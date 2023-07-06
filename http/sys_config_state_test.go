@@ -173,7 +173,8 @@ func TestSysConfigState_Sanitized(t *testing.T) {
 						"type":   "tcp",
 					},
 				},
-				"storage": tc.expectedStorageOutput,
+				"storage":                       tc.expectedStorageOutput,
+				"administrative_namespace_path": "",
 			}
 
 			if tc.expectedHAStorageOutput != nil {

@@ -10,7 +10,7 @@ description: |-
   Consensus Algorithm.
 ---
 
-# Integrated Storage (Raft) Backend
+# Integrated storage (Raft) backend
 
 The Integrated Storage backend is used to persist Vault's data. Unlike other storage
 backends, Integrated Storage does not operate from a single source of data. Instead
@@ -42,7 +42,7 @@ backend cannot be declared.
 ~> **Note:** When using the Integrated Storage backend, it is strongly recommended to
 set [`disable_mlock`](/vault/docs/configuration#disable_mlock) to `true`, and to disable memory swapping on the system.
 
-## `raft` Parameters
+## `raft` parameters
 
 - `path` `(string: "")` – The file system path where all the Vault data gets
   stored.

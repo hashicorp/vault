@@ -5,7 +5,7 @@ description: >-
   The Vault Secrets Operator allows Pods to consume Vault secrets natively from Kubernetes Secrets.
 ---
 
-# Vault Secrets Operator
+# Vault secrets operator
 
 The Vault Secrets Operator (VSO) allows Pods to consume Vault secrets natively from Kubernetes Secrets.
 
@@ -34,7 +34,7 @@ The following features are supported by the Vault Secrets Operator:
 - Support for installing using: `Helm` or `Kustomize`<br />
 *see the [installation](/vault/docs/platform/k8s/vso/installation) docs for more details*
 
-## Supported Vault Versions
+## Supported Vault versions
 
 - Vault OSS 1.11+
 - Vault Enterprise 1.11+
@@ -42,7 +42,7 @@ The following features are supported by the Vault Secrets Operator:
 
 @include 'kubernetes-supported-versions.mdx'
 
-## Supported Cloud Providers
+## Supported Cloud providers
 
 The Vault Secrets Operator has been tested successfully in the following hosted Kubernetes environments:
 - Amazon Elastic Kubernetes Service (EKS)
@@ -54,12 +54,12 @@ Basic integration tests are available in the project repository.
 Please report any incompatibilities via a [Github Issue](https://github.com/hashicorp/vault-secrets-operator/issues).
 
 
-## Vault Access and Custom Resource Definitions
+## Vault access and custom resource definitions
 
 The Vault connection and authentication configuration is provided by the `VaultConnection` and `VaultAuth` CRDs. These can be considered as
 foundational Custom Resources that all secret replication type resources will reference.
 
-### VaultConnection Custom Resource
+### VaultConnection custom resource
 
 Provides the configuration necessary for the Operator to connect to a single Vault server instance.
 
@@ -86,7 +86,7 @@ spec:
   # caCertSecretRef: ""
 ```
 
-### VaultAuth Custom Resource
+### VaultAuth custom resource
 
 Provide the configuration necessary for the Operator to authenticate to a single Vault server instance as
 specified in a `VaultConnection` Custom Resource.
@@ -125,12 +125,12 @@ spec:
   # headers: []
 ```
 
-## Vault Secret Custom Resource Definitions
+## Vault secret custom resource definitions
 
 Provide the configuration necessary for the Operator to replicate a single Vault Secret to a single Kubernetes Secret.
 Each supported CRD is specialized to a *class* of Vault secret, documented below.
 
-### VaultStaticSecret Custom Resource
+### VaultStaticSecret custom resource
 
 Provides the configuration necessary for the Operator to synchronize a single Vault *static* Secret to a single Kubernetes Secret.<br />
 Supported secrets engines: [kv-v2](/vault/docs/secrets/kv/kv-v2), [kv-v1](/vault/docs/secrets/kv/kv-v1)
@@ -180,7 +180,7 @@ spec:
     name: static-secret2
 ```
 
-### VaultPKISecret Custom Resource
+### VaultPKISecret custom resource
 Provides the configuration necessary for the Operator to synchronize a single Vault *PKI* Secret to a single Kubernetes Secret.<br />
 Supported secrets engines: [pki](/vault/docs/secrets/pki)
 
@@ -207,7 +207,7 @@ spec:
     name: pki1
 ```
 
-### VaultDynamicSecret Custom Resource
+### VaultDynamicSecret custom resource
 
 Provides the configuration necessary for the Operator to synchronize a single Vault *dynamic* Secret to a single Kubernetes Secret.<br />
 Supported secrets engines *non-exhaustive*: [databases](/vault/docs/secrets/databases), [aws](/vault/docs/secrets/aws),
