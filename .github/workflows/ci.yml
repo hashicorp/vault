@@ -346,6 +346,9 @@ jobs:
     runs-on: ubuntu-latest
     if: success() || failure() || needs.tests-completed.result == 'skipped'
     needs:
+      - test-go
+      - test-go-fips
+      - test-go-race
       - tests-completed
     steps:
       - name: Download failure summary
