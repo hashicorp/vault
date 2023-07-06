@@ -5,7 +5,7 @@ on:
     outputs:
       is_docs_ui_change:
         description: "determines if the changes are docs/ui related"
-        value: ${{ jobs.verify-doc-changes.outputs.is_docs_ui_change }}
+        value: ${{ jobs.verify-doc-ui-changes.outputs.is_docs_ui_change }}
 
 jobs:
   # verify-doc-ui-changes determines if the changes are only for docs (website) and/or ui
