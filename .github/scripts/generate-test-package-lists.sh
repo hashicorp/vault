@@ -272,6 +272,7 @@ if [ "${ENTERPRISE:+x}" == "x" ] ; then
     test_packages[14]+=" $base/vault/external_tests/quotas-docker"
 fi
 test_packages[14]+=" $base/vault/external_tests/raftha"
+test_packages[14]+=" $base/internal/observability/event"
 
 # Total time: 362
 test_packages[15]+=" $base/builtin/logical/nomad"
