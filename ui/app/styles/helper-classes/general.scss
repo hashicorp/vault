@@ -115,3 +115,8 @@
 .border-radius-2 {
   border-radius: $radius;
 }
+
+// border-spacing
+.is-border-spacing-revert {
+  border-spacing: revert;
+}
