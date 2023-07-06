@@ -65,7 +65,7 @@ func (b *backend) rotateCredential(ctx context.Context, storage logical.Storage)
 
 	cfg := item.Value.(staticRoleEntry)
 
-	err = b.createStaticCredential(ctx, storage, cfg, item.Key)
+	err = b.createStaticCredential(ctx, storage, &cfg, item.Key)
 	if err != nil {
 		return false, err
 	}
@@ -81,7 +81,7 @@ func (b *backend) rotateCredential(ctx context.Context, storage logical.Storage)
 }
 
 // TODO add option to lock storage while performing updates
-func (b *backend) createStaticCredential(ctx context.Context, storage logical.Storage, cfg staticRoleEntry, entryName string) error {
+func (b *backend) createStaticCredential(ctx context.Context, storage logical.Storage, cfg *staticRoleEntry, entryName string) error {
 	config, err := readConfig(ctx, storage)
 	if err != nil {
 		return fmt.Errorf("unable to read configuration: %w", err)
@@ -119,8 +119,6 @@ func (b *backend) createStaticCredential(ctx context.Context, storage logical.St
 }
 
 func (b *backend) deleteStaticCredential(ctx context.Context, storage logical.Storage, cfg staticRoleEntry, shouldLockStorage bool) error {
-	// TODO needed to pop from queue?
-	// TODO remove from logical storage?
 	if cfg.RevokeUserOnDelete {
 		client, err := b.Client(ctx, storage)
 		if err != nil {

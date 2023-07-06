@@ -325,14 +325,15 @@ func (b *backend) pathStaticRoleCreateUpdate(ctx context.Context, req *logical.R
 		RevokeUserOnDelete: revokeUserOnDelete,
 	}
 
-	item, err := b.credRotationQueue.PopByKey(name)
+	_, err = b.credRotationQueue.PopByKey(name)
 	if err != nil {
 		return nil, fmt.Errorf("failed to pop item from the rotation queue for role %q: %w", name, err)
 	}
-	priority := time.Now().Add(staticRole.RotationPeriod).Unix()
-	if item != nil {
-		priority = item.Priority
+	// regenerate either way as username or permissions might have changed
+	if err := b.createStaticCredential(ctx, req.Storage, &staticRole, name); err != nil {
+		return nil, err
 	}
+	priority := time.Now().Add(staticRole.RotationPeriod).Unix()
 	err = b.credRotationQueue.Push(&queue.Item{
 		Key:      name,
 		Value:    staticRole,
@@ -342,18 +343,25 @@ func (b *backend) pathStaticRoleCreateUpdate(ctx context.Context, req *logical.R
 		return nil, fmt.Errorf("failed to add item into the rotation queue for role %q: %w", name, err)
 	}
 
-	entry, err := logical.StorageEntryJSON(rabbitMQStaticRolePath+name, staticRole)
-	if err != nil {
-		return nil, err
-	}
-	if err := req.Storage.Put(ctx, entry); err != nil {
-		return nil, err
-	}
-
 	return nil, nil
 }
 
 func (b *backend) pathStaticRoleDelete(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	name := d.Get("name").(string)
+	if name == "" {
+		return logical.ErrorResponse("missing name"), nil
+	}
+	item, err := b.credRotationQueue.PopByKey(name)
+	if err != nil {
+		return nil, fmt.Errorf("failed to pop item from the rotation queue for role %q: %w", name, err)
+	}
+	if item == nil {
+		return nil, fmt.Errorf("failed to find item on the rotation queue for role %q: %w", name, err)
+	}
+	role := item.Value.(staticRoleEntry)
+	if err := b.deleteStaticCredential(ctx, req.Storage, role, false); err != nil {
+		return nil, err
+	}
 	return b.pathRoleDeleteWithPrefix(ctx, rabbitMQStaticRolePath, req, d)
 }
 
