@@ -572,6 +572,28 @@ func testUnknownFieldValidationHcl(t *testing.T) {
 	}
 }
 
+// testConfigWithAdministrativeNamespaceJson tests that a config with a valid administrative namespace path is correctly validated and loaded.
+func testConfigWithAdministrativeNamespaceJson(t *testing.T) {
+	config, err := LoadConfigFile("./test-fixtures/config_with_valid_admin_ns.json")
+	require.NoError(t, err)
+
+	configErrors := config.Validate("./test-fixtures/config_with_valid_admin_ns.json")
+	require.Empty(t, configErrors)
+
+	require.NotEmpty(t, config.AdministrativeNamespacePath)
+}
+
+// testConfigWithAdministrativeNamespaceHcl tests that a config with a valid administrative namespace path is correctly validated and loaded.
+func testConfigWithAdministrativeNamespaceHcl(t *testing.T) {
+	config, err := LoadConfigFile("./test-fixtures/config_with_valid_admin_ns.hcl")
+	require.NoError(t, err)
+
+	configErrors := config.Validate("./test-fixtures/config_with_valid_admin_ns.hcl")
+	require.Empty(t, configErrors)
+
+	require.NotEmpty(t, config.AdministrativeNamespacePath)
+}
+
 func testLoadConfigFile_json(t *testing.T) {
 	config, err := LoadConfigFile("./test-fixtures/config.hcl.json")
 	if err != nil {
@@ -819,6 +841,7 @@ func testConfig_Sanitized(t *testing.T) {
 			"num_lease_metrics_buckets":              168,
 			"add_lease_metrics_namespace_labels":     false,
 		},
+		"administrative_namespace_path": "admin/",
 	}
 
 	addExpectedEntSanitizedConfig(expected, []string{"http"})
