@@ -6,7 +6,7 @@ description: >-
   for Vault's API.
 ---
 
-# Vault Proxy API Proxy
+# Vault proxy API proxy
 
 Vault Proxy's API Proxy functionality allows you to use Vault Proxy's API as a proxy
 for Vault's API.
@@ -23,7 +23,7 @@ If a `listener` has been configured alongside a `cache` stanza, the API Proxy wi
 first attempt to utilize the cache subsystem for qualifying requests, before forwarding the
 request to Vault. See the [caching docs](/vault/docs/agent-and-proxy/proxy/caching) for more information on caching.
 
-## Using Auto-Auth Token
+## Using Auto-Auth token
 
 Vault Proxy allows for easy authentication to Vault in a wide variety of
 environments using [Auto-Auth](/vault/docs/agent-and-proxy/autoauth). By setting the
@@ -35,12 +35,12 @@ configuration will be overridden if the request already has a token attached,
 in which case, the token present in the request will be used to forward the
 request to the Vault server.
 
-## Forcing Auto-Auth Token
+## Forcing Auto-Auth token
 
 Vault Proxy can be configured to force the use of the auto-auth token by using
 the value `force` for the `use_auto_auth_token` option. This configuration
 overrides the default behavior described above in [Using Auto-Auth
-Token](/vault/docs/proxy/apiproxy#using-auto-auth-token), and instead ignores any
+Token](/vault/docs/agent-and-proxy/proxy/apiproxy#using-auto-auth-token), and instead ignores any
 existing Vault token in the request and instead uses the auto-auth token.
 
 
@@ -66,13 +66,13 @@ or `"never"`.
 - `when_inconsistent` `(string: optional)` - Set to one of `"fail"`, `"retry"`,
 or `"forward"`.
 
-### Example Configuration
+### Example configuration
 
 Here is an example of a `listener` configuration alongside `api_proxy` configuration to force the use of the auto_auth token
 and enforce consistency.
 
 ```hcl
-# Other Vault Proxy configuration blocks
+# Other Vault proxy configuration blocks
 # ...
 
 api_proxy {

@@ -7,7 +7,7 @@ description: |-
   newly created tokens.
 ---
 
-# Vault Proxy Caching
+# Vault proxy caching
 
 Vault Proxy Caching allows client-side caching of responses containing newly
 created tokens and responses containing leased secrets generated off of these
@@ -19,7 +19,7 @@ running on Vault 1.1 and above due to changes that were introduced
 alongside this feature, such as the exposure of the `orphan` field in token
 creation responses.
 
-## Caching and Renewals
+## Caching and renewals
 
 Response caching and renewals are managed by the proxy only under these
 specific scenarios.
@@ -36,7 +36,7 @@ specific scenarios.
    that are issued using the tokens managed by the proxy, will be cached and
    its renewals are taken care of.
 
-## Persistent Cache
+## Persistent cache
 
 Vault Proxy can restore tokens and leases from a persistent cache file created
 by a previous Vault Proxy process.
@@ -45,7 +45,7 @@ Refer to the [Vault Proxy Persistent
 Caching](/vault/docs/agent-and-proxy/proxy/caching/persistent-caches) page for more information on
 this functionality.
 
-## Cache Evictions
+## Cache evictions
 
 The eviction of cache entries pertaining to secrets will occur when the proxy
 can no longer renew them. This can happen when the secrets hit their maximum
@@ -66,7 +66,7 @@ entries. For managing the stale entries in the cache, an endpoint
 `/proxy/v1/cache-clear`(see below) is made available to manually evict cache
 entries based on some of the query criteria used for indexing the cache entries.
 
-## Request Uniqueness
+## Request uniqueness
 
 In order to detect repeat requests and return cached responses, proxy will need
 to have a way to uniquely identify the requests. This computation as it stands
@@ -83,7 +83,7 @@ assumption that the clients will use consistent mechanisms to make requests,
 thereby resulting in consistent hash values per request is the idea upon which
 the caching functionality is built upon.
 
-## Renewal Management
+## Renewal management
 
 The tokens and leases are renewed by the proxy using the secret renewer that is
 made available via the Vault server's [Go
@@ -97,7 +97,7 @@ secrets are no longer performed by the Vault proxy.
 
 ## API
 
-### Cache Clear
+### Cache clear
 
 This endpoint clears the cache based on given criteria. To use this
 API, some information on how the proxy caches values should be known
@@ -129,7 +129,7 @@ but will do nothing (there is no cache to clear) and will return a `200` respons
   `request_path`. The namespace of which the cache entries to be evicted for
   the given request path.
 
-### Sample Payload
+### Sample payload
 
 ```json
 {
@@ -138,7 +138,7 @@ but will do nothing (there is no cache to clear) and will return a `200` respons
 }
 ```
 
-### Sample Request
+### Sample request
 
 ```shell-session
 $ curl \
@@ -165,7 +165,8 @@ These are common configuration values that live within the `persist` block:
 
 - `type` `(string: required)` - The type of the persistent cache to use,
   e.g. `kubernetes`. _Note_: when using HCL this can be used as the key for
-  the block, e.g. `persist "kubernetes" {...}`.
+  the block, e.g. `persist "kubernetes" {...}`. Currently, only `kubernetes`
+  is supported.
 
 - `path` `(string: required)` - The path on disk where the persistent cache file
   should be created or restored from.
@@ -210,13 +211,13 @@ or the default role, `default`, which serves everything (including metrics).
 - `tls_cert_file` `(string: optional)` - Specifies the path to the certificate
   for TLS.
 
-### Example Configuration
+### Example configuration
 
 Here is an example of a cache configuration with the optional `persist` block,
 alongside a regular listener, and a listener that only serves metrics.
 
 ```hcl
-# Other Vault Proxy configuration blocks
+# Other Vault proxy configuration blocks
 # ...
 
 cache {

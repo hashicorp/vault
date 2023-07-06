@@ -30,7 +30,6 @@ variable "arch" {}
 variable "artifact_type" {}
 variable "distro" {}
 variable "edition" {}
-variable "instance_type" {}
 variable "revision" {}
 variable "product_version" {}
 variable "build_tags" { default = null }

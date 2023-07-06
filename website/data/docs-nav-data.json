@@ -775,6 +775,10 @@
         "path": "commands/print"
       },
       {
+        "title": "<code>proxy</code>",
+        "path": "commands/proxy"
+      },
+      {
         "title": "<code>read</code>",
         "path": "commands/read"
       },
@@ -1531,15 +1535,6 @@
       },
       {
         "divider": true
-      },
-      {
-        "title": "App ID",
-        "badge": {
-          "text": "DEPRECATED",
-          "type": "outlined",
-          "color": "neutral"
-        },
-        "path": "auth/app-id"
       }
     ]
   },
@@ -1884,8 +1879,7 @@
       },
       {
         "title": "Upgrade to 1.14.x",
-        "path": "upgrading/upgrade-to-1.14.x",
-        "hidden": true
+        "path": "upgrading/upgrade-to-1.14.x"
       },
       {
         "title": "Upgrade to 1.13.x",
@@ -2133,8 +2127,7 @@
       },
       {
         "title": "1.14.0",
-        "path": "release-notes/1.14.0",
-        "hidden": true
+        "path": "release-notes/1.14.0"
       },
       {
         "title": "1.13.0",

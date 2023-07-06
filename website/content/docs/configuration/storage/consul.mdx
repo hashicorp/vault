@@ -8,7 +8,7 @@ description: |-
   check.
 ---
 
-# Consul Storage Backend
+# Consul storage backend
 
 The Consul storage backend is used to persist Vault's data in [Consul's][consul]
 key-value store. In addition to providing durable storage, inclusion of this
@@ -55,7 +55,7 @@ Note that if you have configured multiple listeners for Vault, you must specify
 which one Consul should advertise to the cluster using [`api_addr`][api-addr]
 and [`cluster_addr`][cluster-addr] ([example][listener-example]).
 
-## `consul` Parameters
+## `consul` parameters
 
 - `address` `(string: "127.0.0.1:8500")` – Specifies the address of the Consul
   agent to communicate with. This can be an IP address, DNS record, or unix
@@ -200,9 +200,9 @@ language:
 }
 ```
 
-## `consul` Examples
+## `consul` examples
 
-### Local Agent
+### Local agent
 
 This example shows a sample physical backend configuration which communicates
 with a local Consul agent running on `127.0.0.1:8500`.
@@ -211,7 +211,7 @@ with a local Consul agent running on `127.0.0.1:8500`.
 storage "consul" {}
 ```
 
-### Detailed Customization
+### Detailed customization
 
 This example shows communicating with Consul on a custom address with an ACL
 token.
@@ -223,7 +223,7 @@ storage "consul" {
 }
 ```
 
-### Custom Storage Path
+### Custom storage path
 
 This example shows storing data at a custom path in Consul's key-value store.
 This path must be readable and writable by the Consul ACL token, if Consul
@@ -235,7 +235,7 @@ storage "consul" {
 }
 ```
 
-### Consul via Unix Socket
+### Consul via unix socket
 
 This example shows communicating with Consul over a local unix socket.
 

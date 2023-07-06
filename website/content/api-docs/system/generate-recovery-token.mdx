@@ -11,7 +11,7 @@ description: |-
 The `/sys/generate-recovery-token` endpoint is used to create a new recovery
 token for Vault.
 
-## Read Recovery Token Generation Progress
+## Read recovery token generation progress
 
 This endpoint reads the configuration and process of the current root generation
 attempt.
@@ -20,14 +20,14 @@ attempt.
 | :----- | :------------------------------------- |
 | `GET`  | `/sys/generate-recovery-token/attempt` |
 
-### Sample Request
+### Sample request
 
 ```shell-session
 $ curl \
     http://127.0.0.1:8200/v1/sys/generate-recovery-token/attempt
 ```
 
-### Sample Response
+### Sample response
 
 ```json
 {
@@ -58,7 +58,7 @@ The raw bytes (char codes) of the token will be XOR'd with
 this value before being returned as a response to the final unseal
 key, encoded as base64.
 
-## Start Recovery Token Generation
+## Start recovery token generation
 
 This endpoint initializes a new recovery token generation attempt. Only a single
 recovery token generation attempt can take place at a time.
@@ -73,7 +73,7 @@ recovery token generation attempt can take place at a time.
   The raw bytes of the token will be encrypted with this value before being
   returned to the final unseal key provider.
 
-### Sample Request
+### Sample request
 
 ```shell-session
 $ curl \
@@ -81,7 +81,7 @@ $ curl \
     http://127.0.0.1:8200/v1/sys/generate-recovery-token/attempt
 ```
 
-### Sample Response
+### Sample response
 
 ```json
 {
@@ -96,7 +96,7 @@ $ curl \
 }
 ```
 
-## Cancel Recovery Token Generation
+## Cancel recovery token generation
 
 This endpoint cancels any in-progress recovery token generation attempt. This
 clears any progress made. This must be called to change the OTP or PGP key being
@@ -106,7 +106,7 @@ used.
 | :------- | :------------------------------------- |
 | `DELETE` | `/sys/generate-recovery-token/attempt` |
 
-### Sample Request
+### Sample request
 
 ```shell-session
 $ curl \
@@ -114,7 +114,7 @@ $ curl \
     http://127.0.0.1:8200/v1/sys/generate-recovery-token/attempt
 ```
 
-## Provide Key Share to Generate Recovery Token
+## Provide key share to generate recovery token
 
 This endpoint is used to enter a single root key share to progress the
 recovery token generation attempt. If the threshold number of root key shares
@@ -135,7 +135,7 @@ only in memory and thus will only be valid until the next restart.
 
 - `nonce` `(string: <required>)` – Specifies the nonce of the attempt.
 
-### Sample Payload
+### Sample payload
 
 ```json
 {
@@ -144,7 +144,7 @@ only in memory and thus will only be valid until the next restart.
 }
 ```
 
-### Sample Request
+### Sample request
 
 ```shell-session
 $ curl \
@@ -153,7 +153,7 @@ $ curl \
     http://127.0.0.1:8200/v1/sys/generate-recovery-token/update
 ```
 
-### Sample Response
+### Sample response
 
 This returns a JSON-encoded object indicating the attempt nonce, and completion
 status, and the encoded recovery token, if the attempt is complete.

@@ -4,7 +4,7 @@ page_title: Auth Methods
 description: Auth methods are mountable methods that perform authentication for Vault.
 ---
 
-# Auth Methods
+# Auth methods
 
 Auth methods are the components in Vault that perform authentication and are
 responsible for assigning identity and a set of policies to a user. In all cases,
@@ -23,7 +23,7 @@ method is the recommended choice.
 To learn more about authentication, see the
 [authentication concepts page](/vault/docs/concepts/auth).
 
-## Enabling/Disabling Auth Methods
+## Enabling/Disabling auth methods
 
 Auth methods can be enabled/disabled using the CLI or the API.
 
@@ -47,10 +47,13 @@ $ vault auth enable -path=my-login userpass
 When an auth method is disabled, all users authenticated via that method are
 automatically logged out.
 
-## External Auth Method Considerations
+## External auth method considerations
 
 When using an external auth method (e.g., GitHub), Vault will call the external service
-at the time of authentication and for any subsequent token renewals. This means that issued tokens
-are valid for their entire duration, and are not invalidated until a renewal or user re-authentication
-occurs. Operators should ensure appropriate [token TTLs](/vault/docs/concepts/tokens#the-general-case)
-are set when using these auth methods.
+at the time of authentication and for subsequent token renewals. If the status
+of an entity changes in the external system (e.g., an account expires or is
+disabled), Vault denies requests to **renew** tokens associated with the entity.
+However, any existing token remain valid for the original grant period unless
+they are explicitly revoked within Vault. Operators should set appropriate
+[token TTLs](/vault/docs/concepts/tokens#the-general-case) when using external
+authN methods.

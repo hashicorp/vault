@@ -4,7 +4,7 @@ page_title: Replication
 description: Learn about the details of multi-datacenter replication within Vault.
 ---
 
-# Replication (Vault Enterprise)
+# Replication (Vault enterprise)
 
 Vault Enterprise 0.7 adds support for multi-datacenter replication. Before
 using this feature, it is useful to understand the intended use cases, design
@@ -15,7 +15,7 @@ replication, focusing on high availability for global deployments. The
 trade-offs made in the design and implementation of replication reflect these
 high level goals.
 
-# Use Cases
+# Use cases
 
 Vault replication is based on a number of common use cases:
 
@@ -35,7 +35,7 @@ Vault replication is based on a number of common use cases:
   allows load to be distributed across additional servers to scale request
   throughput.
 
-# Design Goals
+# Design goals
 
 Based on the use cases for Vault Replication, we had a number of design goals
 for the implementation:
@@ -101,7 +101,7 @@ the work of TTL management between the clusters. The caveat is that clients
 will need to re-authenticate if they switch the Vault cluster they are
 communicating with.
 
-# Implementation Details
+# Implementation details
 
 It is important to understand the high-level architecture of replication to
 ensure the trade-offs are appropriate for your use case. The implementation

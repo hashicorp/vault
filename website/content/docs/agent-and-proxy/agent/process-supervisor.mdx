@@ -6,14 +6,15 @@ description: >-
   into a process via environment variables using Consul Template markup.
 ---
 
-# Vault Agent's Process Supervisor Mode
+# Vault agent's process supervisor mode
 
 Vault Agent's Process Supervisor Mode allows Vault secrets to be injected into
 a process via environment variables using
 [Consul Template markup][consul-templating-language].
 
 -> If you are running your applications in a Kubernetes cluster, we recommend
-   evaluating the [Vault Secrets Operator](/vault/docs/platform/k8s/vso) instead.
+  evaluating the [Vault Secrets Operator](/vault/docs/platform/k8s/vso) and
+  the [Vault Agent Sidecar Injector](/vault/docs/platform/k8s/injector).
 
 !> Vault Agent's Process Supervisor Mode is in public beta. Please provide your
    feedback by opening a GitHub issue [here](https://github.com/hashicorp/vault/issues).
@@ -101,7 +102,7 @@ The top level `exec` block has the following configuration entries.
   to force the child process to stop.
 
 
-## Configuration Example
+## Configuration example
 
 The following example was generated using
 [`vault agent generate-config`](/vault/docs/agent-and-proxy/agent/generate-config),
@@ -148,3 +149,10 @@ exec {
 
 [consul-templating-language]: https://github.com/hashicorp/consul-template/blob/v0.28.1/docs/templating-language.md
 [template-config]: /vault/docs/agent-and-proxy/agent/template#template-configurations
+
+
+## Tutorial
+
+Refer to the [Vault Agent - secrets as environment
+variables](/vault/tutorials/vault-agent/agent-env-vars) tutorial for an
+end-to-end example.

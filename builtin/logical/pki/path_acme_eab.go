@@ -8,7 +8,9 @@ import (
 	"crypto/rand"
 	"encoding/base64"
 	"fmt"
+	"net/http"
 	"path"
+	"strings"
 	"time"
 
 	"github.com/hashicorp/go-uuid"
@@ -39,20 +41,32 @@ func mustBase64Decode(s string) []byte {
 func pathAcmeEabList(b *backend) *framework.Path {
 	return &framework.Path{
 		Pattern: "eab/?$",
-
-		DisplayAttrs: &framework.DisplayAttributes{
-			OperationPrefix: operationPrefixPKI,
-		},
-
-		Fields: map[string]*framework.FieldSchema{},
-
+		Fields:  map[string]*framework.FieldSchema{},
 		Operations: map[logical.Operation]framework.OperationHandler{
 			logical.ListOperation: &framework.PathOperation{
-				DisplayAttrs: &framework.DisplayAttributes{
-					OperationVerb:   "list-eab-key",
-					OperationSuffix: "acme",
-				},
 				Callback: b.pathAcmeListEab,
+				DisplayAttrs: &framework.DisplayAttributes{
+					OperationPrefix: operationPrefixPKI,
+					OperationVerb:   "list-eab-keys",
+					Description:     "List all eab key identifiers yet to be used.",
+				},
+				Responses: map[int][]framework.Response{
+					http.StatusOK: {{
+						Description: "OK",
+						Fields: map[string]*framework.FieldSchema{
+							"keys": {
+								Type:        framework.TypeStringSlice,
+								Description: `A list of unused eab keys`,
+								Required:    true,
+							},
+							"key_info": {
+								Type:        framework.TypeMap,
+								Description: `EAB details keyed by the eab key id`,
+								Required:    false,
+							},
+						},
+					}},
+				},
 			},
 		},
 
@@ -69,23 +83,56 @@ func patternAcmeNewEab(b *backend, pattern string) *framework.Path {
 	fields := map[string]*framework.FieldSchema{}
 	addFieldsForACMEPath(fields, pattern)
 
+	opSuffix := getAcmeOperationSuffix(pattern)
+
 	return &framework.Path{
 		Pattern: pattern,
 		Fields:  fields,
+
 		Operations: map[logical.Operation]framework.OperationHandler{
 			logical.UpdateOperation: &framework.PathOperation{
 				Callback:                    b.pathAcmeCreateEab,
 				ForwardPerformanceSecondary: false,
 				ForwardPerformanceStandby:   true,
 				DisplayAttrs: &framework.DisplayAttributes{
+					OperationPrefix: operationPrefixPKI,
 					OperationVerb:   "generate-eab-key",
-					OperationSuffix: "acme",
+					OperationSuffix: opSuffix,
+					Description:     "Generate an ACME EAB token for a directory",
+				},
+				Responses: map[int][]framework.Response{
+					http.StatusOK: {{
+						Description: "OK",
+						Fields: map[string]*framework.FieldSchema{
+							"id": {
+								Type:        framework.TypeString,
+								Description: `The EAB key identifier`,
+								Required:    true,
+							},
+							"key_type": {
+								Type:        framework.TypeString,
+								Description: `The EAB key type`,
+								Required:    true,
+							},
+							"key": {
+								Type:        framework.TypeString,
+								Description: `The EAB hmac key`,
+								Required:    true,
+							},
+							"acme_directory": {
+								Type:        framework.TypeString,
+								Description: `The ACME directory to which the key belongs`,
+								Required:    true,
+							},
+							"created_on": {
+								Type:        framework.TypeTime,
+								Description: `An RFC3339 formatted date time when the EAB token was created`,
+								Required:    true,
+							},
+						},
+					}},
 				},
 			},
-		},
-
-		DisplayAttrs: &framework.DisplayAttributes{
-			OperationPrefix: operationPrefixPKI,
 		},
 
 		HelpSynopsis:    "Generate external account bindings to be used for ACME",
@@ -97,10 +144,6 @@ func pathAcmeEabDelete(b *backend) *framework.Path {
 	return &framework.Path{
 		Pattern: "eab/" + uuidNameRegex("key_id"),
 
-		DisplayAttrs: &framework.DisplayAttributes{
-			OperationPrefix: operationPrefixPKI,
-		},
-
 		Fields: map[string]*framework.FieldSchema{
 			"key_id": {
 				Type:        framework.TypeString,
@@ -108,15 +151,16 @@ func pathAcmeEabDelete(b *backend) *framework.Path {
 				Required:    true,
 			},
 		},
-
 		Operations: map[logical.Operation]framework.OperationHandler{
 			logical.DeleteOperation: &framework.PathOperation{
-				DisplayAttrs: &framework.DisplayAttributes{
-					OperationSuffix: "acme-configuration",
-				},
 				Callback:                    b.pathAcmeDeleteEab,
 				ForwardPerformanceSecondary: false,
 				ForwardPerformanceStandby:   true,
+				DisplayAttrs: &framework.DisplayAttributes{
+					OperationPrefix: operationPrefixPKI,
+					OperationVerb:   "delete-eab-key",
+					Description:     "Delete an unused EAB token",
+				},
 			},
 		},
 
@@ -229,4 +273,22 @@ func (b *backend) pathAcmeDeleteEab(ctx context.Context, r *logical.Request, d *
 		resp.AddWarning("No key id found with id: " + keyId)
 	}
 	return resp, nil
+}
+
+// getAcmeOperationSuffix used mainly to compute the OpenAPI spec suffix value to distinguish
+// different versions of ACME Vault APIs based on directory paths
+func getAcmeOperationSuffix(pattern string) string {
+	hasRole := strings.Contains(pattern, framework.GenericNameRegex("role"))
+	hasIssuer := strings.Contains(pattern, framework.GenericNameRegex(issuerRefParam))
+
+	switch {
+	case hasRole && hasIssuer:
+		return "for-issuer-and-role"
+	case hasRole:
+		return "for-role"
+	case hasIssuer:
+		return "for-issuer"
+	default:
+		return ""
+	}
 }
