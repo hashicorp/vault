@@ -31,7 +31,7 @@ export default class KvMetadataAdapter extends ApplicationAdapter {
   query(store, type, query) {
     const { backend } = query;
     return this.ajax(this._url(`${encodePath(backend)}/metadata?list=1`), 'GET').then((resp) => {
-      resp.backend = backend;
+      resp.data.backend = backend;
       return resp;
     });
   }
