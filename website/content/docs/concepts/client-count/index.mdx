@@ -27,7 +27,7 @@ While there are many different potential clients, the most common are:
 
 ## Identity and entity assignment
 
-When clients authenticate, Vault assigns them a **client identity type**: 
+Authorized clients can connect to Vault with a variety of authentication methods.
 
 Authorization source       | AuthN method
 -------------------------- | ---------------------------------
@@ -37,12 +37,12 @@ Self                       | AppRole, tokens with no associated authN path or ro
 
 ![Vault client types](https://www.datocms-assets.com/2885/1617325030-vault-clients.png)
 
-Vault also assigns a unique identifier (**client entity**) in the
-[Vault identity system](/vault/docs/secrets/identity) based on the
-authentication method used or a previously assigned alias. **Entity aliases**
-let clients authenticate with multiple methods but still be associated with a
-single policy, share resources, and count as the same entity, regardless of the
-authentication method used for a particular session.
+When a client authenticates, Vault assigns a unique identifier
+(**client entity**) in the [Vault identity system](/vault/docs/secrets/identity)
+based on the authentication method used or a previously assigned alias.
+**Entity aliases** let clients authenticate with multiple methods but still be
+associated with a single policy, share resources, and count as the same entity,
+regardless of the authentication method used for a particular session.
 
 ## Standard entity assignments
 
