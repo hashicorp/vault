@@ -6,7 +6,7 @@ description: >-
   will revoke that secret.
 ---
 
-# Lease, Renew, and Revoke
+# Lease, renew, and revoke
 
 With every dynamic secret and `service` type authentication token, Vault
 creates a _lease_: metadata containing information such as a time duration,
@@ -44,7 +44,7 @@ lease duration; see the documentation for more information.
 When reading a dynamic secret, such as via `vault read`, Vault always returns a
 `lease_id`. This is the ID used with commands such as `vault lease renew` and `vault lease revoke` to manage the lease of the secret.
 
-## Lease Durations and Renewal
+## Lease durations and renewal
 
 Along with the lease ID, a _lease duration_ can be read. The lease duration is
 a Time To Live value: the time in seconds for which the lease is valid. A
@@ -71,7 +71,7 @@ determine what the new lease is.
 
 -> To implement token renewal logic in your application code, refer to the [code example in the Authentication doc](/vault/docs/concepts/auth#code-example).
 
-## Prefix-based Revocation
+## Prefix-based revocation
 
 In addition to revoking a single secret, operators with proper access control
 can revoke multiple secrets based on their lease ID prefix.

@@ -6,7 +6,7 @@ description: |-
   port.
 ---
 
-# `tcp` Listener
+# `tcp` listener
 
 The TCP listener configures Vault to listen on a TCP address/port.
 
@@ -46,7 +46,7 @@ For example, the `"Content-Security-Policy"` header is defined by default in the
 the value in the configuration file is set in the response headers instead of the
 default value in the `"/sys/config/ui"` [API endpoint](/vault/api-docs/system/config-ui).
 
-## `tcp` Listener Parameters
+## `tcp` listener parameters
 
 - `address` `(string: "127.0.0.1:8200")` – Specifies the address to bind to for
   listening. This can be dynamically defined with a
@@ -194,19 +194,19 @@ default value in the `"/sys/config/ui"` [API endpoint](/vault/api-docs/system/co
   there is no X-Forwarded-For header or it is empty, the client address will be
   used as-is, rather than the client connection rejected.
 
-### `telemetry` Parameters
+### `telemetry` parameters
 
 - `unauthenticated_metrics_access` `(bool: false)` - If set to true, allows
   unauthenticated access to the `/v1/sys/metrics` endpoint.
 
-### `profiling` Parameters
+### `profiling` parameters
 
 - `unauthenticated_pprof_access` `(bool: false)` - If set to true, allows
   unauthenticated access to the `/v1/sys/pprof` endpoint.
 - `unauthenticated_in_flight_request_access` `(bool: false)` - If set to true, allows
   unauthenticated access to the `/v1/sys/in-flight-req` endpoint.
 
-### `custom_response_headers` Parameters
+### `custom_response_headers` parameters
 
 - `default` `(key-value-map: {})` - A map of string header names to an array of
   string values. The default headers are set on all endpoints regardless of
@@ -224,7 +224,7 @@ default value in the `"/sys/config/ui"` [API endpoint](/vault/api-docs/system/co
   For example, `"2xx" = {"Header-A": ["Value1", "Value2"]}`, `"Header-A"`
   is set when the http response status code is `"200"`, `"204"`, etc.
 
-## `tcp` Listener Examples
+## `tcp` listener examples
 
 ### Configuring TLS
 
@@ -237,7 +237,7 @@ listener "tcp" {
 }
 ```
 
-### Listening on Multiple Interfaces
+### Listening on multiple interfaces
 
 This example shows Vault listening on a private interface, as well as localhost.
 
@@ -332,7 +332,7 @@ listener "tcp" {
 }
 ```
 
-### Listening on all IPv6 & IPv4 Interfaces
+### Listening on all IPv6 & IPv4 interfaces
 
 This example shows Vault listening on all IPv4 & IPv6 interfaces including localhost.
 

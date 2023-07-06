@@ -9,7 +9,7 @@ description: |-
   process.
 ---
 
-# `storage` Stanza
+# `storage` stanza
 
 The `storage` stanza configures the storage backend, which represents the
 location for the durable storage of Vault's information. Each backend has pros,
@@ -41,7 +41,7 @@ For configuration options which also read an environment variable, the
 environment variable will take precedence over values in the configuration
 file.
 
-## Integrated Storage vs. External Storage
+## Integrated storage vs. external storage
 
 HashiCorp recommends using Vault's [integrated
 storage](/vault/docs/configuration/storage/raft) for most use cases rather than
@@ -63,7 +63,7 @@ Storage. Suppose you decide that the additional operational complexity of extern
 | Data location                  | The encrypted Vault data is stored on the same host where the Vault server process runs.                                                                                                                                     | The encrypted Vault data is stored where the external storage is located. Therefore, the Vault server and the data storage are hosted on physically separate hosts.                                                                   |
 | System requirements            | Avoid "burstable" CPU and storage options. SSDs should be used for the hard drive. <p />See the [Reference Architecture](/vault/tutorials/day-one-raft/raft-reference-architecture#system-requirements) guide. | Follow the system requirements given by your chosen storage backend.                                                                                                                                                                  |
 
-### Integrated Storage vs. Consul as Vault Storage
+### Integrated storage vs. consul as Vault storage
 
 [HashiCorp Consul](/consul/docs/intro) is a comprehensive
 multi-cloud service networking solution including service mesh, service
