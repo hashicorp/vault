@@ -22,17 +22,9 @@
 # Here, it is used to check if a deprecated function, variable, constant or field is used.
 
 # Run staticcheck 
-set -e
+set -euo pipefail
 echo "Performing deprecations check: running staticcheck"
 
-# Identify repository name
-if [ -z $2 ]; then
-    # local repository name
-    repositoryName=$(basename `git rev-parse --show-toplevel`)
-else
-    # github repository name from deprecated-functions-checker.yml
-    repositoryName=$2
-fi
 
 # If no compare branch name is specified, output all deprecations
 # Else only output the deprecations from the changes added
