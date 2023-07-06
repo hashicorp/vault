@@ -378,7 +378,7 @@ jobs:
           # - `.[2]` retrieves the third element of the filename array, which is the runner number.
           # - `.[0:1]` retrieves the first character of the string, we use this to remove the ".json" suffix.
 
-          jq -r -s '[.[] | select(.Action == "fail") | select(.Test != null)] | sort_by(.Package, .Test) | .[] | "| \(.Package) | \(.Test) | \(input_filename | split("-") | .[2] | .[0:1])"' failure-summary-*.json >> "$temp_file_name"
+          jq -r -n 'inputs | select(.Action == "fail") | select(.Test != null) | "| \(.Package) | \(.Test) | \(input_filename | split("-") | .[2] | sub(".json"; ""))"' failure-summary-*.json | sort >> "$temp_file_name"
 
           # if there are test failures, present them in a format of a GH Markdown table
           if [ -s "$temp_file_name" ]; then
