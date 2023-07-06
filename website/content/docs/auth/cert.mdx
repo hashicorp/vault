@@ -6,7 +6,7 @@ description: >-
   client certificates.
 ---
 
-# TLS Certificates Auth Method
+# TLS certificates auth method
 
 @include 'x509-sha1-deprecation.mdx'
 
@@ -25,7 +25,7 @@ lower-case.
 Please note that to use this auth method, `tls_disable` must be false in the Vault
 configuration. This is because the certificates are sent through TLS communication itself.
 
-## Revocation Checking
+## Revocation checking
 
 Since Vault 0.4, the method supports revocation checking.
 

@@ -10,7 +10,7 @@ The `/sys/locked-users` endpoint is used to list and unlock locked users in Vaul
 
 Please visit [user lockout](/vault/docs/concepts/user-lockout) concepts page for more details about the feature. 
 
-## List Locked Users
+## List locked users
 
 This endpoint lists the locked users information in Vault. 
 
@@ -33,7 +33,7 @@ This endpoint was added in Vault 1.13.
 belongs in the namespace in which the request was made. If no mount accessor is specified,
 the response will include locked users in all child namespaces of the namespace in which the request was made. 
 
-### Sample Request
+### Sample request
 
 ```shell-session
 $ curl \
@@ -42,7 +42,7 @@ $ curl \
     http://127.0.0.1:8200/v1/sys/locked-users
 ```
 
-### Sample Response
+### Sample response
 
 ```json
 {
@@ -173,7 +173,7 @@ For deleted namespaces, the response will look like:
 
 ### Sample request with mount accessor
 
-#### Sample Payload
+#### Sample payload
 
 ```json
 {
@@ -181,7 +181,7 @@ For deleted namespaces, the response will look like:
 }
 ```
 
-#### Sample Request
+#### Sample request
 
 ```shell-session
 $ curl \
@@ -191,7 +191,7 @@ $ curl \
     http://127.0.0.1:8200/v1/sys/locked-users
 ```
 
-## Unlock User
+## Unlock user
 
 This endpoint unlocks a locked user with provided mount_accessor and alias_identifier in namespace in which the request was made if locked. 
 This command is idempotent, meaning it succeeds even if user with the given mount_accessor and alias_identifier is not locked. 
@@ -212,7 +212,7 @@ belongs to userpass backend, the name should be a valid username within userpass
 to an approle auth method, the name should be a valid RoleID. If the alias belongs to an ldap auth method, the name
 should be a valid username.
 
-### Sample Request
+### Sample request
 
 ```shell-session
 $ curl \

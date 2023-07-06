@@ -21,7 +21,6 @@ Router.map(function () {
       this.route('redirect');
       this.route('init');
       this.route('logout');
-      this.mount('open-api-explorer', { path: '/api-explorer' });
       this.route('license');
       this.route('mfa-setup');
       this.route('clients', function () {
@@ -51,6 +50,7 @@ Router.map(function () {
       this.route('unseal');
       this.route('tools', function () {
         this.route('tool', { path: '/:selected_action' });
+        this.mount('open-api-explorer', { path: '/api-explorer' });
       });
       this.route('access', function () {
         this.route('methods', { path: '/' });

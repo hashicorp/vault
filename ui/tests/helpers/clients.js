@@ -37,6 +37,7 @@ export const SELECTORS = {
   monthlyUsageBlock: '[data-test-monthly-usage]',
   selectedAuthMount: 'div#auth-method-search-select [data-test-selected-option] div',
   selectedNs: 'div#namespace-search-select [data-test-selected-option] div',
+  upgradeWarning: '[data-test-clients-upgrade-warning]',
 };
 
 export const CHART_ELEMENTS = {

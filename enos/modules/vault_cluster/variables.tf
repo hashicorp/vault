@@ -15,6 +15,18 @@ variable "awskms_unseal_key_arn" {
   default     = null
 }
 
+variable "backend_cluster_name" {
+  type        = string
+  description = "The name of the backend cluster"
+  default     = null
+}
+
+variable "backend_cluster_tag_key" {
+  type        = string
+  description = "The tag key for searching for backend nodes"
+  default     = null
+}
+
 variable "cluster_name" {
   type        = string
   description = "The Vault cluster name"
@@ -30,12 +42,6 @@ variable "config_dir" {
 variable "config_env_vars" {
   description = "Optional Vault configuration environment variables to set starting Vault"
   type        = map(string)
-  default     = null
-}
-
-variable "consul_cluster_tag" {
-  type        = string
-  description = "The retry_join tag to use for Consul"
   default     = null
 }
 
@@ -85,6 +91,12 @@ variable "consul_release" {
     version = "1.15.1"
     edition = "oss"
   }
+}
+
+variable "enable_file_audit_device" {
+  description = "If true the file audit device will be enabled at the path /var/log/vault_audit.log"
+  type        = bool
+  default     = true
 }
 
 variable "force_unseal" {
@@ -202,10 +214,4 @@ variable "unseal_method" {
     condition     = contains(["awskms", "shamir"], var.unseal_method)
     error_message = "The unseal_method must be either awskms or shamir. No other unseal methods are supported."
   }
-}
-
-variable "enable_file_audit_device" {
-  description = "If true the file audit device will be enabled at the path /var/log/vault_audit.log"
-  type        = bool
-  default     = true
 }

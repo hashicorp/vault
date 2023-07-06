@@ -158,7 +158,7 @@ func (ts *TokenStore) paths() []*framework.Path {
 		},
 
 		{
-			Pattern: "accessors/$",
+			Pattern: "accessors/?$",
 
 			DisplayAttrs: &framework.DisplayAttributes{
 				OperationPrefix: operationPrefixToken,
@@ -430,7 +430,7 @@ func (ts *TokenStore) paths() []*framework.Path {
 				logical.ReadOperation: &framework.PathOperation{
 					Callback: ts.handleLookup,
 					DisplayAttrs: &framework.DisplayAttributes{
-						OperationSuffix: "self3", // avoid collision with lookup-self
+						OperationSuffix: "2",
 					},
 				},
 				logical.UpdateOperation: &framework.PathOperation{
@@ -3207,7 +3207,7 @@ func (ts *TokenStore) handleCreateCommon(ctx context.Context, req *logical.Reque
 		te.TTL = dur
 	} else if data.Lease != "" {
 		// This block is compatibility
-		dur, err := time.ParseDuration(data.Lease)
+		dur, err := parseutil.ParseDurationSecond(data.Lease)
 		if err != nil {
 			return logical.ErrorResponse(err.Error()), logical.ErrInvalidRequest
 		}

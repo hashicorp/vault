@@ -10,7 +10,7 @@ The following are the available annotations for the injector. These annotations
 are organized into two sections: agent and vault. All of the annotations below
 change the configurations of the Vault Agent containers injected into the pod.
 
-## Agent Annotations
+## Agent annotations
 
 Agent annotations change the Vault Agent containers templating configuration. For
 example, agent annotations allow users to define what secrets they want, how to render
@@ -232,7 +232,7 @@ them, optional commands to run, etc.
 - `vault.hashicorp.com/agent-init-json-patch` - same as `vault.hashicorp.com/agent-json-patch`, except that the JSON patch will be applied to the
   injected init container instead.
 
-## Vault Annotations
+## Vault annotations
 
 Vault annotations change how the Vault Agent containers communicate with Vault. For
 example, Vault's address, TLS certificates to use, client parameters such as timeouts,

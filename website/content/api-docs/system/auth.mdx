@@ -10,7 +10,7 @@ The `/sys/auth` endpoint is used to list, create, update, and delete auth
 methods. Auth methods convert user or machine-supplied information into a
 token which can be used for all future requests.
 
-## List Auth Methods
+## List auth methods
 
 This endpoint lists all enabled auth methods.
 
@@ -18,7 +18,7 @@ This endpoint lists all enabled auth methods.
 | :----- | :---------- |
 | `GET`  | `/sys/auth` |
 
-### Sample Request
+### Sample request
 
 ```shell-session
 $ curl \
@@ -26,7 +26,7 @@ $ curl \
     http://127.0.0.1:8200/v1/sys/auth
 ```
 
-### Sample Response
+### Sample response
 
 ```json
 {
@@ -79,7 +79,7 @@ $ curl \
 }
 ```
 
-## Enable Auth Method
+## Enable auth method
 
 This endpoint enables a new auth method. After enabling, the auth method can
 be accessed and configured via the auth path specified as part of the URL. This
@@ -161,7 +161,7 @@ relevant functionality is only supported in Vault Enterprise:
 - `seal_wrap` `(bool: false)` - Enable seal wrapping for the mount, causing
   values stored by the mount to be wrapped by the seal's encryption capability.
 
-### Sample Payload
+### Sample payload
 
 ```json
 {
@@ -170,7 +170,7 @@ relevant functionality is only supported in Vault Enterprise:
 }
 ```
 
-### Sample Request
+### Sample request
 
 ```shell-session
 $ curl \
@@ -180,7 +180,7 @@ $ curl \
     http://127.0.0.1:8200/v1/sys/auth/my-auth
 ```
 
-## Read Auth Method configuration
+## Read auth method configuration
 
 This endpoints returns the configuration of the auth method at the given path.
 
@@ -188,7 +188,7 @@ This endpoints returns the configuration of the auth method at the given path.
 | :----- | :---------------- |
 | `GET`  | `/sys/auth/:path` |
 
-### Sample Request
+### Sample request
 
 ```shell-session
 $ curl \
@@ -196,7 +196,7 @@ $ curl \
     http://127.0.0.1:8200/v1/sys/auth/my-auth
 ```
 
-### Sample Response
+### Sample response
 
 ```json
 {
@@ -229,7 +229,7 @@ $ curl \
 ```
 
 
-## Disable Auth Method
+## Disable auth method
 
 This endpoint disables the auth method at the given auth path.
 
@@ -245,7 +245,7 @@ This endpoint disables the auth method at the given auth path.
 - `path` `(string: <required>)` – Specifies the path to disable. This is part of
   the request URL.
 
-### Sample Request
+### Sample request
 
 ```shell-session
 $ curl \
@@ -254,7 +254,7 @@ $ curl \
     http://127.0.0.1:8200/v1/sys/auth/my-auth
 ```
 
-## Read Auth Method Tuning
+## Read auth method tuning
 
 This endpoint reads the given auth path's configuration. _This endpoint requires
 `sudo` capability on the final path, but the same functionality can be achieved
@@ -271,7 +271,7 @@ without `sudo` via `sys/mounts/auth/[auth-path]/tune`._
 
 - `path` `(string: <required>)` – Specifies the path in which to tune.
 
-### Sample Request
+### Sample request
 
 ```shell-session
 $ curl \
@@ -279,7 +279,7 @@ $ curl \
     http://127.0.0.1:8200/v1/sys/auth/my-auth/tune
 ```
 
-### Sample Response
+### Sample response
 
 ```json
 {
@@ -291,7 +291,7 @@ $ curl \
 }
 ```
 
-## Tune Auth Method
+## Tune auth method
 
 Tune configuration parameters for a given auth path. _This endpoint
 requires `sudo` capability on the final path, but the same functionality
@@ -361,7 +361,7 @@ can be achieved without `sudo` via `sys/mounts/auth/[auth-path]/tune`._
   - `lockout_disable` `(bool: false)` - Disables the user lockout feature for this mount
      if set to true.
 
-### Sample Payload
+### Sample payload
 
 ```json
 {
@@ -376,7 +376,7 @@ can be achieved without `sudo` via `sys/mounts/auth/[auth-path]/tune`._
 }
 ```
 
-### Sample Request
+### Sample request
 
 ```shell-session
 $ curl \

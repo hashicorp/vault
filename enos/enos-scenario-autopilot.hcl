@@ -39,33 +39,27 @@ scenario "autopilot" {
       "ent.hsm.fips1402" = ["ui", "enterprise", "cgo", "hsm", "fips", "fips_140_2", "ent.hsm.fips1402"]
     }
     bundle_path = matrix.artifact_source != "artifactory" ? abspath(var.vault_bundle_path) : null
-    packages    = ["jq"]
+    distro_version = {
+      "rhel"   = var.rhel_distro_version
+      "ubuntu" = var.ubuntu_distro_version
+    }
     enos_provider = {
       rhel   = provider.enos.rhel
       ubuntu = provider.enos.ubuntu
     }
-    spot_price_max = {
-      // These prices are based on on-demand cost for t3.large in us-east
-      "rhel"   = "0.1432"
-      "ubuntu" = "0.0832"
-    }
+    packages = ["jq"]
     tags = merge({
       "Project Name" : var.project_name
       "Project" : "Enos",
       "Environment" : "ci"
     }, var.tags)
-    vault_instance_types = {
-      amd64 = "t3a.small"
-      arm64 = "t4g.small"
-    }
-
-    vault_instance_type = coalesce(var.vault_instance_type, local.vault_instance_types[matrix.arch])
-    vault_license_path  = abspath(var.vault_license_path != null ? var.vault_license_path : joinpath(path.root, "./support/vault.hclic"))
+    vault_license_path = abspath(var.vault_license_path != null ? var.vault_license_path : joinpath(path.root, "./support/vault.hclic"))
     vault_install_dir_packages = {
       rhel   = "/bin"
       ubuntu = "/usr/bin"
     }
     vault_install_dir = matrix.artifact_type == "bundle" ? var.vault_install_dir : local.vault_install_dir_packages[matrix.distro]
+    vault_tag_key     = "Type" // enos_vault_start expects Type as the tag key
   }
 
   step "build_vault" {
@@ -85,29 +79,19 @@ scenario "autopilot" {
       artifact_type        = matrix.artifact_type
       distro               = matrix.artifact_source == "artifactory" ? matrix.distro : null
       edition              = matrix.artifact_source == "artifactory" ? matrix.edition : null
-      instance_type        = matrix.artifact_source == "artifactory" ? local.vault_instance_type : null
       revision             = var.vault_revision
     }
   }
 
-  step "find_azs" {
-    module = module.az_finder
-
-    variables {
-      instance_type = [
-        local.vault_instance_type
-      ]
-    }
+  step "ec2_info" {
+    module = module.ec2_info
   }
 
   step "create_vpc" {
-    module     = module.create_vpc
-    depends_on = [step.find_azs]
+    module = module.create_vpc
 
     variables {
-      ami_architectures  = [matrix.arch]
-      availability_zones = step.find_azs.availability_zones
-      common_tags        = local.tags
+      common_tags = local.tags
     }
   }
 
@@ -120,7 +104,7 @@ scenario "autopilot" {
   }
 
   step "create_vault_cluster_targets" {
-    module     = module.target_ec2_spot_fleet // "target_ec2_instances" can be used for on-demand instances
+    module     = module.target_ec2_instances
     depends_on = [step.create_vpc]
 
     providers = {
@@ -128,11 +112,10 @@ scenario "autopilot" {
     }
 
     variables {
-      ami_id                = step.create_vpc.ami_ids[matrix.distro][matrix.arch]
+      ami_id                = step.ec2_info.ami_ids[matrix.arch][matrix.distro][local.distro_version[matrix.distro]]
       awskms_unseal_key_arn = step.create_vpc.kms_key_arn
+      cluster_tag_key       = local.vault_tag_key
       common_tags           = local.tags
-      instance_type         = local.vault_instance_type // only used for on-demand instances
-      spot_price_max        = local.spot_price_max[matrix.distro]
       vpc_id                = step.create_vpc.vpc_id
     }
   }
@@ -185,7 +168,6 @@ scenario "autopilot" {
     }
   }
 
-
   step "verify_write_test_data" {
     module = module.vault_verify_write_data
     depends_on = [
@@ -215,7 +197,7 @@ scenario "autopilot" {
   }
 
   step "create_vault_cluster_upgrade_targets" {
-    module     = module.target_ec2_spot_fleet // "target_ec2_instances" can be used for on-demand instances
+    module     = module.target_ec2_instances
     depends_on = [step.create_vpc]
 
     providers = {
@@ -223,12 +205,10 @@ scenario "autopilot" {
     }
 
     variables {
-      ami_id                = step.create_vpc.ami_ids[matrix.distro][matrix.arch]
+      ami_id                = step.ec2_info.ami_ids[matrix.arch][matrix.distro][local.distro_version[matrix.distro]]
       awskms_unseal_key_arn = step.create_vpc.kms_key_arn
       common_tags           = local.tags
       cluster_name          = step.create_vault_cluster_targets.cluster_name
-      instance_type         = local.vault_instance_type // only used for on-demand instances
-      spot_price_max        = local.spot_price_max[matrix.distro]
       vpc_id                = step.create_vpc.vpc_id
     }
   }
@@ -247,12 +227,10 @@ scenario "autopilot" {
     }
 
     variables {
-      artifactory_release   = matrix.artifact_source == "artifactory" ? step.build_vault.vault_artifactory_release : null
-      awskms_unseal_key_arn = step.create_vpc.kms_key_arn
-      cluster_name          = step.create_vault_cluster_targets.cluster_name
-      config_env_vars = {
-        VAULT_LOG_LEVEL = var.vault_log_level
-      }
+      artifactory_release         = matrix.artifact_source == "artifactory" ? step.build_vault.vault_artifactory_release : null
+      awskms_unseal_key_arn       = step.create_vpc.kms_key_arn
+      cluster_name                = step.create_vault_cluster_targets.cluster_name
+      log_level                   = var.vault_log_level
       force_unseal                = matrix.seal == "shamir"
       initialize_cluster          = false
       install_dir                 = local.vault_install_dir

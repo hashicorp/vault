@@ -16,7 +16,7 @@ import { SELECTORS as S } from 'vault/tests/helpers/pki/pki-generate-root';
 
 const SELECTORS = {
   pageTitle: '[data-test-pki-page-title]',
-  alertBanner: '[data-test-alert-banner="alert"]',
+  nextSteps: '[data-test-rotate-next-steps]',
   toolbarCrossSign: '[data-test-pki-issuer-cross-sign]',
   toolbarSignInt: '[data-test-pki-issuer-sign-int]',
   toolbarDownload: '[data-test-issuer-download]',
@@ -88,7 +88,7 @@ module('Integration | Component | page/pki-issuer-rotate-root', function (hooks)
     `,
       { owner: this.engine }
     );
-    assert.dom(SELECTORS.pageTitle).hasText('Generate new root');
+    assert.dom(SELECTORS.pageTitle).hasText('Generate New Root');
     assert.dom(SELECTORS.oldRadioSelect).isChecked('defaults to use-old-settings');
     assert.dom(SELECTORS.rotateRootForm).exists('it renders old settings form');
     assert
@@ -197,9 +197,9 @@ module('Integration | Component | page/pki-issuer-rotate-root', function (hooks)
       `,
       { owner: this.engine }
     );
-    assert.dom(SELECTORS.pageTitle).hasText('View issuer certificate');
+    assert.dom(SELECTORS.pageTitle).hasText('View Issuer Certificate');
     assert
-      .dom(SELECTORS.alertBanner)
+      .dom(SELECTORS.nextSteps)
       .hasText(
         'Next steps Your new root has been generated. Make sure to copy and save the private_key as it is only available once. If you’re ready, you can begin cross-signing issuers now. If not, the option to cross-sign is available when you use this certificate. Cross-sign issuers'
       );
@@ -234,12 +234,12 @@ module('Integration | Component | page/pki-issuer-rotate-root', function (hooks)
       `,
       { owner: this.engine }
     );
-    assert.dom(SELECTORS.pageTitle).hasText('View issuer certificate');
+    assert.dom(SELECTORS.pageTitle).hasText('View Issuer Certificate');
     assert.dom(SELECTORS.toolbarCrossSign).exists();
     assert.dom(SELECTORS.toolbarSignInt).exists();
     assert.dom(SELECTORS.toolbarDownload).exists();
     assert
-      .dom(SELECTORS.alertBanner)
+      .dom(SELECTORS.nextSteps)
       .hasText(
         'Next steps Your new root has been generated. If you’re ready, you can begin cross-signing issuers now. If not, the option to cross-sign is available when you use this certificate. Cross-sign issuers'
       );
