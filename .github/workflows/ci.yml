@@ -119,6 +119,7 @@ jobs:
     needs:
       - setup
       - setup-go-cache
+      - verify-changes
     # Don't run this job for PR branches starting with:
     # 'ui/', 'backport/ui/', or a doc only PR
     if: |
@@ -153,6 +154,7 @@ jobs:
     needs:
       - setup
       - setup-go-cache
+      - verify-changes
     uses: ./.github/workflows/test-go.yml
     with:
       total-runners: 16
