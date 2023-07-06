@@ -1486,48 +1486,52 @@ func (b *SystemBackend) statusPaths() []*framework.Path {
 	}
 }
 
+func (b *SystemBackend) auditHashPath() *framework.Path {
+	return &framework.Path{
+		Pattern: "audit-hash/(?P<path>.+)",
+
+		DisplayAttrs: &framework.DisplayAttributes{
+			OperationPrefix: "auditing",
+			OperationVerb:   "calculate",
+			OperationSuffix: "hash",
+		},
+
+		Fields: map[string]*framework.FieldSchema{
+			"path": {
+				Type:        framework.TypeString,
+				Description: strings.TrimSpace(sysHelp["audit_path"][0]),
+			},
+
+			"input": {
+				Type: framework.TypeString,
+			},
+		},
+
+		Operations: map[logical.Operation]framework.OperationHandler{
+			logical.UpdateOperation: &framework.PathOperation{
+				Callback: b.handleAuditHash,
+				Responses: map[int][]framework.Response{
+					http.StatusOK: {{
+						Description: "OK",
+						Fields: map[string]*framework.FieldSchema{
+							"hash": {
+								Type:     framework.TypeString,
+								Required: true,
+							},
+						},
+					}},
+				},
+			},
+		},
+
+		HelpSynopsis:    strings.TrimSpace(sysHelp["audit-hash"][0]),
+		HelpDescription: strings.TrimSpace(sysHelp["audit-hash"][1]),
+	}
+}
+
 func (b *SystemBackend) auditPaths() []*framework.Path {
 	return []*framework.Path{
-		{
-			Pattern: "audit-hash/(?P<path>.+)",
-
-			DisplayAttrs: &framework.DisplayAttributes{
-				OperationPrefix: "auditing",
-				OperationVerb:   "calculate",
-				OperationSuffix: "hash",
-			},
-
-			Fields: map[string]*framework.FieldSchema{
-				"path": {
-					Type:        framework.TypeString,
-					Description: strings.TrimSpace(sysHelp["audit_path"][0]),
-				},
-
-				"input": {
-					Type: framework.TypeString,
-				},
-			},
-
-			Operations: map[logical.Operation]framework.OperationHandler{
-				logical.UpdateOperation: &framework.PathOperation{
-					Callback: b.handleAuditHash,
-					Responses: map[int][]framework.Response{
-						http.StatusOK: {{
-							Description: "OK",
-							Fields: map[string]*framework.FieldSchema{
-								"hash": {
-									Type:     framework.TypeString,
-									Required: true,
-								},
-							},
-						}},
-					},
-				},
-			},
-
-			HelpSynopsis:    strings.TrimSpace(sysHelp["audit-hash"][0]),
-			HelpDescription: strings.TrimSpace(sysHelp["audit-hash"][1]),
-		},
+		b.auditHashPath(),
 
 		{
 			Pattern: "audit$",
