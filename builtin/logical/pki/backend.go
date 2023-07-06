@@ -16,7 +16,6 @@ import (
 
 	"github.com/armon/go-metrics"
 	"github.com/hashicorp/go-multierror"
-	"github.com/hashicorp/vault/helper/constants"
 	"github.com/hashicorp/vault/helper/metricsutil"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/sdk/framework"
@@ -271,18 +270,8 @@ func Backend(conf *logical.BackendConfig) *backend {
 		// We specifically do NOT add acme/new-eab to this as it should be auth'd
 	}
 
-	if constants.IsEnterprise {
-		// Unified CRL/OCSP paths are ENT only
-		entOnly := []*framework.Path{
-			pathGetIssuerUnifiedCRL(&b),
-			pathListCertsRevocationQueue(&b),
-			pathListUnifiedRevoked(&b),
-			pathFetchUnifiedCRL(&b),
-			buildPathUnifiedOcspGet(&b),
-			buildPathUnifiedOcspPost(&b),
-		}
-		b.Backend.Paths = append(b.Backend.Paths, entOnly...)
-	}
+	// modify the backend with ENT specific attributes, I.E. paths..
+	setupEntSpecificBackend(&b)
 
 	b.tidyCASGuard = new(uint32)
 	b.tidyCancelCAS = new(uint32)
