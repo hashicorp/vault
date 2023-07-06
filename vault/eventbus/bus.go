@@ -266,10 +266,10 @@ func (node *asyncChanNode) Close(ctx context.Context) {
 	node.closeOnce.Do(func() {
 		defer node.cancelFunc()
 		if node.broker != nil {
-			done, err := node.broker.RemovePipelineAndNodes(ctx, eventTypeAll, node.pipelineID)
+			isPipelineRemoved, err := node.broker.RemovePipelineAndNodes(ctx, eventTypeAll, node.pipelineID)
 
 			switch {
-			case err != nil && done:
+			case err != nil && isPipelineRemoved:
 				msg := fmt.Sprintf("Error removing nodes referenced by pipeline %q", node.pipelineID)
 				node.logger.Warn(msg, err)
 			case err != nil:
