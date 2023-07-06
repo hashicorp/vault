@@ -609,6 +609,8 @@ func (n *DockerClusterNode) Start(ctx context.Context, opts *DockerClusterOption
 	vaultCfg["api_addr"] = `https://{{- GetAllInterfaces | exclude "flags" "loopback" | attr "address" -}}:8200`
 	vaultCfg["cluster_addr"] = `https://{{- GetAllInterfaces | exclude "flags" "loopback" | attr "address" -}}:8201`
 
+	vaultCfg["administrative_namespace_path"] = opts.AdministrativeNamespacePath
+
 	systemJSON, err := json.Marshal(vaultCfg)
 	if err != nil {
 		return err
