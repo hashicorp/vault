@@ -21,11 +21,22 @@
   </p.levelLeft>
 </PageHeader>
 
-<div class="tabs-container box is-bottomless is-marginless is-paddingless">
-  <nav class="tabs" aria-label="kv tabs">
-    <ul>
-      <LinkTo @route="secrets" data-test-secret-list-tab="Secrets">Secrets</LinkTo>
-      <LinkTo @route="configuration" data-test-secret-list-tab="Configuration">Configuration</LinkTo>
-    </ul>
-  </nav>
-</div>
+{{! Tabs section, which changes based on route. }}
+{{yield to="tabs"}}
+<Toolbar>
+  {{#if (has-block "filter")}}
+    <ToolbarFilters>
+      {{!-- <NavigateInput
+        @filter={{@rolesFilterValue}}
+        @placeholder="Filter roles"
+        @urls={{hash list="vault.cluster.secrets.backend.kubernetes.roles"}}
+      /> --}}
+    </ToolbarFilters>
+  {{/if}}
+  <ToolbarActions>
+    {{#if (has-block "toolbarActions")}}
+
+      {{yield to="toolbarActions"}}
+    {{/if}}
+  </ToolbarActions>
+</Toolbar>
