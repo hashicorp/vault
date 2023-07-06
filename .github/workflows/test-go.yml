@@ -230,7 +230,7 @@ jobs:
             go run gotest.tools/gotestsum --format=short-verbose \
               --junitfile test-results/go-test/results.xml \
               --jsonfile test-results/go-test/results.json \
-              --jsonfile-timing-events failure-summary-${{ matrix.runner-index }}.json \
+              --jsonfile-timing-events failure-summary-${{ matrix.runner-index }}${{inputs.name}}.json \
               -- \
               -tags "${{ inputs.go-build-tags }}" \
               -timeout=${{ env.TIMEOUT_IN_MINUTES }}m \
@@ -265,4 +265,4 @@ jobs:
         if: success() || failure()
         with:
           name: failure-summary
-          path: failure-summary-${{ matrix.runner-index }}.json
+          path: failure-summary-${{ matrix.runner-index }}${{inputs.name}}.json
