@@ -17,15 +17,17 @@
 {{yield to="tabs"}}
 
 {{! TODO checks for if list >0 show filter }}
-<Toolbar>
-  {{#if (has-block "toolbarFilter")}}
-    {{! <ToolbarFilters> }}
-    {{yield to="toolbarFilter"}}
-    {{! </ToolbarFilters> }}
-  {{/if}}
-  <ToolbarActions>
-    {{#if (has-block "toolbarActions")}}
-      {{yield to="toolbarActions"}}
+{{#if @showToolbar}}
+  <Toolbar>
+    {{#if (has-block "toolbarFilter")}}
+      {{! <ToolbarFilters> }}
+      {{yield to="toolbarFilter"}}
+      {{! </ToolbarFilters> }}
     {{/if}}
-  </ToolbarActions>
-</Toolbar>
+    <ToolbarActions>
+      {{#if (has-block "toolbarActions")}}
+        {{yield to="toolbarActions"}}
+      {{/if}}
+    </ToolbarActions>
+  </Toolbar>
+{{/if}}

@@ -1,4 +1,4 @@
-<KvPageHeader @breadcrumbs={{@breadcrumbs}} @model={{@model}} @showToolbar="true">
+<KvPageHeader @breadcrumbs={{@breadcrumbs}} @model={{@model}}>
   <:tabs>
     <div class="tabs-container box is-bottomless is-marginless is-paddingless">
       <nav class="tabs" aria-label="kv tabs">
@@ -9,14 +9,4 @@
       </nav>
     </div>
   </:tabs>
-
-  <:toolbarFilter>
-    {{! TODO NavbarInput with autocomplete }}
-  </:toolbarFilter>
-
-  <:toolbarActions>
-    <ToolbarLink @route="secrets.create" @type="add">Create secret</ToolbarLink>
-  </:toolbarActions>
 </KvPageHeader>
-
-{{! TODO: iterate over secret list }}
