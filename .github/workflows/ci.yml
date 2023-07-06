@@ -97,12 +97,11 @@ jobs:
       - setup
       - setup-go-cache
       - verify-changes
-    # Don't run this job for PR branches starting with:
-    # 'ui/', 'backport/ui/', or a doc only PR
+    # Don't run this job for docs/ui only PRs
     if: |
       !startsWith(github.head_ref, 'ui/') &&
       !startsWith(github.head_ref, 'backport/ui/') &&
-      needs.verify-changes.outputs.is_docs_change == 'false'
+      needs.verify-changes.outputs.is_docs_ui_change == 'false'
     uses: ./.github/workflows/test-go.yml
     with:
       # The regular Go tests use an extra runner to execute the
@@ -120,13 +119,10 @@ jobs:
       - setup
       - setup-go-cache
       - verify-changes
-    # Don't run this job for PR branches starting with:
-    # 'ui/', 'backport/ui/', or a doc only PR
+    # Don't run this job for docs/ui only PRs
     if: |
       github.event.pull_request.draft == false &&
-      !startsWith(github.head_ref, 'ui/') &&
-      !startsWith(github.head_ref, 'backport/ui/') &&
-      needs.verify-changes.outputs.is_docs_change == 'false'
+      needs.verify-changes.outputs.is_docs_ui_change == 'false'
     uses: ./.github/workflows/test-go.yml
     with:
       total-runners: 16
@@ -143,14 +139,11 @@ jobs:
     secrets: inherit
   test-go-fips:
     name: Run Go tests with FIPS configuration
-    # Only run this job for the enterprise repo if the PR branch doesn't start with:
-    # 'ui/', 'backport/ui/', or a doc only PR
+    # Only run this job for the enterprise repo if the PR is not docs/ui only
     if: |
       github.event.pull_request.draft == false &&
       needs.setup.outputs.enterprise == 1 &&
-      !startsWith(github.head_ref, 'ui/') &&
-      !startsWith(github.head_ref, 'backport/ui/') &&
-      needs.verify-changes.outputs.is_docs_change == 'false'
+      needs.verify-changes.outputs.is_docs_ui_change == 'false'
     needs:
       - setup
       - setup-go-cache
