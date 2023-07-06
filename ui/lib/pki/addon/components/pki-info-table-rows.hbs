@@ -9,7 +9,13 @@
           @addCopyButton={{or (eq attr.name "issuerId") (eq attr.name "keyId")}}
         >
           {{#if (and attr.options.masked value)}}
-            <MaskedInput @value={{value}} @displayOnly={{true}} @allowCopy={{true}} />
+            <MaskedInput
+              @name={{attr.name}}
+              @value={{value}}
+              @displayOnly={{true}}
+              @allowCopy={{true}}
+              @allowDownload={{true}}
+            />
           {{else if attr.options.detailLinkTo}}
             <LinkTo @route={{attr.options.detailLinkTo}} @model={{value}}>{{value}}</LinkTo>
           {{else if (or (eq attr.name "privateKey") (eq attr.name "privateKeyType"))}}

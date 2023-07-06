@@ -15,7 +15,13 @@
           <InfoTableRow
             @label={{capitalize (or attr.options.detailsLabel attr.options.label (humanize (dasherize attr.name)))}}
           >
-            <MaskedInput @value={{get @model attr.name}} @displayOnly={{true}} @allowCopy={{true}} />
+            <MaskedInput
+              @name={{attr.name}}
+              @value={{get @model attr.name}}
+              @displayOnly={{true}}
+              @allowCopy={{true}}
+              @allowDownload={{true}}
+            />
           </InfoTableRow>
         {{else}}
           <InfoTableRow
@@ -27,7 +33,13 @@
     {{/each}}
     <InfoTableRow @label="Private key">
       {{#if @model.privateKey}}
-        <MaskedInput @value={{@model.privateKey}} @displayOnly={{true}} @allowCopy={{true}} />
+        <MaskedInput
+          @name="privateKey"
+          @value={{@model.privateKey}}
+          @displayOnly={{true}}
+          @allowCopy={{true}}
+          @allowDownload={{true}}
+        />
       {{else}}
         <span class="tag">internal</span>
       {{/if}}
