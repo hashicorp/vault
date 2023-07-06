@@ -3207,9 +3207,10 @@ exec {
 
 	testAppAddr := fmt.Sprintf("http://localhost:%d", port)
 
-	checkTestAppEnvVars := func(expectedEnvVars map[string]string) {
+	checkTestAppEnvVars := func(t *testing.T, expectedEnvVars map[string]string) {
+		t.Helper()
 		// verify the environment variables
-		resp, err := http.Get(testAppAddr)
+		resp, err := retryablehttp.Get(testAppAddr)
 		if err != nil {
 			t.Fatalf("error making request to the test app: %s", err)
 		}
@@ -3236,7 +3237,7 @@ exec {
 		}
 	}
 
-	checkTestAppEnvVars(map[string]string{
+	checkTestAppEnvVars(t, map[string]string{
 		"MY_DATABASE_USER":     "dbuser",
 		"MY_DATABASE_PASSWORD": "password1",
 	})
@@ -3253,7 +3254,7 @@ exec {
 	// see template_config.static_secret_render_interval
 	time.Sleep(4 * time.Second)
 
-	checkTestAppEnvVars(map[string]string{
+	checkTestAppEnvVars(t, map[string]string{
 		"MY_DATABASE_USER":     "newuser",
 		"MY_DATABASE_PASSWORD": "password2",
 	})
