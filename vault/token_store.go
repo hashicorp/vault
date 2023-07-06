@@ -158,7 +158,7 @@ func (ts *TokenStore) paths() []*framework.Path {
 		},
 
 		{
-			Pattern: "accessors/$",
+			Pattern: "accessors/?$",
 
 			DisplayAttrs: &framework.DisplayAttributes{
 				OperationPrefix: operationPrefixToken,
