@@ -21,7 +21,18 @@ const generateFromRole = [
     ],
   },
 ];
-@withFormFields(null, generateFromRole)
+// Extra fields returned on the /issue endpoint
+const certDisplayFields = [
+  'certificate',
+  'commonName',
+  'revocationTime',
+  'serialNumber',
+  'caChain',
+  'issuingCa',
+  'privateKey',
+  'privateKeyType',
+];
+@withFormFields(certDisplayFields, generateFromRole)
 export default class PkiCertificateGenerateModel extends PkiCertificateBaseModel {
   getHelpUrl(backend) {
     return `/v1/${backend}/issue/example?help=1`;
