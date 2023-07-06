@@ -2,8 +2,11 @@ name: Add HashiCorp contributed label
 
 # The purpose of this job is to label all HashiCorp contributed PRs, so that
 # we can more easily identify community contributed PRs (anything that doesn't
-# have this label)
-# While it might seem like this is the 'reverse' of what we should do, 
+# have this label).
+# While it might seem like this is the 'reverse' of what we should do, GitHub
+# (rightly) does not allow branches from forks to have write permissions, so
+# making PRs from forks self-label themselves as community-contributed is not
+# possible.
 
 on:
   pull_request:
