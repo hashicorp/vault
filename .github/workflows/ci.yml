@@ -89,7 +89,7 @@ jobs:
         run: |
           ./.github/scripts/oss-diff.sh ${{ steps.determine-branch.outputs.BRANCH }} HEAD
   verify-changes:
-    name: Verify doc only PRs
+    name: Verify doc-ui only PRs
     uses: ./.github/workflows/verify_changes.yml
   test-go:
     name: Run Go tests
