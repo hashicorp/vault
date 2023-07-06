@@ -25,5 +25,4 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           PR: ${{ github.event.pull_request.html_url }}
-        run: |
-          "gh pr edit $PR --add-label \"hashicorp-contributed-pr\""
+        run: gh pr edit $PR --add-label 'hashicorp-contributed-pr'
