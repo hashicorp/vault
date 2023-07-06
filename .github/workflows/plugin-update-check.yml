@@ -3,30 +3,21 @@ on:
     inputs:
       repo:
         type: string
-        description: the plugin repo that is updated (ex. vault-plugin-database-snowflake)
+        description: 'The owner and repository name as per the github.repository context property.'
         required: true
       sha:
         type: string
-        description: the hash of the plugin repo commit to use
+        description: 'The hash of the plugin repository commit to use'
         required: true
       plugin_branch:
         type: string
-        description: the name of the plugin branch
+        description: 'The name of the plugin branch'
         required: true
 
 jobs:
   plugin-update-check:
     runs-on: ubuntu-latest
     env:
-      # In the case of a curl call, the input json will look like:
-      # e.g.,
-      #  {
-      #    "ref": "some-branch",
-      #    "inputs": {
-      #        "sha":"abcdef",
-      #        "repo":"vault-plugin-database-snowflake"
-      #    }
-      #  }
       COMMIT_SHA: "${{inputs.sha}}"
       PLUGIN_REPO: "${{inputs.repo}}"
       PLUGIN_BRANCH: "${{inputs.plugin_branch}}"
@@ -44,7 +35,7 @@ jobs:
       - uses: actions/setup-go@fac708d6674e30b6ba41289acaab6d4b75aa0753 # v4.0.1
       - name: update plugin
         run: |
-          go get "github.com/hashicorp/$PLUGIN_REPO@$COMMIT_SHA"
+          go get "github.com/$PLUGIN_REPO@$COMMIT_SHA"
           go mod tidy
       - name: detect changes
         id: changes
