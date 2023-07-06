@@ -320,8 +320,8 @@ jobs:
       - run: |
           tr -d '\n' <<< '${{ toJSON(needs.*.result) }}' | grep -q -v -E '(failure|cancelled)'
 
-  notify-tests-completed-failures:
-    if: ${{ always() && needs.tests-completed.result == 'failure' && (github.ref_name == 'main' || startsWith(github.ref_name, 'release/')) }}
+  notify-tests-completed-failures-oss:
+    if: ${{ always() && github.repository == 'hashicorp/vault' && needs.tests-completed.result == 'failure' && (github.ref_name == 'main' || startsWith(github.ref_name, 'release/')) }}
     runs-on: ubuntu-latest
     permissions:
       id-token: write
@@ -341,3 +341,35 @@ jobs:
           channel-id: "C05AABYEA9Y" # sent to #feed-vault-ci-official
           payload: |
             {"text":"OSS test failures on ${{ github.ref_name }}","blocks":[{"type":"header","text":{"type":"plain_text","text":":rotating_light: OSS test failures :rotating_light:","emoji":true}},{"type":"divider"},{"type":"section","text":{"type":"mrkdwn","text":"test(s) failed on ${{ github.ref_name }}"},"accessory":{"type":"button","text":{"type":"plain_text","text":"View Failing Workflow","emoji":true},"url":"${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"}}]}
+
+  notify-tests-completed-failures-ent:
+    if: ${{ always() && github.repository == 'hashicorp/vault-enterprise' && needs.tests-completed.result == 'failure' && (github.ref_name == 'main' || startsWith(github.ref_name, 'release/')) }}
+    runs-on: ['self-hosted', 'linux', 'small']
+    permissions:
+      id-token: write
+      contents: read
+    strategy:
+      fail-fast: false
+    needs:
+      - tests-completed
+    steps:
+      - id: vault-auth
+        name: Vault Authenticate
+        run: vault-auth
+      - id: secrets
+        name: Fetch Vault Secrets
+        uses: hashicorp/vault-action@130d1f5f4fe645bb6c83e4225c04d64cfb62de6e
+        with:
+          url: ${{ steps.vault-auth.outputs.addr }}
+          caCertificate: ${{ steps.vault-auth.outputs.ca_certificate }}
+          token: ${{ steps.vault-auth.outputs.token }}
+          secrets: |
+            kv/data/github/${{ github.repository }}/github_actions_notifications_bot token | SLACK_BOT_TOKEN;
+      - name: send-notification
+        uses: hashicorp/cloud-gha-slack-notifier@730a033037b8e603adf99ebd3085f0fdfe75e2f4 #v1
+        with:
+          channel-id: "C05AABYEA9Y" # sent to #feed-vault-ci-official
+          slack-bot-token: ${{ steps.secrets.outputs.SLACK_BOT_TOKEN }}
+          payload: |
+            {"text":"Enterprise test failures on ${{ github.ref_name }}","blocks":[{"type":"header","text":{"type":"plain_text","text":":rotating_light: Enterprise test failures :rotating_light:","emoji":true}},{"type":"divider"},{"type":"section","text":{"type":"mrkdwn","text":"test(s) failed on ${{ github.ref_name }}"},"accessory":{"type":"button","text":{"type":"plain_text","text":"View Failing Workflow","emoji":true},"url":"${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"}}]}
+    
