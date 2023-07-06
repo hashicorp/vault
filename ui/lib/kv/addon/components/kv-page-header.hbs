@@ -1,41 +1,30 @@
 <PageHeader as |p|>
   <p.top>
-    <nav class="breadcrumb" aria-label="breadcrumbs">
-      <ul>
-        <li>
-          <span class="sep">/</span>
-          <LinkToExternal @route="secrets">secrets</LinkToExternal>
-        </li>
-        <li>
-          <span class="sep">/</span>
-          <span>{{@model.id}}</span>
-        </li>
-      </ul>
-    </nav>
+    <Page::Breadcrumbs @breadcrumbs={{@breadcrumbs}} />
   </p.top>
   <p.levelLeft>
     <h1 class="title is-3" data-test-header-title>
       <Icon @name={{@model.icon}} @size="24" class="has-text-grey-light" />
       {{@model.id}}
+      <span class="tag">
+        Version 2
+      </span>
     </h1>
   </p.levelLeft>
 </PageHeader>
 
 {{! Tabs section, which changes based on route. }}
 {{yield to="tabs"}}
+
+{{! TODO checks for if list >0 show filter }}
 <Toolbar>
-  {{#if (has-block "filter")}}
-    <ToolbarFilters>
-      {{!-- <NavigateInput
-        @filter={{@rolesFilterValue}}
-        @placeholder="Filter roles"
-        @urls={{hash list="vault.cluster.secrets.backend.kubernetes.roles"}}
-      /> --}}
-    </ToolbarFilters>
+  {{#if (has-block "toolbarFilter")}}
+    {{! <ToolbarFilters> }}
+    {{yield to="toolbarFilter"}}
+    {{! </ToolbarFilters> }}
   {{/if}}
   <ToolbarActions>
     {{#if (has-block "toolbarActions")}}
-
       {{yield to="toolbarActions"}}
     {{/if}}
   </ToolbarActions>
