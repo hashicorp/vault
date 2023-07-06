@@ -342,9 +342,9 @@ jobs:
             {"text":"Enterprise test failures on ${{ github.ref_name }}","blocks":[{"type":"header","text":{"type":"plain_text","text":":rotating_light: Enterprise test failures :rotating_light:","emoji":true}},{"type":"divider"},{"type":"section","text":{"type":"mrkdwn","text":"test(s) failed on ${{ github.ref_name }}"},"accessory":{"type":"button","text":{"type":"plain_text","text":"View Failing Workflow","emoji":true},"url":"${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"}}]}
     
   test-summary:
-    name: Display Go test failures
+    name: Go test failures
     runs-on: ubuntu-latest
-    if: success() || failure()
+    if: success() || failure() || needs.tests-completed.result == 'skipped'
     needs:
       - tests-completed
     steps:
