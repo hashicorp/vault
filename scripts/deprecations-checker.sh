@@ -38,9 +38,9 @@ fi
 # Else only output the deprecations from the changes added
 if [ -z $1 ]
     then
-        staticcheck -tags="$BUILD_TAGS" | grep deprecated
+        staticcheck -checks="-all","SA1019" -tags="$BUILD_TAGS"
     else
         # GitHub Actions will use this to find only changes wrt PR's base ref branch
         # revgrep CLI tool will return an exit status of 1 if any issues match, else it will return 0
-        staticcheck -tags="$BUILD_TAGS" | grep deprecated 2>&1 | revgrep "$(git merge-base HEAD "origin/$1")"
+        staticcheck  -checks="-all","SA1019" -tags="$BUILD_TAGS" 2>&1 | revgrep "$(git merge-base HEAD "origin/$1")"
 fi
