@@ -65,26 +65,18 @@ MicroServiceB share a common role ID.
 ## Entity assignment with ACME
 
 Vault treats all ACME connections that authenticate under the same certificate
-identifier (domain) and mount as the same **certificate entity** for client
-count calculations.
+identifier (domain) as the same **certificate entity** for client count
+calculations.
 
 For example:
 
 - Authentication requests from two ACME clients living on different servers that
-  request the same set of certificate identifiers from a **common** mount are
-  assigned to the same certificate entity.
-- Authentication requests from two ACME clients living on different servers that
-  request the same set of certificate identifiers from **different** mounts are
-  assigned to separate certificate entities.
-- Multiple requests to the same mount for the same certificate identifier from a
-  single ACME client for the same certificate identifier are assigned to the
-  same certificate entity.
+  request the same set of certificate identifiers are assigned to the same
+  certificate entity.
+- Multiple requests for the same certificate identifier from a single ACME
+  client are assigned to the same certificate entity.
 - Two authentication requests from a single ACME client for different
-  certificate identifiers is assigned to separate certificate entities,
-  regardless of which mount was involved.
-- Two authentication requests from a single ACME client for the same certificate
-  identifiers from different mounts is assigned to separate certificate
-  entities.
+  certificate identifiers are assigned to separate certificate entities.
 
 ## Entity assignment with namespaces
 

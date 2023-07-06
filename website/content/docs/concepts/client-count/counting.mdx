@@ -38,12 +38,12 @@ ID has already been recorded in the client log as active for the current month:
 For example:
 
 - Two non-entity tokens under the same namespace, with the same alias name and
-  policy assignment will have the same entity assignment and are only counted
+  policy assignment receive the same entity assignment and are only counted
   **once**.
 - Two authentication requests from a single ACME client for the same certificate
-  identifiers from different mounts will have different entity assignments and
-  are counted **twice**.
-- An application authenticating with AppRol will have the same entity assignment
+  identifiers from different mounts receive the same entity assignments and
+  are counted **once**.
+- An application authenticating with AppRol receive the same entity assignment
   every time and only counted **once**.
 
 At the **end of each month**, Vault pre-computes reports for each cluster on the
