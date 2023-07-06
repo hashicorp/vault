@@ -4,7 +4,7 @@
  */
 
 const SELECTORS = {
-  cardTitle: '[data-test-dashboard-secrets-engines-header] h3',
+  cardTitle: '[data-test-dashboard-secrets-engines-header]',
   secretEnginesTableRows: '[data-test-dashboard-secrets-engines-table] tr',
   getSecretEngineAccessor: (engineId) => `[data-test-secrets-engines-row=${engineId}] [data-test-accessor]`,
   getSecretEngineDescription: (engineId) =>
