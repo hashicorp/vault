@@ -156,6 +156,8 @@ function build() {
   : "${GO_TAGS:=""}"
   : "${REMOVE_SYMBOLS:=""}"
 
+  GOOS= GOARCH= go generate ./...
+
   # Build our ldflags
   msg="--> Building Vault v$version, revision $revision, built $build_date"
 
