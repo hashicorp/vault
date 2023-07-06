@@ -381,11 +381,11 @@ jobs:
           jq -r -s '[.[] | select(.Action == "fail") | select(.Test != null)] | sort_by(.Package, .Test) | .[] | "| \(.Package) | \(.Test) | \(input_filename | split("-") | .[2] | .[0:1])"' failure-summary-*.json >> "$temp_file_name"
 
           # if there are test failures, present them in a format of a GH Markdown table
-          if [ -s $temp_file_name ]; then
+          if [ -s "$temp_file_name" ]; then
             echo "### Go test failures" >> "$GITHUB_STEP_SUMMARY"
             echo "| Package | Test | Runner Index |" >> "$GITHUB_STEP_SUMMARY"
             echo "| ------- | ---- | ------------ |" >> "$GITHUB_STEP_SUMMARY"
-            cat $temp_file_name >>  "$GITHUB_STEP_SUMMARY"
+            cat "$temp_file_name" >>  "$GITHUB_STEP_SUMMARY"
           else
             echo "### All Go tests passed! :white_check_mark:" >> "$GITHUB_STEP_SUMMARY"
           fi
