@@ -10,7 +10,6 @@ import { resolve, Promise } from 'rsvp';
 import { dasherize } from '@ember/string';
 import { assert } from '@ember/debug';
 import { set, get } from '@ember/object';
-import { tracked } from 'tracked-built-ins';
 import clamp from 'vault/utils/clamp';
 import config from 'vault/config/environment';
 
@@ -34,7 +33,7 @@ export function keyForCache(query) {
 }
 
 export default class StoreService extends Store {
-  lazyCaches = tracked(Map);
+  lazyCaches = new Map();
 
   setLazyCacheForModel(modelName, key, value) {
     const cacheKey = keyForCache(key);
@@ -143,9 +142,7 @@ export default class StoreService extends Store {
   // pushes records into the store and returns the result
   fetchPage(modelName, query) {
     const response = this.constructResponse(modelName, query);
-    this.peekAll(modelName).forEach((record) => {
-      record.unloadRecord();
-    });
+    this.unloadAll(modelName);
     return new Promise((resolve) => {
       schedule('destroy', () => {
         this.push(
