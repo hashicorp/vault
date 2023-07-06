@@ -3100,7 +3100,7 @@ vault {
 	wg.Wait()
 }
 
-func setupTestApp(t *testing.T) string {
+func buildTestApp(t *testing.T) string {
 	t.Helper()
 
 	// we must build a test-app binary since 'go run' does not propagate signals correctly
@@ -3120,11 +3120,14 @@ func setupTestApp(t *testing.T) string {
 // TestAgent_Exec_Restarts tests that vault agent restarts the app
 // on changes to relevant vault secrets
 func TestAgent_Exec_Restarts(t *testing.T) {
-	testAppBin := setupTestApp(t)
+	logger := logging.NewVaultLogger(hclog.Trace)
+
+	testAppBin := buildTestApp(t)
 	defer os.Remove(testAppBin)
 
 	vaultClient, cleanup := testVaultServer(t)
 	defer cleanup()
+	// TODO: this is required for vault agent to hit the correct vault url
 	t.Setenv(api.EnvVaultAddress, vaultClient.Address())
 
 	tokenFile := populateTempFile(t, "tokenfile.txt", vaultClient.Token())
@@ -3138,7 +3141,7 @@ func TestAgent_Exec_Restarts(t *testing.T) {
 	const port = 34001
 	config := fmt.Sprintf(`
 template_config {
-  static_secret_render_interval = "2s"
+  static_secret_render_interval = "1s"
 }
 
 vault {
@@ -3150,7 +3153,7 @@ auto_auth {
 	method {
 		type = "token_file"
     	config {
-      		token_file_path = "%s"
+			token_file_path = "%s"
 		}
 	}
 }
@@ -3164,7 +3167,6 @@ env_template "MY_DATABASE_PASSWORD" {
 exec {
 	command = ["%s", "-port", "%d"]
 }`, vaultClient.Address(), tokenFile.Name(), testAppBin, port)
-	logger := logging.NewVaultLogger(hclog.Trace)
 	configFile := makeTempFile(t, "config.hcl", config)
 
 	// enable kv-v2 backend
@@ -3201,7 +3203,7 @@ exec {
 	}
 
 	// agent started, give some time to populate env vars from vault
-	time.Sleep(10 * time.Second)
+	time.Sleep(2 * time.Second)
 
 	testAppAddr := fmt.Sprintf("http://localhost:%d", port)
 
@@ -3252,8 +3254,8 @@ exec {
 	time.Sleep(4 * time.Second)
 
 	checkTestAppEnvVars(map[string]string{
-		"MY_DATABASE_USER":     "dbuser",
-		"MY_DATABASE_PASSWORD": "password1",
+		"MY_DATABASE_USER":     "newuser",
+		"MY_DATABASE_PASSWORD": "password2",
 	})
 
 	close(agentCmd.ShutdownCh)
@@ -3275,7 +3277,7 @@ exec {
 // TestExec_ExitCodes makes sure vault agent exits with the same
 // exit code as the exec app
 func TestExec_ExitCodes(t *testing.T) {
-	testAppBin := setupTestApp(t)
+	testAppBin := buildTestApp(t)
 	defer os.Remove(testAppBin)
 
 	checkAppIsRunning := func(port int) {
