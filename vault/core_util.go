@@ -81,7 +81,7 @@ func (c *Core) PersistUndoLogs() error           { return nil }
 func (c *Core) teardownReplicationResolverHandler() {}
 func createSecondaries(*Core, *CoreConfig)          {}
 
-func addExtraLogicalBackends(*Core, map[string]logical.Factory) {}
+func addExtraLogicalBackends(*Core, map[string]logical.Factory, string) {}
 
 func addExtraCredentialBackends(*Core, map[string]logical.Factory) {}
 
