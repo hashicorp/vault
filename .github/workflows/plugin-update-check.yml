@@ -85,7 +85,6 @@ jobs:
         if: steps.changes.outputs.count > 0
         env:
           GITHUB_TOKEN: ${{secrets.ELEVATED_GITHUB_TOKEN}}
-        # Only open a PR if the branch is not attached to an existing one
         run: |
           # get Plugin PR number
           plugin_pr_num=$(gh pr list --head "$PLUGIN_BRANCH" --json number --repo "$PLUGIN_REPO" -q '.[0].number')
