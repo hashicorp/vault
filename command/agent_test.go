@@ -3138,7 +3138,7 @@ func TestAgent_Exec_Restarts(t *testing.T) {
 		t.Fatalf("unable to change permissions of token file: %s", err)
 	}
 
-	const port = 34001
+	const port = 34123
 	config := fmt.Sprintf(`
 template_config {
   static_secret_render_interval = "1s"
@@ -3225,7 +3225,7 @@ exec {
 		if err := decoder.Decode(&response); err != nil {
 			t.Fatalf("unable to parse response from test app: %s", err)
 		}
-
+		logger.Info("checking process", "processid", response.ProcessID)
 		for envVar, expectedValue := range expectedEnvVars {
 			actualValue, ok := response.EnvironmentVariables[envVar]
 			if !ok {
@@ -3252,7 +3252,7 @@ exec {
 	}
 	// wait for consul-template to fetch the new values
 	// see template_config.static_secret_render_interval
-	time.Sleep(4 * time.Second)
+	time.Sleep(10 * time.Second)
 
 	checkTestAppEnvVars(t, map[string]string{
 		"MY_DATABASE_USER":     "newuser",
