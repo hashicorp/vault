@@ -77,6 +77,7 @@
 
 .brand-icon-large {
   width: 62px;
+  height: 62px; // without an explicit height the view breaks in Safari
 }
 
 .error-icon {

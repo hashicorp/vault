@@ -1,4 +1,4 @@
-<div class="selectable-card-container has-grid has-top-margin-l has-two-col-grid">
+<div class="is-grid grid-2-columns grid-gap-2 has-top-margin-l">
   <OverviewCard
     @cardTitle="Issuers"
     @subText="The total number of issuers in this PKI mount. Includes both root and intermediate certificates."
@@ -43,7 +43,7 @@
   </OverviewCard>
 
   <OverviewCard @cardTitle="View certificate" @subText="Quickly view a certificate by typing its serial number.">
-    <div class="has-top-margin-m is-flex">
+    <div class="has-top-margin-m {{unless this.certificateValue 'is-flex'}}">
       <SearchSelect
         class="is-flex-1"
         @selectLimit="1"
@@ -57,7 +57,7 @@
       />
       <button
         type="button"
-        class="button is-secondary has-left-margin-s"
+        class="button is-secondary {{unless this.certificateValue 'has-left-margin-s'}}"
         disabled={{unless this.certificateValue true}}
         {{on "click" this.transitionToViewCertificates}}
         data-test-view-certificate-button

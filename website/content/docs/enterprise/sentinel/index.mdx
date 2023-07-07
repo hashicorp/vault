@@ -14,7 +14,7 @@ high-risk secrets and assets, and because of its default-deny stance,
 integration with Vault is implemented in a defense-in-depth fashion. This takes
 the form of multiple types of policies and a fixed evaluation order.
 
-## Policy Types
+## Policy types
 
 Vault's policy system has been expanded to support three types of policies:
 
@@ -42,7 +42,7 @@ Sentinel execution should be considered to be significantly slower than normal
 ACL policy checking. If high performance is needed, testing should be performed
 appropriately when introducing Sentinel policies.
 
-## Policy Evaluation
+## Policy evaluation
 
 During evaluation, all policy types, if they exist, must grant access.
 Evaluation uses the following logic:
@@ -58,7 +58,7 @@ Evaluation uses the following logic:
 
 Any failure at any of these steps results in a denied request.
 
-## Policy Overriding
+## Policy overriding
 
 Vault supports normal Sentinel overriding behavior. Requests to override can be
 specified on the command line via the `policy-override` flag or in HTTP
@@ -83,7 +83,7 @@ necessary to pre-populate Identity entries or supply additional parameters with
 the request if you require more information to use MFA than the endpoint is
 able to glean from the original request alone.
 
-# Using Sentinel
+# Using sentinel
 
 ## Configuration
 
@@ -103,7 +103,7 @@ subject to an EGPs exactly matching the requested path and any glob EGPs
 sitting further up the request path, an EGP with a path of `*` will thus take
 effect on all requests.
 
-## Properties and Examples
+## Properties and examples
 
 See the [Examples](/vault/docs/enterprise/sentinel/examples) page for examples
 of Sentinel in action, and the

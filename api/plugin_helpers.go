@@ -40,7 +40,7 @@ const (
 // path matches that path or not (useful specifically for the paths that
 // contain templated fields.)
 var sudoPaths = map[string]*regexp.Regexp{
-	"/auth/token/accessors/":                        regexp.MustCompile(`^/auth/token/accessors/?$`),
+	"/auth/token/accessors":                         regexp.MustCompile(`^/auth/token/accessors/?$`),
 	"/pki/root":                                     regexp.MustCompile(`^/pki/root$`),
 	"/pki/root/sign-self-issued":                    regexp.MustCompile(`^/pki/root/sign-self-issued$`),
 	"/sys/audit":                                    regexp.MustCompile(`^/sys/audit$`),
@@ -50,7 +50,7 @@ var sudoPaths = map[string]*regexp.Regexp{
 	"/sys/config/auditing/request-headers":          regexp.MustCompile(`^/sys/config/auditing/request-headers$`),
 	"/sys/config/auditing/request-headers/{header}": regexp.MustCompile(`^/sys/config/auditing/request-headers/.+$`),
 	"/sys/config/cors":                              regexp.MustCompile(`^/sys/config/cors$`),
-	"/sys/config/ui/headers/":                       regexp.MustCompile(`^/sys/config/ui/headers/?$`),
+	"/sys/config/ui/headers":                        regexp.MustCompile(`^/sys/config/ui/headers/?$`),
 	"/sys/config/ui/headers/{header}":               regexp.MustCompile(`^/sys/config/ui/headers/.+$`),
 	"/sys/leases":                                   regexp.MustCompile(`^/sys/leases$`),
 	"/sys/leases/lookup/":                           regexp.MustCompile(`^/sys/leases/lookup/?$`),
@@ -249,7 +249,9 @@ func SudoPaths() map[string]*regexp.Regexp {
 	return sudoPaths
 }
 
-// Determine whether the given path requires the sudo capability
+// Determine whether the given path requires the sudo capability.
+// Note that this uses hardcoded static path information, so will return incorrect results for paths in namespaces,
+// or for secret engines mounted at non-default paths.
 func IsSudoPath(path string) bool {
 	// Return early if the path is any of the non-templated sudo paths.
 	if _, ok := sudoPaths[path]; ok {

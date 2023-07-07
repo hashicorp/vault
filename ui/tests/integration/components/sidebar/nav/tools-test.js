@@ -22,11 +22,11 @@ module('Integration | Component | sidebar-nav-tools', function (hooks) {
     await renderComponent();
     assert
       .dom('[data-test-sidebar-nav-link]')
-      .exists({ count: 1 }, 'Nav links are hidden other than back link');
+      .exists({ count: 2 }, 'Nav links are hidden other than back link and api explorer.');
   });
 
   test('it should render nav headings and links', async function (assert) {
-    const links = ['Back to main navigation', ...toolsActions()];
+    const links = ['Back to main navigation', ...toolsActions(), 'API Explorer'];
     stubFeaturesAndPermissions(this.owner);
     await renderComponent();
 

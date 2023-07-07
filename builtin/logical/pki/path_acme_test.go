@@ -807,8 +807,8 @@ func TestAcmeIgnoresRoleExtKeyUsage(t *testing.T) {
 	roleName := "test-role"
 
 	roleOpt := map[string]interface{}{
-		"ttl_duration":                "365h",
-		"max_ttl_duration":            "720h",
+		"ttl":                         "365h",
+		"max_ttl":                     "720h",
 		"key_type":                    "any",
 		"allowed_domains":             "localdomain",
 		"allow_subdomains":            "true",
@@ -1286,8 +1286,8 @@ func setupAcmeBackendOnClusterAtPath(t *testing.T, cluster *vault.TestCluster, c
 	require.NoError(t, err, "failed updating default issuer")
 
 	_, err = client.Logical().Write(mount+"/roles/test-role", map[string]interface{}{
-		"ttl_duration":                "168h",
-		"max_ttl_duration":            "168h",
+		"ttl":                         "168h",
+		"max_ttl":                     "168h",
 		"key_type":                    "any",
 		"allowed_domains":             "localdomain",
 		"allow_subdomains":            "true",
@@ -1296,9 +1296,9 @@ func setupAcmeBackendOnClusterAtPath(t *testing.T, cluster *vault.TestCluster, c
 	require.NoError(t, err, "failed creating role test-role")
 
 	_, err = client.Logical().Write(mount+"/roles/acme", map[string]interface{}{
-		"ttl_duration":     "3650h",
-		"max_ttl_duration": "7200h",
-		"key_type":         "any",
+		"ttl":      "3650h",
+		"max_ttl":  "7200h",
+		"key_type": "any",
 	})
 	require.NoError(t, err, "failed creating role acme")
 

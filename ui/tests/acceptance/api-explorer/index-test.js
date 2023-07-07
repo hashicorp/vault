@@ -17,7 +17,7 @@ module('Acceptance | API Explorer', function (hooks) {
   });
 
   test('it filters paths after swagger-ui is loaded', async function (assert) {
-    await visit('/vault/api-explorer');
+    await visit('/vault/tools/api-explorer');
     await waitUntil(() => {
       return find('[data-test-filter-input]').disabled === false;
     });

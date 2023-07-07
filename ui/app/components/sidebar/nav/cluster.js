@@ -5,6 +5,7 @@ export default class SidebarNavClusterComponent extends Component {
   @service currentCluster;
   @service version;
   @service auth;
+  @service namespace;
 
   get cluster() {
     return this.currentCluster.cluster;
