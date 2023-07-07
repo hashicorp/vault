@@ -30,17 +30,13 @@ export default class LdapRoleAdapter extends NamedPathAdapter {
     const { backend, type: roleType } = query;
     const url = this.getURL(backend, this.pathForRoleType(roleType));
     return this.ajax(url, 'GET', { data: { list: true } }).then((resp) => {
-      return resp.data.keys.map((name) => ({ name, backend }));
+      return resp.data.keys.map((name) => ({ name, backend, type: roleType }));
     });
   }
   queryRecord(store, type, query) {
     const { backend, name, type: roleType } = query;
     const url = this.getURL(backend, this.pathForRoleType(roleType), name);
-    return this.ajax(url, 'GET').then((resp) => {
-      resp.data.backend = backend;
-      resp.data.name = name;
-      return resp.data;
-    });
+    return this.ajax(url, 'GET').then((resp) => ({ ...resp.data, backend, name, type: roleType }));
   }
 
   fetchCredentials(backend, type, name) {

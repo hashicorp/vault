@@ -4,7 +4,6 @@
  */
 
 import Model, { attr } from '@ember-data/model';
-import { tracked } from '@glimmer/tracking';
 import { withFormFields } from 'vault/decorators/model-form-fields';
 import { withModelValidations } from 'vault/decorators/model-validations';
 
@@ -56,7 +55,7 @@ export const dynamicRoleFields = [
 @withModelValidations(validations)
 @withFormFields()
 export default class LdapRoleModel extends Model {
-  @tracked type; // this must be set to either static or dynamic in order for the adapter to build the correct url
+  @attr('string') type; // this must be set to either static or dynamic in order for the adapter to build the correct url and for the correct form fields to display
 
   @attr('string') backend; // dynamic path of secret -- set on response from value passed to queryRecord
 
