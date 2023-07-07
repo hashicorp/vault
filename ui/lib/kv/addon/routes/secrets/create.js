@@ -12,10 +12,9 @@ export default class KvSecretsCreateRoute extends Route {
   @service secretMountPath;
 
   model() {
-    // TODO return model for query on kv/data.
+    // TODO return model for query on kv/data
     const backend = this.secretMountPath.get();
     return hash({
-      id: backend,
       backend,
       icon: 'kv',
     });
@@ -23,10 +22,6 @@ export default class KvSecretsCreateRoute extends Route {
 
   setupController(controller, resolvedModel) {
     super.setupController(controller, resolvedModel);
-
-    controller.breadcrumbs = [
-      { label: 'secrets', route: 'secrets', linkExternal: true },
-      { label: resolvedModel.backend },
-    ];
+    controller.breadcrumbs = [{ label: resolvedModel.backend, route: 'secrets' }, { label: 'create' }];
   }
 }

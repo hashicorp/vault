@@ -18,7 +18,6 @@ export default class KvSecretDetailsRoute extends Route {
     return hash({
       id: name,
       backend,
-      icon: 'kv',
     });
   }
 
@@ -27,7 +26,8 @@ export default class KvSecretDetailsRoute extends Route {
 
     controller.breadcrumbs = [
       { label: 'secrets', route: 'secrets', linkExternal: true },
-      { label: resolvedModel.backend },
+      { label: resolvedModel.backend, route: 'secrets' },
+      { label: resolvedModel.id },
     ];
   }
 }
