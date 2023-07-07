@@ -16,9 +16,8 @@ export default class KvSecretMetadataEditRoute extends Route {
     const backend = this.secretMountPath.get();
     const { name } = this.paramsFor('secrets.secret');
     return hash({
-      id: name,
+      path: name,
       backend,
-      pageTitle: 'Edit Secret Metadata',
     });
   }
 
@@ -28,7 +27,7 @@ export default class KvSecretMetadataEditRoute extends Route {
     controller.breadcrumbs = [
       { label: 'secrets', route: 'secrets', linkExternal: true },
       { label: resolvedModel.backend, route: 'secrets' },
-      { label: resolvedModel.id, route: 'secrets.secret.details', model: resolvedModel.id },
+      { label: resolvedModel.path, route: 'secrets.secret.details', model: resolvedModel.path },
       { label: 'edit-metadata' },
     ];
   }

@@ -16,7 +16,7 @@ export default class KvSecretDetailsRoute extends Route {
     const backend = this.secretMountPath.get();
     const { name } = this.paramsFor('secrets.secret');
     return hash({
-      id: name,
+      path: name,
       backend,
     });
   }
@@ -27,7 +27,7 @@ export default class KvSecretDetailsRoute extends Route {
     controller.breadcrumbs = [
       { label: 'secrets', route: 'secrets', linkExternal: true },
       { label: resolvedModel.backend, route: 'secrets' },
-      { label: resolvedModel.id },
+      { label: resolvedModel.path },
     ];
   }
 }

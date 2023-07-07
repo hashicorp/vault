@@ -13,17 +13,16 @@ export default class KvConfigurationRoute extends Route {
 
   model() {
     const backend = this.secretMountPath.get();
-    // TODO: model for configuration comes from secret-engine but maybe we should make our own because it combines two endpoints?
+    // TODO: bring in model from secret-engine.
     return hash({
       backend,
-      id: backend,
       icon: 'kv',
     });
   }
 
   setupController(controller, resolvedModel) {
     super.setupController(controller, resolvedModel);
-
+    controller.pageTitle = resolvedModel.backend;
     controller.breadcrumbs = [
       { label: 'secrets', route: 'secrets', linkExternal: true },
       { label: resolvedModel.backend },
