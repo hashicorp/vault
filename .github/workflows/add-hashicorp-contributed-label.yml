@@ -9,11 +9,9 @@ name: Add HashiCorp contributed label
 # possible.
 
 on:
+  # On every pull request, on every branch
   pull_request:
     types: [opened, synchronize, reopened]
-    # Runs on PRs to main
-    branches:
-      - main
 
 jobs:
   add-hashicorp-contributed-label:
