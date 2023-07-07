@@ -661,3 +661,56 @@ $ curl \
     --data @payload.json \
     http://127.0.0.1:8200/v1/sys/replication/dr/secondary/operation-token/delete
 ```
+
+## Reindex Replication
+
+This endpoint reindexes the local data storage. This can cause a very long delay
+depending on the number and size of objects in the data store.
+
+**This endpoint requires a disaster recovery operation token.**
+
+| Method | Path                                     |
+| :----- | :--------------------------------------- |
+| `POST` | `/sys/replication/dr/secondary/reindex` |
+
+### Parameters
+
+- `diff` `(bool: false)` – Enables a slower re-indexing which will perform a key
+  level check to diagnose issues. Defaults false.
+
+- `force` `(bool: false)` – Forces a complete re-indexing which only scans data
+  available in the storage. Defaults false.
+
+- `skip_flush` `(bool: false)` – Skips the tree flushing stage of the reindex
+  process. This setting can be used to reduce the amount of time the tree is locked
+  during a reindex process. If this node is killed before the full tree has been
+  asynchronously flushed the reindex may not have applied fully and a new reindex
+  may need to be done. Defaults false.
+
+- `dr_operation_token` `(string: <required>)` - DR operation token used to authorize 
+  this request.
+
+### Sample Payload
+
+```json
+{
+  "dr_operation_token": "..."
+}
+```
+
+### Sample Request
+
+```shell-session
+$ curl \
+    --header "X-Vault-Token: ..." \
+    --request POST \
+    http://127.0.0.1:8200/v1/sys/replication/dr/secondary/reindex
+```
+
+### Sample Response
+
+```json
+{
+  "warnings": ["..."]
+}
+```
