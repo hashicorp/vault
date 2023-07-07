@@ -50,6 +50,8 @@ type SharedConfig struct {
 	PidFile string `hcl:"pid_file"`
 
 	ClusterName string `hcl:"cluster_name"`
+
+	AdministrativeNamespacePath string `hcl:"administrative_namespace_path"`
 }
 
 func ParseConfig(d string) (*SharedConfig, error) {
@@ -164,12 +166,13 @@ func (c *SharedConfig) Sanitized() map[string]interface{} {
 	}
 
 	result := map[string]interface{}{
-		"cluster_name":                 c.ClusterName,
-		"default_max_request_duration": c.DefaultMaxRequestDuration,
-		"disable_mlock":                c.DisableMlock,
-		"log_format":                   c.LogFormat,
-		"log_level":                    c.LogLevel,
-		"pid_file":                     c.PidFile,
+		"default_max_request_duration":  c.DefaultMaxRequestDuration,
+		"disable_mlock":                 c.DisableMlock,
+		"log_level":                     c.LogLevel,
+		"log_format":                    c.LogFormat,
+		"pid_file":                      c.PidFile,
+		"cluster_name":                  c.ClusterName,
+		"administrative_namespace_path": c.AdministrativeNamespacePath,
 	}
 
 	// Optional log related settings
