@@ -43,9 +43,9 @@ on:
         default: 20
         type: number
       timeout-minutes:
-        description: The maximum number of minutes that this workflow should run 
+        description: The maximum number of minutes that this workflow should run
         required: false
-        default: 60 
+        default: 60
         type: number
 
 
@@ -59,41 +59,41 @@ jobs:
       id-token: write  # Note: this permission is explicitly required for Vault auth
       contents: read
     steps:
-    - uses: actions/checkout@c85c95e3d7251135ab7dc9ce3241c5835cc595a9 # v3.5.3
-    - uses: actions/setup-go@fac708d6674e30b6ba41289acaab6d4b75aa0753 # v4.0.1
-      with:
-        go-version-file: ./.go-version
-        cache: true
-    - name: Authenticate to Vault
-      id: vault-auth
-      if: github.repository == 'hashicorp/vault-enterprise'
-      run: vault-auth
-    - name: Fetch Secrets
-      id: secrets
-      if: github.repository == 'hashicorp/vault-enterprise'
-      uses: hashicorp/vault-action@130d1f5f4fe645bb6c83e4225c04d64cfb62de6e
-      with:
-        url: ${{ steps.vault-auth.outputs.addr }}
-        caCertificate: ${{ steps.vault-auth.outputs.ca_certificate }}
-        token: ${{ steps.vault-auth.outputs.token }}
-        secrets: |
-          kv/data/github/${{ github.repository }}/github-token username-and-token | github-token;
-    - id: setup-git-private
-      name: Setup Git configuration (private)
-      if: github.repository == 'hashicorp/vault-enterprise'
-      run: |
-        git config --global url."https://${{ steps.secrets.outputs.github-token }}@github.com".insteadOf https://github.com
-    - id: setup-git-public
-      name: Setup Git configuration (public)
-      if: github.repository != 'hashicorp/vault-enterprise'
-      run: |
-        git config --global url."https://${{ secrets.ELEVATED_GITHUB_TOKEN}}@github.com".insteadOf https://github.com
-    - id: test
-      working-directory: .github/scripts
-      env:
-        GOPRIVATE: github.com/hashicorp/*
-      run: |
-        ENTERPRISE=${{ inputs.enterprise }} ./test-generate-test-package-lists.sh
+      - uses: actions/checkout@c85c95e3d7251135ab7dc9ce3241c5835cc595a9 # v3.5.3
+      - uses: actions/setup-go@fac708d6674e30b6ba41289acaab6d4b75aa0753 # v4.0.1
+        with:
+          go-version-file: ./.go-version
+          cache: true
+      - name: Authenticate to Vault
+        id: vault-auth
+        if: github.repository == 'hashicorp/vault-enterprise'
+        run: vault-auth
+      - name: Fetch Secrets
+        id: secrets
+        if: github.repository == 'hashicorp/vault-enterprise'
+        uses: hashicorp/vault-action@130d1f5f4fe645bb6c83e4225c04d64cfb62de6e
+        with:
+          url: ${{ steps.vault-auth.outputs.addr }}
+          caCertificate: ${{ steps.vault-auth.outputs.ca_certificate }}
+          token: ${{ steps.vault-auth.outputs.token }}
+          secrets: |
+            kv/data/github/${{ github.repository }}/github-token username-and-token | github-token;
+      - id: setup-git-private
+        name: Setup Git configuration (private)
+        if: github.repository == 'hashicorp/vault-enterprise'
+        run: |
+          git config --global url."https://${{ steps.secrets.outputs.github-token }}@github.com".insteadOf https://github.com
+      - id: setup-git-public
+        name: Setup Git configuration (public)
+        if: github.repository != 'hashicorp/vault-enterprise'
+        run: |
+          git config --global url."https://${{ secrets.ELEVATED_GITHUB_TOKEN}}@github.com".insteadOf https://github.com
+      - id: test
+        working-directory: .github/scripts
+        env:
+          GOPRIVATE: github.com/hashicorp/*
+        run: |
+          ENTERPRISE=${{ inputs.enterprise }} ./test-generate-test-package-lists.sh
   runner-indexes:
     runs-on: ${{ fromJSON(inputs.runs-on) }}
     name: Generate runner indexes
@@ -104,18 +104,18 @@ jobs:
     outputs:
       runner-indexes: ${{ steps.generate-index-list.outputs.indexes }}
     steps:
-    - id: generate-index-list
-      run: |
-        INDEX_LIST="$(seq 1 ${{ inputs.total-runners }})"
-        INDEX_JSON="$(jq --null-input --compact-output '. |= [inputs]' <<< "${INDEX_LIST}")"
-        echo "indexes=${INDEX_JSON}" >> "${GITHUB_OUTPUT}"
+      - id: generate-index-list
+        run: |
+          INDEX_LIST="$(seq 1 ${{ inputs.total-runners }})"
+          INDEX_JSON="$(jq --null-input --compact-output '. |= [inputs]' <<< "${INDEX_LIST}")"
+          echo "indexes=${INDEX_JSON}" >> "${GITHUB_OUTPUT}"
   test-go:
     permissions:
       id-token: write  # Note: this permission is explicitly required for Vault auth
       contents: read
     name: "${{ matrix.runner-index }}"
     needs:
-    - runner-indexes
+      - runner-indexes
     runs-on: ${{ fromJSON(inputs.runs-on) }}
     strategy:
       fail-fast: false
@@ -127,7 +127,7 @@ jobs:
         runner-index: ${{ fromJSON(needs.runner-indexes.outputs.runner-indexes) }}
     env:
       GOPRIVATE: github.com/hashicorp/*
-      TIMEOUT_IN_MINUTES: ${{ inputs.timeout-minutes }} 
+      TIMEOUT_IN_MINUTES: ${{ inputs.timeout-minutes }}
     steps:
       - uses: actions/checkout@c85c95e3d7251135ab7dc9ce3241c5835cc595a9 # v3.5.3
       - uses: actions/setup-go@fac708d6674e30b6ba41289acaab6d4b75aa0753 # v4.0.1
@@ -230,6 +230,7 @@ jobs:
             go run gotest.tools/gotestsum --format=short-verbose \
               --junitfile test-results/go-test/results-${{ matrix.runner-index }}.xml \
               --jsonfile test-results/go-test/results-${{ matrix.runner-index }}.json \
+              --jsonfile-timing-events failure-summary-${{ matrix.runner-index }}${{inputs.name}}.json \
               -- \
               -tags "${{ inputs.go-build-tags }}" \
               -timeout=${{ env.TIMEOUT_IN_MINUTES }}m \
@@ -238,7 +239,7 @@ jobs:
                 \
               ${test_packages[${{ matrix.runner-index }}]}
       - name: Prepare datadog-ci
-        if: github.repository == 'hashicorp/vault' && (success() || failure()) 
+        if: github.repository == 'hashicorp/vault' && (success() || failure())
         continue-on-error: true
         run: |
           curl -L --fail "https://github.com/DataDog/datadog-ci/releases/latest/download/datadog-ci_linux-x64" --output "/usr/local/bin/datadog-ci"
@@ -258,10 +259,10 @@ jobs:
         with:
           name: test-results${{ inputs.name }}
           path: test-results/
-        if: success() || failure() 
-      - name: Create a summary of tests
-        uses: test-summary/action@62bc5c68de2a6a0d02039763b8c754569df99e3f    # TSCCR: no entry for repository "test-summary/action"
+        if: success() || failure()
+      - name: Upload failure summary
+        uses: actions/upload-artifact@0b7f8abb1508181956e8e162db84b466c27e18ce # v3.1.2
+        if: success() || failure()
         with:
-          paths: "test-results/go-test/results-${{ matrix.runner-index }}.xml"
-          show: "fail"
-        if: success() || failure() 
+          name: failure-summary
+          path: failure-summary-${{ matrix.runner-index }}${{inputs.name}}.json
