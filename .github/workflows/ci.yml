@@ -381,13 +381,13 @@ jobs:
           # - `.[2]` retrieves the third element of the filename array, which is the runner number.
           # - `.[0:1]` retrieves the first character of the string, we use this to remove the ".json" suffix.
 
-          jq -r -n 'inputs | select(.Action == "fail") | select(.Test != null) | "| \(.Package) | \(.Test) | \(input_filename | split("-") | .[2] | sub(".json"; ""))"' failure-summary-*.json | sort >> "$temp_file_name"
+          jq -r -n 'inputs | select(.Action == "fail") | select(.Test != null) | "| \(.Package) | \(.Test) | \(input_filename | split("-") | .[2] | sub(".json"; "")) | \(input_filename | split("-") | .[3] // "normal" | sub(".json";"") )"' failure-summary-*.json | sort >> "$temp_file_name"
 
           # if there are test failures, present them in a format of a GH Markdown table
           if [ -s "$temp_file_name" ]; then
             echo "### Go test failures" >> "$GITHUB_STEP_SUMMARY"
-            echo "| Package | Test | Runner Index |" >> "$GITHUB_STEP_SUMMARY"
-            echo "| ------- | ---- | ------------ |" >> "$GITHUB_STEP_SUMMARY"
+            echo "| Package | Test | Runner Index | Test Type |" >> "$GITHUB_STEP_SUMMARY"
+            echo "| ------- | ---- | ------------ | --------- |" >> "$GITHUB_STEP_SUMMARY"
             cat "$temp_file_name" >>  "$GITHUB_STEP_SUMMARY"
           else
             echo "### All Go tests passed! :white_check_mark:" >> "$GITHUB_STEP_SUMMARY"
