@@ -11,9 +11,9 @@ import (
 
 	cleanhttp "github.com/hashicorp/go-cleanhttp"
 	"github.com/hashicorp/vault/sdk/framework"
+	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/sdk/queue"
-	"github.com/hashicorp/vault/sdk/helper/consts"
 	rabbithole "github.com/michaelklishin/rabbit-hole/v2"
 )
 
@@ -50,8 +50,8 @@ func Backend(conf *logical.BackendConfig) *backend {
 			[]*framework.Path{
 				pathConfigConnection(&b),
 				pathConfigLease(&b),
-				pathCreds(&b),
 			},
+			pathCreds(&b),
 			pathListRoles(&b),
 			pathRoles(&b),
 		),
@@ -60,8 +60,8 @@ func Backend(conf *logical.BackendConfig) *backend {
 			secretCreds(&b),
 		},
 
-		Clean:       b.resetClient,
-		Invalidate:  b.invalidate,
+		Clean:             b.resetClient,
+		Invalidate:        b.invalidate,
 		WALRollbackMinAge: time.Duration(rabbitMQDefaultRotationPeriod) * time.Second,
 		PeriodicFunc: func(ctx context.Context, req *logical.Request) error {
 			repState := conf.System.ReplicationState()

@@ -12,8 +12,8 @@ import (
 	"github.com/fatih/structs"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
-	"github.com/hashicorp/vault/sdk/queue"
 	"github.com/hashicorp/vault/sdk/logical"
+	"github.com/hashicorp/vault/sdk/queue"
 )
 
 func pathListRoles(b *backend) []*framework.Path {
@@ -285,12 +285,12 @@ func (b *backend) pathStaticRoleRead(ctx context.Context, req *logical.Request, 
 		return nil, nil
 	}
 	data := map[string]interface{}{
-		"rotation_period": role.RotationPeriod.Seconds(),
+		"rotation_period":       role.RotationPeriod.Seconds(),
 		"revoke_user_on_delete": role.RevokeUserOnDelete,
-		"username": role.Username,
+		"username":              role.Username,
 	}
 	roleInfo := structs.New(role.RoleEntry).Map()
-	for k, v := range(roleInfo) {
+	for k, v := range roleInfo {
 		data[k] = v
 	}
 	if !role.LastVaultRotation.IsZero() {
@@ -319,9 +319,9 @@ func (b *backend) pathStaticRoleCreateUpdate(ctx context.Context, req *logical.R
 	revokeUserOnDelete := d.Get("revoke_user_on_delete").(bool)
 	rotationPeriod := d.Get("rotation_period").(int)
 	staticRole := staticRoleEntry{
-		RoleEntry: *role,
-		Username: username,
-		RotationPeriod: time.Duration(rotationPeriod) * time.Second,
+		RoleEntry:          *role,
+		Username:           username,
+		RotationPeriod:     time.Duration(rotationPeriod) * time.Second,
 		RevokeUserOnDelete: revokeUserOnDelete,
 	}
 
@@ -377,12 +377,12 @@ type roleEntry struct {
 }
 
 type staticRoleEntry struct {
-	Username            string         `json:"username" structs:"username" mapstructure:"username"`
-	Password            string         `json:"password" structs:"password" mapstructure:"password"`
-	LastVaultRotation   time.Time      `json:"last_vault_rotation" structs:"last_vault_rotation" mapstructure:"last_vault_rotation"`
-	RotationPeriod      time.Duration  `json:"rotation_period" structs:"rotation_period" mapstructure:"rotation_period"`
-	RevokeUserOnDelete  bool           `json:"revoke_user_on_delete" structs:"revoke_user_on_delete" mapstructure:"revoke_user_on_delete"`
-	RoleEntry           roleEntry      `json:"role_entry" structs:"role_entry" mapstructure:"role_entry"`
+	Username           string        `json:"username" structs:"username" mapstructure:"username"`
+	Password           string        `json:"password" structs:"password" mapstructure:"password"`
+	LastVaultRotation  time.Time     `json:"last_vault_rotation" structs:"last_vault_rotation" mapstructure:"last_vault_rotation"`
+	RotationPeriod     time.Duration `json:"rotation_period" structs:"rotation_period" mapstructure:"rotation_period"`
+	RevokeUserOnDelete bool          `json:"revoke_user_on_delete" structs:"revoke_user_on_delete" mapstructure:"revoke_user_on_delete"`
+	RoleEntry          roleEntry     `json:"role_entry" structs:"role_entry" mapstructure:"role_entry"`
 }
 
 // Structure representing the permissions of a vhost

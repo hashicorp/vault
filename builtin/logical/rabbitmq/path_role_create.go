@@ -7,6 +7,7 @@ import (
 	"context"
 	"fmt"
 	"io/ioutil"
+	"time"
 
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/template"
@@ -18,30 +19,80 @@ const (
 	defaultUserNameTemplate = `{{ printf "%s-%s" (.DisplayName) (uuid) }}`
 )
 
-func pathCreds(b *backend) *framework.Path {
-	return &framework.Path{
-		Pattern: "creds/" + framework.GenericNameRegex("name"),
+func pathCreds(b *backend) []*framework.Path {
+	return []*framework.Path{
+		{
+			Pattern: "creds/" + framework.GenericNameRegex("name"),
 
-		DisplayAttrs: &framework.DisplayAttributes{
-			OperationPrefix: operationPrefixRabbitMQ,
-			OperationVerb:   "request",
-			OperationSuffix: "credentials",
-		},
-
-		Fields: map[string]*framework.FieldSchema{
-			"name": {
-				Type:        framework.TypeString,
-				Description: "Name of the role.",
+			DisplayAttrs: &framework.DisplayAttributes{
+				OperationPrefix: operationPrefixRabbitMQ,
+				OperationVerb:   "request",
+				OperationSuffix: "credentials",
 			},
-		},
 
-		Callbacks: map[logical.Operation]framework.OperationFunc{
-			logical.ReadOperation: b.pathCredsRead,
-		},
+			Fields: map[string]*framework.FieldSchema{
+				"name": {
+					Type:        framework.TypeString,
+					Description: "Name of the role.",
+				},
+			},
 
-		HelpSynopsis:    pathRoleCreateReadHelpSyn,
-		HelpDescription: pathRoleCreateReadHelpDesc,
+			Callbacks: map[logical.Operation]framework.OperationFunc{
+				logical.ReadOperation: b.pathCredsRead,
+			},
+
+			HelpSynopsis:    pathRoleCreateReadHelpSyn,
+			HelpDescription: pathRoleCreateReadHelpDesc,
+		},
+		{
+			Pattern: "static-creds/" + framework.GenericNameRegex("name"),
+
+			DisplayAttrs: &framework.DisplayAttributes{
+				OperationPrefix: operationPrefixRabbitMQ,
+				OperationVerb:   "request",
+				OperationSuffix: "credentials",
+			},
+
+			Fields: map[string]*framework.FieldSchema{
+				"name": {
+					Type:        framework.TypeString,
+					Description: "Name of the static role.",
+				},
+			},
+
+			Callbacks: map[logical.Operation]framework.OperationFunc{
+				logical.ReadOperation: b.pathStaticCredsRead,
+			},
+
+			HelpSynopsis:    pathStaticRoleCredsHelpSyn,
+			HelpDescription: pathStaticRoleCredsHelpSyn,
+		},
 	}
+}
+
+func (b *backend) pathStaticCredsRead(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	name := d.Get("name").(string)
+	if name == "" {
+		return logical.ErrorResponse("missing name"), nil
+	}
+	role, err := b.StaticRole(ctx, req.Storage, name)
+	if err != nil {
+		return nil, err
+	}
+	if role == nil {
+		return logical.ErrorResponse(fmt.Sprintf("unknown role: %s", name)), nil
+	}
+	ttl := role.LastVaultRotation.Add(role.RotationPeriod).Sub(time.Now()).Seconds()
+	respData := map[string]interface{}{
+		"username":            role.Username,
+		"ttl":                 ttl,
+		"rotation_period":     role.RotationPeriod,
+		"last_vault_rotation": role.LastVaultRotation,
+		"password":            role.Password,
+	}
+	return &logical.Response{
+		Data: respData,
+	}, nil
 }
 
 // Issues the credential based on the role name
@@ -232,4 +283,14 @@ const pathRoleCreateReadHelpDesc = `
 This path reads RabbitMQ credentials for a certain role. The
 RabbitMQ credentials will be generated on demand and will be automatically
 revoked when the lease is up.
+`
+
+const pathStaticRoleCredsHelpSyn = `
+Request RabbitMQ credentials for a static role.
+`
+
+const pathStaticRoleCredsHelpDesc = `
+This path reads RabbitMQ credentials for a certain static role. The
+RabbitMQ credentials will be rotated periodically according to their configuration,
+and will return the same password until they are rotated.
 `
