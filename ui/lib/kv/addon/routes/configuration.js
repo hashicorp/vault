@@ -16,7 +16,6 @@ export default class KvConfigurationRoute extends Route {
     // TODO: bring in model from secret-engine.
     return hash({
       backend,
-      icon: 'kv',
     });
   }
 

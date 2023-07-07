@@ -16,7 +16,6 @@ export default class KvSecretsCreateRoute extends Route {
     const backend = this.secretMountPath.get();
     return hash({
       backend,
-      icon: 'kv',
     });
   }
 
