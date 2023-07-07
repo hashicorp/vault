@@ -18,7 +18,7 @@ module('Unit | Adapter | ldap/role', function (hooks) {
   });
 
   test('it should make request to correct endpoints when listing records', async function (assert) {
-    assert.expect(4);
+    assert.expect(7);
 
     this.server.get('/ldap-test/:path', (schema, req) => {
       assert.ok(req.queryParams.list, 'list query param sent when listing roles');
@@ -30,13 +30,19 @@ module('Unit | Adapter | ldap/role', function (hooks) {
       return { data: { keys: ['test-role'] } };
     });
 
-    await this.store.query('ldap/role', { backend: 'ldap-test', type: 'dynamic' });
-    this.path = 'static-role';
-    await this.store.query('ldap/role', { backend: 'ldap-test', type: 'static' });
+    for (const type of ['dynamic', 'static']) {
+      this.models = await this.store.query('ldap/role', { backend: 'ldap-test', type });
+      this.path = 'static-role';
+    }
+
+    const model = this.models.firstObject;
+    assert.strictEqual(model.backend, 'ldap-test', 'Backend value is set on records returned from query');
+    assert.strictEqual(model.type, 'static', 'Type value is set on records returned from query');
+    assert.strictEqual(model.name, 'test-role', 'Name value is set on records returned from query');
   });
 
   test('it should make request to correct endpoints when querying record', async function (assert) {
-    assert.expect(2);
+    assert.expect(5);
 
     this.server.get('/ldap-test/:path/test-role', (schema, req) => {
       assert.strictEqual(
@@ -47,13 +53,21 @@ module('Unit | Adapter | ldap/role', function (hooks) {
     });
 
     for (const type of ['dynamic', 'static']) {
-      await this.store.queryRecord('ldap/role', {
+      this.model = await this.store.queryRecord('ldap/role', {
         backend: 'ldap-test',
         type,
         name: 'test-role',
       });
       this.path = 'static-role';
     }
+
+    assert.strictEqual(
+      this.model.backend,
+      'ldap-test',
+      'Backend value is set on records returned from query'
+    );
+    assert.strictEqual(this.model.type, 'static', 'Type value is set on records returned from query');
+    assert.strictEqual(this.model.name, 'test-role', 'Name value is set on records returned from query');
   });
 
   test('it should make request to correct endpoints when creating new record', async function (assert) {
