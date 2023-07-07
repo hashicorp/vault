@@ -1,4 +1,5 @@
-// Package builtinplugins go: build !enterprise
+// go: build !enterprise
+
 package builtinplugins
 
 import "github.com/hashicorp/vault/sdk/helper/consts"
