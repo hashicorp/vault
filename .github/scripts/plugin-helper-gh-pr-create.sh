@@ -34,8 +34,8 @@ echo "captured response:"
 echo "$resp" | jq .
 
 # get Vault PR number
-vault_pr_num=$(echo "$resp" | jq '.number')
-vault_pr_url=$(echo "$resp" | jq '.html_url')
+vault_pr_num=$(echo "$resp" | jq -r '.number')
+vault_pr_url=$(echo "$resp" | jq -r '.html_url')
 echo "Vault PR number: $vault_pr_url"
 
 # add labels to Vault PR - this requires a wider permission set than we currently have available as a repo token
