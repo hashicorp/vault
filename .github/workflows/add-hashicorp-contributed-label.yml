@@ -10,7 +10,7 @@ name: Add HashiCorp contributed label
 
 on:
   pull_request:
-    types: [opened, synchronize, reopened, ready_for_review]
+    types: [opened, synchronize, reopened]
     # Runs on PRs to main
     branches:
       - main
