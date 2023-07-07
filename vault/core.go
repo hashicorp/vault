@@ -3181,6 +3181,7 @@ type BuiltinRegistry interface {
 	Get(name string, pluginType consts.PluginType) (func() (interface{}, error), bool)
 	Keys(pluginType consts.PluginType) []string
 	DeprecationStatus(name string, pluginType consts.PluginType) (consts.DeprecationStatus, bool)
+	IsBuiltinEntPlugin(name string, pluginType consts.PluginType) bool
 }
 
 func (c *Core) AuditLogger() AuditLogger {
@@ -3234,28 +3235,7 @@ func (c *Core) isMountable(ctx context.Context, entry *MountEntry, pluginType co
 // isMountEntryBuiltin determines whether a mount entry is associated with a
 // builtin of the specified plugin type.
 func (c *Core) isMountEntryBuiltin(ctx context.Context, entry *MountEntry, pluginType consts.PluginType) bool {
-	// Prevent a panic early on
-	if entry == nil || c.pluginCatalog == nil {
-		return false
-	}
-
-	// Allow type to be determined from mount entry when not otherwise specified
-	if pluginType == consts.PluginTypeUnknown {
-		pluginType = c.builtinTypeFromMountEntry(ctx, entry)
-	}
-
-	// Handle aliases
-	pluginName := entry.Type
-	if alias, ok := mountAliases[pluginName]; ok {
-		pluginName = alias
-	}
-
-	plug, err := c.pluginCatalog.Get(ctx, pluginName, pluginType, entry.Version)
-	if err != nil || plug == nil {
-		return false
-	}
-
-	return plug.Builtin
+	return false
 }
 
 // MatchingMount returns the path of the mount that will be responsible for

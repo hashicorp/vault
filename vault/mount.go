@@ -915,6 +915,10 @@ func (c *Core) unmountInternal(ctx context.Context, path string, updateStorage b
 	if err := c.router.Unmount(ctx, path); err != nil {
 		return err
 	}
+	if err = c.entBuiltinPluginMetrics(ctx, entry, -1); err != nil {
+		c.logger.Error("failed to emit disabled ent builtin plugin metrics", "error", err)
+		return err
+	}
 
 	removePathCheckers(c, entry, viewPath)
 

@@ -283,6 +283,11 @@ func (r *registry) DeprecationStatus(name string, pluginType consts.PluginType) 
 	return consts.Unknown, false
 }
 
+// IsBuiltinEntPlugin checks whether the plugin is an enterprise only builtin plugin
+func (r *registry) IsBuiltinEntPlugin(name string, pluginType consts.PluginType) bool {
+	return false
+}
+
 func toFunc(ifc interface{}) func() (interface{}, error) {
 	return func() (interface{}, error) {
 		return ifc, nil
