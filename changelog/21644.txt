@@ -1,0 +1,3 @@
+```release-note:feature
+secrets/rabbitmq: Add static credential support
+```
