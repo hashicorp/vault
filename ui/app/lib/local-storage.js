@@ -4,8 +4,22 @@
  */
 
 export default {
+  isLocalStorageSupported() {
+    try {
+      const key = `__storage__test`;
+      window.localStorage.setItem(key, null);
+      window.localStorage.removeItem(key);
+      return true;
+    } catch (e) {
+      // modify the e object so we can customize the error message.
+      // e.message is readOnly.
+      e.errors = [`This is likely due to your browser's cookie settings.`];
+      throw e;
+    }
+  },
+
   getItem(key) {
-    var item = window.localStorage.getItem(key);
+    const item = window.localStorage.getItem(key);
     return item && JSON.parse(item);
   },
 
