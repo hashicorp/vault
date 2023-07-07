@@ -32,15 +32,27 @@ module('Unit | Serializer | ldap/role', function (hooks) {
     const serializeAndAssert = (type) => {
       this.model.type = type;
       const payload = this.model.serialize();
+      // intentionally not using fieldsForType from model to detect any drift
+      const fieldsForType = {
+        static: ['username', 'dn', 'rotation_period'],
+        dynamic: [
+          'default_ttl',
+          'max_ttl',
+          'username_template',
+          'creation_ldif',
+          'deletion_ldif',
+          'rollback_ldif',
+        ],
+      }[type];
 
       assert.strictEqual(
         Object.keys(payload).length,
-        this.model.fieldsForType.length,
+        fieldsForType.length,
         `Correct number of keys exist in serialized payload for ${type} role type`
       );
       Object.keys(payload).forEach((key) => {
         assert.true(
-          this.model.fieldsForType.includes(key),
+          fieldsForType.includes(key),
           `${key} property exists in serialized payload for ${type} role type`
         );
       });

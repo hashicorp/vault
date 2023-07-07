@@ -38,13 +38,20 @@ module('Unit | Adapter | ldap/role', function (hooks) {
   test('it should make request to correct endpoints when querying record', async function (assert) {
     assert.expect(2);
 
-    this.server.get('/ldap-test/:path/test-role', () => {
-      assert.ok('GET request made to correct endpoint when querying record');
-      return { data: {} };
+    this.server.get('/ldap-test/:path/test-role', (schema, req) => {
+      assert.strictEqual(
+        req.params.path,
+        this.path,
+        'GET request made to correct endpoint when querying record'
+      );
     });
 
     for (const type of ['dynamic', 'static']) {
-      await this.store.queryRecord('ldap/role', { backend: 'ldap-test', type, name: 'test-role' });
+      await this.store.queryRecord('ldap/role', {
+        backend: 'ldap-test',
+        type,
+        name: 'test-role',
+      });
       this.path = 'static-role';
     }
   });
@@ -52,8 +59,12 @@ module('Unit | Adapter | ldap/role', function (hooks) {
   test('it should make request to correct endpoints when creating new record', async function (assert) {
     assert.expect(2);
 
-    this.server.post('/ldap-test/:path/test-role', () => {
-      assert.ok('POST request made to correct endpoint when creating new record');
+    this.server.post('/ldap-test/:path/test-role', (schema, req) => {
+      assert.strictEqual(
+        req.params.path,
+        this.path,
+        'POST request made to correct endpoint when creating new record'
+      );
     });
 
     const getModel = (type) => {
@@ -67,14 +78,19 @@ module('Unit | Adapter | ldap/role', function (hooks) {
     for (const type of ['dynamic', 'static']) {
       const model = getModel(type);
       await model.save();
+      this.path = 'static-role';
     }
   });
 
   test('it should make request to correct endpoints when updating record', async function (assert) {
     assert.expect(2);
 
-    this.server.post('/ldap-test/:path/test-role', () => {
-      assert.ok('POST request made to correct endpoint when updating record');
+    this.server.post('/ldap-test/:path/test-role', (schema, req) => {
+      assert.strictEqual(
+        req.params.path,
+        this.path,
+        'POST request made to correct endpoint when updating record'
+      );
     });
 
     this.store.pushPayload('ldap/role', {
@@ -94,8 +110,12 @@ module('Unit | Adapter | ldap/role', function (hooks) {
   test('it should make request to correct endpoints when deleting record', async function (assert) {
     assert.expect(2);
 
-    this.server.delete('/ldap-test/:path/test-role', () => {
-      assert.ok('DELETE request made to correct endpoint when deleting record');
+    this.server.delete('/ldap-test/:path/test-role', (schema, req) => {
+      assert.strictEqual(
+        req.params.path,
+        this.path,
+        'DELETE request made to correct endpoint when deleting record'
+      );
     });
 
     const getModel = () => {
@@ -120,8 +140,12 @@ module('Unit | Adapter | ldap/role', function (hooks) {
 
     this.path = 'creds';
 
-    this.server.get('/ldap-test/:path/test-role', () => {
-      assert.ok('GET request made to correct endpoint when fetching credentials');
+    this.server.get('/ldap-test/:path/test-role', (schema, req) => {
+      assert.strictEqual(
+        req.params.path,
+        this.path,
+        'GET request made to correct endpoint when fetching credentials'
+      );
     });
 
     for (const type of ['dynamic', 'static']) {
