@@ -2768,9 +2768,8 @@ func (ts *TokenStore) handleCreateCommon(ctx context.Context, req *logical.Reque
 		explicitEntityID = entity.ID
 	}
 
-	// By using GetOk here, we set TokenEntry.Meta to nil instead of an empty map, when no meta was passed in the
-	// token creation API call. This maintains closer compatibility with previous behaviour of Vault, helping to avoid
-	// user surprise, and saving the need to update quite a few tests which expect this to be nil in such a case.
+	// GetOk is used here solely to preserve the distinction between an absent/nil map and an empty map, to match the
+	// behaviour of previous Vault versions - rather than introducing a potential slight compatibility issue for users.
 	meta, ok := d.GetOk("meta")
 	var metaMap map[string]string
 	if ok {
