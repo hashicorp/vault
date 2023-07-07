@@ -27,9 +27,9 @@
 {{! TODO checks for if list >0 show filter }}
 {{#if @showToolbar}}
   <Toolbar>
-    {{#if (has-block "toolbarFilter")}}
+    {{#if (has-block "toolbarFilters")}}
       {{! <ToolbarFilters> }}
-      {{yield to="toolbarFilter"}}
+      {{yield to="toolbarFilters"}}
       {{! </ToolbarFilters> }}
     {{/if}}
     <ToolbarActions>

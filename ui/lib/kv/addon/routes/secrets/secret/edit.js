@@ -13,7 +13,7 @@ export default class KvSecretEditRoute extends Route {
     return hash({
       id: name,
       backend,
-      pageTitle: 'Create new version',
+      pageTitle: 'Create New Version',
     });
   }
 
