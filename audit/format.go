@@ -135,7 +135,7 @@ func (f *AuditFormatter) FormatRequest(ctx context.Context, w io.Writer, config 
 			RemotePort:                    getRemotePort(req),
 			ReplicationCluster:            req.ReplicationCluster,
 			Headers:                       req.Headers,
-			ClientCertificateSerialNumber: getClientCertificateSerialNumber(connState),
+			ClientCertificateSerialNumber: GetClientCertificateSerialNumber(connState),
 		},
 	}
 
@@ -214,7 +214,7 @@ func (f *AuditFormatter) FormatResponse(ctx context.Context, w io.Writer, config
 				respData[k] = v
 			}
 
-			doElideListResponseData(respData)
+			DoElideListResponseData(respData)
 		} else {
 			respData = resp.Data
 		}
@@ -279,7 +279,7 @@ func (f *AuditFormatter) FormatResponse(ctx context.Context, w io.Writer, config
 	var respWrapInfo *AuditResponseWrapInfo
 	if resp.WrapInfo != nil {
 		token := resp.WrapInfo.Token
-		if jwtToken := parseVaultTokenFromJWT(token); jwtToken != nil {
+		if jwtToken := ParseVaultTokenFromJWT(token); jwtToken != nil {
 			token = *jwtToken
 		}
 		respWrapInfo = &AuditResponseWrapInfo{
@@ -339,7 +339,7 @@ func (f *AuditFormatter) FormatResponse(ctx context.Context, w io.Writer, config
 			PolicyOverride:                req.PolicyOverride,
 			RemoteAddr:                    getRemoteAddr(req),
 			RemotePort:                    getRemotePort(req),
-			ClientCertificateSerialNumber: getClientCertificateSerialNumber(connState),
+			ClientCertificateSerialNumber: GetClientCertificateSerialNumber(connState),
 			ReplicationCluster:            req.ReplicationCluster,
 			Headers:                       req.Headers,
 		},
@@ -505,6 +505,7 @@ type AuditNamespace struct {
 }
 
 // getRemoteAddr safely gets the remote address avoiding a nil pointer
+// Deprecated: use Request.GetRemoteAddr
 func getRemoteAddr(req *logical.Request) string {
 	if req != nil && req.Connection != nil {
 		return req.Connection.RemoteAddr
@@ -513,6 +514,7 @@ func getRemoteAddr(req *logical.Request) string {
 }
 
 // getRemotePort safely gets the remote port avoiding a nil pointer
+// Deprecated: use Request.GetRemotePort
 func getRemotePort(req *logical.Request) int {
 	if req != nil && req.Connection != nil {
 		return req.Connection.RemotePort
@@ -520,7 +522,8 @@ func getRemotePort(req *logical.Request) int {
 	return 0
 }
 
-func getClientCertificateSerialNumber(connState *tls.ConnectionState) string {
+// TODO: PW: Go doc
+func GetClientCertificateSerialNumber(connState *tls.ConnectionState) string {
 	if connState == nil || len(connState.VerifiedChains) == 0 || len(connState.VerifiedChains[0]) == 0 {
 		return ""
 	}
@@ -528,9 +531,9 @@ func getClientCertificateSerialNumber(connState *tls.ConnectionState) string {
 	return connState.VerifiedChains[0][0].SerialNumber.String()
 }
 
-// parseVaultTokenFromJWT returns a string iff the token was a JWT and we could
+// ParseVaultTokenFromJWT returns a string iff the token was a JWT and we could
 // extract the original token ID from inside
-func parseVaultTokenFromJWT(token string) *string {
+func ParseVaultTokenFromJWT(token string) *string {
 	if strings.Count(token, ".") != 2 {
 		return nil
 	}
@@ -570,12 +573,12 @@ func NewTemporaryFormatter(format, prefix string) *AuditFormatter {
 	return ret
 }
 
-// doElideListResponseData performs the actual elision of list operation response data, once surrounding code has
+// DoElideListResponseData performs the actual elision of list operation response data, once surrounding code has
 // determined it should apply to a particular request. The data map that is passed in must be a copy that is safe to
 // modify in place, but need not be a full recursive deep copy, as only top-level keys are changed.
 //
 // See the documentation of the controlling option in FormatterConfig for more information on the purpose.
-func doElideListResponseData(data map[string]interface{}) {
+func DoElideListResponseData(data map[string]interface{}) {
 	for k, v := range data {
 		if k == "keys" {
 			if vSlice, ok := v.([]string); ok {

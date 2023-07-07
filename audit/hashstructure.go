@@ -74,7 +74,7 @@ func HashRequest(salter *salt.Salt, in *logical.Request, HMACAccessor bool, nonH
 			return nil, err
 		}
 
-		err = hashMap(fn, copy.(map[string]interface{}), nonHMACDataKeys)
+		err = HashMap(fn, copy.(map[string]interface{}), nonHMACDataKeys)
 		if err != nil {
 			return nil, err
 		}
@@ -84,7 +84,7 @@ func HashRequest(salter *salt.Salt, in *logical.Request, HMACAccessor bool, nonH
 	return &req, nil
 }
 
-func hashMap(fn func(string) string, data map[string]interface{}, nonHMACDataKeys []string) error {
+func HashMap(fn func(string) string, data map[string]interface{}, nonHMACDataKeys []string) error {
 	for k, v := range data {
 		if o, ok := v.(logical.OptMarshaler); ok {
 			marshaled, err := o.MarshalJSONWithOptions(&logical.MarshalOptions{
@@ -142,10 +142,10 @@ func HashResponse(
 		// - take advantage of the deep copy of resp.Data that was going to be done anyway for hashing
 		// - but elide data before potentially spending time hashing it
 		if elideListResponseData {
-			doElideListResponseData(mapCopy)
+			DoElideListResponseData(mapCopy)
 		}
 
-		err = hashMap(fn, mapCopy, nonHMACDataKeys)
+		err = HashMap(fn, mapCopy, nonHMACDataKeys)
 		if err != nil {
 			return nil, err
 		}

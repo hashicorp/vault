@@ -59,7 +59,7 @@ func (fw *testingFormatWriter) hashExpectedValueForComparison(input map[string]i
 		panic(err)
 	}
 
-	err = hashMap(salter.GetIdentifiedHMAC, copiedAsMap, nil)
+	err = HashMap(salter.GetIdentifiedHMAC, copiedAsMap, nil)
 	if err != nil {
 		panic(err)
 	}
