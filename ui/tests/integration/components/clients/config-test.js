@@ -13,7 +13,7 @@ module('Integration | Component | client count config', function (hooks) {
     this.router = this.owner.lookup('service:router');
     this.transitionStub = sinon.stub(this.router, 'transitionTo');
     const store = this.owner.lookup('service:store');
-    this.createModel = (enabled = 'enable', reporting_enabled = false, minimum_retention_months = 0) => {
+    this.createModel = (enabled = 'enable', reporting_enabled = false, minimum_retention_months = 24) => {
       store.pushPayload('clients/config', {
         modelName: 'clients/config',
         id: 'foo',
@@ -51,7 +51,7 @@ module('Integration | Component | client count config', function (hooks) {
 
     this.server.put('/sys/internal/counters/config', (schema, req) => {
       const { enabled, retention_months } = JSON.parse(req.requestBody);
-      const expected = { enabled: 'enable', retention_months: 5 };
+      const expected = { enabled: 'enable', retention_months: 24 };
       assert.deepEqual(expected, { enabled, retention_months }, 'Correct data sent in PUT request');
       return {};
     });
@@ -75,11 +75,11 @@ module('Integration | Component | client count config', function (hooks) {
     assert
       .dom('[data-test-inline-error-message]')
       .hasText(
-        'Retention period must be greater than or equal to 0.',
+        'Retention period must be greater than or equal to 24.',
         'Validation error shows for incorrect retention period'
       );
 
-    await fillIn('[data-test-input="retentionMonths"]', 5);
+    await fillIn('[data-test-input="retentionMonths"]', 24);
     await click('[data-test-clients-config-save]');
     assert.dom('.modal.is-active').exists('Modal renders');
     assert
@@ -149,7 +149,7 @@ module('Integration | Component | client count config', function (hooks) {
 
     this.server.put('/sys/internal/counters/config', (schema, req) => {
       const { enabled, retention_months } = JSON.parse(req.requestBody);
-      const expected = { enabled: 'enable', retention_months: 5 };
+      const expected = { enabled: 'enable', retention_months: 24 };
       assert.deepEqual(expected, { enabled, retention_months }, 'Correct data sent in PUT request');
       return {};
     });
@@ -160,8 +160,7 @@ module('Integration | Component | client count config', function (hooks) {
       <div id="modal-wormhole"></div>
       <Clients::Config @model={{this.model}} @mode="edit" />
     `);
-
-    await fillIn('[data-test-input="retentionMonths"]', 5);
+    await fillIn('[data-test-input="retentionMonths"]', 24);
     await click('[data-test-clients-config-save]');
   });
 });
