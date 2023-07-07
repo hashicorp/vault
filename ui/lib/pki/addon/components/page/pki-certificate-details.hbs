@@ -34,12 +34,7 @@
 {{#each @model.formFields as |field|}}
   {{#if field.options.masked}}
     <InfoTableRow @label={{or field.options.label (capitalize (humanize (dasherize field.name)))}}>
-      <MaskedInput
-        @value={{or (get @model field.name) null}}
-        @displayOnly={{true}}
-        @allowCopy={{true}}
-        @allowDownload={{true}}
-      />
+      <MaskedInput @value={{or (get @model field.name) null}} @displayOnly={{true}} @allowCopy={{true}} />
     </InfoTableRow>
   {{else if (eq field.name "serialNumber")}}
     <InfoTableRow @label="Serial number">
