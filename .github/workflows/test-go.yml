@@ -228,8 +228,8 @@ jobs:
           # shellcheck disable=SC2086 # can't quote package list
           GOARCH=${{ inputs.go-arch }} \
             go run gotest.tools/gotestsum --format=short-verbose \
-              --junitfile test-results/go-test/results.xml \
-              --jsonfile test-results/go-test/results.json \
+              --junitfile test-results/go-test/results-${{ matrix.runner-index }}.xml \
+              --jsonfile test-results/go-test/results-${{ matrix.runner-index }}.json \
               -- \
               -tags "${{ inputs.go-build-tags }}" \
               -timeout=${{ env.TIMEOUT_IN_MINUTES }}m \
@@ -251,17 +251,17 @@ jobs:
           if [[ ${{ github.repository }} == 'hashicorp/vault' ]]; then
             export DATADOG_API_KEY=${{ secrets.DATADOG_API_KEY }}
           fi
-          datadog-ci junit upload --service "$GITHUB_REPOSITORY" test-results/go-test/results.xml
+          datadog-ci junit upload --service "$GITHUB_REPOSITORY" test-results/go-test/results-${{ matrix.runner-index }}.xml
         if: success() || failure()
       - name: Archive test results
         uses: actions/upload-artifact@0b7f8abb1508181956e8e162db84b466c27e18ce # v3.1.2
         with:
-          name: test-results${{ inputs.name }}-${{ matrix.runner-index }}
+          name: test-results${{ inputs.name }}
           path: test-results/
         if: success() || failure() 
       - name: Create a summary of tests
         uses: test-summary/action@62bc5c68de2a6a0d02039763b8c754569df99e3f   # TSCCR: no entry for repository "test-summary/action"
         with:
-          paths: "test-results/go-test/results.xml"
+          paths: "test-results/go-test/results-${{ matrix.runner-index }}.xml"
           show: "fail"
         if: success() || failure() 
