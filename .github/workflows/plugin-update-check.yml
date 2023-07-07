@@ -64,12 +64,22 @@ jobs:
             --title "[DO NOT MERGE]: $PLUGIN_REPO Automated plugin update check" \
             --body "Updates $PLUGIN_REPO to verify vault CI. Full log: https://github.com/hashicorp/vault/actions/runs/$RUN_ID"
 
-            PR=$(gh pr list --head "$VAULT_BRANCH" --json number -q '.[0].number')
             echo "vault_pr_num=$(gh pr list --head "$VAULT_BRANCH" --json number -q '.[0].number')" >> "$GITHUB_OUTPUT"
             echo "vault_pr_url=$(gh pr list --head "$VAULT_BRANCH" --json html_url -q '.[0].htlm_url')" >> "$GITHUB_OUTPUT"
           else
             echo "Pull request already exists, won't create a new one."
           fi
+
+      - name: Add labels to Vault CI check PR
+        if: steps.changes.outputs.count > 0
+        env:
+          # this is a different token to the one we have been using that should
+          # allow us to add labels
+          GITHUB_TOKEN: ${{secrets.GITHUB_TOKEN}}
+        run: |
+          gh pr edit "${{ steps.pr.outputs.vault_pr_num }}" \
+            --add-label "dependencies,pr/no-changelong,pr/no-milestone" \
+            --repo hashicorp/vault
 
       - name: Comment on plugin PR
         if: steps.changes.outputs.count > 0
@@ -83,11 +93,3 @@ jobs:
           # make a comment on the plugin repo's PR
           gh pr comment "$plugin_pr_num" --body "Vault CI check PR: $vault_pr_url" --repo "$PLUGIN_REPO"
 
-      - name: Add labels to Vault CI check PR
-        if: steps.changes.outputs.count > 0
-        env:
-          GITHUB_TOKEN: ${{secrets.GITHUB_TOKEN}}
-        run: |
-          gh pr edit "${{ steps.pr.outputs.vault_pr_num }}" \
-            --add-label "dependencies,pr/no-changelong,pr/no-milestone" \
-            --repo hashicorp/vault
