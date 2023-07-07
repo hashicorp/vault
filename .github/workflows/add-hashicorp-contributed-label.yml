@@ -17,8 +17,8 @@ on:
 
 jobs:
   add-hashicorp-contributed-label:
-    # Only run if this is NOT coming from a fork of Vault (if this is not true, it's community contributed)
-    if: ${{ github.event.pull_request.head.repo.full_name == github.event.pull_request.base.repo.full_name }}
+    # Only run if this is NOT coming from a fork of hashicorp/vault (if this is not true, it's community contributed)
+    if: ${{ github.repository == 'hashicorp/vault' && (github.event.pull_request.head.repo.full_name == github.event.pull_request.base.repo.full_name) }}
     runs-on: ubuntu-latest
     steps:
       - name: "Add label to PR"
