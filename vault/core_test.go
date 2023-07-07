@@ -35,10 +35,6 @@ import (
 // invalidKey is used to test Unseal
 var invalidKey = []byte("abcdefghijklmnopqrstuvwxyz")[:17]
 
-func TestJustFail(t *testing.T) {
-	t.Fatalf("FAILING ON PURPOSE")
-}
-
 func TestNewCore_badRedirectAddr(t *testing.T) {
 	logger = logging.NewVaultLogger(log.Trace)
 
