@@ -99,7 +99,8 @@ jobs:
       - verify-changes
     # Don't run this job for docs/ui only PRs
     if: |
-      needs.verify-changes.outputs.is_docs_ui_change == 'false'
+      needs.verify-changes.outputs.is_docs_change == 'false' &&
+      needs.verify-changes.outputs.is_ui_change == 'false'
     uses: ./.github/workflows/test-go.yml
     with:
       # The regular Go tests use an extra runner to execute the
@@ -120,7 +121,8 @@ jobs:
     # Don't run this job for docs/ui only PRs
     if: |
       github.event.pull_request.draft == false &&
-      needs.verify-changes.outputs.is_docs_ui_change == 'false'
+      needs.verify-changes.outputs.is_docs_change == 'false' &&
+      needs.verify-changes.outputs.is_ui_change == 'false'
     uses: ./.github/workflows/test-go.yml
     with:
       total-runners: 16
@@ -141,7 +143,8 @@ jobs:
     if: |
       github.event.pull_request.draft == false &&
       needs.setup.outputs.enterprise == 1 &&
-      needs.verify-changes.outputs.is_docs_ui_change == 'false'
+      needs.verify-changes.outputs.is_docs_change == 'false' &&
+      needs.verify-changes.outputs.is_ui_change == 'false'
     needs:
       - setup
       - setup-go-cache

@@ -3,9 +3,12 @@ name: verify_changes
 on:
   workflow_call:
     outputs:
-      is_docs_ui_change:
-        description: "determines if the changes are docs/ui related"
-        value: ${{ jobs.verify-doc-ui-changes.outputs.is_docs_ui_change }}
+      is_docs_change:
+        description: "determines if the changes contains docs"
+        value: ${{ jobs.verify-doc-ui-changes.outputs.is_docs_change }}
+      is_ui_change:
+        description: "determines if the changes contain ui"
+        value: ${{ jobs.verify-doc-ui-changes.outputs.is_ui_change }}
 
 jobs:
   # verify-doc-ui-changes determines if the changes are only for docs (website) and/or ui
@@ -13,7 +16,8 @@ jobs:
     if: github.event.pull_request.draft == false
     runs-on: ubuntu-latest
     outputs:
-      is_docs_ui_change: ${{ steps.get-changeddir.outputs.is_docs_ui_change }}
+      is_docs_change: ${{ steps.get-changeddir.outputs.is_docs_change }}
+      is_ui_change: ${{ steps.get-changeddir.outputs.is_ui_change }}
     steps:
       - uses: actions/checkout@c85c95e3d7251135ab7dc9ce3241c5835cc595a9 # v3.5.3
         with:

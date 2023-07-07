@@ -29,20 +29,28 @@ fi
 changed_dir=$(git diff $base_commit...$head_commit --name-only | awk -F"/" '{ print $1}' | uniq)
 change_count=$(echo "$changed_dir" | wc -l)
 
+# There are 4 main conditions to check:
+#
+# 1. more than two changes found, set the flags to false
+# 2. doc only change
+# 3. ui only change
+# 4. two changes found, if either doc or ui does not exist in the changes, set both flags to false
+
 if [[ $change_count -gt 2 && $change_count -ne 0 ]]; then
-  echo "is_docs_ui_change=false" >> "$GITHUB_OUTPUT"
-  exit 0
+  echo "is_docs_change=false" >> "$GITHUB_OUTPUT"
+  echo "is_ui_change=false" >> "$GITHUB_OUTPUT"
 elif [[ $change_count -eq 1 && "$changed_dir" == "website" ]]; then
-  echo "is_docs_ui_change=true" >> "$GITHUB_OUTPUT"
-  exit 0
+  echo "is_docs_change=true" >> "$GITHUB_OUTPUT"
+  echo "is_ui_change=false" >> "$GITHUB_OUTPUT"
 elif [[ $change_count -eq 1 && "$changed_dir" == "ui" ]]; then
-  echo "is_docs_ui_change=true" >> "$GITHUB_OUTPUT"
-  exit 0
+  echo "is_ui_change=true" >> "$GITHUB_OUTPUT"
+  echo "is_docs_change=false" >> "$GITHUB_OUTPUT"
 else
   if ! contains "website" ${changed_dir[@]} || ! contains "ui" ${changed_dir[@]}; then
-    echo "is_docs_ui_change=false" >> "$GITHUB_OUTPUT"
-    exit 0
+   echo "is_docs_change=false" >> "$GITHUB_OUTPUT"
+   echo "is_ui_change=false" >> "$GITHUB_OUTPUT"
   else
-    echo "is_docs_ui_change=true" >> "$GITHUB_OUTPUT"
+    echo "is_docs_change=true" >> "$GITHUB_OUTPUT"
+    echo "is_ui_change=true" >> "$GITHUB_OUTPUT"
   fi
 fi
