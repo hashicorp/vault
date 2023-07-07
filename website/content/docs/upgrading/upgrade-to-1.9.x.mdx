@@ -115,3 +115,13 @@ If a panic is encountered after an upgrade to Vault 1.9.0, the named key will be
 corrupted on storage and become unusable. In this case, the key will need to be
 deleted and re-created. A fix to fully mitigate this panic will be addressed on
 Vault 1.9.3.
+
+### Activity Log Non-Entity Tokens
+
+When upgrading Vault from 1.8 (or earlier) to 1.9 (or later), client counts of [non-entity tokens](/vault/docs/concepts/client-count#non-entity-tokens) will only include the tokens used after the upgrade.
+
+Starting in Vault 1.9, the activity log records and de-duplicates non-entity tokens by using the namespace and token's policies to generate a unique identifier. Because Vault did not create identifiers for these tokens before 1.9, the activity log cannot know whether this token has been seen pre-1.9. To prevent inaccurate and inflated counts, the activity log will ignore any counts of non-entity tokens that were created before the upgrade and only the non-entity tokens from versions 1.9 and later will be counted.
+
+Before upgrading, you should [query Vault usage metrics](/vault/tutorials/monitoring/usage-metrics#querying-usage-metrics) and report the usage data for billing purposes.
+
+See the client count [overview](/vault/docs/concepts/client-count) and [FAQ](/vault/docs/concepts/client-count/faq) for more information.

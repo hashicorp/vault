@@ -245,9 +245,8 @@ func (b *SystemBackend) handleRaftRemovePeerUpdate() framework.OperationFunc {
 		if err := raftBackend.RemovePeer(ctx, serverID); err != nil {
 			return nil, err
 		}
-		if b.Core.raftFollowerStates != nil {
-			b.Core.raftFollowerStates.Delete(serverID)
-		}
+
+		b.Core.raftFollowerStates.Delete(serverID)
 
 		return nil, nil
 	}
@@ -348,16 +347,6 @@ func (b *SystemBackend) handleRaftBootstrapAnswerWrite() framework.OperationFunc
 			return nil, errors.New("could not decode raft TLS configuration")
 		}
 
-		switch nonVoter {
-		case true:
-			err = raftBackend.AddNonVotingPeer(ctx, serverID, clusterAddr)
-		default:
-			err = raftBackend.AddPeer(ctx, serverID, clusterAddr)
-		}
-		if err != nil {
-			return nil, err
-		}
-
 		var desiredSuffrage string
 		switch nonVoter {
 		case true:
@@ -366,11 +355,22 @@ func (b *SystemBackend) handleRaftBootstrapAnswerWrite() framework.OperationFunc
 			desiredSuffrage = "voter"
 		}
 
-		if b.Core.raftFollowerStates != nil {
-			b.Core.raftFollowerStates.Update(&raft.EchoRequestUpdate{
-				NodeID:          serverID,
-				DesiredSuffrage: desiredSuffrage,
-			})
+		added := b.Core.raftFollowerStates.Update(&raft.EchoRequestUpdate{
+			NodeID:          serverID,
+			DesiredSuffrage: desiredSuffrage,
+		})
+
+		switch nonVoter {
+		case true:
+			err = raftBackend.AddNonVotingPeer(ctx, serverID, clusterAddr)
+		default:
+			err = raftBackend.AddPeer(ctx, serverID, clusterAddr)
+		}
+		if err != nil {
+			if added {
+				b.Core.raftFollowerStates.Delete(serverID)
+			}
+			return nil, err
 		}
 
 		peers, err := raftBackend.Peers(ctx)

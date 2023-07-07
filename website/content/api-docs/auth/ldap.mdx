@@ -94,11 +94,10 @@ This endpoint configures the LDAP auth method.
   returning _user_ objects, use: `memberOf`. The default is `cn`.
 - `username_as_alias` `(bool: false)` - If set to true, forces the auth method
   to use the username passed by the user as the alias name.
-- `max_page_size` `(int: math.MaxInt32)` - If set to a value greater than 0, the LDAP
+- `max_page_size` `(int: 0)` - If set to a value greater than 0, the LDAP
   backend will use the LDAP server's paged search control to request pages of
   up to the given size. This can be used to avoid hitting the LDAP server's
-  maximum result size limit. A value of 0 will be interpreted by the LDAP
-  server as unlimited. If set to -1, the LDAP backend will not use the
+  maximum result size limit. Otherwise, the LDAP backend will not use the
   paged search control.
 
 @include 'tokenfields.mdx'

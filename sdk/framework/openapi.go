@@ -386,6 +386,10 @@ func documentPath(p *Path, specialPaths *logical.Paths, requestResponsePrefix st
 					s.Properties[name] = &p
 				}
 
+				// Make the ordering deterministic, so that the generated OpenAPI spec document, observed over several
+				// versions, doesn't contain spurious non-semantic changes.
+				sort.Strings(s.Required)
+
 				// If examples were given, use the first one as the sample
 				// of this schema.
 				if len(props.Examples) > 0 {
@@ -798,8 +802,8 @@ func convertType(t FieldType) schemaType {
 		ret.baseType = "integer"
 		ret.format = "int64"
 	case TypeDurationSecond, TypeSignedDurationSecond:
-		ret.baseType = "integer"
-		ret.format = "seconds"
+		ret.baseType = "string"
+		ret.format = "duration"
 	case TypeBool:
 		ret.baseType = "boolean"
 	case TypeMap:

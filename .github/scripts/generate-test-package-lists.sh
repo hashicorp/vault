@@ -137,6 +137,7 @@ test_packages[6]+=" $base/sdk/helper/kdf"
 test_packages[6]+=" $base/sdk/helper/locksutil"
 test_packages[6]+=" $base/sdk/helper/pathmanager"
 test_packages[6]+=" $base/sdk/helper/roottoken"
+test_packages[6]+=" $base/sdk/helper/testhelpers"
 test_packages[6]+=" $base/sdk/helper/xor"
 test_packages[6]+=" $base/sdk/physical/file"
 test_packages[6]+=" $base/sdk/plugin/pb"
@@ -266,6 +267,7 @@ test_packages[15]+=" $base/physical/mysql"
 test_packages[15]+=" $base/plugins/database/cassandra"
 if [ "${ENTERPRISE:+x}" == "x" ] ; then
     test_packages[15]+=" $base/vault/external_tests/namespaces"
+    test_packages[15]+=" $base/vault/external_tests/census"
 fi
 test_packages[15]+=" $base/vault/external_tests/sealmigrationext"
 

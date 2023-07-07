@@ -421,9 +421,12 @@ func (c *Core) checkToken(ctx context.Context, req *logical.Request, unauth bool
 		auth.PolicyResults.GrantingPolicies = append(auth.PolicyResults.GrantingPolicies, authResults.SentinelResults.GrantingPolicies...)
 	}
 
+	c.activityLogLock.RLock()
+	activityLog := c.activityLog
+	c.activityLogLock.RUnlock()
 	// If it is an authenticated ( i.e with vault token ) request, increment client count
-	if !unauth && c.activityLog != nil {
-		c.activityLog.HandleTokenUsage(ctx, te, clientID, isTWE)
+	if !unauth && activityLog != nil {
+		activityLog.HandleTokenUsage(ctx, te, clientID, isTWE)
 	}
 	return auth, te, nil
 }

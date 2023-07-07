@@ -152,7 +152,7 @@ It will produce errors in Vault Server's logs such as:
   error=
   | 1 error occurred:
   | 	* panic generating audit log
-  | 
+  |
 ```
 
 As a workaround, [listing plugins by type](/api-docs/system/plugins-catalog#list-plugins-1)
@@ -184,3 +184,32 @@ Affects version 1.12.3. A fix will be released in 1.12.4.
 @include 'tokenization-rotation-persistence.mdx'
 
 @include 'ocsp-redirect.mdx'
+
+### LDAP Pagination Issue
+
+There was a regression introduced in 1.12.6 relating to LDAP maximum page sizes, resulting in
+an error `no LDAP groups found in groupDN [...] only policies from locally-defined groups available`.  The issue
+occurs when upgrading Vault with an instance that has an existing LDAP Auth configuration.
+
+As a workaround, disable paged searching using the following:
+```shell-session
+vault write auth/ldap/config max_page_size=-1
+```
+
+#### Impacted Versions
+
+Affects Vault 1.12.6.
+
+### Slow Startup Time When Storing PKI Certificates 
+
+There was a regression introduced in 1.12.0 where Vault is slow to start because the 
+PKI secret engine performs a list operation on the stored certificates. If a large number 
+of certificates are stored this can cause long start times on active and standby nodes.
+
+There is currently no workaround for this other than limiting the number of certificates stored
+in Vault via the [PKI tidy](/vault/api-docs/secret/pki.mdx#tidy) or using `no_store`
+flag for [PKI roles](/vault/api-docs/secret/pki.mdx#create-update-role).
+
+#### Impacted Versions
+
+Affects Vault 1.12.0+

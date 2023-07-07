@@ -327,8 +327,7 @@ func (c *Core) startClusterListener(ctx context.Context) error {
 	c.clusterListener.Store(cluster.NewListener(networkLayer,
 		c.clusterCipherSuites,
 		listenerLogger,
-		5*c.clusterHeartbeatInterval,
-		c.grpcMinConnectTimeout))
+		5*c.clusterHeartbeatInterval))
 
 	c.AddLogger(listenerLogger)
 
@@ -384,6 +383,10 @@ func (c *Core) SetClusterListenerAddrs(addrs []*net.TCPAddr) {
 	if c.ClusterAddr() == "" && len(addrs) == 1 {
 		c.clusterAddr.Store(fmt.Sprintf("https://%s", addrs[0].String()))
 	}
+}
+
+func (c *Core) ClusterID() string {
+	return c.clusterID.Load()
 }
 
 func (c *Core) SetClusterHandler(handler http.Handler) {

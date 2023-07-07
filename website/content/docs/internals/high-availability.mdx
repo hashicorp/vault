@@ -37,8 +37,7 @@ If a server is in a sealed state, it cannot act as a standby. Servers in a seale
 
 # Performance Standby Nodes (Enterprise)
 
-Performance Standby Nodes, like traditional High Availability standby
-nodes, service read-only requests from users or applications.
+Performance Standby Nodes service read-only requests from users or applications.
 Read-only requests are requests that do not modify Vault's storage. Vault quickly scales its ability to service these operations,
 providing a near-linear request-per-second scaling for most scenarios and secrets engines like K/V and Transit. Traffic is distributed across performance standby nodes, allowing clients to scale these IOPS horizontally, and control high traffic workloads.
 

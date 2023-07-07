@@ -58,17 +58,14 @@ Vagrantfile
 !command/server/test-fixtures/**/*.hcl
 !enos/**/*.hcl
 
-# Enos local Terraform files
-enos/.enos
-enos/support
-enos/.terraform/*
-enos/.terraform.lock.hcl
-enos/*.tfstate
-enos/*.tfstate.*
-enos/**/.terraform/*
-enos/**/.terraform.lock.hcl
-enos/**/*.tfstate
-enos/**/*.tfstate.*
+# Enos
+.enos
+enos-local.vars.hcl
+enos/**/support
+enos/**/kubeconfig
+.terraform
+.terraform.lock.hcl
+.tfstate.*
 
 .DS_Store
 .idea

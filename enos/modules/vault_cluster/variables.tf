@@ -15,6 +15,18 @@ variable "awskms_unseal_key_arn" {
   default     = null
 }
 
+variable "backend_cluster_name" {
+  type        = string
+  description = "The name of the backend cluster"
+  default     = null
+}
+
+variable "backend_cluster_tag_key" {
+  type        = string
+  description = "The tag key for searching for backend nodes"
+  default     = null
+}
+
 variable "cluster_name" {
   type        = string
   description = "The Vault cluster name"
@@ -33,12 +45,6 @@ variable "config_env_vars" {
   default     = null
 }
 
-variable "consul_cluster_tag" {
-  type        = string
-  description = "The retry_join tag to use for Consul"
-  default     = null
-}
-
 variable "consul_data_dir" {
   type        = string
   description = "The directory where the consul will store data"
@@ -51,10 +57,28 @@ variable "consul_install_dir" {
   default     = "/opt/consul/bin"
 }
 
+variable "consul_license" {
+  type        = string
+  sensitive   = true
+  description = "The consul enterprise license"
+  default     = null
+}
+
 variable "consul_log_file" {
   type        = string
   description = "The file where the consul will write log output"
   default     = "/var/log/consul.log"
+}
+
+variable "consul_log_level" {
+  type        = string
+  description = "The consul service log level"
+  default     = "info"
+
+  validation {
+    condition     = contains(["trace", "debug", "info", "warn", "error"], var.consul_log_level)
+    error_message = "The consul_log_level must be one of 'trace', 'debug', 'info', 'warn', or 'error'."
+  }
 }
 
 variable "consul_release" {
@@ -67,6 +91,12 @@ variable "consul_release" {
     version = "1.15.1"
     edition = "oss"
   }
+}
+
+variable "enable_file_audit_device" {
+  description = "If true the file audit device will be enabled at the path /var/log/vault_audit.log"
+  type        = bool
+  default     = true
 }
 
 variable "force_unseal" {
@@ -98,6 +128,17 @@ variable "local_artifact_path" {
   type        = string
   description = "The path to a locally built vault artifact to install. It can be a zip archive, RPM, or Debian package"
   default     = null
+}
+
+variable "log_level" {
+  type        = string
+  description = "The vault service log level"
+  default     = "info"
+
+  validation {
+    condition     = contains(["trace", "debug", "info", "warn", "error"], var.log_level)
+    error_message = "The log_level must be one of 'trace', 'debug', 'info', 'warn', or 'error'."
+  }
 }
 
 variable "manage_service" {

@@ -28,3 +28,18 @@ API path by setting the [bool config option](/api-docs/secret/databases/elasticd
 @include 'raft-retry-join-failure.mdx'
 
 @include 'tokenization-rotation-persistence.mdx'
+
+### LDAP Pagination Issue
+
+There was a regression introduced in 1.11.10 relating to LDAP maximum page sizes, resulting in
+an error `no LDAP groups found in groupDN [...] only policies from locally-defined groups available`.  The issue
+occurs when upgrading Vault with an instance that has an existing LDAP Auth configuration.
+
+As a workaround, disable paged searching using the following:
+```shell-session
+vault write auth/ldap/config max_page_size=-1
+```
+
+#### Impacted Versions
+
+Affects Vault 1.11.10.
