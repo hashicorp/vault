@@ -4,7 +4,7 @@
  */
 
 /* eslint-env node */
-
+/* non-sense */
 'use strict';
 
 const vault_addr = process.env.VAULT_ADDR;
