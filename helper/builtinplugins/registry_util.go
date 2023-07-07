@@ -1,4 +1,4 @@
-// go: build !enterprise
+//go:build !enterprise
 
 package builtinplugins
 
