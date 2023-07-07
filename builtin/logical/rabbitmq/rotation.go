@@ -19,6 +19,7 @@ const (
 	defaultQueueTickSeconds = 5
 
 	// Config key to set an alternate interval
+	// TODO make this configurable in the backend
 	queueTickIntervalKey = "rotation_queue_tick_interval"
 
 	// WAL storage key used for static account rotations
@@ -44,6 +45,13 @@ func (b *backend) rotateExpiredStaticCreds(ctx context.Context, req *logical.Req
 			}
 		}
 	}
+}
+
+func (b *backend) validateRotationPeriod(period time.Duration) error {
+	if period < defaultQueueTickSeconds {
+		return fmt.Errorf("role rotation period out of range: must be greater than %d seconds", defaultQueueTickSeconds)
+	}
+	return nil
 }
 
 // TODO check if not pop by key needed

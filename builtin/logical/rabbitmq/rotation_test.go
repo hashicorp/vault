@@ -66,6 +66,14 @@ func TestBackend_StaticRoles(t *testing.T) {
 			wantErr: true,
 		},
 		{
+			name: "invalid static role with missing rotation period",
+			args: map[string]interface{}{
+				"tags":            tags,
+				"username":        "tester",
+			},
+			wantErr: true,
+		},
+		{
 			name: "invalid static role with no username",
 			args: map[string]interface{}{
 				"tags":         tags,
@@ -78,13 +86,13 @@ func TestBackend_StaticRoles(t *testing.T) {
 			args: map[string]interface{}{
 				"tags":            tags,
 				"username":        "tester",
-				"rotation_period": 3,
+				"rotation_period": 7,
 			},
 			wantErr: false,
 			expectedResp: map[string]interface{}{
 				"tags":            tags,
 				"username":        "tester",
-				"rotation_period": 3.0,
+				"rotation_period": 7.0,
 			},
 		},
 		{
@@ -93,12 +101,14 @@ func TestBackend_StaticRoles(t *testing.T) {
 				"tags":                  tags,
 				"username":              "tester",
 				"revoke_user_on_delete": true,
+				"rotation_period": 10,
 			},
 			wantErr: false,
 			expectedResp: map[string]interface{}{
 				"tags":                  tags,
 				"username":              "tester",
 				"revoke_user_on_delete": true,
+				"rotation_period": 10.0,
 			},
 		},
 	}

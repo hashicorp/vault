@@ -317,7 +317,15 @@ func (b *backend) pathStaticRoleCreateUpdate(ctx context.Context, req *logical.R
 		return logical.ErrorResponse("username is a required field to create a static account"), nil
 	}
 	revokeUserOnDelete := d.Get("revoke_user_on_delete").(bool)
-	rotationPeriod := d.Get("rotation_period").(int)
+	rotationPeriodRaw, ok := d.GetOk("rotation_period")
+	if !ok {
+		// TODO allow to set default in backend
+		return logical.ErrorResponse("missing %q parameter", "rotation_period"), nil
+	}
+	rotationPeriod := rotationPeriodRaw.(int)
+	if err := b.validateRotationPeriod(time.Duration(rotationPeriod) * time.Second); err != nil {
+		return logical.ErrorResponse(err.Error()), nil
+	}
 	staticRole := staticRoleEntry{
 		RoleEntry:          *role,
 		Username:           username,
