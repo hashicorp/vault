@@ -724,8 +724,11 @@ func (c *Core) mountInternal(ctx context.Context, entry *MountEntry, updateStora
 		}
 	}
 	c.mounts = newTable
-
 	if err := c.router.Mount(backend, entry.Path, entry, view); err != nil {
+		return err
+	}
+	if err = c.entBuiltinPluginMetrics(ctx, entry, 1); err != nil {
+		c.logger.Error("failed to emit enabled ent builtin plugin metrics", "error", err)
 		return err
 	}
 
