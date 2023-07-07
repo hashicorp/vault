@@ -9,10 +9,12 @@ import { hash } from 'rsvp';
 
 export default class VaultClusterDashboardRoute extends Route {
   @service store;
+  @service version;
 
   model() {
     return hash({
       secretsEngines: this.store.query('secret-engine', {}),
+      version: this.version.version,
     });
   }
 }
