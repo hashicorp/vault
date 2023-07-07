@@ -77,6 +77,11 @@ jobs:
           # allow us to add labels
           GITHUB_TOKEN: ${{secrets.GITHUB_TOKEN}}
         run: |
+          if [ -z "$vault_pr_num" ]; then
+            echo "error: no vault PR found"
+            exit 1
+          fi
+
           gh pr edit "${{ steps.pr.outputs.vault_pr_num }}" \
             --add-label "dependencies,pr/no-changelong,pr/no-milestone" \
             --repo hashicorp/vault
@@ -89,6 +94,17 @@ jobs:
           # get Plugin PR number
           plugin_pr_num=$(gh pr list --head "$PLUGIN_BRANCH" --json number --repo "$PLUGIN_REPO" -q '.[0].number')
 
-          # make a comment on the plugin repo's PR
-          gh pr comment "$plugin_pr_num" --body "Vault CI check PR: $vault_pr_url" --repo "$PLUGIN_REPO"
+          if [ -z "$plugin_pr_num" ]; then
+            echo "error: no plugin PR found"
+            exit 1
+          fi
 
+          if [ -z "${{ steps.pr.outputs.vault_pr_url }}" ]; then
+            echo "error: no vault PR found"
+            exit 1
+          fi
+
+          # make a comment on the plugin repo's PR
+          gh pr comment "$plugin_pr_num" \
+            --body "Vault CI check PR: ${{ steps.pr.outputs.vault_pr_url }}" \
+            --repo "$PLUGIN_REPO"
