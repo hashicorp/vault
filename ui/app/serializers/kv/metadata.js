@@ -18,8 +18,8 @@ export default class KvMetadataSerializer extends ApplicationSerializer {
 
   normalizeItems(payload) {
     if (payload.data.keys) {
-      assert('payload.backend must be provided on kv/metadata list response', !!payload.data.backend);
-      const backend = payload.data.backend;
+      assert('payload.backend must be provided on kv/metadata list response', !!payload.backend);
+      const backend = payload.backend;
       payload.data.keys = payload.data.keys.map((path) => {
         return {
           id: kvMetadataPath(backend, path),

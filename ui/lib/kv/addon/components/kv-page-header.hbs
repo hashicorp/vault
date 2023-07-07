@@ -28,9 +28,7 @@
 {{#if @showToolbar}}
   <Toolbar>
     {{#if (has-block "toolbarFilters")}}
-      {{! <ToolbarFilters> }}
       {{yield to="toolbarFilters"}}
-      {{! </ToolbarFilters> }}
     {{/if}}
     <ToolbarActions>
       {{#if (has-block "toolbarActions")}}
