@@ -62,8 +62,6 @@ jobs:
             gh pr create \
             --head "$VAULT_BRANCH" \
             --title "[DO NOT MERGE]: $PLUGIN_REPO Automated plugin update check" \
-            --reviewer "$reviewers" \
-            --label "dependencies" \
             --body "Updates $PLUGIN_REPO to verify vault CI. Full log: https://github.com/hashicorp/vault/actions/runs/$RUN_ID"
 
             PR=$(gh pr list --head "$VAULT_BRANCH" --json number -q '.[0].number')
