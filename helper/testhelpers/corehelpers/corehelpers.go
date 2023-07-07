@@ -182,13 +182,23 @@ func (m *mockBuiltinRegistry) Keys(pluginType consts.PluginType) []string {
 			"pending-removal-test-plugin",
 			"approle",
 		}
-		
+
 	case consts.PluginTypeSecrets:
 		return append(externalPlugins, "kv")
 	}
 
 	return []string{}
 }
+
+func (r *mockBuiltinRegistry) IsBuiltinEntPlugin(name string, pluginType consts.PluginType) bool {
+	for _, i := range externalPlugins {
+		if i == name {
+			return true
+		}
+	}
+	return false
+}
+
 func (m *mockBuiltinRegistry) Contains(name string, pluginType consts.PluginType) bool {
 	for _, key := range m.Keys(pluginType) {
 		if key == name {
@@ -204,16 +214,6 @@ func (m *mockBuiltinRegistry) DeprecationStatus(name string, pluginType consts.P
 	}
 
 	return consts.Unknown, false
-}
-
-// IsBuiltinEntPlugin checks whether the plugin is an enterprise only builtin plugin
-func (r *mockBuiltinRegistry) IsBuiltinEntPlugin(name string, pluginType consts.PluginType) bool {
-	for _, i := range externalPlugins {
-		if i == name {
-			return true
-		}
-	}
-	return false
 }
 
 func TestNoopAudit(t testing.T, config map[string]string) *NoopAudit {
