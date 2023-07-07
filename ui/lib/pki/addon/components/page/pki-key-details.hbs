@@ -49,13 +49,7 @@
   {{/each}}
   {{#if @key.privateKey}}
     <InfoTableRow @label="Private key">
-      <MaskedInput
-        @name="Private key"
-        @value={{@key.privateKey}}
-        @displayOnly={{true}}
-        @allowCopy={{true}}
-        @allowDownload={{true}}
-      />
+      <MaskedInput @value={{@key.privateKey}} @name="Private key" @displayOnly={{true}} @allowCopy={{true}} />
     </InfoTableRow>
   {{/if}}
 </div>

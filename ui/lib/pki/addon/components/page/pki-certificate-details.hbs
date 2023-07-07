@@ -35,7 +35,6 @@
   {{#if field.options.masked}}
     <InfoTableRow @label={{or field.options.label (capitalize (humanize (dasherize field.name)))}}>
       <MaskedInput
-        @name={{field.name}}
         @value={{or (get @model field.name) null}}
         @displayOnly={{true}}
         @allowCopy={{true}}
