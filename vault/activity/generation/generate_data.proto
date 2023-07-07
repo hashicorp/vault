@@ -48,10 +48,9 @@ message Clients {
 message Client {
   string id = 1;
   int32 count = 2;
-  int32 times_seen = 3;
-  bool repeated = 4;
-  int32 repeated_from_month = 5;
-  string namespace = 6;
-  string mount = 7;
-  bool non_entity = 8;
+  bool repeated = 3;
+  int32 repeated_from_month = 4;
+  string namespace = 5;
+  string mount = 6;
+  bool non_entity = 7;
 }

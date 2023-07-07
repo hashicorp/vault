@@ -4567,13 +4567,13 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@hashicorp/design-system-components@npm:2.3.1":
-  version: 2.3.1
-  resolution: "@hashicorp/design-system-components@npm:2.3.1"
+"@hashicorp/design-system-components@npm:2.7.0":
+  version: 2.7.0
+  resolution: "@hashicorp/design-system-components@npm:2.7.0"
   dependencies:
     "@ember/render-modifiers": ^2.0.5
     "@hashicorp/design-system-tokens": ^1.5.0
-    "@hashicorp/ember-flight-icons": ^3.0.2
+    "@hashicorp/ember-flight-icons": ^3.0.5
     dialog-polyfill: ^0.5.6
     ember-a11y-refocus: ^3.0.2
     ember-auto-import: ^2.6.0
@@ -4590,7 +4590,7 @@ __metadata:
     ember-truth-helpers: ^3.0.0
     sass: ^1.58.3
     tippy.js: ^6.3.7
-  checksum: 07d2ac71f8d345cde731c15ff5ef83a57a2f8ab3b56fd71bec122d50db8a8b10968c4b0344055b6314a85350b6ca1fda6dc290d31da61086c25d6d131dcc7c9b
+  checksum: e100910ffd1b5e5e900c5fccf344b77768b69b847d1e588c23a527fe16134ae9be75c34047a37b3300dc303671675520e3fd4694340f8386bb7ff73129f5ca54
   languageName: node
   linkType: hard
 
@@ -4601,22 +4601,22 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@hashicorp/ember-flight-icons@npm:^3.0.2":
-  version: 3.0.2
-  resolution: "@hashicorp/ember-flight-icons@npm:3.0.2"
+"@hashicorp/ember-flight-icons@npm:3.0.5, @hashicorp/ember-flight-icons@npm:^3.0.5":
+  version: 3.0.5
+  resolution: "@hashicorp/ember-flight-icons@npm:3.0.5"
   dependencies:
-    "@hashicorp/flight-icons": ^2.12.0
-    ember-auto-import: ^2.4.2
+    "@hashicorp/flight-icons": ^2.13.1
+    ember-auto-import: ^2.6.0
     ember-cli-babel: ^7.26.11
     ember-cli-htmlbars: ^6.1.0
-  checksum: 325982c6d2e05ed73bed183c43eaa5883a60ec02cb055f418adf26e870eaadf763233643b1ec8f2546bb564a8a3b4053ac086c4e24f8924ed94611e3e0519d1b
+  checksum: b18bcd8765e6df59c4bdd6dd584fdaac8f40c7fcd59980092e89a82167178d827895f05867ae6b2005f2513300cff5f6b60b65606567ca8d9c422f18b14bbc79
   languageName: node
   linkType: hard
 
-"@hashicorp/flight-icons@npm:^2.12.0":
-  version: 2.12.0
-  resolution: "@hashicorp/flight-icons@npm:2.12.0"
-  checksum: dbc7316ad69f8209fd196254e2ae7c47984181822e367eaea1301176083240fbbf64a7230adf787b7669d606fe329461e01ca738e514beac9742cb1ba0103f9a
+"@hashicorp/flight-icons@npm:^2.13.1":
+  version: 2.13.1
+  resolution: "@hashicorp/flight-icons@npm:2.13.1"
+  checksum: 590e30e346c9fa0a9bfbe8376300e73c58d0fa95f108c3f67c0795c05576ca39f3beb971bcd20f90f78c7978bfbf2c7d5fc6e5a5dd1efc029e7afdd9f87a3a19
   languageName: node
   linkType: hard
 
@@ -5645,6 +5645,13 @@ __metadata:
     "@types/mime": ^1
     "@types/node": "*"
   checksum: 5c5f3b64e9fe7c51fb428ef70f1f2365b897fc3c8400be6d6afc8db0f152639182b360361ebd3d0cbaeb607b125dee03bf0c50bf7e08642ff150028f05bb7381
+  languageName: node
+  linkType: hard
+
+"@types/shell-quote@npm:^1.7.1":
+  version: 1.7.1
+  resolution: "@types/shell-quote@npm:1.7.1"
+  checksum: 51e58326b8c6dcb72846b94cebe3dc4c84f3514469a8e52bd29c52c601e784b427b851d7477acbeef47bfcccf25d2a5768684d27e7fc95fdd003393c1bbb7bc3
   languageName: node
   linkType: hard
 
@@ -9499,9 +9506,9 @@ __metadata:
   linkType: hard
 
 "caniuse-lite@npm:^1.0.0, caniuse-lite@npm:^1.0.30000792, caniuse-lite@npm:^1.0.30000805, caniuse-lite@npm:^1.0.30000844, caniuse-lite@npm:^1.0.30001219, caniuse-lite@npm:^1.0.30001264, caniuse-lite@npm:^1.0.30001280, caniuse-lite@npm:^1.0.30001304, caniuse-lite@npm:^1.0.30001317, caniuse-lite@npm:^1.0.30001349":
-  version: 1.0.30001419
-  resolution: "caniuse-lite@npm:1.0.30001419"
-  checksum: 7a4dc2794a6773574b5aebcd1c9c0d56159654821714152d8a0b04e261e1522bfd3d86589b8406ce81c7bf5b706118b73b2cb85d577ae433e303dd48ac9ff65f
+  version: 1.0.30001487
+  resolution: "caniuse-lite@npm:1.0.30001487"
+  checksum: b5a9e72ec165765fb3e07913cc389685ce8a30ac48967f99baec773a4353d2037fb534241e87b3c95d40a5081079be2263710b784883183bb2998b73f7202233
   languageName: node
   linkType: hard
 
@@ -24191,8 +24198,8 @@ __metadata:
     "@ember/test-waiters": ^3.0.0
     "@glimmer/component": ^1.1.2
     "@glimmer/tracking": ^1.1.2
-    "@hashicorp/design-system-components": 2.3.1
-    "@hashicorp/ember-flight-icons": ^3.0.2
+    "@hashicorp/design-system-components": 2.7.0
+    "@hashicorp/ember-flight-icons": 3.0.5
     "@hashicorp/structure-icons": ^1.3.0
     "@icholy/duration": ^5.1.0
     "@tsconfig/ember": ^1.0.1
@@ -24224,6 +24231,7 @@ __metadata:
     "@types/ember__utils": ^4.0.2
     "@types/qunit": ^2.19.3
     "@types/rsvp": ^4.0.4
+    "@types/shell-quote": ^1.7.1
     "@typescript-eslint/eslint-plugin": ^5.19.0
     "@typescript-eslint/parser": ^5.19.0
     asn1js: ^2.2.0

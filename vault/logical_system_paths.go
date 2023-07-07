@@ -224,7 +224,7 @@ func (b *SystemBackend) configPaths() []*framework.Path {
 		},
 
 		{
-			Pattern: "config/ui/headers/$",
+			Pattern: "config/ui/headers/?$",
 
 			Operations: map[logical.Operation]framework.OperationHandler{
 				logical.ListOperation: &framework.PathOperation{
@@ -466,6 +466,32 @@ func (b *SystemBackend) configPaths() []*framework.Path {
 			HelpSynopsis:    strings.TrimSpace(sysHelp["generate-root"][0]),
 			HelpDescription: strings.TrimSpace(sysHelp["generate-root"][1]),
 		},
+		{
+			Pattern: "decode-token$",
+			Fields: map[string]*framework.FieldSchema{
+				"encoded_token": {
+					Type:        framework.TypeString,
+					Description: "Specifies the encoded token (result from generate-root).",
+				},
+				"otp": {
+					Type:        framework.TypeString,
+					Description: "Specifies the otp code for decode.",
+				},
+			},
+			Operations: map[logical.Operation]framework.OperationHandler{
+				logical.UpdateOperation: &framework.PathOperation{
+					Callback: b.handleGenerateRootDecodeTokenUpdate,
+					DisplayAttrs: &framework.DisplayAttributes{
+						OperationVerb: "decode",
+					},
+					Summary: "Decodes the encoded token with the otp.",
+					Responses: map[int][]framework.Response{
+						http.StatusOK: {{Description: "OK"}},
+					},
+				},
+			},
+		},
+
 		{
 			Pattern: "health$",
 			Fields: map[string]*framework.FieldSchema{
@@ -1426,7 +1452,7 @@ func (b *SystemBackend) statusPaths() []*framework.Path {
 			HelpDescription: strings.TrimSpace(sysHelp["ha-status"][1]),
 		},
 		{
-			Pattern: "version-history/$",
+			Pattern: "version-history/?$",
 
 			DisplayAttrs: &framework.DisplayAttributes{
 				OperationVerb: "version-history",
@@ -1460,48 +1486,52 @@ func (b *SystemBackend) statusPaths() []*framework.Path {
 	}
 }
 
+func (b *SystemBackend) auditHashPath() *framework.Path {
+	return &framework.Path{
+		Pattern: "audit-hash/(?P<path>.+)",
+
+		DisplayAttrs: &framework.DisplayAttributes{
+			OperationPrefix: "auditing",
+			OperationVerb:   "calculate",
+			OperationSuffix: "hash",
+		},
+
+		Fields: map[string]*framework.FieldSchema{
+			"path": {
+				Type:        framework.TypeString,
+				Description: strings.TrimSpace(sysHelp["audit_path"][0]),
+			},
+
+			"input": {
+				Type: framework.TypeString,
+			},
+		},
+
+		Operations: map[logical.Operation]framework.OperationHandler{
+			logical.UpdateOperation: &framework.PathOperation{
+				Callback: b.handleAuditHash,
+				Responses: map[int][]framework.Response{
+					http.StatusOK: {{
+						Description: "OK",
+						Fields: map[string]*framework.FieldSchema{
+							"hash": {
+								Type:     framework.TypeString,
+								Required: true,
+							},
+						},
+					}},
+				},
+			},
+		},
+
+		HelpSynopsis:    strings.TrimSpace(sysHelp["audit-hash"][0]),
+		HelpDescription: strings.TrimSpace(sysHelp["audit-hash"][1]),
+	}
+}
+
 func (b *SystemBackend) auditPaths() []*framework.Path {
 	return []*framework.Path{
-		{
-			Pattern: "audit-hash/(?P<path>.+)",
-
-			DisplayAttrs: &framework.DisplayAttributes{
-				OperationPrefix: "auditing",
-				OperationVerb:   "calculate",
-				OperationSuffix: "hash",
-			},
-
-			Fields: map[string]*framework.FieldSchema{
-				"path": {
-					Type:        framework.TypeString,
-					Description: strings.TrimSpace(sysHelp["audit_path"][0]),
-				},
-
-				"input": {
-					Type: framework.TypeString,
-				},
-			},
-
-			Operations: map[logical.Operation]framework.OperationHandler{
-				logical.UpdateOperation: &framework.PathOperation{
-					Callback: b.handleAuditHash,
-					Responses: map[int][]framework.Response{
-						http.StatusOK: {{
-							Description: "OK",
-							Fields: map[string]*framework.FieldSchema{
-								"hash": {
-									Type:     framework.TypeString,
-									Required: true,
-								},
-							},
-						}},
-					},
-				},
-			},
-
-			HelpSynopsis:    strings.TrimSpace(sysHelp["audit-hash"][0]),
-			HelpDescription: strings.TrimSpace(sysHelp["audit-hash"][1]),
-		},
+		b.auditHashPath(),
 
 		{
 			Pattern: "audit$",
@@ -2214,7 +2244,7 @@ func (b *SystemBackend) internalPaths() []*framework.Path {
 				logical.UpdateOperation: &framework.PathOperation{
 					Callback: b.pathInternalOpenAPI,
 					DisplayAttrs: &framework.DisplayAttributes{
-						OperationSuffix: "open-api-document2",
+						OperationSuffix: "open-api-document-with-parameters",
 					},
 				},
 			},

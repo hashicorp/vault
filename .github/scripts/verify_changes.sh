@@ -3,15 +3,13 @@
 
 event_type=$1 # GH event type (pull_request)
 ref_name=$2 # branch reference that triggered the workflow
-head_ref=$3 # PR branch head ref
-base_ref=$4 # PR branch base ref
+base_ref=$3 # PR branch base ref
 
 changed_dir=""
 
 if [[ "$event_type" == "pull_request" ]]; then
-  git fetch --no-tags --prune origin $head_ref
   git fetch --no-tags --prune origin $base_ref
-  head_commit="origin/$head_ref"
+  head_commit="HEAD"
   base_commit="origin/$base_ref"
 else
   git fetch --no-tags --prune origin $ref_name

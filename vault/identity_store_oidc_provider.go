@@ -16,6 +16,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/go-jose/go-jose/v3"
 	"github.com/hashicorp/go-memdb"
 	"github.com/hashicorp/go-secure-stdlib/base62"
 	"github.com/hashicorp/go-secure-stdlib/strutil"
@@ -24,7 +25,6 @@ import (
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/identitytpl"
 	"github.com/hashicorp/vault/sdk/logical"
-	"gopkg.in/square/go-jose.v2"
 )
 
 const (
@@ -527,7 +527,8 @@ func oidcProviderPaths(i *IdentityStore) []*framework.Path {
 				logical.UpdateOperation: &framework.PathOperation{
 					Callback: i.pathOIDCAuthorize,
 					DisplayAttrs: &framework.DisplayAttributes{
-						OperationVerb: "authorize2",
+						OperationVerb:   "authorize",
+						OperationSuffix: "with-parameters",
 					},
 					ForwardPerformanceStandby:   true,
 					ForwardPerformanceSecondary: false,

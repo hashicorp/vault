@@ -32,6 +32,22 @@ on:
         description: A comma-separated list of additional build tags to consider satisfied during the build.
         required: false
         type: string
+      name:
+        description: A suffix to append to archived test results
+        required: false
+        default: ''
+        type: string
+      go-test-parallelism:
+        description: The parallelism parameter for Go tests
+        required: false
+        default: 20
+        type: number
+      timeout-minutes:
+        description: The maximum number of minutes that this workflow should run 
+        required: false
+        default: 60 
+        type: number
+
 
 env: ${{ fromJSON(inputs.env-vars) }}
 
@@ -39,10 +55,43 @@ jobs:
   test-generate-test-package-list:
     runs-on: ${{ fromJSON(inputs.runs-on) }}
     name: Verify Test Package Distribution
+    permissions:
+      id-token: write  # Note: this permission is explicitly required for Vault auth
+      contents: read
     steps:
-    - uses: actions/checkout@ac593985615ec2ede58e132d2e21d2b1cbd6127c
+    - uses: actions/checkout@c85c95e3d7251135ab7dc9ce3241c5835cc595a9 # v3.5.3
+    - uses: actions/setup-go@fac708d6674e30b6ba41289acaab6d4b75aa0753 # v4.0.1
+      with:
+        go-version-file: ./.go-version
+        cache: true
+    - name: Authenticate to Vault
+      id: vault-auth
+      if: github.repository == 'hashicorp/vault-enterprise'
+      run: vault-auth
+    - name: Fetch Secrets
+      id: secrets
+      if: github.repository == 'hashicorp/vault-enterprise'
+      uses: hashicorp/vault-action@130d1f5f4fe645bb6c83e4225c04d64cfb62de6e
+      with:
+        url: ${{ steps.vault-auth.outputs.addr }}
+        caCertificate: ${{ steps.vault-auth.outputs.ca_certificate }}
+        token: ${{ steps.vault-auth.outputs.token }}
+        secrets: |
+          kv/data/github/${{ github.repository }}/github-token username-and-token | github-token;
+    - id: setup-git-private
+      name: Setup Git configuration (private)
+      if: github.repository == 'hashicorp/vault-enterprise'
+      run: |
+        git config --global url."https://${{ steps.secrets.outputs.github-token }}@github.com".insteadOf https://github.com
+    - id: setup-git-public
+      name: Setup Git configuration (public)
+      if: github.repository != 'hashicorp/vault-enterprise'
+      run: |
+        git config --global url."https://${{ secrets.ELEVATED_GITHUB_TOKEN}}@github.com".insteadOf https://github.com
     - id: test
       working-directory: .github/scripts
+      env:
+        GOPRIVATE: github.com/hashicorp/*
       run: |
         ENTERPRISE=${{ inputs.enterprise }} ./test-generate-test-package-lists.sh
   runner-indexes:
@@ -78,10 +127,10 @@ jobs:
         runner-index: ${{ fromJSON(needs.runner-indexes.outputs.runner-indexes) }}
     env:
       GOPRIVATE: github.com/hashicorp/*
-      TIMEOUT_IN_MINUTES: 60
+      TIMEOUT_IN_MINUTES: ${{ inputs.timeout-minutes }} 
     steps:
-      - uses: actions/checkout@ac593985615ec2ede58e132d2e21d2b1cbd6127c
-      - uses: actions/setup-go@d0a58c1c4d2b25278816e339b944508c875f3613
+      - uses: actions/checkout@c85c95e3d7251135ab7dc9ce3241c5835cc595a9 # v3.5.3
+      - uses: actions/setup-go@fac708d6674e30b6ba41289acaab6d4b75aa0753 # v4.0.1
         with:
           go-version-file: ./.go-version
           cache: true
@@ -184,12 +233,12 @@ jobs:
               -- \
               -tags "${{ inputs.go-build-tags }}" \
               -timeout=${{ env.TIMEOUT_IN_MINUTES }}m \
-              -parallel=20 \
+              -parallel=${{ inputs.go-test-parallelism }} \
               ${{ inputs.extra-flags }} \
                 \
               ${test_packages[${{ matrix.runner-index }}]}
       - name: Prepare datadog-ci
-        if: github.repository == 'hashicorp/vault' && always()
+        if: github.repository == 'hashicorp/vault' && (success() || failure()) 
         continue-on-error: true
         run: |
           curl -L --fail "https://github.com/DataDog/datadog-ci/releases/latest/download/datadog-ci_linux-x64" --output "/usr/local/bin/datadog-ci"
@@ -203,16 +252,16 @@ jobs:
             export DATADOG_API_KEY=${{ secrets.DATADOG_API_KEY }}
           fi
           datadog-ci junit upload --service "$GITHUB_REPOSITORY" test-results/go-test/results.xml
-        if: always()
+        if: success() || failure()
       - name: Archive test results
-        uses: actions/upload-artifact@0b7f8abb1508181956e8e162db84b466c27e18ce
+        uses: actions/upload-artifact@0b7f8abb1508181956e8e162db84b466c27e18ce # v3.1.2
         with:
-          name: test-results-${{ matrix.runner-index }}
+          name: test-results${{ inputs.name }}-${{ matrix.runner-index }}
           path: test-results/
-        if: always()
+        if: success() || failure() 
       - name: Create a summary of tests
-        uses: test-summary/action@62bc5c68de2a6a0d02039763b8c754569df99e3f
+        uses: test-summary/action@62bc5c68de2a6a0d02039763b8c754569df99e3f   # TSCCR: no entry for repository "test-summary/action"
         with:
           paths: "test-results/go-test/results.xml"
           show: "fail"
-        if: always()
+        if: success() || failure() 

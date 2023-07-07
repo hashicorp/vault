@@ -9,6 +9,8 @@ import (
 	"fmt"
 	"net/url"
 	"os"
+	"runtime"
+	"strings"
 	"testing"
 
 	log "github.com/hashicorp/go-hclog"
@@ -26,6 +28,11 @@ type Config struct {
 var _ docker.ServiceConfig = &Config{}
 
 func prepareCockroachDBTestContainer(t *testing.T) (func(), *Config) {
+	// Skipping, as this image can't run on arm architecture
+	if strings.Contains(runtime.GOARCH, "arm") {
+		t.Skip("Skipping, as CockroachDB 1.0 is not supported on ARM architectures")
+	}
+
 	if retURL := os.Getenv("CR_URL"); retURL != "" {
 		s, err := docker.NewServiceURLParse(retURL)
 		if err != nil {

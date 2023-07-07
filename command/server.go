@@ -43,6 +43,7 @@ import (
 	loghelper "github.com/hashicorp/vault/helper/logging"
 	"github.com/hashicorp/vault/helper/metricsutil"
 	"github.com/hashicorp/vault/helper/namespace"
+	"github.com/hashicorp/vault/helper/testhelpers/teststorage"
 	"github.com/hashicorp/vault/helper/useragent"
 	vaulthttp "github.com/hashicorp/vault/http"
 	"github.com/hashicorp/vault/internalshared/configutil"
@@ -62,6 +63,7 @@ import (
 	"github.com/mitchellh/go-testing-interface"
 	"github.com/pkg/errors"
 	"github.com/posener/complete"
+	"github.com/sasha-s/go-deadlock"
 	"go.uber.org/atomic"
 	"golang.org/x/net/http/httpproxy"
 	"google.golang.org/grpc/grpclog"
@@ -929,6 +931,69 @@ func (c *ServerCommand) InitListeners(config *server.Config, disableClustering b
 	return 0, lns, clusterAddrs, nil
 }
 
+func configureDevTLS(c *ServerCommand) (func(), *server.Config, string, error) {
+	var devStorageType string
+
+	switch {
+	case c.flagDevConsul:
+		devStorageType = "consul"
+	case c.flagDevHA && c.flagDevTransactional:
+		devStorageType = "inmem_transactional_ha"
+	case !c.flagDevHA && c.flagDevTransactional:
+		devStorageType = "inmem_transactional"
+	case c.flagDevHA && !c.flagDevTransactional:
+		devStorageType = "inmem_ha"
+	default:
+		devStorageType = "inmem"
+	}
+
+	var certDir string
+	var err error
+	var config *server.Config
+	var f func()
+
+	if c.flagDevTLS {
+		if c.flagDevTLSCertDir != "" {
+			if _, err = os.Stat(c.flagDevTLSCertDir); err != nil {
+				return nil, nil, "", err
+			}
+
+			certDir = c.flagDevTLSCertDir
+		} else {
+			if certDir, err = os.MkdirTemp("", "vault-tls"); err != nil {
+				return nil, nil, certDir, err
+			}
+		}
+		config, err = server.DevTLSConfig(devStorageType, certDir)
+
+		f = func() {
+			if err := os.Remove(fmt.Sprintf("%s/%s", certDir, server.VaultDevCAFilename)); err != nil {
+				c.UI.Error(err.Error())
+			}
+
+			if err := os.Remove(fmt.Sprintf("%s/%s", certDir, server.VaultDevCertFilename)); err != nil {
+				c.UI.Error(err.Error())
+			}
+
+			if err := os.Remove(fmt.Sprintf("%s/%s", certDir, server.VaultDevKeyFilename)); err != nil {
+				c.UI.Error(err.Error())
+			}
+
+			// Only delete temp directories we made.
+			if c.flagDevTLSCertDir == "" {
+				if err := os.Remove(certDir); err != nil {
+					c.UI.Error(err.Error())
+				}
+			}
+		}
+
+	} else {
+		config, err = server.DevConfig(devStorageType)
+	}
+
+	return f, config, certDir, err
+}
+
 func (c *ServerCommand) Run(args []string) int {
 	f := c.Flags()
 
@@ -936,6 +1001,9 @@ func (c *ServerCommand) Run(args []string) int {
 		c.UI.Error(err.Error())
 		return 1
 	}
+
+	// Don't exit just because we saw a potential deadlock.
+	deadlock.Opts.OnPotentialDeadlock = func() {}
 
 	c.logGate = gatedwriter.NewWriter(os.Stderr)
 	c.logWriter = c.logGate
@@ -969,74 +1037,20 @@ func (c *ServerCommand) Run(args []string) int {
 
 	// Load the configuration
 	var config *server.Config
-	var err error
 	var certDir string
 	if c.flagDev {
-		var devStorageType string
-		switch {
-		case c.flagDevConsul:
-			devStorageType = "consul"
-		case c.flagDevHA && c.flagDevTransactional:
-			devStorageType = "inmem_transactional_ha"
-		case !c.flagDevHA && c.flagDevTransactional:
-			devStorageType = "inmem_transactional"
-		case c.flagDevHA && !c.flagDevTransactional:
-			devStorageType = "inmem_ha"
-		default:
-			devStorageType = "inmem"
-		}
-
-		if c.flagDevTLS {
-			if c.flagDevTLSCertDir != "" {
-				_, err := os.Stat(c.flagDevTLSCertDir)
-				if err != nil {
-					c.UI.Error(err.Error())
-					return 1
-				}
-
-				certDir = c.flagDevTLSCertDir
-			} else {
-				certDir, err = os.MkdirTemp("", "vault-tls")
-				if err != nil {
-					c.UI.Error(err.Error())
-					return 1
-				}
-			}
-			config, err = server.DevTLSConfig(devStorageType, certDir)
-
-			defer func() {
-				err := os.Remove(fmt.Sprintf("%s/%s", certDir, server.VaultDevCAFilename))
-				if err != nil {
-					c.UI.Error(err.Error())
-				}
-
-				err = os.Remove(fmt.Sprintf("%s/%s", certDir, server.VaultDevCertFilename))
-				if err != nil {
-					c.UI.Error(err.Error())
-				}
-
-				err = os.Remove(fmt.Sprintf("%s/%s", certDir, server.VaultDevKeyFilename))
-				if err != nil {
-					c.UI.Error(err.Error())
-				}
-
-				// Only delete temp directories we made.
-				if c.flagDevTLSCertDir == "" {
-					err = os.Remove(certDir)
-					if err != nil {
-						c.UI.Error(err.Error())
-					}
-				}
-			}()
-
-		} else {
-			config, err = server.DevConfig(devStorageType)
+		df, cfg, dir, err := configureDevTLS(c)
+		if df != nil {
+			defer df()
 		}
 
 		if err != nil {
 			c.UI.Error(err.Error())
 			return 1
 		}
+
+		config = cfg
+		certDir = dir
 
 		if c.flagDevListenAddr != "" {
 			config.Listeners[0].Address = c.flagDevListenAddr
@@ -1120,15 +1134,6 @@ func (c *ServerCommand) Run(args []string) int {
 	}
 	if envLicense := os.Getenv(EnvVaultLicense); envLicense != "" {
 		config.License = envLicense
-	}
-	if disableSSC := os.Getenv(DisableSSCTokens); disableSSC != "" {
-		var err error
-		config.DisableSSCTokens, err = strconv.ParseBool(disableSSC)
-		if err != nil {
-			c.UI.Warn(wrapAtLength("WARNING! failed to parse " +
-				"VAULT_DISABLE_SERVER_SIDE_CONSISTENT_TOKENS env var: " +
-				"setting to default value false"))
-		}
 	}
 
 	if err := server.ExperimentsFromEnvAndCLI(config, EnvVaultExperiments, c.flagExperiments); err != nil {
@@ -1427,6 +1432,9 @@ func (c *ServerCommand) Run(args []string) int {
 		info["HCP resource ID"] = config.HCPLinkConf.Resource.ID
 	}
 
+	infoKeys = append(infoKeys, "administrative namespace")
+	info["administrative namespace"] = config.AdministrativeNamespacePath
+
 	sort.Strings(infoKeys)
 	c.UI.Output("==> Vault server configuration:\n")
 
@@ -1669,6 +1677,9 @@ func (c *ServerCommand) Run(args []string) int {
 				c.UI.Error(err.Error())
 			}
 
+			if err := core.ReloadCensus(); err != nil {
+				c.UI.Error(err.Error())
+			}
 			select {
 			case c.licenseReloadedCh <- err:
 			default:
@@ -1718,6 +1729,44 @@ func (c *ServerCommand) Run(args []string) int {
 
 				c.logger.Info(fmt.Sprintf("Wrote stacktrace to: %s", f.Name()))
 				f.Close()
+			}
+
+			// We can only get pprof outputs via the API but sometimes Vault can get
+			// into a state where it cannot process requests so we can get pprof outputs
+			// via SIGUSR2.
+			if os.Getenv("VAULT_PPROF_WRITE_TO_FILE") != "" {
+				dir := ""
+				path := os.Getenv("VAULT_PPROF_FILE_PATH")
+				if path != "" {
+					if _, err := os.Stat(path); err != nil {
+						c.logger.Error("Checking pprof path failed", "error", err)
+						continue
+					}
+					dir = path
+				} else {
+					dir, err = os.MkdirTemp("", "vault-pprof")
+					if err != nil {
+						c.logger.Error("Could not create temporary directory for pprof", "error", err)
+						continue
+					}
+				}
+
+				dumps := []string{"goroutine", "heap", "allocs", "threadcreate"}
+				for _, dump := range dumps {
+					pFile, err := os.Create(filepath.Join(dir, dump))
+					if err != nil {
+						c.logger.Error("error creating pprof file", "name", dump, "error", err)
+						break
+					}
+
+					err = pprof.Lookup(dump).WriteTo(pFile, 0)
+					if err != nil {
+						c.logger.Error("error generating pprof data", "name", dump, "error", err)
+						break
+					}
+				}
+
+				c.logger.Info(fmt.Sprintf("Wrote pprof files to: %s", dir))
 			}
 		}
 	}
@@ -1961,7 +2010,7 @@ func (c *ServerCommand) enableDev(core *vault.Core, coreConfig *vault.CoreConfig
 }
 
 func (c *ServerCommand) enableThreeNodeDevCluster(base *vault.CoreConfig, info map[string]string, infoKeys []string, devListenAddress, tempDir string) int {
-	testCluster := vault.NewTestCluster(&testing.RuntimeT{}, base, &vault.TestClusterOptions{
+	conf, opts := teststorage.ClusterSetup(base, &vault.TestClusterOptions{
 		HandlerFunc:       vaulthttp.Handler,
 		BaseListenAddress: c.flagDevListenAddr,
 		Logger:            c.logger,
@@ -1976,8 +2025,17 @@ func (c *ServerCommand) enableThreeNodeDevCluster(base *vault.CoreConfig, info m
 				},
 			},
 		},
-	})
+	}, nil)
+	testCluster := vault.NewTestCluster(&testing.RuntimeT{}, conf, opts)
 	defer c.cleanupGuard.Do(testCluster.Cleanup)
+
+	if constants.IsEnterprise {
+		err := testcluster.WaitForActiveNodeAndPerfStandbys(context.Background(), testCluster)
+		if err != nil {
+			c.UI.Error(fmt.Sprintf("perf standbys didn't become ready: %v", err))
+			return 1
+		}
+	}
 
 	info["cluster parameters path"] = testCluster.TempDir
 	infoKeys = append(infoKeys, "cluster parameters path")
@@ -2739,6 +2797,7 @@ func createCoreConfig(c *ServerCommand, config *server.Config, backend physical.
 		LicensePath:                    config.LicensePath,
 		DisableSSCTokens:               config.DisableSSCTokens,
 		Experiments:                    config.Experiments,
+		AdministrativeNamespacePath:    config.AdministrativeNamespacePath,
 	}
 
 	if c.flagDev {

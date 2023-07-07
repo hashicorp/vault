@@ -104,20 +104,27 @@ export function formatValues(subject, extension) {
 }
 
 /*
-How to use the verify function for cross-signing: 
+Explanation of cross-signing and how to use the verify function: 
 (See setup script here: https://github.com/hashicorp/vault-tools/blob/main/vault-ui/pki/pki-cross-sign-config.sh)
 1. A trust chain exists between "old-parent-issuer-name" -> "old-intermediate"
-2. Cross-sign "old-intermediate" against "my-parent-issuer-name" creating a new certificate: "newly-cross-signed-int-name"
-3. Generate a leaf certificate from "newly-cross-signed-int-name", let's call it "baby-leaf"
-4. Verify that "baby-leaf" validates against both chains: 
+2. We create a new root, "my-parent-issuer-name" to phase out the old one
+
+* cross-signing step performed in the UI * 
+3. Cross-sign "old-intermediate" against new root "my-parent-issuer-name" which generates a new intermediate issuer, 
+"newly-cross-signed-int-name", to phase out the old intermediate
+
+* validate cross-signing accurately copied the old intermediate issuer *
+4. Generate a leaf certificate from "newly-cross-signed-int-name", let's call it "baby-leaf"
+5. Verify that "baby-leaf" validates against both chains: 
 "old-parent-issuer-name" -> "old-intermediate" -> "baby-leaf"
 "my-parent-issuer-name" -> "newly-cross-signed-int-name" -> "baby-leaf"
 
-A valid cross-signing would mean BOTH of the following return true:
-verifyCertificates(oldParentCert, oldIntCert, leaf)
-verifyCertificates(newParentCert, crossSignedCert, leaf)
+We're just concerned with the link between the leaf and both intermediates
+to confirm the UI performed the cross-sign correctly
+(which already assumes the link between each parent and intermediate is valid)
 
-each arg is the JSON string certificate value
+verifyCertificates(oldIntermediate, crossSignedCert, leaf)
+
 */
 export async function verifyCertificates(certA, certB, leaf) {
   const parsedCertA = jsonToCertObject(certA);
@@ -131,7 +138,7 @@ export async function verifyCertificates(certA, certB, leaf) {
     const isEqualB = parsedLeaf.issuer.isEqual(parsedCertB.subject);
     return chainA && chainB && isEqualA && isEqualB;
   }
-  // can be used to validate if a certificate is self-signed, by passing it as both certA and B (i.e. a root cert)
+  // can be used to validate if a certificate is self-signed (i.e. a root cert), by passing it as both certA and B
   return (await parsedCertA.verify(parsedCertB)) && parsedCertA.issuer.isEqual(parsedCertB.subject);
 }
 

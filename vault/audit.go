@@ -155,7 +155,7 @@ func (c *Core) enableAudit(ctx context.Context, entry *MountEntry, updateStorage
 	c.audit = newTable
 
 	// Register the backend
-	c.auditBroker.Register(entry.Path, backend, view, entry.Local)
+	c.auditBroker.Register(entry.Path, backend, entry.Local)
 	if c.logger.IsInfo() {
 		c.logger.Info("enabled audit backend", "path", entry.Path, "type", entry.Type)
 	}
@@ -416,7 +416,7 @@ func (c *Core) setupAudits(ctx context.Context) error {
 		}
 
 		// Mount the backend
-		broker.Register(entry.Path, backend, view, entry.Local)
+		broker.Register(entry.Path, backend, entry.Local)
 
 		successCount++
 	}

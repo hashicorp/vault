@@ -24,8 +24,15 @@ module('Integration | Component | Page::PkiConfigurationDetails', function (hook
     this.secretMountPath.currentPath = 'pki-test';
 
     this.store = this.owner.lookup('service:store');
-    this.urls = this.store.createRecord('pki/urls', { id: 'pki-test', issuingCertificates: 'example.com' });
-    this.crl = this.store.createRecord('pki/crl', {
+    this.cluster = this.store.createRecord('pki/config/cluster', {
+      id: 'pki-test',
+      path: 'https://pr-a.vault.example.com/v1/ns1/pki-root',
+    });
+    this.urls = this.store.createRecord('pki/config/urls', {
+      id: 'pki-test',
+      issuingCertificates: 'example.com',
+    });
+    this.crl = this.store.createRecord('pki/config/crl', {
       id: 'pki-test',
       expiry: '20h',
       disable: false,
@@ -52,6 +59,17 @@ module('Integration | Component | Page::PkiConfigurationDetails', function (hook
         allowedManagedKeys: true,
       }),
     };
+  });
+
+  test('shows the correct information on cluster config', async function (assert) {
+    await render(hbs`<Page::PkiConfigurationDetails @cluster={{this.cluster}} @hasConfig={{true}} />,`, {
+      owner: this.engine,
+    });
+
+    assert
+      .dom(SELECTORS.rowValue("Mount's API path"))
+      .hasText('https://pr-a.vault.example.com/v1/ns1/pki-root', 'mount API path row renders');
+    assert.dom(SELECTORS.rowValue('AIA path')).hasText('None', "renders 'None' when no data");
   });
 
   test('shows the correct information on global urls section', async function (assert) {

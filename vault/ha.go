@@ -135,7 +135,10 @@ func (c *Core) getHAMembers() ([]HAStatusNode, error) {
 	return nodes, nil
 }
 
-// Leader is used to get the current active leader
+// Leader is used to get information about the current active leader in relation to the current node (core).
+// It utilizes a state lock on the Core by attempting to acquire a read lock. Care should be taken not to
+// call this method if a read lock on this Core's state lock is currently held, as this can cause deadlock.
+// e.g. if called from within request handling.
 func (c *Core) Leader() (isLeader bool, leaderAddr, clusterAddr string, err error) {
 	// Check if HA enabled. We don't need the lock for this check as it's set
 	// on startup and never modified

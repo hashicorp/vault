@@ -948,10 +948,61 @@ cKumubUxOfFdy1ZvAAAAEm5jY0BtYnAudWJudC5sb2NhbA==
 					return nil
 				},
 			},
+			testIssueCert("testcarole", "ec", testUserName, sshAddress, expectError),
+			testIssueCert("testcarole", "ed25519", testUserName, sshAddress, expectError),
+			testIssueCert("testcarole", "rsa", testUserName, sshAddress, expectError),
 		},
 	}
 
 	logicaltest.Test(t, testCase)
+}
+
+func testIssueCert(role string, keyType string, testUserName string, sshAddress string, expectError bool) logicaltest.TestStep {
+	return logicaltest.TestStep{
+		Operation: logical.UpdateOperation,
+		Path:      "issue/" + role,
+		ErrorOk:   expectError,
+		Data: map[string]interface{}{
+			"key_type":         keyType,
+			"valid_principals": testUserName,
+		},
+
+		Check: func(resp *logical.Response) error {
+			// Tolerate nil response if an error was expected
+			if expectError && resp == nil {
+				return nil
+			}
+
+			signedKey := strings.TrimSpace(resp.Data["signed_key"].(string))
+			if signedKey == "" {
+				return errors.New("no signed key in response")
+			}
+
+			privKey, err := ssh.ParsePrivateKey([]byte(resp.Data["private_key"].(string)))
+			if err != nil {
+				return fmt.Errorf("error parsing private key: %v", err)
+			}
+
+			parsedKey, _, _, _, err := ssh.ParseAuthorizedKey([]byte(signedKey))
+			if err != nil {
+				return fmt.Errorf("error parsing signed key: %v", err)
+			}
+			certSigner, err := ssh.NewCertSigner(parsedKey.(*ssh.Certificate), privKey)
+			if err != nil {
+				return err
+			}
+
+			err = testSSH(testUserName, sshAddress, ssh.PublicKeys(certSigner), "date")
+			if expectError && err == nil {
+				return fmt.Errorf("expected error but got none")
+			}
+			if !expectError && err != nil {
+				return err
+			}
+
+			return nil
+		},
+	}
 }
 
 func TestSSHBackend_CAUpgradeAlgorithmSigner(t *testing.T) {

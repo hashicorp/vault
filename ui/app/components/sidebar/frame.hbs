@@ -39,7 +39,7 @@
       </:footer>
     </Hds::SideNav>
   </Frame.Sidebar>
-  <Frame.Main id="app-main-content">
+  <Frame.Main id="app-main-content" class={{if this.console.isOpen "main--console-open"}}>
     {{! outlet for app content }}
     <div id="modal-wormhole"></div>
     <LinkStatus @status={{this.currentCluster.cluster.hcpLinkStatus}} />

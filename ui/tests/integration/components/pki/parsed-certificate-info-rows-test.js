@@ -3,8 +3,6 @@ import { setupRenderingTest } from 'vault/tests/helpers';
 import { render } from '@ember/test-helpers';
 import { hbs } from 'ember-cli-htmlbars';
 import { setupEngine } from 'ember-engines/test-support';
-import { parseCertificate } from 'vault/utils/parse-pki-cert';
-import { unsupportedOids } from 'vault/tests/helpers/pki/values';
 
 module('Integration | Component | parsed-certificate-info-rows', function (hooks) {
   setupRenderingTest(hooks);
@@ -41,53 +39,5 @@ module('Integration | Component | parsed-certificate-info-rows', function (hooks
     assert
       .dom('[data-test-parsing-error-alert-banner]')
       .doesNotExist('does not render parsing error info banner');
-  });
-
-  test('it renders info banner when parsing fails and no parsing errors', async function (assert) {
-    this.set('parsedCertificate', {
-      can_parse: false,
-    });
-    await render(hbs`<ParsedCertificateInfoRows @model={{this.parsedCertificate}} />`, {
-      owner: this.engine,
-    });
-
-    assert
-      .dom('[data-test-parsing-error-alert-banner]')
-      .hasText(
-        "There was an error parsing certificate metadata Vault cannot display unparsed values, but this will not interfere with the certificate's functionality."
-      );
-  });
-
-  test('it renders info banner when parsing fails and parsing errors exist', async function (assert) {
-    this.set('parsedCertificate', {
-      can_parse: false,
-      parsing_errors: [new Error('some parsing error')],
-    });
-    await render(hbs`<ParsedCertificateInfoRows @model={{this.parsedCertificate}} />`, {
-      owner: this.engine,
-    });
-
-    assert
-      .dom('[data-test-parsing-error-alert-banner]')
-      .hasText(
-        "There was an error parsing certificate metadata Vault cannot display unparsed values, but this will not interfere with the certificate's functionality. Parsing error(s): some parsing error"
-      );
-  });
-
-  test('it renders info banner when parsing is successful but unsupported OIDs return parsing errors', async function (assert) {
-    const { parsing_errors } = parseCertificate(unsupportedOids);
-    this.set('parsedCertificate', {
-      can_parse: true,
-      parsing_errors,
-    });
-    await render(hbs`<ParsedCertificateInfoRows @model={{this.parsedCertificate}} />`, {
-      owner: this.engine,
-    });
-
-    assert
-      .dom('[data-test-parsing-error-alert-banner]')
-      .hasText(
-        "There was an error parsing certificate metadata Vault cannot display unparsed values, but this will not interfere with the certificate's functionality. Parsing error(s): certificate contains unsupported subject OIDs: 1.2.840.113549.1.9.1, certificate contains unsupported extension OIDs: 2.5.29.37"
-      );
   });
 });

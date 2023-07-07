@@ -609,6 +609,8 @@ func (n *DockerClusterNode) Start(ctx context.Context, opts *DockerClusterOption
 	vaultCfg["api_addr"] = `https://{{- GetAllInterfaces | exclude "flags" "loopback" | attr "address" -}}:8200`
 	vaultCfg["cluster_addr"] = `https://{{- GetAllInterfaces | exclude "flags" "loopback" | attr "address" -}}:8201`
 
+	vaultCfg["administrative_namespace_path"] = opts.AdministrativeNamespacePath
+
 	systemJSON, err := json.Marshal(vaultCfg)
 	if err != nil {
 		return err
@@ -770,6 +772,48 @@ func (n *DockerClusterNode) Start(ctx context.Context, opts *DockerClusterOption
 	}
 	client.SetToken(n.Cluster.rootToken)
 	n.client = client
+	return nil
+}
+
+func (n *DockerClusterNode) Pause(ctx context.Context) error {
+	return n.DockerAPI.ContainerPause(ctx, n.Container.ID)
+}
+
+func (n *DockerClusterNode) AddNetworkDelay(ctx context.Context, delay time.Duration, targetIP string) error {
+	ip := net.ParseIP(targetIP)
+	if ip == nil {
+		return fmt.Errorf("targetIP %q is not an IP address", targetIP)
+	}
+	// Let's attempt to get a unique handle for the filter rule; we'll assume that
+	// every targetIP has a unique last octet, which is true currently for how
+	// we're doing docker networking.
+	lastOctet := ip.To4()[3]
+
+	stdout, stderr, exitCode, err := n.runner.RunCmdWithOutput(ctx, n.Container.ID, []string{
+		"/bin/sh",
+		"-xec", strings.Join([]string{
+			fmt.Sprintf("echo isolating node %s", targetIP),
+			"apk add iproute2",
+			// If we're running this script a second time on the same node,
+			// the add dev will fail; since we only want to run the netem
+			// command once, we'll do so in the case where the add dev doesn't fail.
+			"tc qdisc add dev eth0 root handle 1: prio && " +
+				fmt.Sprintf("tc qdisc add dev eth0 parent 1:1 handle 2: netem delay %dms", delay/time.Millisecond),
+			// Here we create a u32 filter as per https://man7.org/linux/man-pages/man8/tc-u32.8.html
+			// Its parent is 1:0 (which I guess is the root?)
+			// Its handle must be unique, so we base it on targetIP
+			fmt.Sprintf("tc filter add dev eth0 parent 1:0 protocol ip pref 55 handle ::%x u32 match ip dst %s flowid 2:1", lastOctet, targetIP),
+		}, "; "),
+	})
+	if err != nil {
+		return err
+	}
+
+	n.Logger.Trace(string(stdout))
+	n.Logger.Trace(string(stderr))
+	if exitCode != 0 {
+		return fmt.Errorf("got nonzero exit code from iptables: %d", exitCode)
+	}
 	return nil
 }
 

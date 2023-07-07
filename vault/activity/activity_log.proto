@@ -22,6 +22,9 @@ message EntityRecord {
 	// MountAccessor is the auth mount accessor of the token used to perform the
 	// activity.
 	string mount_accessor = 5;
+	// client_type identifies the source of the entity record (entity,
+	// non-entity, acme, etc.)
+	string client_type = 6;
 }
 
 message LogFragment {

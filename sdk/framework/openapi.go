@@ -208,7 +208,7 @@ var (
 // documentPaths parses all paths in a framework.Backend into OpenAPI paths.
 func documentPaths(backend *Backend, requestResponsePrefix string, doc *OASDocument) error {
 	for _, p := range backend.Paths {
-		if err := documentPath(p, backend.SpecialPaths(), requestResponsePrefix, backend.BackendType, doc); err != nil {
+		if err := documentPath(p, backend, requestResponsePrefix, doc); err != nil {
 			return err
 		}
 	}
@@ -217,13 +217,13 @@ func documentPaths(backend *Backend, requestResponsePrefix string, doc *OASDocum
 }
 
 // documentPath parses a framework.Path into one or more OpenAPI paths.
-func documentPath(p *Path, specialPaths *logical.Paths, requestResponsePrefix string, backendType logical.BackendType, doc *OASDocument) error {
+func documentPath(p *Path, backend *Backend, requestResponsePrefix string, doc *OASDocument) error {
 	var sudoPaths []string
 	var unauthPaths []string
 
-	if specialPaths != nil {
-		sudoPaths = specialPaths.Root
-		unauthPaths = specialPaths.Unauthenticated
+	if backend.PathsSpecial != nil {
+		sudoPaths = backend.PathsSpecial.Root
+		unauthPaths = backend.PathsSpecial.Unauthenticated
 	}
 
 	// Convert optional parameters into distinct patterns to be processed independently.
@@ -383,6 +383,10 @@ func documentPath(p *Path, specialPaths *logical.Paths, requestResponsePrefix st
 					s.Properties[name] = &p
 				}
 
+				// Make the ordering deterministic, so that the generated OpenAPI spec document, observed over several
+				// versions, doesn't contain spurious non-semantic changes.
+				sort.Strings(s.Required)
+
 				// If examples were given, use the first one as the sample
 				// of this schema.
 				if len(props.Examples) > 0 {
@@ -426,7 +430,7 @@ func documentPath(p *Path, specialPaths *logical.Paths, requestResponsePrefix st
 
 			// Add tags based on backend type
 			var tags []string
-			switch backendType {
+			switch backend.BackendType {
 			case logical.TypeLogical:
 				tags = []string{"secrets"}
 			case logical.TypeCredential:
@@ -524,7 +528,11 @@ func documentPath(p *Path, specialPaths *logical.Paths, requestResponsePrefix st
 			}
 		}
 
-		doc.Paths["/"+path] = &pi
+		openAPIPath := "/" + path
+		if doc.Paths[openAPIPath] != nil {
+			backend.Logger().Warn("OpenAPI spec generation: multiple framework.Path instances generated the same path; last processed wins", "path", openAPIPath)
+		}
+		doc.Paths[openAPIPath] = &pi
 	}
 
 	return nil
@@ -918,8 +926,8 @@ func convertType(t FieldType) schemaType {
 		ret.baseType = "integer"
 		ret.format = "int64"
 	case TypeDurationSecond, TypeSignedDurationSecond:
-		ret.baseType = "integer"
-		ret.format = "seconds"
+		ret.baseType = "string"
+		ret.format = "duration"
 	case TypeBool:
 		ret.baseType = "boolean"
 	case TypeMap:

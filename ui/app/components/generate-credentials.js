@@ -20,14 +20,6 @@ const MODEL_TYPES = {
     title: 'Generate AWS Credentials',
     backIsListLink: true,
   },
-  'pki-issue': {
-    model: 'pki/cert',
-    title: 'Issue Certificate',
-  },
-  'pki-sign': {
-    model: 'pki-certificate-sign',
-    title: 'Sign Certificate',
-  },
 };
 
 export default Component.extend({

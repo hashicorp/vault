@@ -6,11 +6,11 @@ description: >-
   Vault Agent containers to pods for consuming Vault secrets.
 ---
 
-# Agent Sidecar Injector
+# Agent sidecar injector
 
 The Vault Agent Injector alters pod specifications to include Vault Agent
 containers that render Vault secrets to a shared memory volume using
-[Vault Agent Templates](/vault/docs/agent/template).
+[Vault Agent Templates](/vault/docs/agent-and-proxy/agent/template).
 By rendering secrets to a shared volume, containers within the pod can consume
 Vault secrets without being Vault aware.
 
@@ -61,7 +61,7 @@ A service account must be present to use the Vault Agent Injector with the Kuber
 authentication method. It is _not_ recommended to bind Vault roles to the default service
 account provided to pods if no service account is defined.
 
-### Requesting Secrets
+### Requesting secrets
 
 There are two methods of configuring the Vault Agent containers to render secrets:
 
@@ -70,7 +70,7 @@ There are two methods of configuring the Vault Agent containers to render secret
 
 Only one of these methods may be used at any time.
 
-#### Secrets via Annotations
+#### Secrets via annotations
 
 To configure secret injection using annotations, the user must supply:
 
@@ -106,7 +106,7 @@ vault.hashicorp.com/role: 'app'
 
 The secret unique name must consist of alphanumeric characters, `.`, `_` or `-`.
 
-##### Secret Templates
+##### Secret templates
 
 ~> Vault Agent uses the Consul Template project to render secrets. For more information
 on writing templates, see the [Consul Template documentation](https://github.com/hashicorp/consul-template).
@@ -171,12 +171,12 @@ username: v-kubernet-pg-app-q0Z7WPfVNqqTJuoDqCTY-1576529094
 
 ~> Some secrets such as KV are stored in maps. Their data can be accessed using `.Data.data.<NAME>`
 
-### Renewals and Updating Secrets
+### Renewals and updating secrets
 
 For more information on when Vault Agent fetches and renews secrets, see the
-[Agent documentation](/vault/docs/agent/template#renewals-and-updating-secrets).
+[Agent documentation](/vault/docs/agent-and-proxy/agent/template#renewals-and-updating-secrets).
 
-### Vault Agent Configuration Map
+### Vault agent configuration map
 
 For advanced use cases, it may be required to define Vault Agent configuration
 files to mount instead of using secret and template annotations. The Vault Agent

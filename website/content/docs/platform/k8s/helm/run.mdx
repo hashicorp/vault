@@ -7,14 +7,14 @@ description: >-
   Kubernetes.
 ---
 
-# Run Vault on Kubernetes
+# Run Vault on kubernetes
 
 Vault works with Kubernetes in various modes: `dev`, `standalone`, `ha`,
 and `external`.
 
 @include 'helm/version.mdx'
 
-## Helm Chart
+## Helm chart
 
 The [Vault Helm chart](https://github.com/hashicorp/vault-helm)
 is the recommended way to install and configure Vault on Kubernetes.
@@ -219,7 +219,7 @@ vault-1                                 1/1     Running   0          1m49s
 vault-2                                 1/1     Running   0          1m49s
 ```
 
-#### Google KMS Auto Unseal
+#### Google KMS auto unseal
 
 The Helm chart may be run with [Google KMS for Auto
 Unseal](/vault/docs/configuration/seal/gcpckms). This enables Vault server pods to
@@ -228,7 +228,7 @@ auto unseal if they are rescheduled.
 Vault Helm requires the Google Cloud KMS credentials stored in
 `credentials.json` and mounted as a secret in each Vault server pod.
 
-##### Create the Secret
+##### Create the secret
 
 First, create the secret in Kubernetes:
 
@@ -238,7 +238,7 @@ kubectl create secret generic kms-creds --from-file=credentials.json
 
 Vault Helm mounts this to `/vault/userconfig/kms-creds/credentials.json`.
 
-##### Config Example
+##### Config example
 
 This is a Vault Helm configuration that uses Google KMS:
 
@@ -289,7 +289,7 @@ server:
       }
 ```
 
-#### Amazon KMS Auto Unseal
+#### Amazon KMS auto unseal
 
 The Helm chart may be run with [AWS KMS for Auto
 Unseal](/vault/docs/configuration/seal/awskms). This enables Vault server pods to auto
@@ -298,7 +298,7 @@ unseal if they are rescheduled.
 Vault Helm requires the AWS credentials stored as environment variables that
 are defined in each Vault server pod.
 
-##### Create the Secret
+##### Create the secret
 
 First, create a secret with your KMS access key/secret:
 
@@ -308,7 +308,7 @@ $ kubectl create secret generic kms-creds \
     --from-literal=AWS_SECRET_ACCESS_KEY="${AWS_SECRET_ACCESS_KEY?}"
 ```
 
-##### Config Example
+##### Config example
 
 This is a Vault Helm configuration that uses AWS KMS:
 
@@ -368,7 +368,7 @@ server:
 Using this customized probe, a `postStart` script could automatically run once the
 pod is ready for additional setup.
 
-### Upgrading Vault on Kubernetes
+### Upgrading Vault on kubernetes
 
 To upgrade Vault on Kubernetes, we follow the same pattern as
 [generally upgrading Vault](/vault/docs/upgrading), except we can use
@@ -388,7 +388,7 @@ structure that make the data incompatible with a downgrade. If you need to roll
 back to a previous version of Vault, you should roll back your data store as
 well.
 
-#### Upgrading Vault Servers
+#### Upgrading Vault servers
 
 !> **IMPORTANT NOTE:** Helm will install the latest chart found in a repo by default.
 It's recommended to specify the chart version when upgrading.
@@ -453,10 +453,10 @@ Select the active Vault pod:
 $ kubectl get pods -l vault-active=true
 ```
 
-Next, delete every pod that is not the active primary:
+Next, sequentially delete every pod that is not the active primary, ensuring the quorum is maintained at all times:
 
 ```shell-session
-$ kubectl delete pod <name of Vault pods>
+$ kubectl delete pod <name of Vault pod>
 ```
 
 If auto-unseal is not being used, the newly scheduled Vault standby pods needs
@@ -482,7 +482,7 @@ $ kubectl exec -ti <name of pod> -- vault operator unseal
 After a few moments the Vault cluster should elect a new active primary. The Vault
 cluster is now upgraded!
 
-### Protecting Sensitive Vault Configurations
+### Protecting sensitive Vault configurations
 
 Vault Helm renders a Vault configuration file during installation and stores the
 file in a Kubernetes configmap. Some configurations require sensitive data to be
@@ -536,7 +536,7 @@ that eases operating a Vault cluster and we document those below. The standard
 [production deployment](/vault/tutorials/operations/production-hardening) tutorial is still an
 important read even if running Vault within Kubernetes.
 
-### Production Deployment Checklist
+### Production deployment checklist
 
 _End-to-End TLS._ Vault should always be used with TLS in production. If
 intermediate load balancers or reverse proxies are used to front Vault,

@@ -21,7 +21,7 @@ export default {
     return Object.keys(window.localStorage);
   },
 
-  cleanUpStorage(string, keyToKeep) {
+  cleanupStorage(string, keyToKeep) {
     if (!string) return;
     const relevantKeys = this.keys().filter((str) => str.startsWith(string));
     relevantKeys?.forEach((key) => {
