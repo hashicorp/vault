@@ -15,10 +15,8 @@ the request will be forwarded to the active node.  While the
 affected node will have a delay before attempting to acquire 
 the leader lock again, if no other Vault nodes acquire the
 lock beforehand, it is possible for the same node to re-acquire
-the lock and become active again. Due to this architecture, there may be a non-zero time
-whilst the cluster has no active node, before another node grabs the lock and finishes
-transitioning to active operation. This may result in failed forwarding of requests to the
-leader node.
+the lock and become active again. Due to the locking architecture, there may be a period of time
+before another node grabs the lock and finishes transitioning to active operation where the cluster has no active node. During the period where none of the nodes are active, forwarding of requests to the leader node will fail.
 
 ## Examples
 
