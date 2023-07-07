@@ -50,6 +50,7 @@ jobs:
           git push -f origin ${{ github.ref_name }}:"$VAULT_BRANCH"
 
       - name: Open pull request if needed
+        id: pr
         if: steps.changes.outputs.count > 0
         env:
           GITHUB_TOKEN: ${{secrets.ELEVATED_GITHUB_TOKEN}}
@@ -58,9 +59,37 @@ jobs:
           PR=$(gh pr list --head "$VAULT_BRANCH" --json number -q '.[0].number')
 
           if [ -z "$PR" ]; then
-            # call the script to create the plugin update PR on Vault
-            ./.github/scripts/plugin-helper-gh-pr-create.sh
+            gh pr create \
+            --head "$VAULT_BRANCH" \
+            --title "[DO NOT MERGE]: $PLUGIN_REPO Automated plugin update check" \
+            --reviewer "$reviewers" \
+            --label "dependencies" \
+            --body "Updates $PLUGIN_REPO to verify vault CI. Full log: https://github.com/hashicorp/vault/actions/runs/$RUN_ID"
 
+            PR=$(gh pr list --head "$VAULT_BRANCH" --json number -q '.[0].number')
+            echo "vault_pr_num=$(gh pr list --head "$VAULT_BRANCH" --json number -q '.[0].number')" >> "$GITHUB_OUTPUT"
+            echo "vault_pr_url=$(gh pr list --head "$VAULT_BRANCH" --json html_url -q '.[0].htlm_url')" >> "$GITHUB_OUTPUT"
           else
             echo "Pull request already exists, won't create a new one."
           fi
+
+      - name: Comment on plugin PR
+        if: steps.changes.outputs.count > 0
+        env:
+          GITHUB_TOKEN: ${{secrets.ELEVATED_GITHUB_TOKEN}}
+        # Only open a PR if the branch is not attached to an existing one
+        run: |
+          # get Plugin PR number
+          plugin_pr_num=$(gh pr list --head "$PLUGIN_BRANCH" --json number --repo "$PLUGIN_REPO" -q '.[0].number')
+
+          # make a comment on the plugin repo's PR
+          gh pr comment "$plugin_pr_num" --body "Vault CI check PR: $vault_pr_url" --repo "$PLUGIN_REPO"
+
+      - name: Add labels to Vault CI check PR
+        if: steps.changes.outputs.count > 0
+        env:
+          GITHUB_TOKEN: ${{secrets.GITHUB_TOKEN}}
+        run: |
+          gh pr edit "${{ steps.pr.outputs.vault_pr_num }}" \
+            --add-label "dependencies,pr/no-changelong,pr/no-milestone" \
+            --repo hashicorp/vault
