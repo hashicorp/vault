@@ -8,8 +8,8 @@ description: Audit devices are mountable devices that log requests and responses
 
 Audit devices are the components in Vault that collectively keep a detailed log of all
 requests to Vault, and their responses. Because every operation with Vault is an API
-request/response, when using a single audit device, the audit log contains _every authenticated_ interaction with
-Vault, including errors - except for a few paths which do not go via the audit system.
+request/response, when using a single audit device, the audit log contains _every_ interaction with
+the Vault API, including errors - except for a few paths which do not go via the audit system.
 
 The non-audited paths are:
 
