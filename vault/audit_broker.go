@@ -40,20 +40,28 @@ func NewAuditBroker(log log.Logger) *AuditBroker {
 }
 
 // Register is used to add new audit backend to the broker
-func (a *AuditBroker) Register(name string, b audit.Backend, local bool) {
-	a.Lock()
-	defer a.Unlock()
-	a.backends[name] = backendEntry{
-		backend: b,
-		local:   local,
+func (a *AuditBroker) Register(name string, b audit.Backend, local bool, useEventLogger bool) {
+	if useEventLogger {
+		// TODO: Coming soon
+	} else {
+		a.Lock()
+		defer a.Unlock()
+		a.backends[name] = backendEntry{
+			backend: b,
+			local:   local,
+		}
 	}
 }
 
 // Deregister is used to remove an audit backend from the broker
-func (a *AuditBroker) Deregister(name string) {
-	a.Lock()
-	defer a.Unlock()
-	delete(a.backends, name)
+func (a *AuditBroker) Deregister(name string, useEventLogger bool) {
+	if useEventLogger {
+		// TODO: Coming soon
+	} else {
+		a.Lock()
+		defer a.Unlock()
+		delete(a.backends, name)
+	}
 }
 
 // IsRegistered is used to check if a given audit backend is registered

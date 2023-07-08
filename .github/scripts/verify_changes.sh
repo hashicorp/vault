@@ -27,7 +27,7 @@ fi
 
 # git diff with ... shows the differences between base_commit and head_commit starting at the last common commit
 changed_dir=$(git diff $base_commit...$head_commit --name-only | awk -F"/" '{ print $1}' | uniq)
-change_count=$(echo "$changed_dir" | wc -l)
+change_count=$(git diff $base_commit...$head_commit --name-only | awk -F"/" '{ print $1}' | uniq | wc -l)
 
 # There are 4 main conditions to check:
 #
@@ -36,7 +36,7 @@ change_count=$(echo "$changed_dir" | wc -l)
 # 3. ui only change
 # 4. two changes found, if either doc or ui does not exist in the changes, set both flags to false
 
-if [[ $change_count -gt 2 && $change_count -ne 0 ]]; then
+if [[ $change_count -gt 2 ]]; then
   echo "is_docs_change=false" >> "$GITHUB_OUTPUT"
   echo "is_ui_change=false" >> "$GITHUB_OUTPUT"
 elif [[ $change_count -eq 1 && "$changed_dir" == "website" ]]; then
