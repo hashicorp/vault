@@ -84,7 +84,7 @@ export default Route.extend(ModelBoundaryRoute, ClusterRoute, {
 
   model(params) {
     // if a user's browser settings block localStorage they will be unable to use Vault. The method will throw the error and the rest of the application will not load.
-    localStorage.isLocalStorageSupported();
+    // localStorage.isLocalStorageSupported();
 
     const id = this.getClusterId(params);
     return this.store.findRecord('cluster', id);
