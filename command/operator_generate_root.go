@@ -79,7 +79,7 @@ Usage: vault operator generate-root [options] -init [-otp=...] [-pgp-key=...]
     choose one of the following protection methods for how the token will be
     returned:
 
-      - A base64-encoded one-time-password (OTP). The resulting	token is XORed
+      - A base64-encoded one-time-password (OTP). The resulting token is XORed
         with this value when it is returned. Use the "-decode" form of this
         command to output the final value.
 
@@ -94,7 +94,7 @@ Usage: vault operator generate-root [options] -init [-otp=...] [-pgp-key=...]
 
             $ vault operator generate-root -init -otp="..."
 
-	  - A PGP key. The resulting token is encrypted with this public key.
+      - A PGP key. The resulting token is encrypted with this public key.
         The key may be specified as a path to a file, or a string of the
         form "keybase:<username>" to fetch the key from the keybase.io API.
 
