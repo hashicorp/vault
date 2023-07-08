@@ -343,8 +343,8 @@ func TestAuditBroker_LogRequest(t *testing.T) {
 	b := NewAuditBroker(l)
 	a1 := corehelpers.TestNoopAudit(t, nil)
 	a2 := corehelpers.TestNoopAudit(t, nil)
-	b.Register("foo", a1, false)
-	b.Register("bar", a2, false)
+	b.Register("foo", a1, false, false)
+	b.Register("bar", a2, false, false)
 
 	auth := &logical.Auth{
 		ClientToken: "foo",
@@ -430,8 +430,8 @@ func TestAuditBroker_LogResponse(t *testing.T) {
 	b := NewAuditBroker(l)
 	a1 := corehelpers.TestNoopAudit(t, nil)
 	a2 := corehelpers.TestNoopAudit(t, nil)
-	b.Register("foo", a1, false)
-	b.Register("bar", a2, false)
+	b.Register("foo", a1, false, false)
+	b.Register("bar", a2, false, false)
 
 	auth := &logical.Auth{
 		NumUses:     10,
@@ -537,8 +537,8 @@ func TestAuditBroker_AuditHeaders(t *testing.T) {
 	view := NewBarrierView(barrier, "headers/")
 	a1 := corehelpers.TestNoopAudit(t, nil)
 	a2 := corehelpers.TestNoopAudit(t, nil)
-	b.Register("foo", a1, false)
-	b.Register("bar", a2, false)
+	b.Register("foo", a1, false, false)
+	b.Register("bar", a2, false, false)
 
 	auth := &logical.Auth{
 		ClientToken: "foo",

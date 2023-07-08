@@ -173,28 +173,28 @@ jobs:
           rm -rf /tmp/enos*
           rm -rf ./enos/support
           rm -rf ./enos/.enos
-      # Send a Slack notification to #feed-vault-enos-failures for if the 'run' step fails.
+      # Send a Slack notification to #feed-vault-enos-failures if the 'run' step fails.
       # There is an incoming webhook set up on the "Enos Vault Failure Bot" Slackbot https://api.slack.com/apps/A05E31CH1LG/incoming-webhooks
       - name: Send Slack notification on Enos run failure
         uses: hashicorp/actions-slack-status@v1
         if: ${{ always() }}
         with:
-          failure-message: "An Enos scenario run failed."
+          failure-message: "An Enos scenario `run` failed on the branch `${{ github.event.pull_request.head.ref }}` \nPR title: `${{ github.event.pull_request.title }}` \nActor: `${{ github.event.pull_request.user.login }}`"
           status: ${{steps.run.outcome}}
           slack-webhook-url: ${{secrets.SLACK_WEBHOOK_URL}}
-      # Send a Slack notification to #feed-vault-enos-failures for if the 'run_retry' step fails.
+      # Send a Slack notification to #feed-vault-enos-failures if the 'run_retry' step fails.
       - name: Send Slack notification on Enos run_retry failure
         uses: hashicorp/actions-slack-status@v1
         if: ${{ always() }}
         with:
-          failure-message: "An Enos scenario run_retry failed."
+          failure-message: "An Enos scenario `run_retry` failed on the branch `${{ github.event.pull_request.head.ref }}` \nPR title: `${{ github.event.pull_request.title }}` \nActor: `${{ github.event.pull_request.user.login }}`"
           status: ${{steps.run_retry.outcome}}
           slack-webhook-url: ${{secrets.SLACK_WEBHOOK_URL}}
-      # Send a Slack notification to #feed-vault-enos-failures for if the 'destroy' step fails.
+      # Send a Slack notification to #feed-vault-enos-failures if the 'destroy' step fails.
       - name: Send Slack notification on Enos destroy failure
         uses: hashicorp/actions-slack-status@v1
         if: ${{ always() }}
         with:
-          failure-message: "An Enos scenario destroy failed."
+          failure-message: "An Enos scenario `destroy` failed on the branch `${{ github.event.pull_request.head.ref }}` \nPR title: `${{ github.event.pull_request.title }}` \nActor: `${{ github.event.pull_request.user.login }}`"
           status: ${{steps.destroy.outcome}}
           slack-webhook-url: ${{secrets.SLACK_WEBHOOK_URL}}
