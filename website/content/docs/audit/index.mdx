@@ -30,6 +30,12 @@ The non-audited paths are:
     sys/storage/raft/join
     sys/internal/ui/feature-flags
 
+and also, if the relevant listener configuration settings allow unauthenticated access:
+
+    sys/metrics
+    sys/pprof/*
+    sys/in-flight-req
+
 ## Enabling multiple devices
 
 When multiple audit devices are enabled, Vault will attempt to send the audit
