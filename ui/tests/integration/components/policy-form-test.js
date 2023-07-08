@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
 import { module, test } from 'qunit';
 import { setupRenderingTest } from 'ember-qunit';
 import { click, fillIn, render, triggerEvent } from '@ember/test-helpers';
@@ -12,7 +17,7 @@ const SELECTORS = {
   policyUpload: '[data-test-text-file-input]',
   saveButton: '[data-test-policy-save]',
   cancelButton: '[data-test-policy-cancel]',
-  error: '[data-test-error]',
+  error: '[data-test-message-error]',
 };
 
 module('Integration | Component | policy-form', function (hooks) {

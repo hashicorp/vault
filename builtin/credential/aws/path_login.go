@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package awsauth
 
 import (
@@ -24,6 +27,7 @@ import (
 	cleanhttp "github.com/hashicorp/go-cleanhttp"
 	"github.com/hashicorp/go-retryablehttp"
 	"github.com/hashicorp/go-secure-stdlib/awsutil"
+	"github.com/hashicorp/go-secure-stdlib/parseutil"
 	"github.com/hashicorp/go-secure-stdlib/strutil"
 	uuid "github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/builtin/credential/aws/pkcs7"
@@ -52,6 +56,10 @@ var (
 func (b *backend) pathLogin() *framework.Path {
 	return &framework.Path{
 		Pattern: "login$",
+		DisplayAttrs: &framework.DisplayAttributes{
+			OperationPrefix: operationPrefixAWS,
+			OperationVerb:   "login",
+		},
 		Fields: map[string]*framework.FieldSchema{
 			"role": {
 				Type: framework.TypeString,
@@ -103,8 +111,8 @@ This must match the request body included in the signature.`,
 			"iam_request_headers": {
 				Type: framework.TypeHeader,
 				Description: `Key/value pairs of headers for use in the
-sts:GetCallerIdentity HTTP requests headers when auth_type is iam. Can be either 
-a Base64-encoded, JSON-serialized string, or a JSON object of key/value pairs. 
+sts:GetCallerIdentity HTTP requests headers when auth_type is iam. Can be either
+a Base64-encoded, JSON-serialized string, or a JSON object of key/value pairs.
 This must at a minimum include the headers over which AWS has included a  signature.`,
 			},
 			"identity": {
@@ -337,7 +345,7 @@ func (b *backend) pathLoginResolveRoleIam(ctx context.Context, req *logical.Requ
 
 // instanceIamRoleARN fetches the IAM role ARN associated with the given
 // instance profile name
-func (b *backend) instanceIamRoleARN(iamClient *iam.IAM, instanceProfileName string) (string, error) {
+func (b *backend) instanceIamRoleARN(ctx context.Context, iamClient *iam.IAM, instanceProfileName string) (string, error) {
 	if iamClient == nil {
 		return "", fmt.Errorf("nil iamClient")
 	}
@@ -345,7 +353,7 @@ func (b *backend) instanceIamRoleARN(iamClient *iam.IAM, instanceProfileName str
 		return "", fmt.Errorf("missing instance profile name")
 	}
 
-	profile, err := iamClient.GetInstanceProfile(&iam.GetInstanceProfileInput{
+	profile, err := iamClient.GetInstanceProfileWithContext(ctx, &iam.GetInstanceProfileInput{
 		InstanceProfileName: aws.String(instanceProfileName),
 	})
 	if err != nil {
@@ -379,7 +387,7 @@ func (b *backend) validateInstance(ctx context.Context, s logical.Storage, insta
 		return nil, err
 	}
 
-	status, err := ec2Client.DescribeInstances(&ec2.DescribeInstancesInput{
+	status, err := ec2Client.DescribeInstancesWithContext(ctx, &ec2.DescribeInstancesInput{
 		InstanceIds: []*string{
 			aws.String(instanceID),
 		},
@@ -721,7 +729,7 @@ func (b *backend) verifyInstanceMeetsRoleRequirements(ctx context.Context,
 		} else if iamClient == nil {
 			return nil, fmt.Errorf("received a nil iamClient")
 		}
-		iamRoleARN, err := b.instanceIamRoleARN(iamClient, iamInstanceProfileEntity.FriendlyName)
+		iamRoleARN, err := b.instanceIamRoleARN(ctx, iamClient, iamInstanceProfileEntity.FriendlyName)
 		if err != nil {
 			return nil, fmt.Errorf("IAM role ARN could not be fetched: %w", err)
 		}
@@ -1284,7 +1292,7 @@ func (b *backend) pathLoginRenewEc2(ctx context.Context, req *logical.Request, _
 	// If the login was made using the role tag, then max_ttl from tag
 	// is cached in internal data during login and used here to cap the
 	// max_ttl of renewal.
-	rTagMaxTTL, err := time.ParseDuration(req.Auth.Metadata["role_tag_max_ttl"])
+	rTagMaxTTL, err := parseutil.ParseDurationSecond(req.Auth.Metadata["role_tag_max_ttl"])
 	if err != nil {
 		return nil, err
 	}
@@ -1832,7 +1840,7 @@ func (b *backend) fullArn(ctx context.Context, e *iamEntity, s logical.Storage) 
 		input := iam.GetUserInput{
 			UserName: aws.String(e.FriendlyName),
 		}
-		resp, err := client.GetUser(&input)
+		resp, err := client.GetUserWithContext(ctx, &input)
 		if err != nil {
 			return "", fmt.Errorf("error fetching user %q: %w", e.FriendlyName, err)
 		}
@@ -1846,7 +1854,7 @@ func (b *backend) fullArn(ctx context.Context, e *iamEntity, s logical.Storage) 
 		input := iam.GetRoleInput{
 			RoleName: aws.String(e.FriendlyName),
 		}
-		resp, err := client.GetRole(&input)
+		resp, err := client.GetRoleWithContext(ctx, &input)
 		if err != nil {
 			return "", fmt.Errorf("error fetching role %q: %w", e.FriendlyName, err)
 		}

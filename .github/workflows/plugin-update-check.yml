@@ -1,0 +1,66 @@
+on:
+  workflow_dispatch:
+    inputs:
+      repo:
+        type: string
+        description: 'The owner and repository name as per the github.repository context property.'
+        required: true
+      plugin_branch:
+        type: string
+        description: 'The name of the plugin branch'
+        required: true
+
+jobs:
+  plugin-update-check:
+    runs-on: ubuntu-latest
+    env:
+      PLUGIN_REPO: "${{inputs.repo}}"
+      PLUGIN_BRANCH: "${{inputs.plugin_branch}}"
+      VAULT_BRANCH: "auto-plugin-update/${{inputs.repo}}/${{inputs.plugin_branch}}"
+      RUN_ID: "${{github.run_id}}"
+    steps:
+      - run: echo "Branch $PLUGIN_BRANCH of $PLUGIN_REPO"
+      - uses: actions/checkout@c85c95e3d7251135ab7dc9ce3241c5835cc595a9 # v3.5.3
+        with:
+          # We don't use the default token so that checks are executed on the resulting PR
+          # https://docs.github.com/en/actions/using-workflows/triggering-a-workflow#triggering-a-workflow-from-a-workflow
+          token: ${{ secrets.ELEVATED_GITHUB_TOKEN }}
+
+      - uses: actions/setup-go@fac708d6674e30b6ba41289acaab6d4b75aa0753 # v4.0.1
+        with:
+          go-version-file: .go-version
+
+      - name: update plugin
+        run: |
+          go get "github.com/$PLUGIN_REPO@$PLUGIN_BRANCH"
+          go mod tidy
+
+      - name: detect changes
+        id: changes
+        run: |
+          echo "count=$(git status --porcelain=v1 2>/dev/null | wc -l)" >> "$GITHUB_OUTPUT"
+
+      - name: commit/push
+        if: steps.changes.outputs.count > 0
+        run: |
+          git config user.name hc-github-team-secure-vault-ecosystem
+          git config user.email hc-github-team-secure-vault-ecosystem@users.noreply.github.com
+          git add .
+          git commit -m "Automated dependency upgrades"
+          git push -f origin ${{ github.ref_name }}:"$VAULT_BRANCH"
+
+      - name: Open pull request if needed
+        if: steps.changes.outputs.count > 0
+        env:
+          GITHUB_TOKEN: ${{secrets.ELEVATED_GITHUB_TOKEN}}
+        # Only open a PR if the branch is not attached to an existing one
+        run: |
+          PR=$(gh pr list --head "$VAULT_BRANCH" --json number -q '.[0].number')
+
+          if [ -z "$PR" ]; then
+            # call the script to create the plugin update PR on Vault
+            ./.github/scripts/plugin-helper-gh-pr-create.sh
+
+          else
+            echo "Pull request already exists, won't create a new one."
+          fi

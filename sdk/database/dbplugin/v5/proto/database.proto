@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 syntax = "proto3";
 package dbplugin.v5;
 
@@ -29,6 +32,7 @@ message NewUserRequest {
     Statements rollback_statements = 5;
     int32 credential_type = 6;
     bytes public_key = 7;
+    string subject = 8;
 }
 
 message UsernameConfig {

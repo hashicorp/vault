@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
 export default (test) => {
   test('it should make request to correct endpoint on save', async function (assert) {
     assert.expect(1);

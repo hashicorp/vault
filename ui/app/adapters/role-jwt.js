@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
 import ApplicationAdapter from './application';
 import { inject as service } from '@ember/service';
 import { encodePath } from 'vault/utils/path-encoding-helpers';

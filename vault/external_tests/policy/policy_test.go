@@ -1,8 +1,13 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package policy
 
 import (
 	"testing"
 	"time"
+
+	"github.com/hashicorp/vault/helper/testhelpers/minimal"
 
 	"github.com/go-test/deep"
 	"github.com/hashicorp/go-hclog"
@@ -95,27 +100,8 @@ func TestPolicy_NoDefaultPolicy(t *testing.T) {
 
 func TestPolicy_NoConfiguredPolicy(t *testing.T) {
 	var err error
-	coreConfig := &vault.CoreConfig{
-		DisableMlock: true,
-		DisableCache: true,
-		Logger:       hclog.NewNullLogger(),
-		CredentialBackends: map[string]logical.Factory{
-			"ldap": ldap.Factory,
-		},
-	}
-
-	cluster := vault.NewTestCluster(t, coreConfig, &vault.TestClusterOptions{
-		HandlerFunc: vaulthttp.Handler,
-	})
-
-	cluster.Start()
-	defer cluster.Cleanup()
-
-	cores := cluster.Cores
-
-	vault.TestWaitActive(t, cores[0].Core)
-
-	client := cores[0].Client
+	cluster := minimal.NewTestSoloCluster(t, nil)
+	client := cluster.Cores[0].Client
 
 	err = client.Sys().EnableAuthWithOptions("ldap", &api.EnableAuthOptions{
 		Type: "ldap",

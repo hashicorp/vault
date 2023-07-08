@@ -1,0 +1,77 @@
+<form {{on "submit" (perform this.save)}}>
+  <div class="box is-sideless is-fullwidth is-marginless">
+    <MessageError @errorMessage={{this.error}} />
+    {{#each @model.formFields as |field|}}
+      {{#if (eq field.name "issuingCertificates")}}
+        <div class="has-top-margin-m has-bottom-margin-s">
+          <h2 class="title is-4">
+            Issuer URLs
+          </h2>
+        </div>
+      {{/if}}
+      <FormField @attr={{field}} @model={{@model}}>
+        {{#if (eq field.name "usage")}}
+          {{#each field.options.valueOptions as |option|}}
+            <div class="is-flex-center has-text-grey has-text-weight-bold">
+              <Input
+                data-test-usage={{option.label}}
+                id={{option.value}}
+                @type="checkbox"
+                @checked={{includes option.value this.usageValues}}
+                {{on "change" (fn this.setUsage option.value)}}
+              />
+              <label for={{option.value}} class="has-left-margin-s">{{option.label}}</label>
+            </div>
+          {{/each}}
+        {{else if (eq field.name "leafNotAfterBehavior")}}
+          <div class="control is-expanded">
+            <div class="select is-fullwidth">
+              <select
+                name={{@attr.name}}
+                id={{@attr.name}}
+                {{on "change" (pipe (pick "target.value") (fn (mut @model.leafNotAfterBehavior)))}}
+                onchange={{this.onChangeWithEvent}}
+              >
+                {{#each field.options.valueOptions as |value|}}
+                  <option selected={{eq @model.leafNotAfterBehavior value}} value={{value}}>
+                    {{capitalize (if (eq value "err") "error" value)}}
+                    if the computed NotAfter exceeds that of this issuer
+                  </option>
+                {{/each}}
+              </select>
+            </div>
+          </div>
+        {{/if}}
+      </FormField>
+    {{/each}}
+  </div>
+  <div class="has-top-margin-l has-bottom-margin-l">
+    <button
+      type="submit"
+      class="button is-primary {{if this.save.isRunning 'is-loading'}}"
+      disabled={{this.save.isRunning}}
+      data-test-save
+    >
+      Update
+    </button>
+    <button
+      type="button"
+      class="button has-left-margin-s"
+      disabled={{this.save.isRunning}}
+      {{on "click" this.cancel}}
+      data-test-cancel
+    >
+      Cancel
+    </button>
+    {{#if this.error}}
+      <div class="control">
+        <AlertInline
+          @type="danger"
+          @paddingTop={{true}}
+          @message="There was an error submitting this form."
+          @mimicRefresh={{true}}
+        />
+      </div>
+    {{/if}}
+  </div>
+</form>

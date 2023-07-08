@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 /*
  * The healthcheck package attempts to allow generic checks of arbitrary
  * engines, while providing a common framework with some performance
@@ -25,6 +28,7 @@
 package healthcheck
 
 import (
+	"context"
 	"fmt"
 	"strings"
 
@@ -118,6 +122,10 @@ func (e *Executor) Execute() (map[string][]*Result, error) {
 			return nil, fmt.Errorf("failed to evaluate %v: %w", checker.Name(), err)
 		}
 
+		if results == nil {
+			results = []*Result{}
+		}
+
 		for _, result := range results {
 			result.Endpoint = e.templatePath(result.Endpoint)
 			result.StatusDisplay = ResultStatusNameMap[result.Status]
@@ -162,7 +170,11 @@ func (e *Executor) FetchIfNotFetched(op logical.Operation, rawPath string) (*Pat
 		return nil, fmt.Errorf("unknown operation: %v on %v", op, path)
 	}
 
-	response, err := e.Client.Logical().ReadRawWithData(path, data)
+	// client.ReadRaw* methods require a manual timeout override
+	ctx, cancel := context.WithTimeout(context.Background(), e.Client.ClientTimeout())
+	defer cancel()
+
+	response, err := e.Client.Logical().ReadRawWithDataWithContext(ctx, path, data)
 	ret.Response = response
 	if err != nil {
 		ret.FetchError = err

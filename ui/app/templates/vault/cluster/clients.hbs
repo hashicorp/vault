@@ -6,25 +6,22 @@
   </p.levelLeft>
 </PageHeader>
 
-<div class="tabs-container box is-bottomless is-marginless is-fullwidth is-paddingless" data-test-pricing-metrics>
+<div class="tabs-container box is-bottomless is-marginless is-fullwidth is-paddingless">
   <nav class="tabs">
     <ul>
-      <LinkTo @route="vault.cluster.clients.current" data-test-current-month>
-        Current month
+      <LinkTo @route="vault.cluster.clients.dashboard" data-test-dashboard>
+        Dashboard
       </LinkTo>
-      <LinkTo @route="vault.cluster.clients.history" data-test-history>
-        History
-      </LinkTo>
-      {{#if (or @model.config.configPath.canRead @model.configPath.canRead)}}
-        <LinkTo @route="vault.cluster.clients.config">
+      {{#if (or @model.config.canRead @model.canRead)}}
+        <LinkTo
+          @route="vault.cluster.clients.config"
+          @current-when="vault.cluster.clients.config vault.cluster.clients.edit"
+        >
           Configuration
         </LinkTo>
       {{/if}}
     </ul>
   </nav>
 </div>
-{{#if this.currentlyLoading}}
-  <LayoutLoading />
-{{else}}
-  {{outlet}}
-{{/if}}
+
+{{outlet}}

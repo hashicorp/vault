@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package agent
 
 import (
@@ -9,16 +12,14 @@ import (
 	"testing"
 	"time"
 
-	"github.com/hashicorp/vault/builtin/logical/pki"
-
 	hclog "github.com/hashicorp/go-hclog"
-
 	"github.com/hashicorp/vault/api"
 	vaultcert "github.com/hashicorp/vault/builtin/credential/cert"
-	"github.com/hashicorp/vault/command/agent/auth"
-	agentcert "github.com/hashicorp/vault/command/agent/auth/cert"
-	"github.com/hashicorp/vault/command/agent/sink"
-	"github.com/hashicorp/vault/command/agent/sink/file"
+	"github.com/hashicorp/vault/builtin/logical/pki"
+	"github.com/hashicorp/vault/command/agentproxyshared/auth"
+	agentcert "github.com/hashicorp/vault/command/agentproxyshared/auth/cert"
+	"github.com/hashicorp/vault/command/agentproxyshared/sink"
+	"github.com/hashicorp/vault/command/agentproxyshared/sink/file"
 	"github.com/hashicorp/vault/helper/dhutil"
 	vaulthttp "github.com/hashicorp/vault/http"
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"

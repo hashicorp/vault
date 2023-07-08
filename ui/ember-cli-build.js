@@ -1,9 +1,13 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
 /* eslint-env node */
 'use strict';
 
 const EmberApp = require('ember-cli/lib/broccoli/ember-app');
 const config = require('./config/environment')();
-const nodeSass = require('node-sass');
 
 const environment = EmberApp.env();
 const isProd = environment === 'production';
@@ -39,9 +43,18 @@ const appConfig = {
     enabled: !isProd,
   },
   sassOptions: {
-    implementation: nodeSass,
     sourceMap: false,
     onlyIncluded: true,
+    precision: 4,
+    includePaths: [
+      './node_modules/@hashicorp/design-system-components/app/styles',
+      './node_modules/@hashicorp/design-system-tokens/dist/products/css',
+    ],
+  },
+  minifyCSS: {
+    options: {
+      advanced: false,
+    },
   },
   autoprefixer: {
     enabled: isTest || isProd,

@@ -1,11 +1,6 @@
-<AlertBanner @type="warning" @message="Vault is sealed" @yieldWithoutColumn={{true}} class="is-marginless">
-  <div class="is-flex is-flex-v-centered">
-    <div>
-      <span class="message-title">Warning</span>
-      Vault is sealed
-    </div>
-  </div>
-</AlertBanner>
+<Hds::Alert @type="inline" @color="warning" as |A|>
+  <A.Title class="alert-title">Vault is sealed</A.Title>
+</Hds::Alert>
 {{#if this.showJoinForm}}
   <div class="box is-marginless is-shadowless">
     <h2 class="title is-5" data-test-join-header>

@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
 import { assign } from '@ember/polyfills';
 import EmberObject from '@ember/object';
 import ClusterRouteMixin from 'vault/mixins/cluster-route';
