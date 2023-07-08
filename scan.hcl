@@ -1,6 +1,9 @@
+# Copyright (c) HashiCorp, Inc.
+# SPDX-License-Identifier: MPL-2.0
+
 repository {
-  # go_modules = true
-  # osv = true
+  go_modules = true
+  osv = true
   secrets {
     all = true
   } 

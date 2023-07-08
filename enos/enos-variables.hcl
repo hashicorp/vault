@@ -1,3 +1,6 @@
+# Copyright (c) HashiCorp, Inc.
+# SPDX-License-Identifier: MPL-2.0
+
 variable "artifact_path" {
   type        = string
   description = "The local path for dev artifact to test"
@@ -55,9 +58,9 @@ variable "backend_edition" {
 }
 
 variable "backend_instance_type" {
-  description = "The instance type to use for the Vault backend"
+  description = "The instance type to use for the Vault backend. Must be arm64/nitro compatible"
   type        = string
-  default     = "t3.small"
+  default     = "t4g.small"
 }
 
 variable "backend_license_path" {
@@ -66,10 +69,54 @@ variable "backend_license_path" {
   default     = null
 }
 
+variable "backend_log_level" {
+  description = "The server log level for the backend. Supported values include 'trace', 'debug', 'info', 'warn', 'error'"
+  type        = string
+  default     = "trace"
+}
+
+variable "operator_instance" {
+  type        = string
+  description = "The ip address of the operator (Voter) node"
+}
+
 variable "project_name" {
   description = "The description of the project"
   type        = string
   default     = "vault-enos-integration"
+}
+
+variable "remove_vault_instances" {
+  type = map(object({
+    private_ip = string
+    public_ip  = string
+  }))
+  description = "The old vault nodes to be removed"
+}
+
+
+variable "ui_test_filter" {
+  type        = string
+  description = "A test filter to limit the ui tests to execute. Will be appended to the ember test command as '-f=\"<filter>\"'"
+  default     = null
+}
+
+variable "ui_run_tests" {
+  type        = bool
+  description = "Whether to run the UI tests or not. If set to false a cluster will be created but no tests will be run"
+  default     = true
+}
+
+variable "vault_enable_file_audit_device" {
+  description = "If true the file audit device will be enabled at the path /var/log/vault_audit.log"
+  type        = bool
+  default     = true
+}
+
+variable "rhel_distro_version" {
+  description = "The version of RHEL to use"
+  type        = string
+  default     = "9.1" // or "8.8"
 }
 
 variable "tags" {
@@ -88,6 +135,12 @@ variable "tfc_api_token" {
   description = "The Terraform Cloud QTI Organization API token."
   type        = string
   sensitive   = true
+}
+
+variable "ubuntu_distro_version" {
+  description = "The version of ubuntu to use"
+  type        = string
+  default     = "22.04" // or "20.04", "18.04"
 }
 
 variable "vault_artifact_type" {
@@ -137,6 +190,12 @@ variable "vault_local_build_tags" {
   description = "The build tags to pass to the Go compiler for builder:local variants"
   type        = list(string)
   default     = null
+}
+
+variable "vault_log_level" {
+  description = "The server log level for Vault logs. Supported values (in order of detail) are trace, debug, info, warn, and err."
+  type        = string
+  default     = "trace"
 }
 
 variable "vault_build_date" {

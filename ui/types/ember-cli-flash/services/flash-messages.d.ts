@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
 declare module 'ember-cli-flash/services/flash-messages' {
   import Service from '@ember/service';
   import FlashObject from 'ember-cli-flash/flash/object';

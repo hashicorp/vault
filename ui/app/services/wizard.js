@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
 import { next } from '@ember/runloop';
 import { typeOf } from '@ember/utils';
 import Service, { inject as service } from '@ember/service';

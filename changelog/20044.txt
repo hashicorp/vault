@@ -1,0 +1,4 @@
+```release-note:improvement
+core: Add a `raft` sub-field to the `storage` and `ha_storage` details provided by the
+`/sys/config/state/sanitized` endpoint in order to include the `max_entry_size`.
+```

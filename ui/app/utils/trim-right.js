@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
 // will trim a given set of endings from the end of a string
 // if isExtension is true, the first char of that string will be escaped
 // in the regex

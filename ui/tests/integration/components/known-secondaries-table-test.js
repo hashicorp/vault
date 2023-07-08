@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
 /* eslint qunit/no-conditional-assertions: "warn" */
 import { module, test } from 'qunit';
 import { setupRenderingTest } from 'ember-qunit';

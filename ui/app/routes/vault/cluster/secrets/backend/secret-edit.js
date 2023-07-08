@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
 import AdapterError from '@ember-data/adapter/error';
 import { set } from '@ember/object';
 import { resolve } from 'rsvp';
@@ -104,11 +109,10 @@ export default Route.extend(UnloadModelRoute, {
       ssh: 'role-ssh',
       transform: this.modelTypeForTransform(secret),
       aws: 'role-aws',
-      pki: secret && secret.startsWith('cert/') ? 'pki/cert' : 'pki/pki-role',
       cubbyhole: 'secret',
-      kv: backendModel.get('modelTypeForKV'),
+      kv: backendModel.modelTypeForKV,
       keymgmt: `keymgmt/${options.queryParams?.itemType || 'key'}`,
-      generic: backendModel.get('modelTypeForKV'),
+      generic: backendModel.modelTypeForKV,
     };
     return types[type];
   },
@@ -233,9 +237,6 @@ export default Route.extend(UnloadModelRoute, {
     const type = params.type || '';
     if (!secret) {
       secret = '\u0020';
-    }
-    if (modelType === 'pki/cert') {
-      secret = secret.replace('cert/', '');
     }
     if (modelType.startsWith('transform/')) {
       secret = this.transformSecretName(secret, modelType);

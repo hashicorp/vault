@@ -43,7 +43,7 @@
       type="button"
       class="button has-left-margin-s"
       disabled={{this.save.isRunning}}
-      {{on "click" this.cancel}}
+      {{on "click" @onCancel}}
       data-test-pki-key-cancel
     >
       Cancel

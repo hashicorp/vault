@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
 import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
 import { click, currentRouteName, currentURL, fillIn, visit } from '@ember/test-helpers';
@@ -219,7 +224,7 @@ module('Acceptance | mfa-method', function (hooks) {
     );
     await click('[data-test-tab="enforcements"]');
     assert.dom('[data-test-list-item]').hasText('bar', 'Enforcement is listed in method view');
-    await click('[data-test-link="mfa"]');
+    await click('[data-test-sidebar-nav-link="Multi-Factor Authentication"]');
     await click('[data-test-tab="enforcements"]');
     assert.dom('[data-test-list-item="bar"]').hasText('bar', 'Enforcement is listed in enforcements view');
     await click('[data-test-list-item="bar"]');
@@ -288,5 +293,17 @@ module('Acceptance | mfa-method', function (hooks) {
     assert
       .dom('[data-test-row-value="Max validation attempts"]')
       .hasText('10', 'Max validation attempts field is updated');
+  });
+
+  test('it should navigate to enforcements create route from method enforcement tab', async function (assert) {
+    await visit('/vault/access/mfa/methods');
+    await click('[data-test-mfa-method-list-item]');
+    await click('[data-test-tab="enforcements"]');
+    await click('[data-test-enforcement-create]');
+    assert.strictEqual(
+      currentRouteName(),
+      'vault.cluster.access.mfa.enforcements.create',
+      'Navigates to enforcements create route from toolbar action'
+    );
   });
 });

@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package api
 
 import (
@@ -11,7 +14,7 @@ import (
 	"os"
 	"regexp"
 
-	squarejwt "gopkg.in/square/go-jose.v2/jwt"
+	"github.com/go-jose/go-jose/v3/jwt"
 
 	"github.com/hashicorp/errwrap"
 )
@@ -37,9 +40,9 @@ const (
 // path matches that path or not (useful specifically for the paths that
 // contain templated fields.)
 var sudoPaths = map[string]*regexp.Regexp{
-	"/auth/{token_mount_path}/accessors/":     regexp.MustCompile(`^/auth/.+/accessors/$`),
-	"/{pki_mount_path}/root":                  regexp.MustCompile(`^/.+/root$`),
-	"/{pki_mount_path}/root/sign-self-issued": regexp.MustCompile(`^/.+/root/sign-self-issued$`),
+	"/auth/token/accessors":                         regexp.MustCompile(`^/auth/token/accessors/?$`),
+	"/pki/root":                                     regexp.MustCompile(`^/pki/root$`),
+	"/pki/root/sign-self-issued":                    regexp.MustCompile(`^/pki/root/sign-self-issued$`),
 	"/sys/audit":                                    regexp.MustCompile(`^/sys/audit$`),
 	"/sys/audit/{path}":                             regexp.MustCompile(`^/sys/audit/.+$`),
 	"/sys/auth/{path}":                              regexp.MustCompile(`^/sys/auth/.+$`),
@@ -47,10 +50,10 @@ var sudoPaths = map[string]*regexp.Regexp{
 	"/sys/config/auditing/request-headers":          regexp.MustCompile(`^/sys/config/auditing/request-headers$`),
 	"/sys/config/auditing/request-headers/{header}": regexp.MustCompile(`^/sys/config/auditing/request-headers/.+$`),
 	"/sys/config/cors":                              regexp.MustCompile(`^/sys/config/cors$`),
-	"/sys/config/ui/headers/":                       regexp.MustCompile(`^/sys/config/ui/headers/$`),
+	"/sys/config/ui/headers":                        regexp.MustCompile(`^/sys/config/ui/headers/?$`),
 	"/sys/config/ui/headers/{header}":               regexp.MustCompile(`^/sys/config/ui/headers/.+$`),
 	"/sys/leases":                                   regexp.MustCompile(`^/sys/leases$`),
-	"/sys/leases/lookup/":                           regexp.MustCompile(`^/sys/leases/lookup/$`),
+	"/sys/leases/lookup/":                           regexp.MustCompile(`^/sys/leases/lookup/?$`),
 	"/sys/leases/lookup/{prefix}":                   regexp.MustCompile(`^/sys/leases/lookup/.+$`),
 	"/sys/leases/revoke-force/{prefix}":             regexp.MustCompile(`^/sys/leases/revoke-force/.+$`),
 	"/sys/leases/revoke-prefix/{prefix}":            regexp.MustCompile(`^/sys/leases/revoke-prefix/.+$`),
@@ -70,7 +73,7 @@ var sudoPaths = map[string]*regexp.Regexp{
 	"/sys/replication/performance/primary/secondary-token": regexp.MustCompile(`^/sys/replication/performance/primary/secondary-token$`),
 	"/sys/replication/primary/secondary-token":             regexp.MustCompile(`^/sys/replication/primary/secondary-token$`),
 	"/sys/replication/reindex":                             regexp.MustCompile(`^/sys/replication/reindex$`),
-	"/sys/storage/raft/snapshot-auto/config/":              regexp.MustCompile(`^/sys/storage/raft/snapshot-auto/config/$`),
+	"/sys/storage/raft/snapshot-auto/config/":              regexp.MustCompile(`^/sys/storage/raft/snapshot-auto/config/?$`),
 	"/sys/storage/raft/snapshot-auto/config/{name}":        regexp.MustCompile(`^/sys/storage/raft/snapshot-auto/config/[^/]+$`),
 }
 
@@ -132,7 +135,7 @@ func VaultPluginTLSProviderContext(ctx context.Context, apiTLSConfig *TLSConfig)
 	return func() (*tls.Config, error) {
 		unwrapToken := os.Getenv(PluginUnwrapTokenEnv)
 
-		parsedJWT, err := squarejwt.ParseSigned(unwrapToken)
+		parsedJWT, err := jwt.ParseSigned(unwrapToken)
 		if err != nil {
 			return nil, errwrap.Wrapf("error parsing wrapping token: {{err}}", err)
 		}
@@ -246,7 +249,9 @@ func SudoPaths() map[string]*regexp.Regexp {
 	return sudoPaths
 }
 
-// Determine whether the given path requires the sudo capability
+// Determine whether the given path requires the sudo capability.
+// Note that this uses hardcoded static path information, so will return incorrect results for paths in namespaces,
+// or for secret engines mounted at non-default paths.
 func IsSudoPath(path string) bool {
 	// Return early if the path is any of the non-templated sudo paths.
 	if _, ok := sudoPaths[path]; ok {

@@ -46,7 +46,7 @@
               </option>
             {{/if}}
             {{#each (path-or-array @attr.options.possibleValues @model) as |val|}}
-              <option selected={{eq (get @model this.valuePath) (or val.value val)}} value={{or val.value val}}>
+              <option selected={{loose-equal (get @model this.valuePath) (or val.value val)}} value={{or val.value val}}>
                 {{or val.displayName val}}
               </option>
             {{/each}}
@@ -209,21 +209,18 @@
     <StringList
       data-test-input={{@attr.name}}
       @label={{this.labelString}}
-      @warning={{@attr.options.warning}}
       @helpText={{if this.showHelpText @attr.options.helpText}}
       @inputValue={{get @model this.valuePath}}
       @onChange={{this.setAndBroadcast}}
       @attrName={{@attr.name}}
-      @subText={{@attr.options.subText}}
-      @hideFormSection={{@attr.options.hideFormSection}}
+      @subText="{{@attr.options.subText}} Add one item per row."
     />
   {{else if (eq @attr.options.sensitive true)}}
-    {{! Masked Input }}
     <MaskedInput
+      @name={{@attr.name}}
       @value={{or (get @model this.valuePath) @attr.options.defaultValue}}
       @allowCopy="true"
       @onChange={{this.setAndBroadcast}}
-      @name={{@attr.name}}
       @onKeyUp={{@onKeyUp}}
     />
     {{#if this.validationError}}
@@ -238,8 +235,11 @@
           id={{@attr.name}}
           value={{or (get @model this.valuePath) @attr.options.defaultValue}}
           oninput={{this.onChangeWithEvent}}
-          class="textarea"
+          class="textarea {{if this.validationError 'has-error-border'}}"
         ></textarea>
+        {{#if this.validationError}}
+          <AlertInline @type="danger" @message={{this.validationError}} @paddingTop={{true}} />
+        {{/if}}
       {{else if (eq @attr.options.editType "password")}}
         <Input
           data-test-input={{@attr.name}}
@@ -302,9 +302,10 @@
           autocomplete="off"
           spellcheck="false"
           value={{or (get @model this.valuePath) @attr.options.defaultValue}}
-          onchange={{this.onChangeWithEvent}}
-          onkeyup={{this.handleKeyUp}}
-          class="input {{if this.validationError 'has-error-border'}} has-bottom-margin-m"
+          {{on "input" this.onChangeWithEvent}}
+          {{on "change" this.onChangeWithEvent}}
+          {{on "keyup" this.handleKeyUp}}
+          class="input {{if this.validationError 'has-error-border'}}"
           maxLength={{@attr.options.characterLimit}}
         />
         {{#if @attr.options.validationAttr}}
@@ -314,6 +315,14 @@
         {{/if}}
         {{#if this.validationError}}
           <AlertInline @type="danger" @message={{this.validationError}} @paddingTop={{true}} />
+        {{/if}}
+        {{#if this.validationWarning}}
+          <AlertInline
+            @type="warning"
+            @message={{this.validationWarning}}
+            @paddingTop={{true}}
+            data-test-validation-warning
+          />
         {{/if}}
       {{/if}}
     </div>

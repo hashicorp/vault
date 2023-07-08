@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
 import { run } from '@ember/runloop';
 import Service from '@ember/service';
 import { resolve } from 'rsvp';
@@ -59,7 +64,7 @@ module('Integration | Component | shamir flow', function (hooks) {
     await render(hbs`
     <ShamirFlow @errors={{this.errors}} />
     `);
-    assert.dom('.message.is-danger').exists({ count: 2 }, 'renders errors');
+    assert.dom('[data-test-message-error]').exists({ count: 2 }, 'renders errors');
   });
 
   test('it sends data to the passed action', async function (assert) {

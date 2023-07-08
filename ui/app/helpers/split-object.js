@@ -1,4 +1,9 @@
 /**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
+/**
  * @module SplitObject
  * SplitObject helper takes in a class of data as the first param and an array of keys that you want to split into another object as the second param. 
  * You will end up with an array of two objects. One no longer with the array of params, and the second with just the array of params.

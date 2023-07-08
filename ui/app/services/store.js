@@ -1,10 +1,15 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
 import Store from '@ember-data/store';
 import { schedule } from '@ember/runloop';
 import { copy } from 'ember-copy';
 import { resolve, Promise } from 'rsvp';
 import { dasherize } from '@ember/string';
 import { assert } from '@ember/debug';
-import { set, get, computed } from '@ember/object';
+import { set, get } from '@ember/object';
 import clamp from 'vault/utils/clamp';
 import config from 'vault/config/environment';
 
@@ -27,26 +32,16 @@ export function keyForCache(query) {
   return JSON.stringify(cacheKeyObject);
 }
 
-export default Store.extend({
-  // this is a map of map that stores the caches
-  // eslint-disable-next-line
-  lazyCaches: computed({
-    get() {
-      return this._lazyCaches || new Map();
-    },
-    set(key, value) {
-      return (this._lazyCaches = value);
-    },
-  }),
+export default class StoreService extends Store {
+  lazyCaches = new Map();
 
   setLazyCacheForModel(modelName, key, value) {
     const cacheKey = keyForCache(key);
     const cache = this.lazyCacheForModel(modelName) || new Map();
     cache.set(cacheKey, value);
-    const lazyCaches = this.lazyCaches;
     const modelKey = normalizeModelName(modelName);
-    lazyCaches.set(modelKey, cache);
-  },
+    this.lazyCaches.set(modelKey, cache);
+  }
 
   getLazyCacheForModel(modelName, key) {
     const cacheKey = keyForCache(key);
@@ -54,11 +49,11 @@ export default Store.extend({
     if (modelCache) {
       return modelCache.get(cacheKey);
     }
-  },
+  }
 
   lazyCacheForModel(modelName) {
     return this.lazyCaches.get(normalizeModelName(modelName));
-  },
+  }
 
   // This is the public interface for the store extension - to be used just
   // like `Store.query`. Special handling of the response is controlled by
@@ -100,7 +95,7 @@ export default Store.extend({
       .catch(function (e) {
         throw e;
       });
-  },
+  }
 
   filterData(filter, dataset) {
     let newData = dataset || [];
@@ -111,7 +106,7 @@ export default Store.extend({
       });
     }
     return newData;
-  },
+  }
 
   // reconstructs the original form of the response from the server
   // with an additional `meta` block
@@ -142,14 +137,12 @@ export default Store.extend({
     };
 
     return response;
-  },
+  }
 
   // pushes records into the store and returns the result
   fetchPage(modelName, query) {
     const response = this.constructResponse(modelName, query);
-    this.peekAll(modelName).forEach((record) => {
-      record.unloadRecord();
-    });
+    this.unloadAll(modelName);
     return new Promise((resolve) => {
       schedule('destroy', () => {
         this.push(
@@ -166,12 +159,12 @@ export default Store.extend({
         resolve(model);
       });
     });
-  },
+  }
 
   // get cached data
   getDataset(modelName, query) {
     return this.getLazyCacheForModel(modelName, query);
-  },
+  }
 
   // store data cache as { response, dataset}
   // also populated `lazyCaches` attribute
@@ -181,20 +174,18 @@ export default Store.extend({
       dataset: array,
     };
     this.setLazyCacheForModel(modelName, query, dataSet);
-  },
+  }
 
   clearDataset(modelName) {
-    const cacheList = this.lazyCaches;
-    if (!cacheList.size) return;
-    if (modelName && cacheList.has(modelName)) {
-      cacheList.delete(modelName);
+    if (!this.lazyCaches.size) return;
+    if (modelName && this.lazyCaches.has(modelName)) {
+      this.lazyCaches.delete(modelName);
       return;
     }
-    cacheList.clear();
-    this.set('lazyCaches', cacheList);
-  },
+    this.lazyCaches.clear();
+  }
 
   clearAllDatasets() {
     this.clearDataset();
-  },
-});
+  }
+}

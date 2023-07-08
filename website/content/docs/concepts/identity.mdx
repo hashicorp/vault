@@ -12,9 +12,9 @@ overview of the various terminologies and their concepts. The idea of Identity
 is to maintain the clients who are recognized by Vault. As such, Vault provides
 an identity management solution through the **Identity secrets engine**. For
 more information about the Identity secrets engine and how it is used, refer to
-the [Identity Secrets Engine](/docs/secrets/identity) documentation.
+the [Identity Secrets Engine](/vault/docs/secrets/identity) documentation.
 
-## Entities and Aliases
+## Entities and aliases
 
 Each user may have multiple accounts with various identity providers, and Vault
 supports many of those providers to authenticate with Vault. Vault Identity can
@@ -45,10 +45,10 @@ to the authenticated token. When such tokens are used, their entity identifiers
 are audit logged, marking a trail of actions performed by specific users.
 
 ~> Vault Entity is used to count the number of Vault clients. To learn more
-about client count, refer to the [Client Count](/docs/concepts/client-count)
+about client count, refer to the [Client Count](/vault/docs/concepts/client-count)
 documentation.
 
-## Entity Management
+## Entity management
 
 Entities in Vault **do not** automatically pull identity information from
 anywhere. It needs to be explicitly managed by operators. This way, it is
@@ -56,7 +56,7 @@ flexible in terms of administratively controlling the number of entities to be
 synced against Vault. In some sense, Vault will serve as a _cache_ of
 identities and not as a _source_ of identities.
 
-## Entity Policies
+## Entity policies
 
 Vault policies can be assigned to entities which will grant _additional_
 permissions to the token on top of the existing policies on the token. If the
@@ -85,7 +85,7 @@ policies. If a user can modify an alias they can login with, they can bind it to
 an entity with higher privileges. If a user can modify group membership, they
 can add their entity to a group with higher privileges.
 
-## Mount Bound Aliases
+## Mount bound aliases
 
 Vault supports multiple authentication backends and also allows enabling the
 same type of authentication backend on different mount paths. The alias name of
@@ -122,7 +122,7 @@ a particular auth mount point.
 | Token               | `entity_alias`, if provided                                                                         |
 | Username (userpass) | Username                                                                                            |
 
-## Local Auth Methods
+## Local auth methods
 
 **Vault Enterprise:** All the auth methods will generate an entity by default
 when a token is being issued, with the exception of token store. This is applicable
@@ -132,7 +132,7 @@ If the goal of marking an auth method as `local` was to comply to GDPR guideline
 then care must be taken to not set the data pertaining to local auth mount or local auth
 mount aliases in the metadata of the associated entity.
 
-## Implicit Entities
+## Implicit entities
 
 Operators can create entities for all the users of an auth mount beforehand and
 assign policies to them, so that when users login, the desired capabilities to
@@ -145,13 +145,13 @@ normally have any associated identity information. An existing or new implicit
 entity can be assigned by using the `entity_alias` parameter, when creating a
 token using a token role with a configured list of `allowed_entity_aliases`.
 
-## Identity Auditing
+## Identity auditing
 
 If the token used to make API calls has an associated entity identifier, it
 will be audit logged as well. This leaves a trail of actions performed by
 specific users.
 
-## Identity Groups
+## Identity groups
 
 Vault identity has support for **groups**. A group can contain multiple entities
 as its members. A group can also have subgroups. Policies set on the group are
@@ -162,7 +162,7 @@ on the entity itself.
 
 ![Identity overview](/img/vault-identity-doc-3.png)
 
-## Group Hierarchical Permissions
+## Group hierarchical permissions
 
 Entities can be direct members of groups, in which case they inherit the
 policies of the groups they belong to. Entities can also be indirect members of
@@ -170,7 +170,7 @@ groups. For example, if a GroupA has GroupB as subgroup, then members of GroupB
 are indirect members of GroupA. Hence, the members of GroupB will have access
 to policies on both GroupA and GroupB.
 
-## External vs Internal Groups
+## External vs internal groups
 
 By default, the groups created in identity store are called the internal
 groups. The membership management of these groups should be carried out
@@ -186,9 +186,9 @@ group and has an alias that maps to the group in LDAP. If the user is removed
 from the group in LDAP, that change gets reflected in Vault only upon the
 subsequent login or renewal operation.
 
-For information about Identity Secrets Engine, refer to [Identity Secrets Engine](/docs/secrets/identity).
+For information about Identity Secrets Engine, refer to [Identity Secrets Engine](/vault/docs/secrets/identity).
 
 ## Tutorial
 
 Refer to the [Identity: Entities and
-Groups](https://learn.hashicorp.com/tutorials/vault/identity) tutorial to learn how Vault supports mutliple authentication methods and enables the same authentication method to be used with different mount paths.
+Groups](/vault/tutorials/auth-methods/identity) tutorial to learn how Vault supports mutliple authentication methods and enables the same authentication method to be used with different mount paths.

@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package certutil
 
 import (
@@ -78,6 +81,11 @@ var InvSignatureAlgorithmNames = map[x509.SignatureAlgorithm]string{
 	x509.PureEd25519:      "Ed25519",
 }
 
+// OID for RFC 5280 CRL Number extension.
+//
+// > id-ce-cRLNumber OBJECT IDENTIFIER ::= { id-ce 20 }
+var CRLNumberOID = asn1.ObjectIdentifier([]int{2, 5, 29, 20})
+
 // OID for RFC 5280 Delta CRL Indicator CRL extension.
 //
 // > id-ce-deltaCRLIndicator OBJECT IDENTIFIER ::= { id-ce 27 }
@@ -118,7 +126,7 @@ func GetSubjKeyID(privateKey crypto.Signer) ([]byte, error) {
 	if privateKey == nil {
 		return nil, errutil.InternalError{Err: "passed-in private key is nil"}
 	}
-	return getSubjectKeyID(privateKey.Public())
+	return GetSubjectKeyID(privateKey.Public())
 }
 
 // Returns the explicit SKID when used for cross-signing, else computes a new
@@ -128,10 +136,10 @@ func getSubjectKeyIDFromBundle(data *CreationBundle) ([]byte, error) {
 		return data.Params.SKID, nil
 	}
 
-	return getSubjectKeyID(data.CSR.PublicKey)
+	return GetSubjectKeyID(data.CSR.PublicKey)
 }
 
-func getSubjectKeyID(pub interface{}) ([]byte, error) {
+func GetSubjectKeyID(pub interface{}) ([]byte, error) {
 	var publicKeyBytes []byte
 	switch pub := pub.(type) {
 	case *rsa.PublicKey:
@@ -1034,8 +1042,8 @@ func selectSignatureAlgorithmForECDSA(pub crypto.PublicKey, signatureBits int) x
 }
 
 var (
-	oidExtensionBasicConstraints = []int{2, 5, 29, 19}
-	oidExtensionSubjectAltName   = []int{2, 5, 29, 17}
+	ExtensionBasicConstraintsOID = []int{2, 5, 29, 19}
+	ExtensionSubjectAltNameOID   = []int{2, 5, 29, 17}
 )
 
 // CreateCSR creates a CSR with the default rand.Reader to
@@ -1090,7 +1098,7 @@ func createCSR(data *CreationBundle, addBasicConstraints bool, randReader io.Rea
 			return nil, errutil.InternalError{Err: errwrap.Wrapf("error marshaling basic constraints: {{err}}", err).Error()}
 		}
 		ext := pkix.Extension{
-			Id:       oidExtensionBasicConstraints,
+			Id:       ExtensionBasicConstraintsOID,
 			Value:    val,
 			Critical: true,
 		}
@@ -1211,7 +1219,7 @@ func signCertificate(data *CreationBundle, randReader io.Reader) (*ParsedCertBun
 		certTemplate.URIs = data.CSR.URIs
 
 		for _, name := range data.CSR.Extensions {
-			if !name.Id.Equal(oidExtensionBasicConstraints) && !(len(data.Params.OtherSANs) > 0 && name.Id.Equal(oidExtensionSubjectAltName)) {
+			if !name.Id.Equal(ExtensionBasicConstraintsOID) && !(len(data.Params.OtherSANs) > 0 && name.Id.Equal(ExtensionSubjectAltNameOID)) {
 				certTemplate.ExtraExtensions = append(certTemplate.ExtraExtensions, name)
 			}
 		}
@@ -1382,5 +1390,70 @@ func CreateDeltaCRLIndicatorExt(completeCRLNumber int64) (pkix.Extension, error)
 		// But, this needs to be encoded as a big number for encoding/asn1
 		// to work properly.
 		Value: bigNumValue,
+	}, nil
+}
+
+// ParseBasicConstraintExtension parses a basic constraint pkix.Extension, useful if attempting to validate
+// CSRs are requesting CA privileges as Go does not expose its implementation. Values returned are
+// IsCA, MaxPathLen or error. If MaxPathLen was not set, a value of -1 will be returned.
+func ParseBasicConstraintExtension(ext pkix.Extension) (bool, int, error) {
+	if !ext.Id.Equal(ExtensionBasicConstraintsOID) {
+		return false, -1, fmt.Errorf("passed in extension was not a basic constraint extension")
+	}
+
+	// All elements are set to optional here, as it is possible that we receive a CSR with the extension
+	// containing an empty sequence by spec.
+	type basicConstraints struct {
+		IsCA       bool `asn1:"optional"`
+		MaxPathLen int  `asn1:"optional,default:-1"`
+	}
+	bc := &basicConstraints{}
+	leftOver, err := asn1.Unmarshal(ext.Value, bc)
+	if err != nil {
+		return false, -1, fmt.Errorf("failed unmarshalling extension value: %w", err)
+	}
+
+	numLeftOver := len(bytes.TrimSpace(leftOver))
+	if numLeftOver > 0 {
+		return false, -1, fmt.Errorf("%d extra bytes within basic constraints value extension", numLeftOver)
+	}
+
+	return bc.IsCA, bc.MaxPathLen, nil
+}
+
+// CreateBasicConstraintExtension create a basic constraint extension based on inputs,
+// if isCa is false, an empty value sequence will be returned with maxPath being
+// ignored. If isCa is true maxPath can be set to -1 to not set a maxPath value.
+func CreateBasicConstraintExtension(isCa bool, maxPath int) (pkix.Extension, error) {
+	var asn1Bytes []byte
+	var err error
+
+	switch {
+	case isCa && maxPath >= 0:
+		CaAndMaxPathLen := struct {
+			IsCa       bool `asn1:""`
+			MaxPathLen int  `asn1:""`
+		}{
+			IsCa:       isCa,
+			MaxPathLen: maxPath,
+		}
+		asn1Bytes, err = asn1.Marshal(CaAndMaxPathLen)
+	case isCa && maxPath < 0:
+		justCa := struct {
+			IsCa bool `asn1:""`
+		}{IsCa: isCa}
+		asn1Bytes, err = asn1.Marshal(justCa)
+	default:
+		asn1Bytes, err = asn1.Marshal(struct{}{})
+	}
+
+	if err != nil {
+		return pkix.Extension{}, err
+	}
+
+	return pkix.Extension{
+		Id:       ExtensionBasicConstraintsOID,
+		Critical: true,
+		Value:    asn1Bytes,
 	}, nil
 }

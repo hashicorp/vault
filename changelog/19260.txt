@@ -1,0 +1,3 @@
+```release-note:feature
+**agent/auto-auth:**: Add OCI (Oracle Cloud Infrastructure) auto-auth method
+```

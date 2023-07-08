@@ -1,0 +1,3 @@
+```release-note:improvement
+agent: Add note in logs when starting Vault Agent indicating if the version differs to the Vault Server.
+```

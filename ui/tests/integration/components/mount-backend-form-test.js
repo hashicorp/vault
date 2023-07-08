@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
 import { later, _cancelTimers as cancelTimers } from '@ember/runloop';
 import { module, test } from 'qunit';
 import { setupRenderingTest } from 'ember-qunit';
@@ -18,7 +23,9 @@ module('Integration | Component | mount backend form', function (hooks) {
   setupMirage(hooks);
 
   hooks.beforeEach(function () {
-    this.owner.lookup('service:flash-messages').registerTypes(['success', 'danger']);
+    this.flashMessages = this.owner.lookup('service:flash-messages');
+    this.flashMessages.registerTypes(['success', 'danger']);
+    this.flashSuccessSpy = sinon.spy(this.flashMessages, 'success');
     this.store = this.owner.lookup('service:store');
     this.server.post('/sys/capabilities-self', allowAllCapabilitiesStub());
     this.server.post('/sys/auth/foo', noopStub());
@@ -80,22 +87,45 @@ module('Integration | Component | mount backend form', function (hooks) {
       assert.strictEqual(component.pathValue, 'newpath', 'keeps custom path value');
     });
 
+    test('it does not show a selected token type when first mounting an auth method', async function (assert) {
+      await render(
+        hbs`<MountBackendForm @mountModel={{this.model}} @onMountSuccess={{this.onMountSuccess}} />`
+      );
+      await component.selectType('github');
+      await component.next();
+      await component.toggleOptions();
+      assert
+        .dom('[data-test-input="config.tokenType"]')
+        .hasValue('', 'token type does not have a default value.');
+      const selectOptions = document.querySelector('[data-test-input="config.tokenType"]').options;
+      assert.strictEqual(selectOptions[1].text, 'default-service', 'first option is default-service');
+      assert.strictEqual(selectOptions[2].text, 'default-batch', 'second option is default-batch');
+      assert.strictEqual(selectOptions[3].text, 'batch', 'third option is batch');
+      assert.strictEqual(selectOptions[4].text, 'service', 'fourth option is service');
+    });
+
     test('it calls mount success', async function (assert) {
-      assert.expect(2);
+      assert.expect(3);
+
       this.server.post('/sys/auth/foo', () => {
         assert.ok(true, 'it calls enable on an auth method');
         return [204, { 'Content-Type': 'application/json' }];
       });
       const spy = sinon.spy();
       this.set('onMountSuccess', spy);
+
       await render(
         hbs`<MountBackendForm @mountModel={{this.model}} @onMountSuccess={{this.onMountSuccess}} />`
       );
       await component.mount('approle', 'foo');
-
       later(() => cancelTimers(), 50);
       await settled();
+
       assert.ok(spy.calledOnce, 'calls the passed success method');
+      assert.ok(
+        this.flashSuccessSpy.calledWith('Successfully mounted the approle auth method at foo.'),
+        'Renders correct flash message'
+      );
     });
   });
 
@@ -146,22 +176,28 @@ module('Integration | Component | mount backend form', function (hooks) {
     });
 
     test('it calls mount success', async function (assert) {
-      assert.expect(2);
+      assert.expect(3);
+
       this.server.post('/sys/mounts/foo', () => {
         assert.ok(true, 'it calls enable on an secrets engine');
         return [204, { 'Content-Type': 'application/json' }];
       });
       const spy = sinon.spy();
       this.set('onMountSuccess', spy);
+
       await render(
         hbs`<MountBackendForm @mountType="secret" @mountModel={{this.model}} @onMountSuccess={{this.onMountSuccess}} />`
       );
 
       await component.mount('ssh', 'foo');
-
       later(() => cancelTimers(), 50);
       await settled();
+
       assert.ok(spy.calledOnce, 'calls the passed success method');
+      assert.ok(
+        this.flashSuccessSpy.calledWith('Successfully mounted the ssh secrets engine at foo.'),
+        'Renders correct flash message'
+      );
     });
   });
 });

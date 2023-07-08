@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
 import trimRight from 'vault/utils/trim-right';
 import { module, test } from 'qunit';
 

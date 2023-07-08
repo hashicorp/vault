@@ -1,13 +1,16 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
 import ApplicationSerializer from '../application';
 
-export default ApplicationSerializer.extend({
+export default class VersionHistorySerializer extends ApplicationSerializer {
+  primaryKey = 'version';
+
   normalizeItems(payload) {
     if (payload.data.keys && Array.isArray(payload.data.keys)) {
-      return payload.data.keys.map((key) => {
-        const model = payload.data.key_info[key];
-        model.id = key;
-        return model;
-      });
+      return payload.data.keys.map((key) => ({ version: key, ...payload.data.key_info[key] }));
     }
-  },
-});
+  }
+}

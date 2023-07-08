@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package audit
 
 import (
@@ -293,7 +296,7 @@ func TestHashResponse(t *testing.T) {
 	}
 	for _, tc := range cases {
 		input := fmt.Sprintf("%#v", tc.Input)
-		out, err := HashResponse(localSalt, tc.Input, tc.HMACAccessor, tc.NonHMACDataKeys)
+		out, err := HashResponse(localSalt, tc.Input, tc.HMACAccessor, tc.NonHMACDataKeys, false)
 		if err != nil {
 			t.Fatalf("err: %s\n\n%s", err, input)
 		}

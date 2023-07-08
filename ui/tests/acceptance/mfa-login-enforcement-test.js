@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
 import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
 import { click, currentRouteName, fillIn, visit } from '@ember/test-helpers';
@@ -21,7 +26,7 @@ module('Acceptance | mfa-login-enforcement', function (hooks) {
 
   test('it should create login enforcement', async function (assert) {
     await visit('/ui/vault/access');
-    await click('[data-test-link="mfa"]');
+    await click('[data-test-sidebar-nav-link="Multi-Factor Authentication"]');
     await click('[data-test-tab="enforcements"]');
     await click('[data-test-enforcement-create]');
 

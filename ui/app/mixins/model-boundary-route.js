@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
 // meant for use mixed-in to a Route file
 //
 // When a route is deactivated, this mixin clears the Ember Data store of
