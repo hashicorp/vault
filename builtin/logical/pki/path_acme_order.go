@@ -582,10 +582,18 @@ func issueCertFromCsr(ac *acmeContext, csr *x509.CertificateRequest) (*certutil.
 		return nil, "", fmt.Errorf("verification of parsed bundle failed: %w", err)
 	}
 
-	// We only allow ServerAuth key usage from ACME issued certs.
-	for _, usage := range parsedBundle.Certificate.ExtKeyUsage {
-		if usage != x509.ExtKeyUsageServerAuth {
-			return nil, "", fmt.Errorf("%w: ACME certs only allow ServerAuth key usage", ErrBadCSR)
+	// We only allow ServerAuth key usage from ACME issued certs
+	// when configuration does not allow usage of ExtKeyusage field.
+	config, err := ac.sc.Backend.acmeState.getConfigWithUpdate(ac.sc)
+	if err != nil {
+		return nil, "", fmt.Errorf("failed to fetch ACME configuration: %w", err)
+	}
+
+	if !config.AllowRoleExtkeyusage {
+		for _, usage := range parsedBundle.Certificate.ExtKeyUsage {
+			if usage != x509.ExtKeyUsageServerAuth {
+				return nil, "", fmt.Errorf("%w: ACME certs only allow ServerAuth key usage", ErrBadCSR)
+			}
 		}
 	}
 
