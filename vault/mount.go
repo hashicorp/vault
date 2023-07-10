@@ -728,6 +728,10 @@ func (c *Core) mountInternal(ctx context.Context, entry *MountEntry, updateStora
 	if err := c.router.Mount(backend, entry.Path, entry, view); err != nil {
 		return err
 	}
+	if err = c.entBuiltinPluginMetrics(ctx, entry, 1); err != nil {
+		c.logger.Error("failed to emit enabled ent builtin plugin metrics", "error", err)
+		return err
+	}
 
 	// Re-evaluate filtered paths
 	if err := runFilteredPathsEvaluation(ctx, c, false); err != nil {
@@ -913,6 +917,10 @@ func (c *Core) unmountInternal(ctx context.Context, path string, updateStorage b
 
 	// Unmount the backend entirely
 	if err := c.router.Unmount(ctx, path); err != nil {
+		return err
+	}
+	if err = c.entBuiltinPluginMetrics(ctx, entry, -1); err != nil {
+		c.logger.Error("failed to emit disabled ent builtin plugin metrics", "error", err)
 		return err
 	}
 
