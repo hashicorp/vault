@@ -102,7 +102,7 @@ export default class LdapRoleModel extends Model {
     editType: 'ttl',
     label: 'Generated credentials’s maximum Time-to-Live (Max TTL)',
     detailsLabel: 'Max TTL',
-    helperTextDisabled: 'Vault will use the engine default of 1 hour',
+    helperTextDisabled: 'Vault will use the engine default of 24 hours',
     defaultValue: '24h',
     defaultShown: 'Engine default',
   })

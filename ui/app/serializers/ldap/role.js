@@ -5,7 +5,7 @@
 
 import ApplicationSerializer from '../application';
 
-export default class KubernetesConfigSerializer extends ApplicationSerializer {
+export default class LdapRoleSerializer extends ApplicationSerializer {
   primaryKey = 'name';
 
   serialize(snapshot) {
