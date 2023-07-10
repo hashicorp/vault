@@ -12792,15 +12792,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-"ember-copy@npm:2.0.1":
-  version: 2.0.1
-  resolution: "ember-copy@npm:2.0.1"
-  dependencies:
-    ember-cli-babel: ^7.22.1
-  checksum: addeba5ce864c1dcea4ec475bab51c4996dcd575adab28fb3a5fb082fa1db1f8530236ccfbb2c66fd594d8b11410f17eece6651957bd6b0804eaa870915e84ba
-  languageName: node
-  linkType: hard
-
 "ember-d3@npm:^0.5.1":
   version: 0.5.1
   resolution: "ember-d3@npm:0.5.1"
@@ -24276,7 +24267,6 @@ __metadata:
     ember-cli-typescript: ^5.2.1
     ember-composable-helpers: 5.0.0
     ember-concurrency: 2.3.4
-    ember-copy: 2.0.1
     ember-d3: ^0.5.1
     ember-data: ~4.5.0
     ember-engines: 0.8.23
