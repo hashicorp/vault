@@ -202,6 +202,24 @@ jobs:
       vault-version: ${{ needs.product-metadata.outputs.vault-version }}
     secrets: inherit
 
+  report-build-failures:
+    name: Report Build Failures
+    needs:
+      - build-other
+      - build-linux
+      - build-darwin
+    if: ${{ contains(join(needs.*.result, ','), 'failure') }} && (success() || failure())
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@c85c95e3d7251135ab7dc9ce3241c5835cc595a9 # v3.5.3
+      - name: Build Status
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR: ${{ github.event.pull_request.html_url }}
+          RUN_ID: ${{ github.run_id }}
+          REPO: ${{ github.event.repository.name }}
+        run: ./.github/scripts/report_failed_builds.sh
+
   build-docker:
     name: Docker image
     needs:
