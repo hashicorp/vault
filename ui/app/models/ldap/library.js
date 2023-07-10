@@ -23,7 +23,7 @@ const formFields = [
 export default class LdapLibraryModel extends Model {
   @attr('string') backend; // dynamic path of secret -- set on response from value passed to queryRecord
 
-  @attr('string', { label: 'Library Name' }) name;
+  @attr('string', { label: 'Library name' }) name;
 
   @attr('string', {
     editType: 'stringArray',
@@ -35,9 +35,9 @@ export default class LdapLibraryModel extends Model {
 
   @attr('number', {
     editType: 'ttl',
-    label: 'Default Lease TTL',
+    label: 'Default lease TTL',
     detailsLabel: 'TTL',
-    helperTextDisabled: 'Vault will use the default lease duration',
+    helperTextDisabled: 'Vault will use the default lease duration.',
     defaultValue: '1h',
     defaultShown: 'Engine default',
   })
@@ -45,9 +45,9 @@ export default class LdapLibraryModel extends Model {
 
   @attr('number', {
     editType: 'ttl',
-    label: 'Max Lease TTL',
+    label: 'Max lease TTL',
     detailsLabel: 'Max TTL',
-    helperTextDisabled: 'Vault will use the default lease duration',
+    helperTextDisabled: 'Vault will use the default lease duration.',
     defaultValue: '24h',
     defaultShown: 'Engine default',
   })
@@ -56,7 +56,7 @@ export default class LdapLibraryModel extends Model {
   // this is a boolean from the server but is transformed in the serializer to display as Disabled or Enabled
   @attr('string', {
     editType: 'radio',
-    label: 'Check-in Enforcement',
+    label: 'Check-in enforcement',
     subText:
       'When disabled, accounts must be checked in by the entity or client token that checked them out. If enabled, anyone with the right permission can check the account back in.',
     possibleValues: ['Disabled', 'Enabled'],

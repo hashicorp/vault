@@ -60,14 +60,14 @@ export default class LdapRoleModel extends Model {
   @attr('string') backend; // dynamic path of secret -- set on response from value passed to queryRecord
 
   @attr('string', {
-    label: 'Role Name',
+    label: 'Role name',
     subText: 'The name of the role that will be used in Vault.',
   })
   name;
 
   // static role properties
   @attr('string', {
-    label: 'Distinguished Name',
+    label: 'Distinguished name',
     subText: 'Distinguished name (DN) of entry Vault should manage.',
   })
   dn;
@@ -81,7 +81,7 @@ export default class LdapRoleModel extends Model {
 
   @attr('string', {
     editType: 'ttl',
-    label: 'Rotation Period',
+    label: 'Rotation period',
     subText:
       'Specifies the amount of time Vault should wait before rotating the password. The minimum is 5 seconds.',
   })
@@ -90,9 +90,9 @@ export default class LdapRoleModel extends Model {
   // dynamic role properties
   @attr('number', {
     editType: 'ttl',
-    label: 'Generated credentials’s Time-to-Live (TTL)',
+    label: 'Generated credentials’s time-to-live (TTL)',
     detailsLabel: 'TTL',
-    helperTextDisabled: 'Vault will use the default of 1 hour',
+    helperTextDisabled: 'Vault will use the default of 1 hour.',
     defaultValue: '1h',
     defaultShown: 'Engine default',
   })
@@ -100,9 +100,9 @@ export default class LdapRoleModel extends Model {
 
   @attr('number', {
     editType: 'ttl',
-    label: 'Generated credentials’s maximum Time-to-Live (Max TTL)',
+    label: 'Generated credentials’s maximum time-to-live (Max TTL)',
     detailsLabel: 'Max TTL',
-    helperTextDisabled: 'Vault will use the engine default of 24 hours',
+    helperTextDisabled: 'Vault will use the engine default of 24 hours.',
     defaultValue: '24h',
     defaultShown: 'Engine default',
   })
@@ -110,7 +110,7 @@ export default class LdapRoleModel extends Model {
 
   @attr('string', {
     editType: 'optionalText',
-    label: 'Username Template',
+    label: 'Username template',
     subText: 'Enter the custom username template to use.',
     defaultSubText:
       'Template describing how dynamic usernames are generated. Vault will use the default for this plugin.',
