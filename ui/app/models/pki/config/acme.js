@@ -42,7 +42,7 @@ export default class PkiConfigAcmeModel extends Model {
   @attr('boolean', {
     label: 'Allow ExtKeyUsage usage',
     subText:
-      'When enabled, respect the role configuration. Otherwise, the field is forced to ServerAuth only.',
+      'When enabled, respect the ExtKeyUsage role configuration. Otherwise, ACME certificates are forced to ServerAuth only.',
   })
   allowRoleExtkeyusage;
 
