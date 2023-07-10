@@ -87,6 +87,7 @@ jobs:
           GO_TAGS: ${{ inputs.go-tags }}
         run: make ci-build
       - name: Build Status
+        id: comment-failed-build
         if: failure() && steps.build-vault.outcome == 'failure'
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
