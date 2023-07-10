@@ -92,6 +92,9 @@ func Factory(ctx context.Context, conf *audit.BackendConfig) (audit.Backend, err
 		},
 	}
 
+	// Configure the formatter for either case.
+	b.formatter.Formatter = &audit.AuditFormatter{SaltFunc: b.Salt}
+
 	switch format {
 	case "json":
 		b.formatter.Writer = &audit.JSONFormatWriter{
