@@ -496,6 +496,7 @@ func TestCertStorageMetrics(t *testing.T) {
 	}
 	cluster := vault.NewTestCluster(t, coreConfig, &vault.TestClusterOptions{
 		HandlerFunc: vaulthttp.Handler,
+		NumCores:    1,
 	})
 	cluster.Start()
 	defer cluster.Cleanup()
@@ -577,9 +578,9 @@ func TestCertStorageMetrics(t *testing.T) {
 	require.NoError(t, err)
 
 	// Reload the Mount - Otherwise Stored Certificate Counts Will Not Be Populated
-	_, err = client.Logical().Write("/sys/plugins/reload/backend", map[string]interface{}{
-		"plugin": "pki",
-	})
+	// Sealing cores as plugin reload triggers the race detector - VAULT-13635
+	testhelpers.EnsureCoresSealed(t, cluster)
+	testhelpers.EnsureCoresUnsealed(t, cluster)
 
 	// By reading the auto-tidy endpoint, we ensure that initialize has completed (which has a write lock on auto-tidy)
 	_, err = client.Logical().Read("/pki/config/auto-tidy")
