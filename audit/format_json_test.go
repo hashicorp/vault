@@ -110,7 +110,7 @@ func TestFormatJSON_formatRequest(t *testing.T) {
 			Formatter: &AuditFormatter{
 				SaltFunc: saltFunc,
 			},
-			Writer: &JSONFormatWriter{
+			Writer: &JSONWriter{
 				Prefix: tc.Prefix,
 			},
 		}

@@ -231,7 +231,7 @@ func NewNoopAudit(config map[string]string) (*NoopAudit, error) {
 	}
 	n.formatter = &audit.AuditFormatterWriter{
 		Formatter: &audit.AuditFormatter{SaltFunc: n.Salt},
-		Writer:    &audit.JSONFormatWriter{},
+		Writer:    &audit.JSONWriter{},
 	}
 
 	return n, nil

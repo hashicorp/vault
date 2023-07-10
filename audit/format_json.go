@@ -9,15 +9,14 @@ import (
 	"io"
 )
 
-var _ Writer = (*JSONFormatWriter)(nil)
+var _ Writer = (*JSONWriter)(nil)
 
-// JSONFormatWriter is a Writer implementation that structures data into
-// a JSON format.
-type JSONFormatWriter struct {
+// JSONWriter is a Writer implementation that structures data into a JSON format.
+type JSONWriter struct {
 	Prefix string
 }
 
-func (f *JSONFormatWriter) WriteRequest(w io.Writer, req *AuditRequestEntry) error {
+func (f *JSONWriter) WriteRequest(w io.Writer, req *AuditRequestEntry) error {
 	if req == nil {
 		return fmt.Errorf("request entry was nil, cannot encode")
 	}
@@ -33,7 +32,7 @@ func (f *JSONFormatWriter) WriteRequest(w io.Writer, req *AuditRequestEntry) err
 	return enc.Encode(req)
 }
 
-func (f *JSONFormatWriter) WriteResponse(w io.Writer, resp *AuditResponseEntry) error {
+func (f *JSONWriter) WriteResponse(w io.Writer, resp *AuditResponseEntry) error {
 	if resp == nil {
 		return fmt.Errorf("response entry was nil, cannot encode")
 	}

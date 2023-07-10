@@ -11,15 +11,14 @@ import (
 	"github.com/jefferai/jsonx"
 )
 
-var _ Writer = (*JSONxFormatWriter)(nil)
+var _ Writer = (*JSONxWriter)(nil)
 
-// JSONxFormatWriter is a Writer implementation that structures data into
-// an XML format.
-type JSONxFormatWriter struct {
+// JSONxWriter is a Writer implementation that structures data into an XML format.
+type JSONxWriter struct {
 	Prefix string
 }
 
-func (f *JSONxFormatWriter) WriteRequest(w io.Writer, req *AuditRequestEntry) error {
+func (f *JSONxWriter) WriteRequest(w io.Writer, req *AuditRequestEntry) error {
 	if req == nil {
 		return fmt.Errorf("request entry was nil, cannot encode")
 	}
@@ -45,7 +44,7 @@ func (f *JSONxFormatWriter) WriteRequest(w io.Writer, req *AuditRequestEntry) er
 	return err
 }
 
-func (f *JSONxFormatWriter) WriteResponse(w io.Writer, resp *AuditResponseEntry) error {
+func (f *JSONxWriter) WriteResponse(w io.Writer, resp *AuditResponseEntry) error {
 	if resp == nil {
 		return fmt.Errorf("response entry was nil, cannot encode")
 	}

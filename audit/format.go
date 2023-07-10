@@ -664,9 +664,9 @@ func NewTemporaryFormatter(format, prefix string) *AuditFormatterWriter {
 
 	switch format {
 	case "jsonx":
-		ret.Writer = &JSONxFormatWriter{Prefix: prefix}
+		ret.Writer = &JSONxWriter{Prefix: prefix}
 	default:
-		ret.Writer = &JSONFormatWriter{Prefix: prefix}
+		ret.Writer = &JSONWriter{Prefix: prefix}
 	}
 	return ret
 }

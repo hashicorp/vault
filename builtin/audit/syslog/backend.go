@@ -97,12 +97,12 @@ func Factory(ctx context.Context, conf *audit.BackendConfig) (audit.Backend, err
 
 	switch format {
 	case "json":
-		b.formatter.Writer = &audit.JSONFormatWriter{
+		b.formatter.Writer = &audit.JSONWriter{
 			Prefix:   conf.Config["prefix"],
 			SaltFunc: b.Salt,
 		}
 	case "jsonx":
-		b.formatter.Writer = &audit.JSONxFormatWriter{
+		b.formatter.Writer = &audit.JSONxWriter{
 			Prefix:   conf.Config["prefix"],
 			SaltFunc: b.Salt,
 		}
