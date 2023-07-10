@@ -440,6 +440,7 @@ func (f *AuditFormatter) FormatResponse(ctx context.Context, config FormatterCon
 	return respEntry, nil
 }
 
+// Salt returns a non-nil salt or an error.
 func (f *AuditFormatter) Salt(ctx context.Context) (*salt.Salt, error) {
 	if f.SaltFunc == nil {
 		return nil, errors.New("salter not initialized")
