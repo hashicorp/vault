@@ -724,6 +724,7 @@ func (c *Core) mountInternal(ctx context.Context, entry *MountEntry, updateStora
 		}
 	}
 	c.mounts = newTable
+
 	if err := c.router.Mount(backend, entry.Path, entry, view); err != nil {
 		return err
 	}
