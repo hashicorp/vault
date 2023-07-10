@@ -127,3 +127,6 @@ website/components/node_modules
 *.log
 
 tools/godoctests/.bin
+tools/gonilnilfunctions/.bin
+tools/codechecker/.bin
+.ci-bootstrap
