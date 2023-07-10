@@ -17,7 +17,13 @@
   </p.levelLeft>
 </PageHeader>
 
-{{yield to="tabs"}}
+<div class="tabs-container box is-bottomless is-marginless is-paddingless">
+  <nav class="tabs" aria-label="kv tabs">
+    <ul>
+      {{yield to="tabLinks"}}
+    </ul>
+  </nav>
+</div>
 
 {{! TODO checks for if list >0 show filter }}
 {{#if (or (has-block "toolbarFilters") (has-block "toolbarActions"))}}

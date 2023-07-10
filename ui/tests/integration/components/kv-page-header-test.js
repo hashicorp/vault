@@ -77,7 +77,7 @@ module('Integration | Component | kv | kv-page-header', function (hooks) {
 
   test('it renders tabs', async function (assert) {
     await render(
-      hbs`<KvPageHeader @model={{this.model}} @breadcrumbs={{this.breadcrumbs}} @isEngineView="true" >
+      hbs`<KvPageHeader @model={{this.model}} @breadcrumbs={{this.breadcrumbs}} @isEngineView={{true}} >
     <:tabs>
     <div class="tabs-container box is-bottomless is-marginless is-paddingless">
       <nav class="tabs">
@@ -102,7 +102,7 @@ module('Integration | Component | kv | kv-page-header', function (hooks) {
 
   test('it should yield block for toolbar actions', async function (assert) {
     await render(
-      hbs`<KvPageHeader @model={{this.model}} @breadcrumbs={{this.breadcrumbs}} @isEngineView="true" >
+      hbs`<KvPageHeader @model={{this.model}} @breadcrumbs={{this.breadcrumbs}} @isEngineView={{true}} >
       <:toolbarActions>
       <ToolbarLink @route="secrets.create" @type="add">Create secret</ToolbarLink>
     </:toolbarActions>
@@ -115,7 +115,7 @@ module('Integration | Component | kv | kv-page-header', function (hooks) {
 
   test('it should yield block for toolbar filters', async function (assert) {
     await render(
-      hbs`<KvPageHeader @model={{this.model}} @breadcrumbs={{this.breadcrumbs}} @isEngineView="true" >
+      hbs`<KvPageHeader @model={{this.model}} @breadcrumbs={{this.breadcrumbs}} @isEngineView={{true}} >
       <:toolbarFilters>
       <p>stuff here</p>
     </:toolbarFilters>
