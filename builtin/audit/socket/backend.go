@@ -101,12 +101,12 @@ func Factory(ctx context.Context, conf *audit.BackendConfig) (audit.Backend, err
 
 	switch format {
 	case "json":
-		b.formatter.AuditFormatWriter = &audit.JSONFormatWriter{
+		b.formatter.Writer = &audit.JSONFormatWriter{
 			Prefix:   conf.Config["prefix"],
 			SaltFunc: b.Salt,
 		}
 	case "jsonx":
-		b.formatter.AuditFormatWriter = &audit.JSONxFormatWriter{
+		b.formatter.Writer = &audit.JSONxFormatWriter{
 			Prefix:   conf.Config["prefix"],
 			SaltFunc: b.Salt,
 		}
@@ -119,7 +119,7 @@ func Factory(ctx context.Context, conf *audit.BackendConfig) (audit.Backend, err
 type Backend struct {
 	connection net.Conn
 
-	formatter    audit.AuditFormatter
+	formatter    audit.AuditFormatterWriter
 	formatConfig audit.FormatterConfig
 
 	writeDuration time.Duration
@@ -146,7 +146,7 @@ func (b *Backend) GetHash(ctx context.Context, data string) (string, error) {
 
 func (b *Backend) LogRequest(ctx context.Context, in *logical.LogInput) error {
 	var buf bytes.Buffer
-	if err := b.formatter.FormatRequest(ctx, &buf, b.formatConfig, in); err != nil {
+	if err := b.formatter.FormatAndWriteRequest(ctx, &buf, b.formatConfig, in); err != nil {
 		return err
 	}
 
@@ -169,7 +169,7 @@ func (b *Backend) LogRequest(ctx context.Context, in *logical.LogInput) error {
 
 func (b *Backend) LogResponse(ctx context.Context, in *logical.LogInput) error {
 	var buf bytes.Buffer
-	if err := b.formatter.FormatResponse(ctx, &buf, b.formatConfig, in); err != nil {
+	if err := b.formatter.FormatAndWriteResponse(ctx, &buf, b.formatConfig, in); err != nil {
 		return err
 	}
 
@@ -193,7 +193,7 @@ func (b *Backend) LogResponse(ctx context.Context, in *logical.LogInput) error {
 func (b *Backend) LogTestMessage(ctx context.Context, in *logical.LogInput, config map[string]string) error {
 	var buf bytes.Buffer
 	temporaryFormatter := audit.NewTemporaryFormatter(config["format"], config["prefix"])
-	if err := temporaryFormatter.FormatRequest(ctx, &buf, b.formatConfig, in); err != nil {
+	if err := temporaryFormatter.FormatAndWriteRequest(ctx, &buf, b.formatConfig, in); err != nil {
 		return err
 	}
 

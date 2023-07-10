@@ -59,7 +59,7 @@ func (fw *testingFormatWriter) hashExpectedValueForComparison(input map[string]i
 		panic(err)
 	}
 
-	err = HashMap(salter.GetIdentifiedHMAC, copiedAsMap, nil)
+	err = hashMap(salter.GetIdentifiedHMAC, copiedAsMap, nil)
 	if err != nil {
 		panic(err)
 	}
@@ -70,7 +70,7 @@ func (fw *testingFormatWriter) hashExpectedValueForComparison(input map[string]i
 func TestFormatRequestErrors(t *testing.T) {
 	config := FormatterConfig{}
 	formatter := AuditFormatter{
-		AuditFormatWriter: &testingFormatWriter{},
+		Writer: &testingFormatWriter{},
 	}
 
 	if err := formatter.FormatRequest(context.Background(), io.Discard, config, &logical.LogInput{}); err == nil {
@@ -88,7 +88,7 @@ func TestFormatRequestErrors(t *testing.T) {
 func TestFormatResponseErrors(t *testing.T) {
 	config := FormatterConfig{}
 	formatter := AuditFormatter{
-		AuditFormatWriter: &testingFormatWriter{},
+		Writer: &testingFormatWriter{},
 	}
 
 	if err := formatter.FormatResponse(context.Background(), io.Discard, config, &logical.LogInput{}); err == nil {

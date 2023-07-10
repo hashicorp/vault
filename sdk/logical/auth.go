@@ -7,8 +7,6 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/hashicorp/vault/sdk/helper/salt"
-
 	sockaddr "github.com/hashicorp/go-sockaddr"
 )
 
@@ -132,23 +130,4 @@ type PolicyInfo struct {
 	NamespaceId   string `json:"namespace_id"`
 	NamespacePath string `json:"namespace_path"`
 	Type          string `json:"type"`
-}
-
-// HashAuth returns a hashed copy of the logical.Auth input.
-func (a *Auth) HashAuth(salter *salt.Salt, HMACAccessor bool) (*Auth, error) {
-	if a == nil {
-		return nil, nil
-	}
-
-	fn := salter.GetIdentifiedHMAC
-	auth := *a
-
-	if auth.ClientToken != "" {
-		auth.ClientToken = fn(auth.ClientToken)
-	}
-	if HMACAccessor && auth.Accessor != "" {
-		auth.Accessor = fn(auth.Accessor)
-	}
-
-	return &auth, nil
 }

@@ -6,6 +6,7 @@ package audit
 import (
 	"context"
 	"crypto/tls"
+	"errors"
 	"fmt"
 	"io"
 	"strings"
@@ -18,39 +19,47 @@ import (
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
-type AuditFormatWriter interface {
-	// WriteRequest writes the request entry to the writer or returns an error.
-	WriteRequest(io.Writer, *AuditRequestEntry) error
-	// WriteResponse writes the response entry to the writer or returns an error.
-	WriteResponse(io.Writer, *AuditResponseEntry) error
+// Salter is an interface that provides a way to obtain a Salt for hashing.
+type Salter interface {
 	// Salt returns a non-nil salt or an error.
 	Salt(context.Context) (*salt.Salt, error)
 }
 
-// AuditFormatter implements the Formatter interface, and allows the underlying
-// marshaller to be swapped out
-type AuditFormatter struct {
-	AuditFormatWriter
+// Writer is an interface that provides a way to write request and response audit entries.
+// Formatters write their output to an io.Writer.
+type Writer interface {
+	// WriteRequest writes the request entry to the writer or returns an error.
+	WriteRequest(io.Writer, *AuditRequestEntry) error
+	// WriteResponse writes the response entry to the writer or returns an error.
+	WriteResponse(io.Writer, *AuditResponseEntry) error
 }
 
-var _ Formatter = (*AuditFormatter)(nil)
+var (
+	_ Formatter = (*AuditFormatter)(nil)
+	_ Formatter = (*AuditFormatterWriter)(nil)
+	_ Writer    = (*AuditFormatterWriter)(nil)
+)
 
-func (f *AuditFormatter) FormatRequest(ctx context.Context, w io.Writer, config FormatterConfig, in *logical.LogInput) error {
+// AuditFormatter should be used to format audit requests and responses.
+type AuditFormatter struct {
+	Formatter
+}
+
+// AuditFormatterWriter should be used to format and write out audit requests and responses.
+type AuditFormatterWriter struct {
+	AuditFormatter
+	Writer
+}
+
+// FormatRequest attempts to format the specified logical.LogInput into an AuditRequestEntry.
+func (f *AuditFormatter) FormatRequest(ctx context.Context, config FormatterConfig, in *logical.LogInput) (*AuditRequestEntry, error) {
 	if in == nil || in.Request == nil {
-		return fmt.Errorf("request to request-audit a nil request")
+		return nil, errors.New("request to request-audit a nil request")
 	}
 
-	if w == nil {
-		return fmt.Errorf("writer for audit request is nil")
-	}
-
-	if f.AuditFormatWriter == nil {
-		return fmt.Errorf("no format writer specified")
-	}
-
-	salt, err := f.Salt(ctx)
+	s, err := f.Salt(ctx)
 	if err != nil {
-		return fmt.Errorf("error fetching salt: %w", err)
+		return nil, fmt.Errorf("error fetching salt: %w", err)
 	}
 
 	// Set these to the input values at first
@@ -66,14 +75,14 @@ func (f *AuditFormatter) FormatRequest(ctx context.Context, w io.Writer, config 
 	}
 
 	if !config.Raw {
-		auth, err = HashAuth(salt, auth, config.HMACAccessor)
+		auth, err = HashAuth(s, auth, config.HMACAccessor)
 		if err != nil {
-			return err
+			return nil, err
 		}
 
-		req, err = HashRequest(salt, req, config.HMACAccessor, in.NonHMACReqDataKeys)
+		req, err = HashRequest(s, req, config.HMACAccessor, in.NonHMACReqDataKeys)
 		if err != nil {
-			return err
+			return nil, err
 		}
 	}
 
@@ -84,7 +93,7 @@ func (f *AuditFormatter) FormatRequest(ctx context.Context, w io.Writer, config 
 
 	ns, err := namespace.FromContext(ctx)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	reqType := in.Type
@@ -135,7 +144,7 @@ func (f *AuditFormatter) FormatRequest(ctx context.Context, w io.Writer, config 
 			RemotePort:                    getRemotePort(req),
 			ReplicationCluster:            req.ReplicationCluster,
 			Headers:                       req.Headers,
-			ClientCertificateSerialNumber: GetClientCertificateSerialNumber(connState),
+			ClientCertificateSerialNumber: getClientCertificateSerialNumber(connState),
 		},
 	}
 
@@ -166,25 +175,18 @@ func (f *AuditFormatter) FormatRequest(ctx context.Context, w io.Writer, config 
 		reqEntry.Time = time.Now().UTC().Format(time.RFC3339Nano)
 	}
 
-	return f.AuditFormatWriter.WriteRequest(w, reqEntry)
+	return reqEntry, nil
 }
 
-func (f *AuditFormatter) FormatResponse(ctx context.Context, w io.Writer, config FormatterConfig, in *logical.LogInput) error {
+// FormatResponse attempts to format the specified logical.LogInput into an AuditResponseEntry.
+func (f *AuditFormatter) FormatResponse(ctx context.Context, config FormatterConfig, in *logical.LogInput) (*AuditResponseEntry, error) {
 	if in == nil || in.Request == nil {
-		return fmt.Errorf("request to response-audit a nil request")
+		return nil, errors.New("request to response-audit a nil request")
 	}
 
-	if w == nil {
-		return fmt.Errorf("writer for audit request is nil")
-	}
-
-	if f.AuditFormatWriter == nil {
-		return fmt.Errorf("no format writer specified")
-	}
-
-	salt, err := f.Salt(ctx)
+	s, err := f.Salt(ctx)
 	if err != nil {
-		return fmt.Errorf("error fetching salt: %w", err)
+		return nil, fmt.Errorf("error fetching salt: %w", err)
 	}
 
 	// Set these to the input values at first
@@ -214,24 +216,24 @@ func (f *AuditFormatter) FormatResponse(ctx context.Context, w io.Writer, config
 				respData[k] = v
 			}
 
-			DoElideListResponseData(respData)
+			doElideListResponseData(respData)
 		} else {
 			respData = resp.Data
 		}
 	} else {
-		auth, err = HashAuth(salt, auth, config.HMACAccessor)
+		auth, err = HashAuth(s, auth, config.HMACAccessor)
 		if err != nil {
-			return err
+			return nil, err
 		}
 
-		req, err = HashRequest(salt, req, config.HMACAccessor, in.NonHMACReqDataKeys)
+		req, err = HashRequest(s, req, config.HMACAccessor, in.NonHMACReqDataKeys)
 		if err != nil {
-			return err
+			return nil, err
 		}
 
-		resp, err = HashResponse(salt, resp, config.HMACAccessor, in.NonHMACRespDataKeys, elideListResponseData)
+		resp, err = HashResponse(s, resp, config.HMACAccessor, in.NonHMACRespDataKeys, elideListResponseData)
 		if err != nil {
-			return err
+			return nil, err
 		}
 
 		respData = resp.Data
@@ -244,7 +246,7 @@ func (f *AuditFormatter) FormatResponse(ctx context.Context, w io.Writer, config
 
 	ns, err := namespace.FromContext(ctx)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	var respAuth *AuditAuth
@@ -279,7 +281,7 @@ func (f *AuditFormatter) FormatResponse(ctx context.Context, w io.Writer, config
 	var respWrapInfo *AuditResponseWrapInfo
 	if resp.WrapInfo != nil {
 		token := resp.WrapInfo.Token
-		if jwtToken := ParseVaultTokenFromJWT(token); jwtToken != nil {
+		if jwtToken := parseVaultTokenFromJWT(token); jwtToken != nil {
 			token = *jwtToken
 		}
 		respWrapInfo = &AuditResponseWrapInfo{
@@ -339,7 +341,7 @@ func (f *AuditFormatter) FormatResponse(ctx context.Context, w io.Writer, config
 			PolicyOverride:                req.PolicyOverride,
 			RemoteAddr:                    getRemoteAddr(req),
 			RemotePort:                    getRemotePort(req),
-			ClientCertificateSerialNumber: GetClientCertificateSerialNumber(connState),
+			ClientCertificateSerialNumber: getClientCertificateSerialNumber(connState),
 			ReplicationCluster:            req.ReplicationCluster,
 			Headers:                       req.Headers,
 		},
@@ -388,7 +390,47 @@ func (f *AuditFormatter) FormatResponse(ctx context.Context, w io.Writer, config
 		respEntry.Time = time.Now().UTC().Format(time.RFC3339Nano)
 	}
 
-	return f.AuditFormatWriter.WriteResponse(w, respEntry)
+	return respEntry, nil
+}
+
+// FormatAndWriteRequest attempts to format the specified logical.LogInput into an AuditRequestEntry,
+// and then write the request using the specified io.Writer.
+func (f *AuditFormatterWriter) FormatAndWriteRequest(ctx context.Context, w io.Writer, config FormatterConfig, in *logical.LogInput) error {
+	switch {
+	case in == nil || in.Request == nil:
+		return fmt.Errorf("request to request-audit a nil request")
+	case w == nil:
+		return fmt.Errorf("writer for audit request is nil")
+	case f.Writer == nil:
+		return fmt.Errorf("no format writer specified")
+	}
+
+	reqEntry, err := f.Formatter.FormatRequest(ctx, config, in)
+	if err != nil {
+		return err
+	}
+
+	return f.Writer.WriteRequest(w, reqEntry)
+}
+
+// FormatAndWriteResponse attempts to format the specified logical.LogInput into an AuditResponseEntry,
+// and then write the response using the specified io.Writer.
+func (f *AuditFormatterWriter) FormatAndWriteResponse(ctx context.Context, w io.Writer, config FormatterConfig, in *logical.LogInput) error {
+	switch {
+	case in == nil || in.Request == nil:
+		return fmt.Errorf("request to response-audit a nil request")
+	case w == nil:
+		return fmt.Errorf("writer for audit request is nil")
+	case f.Writer == nil:
+		return fmt.Errorf("no format writer specified")
+	}
+
+	respEntry, err := f.Formatter.FormatResponse(ctx, config, in)
+	if err != nil {
+		return err
+	}
+
+	return f.Writer.WriteResponse(w, respEntry)
 }
 
 // AuditRequestEntry is the structure of a request audit log entry in Audit.
@@ -522,8 +564,9 @@ func getRemotePort(req *logical.Request) int {
 	return 0
 }
 
-// TODO: PW: Go doc
-func GetClientCertificateSerialNumber(connState *tls.ConnectionState) string {
+// getClientCertificateSerialNumber attempts the retrieve the serial number of
+// the peer certificate from the specified tls.ConnectionState.
+func getClientCertificateSerialNumber(connState *tls.ConnectionState) string {
 	if connState == nil || len(connState.VerifiedChains) == 0 || len(connState.VerifiedChains[0]) == 0 {
 		return ""
 	}
@@ -531,9 +574,9 @@ func GetClientCertificateSerialNumber(connState *tls.ConnectionState) string {
 	return connState.VerifiedChains[0][0].SerialNumber.String()
 }
 
-// ParseVaultTokenFromJWT returns a string iff the token was a JWT and we could
+// parseVaultTokenFromJWT returns a string iff the token was a JWT and we could
 // extract the original token ID from inside
-func ParseVaultTokenFromJWT(token string) *string {
+func parseVaultTokenFromJWT(token string) *string {
 	if strings.Count(token, ".") != 2 {
 		return nil
 	}
@@ -552,20 +595,20 @@ func ParseVaultTokenFromJWT(token string) *string {
 }
 
 // NewTemporaryFormatter creates a formatter not backed by a persistent salt
-func NewTemporaryFormatter(format, prefix string) *AuditFormatter {
+func NewTemporaryFormatter(format, prefix string) *AuditFormatterWriter {
 	temporarySalt := func(ctx context.Context) (*salt.Salt, error) {
 		return salt.NewNonpersistentSalt(), nil
 	}
-	ret := &AuditFormatter{}
+	ret := &AuditFormatterWriter{}
 
 	switch format {
 	case "jsonx":
-		ret.AuditFormatWriter = &JSONxFormatWriter{
+		ret.Writer = &JSONxFormatWriter{
 			Prefix:   prefix,
 			SaltFunc: temporarySalt,
 		}
 	default:
-		ret.AuditFormatWriter = &JSONFormatWriter{
+		ret.Writer = &JSONFormatWriter{
 			Prefix:   prefix,
 			SaltFunc: temporarySalt,
 		}
@@ -573,12 +616,12 @@ func NewTemporaryFormatter(format, prefix string) *AuditFormatter {
 	return ret
 }
 
-// DoElideListResponseData performs the actual elision of list operation response data, once surrounding code has
+// doElideListResponseData performs the actual elision of list operation response data, once surrounding code has
 // determined it should apply to a particular request. The data map that is passed in must be a copy that is safe to
 // modify in place, but need not be a full recursive deep copy, as only top-level keys are changed.
 //
 // See the documentation of the controlling option in FormatterConfig for more information on the purpose.
-func DoElideListResponseData(data map[string]interface{}) {
+func doElideListResponseData(data map[string]interface{}) {
 	for k, v := range data {
 		if k == "keys" {
 			if vSlice, ok := v.([]string); ok {

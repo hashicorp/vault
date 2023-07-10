@@ -5,19 +5,18 @@ package audit
 
 import (
 	"context"
-	"io"
 
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
 // Formatter is an interface that is responsible for formatting a
-// request/response into some format. Formatters write their output
-// to an io.Writer.
+// request/response into some format.
 //
 // It is recommended that you pass data through Hash prior to formatting it.
 type Formatter interface {
-	FormatRequest(context.Context, io.Writer, FormatterConfig, *logical.LogInput) error
-	FormatResponse(context.Context, io.Writer, FormatterConfig, *logical.LogInput) error
+	Salter
+	FormatRequest(context.Context, FormatterConfig, *logical.LogInput) (*AuditRequestEntry, error)
+	FormatResponse(context.Context, FormatterConfig, *logical.LogInput) (*AuditResponseEntry, error)
 }
 
 type FormatterConfig struct {

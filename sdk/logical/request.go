@@ -5,13 +5,10 @@ package logical
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"net/http"
 	"strings"
 	"time"
-
-	"github.com/hashicorp/vault/sdk/helper/salt"
 
 	"github.com/mitchellh/copystructure"
 )
@@ -449,68 +446,4 @@ type CtxKeyInFlightRequestID struct{}
 
 func (c CtxKeyInFlightRequestID) String() string {
 	return "in-flight-request-ID"
-}
-
-// GetRemoteAddr safely gets the remote address avoiding a nil pointer
-func (r *Request) GetRemoteAddr() string {
-	if r != nil && r.Connection != nil {
-		return r.Connection.RemoteAddr
-	}
-	return ""
-}
-
-// GetRemotePort safely gets the remote port avoiding a nil pointer
-func (r *Request) GetRemotePort() int {
-	if r != nil && r.Connection != nil {
-		return r.Connection.RemotePort
-	}
-	return 0
-}
-
-// HashRequest returns a hashed copy of the logical.Request input.
-func (r *Request) HashRequest(salter *salt.Salt, HMACAccessor bool, nonHMACDataKeys []string) (*Request, error) {
-	if r == nil {
-		return nil, nil
-	}
-
-	fn := salter.GetIdentifiedHMAC
-	req := *r
-
-	if req.Auth != nil {
-		cp, err := copystructure.Copy(req.Auth)
-		if err != nil {
-			return nil, err
-		}
-
-		auth, ok := cp.(*Auth)
-		if !ok {
-			return nil, errors.New("unable to hash auth in request")
-		}
-		req.Auth, err = auth.HashAuth(salter, HMACAccessor)
-		if err != nil {
-			return nil, err
-		}
-	}
-
-	if req.ClientToken != "" {
-		req.ClientToken = fn(req.ClientToken)
-	}
-	if HMACAccessor && req.ClientTokenAccessor != "" {
-		req.ClientTokenAccessor = fn(req.ClientTokenAccessor)
-	}
-
-	if req.Data != nil {
-		copy, err := copystructure.Copy(req.Data)
-		if err != nil {
-			return nil, err
-		}
-
-		err = hashMap(fn, copy.(map[string]interface{}), nonHMACDataKeys)
-		if err != nil {
-			return nil, err
-		}
-		req.Data = copy.(map[string]interface{})
-	}
-
-	return &req, nil
 }

@@ -105,7 +105,7 @@ func TestFormatJSON_formatRequest(t *testing.T) {
 	for name, tc := range cases {
 		var buf bytes.Buffer
 		formatter := AuditFormatter{
-			AuditFormatWriter: &JSONFormatWriter{
+			Writer: &JSONFormatWriter{
 				Prefix:   tc.Prefix,
 				SaltFunc: saltFunc,
 			},

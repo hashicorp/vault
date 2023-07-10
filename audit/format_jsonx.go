@@ -13,7 +13,7 @@ import (
 	"github.com/jefferai/jsonx"
 )
 
-// JSONxFormatWriter is an AuditFormatWriter implementation that structures data into
+// JSONxFormatWriter is an Writer implementation that structures data into
 // a XML format.
 type JSONxFormatWriter struct {
 	Prefix   string

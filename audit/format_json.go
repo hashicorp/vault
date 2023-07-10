@@ -12,7 +12,7 @@ import (
 	"github.com/hashicorp/vault/sdk/helper/salt"
 )
 
-// JSONFormatWriter is an AuditFormatWriter implementation that structures data into
+// JSONFormatWriter is an Writer implementation that structures data into
 // a JSON format.
 type JSONFormatWriter struct {
 	Prefix   string
