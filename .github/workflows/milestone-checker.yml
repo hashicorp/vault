@@ -5,7 +5,7 @@ name: Check Milestone
 
 on:
   pull_request:
-    types: [opened, synchronize, labeled, unlabeled]
+    types: [opened, synchronize, labeled, unlabeled, milestoned, demilestoned]
     # Runs on PRs to main and release branches
     branches:
       - main
@@ -17,7 +17,7 @@ jobs:
   # checks that a milestone entry is present for a PR
   milestone-check:
     # If there is a `pr/no-milestone` label we ignore this check
-    if: "! ( contains(github.event.pull_request.labels.*.name, 'pr/no-milestone') || ( github.event.name == 'labeled' && github.event.label == 'pr/no-milestone' ) )"
+    if: "! ( contains(github.event.pull_request.labels.*.name, 'pr/no-milestone') || ( github.event.name == 'labeled' && github.event.label != 'pr/no-milestone' ) )"
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Actions
