@@ -78,16 +78,10 @@ module('Integration | Component | kv | kv-page-header', function (hooks) {
   test('it renders tabs', async function (assert) {
     await render(
       hbs`<KvPageHeader @model={{this.model}} @breadcrumbs={{this.breadcrumbs}} @isEngineView={{true}} >
-    <:tabs>
-    <div class="tabs-container box is-bottomless is-marginless is-paddingless">
-      <nav class="tabs">
-        <ul>
+    <:tabLinks>
           <LinkTo @route="secrets" data-test-secrets-tab="Secrets">Secrets</LinkTo>
           <LinkTo @route="configuration" data-test-secrets-tab="Configuration">Configuration</LinkTo>
-        </ul>
-      </nav>
-    </div>
-  </:tabs>
+  </:tabLinks>
   </KvPageHeader>
     `,
       {
