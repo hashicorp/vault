@@ -35,7 +35,7 @@ block() {
 
 # Add all check functions to this space separated list.
 # They are executed in this order (see end of file).
-CHECKS="ui_lint"
+CHECKS="ui_lint backend_lint"
 
 # Run ui linter if changes in that dir detected.
 ui_lint() {
@@ -58,6 +58,15 @@ ui_lint() {
   # Run the linter from the UI dir.
   cd $DIR
   $LINTER || block "UI lint failed"
+}
+
+backend_lint() {
+  # Silently succeed if no changes staged for Go code files.
+  if git diff --name-only --cached --exit-code -- '*.go'; then
+    return 0
+  fi
+
+  ./scripts/gofmtcheck.sh || block "Backend linting failed; run 'make fmt' to fix."
 }
 
 for CHECK in $CHECKS; do
