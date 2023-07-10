@@ -266,12 +266,7 @@ jobs:
       - setup-go-cache
       - test-go
       - test-ui
-    # We force a failure if any of the dependent jobs fail,
-    # this is a workaround for the issue reported https://github.com/actions/runner/issues/2566
-    if: |
-      always() && (cancelled() ||
-      contains(needs.*.result, 'cancelled') ||
-      contains(needs.*.result, 'failure'))
+    if: always() 
     runs-on: ${{ fromJSON(needs.setup.outputs.compute-tiny) }}
     steps:
       - run: |
@@ -332,12 +327,18 @@ jobs:
   test-summary:
     name: Go test failures
     runs-on: ubuntu-latest
-    if: success() || failure() || needs.tests-completed.result == 'skipped'
+    if: |
+      always() &&
+      (needs.test-go.result == 'success' ||
+      needs.test-go.result == 'failure' ||
+      needs.test-go-fips.result == 'success' ||
+      needs.test-go-fips.result == 'failure' ||
+      needs.test-go-race.result == 'success' ||
+      needs.test-go-race.result == 'failure')
     needs:
       - test-go
       - test-go-fips
       - test-go-race
-      - tests-completed
     steps:
       - name: Download failure summary
         uses: actions/download-artifact@v3
@@ -366,13 +367,12 @@ jobs:
           # Read JSON objects from the input files specified after the 'jq' command.
           # We assume that the input files contain one JSON object per line.
           #
-          # 'select(.Action == "fail") | select(.Test != null)':
+          # 'select(.Action == "fail")':
           # Filter JSON array to contain only objects where the value of "Action" is "fail"
-          # and the value of "Test" key is not null.
           #
           # The remaining part of the query constructs a formatted string for each filtered JSON object`:
-          # - '\(.Package)' and '\(.Test)' insert the values of the "Package" and "Test" keys into the string,
-          #   respectively.
+          # - '\(.Package)' and '\(.Test // "-")' insert the values of the "Package" and "Test" keys into the string,
+          #   respectively. If Test is missing, insert a dash character instead.
           # - 'input_filename' is a special variable in 'jq' that represents the name of the input file being processed.
           # - 'split("-")' splits the input filename on the hyphen ("-") character and returns an array of the
           #   resulting parts.
@@ -387,7 +387,7 @@ jobs:
           # | pkg2 | test2 | 4 | race |
           # | pkg3 | test3 | 6 | fips |
 
-          jq -r -n 'inputs | select(.Action == "fail") | select(.Test != null) | "| \(.Package) | \(.Test) | \(input_filename | split("-") | .[2] | sub(".json"; "")) | \(input_filename | split("-") | .[3] // "normal" | sub(".json";"") )"' failure-summary-*.json | sort >> "$temp_file_name"
+          jq -r -n 'inputs | select(.Action == "fail") | "| \(.Package) | \(.Test // "-") | \(input_filename | split("-") | .[2] | sub(".json"; "")) | \(input_filename | split("-") | .[3] // "normal" | sub(".json";"") )"' failure-summary-*.json | sort >> "$temp_file_name"
 
           # if there are test failures, present them in a format of a GH Markdown table
           if [ -s "$temp_file_name" ]; then
