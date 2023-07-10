@@ -13,6 +13,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/require"
+
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
 	"github.com/hashicorp/vault/sdk/helper/salt"
@@ -104,7 +106,10 @@ func TestFormatJSON_formatRequest(t *testing.T) {
 
 	for name, tc := range cases {
 		var buf bytes.Buffer
-		formatter := AuditFormatter{
+		formatter := AuditFormatterWriter{
+			Formatter: &AuditFormatter{
+				SaltFunc: saltFunc,
+			},
 			Writer: &JSONFormatWriter{
 				Prefix:   tc.Prefix,
 				SaltFunc: saltFunc,
@@ -118,29 +123,29 @@ func TestFormatJSON_formatRequest(t *testing.T) {
 			Request:  tc.Req,
 			OuterErr: tc.Err,
 		}
-		if err := formatter.FormatRequest(namespace.RootContext(nil), &buf, config, in); err != nil {
-			t.Fatalf("bad: %s\nerr: %s", name, err)
-		}
+
+		err := formatter.FormatAndWriteRequest(namespace.RootContext(nil), &buf, config, in)
+		require.NoErrorf(t, err, "bad: %s\nerr: %s", name, err)
 
 		if !strings.HasPrefix(buf.String(), tc.Prefix) {
 			t.Fatalf("no prefix: %s \n log: %s\nprefix: %s", name, expectedResultStr, tc.Prefix)
 		}
 
-		expectedjson := new(AuditRequestEntry)
+		expectedJSON := new(AuditRequestEntry)
 
-		if err := jsonutil.DecodeJSON([]byte(expectedResultStr), &expectedjson); err != nil {
+		if err := jsonutil.DecodeJSON([]byte(expectedResultStr), &expectedJSON); err != nil {
 			t.Fatalf("bad json: %s", err)
 		}
-		expectedjson.Request.Namespace = &AuditNamespace{ID: "root"}
+		expectedJSON.Request.Namespace = &AuditNamespace{ID: "root"}
 
 		actualjson := new(AuditRequestEntry)
 		if err := jsonutil.DecodeJSON([]byte(buf.String())[len(tc.Prefix):], &actualjson); err != nil {
 			t.Fatalf("bad json: %s", err)
 		}
 
-		expectedjson.Time = actualjson.Time
+		expectedJSON.Time = actualjson.Time
 
-		expectedBytes, err := json.Marshal(expectedjson)
+		expectedBytes, err := json.Marshal(expectedJSON)
 		if err != nil {
 			t.Fatalf("unable to marshal json: %s", err)
 		}

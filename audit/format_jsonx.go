@@ -13,8 +13,10 @@ import (
 	"github.com/jefferai/jsonx"
 )
 
-// JSONxFormatWriter is an Writer implementation that structures data into
-// a XML format.
+var _ Writer = (*JSONxFormatWriter)(nil)
+
+// JSONxFormatWriter is a Writer implementation that structures data into
+// an XML format.
 type JSONxFormatWriter struct {
 	Prefix   string
 	SaltFunc func(context.Context) (*salt.Salt, error)

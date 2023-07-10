@@ -115,7 +115,10 @@ func TestFormatJSONx_formatRequest(t *testing.T) {
 
 	for name, tc := range cases {
 		var buf bytes.Buffer
-		formatter := AuditFormatter{
+		formatter := AuditFormatterWriter{
+			Formatter: &AuditFormatter{
+				SaltFunc: saltFunc,
+			},
 			Writer: &JSONxFormatWriter{
 				Prefix:   tc.Prefix,
 				SaltFunc: saltFunc,
@@ -130,7 +133,7 @@ func TestFormatJSONx_formatRequest(t *testing.T) {
 			Request:  tc.Req,
 			OuterErr: tc.Err,
 		}
-		if err := formatter.FormatRequest(namespace.RootContext(nil), &buf, config, in); err != nil {
+		if err := formatter.FormatAndWriteRequest(namespace.RootContext(nil), &buf, config, in); err != nil {
 			t.Fatalf("bad: %s\nerr: %s", name, err)
 		}
 

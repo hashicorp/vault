@@ -12,7 +12,9 @@ import (
 	"github.com/hashicorp/vault/sdk/helper/salt"
 )
 
-// JSONFormatWriter is an Writer implementation that structures data into
+var _ Writer = (*JSONFormatWriter)(nil)
+
+// JSONFormatWriter is a Writer implementation that structures data into
 // a JSON format.
 type JSONFormatWriter struct {
 	Prefix   string
