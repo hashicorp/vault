@@ -231,7 +231,7 @@ jobs:
           #  if [[ ${{ github.base_ref }} = release/* ]] ; then
           echo "reference branch name"
           echo ${{ github.base_ref }}
-          if [[ ${{ github.base_ref }} = vault-17777/* ]] ; then
+          if [[ ${{ github.base_ref }} = vault-17777* ]] ; then
             VAULT_FAIL_TEST="true"
             export VAULT_FAIL_TEST
             rerunFails="--rerun-fails"
