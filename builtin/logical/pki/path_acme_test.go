@@ -1021,23 +1021,23 @@ func TestACMESubjectFieldsAndExtensionsIgnored(t *testing.T) {
 	acmeClient := getAcmeClientForCluster(t, cluster, directory, nil)
 	cr := &x509.CertificateRequest{
 		Subject:  pkix.Name{CommonName: domains[0], OrganizationalUnit: []string{"DadgarCorp IT"}},
-        DNSNames: domains,
-    }
+		DNSNames: domains,
+	}
 	cert := doACMEForCSRWithDNS(t, dns, acmeClient, domains, cr)
 	t.Logf("Got certificate: %v", cert)
 	require.Empty(t, cert.Subject.OrganizationalUnit)
 
-    // Use the default sign-verbatim policy and ensure extension does not get set.
-    domains = []string{"no-ext.dadgarcorp.com"}
+	// Use the default sign-verbatim policy and ensure extension does not get set.
+	domains = []string{"no-ext.dadgarcorp.com"}
 	extension, err := certutil.CreateDeltaCRLIndicatorExt(12345)
 	require.NoError(t, err)
-    cr = &x509.CertificateRequest{
-        Subject:  pkix.Name{CommonName: domains[0]},
-        DNSNames: domains,
+	cr = &x509.CertificateRequest{
+		Subject:         pkix.Name{CommonName: domains[0]},
+		DNSNames:        domains,
 		ExtraExtensions: []pkix.Extension{extension},
-    }
-    cert = doACMEForCSRWithDNS(t, dns, acmeClient, domains, cr)
-    t.Logf("Got certificate: %v", cert)
+	}
+	cert = doACMEForCSRWithDNS(t, dns, acmeClient, domains, cr)
+	t.Logf("Got certificate: %v", cert)
 	for _, ext := range cert.Extensions {
 		require.False(t, ext.Id.Equal(certutil.DeltaCRLIndicatorOID))
 	}
