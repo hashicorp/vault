@@ -107,13 +107,12 @@ type OASLicense struct {
 }
 
 type OASPathItem struct {
-	Description       string             `json:"description,omitempty"`
-	Parameters        []OASParameter     `json:"parameters,omitempty"`
-	Sudo              bool               `json:"x-vault-sudo,omitempty" mapstructure:"x-vault-sudo"`
-	Unauthenticated   bool               `json:"x-vault-unauthenticated,omitempty" mapstructure:"x-vault-unauthenticated"`
-	CreateSupported   bool               `json:"x-vault-createSupported,omitempty" mapstructure:"x-vault-createSupported"`
-	DisplayNavigation bool               `json:"x-vault-displayNavigation,omitempty" mapstructure:"x-vault-displayNavigation"`
-	DisplayAttrs      *DisplayAttributes `json:"x-vault-displayAttrs,omitempty" mapstructure:"x-vault-displayAttrs"`
+	Description     string             `json:"description,omitempty"`
+	Parameters      []OASParameter     `json:"parameters,omitempty"`
+	Sudo            bool               `json:"x-vault-sudo,omitempty" mapstructure:"x-vault-sudo"`
+	Unauthenticated bool               `json:"x-vault-unauthenticated,omitempty" mapstructure:"x-vault-unauthenticated"`
+	CreateSupported bool               `json:"x-vault-createSupported,omitempty" mapstructure:"x-vault-createSupported"`
+	DisplayAttrs    *DisplayAttributes `json:"x-vault-displayAttrs,omitempty" mapstructure:"x-vault-displayAttrs"`
 
 	Get    *OASOperation `json:"get,omitempty"`
 	Post   *OASOperation `json:"post,omitempty"`
@@ -309,6 +308,7 @@ func documentPath(p *Path, backend *Backend, requestResponsePrefix string, doc *
 
 		// Process each supported operation by building up an Operation object
 		// with descriptions, properties and examples from the framework.Path data.
+		var listOperation *OASOperation
 		for opType, opHandler := range operations {
 			props := opHandler.Properties()
 			if props.Unpublished || forceUnpublished {
@@ -322,11 +322,6 @@ func documentPath(p *Path, backend *Backend, requestResponsePrefix string, doc *
 				if operations[logical.UpdateOperation] != nil {
 					continue
 				}
-			}
-
-			// If both List and Read are defined, only process Read.
-			if opType == logical.ListOperation && operations[logical.ReadOperation] != nil {
-				continue
 			}
 
 			op := NewOASOperation()
@@ -408,23 +403,16 @@ func documentPath(p *Path, backend *Backend, requestResponsePrefix string, doc *
 				}
 			}
 
-			// LIST is represented as GET with a `list` query parameter.
+			// LIST is represented as GET with a `list` query parameter. Code later on in this function will assign
+			// list operations to a path with an extra trailing slash, ensuring they do not collide with read
+			// operations.
 			if opType == logical.ListOperation {
-				// Only accepts List (due to the above skipping of ListOperations that also have ReadOperations)
 				op.Parameters = append(op.Parameters, OASParameter{
 					Name:        "list",
 					Description: "Must be set to `true`",
 					Required:    true,
 					In:          "query",
 					Schema:      &OASSchema{Type: "string", Enum: []interface{}{"true"}},
-				})
-			} else if opType == logical.ReadOperation && operations[logical.ListOperation] != nil {
-				// Accepts both Read and List
-				op.Parameters = append(op.Parameters, OASParameter{
-					Name:        "list",
-					Description: "Return a list if `true`",
-					In:          "query",
-					Schema:      &OASSchema{Type: "string"},
 				})
 			}
 
@@ -521,18 +509,65 @@ func documentPath(p *Path, backend *Backend, requestResponsePrefix string, doc *
 			switch opType {
 			case logical.CreateOperation, logical.UpdateOperation:
 				pi.Post = op
-			case logical.ReadOperation, logical.ListOperation:
+			case logical.ReadOperation:
 				pi.Get = op
 			case logical.DeleteOperation:
 				pi.Delete = op
+			case logical.ListOperation:
+				listOperation = op
 			}
 		}
 
-		openAPIPath := "/" + path
-		if doc.Paths[openAPIPath] != nil {
-			backend.Logger().Warn("OpenAPI spec generation: multiple framework.Path instances generated the same path; last processed wins", "path", openAPIPath)
+		// Write the regular, non-list, OpenAPI path to the OpenAPI document, UNLESS we generated a ListOperation, and
+		// NO OTHER operation types. In that fairly common case (there are lots of list-only endpoints), we avoid
+		// writing a redundant OpenAPI path for (e.g.) "auth/token/accessors" with no operations, only to then write
+		// one for "auth/token/accessors/" immediately below.
+		//
+		// On the other hand, we do still write the OpenAPI path here if we generated ZERO operation types - this serves
+		// to provide documentation to a human that an endpoint exists, even if it has no invokable OpenAPI operations.
+		// Examples of this include kv-v2's ".*" endpoint (regex cannot be translated to OpenAPI parameters), and the
+		// auth/oci/login endpoint (implements ResolveRoleOperation only, only callable from inside Vault).
+		generateNonListOpenAPIPath := listOperation == nil || pi.Get != nil || pi.Post != nil || pi.Delete != nil
+		if generateNonListOpenAPIPath {
+			openAPIPath := "/" + path
+			if doc.Paths[openAPIPath] != nil {
+				backend.Logger().Warn(
+					"OpenAPI spec generation: multiple framework.Path instances generated the same path; "+
+						"last processed wins", "path", openAPIPath)
+			}
+			doc.Paths[openAPIPath] = &pi
 		}
-		doc.Paths[openAPIPath] = &pi
+
+		// If there is a ListOperation, write it to a separate OpenAPI path in the document.
+		if listOperation != nil {
+			// Typically, we will append a slash here to disambiguate from the path written immediately above.
+			// However, if we skipped writing the path above (and so don't need to worry about disambiguating from it),
+			// AND the path already contains a trailing slash, we want to avoid doubling it.
+			if generateNonListOpenAPIPath || !strings.HasSuffix(path, "/") {
+				path += "/"
+			}
+
+			listPathItem := OASPathItem{
+				Description:  pi.Description,
+				Parameters:   pi.Parameters,
+				DisplayAttrs: pi.DisplayAttrs,
+
+				// Since the path may now have an extra slash on the end, we need to recalculate the special path
+				// matches, as the sudo or unauthenticated status may be changed as a result!
+				Sudo:            specialPathMatch(path, sudoPaths),
+				Unauthenticated: specialPathMatch(path, unauthPaths),
+
+				Get: listOperation,
+			}
+
+			openAPIPath := "/" + path
+			if doc.Paths[openAPIPath] != nil {
+				backend.Logger().Warn(
+					"OpenAPI spec generation: multiple framework.Path instances generated the same path; "+
+						"last processed wins", "path", openAPIPath)
+			}
+			doc.Paths[openAPIPath] = &listPathItem
+		}
 	}
 
 	return nil

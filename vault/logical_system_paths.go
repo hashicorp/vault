@@ -3658,7 +3658,7 @@ func (b *SystemBackend) policyPaths() []*framework.Path {
 
 			DisplayAttrs: &framework.DisplayAttributes{
 				OperationPrefix: "policies",
-				OperationVerb:   "list",
+				OperationSuffix: "acl-policy-list2", // this endpoint duplicates /sys/policies/acl
 			},
 
 			Operations: map[logical.Operation]framework.OperationHandler{
