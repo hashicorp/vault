@@ -26,6 +26,8 @@ import (
 	"github.com/mitchellh/go-testing-interface"
 )
 
+var externalPlugins = []string{"transform", "kmip", "keymgmt"}
+
 // RetryUntil runs f until it returns a nil result or the timeout is reached.
 // If a nil result hasn't been obtained by timeout, calls t.Fatal.
 func RetryUntil(t testing.T, timeout time.Duration, f func() error) {
@@ -180,8 +182,21 @@ func (m *mockBuiltinRegistry) Keys(pluginType consts.PluginType) []string {
 			"pending-removal-test-plugin",
 			"approle",
 		}
+
+	case consts.PluginTypeSecrets:
+		return append(externalPlugins, "kv")
 	}
+
 	return []string{}
+}
+
+func (r *mockBuiltinRegistry) IsBuiltinEntPlugin(name string, pluginType consts.PluginType) bool {
+	for _, i := range externalPlugins {
+		if i == name {
+			return true
+		}
+	}
+	return false
 }
 
 func (m *mockBuiltinRegistry) Contains(name string, pluginType consts.PluginType) bool {
