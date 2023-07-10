@@ -79,12 +79,22 @@ jobs:
           # Never do a partial restore of the web_ui if we don't get a cache hit.
           key: ${{ inputs.web-ui-cache-key }}
       - name: Build Vault
+        id: build-vault
         env:
           CGO_ENABLED: ${{ inputs.cgo-enabled }}
           GOARCH: ${{ inputs.goarch }}
           GOOS: ${{ inputs.goos }}
           GO_TAGS: ${{ inputs.go-tags }}
         run: make ci-build
+      - name: Build Status
+          id: report-build-failure
+          if: failure() && steps.build-vault.outcome == 'failure'
+          env:
+            GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+            PR: ${{ github.event.pull_request.html_url }}
+            RUN_ID: ${{ github.run_id }}
+            REPO: ${{ github.event.repository.name }}
+          run: ./.github/scripts/report_first_go_test_failure_log.sh
       - name: Determine artifact basename
         env:
           GOARCH: ${{ inputs.goarch }}
