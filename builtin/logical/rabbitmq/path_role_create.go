@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"time"
+	"math"
 
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/template"
@@ -82,11 +83,11 @@ func (b *backend) pathStaticCredsRead(ctx context.Context, req *logical.Request,
 	if role == nil {
 		return logical.ErrorResponse(fmt.Sprintf("unknown role: %s", name)), nil
 	}
-	ttl := role.LastVaultRotation.Add(role.RotationPeriod).Sub(time.Now()).Seconds()
+	ttl := math.Max(0, role.LastVaultRotation.Add(role.RotationPeriod).Sub(time.Now()).Seconds())
 	respData := map[string]interface{}{
 		"username":            role.Username,
-		"ttl":                 ttl,
-		"rotation_period":     role.RotationPeriod,
+		"ttl":                 int(ttl),
+		"rotation_period":     int(role.RotationPeriod.Seconds()),
 		"last_vault_rotation": role.LastVaultRotation,
 		"password":            role.Password,
 	}
