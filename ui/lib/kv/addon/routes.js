@@ -12,7 +12,6 @@ export default buildRoutes(function () {
       this.route('details');
       this.route('edit');
       this.route('metadata', function () {
-        this.route('details');
         this.route('edit');
       });
       this.route('versions');

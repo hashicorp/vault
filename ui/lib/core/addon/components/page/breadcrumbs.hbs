@@ -6,9 +6,15 @@
         {{#if breadcrumb.linkExternal}}
           <LinkToExternal @route={{breadcrumb.route}}>{{breadcrumb.label}}</LinkToExternal>
         {{else if breadcrumb.route}}
-          <LinkTo @route={{breadcrumb.route}}>
-            {{breadcrumb.label}}
-          </LinkTo>
+          {{#if breadcrumb.model}}
+            <LinkTo @route={{breadcrumb.route}} @model={{breadcrumb.model}}>
+              {{breadcrumb.label}}
+            </LinkTo>
+          {{else}}
+            <LinkTo @route={{breadcrumb.route}}>
+              {{breadcrumb.label}}
+            </LinkTo>
+          {{/if}}
         {{else}}
           {{breadcrumb.label}}
         {{/if}}
