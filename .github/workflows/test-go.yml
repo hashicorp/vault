@@ -234,7 +234,7 @@ jobs:
           if [[ ${{ github.base_ref }} = vault-17777* ]] ; then
             VAULT_FAIL_TEST="true"
             export VAULT_FAIL_TEST
-            rerunFails="--rerun-fails"
+            rerunFails="--rerun-fails --packages="./...""
             echo "go run gotest.tools/gotestsum --format=short-verbose  $rerunFails"
           fi
 
