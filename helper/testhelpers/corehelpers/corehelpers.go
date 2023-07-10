@@ -277,7 +277,7 @@ type NoopAudit struct {
 func (n *NoopAudit) LogRequest(ctx context.Context, in *logical.LogInput) error {
 	n.l.Lock()
 	defer n.l.Unlock()
-	if n.formatter.Writer != nil {
+	if n.formatter != nil {
 		var w bytes.Buffer
 		err := n.formatter.FormatAndWriteRequest(ctx, &w, audit.FormatterConfig{}, in)
 		if err != nil {
