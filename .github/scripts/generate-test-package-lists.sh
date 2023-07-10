@@ -45,8 +45,8 @@ fi
 test_packages[4]+=" $base/http"
 test_packages[4]+=" $base/sdk/helper/pluginutil"
 test_packages[4]+=" $base/serviceregistration/kubernetes"
-test_packages[4]+=" $base/tools/godoctests/pkg/analyzer"
-test_packages[4]+=" $base/tools/gonilnilfunctions/pkg/analyzer"
+test_packages[4]+=" $base/tools/codechecker/pkg/godoctests"
+test_packages[4]+=" $base/tools/codechecker/pkg/gonilnilfunctions"
 if [ "${ENTERPRISE:+x}" == "x" ] ; then
     test_packages[4]+=" $base/vault/external_tests/apilock"
     test_packages[4]+=" $base/vault/external_tests/filteredpaths"
@@ -272,6 +272,7 @@ if [ "${ENTERPRISE:+x}" == "x" ] ; then
     test_packages[14]+=" $base/vault/external_tests/quotas-docker"
 fi
 test_packages[14]+=" $base/vault/external_tests/raftha"
+test_packages[14]+=" $base/internal/observability/event"
 
 # Total time: 362
 test_packages[15]+=" $base/builtin/logical/nomad"

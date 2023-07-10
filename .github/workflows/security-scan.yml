@@ -13,20 +13,20 @@ jobs:
     runs-on: ['linux', 'large']
     if: ${{ github.actor != 'dependabot[bot]' || github.actor != 'hc-github-team-secure-vault-core' }}
     steps:
-    - uses: actions/checkout@8e5e7e5ab8b370d6c329ec480221332ada57f0ab # v3.5.2
+    - uses: actions/checkout@c85c95e3d7251135ab7dc9ce3241c5835cc595a9 # v3.5.3
 
     - name: Set up Go
-      uses: actions/setup-go@4d34df0c2316fe8122ab82dc22947d607c0c91f9 # v4.0.0
+      uses: actions/setup-go@fac708d6674e30b6ba41289acaab6d4b75aa0753 # v4.0.1
       with:
         go-version: 1.18
 
     - name: Set up Python
-      uses: actions/setup-python@57ded4d7d5e986d7296eab16560982c6dd7c923b # v4.6.0
+      uses: actions/setup-python@bd6b4b6205c4dbad673328db7b31b7fab9e241c0 # v4.6.1
       with:
         python-version: 3.x
 
     - name: Clone Security Scanner repo
-      uses: actions/checkout@8e5e7e5ab8b370d6c329ec480221332ada57f0ab # v3.5.2
+      uses: actions/checkout@c85c95e3d7251135ab7dc9ce3241c5835cc595a9 # v3.5.3
       with:
         repository: hashicorp/security-scanner
         token: ${{ secrets.HASHIBOT_PRODSEC_GITHUB_TOKEN }}
@@ -77,6 +77,6 @@ jobs:
         cat results.sarif
 
     - name: Upload SARIF file
-      uses: github/codeql-action/upload-sarif@9a866ed4524fc3422c3af1e446dab8efa3503411 # codeql-bundle-20230418
+      uses: github/codeql-action/upload-sarif@cdcdbb579706841c47f7063dda365e292e5cad7a # codeql-bundle-v2.13.4
       with:
         sarif_file: results.sarif
