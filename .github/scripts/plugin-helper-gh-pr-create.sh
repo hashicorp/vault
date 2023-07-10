@@ -10,10 +10,9 @@ set -e
 [ ${PLUGIN_BRANCH:?} ]
 [ ${RUN_ID:?} ]
 
-# we are using the GH API directly so that we can get the resluting
+# we are using the GH API directly so that we can get the resulting
 # PR URL from the JSON response
 
-reviewers="fairclothjm,kpcraig"
 resp=$(curl -SL \
   -X POST \
   -H "Accept: application/vnd.github+json" \
@@ -35,16 +34,17 @@ echo "captured response:"
 echo "$resp" | jq .
 
 # get Vault PR number
-vault_pr_num=$(echo "$resp" | jq '.number')
-vault_pr_url=$(echo "$resp" | jq '.html_url')
+vault_pr_num=$(echo "$resp" | jq -r '.number')
+vault_pr_url=$(echo "$resp" | jq -r '.html_url')
 echo "Vault PR number: $vault_pr_url"
 
-# add labels to Vault PR
+# add labels to Vault PR - this requires a wider permission set than we currently have available as a repo token
+#reviewers="austingebauer,fairclothjm,vinay-gopalan,maxcoulombe,robmonte,Zlaticanin,kpcraig,raymonstah"
 #gh pr edit "$vault_pr_num" --add-label "dependencies,pr/no-changelong,pr/no-milestone" --repo hashicorp/vault
 #gh pr edit "$vault_pr_num" --add-reviewer "$reviewers"
 
 # get Plugin PR number
-plugin_pr_num=$(gh pr list --head "$PLUGIN_BRANCH" --json number --repo hashicorp/$PLUGIN_REPO -q '.[0].number')
+plugin_pr_num=$(gh pr list --head "$PLUGIN_BRANCH" --json number --repo "$PLUGIN_REPO" -q '.[0].number')
 
 # make a comment on the plugin repo's PR
-gh pr comment "$plugin_pr_num" --body "Vault CI check PR: $vault_pr_url" --repo hashicorp/$PLUGIN_REPO
+gh pr comment "$plugin_pr_num" --body "Vault CI check PR: $vault_pr_url" --repo "$PLUGIN_REPO"
