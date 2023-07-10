@@ -238,8 +238,7 @@ proto: bootstrap
 	protoc-go-inject-tag -input=./helper/identity/mfa/types.pb.go
 
 fmtcheck:
-	@true
-#@sh -c "'$(CURDIR)/scripts/gofmtcheck.sh'"
+	@sh -c "'$(CURDIR)/scripts/gofmtcheck.sh'"
 
 fmt: ci-bootstrap
 	find . -name '*.go' | grep -v pb.go | grep -v vendor | xargs go run mvdan.cc/gofumpt -w
