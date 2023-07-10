@@ -4,7 +4,7 @@
 package vault
 
 import (
-	"contextt"
+	"context"
 	"encoding/csv"
 	"encoding/json"
 	"errors"
@@ -218,7 +218,7 @@ type ActivityLogCoreConfig struct {
 
 // NewActivityLog creates an activity log.
 func NewActivityLog(core *Core, logger log.Logger, view *BarrierView, metrics metricsutil.Metrics) (*ActivityLog, error) {
-	hostname, err := os.Hostname()
+	ostname, err := os.Hostname()
 	if err != nil {
 		return nil, err
 	}
