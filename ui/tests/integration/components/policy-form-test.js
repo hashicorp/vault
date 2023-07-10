@@ -18,6 +18,9 @@ const SELECTORS = {
   saveButton: '[data-test-policy-save]',
   cancelButton: '[data-test-policy-cancel]',
   error: '[data-test-message-error]',
+  exampleModal: '[data-test-policy-example]',
+  exampleModalTitle: '[data-test-modal-title]',
+  exampleModalClose: '[data-test-modal-close-button]',
 };
 
 module('Integration | Component | policy-form', function (hooks) {
@@ -202,5 +205,115 @@ module('Integration | Component | policy-form', function (hooks) {
     await click(SELECTORS.saveButton);
     assert.ok(this.onSave.notCalled);
     assert.dom(SELECTORS.error).includesText('An error occurred');
+  });
+  test('it does not create a new policy when the cancel button is clicked', async function (assert) {
+    const policy = `
+    path "secret/*" {
+      capabilities = [ "create", "read", "update", "list" ]
+    }
+    `;
+    await render(hbs`
+    <PolicyForm
+      @model={{this.model}}
+      @onCancel={{this.onCancel}}
+      @onSave={{this.onSave}}
+    />
+    `);
+    await fillIn(SELECTORS.nameInput, 'Foo');
+    assert.strictEqual(this.model.name, 'foo', 'Input sets name on model to lowercase input');
+    await fillIn(`${SELECTORS.policyEditor} textarea`, policy);
+    assert.strictEqual(this.model.policy, policy, 'Policy editor sets policy on model');
+
+    await click(SELECTORS.cancelButton);
+    assert.ok(this.onSave.notCalled);
+    assert.ok(this.onCancel.calledOnce, 'Form calls onCancel');
+  });
+  test('it does not save edits when the cancel button is clicked', async function (assert) {
+    const model = this.store.createRecord('policy/acl', {
+      name: 'foo',
+      policy: 'some policy content',
+    });
+    model.save();
+
+    this.set('model', model);
+    await render(hbs`
+    <PolicyForm
+      @model={{this.model}}
+      @onCancel={{this.onCancel}}
+      @onSave={{this.onSave}}
+    />
+    `);
+    await fillIn(`${SELECTORS.policyEditor} textarea`, 'updated-');
+    assert.strictEqual(
+      this.model.policy,
+      'updated-some policy content',
+      'Policy editor updates policy value on model'
+    );
+    await click(SELECTORS.cancelButton);
+    assert.ok(this.onSave.notCalled);
+    assert.ok(this.onCancel.calledOnce, 'Form calls onCancel');
+
+    await render(hbs`
+    <PolicyForm
+      @model={{this.model}}
+      @onCancel={{this.onCancel}}
+      @onSave={{this.onSave}}
+    />
+    `);
+    assert.strictEqual(
+      this.model.policy,
+      'some policy content',
+      'Policy editor shows original policy content, meaning that onCancel worked successfully'
+    );
+  });
+  test('it does not render the link for the policy example modal if not specified to', async function (assert) {
+    await render(hbs`
+    <PolicyForm
+      @model={{this.model}}
+      @onCancel={{this.onCancel}}
+      @onSave={{this.onSave}}
+    />
+    `);
+    assert.dom(SELECTORS.exampleModal).doesNotExist('Button for the policy example modal does not exist');
+  });
+  test('it renders the link to the policy example modal when specified to', async function (assert) {
+    await render(hbs`
+    <PolicyForm
+      @model={{this.model}}
+      @onCancel={{this.onCancel}}
+      @onSave={{this.onSave}}
+      @renderPolicyExampleModal={{true}}
+    />
+    <div id="modal-wormhole"></div>
+    `);
+    assert.dom(SELECTORS.exampleModal).exists({ count: 1 }, 'Button for the policy example modal exists');
+  });
+  test('it renders the correct title for ACL example for the policy example modal', async function (assert) {
+    await render(hbs`
+    <PolicyForm
+      @model={{this.model}}
+      @onCancel={{this.onCancel}}
+      @onSave={{this.onSave}}
+      @renderPolicyExampleModal={{true}}
+    />
+    <div id="modal-wormhole"></div>
+    `);
+    await click(SELECTORS.exampleModal);
+    assert.dom(SELECTORS.exampleModalTitle).hasText('Example ACL Policy');
+  });
+  test('it renders the correct title for RGP example for the policy example modal', async function (assert) {
+    const model = this.store.createRecord('policy/rgp');
+    this.set('model', model);
+    await render(hbs`
+    <PolicyForm
+      @model={{this.model}}
+      @onCancel={{this.onCancel}}
+      @onSave={{this.onSave}}
+      @renderPolicyExampleModal={{true}}
+    />
+    <div id="modal-wormhole"></div>
+    `);
+    await click(SELECTORS.exampleModal);
+    assert.dom(SELECTORS.exampleModalTitle).hasText('Example RGP Policy');
   });
 });
