@@ -21,6 +21,12 @@ func TestSysPprof_Exec(t *testing.T) {
 	if binary == "" {
 		t.Skip("only running exec test when $VAULT_BINARY present")
 	}
+	// for testing vault-17777
+	fail_tests := os.Getenv("VAULT_FAIL_TEST")
+	if fail_tests == "true" {
+		t.Fatal("test failed to test vault-17777")
+	}
+
 	cluster := testcluster.NewTestExecDevCluster(t, &testcluster.ExecDevClusterOptions{
 		ClusterOptions: testcluster.ClusterOptions{
 			NumCores: 1,
