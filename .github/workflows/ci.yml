@@ -48,18 +48,6 @@ jobs:
             echo 'enterprise=' >> "$GITHUB_OUTPUT"
             echo 'go-build-tags=' >> "$GITHUB_OUTPUT"
           fi
-  semgrep:
-    name: Semgrep
-    needs:
-      - setup
-    runs-on: ${{ fromJSON(needs.setup.outputs.compute-tiny) }}
-    container:
-      image: returntocorp/semgrep@sha256:ffc6f3567654f9431456d49fd059dfe548f007c494a7eb6cd5a1a3e50d813fb3
-    steps:
-      - uses: actions/checkout@c85c95e3d7251135ab7dc9ce3241c5835cc595a9 # v3.5.3
-      - name: Run Semgrep Rules
-        id: semgrep
-        run: semgrep ci --include '*.go' --config 'tools/semgrep/ci'
   setup-go-cache:
     name: Go Caches
     needs:
@@ -68,25 +56,6 @@ jobs:
     with:
       runs-on: ${{ needs.setup.outputs.compute-standard }}
     secrets: inherit
-  fmt:
-    name: Check Format
-    needs:
-      - setup
-    runs-on: ${{ fromJSON(needs.setup.outputs.compute-tiny) }}
-    steps:
-      - uses: actions/checkout@c85c95e3d7251135ab7dc9ce3241c5835cc595a9 # v3.5.3
-      - uses: actions/setup-go@fac708d6674e30b6ba41289acaab6d4b75aa0753 # v4.0.1
-        with:
-          go-version-file: ./.go-version
-          cache: true
-      - id: format
-        run: |
-          echo "Using gofumpt version $(go run mvdan.cc/gofumpt -version)"
-          make fmt
-          if ! git diff --exit-code; then
-            echo "Code has formatting errors. Run 'make fmt' to fix"
-            exit 1
-          fi
   diff-oss-ci:
     name: Diff OSS
     needs:
@@ -298,7 +267,7 @@ jobs:
           name: test-results-ui
           path: ui/test-results
         if: success() || failure()
-      - uses: test-summary/action@62bc5c68de2a6a0d02039763b8c754569df99e3f    # TSCCR: no entry for repository "test-summary/action"
+      - uses: test-summary/action@62bc5c68de2a6a0d02039763b8c754569df99e3f  # TSCCR: no entry for repository "test-summary/action"
         with:
           paths: "ui/test-results/qunit/results.xml"
           show: "fail"
@@ -309,19 +278,13 @@ jobs:
       - setup-go-cache
       - test-go
       - test-ui
-    # We force a failure if any of the dependent jobs fail,
-    # this is a workaround for the issue reported https://github.com/actions/runner/issues/2566
-    if: |
-      always() && (cancelled() ||
-      contains(needs.*.result, 'cancelled') ||
-      contains(needs.*.result, 'failure'))
+    if: always() 
     runs-on: ${{ fromJSON(needs.setup.outputs.compute-tiny) }}
     steps:
       - run: |
           tr -d '\n' <<< '${{ toJSON(needs.*.result) }}' | grep -q -v -E '(failure|cancelled)'
-
-  notify-tests-completed-failures:
-    if: ${{ always() && needs.tests-completed.result == 'failure' && (github.ref_name == 'main' || startsWith(github.ref_name, 'release/')) }}
+  notify-tests-completed-failures-oss:
+    if: ${{ always() && github.repository == 'hashicorp/vault' && needs.tests-completed.result == 'failure' && (github.ref_name == 'main' || startsWith(github.ref_name, 'release/')) }}
     runs-on: ubuntu-latest
     permissions:
       id-token: write
@@ -341,3 +304,106 @@ jobs:
           channel-id: "C05AABYEA9Y" # sent to #feed-vault-ci-official
           payload: |
             {"text":"OSS test failures on ${{ github.ref_name }}","blocks":[{"type":"header","text":{"type":"plain_text","text":":rotating_light: OSS test failures :rotating_light:","emoji":true}},{"type":"divider"},{"type":"section","text":{"type":"mrkdwn","text":"test(s) failed on ${{ github.ref_name }}"},"accessory":{"type":"button","text":{"type":"plain_text","text":"View Failing Workflow","emoji":true},"url":"${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"}}]}
+
+  notify-tests-completed-failures-ent:
+    if: ${{ always() && github.repository == 'hashicorp/vault-enterprise' && needs.tests-completed.result == 'failure' && (github.ref_name == 'main' || startsWith(github.ref_name, 'release/')) }}
+    runs-on: ['self-hosted', 'linux', 'small']
+    permissions:
+      id-token: write
+      contents: read
+    strategy:
+      fail-fast: false
+    needs:
+      - tests-completed
+    steps:
+      - id: vault-auth
+        name: Vault Authenticate
+        run: vault-auth
+      - id: secrets
+        name: Fetch Vault Secrets
+        uses: hashicorp/vault-action@130d1f5f4fe645bb6c83e4225c04d64cfb62de6e
+        with:
+          url: ${{ steps.vault-auth.outputs.addr }}
+          caCertificate: ${{ steps.vault-auth.outputs.ca_certificate }}
+          token: ${{ steps.vault-auth.outputs.token }}
+          secrets: |
+            kv/data/github/${{ github.repository }}/github_actions_notifications_bot token | SLACK_BOT_TOKEN;
+      - name: send-notification
+        uses: hashicorp/cloud-gha-slack-notifier@730a033037b8e603adf99ebd3085f0fdfe75e2f4 #v1
+        with:
+          channel-id: "C05AABYEA9Y" # sent to #feed-vault-ci-official
+          slack-bot-token: ${{ steps.secrets.outputs.SLACK_BOT_TOKEN }}
+          payload: |
+            {"text":"Enterprise test failures on ${{ github.ref_name }}","blocks":[{"type":"header","text":{"type":"plain_text","text":":rotating_light: Enterprise test failures :rotating_light:","emoji":true}},{"type":"divider"},{"type":"section","text":{"type":"mrkdwn","text":"test(s) failed on ${{ github.ref_name }}"},"accessory":{"type":"button","text":{"type":"plain_text","text":"View Failing Workflow","emoji":true},"url":"${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"}}]}
+
+  test-summary:
+    name: Go test failures
+    runs-on: ubuntu-latest
+    if: success() || failure() || needs.tests-completed.result == 'skipped'
+    needs:
+      - test-go
+      - test-go-fips
+      - test-go-race
+      - tests-completed
+    steps:
+      - name: Download failure summary
+        uses: actions/download-artifact@v3
+        with:
+          name: failure-summary
+      - name: Prepare failure summary
+        run: |
+          # We will store the jq query results in a temp file
+          temp_file_name=temp-$(date +%s)
+
+          # The 'jq' command below filters and formats JSON data from input files to generate a failure summary report.
+          # The query is a bit of a nightmare, though, so let's have a closer look at it.
+          #
+          # The command takes input from files matching the pattern "failure-summary-*.json".
+          # The input files should contain streams of JSON objects(with no commas in between),
+          # one per line, representing test results.
+          # Each object should have the "Action" and "Package" keys.
+          #
+          # We invoke the command with two flags:
+          # - '-r' specifies that the output should be in raw format,
+          #   without any JSON formatting. (I.e. no quotes).
+          # - '-n' tells 'jq' not to read any input from the command line.
+          #   It is used when input is provided through the 'inputs' function or other methods.
+          #
+          # 'inputs':
+          # Read JSON objects from the input files specified after the 'jq' command.
+          # We assume that the input files contain one JSON object per line.
+          #
+          # 'select(.Action == "fail") | select(.Test != null)':
+          # Filter JSON array to contain only objects where the value of "Action" is "fail"
+          # and the value of "Test" key is not null.
+          #
+          # The remaining part of the query constructs a formatted string for each filtered JSON object`:
+          # - '\(.Package)' and '\(.Test)' insert the values of the "Package" and "Test" keys into the string,
+          #   respectively.
+          # - 'input_filename' is a special variable in 'jq' that represents the name of the input file being processed.
+          # - 'split("-")' splits the input filename on the hyphen ("-") character and returns an array of the
+          #   resulting parts.
+          # - '.sub(".json"; "")' removes the ".json" extension from the string.
+          # - The third part of the filename is extracted using '.split("-") | .[2]'.
+          # - If the fourth part of the filename exists, it contains the test type.
+          #   Otherwise, the default value "normal" is used.
+          # - The '.sub(".json"; "")' removes the ".json" extension from the string.
+          #
+          # The filtered and formatted data is outputted as rows of a Markdown table, like this:
+          # | pkg1 | test1 | 1 | normal |
+          # | pkg2 | test2 | 4 | race |
+          # | pkg3 | test3 | 6 | fips |
+
+          jq -r -n 'inputs | select(.Action == "fail") | select(.Test != null) | "| \(.Package) | \(.Test) | \(input_filename | split("-") | .[2] | sub(".json"; "")) | \(input_filename | split("-") | .[3] // "normal" | sub(".json";"") )"' failure-summary-*.json | sort >> "$temp_file_name"
+
+          # if there are test failures, present them in a format of a GH Markdown table
+          if [ -s "$temp_file_name" ]; then
+            # shellcheck disable=SC2129
+            # Here we create the headings for the summary table
+            echo "### Go test failures" >> "$GITHUB_STEP_SUMMARY"
+            echo "| Package | Test | Runner Index | Test Type |" >> "$GITHUB_STEP_SUMMARY"
+            echo "| ------- | ---- | ------------ | --------- |" >> "$GITHUB_STEP_SUMMARY"
+            cat "$temp_file_name" >>  "$GITHUB_STEP_SUMMARY"
+          else
+            echo "### All Go tests passed! :white_check_mark:" >> "$GITHUB_STEP_SUMMARY"
+          fi
