@@ -547,7 +547,6 @@ type AuditNamespace struct {
 }
 
 // getRemoteAddr safely gets the remote address avoiding a nil pointer
-// Deprecated: use Request.GetRemoteAddr
 func getRemoteAddr(req *logical.Request) string {
 	if req != nil && req.Connection != nil {
 		return req.Connection.RemoteAddr
@@ -556,7 +555,6 @@ func getRemoteAddr(req *logical.Request) string {
 }
 
 // getRemotePort safely gets the remote port avoiding a nil pointer
-// Deprecated: use Request.GetRemotePort
 func getRemotePort(req *logical.Request) int {
 	if req != nil && req.Connection != nil {
 		return req.Connection.RemotePort
