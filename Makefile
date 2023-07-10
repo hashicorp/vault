@@ -152,7 +152,12 @@ ci-lint:
 
 # prep runs `go generate` to build the dynamically generated
 # source files.
-prep: fmtcheck
+#
+# n.b.: prep used to depend on fmtcheck, but since fmtcheck is
+# now run as a pre-commit hook (and there's little value in
+# making every build run the formatter), we've removed that
+# dependency.
+prep:
 	@sh -c "'$(CURDIR)/scripts/goversioncheck.sh' '$(GO_VERSION_MIN)'"
 	@$(GO_CMD) generate $$($(GO_CMD) list ./... | grep -v /vendor/)
 	@if [ -d .git/hooks ]; then cp .hooks/* .git/hooks/; fi
