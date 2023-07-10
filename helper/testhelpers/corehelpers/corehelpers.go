@@ -229,9 +229,11 @@ func NewNoopAudit(config map[string]string) (*NoopAudit, error) {
 			Config: config,
 		},
 	}
-	n.formatter.Writer = &audit.JSONFormatWriter{
-		SaltFunc: n.Salt,
+	n.formatter = &audit.AuditFormatterWriter{
+		Formatter: &audit.AuditFormatter{SaltFunc: n.Salt},
+		Writer:    &audit.JSONFormatWriter{},
 	}
+
 	return n, nil
 }
 
@@ -265,7 +267,7 @@ type NoopAudit struct {
 	RespReqNonHMACKeys [][]string
 	RespErrs           []error
 
-	formatter audit.AuditFormatterWriter
+	formatter *audit.AuditFormatterWriter
 	records   [][]byte
 	l         sync.RWMutex
 	salt      *salt.Salt
@@ -297,7 +299,7 @@ func (n *NoopAudit) LogResponse(ctx context.Context, in *logical.LogInput) error
 	n.l.Lock()
 	defer n.l.Unlock()
 
-	if n.formatter.Writer != nil {
+	if n.formatter != nil {
 		var w bytes.Buffer
 		err := n.formatter.FormatAndWriteResponse(ctx, &w, audit.FormatterConfig{}, in)
 		if err != nil {

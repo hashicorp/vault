@@ -69,17 +69,11 @@ func (fw *testingFormatWriter) hashExpectedValueForComparison(input map[string]i
 
 func TestAuditFormat_FormatRequest_Errors(t *testing.T) {
 	config := FormatterConfig{}
-	formatter := AuditFormatter{} // TODO: PW: need salt func
+	formatter := AuditFormatter{}
 
 	entry, err := formatter.FormatRequest(context.Background(), config, &logical.LogInput{})
 	require.Error(t, err)
 	require.Nil(t, entry)
-
-	// TODO: PW: ...
-	// in := &logical.LogInput{Request: &logical.Request{}}
-	// entry, err = formatter.FormatRequest(context.Background(), config, in)
-	// require.NoError(t, err)
-	// require.NotNil(t, entry)
 }
 
 func TestAuditFormatWriter_FormatRequest_Errors(t *testing.T) {

@@ -4,12 +4,9 @@
 package audit
 
 import (
-	"context"
 	"encoding/json"
 	"fmt"
 	"io"
-
-	"github.com/hashicorp/vault/sdk/helper/salt"
 )
 
 var _ Writer = (*JSONFormatWriter)(nil)
@@ -17,8 +14,7 @@ var _ Writer = (*JSONFormatWriter)(nil)
 // JSONFormatWriter is a Writer implementation that structures data into
 // a JSON format.
 type JSONFormatWriter struct {
-	Prefix   string
-	SaltFunc func(context.Context) (*salt.Salt, error)
+	Prefix string
 }
 
 func (f *JSONFormatWriter) WriteRequest(w io.Writer, req *AuditRequestEntry) error {
@@ -51,8 +47,4 @@ func (f *JSONFormatWriter) WriteResponse(w io.Writer, resp *AuditResponseEntry) 
 
 	enc := json.NewEncoder(w)
 	return enc.Encode(resp)
-}
-
-func (f *JSONFormatWriter) Salt(ctx context.Context) (*salt.Salt, error) {
-	return f.SaltFunc(ctx)
 }

@@ -120,8 +120,7 @@ func TestFormatJSONx_formatRequest(t *testing.T) {
 				SaltFunc: saltFunc,
 			},
 			Writer: &JSONxFormatWriter{
-				Prefix:   tc.Prefix,
-				SaltFunc: saltFunc,
+				Prefix: tc.Prefix,
 			},
 		}
 		config := FormatterConfig{

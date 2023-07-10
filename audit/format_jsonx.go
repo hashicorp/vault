@@ -4,12 +4,10 @@
 package audit
 
 import (
-	"context"
 	"encoding/json"
 	"fmt"
 	"io"
 
-	"github.com/hashicorp/vault/sdk/helper/salt"
 	"github.com/jefferai/jsonx"
 )
 
@@ -18,8 +16,7 @@ var _ Writer = (*JSONxFormatWriter)(nil)
 // JSONxFormatWriter is a Writer implementation that structures data into
 // an XML format.
 type JSONxFormatWriter struct {
-	Prefix   string
-	SaltFunc func(context.Context) (*salt.Salt, error)
+	Prefix string
 }
 
 func (f *JSONxFormatWriter) WriteRequest(w io.Writer, req *AuditRequestEntry) error {
@@ -72,8 +69,4 @@ func (f *JSONxFormatWriter) WriteResponse(w io.Writer, resp *AuditResponseEntry)
 
 	_, err = w.Write(xmlBytes)
 	return err
-}
-
-func (f *JSONxFormatWriter) Salt(ctx context.Context) (*salt.Salt, error) {
-	return f.SaltFunc(ctx)
 }
