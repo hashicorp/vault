@@ -3169,6 +3169,7 @@ type BuiltinRegistry interface {
 	Get(name string, pluginType consts.PluginType) (func() (interface{}, error), bool)
 	Keys(pluginType consts.PluginType) []string
 	DeprecationStatus(name string, pluginType consts.PluginType) (consts.DeprecationStatus, bool)
+	IsBuiltinEntPlugin(name string, pluginType consts.PluginType) bool
 }
 
 func (c *Core) AuditLogger() AuditLogger {
