@@ -13,9 +13,9 @@ export default buildRoutes(function () {
       this.route('edit');
       this.route('metadata', function () {
         this.route('edit');
+        this.route('versions');
+        this.route('diff');
       });
-      this.route('versions');
-      this.route('diff');
     });
   });
   this.route('configuration');
