@@ -4,6 +4,7 @@
  */
 
 import { run } from '@ember/runloop';
+import { copy } from 'ember-copy';
 import { module, test } from 'qunit';
 import { setupTest } from 'ember-qunit';
 import { TOKEN_SEPARATOR, TOKEN_PREFIX, ROOT_PREFIX } from 'vault/services/auth';
@@ -132,20 +133,20 @@ module('Integration | Service | auth', function (hooks) {
     this.memStore = storage();
     this.server = new Pretender(function () {
       this.get('/v1/auth/token/lookup-self', function (request) {
-        const resp = { ...ROOT_TOKEN_RESPONSE };
+        const resp = copy(ROOT_TOKEN_RESPONSE, true);
         resp.id = request.requestHeaders['X-Vault-Token'];
         resp.data.id = request.requestHeaders['X-Vault-Token'];
         return [200, {}, resp];
       });
       this.post('/v1/auth/userpass/login/:username', function (request) {
         const { username } = request.params;
-        const resp = { ...USERPASS_RESPONSE };
+        const resp = copy(USERPASS_RESPONSE, true);
         resp.auth.metadata.username = username;
         return [200, {}, resp];
       });
 
       this.post('/v1/auth/github/login', function () {
-        const resp = { ...GITHUB_RESPONSE };
+        const resp = copy(GITHUB_RESPONSE, true);
         return [200, {}, resp];
       });
     });
@@ -319,7 +320,7 @@ module('Integration | Service | auth', function (hooks) {
     const tokenResp = TOKEN_NON_ROOT_RESPONSE();
     this.server.map(function () {
       this.get('/v1/auth/token/lookup-self', function (request) {
-        const resp = { ...tokenResp };
+        const resp = copy(tokenResp, true);
         resp.id = request.requestHeaders['X-Vault-Token'];
         resp.data.id = request.requestHeaders['X-Vault-Token'];
         return [200, {}, resp];
