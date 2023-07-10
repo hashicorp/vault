@@ -309,12 +309,7 @@ jobs:
       - setup-go-cache
       - test-go
       - test-ui
-    # We force a failure if any of the dependent jobs fail,
-    # this is a workaround for the issue reported https://github.com/actions/runner/issues/2566
-    if: |
-      always() && (cancelled() ||
-      contains(needs.*.result, 'cancelled') ||
-      contains(needs.*.result, 'failure'))
+    if: always() 
     runs-on: ${{ fromJSON(needs.setup.outputs.compute-tiny) }}
     steps:
       - run: |
