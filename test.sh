@@ -7,5 +7,11 @@ test_packages[1]+=' github.com/hashicorp/vault/sdk/helper/keysutil'
 # combine the list to a string separated by space and quote it 
 bar=$(IFS=" " ; echo "${test_packages[1]}")
 bar1='"'"$bar"'"'
-rerunFails="--rerun-fails --packages $bar"
-go run gotest.tools/gotestsum --format=short-verbose  $rerunFails
+rerunFails="--rerun-fails --packages "$bar""
+go run gotest.tools/gotestsum --format=short-verbose $rerunFails \
+              --junitfile results-1.xml \
+              --jsonfile results-1.json \
+              --jsonfile-timing-events failure-summary-1.json 
+
+# go run gotest.tools/gotestsum --format=short-verbose --rerun-fails --packages "github.com/hashicorp/vault/api github.com/hashicorp/vault/command github.com/hashicorp/vault/sdk/helper/keysutil" --junitfile results-1.xml --jsonfile results-1.json --jsonfile-timing-events failure-summary-1.json
+# --rerun-fails --packages "$bar"
