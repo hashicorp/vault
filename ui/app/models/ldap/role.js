@@ -55,9 +55,12 @@ export const dynamicRoleFields = [
 @withModelValidations(validations)
 @withFormFields()
 export default class LdapRoleModel extends Model {
-  @attr('string') type; // this must be set to either static or dynamic in order for the adapter to build the correct url and for the correct form fields to display
-
   @attr('string') backend; // dynamic path of secret -- set on response from value passed to queryRecord
+
+  @attr('string', {
+    defaultValue: 'static',
+  })
+  type; // this must be set to either static or dynamic in order for the adapter to build the correct url and for the correct form fields to display
 
   @attr('string', {
     label: 'Role name',
@@ -82,8 +85,9 @@ export default class LdapRoleModel extends Model {
   @attr('string', {
     editType: 'ttl',
     label: 'Rotation period',
-    subText:
+    helperTextEnabled:
       'Specifies the amount of time Vault should wait before rotating the password. The minimum is 5 seconds.',
+    hideToggle: true,
   })
   rotation_period;
 
@@ -124,6 +128,8 @@ export default class LdapRoleModel extends Model {
     label: 'Creation LDIF',
     helpText: 'Specifies the LDIF statements executed to create a user. May optionally be base64 encoded.',
     defaultValue: creationLdifExample,
+    mode: 'ruby',
+    sectionHeading: 'LDIF Statements', // render section heading before form field
   })
   creation_ldif;
 
@@ -133,6 +139,7 @@ export default class LdapRoleModel extends Model {
     helpText:
       'Specifies the LDIF statements executed to delete a user once its TTL has expired. May optionally be base64 encoded.',
     defaultValue: deletionLdifExample,
+    mode: 'ruby',
   })
   deletion_ldif;
 
@@ -142,6 +149,7 @@ export default class LdapRoleModel extends Model {
     helpText:
       'Specifies the LDIF statement to attempt to rollback any changes if the creation results in an error. May optionally be base64 encoded.',
     defaultValue: rollbackLdifExample,
+    mode: 'ruby',
   })
   rollback_ldif;
 
