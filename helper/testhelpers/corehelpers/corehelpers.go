@@ -9,6 +9,7 @@ import (
 	"bytes"
 	"context"
 	"crypto/sha256"
+	"fmt"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -244,9 +245,19 @@ func NewNoopAudit(config map[string]string) (*NoopAudit, error) {
 			Config: config,
 		},
 	}
-	n.formatter.AuditFormatWriter = &audit.JSONFormatWriter{
-		SaltFunc: n.Salt,
+
+	f, err := audit.NewAuditFormatter(n)
+	if err != nil {
+		return nil, fmt.Errorf("error creating formatter: %w", err)
 	}
+
+	fw, err := audit.NewAuditFormatterWriter(f, &audit.JSONWriter{})
+	if err != nil {
+		return nil, fmt.Errorf("error creating formatter writer: %w", err)
+	}
+
+	n.formatter = fw
+
 	return n, nil
 }
 
@@ -280,7 +291,7 @@ type NoopAudit struct {
 	RespReqNonHMACKeys [][]string
 	RespErrs           []error
 
-	formatter audit.AuditFormatter
+	formatter *audit.AuditFormatterWriter
 	records   [][]byte
 	l         sync.RWMutex
 	salt      *salt.Salt
@@ -290,9 +301,9 @@ type NoopAudit struct {
 func (n *NoopAudit) LogRequest(ctx context.Context, in *logical.LogInput) error {
 	n.l.Lock()
 	defer n.l.Unlock()
-	if n.formatter.AuditFormatWriter != nil {
+	if n.formatter != nil {
 		var w bytes.Buffer
-		err := n.formatter.FormatRequest(ctx, &w, audit.FormatterConfig{}, in)
+		err := n.formatter.FormatAndWriteRequest(ctx, &w, audit.FormatterConfig{}, in)
 		if err != nil {
 			return err
 		}
@@ -312,9 +323,9 @@ func (n *NoopAudit) LogResponse(ctx context.Context, in *logical.LogInput) error
 	n.l.Lock()
 	defer n.l.Unlock()
 
-	if n.formatter.AuditFormatWriter != nil {
+	if n.formatter != nil {
 		var w bytes.Buffer
-		err := n.formatter.FormatResponse(ctx, &w, audit.FormatterConfig{}, in)
+		err := n.formatter.FormatAndWriteResponse(ctx, &w, audit.FormatterConfig{}, in)
 		if err != nil {
 			return err
 		}
@@ -339,7 +350,7 @@ func (n *NoopAudit) LogTestMessage(ctx context.Context, in *logical.LogInput, co
 	defer n.l.Unlock()
 	var w bytes.Buffer
 	tempFormatter := audit.NewTemporaryFormatter(config["format"], config["prefix"])
-	err := tempFormatter.FormatResponse(ctx, &w, audit.FormatterConfig{}, in)
+	err := tempFormatter.FormatAndWriteResponse(ctx, &w, audit.FormatterConfig{}, in)
 	if err != nil {
 		return err
 	}
