@@ -67,45 +67,76 @@ func (fw *testingFormatWriter) hashExpectedValueForComparison(input map[string]i
 	return copiedAsMap
 }
 
-func TestFormatRequestErrors(t *testing.T) {
+func TestAuditFormat_FormatRequest_Errors(t *testing.T) {
 	config := FormatterConfig{}
-	formatter := AuditFormatter{
-		AuditFormatWriter: &testingFormatWriter{},
-	}
+	formatter := auditFormatter{}
 
-	if err := formatter.FormatRequest(context.Background(), io.Discard, config, &logical.LogInput{}); err == nil {
-		t.Fatal("expected error due to nil request")
-	}
-
-	in := &logical.LogInput{
-		Request: &logical.Request{},
-	}
-	if err := formatter.FormatRequest(context.Background(), nil, config, in); err == nil {
-		t.Fatal("expected error due to nil writer")
-	}
+	entry, err := formatter.FormatRequest(context.Background(), config, &logical.LogInput{})
+	require.Error(t, err)
+	require.Nil(t, entry)
 }
 
-func TestFormatResponseErrors(t *testing.T) {
+func TestAuditFormatWriter_FormatRequest_Errors(t *testing.T) {
 	config := FormatterConfig{}
-	formatter := AuditFormatter{
-		AuditFormatWriter: &testingFormatWriter{},
+	formatter := AuditFormatterWriter{
+		Formatter: &auditFormatter{},
+		Writer:    &testingFormatWriter{},
 	}
 
-	if err := formatter.FormatResponse(context.Background(), io.Discard, config, &logical.LogInput{}); err == nil {
-		t.Fatal("expected error due to nil request")
-	}
+	entry, err := formatter.FormatRequest(context.Background(), config, &logical.LogInput{})
+	require.Error(t, err)
+	require.Nil(t, entry)
 
 	in := &logical.LogInput{
 		Request: &logical.Request{},
 	}
-	if err := formatter.FormatResponse(context.Background(), nil, config, in); err == nil {
-		t.Fatal("expected error due to nil writer")
+
+	entry, err = formatter.FormatRequest(context.Background(), config, in)
+	require.Error(t, err)
+	require.Nil(t, entry)
+}
+
+func TestAuditFormat_FormatResponse_Errors(t *testing.T) {
+	config := FormatterConfig{}
+	formatter := auditFormatter{}
+
+	entry, err := formatter.FormatResponse(context.Background(), config, &logical.LogInput{})
+	require.Error(t, err)
+	require.Nil(t, entry)
+
+	in := &logical.LogInput{Request: &logical.Request{}}
+
+	entry, err = formatter.FormatResponse(context.Background(), config, in)
+	require.Error(t, err)
+	require.Nil(t, entry)
+}
+
+func TestAuditFormatWriter_FormatResponse_Errors(t *testing.T) {
+	config := FormatterConfig{}
+	formatter := AuditFormatterWriter{
+		Formatter: &auditFormatter{},
+		Writer:    &testingFormatWriter{},
 	}
+
+	entry, err := formatter.FormatResponse(context.Background(), config, &logical.LogInput{})
+	require.Error(t, err)
+	require.Nil(t, entry)
+
+	in := &logical.LogInput{Request: &logical.Request{}}
+
+	entry, err = formatter.FormatResponse(context.Background(), config, in)
+	require.Error(t, err)
+	require.Nil(t, entry)
 }
 
 func TestElideListResponses(t *testing.T) {
 	tfw := testingFormatWriter{}
-	formatter := AuditFormatter{&tfw}
+	f, err := NewAuditFormatter(&tfw)
+	require.NoError(t, err)
+	formatter := AuditFormatterWriter{
+		Formatter: f,
+		Writer:    &tfw,
+	}
 	ctx := namespace.RootContext(context.Background())
 
 	type test struct {
@@ -184,7 +215,7 @@ func TestElideListResponses(t *testing.T) {
 		operation logical.Operation,
 		inputData map[string]interface{},
 	) {
-		err := formatter.FormatResponse(ctx, io.Discard, config, &logical.LogInput{
+		err := formatter.FormatAndWriteResponse(ctx, io.Discard, config, &logical.LogInput{
 			Request:  &logical.Request{Operation: operation},
 			Response: &logical.Response{Data: inputData},
 		})
