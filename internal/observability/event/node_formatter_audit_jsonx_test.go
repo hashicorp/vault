@@ -17,9 +17,10 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// fakeEvent will return a new fake event containing audit data.
+// fakeEvent will return a new fake event containing audit data based on the
+// specified logical.LogInput.
 // The audit event is for a response and should be JSONx format.
-func fakeEvent(t *testing.T) *eventlogger.Event {
+func fakeEvent(t *testing.T, input *logical.LogInput) *eventlogger.Event {
 	t.Helper()
 
 	date := time.Date(2023, time.July, 11, 15, 49, 10, 0o0, time.Local)
@@ -37,6 +38,8 @@ func fakeEvent(t *testing.T) *eventlogger.Event {
 	require.Equal(t, AuditFormatJSONX, auditEvent.RequiredFormat)
 	require.Equal(t, AuditResponse, auditEvent.Subtype)
 	require.Equal(t, date, auditEvent.Timestamp)
+
+	auditEvent.Data = input
 
 	e := &eventlogger.Event{
 		Type:      eventlogger.EventType(AuditType),
@@ -70,7 +73,7 @@ func TestAuditFormatterJSONX_Process(t *testing.T) {
 	tests := map[string]struct {
 		IsErrorExpected      bool
 		ExpectedErrorMessage string
-		Data                 any
+		Data                 *logical.LogInput
 	}{
 		"no-formatted-json": {
 			IsErrorExpected:      true,
@@ -87,10 +90,12 @@ func TestAuditFormatterJSONX_Process(t *testing.T) {
 		name := name
 		tc := tc
 		t.Run(name, func(t *testing.T) {
-			e := fakeEvent(t)
+			e := fakeEvent(t, tc.Data)
 			require.NotNil(t, e)
 
 			// If we have data specified, then encode it and store as a format.
+			// This is faking the behavior of the JSON formatter node which is a
+			// pre-req for JSONx formatter node.
 			if tc.Data != nil {
 				jsonBytes, err := jsonutil.EncodeJSON(tc.Data)
 				require.NoError(t, err)
