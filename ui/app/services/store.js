@@ -140,7 +140,7 @@ export default class StoreService extends Store {
   // pushes records into the store and returns the result
   fetchPage(modelName, query) {
     const response = this.constructResponse(modelName, query);
-    this.peekAll(modelName).map((model) => model.unloadRecord());
+    this.unloadAll(modelName);
     return new Promise((resolve) => {
       // after the above unloadRecords are finished, push into store
       schedule('destroy', () => {
