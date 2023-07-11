@@ -44,13 +44,13 @@ type Writer interface {
 }
 
 var (
-	_ Formatter = (*auditFormatter)(nil)
+	_ Formatter = (*AuditFormatter)(nil)
 	_ Formatter = (*AuditFormatterWriter)(nil)
 	_ Writer    = (*AuditFormatterWriter)(nil)
 )
 
-// auditFormatter should be used to format audit requests and responses.
-type auditFormatter struct {
+// AuditFormatter should be used to format audit requests and responses.
+type AuditFormatter struct {
 	salter Salter
 }
 
@@ -98,13 +98,13 @@ func (s *nonPersistentSalt) Salt(_ context.Context) (*salt.Salt, error) {
 	return salt.NewNonpersistentSalt(), nil
 }
 
-// NewAuditFormatter should be used to create an auditFormatter.
-func NewAuditFormatter(salter Salter) (*auditFormatter, error) {
+// NewAuditFormatter should be used to create an AuditFormatter.
+func NewAuditFormatter(salter Salter) (*AuditFormatter, error) {
 	if salter == nil {
 		return nil, errors.New("cannot create a new audit formatter with nil salter")
 	}
 
-	return &auditFormatter{salter: salter}, nil
+	return &AuditFormatter{salter: salter}, nil
 }
 
 // NewAuditFormatterWriter should be used to create a new AuditFormatterWriter.
@@ -125,10 +125,10 @@ func NewAuditFormatterWriter(formatter Formatter, writer Writer) (*AuditFormatte
 }
 
 // FormatRequest attempts to format the specified logical.LogInput into an AuditRequestEntry.
-func (f *auditFormatter) FormatRequest(ctx context.Context, config FormatterConfig, in *logical.LogInput) (*AuditRequestEntry, error) {
+func (f *AuditFormatter) FormatRequest(ctx context.Context, config FormatterConfig, in *logical.LogInput) (*AuditRequestEntry, error) {
 	switch {
 	case in == nil || in.Request == nil:
-		return nil, errors.New("request to response-audit a nil request")
+		return nil, errors.New("request to request-audit a nil request")
 	case f.salter == nil:
 		return nil, errors.New("salt func not configured")
 	}
@@ -255,7 +255,7 @@ func (f *auditFormatter) FormatRequest(ctx context.Context, config FormatterConf
 }
 
 // FormatResponse attempts to format the specified logical.LogInput into an AuditResponseEntry.
-func (f *auditFormatter) FormatResponse(ctx context.Context, config FormatterConfig, in *logical.LogInput) (*AuditResponseEntry, error) {
+func (f *AuditFormatter) FormatResponse(ctx context.Context, config FormatterConfig, in *logical.LogInput) (*AuditResponseEntry, error) {
 	switch {
 	case in == nil || in.Request == nil:
 		return nil, errors.New("request to response-audit a nil request")
