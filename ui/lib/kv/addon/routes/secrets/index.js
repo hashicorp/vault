@@ -22,14 +22,14 @@ export default class KvSecretsRoute extends Route {
       }
     });
     return hash({
-      ...secrets,
+      secrets,
       backend,
     });
   }
 
   setupController(controller, resolvedModel) {
     super.setupController(controller, resolvedModel);
-    controller.set('model', resolvedModel);
+    controller.set('model', resolvedModel.secrets);
     controller.pageTitle = resolvedModel.backend;
     controller.breadcrumbs = [
       { label: 'secrets', route: 'secrets', linkExternal: true },
