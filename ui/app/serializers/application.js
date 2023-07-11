@@ -66,9 +66,6 @@ export default JSONSerializer.extend({
     if (attributes.options.readOnly) {
       return;
     }
-    if (attributes.type === 'object' && val && Object.keys(val).length > 0 && valHasNotChanged) {
-      return;
-    }
     if (valIsBlank && valHasNotChanged) {
       return;
     }

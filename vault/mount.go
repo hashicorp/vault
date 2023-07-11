@@ -728,6 +728,10 @@ func (c *Core) mountInternal(ctx context.Context, entry *MountEntry, updateStora
 	if err := c.router.Mount(backend, entry.Path, entry, view); err != nil {
 		return err
 	}
+	if err = c.entBuiltinPluginMetrics(ctx, entry, 1); err != nil {
+		c.logger.Error("failed to emit enabled ent builtin plugin metrics", "error", err)
+		return err
+	}
 
 	// Re-evaluate filtered paths
 	if err := runFilteredPathsEvaluation(ctx, c, false); err != nil {
@@ -913,6 +917,10 @@ func (c *Core) unmountInternal(ctx context.Context, path string, updateStorage b
 
 	// Unmount the backend entirely
 	if err := c.router.Unmount(ctx, path); err != nil {
+		return err
+	}
+	if err = c.entBuiltinPluginMetrics(ctx, entry, -1); err != nil {
+		c.logger.Error("failed to emit disabled ent builtin plugin metrics", "error", err)
 		return err
 	}
 
@@ -1593,7 +1601,11 @@ func (c *Core) setupMounts(ctx context.Context) error {
 
 		// Ensure the path is tainted if set in the mount table
 		if entry.Tainted {
-			c.router.Taint(ctx, entry.Path)
+			// Calculate any namespace prefixes here, because when Taint() is called, there won't be
+			// a namespace to pull from the context. This is similar to what we do above in c.router.Mount().
+			path := entry.Namespace().Path + entry.Path
+			c.logger.Debug("tainting a mount due to it being marked as tainted in mount table", "entry.path", entry.Path, "entry.namespace.path", entry.Namespace().Path, "full_path", path)
+			c.router.Taint(ctx, path)
 		}
 
 		// Ensure the cache is populated, don't need the result
@@ -1698,6 +1710,7 @@ func (c *Core) newLogicalBackend(ctx context.Context, entry *MountEntry, sysView
 		config.EventsSender = pluginEventSender
 	}
 
+	ctx = namespace.ContextWithNamespace(ctx, entry.namespace)
 	ctx = context.WithValue(ctx, "core_number", c.coreNumber)
 	b, err := f(ctx, config)
 	if err != nil {

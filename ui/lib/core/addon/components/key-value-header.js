@@ -21,7 +21,6 @@ import { encodePath } from 'vault/utils/path-encoding-helpers';
  * @param {string} [root=null] - Used to set the secretPath.
  * @param {boolean} [showCurrent=true] - Boolean to show the second part of the breadcrumb, ex: the secret's name.
  * @param {boolean} [linkToPaths=true] - If true link to the path.
- * @param {boolean} [isEngine=false] - Change the LinkTo if the path is coming from an engine.
  */
 
 export default class KeyValueHeader extends Component {

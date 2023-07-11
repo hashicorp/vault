@@ -15,14 +15,12 @@ import (
 	"strconv"
 	"strings"
 	"testing"
-	"time"
 
-	"github.com/hashicorp/vault/sdk/helper/testhelpers/schema"
-
+	"github.com/hashicorp/go-secure-stdlib/parseutil"
 	vaulthttp "github.com/hashicorp/vault/http"
-	"github.com/hashicorp/vault/vault"
-
+	"github.com/hashicorp/vault/sdk/helper/testhelpers/schema"
 	"github.com/hashicorp/vault/sdk/logical"
+	"github.com/hashicorp/vault/vault"
 	"github.com/stretchr/testify/require"
 	"golang.org/x/crypto/ocsp"
 )
@@ -581,7 +579,7 @@ func runOcspRequestTest(t *testing.T, requestType string, caKeyType string, caKe
 	require.True(t, thisUpdate.Before(nextUpdate),
 		fmt.Sprintf("thisUpdate %s, should have been before nextUpdate: %s", thisUpdate, nextUpdate))
 	nextUpdateDiff := nextUpdate.Sub(thisUpdate)
-	expectedDiff, err := time.ParseDuration(defaultCrlConfig.OcspExpiry)
+	expectedDiff, err := parseutil.ParseDurationSecond(defaultCrlConfig.OcspExpiry)
 	require.NoError(t, err, "failed to parse default ocsp expiry value")
 	require.Equal(t, expectedDiff, nextUpdateDiff,
 		fmt.Sprintf("the delta between thisUpdate %s and nextUpdate: %s should have been around: %s but was %s",

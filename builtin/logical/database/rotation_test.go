@@ -1390,7 +1390,7 @@ func setupMockDB(b *databaseBackend) *mockNewDatabase {
 		id:       "foo-id",
 		name:     "mockV5",
 	}
-	b.connections["mockv5"] = dbi
+	b.connections.Put("mockv5", dbi)
 
 	return mockDB
 }

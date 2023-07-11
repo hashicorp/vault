@@ -171,11 +171,15 @@
         "path": "concepts/resource-quotas"
       },
       {
-        "title": "Client Count",
+        "title": "Client count",
         "routes": [
           {
-            "title": "Overview",
+            "title": "Clients and entities",
             "path": "concepts/client-count"
+          },
+          {
+            "title": "Client count calculation",
+            "path": "concepts/client-count/counting"
           },
           {
             "title": "FAQ",
@@ -1879,8 +1883,7 @@
       },
       {
         "title": "Upgrade to 1.14.x",
-        "path": "upgrading/upgrade-to-1.14.x",
-        "hidden": true
+        "path": "upgrading/upgrade-to-1.14.x"
       },
       {
         "title": "Upgrade to 1.13.x",
@@ -2128,8 +2131,7 @@
       },
       {
         "title": "1.14.0",
-        "path": "release-notes/1.14.0",
-        "hidden": true
+        "path": "release-notes/1.14.0"
       },
       {
         "title": "1.13.0",

@@ -37,6 +37,17 @@ on:
         required: false
         default: ''
         type: string
+      go-test-parallelism:
+        description: The parallelism parameter for Go tests
+        required: false
+        default: 20
+        type: number
+      timeout-minutes:
+        description: The maximum number of minutes that this workflow should run 
+        required: false
+        default: 60 
+        type: number
+
 
 env: ${{ fromJSON(inputs.env-vars) }}
 
@@ -48,8 +59,8 @@ jobs:
       id-token: write  # Note: this permission is explicitly required for Vault auth
       contents: read
     steps:
-    - uses: actions/checkout@8e5e7e5ab8b370d6c329ec480221332ada57f0ab # v3.5.2
-    - uses: actions/setup-go@4d34df0c2316fe8122ab82dc22947d607c0c91f9 # v4.0.0
+    - uses: actions/checkout@c85c95e3d7251135ab7dc9ce3241c5835cc595a9 # v3.5.3
+    - uses: actions/setup-go@fac708d6674e30b6ba41289acaab6d4b75aa0753 # v4.0.1
       with:
         go-version-file: ./.go-version
         cache: true
@@ -116,10 +127,10 @@ jobs:
         runner-index: ${{ fromJSON(needs.runner-indexes.outputs.runner-indexes) }}
     env:
       GOPRIVATE: github.com/hashicorp/*
-      TIMEOUT_IN_MINUTES: 60
+      TIMEOUT_IN_MINUTES: ${{ inputs.timeout-minutes }} 
     steps:
-      - uses: actions/checkout@8e5e7e5ab8b370d6c329ec480221332ada57f0ab # v3.5.2
-      - uses: actions/setup-go@4d34df0c2316fe8122ab82dc22947d607c0c91f9 # v4.0.0
+      - uses: actions/checkout@c85c95e3d7251135ab7dc9ce3241c5835cc595a9 # v3.5.3
+      - uses: actions/setup-go@fac708d6674e30b6ba41289acaab6d4b75aa0753 # v4.0.1
         with:
           go-version-file: ./.go-version
           cache: true
@@ -217,17 +228,18 @@ jobs:
           # shellcheck disable=SC2086 # can't quote package list
           GOARCH=${{ inputs.go-arch }} \
             go run gotest.tools/gotestsum --format=short-verbose \
-              --junitfile test-results/go-test/results.xml \
-              --jsonfile test-results/go-test/results.json \
+              --junitfile test-results/go-test/results-${{ matrix.runner-index }}.xml \
+              --jsonfile test-results/go-test/results-${{ matrix.runner-index }}.json \
+              --jsonfile-timing-events failure-summary-${{ matrix.runner-index }}${{inputs.name}}.json \
               -- \
               -tags "${{ inputs.go-build-tags }}" \
               -timeout=${{ env.TIMEOUT_IN_MINUTES }}m \
-              -parallel=20 \
+              -parallel=${{ inputs.go-test-parallelism }} \
               ${{ inputs.extra-flags }} \
                 \
               ${test_packages[${{ matrix.runner-index }}]}
       - name: Prepare datadog-ci
-        if: github.repository == 'hashicorp/vault' && always()
+        if: github.repository == 'hashicorp/vault' && (success() || failure()) 
         continue-on-error: true
         run: |
           curl -L --fail "https://github.com/DataDog/datadog-ci/releases/latest/download/datadog-ci_linux-x64" --output "/usr/local/bin/datadog-ci"
@@ -240,17 +252,17 @@ jobs:
           if [[ ${{ github.repository }} == 'hashicorp/vault' ]]; then
             export DATADOG_API_KEY=${{ secrets.DATADOG_API_KEY }}
           fi
-          datadog-ci junit upload --service "$GITHUB_REPOSITORY" test-results/go-test/results.xml
-        if: always()
+          datadog-ci junit upload --service "$GITHUB_REPOSITORY" test-results/go-test/results-${{ matrix.runner-index }}.xml
+        if: success() || failure()
       - name: Archive test results
         uses: actions/upload-artifact@0b7f8abb1508181956e8e162db84b466c27e18ce # v3.1.2
         with:
-          name: test-results${{ inputs.name }}-${{ matrix.runner-index }}
+          name: test-results${{ inputs.name }}
           path: test-results/
-        if: always()
-      - name: Create a summary of tests
-        uses: test-summary/action@62bc5c68de2a6a0d02039763b8c754569df99e3f # TSCCR: no entry for repository "test-summary/action"
+        if: success() || failure()
+      - name: Upload failure summary
+        uses: actions/upload-artifact@0b7f8abb1508181956e8e162db84b466c27e18ce # v3.1.2
+        if: success() || failure()
         with:
-          paths: "test-results/go-test/results.xml"
-          show: "fail"
-        if: always()
+          name: failure-summary
+          path: failure-summary-${{ matrix.runner-index }}${{inputs.name}}.json

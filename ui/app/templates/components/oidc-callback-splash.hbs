@@ -4,11 +4,10 @@
       <div class="has-text-grey has-bottom-margin-m has-current-color-fill">
         <LogoEdition />
       </div>
-      <AlertBanner
-        @type="success"
-        @title="Signing in with your OIDC provider..."
-        @message="This window will close automatically"
-      />
+      <Hds::Alert @type="inline" @color="success" as |A|>
+        <A.Title>Signing in with your OIDC provider...</A.Title>
+        <A.Description>This window will close automatically</A.Description>
+      </Hds::Alert>
     </div>
   </div>
 </div>

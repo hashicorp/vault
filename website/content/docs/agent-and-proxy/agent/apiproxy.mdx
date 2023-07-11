@@ -6,7 +6,7 @@ description: >-
   for Vault's API.
 ---
 
-# Vault Agent API Proxy
+# Vault agent API proxy
 
 Vault Agent's API Proxy functionality allows you to use Vault Agent's API as a proxy
 for Vault's API.
@@ -26,7 +26,7 @@ If a `listener` has been configured alongside a `cache` stanza, the API Proxy wi
 first attempt to utilize the cache subsystem for qualifying requests, before forwarding the
 request to Vault. See the [caching docs](/vault/docs/agent-and-proxy/agent/caching) for more information on caching.
 
-## Using Auto-Auth Token
+## Using Auto-Auth token
 
 Vault Agent allows for easy authentication to Vault in a wide variety of
 environments using [Auto-Auth](/vault/docs/agent-and-proxy/agent/autoauth). By setting the
@@ -38,7 +38,7 @@ configuration will be overridden if the request already has a token attached,
 in which case, the token present in the request will be used to forward the
 request to the Vault server.
 
-## Forcing Auto-Auth Token
+## Forcing Auto-Auth token
 
 Vault Agent can be configured to force the use of the auto-auth token by using
 the value `force` for the `use_auto_auth_token` option. This configuration
@@ -69,13 +69,13 @@ or `"never"`.
 - `when_inconsistent` `(string: optional)` - Set to one of `"fail"`, `"retry"`,
 or `"forward"`.
 
-### Example Configuration
+### Example configuration
 
 Here is an example of a `listener` configuration alongside `api_proxy` configuration to force the use of the auto_auth token
 and enforce consistency.
 
 ```hcl
-# Other Vault Agent configuration blocks
+# Other Vault agent configuration blocks
 # ...
 
 api_proxy {
