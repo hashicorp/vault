@@ -174,7 +174,8 @@ jobs:
           rm -rf ./enos/support
           rm -rf ./enos/.enos
       # Remove fail-temp step before merge to main
-      - name: fail-temp
+      - name: Temporary fail step
+        id: temp_fail
         if: ${{ always() }}
         continue-on-error: true
         run: |
@@ -187,7 +188,7 @@ jobs:
         if: ${{ always() }}
         with:
           failure-message: "github.event_name: ${{ github.event_name }} \ngithub.actor: ${{ github.actor }} \ngithub.ref_name: ${{ github.ref_name }} \n"
-          status: ${{steps.fail-temp.outcome}}
+          status: ${{steps.temp_fail.outcome}}
           slack-webhook-url: ${{secrets.SLACK_WEBHOOK_URL}}
       # Send a Slack notification to #feed-vault-enos-failures if the 'run_retry' step fails.
       - name: Send Slack notification on Enos run_retry failure
