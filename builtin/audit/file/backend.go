@@ -125,7 +125,11 @@ func Factory(ctx context.Context, conf *audit.BackendConfig) (audit.Backend, err
 	b.salt.Store((*salt.Salt)(nil))
 
 	// Configure the formatter for either case.
-	b.formatter.Formatter = &audit.AuditFormatter{SaltFunc: b.Salt}
+	f, err := audit.NewAuditFormatter(b)
+	if err != nil {
+		return nil, fmt.Errorf("error creating formatter: %w", err)
+	}
+	b.formatter.Formatter = f
 
 	switch format {
 	case "json":
@@ -157,7 +161,7 @@ func Factory(ctx context.Context, conf *audit.BackendConfig) (audit.Backend, err
 type Backend struct {
 	path string
 
-	formatter    audit.AuditFormatterWriter
+	formatter    *audit.AuditFormatterWriter
 	formatConfig audit.FormatterConfig
 
 	fileLock sync.RWMutex

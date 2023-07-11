@@ -69,7 +69,7 @@ func (fw *testingFormatWriter) hashExpectedValueForComparison(input map[string]i
 
 func TestAuditFormat_FormatRequest_Errors(t *testing.T) {
 	config := FormatterConfig{}
-	formatter := AuditFormatter{}
+	formatter := auditFormatter{}
 
 	entry, err := formatter.FormatRequest(context.Background(), config, &logical.LogInput{})
 	require.Error(t, err)
@@ -79,7 +79,7 @@ func TestAuditFormat_FormatRequest_Errors(t *testing.T) {
 func TestAuditFormatWriter_FormatRequest_Errors(t *testing.T) {
 	config := FormatterConfig{}
 	formatter := AuditFormatterWriter{
-		Formatter: &AuditFormatter{},
+		Formatter: &auditFormatter{},
 		Writer:    &testingFormatWriter{},
 	}
 
@@ -98,7 +98,7 @@ func TestAuditFormatWriter_FormatRequest_Errors(t *testing.T) {
 
 func TestAuditFormat_FormatResponse_Errors(t *testing.T) {
 	config := FormatterConfig{}
-	formatter := AuditFormatter{}
+	formatter := auditFormatter{}
 
 	entry, err := formatter.FormatResponse(context.Background(), config, &logical.LogInput{})
 	require.Error(t, err)
@@ -114,7 +114,7 @@ func TestAuditFormat_FormatResponse_Errors(t *testing.T) {
 func TestAuditFormatWriter_FormatResponse_Errors(t *testing.T) {
 	config := FormatterConfig{}
 	formatter := AuditFormatterWriter{
-		Formatter: &AuditFormatter{},
+		Formatter: &auditFormatter{},
 		Writer:    &testingFormatWriter{},
 	}
 
@@ -131,8 +131,10 @@ func TestAuditFormatWriter_FormatResponse_Errors(t *testing.T) {
 
 func TestElideListResponses(t *testing.T) {
 	tfw := testingFormatWriter{}
+	f, err := NewAuditFormatter(&tfw)
+	require.NoError(t, err)
 	formatter := AuditFormatterWriter{
-		Formatter: &AuditFormatter{SaltFunc: tfw.Salt},
+		Formatter: f,
 		Writer:    &tfw,
 	}
 	ctx := namespace.RootContext(context.Background())

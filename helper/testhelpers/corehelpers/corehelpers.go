@@ -9,6 +9,7 @@ import (
 	"bytes"
 	"context"
 	"crypto/sha256"
+	"fmt"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -244,8 +245,14 @@ func NewNoopAudit(config map[string]string) (*NoopAudit, error) {
 			Config: config,
 		},
 	}
-	n.formatter = &audit.AuditFormatterWriter{
-		Formatter: &audit.AuditFormatter{SaltFunc: n.Salt},
+
+	f, err := audit.NewAuditFormatter(n)
+	if err != nil {
+		return nil, fmt.Errorf("error creating formatter: %w", err)
+	}
+
+	n.formatter = &audit.auditFormatterWriter{
+		Formatter: f,
 		Writer:    &audit.JSONWriter{},
 	}
 
@@ -282,7 +289,7 @@ type NoopAudit struct {
 	RespReqNonHMACKeys [][]string
 	RespErrs           []error
 
-	formatter *audit.AuditFormatterWriter
+	formatter *audit.auditFormatterWriter
 	records   [][]byte
 	l         sync.RWMutex
 	salt      *salt.Salt

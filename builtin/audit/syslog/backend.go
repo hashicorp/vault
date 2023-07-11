@@ -93,14 +93,25 @@ func Factory(ctx context.Context, conf *audit.BackendConfig) (audit.Backend, err
 	}
 
 	// Configure the formatter for either case.
-	b.formatter.Formatter = &audit.AuditFormatter{SaltFunc: b.Salt}
+	f, err := audit.NewAuditFormatter(b)
+	if err != nil {
+		return nil, fmt.Errorf("error creating formatter: %w", err)
+	}
 
+	var w audit.Writer
 	switch format {
 	case "json":
-		b.formatter.Writer = &audit.JSONWriter{Prefix: conf.Config["prefix"]}
+		w = &audit.JSONWriter{Prefix: conf.Config["prefix"]}
 	case "jsonx":
-		b.formatter.Writer = &audit.JSONxWriter{Prefix: conf.Config["prefix"]}
+		w = &audit.JSONxWriter{Prefix: conf.Config["prefix"]}
 	}
+
+	fw, err := audit.NewAuditFormatWriter(f, w)
+	if err != nil {
+		return nil, fmt.Errorf("error creating formatter writer: %w", err)
+	}
+
+	b.formatter = fw
 
 	return b, nil
 }
@@ -109,7 +120,7 @@ func Factory(ctx context.Context, conf *audit.BackendConfig) (audit.Backend, err
 type Backend struct {
 	logger gsyslog.Syslogger
 
-	formatter    audit.AuditFormatterWriter
+	formatter    *audit.AuditFormatterWriter
 	formatConfig audit.FormatterConfig
 
 	saltMutex  sync.RWMutex
