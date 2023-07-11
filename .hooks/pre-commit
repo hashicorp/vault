@@ -62,14 +62,17 @@ ui_lint() {
 
 backend_lint() {
   # Silently succeed if no changes staged for Go code files.
-  if git diff --name-only --cached --exit-code -- '*.go'; then
+  staged=$(git diff --name-only --cached --exit-code -- '*.go')
+  ret=$?
+  if [ $ret -eq 0 ]; then
     return 0
   fi
 
-  ./scripts/gofmtcheck.sh || block "Backend linting failed; run 'make fmt' to fix."
+  # Get only the staged files
+  ./scripts/gofmtcheck.sh "${staged}" || block "Backend linting failed; run 'make fmt' to fix."
 }
 
 for CHECK in $CHECKS; do
   # Force each check into a subshell to avoid crosstalk.
-  ( $CHECK ) || exit $?
+  ($CHECK) || exit $?
 done
