@@ -7,20 +7,28 @@ import Route from '@ember/routing/route';
 import { inject as service } from '@ember/service';
 import { hash } from 'rsvp';
 
-export default class KvSecretsCreateRoute extends Route {
+export default class KvSecretMetadataEditRoute extends Route {
   @service store;
   @service secretMountPath;
 
   model() {
-    // TODO return model for query on kv/data
+    // TODO return model for query on kv/metadata.
     const backend = this.secretMountPath.get();
+    const { name } = this.paramsFor('secret');
     return hash({
+      path: name,
       backend,
     });
   }
 
   setupController(controller, resolvedModel) {
     super.setupController(controller, resolvedModel);
-    controller.breadcrumbs = [{ label: resolvedModel.backend, route: 'secrets' }, { label: 'create' }];
+
+    controller.breadcrumbs = [
+      { label: 'secrets', route: 'list', linkExternal: true },
+      { label: resolvedModel.backend, route: 'secret' },
+      { label: resolvedModel.path, route: 'secret.details', model: resolvedModel.path },
+      { label: 'edit-metadata' },
+    ];
   }
 }

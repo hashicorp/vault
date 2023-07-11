@@ -1,6 +1,6 @@
 <KvPageHeader @breadcrumbs={{@breadcrumbs}} @model={{@model}} @isEngineView={{true}} @pageTitle={{@pageTitle}}>
   <:tabLinks>
-    <LinkTo @route="secrets" data-test-secrets-tab="Secrets">Secrets</LinkTo>
+    <LinkTo @route="list" data-test-secrets-tab="Secrets">Secrets</LinkTo>
     <LinkTo @route="configuration" data-test-secrets-tab="Configuration">Configuration</LinkTo>
   </:tabLinks>
 
@@ -9,16 +9,16 @@
   </:toolbarFilters>
 
   <:toolbarActions>
-    <ToolbarLink @route="secrets.create" @type="add">Create secret</ToolbarLink>
+    <ToolbarLink @route="create" @type="add">Create secret</ToolbarLink>
   </:toolbarActions>
 </KvPageHeader>
 
 {{! TODO add permissions on the menu items }}
-{{#if (gt @model.length 0)}}
+{{!-- {{#if (gt @model.length 0)}}
   {{#each @model as |secret|}}
     <LinkedBlock
       class="list-item-row"
-      @params={{array (if secret.isFolder "secrets.index" "secrets.secret.details") secret.path}}
+      @params={{array (if secret.isFolder "list" "secret.details") secret.path}}
       @linkPrefix={{this.mountPoint}}
     >
       <div class="level is-mobile">
@@ -36,12 +36,12 @@
               <nav class="menu">
                 <ul class="menu-list">
                   <li>
-                    <LinkTo @route="secrets.secret.details" @model={{secret.path}}>
+                    <LinkTo @route="secret.details" @model={{secret.path}}>
                       Details
                     </LinkTo>
                   </li>
                   <li>
-                    <LinkTo @route="secrets.secret.edit" @model={{secret.path}}>
+                    <LinkTo @route="secret.edit" @model={{secret.path}}>
                       Edit
                     </LinkTo>
                   </li>
@@ -59,8 +59,8 @@
     @title="No secrets yet"
     @message="When created, secrets will be listed here. Create a secret to get started."
   >
-    <LinkTo class="has-top-margin-xs" @route="secrets.create">
+    <LinkTo class="has-top-margin-xs" @route="create">
       Create secret
     </LinkTo>
   </EmptyState>
-{{/if}}
+{{/if}} --}}
