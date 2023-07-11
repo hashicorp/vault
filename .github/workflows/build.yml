@@ -21,22 +21,7 @@ concurrency:
 jobs:
   # verify-changes determines if the changes are only for docs (website)
   verify-changes:
-    if: github.event.pull_request.draft == false
-    runs-on: ubuntu-latest
-    outputs:
-      is_docs_change: ${{ steps.get-changeddir.outputs.is_docs_change }}
-    steps:
-      - uses: actions/checkout@c85c95e3d7251135ab7dc9ce3241c5835cc595a9 # v3.5.3
-        with:
-          ref: ${{ github.event.pull_request.head.sha }}
-          fetch-depth: 0 # Use fetch depth 0 for comparing changes to base branch
-      - name: Get changed directories
-        id: get-changeddir
-        env:
-          TYPE: ${{ github.event_name }}
-          REF_NAME: ${{ github.ref_name }}
-          BASE: ${{ github.base_ref }}
-        run: ./.github/scripts/verify_changes.sh ${{ env.TYPE }} ${{ env.REF_NAME }} ${{ env.BASE }}
+    uses: ./.github/workflows/verify_changes.yml
 
   product-metadata:
     # do not run build and test steps for docs changes
