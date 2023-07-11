@@ -13,6 +13,7 @@ import (
 
 var _ eventlogger.Node = (*AuditFormatterJSONX)(nil)
 
+// AuditFormatterJSONX represents a formatter node which will Process JSON to JSONx format.
 type AuditFormatterJSONX struct {
 	format auditFormat
 }
