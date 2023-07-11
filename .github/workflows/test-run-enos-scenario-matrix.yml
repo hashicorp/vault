@@ -105,6 +105,7 @@ jobs:
       ENOS_VAR_vault_bundle_path: ./support/downloads/${{ inputs.build-artifact-name }}
       ENOS_VAR_vault_license_path: ./support/vault.hclic
       ENOS_DEBUG_DATA_ROOT_DIR: /tmp/enos-debug-data
+
     steps:
       - uses: actions/checkout@c85c95e3d7251135ab7dc9ce3241c5835cc595a9 # v3.5.3
       - uses: hashicorp/setup-terraform@v2
@@ -187,7 +188,8 @@ jobs:
         uses: hashicorp/actions-slack-status@v1
         if: ${{ always() }}
         with:
-          failure-message: "${{ github.event_name == 'repository_dispatch' ? github.event_name : 'this is a PR'}}"
+          failure-message: "Triggering event: ${{ github.event_name }} \nActor: '${{ github.actor }}' \n[TEST] github.event.client_payload.payload.branch: '${{ github.event.client_payload.payload.branch }}'"
+          # failure-message: "${{ github.event_name == 'repository_dispatch' ? github.event_name : 'this is a PR'}}"
           # failure-message: "Actor: '${{ github.actor }}' \nBranch: '${{ github.event_name == 'pull_request' ? github.event.pull_request.head.ref : 'n/a'}}' \nPR title: '${{ github.event_name == 'pull_request' ? github.event.pull_request.title : 'n/a'}} \n[TEST] If repository_dispatch: '${{ github.event_name == 'repository_dispatch' ? github.event_name : 'this is a PR'}}'"
           # failure-message: "github.event_name: ${{ github.event_name }} \ngithub.actor: ${{ github.actor }} \ngithub.ref_name: ${{ github.ref_name }} \n"
           status: ${{steps.temp_fail.outcome}}
