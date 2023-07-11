@@ -518,6 +518,20 @@ func documentPath(p *Path, backend *Backend, requestResponsePrefix string, doc *
 			}
 		}
 
+		// The conventions enforced by the Vault HTTP routing code make it impossible to match a path with a trailing
+		// slash to anything other than a ListOperation. Catch mistakes in path definition, to enforce that if both of
+		// the two following blocks of code (non-list, and list) write an OpenAPI path to the output document, then the
+		// first one will definitely not have a trailing slash.
+		originalPathHasTrailingSlash := strings.HasSuffix(path, "/")
+		if originalPathHasTrailingSlash && (pi.Get != nil || pi.Post != nil || pi.Delete != nil) {
+			backend.Logger().Warn(
+				"OpenAPI spec generation: discarding impossible-to-invoke non-list operations from path with "+
+					"required trailing slash; this is a bug in the backend code", "path", path)
+			pi.Get = nil
+			pi.Post = nil
+			pi.Delete = nil
+		}
+
 		// Write the regular, non-list, OpenAPI path to the OpenAPI document, UNLESS we generated a ListOperation, and
 		// NO OTHER operation types. In that fairly common case (there are lots of list-only endpoints), we avoid
 		// writing a redundant OpenAPI path for (e.g.) "auth/token/accessors" with no operations, only to then write
@@ -527,8 +541,7 @@ func documentPath(p *Path, backend *Backend, requestResponsePrefix string, doc *
 		// to provide documentation to a human that an endpoint exists, even if it has no invokable OpenAPI operations.
 		// Examples of this include kv-v2's ".*" endpoint (regex cannot be translated to OpenAPI parameters), and the
 		// auth/oci/login endpoint (implements ResolveRoleOperation only, only callable from inside Vault).
-		generateNonListOpenAPIPath := listOperation == nil || pi.Get != nil || pi.Post != nil || pi.Delete != nil
-		if generateNonListOpenAPIPath {
+		if listOperation == nil || pi.Get != nil || pi.Post != nil || pi.Delete != nil {
 			openAPIPath := "/" + path
 			if doc.Paths[openAPIPath] != nil {
 				backend.Logger().Warn(
@@ -540,10 +553,11 @@ func documentPath(p *Path, backend *Backend, requestResponsePrefix string, doc *
 
 		// If there is a ListOperation, write it to a separate OpenAPI path in the document.
 		if listOperation != nil {
-			// Typically, we will append a slash here to disambiguate from the path written immediately above.
-			// However, if we skipped writing the path above (and so don't need to worry about disambiguating from it),
-			// AND the path already contains a trailing slash, we want to avoid doubling it.
-			if generateNonListOpenAPIPath || !strings.HasSuffix(path, "/") {
+			// Append a slash here to disambiguate from the path written immediately above.
+			// However, if the path already contains a trailing slash, we want to avoid doubling it, and it is
+			// guaranteed (through the interaction of logic in the last two blocks) that the block immediately above
+			// will NOT have written a path to the OpenAPI document.
+			if !originalPathHasTrailingSlash {
 				path += "/"
 			}
 
