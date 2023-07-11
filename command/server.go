@@ -1422,6 +1422,9 @@ func (c *ServerCommand) Run(args []string) int {
 		info["HCP resource ID"] = config.HCPLinkConf.Resource.ID
 	}
 
+	infoKeys = append(infoKeys, "administrative namespace")
+	info["administrative namespace"] = config.AdministrativeNamespacePath
+
 	sort.Strings(infoKeys)
 	c.UI.Output("==> Vault server configuration:\n")
 
@@ -2716,6 +2719,7 @@ func createCoreConfig(c *ServerCommand, config *server.Config, backend physical.
 		LicensePath:                    config.LicensePath,
 		DisableSSCTokens:               config.DisableSSCTokens,
 		Experiments:                    config.Experiments,
+		AdministrativeNamespacePath:    config.AdministrativeNamespacePath,
 	}
 
 	if c.flagDev {
