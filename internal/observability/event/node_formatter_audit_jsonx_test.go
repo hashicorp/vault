@@ -17,10 +17,10 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// fakeEvent will return a new fake event containing audit data based on the
+// fakeJSONXAuditEvent will return a new fake event containing audit data based on the
 // specified logical.LogInput.
 // The audit event is for a response and should be JSONx format.
-func fakeEvent(t *testing.T, input *logical.LogInput) *eventlogger.Event {
+func fakeJSONXAuditEvent(t *testing.T, input *logical.LogInput) *eventlogger.Event {
 	t.Helper()
 
 	date := time.Date(2023, time.July, 11, 15, 49, 10, 0o0, time.Local)
@@ -90,7 +90,8 @@ func TestAuditFormatterJSONX_Process(t *testing.T) {
 		name := name
 		tc := tc
 		t.Run(name, func(t *testing.T) {
-			e := fakeEvent(t, tc.Data)
+			t.Parallel()
+			e := fakeJSONXAuditEvent(t, tc.Data)
 			require.NotNil(t, e)
 
 			// If we have data specified, then encode it and store as a format.
