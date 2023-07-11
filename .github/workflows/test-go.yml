@@ -238,7 +238,7 @@ jobs:
             export VAULT_FAIL_TEST
             # # join packages names as space separated list
             # packages=$(IFS=" " ; echo "${test_packages[${{ matrix.runner-index }}]}")
-            rerunFails="--rerun-fails --packages=${test_packages[${{ matrix.runner-index }}]}"
+            rerunFails="--rerun-fails --packages=\"${test_packages[${{ matrix.runner-index }}]}\""
             echo "go run gotest.tools/gotestsum --format=short-verbose  $rerunFails"
           fi
 
