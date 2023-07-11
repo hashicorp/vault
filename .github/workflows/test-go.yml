@@ -243,7 +243,7 @@ jobs:
           fi
 
           GOARCH=${{ inputs.go-arch }} \
-            go run gotest.tools/gotestsum --format=short-verbose  $rerunFails\
+            go run gotest.tools/gotestsum --format=short-verbose  $rerunFails \
               --junitfile test-results/go-test/results-${{ matrix.runner-index }}.xml \
               --jsonfile test-results/go-test/results-${{ matrix.runner-index }}.json \
               --jsonfile-timing-events failure-summary-${{ matrix.runner-index }}${{inputs.name}}.json \
