@@ -4,22 +4,19 @@
 package audit
 
 import (
-	"context"
 	"encoding/json"
 	"fmt"
 	"io"
-
-	"github.com/hashicorp/vault/sdk/helper/salt"
 )
 
-// JSONFormatWriter is an AuditFormatWriter implementation that structures data into
-// a JSON format.
-type JSONFormatWriter struct {
-	Prefix   string
-	SaltFunc func(context.Context) (*salt.Salt, error)
+var _ Writer = (*JSONWriter)(nil)
+
+// JSONWriter is a Writer implementation that structures data into a JSON format.
+type JSONWriter struct {
+	Prefix string
 }
 
-func (f *JSONFormatWriter) WriteRequest(w io.Writer, req *AuditRequestEntry) error {
+func (f *JSONWriter) WriteRequest(w io.Writer, req *AuditRequestEntry) error {
 	if req == nil {
 		return fmt.Errorf("request entry was nil, cannot encode")
 	}
@@ -35,7 +32,7 @@ func (f *JSONFormatWriter) WriteRequest(w io.Writer, req *AuditRequestEntry) err
 	return enc.Encode(req)
 }
 
-func (f *JSONFormatWriter) WriteResponse(w io.Writer, resp *AuditResponseEntry) error {
+func (f *JSONWriter) WriteResponse(w io.Writer, resp *AuditResponseEntry) error {
 	if resp == nil {
 		return fmt.Errorf("response entry was nil, cannot encode")
 	}
@@ -49,8 +46,4 @@ func (f *JSONFormatWriter) WriteResponse(w io.Writer, resp *AuditResponseEntry) 
 
 	enc := json.NewEncoder(w)
 	return enc.Encode(resp)
-}
-
-func (f *JSONFormatWriter) Salt(ctx context.Context) (*salt.Salt, error) {
-	return f.SaltFunc(ctx)
 }
