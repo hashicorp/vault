@@ -90,7 +90,7 @@ type DynamoDBBackend struct {
 	client     *dynamodb.DynamoDB
 	logger     log.Logger
 	haEnabled  bool
-	permitPool *physical.PermitPool
+	permitPool *PermitPoolWithMetrics
 }
 
 // DynamoDBRecord is the representation of a vault entry in
@@ -126,7 +126,7 @@ type DynamoDBLockRecord struct {
 type PermitPoolWithMetrics struct {
 	physical.PermitPool
 	pendingPermits int32
-	poolSize	   int
+	poolSize       int
 }
 
 // NewDynamoDBBackend constructs a DynamoDB backend. If the
@@ -255,7 +255,7 @@ func NewDynamoDBBackend(conf map[string]string, logger log.Logger) (physical.Bac
 	return &DynamoDBBackend{
 		table:      table,
 		client:     client,
-		permitPool: physical.NewPermitPool(maxParInt),
+		permitPool: NewPermitPoolWithMetrics(maxParInt),
 		haEnabled:  haEnabledBool,
 		logger:     logger,
 	}, nil
