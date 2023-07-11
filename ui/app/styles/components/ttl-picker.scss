@@ -11,6 +11,10 @@
   font-weight: bold;
 }
 
+.ttl-picker-form-field-error input {
+  border: 1px solid $red-500;
+}
+
 input.has-error,
 input.has-error:focus,
 input.has-error:hover {

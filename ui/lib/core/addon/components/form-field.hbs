@@ -139,6 +139,7 @@
       {{#let (or (get @model this.valuePath) @attr.options.setDefault) as |initialValue|}}
         <TtlPicker
           data-test-input={{@attr.name}}
+          class={{if this.validationError "ttl-picker-form-field-error"}}
           @onChange={{this.setAndBroadcastTtl}}
           @label={{this.labelString}}
           @helperTextDisabled={{or @attr.options.helperTextDisabled "Vault will use the default lease duration."}}
@@ -149,6 +150,9 @@
           @hideToggle={{@attr.options.hideToggle}}
         />
       {{/let}}
+      {{#if this.validationError}}
+        <AlertInline @type="danger" @message={{this.validationError}} />
+      {{/if}}
     </div>
   {{else if (eq @attr.options.editType "regex")}}
     {{! Regex Validated Input }}
