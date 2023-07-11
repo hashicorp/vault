@@ -251,10 +251,12 @@ func NewNoopAudit(config map[string]string) (*NoopAudit, error) {
 		return nil, fmt.Errorf("error creating formatter: %w", err)
 	}
 
-	n.formatter = &audit.AuditFormatterWriter{
-		Formatter: f,
-		Writer:    &audit.JSONWriter{},
+	fw, err := audit.NewAuditFormatterWriter(f, &audit.JSONWriter{})
+	if err != nil {
+		return nil, fmt.Errorf("error creating formatter writer: %w", err)
 	}
+
+	n.formatter = fw
 
 	return n, nil
 }

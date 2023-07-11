@@ -106,7 +106,7 @@ func Factory(ctx context.Context, conf *audit.BackendConfig) (audit.Backend, err
 		w = &audit.JSONxWriter{Prefix: conf.Config["prefix"]}
 	}
 
-	fw, err := audit.NewAuditFormatWriter(f, w)
+	fw, err := audit.NewAuditFormatterWriter(f, w)
 	if err != nil {
 		return nil, fmt.Errorf("error creating formatter writer: %w", err)
 	}

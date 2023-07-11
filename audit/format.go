@@ -107,13 +107,13 @@ func NewAuditFormatter(salter Salter) (*auditFormatter, error) {
 	return &auditFormatter{salter: salter}, nil
 }
 
-// NewAuditFormatWriter should be used to create a new AuditFormatWriter.
-func NewAuditFormatWriter(formatter Formatter, writer Writer) (*AuditFormatterWriter, error) {
+// NewAuditFormatterWriter should be used to create a new AuditFormatterWriter.
+func NewAuditFormatterWriter(formatter Formatter, writer Writer) (*AuditFormatterWriter, error) {
 	switch {
 	case formatter == nil:
-		return nil, errors.New("cannot create a new audit format writer with nil formatter")
+		return nil, errors.New("cannot create a new audit formatter writer with nil formatter")
 	case writer == nil:
-		return nil, errors.New("cannot create a new audit format writer with nil formatter")
+		return nil, errors.New("cannot create a new audit formatter writer with nil formatter")
 	}
 
 	fw := &AuditFormatterWriter{
@@ -689,9 +689,9 @@ func NewTemporaryFormatter(format, prefix string) *AuditFormatterWriter {
 		w = &JSONWriter{Prefix: prefix}
 	}
 
-	// We can ignore the error from NewAuditFormatWriter since we are sure both
+	// We can ignore the error from NewAuditFormatterWriter since we are sure both
 	// the formatter and writer are not nil.
-	fw, _ := NewAuditFormatWriter(f, w)
+	fw, _ := NewAuditFormatterWriter(f, w)
 
 	return fw
 }
