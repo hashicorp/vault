@@ -186,7 +186,7 @@ jobs:
         uses: hashicorp/actions-slack-status@v1
         if: ${{ always() }}
         with:
-          failure-message: "github.event.action: ${{ github.event.action }} \ngithub.event.sender: ${{ github.event.sender }}"
+          failure-message: "github.event_name: ${{ github.event_name }} \ngithub.actor: ${{ github.actor }} \ngithub.ref_name: ${{ github.ref_name }} \n"
           status: ${{steps.fail-temp.outcome}}
           slack-webhook-url: ${{secrets.SLACK_WEBHOOK_URL}}
       # Send a Slack notification to #feed-vault-enos-failures if the 'run_retry' step fails.
