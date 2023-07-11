@@ -52,6 +52,7 @@ func Backend() *backend {
 			Callback: teamMapPaths[0].Callbacks[logical.ReadOperation],
 			Summary:  teamMapPaths[0].HelpSynopsis,
 			DisplayAttrs: &framework.DisplayAttributes{
+				OperationVerb:   "list",
 				OperationSuffix: "teams2", // The ReadOperation is redundant with the ListOperation
 			},
 		},
@@ -84,6 +85,7 @@ func Backend() *backend {
 			Callback: userMapPaths[0].Callbacks[logical.ReadOperation],
 			Summary:  userMapPaths[0].HelpSynopsis,
 			DisplayAttrs: &framework.DisplayAttributes{
+				OperationVerb:   "list",
 				OperationSuffix: "users2", // The ReadOperation is redundant with the ListOperation
 			},
 		},
