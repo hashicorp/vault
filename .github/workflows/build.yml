@@ -297,27 +297,6 @@ jobs:
       artifact-version: ${{ needs.product-metadata.outputs.vault-version }}
     secrets: inherit
 
-  completed-successfully:
-    # We force a failure if any of the dependent jobs fail,
-    # this is a workaround for the issue reported https://github.com/actions/runner/issues/2566
-    if: |
-      always() && (cancelled() ||
-      contains(needs.*.result, 'cancelled') ||
-      contains(needs.*.result, 'failure'))
-    runs-on: ubuntu-latest
-    needs:
-      - build-other
-      - build-linux
-      - build-darwin
-      - build-docker
-      - build-ubi
-      - test
-      - test-docker-k8s
-    steps:
-      - run: |
-          echo "Some of the required build and test workflows have failed!"
-          exit 1
-
   report-build-failures:
     name: Report Build Failures
     needs:
@@ -343,6 +322,27 @@ jobs:
           REPO: ${{ github.event.repository.name }}
           FAILED_JOBS: ${{ contains(needs.*.result, 'failure') && needs.*.name }}
         run: ./.github/scripts/report_failed_builds.sh
+
+  completed-successfully:
+    # We force a failure if any of the dependent jobs fail,
+    # this is a workaround for the issue reported https://github.com/actions/runner/issues/2566
+    if: |
+      always() && (cancelled() ||
+      contains(needs.*.result, 'cancelled') ||
+      contains(needs.*.result, 'failure'))
+    runs-on: ubuntu-latest
+    needs:
+      - build-other
+      - build-linux
+      - build-darwin
+      - build-docker
+      - build-ubi
+      - test
+      - test-docker-k8s
+    steps:
+      - run: |
+          echo "Some of the required build and test workflows have failed!"
+          exit 1
 
   notify-completed-successfully-failures-oss:
     if: ${{ always() && github.repository == 'hashicorp/vault' && needs.completed-successfully.result == 'failure' && (github.ref_name == 'main' || startsWith(github.ref_name, 'release/')) }}
