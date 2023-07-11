@@ -95,6 +95,7 @@ func TestNewAuditFormatterJSON(t *testing.T) {
 		name := name
 		tc := tc
 		t.Run(name, func(t *testing.T) {
+			t.Parallel()
 			cfg := vaultaudit.FormatterConfig{}
 			var ss vaultaudit.Salter
 			if tc.UseStaticSalt {
@@ -173,6 +174,7 @@ func TestAuditFormatterJSON_Process(t *testing.T) {
 		name := name
 		tc := tc
 		t.Run(name, func(t *testing.T) {
+			t.Parallel()
 			e := fakeJSONAuditEvent(t, tc.Data)
 			require.NotNil(t, e)
 

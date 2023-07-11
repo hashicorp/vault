@@ -110,6 +110,7 @@ func TestNewAuditFormatter(t *testing.T) {
 		name := name
 		tc := tc
 		t.Run(name, func(t *testing.T) {
+			t.Parallel()
 			var s Salter
 			switch {
 			case tc.UseStaticSalter:
@@ -167,6 +168,7 @@ func TestAuditFormatter_FormatRequest(t *testing.T) {
 		name := name
 		tc := tc
 		t.Run(name, func(t *testing.T) {
+			t.Parallel()
 			config := FormatterConfig{}
 			f, err := NewAuditFormatter(newStaticSalt(t))
 			require.NoError(t, err)
@@ -230,6 +232,7 @@ func TestAuditFormatter_FormatResponse(t *testing.T) {
 		name := name
 		tc := tc
 		t.Run(name, func(t *testing.T) {
+			t.Parallel()
 			config := FormatterConfig{}
 			f, err := NewAuditFormatter(newStaticSalt(t))
 			require.NoError(t, err)
