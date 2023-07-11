@@ -13,6 +13,7 @@ import Component from '@glimmer/component';
 import utils from 'vault/lib/key-utils';
 import keys from 'vault/lib/keycodes';
 import { encodePath } from 'vault/utils/path-encoding-helpers';
+import Ember from 'ember';
 
 /**
  * @module NavigateInput
@@ -200,7 +201,7 @@ export default class NavigateInput extends Component {
   maybeFocusInput() {
     // if component is loaded and filter is already applied,
     // we assume the user just typed in a filter and the page reloaded
-    if (this.args.filter) {
+    if (this.args.filter && !Ember.testing) {
       later(
         this,
         function () {
