@@ -17,7 +17,7 @@
             />
           {{else}}
             {{! OTHERWISE WE'RE EDITING }}
-            {{#if (or (eq attr.name "name") (attr.options.editDisabled))}}
+            {{#if (or (eq attr.name "name") (eq attr.name "username") (attr.options.editDisabled))}}
               <ReadonlyFormField @attr={{attr}} @value={{get @model attr.name}} />
             {{else}}
               <FormField
