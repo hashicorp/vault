@@ -188,10 +188,7 @@ jobs:
         uses: hashicorp/actions-slack-status@v1
         if: ${{ always() }}
         with:
-          failure-message: "Triggering event: ${{ github.event_name }} \nActor: '${{ github.actor }}' \n[TEST] github.event.client_payload.payload.branch: '${{ github.event.client_payload.payload.branch }}'"
-          # failure-message: "${{ github.event_name == 'repository_dispatch' ? github.event_name : 'this is a PR'}}"
-          # failure-message: "Actor: '${{ github.actor }}' \nBranch: '${{ github.event_name == 'pull_request' ? github.event.pull_request.head.ref : 'n/a'}}' \nPR title: '${{ github.event_name == 'pull_request' ? github.event.pull_request.title : 'n/a'}} \n[TEST] If repository_dispatch: '${{ github.event_name == 'repository_dispatch' ? github.event_name : 'this is a PR'}}'"
-          # failure-message: "github.event_name: ${{ github.event_name }} \ngithub.actor: ${{ github.actor }} \ngithub.ref_name: ${{ github.ref_name }} \n"
+          failure-message: "Triggering event: `${{ github.event_name }}` \nActor: `${{ github.actor }}`"
           status: ${{steps.temp_fail.outcome}}
           slack-webhook-url: ${{secrets.SLACK_WEBHOOK_URL}}
       # Send a Slack notification to #feed-vault-enos-failures if the 'run_retry' step fails.
