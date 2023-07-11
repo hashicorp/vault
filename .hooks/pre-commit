@@ -74,5 +74,5 @@ backend_lint() {
 
 for CHECK in $CHECKS; do
   # Force each check into a subshell to avoid crosstalk.
-  ($CHECK) || exit $?
+  ( $CHECK ) || exit $?
 done
