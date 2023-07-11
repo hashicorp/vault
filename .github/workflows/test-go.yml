@@ -132,7 +132,7 @@ jobs:
               jq -c --arg BINARY "${BINARY_TESTS}" \
                 '.include += [{
                   "id": 16,
-                  "estimatedRuntime": "0s",
+                  "estimatedRuntime": "N/A",
                   "packages": $BINARY,
                   "description": "partition 16 - binary test packages"
               }]' matrix.json
