@@ -15,7 +15,20 @@ for Vault 1.13.x compared to 1.12. Please read it carefully.
 
 @include 'consul-dataplane-upgrade-note.mdx'
 
-### Active Directory Secrets Engine Deprecation
+### User lockout
+
+As of version 1.13, Vault will stop trying to validate user credentials if the
+user submits multiple invalid credentials in quick succession. During lockout,
+Vault ignores requests from the barred user rather than responding with a 
+permission denied error.
+
+User lockout is enabled by default with a lockout threshold of 5 attempt, a
+lockout duration of 15 minutes, and a counter reset window of 15 minutes.
+
+For more information, refer to the [User lockout](/vault/docs/concepts/user-lockout)
+overview.
+
+### Active directory secrets engine deprecation
 
 The Active Directory (AD) secrets engine has been deprecated as of the Vault 1.13 release.
 We will continue to support the AD secrets engine in maintenance mode for six major Vault
