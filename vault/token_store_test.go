@@ -6,6 +6,7 @@ package vault
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"path"
 	"reflect"
@@ -2389,9 +2390,9 @@ func TestTokenStore_HandleRequest_RevokeOrphan_NonRoot(t *testing.T) {
 		"token": "child",
 	}
 	req.ClientToken = "child"
-	resp, err := ts.HandleRequest(namespace.RootContext(nil), req)
-	if err != logical.ErrInvalidRequest {
-		t.Fatalf("did not get error when non-root revoking itself with orphan flag; resp is %#v", resp)
+	resp, err := c.HandleRequest(namespace.RootContext(nil), req)
+	if !errors.Is(err, logical.ErrPermissionDenied) {
+		t.Fatalf("did not get expected error when non-root revoking itself with orphan flag; resp is %#v; err is %#v", resp, err)
 	}
 
 	time.Sleep(200 * time.Millisecond)
