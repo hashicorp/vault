@@ -13,14 +13,23 @@ export default class KvSecretsRoute extends Route {
 
   model() {
     // TODO add filtering and return model for query on kv/metadata.
-    const backend = this.secretMountPath.get();
+    const backend = this.secretMountPath.currentPath;
+    const secrets = this.store.query('kv/metadata', { backend }).catch((err) => {
+      if (err.httpStatus === 404) {
+        return [];
+      } else {
+        throw err;
+      }
+    });
     return hash({
+      ...secrets,
       backend,
     });
   }
 
   setupController(controller, resolvedModel) {
     super.setupController(controller, resolvedModel);
+    controller.set('model', resolvedModel);
     controller.pageTitle = resolvedModel.backend;
     controller.breadcrumbs = [
       { label: 'secrets', route: 'secrets', linkExternal: true },
