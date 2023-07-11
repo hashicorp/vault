@@ -68,7 +68,7 @@ backend_lint() {
     return 0
   fi
 
-  # Get only the staged files
+  # Only run fmtcheck on staged files
   ./scripts/gofmtcheck.sh "${staged}" || block "Backend linting failed; run 'make fmt' to fix."
 }
 
