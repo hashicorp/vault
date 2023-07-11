@@ -8,7 +8,6 @@ import { setupRenderingTest } from 'vault/tests/helpers';
 import { render } from '@ember/test-helpers';
 import { hbs } from 'ember-cli-htmlbars';
 
-// To-Do: add to tests
 const SELECTORS = {
   policyText: '[data-test-modal-title]',
   aclPolicyParagraph: '[data-test-example-modal-text-acl]',
@@ -62,7 +61,6 @@ module('Integration | Component | policy-example', function (hooks) {
       @policyType={{this.model.policyType}}
     />
     `);
-    //await this.pauseTest();
     assert.dom(SELECTORS.jsonText).includesText(`# Grant 'create', 'read' , 'update', and ‘list’ permission`);
   });
 
