@@ -3,10 +3,11 @@
  * SPDX-License-Identifier: MPL-2.0
  */
 
-import { debounce } from '@ember/runloop';
+import { debounce, later } from '@ember/runloop';
 import { inject as service } from '@ember/service';
-import Component from '@glimmer/component';
 import { action } from '@ember/object';
+import { guidFor } from '@ember/object/internals';
+import Component from '@glimmer/component';
 
 // TODO MOVE THESE TO THE ADDON
 import utils from 'vault/lib/key-utils';
@@ -61,6 +62,7 @@ const routeFor = function (type, mode, urls) {
 
 export default class NavigateInput extends Component {
   @service router;
+  inputId = `nav-input-${guidFor(this)}`;
 
   get mode() {
     return this.args.mode || 'secrets';
@@ -129,7 +131,7 @@ export default class NavigateInput extends Component {
   }
 
   onTab(event) {
-    const firstPartialMatch = this.args.firstPartialMatch.id;
+    const firstPartialMatch = this.args.firstPartialMatch?.id;
     if (!firstPartialMatch) {
       return;
     }
@@ -190,14 +192,31 @@ export default class NavigateInput extends Component {
         page: 1,
       },
     });
+    // component is not re-rendered on policy list so trigger autofocus here
+    this.maybeFocusInput();
   }
 
   @action
-  handleInput(filter) {
-    if (this.args.filterDidChange) {
-      this.args.filterDidChange(filter.target.value);
+  maybeFocusInput() {
+    // if component is loaded and filter is already applied,
+    // we assume the user just typed in a filter and the page reloaded
+    if (this.args.filter) {
+      later(
+        this,
+        function () {
+          document.getElementById(this.inputId).focus();
+        },
+        400
+      );
     }
-    debounce(this, this.filterUpdated, filter.target.value, 200);
+  }
+
+  @action
+  handleInput(evt) {
+    if (this.args.filterDidChange) {
+      this.args.filterDidChange(evt.target.value);
+    }
+    debounce(this, this.filterUpdated, evt.target.value, 400);
   }
   @action
   setFilterFocused(isFocused) {
