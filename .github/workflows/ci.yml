@@ -88,21 +88,19 @@ jobs:
       - id: diff
         run: |
           ./.github/scripts/oss-diff.sh ${{ steps.determine-branch.outputs.BRANCH }} HEAD
+  verify-changes:
+    name: Verify doc-ui only PRs
+    uses: ./.github/workflows/verify_changes.yml
   test-go:
     name: Run Go tests
     needs:
       - setup
       - setup-go-cache
-    # Don't run this job for PR branches starting with:
-    # 'ui/', 'backport/ui/', 'docs/', or 'backport/docs/'
-    # OR
-    # the 'docs' label is present
+      - verify-changes
+    # Don't run this job for docs/ui only PRs
     if: |
-      !startsWith(github.head_ref, 'ui/') &&
-      !startsWith(github.head_ref, 'backport/ui/') &&
-      !startsWith(github.head_ref, 'docs/') &&
-      !startsWith(github.head_ref, 'backport/docs/') &&
-      !contains(github.event.pull_request.labels.*.name, 'docs')
+      needs.verify-changes.outputs.is_docs_change == 'false' &&
+      needs.verify-changes.outputs.is_ui_change == 'false'
     uses: ./.github/workflows/test-go.yml
     with:
       # The regular Go tests use an extra runner to execute the
@@ -119,17 +117,12 @@ jobs:
     needs:
       - setup
       - setup-go-cache
-    # Don't run this job for PR branches starting with:
-    # 'ui/', 'backport/ui/', 'docs/', or 'backport/docs/'
-    # OR
-    # the 'docs' label is present
+      - verify-changes
+    # Don't run this job for docs/ui only PRs
     if: |
       github.event.pull_request.draft == false &&
-      !startsWith(github.head_ref, 'ui/') &&
-      !startsWith(github.head_ref, 'backport/ui/') &&
-      !startsWith(github.head_ref, 'docs/') &&
-      !startsWith(github.head_ref, 'backport/docs/') &&
-      !contains(github.event.pull_request.labels.*.name, 'docs')
+      needs.verify-changes.outputs.is_docs_change == 'false' &&
+      needs.verify-changes.outputs.is_ui_change == 'false'
     uses: ./.github/workflows/test-go.yml
     with:
       total-runners: 16
@@ -146,21 +139,16 @@ jobs:
     secrets: inherit
   test-go-fips:
     name: Run Go tests with FIPS configuration
-    # Only run this job for the enterprise repo if the PR branch doesn't start with:
-    # 'ui/', 'backport/ui/', 'docs/', or 'backport/docs/'
-    # OR
-    # the 'docs' label is not present
+    # Only run this job for the enterprise repo if the PR is not docs/ui only
     if: |
       github.event.pull_request.draft == false &&
       needs.setup.outputs.enterprise == 1 &&
-      !startsWith(github.head_ref, 'ui/') &&
-      !startsWith(github.head_ref, 'backport/ui/') &&
-      !startsWith(github.head_ref, 'docs/') &&
-      !startsWith(github.head_ref, 'backport/docs/') &&
-      !contains(github.event.pull_request.labels.*.name, 'docs')
+      needs.verify-changes.outputs.is_docs_change == 'false' &&
+      needs.verify-changes.outputs.is_ui_change == 'false'
     needs:
       - setup
       - setup-go-cache
+      - verify-changes
     uses: ./.github/workflows/test-go.yml
     with:
       total-runners: 16
