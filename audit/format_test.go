@@ -18,8 +18,6 @@ import (
 
 // newStaticSalt returns a new staticSalt for use in testing.
 func newStaticSalt(t *testing.T) *staticSalt {
-	t.Helper()
-
 	s, err := salt.NewSalt(context.Background(), nil, nil)
 	require.NoError(t, err)
 
@@ -33,7 +31,7 @@ type staticSalt struct {
 }
 
 // Salt returns the static salt and no error.
-func (s *staticSalt) Salt(ctx context.Context) (*salt.Salt, error) {
+func (s *staticSalt) Salt(_ context.Context) (*salt.Salt, error) {
 	return s.salt, nil
 }
 

@@ -65,7 +65,7 @@ func (f *AuditFormatterJSON) Process(ctx context.Context, e *eventlogger.Event) 
 		return nil, fmt.Errorf("%s: event is nil: %w", op, ErrInvalidParameter)
 	}
 
-	a, ok := e.Payload.(audit)
+	a, ok := e.Payload.(*audit)
 	if !ok {
 		return nil, fmt.Errorf("%s: cannot parse event payload: %w", op, ErrInvalidParameter)
 	}
