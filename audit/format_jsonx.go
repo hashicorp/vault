@@ -4,23 +4,21 @@
 package audit
 
 import (
-	"context"
 	"encoding/json"
 	"fmt"
 	"io"
 
-	"github.com/hashicorp/vault/sdk/helper/salt"
 	"github.com/jefferai/jsonx"
 )
 
-// JSONxFormatWriter is an AuditFormatWriter implementation that structures data into
-// a XML format.
-type JSONxFormatWriter struct {
-	Prefix   string
-	SaltFunc func(context.Context) (*salt.Salt, error)
+var _ Writer = (*JSONxWriter)(nil)
+
+// JSONxWriter is a Writer implementation that structures data into an XML format.
+type JSONxWriter struct {
+	Prefix string
 }
 
-func (f *JSONxFormatWriter) WriteRequest(w io.Writer, req *AuditRequestEntry) error {
+func (f *JSONxWriter) WriteRequest(w io.Writer, req *AuditRequestEntry) error {
 	if req == nil {
 		return fmt.Errorf("request entry was nil, cannot encode")
 	}
@@ -46,7 +44,7 @@ func (f *JSONxFormatWriter) WriteRequest(w io.Writer, req *AuditRequestEntry) er
 	return err
 }
 
-func (f *JSONxFormatWriter) WriteResponse(w io.Writer, resp *AuditResponseEntry) error {
+func (f *JSONxWriter) WriteResponse(w io.Writer, resp *AuditResponseEntry) error {
 	if resp == nil {
 		return fmt.Errorf("response entry was nil, cannot encode")
 	}
@@ -70,8 +68,4 @@ func (f *JSONxFormatWriter) WriteResponse(w io.Writer, resp *AuditResponseEntry)
 
 	_, err = w.Write(xmlBytes)
 	return err
-}
-
-func (f *JSONxFormatWriter) Salt(ctx context.Context) (*salt.Salt, error) {
-	return f.SaltFunc(ctx)
 }
