@@ -320,7 +320,7 @@ jobs:
           PR: ${{ github.event.pull_request.html_url }}
           RUN_ID: ${{ github.run_id }}
           REPO: ${{ github.event.repository.name }}
-          FAILED_JOBS: ${{ contains(needs.*.result, 'failure') && needs.*.name }}
+          FAILED_JOBS: ${{ contains(needs.*.result, 'failure') && needs.*.name || "" }}
         run: ./.github/scripts/report_failed_builds.sh
 
   completed-successfully:
