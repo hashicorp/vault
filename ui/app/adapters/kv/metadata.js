@@ -6,12 +6,17 @@
 import { encodePath } from 'vault/utils/path-encoding-helpers';
 import ApplicationAdapter from '../application';
 import { kvMetadataPath } from 'vault/utils/kv-path';
+import { isEmpty } from '@ember/utils';
 
 export default class KvMetadataAdapter extends ApplicationAdapter {
   namespace = 'v1';
 
-  _url(fullPath) {
-    return `${this.buildURL()}/${fullPath}`;
+  _url(fullPath, nestedSecret) {
+    let url = `${this.buildURL()}/${fullPath}`;
+    if (!isEmpty(nestedSecret)) {
+      url = url + encodePath(nestedSecret); // ex: metadata/beep/boop/?list=true
+    }
+    return url;
   }
 
   createRecord(store, type, snapshot) {
@@ -29,8 +34,11 @@ export default class KvMetadataAdapter extends ApplicationAdapter {
 
   // TODO: replace this with raw request for metadata request?
   query(store, type, query) {
-    const { backend } = query;
-    return this.ajax(this._url(`${encodePath(backend)}/metadata?list=1`), 'GET').then((resp) => {
+    const { backend, nestedSecret } = query;
+    // nestedSecret is a value if the secret name is nested e.g. beep/boop/bop and you've clicked on beep, secret = "boop/"
+    return this.ajax(this._url(`${encodePath(backend)}/metadata/`, nestedSecret), 'GET', {
+      data: { list: true },
+    }).then((resp) => {
       resp.backend = backend;
       return resp;
     });
