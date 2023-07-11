@@ -783,8 +783,8 @@ func NewTokenStore(ctx context.Context, logger log.Logger, core *Core, config *l
 
 		PathsSpecial: &logical.Paths{
 			Root: []string{
-				"revoke-orphan",
-				"accessors/",
+				"revoke-orphan/*",
+				"accessors*",
 			},
 
 			// Most token store items are local since tokens are local, but a
@@ -3285,14 +3285,22 @@ func (ts *TokenStore) revokeCommon(ctx context.Context, req *logical.Request, da
 	return nil, nil
 }
 
-// handleRevokeOrphan handles the auth/token/revoke-orphan path for revocation of tokens
-// in a way that leaves child tokens orphaned. Normally, using sys/leases/revoke/{lease_id} will revoke
+// handleRevokeOrphan handles the auth/token/revoke-orphan/id path for revocation of tokens
+// in a way that leaves child tokens orphaned. Normally, using sys/revoke/leaseID will revoke
 // the token and all children.
 func (ts *TokenStore) handleRevokeOrphan(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	// Parse the id
 	id := data.Get("token").(string)
 	if id == "" {
 		return logical.ErrorResponse("missing token ID"), logical.ErrInvalidRequest
+	}
+
+	// Check if the client token has sudo/root privileges for the requested path
+	isSudo := ts.System().(extendedSystemView).SudoPrivilege(ctx, req.MountPoint+req.Path, req.ClientToken)
+
+	if !isSudo {
+		return logical.ErrorResponse("root or sudo privileges required to revoke and orphan"),
+			logical.ErrInvalidRequest
 	}
 
 	// Do a lookup. Among other things, that will ensure that this is either
