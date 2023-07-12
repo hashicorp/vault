@@ -61,39 +61,42 @@
           data-test-policy-editor
         />
       {{/if}}
-      <p class="is-size-9 has-text-grey has-bottom-margin-l has-top-margin-xs">
-        You can use Alt+Tab (Option+Tab on MacOS) in the code editor to skip to the next field.
+      <div class="has-top-margin-xs">
+        <span class="is-size-9 has-text-grey has-bottom-margin-l">
+          You can use Alt+Tab (Option+Tab on MacOS) in the code editor to skip to the next field.
+        </span>
         {{! Only renders button (and modal) if not already in the "create policy" modal }}
         {{#if @renderPolicyExampleModal}}
-          See
-          <button
-            type="button"
-            class="text-button has-text-info"
-            {{on "click" (fn (mut this.showTemplateModal))}}
-            data-test-policy-example
-          >
-            example template
-          </button>.
+          <span class="is-size-9 has-text-grey has-bottom-margin-l">
+            See
+            <button
+              type="button"
+              class="text-button has-text-info"
+              {{on "click" (fn (mut this.showTemplateModal))}}
+              data-test-policy-example
+            >
+              example template
+            </button>.
+          </span>
+          {{! Only renders more information if already in the "create policy" modal }}
+        {{else}}
+          <p class="has-top-margin-l">
+            More information about
+            {{uppercase @model.policyType}}
+            policies can be found
+            <DocLink
+              @path={{if
+                (eq @model.policyType "acl")
+                "/vault/docs/concepts/policies#capabilities"
+                "/vault/tutorials/policies/sentinel#role-governing-policies-rgps"
+              }}
+            >
+              here.
+            </DocLink>
+          </p>
         {{/if}}
-      </p>
+      </div>
     </div>
-    {{! Only renders text if already in the "create policy" modal }}
-    {{#unless @renderPolicyExampleModal}}
-      <p>
-        More information about
-        {{uppercase @model.policyType}}
-        policies can be found
-        <DocLink
-          @path={{if
-            (eq @model.policyType "acl")
-            "/vault/docs/concepts/policies#capabilities"
-            "/vault/tutorials/policies/sentinel#role-governing-policies-rgps"
-          }}
-        >
-          here.
-        </DocLink>
-      </p>
-    {{/unless}}
     {{#each @model.additionalAttrs as |attr|}}
       <FormField data-test-field={{true}} @attr={{attr}} @model={{@model}} />
     {{/each}}
