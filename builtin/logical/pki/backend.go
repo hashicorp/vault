@@ -270,9 +270,6 @@ func Backend(conf *logical.BackendConfig) *backend {
 		// We specifically do NOT add acme/new-eab to this as it should be auth'd
 	}
 
-	// modify the backend with ENT specific attributes, I.E. paths..
-	setupEntSpecificBackend(&b)
-
 	b.tidyCASGuard = new(uint32)
 	b.tidyCancelCAS = new(uint32)
 	b.tidyStatus = &tidyStatus{state: tidyStatusInactive}
@@ -304,11 +301,14 @@ func Backend(conf *logical.BackendConfig) *backend {
 	b.unifiedTransferStatus = newUnifiedTransferStatus()
 
 	b.acmeState = NewACMEState()
+
+	b.SetupEnt()
 	return &b
 }
 
 type backend struct {
 	*framework.Backend
+	entBackend
 
 	backendUUID       string
 	storage           logical.Storage
@@ -340,7 +340,6 @@ type backend struct {
 	// Context around ACME operations
 	acmeState       *acmeState
 	acmeAccountLock sync.RWMutex // (Write) Locked on Tidy, (Read) Locked on Account Creation
-	// TODO: Stress test this - eg. creating an order while an account is being revoked
 }
 
 type roleOperation func(ctx context.Context, req *logical.Request, data *framework.FieldData, role *roleEntry) (*logical.Response, error)
@@ -410,7 +409,7 @@ func (b *backend) metricsWrap(callType string, roleMode int, ofunc roleOperation
 }
 
 // initialize is used to perform a possible PKI storage migration if needed
-func (b *backend) initialize(ctx context.Context, _ *logical.InitializationRequest) error {
+func (b *backend) initialize(ctx context.Context, ir *logical.InitializationRequest) error {
 	sc := b.makeStorageContext(ctx, b.storage)
 	if err := b.crlBuilder.reloadConfigIfRequired(sc); err != nil {
 		return err
@@ -434,11 +433,14 @@ func (b *backend) initialize(ctx context.Context, _ *logical.InitializationReque
 		b.certCountError = err.Error()
 	}
 
-	return nil
+	return b.initializeEnt(sc, ir)
 }
 
-func (b *backend) cleanup(_ context.Context) {
+func (b *backend) cleanup(ctx context.Context) {
+	sc := b.makeStorageContext(ctx, b.storage)
 	b.acmeState.validator.Closing <- struct{}{}
+
+	b.cleanupEnt(sc)
 }
 
 func (b *backend) initializePKIIssuersStorage(ctx context.Context) error {
@@ -569,6 +571,8 @@ func (b *backend) invalidate(ctx context.Context, key string) {
 		serial := split[len(split)-1]
 		b.crlBuilder.addCertFromCrossRevocation(cluster, serial)
 	}
+
+	b.invalidateEnt(ctx, key)
 }
 
 func (b *backend) periodicFunc(ctx context.Context, request *logical.Request) error {
@@ -722,7 +726,7 @@ func (b *backend) periodicFunc(ctx context.Context, request *logical.Request) er
 	}
 
 	// All good!
-	return nil
+	return b.periodicFuncEnt(backgroundSc, request)
 }
 
 func (b *backend) initializeStoredCertificateCounts(ctx context.Context) error {
