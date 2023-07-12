@@ -28,4 +28,13 @@ export default class VaultClusterDashboardRoute extends Route {
       vaultConfiguration: this.getVaultConfiguration(),
     });
   }
+
+  setupController(controller, resolvedModel) {
+    super.setupController(controller, resolvedModel);
+    const { version } = resolvedModel;
+
+    controller.versionHeader = version.isEnterprise
+      ? `Vault v${version.version.slice(0, version.version.indexOf('+'))}`
+      : `Vault v${version.version}`;
+  }
 }

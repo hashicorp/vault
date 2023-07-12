@@ -29,6 +29,11 @@ module('Acceptance | landing page dashboard', function (hooks) {
     assert.strictEqual(currentURL(), '/vault/dashboard');
   });
 
+  test('display the version number for the title', async function (assert) {
+    await visit('/vault/dashboard');
+    assert.dom('[data-test-dashboard-version-header]').hasText('Vault v1.9.0');
+  });
+
   module('secrets engines card', function () {
     test('shows a secrets engine card', async function (assert) {
       await mountSecrets.enable('pki', 'pki');
