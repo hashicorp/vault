@@ -17,10 +17,8 @@
       <B.Td data-test-vault-config-details="max_lease_ttl">{{format-duration @vaultConfiguration.max_lease_ttl}}</B.Td>
     </B.Tr>
     <B.Tr>
-      <B.Td>TLS</B.Td>
-      <B.Td
-        data-test-vault-config-details="tls_disable"
-      >{{@vaultConfiguration.listeners.firstObject.config.tls_disable}}</B.Td>
+      <B.Td>TLS disabled</B.Td>
+      <B.Td data-test-vault-config-details="tls_disable">{{this.tlsDisabled}}</B.Td>
     </B.Tr>
     <B.Tr>
       <B.Td>Log format</B.Td>
