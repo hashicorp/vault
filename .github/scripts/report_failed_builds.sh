@@ -30,4 +30,4 @@ for job in "${jobs[@]}";do
   fi
 done
 
-gh pr comment "$PR" --body "build failed for these jobs: ${failed_jobs[@]}. Please refer to this workflow to learn more: https://github.com/hashicorp/vault/actions/runs/$RUN_ID"
+gh pr comment "$PR" --body "build failed for these jobs: ${failed_jobs[*]}. Please refer to this workflow to learn more: https://github.com/hashicorp/vault/actions/runs/$RUN_ID"
