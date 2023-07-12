@@ -18,9 +18,9 @@ import (
 )
 
 const (
-	operationPrefixRabbitMQ       = "rabbit-mq"
-	rabbitMQRolePath              = "role/"
-	rabbitMQStaticRolePath        = "static-role/"
+	operationPrefixRabbitMQ = "rabbit-mq"
+	rabbitMQRolePath        = "role/"
+	rabbitMQStaticRolePath  = "static-role/"
 	// TODO remove duplicate from roation.go
 	rabbitMQDefaultRotationPeriod = 5
 )
@@ -61,8 +61,8 @@ func Backend(conf *logical.BackendConfig) *backend {
 			secretCreds(&b),
 		},
 
-		Clean:             b.resetClient,
-		Invalidate:        b.invalidate,
+		Clean:      b.resetClient,
+		Invalidate: b.invalidate,
 		// TODO check why this takes longer to trigger
 		WALRollbackMinAge: time.Duration(rabbitMQDefaultRotationPeriod) * time.Second,
 		PeriodicFunc: func(ctx context.Context, req *logical.Request) error {

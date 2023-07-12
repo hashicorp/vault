@@ -7,8 +7,8 @@ import (
 	"context"
 	"fmt"
 	"io/ioutil"
-	"time"
 	"math"
+	"time"
 
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/template"
