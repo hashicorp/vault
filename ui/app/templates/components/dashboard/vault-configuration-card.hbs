@@ -1,0 +1,34 @@
+<h3 class="title is-4">Configuration details</h3>
+
+<Hds::Table @caption="Vault configuration details" class="is-border-spacing-revert">
+  <:body as |B|>
+    <B.Tr>
+      <B.Td>API_ADDR</B.Td>
+      <B.Td>{{@vaultConfiguration.api_addr}}</B.Td>
+    </B.Tr>
+    <B.Tr>
+      <B.Td>Default lease TTL</B.Td>
+      <B.Td>{{format-duration @vaultConfiguration.default_lease_ttl}}</B.Td>
+    </B.Tr>
+    <B.Tr>
+      <B.Td>Max lease TTL</B.Td>
+      <B.Td>{{format-duration @vaultConfiguration.max_lease_ttl}}</B.Td>
+    </B.Tr>
+    <B.Tr>
+      <B.Td>TLS</B.Td>
+      <B.Td>{{@vaultConfiguration.listeners.firstObject.config.tls_disable}}</B.Td>
+    </B.Tr>
+    <B.Tr>
+      <B.Td>Log format</B.Td>
+      <B.Td>{{or @vaultConfiguration.log_format "None"}}</B.Td>
+    </B.Tr>
+    <B.Tr>
+      <B.Td>Log level</B.Td>
+      <B.Td>{{@vaultConfiguration.log_level}}</B.Td>
+    </B.Tr>
+    <B.Tr>
+      <B.Td>Storage type</B.Td>
+      <B.Td>{{@vaultConfiguration.storage.type}}</B.Td>
+    </B.Tr>
+  </:body>
+</Hds::Table>
