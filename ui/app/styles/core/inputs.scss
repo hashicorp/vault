@@ -47,7 +47,9 @@
 }
 
 .input[disabled],
-.textarea[disabled] {
+.textarea[disabled],
+.input[readonly],
+.textarea[readonly] {
   border-color: $grey-light;
   background-color: $ui-gray-100;
   color: $ui-gray-500;
