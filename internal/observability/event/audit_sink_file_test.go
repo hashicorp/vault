@@ -90,7 +90,6 @@ func TestNewAuditFileSink(t *testing.T) {
 		IsErrorExpected      bool
 		ExpectedErrorMessage string
 		ExpectedFileMode     os.FileMode
-		ExpectedPrefix       string
 	}{
 		"default": {
 			Config:               AuditFileSinkConfig{},
@@ -163,7 +162,6 @@ func TestNewAuditFileSink(t *testing.T) {
 			IsTempDirPath:    true,
 			IsErrorExpected:  false,
 			ExpectedFileMode: 0o20000000755,
-			ExpectedPrefix:   "bleep",
 		},
 	}
 
@@ -173,8 +171,9 @@ func TestNewAuditFileSink(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
+			// If we need a real directory as a path we can use a temp dir.
+			// but we should keep track of it for comparison in the new sink.
 			var tempDir string
-
 			if tc.IsTempDirPath {
 				tempDir = t.TempDir()
 				tc.Config.Path = tempDir
@@ -190,8 +189,17 @@ func TestNewAuditFileSink(t *testing.T) {
 			default:
 				require.NoError(t, err)
 				require.NotNil(t, sink)
+
 				require.Equal(t, tc.ExpectedFileMode, sink.fileMode)
-				require.Equal(t, tc.ExpectedPrefix, sink.prefix)
+				require.Equal(t, tc.Config.Prefix, sink.prefix)
+				require.Equal(t, tc.Config.Format, sink.format)
+
+				switch {
+				case tc.IsTempDirPath:
+					require.Equal(t, tempDir, sink.path)
+				default:
+					require.Equal(t, tc.Config.Path, sink.path)
+				}
 			}
 		})
 	}
