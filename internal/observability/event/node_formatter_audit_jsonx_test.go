@@ -17,17 +17,16 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// fakeJSONXAuditEvent will return a new fake event containing audit data based on the
-// specified logical.LogInput.
-// The audit event is for a response and should be JSONx format.
-func fakeJSONXAuditEvent(t *testing.T, input *logical.LogInput) *eventlogger.Event {
+// fakeJSONXAuditEvent will return a new fake event containing audit data based
+// on the specified auditSubtype and logical.LogInput.
+func fakeJSONXAuditEvent(t *testing.T, subtype auditSubtype, input *logical.LogInput) *eventlogger.Event {
 	t.Helper()
 
-	date := time.Date(2023, time.July, 11, 15, 49, 10, 0o0, time.Local)
+	date := time.Date(2023, time.July, 11, 15, 49, 10, 0, time.Local)
 
 	auditEvent, err := newAudit(
 		WithID("123"),
-		WithSubtype(string(AuditResponse)),
+		WithSubtype(string(subtype)),
 		WithFormat(string(AuditFormatJSONX)),
 		WithNow(date),
 	)
@@ -36,7 +35,7 @@ func fakeJSONXAuditEvent(t *testing.T, input *logical.LogInput) *eventlogger.Eve
 	require.Equal(t, "123", auditEvent.ID)
 	require.Equal(t, "v0.1", auditEvent.Version)
 	require.Equal(t, AuditFormatJSONX, auditEvent.RequiredFormat)
-	require.Equal(t, AuditResponse, auditEvent.Subtype)
+	require.Equal(t, subtype, auditEvent.Subtype)
 	require.Equal(t, date, auditEvent.Timestamp)
 
 	auditEvent.Data = input
@@ -73,15 +72,29 @@ func TestAuditFormatterJSONX_Process(t *testing.T) {
 	tests := map[string]struct {
 		IsErrorExpected      bool
 		ExpectedErrorMessage string
+		Subtype              auditSubtype
 		Data                 *logical.LogInput
 	}{
-		"no-formatted-json": {
+		"request-no-formatted-json": {
 			IsErrorExpected:      true,
 			ExpectedErrorMessage: "event.(AuditFormatterJSONX).Process: pre-formatted JSON required but not found: invalid parameter",
+			Subtype:              AuditRequest,
 			Data:                 nil,
 		},
-		"basic-json": {
+		"response-no-formatted-json": {
+			IsErrorExpected:      true,
+			ExpectedErrorMessage: "event.(AuditFormatterJSONX).Process: pre-formatted JSON required but not found: invalid parameter",
+			Subtype:              AuditResponse,
+			Data:                 nil,
+		},
+		"request-basic-json": {
 			IsErrorExpected: false,
+			Subtype:         AuditRequest,
+			Data:            &logical.LogInput{Type: "magic"},
+		},
+		"response-basic-json": {
+			IsErrorExpected: false,
+			Subtype:         AuditResponse,
 			Data:            &logical.LogInput{Type: "magic"},
 		},
 	}
@@ -91,7 +104,7 @@ func TestAuditFormatterJSONX_Process(t *testing.T) {
 		tc := tc
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
-			e := fakeJSONXAuditEvent(t, tc.Data)
+			e := fakeJSONXAuditEvent(t, tc.Subtype, tc.Data)
 			require.NotNil(t, e)
 
 			// If we have data specified, then encode it and store as a format.
