@@ -250,7 +250,7 @@ jobs:
               --junitfile test-results/go-test/results-${{ matrix.id }}.xml \
               --jsonfile test-results/go-test/results-${{ matrix.id }}.json \
               --jsonfile-timing-events failure-summary-${{ matrix.id }}${{ inputs.name != '' && '-' || '' }}${{ inputs.name }}.json \
-              $rerunFails \
+              $RERUN_FAILS \
               --packages "${{ matrix.packages }}" \
               -- \
               -tags "${{ inputs.go-tags }}" \
