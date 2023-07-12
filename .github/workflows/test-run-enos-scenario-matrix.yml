@@ -105,7 +105,6 @@ jobs:
       ENOS_VAR_vault_bundle_path: ./support/downloads/${{ inputs.build-artifact-name }}
       ENOS_VAR_vault_license_path: ./support/vault.hclic
       ENOS_DEBUG_DATA_ROOT_DIR: /tmp/enos-debug-data
-
     steps:
       - uses: actions/checkout@c85c95e3d7251135ab7dc9ce3241c5835cc595a9 # v3.5.3
       - uses: hashicorp/setup-terraform@v2
