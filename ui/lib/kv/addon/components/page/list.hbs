@@ -14,11 +14,11 @@
 </KvPageHeader>
 
 {{! TODO add permissions on the menu items }}
-{{!-- {{#if (gt @model.length 0)}}
+{{#if (gt @model.length 0)}}
   {{#each @model as |secret|}}
     <LinkedBlock
       class="list-item-row"
-      @params={{array (if secret.isFolder "list" "secret.details") secret.path}}
+      @params={{array (if secret.isFolder "list" "secret.details") secret.id}}
       @linkPrefix={{this.mountPoint}}
     >
       <div class="level is-mobile">
@@ -63,4 +63,4 @@
       Create secret
     </LinkTo>
   </EmptyState>
-{{/if}} --}}
+{{/if}}

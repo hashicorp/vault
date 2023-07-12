@@ -24,6 +24,7 @@ export default class KvSecretsPageComponent extends Component {
   get mountPoint() {
     return getOwner(this).mountPoint;
   }
+
   // ARG TODO return to this action
   @action
   onDelete() {

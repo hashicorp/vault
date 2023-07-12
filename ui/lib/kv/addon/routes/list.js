@@ -11,24 +11,26 @@ import { normalizePath } from 'vault/utils/path-encoding-helpers';
 
 export default class KvSecretsListRoute extends Route {
   @service store;
+  @service router;
   @service secretMountPath;
 
   nestedSecretName() {
-    const { name } = this.paramsFor('list');
-    return name ? normalizePath(name) : '';
+    const { nestedSecret } = this.paramsFor('list');
+    return nestedSecret ? normalizePath(nestedSecret) : '';
   }
 
-  // beforeModel() {
-  //   const secret = this.secretParam();
-  //   if (secret.endsWith('/')) {
-  //     this.router.replaceWith('secrets', secret + '/');
-  //   }
-  // }
+  beforeModel() {
+    const nestedSecret = this.nestedSecretName();
+    if (this.routeName === 'list' && nestedSecret.endsWith('/')) {
+      // this.router.replaceWith('vault.cluster.secrets.backend.kv.list', nestedSecret + '/');
+    }
+  }
+
   model() {
     // TODO add filtering and return model for query on kv/metadata.
-    const nestedSecret = this.nestedSecretName() || '';
+    const nestedSecretParam = this.nestedSecretName() || '';
     const backend = this.secretMountPath.currentPath;
-    const secrets = this.store.query('kv/metadata', { backend, nestedSecret }).catch((err) => {
+    const secrets = this.store.query('kv/metadata', { backend, nestedSecretParam }).catch((err) => {
       if (err.httpStatus === 404) {
         return [];
       } else {
@@ -36,7 +38,6 @@ export default class KvSecretsListRoute extends Route {
       }
     });
     return hash({
-      nestedSecret,
       secrets,
       backend,
     });
