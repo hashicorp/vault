@@ -243,10 +243,7 @@ jobs:
           # shellcheck disable=SC2086 # can't quote package list
 
           # On a release branch, add a flag to rerun failed tests
-          #  if [[ ${{ github.base_ref }} = release/* ]] ; then
-          if [[ ${{ github.base_ref }} = vault-17777* ]] ; then
-            # VAULT_FAIL_TEST="true"
-            # export VAULT_FAIL_TEST
+          if [[ ${{ github.base_ref }} = release/* ]] ; then
             rerunFails="--rerun-fails"
           fi
 
