@@ -16,19 +16,8 @@ jobs:
   # checks that a milestone entry is present for a PR
   milestone-check:
     # If there is a `pr/no-milestone` label we ignore this check
-    if: "!contains(github.event.pull_request.labels.*.name, 'pr/no-milestone')"
+    if: "!contains(github.event.pull_request.labels.*.name, 'pr/no-milestone')" 
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout Actions
-        uses: actions/checkout@c85c95e3d7251135ab7dc9ce3241c5835cc595a9 # v3.5.3
-        with:
-          repository: "grafana/grafana-github-actions"
-          path: ./actions
-          ref: main
-      - name: Install Actions
-        run: npm install --production --prefix ./actions
-      - name: Run PR Checks
-        uses: ./actions/pr-checks
-        with:
-          token: ${{secrets.GITHUB_TOKEN}}
-          configPath: configs/milestone-check
+      - name: Check milestone
+        run: ${{ github.event.pull_request.milestone != null }}
