@@ -10,6 +10,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"strings"
 	"sync"
 
 	"github.com/hashicorp/eventlogger"
@@ -40,11 +41,8 @@ type AuditFileSinkConfig struct {
 func NewAuditFileSink(config AuditFileSinkConfig) (*AuditFileSink, error) {
 	const op = "event.NewAuditFileSink"
 
-	switch config.Format {
-	case AuditFormatJSON:
-	case AuditFormatJSONX:
-	default:
-		return nil, fmt.Errorf("%s: unsupported audit format %q", op, config.Format)
+	if err := config.validate(); err != nil {
+		return nil, fmt.Errorf("%s: unable to create new audit file sink: %w", op, err)
 	}
 
 	mode := os.FileMode(defaultFileMode)
@@ -56,7 +54,7 @@ func NewAuditFileSink(config AuditFileSinkConfig) (*AuditFileSink, error) {
 			if config.Path != "stdout" && config.Path != "discard" && config.Path != "stderr" {
 				fileInfo, err := os.Stat(config.Path)
 				if err != nil {
-					return nil, err
+					return nil, fmt.Errorf("%s: unable to obtain file info: %w", op, err)
 				}
 				mode = fileInfo.Mode()
 			}
@@ -69,8 +67,9 @@ func NewAuditFileSink(config AuditFileSinkConfig) (*AuditFileSink, error) {
 		file:     nil,
 		fileLock: sync.RWMutex{},
 		fileMode: mode,
-		path:     config.Path,
 		format:   config.Format,
+		path:     config.Path,
+		prefix:   config.Prefix,
 	}, nil
 }
 
@@ -216,4 +215,19 @@ func (f *AuditFileSink) log(buf *bytes.Buffer, writer io.Writer) error {
 
 	_, err = reader.WriteTo(writer)
 	return fmt.Errorf("%s: unable to re-write to file for audit sink: %w", op, err)
+}
+
+// validate ensures that the required properties of a AuditFileSinkConfig have been configured.
+func (c *AuditFileSinkConfig) validate() error {
+	const op = "event.(AuditFileSinkConfig).validate"
+
+	if strings.TrimSpace(c.Path) == "" {
+		return fmt.Errorf("%s: path cannot be empty: %w", op, ErrInvalidParameter)
+	}
+
+	if err := c.Format.validate(); err != nil {
+		return fmt.Errorf("%s: invalid format: %w", op, err)
+	}
+
+	return nil
 }
