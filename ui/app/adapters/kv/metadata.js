@@ -32,7 +32,6 @@ export default class KvMetadataAdapter extends ApplicationAdapter {
     });
   }
 
-  // TODO: replace this with raw request for metadata request?
   query(store, type, query) {
     const { backend, secretPrefix } = query;
     // example of secretPrefix: beep/boop/
