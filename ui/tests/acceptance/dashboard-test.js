@@ -100,7 +100,7 @@ module('Acceptance | landing page dashboard', function (hooks) {
           log_format: '',
           log_level: 'debug',
           log_requests_level: '',
-          max_lease_ttl: 15206400,
+          max_lease_ttl: 0,
           pid_file: '',
           plugin_directory: '',
           plugin_file_permissions: 0,
@@ -161,7 +161,7 @@ module('Acceptance | landing page dashboard', function (hooks) {
       assert.dom(VAULT_CONFIGURATION_SELECTORS.cardTitle).hasText('Configuration details');
       assert.dom(VAULT_CONFIGURATION_SELECTORS.apiAddr).hasText('http://127.0.0.1:8200');
       assert.dom(VAULT_CONFIGURATION_SELECTORS.defaultLeaseTtl).hasText('0');
-      assert.dom(VAULT_CONFIGURATION_SELECTORS.maxLeaseTtl).hasText('5 months 25 days 1 hour');
+      assert.dom(VAULT_CONFIGURATION_SELECTORS.maxLeaseTtl).hasText('0');
       assert.dom(VAULT_CONFIGURATION_SELECTORS.tlsDisable).hasText('true');
       assert.dom(VAULT_CONFIGURATION_SELECTORS.logFormat).hasText('None');
       assert.dom(VAULT_CONFIGURATION_SELECTORS.logLevel).hasText('debug');
