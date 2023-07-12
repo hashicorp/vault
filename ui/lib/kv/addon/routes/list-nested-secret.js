@@ -18,26 +18,19 @@ export default class KvSecretsListRoute extends Route {
   @service router;
   @service secretMountPath;
 
-  getNestedSecretFromUrlParam() {
-    const { nestedSecret } = this.paramsFor('list-nested-secret');
-    return nestedSecret ? normalizePath(nestedSecret) : '';
+  getSecretPrefixFromUrlParam() {
+    const { secret_prefix } = this.paramsFor('list-nested-secret');
+    return secret_prefix ? normalizePath(secret_prefix) : '';
   }
-
-  // beforeModel() {
-  //   const nestedSecret = this.getNestedSecretFromUrlParam();
-  //   if (this.routeName === 'list' && nestedSecret.endsWith('/')) {
-  //     // this.router.replaceWith('vault.cluster.secrets.backend.kv.list', nestedSecret + '/');
-  //   }
-  // }
 
   model() {
     // TODO add filtering and return model for query on kv/metadata.
-    let nestedSecret;
+    let secretPrefix;
     if (this.routeName === 'list-nested-secret') {
-      nestedSecret = this.getNestedSecretFromUrlParam();
+      secretPrefix = this.getSecretPrefixFromUrlParam();
     }
     const backend = this.secretMountPath.currentPath;
-    const arrayOfSecretModels = this.store.query('kv/metadata', { backend, nestedSecret }).catch((err) => {
+    const arrayOfSecretModels = this.store.query('kv/metadata', { backend, secretPrefix }).catch((err) => {
       if (err.httpStatus === 404) {
         return [];
       } else {

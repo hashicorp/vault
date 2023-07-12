@@ -11,10 +11,10 @@ import { isEmpty } from '@ember/utils';
 export default class KvMetadataAdapter extends ApplicationAdapter {
   namespace = 'v1';
 
-  _url(fullPath, nestedSecret) {
+  _url(fullPath, secretPrefix) {
     let url = `${this.buildURL()}/${fullPath}`;
-    if (!isEmpty(nestedSecret)) {
-      url = url + encodePath(nestedSecret); // ex: metadata/beep/boop/?list=true
+    if (!isEmpty(secretPrefix)) {
+      url = url + encodePath(secretPrefix); // ex: metadata/beep/boop/?list=true
     }
     return url;
   }
@@ -34,13 +34,13 @@ export default class KvMetadataAdapter extends ApplicationAdapter {
 
   // TODO: replace this with raw request for metadata request?
   query(store, type, query) {
-    const { backend, nestedSecret } = query;
-    // example of nestedSecret: beep/boop/
-    return this.ajax(this._url(`${encodePath(backend)}/metadata/`, nestedSecret), 'GET', {
+    const { backend, secretPrefix } = query;
+    // example of secretPrefix: beep/boop/
+    return this.ajax(this._url(`${encodePath(backend)}/metadata/`, secretPrefix), 'GET', {
       data: { list: true },
     }).then((resp) => {
       resp.backend = backend;
-      resp.path = nestedSecret;
+      resp.path = secretPrefix;
       return resp;
     });
   }
