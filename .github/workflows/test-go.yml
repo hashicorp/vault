@@ -130,18 +130,18 @@ jobs:
       - name: Build complete matrix
         id: build
         run: |
-            set -exo pipefail
-            export BINARY_TESTS="${{ steps.list-binary-tests.outputs.list }}"
-            (
-              echo -n "matrix="
-              jq -c --arg BINARY "${BINARY_TESTS}" \
-                '.include += [{
-                  "id": 16,
-                  "estimatedRuntime": "N/A",
-                  "packages": $BINARY,
-                  "description": "partition 16 - binary test packages"
-              }]' matrix.json
-            ) >> "$GITHUB_OUTPUT"
+          set -exo pipefail
+          export BINARY_TESTS="${{ steps.list-binary-tests.outputs.list }}"
+          (
+            echo -n "matrix="
+            jq -c --arg BINARY "${BINARY_TESTS}" \
+              '.include += [{
+                "id": 16,
+                "estimatedRuntime": "N/A",
+                "packages": $BINARY,
+                "description": "partition 16 - binary test packages"
+            }]' matrix.json
+          ) >> "$GITHUB_OUTPUT"
     outputs:
       matrix: ${{ steps.build.outputs.matrix }}
 
@@ -243,7 +243,7 @@ jobs:
             go run gotest.tools/gotestsum --format=short-verbose \
               --junitfile test-results/go-test/results-${{ matrix.id }}.xml \
               --jsonfile test-results/go-test/results-${{ matrix.id }}.json \
-              --jsonfile-timing-events failure-summary-${{ matrix.id }}${{inputs.name}}.json \
+              --jsonfile-timing-events failure-summary-${{ matrix.id }}${{ inputs.name != '' && '-' || '' }}${{ inputs.name }}.json \
               -- \
               -tags "${{ inputs.go-tags }}" \
               -timeout=${{ env.TIMEOUT_IN_MINUTES }}m \
@@ -269,15 +269,66 @@ jobs:
       - name: Archive test results
         uses: actions/upload-artifact@0b7f8abb1508181956e8e162db84b466c27e18ce # v3.1.2
         with:
-          name: test-results${{ inputs.name }}
+          name: test-results${{ inputs.name != '' && '-' || '' }}${{ inputs.name }}
           path: test-results/go-test
         if: success() || failure()
+      # GitHub Actions doesn't expose the job ID or the URL to the job execution,
+      # so we have to fetch it from the API
+      - name: Fetch job logs URL
+        uses: actions/github-script@d7906e4ad0b1822421a7e6a35d5ca353c962f410 # v6.4.1
+        if: success() || failure()
+        continue-on-error: true
+        with:
+          retries: 10
+          script: |
+            const fs = require("fs");
+            const result = await github.rest.actions.listJobsForWorkflowRun({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                run_id: context.runId,
+            });
+
+            const prefixToSearchFor = 'Run Go tests / test-go (${{ matrix.id }}'
+            const jobData = result.data.jobs.filter(
+                (job) => job.name.startsWith(prefixToSearchFor)
+            );
+            if (
+                jobData === undefined ||
+                jobData.length == 0 ||
+                jobData[0].html_url === undefined
+            ) {
+                const msg = "Failed to fetch GHA job data.";
+                console.log(msg);
+                throw new Error(msg);
+            }
+
+            const url = jobData[0].html_url;
+            const envVarName = "GH_JOB_URL";
+            const envVar = envVarName + "=" + url;
+            const envFile = process.env.GITHUB_ENV;
+
+            fs.appendFile(envFile, envVar, (err) => {
+                if (err) throw err;
+                console.log("Successfully set " + envVarName + " to: " + url);
+            });
+      - name: Prepare failure summary
+        if: success() || failure()
+        run: |
+          # This jq query filters out successful tests, leaving only the failures.
+          # Then, it formats the results into rows of a Markdown table.
+          # An example row will resemble this:
+          # | github.com/hashicorp/vault/package | TestName | fips | 0 | 2 | [view results](github.com/link-to-logs) |
+          jq -r -n 'inputs
+          | select(.Action == "fail")
+          | "| ${{inputs.name}} | \(.Package) | \(.Test // "-") | \(.Elapsed) | ${{ matrix.id }} | [view test results :scroll:](${{ env.GH_JOB_URL }}) |"' \
+          failure-summary-${{ matrix.id }}${{ inputs.name != '' && '-' || '' }}${{inputs.name}}.json \
+          >> failure-summary-${{ matrix.id }}${{ inputs.name != '' && '-' || '' }}${{inputs.name}}.md
       - name: Upload failure summary
         uses: actions/upload-artifact@0b7f8abb1508181956e8e162db84b466c27e18ce # v3.1.2
         if: success() || failure()
         with:
           name: failure-summary
-          path: failure-summary-${{ matrix.id }}${{inputs.name}}.json
+          path: failure-summary-${{ matrix.id }}${{ inputs.name != '' && '-' || '' }}${{inputs.name}}.md
 
   test-collect-reports:
     needs: test-go
