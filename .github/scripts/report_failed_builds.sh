@@ -25,9 +25,9 @@ set -e
 jobs=( "build-other:$BUILD_OTHER" "build-linux:$BUILD_LINUX" "build-darwin:$BUILD_DARWIN" "build-docker:$BUILD_DOCKER" "build-ubi:$BUILD_UBI" "test:$TEST" "test-docker-k8s:$TEST_DOCKER_K8S" )
 failed_jobs=()
 for job in "${jobs[@]}";do
-  if [[ "$job" == *"failure"* ]]; then
+  if [[ "$job" == *"failure"* || "$job" == *"cancelled"* ]]; then
     failed_jobs+=("$job")
   fi
 done
 
-gh pr comment "$PR" --body "build failed for these jobs: $failed_jobs. Please refer to this workflow to learn more: https://github.com/hashicorp/vault/actions/runs/$RUN_ID"
+gh pr comment "$PR" --body "build failed for these jobs: ${failed_jobs[@]}. Please refer to this workflow to learn more: https://github.com/hashicorp/vault/actions/runs/$RUN_ID"
