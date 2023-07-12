@@ -11,61 +11,61 @@ import (
 	"github.com/jefferai/jsonx"
 )
 
-var _ eventlogger.Node = (*AuditFormatterJSONX)(nil)
+var _ eventlogger.Node = (*AuditFormatterJSONx)(nil)
 
-// AuditFormatterJSONX represents a formatter node which will Process JSON to JSONx format.
-type AuditFormatterJSONX struct {
+// AuditFormatterJSONx represents a formatter node which will Process JSON to JSONx format.
+type AuditFormatterJSONx struct {
 	format auditFormat
 }
 
-// NewAuditFormatterJSONX creates a formatter node which can be used to format
-// incoming events to JSONX.
+// NewAuditFormatterJSONx creates a formatter node which can be used to format
+// incoming events to JSONx.
 // This formatter node requires that a AuditFormatterJSON node exists earlier
 // in the pipeline and will attempt to access the JSON encoded data stored by that
 // formatter node.
-func NewAuditFormatterJSONX() *AuditFormatterJSONX {
-	return &AuditFormatterJSONX{format: AuditFormatJSONX}
+func NewAuditFormatterJSONx() *AuditFormatterJSONx {
+	return &AuditFormatterJSONx{format: AuditFormatJSONx}
 }
 
 // Reopen is a no-op for this formatter node.
-func (_ *AuditFormatterJSONX) Reopen() error {
+func (_ *AuditFormatterJSONx) Reopen() error {
 	return nil
 }
 
 // Type describes the type of this node.
-func (_ *AuditFormatterJSONX) Type() eventlogger.NodeType {
+func (_ *AuditFormatterJSONx) Type() eventlogger.NodeType {
 	return eventlogger.NodeTypeFormatter
 }
 
 // Process will attempt to retrieve pre-formatted JSON stored within the event
-// and re-encode the data to JSONX.
-func (f *AuditFormatterJSONX) Process(ctx context.Context, e *eventlogger.Event) (*eventlogger.Event, error) {
+// and re-encode the data to JSONx.
+func (f *AuditFormatterJSONx) Process(ctx context.Context, e *eventlogger.Event) (*eventlogger.Event, error) {
 	select {
 	case <-ctx.Done():
 		return nil, ctx.Err()
 	default:
 	}
 
-	const op = "event.(AuditFormatterJSONX).Process"
+	const op = "event.(AuditFormatterJSONx).Process"
 	if e == nil {
 		return nil, fmt.Errorf("%s: event is nil: %w", op, ErrInvalidParameter)
 	}
 
 	// We expect that JSON has already been parsed for this event.
 	jsonBytes, ok := e.Format(AuditFormatJSON.String())
-	switch {
-	case !ok:
+	if !ok {
 		return nil, fmt.Errorf("%s: pre-formatted JSON required but not found: %w", op, ErrInvalidParameter)
-	case jsonBytes == nil:
+	}
+	if jsonBytes == nil {
 		return nil, fmt.Errorf("%s: pre-formatted JSON required but was nil: %w", op, ErrInvalidParameter)
 	}
 
 	xmlBytes, err := jsonx.EncodeJSONBytes(jsonBytes)
-	switch {
-	case err != nil:
-		return nil, fmt.Errorf("%s: unable to encode JSONX using JSON data: %w", op, err)
-	case xmlBytes == nil:
-		return nil, fmt.Errorf("%s: encoded JSONX was nil: %w", op, err)
+	if err != nil {
+		return nil, fmt.Errorf("%s: unable to encode JSONx using JSON data: %w", op, err)
+	}
+	if xmlBytes == nil {
+		return nil, fmt.Errorf("%s: encoded JSONx was nil: %w", op, err)
 	}
 
 	e.FormattedAs(f.format.String(), xmlBytes)

@@ -19,7 +19,7 @@ const (
 // Audit formats.
 const (
 	AuditFormatJSON  auditFormat = "json"
-	AuditFormatJSONX auditFormat = "jsonx"
+	AuditFormatJSONx auditFormat = "jsonx"
 )
 
 // auditVersion defines the version of audit events.
@@ -122,7 +122,7 @@ func (t auditSubtype) validate() error {
 func (f auditFormat) validate() error {
 	const op = "event.(audit).(format).validate"
 	switch f {
-	case AuditFormatJSON, AuditFormatJSONX:
+	case AuditFormatJSON, AuditFormatJSONx:
 		return nil
 	default:
 		return fmt.Errorf("%s: '%s' is not a valid required format: %w", op, f, ErrInvalidParameter)

@@ -17,9 +17,9 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// fakeJSONXAuditEvent will return a new fake event containing audit data based
+// fakeJSONxAuditEvent will return a new fake event containing audit data based
 // on the specified auditSubtype and logical.LogInput.
-func fakeJSONXAuditEvent(t *testing.T, subtype auditSubtype, input *logical.LogInput) *eventlogger.Event {
+func fakeJSONxAuditEvent(t *testing.T, subtype auditSubtype, input *logical.LogInput) *eventlogger.Event {
 	t.Helper()
 
 	date := time.Date(2023, time.July, 11, 15, 49, 10, 0, time.Local)
@@ -27,14 +27,14 @@ func fakeJSONXAuditEvent(t *testing.T, subtype auditSubtype, input *logical.LogI
 	auditEvent, err := newAudit(
 		WithID("123"),
 		WithSubtype(string(subtype)),
-		WithFormat(string(AuditFormatJSONX)),
+		WithFormat(string(AuditFormatJSONx)),
 		WithNow(date),
 	)
 	require.NoError(t, err)
 	require.NotNil(t, auditEvent)
 	require.Equal(t, "123", auditEvent.ID)
 	require.Equal(t, "v0.1", auditEvent.Version)
-	require.Equal(t, AuditFormatJSONX, auditEvent.RequiredFormat)
+	require.Equal(t, AuditFormatJSONx, auditEvent.RequiredFormat)
 	require.Equal(t, subtype, auditEvent.Subtype)
 	require.Equal(t, date, auditEvent.Timestamp)
 
@@ -50,25 +50,25 @@ func fakeJSONXAuditEvent(t *testing.T, subtype auditSubtype, input *logical.LogI
 	return e
 }
 
-// TestNewAuditFormatterJSONX ensures we can create new AuditFormatterJSONX structs.
-func TestNewAuditFormatterJSONX(t *testing.T) {
-	f := NewAuditFormatterJSONX()
+// TestNewAuditFormatterJSONx ensures we can create new AuditFormatterJSONx structs.
+func TestNewAuditFormatterJSONx(t *testing.T) {
+	f := NewAuditFormatterJSONx()
 	require.NotNil(t, f)
 }
 
-// TestAuditFormatterJSONX_Reopen ensures that we do no get an error when calling Reopen.
-func TestAuditFormatterJSONX_Reopen(t *testing.T) {
-	require.NoError(t, NewAuditFormatterJSONX().Reopen())
+// TestAuditFormatterJSONx_Reopen ensures that we do no get an error when calling Reopen.
+func TestAuditFormatterJSONx_Reopen(t *testing.T) {
+	require.NoError(t, NewAuditFormatterJSONx().Reopen())
 }
 
-// TestAuditFormatterJSONX_Type ensures that the node is a 'formatter' type.
-func TestAuditFormatterJSONX_Type(t *testing.T) {
-	require.Equal(t, eventlogger.NodeTypeFormatter, NewAuditFormatterJSONX().Type())
+// TestAuditFormatterJSONx_Type ensures that the node is a 'formatter' type.
+func TestAuditFormatterJSONx_Type(t *testing.T) {
+	require.Equal(t, eventlogger.NodeTypeFormatter, NewAuditFormatterJSONx().Type())
 }
 
-// TestAuditFormatterJSONX_Process attempts to run the Process method to convert
+// TestAuditFormatterJSONx_Process attempts to run the Process method to convert
 // pre-formatted JSON to XML (JSONx).
-func TestAuditFormatterJSONX_Process(t *testing.T) {
+func TestAuditFormatterJSONx_Process(t *testing.T) {
 	tests := map[string]struct {
 		IsErrorExpected      bool
 		ExpectedErrorMessage string
@@ -77,13 +77,13 @@ func TestAuditFormatterJSONX_Process(t *testing.T) {
 	}{
 		"request-no-formatted-json": {
 			IsErrorExpected:      true,
-			ExpectedErrorMessage: "event.(AuditFormatterJSONX).Process: pre-formatted JSON required but not found: invalid parameter",
+			ExpectedErrorMessage: "event.(AuditFormatterJSONx).Process: pre-formatted JSON required but not found: invalid parameter",
 			Subtype:              AuditRequest,
 			Data:                 nil,
 		},
 		"response-no-formatted-json": {
 			IsErrorExpected:      true,
-			ExpectedErrorMessage: "event.(AuditFormatterJSONX).Process: pre-formatted JSON required but not found: invalid parameter",
+			ExpectedErrorMessage: "event.(AuditFormatterJSONx).Process: pre-formatted JSON required but not found: invalid parameter",
 			Subtype:              AuditResponse,
 			Data:                 nil,
 		},
@@ -104,7 +104,7 @@ func TestAuditFormatterJSONX_Process(t *testing.T) {
 		tc := tc
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
-			e := fakeJSONXAuditEvent(t, tc.Subtype, tc.Data)
+			e := fakeJSONxAuditEvent(t, tc.Subtype, tc.Data)
 			require.NotNil(t, e)
 
 			// If we have data specified, then encode it and store as a format.
@@ -117,8 +117,8 @@ func TestAuditFormatterJSONX_Process(t *testing.T) {
 				e.FormattedAs(string(AuditFormatJSON), jsonBytes)
 			}
 
-			processed, err := NewAuditFormatterJSONX().Process(context.Background(), e)
-			b, found := e.Format(string(AuditFormatJSONX))
+			processed, err := NewAuditFormatterJSONx().Process(context.Background(), e)
+			b, found := e.Format(string(AuditFormatJSONx))
 
 			switch {
 			case tc.IsErrorExpected:
