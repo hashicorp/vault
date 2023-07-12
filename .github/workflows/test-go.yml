@@ -51,12 +51,11 @@ on:
 env: ${{ fromJSON(inputs.env-vars) }}
 
 jobs:
-  test-generate-test-package-list:
-    runs-on: ${{ fromJSON(inputs.runs-on) }}
-    name: Verify Test Package Distribution
+  test-matrix:
     permissions:
       id-token: write  # Note: this permission is explicitly required for Vault auth
       contents: read
+    runs-on: ${{ fromJSON(inputs.runs-on) }}
     steps:
       - uses: actions/checkout@c85c95e3d7251135ab7dc9ce3241c5835cc595a9 # v3.5.3
       - uses: ./.github/actions/set-up-go
@@ -76,7 +75,15 @@ jobs:
           caCertificate: ${{ steps.vault-auth.outputs.ca_certificate }}
           token: ${{ steps.vault-auth.outputs.token }}
           secrets: |
+            kv/data/github/${{ github.repository }}/datadog-ci DATADOG_API_KEY;
             kv/data/github/${{ github.repository }}/github-token username-and-token | github-token;
+            kv/data/github/${{ github.repository }}/license license_1 | VAULT_LICENSE_CI;
+            kv/data/github/${{ github.repository }}/license license_2 | VAULT_LICENSE_2;
+            kv/data/github/${{ github.repository }}/hcp-link HCP_API_ADDRESS;
+            kv/data/github/${{ github.repository }}/hcp-link HCP_AUTH_URL;
+            kv/data/github/${{ github.repository }}/hcp-link HCP_CLIENT_ID;
+            kv/data/github/${{ github.repository }}/hcp-link HCP_CLIENT_SECRET;
+            kv/data/github/${{ github.repository }}/hcp-link HCP_RESOURCE_ID;
       - id: setup-git-private
         name: Setup Git configuration (private)
         if: github.repository == 'hashicorp/vault-enterprise'
@@ -87,43 +94,66 @@ jobs:
         if: github.repository != 'hashicorp/vault-enterprise'
         run: |
           git config --global url."https://${{ secrets.ELEVATED_GITHUB_TOKEN}}@github.com".insteadOf https://github.com
-      - id: test
-        working-directory: .github/scripts
+      - run: go install gotest.tools/gotestsum@v1.9.0
+
+      - run: mkdir -p test-results/go-test
+
+      # We use a unique "read-" prefix to guarantee that we're not scribbling on
+      # the aggregated test data in the event of test failure. This key is
+      # unique for every test run and just used to restore the previous
+      # aggregated data. We persist all test data after a successful run and
+      # store that in the go-test-reports- cache.
+      - id: restore-from-cache
+        uses: actions/cache@88522ab9f39a2ea568f7027eddc7d8d8bc9d59c8 # v3.3.1
+        with:
+          path: test-results/go-test
+          key: read-go-test-reports-${{ github.run_number }}
+          restore-keys: go-test-reports-
+      - name: List cached results
+        id: list-cached-results
+        run: ls -lhR test-results/go-test
+      - name: Build matrix excluding binary and integration tests
+        id: build-non-binary
         env:
           GOPRIVATE: github.com/hashicorp/*
         run: |
-          ENTERPRISE=${{ inputs.enterprise }} ./test-generate-test-package-lists.sh
-  runner-indexes:
-    runs-on: ${{ fromJSON(inputs.runs-on) }}
-    name: Generate runner indexes
-    #
-    # This job generates a JSON Array of integers ranging from 1 to 16.
-    # That array is used in the matrix section of the test-go job below.
-    #
-    outputs:
-      runner-indexes: ${{ steps.generate-index-list.outputs.indexes }}
-    steps:
-      - id: generate-index-list
+          (
+            go list ./... | grep -v "_binary" | grep -v "vault/integ" | gotestsum tool ci-matrix --debug \
+              --partitions 16 \
+              --timing-files 'test-results/go-test/*.json' > matrix.json
+          )
+      - name: Capture list of binary tests
+        id: list-binary-tests
         run: |
-          INDEX_LIST="$(seq 1 ${{ inputs.total-runners }})"
-          INDEX_JSON="$(jq --null-input --compact-output '. |= [inputs]' <<< "${INDEX_LIST}")"
-          echo "indexes=${INDEX_JSON}" >> "${GITHUB_OUTPUT}"
+          LIST="$(go list ./... | grep "_binary" | xargs)"
+          echo "list=$LIST" >> "$GITHUB_OUTPUT"
+      - name: Build complete matrix
+        id: build
+        run: |
+            set -exo pipefail
+            export BINARY_TESTS="${{ steps.list-binary-tests.outputs.list }}"
+            (
+              echo -n "matrix="
+              jq -c --arg BINARY "${BINARY_TESTS}" \
+                '.include += [{
+                  "id": 16,
+                  "estimatedRuntime": "N/A",
+                  "packages": $BINARY,
+                  "description": "partition 16 - binary test packages"
+              }]' matrix.json
+            ) >> "$GITHUB_OUTPUT"
+    outputs:
+      matrix: ${{ steps.build.outputs.matrix }}
+
   test-go:
+    needs: test-matrix
     permissions:
       id-token: write  # Note: this permission is explicitly required for Vault auth
       contents: read
-    name: "${{ matrix.runner-index }}"
-    needs:
-      - runner-indexes
     runs-on: ${{ fromJSON(inputs.runs-on) }}
     strategy:
       fail-fast: false
-      matrix:
-        #
-        # Initialize the runner-index key with the JSON array of integers
-        # generated above.
-        #
-        runner-index: ${{ fromJSON(needs.runner-indexes.outputs.runner-indexes) }}
+      matrix: ${{ fromJSON(needs.test-matrix.outputs.matrix) }}
     env:
       GOPRIVATE: github.com/hashicorp/*
       TIMEOUT_IN_MINUTES: ${{ inputs.timeout-minutes }}
@@ -164,13 +194,8 @@ jobs:
         if: github.repository != 'hashicorp/vault-enterprise'
         run: |
           git config --global url."https://${{ secrets.ELEVATED_GITHUB_TOKEN}}@github.com".insteadOf https://github.com
-      - id: go-mod-download
-        if: matrix.runner-index > 16
-        env:
-          GOPRIVATE: github.com/hashicorp/*
-        run: time go mod download -x
       - id: build
-        if: matrix.runner-index > 16
+        if: contains(matrix.packages, '_binary')
         env:
           GOPRIVATE: github.com/hashicorp/*
         run: time make ci-bootstrap dev
@@ -182,18 +207,8 @@ jobs:
         run: |
           set -exo pipefail
 
-          #
-          # This script creates a Bash array with 16 elements each
-          # containing a space delimited list of package names. The
-          # array element corresponding to this instance's
-          # matrix.runner-index value.
-          #
-          ENTERPRISE=${{ inputs.enterprise }} source .github/scripts/generate-test-package-lists.sh
-
           # Build the dynamically generated source files.
           make prep
-
-          mkdir -p test-results/go-test
 
           # We don't want VAULT_LICENSE set when running Go tests, because that's
           # not what developers have in their environments and it could break some
@@ -226,16 +241,15 @@ jobs:
           # shellcheck disable=SC2086 # can't quote package list
           GOARCH=${{ inputs.go-arch }} \
             go run gotest.tools/gotestsum --format=short-verbose \
-              --junitfile test-results/go-test/results-${{ matrix.runner-index }}.xml \
-              --jsonfile test-results/go-test/results-${{ matrix.runner-index }}.json \
-              --jsonfile-timing-events failure-summary-${{ matrix.runner-index }}${{inputs.name}}.json \
+              --junitfile test-results/go-test/results-${{ matrix.id }}.xml \
+              --jsonfile test-results/go-test/results-${{ matrix.id }}.json \
+              --jsonfile-timing-events failure-summary-${{ matrix.id }}${{inputs.name}}.json \
               -- \
               -tags "${{ inputs.go-tags }}" \
               -timeout=${{ env.TIMEOUT_IN_MINUTES }}m \
               -parallel=${{ inputs.go-test-parallelism }} \
               ${{ inputs.extra-flags }} \
-                \
-              ${test_packages[${{ matrix.runner-index }}]}
+              ${{ matrix.packages }}
       - name: Prepare datadog-ci
         if: github.repository == 'hashicorp/vault' && (success() || failure())
         continue-on-error: true
@@ -250,17 +264,35 @@ jobs:
           if [[ ${{ github.repository }} == 'hashicorp/vault' ]]; then
             export DATADOG_API_KEY=${{ secrets.DATADOG_API_KEY }}
           fi
-          datadog-ci junit upload --service "$GITHUB_REPOSITORY" test-results/go-test/results-${{ matrix.runner-index }}.xml
+          datadog-ci junit upload --service "$GITHUB_REPOSITORY" test-results/go-test/results-${{ matrix.id }}.xml
         if: success() || failure()
       - name: Archive test results
         uses: actions/upload-artifact@0b7f8abb1508181956e8e162db84b466c27e18ce # v3.1.2
         with:
           name: test-results${{ inputs.name }}
-          path: test-results/
+          path: test-results/go-test
         if: success() || failure()
       - name: Upload failure summary
         uses: actions/upload-artifact@0b7f8abb1508181956e8e162db84b466c27e18ce # v3.1.2
         if: success() || failure()
         with:
           name: failure-summary
-          path: failure-summary-${{ matrix.runner-index }}${{inputs.name}}.json
+          path: failure-summary-${{ matrix.id }}${{inputs.name}}.json
+
+  test-collect-reports:
+    needs: test-go
+    runs-on: ${{ fromJSON(inputs.runs-on) }}
+    steps:
+      - uses: actions/cache@88522ab9f39a2ea568f7027eddc7d8d8bc9d59c8 # v3.3.1
+        with:
+          path: test-results/go-test
+          key: go-test-reports-${{ github.run_number }}
+          restore-keys: go-test-reports-
+      - uses: actions/download-artifact@9bc31d5ccc31df68ecc42ccf4149144866c47d8a # v3.0.2
+        with:
+          name: test-results
+          path: test-results/go-test
+      - run: |
+          ls -lhR test-results/go-test
+          find test-results/go-test -mindepth 1 -mtime +3 -delete
+          ls -lhR test-results/go-test
