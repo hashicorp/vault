@@ -114,9 +114,9 @@ func TestOptions_WithNow(t *testing.T) {
 			ExpectedErrorMessage: "cannot specify 'now' to be the zero time instant",
 		},
 		"valid-time": {
-			Value:           time.Date(2023, time.July, 4, 12, 0o3, 0o0, 0o0, &time.Location{}),
+			Value:           time.Date(2023, time.July, 4, 12, 3, 0, 0, time.Local),
 			IsErrorExpected: false,
-			ExpectedValue:   time.Date(2023, time.July, 4, 12, 0o3, 0o0, 0o0, &time.Location{}),
+			ExpectedValue:   time.Date(2023, time.July, 4, 12, 3, 0, 0, time.Local),
 		},
 	}
 
@@ -245,16 +245,16 @@ func TestOptions_Opts(t *testing.T) {
 		},
 		"with-multiple-valid-now": {
 			opts: []Option{
-				WithNow(time.Date(2023, time.July, 4, 12, 0o3, 0o0, 0o0, &time.Location{})),
-				WithNow(time.Date(2023, time.July, 4, 13, 0o3, 0o0, 0o0, &time.Location{})),
+				WithNow(time.Date(2023, time.July, 4, 12, 3, 0, 0, time.Local)),
+				WithNow(time.Date(2023, time.July, 4, 13, 3, 0, 0, time.Local)),
 			},
 			IsErrorExpected: false,
-			ExpectedNow:     time.Date(2023, time.July, 4, 13, 0o3, 0o0, 0o0, &time.Location{}),
+			ExpectedNow:     time.Date(2023, time.July, 4, 13, 3, 0, 0, time.Local),
 			IsNowExpected:   false,
 		},
 		"with-multiple-valid-then-invalid-now": {
 			opts: []Option{
-				WithNow(time.Date(2023, time.July, 4, 12, 0o3, 0o0, 0o0, &time.Location{})),
+				WithNow(time.Date(2023, time.July, 4, 12, 3, 0, 0, time.Local)),
 				WithNow(time.Time{}),
 			},
 			IsErrorExpected:      true,
@@ -265,13 +265,13 @@ func TestOptions_Opts(t *testing.T) {
 				WithID("qwerty"),
 				WithSubtype("typey2"),
 				WithFormat("json"),
-				WithNow(time.Date(2023, time.July, 4, 12, 0o3, 0o0, 0o0, &time.Location{})),
+				WithNow(time.Date(2023, time.July, 4, 12, 3, 0, 0, time.Local)),
 			},
 			IsErrorExpected: false,
 			ExpectedID:      "qwerty",
 			ExpectedSubtype: "typey2",
 			ExpectedFormat:  "json",
-			ExpectedNow:     time.Date(2023, time.July, 4, 12, 0o3, 0o0, 0o0, &time.Location{}),
+			ExpectedNow:     time.Date(2023, time.July, 4, 12, 3, 0, 0, time.Local),
 		},
 	}
 
