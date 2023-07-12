@@ -212,7 +212,7 @@ type ActivityLogCoreConfig struct {
 	MinimumRetentionMonths int
 
 	// Clock holds a custom clock to modify time.Now, time.Ticker, time.Timer.
-	// If nil, the default functions from the time package are used
+	// If nil, the default functions from the time package are used. // bogus change
 	Clock timeutil.Clock
 }
 
