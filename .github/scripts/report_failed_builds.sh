@@ -16,13 +16,10 @@ set -e
 [ ${TEST:?} ]
 [ ${TEST_DOCKER_K8S:?} ]
 
-#failed_tests_ids=$(gh api \
-#  -H "Accept: application/vnd.github+json" \
-#  -H "X-GitHub-Api-Version: 2022-11-28" \
-#  /repos/hashicorp/"$REPO"/actions/runs/"$RUN_ID"/attempts/1/jobs | jq -r '[.jobs[] | select(.name | startswith("Darwin") or startswith("Linux") or startswith("Other") ) | select(.conclusion == "failure") | .id][0]')
-#
-#extracted_error=$(gh run view --job $failed_tests_ids --log | grep "\#\#\[error\]")
+# listing out all of the jobs with the status
 jobs=( "build-other:$BUILD_OTHER" "build-linux:$BUILD_LINUX" "build-darwin:$BUILD_DARWIN" "build-docker:$BUILD_DOCKER" "build-ubi:$BUILD_UBI" "test:$TEST" "test-docker-k8s:$TEST_DOCKER_K8S" )
+
+# there is a case where even if a job is failed, it reports as cancelled. So, we look for both.
 failed_jobs=()
 for job in "${jobs[@]}";do
   if [[ "$job" == *"failure"* || "$job" == *"cancelled"* ]]; then
