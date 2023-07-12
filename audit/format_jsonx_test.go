@@ -12,21 +12,19 @@ import (
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/require"
+
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/sdk/helper/salt"
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
 func TestFormatJSONx_formatRequest(t *testing.T) {
-	salter, err := salt.NewSalt(context.Background(), nil, nil)
-	if err != nil {
-		t.Fatal(err)
-	}
-	saltFunc := func(context.Context) (*salt.Salt, error) {
-		return salter, nil
-	}
+	s, err := salt.NewSalt(context.Background(), nil, nil)
+	require.NoError(t, err)
+	tempStaticSalt := &staticSalt{salt: s}
 
-	fooSalted := salter.GetIdentifiedHMAC("foo")
+	fooSalted := s.GetIdentifiedHMAC("foo")
 	issueTime, _ := time.Parse(time.RFC3339, "2020-05-28T13:40:18-05:00")
 
 	cases := map[string]struct {
@@ -115,10 +113,12 @@ func TestFormatJSONx_formatRequest(t *testing.T) {
 
 	for name, tc := range cases {
 		var buf bytes.Buffer
-		formatter := AuditFormatter{
-			AuditFormatWriter: &JSONxFormatWriter{
-				Prefix:   tc.Prefix,
-				SaltFunc: saltFunc,
+		f, err := NewAuditFormatter(tempStaticSalt)
+		require.NoError(t, err)
+		formatter := AuditFormatterWriter{
+			Formatter: f,
+			Writer: &JSONxWriter{
+				Prefix: tc.Prefix,
 			},
 		}
 		config := FormatterConfig{
@@ -130,7 +130,7 @@ func TestFormatJSONx_formatRequest(t *testing.T) {
 			Request:  tc.Req,
 			OuterErr: tc.Err,
 		}
-		if err := formatter.FormatRequest(namespace.RootContext(nil), &buf, config, in); err != nil {
+		if err := formatter.FormatAndWriteRequest(namespace.RootContext(nil), &buf, config, in); err != nil {
 			t.Fatalf("bad: %s\nerr: %s", name, err)
 		}
 
