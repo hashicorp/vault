@@ -302,13 +302,12 @@ jobs:
       - id: failed-jobs
         run: |
           arr=()
-          for job in build-other build-linux build-darwin build-docker build-ubi test test-docker-k8s; do
-            if [[ ${{ needs."$job".result }} == "failure" ]]; then
-              arr+=(${{ needs."$job".name }})
+          for job in build-other build-linux build-darwin build-docker build-ubi 'test' test-docker-k8s; do
+            if [[ ${{ needs.$job.result }} == "failure" ]]; then
+              arr+=(${{ needs.$job.name }})
             fi
           done
           echo "failed_jobs=$( echo ${arr[@]} )" >> $GITHUB_OUTPUT
-          echo ::set-output name=arr::${arr[@]}
       - name: Build Status
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
