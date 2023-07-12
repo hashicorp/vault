@@ -139,11 +139,11 @@ jobs:
         run: echo $JSON
         env:
           JSON: ${{ toJSON(github) }}
-      - name: Dump job context
+      - name: Dump jobs context
         id: job_context_step
         run: echo $JSON
         env:
-          JSON: ${{ toJSON(job) }}
+          JSON: ${{ toJSON(jobs) }}
       - name: Authenticate to Vault
         id: vault-auth
         if: github.repository == 'hashicorp/vault-enterprise'
