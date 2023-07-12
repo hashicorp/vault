@@ -379,7 +379,7 @@ func TestBackend_Rotation_StaticRoles(t *testing.T) {
 			req := &logical.Request{
 				Storage: config.StorageView,
 			}
-			err = b.rotateExpiredStaticCreds(bgCTX, req)
+			err = b.rotateExpiredStaticCreds(bgCTX, req.Storage)
 			if err != nil {
 				t.Fatalf("got an error rotating credentials: %s", err)
 			}

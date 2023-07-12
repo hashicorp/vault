@@ -21,8 +21,6 @@ const (
 	operationPrefixRabbitMQ = "rabbit-mq"
 	rabbitMQRolePath        = "role/"
 	rabbitMQStaticRolePath  = "static-role/"
-	// TODO remove duplicate from roation.go
-	rabbitMQDefaultRotationPeriod = 5
 )
 
 // Factory creates and configures the backend
@@ -32,6 +30,7 @@ func Factory(ctx context.Context, conf *logical.BackendConfig) (logical.Backend,
 		return nil, err
 	}
 	b.credRotationQueue = queue.New()
+	go b.initQueue(b.queueCtx, conf, conf.System.ReplicationState())
 	return b, nil
 }
 
@@ -63,21 +62,19 @@ func Backend(conf *logical.BackendConfig) *backend {
 
 		Clean:      b.resetClient,
 		Invalidate: b.invalidate,
-		// TODO check why this takes longer to trigger
-		WALRollbackMinAge: time.Duration(rabbitMQDefaultRotationPeriod) * time.Second,
 		PeriodicFunc: func(ctx context.Context, req *logical.Request) error {
 			repState := conf.System.ReplicationState()
 			if (conf.System.LocalMount() ||
 				!repState.HasState(consts.ReplicationPerformanceSecondary)) &&
 				!repState.HasState(consts.ReplicationDRSecondary) &&
 				!repState.HasState(consts.ReplicationPerformanceStandby) {
-				return b.rotateExpiredStaticCreds(ctx, req)
+				return b.rotateExpiredStaticCreds(ctx, req.Storage)
 			}
 			return nil
 		},
 		BackendType: logical.TypeLogical,
 	}
-
+	b.queueCtx, b.cancelQueueCtx = context.WithCancel(context.Background())
 	return &b
 }
 
@@ -88,6 +85,8 @@ type backend struct {
 	lock   sync.RWMutex
 
 	credRotationQueue *queue.PriorityQueue
+	queueCtx          context.Context
+	cancelQueueCtx    context.CancelFunc
 }
 
 // DB returns the database connection.
@@ -138,6 +137,22 @@ func (b *backend) invalidate(ctx context.Context, key string) {
 	switch key {
 	case "config/connection":
 		b.resetClient(ctx)
+	}
+}
+
+func (b *backend) runTicker(ctx context.Context, queueTickInterval time.Duration, s logical.Storage) {
+	b.Logger().Info("starting periodic ticker")
+	tick := time.NewTicker(queueTickInterval)
+	defer tick.Stop()
+	for {
+		select {
+		case <-tick.C:
+			b.rotateExpiredStaticCreds(ctx, s)
+
+		case <-ctx.Done():
+			b.Logger().Info("stopping periodic ticker")
+			return
+		}
 	}
 }
 

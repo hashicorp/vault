@@ -6,9 +6,11 @@ package rabbitmq
 import (
 	"context"
 	"fmt"
+	"strconv"
 	"time"
 
 	"github.com/hashicorp/go-multierror"
+	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/sdk/queue"
 	rabbithole "github.com/michaelklishin/rabbit-hole/v2"
@@ -29,11 +31,11 @@ const (
 // rotateExpiredStaticCreds will pop expired credentials (credentials whose priority
 // represents a time before the present), rotate the associated credential, and push
 // them back onto the queue with the new priority.
-func (b *backend) rotateExpiredStaticCreds(ctx context.Context, req *logical.Request) error {
+func (b *backend) rotateExpiredStaticCreds(ctx context.Context, s logical.Storage) error {
 	var errs *multierror.Error
 
 	for {
-		keepGoing, err := b.rotateCredential(ctx, req.Storage)
+		keepGoing, err := b.rotateCredential(ctx, s)
 		if err != nil {
 			errs = multierror.Append(errs, err)
 		}
@@ -56,6 +58,11 @@ func (b *backend) validateRotationPeriod(period time.Duration) error {
 
 // TODO check if not pop by key needed
 func (b *backend) rotateCredential(ctx context.Context, storage logical.Storage) (rotated bool, err error) {
+	select {
+	case <-ctx.Done():
+		return false, nil
+	default:
+	}
 	item, err := b.credRotationQueue.Pop()
 	if err != nil {
 		if err == queue.ErrEmpty {
@@ -137,4 +144,37 @@ func (b *backend) deleteStaticCredential(ctx context.Context, storage logical.St
 		}
 	}
 	return nil
+}
+
+func (b *backend) initQueue(ctx context.Context, conf *logical.BackendConfig, replicationState consts.ReplicationState) {
+	if (conf.System.LocalMount() || !replicationState.HasState(consts.ReplicationPerformanceSecondary)) &&
+		!replicationState.HasState(consts.ReplicationDRSecondary) &&
+		!replicationState.HasState(consts.ReplicationPerformanceStandby) {
+		b.Logger().Info("initializing rabbitmq rotation queue")
+		queueTickerInterval := defaultQueueTickSeconds * time.Second
+		if strVal, ok := conf.Config[queueTickIntervalKey]; ok {
+			newVal, err := strconv.Atoi(strVal)
+			if err == nil {
+				queueTickerInterval = time.Duration(newVal) * time.Second
+			} else {
+				b.Logger().Error("bad value for %q option: %q", queueTickIntervalKey, strVal)
+			}
+		}
+		go b.runTicker(ctx, queueTickerInterval, conf.StorageView)
+	}
+}
+
+func (b *backend) popFromRotationQueueByKey(name string) (*queue.Item, error) {
+	select {
+	case <-b.queueCtx.Done():
+	default:
+		item, err := b.credRotationQueue.PopByKey(name)
+		if err != nil {
+			return nil, err
+		}
+		if item != nil {
+			return item, nil
+		}
+	}
+	return nil, queue.ErrEmpty
 }

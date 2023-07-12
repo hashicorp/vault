@@ -333,9 +333,11 @@ func (b *backend) pathStaticRoleCreateUpdate(ctx context.Context, req *logical.R
 		RevokeUserOnDelete: revokeUserOnDelete,
 	}
 
-	_, err = b.credRotationQueue.PopByKey(name)
+	_, err = b.popFromRotationQueueByKey(name)
 	if err != nil {
-		return nil, fmt.Errorf("failed to pop item from the rotation queue for role %q: %w", name, err)
+		if err != queue.ErrEmpty {
+			return nil, fmt.Errorf("failed to pop item from the rotation queue for role %q: %w", name, err)
+		}
 	}
 	// regenerate either way as username or permissions might have changed
 	if err := b.createStaticCredential(ctx, req.Storage, &staticRole, name); err != nil {
@@ -359,7 +361,7 @@ func (b *backend) pathStaticRoleDelete(ctx context.Context, req *logical.Request
 	if name == "" {
 		return logical.ErrorResponse("missing name"), nil
 	}
-	item, err := b.credRotationQueue.PopByKey(name)
+	item, err := b.popFromRotationQueueByKey(name)
 	if err != nil {
 		return nil, fmt.Errorf("failed to pop item from the rotation queue for role %q: %w", name, err)
 	}
