@@ -289,8 +289,9 @@ jobs:
                 run_id: context.runId,
             });
 
+            const prefixToSearchFor = 'Run Go tests / test-go (${{ matrix.id }}'
             const jobData = result.data.jobs.filter(
-                (job) => job.name === "Run Go tests / ${{ matrix.runner-index }}"
+                (job) => job.name.startsWith(prefixToSearchFor)
             );
             if (
                 jobData === undefined ||
@@ -320,9 +321,9 @@ jobs:
           # | github.com/hashicorp/vault/package | TestName | fips | 0 | 2 | [view results](github.com/link-to-logs) |
           jq -r -n 'inputs
           | select(.Action == "fail")
-          | "| ${{inputs.name}} | \(.Package) | \(.Test // "-") | \(.Elapsed) | ${{ matrix.runner-index }} | [view test results :scroll:](${{ env.GH_JOB_URL }}) |"' \
-          failure-summary-${{ matrix.runner-index }}${{ inputs.name != '' && '-' || '' }}${{inputs.name}}.json \
-          >> failure-summary-${{ matrix.runner-index }}${{ inputs.name != '' && '-' || '' }}${{inputs.name}}.md
+          | "| ${{inputs.name}} | \(.Package) | \(.Test // "-") | \(.Elapsed) | ${{ matrix.id }} | [view test results :scroll:](${{ env.GH_JOB_URL }}) |"' \
+          failure-summary-${{ matrix.id }}${{ inputs.name != '' && '-' || '' }}${{inputs.name}}.json \
+          >> failure-summary-${{ matrix.id }}${{ inputs.name != '' && '-' || '' }}${{inputs.name}}.md
       - name: Upload failure summary
         uses: actions/upload-artifact@0b7f8abb1508181956e8e162db84b466c27e18ce # v3.1.2
         if: success() || failure()
