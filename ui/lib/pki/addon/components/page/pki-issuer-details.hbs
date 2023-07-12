@@ -149,7 +149,7 @@
 
 {{! ROOT ROTATION MODAL }}
 {{#if this.showRotationModal}}
-  <Hds::Modal id="root-rotation-modal" @onClose={{mut this.showRotationModal false}} as |M|>
+  <Hds::Modal id="root-rotation-modal" @onClose={{fn (mut this.showRotationModal) false}} as |M|>
     <M.Header @icon="rotate-cw">
       Rotate this root
     </M.Header>
