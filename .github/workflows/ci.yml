@@ -96,14 +96,12 @@ jobs:
     needs:
       - setup
       - setup-go-cache
-      #- verify-changes
+      - verify-changes
     # Don't run this job for docs/ui only PRs
     if: |
-      !startsWith(github.head_ref, 'ui/') &&
-      !startsWith(github.head_ref, 'backport/ui/') &&
-      !startsWith(github.head_ref, 'docs/') &&
-      !startsWith(github.head_ref, 'backport/docs/') &&
-      !contains(github.event.pull_request.labels.*.name, 'docs')
+      always() && (needs.verify-changes.result == 'skipped' ||
+      (needs.verify-changes.outputs.is_docs_change == 'false' &&
+      needs.verify-changes.outputs.is_ui_change == 'false'))
     uses: ./.github/workflows/test-go.yml
     with:
       # The regular Go tests use an extra runner to execute the
