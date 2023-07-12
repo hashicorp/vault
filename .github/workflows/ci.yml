@@ -168,7 +168,7 @@ jobs:
     # The test-ui job is only run on:
     # - pushes to main and branches starting with "release/"
     # - PRs where the branch starts with "ui/", "backport/ui/", "merge", or when base branch starts with "release/"
-    # - PRs with the "ui" label on github
+    # - PRs with the "ui" label on GitHub
     if: |
       github.ref_name == 'main' ||
       startsWith(github.ref_name, 'release/') ||
@@ -347,11 +347,11 @@ jobs:
           name: failure-summary
       - name: Prepare failure summary
         run: |
-          # We will store the jq query results in a temp file
+          # Sort all of the summary table rows and push them to a temp file.
           temp_file_name=temp-$(date +%s)
           cat failure-summary-*.md | sort >> "$temp_file_name"
 
-          # if there are test failures, present them in a format of a GH Markdown table
+          # If there are test failures, present them in a format of a GitHub Markdown table.
           if [ -s "$temp_file_name" ]; then
             # shellcheck disable=SC2129
             # Here we create the headings for the summary table
