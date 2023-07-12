@@ -98,6 +98,12 @@ jobs:
       - run: go install gotest.tools/gotestsum@v1.9.0
 
       - run: mkdir -p test-results/go-test
+
+      # We use a unique "read-" prefix to guarantee that we're not scribbling on
+      # the aggregated test data in the event of test failure. This key is
+      # unique for every test run and just used to restore the previous
+      # aggregated data. We persist all test data after a successful run and
+      # store that in the go-test-reports- cache.
       - id: restore-from-cache
         uses: actions/cache@88522ab9f39a2ea568f7027eddc7d8d8bc9d59c8 # v3.3.1
         with:
@@ -206,8 +212,6 @@ jobs:
           # Build the dynamically generated source files.
           make prep
 
-          mkdir -p test-results/go-test
-
           # We don't want VAULT_LICENSE set when running Go tests, because that's
           # not what developers have in their environments and it could break some
           # tests; it would be like setting VAULT_TOKEN.  However some non-Go
@@ -281,12 +285,12 @@ jobs:
     needs: test-go
     runs-on: ${{ fromJSON(inputs.runs-on) }}
     steps:
-      - uses: actions/cache@v3
+      - uses: actions/cache@88522ab9f39a2ea568f7027eddc7d8d8bc9d59c8 # v3.3.1
         with:
           path: test-results/go-test
           key: go-test-reports-${{ github.run_number }}
           restore-keys: go-test-reports-
-      - uses: actions/download-artifact@v3
+      - uses: actions/download-artifact@9bc31d5ccc31df68ecc42ccf4149144866c47d8a # v3.0.2
         with:
           name: test-results
           path: test-results/go-test
