@@ -250,10 +250,7 @@ jobs:
           if [[ ${{ github.base_ref }} = vault-17777* ]] ; then
             VAULT_FAIL_TEST="true"
             export VAULT_FAIL_TEST
-            # # join packages names as space separated list
-            # packages=$(IFS=" " ; echo "${{ matrix.packages }}")
-            rerunFails="--rerun-fails --packages "${{ matrix.packages }}""
-            echo "go run gotest.tools/gotestsum --format=short-verbose  $rerunFails"
+            rerunFails="--rerun-fails"
           fi
 
           GOARCH=${{ inputs.go-arch }} \
@@ -261,13 +258,13 @@ jobs:
               --junitfile test-results/go-test/results-${{ matrix.id }}.xml \
               --jsonfile test-results/go-test/results-${{ matrix.id }}.json \
               --jsonfile-timing-events failure-summary-${{ matrix.id }}${{ inputs.name != '' && '-' || '' }}${{ inputs.name }}.json \
-               $rerunFails \
+              $rerunFails \
+              --packages "${{ matrix.packages }}" \
               -- \
               -tags "${{ inputs.go-build-tags }}" \
               -timeout=${{ env.TIMEOUT_IN_MINUTES }}m \
               -parallel=${{ inputs.go-test-parallelism }} \
               ${{ inputs.extra-flags }} \
-              ${{ matrix.packages }}
       - name: Prepare datadog-ci
         if: github.repository == 'hashicorp/vault' && (success() || failure()) 
         continue-on-error: true
