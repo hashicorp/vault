@@ -1,6 +1,6 @@
 <KvPageHeader @breadcrumbs={{@breadcrumbs}} @model={{@model}} @isEngineView={{true}} @pageTitle={{@pageTitle}}>
   <:tabLinks>
-    <LinkTo @route="list" data-test-secrets-tab="Secrets">Secrets</LinkTo>
+    <LinkTo @route={{@routeName}} data-test-secrets-tab={{@routeName}}>Secrets</LinkTo>
     <LinkTo @route="configuration" data-test-secrets-tab="Configuration">Configuration</LinkTo>
   </:tabLinks>
 
@@ -18,7 +18,7 @@
   {{#each @model as |secret|}}
     <LinkedBlock
       class="list-item-row"
-      @params={{array (if secret.isFolder "list" "secret.details") secret.id}}
+      @params={{array (if secret.isFolder "list-nested-secret" "secret.details") secret.path}}
       @linkPrefix={{this.mountPoint}}
     >
       <div class="level is-mobile">

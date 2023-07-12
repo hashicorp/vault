@@ -34,13 +34,16 @@ export default class KvMetadataAdapter extends ApplicationAdapter {
 
   // TODO: replace this with raw request for metadata request?
   query(store, type, query) {
-    const { backend, nestedSecretParam } = query;
-    // nestedSecretParam is a value if the secret name is nested e.g. beep/boop/bop and you've clicked on beep, secret = "boop/"
-    return this.ajax(this._url(`${encodePath(backend)}/metadata/`, nestedSecretParam), 'GET', {
+    const { backend, nestedSecret } = query;
+    // example of nestedSecret: beep/boop/
+    return this.ajax(this._url(`${encodePath(backend)}/metadata/`, nestedSecret), 'GET', {
       data: { list: true },
     }).then((resp) => {
-      // resp id changes from beep/boop to beep/boop/bop
-      resp.id = nestedSecretParam;
+      // resp.id = nestedSecret;
+      // change the path from beep/ to beep/boop/bop if nested secret.
+      if (nestedSecret) {
+        resp.path = nestedSecret;
+      }
       resp.backend = backend;
       return resp;
     });

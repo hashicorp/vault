@@ -3,6 +3,10 @@
  * SPDX-License-Identifier: MPL-2.0
  */
 
+/**
+ * We have two routes for the list view. While this file does the logic the associated template is list.hbs.
+ */
+
 import Route from '@ember/routing/route';
 import { action } from '@ember/object';
 import { inject as service } from '@ember/service';
@@ -14,23 +18,23 @@ export default class KvSecretsListRoute extends Route {
   @service router;
   @service secretMountPath;
 
-  nestedSecretName() {
-    const { nestedSecret } = this.paramsFor('list');
+  getNestedSecretFromUrlParam() {
+    const { nestedSecret } = this.paramsFor('list-nested-secret');
     return nestedSecret ? normalizePath(nestedSecret) : '';
   }
 
-  beforeModel() {
-    const nestedSecret = this.nestedSecretName();
-    if (this.routeName === 'list' && nestedSecret.endsWith('/')) {
-      // this.router.replaceWith('vault.cluster.secrets.backend.kv.list', nestedSecret + '/');
-    }
-  }
+  // beforeModel() {
+  //   const nestedSecret = this.getNestedSecretFromUrlParam();
+  //   if (this.routeName === 'list' && nestedSecret.endsWith('/')) {
+  //     // this.router.replaceWith('vault.cluster.secrets.backend.kv.list', nestedSecret + '/');
+  //   }
+  // }
 
   model() {
     // TODO add filtering and return model for query on kv/metadata.
-    const nestedSecretParam = this.nestedSecretName() || '';
+    const nestedSecret = this.getNestedSecretFromUrlParam();
     const backend = this.secretMountPath.currentPath;
-    const secrets = this.store.query('kv/metadata', { backend, nestedSecretParam }).catch((err) => {
+    const arrayOfSecretModels = this.store.query('kv/metadata', { backend, nestedSecret }).catch((err) => {
       if (err.httpStatus === 404) {
         return [];
       } else {
@@ -38,14 +42,16 @@ export default class KvSecretsListRoute extends Route {
       }
     });
     return hash({
-      secrets,
+      arrayOfSecretModels,
       backend,
+      routeName: this.routeName,
     });
   }
 
   setupController(controller, resolvedModel) {
     super.setupController(controller, resolvedModel);
-    controller.set('model', resolvedModel.secrets);
+    controller.set('model', resolvedModel.arrayOfSecretModels);
+    controller.routeName = resolvedModel.routeName;
     controller.pageTitle = resolvedModel.backend;
     controller.breadcrumbs = [
       { label: 'secrets', route: 'secrets', linkExternal: true },

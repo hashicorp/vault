@@ -5,7 +5,7 @@
 
 // import { assert } from '@ember/debug';
 import ApplicationSerializer from '../application';
-// import { kvMetadataPath } from 'vault/utils/kv-path';
+import { kvMetadataPath } from 'vault/utils/kv-path';
 
 export default class KvMetadataSerializer extends ApplicationSerializer {
   attrs = {
@@ -48,9 +48,8 @@ export default class KvMetadataSerializer extends ApplicationSerializer {
           fullSecretPath = '\u0020';
         }
         return {
-          // id: kvMetadataPath(payload.backend, fullSecretPath),
-          id: fullSecretPath,
-          path: secret,
+          id: kvMetadataPath(payload.backend, fullSecretPath),
+          path: fullSecretPath,
         };
       });
     }
