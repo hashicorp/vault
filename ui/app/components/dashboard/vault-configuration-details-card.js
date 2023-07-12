@@ -17,9 +17,11 @@ import Component from '@glimmer/component';
  */
 
 export default class DashboardSecretsEnginesCard extends Component {
-  get tlsDisableConfig() {
-    return this.args.vaultConfiguration.listeners.find((listener) => {
+  get tlsDisabled() {
+    const tlsDisableConfig = this.args.vaultConfiguration.listeners.find((listener) => {
       if (listener.config && listener.config.tls_disable) return listener.config.tls_disable;
     });
+
+    return tlsDisableConfig?.config.tls_disable ? 'Enabled' : 'Disabled';
   }
 }
