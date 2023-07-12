@@ -63,11 +63,10 @@ runs:
       shell: bash
       run: |
         git config --global url."https://${{ inputs.github-token }}@github.com".insteadOf https://github.com
-        # go list ./... forces downloading some additional versions of modules that 'go mod
-        # download' misses. We need this because we make use of go list itself during
-        # code generation in later builds that rely on this module cache.
-        go list ./...
-        go list -test ./...
-        go mod download
-        ( cd sdk && go mod download )
-        ( cd api && go mod download )
+        for mod in $(find . -type f -name go.mod); do
+          pushd "$(dirname $mod)"
+            go list ./...
+            go list -test ./...
+            go mod download
+          popd
+        done
