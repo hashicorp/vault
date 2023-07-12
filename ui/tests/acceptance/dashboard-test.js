@@ -57,7 +57,7 @@ module('Acceptance | landing page dashboard', function (hooks) {
     });
   });
 
-  module('configuration details more card', function () {
+  module('configuration details card', function () {
     test('shows the configuration details card', async function (assert) {
       this.server.get('sys/config/state/sanitized', () => ({
         data: {
@@ -66,7 +66,7 @@ module('Acceptance | landing page dashboard', function (hooks) {
           cluster_addr: 'https://127.0.0.1:8201',
           cluster_cipher_suites: '',
           cluster_name: '',
-          default_lease_ttl: 10368000,
+          default_lease_ttl: 0,
           default_max_request_duration: 0,
           detect_deadlocks: '',
           disable_cache: false,
@@ -155,7 +155,7 @@ module('Acceptance | landing page dashboard', function (hooks) {
       await visit('/vault/dashboard');
       assert.dom(VAULT_CONFIGURATION_SELECTORS.cardTitle).hasText('Configuration details');
       assert.dom(VAULT_CONFIGURATION_SELECTORS.apiAddr).hasText('http://127.0.0.1:8200');
-      assert.dom(VAULT_CONFIGURATION_SELECTORS.defaultLeaseTtl).hasText('3 months 30 days 1 hour');
+      assert.dom(VAULT_CONFIGURATION_SELECTORS.defaultLeaseTtl).hasText('0');
       assert.dom(VAULT_CONFIGURATION_SELECTORS.maxLeaseTtl).hasText('5 months 25 days 1 hour');
       assert.dom(VAULT_CONFIGURATION_SELECTORS.tlsDisable).hasText('true');
       assert.dom(VAULT_CONFIGURATION_SELECTORS.logFormat).hasText('None');
