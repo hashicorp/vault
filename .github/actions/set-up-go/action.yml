@@ -14,30 +14,33 @@ inputs:
 outputs:
   cache-key:
     description: "The Go modules cache key"
-    value: ${{ steps.metadata.outputs.cache-key }}
+    value: ${{ steps.metadata-2.outputs.cache-key }}
   cache-path:
     description: "The GOMODCACHE path"
-    value: ${{ steps.metadata.outputs.cache-path }}
+    value: ${{ steps.metadata-2.outputs.cache-path }}
   go-version:
     description: "The version of Go in the .go-version file"
-    value: ${{ steps.go-version.outputs.go-version }}
+    value: ${{ steps.metadata-1.outputs.go-version }}
 
 runs:
   using: composite
   steps:
     - uses: actions/checkout@c85c95e3d7251135ab7dc9ce3241c5835cc595a9 # v3.5.3
-    - id: go-version
+    - id: metadata-1
       shell: bash
-      run: echo "go-version=$(cat ./.go-version)" >> "$GITHUB_OUTPUT"
+      run: |
+        echo "go-version=$(cat ./.go-version)" >> "$GITHUB_OUTPUT"
+        sums=($(for sum in $(find . -type f -name go.sum); do echo $sum; done))
+        echo "go-sums-paths='$(printf '%s\n' "$sums[@]}" | jq -R . | jq -s . --compact-output)'" >> "$GITHUB_OUTPUT"
     - uses: actions/setup-go@fac708d6674e30b6ba41289acaab6d4b75aa0753 # v4.0.1
       with:
-        go-version: ${{ steps.go-version.outputs.go-version }}
+        go-version: ${{ steps.metadata-1.outputs.go-version }}
         cache: false # We use our own caching strategy
-    - id: metadata
+    - id: metadata-2
       shell: bash
       run: |
         echo "cache-path=$(go env GOMODCACHE)" >> "$GITHUB_OUTPUT"
-        echo "cache-key=go-modules-${{ hashFiles('**/go.sum') }}" >> "$GITHUB_OUTPUT"
+        echo "cache-key=go-modules-${{ hashFiles(join(fromJson(steps.metadata-1.outputs.go-sums-paths), ',')) }}" >> "$GITHUB_OUTPUT"
     - id: cache-modules
       uses: actions/cache@88522ab9f39a2ea568f7027eddc7d8d8bc9d59c8 # v3.3.1
       with:
@@ -56,7 +59,7 @@ runs:
         # We intentionally do not use partial restore keys. If we get dont get an exact cache hit
         # we only want to download the latest modules, not append them to a prior cache. This
         # keeps cache upload time, download time, and storage size to a minimum.
-        path: ${{ steps.metadata.outputs.cache-path }}
+        path: ${{ steps.metadata-2.outputs.cache-path }}
         key: ${{ steps.metadata.outputs.cache-key }}
     - if: steps.cache-modules.outputs.cache-hit != 'true'
       name: Download go modules
