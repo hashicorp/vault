@@ -17,7 +17,7 @@
 
     {{#if (not (eq @model.vaultConfiguration 403))}}
       <Hds::Card::Container @hasBorder={{true}} class="has-padding-l is-flex-column is-flex-half">
-        <Dashboard::VaultConfigurationCard @vaultConfiguration={{@model.vaultConfiguration}} />
+        <Dashboard::VaultConfigurationDetailsCard @vaultConfiguration={{@model.vaultConfiguration}} />
       </Hds::Card::Container>
     {{/if}}
   </div>
