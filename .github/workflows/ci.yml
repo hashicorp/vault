@@ -136,7 +136,7 @@ jobs:
       go-build-tags: ${{ needs.setup.outputs.go-build-tags }}
       runs-on: ${{ needs.setup.outputs.compute-huge }}
       enterprise: ${{ needs.setup.outputs.enterprise }}
-      name: "-race"
+      name: "race"
     secrets: inherit
   test-go-fips:
     name: Run Go tests with FIPS configuration
@@ -161,7 +161,7 @@ jobs:
       go-build-tags: '${{ needs.setup.outputs.go-build-tags }},deadlock,cgo,fips,fips_140_2'
       runs-on: ${{ needs.setup.outputs.compute-larger }}
       enterprise: ${{ needs.setup.outputs.enterprise }}
-      name: "-fips"
+      name: "fips"
     secrets: inherit
   test-ui:
     name: Test UI
@@ -349,54 +349,14 @@ jobs:
         run: |
           # We will store the jq query results in a temp file
           temp_file_name=temp-$(date +%s)
-
-          # The 'jq' command below filters and formats JSON data from input files to generate a failure summary report.
-          # The query is a bit of a nightmare, though, so let's have a closer look at it.
-          #
-          # The command takes input from files matching the pattern "failure-summary-*.json".
-          # The input files should contain streams of JSON objects(with no commas in between),
-          # one per line, representing test results.
-          # Each object should have the "Action" and "Package" keys.
-          #
-          # We invoke the command with two flags:
-          # - '-r' specifies that the output should be in raw format,
-          #   without any JSON formatting. (I.e. no quotes).
-          # - '-n' tells 'jq' not to read any input from the command line.
-          #   It is used when input is provided through the 'inputs' function or other methods.
-          #
-          # 'inputs':
-          # Read JSON objects from the input files specified after the 'jq' command.
-          # We assume that the input files contain one JSON object per line.
-          #
-          # 'select(.Action == "fail")':
-          # Filter JSON array to contain only objects where the value of "Action" is "fail"
-          #
-          # The remaining part of the query constructs a formatted string for each filtered JSON object`:
-          # - '\(.Package)' and '\(.Test // "-")' insert the values of the "Package" and "Test" keys into the string,
-          #   respectively. If Test is missing, insert a dash character instead.
-          # - 'input_filename' is a special variable in 'jq' that represents the name of the input file being processed.
-          # - 'split("-")' splits the input filename on the hyphen ("-") character and returns an array of the
-          #   resulting parts.
-          # - '.sub(".json"; "")' removes the ".json" extension from the string.
-          # - The third part of the filename is extracted using '.split("-") | .[2]'.
-          # - If the fourth part of the filename exists, it contains the test type.
-          #   Otherwise, the default value "normal" is used.
-          # - The '.sub(".json"; "")' removes the ".json" extension from the string.
-          #
-          # The filtered and formatted data is outputted as rows of a Markdown table, like this:
-          # | pkg1 | test1 | 1 | normal |
-          # | pkg2 | test2 | 4 | race |
-          # | pkg3 | test3 | 6 | fips |
-
-          jq -r -n 'inputs | select(.Action == "fail") | "| \(.Package) | \(.Test // "-") | \(input_filename | split("-") | .[2] | sub(".json"; "")) | \(input_filename | split("-") | .[3] // "normal" | sub(".json";"") )"' failure-summary-*.json | sort >> "$temp_file_name"
+          cat failure-summary-*.md | sort >> "$temp_file_name"
 
           # if there are test failures, present them in a format of a GH Markdown table
           if [ -s "$temp_file_name" ]; then
             # shellcheck disable=SC2129
             # Here we create the headings for the summary table
-            echo "### Go test failures" >> "$GITHUB_STEP_SUMMARY"
-            echo "| Package | Test | Runner Index | Test Type |" >> "$GITHUB_STEP_SUMMARY"
-            echo "| ------- | ---- | ------------ | --------- |" >> "$GITHUB_STEP_SUMMARY"
+            echo "| Test Type | Package | Test | Elapsed | Runner Index | Logs |" >> "$GITHUB_STEP_SUMMARY"
+            echo "| --------- | ------- | ---- | ------- | ------------ | ---- |" >> "$GITHUB_STEP_SUMMARY"
             cat "$temp_file_name" >>  "$GITHUB_STEP_SUMMARY"
           else
             echo "### All Go tests passed! :white_check_mark:" >> "$GITHUB_STEP_SUMMARY"
