@@ -879,6 +879,7 @@ func (c *Core) setupCredentials(ctx context.Context) error {
 			// Calculate any namespace prefixes here, because when Taint() is called, there won't be
 			// a namespace to pull from the context. This is similar to what we do above in c.router.Mount().
 			path = entry.Namespace().Path + path
+			c.logger.Debug("tainting a mount due to it being marked as tainted in mount table", "entry.path", entry.Path, "entry.namespace.path", entry.Namespace().Path, "full_path", path)
 			c.router.Taint(ctx, path)
 		}
 

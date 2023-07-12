@@ -88,7 +88,7 @@ module('Integration | Component | page/pki-issuer-rotate-root', function (hooks)
     `,
       { owner: this.engine }
     );
-    assert.dom(SELECTORS.pageTitle).hasText('Generate new root');
+    assert.dom(SELECTORS.pageTitle).hasText('Generate New Root');
     assert.dom(SELECTORS.oldRadioSelect).isChecked('defaults to use-old-settings');
     assert.dom(SELECTORS.rotateRootForm).exists('it renders old settings form');
     assert
@@ -197,7 +197,7 @@ module('Integration | Component | page/pki-issuer-rotate-root', function (hooks)
       `,
       { owner: this.engine }
     );
-    assert.dom(SELECTORS.pageTitle).hasText('View issuer certificate');
+    assert.dom(SELECTORS.pageTitle).hasText('View Issuer Certificate');
     assert
       .dom(SELECTORS.nextSteps)
       .hasText(
@@ -234,7 +234,7 @@ module('Integration | Component | page/pki-issuer-rotate-root', function (hooks)
       `,
       { owner: this.engine }
     );
-    assert.dom(SELECTORS.pageTitle).hasText('View issuer certificate');
+    assert.dom(SELECTORS.pageTitle).hasText('View Issuer Certificate');
     assert.dom(SELECTORS.toolbarCrossSign).exists();
     assert.dom(SELECTORS.toolbarSignInt).exists();
     assert.dom(SELECTORS.toolbarDownload).exists();

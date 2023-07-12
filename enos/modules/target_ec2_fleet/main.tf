@@ -76,15 +76,23 @@ resource "random_string" "unique_id" {
   special = false
 }
 
+// ec2:CreateFleet only allows up to 4 InstanceRequirements overrides so we can only ever request
+// a fleet across 4 or fewer subnets if we want to bid with InstanceRequirements instead of
+// weighted instance types.
+resource "random_shuffle" "subnets" {
+  input        = data.aws_subnets.vpc.ids
+  result_count = 4
+}
+
 locals {
-  spot_allocation_strategy      = "price-capacity-optimized"
+  spot_allocation_strategy      = "lowestPrice"
   on_demand_allocation_strategy = "lowestPrice"
   instances                     = toset([for idx in range(var.instance_count) : tostring(idx)])
   cluster_name                  = coalesce(var.cluster_name, random_string.random_cluster_name.result)
   name_prefix                   = "${var.project_name}-${local.cluster_name}-${random_string.unique_id.result}"
   fleet_tag                     = "${local.name_prefix}-spot-fleet-target"
   fleet_tags = {
-    Name                     = "${local.name_prefix}-target"
+    Name                     = "${local.name_prefix}-${var.cluster_tag_key}-target"
     "${var.cluster_tag_key}" = local.cluster_name
     Fleet                    = local.fleet_tag
   }
@@ -218,6 +226,20 @@ resource "aws_launch_template" "target" {
     name = aws_iam_instance_profile.target.name
   }
 
+  instance_requirements {
+    burstable_performance = "included"
+
+    memory_mib {
+      min = var.instance_mem_min
+      max = var.instance_mem_max
+    }
+
+    vcpu_count {
+      min = var.instance_cpu_min
+      max = var.instance_cpu_max
+    }
+  }
+
   network_interfaces {
     associate_public_ip_address = true
     delete_on_termination       = true
@@ -251,7 +273,9 @@ resource "aws_launch_template" "target" {
 # Unless we see capacity issues or instances being shut down then we ought to
 # stick with that strategy.
 resource "aws_ec2_fleet" "targets" {
-  terminate_instances = true // termiante instances when we "delete" the fleet
+  replace_unhealthy_instances         = false
+  terminate_instances                 = true // terminate instances when we "delete" the fleet
+  terminate_instances_with_expiration = false
   tags = merge(
     var.common_tags,
     local.fleet_tags,
@@ -264,22 +288,11 @@ resource "aws_ec2_fleet" "targets" {
       version            = aws_launch_template.target.latest_version
     }
 
-    override {
-      max_price = var.max_price
-      subnet_id = data.aws_subnets.vpc.ids[0]
+    dynamic "override" {
+      for_each = random_shuffle.subnets.result
 
-      instance_requirements {
-        burstable_performance = "included"
-
-        memory_mib {
-          min = var.instance_mem_min
-          max = var.instance_mem_max
-        }
-
-        vcpu_count {
-          min = var.instance_cpu_min
-          max = var.instance_cpu_max
-        }
+      content {
+        subnet_id = override.value
       }
     }
   }

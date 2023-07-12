@@ -807,8 +807,8 @@ func TestAcmeIgnoresRoleExtKeyUsage(t *testing.T) {
 	roleName := "test-role"
 
 	roleOpt := map[string]interface{}{
-		"ttl_duration":                "365h",
-		"max_ttl_duration":            "720h",
+		"ttl":                         "365h",
+		"max_ttl":                     "720h",
 		"key_type":                    "any",
 		"allowed_domains":             "localdomain",
 		"allow_subdomains":            "true",
@@ -995,8 +995,53 @@ func TestIssuerRoleDirectoryAssociations(t *testing.T) {
 		require.Contains(t, leafCert.Subject.OrganizationalUnit, "IT Security", "on directory: %v", directory)
 		requireSignedByAtPath(t, client, leafCert, issuerPath)
 	}
+}
 
-	// 5.
+func TestACMESubjectFieldsAndExtensionsIgnored(t *testing.T) {
+	t.Parallel()
+
+	// This creates two issuers for us (root-ca, int-ca) and two
+	// roles (test-role, acme) that we can use with various directory
+	// configurations.
+	cluster, client, _ := setupAcmeBackend(t)
+	defer cluster.Cleanup()
+
+	// Setup DNS for validations.
+	testCtx := context.Background()
+	dns := dnstest.SetupResolver(t, "dadgarcorp.com")
+	defer dns.Cleanup()
+	_, err := client.Logical().WriteWithContext(testCtx, "pki/config/acme", map[string]interface{}{
+		"dns_resolver": dns.GetLocalAddr(),
+	})
+	require.NoError(t, err, "failed to specify dns resolver")
+
+	// Use the default sign-verbatim policy and ensure OU does not get set.
+	directory := "/v1/pki/acme/"
+	domains := []string{"no-ou.dadgarcorp.com"}
+	acmeClient := getAcmeClientForCluster(t, cluster, directory, nil)
+	cr := &x509.CertificateRequest{
+		Subject:  pkix.Name{CommonName: domains[0], OrganizationalUnit: []string{"DadgarCorp IT"}},
+		DNSNames: domains,
+	}
+	cert := doACMEForCSRWithDNS(t, dns, acmeClient, domains, cr)
+	t.Logf("Got certificate: %v", cert)
+	require.Empty(t, cert.Subject.OrganizationalUnit)
+
+	// Use the default sign-verbatim policy and ensure extension does not get set.
+	domains = []string{"no-ext.dadgarcorp.com"}
+	extension, err := certutil.CreateDeltaCRLIndicatorExt(12345)
+	require.NoError(t, err)
+	cr = &x509.CertificateRequest{
+		Subject:         pkix.Name{CommonName: domains[0]},
+		DNSNames:        domains,
+		ExtraExtensions: []pkix.Extension{extension},
+	}
+	cert = doACMEForCSRWithDNS(t, dns, acmeClient, domains, cr)
+	t.Logf("Got certificate: %v", cert)
+	for _, ext := range cert.Extensions {
+		require.False(t, ext.Id.Equal(certutil.DeltaCRLIndicatorOID))
+	}
+	require.NotEmpty(t, cert.Extensions)
 }
 
 // TestAcmeWithCsrIncludingBasicConstraintExtension verify that we error out for a CSR that is requesting a
@@ -1242,7 +1287,7 @@ func setupAcmeBackendOnClusterAtPath(t *testing.T, cluster *vault.TestCluster, c
 			"issuer_name": "root-ca",
 			"key_name":    "root-key",
 			"key_type":    "ec",
-			"common_name": "root.com",
+			"common_name": "Test Root R1 " + mount,
 			"ttl":         "7200h",
 			"max_ttl":     "920000h",
 		})
@@ -1252,7 +1297,7 @@ func setupAcmeBackendOnClusterAtPath(t *testing.T, cluster *vault.TestCluster, c
 		map[string]interface{}{
 			"key_name":    "int-key",
 			"key_type":    "ec",
-			"common_name": "test.com",
+			"common_name": "Test Int X1 " + mount,
 		})
 	require.NoError(t, err, "failed creating intermediary CSR")
 	intermediateCSR := resp.Data["csr"].(string)
@@ -1286,8 +1331,8 @@ func setupAcmeBackendOnClusterAtPath(t *testing.T, cluster *vault.TestCluster, c
 	require.NoError(t, err, "failed updating default issuer")
 
 	_, err = client.Logical().Write(mount+"/roles/test-role", map[string]interface{}{
-		"ttl_duration":                "168h",
-		"max_ttl_duration":            "168h",
+		"ttl":                         "168h",
+		"max_ttl":                     "168h",
 		"key_type":                    "any",
 		"allowed_domains":             "localdomain",
 		"allow_subdomains":            "true",
@@ -1296,9 +1341,9 @@ func setupAcmeBackendOnClusterAtPath(t *testing.T, cluster *vault.TestCluster, c
 	require.NoError(t, err, "failed creating role test-role")
 
 	_, err = client.Logical().Write(mount+"/roles/acme", map[string]interface{}{
-		"ttl_duration":     "3650h",
-		"max_ttl_duration": "7200h",
-		"key_type":         "any",
+		"ttl":      "3650h",
+		"max_ttl":  "7200h",
+		"key_type": "any",
 	})
 	require.NoError(t, err, "failed creating role acme")
 

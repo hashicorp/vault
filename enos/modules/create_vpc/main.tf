@@ -1,4 +1,11 @@
-data "aws_region" "current" {}
+data "aws_availability_zones" "available" {
+  state = "available"
+
+  filter {
+    name   = "zone-name"
+    values = ["*"]
+  }
+}
 
 resource "random_string" "cluster_id" {
   length  = 8
@@ -34,14 +41,16 @@ resource "aws_vpc" "vpc" {
 }
 
 resource "aws_subnet" "subnet" {
+  count                   = length(data.aws_availability_zones.available.names)
   vpc_id                  = aws_vpc.vpc.id
-  cidr_block              = var.cidr
+  cidr_block              = cidrsubnet(var.cidr, 8, count.index)
+  availability_zone       = data.aws_availability_zones.available.names[count.index]
   map_public_ip_on_launch = true
 
   tags = merge(
     var.common_tags,
     {
-      "Name" = "${var.name}-subnet"
+      "Name" = "${var.name}-subnet-${data.aws_availability_zones.available.names[count.index]}"
     },
   )
 }

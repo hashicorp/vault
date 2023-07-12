@@ -160,6 +160,14 @@ resource "random_string" "unique_id" {
   special = false
 }
 
+// ec2:RequestSpotFleet only allows up to 4 InstanceRequirements overrides so we can only ever
+// request a fleet across 4 or fewer subnets if we want to bid with InstanceRequirements instead of
+// weighted instance types.
+resource "random_shuffle" "subnets" {
+  input        = data.aws_subnets.vpc.ids
+  result_count = 4
+}
+
 locals {
   allocation_strategy = "lowestPrice"
   instances           = toset([for idx in range(var.instance_count) : tostring(idx)])
@@ -167,7 +175,7 @@ locals {
   name_prefix         = "${var.project_name}-${local.cluster_name}-${random_string.unique_id.result}"
   fleet_tag           = "${local.name_prefix}-spot-fleet-target"
   fleet_tags = {
-    Name                     = "${local.name_prefix}-target"
+    Name                     = "${local.name_prefix}-${var.cluster_tag_key}-target"
     "${var.cluster_tag_key}" = local.cluster_name
     Fleet                    = local.fleet_tag
   }
@@ -304,12 +312,27 @@ resource "aws_security_group" "target" {
 }
 
 resource "aws_launch_template" "target" {
-  name     = "${local.name_prefix}-target"
-  image_id = var.ami_id
-  key_name = var.ssh_keypair
+  name          = "${local.name_prefix}-target"
+  image_id      = var.ami_id
+  instance_type = null
+  key_name      = var.ssh_keypair
 
   iam_instance_profile {
     name = aws_iam_instance_profile.target.name
+  }
+
+  instance_requirements {
+    burstable_performance = "included"
+
+    memory_mib {
+      min = var.instance_mem_min
+      max = var.instance_mem_max
+    }
+
+    vcpu_count {
+      min = var.instance_cpu_min
+      max = var.instance_cpu_max
+    }
   }
 
   network_interfaces {
@@ -353,6 +376,7 @@ resource "aws_spot_fleet_request" "targets" {
   // to 1 to avoid rebuilding the fleet on a re-run. For any other strategy
   // set it to zero to avoid rebuilding the fleet on a re-run.
   instance_pools_to_use_count   = local.allocation_strategy == "lowestPrice" ? 1 : 0
+  spot_price                    = var.max_price
   target_capacity               = var.instance_count
   terminate_instances_on_delete = true
   wait_for_fulfillment          = true
@@ -363,23 +387,24 @@ resource "aws_spot_fleet_request" "targets" {
       version = aws_launch_template.target.latest_version
     }
 
-    overrides {
-      spot_price = var.max_price
-      subnet_id  = data.aws_subnets.vpc.ids[0]
+    // We cannot currently use more than one subnet[0]. Until the bug has been resolved
+    // we'll choose a random subnet. It would be ideal to bid across all subnets to get
+    // the absolute cheapest available at the time of bidding.
+    //
+    // [0] https://github.com/hashicorp/terraform-provider-aws/issues/30505
 
-      instance_requirements {
-        burstable_performance = "included"
+    /*
+    dynamic "overrides" {
+      for_each = random_shuffle.subnets.result
 
-        memory_mib {
-          min = var.instance_mem_min
-          max = var.instance_mem_max
-        }
-
-        vcpu_count {
-          min = var.instance_cpu_min
-          max = var.instance_cpu_max
-        }
+      content {
+        subnet_id = overrides.value
       }
+    }
+    */
+
+    overrides {
+      subnet_id = random_shuffle.subnets.result[0]
     }
   }
 

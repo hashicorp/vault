@@ -111,7 +111,7 @@ signed by an issuer in this mount.`,
 						Description: "OK",
 						Fields: map[string]*framework.FieldSchema{
 							"revocation_time": {
-								Type:        framework.TypeDurationSecond,
+								Type:        framework.TypeInt64,
 								Description: `Revocation Time`,
 								Required:    false,
 							},
@@ -176,7 +176,7 @@ be in PEM format.`,
 						Description: "OK",
 						Fields: map[string]*framework.FieldSchema{
 							"revocation_time": {
-								Type:        framework.TypeDurationSecond,
+								Type:        framework.TypeInt64,
 								Description: `Revocation Time`,
 								Required:    false,
 							},
