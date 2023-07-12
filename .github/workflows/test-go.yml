@@ -242,7 +242,7 @@ jobs:
 
           # On a release branch, add a flag to rerun failed tests
           if [[ ${{ github.base_ref }} = release/* ]] ; then
-            rerunFails="--rerun-fails"
+           RERUN_FAILS="--rerun-fails"
           fi
 
           GOARCH=${{ inputs.go-arch }} \
