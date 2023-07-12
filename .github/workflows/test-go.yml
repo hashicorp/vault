@@ -28,7 +28,7 @@ on:
         required: false
         type: string
         default: ubuntu-latest
-      go-build-tags:
+      go-tags:
         description: A comma-separated list of additional build tags to consider satisfied during the build.
         required: false
         type: string
@@ -48,7 +48,6 @@ on:
         default: 60
         type: number
 
-
 env: ${{ fromJSON(inputs.env-vars) }}
 
 jobs:
@@ -60,10 +59,10 @@ jobs:
       contents: read
     steps:
       - uses: actions/checkout@c85c95e3d7251135ab7dc9ce3241c5835cc595a9 # v3.5.3
-      - uses: actions/setup-go@fac708d6674e30b6ba41289acaab6d4b75aa0753 # v4.0.1
+      - uses: ./.github/actions/set-up-go
         with:
-          go-version-file: ./.go-version
-          cache: true
+          github-token: ${{ secrets.ELEVATED_GITHUB_TOKEN }}
+          no-restore: true # We don't need the vault Go modules when generating indices
       - name: Authenticate to Vault
         id: vault-auth
         if: github.repository == 'hashicorp/vault-enterprise'
@@ -130,10 +129,9 @@ jobs:
       TIMEOUT_IN_MINUTES: ${{ inputs.timeout-minutes }}
     steps:
       - uses: actions/checkout@c85c95e3d7251135ab7dc9ce3241c5835cc595a9 # v3.5.3
-      - uses: actions/setup-go@fac708d6674e30b6ba41289acaab6d4b75aa0753 # v4.0.1
+      - uses: ./.github/actions/set-up-go
         with:
-          go-version-file: ./.go-version
-          cache: true
+          github-token: ${{ secrets.ELEVATED_GITHUB_TOKEN }}
       - name: Authenticate to Vault
         id: vault-auth
         if: github.repository == 'hashicorp/vault-enterprise'
@@ -201,7 +199,7 @@ jobs:
           # not what developers have in their environments and it could break some
           # tests; it would be like setting VAULT_TOKEN.  However some non-Go
           # CI commands, like the UI tests, shouldn't have to worry about licensing.
-          # So we provide the tests which want an externally supplied license with licenses 
+          # So we provide the tests which want an externally supplied license with licenses
           # via the VAULT_LICENSE_CI and VAULT_LICENSE_2 environment variables, and here we unset it.
           # shellcheck disable=SC2034
           VAULT_LICENSE=
@@ -224,7 +222,7 @@ jobs:
             VAULT_BINARY="$(pwd)/bin/vault"
             export VAULT_BINARY
           fi
-          
+
           # shellcheck disable=SC2086 # can't quote package list
           GOARCH=${{ inputs.go-arch }} \
             go run gotest.tools/gotestsum --format=short-verbose \
@@ -232,7 +230,7 @@ jobs:
               --jsonfile test-results/go-test/results-${{ matrix.runner-index }}.json \
               --jsonfile-timing-events failure-summary-${{ matrix.runner-index }}${{inputs.name}}.json \
               -- \
-              -tags "${{ inputs.go-build-tags }}" \
+              -tags "${{ inputs.go-tags }}" \
               -timeout=${{ env.TIMEOUT_IN_MINUTES }}m \
               -parallel=${{ inputs.go-test-parallelism }} \
               ${{ inputs.extra-flags }} \
