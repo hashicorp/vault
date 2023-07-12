@@ -7,7 +7,7 @@ import Component from '@glimmer/component';
 
 /**
  * @module DashboardVaultConfigurationCard
- * DashboardVaultConfigurationCard component are used to display 5 secrets engines to the user.
+ * DashboardVaultConfigurationCard component are used to display vault configuration.
  *
  * @example
  * ```js
