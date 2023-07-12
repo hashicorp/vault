@@ -188,13 +188,13 @@ jobs:
         if: ${{ always() }}
         with:
           failure-message: "An Enos scenario `run_retry` failed. \nTriggering event: `${{ github.event_name }}` \nActor: `${{ github.actor }}`"
-          status: ${{steps.run_retry.outcome}}
-          slack-webhook-url: ${{secrets.SLACK_WEBHOOK_URL}}
+          status: ${{ steps.run_retry.outcome }}
+          slack-webhook-url: ${{ secrets.SLACK_WEBHOOK_URL }}
       # Send a Slack notification to #feed-vault-enos-failures if the 'destroy' step fails.
       - name: Send Slack notification on Enos destroy failure
         uses: hashicorp/actions-slack-status@v1
         if: ${{ always() }}
         with:
           failure-message: "An Enos scenario `destroy` failed. \nTriggering event: `${{ github.event_name }}` \nActor: `${{ github.actor }}`"
-          status: ${{steps.destroy.outcome}}
-          slack-webhook-url: ${{secrets.SLACK_WEBHOOK_URL}}
+          status: ${{ steps.destroy.outcome }}
+          slack-webhook-url: ${{ secrets.SLACK_WEBHOOK_URL }}
