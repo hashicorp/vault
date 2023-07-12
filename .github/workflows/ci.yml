@@ -88,21 +88,19 @@ jobs:
       - id: diff
         run: |
           ./.github/scripts/oss-diff.sh ${{ steps.determine-branch.outputs.BRANCH }} HEAD
+  verify-changes:
+    name: Verify doc-ui only PRs
+    uses: ./.github/workflows/verify_changes.yml
   test-go:
     name: Run Go tests
     needs:
       - setup
       - setup-go-cache
-    # Don't run this job for PR branches starting with:
-    # 'ui/', 'backport/ui/', 'docs/', or 'backport/docs/'
-    # OR
-    # the 'docs' label is present
+      - verify-changes
+    # Don't run this job for docs/ui only PRs
     if: |
-      !startsWith(github.head_ref, 'ui/') &&
-      !startsWith(github.head_ref, 'backport/ui/') &&
-      !startsWith(github.head_ref, 'docs/') &&
-      !startsWith(github.head_ref, 'backport/docs/') &&
-      !contains(github.event.pull_request.labels.*.name, 'docs')
+      needs.verify-changes.outputs.is_docs_change == 'false' &&
+      needs.verify-changes.outputs.is_ui_change == 'false'
     uses: ./.github/workflows/test-go.yml
     with:
       # The regular Go tests use an extra runner to execute the
@@ -119,17 +117,12 @@ jobs:
     needs:
       - setup
       - setup-go-cache
-    # Don't run this job for PR branches starting with:
-    # 'ui/', 'backport/ui/', 'docs/', or 'backport/docs/'
-    # OR
-    # the 'docs' label is present
+      - verify-changes
+    # Don't run this job for docs/ui only PRs
     if: |
       github.event.pull_request.draft == false &&
-      !startsWith(github.head_ref, 'ui/') &&
-      !startsWith(github.head_ref, 'backport/ui/') &&
-      !startsWith(github.head_ref, 'docs/') &&
-      !startsWith(github.head_ref, 'backport/docs/') &&
-      !contains(github.event.pull_request.labels.*.name, 'docs')
+      needs.verify-changes.outputs.is_docs_change == 'false' &&
+      needs.verify-changes.outputs.is_ui_change == 'false'
     uses: ./.github/workflows/test-go.yml
     with:
       total-runners: 16
@@ -146,21 +139,16 @@ jobs:
     secrets: inherit
   test-go-fips:
     name: Run Go tests with FIPS configuration
-    # Only run this job for the enterprise repo if the PR branch doesn't start with:
-    # 'ui/', 'backport/ui/', 'docs/', or 'backport/docs/'
-    # OR
-    # the 'docs' label is not present
+    # Only run this job for the enterprise repo if the PR is not docs/ui only
     if: |
       github.event.pull_request.draft == false &&
       needs.setup.outputs.enterprise == 1 &&
-      !startsWith(github.head_ref, 'ui/') &&
-      !startsWith(github.head_ref, 'backport/ui/') &&
-      !startsWith(github.head_ref, 'docs/') &&
-      !startsWith(github.head_ref, 'backport/docs/') &&
-      !contains(github.event.pull_request.labels.*.name, 'docs')
+      needs.verify-changes.outputs.is_docs_change == 'false' &&
+      needs.verify-changes.outputs.is_ui_change == 'false'
     needs:
       - setup
       - setup-go-cache
+      - verify-changes
     uses: ./.github/workflows/test-go.yml
     with:
       total-runners: 16
@@ -339,12 +327,18 @@ jobs:
   test-summary:
     name: Go test failures
     runs-on: ubuntu-latest
-    if: success() || failure() || needs.tests-completed.result == 'skipped'
+    if: |
+      always() &&
+      (needs.test-go.result == 'success' ||
+      needs.test-go.result == 'failure' ||
+      needs.test-go-fips.result == 'success' ||
+      needs.test-go-fips.result == 'failure' ||
+      needs.test-go-race.result == 'success' ||
+      needs.test-go-race.result == 'failure')
     needs:
       - test-go
       - test-go-fips
       - test-go-race
-      - tests-completed
     steps:
       - name: Download failure summary
         uses: actions/download-artifact@v3
@@ -373,13 +367,12 @@ jobs:
           # Read JSON objects from the input files specified after the 'jq' command.
           # We assume that the input files contain one JSON object per line.
           #
-          # 'select(.Action == "fail") | select(.Test != null)':
+          # 'select(.Action == "fail")':
           # Filter JSON array to contain only objects where the value of "Action" is "fail"
-          # and the value of "Test" key is not null.
           #
           # The remaining part of the query constructs a formatted string for each filtered JSON object`:
-          # - '\(.Package)' and '\(.Test)' insert the values of the "Package" and "Test" keys into the string,
-          #   respectively.
+          # - '\(.Package)' and '\(.Test // "-")' insert the values of the "Package" and "Test" keys into the string,
+          #   respectively. If Test is missing, insert a dash character instead.
           # - 'input_filename' is a special variable in 'jq' that represents the name of the input file being processed.
           # - 'split("-")' splits the input filename on the hyphen ("-") character and returns an array of the
           #   resulting parts.
@@ -394,7 +387,7 @@ jobs:
           # | pkg2 | test2 | 4 | race |
           # | pkg3 | test3 | 6 | fips |
 
-          jq -r -n 'inputs | select(.Action == "fail") | select(.Test != null) | "| \(.Package) | \(.Test) | \(input_filename | split("-") | .[2] | sub(".json"; "")) | \(input_filename | split("-") | .[3] // "normal" | sub(".json";"") )"' failure-summary-*.json | sort >> "$temp_file_name"
+          jq -r -n 'inputs | select(.Action == "fail") | "| \(.Package) | \(.Test // "-") | \(input_filename | split("-") | .[2] | sub(".json"; "")) | \(input_filename | split("-") | .[3] // "normal" | sub(".json";"") )"' failure-summary-*.json | sort >> "$temp_file_name"
 
           # if there are test failures, present them in a format of a GH Markdown table
           if [ -s "$temp_file_name" ]; then
