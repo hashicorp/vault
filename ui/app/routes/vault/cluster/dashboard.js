@@ -22,19 +22,14 @@ export default class VaultClusterDashboardRoute extends Route {
   }
 
   model() {
+    const versionHeader = this.version.isEnterprise
+      ? `Vault v${this.version.version.slice(0, this.version.version.indexOf('+'))}`
+      : `Vault v${this.version.version}`;
+
     return hash({
+      versionHeader,
       secretsEngines: this.store.query('secret-engine', {}),
-      version: this.version,
       vaultConfiguration: this.getVaultConfiguration(),
     });
-  }
-
-  setupController(controller, resolvedModel) {
-    super.setupController(controller, resolvedModel);
-    const { version } = resolvedModel;
-
-    controller.versionHeader = version.isEnterprise
-      ? `Vault v${version.version.slice(0, version.version.indexOf('+'))}`
-      : `Vault v${version.version}`;
   }
 }
