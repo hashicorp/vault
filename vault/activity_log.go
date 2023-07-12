@@ -238,7 +238,7 @@ func NewActivityLog(core *Core, logger log.Logger, view *BarrierView, metrics me
 		sendCh:                    make(chan struct{}, 1), // buffered so it can be triggered by fragment size
 		doneCh:                    make(chan struct{}, 1),
 		partialMonthClientTracker: make(map[string]*activity.EntityRecord),
-		CensusReportInterval:      time.Hour * 1,
+		CensusReportInterval:      time.Hour * 2,
 		clock:                     clock,
 		currentSegment: segmentInfo{
 			startTimestamp: 0,

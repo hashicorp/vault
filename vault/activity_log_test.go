@@ -35,8 +35,8 @@ import (
 	"github.com/mitchellh/mapstructure"
 )
 
-// TestActivityLog_Creation calls AddEntityToFragment and verifies that it appears correctly in a.fragment.
-func TestActivityLog_Creation(t *testing.T) {
+// TestActivityLog_Creation_bogus calls AddEntityToFragment and verifies that it appears correctly in a.fragment.
+func TestActivityLog_Creation_bogus(t *testing.T) {
 	core, _, _ := TestCoreUnsealed(t)
 
 	a := core.activityLog
