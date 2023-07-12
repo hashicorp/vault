@@ -20,7 +20,8 @@ const formFieldProps = ['maxVersions', 'casRequired', 'deleteVersionAfter', 'cus
 @withFormFields(formFieldProps)
 export default class KvSecretMetadataModel extends Model {
   @attr('string') backend;
-  @attr('string') path; // either my-secret or the full secret path for nested secrets beep/boop/bop
+  @attr('string') path;
+  @attr('string') fullSecretPath;
 
   @attr('number', {
     defaultValue: 0,

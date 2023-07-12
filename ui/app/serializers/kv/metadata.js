@@ -37,19 +37,12 @@ export default class KvMetadataSerializer extends ApplicationSerializer {
       // if we have data.keys, it's a list of ids, so we map over that
       // and create objects with id's
       return payload.data.keys.map((secret) => {
-        // secrets don't have an id in the response, so we need to concat the full
-        // path of the secret here - the id in the payload is added
-        // in the adapter after making the request
-        let fullSecretPath = payload.id ? payload.id + secret : secret;
-        // if there is no path, it's a "top level" secret, so add
-        // a unicode space for the id
-        // https://github.com/hashicorp/vault/issues/3348
-        if (!fullSecretPath) {
-          fullSecretPath = '\u0020';
-        }
+        // no path? then we're either on a "top level" secret or the first of a directory of a nested secret, e.g. "beep/". Set the path to either "my-secret" or "beep/". If we do have a path then we're in a nested secret. Concat to turn "beep/" into "beep/boop/"
+        const fullSecretPath = payload.path ? payload.path + secret : secret;
         return {
           id: kvMetadataPath(payload.backend, fullSecretPath),
-          path: fullSecretPath,
+          path: secret,
+          full_secret_path: fullSecretPath,
         };
       });
     }

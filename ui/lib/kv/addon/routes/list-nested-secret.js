@@ -32,7 +32,10 @@ export default class KvSecretsListRoute extends Route {
 
   model() {
     // TODO add filtering and return model for query on kv/metadata.
-    const nestedSecret = this.getNestedSecretFromUrlParam();
+    let nestedSecret;
+    if (this.routeName === 'list-nested-secret') {
+      nestedSecret = this.getNestedSecretFromUrlParam();
+    }
     const backend = this.secretMountPath.currentPath;
     const arrayOfSecretModels = this.store.query('kv/metadata', { backend, nestedSecret }).catch((err) => {
       if (err.httpStatus === 404) {

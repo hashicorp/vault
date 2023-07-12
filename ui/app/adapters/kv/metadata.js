@@ -39,12 +39,8 @@ export default class KvMetadataAdapter extends ApplicationAdapter {
     return this.ajax(this._url(`${encodePath(backend)}/metadata/`, nestedSecret), 'GET', {
       data: { list: true },
     }).then((resp) => {
-      // resp.id = nestedSecret;
-      // change the path from beep/ to beep/boop/bop if nested secret.
-      if (nestedSecret) {
-        resp.path = nestedSecret;
-      }
       resp.backend = backend;
+      resp.path = nestedSecret;
       return resp;
     });
   }

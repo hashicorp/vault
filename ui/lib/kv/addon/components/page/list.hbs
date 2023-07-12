@@ -18,7 +18,7 @@
   {{#each @model as |secret|}}
     <LinkedBlock
       class="list-item-row"
-      @params={{array (if secret.isFolder "list-nested-secret" "secret.details") secret.path}}
+      @params={{array (if secret.isFolder "list-nested-secret" "secret.details") secret.fullSecretPath}}
       @linkPrefix={{this.mountPoint}}
     >
       <div class="level is-mobile">
