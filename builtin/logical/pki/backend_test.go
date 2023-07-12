@@ -34,6 +34,7 @@ import (
 	"time"
 
 	"github.com/hashicorp/vault/helper/testhelpers/teststorage"
+	"golang.org/x/exp/maps"
 
 	"github.com/hashicorp/vault/helper/testhelpers"
 
@@ -6867,6 +6868,9 @@ func TestProperAuthing(t *testing.T) {
 		"eab/" + eabKid:                          shouldBeAuthed,
 	}
 
+	entPaths := getEntProperAuthingPaths(serial)
+	maps.Copy(paths, entPaths)
+
 	// Add ACME based paths to the test suite
 	for _, acmePrefix := range []string{"", "issuer/default/", "roles/test/", "issuer/default/roles/test/"} {
 		paths[acmePrefix+"acme/directory"] = shouldBeUnauthedReadList
@@ -6944,6 +6948,8 @@ func TestProperAuthing(t *testing.T) {
 		if strings.Contains(raw_path, "eab") && strings.Contains(raw_path, "{key_id}") {
 			raw_path = strings.ReplaceAll(raw_path, "{key_id}", eabKid)
 		}
+
+		raw_path = entProperAuthingPathReplacer(raw_path)
 
 		handler, present := paths[raw_path]
 		if !present {
