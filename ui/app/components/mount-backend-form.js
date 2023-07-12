@@ -35,12 +35,17 @@ export default class MountBackendForm extends Component {
   @tracked errorMessage = '';
 
   willDestroy() {
-    // if unsaved, we want to unload so it doesn't show up in the auth mount list
-    super.willDestroy(...arguments);
-    if (this.args.mountModel) {
-      const method = this.args.mountModel.isNew ? 'unloadRecord' : 'rollbackAttributes';
-      this.args.mountModel[method]();
+    if (this.args?.mountModel) {
+      try {
+        // if unsaved, we want to unload so it doesn't show up in the auth mount list
+        const method = this.args.mountModel.isNew ? 'unloadRecord' : 'rollbackAttributes';
+        this.args.mountModel[method]();
+      } catch (e) {
+        // In component test the store is torn down before willDestroy is called, causing error
+        console.debug('mountModel rollback failed with error:', e.message); // eslint-disable-line
+      }
     }
+    super.willDestroy(...arguments);
   }
 
   checkPathChange(type) {
