@@ -1,0 +1,25 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
+import Component from '@glimmer/component';
+
+/**
+ * @module DashboardVaultConfigurationCard
+ * DashboardVaultConfigurationCard component are used to display 5 secrets engines to the user.
+ *
+ * @example
+ * ```js
+ * <DashboardVaultConfigurationCard @vaultConfiguration={{@model.vaultConfiguration}} />
+ * ```
+ * @param {object} vaultConfiguration - object of vault configuration key/values
+ */
+
+export default class DashboardSecretsEnginesCard extends Component {
+  get tlsDisableConfig() {
+    return this.args.vaultConfiguration.listeners.find((listener) => {
+      if (listener.config && listener.config.tls_disable) return listener.config.tls_disable;
+    });
+  }
+}
