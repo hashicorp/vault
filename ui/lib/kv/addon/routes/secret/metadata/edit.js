@@ -26,7 +26,7 @@ export default class KvSecretMetadataEditRoute extends Route {
 
     controller.breadcrumbs = [
       { label: 'secrets', route: 'secrets', linkExternal: true },
-      { label: resolvedModel.backend, route: 'secret' },
+      { label: resolvedModel.backend, route: 'list' },
       { label: resolvedModel.path, route: 'secret.details', model: resolvedModel.path },
       { label: 'edit-metadata' },
     ];

@@ -21,6 +21,6 @@ export default class KvSecretsCreateRoute extends Route {
 
   setupController(controller, resolvedModel) {
     super.setupController(controller, resolvedModel);
-    controller.breadcrumbs = [{ label: resolvedModel.backend, route: 'list-root' }, { label: 'create' }];
+    controller.breadcrumbs = [{ label: resolvedModel.backend, route: 'list' }, { label: 'create' }];
   }
 }
