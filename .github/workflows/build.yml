@@ -284,17 +284,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@c85c95e3d7251135ab7dc9ce3241c5835cc595a9 # v3.5.3
-#      - name: Find Comment
-#        uses: peter-evans/find-comment@v2
-#        id: find_comment
-#        with:
-#          issue-number: ${{ github.event.pull_request.number }}
-#          body-includes: 'build failed for these jobs'
       - name: Build Status
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          PR_NUMBER: ${{ github.event.pull_request.number }}
-#          COMMENT_ID: ${{ steps.find_comment.outputs.comment-id }}
+          PR_NUMBER: ${{ github.event.pull_request.number }
           RUN_ID: ${{ github.run_id }}
           REPO: ${{ github.event.repository.name }}
           BUILD_OTHER: ${{ needs.build-other.result }}
