@@ -24,11 +24,10 @@ func TestAuditFileSink_Type(t *testing.T) {
 // TestNewAuditFileSink tests creation of an AuditFileSink.
 func TestNewAuditFileSink(t *testing.T) {
 	tests := map[string]struct {
-		IsTempDirPath bool // Path should contain the filename if temp dir is true
-		Path          string
-		Format        auditFormat
-		Options       []Option
-		//
+		IsTempDirPath        bool // Path should contain the filename if temp dir is true
+		Path                 string
+		Format               auditFormat
+		Options              []Option
 		IsErrorExpected      bool
 		ExpectedErrorMessage string
 		// Expected values of AuditFileSink
