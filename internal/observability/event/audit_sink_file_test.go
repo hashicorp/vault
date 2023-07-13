@@ -5,6 +5,7 @@ package event
 
 import (
 	"os"
+	"path/filepath"
 	"testing"
 
 	"github.com/hashicorp/eventlogger"
@@ -12,71 +13,9 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// TestAuditFileSinkConfig_Validate ensures that validation of an AuditFileSinkConfig
-// returns the expected results given various values for its fields.
-func TestAuditFileSinkConfig_Validate(t *testing.T) {
-	tests := map[string]struct {
-		IsNil                bool
-		Path                 string
-		Format               auditFormat
-		IsErrorExpected      bool
-		ExpectedErrorMessage string
-	}{
-		"default": {
-			Path:                 "",
-			Format:               "",
-			IsErrorExpected:      true,
-			ExpectedErrorMessage: "event.(AuditFileSinkConfig).validate: path cannot be empty: invalid parameter",
-		},
-		"spacey-path": {
-			Path:                 "   ",
-			IsErrorExpected:      true,
-			ExpectedErrorMessage: "event.(AuditFileSinkConfig).validate: path cannot be empty: invalid parameter",
-		},
-		"no-format": {
-			Path:                 "/var/nice-path",
-			Format:               "",
-			IsErrorExpected:      true,
-			ExpectedErrorMessage: "event.(AuditFileSinkConfig).validate: invalid format: event.(audit).(format).validate: '' is not a valid required format: invalid parameter",
-		},
-		"bad-format": {
-			Path:                 "/var/nice-path",
-			Format:               "qwerty",
-			IsErrorExpected:      true,
-			ExpectedErrorMessage: "event.(AuditFileSinkConfig).validate: invalid format: event.(audit).(format).validate: 'qwerty' is not a valid required format: invalid parameter",
-		},
-		"happy": {
-			Path:            "/var/nice-path",
-			Format:          AuditFormatJSON,
-			IsErrorExpected: false,
-		},
-	}
-
-	for name, tc := range tests {
-		name := name
-		tc := tc
-		t.Run(name, func(t *testing.T) {
-			t.Parallel()
-
-			cfg := &AuditFileSinkConfig{Path: tc.Path, Format: tc.Format}
-			err := cfg.validate()
-			switch {
-			case tc.IsErrorExpected:
-				require.Error(t, err)
-				require.EqualError(t, err, tc.ExpectedErrorMessage)
-			default:
-				require.NoError(t, err)
-			}
-		})
-	}
-}
-
 // TestAuditFileSink_Type ensures that the node is a 'sink' type.
 func TestAuditFileSink_Type(t *testing.T) {
-	f, err := NewAuditFileSink(AuditFileSinkConfig{
-		Path:   t.TempDir(),
-		Format: AuditFormatJSON,
-	})
+	f, err := NewAuditFileSink(t.TempDir(), AuditFormatJSON)
 	require.NoError(t, err)
 	require.NotNil(t, f)
 	require.Equal(t, eventlogger.NodeTypeSink, f.Type())
@@ -85,83 +24,183 @@ func TestAuditFileSink_Type(t *testing.T) {
 // TestNewAuditFileSink tests creation of an AuditFileSink.
 func TestNewAuditFileSink(t *testing.T) {
 	tests := map[string]struct {
-		Config               AuditFileSinkConfig
+		IsTempDirPath bool // Path should contain the filename if temp dir is true
+		Path          string
+		Format        auditFormat
+		Options       []Option
+		//
+		IsErrorExpected      bool
+		ExpectedErrorMessage string
+		// Expected values of AuditFileSink
+		ExpectedFileMode os.FileMode
+		ExpectedFormat   auditFormat
+		ExpectedPath     string
+		ExpectedPrefix   string
+	}{
+		"default-values": {
+			IsErrorExpected:      true,
+			ExpectedErrorMessage: "event.NewAuditFileSink: path is required",
+		},
+		"spacey-path": {
+			Path:                 "     ",
+			Format:               AuditFormatJSON,
+			IsErrorExpected:      true,
+			ExpectedErrorMessage: "event.NewAuditFileSink: path is required",
+		},
+		"bad-format": {
+			Path:                 "qwerty",
+			Format:               "squirrels",
+			IsErrorExpected:      true,
+			ExpectedErrorMessage: "event.NewAuditFileSink: invalid format: event.(audit).(auditFormat).validate: 'squirrels' is not a valid format: invalid parameter",
+		},
+		"path-not-exist-valid-format-file-mode": {
+			Path:             "qwerty",
+			Format:           AuditFormatJSON,
+			Options:          []Option{WithFileMode("00755")},
+			IsErrorExpected:  false,
+			ExpectedPath:     "qwerty",
+			ExpectedFormat:   AuditFormatJSON,
+			ExpectedPrefix:   "",
+			ExpectedFileMode: os.FileMode(0o755),
+		},
+		"valid-path-no-format": {
+			IsTempDirPath:        true,
+			Path:                 "vault.log",
+			IsErrorExpected:      true,
+			ExpectedErrorMessage: "event.NewAuditFileSink: invalid format: event.(audit).(auditFormat).validate: '' is not a valid format: invalid parameter",
+		},
+		"valid-path-and-format": {
+			IsTempDirPath:    true,
+			Path:             "vault.log",
+			Format:           AuditFormatJSON,
+			IsErrorExpected:  false,
+			ExpectedFileMode: defaultFileMode,
+			ExpectedFormat:   AuditFormatJSON,
+			ExpectedPrefix:   "",
+		},
+		"file-mode-not-default-or-zero": {
+			Path:             "vault.log",
+			Format:           AuditFormatJSON,
+			Options:          []Option{WithFileMode("0007")},
+			IsTempDirPath:    true,
+			IsErrorExpected:  false,
+			ExpectedFormat:   AuditFormatJSON,
+			ExpectedPrefix:   "",
+			ExpectedFileMode: 0o007,
+		},
+		"path-stdout": {
+			Path:             "stdout",
+			Format:           AuditFormatJSON,
+			Options:          []Option{WithFileMode("0007")}, // Will be ignored as stdout
+			IsTempDirPath:    false,
+			IsErrorExpected:  false,
+			ExpectedPath:     "stdout",
+			ExpectedFormat:   AuditFormatJSON,
+			ExpectedPrefix:   "",
+			ExpectedFileMode: defaultFileMode,
+		},
+		"path-discard": {
+			Path:             "discard",
+			Format:           AuditFormatJSON,
+			Options:          []Option{WithFileMode("0007")},
+			IsTempDirPath:    false,
+			IsErrorExpected:  false,
+			ExpectedPath:     "discard",
+			ExpectedFormat:   AuditFormatJSON,
+			ExpectedPrefix:   "",
+			ExpectedFileMode: defaultFileMode,
+		},
+		"prefix": {
+			IsTempDirPath:    true,
+			Path:             "vault.log",
+			Format:           AuditFormatJSON,
+			Options:          []Option{WithFileMode("0007"), WithPrefix("bleep")},
+			IsErrorExpected:  false,
+			ExpectedPrefix:   "bleep",
+			ExpectedFormat:   AuditFormatJSON,
+			ExpectedFileMode: 0o007,
+		},
+	}
+
+	for name, tc := range tests {
+		name := name
+		tc := tc
+		t.Run(name, func(t *testing.T) {
+			// t.Parallel()
+
+			// If we need a real directory as a path we can use a temp dir.
+			// but we should keep track of it for comparison in the new sink.
+			var tempDir string
+			tempPath := tc.Path
+			if tc.IsTempDirPath {
+				tempDir = t.TempDir()
+				tempPath = filepath.Join(tempDir, tempPath)
+			}
+
+			sink, err := NewAuditFileSink(tempPath, tc.Format, tc.Options...)
+
+			switch {
+			case tc.IsErrorExpected:
+				require.Error(t, err)
+				require.EqualError(t, err, tc.ExpectedErrorMessage)
+				require.Nil(t, sink)
+			default:
+				require.NoError(t, err)
+				require.NotNil(t, sink)
+
+				// Assert properties are correct.
+				require.Equal(t, tc.ExpectedPrefix, sink.prefix)
+				require.Equal(t, tc.ExpectedFormat, sink.format)
+				require.Equal(t, tc.ExpectedFileMode, sink.fileMode)
+
+				switch {
+				case tc.IsTempDirPath:
+					require.Equal(t, tempPath, sink.path)
+				default:
+					require.Equal(t, tc.ExpectedPath, sink.path)
+				}
+			}
+		})
+	}
+}
+
+// TestAuditFileSink_Reopen tests that the sink reopens files as expected when requested to.
+// stdout and discard paths are ignored.
+// see: https://developer.hashicorp.com/vault/docs/audit/file#file_path
+func TestAuditFileSink_Reopen(t *testing.T) {
+	tests := map[string]struct {
+		Path                 string
 		IsTempDirPath        bool
+		ShouldCreateFile     bool
+		Options              []Option
 		IsErrorExpected      bool
 		ExpectedErrorMessage string
 		ExpectedFileMode     os.FileMode
 	}{
-		"default": {
-			Config:               AuditFileSinkConfig{},
+		// Should be ignored by Reopen
+		"discard": {
+			Path: "discard",
+		},
+		// Should be ignored by Reopen
+		"stdout": {
+			Path: "stdout",
+		},
+		"permission-denied": {
+			Path:                 "/tmp/vault/test/foo.log",
 			IsErrorExpected:      true,
-			ExpectedErrorMessage: "event.NewAuditFileSink: unable to create new audit file sink: event.(AuditFileSinkConfig).validate: path cannot be empty: invalid parameter",
+			ExpectedErrorMessage: "event.(AuditFileSink).open: unable to create file \"/tmp/vault/test/foo.log\": mkdir /tmp/vault/test: permission denied",
 		},
-		"default-path-not-exist-valid-format": {
-			Config:               AuditFileSinkConfig{Path: "qwerty", Format: AuditFormatJSON},
-			IsErrorExpected:      true,
-			ExpectedErrorMessage: "event.NewAuditFileSink: unable to obtain file info: stat qwerty: no such file or directory",
-		},
-		"default-valid-path": {
-			Config:               AuditFileSinkConfig{},
-			IsTempDirPath:        true,
-			IsErrorExpected:      true,
-			ExpectedErrorMessage: "event.NewAuditFileSink: unable to create new audit file sink: event.(AuditFileSinkConfig).validate: invalid format: event.(audit).(format).validate: '' is not a valid required format: invalid parameter",
-		},
-		"default-valid-path-and-format": {
-			Config: AuditFileSinkConfig{
-				Format: AuditFormatJSON,
-			},
+		"happy": {
+			Path:             "vault.log",
 			IsTempDirPath:    true,
-			IsErrorExpected:  false,
-			ExpectedFileMode: 0o20000000755,
+			ExpectedFileMode: os.FileMode(defaultFileMode),
 		},
-		"file-mode-not-default-or-zero": {
-			Config:           AuditFileSinkConfig{Format: AuditFormatJSON, FileMode: 0o007},
+		"filemode-existing": {
+			Path:             "vault.log",
 			IsTempDirPath:    true,
-			IsErrorExpected:  false,
-			ExpectedFileMode: 0o007,
-		},
-		"path-stdout": {
-			Config: AuditFileSinkConfig{
-				Path:     "stdout",
-				Prefix:   "",
-				FileMode: 0x777,
-				Format:   AuditFormatJSON,
-			},
-			IsTempDirPath:    false,
-			IsErrorExpected:  false,
-			ExpectedFileMode: 0x777,
-		},
-		"path-stderr": {
-			Config: AuditFileSinkConfig{
-				Path:     "stderr",
-				Prefix:   "",
-				FileMode: 0x777,
-				Format:   AuditFormatJSON,
-			},
-			IsTempDirPath:    false,
-			IsErrorExpected:  false,
-			ExpectedFileMode: 0x777,
-		},
-		"path-discard": {
-			Config: AuditFileSinkConfig{
-				Path:     "discard",
-				Prefix:   "",
-				FileMode: 0x777,
-				Format:   AuditFormatJSON,
-			},
-			IsTempDirPath:    false,
-			IsErrorExpected:  false,
-			ExpectedFileMode: 0x777,
-		},
-		"prefix": {
-			Config: AuditFileSinkConfig{
-				Format: AuditFormatJSON,
-				Prefix: "bleep",
-			},
-			IsTempDirPath:    true,
-			IsErrorExpected:  false,
-			ExpectedFileMode: 0o20000000755,
+			ShouldCreateFile: true,
+			Options:          []Option{WithFileMode("0000")},
+			ExpectedFileMode: os.FileMode(defaultFileMode),
 		},
 	}
 
@@ -174,32 +213,43 @@ func TestNewAuditFileSink(t *testing.T) {
 			// If we need a real directory as a path we can use a temp dir.
 			// but we should keep track of it for comparison in the new sink.
 			var tempDir string
+			tempPath := tc.Path
 			if tc.IsTempDirPath {
 				tempDir = t.TempDir()
-				tc.Config.Path = tempDir
+				tempPath = filepath.Join(tempDir, tc.Path)
 			}
 
-			sink, err := NewAuditFileSink(tc.Config)
+			// If the file mode is 0 then we will need a pre-created file to stat.
+			// Only do this for paths that are not 'special keywords'
+			if tc.ShouldCreateFile && tc.Path != discard && tc.Path != stdout {
+				f, err := os.OpenFile(tempPath, os.O_CREATE, defaultFileMode)
+				require.NoError(t, err)
+				defer func() {
+					err = os.Remove(f.Name())
+					require.NoError(t, err)
+				}()
+			}
+
+			sink, err := NewAuditFileSink(tempPath, AuditFormatJSON, tc.Options...)
+			require.NoError(t, err)
+			require.NotNil(t, sink)
+
+			err = sink.Reopen()
 
 			switch {
 			case tc.IsErrorExpected:
 				require.Error(t, err)
 				require.EqualError(t, err, tc.ExpectedErrorMessage)
-				require.Nil(t, sink)
+			case tempPath == discard:
+				require.NoError(t, err)
+			case tempPath == stdout:
+				require.NoError(t, err)
 			default:
 				require.NoError(t, err)
-				require.NotNil(t, sink)
-
-				require.Equal(t, tc.ExpectedFileMode, sink.fileMode)
-				require.Equal(t, tc.Config.Prefix, sink.prefix)
-				require.Equal(t, tc.Config.Format, sink.format)
-
-				switch {
-				case tc.IsTempDirPath:
-					require.Equal(t, tempDir, sink.path)
-				default:
-					require.Equal(t, tc.Config.Path, sink.path)
-				}
+				info, err := os.Stat(tempPath)
+				require.NoError(t, err)
+				require.NotNil(t, info)
+				require.Equal(t, tc.ExpectedFileMode, info.Mode())
 			}
 		})
 	}

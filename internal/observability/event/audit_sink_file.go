@@ -17,7 +17,11 @@ import (
 )
 
 // defaultFileMode is the default file permissions (read/write for everyone).
-const defaultFileMode = 0o600
+const (
+	defaultFileMode = 0o600
+	discard         = "discard"
+	stdout          = "stdout"
+)
 
 // AuditFileSink is a sink node which handles writing audit events to file.
 type AuditFileSink struct {
@@ -29,37 +33,46 @@ type AuditFileSink struct {
 	prefix   string
 }
 
-// AuditFileSinkConfig is the configuration for the AuditFileSink.
-type AuditFileSinkConfig struct {
-	Path     string
-	Prefix   string
-	FileMode os.FileMode
-	Format   auditFormat
-}
-
 // NewAuditFileSink should be used to create a new AuditFileSink.
-func NewAuditFileSink(config AuditFileSinkConfig) (*AuditFileSink, error) {
+func NewAuditFileSink(path string, format auditFormat, opt ...Option) (*AuditFileSink, error) {
 	const op = "event.NewAuditFileSink"
 
-	if err := config.validate(); err != nil {
-		return nil, fmt.Errorf("%s: unable to create new audit file sink: %w", op, err)
+	// Parse and check path
+	p := strings.TrimSpace(path)
+	switch {
+	case p == "":
+		return nil, fmt.Errorf("%s: path is required", op)
+	case strings.EqualFold(path, stdout):
+		p = stdout
+	case strings.EqualFold(path, discard):
+		p = discard
+	}
+
+	// Validate format
+	if err := format.validate(); err != nil {
+		return nil, fmt.Errorf("%s: invalid format: %w", op, err)
+	}
+
+	opts, err := getOpts(opt...)
+	if err != nil {
+		return nil, fmt.Errorf("%s: error applying options: %w", op, err)
 	}
 
 	mode := os.FileMode(defaultFileMode)
-
-	if config.FileMode != defaultFileMode {
-		switch config.FileMode {
-		case 0:
-			// if mode is 0000, then do not modify file mode
-			if config.Path != "stdout" && config.Path != "discard" && config.Path != "stderr" {
-				fileInfo, err := os.Stat(config.Path)
-				if err != nil {
-					return nil, fmt.Errorf("%s: unable to obtain file info: %w", op, err)
-				}
-				mode = fileInfo.Mode()
+	// If we got an optional file mode supplied and our path isn't a special keyword
+	// then we should use the supplied file mode, or maintain the existing file mode.
+	if opts.withFileMode != nil {
+		switch {
+		case p == stdout:
+		case p == discard:
+		case *opts.withFileMode == 0: // Maintain the existing file's mode when set to "0000".
+			fileInfo, err := os.Stat(path)
+			if err != nil {
+				return nil, fmt.Errorf("%s: unable to determine existing file mode: %w", op, err)
 			}
+			mode = fileInfo.Mode()
 		default:
-			mode = config.FileMode
+			mode = *opts.withFileMode
 		}
 	}
 
@@ -67,14 +80,16 @@ func NewAuditFileSink(config AuditFileSinkConfig) (*AuditFileSink, error) {
 		file:     nil,
 		fileLock: sync.RWMutex{},
 		fileMode: mode,
-		format:   config.Format,
-		path:     config.Path,
-		prefix:   config.Prefix,
+		format:   format,
+		path:     p,
+		prefix:   opts.withPrefix,
 	}, nil
 }
 
 // Process handles writing the event to the file sink.
 func (f *AuditFileSink) Process(ctx context.Context, e *eventlogger.Event) (*eventlogger.Event, error) {
+	const op = "event.(AuditFileSink).Process"
+
 	select {
 	case <-ctx.Done():
 		return nil, ctx.Err()
@@ -82,22 +97,17 @@ func (f *AuditFileSink) Process(ctx context.Context, e *eventlogger.Event) (*eve
 	}
 
 	// 'discard' path means we just do nothing and pretend we're done.
-	if f.path == "discard" {
+	if f.path == discard {
 		return nil, nil
 	}
 
-	const op = "event.(AuditFileSink).Process"
-	var writer io.Writer
-	if f.path == "stdout" {
-		writer = os.Stdout
-	}
 	formatted, exists := e.Format(f.format.String())
 	if !exists {
 		return nil, fmt.Errorf("%s: unable to retrieve formatted event %q", op, f.format)
 	}
 
 	buffer := bytes.NewBuffer(formatted)
-	err := f.log(buffer, writer)
+	err := f.log(buffer)
 	if err != nil {
 		return nil, fmt.Errorf("%s: error writing file for audit sink: %w", op, err)
 	}
@@ -110,7 +120,7 @@ func (f *AuditFileSink) Reopen() error {
 	const op = "event.(AuditFileSink).Reopen"
 
 	switch f.path {
-	case "stdout", "discard":
+	case stdout, discard:
 		return nil
 	}
 
@@ -138,6 +148,8 @@ func (f *AuditFileSink) Type() eventlogger.NodeType {
 
 // open attempts to open a file at the sink's path, with the sink's fileMode permissions
 // if one is not already open.
+// It doesn't have any locking and relies on calling functions of AuditFileSink to
+// handle this (e.g. log and Reopen methods).
 func (f *AuditFileSink) open() error {
 	const op = "event.(AuditFileSink).open"
 
@@ -146,7 +158,7 @@ func (f *AuditFileSink) open() error {
 	}
 
 	if err := os.MkdirAll(filepath.Dir(f.path), f.fileMode); err != nil {
-		return fmt.Errorf("%s: unable to create directory %q for audit sink: %w", op, f.path, err)
+		return fmt.Errorf("%s: unable to create file %q: %w", op, f.path, err)
 	}
 
 	var err error
@@ -167,21 +179,27 @@ func (f *AuditFileSink) open() error {
 }
 
 // log writes the buffer to the file.
-func (f *AuditFileSink) log(buf *bytes.Buffer, writer io.Writer) error {
+// It acquires a lock on the file to do this.
+func (f *AuditFileSink) log(buf *bytes.Buffer) error {
 	const op = "event.(AuditFileSink).log"
-
-	reader := bytes.NewReader(buf.Bytes())
 
 	f.fileLock.Lock()
 	defer f.fileLock.Unlock()
 
-	if writer == nil {
+	reader := bytes.NewReader(buf.Bytes())
+
+	var writer io.Writer
+	switch {
+	case f.path == stdout:
+		writer = os.Stdout
+	default:
 		if err := f.open(); err != nil {
 			return fmt.Errorf("%s: unable to open file for audit sink: %w", op, err)
 		}
 		writer = f.file
 	}
 
+	// Write prefix before the data if required.
 	if f.prefix != "" {
 		_, err := writer.Write([]byte(f.prefix))
 		if err != nil {
@@ -191,9 +209,12 @@ func (f *AuditFileSink) log(buf *bytes.Buffer, writer io.Writer) error {
 
 	if _, err := reader.WriteTo(writer); err == nil {
 		return nil
-	} else if f.path == "stdout" {
+	} else if f.path == stdout {
 		return fmt.Errorf("%s: unable write to %q: %w", op, f.path, err)
 	}
+
+	// TODO: PW: The code below seems like a one-time retry if things failed so far
+	// We should confirm this is the intention before we commit to 'porting' it.
 
 	// If writing to stdout there's no real reason to think anything would have changed so return above.
 	// Otherwise, opportunistically try to re-open the FD, once per call.
@@ -214,19 +235,8 @@ func (f *AuditFileSink) log(buf *bytes.Buffer, writer io.Writer) error {
 	}
 
 	_, err = reader.WriteTo(writer)
-	return fmt.Errorf("%s: unable to re-write to file for audit sink: %w", op, err)
-}
-
-// validate ensures that the required properties of a AuditFileSinkConfig have been configured.
-func (c *AuditFileSinkConfig) validate() error {
-	const op = "event.(AuditFileSinkConfig).validate"
-
-	if strings.TrimSpace(c.Path) == "" {
-		return fmt.Errorf("%s: path cannot be empty: %w", op, ErrInvalidParameter)
-	}
-
-	if err := c.Format.validate(); err != nil {
-		return fmt.Errorf("%s: invalid format: %w", op, err)
+	if err != nil {
+		return fmt.Errorf("%s: unable to re-write to file for audit sink: %w", op, err)
 	}
 
 	return nil

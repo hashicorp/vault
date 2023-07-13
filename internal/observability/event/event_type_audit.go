@@ -42,7 +42,7 @@ type audit struct {
 }
 
 // newAudit should be used to create an audit event.
-// auditSubtype and auditFormat are needed for audit.
+// auditSubtype and format are needed for audit.
 // It will use the supplied options, generate an ID if required, and validate the event.
 func newAudit(opt ...Option) (*audit, error) {
 	const op = "event.newAudit"
@@ -66,7 +66,7 @@ func newAudit(opt ...Option) (*audit, error) {
 		Version:        auditVersion,
 		Subtype:        auditSubtype(opts.withSubtype),
 		Timestamp:      opts.withNow,
-		RequiredFormat: auditFormat(opts.withFormat),
+		RequiredFormat: opts.withFormat,
 	}
 
 	if err := audit.validate(); err != nil {
@@ -118,18 +118,18 @@ func (t auditSubtype) validate() error {
 	}
 }
 
-// validate ensures that auditFormat is one of the set of allowed event formats.
+// validate ensures that format is one of the set of allowed event formats.
 func (f auditFormat) validate() error {
-	const op = "event.(audit).(format).validate"
+	const op = "event.(audit).(auditFormat).validate"
 	switch f {
 	case AuditFormatJSON, AuditFormatJSONx:
 		return nil
 	default:
-		return fmt.Errorf("%s: '%s' is not a valid required format: %w", op, f, ErrInvalidParameter)
+		return fmt.Errorf("%s: '%s' is not a valid format: %w", op, f, ErrInvalidParameter)
 	}
 }
 
-// String returns the string version of an auditFormat.
+// String returns the string version of an format.
 func (f auditFormat) String() string {
 	return string(f)
 }

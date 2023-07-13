@@ -157,7 +157,7 @@ func TestAuditEvent_Validate(t *testing.T) {
 				RequiredFormat: auditFormat("blah"),
 			},
 			IsErrorExpected:      true,
-			ExpectedErrorMessage: "event.(audit).validate: event.(audit).(format).validate: 'blah' is not a valid required format: invalid parameter",
+			ExpectedErrorMessage: "event.(audit).validate: event.(audit).(auditFormat).validate: 'blah' is not a valid format: invalid parameter",
 		},
 		"default-time": {
 			Value: &audit{
@@ -257,12 +257,12 @@ func TestAuditEvent_Validate_Format(t *testing.T) {
 		"empty": {
 			Value:                "",
 			IsErrorExpected:      true,
-			ExpectedErrorMessage: "event.(audit).(format).validate: '' is not a valid required format: invalid parameter",
+			ExpectedErrorMessage: "event.(audit).(auditFormat).validate: '' is not a valid format: invalid parameter",
 		},
 		"unsupported": {
 			Value:                "foo",
 			IsErrorExpected:      true,
-			ExpectedErrorMessage: "event.(audit).(format).validate: 'foo' is not a valid required format: invalid parameter",
+			ExpectedErrorMessage: "event.(audit).(auditFormat).validate: 'foo' is not a valid format: invalid parameter",
 		},
 		"json": {
 			Value:           "json",
