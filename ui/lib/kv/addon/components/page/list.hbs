@@ -36,16 +36,24 @@
             <PopupMenu>
               <nav class="menu">
                 <ul class="menu-list">
-                  <li>
-                    <LinkTo @route="secret.details" @model={{secret.path}}>
-                      Details
-                    </LinkTo>
-                  </li>
-                  <li>
-                    <LinkTo @route="secret.edit" @model={{secret.path}}>
-                      Edit
-                    </LinkTo>
-                  </li>
+                  {{#if secret.pathIsFolder}}
+                    <li>
+                      <LinkTo @route="list-nested-secret" @model={{secret.fullSecretPath}}>
+                        Content
+                      </LinkTo>
+                    </li>
+                  {{else}}
+                    <li>
+                      <LinkTo @route="secret.details" @model={{secret.path}}>
+                        Details
+                      </LinkTo>
+                    </li>
+                    <li>
+                      <LinkTo @route="secret.edit" @model={{secret.path}}>
+                        Edit
+                      </LinkTo>
+                    </li>
+                  {{/if}}
                 </ul>
               </nav>
             </PopupMenu>
