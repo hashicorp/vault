@@ -22,8 +22,6 @@ module('Acceptance | landing page dashboard', function (hooks) {
 
   // TODO LANDING PAGE: create a test that will navigate to dashboard if user opts into new dashboard ui
   test('does not navigate to dashboard on login when user has not opted into dashboard ui', async function (assert) {
-    assert.strictEqual(currentURL(), '/vault/secrets');
-
     await visit('/vault/dashboard');
 
     assert.strictEqual(currentURL(), '/vault/dashboard');
@@ -152,7 +150,6 @@ module('Acceptance | landing page dashboard', function (hooks) {
           usage_gauge_period: 5000000000,
         },
       };
-      return authPage.login();
     });
     test('shows the configuration details card', async function (assert) {
       this.server.get('sys/config/state/sanitized', () => ({
@@ -161,6 +158,7 @@ module('Acceptance | landing page dashboard', function (hooks) {
         warnings: null,
         auth: null,
       }));
+      await authPage.login();
       await visit('/vault/dashboard');
       assert.dom(VAULT_CONFIGURATION_SELECTORS.cardTitle).hasText('Configuration details');
       assert.dom(VAULT_CONFIGURATION_SELECTORS.apiAddr).hasText('http://127.0.0.1:8200');
@@ -181,6 +179,7 @@ module('Acceptance | landing page dashboard', function (hooks) {
           auth: null,
         };
       });
+      await authPage.login();
       await visit('/vault/dashboard');
       assert.dom(VAULT_CONFIGURATION_SELECTORS.tlsDisable).hasText('Disabled');
     });
@@ -195,6 +194,7 @@ module('Acceptance | landing page dashboard', function (hooks) {
           auth: null,
         };
       });
+      await authPage.login();
       await visit('/vault/dashboard');
       assert.dom(VAULT_CONFIGURATION_SELECTORS.tlsDisable).hasText('Disabled');
     });

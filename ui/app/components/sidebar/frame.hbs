@@ -4,10 +4,9 @@
       <:header>
         <Hds::SideNav::Header>
           <:logo>
-            {{! TODO LANDING PAGE: VAULT-17055 Update the logo to navigate to dashboard if user opted into new dashboard ui }}
             <Hds::SideNav::Header::HomeLink
               @icon="vault"
-              @route="vault.cluster"
+              @route="vault.cluster.dashboard"
               @model={{this.currentCluster.cluster.name}}
               @ariaLabel="home link"
               data-test-sidebar-logo
