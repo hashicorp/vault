@@ -12,7 +12,6 @@ import (
 	"github.com/aws/aws-sdk-go/service/iam/iamiface"
 	"github.com/aws/aws-sdk-go/service/sts/stsiface"
 	"github.com/hashicorp/vault/sdk/framework"
-	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/sdk/queue"
 )
@@ -32,7 +31,7 @@ func Factory(ctx context.Context, conf *logical.BackendConfig) (logical.Backend,
 	return b, nil
 }
 
-func Backend(conf *logical.BackendConfig) *backend {
+func Backend(_ *logical.BackendConfig) *backend {
 	var b backend
 	b.credRotationQueue = queue.New()
 	b.Backend = &framework.Backend{
@@ -67,11 +66,7 @@ func Backend(conf *logical.BackendConfig) *backend {
 		WALRollback:       b.walRollback,
 		WALRollbackMinAge: minAwsUserRollbackAge,
 		PeriodicFunc: func(ctx context.Context, req *logical.Request) error {
-			repState := conf.System.ReplicationState()
-			if (conf.System.LocalMount() ||
-				!repState.HasState(consts.ReplicationPerformanceSecondary)) &&
-				!repState.HasState(consts.ReplicationDRSecondary) &&
-				!repState.HasState(consts.ReplicationPerformanceStandby) {
+			if b.WriteSafeReplicationState() {
 				return b.rotateExpiredStaticCreds(ctx, req)
 			}
 			return nil
