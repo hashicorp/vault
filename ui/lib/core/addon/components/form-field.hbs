@@ -270,6 +270,7 @@
             @theme={{or @attr.options.theme "hashi"}}
             @helpText={{@attr.options.helpText}}
             @mode={{@attr.options.mode}}
+            @example={{@attr.options.example}}
           >
             {{#if @attr.options.allowReset}}
               <button
@@ -284,6 +285,9 @@
               </button>
             {{/if}}
           </JsonEditor>
+          {{#if this.validationError}}
+            <AlertInline @type="danger" @message={{this.validationError}} @paddingTop={{true}} />
+          {{/if}}
         {{/let}}
         {{#if @attr.options.subText}}
           <p class="sub-text">
@@ -364,6 +368,7 @@
       @value={{if (get @model this.valuePath) (stringify (get @model this.valuePath)) this.emptyData}}
       @valueUpdated={{fn this.codemirrorUpdated false}}
       @helpText={{@attr.options.helpText}}
+      @example={{@attr.options.example}}
     />
   {{else if (eq @attr.options.editType "yield")}}
     {{yield}}

@@ -72,5 +72,9 @@ export default class CodeMirrorModifier extends Modifier {
     editor.on('focus', bind(this, this._onFocus));
 
     this._editor = editor;
+
+    if (this.args.named.onSetup) {
+      this.args.named.onSetup(editor);
+    }
   }
 }
