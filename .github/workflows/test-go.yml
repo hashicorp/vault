@@ -288,6 +288,8 @@ jobs:
                 run_id: context.runId,
             });
 
+            console.log(result.data);
+
             const prefixToSearchFor = 'Run Go tests / test-go (${{ matrix.id }}'
             const jobData = result.data.jobs.filter(
                 (job) => job.name.startsWith(prefixToSearchFor)
