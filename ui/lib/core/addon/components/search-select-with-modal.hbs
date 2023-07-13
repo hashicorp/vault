@@ -82,17 +82,15 @@
   {{/if}}
 
   {{! wait until user has selected 'create a new item' before rendering modal}}
-  {{#if this.nameInput}}
-    <Modal
-      @title="Create new {{singularize @id}}"
-      @onClose={{action (mut this.showModal) false}}
-      @isActive={{this.showModal}}
-      @type="info"
-      @showCloseButton={{false}}
-    >
-      <section class="modal-card-body">
-        {{#if @modalSubtext}}
-          <p class="has-bottom-margin-s" data-test-modal-subtext>
+  {{#if (and this.nameInput this.showModal)}}
+    <Hds::Modal id="form-modal" @onClose={{fn (mut this.showRotationModal) false}} as |M|>
+      <M.Header @icon="info">
+        Create new
+        {{singularize @id}}
+      </M.Header>
+      <M.Body>
+        {{#if @modalSubText}}
+          <p class="hds-typography-body-300 hds-foreground-primary">
             {{@modalSubtext}}
           </p>
         {{/if}}
@@ -103,7 +101,7 @@
           {{! form must receive an @onSave and @onCancel arg that executes the callback}}
           {{component @modalFormTemplate nameInput=this.nameInput onSave=this.resetModal onCancel=this.resetModal}}
         {{/if}}
-      </section>
-    </Modal>
+      </M.Body>
+    </Hds::Modal>
   {{/if}}
 </div>
