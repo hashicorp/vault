@@ -400,7 +400,7 @@ func getAcmeRoleAndIssuer(sc *storageContext, data *framework.FieldData, config 
 
 	// If not allowed in configuration, override ExtKeyUsage behavior to force it to only be
 	// ServerAuth within ACME issued certs
-	if !config.AllowRoleExtkeyusage {
+	if !config.AllowRoleExtKeyUsage {
 		role.ExtKeyUsage = []string{"serverauth"}
 		role.ExtKeyUsageOIDs = []string{}
 		role.ServerFlag = true

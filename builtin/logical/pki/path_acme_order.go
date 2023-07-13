@@ -589,7 +589,7 @@ func issueCertFromCsr(ac *acmeContext, csr *x509.CertificateRequest) (*certutil.
 		return nil, "", fmt.Errorf("failed to fetch ACME configuration: %w", err)
 	}
 
-	if !config.AllowRoleExtkeyusage {
+	if !config.AllowRoleExtKeyUsage {
 		for _, usage := range parsedBundle.Certificate.ExtKeyUsage {
 			if usage != x509.ExtKeyUsageServerAuth {
 				return nil, "", fmt.Errorf("%w: ACME certs only allow ServerAuth key usage", ErrBadCSR)
