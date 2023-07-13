@@ -4,13 +4,45 @@
  */
 
 import { inject as service } from '@ember/service';
-import { gt } from '@ember/object/computed';
+import { equal, gt } from '@ember/object/computed';
 import { camelize } from '@ember/string';
 import Component from '@ember/component';
 import { get, computed } from '@ember/object';
 import layout from '../templates/components/shamir-flow';
 import { A } from '@ember/array';
 
+/* generate-operation-token response example
+{
+  "started": true,
+  "nonce": "2dbd10f1-8528-6246-09e7-82b25b8aba63",
+  "progress": 1,
+  "required": 3,
+  "encoded_token": "",
+  "otp": "2vPFYG8gUSW9npwzyvxXMug0",
+  "otp_length": 24,
+  "complete": false
+}
+
+unseal response (progress)
+{
+  "sealed": true,
+  "t": 3,
+  "n": 5,
+  "progress": 2,
+  "version": "0.6.2"
+}
+
+unseal response (finished)
+{
+  "sealed": false,
+  "t": 3,
+  "n": 5,
+  "progress": 0,
+  "version": "0.6.2",
+  "cluster_name": "vault-cluster-d6ec3c7f",
+  "cluster_id": "3e8b3fec-3749-e056-ba41-b62a63b997e8"
+}
+*/
 const pgpKeyFileDefault = () => ({ value: '' });
 const DEFAULTS = {
   key: null,
@@ -33,7 +65,6 @@ export default Component.extend(DEFAULTS, {
   fetchOnInit: false,
   buttonText: 'Submit',
   thresholdPath: 'required',
-  generateAction: false,
   layout,
 
   init() {
@@ -45,7 +76,7 @@ export default Component.extend(DEFAULTS, {
 
   didInsertElement() {
     this._super(...arguments);
-    this.onUpdate(this.getProperties(Object.keys(DEFAULTS)));
+    this.onUpdate();
   },
 
   onUpdate() {},
@@ -84,7 +115,7 @@ export default Component.extend(DEFAULTS, {
       delete props.otp;
     }
     this.setProperties(props);
-    onUpdate(props);
+    onUpdate();
     if (isComplete(props)) {
       this.reset();
       onShamirSuccess(props);
@@ -103,6 +134,8 @@ export default Component.extend(DEFAULTS, {
       throw e;
     }
   },
+
+  generateAction: equal('action', 'generate-dr-operation-token'),
 
   generateStep: computed('generateWithPGP', 'haveSavedPGPKey', 'pgp_key', function () {
     const { generateWithPGP, pgp_key, haveSavedPGPKey } = this;

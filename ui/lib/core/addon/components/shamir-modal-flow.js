@@ -14,13 +14,11 @@
  * ```
  * @param {function} onClose - This function will be triggered when the modal intends to be closed
  */
-import { inject as service } from '@ember/service';
 import ShamirFlow from './shamir-flow';
 import layout from '../templates/components/shamir-modal-flow';
 
 export default ShamirFlow.extend({
   layout,
-  store: service(),
   onClose: () => {},
   actions: {
     onCancelClose() {
