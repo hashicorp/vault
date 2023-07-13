@@ -31,21 +31,29 @@
           is
           {{if this.model.unsealed "unsealed" "sealed"}}
         </p>
-        <p>
-          Unseal Vault by entering portions of the unseal key. This can be done via multiple mechanisms on multiple
-          computers. Once all portions are entered, the root key will be decrypted and Vault will unseal.
-        </p>
+        {{#if this.model.unsealed}}
+          <p>Please wait while we redirect you.</p>
+        {{else}}
+          <p>
+            Unseal Vault by entering portions of the unseal key. This can be done via multiple mechanisms on multiple
+            computers. Once all portions are entered, the root key will be decrypted and Vault will unseal.
+          </p>
+        {{/if}}
+        {{#unless this.model.unsealed}}
+          <Shamir::Flow
+            @action="unseal"
+            @onLicenseError={{action "handleLicenseError"}}
+            @onShamirSuccess={{action "transitionToCluster"}}
+            @updateProgress={{action "reloadCluster"}}
+            @buttonText="Unseal"
+            @thresholdPath="t"
+            @isComplete={{action "isUnsealed"}}
+            @threshold={{this.model.sealThreshold}}
+            @progress={{this.model.sealProgress}}
+            class="has-top-margin-m"
+          />
+        {{/unless}}
       </div>
-      <ShamirFlow
-        @action="unseal"
-        @onLicenseError={{action "handleLicenseError"}}
-        @onShamirSuccess={{action "transitionToCluster"}}
-        @buttonText="Unseal"
-        @thresholdPath="t"
-        @isComplete={{action "isUnsealed"}}
-        @threshold={{this.model.sealThreshold}}
-        @progress={{this.model.sealProgress}}
-      />
     </Page.content>
     <Page.footer>
       <div class="box is-borderless is-shadowless">
