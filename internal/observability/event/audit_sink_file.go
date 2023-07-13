@@ -168,10 +168,15 @@ func (f *AuditFileSink) open() error {
 	}
 
 	// Change the file mode in case the log file already existed.
-	// We special case /dev/null since we can't chmod it and bypass if the mode is zero.
-	if f.path != "/dev/null" && f.fileMode != 0 {
-		if err = os.Chmod(f.path, f.fileMode); err != nil {
-			return fmt.Errorf("%s: unable to change file %q permissions '%v' for audit sink: %w", op, f.path, f.fileMode, err)
+	// We special case '/dev/null' since we can't chmod it, and bypass if the mode is zero.
+	switch f.path {
+	case "/dev/null":
+	default:
+		if f.fileMode != 0 {
+			err = os.Chmod(f.path, f.fileMode)
+			if err != nil {
+				return fmt.Errorf("%s: unable to change file %q permissions '%v' for audit sink: %w", op, f.path, f.fileMode, err)
+			}
 		}
 	}
 

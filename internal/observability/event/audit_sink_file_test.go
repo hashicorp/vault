@@ -7,6 +7,13 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+	"time"
+
+	"github.com/hashicorp/vault/sdk/logical"
+
+	vaultaudit "github.com/hashicorp/vault/audit"
+
+	"github.com/hashicorp/vault/helper/namespace"
 
 	"github.com/hashicorp/eventlogger"
 
@@ -252,4 +259,66 @@ func TestAuditFileSink_Reopen(t *testing.T) {
 			}
 		})
 	}
+}
+
+// BenchmarkAuditFileSink_Process benchmarks the AuditFormatterJSON and then AuditFileSink calling Process.
+// This should replicate the original benchmark testing which used to perform both of these roles together.
+func BenchmarkAuditFileSink_Process(b *testing.B) {
+	// Base input
+	in := &logical.LogInput{
+		Auth: &logical.Auth{
+			ClientToken:     "foo",
+			Accessor:        "bar",
+			EntityID:        "foobarentity",
+			DisplayName:     "testtoken",
+			NoDefaultPolicy: true,
+			Policies:        []string{"root"},
+			TokenType:       logical.TokenTypeService,
+		},
+		Request: &logical.Request{
+			Operation: logical.UpdateOperation,
+			Path:      "/foo",
+			Connection: &logical.Connection{
+				RemoteAddr: "127.0.0.1",
+			},
+			WrapInfo: &logical.RequestWrapInfo{
+				TTL: 60 * time.Second,
+			},
+			Headers: map[string][]string{
+				"foo": {"bar"},
+			},
+		},
+	}
+
+	ctx := namespace.RootContext(nil)
+
+	// Create the formatter node.
+	cfg := vaultaudit.FormatterConfig{}
+	ss := newStaticSalt(b)
+	formatter, err := NewAuditFormatterJSON(cfg, ss)
+	require.NoError(b, err)
+	require.NotNil(b, formatter)
+
+	// Create the sink node.
+	sink, err := NewAuditFileSink("/dev/null", AuditFormatJSON)
+	require.NoError(b, err)
+	require.NotNil(b, sink)
+
+	// Generate the event
+	event := fakeJSONAuditEvent(b, AuditRequest, in)
+	require.NotNil(b, event)
+
+	b.ResetTimer()
+	b.RunParallel(func(pb *testing.PB) {
+		for pb.Next() {
+			event, err = formatter.Process(ctx, event)
+			if err != nil {
+				panic(err)
+			}
+			_, err := sink.Process(ctx, event)
+			if err != nil {
+				panic(err)
+			}
+		}
+	})
 }
