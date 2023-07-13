@@ -60,7 +60,9 @@
 
 .input[readonly],
 .textarea[readonly] {
+  border: none;
   box-shadow: none;
+  cursor: not-allowed;
 }
 
 // textarea specific css
