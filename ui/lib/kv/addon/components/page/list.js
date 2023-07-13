@@ -7,38 +7,24 @@ import Component from '@glimmer/component';
 import { inject as service } from '@ember/service';
 import { action } from '@ember/object';
 import { getOwner } from '@ember/application';
-// import errorMessage from 'vault/utils/error-message';
 
 /**
- * @module Secrets
- * SecretsPage component is a child component to show list of secrets.
+ * @module List
+ * ListPage component is a component to show a list of kv/metadata secrets.
  *
- * @param {array} secrets - array of secrets
- * @param {array} breadcrumbs - breadcrumbs as an array of objects that contain label and route
- * /// ARG TODO add more
+ * @param {array} model - An array of models generated form kv/metadata query.
+ * @param {array} breadcrumbs - Breadcrumbs as an array of objects that contain label, route, and modelId. They are updated via the util kv-breadcrumbs to handle dynamic *secretPrefix on the list-nested-secret route.
  */
 
-export default class KvSecretsPageComponent extends Component {
+export default class KvListPageComponent extends Component {
   @service flashMessages;
 
   get mountPoint() {
     return getOwner(this).mountPoint;
   }
 
-  // ARG TODO return to this action
   @action
   onDelete() {
-    // do something
+    // todo
   }
-  // async onDelete(model) {
-  //   try {
-  //     const message = `Successfully deleted role ${model.path}`;
-  //     await model.destroyRecord();
-  //     this.args.roles.removeObject(model);
-  //     this.flashMessages.success(message);
-  //   } catch (error) {
-  //     const message = errorMessage(error, 'Error deleting this secret. Please try again or contact support.');
-  //     this.flashMessages.danger(message);
-  //   }
-  // }
 }

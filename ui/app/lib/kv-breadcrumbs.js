@@ -3,48 +3,33 @@
  * SPDX-License-Identifier: MPL-2.0
  */
 
-/**
- * This file is based off the older key-utils. However, after moving KV to it's own engine we needed to modify some of the methods here for the new models.
- * */
-
 function pathIsFolder(secretPrefix) {
-  // ex: boop/ === true, boop/bop === false; This regex only checks for the end of the string.
+  // This regex only checks for / at the end of the string. ex: boop/ === true, boop/bop === false;
   return secretPrefix ? !!secretPrefix.match(/\/$/) : false;
 }
 
 function pathIsFromNested(path) {
-  // ex: beep/boop/bop doesn't need to end in a / just include on in the path.
+  // This regex just looks for a / anywhere in the path. ex: boop/ === true, boop/bop === true;
   return path ? !!path.match(/\//) : false;
 }
 
-function secretPrefixParts(key) {
-  if (!key) {
-    return null;
+function breadcrumbsForNestedSecret(path) {
+  // path === "meep/moop/"
+  const pathAsArray = path.split('/');
+  if (pathAsArray.at(-1) === '') {
+    pathAsArray.pop(); // remove the last / so you can get the correct index count, ["meep", "moop"]
   }
-  var isFolder = pathIsFolder(key);
-  var parts = key.split('/');
-  if (isFolder) {
-    parts.pop();
-  }
-  return parts.length > 0 ? parts : null;
-}
-
-function modelIdsForSecretPrefix(secretPrefix) {
-  const secretPrefixAsArray = secretPrefix.split('/');
-  secretPrefixAsArray.pop(); // remove the last / so you can get the correct index count
-
-  const modelIdArray = secretPrefixAsArray.map((key, index) => {
-    return `${secretPrefixAsArray.slice(0, index + 1).join('/')}/`;
+  const modelIdArray = pathAsArray.map((key, index) => {
+    return `${pathAsArray.slice(0, index + 1).join('/')}/`; // ex: ['meep/', 'meep/moop/']. We need these model Ids to tell the LinkTo on the breadcrumb what to put into the dynamic *secretPrefix on the breadcrumb: ex/kv/meep/moop/
   });
-  const secretPrefixPartsAsAnArray = secretPrefixParts(secretPrefix);
 
-  return secretPrefixPartsAsAnArray.map((key, index) => {
+  return pathAsArray.map((key, index) => {
     // we do not want to return "route or model" on the last item otherwise it will add link to the current page.
-    if (secretPrefixPartsAsAnArray.length - 1 === index) {
+    if (pathAsArray.length - 1 === index) {
       return { label: key };
     }
     return { label: key, route: 'list-nested-secret', model: modelIdArray[index] };
   });
 }
 
-export { modelIdsForSecretPrefix, pathIsFolder, pathIsFromNested };
+export { breadcrumbsForNestedSecret, pathIsFolder, pathIsFromNested };

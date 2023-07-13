@@ -6,8 +6,8 @@
 import buildRoutes from 'ember-engines/routes';
 
 export default buildRoutes(function () {
-  // we have to have two list routes because ember won't let a query param (e.g. *secret_prefix) be blank.
-  // and we only have a query param when we're on a nested secret route like beep/boop/
+  // There are two list routes because Ember won't let a query param (e.g. *secret_prefix) be blank.
+  // We only have a query param when we're on a nested secret route like beep/boop/
   this.route('list');
   this.route('list-nested-secret', { path: '/list/*secret_prefix' });
   this.route('create');
