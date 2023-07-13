@@ -11,9 +11,11 @@ on:
       - main
       - release/**
   workflow_dispatch:
+
 concurrency:
   group: ${{ github.head_ref || github.run_id }}-ci
   cancel-in-progress: true
+
 jobs:
   setup:
     name: Setup
@@ -24,8 +26,9 @@ jobs:
       compute-larger: ${{ steps.setup-outputs.outputs.compute-larger }}
       compute-huge: ${{ steps.setup-outputs.outputs.compute-huge }}
       enterprise: ${{ steps.setup-outputs.outputs.enterprise }}
-      go-build-tags: ${{ steps.setup-outputs.outputs.go-build-tags }}
+      go-tags: ${{ steps.setup-outputs.outputs.go-tags }}
     steps:
+      - uses: actions/checkout@c85c95e3d7251135ab7dc9ce3241c5835cc595a9 # v3.5.3
       - id: setup-outputs
         name: Setup outputs
         run: |
@@ -38,7 +41,7 @@ jobs:
             echo 'compute-larger=["self-hosted","ondemand","linux","type=m5.2xlarge"]' >> "$GITHUB_OUTPUT"
             echo 'compute-huge=["self-hosted","ondemand","linux","type=m5.4xlarge"]' >> "$GITHUB_OUTPUT"
             echo 'enterprise=1' >> "$GITHUB_OUTPUT"
-            echo 'go-build-tags=ent,enterprise' >> "$GITHUB_OUTPUT"
+            echo 'go-tags=ent,enterprise' >> "$GITHUB_OUTPUT"
           else
             # shellcheck disable=SC2129
             echo 'compute-tiny="ubuntu-latest"' >> "$GITHUB_OUTPUT"                         #  2 cores,   7 GB RAM,   14 GB SSD
@@ -46,16 +49,14 @@ jobs:
             echo 'compute-larger="custom-linux-medium-vault-latest"' >> "$GITHUB_OUTPUT"    # 16 cores,  64 GB RAM,  600 GB SSD
             echo 'compute-huge="custom-linux-xl-vault-latest"' >> "$GITHUB_OUTPUT"          # 32-cores, 128 GB RAM, 1200 GB SSD
             echo 'enterprise=' >> "$GITHUB_OUTPUT"
-            echo 'go-build-tags=' >> "$GITHUB_OUTPUT"
+            echo 'go-tags=' >> "$GITHUB_OUTPUT"
           fi
-  setup-go-cache:
-    name: Go Caches
-    needs:
-      - setup
-    uses: ./.github/workflows/setup-go-cache.yml
-    with:
-      runs-on: ${{ needs.setup.outputs.compute-standard }}
-    secrets: inherit
+      - name: Ensure Go modules are cached
+        uses: ./.github/actions/set-up-go
+        with:
+          github-token: ${{ secrets.ELEVATED_GITHUB_TOKEN }}
+          no-restore: true # don't download them on a cache hit
+
   diff-oss-ci:
     name: Diff OSS
     needs:
@@ -88,19 +89,21 @@ jobs:
       - id: diff
         run: |
           ./.github/scripts/oss-diff.sh ${{ steps.determine-branch.outputs.BRANCH }} HEAD
+
   verify-changes:
     name: Verify doc-ui only PRs
     uses: ./.github/workflows/verify_changes.yml
+
   test-go:
     name: Run Go tests
     needs:
       - setup
-      - setup-go-cache
       - verify-changes
     # Don't run this job for docs/ui only PRs
     if: |
-      needs.verify-changes.outputs.is_docs_change == 'false' &&
-      needs.verify-changes.outputs.is_ui_change == 'false'
+      always() && (needs.verify-changes.result == 'skipped' ||
+      (needs.verify-changes.outputs.is_docs_change == 'false' &&
+      needs.verify-changes.outputs.is_ui_change == 'false'))
     uses: ./.github/workflows/test-go.yml
     with:
       # The regular Go tests use an extra runner to execute the
@@ -108,15 +111,15 @@ jobs:
       # other tests aren't slowed down waiting for a binary build.
       total-runners: 17
       go-arch: amd64
-      go-build-tags: '${{ needs.setup.outputs.go-build-tags }},deadlock'
+      go-tags: '${{ needs.setup.outputs.go-tags }},deadlock'
       runs-on: ${{ needs.setup.outputs.compute-larger }}
       enterprise: ${{ needs.setup.outputs.enterprise }}
     secrets: inherit
+
   test-go-race:
     name: Run Go tests with data race detection
     needs:
       - setup
-      - setup-go-cache
       - verify-changes
     # Don't run this job for docs/ui only PRs
     if: |
@@ -132,11 +135,12 @@ jobs:
         }
       extra-flags: '-race'
       go-arch: amd64
-      go-build-tags: ${{ needs.setup.outputs.go-build-tags }}
+      go-tags: ${{ needs.setup.outputs.go-tags }}
       runs-on: ${{ needs.setup.outputs.compute-huge }}
       enterprise: ${{ needs.setup.outputs.enterprise }}
-      name: "-race"
+      name: "race"
     secrets: inherit
+
   test-go-fips:
     name: Run Go tests with FIPS configuration
     # Only run this job for the enterprise repo if the PR is not docs/ui only
@@ -147,7 +151,6 @@ jobs:
       needs.verify-changes.outputs.is_ui_change == 'false'
     needs:
       - setup
-      - setup-go-cache
       - verify-changes
     uses: ./.github/workflows/test-go.yml
     with:
@@ -157,17 +160,18 @@ jobs:
           "GOEXPERIMENT": "boringcrypto"
         }
       go-arch: amd64
-      go-build-tags: '${{ needs.setup.outputs.go-build-tags }},deadlock,cgo,fips,fips_140_2'
+      go-tags: '${{ needs.setup.outputs.go-tags }},deadlock,cgo,fips,fips_140_2'
       runs-on: ${{ needs.setup.outputs.compute-larger }}
       enterprise: ${{ needs.setup.outputs.enterprise }}
-      name: "-fips"
+      name: "fips"
     secrets: inherit
+
   test-ui:
     name: Test UI
     # The test-ui job is only run on:
     # - pushes to main and branches starting with "release/"
     # - PRs where the branch starts with "ui/", "backport/ui/", "merge", or when base branch starts with "release/"
-    # - PRs with the "ui" label on github
+    # - PRs with the "ui" label on GitHub
     if: |
       github.ref_name == 'main' ||
       startsWith(github.ref_name, 'release/') ||
@@ -183,10 +187,9 @@ jobs:
     runs-on: ${{ fromJSON(needs.setup.outputs.compute-larger) }}
     steps:
       - uses: actions/checkout@c85c95e3d7251135ab7dc9ce3241c5835cc595a9 # v3.5.3
-      - uses: actions/setup-go@fac708d6674e30b6ba41289acaab6d4b75aa0753 # v4.0.1
+      - uses: ./.github/actions/set-up-go
         with:
-          go-version-file: ./.go-version
-          cache: true
+          github-token: ${{ secrets.ELEVATED_GITHUB_TOKEN }}
       # Setup node.js without caching to allow running npm install -g yarn (next step)
       - uses: actions/setup-node@64ed1c7eab4cce3362f8c340dee64e5eaeef8f7c # v3.6.0
         with:
@@ -260,17 +263,18 @@ jobs:
           paths: "ui/test-results/qunit/results.xml"
           show: "fail"
         if: always()
+
   tests-completed:
     needs:
       - setup
-      - setup-go-cache
       - test-go
       - test-ui
-    if: always() 
+    if: always()
     runs-on: ${{ fromJSON(needs.setup.outputs.compute-tiny) }}
     steps:
       - run: |
           tr -d '\n' <<< '${{ toJSON(needs.*.result) }}' | grep -q -v -E '(failure|cancelled)'
+
   notify-tests-completed-failures-oss:
     if: ${{ always() && github.repository == 'hashicorp/vault' && needs.tests-completed.result == 'failure' && (github.ref_name == 'main' || startsWith(github.ref_name, 'release/')) }}
     runs-on: ubuntu-latest
@@ -323,7 +327,7 @@ jobs:
           slack-bot-token: ${{ steps.secrets.outputs.SLACK_BOT_TOKEN }}
           payload: |
             {"text":"Enterprise test failures on ${{ github.ref_name }}","blocks":[{"type":"header","text":{"type":"plain_text","text":":rotating_light: Enterprise test failures :rotating_light:","emoji":true}},{"type":"divider"},{"type":"section","text":{"type":"mrkdwn","text":"test(s) failed on ${{ github.ref_name }}"},"accessory":{"type":"button","text":{"type":"plain_text","text":"View Failing Workflow","emoji":true},"url":"${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"}}]}
-    
+
   test-summary:
     name: Go test failures
     runs-on: ubuntu-latest
@@ -341,61 +345,21 @@ jobs:
       - test-go-race
     steps:
       - name: Download failure summary
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@9bc31d5ccc31df68ecc42ccf4149144866c47d8a # v3.0.2
         with:
           name: failure-summary
       - name: Prepare failure summary
         run: |
-          # We will store the jq query results in a temp file
+          # Sort all of the summary table rows and push them to a temp file.
           temp_file_name=temp-$(date +%s)
+          cat failure-summary-*.md | sort >> "$temp_file_name"
 
-          # The 'jq' command below filters and formats JSON data from input files to generate a failure summary report.
-          # The query is a bit of a nightmare, though, so let's have a closer look at it.
-          #
-          # The command takes input from files matching the pattern "failure-summary-*.json".
-          # The input files should contain streams of JSON objects(with no commas in between),
-          # one per line, representing test results.
-          # Each object should have the "Action" and "Package" keys.
-          #
-          # We invoke the command with two flags:
-          # - '-r' specifies that the output should be in raw format,
-          #   without any JSON formatting. (I.e. no quotes).
-          # - '-n' tells 'jq' not to read any input from the command line.
-          #   It is used when input is provided through the 'inputs' function or other methods.
-          #
-          # 'inputs':
-          # Read JSON objects from the input files specified after the 'jq' command.
-          # We assume that the input files contain one JSON object per line.
-          #
-          # 'select(.Action == "fail")':
-          # Filter JSON array to contain only objects where the value of "Action" is "fail"
-          #
-          # The remaining part of the query constructs a formatted string for each filtered JSON object`:
-          # - '\(.Package)' and '\(.Test // "-")' insert the values of the "Package" and "Test" keys into the string,
-          #   respectively. If Test is missing, insert a dash character instead.
-          # - 'input_filename' is a special variable in 'jq' that represents the name of the input file being processed.
-          # - 'split("-")' splits the input filename on the hyphen ("-") character and returns an array of the
-          #   resulting parts.
-          # - '.sub(".json"; "")' removes the ".json" extension from the string.
-          # - The third part of the filename is extracted using '.split("-") | .[2]'.
-          # - If the fourth part of the filename exists, it contains the test type.
-          #   Otherwise, the default value "normal" is used.
-          # - The '.sub(".json"; "")' removes the ".json" extension from the string.
-          #
-          # The filtered and formatted data is outputted as rows of a Markdown table, like this:
-          # | pkg1 | test1 | 1 | normal |
-          # | pkg2 | test2 | 4 | race |
-          # | pkg3 | test3 | 6 | fips |
-
-          jq -r -n 'inputs | select(.Action == "fail") | "| \(.Package) | \(.Test // "-") | \(input_filename | split("-") | .[2] | sub(".json"; "")) | \(input_filename | split("-") | .[3] // "normal" | sub(".json";"") )"' failure-summary-*.json | sort >> "$temp_file_name"
-
-          # if there are test failures, present them in a format of a GH Markdown table
+          # If there are test failures, present them in a format of a GitHub Markdown table.
           if [ -s "$temp_file_name" ]; then
             # shellcheck disable=SC2129
             # Here we create the headings for the summary table
-            echo "### Go test failures" >> "$GITHUB_STEP_SUMMARY"
-            echo "| Package | Test | Runner Index | Test Type |" >> "$GITHUB_STEP_SUMMARY"
-            echo "| ------- | ---- | ------------ | --------- |" >> "$GITHUB_STEP_SUMMARY"
+            echo "| Test Type | Package | Test | Elapsed | Runner Index | Logs |" >> "$GITHUB_STEP_SUMMARY"
+            echo "| --------- | ------- | ---- | ------- | ------------ | ---- |" >> "$GITHUB_STEP_SUMMARY"
             cat "$temp_file_name" >>  "$GITHUB_STEP_SUMMARY"
           else
             echo "### All Go tests passed! :white_check_mark:" >> "$GITHUB_STEP_SUMMARY"
