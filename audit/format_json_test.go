@@ -5,7 +5,6 @@ package audit
 
 import (
 	"bytes"
-	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -17,27 +16,13 @@ import (
 
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
-	"github.com/hashicorp/vault/sdk/helper/salt"
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
-// staticSalt is a struct which can be used to obtain a static salt.
-// a salt must be assigned when the struct is initialized.
-type staticSalt struct {
-	salt *salt.Salt
-}
-
-// Salt returns the static salt and no error.
-func (s *staticSalt) Salt(ctx context.Context) (*salt.Salt, error) {
-	return s.salt, nil
-}
-
 func TestFormatJSON_formatRequest(t *testing.T) {
-	s, err := salt.NewSalt(context.Background(), nil, nil)
-	require.NoError(t, err)
-	tempStaticSalt := &staticSalt{salt: s}
+	ss := newStaticSalt(t)
 
-	expectedResultStr := fmt.Sprintf(testFormatJSONReqBasicStrFmt, s.GetIdentifiedHMAC("foo"))
+	expectedResultStr := fmt.Sprintf(testFormatJSONReqBasicStrFmt, ss.salt.GetIdentifiedHMAC("foo"))
 
 	issueTime, _ := time.Parse(time.RFC3339, "2020-05-28T13:40:18-05:00")
 	cases := map[string]struct {
@@ -113,7 +98,7 @@ func TestFormatJSON_formatRequest(t *testing.T) {
 
 	for name, tc := range cases {
 		var buf bytes.Buffer
-		f, err := NewAuditFormatter(tempStaticSalt)
+		f, err := NewAuditFormatter(ss)
 		require.NoError(t, err)
 		formatter := AuditFormatterWriter{
 			Formatter: f,
