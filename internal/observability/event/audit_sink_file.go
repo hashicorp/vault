@@ -210,14 +210,11 @@ func (f *AuditFileSink) log(buf *bytes.Buffer) error {
 	if _, err := reader.WriteTo(writer); err == nil {
 		return nil
 	} else if f.path == stdout {
+		// If writing to stdout there's no real reason to think anything would change on retry.
 		return fmt.Errorf("%s: unable write to %q: %w", op, f.path, err)
 	}
 
-	// TODO: PW: The code below seems like a one-time retry if things failed so far
-	// We should confirm this is the intention before we commit to 'porting' it.
-
-	// If writing to stdout there's no real reason to think anything would have changed so return above.
-	// Otherwise, opportunistically try to re-open the FD, once per call.
+	// Otherwise, opportunistically try to re-open the FD, once per call (1 retry attempt).
 	err := f.file.Close()
 	if err != nil {
 		return fmt.Errorf("%s: unable to close file for audit sink: %w", op, err)
