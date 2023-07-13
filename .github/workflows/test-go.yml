@@ -112,13 +112,13 @@ jobs:
       - name: List cached results
         id: list-cached-results
         run: ls -lhR test-results/go-test
-      - name: Build matrix excluding binary tests
+      - name: Build matrix excluding binary and integration tests
         id: build-non-binary
         env:
           GOPRIVATE: github.com/hashicorp/*
         run: |
           (
-            go list ./... | grep -v "_binary" | gotestsum tool ci-matrix --debug \
+            go list ./... | grep -v "_binary" | grep -v "vault/integ" | gotestsum tool ci-matrix --debug \
               --partitions 16 \
               --timing-files 'test-results/go-test/*.json' > matrix.json
           )
