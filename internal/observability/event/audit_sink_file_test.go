@@ -51,7 +51,7 @@ func TestNewAuditFileSink(t *testing.T) {
 			Path:                 "qwerty",
 			Format:               "squirrels",
 			IsErrorExpected:      true,
-			ExpectedErrorMessage: "event.NewAuditFileSink: invalid format: event.(audit).(auditFormat).validate: 'squirrels' is not a valid format: invalid parameter",
+			ExpectedErrorMessage: "event.NewAuditFileSink: invalid format: event.(auditFormat).validate: 'squirrels' is not a valid format: invalid parameter",
 		},
 		"path-not-exist-valid-format-file-mode": {
 			Path:             "qwerty",
@@ -67,7 +67,7 @@ func TestNewAuditFileSink(t *testing.T) {
 			IsTempDirPath:        true,
 			Path:                 "vault.log",
 			IsErrorExpected:      true,
-			ExpectedErrorMessage: "event.NewAuditFileSink: invalid format: event.(audit).(auditFormat).validate: '' is not a valid format: invalid parameter",
+			ExpectedErrorMessage: "event.NewAuditFileSink: invalid format: event.(auditFormat).validate: '' is not a valid format: invalid parameter",
 		},
 		"valid-path-and-format": {
 			IsTempDirPath:    true,

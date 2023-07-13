@@ -64,7 +64,7 @@ func newAudit(opt ...Option) (*audit, error) {
 	audit := &audit{
 		ID:             opts.withID,
 		Version:        auditVersion,
-		Subtype:        auditSubtype(opts.withSubtype),
+		Subtype:        opts.withSubtype,
 		Timestamp:      opts.withNow,
 		RequiredFormat: opts.withFormat,
 	}

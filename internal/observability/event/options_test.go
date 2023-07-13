@@ -32,7 +32,7 @@ func TestOptions_WithFormat(t *testing.T) {
 		"invalid-test": {
 			Value:                "test",
 			IsErrorExpected:      true,
-			ExpectedErrorMessage: "event.(audit).(auditFormat).validate: 'test' is not a valid format: invalid parameter",
+			ExpectedErrorMessage: "event.(auditFormat).validate: 'test' is not a valid format: invalid parameter",
 		},
 		"valid-json": {
 			Value:           "json",
