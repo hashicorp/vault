@@ -96,14 +96,18 @@ func (f *AuditFileSink) Process(ctx context.Context, e *eventlogger.Event) (*eve
 	default:
 	}
 
+	if e == nil {
+		return nil, fmt.Errorf("%s: event is nil: %w", op, ErrInvalidParameter)
+	}
+
 	// 'discard' path means we just do nothing and pretend we're done.
 	if f.path == discard {
 		return nil, nil
 	}
 
-	formatted, exists := e.Format(f.format.String())
-	if !exists {
-		return nil, fmt.Errorf("%s: unable to retrieve formatted event %q", op, f.format)
+	formatted, found := e.Format(f.format.String())
+	if !found {
+		return nil, fmt.Errorf("%s: unable to retrieve event formatted as %q", op, f.format)
 	}
 
 	buffer := bytes.NewBuffer(formatted)

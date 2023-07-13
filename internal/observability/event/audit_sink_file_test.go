@@ -261,6 +261,97 @@ func TestAuditFileSink_Reopen(t *testing.T) {
 	}
 }
 
+// TestAuditFileSink_Process ensures that Process behaves as expected.
+func TestAuditFileSink_Process(t *testing.T) {
+	tests := map[string]struct {
+		Path                 string
+		Format               auditFormat
+		Data                 *logical.LogInput
+		ShouldIgnoreFormat   bool
+		ShouldUseNilEvent    bool
+		IsErrorExpected      bool
+		ExpectedErrorMessage string
+	}{
+		"discard": {
+			Path:            discard,
+			Format:          AuditFormatJSON,
+			Data:            &logical.LogInput{Request: &logical.Request{ID: "123"}},
+			IsErrorExpected: false,
+		},
+		"stdout": {
+			Path:            stdout,
+			Format:          AuditFormatJSON,
+			Data:            &logical.LogInput{Request: &logical.Request{ID: "123"}},
+			IsErrorExpected: false,
+		},
+		"no-formatted-data": {
+			Path:                 "/dev/null",
+			Format:               AuditFormatJSON,
+			Data:                 &logical.LogInput{Request: &logical.Request{ID: "123"}},
+			ShouldIgnoreFormat:   true,
+			IsErrorExpected:      true,
+			ExpectedErrorMessage: "event.(AuditFileSink).Process: unable to retrieve event formatted as \"json\"",
+		},
+		"nil": {
+			Path:                 "/dev/null",
+			Format:               AuditFormatJSON,
+			Data:                 &logical.LogInput{Request: &logical.Request{ID: "123"}},
+			ShouldUseNilEvent:    true,
+			IsErrorExpected:      true,
+			ExpectedErrorMessage: "event.(AuditFileSink).Process: event is nil: invalid parameter",
+		},
+	}
+
+	for name, tc := range tests {
+		name := name
+		tc := tc
+		t.Run(name, func(t *testing.T) {
+			// Setup a formatter
+			cfg := vaultaudit.FormatterConfig{}
+			ss := newStaticSalt(t)
+			formatter, err := NewAuditFormatterJSON(cfg, ss)
+			require.NoError(t, err)
+			require.NotNil(t, formatter)
+
+			// Setup a sink
+			sink, err := NewAuditFileSink(tc.Path, tc.Format)
+			require.NoError(t, err)
+			require.NotNil(t, sink)
+
+			// Generate a fake event
+			ctx := namespace.RootContext(nil)
+			event := fakeJSONAuditEvent(t, AuditRequest, tc.Data)
+			require.NotNil(t, event)
+
+			// Finesse the event into the correct shape.
+			event, err = formatter.Process(ctx, event)
+			require.NoError(t, err)
+			require.NotNil(t, event)
+
+			// Some conditional stuff 'per test' to exercise different parts of Process.
+			if tc.ShouldIgnoreFormat {
+				delete(event.Formatted, tc.Format.String())
+			}
+
+			if tc.ShouldUseNilEvent {
+				event = nil
+			}
+
+			// The actual exercising of the sink.
+			event, err = sink.Process(ctx, event)
+			switch {
+			case tc.IsErrorExpected:
+				require.Error(t, err)
+				require.EqualError(t, err, tc.ExpectedErrorMessage)
+				require.Nil(t, event)
+			default:
+				require.NoError(t, err)
+				require.Nil(t, event)
+			}
+		})
+	}
+}
+
 // BenchmarkAuditFileSink_Process benchmarks the AuditFormatterJSON and then AuditFileSink calling Process.
 // This should replicate the original benchmark testing which used to perform both of these roles together.
 func BenchmarkAuditFileSink_Process(b *testing.B) {
