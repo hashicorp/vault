@@ -3677,6 +3677,9 @@ func (b *SystemBackend) policyPaths() []*framework.Path {
 							},
 						}},
 					},
+					DisplayAttrs: &framework.DisplayAttributes{
+						OperationSuffix: "acl-policies2", // this endpoint duplicates sys/policies/acl
+					},
 				},
 				logical.ListOperation: &framework.PathOperation{
 					Callback: b.handlePoliciesList(PolicyTypeACL),
@@ -3693,6 +3696,9 @@ func (b *SystemBackend) policyPaths() []*framework.Path {
 								},
 							},
 						}},
+					},
+					DisplayAttrs: &framework.DisplayAttributes{
+						OperationSuffix: "acl-policies3", // this endpoint duplicates sys/policies/acl
 					},
 				},
 			},
