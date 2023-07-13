@@ -52,6 +52,6 @@ export default class KvSecretsListRoute extends Route {
       const breadcrumbsForSecretPrefix = modelIdsForSecretPrefix(resolvedModel.secretPrefix);
       breadcrumbsArray = [...breadcrumbsArray, ...breadcrumbsForSecretPrefix];
     }
-    controller.breadcrumbs = breadcrumbsArray;
+    controller.set('breadcrumbs', breadcrumbsArray);
   }
 }
