@@ -7,7 +7,7 @@ set -e
 [ ${GITHUB_TOKEN:?} ]
 [ ${RUN_ID:?} ]
 [ ${REPO:?} ]
-[ ${PR:?} ]
+[ ${PR_NUMBER:?} ]
 [ ${BUILD_OTHER:?} ]
 [ ${BUILD_LINUX:?} ]
 [ ${BUILD_DARWIN:?} ]
@@ -16,13 +16,12 @@ set -e
 [ ${TEST:?} ]
 [ ${TEST_DOCKER_K8S:?} ]
 
-#failed_tests_ids=$(gh api \
-#  -H "Accept: application/vnd.github+json" \
-#  -H "X-GitHub-Api-Version: 2022-11-28" \
-#  /repos/hashicorp/"$REPO"/actions/runs/"$RUN_ID"/attempts/1/jobs | jq -r '[.jobs[] | select(.name | startswith("Darwin") or startswith("Linux") or startswith("Other") ) | select(.conclusion == "failure") | .id][0]')
-#
-#extracted_error=$(gh run view --job $failed_tests_ids --log | grep "\#\#\[error\]")
+#COMMENT_ID=${COMMENT_ID:-''}
+
+# listing out all of the jobs with the status
 jobs=( "build-other:$BUILD_OTHER" "build-linux:$BUILD_LINUX" "build-darwin:$BUILD_DARWIN" "build-docker:$BUILD_DOCKER" "build-ubi:$BUILD_UBI" "test:$TEST" "test-docker-k8s:$TEST_DOCKER_K8S" )
+
+# there is a case where even if a job is failed, it reports as cancelled. So, we look for both.
 failed_jobs=()
 for job in "${jobs[@]}";do
   if [[ "$job" == *"failure"* || "$job" == *"cancelled"* ]]; then
@@ -30,4 +29,25 @@ for job in "${jobs[@]}";do
   fi
 done
 
-gh pr comment "$PR" --body "build failed for these jobs: ${failed_jobs[*]}. Please refer to this workflow to learn more: https://github.com/hashicorp/vault/actions/runs/$RUN_ID"
+new_body="build failed for these jobs: ${failed_jobs[*]}. Please refer to this workflow to learn more: https://github.com/hashicorp/vault/actions/runs/$RUN_ID"
+
+comment_id=$(gh api \
+               -H "Accept: application/vnd.github+json" \
+               -H "X-GitHub-Api-Version: 2022-11-28" \
+               /repos/hashicorp/vault/issues/"$PR_NUMBER"/comments | jq -r '.[] | select (.body | contains("build failed for these job")) | .id')
+
+if [[ "$comment_id" != "" ]]; then
+  gh api \
+    --method PATCH \
+    -H "Accept: application/vnd.github+json" \
+    -H "X-GitHub-Api-Version: 2022-11-28" \
+    /repos/hashicorp/vault/issues/comments/"$comment_id" \
+    -f body="$new_body"
+else
+  gh api \
+    --method POST \
+    -H "Accept: application/vnd.github+json" \
+    -H "X-GitHub-Api-Version: 2022-11-28" \
+    /repos/hashicorp/vault/issues/"$PR_NUMBER"/comments \
+    -f body="$new_body"
+fi
