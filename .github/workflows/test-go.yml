@@ -243,7 +243,7 @@ jobs:
            RERUN_FAILS="--rerun-fails"
           fi
 
-          # shellcheck disable=SC2086 # can't quote package list
+          # shellcheck disable=SC2086 # can't quote RERUN_FAILS
           GOARCH=${{ inputs.go-arch }} \
             go run gotest.tools/gotestsum --format=short-verbose \
               --junitfile test-results/go-test/results-${{ matrix.id }}.xml \
