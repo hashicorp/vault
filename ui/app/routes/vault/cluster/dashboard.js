@@ -10,6 +10,7 @@ import { hash } from 'rsvp';
 export default class VaultClusterDashboardRoute extends Route {
   @service store;
   @service version;
+  @service namespace;
 
   async getVaultConfiguration() {
     try {
@@ -25,11 +26,13 @@ export default class VaultClusterDashboardRoute extends Route {
     const versionHeader = this.version.isEnterprise
       ? `Vault v${this.version.version.slice(0, this.version.version.indexOf('+'))}`
       : `Vault v${this.version.version}`;
+    const vaultConfiguration = this.getVaultConfiguration();
 
     return hash({
       versionHeader,
       secretsEngines: this.store.query('secret-engine', {}),
-      vaultConfiguration: this.getVaultConfiguration(),
+      vaultConfiguration: typeof vaultConfiguration === 'number' ? vaultConfiguration : false,
+      namespace: this.namespace,
     });
   }
 }

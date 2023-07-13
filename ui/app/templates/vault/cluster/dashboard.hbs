@@ -1,6 +1,42 @@
 <h1 class="title has-top-margin-m" data-test-dashboard-version-header>
   {{@model.versionHeader}}
+  <Hds::Badge
+    @text="New"
+    @icon="wand"
+    @color="highlight"
+    class="is-underline has-pointer"
+    {{on "click" (fn (mut this.showNewFeatureModal) true)}}
+  />
+  <Hds::Badge @text={{if @model.namespace.inRootNamespace "root" @model.namespace.path}} @icon="org" />
 </h1>
+<Modal
+  @title="New dashboard"
+  @onClose={{action (mut this.showNewFeatureModal) false}}
+  @isActive={{this.showNewFeatureModal}}
+  @showCloseButton={{true}}
+>
+  <section class="modal-card-body has-top-padding-l has-bottom-padding-l">
+    <div>
+      <div class="has-bottom-margin-s">
+        Vault now has a dashboard that includes, among other things:
+      </div>
+      <ul class="bullet">
+        <li>An overview of Vault’s metrics, shortcuts, and at-a-glance information</li>
+        <li>Configuration details such as cluster address, TTL, TLS, log format, and storage type</li>
+        <li>Quick actions: perform important tasks such as finding a secret or generating a leaf certificate</li>
+      </ul>
+      <div class="has-top-margin-s">
+        You can still access the Secrets engines page on the sidebar.
+      </div>
+    </div>
+  </section>
+  <footer class="modal-card-foot modal-card-foot-outlined">
+    <button type="button" class="button is-primary" {{on "click" (fn (mut this.showNewFeatureModal) false)}}>
+      Got it
+    </button>
+  </footer>
+</Modal>
+
 <div>
   <div class="is-grid grid-2-columns grid-gap-2 has-bottom-margin-m grid-align-items-start">
     <Hds::Card::Container @hasBorder={{true}} class="has-padding-l is-flex-column is-flex-half">
@@ -15,7 +51,7 @@
       <Dashboard::LearnMoreCard />
     </Hds::Card::Container>
 
-    {{#if (not (eq @model.vaultConfiguration 403))}}
+    {{#if @model.vaultConfiguration}}
       <Hds::Card::Container @hasBorder={{true}} class="has-padding-l is-flex-column is-flex-half">
         <Dashboard::VaultConfigurationDetailsCard @vaultConfiguration={{@model.vaultConfiguration}} />
       </Hds::Card::Container>
