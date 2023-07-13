@@ -81,9 +81,13 @@ func (c *Core) enableCredentialInternal(ctx context.Context, entry *MountEntry, 
 
 	c.mountsLock.Lock()
 	c.authLock.Lock()
+	locked := true
 	unlock := func() {
-		c.authLock.Unlock()
-		c.mountsLock.Unlock()
+		if locked {
+			c.authLock.Unlock()
+			c.mountsLock.Unlock()
+			locked = false
+		}
 	}
 	defer unlock()
 
@@ -224,7 +228,6 @@ func (c *Core) enableCredentialInternal(ctx context.Context, entry *MountEntry, 
 		c.logger.Error("failed to evaluate filtered paths", "error", err)
 
 		unlock()
-		unlock = func() {}
 		// We failed to evaluate filtered paths so we are undoing the mount operation
 		if disableCredentialErr := c.disableCredentialInternal(ctx, entry.Path, MountTableUpdateStorage); disableCredentialErr != nil {
 			c.logger.Error("failed to disable credential", "error", disableCredentialErr)

@@ -40,13 +40,14 @@ func (_ *AuditFormatterJSONx) Type() eventlogger.NodeType {
 // Process will attempt to retrieve pre-formatted JSON stored within the event
 // and re-encode the data to JSONx.
 func (f *AuditFormatterJSONx) Process(ctx context.Context, e *eventlogger.Event) (*eventlogger.Event, error) {
+	const op = "event.(AuditFormatterJSONx).Process"
+
 	select {
 	case <-ctx.Done():
 		return nil, ctx.Err()
 	default:
 	}
 
-	const op = "event.(AuditFormatterJSONx).Process"
 	if e == nil {
 		return nil, fmt.Errorf("%s: event is nil: %w", op, ErrInvalidParameter)
 	}
