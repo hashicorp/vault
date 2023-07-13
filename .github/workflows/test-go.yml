@@ -241,7 +241,7 @@ jobs:
           # shellcheck disable=SC2086 # can't quote package list
 
           # On a release branch, add a flag to rerun failed tests
-          if [[ ${{ github.ref_name }} == 'release/*' ]]; then
+          if [[ "${{ github.ref_name }}" == "release/*" ]]; then
            RERUN_FAILS="--rerun-fails"
           fi
 
@@ -250,7 +250,7 @@ jobs:
               --junitfile test-results/go-test/results-${{ matrix.id }}.xml \
               --jsonfile test-results/go-test/results-${{ matrix.id }}.json \
               --jsonfile-timing-events failure-summary-${{ matrix.id }}${{ inputs.name != '' && '-' || '' }}${{ inputs.name }}.json \
-              $RERUN_FAILS \
+              "$RERUN_FAILS" \
               --packages "${{ matrix.packages }}" \
               -- \
               -tags "${{ inputs.go-tags }}" \
