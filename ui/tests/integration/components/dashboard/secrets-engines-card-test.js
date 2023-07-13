@@ -81,13 +81,13 @@ module('Integration | Component | dashboard/secrets-engines-card', function (hoo
 
   test('it should display only five secrets engines', async function (assert) {
     await this.renderComponent();
-    assert.dom(SELECTORS.cardTitle).hasText('Secrets Engines');
+    assert.dom(SELECTORS.cardTitle).hasText('Secrets engines');
     assert.dom(SELECTORS.secretEnginesTableRows).exists({ count: 5 });
   });
 
   test('it should display the secrets engines accessor and path', async function (assert) {
     await this.renderComponent();
-    assert.dom(SELECTORS.cardTitle).hasText('Secrets Engines');
+    assert.dom(SELECTORS.cardTitle).hasText('Secrets engines');
     assert.dom(SELECTORS.secretEnginesTableRows).exists({ count: 5 });
 
     this.secretsEngines.slice(0, 5).forEach((engine) => {

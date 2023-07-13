@@ -9,10 +9,27 @@ import { hash } from 'rsvp';
 
 export default class VaultClusterDashboardRoute extends Route {
   @service store;
+  @service version;
+
+  async getVaultConfiguration() {
+    try {
+      const adapter = this.store.adapterFor('application');
+      const configState = await adapter.ajax('/v1/sys/config/state/sanitized', 'GET');
+      return configState.data;
+    } catch (e) {
+      return e.httpStatus;
+    }
+  }
 
   model() {
+    const versionHeader = this.version.isEnterprise
+      ? `Vault v${this.version.version.slice(0, this.version.version.indexOf('+'))}`
+      : `Vault v${this.version.version}`;
+
     return hash({
+      versionHeader,
       secretsEngines: this.store.query('secret-engine', {}),
+      vaultConfiguration: this.getVaultConfiguration(),
     });
   }
 }
