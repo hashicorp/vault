@@ -21,6 +21,7 @@
     {{#each this.roleTypeOptions as |option|}}
       <RadioGroup.RadioCard
         @checked={{eq option.value @model.type}}
+        @disabled={{not @model.isNew}}
         {{on "change" (fn (mut @model.type) option.value)}}
         data-test-radio-card={{option.value}}
         as |Card|
@@ -45,7 +46,7 @@
 
   <div class="has-top-margin-l has-bottom-margin-l is-flex">
     <button
-      data-test-role-save
+      data-test-save
       class="button is-primary"
       type="submit"
       disabled={{this.save.isRunning}}
@@ -54,7 +55,7 @@
       {{if @model.isNew "Create role" "Save"}}
     </button>
     <button
-      data-test-role-cancel
+      data-test-cancel
       class="button has-left-margin-xs"
       type="button"
       disabled={{this.save.isRunning}}

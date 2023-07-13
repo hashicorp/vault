@@ -22,6 +22,7 @@ const rollbackLdifExample = `# The example below is treated as a comment and wil
 `;
 
 const validations = {
+  name: [{ type: 'presence', message: 'Name is required' }],
   username: [
     {
       validator: (model) => (model.isStatic && !model.username ? false : true),
@@ -38,6 +39,12 @@ const validations = {
     {
       validator: (model) => (model.isDynamic && !model.creation_ldif ? false : true),
       message: 'Creation LDIF is required.',
+    },
+  ],
+  deletion_ldif: [
+    {
+      validator: (model) => (model.isDynamic && !model.creation_ldif ? false : true),
+      message: 'Deletion LDIF is required.',
     },
   ],
 };
@@ -82,7 +89,7 @@ export default class LdapRoleModel extends Model {
   })
   username;
 
-  @attr('string', {
+  @attr({
     editType: 'ttl',
     label: 'Rotation period',
     helperTextEnabled:
@@ -92,9 +99,9 @@ export default class LdapRoleModel extends Model {
   rotation_period;
 
   // dynamic role properties
-  @attr('number', {
+  @attr({
     editType: 'ttl',
-    label: 'Generated credentials’s time-to-live (TTL)',
+    label: 'Generated credential’s time-to-live (TTL)',
     detailsLabel: 'TTL',
     helperTextDisabled: 'Vault will use the default of 1 hour.',
     defaultValue: '1h',
@@ -102,9 +109,9 @@ export default class LdapRoleModel extends Model {
   })
   default_ttl;
 
-  @attr('number', {
+  @attr({
     editType: 'ttl',
-    label: 'Generated credentials’s maximum time-to-live (Max TTL)',
+    label: 'Generated credential’s maximum time-to-live (Max TTL)',
     detailsLabel: 'Max TTL',
     helperTextDisabled: 'Vault will use the engine default of 24 hours.',
     defaultValue: '24h',
@@ -127,7 +134,7 @@ export default class LdapRoleModel extends Model {
     editType: 'json',
     label: 'Creation LDIF',
     helpText: 'Specifies the LDIF statements executed to create a user. May optionally be base64 encoded.',
-    defaultValue: creationLdifExample,
+    example: creationLdifExample,
     mode: 'ruby',
     sectionHeading: 'LDIF Statements', // render section heading before form field
   })
@@ -138,7 +145,7 @@ export default class LdapRoleModel extends Model {
     label: 'Deletion LDIF',
     helpText:
       'Specifies the LDIF statements executed to delete a user once its TTL has expired. May optionally be base64 encoded.',
-    defaultValue: deletionLdifExample,
+    example: deletionLdifExample,
     mode: 'ruby',
   })
   deletion_ldif;
@@ -148,7 +155,7 @@ export default class LdapRoleModel extends Model {
     label: 'Rollback LDIF',
     helpText:
       'Specifies the LDIF statement to attempt to rollback any changes if the creation results in an error. May optionally be base64 encoded.',
-    defaultValue: rollbackLdifExample,
+    example: rollbackLdifExample,
     mode: 'ruby',
   })
   rollback_ldif;

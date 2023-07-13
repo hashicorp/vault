@@ -62,7 +62,11 @@ export default class LdapCreateAndEditRolePageComponent extends Component<Args> 
       try {
         yield this.args.model.save();
         this.flashMessages.success(`Successfully created the role ${model.name}`);
-        this.router.transitionTo('vault.cluster.secrets.backend.ldap.roles.role.details', model);
+        this.router.transitionTo(
+          'vault.cluster.secrets.backend.ldap.roles.role.details',
+          model.type,
+          model.name
+        );
       } catch (error) {
         this.error = errorMessage(error, 'Error saving role. Please try again or contact support');
       }

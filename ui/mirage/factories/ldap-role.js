@@ -11,7 +11,7 @@ export default Factory.extend({
   // static props
   static: trait({
     dn: 'cn=hashicorp,ou=Users,dc=hashicorp,dc=com',
-    rotation_period: '24h',
+    rotation_period: 10,
     username: 'hashicorp',
   }),
 
@@ -32,7 +32,7 @@ export default Factory.extend({
     changetype: delete
     `,
     username_template: '{{.DisplayName}}_{{.RoleName}}',
-    default_ttl: '1h',
-    max_ttl: '24h',
+    default_ttl: 3600,
+    max_ttl: 86400,
   }),
 });
