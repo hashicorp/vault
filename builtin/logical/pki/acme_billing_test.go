@@ -240,6 +240,10 @@ func doACMEForDomainWithDNS(t *testing.T, dns *dnstest.TestServer, acmeClient *a
 		DNSNames: domains,
 	}
 
+	return doACMEForCSRWithDNS(t, dns, acmeClient, domains, cr)
+}
+
+func doACMEForCSRWithDNS(t *testing.T, dns *dnstest.TestServer, acmeClient *acme.Client, domains []string, cr *x509.CertificateRequest) *x509.Certificate {
 	accountKey, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
 	require.NoError(t, err, "failed to generate account key")
 	acmeClient.Key = accountKey

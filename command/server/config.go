@@ -447,6 +447,11 @@ func (c *Config) Merge(c2 *Config) *Config {
 		}
 	}
 
+	result.AdministrativeNamespacePath = c.AdministrativeNamespacePath
+	if c2.AdministrativeNamespacePath != "" {
+		result.AdministrativeNamespacePath = c2.AdministrativeNamespacePath
+	}
+
 	result.entConfig = c.entConfig.Merge(c2.entConfig)
 
 	result.Experiments = mergeExperiments(c.Experiments, c2.Experiments)

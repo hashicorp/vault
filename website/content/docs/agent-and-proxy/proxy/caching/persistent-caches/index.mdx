@@ -4,7 +4,7 @@ page_title: Vault Proxy Persistent Caching
 description: Vault Proxy Caching
 ---
 
-# Vault Proxy Persistent Caching
+# Vault proxy persistent caching
 
 Vault Proxy can restore tokens and leases from a persistent cache file created
 by a previous Vault Proxy process. The persistent cache is a BoltDB file that
@@ -22,16 +22,16 @@ be invalidated and secrets will need to be re-fetched from Vault.
 -> **Note** Vault Proxy persistent cache is currently supported only in a
 Kubernetes environment.
 
-## Vault Proxy Persistent Cache Types
+## Vault proxy persistent cache types
 
 Please see the sidebar for available types and their usage/configuration.
 
-## Persistent Cache Example Configuration
+## Persistent cache example configuration
 
 Here is an example of a persistent cache configuration.
 
 ```hcl
-# Other Vault Proxy configuration blocks
+# Other Vault proxy configuration blocks
 # ...
 
 cache {
