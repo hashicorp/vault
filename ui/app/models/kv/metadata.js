@@ -6,7 +6,7 @@
 import Model, { attr } from '@ember-data/model';
 import { withModelValidations } from 'vault/decorators/model-validations';
 import { withFormFields } from 'vault/decorators/model-form-fields';
-import utils from 'vault/lib/key-utils';
+import { pathIsFolder } from 'vault/lib/kv-breadcrumbs';
 
 const validations = {
   maxVersions: [
@@ -60,8 +60,9 @@ export default class KvSecretMetadataModel extends Model {
   @attr('string') updatedTime;
   @attr('object') versions;
 
-  // used for secret list view
-  get isFolder() {
-    return utils.keyIsFolder(this.path);
+  // used for KV list and list-nested-secret view
+  get pathIsFolder() {
+    // ex: beep/
+    return pathIsFolder(this.path);
   }
 }

@@ -47,11 +47,9 @@ export default class KvSecretsListRoute extends Route {
       { label: 'secrets', route: 'secrets', linkExternal: true },
       { label: resolvedModel.backend, route: 'list' },
     ];
-    // these breadcrumbs handle nested secrets: beep/boop/bop
+    // these breadcrumbs handle nested secrets: beep/boop/
     if (resolvedModel.secretPrefix) {
-      const secretPrefix = resolvedModel.secretPrefix;
-      const breadcrumbsForSecretPrefix = modelIdsForSecretPrefix(secretPrefix);
-
+      const breadcrumbsForSecretPrefix = modelIdsForSecretPrefix(resolvedModel.secretPrefix);
       breadcrumbsArray = [...breadcrumbsArray, ...breadcrumbsForSecretPrefix];
     }
     controller.breadcrumbs = breadcrumbsArray;
