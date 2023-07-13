@@ -21,21 +21,21 @@ var _ TokenHelper = (*InternalTokenHelper)(nil)
 // token-helper is configured, and avoids shelling out
 type InternalTokenHelper struct {
 	tokenPath string
-	homeDir   string
 }
 
 func NewInternalTokenHelper() (*InternalTokenHelper, error) {
+	if tokenPath := os.Getenv("VAULT_TOKEN_FILE"); tokenPath != "" {
+		if token := os.Getenv("VAULT_TOKEN"); token != "" {
+			return nil, fmt.Errorf("cannot specify both VAULT_TOKEN_FILE and VAULT_TOKEN")
+		}
+		return &InternalTokenHelper{tokenPath: tokenPath}, nil
+	}
+
 	homeDir, err := homedir.Dir()
 	if err != nil {
 		panic(fmt.Sprintf("error getting user's home directory: %v", err))
 	}
-	return &InternalTokenHelper{homeDir: homeDir}, err
-}
-
-// populateTokenPath figures out the token path using homedir to get the user's
-// home directory
-func (i *InternalTokenHelper) populateTokenPath() {
-	i.tokenPath = filepath.Join(i.homeDir, ".vault-token")
+	return &InternalTokenHelper{tokenPath: filepath.Join(homeDir, ".vault-token")}, err
 }
 
 func (i *InternalTokenHelper) Path() string {
@@ -44,7 +44,6 @@ func (i *InternalTokenHelper) Path() string {
 
 // Get gets the value of the stored token, if any
 func (i *InternalTokenHelper) Get() (string, error) {
-	i.populateTokenPath()
 	f, err := os.Open(i.tokenPath)
 	if os.IsNotExist(err) {
 		return "", nil
@@ -66,7 +65,6 @@ func (i *InternalTokenHelper) Get() (string, error) {
 // existing file atomically to ensure that ownership and permissions are set
 // appropriately.
 func (i *InternalTokenHelper) Store(input string) error {
-	i.populateTokenPath()
 	tmpFile := i.tokenPath + ".tmp"
 	f, err := os.OpenFile(tmpFile, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0o600)
 	if err != nil {
@@ -95,7 +93,6 @@ func (i *InternalTokenHelper) Store(input string) error {
 
 // Erase erases the value of the token
 func (i *InternalTokenHelper) Erase() error {
-	i.populateTokenPath()
 	if err := os.Remove(i.tokenPath); err != nil && !os.IsNotExist(err) {
 		return err
 	}
