@@ -109,7 +109,7 @@ func (a *audit) validate() error {
 
 // validate ensures that auditSubtype is one of the set of allowed event subtypes.
 func (t auditSubtype) validate() error {
-	const op = "event.(audit).(subtype).validate"
+	const op = "event.(auditSubtype).validate"
 	switch t {
 	case AuditRequest, AuditResponse:
 		return nil
@@ -118,9 +118,9 @@ func (t auditSubtype) validate() error {
 	}
 }
 
-// validate ensures that format is one of the set of allowed event formats.
+// validate ensures that auditFormat is one of the set of allowed event formats.
 func (f auditFormat) validate() error {
-	const op = "event.(audit).(auditFormat).validate"
+	const op = "event.(auditFormat).validate"
 	switch f {
 	case AuditFormatJSON, AuditFormatJSONx:
 		return nil
@@ -129,7 +129,7 @@ func (f auditFormat) validate() error {
 	}
 }
 
-// String returns the string version of an format.
+// String returns the string version of an auditFormat.
 func (f auditFormat) String() string {
 	return string(f)
 }
