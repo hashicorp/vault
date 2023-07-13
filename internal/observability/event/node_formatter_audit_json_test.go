@@ -22,8 +22,8 @@ import (
 
 // fakeJSONAuditEvent will return a new fake event containing audit data based
 // on the specified auditSubtype and logical.LogInput.
-func fakeJSONAuditEvent(t *testing.T, subtype auditSubtype, input *logical.LogInput) *eventlogger.Event {
-	t.Helper()
+func fakeJSONAuditEvent(tb testing.TB, subtype auditSubtype, input *logical.LogInput) *eventlogger.Event {
+	tb.Helper()
 
 	date := time.Date(2023, time.July, 11, 15, 49, 10, 0o0, time.Local)
 
@@ -33,13 +33,13 @@ func fakeJSONAuditEvent(t *testing.T, subtype auditSubtype, input *logical.LogIn
 		WithFormat(string(AuditFormatJSON)),
 		WithNow(date),
 	)
-	require.NoError(t, err)
-	require.NotNil(t, auditEvent)
-	require.Equal(t, "123", auditEvent.ID)
-	require.Equal(t, "v0.1", auditEvent.Version)
-	require.Equal(t, AuditFormatJSON, auditEvent.RequiredFormat)
-	require.Equal(t, subtype, auditEvent.Subtype)
-	require.Equal(t, date, auditEvent.Timestamp)
+	require.NoError(tb, err)
+	require.NotNil(tb, auditEvent)
+	require.Equal(tb, "123", auditEvent.ID)
+	require.Equal(tb, "v0.1", auditEvent.Version)
+	require.Equal(tb, AuditFormatJSON, auditEvent.RequiredFormat)
+	require.Equal(tb, subtype, auditEvent.Subtype)
+	require.Equal(tb, date, auditEvent.Timestamp)
 
 	auditEvent.Data = input
 
@@ -54,9 +54,9 @@ func fakeJSONAuditEvent(t *testing.T, subtype auditSubtype, input *logical.LogIn
 }
 
 // newStaticSalt returns a new staticSalt for use in testing.
-func newStaticSalt(t *testing.T) *staticSalt {
+func newStaticSalt(tb testing.TB) *staticSalt {
 	s, err := salt.NewSalt(context.Background(), nil, nil)
-	require.NoError(t, err)
+	require.NoError(tb, err)
 
 	return &staticSalt{salt: s}
 }

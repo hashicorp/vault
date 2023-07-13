@@ -54,13 +54,14 @@ func (_ *AuditFormatterJSON) Type() eventlogger.NodeType {
 // Process will attempt to parse the incoming event data into a corresponding
 // audit request/response entry which is serialized to JSON and stored within the event.
 func (f *AuditFormatterJSON) Process(ctx context.Context, e *eventlogger.Event) (*eventlogger.Event, error) {
+	const op = "event.(AuditFormatterJSON).Process"
+
 	select {
 	case <-ctx.Done():
 		return nil, ctx.Err()
 	default:
 	}
 
-	const op = "event.(AuditFormatterJSON).Process"
 	if e == nil {
 		return nil, fmt.Errorf("%s: event is nil: %w", op, ErrInvalidParameter)
 	}
