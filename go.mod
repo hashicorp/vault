@@ -111,7 +111,7 @@ require (
 	github.com/hashicorp/raft-boltdb/v2 v2.0.0-20210421194847-a7e34179d62c
 	github.com/hashicorp/raft-snapshot v1.0.4
 	github.com/hashicorp/vault-plugin-auth-alicloud v0.14.0
-	github.com/hashicorp/vault-plugin-auth-azure v0.13.0
+	github.com/hashicorp/vault-plugin-auth-azure v0.13.1
 	github.com/hashicorp/vault-plugin-auth-centrify v0.14.0
 	github.com/hashicorp/vault-plugin-auth-cf v0.14.0
 	github.com/hashicorp/vault-plugin-auth-gcp v0.15.0
