@@ -72,7 +72,7 @@ func TestOptions_WithSubtype(t *testing.T) {
 		Value                string
 		IsErrorExpected      bool
 		ExpectedErrorMessage string
-		ExpectedValue        string
+		ExpectedValue        auditSubtype
 	}{
 		"empty": {
 			Value:                "",
@@ -85,9 +85,9 @@ func TestOptions_WithSubtype(t *testing.T) {
 			ExpectedErrorMessage: "subtype cannot be empty",
 		},
 		"valid": {
-			Value:           "test",
+			Value:           "AuditResponse",
 			IsErrorExpected: false,
-			ExpectedValue:   "test",
+			ExpectedValue:   AuditResponse,
 		},
 	}
 
@@ -275,7 +275,7 @@ func TestOptions_Opts(t *testing.T) {
 		IsErrorExpected      bool
 		ExpectedErrorMessage string
 		ExpectedID           string
-		ExpectedSubtype      string
+		ExpectedSubtype      auditSubtype
 		ExpectedFormat       auditFormat
 		IsNowExpected        bool
 		ExpectedNow          time.Time
@@ -301,11 +301,11 @@ func TestOptions_Opts(t *testing.T) {
 		},
 		"with-multiple-valid-subtype": {
 			opts: []Option{
-				WithSubtype("qwerty"),
-				WithSubtype("juan"),
+				WithSubtype("AuditRequest"),
+				WithSubtype("AuditResponse"),
 			},
 			IsErrorExpected: false,
-			ExpectedSubtype: "juan",
+			ExpectedSubtype: AuditResponse,
 			IsNowExpected:   true,
 		},
 		"with-multiple-valid-format": {
@@ -337,13 +337,13 @@ func TestOptions_Opts(t *testing.T) {
 		"with-multiple-valid-options": {
 			opts: []Option{
 				WithID("qwerty"),
-				WithSubtype("typey2"),
+				WithSubtype("AuditRequest"),
 				WithFormat("json"),
 				WithNow(time.Date(2023, time.July, 4, 12, 3, 0, 0, time.Local)),
 			},
 			IsErrorExpected: false,
 			ExpectedID:      "qwerty",
-			ExpectedSubtype: "typey2",
+			ExpectedSubtype: AuditRequest,
 			ExpectedFormat:  AuditFormatJSON,
 			ExpectedNow:     time.Date(2023, time.July, 4, 12, 3, 0, 0, time.Local),
 		},

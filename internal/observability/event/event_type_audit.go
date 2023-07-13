@@ -42,7 +42,7 @@ type audit struct {
 }
 
 // newAudit should be used to create an audit event.
-// auditSubtype and format are needed for audit.
+// auditSubtype and auditFormat are needed for audit.
 // It will use the supplied options, generate an ID if required, and validate the event.
 func newAudit(opt ...Option) (*audit, error) {
 	const op = "event.newAudit"

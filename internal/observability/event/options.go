@@ -21,7 +21,7 @@ type Option func(*options) error
 type options struct {
 	withID       string
 	withNow      time.Time
-	withSubtype  string
+	withSubtype  auditSubtype
 	withFormat   auditFormat
 	withFileMode *os.FileMode
 	withPrefix   string
@@ -103,17 +103,19 @@ func WithNow(now time.Time) Option {
 // WithSubtype provides an option to represent the subtype.
 func WithSubtype(subtype string) Option {
 	return func(o *options) error {
-		var err error
-
-		subtype := strings.TrimSpace(subtype)
-		switch {
-		case subtype == "":
-			err = errors.New("subtype cannot be empty")
-		default:
-			o.withSubtype = subtype
+		s := strings.TrimSpace(subtype)
+		if s == "" {
+			return errors.New("subtype cannot be empty")
 		}
 
-		return err
+		parsed := auditSubtype(s)
+		err := parsed.validate()
+		if err != nil {
+			return err
+		}
+
+		o.withSubtype = parsed
+		return nil
 	}
 }
 
