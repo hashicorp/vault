@@ -7,6 +7,7 @@ import Route from '@ember/routing/route';
 import { inject as service } from '@ember/service';
 import { hash } from 'rsvp';
 import { normalizePath } from 'vault/utils/path-encoding-helpers';
+import { modelIdsForSecretPrefix } from 'vault/lib/kv-breadcrumbs';
 
 export default class KvSecretsListRoute extends Route {
   @service store;
@@ -33,6 +34,7 @@ export default class KvSecretsListRoute extends Route {
       arrayOfSecretModels,
       backend,
       routeName: this.routeName,
+      secretPrefix,
     });
   }
 
@@ -41,9 +43,17 @@ export default class KvSecretsListRoute extends Route {
     controller.set('model', resolvedModel.arrayOfSecretModels);
     controller.routeName = resolvedModel.routeName;
     controller.pageTitle = resolvedModel.backend;
-    controller.breadcrumbs = [
+    let breadcrumbsArray = [
       { label: 'secrets', route: 'secrets', linkExternal: true },
-      { label: resolvedModel.backend },
+      { label: resolvedModel.backend, route: 'list' },
     ];
+    // these breadcrumbs handle nested secrets: beep/boop/bop
+    if (resolvedModel.secretPrefix) {
+      const secretPrefix = resolvedModel.secretPrefix;
+      const breadcrumbsForSecretPrefix = modelIdsForSecretPrefix(secretPrefix);
+
+      breadcrumbsArray = [...breadcrumbsArray, ...breadcrumbsForSecretPrefix];
+    }
+    controller.breadcrumbs = breadcrumbsArray;
   }
 }
