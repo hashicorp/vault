@@ -4,7 +4,6 @@
 package event
 
 import (
-	"bytes"
 	"context"
 	"fmt"
 	"net"
@@ -70,10 +69,8 @@ func (s *AuditSocketSink) Process(ctx context.Context, e *eventlogger.Event) (*e
 		return nil, fmt.Errorf("%s: unable to retrieve event formatted as %q", op, s.format)
 	}
 
-	buffer := bytes.NewBuffer(formatted)
-
 	// Try writing and return early if successful.
-	err := s.write(ctx, buffer.Bytes())
+	err := s.write(ctx, formatted)
 	if err == nil {
 		return nil, nil
 	}
@@ -85,7 +82,7 @@ func (s *AuditSocketSink) Process(ctx context.Context, e *eventlogger.Event) (*e
 		// Add the reconnection error to the existing error.
 		err = multierror.Append(err, reconErr)
 	default:
-		err = s.write(ctx, buffer.Bytes())
+		err = s.write(ctx, formatted)
 	}
 
 	// Format the error nicely if we need to return one.
@@ -93,6 +90,7 @@ func (s *AuditSocketSink) Process(ctx context.Context, e *eventlogger.Event) (*e
 		err = fmt.Errorf("%s: error writing to socket: %w", op, err)
 	}
 
+	// return nil for the event to indicate the pipeline is complete.
 	return nil, err
 }
 
