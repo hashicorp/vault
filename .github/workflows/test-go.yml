@@ -294,6 +294,10 @@ jobs:
                 run_id: context.runId,
             });
 
+            // This is a temporary debugging statement to catch an intermittent API issue
+            // we will remove it once this script runs reliably
+            console.log(result.data);
+
             const prefixToSearchFor = 'Run Go tests / test-go (${{ matrix.id }}'
             const jobData = result.data.jobs.filter(
                 (job) => job.name.startsWith(prefixToSearchFor)
@@ -317,6 +321,7 @@ jobs:
             });
       - name: Prepare failure summary
         if: success() || failure()
+        continue-on-error: true
         run: |
           # This jq query filters out successful tests, leaving only the failures.
           # Then, it formats the results into rows of a Markdown table.
