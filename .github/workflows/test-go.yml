@@ -239,7 +239,7 @@ jobs:
           fi
 
           # On a release branch, add a flag to rerun failed tests
-          if [[ "${{ github.ref_name }}" = "release/*" ]]; then
+          if [[ "${{ github.base_ref }}" = "release/*" || "${{ github.ref_name }}" = "release/*" ]]; then
            RERUN_FAILS="--rerun-fails"
           fi
 
@@ -294,10 +294,6 @@ jobs:
                 run_id: context.runId,
             });
 
-            // This is a temporary debugging statement to catch an intermittent API issue
-            // we will remove it once this script runs reliably
-            console.log(result.data);
-
             const prefixToSearchFor = 'Run Go tests / test-go (${{ matrix.id }}'
             const jobData = result.data.jobs.filter(
                 (job) => job.name.startsWith(prefixToSearchFor)
@@ -307,7 +303,9 @@ jobs:
                 jobData.length == 0 ||
                 jobData[0].html_url === undefined
             ) {
-                console.log("Failed to fetch GHA job data.");
+                const msg = "Failed to fetch GHA job data.";
+                console.log(msg);
+                throw new Error(msg);
             }
 
             const url = jobData[0].html_url;
@@ -321,7 +319,6 @@ jobs:
             });
       - name: Prepare failure summary
         if: success() || failure()
-        continue-on-error: true
         run: |
           # This jq query filters out successful tests, leaving only the failures.
           # Then, it formats the results into rows of a Markdown table.
