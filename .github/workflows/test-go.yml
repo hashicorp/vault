@@ -217,7 +217,7 @@ jobs:
         run: |
           set -exo pipefail
           
-          echo "${{ needs.test-matrix.outputs.matrix[matrix.id] }}"
+          echo "${{ needs.test-matrix.outputs.matrix }}"
           # Build the dynamically generated source files.
           make prep
 
