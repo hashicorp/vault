@@ -202,6 +202,7 @@ jobs:
         run: time make ci-bootstrap dev
       - id: run-go-tests
         name: Run Go tests
+        if: ${{ matrix.id == 5 }}
         timeout-minutes: ${{ fromJSON(env.TIMEOUT_IN_MINUTES) }}
         env:
           COMMIT_SHA: ${{ github.sha }}

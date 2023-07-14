@@ -361,20 +361,17 @@ jobs:
             echo "| Test Type | Package | Test | Elapsed | Runner Index | Logs |" >> "$GITHUB_STEP_SUMMARY"
             echo "| --------- | ------- | ---- | ------- | ------------ | ---- |" >> "$GITHUB_STEP_SUMMARY"
             cat "$temp_file_name" >>  "$GITHUB_STEP_SUMMARY"
+            echo "TABLE_TEST_RESULTS=$(cat $GITHUB_STEP_SUMMARY | base64)" >> "$GITHUB_ENV"
           else
             echo "### All Go tests passed! :white_check_mark:" >> "$GITHUB_STEP_SUMMARY"
           fi 
-          EOF=$(dd if=/dev/urandom bs=15 count=1 status=none | base64)
-          # shellcheck disable=SC2129
-          echo "TABLE_TEST_RESULTS<<$EOF" >> "$GITHUB_ENV"
-          echo $(cat "$GITHUB_STEP_SUMMARY") >> "$GITHUB_ENV"
-          echo "$EOF" >> "$GITHUB_ENV"
       - uses: actions/checkout@c85c95e3d7251135ab7dc9ce3241c5835cc595a9 # v3.5.3
       - name: Create comment
+        if: ${{ toJSON(env.TABLE_TEST_RESULTS) == '{ }' }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           PR_NUMBER: ${{ github.event.pull_request.number }}
           RUN_ID: ${{ github.run_id }}
           REPO: ${{ github.event.repository.name }}
-          TABLE_DATA: ${{ env.TABLE_TEST_RESULTS }} 
+          TABLE_DATA_B64: ${{ env.TABLE_TEST_RESULTS }} 
         run: ./.github/scripts/report_failed_tests.sh
