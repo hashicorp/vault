@@ -202,7 +202,7 @@
     "@hashicorp/ember-flight-icons": "2.0.3"
   },
   "engines": {
-    "node": "12.* || 14.* || >= 16"
+    "node": "14"
   },
   "ember": {
     "edition": "octane"
