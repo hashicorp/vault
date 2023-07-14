@@ -362,6 +362,7 @@ jobs:
             echo "| --------- | ------- | ---- | ------- | ------------ | ---- |" >> "$GITHUB_STEP_SUMMARY"
             cat "$temp_file_name" >>  "$GITHUB_STEP_SUMMARY"
             base64encoded=`cat "$GITHUB_STEP_SUMMARY" | base64`
+            echo "$base64encoded" 
             echo "TABLE_TEST_RESULTS=$base64Encoded" >> "$GITHUB_ENV"
           else
             echo "### All Go tests passed! :white_check_mark:" >> "$GITHUB_STEP_SUMMARY"
