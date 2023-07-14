@@ -45,8 +45,8 @@
             @onLicenseError={{action "handleLicenseError"}}
             @onShamirSuccess={{action "transitionToCluster"}}
             @updateProgress={{action "reloadCluster"}}
+            @checkComplete={{action "isUnsealed"}}
             @buttonText="Unseal"
-            @thresholdPath="t"
             @isComplete={{action "isUnsealed"}}
             @threshold={{this.model.sealThreshold}}
             @progress={{this.model.sealProgress}}
