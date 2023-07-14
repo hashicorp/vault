@@ -7,9 +7,9 @@ import Component from '@glimmer/component';
 
 /**
  * @module PolicyExample
- * PolicyExample component is meant to show an example of a policy. The PolicyExample can rendered by the PolicyTemplate
- * component (as in the first example below). PolicyExample can also be rendered in a modal (second example below), which
- * is how it is conditionally rendered by the PolicyForm component.
+ * The PolicyExample component receives a policy type ('acl', 'rgp', or 'egp') and renders a copyable policy example of
+ * that type using the <JsonEditor> component. Inside a modal, the PolicyExample component must be wrapped in a conditional
+ * (example below), otherwise the <JsonEditor> value won't render until it's focused.
  *
  * @example
  *  <PolicyExample

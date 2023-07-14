@@ -266,7 +266,7 @@ module('Integration | Component | policy-form', function (hooks) {
       'Policy editor shows original policy content, meaning that onCancel worked successfully'
     );
   });
-  test('it does not render the link for the policy example modal if not specified to', async function (assert) {
+  test('it does not render the button for the policy example modal if not specified to', async function (assert) {
     await render(hbs`
     <PolicyForm
       @model={{this.model}}
@@ -276,7 +276,7 @@ module('Integration | Component | policy-form', function (hooks) {
     `);
     assert.dom(SELECTORS.exampleModal).doesNotExist('Button for the policy example modal does not exist');
   });
-  test('it renders the link to the policy example modal when specified to', async function (assert) {
+  test('it renders the button to the policy example modal when specified to', async function (assert) {
     await render(hbs`
     <PolicyForm
       @model={{this.model}}
