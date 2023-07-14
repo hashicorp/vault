@@ -27,13 +27,13 @@ export default class KvMetadataAdapter extends ApplicationAdapter {
   }
 
   query(store, type, query) {
-    const { backend, secretPrefix } = query;
-    // example of secretPrefix: beep/boop/
-    return this.ajax(this._url(kvMetadataPath(backend, secretPrefix)), 'GET', {
+    const { backend, pathToSecret } = query;
+    // example of pathToSecret: beep/boop/
+    return this.ajax(this._url(kvMetadataPath(backend, pathToSecret)), 'GET', {
       data: { list: true },
     }).then((resp) => {
       resp.backend = backend;
-      resp.path = secretPrefix;
+      resp.path = pathToSecret;
       return resp;
     });
   }

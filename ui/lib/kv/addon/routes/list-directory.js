@@ -7,23 +7,23 @@ import Route from '@ember/routing/route';
 import { inject as service } from '@ember/service';
 import { hash } from 'rsvp';
 import { normalizePath } from 'vault/utils/path-encoding-helpers';
-import { breadcrumbsForNestedSecret } from 'vault/lib/kv-breadcrumbs';
+import { breadcrumbsForDirectory } from 'vault/lib/kv-breadcrumbs';
 
 export default class KvSecretsListRoute extends Route {
   @service store;
   @service router;
   @service secretMountPath;
 
-  getSecretPrefixFromUrl() {
-    const { secret_prefix } = this.paramsFor('list-nested-secret');
-    return secret_prefix ? normalizePath(secret_prefix) : '';
+  getPathToSecretFromUrl() {
+    const { path_to_secret } = this.paramsFor('list-directory');
+    return path_to_secret ? normalizePath(path_to_secret) : '';
   }
 
   model() {
     // TODO add filtering and return model for query on kv/metadata.
-    const secretPrefix = this.getSecretPrefixFromUrl();
+    const pathToSecret = this.getPathToSecretFromUrl();
     const backend = this.secretMountPath.currentPath;
-    const arrayOfSecretModels = this.store.query('kv/metadata', { backend, secretPrefix }).catch((err) => {
+    const arrayOfSecretModels = this.store.query('kv/metadata', { backend, pathToSecret }).catch((err) => {
       if (err.httpStatus === 404) {
         return [];
       } else {
@@ -33,23 +33,20 @@ export default class KvSecretsListRoute extends Route {
     return hash({
       arrayOfSecretModels,
       backend,
-      routeName: this.routeName,
-      secretPrefix,
+      pathToSecret,
     });
   }
 
   setupController(controller, resolvedModel) {
     super.setupController(controller, resolvedModel);
-    controller.set('model', resolvedModel.arrayOfSecretModels);
-    controller.routeName = resolvedModel.routeName;
-    controller.pageTitle = resolvedModel.backend;
+    controller.routeName = this.routeName;
     let breadcrumbsArray = [
       { label: 'secrets', route: 'secrets', linkExternal: true },
       { label: resolvedModel.backend, route: 'list' },
     ];
-    // these breadcrumbs handle nested secrets: beep/boop/
-    if (resolvedModel.secretPrefix) {
-      breadcrumbsArray = [...breadcrumbsArray, ...breadcrumbsForNestedSecret(resolvedModel.secretPrefix)];
+    // these breadcrumbs handle directories: beep/boop/
+    if (resolvedModel.pathToSecret) {
+      breadcrumbsArray = [...breadcrumbsArray, ...breadcrumbsForDirectory(resolvedModel.pathToSecret)];
     }
     controller.set('breadcrumbs', breadcrumbsArray);
   }

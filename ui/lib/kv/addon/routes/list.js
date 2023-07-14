@@ -3,4 +3,4 @@
  * SPDX-License-Identifier: MPL-2.0
  */
 
-export { default } from './list-nested-secret';
+export { default } from './list-directory';

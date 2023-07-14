@@ -1,4 +1,4 @@
-<KvPageHeader @breadcrumbs={{@breadcrumbs}} @model={{@model}} @isEngineView={{true}} @pageTitle={{@pageTitle}}>
+<KvPageHeader @breadcrumbs={{@breadcrumbs}} @model={{@model}} @isEngineView={{true}} @pageTitle={{@model.backend}}>
   <:tabLinks>
     <LinkTo @route={{@routeName}} data-test-secrets-tab={{@routeName}}>Secrets</LinkTo>
     <LinkTo @route="configuration" data-test-secrets-tab="Configuration">Configuration</LinkTo>
@@ -13,13 +13,12 @@
     <ToolbarLink @route="create" @type="add">Create secret</ToolbarLink>
   </:toolbarActions>
 </KvPageHeader>
-
 {{! TODO add permissions on the menu items }}
-{{#if (gt @model.length 0)}}
-  {{#each @model as |secret|}}
+{{#if @model.arrayOfSecretModels}}
+  {{#each @model.arrayOfSecretModels as |secret|}}
     <LinkedBlock
       class="list-item-row"
-      @params={{array (if secret.pathIsFolder "list-nested-secret" "secret.details") secret.fullSecretPath}}
+      @params={{array (if secret.pathIsDirectory "list-directory" "secret.details") secret.fullSecretPath}}
       @linkPrefix={{this.mountPoint}}
     >
       <div class="level is-mobile">
@@ -36,9 +35,9 @@
             <PopupMenu>
               <nav class="menu">
                 <ul class="menu-list">
-                  {{#if secret.pathIsFolder}}
+                  {{#if secret.pathIsDirectory}}
                     <li>
-                      <LinkTo @route="list-nested-secret" @model={{secret.fullSecretPath}}>
+                      <LinkTo @route="list-directory" @model={{secret.fullSecretPath}}>
                         Content
                       </LinkTo>
                     </li>
