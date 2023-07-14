@@ -219,7 +219,9 @@ jobs:
           
           # Build the dynamically generated source files.
           make prep
-
+          
+          echo ${{ toJSON(needs.test-matrix.outputs.matrix)[matrix.id] }}
+          echo ${{ toJSON(needs.test-matrix.outputs.matrix) }}
           # We don't want VAULT_LICENSE set when running Go tests, because that's
           # not what developers have in their environments and it could break some
           # tests; it would be like setting VAULT_TOKEN.  However some non-Go
