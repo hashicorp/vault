@@ -34,6 +34,7 @@ type AuditFileSink struct {
 }
 
 // NewAuditFileSink should be used to create a new AuditFileSink.
+// Accepted options: WithFileMode and WithPrefix.
 func NewAuditFileSink(path string, format auditFormat, opt ...Option) (*AuditFileSink, error) {
 	const op = "event.NewAuditFileSink"
 
@@ -145,7 +146,7 @@ func (f *AuditFileSink) Reopen() error {
 	return f.open()
 }
 
-// Type is used to define which type of node AuditFileSink is.
+// Type describes the type of this node (sink).
 func (f *AuditFileSink) Type() eventlogger.NodeType {
 	return eventlogger.NodeTypeSink
 }
