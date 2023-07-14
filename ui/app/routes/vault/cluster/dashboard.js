@@ -9,8 +9,6 @@ import { hash } from 'rsvp';
 
 export default class VaultClusterDashboardRoute extends Route {
   @service store;
-  @service version;
-  @service namespace;
 
   async getVaultConfiguration() {
     try {
@@ -23,16 +21,17 @@ export default class VaultClusterDashboardRoute extends Route {
   }
 
   model() {
-    const versionHeader = this.version.isEnterprise
-      ? `Vault v${this.version.version.slice(0, this.version.version.indexOf('+'))}`
-      : `Vault v${this.version.version}`;
     const vaultConfiguration = this.getVaultConfiguration();
 
     return hash({
-      versionHeader,
+      vaultConfiguration,
       secretsEngines: this.store.query('secret-engine', {}),
-      vaultConfiguration: typeof vaultConfiguration === 'number' ? vaultConfiguration : false,
-      namespace: this.namespace,
     });
+  }
+
+  setupController(controller, resolvedModel) {
+    super.setupController(...arguments);
+    controller.vaultConfiguration =
+      typeof resolvedModel.vaultConfiguration === 'number' ? false : resolvedModel.vaultConfiguration;
   }
 }
