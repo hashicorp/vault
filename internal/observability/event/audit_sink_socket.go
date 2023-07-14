@@ -18,16 +18,16 @@ import (
 
 // AuditSocketSink is a sink node which handles writing audit events to socket.
 type AuditSocketSink struct {
-	format        auditFormat
-	address       string
-	socketType    string        // socketType (default 'tcp')
-	writeDuration time.Duration // default 2s
-	socketLock    sync.RWMutex
-	connection    net.Conn
+	format      auditFormat
+	address     string
+	socketType  string        // socketType (default 'tcp')
+	maxDuration time.Duration // default 2s
+	socketLock  sync.RWMutex
+	connection  net.Conn
 }
 
 // NewAuditSocketSink should be used to create a new AuditSocketSink.
-// Accepted options: WithWriteDuration and WithSocketType.
+// Accepted options: WithMaxDuration and WithSocketType.
 func NewAuditSocketSink(format auditFormat, address string, opt ...Option) (*AuditSocketSink, error) {
 	const op = "event.NewAuditSocketSink"
 
@@ -37,12 +37,12 @@ func NewAuditSocketSink(format auditFormat, address string, opt ...Option) (*Aud
 	}
 
 	sink := &AuditSocketSink{
-		format:        format,
-		address:       address,
-		socketType:    opts.withSocketType,    // default tcp
-		writeDuration: opts.withWriteDuration, // default 2s
-		socketLock:    sync.RWMutex{},
-		connection:    nil,
+		format:      format,
+		address:     address,
+		socketType:  opts.withSocketType,  // default tcp
+		maxDuration: opts.withMaxDuration, // default 2s
+		socketLock:  sync.RWMutex{},
+		connection:  nil,
 	}
 
 	return sink, nil
@@ -125,7 +125,7 @@ func (s *AuditSocketSink) connect(ctx context.Context) error {
 		return nil
 	}
 
-	timeoutContext, cancel := context.WithTimeout(ctx, s.writeDuration)
+	timeoutContext, cancel := context.WithTimeout(ctx, s.maxDuration)
 	defer cancel()
 
 	dialer := net.Dialer{}
@@ -184,7 +184,7 @@ func (s *AuditSocketSink) write(ctx context.Context, data []byte) error {
 		return fmt.Errorf("%s: connection error: %w", op, err)
 	}
 
-	err = s.connection.SetWriteDeadline(time.Now().Add(s.writeDuration))
+	err = s.connection.SetWriteDeadline(time.Now().Add(s.maxDuration))
 	if err != nil {
 		return fmt.Errorf("%s: unable to set write deadline: %w", op, err)
 	}
