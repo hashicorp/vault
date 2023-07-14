@@ -32,7 +32,9 @@ type options struct {
 // getDefaultOptions returns options with their default values.
 func getDefaultOptions() options {
 	return options{
-		withNow: time.Now(),
+		withNow:      time.Now(),
+		withFacility: "AUTH",
+		withTag:      "vault",
 	}
 }
 
@@ -180,7 +182,11 @@ func WithPrefix(prefix string) Option {
 // WithFacility provides an option to represent a 'facility' for a syslog sink.
 func WithFacility(facility string) Option {
 	return func(o *options) error {
-		o.withFacility = strings.TrimSpace(facility)
+		facility = strings.TrimSpace(facility)
+
+		if facility != "" {
+			o.withFacility = facility
+		}
 
 		return nil
 	}
@@ -189,7 +195,11 @@ func WithFacility(facility string) Option {
 // WithTag provides an option to represent a 'tag' for a syslog sink.
 func WithTag(tag string) Option {
 	return func(o *options) error {
-		o.withTag = strings.TrimSpace(tag)
+		tag = strings.TrimSpace(tag)
+
+		if tag != "" {
+			o.withTag = tag
+		}
 
 		return nil
 	}

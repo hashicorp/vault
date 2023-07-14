@@ -29,17 +29,7 @@ func NewAuditSyslogSink(format auditFormat, opt ...Option) (*AuditSyslogSink, er
 		return nil, fmt.Errorf("%s: error applying options: %w", op, err)
 	}
 
-	facility := "AUTH"
-	if opts.withFacility != "" {
-		facility = opts.withFacility
-	}
-
-	tag := "vault"
-	if opts.withTag != "" {
-		tag = opts.withTag
-	}
-
-	logger, err := gsyslog.NewLogger(gsyslog.LOG_INFO, facility, tag)
+	logger, err := gsyslog.NewLogger(gsyslog.LOG_INFO, opts.withFacility, opts.withTag)
 	if err != nil {
 		return nil, fmt.Errorf("%s: error creating syslogger: %w", op, err)
 	}

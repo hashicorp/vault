@@ -342,6 +342,8 @@ func TestOptions_Default(t *testing.T) {
 	require.NotNil(t, opts)
 	require.True(t, time.Now().After(opts.withNow))
 	require.False(t, opts.withNow.IsZero())
+	require.Equal(t, "AUTH", opts.withFacility)
+	require.Equal(t, "vault", opts.withTag)
 }
 
 // TestOptions_Opts exercises getOpts with various Option values.
