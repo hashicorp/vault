@@ -140,7 +140,7 @@ jobs:
                   "estimatedRuntime": "N/A",
                   "packages": $BINARY,
                   "description": "partition 16 - binary test packages"
-              }] | .include | map({(.id | tostring): .})' matrix.json
+              }] | .include | map( { (.id|tostring): . } ) | add' matrix.json
             ) >> "$GITHUB_OUTPUT"
             (
               echo -n "matrix_ids="
