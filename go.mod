@@ -117,7 +117,7 @@ require (
 	github.com/hashicorp/hcp-scada-provider v0.2.1
 	github.com/hashicorp/hcp-sdk-go v0.23.0
 	github.com/hashicorp/nomad/api v0.0.0-20230519153805-2275a83cbfdf
-	github.com/hashicorp/raft v1.3.10
+	github.com/hashicorp/raft v1.5.0
 	github.com/hashicorp/raft-autopilot v0.2.0
 	github.com/hashicorp/raft-boltdb/v2 v2.0.0-20210421194847-a7e34179d62c
 	github.com/hashicorp/raft-snapshot v1.0.4
@@ -210,7 +210,7 @@ require (
 	golang.org/x/net v0.10.0
 	golang.org/x/oauth2 v0.8.0
 	golang.org/x/sync v0.2.0
-	golang.org/x/sys v0.8.0
+	golang.org/x/sys v0.10.0
 	golang.org/x/term v0.8.0
 	golang.org/x/text v0.9.0
 	golang.org/x/tools v0.7.0
