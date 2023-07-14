@@ -1315,7 +1315,7 @@
             "path": "secrets/pki/considerations"
           },
           {
-            "title": "Troubleshooting - ACME",
+            "title": "Troubleshooting ACME integration",
             "path": "secrets/pki/troubleshooting-acme"
           },
 
