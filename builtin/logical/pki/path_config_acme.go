@@ -70,7 +70,6 @@ func (sc *storageContext) setAcmeConfig(entry *acmeConfigEntry) error {
 		return fmt.Errorf("failed writing storage entry: %w", err)
 	}
 
-	sc.Backend.acmeState.markConfigDirty()
 	return nil
 }
 
@@ -141,7 +140,7 @@ func pathAcmeConfig(b *backend) *framework.Path {
 
 func (b *backend) pathAcmeRead(ctx context.Context, req *logical.Request, _ *framework.FieldData) (*logical.Response, error) {
 	sc := b.makeStorageContext(ctx, req.Storage)
-	config, err := sc.getAcmeConfig()
+	config, err := b.acmeState.getConfigWithForcedUpdate(sc)
 	if err != nil {
 		return nil, err
 	}
@@ -178,7 +177,7 @@ func genResponseFromAcmeConfig(config *acmeConfigEntry, warnings []string) *logi
 func (b *backend) pathAcmeWrite(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	sc := b.makeStorageContext(ctx, req.Storage)
 
-	config, err := sc.getAcmeConfig()
+	config, err := b.acmeState.getConfigWithForcedUpdate(sc)
 	if err != nil {
 		return nil, err
 	}
@@ -315,9 +314,8 @@ func (b *backend) pathAcmeWrite(ctx context.Context, req *logical.Request, d *fr
 		}
 	}
 
-	err = sc.setAcmeConfig(config)
-	if err != nil {
-		return nil, err
+	if _, err := b.acmeState.writeConfig(sc, config); err != nil {
+		return nil, fmt.Errorf("failed persisting: %w", err)
 	}
 
 	return genResponseFromAcmeConfig(config, warnings), nil

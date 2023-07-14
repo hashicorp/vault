@@ -4106,7 +4106,7 @@ func TestSystemBackend_OpenAPI(t *testing.T) {
 		}{
 			{path: "/auth/token/lookup", tag: "auth"},
 			{path: "/cubbyhole/{path}", tag: "secrets"},
-			{path: "/identity/group/id", tag: "identity"},
+			{path: "/identity/group/id/", tag: "identity"},
 			{path: expectedSecretPrefix + "^.*$", unpublished: true},
 			{path: "/sys/policy", tag: "system"},
 		}
