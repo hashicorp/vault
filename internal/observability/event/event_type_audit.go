@@ -64,9 +64,9 @@ func newAudit(opt ...Option) (*audit, error) {
 	audit := &audit{
 		ID:             opts.withID,
 		Version:        auditVersion,
-		Subtype:        auditSubtype(opts.withSubtype),
+		Subtype:        opts.withSubtype,
 		Timestamp:      opts.withNow,
-		RequiredFormat: auditFormat(opts.withFormat),
+		RequiredFormat: opts.withFormat,
 	}
 
 	if err := audit.validate(); err != nil {
@@ -109,7 +109,7 @@ func (a *audit) validate() error {
 
 // validate ensures that auditSubtype is one of the set of allowed event subtypes.
 func (t auditSubtype) validate() error {
-	const op = "event.(audit).(subtype).validate"
+	const op = "event.(auditSubtype).validate"
 	switch t {
 	case AuditRequest, AuditResponse:
 		return nil
@@ -120,12 +120,12 @@ func (t auditSubtype) validate() error {
 
 // validate ensures that auditFormat is one of the set of allowed event formats.
 func (f auditFormat) validate() error {
-	const op = "event.(audit).(format).validate"
+	const op = "event.(auditFormat).validate"
 	switch f {
 	case AuditFormatJSON, AuditFormatJSONx:
 		return nil
 	default:
-		return fmt.Errorf("%s: '%s' is not a valid required format: %w", op, f, ErrInvalidParameter)
+		return fmt.Errorf("%s: '%s' is not a valid format: %w", op, f, ErrInvalidParameter)
 	}
 }
 
