@@ -23,16 +23,19 @@ module('Unit | Serializer | kv/metadata', function (hooks) {
       {
         id: 'my-backend/metadata/first',
         path: 'first',
+        backend: 'my-backend',
         full_secret_path: 'first',
       },
       {
         id: 'my-backend/metadata/second',
         path: 'second',
+        backend: 'my-backend',
         full_secret_path: 'second',
       },
       {
         id: 'my-backend/metadata/third/',
         path: 'third/',
+        backend: 'my-backend',
         full_secret_path: 'third/',
       },
     ];
@@ -55,6 +58,7 @@ module('Unit | Serializer | kv/metadata', function (hooks) {
       {
         id: 'my-backend/metadata/beep/boop/',
         path: 'boop/',
+        backend: 'my-backend',
         full_secret_path: 'beep/boop/',
       },
     ];

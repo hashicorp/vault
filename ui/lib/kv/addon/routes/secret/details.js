@@ -33,8 +33,7 @@ export default class KvSecretDetailsRoute extends Route {
     if (pathIsFromDirectory(resolvedModel.path)) {
       breadcrumbsArray = [...breadcrumbsArray, ...breadcrumbsForDirectory(resolvedModel.path)];
     } else {
-      const breadcrumbsCurrentPath = { label: resolvedModel.path };
-      breadcrumbsArray.push(breadcrumbsCurrentPath);
+      breadcrumbsArray.push({ label: resolvedModel.path });
     }
     controller.breadcrumbs = breadcrumbsArray;
   }

@@ -20,6 +20,7 @@ export default class KvListPageComponent extends Component {
   @service flashMessages;
 
   get mountPoint() {
+    // mountPoint tells the LinkedBlock component where to start the transition. In this case, mountPoint will always be vault.cluster.secrets.backend.kv.
     return getOwner(this).mountPoint;
   }
 

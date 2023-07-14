@@ -27,6 +27,7 @@ export default class KvMetadataSerializer extends ApplicationSerializer {
         return {
           id: kvMetadataPath(payload.backend, fullSecretPath),
           path: secret,
+          backend: payload.backend,
           full_secret_path: fullSecretPath,
         };
       });

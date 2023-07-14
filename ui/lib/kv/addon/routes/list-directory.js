@@ -19,11 +19,10 @@ export default class KvSecretsListRoute extends Route {
     return path_to_secret ? normalizePath(path_to_secret) : '';
   }
 
-  model() {
-    // TODO add filtering and return model for query on kv/metadata.
-    const pathToSecret = this.getPathToSecretFromUrl();
+  model(params) {
+    const pathToSecret = params.path_to_secret ? normalizePath(params.path_to_secret) : '';
     const backend = this.secretMountPath.currentPath;
-    const arrayOfSecretModels = this.store.query('kv/metadata', { backend, pathToSecret }).catch((err) => {
+    const secrets = this.store.query('kv/metadata', { backend, pathToSecret }).catch((err) => {
       if (err.httpStatus === 404) {
         return [];
       } else {
@@ -31,7 +30,7 @@ export default class KvSecretsListRoute extends Route {
       }
     });
     return hash({
-      arrayOfSecretModels,
+      secrets,
       backend,
       pathToSecret,
     });

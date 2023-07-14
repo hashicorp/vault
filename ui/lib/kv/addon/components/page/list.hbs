@@ -14,8 +14,8 @@
   </:toolbarActions>
 </KvPageHeader>
 {{! TODO add permissions on the menu items }}
-{{#if @model.arrayOfSecretModels}}
-  {{#each @model.arrayOfSecretModels as |secret|}}
+{{#if @model.secrets}}
+  {{#each @model.secrets as |secret|}}
     <LinkedBlock
       class="list-item-row"
       @params={{array (if secret.pathIsDirectory "list-directory" "secret.details") secret.fullSecretPath}}

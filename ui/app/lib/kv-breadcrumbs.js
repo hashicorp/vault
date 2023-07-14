@@ -14,10 +14,17 @@ function pathIsFromDirectory(path) {
 }
 
 function breadcrumbsForDirectory(path) {
-  // path === "beep/boop/"
+  /* 
+    takes a path nested secret path "beep/boop" and returns an array of objects used for breadcrumbs: 
+    [
+    { label: 'beep', route: 'list-directory', model: 'beep'},
+    { label: 'boop', route: 'list-directory', model: 'beep/boop'},
+    { label: 'bop' ] } // last item is current route, only return label so breadcrumb has no link 
+    ]
+  */
   const pathAsArray = path.split('/').filter((path) => path);
   const modelIdArray = pathAsArray.map((key, index) => {
-    return `${pathAsArray.slice(0, index + 1).join('/')}/`; // ex: ['beep/', 'beep/boop/']. We need these model Ids to tell the LinkTo on the breadcrumb what to put into the dynamic *pathToSecret on the breadcrumb: ex/kv/beep/boop/
+    return `${pathAsArray.slice(0, index + 1).join('/')}/`;
   });
 
   return pathAsArray.map((key, index) => {
