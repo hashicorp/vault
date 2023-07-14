@@ -4,6 +4,7 @@
 package event
 
 import (
+	"os"
 	"testing"
 	"time"
 
@@ -16,7 +17,7 @@ func TestOptions_WithFormat(t *testing.T) {
 		Value                string
 		IsErrorExpected      bool
 		ExpectedErrorMessage string
-		ExpectedValue        string
+		ExpectedValue        auditFormat
 	}{
 		"empty": {
 			Value:                "",
@@ -28,10 +29,20 @@ func TestOptions_WithFormat(t *testing.T) {
 			IsErrorExpected:      true,
 			ExpectedErrorMessage: "format cannot be empty",
 		},
-		"valid": {
-			Value:           "test",
+		"invalid-test": {
+			Value:                "test",
+			IsErrorExpected:      true,
+			ExpectedErrorMessage: "event.(auditFormat).validate: 'test' is not a valid format: invalid parameter",
+		},
+		"valid-json": {
+			Value:           "json",
 			IsErrorExpected: false,
-			ExpectedValue:   "test",
+			ExpectedValue:   AuditFormatJSON,
+		},
+		"valid-jsonx": {
+			Value:           "jsonx",
+			IsErrorExpected: false,
+			ExpectedValue:   AuditFormatJSONx,
 		},
 	}
 
@@ -61,7 +72,7 @@ func TestOptions_WithSubtype(t *testing.T) {
 		Value                string
 		IsErrorExpected      bool
 		ExpectedErrorMessage string
-		ExpectedValue        string
+		ExpectedValue        auditSubtype
 	}{
 		"empty": {
 			Value:                "",
@@ -74,9 +85,9 @@ func TestOptions_WithSubtype(t *testing.T) {
 			ExpectedErrorMessage: "subtype cannot be empty",
 		},
 		"valid": {
-			Value:           "test",
+			Value:           "AuditResponse",
 			IsErrorExpected: false,
-			ExpectedValue:   "test",
+			ExpectedValue:   AuditResponse,
 		},
 	}
 
@@ -186,6 +197,69 @@ func TestOptions_WithID(t *testing.T) {
 	}
 }
 
+// TestOptions_WithFileMode exercises WithFileMode option to ensure it performs as expected.
+func TestOptions_WithFileMode(t *testing.T) {
+	tests := map[string]struct {
+		Value                string
+		IsErrorExpected      bool
+		ExpectedErrorMessage string
+		IsNilExpected        bool
+		ExpectedValue        os.FileMode
+	}{
+		"empty": {
+			Value:           "",
+			IsErrorExpected: false,
+			IsNilExpected:   true,
+		},
+		"whitespace": {
+			Value:           "     ",
+			IsErrorExpected: false,
+			IsNilExpected:   true,
+		},
+		"nonsense": {
+			Value:                "juan",
+			IsErrorExpected:      true,
+			ExpectedErrorMessage: "unable to parse file mode: strconv.ParseUint: parsing \"juan\": invalid syntax",
+		},
+		"zero": {
+			Value:           "0000",
+			IsErrorExpected: false,
+			ExpectedValue:   os.FileMode(0o000),
+		},
+		"valid": {
+			Value:           "0007",
+			IsErrorExpected: false,
+			ExpectedValue:   os.FileMode(0o007),
+		},
+	}
+
+	for name, tc := range tests {
+		name := name
+		tc := tc
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+			options := &options{}
+			applyOption := WithFileMode(tc.Value)
+			err := applyOption(options)
+			switch {
+			case tc.IsErrorExpected:
+				require.Error(t, err)
+				require.EqualError(t, err, tc.ExpectedErrorMessage)
+			default:
+				require.NoError(t, err)
+				switch {
+				case tc.IsNilExpected:
+					// Optional option 'not supplied' (i.e. was whitespace/empty string)
+					require.Nil(t, options.withFileMode)
+				default:
+					// Dereference the pointer, so we can examine the file mode.
+					require.Equal(t, tc.ExpectedValue, *options.withFileMode)
+				}
+			}
+		})
+	}
+}
+
 // TestOptions_Default exercises getDefaultOptions to assert the default values.
 func TestOptions_Default(t *testing.T) {
 	opts := getDefaultOptions()
@@ -201,8 +275,8 @@ func TestOptions_Opts(t *testing.T) {
 		IsErrorExpected      bool
 		ExpectedErrorMessage string
 		ExpectedID           string
-		ExpectedSubtype      string
-		ExpectedFormat       string
+		ExpectedSubtype      auditSubtype
+		ExpectedFormat       auditFormat
 		IsNowExpected        bool
 		ExpectedNow          time.Time
 	}{
@@ -227,20 +301,20 @@ func TestOptions_Opts(t *testing.T) {
 		},
 		"with-multiple-valid-subtype": {
 			opts: []Option{
-				WithSubtype("qwerty"),
-				WithSubtype("juan"),
+				WithSubtype("AuditRequest"),
+				WithSubtype("AuditResponse"),
 			},
 			IsErrorExpected: false,
-			ExpectedSubtype: "juan",
+			ExpectedSubtype: AuditResponse,
 			IsNowExpected:   true,
 		},
 		"with-multiple-valid-format": {
 			opts: []Option{
-				WithFormat("qwerty"),
-				WithFormat("juan"),
+				WithFormat("json"),
+				WithFormat("jsonx"),
 			},
 			IsErrorExpected: false,
-			ExpectedFormat:  "juan",
+			ExpectedFormat:  AuditFormatJSONx,
 			IsNowExpected:   true,
 		},
 		"with-multiple-valid-now": {
@@ -263,14 +337,14 @@ func TestOptions_Opts(t *testing.T) {
 		"with-multiple-valid-options": {
 			opts: []Option{
 				WithID("qwerty"),
-				WithSubtype("typey2"),
+				WithSubtype("AuditRequest"),
 				WithFormat("json"),
 				WithNow(time.Date(2023, time.July, 4, 12, 3, 0, 0, time.Local)),
 			},
 			IsErrorExpected: false,
 			ExpectedID:      "qwerty",
-			ExpectedSubtype: "typey2",
-			ExpectedFormat:  "json",
+			ExpectedSubtype: AuditRequest,
+			ExpectedFormat:  AuditFormatJSON,
 			ExpectedNow:     time.Date(2023, time.July, 4, 12, 3, 0, 0, time.Local),
 		},
 	}
