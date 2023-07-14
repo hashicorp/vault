@@ -60,7 +60,7 @@
 </Toolbar>
 
 {{#if (eq this.tab "targets")}}
-  {{#if (gt @model.targets.length 0)}}
+  {{#if @model.targets}}
     {{#each @model.targets as |target|}}
       <LinkedBlock
         class="list-item-row"
