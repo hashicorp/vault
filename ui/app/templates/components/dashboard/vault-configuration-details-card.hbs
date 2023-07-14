@@ -4,7 +4,7 @@
   <:body as |B|>
     <B.Tr>
       <B.Td>API_ADDR</B.Td>
-      <B.Td data-test-vault-config-details="api_addr">{{@vaultConfiguration.api_addr}}</B.Td>
+      <B.Td data-test-vault-config-details="api_addr">{{or @vaultConfiguration.api_addr "None"}}</B.Td>
     </B.Tr>
     <B.Tr>
       <B.Td>Default lease TTL</B.Td>

@@ -1,14 +1,17 @@
-<h1 class="title has-top-margin-m" data-test-dashboard-version-header>
-  {{this.versionHeader}}
+<div class="has-top-margin-l has-bottom-margin-l">
+  <h1 class="title is-inline is-v-centered" data-test-dashboard-version-header>
+    {{this.versionHeader}}
+  </h1>
   <Hds::Badge
     @text="New"
     @icon="wand"
     @color="highlight"
     class="is-underline has-pointer"
     {{on "click" (fn (mut this.showNewFeatureModal) true)}}
+    data-test-badge-new
   />
-  <Hds::Badge @text={{if this.namespace.inRootNamespace "root" this.namespace.path}} @icon="org" />
-</h1>
+  <Hds::Badge @text={{if this.namespace.inRootNamespace "root" this.namespace.path}} @icon="org" data-test-badge-namespace />
+</div>
 
 <Modal
   @title="New dashboard"
