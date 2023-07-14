@@ -205,7 +205,7 @@ jobs:
         run: |
           git config --global url."https://${{ secrets.ELEVATED_GITHUB_TOKEN}}@github.com".insteadOf https://github.com
       - id: build
-        if: contains(needs.test-matrix.outputs.matrix[matrix.id].packages, '_binary')
+        if: contains(toJSON(needs.test-matrix.outputs.matrix)[matrix.id].packages, '_binary')
         env:
           GOPRIVATE: github.com/hashicorp/*
         run: time make ci-bootstrap dev
@@ -217,7 +217,6 @@ jobs:
         run: |
           set -exo pipefail
           
-          echo "${{ needs.test-matrix.outputs.matrix }}"
           # Build the dynamically generated source files.
           make prep
 
@@ -261,7 +260,7 @@ jobs:
               --jsonfile test-results/go-test/results-${{ matrix.id }}.json \
               --jsonfile-timing-events failure-summary-${{ matrix.id }}${{ inputs.name != '' && '-' || '' }}${{ inputs.name }}.json \
               $RERUN_FAILS \
-              --packages "${{ needs.test-matrix.outputs.matrix[matrix.id].packages }}" \
+              --packages "${{ toJSON(needs.test-matrix.outputs.matrix)[matrix.id].packages }}" \
               -- \
               -tags "${{ inputs.go-tags }}" \
               -timeout=${{ env.TIMEOUT_IN_MINUTES }}m \
