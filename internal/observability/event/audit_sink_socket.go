@@ -58,6 +58,9 @@ func (s *AuditSocketSink) Process(ctx context.Context, e *eventlogger.Event) (*e
 	default:
 	}
 
+	s.socketLock.Lock()
+	defer s.socketLock.Unlock()
+
 	if e == nil {
 		return nil, fmt.Errorf("%s: event is nil: %w", op, ErrInvalidParameter)
 	}
@@ -101,8 +104,11 @@ func (s *AuditSocketSink) Reopen() error {
 	defer s.socketLock.Unlock()
 
 	err := s.reconnect(nil)
+	if err != nil {
+		return fmt.Errorf("%s: error reconnecting: %w", op, err)
+	}
 
-	return err
+	return nil
 }
 
 // Type describes the type of this node (sink).
