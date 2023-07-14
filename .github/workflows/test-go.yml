@@ -147,7 +147,7 @@ jobs:
               jq -c \
               '.include += [{ 
                   "id": 16 
-                }] | { include: .include | map({id: .id})}' matrix.json
+                }] | [ .include[].id | tostring ]' matrix.json
             ) >> "$GITHUB_OUTPUT"
     outputs:
       matrix: ${{ steps.build.outputs.matrix }}
@@ -162,7 +162,8 @@ jobs:
     runs-on: ${{ fromJSON(inputs.runs-on) }}
     strategy:
       fail-fast: false
-      matrix: ${{ fromJSON(needs.test-matrix.outputs.matrix_ids) }}
+      matrix: 
+        id: ${{ fromJSON(needs.test-matrix.outputs.matrix_ids) }}
     env:
       GOPRIVATE: github.com/hashicorp/*
       TIMEOUT_IN_MINUTES: ${{ inputs.timeout-minutes }}
@@ -215,7 +216,8 @@ jobs:
           COMMIT_SHA: ${{ github.sha }}
         run: |
           set -exo pipefail
-
+          
+          echo "${{ needs.test-matrix.outputs.matrix[matrix.id] }}"
           # Build the dynamically generated source files.
           make prep
 
