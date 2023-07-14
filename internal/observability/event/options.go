@@ -6,6 +6,8 @@ package event
 import (
 	"errors"
 	"fmt"
+	"os"
+	"strconv"
 	"strings"
 	"time"
 
@@ -17,10 +19,12 @@ type Option func(*options) error
 
 // options are used to represent configuration for an Event.
 type options struct {
-	withID      string
-	withNow     time.Time
-	withSubtype string
-	withFormat  string
+	withID       string
+	withNow      time.Time
+	withSubtype  auditSubtype
+	withFormat   auditFormat
+	withFileMode *os.FileMode
+	withPrefix   string
 }
 
 // getDefaultOptions returns options with their default values.
@@ -63,7 +67,7 @@ func NewID(prefix string) (string, error) {
 	return fmt.Sprintf("%s_%s", prefix, id), nil
 }
 
-// WithID allows an optional ID.
+// WithID provides an optional ID.
 func WithID(id string) Option {
 	return func(o *options) error {
 		var err error
@@ -80,7 +84,7 @@ func WithID(id string) Option {
 	}
 }
 
-// WithNow allows an option to represent 'now'.
+// WithNow provides an option to represent 'now'.
 func WithNow(now time.Time) Option {
 	return func(o *options) error {
 		var err error
@@ -96,36 +100,78 @@ func WithNow(now time.Time) Option {
 	}
 }
 
-// WithSubtype allows an option to represent the subtype.
+// WithSubtype provides an option to represent the subtype.
 func WithSubtype(subtype string) Option {
 	return func(o *options) error {
-		var err error
-
-		subtype := strings.TrimSpace(subtype)
-		switch {
-		case subtype == "":
-			err = errors.New("subtype cannot be empty")
-		default:
-			o.withSubtype = subtype
+		s := strings.TrimSpace(subtype)
+		if s == "" {
+			return errors.New("subtype cannot be empty")
 		}
 
-		return err
+		parsed := auditSubtype(s)
+		err := parsed.validate()
+		if err != nil {
+			return err
+		}
+
+		o.withSubtype = parsed
+		return nil
 	}
 }
 
-// WithFormat allows an option to represent event format.
+// WithFormat provides an option to represent event format.
 func WithFormat(format string) Option {
 	return func(o *options) error {
-		var err error
-
-		format := strings.TrimSpace(format)
-		switch {
-		case format == "":
-			err = errors.New("format cannot be empty")
-		default:
-			o.withFormat = format
+		f := strings.TrimSpace(format)
+		if f == "" {
+			return errors.New("format cannot be empty")
 		}
 
-		return err
+		parsed := auditFormat(f)
+		err := parsed.validate()
+		if err != nil {
+			return err
+		}
+
+		o.withFormat = parsed
+		return nil
+	}
+}
+
+// WithFileMode provides an option to represent a file mode for a file sink.
+// Supplying an empty string or whitespace will prevent this option from being
+// applied, but it will not return an error in those circumstances.
+func WithFileMode(mode string) Option {
+	return func(o *options) error {
+		// Clear up whitespace before attempting to parse
+		mode = strings.TrimSpace(mode)
+		if mode == "" {
+			// If supplied file mode is empty, just return early without setting anything.
+			// We can assume that this option was called by something that didn't
+			// parse the incoming value, perhaps from a config map etc.
+			return nil
+		}
+
+		// By now we believe we have something that the caller really intended to
+		// be parsed into a file mode.
+		raw, err := strconv.ParseUint(mode, 8, 32)
+
+		switch {
+		case err != nil:
+			return fmt.Errorf("unable to parse file mode: %w", err)
+		default:
+			m := os.FileMode(raw)
+			o.withFileMode = &m
+		}
+
+		return nil
+	}
+}
+
+// WithPrefix provides an option to represent a prefix for a file sink.
+func WithPrefix(prefix string) Option {
+	return func(o *options) error {
+		o.withPrefix = prefix
+		return nil
 	}
 }

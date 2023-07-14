@@ -6767,10 +6767,10 @@ func TestProperAuthing(t *testing.T) {
 		"cert/unified-delta-crl":                 shouldBeUnauthedReadList,
 		"cert/unified-delta-crl/raw":             shouldBeUnauthedReadList,
 		"cert/unified-delta-crl/raw/pem":         shouldBeUnauthedReadList,
-		"certs":                                  shouldBeAuthed,
-		"certs/revoked":                          shouldBeAuthed,
-		"certs/revocation-queue":                 shouldBeAuthed,
-		"certs/unified-revoked":                  shouldBeAuthed,
+		"certs/":                                 shouldBeAuthed,
+		"certs/revoked/":                         shouldBeAuthed,
+		"certs/revocation-queue/":                shouldBeAuthed,
+		"certs/unified-revoked/":                 shouldBeAuthed,
 		"config/acme":                            shouldBeAuthed,
 		"config/auto-tidy":                       shouldBeAuthed,
 		"config/ca":                              shouldBeAuthed,
@@ -6817,7 +6817,7 @@ func TestProperAuthing(t *testing.T) {
 		"issuer/default/sign-verbatim":           shouldBeAuthed,
 		"issuer/default/sign-verbatim/test":      shouldBeAuthed,
 		"issuer/default/sign/test":               shouldBeAuthed,
-		"issuers":                                shouldBeUnauthedReadList,
+		"issuers/":                               shouldBeUnauthedReadList,
 		"issuers/generate/intermediate/exported": shouldBeAuthed,
 		"issuers/generate/intermediate/internal": shouldBeAuthed,
 		"issuers/generate/intermediate/existing": shouldBeAuthed,
@@ -6829,7 +6829,7 @@ func TestProperAuthing(t *testing.T) {
 		"issuers/import/cert":                    shouldBeAuthed,
 		"issuers/import/bundle":                  shouldBeAuthed,
 		"key/default":                            shouldBeAuthed,
-		"keys":                                   shouldBeAuthed,
+		"keys/":                                  shouldBeAuthed,
 		"keys/generate/internal":                 shouldBeAuthed,
 		"keys/generate/exported":                 shouldBeAuthed,
 		"keys/generate/kms":                      shouldBeAuthed,
@@ -6839,7 +6839,7 @@ func TestProperAuthing(t *testing.T) {
 		"revoke":                                 shouldBeAuthed,
 		"revoke-with-key":                        shouldBeAuthed,
 		"roles/test":                             shouldBeAuthed,
-		"roles":                                  shouldBeAuthed,
+		"roles/":                                 shouldBeAuthed,
 		"root":                                   shouldBeAuthed,
 		"root/generate/exported":                 shouldBeAuthed,
 		"root/generate/internal":                 shouldBeAuthed,
@@ -6864,7 +6864,7 @@ func TestProperAuthing(t *testing.T) {
 		"unified-crl/delta/pem":                  shouldBeUnauthedReadList,
 		"unified-ocsp":                           shouldBeUnauthedWriteOnly,
 		"unified-ocsp/dGVzdAo=":                  shouldBeUnauthedReadList,
-		"eab":                                    shouldBeAuthed,
+		"eab/":                                   shouldBeAuthed,
 		"eab/" + eabKid:                          shouldBeAuthed,
 	}
 
@@ -6953,7 +6953,8 @@ func TestProperAuthing(t *testing.T) {
 
 		handler, present := paths[raw_path]
 		if !present {
-			t.Fatalf("OpenAPI reports PKI mount contains %v->%v but was not tested to be authed or authed.", openapi_path, raw_path)
+			t.Fatalf("OpenAPI reports PKI mount contains %v -> %v but was not tested to be authed or not authed.",
+				openapi_path, raw_path)
 		}
 
 		openapi_data := raw_data.(map[string]interface{})
