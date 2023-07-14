@@ -15,6 +15,6 @@ set -e
 # This comment reports failed jobs and the url to the failed workflow
 new_body="CI Test Results:\n${TABLE_DATA}"
 
-source gh_comment.sh
+source ./.github/scripts/gh_comment.sh
 
 update_or_create_comment "$REPO" "$PR_NUMBER" "CI Test Results:" "$BODY"

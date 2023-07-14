@@ -37,6 +37,6 @@ else
 fi
 
 
-source gh_comment.sh
+source ./.github/scripts/gh_comment.sh
 
 update_or_create_comment "$REPO" "$PR_NUMBER" "Build Results:" "$BODY"
