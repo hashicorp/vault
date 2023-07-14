@@ -27,7 +27,7 @@ type AuditSocketSink struct {
 }
 
 // NewAuditSocketSink should be used to create a new AuditSocketSink.
-// Accepted options: WithAddress, WithDuration and WithSocketType.
+// Accepted options: WithDuration and WithSocketType.
 func NewAuditSocketSink(format auditFormat, address string, opt ...Option) (*AuditSocketSink, error) {
 	const op = "event.NewAuditSocketSink"
 
