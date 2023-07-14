@@ -15,10 +15,7 @@ function pathIsFromNested(path) {
 
 function breadcrumbsForNestedSecret(path) {
   // path === "meep/moop/"
-  const pathAsArray = path.split('/');
-  if (pathAsArray.at(-1) === '') {
-    pathAsArray.pop(); // remove the last / so you can get the correct index count, ["meep", "moop"]
-  }
+  const pathAsArray = path.split('/').filter((path) => path);
   const modelIdArray = pathAsArray.map((key, index) => {
     return `${pathAsArray.slice(0, index + 1).join('/')}/`; // ex: ['meep/', 'meep/moop/']. We need these model Ids to tell the LinkTo on the breadcrumb what to put into the dynamic *secretPrefix on the breadcrumb: ex/kv/meep/moop/
   });
