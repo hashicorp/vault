@@ -5,19 +5,6 @@ import { camelize } from '@ember/string';
 import Component from '@glimmer/component';
 import { tracked } from '@glimmer/tracking';
 
-const oldArgs = {
-  action: 'unseal',
-  onLicenseError: () => {},
-  onShamirSuccess: () => {},
-  onUpdate: () => {},
-  buttonText: 'Submit',
-  thresholdPath: 't',
-  isComplete: () => {},
-  threshold: 1,
-  progress: 1,
-  fetchOnInit: false,
-};
-
 /**
  * @module ShamirFlowComponent
  * These components are used to manage keeping track of a shamir unseal flow.
@@ -50,20 +37,9 @@ const oldArgs = {
  */
 export default class ShamirFlowComponent extends Component {
   @service store;
-
   @tracked errors = A();
-  @tracked haveSavedPGPKey = false;
   @tracked attemptResponse = null;
-  @tracked otp = '';
 
-  // get encoded_token() {
-  //   // encoded token is returned from generate-operation-token endpoint
-  //   return this.attemptProgress.encoded_token;
-  // }
-  // get otp() {
-  //   // otp is returned from generate-operation-token endpoint
-  //   return this.attemptProgress.otp;
-  // }
   get action() {
     if (!this.args.action) return '';
     return camelize(this.args.action);
@@ -90,14 +66,17 @@ export default class ShamirFlowComponent extends Component {
    * @returns Promise which should resolve unless throwing error to parent.
    */
   async attemptProgress(data) {
+    this.errors = null;
     const action = this.action;
     const adapter = this.store.adapterFor('cluster');
     const method = adapter[action];
-    // TODO: pass checkStatus for options
+    // Only used for DR token generate
+    const checkStatus = data ? false : true;
+
     try {
-      const resp = await method.call(adapter, data);
+      const resp = await method.call(adapter, data, { checkStatus });
       this.updateProgress(resp);
-      this.checkComplete(resp);
+      this.handleComplete(resp);
       return;
     } catch (e) {
       if (e.httpStatus === 400) {
@@ -114,7 +93,7 @@ export default class ShamirFlowComponent extends Component {
   }
 
   /**
-   * 3. This method is a hook to make updates to the display.
+   * 3. This method gets called after successful unseal attempt.
    * By default the response will be made available to the component,
    * but pass in @updateProgress (no params) to trigger any side effects that will
    * update passed attributes from parent.
@@ -126,68 +105,46 @@ export default class ShamirFlowComponent extends Component {
       this.args.updateProgress();
     }
     this.attemptResponse = response;
-    if (response.otp) {
-      // OTP is sticky -- once we get one we don't want to remove it
-      // even if the current response doesn't include one.
-      // See PR #5818
-      this.otp = response.otp;
-    }
     return;
   }
 
   /**
-   * 4. checkComplete checks the payload for completeness.
-   * For custom logic, define @checkComplete which receives
-   * the adapter payload. If true, @onShamirSuccess will be called
+   * 4. checkComplete checks the payload for completeness, then then
+   * takes calls @onShamirSuccess with no arguments if complete.
+   * For custom logic, define @checkComplete which receives the
+   * adapter payload.
    * @param {payload} response from the adapter method
    * @returns void
    */
-  checkComplete(response) {
-    let isComplete = response.complete === true;
-    if (this.args.checkComplete) {
-      isComplete = this.args.checkComplete(response);
-    }
+  handleComplete(response) {
+    const isComplete = this.checkComplete(response);
     if (isComplete) {
-      this.reset();
-      this.args.onShamirSuccess();
+      if (this.args.onShamirSuccess) {
+        this.args.onShamirSuccess();
+      }
     }
     return;
   }
 
+  checkComplete(response) {
+    if (this.args.checkComplete) {
+      return this.args.checkComplete(response);
+    }
+    return response.complete === true;
+  }
+
   reset() {
     this.attemptResponse = null;
-    this.haveSavedPGPKey = false;
     this.errors = null;
   }
 
   @action
-  onSubmit(data) {
-    this.errors = null;
+  onSubmitKey(data) {
     this.attemptProgress(this.extractData(data));
   }
-
-  // @action
-  // startGenerate(data) {
-  //   if (this.generateAction) {
-  //     data.attempt = true;
-  //   }
-  //   this.attemptProgress(this.extractData(data));
-  // }
 }
 
-/* generate-operation-token response example
-{
-  "started": true,
-  "nonce": "2dbd10f1-8528-6246-09e7-82b25b8aba63",
-  "progress": 1,
-  "required": 3,
-  "encoded_token": "",
-  "otp": "2vPFYG8gUSW9npwzyvxXMug0",
-  "otp_length": 24,
-  "complete": false
-}
-
-unseal response (progress)
+/* example unseal response (progress)
 {
   "sealed": true,
   "t": 3,
@@ -196,7 +153,7 @@ unseal response (progress)
   "version": "0.6.2"
 }
 
-unseal response (finished)
+example unseal response (finished)
 {
   "sealed": false,
   "t": 3,
