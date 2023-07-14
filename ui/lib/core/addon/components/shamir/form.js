@@ -23,6 +23,7 @@ import { tracked } from '@glimmer/tracking';
  * @param {number} threshold - min number of keys required to unlock shamir seal
  * @param {number} progress - number of keys given so far for unlock
  * @param {string} buttonText - CTA for the form submit button. Defaults to "Submit"
+ * @param {string} inputLabel - Label for key input. Defaults to "Shamir key portion"
  * @param {boolean} alwaysShowProgress - determines if the shamir progress should always show, or only when > 0 progress
  * @param {string} otp - if otp is present, it will show a section describing what to do with it
  *
@@ -36,6 +37,9 @@ export default class ShamirFormComponent extends Component {
   }
   get showProgress() {
     return this.args.progress > 0 || this.args.alwaysShowProgress;
+  }
+  get inputLabel() {
+    return this.args.inputLabel || 'Shamir key portion';
   }
 
   resetForm() {
