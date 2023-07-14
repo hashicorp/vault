@@ -73,7 +73,7 @@
               type="button"
               class="text-button has-text-info"
               {{on "click" (fn (mut this.showTemplateModal))}}
-              data-test-policy-example
+              data-test-policy-example-button
             >
               example template
             </button>.
@@ -130,6 +130,7 @@
     @onClose={{fn (mut this.showTemplateModal) false}}
     @isActive={{this.showTemplateModal}}
     @showCloseButton={{true}}
+    data-test-policy-example-modal
   >
     <section class="modal-card-body">
       {{! code-mirror modifier does not render value initially until focus event fires }}

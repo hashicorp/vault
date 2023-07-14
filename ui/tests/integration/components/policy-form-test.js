@@ -18,7 +18,8 @@ const SELECTORS = {
   saveButton: '[data-test-policy-save]',
   cancelButton: '[data-test-policy-cancel]',
   error: '[data-test-message-error]',
-  exampleModal: '[data-test-policy-example]',
+  exampleButton: '[data-test-policy-example-button]',
+  exampleModal: '[data-test-policy-example-modal]',
   exampleModalTitle: '[data-test-modal-title]',
   exampleModalClose: '[data-test-modal-close-button]',
 };
@@ -266,7 +267,7 @@ module('Integration | Component | policy-form', function (hooks) {
       'Policy editor shows original policy content, meaning that onCancel worked successfully'
     );
   });
-  test('it does not render the button for the policy example modal if not specified to', async function (assert) {
+  test('it does not render the button and modal for the policy example if not specified to', async function (assert) {
     await render(hbs`
     <PolicyForm
       @model={{this.model}}
@@ -274,9 +275,10 @@ module('Integration | Component | policy-form', function (hooks) {
       @onSave={{this.onSave}}
     />
     `);
-    assert.dom(SELECTORS.exampleModal).doesNotExist('Button for the policy example modal does not exist');
+    assert.dom(SELECTORS.exampleModal).doesNotExist('Modal for the policy example does not exist');
+    assert.dom(SELECTORS.exampleButton).doesNotExist('Button for the policy example modal does not exist');
   });
-  test('it renders the button to the policy example modal when specified to', async function (assert) {
+  test('it renders the button and modal for the policy example when specified to', async function (assert) {
     await render(hbs`
     <PolicyForm
       @model={{this.model}}
@@ -286,7 +288,8 @@ module('Integration | Component | policy-form', function (hooks) {
     />
     <div id="modal-wormhole"></div>
     `);
-    assert.dom(SELECTORS.exampleModal).exists({ count: 1 }, 'Button for the policy example modal exists');
+    assert.dom(SELECTORS.exampleButton).exists({ count: 1 }, 'Modal for the policy example exists');
+    assert.dom(SELECTORS.exampleButton).exists({ count: 1 }, 'Button for the policy example modal exists');
   });
   test('it renders the correct title for ACL example for the policy example modal', async function (assert) {
     await render(hbs`
@@ -298,7 +301,7 @@ module('Integration | Component | policy-form', function (hooks) {
     />
     <div id="modal-wormhole"></div>
     `);
-    await click(SELECTORS.exampleModal);
+    await click(SELECTORS.exampleButton);
     assert.dom(SELECTORS.exampleModalTitle).hasText('Example ACL Policy');
   });
   test('it renders the correct title for RGP example for the policy example modal', async function (assert) {
@@ -313,7 +316,7 @@ module('Integration | Component | policy-form', function (hooks) {
     />
     <div id="modal-wormhole"></div>
     `);
-    await click(SELECTORS.exampleModal);
+    await click(SELECTORS.exampleButton);
     assert.dom(SELECTORS.exampleModalTitle).hasText('Example RGP Policy');
   });
 });
