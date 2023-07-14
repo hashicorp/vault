@@ -361,7 +361,7 @@ type Core struct {
 
 	// mountsLock is used to ensure that the mounts table does not
 	// change underneath a calling function
-	mountsLock sync.RWMutex
+	mountsLock locking.DeadlockRWMutex
 
 	// mountMigrationTracker tracks past and ongoing remount operations
 	// against their migration ids
@@ -373,7 +373,7 @@ type Core struct {
 
 	// authLock is used to ensure that the auth table does not
 	// change underneath a calling function
-	authLock sync.RWMutex
+	authLock locking.DeadlockRWMutex
 
 	// audit is loaded after unseal since it is a protected
 	// configuration
@@ -852,6 +852,10 @@ type CoreConfig struct {
 	PendingRemovalMountsAllowed bool
 
 	ExpirationRevokeRetryBase time.Duration
+
+	// AdministrativeNamespacePath is used to configure the administrative namespace, which has access to some sys endpoints that are
+	// only accessible in the root namespace, currently sys/audit-hash and sys/monitor.
+	AdministrativeNamespacePath string
 }
 
 // GetServiceRegistration returns the config's ServiceRegistration, or nil if it does
@@ -1204,7 +1208,7 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 		c.AddLogger(identityLogger)
 		return NewIdentityStore(ctx, c, config, identityLogger)
 	}
-	addExtraLogicalBackends(c, logicalBackends)
+	addExtraLogicalBackends(c, logicalBackends, conf.AdministrativeNamespacePath)
 	c.logicalBackends = logicalBackends
 
 	credentialBackends := make(map[string]logical.Factory)
@@ -3177,6 +3181,7 @@ type BuiltinRegistry interface {
 	Get(name string, pluginType consts.PluginType) (func() (interface{}, error), bool)
 	Keys(pluginType consts.PluginType) []string
 	DeprecationStatus(name string, pluginType consts.PluginType) (consts.DeprecationStatus, bool)
+	IsBuiltinEntPlugin(name string, pluginType consts.PluginType) bool
 }
 
 func (c *Core) AuditLogger() AuditLogger {
@@ -3866,8 +3871,8 @@ func (c *Core) ListAuths() ([]*MountEntry, error) {
 		return nil, fmt.Errorf("vault is sealed")
 	}
 
-	c.mountsLock.RLock()
-	defer c.mountsLock.RUnlock()
+	c.authLock.RLock()
+	defer c.authLock.RUnlock()
 
 	var entries []*MountEntry
 

@@ -12,13 +12,12 @@ import (
 	"testing"
 	"time"
 
-	"github.com/hashicorp/vault/sdk/helper/testhelpers/schema"
-
+	"github.com/hashicorp/go-secure-stdlib/parseutil"
 	"github.com/hashicorp/vault/api"
 	vaulthttp "github.com/hashicorp/vault/http"
+	"github.com/hashicorp/vault/sdk/helper/testhelpers/schema"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/vault"
-
 	"github.com/stretchr/testify/require"
 )
 
@@ -1068,7 +1067,7 @@ func TestAutoRebuild(t *testing.T) {
 	thisCRLNumber := getCRLNumber(t, crl)
 	requireSerialNumberInCRL(t, crl, leafSerial) // But the old one should.
 	now := time.Now()
-	graceInterval, _ := time.ParseDuration(gracePeriod)
+	graceInterval, _ := parseutil.ParseDurationSecond(gracePeriod)
 	expectedUpdate := lastCRLExpiry.Add(-1 * graceInterval)
 	if requireSerialNumberInCRL(nil, crl, newLeafSerial) {
 		// If we somehow lagged and we ended up needing to rebuild

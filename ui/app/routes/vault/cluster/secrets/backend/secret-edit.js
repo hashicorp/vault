@@ -8,9 +8,9 @@ import { set } from '@ember/object';
 import { resolve } from 'rsvp';
 import { inject as service } from '@ember/service';
 import Route from '@ember/routing/route';
-import utils from 'vault/lib/key-utils';
 import UnloadModelRoute from 'vault/mixins/unload-model-route';
 import { encodePath, normalizePath } from 'vault/utils/path-encoding-helpers';
+import { keyIsFolder, parentKeyForKey } from 'core/utils/key-utils';
 
 export default Route.extend(UnloadModelRoute, {
   store: service(),
@@ -79,9 +79,9 @@ export default Route.extend(UnloadModelRoute, {
   beforeModel({ to: { queryParams } }) {
     const secret = this.secretParam();
     return this.buildModel(secret, queryParams).then(() => {
-      const parentKey = utils.parentKeyForKey(secret);
+      const parentKey = parentKeyForKey(secret);
       const mode = this.routeName.split('.').pop();
-      if (mode === 'edit' && utils.keyIsFolder(secret)) {
+      if (mode === 'edit' && keyIsFolder(secret)) {
         if (parentKey) {
           return this.transitionTo('vault.cluster.secrets.backend.list', encodePath(parentKey));
         } else {
@@ -109,7 +109,6 @@ export default Route.extend(UnloadModelRoute, {
       ssh: 'role-ssh',
       transform: this.modelTypeForTransform(secret),
       aws: 'role-aws',
-      pki: secret && secret.startsWith('cert/') ? 'pki/cert' : 'pki/pki-role',
       cubbyhole: 'secret',
       kv: backendModel.modelTypeForKV,
       keymgmt: `keymgmt/${options.queryParams?.itemType || 'key'}`,
@@ -238,9 +237,6 @@ export default Route.extend(UnloadModelRoute, {
     const type = params.type || '';
     if (!secret) {
       secret = '\u0020';
-    }
-    if (modelType === 'pki/cert') {
-      secret = secret.replace('cert/', '');
     }
     if (modelType.startsWith('transform/')) {
       secret = this.transformSecretName(secret, modelType);

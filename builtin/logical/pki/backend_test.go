@@ -34,6 +34,7 @@ import (
 	"time"
 
 	"github.com/hashicorp/vault/helper/testhelpers/teststorage"
+	"golang.org/x/exp/maps"
 
 	"github.com/hashicorp/vault/helper/testhelpers"
 
@@ -6125,22 +6126,23 @@ func TestPKI_TemplatedAIAs(t *testing.T) {
 	_, err = CBWrite(b, s, "config/urls", aiaData)
 	require.NoError(t, err)
 
-	// But root generation will fail.
+	// Root generation should succeed, but without AIA info.
 	rootData := map[string]interface{}{
 		"common_name": "Long-Lived Root X1",
 		"issuer_name": "long-root-x1",
 		"key_type":    "ec",
 	}
-	_, err = CBWrite(b, s, "root/generate/internal", rootData)
-	require.Error(t, err)
-	require.Contains(t, err.Error(), "unable to parse AIA URL")
+	resp, err = CBWrite(b, s, "root/generate/internal", rootData)
+	require.NoError(t, err)
+	_, err = CBDelete(b, s, "root")
+	require.NoError(t, err)
 
-	// Clearing the config and regenerating the root should succeed.
+	// Clearing the config and regenerating the root should still succeed.
 	_, err = CBWrite(b, s, "config/urls", map[string]interface{}{
-		"crl_distribution_points": "",
-		"issuing_certificates":    "",
-		"ocsp_servers":            "",
-		"enable_templating":       false,
+		"crl_distribution_points": "{{cluster_path}}/issuer/my-root-id/crl/der",
+		"issuing_certificates":    "{{cluster_aia_path}}/issuer/my-root-id/der",
+		"ocsp_servers":            "{{cluster_path}}/ocsp",
+		"enable_templating":       true,
 	})
 	require.NoError(t, err)
 	resp, err = CBWrite(b, s, "root/generate/internal", rootData)
@@ -6765,10 +6767,10 @@ func TestProperAuthing(t *testing.T) {
 		"cert/unified-delta-crl":                 shouldBeUnauthedReadList,
 		"cert/unified-delta-crl/raw":             shouldBeUnauthedReadList,
 		"cert/unified-delta-crl/raw/pem":         shouldBeUnauthedReadList,
-		"certs":                                  shouldBeAuthed,
-		"certs/revoked":                          shouldBeAuthed,
-		"certs/revocation-queue":                 shouldBeAuthed,
-		"certs/unified-revoked":                  shouldBeAuthed,
+		"certs/":                                 shouldBeAuthed,
+		"certs/revoked/":                         shouldBeAuthed,
+		"certs/revocation-queue/":                shouldBeAuthed,
+		"certs/unified-revoked/":                 shouldBeAuthed,
 		"config/acme":                            shouldBeAuthed,
 		"config/auto-tidy":                       shouldBeAuthed,
 		"config/ca":                              shouldBeAuthed,
@@ -6815,7 +6817,7 @@ func TestProperAuthing(t *testing.T) {
 		"issuer/default/sign-verbatim":           shouldBeAuthed,
 		"issuer/default/sign-verbatim/test":      shouldBeAuthed,
 		"issuer/default/sign/test":               shouldBeAuthed,
-		"issuers":                                shouldBeUnauthedReadList,
+		"issuers/":                               shouldBeUnauthedReadList,
 		"issuers/generate/intermediate/exported": shouldBeAuthed,
 		"issuers/generate/intermediate/internal": shouldBeAuthed,
 		"issuers/generate/intermediate/existing": shouldBeAuthed,
@@ -6827,7 +6829,7 @@ func TestProperAuthing(t *testing.T) {
 		"issuers/import/cert":                    shouldBeAuthed,
 		"issuers/import/bundle":                  shouldBeAuthed,
 		"key/default":                            shouldBeAuthed,
-		"keys":                                   shouldBeAuthed,
+		"keys/":                                  shouldBeAuthed,
 		"keys/generate/internal":                 shouldBeAuthed,
 		"keys/generate/exported":                 shouldBeAuthed,
 		"keys/generate/kms":                      shouldBeAuthed,
@@ -6837,7 +6839,7 @@ func TestProperAuthing(t *testing.T) {
 		"revoke":                                 shouldBeAuthed,
 		"revoke-with-key":                        shouldBeAuthed,
 		"roles/test":                             shouldBeAuthed,
-		"roles":                                  shouldBeAuthed,
+		"roles/":                                 shouldBeAuthed,
 		"root":                                   shouldBeAuthed,
 		"root/generate/exported":                 shouldBeAuthed,
 		"root/generate/internal":                 shouldBeAuthed,
@@ -6862,9 +6864,12 @@ func TestProperAuthing(t *testing.T) {
 		"unified-crl/delta/pem":                  shouldBeUnauthedReadList,
 		"unified-ocsp":                           shouldBeUnauthedWriteOnly,
 		"unified-ocsp/dGVzdAo=":                  shouldBeUnauthedReadList,
-		"eab":                                    shouldBeAuthed,
+		"eab/":                                   shouldBeAuthed,
 		"eab/" + eabKid:                          shouldBeAuthed,
 	}
+
+	entPaths := getEntProperAuthingPaths(serial)
+	maps.Copy(paths, entPaths)
 
 	// Add ACME based paths to the test suite
 	for _, acmePrefix := range []string{"", "issuer/default/", "roles/test/", "issuer/default/roles/test/"} {
@@ -6944,9 +6949,12 @@ func TestProperAuthing(t *testing.T) {
 			raw_path = strings.ReplaceAll(raw_path, "{key_id}", eabKid)
 		}
 
+		raw_path = entProperAuthingPathReplacer(raw_path)
+
 		handler, present := paths[raw_path]
 		if !present {
-			t.Fatalf("OpenAPI reports PKI mount contains %v->%v but was not tested to be authed or authed.", openapi_path, raw_path)
+			t.Fatalf("OpenAPI reports PKI mount contains %v -> %v but was not tested to be authed or not authed.",
+				openapi_path, raw_path)
 		}
 
 		openapi_data := raw_data.(map[string]interface{})
@@ -7096,6 +7104,33 @@ func TestPatchIssuer(t *testing.T) {
 			require.Equal(t, []string{id}, resp.Data[testCase.Field], "failed persisting value")
 		}
 	}
+}
+
+func TestGenerateRootCAWithAIA(t *testing.T) {
+	// Generate a root CA at /pki-root
+	b_root, s_root := CreateBackendWithStorage(t)
+
+	// Setup templated AIA information
+	_, err := CBWrite(b_root, s_root, "config/cluster", map[string]interface{}{
+		"path":     "https://localhost:8200",
+		"aia_path": "https://localhost:8200",
+	})
+	require.NoError(t, err, "failed to write AIA settings")
+
+	_, err = CBWrite(b_root, s_root, "config/urls", map[string]interface{}{
+		"crl_distribution_points": "{{cluster_path}}/issuer/{{issuer_id}}/crl/der",
+		"issuing_certificates":    "{{cluster_aia_path}}/issuer/{{issuer_id}}/der",
+		"ocsp_servers":            "{{cluster_path}}/ocsp",
+		"enable_templating":       true,
+	})
+	require.NoError(t, err, "failed to write AIA settings")
+
+	// Write a root issuer, this should succeed.
+	resp, err := CBWrite(b_root, s_root, "root/generate/exported", map[string]interface{}{
+		"common_name": "root myvault.com",
+		"key_type":    "ec",
+	})
+	requireSuccessNonNilResponse(t, resp, err, "expected root generation to succeed")
 }
 
 var (

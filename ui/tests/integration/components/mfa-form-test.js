@@ -225,7 +225,7 @@ module('Integration | Component | mfa-form', function (hooks) {
     later(() => cancelTimers(), 50);
     await click('[data-test-mfa-validate]');
     assert
-      .dom('[data-test-error]')
+      .dom('[data-test-message-error]')
       .includesText(TOTP_VALIDATION_ERROR, 'Generic error message renders for passcode validation error');
   });
 });
