@@ -197,6 +197,82 @@ func TestOptions_WithID(t *testing.T) {
 	}
 }
 
+// TestOptions_WithFacility exercises WithFacility option to ensure it performs as expected.
+func TestOptions_WithFacility(t *testing.T) {
+	tests := map[string]struct {
+		Value         string
+		ExpectedValue string
+	}{
+		"empty": {
+			Value:         "",
+			ExpectedValue: "",
+		},
+		"whitespace": {
+			Value:         "    ",
+			ExpectedValue: "",
+		},
+		"value": {
+			Value:         "juan",
+			ExpectedValue: "juan",
+		},
+		"spacey-value": {
+			Value:         "   juan   ",
+			ExpectedValue: "juan",
+		},
+	}
+
+	for name, tc := range tests {
+		name := name
+		tc := tc
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+			options := &options{}
+			applyOption := WithFacility(tc.Value)
+			err := applyOption(options)
+			require.NoError(t, err)
+			require.Equal(t, tc.ExpectedValue, options.withFacility)
+		})
+	}
+}
+
+// TestOptions_WithTag exercises WithTag option to ensure it performs as expected.
+func TestOptions_WithTag(t *testing.T) {
+	tests := map[string]struct {
+		Value         string
+		ExpectedValue string
+	}{
+		"empty": {
+			Value:         "",
+			ExpectedValue: "",
+		},
+		"whitespace": {
+			Value:         "    ",
+			ExpectedValue: "",
+		},
+		"value": {
+			Value:         "juan",
+			ExpectedValue: "juan",
+		},
+		"spacey-value": {
+			Value:         "   juan   ",
+			ExpectedValue: "juan",
+		},
+	}
+
+	for name, tc := range tests {
+		name := name
+		tc := tc
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+			options := &options{}
+			applyOption := WithTag(tc.Value)
+			err := applyOption(options)
+			require.NoError(t, err)
+			require.Equal(t, tc.ExpectedValue, options.withTag)
+		})
+	}
+}
+
 // TestOptions_WithFileMode exercises WithFileMode option to ensure it performs as expected.
 func TestOptions_WithFileMode(t *testing.T) {
 	tests := map[string]struct {
@@ -266,6 +342,8 @@ func TestOptions_Default(t *testing.T) {
 	require.NotNil(t, opts)
 	require.True(t, time.Now().After(opts.withNow))
 	require.False(t, opts.withNow.IsZero())
+	require.Equal(t, "AUTH", opts.withFacility)
+	require.Equal(t, "vault", opts.withTag)
 }
 
 // TestOptions_Opts exercises getOpts with various Option values.
