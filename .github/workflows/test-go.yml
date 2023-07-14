@@ -142,6 +142,7 @@ jobs:
                   "description": "partition 16 - binary test packages"
               }]' matrix.json
             ) >> "$GITHUB_OUTPUT"
+            echo ${{ env.matrix }}
     outputs:
       matrix: ${{ steps.build.outputs.matrix }}
 
