@@ -1,0 +1,43 @@
+---
+layout: docs
+page_title: "Telemetry reference: Write-ahead log metrics"
+description: >-
+  Technical reference for write-ahead log telemetry values.
+---
+
+# Write-ahead log (WAL) telemetry
+
+WAL telemetry provides information on the overall health of the write-ahead logs
+used by Vault.
+
+## Default metrics
+
+@include 'telemetry-metrics/vault/wal/deletewals.mdx'
+
+@include 'telemetry-metrics/vault/wal/flushready.mdx'
+
+@include 'telemetry-metrics/vault/wal/flushready/queue_len.mdx'
+
+@include 'telemetry-metrics/vault/wal/gc/deleted.mdx'
+
+@include 'telemetry-metrics/vault/wal/gc/total.mdx'
+
+@include 'telemetry-metrics/vault/wal/loadwal.mdx'
+
+@include 'telemetry-metrics/vault/wal/persistwals.mdx'
+
+## Log shipping metrics
+
+@include 'telemetry-metrics/vault/logshipper/buffer/length.mdx'
+
+@include 'telemetry-metrics/vault/logshipper/buffer/max_length.mdx'
+
+@include 'telemetry-metrics/vault/logshipper/buffer/max_size.mdx'
+
+@include 'telemetry-metrics/vault/logshipper/buffer/size.mdx'
+
+@include 'telemetry-metrics/vault/logshipper/streamwals/guard_found.mdx'
+
+@include 'telemetry-metrics/vault/logshipper/streamwals/missing_guard.mdx'
+
+@include 'telemetry-metrics/vault/logshipper/streamwals/scanned_entries.mdx'

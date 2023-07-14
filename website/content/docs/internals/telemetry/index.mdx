@@ -1,0 +1,75 @@
+---
+layout: docs
+page_title: Telemetry
+description: |-
+  Learn about the telemetry data available in Vault.
+---
+
+# Telemetry
+
+The Vault server process collects various runtime metrics about the performance of different libraries and subsystems. These metrics are aggregated on a ten-second interval and retained for one minute in memory. Telemetry from Vault must be stored in metrics aggregation software to monitor Vault and collect durable metrics.
+
+To view the raw data, you must send a signal to the Vault process: on Unix-style operating systems, this is `USR1`, while on Windows, it is `BREAK`. When the Vault process receives this signal, it will dump the current telemetry information to the process's `stderr`.
+
+This telemetry information can be used for debugging purposes and provides users with insights into Vault's runtime.
+
+Telemetry information can also be streamed directly from Vault to a range of metrics aggregation solutions as described in the [telemetry Stanza][telemetry-stanza] documentation.
+
+The following is an example of a telemetry dump snippet:
+
+```text
+[2017-12-19 20:37:50 +0000 UTC][G] 'vault.7f320e57f9fe.expire.num_leases': 5100.000
+[2017-12-19 20:37:50 +0000 UTC][G] 'vault.7f320e57f9fe.runtime.num_goroutines': 39.000
+[2017-12-19 20:37:50 +0000 UTC][G] 'vault.7f320e57f9fe.runtime.sys_bytes': 222746880.000
+[2017-12-19 20:37:50 +0000 UTC][G] 'vault.7f320e57f9fe.runtime.malloc_count': 109189192.000
+[2017-12-19 20:37:50 +0000 UTC][G] 'vault.7f320e57f9fe.runtime.free_count': 108408240.000
+[2017-12-19 20:37:50 +0000 UTC][G] 'vault.7f320e57f9fe.runtime.heap_objects': 780953.000
+[2017-12-19 20:37:50 +0000 UTC][G] 'vault.7f320e57f9fe.runtime.total_gc_runs': 232.000
+[2017-12-19 20:37:50 +0000 UTC][G] 'vault.7f320e57f9fe.runtime.alloc_bytes': 72954392.000
+[2017-12-19 20:37:50 +0000 UTC][G] 'vault.7f320e57f9fe.runtime.total_gc_pause_ns': 150293024.000
+[2017-12-19 20:37:50 +0000 UTC][S] 'vault.merkle.flushDirty': Count: 100 Min: 0.008 Mean: 0.027 Max: 0.183 Stddev: 0.024 Sum: 2.681 LastUpdated: 2017-12-19 20:37:59.848733035 +0000 UTC m=+10463.692105920
+[2017-12-19 20:37:50 +0000 UTC][S] 'vault.merkle.saveCheckpoint': Count: 4 Min: 0.021 Mean: 0.054 Max: 0.110 Stddev: 0.039 Sum: 0.217 LastUpdated: 2017-12-19 20:37:57.048458148 +0000 UTC m=+10460.891835029
+[2017-12-19 20:38:00 +0000 UTC][G] 'vault.7f320e57f9fe.runtime.alloc_bytes': 73326136.000
+[2017-12-19 20:38:00 +0000 UTC][G] 'vault.7f320e57f9fe.runtime.sys_bytes': 222746880.000
+[2017-12-19 20:38:00 +0000 UTC][G] 'vault.7f320e57f9fe.runtime.malloc_count': 109195904.000
+[2017-12-19 20:38:00 +0000 UTC][G] 'vault.7f320e57f9fe.runtime.free_count': 108409568.000
+[2017-12-19 20:38:00 +0000 UTC][G] 'vault.7f320e57f9fe.runtime.heap_objects': 786342.000
+[2017-12-19 20:38:00 +0000 UTC][G] 'vault.7f320e57f9fe.runtime.total_gc_pause_ns': 150293024.000
+[2017-12-19 20:38:00 +0000 UTC][G] 'vault.7f320e57f9fe.expire.num_leases': 5100.000
+[2017-12-19 20:38:00 +0000 UTC][G] 'vault.7f320e57f9fe.runtime.num_goroutines': 39.000
+[2017-12-19 20:38:00 +0000 UTC][G] 'vault.7f320e57f9fe.runtime.total_gc_runs': 232.000
+[2017-12-19 20:38:00 +0000 UTC][S] 'vault.route.rollback.consul-': Count: 1 Sum: 0.013 LastUpdated: 2017-12-19 20:38:01.968471579 +0000 UTC m=+10465.811842067
+[2017-12-19 20:38:00 +0000 UTC][S] 'vault.rollback.attempt.consul-': Count: 1 Sum: 0.073 LastUpdated: 2017-12-19 20:38:01.968502743 +0000 UTC m=+10465.811873131
+[2017-12-19 20:38:00 +0000 UTC][S] 'vault.rollback.attempt.pki-': Count: 1 Sum: 0.070 LastUpdated: 2017-12-19 20:38:01.96867005 +0000 UTC m=+10465.812041936
+[2017-12-19 20:38:00 +0000 UTC][S] 'vault.route.rollback.auth-app-id-': Count: 1 Sum: 0.012 LastUpdated: 2017-12-19 20:38:01.969146401 +0000 UTC m=+10465.812516689
+[2017-12-19 20:38:00 +0000 UTC][S] 'vault.rollback.attempt.identity-': Count: 1 Sum: 0.063 LastUpdated: 2017-12-19 20:38:01.968029888 +0000 UTC m=+10465.811400276
+[2017-12-19 20:38:00 +0000 UTC][S] 'vault.rollback.attempt.database-': Count: 1 Sum: 0.066 LastUpdated: 2017-12-19 20:38:01.969394215 +0000 UTC m=+10465.812764603
+[2017-12-19 20:38:00 +0000 UTC][S] 'vault.barrier.get': Count: 16 Min: 0.010 Mean: 0.015 Max: 0.031 Stddev: 0.005 Sum: 0.237 LastUpdated: 2017-12-19 20:38:01.983268118 +0000 UTC m=+10465.826637008
+[2017-12-19 20:38:00 +0000 UTC][S] 'vault.merkle.flushDirty': Count: 100 Min: 0.006 Mean: 0.024 Max: 0.098 Stddev: 0.019 Sum: 2.386 LastUpdated: 2017-12-19 20:38:09.848158309 +0000 UTC m=+10473.691527099
+```
+
+You'll note that log entries are prefixed with the metric type as follows:
+
+- **[C]** is a counter. Counters are cumulative metrics that are incremented when some event occurs, and resets at the end of reporting intervals. Vault retains counters and other metrics for one minute in-memory, so an [aggregation solution][telemetry-stanza] must be configured to see accurate and persistent counters over time.
+- **[G]** is a gauge. Gauges provide measurements of current values.
+- **[S]** is a summary. Summaries provide sample observations of values. Vault commonly uses summaries for measuring the timing duration of discrete events in the reporting interval.
+
+The following sections describe the available Vault metrics. The metrics interval are approximately 10 seconds when manually triggering metrics output using the above-described signals. Some high-cardinality gauges, like `vault.kv.secret.count`, are emitted every 10 minutes, or at an interval configured in the `telemetry` stanza.
+
+Some Vault metrics come with additional [labels](#metric-labels) describing the measurement in more detail, such as the namespace in which an operation takes place or the auth method used to create a token. This additional information is incorporated into the metrics name in the in-memory telemetry or other telemetry engines that do not support labels. The metric name in the table below is followed by a list of labels supported, in the order in which they appear, if flattened.
+
+## Metric labels
+
+| Metric                 | Description                                                                                                                                                                                                                                           | Example                 |
+| :--------------------- | :---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | :---------------------- |
+| `auth_method`          | Authorization engine type .                                                                                                                                                                                                                           | `userpass`              |
+| `cluster`              | The cluster name from which the metric originated; set in the configuration file, or automatically generated when a cluster is create                                                                                                                 | `vault-cluster-d54ad07` |
+| `creation_ttl`         | Time-to-live value assigned to a token or lease at creation. This value is rounded up to the next-highest bucket; the available buckets are `1m`, `10m`, `20m`, `1h`, `2h`, `1d`, `2d`, `7d`, and `30d`. Any longer TTL is assigned the value `+Inf`. | `7d`                    |
+| `mount_point`          | Path at which an auth method or secret engine is mounted.                                                                                                                                                                                             | `auth/userpass/`        |
+| `namespace`            | A namespace path, or `root` for the root namespace                                                                                                                                                                                                    | `ns1`                   |
+| `policy`               | A single named policy                                                                                                                                                                                                                                 | `default`               |
+| `secret_engine`        | The [secret engine][secrets-engine] type.                                                                                                                                                                                                             | `aws`                   |
+| `token_type`           | Identifies whether the token is a batch token or a service token.                                                                                                                                                                                     | `service`               |
+| `peer_id`              | Unique identifier of a raft peer.                                                                                                                                                                                                                     | `node-1`                |
+| `node_id`              | Unique identifier of a raft peer, same as peer_id.                                                                                                                                                                                                    | `node-1`                |
+| `snapshot_config_name` | For automated snapshots, the name of the configuration                                                                                                                                                                                                | `config1`               |

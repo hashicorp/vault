@@ -1,0 +1,23 @@
+---
+layout: docs
+page_title: "Telemetry reference: Merkle tree metrics"
+description: >-
+  Technical reference for merkle tree telemetry values.
+---
+
+# Merkle tree telemetry
+
+Merkle tree telemetry provides information on the overall health of the
+underlying merkle trees used by Vault.
+
+## Default metrics
+
+@include 'telemetry-metrics/vault/merkle/flushdirty.mdx'
+
+@include 'telemetry-metrics/vault/merkle/flushdirty/num_pages.mdx'
+
+@include 'telemetry-metrics/vault/merkle/flushdirty/outstanding_pages.mdx'
+
+@include 'telemetry-metrics/vault/merkle/savecheckpoint.mdx'
+
+@include 'telemetry-metrics/vault/merkle/savecheckpoint/num_dirty.mdx'
