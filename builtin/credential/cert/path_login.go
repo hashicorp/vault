@@ -512,16 +512,29 @@ func (b *backend) matchesCertificateExtensions(clientCert *x509.Certificate, con
 
 	for _, ext := range clientCert.Extensions {
 		var parsedValue string
-		asn1.Unmarshal(ext.Value, &parsedValue)
-		clientExtMap[ext.Id.String()] = parsedValue
+		_, err := asn1.Unmarshal(ext.Value, &parsedValue)
+		if err != nil {
+			clientExtMap[ext.Id.String()] = ""
+		} else {
+			clientExtMap[ext.Id.String()] = parsedValue
+		}
+
 		hexExtMap[ext.Id.String()] = hex.EncodeToString(ext.Value)
 	}
 
 	// If any of the required extensions don't match the constraint fails
 	for _, requiredExt := range config.Entry.RequiredExtensions {
 		reqExt := strings.SplitN(requiredExt, ":", 2)
+		if len(reqExt) != 2 {
+			return false
+		}
+
 		if reqExt[0] == "hex" {
 			reqHexExt := strings.SplitN(reqExt[1], ":", 2)
+			if len(reqHexExt) != 2 {
+				return false
+			}
+
 			clientExtValue, clientExtValueOk := hexExtMap[reqHexExt[0]]
 			if !clientExtValueOk || !glob.Glob(strings.ToLower(reqHexExt[1]), clientExtValue) {
 				return false

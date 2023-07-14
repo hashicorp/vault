@@ -1309,6 +1309,8 @@ func TestBackend_ext_singleCert(t *testing.T) {
 			testAccStepLoginInvalid(t, connState),
 			testAccStepCert(t, "web", ca, "foo", allowed{names: "example.com", ext: "hex:2.5.29.17:*87047F000001*"}, false),
 			testAccStepLogin(t, connState),
+			testAccStepCert(t, "web", ca, "foo", allowed{names: "example.com", ext: "2.5.29.17:"}, false),
+			testAccStepLogin(t, connState),
 			testAccStepReadConfig(t, config{EnableIdentityAliasMetadata: false}, connState),
 			testAccStepCert(t, "web", ca, "foo", allowed{metadata_ext: "2.1.1.1,1.2.3.45"}, false),
 			testAccStepLoginWithMetadata(t, connState, "web", map[string]string{"2-1-1-1": "A UTF8String Extension"}, false),
