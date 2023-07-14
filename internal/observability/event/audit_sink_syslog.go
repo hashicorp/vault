@@ -47,7 +47,7 @@ func NewAuditSyslogSink(format auditFormat, opt ...Option) (*AuditSyslogSink, er
 	return &AuditSyslogSink{format: format, logger: logger}, nil
 }
 
-// Process handles writing the event to the syslog sink.
+// Process handles writing the event to the syslog.
 func (s *AuditSyslogSink) Process(ctx context.Context, e *eventlogger.Event) (*eventlogger.Event, error) {
 	const op = "event.(AuditSyslogSink).Process"
 
