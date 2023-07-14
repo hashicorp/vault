@@ -367,7 +367,7 @@ jobs:
           EOF=$(dd if=/dev/urandom bs=15 count=1 status=none | base64)
           # shellcheck disable=SC2129
           echo "TABLE_TEST_RESULTS<<$EOF" >> "$GITHUB_ENV"
-          echo "$GITHUB_STEP_SUMMARY" >> "$GITHUB_ENV"
+          echo $(cat "$GITHUB_STEP_SUMMARY") >> "$GITHUB_ENV"
           echo "$EOF" >> "$GITHUB_ENV"
       - uses: actions/checkout@c85c95e3d7251135ab7dc9ce3241c5835cc595a9 # v3.5.3
       - name: Create comment
