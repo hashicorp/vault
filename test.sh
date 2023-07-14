@@ -3,7 +3,7 @@ set -exo pipefail
 
 # branchName="vault-17777-fix2"
 branchName2="release/vault-17777-fix3"
-if [[ -n "$branchName" && "$branchName" == "release/"* ]] || [[ "$branchName2" == "release/"* ]]
+if [[ -n "$branchName" && "$branchName" == release/* ]] || [[ "$branchName2" == release/* ]]
 then
     RERUN_FAILS="--rerun-fails"
 fi
