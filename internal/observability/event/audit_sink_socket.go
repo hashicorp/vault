@@ -39,8 +39,8 @@ func NewAuditSocketSink(format auditFormat, address string, opt ...Option) (*Aud
 	sink := &AuditSocketSink{
 		format:      format,
 		address:     address,
-		socketType:  opts.withSocketType,  // default tcp
-		maxDuration: opts.withMaxDuration, // default 2s
+		socketType:  opts.withSocketType,
+		maxDuration: opts.withMaxDuration,
 		socketLock:  sync.RWMutex{},
 		connection:  nil,
 	}
