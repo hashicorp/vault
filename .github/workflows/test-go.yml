@@ -140,11 +140,18 @@ jobs:
                   "estimatedRuntime": "N/A",
                   "packages": $BINARY,
                   "description": "partition 16 - binary test packages"
-              }]' matrix.json
+              }] | .include | map({(.id | tostring): .})' matrix.json
             ) >> "$GITHUB_OUTPUT"
-            echo ${{ env.matrix }}
+            (
+              echo -n "matrix_ids="
+              jq -c \
+              '.include += [{ 
+                  "id": 16 
+                }] | { include: .include | map({id: .id})}' matrix.json
+            ) >> "$GITHUB_OUTPUT"
     outputs:
       matrix: ${{ steps.build.outputs.matrix }}
+      matrix_ids: ${{ steps.build.outputs.matrix_ids }} 
 
   test-go:
     needs: test-matrix
@@ -155,7 +162,7 @@ jobs:
     runs-on: ${{ fromJSON(inputs.runs-on) }}
     strategy:
       fail-fast: false
-      matrix: ${{ fromJSON(needs.test-matrix.outputs.matrix) }}
+      matrix: ${{ fromJSON(needs.test-matrix.outputs.matrix_ids) }}
     env:
       GOPRIVATE: github.com/hashicorp/*
       TIMEOUT_IN_MINUTES: ${{ inputs.timeout-minutes }}
@@ -197,13 +204,12 @@ jobs:
         run: |
           git config --global url."https://${{ secrets.ELEVATED_GITHUB_TOKEN}}@github.com".insteadOf https://github.com
       - id: build
-        if: contains(matrix.packages, '_binary')
+        if: contains(needs.test-matrix.outputs.matrix[matrix.id].packages, '_binary')
         env:
           GOPRIVATE: github.com/hashicorp/*
         run: time make ci-bootstrap dev
       - id: run-go-tests
         name: Run Go tests
-        if: ${{ matrix.id == 5 }}
         timeout-minutes: ${{ fromJSON(env.TIMEOUT_IN_MINUTES) }}
         env:
           COMMIT_SHA: ${{ github.sha }}
@@ -253,7 +259,7 @@ jobs:
               --jsonfile test-results/go-test/results-${{ matrix.id }}.json \
               --jsonfile-timing-events failure-summary-${{ matrix.id }}${{ inputs.name != '' && '-' || '' }}${{ inputs.name }}.json \
               $RERUN_FAILS \
-              --packages "${{ matrix.packages }}" \
+              --packages "${{ needs.test-matrix.outputs.matrix[matrix.id].packages }}" \
               -- \
               -tags "${{ inputs.go-tags }}" \
               -timeout=${{ env.TIMEOUT_IN_MINUTES }}m \
@@ -351,7 +357,10 @@ jobs:
         with:
           name: failure-summary
           path: failure-summary-${{ matrix.id }}${{ inputs.name != '' && '-' || '' }}${{inputs.name}}.md
-
+      - name: handle cancel
+        if: always() && cancelled()
+        run: |
+          
   test-collect-reports:
     needs: test-go
     runs-on: ${{ fromJSON(inputs.runs-on) }}
