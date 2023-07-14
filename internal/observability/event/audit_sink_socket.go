@@ -19,8 +19,8 @@ import (
 type AuditSocketSink struct {
 	format      auditFormat
 	address     string
-	socketType  string        // socketType (default 'tcp')
-	maxDuration time.Duration // default 2s
+	socketType  string
+	maxDuration time.Duration
 	socketLock  sync.RWMutex
 	connection  net.Conn
 }
