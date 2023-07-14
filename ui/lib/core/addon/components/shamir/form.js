@@ -10,7 +10,7 @@ import { tracked } from '@glimmer/tracking';
  *
  * @example
  * ```js
- * <ShamirForm
+ * <Shamir::Form
  *  @onSubmit={{this.handleKeySubmit}}
  *  @threshold={{cluster.threshold}}
  *  @progress={{cluster.progress}}
@@ -19,7 +19,7 @@ import { tracked } from '@glimmer/tracking';
  * />
  * ```
  *
- * @param {Function} onSubmit - method which handles the action for shamir
+ * @param {Function} onSubmit - method which handles the action for shamir. Receives { key }
  * @param {number} threshold - min number of keys required to unlock shamir seal
  * @param {number} progress - number of keys given so far for unlock
  * @param {string} buttonText - CTA for the form submit button. Defaults to "Submit"

@@ -1,11 +1,18 @@
 <Modal
   @title="Generate operation token"
-  @onClose={{action "onClose"}}
-  @isActive={{this.isActive}}
+  @onClose={{@onClose}}
+  @isActive={{@isActive}}
   @type="warning"
   @showCloseButton={{true}}
 >
   <section class="modal-card-body">
+    <pre>
+      token:
+      {{this.encoded_token}}; otp:
+      {{this.otp}}; step:
+      {{this.generateStep}}
+      started:{{this.started}}
+    </pre>
     {{#if this.encoded_token}}
       <p class="has-bottom-margin-l">
         Below is the process and the values necessary to generate your operation token. Read the instructions carefully!
@@ -70,20 +77,25 @@
         </div>
       </div>
       <div>
-        <button type="button" class="button is-primary" {{action "onCancelClose"}}>
+        <button type="button" class="button is-primary" {{on "click" this.onCancelClose}}>
           Clear &amp; Close
         </button>
       </div>
-    {{else if (and this.generateAction (not this.started))}}
-      <form {{action "startGenerate" (hash pgp_key=this.pgp_key) on="submit"}} id="shamir" aria-label="shamir generate form">
+    {{else if (not this.started)}}
+      <form
+        {{on "submit" (fn this.startGenerate (hash pgp_key=this.pgp_key))}}
+        id="shamir"
+        aria-label="shamir generate form"
+      >
         <MessageError @errors={{this.errors}} />
         {{#if (eq this.generateStep "chooseMethod")}}
+          HERE HERE HERE
           <div class="has-bottom-margin-m" data-test-shamir-modal-body>
             {{yield}}
           </div>
           <div class="field is-grouped is-flex-center">
             <div class="control is-flex-row">
-              <button type="button" class="link" {{action (mut this.generateWithPGP) true}}>
+              <button type="button" class="link" {{on "click" (fn (mut this.generateWithPGP) true)}}>
                 Provide PGP Key
               </button>
             </div>
@@ -105,16 +117,16 @@
               Choose a PGP Key from your computer or paste the contents of one in the form below. This key will be used to
               Encrypt the generated operation token.
             </p>
-            <PgpFile @index="" @key={{this.pgpKeyFile}} @onChange={{action "setKey"}} />
+            <PgpFile @index="" @key={{this.pgpKeyFile}} @onChange={{this.setKey}} />
           </div>
           <div class="field is-grouped">
             <div class="control">
-              <button type="button" class="button" {{action "reset"}}>
+              <button type="button" class="button" {{on "click" this.reset}}>
                 Back
               </button>
             </div>
             <div class="control">
-              <button type="button" disabled={{not this.pgp_key}} class="button is-primary" {{action "savePGPKey"}}>
+              <button type="button" disabled={{not this.pgpKey}} class="button is-primary" {{action "savePGPKey"}}>
                 Use PGP Key
               </button>
             </div>
@@ -132,18 +144,18 @@
               {{this.pgpKeyFile.filename}}
             </h4>
             <div class="message is-list has-copy-button" tabindex="-1">
-              <HoverCopyButton @copyValue={{this.pgp_key}} />
-              <code class="is-word-break">{{this.pgp_key}}</code>
+              <HoverCopyButton @copyValue={{this.pgpKey}} />
+              <code class="is-word-break">{{this.pgpKey}}</code>
             </div>
           </div>
           <div class="field is-grouped">
             <div class="control">
-              <button type="button" class="button" {{action "reset"}}>
+              <button type="button" class="button" {{on "click" this.reset}}>
                 Back
               </button>
             </div>
             <div class="control">
-              <button type="submit" disabled={{and (not this.pgp_key)}} class="button is-primary">
+              <button type="submit" disabled={{and (not this.pgpKey)}} class="button is-primary">
                 Generate operation token
               </button>
             </div>
@@ -151,7 +163,8 @@
         {{/if}}
       </form>
     {{else}}
-      <form {{action "onSubmit" (hash key=this.key) on="submit"}} id="shamir" aria-label="shamir form">
+      else else
+      <form {{on "submit" (fn this.onSubmit (hash key=this.key))}} id="shamir" aria-label="shamir form">
         <div class="has-bottom-margin-m">
           {{#if this.errors}}
             <div class="box is-shadowless is-marginless no-padding-top is-fullwidth">

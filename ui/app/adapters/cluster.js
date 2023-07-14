@@ -211,12 +211,13 @@ export default ApplicationAdapter.extend({
   },
 
   generateDrOperationToken(data, options) {
+    console.log({ data, options });
     let verb = options && options.checkStatus ? 'GET' : 'PUT';
     if (options.cancel) {
       verb = 'DELETE';
     }
     let url = `${this.buildURL()}/replication/dr/secondary/generate-operation-token/`;
-    if (!data || data.pgp_key || data.attempt) {
+    if (!options.cancel || data.pgp_key || data.attempt) {
       // start the generation
       url = url + 'attempt';
     } else {
