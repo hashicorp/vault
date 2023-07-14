@@ -187,7 +187,7 @@ jobs:
     runs-on: ${{ fromJSON(needs.setup.outputs.compute-larger) }}
     steps:
       - uses: actions/checkout@c85c95e3d7251135ab7dc9ce3241c5835cc595a9 # v3.5.3
-      - uses: ./github/actions/set-up-go
+      - uses: ./.github/actions/set-up-go
         with:
           github-token: ${{ secrets.ELEVATED_GITHUB_TOKEN }}
       # Setup node.js without caching to allow running npm install -g yarn (next step)
