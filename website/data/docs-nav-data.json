@@ -76,7 +76,7 @@
             "title": "Metric reference",
             "routes": [
               {
-                "title": "TBD",
+                "title": "Metric labels",
                 "path": "internals/telemetry/metrics"
               },
               {
@@ -84,7 +84,7 @@
                 "path": "internals/telemetry/metrics/core-system"
               },
               {
-                "title": "Audit metrics",
+                "title": "Audit log metrics",
                 "path": "internals/telemetry/metrics/audit"
               },
               {
