@@ -1179,7 +1179,7 @@ func (b *SystemBackend) handleMount(ctx context.Context, req *logical.Request, d
 		config.ForceNoCache = true
 	}
 
-	if err := checkListingVisibility(apiConfig.ListingVisibility); err != nil {
+	if err := checkListingVisibility(apiConfig.ListingVisibility, false); err != nil {
 		return logical.ErrorResponse(fmt.Sprintf("invalid listing_visibility %s", apiConfig.ListingVisibility)), nil
 	}
 	config.ListingVisibility = apiConfig.ListingVisibility
@@ -2003,7 +2003,7 @@ func (b *SystemBackend) handleTuneWriteCommon(ctx context.Context, path string, 
 		lvString := rawVal.(string)
 		listingVisibility := ListingVisibilityType(lvString)
 
-		if err := checkListingVisibility(listingVisibility); err != nil {
+		if err := checkListingVisibility(listingVisibility, strings.HasPrefix(path, credentialRoutePrefix)); err != nil {
 			return logical.ErrorResponse(fmt.Sprintf("invalid listing_visibility %s", listingVisibility)), nil
 		}
 
@@ -2655,7 +2655,7 @@ func (b *SystemBackend) handleEnableAuth(ctx context.Context, req *logical.Reque
 			logical.ErrInvalidRequest
 	}
 
-	if err := checkListingVisibility(apiConfig.ListingVisibility); err != nil {
+	if err := checkListingVisibility(apiConfig.ListingVisibility, true); err != nil {
 		return logical.ErrorResponse(fmt.Sprintf("invalid listing_visibility %s", apiConfig.ListingVisibility)), nil
 	}
 	config.ListingVisibility = apiConfig.ListingVisibility
@@ -5185,12 +5185,15 @@ func sanitizePath(path string) string {
 	return path
 }
 
-func checkListingVisibility(visibility ListingVisibilityType) error {
+func checkListingVisibility(visibility ListingVisibilityType, isAuth bool) error {
 	switch visibility {
 	case ListingVisibilityDefault:
 	case ListingVisibilityHidden:
 	case ListingVisibilityUnauth:
 	case ListingVisibilityDropdown:
+		if !isAuth {
+			return fmt.Errorf("dropdown is only applicable to auth type mounts")
+		}
 	default:
 		return fmt.Errorf("invalid listing visibility type")
 	}
@@ -5935,7 +5938,7 @@ This path responds to the following HTTP methods.
 		"This function can be used to generate high-entropy random bytes.",
 	},
 	"listing_visibility": {
-		"Determines the visibility of the mount in the UI-specific listing endpoint. Accepted value are 'unauth' and 'hidden', with the empty default ('') behaving like 'hidden'.",
+		"Determines the visibility of the mount in the UI-specific listing endpoint. Accepted value are 'unauth' and 'hidden', with the empty default ('') behaving like 'hidden'. Auth methods also accept the value 'dropdown', to customize the UI's login dropdown.",
 		"",
 	},
 	"passthrough_request_headers": {

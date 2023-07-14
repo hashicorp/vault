@@ -123,4 +123,10 @@ func TestSysInternal_UIMounts(t *testing.T) {
 	if !reflect.DeepEqual(actual, expected) {
 		t.Fatalf("bad:\nExpected: %#v\nActual:%#v", expected, actual)
 	}
+
+	// Mount-tune the listing_visibility: "dropdown"
+	resp = testHttpPost(t, token, addr+"/v1/sys/mounts/secret/tune", map[string]interface{}{
+		"listing_visibility": "dropdown",
+	})
+	testResponseStatus(t, resp, 400)
 }
