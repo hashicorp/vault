@@ -32,28 +32,6 @@ done
 # This comment reports failed jobs and the url to the failed workflow
 new_body="build failed for these jobs: ${failed_jobs[*]}. Please refer to this workflow to learn more: https://github.com/hashicorp/vault/actions/runs/$RUN_ID"
 
-# We only want for the GH bot to place one comment to report build failures
-# and if we rerun a job, that comment needs to be updated.
-# Let's try to find if the GH bot has placed a similar comment
-comment_id=$(gh api \
-               -H "Accept: application/vnd.github+json" \
-               -H "X-GitHub-Api-Version: 2022-11-28" \
-               /repos/hashicorp/"$REPO"/issues/"$PR_NUMBER"/comments | jq -r '.[] | select (.body | contains("build failed for these job")) | .id')
+source gh_comment.sh
 
-if [[ "$comment_id" != "" ]]; then
-  # update the comment with the new body
-  gh api \
-    --method PATCH \
-    -H "Accept: application/vnd.github+json" \
-    -H "X-GitHub-Api-Version: 2022-11-28" \
-    /repos/hashicorp/"$REPO"/issues/comments/"$comment_id" \
-    -f body="$new_body"
-else
-  # create a comment with the new body
-  gh api \
-    --method POST \
-    -H "Accept: application/vnd.github+json" \
-    -H "X-GitHub-Api-Version: 2022-11-28" \
-    /repos/hashicorp/"$REPO"/issues/"$PR_NUMBER"/comments \
-    -f body="$new_body"
-fi
+update_or_create_comment "$REPO" "$PR_NUMBER" "build failed for these jobs" "$BODY"
