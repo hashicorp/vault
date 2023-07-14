@@ -4,7 +4,6 @@
 package event
 
 import (
-	"bytes"
 	"context"
 	"fmt"
 
@@ -56,12 +55,12 @@ func (s *AuditSyslogSink) Process(ctx context.Context, e *eventlogger.Event) (*e
 		return nil, fmt.Errorf("%s: unable to retrieve event formatted as %q", op, s.format)
 	}
 
-	buffer := bytes.NewBuffer(formatted)
-	_, err := s.logger.Write(buffer.Bytes())
+	_, err := s.logger.Write(formatted)
 	if err != nil {
 		return nil, fmt.Errorf("%s: error writing to syslog: %w", op, err)
 	}
 
+	// return nil for the event to indicate the pipeline is complete.
 	return nil, nil
 }
 

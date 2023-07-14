@@ -111,12 +111,12 @@ func (f *AuditFileSink) Process(ctx context.Context, e *eventlogger.Event) (*eve
 		return nil, fmt.Errorf("%s: unable to retrieve event formatted as %q", op, f.format)
 	}
 
-	buffer := bytes.NewBuffer(formatted)
-	err := f.log(buffer)
+	err := f.log(formatted)
 	if err != nil {
 		return nil, fmt.Errorf("%s: error writing file for audit sink: %w", op, err)
 	}
 
+	// return nil for the event to indicate the pipeline is complete.
 	return nil, nil
 }
 
@@ -190,13 +190,13 @@ func (f *AuditFileSink) open() error {
 
 // log writes the buffer to the file.
 // It acquires a lock on the file to do this.
-func (f *AuditFileSink) log(buf *bytes.Buffer) error {
+func (f *AuditFileSink) log(data []byte) error {
 	const op = "event.(AuditFileSink).log"
 
 	f.fileLock.Lock()
 	defer f.fileLock.Unlock()
 
-	reader := bytes.NewReader(buf.Bytes())
+	reader := bytes.NewReader(data)
 
 	var writer io.Writer
 	switch {
