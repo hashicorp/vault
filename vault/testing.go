@@ -2038,7 +2038,7 @@ func (tc *TestCluster) initCores(t testing.T, opts *TestClusterOptions, addAudit
 	}
 	var buf bytes.Buffer
 	for i, key := range tc.BarrierKeys {
-		buf.Write([]byte(base64.StdEncoding.EncodeToString(key)))
+		buf.WriteString(base64.StdEncoding.EncodeToString(key))
 		if i < len(tc.BarrierKeys)-1 {
 			buf.WriteRune('\n')
 		}
@@ -2048,7 +2048,7 @@ func (tc *TestCluster) initCores(t testing.T, opts *TestClusterOptions, addAudit
 		t.Fatal(err)
 	}
 	for i, key := range tc.RecoveryKeys {
-		buf.Write([]byte(base64.StdEncoding.EncodeToString(key)))
+		buf.WriteString(base64.StdEncoding.EncodeToString(key))
 		if i < len(tc.RecoveryKeys)-1 {
 			buf.WriteRune('\n')
 		}

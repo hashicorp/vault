@@ -426,7 +426,7 @@ func TestCertEndToEnd_CertsInConfig(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer os.Remove(leafCertFile.Name())
-	if _, err := leafCertFile.Write([]byte(leafCertPEM)); err != nil {
+	if _, err := leafCertFile.WriteString(leafCertPEM); err != nil {
 		t.Fatal(err)
 	}
 	if err := leafCertFile.Close(); err != nil {
@@ -438,7 +438,7 @@ func TestCertEndToEnd_CertsInConfig(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer os.Remove(leafCertKeyFile.Name())
-	if _, err := leafCertKeyFile.Write([]byte(leafCertKeyPEM)); err != nil {
+	if _, err := leafCertKeyFile.WriteString(leafCertKeyPEM); err != nil {
 		t.Fatal(err)
 	}
 	if err := leafCertKeyFile.Close(); err != nil {
