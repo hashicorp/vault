@@ -303,9 +303,7 @@ jobs:
                 jobData.length == 0 ||
                 jobData[0].html_url === undefined
             ) {
-                const msg = "Failed to fetch GHA job data.";
-                console.log(msg);
-                throw new Error(msg);
+                console.log("Failed to fetch GHA job data.");
             }
 
             const url = jobData[0].html_url;
