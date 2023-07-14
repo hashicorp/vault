@@ -23,8 +23,6 @@
     {{/if}}
     {{#if (has-block)}}
       {{yield}}
-    {{else if @formText}}
-      {{@formText}}
     {{/if}}
   </div>
   <div class="field">
@@ -42,13 +40,9 @@
       </button>
     </div>
     <div class="column is-flex-v-centered is-flex-end">
-      {{#if this.hasProgress}}
+      {{#if this.showProgress}}
         <ShamirProgress @threshold={{@threshold}} @progress={{@progress}} />
       {{/if}}
     </div>
   </div>
-  {{! <div class="box-fake is-shadowless">
-  </div>
-  <div class="box is-marginless is-shadowless">
-  </div> }}
 </form>
