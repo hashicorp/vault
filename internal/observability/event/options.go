@@ -11,6 +11,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/hashicorp/go-secure-stdlib/parseutil"
+
 	"github.com/hashicorp/go-uuid"
 )
 
@@ -19,22 +21,26 @@ type Option func(*options) error
 
 // options are used to represent configuration for an Event.
 type options struct {
-	withID       string
-	withNow      time.Time
-	withSubtype  auditSubtype
-	withFormat   auditFormat
-	withFileMode *os.FileMode
-	withPrefix   string
-	withFacility string
-	withTag      string
+	withID          string
+	withNow         time.Time
+	withSubtype     auditSubtype
+	withFormat      auditFormat
+	withFileMode    *os.FileMode
+	withPrefix      string
+	withFacility    string
+	withTag         string
+	withSocketType  string
+	withMaxDuration time.Duration
 }
 
 // getDefaultOptions returns options with their default values.
 func getDefaultOptions() options {
 	return options{
-		withNow:      time.Now(),
-		withFacility: "AUTH",
-		withTag:      "vault",
+		withNow:         time.Now(),
+		withFacility:    "AUTH",
+		withTag:         "vault",
+		withSocketType:  "tcp",
+		withMaxDuration: 2 * time.Second,
 	}
 }
 
@@ -200,6 +206,39 @@ func WithTag(tag string) Option {
 		if tag != "" {
 			o.withTag = tag
 		}
+
+		return nil
+	}
+}
+
+// WithSocketType provides an option to represent the socket type for a socket sink.
+func WithSocketType(socketType string) Option {
+	return func(o *options) error {
+		socketType = strings.TrimSpace(socketType)
+
+		if socketType != "" {
+			o.withSocketType = socketType
+		}
+
+		return nil
+	}
+}
+
+// WithMaxDuration provides an option to represent the max duration for writing to a socket sink.
+func WithMaxDuration(duration string) Option {
+	return func(o *options) error {
+		duration = strings.TrimSpace(duration)
+
+		if duration == "" {
+			return nil
+		}
+
+		parsed, err := parseutil.ParseDurationSecond(duration)
+		if err != nil {
+			return err
+		}
+
+		o.withMaxDuration = parsed
 
 		return nil
 	}
