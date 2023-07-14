@@ -1,16 +1,9 @@
 import { module, test } from 'qunit';
 import sinon from 'sinon';
 import { setupRenderingTest } from 'vault/tests/helpers';
-import { click, render, typeIn } from '@ember/test-helpers';
+import { click, render, settled, typeIn } from '@ember/test-helpers';
 import { hbs } from 'ember-cli-htmlbars';
-
-const selectors = {
-  input: '[data-test-shamir-key-input]',
-  inputLabel: '[data-test-shamir-key-label]',
-  submitButton: '[data-test-shamir-submit]',
-  otpInfo: '[data-test-otp-info]',
-  otpCode: '[data-test-otp]',
-};
+import { SHAMIR_FORM } from 'vault/tests/helpers/components/shamir';
 
 module('Integration | Component | shamir/form', function (hooks) {
   setupRenderingTest(hooks);
@@ -21,32 +14,34 @@ module('Integration | Component | shamir/form', function (hooks) {
 
   test('it does calls callback only if key value present', async function (assert) {
     await render(hbs`
-      <Shamir::Form @onSubmit={{this.submitSpy}} @progress={{2}} @threshold={{4}} />
+      <Shamir::Form @onSubmit={{this.submitSpy}} @progress={{0}} @threshold={{3}} />
     `);
-    assert.dom(selectors.submitButton).hasText('Submit', 'Submit button has default text');
-    await click(selectors.submitButton);
+    assert.dom(SHAMIR_FORM.submitButton).hasText('Submit', 'Submit button has default text');
+    await click(SHAMIR_FORM.submitButton);
+    assert.dom(SHAMIR_FORM.progress).doesNotExist('Hides progress bar if none made');
     assert.ok(this.submitSpy.notCalled, 'onSubmit was not called');
-    await typeIn(selectors.input, 'this-is-the-key');
-    assert.dom(selectors.input).hasValue('this-is-the-key', 'input value set');
-    assert.dom(selectors.inputLabel).hasText('Shamir key portion', 'label has default text');
-    await click(selectors.submitButton);
+    await typeIn(SHAMIR_FORM.input, 'this-is-the-key');
+    assert.dom(SHAMIR_FORM.input).hasValue('this-is-the-key', 'input value set');
+    assert.dom(SHAMIR_FORM.inputLabel).hasText('Shamir key portion', 'label has default text');
+    await click(SHAMIR_FORM.submitButton);
     assert.ok(
       this.submitSpy.calledOnceWith({ key: 'this-is-the-key' }),
       'onSubmit called with correct params'
     );
-    assert.dom(selectors.input).hasValue('', 'key value reset after submit');
+    assert.dom(SHAMIR_FORM.input).hasValue('', 'key value reset after submit');
 
     // Template block usage:
     await render(hbs`
-    <Shamir::Form @onSubmit={{this.submitSpy}} @progress={{2}} @threshold={{4}} @buttonText="Do the thing" @inputLabel="Unseal key">
+    <Shamir::Form @onSubmit={{this.submitSpy}} @progress={{0}} @threshold={{3}} @alwaysShowProgress={{true}} @buttonText="Do the thing" @inputLabel="Unseal key">
       <div data-test-block-content>Hello</div>
     </Shamir::Form>
     `);
 
     assert.dom('[data-test-block-content]').hasText('Hello', 'renders block content');
-    assert.dom(selectors.submitButton).hasText('Do the thing', 'uses passed button text');
-    assert.dom(selectors.inputLabel).hasText('Unseal key', 'uses passed inputLabel');
-    assert.dom(selectors.otpInfo).doesNotExist('no OTP info shown');
+    assert.dom(SHAMIR_FORM.submitButton).hasText('Do the thing', 'uses passed button text');
+    assert.dom(SHAMIR_FORM.inputLabel).hasText('Unseal key', 'uses passed inputLabel');
+    assert.dom(SHAMIR_FORM.otpInfo).doesNotExist('no OTP info shown');
+    assert.dom(SHAMIR_FORM.progress).exists('Shows progress even if 0 when alwaysShowProgress=true');
   });
 
   test('it shows OTP info if provided', async function (assert) {
@@ -62,8 +57,23 @@ module('Integration | Component | shamir/form', function (hooks) {
       </Shamir::Form>
     `);
 
-    assert.dom(selectors.otpInfo).exists('shows OTP info');
-    assert.dom(selectors.otpCode).hasText('this-is-otp', 'shows OTP code');
+    assert.dom(SHAMIR_FORM.otpInfo).exists('shows OTP info');
+    assert.dom(SHAMIR_FORM.otpCode).hasText('this-is-otp', 'shows OTP code');
     assert.dom('[data-test-block-content]').hasText('Hello', 'renders block content');
+  });
+
+  test('renders errors provided', async function (assert) {
+    this.set('errors', ['first error', 'this is fine']);
+    await render(hbs`
+      <Shamir::Form
+        @onSubmit={{this.submitSpy}}
+        @errors={{this.errors}}
+      />
+    `);
+    assert.dom(SHAMIR_FORM.error).exists({ count: 2 }, 'renders errors');
+
+    this.set('errors', []);
+    await settled();
+    assert.dom(SHAMIR_FORM.error).doesNotExist('errors cleared');
   });
 });

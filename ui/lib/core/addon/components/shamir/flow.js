@@ -28,11 +28,13 @@ import { tracked } from '@glimmer/tracking';
  * @param {string} action - adapter method name (kebab case) to call on attempt
  * @param {number} threshold - number of keys required to unlock
  * @param {number} progress - number of keys given so far for unlock
+ * @param {string} inputLabel - (optional) Label for key input
  * @param {string} buttonText - (optional) CTA for the form submit button. Defaults to "Submit"
  * @param {Function} extractData - (optional) modify the payload before the action is called
  * @param {Function} updateProgress - (optional) call a side effect to check if progress has been made
  * @param {Function} checkComplete - (optional) custom logic based on adapter response. Should return boolean.
  * @param {Function} onShamirSuccess - method called when shamir unlock is complete.
+ * @param {Function} onLicenseError - method called when shamir unlock fails due to licensing error
  *
  */
 export default class ShamirFlowComponent extends Component {
@@ -85,7 +87,7 @@ export default class ShamirFlowComponent extends Component {
       } else {
         // if licensing error, trigger parent method to handle
         if (e.httpStatus === 500 && e.errors?.join(' ').includes('licensing is in an invalid state')) {
-          this.onLicenseError();
+          this.args.onLicenseError();
         }
         throw e;
       }

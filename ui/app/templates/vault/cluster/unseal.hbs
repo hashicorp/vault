@@ -42,14 +42,14 @@
         {{#unless this.model.unsealed}}
           <Shamir::Flow
             @action="unseal"
-            @onLicenseError={{action "handleLicenseError"}}
-            @onShamirSuccess={{action "transitionToCluster"}}
-            @updateProgress={{action "reloadCluster"}}
-            @checkComplete={{action "isUnsealed"}}
-            @buttonText="Unseal"
-            @isComplete={{action "isUnsealed"}}
             @threshold={{this.model.sealThreshold}}
             @progress={{this.model.sealProgress}}
+            @updateProgress={{action "reloadCluster"}}
+            @inputLabel="Unseal Key Portion"
+            @buttonText="Unseal"
+            @onLicenseError={{action "handleLicenseError"}}
+            @checkComplete={{action "isUnsealed"}}
+            @onShamirSuccess={{action "transitionToCluster"}}
             class="has-top-margin-m"
           />
         {{/unless}}
