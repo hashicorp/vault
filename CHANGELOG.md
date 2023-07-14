@@ -121,6 +121,7 @@ Plugins using sdk/useragent.String must instead use sdk/useragent.PluginString. 
 
 FEATURES:
 
+* **User lockout**: Ignore repeated bad credentials from the same user for a configured period of time. Enabled by default.
 * **Azure Auth Managed Identities**: Allow any Azure resource that supports managed identities to authenticate with Vault [[GH-19077](https://github.com/hashicorp/vault/pull/19077)]
 * **Azure Auth Rotate Root**: Add support for rotate root in Azure Auth engine [[GH-19077](https://github.com/hashicorp/vault/pull/19077)]
 * **Event System (Alpha)**: Vault has a new opt-in experimental event system. Not yet suitable for production use. Events are currently only generated on writes to the KV secrets engine, but external plugins can also be updated to start generating events. [[GH-19194](https://github.com/hashicorp/vault/pull/19194)]

@@ -7,6 +7,7 @@ on:
     branches:
       - main
       - release/**
+
 concurrency:
   group: ${{ github.head_ref || github.run_id }}-lint
   cancel-in-progress: true
@@ -20,38 +21,37 @@ jobs:
       - uses: actions/checkout@c85c95e3d7251135ab7dc9ce3241c5835cc595a9 # v3.5.3
         with:
           fetch-depth: 0
-      - uses: actions/setup-go@fac708d6674e30b6ba41289acaab6d4b75aa0753 # v4.0.1
+      - uses: ./.github/actions/set-up-go
         with:
-          go-version-file: ./.go-version
-          cache: true
+          github-token: ${{ secrets.ELEVATED_GITHUB_TOKEN }}
       - run: make ci-deprecations
         name: Check deprecations
+
   codechecker:
-    name: Code checks 
+    name: Code checks
     runs-on: ubuntu-latest
     if: github.base_ref == 'main'
     steps:
       - uses: actions/checkout@c85c95e3d7251135ab7dc9ce3241c5835cc595a9 # v3.5.3
         with:
           fetch-depth: 0
-      - uses: actions/setup-go@fac708d6674e30b6ba41289acaab6d4b75aa0753 # v4.0.1
+      - uses: ./.github/actions/set-up-go
         with:
-          go-version-file: ./.go-version
-          cache: true
+          github-token: ${{ secrets.ELEVATED_GITHUB_TOKEN }}
         # Note: if there is a function we want to ignore the nilnil check for,
         # You can add 'ignore-nil-nil-function-check' somewhere in the
         # godoc for the function.
       - run: make ci-vet-codechecker
         name: Check custom linters
+
   format:
     name: Format
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@c85c95e3d7251135ab7dc9ce3241c5835cc595a9 # v3.5.3
-      - uses: actions/setup-go@fac708d6674e30b6ba41289acaab6d4b75aa0753 # v4.0.1
+      - uses: ./.github/actions/set-up-go
         with:
-          go-version-file: ./.go-version
-          cache: true
+          github-token: ${{ secrets.ELEVATED_GITHUB_TOKEN }}
       - name: Go format
         run: |
           make ci-bootstrap
@@ -61,6 +61,7 @@ jobs:
             echo "Code has formatting errors. Run 'make fmt' to fix"
             exit 1
           fi
+
   semgrep:
     name: Semgrep
     runs-on: ubuntu-latest
