@@ -104,8 +104,8 @@
     {{/each}}
   {{else}}
     <EmptyState
-      @title="No targets exist"
-      @message="An enforcement target has either been deleted or there was an error while saving the form."
+      @title="No target exists for this enforcement"
+      @message="A target might have been deleted after the enforcement was created."
     />
   {{/if}}
 {{else if (eq this.tab "methods")}}
