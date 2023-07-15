@@ -56,7 +56,7 @@ module('Unit | Service | store', function (hooks) {
 
     store.clearDataset('transit-key');
     assert.strictEqual(store.get('lazyCaches').size, 1, 'deletes one key');
-    assert.notOk(store.get('lazyCaches').has(), 'cache is no longer stored');
+    assert.notOk(store.get('lazyCaches').has('transit-key'), 'cache is no longer stored');
   });
 
   test('store.clearAllDatasets', function (assert) {

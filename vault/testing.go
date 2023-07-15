@@ -40,7 +40,6 @@ import (
 	auditFile "github.com/hashicorp/vault/builtin/audit/file"
 	"github.com/hashicorp/vault/command/server"
 	"github.com/hashicorp/vault/helper/constants"
-	"github.com/hashicorp/vault/helper/experiments"
 	"github.com/hashicorp/vault/helper/metricsutil"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/helper/testhelpers/corehelpers"
@@ -217,8 +216,9 @@ func TestCoreWithSealAndUINoCleanup(t testing.T, opts *CoreConfig) *Core {
 	conf.DisableSSCTokens = opts.DisableSSCTokens
 	conf.PluginDirectory = opts.PluginDirectory
 	conf.DetectDeadlocks = opts.DetectDeadlocks
-	conf.Experiments = []string{experiments.VaultExperimentEventsAlpha1}
+	conf.Experiments = opts.Experiments
 	conf.CensusAgent = opts.CensusAgent
+	conf.AdministrativeNamespacePath = opts.AdministrativeNamespacePath
 
 	if opts.Logger != nil {
 		conf.Logger = opts.Logger
@@ -1543,6 +1543,7 @@ func NewTestCluster(t testing.T, base *CoreConfig, opts *TestClusterOptions) *Te
 		coreConfig.DisableSentinelTrace = base.DisableSentinelTrace
 		coreConfig.ClusterName = base.ClusterName
 		coreConfig.DisableAutopilot = base.DisableAutopilot
+		coreConfig.AdministrativeNamespacePath = base.AdministrativeNamespacePath
 
 		if base.BuiltinRegistry != nil {
 			coreConfig.BuiltinRegistry = base.BuiltinRegistry
