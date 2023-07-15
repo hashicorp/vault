@@ -357,7 +357,8 @@ func (b *backend) matchesConstraints(ctx context.Context, clientCert *x509.Certi
 		b.matchesEmailSANs(clientCert, config) &&
 		b.matchesURISANs(clientCert, config) &&
 		b.matchesOrganizationalUnits(clientCert, config) &&
-		b.matchesCertificateExtensions(clientCert, config)
+		b.matchesCertificateExtensions(clientCert, config) &&
+		b.matchesSubjectOids(clientCert, config)
 	if config.Entry.OcspEnabled {
 		ocspGood, err := b.checkForCertInOCSP(ctx, clientCert, trustedChain, conf)
 		if err != nil {
@@ -517,6 +518,56 @@ func (b *backend) matchesCertificateExtensions(clientCert *x509.Certificate, con
 		reqExt := strings.SplitN(requiredExt, ":", 2)
 		clientExtValue, clientExtValueOk := clientExtMap[reqExt[0]]
 		if !clientExtValueOk || !glob.Glob(reqExt[1], clientExtValue) {
+			return false
+		}
+	}
+	return true
+}
+
+// Matches the Subject dn entries with te required_subject_oids from the the configuration.
+// All entries in the required config should match.
+func (b *backend) matchesSubjectOids(clientCert *x509.Certificate, config *ParsedCert) bool {
+	// If no required extensions, nothing to check here
+	if len(config.Entry.RequiredSubjectOids) == 0 {
+		return true
+	}
+	// Fail fast if we have required Subject OID's but do not have Subject entries in the Cert
+	if len(clientCert.Subject.Names) == 0 {
+		return false
+	}
+
+	// Build the 'Subject Names' OID map from the certificate, this will be
+	// matched in the next step with the required OID's from config.
+	// Note that this is a Map of slice, So eg. if the subject has multiple
+	// entries for OU say MyOU1, MyOU2 and MyOU3, this generated Map will have an entry
+	// 2.5.4.11:[MyOU1 MyOU1 MyOU2]
+	subjectOidMap := make(map[string][]string, len(clientCert.Subject.Names))
+	for _, n := range clientCert.Subject.Names {
+		subjectOidMap[n.Type.String()] = append(subjectOidMap[n.Type.String()], n.Value.(string))
+	}
+	// Check if all the required OID's from the config are present in the
+	// certificate Subject Names i.e. the subjectOidMap we created in previous step
+	for _, requiredOid := range config.Entry.RequiredSubjectOids {
+		// expected format for a required OID is OID:Value so we split it accordingly
+		reqOid := strings.SplitN(requiredOid, ":", 2)
+
+		clientSubjOidValue, clientSubjOidValueOk := subjectOidMap[reqOid[0]]
+		// The match fails if the OID itself is not present or is missing a value
+		if !clientSubjOidValueOk || len(clientSubjOidValue) == 0 {
+			return false
+		}
+		// If the OID matches, we compare the required OID value with each entry of the
+		// slice value from the matched map entry
+		isRequiredOidInCertEntry := false
+		for _, clientSubjOid := range clientSubjOidValue {
+			if glob.Glob(reqOid[1], clientSubjOid) {
+				isRequiredOidInCertEntry = true
+				break
+			}
+		}
+
+		// If none of the slice entries match, the overall match fails for a required OID.
+		if !isRequiredOidInCertEntry {
 			return false
 		}
 	}

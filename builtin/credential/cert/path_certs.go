@@ -218,6 +218,12 @@ certificate.`,
 				Description: tokenutil.DeprecationText("token_bound_cidrs"),
 				Deprecated:  true,
 			},
+			"required_subject_oids": {
+				Type: framework.TypeCommaStringSlice,
+				Description: `A comma-separated string or array of subject name entries
+formatted as "oid:value". Expects the oid value to be some type of ASN1 encoded string.
+All values much match. Supports globbing on "value".`,
+			},
 		},
 
 		Callbacks: map[logical.Operation]framework.OperationFunc{
@@ -308,6 +314,7 @@ func (b *backend) pathCertRead(ctx context.Context, req *logical.Request, d *fra
 		"ocsp_servers_override":        cert.OcspServersOverride,
 		"ocsp_fail_open":               cert.OcspFailOpen,
 		"ocsp_query_all_servers":       cert.OcspQueryAllServers,
+		"required_subject_oids":        cert.RequiredSubjectOids,
 	}
 	cert.PopulateTokenData(data)
 
@@ -391,6 +398,9 @@ func (b *backend) pathCertWrite(ctx context.Context, req *logical.Request, d *fr
 	}
 	if allowedMetadataExtensionsRaw, ok := d.GetOk("allowed_metadata_extensions"); ok {
 		cert.AllowedMetadataExtensions = allowedMetadataExtensionsRaw.([]string)
+	}
+	if requiredSubjectOidsRaw, ok := d.GetOk("required_subject_oids"); ok {
+		cert.RequiredSubjectOids = requiredSubjectOidsRaw.([]string)
 	}
 
 	// Get tokenutil fields
@@ -509,12 +519,12 @@ type CertEntry struct {
 	RequiredExtensions         []string
 	AllowedMetadataExtensions  []string
 	BoundCIDRs                 []*sockaddr.SockAddrMarshaler
-
-	OcspCaCertificates  string
-	OcspEnabled         bool
-	OcspServersOverride []string
-	OcspFailOpen        bool
-	OcspQueryAllServers bool
+	RequiredSubjectOids        []string
+	OcspCaCertificates         string
+	OcspEnabled                bool
+	OcspServersOverride        []string
+	OcspFailOpen               bool
+	OcspQueryAllServers        bool
 }
 
 const pathCertHelpSyn = `
