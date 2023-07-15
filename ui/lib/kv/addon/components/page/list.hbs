@@ -5,7 +5,11 @@
   </:tabLinks>
 
   <:toolbarFilters>
-    {{! TODO add navigateInput }}
+    <NavigateInput
+      @filter={{@filterValue}}
+      @placeholder="Filter secrets"
+      @urls={{hash list="vault.cluster.secrets.backend.kv.list-directory"}}
+    />
   </:toolbarFilters>
 
   <:toolbarActions>
@@ -62,13 +66,17 @@
     </LinkedBlock>
   {{/each}}
 {{else}}
-  <EmptyState
-    data-test-secret-list-empty-state
-    @title="No secrets yet"
-    @message="When created, secrets will be listed here. Create a secret to get started."
-  >
-    <LinkTo class="has-top-margin-xs" @route="create">
-      Create secret
-    </LinkTo>
-  </EmptyState>
+  {{#if @filterValue}}
+    <EmptyState @title="There are no secrets matching &quot;{{@filterValue}}&quot;" />
+  {{else}}
+    <EmptyState
+      data-test-secret-list-empty-state
+      @title="No secrets yet"
+      @message="When created, secrets will be listed here. Create a secret to get started."
+    >
+      <LinkTo class="has-top-margin-xs" @route="create">
+        Create secret
+      </LinkTo>
+    </EmptyState>
+  {{/if}}
 {{/if}}

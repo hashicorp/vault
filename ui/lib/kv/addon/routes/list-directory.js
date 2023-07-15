@@ -19,16 +19,27 @@ export default class KvSecretsListRoute extends Route {
     return path_to_secret ? normalizePath(path_to_secret) : '';
   }
 
-  model(params) {
+  model(params, transition) {
+    // filter KV secrets based on pageFilter value
+    const { pageFilter } = transition.to.queryParams;
     const pathToSecret = params.path_to_secret ? normalizePath(params.path_to_secret) : '';
     const backend = this.secretMountPath.currentPath;
-    const secrets = this.store.query('kv/metadata', { backend, pathToSecret }).catch((err) => {
-      if (err.httpStatus === 404) {
-        return [];
-      } else {
-        throw err;
-      }
-    });
+    const secrets = this.store
+      .query('kv/metadata', { backend, pathToSecret })
+      .then((models) => {
+        this.has404 = false;
+        return pageFilter
+          ? models.filter((model) => model.path.toLowerCase().includes(pageFilter.toLowerCase()))
+          : models;
+      })
+      .catch((err) => {
+        if (err.httpStatus === 404) {
+          this.has404 = true;
+          return [];
+        } else {
+          throw err;
+        }
+      });
     return hash({
       secrets,
       backend,
@@ -38,6 +49,8 @@ export default class KvSecretsListRoute extends Route {
 
   setupController(controller, resolvedModel) {
     super.setupController(controller, resolvedModel);
+
+    // for breadcrumbs
     controller.routeName = this.routeName;
     let breadcrumbsArray = [
       { label: 'secrets', route: 'secrets', linkExternal: true },
