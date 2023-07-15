@@ -18,18 +18,24 @@ export default class KvSecretsListRoute extends Route {
     const { path_to_secret } = this.paramsFor('list-directory');
     return path_to_secret ? normalizePath(path_to_secret) : '';
   }
+  queryParams = {
+    pageFilter: {
+      refreshModel: true, // changing the "Filter secrets" input will cause the model hook to run again.
+    },
+  };
 
-  model(params, transition) {
-    // filter KV secrets based on pageFilter value
-    const { pageFilter } = transition.to.queryParams;
+  model(params) {
+    const pageFilter = params.pageFilter;
     const pathToSecret = params.path_to_secret ? normalizePath(params.path_to_secret) : '';
     const backend = this.secretMountPath.currentPath;
     const secrets = this.store
       .query('kv/metadata', { backend, pathToSecret })
       .then((models) => {
         this.has404 = false;
-        return pageFilter
-          ? models.filter((model) => model.path.toLowerCase().includes(pageFilter.toLowerCase()))
+        // handle situation for when there is potentially both a pageFilter and pathToSecret ex: beep/my-.
+        const filter = pathToSecret ? pathToSecret + (pageFilter || '') : pageFilter;
+        return filter
+          ? models.filter((model) => model.fullSecretPath.toLowerCase().includes(filter.toLowerCase()))
           : models;
       })
       .catch((err) => {
@@ -49,8 +55,6 @@ export default class KvSecretsListRoute extends Route {
 
   setupController(controller, resolvedModel) {
     super.setupController(controller, resolvedModel);
-
-    // for breadcrumbs
     controller.routeName = this.routeName;
     let breadcrumbsArray = [
       { label: 'secrets', route: 'secrets', linkExternal: true },
