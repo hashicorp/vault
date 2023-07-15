@@ -5,7 +5,7 @@
       <ExternalLink @href="https://github.com/hashicorp/hcl">HCL</ExternalLink>
       ) or JSON and describe which paths in Vault a user or machine is allowed to access. Here is an example policy:
     </p>
-  {{else}}
+  {{else if (eq @policyType "rgp")}}
     <p class="has-bottom-margin-s" data-test-example-modal-text-rgp>
       Role Governing Policies (RGPs) are tied to client tokens or identities which is similar to
       <DocLink @path="/vault/tutorials/policies/policies">ACL policies</DocLink>. They use
@@ -21,22 +21,29 @@
       <code class="tag is-marginless is-paddingless">admin</code>
       policy:
     </p>
+  {{else}}
+    <p class="has-bottom-margin-s" data-test-example-modal-text-egp>
+      Endpoint Governing Policies (EGPs) are tied to particular paths (e.g.
+      <code class="tag is-marginless is-paddingless">aws/creds/</code>
+      ) instead of tokens. They use
+      <ExternalLink @href="https://docs.hashicorp.com/sentinel/language">Sentinel</ExternalLink>
+      as a language to access
+      <DocLink @path="/vault/docs/enterprise/sentinel/properties">properties</DocLink>
+      of the incoming requests.
+    </p>
+    <p>
+      Here is an example policy that fulfills the requirement of an incoming request to be performed during the business
+      hours 7:00am to 6:00pm on work days:
+    </p>
   {{/if}}
 </div>
-<JsonEditor @value={{this.policyTemplate}} @mode="ruby" @readOnly={{true}} @showToolbar={{true}} />
+<JsonEditor @value={{get this.policyTemplates @policyType}} @mode="ruby" @readOnly={{true}} @showToolbar={{true}} />
 <div class="has-bottom-margin-m has-top-padding-s">
   <p>
     More information about
     {{uppercase @policyType}}
     policies can be found
-    <DocLink
-      @path={{if
-        (eq @policyType "acl")
-        "/vault/docs/concepts/policies#capabilities"
-        "/vault/tutorials/policies/sentinel#role-governing-policies-rgps"
-      }}
-      data-test-example-modal-information-link
-    >
+    <DocLink @path={{get this.moreInformationLinks @policyType}} data-test-example-modal-information-link>
       here.
     </DocLink>
   </p>
