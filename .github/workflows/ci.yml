@@ -353,7 +353,6 @@ jobs:
         run: |
           # Sort all of the summary table rows and push them to a temp file.
           temp_file_name=temp-$(date +%s)
-          # shellcheck disable=SC2002
           cat failure-summary-*.md | sort >> "$temp_file_name"
           temp_message_file_name=temp-table-$(date +%s)
           
@@ -363,6 +362,7 @@ jobs:
             # Here we create the headings for the summary table
             echo "| Test Type | Package | Test | Elapsed | Runner Index | Logs |" | tee -a "$GITHUB_STEP_SUMMARY" "$temp_message_file_name" 
             echo "| --------- | ------- | ---- | ------- | ------------ | ---- |" | tee -a "$GITHUB_STEP_SUMMARY" "$temp_message_file_name"
+            # shellcheck disable=SC2002
             cat "$temp_file_name" | tee -a "$GITHUB_STEP_SUMMARY" "$temp_message_file_name"
           else
             echo "### All Go tests passed! :white_check_mark:" | tee -a "$GITHUB_STEP_SUMMARY" "$temp_message_file_name"
