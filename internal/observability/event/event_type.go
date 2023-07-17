@@ -3,9 +3,7 @@
 
 package event
 
-import (
-	"fmt"
-)
+import "fmt"
 
 // EventType represents the event's type
 type EventType string

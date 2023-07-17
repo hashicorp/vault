@@ -1,20 +1,18 @@
 // Copyright (c) HashiCorp, Inc.
 // SPDX-License-Identifier: MPL-2.0
 
-package event
+package audit
 
 import (
 	"context"
 	"testing"
 	"time"
 
+	"github.com/hashicorp/vault/internal/observability/event"
+
 	"github.com/hashicorp/vault/helper/namespace"
 
 	"github.com/hashicorp/vault/sdk/logical"
-
-	vaultaudit "github.com/hashicorp/vault/audit"
-
-	"github.com/hashicorp/vault/sdk/helper/salt"
 
 	"github.com/hashicorp/eventlogger"
 	"github.com/stretchr/testify/require"
@@ -44,32 +42,13 @@ func fakeJSONAuditEvent(tb testing.TB, subtype auditSubtype, input *logical.LogI
 	auditEvent.Data = input
 
 	e := &eventlogger.Event{
-		Type:      eventlogger.EventType(AuditType),
+		Type:      eventlogger.EventType(event.AuditType),
 		CreatedAt: auditEvent.Timestamp,
 		Formatted: make(map[string][]byte),
 		Payload:   auditEvent,
 	}
 
 	return e
-}
-
-// newStaticSalt returns a new staticSalt for use in testing.
-func newStaticSalt(tb testing.TB) *staticSalt {
-	s, err := salt.NewSalt(context.Background(), nil, nil)
-	require.NoError(tb, err)
-
-	return &staticSalt{salt: s}
-}
-
-// staticSalt is a struct which can be used to obtain a static salt.
-// a salt must be assigned when the struct is initialized.
-type staticSalt struct {
-	salt *salt.Salt
-}
-
-// Salt returns the static salt and no error.
-func (s *staticSalt) Salt(_ context.Context) (*salt.Salt, error) {
-	return s.salt, nil
 }
 
 // TestNewAuditFormatterJSON ensures we can create new AuditFormatterJSONX structs.
@@ -82,7 +61,7 @@ func TestNewAuditFormatterJSON(t *testing.T) {
 		"nil-salter": {
 			UseStaticSalt:        false,
 			IsErrorExpected:      true,
-			ExpectedErrorMessage: "event.NewAuditFormatterJSON: unable to create new JSON audit formatter: cannot create a new audit formatter with nil salter",
+			ExpectedErrorMessage: "audit.NewAuditFormatterJSON: unable to create new JSON audit formatter: cannot create a new audit formatter with nil salter",
 		},
 		"static-salter": {
 			UseStaticSalt:   true,
@@ -95,8 +74,8 @@ func TestNewAuditFormatterJSON(t *testing.T) {
 		tc := tc
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
-			cfg := vaultaudit.FormatterConfig{}
-			var ss vaultaudit.Salter
+			cfg := FormatterConfig{}
+			var ss Salter
 			if tc.UseStaticSalt {
 				ss = newStaticSalt(t)
 			}
@@ -119,7 +98,7 @@ func TestNewAuditFormatterJSON(t *testing.T) {
 // TestAuditFormatterJSONX_Reopen ensures that we do no get an error when calling Reopen.
 func TestAuditFormatterJSON_Reopen(t *testing.T) {
 	ss := newStaticSalt(t)
-	cfg := vaultaudit.FormatterConfig{}
+	cfg := FormatterConfig{}
 
 	f, err := NewAuditFormatterJSON(cfg, ss)
 	require.NoError(t, err)
@@ -130,7 +109,7 @@ func TestAuditFormatterJSON_Reopen(t *testing.T) {
 // TestAuditFormatterJSONX_Type ensures that the node is a 'formatter' type.
 func TestAuditFormatterJSON_Type(t *testing.T) {
 	ss := newStaticSalt(t)
-	cfg := vaultaudit.FormatterConfig{}
+	cfg := FormatterConfig{}
 
 	f, err := NewAuditFormatterJSON(cfg, ss)
 	require.NoError(t, err)
@@ -150,49 +129,49 @@ func TestAuditFormatterJSON_Process(t *testing.T) {
 	}{
 		"request-no-data": {
 			IsErrorExpected:      true,
-			ExpectedErrorMessage: "event.(AuditFormatterJSON).Process: unable to parse request from audit event: request to request-audit a nil request",
-			Subtype:              AuditRequest,
+			ExpectedErrorMessage: "audit.(AuditFormatterJSON).Process: unable to parse request from audit event: request to request-audit a nil request",
+			Subtype:              AuditRequestType,
 			Data:                 nil,
 		},
 		"response-no-data": {
 			IsErrorExpected:      true,
-			ExpectedErrorMessage: "event.(AuditFormatterJSON).Process: unable to parse response from audit event: request to response-audit a nil request",
-			Subtype:              AuditResponse,
+			ExpectedErrorMessage: "audit.(AuditFormatterJSON).Process: unable to parse response from audit event: request to response-audit a nil request",
+			Subtype:              AuditResponseType,
 			Data:                 nil,
 		},
 		"request-basic-input": {
 			IsErrorExpected:      true,
-			ExpectedErrorMessage: "event.(AuditFormatterJSON).Process: unable to parse request from audit event: request to request-audit a nil request",
-			Subtype:              AuditRequest,
+			ExpectedErrorMessage: "audit.(AuditFormatterJSON).Process: unable to parse request from audit event: request to request-audit a nil request",
+			Subtype:              AuditRequestType,
 			Data:                 &logical.LogInput{Type: "magic"},
 		},
 		"response-basic-input": {
 			IsErrorExpected:      true,
-			ExpectedErrorMessage: "event.(AuditFormatterJSON).Process: unable to parse response from audit event: request to response-audit a nil request",
-			Subtype:              AuditResponse,
+			ExpectedErrorMessage: "audit.(AuditFormatterJSON).Process: unable to parse response from audit event: request to response-audit a nil request",
+			Subtype:              AuditResponseType,
 			Data:                 &logical.LogInput{Type: "magic"},
 		},
 		"request-basic-input-and-request-no-ns": {
 			IsErrorExpected:      true,
-			ExpectedErrorMessage: "event.(AuditFormatterJSON).Process: unable to parse request from audit event: no namespace",
-			Subtype:              AuditRequest,
+			ExpectedErrorMessage: "audit.(AuditFormatterJSON).Process: unable to parse request from audit event: no namespace",
+			Subtype:              AuditRequestType,
 			Data:                 &logical.LogInput{Request: &logical.Request{ID: "123"}},
 		},
 		"response-basic-input-and-request-no-ns": {
 			IsErrorExpected:      true,
-			ExpectedErrorMessage: "event.(AuditFormatterJSON).Process: unable to parse response from audit event: no namespace",
-			Subtype:              AuditResponse,
+			ExpectedErrorMessage: "audit.(AuditFormatterJSON).Process: unable to parse response from audit event: no namespace",
+			Subtype:              AuditResponseType,
 			Data:                 &logical.LogInput{Request: &logical.Request{ID: "123"}},
 		},
 		"request-basic-input-and-request-with-ns": {
 			IsErrorExpected: false,
-			Subtype:         AuditRequest,
+			Subtype:         AuditRequestType,
 			Data:            &logical.LogInput{Request: &logical.Request{ID: "123"}},
 			RootNamespace:   true,
 		},
 		"response-basic-input-and-request-with-ns": {
 			IsErrorExpected: false,
-			Subtype:         AuditResponse,
+			Subtype:         AuditResponseType,
 			Data:            &logical.LogInput{Request: &logical.Request{ID: "123"}},
 			RootNamespace:   true,
 		},
@@ -207,7 +186,7 @@ func TestAuditFormatterJSON_Process(t *testing.T) {
 			require.NotNil(t, e)
 
 			ss := newStaticSalt(t)
-			cfg := vaultaudit.FormatterConfig{}
+			cfg := FormatterConfig{}
 
 			f, err := NewAuditFormatterJSON(cfg, ss)
 			require.NoError(t, err)

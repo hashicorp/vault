@@ -1,12 +1,14 @@
 // Copyright (c) HashiCorp, Inc.
 // SPDX-License-Identifier: MPL-2.0
 
-package event
+package audit
 
 import (
 	"context"
 	"testing"
 	"time"
+
+	"github.com/hashicorp/vault/internal/observability/event"
 
 	"github.com/hashicorp/vault/sdk/logical"
 
@@ -41,7 +43,7 @@ func fakeJSONxAuditEvent(t *testing.T, subtype auditSubtype, input *logical.LogI
 	auditEvent.Data = input
 
 	e := &eventlogger.Event{
-		Type:      eventlogger.EventType(AuditType),
+		Type:      eventlogger.EventType(event.AuditType),
 		CreatedAt: auditEvent.Timestamp,
 		Formatted: make(map[string][]byte),
 		Payload:   auditEvent,
@@ -77,24 +79,24 @@ func TestAuditFormatterJSONx_Process(t *testing.T) {
 	}{
 		"request-no-formatted-json": {
 			IsErrorExpected:      true,
-			ExpectedErrorMessage: "event.(AuditFormatterJSONx).Process: pre-formatted JSON required but not found: invalid parameter",
-			Subtype:              AuditRequest,
+			ExpectedErrorMessage: "audit.(AuditFormatterJSONx).Process: pre-formatted JSON required but not found: invalid parameter",
+			Subtype:              AuditRequestType,
 			Data:                 nil,
 		},
 		"response-no-formatted-json": {
 			IsErrorExpected:      true,
-			ExpectedErrorMessage: "event.(AuditFormatterJSONx).Process: pre-formatted JSON required but not found: invalid parameter",
-			Subtype:              AuditResponse,
+			ExpectedErrorMessage: "audit.(AuditFormatterJSONx).Process: pre-formatted JSON required but not found: invalid parameter",
+			Subtype:              AuditResponseType,
 			Data:                 nil,
 		},
 		"request-basic-json": {
 			IsErrorExpected: false,
-			Subtype:         AuditRequest,
+			Subtype:         AuditRequestType,
 			Data:            &logical.LogInput{Type: "magic"},
 		},
 		"response-basic-json": {
 			IsErrorExpected: false,
-			Subtype:         AuditResponse,
+			Subtype:         AuditResponseType,
 			Data:            &logical.LogInput{Type: "magic"},
 		},
 	}

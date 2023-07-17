@@ -1,7 +1,7 @@
 // Copyright (c) HashiCorp, Inc.
 // SPDX-License-Identifier: MPL-2.0
 
-package event
+package audit
 
 import (
 	"context"
@@ -9,6 +9,8 @@ import (
 	"net"
 	"sync"
 	"time"
+
+	"github.com/hashicorp/vault/internal/observability/event"
 
 	"github.com/hashicorp/go-multierror"
 
@@ -27,8 +29,8 @@ type AuditSocketSink struct {
 
 // NewAuditSocketSink should be used to create a new AuditSocketSink.
 // Accepted options: WithMaxDuration and WithSocketType.
-func NewAuditSocketSink(format auditFormat, address string, opt ...Option) (*AuditSocketSink, error) {
-	const op = "event.NewAuditSocketSink"
+func NewAuditSocketSink(format auditFormat, address string, opt ...AuditOption) (*AuditSocketSink, error) {
+	const op = "audit.NewAuditSocketSink"
 
 	opts, err := getOpts(opt...)
 	if err != nil {
@@ -49,7 +51,7 @@ func NewAuditSocketSink(format auditFormat, address string, opt ...Option) (*Aud
 
 // Process handles writing the event to the socket.
 func (s *AuditSocketSink) Process(ctx context.Context, e *eventlogger.Event) (*eventlogger.Event, error) {
-	const op = "event.(AuditSocketSink).Process"
+	const op = "audit.(AuditSocketSink).Process"
 
 	select {
 	case <-ctx.Done():
@@ -61,7 +63,7 @@ func (s *AuditSocketSink) Process(ctx context.Context, e *eventlogger.Event) (*e
 	defer s.socketLock.Unlock()
 
 	if e == nil {
-		return nil, fmt.Errorf("%s: event is nil: %w", op, ErrInvalidParameter)
+		return nil, fmt.Errorf("%s: event is nil: %w", op, event.ErrInvalidParameter)
 	}
 
 	formatted, found := e.Format(s.format.String())
@@ -96,7 +98,7 @@ func (s *AuditSocketSink) Process(ctx context.Context, e *eventlogger.Event) (*e
 
 // Reopen handles reopening the connection for the socket sink.
 func (s *AuditSocketSink) Reopen() error {
-	const op = "event.(AuditSocketSink).Reopen"
+	const op = "audit.(AuditSocketSink).Reopen"
 
 	s.socketLock.Lock()
 	defer s.socketLock.Unlock()
@@ -116,7 +118,7 @@ func (s *AuditSocketSink) Type() eventlogger.NodeType {
 
 // connect attempts to establish a connection using the socketType and address.
 func (s *AuditSocketSink) connect(ctx context.Context) error {
-	const op = "event.(AuditSocketSink).connect"
+	const op = "audit.(AuditSocketSink).connect"
 
 	// If we're already connected, we should have disconnected first.
 	if s.connection != nil {
@@ -139,7 +141,7 @@ func (s *AuditSocketSink) connect(ctx context.Context) error {
 
 // disconnect attempts to close and clear an existing connection.
 func (s *AuditSocketSink) disconnect() error {
-	const op = "event.(AuditSocketSink).disconnect"
+	const op = "audit.(AuditSocketSink).disconnect"
 
 	// If we're already disconnected, we can return early.
 	if s.connection == nil {
@@ -157,7 +159,7 @@ func (s *AuditSocketSink) disconnect() error {
 
 // reconnect attempts to disconnect and then connect to the configured socketType and address.
 func (s *AuditSocketSink) reconnect(ctx context.Context) error {
-	const op = "event.(AuditSocketSink).reconnect"
+	const op = "audit.(AuditSocketSink).reconnect"
 
 	err := s.disconnect()
 	if err != nil {
@@ -174,7 +176,7 @@ func (s *AuditSocketSink) reconnect(ctx context.Context) error {
 
 // write attempts to write the specified data using the established connection.
 func (s *AuditSocketSink) write(ctx context.Context, data []byte) error {
-	const op = "event.(AuditSocketSink).write"
+	const op = "audit.(AuditSocketSink).write"
 
 	// Ensure we're connected.
 	err := s.connect(ctx)

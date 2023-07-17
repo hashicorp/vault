@@ -1,11 +1,13 @@
 // Copyright (c) HashiCorp, Inc.
 // SPDX-License-Identifier: MPL-2.0
 
-package event
+package audit
 
 import (
 	"context"
 	"fmt"
+
+	"github.com/hashicorp/vault/internal/observability/event"
 
 	gsyslog "github.com/hashicorp/go-syslog"
 
@@ -20,8 +22,8 @@ type AuditSyslogSink struct {
 
 // NewAuditSyslogSink should be used to create a new AuditSyslogSink.
 // Accepted options: WithFacility and WithTag.
-func NewAuditSyslogSink(format auditFormat, opt ...Option) (*AuditSyslogSink, error) {
-	const op = "event.NewAuditSyslogSink"
+func NewAuditSyslogSink(format auditFormat, opt ...AuditOption) (*AuditSyslogSink, error) {
+	const op = "audit.NewAuditSyslogSink"
 
 	opts, err := getOpts(opt...)
 	if err != nil {
@@ -38,7 +40,7 @@ func NewAuditSyslogSink(format auditFormat, opt ...Option) (*AuditSyslogSink, er
 
 // Process handles writing the event to the syslog.
 func (s *AuditSyslogSink) Process(ctx context.Context, e *eventlogger.Event) (*eventlogger.Event, error) {
-	const op = "event.(AuditSyslogSink).Process"
+	const op = "audit.(AuditSyslogSink).Process"
 
 	select {
 	case <-ctx.Done():
@@ -47,7 +49,7 @@ func (s *AuditSyslogSink) Process(ctx context.Context, e *eventlogger.Event) (*e
 	}
 
 	if e == nil {
-		return nil, fmt.Errorf("%s: event is nil: %w", op, ErrInvalidParameter)
+		return nil, fmt.Errorf("%s: event is nil: %w", op, event.ErrInvalidParameter)
 	}
 
 	formatted, found := e.Format(s.format.String())

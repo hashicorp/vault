@@ -1,7 +1,7 @@
 // Copyright (c) HashiCorp, Inc.
 // SPDX-License-Identifier: MPL-2.0
 
-package event
+package audit
 
 import (
 	"testing"
@@ -13,7 +13,7 @@ import (
 // TestAuditEvent_New exercises the newAudit func to create audit events.
 func TestAuditEvent_New(t *testing.T) {
 	tests := map[string]struct {
-		Options              []Option
+		Options              []AuditOption
 		IsErrorExpected      bool
 		ExpectedErrorMessage string
 		ExpectedID           string
@@ -25,40 +25,40 @@ func TestAuditEvent_New(t *testing.T) {
 		"nil": {
 			Options:              nil,
 			IsErrorExpected:      true,
-			ExpectedErrorMessage: "event.newAudit: event.(audit).validate: event.(auditSubtype).validate: '' is not a valid event subtype: invalid parameter",
+			ExpectedErrorMessage: "audit.newAudit: audit.(audit).validate: audit.(auditSubtype).validate: '' is not a valid event subtype: invalid parameter",
 		},
 		"empty-option": {
-			Options:              []Option{},
+			Options:              []AuditOption{},
 			IsErrorExpected:      true,
-			ExpectedErrorMessage: "event.newAudit: event.(audit).validate: event.(auditSubtype).validate: '' is not a valid event subtype: invalid parameter",
+			ExpectedErrorMessage: "audit.newAudit: audit.(audit).validate: audit.(auditSubtype).validate: '' is not a valid event subtype: invalid parameter",
 		},
 		"bad-id": {
-			Options:              []Option{WithID("")},
+			Options:              []AuditOption{WithID("")},
 			IsErrorExpected:      true,
-			ExpectedErrorMessage: "event.newAudit: error applying options: id cannot be empty",
+			ExpectedErrorMessage: "audit.newAudit: error applying options: id cannot be empty",
 		},
 		"good": {
-			Options: []Option{
+			Options: []AuditOption{
 				WithID("audit_123"),
 				WithFormat(string(AuditFormatJSON)),
-				WithSubtype(string(AuditResponse)),
+				WithSubtype(string(AuditResponseType)),
 				WithNow(time.Date(2023, time.July, 4, 12, 3, 0, 0, time.Local)),
 			},
 			IsErrorExpected:   false,
 			ExpectedID:        "audit_123",
 			ExpectedTimestamp: time.Date(2023, time.July, 4, 12, 3, 0, 0, time.Local),
-			ExpectedSubtype:   AuditResponse,
+			ExpectedSubtype:   AuditResponseType,
 			ExpectedFormat:    AuditFormatJSON,
 		},
 		"good-no-time": {
-			Options: []Option{
+			Options: []AuditOption{
 				WithID("audit_123"),
 				WithFormat(string(AuditFormatJSON)),
-				WithSubtype(string(AuditResponse)),
+				WithSubtype(string(AuditResponseType)),
 			},
 			IsErrorExpected: false,
 			ExpectedID:      "audit_123",
-			ExpectedSubtype: AuditResponse,
+			ExpectedSubtype: AuditResponseType,
 			ExpectedFormat:  AuditFormatJSON,
 			IsNowExpected:   true,
 		},
@@ -104,36 +104,36 @@ func TestAuditEvent_Validate(t *testing.T) {
 		"nil": {
 			Value:                nil,
 			IsErrorExpected:      true,
-			ExpectedErrorMessage: "event.(audit).validate: audit is nil: invalid parameter",
+			ExpectedErrorMessage: "audit.(audit).validate: audit is nil: invalid parameter",
 		},
 		"default": {
 			Value:                &audit{},
 			IsErrorExpected:      true,
-			ExpectedErrorMessage: "event.(audit).validate: missing ID: invalid parameter",
+			ExpectedErrorMessage: "audit.(audit).validate: missing ID: invalid parameter",
 		},
 		"id-empty": {
 			Value: &audit{
 				ID:             "",
 				Version:        auditVersion,
-				Subtype:        AuditRequest,
+				Subtype:        AuditRequestType,
 				Timestamp:      time.Now(),
 				Data:           nil,
 				RequiredFormat: AuditFormatJSON,
 			},
 			IsErrorExpected:      true,
-			ExpectedErrorMessage: "event.(audit).validate: missing ID: invalid parameter",
+			ExpectedErrorMessage: "audit.(audit).validate: missing ID: invalid parameter",
 		},
 		"version-fiddled": {
 			Value: &audit{
 				ID:             "audit_123",
 				Version:        "magic-v2",
-				Subtype:        AuditRequest,
+				Subtype:        AuditRequestType,
 				Timestamp:      time.Now(),
 				Data:           nil,
 				RequiredFormat: AuditFormatJSON,
 			},
 			IsErrorExpected:      true,
-			ExpectedErrorMessage: "event.(audit).validate: audit version unsupported: invalid parameter",
+			ExpectedErrorMessage: "audit.(audit).validate: audit version unsupported: invalid parameter",
 		},
 		"subtype-fiddled": {
 			Value: &audit{
@@ -145,37 +145,37 @@ func TestAuditEvent_Validate(t *testing.T) {
 				RequiredFormat: AuditFormatJSON,
 			},
 			IsErrorExpected:      true,
-			ExpectedErrorMessage: "event.(audit).validate: event.(auditSubtype).validate: 'moon' is not a valid event subtype: invalid parameter",
+			ExpectedErrorMessage: "audit.(audit).validate: audit.(auditSubtype).validate: 'moon' is not a valid event subtype: invalid parameter",
 		},
 		"format-fiddled": {
 			Value: &audit{
 				ID:             "audit_123",
 				Version:        auditVersion,
-				Subtype:        AuditResponse,
+				Subtype:        AuditResponseType,
 				Timestamp:      time.Now(),
 				Data:           nil,
 				RequiredFormat: auditFormat("blah"),
 			},
 			IsErrorExpected:      true,
-			ExpectedErrorMessage: "event.(audit).validate: event.(auditFormat).validate: 'blah' is not a valid format: invalid parameter",
+			ExpectedErrorMessage: "audit.(audit).validate: audit.(auditFormat).validate: 'blah' is not a valid format: invalid parameter",
 		},
 		"default-time": {
 			Value: &audit{
 				ID:             "audit_123",
 				Version:        auditVersion,
-				Subtype:        AuditResponse,
+				Subtype:        AuditResponseType,
 				Timestamp:      time.Time{},
 				Data:           nil,
 				RequiredFormat: AuditFormatJSON,
 			},
 			IsErrorExpected:      true,
-			ExpectedErrorMessage: "event.(audit).validate: audit timestamp cannot be the zero time instant: invalid parameter",
+			ExpectedErrorMessage: "audit.(audit).validate: audit timestamp cannot be the zero time instant: invalid parameter",
 		},
 		"valid": {
 			Value: &audit{
 				ID:             "audit_123",
 				Version:        auditVersion,
-				Subtype:        AuditResponse,
+				Subtype:        AuditResponseType,
 				Timestamp:      time.Now(),
 				Data:           nil,
 				RequiredFormat: AuditFormatJSON,
@@ -212,12 +212,12 @@ func TestAuditEvent_Validate_Subtype(t *testing.T) {
 		"empty": {
 			Value:                "",
 			IsErrorExpected:      true,
-			ExpectedErrorMessage: "event.(auditSubtype).validate: '' is not a valid event subtype: invalid parameter",
+			ExpectedErrorMessage: "audit.(auditSubtype).validate: '' is not a valid event subtype: invalid parameter",
 		},
 		"unsupported": {
 			Value:                "foo",
 			IsErrorExpected:      true,
-			ExpectedErrorMessage: "event.(auditSubtype).validate: 'foo' is not a valid event subtype: invalid parameter",
+			ExpectedErrorMessage: "audit.(auditSubtype).validate: 'foo' is not a valid event subtype: invalid parameter",
 		},
 		"request": {
 			Value:           "AuditRequest",
@@ -257,12 +257,12 @@ func TestAuditEvent_Validate_Format(t *testing.T) {
 		"empty": {
 			Value:                "",
 			IsErrorExpected:      true,
-			ExpectedErrorMessage: "event.(auditFormat).validate: '' is not a valid format: invalid parameter",
+			ExpectedErrorMessage: "audit.(auditFormat).validate: '' is not a valid format: invalid parameter",
 		},
 		"unsupported": {
 			Value:                "foo",
 			IsErrorExpected:      true,
-			ExpectedErrorMessage: "event.(auditFormat).validate: 'foo' is not a valid format: invalid parameter",
+			ExpectedErrorMessage: "audit.(auditFormat).validate: 'foo' is not a valid format: invalid parameter",
 		},
 		"json": {
 			Value:           "json",
