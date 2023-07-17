@@ -109,7 +109,8 @@ jobs:
       # The regular Go tests use an extra runner to execute the
       # binary-dependent tests. We isolate them there so that the
       # other tests aren't slowed down waiting for a binary build.
-      total-runners: 17
+      binary-tests: true
+      total-runners: 16
       go-arch: amd64
       go-tags: '${{ needs.setup.outputs.go-tags }},deadlock'
       runs-on: ${{ needs.setup.outputs.compute-larger }}
