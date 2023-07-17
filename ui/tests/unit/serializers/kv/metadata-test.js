@@ -14,8 +14,9 @@ module('Unit | Serializer | kv/metadata', function (hooks) {
     const serverData = {
       request_id: 'foo',
       backend: 'my-backend',
+      path: '',
       data: {
-        keys: ['first', 'second'],
+        keys: ['first', 'second', 'third/'],
       },
     };
     const expectedData = [
@@ -23,19 +24,49 @@ module('Unit | Serializer | kv/metadata', function (hooks) {
         id: 'my-backend/metadata/first',
         path: 'first',
         backend: 'my-backend',
+        full_secret_path: 'first',
       },
       {
         id: 'my-backend/metadata/second',
         path: 'second',
         backend: 'my-backend',
+        full_secret_path: 'second',
+      },
+      {
+        id: 'my-backend/metadata/third/',
+        path: 'third/',
+        backend: 'my-backend',
+        full_secret_path: 'third/',
       },
     ];
 
     const serializedRecord = serializer.normalizeItems(serverData);
-    assert.deepEqual(serializedRecord.data.keys, expectedData, 'transformed keys into proper IDs');
+    assert.deepEqual(serializedRecord, expectedData, 'transformed keys into proper IDs');
   });
 
-  test('it throws an assertionn if backend not on payload', function (assert) {
+  test('it should properly normalize a nested secret list response', function (assert) {
+    const serializer = this.owner.lookup('serializer:kv/metadata');
+    const serverData = {
+      request_id: 'foo',
+      backend: 'my-backend',
+      path: 'beep/',
+      data: {
+        keys: ['boop/'],
+      },
+    };
+    const expectedData = [
+      {
+        id: 'my-backend/metadata/beep/boop/',
+        path: 'boop/',
+        backend: 'my-backend',
+        full_secret_path: 'beep/boop/',
+      },
+    ];
+    const serializedRecord = serializer.normalizeItems(serverData);
+    assert.deepEqual(serializedRecord, expectedData, 'transformed keys into proper IDs');
+  });
+
+  test('it throws an assertion if backend not on payload', function (assert) {
     const serializer = this.owner.lookup('serializer:kv/metadata');
     const serverData = {
       request_id: 'foo',

@@ -7,12 +7,12 @@ import Route from '@ember/routing/route';
 import { inject as service } from '@ember/service';
 import { hash } from 'rsvp';
 
-export default class KvSecretsRoute extends Route {
+export default class KvSecretsCreateRoute extends Route {
   @service store;
   @service secretMountPath;
 
   model() {
-    // TODO add filtering and return model for query on kv/metadata.
+    // TODO return model for query on kv/data
     const backend = this.secretMountPath.get();
     return hash({
       backend,
@@ -21,10 +21,6 @@ export default class KvSecretsRoute extends Route {
 
   setupController(controller, resolvedModel) {
     super.setupController(controller, resolvedModel);
-    controller.pageTitle = resolvedModel.backend;
-    controller.breadcrumbs = [
-      { label: 'secrets', route: 'secrets', linkExternal: true },
-      { label: resolvedModel.backend },
-    ];
+    controller.breadcrumbs = [{ label: resolvedModel.backend, route: 'list' }, { label: 'create' }];
   }
 }

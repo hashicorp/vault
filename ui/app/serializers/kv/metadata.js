@@ -19,15 +19,18 @@ export default class KvMetadataSerializer extends ApplicationSerializer {
   normalizeItems(payload) {
     if (payload.data.keys) {
       assert('payload.backend must be provided on kv/metadata list response', !!payload.backend);
-      const backend = payload.backend;
-      payload.data.keys = payload.data.keys.map((path) => {
+      return payload.data.keys.map((secret) => {
+        // If there is no payload.path then we're either on a "top level" secret or the first level directory of a nested secret.
+        // We set the path to the current secret or pathToSecret. e.g. my-secret or beep/boop/
+        // We add a param called full_secret_path to the model which we use to navigate to the nested secret. e.g. beep/boop/bop.
+        const fullSecretPath = payload.path ? payload.path + secret : secret;
         return {
-          id: kvMetadataPath(backend, path),
-          backend,
-          path,
+          id: kvMetadataPath(payload.backend, fullSecretPath),
+          path: secret,
+          backend: payload.backend,
+          full_secret_path: fullSecretPath,
         };
       });
-      return payload;
     }
     return super.normalizeItems(payload);
   }

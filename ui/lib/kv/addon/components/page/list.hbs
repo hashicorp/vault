@@ -1,0 +1,74 @@
+<KvPageHeader @breadcrumbs={{@breadcrumbs}} @model={{@model}} @isEngineView={{true}} @pageTitle={{@model.backend}}>
+  <:tabLinks>
+    <LinkTo @route={{@routeName}} data-test-secrets-tab={{@routeName}}>Secrets</LinkTo>
+    <LinkTo @route="configuration" data-test-secrets-tab="Configuration">Configuration</LinkTo>
+  </:tabLinks>
+
+  <:toolbarFilters>
+    {{! TODO add navigateInput }}
+  </:toolbarFilters>
+
+  <:toolbarActions>
+    {{! TODO this create link route needs to handle creating from a directory e.g. beep/boop/  "initialKey"}}
+    <ToolbarLink @route="create" @type="add">Create secret</ToolbarLink>
+  </:toolbarActions>
+</KvPageHeader>
+{{! TODO add permissions on the menu items }}
+{{#if @model.secrets}}
+  {{#each @model.secrets as |secret|}}
+    <LinkedBlock
+      class="list-item-row"
+      @params={{array (if secret.pathIsDirectory "list-directory" "secret.details") secret.fullSecretPath}}
+      @linkPrefix={{this.mountPoint}}
+    >
+      <div class="level is-mobile">
+        <div class="level-left">
+          <div>
+            <Icon @name="user" class="has-text-grey-light" />
+            <span class="has-text-weight-semibold is-underline">
+              {{secret.path}}
+            </span>
+          </div>
+        </div>
+        <div class="level-right is-flex is-paddingless is-marginless">
+          <div class="level-item">
+            <PopupMenu>
+              <nav class="menu">
+                <ul class="menu-list">
+                  {{#if secret.pathIsDirectory}}
+                    <li>
+                      <LinkTo @route="list-directory" @model={{secret.fullSecretPath}}>
+                        Content
+                      </LinkTo>
+                    </li>
+                  {{else}}
+                    <li>
+                      <LinkTo @route="secret.details" @model={{secret.path}}>
+                        Details
+                      </LinkTo>
+                    </li>
+                    <li>
+                      <LinkTo @route="secret.edit" @model={{secret.path}}>
+                        Edit
+                      </LinkTo>
+                    </li>
+                  {{/if}}
+                </ul>
+              </nav>
+            </PopupMenu>
+          </div>
+        </div>
+      </div>
+    </LinkedBlock>
+  {{/each}}
+{{else}}
+  <EmptyState
+    data-test-secret-list-empty-state
+    @title="No secrets yet"
+    @message="When created, secrets will be listed here. Create a secret to get started."
+  >
+    <LinkTo class="has-top-margin-xs" @route="create">
+      Create secret
+    </LinkTo>
+  </EmptyState>
+{{/if}}
