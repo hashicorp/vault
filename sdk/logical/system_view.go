@@ -97,6 +97,10 @@ type SystemView interface {
 	// write forwarding (WriteForwardedPaths). This value will be templated
 	// in for the {{cluterId}} sentinel.
 	ClusterID(ctx context.Context) (string, error)
+
+	// APILockShouldBlockRequest returns whether a namespace for the requested
+	// mount is locked and should be blocked
+	APILockShouldBlockRequest() (bool, error)
 }
 
 type PasswordPolicy interface {
@@ -112,22 +116,23 @@ type ExtendedSystemView interface {
 type PasswordGenerator func() (password string, err error)
 
 type StaticSystemView struct {
-	DefaultLeaseTTLVal  time.Duration
-	MaxLeaseTTLVal      time.Duration
-	SudoPrivilegeVal    bool
-	TaintedVal          bool
-	CachingDisabledVal  bool
-	Primary             bool
-	EnableMlock         bool
-	LocalMountVal       bool
-	ReplicationStateVal consts.ReplicationState
-	EntityVal           *Entity
-	GroupsVal           []*Group
-	Features            license.Features
-	PluginEnvironment   *PluginEnvironment
-	PasswordPolicies    map[string]PasswordGenerator
-	VersionString       string
-	ClusterUUID         string
+	DefaultLeaseTTLVal           time.Duration
+	MaxLeaseTTLVal               time.Duration
+	SudoPrivilegeVal             bool
+	TaintedVal                   bool
+	CachingDisabledVal           bool
+	Primary                      bool
+	EnableMlock                  bool
+	LocalMountVal                bool
+	ReplicationStateVal          consts.ReplicationState
+	EntityVal                    *Entity
+	GroupsVal                    []*Group
+	Features                     license.Features
+	PluginEnvironment            *PluginEnvironment
+	PasswordPolicies             map[string]PasswordGenerator
+	VersionString                string
+	ClusterUUID                  string
+	APILockShouldBlockRequestVal bool
 }
 
 type noopAuditor struct{}
@@ -252,4 +257,8 @@ func (d *StaticSystemView) DeletePasswordPolicy(name string) (existed bool) {
 
 func (d StaticSystemView) ClusterID(ctx context.Context) (string, error) {
 	return d.ClusterUUID, nil
+}
+
+func (d StaticSystemView) APILockShouldBlockRequest() (bool, error) {
+	return d.APILockShouldBlockRequestVal, nil
 }

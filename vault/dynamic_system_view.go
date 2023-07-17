@@ -427,3 +427,17 @@ func (d dynamicSystemView) ClusterID(ctx context.Context) (string, error) {
 
 	return clusterInfo.ID, nil
 }
+
+func (d dynamicSystemView) APILockShouldBlockRequest() (bool, error) {
+	mountEntry := d.mountEntry
+	if mountEntry == nil {
+		return false, fmt.Errorf("no mount entry")
+	}
+	ns := mountEntry.Namespace()
+
+	if err := enterpriseBlockRequestIfError(d.core, ns.Path, mountEntry.Path); err != nil {
+		return true, nil
+	}
+
+	return false, nil
+}
