@@ -19,7 +19,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// fakeJSONxAuditEvent will return a new fake auditEvent containing audit data based
+// fakeJSONxAuditEvent will return a new fake event containing audit data based
 // on the specified subtype and logical.LogInput.
 func fakeJSONxAuditEvent(t *testing.T, subtype subtype, input *logical.LogInput) *eventlogger.Event {
 	t.Helper()
