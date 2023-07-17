@@ -94,7 +94,7 @@ func TestAuditEvent_New(t *testing.T) {
 	}
 }
 
-// TestAuditEvent_Validate exercises the validation for an audit auditEvent.
+// TestAuditEvent_Validate exercises the validation for an audit event.
 func TestAuditEvent_Validate(t *testing.T) {
 	tests := map[string]struct {
 		Value                *auditEvent
