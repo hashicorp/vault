@@ -353,6 +353,7 @@ jobs:
         run: |
           # Sort all of the summary table rows and push them to a temp file.
           temp_file_name=temp-$(date +%s)
+          # shellcheck disable=SC2002
           cat failure-summary-*.md | sort >> "$temp_file_name"
           temp_message_file_name=temp-table-$(date +%s)
           
@@ -365,8 +366,11 @@ jobs:
             cat "$temp_file_name" | tee -a "$GITHUB_STEP_SUMMARY" "$temp_message_file_name"
           else
             echo "### All Go tests passed! :white_check_mark:" | tee -a "$GITHUB_STEP_SUMMARY" "$temp_message_file_name"
-          fi 
+          fi
+          
+          # the random EOF is needed for a multiline environment variable
           EOF=$(dd if=/dev/urandom bs=15 count=1 status=none | base64)
+          # shellcheck disable=SC2129
           echo "TABLE_TEST_RESULTS<<$EOF" >> "$GITHUB_ENV"
           cat "$temp_message_file_name" >> "$GITHUB_ENV"
           echo "$EOF" >> "$GITHUB_ENV" 
