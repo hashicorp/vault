@@ -118,7 +118,7 @@ func TestAuditFormatterJSON_Type(t *testing.T) {
 }
 
 // TestAuditFormatterJSON_Process attempts to run the Process method to convert
-// the logical.LogInput within an audit auditEvent to JSON (AuditRequestEntry or AuditResponseEntry).
+// the logical.LogInput within an audit event to JSON (AuditRequestEntry or AuditResponseEntry).
 func TestAuditFormatterJSON_Process(t *testing.T) {
 	tests := map[string]struct {
 		IsErrorExpected      bool

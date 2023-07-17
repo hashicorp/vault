@@ -202,7 +202,7 @@ func TestAuditEvent_Validate(t *testing.T) {
 	}
 }
 
-// TestAuditEvent_Validate_Subtype exercises the validation for an audit auditEvent's subtype.
+// TestAuditEvent_Validate_Subtype exercises the validation for an audit event's subtype.
 func TestAuditEvent_Validate_Subtype(t *testing.T) {
 	tests := map[string]struct {
 		Value                string
@@ -247,7 +247,7 @@ func TestAuditEvent_Validate_Subtype(t *testing.T) {
 	}
 }
 
-// TestAuditEvent_Validate_Format exercises the validation for an audit auditEvent's format.
+// TestAuditEvent_Validate_Format exercises the validation for an audit event's format.
 func TestAuditEvent_Validate_Format(t *testing.T) {
 	tests := map[string]struct {
 		Value                string
