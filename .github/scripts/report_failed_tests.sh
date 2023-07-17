@@ -8,9 +8,9 @@ set -e
 [ ${RUN_ID:?} ]
 [ ${REPO:?} ]
 [ ${PR_NUMBER:?} ]
-[ ${TABLE_DATA_B64:?} ]
+[ ${TABLE_DATA:?} ]
 
-TABLE_DATA=$(echo "$TABLE_DATA_B64" | base64 -d)
+#TABLE_DATA=$(echo "$TABLE_DATA_B64" | base64 -d)
 # Create a comment to be posted on the PR
 # This comment reports failed jobs and the url to the failed workflow
 new_body="CI Test Results:\n${TABLE_DATA}"
