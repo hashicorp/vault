@@ -81,6 +81,91 @@ func TestTidyConfigs(t *testing.T) {
 
 		lastOp = operation
 	}
+
+	// pause_duration is tested elsewhere in other tests.
+	type configSafetyBufferValueStr struct {
+		Config       string
+		FirstValue   int
+		SecondValue  int
+		DefaultValue int
+	}
+	configSafetyBufferValues := []configSafetyBufferValueStr{
+		{
+			Config:       "safety_buffer",
+			FirstValue:   1,
+			SecondValue:  2,
+			DefaultValue: int(defaultTidyConfig.SafetyBuffer / time.Second),
+		},
+		{
+			Config:       "issuer_safety_buffer",
+			FirstValue:   1,
+			SecondValue:  2,
+			DefaultValue: int(defaultTidyConfig.IssuerSafetyBuffer / time.Second),
+		},
+		{
+			Config:       "acme_account_safety_buffer",
+			FirstValue:   1,
+			SecondValue:  2,
+			DefaultValue: int(defaultTidyConfig.AcmeAccountSafetyBuffer / time.Second),
+		},
+		{
+			Config:       "revocation_queue_safety_buffer",
+			FirstValue:   1,
+			SecondValue:  2,
+			DefaultValue: int(defaultTidyConfig.QueueSafetyBuffer / time.Second),
+		},
+	}
+
+	for _, flag := range configSafetyBufferValues {
+		b, s := CreateBackendWithStorage(t)
+
+		resp, err := CBRead(b, s, "config/auto-tidy")
+		requireSuccessNonNilResponse(t, resp, err, "expected to be able to read auto-tidy operation for flag "+flag.Config)
+		require.Equal(t, resp.Data[flag.Config].(int), flag.DefaultValue, "expected initial auto-tidy config to match default value for "+flag.Config)
+
+		resp, err = CBWrite(b, s, "config/auto-tidy", map[string]interface{}{
+			"enabled":         true,
+			"tidy_cert_store": true,
+			flag.Config:       flag.FirstValue,
+		})
+		requireSuccessNonNilResponse(t, resp, err, "expected to be able to set auto-tidy config option "+flag.Config)
+
+		resp, err = CBRead(b, s, "config/auto-tidy")
+		requireSuccessNonNilResponse(t, resp, err, "expected to be able to read auto-tidy operation for config "+flag.Config)
+		require.Equal(t, resp.Data[flag.Config].(int), flag.FirstValue, "expected value to be set after reading auto-tidy config "+flag.Config)
+
+		resp, err = CBWrite(b, s, "config/auto-tidy", map[string]interface{}{
+			"enabled":         true,
+			"tidy_cert_store": true,
+			flag.Config:       flag.SecondValue,
+		})
+		requireSuccessNonNilResponse(t, resp, err, "expected to be able to set auto-tidy config option "+flag.Config)
+
+		resp, err = CBRead(b, s, "config/auto-tidy")
+		requireSuccessNonNilResponse(t, resp, err, "expected to be able to read auto-tidy operation for config "+flag.Config)
+		require.Equal(t, resp.Data[flag.Config].(int), flag.SecondValue, "expected value to be set after reading auto-tidy config "+flag.Config)
+
+		resp, err = CBWrite(b, s, "tidy", map[string]interface{}{
+			"tidy_cert_store": true,
+			flag.Config:       flag.FirstValue,
+		})
+		t.Logf("tidy run results: resp=%v/err=%v", resp, err)
+		requireSuccessNonNilResponse(t, resp, err, "expected to be able to start tidy operation with "+flag.Config)
+		if len(resp.Warnings) > 0 {
+			for _, warning := range resp.Warnings {
+				if strings.Contains(warning, "unrecognized parameter") && strings.Contains(warning, flag.Config) {
+					t.Fatalf("warning '%v' claims parameter '%v' is unknown", warning, flag.Config)
+				}
+			}
+		}
+
+		time.Sleep(2 * time.Second)
+
+		resp, err = CBRead(b, s, "tidy-status")
+		requireSuccessNonNilResponse(t, resp, err, "expected to be able to start tidy operation with "+flag.Config)
+		t.Logf("got response: %v for config: %v", resp, flag.Config)
+		require.Equal(t, resp.Data[flag.Config].(int), flag.FirstValue, "expected flag to be set in tidy-status for config "+flag.Config)
+	}
 }
 
 func TestAutoTidy(t *testing.T) {
