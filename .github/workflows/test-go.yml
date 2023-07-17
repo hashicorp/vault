@@ -219,9 +219,9 @@ jobs:
           
           # Build the dynamically generated source files.
           make prep
+         
+          packages=$(echo "${{ toJSON(needs.test-matrix.outputs.matrix) }}" | jq --arg id "${{ matrix.id }}" '.[$id] | .packages') 
           
-          echo ${{ toJSON(needs.test-matrix.outputs.matrix)[matrix.id] }}
-          echo ${{ toJSON(needs.test-matrix.outputs.matrix) }}
           # We don't want VAULT_LICENSE set when running Go tests, because that's
           # not what developers have in their environments and it could break some
           # tests; it would be like setting VAULT_TOKEN.  However some non-Go
@@ -262,7 +262,7 @@ jobs:
               --jsonfile test-results/go-test/results-${{ matrix.id }}.json \
               --jsonfile-timing-events failure-summary-${{ matrix.id }}${{ inputs.name != '' && '-' || '' }}${{ inputs.name }}.json \
               $RERUN_FAILS \
-              --packages "${{ toJSON(needs.test-matrix.outputs.matrix)[matrix.id].packages }}" \
+              --packages "$packages" \
               -- \
               -tags "${{ inputs.go-tags }}" \
               -timeout=${{ env.TIMEOUT_IN_MINUTES }}m \
