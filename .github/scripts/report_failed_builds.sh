@@ -31,9 +31,11 @@ done
 # Create a comment to be posted on the PR
 # This comment reports failed jobs and the url to the failed workflow
 if [ ${#failed_jobs[@]} -eq 0 ]; then
-  new_body="Build Results:\nAll builds succeeded"
+  new_body="Build Results:
+All builds succeeded! :white_check_mark:"
 else
-  new_body="Build Results:\nBuild failed for these jobs: ${failed_jobs[*]}. Please refer to this workflow to learn more: https://github.com/hashicorp/vault/actions/runs/$RUN_ID"
+  new_body="Build Results:
+Build failed for these jobs: ${failed_jobs[*]}. Please refer to this workflow to learn more: https://github.com/hashicorp/vault/actions/runs/$RUN_ID"
 fi
 
 

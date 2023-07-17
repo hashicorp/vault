@@ -266,7 +266,7 @@ jobs:
       artifact-revision: ${{ needs.product-metadata.outputs.vault-revision }}
       artifact-version: ${{ needs.product-metadata.outputs.vault-version }}
     secrets: inherit
-
+    
   report-build-failures:
     name: Report Build Failures
     needs:
@@ -277,7 +277,7 @@ jobs:
       - build-ubi
       - test
       - test-docker-k8s
-    if: success() || failure() 
+    if: success() || failure()
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@c85c95e3d7251135ab7dc9ce3241c5835cc595a9 # v3.5.3
