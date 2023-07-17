@@ -602,7 +602,7 @@ func TestDeletedIssuersPostMigration(t *testing.T) {
 
 	t.Parallel()
 	ctx := context.Background()
-	b, s := CreateBackendWithStorage(t)
+	b, s := createBackendWithStorage(t)
 	sc := b.makeStorageContext(ctx, s)
 
 	// Reset the version the helper above set to 1.
@@ -696,6 +696,19 @@ func requireFailInMigration(t *testing.T, b *backend, s logical.Storage, operati
 	require.True(t, resp.IsError(), "error flag was not set from op:%s path:%s resp: %#v", operation, path, resp)
 	require.Contains(t, resp.Error().Error(), "migration has completed",
 		"error message did not contain migration test for op:%s path:%s resp: %#v", operation, path, resp)
+}
+
+func requireFileExists(t *testing.T, sc *storageContext, path string, contents []byte) []byte {
+	t.Helper()
+
+	entry, err := sc.Storage.Get(sc.Context, path)
+	require.NoError(t, err)
+	require.NotNil(t, entry)
+	require.NotEmpty(t, entry.Value)
+	if contents != nil {
+		require.Equal(t, entry.Value, contents)
+	}
+	return entry.Value
 }
 
 // Keys to simulate an intermediate CA mount with also-imported root (parent).
