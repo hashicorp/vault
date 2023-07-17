@@ -15,6 +15,6 @@
 <PkiGenerateCsr
   @model={{@model}}
   @onCancel={{transition-to "vault.cluster.secrets.backend.pki.issuers.index"}}
-  @onSave={{fn (mut this.title) "View generated CSR"}}
+  @onSave={{fn (mut this.title) "View Generated CSR"}}
   @onComplete={{transition-to "vault.cluster.secrets.backend.pki.issuers.index"}}
 />

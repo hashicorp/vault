@@ -6,7 +6,7 @@ description: >-
   OCI Identity credentials.
 ---
 
-# OCI Auth Method
+# OCI auth method
 
 The OCI Auth method for Vault enables authentication and authorization using [OCI Identity](https://docs.cloud.oracle.com/iaas/Content/Identity/Concepts/overview.htm) credentials.
 
@@ -14,7 +14,7 @@ This plugin is developed in a separate GitHub repository at https://github.com/h
 but is automatically bundled in Vault releases. Please file all feature requests, bugs, and pull requests
 specific to the OCI plugin under that repository.
 
-## OCI Roles
+## OCI roles
 
 The OCI Auth method authorizes using roles, as shown here:
 ![Role Based Authorization](/img/oci/oci-role-based-authz.png)
@@ -33,7 +33,7 @@ The `ocid_list` field of a role is a list of [Group or Dynamic Group](https://do
 
 ## Configuration
 
-### Configure the OCI Tenancy to Run Vault
+### Configure the OCI tenancy to run Vault
 
 The OCI Auth method requires [instance principal](https://blogs.oracle.com/cloud-infrastructure/announcing-instance-principals-for-identity-and-access-management) credentials to call OCI Identity APIs, and therefore the Vault server needs to run inside an OCI compute instance.
 
@@ -50,7 +50,7 @@ Follow the steps below to add policies to your tenancy that allow the OCI comput
    allow dynamic-group VaultDynamicGroup to {GROUP_MEMBERSHIP_INSPECT} in tenancy
    ```
 
-### Configure the OCI Auth method
+### Configure the OCI auth method
 
 First, enable the OCI Auth method.
 
@@ -100,7 +100,7 @@ Group or Dynamic Group OCIDs in your tenancy that has users or instances that yo
       http://127.0.0.1:8200/v1/auth/oci/role/vaultadminrole (127.0.0.1:8200/v1/auth/oci/role/vaultadminrole)
    ```
 
-### Log in to Vault using OCI Auth
+### Log in to Vault using OCI auth
 
 As a result of both methods described below, you will get a response that includes a token with the previously added policy.
 
@@ -132,7 +132,7 @@ If you don't have an API key:
 1. Ensure that the region in the config matches the region of the compute instance that is running Vault.
 
 
-### Manage Roles in the OCI Auth method
+### Manage roles in the OCI auth method
 
 1.  Similar to creating the Vault administrator role, create other roles mapped to other policies. Create a file named devrole.json with the following contents. Replace ocid_list with Groups or Dynamic Groups in your tenancy.
 

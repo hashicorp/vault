@@ -1,25 +1,42 @@
 ---
 layout: docs
-page_title: Upgrading to Vault 1.14.x - Guides
+page_title: Upgrade to Vault 1.14.x
 description: |-
-  This page contains the list of deprecations and important or breaking changes
-  for Vault 1.14.x. Please read it carefully.
+  Deprecations, important or breaking changes, and remediation recommendations
+  for anyone upgrading to 1.14.x from Vault 1.13.x.
 ---
 
-# Overview
+# Upgrade to Vault 1.14.x
 
-This page contains the list of deprecations and important or breaking changes
-for Vault 1.14.x compared to 1.13. Please read it carefully.
+The Vault 1.14.x upgrade guide contains information on deprecations, important
+or breaking changes, and remediation recommendations for anyone upgrading from
+Vault 1.13. **Please read carefully**.
 
-~> Note: these are **draft** notes for a future version of Vault. They should not be considered
-official guidance until the release has been completed.
+## Feature deprecations and EOL
 
-## Changes
+### Duplicative Docker images
 
+As of Vault 1.14 we will no longer update the the `vault` Docker image.
+Only the [Verified Publisher](https://hub.docker.com/r/hashicorp/vault)
+`hashicorp/vault` image will be updated on DockerHub.
 
+Users of [Official Images](https://hub.docker.com/_/vault) need to use
+`docker pull hashicorp/vault:<version>` instead of `docker pull vault:<version>`
+to get newer versions of Vault in Docker images. Currently, HashiCorp publishes
+and updates identical Docker images of Vault as Verified Publisher and
+Official images separately.
 
-## Known Issues
+## Important changes
 
-@include 'ui-pki-control-groups-known-issue.mdx'
+There are no major changes to announce at this time.
 
+## Known issues and workarounds
+
+@include 'known-issues/ui-pki-control-groups.mdx'
+
+@include 'known-issues/update-primary-data-loss.mdx'
+
+@include 'known-issues/update-primary-addrs-panic.mdx'
+
+@include 'known-issues/ui-safari-login-screen.mdx'
 

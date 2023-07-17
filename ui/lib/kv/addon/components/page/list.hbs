@@ -73,6 +73,16 @@
                         </ConfirmAction>
                       </li>
                     {{/if}}
+                    <li>
+                      <LinkTo @route="secret.details" @model={{secret.path}}>
+                        Details
+                      </LinkTo>
+                    </li>
+                    <li>
+                      <LinkTo @route="secret.edit" @model={{secret.path}}>
+                        Edit
+                      </LinkTo>
+                    </li>
                   {{/if}}
                 </ul>
               </nav>
@@ -96,4 +106,13 @@
       </LinkTo>
     </EmptyState>
   {{/if}}
+  <EmptyState
+    data-test-secret-list-empty-state
+    @title="No secrets yet"
+    @message="When created, secrets will be listed here. Create a secret to get started."
+  >
+    <LinkTo class="has-top-margin-xs" @route="create">
+      Create secret
+    </LinkTo>
+  </EmptyState>
 {{/if}}

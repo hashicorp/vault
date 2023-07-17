@@ -171,11 +171,15 @@
         "path": "concepts/resource-quotas"
       },
       {
-        "title": "Client Count",
+        "title": "Client count",
         "routes": [
           {
-            "title": "Overview",
+            "title": "Clients and entities",
             "path": "concepts/client-count"
+          },
+          {
+            "title": "Client count calculation",
+            "path": "concepts/client-count/counting"
           },
           {
             "title": "FAQ",
@@ -207,7 +211,7 @@
           "type": "outlined",
           "color": "neutral"
         }
-  }
+      }
     ]
   },
   {
@@ -571,22 +575,22 @@
             "title": "<code>health-check</code>",
             "path": "commands/pki/health-check"
           },
-	  {
-	    "title": "<code>verify-sign</code>",
-	    "path": "commands/pki/verify-sign"
-	  },
-	  {
-	    "title": "<code>list-intermeidates</code>",
-	    "path": "commands/pki/list-intermediates"
-	  },
-	  {
-	    "title": "<code>issue</code>",
-	    "path": "commands/pki/issue"
-	  },
-	  {
-	    "title": "<code>reissue</code>",
-	    "path": "commands/pki/reissue"
-	  }
+          {
+            "title": "<code>verify-sign</code>",
+            "path": "commands/pki/verify-sign"
+          },
+          {
+            "title": "<code>list-intermeidates</code>",
+            "path": "commands/pki/list-intermediates"
+          },
+          {
+            "title": "<code>issue</code>",
+            "path": "commands/pki/issue"
+          },
+          {
+            "title": "<code>reissue</code>",
+            "path": "commands/pki/reissue"
+          }
         ]
       },
       {
@@ -773,6 +777,10 @@
       {
         "title": "<code>print</code>",
         "path": "commands/print"
+      },
+      {
+        "title": "<code>proxy</code>",
+        "path": "commands/proxy"
       },
       {
         "title": "<code>read</code>",
@@ -1040,6 +1048,14 @@
                 ]
               }
             ]
+          },
+          {
+            "title": "generate-config",
+            "path": "agent-and-proxy/agent/generate-config"
+          },
+          {
+            "title": "Process Supervisor Mode",
+            "path": "agent-and-proxy/agent/process-supervisor"
           },
           {
             "title": "Templates",
@@ -1523,15 +1539,6 @@
       },
       {
         "divider": true
-      },
-      {
-        "title": "App ID",
-        "badge": {
-          "text": "DEPRECATED",
-          "type": "outlined",
-          "color": "neutral"
-        },
-        "path": "auth/app-id"
       }
     ]
   },
@@ -1867,8 +1874,8 @@
         "path": "upgrading"
       },
       {
-         "title": "Upgrade Vault HA installations",
-         "path": "upgrading/vault-ha-upgrade"
+        "title": "Upgrade Vault HA installations",
+        "path": "upgrading/vault-ha-upgrade"
       },
       {
         "title": "Upgrade Plugins",
@@ -1876,8 +1883,7 @@
       },
       {
         "title": "Upgrade to 1.14.x",
-        "path": "upgrading/upgrade-to-1.14.x",
-        "hidden": true
+        "path": "upgrading/upgrade-to-1.14.x"
       },
       {
         "title": "Upgrade to 1.13.x",
@@ -2124,13 +2130,12 @@
         "path": "release-notes"
       },
       {
-         "title": "1.14.0",
-         "path": "release-notes/1.14.0",
-         "hidden": true
+        "title": "1.14.0",
+        "path": "release-notes/1.14.0"
       },
       {
-         "title": "1.13.0",
-         "path": "release-notes/1.13.0"
+        "title": "1.13.0",
+        "path": "release-notes/1.13.0"
       },
       {
         "title": "1.12.0",

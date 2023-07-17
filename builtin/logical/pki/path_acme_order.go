@@ -11,6 +11,7 @@ import (
 	"net"
 	"net/http"
 	"sort"
+	"strings"
 	"time"
 
 	"github.com/hashicorp/vault/sdk/helper/strutil"
@@ -480,6 +481,34 @@ func storeCertificate(sc *storageContext, signedCertBundle *certutil.ParsedCertB
 	return nil
 }
 
+func maybeAugmentReqDataWithSuitableCN(ac *acmeContext, csr *x509.CertificateRequest, data *framework.FieldData) {
+	// Role doesn't require a CN, so we don't care.
+	if !ac.role.RequireCN {
+		return
+	}
+
+	// CSR contains a CN, so use that one.
+	if csr.Subject.CommonName != "" {
+		return
+	}
+
+	// Choose a CN in the order wildcard -> DNS -> IP -> fail.
+	for _, name := range csr.DNSNames {
+		if strings.Contains(name, "*") {
+			data.Raw["common_name"] = name
+			return
+		}
+	}
+	if len(csr.DNSNames) > 0 {
+		data.Raw["common_name"] = csr.DNSNames[0]
+		return
+	}
+	if len(csr.IPAddresses) > 0 {
+		data.Raw["common_name"] = csr.IPAddresses[0].String()
+		return
+	}
+}
+
 func issueCertFromCsr(ac *acmeContext, csr *x509.CertificateRequest) (*certutil.ParsedCertBundle, issuerID, error) {
 	pemBlock := &pem.Block{
 		Type:    "CERTIFICATE REQUEST",
@@ -494,6 +523,11 @@ func issueCertFromCsr(ac *acmeContext, csr *x509.CertificateRequest) (*certutil.
 		},
 		Schema: getCsrSignVerbatimSchemaFields(),
 	}
+
+	// XXX: Usability hack: by default, minimalist roles have require_cn=true,
+	// but some ACME clients do not provision one in the certificate as modern
+	// (TLS) clients are mostly verifying against server's DNS SANs.
+	maybeAugmentReqDataWithSuitableCN(ac, csr, data)
 
 	signingBundle, issuerId, err := ac.sc.fetchCAInfoWithIssuer(ac.issuer.ID.String(), IssuanceUsage)
 	if err != nil {
@@ -548,10 +582,18 @@ func issueCertFromCsr(ac *acmeContext, csr *x509.CertificateRequest) (*certutil.
 		return nil, "", fmt.Errorf("verification of parsed bundle failed: %w", err)
 	}
 
-	// We only allow ServerAuth key usage from ACME issued certs.
-	for _, usage := range parsedBundle.Certificate.ExtKeyUsage {
-		if usage != x509.ExtKeyUsageServerAuth {
-			return nil, "", fmt.Errorf("%w: ACME certs only allow ServerAuth key usage", ErrBadCSR)
+	// We only allow ServerAuth key usage from ACME issued certs
+	// when configuration does not allow usage of ExtKeyusage field.
+	config, err := ac.sc.Backend.acmeState.getConfigWithUpdate(ac.sc)
+	if err != nil {
+		return nil, "", fmt.Errorf("failed to fetch ACME configuration: %w", err)
+	}
+
+	if !config.AllowRoleExtKeyUsage {
+		for _, usage := range parsedBundle.Certificate.ExtKeyUsage {
+			if usage != x509.ExtKeyUsageServerAuth {
+				return nil, "", fmt.Errorf("%w: ACME certs only allow ServerAuth key usage", ErrBadCSR)
+			}
 		}
 	}
 
@@ -585,7 +627,14 @@ func parseCsrFromFinalize(data map[string]interface{}) (*x509.CertificateRequest
 
 	for _, ext := range csr.Extensions {
 		if ext.Id.Equal(certutil.ExtensionBasicConstraintsOID) {
-			return nil, fmt.Errorf("%w: refusing to accept CSR with Basic Constraints extension", ErrBadCSR)
+			isCa, _, err := certutil.ParseBasicConstraintExtension(ext)
+			if err != nil {
+				return nil, fmt.Errorf("%w: refusing to accept CSR with Basic Constraints extension: %v", ErrBadCSR, err.Error())
+			}
+
+			if isCa {
+				return nil, fmt.Errorf("%w: refusing to accept CSR with Basic Constraints extension with CA set to true", ErrBadCSR)
+			}
 		}
 	}
 
@@ -811,7 +860,7 @@ func generateAuthorization(acct *acmeAccount, identifier *ACMEIdentifier) (*ACME
 	// Certain challenges have certain restrictions: DNS challenges cannot
 	// be used to validate IP addresses, and only DNS challenges can be used
 	// to validate wildcards.
-	allowedChallenges := []ACMEChallengeType{ACMEHTTPChallenge, ACMEDNSChallenge}
+	allowedChallenges := []ACMEChallengeType{ACMEHTTPChallenge, ACMEDNSChallenge, ACMEALPNChallenge}
 	if identifier.Type == ACMEIPIdentifier {
 		allowedChallenges = []ACMEChallengeType{ACMEHTTPChallenge}
 	} else if identifier.IsWildcard {

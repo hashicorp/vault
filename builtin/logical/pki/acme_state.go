@@ -77,10 +77,7 @@ func (a *acmeState) Initialize(b *backend, sc *storageContext) error {
 	}
 
 	// Kick off our ACME challenge validation engine.
-	if err := a.validator.Initialize(b, sc); err != nil {
-		return fmt.Errorf("error initializing ACME engine: %w", err)
-	}
-	go a.validator.Run(b, a)
+	go a.validator.Run(b, a, sc)
 
 	// All good.
 	return nil
@@ -106,7 +103,7 @@ func (a *acmeState) reloadConfigIfRequired(sc *storageContext) error {
 
 	config, err := sc.getAcmeConfig()
 	if err != nil {
-		return fmt.Errorf("failed reading config: %w", err)
+		return fmt.Errorf("failed reading ACME config: %w", err)
 	}
 
 	a.config = *config
@@ -125,6 +122,29 @@ func (a *acmeState) getConfigWithUpdate(sc *storageContext) (*acmeConfigEntry, e
 
 	configCopy := a.config
 	return &configCopy, nil
+}
+
+func (a *acmeState) getConfigWithForcedUpdate(sc *storageContext) (*acmeConfigEntry, error) {
+	a.markConfigDirty()
+	return a.getConfigWithUpdate(sc)
+}
+
+func (a *acmeState) writeConfig(sc *storageContext, config *acmeConfigEntry) (*acmeConfigEntry, error) {
+	a._config.Lock()
+	defer a._config.Unlock()
+
+	if err := sc.setAcmeConfig(config); err != nil {
+		a.markConfigDirty()
+		return nil, fmt.Errorf("failed writing ACME config: %w", err)
+	}
+
+	if config != nil {
+		a.config = *config
+	} else {
+		a.config = defaultAcmeConfig
+	}
+
+	return config, nil
 }
 
 func generateRandomBase64(srcBytes int) (string, error) {

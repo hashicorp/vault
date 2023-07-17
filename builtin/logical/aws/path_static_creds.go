@@ -13,13 +13,13 @@ import (
 const (
 	pathStaticCreds = "static-creds"
 
-	paramAccessKeyID      = "access_key_id"
-	paramSecretsAccessKey = "secret_access_key"
+	paramAccessKeyID      = "access_key"
+	paramSecretsAccessKey = "secret_key"
 )
 
 type awsCredentials struct {
-	AccessKeyID     string `json:"access_key_id" structs:"access_key_id" mapstructure:"access_key_id"`
-	SecretAccessKey string `json:"secret_access_key" structs:"secret_access_key" mapstructure:"secret_access_key"`
+	AccessKeyID     string `json:"access_key" structs:"access_key" mapstructure:"access_key"`
+	SecretAccessKey string `json:"secret_key" structs:"secret_key" mapstructure:"secret_key"`
 }
 
 func pathStaticCredentials(b *backend) *framework.Path {

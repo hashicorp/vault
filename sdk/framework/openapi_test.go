@@ -324,12 +324,15 @@ func TestOpenAPI_SpecialPaths(t *testing.T) {
 			path := Path{
 				Pattern: test.pattern,
 			}
-			specialPaths := &logical.Paths{
-				Root:            test.rootPaths,
-				Unauthenticated: test.unauthenticatedPaths,
+			backend := &Backend{
+				PathsSpecial: &logical.Paths{
+					Root:            test.rootPaths,
+					Unauthenticated: test.unauthenticatedPaths,
+				},
+				BackendType: logical.TypeLogical,
 			}
 
-			if err := documentPath(&path, specialPaths, "kv", logical.TypeLogical, doc); err != nil {
+			if err := documentPath(&path, backend, "kv", doc); err != nil {
 				t.Fatal(err)
 			}
 
@@ -593,7 +596,7 @@ func TestOpenAPI_CustomDecoder(t *testing.T) {
 	}
 
 	docOrig := NewOASDocument("version")
-	err := documentPath(p, nil, "kv", logical.TypeLogical, docOrig)
+	err := documentPath(p, &Backend{BackendType: logical.TypeLogical}, "kv", docOrig)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -866,7 +869,10 @@ func testPath(t *testing.T, path *Path, sp *logical.Paths, expectedJSON string) 
 	t.Helper()
 
 	doc := NewOASDocument("dummyversion")
-	if err := documentPath(path, sp, "kv", logical.TypeLogical, doc); err != nil {
+	if err := documentPath(path, &Backend{
+		PathsSpecial: sp,
+		BackendType:  logical.TypeLogical,
+	}, "kv", doc); err != nil {
 		t.Fatal(err)
 	}
 	doc.CreateOperationIDs("")

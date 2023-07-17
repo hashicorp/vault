@@ -31,9 +31,10 @@ function retry {
 
 echo "Installing Dependencies: $packages"
 if [ -f /etc/debian_version ]; then
-  # Make sure cloud-init is not modifying our sources list while we're trying
-  # to install.
-  retry 7 grep ec2 /etc/apt/sources.list
+  # Do our best to make sure that we don't race with cloud-init. Wait a reasonable time until we
+  # see ec2 in the sources list. Very rarely cloud-init will take longer than we wait. In that case
+  # we'll just install our packages.
+  retry 7 grep ec2 /etc/apt/sources.list || true
 
   cd /tmp
   retry 5 sudo apt update

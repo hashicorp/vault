@@ -1,8 +1,22 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package pki
 
 import (
+	"context"
+	"crypto"
+	"crypto/ecdsa"
+	"crypto/elliptic"
+	"crypto/rand"
 	"crypto/sha256"
+	"crypto/tls"
+	"crypto/x509"
+	"crypto/x509/pkix"
+	"encoding/asn1"
 	"encoding/base64"
+	"fmt"
+	"math/big"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -10,6 +24,8 @@ import (
 	"time"
 
 	"github.com/hashicorp/vault/builtin/logical/pki/dnstest"
+
+	"github.com/stretchr/testify/require"
 )
 
 type keyAuthorizationTestCase struct {
@@ -190,7 +206,7 @@ func TestAcmeValidateHTTP01Challenge(t *testing.T) {
 func TestAcmeValidateDNS01Challenge(t *testing.T) {
 	t.Parallel()
 
-	host := "alsdkjfasldkj.com"
+	host := "dadgarcorp.com"
 	resolver := dnstest.SetupResolver(t, host)
 	defer resolver.Cleanup()
 
@@ -217,5 +233,481 @@ func TestAcmeValidateDNS01Challenge(t *testing.T) {
 		}
 
 		resolver.RemoveAllRecords()
+	}
+}
+
+func TestAcmeValidateTLSALPN01Challenge(t *testing.T) {
+	// This test is not parallel because we modify ALPNPort to use a custom
+	// non-standard port _just for testing purposes_.
+	host := "localhost"
+	config := &acmeConfigEntry{}
+
+	returnedProtocols := []string{ALPNProtocol}
+	var certificates []*x509.Certificate
+	var privateKey crypto.PrivateKey
+
+	tlsCfg := &tls.Config{}
+	tlsCfg.GetConfigForClient = func(*tls.ClientHelloInfo) (*tls.Config, error) {
+		var retCfg tls.Config = *tlsCfg
+		retCfg.NextProtos = returnedProtocols
+		t.Logf("[alpn-server] returned protocol: %v", returnedProtocols)
+		return &retCfg, nil
+	}
+	tlsCfg.GetCertificate = func(*tls.ClientHelloInfo) (*tls.Certificate, error) {
+		var ret tls.Certificate
+		for index, cert := range certificates {
+			ret.Certificate = append(ret.Certificate, cert.Raw)
+			if index == 0 {
+				ret.Leaf = cert
+			}
+		}
+		ret.PrivateKey = privateKey
+		t.Logf("[alpn-server] returned certificates: %v", ret)
+		return &ret, nil
+	}
+
+	ln, err := tls.Listen("tcp", host+":0", tlsCfg)
+	require.NoError(t, err, "failed to listen with TLS config")
+
+	doOneAccept := func() {
+		t.Logf("[alpn-server] starting accept...")
+		connRaw, err := ln.Accept()
+		require.NoError(t, err, "failed to accept TLS connection")
+
+		t.Logf("[alpn-server] got connection...")
+		conn := tls.Server(connRaw.(*tls.Conn), tlsCfg)
+
+		ctx, cancel := context.WithTimeout(context.Background(), 1*time.Minute)
+		defer func() {
+			t.Logf("[alpn-server] defer context cancel executing")
+			cancel()
+		}()
+
+		t.Logf("[alpn-server] starting handshake...")
+		if err := conn.HandshakeContext(ctx); err != nil {
+			t.Logf("[alpn-server] got non-fatal error while handshaking connection: %v", err)
+		}
+
+		t.Logf("[alpn-server] closing connection...")
+		if err := conn.Close(); err != nil {
+			t.Logf("[alpn-server] got non-fatal error while closing connection: %v", err)
+		}
+	}
+
+	ALPNPort = strings.Split(ln.Addr().String(), ":")[1]
+
+	type alpnTestCase struct {
+		name         string
+		certificates []*x509.Certificate
+		privateKey   crypto.PrivateKey
+		protocols    []string
+		token        string
+		thumbprint   string
+		shouldFail   bool
+	}
+
+	var alpnTestCases []alpnTestCase
+	// Add all of our keyAuthorizationTestCases into alpnTestCases
+	for index, tc := range keyAuthorizationTestCases {
+		t.Logf("using keyAuthorizationTestCase [tc=%d] as alpnTestCase [tc=%d]...", index, len(alpnTestCases))
+		// Properly encode the authorization.
+		checksum := sha256.Sum256([]byte(tc.keyAuthz))
+		authz, err := asn1.Marshal(checksum[:])
+		require.NoError(t, err, "failed asn.1 marshalling authz")
+
+		// Build a self-signed certificate.
+		key, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+		require.NoError(t, err, "failed generating private key")
+		tmpl := &x509.Certificate{
+			Subject: pkix.Name{
+				CommonName: host,
+			},
+			Issuer: pkix.Name{
+				CommonName: host,
+			},
+			KeyUsage:     x509.KeyUsageDigitalSignature | x509.KeyUsageCertSign,
+			ExtKeyUsage:  []x509.ExtKeyUsage{x509.ExtKeyUsageAny},
+			PublicKey:    key.Public(),
+			SerialNumber: big.NewInt(1),
+			DNSNames:     []string{host},
+			ExtraExtensions: []pkix.Extension{
+				{
+					Id:       OIDACMEIdentifier,
+					Critical: true,
+					Value:    authz,
+				},
+			},
+			BasicConstraintsValid: true,
+			IsCA:                  false,
+		}
+		certBytes, err := x509.CreateCertificate(rand.Reader, tmpl, tmpl, key.Public(), key)
+		require.NoError(t, err, "failed to create certificate")
+		cert, err := x509.ParseCertificate(certBytes)
+		require.NoError(t, err, "failed to parse newly generated certificate")
+
+		newTc := alpnTestCase{
+			name:         fmt.Sprintf("keyAuthorizationTestCase[%d]", index),
+			certificates: []*x509.Certificate{cert},
+			privateKey:   key,
+			protocols:    []string{ALPNProtocol},
+			token:        tc.token,
+			thumbprint:   tc.thumbprint,
+			shouldFail:   tc.shouldFail,
+		}
+		alpnTestCases = append(alpnTestCases, newTc)
+	}
+
+	{
+		// Test case: Longer chain
+		// Build a self-signed certificate.
+		rootKey, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+		require.NoError(t, err, "failed generating root private key")
+		tmpl := &x509.Certificate{
+			Subject: pkix.Name{
+				CommonName: "Root CA",
+			},
+			Issuer: pkix.Name{
+				CommonName: "Root CA",
+			},
+			KeyUsage:              x509.KeyUsageDigitalSignature | x509.KeyUsageCertSign,
+			ExtKeyUsage:           []x509.ExtKeyUsage{x509.ExtKeyUsageAny},
+			PublicKey:             rootKey.Public(),
+			SerialNumber:          big.NewInt(1),
+			BasicConstraintsValid: true,
+			IsCA:                  true,
+		}
+		rootCertBytes, err := x509.CreateCertificate(rand.Reader, tmpl, tmpl, rootKey.Public(), rootKey)
+		require.NoError(t, err, "failed to create root certificate")
+		rootCert, err := x509.ParseCertificate(rootCertBytes)
+		require.NoError(t, err, "failed to parse newly generated root certificate")
+
+		// Compute our authorization.
+		checksum := sha256.Sum256([]byte("valid.valid"))
+		authz, err := asn1.Marshal(checksum[:])
+		require.NoError(t, err, "failed to marshal authz with asn.1 ")
+
+		// Build a leaf certificate which _could_ pass validation
+		key, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+		require.NoError(t, err, "failed generating leaf private key")
+		tmpl = &x509.Certificate{
+			Subject: pkix.Name{
+				CommonName: host,
+			},
+			Issuer: pkix.Name{
+				CommonName: "Root CA",
+			},
+			KeyUsage:     x509.KeyUsageDigitalSignature | x509.KeyUsageCertSign,
+			ExtKeyUsage:  []x509.ExtKeyUsage{x509.ExtKeyUsageAny},
+			PublicKey:    key.Public(),
+			SerialNumber: big.NewInt(2),
+			DNSNames:     []string{host},
+			ExtraExtensions: []pkix.Extension{
+				{
+					Id:       OIDACMEIdentifier,
+					Critical: true,
+					Value:    authz,
+				},
+			},
+			BasicConstraintsValid: true,
+			IsCA:                  false,
+		}
+		certBytes, err := x509.CreateCertificate(rand.Reader, tmpl, rootCert, key.Public(), rootKey)
+		require.NoError(t, err, "failed to create leaf certificate")
+		cert, err := x509.ParseCertificate(certBytes)
+		require.NoError(t, err, "failed to parse newly generated leaf certificate")
+
+		newTc := alpnTestCase{
+			name:         "longer chain with valid leaf",
+			certificates: []*x509.Certificate{cert, rootCert},
+			privateKey:   key,
+			protocols:    []string{ALPNProtocol},
+			token:        "valid",
+			thumbprint:   "valid",
+			shouldFail:   true,
+		}
+		alpnTestCases = append(alpnTestCases, newTc)
+	}
+
+	{
+		// Test case: cert without DNSSan
+		// Compute our authorization.
+		checksum := sha256.Sum256([]byte("valid.valid"))
+		authz, err := asn1.Marshal(checksum[:])
+		require.NoError(t, err, "failed to marshal authz with asn.1 ")
+
+		// Build a leaf certificate without a DNSSan
+		key, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+		require.NoError(t, err, "failed generating leaf private key")
+		tmpl := &x509.Certificate{
+			Subject: pkix.Name{
+				CommonName: host,
+			},
+			Issuer: pkix.Name{
+				CommonName: host,
+			},
+			KeyUsage:     x509.KeyUsageDigitalSignature | x509.KeyUsageCertSign,
+			ExtKeyUsage:  []x509.ExtKeyUsage{x509.ExtKeyUsageAny},
+			PublicKey:    key.Public(),
+			SerialNumber: big.NewInt(2),
+			// NO DNSNames
+			ExtraExtensions: []pkix.Extension{
+				{
+					Id:       OIDACMEIdentifier,
+					Critical: true,
+					Value:    authz,
+				},
+			},
+			BasicConstraintsValid: true,
+			IsCA:                  false,
+		}
+		certBytes, err := x509.CreateCertificate(rand.Reader, tmpl, tmpl, key.Public(), key)
+		require.NoError(t, err, "failed to create leaf certificate")
+		cert, err := x509.ParseCertificate(certBytes)
+		require.NoError(t, err, "failed to parse newly generated leaf certificate")
+
+		newTc := alpnTestCase{
+			name:         "valid keyauthz without valid dnsname",
+			certificates: []*x509.Certificate{cert},
+			privateKey:   key,
+			protocols:    []string{ALPNProtocol},
+			token:        "valid",
+			thumbprint:   "valid",
+			shouldFail:   true,
+		}
+		alpnTestCases = append(alpnTestCases, newTc)
+	}
+
+	{
+		// Test case: cert without matching DNSSan
+		// Compute our authorization.
+		checksum := sha256.Sum256([]byte("valid.valid"))
+		authz, err := asn1.Marshal(checksum[:])
+		require.NoError(t, err, "failed to marshal authz with asn.1 ")
+
+		// Build a leaf certificate which fails validation due to bad DNSName
+		key, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+		require.NoError(t, err, "failed generating leaf private key")
+		tmpl := &x509.Certificate{
+			Subject: pkix.Name{
+				CommonName: host,
+			},
+			Issuer: pkix.Name{
+				CommonName: host,
+			},
+			KeyUsage:     x509.KeyUsageDigitalSignature | x509.KeyUsageCertSign,
+			ExtKeyUsage:  []x509.ExtKeyUsage{x509.ExtKeyUsageAny},
+			PublicKey:    key.Public(),
+			SerialNumber: big.NewInt(2),
+			DNSNames:     []string{host + ".dadgarcorp.com" /* not matching host! */},
+			ExtraExtensions: []pkix.Extension{
+				{
+					Id:       OIDACMEIdentifier,
+					Critical: true,
+					Value:    authz,
+				},
+			},
+			BasicConstraintsValid: true,
+			IsCA:                  false,
+		}
+		certBytes, err := x509.CreateCertificate(rand.Reader, tmpl, tmpl, key.Public(), key)
+		require.NoError(t, err, "failed to create leaf certificate")
+		cert, err := x509.ParseCertificate(certBytes)
+		require.NoError(t, err, "failed to parse newly generated leaf certificate")
+
+		newTc := alpnTestCase{
+			name:         "valid keyauthz without matching dnsname",
+			certificates: []*x509.Certificate{cert},
+			privateKey:   key,
+			protocols:    []string{ALPNProtocol},
+			token:        "valid",
+			thumbprint:   "valid",
+			shouldFail:   true,
+		}
+		alpnTestCases = append(alpnTestCases, newTc)
+	}
+
+	{
+		// Test case: cert with additional SAN
+		// Compute our authorization.
+		checksum := sha256.Sum256([]byte("valid.valid"))
+		authz, err := asn1.Marshal(checksum[:])
+		require.NoError(t, err, "failed to marshal authz with asn.1 ")
+
+		// Build a leaf certificate which has an invalid additional SAN
+		key, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+		require.NoError(t, err, "failed generating leaf private key")
+		tmpl := &x509.Certificate{
+			Subject: pkix.Name{
+				CommonName: host,
+			},
+			Issuer: pkix.Name{
+				CommonName: host,
+			},
+			KeyUsage:       x509.KeyUsageDigitalSignature | x509.KeyUsageCertSign,
+			ExtKeyUsage:    []x509.ExtKeyUsage{x509.ExtKeyUsageAny},
+			PublicKey:      key.Public(),
+			SerialNumber:   big.NewInt(2),
+			DNSNames:       []string{host},
+			EmailAddresses: []string{"webmaster@" + host}, /* unexpected */
+			ExtraExtensions: []pkix.Extension{
+				{
+					Id:       OIDACMEIdentifier,
+					Critical: true,
+					Value:    authz,
+				},
+			},
+			BasicConstraintsValid: true,
+			IsCA:                  false,
+		}
+		certBytes, err := x509.CreateCertificate(rand.Reader, tmpl, tmpl, key.Public(), key)
+		require.NoError(t, err, "failed to create leaf certificate")
+		cert, err := x509.ParseCertificate(certBytes)
+		require.NoError(t, err, "failed to parse newly generated leaf certificate")
+
+		newTc := alpnTestCase{
+			name:         "valid keyauthz with additional email SANs",
+			certificates: []*x509.Certificate{cert},
+			privateKey:   key,
+			protocols:    []string{ALPNProtocol},
+			token:        "valid",
+			thumbprint:   "valid",
+			shouldFail:   true,
+		}
+		alpnTestCases = append(alpnTestCases, newTc)
+	}
+
+	{
+		// Test case: cert without CN
+		// Compute our authorization.
+		checksum := sha256.Sum256([]byte("valid.valid"))
+		authz, err := asn1.Marshal(checksum[:])
+		require.NoError(t, err, "failed to marshal authz with asn.1 ")
+
+		// Build a leaf certificate which should pass validation
+		key, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+		require.NoError(t, err, "failed generating leaf private key")
+		tmpl := &x509.Certificate{
+			Subject:      pkix.Name{},
+			Issuer:       pkix.Name{},
+			KeyUsage:     x509.KeyUsageDigitalSignature | x509.KeyUsageCertSign,
+			ExtKeyUsage:  []x509.ExtKeyUsage{x509.ExtKeyUsageAny},
+			PublicKey:    key.Public(),
+			SerialNumber: big.NewInt(2),
+			DNSNames:     []string{host},
+			ExtraExtensions: []pkix.Extension{
+				{
+					Id:       OIDACMEIdentifier,
+					Critical: true,
+					Value:    authz,
+				},
+			},
+			BasicConstraintsValid: true,
+			IsCA:                  false,
+		}
+		certBytes, err := x509.CreateCertificate(rand.Reader, tmpl, tmpl, key.Public(), key)
+		require.NoError(t, err, "failed to create leaf certificate")
+		cert, err := x509.ParseCertificate(certBytes)
+		require.NoError(t, err, "failed to parse newly generated leaf certificate")
+
+		newTc := alpnTestCase{
+			name:         "valid certificate; no Subject/Issuer (missing CN)",
+			certificates: []*x509.Certificate{cert},
+			privateKey:   key,
+			protocols:    []string{ALPNProtocol},
+			token:        "valid",
+			thumbprint:   "valid",
+			shouldFail:   false,
+		}
+		alpnTestCases = append(alpnTestCases, newTc)
+	}
+
+	{
+		// Test case: cert without the extension
+		// Build a leaf certificate which should fail validation
+		key, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+		require.NoError(t, err, "failed generating leaf private key")
+		tmpl := &x509.Certificate{
+			Subject:               pkix.Name{},
+			Issuer:                pkix.Name{},
+			KeyUsage:              x509.KeyUsageDigitalSignature | x509.KeyUsageCertSign,
+			ExtKeyUsage:           []x509.ExtKeyUsage{x509.ExtKeyUsageAny},
+			PublicKey:             key.Public(),
+			SerialNumber:          big.NewInt(1),
+			DNSNames:              []string{host},
+			BasicConstraintsValid: true,
+			IsCA:                  true,
+		}
+		certBytes, err := x509.CreateCertificate(rand.Reader, tmpl, tmpl, key.Public(), key)
+		require.NoError(t, err, "failed to create leaf certificate")
+		cert, err := x509.ParseCertificate(certBytes)
+		require.NoError(t, err, "failed to parse newly generated leaf certificate")
+
+		newTc := alpnTestCase{
+			name:         "missing required acmeIdentifier extension",
+			certificates: []*x509.Certificate{cert},
+			privateKey:   key,
+			protocols:    []string{ALPNProtocol},
+			token:        "valid",
+			thumbprint:   "valid",
+			shouldFail:   true,
+		}
+		alpnTestCases = append(alpnTestCases, newTc)
+	}
+
+	{
+		// Test case: root without a leaf
+		// Build a self-signed certificate.
+		rootKey, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+		require.NoError(t, err, "failed generating root private key")
+		tmpl := &x509.Certificate{
+			Subject: pkix.Name{
+				CommonName: "Root CA",
+			},
+			Issuer: pkix.Name{
+				CommonName: "Root CA",
+			},
+			KeyUsage:              x509.KeyUsageDigitalSignature | x509.KeyUsageCertSign,
+			ExtKeyUsage:           []x509.ExtKeyUsage{x509.ExtKeyUsageAny},
+			PublicKey:             rootKey.Public(),
+			SerialNumber:          big.NewInt(1),
+			BasicConstraintsValid: true,
+			IsCA:                  true,
+		}
+		rootCertBytes, err := x509.CreateCertificate(rand.Reader, tmpl, tmpl, rootKey.Public(), rootKey)
+		require.NoError(t, err, "failed to create root certificate")
+		rootCert, err := x509.ParseCertificate(rootCertBytes)
+		require.NoError(t, err, "failed to parse newly generated root certificate")
+
+		newTc := alpnTestCase{
+			name:         "root without leaf",
+			certificates: []*x509.Certificate{rootCert},
+			privateKey:   rootKey,
+			protocols:    []string{ALPNProtocol},
+			token:        "valid",
+			thumbprint:   "valid",
+			shouldFail:   true,
+		}
+		alpnTestCases = append(alpnTestCases, newTc)
+	}
+
+	for index, tc := range alpnTestCases {
+		t.Logf("\n\n[tc=%d/name=%s] starting validation", index, tc.name)
+		certificates = tc.certificates
+		privateKey = tc.privateKey
+		returnedProtocols = tc.protocols
+
+		// Attempt to validate the challenge.
+		go doOneAccept()
+		isValid, err := ValidateTLSALPN01Challenge(host, tc.token, tc.thumbprint, config)
+		if !isValid && err == nil {
+			t.Fatalf("[tc=%d/name=%s] expected failure to give reason via err (%v / %v)", index, tc.name, isValid, err)
+		}
+
+		expectedValid := !tc.shouldFail
+		if expectedValid != isValid {
+			t.Fatalf("[tc=%d/name=%s] got ret=%v (err=%v), expected ret=%v (shouldFail=%v)", index, tc.name, isValid, err, expectedValid, tc.shouldFail)
+		} else if err != nil {
+			t.Logf("[tc=%d/name=%s] got expected failure: err=%v", index, tc.name, err)
+		}
 	}
 }

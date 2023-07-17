@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package dnstest
 
 import (
@@ -171,10 +174,7 @@ func (ts *TestServer) buildZoneFile(target string) string {
 	return zone
 }
 
-func (ts *TestServer) PushConfig() {
-	ts.lock.Lock()
-	defer ts.lock.Unlock()
-
+func (ts *TestServer) pushNamedConf() {
 	contents := docker.NewBuildContext()
 	cfgPath := "/etc/bind/named.conf.options"
 	namedCfg := ts.buildNamedConf()
@@ -182,6 +182,13 @@ func (ts *TestServer) PushConfig() {
 	contents[cfgPath].SetOwners(0, 142) // root, bind
 
 	ts.t.Logf("Generated bind9 config (%s):\n%v\n", cfgPath, namedCfg)
+
+	err := ts.runner.CopyTo(ts.startup.Container.ID, "/", contents)
+	require.NoError(ts.t, err, "failed pushing updated named.conf.options to container")
+}
+
+func (ts *TestServer) pushZoneFiles() {
+	contents := docker.NewBuildContext()
 
 	for _, domain := range ts.domains {
 		path := "/var/cache/bind/" + domain + ".zone"
@@ -193,7 +200,28 @@ func (ts *TestServer) PushConfig() {
 	}
 
 	err := ts.runner.CopyTo(ts.startup.Container.ID, "/", contents)
-	require.NoError(ts.t, err, "failed pushing updated configuration to container")
+	require.NoError(ts.t, err, "failed pushing updated named.conf.options to container")
+}
+
+func (ts *TestServer) PushConfig() {
+	ts.lock.Lock()
+	defer ts.lock.Unlock()
+
+	_, _, _, err := ts.runner.RunCmdWithOutput(ts.ctx, ts.startup.Container.ID, []string{"rndc", "freeze"})
+	require.NoError(ts.t, err, "failed to freeze DNS config")
+
+	// There's two cases here:
+	//
+	// 1. We've added a new top-level domain name. Here, we want to make
+	//    sure the new zone file is pushed before we push the reference
+	//    to it.
+	// 2. We've just added a new. Here, the order doesn't matter, but
+	//    mostly likely the second push will be a no-op.
+	ts.pushZoneFiles()
+	ts.pushNamedConf()
+
+	_, _, _, err = ts.runner.RunCmdWithOutput(ts.ctx, ts.startup.Container.ID, []string{"rndc", "thaw"})
+	require.NoError(ts.t, err, "failed to thaw DNS config")
 
 	// Wait until our config has taken.
 	corehelpers.RetryUntil(ts.t, 15*time.Second, func() error {

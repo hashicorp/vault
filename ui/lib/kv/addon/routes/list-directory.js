@@ -18,6 +18,7 @@ export default class KvSecretsListRoute extends Route {
     const { path_to_secret } = this.paramsFor('list-directory');
     return path_to_secret ? normalizePath(path_to_secret) : '';
   }
+
   queryParams = {
     pageFilter: {
       refreshModel: true, // changing the "Filter secrets" input will cause the model hook to run again.

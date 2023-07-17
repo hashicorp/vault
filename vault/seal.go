@@ -10,7 +10,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"strings"
 	"sync/atomic"
 
 	aeadwrapper "github.com/hashicorp/go-kms-wrapping/wrappers/aead/v2"
@@ -20,7 +19,6 @@ import (
 
 	"github.com/ProtonMail/go-crypto/openpgp"
 	"github.com/ProtonMail/go-crypto/openpgp/packet"
-	"github.com/golang/protobuf/proto"
 	wrapping "github.com/hashicorp/go-kms-wrapping/v2"
 	"github.com/hashicorp/vault/vault/seal"
 )
@@ -455,28 +453,13 @@ func writeStoredKeys(ctx context.Context, storage physical.Backend, encryptor se
 		return fmt.Errorf("no keys provided")
 	}
 
-	buf, err := json.Marshal(keys)
-	if err != nil {
-		return fmt.Errorf("failed to encode keys for storage: %w", err)
-	}
-
 	// Encrypt and marshal the keys
-	blobInfo, err := encryptor.Encrypt(ctx, buf, nil)
-	if err != nil {
-		return &ErrEncrypt{Err: fmt.Errorf("failed to encrypt keys for storage: %w", err)}
-	}
-
-	value, err := proto.Marshal(blobInfo)
+	pe, err := SealWrapStoredBarrierKeys(ctx, encryptor, keys)
 	if err != nil {
 		return fmt.Errorf("failed to marshal value for storage: %w", err)
 	}
 
 	// Store the seal configuration.
-	pe := &physical.Entry{
-		Key:   StoredBarrierKeysPath, // TODO(SEALHA): will we need to store more than one set of keys?
-		Value: value,
-	}
-
 	if err := storage.Put(ctx, pe); err != nil {
 		return fmt.Errorf("failed to write keys to storage: %w", err)
 	}
@@ -496,24 +479,5 @@ func readStoredKeys(ctx context.Context, storage physical.Backend, encryptor sea
 		return nil, nil
 	}
 
-	blobInfo := &wrapping.BlobInfo{}
-	if err := proto.Unmarshal(pe.Value, blobInfo); err != nil {
-		return nil, fmt.Errorf("failed to proto decode stored keys: %w", err)
-	}
-
-	pt, err := encryptor.Decrypt(ctx, blobInfo, nil)
-	if err != nil {
-		if strings.Contains(err.Error(), "message authentication failed") {
-			return nil, &ErrInvalidKey{Reason: fmt.Sprintf("failed to decrypt keys from storage: %v", err)}
-		}
-		return nil, &ErrDecrypt{Err: fmt.Errorf("failed to decrypt keys from storage: %w", err)}
-	}
-
-	// Decode the barrier entry
-	var keys [][]byte
-	if err := json.Unmarshal(pt, &keys); err != nil {
-		return nil, fmt.Errorf("failed to decode stored keys: %v", err)
-	}
-
-	return keys, nil
+	return UnsealWrapStoredBarrierKeys(ctx, encryptor, pe)
 }
