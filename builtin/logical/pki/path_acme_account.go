@@ -405,6 +405,7 @@ func (b *backend) tidyAcmeAccountByThumbprint(as *acmeState, sc *storageContext,
 	if err != nil {
 		return err
 	}
+	account.KeyId = thumbprint.Kid
 
 	// Tidy Orders On the Account
 	orderIds, err := as.ListOrderIds(sc, thumbprint.Kid)
