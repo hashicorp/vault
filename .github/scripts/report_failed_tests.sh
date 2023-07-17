@@ -15,7 +15,8 @@ fi
 
 # Create a comment to be posted on the PR
 # This comment reports failed jobs and the url to the failed workflow
-BODY="CI Test Results:\n${TABLE_DATA}"
+BODY="CI Test Results:
+${TABLE_DATA}"
 
 source ./.github/scripts/gh_comment.sh
 

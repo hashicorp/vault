@@ -15,6 +15,7 @@ function update_or_create_comment {
   comment_id=$(gh api \
                  -H "Accept: application/vnd.github+json" \
                  -H "X-GitHub-Api-Version: 2022-11-28" \
+                 --paginate \
                  /repos/hashicorp/"$REPO"/issues/"$PR_NUMBER"/comments | jq -r --arg SEARCH_KEY "$SEARCH_KEY" '.[] | select (.body | contains($SEARCH_KEY)) | .id')
 
   if [[ "$comment_id" != "" ]]; then
