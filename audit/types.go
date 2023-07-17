@@ -38,9 +38,9 @@ type audit struct {
 	RequiredFormat auditFormat       `json:"format"`
 }
 
-type AuditOption func(*AuditOptions) error
+type Option func(*options) error
 
-type AuditOptions struct {
+type options struct {
 	withID          string
 	withNow         time.Time
 	withSubtype     auditSubtype

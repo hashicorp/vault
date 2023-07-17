@@ -13,7 +13,7 @@ import (
 // TestAuditEvent_New exercises the newAudit func to create audit events.
 func TestAuditEvent_New(t *testing.T) {
 	tests := map[string]struct {
-		Options              []AuditOption
+		Options              []Option
 		IsErrorExpected      bool
 		ExpectedErrorMessage string
 		ExpectedID           string
@@ -27,18 +27,18 @@ func TestAuditEvent_New(t *testing.T) {
 			IsErrorExpected:      true,
 			ExpectedErrorMessage: "audit.newAudit: audit.(audit).validate: audit.(auditSubtype).validate: '' is not a valid event subtype: invalid parameter",
 		},
-		"empty-option": {
-			Options:              []AuditOption{},
+		"empty-Option": {
+			Options:              []Option{},
 			IsErrorExpected:      true,
 			ExpectedErrorMessage: "audit.newAudit: audit.(audit).validate: audit.(auditSubtype).validate: '' is not a valid event subtype: invalid parameter",
 		},
 		"bad-id": {
-			Options:              []AuditOption{WithID("")},
+			Options:              []Option{WithID("")},
 			IsErrorExpected:      true,
 			ExpectedErrorMessage: "audit.newAudit: error applying options: id cannot be empty",
 		},
 		"good": {
-			Options: []AuditOption{
+			Options: []Option{
 				WithID("audit_123"),
 				WithFormat(string(AuditFormatJSON)),
 				WithSubtype(string(AuditResponseType)),
@@ -51,7 +51,7 @@ func TestAuditEvent_New(t *testing.T) {
 			ExpectedFormat:    AuditFormatJSON,
 		},
 		"good-no-time": {
-			Options: []AuditOption{
+			Options: []Option{
 				WithID("audit_123"),
 				WithFormat(string(AuditFormatJSON)),
 				WithSubtype(string(AuditResponseType)),

@@ -16,7 +16,7 @@ import (
 // newAudit should be used to create an audit event.
 // auditSubtype and auditFormat are needed for audit.
 // It will use the supplied Options, generate an ID if required, and validate the event.
-func newAudit(opt ...AuditOption) (*audit, error) {
+func newAudit(opt ...Option) (*audit, error) {
 	const op = "audit.newAudit"
 
 	// Get the default options

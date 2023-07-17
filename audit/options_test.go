@@ -11,7 +11,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// TestOptions_WithFormat exercises WithFormat option to ensure it performs as expected.
+// TestOptions_WithFormat exercises WithFormat Option to ensure it performs as expected.
 func TestOptions_WithFormat(t *testing.T) {
 	tests := map[string]struct {
 		Value                string
@@ -51,7 +51,7 @@ func TestOptions_WithFormat(t *testing.T) {
 		tc := tc
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
-			options := &AuditOptions{}
+			options := &options{}
 			applyOption := WithFormat(tc.Value)
 			err := applyOption(options)
 			switch {
@@ -66,7 +66,7 @@ func TestOptions_WithFormat(t *testing.T) {
 	}
 }
 
-// TestOptions_WithSubtype exercises WithSubtype option to ensure it performs as expected.
+// TestOptions_WithSubtype exercises WithSubtype Option to ensure it performs as expected.
 func TestOptions_WithSubtype(t *testing.T) {
 	tests := map[string]struct {
 		Value                string
@@ -96,7 +96,7 @@ func TestOptions_WithSubtype(t *testing.T) {
 		tc := tc
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
-			options := &AuditOptions{}
+			options := &options{}
 			applyOption := WithSubtype(tc.Value)
 			err := applyOption(options)
 			switch {
@@ -111,7 +111,7 @@ func TestOptions_WithSubtype(t *testing.T) {
 	}
 }
 
-// TestOptions_WithNow exercises WithNow option to ensure it performs as expected.
+// TestOptions_WithNow exercises WithNow Option to ensure it performs as expected.
 func TestOptions_WithNow(t *testing.T) {
 	tests := map[string]struct {
 		Value                time.Time
@@ -137,7 +137,7 @@ func TestOptions_WithNow(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			options := &AuditOptions{}
+			options := &options{}
 			applyOption := WithNow(tc.Value)
 			err := applyOption(options)
 			switch {
@@ -152,7 +152,7 @@ func TestOptions_WithNow(t *testing.T) {
 	}
 }
 
-// TestOptions_WithID exercises WithID option to ensure it performs as expected.
+// TestOptions_WithID exercises WithID Option to ensure it performs as expected.
 func TestOptions_WithID(t *testing.T) {
 	tests := map[string]struct {
 		Value                string
@@ -182,7 +182,7 @@ func TestOptions_WithID(t *testing.T) {
 		tc := tc
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
-			options := &AuditOptions{}
+			options := &options{}
 			applyOption := WithID(tc.Value)
 			err := applyOption(options)
 			switch {
@@ -197,7 +197,7 @@ func TestOptions_WithID(t *testing.T) {
 	}
 }
 
-// TestOptions_WithFacility exercises WithFacility option to ensure it performs as expected.
+// TestOptions_WithFacility exercises WithFacility Option to ensure it performs as expected.
 func TestOptions_WithFacility(t *testing.T) {
 	tests := map[string]struct {
 		Value         string
@@ -226,7 +226,7 @@ func TestOptions_WithFacility(t *testing.T) {
 		tc := tc
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
-			options := &AuditOptions{}
+			options := &options{}
 			applyOption := WithFacility(tc.Value)
 			err := applyOption(options)
 			require.NoError(t, err)
@@ -235,7 +235,7 @@ func TestOptions_WithFacility(t *testing.T) {
 	}
 }
 
-// TestOptions_WithTag exercises WithTag option to ensure it performs as expected.
+// TestOptions_WithTag exercises WithTag Option to ensure it performs as expected.
 func TestOptions_WithTag(t *testing.T) {
 	tests := map[string]struct {
 		Value         string
@@ -264,7 +264,7 @@ func TestOptions_WithTag(t *testing.T) {
 		tc := tc
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
-			options := &AuditOptions{}
+			options := &options{}
 			applyOption := WithTag(tc.Value)
 			err := applyOption(options)
 			require.NoError(t, err)
@@ -273,7 +273,7 @@ func TestOptions_WithTag(t *testing.T) {
 	}
 }
 
-// TestOptions_WithSocketType exercises WithSocketType option to ensure it performs as expected.
+// TestOptions_WithSocketType exercises WithSocketType Option to ensure it performs as expected.
 func TestOptions_WithSocketType(t *testing.T) {
 	tests := map[string]struct {
 		Value         string
@@ -302,7 +302,7 @@ func TestOptions_WithSocketType(t *testing.T) {
 		tc := tc
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
-			options := &AuditOptions{}
+			options := &options{}
 			applyOption := WithSocketType(tc.Value)
 			err := applyOption(options)
 			require.NoError(t, err)
@@ -311,7 +311,7 @@ func TestOptions_WithSocketType(t *testing.T) {
 	}
 }
 
-// TestOptions_WithMaxDuration exercises WithMaxDuration option to ensure it performs as expected.
+// TestOptions_WithMaxDuration exercises WithMaxDuration Option to ensure it performs as expected.
 func TestOptions_WithMaxDuration(t *testing.T) {
 	tests := map[string]struct {
 		Value                string
@@ -350,7 +350,7 @@ func TestOptions_WithMaxDuration(t *testing.T) {
 		tc := tc
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
-			options := &AuditOptions{}
+			options := &options{}
 			applyOption := WithMaxDuration(tc.Value)
 			err := applyOption(options)
 			switch {
@@ -365,7 +365,7 @@ func TestOptions_WithMaxDuration(t *testing.T) {
 	}
 }
 
-// TestOptions_WithFileMode exercises WithFileMode option to ensure it performs as expected.
+// TestOptions_WithFileMode exercises WithFileMode Option to ensure it performs as expected.
 func TestOptions_WithFileMode(t *testing.T) {
 	tests := map[string]struct {
 		Value                string
@@ -406,7 +406,7 @@ func TestOptions_WithFileMode(t *testing.T) {
 		tc := tc
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
-			options := &AuditOptions{}
+			options := &options{}
 			applyOption := WithFileMode(tc.Value)
 			err := applyOption(options)
 			switch {
@@ -417,7 +417,7 @@ func TestOptions_WithFileMode(t *testing.T) {
 				require.NoError(t, err)
 				switch {
 				case tc.IsNilExpected:
-					// Optional option 'not supplied' (i.e. was whitespace/empty string)
+					// Optional Option 'not supplied' (i.e. was whitespace/empty string)
 					require.Nil(t, options.withFileMode)
 				default:
 					// Dereference the pointer, so we can examine the file mode.
@@ -442,7 +442,7 @@ func TestOptions_Default(t *testing.T) {
 // TestOptions_Opts exercises GetOpts with various Option values.
 func TestOptions_Opts(t *testing.T) {
 	tests := map[string]struct {
-		opts                 []AuditOption
+		opts                 []Option
 		IsErrorExpected      bool
 		ExpectedErrorMessage string
 		ExpectedID           string
@@ -457,12 +457,12 @@ func TestOptions_Opts(t *testing.T) {
 			IsNowExpected:   true,
 		},
 		"empty-options": {
-			opts:            []AuditOption{},
+			opts:            []Option{},
 			IsErrorExpected: false,
 			IsNowExpected:   true,
 		},
 		"with-multiple-valid-id": {
-			opts: []AuditOption{
+			opts: []Option{
 				WithID("qwerty"),
 				WithID("juan"),
 			},
@@ -471,7 +471,7 @@ func TestOptions_Opts(t *testing.T) {
 			IsNowExpected:   true,
 		},
 		"with-multiple-valid-subtype": {
-			opts: []AuditOption{
+			opts: []Option{
 				WithSubtype("AuditRequest"),
 				WithSubtype("AuditResponse"),
 			},
@@ -480,7 +480,7 @@ func TestOptions_Opts(t *testing.T) {
 			IsNowExpected:   true,
 		},
 		"with-multiple-valid-format": {
-			opts: []AuditOption{
+			opts: []Option{
 				WithFormat("json"),
 				WithFormat("jsonx"),
 			},
@@ -489,7 +489,7 @@ func TestOptions_Opts(t *testing.T) {
 			IsNowExpected:   true,
 		},
 		"with-multiple-valid-now": {
-			opts: []AuditOption{
+			opts: []Option{
 				WithNow(time.Date(2023, time.July, 4, 12, 3, 0, 0, time.Local)),
 				WithNow(time.Date(2023, time.July, 4, 13, 3, 0, 0, time.Local)),
 			},
@@ -498,7 +498,7 @@ func TestOptions_Opts(t *testing.T) {
 			IsNowExpected:   false,
 		},
 		"with-multiple-valid-then-invalid-now": {
-			opts: []AuditOption{
+			opts: []Option{
 				WithNow(time.Date(2023, time.July, 4, 12, 3, 0, 0, time.Local)),
 				WithNow(time.Time{}),
 			},
@@ -506,7 +506,7 @@ func TestOptions_Opts(t *testing.T) {
 			ExpectedErrorMessage: "cannot specify 'now' to be the zero time instant",
 		},
 		"with-multiple-valid-options": {
-			opts: []AuditOption{
+			opts: []Option{
 				WithID("qwerty"),
 				WithSubtype("AuditRequest"),
 				WithFormat("json"),

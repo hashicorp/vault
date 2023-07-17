@@ -22,7 +22,7 @@ type AuditSyslogSink struct {
 
 // NewAuditSyslogSink should be used to create a new AuditSyslogSink.
 // Accepted options: WithFacility and WithTag.
-func NewAuditSyslogSink(format auditFormat, opt ...AuditOption) (*AuditSyslogSink, error) {
+func NewAuditSyslogSink(format auditFormat, opt ...Option) (*AuditSyslogSink, error) {
 	const op = "audit.NewAuditSyslogSink"
 
 	opts, err := getOpts(opt...)

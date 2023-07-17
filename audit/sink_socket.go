@@ -29,7 +29,7 @@ type AuditSocketSink struct {
 
 // NewAuditSocketSink should be used to create a new AuditSocketSink.
 // Accepted options: WithMaxDuration and WithSocketType.
-func NewAuditSocketSink(format auditFormat, address string, opt ...AuditOption) (*AuditSocketSink, error) {
+func NewAuditSocketSink(format auditFormat, address string, opt ...Option) (*AuditSocketSink, error) {
 	const op = "audit.NewAuditSocketSink"
 
 	opts, err := getOpts(opt...)
