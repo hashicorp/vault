@@ -26,10 +26,8 @@ func fakeJSONxAuditEvent(t *testing.T, subtype subtype, input *logical.LogInput)
 
 	date := time.Date(2023, time.July, 11, 15, 49, 10, 0, time.Local)
 
-	auditEvent, err := newEvent(
+	auditEvent, err := newEvent(subtype, JSONxFormat,
 		WithID("123"),
-		WithSubtype(string(subtype)),
-		WithFormat(string(JSONxFormat)),
 		WithNow(date),
 	)
 	require.NoError(t, err)

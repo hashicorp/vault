@@ -14,6 +14,8 @@ import (
 func TestAuditEvent_New(t *testing.T) {
 	tests := map[string]struct {
 		Options              []Option
+		Subtype              subtype
+		Format               format
 		IsErrorExpected      bool
 		ExpectedErrorMessage string
 		ExpectedID           string
@@ -24,16 +26,22 @@ func TestAuditEvent_New(t *testing.T) {
 	}{
 		"nil": {
 			Options:              nil,
+			Subtype:              subtype(""),
+			Format:               format(""),
 			IsErrorExpected:      true,
 			ExpectedErrorMessage: "audit.newEvent: audit.(auditEvent).validate: audit.(subtype).validate: '' is not a valid event subtype: invalid parameter",
 		},
 		"empty-Option": {
 			Options:              []Option{},
+			Subtype:              subtype(""),
+			Format:               format(""),
 			IsErrorExpected:      true,
 			ExpectedErrorMessage: "audit.newEvent: audit.(auditEvent).validate: audit.(subtype).validate: '' is not a valid event subtype: invalid parameter",
 		},
 		"bad-id": {
 			Options:              []Option{WithID("")},
+			Subtype:              ResponseType,
+			Format:               JSONFormat,
 			IsErrorExpected:      true,
 			ExpectedErrorMessage: "audit.newEvent: error applying options: id cannot be empty",
 		},
@@ -44,11 +52,13 @@ func TestAuditEvent_New(t *testing.T) {
 				WithSubtype(string(ResponseType)),
 				WithNow(time.Date(2023, time.July, 4, 12, 3, 0, 0, time.Local)),
 			},
+			Subtype:           RequestType,
+			Format:            JSONxFormat,
 			IsErrorExpected:   false,
 			ExpectedID:        "audit_123",
 			ExpectedTimestamp: time.Date(2023, time.July, 4, 12, 3, 0, 0, time.Local),
-			ExpectedSubtype:   ResponseType,
-			ExpectedFormat:    JSONFormat,
+			ExpectedSubtype:   RequestType,
+			ExpectedFormat:    JSONxFormat,
 		},
 		"good-no-time": {
 			Options: []Option{
@@ -56,10 +66,12 @@ func TestAuditEvent_New(t *testing.T) {
 				WithFormat(string(JSONFormat)),
 				WithSubtype(string(ResponseType)),
 			},
+			Subtype:         RequestType,
+			Format:          JSONxFormat,
 			IsErrorExpected: false,
 			ExpectedID:      "audit_123",
-			ExpectedSubtype: ResponseType,
-			ExpectedFormat:  JSONFormat,
+			ExpectedSubtype: RequestType,
+			ExpectedFormat:  JSONxFormat,
 			IsNowExpected:   true,
 		},
 	}
@@ -70,7 +82,7 @@ func TestAuditEvent_New(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			audit, err := newEvent(tc.Options...)
+			audit, err := newEvent(tc.Subtype, tc.Format, tc.Options...)
 			switch {
 			case tc.IsErrorExpected:
 				require.Error(t, err)
