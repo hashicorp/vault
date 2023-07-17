@@ -27,9 +27,8 @@ export default class DashboardVaultVersionTitle extends Component {
   }
 
   get namespaceDisplay() {
-    const ns = this.namespace.path;
-    if (ns.inRootNamespace) return 'root';
-    const parts = ns?.split('/');
+    if (this.namespace.inRootNamespace) return 'root';
+    const parts = this.namespace.path?.split('/');
     return parts[parts.length - 1];
   }
 }
