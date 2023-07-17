@@ -8,17 +8,13 @@ import (
 	"strings"
 	"time"
 
-	"github.com/hashicorp/vault/internal/observability/event"
-
 	"github.com/hashicorp/go-secure-stdlib/parseutil"
 )
 
 // getDefaultOptions returns AuditOptions with their default values.
 func getDefaultOptions() AuditOptions {
 	return AuditOptions{
-		Options: event.Options{
-			WithNow: time.Now(),
-		},
+		withNow:         time.Now(),
 		withFacility:    "AUTH",
 		withTag:         "vault",
 		withSocketType:  "tcp",
@@ -52,7 +48,7 @@ func WithID(id string) AuditOption {
 		case id == "":
 			err = errors.New("id cannot be empty")
 		default:
-			o.WithID = id
+			o.withID = id
 		}
 
 		return err
@@ -68,7 +64,7 @@ func WithNow(now time.Time) AuditOption {
 		case now.IsZero():
 			err = errors.New("cannot specify 'now' to be the zero time instant")
 		default:
-			o.WithNow = now
+			o.withNow = now
 		}
 
 		return err

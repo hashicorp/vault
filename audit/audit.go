@@ -25,18 +25,18 @@ func newAudit(opt ...AuditOption) (*audit, error) {
 		return nil, fmt.Errorf("%s: error applying options: %w", op, err)
 	}
 
-	if opts.WithID == "" {
+	if opts.withID == "" {
 		var err error
 
-		opts.WithID, err = event.NewID(string(event.AuditType))
+		opts.withID, err = event.NewID(string(event.AuditType))
 		if err != nil {
 			return nil, fmt.Errorf("%s: error creating ID for event: %w", op, err)
 		}
 	}
 
 	audit := &audit{
-		ID:             opts.WithID,
-		Timestamp:      opts.WithNow,
+		ID:             opts.withID,
+		Timestamp:      opts.withNow,
 		Version:        auditVersion,
 		Subtype:        opts.withSubtype,
 		RequiredFormat: opts.withFormat,

@@ -133,24 +133,6 @@ func TestOptions_Opts(t *testing.T) {
 			ExpectedID:      "juan",
 			IsNowExpected:   true,
 		},
-		//"with-multiple-valid-subtype": {
-		//	opts: []Option{
-		//		WithSubtype("AuditRequest"),
-		//		WithSubtype("AuditResponse"),
-		//	},
-		//	IsErrorExpected: false,
-		//	ExpectedSubtype: AuditResponse,
-		//	IsNowExpected:   true,
-		//},
-		//"with-multiple-valid-format": {
-		//	opts: []Option{
-		//		WithFormat("json"),
-		//		WithFormat("jsonx"),
-		//	},
-		//	IsErrorExpected: false,
-		//	ExpectedFormat:  AuditFormatJSONx,
-		//	IsNowExpected:   true,
-		//},
 		"with-multiple-valid-now": {
 			opts: []Option{
 				WithNow(time.Date(2023, time.July, 4, 12, 3, 0, 0, time.Local)),
@@ -171,15 +153,11 @@ func TestOptions_Opts(t *testing.T) {
 		"with-multiple-valid-options": {
 			opts: []Option{
 				WithID("qwerty"),
-				/*	WithSubtype("AuditRequest"),
-					WithFormat("json"),*/
 				WithNow(time.Date(2023, time.July, 4, 12, 3, 0, 0, time.Local)),
 			},
 			IsErrorExpected: false,
 			ExpectedID:      "qwerty",
-			// ExpectedSubtype: AuditRequest,
-			// ExpectedFormat:  AuditFormatJSON,
-			ExpectedNow: time.Date(2023, time.July, 4, 12, 3, 0, 0, time.Local),
+			ExpectedNow:     time.Date(2023, time.July, 4, 12, 3, 0, 0, time.Local),
 		},
 	}
 
@@ -198,8 +176,6 @@ func TestOptions_Opts(t *testing.T) {
 				require.NotNil(t, opts)
 				require.NoError(t, err)
 				require.Equal(t, tc.ExpectedID, opts.WithID)
-				// require.Equal(t, tc.ExpectedSubtype, opts.withSubtype)
-				// require.Equal(t, tc.ExpectedFormat, opts.withFormat)
 				switch {
 				case tc.IsNowExpected:
 					require.True(t, time.Now().After(opts.WithNow))
@@ -212,5 +188,3 @@ func TestOptions_Opts(t *testing.T) {
 		})
 	}
 }
-
-// TODO: Reproduce some of these tests in audit/options.go

@@ -146,7 +146,7 @@ func TestOptions_WithNow(t *testing.T) {
 				require.EqualError(t, err, tc.ExpectedErrorMessage)
 			default:
 				require.NoError(t, err)
-				require.Equal(t, tc.ExpectedValue, options.WithNow)
+				require.Equal(t, tc.ExpectedValue, options.withNow)
 			}
 		})
 	}
@@ -191,7 +191,7 @@ func TestOptions_WithID(t *testing.T) {
 				require.EqualError(t, err, tc.ExpectedErrorMessage)
 			default:
 				require.NoError(t, err)
-				require.Equal(t, tc.ExpectedValue, options.WithID)
+				require.Equal(t, tc.ExpectedValue, options.withID)
 			}
 		})
 	}
@@ -432,8 +432,8 @@ func TestOptions_WithFileMode(t *testing.T) {
 func TestOptions_Default(t *testing.T) {
 	opts := getDefaultOptions()
 	require.NotNil(t, opts)
-	require.True(t, time.Now().After(opts.WithNow))
-	require.False(t, opts.WithNow.IsZero())
+	require.True(t, time.Now().After(opts.withNow))
+	require.False(t, opts.withNow.IsZero())
 	require.Equal(t, "AUTH", opts.withFacility)
 	require.Equal(t, "vault", opts.withTag)
 	require.Equal(t, 2*time.Second, opts.withMaxDuration)
@@ -534,15 +534,15 @@ func TestOptions_Opts(t *testing.T) {
 			default:
 				require.NotNil(t, opts)
 				require.NoError(t, err)
-				require.Equal(t, tc.ExpectedID, opts.WithID)
+				require.Equal(t, tc.ExpectedID, opts.withID)
 				require.Equal(t, tc.ExpectedSubtype, opts.withSubtype)
 				require.Equal(t, tc.ExpectedFormat, opts.withFormat)
 				switch {
 				case tc.IsNowExpected:
-					require.True(t, time.Now().After(opts.WithNow))
-					require.False(t, opts.WithNow.IsZero())
+					require.True(t, time.Now().After(opts.withNow))
+					require.False(t, opts.withNow.IsZero())
 				default:
-					require.Equal(t, tc.ExpectedNow, opts.WithNow)
+					require.Equal(t, tc.ExpectedNow, opts.withNow)
 				}
 
 			}

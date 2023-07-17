@@ -4,8 +4,6 @@ import (
 	"os"
 	"time"
 
-	"github.com/hashicorp/vault/internal/observability/event"
-
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
@@ -43,7 +41,8 @@ type audit struct {
 type AuditOption func(*AuditOptions) error
 
 type AuditOptions struct {
-	event.Options
+	withID          string
+	withNow         time.Time
 	withSubtype     auditSubtype
 	withFormat      auditFormat
 	withFileMode    *os.FileMode
