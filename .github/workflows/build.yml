@@ -299,10 +299,7 @@ jobs:
   completed-successfully:
     # We force a failure if any of the dependent jobs fail,
     # this is a workaround for the issue reported https://github.com/actions/runner/issues/2566
-    if: |
-      always() && (cancelled() ||
-      contains(needs.*.result, 'cancelled') ||
-      contains(needs.*.result, 'failure'))
+    if: always()
     runs-on: ubuntu-latest
     needs:
       - build-other
@@ -314,8 +311,7 @@ jobs:
       - test-docker-k8s
     steps:
       - run: |
-          echo "Some of the required build and test workflows have failed!"
-          exit 1
+          tr -d '\n' <<< '${{ toJSON(needs.*.result) }}' | grep -q -v -E '(failure|cancelled)'
 
   notify-completed-successfully-failures-oss:
     if: ${{ always() && github.repository == 'hashicorp/vault' && needs.completed-successfully.result == 'failure' && (github.ref_name == 'main' || startsWith(github.ref_name, 'release/')) }}
