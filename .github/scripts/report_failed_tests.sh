@@ -8,12 +8,14 @@ set -e
 [ ${RUN_ID:?} ]
 [ ${REPO:?} ]
 [ ${PR_NUMBER:?} ]
-[ ${TABLE_DATA:?} ]
+if [ -z "$TABLE_DATA" ]; then
+  echo "Invalid TABLE_DATA"
+  exit 1
+fi
 
-#TABLE_DATA=$(echo "$TABLE_DATA_B64" | base64 -d)
 # Create a comment to be posted on the PR
 # This comment reports failed jobs and the url to the failed workflow
-new_body="CI Test Results:\n${TABLE_DATA}"
+BODY="CI Test Results:\n${TABLE_DATA}"
 
 source ./.github/scripts/gh_comment.sh
 
