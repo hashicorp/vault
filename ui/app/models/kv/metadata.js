@@ -6,6 +6,7 @@
 import Model, { attr } from '@ember-data/model';
 import { withModelValidations } from 'vault/decorators/model-validations';
 import { withFormFields } from 'vault/decorators/model-form-fields';
+import { pathIsDirectory } from 'vault/lib/kv-breadcrumbs';
 
 const validations = {
   maxVersions: [
@@ -18,8 +19,9 @@ const formFieldProps = ['maxVersions', 'casRequired', 'deleteVersionAfter', 'cus
 @withModelValidations(validations)
 @withFormFields(formFieldProps)
 export default class KvSecretMetadataModel extends Model {
-  @attr('string') backend; // dynamic path of secret -- set on response from value passed to queryRecord.
+  @attr('string') backend;
   @attr('string') path;
+  @attr('string') fullSecretPath;
 
   @attr('number', {
     defaultValue: 0,
@@ -57,4 +59,10 @@ export default class KvSecretMetadataModel extends Model {
   @attr('number') oldestVersion;
   @attr('string') updatedTime;
   @attr('object') versions;
+
+  // used for KV list and list-directory view
+  get pathIsDirectory() {
+    // ex: beep/
+    return pathIsDirectory(this.path);
+  }
 }
