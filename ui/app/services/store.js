@@ -191,7 +191,7 @@ export default class StoreService extends Store {
   unloadRecord(record) {
     if (!this.isDestroyed && !this.isDestroying) {
       // Prevent unload attempt after test teardown, resulting in test failure
-      super(...arguments);
+      super.unloadRecord(...arguments);
     } else {
       debug('skipped unload record', record, record.id, record.itemType);
     }
@@ -200,7 +200,7 @@ export default class StoreService extends Store {
   unloadAll(type) {
     if (!this.isDestroyed && !this.isDestroying) {
       // Prevent unload attempt after test teardown, resulting in test failure
-      super(...arguments);
+      super.unloadAll(...arguments);
     } else {
       debug(`skipped unload model of type ${type} because store is destroyed`);
     }
