@@ -9,7 +9,7 @@ export default class KvSecretEditRoute extends Route {
   model() {
     // TODO add model. Needs to include a queryParam for version.
     const backend = this.secretMountPath.get();
-    const { name } = this.paramsFor('secrets.secret');
+    const { name } = this.paramsFor('secret');
     return hash({
       path: name,
       backend,
@@ -21,8 +21,8 @@ export default class KvSecretEditRoute extends Route {
 
     controller.breadcrumbs = [
       { label: 'secrets', route: 'secrets', linkExternal: true },
-      { label: resolvedModel.backend, route: 'secrets' },
-      { label: resolvedModel.path, route: 'secrets.secret.details', model: resolvedModel.path },
+      { label: resolvedModel.backend, route: 'list' },
+      { label: resolvedModel.path, route: 'secret.details', model: resolvedModel.path },
       { label: 'edit' },
     ];
   }

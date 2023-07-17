@@ -64,7 +64,7 @@ module('Integration | Component | kv | kv-page-header', function (hooks) {
 
   test('it renders a title, icon and tag if engine view', async function (assert) {
     await render(
-      hbs`<KvPageHeader @breadcrumbs={{this.breadcrumbs}} @model={{this.model}} @isEngineView="true"/>`,
+      hbs`<KvPageHeader @breadcrumbs={{this.breadcrumbs}} @model={{this.model}} @isEngineView="true" @pageTitle={{this.backend}}/>`,
       {
         owner: this.engine,
       }
@@ -79,7 +79,7 @@ module('Integration | Component | kv | kv-page-header', function (hooks) {
     await render(
       hbs`<KvPageHeader @model={{this.model}} @breadcrumbs={{this.breadcrumbs}} @isEngineView={{true}} >
     <:tabLinks>
-          <LinkTo @route="secrets" data-test-secrets-tab="Secrets">Secrets</LinkTo>
+          <LinkTo @route="list" data-test-secrets-tab="Secrets">Secrets</LinkTo>
           <LinkTo @route="configuration" data-test-secrets-tab="Configuration">Configuration</LinkTo>
   </:tabLinks>
   </KvPageHeader>

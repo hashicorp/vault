@@ -1,6 +1,6 @@
-<KvPageHeader @breadcrumbs={{@breadcrumbs}} @model={{@model}} @isEngineView={{true}}>
+<KvPageHeader @breadcrumbs={{@breadcrumbs}} @model={{@model}} @isEngineView={{true}} @pageTitle={{@pageTitle}}>
   <:tabLinks>
-    <LinkTo @route="secrets" data-test-secrets-tab="Secrets">Secrets</LinkTo>
+    <LinkTo @route="list" data-test-secrets-tab="Secrets">Secrets</LinkTo>
     <LinkTo @route="configuration" data-test-secrets-tab="Configuration">Configuration</LinkTo>
   </:tabLinks>
 </KvPageHeader>

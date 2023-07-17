@@ -13,7 +13,7 @@ export default class KvSecretMetadataDiffRoute extends Route {
 
   model() {
     const backend = this.secretMountPath.get();
-    const parentModel = this.modelFor('secrets.secret.metadata');
+    const parentModel = this.modelFor('secret.metadata');
     return hash({
       backend,
       ...parentModel,
@@ -24,8 +24,8 @@ export default class KvSecretMetadataDiffRoute extends Route {
     super.setupController(controller, resolvedModel);
     controller.breadcrumbs = [
       { label: 'secrets', route: 'secrets', linkExternal: true },
-      { label: resolvedModel.backend, route: 'secrets' },
-      { label: resolvedModel.name, route: 'secrets.secret.details', model: resolvedModel.name },
+      { label: resolvedModel.backend, route: 'list' },
+      { label: resolvedModel.name, route: 'secret.details', model: resolvedModel.name },
       { label: 'version diff' },
     ];
   }

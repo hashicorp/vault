@@ -3,7 +3,6 @@
  * SPDX-License-Identifier: MPL-2.0
  */
 
-import { encodePath } from 'vault/utils/path-encoding-helpers';
 import ApplicationAdapter from '../application';
 import { kvMetadataPath } from 'vault/utils/kv-path';
 
@@ -27,11 +26,14 @@ export default class KvMetadataAdapter extends ApplicationAdapter {
     });
   }
 
-  // TODO: replace this with raw request for metadata request?
   query(store, type, query) {
-    const { backend } = query;
-    return this.ajax(this._url(`${encodePath(backend)}/metadata?list=1`), 'GET').then((resp) => {
-      resp.data.backend = backend;
+    const { backend, pathToSecret } = query;
+    // example of pathToSecret: beep/boop/
+    return this.ajax(this._url(kvMetadataPath(backend, pathToSecret)), 'GET', {
+      data: { list: true },
+    }).then((resp) => {
+      resp.backend = backend;
+      resp.path = pathToSecret;
       return resp;
     });
   }

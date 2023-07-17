@@ -24,7 +24,8 @@ export default class KvConfigurationRoute extends Route {
     controller.pageTitle = resolvedModel.backend;
     controller.breadcrumbs = [
       { label: 'secrets', route: 'secrets', linkExternal: true },
-      { label: resolvedModel.backend },
+      { label: resolvedModel.backend, route: 'list' },
+      { label: 'configuration' },
     ];
   }
 }
