@@ -25,4 +25,11 @@ export default class DashboardVaultVersionTitle extends Component {
       ? `Vault v${this.version.version.slice(0, this.version.version.indexOf('+'))}`
       : `Vault v${this.version.version}`;
   }
+
+  get namespaceDisplay() {
+    const ns = this.namespace.path;
+    if (ns.inRootNamespace) return 'root';
+    const parts = ns?.split('/');
+    return parts[parts.length - 1];
+  }
 }

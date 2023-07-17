@@ -10,7 +10,7 @@
     {{on "click" (fn (mut this.showNewFeatureModal) true)}}
     data-test-badge-new
   />
-  <Hds::Badge @text={{if this.namespace.inRootNamespace "root" this.namespace.path}} @icon="org" data-test-badge-namespace />
+  <Hds::Badge @text={{this.namespaceDisplay}} @icon="org" data-test-badge-namespace />
 </div>
 
 <Modal
