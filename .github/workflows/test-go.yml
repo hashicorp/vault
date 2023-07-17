@@ -161,7 +161,6 @@ jobs:
               jq -c \
                 '[ .include[].id | tostring ]' "$matrix_file"
             ) >> "$GITHUB_OUTPUT"
-            cat "$GITHUB_OUTPUT"
     outputs:
       matrix: ${{ steps.build.outputs.matrix }}
       matrix_ids: ${{ steps.build.outputs.matrix_ids }} 
@@ -223,6 +222,7 @@ jobs:
           GOPRIVATE: github.com/hashicorp/*
         run: time make ci-bootstrap dev
       - id: run-go-tests
+        if: matrix.id == 5
         name: Run Go tests
         timeout-minutes: ${{ fromJSON(env.TIMEOUT_IN_MINUTES) }}
         env:

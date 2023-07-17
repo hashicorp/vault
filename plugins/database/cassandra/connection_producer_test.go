@@ -24,6 +24,9 @@ var insecureFileMounts = map[string]string{
 	"test-fixtures/no_tls/cassandra.yaml": "/etc/cassandra/cassandra.yaml",
 }
 
+func TestFailed(t *testing.T) {
+	t.Fatalf("this test will fail")
+}
 func TestSelfSignedCA(t *testing.T) {
 	copyFromTo := map[string]string{
 		"test-fixtures/with_tls/stores":  "/bitnami/cassandra/secrets/",
