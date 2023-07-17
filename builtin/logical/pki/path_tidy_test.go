@@ -5,8 +5,11 @@ package pki
 
 import (
 	"context"
+	"crypto/ecdsa"
+	"crypto/elliptic"
 	"crypto/rand"
 	"crypto/rsa"
+	"crypto/x509"
 	"encoding/base64"
 	"encoding/json"
 	"errors"
@@ -938,11 +941,31 @@ func TestTidyAcmeWithBackdate(t *testing.T) {
 
 	acmeClient := getAcmeClientForCluster(t, cluster, baseAcmeURL, accountKey)
 
-	// Create new account
+	// Create new account with order/cert
 	t.Logf("Testing register on %s", baseAcmeURL)
 	acct, err := acmeClient.Register(testCtx, &acme.Account{}, func(tosURL string) bool { return true })
 	t.Logf("got account URI: %v", acct.URI)
 	require.NoError(t, err, "failed registering account")
+	identifiers := []string{"*.localdomain"}
+	order, err := acmeClient.AuthorizeOrder(testCtx, []acme.AuthzID{
+		{Type: "dns", Value: identifiers[0]},
+	})
+	require.NoError(t, err, "failed creating order")
+
+	// HACK: Update authorization/challenge to completed as we can't really do it properly in this workflow test.
+	markAuthorizationSuccess(t, client, acmeClient, acct, order)
+
+	goodCr := &x509.CertificateRequest{DNSNames: []string{identifiers[0]}}
+	csrKey, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+	require.NoError(t, err, "failed generated key for CSR")
+	csr, err := x509.CreateCertificateRequest(rand.Reader, goodCr, csrKey)
+	require.NoError(t, err, "failed generating csr")
+	certs, _, err := acmeClient.CreateOrderCert(testCtx, order.FinalizeURL, csr, true)
+	require.NoError(t, err, "order finalization failed")
+	require.GreaterOrEqual(t, len(certs), 1, "expected at least one cert in bundle")
+
+	acmeCert, err := x509.ParseCertificate(certs[0])
+	require.NoError(t, err, "failed parsing acme cert")
 
 	// -> Ensure we see it in storage. Since we don't have direct storage
 	// access, use sys/raw interface.
@@ -958,14 +981,14 @@ func TestTidyAcmeWithBackdate(t *testing.T) {
 	require.NoError(t, err)
 
 	// Wait for tidy to finish.
-	time.Sleep(2 * time.Second)
-	statusResp, err := client.Logical().Read("pki/tidy-status")
-	require.NoError(t, err)
-	t.Logf("got tidy status: %v", statusResp.Data)
-	require.NotEqual(t, statusResp.Data["state"], "Running", "tidy is still running...")
-	require.Empty(t, statusResp.Data["error"], "got error during tidy run")
+	waitForTidyToFinish(t, client, "pki")
 
 	// Check that the Account is Still There, Still Valid.
+	account, err := acmeClient.GetReg(context.Background(), "" /* legacy unused param*/)
+	require.NoError(t, err, "received account looking up acme account")
+	require.Equal(t, acme.StatusValid, account.Status)
+
+	// Find the associated thumbprint
 	listResp, err = client.Logical().ListWithContext(testCtx, acmeThumbprintsPath)
 	require.NoError(t, err)
 	require.NotNil(t, listResp)
@@ -974,7 +997,38 @@ func TestTidyAcmeWithBackdate(t *testing.T) {
 	thumbprint := thumbprintEntries[0].(string)
 
 	// Let "Time Pass"; this is a HACK, this function sys-writes to overwrite the date on objects in storage
-	backDateAcmeAccountSys(t, testCtx, client, thumbprint, 30*24*time.Hour, pkiMount)
+	duration := time.Until(acmeCert.NotAfter) + 31*24*time.Hour
+	accountId := acmeClient.KID[strings.LastIndex(string(acmeClient.KID), "/")+1:]
+	orderId := order.URI[strings.LastIndex(order.URI, "/")+1:]
+	backDateAcmeOrderSys(t, testCtx, client, string(accountId), orderId, duration, pkiMount)
+
+	// Run Tidy -> clean up order
+	_, err = client.Logical().Write("pki/tidy", map[string]interface{}{
+		"tidy_acme": true,
+	})
+	require.NoError(t, err)
+
+	// Wait for tidy to finish.
+	tidyResp := waitForTidyToFinish(t, client, "pki")
+
+	require.Equal(t, tidyResp.Data["acme_orders_deleted_count"], json.Number("1"),
+		"expected to revoke a single ACME order: %v", tidyResp)
+	require.Equal(t, tidyResp.Data["acme_account_revoked_count"], json.Number("0"),
+		"no ACME account should have been revoked: %v", tidyResp)
+	require.Equal(t, tidyResp.Data["acme_account_deleted_count"], json.Number("0"),
+		"no ACME account should have been revoked: %v", tidyResp)
+
+	// Make sure our order is indeed deleted.
+	_, err = acmeClient.GetOrder(context.Background(), order.URI)
+	require.ErrorContains(t, err, "order does not exist")
+
+	// Check that the Account is Still There, Still Valid.
+	account, err = acmeClient.GetReg(context.Background(), "" /* legacy unused param*/)
+	require.NoError(t, err, "received account looking up acme account")
+	require.Equal(t, acme.StatusValid, account.Status)
+
+	// Now back date the account to make sure we revoke it
+	backDateAcmeAccountSys(t, testCtx, client, thumbprint, duration, pkiMount)
 
 	// Run Tidy -> mark account revoked
 	_, err = client.Logical().Write("pki/tidy", map[string]interface{}{
@@ -983,16 +1037,21 @@ func TestTidyAcmeWithBackdate(t *testing.T) {
 	require.NoError(t, err)
 
 	// Wait for tidy to finish.
-	time.Sleep(2 * time.Second)
-	statusResp, err = client.Logical().Read("pki/tidy-status")
-	require.NoError(t, err)
-	t.Logf("got tidy status: %v", statusResp.Data)
-	require.NotEqual(t, statusResp.Data["state"], "Running", "tidy is still running...")
-	require.Empty(t, statusResp.Data["error"], "got error during tidy run")
-	require.Equal(t, statusResp.Data["acme_account_revoked_count"], json.Number("1"), "expected to revoke a single ACME account")
+	tidyResp = waitForTidyToFinish(t, client, "pki")
+	require.Equal(t, tidyResp.Data["acme_orders_deleted_count"], json.Number("0"),
+		"no ACME orders should have been deleted: %v", tidyResp)
+	require.Equal(t, tidyResp.Data["acme_account_revoked_count"], json.Number("1"),
+		"expected to revoke a single ACME account: %v", tidyResp)
+	require.Equal(t, tidyResp.Data["acme_account_deleted_count"], json.Number("0"),
+		"no ACME account should have been revoked: %v", tidyResp)
+
+	// Lookup our account to make sure we get the appropriate revoked status
+	account, err = acmeClient.GetReg(context.Background(), "" /* legacy unused param*/)
+	require.NoError(t, err, "received account looking up acme account")
+	require.Equal(t, acme.StatusRevoked, account.Status)
 
 	// Let "Time Pass"; this is a HACK, this function sys-writes to overwrite the date on objects in storage
-	backDateAcmeAccountSys(t, testCtx, client, thumbprint, 30*24*time.Hour, pkiMount)
+	backDateAcmeAccountSys(t, testCtx, client, thumbprint, duration, pkiMount)
 
 	// Run Tidy -> remove account
 	_, err = client.Logical().Write("pki/tidy", map[string]interface{}{
@@ -1001,12 +1060,7 @@ func TestTidyAcmeWithBackdate(t *testing.T) {
 	require.NoError(t, err)
 
 	// Wait for tidy to finish.
-	time.Sleep(2 * time.Second)
-	statusResp, err = client.Logical().Read("pki/tidy-status")
-	require.NoError(t, err)
-	t.Logf("got tidy status: %v", statusResp.Data)
-	require.NotEqual(t, statusResp.Data["state"], "Running", "tidy is still running...")
-	require.Empty(t, statusResp.Data["error"], "got error during tidy run")
+	waitForTidyToFinish(t, client, "pki")
 
 	// Check Account No Longer Appears
 	listResp, err = client.Logical().ListWithContext(testCtx, acmeThumbprintsPath)
@@ -1070,12 +1124,7 @@ func TestTidyAcmeWithSafetyBuffer(t *testing.T) {
 	require.NoError(t, err)
 
 	// Wait for tidy to finish.
-	time.Sleep(2 * time.Second)
-	statusResp, err := client.Logical().Read("pki/tidy-status")
-	require.NoError(t, err)
-	t.Logf("got tidy status: %v", statusResp.Data)
-	require.NotEqual(t, statusResp.Data["state"], "Running", "tidy is still running...")
-	require.Empty(t, statusResp.Data["error"], "got error during tidy run")
+	statusResp := waitForTidyToFinish(t, client, "pki")
 	require.Equal(t, statusResp.Data["acme_account_revoked_count"], json.Number("1"), "expected to revoke a single ACME account")
 
 	// Wait for the account to expire.
@@ -1089,12 +1138,7 @@ func TestTidyAcmeWithSafetyBuffer(t *testing.T) {
 	require.NoError(t, err)
 
 	// Wait for tidy to finish.
-	time.Sleep(2 * time.Second)
-	statusResp, err = client.Logical().Read("pki/tidy-status")
-	require.NoError(t, err)
-	t.Logf("got tidy status: %v", statusResp.Data)
-	require.NotEqual(t, statusResp.Data["state"], "Running", "tidy is still running...")
-	require.Empty(t, statusResp.Data["error"], "got error during tidy run")
+	waitForTidyToFinish(t, client, "pki")
 
 	// Check Account No Longer Appears
 	listResp, err = client.Logical().ListWithContext(testCtx, acmeThumbprintsPath)
@@ -1170,9 +1214,8 @@ func backDateAcmeAccountSys(t *testing.T, testContext context.Context, client *a
 
 	orders := ordersRaw.Data
 
-	for _, orderInterface := range orders {
-		orderId := orderInterface.(string)
-		backDateAcmeOrderSys(t, testContext, client, thumbprint.Kid, orderId, backdateAmount, mount)
+	for _, orderId := range orders["keys"].([]interface{}) {
+		backDateAcmeOrderSys(t, testContext, client, thumbprint.Kid, orderId.(string), backdateAmount, mount)
 	}
 
 	// No need to change certificates entries here - no time is stored on AcmeCertEntry
@@ -1251,4 +1294,29 @@ func backDate(original time.Time, change time.Duration) time.Time {
 	}
 
 	return original.Add(-change)
+}
+
+func waitForTidyToFinish(t *testing.T, client *api.Client, mount string) *api.Secret {
+	var statusResp *api.Secret
+	testhelpers.RetryUntil(t, 5*time.Second, func() error {
+		var err error
+
+		tidyStatusPath := mount + "/tidy-status"
+		statusResp, err = client.Logical().Read(tidyStatusPath)
+		if err != nil {
+			return fmt.Errorf("failed reading path: %s: %w", tidyStatusPath, err)
+		}
+		if state, ok := statusResp.Data["state"]; !ok || state == "Running" {
+			return fmt.Errorf("tidy status state is still running")
+		}
+
+		if errorOccurred, ok := statusResp.Data["error"]; !ok || !(errorOccurred == nil || errorOccurred == "") {
+			return fmt.Errorf("tidy status returned an error: %s", errorOccurred)
+		}
+
+		return nil
+	})
+
+	t.Logf("got tidy status: %v", statusResp.Data)
+	return statusResp
 }
