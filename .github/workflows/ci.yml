@@ -354,21 +354,21 @@ jobs:
           # Sort all of the summary table rows and push them to a temp file.
           temp_file_name=temp-$(date +%s)
           cat failure-summary-*.md | sort >> "$temp_file_name"
-
+          temp_message_file_name=temp-table-$(date +%s)
+          
           # If there are test failures, present them in a format of a GitHub Markdown table.
           if [ -s "$temp_file_name" ]; then
             # shellcheck disable=SC2129
             # Here we create the headings for the summary table
-            echo "| Test Type | Package | Test | Elapsed | Runner Index | Logs |" >> "$GITHUB_STEP_SUMMARY"
-            echo "| --------- | ------- | ---- | ------- | ------------ | ---- |" >> "$GITHUB_STEP_SUMMARY"
-            cat "$temp_file_name" >>  "$GITHUB_STEP_SUMMARY"
+            echo "| Test Type | Package | Test | Elapsed | Runner Index | Logs |" | tee -a "$GITHUB_STEP_SUMMARY" "$temp_message_file_name" 
+            echo "| --------- | ------- | ---- | ------- | ------------ | ---- |" | tee -a "$GITHUB_STEP_SUMMARY" "$temp_message_file_name"
+            cat "$temp_file_name" | tee -a "$GITHUB_STEP_SUMMARY" "$temp_message_file_name"
           else
-            echo "### All Go tests passed! :white_check_mark:" >> "$GITHUB_STEP_SUMMARY"
+            echo "### All Go tests passed! :white_check_mark:" | tee -a "$GITHUB_STEP_SUMMARY" table.md
           fi 
-          echo "$base64encoded" 
           (
             echo -n "TABLE_TEST_RESULTS="
-            base64 -i "$GITHUB_STEP_SUMMARY" 
+            base64 -i "$temp_message_file_name" 
           ) >> "$GITHUB_ENV"
       - uses: actions/checkout@c85c95e3d7251135ab7dc9ce3241c5835cc595a9 # v3.5.3
       - name: Create comment
