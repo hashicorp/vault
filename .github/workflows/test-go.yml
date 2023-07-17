@@ -146,9 +146,9 @@ jobs:
                   "estimatedRuntime": "N/A",
                   "packages": $BINARY,
                   "description": "partition $BINARY_INDEX - binary test packages"
-              }]' >> new-matrix.json
+              }]' matrix.json >> new-matrix.json
               matrix_file="new-matrix.json" 
-            fi 
+            fi
             # convert the json to a map keyed by id
             (
               echo -n "matrix="
