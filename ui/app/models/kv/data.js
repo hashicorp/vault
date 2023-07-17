@@ -92,4 +92,7 @@ export default class KvSecretDataModel extends Model {
   get canListMetadata() {
     return this.metadataPath.get('canList');
   }
+  get canDeleteMetadata() {
+    return this.metadataPath.get('canDelete');
+  }
 }

@@ -46,16 +46,33 @@
                       </LinkTo>
                     </li>
                   {{else}}
-                    <li>
-                      <LinkTo @route="secret.details" @model={{secret.path}}>
-                        Details
-                      </LinkTo>
-                    </li>
-                    <li>
-                      <LinkTo @route="secret.edit" @model={{secret.path}}>
-                        Edit
-                      </LinkTo>
-                    </li>
+                    {{#if (or secret.canReadData secret.canReadMetadata)}}
+                      <li>
+                        <LinkTo @route="secret.details" @model={{secret.path}}>
+                          Details
+                        </LinkTo>
+                      </li>
+                    {{/if}}
+                    {{#if secret.canEditData}}
+                      <li>
+                        <LinkTo @route="secret.edit" @model={{secret.path}}>
+                          Create new version
+                        </LinkTo>
+                      </li>
+                    {{/if}}
+                    {{#if secret.canDeleteMetadata}}
+                      <li>
+                        <ConfirmAction
+                          @buttonClasses="link is-destroy"
+                          @onConfirmAction={{fn this.onDelete secret}}
+                          @confirmMessage={{"This will permanently delete this secret and all its versions."}}
+                          @cancelButtonText="Cancel"
+                          data-test-secret-delete="true"
+                        >
+                          Permanently delete
+                        </ConfirmAction>
+                      </li>
+                    {{/if}}
                   {{/if}}
                 </ul>
               </nav>

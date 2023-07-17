@@ -7,6 +7,10 @@ import Component from '@glimmer/component';
 import { inject as service } from '@ember/service';
 import { action } from '@ember/object';
 import { getOwner } from '@ember/application';
+import errorMessage from 'vault/utils/error-message';
+import keyUtils from 'vault/lib/key-utils';
+
+const { ancestorKeysForKey } = keyUtils;
 
 /**
  * @module List
@@ -19,6 +23,7 @@ import { getOwner } from '@ember/application';
 
 export default class KvListPageComponent extends Component {
   @service flashMessages;
+  @service router;
 
   get mountPoint() {
     // mountPoint tells the LinkedBlock component where to start the transition. In this case, mountPoint will always be vault.cluster.secrets.backend.kv.
@@ -26,7 +31,20 @@ export default class KvListPageComponent extends Component {
   }
 
   @action
-  onDelete() {
-    // todo
+  async onDelete(model) {
+    try {
+      const message = `Successfully deleted secret ${model.fullSecretPath}.`;
+      await model.destroyRecord();
+      this.flashMessages.success(message);
+      // if you've deleted a secret from within a directory, transition to its parent directory.
+      if (this.args.routeName === 'list-directory') {
+        const ancestors = ancestorKeysForKey(model.fullSecretPath);
+        const nearest = ancestors.pop();
+        this.router.transitionTo(`${this.mountPoint}.list-directory`, nearest);
+      }
+    } catch (error) {
+      const message = errorMessage(error, 'Error deleting secret. Please try again or contact support.');
+      this.flashMessages.danger(message);
+    }
   }
 }
