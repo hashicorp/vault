@@ -137,28 +137,29 @@ jobs:
         id: build
         run: |
             set -exo pipefail
+            matrix_file="matrix.json"
             if [ "${{ inputs.binary-tests}}" == "true" ]; then
               export BINARY_TESTS="${{ steps.list-binary-tests.outputs.list }}"
-              jq -c --arg BINARY "${BINARY_TESTS}" --arg BINARY_INDEX "${{ inputs.total-runners }}" \
+              jq --arg BINARY "${BINARY_TESTS}" --arg BINARY_INDEX "${{ inputs.total-runners }}" \
                 '.include += [{
                   "id": $BINARY_INDEX,
                   "estimatedRuntime": "N/A",
                   "packages": $BINARY,
                   "description": "partition $BINARY_INDEX - binary test packages"
               }]' >> new-matrix.json
-              mv new-matrix.json matrix.json
+              matrix_file="new-matrix.json" 
             fi 
             # convert the json to a map keyed by id
             (
               echo -n "matrix="
                 jq -c \
-                '.include | map( { (.id|tostring): . } ) | add' matrix.json
+                '.include | map( { (.id|tostring): . } ) | add' "$matrix_file" 
             ) >> "$GITHUB_OUTPUT"
             # extract the an array of ids from the json
             (
               echo -n "matrix_ids="
               jq -c \
-                '[ .include[].id | tostring ]' matrix.json
+                '[ .include[].id | tostring ]' "$matrix_file"
             ) >> "$GITHUB_OUTPUT"
             cat "$GITHUB_OUTPUT"
     outputs:
