@@ -8,9 +8,7 @@ import { inject as service } from '@ember/service';
 import { action } from '@ember/object';
 import { getOwner } from '@ember/application';
 import errorMessage from 'vault/utils/error-message';
-import keyUtils from 'vault/lib/key-utils';
-
-const { ancestorKeysForKey } = keyUtils;
+import { ancestorKeysForKey } from 'core/utils/key-utils';
 
 /**
  * @module List
