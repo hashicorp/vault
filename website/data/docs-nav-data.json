@@ -171,11 +171,15 @@
         "path": "concepts/resource-quotas"
       },
       {
-        "title": "Client Count",
+        "title": "Client count",
         "routes": [
           {
-            "title": "Overview",
+            "title": "Clients and entities",
             "path": "concepts/client-count"
+          },
+          {
+            "title": "Client count calculation",
+            "path": "concepts/client-count/counting"
           },
           {
             "title": "FAQ",

@@ -5,7 +5,6 @@
 
 import Store from '@ember-data/store';
 import { schedule } from '@ember/runloop';
-import { copy } from 'ember-copy';
 import { resolve, Promise } from 'rsvp';
 import { dasherize } from '@ember/string';
 import { assert } from '@ember/debug';
@@ -115,8 +114,8 @@ export default class StoreService extends Store {
   // currentPage, lastPage, nextPage, prevPage, total, filteredTotal
   constructResponse(modelName, query) {
     const { pageFilter, responsePath, size, page } = query;
-    let { response, dataset } = this.getDataset(modelName, query);
-    response = copy(response, true);
+    const { response, dataset } = this.getDataset(modelName, query);
+    const resp = { ...response };
     const data = this.filterData(pageFilter, dataset);
 
     const lastPage = Math.ceil(data.length / size);
@@ -125,9 +124,8 @@ export default class StoreService extends Store {
     const start = end - size;
     const slicedDataSet = data.slice(start, end);
 
-    set(response, responsePath || '', slicedDataSet);
-
-    response.meta = {
+    set(resp, responsePath || '', slicedDataSet);
+    resp.meta = {
       currentPage,
       lastPage,
       nextPage: clamp(currentPage + 1, 1, lastPage),
@@ -136,14 +134,15 @@ export default class StoreService extends Store {
       filteredTotal: data.length || 0,
     };
 
-    return response;
+    return resp;
   }
 
   // pushes records into the store and returns the result
   fetchPage(modelName, query) {
     const response = this.constructResponse(modelName, query);
-    this.unloadAll(modelName);
+    this.peekAll(modelName).map((model) => model.unloadRecord());
     return new Promise((resolve) => {
+      // after the above unloadRecords are finished, push into store
       schedule('destroy', () => {
         this.push(
           this.serializerFor(modelName).normalizeResponse(

@@ -573,9 +573,13 @@ func (c *Core) mount(ctx context.Context, entry *MountEntry) error {
 func (c *Core) mountInternal(ctx context.Context, entry *MountEntry, updateStorage bool) error {
 	c.mountsLock.Lock()
 	c.authLock.Lock()
+	locked := true
 	unlock := func() {
-		c.authLock.Unlock()
-		c.mountsLock.Unlock()
+		if locked {
+			c.authLock.Unlock()
+			c.mountsLock.Unlock()
+			locked = false
+		}
 	}
 	defer unlock()
 
@@ -728,13 +732,16 @@ func (c *Core) mountInternal(ctx context.Context, entry *MountEntry, updateStora
 	if err := c.router.Mount(backend, entry.Path, entry, view); err != nil {
 		return err
 	}
+	if err = c.entBuiltinPluginMetrics(ctx, entry, 1); err != nil {
+		c.logger.Error("failed to emit enabled ent builtin plugin metrics", "error", err)
+		return err
+	}
 
 	// Re-evaluate filtered paths
 	if err := runFilteredPathsEvaluation(ctx, c, false); err != nil {
 		c.logger.Error("failed to evaluate filtered paths", "error", err)
 
 		unlock()
-		unlock = func() {}
 		// We failed to evaluate filtered paths so we are undoing the mount operation
 		if unmountInternalErr := c.unmountInternal(ctx, entry.Path, MountTableUpdateStorage); unmountInternalErr != nil {
 			c.logger.Error("failed to unmount", "error", unmountInternalErr)
@@ -913,6 +920,10 @@ func (c *Core) unmountInternal(ctx context.Context, path string, updateStorage b
 
 	// Unmount the backend entirely
 	if err := c.router.Unmount(ctx, path); err != nil {
+		return err
+	}
+	if err = c.entBuiltinPluginMetrics(ctx, entry, -1); err != nil {
+		c.logger.Error("failed to emit disabled ent builtin plugin metrics", "error", err)
 		return err
 	}
 

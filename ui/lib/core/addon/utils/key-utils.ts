@@ -3,37 +3,38 @@
  * SPDX-License-Identifier: MPL-2.0
  */
 
-function keyIsFolder(key) {
+export function keyIsFolder(key: string) {
   return key ? !!key.match(/\/$/) : false;
 }
 
-function keyPartsForKey(key) {
+export function keyPartsForKey(key: string) {
   if (!key) {
     return null;
   }
-  var isFolder = keyIsFolder(key);
-  var parts = key.split('/');
+  const isFolder = keyIsFolder(key);
+  const parts = key.split('/');
   if (isFolder) {
+    // remove last item which is empty
     parts.pop();
   }
   return parts.length > 1 ? parts : null;
 }
 
-function parentKeyForKey(key) {
-  var parts = keyPartsForKey(key);
+export function parentKeyForKey(key: string) {
+  const parts = keyPartsForKey(key);
   if (!parts) {
-    return null;
+    return '';
   }
   return parts.slice(0, -1).join('/') + '/';
 }
 
-function keyWithoutParentKey(key) {
+export function keyWithoutParentKey(key: string) {
   return key ? key.replace(parentKeyForKey(key), '') : null;
 }
 
-function ancestorKeysForKey(key) {
-  var ancestors = [],
-    parentKey = parentKeyForKey(key);
+export function ancestorKeysForKey(key: string) {
+  const ancestors = [];
+  let parentKey = parentKeyForKey(key);
 
   while (parentKey) {
     ancestors.unshift(parentKey);
@@ -42,11 +43,3 @@ function ancestorKeysForKey(key) {
 
   return ancestors;
 }
-
-export default {
-  keyIsFolder,
-  keyPartsForKey,
-  parentKeyForKey,
-  keyWithoutParentKey,
-  ancestorKeysForKey,
-};

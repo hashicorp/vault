@@ -122,7 +122,7 @@ require (
 	github.com/hashicorp/raft-boltdb/v2 v2.0.0-20210421194847-a7e34179d62c
 	github.com/hashicorp/raft-snapshot v1.0.4
 	github.com/hashicorp/vault-plugin-auth-alicloud v0.15.0
-	github.com/hashicorp/vault-plugin-auth-azure v0.15.0
+	github.com/hashicorp/vault-plugin-auth-azure v0.15.1
 	github.com/hashicorp/vault-plugin-auth-centrify v0.15.1
 	github.com/hashicorp/vault-plugin-auth-cf v0.15.0
 	github.com/hashicorp/vault-plugin-auth-gcp v0.16.0
@@ -219,7 +219,7 @@ require (
 	google.golang.org/grpc/cmd/protoc-gen-go-grpc v1.1.0
 	google.golang.org/protobuf v1.30.0
 	gopkg.in/ory-am/dockertest.v3 v3.3.4
-	gotest.tools/gotestsum v1.9.0
+	gotest.tools/gotestsum v1.10.0
 	honnef.co/go/tools v0.4.3
 	k8s.io/utils v0.0.0-20230220204549-a5ecb0141aa5
 	layeh.com/radius v0.0.0-20190322222518-890bc1058917
