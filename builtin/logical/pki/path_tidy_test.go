@@ -37,7 +37,10 @@ func TestTidyConfigs(t *testing.T) {
 
 	var cfg tidyConfig
 	operations := strings.Split(cfg.AnyTidyConfig(), " / ")
+	require.Greater(t, len(operations), 1, "expected more than one operation")
 	t.Logf("Got tidy operations: %v", operations)
+
+	lastOp := operations[len(operations)-1]
 
 	for _, operation := range operations {
 		b, s := CreateBackendWithStorage(t)
@@ -52,6 +55,17 @@ func TestTidyConfigs(t *testing.T) {
 		requireSuccessNonNilResponse(t, resp, err, "expected to be able to read auto-tidy operation for operation "+operation)
 		require.True(t, resp.Data[operation].(bool), "expected operation to be enabled after reading auto-tidy config "+operation)
 
+		resp, err = CBWrite(b, s, "config/auto-tidy", map[string]interface{}{
+			"enabled": true,
+			operation: false,
+			lastOp:    true,
+		})
+		requireSuccessNonNilResponse(t, resp, err, "expected to be able to disable auto-tidy operation "+operation)
+
+		resp, err = CBRead(b, s, "config/auto-tidy")
+		requireSuccessNonNilResponse(t, resp, err, "expected to be able to read auto-tidy operation for operation "+operation)
+		require.False(t, resp.Data[operation].(bool), "expected operation to be disabled after reading auto-tidy config "+operation)
+
 		resp, err = CBWrite(b, s, "tidy", map[string]interface{}{
 			operation: true,
 		})
@@ -64,6 +78,8 @@ func TestTidyConfigs(t *testing.T) {
 				}
 			}
 		}
+
+		lastOp = operation
 	}
 }
 
