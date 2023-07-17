@@ -819,24 +819,16 @@ func TestCertStorageMetrics(t *testing.T) {
 	})
 }
 
-func TestTidyAcme(t *testing.T) {
-	// This would still be way easier if I could do both sides
-	// b, s := CreateBackendWithStorage(t)
+// This test uses the default safety buffer with backdating.
+func TestTidyAcmeWithBackdate(t *testing.T) {
+	t.Parallel()
+
 	cluster, client, _ := setupAcmeBackend(t)
 	defer cluster.Cleanup()
 	testCtx := context.Background()
 
 	// Grab the mount UUID for sys/raw invocations.
 	pkiMount := findStorageMountUuid(t, client, "pki")
-
-	// Configure Tidy to Tidy Acme (by Writing the auto-tidy config.)
-	_, err := client.Logical().Write("pki/config/auto-tidy", map[string]interface{}{
-		"enabled":           true,
-		"interval_duration": "1s",
-		"tidy_acme":         true,
-		"safety_buffer":     "1s",
-	})
-	require.NoError(t, err)
 
 	// Register an Account, do nothing with it
 	baseAcmeURL := "/v1/pki/acme/"
@@ -848,6 +840,7 @@ func TestTidyAcme(t *testing.T) {
 	// Create new account
 	t.Logf("Testing register on %s", baseAcmeURL)
 	acct, err := acmeClient.Register(testCtx, &acme.Account{}, func(tosURL string) bool { return true })
+	t.Logf("got account URI: %v", acct.URI)
 	require.NoError(t, err, "failed registering account")
 
 	// -> Ensure we see it in storage. Since we don't have direct storage
@@ -895,6 +888,7 @@ func TestTidyAcme(t *testing.T) {
 	t.Logf("got tidy status: %v", statusResp.Data)
 	require.NotEqual(t, statusResp.Data["state"], "Running", "tidy is still running...")
 	require.Empty(t, statusResp.Data["error"], "got error during tidy run")
+	require.Equal(t, statusResp.Data["acme_account_revoked_count"], json.Number("1"), "expected to revoke a single ACME account")
 
 	// Let "Time Pass"; this is a HACK, this function sys-writes to overwrite the date on objects in storage
 	backDateAcmeAccountSys(t, testCtx, client, thumbprint, 30*24*time.Hour, pkiMount)
@@ -916,117 +910,106 @@ func TestTidyAcme(t *testing.T) {
 	// Check Account No Longer Appears
 	listResp, err = client.Logical().ListWithContext(testCtx, acmeThumbprintsPath)
 	require.NoError(t, err)
-	require.NotNil(t, listResp)
-	thumbprintEntries = listResp.Data["keys"].([]interface{})
-	require.Equal(t, 0, len(thumbprintEntries))
+	if listResp != nil {
+		thumbprintEntries = listResp.Data["keys"].([]interface{})
+		require.Equal(t, 0, len(thumbprintEntries))
+	}
 
 	// Nor Under Account
-	getResp, err := client.Logical().ReadWithContext(testCtx, "pki"+acmeAccountPrefix+acct.URI)
+	_, acctKID := path.Split(acct.URI)
+	acctPath := path.Join("sys/raw/logical", pkiMount, acmeAccountPrefix, acctKID)
+	t.Logf("account path: %v", acctPath)
+	getResp, err := client.Logical().ReadWithContext(testCtx, acctPath)
+	require.NoError(t, err)
 	require.Nil(t, getResp)
 }
 
-// These calls are for tests using the "storage" and "backend" direct setup
-func backDateAcmeAccount(t *testing.T, testContext context.Context, b *backend, s logical.Storage, thumbprintString string, backdateAmount time.Duration) {
-	thumbprintPath := acmeThumbprintPrefix + thumbprintString
-	thumbprintEntry, err := s.Get(testContext, thumbprintPath)
-	if err != nil {
-		t.Fatalf("unable to fetch thumbprint entry %v", err)
+// This test uses a smaller safety buffer.
+func TestTidyAcmeWithSafetyBuffer(t *testing.T) {
+	t.Parallel()
+
+	// This would still be way easier if I could do both sides
+	cluster, client, _ := setupAcmeBackend(t)
+	defer cluster.Cleanup()
+	testCtx := context.Background()
+
+	// Grab the mount UUID for sys/raw invocations.
+	pkiMount := findStorageMountUuid(t, client, "pki")
+
+	// Register an Account, do nothing with it
+	baseAcmeURL := "/v1/pki/acme/"
+	accountKey, err := rsa.GenerateKey(rand.Reader, 2048)
+	require.NoError(t, err, "failed creating rsa key")
+
+	acmeClient := getAcmeClientForCluster(t, cluster, baseAcmeURL, accountKey)
+
+	// Create new account
+	t.Logf("Testing register on %s", baseAcmeURL)
+	acct, err := acmeClient.Register(testCtx, &acme.Account{}, func(tosURL string) bool { return true })
+	t.Logf("got account URI: %v", acct.URI)
+	require.NoError(t, err, "failed registering account")
+
+	// -> Ensure we see it in storage. Since we don't have direct storage
+	// access, use sys/raw interface.
+	acmeThumbprintsPath := path.Join("sys/raw/logical", pkiMount, acmeThumbprintPrefix)
+	listResp, err := client.Logical().ListWithContext(testCtx, acmeThumbprintsPath)
+	require.NoError(t, err, "failed listing ACME thumbprints")
+	require.NotEmpty(t, listResp.Data["keys"], "expected non-empty list response")
+	thumbprintEntries := listResp.Data["keys"].([]interface{})
+	require.Equal(t, len(thumbprintEntries), 1)
+
+	// Wait for the account to expire.
+	time.Sleep(2 * time.Second)
+
+	// Run Tidy -> mark account revoked
+	_, err = client.Logical().Write("pki/tidy", map[string]interface{}{
+		"tidy_acme":                  true,
+		"acme_account_safety_buffer": "1s",
+	})
+	require.NoError(t, err)
+
+	// Wait for tidy to finish.
+	time.Sleep(2 * time.Second)
+	statusResp, err := client.Logical().Read("pki/tidy-status")
+	require.NoError(t, err)
+	t.Logf("got tidy status: %v", statusResp.Data)
+	require.NotEqual(t, statusResp.Data["state"], "Running", "tidy is still running...")
+	require.Empty(t, statusResp.Data["error"], "got error during tidy run")
+	require.Equal(t, statusResp.Data["acme_account_revoked_count"], json.Number("1"), "expected to revoke a single ACME account")
+
+	// Wait for the account to expire.
+	time.Sleep(2 * time.Second)
+
+	// Run Tidy -> remove account
+	_, err = client.Logical().Write("pki/tidy", map[string]interface{}{
+		"tidy_acme":                  true,
+		"acme_account_safety_buffer": "1s",
+	})
+	require.NoError(t, err)
+
+	// Wait for tidy to finish.
+	time.Sleep(2 * time.Second)
+	statusResp, err = client.Logical().Read("pki/tidy-status")
+	require.NoError(t, err)
+	t.Logf("got tidy status: %v", statusResp.Data)
+	require.NotEqual(t, statusResp.Data["state"], "Running", "tidy is still running...")
+	require.Empty(t, statusResp.Data["error"], "got error during tidy run")
+
+	// Check Account No Longer Appears
+	listResp, err = client.Logical().ListWithContext(testCtx, acmeThumbprintsPath)
+	require.NoError(t, err)
+	if listResp != nil {
+		thumbprintEntries = listResp.Data["keys"].([]interface{})
+		require.Equal(t, 0, len(thumbprintEntries))
 	}
 
-	var thumbprint acmeThumbprint
-	err = thumbprintEntry.DecodeJSON(&thumbprint)
-	if err != nil {
-		t.Fatalf("unable to decode thumbprint entry %v to find account entry: %v", thumbprintEntry, err)
-	}
-
-	accountPath := acmeAccountPrefix + thumbprint.Kid
-	accountEntry, err := s.Get(testContext, accountPath)
-	if err != nil {
-		t.Fatalf("unable to fetch account entry %v: %v", thumbprint.Kid, err)
-	}
-
-	var account acmeAccount
-	err = accountEntry.DecodeJSON(&account)
-	if err != nil {
-		t.Fatalf("unable to decode acme account %v: %v", accountEntry, err)
-	}
-
-	account.AccountCreatedDate = backDate(account.AccountCreatedDate, backdateAmount)
-	account.MaxCertExpiry = backDate(account.MaxCertExpiry, backdateAmount)
-	account.AccountRevokedDate = backDate(account.AccountRevokedDate, backdateAmount)
-
-	json, err := logical.StorageEntryJSON(accountPath, &account)
-	err = s.Put(testContext, json)
-	if err != nil {
-		t.Fatalf("error saving backdated account entry at %v: %v", accountPath, err)
-	}
-
-	orders, err := s.List(testContext, acmeAccountPrefix+thumbprint.Kid+"/orders/")
-	if err != nil {
-		t.Fatalf("unable to list orders on account %v", thumbprint.Kid)
-	}
-
-	for _, order := range orders {
-		backDateAcmeOrder(t, testContext, b, s, thumbprint.Kid, order, backdateAmount)
-	}
-
-	// No need to change certificates entries here - no time is stored on AcmeCertEntry
-}
-
-func backDateAcmeOrder(t *testing.T, testContext context.Context, b *backend, s logical.Storage, accountKid string, orderId string, backdateAmount time.Duration) {
-	orderPath := acmeAccountPrefix + accountKid + "orders" + orderId
-
-	orderEntry, err := s.Get(testContext, orderPath)
-	if err != nil {
-		t.Fatalf("unable to fetch order entry %v on account %v", orderId, accountKid)
-	}
-
-	var order *acmeOrder
-	err = orderEntry.DecodeJSON(order)
-	if err != nil {
-		t.Fatalf("error decoding order entry %v on account %v, %v produced: %v", orderId, accountKid, orderEntry, err)
-	}
-
-	order.Expires = backDate(order.Expires, backdateAmount)
-	order.CertificateExpiry = backDate(order.CertificateExpiry, backdateAmount)
-
-	json, err := logical.StorageEntryJSON(orderPath, &order)
-	err = s.Put(testContext, json)
-	if err != nil {
-		t.Fatalf("error saving backdated order entry %v on account %v : %v", orderId, accountKid, err)
-	}
-
-	for _, authId := range order.AuthorizationIds {
-		backDateAcmeAuthorization(t, testContext, s, accountKid, authId, backdateAmount)
-	}
-}
-
-func backDateAcmeAuthorization(t *testing.T, testContext context.Context, s logical.Storage, accountKid string, authId string, backdateAmount time.Duration) {
-	authPath := acmeAccountPrefix + accountKid + "/authorizations/" + authId
-
-	authEntry, err := s.Get(testContext, authPath)
-	if err != nil {
-		t.Fatalf("unable to fetch authorization %v : %v", authPath, err)
-	}
-
-	var auth *ACMEAuthorization
-	err = authEntry.DecodeJSON(auth)
-	if err != nil {
-		t.Fatalf("error decoding auth %v, auth entry %v produced %v", authPath, authEntry, err)
-	}
-
-	expiry, err := auth.GetExpires()
-	if err != nil {
-		t.Fatalf("could not get expiry on %v: %v", authPath, err)
-	}
-	newExpiry := backDate(expiry, backdateAmount)
-	auth.Expires = time.Time.Format(newExpiry, time.RFC3339)
-
-	json, err := logical.StorageEntryJSON(authPath, auth)
-	err = s.Put(testContext, json)
-	if err != nil {
-		t.Fatalf("error updating authorization date on %v: %v", authPath, err)
-	}
+	// Nor Under Account
+	_, acctKID := path.Split(acct.URI)
+	acctPath := path.Join("sys/raw/logical", pkiMount, acmeAccountPrefix, acctKID)
+	t.Logf("account path: %v", acctPath)
+	getResp, err := client.Logical().ReadWithContext(testCtx, acctPath)
+	require.NoError(t, err)
+	require.Nil(t, getResp)
 }
 
 // The sys tests refer to all of the tests using sys/raw/logical which work off of a client
@@ -1055,9 +1038,13 @@ func backDateAcmeAccountSys(t *testing.T, testContext context.Context, client *a
 		t.Fatalf("unable to decode acme account %v: %v", accountResp, err)
 	}
 
+	t.Logf("got account before update: %v", account)
+
 	account.AccountCreatedDate = backDate(account.AccountCreatedDate, backdateAmount)
 	account.MaxCertExpiry = backDate(account.MaxCertExpiry, backdateAmount)
 	account.AccountRevokedDate = backDate(account.AccountRevokedDate, backdateAmount)
+
+	t.Logf("got account after update: %v", account)
 
 	encodeJSON, err := jsonutil.EncodeJSON(account)
 	_, err = client.Logical().WriteWithContext(context.Background(), accountPath, map[string]interface{}{
