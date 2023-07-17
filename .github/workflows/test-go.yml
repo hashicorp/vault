@@ -128,7 +128,7 @@ jobs:
               --timing-files 'test-results/go-test/*.json' > matrix.json
           )
       - name: Capture list of binary tests
-        if: inputs.binary-tests == 'true'
+        if: inputs.binary-tests
         id: list-binary-tests
         run: |
           LIST="$(go list ./... | grep "_binary" | xargs)"
@@ -160,6 +160,7 @@ jobs:
               jq -c \
                 '[ .include[].id | tostring ]' matrix.json
             ) >> "$GITHUB_OUTPUT"
+            cat "$GITHUB_OUTPUT"
     outputs:
       matrix: ${{ steps.build.outputs.matrix }}
       matrix_ids: ${{ steps.build.outputs.matrix_ids }} 
@@ -216,7 +217,7 @@ jobs:
         run: |
           git config --global url."https://${{ secrets.ELEVATED_GITHUB_TOKEN}}@github.com".insteadOf https://github.com
       - id: build
-        if: inputs.binary-tests == 'true' && matrix.id == inputs.total-runners 
+        if: inputs.binary-tests && matrix.id == inputs.total-runners 
         env:
           GOPRIVATE: github.com/hashicorp/*
         run: time make ci-bootstrap dev
