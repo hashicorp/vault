@@ -266,7 +266,7 @@ jobs:
       artifact-revision: ${{ needs.product-metadata.outputs.vault-revision }}
       artifact-version: ${{ needs.product-metadata.outputs.vault-version }}
     secrets: inherit
-    
+
   report-build-failures:
     name: Report Build Failures
     needs:
