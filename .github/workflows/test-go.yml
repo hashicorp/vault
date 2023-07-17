@@ -222,7 +222,6 @@ jobs:
           GOPRIVATE: github.com/hashicorp/*
         run: time make ci-bootstrap dev
       - id: run-go-tests
-        if: matrix.id == 5
         name: Run Go tests
         timeout-minutes: ${{ fromJSON(env.TIMEOUT_IN_MINUTES) }}
         env:
