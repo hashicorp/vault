@@ -11,12 +11,13 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/hashicorp/vault/sdk/helper/jsonutil"
-	"golang.org/x/crypto/acme"
 	"path"
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/hashicorp/vault/sdk/helper/jsonutil"
+	"golang.org/x/crypto/acme"
 
 	"github.com/hashicorp/vault/helper/testhelpers"
 	"github.com/hashicorp/vault/sdk/helper/testhelpers/schema"
@@ -476,7 +477,7 @@ func TestCertStorageMetrics(t *testing.T) {
 
 	// We set up a metrics accumulator
 	inmemSink := metrics.NewInmemSink(
-		2*newPeriod, // A short time period is ideal here to test metrics are emitted every periodic func
+		2*newPeriod,  // A short time period is ideal here to test metrics are emitted every periodic func
 		10*newPeriod) // Do not keep a huge amount of metrics in the sink forever, clear them out to save memory usage.
 
 	metricsConf := metrics.DefaultConfig("")
@@ -819,12 +820,14 @@ func TestCertStorageMetrics(t *testing.T) {
 }
 
 func TestTidyAcme(t *testing.T) {
-
 	// This would still be way easier if I could do both sides
 	// b, s := CreateBackendWithStorage(t)
 	cluster, client, _ := setupAcmeBackend(t)
 	defer cluster.Cleanup()
 	testCtx := context.Background()
+
+	// Grab the mount UUID for sys/raw invocations.
+	pkiMount := findStorageMountUuid(t, client, "pki")
 
 	// Configure Tidy to Tidy Acme (by Writing the auto-tidy config.)
 	_, err := client.Logical().Write("pki/config/auto-tidy", map[string]interface{}{
@@ -847,47 +850,79 @@ func TestTidyAcme(t *testing.T) {
 	acct, err := acmeClient.Register(testCtx, &acme.Account{}, func(tosURL string) bool { return true })
 	require.NoError(t, err, "failed registering account")
 
+	// -> Ensure we see it in storage. Since we don't have direct storage
+	// access, use sys/raw interface.
+	acmeThumbprintsPath := path.Join("sys/raw/logical", pkiMount, acmeThumbprintPrefix)
+	listResp, err := client.Logical().ListWithContext(testCtx, acmeThumbprintsPath)
+	require.NoError(t, err, "failed listing ACME thumbprints")
+	require.NotEmpty(t, listResp.Data["keys"], "expected non-empty list response")
+
 	// Run Tidy
 	_, err = client.Logical().Write("pki/tidy", map[string]interface{}{
 		"tidy_acme": true,
 	})
 	require.NoError(t, err)
 
-	// Check that the Account is Still There, Still Valid
-	listResp, err := client.Logical().ListWithContext(testCtx, "pki"+acmeThumbprintPrefix)
+	// Wait for tidy to finish.
+	time.Sleep(2 * time.Second)
+	statusResp, err := client.Logical().Read("pki/tidy-status")
+	require.NoError(t, err)
+	t.Logf("got tidy status: %v", statusResp.Data)
+	require.NotEqual(t, statusResp.Data["state"], "Running", "tidy is still running...")
+	require.Empty(t, statusResp.Data["error"], "got error during tidy run")
+
+	// Check that the Account is Still There, Still Valid.
+	listResp, err = client.Logical().ListWithContext(testCtx, acmeThumbprintsPath)
+	require.NoError(t, err)
 	require.NotNil(t, listResp)
 	thumbprintEntries := listResp.Data["keys"].([]interface{})
 	require.Equal(t, len(thumbprintEntries), 1)
 	thumbprint := thumbprintEntries[0].(string)
 
 	// Let "Time Pass"; this is a HACK, this function sys-writes to overwrite the date on objects in storage
-	backDateAcmeAccountSys(t, testCtx, client, thumbprint, 30*24*time.Hour, "pki")
+	backDateAcmeAccountSys(t, testCtx, client, thumbprint, 30*24*time.Hour, pkiMount)
 
-	// Run Tidy
+	// Run Tidy -> mark account revoked
 	_, err = client.Logical().Write("pki/tidy", map[string]interface{}{
 		"tidy_acme": true,
 	})
 	require.NoError(t, err)
+
+	// Wait for tidy to finish.
+	time.Sleep(2 * time.Second)
+	statusResp, err = client.Logical().Read("pki/tidy-status")
+	require.NoError(t, err)
+	t.Logf("got tidy status: %v", statusResp.Data)
+	require.NotEqual(t, statusResp.Data["state"], "Running", "tidy is still running...")
+	require.Empty(t, statusResp.Data["error"], "got error during tidy run")
 
 	// Let "Time Pass"; this is a HACK, this function sys-writes to overwrite the date on objects in storage
-	backDateAcmeAccountSys(t, testCtx, client, thumbprint, 30*24*time.Hour, "pki")
+	backDateAcmeAccountSys(t, testCtx, client, thumbprint, 30*24*time.Hour, pkiMount)
 
-	// Run Tidy
+	// Run Tidy -> remove account
 	_, err = client.Logical().Write("pki/tidy", map[string]interface{}{
 		"tidy_acme": true,
 	})
 	require.NoError(t, err)
 
+	// Wait for tidy to finish.
+	time.Sleep(2 * time.Second)
+	statusResp, err = client.Logical().Read("pki/tidy-status")
+	require.NoError(t, err)
+	t.Logf("got tidy status: %v", statusResp.Data)
+	require.NotEqual(t, statusResp.Data["state"], "Running", "tidy is still running...")
+	require.Empty(t, statusResp.Data["error"], "got error during tidy run")
+
 	// Check Account No Longer Appears
-	listResp, err = client.Logical().ListWithContext(testCtx, "pki"+acmeThumbprintPrefix)
+	listResp, err = client.Logical().ListWithContext(testCtx, acmeThumbprintsPath)
+	require.NoError(t, err)
 	require.NotNil(t, listResp)
 	thumbprintEntries = listResp.Data["keys"].([]interface{})
-	require.Equal(t, len(thumbprintEntries), 0)
+	require.Equal(t, 0, len(thumbprintEntries))
 
 	// Nor Under Account
 	getResp, err := client.Logical().ReadWithContext(testCtx, "pki"+acmeAccountPrefix+acct.URI)
 	require.Nil(t, getResp)
-
 }
 
 // These calls are for tests using the "storage" and "backend" direct setup
@@ -936,7 +971,6 @@ func backDateAcmeAccount(t *testing.T, testContext context.Context, b *backend, 
 	}
 
 	// No need to change certificates entries here - no time is stored on AcmeCertEntry
-
 }
 
 func backDateAcmeOrder(t *testing.T, testContext context.Context, b *backend, s logical.Storage, accountKid string, orderId string, backdateAmount time.Duration) {
@@ -965,7 +999,6 @@ func backDateAcmeOrder(t *testing.T, testContext context.Context, b *backend, s 
 	for _, authId := range order.AuthorizationIds {
 		backDateAcmeAuthorization(t, testContext, s, accountKid, authId, backdateAmount)
 	}
-
 }
 
 func backDateAcmeAuthorization(t *testing.T, testContext context.Context, s logical.Storage, accountKid string, authId string, backdateAmount time.Duration) {
@@ -994,7 +1027,6 @@ func backDateAcmeAuthorization(t *testing.T, testContext context.Context, s logi
 	if err != nil {
 		t.Fatalf("error updating authorization date on %v: %v", authPath, err)
 	}
-
 }
 
 // The sys tests refer to all of the tests using sys/raw/logical which work off of a client
@@ -1038,9 +1070,15 @@ func backDateAcmeAccountSys(t *testing.T, testContext context.Context, client *a
 
 	ordersPath := path.Join("sys/raw/logical", mount, acmeAccountPrefix, thumbprint.Kid, "/orders/")
 	ordersRaw, err := client.Logical().ListWithContext(context.Background(), ordersPath)
-	if err != nil {
-		t.Fatalf("unable to list orders on account %v", thumbprint.Kid)
+	require.NoError(t, err, "failed listing orders")
+
+	if ordersRaw == nil {
+		t.Logf("skipping backdating orders as there are none")
+		return
 	}
+
+	require.NotNil(t, ordersRaw, "got no response data")
+	require.NotNil(t, ordersRaw.Data, "got no response data")
 
 	orders := ordersRaw.Data
 
@@ -1050,7 +1088,6 @@ func backDateAcmeAccountSys(t *testing.T, testContext context.Context, client *a
 	}
 
 	// No need to change certificates entries here - no time is stored on AcmeCertEntry
-
 }
 
 func backDateAcmeOrderSys(t *testing.T, testContext context.Context, client *api.Client, accountKid string, orderId string, backdateAmount time.Duration, mount string) {
@@ -1081,7 +1118,6 @@ func backDateAcmeOrderSys(t *testing.T, testContext context.Context, client *api
 	for _, authId := range order.AuthorizationIds {
 		backDateAcmeAuthorizationSys(t, testContext, client, accountKid, authId, backdateAmount, mount)
 	}
-
 }
 
 func backDateAcmeAuthorizationSys(t *testing.T, testContext context.Context, client *api.Client, accountKid string, authId string, backdateAmount time.Duration, mount string) {
@@ -1127,5 +1163,4 @@ func backDate(original time.Time, change time.Duration) time.Time {
 	}
 
 	return original.Add(-change)
-
 }
