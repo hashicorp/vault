@@ -19,24 +19,24 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// fakeJSONxAuditEvent will return a new fake event containing audit data based
-// on the specified auditSubtype and logical.LogInput.
-func fakeJSONxAuditEvent(t *testing.T, subtype auditSubtype, input *logical.LogInput) *eventlogger.Event {
+// fakeJSONxAuditEvent will return a new fake auditEvent containing audit data based
+// on the specified subtype and logical.LogInput.
+func fakeJSONxAuditEvent(t *testing.T, subtype subtype, input *logical.LogInput) *eventlogger.Event {
 	t.Helper()
 
 	date := time.Date(2023, time.July, 11, 15, 49, 10, 0, time.Local)
 
-	auditEvent, err := newAudit(
+	auditEvent, err := newEvent(
 		WithID("123"),
 		WithSubtype(string(subtype)),
-		WithFormat(string(AuditFormatJSONx)),
+		WithFormat(string(JSONxFormat)),
 		WithNow(date),
 	)
 	require.NoError(t, err)
 	require.NotNil(t, auditEvent)
 	require.Equal(t, "123", auditEvent.ID)
 	require.Equal(t, "v0.1", auditEvent.Version)
-	require.Equal(t, AuditFormatJSONx, auditEvent.RequiredFormat)
+	require.Equal(t, JSONxFormat, auditEvent.RequiredFormat)
 	require.Equal(t, subtype, auditEvent.Subtype)
 	require.Equal(t, date, auditEvent.Timestamp)
 
@@ -74,29 +74,29 @@ func TestAuditFormatterJSONx_Process(t *testing.T) {
 	tests := map[string]struct {
 		IsErrorExpected      bool
 		ExpectedErrorMessage string
-		Subtype              auditSubtype
+		Subtype              subtype
 		Data                 *logical.LogInput
 	}{
 		"request-no-formatted-json": {
 			IsErrorExpected:      true,
 			ExpectedErrorMessage: "audit.(AuditFormatterJSONx).Process: pre-formatted JSON required but not found: invalid parameter",
-			Subtype:              AuditRequestType,
+			Subtype:              RequestType,
 			Data:                 nil,
 		},
 		"response-no-formatted-json": {
 			IsErrorExpected:      true,
 			ExpectedErrorMessage: "audit.(AuditFormatterJSONx).Process: pre-formatted JSON required but not found: invalid parameter",
-			Subtype:              AuditResponseType,
+			Subtype:              ResponseType,
 			Data:                 nil,
 		},
 		"request-basic-json": {
 			IsErrorExpected: false,
-			Subtype:         AuditRequestType,
+			Subtype:         RequestType,
 			Data:            &logical.LogInput{Type: "magic"},
 		},
 		"response-basic-json": {
 			IsErrorExpected: false,
-			Subtype:         AuditResponseType,
+			Subtype:         ResponseType,
 			Data:            &logical.LogInput{Type: "magic"},
 		},
 	}
@@ -116,11 +116,11 @@ func TestAuditFormatterJSONx_Process(t *testing.T) {
 				jsonBytes, err := jsonutil.EncodeJSON(tc.Data)
 				require.NoError(t, err)
 				require.NotNil(t, jsonBytes)
-				e.FormattedAs(string(AuditFormatJSON), jsonBytes)
+				e.FormattedAs(string(JSONFormat), jsonBytes)
 			}
 
 			processed, err := NewAuditFormatterJSONx().Process(context.Background(), e)
-			b, found := e.Format(string(AuditFormatJSONx))
+			b, found := e.Format(string(JSONxFormat))
 
 			switch {
 			case tc.IsErrorExpected:

@@ -9,33 +9,33 @@ import (
 
 // Audit subtypes.
 const (
-	AuditRequestType  auditSubtype = "AuditRequest"
-	AuditResponseType auditSubtype = "AuditResponse"
+	RequestType  subtype = "AuditRequest"
+	ResponseType subtype = "AuditResponse"
 )
 
 // Audit formats.
 const (
-	AuditFormatJSON  auditFormat = "json"
-	AuditFormatJSONx auditFormat = "jsonx"
+	JSONFormat  format = "json"
+	JSONxFormat format = "jsonx"
 )
 
-// auditVersion defines the version of audit events.
-const auditVersion = "v0.1"
+// version defines the version of audit events.
+const version = "v0.1"
 
-// auditSubtype defines the type of audit event.
-type auditSubtype string
+// subtype defines the type of audit event.
+type subtype string
 
-// auditFormat defines types of format audit events support.
-type auditFormat string
+// format defines types of format audit events support.
+type format string
 
-// audit is the audit event.
-type audit struct {
+// auditEvent is the audit event.
+type auditEvent struct {
 	ID             string            `json:"id"`
 	Version        string            `json:"version"`
-	Subtype        auditSubtype      `json:"subtype"` // the subtype of the audit event.
+	Subtype        subtype           `json:"subtype"` // the subtype of the audit event.
 	Timestamp      time.Time         `json:"timestamp"`
 	Data           *logical.LogInput `json:"data"`
-	RequiredFormat auditFormat       `json:"format"`
+	RequiredFormat format            `json:"format"`
 }
 
 type Option func(*options) error
@@ -43,8 +43,8 @@ type Option func(*options) error
 type options struct {
 	withID          string
 	withNow         time.Time
-	withSubtype     auditSubtype
-	withFormat      auditFormat
+	withSubtype     subtype
+	withFormat      format
 	withFileMode    *os.FileMode
 	withPrefix      string
 	withFacility    string

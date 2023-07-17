@@ -65,7 +65,7 @@ func (f *AuditFormatterJSON) Process(ctx context.Context, e *eventlogger.Event) 
 		return nil, fmt.Errorf("%s: event is nil: %w", op, event.ErrInvalidParameter)
 	}
 
-	a, ok := e.Payload.(*audit)
+	a, ok := e.Payload.(*auditEvent)
 	if !ok {
 		return nil, fmt.Errorf("%s: cannot parse event payload: %w", op, event.ErrInvalidParameter)
 	}
@@ -73,7 +73,7 @@ func (f *AuditFormatterJSON) Process(ctx context.Context, e *eventlogger.Event) 
 	var formatted []byte
 
 	switch a.Subtype {
-	case AuditRequestType:
+	case RequestType:
 		entry, err := f.formatter.FormatRequest(ctx, f.config, a.Data)
 		if err != nil {
 			return nil, fmt.Errorf("%s: unable to parse request from audit event: %w", op, err)
@@ -83,7 +83,7 @@ func (f *AuditFormatterJSON) Process(ctx context.Context, e *eventlogger.Event) 
 		if err != nil {
 			return nil, fmt.Errorf("%s: unable to format request: %w", op, err)
 		}
-	case AuditResponseType:
+	case ResponseType:
 		entry, err := f.formatter.FormatResponse(ctx, f.config, a.Data)
 		if err != nil {
 			return nil, fmt.Errorf("%s: unable to parse response from audit event: %w", op, err)
@@ -97,7 +97,7 @@ func (f *AuditFormatterJSON) Process(ctx context.Context, e *eventlogger.Event) 
 		return nil, fmt.Errorf("%s: unknown audit event subtype: %q", op, a.Subtype)
 	}
 
-	e.FormattedAs(AuditFormatJSON.String(), formatted)
+	e.FormattedAs(JSONFormat.String(), formatted)
 
 	return e, nil
 }

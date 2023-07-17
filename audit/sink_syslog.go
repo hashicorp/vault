@@ -16,13 +16,13 @@ import (
 
 // AuditSyslogSink is a sink node which handles writing audit events to syslog.
 type AuditSyslogSink struct {
-	format auditFormat
+	format format
 	logger gsyslog.Syslogger
 }
 
 // NewAuditSyslogSink should be used to create a new AuditSyslogSink.
 // Accepted options: WithFacility and WithTag.
-func NewAuditSyslogSink(format auditFormat, opt ...Option) (*AuditSyslogSink, error) {
+func NewAuditSyslogSink(format format, opt ...Option) (*AuditSyslogSink, error) {
 	const op = "audit.NewAuditSyslogSink"
 
 	opts, err := getOpts(opt...)

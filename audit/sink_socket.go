@@ -19,7 +19,7 @@ import (
 
 // AuditSocketSink is a sink node which handles writing audit events to socket.
 type AuditSocketSink struct {
-	format      auditFormat
+	format      format
 	address     string
 	socketType  string
 	maxDuration time.Duration
@@ -29,7 +29,7 @@ type AuditSocketSink struct {
 
 // NewAuditSocketSink should be used to create a new AuditSocketSink.
 // Accepted options: WithMaxDuration and WithSocketType.
-func NewAuditSocketSink(format auditFormat, address string, opt ...Option) (*AuditSocketSink, error) {
+func NewAuditSocketSink(format format, address string, opt ...Option) (*AuditSocketSink, error) {
 	const op = "audit.NewAuditSocketSink"
 
 	opts, err := getOpts(opt...)

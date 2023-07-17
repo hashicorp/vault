@@ -10,56 +10,56 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// TestAuditEvent_New exercises the newAudit func to create audit events.
+// TestAuditEvent_New exercises the newEvent func to create audit events.
 func TestAuditEvent_New(t *testing.T) {
 	tests := map[string]struct {
 		Options              []Option
 		IsErrorExpected      bool
 		ExpectedErrorMessage string
 		ExpectedID           string
-		ExpectedFormat       auditFormat
-		ExpectedSubtype      auditSubtype
+		ExpectedFormat       format
+		ExpectedSubtype      subtype
 		ExpectedTimestamp    time.Time
 		IsNowExpected        bool
 	}{
 		"nil": {
 			Options:              nil,
 			IsErrorExpected:      true,
-			ExpectedErrorMessage: "audit.newAudit: audit.(audit).validate: audit.(auditSubtype).validate: '' is not a valid event subtype: invalid parameter",
+			ExpectedErrorMessage: "audit.newEvent: audit.(auditEvent).validate: audit.(subtype).validate: '' is not a valid event subtype: invalid parameter",
 		},
 		"empty-Option": {
 			Options:              []Option{},
 			IsErrorExpected:      true,
-			ExpectedErrorMessage: "audit.newAudit: audit.(audit).validate: audit.(auditSubtype).validate: '' is not a valid event subtype: invalid parameter",
+			ExpectedErrorMessage: "audit.newEvent: audit.(auditEvent).validate: audit.(subtype).validate: '' is not a valid event subtype: invalid parameter",
 		},
 		"bad-id": {
 			Options:              []Option{WithID("")},
 			IsErrorExpected:      true,
-			ExpectedErrorMessage: "audit.newAudit: error applying options: id cannot be empty",
+			ExpectedErrorMessage: "audit.newEvent: error applying options: id cannot be empty",
 		},
 		"good": {
 			Options: []Option{
 				WithID("audit_123"),
-				WithFormat(string(AuditFormatJSON)),
-				WithSubtype(string(AuditResponseType)),
+				WithFormat(string(JSONFormat)),
+				WithSubtype(string(ResponseType)),
 				WithNow(time.Date(2023, time.July, 4, 12, 3, 0, 0, time.Local)),
 			},
 			IsErrorExpected:   false,
 			ExpectedID:        "audit_123",
 			ExpectedTimestamp: time.Date(2023, time.July, 4, 12, 3, 0, 0, time.Local),
-			ExpectedSubtype:   AuditResponseType,
-			ExpectedFormat:    AuditFormatJSON,
+			ExpectedSubtype:   ResponseType,
+			ExpectedFormat:    JSONFormat,
 		},
 		"good-no-time": {
 			Options: []Option{
 				WithID("audit_123"),
-				WithFormat(string(AuditFormatJSON)),
-				WithSubtype(string(AuditResponseType)),
+				WithFormat(string(JSONFormat)),
+				WithSubtype(string(ResponseType)),
 			},
 			IsErrorExpected: false,
 			ExpectedID:      "audit_123",
-			ExpectedSubtype: AuditResponseType,
-			ExpectedFormat:  AuditFormatJSON,
+			ExpectedSubtype: ResponseType,
+			ExpectedFormat:  JSONFormat,
 			IsNowExpected:   true,
 		},
 	}
@@ -70,7 +70,7 @@ func TestAuditEvent_New(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			audit, err := newAudit(tc.Options...)
+			audit, err := newEvent(tc.Options...)
 			switch {
 			case tc.IsErrorExpected:
 				require.Error(t, err)
@@ -94,91 +94,91 @@ func TestAuditEvent_New(t *testing.T) {
 	}
 }
 
-// TestAuditEvent_Validate exercises the validation for an audit event.
+// TestAuditEvent_Validate exercises the validation for an audit auditEvent.
 func TestAuditEvent_Validate(t *testing.T) {
 	tests := map[string]struct {
-		Value                *audit
+		Value                *auditEvent
 		IsErrorExpected      bool
 		ExpectedErrorMessage string
 	}{
 		"nil": {
 			Value:                nil,
 			IsErrorExpected:      true,
-			ExpectedErrorMessage: "audit.(audit).validate: audit is nil: invalid parameter",
+			ExpectedErrorMessage: "audit.(auditEvent).validate: event is nil: invalid parameter",
 		},
 		"default": {
-			Value:                &audit{},
+			Value:                &auditEvent{},
 			IsErrorExpected:      true,
-			ExpectedErrorMessage: "audit.(audit).validate: missing ID: invalid parameter",
+			ExpectedErrorMessage: "audit.(auditEvent).validate: missing ID: invalid parameter",
 		},
 		"id-empty": {
-			Value: &audit{
+			Value: &auditEvent{
 				ID:             "",
-				Version:        auditVersion,
-				Subtype:        AuditRequestType,
+				Version:        version,
+				Subtype:        RequestType,
 				Timestamp:      time.Now(),
 				Data:           nil,
-				RequiredFormat: AuditFormatJSON,
+				RequiredFormat: JSONFormat,
 			},
 			IsErrorExpected:      true,
-			ExpectedErrorMessage: "audit.(audit).validate: missing ID: invalid parameter",
+			ExpectedErrorMessage: "audit.(auditEvent).validate: missing ID: invalid parameter",
 		},
 		"version-fiddled": {
-			Value: &audit{
+			Value: &auditEvent{
 				ID:             "audit_123",
 				Version:        "magic-v2",
-				Subtype:        AuditRequestType,
+				Subtype:        RequestType,
 				Timestamp:      time.Now(),
 				Data:           nil,
-				RequiredFormat: AuditFormatJSON,
+				RequiredFormat: JSONFormat,
 			},
 			IsErrorExpected:      true,
-			ExpectedErrorMessage: "audit.(audit).validate: audit version unsupported: invalid parameter",
+			ExpectedErrorMessage: "audit.(auditEvent).validate: event version unsupported: invalid parameter",
 		},
 		"subtype-fiddled": {
-			Value: &audit{
+			Value: &auditEvent{
 				ID:             "audit_123",
-				Version:        auditVersion,
-				Subtype:        auditSubtype("moon"),
+				Version:        version,
+				Subtype:        subtype("moon"),
 				Timestamp:      time.Now(),
 				Data:           nil,
-				RequiredFormat: AuditFormatJSON,
+				RequiredFormat: JSONFormat,
 			},
 			IsErrorExpected:      true,
-			ExpectedErrorMessage: "audit.(audit).validate: audit.(auditSubtype).validate: 'moon' is not a valid event subtype: invalid parameter",
+			ExpectedErrorMessage: "audit.(auditEvent).validate: audit.(subtype).validate: 'moon' is not a valid event subtype: invalid parameter",
 		},
 		"format-fiddled": {
-			Value: &audit{
+			Value: &auditEvent{
 				ID:             "audit_123",
-				Version:        auditVersion,
-				Subtype:        AuditResponseType,
+				Version:        version,
+				Subtype:        ResponseType,
 				Timestamp:      time.Now(),
 				Data:           nil,
-				RequiredFormat: auditFormat("blah"),
+				RequiredFormat: format("blah"),
 			},
 			IsErrorExpected:      true,
-			ExpectedErrorMessage: "audit.(audit).validate: audit.(auditFormat).validate: 'blah' is not a valid format: invalid parameter",
+			ExpectedErrorMessage: "audit.(auditEvent).validate: audit.(format).validate: 'blah' is not a valid format: invalid parameter",
 		},
 		"default-time": {
-			Value: &audit{
+			Value: &auditEvent{
 				ID:             "audit_123",
-				Version:        auditVersion,
-				Subtype:        AuditResponseType,
+				Version:        version,
+				Subtype:        ResponseType,
 				Timestamp:      time.Time{},
 				Data:           nil,
-				RequiredFormat: AuditFormatJSON,
+				RequiredFormat: JSONFormat,
 			},
 			IsErrorExpected:      true,
-			ExpectedErrorMessage: "audit.(audit).validate: audit timestamp cannot be the zero time instant: invalid parameter",
+			ExpectedErrorMessage: "audit.(auditEvent).validate: event timestamp cannot be the zero time instant: invalid parameter",
 		},
 		"valid": {
-			Value: &audit{
+			Value: &auditEvent{
 				ID:             "audit_123",
-				Version:        auditVersion,
-				Subtype:        AuditResponseType,
+				Version:        version,
+				Subtype:        ResponseType,
 				Timestamp:      time.Now(),
 				Data:           nil,
-				RequiredFormat: AuditFormatJSON,
+				RequiredFormat: JSONFormat,
 			},
 			IsErrorExpected: false,
 		},
@@ -202,7 +202,7 @@ func TestAuditEvent_Validate(t *testing.T) {
 	}
 }
 
-// TestAuditEvent_Validate_Subtype exercises the validation for an audit event's subtype.
+// TestAuditEvent_Validate_Subtype exercises the validation for an audit auditEvent's subtype.
 func TestAuditEvent_Validate_Subtype(t *testing.T) {
 	tests := map[string]struct {
 		Value                string
@@ -212,12 +212,12 @@ func TestAuditEvent_Validate_Subtype(t *testing.T) {
 		"empty": {
 			Value:                "",
 			IsErrorExpected:      true,
-			ExpectedErrorMessage: "audit.(auditSubtype).validate: '' is not a valid event subtype: invalid parameter",
+			ExpectedErrorMessage: "audit.(subtype).validate: '' is not a valid event subtype: invalid parameter",
 		},
 		"unsupported": {
 			Value:                "foo",
 			IsErrorExpected:      true,
-			ExpectedErrorMessage: "audit.(auditSubtype).validate: 'foo' is not a valid event subtype: invalid parameter",
+			ExpectedErrorMessage: "audit.(subtype).validate: 'foo' is not a valid event subtype: invalid parameter",
 		},
 		"request": {
 			Value:           "AuditRequest",
@@ -235,7 +235,7 @@ func TestAuditEvent_Validate_Subtype(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			err := auditSubtype(tc.Value).validate()
+			err := subtype(tc.Value).validate()
 			switch {
 			case tc.IsErrorExpected:
 				require.Error(t, err)
@@ -247,7 +247,7 @@ func TestAuditEvent_Validate_Subtype(t *testing.T) {
 	}
 }
 
-// TestAuditEvent_Validate_Format exercises the validation for an audit event's format.
+// TestAuditEvent_Validate_Format exercises the validation for an audit auditEvent's format.
 func TestAuditEvent_Validate_Format(t *testing.T) {
 	tests := map[string]struct {
 		Value                string
@@ -257,12 +257,12 @@ func TestAuditEvent_Validate_Format(t *testing.T) {
 		"empty": {
 			Value:                "",
 			IsErrorExpected:      true,
-			ExpectedErrorMessage: "audit.(auditFormat).validate: '' is not a valid format: invalid parameter",
+			ExpectedErrorMessage: "audit.(format).validate: '' is not a valid format: invalid parameter",
 		},
 		"unsupported": {
 			Value:                "foo",
 			IsErrorExpected:      true,
-			ExpectedErrorMessage: "audit.(auditFormat).validate: 'foo' is not a valid format: invalid parameter",
+			ExpectedErrorMessage: "audit.(format).validate: 'foo' is not a valid format: invalid parameter",
 		},
 		"json": {
 			Value:           "json",
@@ -280,7 +280,7 @@ func TestAuditEvent_Validate_Format(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			err := auditFormat(tc.Value).validate()
+			err := format(tc.Value).validate()
 			switch {
 			case tc.IsErrorExpected:
 				require.Error(t, err)

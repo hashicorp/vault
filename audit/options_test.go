@@ -17,7 +17,7 @@ func TestOptions_WithFormat(t *testing.T) {
 		Value                string
 		IsErrorExpected      bool
 		ExpectedErrorMessage string
-		ExpectedValue        auditFormat
+		ExpectedValue        format
 	}{
 		"empty": {
 			Value:                "",
@@ -32,17 +32,17 @@ func TestOptions_WithFormat(t *testing.T) {
 		"invalid-test": {
 			Value:                "test",
 			IsErrorExpected:      true,
-			ExpectedErrorMessage: "audit.(auditFormat).validate: 'test' is not a valid format: invalid parameter",
+			ExpectedErrorMessage: "audit.(format).validate: 'test' is not a valid format: invalid parameter",
 		},
 		"valid-json": {
 			Value:           "json",
 			IsErrorExpected: false,
-			ExpectedValue:   AuditFormatJSON,
+			ExpectedValue:   JSONFormat,
 		},
 		"valid-jsonx": {
 			Value:           "jsonx",
 			IsErrorExpected: false,
-			ExpectedValue:   AuditFormatJSONx,
+			ExpectedValue:   JSONxFormat,
 		},
 	}
 
@@ -72,7 +72,7 @@ func TestOptions_WithSubtype(t *testing.T) {
 		Value                string
 		IsErrorExpected      bool
 		ExpectedErrorMessage string
-		ExpectedValue        auditSubtype
+		ExpectedValue        subtype
 	}{
 		"empty": {
 			Value:                "",
@@ -87,7 +87,7 @@ func TestOptions_WithSubtype(t *testing.T) {
 		"valid": {
 			Value:           "AuditResponse",
 			IsErrorExpected: false,
-			ExpectedValue:   AuditResponseType,
+			ExpectedValue:   ResponseType,
 		},
 	}
 
@@ -446,8 +446,8 @@ func TestOptions_Opts(t *testing.T) {
 		IsErrorExpected      bool
 		ExpectedErrorMessage string
 		ExpectedID           string
-		ExpectedSubtype      auditSubtype
-		ExpectedFormat       auditFormat
+		ExpectedSubtype      subtype
+		ExpectedFormat       format
 		IsNowExpected        bool
 		ExpectedNow          time.Time
 	}{
@@ -476,7 +476,7 @@ func TestOptions_Opts(t *testing.T) {
 				WithSubtype("AuditResponse"),
 			},
 			IsErrorExpected: false,
-			ExpectedSubtype: AuditResponseType,
+			ExpectedSubtype: ResponseType,
 			IsNowExpected:   true,
 		},
 		"with-multiple-valid-format": {
@@ -485,7 +485,7 @@ func TestOptions_Opts(t *testing.T) {
 				WithFormat("jsonx"),
 			},
 			IsErrorExpected: false,
-			ExpectedFormat:  AuditFormatJSONx,
+			ExpectedFormat:  JSONxFormat,
 			IsNowExpected:   true,
 		},
 		"with-multiple-valid-now": {
@@ -514,8 +514,8 @@ func TestOptions_Opts(t *testing.T) {
 			},
 			IsErrorExpected: false,
 			ExpectedID:      "qwerty",
-			ExpectedSubtype: AuditRequestType,
-			ExpectedFormat:  AuditFormatJSON,
+			ExpectedSubtype: RequestType,
+			ExpectedFormat:  JSONFormat,
 			ExpectedNow:     time.Date(2023, time.July, 4, 12, 3, 0, 0, time.Local),
 		},
 	}

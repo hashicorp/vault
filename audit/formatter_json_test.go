@@ -18,24 +18,24 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// fakeJSONAuditEvent will return a new fake event containing audit data based
-// on the specified auditSubtype and logical.LogInput.
-func fakeJSONAuditEvent(tb testing.TB, subtype auditSubtype, input *logical.LogInput) *eventlogger.Event {
+// fakeJSONAuditEvent will return a new fake auditEvent containing audit data based
+// on the specified subtype and logical.LogInput.
+func fakeJSONAuditEvent(tb testing.TB, subtype subtype, input *logical.LogInput) *eventlogger.Event {
 	tb.Helper()
 
 	date := time.Date(2023, time.July, 11, 15, 49, 10, 0o0, time.Local)
 
-	auditEvent, err := newAudit(
+	auditEvent, err := newEvent(
 		WithID("123"),
 		WithSubtype(string(subtype)),
-		WithFormat(string(AuditFormatJSON)),
+		WithFormat(string(JSONFormat)),
 		WithNow(date),
 	)
 	require.NoError(tb, err)
 	require.NotNil(tb, auditEvent)
 	require.Equal(tb, "123", auditEvent.ID)
 	require.Equal(tb, "v0.1", auditEvent.Version)
-	require.Equal(tb, AuditFormatJSON, auditEvent.RequiredFormat)
+	require.Equal(tb, JSONFormat, auditEvent.RequiredFormat)
 	require.Equal(tb, subtype, auditEvent.Subtype)
 	require.Equal(tb, date, auditEvent.Timestamp)
 
@@ -118,60 +118,60 @@ func TestAuditFormatterJSON_Type(t *testing.T) {
 }
 
 // TestAuditFormatterJSON_Process attempts to run the Process method to convert
-// the logical.LogInput within an audit event to JSON (AuditRequestEntry or AuditResponseEntry).
+// the logical.LogInput within an audit auditEvent to JSON (AuditRequestEntry or AuditResponseEntry).
 func TestAuditFormatterJSON_Process(t *testing.T) {
 	tests := map[string]struct {
 		IsErrorExpected      bool
 		ExpectedErrorMessage string
-		Subtype              auditSubtype
+		Subtype              subtype
 		Data                 *logical.LogInput
 		RootNamespace        bool
 	}{
 		"request-no-data": {
 			IsErrorExpected:      true,
 			ExpectedErrorMessage: "audit.(AuditFormatterJSON).Process: unable to parse request from audit event: request to request-audit a nil request",
-			Subtype:              AuditRequestType,
+			Subtype:              RequestType,
 			Data:                 nil,
 		},
 		"response-no-data": {
 			IsErrorExpected:      true,
 			ExpectedErrorMessage: "audit.(AuditFormatterJSON).Process: unable to parse response from audit event: request to response-audit a nil request",
-			Subtype:              AuditResponseType,
+			Subtype:              ResponseType,
 			Data:                 nil,
 		},
 		"request-basic-input": {
 			IsErrorExpected:      true,
 			ExpectedErrorMessage: "audit.(AuditFormatterJSON).Process: unable to parse request from audit event: request to request-audit a nil request",
-			Subtype:              AuditRequestType,
+			Subtype:              RequestType,
 			Data:                 &logical.LogInput{Type: "magic"},
 		},
 		"response-basic-input": {
 			IsErrorExpected:      true,
 			ExpectedErrorMessage: "audit.(AuditFormatterJSON).Process: unable to parse response from audit event: request to response-audit a nil request",
-			Subtype:              AuditResponseType,
+			Subtype:              ResponseType,
 			Data:                 &logical.LogInput{Type: "magic"},
 		},
 		"request-basic-input-and-request-no-ns": {
 			IsErrorExpected:      true,
 			ExpectedErrorMessage: "audit.(AuditFormatterJSON).Process: unable to parse request from audit event: no namespace",
-			Subtype:              AuditRequestType,
+			Subtype:              RequestType,
 			Data:                 &logical.LogInput{Request: &logical.Request{ID: "123"}},
 		},
 		"response-basic-input-and-request-no-ns": {
 			IsErrorExpected:      true,
 			ExpectedErrorMessage: "audit.(AuditFormatterJSON).Process: unable to parse response from audit event: no namespace",
-			Subtype:              AuditResponseType,
+			Subtype:              ResponseType,
 			Data:                 &logical.LogInput{Request: &logical.Request{ID: "123"}},
 		},
 		"request-basic-input-and-request-with-ns": {
 			IsErrorExpected: false,
-			Subtype:         AuditRequestType,
+			Subtype:         RequestType,
 			Data:            &logical.LogInput{Request: &logical.Request{ID: "123"}},
 			RootNamespace:   true,
 		},
 		"response-basic-input-and-request-with-ns": {
 			IsErrorExpected: false,
-			Subtype:         AuditResponseType,
+			Subtype:         ResponseType,
 			Data:            &logical.LogInput{Request: &logical.Request{ID: "123"}},
 			RootNamespace:   true,
 		},
@@ -201,7 +201,7 @@ func TestAuditFormatterJSON_Process(t *testing.T) {
 			}
 
 			processed, err := f.Process(ctx, e)
-			b, found := e.Format(string(AuditFormatJSON))
+			b, found := e.Format(string(JSONFormat))
 
 			switch {
 			case tc.IsErrorExpected:

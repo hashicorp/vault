@@ -72,14 +72,13 @@ func WithNow(now time.Time) Option {
 }
 
 // WithSubtype provides an Option to represent the subtype.
-func WithSubtype(subtype string) Option {
+func WithSubtype(s string) Option {
 	return func(o *options) error {
-		s := strings.TrimSpace(subtype)
+		s := strings.TrimSpace(s)
 		if s == "" {
 			return errors.New("subtype cannot be empty")
 		}
-
-		parsed := auditSubtype(s)
+		parsed := subtype(s)
 		err := parsed.validate()
 		if err != nil {
 			return err
@@ -91,14 +90,14 @@ func WithSubtype(subtype string) Option {
 }
 
 // WithFormat provides an Option to represent event format.
-func WithFormat(format string) Option {
+func WithFormat(f string) Option {
 	return func(o *options) error {
-		f := strings.TrimSpace(format)
+		f := strings.TrimSpace(f)
 		if f == "" {
 			return errors.New("format cannot be empty")
 		}
 
-		parsed := auditFormat(f)
+		parsed := format(f)
 		err := parsed.validate()
 		if err != nil {
 			return err

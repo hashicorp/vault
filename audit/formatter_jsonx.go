@@ -53,7 +53,7 @@ func (f *AuditFormatterJSONx) Process(ctx context.Context, e *eventlogger.Event)
 	}
 
 	// We expect that JSON has already been parsed for this event.
-	jsonBytes, ok := e.Format(AuditFormatJSON.String())
+	jsonBytes, ok := e.Format(JSONFormat.String())
 	if !ok {
 		return nil, fmt.Errorf("%s: pre-formatted JSON required but not found: %w", op, event.ErrInvalidParameter)
 	}
@@ -69,7 +69,7 @@ func (f *AuditFormatterJSONx) Process(ctx context.Context, e *eventlogger.Event)
 		return nil, fmt.Errorf("%s: encoded JSONx was nil: %w", op, err)
 	}
 
-	e.FormattedAs(AuditFormatJSONx.String(), xmlBytes)
+	e.FormattedAs(JSONxFormat.String(), xmlBytes)
 
 	return e, nil
 }
