@@ -13,13 +13,13 @@ function pathIsFromDirectory(path) {
   return path ? !!path.match(/\//) : false;
 }
 
-function breadcrumbsForDirectory(path) {
+function breadcrumbsForDirectory(path, noLinkToLastItem) {
   /* 
     takes a path nested secret path "beep/boop" and returns an array of objects used for breadcrumbs: 
     [
     { label: 'beep', route: 'list-directory', model: 'beep'},
     { label: 'boop', route: 'list-directory', model: 'beep/boop'},
-    { label: 'bop' ] } // last item is current route, only return label so breadcrumb has no link 
+    { label: 'bop' ] } // if noLinkToLastItem = true; last item is current route, only return label so breadcrumb has no link 
     ]
   */
   const pathAsArray = path.split('/').filter((path) => path);
@@ -28,9 +28,10 @@ function breadcrumbsForDirectory(path) {
   });
 
   return pathAsArray.map((key, index) => {
-    // we do not want to return "route or model" on the last item otherwise it will add link to the current page.
-    if (pathAsArray.length - 1 === index) {
-      return { label: key };
+    if (noLinkToLastItem) {
+      if (pathAsArray.length - 1 === index) {
+        return { label: key };
+      }
     }
     return { label: key, route: 'list-directory', model: modelIdArray[index] };
   });

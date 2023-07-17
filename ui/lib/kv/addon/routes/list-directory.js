@@ -63,7 +63,7 @@ export default class KvSecretsListRoute extends Route {
     ];
     // these breadcrumbs handle directories: beep/boop/
     if (resolvedModel.pathToSecret) {
-      breadcrumbsArray = [...breadcrumbsArray, ...breadcrumbsForDirectory(resolvedModel.pathToSecret)];
+      breadcrumbsArray = [...breadcrumbsArray, ...breadcrumbsForDirectory(resolvedModel.pathToSecret, true)];
     }
     controller.set('breadcrumbs', breadcrumbsArray);
   }
