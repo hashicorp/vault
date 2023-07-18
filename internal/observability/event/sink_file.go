@@ -40,13 +40,8 @@ func NewFileSink(path string, format string, opt ...Option) (*FileSink, error) {
 
 	// Parse and check path
 	p := strings.TrimSpace(path)
-	switch {
-	case p == "":
+	if p == "" {
 		return nil, fmt.Errorf("%s: path is required", op)
-	case strings.EqualFold(path, stdout):
-		p = stdout
-	case strings.EqualFold(path, discard):
-		p = discard
 	}
 
 	opts, err := getOpts(opt...)
@@ -59,8 +54,6 @@ func NewFileSink(path string, format string, opt ...Option) (*FileSink, error) {
 	// then we should use the supplied file mode, or maintain the existing file mode.
 	if opts.withFileMode != nil {
 		switch {
-		case p == stdout:
-		case p == discard:
 		case *opts.withFileMode == 0: // Maintain the existing file's mode when set to "0000".
 			fileInfo, err := os.Stat(path)
 			if err != nil {

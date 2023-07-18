@@ -13,6 +13,7 @@ import (
 	"github.com/hashicorp/eventlogger"
 	gsyslog "github.com/hashicorp/go-syslog"
 	"github.com/hashicorp/vault/audit"
+	"github.com/hashicorp/vault/internal/observability/event"
 	"github.com/hashicorp/vault/sdk/helper/salt"
 	"github.com/hashicorp/vault/sdk/logical"
 )
@@ -113,12 +114,25 @@ func Factory(ctx context.Context, conf *audit.BackendConfig, useEventLogger bool
 		w = &audit.JSONxWriter{Prefix: conf.Config["prefix"]}
 	}
 
+	formatterNodeID := event.GenerateNodeID()
+	b.nodeIDList = append(b.nodeIDList, formatterNodeID)
+	b.nodeMap[formatterNodeID] = f
+
 	fw, err := audit.NewEventFormatterWriter(b.formatConfig, f, w)
 	if err != nil {
 		return nil, fmt.Errorf("error creating formatter writer: %w", err)
 	}
 
 	b.formatter = fw
+
+	sinkNode, err := event.NewSyslogSink(format, event.WithFacility(facility), event.WithTag(tag))
+	if err != nil {
+		return nil, fmt.Errorf("error creating syslog sink node: %w", err)
+	}
+
+	sinkNodeID := event.GenerateNodeID()
+	b.nodeIDList = append(b.nodeIDList, sinkNodeID)
+	b.nodeMap[sinkNodeID] = sinkNode
 
 	return b, nil
 }

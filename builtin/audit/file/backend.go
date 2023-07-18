@@ -107,9 +107,7 @@ func Factory(ctx context.Context, conf *audit.BackendConfig, useEventLogger bool
 			}
 		default:
 			mode = os.FileMode(m)
-
 		}
-
 	}
 
 	cfg := audit.FormatterConfig{
@@ -173,7 +171,11 @@ func Factory(ctx context.Context, conf *audit.BackendConfig, useEventLogger bool
 			return nil, fmt.Errorf("sanity check failed; unable to open %q for writing: %w", path, err)
 		}
 
-		sinkNode = nil // The file sink node struct
+		var err error
+		sinkNode, err = event.NewFileSink(b.path, format, event.WithFileMode(mode.String()), event.WithPrefix(conf.Config["prefix"]))
+		if err != nil {
+			return nil, fmt.Errorf("file sink creation failed for path %q: %w", path, err)
+		}
 	}
 
 	sinkNodeID := event.GenerateNodeID()

@@ -340,11 +340,11 @@ func verifyDefaultAuditTable(t *testing.T, table *MountTable) {
 
 func TestAuditBroker_LogRequest(t *testing.T) {
 	l := logging.NewVaultLogger(log.Trace)
-	b := NewAuditBroker(l)
+	b := NewAuditBroker(l, false)
 	a1 := corehelpers.TestNoopAudit(t, nil)
 	a2 := corehelpers.TestNoopAudit(t, nil)
-	b.Register("foo", a1, false, false)
-	b.Register("bar", a2, false, false)
+	b.Register("foo", a1, false)
+	b.Register("bar", a2, false)
 
 	auth := &logical.Auth{
 		ClientToken: "foo",
@@ -427,11 +427,11 @@ func TestAuditBroker_LogRequest(t *testing.T) {
 
 func TestAuditBroker_LogResponse(t *testing.T) {
 	l := logging.NewVaultLogger(log.Trace)
-	b := NewAuditBroker(l)
+	b := NewAuditBroker(l, false)
 	a1 := corehelpers.TestNoopAudit(t, nil)
 	a2 := corehelpers.TestNoopAudit(t, nil)
-	b.Register("foo", a1, false, false)
-	b.Register("bar", a2, false, false)
+	b.Register("foo", a1, false)
+	b.Register("bar", a2, false)
 
 	auth := &logical.Auth{
 		NumUses:     10,
@@ -532,13 +532,13 @@ func TestAuditBroker_LogResponse(t *testing.T) {
 
 func TestAuditBroker_AuditHeaders(t *testing.T) {
 	logger := logging.NewVaultLogger(log.Trace)
-	b := NewAuditBroker(logger)
+	b := NewAuditBroker(logger, false)
 	_, barrier, _ := mockBarrier(t)
 	view := NewBarrierView(barrier, "headers/")
 	a1 := corehelpers.TestNoopAudit(t, nil)
 	a2 := corehelpers.TestNoopAudit(t, nil)
-	b.Register("foo", a1, false, false)
-	b.Register("bar", a2, false, false)
+	b.Register("foo", a1, false)
+	b.Register("bar", a2, false)
 
 	auth := &logical.Auth{
 		ClientToken: "foo",

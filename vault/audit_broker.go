@@ -29,15 +29,20 @@ type AuditBroker struct {
 	sync.RWMutex
 	backends map[string]backendEntry
 	logger   log.Logger
-	broker   *eventlogger.Broker
+
+	broker *eventlogger.Broker
 }
 
 // NewAuditBroker creates a new audit broker
-func NewAuditBroker(log log.Logger) *AuditBroker {
-	// Ignoring the second error return value since an error will only occur
-	// if an unrecognized eventlogger.RegistrationPolicy is provided to an
-	// eventlogger.Option function.
-	eventBroker, _ := eventlogger.NewBroker(eventlogger.WithNodeRegistrationPolicy(eventlogger.DenyOverwrite), eventlogger.WithPipelineRegistrationPolicy(eventlogger.DenyOverwrite))
+func NewAuditBroker(log log.Logger, useEventLogger bool) *AuditBroker {
+	var eventBroker *eventlogger.Broker
+
+	if useEventLogger {
+		// Ignoring the second error return value since an error will only occur
+		// if an unrecognized eventlogger.RegistrationPolicy is provided to an
+		// eventlogger.Option function.
+		eventBroker, _ = eventlogger.NewBroker(eventlogger.WithNodeRegistrationPolicy(eventlogger.DenyOverwrite), eventlogger.WithPipelineRegistrationPolicy(eventlogger.DenyOverwrite))
+	}
 
 	b := &AuditBroker{
 		backends: make(map[string]backendEntry),
@@ -48,11 +53,11 @@ func NewAuditBroker(log log.Logger) *AuditBroker {
 }
 
 // Register is used to add new audit backend to the broker
-func (a *AuditBroker) Register(name string, b audit.Backend, local bool, useEventLogger bool) {
+func (a *AuditBroker) Register(name string, b audit.Backend, local bool) {
 	a.Lock()
 	defer a.Unlock()
 
-	if useEventLogger {
+	if a.broker != nil {
 		b.RegisterNodesAndPipeline(a.broker, name)
 	}
 
@@ -64,20 +69,22 @@ func (a *AuditBroker) Register(name string, b audit.Backend, local bool, useEven
 }
 
 // Deregister is used to remove an audit backend from the broker
-func (a *AuditBroker) Deregister(name string, useEventLogger bool) {
-	if useEventLogger {
-		// TODO: Coming soon
-	} else {
-		a.Lock()
-		defer a.Unlock()
-		delete(a.backends, name)
+func (a *AuditBroker) Deregister(ctx context.Context, name string) {
+	a.Lock()
+	defer a.Unlock()
+
+	if a.broker != nil {
+		a.broker.RemovePipelineAndNodes(ctx, eventlogger.EventType("audit"), eventlogger.PipelineID(name))
 	}
+
+	delete(a.backends, name)
 }
 
 // IsRegistered is used to check if a given audit backend is registered
 func (a *AuditBroker) IsRegistered(name string) bool {
 	a.RLock()
 	defer a.RUnlock()
+
 	_, ok := a.backends[name]
 	return ok
 }
