@@ -100,7 +100,7 @@ func Factory(ctx context.Context, conf *audit.BackendConfig) (audit.Backend, err
 	}
 
 	// Configure the formatter for either case.
-	f, err := audit.NewAuditFormatter(b)
+	f, err := audit.NewEventFormatter(b)
 	if err != nil {
 		return nil, fmt.Errorf("error creating formatter: %w", err)
 	}
@@ -112,7 +112,7 @@ func Factory(ctx context.Context, conf *audit.BackendConfig) (audit.Backend, err
 		w = &audit.JSONxWriter{Prefix: conf.Config["prefix"]}
 	}
 
-	fw, err := audit.NewAuditFormatterWriter(f, w)
+	fw, err := audit.NewEventFormatterWriter(f, w)
 	if err != nil {
 		return nil, fmt.Errorf("error creating formatter writer: %w", err)
 	}
@@ -126,7 +126,7 @@ func Factory(ctx context.Context, conf *audit.BackendConfig) (audit.Backend, err
 type Backend struct {
 	connection net.Conn
 
-	formatter    *audit.AuditFormatterWriter
+	formatter    *audit.EventFormatterWriter
 	formatConfig audit.FormatterConfig
 
 	writeDuration time.Duration

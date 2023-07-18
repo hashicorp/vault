@@ -22,7 +22,7 @@ func getDefaultOptions() options {
 	}
 }
 
-// getOpts applies all the supplied Option and returns configured options.
+// getOpts applies each supplied Option and returns the fully configured options.
 // Each Option is applied in the order it appears in the argument list, so it is
 // possible to supply the same Option numerous times and the 'last write wins'.
 func getOpts(opt ...Option) (options, error) {
@@ -140,7 +140,12 @@ func WithFileMode(mode string) Option {
 // WithPrefix provides an Option to represent a prefix for a file sink.
 func WithPrefix(prefix string) Option {
 	return func(o *options) error {
-		o.withPrefix = prefix
+		prefix = strings.TrimSpace(prefix)
+
+		if prefix != "" {
+			o.withPrefix = prefix
+		}
+
 		return nil
 	}
 }

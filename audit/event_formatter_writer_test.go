@@ -37,16 +37,16 @@ func (s *staticSalt) Salt(_ context.Context) (*salt.Salt, error) {
 
 type testingFormatWriter struct {
 	salt         *salt.Salt
-	lastRequest  *AuditRequestEntry
-	lastResponse *AuditResponseEntry
+	lastRequest  *RequestEntry
+	lastResponse *ResponseEntry
 }
 
-func (fw *testingFormatWriter) WriteRequest(_ io.Writer, entry *AuditRequestEntry) error {
+func (fw *testingFormatWriter) WriteRequest(_ io.Writer, entry *RequestEntry) error {
 	fw.lastRequest = entry
 	return nil
 }
 
-func (fw *testingFormatWriter) WriteResponse(_ io.Writer, entry *AuditResponseEntry) error {
+func (fw *testingFormatWriter) WriteResponse(_ io.Writer, entry *ResponseEntry) error {
 	fw.lastResponse = entry
 	return nil
 }
@@ -86,7 +86,7 @@ func (fw *testingFormatWriter) hashExpectedValueForComparison(input map[string]i
 	return copiedAsMap
 }
 
-// TestNewAuditFormatter tests that creating a new AuditFormatter can be done safely.
+// TestNewAuditFormatter tests that creating a new EventFormatter can be done safely.
 func TestNewAuditFormatter(t *testing.T) {
 	tests := map[string]struct {
 		Salter              Salter
@@ -119,7 +119,7 @@ func TestNewAuditFormatter(t *testing.T) {
 				s = tc.Salter
 			}
 
-			f, err := NewAuditFormatter(s)
+			f, err := NewEventFormatter(FormatterConfig{}, s)
 			switch {
 			case tc.IsErrorExpected:
 				require.Error(t, err)
@@ -132,7 +132,7 @@ func TestNewAuditFormatter(t *testing.T) {
 	}
 }
 
-// TestAuditFormatter_FormatRequest exercises AuditFormatter.FormatRequest with
+// TestAuditFormatter_FormatRequest exercises EventFormatter.FormatRequest with
 // varying inputs.
 func TestAuditFormatter_FormatRequest(t *testing.T) {
 	tests := map[string]struct {
@@ -169,8 +169,7 @@ func TestAuditFormatter_FormatRequest(t *testing.T) {
 		tc := tc
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
-			config := FormatterConfig{}
-			f, err := NewAuditFormatter(newStaticSalt(t))
+			f, err := NewEventFormatter(FormatterConfig{}, newStaticSalt(t))
 			require.NoError(t, err)
 
 			var ctx context.Context
@@ -181,7 +180,7 @@ func TestAuditFormatter_FormatRequest(t *testing.T) {
 				ctx = context.Background()
 			}
 
-			entry, err := f.FormatRequest(ctx, config, tc.Input)
+			entry, err := f.FormatRequest(ctx, tc.Input)
 
 			switch {
 			case tc.IsErrorExpected:
@@ -196,7 +195,7 @@ func TestAuditFormatter_FormatRequest(t *testing.T) {
 	}
 }
 
-// TestAuditFormatter_FormatResponse exercises AuditFormatter.FormatResponse with
+// TestAuditFormatter_FormatResponse exercises EventFormatter.FormatResponse with
 // varying inputs.
 func TestAuditFormatter_FormatResponse(t *testing.T) {
 	tests := map[string]struct {
@@ -233,8 +232,7 @@ func TestAuditFormatter_FormatResponse(t *testing.T) {
 		tc := tc
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
-			config := FormatterConfig{}
-			f, err := NewAuditFormatter(newStaticSalt(t))
+			f, err := NewEventFormatter(FormatterConfig{}, newStaticSalt(t))
 			require.NoError(t, err)
 
 			var ctx context.Context
@@ -245,7 +243,7 @@ func TestAuditFormatter_FormatResponse(t *testing.T) {
 				ctx = context.Background()
 			}
 
-			entry, err := f.FormatResponse(ctx, config, tc.Input)
+			entry, err := f.FormatResponse(ctx, tc.Input)
 
 			switch {
 			case tc.IsErrorExpected:
@@ -261,15 +259,6 @@ func TestAuditFormatter_FormatResponse(t *testing.T) {
 }
 
 func TestElideListResponses(t *testing.T) {
-	tfw := testingFormatWriter{}
-	f, err := NewAuditFormatter(&tfw)
-	require.NoError(t, err)
-	formatter := AuditFormatterWriter{
-		Formatter: f,
-		Writer:    &tfw,
-	}
-	ctx := namespace.RootContext(context.Background())
-
 	type test struct {
 		name         string
 		inputData    map[string]interface{}
@@ -340,13 +329,17 @@ func TestElideListResponses(t *testing.T) {
 	}
 	oneInterestingTestCase := tests[2]
 
-	formatResponse := func(
-		t *testing.T,
-		config FormatterConfig,
-		operation logical.Operation,
-		inputData map[string]interface{},
+	tfw := testingFormatWriter{}
+	ctx := namespace.RootContext(context.Background())
+
+	formatResponse := func(t *testing.T, config FormatterConfig, operation logical.Operation, inputData map[string]interface{},
 	) {
-		err := formatter.FormatAndWriteResponse(ctx, io.Discard, config, &logical.LogInput{
+		f, err := NewEventFormatter(config, &tfw)
+		require.NoError(t, err)
+		formatter, err := NewEventFormatterWriter(config, f, &tfw)
+		require.NoError(t, err)
+		require.NotNil(t, formatter)
+		err = formatter.FormatAndWriteResponse(ctx, io.Discard, &logical.LogInput{
 			Request:  &logical.Request{Operation: operation},
 			Response: &logical.Response{Data: inputData},
 		})

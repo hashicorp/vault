@@ -246,12 +246,12 @@ func NewNoopAudit(config map[string]string) (*NoopAudit, error) {
 		},
 	}
 
-	f, err := audit.NewAuditFormatter(n)
+	f, err := audit.NewEventFormatter(n)
 	if err != nil {
 		return nil, fmt.Errorf("error creating formatter: %w", err)
 	}
 
-	fw, err := audit.NewAuditFormatterWriter(f, &audit.JSONWriter{})
+	fw, err := audit.NewEventFormatterWriter(f, &audit.JSONWriter{})
 	if err != nil {
 		return nil, fmt.Errorf("error creating formatter writer: %w", err)
 	}
@@ -291,7 +291,7 @@ type NoopAudit struct {
 	RespReqNonHMACKeys [][]string
 	RespErrs           []error
 
-	formatter *audit.AuditFormatterWriter
+	formatter *audit.EventFormatterWriter
 	records   [][]byte
 	l         sync.RWMutex
 	salt      *salt.Salt
