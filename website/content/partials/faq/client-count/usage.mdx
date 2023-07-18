@@ -1,4 +1,4 @@
-### Can i view the list of unique client IDs that contributed to my client count aggregate? ((#view-data))
+### Can I view the list of unique client IDs that contributed to my client count aggregate? ((#view-data))
 
 **Yes, if you are using Vault 1.11 or later**.
 
@@ -14,7 +14,7 @@ the
 As of Vault v1.9, audit logs include a field called `clientID` that records the
 active or computed entity ID of the associated token.
 
-### Can i skip client computation for a period of time during the billing period? ((#skip-computation))
+### Can I skip client computation for a period of time during the billing period? ((#skip-computation))
 
 **Yes, but the data may be inaccurate**.
 
@@ -52,7 +52,7 @@ but you disabled tracking for the month of April. Vault will look for the
 largest, contiguous window of time where data is available, May through December,
 and compute results for that period of time. May 2021 through December 2021.
 
-### Can i disable client counting? ((#disable-client-count))
+### Can I disable client counting? ((#disable-client-count))
 
 **Yes**.
 
@@ -62,10 +62,10 @@ and disable the tracking parameter. If you disable client counting in the middle
 of a month, Vault will discard any data currently recorded for the month. Data
 for previous months is preserved.
 
-### Can i configure Vault to log the client count data? ((#log-client-count))
+### Can I configure Vault to log the client count data? ((#log-client-count))
 
 **Yes**.
 
 You can use the Vault API to
 [update the client count configuration](/vault/api-docs/system/internal-counters#update-the-client-count-configuration)
-and specify your preferred retention period. 
+and specify your preferred retention period.
