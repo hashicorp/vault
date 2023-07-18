@@ -9,7 +9,7 @@ import { Certificate } from 'pkijs';
 import { differenceInHours, getUnixTime } from 'date-fns';
 import {
   EXTENSION_OIDs,
-  IGNORED_OIDs,
+  OTHER_OIDs,
   KEY_USAGE_BITS,
   SAN_TYPES,
   SIGNATURE_ALGORITHM_OIDs,
@@ -131,15 +131,29 @@ export async function verifyCertificates(certA, certB, leaf) {
   const parsedCertB = jsonToCertObject(certB);
   if (leaf) {
     const parsedLeaf = jsonToCertObject(leaf);
-    const chainA = await parsedLeaf.verify(parsedCertA);
-    const chainB = await parsedLeaf.verify(parsedCertB);
+    const chainA = await verifySignature(parsedCertA, parsedLeaf);
+    const chainB = await verifySignature(parsedCertB, parsedLeaf);
     // the leaf's issuer should be equal to the subject data of the intermediate certs
     const isEqualA = parsedLeaf.issuer.isEqual(parsedCertA.subject);
     const isEqualB = parsedLeaf.issuer.isEqual(parsedCertB.subject);
     return chainA && chainB && isEqualA && isEqualB;
   }
   // can be used to validate if a certificate is self-signed (i.e. a root cert), by passing it as both certA and B
-  return (await parsedCertA.verify(parsedCertB)) && parsedCertA.issuer.isEqual(parsedCertB.subject);
+  return (await verifySignature(parsedCertA, parsedCertB)) && parsedCertA.issuer.isEqual(parsedCertB.subject);
+}
+
+async function verifySignature(parent, child) {
+  try {
+    // ed25519 is an unsupported signature algorithm
+    // catch the error and instead check the AKID (authority key ID) includes the SKID (subject key ID)
+    return await child.verify(parent);
+  } catch (error) {
+    const skidExtension = parent.extensions.find((ext) => ext.extnID === OTHER_OIDs.subject_key_identifier);
+    const akidExtension = parent.extensions.find((ext) => ext.extnID === OTHER_OIDs.authority_key_identifier);
+    const skid = new Uint8Array(skidExtension.parsedValue.valueBlock.valueHex);
+    const akid = new Uint8Array(akidExtension.extnValue.valueBlock.valueHex);
+    return akid.toString().includes(skid.toString());
+  }
 }
 
 //* PARSING HELPERS
@@ -182,7 +196,7 @@ export function parseExtensions(extensions) {
   if (!extensions) return null;
   const values = {};
   const errors = [];
-  const allowedOids = Object.values({ ...EXTENSION_OIDs, ...IGNORED_OIDs });
+  const allowedOids = Object.values({ ...EXTENSION_OIDs, ...OTHER_OIDs });
   const isUnknownExtension = (ext) => !allowedOids.includes(ext.extnID);
   if (extensions.any(isUnknownExtension)) {
     const unknown = extensions.filter(isUnknownExtension).map((ext) => ext.extnID);
