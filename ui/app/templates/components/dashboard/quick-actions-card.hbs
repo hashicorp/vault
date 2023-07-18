@@ -1,0 +1,53 @@
+<h3 class="title is-4">Quick actions</h3>
+
+<div class="has-bottom-margin-m">
+  <h4 class="title is-6">Secrets engine</h4>
+  <SearchSelect
+    @id="secret-engines-select"
+    @options={{this.secretsEnginesOptions}}
+    @selectLimit="1"
+    @disallowNewItems={{true}}
+    @fallbackComponent="input-search"
+    @onChange={{this.onSearchEngineSelect}}
+    @placeholder="Type to select a mount..."
+    @displayInherit={{true}}
+    class="is-marginless"
+  />
+</div>
+
+<h4 class="title is-6">Action</h4>
+<Select
+  @name="auth-method"
+  @options={{this.selectedQuickActions}}
+  @valueAttribute="actionType"
+  @labelAttribute="actionTitle"
+  @isFullwidth={{true}}
+  @selectedValue={{this.selectedAction}}
+  @onChange={{this.setSelectedAction}}
+/>
+
+<h4 class="title is-6">{{this.actionType.title}}</h4>
+{{#if (eq this.actionType.elementType "input")}}
+  <Input class="input" />
+{{else if (eq this.actionType.elementType "select")}}
+  <Select
+    @name="auth-method"
+    @options={{this.selectedQuickActions}}
+    @valueAttribute="actionType"
+    @labelAttribute="actionTitle"
+    @isFullwidth={{true}}
+    @selectedValue={{this.selectedAction}}
+    @onChange={{this.setSelectedAction}}
+  />
+{{else}}
+  <SearchSelect
+    @options={{this.secretsEnginesOptions}}
+    @selectLimit="1"
+    @disallowNewItems={{true}}
+    @fallbackComponent="input-search"
+    @onChange={{this.onSearchEngineSelect}}
+    @placeholder="Type to select a mount..."
+    @displayInherit={{true}}
+    class="is-marginless"
+  />
+{{/if}}
