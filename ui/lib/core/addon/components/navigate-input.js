@@ -12,8 +12,7 @@ import Component from '@glimmer/component';
 
 import { encodePath } from 'vault/utils/path-encoding-helpers';
 import { keyIsFolder, parentKeyForKey } from 'core/utils/key-utils';
-// TODO MOVE THESE TO THE ADDON
-import keys from 'vault/lib/keycodes';
+import keys from 'core/utils/key-codes';
 
 /**
  * @module NavigateInput
@@ -94,7 +93,6 @@ export default class NavigateInput extends Component {
     if (mode.startsWith('secrets') && (!val || val === baseKey)) {
       return;
     }
-
     if (this.args.filterMatchesKey && !keyIsFolder(val)) {
       const params = [routeFor('show', mode, this.args.urls), extraParams, this.keyForNav(val)].compact();
       this.transitionToRoute(...params);
@@ -165,7 +163,6 @@ export default class NavigateInput extends Component {
   navigate(key, mode, pageFilter) {
     const route = routeFor(key ? 'list' : 'list-root', mode, this.args.urls);
     const args = [route];
-
     if (key) {
       args.push(key);
     }
@@ -207,7 +204,7 @@ export default class NavigateInput extends Component {
       later(
         this,
         function () {
-          document.getElementById(this.inputId)?.focus();
+          document.getElementById(this.inputId).focus();
         },
         400
       );

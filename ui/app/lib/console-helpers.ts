@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: MPL-2.0
  */
 
-import keys from 'vault/lib/keycodes';
+import keys from 'core/utils/key-codes';
 import AdapterError from '@ember-data/adapter/error';
 import { parse } from 'shell-quote';
 
