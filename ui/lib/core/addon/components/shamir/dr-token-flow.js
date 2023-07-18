@@ -50,6 +50,12 @@ export default class ShamirDrTokenFlowComponent extends ShamirFlowComponent {
   get threshold() {
     return this.attemptResponse?.required;
   }
+  get pgpText() {
+    return {
+      confirm: `Below is the base-64 encoded PGP Key that will be used to encrypt the generated operation token. Next we'll enter portions of the root key to generate an operation token. Click the "Generate operation token" button to proceed.`,
+      form: `Choose a PGP Key from your computer or paste the contents of one in the form below. This key will be used to Encrypt the generated operation token.`,
+    };
+  }
 
   // Methods which override those in Shamir/Flow
   extractData(data) {
@@ -95,7 +101,7 @@ export default class ShamirDrTokenFlowComponent extends ShamirFlowComponent {
 
   @action
   async onCancelClose() {
-    if (!this.encoded_token) {
+    if (!this.encodedToken && this.started) {
       const adapter = this.store.adapterFor('cluster');
       await adapter.generateDrOperationToken({}, { cancel: true });
     }

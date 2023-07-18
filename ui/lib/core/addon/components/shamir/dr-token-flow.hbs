@@ -1,6 +1,6 @@
 <section class="modal-card-body">
   {{#if this.encodedToken}}
-    <p class="has-bottom-margin-l">
+    <p class="has-bottom-margin-l" data-test-dr-token-flow-step="show-token">
       Below is the process and the values necessary to generate your operation token. Read the instructions carefully!
     </p>
     <div class="has-bottom-margin-m">
@@ -72,9 +72,10 @@
       @threshold={{this.threshold}}
       @errors={{this.errors}}
       @buttonText="Generate token"
-      @onSubmit={{this.onSubmit}}
+      @onSubmit={{this.onSubmitKey}}
       @otp={{this.otp}}
       @alwaysShowProgress={{true}}
+      data-test-dr-token-flow-step="shamir"
     >
       <p>Generate an operation token by entering a portion of the
         <strong>primary's root key</strong>. Once all portions are entered, the generated token may be used to manage your
@@ -82,10 +83,22 @@
       </p>
     </Shamir::Form>
   {{else if this.generateWithPGP}}
-    <ChoosePgpKeyForm @onCancel={{fn (mut this.generateWithPGP) false}} @onSubmit={{this.usePgpKey}} />
+    <ChoosePgpKeyForm
+      @onCancel={{fn (mut this.generateWithPGP) false}}
+      @onSubmit={{this.usePgpKey}}
+      @formText={{this.pgpText.form}}
+      @confirmText={{this.pgpText.confirm}}
+      @buttonText="Generate operation token"
+      data-test-dr-token-flow-step="choose-pgp"
+    />
   {{else}}
     {{! Not started }}
-    <form {{on "submit" this.startGenerate}} id="shamir" aria-label="shamir generate form">
+    <form
+      {{on "submit" this.startGenerate}}
+      id="shamir"
+      aria-label="shamir generate form"
+      data-test-dr-token-flow-step="begin"
+    >
       <MessageError @errors={{this.errors}} />
       <div class="has-bottom-margin-m" data-test-shamir-modal-body>
         <p>
@@ -96,7 +109,7 @@
       </div>
       <div class="field is-grouped is-flex-center">
         <div class="control is-flex-row">
-          <button type="button" class="link" {{on "click" (fn (mut this.generateWithPGP) true)}}>
+          <button type="button" class="link" {{on "click" (fn (mut this.generateWithPGP) true)}} data-test-use-pgp-key-cta>
             Provide PGP Key
           </button>
         </div>
