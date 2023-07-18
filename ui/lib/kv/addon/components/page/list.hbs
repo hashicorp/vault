@@ -5,30 +5,37 @@
   </:tabLinks>
 
   <:toolbarFilters>
-    <NavigateInput
-      @filter={{@filterValue}}
-      @placeholder="Filter secrets"
-      @urls={{hash list="vault.cluster.secrets.backend.kv.list-directory"}}
-      @filterFocusDidChange={{action "setFilterFocus"}}
-      @filterMatchesKey={{this.filterMatchesKey}}
-      {{!-- @filterDidChange={{this.setFilter}} --}}
-      @shouldNavigateTree={{true}}
-      @mode="test"
-    />
-    {{#if this.filterFocused}}
-      {{#if this.filterMatchesKey}}
-        {{!-- {{#unless this.filterIsFolder}} --}}
-        <p class="input-hint">
-          <kbd>Enter</kbd>
-          to view
-          {{@filterValue}}
+    <div class="navigate-filter">
+      <div class="field" data-test-nav-input>
+        <p class="control has-icons-left">
+          {{! template-lint-disable no-down-event-binding }}
+          <Input
+            id="secret-filter"
+            class="filter input"
+            placeholder="Filter secrets"
+            @value={{@model.filterValue}}
+            @type="text"
+            data-test-component="navigate-input"
+            {{on "input" this.handleInput}}
+            {{on "keydown" this.handleKeyDown}}
+            {{on "focus" this.setFilterIsFocused}}
+            {{did-insert this.focusInput}}
+            autocomplete="off"
+          />
+          <Icon @name="search" class="search-icon has-text-grey-light" />
         </p>
-        {{!-- {{/unless}} --}}
-      {{/if}}
-      {{#if this.firstPartialMatch}}
-        <p class="input-hint">
-          <kbd>Tab</kbd>
-          to autocomplete
+      </div>
+    </div>
+    {{#if this.filterIsFocused}}
+      {{#if this.filterMatchesASecretPath}}
+        <p class="help has-text-grey is-size-8 has-left-padding-xs">
+          <kbd>ENTER</kbd>
+          to go to see details.
+        </p>
+      {{else}}
+        <p class="help has-text-grey is-size-8 has-left-padding-xs">
+          <kbd>TAB</kbd>
+          to autocomplete.
         </p>
       {{/if}}
     {{/if}}
@@ -112,8 +119,8 @@
     </LinkedBlock>
   {{/each}}
 {{else}}
-  {{#if @filterValue}}
-    <EmptyState @title="There are no secrets matching &quot;{{@filterValue}}&quot;" />
+  {{#if @model.filterValue}}
+    <EmptyState @title="There are no secrets matching &quot;{{@model.filterValue}}&quot;. Presse enter to add one." />
   {{else}}
     <EmptyState
       data-test-secret-list-empty-state

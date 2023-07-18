@@ -14,11 +14,6 @@ export default class KvSecretsListRoute extends Route {
   @service router;
   @service secretMountPath;
 
-  getPathToSecretFromUrl() {
-    const { path_to_secret } = this.paramsFor('list-directory');
-    return path_to_secret ? normalizePath(path_to_secret) : '';
-  }
-
   queryParams = {
     pageFilter: {
       refreshModel: true, // changing the "Filter secrets" input will cause the model hook to run again.
@@ -29,12 +24,11 @@ export default class KvSecretsListRoute extends Route {
     const pageFilter = params.pageFilter;
     const pathToSecret = params.path_to_secret ? normalizePath(params.path_to_secret) : '';
     const backend = this.secretMountPath.currentPath;
+    const filter = pathToSecret ? pathToSecret + (pageFilter || '') : pageFilter;
     const secrets = this.store
       .query('kv/metadata', { backend, pathToSecret })
       .then((models) => {
         this.has404 = false;
-        // handle situation for when there is potentially both a pageFilter and pathToSecret ex: beep/my-.
-        const filter = pathToSecret ? pathToSecret + (pageFilter || '') : pageFilter;
         return filter
           ? models.filter((model) => model.fullSecretPath.toLowerCase().includes(filter.toLowerCase()))
           : models;
@@ -51,20 +45,31 @@ export default class KvSecretsListRoute extends Route {
       secrets,
       backend,
       pathToSecret,
+      filterValue: filter,
     });
   }
 
   setupController(controller, resolvedModel) {
     super.setupController(controller, resolvedModel);
     controller.routeName = this.routeName;
-    let breadcrumbsArray = [
-      { label: 'secrets', route: 'secrets', linkExternal: true },
-      { label: resolvedModel.backend, route: 'list' },
-    ];
+
+    let breadcrumbsArray = [{ label: 'secrets', route: 'secrets', linkExternal: true }];
+    // if on top level don't link the engine breadcrumb label, but if within a directory, do link back to top level.
+    if (this.routeName === 'list') {
+      breadcrumbsArray.push({ label: resolvedModel.backend });
+    } else {
+      breadcrumbsArray.push({ label: resolvedModel.backend, route: 'list' });
+    }
     // these breadcrumbs handle directories: beep/boop/
     if (resolvedModel.pathToSecret) {
       breadcrumbsArray = [...breadcrumbsArray, ...breadcrumbsForDirectory(resolvedModel.pathToSecret, true)];
     }
     controller.set('breadcrumbs', breadcrumbsArray);
+  }
+
+  resetController(controller, isExiting) {
+    if (isExiting) {
+      controller.set('pageFilter', '');
+    }
   }
 }

@@ -6,10 +6,12 @@
 import Component from '@glimmer/component';
 import { inject as service } from '@ember/service';
 import { action } from '@ember/object';
-import { tracked } from '@glimmer/tracking';
 import { getOwner } from '@ember/application';
 import errorMessage from 'vault/utils/error-message';
-import { ancestorKeysForKey, keyIsFolder } from 'core/utils/key-utils';
+import { ancestorKeysForKey, keyIsFolder, parentKeyForKey, keyWithoutParentKey } from 'core/utils/key-utils';
+import keys from 'core/utils/key-codes';
+import { tracked } from '@glimmer/tracking';
+import escapeStringRegexp from 'escape-string-regexp';
 
 /**
  * @module List
@@ -23,35 +25,13 @@ import { ancestorKeysForKey, keyIsFolder } from 'core/utils/key-utils';
 export default class KvListPageComponent extends Component {
   @service flashMessages;
   @service router;
-  @tracked filterFocused = false;
+
+  @tracked filterIsFocused = false;
 
   get mountPoint() {
     // mountPoint tells the LinkedBlock component where to start the transition. In this case, mountPoint will always be vault.cluster.secrets.backend.kv.
     return getOwner(this).mountPoint;
   }
-
-  // Following getters are used for NavigateInput
-  get filterMatchesKey() {
-    return !!(
-      this.args.model.secrets.length &&
-      this.args.model.secrets.findBy('fullSecretPath', this.args.filterValue)
-    );
-  }
-
-  get filterIsFolder() {
-    return !!keyIsFolder(this.args.filterValue);
-  }
-
-  get firstPartialMatch() {
-    return 'blah';
-    // if (!this.args.model.secrets) return;
-    // const reg = new RegExp('^' + this.args.filterValue);
-    // return this.filterMatchesKey ? null : this.args.model.secrets.find((key) => reg.test(key.fullSecretPath));
-  }
-
-  // @action setFilter(value) {
-  //   this.args.filterValue = value;
-  // }
 
   @action
   async onDelete(model) {
@@ -70,7 +50,111 @@ export default class KvListPageComponent extends Component {
       this.flashMessages.danger(message);
     }
   }
-  @action setFilterFocus(bool) {
-    this.filterFocused = bool;
+
+  // filter operations and getters
+  get filterMatchesASecretPath() {
+    return !!(
+      this.args.model.secrets &&
+      this.args.model.secrets.length &&
+      this.args.model.secrets.findBy('fullSecretPath', this.args.model.filterValue)
+    );
+  }
+
+  get partialMatch() {
+    // you can't pass undefined to RegExp so replacing with empty string if there is no pageFilter value
+    const value = !this.pageFilter ? '' : this.pageFilter;
+    const reg = new RegExp('^' + escapeStringRegexp(value));
+    const match = this.args.model.secrets.filter((path) => reg.test(path.fullSecretPath))[0];
+
+    if (this.filterMatchesASecretPath || !match) return null;
+    // TODO not doing the shared prefix?
+    return match.fullSecretPath;
+  }
+
+  @action
+  handleInput(event) {
+    // handling typing
+    const input = event.target.value;
+    const isDirectory = keyIsFolder(input);
+    const parentDirectory = parentKeyForKey(input);
+    const secretWithinDirectory = keyWithoutParentKey(input);
+
+    if (isDirectory) {
+      this.router.transitionTo('vault.cluster.secrets.backend.kv.list-directory', input);
+    } else if (parentDirectory) {
+      this.router.transitionTo('vault.cluster.secrets.backend.kv.list-directory', parentDirectory, {
+        queryParams: { pageFilter: secretWithinDirectory },
+      });
+    } else {
+      this.router.transitionTo('vault.cluster.secrets.backend.kv.list', {
+        queryParams: { pageFilter: input },
+      });
+    }
+  }
+  @action
+  handleKeyDown(event) {
+    // handle keyboard events: tab, enter, escape
+    const inputValue = event.target.value;
+    const parentDirectory = parentKeyForKey(inputValue);
+
+    if (event.keyCode === keys.TAB) {
+      event.preventDefault();
+      const isMatchDirectory = keyIsFolder(this.partialMatch);
+      const parentDirectoryFromMatch = parentKeyForKey(this.partialMatch);
+      const withoutDirectory = keyWithoutParentKey(this.partialMatch);
+
+      if (isMatchDirectory) {
+        // beep/boop/
+        this.router.transitionTo('vault.cluster.secrets.backend.kv.list-directory', this.partialMatch);
+      } else if (!isMatchDirectory && parentDirectoryFromMatch) {
+        // beep/boop/my-
+        this.router.transitionTo(
+          'vault.cluster.secrets.backend.kv.list-directory',
+          parentDirectoryFromMatch,
+          {
+            queryParams: { pageFilter: withoutDirectory },
+          }
+        );
+      } else {
+        this.router.transitionTo('vault.cluster.secrets.backend.kv.list', {
+          queryParams: { pageFilter: this.partialMatch },
+        });
+      }
+    }
+    if (event.keyCode === keys.ENTER) {
+      event.preventDefault();
+      if (this.filterMatchesASecretPath) {
+        // check if secret exists if it does, navigate to the details page
+        this.router.transitionTo('vault.cluster.secrets.backend.kv.secret.details', inputValue);
+      } else {
+        this.router.transitionTo('vault.cluster.secrets.backend.kv.create', {
+          queryParams: { initialKey: inputValue },
+        });
+      }
+      return;
+    }
+    if (event.keyCode === keys.ESC) {
+      // transition to the nearest directory or to the list route.
+      // clear pageFilter queryParam each time
+      return !parentDirectory
+        ? this.router.transitionTo('vault.cluster.secrets.backend.kv.list', {
+            queryParams: { pageFilter: '' },
+          })
+        : this.router.transitionTo('vault.cluster.secrets.backend.kv.list-directory', parentDirectory, {
+            queryParams: { pageFilter: '' },
+          });
+    }
+    return;
+  }
+
+  @action
+  setFilterIsFocused() {
+    this.filterIsFocused = true;
+  }
+  @action
+  focusInput() {
+    if (this.args.model.filterValue) {
+      document.getElementById('secret-filter')?.focus();
+    }
   }
 }

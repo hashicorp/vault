@@ -94,16 +94,6 @@ export default class NavigateInput extends Component {
     if (mode.startsWith('secrets') && (!val || val === baseKey)) {
       return;
     }
-    // ARG TESTING
-    if (this.mode === 'test') {
-      if (!keyIsFolder(val)) {
-        this.router.transitionTo('vault.cluster.secrets.backend.kv.secret.details', val);
-        return;
-      } else {
-        this.router.transitionTo('vault.cluster.secrets.backend.kv.list-directory', val);
-        return;
-      }
-    }
 
     if (this.args.filterMatchesKey && !keyIsFolder(val)) {
       const params = [routeFor('show', mode, this.args.urls), extraParams, this.keyForNav(val)].compact();
@@ -175,6 +165,7 @@ export default class NavigateInput extends Component {
   navigate(key, mode, pageFilter) {
     const route = routeFor(key ? 'list' : 'list-root', mode, this.args.urls);
     const args = [route];
+
     if (key) {
       args.push(key);
     }
