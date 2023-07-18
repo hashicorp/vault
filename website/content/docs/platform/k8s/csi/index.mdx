@@ -5,7 +5,7 @@ description: >-
   The Vault CSI Provider allows pods to consume Vault secrets using CSI volumes.
 ---
 
-# Vault CSI Provider
+# Vault CSI provider
 
 The Vault CSI Provider allows pods to consume Vault secrets using
 [CSI Secrets Store](https://github.com/kubernetes-sigs/secrets-store-csi-driver) volumes.
@@ -48,7 +48,7 @@ A service account must be present to use the Vault CSI Provider with the Kuberne
 authentication method. It is _not_ recommended to bind Vault roles to the default service
 account provided to pods if no service account is defined.
 
-### Setting `issuer` for Kubernetes authentication
+### Setting `issuer` for kubernetes authentication
 
 -> **Deprecated:** The `issuer` parameter has been deprecated as of Vault 1.9 and will be removed in a future release.
 
@@ -71,7 +71,7 @@ long-lived default service account token, with an issuer different to the tokens
 Vault CSI Provider will create. But one Kubernetes auth mount can only be
 configured to validate a single issuer value.
 
-## Secret Provider Class Example
+## Secret provider class example
 
 The following is an example of a Secret Provider Class using the `vault` provider:
 
@@ -106,7 +106,7 @@ spec:
 
 ~> Secret Provider Class is a namespaced object in Kubernetes.
 
-## Using Secret Provider Classes
+## Using secret provider classes
 
 An application pod uses the example Secret Provider Class above by mounting it as a CSI volume:
 
