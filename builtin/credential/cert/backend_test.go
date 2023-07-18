@@ -14,7 +14,6 @@ import (
 	"crypto/x509/pkix"
 	"encoding/pem"
 	"fmt"
-	"github.com/hashicorp/go-sockaddr"
 	"io"
 	"io/ioutil"
 	"math/big"
@@ -27,6 +26,8 @@ import (
 	"reflect"
 	"testing"
 	"time"
+
+	"github.com/hashicorp/go-sockaddr"
 
 	"github.com/go-test/deep"
 	"golang.org/x/net/http2"
