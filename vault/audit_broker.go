@@ -11,6 +11,7 @@ import (
 	"time"
 
 	metrics "github.com/armon/go-metrics"
+	"github.com/hashicorp/eventlogger"
 	log "github.com/hashicorp/go-hclog"
 	multierror "github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/vault/audit"
@@ -28,29 +29,38 @@ type AuditBroker struct {
 	sync.RWMutex
 	backends map[string]backendEntry
 	logger   log.Logger
+	broker   *eventlogger.Broker
 }
 
 // NewAuditBroker creates a new audit broker
 func NewAuditBroker(log log.Logger) *AuditBroker {
+	// Ignoring the second error return value since an error will only occur
+	// if an unrecognized eventlogger.RegistrationPolicy is provided to an
+	// eventlogger.Option function.
+	eventBroker, _ := eventlogger.NewBroker(eventlogger.WithNodeRegistrationPolicy(eventlogger.DenyOverwrite), eventlogger.WithPipelineRegistrationPolicy(eventlogger.DenyOverwrite))
+
 	b := &AuditBroker{
 		backends: make(map[string]backendEntry),
 		logger:   log,
+		broker:   eventBroker,
 	}
 	return b
 }
 
 // Register is used to add new audit backend to the broker
 func (a *AuditBroker) Register(name string, b audit.Backend, local bool, useEventLogger bool) {
+	a.Lock()
+	defer a.Unlock()
+
 	if useEventLogger {
-		// TODO: Coming soon
-	} else {
-		a.Lock()
-		defer a.Unlock()
-		a.backends[name] = backendEntry{
-			backend: b,
-			local:   local,
-		}
+		b.RegisterNodesAndPipeline(a.broker, name)
 	}
+
+	a.backends[name] = backendEntry{
+		backend: b,
+		local:   local,
+	}
+
 }
 
 // Deregister is used to remove an audit backend from the broker

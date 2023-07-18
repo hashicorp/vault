@@ -5,6 +5,7 @@ import (
 	"io"
 	"time"
 
+	"github.com/hashicorp/eventlogger"
 	"github.com/hashicorp/vault/sdk/helper/salt"
 
 	"github.com/hashicorp/vault/sdk/logical"
@@ -271,6 +272,12 @@ type Backend interface {
 
 	// Invalidate is called for path invalidation
 	Invalidate(context.Context)
+
+	// RegisterNodesAndPipeline provides an eventlogger.Broker pointer so that
+	// the Backend can call its RegisterNode and RegisterPipeline methods with
+	// the nodes and the pipeline that were created in the corresponding
+	// Factory function.
+	RegisterNodesAndPipeline(*eventlogger.Broker, string) error
 }
 
 // BackendConfig contains configuration parameters used in the factory func to
