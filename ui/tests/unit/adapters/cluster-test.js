@@ -260,17 +260,17 @@ module('Unit | Adapter | cluster', function (hooks) {
       },
     });
 
-    // Default
+    // Generate token progress
     adapter.generateDrOperationToken({ key: 'foo' }, {});
     assert.strictEqual(
       url,
-      '/v1/sys/replication/dr/secondary/generate-operation-token/attempt',
-      'no options url correct'
+      '/v1/sys/replication/dr/secondary/generate-operation-token/update',
+      'progress url correct'
     );
-    assert.strictEqual(method, 'PUT', 'no options method OK');
-    assert.deepEqual({ data: { key: 'foo' }, unauthenticated: true }, options, 'no options payload OK');
+    assert.strictEqual(method, 'POST', 'progress method OK');
+    assert.deepEqual({ data: { key: 'foo' }, unauthenticated: true }, options, 'progress payload OK');
 
-    // CheckStatus
+    // CheckStatus / Read generation progress
     adapter.generateDrOperationToken({ key: 'foo' }, { checkStatus: true });
     assert.strictEqual(
       url,
@@ -280,11 +280,11 @@ module('Unit | Adapter | cluster', function (hooks) {
     assert.strictEqual(method, 'GET', 'checkStatus method OK');
     assert.deepEqual({ data: { key: 'foo' }, unauthenticated: true }, options, 'checkStatus options OK');
 
-    // Cancel
+    // Cancel generation
     adapter.generateDrOperationToken({}, { cancel: true });
     assert.strictEqual(
       url,
-      '/v1/sys/replication/dr/secondary/generate-operation-token/update',
+      '/v1/sys/replication/dr/secondary/generate-operation-token/attempt',
       'Cancel url correct'
     );
     assert.strictEqual(method, 'DELETE', 'cancel method OK');
@@ -297,7 +297,7 @@ module('Unit | Adapter | cluster', function (hooks) {
       '/v1/sys/replication/dr/secondary/generate-operation-token/attempt',
       'pgp_key url correct'
     );
-    assert.strictEqual(method, 'PUT', 'pgp_key method OK');
+    assert.strictEqual(method, 'POST', 'method ok when pgp_key on data');
     assert.deepEqual({ data: { pgp_key: 'yes' }, unauthenticated: true }, options, 'pgp_key options OK');
 
     // data.attempt
@@ -307,7 +307,7 @@ module('Unit | Adapter | cluster', function (hooks) {
       '/v1/sys/replication/dr/secondary/generate-operation-token/attempt',
       'data.attempt url correct'
     );
-    assert.strictEqual(method, 'PUT', 'data.attempt method OK');
+    assert.strictEqual(method, 'POST', 'data.attempt method OK');
     assert.deepEqual({ data: { attempt: true }, unauthenticated: true }, options, 'data.attempt options OK');
   });
 });
