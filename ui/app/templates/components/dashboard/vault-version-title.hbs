@@ -1,16 +1,20 @@
-<div class="has-top-margin-l has-bottom-margin-l">
-  <h1 class="title is-inline is-v-centered" data-test-dashboard-version-header>
+<div class="has-top-margin-l has-bottom-margin-l is-flex-center">
+  <h1 class="title is-v-centered is-marginless" data-test-dashboard-version-header>
     {{this.versionHeader}}
   </h1>
-  <Hds::Badge
-    @text="New"
-    @icon="wand"
-    @color="highlight"
-    class="is-underline has-pointer"
-    {{on "click" (fn (mut this.showNewFeatureModal) true)}}
-    data-test-badge-new
-  />
-  <Hds::Badge @text={{this.namespaceDisplay}} @icon="org" data-test-badge-namespace />
+  <span class="has-left-margin-xxs">
+    <Hds::Button
+      @text="New"
+      @color="secondary"
+      @size="small"
+      @icon="wand"
+      class="hds-highlight-background hds-purple-text is-borderless is-shadowless is-underline new-features-modal-button"
+      {{on "click" (fn (mut this.showNewFeatureModal) true)}}
+    />
+  </span>
+  <span class="has-left-margin-xxs">
+    <Hds::Badge @text={{this.namespaceDisplay}} @icon="org" data-test-badge-namespace />
+  </span>
 </div>
 
 <Modal

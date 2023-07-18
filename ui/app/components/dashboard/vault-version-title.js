@@ -12,7 +12,7 @@ import { inject as service } from '@ember/service';
  *
  * @example
  * ```js
- * <DashboardVaultVersionTitle />
+ * <Dashboard::VaultVersionTitle />
  * ```
  */
 
