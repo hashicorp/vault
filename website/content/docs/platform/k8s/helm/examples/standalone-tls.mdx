@@ -6,7 +6,7 @@ description: |-
   Describes how to set up a standalone Vault with TLS certificate
 ---
 
-# Standalone Server with TLS
+# Standalone server with TLS
 
 @include 'helm/version.mdx'
 
@@ -16,25 +16,25 @@ This example can be used to set up a single server Vault cluster using TLS.
 2. Store key & cert into [Kubernetes secrets store](https://kubernetes.io/docs/concepts/configuration/secret/)
 3. Configure helm chart to use Kubernetes secret from step 2
 
-## 1. Create key & certificate using Kubernetes CA
+## 1. create key & certificate using kubernetes CA
 
 There are four variables that will be used in this example.
 
 ```bash
-# SERVICE is the name of the Vault service in Kubernetes.
+# SERVICE is the name of the Vault service in kubernetes.
 # It does not have to match the actual running service, though it may help for consistency.
 export SERVICE=vault-server-tls
 
 # NAMESPACE where the Vault service is running.
 export NAMESPACE=vault-namespace
 
-# SECRET_NAME to create in the Kubernetes secrets store.
+# SECRET_NAME to create in the kubernetes secrets store.
 export SECRET_NAME=vault-server-tls
 
 # TMPDIR is a temporary working directory.
 export TMPDIR=/tmp
 
-# CSR_NAME will be the name of our certificate signing request as seen by Kubernetes.
+# CSR_NAME will be the name of our certificate signing request as seen by kubernetes.
 export CSR_NAME=vault-csr
 ```
 
@@ -129,7 +129,7 @@ e is 65537 (0x10001)
       vault-csr   1m13s   kubernetes.io/kubelet-serving                 kubernetes-admin                 Approved,Issued
       ```
 
-## 2. Store key, cert, and Kubernetes CA into Kubernetes secrets store
+## 2. store key, cert, and kubernetes CA into kubernetes secrets store
 
 1. Retrieve the certificate.
 
@@ -171,7 +171,7 @@ e is 65537 (0x10001)
    # secret/vault-server-tls created
    ```
 
-## 3. Helm Configuration
+## 3. helm configuration
 
 The below `custom-values.yaml` can be used to set up a single server Vault cluster using TLS.
 This assumes that a Kubernetes `secret` exists with the server certificate, key and
