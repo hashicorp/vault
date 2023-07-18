@@ -1,5 +1,8 @@
 ### vault.raft.apply ((#vault-raft-apply))
 
-Metric type | Units | Description
------------ | ----- | -----------
-BLAH     | BLAH    | BLAH
+Metric type | Value   | Description
+----------- | ------- | -----------
+counter     | integer | Number of transactions in the configured interval
+
+The `vault.raft.apply` metric is generally a good indicator of the write load
+on your raft internal storage.

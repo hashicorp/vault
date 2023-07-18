@@ -1,5 +1,9 @@
 ### vault.core.step_down ((#vault-core-step_down))
 
-Metric type | Units | Description
+Metric type | Value | Description
 ----------- | ----- | -----------
-BLAH     | BLAH    | BLAH
+summary     | ms    | Time required to step down cluster leadership
+
+Step down time is an important health metric for your Vault installation. We
+strongly recommend that you closely monitor `vault.core.step_down` and set
+alerts that keep you informed of the overall cluster leadership status.
