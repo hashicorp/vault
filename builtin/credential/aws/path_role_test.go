@@ -1012,7 +1012,10 @@ func TestRoleResolutionWithSTSEndpointConfigured(t *testing.T) {
 
 	// Ensure aws credentials are available locally for testing.
 	logger := logging.NewVaultLogger(hclog.Debug)
-	credsConfig := &awsutil.CredentialsConfig{Logger: logger}
+	credsConfig, err := awsutil.NewCredentialsConfig(awsutil.WithLogger(logger))
+	if err != nil {
+		t.Fatal(err)
+	}
 	credsChain, err := credsConfig.GenerateCredentialChain()
 	if err != nil {
 		t.Fatal(err)

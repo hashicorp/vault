@@ -40,7 +40,10 @@ func DoS3BackendTest(t *testing.T, kmsKeyId string) {
 
 	logger := logging.NewVaultLogger(log.Debug)
 
-	credsConfig := &awsutil.CredentialsConfig{Logger: logger}
+	credsConfig, err := awsutil.NewCredentialsConfig(awsutil.WithLogger(logger))
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	credsChain, err := credsConfig.GenerateCredentialChain()
 	if err != nil {

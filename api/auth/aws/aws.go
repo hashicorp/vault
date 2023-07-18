@@ -149,11 +149,9 @@ func (a *AWSAuth) Login(ctx context.Context, client *api.Client) (*api.Secret, e
 	case iamType:
 		logger := hclog.Default()
 		if a.creds == nil {
-			credsConfig := awsutil.CredentialsConfig{
-				AccessKey:    os.Getenv("AWS_ACCESS_KEY_ID"),
-				SecretKey:    os.Getenv("AWS_SECRET_ACCESS_KEY"),
-				SessionToken: os.Getenv("AWS_SESSION_TOKEN"),
-				Logger:       logger,
+			credsConfig, err := awsutil.NewCredentialsConfig(awsutil.WithLogger(logger))
+			if err != nil {
+				return nil, err
 			}
 
 			// the env vars above will take precedence if they are set, as

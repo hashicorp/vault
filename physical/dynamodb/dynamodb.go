@@ -193,12 +193,16 @@ func NewDynamoDBBackend(conf map[string]string, logger log.Logger) (physical.Bac
 		}
 	}
 
-	credsConfig := &awsutil.CredentialsConfig{
-		AccessKey:    conf["access_key"],
-		SecretKey:    conf["secret_key"],
-		SessionToken: conf["session_token"],
-		Logger:       logger,
+	credsConfig, err := awsutil.NewCredentialsConfig(
+		awsutil.WithLogger(logger),
+		awsutil.WithAccessKey(conf["access_key"]),
+		awsutil.WithSecretKey(conf["secret_key"]),
+	)
+	if err != nil {
+		return nil, err
 	}
+	credsConfig.SessionToken = conf["session_token"]
+
 	creds, err := credsConfig.GenerateCredentialChain()
 	if err != nil {
 		return nil, err

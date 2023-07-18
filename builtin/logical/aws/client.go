@@ -20,7 +20,10 @@ import (
 
 // NOTE: The caller is required to ensure that b.clientMutex is at least read locked
 func getRootConfig(ctx context.Context, s logical.Storage, clientType string, logger hclog.Logger) (*aws.Config, error) {
-	credsConfig := &awsutil.CredentialsConfig{}
+	credsConfig, err := awsutil.NewCredentialsConfig(awsutil.WithLogger(logger))
+	if err != nil {
+		return nil, err
+	}
 	var endpoint string
 	var maxRetries int = aws.UseServiceDefaultRetries
 

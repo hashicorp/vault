@@ -26,9 +26,12 @@ import (
 // * Environment variables
 // * Instance metadata role
 func (b *backend) getRawClientConfig(ctx context.Context, s logical.Storage, region, clientType string) (*aws.Config, error) {
-	credsConfig := &awsutil.CredentialsConfig{
-		Region: region,
-		Logger: b.Logger(),
+	credsConfig, err := awsutil.NewCredentialsConfig(
+		awsutil.WithRegion(region),
+		awsutil.WithLogger(b.Logger()),
+	)
+	if err != nil {
+		return nil, err
 	}
 
 	// Read the configured secret key and access key
