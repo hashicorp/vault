@@ -73,7 +73,7 @@ This command respects the `-format` parameter to control the presentation of
 output sent to stdout. Fatal errors that prevent health checks from executing
 may not follow this formatting.
 
-## Return Status and Output
+## Return status and output
 
 This command returns the following exit codes:
 
@@ -111,12 +111,12 @@ These correspond to the following health check status values:
  - status `invalid_version` / status code `5`: exit code `5`.
  - status `insufficient_permissions` / status code `6`: exit code `6`.
 
-## Health Checks
+## Health checks
 
 The following health checks are currently implemented. More health checks may
 be added in future releases and may default to being enabled.
 
-### CA Validity Period
+### CA validity period
 
 **Name**: `ca_validity_period`
 
@@ -138,7 +138,7 @@ This health check will check each issuer in the mount for validity status, retur
 
 The remediation here is to remove old CAs after they expire and perform a [CA rotation operation](/vault/docs/secrets/pki/rotation-primitives) for any with pending expiry.
 
-### CRL Validity Period
+### CRL validity period
 
 **Name**: `crl_validity_period`
 
@@ -158,7 +158,7 @@ This health check checks each issuer's CRL for validity status, returning a list
 
 For informational purposes, it reads the CRL config and suggests enabling auto-rebuild CRLs if not enabled.
 
-### Hardware-Backed Root Certificate
+### Hardware-Backed root certificate
 
 **Name**: `hardware_backed_root`
 
@@ -174,7 +174,7 @@ For informational purposes, it reads the CRL config and suggests enabling auto-r
 
 This health check checks issuers for root CAs backed by software keys. While Vault is secure, for production root certificates, we'd recommend the additional integrity of KMS-backed keys. This is an informational check only. When all roots are KMS-backed, we'll return OK; when no issuers are roots, we'll return not applicable.
 
-### Root Certificate Issued Non-CA Leaves
+### Root certificate issued Non-CA leaves
 
 **Name**: `root_issued_leaves`
 
@@ -191,7 +191,7 @@ This health check checks issuers for root CAs backed by software keys. While Vau
 
 This health check verifies whether a proper CA hierarchy is in use. We do this by fetching `certs_to_fetch` leaf certificates (configurable) and seeing if they are a non-issuer leaf and if they were signed by a root issuer in this mount. If one is found, we'll issue a warning about this, and recommend setting up an intermediate CA.
 
-### Role Allows Implicit Localhost Issuance
+### Role allows implicit localhost issuance
 
 **Name**: `role_allows_localhost`
 
@@ -204,7 +204,7 @@ This health check verifies whether a proper CA hierarchy is in use. We do this b
 
 This health check checks each role to see whether the role allows localhost based issuance implicitly (`allow_localhost=true`) with a non-empty allowed_domains value. If it does, it issues a warning and suggests setting it to false and switching to allowed_domains with an explicit list of allowed localhost-like domains. This is a best-practice to simplify understanding of roles.
 
-### Role Allows Glob-Based Wildcard Issuance
+### Role allows Glob-Based wildcard issuance
 
 **Name**: `role_allows_glob_wildcards`
 
@@ -219,7 +219,7 @@ This health check checks each role to see whether the role allows localhost base
 
 This health check checks each role to see whether or not it allows wildcard issuance with glob domains as well - these two interact and can result in nested wildcards and other quirks. It is strongly suggested that roles either allow globs or or allow wildcards, but not both - this will be a critical warning. If both behaviors are required, we'd suggest splitting it into two roles.
 
-### Role Sets `no_store=false` and Performance
+### Role sets `no_store=false` and performance
 
 **Name**: `role_no_store_false`
 
@@ -236,7 +236,7 @@ This health check checks each role to see whether or not it allows wildcard issu
 
 This health check checks each role to see whether it sets `no_store=false` or not. When used with lots of certificates and no temporal auto-rebuilding of CRLs, this can result in bad performance. Instead, BYOC can be used for the occasional revocation and shorter certificate lifetimes used instead. Without auto-rebuild, this will be a warning, but when auto-rebuild is enabled, we can make it informational.
 
-### Accessibility of Audit Information
+### Accessibility of audit information
 
 **Name**: `audit_visibility`
 
@@ -250,7 +250,7 @@ This health check checks each role to see whether it sets `no_store=false` or no
 
 This health check checks whether audit information is accessible to log consumers, validating whether our list of safe and unsafe audit parameters are generally followed. These are informational responses, if any are present.
 
-### ACL Policies Allow Problematic Endpoints
+### ACL policies allow problematic endpoints
 
 **Name**: `policy_allow_endpoints`
 
@@ -265,7 +265,7 @@ This health check checks whether audit information is accessible to log consumer
 
 This health check checks whether unsafe access to APIs (such as `sign-intermediate`, `sign-verbatim`, and `sign-self-issued`) are allowed. Any findings are a critical result and should be rectified by the administrator or explicitly allowed.
 
-### Allow If-Modified-Since Requests
+### Allow If-Modified-Since requests
 
 **Name**: `allow_if_modified_since`
 
@@ -277,7 +277,7 @@ This health check checks whether unsafe access to APIs (such as `sign-intermedia
 
 This health check verifies if the `If-Modified-Since` header has been added to `passthrough_request_headers` and if `Last-Modified` header has been added to `allowed_response_headers`. This is an informational message if both haven't been configured, or a warning if only one has been configured.
 
-### Auto-Tidy Disabled
+### Auto-Tidy disabled
 
 **Name**: `enable_auto_tidy`
 
@@ -294,7 +294,7 @@ This health check verifies if the `If-Modified-Since` header has been added to `
 
 This health check verifies that auto-tidy is enabled, with sane defaults for interval_duration and pause_duration. Any disabled findings will be informational, as this is a best-practice but not strictly required, but other findings w.r.t. `interval_duration` or `pause_duration` will be critical/warnings.
 
-### Tidy Hasn't Run
+### Tidy hasn't run
 
 **Name**: `tidy_last_run`
 
@@ -309,7 +309,7 @@ This health check verifies that auto-tidy is enabled, with sane defaults for int
 
 This health check verifies that tidy has run within the last run window. This can be critical/warning alerts as this can start to seriously impact Vault's performance.
 
-### Too Many Certificates
+### Too many certificates
 
 **Name**: `too_many_certs`
 
