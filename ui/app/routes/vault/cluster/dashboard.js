@@ -17,7 +17,7 @@ export default class VaultClusterDashboardRoute extends Route.extend(ClusterRout
       const configState = await adapter.ajax('/v1/sys/config/state/sanitized', 'GET');
       return configState.data;
     } catch (e) {
-      return e.httpStatus;
+      return null;
     }
   }
 
@@ -28,12 +28,5 @@ export default class VaultClusterDashboardRoute extends Route.extend(ClusterRout
       vaultConfiguration,
       secretsEngines: this.store.query('secret-engine', {}),
     });
-  }
-
-  setupController(controller, resolvedModel) {
-    super.setupController(controller, resolvedModel);
-
-    controller.vaultConfiguration =
-      typeof resolvedModel.vaultConfiguration === 'number' ? false : resolvedModel.vaultConfiguration;
   }
 }
