@@ -10,7 +10,7 @@ on:
         required: true
         type: string
       total-runners:
-        description: Number of runners to use for executing the tests on. This excludes the binary tests.
+        description: Number of runners to use for executing non-binary tests.
         required: true
         type: string
       binary-tests:
