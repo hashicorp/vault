@@ -4427,20 +4427,21 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@ember/test-helpers@npm:3.0.3":
-  version: 3.0.3
-  resolution: "@ember/test-helpers@npm:3.0.3"
+"@ember/test-helpers@npm:2.9.3":
+  version: 2.9.3
+  resolution: "@ember/test-helpers@npm:2.9.3"
   dependencies:
-    "@ember/test-waiters": ^3.0.2
+    "@ember/test-waiters": ^3.0.0
     "@embroider/macros": ^1.10.0
+    "@embroider/util": ^1.9.0
     broccoli-debug: ^0.6.5
     broccoli-funnel: ^3.0.8
-    ember-auto-import: ^2.6.0
     ember-cli-babel: ^7.26.11
-    ember-cli-htmlbars: ^6.2.0
+    ember-cli-htmlbars: ^6.1.1
+    ember-destroyable-polyfill: ^2.0.3
   peerDependencies:
-    ember-source: ^4.0.0 || ^5.0.0
-  checksum: 923030effab86afbfa514164af31c449bd7d7cba9939e89dbbe44c1822c9f38352c2550f7a316fd2cc9971631cd8934c244a95df798019ef6b4c4e5677bb9249
+    ember-source: ">=3.8.0"
+  checksum: 4591d33275c6035d41aa95184200074a727cc660aa43e48e9ed63ba07881a12fa332360fe7e5ba3b7a466fd740d92aa9f97e5d3584e95e2337c9b57ee844da69
   languageName: node
   linkType: hard
 
@@ -4453,18 +4454,6 @@ __metadata:
     ember-cli-version-checker: ^5.1.2
     semver: ^7.3.5
   checksum: 4998a8213b8800633485eaca342bd6e9b388d974def70ab794612d0c691b68599b2377b9a5467bdddea699099fec2897821c9127443ddac3c69c82d73ea21fa5
-  languageName: node
-  linkType: hard
-
-"@ember/test-waiters@npm:^3.0.2":
-  version: 3.0.2
-  resolution: "@ember/test-waiters@npm:3.0.2"
-  dependencies:
-    calculate-cache-key-for-tree: ^2.0.0
-    ember-cli-babel: ^7.26.6
-    ember-cli-version-checker: ^5.1.2
-    semver: ^7.3.5
-  checksum: 4ad673fd6c2edc45d7fe378c318dd7f86eabb74eabded5e36b073baa580e2fa2cbb74b52037a2af94a2de98777335129d236b9a33bd33efd30927b0f5e706eaf
   languageName: node
   linkType: hard
 
@@ -4617,6 +4606,26 @@ __metadata:
   peerDependencies:
     ember-source: "*"
   checksum: f3656a8ae3df0d3b35a40c867258a621ef28311c5fbd3e8718593fd436e09816cc3331694695e40dcad384bda638986184dbe13d919314189ce31c154eebdd81
+  languageName: node
+  linkType: hard
+
+"@embroider/util@npm:^1.9.0":
+  version: 1.11.2
+  resolution: "@embroider/util@npm:1.11.2"
+  dependencies:
+    "@embroider/macros": ^1.12.3
+    broccoli-funnel: ^3.0.5
+    ember-cli-babel: ^7.26.11
+  peerDependencies:
+    "@glint/environment-ember-loose": ^1.0.0
+    "@glint/template": ^1.0.0
+    ember-source: "*"
+  peerDependenciesMeta:
+    "@glint/environment-ember-loose":
+      optional: true
+    "@glint/template":
+      optional: true
+  checksum: 1d9cc4e5b4d2f8bd3803460771665e251c88b1788791c8a2bb15baab33bb5ec4afd0da1203ed7f4797abb31d9565e5abb0aef2ba6dcfa20368f48dca191a9106
   languageName: node
   linkType: hard
 
@@ -10043,14 +10052,14 @@ __metadata:
   languageName: node
   linkType: hard
 
-"caniuse-lite@npm:^1.0.0, caniuse-lite@npm:^1.0.30000792, caniuse-lite@npm:^1.0.30000805, caniuse-lite@npm:^1.0.30000844, caniuse-lite@npm:^1.0.30001219, caniuse-lite@npm:^1.0.30001264, caniuse-lite@npm:^1.0.30001280, caniuse-lite@npm:^1.0.30001304, caniuse-lite@npm:^1.0.30001317, caniuse-lite@npm:^1.0.30001349":
+"caniuse-lite@npm:^1.0.0, caniuse-lite@npm:^1.0.30000792, caniuse-lite@npm:^1.0.30000805, caniuse-lite@npm:^1.0.30001219, caniuse-lite@npm:^1.0.30001264, caniuse-lite@npm:^1.0.30001280, caniuse-lite@npm:^1.0.30001304, caniuse-lite@npm:^1.0.30001317, caniuse-lite@npm:^1.0.30001349":
   version: 1.0.30001487
   resolution: "caniuse-lite@npm:1.0.30001487"
   checksum: b5a9e72ec165765fb3e07913cc389685ce8a30ac48967f99baec773a4353d2037fb534241e87b3c95d40a5081079be2263710b784883183bb2998b73f7202233
   languageName: node
   linkType: hard
 
-"caniuse-lite@npm:^1.0.30001503":
+"caniuse-lite@npm:^1.0.30000844, caniuse-lite@npm:^1.0.30001503":
   version: 1.0.30001516
   resolution: "caniuse-lite@npm:1.0.30001516"
   checksum: 044adf3493b734a356a2922445a30095a0f6de6b9194695cdf74deafe7bef658e85858a31177762c2813f6e1ed2722d832d59eee0ecb2151e93a611ee18cb21f
@@ -12270,7 +12279,14 @@ __metadata:
   languageName: node
   linkType: hard
 
-"electron-to-chromium@npm:^1.3.47, electron-to-chromium@npm:^1.3.723":
+"electron-to-chromium@npm:^1.3.47":
+  version: 1.4.462
+  resolution: "electron-to-chromium@npm:1.4.462"
+  checksum: ee6e0318ca1144077131036ad87630f8b68c9c4d2c2ce97359731dc676df3518cb88223dc8057187d97e018983e08c003b64d03fba27f98fa53698e758672771
+  languageName: node
+  linkType: hard
+
+"electron-to-chromium@npm:^1.3.723":
   version: 1.3.906
   resolution: "electron-to-chromium@npm:1.3.906"
   checksum: 087330249a424066cbdb882890164b3cb944f0ea293838a1445274428549e5b6c5edd25c353fed733d20d055ba276d4e3b069554b5e06ebfe511134c4f68cf87
@@ -12362,7 +12378,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"ember-auto-import@npm:2.6.3, ember-auto-import@npm:^2.4.3, ember-auto-import@npm:^2.5.0, ember-auto-import@npm:^2.6.1":
+"ember-auto-import@npm:2.6.3, ember-auto-import@npm:^2.4.2, ember-auto-import@npm:^2.4.3, ember-auto-import@npm:^2.5.0":
   version: 2.6.3
   resolution: "ember-auto-import@npm:2.6.3"
   dependencies:
@@ -12915,7 +12931,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"ember-cli-htmlbars@npm:^6.2.0":
+"ember-cli-htmlbars@npm:^6.1.1, ember-cli-htmlbars@npm:^6.2.0":
   version: 6.2.0
   resolution: "ember-cli-htmlbars@npm:6.2.0"
   dependencies:
@@ -13858,24 +13874,23 @@ __metadata:
   languageName: node
   linkType: hard
 
-"ember-qunit@npm:7.0.0":
-  version: 7.0.0
-  resolution: "ember-qunit@npm:7.0.0"
+"ember-qunit@npm:6.0.0":
+  version: 6.0.0
+  resolution: "ember-qunit@npm:6.0.0"
   dependencies:
     broccoli-funnel: ^3.0.8
     broccoli-merge-trees: ^3.0.2
     common-tags: ^1.8.0
-    ember-auto-import: ^2.6.1
-    ember-cli-babel: ^7.26.11
+    ember-auto-import: ^2.4.2
+    ember-cli-babel: ^7.26.6
     ember-cli-test-loader: ^3.0.0
     resolve-package-path: ^4.0.3
     silent-error: ^1.1.1
-    validate-peer-dependencies: ^2.2.0
+    validate-peer-dependencies: ^2.1.0
   peerDependencies:
-    "@ember/test-helpers": ">=3.0.3"
-    ember-source: ">=4.0.0"
+    "@ember/test-helpers": ^2.4.0
     qunit: ^2.13.0
-  checksum: 7586919493b3317e5ad284d48ede8ada8021fc3e766061a7f0911583a9f10eeea67acb52682e8e5c0bc1658084f2c335f1764177710e5aa7765391f8b9314581
+  checksum: 74c4c9316ff509a195e7961bae9aa1da6e6260d1a5e0ce153dff76302d23f974fa652dfc9d484fbe78d64623ba0d837b68d437d56745531118b88b950c6a5608
   languageName: node
   linkType: hard
 
@@ -13928,7 +13943,14 @@ __metadata:
   languageName: node
   linkType: hard
 
-"ember-rfc176-data@npm:^0.3.13, ember-rfc176-data@npm:^0.3.15, ember-rfc176-data@npm:^0.3.17":
+"ember-rfc176-data@npm:^0.3.13":
+  version: 0.3.18
+  resolution: "ember-rfc176-data@npm:0.3.18"
+  checksum: 897ac88b54fae39b3bda1c3aefb807f5ffc394c34e33c47b20b8b983e090716492a7d61acadc06771988285fe4e2b18c22faaf0b3b340d810dbbce2fe1a2a3e5
+  languageName: node
+  linkType: hard
+
+"ember-rfc176-data@npm:^0.3.15, ember-rfc176-data@npm:^0.3.17":
   version: 0.3.17
   resolution: "ember-rfc176-data@npm:0.3.17"
   checksum: bc35da90149178d4c0e67097446d46ab69910571fcd02308dead097ca21c6d86767c4031d2bba4df267213ce6c43d1fe5660ded9e061051c1d84ba171fd02366
@@ -18196,9 +18218,9 @@ __metadata:
   linkType: hard
 
 "jquery@npm:^3.4.1":
-  version: 3.6.0
-  resolution: "jquery@npm:3.6.0"
-  checksum: 8fd5fef4aa48fd374ec716dd1c1df1af407814a228e15c1260ca140de3a697c2a77c30c54ff1d238b6a3ab4ddc445ddeef9adce6c6d28e4869d85eb9d3951c0e
+  version: 3.7.0
+  resolution: "jquery@npm:3.7.0"
+  checksum: 907785e133afc427650a131af5fccef66a404885037513b3d4d7d63aee6409bcc32a39836868c60e59b05aa0fb8ace8961c18b2ee3ffdf6ffdb571d6d7cd88ff
   languageName: node
   linkType: hard
 
@@ -22775,7 +22797,20 @@ __metadata:
   languageName: node
   linkType: hard
 
-"resolve@npm:^1.1.7, resolve@npm:^1.10.0, resolve@npm:^1.11.1, resolve@npm:^1.13.1, resolve@npm:^1.14.2, resolve@npm:^1.17.0, resolve@npm:^1.20.0, resolve@npm:^1.3.3, resolve@npm:^1.4.0, resolve@npm:^1.5.0, resolve@npm:^1.8.1":
+"resolve@npm:^1.1.7, resolve@npm:^1.22.1":
+  version: 1.22.3
+  resolution: "resolve@npm:1.22.3"
+  dependencies:
+    is-core-module: ^2.12.0
+    path-parse: ^1.0.7
+    supports-preserve-symlinks-flag: ^1.0.0
+  bin:
+    resolve: bin/resolve
+  checksum: fb834b81348428cb545ff1b828a72ea28feb5a97c026a1cf40aa1008352c72811ff4d4e71f2035273dc536dcfcae20c13604ba6283c612d70fa0b6e44519c374
+  languageName: node
+  linkType: hard
+
+"resolve@npm:^1.10.0, resolve@npm:^1.11.1, resolve@npm:^1.13.1, resolve@npm:^1.14.2, resolve@npm:^1.17.0, resolve@npm:^1.20.0, resolve@npm:^1.3.3, resolve@npm:^1.4.0, resolve@npm:^1.5.0, resolve@npm:^1.8.1":
   version: 1.20.0
   resolution: "resolve@npm:1.20.0"
   dependencies:
@@ -22798,20 +22833,20 @@ __metadata:
   languageName: node
   linkType: hard
 
-"resolve@npm:^1.22.1":
+"resolve@patch:resolve@^1.1.7#~builtin<compat/resolve>, resolve@patch:resolve@^1.22.1#~builtin<compat/resolve>":
   version: 1.22.3
-  resolution: "resolve@npm:1.22.3"
+  resolution: "resolve@patch:resolve@npm%3A1.22.3#~builtin<compat/resolve>::version=1.22.3&hash=c3c19d"
   dependencies:
     is-core-module: ^2.12.0
     path-parse: ^1.0.7
     supports-preserve-symlinks-flag: ^1.0.0
   bin:
     resolve: bin/resolve
-  checksum: fb834b81348428cb545ff1b828a72ea28feb5a97c026a1cf40aa1008352c72811ff4d4e71f2035273dc536dcfcae20c13604ba6283c612d70fa0b6e44519c374
+  checksum: ad59734723b596d0891321c951592ed9015a77ce84907f89c9d9307dd0c06e11a67906a3e628c4cae143d3e44898603478af0ddeb2bba3f229a9373efe342665
   languageName: node
   linkType: hard
 
-"resolve@patch:resolve@^1.1.7#~builtin<compat/resolve>, resolve@patch:resolve@^1.10.0#~builtin<compat/resolve>, resolve@patch:resolve@^1.11.1#~builtin<compat/resolve>, resolve@patch:resolve@^1.13.1#~builtin<compat/resolve>, resolve@patch:resolve@^1.14.2#~builtin<compat/resolve>, resolve@patch:resolve@^1.17.0#~builtin<compat/resolve>, resolve@patch:resolve@^1.20.0#~builtin<compat/resolve>, resolve@patch:resolve@^1.3.3#~builtin<compat/resolve>, resolve@patch:resolve@^1.4.0#~builtin<compat/resolve>, resolve@patch:resolve@^1.5.0#~builtin<compat/resolve>, resolve@patch:resolve@^1.8.1#~builtin<compat/resolve>":
+"resolve@patch:resolve@^1.10.0#~builtin<compat/resolve>, resolve@patch:resolve@^1.11.1#~builtin<compat/resolve>, resolve@patch:resolve@^1.13.1#~builtin<compat/resolve>, resolve@patch:resolve@^1.14.2#~builtin<compat/resolve>, resolve@patch:resolve@^1.17.0#~builtin<compat/resolve>, resolve@patch:resolve@^1.20.0#~builtin<compat/resolve>, resolve@patch:resolve@^1.3.3#~builtin<compat/resolve>, resolve@patch:resolve@^1.4.0#~builtin<compat/resolve>, resolve@patch:resolve@^1.5.0#~builtin<compat/resolve>, resolve@patch:resolve@^1.8.1#~builtin<compat/resolve>":
   version: 1.20.0
   resolution: "resolve@patch:resolve@npm%3A1.20.0#~builtin<compat/resolve>::version=1.20.0&hash=c3c19d"
   dependencies:
@@ -22831,19 +22866,6 @@ __metadata:
   bin:
     resolve: bin/resolve
   checksum: c79ecaea36c872ee4a79e3db0d3d4160b593f2ca16e031d8283735acd01715a203607e9ded3f91f68899c2937fa0d49390cddbe0fb2852629212f3cda283f4a7
-  languageName: node
-  linkType: hard
-
-"resolve@patch:resolve@^1.22.1#~builtin<compat/resolve>":
-  version: 1.22.3
-  resolution: "resolve@patch:resolve@npm%3A1.22.3#~builtin<compat/resolve>::version=1.22.3&hash=c3c19d"
-  dependencies:
-    is-core-module: ^2.12.0
-    path-parse: ^1.0.7
-    supports-preserve-symlinks-flag: ^1.0.0
-  bin:
-    resolve: bin/resolve
-  checksum: ad59734723b596d0891321c951592ed9015a77ce84907f89c9d9307dd0c06e11a67906a3e628c4cae143d3e44898603478af0ddeb2bba3f229a9373efe342665
   languageName: node
   linkType: hard
 
@@ -25782,7 +25804,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"validate-peer-dependencies@npm:^2.2.0":
+"validate-peer-dependencies@npm:^2.1.0":
   version: 2.2.0
   resolution: "validate-peer-dependencies@npm:2.2.0"
   dependencies:
@@ -25811,7 +25833,7 @@ __metadata:
     "@ember/optional-features": ^2.0.0
     "@ember/render-modifiers": ^1.0.2
     "@ember/string": ^3.0.1
-    "@ember/test-helpers": 3.0.3
+    "@ember/test-helpers": 2.9.3
     "@ember/test-waiters": ^3.0.0
     "@glimmer/component": ^1.1.2
     "@glimmer/tracking": ^1.1.2
@@ -25906,7 +25928,7 @@ __metadata:
     ember-page-title: ^7.0.0
     ember-power-select: 6.0.1
     ember-qrcode-shim: ^0.4.0
-    ember-qunit: 7.0.0
+    ember-qunit: 6.0.0
     ember-resolver: ^10.0.0
     ember-responsive: 5.0.0
     ember-router-helpers: ^0.4.0
