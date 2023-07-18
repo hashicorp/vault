@@ -11,14 +11,14 @@ description: |-
 This page contains the list of breaking changes for Vault 0.6.1. Please read it
 carefully.
 
-## Standby Nodes Must Be 0.6.1 As Well
+## Standby nodes must be 0.6.1 as well
 
 Once an active node is running 0.6.1, only standby nodes running 0.6.1+ will be
 able to form an HA cluster. If following our [general upgrade
 instructions](/vault/docs/upgrading) this will
 not be an issue.
 
-## Health Endpoint Status Code Changes
+## Health endpoint status code changes
 
 Prior to 0.6.1, the health endpoint would return a `500` (Internal Server
 Error) for both a sealed and uninitialized state. In both states this was
@@ -34,14 +34,14 @@ be adjusted with the `uninitcode` query parameter.
 This removes ambiguity/confusion and falls more in line with the intention of
 each status code (including `500`).
 
-## Root Token Creation Restrictions
+## Root token creation restrictions
 
 Root tokens (tokens with the `root` policy) can no longer be created except by
 another root token or the
 [`generate-root`](/vault/api-docs/system/generate-root)
 endpoint or CLI command.
 
-## PKI Backend Certificates Will Contain Default Key Usages
+## PKI backend certificates will contain default key usages
 
 Issued certificates from the `pki` backend against roles created or modified
 after upgrading will contain a set of default key usages. This increases
@@ -52,7 +52,7 @@ This behavior is fully adjustable; see the [PKI backend
 documentation](/vault/docs/secrets/pki) for
 details.
 
-## DynamoDB Does Not Support HA By Default
+## DynamoDB does not support HA by default
 
 If using DynamoDB and want to use HA support, you will need to explicitly
 enable it in Vault's configuration; see the
@@ -64,7 +64,7 @@ it is _very important_ that you set this option **before** upgrading your Vault
 instances. Without doing so, each Vault instance will believe that it is
 standalone and there could be consistency issues.
 
-## LDAP Auth Method Forgets Bind Password and Insecure TLS Settings
+## LDAP auth method forgets bind password and insecure TLS settings
 
 Due to a bug, these two settings are forgotten if they have been configured in
 the LDAP backend prior to 0.6.1. If you are using these settings with LDAP,
@@ -72,7 +72,7 @@ please be sure to re-submit your LDAP configuration to Vault after the upgrade,
 so ensure that you have a valid token to do so before upgrading if you are
 relying on LDAP authentication for permissions to modify the backend itself.
 
-## LDAP Auth Method Does Not Search `memberOf`
+## LDAP auth method does not search `memberOf`
 
 The LDAP backend went from a model where all permutations of storing and
 filtering groups were tried in all cases to one where specific filters are
@@ -93,7 +93,7 @@ that they have valid tokens with policies allowing modification of LDAP
 parameters before upgrading, so that once an upgrade is performed, the new
 configuration can be specified successfully.
 
-## App-ID is Deprecated
+## App-ID is deprecated
 
 With the addition of the new [AppRole
 backend](/vault/docs/auth/approle), App-ID is

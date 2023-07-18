@@ -4,7 +4,7 @@ page_title: LDAP - Auth Methods - HTTP API
 description: This is the API documentation for the Vault LDAP auth method.
 ---
 
-# LDAP Auth Method (API)
+# LDAP auth method (API)
 
 @include 'x509-sha1-deprecation.mdx'
 
@@ -107,7 +107,7 @@ This endpoint configures the LDAP auth method.
 
 @include 'ldap-auth-userfilter-warning.mdx'
 
-### Sample Request
+### Sample request
 
 ```shell-session
 $ curl \
@@ -117,7 +117,7 @@ $ curl \
     http://127.0.0.1:8200/v1/auth/ldap/config
 ```
 
-### Sample Payload
+### Sample payload
 
 ```json
 {
@@ -139,7 +139,7 @@ $ curl \
 }
 ```
 
-## Read LDAP Configuration
+## Read LDAP configuration
 
 This endpoint retrieves the LDAP configuration for the auth method.
 
@@ -147,7 +147,7 @@ This endpoint retrieves the LDAP configuration for the auth method.
 | :----- | :------------------ |
 | `GET`  | `/auth/ldap/config` |
 
-### Sample Request
+### Sample request
 
 ```shell-session
 $ curl \
@@ -155,7 +155,7 @@ $ curl \
     http://127.0.0.1:8200/v1/auth/ldap/config
 ```
 
-### Sample Response
+### Sample response
 
 ```json
 {
@@ -187,7 +187,7 @@ $ curl \
 }
 ```
 
-## List LDAP Groups
+## List LDAP groups
 
 This endpoint returns a list of existing groups in the method.
 
@@ -195,7 +195,7 @@ This endpoint returns a list of existing groups in the method.
 | :----- | :------------------ |
 | `LIST` | `/auth/ldap/groups` |
 
-### Sample Request
+### Sample request
 
 ```shell-session
 $ curl \
@@ -204,7 +204,7 @@ $ curl \
     http://127.0.0.1:8200/v1/auth/ldap/groups
 ```
 
-### Sample Response
+### Sample response
 
 ```json
 {
@@ -220,7 +220,7 @@ $ curl \
 }
 ```
 
-## Read LDAP Group
+## Read LDAP group
 
 This endpoint returns the policies associated with a LDAP group.
 
@@ -232,7 +232,7 @@ This endpoint returns the policies associated with a LDAP group.
 
 - `name` `(string: <required>)` – The name of the LDAP group
 
-### Sample Request
+### Sample request
 
 ```shell-session
 $ curl \
@@ -240,7 +240,7 @@ $ curl \
     http://127.0.0.1:8200/v1/auth/ldap/groups/admins
 ```
 
-### Sample Response
+### Sample response
 
 ```json
 {
@@ -257,7 +257,7 @@ $ curl \
 }
 ```
 
-## Create/Update LDAP Group
+## Create/Update LDAP group
 
 This endpoint creates or updates LDAP group policies.
 
@@ -271,7 +271,7 @@ This endpoint creates or updates LDAP group policies.
 - `policies` `(string: "")` – Comma-separated list of policies associated to the
   group.
 
-### Sample Payload
+### Sample payload
 
 ```json
 {
@@ -279,7 +279,7 @@ This endpoint creates or updates LDAP group policies.
 }
 ```
 
-### Sample Request
+### Sample request
 
 ```shell-session
 $ curl \
@@ -289,7 +289,7 @@ $ curl \
     http://127.0.0.1:8200/v1/auth/ldap/groups/admins
 ```
 
-## Delete LDAP Group
+## Delete LDAP group
 
 This endpoint deletes the LDAP group and policy association.
 
@@ -301,7 +301,7 @@ This endpoint deletes the LDAP group and policy association.
 
 - `name` `(string: <required>)` – The name of the LDAP group
 
-### Sample Request
+### Sample request
 
 ```shell-session
 $ curl \
@@ -310,7 +310,7 @@ $ curl \
     http://127.0.0.1:8200/v1/auth/ldap/groups/admins
 ```
 
-## List LDAP Users
+## List LDAP users
 
 This endpoint returns a list of existing users in the method.
 
@@ -318,7 +318,7 @@ This endpoint returns a list of existing users in the method.
 | :----- | :----------------- |
 | `LIST` | `/auth/ldap/users` |
 
-### Sample Request
+### Sample request
 
 ```shell-session
 $ curl \
@@ -327,7 +327,7 @@ $ curl \
     http://127.0.0.1:8200/v1/auth/ldap/users
 ```
 
-### Sample Response
+### Sample response
 
 ```json
 {
@@ -343,7 +343,7 @@ $ curl \
 }
 ```
 
-## Read LDAP User
+## Read LDAP user
 
 This endpoint returns the policies associated with a LDAP user.
 
@@ -355,7 +355,7 @@ This endpoint returns the policies associated with a LDAP user.
 
 - `username` `(string: <required>)` – The username of the LDAP user
 
-### Sample Request
+### Sample request
 
 ```shell-session
 $ curl \
@@ -363,7 +363,7 @@ $ curl \
     http://127.0.0.1:8200/v1/auth/ldap/users/mitchellh
 ```
 
-### Sample Response
+### Sample response
 
 ```json
 {
@@ -381,7 +381,7 @@ $ curl \
 }
 ```
 
-## Create/Update LDAP User
+## Create/Update LDAP user
 
 This endpoint creates or updates LDAP users policies and group associations.
 
@@ -397,7 +397,7 @@ This endpoint creates or updates LDAP users policies and group associations.
 - `groups` `(string: "")` – Comma-separated list of groups associated to the
   user.
 
-### Sample Payload
+### Sample payload
 
 ```json
 {
@@ -405,7 +405,7 @@ This endpoint creates or updates LDAP users policies and group associations.
 }
 ```
 
-### Sample Request
+### Sample request
 
 ```shell-session
 $ curl \
@@ -415,7 +415,7 @@ $ curl \
     http://127.0.0.1:8200/v1/auth/ldap/users/mitchellh
 ```
 
-## Delete LDAP User
+## Delete LDAP user
 
 This endpoint deletes the LDAP user and policy association.
 
@@ -427,7 +427,7 @@ This endpoint deletes the LDAP user and policy association.
 
 - `username` `(string: <required>)` – The username of the LDAP user
 
-### Sample Request
+### Sample request
 
 ```shell-session
 $ curl \
@@ -436,7 +436,7 @@ $ curl \
     http://127.0.0.1:8200/v1/auth/ldap/users/mitchellh
 ```
 
-## Login with LDAP User
+## Login with LDAP user
 
 This endpoint allows you to log in with LDAP credentials
 
@@ -449,7 +449,7 @@ This endpoint allows you to log in with LDAP credentials
 - `username` `(string: <required>)` – The username of the LDAP user
 - `password` `(string: <required>)` – The password for the LDAP user
 
-### Sample Payload
+### Sample payload
 
 ```json
 {
@@ -457,7 +457,7 @@ This endpoint allows you to log in with LDAP credentials
 }
 ```
 
-### Sample Request
+### Sample request
 
 ```shell-session
 $ curl \
@@ -466,7 +466,7 @@ $ curl \
     http://127.0.0.1:8200/v1/auth/ldap/login/mitchellh
 ```
 
-### Sample Response
+### Sample response
 
 ```json
 {
