@@ -252,12 +252,13 @@ jobs:
               --junitfile test-results/go-test/results-${{ matrix.id }}.xml \
               --jsonfile test-results/go-test/results-${{ matrix.id }}.json \
               --jsonfile-timing-events failure-summary-${{ matrix.id }}${{ inputs.name != '' && '-' || '' }}${{ inputs.name }}.json \
+               $RERUN_FAILS \
+              --packages "$packages" \
               -- \
               -tags "${{ inputs.go-tags }}" \
               -timeout=${{ env.TIMEOUT_IN_MINUTES }}m \
               -parallel=${{ inputs.go-test-parallelism }} \
               ${{ inputs.extra-flags }} \
-              ${{ matrix.packages }}
       - name: Prepare datadog-ci
         if: github.repository == 'hashicorp/vault' && (success() || failure())
         continue-on-error: true
