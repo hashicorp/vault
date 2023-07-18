@@ -22,7 +22,7 @@
 # Here, it is used to check if a deprecated function, variable, constant or field is used.
 
 # Run staticcheck 
-set -ex
+set -e
 echo "Performing deprecations check: running staticcheck"
 
 
