@@ -38,8 +38,6 @@
             Unseal Vault by entering portions of the unseal key. This can be done via multiple mechanisms on multiple
             computers. Once all portions are entered, the root key will be decrypted and Vault will unseal.
           </p>
-        {{/if}}
-        {{#unless this.model.unsealed}}
           <Shamir::Flow
             @action="unseal"
             @threshold={{this.model.sealThreshold}}
@@ -52,7 +50,7 @@
             @onShamirSuccess={{action "transitionToCluster"}}
             class="has-top-margin-m"
           />
-        {{/unless}}
+        {{/if}}
       </div>
     </Page.content>
     <Page.footer>

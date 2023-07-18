@@ -30,7 +30,7 @@
         </button>
       </div>
       <div class="control">
-        <button type="submit" disabled={{and (not this.pgpKey)}} class="button is-primary" data-test-confirm-pgp-key-submit>
+        <button type="submit" disabled={{not this.pgpKey}} class="button is-primary" data-test-confirm-pgp-key-submit>
           {{this.buttonText}}
         </button>
       </div>
