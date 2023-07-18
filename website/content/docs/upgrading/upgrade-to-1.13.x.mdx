@@ -36,7 +36,7 @@ releases. Maintenance mode means that we will fix bugs and security issues but w
 new features. For additional information, see the [deprecation table](/vault/docs/deprecation)
 and [migration guide](/vault/docs/secrets/ad/migration-guide).
 
-### AliCloud Auth Role Parameter
+### AliCloud auth role parameter
 
 The AliCloud auth plugin will now require the `role` parameter on login. This
 has always been documented as a required field but the requirement will now be
@@ -84,18 +84,18 @@ feature](/vault/docs/deprecation/faq#q-what-should-i-do-if-i-use-mount-filters-a
 For more information on the phases of deprecation, see the [Deprecation Notices
 FAQ](/vault/docs/deprecation/faq#q-what-are-the-phases-of-deprecation).
 
-#### Impacted Versions
+#### Impacted versions
 
 Affects upgrading from any version of Vault to 1.13.x. All other upgrade paths
 are unaffected.
 
-## Known Issues
+## Known issues
 
 @include 'tokenization-rotation-persistence.mdx'
 
 @include 'ocsp-redirect.mdx'
 
-### PKI Revocation Request Forwarding
+### PKI revocation request forwarding
 
 If a revocation request comes in to a standby or performance secondary node,
 for a certificate that is present locally, the request will not be correctly
@@ -116,11 +116,11 @@ An additional workaround for users rendering STS credentials via the Vault Agent
 `static-secret-render-interval` for a template using the credentials. Setting this configuration to 15 minutes
 accommodates the default minimum duration of an STS token and overrides the default render interval of 5 minutes.
 
-#### Impacted Versions
+#### Impacted versions
 
 Affects Vault 1.13.0 only.
 
-### LDAP Pagination Issue
+### LDAP pagination issue
 
 There was a regression introduced in 1.13.2 relating to LDAP maximum page sizes, resulting in
 an error `no LDAP groups found in groupDN [...] only policies from locally-defined groups available`.  The issue
@@ -131,11 +131,11 @@ As a workaround, disable paged searching using the following:
 vault write auth/ldap/config max_page_size=-1
 ```
 
-#### Impacted Versions
+#### Impacted versions
 
 Affects Vault 1.13.2.
 
-### PKI Cross-Cluster Revocation Requests and Unified CRL/OCSP
+### PKI Cross-Cluster revocation requests and unified CRL/OCSP
 
 When revoking certificates on a cluster that doesn't own the
 certificate, writing the revocation request will fail with
@@ -147,7 +147,7 @@ As a workaround, submit revocation requests to the cluster which
 issued the certificate, or use BYOC revocation. Use cluster-local
 OCSP and CRLs until this is resolved.
 
-#### Impacted Versions
+#### Impacted versions
 
 Affects Vault 1.13.0 to 1.13.2. Fixed in 1.13.3.
 
@@ -155,7 +155,7 @@ On upgrade, all local revocations will be synchronized between
 clusters; revocation requests are not persisted when failing to
 write cross-cluster.
 
-### Slow Startup Time When Storing PKI Certificates
+### Slow startup time when storing PKI certificates
 
 There was a regression introduced in 1.13.0 where Vault is slow to start because the
 PKI secret engine performs a list operation on the stored certificates. If a large number
@@ -165,7 +165,7 @@ There is currently no workaround for this other than limiting the number of cert
 in Vault via the [PKI tidy](/vault/api-docs/secret/pki#tidy) or using `no_store`
 flag for [PKI roles](/vault/api-docs/secret/pki#createupdate-role).
 
-#### Impacted Versions
+#### Impacted versions
 
 Affects Vault 1.13.0+
 
