@@ -277,7 +277,7 @@ jobs:
       - build-ubi
       - test
       - test-docker-k8s
-    if: success() || failure()
+    if: (success() || failure()) && github.head_ref != ''
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@c85c95e3d7251135ab7dc9ce3241c5835cc595a9 # v3.5.3

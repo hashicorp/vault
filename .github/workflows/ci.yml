@@ -376,6 +376,7 @@ jobs:
           echo "$EOF" >> "$GITHUB_ENV" 
       - uses: actions/checkout@c85c95e3d7251135ab7dc9ce3241c5835cc595a9 # v3.5.3
       - name: Create comment
+        if: github.head_ref != ''
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           PR_NUMBER: ${{ github.event.pull_request.number }}
