@@ -8,9 +8,8 @@ import { inject as service } from '@ember/service';
 import { hash } from 'rsvp';
 // eslint-disable-next-line ember/no-mixins
 import ClusterRoute from 'vault/mixins/cluster-route';
-
-export default Route.extend(ClusterRoute, {
-  store: service(),
+export default class VaultClusterDashboardRoute extends Route.extend(ClusterRoute) {
+  @service store;
 
   async getVaultConfiguration() {
     try {
@@ -20,7 +19,7 @@ export default Route.extend(ClusterRoute, {
     } catch (e) {
       return e.httpStatus;
     }
-  },
+  }
 
   model() {
     const vaultConfiguration = this.getVaultConfiguration();
@@ -29,11 +28,12 @@ export default Route.extend(ClusterRoute, {
       vaultConfiguration,
       secretsEngines: this.store.query('secret-engine', {}),
     });
-  },
+  }
 
   setupController(controller, resolvedModel) {
-    this._super(...arguments);
+    super.setupController(controller, resolvedModel);
+
     controller.vaultConfiguration =
       typeof resolvedModel.vaultConfiguration === 'number' ? false : resolvedModel.vaultConfiguration;
-  },
-});
+  }
+}
