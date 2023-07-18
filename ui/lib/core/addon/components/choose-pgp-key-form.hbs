@@ -1,9 +1,18 @@
 {{#if this.selectedPgp}}
-  <form id="confirm-pgp-key" {{on "submit" this.handleSubmit}} aria-label="begin token generation with PGP key">
+  <form
+    id="confirm-pgp-key"
+    {{on "submit" this.handleSubmit}}
+    aria-label="begin token generation with PGP key"
+    data-test-confirm-pgp-key
+  >
     <div>
-      <p class="has-bottom-margin-m">
-        Below is the base-64 encoded PGP Key that will be used to encrypt the generated operation token. Next we'll enter
-        portions of the root key to generate an operation token. Click the "Generate operation token" button to proceed.
+      <p class="has-bottom-margin-m" data-test-pgp-key-confirm>
+        {{or
+          @confirmText
+          (concat
+            'Below is the base-64 encoded PGP Key that will be used. Click the "' this.buttonText '" button to proceed.'
+          )
+        }}
       </p>
       <h4 class="field-title has-bottom-padding-m is-fullwidth">
         PGP Key
@@ -11,39 +20,43 @@
       </h4>
       <div class="message is-list has-copy-button" tabindex="-1">
         <HoverCopyButton @copyValue={{this.pgpKey}} />
-        <code class="is-word-break">{{this.pgpKey}}</code>
+        <code class="is-word-break" data-test-pgp-key-copy>{{this.pgpKey}}</code>
       </div>
     </div>
     <div class="field is-grouped">
       <div class="control">
-        <button type="button" class="button" {{on "click" (fn (mut this.selectedPgp) "")}}>
+        <button type="button" class="button" {{on "click" (fn (mut this.selectedPgp) "")}} data-test-confirm-pgp-back-button>
           Back
         </button>
       </div>
       <div class="control">
-        <button type="submit" disabled={{and (not this.pgpKey)}} class="button is-primary">
-          Generate operation token
+        <button type="submit" disabled={{and (not this.pgpKey)}} class="button is-primary" data-test-confirm-pgp-key-submit>
+          {{this.buttonText}}
         </button>
       </div>
     </div>
   </form>
 {{else}}
-  <form id="choose-pgp-key" {{on "submit" this.usePgpKey}} aria-label="provide PGP key">
+  <form
+    id="choose-pgp-key"
+    {{on "submit" this.usePgpKey}}
+    aria-label="provide PGP key"
+    data-test-choose-pgp-key-form="begin"
+  >
     <div class="has-bottom-margin-m">
-      <p>
-        Choose a PGP Key from your computer or paste the contents of one in the form below. This key will be used to Encrypt
-        the generated operation token.
+      <p data-test-choose-pgp-key-description>
+        {{this.formText}}
       </p>
       <PgpFile @index="" @key={{this.pgpKeyFile}} @onChange={{this.setKey}} />
     </div>
     <div class="field is-grouped">
       <div class="control">
-        <button type="button" class="button" {{on "click" @onCancel}}>
+        <button type="button" class="button" {{on "click" @onCancel}} data-test-use-pgp-key-cancel>
           Back
         </button>
       </div>
       <div class="control">
-        <button type="submit" disabled={{not this.pgpKeyFile.value}} class="button is-primary">
+        <button type="submit" disabled={{not this.pgpKeyFile.value}} class="button is-primary" data-test-use-pgp-key-button>
           Use PGP Key
         </button>
       </div>
