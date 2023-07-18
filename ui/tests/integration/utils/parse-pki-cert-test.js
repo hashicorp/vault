@@ -18,7 +18,10 @@ import {
   pssTrueCert,
   skeletonCert,
   unsupportedOids,
+  unsupportedSignatureRoot,
+  unsupportedSignatureInt,
 } from 'vault/tests/helpers/pki/values';
+import { verifyCertificates } from 'vault/utils/parse-pki-cert';
 
 module('Integration | Util | parse pki certificate', function (hooks) {
   setupTest(hooks);
@@ -225,6 +228,14 @@ module('Integration | Util | parse pki certificate', function (hooks) {
       },
       `values for ${Object.keys(SAN_TYPES).join(', ')} are comma separated strings (and no longer arrays)`
     );
+  });
+
+  test('the helper verifyCertificates catches errors', async function (assert) {
+    assert.expect(2);
+    const verifiedRoot = await verifyCertificates(unsupportedSignatureRoot, unsupportedSignatureRoot);
+    const verifiedInt = await verifyCertificates(unsupportedSignatureInt, unsupportedSignatureInt);
+    assert.true(verifiedRoot, 'returns true for root certificate');
+    assert.false(verifiedInt, 'returns false for intermediate cert');
   });
 
   test('it fails silently when passed null', async function (assert) {
