@@ -116,8 +116,10 @@ func (a *AuditBroker) GetHash(ctx context.Context, name string, input string) (s
 // log the given request and that *at least one* succeeds.
 func (a *AuditBroker) LogRequest(ctx context.Context, in *logical.LogInput, headersConfig *AuditedHeadersConfig) (ret error) {
 	defer metrics.MeasureSince([]string{"audit", "log_request"}, time.Now())
+
 	a.RLock()
 	defer a.RUnlock()
+
 	if in.Request.InboundSSCToken != "" {
 		if in.Auth != nil {
 			reqAuthToken := in.Auth.ClientToken
