@@ -86,23 +86,26 @@ func (fw *testingFormatWriter) hashExpectedValueForComparison(input map[string]i
 	return copiedAsMap
 }
 
-// TestNewAuditFormatter tests that creating a new EventFormatter can be done safely.
-func TestNewAuditFormatter(t *testing.T) {
+// TestNewEventFormatterWriter tests that creating a new EventFormatterWriter can be done safely.
+func TestNewEventFormatterWriter(t *testing.T) {
 	tests := map[string]struct {
-		Salter              Salter
-		UseStaticSalter     bool
-		IsErrorExpected     bool
-		ExpectedErrorMessag string
+		Salter               Salter
+		UseStaticSalter      bool
+		UseNilFormatter      bool
+		UseNilWriter         bool
+		IsErrorExpected      bool
+		ExpectedErrorMessage string
 	}{
 		"nil": {
-			Salter:              nil,
-			IsErrorExpected:     true,
-			ExpectedErrorMessag: "cannot create a new audit formatter with nil salter",
+			Salter:               nil,
+			UseNilFormatter:      true,
+			UseNilWriter:         true,
+			IsErrorExpected:      true,
+			ExpectedErrorMessage: "cannot create a new audit formatter with nil salter",
 		},
 		"static": {
-			UseStaticSalter:     true,
-			IsErrorExpected:     false,
-			ExpectedErrorMessag: "",
+			UseStaticSalter: true,
+			IsErrorExpected: false,
 		},
 	}
 
@@ -119,14 +122,29 @@ func TestNewAuditFormatter(t *testing.T) {
 				s = tc.Salter
 			}
 
-			f, err := NewEventFormatter(FormatterConfig{}, s)
+			cfg := FormatterConfig{}
+
+			var f Formatter
+			if !tc.UseNilFormatter {
+				tempFormatter, err := NewEventFormatter(cfg, s)
+				require.NoError(t, err)
+				require.NotNil(t, tempFormatter)
+				f = tempFormatter
+			}
+
+			var w Writer
+			if !tc.UseNilWriter {
+				w = &JSONWriter{}
+			}
+
+			fw, err := NewEventFormatterWriter(cfg, f, w)
 			switch {
 			case tc.IsErrorExpected:
 				require.Error(t, err)
-				require.Nil(t, f)
+				require.Nil(t, fw)
 			default:
 				require.NoError(t, err)
-				require.NotNil(t, f)
+				require.NotNil(t, fw)
 			}
 		})
 	}

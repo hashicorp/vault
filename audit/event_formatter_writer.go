@@ -5,13 +5,10 @@ package audit
 
 import (
 	"context"
-	"crypto/tls"
 	"errors"
 	"fmt"
 	"io"
 	"strings"
-
-	"github.com/go-jose/go-jose/v3/jwt"
 
 	"github.com/hashicorp/vault/sdk/helper/salt"
 	"github.com/hashicorp/vault/sdk/logical"
@@ -87,52 +84,6 @@ func (f *EventFormatterWriter) FormatAndWriteResponse(ctx context.Context, w io.
 	}
 
 	return f.Writer.WriteResponse(w, respEntry)
-}
-
-// getRemoteAddr safely gets the remote address avoiding a nil pointer
-func getRemoteAddr(req *logical.Request) string {
-	if req != nil && req.Connection != nil {
-		return req.Connection.RemoteAddr
-	}
-	return ""
-}
-
-// getRemotePort safely gets the remote port avoiding a nil pointer
-func getRemotePort(req *logical.Request) int {
-	if req != nil && req.Connection != nil {
-		return req.Connection.RemotePort
-	}
-	return 0
-}
-
-// getClientCertificateSerialNumber attempts the retrieve the serial number of
-// the peer certificate from the specified tls.ConnectionState.
-func getClientCertificateSerialNumber(connState *tls.ConnectionState) string {
-	if connState == nil || len(connState.VerifiedChains) == 0 || len(connState.VerifiedChains[0]) == 0 {
-		return ""
-	}
-
-	return connState.VerifiedChains[0][0].SerialNumber.String()
-}
-
-// parseVaultTokenFromJWT returns a string iff the token was a JWT and we could
-// extract the original token ID from inside
-func parseVaultTokenFromJWT(token string) *string {
-	if strings.Count(token, ".") != 2 {
-		return nil
-	}
-
-	parsedJWT, err := jwt.ParseSigned(token)
-	if err != nil {
-		return nil
-	}
-
-	var claims jwt.Claims
-	if err = parsedJWT.UnsafeClaimsWithoutVerification(&claims); err != nil {
-		return nil
-	}
-
-	return &claims.ID
 }
 
 // NewTemporaryFormatter creates a formatter not backed by a persistent salt
