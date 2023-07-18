@@ -4,6 +4,7 @@
 package event
 
 import (
+	"os"
 	"testing"
 	"time"
 
@@ -355,6 +356,114 @@ func TestOptions_WithMaxDuration(t *testing.T) {
 			default:
 				require.NoError(t, err)
 				require.Equal(t, tc.ExpectedValue, options.withMaxDuration)
+			}
+		})
+	}
+}
+
+// TestOptions_WithFileMode exercises WithFileMode Option to ensure it performs as expected.
+func TestOptions_WithFileMode(t *testing.T) {
+	tests := map[string]struct {
+		Value                string
+		IsErrorExpected      bool
+		ExpectedErrorMessage string
+		IsNilExpected        bool
+		ExpectedValue        os.FileMode
+	}{
+		"empty": {
+			Value:           "",
+			IsErrorExpected: false,
+			IsNilExpected:   true,
+		},
+		"whitespace": {
+			Value:           "     ",
+			IsErrorExpected: false,
+			IsNilExpected:   true,
+		},
+		"nonsense": {
+			Value:                "juan",
+			IsErrorExpected:      true,
+			ExpectedErrorMessage: "unable to parse file mode: strconv.ParseUint: parsing \"juan\": invalid syntax",
+		},
+		"zero": {
+			Value:           "0000",
+			IsErrorExpected: false,
+			ExpectedValue:   os.FileMode(0o000),
+		},
+		"valid": {
+			Value:           "0007",
+			IsErrorExpected: false,
+			ExpectedValue:   os.FileMode(0o007),
+		},
+	}
+
+	for name, tc := range tests {
+		name := name
+		tc := tc
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+			options := &options{}
+			applyOption := WithFileMode(tc.Value)
+			err := applyOption(options)
+			switch {
+			case tc.IsErrorExpected:
+				require.Error(t, err)
+				require.EqualError(t, err, tc.ExpectedErrorMessage)
+			default:
+				require.NoError(t, err)
+				switch {
+				case tc.IsNilExpected:
+					// Optional Option 'not supplied' (i.e. was whitespace/empty string)
+					require.Nil(t, options.withFileMode)
+				default:
+					// Dereference the pointer, so we can examine the file mode.
+					require.Equal(t, tc.ExpectedValue, *options.withFileMode)
+				}
+			}
+		})
+	}
+}
+
+// TestOptions_WithPrefix exercises WithPrefix Option to ensure it performs as expected.
+func TestOptions_WithPrefix(t *testing.T) {
+	tests := map[string]struct {
+		Value                string
+		IsErrorExpected      bool
+		ExpectedErrorMessage string
+		ExpectedValue        string
+	}{
+		"empty": {
+			Value:           "",
+			IsErrorExpected: false,
+			ExpectedValue:   "",
+		},
+		"whitespace": {
+			Value:                "     ",
+			IsErrorExpected:      false,
+			ExpectedErrorMessage: "",
+		},
+		"valid": {
+			Value:           "test",
+			IsErrorExpected: false,
+			ExpectedValue:   "test",
+		},
+	}
+
+	for name, tc := range tests {
+		name := name
+		tc := tc
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+			options := &options{}
+			applyOption := WithPrefix(tc.Value)
+			err := applyOption(options)
+			switch {
+			case tc.IsErrorExpected:
+				require.Error(t, err)
+				require.EqualError(t, err, tc.ExpectedErrorMessage)
+			default:
+				require.NoError(t, err)
+				require.Equal(t, tc.ExpectedValue, options.withPrefix)
 			}
 		})
 	}

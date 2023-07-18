@@ -3,7 +3,6 @@ package audit
 import (
 	"context"
 	"io"
-	"os"
 	"time"
 
 	"github.com/hashicorp/vault/sdk/helper/salt"
@@ -47,12 +46,10 @@ type Option func(*options) error
 
 // options are used to represent configuration for a audit related nodes.
 type options struct {
-	withID       string
-	withNow      time.Time
-	withSubtype  subtype
-	withFormat   format
-	withFileMode *os.FileMode
-	withPrefix   string
+	withID      string
+	withNow     time.Time
+	withSubtype subtype
+	withFormat  format
 }
 
 // Salter is an interface that provides a way to obtain a Salt for hashing.

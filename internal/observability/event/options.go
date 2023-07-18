@@ -6,6 +6,8 @@ package event
 import (
 	"errors"
 	"fmt"
+	"os"
+	"strconv"
 	"strings"
 	"time"
 
@@ -25,6 +27,8 @@ type options struct {
 	withTag         string
 	withSocketType  string
 	withMaxDuration time.Duration
+	withFileMode    *os.FileMode
+	withPrefix      string
 }
 
 // getDefaultOptions returns Options with their default values.
@@ -158,6 +162,48 @@ func WithMaxDuration(duration string) Option {
 		}
 
 		o.withMaxDuration = parsed
+
+		return nil
+	}
+}
+
+// WithFileMode provides an Option to represent a file mode for a file sink.
+// Supplying an empty string or whitespace will prevent this Option from being
+// applied, but it will not return an error in those circumstances.
+func WithFileMode(mode string) Option {
+	return func(o *options) error {
+		// If supplied file mode is empty, just return early without setting anything.
+		// We can assume that this Option was called by something that didn't
+		// parse the incoming value, perhaps from a config map etc.
+		mode = strings.TrimSpace(mode)
+		if mode == "" {
+			return nil
+		}
+
+		// By now we believe we have something that the caller really intended to
+		// be parsed into a file mode.
+		raw, err := strconv.ParseUint(mode, 8, 32)
+
+		switch {
+		case err != nil:
+			return fmt.Errorf("unable to parse file mode: %w", err)
+		default:
+			m := os.FileMode(raw)
+			o.withFileMode = &m
+		}
+
+		return nil
+	}
+}
+
+// WithPrefix provides an Option to represent a prefix for a file sink.
+func WithPrefix(prefix string) Option {
+	return func(o *options) error {
+		prefix = strings.TrimSpace(prefix)
+
+		if prefix != "" {
+			o.withPrefix = prefix
+		}
 
 		return nil
 	}

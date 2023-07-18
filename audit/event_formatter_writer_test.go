@@ -17,9 +17,9 @@ import (
 )
 
 // newStaticSalt returns a new staticSalt for use in testing.
-func newStaticSalt(t *testing.T) *staticSalt {
+func newStaticSalt(tb testing.TB) *staticSalt {
 	s, err := salt.NewSalt(context.Background(), nil, nil)
-	require.NoError(t, err)
+	require.NoError(tb, err)
 
 	return &staticSalt{salt: s}
 }
