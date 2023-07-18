@@ -10,8 +10,8 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// TestAuditEvent_New exercises the newEvent func to create audit events.
-func TestAuditEvent_New(t *testing.T) {
+// TestAuditEvent_new exercises the newEvent func to create audit events.
+func TestAuditEvent_new(t *testing.T) {
 	tests := map[string]struct {
 		Options              []Option
 		Subtype              subtype

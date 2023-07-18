@@ -71,7 +71,7 @@ func WithNow(now time.Time) Option {
 	}
 }
 
-// WithSubtype provides an Option to represent the subtype.
+// WithSubtype provides an Option to represent the event subtype.
 func WithSubtype(s string) Option {
 	return func(o *options) error {
 		s := strings.TrimSpace(s)
@@ -189,7 +189,7 @@ func WithSocketType(socketType string) Option {
 	}
 }
 
-// WithMaxDuration provides an Option to represent the max duration for writing to a socket sink.
+// WithMaxDuration provides an Option to represent the max duration for writing to a socket.
 func WithMaxDuration(duration string) Option {
 	return func(o *options) error {
 		duration = strings.TrimSpace(duration)

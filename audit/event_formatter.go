@@ -42,7 +42,7 @@ func NewEventFormatter(config FormatterConfig, salter Salter) (*EventFormatter, 
 	}, nil
 }
 
-// Reopen is a no-op for a formatter node.
+// Reopen is a no-op for the formatter node.
 func (_ *EventFormatter) Reopen() error {
 	return nil
 }
@@ -53,7 +53,7 @@ func (_ *EventFormatter) Type() eventlogger.NodeType {
 }
 
 // Process will attempt to parse the incoming event data into a corresponding
-// audit request/response entry which is serialized to JSON and stored within the event.
+// audit Request/Response which is serialized to JSON/JSONx and stored within the event.
 func (f *EventFormatter) Process(ctx context.Context, e *eventlogger.Event) (*eventlogger.Event, error) {
 	const op = "audit.(EventFormatter).Process"
 
@@ -119,7 +119,7 @@ func (f *EventFormatter) Process(ctx context.Context, e *eventlogger.Event) (*ev
 	return e, nil
 }
 
-// FormatRequest attempts to format the specified logical.LogInput into an RequestEntry.
+// FormatRequest attempts to format the specified logical.LogInput into a RequestEntry.
 func (f *EventFormatter) FormatRequest(ctx context.Context, in *logical.LogInput) (*RequestEntry, error) {
 	switch {
 	case in == nil || in.Request == nil:
@@ -249,7 +249,7 @@ func (f *EventFormatter) FormatRequest(ctx context.Context, in *logical.LogInput
 	return reqEntry, nil
 }
 
-// FormatResponse attempts to format the specified logical.LogInput into an ResponseEntry.
+// FormatResponse attempts to format the specified logical.LogInput into a ResponseEntry.
 func (f *EventFormatter) FormatResponse(ctx context.Context, in *logical.LogInput) (*ResponseEntry, error) {
 	switch {
 	case in == nil || in.Request == nil:
@@ -493,7 +493,7 @@ func getClientCertificateSerialNumber(connState *tls.ConnectionState) string {
 	return connState.VerifiedChains[0][0].SerialNumber.String()
 }
 
-// parseVaultTokenFromJWT returns a string iff the token was a JWT and we could
+// parseVaultTokenFromJWT returns a string iff the token was a JWT, and we could
 // extract the original token ID from inside
 func parseVaultTokenFromJWT(token string) *string {
 	if strings.Count(token, ".") != 2 {
@@ -511,4 +511,23 @@ func parseVaultTokenFromJWT(token string) *string {
 	}
 
 	return &claims.ID
+}
+
+// doElideListResponseData performs the actual elision of list operation response data, once surrounding code has
+// determined it should apply to a particular request. The data map that is passed in must be a copy that is safe to
+// modify in place, but need not be a full recursive deep copy, as only top-level keys are changed.
+//
+// See the documentation of the controlling option in FormatterConfig for more information on the purpose.
+func doElideListResponseData(data map[string]interface{}) {
+	for k, v := range data {
+		if k == "keys" {
+			if vSlice, ok := v.([]string); ok {
+				data[k] = len(vSlice)
+			}
+		} else if k == "key_info" {
+			if vMap, ok := v.(map[string]interface{}); ok {
+				data[k] = len(vMap)
+			}
+		}
+	}
 }

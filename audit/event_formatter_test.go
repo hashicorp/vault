@@ -18,8 +18,8 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// fakeEvent will return a new fake event containing audit data based
-// on the specified subtype, format and logical.LogInput.
+// fakeEvent will return a new fake event containing audit data based  on the
+// specified subtype, format and logical.LogInput.
 func fakeEvent(tb testing.TB, subtype subtype, format format, input *logical.LogInput) *eventlogger.Event {
 	tb.Helper()
 

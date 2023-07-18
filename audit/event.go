@@ -11,7 +11,8 @@ import (
 
 // newEvent should be used to create an audit event.
 // subtype and format are needed for audit.
-// It will use the supplied Options, generate an ID if required, and validate the event.
+// It will generate an ID if no ID is supplied.
+// Supported options: WithID, WithNow.
 func newEvent(s subtype, f format, opt ...Option) (*auditEvent, error) {
 	const op = "audit.newEvent"
 
@@ -44,7 +45,7 @@ func newEvent(s subtype, f format, opt ...Option) (*auditEvent, error) {
 	return audit, nil
 }
 
-// validate attempts to ensure the event has the basic requirements of the event type configured.
+// validate attempts to ensure the audit event in its present state is valid.
 func (a *auditEvent) validate() error {
 	const op = "audit.(auditEvent).validate"
 
@@ -99,7 +100,7 @@ func (f format) validate() error {
 	}
 }
 
-// String returns the string version of an format.
+// String returns the string version of a format.
 func (f format) String() string {
 	return string(f)
 }
