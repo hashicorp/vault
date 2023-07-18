@@ -6,10 +6,10 @@
 import Route from '@ember/routing/route';
 import { inject as service } from '@ember/service';
 import { hash } from 'rsvp';
-
-export default class VaultClusterDashboardRoute extends Route {
+// eslint-disable-next-line ember/no-mixins
+import ClusterRoute from 'vault/mixins/cluster-route';
+export default class VaultClusterDashboardRoute extends Route.extend(ClusterRoute) {
   @service store;
-  @service version;
 
   async getVaultConfiguration() {
     try {
@@ -17,19 +17,16 @@ export default class VaultClusterDashboardRoute extends Route {
       const configState = await adapter.ajax('/v1/sys/config/state/sanitized', 'GET');
       return configState.data;
     } catch (e) {
-      return e.httpStatus;
+      return null;
     }
   }
 
   model() {
-    const versionHeader = this.version.isEnterprise
-      ? `Vault v${this.version.version.slice(0, this.version.version.indexOf('+'))}`
-      : `Vault v${this.version.version}`;
+    const vaultConfiguration = this.getVaultConfiguration();
 
     return hash({
-      versionHeader,
+      vaultConfiguration,
       secretsEngines: this.store.query('secret-engine', {}),
-      vaultConfiguration: this.getVaultConfiguration(),
     });
   }
 }

@@ -1,24 +1,21 @@
-<h1 class="title has-top-margin-m" data-test-dashboard-version-header>
-  {{@model.versionHeader}}
-</h1>
-<div>
-  <div class="is-grid grid-2-columns grid-gap-2 has-bottom-margin-m grid-align-items-start">
-    <Hds::Card::Container @hasBorder={{true}} class="has-padding-l is-flex-column is-flex-half">
-      <Dashboard::SecretsEnginesCard @secretsEngines={{@model.secretsEngines}} />
-    </Hds::Card::Container>
+<Dashboard::VaultVersionTitle />
 
-    <Hds::Card::Container @hasBorder={{true}} class="has-padding-l is-flex-column is-flex-half">
-      <h3 class="title is-4">Quick Actions</h3>
-    </Hds::Card::Container>
+<div class="is-grid grid-2-columns grid-gap-2 has-bottom-margin-m grid-align-items-start">
+  <Hds::Card::Container @hasBorder={{true}} class="has-padding-l is-flex-column is-flex-half">
+    <Dashboard::SecretsEnginesCard @secretsEngines={{@model.secretsEngines}} />
+  </Hds::Card::Container>
 
-    <Hds::Card::Container @hasBorder={{true}} class="has-padding-l is-flex-column is-flex-half">
-      <Dashboard::LearnMoreCard />
-    </Hds::Card::Container>
+  <Hds::Card::Container @hasBorder={{true}} class="has-padding-l is-flex-column is-flex-half">
+    <h3 class="title is-4">Quick Actions</h3>
+  </Hds::Card::Container>
 
-    {{#if (not (eq @model.vaultConfiguration 403))}}
-      <Hds::Card::Container @hasBorder={{true}} class="has-padding-l is-flex-column is-flex-half">
-        <Dashboard::VaultConfigurationDetailsCard @vaultConfiguration={{@model.vaultConfiguration}} />
-      </Hds::Card::Container>
-    {{/if}}
-  </div>
+  <Hds::Card::Container @hasBorder={{true}} class="has-padding-l is-flex-column is-flex-half">
+    <Dashboard::LearnMoreCard />
+  </Hds::Card::Container>
+
+  {{#if @model.vaultConfiguration}}
+    <Hds::Card::Container @hasBorder={{true}} class="has-padding-l is-flex-column is-flex-half">
+      <Dashboard::VaultConfigurationDetailsCard @vaultConfiguration={{@model.vaultConfiguration}} />
+    </Hds::Card::Container>
+  {{/if}}
 </div>

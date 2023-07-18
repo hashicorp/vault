@@ -707,6 +707,8 @@ module('Acceptance | secrets/secret/create, read, delete', function (hooks) {
     await settled();
     await authPage.login(userToken);
     await settled();
+    // on login users are directed to dashboard, so we would need to visit the vault secrets page to click on an engine
+    await visit('vault/secrets');
     // test if metadata tab there with no read access message and no ability to edit.
     await click(`[data-test-auth-backend-link=${enginePath}]`);
     assert
