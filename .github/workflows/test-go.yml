@@ -155,7 +155,7 @@ jobs:
                 jq -c \
                 '.include | map( { (.id|tostring): . } ) | add' "$matrix_file" 
             ) >> "$GITHUB_OUTPUT"
-            # extract the an array of ids from the json
+            # extract an array of ids from the json
             (
               echo -n "matrix_ids="
               jq -c \
