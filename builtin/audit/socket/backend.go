@@ -46,12 +46,15 @@ func Factory(ctx context.Context, conf *audit.BackendConfig) (audit.Backend, err
 		return nil, err
 	}
 
+	auditFormat := audit.JSONFormat
 	format, ok := conf.Config["format"]
 	if !ok {
-		format = "json"
+		format = audit.JSONFormat.String()
 	}
 	switch format {
-	case "json", "jsonx":
+	case audit.JSONFormat.String():
+	case audit.JSONxFormat.String():
+		auditFormat = audit.JSONxFormat
 	default:
 		return nil, fmt.Errorf("unknown format type %q", format)
 	}
@@ -85,14 +88,17 @@ func Factory(ctx context.Context, conf *audit.BackendConfig) (audit.Backend, err
 		elideListResponses = value
 	}
 
+	cfg := audit.FormatterConfig{
+		Raw:                logRaw,
+		HMACAccessor:       hmacAccessor,
+		ElideListResponses: elideListResponses,
+		RequiredFormat:     auditFormat,
+	}
+
 	b := &Backend{
-		saltConfig: conf.SaltConfig,
-		saltView:   conf.SaltView,
-		formatConfig: audit.FormatterConfig{
-			Raw:                logRaw,
-			HMACAccessor:       hmacAccessor,
-			ElideListResponses: elideListResponses,
-		},
+		saltConfig:   conf.SaltConfig,
+		saltView:     conf.SaltView,
+		formatConfig: cfg,
 
 		writeDuration: writeDuration,
 		address:       address,
@@ -100,7 +106,7 @@ func Factory(ctx context.Context, conf *audit.BackendConfig) (audit.Backend, err
 	}
 
 	// Configure the formatter for either case.
-	f, err := audit.NewEventFormatter(b)
+	f, err := audit.NewEventFormatter(b.formatConfig, b)
 	if err != nil {
 		return nil, fmt.Errorf("error creating formatter: %w", err)
 	}
@@ -112,7 +118,7 @@ func Factory(ctx context.Context, conf *audit.BackendConfig) (audit.Backend, err
 		w = &audit.JSONxWriter{Prefix: conf.Config["prefix"]}
 	}
 
-	fw, err := audit.NewEventFormatterWriter(f, w)
+	fw, err := audit.NewEventFormatterWriter(b.formatConfig, f, w)
 	if err != nil {
 		return nil, fmt.Errorf("error creating formatter writer: %w", err)
 	}
@@ -153,7 +159,7 @@ func (b *Backend) GetHash(ctx context.Context, data string) (string, error) {
 
 func (b *Backend) LogRequest(ctx context.Context, in *logical.LogInput) error {
 	var buf bytes.Buffer
-	if err := b.formatter.FormatAndWriteRequest(ctx, &buf, b.formatConfig, in); err != nil {
+	if err := b.formatter.FormatAndWriteRequest(ctx, &buf, in); err != nil {
 		return err
 	}
 
@@ -176,7 +182,7 @@ func (b *Backend) LogRequest(ctx context.Context, in *logical.LogInput) error {
 
 func (b *Backend) LogResponse(ctx context.Context, in *logical.LogInput) error {
 	var buf bytes.Buffer
-	if err := b.formatter.FormatAndWriteResponse(ctx, &buf, b.formatConfig, in); err != nil {
+	if err := b.formatter.FormatAndWriteResponse(ctx, &buf, in); err != nil {
 		return err
 	}
 
@@ -200,7 +206,7 @@ func (b *Backend) LogResponse(ctx context.Context, in *logical.LogInput) error {
 func (b *Backend) LogTestMessage(ctx context.Context, in *logical.LogInput, config map[string]string) error {
 	var buf bytes.Buffer
 	temporaryFormatter := audit.NewTemporaryFormatter(config["format"], config["prefix"])
-	if err := temporaryFormatter.FormatAndWriteRequest(ctx, &buf, b.formatConfig, in); err != nil {
+	if err := temporaryFormatter.FormatAndWriteRequest(ctx, &buf, in); err != nil {
 		return err
 	}
 
