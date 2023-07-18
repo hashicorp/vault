@@ -3253,6 +3253,12 @@ exec {
 	// wait for consul-template to fetch the new values
 	// see template_config.static_secret_render_interval
 	time.Sleep(10 * time.Second)
+	res, err := vaultClient.KVv2("kv-v2/").Get(context.Background(), "my-db")
+	userValue := res.Data["user"].(string)
+	passwordValue := res.Data["password"].(string)
+	if userValue != "newuser" || passwordValue != "password2" {
+		t.Fatal("unable to confirm values updated")
+	}
 
 	checkTestAppEnvVars(t, map[string]string{
 		"MY_DATABASE_USER":     "newuser",
