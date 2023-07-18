@@ -6,7 +6,7 @@ description: |-
   server or cluster.
 ---
 
-# PostgreSQL Storage Backend
+# PostgreSQL storage backend
 
 The PostgreSQL storage backend is used to persist Vault's data in a
 [PostgreSQL][postgresql] server or cluster.
@@ -87,7 +87,7 @@ $$
 LANGUAGE plpgsql;
 ```
 
-## `postgresql` Parameters
+## `postgresql` parameters
 
 - `connection_url` `(string: <required>)` – Specifies the connection string to
   use to authenticate and connect to PostgreSQL. The connection URL can also be
@@ -113,9 +113,9 @@ LANGUAGE plpgsql;
   for storing high availability information. This table must already exist (Vault
   will not attempt to create it).
 
-## `postgresql` Examples
+## `postgresql` examples
 
-### Custom SSL Verification
+### Custom SSL verification
 
 This example shows connecting to a PostgreSQL cluster using full SSL
 verification (recommended).
