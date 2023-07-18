@@ -1,0 +1,34 @@
+<div class="navigate-filter">
+  <div class="field" data-test-nav-input>
+    <p class="control has-icons-left">
+      {{! template-lint-disable no-down-event-binding }}
+      <Input
+        id="secret-filter"
+        class="filter input"
+        placeholder="Filter secrets"
+        @value={{@model.filterValue}}
+        @type="text"
+        data-test-component="kv-filter-list"
+        {{on "input" this.handleInput}}
+        {{on "keydown" this.handleKeyDown}}
+        {{on "focus" this.setFilterIsFocused}}
+        {{did-insert this.focusInput}}
+        autocomplete="off"
+      />
+      <Icon @name="search" class="search-icon has-text-grey-light" />
+    </p>
+  </div>
+</div>
+{{#if this.filterIsFocused}}
+  {{#if this.filterMatchesASecretPath}}
+    <p class="help has-text-grey is-size-8 has-left-padding-xs">
+      <kbd>ENTER</kbd>
+      to go to see details.
+    </p>
+  {{else}}
+    <p class="help has-text-grey is-size-8 has-left-padding-xs">
+      <kbd>TAB</kbd>
+      to autocomplete.
+    </p>
+  {{/if}}
+{{/if}}
