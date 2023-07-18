@@ -63,6 +63,8 @@ The number of mount points can be monitored by reading the
 similar sub-paths for namespaces respectively, like: `namespace1/sys/auth`,
 `namespace1/sys/mounts`, etc.
 
+Alternatively, the [Vault telemetry metrics](/vault/docs/internals/telemetry) `vault.core.mount_table.num_entries` and `vault.core.mount_table.size` are available to monitor the number of mount points and size of each mount table, respectively. 
+
 ### Namespace limits
 
 The entire list of namespaces must fit in a single storage
