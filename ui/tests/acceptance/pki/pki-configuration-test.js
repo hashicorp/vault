@@ -194,7 +194,7 @@ module('Acceptance | pki configuration test', function (hooks) {
         );
     });
 
-    // test coverage for ed25519 certs not displaying: https://hashicorp.atlassian.net/browse/VAULT-18198
+    // test coverage for ed25519 certs not displaying because the verify() function errors
     test('it generates and displays a root issuer of key type = ed25519', async function (assert) {
       assert.expect(4);
       await authPage.login(this.pkiAdminToken);
