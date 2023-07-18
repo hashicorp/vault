@@ -10,8 +10,7 @@ import { hbs } from 'ember-cli-htmlbars';
 
 const SELECTORS = {
   policyText: '[data-test-modal-title]',
-  aclPolicyParagraph: '[data-test-example-modal-text-acl]',
-  rgpPolicyParagraph: '[data-test-example-modal-text-rgp]',
+  policyDescription: (type) => `[data-test-example-modal-text=${type}]`,
   jsonText: '[data-test-example-modal-json-text]',
   informationLink: '[data-test-example-modal-information-link]',
 };
@@ -32,7 +31,7 @@ module('Integration | Component | policy-example', function (hooks) {
     />
     `);
     assert
-      .dom(SELECTORS.aclPolicyParagraph)
+      .dom(SELECTORS.policyDescription('acl'))
       .hasText(
         'ACL Policies are written in Hashicorp Configuration Language ( HCL ) or JSON and describe which paths in Vault a user or machine is allowed to access. Here is an example policy:'
       );
@@ -47,9 +46,24 @@ module('Integration | Component | policy-example', function (hooks) {
     />
     `);
     assert
-      .dom(SELECTORS.rgpPolicyParagraph)
+      .dom(SELECTORS.policyDescription('rgp'))
       .hasText(
         'Role Governing Policies (RGPs) are tied to client tokens or identities which is similar to ACL policies . They use Sentinel as a language framework to enable fine-grained policy decisions.'
+      );
+  });
+
+  test('it renders the correct paragraph for EGP policy', async function (assert) {
+    this.model = this.store.createRecord('policy/egp');
+
+    await render(hbs`
+    <PolicyExample
+      @policyType={{this.model.policyType}}
+    />
+    `);
+    assert
+      .dom(SELECTORS.policyDescription('egp'))
+      .hasText(
+        `Endpoint Governing Policies (EGPs) are tied to particular paths (e.g. aws/creds/ ) instead of tokens. They use Sentinel as a language to access properties of the incoming requests.`
       );
   });
 
@@ -75,5 +89,16 @@ module('Integration | Component | policy-example', function (hooks) {
     assert
       .dom(SELECTORS.jsonText)
       .includesText(`# Import strings library that exposes common string operations`);
+  });
+
+  test('it renders the correct JSON editor text for EGP policy', async function (assert) {
+    this.model = this.store.createRecord('policy/egp');
+
+    await render(hbs`
+    <PolicyExample
+      @policyType={{this.model.policyType}}
+    />
+    `);
+    assert.dom(SELECTORS.jsonText).includesText(`# Expect requests to only happen during work days (Monday `);
   });
 });
