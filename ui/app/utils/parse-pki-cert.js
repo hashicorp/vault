@@ -142,16 +142,21 @@ export async function verifyCertificates(certA, certB, leaf) {
   return (await verifySignature(parsedCertA, parsedCertB)) && parsedCertA.issuer.isEqual(parsedCertB.subject);
 }
 
-async function verifySignature(parent, child) {
+export async function verifySignature(parent, child) {
   try {
-    // ed25519 is an unsupported signature algorithm
-    // catch the error and instead check the AKID (authority key ID) includes the SKID (subject key ID)
     return await child.verify(parent);
   } catch (error) {
+    // ed25519 is an unsupported signature algorithm and so verify() errors
+    // SKID (subject key ID) is the byte array of the key identifier
+    // AKID (authority key ID) is a SEQUENCE-type extension that includes the key identifier and potentially other information.
     const skidExtension = parent.extensions.find((ext) => ext.extnID === OTHER_OIDs.subject_key_identifier);
     const akidExtension = parent.extensions.find((ext) => ext.extnID === OTHER_OIDs.authority_key_identifier);
+    // return false if either extension is missing
+    // this could mean a false-negative but that's okay for our use-case
+    if (!skidExtension || !akidExtension) return false;
     const skid = new Uint8Array(skidExtension.parsedValue.valueBlock.valueHex);
     const akid = new Uint8Array(akidExtension.extnValue.valueBlock.valueHex);
+    // Check that AKID includes the SKID, which saves us from parsing the AKID and is unlikely to return false-positives.
     return akid.toString().includes(skid.toString());
   }
 }

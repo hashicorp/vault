@@ -11,7 +11,7 @@ import { fromBase64, stringToArrayBuffer } from 'pvutils';
 import { Certificate } from 'pkijs';
 import { addHours, fromUnixTime, isSameDay } from 'date-fns';
 import errorMessage from 'vault/utils/error-message';
-import { SAN_TYPES } from 'vault/utils/parse-pki-cert-oids';
+import { OTHER_OIDs, SAN_TYPES } from 'vault/utils/parse-pki-cert-oids';
 import {
   certWithoutCN,
   loadedCert,
@@ -22,6 +22,8 @@ import {
   unsupportedSignatureInt,
 } from 'vault/tests/helpers/pki/values';
 import { verifyCertificates } from 'vault/utils/parse-pki-cert';
+import { jsonToCertObject } from 'vault/utils/parse-pki-cert';
+import { verifySignature } from 'vault/utils/parse-pki-cert';
 
 module('Integration | Util | parse pki certificate', function (hooks) {
   setupTest(hooks);
@@ -231,11 +233,32 @@ module('Integration | Util | parse pki certificate', function (hooks) {
   });
 
   test('the helper verifyCertificates catches errors', async function (assert) {
-    assert.expect(2);
+    assert.expect(5);
     const verifiedRoot = await verifyCertificates(unsupportedSignatureRoot, unsupportedSignatureRoot);
-    const verifiedInt = await verifyCertificates(unsupportedSignatureInt, unsupportedSignatureInt);
     assert.true(verifiedRoot, 'returns true for root certificate');
+    const verifiedInt = await verifyCertificates(unsupportedSignatureInt, unsupportedSignatureInt);
     assert.false(verifiedInt, 'returns false for intermediate cert');
+
+    const filterExtensions = (list, oid) => list.filter((ext) => ext.extnID !== oid);
+    const { subject_key_identifier, authority_key_identifier } = OTHER_OIDs;
+    const testCert = jsonToCertObject(unsupportedSignatureRoot);
+    const certWithoutSKID = testCert;
+    certWithoutSKID.extensions = filterExtensions(testCert.extensions, subject_key_identifier);
+    assert.false(
+      await verifySignature(certWithoutSKID, certWithoutSKID),
+      'returns false if no subject key ID'
+    );
+
+    const certWithoutAKID = testCert;
+    certWithoutAKID.extensions = filterExtensions(testCert.extensions, authority_key_identifier);
+    assert.false(await verifySignature(certWithoutAKID, certWithoutAKID), 'returns false if no AKID');
+
+    const certWithoutKeyID = testCert;
+    certWithoutAKID.extensions = [];
+    assert.false(
+      await verifySignature(certWithoutKeyID, certWithoutKeyID),
+      'returns false if neither SKID or AKID'
+    );
   });
 
   test('it fails silently when passed null', async function (assert) {
