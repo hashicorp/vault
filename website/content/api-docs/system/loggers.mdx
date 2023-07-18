@@ -23,7 +23,7 @@ environment variable once the Vault service is reloaded or restarted.
 - `level` `(string: <required>)` – Specifies the log verbosity level to be set for all loggers.
 Supported values (in order of detail) are `"trace"`, `"debug"`, `"info"`, `"warn"`, and `"error"`.
 
-### Sample Payload
+### Sample payload
 
 ```json
 {
@@ -31,7 +31,7 @@ Supported values (in order of detail) are `"trace"`, `"debug"`, `"info"`, `"warn
 }
 ```
 
-### Sample Request
+### Sample request
 
 ```shell-session
 $ curl \
@@ -53,7 +53,7 @@ $ curl \
 - `level` `(string: <required>)` – Specifies the log verbosity level to be set for the provided logger.
 Supported values (in order of detail) are `"trace"`, `"debug"`, `"info"`, `"warn"`, and `"error"`.
 
-### Sample Payload
+### Sample payload
 
 ```json
 {
@@ -61,7 +61,7 @@ Supported values (in order of detail) are `"trace"`, `"debug"`, `"info"`, `"warn
 }
 ```
 
-### Sample Request
+### Sample request
 
 ```shell-session
 $ curl \
@@ -77,7 +77,7 @@ $ curl \
 | :----- | :------------- |
 | `GET`  | `/sys/loggers` |
 
-### Sample Request
+### Sample request
 
 ```shell-session
 $ curl \
@@ -85,7 +85,7 @@ $ curl \
     https://127.0.0.1:8200/v1/sys/loggers
 ```
 
-### Sample Response
+### Sample response
 
 ```json
 {
@@ -101,7 +101,7 @@ $ curl \
 | :----- | :------------------- |
 | `GET`  | `/sys/loggers/:name` |
 
-### Sample Request
+### Sample request
 
 ```shell-session
 $ curl \
@@ -109,7 +109,7 @@ $ curl \
     https://127.0.0.1:8200/v1/sys/loggers/core
 ```
 
-### Sample Response
+### Sample response
 
 ```json
 {
@@ -123,7 +123,7 @@ $ curl \
 | :-------- | :------------- |
 | `DELETE`  | `/sys/loggers` |
 
-### Sample Request
+### Sample request
 
 ```shell-session
 $ curl \
@@ -142,7 +142,7 @@ $ curl \
 
 - `name` `(string: <required>)` – Specifies the logger to be modified (e.g. `audit`, `core`, `expiration`).
 
-### Sample Request
+### Sample request
 
 ```shell-session
 $ curl \
