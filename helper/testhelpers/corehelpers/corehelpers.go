@@ -10,7 +10,7 @@ import (
 	"context"
 	"crypto/sha256"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"os"
 	"path/filepath"
 	"sync"
@@ -246,12 +246,20 @@ func NewNoopAudit(config map[string]string) (*NoopAudit, error) {
 		},
 	}
 
-	f, err := audit.NewEventFormatter(n)
+	cfg := audit.FormatterConfig{
+		Raw:                false,
+		HMACAccessor:       false,
+		ElideListResponses: false,
+		OmitTime:           false,
+		RequiredFormat:     audit.JSONFormat,
+	}
+
+	f, err := audit.NewEventFormatter(cfg, n)
 	if err != nil {
 		return nil, fmt.Errorf("error creating formatter: %w", err)
 	}
 
-	fw, err := audit.NewEventFormatterWriter(f, &audit.JSONWriter{})
+	fw, err := audit.NewEventFormatterWriter(cfg, f, &audit.JSONWriter{})
 	if err != nil {
 		return nil, fmt.Errorf("error creating formatter writer: %w", err)
 	}
@@ -303,7 +311,7 @@ func (n *NoopAudit) LogRequest(ctx context.Context, in *logical.LogInput) error 
 	defer n.l.Unlock()
 	if n.formatter != nil {
 		var w bytes.Buffer
-		err := n.formatter.FormatAndWriteRequest(ctx, &w, audit.FormatterConfig{}, in)
+		err := n.formatter.FormatAndWriteRequest(ctx, &w, in)
 		if err != nil {
 			return err
 		}
@@ -325,7 +333,7 @@ func (n *NoopAudit) LogResponse(ctx context.Context, in *logical.LogInput) error
 
 	if n.formatter != nil {
 		var w bytes.Buffer
-		err := n.formatter.FormatAndWriteResponse(ctx, &w, audit.FormatterConfig{}, in)
+		err := n.formatter.FormatAndWriteResponse(ctx, &w, in)
 		if err != nil {
 			return err
 		}
@@ -350,7 +358,7 @@ func (n *NoopAudit) LogTestMessage(ctx context.Context, in *logical.LogInput, co
 	defer n.l.Unlock()
 	var w bytes.Buffer
 	tempFormatter := audit.NewTemporaryFormatter(config["format"], config["prefix"])
-	err := tempFormatter.FormatAndWriteResponse(ctx, &w, audit.FormatterConfig{}, in)
+	err := tempFormatter.FormatAndWriteResponse(ctx, &w, in)
 	if err != nil {
 		return err
 	}
@@ -370,27 +378,27 @@ func (n *NoopAudit) Salt(ctx context.Context) (*salt.Salt, error) {
 	if n.salt != nil {
 		return n.salt, nil
 	}
-	salt, err := salt.NewSalt(ctx, n.Config.SaltView, n.Config.SaltConfig)
+	s, err := salt.NewSalt(ctx, n.Config.SaltView, n.Config.SaltConfig)
 	if err != nil {
 		return nil, err
 	}
-	n.salt = salt
-	return salt, nil
+	n.salt = s
+	return s, nil
 }
 
 func (n *NoopAudit) GetHash(ctx context.Context, data string) (string, error) {
-	salt, err := n.Salt(ctx)
+	s, err := n.Salt(ctx)
 	if err != nil {
 		return "", err
 	}
-	return salt.GetIdentifiedHMAC(data), nil
+	return s.GetIdentifiedHMAC(data), nil
 }
 
-func (n *NoopAudit) Reload(ctx context.Context) error {
+func (n *NoopAudit) Reload(_ context.Context) error {
 	return nil
 }
 
-func (n *NoopAudit) Invalidate(ctx context.Context) {
+func (n *NoopAudit) Invalidate(_ context.Context) {
 	n.saltMutex.Lock()
 	defer n.saltMutex.Unlock()
 	n.salt = nil
@@ -427,7 +435,7 @@ func NewTestLogger(t testing.T) *TestLogger {
 	// We send nothing on the regular logger, that way we can later deregister
 	// the sink to stop logging during cluster cleanup.
 	logger := hclog.NewInterceptLogger(&hclog.LoggerOptions{
-		Output:            ioutil.Discard,
+		Output:            io.Discard,
 		IndependentLevels: true,
 	})
 	sink := hclog.NewSinkAdapter(&hclog.LoggerOptions{
