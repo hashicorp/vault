@@ -66,11 +66,10 @@ export default Component.extend({
   ).drop(),
 
   willDestroy() {
-    this._super(...arguments);
     const { model } = this;
-    if (!model) return;
-    if ((model.get('isDirty') && !model.isDestroyed) || !model.isDestroying) {
+    if (model && model.get('isDirty') && !model.isDestroyed && !model.isDestroying) {
       model.rollbackAttributes();
     }
+    this._super(...arguments);
   },
 });
