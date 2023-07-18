@@ -582,10 +582,18 @@ func issueCertFromCsr(ac *acmeContext, csr *x509.CertificateRequest) (*certutil.
 		return nil, "", fmt.Errorf("verification of parsed bundle failed: %w", err)
 	}
 
-	// We only allow ServerAuth key usage from ACME issued certs.
-	for _, usage := range parsedBundle.Certificate.ExtKeyUsage {
-		if usage != x509.ExtKeyUsageServerAuth {
-			return nil, "", fmt.Errorf("%w: ACME certs only allow ServerAuth key usage", ErrBadCSR)
+	// We only allow ServerAuth key usage from ACME issued certs
+	// when configuration does not allow usage of ExtKeyusage field.
+	config, err := ac.sc.Backend.acmeState.getConfigWithUpdate(ac.sc)
+	if err != nil {
+		return nil, "", fmt.Errorf("failed to fetch ACME configuration: %w", err)
+	}
+
+	if !config.AllowRoleExtKeyUsage {
+		for _, usage := range parsedBundle.Certificate.ExtKeyUsage {
+			if usage != x509.ExtKeyUsageServerAuth {
+				return nil, "", fmt.Errorf("%w: ACME certs only allow ServerAuth key usage", ErrBadCSR)
+			}
 		}
 	}
 
@@ -673,7 +681,7 @@ func (b *backend) acmeGetOrderHandler(ac *acmeContext, _ *logical.Request, field
 }
 
 func (b *backend) acmeListOrdersHandler(ac *acmeContext, _ *logical.Request, _ *framework.FieldData, uc *jwsCtx, _ map[string]interface{}, acct *acmeAccount) (*logical.Response, error) {
-	orderIds, err := b.acmeState.ListOrderIds(ac, acct.KeyId)
+	orderIds, err := b.acmeState.ListOrderIds(ac.sc, acct.KeyId)
 	if err != nil {
 		return nil, err
 	}
@@ -1012,11 +1020,11 @@ func parseOrderIdentifiers(data map[string]interface{}) ([]*ACMEIdentifier, erro
 	return identifiers, nil
 }
 
-func (b *backend) acmeTidyOrder(ac *acmeContext, accountId string, orderPath string, certTidyBuffer time.Duration) (bool, time.Time, error) {
+func (b *backend) acmeTidyOrder(sc *storageContext, accountId string, orderPath string, certTidyBuffer time.Duration) (bool, time.Time, error) {
 	// First we get the order; note that the orderPath includes the account
 	// It's only accessed at acme/orders/<order_id> with the account context
 	// It's saved at acme/<account_id>/orders/<orderId>
-	entry, err := ac.sc.Storage.Get(ac.sc.Context, orderPath)
+	entry, err := sc.Storage.Get(sc.Context, orderPath)
 	if err != nil {
 		return false, time.Time{}, fmt.Errorf("error loading order: %w", err)
 	}
@@ -1061,20 +1069,20 @@ func (b *backend) acmeTidyOrder(ac *acmeContext, accountId string, orderPath str
 
 	// First Authorizations
 	for _, authorizationId := range order.AuthorizationIds {
-		err = ac.sc.Storage.Delete(ac.sc.Context, getAuthorizationPath(accountId, authorizationId))
+		err = sc.Storage.Delete(sc.Context, getAuthorizationPath(accountId, authorizationId))
 		if err != nil {
 			return false, orderExpiry, err
 		}
 	}
 
 	// Normal Tidy will Take Care of the Certificate, we need to clean up the certificate to account tracker though
-	err = ac.sc.Storage.Delete(ac.sc.Context, getAcmeSerialToAccountTrackerPath(accountId, order.CertificateSerialNumber))
+	err = sc.Storage.Delete(sc.Context, getAcmeSerialToAccountTrackerPath(accountId, order.CertificateSerialNumber))
 	if err != nil {
 		return false, orderExpiry, err
 	}
 
 	// And Finally, the order:
-	err = ac.sc.Storage.Delete(ac.sc.Context, orderPath)
+	err = sc.Storage.Delete(sc.Context, orderPath)
 	if err != nil {
 		return false, orderExpiry, err
 	}

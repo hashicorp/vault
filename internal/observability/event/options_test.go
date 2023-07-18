@@ -197,6 +197,174 @@ func TestOptions_WithID(t *testing.T) {
 	}
 }
 
+// TestOptions_WithFacility exercises WithFacility option to ensure it performs as expected.
+func TestOptions_WithFacility(t *testing.T) {
+	tests := map[string]struct {
+		Value         string
+		ExpectedValue string
+	}{
+		"empty": {
+			Value:         "",
+			ExpectedValue: "",
+		},
+		"whitespace": {
+			Value:         "    ",
+			ExpectedValue: "",
+		},
+		"value": {
+			Value:         "juan",
+			ExpectedValue: "juan",
+		},
+		"spacey-value": {
+			Value:         "   juan   ",
+			ExpectedValue: "juan",
+		},
+	}
+
+	for name, tc := range tests {
+		name := name
+		tc := tc
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+			options := &options{}
+			applyOption := WithFacility(tc.Value)
+			err := applyOption(options)
+			require.NoError(t, err)
+			require.Equal(t, tc.ExpectedValue, options.withFacility)
+		})
+	}
+}
+
+// TestOptions_WithTag exercises WithTag option to ensure it performs as expected.
+func TestOptions_WithTag(t *testing.T) {
+	tests := map[string]struct {
+		Value         string
+		ExpectedValue string
+	}{
+		"empty": {
+			Value:         "",
+			ExpectedValue: "",
+		},
+		"whitespace": {
+			Value:         "    ",
+			ExpectedValue: "",
+		},
+		"value": {
+			Value:         "juan",
+			ExpectedValue: "juan",
+		},
+		"spacey-value": {
+			Value:         "   juan   ",
+			ExpectedValue: "juan",
+		},
+	}
+
+	for name, tc := range tests {
+		name := name
+		tc := tc
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+			options := &options{}
+			applyOption := WithTag(tc.Value)
+			err := applyOption(options)
+			require.NoError(t, err)
+			require.Equal(t, tc.ExpectedValue, options.withTag)
+		})
+	}
+}
+
+// TestOptions_WithSocketType exercises WithSocketType option to ensure it performs as expected.
+func TestOptions_WithSocketType(t *testing.T) {
+	tests := map[string]struct {
+		Value         string
+		ExpectedValue string
+	}{
+		"empty": {
+			Value:         "",
+			ExpectedValue: "",
+		},
+		"whitespace": {
+			Value:         "    ",
+			ExpectedValue: "",
+		},
+		"value": {
+			Value:         "juan",
+			ExpectedValue: "juan",
+		},
+		"spacey-value": {
+			Value:         "   juan   ",
+			ExpectedValue: "juan",
+		},
+	}
+
+	for name, tc := range tests {
+		name := name
+		tc := tc
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+			options := &options{}
+			applyOption := WithSocketType(tc.Value)
+			err := applyOption(options)
+			require.NoError(t, err)
+			require.Equal(t, tc.ExpectedValue, options.withSocketType)
+		})
+	}
+}
+
+// TestOptions_WithMaxDuration exercises WithMaxDuration option to ensure it performs as expected.
+func TestOptions_WithMaxDuration(t *testing.T) {
+	tests := map[string]struct {
+		Value                string
+		ExpectedValue        time.Duration
+		IsErrorExpected      bool
+		ExpectedErrorMessage string
+	}{
+		"empty-gives-default": {
+			Value: "",
+		},
+		"whitespace-give-default": {
+			Value: "    ",
+		},
+		"bad-value": {
+			Value:                "juan",
+			IsErrorExpected:      true,
+			ExpectedErrorMessage: "time: invalid duration \"juan\"",
+		},
+		"bad-spacey-value": {
+			Value:                "   juan   ",
+			IsErrorExpected:      true,
+			ExpectedErrorMessage: "time: invalid duration \"juan\"",
+		},
+		"duration-2s": {
+			Value:         "2s",
+			ExpectedValue: 2 * time.Second,
+		},
+		"duration-2m": {
+			Value:         "2m",
+			ExpectedValue: 2 * time.Minute,
+		},
+	}
+
+	for name, tc := range tests {
+		name := name
+		tc := tc
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+			options := &options{}
+			applyOption := WithMaxDuration(tc.Value)
+			err := applyOption(options)
+			switch {
+			case tc.IsErrorExpected:
+				require.Error(t, err)
+				require.EqualError(t, err, tc.ExpectedErrorMessage)
+			default:
+				require.NoError(t, err)
+				require.Equal(t, tc.ExpectedValue, options.withMaxDuration)
+			}
+		})
+	}
+}
+
 // TestOptions_WithFileMode exercises WithFileMode option to ensure it performs as expected.
 func TestOptions_WithFileMode(t *testing.T) {
 	tests := map[string]struct {
@@ -266,6 +434,9 @@ func TestOptions_Default(t *testing.T) {
 	require.NotNil(t, opts)
 	require.True(t, time.Now().After(opts.withNow))
 	require.False(t, opts.withNow.IsZero())
+	require.Equal(t, "AUTH", opts.withFacility)
+	require.Equal(t, "vault", opts.withTag)
+	require.Equal(t, 2*time.Second, opts.withMaxDuration)
 }
 
 // TestOptions_Opts exercises getOpts with various Option values.

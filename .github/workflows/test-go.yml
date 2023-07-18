@@ -148,8 +148,9 @@ jobs:
   test-go:
     needs: test-matrix
     permissions:
-      id-token: write  # Note: this permission is explicitly required for Vault auth
+      actions: read
       contents: read
+      id-token: write  # Note: this permission is explicitly required for Vault auth
     runs-on: ${{ fromJSON(inputs.runs-on) }}
     strategy:
       fail-fast: false
@@ -285,40 +286,53 @@ jobs:
         if: success() || failure()
         continue-on-error: true
         with:
-          retries: 10
+          retries: 3
           script: |
-            const fs = require("fs");
-            const result = await github.rest.actions.listJobsForWorkflowRun({
+            // We surround the whole script with a try-catch block, to avoid each of the matrix jobs
+            // displaying an error in the GHA workflow run annotations, which gets very noisy.
+            // If an error occurs, it will be logged so that we don't lose any information about the reason for failure.
+            try {
+              const fs = require("fs");
+              const result = await github.rest.actions.listJobsForWorkflowRun({
                 owner: context.repo.owner,
+                per_page: 100,
                 repo: context.repo.repo,
                 run_id: context.runId,
-            });
+              });
 
-            const prefixToSearchFor = 'Run Go tests / test-go (${{ matrix.id }}'
-            const jobData = result.data.jobs.filter(
+              // Determine what job name to use for the query. These values are hardcoded, because GHA doesn't
+              // expose them in any of the contexts available within a workflow run.
+              let prefixToSearchFor;
+              switch ("${{ inputs.name }}") {
+                case "race":
+                  prefixToSearchFor = 'Run Go tests with data race detection / test-go (${{ matrix.id }},'
+                  break
+                case "fips":
+                  prefixToSearchFor = 'Run Go tests with FIPS configuration / test-go (${{ matrix.id }},'
+                  break
+                default:
+                  prefixToSearchFor = 'Run Go tests / test-go (${{ matrix.id }},'
+              }
+
+              const jobData = result.data.jobs.filter(
                 (job) => job.name.startsWith(prefixToSearchFor)
-            );
-            if (
-                jobData === undefined ||
-                jobData.length == 0 ||
-                jobData[0].html_url === undefined
-            ) {
-                const msg = "Failed to fetch GHA job data.";
-                console.log(msg);
-                throw new Error(msg);
-            }
+              );
+              const url = jobData[0].html_url;
+              const envVarName = "GH_JOB_URL";
+              const envVar = envVarName + "=" + url;
+              const envFile = process.env.GITHUB_ENV;
 
-            const url = jobData[0].html_url;
-            const envVarName = "GH_JOB_URL";
-            const envVar = envVarName + "=" + url;
-            const envFile = process.env.GITHUB_ENV;
-
-            fs.appendFile(envFile, envVar, (err) => {
+              fs.appendFile(envFile, envVar, (err) => {
                 if (err) throw err;
                 console.log("Successfully set " + envVarName + " to: " + url);
-            });
+              });
+            } catch (error) {
+              console.log("Error: " + error);
+              return
+            }
       - name: Prepare failure summary
         if: success() || failure()
+        continue-on-error: true
         run: |
           # This jq query filters out successful tests, leaving only the failures.
           # Then, it formats the results into rows of a Markdown table.
