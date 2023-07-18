@@ -16,6 +16,8 @@ type StdoutSinkNode struct {
 	expectedFormat string
 }
 
+// NewStdoutSinkNode creates a new StdoutSinkNode that will persist the events
+// it processes using the specified expected format.
 func NewStdoutSinkNode(expectedFormat string) *StdoutSinkNode {
 	return &StdoutSinkNode{
 		expectedFormat: expectedFormat,

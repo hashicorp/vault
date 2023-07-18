@@ -17,6 +17,7 @@ import (
 
 	"github.com/hashicorp/eventlogger"
 	"github.com/hashicorp/vault/audit"
+	"github.com/hashicorp/vault/internal/observability/event"
 	"github.com/hashicorp/vault/sdk/helper/salt"
 	"github.com/hashicorp/vault/sdk/logical"
 )
@@ -125,6 +126,8 @@ func Factory(ctx context.Context, conf *audit.BackendConfig, useEventLogger bool
 		saltView:     conf.SaltView,
 		salt:         new(atomic.Value),
 		formatConfig: cfg,
+		nodeIDList:   make([]eventlogger.NodeID, 0),
+		nodeMap:      make(map[eventlogger.NodeID]eventlogger.Node),
 	}
 
 	// Ensure we are working with the right type by explicitly storing a nil of
@@ -150,9 +153,18 @@ func Factory(ctx context.Context, conf *audit.BackendConfig, useEventLogger bool
 	}
 	b.formatter = fw
 
+	formatterNodeID := event.GenerateNodeID()
+
+	b.nodeIDList = append(b.nodeIDList, formatterNodeID)
+	b.nodeMap[formatterNodeID] = f
+
+	var sinkNode eventlogger.Node
+
 	switch path {
-	case "stdout", "discard":
-		// no need to test opening file if outputting to stdout or discarding
+	case "stdout":
+		sinkNode = event.NewStdoutSinkNode(format)
+	case "discard":
+		sinkNode = &event.NoopSink{}
 	default:
 		// Ensure that the file can be successfully opened for writing;
 		// otherwise it will be too late to catch later without problems
@@ -160,7 +172,14 @@ func Factory(ctx context.Context, conf *audit.BackendConfig, useEventLogger bool
 		if err := b.open(); err != nil {
 			return nil, fmt.Errorf("sanity check failed; unable to open %q for writing: %w", path, err)
 		}
+
+		sinkNode = nil // The file sink node struct
 	}
+
+	sinkNodeID := event.GenerateNodeID()
+
+	b.nodeIDList = append(b.nodeIDList, sinkNodeID)
+	b.nodeMap[sinkNodeID] = sinkNode
 
 	return b, nil
 }

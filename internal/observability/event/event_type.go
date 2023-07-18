@@ -3,7 +3,12 @@
 
 package event
 
-import "fmt"
+import (
+	"fmt"
+
+	"github.com/hashicorp/eventlogger"
+	"github.com/hashicorp/go-uuid"
+)
 
 // EventType represents the event's type
 type EventType string
@@ -21,4 +26,10 @@ func (et EventType) Validate() error {
 	default:
 		return fmt.Errorf("%s: '%s' is not a valid event type: %w", op, et, ErrInvalidParameter)
 	}
+}
+
+func GenerateNodeID() eventlogger.NodeID {
+	uuid, _ := uuid.GenerateUUID()
+
+	return eventlogger.NodeID(uuid)
 }
