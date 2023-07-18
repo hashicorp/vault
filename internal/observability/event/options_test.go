@@ -36,16 +36,16 @@ func TestOptions_WithNow(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			options := &Options{}
+			opts := &options{}
 			applyOption := WithNow(tc.Value)
-			err := applyOption(options)
+			err := applyOption(opts)
 			switch {
 			case tc.IsErrorExpected:
 				require.Error(t, err)
 				require.EqualError(t, err, tc.ExpectedErrorMessage)
 			default:
 				require.NoError(t, err)
-				require.Equal(t, tc.ExpectedValue, options.WithNow)
+				require.Equal(t, tc.ExpectedValue, opts.withNow)
 			}
 		})
 	}
@@ -81,7 +81,7 @@ func TestOptions_WithID(t *testing.T) {
 		tc := tc
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
-			options := &Options{}
+			options := &options{}
 			applyOption := WithID(tc.Value)
 			err := applyOption(options)
 			switch {
@@ -90,7 +90,7 @@ func TestOptions_WithID(t *testing.T) {
 				require.EqualError(t, err, tc.ExpectedErrorMessage)
 			default:
 				require.NoError(t, err)
-				require.Equal(t, tc.ExpectedValue, options.WithID)
+				require.Equal(t, tc.ExpectedValue, options.withID)
 			}
 		})
 	}
@@ -100,11 +100,14 @@ func TestOptions_WithID(t *testing.T) {
 func TestOptions_Default(t *testing.T) {
 	opts := getDefaultOptions()
 	require.NotNil(t, opts)
-	require.True(t, time.Now().After(opts.WithNow))
-	require.False(t, opts.WithNow.IsZero())
+	require.True(t, time.Now().After(opts.withNow))
+	require.False(t, opts.withNow.IsZero())
+	require.Equal(t, "AUTH", opts.withFacility)
+	require.Equal(t, "vault", opts.withTag)
+	require.Equal(t, 2*time.Second, opts.withMaxDuration)
 }
 
-// TestOptions_Opts exercises GetOpts with various Option values.
+// TestOptions_Opts exercises getOpts with various Option values.
 func TestOptions_Opts(t *testing.T) {
 	tests := map[string]struct {
 		opts                 []Option
@@ -166,7 +169,7 @@ func TestOptions_Opts(t *testing.T) {
 		tc := tc
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
-			opts, err := GetOpts(tc.opts...)
+			opts, err := getOpts(tc.opts...)
 
 			switch {
 			case tc.IsErrorExpected:
@@ -175,15 +178,183 @@ func TestOptions_Opts(t *testing.T) {
 			default:
 				require.NotNil(t, opts)
 				require.NoError(t, err)
-				require.Equal(t, tc.ExpectedID, opts.WithID)
+				require.Equal(t, tc.ExpectedID, opts.withID)
 				switch {
 				case tc.IsNowExpected:
-					require.True(t, time.Now().After(opts.WithNow))
-					require.False(t, opts.WithNow.IsZero())
+					require.True(t, time.Now().After(opts.withNow))
+					require.False(t, opts.withNow.IsZero())
 				default:
-					require.Equal(t, tc.ExpectedNow, opts.WithNow)
+					require.Equal(t, tc.ExpectedNow, opts.withNow)
 				}
 
+			}
+		})
+	}
+}
+
+// TestOptions_WithFacility exercises WithFacility Option to ensure it performs as expected.
+func TestOptions_WithFacility(t *testing.T) {
+	tests := map[string]struct {
+		Value         string
+		ExpectedValue string
+	}{
+		"empty": {
+			Value:         "",
+			ExpectedValue: "",
+		},
+		"whitespace": {
+			Value:         "    ",
+			ExpectedValue: "",
+		},
+		"value": {
+			Value:         "juan",
+			ExpectedValue: "juan",
+		},
+		"spacey-value": {
+			Value:         "   juan   ",
+			ExpectedValue: "juan",
+		},
+	}
+
+	for name, tc := range tests {
+		name := name
+		tc := tc
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+			options := &options{}
+			applyOption := WithFacility(tc.Value)
+			err := applyOption(options)
+			require.NoError(t, err)
+			require.Equal(t, tc.ExpectedValue, options.withFacility)
+		})
+	}
+}
+
+// TestOptions_WithTag exercises WithTag Option to ensure it performs as expected.
+func TestOptions_WithTag(t *testing.T) {
+	tests := map[string]struct {
+		Value         string
+		ExpectedValue string
+	}{
+		"empty": {
+			Value:         "",
+			ExpectedValue: "",
+		},
+		"whitespace": {
+			Value:         "    ",
+			ExpectedValue: "",
+		},
+		"value": {
+			Value:         "juan",
+			ExpectedValue: "juan",
+		},
+		"spacey-value": {
+			Value:         "   juan   ",
+			ExpectedValue: "juan",
+		},
+	}
+
+	for name, tc := range tests {
+		name := name
+		tc := tc
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+			options := &options{}
+			applyOption := WithTag(tc.Value)
+			err := applyOption(options)
+			require.NoError(t, err)
+			require.Equal(t, tc.ExpectedValue, options.withTag)
+		})
+	}
+}
+
+// TestOptions_WithSocketType exercises WithSocketType Option to ensure it performs as expected.
+func TestOptions_WithSocketType(t *testing.T) {
+	tests := map[string]struct {
+		Value         string
+		ExpectedValue string
+	}{
+		"empty": {
+			Value:         "",
+			ExpectedValue: "",
+		},
+		"whitespace": {
+			Value:         "    ",
+			ExpectedValue: "",
+		},
+		"value": {
+			Value:         "juan",
+			ExpectedValue: "juan",
+		},
+		"spacey-value": {
+			Value:         "   juan   ",
+			ExpectedValue: "juan",
+		},
+	}
+
+	for name, tc := range tests {
+		name := name
+		tc := tc
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+			options := &options{}
+			applyOption := WithSocketType(tc.Value)
+			err := applyOption(options)
+			require.NoError(t, err)
+			require.Equal(t, tc.ExpectedValue, options.withSocketType)
+		})
+	}
+}
+
+// TestOptions_WithMaxDuration exercises WithMaxDuration Option to ensure it performs as expected.
+func TestOptions_WithMaxDuration(t *testing.T) {
+	tests := map[string]struct {
+		Value                string
+		ExpectedValue        time.Duration
+		IsErrorExpected      bool
+		ExpectedErrorMessage string
+	}{
+		"empty-gives-default": {
+			Value: "",
+		},
+		"whitespace-give-default": {
+			Value: "    ",
+		},
+		"bad-value": {
+			Value:                "juan",
+			IsErrorExpected:      true,
+			ExpectedErrorMessage: "time: invalid duration \"juan\"",
+		},
+		"bad-spacey-value": {
+			Value:                "   juan   ",
+			IsErrorExpected:      true,
+			ExpectedErrorMessage: "time: invalid duration \"juan\"",
+		},
+		"duration-2s": {
+			Value:         "2s",
+			ExpectedValue: 2 * time.Second,
+		},
+		"duration-2m": {
+			Value:         "2m",
+			ExpectedValue: 2 * time.Minute,
+		},
+	}
+
+	for name, tc := range tests {
+		name := name
+		tc := tc
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+			options := &options{}
+			applyOption := WithMaxDuration(tc.Value)
+			err := applyOption(options)
+			switch {
+			case tc.IsErrorExpected:
+				require.Error(t, err)
+				require.EqualError(t, err, tc.ExpectedErrorMessage)
+			default:
+				require.NoError(t, err)
+				require.Equal(t, tc.ExpectedValue, options.withMaxDuration)
 			}
 		})
 	}

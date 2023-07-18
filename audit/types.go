@@ -47,16 +47,12 @@ type Option func(*options) error
 
 // options are used to represent configuration for a audit related nodes.
 type options struct {
-	withID          string
-	withNow         time.Time
-	withSubtype     subtype
-	withFormat      format
-	withFileMode    *os.FileMode
-	withPrefix      string
-	withFacility    string
-	withTag         string
-	withSocketType  string
-	withMaxDuration time.Duration
+	withID       string
+	withNow      time.Time
+	withSubtype  subtype
+	withFormat   format
+	withFileMode *os.FileMode
+	withPrefix   string
 }
 
 // Salter is an interface that provides a way to obtain a Salt for hashing.

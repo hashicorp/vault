@@ -9,36 +9,46 @@ import (
 	"strings"
 	"time"
 
+	"github.com/hashicorp/go-secure-stdlib/parseutil"
+
 	"github.com/hashicorp/go-uuid"
 )
 
 // Option is how Options are passed as arguments.
-type Option func(*Options) error
+type Option func(*options) error
 
 // Options are used to represent configuration for an Event.
-type Options struct {
-	WithID  string
-	WithNow time.Time
+type options struct {
+	withID          string
+	withNow         time.Time
+	withFacility    string
+	withTag         string
+	withSocketType  string
+	withMaxDuration time.Duration
 }
 
 // getDefaultOptions returns Options with their default values.
-func getDefaultOptions() Options {
-	return Options{
-		WithNow: time.Now(),
+func getDefaultOptions() options {
+	return options{
+		withNow:         time.Now(),
+		withFacility:    "AUTH",
+		withTag:         "vault",
+		withSocketType:  "tcp",
+		withMaxDuration: 2 * time.Second,
 	}
 }
 
-// GetOpts applies all the supplied Option and returns configured Options.
+// getOpts applies all the supplied Option and returns configured Options.
 // Each Option is applied in the order it appears in the argument list, so it is
 // possible to supply the same Option numerous times and the 'last write wins'.
-func GetOpts(opt ...Option) (Options, error) {
+func getOpts(opt ...Option) (options, error) {
 	opts := getDefaultOptions()
 	for _, o := range opt {
 		if o == nil {
 			continue
 		}
 		if err := o(&opts); err != nil {
-			return Options{}, err
+			return options{}, err
 		}
 	}
 	return opts, nil
@@ -63,7 +73,7 @@ func NewID(prefix string) (string, error) {
 
 // WithID provides an optional ID.
 func WithID(id string) Option {
-	return func(o *Options) error {
+	return func(o *options) error {
 		var err error
 
 		id := strings.TrimSpace(id)
@@ -71,7 +81,7 @@ func WithID(id string) Option {
 		case id == "":
 			err = errors.New("id cannot be empty")
 		default:
-			o.WithID = id
+			o.withID = id
 		}
 
 		return err
@@ -80,16 +90,75 @@ func WithID(id string) Option {
 
 // WithNow provides an option to represent 'now'.
 func WithNow(now time.Time) Option {
-	return func(o *Options) error {
+	return func(o *options) error {
 		var err error
 
 		switch {
 		case now.IsZero():
 			err = errors.New("cannot specify 'now' to be the zero time instant")
 		default:
-			o.WithNow = now
+			o.withNow = now
 		}
 
 		return err
+	}
+}
+
+// WithFacility provides an Option to represent a 'facility' for a syslog sink.
+func WithFacility(facility string) Option {
+	return func(o *options) error {
+		facility = strings.TrimSpace(facility)
+
+		if facility != "" {
+			o.withFacility = facility
+		}
+
+		return nil
+	}
+}
+
+// WithTag provides an Option to represent a 'tag' for a syslog sink.
+func WithTag(tag string) Option {
+	return func(o *options) error {
+		tag = strings.TrimSpace(tag)
+
+		if tag != "" {
+			o.withTag = tag
+		}
+
+		return nil
+	}
+}
+
+// WithSocketType provides an Option to represent the socket type for a socket sink.
+func WithSocketType(socketType string) Option {
+	return func(o *options) error {
+		socketType = strings.TrimSpace(socketType)
+
+		if socketType != "" {
+			o.withSocketType = socketType
+		}
+
+		return nil
+	}
+}
+
+// WithMaxDuration provides an Option to represent the max duration for writing to a socket.
+func WithMaxDuration(duration string) Option {
+	return func(o *options) error {
+		duration = strings.TrimSpace(duration)
+
+		if duration == "" {
+			return nil
+		}
+
+		parsed, err := parseutil.ParseDurationSecond(duration)
+		if err != nil {
+			return err
+		}
+
+		o.withMaxDuration = parsed
+
+		return nil
 	}
 }

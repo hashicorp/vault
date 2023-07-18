@@ -1,7 +1,7 @@
 // Copyright (c) HashiCorp, Inc.
 // SPDX-License-Identifier: MPL-2.0
 
-package audit
+package event
 
 import (
 	"context"
@@ -10,27 +10,25 @@ import (
 	"sync"
 	"time"
 
-	"github.com/hashicorp/vault/internal/observability/event"
-
 	"github.com/hashicorp/go-multierror"
 
 	"github.com/hashicorp/eventlogger"
 )
 
-// SocketSink is a sink node which handles writing audit events to socket.
+// SocketSink is a sink node which handles writing events to socket.
 type SocketSink struct {
-	format      format
-	address     string
-	socketType  string
-	maxDuration time.Duration
-	socketLock  sync.RWMutex
-	connection  net.Conn
+	requiredFormat string
+	address        string
+	socketType     string
+	maxDuration    time.Duration
+	socketLock     sync.RWMutex
+	connection     net.Conn
 }
 
 // NewSocketSink should be used to create a new SocketSink.
 // Accepted options: WithMaxDuration and WithSocketType.
-func NewSocketSink(format format, address string, opt ...Option) (*SocketSink, error) {
-	const op = "audit.NewSocketSink"
+func NewSocketSink(format string, address string, opt ...Option) (*SocketSink, error) {
+	const op = "event.NewSocketSink"
 
 	opts, err := getOpts(opt...)
 	if err != nil {
@@ -38,12 +36,12 @@ func NewSocketSink(format format, address string, opt ...Option) (*SocketSink, e
 	}
 
 	sink := &SocketSink{
-		format:      format,
-		address:     address,
-		socketType:  opts.withSocketType,
-		maxDuration: opts.withMaxDuration,
-		socketLock:  sync.RWMutex{},
-		connection:  nil,
+		requiredFormat: format,
+		address:        address,
+		socketType:     opts.withSocketType,
+		maxDuration:    opts.withMaxDuration,
+		socketLock:     sync.RWMutex{},
+		connection:     nil,
 	}
 
 	return sink, nil
@@ -51,7 +49,7 @@ func NewSocketSink(format format, address string, opt ...Option) (*SocketSink, e
 
 // Process handles writing the event to the socket.
 func (s *SocketSink) Process(ctx context.Context, e *eventlogger.Event) (*eventlogger.Event, error) {
-	const op = "audit.(SocketSink).Process"
+	const op = "event.(SocketSink).Process"
 
 	select {
 	case <-ctx.Done():
@@ -63,12 +61,12 @@ func (s *SocketSink) Process(ctx context.Context, e *eventlogger.Event) (*eventl
 	defer s.socketLock.Unlock()
 
 	if e == nil {
-		return nil, fmt.Errorf("%s: event is nil: %w", op, event.ErrInvalidParameter)
+		return nil, fmt.Errorf("%s: event is nil: %w", op, ErrInvalidParameter)
 	}
 
-	formatted, found := e.Format(s.format.String())
+	formatted, found := e.Format(s.requiredFormat)
 	if !found {
-		return nil, fmt.Errorf("%s: unable to retrieve event formatted as %q", op, s.format)
+		return nil, fmt.Errorf("%s: unable to retrieve event formatted as %q", op, s.requiredFormat)
 	}
 
 	// Try writing and return early if successful.
@@ -98,7 +96,7 @@ func (s *SocketSink) Process(ctx context.Context, e *eventlogger.Event) (*eventl
 
 // Reopen handles reopening the connection for the socket sink.
 func (s *SocketSink) Reopen() error {
-	const op = "audit.(SocketSink).Reopen"
+	const op = "event.(SocketSink).Reopen"
 
 	s.socketLock.Lock()
 	defer s.socketLock.Unlock()
@@ -118,7 +116,7 @@ func (s *SocketSink) Type() eventlogger.NodeType {
 
 // connect attempts to establish a connection using the socketType and address.
 func (s *SocketSink) connect(ctx context.Context) error {
-	const op = "audit.(SocketSink).connect"
+	const op = "event.(SocketSink).connect"
 
 	// If we're already connected, we should have disconnected first.
 	if s.connection != nil {
@@ -141,7 +139,7 @@ func (s *SocketSink) connect(ctx context.Context) error {
 
 // disconnect attempts to close and clear an existing connection.
 func (s *SocketSink) disconnect() error {
-	const op = "audit.(SocketSink).disconnect"
+	const op = "event.(SocketSink).disconnect"
 
 	// If we're already disconnected, we can return early.
 	if s.connection == nil {
@@ -159,7 +157,7 @@ func (s *SocketSink) disconnect() error {
 
 // reconnect attempts to disconnect and then connect to the configured socketType and address.
 func (s *SocketSink) reconnect(ctx context.Context) error {
-	const op = "audit.(SocketSink).reconnect"
+	const op = "event.(SocketSink).reconnect"
 
 	err := s.disconnect()
 	if err != nil {
@@ -176,7 +174,7 @@ func (s *SocketSink) reconnect(ctx context.Context) error {
 
 // write attempts to write the specified data using the established connection.
 func (s *SocketSink) write(ctx context.Context, data []byte) error {
-	const op = "audit.(SocketSink).write"
+	const op = "event.(SocketSink).write"
 
 	// Ensure we're connected.
 	err := s.connect(ctx)
