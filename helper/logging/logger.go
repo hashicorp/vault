@@ -48,6 +48,11 @@ type LogConfig struct {
 
 	// LogRotateMaxFiles is the maximum number of past archived log files to keep
 	LogRotateMaxFiles int
+
+	// SubloggerHook handles creation of new subloggers, automatically appending
+	// them to core's running list of allLoggers.
+	// see: server.AddSubloggerToAllLoggers for more details.
+	SubloggerHook func(log.Logger) log.Logger
 }
 
 func (c *LogConfig) isLevelInvalid() bool {
@@ -148,6 +153,7 @@ func Setup(config *LogConfig, w io.Writer) (log.InterceptLogger, error) {
 		IndependentLevels: true,
 		Output:            io.MultiWriter(writers...),
 		JSONFormat:        config.isFormatJson(),
+		SubloggerHook:     config.SubloggerHook,
 	})
 
 	return logger, nil
