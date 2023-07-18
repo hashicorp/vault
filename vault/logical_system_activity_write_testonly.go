@@ -36,7 +36,7 @@ func (b *SystemBackend) activityWritePath() *framework.Path {
 			},
 		},
 		Operations: map[logical.Operation]framework.OperationHandler{
-			logical.CreateOperation: &framework.PathOperation{
+			logical.UpdateOperation: &framework.PathOperation{
 				Callback: b.handleActivityWriteData,
 				Summary:  "Write activity log data",
 			},
