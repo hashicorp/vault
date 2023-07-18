@@ -9,7 +9,29 @@
       @filter={{@filterValue}}
       @placeholder="Filter secrets"
       @urls={{hash list="vault.cluster.secrets.backend.kv.list-directory"}}
+      @filterFocusDidChange={{action "setFilterFocus"}}
+      @filterMatchesKey={{this.filterMatchesKey}}
+      {{!-- @filterDidChange={{this.setFilter}} --}}
+      @shouldNavigateTree={{true}}
+      @mode="test"
     />
+    {{#if this.filterFocused}}
+      {{#if this.filterMatchesKey}}
+        {{!-- {{#unless this.filterIsFolder}} --}}
+        <p class="input-hint">
+          <kbd>Enter</kbd>
+          to view
+          {{@filterValue}}
+        </p>
+        {{!-- {{/unless}} --}}
+      {{/if}}
+      {{#if this.firstPartialMatch}}
+        <p class="input-hint">
+          <kbd>Tab</kbd>
+          to autocomplete
+        </p>
+      {{/if}}
+    {{/if}}
   </:toolbarFilters>
 
   <:toolbarActions>
@@ -103,13 +125,4 @@
       </LinkTo>
     </EmptyState>
   {{/if}}
-  <EmptyState
-    data-test-secret-list-empty-state
-    @title="No secrets yet"
-    @message="When created, secrets will be listed here. Create a secret to get started."
-  >
-    <LinkTo class="has-top-margin-xs" @route="create">
-      Create secret
-    </LinkTo>
-  </EmptyState>
 {{/if}}

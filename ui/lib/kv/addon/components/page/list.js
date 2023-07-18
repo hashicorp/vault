@@ -6,9 +6,10 @@
 import Component from '@glimmer/component';
 import { inject as service } from '@ember/service';
 import { action } from '@ember/object';
+import { tracked } from '@glimmer/tracking';
 import { getOwner } from '@ember/application';
 import errorMessage from 'vault/utils/error-message';
-import { ancestorKeysForKey } from 'core/utils/key-utils';
+import { ancestorKeysForKey, keyIsFolder } from 'core/utils/key-utils';
 
 /**
  * @module List
@@ -22,11 +23,35 @@ import { ancestorKeysForKey } from 'core/utils/key-utils';
 export default class KvListPageComponent extends Component {
   @service flashMessages;
   @service router;
+  @tracked filterFocused = false;
 
   get mountPoint() {
     // mountPoint tells the LinkedBlock component where to start the transition. In this case, mountPoint will always be vault.cluster.secrets.backend.kv.
     return getOwner(this).mountPoint;
   }
+
+  // Following getters are used for NavigateInput
+  get filterMatchesKey() {
+    return !!(
+      this.args.model.secrets.length &&
+      this.args.model.secrets.findBy('fullSecretPath', this.args.filterValue)
+    );
+  }
+
+  get filterIsFolder() {
+    return !!keyIsFolder(this.args.filterValue);
+  }
+
+  get firstPartialMatch() {
+    return 'blah';
+    // if (!this.args.model.secrets) return;
+    // const reg = new RegExp('^' + this.args.filterValue);
+    // return this.filterMatchesKey ? null : this.args.model.secrets.find((key) => reg.test(key.fullSecretPath));
+  }
+
+  // @action setFilter(value) {
+  //   this.args.filterValue = value;
+  // }
 
   @action
   async onDelete(model) {
@@ -44,5 +69,8 @@ export default class KvListPageComponent extends Component {
       const message = errorMessage(error, 'Error deleting secret. Please try again or contact support.');
       this.flashMessages.danger(message);
     }
+  }
+  @action setFilterFocus(bool) {
+    this.filterFocused = bool;
   }
 }
