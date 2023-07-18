@@ -16,6 +16,12 @@ type StdoutSinkNode struct {
 	expectedFormat string
 }
 
+func NewStdoutSinkNode(expectedFormat string) *StdoutSinkNode {
+	return &StdoutSinkNode{
+		expectedFormat: expectedFormat,
+	}
+}
+
 // Process persists the provided eventlogger.Event to the standard output stream.
 func (n *StdoutSinkNode) Process(ctx context.Context, event *eventlogger.Event) (*eventlogger.Event, error) {
 	const op = "event.(StdoutSinkNode).Process"
