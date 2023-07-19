@@ -52,27 +52,35 @@ func NewFileSink(path string, format string, opt ...Option) (*FileSink, error) {
 	mode := os.FileMode(defaultFileMode)
 	// If we got an optional file mode supplied and our path isn't a special keyword
 	// then we should use the supplied file mode, or maintain the existing file mode.
-	if opts.withFileMode != nil {
-		switch {
-		case *opts.withFileMode == 0: // Maintain the existing file's mode when set to "0000".
-			fileInfo, err := os.Stat(path)
-			if err != nil {
-				return nil, fmt.Errorf("%s: unable to determine existing file mode: %w", op, err)
-			}
-			mode = fileInfo.Mode()
-		default:
-			mode = *opts.withFileMode
+	switch {
+	case opts.withFileMode == nil:
+	case *opts.withFileMode == 0: // Maintain the existing file's mode when set to "0000".
+		fileInfo, err := os.Stat(path)
+		if err != nil {
+			return nil, fmt.Errorf("%s: unable to determine existing file mode: %w", op, err)
 		}
+		mode = fileInfo.Mode()
+	default:
+		mode = *opts.withFileMode
 	}
 
-	return &FileSink{
+	sink := &FileSink{
 		file:           nil,
 		fileLock:       sync.RWMutex{},
 		fileMode:       mode,
 		requiredFormat: format,
 		path:           p,
 		prefix:         opts.withPrefix,
-	}, nil
+	}
+
+	// Ensure that the file can be successfully opened for writing;
+	// otherwise it will be too late to catch later without problems
+	// (ref: https://github.com/hashicorp/vault/issues/550)
+	if err := sink.open(); err != nil {
+		return nil, fmt.Errorf("%s: sanity check failed; unable to open %q for writing: %w", op, path, err)
+	}
+
+	return sink, nil
 }
 
 // Process handles writing the event to the file sink.

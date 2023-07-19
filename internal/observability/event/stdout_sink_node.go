@@ -13,14 +13,14 @@ var _ eventlogger.Node = (*StdoutSinkNode)(nil)
 // StdoutSinkNode is structure that implements the eventlogger.Node interface
 // as a Sink node that writes the events to the standard output stream.
 type StdoutSinkNode struct {
-	expectedFormat string
+	requiredFormat string
 }
 
 // NewStdoutSinkNode creates a new StdoutSinkNode that will persist the events
 // it processes using the specified expected format.
-func NewStdoutSinkNode(expectedFormat string) *StdoutSinkNode {
+func NewStdoutSinkNode(format string) *StdoutSinkNode {
 	return &StdoutSinkNode{
-		expectedFormat: expectedFormat,
+		requiredFormat: format,
 	}
 }
 
@@ -38,9 +38,9 @@ func (n *StdoutSinkNode) Process(ctx context.Context, event *eventlogger.Event) 
 		return nil, fmt.Errorf("%s: event is nil: %w", op, ErrInvalidParameter)
 	}
 
-	formattedBytes, found := event.Format(n.expectedFormat)
+	formattedBytes, found := event.Format(n.requiredFormat)
 	if !found {
-		return nil, fmt.Errorf("%s: unable to retrieve event formatted as %q", op, n.expectedFormat)
+		return nil, fmt.Errorf("%s: unable to retrieve event formatted as %q", op, n.requiredFormat)
 	}
 
 	_, err := os.Stdout.Write(formattedBytes)
