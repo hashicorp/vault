@@ -136,6 +136,20 @@ func (e extendedSystemViewImpl) SudoPrivilege(ctx context.Context, path string, 
 	return authResults.RootPrivs
 }
 
+func (e extendedSystemViewImpl) APILockShouldBlockRequest() (bool, error) {
+	mountEntry := e.mountEntry
+	if mountEntry == nil {
+		return false, fmt.Errorf("no mount entry")
+	}
+	ns := mountEntry.Namespace()
+
+	if err := enterpriseBlockRequestIfError(e.core, ns.Path, mountEntry.Path); err != nil {
+		return true, nil
+	}
+
+	return false, nil
+}
+
 func (d dynamicSystemView) DefaultLeaseTTL() time.Duration {
 	def, _ := d.fetchTTLs()
 	return def
@@ -426,18 +440,4 @@ func (d dynamicSystemView) ClusterID(ctx context.Context) (string, error) {
 	}
 
 	return clusterInfo.ID, nil
-}
-
-func (d dynamicSystemView) APILockShouldBlockRequest() (bool, error) {
-	mountEntry := d.mountEntry
-	if mountEntry == nil {
-		return false, fmt.Errorf("no mount entry")
-	}
-	ns := mountEntry.Namespace()
-
-	if err := enterpriseBlockRequestIfError(d.core, ns.Path, mountEntry.Path); err != nil {
-		return true, nil
-	}
-
-	return false, nil
 }

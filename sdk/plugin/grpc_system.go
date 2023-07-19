@@ -211,15 +211,6 @@ func (s gRPCSystemViewClient) ClusterID(ctx context.Context) (string, error) {
 	return reply.ClusterID, nil
 }
 
-func (s *gRPCSystemViewClient) APILockShouldBlockRequest() (bool, error) {
-	reply, err := s.client.APILockShouldBlockRequest(context.Background(), &pb.Empty{})
-	if err != nil {
-		return false, err
-	}
-
-	return reply.ShouldBlock, nil
-}
-
 type gRPCSystemViewServer struct {
 	pb.UnimplementedSystemViewServer
 
@@ -401,20 +392,5 @@ func (s *gRPCSystemViewServer) ClusterInfo(ctx context.Context, _ *pb.Empty) (*p
 
 	return &pb.ClusterInfoReply{
 		ClusterID: clusterId,
-	}, nil
-}
-
-func (s *gRPCSystemViewServer) APILockShouldBlockRequest(_ context.Context, _ *pb.Empty) (*pb.APILockShouldBlockRequestReply, error) {
-	if s.impl == nil {
-		return nil, errMissingSystemView
-	}
-
-	shouldBlock, err := s.impl.APILockShouldBlockRequest()
-	if err != nil {
-		return nil, err
-	}
-
-	return &pb.APILockShouldBlockRequestReply{
-		ShouldBlock: shouldBlock,
 	}, nil
 }
