@@ -12,6 +12,11 @@ import (
 	"time"
 )
 
+// TestFail fails a test
+func TestFail(t *testing.T) {
+	t.Fatal("fail test")
+}
+
 // TestConstructTemplates tests the construcTemplates helper function
 func TestConstructTemplates(t *testing.T) {
 	ctx, cancelContextFunc := context.WithTimeout(context.Background(), 5*time.Second)
