@@ -90,10 +90,16 @@ func (f *EventFormatterWriter) FormatAndWriteResponse(ctx context.Context, w io.
 }
 
 // NewTemporaryFormatter creates a formatter not backed by a persistent salt
-func NewTemporaryFormatter(requiredFormat, prefix string) *EventFormatterWriter {
-	// We can ignore the error from NewEventFormatter since we are sure the salter isn't nil.
-	cfg := FormatterConfig{RequiredFormat: format(requiredFormat)}
-	eventFormatter, _ := NewEventFormatter(cfg, &nonPersistentSalt{})
+func NewTemporaryFormatter(requiredFormat, prefix string) (*EventFormatterWriter, error) {
+	cfg, err := NewFormatterConfig(WithFormat(requiredFormat))
+	if err != nil {
+		return nil, err
+	}
+
+	eventFormatter, err := NewEventFormatter(cfg, &nonPersistentSalt{}, WithPrefix(prefix))
+	if err != nil {
+		return nil, err
+	}
 
 	var w Writer
 
@@ -104,9 +110,10 @@ func NewTemporaryFormatter(requiredFormat, prefix string) *EventFormatterWriter 
 		w = &JSONWriter{Prefix: prefix}
 	}
 
-	// We can ignore the error from NewEventFormatterWriter since we are sure both
-	// the formatter and writer are not nil.
-	fw, _ := NewEventFormatterWriter(cfg, eventFormatter, w)
+	fw, err := NewEventFormatterWriter(cfg, eventFormatter, w)
+	if err != nil {
+		return nil, err
+	}
 
-	return fw
+	return fw, nil
 }

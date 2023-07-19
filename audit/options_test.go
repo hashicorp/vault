@@ -19,14 +19,14 @@ func TestOptions_WithFormat(t *testing.T) {
 		ExpectedValue        format
 	}{
 		"empty": {
-			Value:                "",
-			IsErrorExpected:      true,
-			ExpectedErrorMessage: "format cannot be empty",
+			Value:           "",
+			IsErrorExpected: false,
+			ExpectedValue:   format(""),
 		},
 		"whitespace": {
-			Value:                "     ",
-			IsErrorExpected:      true,
-			ExpectedErrorMessage: "format cannot be empty",
+			Value:           "     ",
+			IsErrorExpected: false,
+			ExpectedValue:   format(""),
 		},
 		"invalid-test": {
 			Value:                "test",
@@ -241,6 +241,126 @@ func TestOptions_WithPrefix(t *testing.T) {
 	}
 }
 
+// TestOptions_WithRaw exercises WithRaw Option to ensure it performs as expected.
+func TestOptions_WithRaw(t *testing.T) {
+	tests := map[string]struct {
+		Value         bool
+		ExpectedValue bool
+	}{
+		"true": {
+			Value:         true,
+			ExpectedValue: true,
+		},
+		"false": {
+			Value:         false,
+			ExpectedValue: false,
+		},
+	}
+
+	for name, tc := range tests {
+		name := name
+		tc := tc
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+			options := &options{}
+			applyOption := WithRaw(tc.Value)
+			err := applyOption(options)
+			require.NoError(t, err)
+			require.Equal(t, tc.ExpectedValue, options.withRaw)
+		})
+	}
+}
+
+// TestOptions_WithElision exercises WithElision Option to ensure it performs as expected.
+func TestOptions_WithElision(t *testing.T) {
+	tests := map[string]struct {
+		Value         bool
+		ExpectedValue bool
+	}{
+		"true": {
+			Value:         true,
+			ExpectedValue: true,
+		},
+		"false": {
+			Value:         false,
+			ExpectedValue: false,
+		},
+	}
+
+	for name, tc := range tests {
+		name := name
+		tc := tc
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+			options := &options{}
+			applyOption := WithElision(tc.Value)
+			err := applyOption(options)
+			require.NoError(t, err)
+			require.Equal(t, tc.ExpectedValue, options.withElision)
+		})
+	}
+}
+
+// TestOptions_WithHMACAccessor exercises WithHMACAccessor Option to ensure it performs as expected.
+func TestOptions_WithHMACAccessor(t *testing.T) {
+	tests := map[string]struct {
+		Value         bool
+		ExpectedValue bool
+	}{
+		"true": {
+			Value:         true,
+			ExpectedValue: true,
+		},
+		"false": {
+			Value:         false,
+			ExpectedValue: false,
+		},
+	}
+
+	for name, tc := range tests {
+		name := name
+		tc := tc
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+			options := &options{}
+			applyOption := WithHMACAccessor(tc.Value)
+			err := applyOption(options)
+			require.NoError(t, err)
+			require.Equal(t, tc.ExpectedValue, options.withHMACAccessor)
+		})
+	}
+}
+
+// TestOptions_WithOmitTime exercises WithOmitTime Option to ensure it performs as expected.
+func TestOptions_WithOmitTime(t *testing.T) {
+	tests := map[string]struct {
+		Value         bool
+		ExpectedValue bool
+	}{
+		"true": {
+			Value:         true,
+			ExpectedValue: true,
+		},
+		"false": {
+			Value:         false,
+			ExpectedValue: false,
+		},
+	}
+
+	for name, tc := range tests {
+		name := name
+		tc := tc
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+			options := &options{}
+			applyOption := WithOmitTime(tc.Value)
+			err := applyOption(options)
+			require.NoError(t, err)
+			require.Equal(t, tc.ExpectedValue, options.withOmitTime)
+		})
+	}
+}
+
 // TestOptions_Default exercises getDefaultOptions to assert the default values.
 func TestOptions_Default(t *testing.T) {
 	opts := getDefaultOptions()
@@ -265,11 +385,13 @@ func TestOptions_Opts(t *testing.T) {
 			opts:            nil,
 			IsErrorExpected: false,
 			IsNowExpected:   true,
+			ExpectedFormat:  JSONFormat,
 		},
 		"empty-options": {
 			opts:            []Option{},
 			IsErrorExpected: false,
 			IsNowExpected:   true,
+			ExpectedFormat:  JSONFormat,
 		},
 		"with-multiple-valid-id": {
 			opts: []Option{
@@ -279,6 +401,7 @@ func TestOptions_Opts(t *testing.T) {
 			IsErrorExpected: false,
 			ExpectedID:      "juan",
 			IsNowExpected:   true,
+			ExpectedFormat:  JSONFormat,
 		},
 		"with-multiple-valid-subtype": {
 			opts: []Option{
@@ -288,6 +411,7 @@ func TestOptions_Opts(t *testing.T) {
 			IsErrorExpected: false,
 			ExpectedSubtype: ResponseType,
 			IsNowExpected:   true,
+			ExpectedFormat:  JSONFormat,
 		},
 		"with-multiple-valid-format": {
 			opts: []Option{
@@ -306,6 +430,7 @@ func TestOptions_Opts(t *testing.T) {
 			IsErrorExpected: false,
 			ExpectedNow:     time.Date(2023, time.July, 4, 13, 3, 0, 0, time.Local),
 			IsNowExpected:   false,
+			ExpectedFormat:  JSONFormat,
 		},
 		"with-multiple-valid-then-invalid-now": {
 			opts: []Option{
@@ -314,6 +439,7 @@ func TestOptions_Opts(t *testing.T) {
 			},
 			IsErrorExpected:      true,
 			ExpectedErrorMessage: "cannot specify 'now' to be the zero time instant",
+			ExpectedFormat:       JSONFormat,
 		},
 		"with-multiple-valid-options": {
 			opts: []Option{

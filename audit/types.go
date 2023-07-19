@@ -47,11 +47,15 @@ type Option func(*options) error
 
 // options are used to represent configuration for a audit related nodes.
 type options struct {
-	withID      string
-	withNow     time.Time
-	withSubtype subtype
-	withFormat  format
-	withPrefix  string
+	withID           string
+	withNow          time.Time
+	withSubtype      subtype
+	withFormat       format
+	withPrefix       string
+	withRaw          bool
+	withElision      bool
+	withOmitTime     bool
+	withHMACAccessor bool
 }
 
 // Salter is an interface that provides a way to obtain a Salt for hashing.
@@ -92,6 +96,8 @@ type EventFormatterWriter struct {
 	config FormatterConfig
 }
 
+// FormatterConfig is used to provide basic configuration to a formatter.
+// Use NewFormatterConfig to initialize the FormatterConfig struct.
 type FormatterConfig struct {
 	Raw          bool
 	HMACAccessor bool

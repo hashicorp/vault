@@ -247,12 +247,9 @@ func NewNoopAudit(config map[string]string) (*NoopAudit, error) {
 		},
 	}
 
-	cfg := audit.FormatterConfig{
-		Raw:                false,
-		HMACAccessor:       false,
-		ElideListResponses: false,
-		OmitTime:           false,
-		RequiredFormat:     audit.JSONFormat,
+	cfg, err := audit.NewFormatterConfig()
+	if err != nil {
+		return nil, err
 	}
 
 	f, err := audit.NewEventFormatter(cfg, n)
@@ -358,12 +355,19 @@ func (n *NoopAudit) LogTestMessage(ctx context.Context, in *logical.LogInput, co
 	n.l.Lock()
 	defer n.l.Unlock()
 	var w bytes.Buffer
-	tempFormatter := audit.NewTemporaryFormatter(config["format"], config["prefix"])
-	err := tempFormatter.FormatAndWriteResponse(ctx, &w, in)
+
+	tempFormatter, err := audit.NewTemporaryFormatter(config["format"], config["prefix"])
 	if err != nil {
 		return err
 	}
+
+	err = tempFormatter.FormatAndWriteResponse(ctx, &w, in)
+	if err != nil {
+		return err
+	}
+
 	n.records = append(n.records, w.Bytes())
+
 	return nil
 }
 

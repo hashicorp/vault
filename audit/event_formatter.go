@@ -269,6 +269,8 @@ func (f *EventFormatter) FormatRequest(ctx context.Context, in *logical.LogInput
 // FormatResponse attempts to format the specified logical.LogInput into a ResponseEntry.
 func (f *EventFormatter) FormatResponse(ctx context.Context, in *logical.LogInput) (*ResponseEntry, error) {
 	switch {
+	case f == nil:
+		return nil, errors.New("formatter is nil")
 	case in == nil || in.Request == nil:
 		return nil, errors.New("request to response-audit a nil request")
 	case f.salter == nil:
@@ -482,6 +484,25 @@ func (f *EventFormatter) FormatResponse(ctx context.Context, in *logical.LogInpu
 	}
 
 	return respEntry, nil
+}
+
+// NewFormatterConfig should be used to create a FormatterConfig.
+// Accepted options: WithElision, WithHMACAccessor, WithOmitTime, WithRaw, WithFormat.
+func NewFormatterConfig(opt ...Option) (FormatterConfig, error) {
+	const op = "audit.NewFormatterConfig"
+
+	opts, err := getOpts(opt...)
+	if err != nil {
+		return FormatterConfig{}, fmt.Errorf("%s: error applying options: %w", op, err)
+	}
+
+	return FormatterConfig{
+		ElideListResponses: opts.withElision,
+		HMACAccessor:       opts.withHMACAccessor,
+		OmitTime:           opts.withOmitTime,
+		Raw:                opts.withRaw,
+		RequiredFormat:     opts.withFormat,
+	}, nil
 }
 
 // getRemoteAddr safely gets the remote address avoiding a nil pointer

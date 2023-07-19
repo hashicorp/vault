@@ -48,7 +48,6 @@ func Factory(ctx context.Context, conf *audit.BackendConfig, useEventLogger bool
 		return nil, err
 	}
 
-	auditFormat := audit.JSONFormat
 	format, ok := conf.Config["format"]
 	if !ok {
 		format = audit.JSONFormat.String()
@@ -56,7 +55,6 @@ func Factory(ctx context.Context, conf *audit.BackendConfig, useEventLogger bool
 	switch format {
 	case audit.JSONFormat.String():
 	case audit.JSONxFormat.String():
-		auditFormat = audit.JSONxFormat
 	default:
 		return nil, fmt.Errorf("unknown format type %q", format)
 	}
@@ -90,11 +88,14 @@ func Factory(ctx context.Context, conf *audit.BackendConfig, useEventLogger bool
 		elideListResponses = value
 	}
 
-	cfg := audit.FormatterConfig{
-		Raw:                logRaw,
-		HMACAccessor:       hmacAccessor,
-		ElideListResponses: elideListResponses,
-		RequiredFormat:     auditFormat,
+	cfg, err := audit.NewFormatterConfig(
+		audit.WithElision(elideListResponses),
+		audit.WithFormat(format),
+		audit.WithHMACAccessor(hmacAccessor),
+		audit.WithRaw(logRaw),
+	)
+	if err != nil {
+		return nil, err
 	}
 
 	b := &Backend{
@@ -225,15 +226,20 @@ func (b *Backend) LogResponse(ctx context.Context, in *logical.LogInput) error {
 
 func (b *Backend) LogTestMessage(ctx context.Context, in *logical.LogInput, config map[string]string) error {
 	var buf bytes.Buffer
-	temporaryFormatter := audit.NewTemporaryFormatter(config["format"], config["prefix"])
-	if err := temporaryFormatter.FormatAndWriteRequest(ctx, &buf, in); err != nil {
+
+	temporaryFormatter, err := audit.NewTemporaryFormatter(config["format"], config["prefix"])
+	if err != nil {
+		return err
+	}
+
+	if err = temporaryFormatter.FormatAndWriteRequest(ctx, &buf, in); err != nil {
 		return err
 	}
 
 	b.Lock()
 	defer b.Unlock()
 
-	err := b.write(ctx, buf.Bytes())
+	err = b.write(ctx, buf.Bytes())
 	if err != nil {
 		rErr := b.reconnect(ctx)
 		if rErr != nil {

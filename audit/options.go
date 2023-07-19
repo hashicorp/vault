@@ -9,7 +9,8 @@ import (
 // getDefaultOptions returns options with their default values.
 func getDefaultOptions() options {
 	return options{
-		withNow: time.Now(),
+		withNow:    time.Now(),
+		withFormat: JSONFormat,
 	}
 }
 
@@ -85,7 +86,8 @@ func WithFormat(f string) Option {
 	return func(o *options) error {
 		f := strings.TrimSpace(f)
 		if f == "" {
-			return errors.New("format cannot be empty")
+			// Return early, we won't attempt to apply this option if its empty.
+			return nil
 		}
 
 		parsed := format(f)
@@ -108,6 +110,38 @@ func WithPrefix(prefix string) Option {
 			o.withPrefix = prefix
 		}
 
+		return nil
+	}
+}
+
+// WithRaw provides an Option to represent whether 'raw' is required.
+func WithRaw(r bool) Option {
+	return func(o *options) error {
+		o.withRaw = r
+		return nil
+	}
+}
+
+// WithElision provides an Option to represent whether elision (...) is required.
+func WithElision(e bool) Option {
+	return func(o *options) error {
+		o.withElision = e
+		return nil
+	}
+}
+
+// WithOmitTime provides an Option to represent whether to omit time.
+func WithOmitTime(t bool) Option {
+	return func(o *options) error {
+		o.withOmitTime = t
+		return nil
+	}
+}
+
+// WithHMACAccessor provides an Option to represent whether an HMAC accessor is applicable.
+func WithHMACAccessor(h bool) Option {
+	return func(o *options) error {
+		o.withHMACAccessor = h
 		return nil
 	}
 }
