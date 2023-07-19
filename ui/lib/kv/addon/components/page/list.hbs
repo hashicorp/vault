@@ -68,7 +68,7 @@
   {{/each}}
 {{else}}
   {{#if @filterValue}}
-    <EmptyState @title="There are no secrets matching &quot;{{@filterValue}}&quot;. Press enter to add one." />
+    <EmptyState @title="There are no secrets matching &quot;{{@filterValue}}&quot;." />
   {{else}}
     <EmptyState
       data-test-secret-list-empty-state

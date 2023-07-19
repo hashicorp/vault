@@ -15,7 +15,6 @@ export default class KvSecretsListRoute extends Route {
   @service secretMountPath;
 
   queryParams = {
-    // TODO kv engine cleanup: remove by filtering in the component
     pageFilter: {
       refreshModel: true,
     },
