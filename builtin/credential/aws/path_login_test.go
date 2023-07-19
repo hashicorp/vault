@@ -673,9 +673,9 @@ func TestRegionFromHeader(t *testing.T) {
 	})
 
 	t.Run("invalid-region", func(t *testing.T) {
-		region, err := stsRegionalEndpoint("fake-region-1")
+		endpoint, err := stsRegionalEndpoint("fake-region-1")
 		assert.EqualError(t, err, "unable to get regional STS endpoint for region: fake-region-1")
-		assert.Empty(t, region)
+		assert.Empty(t, endpoint)
 	})
 }
 
