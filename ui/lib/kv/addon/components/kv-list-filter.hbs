@@ -8,7 +8,7 @@
         placeholder="Filter secrets"
         @value={{@model.filterValue}}
         @type="text"
-        data-test-component="kv-filter-list"
+        data-test-component="kv-list-filter"
         {{on "input" this.handleInput}}
         {{on "keydown" this.handleKeyDown}}
         {{on "focus" this.setFilterIsFocused}}
@@ -21,14 +21,14 @@
 </div>
 {{#if this.filterIsFocused}}
   {{#if this.filterMatchesASecretPath}}
-    <p class="help has-text-grey is-size-8 has-left-padding-xs">
+    <p class="help has-text-grey is-size-8 has-left-padding-xs" data-test-help-enter>
       <kbd>ENTER</kbd>
       to go to see details.
       <kbd>ESC</kbd>
       to clear input.
     </p>
   {{else}}
-    <p class="help has-text-grey is-size-8 has-left-padding-xs">
+    <p class="help has-text-grey is-size-8 has-left-padding-xs" data-test-help-tab>
       <kbd>TAB</kbd>
       to autocomplete.
       <kbd>ESC</kbd>

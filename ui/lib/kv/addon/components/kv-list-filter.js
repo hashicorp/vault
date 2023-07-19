@@ -12,13 +12,13 @@ import escapeStringRegexp from 'escape-string-regexp';
 import { tracked } from '@glimmer/tracking';
 
 /**
- * KvFilterList component replaces the older NavigateInput for the KV located in the ember engine.
+ * KvListFilter component replaces the older NavigateInput for the KV located in the ember engine.
  *
  * @param {object} model - The model object which contains model.secrets, and array of model objects that make up the list view. The route controls what is return in this object based on the pageFilter query param and the list-directory route path-to-secret param. Together these are combined to form the filterValue param.
  * @param {boolean} mountPoint - Tells us where in the router files we're located. For this component it will always be vault.cluster.secrets.backend.kv
  */
 
-export default class KvFilterListComponent extends Component {
+export default class KvListFilterComponent extends Component {
   @service router;
 
   @tracked filterIsFocused = false;
