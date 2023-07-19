@@ -3894,18 +3894,7 @@ func (b *SystemBackend) policyPaths() []*framework.Path {
 			Operations: map[logical.Operation]framework.OperationHandler{
 				logical.ListOperation: &framework.PathOperation{
 					Callback: b.handlePoliciesPasswordList,
-					Responses: map[int][]framework.Response{
-						http.StatusOK: {{
-							Description: "OK",
-							Fields: map[string]*framework.FieldSchema{
-								"keys": {
-									Type:     framework.TypeStringSlice,
-									Required: false,
-								},
-							},
-						}},
-					},
-					Summary: "List the existing password policies.",
+					Summary:  "List the existing password policies.",
 				},
 			},
 		},

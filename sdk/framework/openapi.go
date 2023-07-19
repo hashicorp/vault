@@ -195,6 +195,29 @@ var OASStdRespNoContent = &OASResponse{
 	Description: "empty body",
 }
 
+var OASStdRespListOK = &OASResponse{
+	Description: "OK",
+	Content: OASContent{
+		"application/json": &OASMediaTypeObject{
+			Schema: &OASSchema{
+				Ref: "#/components/schemas/StandardListResponse",
+			},
+		},
+	},
+}
+
+var OASStdSchemaStandardListResponse = &OASSchema{
+	Type: "object",
+	Properties: map[string]*OASSchema{
+		"keys": {
+			Type: "array",
+			Items: &OASSchema{
+				Type: "string",
+			},
+		},
+	},
+}
+
 // Regex for handling fields in paths, and string cleanup.
 // Predefined here to avoid substantial recompilation.
 
@@ -431,6 +454,9 @@ func documentPath(p *Path, backend *Backend, requestResponsePrefix string, doc *
 			if len(props.Responses) == 0 {
 				if opType == logical.DeleteOperation {
 					op.Responses[204] = OASStdRespNoContent
+				} else if opType == logical.ListOperation {
+					op.Responses[200] = OASStdRespListOK
+					doc.Components.Schemas["StandardListResponse"] = OASStdSchemaStandardListResponse
 				} else {
 					op.Responses[200] = OASStdRespOK
 				}

@@ -386,17 +386,6 @@ func rawPaths(prefix string, r *RawBackend) []*framework.Path {
 						OperationVerb:   "list",
 						OperationSuffix: "|path",
 					},
-					Responses: map[int][]framework.Response{
-						http.StatusOK: {{
-							Description: "OK",
-							Fields: map[string]*framework.FieldSchema{
-								"keys": {
-									Type:     framework.TypeStringSlice,
-									Required: true,
-								},
-							},
-						}},
-					},
 					Summary: "Return a list keys for a given path prefix.",
 				},
 			},
