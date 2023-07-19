@@ -34,7 +34,6 @@ module('Acceptance | pki configuration test', function (hooks) {
     await authPage.login();
     // Cleanup engine
     await runCommands([`delete sys/mounts/${this.mountPath}`]);
-    await logout.visit();
   });
 
   module('delete all issuers modal and empty states', function (hooks) {

@@ -9,7 +9,6 @@ import { setupApplicationTest } from 'ember-qunit';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 import ENV from 'vault/config/environment';
 import authPage from 'vault/tests/pages/auth';
-import logout from 'vault/tests/pages/logout';
 import { create } from 'ember-cli-page-object';
 import { clickTrigger } from 'ember-power-select/test-support/helpers';
 import ss from 'vault/tests/pages/components/search-select';
@@ -37,10 +36,6 @@ module('Acceptance | oidc-config clients and assignments', function (hooks) {
   hooks.beforeEach(async function () {
     this.store = await this.owner.lookup('service:store');
     return authPage.login();
-  });
-
-  hooks.afterEach(function () {
-    return logout.visit();
   });
 
   hooks.after(function () {
