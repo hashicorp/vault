@@ -1,0 +1,3 @@
+```release-note:bug
+api: Warnings about incorrect parameters will now not be dropped if the response was otherwise empty
+```
