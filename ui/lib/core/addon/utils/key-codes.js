@@ -14,4 +14,5 @@ export default {
   RIGHT: 39,
   DOWN: 40,
   T: 116,
+  BACKSPACE: 8,
 };

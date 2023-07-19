@@ -15,8 +15,9 @@ export default class KvSecretsListRoute extends Route {
   @service secretMountPath;
 
   queryParams = {
+    // TODO remove by filtering in the component
     pageFilter: {
-      refreshModel: true, // changing the "Filter secrets" input will cause the model hook to run again.
+      refreshModel: true,
     },
   };
 
@@ -46,12 +47,12 @@ export default class KvSecretsListRoute extends Route {
       backend,
       pathToSecret,
       filterValue: filter,
+      pageFilter,
     });
   }
 
   setupController(controller, resolvedModel) {
     super.setupController(controller, resolvedModel);
-    controller.routeName = this.routeName;
 
     let breadcrumbsArray = [{ label: 'secrets', route: 'secrets', linkExternal: true }];
     // if on top level don't link the engine breadcrumb label, but if within a directory, do link back to top level.
@@ -65,6 +66,7 @@ export default class KvSecretsListRoute extends Route {
       breadcrumbsArray = [...breadcrumbsArray, ...breadcrumbsForDirectory(resolvedModel.pathToSecret, true)];
     }
     controller.set('breadcrumbs', breadcrumbsArray);
+    controller.set('routeName', this.routeName);
   }
 
   resetController(controller, isExiting) {

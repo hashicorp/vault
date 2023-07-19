@@ -34,10 +34,9 @@ export default class KvFilterListComponent extends Component {
 **/
   get partialMatch() {
     // you can't pass undefined to RegExp so we replace pageFilter with an empty string.
-    const value = !this.pageFilter ? '' : this.pageFilter;
+    const value = !this.args.pageFilter ? '' : this.args.pageFilter;
     const reg = new RegExp('^' + escapeStringRegexp(value));
     const match = this.args.model.secrets.filter((path) => reg.test(path.fullSecretPath))[0];
-
     if (this.filterMatchesASecretPath || !match) return null;
 
     return match.fullSecretPath;
@@ -51,7 +50,7 @@ export default class KvFilterListComponent extends Component {
     return !!(
       this.args.model.secrets &&
       this.args.model.secrets.length &&
-      this.args.model.secrets.findBy('fullSecretPath', this.args.model.filterValue)
+      this.args.model.secrets.findBy('fullSecretPath', this.args.filterValue)
     );
   }
   /*
@@ -63,7 +62,7 @@ export default class KvFilterListComponent extends Component {
     const isDirectory = keyIsFolder(input);
     const parentDirectory = parentKeyForKey(input);
     const secretWithinDirectory = keyWithoutParentKey(input);
-
+    // TODO ideally when it's not a directory we could just filter through the current models and remove pageFilter refresh on the list route.
     if (isDirectory) {
       this.router.transitionTo(this.kvRoute('list-directory'), input);
     } else if (parentDirectory) {
@@ -77,12 +76,22 @@ export default class KvFilterListComponent extends Component {
     }
   }
   /*
-  Handles specific key events: tab, enter and escape. Ignores everything else.
+  Handles specific key events: tab, enter, backspace and escape. Ignores everything else.
 **/
   @action
   handleKeyDown(event) {
     const inputValue = event.target.value;
     const parentDirectory = parentKeyForKey(inputValue);
+    const isInputDirectory = keyIsFolder(inputValue);
+    const inputWithoutParentKey = keyWithoutParentKey(inputValue);
+    if (event.keyCode === keys.BACKSPACE && parentDirectory) {
+      const pageFilter = isInputDirectory ? '' : inputWithoutParentKey.slice(0, -1);
+      this.router.transitionTo(this.kvRoute('list-directory'), parentDirectory, {
+        queryParams: {
+          pageFilter,
+        },
+      });
+    }
 
     if (event.keyCode === keys.TAB) {
       event.preventDefault();
@@ -138,7 +147,7 @@ export default class KvFilterListComponent extends Component {
 
   @action
   focusInput() {
-    if (this.args.model.filterValue) {
+    if (this.args.filterValue) {
       document.getElementById('secret-filter')?.focus();
     }
   }

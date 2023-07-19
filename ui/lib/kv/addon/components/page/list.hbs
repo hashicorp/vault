@@ -5,7 +5,12 @@
   </:tabLinks>
 
   <:toolbarFilters>
-    <KvFilterList @model={{@model}} @mountPoint={{this.mountPoint}} />
+    <KvFilterList
+      @model={{@model}}
+      @mountPoint={{this.mountPoint}}
+      @filterValue={{@filterValue}}
+      @pageFilter={{@pageFilter}}
+    />
   </:toolbarFilters>
 
   <:toolbarActions>
@@ -86,8 +91,8 @@
     </LinkedBlock>
   {{/each}}
 {{else}}
-  {{#if @model.filterValue}}
-    <EmptyState @title="There are no secrets matching &quot;{{@model.filterValue}}&quot;. Presse enter to add one." />
+  {{#if @filterValue}}
+    <EmptyState @title="There are no secrets matching &quot;{{@filterValue}}&quot;. Press enter to add one." />
   {{else}}
     <EmptyState
       data-test-secret-list-empty-state
