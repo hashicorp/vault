@@ -509,6 +509,11 @@ func (entry *MountEntry) Deserialize() map[string]interface{} {
 	}
 }
 
+// DecodeMountTable is used for testing
+func (c *Core) DecodeMountTable(ctx context.Context, raw []byte) (*MountTable, error) {
+	return c.decodeMountTable(ctx, raw)
+}
+
 func (c *Core) decodeMountTable(ctx context.Context, raw []byte) (*MountTable, error) {
 	// Decode into mount table
 	mountTable := new(MountTable)
