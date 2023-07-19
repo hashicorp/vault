@@ -65,7 +65,6 @@ func (a *AuditBroker) Register(name string, b audit.Backend, local bool) {
 		backend: b,
 		local:   local,
 	}
-
 }
 
 // Deregister is used to remove an audit backend from the broker
