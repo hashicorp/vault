@@ -3,22 +3,22 @@ import { setupRenderingTest } from 'vault/tests/helpers';
 import { render } from '@ember/test-helpers';
 import { hbs } from 'ember-cli-htmlbars';
 
-module('Integration | Component | kubernetes-certificate', function (hooks) {
+module('Integration | Component | certificate-card', function (hooks) {
   setupRenderingTest(hooks);
 
   test('it renders', async function (assert) {
     // Set any properties with this.set('myProperty', 'value');
     // Handle any actions with this.set('myAction', function(val) { ... });
 
-    await render(hbs`<KubernetesCertificate />`);
+    await render(hbs`<CertificateCard />`);
 
     assert.dom(this.element).hasText('');
 
     // Template block usage:
     await render(hbs`
-      <KubernetesCertificate>
+      <CertificateCard>
         template block text
-      </KubernetesCertificate>
+      </CertificateCard>
     `);
 
     assert.dom(this.element).hasText('template block text');
