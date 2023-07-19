@@ -98,6 +98,9 @@ func Factory(ctx context.Context, conf *audit.BackendConfig, useEventLogger bool
 		saltConfig:   conf.SaltConfig,
 		saltView:     conf.SaltView,
 		formatConfig: cfg,
+
+		nodeIDList: make([]eventlogger.NodeID, 0),
+		nodeMap:    make(map[eventlogger.NodeID]eventlogger.Node),
 	}
 
 	// Configure the formatter for either case.

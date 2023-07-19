@@ -105,6 +105,9 @@ func Factory(ctx context.Context, conf *audit.BackendConfig, useEventLogger bool
 		writeDuration: writeDuration,
 		address:       address,
 		socketType:    socketType,
+
+		nodeIDList: make([]eventlogger.NodeID, 0),
+		nodeMap:    make(map[eventlogger.NodeID]eventlogger.Node),
 	}
 
 	// Configure the formatter for either case.
