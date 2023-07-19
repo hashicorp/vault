@@ -39,14 +39,19 @@ export default class KvSecretsListRoute extends Route {
   setupController(controller, resolvedModel) {
     super.setupController(controller, resolvedModel);
     controller.routeName = this.routeName;
-    let breadcrumbsArray = [
-      { label: 'secrets', route: 'secrets', linkExternal: true },
-      { label: resolvedModel.backend, route: 'list' },
-    ];
+
+    let breadcrumbsArray = [{ label: 'secrets', route: 'secrets', linkExternal: true }];
+    // if on top level don't link the engine breadcrumb label, but if within a directory, do link back to top level.
+    if (this.routeName === 'list') {
+      breadcrumbsArray.push({ label: resolvedModel.backend });
+    } else {
+      breadcrumbsArray.push({ label: resolvedModel.backend, route: 'list' });
+    }
     // these breadcrumbs handle directories: beep/boop/
     if (resolvedModel.pathToSecret) {
-      breadcrumbsArray = [...breadcrumbsArray, ...breadcrumbsForDirectory(resolvedModel.pathToSecret)];
+      breadcrumbsArray = [...breadcrumbsArray, ...breadcrumbsForDirectory(resolvedModel.pathToSecret, true)];
     }
     controller.set('breadcrumbs', breadcrumbsArray);
+    controller.set('routeName', this.routeName);
   }
 }

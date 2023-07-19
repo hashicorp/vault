@@ -54,4 +54,9 @@ export default class KvMetadataAdapter extends ApplicationAdapter {
       };
     });
   }
+
+  deleteRecord(store, type, snapshot) {
+    const { backend, fullSecretPath } = snapshot.record;
+    return this.ajax(this._url(kvMetadataPath(backend, fullSecretPath)), 'DELETE');
+  }
 }
