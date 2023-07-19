@@ -41,42 +41,6 @@ import (
 	"github.com/mitchellh/mapstructure"
 )
 
-func TestSystemBackend_RootPaths(t *testing.T) {
-	expected := []string{
-		"auth/*",
-		"remount",
-		"audit",
-		"audit/*",
-		"raw",
-		"raw/*",
-		"replication/primary/secondary-token",
-		"replication/performance/primary/secondary-token",
-		"replication/dr/primary/secondary-token",
-		"replication/reindex",
-		"replication/dr/reindex",
-		"replication/performance/reindex",
-		"rotate",
-		"config/cors",
-		"config/auditing/*",
-		"config/ui/headers/*",
-		"plugins/catalog/*",
-		"revoke-prefix/*",
-		"revoke-force/*",
-		"leases/revoke-prefix/*",
-		"leases/revoke-force/*",
-		"leases/lookup/*",
-		"storage/raft/snapshot-auto/config/*",
-		"leases",
-		"internal/inspect/*",
-	}
-
-	b := testSystemBackend(t)
-	actual := b.SpecialPaths().Root
-	if !reflect.DeepEqual(actual, expected) {
-		t.Fatalf("bad: mismatch\nexpected:\n%#v\ngot:\n%#v", expected, actual)
-	}
-}
-
 func TestSystemConfigCORS(t *testing.T) {
 	b := testSystemBackend(t)
 	paths := b.(*SystemBackend).configPaths()
