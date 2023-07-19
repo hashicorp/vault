@@ -31,6 +31,7 @@ and $NUM_OTHER other tests"
   
   # Add the header for the table
   BODY="CI Results:
+Failures:
 | Test Type | Package | Test | Logs |
 | --------- | ------- | ---- | ---- |
 ${TABLE_DATA}"
