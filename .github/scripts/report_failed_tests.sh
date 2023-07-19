@@ -16,7 +16,8 @@ else
   # Only keep the test type, test package, test name, and logs column
   # Remove the scroll emoji
   # Remove "github.com/hashicorp/vault" from the package name
-  TABLE_DATA=$(echo "$TABLE_DATA" | awk -F\| '{if ($4 != " - ") { print "|" $2 "|" $3 "|" $4 "|" $7 }}' | sed -r 's/ :scroll://' | sed -r 's/github.com\/hashicorp\/vault\///')  NUM_FAILURES=$(wc -l <<< "$TABLE_DATA")
+  TABLE_DATA=$(echo "$TABLE_DATA" | awk -F\| '{if ($4 != " - ") { print "|" $2 "|" $3 "|" $4 "|" $7 }}' | sed -r 's/ :scroll://' | sed -r 's/github.com\/hashicorp\/vault\///')
+  NUM_FAILURES=$(wc -l <<< "$TABLE_DATA")
   
   # Check if the number of failures is greater than the maximum tests to display
   # If so, limit the table to MAX_TESTS number of results
