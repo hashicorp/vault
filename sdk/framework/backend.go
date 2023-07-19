@@ -748,16 +748,28 @@ type FieldSchema struct {
 	Required   bool
 	Deprecated bool
 
-	// Query indicates this field will be sent as a query parameter:
+	// Query indicates this field will be expected as a query parameter as part of ReadOperation, ListOperation or
+	// DeleteOperation requests:
 	//
 	//   /v1/foo/bar?some_param=some_value
 	//
-	// It doesn't affect handling of the value, but may be used for documentation.
+	// The field will still be expected as a request body parameter for CreateOperation or UpdateOperation requests!
+	//
+	// To put that another way, you should set Query for any non-path parameter you want to use in a read/list/delete
+	// operation. It is not required that you set Query - Vault will expose the query parameters to you via req.Data
+	// regardless, but if you do not, the generated OpenAPI documentation (and so any code generation based on it) will
+	// not account for your use of the query parameters.
+	//
+	// The reason for this design is historical: back at the start of 2018, query parameters were not mapped to fields
+	// at all, and it was implicit that all non-path fields were exclusively for the use of create/update operations.
+	// Since then, support for query parameters has gradually been extended to read, delete and list operations - and
+	// now this declarative metadata is needed, so that the OpenAPI generator can know which parameters are actually
+	// referred to, from within the code of read/delete/list operation handler functions.
 	Query bool
 
 	// AllowedValues is an optional list of permitted values for this field.
 	// This constraint is not (yet) enforced by the framework, but the list is
-	// output as part of OpenAPI generation and may effect documentation and
+	// output as part of OpenAPI generation and may affect documentation and
 	// dynamic UI generation.
 	AllowedValues []interface{}
 

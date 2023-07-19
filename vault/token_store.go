@@ -310,7 +310,8 @@ func (ts *TokenStore) paths() []*framework.Path {
 			Fields: map[string]*framework.FieldSchema{
 				"token": {
 					Type:        framework.TypeString,
-					Description: "Token to lookup (POST request body)",
+					Description: "Token to lookup",
+					Query:       true,
 				},
 			},
 
@@ -360,13 +361,6 @@ func (ts *TokenStore) paths() []*framework.Path {
 			DisplayAttrs: &framework.DisplayAttributes{
 				OperationPrefix: operationPrefixToken,
 				OperationVerb:   "look-up",
-			},
-
-			Fields: map[string]*framework.FieldSchema{
-				"token": {
-					Type:        framework.TypeString,
-					Description: "Token to look up (unused, does not need to be set)",
-				},
 			},
 
 			Operations: map[logical.Operation]framework.OperationHandler{
@@ -2450,19 +2444,7 @@ func (ts *TokenStore) handleUpdateLookupAccessor(ctx context.Context, req *logic
 		return nil, &logical.StatusBadRequest{Err: "invalid accessor"}
 	}
 
-	// Prepare the field data required for a lookup call
-	d := &framework.FieldData{
-		Raw: map[string]interface{}{
-			"token": aEntry.TokenID,
-		},
-		Schema: map[string]*framework.FieldSchema{
-			"token": {
-				Type:        framework.TypeString,
-				Description: "Token to lookup",
-			},
-		},
-	}
-	resp, err := ts.handleLookup(ctx, req, d)
+	resp, err := ts.handleLookupCommon(ctx, aEntry.TokenID)
 	if err != nil {
 		return nil, err
 	}
@@ -3325,27 +3307,32 @@ func (ts *TokenStore) handleRevokeOrphan(ctx context.Context, req *logical.Reque
 	return nil, nil
 }
 
+// handleLookupSelf handles the auth/token/lookup-self path for querying information about
+// a particular token. This can be used to see which policies are applicable.
 func (ts *TokenStore) handleLookupSelf(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-	data.Raw["token"] = req.ClientToken
-	return ts.handleLookup(ctx, req, data)
+	return ts.handleLookupCommon(ctx, req.ClientToken)
 }
 
-// handleLookup handles the auth/token/lookup/id path for querying information about
+// handleLookup handles the auth/token/lookup path for querying information about
 // a particular token. This can be used to see which policies are applicable.
 func (ts *TokenStore) handleLookup(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	id := data.Get("token").(string)
 	if id == "" {
 		id = req.ClientToken
 	}
-	if id == "" {
+	return ts.handleLookupCommon(ctx, id)
+}
+
+func (ts *TokenStore) handleLookupCommon(ctx context.Context, tokenId string) (*logical.Response, error) {
+	if tokenId == "" {
 		return logical.ErrorResponse("missing token ID"), logical.ErrInvalidRequest
 	}
 
-	lock := locksutil.LockForKey(ts.tokenLocks, id)
+	lock := locksutil.LockForKey(ts.tokenLocks, tokenId)
 	lock.RLock()
 	defer lock.RUnlock()
 
-	out, err := ts.lookupInternal(ctx, id, false, true)
+	out, err := ts.lookupInternal(ctx, tokenId, false, true)
 	if err != nil {
 		return logical.ErrorResponse(err.Error()), logical.ErrInvalidRequest
 	}

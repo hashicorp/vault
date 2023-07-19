@@ -2225,6 +2225,7 @@ func (b *SystemBackend) internalPaths() []*framework.Path {
 				"context": {
 					Type:        framework.TypeString,
 					Description: "Context string appended to every operationId",
+					Query:       true,
 				},
 				"generic_mount_paths": {
 					Type:        framework.TypeBool,
@@ -4082,7 +4083,8 @@ func (b *SystemBackend) wrappingPaths() []*framework.Path {
 
 			Fields: map[string]*framework.FieldSchema{
 				"token": {
-					Type: framework.TypeString,
+					Type:  framework.TypeString,
+					Query: true,
 				},
 			},
 
