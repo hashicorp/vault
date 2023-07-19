@@ -33,8 +33,13 @@ export default class KvSecretMetadataIndexRoute extends Route {
     if (pathIsFromDirectory(resolvedModel.path)) {
       breadcrumbsArray = [...breadcrumbsArray, ...breadcrumbsForDirectory(resolvedModel.path)];
     } else {
-      breadcrumbsArray.push({ label: resolvedModel.path });
+      breadcrumbsArray.push({
+        label: resolvedModel.path,
+        route: 'secret.details',
+        model: resolvedModel.path,
+      });
     }
+
     breadcrumbsArray.push({ label: 'metadata' });
     controller.set('breadcrumbs', breadcrumbsArray);
   }

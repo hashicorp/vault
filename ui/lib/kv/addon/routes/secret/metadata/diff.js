@@ -15,7 +15,9 @@ export default class KvSecretMetadataDiffRoute extends Route {
   model() {
     const backend = this.secretMountPath.get();
     const parentModel = this.modelFor('secret.metadata');
+    const { name } = this.paramsFor('secret');
     return hash({
+      path: name,
       backend,
       ...parentModel,
     });
@@ -32,7 +34,11 @@ export default class KvSecretMetadataDiffRoute extends Route {
     if (pathIsFromDirectory(resolvedModel.name)) {
       breadcrumbsArray = [...breadcrumbsArray, ...breadcrumbsForDirectory(resolvedModel.name)];
     } else {
-      breadcrumbsArray.push({ label: resolvedModel.name });
+      breadcrumbsArray.push({
+        label: resolvedModel.path,
+        route: 'secret.details',
+        model: resolvedModel.path,
+      });
     }
     breadcrumbsArray.push({ label: 'version diff' });
     controller.set('breadcrumbs', breadcrumbsArray);
