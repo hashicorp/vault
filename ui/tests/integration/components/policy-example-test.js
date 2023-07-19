@@ -18,10 +18,6 @@ const SELECTORS = {
 module('Integration | Component | policy-example', function (hooks) {
   setupRenderingTest(hooks);
 
-  hooks.beforeEach(function () {
-    this.store = this.owner.lookup('service:store');
-  });
-
   test('it renders the correct paragraph for ACL policy', async function (assert) {
     await render(hbs`
     <PolicyExample
