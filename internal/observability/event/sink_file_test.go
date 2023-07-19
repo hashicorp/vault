@@ -78,28 +78,6 @@ func TestNewFileSink(t *testing.T) {
 			ExpectedPrefix:   "",
 			ExpectedFileMode: 0o007,
 		},
-		"path-stdout": {
-			Path:             "stdout",
-			Format:           "json",
-			Options:          []Option{WithFileMode("0007")}, // Will be ignored as stdout
-			IsTempDirPath:    false,
-			IsErrorExpected:  false,
-			ExpectedPath:     "stdout",
-			ExpectedFormat:   "json",
-			ExpectedPrefix:   "",
-			ExpectedFileMode: defaultFileMode,
-		},
-		"path-discard": {
-			Path:             "discard",
-			Format:           "json",
-			Options:          []Option{WithFileMode("0007")},
-			IsTempDirPath:    false,
-			IsErrorExpected:  false,
-			ExpectedPath:     "discard",
-			ExpectedFormat:   "json",
-			ExpectedPrefix:   "",
-			ExpectedFileMode: defaultFileMode,
-		},
 		"prefix": {
 			IsTempDirPath:    true,
 			Path:             "vault.log",

@@ -72,7 +72,7 @@ func (f *EventFormatter) Process(ctx context.Context, e *eventlogger.Event) (*ev
 		return nil, fmt.Errorf("%s: cannot parse event payload: %w", op, event.ErrInvalidParameter)
 	}
 
-	var jsonBytes []byte
+	var finalBytes []byte
 
 	switch a.Subtype {
 	case RequestType:
@@ -81,7 +81,7 @@ func (f *EventFormatter) Process(ctx context.Context, e *eventlogger.Event) (*ev
 			return nil, fmt.Errorf("%s: unable to parse request from audit event: %w", op, err)
 		}
 
-		jsonBytes, err = jsonutil.EncodeJSON(entry)
+		finalBytes, err = jsonutil.EncodeJSON(entry)
 		if err != nil {
 			return nil, fmt.Errorf("%s: unable to format request: %w", op, err)
 		}
@@ -91,7 +91,7 @@ func (f *EventFormatter) Process(ctx context.Context, e *eventlogger.Event) (*ev
 			return nil, fmt.Errorf("%s: unable to parse response from audit event: %w", op, err)
 		}
 
-		jsonBytes, err = jsonutil.EncodeJSON(entry)
+		finalBytes, err = jsonutil.EncodeJSON(entry)
 		if err != nil {
 			return nil, fmt.Errorf("%s: unable to format response: %w", op, err)
 		}
@@ -99,22 +99,19 @@ func (f *EventFormatter) Process(ctx context.Context, e *eventlogger.Event) (*ev
 		return nil, fmt.Errorf("%s: unknown audit event subtype: %q", op, a.Subtype)
 	}
 
-	// Store the JSON format.
-	e.FormattedAs(JSONFormat.String(), jsonBytes)
-
 	if f.config.RequiredFormat == JSONxFormat {
-
-		xmlBytes, err := jsonx.EncodeJSONBytes(jsonBytes)
+		var err error
+		finalBytes, err = jsonx.EncodeJSONBytes(finalBytes)
 		if err != nil {
 			return nil, fmt.Errorf("%s: unable to encode JSONx using JSON data: %w", op, err)
 		}
-		if xmlBytes == nil {
+		if finalBytes == nil {
 			return nil, fmt.Errorf("%s: encoded JSONx was nil: %w", op, err)
 		}
-
-		// Store the JSONx format.
-		e.FormattedAs(JSONxFormat.String(), xmlBytes)
 	}
+
+	// Store the final format.
+	e.FormattedAs(f.config.RequiredFormat.String(), finalBytes)
 
 	return e, nil
 }

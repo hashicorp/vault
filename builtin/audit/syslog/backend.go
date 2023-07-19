@@ -10,13 +10,15 @@ import (
 	"strconv"
 	"sync"
 
+	"github.com/hashicorp/eventlogger"
 	gsyslog "github.com/hashicorp/go-syslog"
 	"github.com/hashicorp/vault/audit"
+	"github.com/hashicorp/vault/internal/observability/event"
 	"github.com/hashicorp/vault/sdk/helper/salt"
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
-func Factory(ctx context.Context, conf *audit.BackendConfig) (audit.Backend, error) {
+func Factory(ctx context.Context, conf *audit.BackendConfig, useEventLogger bool) (audit.Backend, error) {
 	if conf.SaltConfig == nil {
 		return nil, fmt.Errorf("nil salt config")
 	}
@@ -96,6 +98,9 @@ func Factory(ctx context.Context, conf *audit.BackendConfig) (audit.Backend, err
 		saltConfig:   conf.SaltConfig,
 		saltView:     conf.SaltView,
 		formatConfig: cfg,
+
+		nodeIDList: make([]eventlogger.NodeID, 0),
+		nodeMap:    make(map[eventlogger.NodeID]eventlogger.Node),
 	}
 
 	// Configure the formatter for either case.
@@ -112,12 +117,25 @@ func Factory(ctx context.Context, conf *audit.BackendConfig) (audit.Backend, err
 		w = &audit.JSONxWriter{Prefix: conf.Config["prefix"]}
 	}
 
+	formatterNodeID := event.GenerateNodeID()
+	b.nodeIDList = append(b.nodeIDList, formatterNodeID)
+	b.nodeMap[formatterNodeID] = f
+
 	fw, err := audit.NewEventFormatterWriter(b.formatConfig, f, w)
 	if err != nil {
 		return nil, fmt.Errorf("error creating formatter writer: %w", err)
 	}
 
 	b.formatter = fw
+
+	sinkNode, err := event.NewSyslogSink(format, event.WithFacility(facility), event.WithTag(tag))
+	if err != nil {
+		return nil, fmt.Errorf("error creating syslog sink node: %w", err)
+	}
+
+	sinkNodeID := event.GenerateNodeID()
+	b.nodeIDList = append(b.nodeIDList, sinkNodeID)
+	b.nodeMap[sinkNodeID] = sinkNode
 
 	return b, nil
 }
@@ -133,6 +151,9 @@ type Backend struct {
 	salt       *salt.Salt
 	saltConfig *salt.Config
 	saltView   logical.Storage
+
+	nodeIDList []eventlogger.NodeID
+	nodeMap    map[eventlogger.NodeID]eventlogger.Node
 }
 
 var _ audit.Backend = (*Backend)(nil)
@@ -207,4 +228,20 @@ func (b *Backend) Invalidate(_ context.Context) {
 	b.saltMutex.Lock()
 	defer b.saltMutex.Unlock()
 	b.salt = nil
+}
+
+func (b *Backend) RegisterNodesAndPipeline(broker *eventlogger.Broker, name string) error {
+	for id, node := range b.nodeMap {
+		if err := broker.RegisterNode(id, node); err != nil {
+			return err
+		}
+	}
+
+	pipeline := eventlogger.Pipeline{
+		PipelineID: eventlogger.PipelineID(name),
+		EventType:  eventlogger.EventType("audit"),
+		NodeIDs:    b.nodeIDList,
+	}
+
+	return broker.RegisterPipeline(pipeline)
 }

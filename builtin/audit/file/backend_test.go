@@ -43,7 +43,7 @@ func TestAuditFile_fileModeNew(t *testing.T) {
 		SaltConfig: &salt.Config{},
 		SaltView:   &logical.InmemStorage{},
 		Config:     config,
-	})
+	}, false)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -82,7 +82,7 @@ func TestAuditFile_fileModeExisting(t *testing.T) {
 		Config:     config,
 		SaltConfig: &salt.Config{},
 		SaltView:   &logical.InmemStorage{},
-	})
+	}, false)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -122,7 +122,7 @@ func TestAuditFile_fileMode0000(t *testing.T) {
 		Config:     config,
 		SaltConfig: &salt.Config{},
 		SaltView:   &logical.InmemStorage{},
-	})
+	}, false)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -144,7 +144,7 @@ func BenchmarkAuditFile_request(b *testing.B) {
 		Config:     config,
 		SaltConfig: &salt.Config{},
 		SaltView:   &logical.InmemStorage{},
-	})
+	}, false)
 	if err != nil {
 		b.Fatal(err)
 	}
@@ -174,7 +174,7 @@ func BenchmarkAuditFile_request(b *testing.B) {
 		},
 	}
 
-	ctx := namespace.RootContext(nil)
+	ctx := namespace.RootContext(context.TODO())
 	b.ResetTimer()
 	b.RunParallel(func(pb *testing.PB) {
 		for pb.Next() {

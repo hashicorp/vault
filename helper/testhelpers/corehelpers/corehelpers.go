@@ -16,6 +16,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/hashicorp/eventlogger"
 	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/audit"
 	"github.com/hashicorp/vault/builtin/credential/approle"
@@ -270,7 +271,7 @@ func NewNoopAudit(config map[string]string) (*NoopAudit, error) {
 }
 
 func NoopAuditFactory(records **[][]byte) audit.Factory {
-	return func(_ context.Context, config *audit.BackendConfig) (audit.Backend, error) {
+	return func(_ context.Context, config *audit.BackendConfig, _ bool) (audit.Backend, error) {
 		n, err := NewNoopAudit(config.Config)
 		if err != nil {
 			return nil, err
@@ -402,6 +403,10 @@ func (n *NoopAudit) Invalidate(_ context.Context) {
 	n.saltMutex.Lock()
 	defer n.saltMutex.Unlock()
 	n.salt = nil
+}
+
+func (n *NoopAudit) RegisterNodesAndPipeline(broker *eventlogger.Broker, _ string) error {
+	return nil
 }
 
 type TestLogger struct {

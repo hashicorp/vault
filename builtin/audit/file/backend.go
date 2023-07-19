@@ -15,12 +15,14 @@ import (
 	"sync"
 	"sync/atomic"
 
+	"github.com/hashicorp/eventlogger"
 	"github.com/hashicorp/vault/audit"
+	"github.com/hashicorp/vault/internal/observability/event"
 	"github.com/hashicorp/vault/sdk/helper/salt"
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
-func Factory(ctx context.Context, conf *audit.BackendConfig) (audit.Backend, error) {
+func Factory(ctx context.Context, conf *audit.BackendConfig, useEventLogger bool) (audit.Backend, error) {
 	if conf.SaltConfig == nil {
 		return nil, fmt.Errorf("nil salt config")
 	}
@@ -105,9 +107,7 @@ func Factory(ctx context.Context, conf *audit.BackendConfig) (audit.Backend, err
 			}
 		default:
 			mode = os.FileMode(m)
-
 		}
-
 	}
 
 	cfg := audit.FormatterConfig{
@@ -124,6 +124,8 @@ func Factory(ctx context.Context, conf *audit.BackendConfig) (audit.Backend, err
 		saltView:     conf.SaltView,
 		salt:         new(atomic.Value),
 		formatConfig: cfg,
+		nodeIDList:   make([]eventlogger.NodeID, 0),
+		nodeMap:      make(map[eventlogger.NodeID]eventlogger.Node),
 	}
 
 	// Ensure we are working with the right type by explicitly storing a nil of
@@ -149,17 +151,43 @@ func Factory(ctx context.Context, conf *audit.BackendConfig) (audit.Backend, err
 	}
 	b.formatter = fw
 
+	formatterNodeID := event.GenerateNodeID()
+
+	b.nodeIDList = append(b.nodeIDList, formatterNodeID)
+	b.nodeMap[formatterNodeID] = f
+
+	var sinkNode eventlogger.Node
+
 	switch path {
-	case "stdout", "discard":
-		// no need to test opening file if outputting to stdout or discarding
+	case "stdout":
+		sinkNode = event.NewStdoutSinkNode(format)
+	case "discard":
+		sinkNode = event.NewNoopSink()
 	default:
-		// Ensure that the file can be successfully opened for writing;
-		// otherwise it will be too late to catch later without problems
-		// (ref: https://github.com/hashicorp/vault/issues/550)
-		if err := b.open(); err != nil {
-			return nil, fmt.Errorf("sanity check failed; unable to open %q for writing: %w", path, err)
+		if useEventLogger {
+			var err error
+
+			// The NewFileSink function attempts to open the file and will
+			// return an error if it can't.
+			sinkNode, err = event.NewFileSink(b.path, format, event.WithFileMode(mode.String()), event.WithPrefix(conf.Config["prefix"]))
+			if err != nil {
+				return nil, fmt.Errorf("file sink creation failed for path %q: %w", path, err)
+			}
+		} else {
+			// Ensure that the file can be successfully opened for writing;
+			// otherwise it will be too late to catch later without problems
+			// (ref: https://github.com/hashicorp/vault/issues/550)
+			if err := b.open(); err != nil {
+				return nil, fmt.Errorf("sanity check failed; unable to open %q for writing: %w", path, err)
+			}
 		}
+
 	}
+
+	sinkNodeID := event.GenerateNodeID()
+
+	b.nodeIDList = append(b.nodeIDList, sinkNodeID)
+	b.nodeMap[sinkNodeID] = sinkNode
 
 	return b, nil
 }
@@ -183,6 +211,9 @@ type Backend struct {
 	salt       *atomic.Value
 	saltConfig *salt.Config
 	saltView   logical.Storage
+
+	nodeIDList []eventlogger.NodeID
+	nodeMap    map[eventlogger.NodeID]eventlogger.Node
 }
 
 var _ audit.Backend = (*Backend)(nil)
@@ -371,4 +402,20 @@ func (b *Backend) Invalidate(_ context.Context) {
 	b.saltMutex.Lock()
 	defer b.saltMutex.Unlock()
 	b.salt.Store((*salt.Salt)(nil))
+}
+
+func (b *Backend) RegisterNodesAndPipeline(broker *eventlogger.Broker, name string) error {
+	for id, node := range b.nodeMap {
+		if err := broker.RegisterNode(id, node); err != nil {
+			return err
+		}
+	}
+
+	pipeline := eventlogger.Pipeline{
+		PipelineID: eventlogger.PipelineID(name),
+		EventType:  eventlogger.EventType("audit"),
+		NodeIDs:    b.nodeIDList,
+	}
+
+	return broker.RegisterPipeline(pipeline)
 }
