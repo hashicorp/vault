@@ -3296,7 +3296,6 @@ func (ts *TokenStore) handleRevokeOrphan(ctx context.Context, req *logical.Reque
 	}
 
 	// TODO #21772 makes the sudo check below redundant, by correcting the TokenStore's PathsSpecial.Root to match this endpoint
-	// However, we are leaving it in place for now, and will remove it later in a second PR, only with vault-core team approval
 
 	// Check if the client token has sudo/root privileges for the requested path
 	isSudo := ts.System().(extendedSystemView).SudoPrivilege(ctx, req.MountPoint+req.Path, req.ClientToken)
