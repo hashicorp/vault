@@ -26,7 +26,12 @@ module('Integration | Component | choose-pgp-key-form', function (hooks) {
     await fillIn('[data-test-pgp-file-textarea]', 'base64-pgp-key');
     assert.dom('[data-test-use-pgp-key-button]').isNotDisabled('use pgp button is no longer disabled');
     await click('[data-test-use-pgp-key-button]');
-    assert.dom('[data-test-pgp-key-confirm]').hasText('my custom form text', 'uses custom form text');
+    assert
+      .dom('[data-test-pgp-key-confirm]')
+      .hasText(
+        'Below is the base-64 encoded PGP Key that will be used. Click the "Do it" button to proceed.',
+        'Incorporates button text in confirmation'
+      );
     assert.dom('[data-test-pgp-key-copy]').hasText('base64-pgp-key', 'Shows PGP key contents');
     assert.dom('[data-test-confirm-pgp-key-submit]').hasText('Do it', 'uses passed buttonText');
     await click('[data-test-confirm-pgp-key-submit]');
