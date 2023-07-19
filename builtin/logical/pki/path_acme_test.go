@@ -795,8 +795,10 @@ func TestAcmeTruncatesToIssuerExpiry(t *testing.T) {
 	require.Equal(t, shortCa.NotAfter, acmeCert.NotAfter, "certificate times aren't the same")
 }
 
-// TestAcmeIgnoresRoleExtKeyUsage
-func TestAcmeIgnoresRoleExtKeyUsage(t *testing.T) {
+// TestAcmeRoleExtKeyUsage verify that ACME by default ignores the role's various ExtKeyUsage flags,
+// but if the ACME configuration override of allow_role_ext_key_usage is set that we then honor
+// the role's flag.
+func TestAcmeRoleExtKeyUsage(t *testing.T) {
 	t.Parallel()
 
 	cluster, client, _ := setupAcmeBackend(t)
@@ -862,6 +864,37 @@ func TestAcmeIgnoresRoleExtKeyUsage(t *testing.T) {
 	require.Equal(t, 1, len(acmeCert.ExtKeyUsage), "mis-match on expected ExtKeyUsages")
 	require.ElementsMatch(t, []x509.ExtKeyUsage{x509.ExtKeyUsageServerAuth}, acmeCert.ExtKeyUsage,
 		"mismatch of ExtKeyUsage flags")
+
+	// Now turn the ACME configuration allow_role_ext_key_usage and retest to make sure we get a certificate
+	// with them all
+	_, err = client.Logical().WriteWithContext(context.Background(), "pki/config/acme", map[string]interface{}{
+		"enabled":                  true,
+		"eab_policy":               "not-required",
+		"allow_role_ext_key_usage": true,
+	})
+	require.NoError(t, err, "failed updating ACME configuration")
+
+	t.Logf("Testing Authorize Order on %s", baseAcmeURL)
+	order, err = acmeClient.AuthorizeOrder(testCtx, []acme.AuthzID{
+		{Type: "dns", Value: identifiers[0]},
+	})
+	require.NoError(t, err, "failed creating order")
+
+	// HACK: Update authorization/challenge to completed as we can't really do it properly in this workflow test.
+	markAuthorizationSuccess(t, client, acmeClient, acct, order)
+
+	certs, _, err = acmeClient.CreateOrderCert(testCtx, order.FinalizeURL, csr, true)
+	require.NoError(t, err, "order finalization failed")
+	require.GreaterOrEqual(t, len(certs), 1, "expected at least one cert in bundle")
+	acmeCert, err = x509.ParseCertificate(certs[0])
+	require.NoError(t, err, "failed parsing acme cert")
+
+	require.Equal(t, 4, len(acmeCert.ExtKeyUsage), "mis-match on expected ExtKeyUsages")
+	require.ElementsMatch(t, []x509.ExtKeyUsage{
+		x509.ExtKeyUsageServerAuth, x509.ExtKeyUsageClientAuth,
+		x509.ExtKeyUsageCodeSigning, x509.ExtKeyUsageEmailProtection,
+	},
+		acmeCert.ExtKeyUsage, "mismatch of ExtKeyUsage flags")
 }
 
 func TestIssuerRoleDirectoryAssociations(t *testing.T) {
