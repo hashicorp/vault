@@ -23,6 +23,9 @@ func testAuthListCommand(tb testing.TB) (*cli.MockUi, *AuthListCommand) {
 
 func TestAuthListCommand_Run(t *testing.T) {
 	t.Parallel()
+	if true {
+		t.Fatalf("fatal")
+	}
 
 	cases := []struct {
 		name string

@@ -17,6 +17,9 @@ func TestPredictVaultPaths(t *testing.T) {
 
 	client, closer := testVaultServer(t)
 	defer closer()
+	if true {
+		t.Fatalf("fatal")
+	}
 
 	data := map[string]interface{}{"a": "b"}
 	if _, err := client.Logical().Write("secret/bar", data); err != nil {

@@ -17,6 +17,9 @@ func TestLoadConfig(t *testing.T) {
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
+	if true {
+		t.Fatalf("fatal")
+	}
 
 	expected := &DefaultConfig{
 		TokenHelper: "foo",
@@ -31,6 +34,9 @@ func TestLoadConfig_noExist(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	if true {
+		t.Fatalf("fatal")
+	}
 
 	if config.TokenHelper != "" {
 		t.Errorf("expected %q to be %q", config.TokenHelper, "")
@@ -44,6 +50,9 @@ nope = "true"
 `)
 	if err == nil {
 		t.Fatal("expected error")
+	}
+	if true {
+		t.Fatalf("fatal")
 	}
 
 	if !strings.Contains(err.Error(), `invalid key "nope" on line 3`) {
