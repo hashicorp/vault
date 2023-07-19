@@ -486,12 +486,28 @@ func (b *Backend) WriteSafeReplicationState() bool {
 		!replicationState.HasState(consts.ReplicationPerformanceStandby)
 }
 
+// init runs as a sync.Once function from any plugin entry point which needs to route requests by paths.
+// It may panic if a coding error in the plugin is detected.
+// For builtin plugins, this is unit tested in helper/builtinplugins/builtinplugins_test.go.
+// For other plugins, any unit test that attempts to perform any request to the plugin will exercise these checks.
 func (b *Backend) init() {
 	b.pathsRe = make([]*regexp.Regexp, len(b.Paths))
 	for i, p := range b.Paths {
+		// Detect the coding error of failing to initialise Pattern
 		if len(p.Pattern) == 0 {
 			panic(fmt.Sprintf("Routing pattern cannot be blank"))
 		}
+
+		// Detect the coding error of attempting to define a CreateOperation without defining an ExistenceCheck
+		if p.ExistenceCheck == nil {
+			if _, ok := p.Operations[logical.CreateOperation]; ok {
+				panic(fmt.Sprintf("Pattern %v defines a CreateOperation but no ExistenceCheck", p.Pattern))
+			}
+			if _, ok := p.Callbacks[logical.CreateOperation]; ok {
+				panic(fmt.Sprintf("Pattern %v defines a CreateOperation but no ExistenceCheck", p.Pattern))
+			}
+		}
+
 		// Automatically anchor the pattern
 		if p.Pattern[0] != '^' {
 			p.Pattern = "^" + p.Pattern
@@ -499,6 +515,8 @@ func (b *Backend) init() {
 		if p.Pattern[len(p.Pattern)-1] != '$' {
 			p.Pattern = p.Pattern + "$"
 		}
+
+		// Detect the coding error of an invalid Pattern
 		b.pathsRe[i] = regexp.MustCompile(p.Pattern)
 	}
 }

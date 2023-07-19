@@ -1544,6 +1544,7 @@ func NewTestCluster(t testing.T, base *CoreConfig, opts *TestClusterOptions) *Te
 		coreConfig.ClusterName = base.ClusterName
 		coreConfig.DisableAutopilot = base.DisableAutopilot
 		coreConfig.AdministrativeNamespacePath = base.AdministrativeNamespacePath
+		coreConfig.ServiceRegistration = base.ServiceRegistration
 
 		if base.BuiltinRegistry != nil {
 			coreConfig.BuiltinRegistry = base.BuiltinRegistry

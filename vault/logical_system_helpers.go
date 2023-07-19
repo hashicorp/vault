@@ -89,6 +89,14 @@ var (
 							return logical.ErrorResponse("enterprise-only feature"), logical.ErrUnsupportedPath
 						},
 					}
+
+					// There is a correctness check that verifies there is an ExistenceFunc for all paths that have
+					// a CreateOperation, so we must define a stub one to pass that check if needed.
+					if operation == logical.CreateOperation {
+						path.ExistenceCheck = func(context.Context, *logical.Request, *framework.FieldData) (bool, error) {
+							return false, nil
+						}
+					}
 				}
 
 				results = append(results, path)
