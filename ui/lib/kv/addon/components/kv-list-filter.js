@@ -79,7 +79,6 @@ export default class KvListFilterComponent extends Component {
     const parentDirectory = parentKeyForKey(inputValue);
     const isInputDirectory = keyIsFolder(inputValue);
     const inputWithoutParentKey = keyWithoutParentKey(inputValue);
-
     if (event.keyCode === keys.BACKSPACE && parentDirectory) {
       const pageFilter = isInputDirectory ? '' : inputWithoutParentKey.slice(0, -1);
       this.router.transitionTo(this.kvRoute('list-directory'), parentDirectory, {
