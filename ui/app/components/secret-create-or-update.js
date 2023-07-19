@@ -31,7 +31,7 @@
 import Component from '@glimmer/component';
 import ControlGroupError from 'vault/lib/control-group-error';
 import Ember from 'ember';
-import keys from 'vault/lib/keycodes';
+import keys from 'core/utils/key-codes';
 import { action, set } from '@ember/object';
 import { inject as service } from '@ember/service';
 import { tracked } from '@glimmer/tracking';
