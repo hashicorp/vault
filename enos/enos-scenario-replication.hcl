@@ -39,7 +39,9 @@ scenario "replication" {
   ]
 
   locals {
-    backend_tag_key = "VaultStorage"
+    # The path to the backend license file (Consul Enterprise)
+    backend_license_path = abspath(var.backend_license_path != null ? var.backend_license_path : joinpath(path.root, "./support/consul.hclic"))
+    backend_tag_key      = "VaultStorage"
     build_tags = {
       "ent"              = ["ui", "enterprise", "ent"]
       "ent.fips1402"     = ["ui", "enterprise", "cgo", "hsm", "fips", "fips_140_2", "ent.fips1402"]
@@ -103,7 +105,18 @@ scenario "replication" {
     }
   }
 
-  step "read_license" {
+  // This step reads the contents of the backend license if we're using a Consul backend and
+  // the edition is "ent".
+  step "read_backend_license" {
+    skip_step = (matrix.primary_backend == "raft" && matrix.secondary_backend == "raft") ||  var.backend_edition == "oss"
+    module    = module.read_license
+
+    variables {
+      file_name = local.backend_license_path
+    }
+  }
+
+  step "read_vault_license" {
     module = module.read_license
 
     variables {
@@ -218,6 +231,7 @@ scenario "replication" {
     variables {
       cluster_name    = step.create_primary_cluster_backend_targets.cluster_name
       cluster_tag_key = local.backend_tag_key
+      consul_license  = (matrix.primary_backend == "consul" && var.backend_edition == "ent") ? step.read_backend_license.license : null
       release = {
         edition = var.backend_edition
         version = matrix.consul_version
@@ -250,7 +264,7 @@ scenario "replication" {
       } : null
       enable_file_audit_device = var.vault_enable_file_audit_device
       install_dir              = local.vault_install_dir
-      license                  = matrix.edition != "oss" ? step.read_license.license : null
+      license                  = matrix.edition != "oss" ? step.read_vault_license.license : null
       local_artifact_path      = local.bundle_path
       packages                 = local.packages
       storage_backend          = matrix.primary_backend
@@ -272,6 +286,7 @@ scenario "replication" {
     variables {
       cluster_name    = step.create_secondary_cluster_backend_targets.cluster_name
       cluster_tag_key = local.backend_tag_key
+      consul_license  = (matrix.secondary_backend == "consul" && var.backend_edition == "ent") ? step.read_backend_license.license : null
       release = {
         edition = var.backend_edition
         version = matrix.consul_version
@@ -304,7 +319,7 @@ scenario "replication" {
       } : null
       enable_file_audit_device = var.vault_enable_file_audit_device
       install_dir              = local.vault_install_dir
-      license                  = matrix.edition != "oss" ? step.read_license.license : null
+      license                  = matrix.edition != "oss" ? step.read_vault_license.license : null
       local_artifact_path      = local.bundle_path
       packages                 = local.packages
       storage_backend          = matrix.secondary_backend
@@ -545,7 +560,7 @@ scenario "replication" {
       force_unseal        = matrix.primary_seal == "shamir"
       initialize_cluster  = false
       install_dir         = local.vault_install_dir
-      license             = matrix.edition != "oss" ? step.read_license.license : null
+      license             = matrix.edition != "oss" ? step.read_vault_license.license : null
       local_artifact_path = local.bundle_path
       packages            = local.packages
       root_token          = step.create_primary_cluster.root_token
