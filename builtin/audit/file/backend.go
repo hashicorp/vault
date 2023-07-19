@@ -164,18 +164,24 @@ func Factory(ctx context.Context, conf *audit.BackendConfig, useEventLogger bool
 	case "discard":
 		sinkNode = event.NewNoopSink()
 	default:
-		// Ensure that the file can be successfully opened for writing;
-		// otherwise it will be too late to catch later without problems
-		// (ref: https://github.com/hashicorp/vault/issues/550)
-		if err := b.open(); err != nil {
-			return nil, fmt.Errorf("sanity check failed; unable to open %q for writing: %w", path, err)
+		if useEventLogger {
+			var err error
+
+			// The NewFileSink function attempts to open the file and will
+			// return an error if it can't.
+			sinkNode, err = event.NewFileSink(b.path, format, event.WithFileMode(mode.String()), event.WithPrefix(conf.Config["prefix"]))
+			if err != nil {
+				return nil, fmt.Errorf("file sink creation failed for path %q: %w", path, err)
+			}
+		} else {
+			// Ensure that the file can be successfully opened for writing;
+			// otherwise it will be too late to catch later without problems
+			// (ref: https://github.com/hashicorp/vault/issues/550)
+			if err := b.open(); err != nil {
+				return nil, fmt.Errorf("sanity check failed; unable to open %q for writing: %w", path, err)
+			}
 		}
 
-		var err error
-		sinkNode, err = event.NewFileSink(b.path, format, event.WithFileMode(mode.String()), event.WithPrefix(conf.Config["prefix"]))
-		if err != nil {
-			return nil, fmt.Errorf("file sink creation failed for path %q: %w", path, err)
-		}
 	}
 
 	sinkNodeID := event.GenerateNodeID()
