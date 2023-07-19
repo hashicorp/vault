@@ -57,7 +57,7 @@ export default class KvListFilterComponent extends Component {
     const isDirectory = keyIsFolder(input);
     const parentDirectory = parentKeyForKey(input);
     const secretWithinDirectory = keyWithoutParentKey(input);
-    // TODO ideally when it's not a directory we could filter through the current models and remove pageFilter refresh on the list route.
+    // TODO kv engine cleanup: ideally when it's not a directory we could filter through the current models and remove pageFilter refresh on the list route.
     if (isDirectory) {
       this.router.transitionTo(this.kvRoute('list-directory'), input);
     } else if (parentDirectory) {
