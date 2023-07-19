@@ -291,6 +291,9 @@ These metrics relate to [Vault Enterprise Replication](/vault/docs/enterprise/re
 | `vault.replication.rpc.standby.server.register_lease_request` | Duration of time taken by standby register lease request                                                                                   | ms              | summary |
 | `vault.replication.rpc.standby.server.wrap_token_request`     | Duration of time taken by standby wrap token request                                                                                       | ms              | summary |
 
+| `vault.replication.rpc.client.create_token_register_auth_lease`                           | Duration of time taken by client create token request                                                                                      | ms              | summary |
+| `vault.replication.rpc.standby.server.create_token_register_auth_lease_request`           | Duration of time taken by standby create token request                                                                                     | ms              | summary |
+
 ## Secrets engines metrics
 
 These metrics relate to the supported [secrets engines][secrets-engines].
