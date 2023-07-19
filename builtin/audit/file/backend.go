@@ -133,7 +133,7 @@ func Factory(ctx context.Context, conf *audit.BackendConfig, useEventLogger bool
 	b.salt.Store((*salt.Salt)(nil))
 
 	// Configure the formatter for either case.
-	f, err := audit.NewEventFormatter(b.formatConfig, b)
+	f, err := audit.NewEventFormatter(b.formatConfig, b, audit.WithPrefix(conf.Config["prefix"]))
 	if err != nil {
 		return nil, fmt.Errorf("error creating formatter: %w", err)
 	}
@@ -169,7 +169,7 @@ func Factory(ctx context.Context, conf *audit.BackendConfig, useEventLogger bool
 
 			// The NewFileSink function attempts to open the file and will
 			// return an error if it can't.
-			sinkNode, err = event.NewFileSink(b.path, format, event.WithFileMode(mode.String()), event.WithPrefix(conf.Config["prefix"]))
+			sinkNode, err = event.NewFileSink(b.path, format, event.WithFileMode(mode.String()))
 			if err != nil {
 				return nil, fmt.Errorf("file sink creation failed for path %q: %w", path, err)
 			}
