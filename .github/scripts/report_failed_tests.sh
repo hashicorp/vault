@@ -15,7 +15,7 @@ else
   # Remove any rows that don't have a test name
   # Only keep the test type, test name, and logs column
   # Remove the scroll emoji
-  TABLE_DATA=$(echo "$TABLE_DATA" | awk -F\| '{if ($4 != " - ") { print $2 "|" $4 "|" $7 }}' | sed -r 's/ :scroll://')
+  TABLE_DATA=$(echo "$TABLE_DATA" | awk -F\| '{if ($4 != " - ") { print "|" $2 "|" $4 "|" $7 }}' | sed -r 's/ :scroll://')
   NUM_FAILURES=$(wc -l <<< "$TABLE_DATA")
   
   # Check if the number of failures is greater than the maximum tests to display
