@@ -354,25 +354,24 @@ jobs:
           # Sort all of the summary table rows and push them to a temp file.
           temp_file_name=temp-$(date +%s)
           cat failure-summary-*.md | sort >> "$temp_file_name"
-          temp_message_file_name=temp-table-$(date +%s)
           
           # If there are test failures, present them in a format of a GitHub Markdown table.
           if [ -s "$temp_file_name" ]; then
             # shellcheck disable=SC2129
             # Here we create the headings for the summary table
-            echo "| Test Type | Package | Test | Elapsed | Runner Index | Logs |" | tee -a "$GITHUB_STEP_SUMMARY" "$temp_message_file_name" 
-            echo "| --------- | ------- | ---- | ------- | ------------ | ---- |" | tee -a "$GITHUB_STEP_SUMMARY" "$temp_message_file_name"
+            echo "| Test Type | Package | Test | Elapsed | Runner Index | Logs |" >> "$GITHUB_STEP_SUMMARY"
+            echo "| --------- | ------- | ---- | ------- | ------------ | ---- |" >> "$GITHUB_STEP_SUMMARY"
             # shellcheck disable=SC2002
-            cat "$temp_file_name" | tee -a "$GITHUB_STEP_SUMMARY" "$temp_message_file_name"
+            cat "$temp_file_name" >> "$GITHUB_STEP_SUMMARY"
           else
-            echo "### All Go tests passed! :white_check_mark:" | tee -a "$GITHUB_STEP_SUMMARY" "$temp_message_file_name"
+            echo "### All Go tests passed! :white_check_mark:" >> tee -a "$GITHUB_STEP_SUMMARY"
           fi
           
           # the random EOF is needed for a multiline environment variable
           EOF=$(dd if=/dev/urandom bs=15 count=1 status=none | base64)
           # shellcheck disable=SC2129
           echo "TABLE_TEST_RESULTS<<$EOF" >> "$GITHUB_ENV"
-          cat "$temp_message_file_name" >> "$GITHUB_ENV"
+          cat "$temp_file_name" >> "$GITHUB_ENV"
           echo "$EOF" >> "$GITHUB_ENV" 
       - uses: actions/checkout@c85c95e3d7251135ab7dc9ce3241c5835cc595a9 # v3.5.3
       - name: Create comment
