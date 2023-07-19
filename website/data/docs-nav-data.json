@@ -126,6 +126,10 @@
               {
                 "title": "Write-ahead log metrics",
                 "path": "internals/telemetry/metrics/wal"
+              },
+              {
+                "title": "Full metrics list",
+                "path": "internals/telemetry/metrics/all"
               }
             ]
           }
