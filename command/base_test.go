@@ -20,9 +20,6 @@ func getDefaultCliHeaders(t *testing.T) http.Header {
 
 func TestClient_FlagHeader(t *testing.T) {
 	defaultHeaders := getDefaultCliHeaders(t)
-	if true {
-		t.Fatalf("fatal")
-	}
 
 	cases := []struct {
 		Input map[string]string

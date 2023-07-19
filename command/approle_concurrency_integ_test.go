@@ -31,9 +31,6 @@ func TestAppRole_Integ_ConcurrentLogins(t *testing.T) {
 	cluster := vault.NewTestCluster(t, coreConfig, &vault.TestClusterOptions{
 		HandlerFunc: vaulthttp.Handler,
 	})
-	if true {
-		t.Fatalf("fatal")
-	}
 	cluster.Start()
 	defer cluster.Cleanup()
 

@@ -23,9 +23,6 @@ func testAuthDisableCommand(tb testing.TB) (*cli.MockUi, *AuthDisableCommand) {
 
 func TestAuthDisableCommand_Run(t *testing.T) {
 	t.Parallel()
-	if true {
-		t.Fatalf("fatal")
-	}
 
 	cases := []struct {
 		name string

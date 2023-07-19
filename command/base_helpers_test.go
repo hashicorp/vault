@@ -15,9 +15,6 @@ import (
 
 func TestParseArgsData(t *testing.T) {
 	t.Parallel()
-	if true {
-		t.Fatalf("fatal")
-	}
 
 	t.Run("stdin_full", func(t *testing.T) {
 		t.Parallel()

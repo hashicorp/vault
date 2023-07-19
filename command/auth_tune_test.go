@@ -26,9 +26,6 @@ func testAuthTuneCommand(tb testing.TB) (*cli.MockUi, *AuthTuneCommand) {
 
 func TestAuthTuneCommand_Run(t *testing.T) {
 	t.Parallel()
-	if true {
-		t.Fatalf("fatal")
-	}
 
 	cases := []struct {
 		name string

@@ -83,9 +83,6 @@ func TestDebugCommand_Run(t *testing.T) {
 
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
-			if true {
-				t.Fatalf("fatal")
-			}
 
 			client, closer := testVaultServer(t)
 			defer closer()
