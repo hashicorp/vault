@@ -333,6 +333,7 @@ func (b *backend) pathLoginIamGetRoleNameCallerIdAndEntity(ctx context.Context, 
 		if err != nil {
 			return "", nil, nil, logical.ErrorResponse(err.Error()), nil
 		}
+
 		b.Logger().Debug("sts_region_from_client set; using region specified from header", "region", clientSpecifiedRegion)
 		endpoint = url
 	}
@@ -1920,10 +1921,10 @@ func awsRegionFromHeader(authorizationHeader string) (string, error) {
 			if len(fields) < 3 {
 				return "", fmt.Errorf("invalid header format")
 			}
+
 			region := fields[2]
 			return region, nil
 		}
-
 	}
 
 	return "", fmt.Errorf("invalid header format")
