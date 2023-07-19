@@ -15,8 +15,7 @@
         }}
       </p>
       <h4 class="field-title has-bottom-padding-m is-fullwidth">
-        PGP Key
-        {{this.pgpKeyFile.filename}}
+        {{concat "PGP Key " this.pgpKeyFile.filename}}
       </h4>
       <div class="message is-list has-copy-button" tabindex="-1">
         <HoverCopyButton @copyValue={{this.pgpKey}} />

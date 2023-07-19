@@ -93,7 +93,7 @@
       data-test-dr-token-flow-step="choose-pgp"
     />
   {{else}}
-    {{! Not started }}
+    {{! Generate token flow not started }}
     <form
       {{on "submit" this.startGenerate}}
       id="shamir"
@@ -133,4 +133,3 @@
     {{if this.encodedToken "Close" "Cancel"}}
   </button>
 </footer>
-{{! </Modal> }}
