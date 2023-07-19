@@ -584,10 +584,6 @@ message ClusterInfoReply {
 	string err = 3;
 }
 
-message APILockShouldBlockRequestReply {
-	bool should_block = 1;
-}
-
 // SystemView exposes system configuration information in a safe way for plugins
 // to consume. Plugins should implement the client for this service.
 service SystemView {
@@ -643,10 +639,6 @@ service SystemView {
 
 	// ClusterInfo returns the ClusterID information; may be reused if ClusterName is also exposed.
 	rpc ClusterInfo(Empty) returns (ClusterInfoReply);
-
-	// APILockShouldBlockRequest returns whether a namespace for the requested
-	// mount is locked and should be blocked
-	rpc APILockShouldBlockRequest(Empty) returns (APILockShouldBlockRequestReply);
 }
 
 message Connection {
