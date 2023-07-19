@@ -364,7 +364,7 @@ jobs:
             # shellcheck disable=SC2002
             cat "$temp_file_name" >> "$GITHUB_STEP_SUMMARY"
           else
-            echo "### All Go tests passed! :white_check_mark:" >> tee -a "$GITHUB_STEP_SUMMARY"
+            echo "### All Go tests passed! :white_check_mark:" >> "$GITHUB_STEP_SUMMARY"
           fi
           
           # the random EOF is needed for a multiline environment variable
