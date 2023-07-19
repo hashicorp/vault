@@ -5,7 +5,12 @@
   </:tabLinks>
 
   <:toolbarFilters>
-    {{! TODO add navigateInput }}
+    <KvListFilter
+      @model={{@model}}
+      @mountPoint={{this.mountPoint}}
+      @filterValue={{@filterValue}}
+      @pageFilter={{@pageFilter}}
+    />
   </:toolbarFilters>
 
   <:toolbarActions>
@@ -62,13 +67,17 @@
     </LinkedBlock>
   {{/each}}
 {{else}}
-  <EmptyState
-    data-test-secret-list-empty-state
-    @title="No secrets yet"
-    @message="When created, secrets will be listed here. Create a secret to get started."
-  >
-    <LinkTo class="has-top-margin-xs" @route="create">
-      Create secret
-    </LinkTo>
-  </EmptyState>
+  {{#if @filterValue}}
+    <EmptyState @title="There are no secrets matching &quot;{{@filterValue}}&quot;. Press enter to add one." />
+  {{else}}
+    <EmptyState
+      data-test-secret-list-empty-state
+      @title="No secrets yet"
+      @message="When created, secrets will be listed here. Create a secret to get started."
+    >
+      <LinkTo class="has-top-margin-xs" @route="create">
+        Create secret
+      </LinkTo>
+    </EmptyState>
+  {{/if}}
 {{/if}}
