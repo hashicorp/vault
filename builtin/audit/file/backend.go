@@ -162,7 +162,7 @@ func Factory(ctx context.Context, conf *audit.BackendConfig, useEventLogger bool
 	case "stdout":
 		sinkNode = event.NewStdoutSinkNode(format)
 	case "discard":
-		sinkNode = &event.NoopSink{}
+		sinkNode = event.NewNoopSink()
 	default:
 		// Ensure that the file can be successfully opened for writing;
 		// otherwise it will be too late to catch later without problems

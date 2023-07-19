@@ -13,8 +13,8 @@ import (
 type NoopSink struct{}
 
 // NewNoopSink should be used to create a new NoopSink.
-func NewNoopSink() (*NoopSink, error) {
-	return &NoopSink{}, nil
+func NewNoopSink() *NoopSink {
+	return &NoopSink{}
 }
 
 // Process is a no-op and always returns nil event and nil error.
