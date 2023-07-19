@@ -18,7 +18,7 @@ import (
 
 // TestFileSink_Type ensures that the node is a 'sink' type.
 func TestFileSink_Type(t *testing.T) {
-	f, err := NewFileSink(t.TempDir(), "json")
+	f, err := NewFileSink(filepath.Join(t.TempDir(), "vault.log"), "json")
 	require.NoError(t, err)
 	require.NotNil(t, f)
 	require.Equal(t, eventlogger.NodeTypeSink, f.Type())
@@ -27,12 +27,12 @@ func TestFileSink_Type(t *testing.T) {
 // TestNewFileSink tests creation of an AuditFileSink.
 func TestNewFileSink(t *testing.T) {
 	tests := map[string]struct {
-		IsTempDirPath        bool // Path should contain the filename if temp dir is true
-		Path                 string
-		Format               string
-		Options              []Option
-		IsErrorExpected      bool
-		ExpectedErrorMessage string
+		ShouldUseAbsolutePath bool // Path should contain the filename if temp dir is true
+		Path                  string
+		Format                string
+		Options               []Option
+		IsErrorExpected       bool
+		ExpectedErrorMessage  string
 		// Expected values of AuditFileSink
 		ExpectedFileMode os.FileMode
 		ExpectedFormat   string
@@ -40,27 +40,18 @@ func TestNewFileSink(t *testing.T) {
 		ExpectedPrefix   string
 	}{
 		"default-values": {
-			IsErrorExpected:      true,
-			ExpectedErrorMessage: "event.NewFileSink: path is required",
+			ShouldUseAbsolutePath: true,
+			IsErrorExpected:       true,
+			ExpectedErrorMessage:  "event.NewFileSink: path is required",
 		},
 		"spacey-path": {
-			Path:                 "     ",
-			Format:               "json",
-			IsErrorExpected:      true,
-			ExpectedErrorMessage: "event.NewFileSink: path is required",
-		},
-		"path-not-exist-valid-format-file-mode": {
-			Path:             "qwerty",
-			Format:           "json",
-			Options:          []Option{WithFileMode("00755")},
-			IsErrorExpected:  false,
-			ExpectedPath:     "qwerty",
-			ExpectedFormat:   "json",
-			ExpectedPrefix:   "",
-			ExpectedFileMode: os.FileMode(0o755),
+			ShouldUseAbsolutePath: true,
+			Path:                  "     ",
+			Format:                "json",
+			IsErrorExpected:       true,
+			ExpectedErrorMessage:  "event.NewFileSink: path is required",
 		},
 		"valid-path-and-format": {
-			IsTempDirPath:    true,
 			Path:             "vault.log",
 			Format:           "json",
 			IsErrorExpected:  false,
@@ -72,14 +63,12 @@ func TestNewFileSink(t *testing.T) {
 			Path:             "vault.log",
 			Format:           "json",
 			Options:          []Option{WithFileMode("0007")},
-			IsTempDirPath:    true,
 			IsErrorExpected:  false,
 			ExpectedFormat:   "json",
 			ExpectedPrefix:   "",
 			ExpectedFileMode: 0o007,
 		},
 		"prefix": {
-			IsTempDirPath:    true,
 			Path:             "vault.log",
 			Format:           "json",
 			Options:          []Option{WithFileMode("0007"), WithPrefix("bleep")},
@@ -100,7 +89,7 @@ func TestNewFileSink(t *testing.T) {
 			// but we should keep track of it for comparison in the new sink.
 			var tempDir string
 			tempPath := tc.Path
-			if tc.IsTempDirPath {
+			if !tc.ShouldUseAbsolutePath {
 				tempDir = t.TempDir()
 				tempPath = filepath.Join(tempDir, tempPath)
 			}
@@ -122,10 +111,10 @@ func TestNewFileSink(t *testing.T) {
 				require.Equal(t, tc.ExpectedFileMode, sink.fileMode)
 
 				switch {
-				case tc.IsTempDirPath:
-					require.Equal(t, tempPath, sink.path)
-				default:
+				case tc.ShouldUseAbsolutePath:
 					require.Equal(t, tc.ExpectedPath, sink.path)
+				default:
+					require.Equal(t, tempPath, sink.path)
 				}
 			}
 		})
@@ -137,35 +126,27 @@ func TestNewFileSink(t *testing.T) {
 // see: https://developer.hashicorp.com/vault/docs/audit/file#file_path
 func TestFileSink_Reopen(t *testing.T) {
 	tests := map[string]struct {
-		Path                 string
-		IsTempDirPath        bool
-		ShouldCreateFile     bool
-		Options              []Option
-		IsErrorExpected      bool
-		ExpectedErrorMessage string
-		ExpectedFileMode     os.FileMode
+		Path                  string
+		ShouldUseAbsolutePath bool
+		ShouldCreateFile      bool
+		ShouldIgnoreFileMode  bool
+		Options               []Option
+		IsErrorExpected       bool
+		ExpectedErrorMessage  string
+		ExpectedFileMode      os.FileMode
 	}{
 		// Should be ignored by Reopen
-		"discard": {
-			Path: "discard",
-		},
-		// Should be ignored by Reopen
-		"stdout": {
-			Path: "stdout",
-		},
-		"permission-denied": {
-			Path:                 "/tmp/vault/test/foo.log",
-			IsErrorExpected:      true,
-			ExpectedErrorMessage: "event.(FileSink).open: unable to create file \"/tmp/vault/test/foo.log\": mkdir /tmp/vault/test: permission denied",
+		"devnull": {
+			Path:                  "/dev/null",
+			ShouldUseAbsolutePath: true,
+			ShouldIgnoreFileMode:  true,
 		},
 		"happy": {
 			Path:             "vault.log",
-			IsTempDirPath:    true,
 			ExpectedFileMode: os.FileMode(defaultFileMode),
 		},
 		"filemode-existing": {
 			Path:             "vault.log",
-			IsTempDirPath:    true,
 			ShouldCreateFile: true,
 			Options:          []Option{WithFileMode("0000")},
 			ExpectedFileMode: os.FileMode(defaultFileMode),
@@ -182,14 +163,14 @@ func TestFileSink_Reopen(t *testing.T) {
 			// but we should keep track of it for comparison in the new sink.
 			var tempDir string
 			tempPath := tc.Path
-			if tc.IsTempDirPath {
+			if !tc.ShouldUseAbsolutePath {
 				tempDir = t.TempDir()
 				tempPath = filepath.Join(tempDir, tc.Path)
 			}
 
 			// If the file mode is 0 then we will need a pre-created file to stat.
 			// Only do this for paths that are not 'special keywords'
-			if tc.ShouldCreateFile && tc.Path != discard && tc.Path != stdout {
+			if tc.ShouldCreateFile && tc.Path != devnull {
 				f, err := os.OpenFile(tempPath, os.O_CREATE, defaultFileMode)
 				require.NoError(t, err)
 				defer func() {
@@ -208,16 +189,14 @@ func TestFileSink_Reopen(t *testing.T) {
 			case tc.IsErrorExpected:
 				require.Error(t, err)
 				require.EqualError(t, err, tc.ExpectedErrorMessage)
-			case tempPath == discard:
-				require.NoError(t, err)
-			case tempPath == stdout:
-				require.NoError(t, err)
 			default:
 				require.NoError(t, err)
 				info, err := os.Stat(tempPath)
 				require.NoError(t, err)
 				require.NotNil(t, info)
-				require.Equal(t, tc.ExpectedFileMode, info.Mode())
+				if !tc.ShouldIgnoreFileMode {
+					require.Equal(t, tc.ExpectedFileMode, info.Mode())
+				}
 			}
 		})
 	}
@@ -226,28 +205,26 @@ func TestFileSink_Reopen(t *testing.T) {
 // TestFileSink_Process ensures that Process behaves as expected.
 func TestFileSink_Process(t *testing.T) {
 	tests := map[string]struct {
-		Path                 string
-		Format               string
-		Data                 string
-		ShouldIgnoreFormat   bool
-		ShouldUseNilEvent    bool
-		IsErrorExpected      bool
-		ExpectedErrorMessage string
+		ShouldUseAbsolutePath bool
+		Path                  string
+		ShouldCreateFile      bool
+		Format                string
+		ShouldIgnoreFormat    bool
+		Data                  string
+		ShouldUseNilEvent     bool
+		IsErrorExpected       bool
+		ExpectedErrorMessage  string
 	}{
-		"discard": {
-			Path:            discard,
-			Format:          "json",
-			Data:            "foo",
-			IsErrorExpected: false,
-		},
-		"stdout": {
-			Path:            stdout,
-			Format:          "json",
-			Data:            "foo",
-			IsErrorExpected: false,
+		"devnull": {
+			ShouldUseAbsolutePath: true,
+			Path:                  devnull,
+			Format:                "json",
+			Data:                  "foo",
+			IsErrorExpected:       false,
 		},
 		"no-formatted-data": {
-			Path:                 "/dev/null",
+			ShouldCreateFile:     true,
+			Path:                 "juan.log",
 			Format:               "json",
 			Data:                 "foo",
 			ShouldIgnoreFormat:   true,
@@ -255,7 +232,7 @@ func TestFileSink_Process(t *testing.T) {
 			ExpectedErrorMessage: "event.(FileSink).Process: unable to retrieve event formatted as \"json\"",
 		},
 		"nil": {
-			Path:                 "/dev/null",
+			Path:                 "foo.log",
 			Format:               "json",
 			Data:                 "foo",
 			ShouldUseNilEvent:    true,
@@ -268,8 +245,26 @@ func TestFileSink_Process(t *testing.T) {
 		name := name
 		tc := tc
 		t.Run(name, func(t *testing.T) {
+			// Temp dir for most testing unless we're trying to test an error
+			var tempDir string
+			tempPath := tc.Path
+			if !tc.ShouldUseAbsolutePath {
+				tempDir = t.TempDir()
+				tempPath = filepath.Join(tempDir, tc.Path)
+			}
+
+			// Create a file if we will need it there before Process kicks off.
+			if tc.ShouldCreateFile && tc.Path != devnull {
+				f, err := os.OpenFile(tempPath, os.O_CREATE, defaultFileMode)
+				require.NoError(t, err)
+				defer func() {
+					err = os.Remove(f.Name())
+					require.NoError(t, err)
+				}()
+			}
+
 			// Set up a sink
-			sink, err := NewFileSink(tc.Path, tc.Format)
+			sink, err := NewFileSink(tempPath, tc.Format)
 			require.NoError(t, err)
 			require.NotNil(t, sink)
 

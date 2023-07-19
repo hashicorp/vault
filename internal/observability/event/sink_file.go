@@ -19,8 +19,7 @@ import (
 // defaultFileMode is the default file permissions (read/write for everyone).
 const (
 	defaultFileMode = 0o600
-	discard         = "discard"
-	stdout          = "stdout"
+	devnull         = "/dev/null"
 )
 
 // FileSink is a sink node which handles writing events to file.
@@ -53,6 +52,7 @@ func NewFileSink(path string, format string, opt ...Option) (*FileSink, error) {
 	// If we got an optional file mode supplied and our path isn't a special keyword
 	// then we should use the supplied file mode, or maintain the existing file mode.
 	switch {
+	case path == devnull:
 	case opts.withFileMode == nil:
 	case *opts.withFileMode == 0: // Maintain the existing file's mode when set to "0000".
 		fileInfo, err := os.Stat(path)
@@ -97,8 +97,8 @@ func (f *FileSink) Process(ctx context.Context, e *eventlogger.Event) (*eventlog
 		return nil, fmt.Errorf("%s: event is nil: %w", op, ErrInvalidParameter)
 	}
 
-	// 'discard' path means we just do nothing and pretend we're done.
-	if f.path == discard {
+	// '/dev/null' path means we just do nothing and pretend we're done.
+	if f.path == devnull {
 		return nil, nil
 	}
 
@@ -120,8 +120,8 @@ func (f *FileSink) Process(ctx context.Context, e *eventlogger.Event) (*eventlog
 func (f *FileSink) Reopen() error {
 	const op = "event.(FileSink).Reopen"
 
-	switch f.path {
-	case stdout, discard:
+	// '/dev/null' path means we just do nothing and pretend we're done.
+	if f.path == devnull {
 		return nil
 	}
 
@@ -171,7 +171,7 @@ func (f *FileSink) open() error {
 	// Change the file mode in case the log file already existed.
 	// We special case '/dev/null' since we can't chmod it, and bypass if the mode is zero.
 	switch f.path {
-	case "/dev/null":
+	case devnull:
 	default:
 		if f.fileMode != 0 {
 			err = os.Chmod(f.path, f.fileMode)
@@ -194,30 +194,20 @@ func (f *FileSink) log(data []byte) error {
 
 	reader := bytes.NewReader(data)
 
-	var writer io.Writer
-	switch {
-	case f.path == stdout:
-		writer = os.Stdout
-	default:
-		if err := f.open(); err != nil {
-			return fmt.Errorf("%s: unable to open file for sink: %w", op, err)
-		}
-		writer = f.file
+	if err := f.open(); err != nil {
+		return fmt.Errorf("%s: unable to open file for sink: %w", op, err)
 	}
 
 	// Write prefix before the data if required.
 	if f.prefix != "" {
-		_, err := writer.Write([]byte(f.prefix))
+		_, err := f.file.Write([]byte(f.prefix))
 		if err != nil {
 			return fmt.Errorf("%s: unable to write prefix %q for sink: %w", op, f.prefix, err)
 		}
 	}
 
-	if _, err := reader.WriteTo(writer); err == nil {
+	if _, err := reader.WriteTo(f.file); err == nil {
 		return nil
-	} else if f.path == stdout {
-		// If writing to stdout there's no real reason to think anything would change on retry.
-		return fmt.Errorf("%s: unable write to %q: %w", op, f.path, err)
 	}
 
 	// Otherwise, opportunistically try to re-open the FD, once per call (1 retry attempt).
@@ -237,7 +227,7 @@ func (f *FileSink) log(data []byte) error {
 		return fmt.Errorf("%s: unable to seek to start of file for sink: %w", op, err)
 	}
 
-	_, err = reader.WriteTo(writer)
+	_, err = reader.WriteTo(f.file)
 	if err != nil {
 		return fmt.Errorf("%s: unable to re-write to file for sink: %w", op, err)
 	}
