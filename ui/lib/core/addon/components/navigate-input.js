@@ -12,8 +12,7 @@ import Component from '@glimmer/component';
 
 import { encodePath } from 'vault/utils/path-encoding-helpers';
 import { keyIsFolder, parentKeyForKey } from 'core/utils/key-utils';
-// TODO MOVE THESE TO THE ADDON
-import keys from 'vault/lib/keycodes';
+import keys from 'core/utils/key-codes';
 
 /**
  * @module NavigateInput

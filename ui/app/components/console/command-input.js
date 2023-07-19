@@ -4,7 +4,7 @@
  */
 
 import Component from '@ember/component';
-import keys from 'vault/lib/keycodes';
+import keys from 'core/utils/key-codes';
 
 export default Component.extend({
   onExecuteCommand() {},
