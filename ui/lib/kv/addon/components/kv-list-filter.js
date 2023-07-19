@@ -16,24 +16,24 @@ import { tracked } from '@glimmer/tracking';
  *
  * @param {object} model - The adapter model object which contains an array of secret models.
  * @param {string} mountPoint - Where in the router files we're located. For this component it will always be vault.cluster.secrets.backend.kv
- * @param {string} filterValue - A concatenation between the list-directory's dynamic path "path-to-secret" and the queryParam "pageFilter". For example, if we're inside the beep/ directory searching for any secret that starts with "my-" this value will equal "beep/my-".  * @param {string} pageFilter - The queryParam value.
+ * @param {string} filterValue - A concatenation between the list-directory's dynamic path "path-to-secret" and the queryParam "pageFilter". For example, if we're inside the beep/ directory searching for any secret that starts with "my-" this value will equal "beep/my-".
+ * @param {string} pageFilter - The queryParam value.
  */
 
 export default class KvListFilterComponent extends Component {
   @service router;
-
   @tracked filterIsFocused = false;
 
   kvRoute(route) {
     return `${this.args.mountPoint}.${route}`;
   }
   /*
-  -partialMatch returns the secret which most closely matches the pageFilter queryParam.
+  -partialMatch returns the secret that most closely matches the pageFilter queryParam.
   -We're focused on pageFilter and not filterValue because if we're inside a directory we only care about the secrets listed there and not the directory. 
   -If pageFilter is empty this returns the first secret model in the list.
 **/
   get partialMatch() {
-    // you can't pass undefined to RegExp so we replace pageFilter with an empty string.
+    // you can't pass undefined to RegExp so if pageFilter is empty we replace it with an empty string.
     const value = !this.args.pageFilter ? '' : this.args.pageFilter;
     const reg = new RegExp('^' + escapeStringRegexp(value));
     const match = this.args.model.secrets.filter((path) => reg.test(path.fullSecretPath))[0];
@@ -49,7 +49,7 @@ export default class KvListFilterComponent extends Component {
     return !!this.args.model.secrets?.findBy('fullSecretPath', this.args.filterValue);
   }
   /*
-  -handleInput is trigger after the value of the input has changed. Is not triggered when input looses focus.
+  -handleInput is triggered after the value of the input has changed. It is not triggered when input looses focus.
 **/
   @action
   handleInput(event) {
