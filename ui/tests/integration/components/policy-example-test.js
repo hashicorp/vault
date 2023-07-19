@@ -23,11 +23,9 @@ module('Integration | Component | policy-example', function (hooks) {
   });
 
   test('it renders the correct paragraph for ACL policy', async function (assert) {
-    this.model = this.store.createRecord('policy/acl');
-
     await render(hbs`
     <PolicyExample
-      @policyType={{this.model.policyType}}
+      @policyType="acl"
     />
     `);
     assert
@@ -38,11 +36,9 @@ module('Integration | Component | policy-example', function (hooks) {
   });
 
   test('it renders the correct paragraph for RGP policy', async function (assert) {
-    this.model = this.store.createRecord('policy/rgp');
-
     await render(hbs`
     <PolicyExample
-      @policyType={{this.model.policyType}}
+      @policyType="rgp"
     />
     `);
     assert
@@ -53,11 +49,9 @@ module('Integration | Component | policy-example', function (hooks) {
   });
 
   test('it renders the correct paragraph for EGP policy', async function (assert) {
-    this.model = this.store.createRecord('policy/egp');
-
     await render(hbs`
     <PolicyExample
-      @policyType={{this.model.policyType}}
+      @policyType="egp"
     />
     `);
     assert
@@ -68,22 +62,18 @@ module('Integration | Component | policy-example', function (hooks) {
   });
 
   test('it renders the correct JSON editor text for ACL policy', async function (assert) {
-    this.model = this.store.createRecord('policy/acl');
-
     await render(hbs`
     <PolicyExample
-      @policyType={{this.model.policyType}}
+      @policyType="acl"
     />
     `);
     assert.dom(SELECTORS.jsonText).includesText(`# Grant 'create', 'read' , 'update', and ‘list’ permission`);
   });
 
   test('it renders the correct JSON editor text for RGP policy', async function (assert) {
-    this.model = this.store.createRecord('policy/rgp');
-
     await render(hbs`
     <PolicyExample
-      @policyType={{this.model.policyType}}
+      @policyType="rgp"
     />
     `);
     assert
@@ -92,11 +82,9 @@ module('Integration | Component | policy-example', function (hooks) {
   });
 
   test('it renders the correct JSON editor text for EGP policy', async function (assert) {
-    this.model = this.store.createRecord('policy/egp');
-
     await render(hbs`
     <PolicyExample
-      @policyType={{this.model.policyType}}
+      @policyType="egp"
     />
     `);
     assert.dom(SELECTORS.jsonText).includesText(`# Expect requests to only happen during work days (Monday `);
