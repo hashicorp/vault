@@ -821,6 +821,8 @@ github.com/axiomhq/hyperloglog v0.0.0-20220105174342-98591331716a h1:eqjiAL3qoof
 github.com/axiomhq/hyperloglog v0.0.0-20220105174342-98591331716a/go.mod h1:2stgcRjl6QmW+gU2h5E7BQXg4HU0gzxKWDuT5HviN9s=
 github.com/baiyubin/aliyun-sts-go-sdk v0.0.0-20180326062324-cfa1a18b161f h1:ZNv7On9kyUzm7fvRZumSyy/IUiSC7AzL0I1jKKtwooA=
 github.com/baiyubin/aliyun-sts-go-sdk v0.0.0-20180326062324-cfa1a18b161f/go.mod h1:AuiFmCCPBSrqvVMvuqFuk0qogytodnVFVSN5CeJB8Gc=
+github.com/bdwyertech/go-kms-wrapping/wrappers/awskms/v2 v2.0.2-0.20230719021057-55b7d25830fb h1:UQYeNOyaaQO3xyahUgHT6ot6aVr69AGz2+Da5Jj0898=
+github.com/bdwyertech/go-kms-wrapping/wrappers/awskms/v2 v2.0.2-0.20230719021057-55b7d25830fb/go.mod h1:wCd4P4reBCyLksjuE2Gs88sh2hSvz5x0Cw5G+gYQtmI=
 github.com/benbjohnson/clock v1.0.3/go.mod h1:bGMdMPoPVvcYyt1gHDf4J2KE153Yf9BuiUKYMaxlTDM=
 github.com/benbjohnson/clock v1.1.0 h1:Q92kusRqC1XV2MjkWETPvjJVqKetz1OzxZB7mHJLju8=
 github.com/benbjohnson/clock v1.1.0/go.mod h1:J11/hYXuz8f4ySSvYwY0FKfm+ezbsZBKZxNJlLklBHA=
@@ -1730,8 +1732,6 @@ github.com/hashicorp/go-kms-wrapping/wrappers/aead/v2 v2.0.7-1 h1:ZV26VJYcITBom0
 github.com/hashicorp/go-kms-wrapping/wrappers/aead/v2 v2.0.7-1/go.mod h1:b99cDSA+OzcyRoBZroSf174/ss/e6gUuS45wue9ZQfc=
 github.com/hashicorp/go-kms-wrapping/wrappers/alicloudkms/v2 v2.0.1 h1:ydUCtmr8f9F+mHZ1iCsvzqFTXqNVpewX3s9zcYipMKI=
 github.com/hashicorp/go-kms-wrapping/wrappers/alicloudkms/v2 v2.0.1/go.mod h1:Sl/ffzV57UAyjtSg1h5Km0rN5+dtzZJm1CUztkoCW2c=
-github.com/hashicorp/go-kms-wrapping/wrappers/awskms/v2 v2.0.7 h1:E3eEWpkofgPNrYyYznfS1+drq4/jFcqHQVNcL7WhUCo=
-github.com/hashicorp/go-kms-wrapping/wrappers/awskms/v2 v2.0.7/go.mod h1:j5vefRoguQUG7iM4reS/hKIZssU1lZRqNPM5Wow6UnM=
 github.com/hashicorp/go-kms-wrapping/wrappers/azurekeyvault/v2 v2.0.7 h1:X27JWuPW6Gmi2l7NMm0pvnp7z7hhtns2TeIOQU93mqI=
 github.com/hashicorp/go-kms-wrapping/wrappers/azurekeyvault/v2 v2.0.7/go.mod h1:i7Dt9mDsVUQG/I639jtdQerliaO2SvvPnpYPhZ8CGZ4=
 github.com/hashicorp/go-kms-wrapping/wrappers/gcpckms/v2 v2.0.8 h1:16I8OqBEuxZIowwn3jiLvhlx+z+ia4dJc9stvz0yUBU=

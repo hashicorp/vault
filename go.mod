@@ -22,6 +22,8 @@ replace github.com/hashicorp/vault/api/auth/userpass => ./api/auth/userpass
 
 replace github.com/hashicorp/vault/sdk => ./sdk
 
+replace github.com/hashicorp/go-kms-wrapping/wrappers/awskms/v2 => github.com/bdwyertech/go-kms-wrapping/wrappers/awskms/v2 v2.0.2-0.20230719021057-55b7d25830fb
+
 require (
 	cloud.google.com/go/monitoring v1.13.0
 	cloud.google.com/go/spanner v1.45.0
