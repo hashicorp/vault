@@ -4,7 +4,6 @@
  */
 
 // a map of keyCode for use in keyboard event handlers
-// TODO have not replaced previous imports
 export default {
   ENTER: 13,
   ESC: 27,
