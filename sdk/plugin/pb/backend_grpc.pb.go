@@ -644,9 +644,6 @@ type SystemViewClient interface {
 	GeneratePasswordFromPolicy(ctx context.Context, in *GeneratePasswordFromPolicyRequest, opts ...grpc.CallOption) (*GeneratePasswordFromPolicyReply, error)
 	// ClusterInfo returns the ClusterID information; may be reused if ClusterName is also exposed.
 	ClusterInfo(ctx context.Context, in *Empty, opts ...grpc.CallOption) (*ClusterInfoReply, error)
-	// APILockShouldBlockRequest returns whether a namespace for the requested
-	// mount is locked and should be blocked
-	APILockShouldBlockRequest(ctx context.Context, in *Empty, opts ...grpc.CallOption) (*APILockShouldBlockRequestReply, error)
 }
 
 type systemViewClient struct {
@@ -774,15 +771,6 @@ func (c *systemViewClient) ClusterInfo(ctx context.Context, in *Empty, opts ...g
 	return out, nil
 }
 
-func (c *systemViewClient) APILockShouldBlockRequest(ctx context.Context, in *Empty, opts ...grpc.CallOption) (*APILockShouldBlockRequestReply, error) {
-	out := new(APILockShouldBlockRequestReply)
-	err := c.cc.Invoke(ctx, "/pb.SystemView/APILockShouldBlockRequest", in, out, opts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
 // SystemViewServer is the server API for SystemView service.
 // All implementations must embed UnimplementedSystemViewServer
 // for forward compatibility
@@ -827,9 +815,6 @@ type SystemViewServer interface {
 	GeneratePasswordFromPolicy(context.Context, *GeneratePasswordFromPolicyRequest) (*GeneratePasswordFromPolicyReply, error)
 	// ClusterInfo returns the ClusterID information; may be reused if ClusterName is also exposed.
 	ClusterInfo(context.Context, *Empty) (*ClusterInfoReply, error)
-	// APILockShouldBlockRequest returns whether a namespace for the requested
-	// mount is locked and should be blocked
-	APILockShouldBlockRequest(context.Context, *Empty) (*APILockShouldBlockRequestReply, error)
 	mustEmbedUnimplementedSystemViewServer()
 }
 
@@ -875,9 +860,6 @@ func (UnimplementedSystemViewServer) GeneratePasswordFromPolicy(context.Context,
 }
 func (UnimplementedSystemViewServer) ClusterInfo(context.Context, *Empty) (*ClusterInfoReply, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method ClusterInfo not implemented")
-}
-func (UnimplementedSystemViewServer) APILockShouldBlockRequest(context.Context, *Empty) (*APILockShouldBlockRequestReply, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method APILockShouldBlockRequest not implemented")
 }
 func (UnimplementedSystemViewServer) mustEmbedUnimplementedSystemViewServer() {}
 
@@ -1126,24 +1108,6 @@ func _SystemView_ClusterInfo_Handler(srv interface{}, ctx context.Context, dec f
 	return interceptor(ctx, in, info, handler)
 }
 
-func _SystemView_APILockShouldBlockRequest_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(Empty)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(SystemViewServer).APILockShouldBlockRequest(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: "/pb.SystemView/APILockShouldBlockRequest",
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(SystemViewServer).APILockShouldBlockRequest(ctx, req.(*Empty))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
 // SystemView_ServiceDesc is the grpc.ServiceDesc for SystemView service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -1202,10 +1166,6 @@ var SystemView_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "ClusterInfo",
 			Handler:    _SystemView_ClusterInfo_Handler,
-		},
-		{
-			MethodName: "APILockShouldBlockRequest",
-			Handler:    _SystemView_APILockShouldBlockRequest_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},
