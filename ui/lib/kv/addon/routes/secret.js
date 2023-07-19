@@ -20,9 +20,4 @@ export default class KvSecretRoute extends Route {
       secret: this.store.queryRecord('kv/data', { backend, path }),
     });
   }
-
-  setupController(controller, resolvedModel) {
-    super.setupController(controller, resolvedModel);
-    controller.breadcrumbs = [{ label: resolvedModel.backend, route: 'list' }, { label: 'create' }];
-  }
 }
