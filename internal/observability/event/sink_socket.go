@@ -110,7 +110,7 @@ func (s *SocketSink) Reopen() error {
 }
 
 // Type describes the type of this node (sink).
-func (s *SocketSink) Type() eventlogger.NodeType {
+func (_ *SocketSink) Type() eventlogger.NodeType {
 	return eventlogger.NodeTypeSink
 }
 

@@ -65,11 +65,11 @@ func (s *SyslogSink) Process(ctx context.Context, e *eventlogger.Event) (*eventl
 }
 
 // Reopen is a no-op for a syslog sink.
-func (s *SyslogSink) Reopen() error {
+func (_ *SyslogSink) Reopen() error {
 	return nil
 }
 
 // Type describes the type of this node (sink).
-func (s *SyslogSink) Type() eventlogger.NodeType {
+func (_ *SyslogSink) Type() eventlogger.NodeType {
 	return eventlogger.NodeTypeSink
 }

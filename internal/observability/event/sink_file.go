@@ -142,7 +142,7 @@ func (f *FileSink) Reopen() error {
 }
 
 // Type describes the type of this node (sink).
-func (f *FileSink) Type() eventlogger.NodeType {
+func (_ *FileSink) Type() eventlogger.NodeType {
 	return eventlogger.NodeTypeSink
 }
 
