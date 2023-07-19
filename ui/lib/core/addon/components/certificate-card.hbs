@@ -1,4 +1,8 @@
-<div class="box is-rounded column is-half is-flex-row certificate-container">
+<Hds::Card::Container
+  @level="mid"
+  @hasBorder={{true}}
+  class="certificate-container is-flex-row has-top-padding-m has-bottom-padding-m"
+>
   <span class="has-left-margin-s">
     <Icon @name="certificate" @size="24" data-test-certificate-icon />
   </span>
@@ -22,4 +26,4 @@
       <Icon @name="clipboard-copy" aria-label="Copy" />
     </CopyButton>
   </div>
-</div>
+</Hds::Card::Container>
