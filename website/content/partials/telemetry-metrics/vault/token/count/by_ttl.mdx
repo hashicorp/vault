@@ -1,5 +1,8 @@
 ### vault.token.count.by_ttl ((#vault-token-count-by_ttl))
 
-Metric type | Value | Description
------------ | ----- | -----------
-BLAH     | BLAH    | BLAH
+Metric type | Value   | Description
+----------- | ------- | -----------
+gauge       | integer | Total number of service tokens assigned a particular TTL
+
+Vault organizes the token count by cluster, namespace, and the time to live
+range assigned at creation.
