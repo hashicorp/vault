@@ -29,16 +29,28 @@ var (
 )
 
 // NewEventFormatter should be used to create an EventFormatter.
-func NewEventFormatter(config FormatterConfig, salter Salter) (*EventFormatter, error) {
+// Accepted options: WithPrefix.
+func NewEventFormatter(config FormatterConfig, salter Salter, opt ...Option) (*EventFormatter, error) {
 	const op = "audit.NewEventFormatter"
 
 	if salter == nil {
 		return nil, fmt.Errorf("%s: cannot create a new audit formatter with nil salter: %w", op, event.ErrInvalidParameter)
 	}
 
+	// We need to ensure that the format isn't just some default empty string.
+	if err := config.RequiredFormat.validate(); err != nil {
+		return nil, fmt.Errorf("%s: format not valid: %w", op, err)
+	}
+
+	opts, err := getOpts(opt...)
+	if err != nil {
+		return nil, fmt.Errorf("%s: error applying options: %w", op, err)
+	}
+
 	return &EventFormatter{
 		salter: salter,
 		config: config,
+		prefix: opts.withPrefix,
 	}, nil
 }
 
@@ -108,6 +120,14 @@ func (f *EventFormatter) Process(ctx context.Context, e *eventlogger.Event) (*ev
 		if result == nil {
 			return nil, fmt.Errorf("%s: encoded JSONx was nil: %w", op, err)
 		}
+	}
+
+	// This makes a bit of a mess of the 'format' since both JSON and XML (JSONx)
+	// don't support a prefix just sitting there.
+	// However, this would be a breaking change to how Vault currently works to
+	// include the prefix as part of the JSON object or XML document.
+	if f.prefix != "" {
+		result = append([]byte(f.prefix), result...)
 	}
 
 	// Store the final format.

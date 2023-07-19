@@ -51,6 +51,7 @@ type options struct {
 	withNow     time.Time
 	withSubtype subtype
 	withFormat  format
+	withPrefix  string
 }
 
 // Salter is an interface that provides a way to obtain a Salt for hashing.
@@ -81,6 +82,7 @@ type Writer interface {
 type EventFormatter struct {
 	salter Salter
 	config FormatterConfig
+	prefix string
 }
 
 // EventFormatterWriter should be used to format and write out audit requests and responses.

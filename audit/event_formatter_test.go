@@ -54,9 +54,11 @@ func TestNewEventFormatter(t *testing.T) {
 	tests := map[string]struct {
 		UseStaticSalt        bool
 		Config               FormatterConfig
+		Options              []Option // Only supports WithPrefix
 		IsErrorExpected      bool
 		ExpectedErrorMessage string
 		ExpectedFormat       format
+		ExpectedPrefix       string
 	}{
 		"nil-salter": {
 			UseStaticSalt:        false,
@@ -66,13 +68,14 @@ func TestNewEventFormatter(t *testing.T) {
 		"static-salter": {
 			UseStaticSalt:   true,
 			IsErrorExpected: false,
+			Config:          FormatterConfig{RequiredFormat: JSONFormat},
 			ExpectedFormat:  JSONFormat,
 		},
 		"default": {
-			UseStaticSalt:   true,
-			Config:          FormatterConfig{},
-			IsErrorExpected: false,
-			ExpectedFormat:  JSONFormat,
+			UseStaticSalt:        true,
+			Config:               FormatterConfig{},
+			IsErrorExpected:      true,
+			ExpectedErrorMessage: "audit.NewEventFormatter: format not valid: audit.(format).validate: '' is not a valid format: invalid parameter",
 		},
 		"config-json": {
 			UseStaticSalt:   true,
@@ -86,6 +89,22 @@ func TestNewEventFormatter(t *testing.T) {
 			IsErrorExpected: false,
 			ExpectedFormat:  JSONxFormat,
 		},
+		"config-json-prefix": {
+			UseStaticSalt:   true,
+			Config:          FormatterConfig{RequiredFormat: JSONFormat},
+			Options:         []Option{WithPrefix("foo")},
+			IsErrorExpected: false,
+			ExpectedFormat:  JSONFormat,
+			ExpectedPrefix:  "foo",
+		},
+		"config-jsonx-prefix": {
+			UseStaticSalt:   true,
+			Config:          FormatterConfig{RequiredFormat: JSONxFormat},
+			Options:         []Option{WithPrefix("foo")},
+			IsErrorExpected: false,
+			ExpectedFormat:  JSONxFormat,
+			ExpectedPrefix:  "foo",
+		},
 	}
 
 	for name, tc := range tests {
@@ -98,7 +117,7 @@ func TestNewEventFormatter(t *testing.T) {
 				ss = newStaticSalt(t)
 			}
 
-			f, err := NewEventFormatter(tc.Config, ss)
+			f, err := NewEventFormatter(tc.Config, ss, tc.Options...)
 
 			switch {
 			case tc.IsErrorExpected:
@@ -108,6 +127,8 @@ func TestNewEventFormatter(t *testing.T) {
 			default:
 				require.NoError(t, err)
 				require.NotNil(t, f)
+				require.Equal(t, tc.ExpectedFormat, f.config.RequiredFormat)
+				require.Equal(t, tc.ExpectedPrefix, f.prefix)
 			}
 		})
 	}
@@ -116,7 +137,7 @@ func TestNewEventFormatter(t *testing.T) {
 // TestEventFormatter_Reopen ensures that we do not get an error when calling Reopen.
 func TestEventFormatter_Reopen(t *testing.T) {
 	ss := newStaticSalt(t)
-	cfg := FormatterConfig{}
+	cfg := FormatterConfig{RequiredFormat: JSONFormat}
 
 	f, err := NewEventFormatter(cfg, ss)
 	require.NoError(t, err)
@@ -127,7 +148,7 @@ func TestEventFormatter_Reopen(t *testing.T) {
 // TestEventFormatter_Type ensures that the node is a 'formatter' type.
 func TestEventFormatter_Type(t *testing.T) {
 	ss := newStaticSalt(t)
-	cfg := FormatterConfig{}
+	cfg := FormatterConfig{RequiredFormat: JSONFormat}
 
 	f, err := NewEventFormatter(cfg, ss)
 	require.NoError(t, err)

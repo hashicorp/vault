@@ -98,7 +98,7 @@ func TestFormatJSON_formatRequest(t *testing.T) {
 
 	for name, tc := range cases {
 		var buf bytes.Buffer
-		f, err := NewEventFormatter(FormatterConfig{}, ss)
+		f, err := NewEventFormatter(FormatterConfig{RequiredFormat: JSONFormat}, ss)
 		require.NoError(t, err)
 		formatter := EventFormatterWriter{
 			Formatter: f,

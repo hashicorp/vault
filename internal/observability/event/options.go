@@ -28,7 +28,6 @@ type options struct {
 	withSocketType  string
 	withMaxDuration time.Duration
 	withFileMode    *os.FileMode
-	withPrefix      string
 }
 
 // getDefaultOptions returns Options with their default values.
@@ -190,19 +189,6 @@ func WithFileMode(mode string) Option {
 		default:
 			m := os.FileMode(raw)
 			o.withFileMode = &m
-		}
-
-		return nil
-	}
-}
-
-// WithPrefix provides an Option to represent a prefix for a file sink.
-func WithPrefix(prefix string) Option {
-	return func(o *options) error {
-		prefix = strings.TrimSpace(prefix)
-
-		if prefix != "" {
-			o.withPrefix = prefix
 		}
 
 		return nil

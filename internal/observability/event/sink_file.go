@@ -29,11 +29,10 @@ type FileSink struct {
 	fileMode       os.FileMode
 	path           string
 	requiredFormat string
-	prefix         string
 }
 
 // NewFileSink should be used to create a new FileSink.
-// Accepted options: WithFileMode and WithPrefix.
+// Accepted options: WithFileMode.
 func NewFileSink(path string, format string, opt ...Option) (*FileSink, error) {
 	const op = "event.NewFileSink"
 
@@ -70,7 +69,6 @@ func NewFileSink(path string, format string, opt ...Option) (*FileSink, error) {
 		fileMode:       mode,
 		requiredFormat: format,
 		path:           p,
-		prefix:         opts.withPrefix,
 	}
 
 	// Ensure that the file can be successfully opened for writing;
@@ -196,14 +194,6 @@ func (f *FileSink) log(data []byte) error {
 
 	if err := f.open(); err != nil {
 		return fmt.Errorf("%s: unable to open file for sink: %w", op, err)
-	}
-
-	// Write prefix before the data if required.
-	if f.prefix != "" {
-		_, err := f.file.Write([]byte(f.prefix))
-		if err != nil {
-			return fmt.Errorf("%s: unable to write prefix %q for sink: %w", op, f.prefix, err)
-		}
 	}
 
 	if _, err := reader.WriteTo(f.file); err == nil {

@@ -196,6 +196,51 @@ func TestOptions_WithID(t *testing.T) {
 	}
 }
 
+// TestOptions_WithPrefix exercises WithPrefix Option to ensure it performs as expected.
+func TestOptions_WithPrefix(t *testing.T) {
+	tests := map[string]struct {
+		Value                string
+		IsErrorExpected      bool
+		ExpectedErrorMessage string
+		ExpectedValue        string
+	}{
+		"empty": {
+			Value:           "",
+			IsErrorExpected: false,
+			ExpectedValue:   "",
+		},
+		"whitespace": {
+			Value:                "     ",
+			IsErrorExpected:      false,
+			ExpectedErrorMessage: "",
+		},
+		"valid": {
+			Value:           "test",
+			IsErrorExpected: false,
+			ExpectedValue:   "test",
+		},
+	}
+
+	for name, tc := range tests {
+		name := name
+		tc := tc
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+			options := &options{}
+			applyOption := WithPrefix(tc.Value)
+			err := applyOption(options)
+			switch {
+			case tc.IsErrorExpected:
+				require.Error(t, err)
+				require.EqualError(t, err, tc.ExpectedErrorMessage)
+			default:
+				require.NoError(t, err)
+				require.Equal(t, tc.ExpectedValue, options.withPrefix)
+			}
+		})
+	}
+}
+
 // TestOptions_Default exercises getDefaultOptions to assert the default values.
 func TestOptions_Default(t *testing.T) {
 	opts := getDefaultOptions()

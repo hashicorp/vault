@@ -71,7 +71,7 @@ func TestNewFileSink(t *testing.T) {
 		"prefix": {
 			Path:             "vault.log",
 			Format:           "json",
-			Options:          []Option{WithFileMode("0007"), WithPrefix("bleep")},
+			Options:          []Option{WithFileMode("0007")},
 			IsErrorExpected:  false,
 			ExpectedPrefix:   "bleep",
 			ExpectedFormat:   "json",
@@ -106,7 +106,6 @@ func TestNewFileSink(t *testing.T) {
 				require.NotNil(t, sink)
 
 				// Assert properties are correct.
-				require.Equal(t, tc.ExpectedPrefix, sink.prefix)
 				require.Equal(t, tc.ExpectedFormat, sink.requiredFormat)
 				require.Equal(t, tc.ExpectedFileMode, sink.fileMode)
 

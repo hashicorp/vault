@@ -98,3 +98,16 @@ func WithFormat(f string) Option {
 		return nil
 	}
 }
+
+// WithPrefix provides an Option to represent a prefix for a file sink.
+func WithPrefix(prefix string) Option {
+	return func(o *options) error {
+		prefix = strings.TrimSpace(prefix)
+
+		if prefix != "" {
+			o.withPrefix = prefix
+		}
+
+		return nil
+	}
+}
