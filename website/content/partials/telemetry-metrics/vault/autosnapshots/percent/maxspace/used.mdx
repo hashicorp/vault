@@ -4,5 +4,7 @@ Metric type | Value      | Description
 ----------- | ---------- | -----------
 gauge       | percentage | The percentage of space currently used on local storage (disk) by saved snapshots
 
-The percentage of used space is relative to the maximum allocated space for
-snapshots, not the total available space on local storage.
+Vault only populates the `vault.autosnapshots.percent.maxspace.used` metric when
+the storage type for autosnapshot is `local`. The percentage of used space is
+relative to the maximum allocated space for snapshots, not the total available
+space on local storage.
