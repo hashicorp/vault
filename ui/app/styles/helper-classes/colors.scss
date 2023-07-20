@@ -30,7 +30,8 @@
 }
 
 .has-error-border,
-select.has-error-border {
+select.has-error-border,
+.ttl-picker-form-field-error input {
   border: 1px solid $red-500;
 }
 

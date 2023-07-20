@@ -139,6 +139,7 @@
       {{#let (or (get @model this.valuePath) @attr.options.setDefault) as |initialValue|}}
         <TtlPicker
           data-test-input={{@attr.name}}
+          class={{if this.validationError "ttl-picker-form-field-error"}}
           @onChange={{this.setAndBroadcastTtl}}
           @label={{this.labelString}}
           @helperTextDisabled={{or @attr.options.helperTextDisabled "Vault will use the default lease duration."}}
@@ -149,6 +150,9 @@
           @hideToggle={{@attr.options.hideToggle}}
         />
       {{/let}}
+      {{#if this.validationError}}
+        <AlertInline @type="danger" @message={{this.validationError}} />
+      {{/if}}
     </div>
   {{else if (eq @attr.options.editType "regex")}}
     {{! Regex Validated Input }}
@@ -266,6 +270,7 @@
             @theme={{or @attr.options.theme "hashi"}}
             @helpText={{@attr.options.helpText}}
             @mode={{@attr.options.mode}}
+            @example={{@attr.options.example}}
           >
             {{#if @attr.options.allowReset}}
               <button
@@ -280,6 +285,9 @@
               </button>
             {{/if}}
           </JsonEditor>
+          {{#if this.validationError}}
+            <AlertInline @type="danger" @message={{this.validationError}} @paddingTop={{true}} />
+          {{/if}}
         {{/let}}
         {{#if @attr.options.subText}}
           <p class="sub-text">
@@ -360,6 +368,7 @@
       @value={{if (get @model this.valuePath) (stringify (get @model this.valuePath)) this.emptyData}}
       @valueUpdated={{fn this.codemirrorUpdated false}}
       @helpText={{@attr.options.helpText}}
+      @example={{@attr.options.example}}
     />
   {{else if (eq @attr.options.editType "yield")}}
     {{yield}}

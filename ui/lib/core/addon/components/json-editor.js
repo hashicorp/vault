@@ -26,11 +26,18 @@ import { action } from '@ember/object';
  * @param {String} [theme] - Specify or customize the look via a named "theme" class in scss.
  * @param {String} [value] - Value within the display. Generally, a json string.
  * @param {String} [viewportMargin] - Size of viewport. Often set to "Infinity" to load/show all text regardless of length.
+ * @param {string} [example] - Example to show when value is null -- when example is provided a restore action will render in the toolbar to clear the current value and show the example after input
  */
 
 export default class JsonEditorComponent extends Component {
   get getShowToolbar() {
     return this.args.showToolbar === false ? false : true;
+  }
+
+  @action
+  onSetup(editor) {
+    // store reference to codemirror editor so that it can be passed to valueUpdated when restoring example
+    this._codemirrorEditor = editor;
   }
 
   @action
@@ -46,5 +53,11 @@ export default class JsonEditorComponent extends Component {
     if (this.args.onFocusOut) {
       this.args.onFocusOut(...args);
     }
+  }
+
+  @action
+  restoreExample() {
+    // set value to null which will cause the example value to be passed into the editor
+    this.args.valueUpdated(null, this._codemirrorEditor);
   }
 }
