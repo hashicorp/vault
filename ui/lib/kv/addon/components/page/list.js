@@ -8,6 +8,8 @@ import { inject as service } from '@ember/service';
 import { action } from '@ember/object';
 import { tracked } from '@glimmer/tracking';
 import { getOwner } from '@ember/application';
+import { ancestorKeysForKey } from 'core/utils/key-utils';
+import errorMessage from 'vault/utils/error-message';
 
 /**
  * @module List
@@ -21,6 +23,7 @@ import { getOwner } from '@ember/application';
 export default class KvListPageComponent extends Component {
   @service flashMessages;
   @service router;
+
   @tracked secretPath = '';
 
   get mountPoint() {
@@ -29,8 +32,21 @@ export default class KvListPageComponent extends Component {
   }
 
   @action
-  onDelete() {
-    // todo
+  async onDelete(model) {
+    try {
+      const message = `Successfully deleted secret ${model.fullSecretPath}.`;
+      await model.destroyRecord();
+      this.flashMessages.success(message);
+      // if you've deleted a secret from within a directory, transition to its parent directory.
+      if (this.args.routeName === 'list-directory') {
+        const ancestors = ancestorKeysForKey(model.fullSecretPath);
+        const nearest = ancestors.pop();
+        this.router.transitionTo(`${this.mountPoint}.list-directory`, nearest);
+      }
+    } catch (error) {
+      const message = errorMessage(error, 'Error deleting secret. Please try again or contact support.');
+      this.flashMessages.danger(message);
+    }
   }
 
   @action

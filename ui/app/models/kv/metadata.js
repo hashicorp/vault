@@ -4,6 +4,7 @@
  */
 
 import Model, { attr } from '@ember-data/model';
+import lazyCapabilities, { apiPath } from 'vault/macros/lazy-capabilities';
 import { withModelValidations } from 'vault/decorators/model-validations';
 import { withFormFields } from 'vault/decorators/model-form-fields';
 import { pathIsDirectory } from 'vault/lib/kv-breadcrumbs';
@@ -64,5 +65,25 @@ export default class KvSecretMetadataModel extends Model {
   get pathIsDirectory() {
     // ex: beep/
     return pathIsDirectory(this.path);
+  }
+
+  // permissions needed for the list view where kv/data has not yet been called. Allows us to conditionally show action items in the LinkedBlock popups.
+  @lazyCapabilities(apiPath`${'backend'}/data/${'path'}`, 'backend', 'path') dataPath;
+  @lazyCapabilities(apiPath`${'backend'}/metadata/${'path'}`, 'backend', 'path') metadataPath;
+
+  get canListMetadata() {
+    return this.metadataPath.get('canList');
+  }
+  get canDeleteMetadata() {
+    return this.metadataPath.get('canDelete');
+  }
+  get canReadMetadata() {
+    return this.metadataPath.get('canRead');
+  }
+  get canReadData() {
+    return this.dataPath.get('canRead');
+  }
+  get canEditData() {
+    return this.dataPath.get('canUpdate');
   }
 }
