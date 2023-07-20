@@ -1,7 +1,7 @@
 # Copyright (c) HashiCorp, Inc.
 # SPDX-License-Identifier: MPL-2.0
 
-scenario "agent" {
+scenario "proxy" {
   matrix {
     arch            = ["amd64", "arm64"]
     artifact_source = ["local", "crt", "artifactory"]
@@ -18,6 +18,7 @@ scenario "agent" {
   ]
 
   locals {
+    backend_tag_key = "VaultStorage"
     build_tags = {
       "oss"              = ["ui"]
       "ent"              = ["ui", "enterprise", "ent"]
@@ -135,8 +136,8 @@ scenario "agent" {
     }
   }
 
-  step "start_vault_agent" {
-    module = "vault_agent"
+  step "start_vault_proxy" {
+    module = "vault_proxy"
     depends_on = [
       step.build_vault,
       step.create_vault_cluster,
@@ -147,28 +148,8 @@ scenario "agent" {
     }
 
     variables {
-      vault_instances                  = step.create_vault_cluster_targets.hosts
-      vault_root_token                 = step.create_vault_cluster.root_token
-      vault_agent_template_destination = "/tmp/agent_output.txt"
-      vault_agent_template_contents    = "{{ with secret \\\"auth/token/lookup-self\\\" }}orphan={{ .Data.orphan }} display_name={{ .Data.display_name }}{{ end }}"
-    }
-  }
-
-  step "verify_vault_agent_output" {
-    module = module.vault_verify_agent_output
-    depends_on = [
-      step.create_vault_cluster,
-      step.start_vault_agent,
-    ]
-
-    providers = {
-      enos = local.enos_provider[matrix.distro]
-    }
-
-    variables {
-      vault_instances                  = step.create_vault_cluster_targets.hosts
-      vault_agent_template_destination = "/tmp/agent_output.txt"
-      vault_agent_expected_output      = "orphan=true display_name=approle"
+      vault_instances  = step.create_vault_cluster_targets.hosts
+      vault_root_token = step.create_vault_cluster.root_token
     }
   }
 
@@ -225,10 +206,5 @@ scenario "agent" {
   output "unseal_keys_hex" {
     description = "The Vault cluster unseal keys hex"
     value       = step.create_vault_cluster.unseal_keys_hex
-  }
-
-  output "vault_audit_device_file_path" {
-    description = "The file path for the file audit device, if enabled"
-    value       = step.create_vault_cluster.audit_device_file_path
   }
 }
