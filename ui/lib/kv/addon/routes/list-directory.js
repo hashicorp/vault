@@ -34,6 +34,9 @@ export default class KvSecretsListRoute extends Route {
           : models;
       })
       .catch((err) => {
+        if (err.httpStatus === 403) {
+          return 403;
+        }
         if (err.httpStatus === 404) {
           this.has404 = true;
           return [];
@@ -52,6 +55,9 @@ export default class KvSecretsListRoute extends Route {
 
   setupController(controller, resolvedModel) {
     super.setupController(controller, resolvedModel);
+    if (resolvedModel.secrets === 403) {
+      resolvedModel.noMetadataListPermissions = true;
+    }
     controller.routeName = this.routeName;
     let breadcrumbsArray = [
       { label: 'secrets', route: 'secrets', linkExternal: true },

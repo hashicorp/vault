@@ -14,6 +14,7 @@ import { getOwner } from '@ember/application';
  *
  * @param {array} model - An array of models generated form kv/metadata query.
  * @param {array} breadcrumbs - Breadcrumbs as an array of objects that contain label, route, and modelId. They are updated via the util kv-breadcrumbs to handle dynamic *pathToSecret on the list-directory route.
+ * @param {boolean} noMetadataListPermissions - true if the return to query metadata LIST is 403, indicating the user does not have permissions to that endpoint.
  */
 
 export default class KvListPageComponent extends Component {
