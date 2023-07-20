@@ -19,7 +19,7 @@ This endpoint returns the total number of Entities.
 | :----- | :-------------------------------- |
 | `GET`  | `/sys/internal/counters/entities` |
 
-### Sample Request
+### Sample request
 
 ```shell-session
 $ curl \
@@ -28,7 +28,7 @@ $ curl \
     http://127.0.0.1:8200/v1/sys/internal/counters/entities
 ```
 
-### Sample Response
+### Sample response
 
 ```json
 {
@@ -57,7 +57,7 @@ This endpoint returns the total number of Tokens.
 | :----- | :------------------------------ |
 | `GET`  | `/sys/internal/counters/tokens` |
 
-### Sample Request
+### Sample request
 
 ```shell-session
 $ curl \
@@ -66,7 +66,7 @@ $ curl \
     http://127.0.0.1:8200/v1/sys/internal/counters/tokens
 ```
 
-### Sample Response
+### Sample response
 
 ```json
 {
@@ -87,7 +87,7 @@ $ curl \
 }
 ```
 
-## Client Count
+## Client count
 
 This endpoint returns client activity information for a given billing
 period, which is represented by the `start_time` and `end_time` parameters.
@@ -352,7 +352,7 @@ This endpoint was added in Vault 1.6.
   explicitly provide a start and end time.
 
 
-### Sample Request
+### Sample request
 
 ```shell-session
 $ curl \
@@ -361,7 +361,7 @@ $ curl \
     http://127.0.0.1:8200/v1/sys/internal/counters/activity
 ```
 
-### Sample Response
+### Sample response
 
 ```json
 {
@@ -718,7 +718,7 @@ $ curl \
     http://127.0.0.1:8200/v1/sys/internal/counters/activity?end_time=2020-06-30T00%3A00%3A00Z&start_time=2020-06-01T00%3A00%3A00Z&limit_namespaces=2
 ```
 
-## Partial Month Client Count
+## Partial month client count
 
 This endpoint returns the client activity in the current month. The response
 will have activity attributions per namespace, per mount within each namespaces,
@@ -737,7 +737,7 @@ This endpoint was added in Vault 1.7.
 | :----- | :---------------------------------------- |
 | `GET`  | `/sys/internal/counters/activity/monthly` |
 
-### Sample Request
+### Sample request
 
 ```shell-session
 $ curl \
@@ -746,7 +746,7 @@ $ curl \
     http://127.0.0.1:8200/v1/sys/internal/counters/activity/monthly
 ```
 
-### Sample Response
+### Sample response
 
 ```json
 {
@@ -861,7 +861,7 @@ $ curl \
 }
 ```
 
-## Update the Client Count Configuration
+## Update the client count configuration
 
 The `/sys/internal/counters/config` endpoint is used to configure logging of active clients.
 
@@ -879,7 +879,7 @@ The `/sys/internal/counters/config` endpoint is used to configure logging of act
 
 Any missing parameters are left at their existing value.
 
-### Sample Payload
+### Sample payload
 
 ```json
 {
@@ -889,7 +889,7 @@ Any missing parameters are left at their existing value.
 }
 ```
 
-### Sample Request
+### Sample request
 
 ```shell-session
 $ curl \
@@ -899,7 +899,7 @@ $ curl \
     http://127.0.0.1:8200/v1/sys/internal/counters/config
 ```
 
-## Read the Client Count Configuration
+## Read the client count configuration
 
 Reading the configuration shows the current settings, as well as a flag as to whether any data can be queried.
 
@@ -907,7 +907,7 @@ Reading the configuration shows the current settings, as well as a flag as to wh
 - `queries_available` `(bool)` - indicates whether any usage report is available. This will initially be
   false until the end of the first calendar month after the feature is enabled.
 
-### Sample Request
+### Sample request
 
 ```shell-session
 $ curl \
@@ -916,7 +916,7 @@ $ curl \
     http://127.0.0.1:8200/v1/sys/internal/counters/config
 ```
 
-### Sample Response
+### Sample response
 
 ```json
 {
@@ -936,7 +936,7 @@ $ curl \
 }
 ```
 
-## Activity Export
+## Activity export
 
 This endpoint returns an export of the clients that had activity within the
 provided start and end times. The returned set of client information will be
@@ -973,7 +973,7 @@ This endpoint was added in Vault 1.11.
     values are `csv` and `json`. If no format is provided a default of `json`
     will be used.
 
-### Sample Request
+### Sample request
 
 ```shell-session
 $ curl \
@@ -982,7 +982,7 @@ $ curl \
     http://127.0.0.1:8200/v1/sys/internal/counters/activity/export
 ```
 
-### Sample Response
+### Sample response
 
 ```json
 {"client_id":"3f210722-7210-98e8-1f0d-e6a39ffb29c6","namespace_id":"root","timestamp":1653350457,"mount_accessor":"auth_userpass_bb52979d"}
