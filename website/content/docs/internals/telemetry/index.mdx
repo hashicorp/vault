@@ -2,20 +2,38 @@
 layout: docs
 page_title: Telemetry
 description: |-
-  Learn about the telemetry data available in Vault.
+  Learn about the telemetry data available in Vault
 ---
 
 # Telemetry
 
-The Vault server process collects various runtime metrics about the performance of different libraries and subsystems. These metrics are aggregated on a ten-second interval and retained for one minute in memory. Telemetry from Vault must be stored in metrics aggregation software to monitor Vault and collect durable metrics.
+The Vault server process collects various runtime metrics about the performance
+of different libraries and subsystems. These metrics are aggregated on a
+10-second interval and retained for one minute in memory. High-cardinality
+metrics, like `vault.kv.secret.count`, report every 10 minutes or at an interval
+configured with in the `telemetry` stanza.
 
-To view the raw data, you must send a signal to the Vault process: on Unix-style operating systems, this is `USR1`, while on Windows, it is `BREAK`. When the Vault process receives this signal, it will dump the current telemetry information to the process's `stderr`.
+@include 'telemetry/supported-aggregation-agents.mdx'
 
-This telemetry information can be used for debugging purposes and provides users with insights into Vault's runtime.
+<Important>
+  Telemetry from Vault must be streamed and stored in metrics aggregation
+  software to monitor Vault and collect durable metrics.
+</Important>
 
-Telemetry information can also be streamed directly from Vault to a range of metrics aggregation solutions as described in the [telemetry Stanza][telemetry-stanza] documentation.
+## Working with raw telemetry data
 
-The following is an example of a telemetry dump snippet:
+You can view raw telemetry data for debugging purposes by interrupting the Vault
+process with `USR1` (on *nix) or `BREAK` (on Windows). When the Vault process
+receives this signal, it dumps telemetry data for the last 10 seconds to
+`stderr`.
+
+Raw telemetry data is prefixed with the relevant metric type:
+
+- **`[C]`** indicates the metric is a **counter**.
+- **`[G]`** indicates the metric is a **gauge**.
+- **`[S]`** indicates the metric is a **summary**.
+
+## Example raw telemetry dump
 
 ```text
 [2017-12-19 20:37:50 +0000 UTC][G] 'vault.7f320e57f9fe.expire.num_leases': 5100.000
@@ -48,8 +66,3 @@ The following is an example of a telemetry dump snippet:
 [2017-12-19 20:38:00 +0000 UTC][S] 'vault.merkle.flushDirty': Count: 100 Min: 0.006 Mean: 0.024 Max: 0.098 Stddev: 0.019 Sum: 2.386 LastUpdated: 2017-12-19 20:38:09.848158309 +0000 UTC m=+10473.691527099
 ```
 
-You'll note that log entries are prefixed with the metric type as follows:
-
-- **[C]** is a counter. Counters are cumulative metrics that are incremented when some event occurs, and resets at the end of reporting intervals. Vault retains counters and other metrics for one minute in-memory, so an [aggregation solution][telemetry-stanza] must be configured to see accurate and persistent counters over time.
-- **[G]** is a gauge. Gauges provide measurements of current values.
-- **[S]** is a summary. Summaries provide sample observations of values. Vault commonly uses summaries for measuring the timing duration of discrete events in the reporting interval.

@@ -76,7 +76,7 @@
             "title": "Metric reference",
             "routes": [
               {
-                "title": "Metric labels",
+                "title": "Overview",
                 "path": "internals/telemetry/metrics"
               },
               {
