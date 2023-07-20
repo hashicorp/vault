@@ -28,7 +28,7 @@ var (
 	_ eventlogger.Node = (*EntryFormatter)(nil)
 )
 
-// NewEntryFormatter should be used to create an EventFormatter.
+// NewEntryFormatter should be used to create an EntryFormatter.
 // Accepted options: WithPrefix.
 func NewEntryFormatter(config FormatterConfig, salter Salter, opt ...Option) (*EntryFormatter, error) {
 	const op = "audit.NewEntryFormatter"
@@ -67,7 +67,7 @@ func (_ *EntryFormatter) Type() eventlogger.NodeType {
 // Process will attempt to parse the incoming event data into a corresponding
 // audit Request/Response which is serialized to JSON/JSONx and stored within the event.
 func (f *EntryFormatter) Process(ctx context.Context, e *eventlogger.Event) (*eventlogger.Event, error) {
-	const op = "audit.(EventFormatter).Process"
+	const op = "audit.(EntryFormatter).Process"
 
 	select {
 	case <-ctx.Done():

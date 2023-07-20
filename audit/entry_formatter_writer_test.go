@@ -86,8 +86,8 @@ func (fw *testingFormatWriter) hashExpectedValueForComparison(input map[string]i
 	return copiedAsMap
 }
 
-// TestNewEventFormatterWriter tests that creating a new EventFormatterWriter can be done safely.
-func TestNewEventFormatterWriter(t *testing.T) {
+// TestNewEntryFormatterWriter tests that creating a new EntryFormatterWriter can be done safely.
+func TestNewEntryFormatterWriter(t *testing.T) {
 	tests := map[string]struct {
 		Salter               Salter
 		UseStaticSalter      bool
@@ -150,7 +150,7 @@ func TestNewEventFormatterWriter(t *testing.T) {
 	}
 }
 
-// TestAuditFormatter_FormatRequest exercises EventFormatter.FormatRequest with
+// TestAuditFormatter_FormatRequest exercises EntryFormatter.FormatRequest with
 // varying inputs.
 func TestAuditFormatter_FormatRequest(t *testing.T) {
 	tests := map[string]struct {
@@ -213,7 +213,7 @@ func TestAuditFormatter_FormatRequest(t *testing.T) {
 	}
 }
 
-// TestAuditFormatter_FormatResponse exercises EventFormatter.FormatResponse with
+// TestAuditFormatter_FormatResponse exercises EntryFormatter.FormatResponse with
 // varying inputs.
 func TestAuditFormatter_FormatResponse(t *testing.T) {
 	tests := map[string]struct {
