@@ -26,13 +26,11 @@ module('Integration | Component | kv | Page::Secret::Details', function (hooks) 
       modelName: 'kv/data',
       id: this.id,
       secret_data: this.secretData,
-      metadata: {
-        created_time: '2023-07-20T02:12:17.379762Z',
-        custom_metadata: null,
-        deletion_time: '',
-        destroyed: false,
-        version: 1,
-      },
+      created_time: '2023-07-20T02:12:17.379762Z',
+      custom_metadata: null,
+      deletion_time: '',
+      destroyed: false,
+      version: this.version,
     });
     this.secret = this.store.peekRecord('kv/data', this.id);
 
@@ -51,19 +49,25 @@ module('Integration | Component | kv | Page::Secret::Details', function (hooks) 
   });
 
   test('it renders secret details and toggles json view', async function (assert) {
-    assert.expect(4);
+    assert.expect(6);
     await render(
       hbs`
-       <Page::Secret::Details @model={{this.model}} @breadcrumbs={{this.breadcrumbs}} />
+       <Page::Secret::Details
+        @secretPath={{this.model.path}}
+        @secret={{this.model.secret}}
+        @breadcrumbs={{this.breadcrumbs}}
+      />
       `,
       { owner: this.engine }
     );
 
+    assert.dom(SELECTORS.pageTitle).includesText(this.model.path, 'renders secret path as page title');
     assert.dom(SELECTORS.infoRowValue('foo')).exists('renders row for secret data');
     assert.dom(SELECTORS.infoRowValue('foo')).hasText('***********');
     await click(SELECTORS.toggleMasked);
     assert.dom(SELECTORS.infoRowValue('foo')).hasText('bar', 'renders secret value');
     await click(SELECTORS.toggleJson);
     assert.propEqual(parseJsonEditor(find), this.secretData, 'json editor renders secret data');
+    assert.dom(SELECTORS.tooltipTrigger).includesText(this.version, 'renders version');
   });
 });
