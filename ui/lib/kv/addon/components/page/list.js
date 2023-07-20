@@ -6,6 +6,7 @@
 import Component from '@glimmer/component';
 import { inject as service } from '@ember/service';
 import { action } from '@ember/object';
+import { tracked } from '@glimmer/tracking';
 import { getOwner } from '@ember/application';
 
 /**
@@ -19,6 +20,8 @@ import { getOwner } from '@ember/application';
 
 export default class KvListPageComponent extends Component {
   @service flashMessages;
+  @service router;
+  @tracked secretPath = '';
 
   get mountPoint() {
     // mountPoint tells the LinkedBlock component where to start the transition. In this case, mountPoint will always be vault.cluster.secrets.backend.kv.
@@ -28,5 +31,15 @@ export default class KvListPageComponent extends Component {
   @action
   onDelete() {
     // todo
+  }
+
+  @action
+  handleSecretPathInput(value) {
+    this.secretPath = value;
+  }
+
+  @action
+  transitionToSecretDetail() {
+    this.router.transitionTo(`${this.mountPoint}.secret.details`, this.secretPath);
   }
 }
