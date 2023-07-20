@@ -5,12 +5,14 @@
   </:tabLinks>
 
   <:toolbarFilters>
-    <KvListFilter
-      @model={{@model}}
-      @mountPoint={{this.mountPoint}}
-      @filterValue={{@filterValue}}
-      @pageFilter={{@pageFilter}}
-    />
+    {{#unless @noMetadataListPermissions}}
+      <KvListFilter
+        @model={{@model}}
+        @mountPoint={{this.mountPoint}}
+        @filterValue={{@filterValue}}
+        @pageFilter={{@pageFilter}}
+      />
+    {{/unless}}
   </:toolbarFilters>
 
   <:toolbarActions>
