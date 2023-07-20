@@ -48,17 +48,17 @@ For example, the following `telemetry` stanza configures Vault with the standard
 telemetry defaults and connects it to a Statsite agent running on the default
 port within a company intranet at `mycompany.statsite`:
 
-```json
+```hcl
 telemetry {
-  usage_gauge_period = "10m",
-  maximum_gauge_cardinality = 500,
-  disable_hostname = false,
-  enable_hostname_label = false,
-  lease_metrics_epsilon = "1h",
-  num_lease_metrics_buckets = 168,
-  add_lease_metrics_namespace_labels = false,
-  filter_default = true,
-  prefix_filter = ["+vault.token", "-vault.expire", "+vault.expire.num_leases"],
+  usage_gauge_period = "10m"
+  maximum_gauge_cardinality = 500
+  disable_hostname = false
+  enable_hostname_label = false
+  lease_metrics_epsilon = "1h"
+  num_lease_metrics_buckets = 168
+  add_lease_metrics_namespace_labels = false
+  filter_default = true
+  prefix_filter = ["+vault.token", "-vault.expire", "+vault.expire.num_leases"]
   statsite_address = "mycompany.statsite:8125"
 }
 ```
@@ -66,9 +66,9 @@ telemetry {
 ## Step 4: Choose a reporting solution
 
 You need to save or forward your telemetry data to a separate storage solution
-for reporting and analysis and possibly alerting. Which solution you need depends on the feature set
-provided by your aggregation agent and the protocol support of your reporting
-platform.
+for reporting, analysis, and alerting. Which solution you need depends on the
+feature set provided by your aggregation agent and the protocol support of your
+reporting platform.
 
 Popular reporting solutions compatible with Vault:
 
