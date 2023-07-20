@@ -279,7 +279,6 @@ func TestAcmeValidateTLSALPN01Challenge(t *testing.T) {
 
 		ctx, cancel := context.WithTimeout(context.Background(), 1*time.Minute)
 		defer func() {
-			t.Logf("[alpn-server] defer context cancel executing")
 			cancel()
 		}()
 

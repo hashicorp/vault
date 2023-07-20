@@ -1767,8 +1767,8 @@ github.com/hashicorp/go-retryablehttp v0.7.2/go.mod h1:Jy/gPYAdjqffZ/yFGCFV2doI5
 github.com/hashicorp/go-rootcerts v1.0.0/go.mod h1:K6zTfqpRlCUIjkwsN4Z+hiSfzSTQa6eBIzfwKfwNnHU=
 github.com/hashicorp/go-rootcerts v1.0.2 h1:jzhAVGtqPKbwpyCPELlgNWhE1znq+qwJtW5Oi2viEzc=
 github.com/hashicorp/go-rootcerts v1.0.2/go.mod h1:pqUvnprVnM5bf7AOirdbb01K4ccR319Vf4pU3K5EGc8=
-github.com/hashicorp/go-secure-stdlib/awsutil v0.2.2 h1:kWg2vyKl7BRXrNxYziqDJ55n+vtOQ1QsGORjzoeB+uM=
-github.com/hashicorp/go-secure-stdlib/awsutil v0.2.2/go.mod h1:oKHSQs4ivIfZ3fbXGQOop1XuDfdSb8RIsWTGaAanSfg=
+github.com/hashicorp/go-secure-stdlib/awsutil v0.2.3 h1:AAQ6Vmo/ncfrZYtbpjhO+g0Qt+iNpYtl3UWT1NLmbYY=
+github.com/hashicorp/go-secure-stdlib/awsutil v0.2.3/go.mod h1:oKHSQs4ivIfZ3fbXGQOop1XuDfdSb8RIsWTGaAanSfg=
 github.com/hashicorp/go-secure-stdlib/base62 v0.1.1/go.mod h1:EdWO6czbmthiwZ3/PUsDV+UD1D5IRU4ActiaWGwt0Yw=
 github.com/hashicorp/go-secure-stdlib/base62 v0.1.2 h1:ET4pqyjiGmY09R5y+rSd70J2w45CtbWDNvGqWp/R3Ng=
 github.com/hashicorp/go-secure-stdlib/base62 v0.1.2/go.mod h1:EdWO6czbmthiwZ3/PUsDV+UD1D5IRU4ActiaWGwt0Yw=
@@ -1863,8 +1863,8 @@ github.com/hashicorp/serf v0.10.1 h1:Z1H2J60yRKvfDYAOZLd2MU0ND4AH/WDz7xYHDWQsIPY
 github.com/hashicorp/serf v0.10.1/go.mod h1:yL2t6BqATOLGc5HF7qbFkTfXoPIY0WZdWHfEvMqbG+4=
 github.com/hashicorp/vault-plugin-auth-alicloud v0.15.0 h1:R2SVwOeVLG5DXzUx42UWhjfFqS0Z9+ncfebPu+gO9VA=
 github.com/hashicorp/vault-plugin-auth-alicloud v0.15.0/go.mod h1:YQXpa2s4rGYKm3Oa/Nkgh5SuGVfHFNEIUwDDYWyhloE=
-github.com/hashicorp/vault-plugin-auth-azure v0.15.0 h1:OPK3rpRsWUQm/oo8l4N+YS7dka+lUHDT/qxTafSFPzY=
-github.com/hashicorp/vault-plugin-auth-azure v0.15.0/go.mod h1:qRCibAYC0AV4s2+HxEwmLMPNLENK1kx2mrq9ldnGdkY=
+github.com/hashicorp/vault-plugin-auth-azure v0.15.1 h1:CknW0l2O70326KfepWeDuPszuNherhAtVNaSLRBsS4U=
+github.com/hashicorp/vault-plugin-auth-azure v0.15.1/go.mod h1:qRCibAYC0AV4s2+HxEwmLMPNLENK1kx2mrq9ldnGdkY=
 github.com/hashicorp/vault-plugin-auth-centrify v0.15.1 h1:6StAr5tltpySNgyUwWC8czm9ZqkO7NIZfcRmxxtFwQ8=
 github.com/hashicorp/vault-plugin-auth-centrify v0.15.1/go.mod h1:xXs4I5yLxbQ5VHcpvSxkRhShCTXd8Zyrni8qnFrfQ4Y=
 github.com/hashicorp/vault-plugin-auth-cf v0.15.0 h1:zIVGlYXCRBY/ElucWdFC9xF27d2QMGMQPm9wSezGREI=

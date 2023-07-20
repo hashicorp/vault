@@ -73,7 +73,7 @@ This command respects the `-format` parameter to control the presentation of
 output sent to stdout. Fatal errors that prevent health checks from executing
 may not follow this formatting.
 
-## Return Status and Output
+## Return status and output
 
 This command returns the following exit codes:
 
@@ -111,12 +111,12 @@ These correspond to the following health check status values:
  - status `invalid_version` / status code `5`: exit code `5`.
  - status `insufficient_permissions` / status code `6`: exit code `6`.
 
-## Health Checks
+## Health checks
 
 The following health checks are currently implemented. More health checks may
 be added in future releases and may default to being enabled.
 
-### CA Validity Period
+### CA validity period
 
 **Name**: `ca_validity_period`
 
@@ -145,7 +145,7 @@ This health check will check each issuer in the mount for validity status, retur
   - Run [tidy](/vault/api-docs/secret/pki#tidy) manually with `vault write <mount>/tidy tidy_expired_issuers=true`.
   - Use the Vault API to call [delete issuer](/vault/api-docs/secret/pki#delete-issuer).
 
-### CRL Validity Period
+### CRL validity period
 
 **Name**: `crl_validity_period`
 
@@ -172,7 +172,7 @@ Use `vault write` to enable CRL auto-rebuild:
 ```shell-session
 $ vault write <mount>/config/crl auto_rebuild=true
 
-### Hardware-Backed Root Certificate
+### Hardware-Backed root certificate
 
 **Name**: `hardware_backed_root`
 
@@ -190,7 +190,7 @@ This health check checks issuers for root CAs backed by software keys. While Vau
 
 Read more about hardware-backed keys within [Vault Enterprise Managed Keys](/vault/docs/enterprise/managed-keys)
 
-### Root Certificate Issued Non-CA Leaves
+### Root certificate issued Non-CA leaves
 
 **Name**: `root_issued_leaves`
 
@@ -215,7 +215,7 @@ This health check verifies whether a proper CA hierarchy is in use. We do this b
 1. Have the root issuer sign the new intermediary issuer.
 1. Issue new leaf certificates using the intermediary issuer.
 
-### Role Allows Implicit Localhost Issuance
+### Role allows implicit localhost issuance
 
 **Name**: `role_allows_localhost`
 
@@ -235,7 +235,7 @@ Checks whether any roles exist that allow implicit localhost based issuance
 1. Update the `allowed_domains` field with an explicit list of allowed
    localhost-like domains.
 
-### Role Allows Glob-Based Wildcard Issuance
+### Role allows Glob-Based wildcard issuance
 
 **Name**: `role_allows_glob_wildcards`
 
@@ -263,7 +263,7 @@ other (potentially dangerous) quirks.
 1. Add the roles that allow glob domains and wildcards to `allowed_roles` so
    Vault ignores them in future checks.
 
-### Role Sets `no_store=false` and Performance
+### Role sets `no_store=false` and performance
 
 **Name**: `role_no_store_false`
 
@@ -295,7 +295,7 @@ to `true`.
 1. Use [BYOC revocations](/vault/api-docs/secret/pki#revoke-certificate) to
    revoke certificates as needed.
 
-### Accessibility of Audit Information
+### Accessibility of audit information
 
 **Name**: `audit_visibility`
 
@@ -348,7 +348,7 @@ vault secrets tune \
    <mount>
 ```
 
-### ACL Policies Allow Problematic Endpoints
+### ACL policies allow problematic endpoints
 
 **Name**: `policy_allow_endpoints`
 
@@ -363,7 +363,7 @@ vault secrets tune \
 
 This health check checks whether unsafe access to APIs (such as `sign-intermediate`, `sign-verbatim`, and `sign-self-issued`) are allowed. Any findings are a critical result and should be rectified by the administrator or explicitly allowed.
 
-### Allow If-Modified-Since Requests
+### Allow If-Modified-Since requests
 
 **Name**: `allow_if_modified_since`
 
@@ -396,7 +396,7 @@ This health check verifies if the `If-Modified-Since` header has been added to `
       <mount>
     ```
 
-### Auto-Tidy Disabled
+### Auto-Tidy disabled
 
 **Name**: `enable_auto_tidy`
 
@@ -428,7 +428,7 @@ vault write <mount>/config/auto-tidy \
   tidy_revoked_cert_issuer_associations=true
 ```
 
-### Tidy Hasn't Run
+### Tidy hasn't run
 
 **Name**: `tidy_last_run`
 
@@ -461,7 +461,7 @@ This health check verifies that tidy has run within the last run window. This ca
    manual run.
 
 
-### Too Many Certificates
+### Too many certificates
 
 **Name**: `too_many_certs`
 
@@ -518,7 +518,7 @@ This health check verifies that ACME is enabled within a mount that contains an 
 Review the [ACME Certificate Issuance](/vault/api-docs/secret/pki#acme-certificate-issuance)
 API documentation to learn about enabling ACME support in Vault.
 
-### ACME Response headers
+### ACME response headers
 
 **Name**: `allow_acme_headers`
 
