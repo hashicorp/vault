@@ -65,10 +65,10 @@ capabilities, the credentials are fetched automatically.
 - `sts_region` `(string: "")` - Region to override the default region for making
   AWS STS API calls. Should only be set if `sts_endpoint` is set. If so, should
   be set to the region in which the custom `sts_endpoint` resides.
-- `sts_region_from_client` `(boolean: false)` - If set, overrides both `sts_endpoint` and
-  `sts_region` to instead use the region specified in the client request headers. This can
-  be useful when you have client requests coming from different regions and want flexibility
-  in which regional STS API is used.
+- `sts_region_from_client` `(boolean: false)` - If set, overrides both `sts_endpoint`
+  and `sts_region` to instead use the region specified in the client request headers for
+  IAM-based authentication . This can be useful when you have client requests coming from
+  different regions and want flexibility in which regional STS API is used.
 - `iam_server_id_header_value` `(string: "")` - The value to require in the
   `X-Vault-AWS-IAM-Server-ID` header as part of GetCallerIdentity requests that
   are used in the iam auth method. If not set, then no value is required or
@@ -127,7 +127,7 @@ $ curl \
     "iam_endpoint": "",
     "sts_endpoint": "",
     "sts_region": "",
-    "sts_region_from_client": "",
+    "sts_region_from_client": false,
     "iam_server_id_header_value": ""
   }
 }
