@@ -53,7 +53,6 @@ func fakeEvent(tb testing.TB, subtype subtype, format format, input *logical.Log
 func TestNewEntryFormatter(t *testing.T) {
 	tests := map[string]struct {
 		UseStaticSalt        bool
-		Config               FormatterConfig
 		Options              []Option // Only supports WithPrefix
 		IsErrorExpected      bool
 		ExpectedErrorMessage string
@@ -68,39 +67,48 @@ func TestNewEntryFormatter(t *testing.T) {
 		"static-salter": {
 			UseStaticSalt:   true,
 			IsErrorExpected: false,
-			Config:          FormatterConfig{RequiredFormat: JSONFormat},
-			ExpectedFormat:  JSONFormat,
+			Options: []Option{
+				WithFormat(JSONFormat.String()),
+			},
+			ExpectedFormat: JSONFormat,
 		},
 		"default": {
-			UseStaticSalt:        true,
-			Config:               FormatterConfig{},
-			IsErrorExpected:      true,
-			ExpectedErrorMessage: "audit.NewEntryFormatter: format not valid: audit.(format).validate: '' is not a valid format: invalid parameter",
+			UseStaticSalt:   true,
+			IsErrorExpected: false,
+			ExpectedFormat:  JSONFormat,
 		},
 		"config-json": {
-			UseStaticSalt:   true,
-			Config:          FormatterConfig{RequiredFormat: JSONFormat},
+			UseStaticSalt: true,
+			Options: []Option{
+				WithFormat(JSONFormat.String()),
+			},
 			IsErrorExpected: false,
 			ExpectedFormat:  JSONFormat,
 		},
 		"config-jsonx": {
-			UseStaticSalt:   true,
-			Config:          FormatterConfig{RequiredFormat: JSONxFormat},
+			UseStaticSalt: true,
+			Options: []Option{
+				WithFormat(JSONxFormat.String()),
+			},
 			IsErrorExpected: false,
 			ExpectedFormat:  JSONxFormat,
 		},
 		"config-json-prefix": {
-			UseStaticSalt:   true,
-			Config:          FormatterConfig{RequiredFormat: JSONFormat},
-			Options:         []Option{WithPrefix("foo")},
+			UseStaticSalt: true,
+			Options: []Option{
+				WithPrefix("foo"),
+				WithFormat(JSONFormat.String()),
+			},
 			IsErrorExpected: false,
 			ExpectedFormat:  JSONFormat,
 			ExpectedPrefix:  "foo",
 		},
 		"config-jsonx-prefix": {
-			UseStaticSalt:   true,
-			Config:          FormatterConfig{RequiredFormat: JSONxFormat},
-			Options:         []Option{WithPrefix("foo")},
+			UseStaticSalt: true,
+			Options: []Option{
+				WithPrefix("foo"),
+				WithFormat(JSONxFormat.String()),
+			},
 			IsErrorExpected: false,
 			ExpectedFormat:  JSONxFormat,
 			ExpectedPrefix:  "foo",
@@ -117,7 +125,9 @@ func TestNewEntryFormatter(t *testing.T) {
 				ss = newStaticSalt(t)
 			}
 
-			f, err := NewEntryFormatter(tc.Config, ss, tc.Options...)
+			cfg, err := NewFormatterConfig(tc.Options...)
+			require.NoError(t, err)
+			f, err := NewEntryFormatter(cfg, ss, tc.Options...)
 
 			switch {
 			case tc.IsErrorExpected:
@@ -137,7 +147,8 @@ func TestNewEntryFormatter(t *testing.T) {
 // TestEntryFormatter_Reopen ensures that we do not get an error when calling Reopen.
 func TestEntryFormatter_Reopen(t *testing.T) {
 	ss := newStaticSalt(t)
-	cfg := FormatterConfig{RequiredFormat: JSONFormat}
+	cfg, err := NewFormatterConfig()
+	require.NoError(t, err)
 
 	f, err := NewEntryFormatter(cfg, ss)
 	require.NoError(t, err)
@@ -148,7 +159,8 @@ func TestEntryFormatter_Reopen(t *testing.T) {
 // TestEntryFormatter_Type ensures that the node is a 'formatter' type.
 func TestEntryFormatter_Type(t *testing.T) {
 	ss := newStaticSalt(t)
-	cfg := FormatterConfig{RequiredFormat: JSONFormat}
+	cfg, err := NewFormatterConfig()
+	require.NoError(t, err)
 
 	f, err := NewEntryFormatter(cfg, ss)
 	require.NoError(t, err)
@@ -290,9 +302,8 @@ func TestEntryFormatter_Process(t *testing.T) {
 			require.NotNil(t, e)
 
 			ss := newStaticSalt(t)
-			cfg := FormatterConfig{
-				RequiredFormat: tc.RequiredFormat,
-			}
+			cfg, err := NewFormatterConfig(WithFormat(tc.RequiredFormat.String()))
+			require.NoError(t, err)
 
 			f, err := NewEntryFormatter(cfg, ss)
 			require.NoError(t, err)
@@ -358,7 +369,8 @@ func BenchmarkAuditFileSink_Process(b *testing.B) {
 	ctx := namespace.RootContext(nil)
 
 	// Create the formatter node.
-	cfg := FormatterConfig{}
+	cfg, err := NewFormatterConfig()
+	require.NoError(b, err)
 	ss := newStaticSalt(b)
 	formatter, err := NewEntryFormatter(cfg, ss)
 	require.NoError(b, err)

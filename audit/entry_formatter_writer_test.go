@@ -122,7 +122,8 @@ func TestNewEntryFormatterWriter(t *testing.T) {
 				s = tc.Salter
 			}
 
-			cfg := FormatterConfig{RequiredFormat: JSONFormat}
+			cfg, err := NewFormatterConfig()
+			require.NoError(t, err)
 
 			var f Formatter
 			if !tc.UseNilFormatter {
@@ -187,7 +188,10 @@ func TestEntryFormatter_FormatRequest(t *testing.T) {
 		tc := tc
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
-			f, err := NewEntryFormatter(FormatterConfig{RequiredFormat: JSONFormat}, newStaticSalt(t))
+
+			cfg, err := NewFormatterConfig()
+			require.NoError(t, err)
+			f, err := NewEntryFormatter(cfg, newStaticSalt(t))
 			require.NoError(t, err)
 
 			var ctx context.Context
@@ -250,7 +254,10 @@ func TestEntryFormatter_FormatResponse(t *testing.T) {
 		tc := tc
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
-			f, err := NewEntryFormatter(FormatterConfig{RequiredFormat: JSONFormat}, newStaticSalt(t))
+
+			cfg, err := NewFormatterConfig()
+			require.NoError(t, err)
+			f, err := NewEntryFormatter(cfg, newStaticSalt(t))
 			require.NoError(t, err)
 
 			var ctx context.Context
@@ -365,7 +372,8 @@ func TestElideListResponses(t *testing.T) {
 	}
 
 	t.Run("Default case", func(t *testing.T) {
-		config := FormatterConfig{ElideListResponses: true, RequiredFormat: JSONFormat}
+		config, err := NewFormatterConfig(WithElision(true))
+		require.NoError(t, err)
 		for _, tc := range tests {
 			t.Run(tc.name, func(t *testing.T) {
 				formatResponse(t, config, logical.ListOperation, tc.inputData)
@@ -375,21 +383,24 @@ func TestElideListResponses(t *testing.T) {
 	})
 
 	t.Run("When Operation is not list, eliding does not happen", func(t *testing.T) {
-		config := FormatterConfig{ElideListResponses: true, RequiredFormat: JSONFormat}
+		config, err := NewFormatterConfig(WithElision(true))
+		require.NoError(t, err)
 		tc := oneInterestingTestCase
 		formatResponse(t, config, logical.ReadOperation, tc.inputData)
 		assert.Equal(t, tfw.hashExpectedValueForComparison(tc.inputData), tfw.lastResponse.Response.Data)
 	})
 
 	t.Run("When ElideListResponses is false, eliding does not happen", func(t *testing.T) {
-		config := FormatterConfig{ElideListResponses: false, RequiredFormat: JSONFormat}
+		config, err := NewFormatterConfig(WithElision(false), WithFormat(JSONFormat.String()))
+		require.NoError(t, err)
 		tc := oneInterestingTestCase
 		formatResponse(t, config, logical.ListOperation, tc.inputData)
 		assert.Equal(t, tfw.hashExpectedValueForComparison(tc.inputData), tfw.lastResponse.Response.Data)
 	})
 
 	t.Run("When Raw is true, eliding still happens", func(t *testing.T) {
-		config := FormatterConfig{ElideListResponses: true, Raw: true, RequiredFormat: JSONFormat}
+		config, err := NewFormatterConfig(WithElision(true), WithRaw(true), WithFormat(JSONFormat.String()))
+		require.NoError(t, err)
 		tc := oneInterestingTestCase
 		formatResponse(t, config, logical.ListOperation, tc.inputData)
 		assert.Equal(t, tc.expectedData, tfw.lastResponse.Response.Data)
