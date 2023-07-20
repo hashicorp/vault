@@ -19,7 +19,7 @@ jobs:
       uses: actions/setup-go@fac708d6674e30b6ba41289acaab6d4b75aa0753 # v4.0.1
       with:
         cache: false # save cache space for vault builds: https://github.com/hashicorp/vault/pull/21764
-        go-version: 1.18
+        go-version-file: .go-version
 
     - name: Set up Python
       uses: actions/setup-python@bd6b4b6205c4dbad673328db7b31b7fab9e241c0 # v4.6.1
@@ -32,7 +32,7 @@ jobs:
         repository: hashicorp/security-scanner
         token: ${{ secrets.HASHIBOT_PRODSEC_GITHUB_TOKEN }}
         path: security-scanner
-        ref: 5a491479f4131d343afe0a4f18f6fcd36639f3fa
+        ref: 52d94588851f38a416f11c1e727131b3c8b0dd4d
 
     - name: Install dependencies
       shell: bash
@@ -69,6 +69,8 @@ jobs:
         #SEMGREP_BASELINE_REF: ${{ github.base_ref }}
       with:
         repository: "$PWD"
+        cache-build: true
+        cache-go-modules: false
 
     - name: SARIF Output
       shell: bash
@@ -78,6 +80,6 @@ jobs:
         cat results.sarif
 
     - name: Upload SARIF file
-      uses: github/codeql-action/upload-sarif@cdcdbb579706841c47f7063dda365e292e5cad7a # codeql-bundle-v2.13.4
+      uses: github/codeql-action/upload-sarif@46a6823b81f2d7c67ddf123851eea88365bc8a67 # codeql-bundle-v2.13.5
       with:
         sarif_file: results.sarif
