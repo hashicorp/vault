@@ -60,8 +60,9 @@ export default class LdapCreateAndEditRolePageComponent extends Component<Args> 
 
     if (isValid) {
       try {
-        yield this.args.model.save();
-        this.flashMessages.success(`Successfully created the role ${model.name}`);
+        const action = model.isNew ? 'created' : 'updated';
+        yield model.save();
+        this.flashMessages.success(`Successfully ${action} the role ${model.name}`);
         this.router.transitionTo(
           'vault.cluster.secrets.backend.ldap.roles.role.details',
           model.type,
