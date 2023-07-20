@@ -291,7 +291,7 @@ type NoopAudit struct {
 	RespReqNonHMACKeys [][]string
 	RespErrs           []error
 
-	formatter *audit.AuditFormatterWriter
+	formatter *audit.EntryFormatterWriter
 	records   [][]byte
 	l         sync.RWMutex
 	salt      *salt.Salt

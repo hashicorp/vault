@@ -37,16 +37,16 @@ func (s *staticSalt) Salt(_ context.Context) (*salt.Salt, error) {
 
 type testingFormatWriter struct {
 	salt         *salt.Salt
-	lastRequest  *AuditRequestEntry
-	lastResponse *AuditResponseEntry
+	lastRequest  *RequestEntry
+	lastResponse *ResponseEntry
 }
 
-func (fw *testingFormatWriter) WriteRequest(_ io.Writer, entry *AuditRequestEntry) error {
+func (fw *testingFormatWriter) WriteRequest(_ io.Writer, entry *RequestEntry) error {
 	fw.lastRequest = entry
 	return nil
 }
 
-func (fw *testingFormatWriter) WriteResponse(_ io.Writer, entry *AuditResponseEntry) error {
+func (fw *testingFormatWriter) WriteResponse(_ io.Writer, entry *ResponseEntry) error {
 	fw.lastResponse = entry
 	return nil
 }
@@ -86,7 +86,7 @@ func (fw *testingFormatWriter) hashExpectedValueForComparison(input map[string]i
 	return copiedAsMap
 }
 
-// TestNewAuditFormatter tests that creating a new AuditFormatter can be done safely.
+// TestNewAuditFormatter tests that creating a new EntryFormatter can be done safely.
 func TestNewAuditFormatter(t *testing.T) {
 	tests := map[string]struct {
 		Salter              Salter
@@ -132,7 +132,7 @@ func TestNewAuditFormatter(t *testing.T) {
 	}
 }
 
-// TestAuditFormatter_FormatRequest exercises AuditFormatter.FormatRequest with
+// TestAuditFormatter_FormatRequest exercises EntryFormatter.FormatRequest with
 // varying inputs.
 func TestAuditFormatter_FormatRequest(t *testing.T) {
 	tests := map[string]struct {
@@ -196,7 +196,7 @@ func TestAuditFormatter_FormatRequest(t *testing.T) {
 	}
 }
 
-// TestAuditFormatter_FormatResponse exercises AuditFormatter.FormatResponse with
+// TestAuditFormatter_FormatResponse exercises EntryFormatter.FormatResponse with
 // varying inputs.
 func TestAuditFormatter_FormatResponse(t *testing.T) {
 	tests := map[string]struct {
@@ -264,7 +264,7 @@ func TestElideListResponses(t *testing.T) {
 	tfw := testingFormatWriter{}
 	f, err := NewAuditFormatter(&tfw)
 	require.NoError(t, err)
-	formatter := AuditFormatterWriter{
+	formatter := EntryFormatterWriter{
 		Formatter: f,
 		Writer:    &tfw,
 	}

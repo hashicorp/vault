@@ -120,7 +120,7 @@ func Factory(ctx context.Context, conf *audit.BackendConfig) (audit.Backend, err
 type Backend struct {
 	logger gsyslog.Syslogger
 
-	formatter    *audit.AuditFormatterWriter
+	formatter    *audit.EntryFormatterWriter
 	formatConfig audit.FormatterConfig
 
 	saltMutex  sync.RWMutex

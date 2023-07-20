@@ -18,7 +18,7 @@ type JSONxWriter struct {
 	Prefix string
 }
 
-func (f *JSONxWriter) WriteRequest(w io.Writer, req *AuditRequestEntry) error {
+func (f *JSONxWriter) WriteRequest(w io.Writer, req *RequestEntry) error {
 	if req == nil {
 		return fmt.Errorf("request entry was nil, cannot encode")
 	}
@@ -44,7 +44,7 @@ func (f *JSONxWriter) WriteRequest(w io.Writer, req *AuditRequestEntry) error {
 	return err
 }
 
-func (f *JSONxWriter) WriteResponse(w io.Writer, resp *AuditResponseEntry) error {
+func (f *JSONxWriter) WriteResponse(w io.Writer, resp *ResponseEntry) error {
 	if resp == nil {
 		return fmt.Errorf("response entry was nil, cannot encode")
 	}

@@ -115,7 +115,7 @@ func TestFormatJSONx_formatRequest(t *testing.T) {
 		var buf bytes.Buffer
 		f, err := NewAuditFormatter(tempStaticSalt)
 		require.NoError(t, err)
-		formatter := AuditFormatterWriter{
+		formatter := EntryFormatterWriter{
 			Formatter: f,
 			Writer: &JSONxWriter{
 				Prefix: tc.Prefix,

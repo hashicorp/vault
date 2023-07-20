@@ -100,7 +100,7 @@ func TestFormatJSON_formatRequest(t *testing.T) {
 		var buf bytes.Buffer
 		f, err := NewAuditFormatter(ss)
 		require.NoError(t, err)
-		formatter := AuditFormatterWriter{
+		formatter := EntryFormatterWriter{
 			Formatter: f,
 			Writer: &JSONWriter{
 				Prefix: tc.Prefix,
@@ -122,14 +122,14 @@ func TestFormatJSON_formatRequest(t *testing.T) {
 			t.Fatalf("no prefix: %s \n log: %s\nprefix: %s", name, expectedResultStr, tc.Prefix)
 		}
 
-		expectedJSON := new(AuditRequestEntry)
+		expectedJSON := new(RequestEntry)
 
 		if err := jsonutil.DecodeJSON([]byte(expectedResultStr), &expectedJSON); err != nil {
 			t.Fatalf("bad json: %s", err)
 		}
-		expectedJSON.Request.Namespace = &AuditNamespace{ID: "root"}
+		expectedJSON.Request.Namespace = &Namespace{ID: "root"}
 
-		actualjson := new(AuditRequestEntry)
+		actualjson := new(RequestEntry)
 		if err := jsonutil.DecodeJSON([]byte(buf.String())[len(tc.Prefix):], &actualjson); err != nil {
 			t.Fatalf("bad json: %s", err)
 		}

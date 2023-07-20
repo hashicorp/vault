@@ -126,7 +126,7 @@ func Factory(ctx context.Context, conf *audit.BackendConfig) (audit.Backend, err
 type Backend struct {
 	connection net.Conn
 
-	formatter    *audit.AuditFormatterWriter
+	formatter    *audit.EntryFormatterWriter
 	formatConfig audit.FormatterConfig
 
 	writeDuration time.Duration

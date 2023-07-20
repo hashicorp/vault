@@ -166,7 +166,7 @@ func Factory(ctx context.Context, conf *audit.BackendConfig) (audit.Backend, err
 type Backend struct {
 	path string
 
-	formatter    *audit.AuditFormatterWriter
+	formatter    *audit.EntryFormatterWriter
 	formatConfig audit.FormatterConfig
 
 	fileLock sync.RWMutex

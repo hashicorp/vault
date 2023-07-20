@@ -28,34 +28,34 @@ type Salter interface {
 // Formatter is an interface that is responsible for formatting a request/response into some format.
 // It is recommended that you pass data through Hash prior to formatting it.
 type Formatter interface {
-	// FormatRequest formats the logical.LogInput into an AuditRequestEntry.
-	FormatRequest(context.Context, FormatterConfig, *logical.LogInput) (*AuditRequestEntry, error)
-	// FormatResponse formats the logical.LogInput into an AuditResponseEntry.
-	FormatResponse(context.Context, FormatterConfig, *logical.LogInput) (*AuditResponseEntry, error)
+	// FormatRequest formats the logical.LogInput into an RequestEntry.
+	FormatRequest(context.Context, FormatterConfig, *logical.LogInput) (*RequestEntry, error)
+	// FormatResponse formats the logical.LogInput into an ResponseEntry.
+	FormatResponse(context.Context, FormatterConfig, *logical.LogInput) (*ResponseEntry, error)
 }
 
 // Writer is an interface that provides a way to write request and response audit entries.
 // Formatters write their output to an io.Writer.
 type Writer interface {
 	// WriteRequest writes the request entry to the writer or returns an error.
-	WriteRequest(io.Writer, *AuditRequestEntry) error
+	WriteRequest(io.Writer, *RequestEntry) error
 	// WriteResponse writes the response entry to the writer or returns an error.
-	WriteResponse(io.Writer, *AuditResponseEntry) error
+	WriteResponse(io.Writer, *ResponseEntry) error
 }
 
 var (
-	_ Formatter = (*AuditFormatter)(nil)
-	_ Formatter = (*AuditFormatterWriter)(nil)
-	_ Writer    = (*AuditFormatterWriter)(nil)
+	_ Formatter = (*EntryFormatter)(nil)
+	_ Formatter = (*EntryFormatterWriter)(nil)
+	_ Writer    = (*EntryFormatterWriter)(nil)
 )
 
-// AuditFormatter should be used to format audit requests and responses.
-type AuditFormatter struct {
+// EntryFormatter should be used to format audit requests and responses.
+type EntryFormatter struct {
 	salter Salter
 }
 
-// AuditFormatterWriter should be used to format and write out audit requests and responses.
-type AuditFormatterWriter struct {
+// EntryFormatterWriter should be used to format and write out audit requests and responses.
+type EntryFormatterWriter struct {
 	Formatter
 	Writer
 }
@@ -98,17 +98,17 @@ func (s *nonPersistentSalt) Salt(_ context.Context) (*salt.Salt, error) {
 	return salt.NewNonpersistentSalt(), nil
 }
 
-// NewAuditFormatter should be used to create an AuditFormatter.
-func NewAuditFormatter(salter Salter) (*AuditFormatter, error) {
+// NewAuditFormatter should be used to create an EntryFormatter.
+func NewAuditFormatter(salter Salter) (*EntryFormatter, error) {
 	if salter == nil {
 		return nil, errors.New("cannot create a new audit formatter with nil salter")
 	}
 
-	return &AuditFormatter{salter: salter}, nil
+	return &EntryFormatter{salter: salter}, nil
 }
 
-// NewAuditFormatterWriter should be used to create a new AuditFormatterWriter.
-func NewAuditFormatterWriter(formatter Formatter, writer Writer) (*AuditFormatterWriter, error) {
+// NewAuditFormatterWriter should be used to create a new EntryFormatterWriter.
+func NewAuditFormatterWriter(formatter Formatter, writer Writer) (*EntryFormatterWriter, error) {
 	switch {
 	case formatter == nil:
 		return nil, errors.New("cannot create a new audit formatter writer with nil formatter")
@@ -116,7 +116,7 @@ func NewAuditFormatterWriter(formatter Formatter, writer Writer) (*AuditFormatte
 		return nil, errors.New("cannot create a new audit formatter writer with nil formatter")
 	}
 
-	fw := &AuditFormatterWriter{
+	fw := &EntryFormatterWriter{
 		Formatter: formatter,
 		Writer:    writer,
 	}
@@ -124,8 +124,8 @@ func NewAuditFormatterWriter(formatter Formatter, writer Writer) (*AuditFormatte
 	return fw, nil
 }
 
-// FormatRequest attempts to format the specified logical.LogInput into an AuditRequestEntry.
-func (f *AuditFormatter) FormatRequest(ctx context.Context, config FormatterConfig, in *logical.LogInput) (*AuditRequestEntry, error) {
+// FormatRequest attempts to format the specified logical.LogInput into an RequestEntry.
+func (f *EntryFormatter) FormatRequest(ctx context.Context, config FormatterConfig, in *logical.LogInput) (*RequestEntry, error) {
 	switch {
 	case in == nil || in.Request == nil:
 		return nil, errors.New("request to request-audit a nil request")
@@ -176,11 +176,11 @@ func (f *AuditFormatter) FormatRequest(ctx context.Context, config FormatterConf
 	if reqType == "" {
 		reqType = "request"
 	}
-	reqEntry := &AuditRequestEntry{
+	reqEntry := &RequestEntry{
 		Type:          reqType,
 		Error:         errString,
 		ForwardedFrom: req.ForwardedFrom,
-		Auth: &AuditAuth{
+		Auth: &Auth{
 			ClientToken:               auth.ClientToken,
 			Accessor:                  auth.Accessor,
 			DisplayName:               auth.DisplayName,
@@ -196,7 +196,7 @@ func (f *AuditFormatter) FormatRequest(ctx context.Context, config FormatterConf
 			TokenTTL:                  int64(auth.TTL.Seconds()),
 		},
 
-		Request: &AuditRequest{
+		Request: &Request{
 			ID:                    req.ID,
 			ClientID:              req.ClientID,
 			ClientToken:           req.ClientToken,
@@ -209,7 +209,7 @@ func (f *AuditFormatter) FormatRequest(ctx context.Context, config FormatterConf
 			MountRunningSha256:    req.MountRunningSha256(),
 			MountIsExternalPlugin: req.MountIsExternalPlugin(),
 			MountClass:            req.MountClass(),
-			Namespace: &AuditNamespace{
+			Namespace: &Namespace{
 				ID:   ns.ID,
 				Path: ns.Path,
 			},
@@ -229,7 +229,7 @@ func (f *AuditFormatter) FormatRequest(ctx context.Context, config FormatterConf
 	}
 
 	if auth.PolicyResults != nil {
-		reqEntry.Auth.PolicyResults = &AuditPolicyResults{
+		reqEntry.Auth.PolicyResults = &PolicyResults{
 			Allowed: auth.PolicyResults.Allowed,
 		}
 
@@ -254,8 +254,8 @@ func (f *AuditFormatter) FormatRequest(ctx context.Context, config FormatterConf
 	return reqEntry, nil
 }
 
-// FormatResponse attempts to format the specified logical.LogInput into an AuditResponseEntry.
-func (f *AuditFormatter) FormatResponse(ctx context.Context, config FormatterConfig, in *logical.LogInput) (*AuditResponseEntry, error) {
+// FormatResponse attempts to format the specified logical.LogInput into an ResponseEntry.
+func (f *EntryFormatter) FormatResponse(ctx context.Context, config FormatterConfig, in *logical.LogInput) (*ResponseEntry, error) {
 	switch {
 	case in == nil || in.Request == nil:
 		return nil, errors.New("request to response-audit a nil request")
@@ -328,9 +328,9 @@ func (f *AuditFormatter) FormatResponse(ctx context.Context, config FormatterCon
 		return nil, err
 	}
 
-	var respAuth *AuditAuth
+	var respAuth *Auth
 	if resp.Auth != nil {
-		respAuth = &AuditAuth{
+		respAuth = &Auth{
 			ClientToken:               resp.Auth.ClientToken,
 			Accessor:                  resp.Auth.Accessor,
 			DisplayName:               resp.Auth.DisplayName,
@@ -350,20 +350,20 @@ func (f *AuditFormatter) FormatResponse(ctx context.Context, config FormatterCon
 		}
 	}
 
-	var respSecret *AuditSecret
+	var respSecret *Secret
 	if resp.Secret != nil {
-		respSecret = &AuditSecret{
+		respSecret = &Secret{
 			LeaseID: resp.Secret.LeaseID,
 		}
 	}
 
-	var respWrapInfo *AuditResponseWrapInfo
+	var respWrapInfo *ResponseWrapInfo
 	if resp.WrapInfo != nil {
 		token := resp.WrapInfo.Token
 		if jwtToken := parseVaultTokenFromJWT(token); jwtToken != nil {
 			token = *jwtToken
 		}
-		respWrapInfo = &AuditResponseWrapInfo{
+		respWrapInfo = &ResponseWrapInfo{
 			TTL:             int(resp.WrapInfo.TTL / time.Second),
 			Token:           token,
 			Accessor:        resp.WrapInfo.Accessor,
@@ -377,11 +377,11 @@ func (f *AuditFormatter) FormatResponse(ctx context.Context, config FormatterCon
 	if respType == "" {
 		respType = "response"
 	}
-	respEntry := &AuditResponseEntry{
+	respEntry := &ResponseEntry{
 		Type:      respType,
 		Error:     errString,
 		Forwarded: req.ForwardedFrom != "",
-		Auth: &AuditAuth{
+		Auth: &Auth{
 			ClientToken:               auth.ClientToken,
 			Accessor:                  auth.Accessor,
 			DisplayName:               auth.DisplayName,
@@ -398,7 +398,7 @@ func (f *AuditFormatter) FormatResponse(ctx context.Context, config FormatterCon
 			TokenTTL:                  int64(auth.TTL.Seconds()),
 		},
 
-		Request: &AuditRequest{
+		Request: &Request{
 			ID:                    req.ID,
 			ClientToken:           req.ClientToken,
 			ClientTokenAccessor:   req.ClientTokenAccessor,
@@ -411,7 +411,7 @@ func (f *AuditFormatter) FormatResponse(ctx context.Context, config FormatterCon
 			MountRunningSha256:    req.MountRunningSha256(),
 			MountIsExternalPlugin: req.MountIsExternalPlugin(),
 			MountClass:            req.MountClass(),
-			Namespace: &AuditNamespace{
+			Namespace: &Namespace{
 				ID:   ns.ID,
 				Path: ns.Path,
 			},
@@ -425,7 +425,7 @@ func (f *AuditFormatter) FormatResponse(ctx context.Context, config FormatterCon
 			Headers:                       req.Headers,
 		},
 
-		Response: &AuditResponse{
+		Response: &Response{
 			MountPoint:            req.MountPoint,
 			MountType:             req.MountType,
 			MountAccessor:         req.MountAccessor,
@@ -444,7 +444,7 @@ func (f *AuditFormatter) FormatResponse(ctx context.Context, config FormatterCon
 	}
 
 	if auth.PolicyResults != nil {
-		respEntry.Auth.PolicyResults = &AuditPolicyResults{
+		respEntry.Auth.PolicyResults = &PolicyResults{
 			Allowed: auth.PolicyResults.Allowed,
 		}
 
@@ -472,9 +472,9 @@ func (f *AuditFormatter) FormatResponse(ctx context.Context, config FormatterCon
 	return respEntry, nil
 }
 
-// FormatAndWriteRequest attempts to format the specified logical.LogInput into an AuditRequestEntry,
+// FormatAndWriteRequest attempts to format the specified logical.LogInput into an RequestEntry,
 // and then write the request using the specified io.Writer.
-func (f *AuditFormatterWriter) FormatAndWriteRequest(ctx context.Context, w io.Writer, config FormatterConfig, in *logical.LogInput) error {
+func (f *EntryFormatterWriter) FormatAndWriteRequest(ctx context.Context, w io.Writer, config FormatterConfig, in *logical.LogInput) error {
 	switch {
 	case in == nil || in.Request == nil:
 		return fmt.Errorf("request to request-audit a nil request")
@@ -494,9 +494,9 @@ func (f *AuditFormatterWriter) FormatAndWriteRequest(ctx context.Context, w io.W
 	return f.Writer.WriteRequest(w, reqEntry)
 }
 
-// FormatAndWriteResponse attempts to format the specified logical.LogInput into an AuditResponseEntry,
+// FormatAndWriteResponse attempts to format the specified logical.LogInput into an ResponseEntry,
 // and then write the response using the specified io.Writer.
-func (f *AuditFormatterWriter) FormatAndWriteResponse(ctx context.Context, w io.Writer, config FormatterConfig, in *logical.LogInput) error {
+func (f *EntryFormatterWriter) FormatAndWriteResponse(ctx context.Context, w io.Writer, config FormatterConfig, in *logical.LogInput) error {
 	switch {
 	case in == nil || in.Request == nil:
 		return errors.New("request to response-audit a nil request")
@@ -516,28 +516,28 @@ func (f *AuditFormatterWriter) FormatAndWriteResponse(ctx context.Context, w io.
 	return f.Writer.WriteResponse(w, respEntry)
 }
 
-// AuditRequestEntry is the structure of a request audit log entry in Audit.
-type AuditRequestEntry struct {
-	Time          string        `json:"time,omitempty"`
-	Type          string        `json:"type,omitempty"`
-	Auth          *AuditAuth    `json:"auth,omitempty"`
-	Request       *AuditRequest `json:"request,omitempty"`
-	Error         string        `json:"error,omitempty"`
-	ForwardedFrom string        `json:"forwarded_from,omitempty"` // Populated in Enterprise when a request is forwarded
+// RequestEntry is the structure of a request audit log entry in Audit.
+type RequestEntry struct {
+	Time          string   `json:"time,omitempty"`
+	Type          string   `json:"type,omitempty"`
+	Auth          *Auth    `json:"auth,omitempty"`
+	Request       *Request `json:"request,omitempty"`
+	Error         string   `json:"error,omitempty"`
+	ForwardedFrom string   `json:"forwarded_from,omitempty"` // Populated in Enterprise when a request is forwarded
 }
 
-// AuditResponseEntry is the structure of a response audit log entry in Audit.
-type AuditResponseEntry struct {
-	Time      string         `json:"time,omitempty"`
-	Type      string         `json:"type,omitempty"`
-	Auth      *AuditAuth     `json:"auth,omitempty"`
-	Request   *AuditRequest  `json:"request,omitempty"`
-	Response  *AuditResponse `json:"response,omitempty"`
-	Error     string         `json:"error,omitempty"`
-	Forwarded bool           `json:"forwarded,omitempty"`
+// ResponseEntry is the structure of a response audit log entry in Audit.
+type ResponseEntry struct {
+	Time      string    `json:"time,omitempty"`
+	Type      string    `json:"type,omitempty"`
+	Auth      *Auth     `json:"auth,omitempty"`
+	Request   *Request  `json:"request,omitempty"`
+	Response  *Response `json:"response,omitempty"`
+	Error     string    `json:"error,omitempty"`
+	Forwarded bool      `json:"forwarded,omitempty"`
 }
 
-type AuditRequest struct {
+type Request struct {
 	ID                            string                 `json:"id,omitempty"`
 	ClientID                      string                 `json:"client_id,omitempty"`
 	ReplicationCluster            string                 `json:"replication_cluster,omitempty"`
@@ -551,7 +551,7 @@ type AuditRequest struct {
 	MountIsExternalPlugin         bool                   `json:"mount_is_external_plugin,omitempty"`
 	ClientToken                   string                 `json:"client_token,omitempty"`
 	ClientTokenAccessor           string                 `json:"client_token_accessor,omitempty"`
-	Namespace                     *AuditNamespace        `json:"namespace,omitempty"`
+	Namespace                     *Namespace             `json:"namespace,omitempty"`
 	Path                          string                 `json:"path,omitempty"`
 	Data                          map[string]interface{} `json:"data,omitempty"`
 	PolicyOverride                bool                   `json:"policy_override,omitempty"`
@@ -562,8 +562,8 @@ type AuditRequest struct {
 	ClientCertificateSerialNumber string                 `json:"client_certificate_serial_number,omitempty"`
 }
 
-type AuditResponse struct {
-	Auth                  *AuditAuth             `json:"auth,omitempty"`
+type Response struct {
+	Auth                  *Auth                  `json:"auth,omitempty"`
 	MountPoint            string                 `json:"mount_point,omitempty"`
 	MountType             string                 `json:"mount_type,omitempty"`
 	MountAccessor         string                 `json:"mount_accessor,omitempty"`
@@ -571,15 +571,15 @@ type AuditResponse struct {
 	MountRunningSha256    string                 `json:"mount_running_sha256,omitempty"`
 	MountClass            string                 `json:"mount_class,omitempty"`
 	MountIsExternalPlugin bool                   `json:"mount_is_external_plugin,omitempty"`
-	Secret                *AuditSecret           `json:"secret,omitempty"`
+	Secret                *Secret                `json:"secret,omitempty"`
 	Data                  map[string]interface{} `json:"data,omitempty"`
 	Warnings              []string               `json:"warnings,omitempty"`
 	Redirect              string                 `json:"redirect,omitempty"`
-	WrapInfo              *AuditResponseWrapInfo `json:"wrap_info,omitempty"`
+	WrapInfo              *ResponseWrapInfo      `json:"wrap_info,omitempty"`
 	Headers               map[string][]string    `json:"headers,omitempty"`
 }
 
-type AuditAuth struct {
+type Auth struct {
 	ClientToken               string              `json:"client_token,omitempty"`
 	Accessor                  string              `json:"accessor,omitempty"`
 	DisplayName               string              `json:"display_name,omitempty"`
@@ -588,7 +588,7 @@ type AuditAuth struct {
 	IdentityPolicies          []string            `json:"identity_policies,omitempty"`
 	ExternalNamespacePolicies map[string][]string `json:"external_namespace_policies,omitempty"`
 	NoDefaultPolicy           bool                `json:"no_default_policy,omitempty"`
-	PolicyResults             *AuditPolicyResults `json:"policy_results,omitempty"`
+	PolicyResults             *PolicyResults      `json:"policy_results,omitempty"`
 	Metadata                  map[string]string   `json:"metadata,omitempty"`
 	NumUses                   int                 `json:"num_uses,omitempty"`
 	RemainingUses             int                 `json:"remaining_uses,omitempty"`
@@ -599,7 +599,7 @@ type AuditAuth struct {
 	TokenIssueTime            string              `json:"token_issue_time,omitempty"`
 }
 
-type AuditPolicyResults struct {
+type PolicyResults struct {
 	Allowed          bool         `json:"allowed"`
 	GrantingPolicies []PolicyInfo `json:"granting_policies,omitempty"`
 }
@@ -611,11 +611,11 @@ type PolicyInfo struct {
 	Type          string `json:"type"`
 }
 
-type AuditSecret struct {
+type Secret struct {
 	LeaseID string `json:"lease_id,omitempty"`
 }
 
-type AuditResponseWrapInfo struct {
+type ResponseWrapInfo struct {
 	TTL             int    `json:"ttl,omitempty"`
 	Token           string `json:"token,omitempty"`
 	Accessor        string `json:"accessor,omitempty"`
@@ -624,7 +624,7 @@ type AuditResponseWrapInfo struct {
 	WrappedAccessor string `json:"wrapped_accessor,omitempty"`
 }
 
-type AuditNamespace struct {
+type Namespace struct {
 	ID   string `json:"id,omitempty"`
 	Path string `json:"path,omitempty"`
 }
@@ -676,7 +676,7 @@ func parseVaultTokenFromJWT(token string) *string {
 }
 
 // NewTemporaryFormatter creates a formatter not backed by a persistent salt
-func NewTemporaryFormatter(format, prefix string) *AuditFormatterWriter {
+func NewTemporaryFormatter(format, prefix string) *EntryFormatterWriter {
 	// We can ignore the error from NewAuditFormatter since we are sure the salter isn't nil.
 	f, _ := NewAuditFormatter(&nonPersistentSalt{})
 
