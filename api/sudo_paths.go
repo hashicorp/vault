@@ -14,8 +14,8 @@ import (
 // path matches that path or not (useful specifically for the paths that
 // contain templated fields.)
 var sudoPaths = map[string]*regexp.Regexp{
-	"/auth/token/accessors": regexp.MustCompile(`^/auth/token/accessors/?$`),
-	// TODO /auth/token/revoke-orphan requires sudo but isn't represented as such in the OpenAPI spec
+	"/auth/token/accessors":                         regexp.MustCompile(`^/auth/token/accessors/?$`),
+	"/auth/token/revoke-orphan":                     regexp.MustCompile(`^/auth/token/revoke-orphan$`),
 	"/pki/root":                                     regexp.MustCompile(`^/pki/root$`),
 	"/pki/root/sign-self-issued":                    regexp.MustCompile(`^/pki/root/sign-self-issued$`),
 	"/sys/audit":                                    regexp.MustCompile(`^/sys/audit$`),
@@ -43,8 +43,8 @@ var sudoPaths = map[string]*regexp.Regexp{
 	"/sys/revoke-force/{prefix}":         regexp.MustCompile(`^/sys/revoke-force/.+$`),
 	"/sys/revoke-prefix/{prefix}":        regexp.MustCompile(`^/sys/revoke-prefix/.+$`),
 	"/sys/rotate":                        regexp.MustCompile(`^/sys/rotate$`),
-	// TODO /sys/seal requires sudo but isn't represented as such in the OpenAPI spec
-	// TODO /sys/step-down requires sudo but isn't represented as such in the OpenAPI spec
+	"/sys/seal":                          regexp.MustCompile(`^/sys/seal$`),
+	"/sys/step-down":                     regexp.MustCompile(`^/sys/step-down$`),
 
 	// enterprise-only paths
 	"/sys/replication/dr/primary/secondary-token":          regexp.MustCompile(`^/sys/replication/dr/primary/secondary-token$`),
