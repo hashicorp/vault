@@ -101,15 +101,16 @@ jobs:
       - verify-changes
     # Don't run this job for docs/ui only PRs
     if: |
-      always() && (needs.verify-changes.result == 'skipped' ||
+      needs.verify-changes.result == 'skipped' ||
       (needs.verify-changes.outputs.is_docs_change == 'false' &&
-      needs.verify-changes.outputs.is_ui_change == 'false'))
+      needs.verify-changes.outputs.is_ui_change == 'false')
     uses: ./.github/workflows/test-go.yml
     with:
       # The regular Go tests use an extra runner to execute the
       # binary-dependent tests. We isolate them there so that the
       # other tests aren't slowed down waiting for a binary build.
-      total-runners: 17
+      binary-tests: true
+      total-runners: 16
       go-arch: amd64
       go-tags: '${{ needs.setup.outputs.go-tags }},deadlock'
       runs-on: ${{ needs.setup.outputs.compute-larger }}
@@ -353,14 +354,32 @@ jobs:
           # Sort all of the summary table rows and push them to a temp file.
           temp_file_name=temp-$(date +%s)
           cat failure-summary-*.md | sort >> "$temp_file_name"
-
+          
           # If there are test failures, present them in a format of a GitHub Markdown table.
           if [ -s "$temp_file_name" ]; then
             # shellcheck disable=SC2129
             # Here we create the headings for the summary table
             echo "| Test Type | Package | Test | Elapsed | Runner Index | Logs |" >> "$GITHUB_STEP_SUMMARY"
             echo "| --------- | ------- | ---- | ------- | ------------ | ---- |" >> "$GITHUB_STEP_SUMMARY"
-            cat "$temp_file_name" >>  "$GITHUB_STEP_SUMMARY"
+            # shellcheck disable=SC2002
+            cat "$temp_file_name" >> "$GITHUB_STEP_SUMMARY"
           else
             echo "### All Go tests passed! :white_check_mark:" >> "$GITHUB_STEP_SUMMARY"
           fi
+          
+          # the random EOF is needed for a multiline environment variable
+          EOF=$(dd if=/dev/urandom bs=15 count=1 status=none | base64)
+          # shellcheck disable=SC2129
+          echo "TABLE_TEST_RESULTS<<$EOF" >> "$GITHUB_ENV"
+          cat "$temp_file_name" >> "$GITHUB_ENV"
+          echo "$EOF" >> "$GITHUB_ENV" 
+      - uses: actions/checkout@c85c95e3d7251135ab7dc9ce3241c5835cc595a9 # v3.5.3
+      - name: Create comment
+        if: github.head_ref != ''
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          RUN_ID: ${{ github.run_id }}
+          REPO: ${{ github.event.repository.name }}
+          TABLE_DATA: ${{ env.TABLE_TEST_RESULTS }} 
+        run: ./.github/scripts/report_failed_tests.sh

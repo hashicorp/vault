@@ -10,9 +10,14 @@ on:
         required: true
         type: string
       total-runners:
-        description: Number of runners to use for executing the tests on.
+        description: Number of runners to use for executing non-binary tests.
         required: true
         type: string
+      binary-tests:
+        description: Whether to run the binary tests.
+        required: false
+        default: false
+        type: boolean 
       env-vars:
         description: A map of environment variables as JSON.
         required: false
@@ -119,10 +124,11 @@ jobs:
         run: |
           (
             go list ./... | grep -v "_binary" | grep -v "vault/integ" | gotestsum tool ci-matrix --debug \
-              --partitions 16 \
+              --partitions "${{ inputs.total-runners }}" \
               --timing-files 'test-results/go-test/*.json' > matrix.json
           )
       - name: Capture list of binary tests
+        if: inputs.binary-tests
         id: list-binary-tests
         run: |
           LIST="$(go list ./... | grep "_binary" | xargs)"
@@ -130,20 +136,34 @@ jobs:
       - name: Build complete matrix
         id: build
         run: |
-          set -exo pipefail
-          export BINARY_TESTS="${{ steps.list-binary-tests.outputs.list }}"
-          (
-            echo -n "matrix="
-            jq -c --arg BINARY "${BINARY_TESTS}" \
-              '.include += [{
-                "id": 16,
-                "estimatedRuntime": "N/A",
-                "packages": $BINARY,
-                "description": "partition 16 - binary test packages"
-            }]' matrix.json
-          ) >> "$GITHUB_OUTPUT"
+            set -exo pipefail
+            matrix_file="matrix.json"
+            if [ "${{ inputs.binary-tests}}" == "true" ] && [ -n "${{ steps.list-binary-tests.outputs.list }}" ]; then
+              export BINARY_TESTS="${{ steps.list-binary-tests.outputs.list }}"
+              jq --arg BINARY "${BINARY_TESTS}" --arg BINARY_INDEX "${{ inputs.total-runners }}" \
+                '.include += [{
+                  "id": $BINARY_INDEX,
+                  "estimatedRuntime": "N/A",
+                  "packages": $BINARY,
+                  "description": "partition $BINARY_INDEX - binary test packages"
+              }]' matrix.json > new-matrix.json
+              matrix_file="new-matrix.json" 
+            fi
+            # convert the json to a map keyed by id
+            (
+              echo -n "matrix="
+                jq -c \
+                '.include | map( { (.id|tostring): . } ) | add' "$matrix_file" 
+            ) >> "$GITHUB_OUTPUT"
+            # extract an array of ids from the json
+            (
+              echo -n "matrix_ids="
+              jq -c \
+                '[ .include[].id | tostring ]' "$matrix_file"
+            ) >> "$GITHUB_OUTPUT"
     outputs:
       matrix: ${{ steps.build.outputs.matrix }}
+      matrix_ids: ${{ steps.build.outputs.matrix_ids }} 
 
   test-go:
     needs: test-matrix
@@ -154,7 +174,8 @@ jobs:
     runs-on: ${{ fromJSON(inputs.runs-on) }}
     strategy:
       fail-fast: false
-      matrix: ${{ fromJSON(needs.test-matrix.outputs.matrix) }}
+      matrix: 
+        id: ${{ fromJSON(needs.test-matrix.outputs.matrix_ids) }}
     env:
       GOPRIVATE: github.com/hashicorp/*
       TIMEOUT_IN_MINUTES: ${{ inputs.timeout-minutes }}
@@ -196,7 +217,7 @@ jobs:
         run: |
           git config --global url."https://${{ secrets.ELEVATED_GITHUB_TOKEN}}@github.com".insteadOf https://github.com
       - id: build
-        if: contains(matrix.packages, '_binary')
+        if: inputs.binary-tests && matrix.id == inputs.total-runners 
         env:
           GOPRIVATE: github.com/hashicorp/*
         run: time make ci-bootstrap dev
@@ -207,10 +228,16 @@ jobs:
           COMMIT_SHA: ${{ github.sha }}
         run: |
           set -exo pipefail
-
+ 
           # Build the dynamically generated source files.
           make prep
-
+         
+          packages=$(echo "${{ toJSON(needs.test-matrix.outputs.matrix) }}" | jq -c -r --arg id "${{ matrix.id }}" '.[$id] | .packages') 
+          
+          if [ -z "$packages" ]; then
+            echo "no test packages to run"
+            exit 1
+          fi
           # We don't want VAULT_LICENSE set when running Go tests, because that's
           # not what developers have in their environments and it could break some
           # tests; it would be like setting VAULT_TOKEN.  However some non-Go
@@ -253,7 +280,7 @@ jobs:
               --jsonfile test-results/go-test/results-${{ matrix.id }}.json \
               --jsonfile-timing-events failure-summary-${{ matrix.id }}${{ inputs.name != '' && '-' || '' }}${{ inputs.name }}.json \
                $RERUN_FAILS \
-              --packages "${{ matrix.packages }}" \
+              --packages "$packages" \
               -- \
               -tags "${{ inputs.go-tags }}" \
               -timeout=${{ env.TIMEOUT_IN_MINUTES }}m \
@@ -307,13 +334,13 @@ jobs:
               let prefixToSearchFor;
               switch ("${{ inputs.name }}") {
                 case "race":
-                  prefixToSearchFor = 'Run Go tests with data race detection / test-go (${{ matrix.id }},'
+                  prefixToSearchFor = 'Run Go tests with data race detection / test-go (${{ matrix.id }})'
                   break
                 case "fips":
-                  prefixToSearchFor = 'Run Go tests with FIPS configuration / test-go (${{ matrix.id }},'
+                  prefixToSearchFor = 'Run Go tests with FIPS configuration / test-go (${{ matrix.id }})'
                   break
                 default:
-                  prefixToSearchFor = 'Run Go tests / test-go (${{ matrix.id }},'
+                  prefixToSearchFor = 'Run Go tests / test-go (${{ matrix.id }})'
               }
 
               const jobData = result.data.jobs.filter(
