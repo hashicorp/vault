@@ -1,0 +1,3 @@
+```release-note:feature
+ui: add example modal to policy form
+```
