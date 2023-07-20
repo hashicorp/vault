@@ -27,7 +27,6 @@ import Component from '@glimmer/component';
 import { inject as service } from '@ember/service';
 import { action } from '@ember/object';
 import { tracked } from '@glimmer/tracking';
-
 export default class GetCredentialsCard extends Component {
   @service router;
   @service store;
@@ -45,11 +44,9 @@ export default class GetCredentialsCard extends Component {
     if (role) {
       this.router.transitionTo('vault.cluster.secrets.backend.credentials', role);
     }
-    // TODO kv engine cleanup. Should be able to remove the is-engine conditional.
+    // TODO kv engine cleanup. Should be able to remove this component and replace with overview card for the role usage. KV engine has switched to overview card.
     if (secret) {
-      this.args.isKvEngine
-        ? this.router.transitionTo('vault.cluster.secrets.backend.kv.secret.details', secret)
-        : this.router.transitionTo('vault.cluster.secrets.backend.show', secret);
+      this.router.transitionTo('vault.cluster.secrets.backend.show', secret);
     }
   }
 
