@@ -41,7 +41,7 @@ export default class SecretEdit extends Component {
   // fired on did-insert from render modifier
   @action
   createKvData(elem, [model]) {
-    if (!model.secretData && model.selectedVersion) {
+    if (model.selectedVersion) {
       this.isV2 = true;
       model.secretData = model.belongsTo('selectedVersion').value().secretData;
     }
