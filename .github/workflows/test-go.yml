@@ -17,7 +17,7 @@ on:
         description: Whether to run the binary tests.
         required: false
         default: false
-        type: boolean 
+        type: boolean
       env-vars:
         description: A map of environment variables as JSON.
         required: false
@@ -66,7 +66,6 @@ jobs:
       - uses: ./.github/actions/set-up-go
         with:
           github-token: ${{ secrets.ELEVATED_GITHUB_TOKEN }}
-          no-restore: true # We don't need the vault Go modules when generating indices
       - name: Authenticate to Vault
         id: vault-auth
         if: github.repository == 'hashicorp/vault-enterprise'
@@ -99,20 +98,12 @@ jobs:
         if: github.repository != 'hashicorp/vault-enterprise'
         run: |
           git config --global url."https://${{ secrets.ELEVATED_GITHUB_TOKEN}}@github.com".insteadOf https://github.com
-      - run: go install gotest.tools/gotestsum@v1.9.0
-
+      - uses: ./.github/actions/set-up-gotestsum
       - run: mkdir -p test-results/go-test
-
-      # We use a unique "read-" prefix to guarantee that we're not scribbling on
-      # the aggregated test data in the event of test failure. This key is
-      # unique for every test run and just used to restore the previous
-      # aggregated data. We persist all test data after a successful run and
-      # store that in the go-test-reports- cache.
-      - id: restore-from-cache
-        uses: actions/cache@88522ab9f39a2ea568f7027eddc7d8d8bc9d59c8 # v3.3.1
+      - uses: actions/cache/restore@88522ab9f39a2ea568f7027eddc7d8d8bc9d59c8 # v3.3.1
         with:
           path: test-results/go-test
-          key: read-go-test-reports-${{ github.run_number }}
+          key: go-test-reports-${{ github.run_number }}
           restore-keys: go-test-reports-
       - name: List cached results
         id: list-cached-results
@@ -147,13 +138,13 @@ jobs:
                   "packages": $BINARY,
                   "description": "partition $BINARY_INDEX - binary test packages"
               }]' matrix.json > new-matrix.json
-              matrix_file="new-matrix.json" 
+              matrix_file="new-matrix.json"
             fi
             # convert the json to a map keyed by id
             (
               echo -n "matrix="
                 jq -c \
-                '.include | map( { (.id|tostring): . } ) | add' "$matrix_file" 
+                '.include | map( { (.id|tostring): . } ) | add' "$matrix_file"
             ) >> "$GITHUB_OUTPUT"
             # extract an array of ids from the json
             (
@@ -163,7 +154,7 @@ jobs:
             ) >> "$GITHUB_OUTPUT"
     outputs:
       matrix: ${{ steps.build.outputs.matrix }}
-      matrix_ids: ${{ steps.build.outputs.matrix_ids }} 
+      matrix_ids: ${{ steps.build.outputs.matrix_ids }}
 
   test-go:
     needs: test-matrix
@@ -174,7 +165,7 @@ jobs:
     runs-on: ${{ fromJSON(inputs.runs-on) }}
     strategy:
       fail-fast: false
-      matrix: 
+      matrix:
         id: ${{ fromJSON(needs.test-matrix.outputs.matrix_ids) }}
     env:
       GOPRIVATE: github.com/hashicorp/*
@@ -217,10 +208,11 @@ jobs:
         run: |
           git config --global url."https://${{ secrets.ELEVATED_GITHUB_TOKEN}}@github.com".insteadOf https://github.com
       - id: build
-        if: inputs.binary-tests && matrix.id == inputs.total-runners 
+        if: inputs.binary-tests && matrix.id == inputs.total-runners
         env:
           GOPRIVATE: github.com/hashicorp/*
         run: time make ci-bootstrap dev
+      - uses: ./.github/actions/set-up-gotestsum
       - id: run-go-tests
         name: Run Go tests
         timeout-minutes: ${{ fromJSON(env.TIMEOUT_IN_MINUTES) }}
@@ -228,12 +220,12 @@ jobs:
           COMMIT_SHA: ${{ github.sha }}
         run: |
           set -exo pipefail
- 
+
           # Build the dynamically generated source files.
           make prep
-         
-          packages=$(echo "${{ toJSON(needs.test-matrix.outputs.matrix) }}" | jq -c -r --arg id "${{ matrix.id }}" '.[$id] | .packages') 
-          
+
+          packages=$(echo "${{ toJSON(needs.test-matrix.outputs.matrix) }}" | jq -c -r --arg id "${{ matrix.id }}" '.[$id] | .packages')
+
           if [ -z "$packages" ]; then
             echo "no test packages to run"
             exit 1
@@ -268,7 +260,7 @@ jobs:
 
           # shellcheck disable=SC2086 # can't quote package list
           GOARCH=${{ inputs.go-arch }} \
-            go run gotest.tools/gotestsum --format=short-verbose \
+            gotestsum --format=short-verbose \
               --junitfile test-results/go-test/results-${{ matrix.id }}.xml \
               --jsonfile test-results/go-test/results-${{ matrix.id }}.json \
               --jsonfile-timing-events failure-summary-${{ matrix.id }}${{ inputs.name != '' && '-' || '' }}${{ inputs.name }}.json \
@@ -375,11 +367,6 @@ jobs:
     needs: test-go
     runs-on: ${{ fromJSON(inputs.runs-on) }}
     steps:
-      - uses: actions/cache@88522ab9f39a2ea568f7027eddc7d8d8bc9d59c8 # v3.3.1
-        with:
-          path: test-results/go-test
-          key: go-test-reports-${{ github.run_number }}
-          restore-keys: go-test-reports-
       - uses: actions/download-artifact@9bc31d5ccc31df68ecc42ccf4149144866c47d8a # v3.0.2
         with:
           name: test-results
@@ -388,3 +375,7 @@ jobs:
           ls -lhR test-results/go-test
           find test-results/go-test -mindepth 1 -mtime +3 -delete
           ls -lhR test-results/go-test
+      - uses: actions/cache/save@88522ab9f39a2ea568f7027eddc7d8d8bc9d59c8 # v3.3.1
+        with:
+          path: test-results/go-test
+          key: go-test-reports-${{ github.run_number }}
