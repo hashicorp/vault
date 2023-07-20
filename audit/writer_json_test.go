@@ -98,38 +98,39 @@ func TestFormatJSON_formatRequest(t *testing.T) {
 
 	for name, tc := range cases {
 		var buf bytes.Buffer
-		f, err := NewAuditFormatter(ss)
+		cfg, err := NewFormatterConfig()
 		require.NoError(t, err)
-		formatter := AuditFormatterWriter{
+		f, err := NewEntryFormatter(cfg, ss)
+		require.NoError(t, err)
+		formatter := EntryFormatterWriter{
 			Formatter: f,
 			Writer: &JSONWriter{
 				Prefix: tc.Prefix,
 			},
+			config: cfg,
 		}
-		config := FormatterConfig{
-			HMACAccessor: false,
-		}
+
 		in := &logical.LogInput{
 			Auth:     tc.Auth,
 			Request:  tc.Req,
 			OuterErr: tc.Err,
 		}
 
-		err = formatter.FormatAndWriteRequest(namespace.RootContext(nil), &buf, config, in)
+		err = formatter.FormatAndWriteRequest(namespace.RootContext(nil), &buf, in)
 		require.NoErrorf(t, err, "bad: %s\nerr: %s", name, err)
 
 		if !strings.HasPrefix(buf.String(), tc.Prefix) {
 			t.Fatalf("no prefix: %s \n log: %s\nprefix: %s", name, expectedResultStr, tc.Prefix)
 		}
 
-		expectedJSON := new(AuditRequestEntry)
+		expectedJSON := new(RequestEntry)
 
 		if err := jsonutil.DecodeJSON([]byte(expectedResultStr), &expectedJSON); err != nil {
 			t.Fatalf("bad json: %s", err)
 		}
-		expectedJSON.Request.Namespace = &AuditNamespace{ID: "root"}
+		expectedJSON.Request.Namespace = &Namespace{ID: "root"}
 
-		actualjson := new(AuditRequestEntry)
+		actualjson := new(RequestEntry)
 		if err := jsonutil.DecodeJSON([]byte(buf.String())[len(tc.Prefix):], &actualjson); err != nil {
 			t.Fatalf("bad json: %s", err)
 		}

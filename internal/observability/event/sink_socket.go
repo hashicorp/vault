@@ -15,41 +15,41 @@ import (
 	"github.com/hashicorp/eventlogger"
 )
 
-// AuditSocketSink is a sink node which handles writing audit events to socket.
-type AuditSocketSink struct {
-	format      auditFormat
-	address     string
-	socketType  string
-	maxDuration time.Duration
-	socketLock  sync.RWMutex
-	connection  net.Conn
+// SocketSink is a sink node which handles writing events to socket.
+type SocketSink struct {
+	requiredFormat string
+	address        string
+	socketType     string
+	maxDuration    time.Duration
+	socketLock     sync.RWMutex
+	connection     net.Conn
 }
 
-// NewAuditSocketSink should be used to create a new AuditSocketSink.
+// NewSocketSink should be used to create a new SocketSink.
 // Accepted options: WithMaxDuration and WithSocketType.
-func NewAuditSocketSink(format auditFormat, address string, opt ...Option) (*AuditSocketSink, error) {
-	const op = "event.NewAuditSocketSink"
+func NewSocketSink(format string, address string, opt ...Option) (*SocketSink, error) {
+	const op = "event.NewSocketSink"
 
 	opts, err := getOpts(opt...)
 	if err != nil {
 		return nil, fmt.Errorf("%s: error applying options: %w", op, err)
 	}
 
-	sink := &AuditSocketSink{
-		format:      format,
-		address:     address,
-		socketType:  opts.withSocketType,
-		maxDuration: opts.withMaxDuration,
-		socketLock:  sync.RWMutex{},
-		connection:  nil,
+	sink := &SocketSink{
+		requiredFormat: format,
+		address:        address,
+		socketType:     opts.withSocketType,
+		maxDuration:    opts.withMaxDuration,
+		socketLock:     sync.RWMutex{},
+		connection:     nil,
 	}
 
 	return sink, nil
 }
 
 // Process handles writing the event to the socket.
-func (s *AuditSocketSink) Process(ctx context.Context, e *eventlogger.Event) (*eventlogger.Event, error) {
-	const op = "event.(AuditSocketSink).Process"
+func (s *SocketSink) Process(ctx context.Context, e *eventlogger.Event) (*eventlogger.Event, error) {
+	const op = "event.(SocketSink).Process"
 
 	select {
 	case <-ctx.Done():
@@ -64,9 +64,9 @@ func (s *AuditSocketSink) Process(ctx context.Context, e *eventlogger.Event) (*e
 		return nil, fmt.Errorf("%s: event is nil: %w", op, ErrInvalidParameter)
 	}
 
-	formatted, found := e.Format(s.format.String())
+	formatted, found := e.Format(s.requiredFormat)
 	if !found {
-		return nil, fmt.Errorf("%s: unable to retrieve event formatted as %q", op, s.format)
+		return nil, fmt.Errorf("%s: unable to retrieve event formatted as %q", op, s.requiredFormat)
 	}
 
 	// Try writing and return early if successful.
@@ -95,8 +95,8 @@ func (s *AuditSocketSink) Process(ctx context.Context, e *eventlogger.Event) (*e
 }
 
 // Reopen handles reopening the connection for the socket sink.
-func (s *AuditSocketSink) Reopen() error {
-	const op = "event.(AuditSocketSink).Reopen"
+func (s *SocketSink) Reopen() error {
+	const op = "event.(SocketSink).Reopen"
 
 	s.socketLock.Lock()
 	defer s.socketLock.Unlock()
@@ -110,13 +110,13 @@ func (s *AuditSocketSink) Reopen() error {
 }
 
 // Type describes the type of this node (sink).
-func (s *AuditSocketSink) Type() eventlogger.NodeType {
+func (_ *SocketSink) Type() eventlogger.NodeType {
 	return eventlogger.NodeTypeSink
 }
 
 // connect attempts to establish a connection using the socketType and address.
-func (s *AuditSocketSink) connect(ctx context.Context) error {
-	const op = "event.(AuditSocketSink).connect"
+func (s *SocketSink) connect(ctx context.Context) error {
+	const op = "event.(SocketSink).connect"
 
 	// If we're already connected, we should have disconnected first.
 	if s.connection != nil {
@@ -138,8 +138,8 @@ func (s *AuditSocketSink) connect(ctx context.Context) error {
 }
 
 // disconnect attempts to close and clear an existing connection.
-func (s *AuditSocketSink) disconnect() error {
-	const op = "event.(AuditSocketSink).disconnect"
+func (s *SocketSink) disconnect() error {
+	const op = "event.(SocketSink).disconnect"
 
 	// If we're already disconnected, we can return early.
 	if s.connection == nil {
@@ -156,8 +156,8 @@ func (s *AuditSocketSink) disconnect() error {
 }
 
 // reconnect attempts to disconnect and then connect to the configured socketType and address.
-func (s *AuditSocketSink) reconnect(ctx context.Context) error {
-	const op = "event.(AuditSocketSink).reconnect"
+func (s *SocketSink) reconnect(ctx context.Context) error {
+	const op = "event.(SocketSink).reconnect"
 
 	err := s.disconnect()
 	if err != nil {
@@ -173,8 +173,8 @@ func (s *AuditSocketSink) reconnect(ctx context.Context) error {
 }
 
 // write attempts to write the specified data using the established connection.
-func (s *AuditSocketSink) write(ctx context.Context, data []byte) error {
-	const op = "event.(AuditSocketSink).write"
+func (s *SocketSink) write(ctx context.Context, data []byte) error {
+	const op = "event.(SocketSink).write"
 
 	// Ensure we're connected.
 	err := s.connect(ctx)

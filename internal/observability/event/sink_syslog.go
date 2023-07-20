@@ -12,16 +12,16 @@ import (
 	"github.com/hashicorp/eventlogger"
 )
 
-// AuditSyslogSink is a sink node which handles writing audit events to syslog.
-type AuditSyslogSink struct {
-	format auditFormat
-	logger gsyslog.Syslogger
+// SyslogSink is a sink node which handles writing events to syslog.
+type SyslogSink struct {
+	requiredFormat string
+	logger         gsyslog.Syslogger
 }
 
-// NewAuditSyslogSink should be used to create a new AuditSyslogSink.
+// NewSyslogSink should be used to create a new SyslogSink.
 // Accepted options: WithFacility and WithTag.
-func NewAuditSyslogSink(format auditFormat, opt ...Option) (*AuditSyslogSink, error) {
-	const op = "event.NewAuditSyslogSink"
+func NewSyslogSink(format string, opt ...Option) (*SyslogSink, error) {
+	const op = "event.NewSyslogSink"
 
 	opts, err := getOpts(opt...)
 	if err != nil {
@@ -33,12 +33,12 @@ func NewAuditSyslogSink(format auditFormat, opt ...Option) (*AuditSyslogSink, er
 		return nil, fmt.Errorf("%s: error creating syslogger: %w", op, err)
 	}
 
-	return &AuditSyslogSink{format: format, logger: logger}, nil
+	return &SyslogSink{requiredFormat: format, logger: logger}, nil
 }
 
 // Process handles writing the event to the syslog.
-func (s *AuditSyslogSink) Process(ctx context.Context, e *eventlogger.Event) (*eventlogger.Event, error) {
-	const op = "event.(AuditSyslogSink).Process"
+func (s *SyslogSink) Process(ctx context.Context, e *eventlogger.Event) (*eventlogger.Event, error) {
+	const op = "event.(SyslogSink).Process"
 
 	select {
 	case <-ctx.Done():
@@ -50,9 +50,9 @@ func (s *AuditSyslogSink) Process(ctx context.Context, e *eventlogger.Event) (*e
 		return nil, fmt.Errorf("%s: event is nil: %w", op, ErrInvalidParameter)
 	}
 
-	formatted, found := e.Format(s.format.String())
+	formatted, found := e.Format(s.requiredFormat)
 	if !found {
-		return nil, fmt.Errorf("%s: unable to retrieve event formatted as %q", op, s.format)
+		return nil, fmt.Errorf("%s: unable to retrieve event formatted as %q", op, s.requiredFormat)
 	}
 
 	_, err := s.logger.Write(formatted)
@@ -65,11 +65,11 @@ func (s *AuditSyslogSink) Process(ctx context.Context, e *eventlogger.Event) (*e
 }
 
 // Reopen is a no-op for a syslog sink.
-func (s *AuditSyslogSink) Reopen() error {
+func (_ *SyslogSink) Reopen() error {
 	return nil
 }
 
 // Type describes the type of this node (sink).
-func (s *AuditSyslogSink) Type() eventlogger.NodeType {
+func (_ *SyslogSink) Type() eventlogger.NodeType {
 	return eventlogger.NodeTypeSink
 }
