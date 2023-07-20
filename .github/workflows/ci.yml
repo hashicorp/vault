@@ -259,7 +259,7 @@ jobs:
           name: test-results-ui
           path: ui/test-results
         if: success() || failure()
-      - uses: test-summary/action@62bc5c68de2a6a0d02039763b8c754569df99e3f  # TSCCR: no entry for repository "test-summary/action"
+      - uses: test-summary/action@62bc5c68de2a6a0d02039763b8c754569df99e3f # v2.1
         with:
           paths: "ui/test-results/qunit/results.xml"
           show: "fail"
