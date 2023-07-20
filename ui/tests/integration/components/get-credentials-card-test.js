@@ -21,6 +21,9 @@ const storeService = Service.extend({
         case 'database/role':
           resolve([{ id: 'my-role', backend: 'database' }]);
           break;
+        case 'kv-engine/my-secret':
+          resolve([{ id: 'my-secret', backend: 'kv-engine' }]);
+          break;
         default:
           reject({ httpStatus: 404, message: 'not found' });
           break;
@@ -48,11 +51,13 @@ module('Integration | Component | get-credentials-card', function (hooks) {
   });
 
   test('it shows a disabled button when no item is selected', async function (assert) {
+    assert.expect(1);
     await render(hbs`<GetCredentialsCard @title={{this.title}} @searchLabel={{this.searchLabel}}/>`);
     assert.dom('[data-test-get-credentials]').isDisabled();
   });
 
   test('it shows button that can be clicked to credentials route when an item is selected', async function (assert) {
+    assert.expect(4);
     const models = ['database/role'];
     this.set('models', models);
     await render(
@@ -76,6 +81,7 @@ module('Integration | Component | get-credentials-card', function (hooks) {
   });
 
   test('it renders input search field when renderInputSearch=true and shows placeholder text', async function (assert) {
+    assert.expect(4);
     await render(
       hbs`<GetCredentialsCard @title={{this.title}} @renderInputSearch={{true}} @placeholder="secret/" @backend="kv" @type="secret"/>`
     );
@@ -94,6 +100,23 @@ module('Integration | Component | get-credentials-card', function (hooks) {
       this.router.transitionTo.lastCall.args,
       ['vault.cluster.secrets.backend.show', 'test'],
       'transitionTo is called with correct route and secret name'
+    );
+  });
+
+  test('it transitions to correct route when isKvEngine', async function (assert) {
+    assert.expect(2);
+    const models = ['kv-engine/my-secret'];
+    this.set('models', models);
+    await render(
+      hbs`<GetCredentialsCard @title="View secret" @searchLabel="Secret path" @placeholder="secret/" @models={{this.models}} @type="secret" @renderInputSearch={{true}} @isKvEngine={{true}}/>`
+    );
+    assert.dom('[data-test-get-credentials]').hasText('View secret');
+    await typeIn('[data-test-search-roles] input', 'my-secret');
+    await click('[data-test-get-credentials]');
+    assert.propEqual(
+      this.router.transitionTo.lastCall.args,
+      ['vault.cluster.secrets.backend.kv.secret.details', 'my-secret'],
+      'transitionTo is called with correct route and secret name.'
     );
   });
 });

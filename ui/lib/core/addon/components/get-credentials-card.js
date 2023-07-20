@@ -20,12 +20,14 @@
  * @param {string} [subText] - Text below title
  * @param {string} [placeholder] - Input placeholder text (default for SearchSelect is 'Search', none for InputSearch)
  * @param {string} backend - Passed to SearchSelect query method to fetch dropdown options
+ * @param {boolean} [isKvEngine] - Boolean used as short term fix for handling two KV engine locations and routes.
  */
 
 import Component from '@glimmer/component';
 import { inject as service } from '@ember/service';
 import { action } from '@ember/object';
 import { tracked } from '@glimmer/tracking';
+
 export default class GetCredentialsCard extends Component {
   @service router;
   @service store;
@@ -43,8 +45,11 @@ export default class GetCredentialsCard extends Component {
     if (role) {
       this.router.transitionTo('vault.cluster.secrets.backend.credentials', role);
     }
+    // TODO kv engine cleanup. Should be able to remove the is-engine conditional.
     if (secret) {
-      this.router.transitionTo('vault.cluster.secrets.backend.show', secret);
+      this.args.isKvEngine
+        ? this.router.transitionTo('vault.cluster.secrets.backend.kv.secret.details', secret)
+        : this.router.transitionTo('vault.cluster.secrets.backend.show', secret);
     }
   }
 
