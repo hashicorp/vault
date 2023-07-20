@@ -16,6 +16,25 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+// newStaticSalt returns a new staticSalt for use in testing.
+func newStaticSalt(t *testing.T) *staticSalt {
+	s, err := salt.NewSalt(context.Background(), nil, nil)
+	require.NoError(t, err)
+
+	return &staticSalt{salt: s}
+}
+
+// staticSalt is a struct which can be used to obtain a static salt.
+// a salt must be assigned when the struct is initialized.
+type staticSalt struct {
+	salt *salt.Salt
+}
+
+// Salt returns the static salt and no error.
+func (s *staticSalt) Salt(_ context.Context) (*salt.Salt, error) {
+	return s.salt, nil
+}
+
 type testingFormatWriter struct {
 	salt         *salt.Salt
 	lastRequest  *AuditRequestEntry
@@ -67,66 +86,178 @@ func (fw *testingFormatWriter) hashExpectedValueForComparison(input map[string]i
 	return copiedAsMap
 }
 
-func TestAuditFormat_FormatRequest_Errors(t *testing.T) {
-	config := FormatterConfig{}
-	formatter := auditFormatter{}
-
-	entry, err := formatter.FormatRequest(context.Background(), config, &logical.LogInput{})
-	require.Error(t, err)
-	require.Nil(t, entry)
-}
-
-func TestAuditFormatWriter_FormatRequest_Errors(t *testing.T) {
-	config := FormatterConfig{}
-	formatter := AuditFormatterWriter{
-		Formatter: &auditFormatter{},
-		Writer:    &testingFormatWriter{},
+// TestNewAuditFormatter tests that creating a new AuditFormatter can be done safely.
+func TestNewAuditFormatter(t *testing.T) {
+	tests := map[string]struct {
+		Salter              Salter
+		UseStaticSalter     bool
+		IsErrorExpected     bool
+		ExpectedErrorMessag string
+	}{
+		"nil": {
+			Salter:              nil,
+			IsErrorExpected:     true,
+			ExpectedErrorMessag: "cannot create a new audit formatter with nil salter",
+		},
+		"static": {
+			UseStaticSalter:     true,
+			IsErrorExpected:     false,
+			ExpectedErrorMessag: "",
+		},
 	}
 
-	entry, err := formatter.FormatRequest(context.Background(), config, &logical.LogInput{})
-	require.Error(t, err)
-	require.Nil(t, entry)
+	for name, tc := range tests {
+		name := name
+		tc := tc
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+			var s Salter
+			switch {
+			case tc.UseStaticSalter:
+				s = newStaticSalt(t)
+			default:
+				s = tc.Salter
+			}
 
-	in := &logical.LogInput{
-		Request: &logical.Request{},
+			f, err := NewAuditFormatter(s)
+			switch {
+			case tc.IsErrorExpected:
+				require.Error(t, err)
+				require.Nil(t, f)
+			default:
+				require.NoError(t, err)
+				require.NotNil(t, f)
+			}
+		})
 	}
-
-	entry, err = formatter.FormatRequest(context.Background(), config, in)
-	require.Error(t, err)
-	require.Nil(t, entry)
 }
 
-func TestAuditFormat_FormatResponse_Errors(t *testing.T) {
-	config := FormatterConfig{}
-	formatter := auditFormatter{}
-
-	entry, err := formatter.FormatResponse(context.Background(), config, &logical.LogInput{})
-	require.Error(t, err)
-	require.Nil(t, entry)
-
-	in := &logical.LogInput{Request: &logical.Request{}}
-
-	entry, err = formatter.FormatResponse(context.Background(), config, in)
-	require.Error(t, err)
-	require.Nil(t, entry)
-}
-
-func TestAuditFormatWriter_FormatResponse_Errors(t *testing.T) {
-	config := FormatterConfig{}
-	formatter := AuditFormatterWriter{
-		Formatter: &auditFormatter{},
-		Writer:    &testingFormatWriter{},
+// TestAuditFormatter_FormatRequest exercises AuditFormatter.FormatRequest with
+// varying inputs.
+func TestAuditFormatter_FormatRequest(t *testing.T) {
+	tests := map[string]struct {
+		Input                *logical.LogInput
+		IsErrorExpected      bool
+		ExpectedErrorMessage string
+		RootNamespace        bool
+	}{
+		"nil": {
+			Input:                nil,
+			IsErrorExpected:      true,
+			ExpectedErrorMessage: "request to request-audit a nil request",
+		},
+		"basic-input": {
+			Input:                &logical.LogInput{},
+			IsErrorExpected:      true,
+			ExpectedErrorMessage: "request to request-audit a nil request",
+		},
+		"input-and-request-no-ns": {
+			Input:                &logical.LogInput{Request: &logical.Request{ID: "123"}},
+			IsErrorExpected:      true,
+			ExpectedErrorMessage: "no namespace",
+			RootNamespace:        false,
+		},
+		"input-and-request-with-ns": {
+			Input:           &logical.LogInput{Request: &logical.Request{ID: "123"}},
+			IsErrorExpected: false,
+			RootNamespace:   true,
+		},
 	}
 
-	entry, err := formatter.FormatResponse(context.Background(), config, &logical.LogInput{})
-	require.Error(t, err)
-	require.Nil(t, entry)
+	for name, tc := range tests {
+		name := name
+		tc := tc
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+			config := FormatterConfig{}
+			f, err := NewAuditFormatter(newStaticSalt(t))
+			require.NoError(t, err)
 
-	in := &logical.LogInput{Request: &logical.Request{}}
+			var ctx context.Context
+			switch {
+			case tc.RootNamespace:
+				ctx = namespace.RootContext(context.Background())
+			default:
+				ctx = context.Background()
+			}
 
-	entry, err = formatter.FormatResponse(context.Background(), config, in)
-	require.Error(t, err)
-	require.Nil(t, entry)
+			entry, err := f.FormatRequest(ctx, config, tc.Input)
+
+			switch {
+			case tc.IsErrorExpected:
+				require.Error(t, err)
+				require.EqualError(t, err, tc.ExpectedErrorMessage)
+				require.Nil(t, entry)
+			default:
+				require.NoError(t, err)
+				require.NotNil(t, entry)
+			}
+		})
+	}
+}
+
+// TestAuditFormatter_FormatResponse exercises AuditFormatter.FormatResponse with
+// varying inputs.
+func TestAuditFormatter_FormatResponse(t *testing.T) {
+	tests := map[string]struct {
+		Input                *logical.LogInput
+		IsErrorExpected      bool
+		ExpectedErrorMessage string
+		RootNamespace        bool
+	}{
+		"nil": {
+			Input:                nil,
+			IsErrorExpected:      true,
+			ExpectedErrorMessage: "request to response-audit a nil request",
+		},
+		"basic-input": {
+			Input:                &logical.LogInput{},
+			IsErrorExpected:      true,
+			ExpectedErrorMessage: "request to response-audit a nil request",
+		},
+		"input-and-request-no-ns": {
+			Input:                &logical.LogInput{Request: &logical.Request{ID: "123"}},
+			IsErrorExpected:      true,
+			ExpectedErrorMessage: "no namespace",
+			RootNamespace:        false,
+		},
+		"input-and-request-with-ns": {
+			Input:           &logical.LogInput{Request: &logical.Request{ID: "123"}},
+			IsErrorExpected: false,
+			RootNamespace:   true,
+		},
+	}
+
+	for name, tc := range tests {
+		name := name
+		tc := tc
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+			config := FormatterConfig{}
+			f, err := NewAuditFormatter(newStaticSalt(t))
+			require.NoError(t, err)
+
+			var ctx context.Context
+			switch {
+			case tc.RootNamespace:
+				ctx = namespace.RootContext(context.Background())
+			default:
+				ctx = context.Background()
+			}
+
+			entry, err := f.FormatResponse(ctx, config, tc.Input)
+
+			switch {
+			case tc.IsErrorExpected:
+				require.Error(t, err)
+				require.EqualError(t, err, tc.ExpectedErrorMessage)
+				require.Nil(t, entry)
+			default:
+				require.NoError(t, err)
+				require.NotNil(t, entry)
+			}
+		})
+	}
 }
 
 func TestElideListResponses(t *testing.T) {

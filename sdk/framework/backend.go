@@ -60,6 +60,11 @@ type Backend struct {
 
 	// InitializeFunc is the callback, which if set, will be invoked via
 	// Initialize() just after a plugin has been mounted.
+	//
+	// Note that storage writes should only occur on the active instance within a
+	// primary cluster or local mount on a performance secondary. If your InitializeFunc
+	// writes to storage, you can use the backend's WriteSafeReplicationState() method
+	// to prevent it from attempting to write on a Vault instance with read-only storage.
 	InitializeFunc InitializeFunc
 
 	// PeriodicFunc is the callback, which if set, will be invoked when the
@@ -70,6 +75,11 @@ type Backend struct {
 	// entries in backend's storage, while the backend is still being used.
 	// (Note the difference between this action and `Clean`, which is
 	// invoked just before the backend is unmounted).
+	//
+	// Note that storage writes should only occur on the active instance within a
+	// primary cluster or local mount on a performance secondary. If your PeriodicFunc
+	// writes to storage, you can use the backend's WriteSafeReplicationState() method
+	// to prevent it from attempting to write on a Vault instance with read-only storage.
 	PeriodicFunc periodicFunc
 
 	// WALRollback is called when a WAL entry (see wal.go) has to be rolled
@@ -466,12 +476,38 @@ func (b *Backend) Secret(k string) *Secret {
 	return nil
 }
 
+// WriteSafeReplicationState returns true if this backend instance is capable of writing
+// to storage without receiving an ErrReadOnly error. The active instance in a primary
+// cluster or a local mount on a performance secondary is capable of writing to storage.
+func (b *Backend) WriteSafeReplicationState() bool {
+	replicationState := b.System().ReplicationState()
+	return (b.System().LocalMount() || !replicationState.HasState(consts.ReplicationPerformanceSecondary)) &&
+		!replicationState.HasState(consts.ReplicationDRSecondary) &&
+		!replicationState.HasState(consts.ReplicationPerformanceStandby)
+}
+
+// init runs as a sync.Once function from any plugin entry point which needs to route requests by paths.
+// It may panic if a coding error in the plugin is detected.
+// For builtin plugins, this is unit tested in helper/builtinplugins/builtinplugins_test.go.
+// For other plugins, any unit test that attempts to perform any request to the plugin will exercise these checks.
 func (b *Backend) init() {
 	b.pathsRe = make([]*regexp.Regexp, len(b.Paths))
 	for i, p := range b.Paths {
+		// Detect the coding error of failing to initialise Pattern
 		if len(p.Pattern) == 0 {
 			panic(fmt.Sprintf("Routing pattern cannot be blank"))
 		}
+
+		// Detect the coding error of attempting to define a CreateOperation without defining an ExistenceCheck
+		if p.ExistenceCheck == nil {
+			if _, ok := p.Operations[logical.CreateOperation]; ok {
+				panic(fmt.Sprintf("Pattern %v defines a CreateOperation but no ExistenceCheck", p.Pattern))
+			}
+			if _, ok := p.Callbacks[logical.CreateOperation]; ok {
+				panic(fmt.Sprintf("Pattern %v defines a CreateOperation but no ExistenceCheck", p.Pattern))
+			}
+		}
+
 		// Automatically anchor the pattern
 		if p.Pattern[0] != '^' {
 			p.Pattern = "^" + p.Pattern
@@ -479,6 +515,8 @@ func (b *Backend) init() {
 		if p.Pattern[len(p.Pattern)-1] != '$' {
 			p.Pattern = p.Pattern + "$"
 		}
+
+		// Detect the coding error of an invalid Pattern
 		b.pathsRe[i] = regexp.MustCompile(p.Pattern)
 	}
 }
