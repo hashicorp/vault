@@ -99,19 +99,4 @@ module('Integration | Component | get-credentials-card', function (hooks) {
       'transitionTo is called with correct route and secret name'
     );
   });
-
-  test('it transitions to correct route when isKvEngine', async function (assert) {
-    assert.expect(2);
-    await render(
-      hbs`<GetCredentialsCard @title="View secret" @searchLabel="Secret path" @placeholder="secret/" @type="secret" @renderInputSearch={{true}} @isKvEngine={{true}}/>`
-    );
-    assert.dom('[data-test-get-credentials]').hasText('View secret');
-    await typeIn('[data-test-search-roles] input', 'my-secret');
-    await click('[data-test-get-credentials]');
-    assert.propEqual(
-      this.router.transitionTo.lastCall.args,
-      ['vault.cluster.secrets.backend.kv.secret.details', 'my-secret'],
-      'transitionTo is called with correct route and secret name.'
-    );
-  });
 });

@@ -20,7 +20,6 @@
  * @param {string} [subText] - Text below title
  * @param {string} [placeholder] - Input placeholder text (default for SearchSelect is 'Search', none for InputSearch)
  * @param {string} backend - Passed to SearchSelect query method to fetch dropdown options
- * @param {boolean} [isKvEngine] - Boolean used as short term fix for handling two KV engine locations and routes.
  */
 
 import Component from '@glimmer/component';
