@@ -20,29 +20,33 @@ export default class KvSecretsListRoute extends Route {
     },
   };
 
-  model(params) {
-    const pageFilter = params.pageFilter;
-    const pathToSecret = params.path_to_secret ? normalizePath(params.path_to_secret) : '';
-    const backend = this.secretMountPath.currentPath;
-    const filter = pathToSecret ? pathToSecret + (pageFilter || '') : pageFilter;
-    const secrets = this.store
+  async fetchMetadata(backend, pathToSecret, filter) {
+    return await this.store
       .query('kv/metadata', { backend, pathToSecret })
       .then((models) => {
-        this.has404 = false;
         return filter
           ? models.filter((model) => model.fullSecretPath.toLowerCase().includes(filter.toLowerCase()))
           : models;
       })
       .catch((err) => {
+        if (err.httpStatus === 403) {
+          return 403;
+        }
         if (err.httpStatus === 404) {
-          this.has404 = true;
           return [];
         } else {
           throw err;
         }
       });
+  }
+
+  model(params) {
+    const pageFilter = params.pageFilter || '';
+    const pathToSecret = params.path_to_secret ? normalizePath(params.path_to_secret) : '';
+    const backend = this.secretMountPath.currentPath;
+    const filter = pathToSecret ? pathToSecret + pageFilter : pageFilter;
     return hash({
-      secrets,
+      secrets: this.fetchMetadata(backend, pathToSecret, filter),
       backend,
       pathToSecret,
       filterValue: filter,
@@ -52,6 +56,9 @@ export default class KvSecretsListRoute extends Route {
 
   setupController(controller, resolvedModel) {
     super.setupController(controller, resolvedModel);
+    if (resolvedModel.secrets === 403) {
+      resolvedModel.noMetadataListPermissions = true;
+    }
     controller.routeName = this.routeName;
 
     let breadcrumbsArray = [{ label: 'secrets', route: 'secrets', linkExternal: true }];

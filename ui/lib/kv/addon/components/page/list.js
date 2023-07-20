@@ -6,6 +6,7 @@
 import Component from '@glimmer/component';
 import { inject as service } from '@ember/service';
 import { action } from '@ember/object';
+import { tracked } from '@glimmer/tracking';
 import { getOwner } from '@ember/application';
 import { ancestorKeysForKey } from 'core/utils/key-utils';
 import errorMessage from 'vault/utils/error-message';
@@ -16,11 +17,14 @@ import errorMessage from 'vault/utils/error-message';
  *
  * @param {array} model - An array of models generated form kv/metadata query.
  * @param {array} breadcrumbs - Breadcrumbs as an array of objects that contain label, route, and modelId. They are updated via the util kv-breadcrumbs to handle dynamic *pathToSecret on the list-directory route.
+ * @param {boolean} noMetadataListPermissions - true if the return to query metadata LIST is 403, indicating the user does not have permissions to that endpoint.
  */
 
 export default class KvListPageComponent extends Component {
   @service flashMessages;
   @service router;
+
+  @tracked secretPath = '';
 
   get mountPoint() {
     // mountPoint tells the LinkedBlock component where to start the transition. In this case, mountPoint will always be vault.cluster.secrets.backend.kv.
@@ -43,5 +47,15 @@ export default class KvListPageComponent extends Component {
       const message = errorMessage(error, 'Error deleting secret. Please try again or contact support.');
       this.flashMessages.danger(message);
     }
+  }
+
+  @action
+  handleSecretPathInput(value) {
+    this.secretPath = value;
+  }
+
+  @action
+  transitionToSecretDetail() {
+    this.router.transitionTo(`${this.mountPoint}.secret.details`, this.secretPath);
   }
 }

@@ -37,6 +37,7 @@ module('Integration | Component | kv | kv-page-header', function (hooks) {
   });
 
   test('it renders breadcrumbs', async function (assert) {
+    assert.expect(4);
     await render(
       hbs`<KvPageHeader @breadcrumbs={{this.breadcrumbs}} @model={{this.model}} @pageTitle="Create new version"/>`,
       {
@@ -52,6 +53,7 @@ module('Integration | Component | kv | kv-page-header', function (hooks) {
   });
 
   test('it renders a custom title for a non engine view', async function (assert) {
+    assert.expect(2);
     await render(
       hbs`<KvPageHeader @breadcrumbs={{this.breadcrumbs}} @model={{this.model}} @pageTitle="Create new version"/>`,
       {
@@ -63,6 +65,7 @@ module('Integration | Component | kv | kv-page-header', function (hooks) {
   });
 
   test('it renders a title, icon and tag if engine view', async function (assert) {
+    assert.expect(2);
     await render(
       hbs`<KvPageHeader @breadcrumbs={{this.breadcrumbs}} @model={{this.model}} @isEngineView="true" @pageTitle={{this.backend}}/>`,
       {
@@ -76,6 +79,7 @@ module('Integration | Component | kv | kv-page-header', function (hooks) {
   });
 
   test('it renders tabs', async function (assert) {
+    assert.expect(2);
     await render(
       hbs`<KvPageHeader @model={{this.model}} @breadcrumbs={{this.breadcrumbs}} @isEngineView={{true}} >
     <:tabLinks>
@@ -95,6 +99,7 @@ module('Integration | Component | kv | kv-page-header', function (hooks) {
   });
 
   test('it should yield block for toolbar actions', async function (assert) {
+    assert.expect(1);
     await render(
       hbs`<KvPageHeader @model={{this.model}} @breadcrumbs={{this.breadcrumbs}} @isEngineView={{true}} >
       <:toolbarActions>
@@ -108,6 +113,7 @@ module('Integration | Component | kv | kv-page-header', function (hooks) {
   });
 
   test('it should yield block for toolbar filters', async function (assert) {
+    assert.expect(1);
     await render(
       hbs`<KvPageHeader @model={{this.model}} @breadcrumbs={{this.breadcrumbs}} @isEngineView={{true}} >
       <:toolbarFilters>
