@@ -29,10 +29,9 @@ with the `vault audit enable` command. For example, to enable auditing for the
 $ vault audit enable file file_path=/var/log/vault_audit.log
 ```
 
-By default, Vault replicates audit device configuration to all nodes within a
-cluster. Enterprise installations also replicate audit device configuration to
-the primary node and all secondary nodes in a cluster. To disable replication, use
-the `local` parameter:
+By default, Enterprise installations replicate audit devices to the secondary
+performance nodes in a cluster. To limit performance replication for an audit
+device, use the `local` flag to mark the device as local to the current node:
 
 ```shell-session
 $ vault audit enable file -local file_path=/var/log/vault_audit.log
