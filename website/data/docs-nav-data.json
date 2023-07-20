@@ -104,10 +104,6 @@
                 "path": "internals/telemetry/metrics/database"
               },
               {
-                "title": "Merkle tree metrics",
-                "path": "internals/telemetry/metrics/merkle"
-              },
-              {
                 "title": "Policy metrics",
                 "path": "internals/telemetry/metrics/policy"
               },
@@ -122,10 +118,6 @@
               {
                 "title": "Storage plugin metrics",
                 "path": "internals/telemetry/metrics/storage"
-              },
-              {
-                "title": "Write-ahead log metrics",
-                "path": "internals/telemetry/metrics/wal"
               },
               {
                 "title": "Full metrics list",
