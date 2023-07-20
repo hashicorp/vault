@@ -57,10 +57,27 @@ telemetry {
   num_lease_metrics_buckets = 168
   add_lease_metrics_namespace_labels = false
   filter_default = true
-  prefix_filter = ["+vault.token", "-vault.expire", "+vault.expire.num_leases"]
+  
   statsite_address = "mycompany.statsite:8125"
 }
 ```
+
+<Tip heading="Use a prefix filter to reduce the volume of metrics you receive">
+
+  Many metrics solutions charge by the metric. You can use the `prefix_filter`
+  parameter to include and exclude specific values based on metric name to avoid
+  paying for irrelevant information.
+  
+  For example, to limit your telemetry to the core token metrics plus the number
+  of leases set to expire:
+
+  ```hcl
+  telemetry {
+    prefix_filter = ["+vault.token", "-vault.expire", "+vault.expire.num_leases"]
+  }
+  ```
+
+</Tip>
 
 ## Step 4: Choose a reporting solution
 
