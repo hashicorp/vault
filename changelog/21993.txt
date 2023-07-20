@@ -1,0 +1,3 @@
+```release-note:improvement
+cli: Allow vault CLI HTTP headers to be specified by environment variable
+```
