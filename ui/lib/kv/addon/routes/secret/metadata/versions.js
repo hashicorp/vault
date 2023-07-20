@@ -6,6 +6,7 @@
 import Route from '@ember/routing/route';
 import { inject as service } from '@ember/service';
 import { hash } from 'rsvp';
+import { pathIsFromDirectory, breadcrumbsForDirectory } from 'vault/lib/kv-breadcrumbs';
 
 export default class KvSecretMetadataVersionsRoute extends Route {
   @service store;
@@ -14,7 +15,9 @@ export default class KvSecretMetadataVersionsRoute extends Route {
   model() {
     const backend = this.secretMountPath.get();
     const parentModel = this.modelFor('secret.metadata');
+    const { name } = this.paramsFor('secret');
     return hash({
+      path: name,
       backend,
       ...parentModel,
     });
@@ -22,11 +25,21 @@ export default class KvSecretMetadataVersionsRoute extends Route {
 
   setupController(controller, resolvedModel) {
     super.setupController(controller, resolvedModel);
-    controller.breadcrumbs = [
+    let breadcrumbsArray = [
       { label: 'secrets', route: 'secrets', linkExternal: true },
       { label: resolvedModel.backend, route: 'list' },
-      { label: resolvedModel.name, route: 'secret.details', model: resolvedModel.name },
-      { label: 'version history' },
     ];
+
+    if (pathIsFromDirectory(resolvedModel.name)) {
+      breadcrumbsArray = [...breadcrumbsArray, ...breadcrumbsForDirectory(resolvedModel.name)];
+    } else {
+      breadcrumbsArray.push({
+        label: resolvedModel.path,
+        route: 'secret.details',
+        model: resolvedModel.path,
+      });
+    }
+    breadcrumbsArray.push({ label: 'version history' });
+    controller.set('breadcrumbs', breadcrumbsArray);
   }
 }
