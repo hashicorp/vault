@@ -40,7 +40,7 @@ module('Acceptance | unseal', function (hooks) {
 
     // unseal
     for (const key of unsealKeys) {
-      await fillIn('[data-test-shamir-input]', key);
+      await fillIn('[data-test-shamir-key-input]', key);
 
       await click('button[type="submit"]');
 

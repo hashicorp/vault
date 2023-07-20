@@ -24,7 +24,7 @@ export const EXTENSION_OIDs = {
 };
 
 // these are allowed ext oids, but not parsed and passed to cross-signed certs
-export const IGNORED_OIDs = {
+export const OTHER_OIDs = {
   // These two extensions are controlled by the parent authority.
   authority_key_identifier: '2.5.29.35',
   authority_access_info: '1.3.6.1.5.5.7.1.1',
