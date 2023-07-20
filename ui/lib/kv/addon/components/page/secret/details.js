@@ -21,15 +21,6 @@ import { tracked } from '@glimmer/tracking';
  * @param {model} secret - Ember data model: 'kv/data'  
  * @param {model} metadata - Ember data model: 'kv/metadata'
  * @param {array} breadcrumbs - Array to generate breadcrumbs, passed to the page header component
- * 
- * sample: 
-  {
-    backend: 'my-kv-engine',
-    path: 'full/secret/path',
-    secret: KvDataEmberModel,
-    metadata: KvMetadataEmberModel,
-  }
- *
  */
 
 export default class KvSecretDetails extends Component {
