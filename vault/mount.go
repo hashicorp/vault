@@ -450,16 +450,6 @@ func (e *MountEntry) SyncCache() {
 	}
 }
 
-func (entry *MountEntry) Deserialize() map[string]interface{} {
-	return map[string]interface{}{
-		"mount_path":      entry.Path,
-		"mount_namespace": entry.Namespace().Path,
-		"uuid":            entry.UUID,
-		"accessor":        entry.Accessor,
-		"mount_type":      entry.Type,
-	}
-}
-
 // DecodeMountTable is used for testing
 func (c *Core) DecodeMountTable(ctx context.Context, raw []byte) (*MountTable, error) {
 	return c.decodeMountTable(ctx, raw)
