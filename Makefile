@@ -113,7 +113,7 @@ vet:
 			echo "and fix them if necessary before submitting the code for reviewal."; \
 		fi
 
-# deprecations runs staticcheck tool to look for deprecations. Checks entire code to see if it 
+# deprecations runs staticcheck tool to look for deprecations. Checks entire code to see if it
 # has deprecated function, variable, constant or field
 deprecations: bootstrap prep
 	@BUILD_TAGS='$(BUILD_TAGS)' ./scripts/deprecations-checker.sh ""
@@ -128,13 +128,13 @@ tools/codechecker/.bin/codechecker:
 
 # vet-codechecker runs our custom linters on the test functions. All output gets
 # piped to revgrep which will only return an error if new piece of code violates
-# the check 
+# the check
 vet-codechecker: bootstrap tools/codechecker/.bin/codechecker prep
 	@$(GO_CMD) vet -vettool=./tools/codechecker/.bin/codechecker -tags=$(BUILD_TAGS) ./... 2>&1 | revgrep
 
 # vet-codechecker runs our custom linters on the test functions. All output gets
-# piped to revgrep which will only return an error if new piece of code that is 
-# not on main violates the check 
+# piped to revgrep which will only return an error if new piece of code that is
+# not on main violates the check
 ci-vet-codechecker: ci-bootstrap tools/codechecker/.bin/codechecker prep
 	@$(GO_CMD) vet -vettool=./tools/codechecker/.bin/codechecker -tags=$(BUILD_TAGS) ./... 2>&1 | revgrep origin/main
 
@@ -159,7 +159,7 @@ ci-lint:
 # dependency.
 prep:
 	@sh -c "'$(CURDIR)/scripts/goversioncheck.sh' '$(GO_VERSION_MIN)'"
-	@$(GO_CMD) generate $($(GO_CMD) list ./... | grep -v /vendor/)
+	@$(GO_CMD) generate $$($(GO_CMD) list ./... | grep -v /vendor/)
 	@if [ -d .git/hooks ]; then cp .hooks/* .git/hooks/; fi
 
 # bootstrap the build by downloading additional tools needed to build
