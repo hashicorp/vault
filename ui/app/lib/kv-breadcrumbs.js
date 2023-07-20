@@ -13,7 +13,7 @@ function pathIsFromDirectory(path) {
   return path ? !!path.match(/\//) : false;
 }
 
-function breadcrumbsForDirectory(path, noLinkToLastItem) {
+function breadcrumbsForDirectory(path, noLinkToLastItem = false) {
   /* 
     takes a path nested secret path "beep/boop" and returns an array of objects used for breadcrumbs: 
     [
