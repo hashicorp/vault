@@ -5,10 +5,6 @@ on:
         type: string
         description: 'The owner and repository name as per the github.repository context property.'
         required: true
-      sha:
-        type: string
-        description: 'The hash of the plugin repository commit to use'
-        required: true
       plugin_branch:
         type: string
         description: 'The name of the plugin branch'
@@ -18,29 +14,33 @@ jobs:
   plugin-update-check:
     runs-on: ubuntu-latest
     env:
-      COMMIT_SHA: "${{inputs.sha}}"
       PLUGIN_REPO: "${{inputs.repo}}"
       PLUGIN_BRANCH: "${{inputs.plugin_branch}}"
-      VAULT_BRANCH: "auto-plugin-update/${{inputs.repo}}/${{inputs.sha}}"
+      VAULT_BRANCH: "auto-plugin-update/${{inputs.repo}}/${{inputs.plugin_branch}}"
       RUN_ID: "${{github.run_id}}"
     steps:
-      - run: echo "would use $COMMIT_SHA of $PLUGIN_REPO"
-        # checkout
+      - run: echo "Branch $PLUGIN_BRANCH of $PLUGIN_REPO"
       - uses: actions/checkout@c85c95e3d7251135ab7dc9ce3241c5835cc595a9 # v3.5.3
         with:
           # We don't use the default token so that checks are executed on the resulting PR
           # https://docs.github.com/en/actions/using-workflows/triggering-a-workflow#triggering-a-workflow-from-a-workflow
           token: ${{ secrets.ELEVATED_GITHUB_TOKEN }}
-        # activate go
+
       - uses: actions/setup-go@fac708d6674e30b6ba41289acaab6d4b75aa0753 # v4.0.1
+        with:
+          cache: false # save cache space for vault builds: https://github.com/hashicorp/vault/pull/21764
+          go-version-file: .go-version
+
       - name: update plugin
         run: |
-          go get "github.com/$PLUGIN_REPO@$COMMIT_SHA"
+          go get "github.com/$PLUGIN_REPO@$PLUGIN_BRANCH"
           go mod tidy
+
       - name: detect changes
         id: changes
         run: |
           echo "count=$(git status --porcelain=v1 2>/dev/null | wc -l)" >> "$GITHUB_OUTPUT"
+
       - name: commit/push
         if: steps.changes.outputs.count > 0
         run: |
@@ -49,7 +49,9 @@ jobs:
           git add .
           git commit -m "Automated dependency upgrades"
           git push -f origin ${{ github.ref_name }}:"$VAULT_BRANCH"
+
       - name: Open pull request if needed
+        id: pr
         if: steps.changes.outputs.count > 0
         env:
           GITHUB_TOKEN: ${{secrets.ELEVATED_GITHUB_TOKEN}}
@@ -58,10 +60,52 @@ jobs:
           PR=$(gh pr list --head "$VAULT_BRANCH" --json number -q '.[0].number')
 
           if [ -z "$PR" ]; then
-            # call the script to create the plugin update PR on Vault
-            ./.github/scripts/plugin-helper-gh-pr-create.sh
+            gh pr create \
+            --head "$VAULT_BRANCH" \
+            --title "[DO NOT MERGE]: $PLUGIN_REPO Automated plugin update check" \
+            --body "Updates $PLUGIN_REPO to verify vault CI. Full log: https://github.com/hashicorp/vault/actions/runs/$RUN_ID"
 
+            echo "vault_pr_num=$(gh pr list --head "$VAULT_BRANCH" --json number -q '.[0].number')" >> "$GITHUB_OUTPUT"
+            echo "vault_pr_url=$(gh pr list --head "$VAULT_BRANCH" --json html_url -q '.[0].html_url')" >> "$GITHUB_OUTPUT"
           else
             echo "Pull request already exists, won't create a new one."
+          fi
+
+      - name: Add labels to Vault CI check PR
+        if: steps.changes.outputs.count > 0
+        env:
+          # this is a different token to the one we have been using that should
+          # allow us to add labels
+          GITHUB_TOKEN: ${{secrets.GITHUB_TOKEN}}
+        run: |
+          if [ -z "$vault_pr_num" ]; then
+            echo "error: no vault PR found"
             exit 1
           fi
+
+          gh pr edit "${{ steps.pr.outputs.vault_pr_num }}" \
+            --add-label "dependencies,pr/no-changelong,pr/no-milestone" \
+            --repo hashicorp/vault
+
+      - name: Comment on plugin PR
+        if: steps.changes.outputs.count > 0
+        env:
+          GITHUB_TOKEN: ${{secrets.ELEVATED_GITHUB_TOKEN}}
+        run: |
+          # get Plugin PR number
+          plugin_pr_num=$(gh pr list --head "$PLUGIN_BRANCH" --json number --repo "$PLUGIN_REPO" -q '.[0].number')
+
+          if [ -z "$plugin_pr_num" ]; then
+            echo "error: no plugin PR found"
+            exit 1
+          fi
+
+          if [ -z "${{ steps.pr.outputs.vault_pr_url }}" ]; then
+            echo "error: no vault PR found"
+            exit 1
+          fi
+
+          # make a comment on the plugin repo's PR
+          gh pr comment "$plugin_pr_num" \
+            --body "Vault CI check PR: ${{ steps.pr.outputs.vault_pr_url }}" \
+            --repo "$PLUGIN_REPO"

@@ -593,10 +593,6 @@ type Core struct {
 	// active, or give up active as soon as it gets it
 	neverBecomeActive *uint32
 
-	// loadCaseSensitiveIdentityStore enforces the loading of identity store
-	// artifacts in a case sensitive manner. To be used only in testing.
-	loadCaseSensitiveIdentityStore bool
-
 	// clusterListener starts up and manages connections on the cluster ports
 	clusterListener *atomic.Value
 
@@ -3181,6 +3177,7 @@ type BuiltinRegistry interface {
 	Get(name string, pluginType consts.PluginType) (func() (interface{}, error), bool)
 	Keys(pluginType consts.PluginType) []string
 	DeprecationStatus(name string, pluginType consts.PluginType) (consts.DeprecationStatus, bool)
+	IsBuiltinEntPlugin(name string, pluginType consts.PluginType) bool
 }
 
 func (c *Core) AuditLogger() AuditLogger {

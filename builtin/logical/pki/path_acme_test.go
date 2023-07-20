@@ -795,8 +795,10 @@ func TestAcmeTruncatesToIssuerExpiry(t *testing.T) {
 	require.Equal(t, shortCa.NotAfter, acmeCert.NotAfter, "certificate times aren't the same")
 }
 
-// TestAcmeIgnoresRoleExtKeyUsage
-func TestAcmeIgnoresRoleExtKeyUsage(t *testing.T) {
+// TestAcmeRoleExtKeyUsage verify that ACME by default ignores the role's various ExtKeyUsage flags,
+// but if the ACME configuration override of allow_role_ext_key_usage is set that we then honor
+// the role's flag.
+func TestAcmeRoleExtKeyUsage(t *testing.T) {
 	t.Parallel()
 
 	cluster, client, _ := setupAcmeBackend(t)
@@ -862,6 +864,37 @@ func TestAcmeIgnoresRoleExtKeyUsage(t *testing.T) {
 	require.Equal(t, 1, len(acmeCert.ExtKeyUsage), "mis-match on expected ExtKeyUsages")
 	require.ElementsMatch(t, []x509.ExtKeyUsage{x509.ExtKeyUsageServerAuth}, acmeCert.ExtKeyUsage,
 		"mismatch of ExtKeyUsage flags")
+
+	// Now turn the ACME configuration allow_role_ext_key_usage and retest to make sure we get a certificate
+	// with them all
+	_, err = client.Logical().WriteWithContext(context.Background(), "pki/config/acme", map[string]interface{}{
+		"enabled":                  true,
+		"eab_policy":               "not-required",
+		"allow_role_ext_key_usage": true,
+	})
+	require.NoError(t, err, "failed updating ACME configuration")
+
+	t.Logf("Testing Authorize Order on %s", baseAcmeURL)
+	order, err = acmeClient.AuthorizeOrder(testCtx, []acme.AuthzID{
+		{Type: "dns", Value: identifiers[0]},
+	})
+	require.NoError(t, err, "failed creating order")
+
+	// HACK: Update authorization/challenge to completed as we can't really do it properly in this workflow test.
+	markAuthorizationSuccess(t, client, acmeClient, acct, order)
+
+	certs, _, err = acmeClient.CreateOrderCert(testCtx, order.FinalizeURL, csr, true)
+	require.NoError(t, err, "order finalization failed")
+	require.GreaterOrEqual(t, len(certs), 1, "expected at least one cert in bundle")
+	acmeCert, err = x509.ParseCertificate(certs[0])
+	require.NoError(t, err, "failed parsing acme cert")
+
+	require.Equal(t, 4, len(acmeCert.ExtKeyUsage), "mis-match on expected ExtKeyUsages")
+	require.ElementsMatch(t, []x509.ExtKeyUsage{
+		x509.ExtKeyUsageServerAuth, x509.ExtKeyUsageClientAuth,
+		x509.ExtKeyUsageCodeSigning, x509.ExtKeyUsageEmailProtection,
+	},
+		acmeCert.ExtKeyUsage, "mismatch of ExtKeyUsage flags")
 }
 
 func TestIssuerRoleDirectoryAssociations(t *testing.T) {
@@ -995,8 +1028,53 @@ func TestIssuerRoleDirectoryAssociations(t *testing.T) {
 		require.Contains(t, leafCert.Subject.OrganizationalUnit, "IT Security", "on directory: %v", directory)
 		requireSignedByAtPath(t, client, leafCert, issuerPath)
 	}
+}
 
-	// 5.
+func TestACMESubjectFieldsAndExtensionsIgnored(t *testing.T) {
+	t.Parallel()
+
+	// This creates two issuers for us (root-ca, int-ca) and two
+	// roles (test-role, acme) that we can use with various directory
+	// configurations.
+	cluster, client, _ := setupAcmeBackend(t)
+	defer cluster.Cleanup()
+
+	// Setup DNS for validations.
+	testCtx := context.Background()
+	dns := dnstest.SetupResolver(t, "dadgarcorp.com")
+	defer dns.Cleanup()
+	_, err := client.Logical().WriteWithContext(testCtx, "pki/config/acme", map[string]interface{}{
+		"dns_resolver": dns.GetLocalAddr(),
+	})
+	require.NoError(t, err, "failed to specify dns resolver")
+
+	// Use the default sign-verbatim policy and ensure OU does not get set.
+	directory := "/v1/pki/acme/"
+	domains := []string{"no-ou.dadgarcorp.com"}
+	acmeClient := getAcmeClientForCluster(t, cluster, directory, nil)
+	cr := &x509.CertificateRequest{
+		Subject:  pkix.Name{CommonName: domains[0], OrganizationalUnit: []string{"DadgarCorp IT"}},
+		DNSNames: domains,
+	}
+	cert := doACMEForCSRWithDNS(t, dns, acmeClient, domains, cr)
+	t.Logf("Got certificate: %v", cert)
+	require.Empty(t, cert.Subject.OrganizationalUnit)
+
+	// Use the default sign-verbatim policy and ensure extension does not get set.
+	domains = []string{"no-ext.dadgarcorp.com"}
+	extension, err := certutil.CreateDeltaCRLIndicatorExt(12345)
+	require.NoError(t, err)
+	cr = &x509.CertificateRequest{
+		Subject:         pkix.Name{CommonName: domains[0]},
+		DNSNames:        domains,
+		ExtraExtensions: []pkix.Extension{extension},
+	}
+	cert = doACMEForCSRWithDNS(t, dns, acmeClient, domains, cr)
+	t.Logf("Got certificate: %v", cert)
+	for _, ext := range cert.Extensions {
+		require.False(t, ext.Id.Equal(certutil.DeltaCRLIndicatorOID))
+	}
+	require.NotEmpty(t, cert.Extensions)
 }
 
 // TestAcmeWithCsrIncludingBasicConstraintExtension verify that we error out for a CSR that is requesting a
@@ -1242,7 +1320,7 @@ func setupAcmeBackendOnClusterAtPath(t *testing.T, cluster *vault.TestCluster, c
 			"issuer_name": "root-ca",
 			"key_name":    "root-key",
 			"key_type":    "ec",
-			"common_name": "root.com",
+			"common_name": "Test Root R1 " + mount,
 			"ttl":         "7200h",
 			"max_ttl":     "920000h",
 		})
@@ -1252,7 +1330,7 @@ func setupAcmeBackendOnClusterAtPath(t *testing.T, cluster *vault.TestCluster, c
 		map[string]interface{}{
 			"key_name":    "int-key",
 			"key_type":    "ec",
-			"common_name": "test.com",
+			"common_name": "Test Int X1 " + mount,
 		})
 	require.NoError(t, err, "failed creating intermediary CSR")
 	intermediateCSR := resp.Data["csr"].(string)

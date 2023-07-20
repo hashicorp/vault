@@ -9,6 +9,7 @@ import (
 	"bytes"
 	"context"
 	"crypto/sha256"
+	"fmt"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -25,6 +26,8 @@ import (
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/mitchellh/go-testing-interface"
 )
+
+var externalPlugins = []string{"transform", "kmip", "keymgmt"}
 
 // RetryUntil runs f until it returns a nil result or the timeout is reached.
 // If a nil result hasn't been obtained by timeout, calls t.Fatal.
@@ -180,8 +183,21 @@ func (m *mockBuiltinRegistry) Keys(pluginType consts.PluginType) []string {
 			"pending-removal-test-plugin",
 			"approle",
 		}
+
+	case consts.PluginTypeSecrets:
+		return append(externalPlugins, "kv")
 	}
+
 	return []string{}
+}
+
+func (r *mockBuiltinRegistry) IsBuiltinEntPlugin(name string, pluginType consts.PluginType) bool {
+	for _, i := range externalPlugins {
+		if i == name {
+			return true
+		}
+	}
+	return false
 }
 
 func (m *mockBuiltinRegistry) Contains(name string, pluginType consts.PluginType) bool {
@@ -229,14 +245,24 @@ func NewNoopAudit(config map[string]string) (*NoopAudit, error) {
 			Config: config,
 		},
 	}
-	n.formatter.AuditFormatWriter = &audit.JSONFormatWriter{
-		SaltFunc: n.Salt,
+
+	f, err := audit.NewAuditFormatter(n)
+	if err != nil {
+		return nil, fmt.Errorf("error creating formatter: %w", err)
 	}
+
+	fw, err := audit.NewAuditFormatterWriter(f, &audit.JSONWriter{})
+	if err != nil {
+		return nil, fmt.Errorf("error creating formatter writer: %w", err)
+	}
+
+	n.formatter = fw
+
 	return n, nil
 }
 
 func NoopAuditFactory(records **[][]byte) audit.Factory {
-	return func(_ context.Context, config *audit.BackendConfig) (audit.Backend, error) {
+	return func(_ context.Context, config *audit.BackendConfig, _ bool) (audit.Backend, error) {
 		n, err := NewNoopAudit(config.Config)
 		if err != nil {
 			return nil, err
@@ -265,7 +291,7 @@ type NoopAudit struct {
 	RespReqNonHMACKeys [][]string
 	RespErrs           []error
 
-	formatter audit.AuditFormatter
+	formatter *audit.AuditFormatterWriter
 	records   [][]byte
 	l         sync.RWMutex
 	salt      *salt.Salt
@@ -275,9 +301,9 @@ type NoopAudit struct {
 func (n *NoopAudit) LogRequest(ctx context.Context, in *logical.LogInput) error {
 	n.l.Lock()
 	defer n.l.Unlock()
-	if n.formatter.AuditFormatWriter != nil {
+	if n.formatter != nil {
 		var w bytes.Buffer
-		err := n.formatter.FormatRequest(ctx, &w, audit.FormatterConfig{}, in)
+		err := n.formatter.FormatAndWriteRequest(ctx, &w, audit.FormatterConfig{}, in)
 		if err != nil {
 			return err
 		}
@@ -297,9 +323,9 @@ func (n *NoopAudit) LogResponse(ctx context.Context, in *logical.LogInput) error
 	n.l.Lock()
 	defer n.l.Unlock()
 
-	if n.formatter.AuditFormatWriter != nil {
+	if n.formatter != nil {
 		var w bytes.Buffer
-		err := n.formatter.FormatResponse(ctx, &w, audit.FormatterConfig{}, in)
+		err := n.formatter.FormatAndWriteResponse(ctx, &w, audit.FormatterConfig{}, in)
 		if err != nil {
 			return err
 		}
@@ -324,7 +350,7 @@ func (n *NoopAudit) LogTestMessage(ctx context.Context, in *logical.LogInput, co
 	defer n.l.Unlock()
 	var w bytes.Buffer
 	tempFormatter := audit.NewTemporaryFormatter(config["format"], config["prefix"])
-	err := tempFormatter.FormatResponse(ctx, &w, audit.FormatterConfig{}, in)
+	err := tempFormatter.FormatAndWriteResponse(ctx, &w, audit.FormatterConfig{}, in)
 	if err != nil {
 		return err
 	}

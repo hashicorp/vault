@@ -115,12 +115,12 @@ vet:
 
 # deprecations runs staticcheck tool to look for deprecations. Checks entire code to see if it 
 # has deprecated function, variable, constant or field
-deprecations: bootstrap
+deprecations: bootstrap prep
 	@BUILD_TAGS='$(BUILD_TAGS)' ./scripts/deprecations-checker.sh ""
 
 # ci-deprecations runs staticcheck tool to look for deprecations. All output gets piped to revgrep
 # which will only return an error if changes that is not on main has deprecated function, variable, constant or field
-ci-deprecations: ci-bootstrap
+ci-deprecations: ci-bootstrap prep
 	@BUILD_TAGS='$(BUILD_TAGS)' ./scripts/deprecations-checker.sh main
 
 tools/codechecker/.bin/codechecker:
@@ -129,13 +129,13 @@ tools/codechecker/.bin/codechecker:
 # vet-codechecker runs our custom linters on the test functions. All output gets
 # piped to revgrep which will only return an error if new piece of code violates
 # the check 
-vet-codechecker: bootstrap tools/codechecker/.bin/codechecker
+vet-codechecker: bootstrap tools/codechecker/.bin/codechecker prep
 	@$(GO_CMD) vet -vettool=./tools/codechecker/.bin/codechecker -tags=$(BUILD_TAGS) ./... 2>&1 | revgrep
 
 # vet-codechecker runs our custom linters on the test functions. All output gets
 # piped to revgrep which will only return an error if new piece of code that is 
 # not on main violates the check 
-ci-vet-codechecker: ci-bootstrap tools/codechecker/.bin/codechecker
+ci-vet-codechecker: ci-bootstrap tools/codechecker/.bin/codechecker prep
 	@$(GO_CMD) vet -vettool=./tools/codechecker/.bin/codechecker -tags=$(BUILD_TAGS) ./... 2>&1 | revgrep origin/main
 
 # lint runs vet plus a number of other checkers, it is more comprehensive, but louder
@@ -152,7 +152,12 @@ ci-lint:
 
 # prep runs `go generate` to build the dynamically generated
 # source files.
-prep: fmtcheck
+#
+# n.b.: prep used to depend on fmtcheck, but since fmtcheck is
+# now run as a pre-commit hook (and there's little value in
+# making every build run the formatter), we've removed that
+# dependency.
+prep:
 	@sh -c "'$(CURDIR)/scripts/goversioncheck.sh' '$(GO_VERSION_MIN)'"
 	@$(GO_CMD) generate $$($(GO_CMD) list ./... | grep -v /vendor/)
 	@if [ -d .git/hooks ]; then cp .hooks/* .git/hooks/; fi
@@ -238,8 +243,7 @@ proto: bootstrap
 	protoc-go-inject-tag -input=./helper/identity/mfa/types.pb.go
 
 fmtcheck:
-	@true
-#@sh -c "'$(CURDIR)/scripts/gofmtcheck.sh'"
+	@sh -c "'$(CURDIR)/scripts/gofmtcheck.sh'"
 
 fmt: ci-bootstrap
 	find . -name '*.go' | grep -v pb.go | grep -v vendor | xargs go run mvdan.cc/gofumpt -w
