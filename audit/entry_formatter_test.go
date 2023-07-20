@@ -326,7 +326,7 @@ func TestEntryFormatter_Process(t *testing.T) {
 	}
 }
 
-// BenchmarkAuditFileSink_Process benchmarks the AuditFormatterJSON and then AuditFileSink calling Process.
+// BenchmarkAuditFileSink_Process benchmarks the EntryFormatter and then event.FileSink calling Process.
 // This should replicate the original benchmark testing which used to perform both of these roles together.
 func BenchmarkAuditFileSink_Process(b *testing.B) {
 	// Base input

@@ -150,9 +150,9 @@ func TestNewEntryFormatterWriter(t *testing.T) {
 	}
 }
 
-// TestAuditFormatter_FormatRequest exercises EntryFormatter.FormatRequest with
+// TestEntryFormatter_FormatRequest exercises EntryFormatter.FormatRequest with
 // varying inputs.
-func TestAuditFormatter_FormatRequest(t *testing.T) {
+func TestEntryFormatter_FormatRequest(t *testing.T) {
 	tests := map[string]struct {
 		Input                *logical.LogInput
 		IsErrorExpected      bool
@@ -213,9 +213,9 @@ func TestAuditFormatter_FormatRequest(t *testing.T) {
 	}
 }
 
-// TestAuditFormatter_FormatResponse exercises EntryFormatter.FormatResponse with
+// TestEntryFormatter_FormatResponse exercises EntryFormatter.FormatResponse with
 // varying inputs.
-func TestAuditFormatter_FormatResponse(t *testing.T) {
+func TestEntryFormatter_FormatResponse(t *testing.T) {
 	tests := map[string]struct {
 		Input                *logical.LogInput
 		IsErrorExpected      bool
