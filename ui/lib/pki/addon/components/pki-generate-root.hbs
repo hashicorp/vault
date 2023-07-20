@@ -75,7 +75,7 @@
         </h2>
         {{#if @urls.canSet}}
           {{#each @urls.allFields as |attr|}}
-            {{#if (not (eq attr.name "mountPath"))}}
+            {{#if (not-eq attr.name "mountPath")}}
               <FormField
                 @attr={{attr}}
                 @mode="create"
