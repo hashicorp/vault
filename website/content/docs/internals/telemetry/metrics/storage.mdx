@@ -7,8 +7,28 @@ description: >-
 
 # Storage plugin telemetry
 
-Storage plugin telemetry provides information on the health of your configured
-storage backends.
+Storage telemetry provides information on the health of Vault storage and your
+configured storage backends.
+
+## Barrier metrics
+
+@include 'telemetry-metrics/vault/barrier/delete.mdx'
+
+@include 'telemetry-metrics/vault/barrier/get.mdx'
+
+@include 'telemetry-metrics/vault/barrier/list.mdx'
+
+@include 'telemetry-metrics/vault/barrier/put.mdx'
+
+## Caching metrics
+
+@include 'telemetry-metrics/vault/cache/delete.mdx'
+
+@include 'telemetry-metrics/vault/cache/hit.mdx'
+
+@include 'telemetry-metrics/vault/cache/miss.mdx'
+
+@include 'telemetry-metrics/vault/cache/write.mdx'
 
 ## Amazon S3 metrics
 
