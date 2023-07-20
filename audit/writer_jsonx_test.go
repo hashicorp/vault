@@ -113,24 +113,24 @@ func TestFormatJSONx_formatRequest(t *testing.T) {
 
 	for name, tc := range cases {
 		var buf bytes.Buffer
-		f, err := NewAuditFormatter(tempStaticSalt)
+		cfg := FormatterConfig{
+			OmitTime:       true,
+			HMACAccessor:   false,
+			RequiredFormat: JSONxFormat,
+		}
+		f, err := NewEntryFormatter(cfg, tempStaticSalt)
 		require.NoError(t, err)
-		formatter := EntryFormatterWriter{
-			Formatter: f,
-			Writer: &JSONxWriter{
-				Prefix: tc.Prefix,
-			},
-		}
-		config := FormatterConfig{
-			OmitTime:     true,
-			HMACAccessor: false,
-		}
+		writer := &JSONxWriter{Prefix: tc.Prefix}
+		formatter, err := NewEntryFormatterWriter(cfg, f, writer)
+		require.NoError(t, err)
+		require.NotNil(t, formatter)
+
 		in := &logical.LogInput{
 			Auth:     tc.Auth,
 			Request:  tc.Req,
 			OuterErr: tc.Err,
 		}
-		if err := formatter.FormatAndWriteRequest(namespace.RootContext(nil), &buf, config, in); err != nil {
+		if err := formatter.FormatAndWriteRequest(namespace.RootContext(nil), &buf, in); err != nil {
 			t.Fatalf("bad: %s\nerr: %s", name, err)
 		}
 

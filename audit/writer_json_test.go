@@ -98,24 +98,25 @@ func TestFormatJSON_formatRequest(t *testing.T) {
 
 	for name, tc := range cases {
 		var buf bytes.Buffer
-		f, err := NewAuditFormatter(ss)
+		f, err := NewEntryFormatter(FormatterConfig{RequiredFormat: JSONFormat}, ss)
 		require.NoError(t, err)
 		formatter := EntryFormatterWriter{
 			Formatter: f,
 			Writer: &JSONWriter{
 				Prefix: tc.Prefix,
 			},
+			config: FormatterConfig{
+				HMACAccessor: false,
+			},
 		}
-		config := FormatterConfig{
-			HMACAccessor: false,
-		}
+
 		in := &logical.LogInput{
 			Auth:     tc.Auth,
 			Request:  tc.Req,
 			OuterErr: tc.Err,
 		}
 
-		err = formatter.FormatAndWriteRequest(namespace.RootContext(nil), &buf, config, in)
+		err = formatter.FormatAndWriteRequest(namespace.RootContext(nil), &buf, in)
 		require.NoErrorf(t, err, "bad: %s\nerr: %s", name, err)
 
 		if !strings.HasPrefix(buf.String(), tc.Prefix) {
