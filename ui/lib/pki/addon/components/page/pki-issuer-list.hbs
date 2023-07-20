@@ -2,7 +2,7 @@
   <LinkedBlock class="list-item-row" @params={{array "issuers.issuer.details" pkiIssuer.id}} @linkPrefix={{@mountPoint}}>
     <div class="level is-mobile">
       <div class="level-left">
-        <div>
+        <div data-test-issuer-list={{pkiIssuer.id}}>
           <Icon @name="certificate" class="has-text-grey-light" />
           <span class="has-text-weight-semibold is-underline">
             {{pkiIssuer.issuerRef}}
