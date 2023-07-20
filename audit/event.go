@@ -83,7 +83,7 @@ type BackendConfig struct {
 }
 
 // Factory is the factory function to create an audit backend.
-type Factory func(context.Context, *BackendConfig) (Backend, error)
+type Factory func(context.Context, *BackendConfig, bool) (Backend, error)
 
 // newEvent should be used to create an audit event.
 // subtype and format are needed for audit.
