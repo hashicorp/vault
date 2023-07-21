@@ -25,15 +25,7 @@ func TestAuditFile_fileModeNew(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	path, err := ioutil.TempDir("", "vault-test_audit_file-file_mode_new")
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	defer os.RemoveAll(path)
-
-	file := filepath.Join(path, "auditTest.txt")
-
+	file := filepath.Join(t.TempDir(), "auditTest.txt")
 	config := map[string]string{
 		"path": file,
 		"mode": modeStr,
@@ -146,15 +138,7 @@ func TestAuditFile_EventLogger_fileModeNew(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	path, err := ioutil.TempDir("", "vault-test_audit_file-eventlogger-file_mode_new")
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	defer os.RemoveAll(path)
-
-	file := filepath.Join(path, "auditTest.txt")
-
+	file := filepath.Join(t.TempDir(), "auditTest.txt")
 	config := map[string]string{
 		"path": file,
 		"mode": modeStr,
