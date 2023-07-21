@@ -581,10 +581,9 @@ func (r *Router) routeCommon(ctx context.Context, req *logical.Request, existenc
 	}
 	req.Path = adjustedPath
 	if !existenceCheck {
-		defer metrics.MeasureSince([]string{
-			"route", string(req.Operation),
-			strings.ReplaceAll(mount, "/", "-"),
-		}, time.Now())
+		defer metrics.MeasureSinceWithLabels([]string{
+			"route_requests",
+		}, time.Now(), []metrics.Label{{"operation", string(req.Operation)}, {"mount_point", mount}})
 	}
 	re := raw.(*routeEntry)
 

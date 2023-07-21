@@ -185,7 +185,7 @@ func (m *RollbackManager) startOrLookupRollback(ctx context.Context, fullPath st
 
 // attemptRollback invokes a RollbackOperation for the given path
 func (m *RollbackManager) attemptRollback(ctx context.Context, fullPath string, rs *rollbackState, grabStatelock bool) (err error) {
-	defer metrics.MeasureSince([]string{"rollback", "attempt", strings.ReplaceAll(fullPath, "/", "-")}, time.Now())
+	defer metrics.MeasureSinceWithLabels([]string{"rollback", "attempt"}, time.Now(), []metrics.Label{{"mount_point", fullPath}})
 
 	defer func() {
 		rs.lastError = err
