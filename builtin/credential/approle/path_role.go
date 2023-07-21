@@ -1087,6 +1087,7 @@ Overrides secret_id_ttl role option when supplied. May not be longer than role's
 				"secret_id": {
 					Type:        framework.TypeString,
 					Description: "SecretID attached to the role.",
+					Query:       true,
 				},
 			},
 			Operations: map[logical.Operation]framework.OperationHandler{
@@ -1195,6 +1196,7 @@ Overrides secret_id_ttl role option when supplied. May not be longer than role's
 				"secret_id_accessor": {
 					Type:        framework.TypeString,
 					Description: "Accessor of the SecretID",
+					Query:       true,
 				},
 			},
 			Operations: map[logical.Operation]framework.OperationHandler{
