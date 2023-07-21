@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/hashicorp/eventlogger"
+
 	"github.com/hashicorp/vault/sdk/helper/salt"
 
 	"github.com/hashicorp/vault/sdk/logical"
