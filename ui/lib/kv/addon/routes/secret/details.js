@@ -4,23 +4,11 @@
  */
 
 import Route from '@ember/routing/route';
-import { inject as service } from '@ember/service';
-import { hash } from 'rsvp';
 import { pathIsFromDirectory, breadcrumbsForDirectory } from 'vault/lib/kv-breadcrumbs';
 
 export default class KvSecretDetailsRoute extends Route {
-  @service store;
-  @service secretMountPath;
-
-  model() {
-    // TODO return model for query on kv/data.
-    const backend = this.secretMountPath.get();
-    const { name } = this.paramsFor('secret');
-    return hash({
-      path: name,
-      backend,
-    });
-  }
+  // model passed from parent secret route, if we need to access or intercept
+  // it can retrieved via `this.modelFor('secret')
 
   setupController(controller, resolvedModel) {
     super.setupController(controller, resolvedModel);
@@ -31,7 +19,7 @@ export default class KvSecretDetailsRoute extends Route {
     ];
 
     if (pathIsFromDirectory(resolvedModel.path)) {
-      breadcrumbsArray = [...breadcrumbsArray, ...breadcrumbsForDirectory(resolvedModel.path)];
+      breadcrumbsArray = [...breadcrumbsArray, ...breadcrumbsForDirectory(resolvedModel.path, true)];
     } else {
       breadcrumbsArray.push({ label: resolvedModel.path });
     }
