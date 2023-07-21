@@ -136,6 +136,9 @@ func TestAuditFile_fileMode0000(t *testing.T) {
 	}
 }
 
+// TestAuditFile_EventLogger_fileModeNew verifies that the Factory function
+// correctly sets the file mode when the useEventLogger argument is set to
+// true.
 func TestAuditFile_EventLogger_fileModeNew(t *testing.T) {
 	modeStr := "0777"
 	mode, err := strconv.ParseUint(modeStr, 8, 32)
