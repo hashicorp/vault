@@ -237,6 +237,8 @@ func (b *Backend) Invalidate(_ context.Context) {
 	b.salt = nil
 }
 
+// RegisterNodesAndPipeline registers the nodes and a pipeline as required by
+// the audit.Backend interface.
 func (b *Backend) RegisterNodesAndPipeline(broker *eventlogger.Broker, name string) error {
 	for id, node := range b.nodeMap {
 		if err := broker.RegisterNode(id, node); err != nil {
