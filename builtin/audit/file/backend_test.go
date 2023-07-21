@@ -136,6 +136,45 @@ func TestAuditFile_fileMode0000(t *testing.T) {
 	}
 }
 
+func TestAuditFile_EventLogger_fileModeNew(t *testing.T) {
+	modeStr := "0777"
+	mode, err := strconv.ParseUint(modeStr, 8, 32)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	path, err := ioutil.TempDir("", "vault-test_audit_file-eventlogger-file_mode_new")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	defer os.RemoveAll(path)
+
+	file := filepath.Join(path, "auditTest.txt")
+
+	config := map[string]string{
+		"path": file,
+		"mode": modeStr,
+	}
+
+	_, err = Factory(context.Background(), &audit.BackendConfig{
+		SaltConfig: &salt.Config{},
+		SaltView:   &logical.InmemStorage{},
+		Config:     config,
+	}, true)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	info, err := os.Stat(file)
+	if err != nil {
+		t.Fatalf("Cannot retrieve file mode from `Stat`")
+	}
+	if info.Mode() != os.FileMode(mode) {
+		t.Fatalf("File mode does not match.")
+	}
+}
+
 func BenchmarkAuditFile_request(b *testing.B) {
 	config := map[string]string{
 		"path": "/dev/null",
