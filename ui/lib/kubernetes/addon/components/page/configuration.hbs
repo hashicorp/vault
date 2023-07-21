@@ -9,7 +9,7 @@
     <InfoTableRow @label="Kubernetes host" @value={{@config.kubernetesHost}} />
     {{#if @config.kubernetesCaCert}}
       <InfoTableRow @label="Certificate">
-        <CertificateCard @kubernetesCaCert={{@config.kubernetesCaCert}} />
+        <CertificateCard @certificateValue={{@config.kubernetesCaCert}} />
       </InfoTableRow>
     {{/if}}
   {{else}}

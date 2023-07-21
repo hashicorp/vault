@@ -16,21 +16,21 @@ const SELECTORS = {
 module('Integration | Component | certificate-card', function (hooks) {
   setupRenderingTest(hooks);
 
-  test('it renders without a CA Certificate', async function (assert) {
+  test('it renders without a certificate value', async function (assert) {
     await render(hbs`<CertificateCard />`);
 
     assert.dom(SELECTORS.label).hasText('PEM Format', 'The label text is correct');
-    assert.dom(SELECTORS.value).hasNoText('The is no value for the CA Certificate');
+    assert.dom(SELECTORS.value).hasNoText('The is no value for the certificate');
   });
 
-  test('it renders with a small CA Certificate', async function (assert) {
-    await render(hbs`<CertificateCard @kubernetesCaCert="test"/>`);
+  test('it renders with a small example value for certificate ', async function (assert) {
+    await render(hbs`<CertificateCard @certificateValue="test"/>`);
 
     assert.dom(SELECTORS.label).hasText('PEM Format', 'The label text is correct');
-    assert.dom(SELECTORS.value).hasText('test', 'The value for the CA Certificate is correct');
+    assert.dom(SELECTORS.value).hasText('test', 'The value for the certificate is correct');
   });
 
-  test('it renders with a larger example CA Certificate', async function (assert) {
+  test('it renders with an example Kubernetes CA Certificate', async function (assert) {
     const certificate = `
       -----BEGIN CERTIFICATE-----
       MIICUTCCAfugAwIBAgIBADANBgkqhkiG9w0BAQQFADBXMQswCQYDVQQGEwJDTjEL
@@ -49,7 +49,7 @@ module('Integration | Component | certificate-card', function (hooks) {
       -----END CERTIFICATE-----
     `;
     this.set('certificate', certificate);
-    await render(hbs`<CertificateCard @kubernetesCaCert={{this.certificate}}/>`);
+    await render(hbs`<CertificateCard @certificateValue={{this.certificate}}/>`);
 
     assert.dom(SELECTORS.label).hasText('PEM Format', 'The label text is correct');
     assert.dom(SELECTORS.value).hasText(certificate, 'The value for the CA Certificate is correct');
