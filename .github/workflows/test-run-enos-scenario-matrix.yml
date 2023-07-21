@@ -99,10 +99,10 @@ jobs:
       ENOS_VAR_artifactory_username: ${{ secrets.ARTIFACTORY_USER }}
       ENOS_VAR_artifactory_token: ${{ secrets.ARTIFACTORY_TOKEN }}
       ENOS_VAR_terraform_plugin_cache_dir: ./support/terraform-plugin-cache
+      ENOS_VAR_vault_artifact_path: ./support/downloads/${{ inputs.build-artifact-name }}
       ENOS_VAR_vault_build_date: ${{ needs.metadata.outputs.build-date }}
       ENOS_VAR_vault_product_version: ${{ needs.metadata.outputs.version }}
       ENOS_VAR_vault_revision: ${{ inputs.vault-revision }}
-      ENOS_VAR_vault_bundle_path: ./support/downloads/${{ inputs.build-artifact-name }}
       ENOS_VAR_vault_license_path: ./support/vault.hclic
       ENOS_DEBUG_DATA_ROOT_DIR: /tmp/enos-debug-data
     steps:
