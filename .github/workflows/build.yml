@@ -37,7 +37,9 @@ jobs:
     # do not run build and test steps for docs changes
     # Following https://docs.github.com/en/repositories/configuring-branches-and-merges-in-your-repository/managing-protected-branches/troubleshooting-required-status-checks#handling-skipped-but-required-checks
     # we conditionally skip the build and tests for docs(website) changes
-    if: ${{ needs.verify-changes.outputs.is_docs_change == 'false' }}
+    if: |
+      github.event.pull_request.draft == false &&
+      needs.verify-changes.outputs.is_docs_change == 'false'
     runs-on: ubuntu-latest
     needs: verify-changes
     outputs:
