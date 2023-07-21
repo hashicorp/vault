@@ -196,6 +196,10 @@ func (b *SystemBackend) raftStoragePaths() []*framework.Path {
 					Type:        framework.TypeBool,
 					Description: "Whether or not to perform automated version upgrades.",
 				},
+				"dr_operation_token": {
+					Type:        framework.TypeString,
+					Description: "DR operation token used to authorize this request (if a DR secondary node).",
+				},
 			},
 
 			Operations: map[logical.Operation]framework.OperationHandler{

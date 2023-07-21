@@ -154,9 +154,8 @@ func (c *OperatorRaftAutopilotSetConfigCommand) Run(args []string) int {
 	if c.flagDisableUpgradeMigration.IsSet() {
 		data["disable_upgrade_migration"] = c.flagDisableUpgradeMigration.Get()
 	}
-
 	if c.flagDRToken != "" {
-		client.SetToken(c.flagDRToken)
+		data["dr_operation_token"] = c.flagDRToken
 	}
 
 	secret, err := client.Logical().Write("sys/storage/raft/autopilot/configuration", data)
