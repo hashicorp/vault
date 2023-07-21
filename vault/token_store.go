@@ -363,6 +363,13 @@ func (ts *TokenStore) paths() []*framework.Path {
 				OperationVerb:   "look-up",
 			},
 
+			Fields: map[string]*framework.FieldSchema{
+				"token": {
+					Type:        framework.TypeString,
+					Description: "Token to look up (unused, does not need to be set)",
+				},
+			},
+
 			Operations: map[logical.Operation]framework.OperationHandler{
 				logical.ReadOperation: &framework.PathOperation{
 					Callback: ts.handleLookupSelf,
@@ -2444,7 +2451,19 @@ func (ts *TokenStore) handleUpdateLookupAccessor(ctx context.Context, req *logic
 		return nil, &logical.StatusBadRequest{Err: "invalid accessor"}
 	}
 
-	resp, err := ts.handleLookupCommon(ctx, aEntry.TokenID)
+	// Prepare the field data required for a lookup call
+	d := &framework.FieldData{
+		Raw: map[string]interface{}{
+			"token": aEntry.TokenID,
+		},
+		Schema: map[string]*framework.FieldSchema{
+			"token": {
+				Type:        framework.TypeString,
+				Description: "Token to lookup",
+			},
+		},
+	}
+	resp, err := ts.handleLookup(ctx, req, d)
 	if err != nil {
 		return nil, err
 	}
@@ -3307,32 +3326,27 @@ func (ts *TokenStore) handleRevokeOrphan(ctx context.Context, req *logical.Reque
 	return nil, nil
 }
 
-// handleLookupSelf handles the auth/token/lookup-self path for querying information about
-// a particular token. This can be used to see which policies are applicable.
 func (ts *TokenStore) handleLookupSelf(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-	return ts.handleLookupCommon(ctx, req.ClientToken)
+	data.Raw["token"] = req.ClientToken
+	return ts.handleLookup(ctx, req, data)
 }
 
-// handleLookup handles the auth/token/lookup path for querying information about
+// handleLookup handles the auth/token/lookup/id path for querying information about
 // a particular token. This can be used to see which policies are applicable.
 func (ts *TokenStore) handleLookup(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	id := data.Get("token").(string)
 	if id == "" {
 		id = req.ClientToken
 	}
-	return ts.handleLookupCommon(ctx, id)
-}
-
-func (ts *TokenStore) handleLookupCommon(ctx context.Context, tokenId string) (*logical.Response, error) {
-	if tokenId == "" {
+	if id == "" {
 		return logical.ErrorResponse("missing token ID"), logical.ErrInvalidRequest
 	}
 
-	lock := locksutil.LockForKey(ts.tokenLocks, tokenId)
+	lock := locksutil.LockForKey(ts.tokenLocks, id)
 	lock.RLock()
 	defer lock.RUnlock()
 
-	out, err := ts.lookupInternal(ctx, tokenId, false, true)
+	out, err := ts.lookupInternal(ctx, id, false, true)
 	if err != nil {
 		return logical.ErrorResponse(err.Error()), logical.ErrInvalidRequest
 	}
