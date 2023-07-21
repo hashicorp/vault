@@ -456,9 +456,15 @@ func NewTestLogger(t testing.T) *TestLogger {
 	return &TestLogger{
 		Path:   logPath,
 		File:   logFile,
-		Logger: logger,
+		Logger: logger.Named(t.Name()),
 		sink:   sink,
 	}
+}
+
+func (tl *TestLogger) Named(s string) hclog.Logger {
+	newTL := *tl
+	newTL.Logger = tl.Logger.Named(s)
+	return &newTL
 }
 
 func (tl *TestLogger) StopLogging() {
