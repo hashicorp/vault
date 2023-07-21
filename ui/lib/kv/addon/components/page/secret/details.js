@@ -14,12 +14,14 @@ import { tracked } from '@glimmer/tracking';
  *  @secretPath={{this.model.path}}
  *  @secret={{this.model.secret}}
  *  @metadata={{this.model.metadata}}
+ *  @noMetadataPermission={{eq this.model.metadata 403}}
  *  @breadcrumbs={{this.breadcrumbs}}
   /> 
  *
  * @param {string} secretPath - path of kv secret 'my/secret' used as the title for the KV page header 
  * @param {model} secret - Ember data model: 'kv/data'  
  * @param {model} metadata - Ember data model: 'kv/metadata'
+ * @param {boolean} noMetadataPermission - True if we received a 403 from the kv/metadata network request
  * @param {array} breadcrumbs - Array to generate breadcrumbs, passed to the page header component
  */
 
