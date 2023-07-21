@@ -71,17 +71,11 @@ export default class KvSecretMetadataModel extends Model {
   @lazyCapabilities(apiPath`${'backend'}/data/${'path'}`, 'backend', 'path') dataPath;
   @lazyCapabilities(apiPath`${'backend'}/metadata/${'path'}`, 'backend', 'path') metadataPath;
 
-  get canListMetadata() {
-    return this.metadataPath.get('canList');
-  }
   get canDeleteMetadata() {
     return this.metadataPath.get('canDelete');
   }
   get canReadMetadata() {
     return this.metadataPath.get('canRead');
-  }
-  get canReadData() {
-    return this.dataPath.get('canRead');
   }
   get canEditData() {
     return this.dataPath.get('canUpdate');

@@ -4,27 +4,14 @@
  */
 
 import Route from '@ember/routing/route';
-import { inject as service } from '@ember/service';
-import { hash } from 'rsvp';
 import { pathIsFromDirectory, breadcrumbsForDirectory } from 'vault/lib/kv-breadcrumbs';
 
 export default class KvSecretMetadataIndexRoute extends Route {
-  @service store;
-  @service secretMountPath;
-
-  model() {
-    // TODO return model for query on kv/metadata.
-    const backend = this.secretMountPath.get();
-    const { name } = this.paramsFor('secret');
-    return hash({
-      path: name,
-      backend,
-    });
-  }
+  // model passed from parent secret route, if we need to access or intercept
+  // it can retrieved via `this.modelFor('secret'), which includes the metadata model.
 
   setupController(controller, resolvedModel) {
     super.setupController(controller, resolvedModel);
-
     let breadcrumbsArray = [
       { label: 'secrets', route: 'secrets', linkExternal: true },
       { label: resolvedModel.backend, route: 'list' },
