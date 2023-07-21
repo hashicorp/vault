@@ -2696,12 +2696,11 @@ func (b *SystemBackend) capabilitiesPaths() []*framework.Path {
 func (b *SystemBackend) leasePaths() []*framework.Path {
 	return []*framework.Path{
 		{
-			Pattern: "leases/lookup/(?P<prefix>.+?)?",
+			Pattern: "leases/lookup/" + framework.MatchAllRegex("prefix"),
 
 			DisplayAttrs: &framework.DisplayAttributes{
 				OperationPrefix: "leases",
 				OperationVerb:   "look-up",
-				OperationSuffix: "|with-prefix",
 			},
 
 			Fields: map[string]*framework.FieldSchema{
