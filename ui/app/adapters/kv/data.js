@@ -39,7 +39,7 @@ export default class KvDataAdapter extends ApplicationAdapter {
     // ID is the full path for the data (including version)
     const id = kvDataPath(backend, path, version);
     return this.ajax(this._url(id), 'GET').then((resp) => {
-      const newResp = {
+      return {
         ...resp,
         data: {
           id,
@@ -48,7 +48,6 @@ export default class KvDataAdapter extends ApplicationAdapter {
           ...resp.data,
         },
       };
-      return newResp;
     });
   }
 
