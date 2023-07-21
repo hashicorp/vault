@@ -854,12 +854,6 @@ type CoreConfig struct {
 	AdministrativeNamespacePath string
 }
 
-// SubloggerAdder is an interface which facilitates tracking of new subloggers
-// added between phases of server startup.
-type SubloggerAdder interface {
-	SubloggerHook(logger log.Logger) log.Logger
-}
-
 // SubloggerHook implements the SubloggerAdder interface. This implementation
 // manages CoreConfig.AllLoggers state prior to (and during) NewCore.
 func (c *CoreConfig) SubloggerHook(logger log.Logger) log.Logger {
@@ -1119,11 +1113,6 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 		return nil, err
 	}
 
-	// Make sure we're keeping track of the subloggers added in coreInit. We
-	// haven't registered core to the server command's SubloggerAdder yet, so
-	// any new subloggers will be in conf.AllLoggers.
-	c.allLoggers = conf.AllLoggers
-
 	if !conf.DisableMlock {
 		// Ensure our memory usage is locked into physical RAM
 		if err := mlock.LockMemory(); err != nil {
@@ -1284,6 +1273,10 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 		c.events.Start()
 	}
 
+	// Make sure we're keeping track of the subloggers added above. We haven't
+	// yet registered core to the server command's SubloggerAdder, so any new
+	// subloggers will be in conf.AllLoggers.
+	c.allLoggers = conf.AllLoggers
 	return c, nil
 }
 

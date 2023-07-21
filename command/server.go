@@ -40,6 +40,7 @@ import (
 	"github.com/hashicorp/vault/helper/builtinplugins"
 	"github.com/hashicorp/vault/helper/constants"
 	"github.com/hashicorp/vault/helper/experiments"
+	"github.com/hashicorp/vault/helper/logging"
 	loghelper "github.com/hashicorp/vault/helper/logging"
 	"github.com/hashicorp/vault/helper/metricsutil"
 	"github.com/hashicorp/vault/helper/namespace"
@@ -120,7 +121,7 @@ type ServerCommand struct {
 	licenseReloadedCh chan (error)    // for tests
 
 	allLoggers []hclog.Logger
-	vault.SubloggerAdder
+	logging.SubloggerAdder
 
 	flagConfigs            []string
 	flagRecovery           bool
@@ -442,22 +443,24 @@ func (c *ServerCommand) parseConfig() (*server.Config, []configutil.ConfigError,
 	return config, configErrors, nil
 }
 
-// AddSubloggerToAllLoggers is registered with the base logger to handle
-// creation of new subloggers through the phases of server startup. There are
-// three phases we need to handle: (1) Before CoreConfig is created, new
-// subloggers are added to ServerCommand.allLoggers; (2) After CoreConfig is
-// created, new subloggers are added to CoreConfig.AllLoggers; (3) After Core
-// instantiation, new subloggers are appended to Core.allLoggers. This logic is
-// managed by the SubloggerAdder interface. Intermediate state must also be kept
-// in sync in NewCore to track new subloggers before we return to the server
-// command and register the Core SubloggerAdder implementation.
-func (c *ServerCommand) AddSubloggerToAllLoggers(logger hclog.Logger) hclog.Logger {
+// AppendToAllLoggers is registered with the base logger to handle creation of
+// new subloggers through the phases of server startup. There are three phases
+// we need to handle: (1) Before CoreConfig is created, new subloggers are added
+// to c.allLoggers; (2) After CoreConfig is created, new subloggers are added to
+// CoreConfig.AllLoggers; (3) After Core instantiation, new subloggers are
+// appended to Core.allLoggers. This logic is managed by the SubloggerAdder
+// interface.
+//
+// NOTE: Core.allLoggers must be set to CoreConfig.allLoggers after NewCore to
+// keep track of new subloggers added before c.SubloggerAdder gets reassigned to
+// the Core implementation.
+func (c *ServerCommand) AppendToAllLoggers(sub hclog.Logger) hclog.Logger {
 	if c.SubloggerAdder == nil {
-		c.allLoggers = append(c.allLoggers, logger)
-		return logger
+		c.allLoggers = append(c.allLoggers, sub)
+		return sub
 	}
 
-	return c.SubloggerHook(logger)
+	return c.SubloggerHook(sub)
 }
 
 func (c *ServerCommand) runRecoveryMode() int {
@@ -1845,7 +1848,7 @@ func (c *ServerCommand) configureLogging(config *server.Config) (hclog.Intercept
 		LogRotateDuration: logRotateDuration,
 		LogRotateBytes:    config.LogRotateBytes,
 		LogRotateMaxFiles: config.LogRotateMaxFiles,
-		SubloggerHook:     c.AddSubloggerToAllLoggers,
+		SubloggerHook:     c.AppendToAllLoggers,
 	}
 
 	return loghelper.Setup(logCfg, c.logWriter)

@@ -55,6 +55,12 @@ type LogConfig struct {
 	SubloggerHook func(log.Logger) log.Logger
 }
 
+// SubloggerAdder is an interface which facilitates tracking of new subloggers
+// added between phases of server startup.
+type SubloggerAdder interface {
+	SubloggerHook(logger log.Logger) log.Logger
+}
+
 func (c *LogConfig) isLevelInvalid() bool {
 	return c.LogLevel == log.NoLevel || c.LogLevel == log.Off || c.LogLevel.String() == "unknown"
 }
