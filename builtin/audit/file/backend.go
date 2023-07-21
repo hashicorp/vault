@@ -149,8 +149,6 @@ func Factory(ctx context.Context, conf *audit.BackendConfig, useEventLogger bool
 	}
 	b.formatter = fw
 
-	var sinkNode eventlogger.Node
-
 	if useEventLogger {
 		b.nodeIDList = make([]eventlogger.NodeID, 2)
 		b.nodeMap = make(map[eventlogger.NodeID]eventlogger.Node)
@@ -159,6 +157,8 @@ func Factory(ctx context.Context, conf *audit.BackendConfig, useEventLogger bool
 
 		b.nodeIDList[0] = formatterNodeID
 		b.nodeMap[formatterNodeID] = f
+
+		var sinkNode eventlogger.Node
 
 		switch path {
 		case "stdout":
