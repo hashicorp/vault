@@ -5,7 +5,14 @@
   </:tabLinks>
 
   <:toolbarFilters>
-    {{! TODO add navigateInput }}
+    {{#unless @noMetadataListPermissions}}
+      <KvListFilter
+        @model={{@model}}
+        @mountPoint={{this.mountPoint}}
+        @filterValue={{@filterValue}}
+        @pageFilter={{@pageFilter}}
+      />
+    {{/unless}}
   </:toolbarFilters>
 
   <:toolbarActions>
@@ -13,62 +20,116 @@
     <ToolbarLink @route="create" @type="add">Create secret</ToolbarLink>
   </:toolbarActions>
 </KvPageHeader>
-{{! TODO add permissions on the menu items }}
-{{#if @model.secrets}}
-  {{#each @model.secrets as |secret|}}
-    <LinkedBlock
-      class="list-item-row"
-      @params={{array (if secret.pathIsDirectory "list-directory" "secret.details") secret.fullSecretPath}}
-      @linkPrefix={{this.mountPoint}}
-    >
-      <div class="level is-mobile">
-        <div class="level-left">
-          <div>
-            <Icon @name="user" class="has-text-grey-light" />
-            <span class="has-text-weight-semibold is-underline">
-              {{secret.path}}
-            </span>
-          </div>
+
+{{#if @noMetadataListPermissions}}
+  <div class="box is-fullwidth is-shadowless has-tall-padding">
+    <div class="selectable-card-container one-card">
+      <OverviewCard @cardTitle="View secret" @subText="Type the path of the secret you want to read.">
+        <div class="has-top-margin-m is-flex">
+          <InputSearch
+            @id="search-input-kv-secret"
+            @onChange={{this.handleSecretPathInput}}
+            @placeholder="secret/"
+            data-test-search-roles
+          />
+          <button
+            type="button"
+            class="button is-secondary"
+            disabled={{(not this.secretPath)}}
+            {{on "click" this.transitionToSecretDetail}}
+            data-test-get-secret-detail
+          >
+            View secret
+          </button>
         </div>
-        <div class="level-right is-flex is-paddingless is-marginless">
-          <div class="level-item">
-            <PopupMenu>
-              <nav class="menu">
-                <ul class="menu-list">
-                  {{#if secret.pathIsDirectory}}
-                    <li>
-                      <LinkTo @route="list-directory" @model={{secret.fullSecretPath}}>
-                        Content
-                      </LinkTo>
-                    </li>
-                  {{else}}
-                    <li>
-                      <LinkTo @route="secret.details" @model={{secret.path}}>
-                        Details
-                      </LinkTo>
-                    </li>
-                    <li>
-                      <LinkTo @route="secret.edit" @model={{secret.path}}>
-                        Edit
-                      </LinkTo>
-                    </li>
-                  {{/if}}
-                </ul>
-              </nav>
-            </PopupMenu>
-          </div>
-        </div>
-      </div>
-    </LinkedBlock>
-  {{/each}}
+      </OverviewCard>
+    </div>
+  </div>
 {{else}}
-  <EmptyState
-    data-test-secret-list-empty-state
-    @title="No secrets yet"
-    @message="When created, secrets will be listed here. Create a secret to get started."
-  >
-    <LinkTo class="has-top-margin-xs" @route="create">
-      Create secret
-    </LinkTo>
-  </EmptyState>
+  {{#if @model.secrets}}
+    {{#each @model.secrets as |secret|}}
+      <LinkedBlock
+        class="list-item-row"
+        @params={{array (if secret.pathIsDirectory "list-directory" "secret.details") secret.fullSecretPath}}
+        @linkPrefix={{this.mountPoint}}
+      >
+        <div class="level is-mobile">
+          <div class="level-left">
+            <div>
+              <Icon @name="user" class="has-text-grey-light" />
+              <span class="has-text-weight-semibold is-underline">
+                {{secret.path}}
+              </span>
+            </div>
+          </div>
+          <div class="level-right is-flex is-paddingless is-marginless">
+            <div class="level-item">
+              <PopupMenu>
+                <nav class="menu">
+                  <ul class="menu-list">
+                    {{#if secret.pathIsDirectory}}
+                      <li>
+                        <LinkTo @route="list-directory" @model={{secret.fullSecretPath}}>
+                          Content
+                        </LinkTo>
+                      </li>
+                    {{else}}
+                      {{#if (or secret.canReadData secret.canReadMetadata)}}
+                        <li>
+                          <LinkTo @route="secret.details" @model={{secret.fullSecretPath}}>
+                            Details
+                          </LinkTo>
+                        </li>
+                      {{/if}}
+                      {{#if secret.canReadMetadata}}
+                        <li>
+                          <LinkTo @route="secret.metadata.versions" @model={{secret.fullSecretPath}}>
+                            View version history
+                          </LinkTo>
+                        </li>
+                      {{/if}}
+                      {{#if secret.canEditData}}
+                        <li>
+                          <LinkTo @route="secret.edit" @model={{secret.fullSecretPath}}>
+                            Create new version
+                          </LinkTo>
+                        </li>
+                      {{/if}}
+                      {{#if secret.canDeleteMetadata}}
+                        <li>
+                          <ConfirmAction
+                            @buttonClasses="link is-destroy"
+                            @onConfirmAction={{fn this.onDelete secret}}
+                            @confirmMessage="This will permanently delete this secret and all its versions."
+                            @cancelButtonText="Cancel"
+                            data-test-secret-delete="true"
+                          >
+                            Permanently delete
+                          </ConfirmAction>
+                        </li>
+                      {{/if}}
+                    {{/if}}
+                  </ul>
+                </nav>
+              </PopupMenu>
+            </div>
+          </div>
+        </div>
+      </LinkedBlock>
+    {{/each}}
+  {{else}}
+    {{#if @filterValue}}
+      <EmptyState @title="There are no secrets matching &quot;{{@filterValue}}&quot;." />
+    {{else}}
+      <EmptyState
+        data-test-secret-list-empty-state
+        @title="No secrets yet"
+        @message="When created, secrets will be listed here. Create a secret to get started."
+      >
+        <LinkTo class="has-top-margin-xs" @route="create">
+          Create secret
+        </LinkTo>
+      </EmptyState>
+    {{/if}}
+  {{/if}}
 {{/if}}
