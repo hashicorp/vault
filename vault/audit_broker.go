@@ -57,30 +57,47 @@ func NewAuditBroker(log log.Logger, useEventLogger bool) (*AuditBroker, error) {
 }
 
 // Register is used to add new audit backend to the broker
-func (a *AuditBroker) Register(name string, b audit.Backend, local bool) {
+func (a *AuditBroker) Register(name string, b audit.Backend, local bool) error {
 	a.Lock()
 	defer a.Unlock()
 
 	if a.broker != nil {
-		b.RegisterNodesAndPipeline(a.broker, name)
+		err := b.RegisterNodesAndPipeline(a.broker, name)
+		if err != nil {
+			return err
+		}
 	}
 
 	a.backends[name] = backendEntry{
 		backend: b,
 		local:   local,
 	}
+
+	return nil
 }
 
 // Deregister is used to remove an audit backend from the broker
-func (a *AuditBroker) Deregister(ctx context.Context, name string) {
+func (a *AuditBroker) Deregister(ctx context.Context, name string) error {
 	a.Lock()
 	defer a.Unlock()
 
+	// Remove the Backend from the map first, so that if an error occurs while
+	// removing the pipeline and nodes, we can quickly exit this method with
+	// the error.
+	delete(a.backends, name)
+
 	if a.broker != nil {
-		a.broker.RemovePipelineAndNodes(ctx, eventlogger.EventType("audit"), eventlogger.PipelineID(name))
+		// The first return value, a bool, indicates whether
+		// RemovePipelineAndNodes encountered the error while evaluating
+		// pre-conditions (false) or once it started removing the pipeline and
+		// the nodes (true). This code doesn't care either way.
+		_, err := a.broker.RemovePipelineAndNodes(ctx, eventlogger.EventType("audit"), eventlogger.PipelineID(name))
+		if err != nil {
+			return err
+		}
 	}
 
-	delete(a.backends, name)
+	return nil
 }
 
 // IsRegistered is used to check if a given audit backend is registered

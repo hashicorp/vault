@@ -208,7 +208,8 @@ func (c *Core) disableAudit(ctx context.Context, path string, updateStorage bool
 
 	c.audit = newTable
 
-	// Unmount the backend
+	// Unmount the backend, any returned error can be ignored since the
+	// Backend will already have been removed from the AuditBroker's map.
 	c.auditBroker.Deregister(ctx, path)
 	if c.logger.IsInfo() {
 		c.logger.Info("disabled audit backend", "path", path)
