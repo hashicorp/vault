@@ -37,9 +37,6 @@ func testVaultServerUnseal(t testing.TB) (*api.Client, []string, func()) {
 	t.Helper()
 
 	return testVaultServerCoreConfig(t, &vault.CoreConfig{
-		DisableMlock: true,
-		DisableCache: true,
-		Logger:       log.NewNullLogger(),
 		CredentialBackends: map[string]logical.Factory{
 			"userpass": credUserpass.Factory,
 		},

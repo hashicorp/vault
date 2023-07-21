@@ -16,13 +16,11 @@ import (
 // Tests the regression in
 // https://github.com/hashicorp/vault/pull/6920
 func TestRecoverFromPanic(t *testing.T) {
-	logger := hclog.New(nil)
 	coreConfig := &vault.CoreConfig{
 		LogicalBackends: map[string]logical.Factory{
 			"noop": vault.NoopBackendFactory,
 		},
 		EnableRaw: true,
-		Logger:    logger,
 	}
 	cluster := vault.NewTestCluster(t, coreConfig, &vault.TestClusterOptions{
 		HandlerFunc: vaulthttp.Handler,

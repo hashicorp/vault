@@ -41,7 +41,6 @@ func TestBuiltinPluginsWork(t *testing.T) {
 				// builtinplugins.Registry, so we need to add it here to be able to test it!
 				"database": logicalDb.Factory,
 			},
-			Logger:                      logging.NewVaultLogger(hclog.Trace),
 			PendingRemovalMountsAllowed: true,
 		},
 		&vault.TestClusterOptions{
