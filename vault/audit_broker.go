@@ -34,14 +34,18 @@ type AuditBroker struct {
 }
 
 // NewAuditBroker creates a new audit broker
-func NewAuditBroker(log log.Logger, useEventLogger bool) *AuditBroker {
+func NewAuditBroker(log log.Logger, useEventLogger bool) (*AuditBroker, error) {
 	var eventBroker *eventlogger.Broker
+	var err error
 
 	if useEventLogger {
 		// Ignoring the second error return value since an error will only occur
 		// if an unrecognized eventlogger.RegistrationPolicy is provided to an
 		// eventlogger.Option function.
-		eventBroker, _ = eventlogger.NewBroker(eventlogger.WithNodeRegistrationPolicy(eventlogger.DenyOverwrite), eventlogger.WithPipelineRegistrationPolicy(eventlogger.DenyOverwrite))
+		eventBroker, err = eventlogger.NewBroker(eventlogger.WithNodeRegistrationPolicy(eventlogger.DenyOverwrite), eventlogger.WithPipelineRegistrationPolicy(eventlogger.DenyOverwrite))
+		if err != nil {
+			return nil, fmt.Errorf("error creating event broker for audit events: %w", err)
+		}
 	}
 
 	b := &AuditBroker{
@@ -49,7 +53,7 @@ func NewAuditBroker(log log.Logger, useEventLogger bool) *AuditBroker {
 		logger:   log,
 		broker:   eventBroker,
 	}
-	return b
+	return b, nil
 }
 
 // Register is used to add new audit backend to the broker

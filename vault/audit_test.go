@@ -340,7 +340,10 @@ func verifyDefaultAuditTable(t *testing.T, table *MountTable) {
 
 func TestAuditBroker_LogRequest(t *testing.T) {
 	l := logging.NewVaultLogger(log.Trace)
-	b := NewAuditBroker(l, false)
+	b, err := NewAuditBroker(l, false)
+	if err != nil {
+		t.Fatal(err)
+	}
 	a1 := corehelpers.TestNoopAudit(t, nil)
 	a2 := corehelpers.TestNoopAudit(t, nil)
 	b.Register("foo", a1, false)
@@ -427,7 +430,10 @@ func TestAuditBroker_LogRequest(t *testing.T) {
 
 func TestAuditBroker_LogResponse(t *testing.T) {
 	l := logging.NewVaultLogger(log.Trace)
-	b := NewAuditBroker(l, false)
+	b, err := NewAuditBroker(l, false)
+	if err != nil {
+		t.Fatal(err)
+	}
 	a1 := corehelpers.TestNoopAudit(t, nil)
 	a2 := corehelpers.TestNoopAudit(t, nil)
 	b.Register("foo", a1, false)
@@ -532,7 +538,10 @@ func TestAuditBroker_LogResponse(t *testing.T) {
 
 func TestAuditBroker_AuditHeaders(t *testing.T) {
 	logger := logging.NewVaultLogger(log.Trace)
-	b := NewAuditBroker(logger, false)
+	b, err := NewAuditBroker(logger, false)
+	if err != nil {
+		t.Fatal(err)
+	}
 	_, barrier, _ := mockBarrier(t)
 	view := NewBarrierView(barrier, "headers/")
 	a1 := corehelpers.TestNoopAudit(t, nil)

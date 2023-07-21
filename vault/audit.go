@@ -383,7 +383,10 @@ func (c *Core) persistAudit(ctx context.Context, table *MountTable, localOnly bo
 func (c *Core) setupAudits(ctx context.Context) error {
 	brokerLogger := c.baseLogger.Named("audit")
 	c.AddLogger(brokerLogger)
-	broker := NewAuditBroker(brokerLogger, c.IsExperimentEnabled(experiments.VaultExperimentCoreAuditEventsAlpha1))
+	broker, err := NewAuditBroker(brokerLogger, c.IsExperimentEnabled(experiments.VaultExperimentCoreAuditEventsAlpha1))
+	if err != nil {
+		return err
+	}
 
 	c.auditLock.Lock()
 	defer c.auditLock.Unlock()
