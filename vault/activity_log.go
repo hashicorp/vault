@@ -218,7 +218,7 @@ type ActivityLogCoreConfig struct {
 
 // NewActivityLog creates an activity log.
 func NewActivityLog(core *Core, logger log.Logger, view *BarrierView, metrics metricsutil.Metrics) (*ActivityLog, error) {
-	hostname, err := os.Hostname()
+	hostName, err := os.Hostname()
 	if err != nil {
 		return nil, err
 	}
@@ -233,7 +233,7 @@ func NewActivityLog(core *Core, logger log.Logger, view *BarrierView, metrics me
 		logger:                    logger,
 		view:                      view,
 		metrics:                   metrics,
-		nodeID:                    hostname,
+		nodeID:                    hostName,
 		newFragmentCh:             make(chan struct{}, 1),
 		sendCh:                    make(chan struct{}, 1), // buffered so it can be triggered by fragment size
 		doneCh:                    make(chan struct{}, 1),
