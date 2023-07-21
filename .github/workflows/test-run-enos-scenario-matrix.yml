@@ -99,10 +99,10 @@ jobs:
       ENOS_VAR_artifactory_username: ${{ secrets.ARTIFACTORY_USER }}
       ENOS_VAR_artifactory_token: ${{ secrets.ARTIFACTORY_TOKEN }}
       ENOS_VAR_terraform_plugin_cache_dir: ./support/terraform-plugin-cache
+      ENOS_VAR_vault_artifact_path: ./support/downloads/${{ inputs.build-artifact-name }}
       ENOS_VAR_vault_build_date: ${{ needs.metadata.outputs.build-date }}
       ENOS_VAR_vault_product_version: ${{ needs.metadata.outputs.version }}
       ENOS_VAR_vault_revision: ${{ inputs.vault-revision }}
-      ENOS_VAR_vault_bundle_path: ./support/downloads/${{ inputs.build-artifact-name }}
       ENOS_VAR_vault_license_path: ./support/vault.hclic
       ENOS_DEBUG_DATA_ROOT_DIR: /tmp/enos-debug-data
     steps:
@@ -179,22 +179,22 @@ jobs:
         uses: hashicorp/actions-slack-status@v1
         if: ${{ always() }}
         with:
-          failure-message: "An Enos scenario `run` failed on the branch `${{ github.event.pull_request.head.ref }}` \nPR title: `${{ github.event.pull_request.title }}` \nActor: `${{ github.event.pull_request.user.login }}`"
-          status: ${{steps.run.outcome}}
-          slack-webhook-url: ${{secrets.SLACK_WEBHOOK_URL}}
+          failure-message: "An Enos scenario `run` failed. \nTriggering event: `${{ github.event_name }}` \nActor: `${{ github.actor }}`"
+          status: ${{ steps.run.outcome }}
+          slack-webhook-url: ${{ secrets.SLACK_WEBHOOK_URL }}
       # Send a Slack notification to #feed-vault-enos-failures if the 'run_retry' step fails.
       - name: Send Slack notification on Enos run_retry failure
         uses: hashicorp/actions-slack-status@v1
         if: ${{ always() }}
         with:
-          failure-message: "An Enos scenario `run_retry` failed on the branch `${{ github.event.pull_request.head.ref }}` \nPR title: `${{ github.event.pull_request.title }}` \nActor: `${{ github.event.pull_request.user.login }}`"
-          status: ${{steps.run_retry.outcome}}
-          slack-webhook-url: ${{secrets.SLACK_WEBHOOK_URL}}
+          failure-message: "An Enos scenario `run_retry` failed. \nTriggering event: `${{ github.event_name }}` \nActor: `${{ github.actor }}`"
+          status: ${{ steps.run_retry.outcome }}
+          slack-webhook-url: ${{ secrets.SLACK_WEBHOOK_URL }}
       # Send a Slack notification to #feed-vault-enos-failures if the 'destroy' step fails.
       - name: Send Slack notification on Enos destroy failure
         uses: hashicorp/actions-slack-status@v1
         if: ${{ always() }}
         with:
-          failure-message: "An Enos scenario `destroy` failed on the branch `${{ github.event.pull_request.head.ref }}` \nPR title: `${{ github.event.pull_request.title }}` \nActor: `${{ github.event.pull_request.user.login }}`"
-          status: ${{steps.destroy.outcome}}
-          slack-webhook-url: ${{secrets.SLACK_WEBHOOK_URL}}
+          failure-message: "An Enos scenario `destroy` failed. \nTriggering event: `${{ github.event_name }}` \nActor: `${{ github.actor }}`"
+          status: ${{ steps.destroy.outcome }}
+          slack-webhook-url: ${{ secrets.SLACK_WEBHOOK_URL }}

@@ -25,7 +25,7 @@ supported. The upgrade notes for each intervening version must be reviewed. The
 upgrade notes may describe additional steps or configuration to update before,
 during, or after the upgrade.
 
-## Integrated Storage Autopilot
+## Integrated storage autopilot
 
 Vault 1.11 introduced [automated
 upgrades](/docs/concepts/integrated-storage/autopilot#automated-upgrades) as
@@ -46,7 +46,7 @@ period. The Vault Agent version can lag behind the Vault Server version, though
 we recommend keeping all Vault instances up to date with the most recent minor Vault version
 to the extent possible.
 
-## Testing the Upgrade
+## Testing the upgrade
 
 It's always a good idea to try to ensure that the upgrade will be successful in
 your environment. The ideal way to do this is to take a snapshot of your data
@@ -56,11 +56,11 @@ do not allow external network connectivity during testing, in case credentials
 expire. This prevents the test cluster from trying to revoke these resources
 along with the non-test cluster.
 
-## OSS to Enterprise Installations
+## OSS to enterprise installations
 
 Upgrading to Vault Enterprise installations follow the same steps as OSS upgrades except that the Vault Enterprise binary is to be used and the license file [applied](/api-docs/system/license#install-license), when applicable. The Enterprise binary and license file can be obtained through your HashiCorp sales team.
 
-## Non-HA Installations
+## Non-HA installations
 
 Upgrading non-HA installations of Vault is as simple as replacing the Vault
 binary with the new version and restarting Vault. Any upgrade tasks that can be
@@ -71,7 +71,7 @@ Always use `SIGINT` or `SIGTERM` to properly shut down Vault.
 Be sure to also read and follow any instructions in the version-specific
 upgrade notes.
 
-## HA Installations
+## HA installations
 
 !> **Important:** Note that these instructions are not relevant if you're on a
 version of Vault greater than or equal to 1.11 and you have Autopilot enabled.
@@ -132,7 +132,7 @@ takes over active duty.
 Be sure to also read and follow any instructions in the version-specific
 upgrade notes.
 
-## Replication Installations
+## Replication installations
 
 -> **Note:** Prior to any upgrade, be sure to also read and follow any instructions in the version-specific
 upgrade notes which are found in the navigation menu for this documentation.

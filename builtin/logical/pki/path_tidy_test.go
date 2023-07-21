@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"strings"
 	"testing"
 	"time"
 
@@ -338,7 +339,8 @@ func TestCertStorageMetrics(t *testing.T) {
 	}
 
 	// Since certificate counts are off by default, those metrics should not exist yet
-	mostRecentInterval := inmemSink.Data()[len(inmemSink.Data())-1]
+	stableMetric := inmemSink.Data()
+	mostRecentInterval := stableMetric[len(stableMetric)-1]
 	_, ok = mostRecentInterval.Gauges["secrets.pki."+backendUUID+".total_revoked_certificates_stored"]
 	if ok {
 		t.Fatalf("Certificate counting should be off by default, but revoked cert count was emitted as a metric in an unconfigured mount")
@@ -365,14 +367,21 @@ func TestCertStorageMetrics(t *testing.T) {
 	testhelpers.EnsureCoresSealed(t, cluster)
 	testhelpers.EnsureCoresUnsealed(t, cluster)
 
-	// By reading the auto-tidy endpoint, we ensure that initialize has completed (which has a write lock on auto-tidy)
-	_, err = client.Logical().Read("/pki/config/auto-tidy")
-	if err != nil {
-		t.Fatal(err)
-	}
+	// Wait until a tidy run has completed.
+	testhelpers.RetryUntil(t, 5*time.Second, func() error {
+		resp, err = client.Logical().Read("pki/tidy-status")
+		if err != nil {
+			return fmt.Errorf("error reading tidy status: %w", err)
+		}
+		if finished, ok := resp.Data["time_finished"]; !ok || finished == "" || finished == nil {
+			return fmt.Errorf("tidy time_finished not run yet: %v", finished)
+		}
+		return nil
+	})
 
 	// Since publish_stored_certificate_count_metrics is still false, these metrics should still not exist yet
-	mostRecentInterval = inmemSink.Data()[len(inmemSink.Data())-1]
+	stableMetric = inmemSink.Data()
+	mostRecentInterval = stableMetric[len(stableMetric)-1]
 	_, ok = mostRecentInterval.Gauges["secrets.pki."+backendUUID+".total_revoked_certificates_stored"]
 	if ok {
 		t.Fatalf("Certificate counting should be off by default, but revoked cert count was emitted as a metric in an unconfigured mount")
@@ -384,9 +393,8 @@ func TestCertStorageMetrics(t *testing.T) {
 
 	// But since certificate counting is on, the metrics should exist on tidyStatus endpoint:
 	tidyStatus, err = client.Logical().Read("pki/tidy-status")
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err, "failed reading tidy-status endpoint")
+
 	// backendUUID should exist, we need this for metrics
 	backendUUID = tidyStatus.Data["internal_backend_uuid"].(string)
 	// "current_cert_store_count", "current_revoked_cert_count"
@@ -415,16 +423,16 @@ func TestCertStorageMetrics(t *testing.T) {
 		"maintain_stored_certificate_counts":       true,
 		"publish_stored_certificate_count_metrics": true,
 	})
-	require.NoError(t, err)
+	require.NoError(t, err, "failed updating auto-tidy configuration")
 
 	// Issue a cert and revoke it.
 	resp, err = client.Logical().Write("pki/issue/local-testing", map[string]interface{}{
 		"common_name": "example.com",
 		"ttl":         "10s",
 	})
-	require.NoError(t, err)
-	require.NotNil(t, resp)
-	require.NotNil(t, resp.Data)
+	require.NoError(t, err, "failed to issue leaf certificate")
+	require.NotNil(t, resp, "nil response without error on issuing leaf certificate")
+	require.NotNil(t, resp.Data, "empty Data without error on issuing leaf certificate")
 	require.NotEmpty(t, resp.Data["serial_number"])
 	require.NotEmpty(t, resp.Data["certificate"])
 	leafSerial := resp.Data["serial_number"].(string)
@@ -441,22 +449,25 @@ func TestCertStorageMetrics(t *testing.T) {
 	require.Empty(t, resp.Data["revocation_time_rfc3339"], "revocation_time_rfc3339 was not empty")
 	require.Empty(t, resp.Data["issuer_id"], "issuer_id was not empty")
 
-	_, err = client.Logical().Write("pki/revoke", map[string]interface{}{
+	revokeResp, err := client.Logical().Write("pki/revoke", map[string]interface{}{
 		"serial_number": leafSerial,
 	})
-	require.NoError(t, err)
+	require.NoError(t, err, "failed revoking serial number: %s", leafSerial)
+
+	for _, warning := range revokeResp.Warnings {
+		if strings.Contains(warning, "already expired; refusing to add to CRL") {
+			t.Skipf("Skipping test as we missed the revocation window of our leaf cert")
+		}
+	}
 
 	// We read the auto-tidy endpoint again, to ensure any metrics logic has completed (lock on config)
 	_, err = client.Logical().Read("/pki/config/auto-tidy")
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err, "failed to read auto-tidy configuration")
 
 	// Check Metrics After Cert Has Be Created and Revoked
 	tidyStatus, err = client.Logical().Read("pki/tidy-status")
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err, "failed to read tidy-status")
+
 	backendUUID = tidyStatus.Data["internal_backend_uuid"].(string)
 	certStoreCount, ok = tidyStatus.Data["current_cert_store_count"]
 	if !ok {
@@ -470,7 +481,7 @@ func TestCertStorageMetrics(t *testing.T) {
 		t.Fatalf("Certificate counting has been turned on, but revoked cert store count does not appear in tidy status")
 	}
 	if revokedCertCount != json.Number("1") {
-		t.Fatalf("Revoked one certificate, but got a revoked cert store count of %v", revokedCertCount)
+		t.Fatalf("Revoked one certificate, but got a revoked cert store count of %v\n:%v", revokedCertCount, tidyStatus)
 	}
 	// This should now be initialized
 	certCountError, ok := tidyStatus.Data["certificate_counting_error"]
@@ -479,7 +490,8 @@ func TestCertStorageMetrics(t *testing.T) {
 	}
 
 	testhelpers.RetryUntil(t, newPeriod*5, func() error {
-		mostRecentInterval = inmemSink.Data()[len(inmemSink.Data())-1]
+		stableMetric = inmemSink.Data()
+		mostRecentInterval = stableMetric[len(stableMetric)-1]
 		revokedCertCountGaugeValue, ok := mostRecentInterval.Gauges["secrets.pki."+backendUUID+".total_revoked_certificates_stored"]
 		if !ok {
 			return errors.New("turned on metrics, but revoked cert count was not emitted")
@@ -498,7 +510,9 @@ func TestCertStorageMetrics(t *testing.T) {
 	})
 
 	// Wait for cert to expire and the safety buffer to elapse.
-	time.Sleep(time.Until(leafCert.NotAfter) + 3*time.Second)
+	sleepFor := time.Until(leafCert.NotAfter) + 3*time.Second
+	t.Logf("%v: Sleeping for %v, leaf certificate expires: %v", time.Now().Format(time.RFC3339), sleepFor, leafCert.NotAfter)
+	time.Sleep(sleepFor)
 
 	// Wait for auto-tidy to run afterwards.
 	var foundTidyRunning string
@@ -523,7 +537,8 @@ func TestCertStorageMetrics(t *testing.T) {
 			require.NotEmpty(t, resp.Data["time_started"])
 			state := resp.Data["state"].(string)
 			started := resp.Data["time_started"].(string)
-			t.Logf("Resp: %v", resp.Data)
+
+			t.Logf("%v: Resp: %v", time.Now().Format(time.RFC3339), resp.Data)
 
 			// We want the _next_ tidy run after the cert expires. This
 			// means if we're currently finished when we hit this the
@@ -560,7 +575,8 @@ func TestCertStorageMetrics(t *testing.T) {
 	}
 
 	testhelpers.RetryUntil(t, newPeriod*5, func() error {
-		mostRecentInterval = inmemSink.Data()[len(inmemSink.Data())-1]
+		stableMetric = inmemSink.Data()
+		mostRecentInterval = stableMetric[len(stableMetric)-1]
 		revokedCertCountGaugeValue, ok := mostRecentInterval.Gauges["secrets.pki."+backendUUID+".total_revoked_certificates_stored"]
 		if !ok {
 			return errors.New("turned on metrics, but revoked cert count was not emitted")

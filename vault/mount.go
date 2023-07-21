@@ -450,6 +450,11 @@ func (e *MountEntry) SyncCache() {
 	}
 }
 
+// DecodeMountTable is used for testing
+func (c *Core) DecodeMountTable(ctx context.Context, raw []byte) (*MountTable, error) {
+	return c.decodeMountTable(ctx, raw)
+}
+
 func (c *Core) decodeMountTable(ctx context.Context, raw []byte) (*MountTable, error) {
 	// Decode into mount table
 	mountTable := new(MountTable)
@@ -514,9 +519,13 @@ func (c *Core) mount(ctx context.Context, entry *MountEntry) error {
 func (c *Core) mountInternal(ctx context.Context, entry *MountEntry, updateStorage bool) error {
 	c.mountsLock.Lock()
 	c.authLock.Lock()
+	locked := true
 	unlock := func() {
-		c.authLock.Unlock()
-		c.mountsLock.Unlock()
+		if locked {
+			c.authLock.Unlock()
+			c.mountsLock.Unlock()
+			locked = false
+		}
 	}
 	defer unlock()
 
@@ -667,7 +676,6 @@ func (c *Core) mountInternal(ctx context.Context, entry *MountEntry, updateStora
 		c.logger.Error("failed to evaluate filtered paths", "error", err)
 
 		unlock()
-		unlock = func() {}
 		// We failed to evaluate filtered paths so we are undoing the mount operation
 		if unmountInternalErr := c.unmountInternal(ctx, entry.Path, MountTableUpdateStorage); unmountInternalErr != nil {
 			c.logger.Error("failed to unmount", "error", unmountInternalErr)
