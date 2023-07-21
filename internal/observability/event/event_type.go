@@ -28,10 +28,10 @@ func (et EventType) Validate() error {
 	}
 }
 
-// GenerateNodeID generates a new UUID.
-// It currently ignores any errors that may occur.
-func GenerateNodeID() eventlogger.NodeID {
-	id, _ := uuid.GenerateUUID()
+// GenerateNodeID generates a new UUID that it casts to the eventlogger.NodeID
+// type.
+func GenerateNodeID() (eventlogger.NodeID, error) {
+	id, err := uuid.GenerateUUID()
 
-	return eventlogger.NodeID(id)
+	return eventlogger.NodeID(id), err
 }

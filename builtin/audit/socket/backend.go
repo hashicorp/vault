@@ -131,7 +131,10 @@ func Factory(ctx context.Context, conf *audit.BackendConfig, useEventLogger bool
 		b.nodeIDList = make([]eventlogger.NodeID, 2)
 		b.nodeMap = make(map[eventlogger.NodeID]eventlogger.Node)
 
-		formatterNodeID := event.GenerateNodeID()
+		formatterNodeID, err := event.GenerateNodeID()
+		if err != nil {
+			return nil, fmt.Errorf("error generating random NodeID for formatter node: %w", err)
+		}
 		b.nodeIDList[0] = formatterNodeID
 		b.nodeMap[formatterNodeID] = f
 
@@ -139,7 +142,10 @@ func Factory(ctx context.Context, conf *audit.BackendConfig, useEventLogger bool
 		if err != nil {
 			return nil, fmt.Errorf("error creating socket sink node: %w", err)
 		}
-		sinkNodeID := event.GenerateNodeID()
+		sinkNodeID, err := event.GenerateNodeID()
+		if err != nil {
+			return nil, fmt.Errorf("error generating random NodeID for sink node: %w", err)
+		}
 		b.nodeIDList[1] = sinkNodeID
 		b.nodeMap[sinkNodeID] = sinkNode
 	}
