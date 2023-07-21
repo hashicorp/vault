@@ -174,7 +174,7 @@ func BenchmarkAuditFile_request(b *testing.B) {
 		},
 	}
 
-	ctx := namespace.RootContext(context.Background())
+	ctx := namespace.RootContext(nil)
 	b.ResetTimer()
 	b.RunParallel(func(pb *testing.PB) {
 		for pb.Next() {
