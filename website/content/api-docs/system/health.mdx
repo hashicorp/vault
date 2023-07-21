@@ -8,7 +8,7 @@ description: The `/sys/health` endpoint is used to check the health status of Va
 
 The `/sys/health` endpoint is used to check the health status of Vault.
 
-## Read Health Information
+## Read health information
 
 This endpoint returns the health status of Vault. This matches the semantics of
 a Consul HTTP health check and provides a simple way to monitor the health of a
@@ -58,14 +58,14 @@ The default status codes are:
 - `uninitcode` `(int: 501)` – Specifies the status code that should be returned
   for a uninitialized node.
 
-### Sample Request
+### Sample request
 
 ```shell-session
 $ curl \
     http://127.0.0.1:8200/v1/sys/health
 ```
 
-### Sample Response
+### Sample response
 
 This response is only returned for a `GET` request.
 
@@ -89,7 +89,7 @@ standby of its status.
 }
 ```
 
-### Sample Request to customize the status code being returned
+### Sample request to customize the status code being returned
 
 ```shell-session
 $ curl -i https://127.0.0.1:8200/v1/sys/health\?drsecondarycode\=200
@@ -102,7 +102,7 @@ content-length: 364
 date: Wed, 26 Jan 2022 09:21:13 GMT
 ```
 
-### Sample Response
+### Sample response
 
 This response is only returned for a `GET` request.
 

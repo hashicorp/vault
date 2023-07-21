@@ -6,7 +6,7 @@ description: |-
   Describes how to set up Diaster Recovery clusters with Integrated Storage (Raft)
 ---
 
-# Highly Available Vault Enterprise Disaster Recovery Clusters with Integrated Storage (Raft)
+# Highly available Vault enterprise disaster recovery clusters with integrated storage (Raft)
 
 @include 'helm/version.mdx'
 
@@ -16,7 +16,7 @@ For more information on Disaster Recovery, [see the official documentation](/vau
 
 -> For license configuration refer to [Running Vault Enterprise](/vault/docs/platform/k8s/helm/enterprise).
 
-## Primary Cluster
+## Primary cluster
 
 First, create the primary cluster:
 
@@ -67,7 +67,7 @@ e6876c97-aaaa-a92e-b99a-0aafab105745    vault-primary-1.vault-primary-internal:8
 4b5d7383-ff31-44df-e008-6a606828823b    vault-primary-2.vault-primary-internal:8201    follower    true
 ```
 
-## Secondary Cluster
+## Secondary cluster
 
 With the primary cluster created, next create a secondary cluster and enable
 disaster recovery replication.
@@ -119,7 +119,7 @@ e6876c97-aaaa-a92e-b99a-0aafab105745    vault-secondary-1.vault-secondary-intern
 4b5d7383-ff31-44df-e008-6a606828823b    vault-secondary-2.vault-secondary-internal:8201    follower    true
 ```
 
-## Enable Disaster Recovery Replication On Primary
+## Enable disaster recovery replication on primary
 
 With the initial clusters setup, we can now configure them for disaster recovery replication.
 
@@ -137,7 +137,7 @@ kubectl exec -ti vault-primary-0 -- vault write sys/replication/dr/primary/secon
 
 The token in the output will be used when configuring the secondary cluster.
 
-## Enable Disaster Recovery Replication On Secondary
+## Enable disaster recovery replication on secondary
 
 Using the token created in the last step, enable disaster recovery replication on the secondary:
 
