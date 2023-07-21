@@ -231,7 +231,7 @@ scenario "replication" {
     variables {
       cluster_name    = step.create_primary_cluster_backend_targets.cluster_name
       cluster_tag_key = local.backend_tag_key
-      consul_license  = (matrix.primary_backend == "consul" && var.backend_edition == "ent") ? step.read_backend_license.license : null
+      license  = (matrix.primary_backend == "consul" && var.backend_edition == "ent") ? step.read_backend_license.license : null
       release = {
         edition = var.backend_edition
         version = matrix.consul_version
@@ -257,6 +257,7 @@ scenario "replication" {
       awskms_unseal_key_arn   = step.create_vpc.kms_key_arn
       backend_cluster_name    = step.create_primary_cluster_backend_targets.cluster_name
       backend_cluster_tag_key = local.backend_tag_key
+      consul_license  = (matrix.primary_backend == "consul" && var.backend_edition == "ent") ? step.read_backend_license.license : null
       cluster_name            = step.create_primary_cluster_targets.cluster_name
       consul_release = matrix.primary_backend == "consul" ? {
         edition = var.backend_edition
@@ -286,7 +287,7 @@ scenario "replication" {
     variables {
       cluster_name    = step.create_secondary_cluster_backend_targets.cluster_name
       cluster_tag_key = local.backend_tag_key
-      consul_license  = (matrix.secondary_backend == "consul" && var.backend_edition == "ent") ? step.read_backend_license.license : null
+      license  = (matrix.secondary_backend == "consul" && var.backend_edition == "ent") ? step.read_backend_license.license : null
       release = {
         edition = var.backend_edition
         version = matrix.consul_version
@@ -312,6 +313,7 @@ scenario "replication" {
       awskms_unseal_key_arn   = step.create_vpc.kms_key_arn
       backend_cluster_name    = step.create_secondary_cluster_backend_targets.cluster_name
       backend_cluster_tag_key = local.backend_tag_key
+      consul_license  = (matrix.secondary_backend == "consul" && var.backend_edition == "ent") ? step.read_backend_license.license : null
       cluster_name            = step.create_secondary_cluster_targets.cluster_name
       consul_release = matrix.secondary_backend == "consul" ? {
         edition = var.backend_edition
@@ -553,6 +555,7 @@ scenario "replication" {
       backend_cluster_name    = step.create_primary_cluster_backend_targets.cluster_name
       backend_cluster_tag_key = local.backend_tag_key
       cluster_name            = step.create_primary_cluster_targets.cluster_name
+      consul_license  = (matrix.primary_backend == "consul" && var.backend_edition == "ent") ? step.read_backend_license.license : null
       consul_release = matrix.primary_backend == "consul" ? {
         edition = var.backend_edition
         version = matrix.consul_version

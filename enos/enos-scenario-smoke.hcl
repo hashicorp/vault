@@ -162,7 +162,7 @@ scenario "smoke" {
   step "create_backend_cluster" {
     module = "backend_${matrix.backend}"
     depends_on = [
-      step.create_vault_cluster_backend_targets,
+      step.create_vault_cluster_backend_targets
     ]
 
     providers = {
@@ -199,6 +199,7 @@ scenario "smoke" {
       backend_cluster_name    = step.create_vault_cluster_backend_targets.cluster_name
       backend_cluster_tag_key = local.backend_tag_key
       cluster_name            = step.create_vault_cluster_targets.cluster_name
+      consul_license  = (matrix.backend == "consul" && var.backend_edition == "ent") ? step.read_backend_license.license : null
       consul_release = matrix.backend == "consul" ? {
         edition = var.backend_edition
         version = matrix.consul_version
