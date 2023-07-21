@@ -235,6 +235,7 @@ func testVaultServerUninit(tb testing.TB) (*api.Client, func()) {
 	}
 
 	core, err := vault.NewCore(&vault.CoreConfig{
+		DisableMlock:       true,
 		Physical:           inm,
 		CredentialBackends: defaultVaultCredentialBackends,
 		AuditBackends:      defaultVaultAuditBackends,
