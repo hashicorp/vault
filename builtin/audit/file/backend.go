@@ -51,8 +51,7 @@ func Factory(ctx context.Context, conf *audit.BackendConfig, useEventLogger bool
 		format = audit.JSONFormat.String()
 	}
 	switch format {
-	case audit.JSONFormat.String():
-	case audit.JSONxFormat.String():
+	case audit.JSONFormat.String(), audit.JSONxFormat.String():
 	default:
 		return nil, fmt.Errorf("unknown format type %q", format)
 	}

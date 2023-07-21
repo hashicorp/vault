@@ -44,8 +44,7 @@ func Factory(ctx context.Context, conf *audit.BackendConfig, useEventLogger bool
 		format = audit.JSONFormat.String()
 	}
 	switch format {
-	case audit.JSONFormat.String():
-	case audit.JSONxFormat.String():
+	case audit.JSONFormat.String(), audit.JSONxFormat.String():
 	default:
 		return nil, fmt.Errorf("unknown format type %q", format)
 	}
@@ -112,9 +111,9 @@ func Factory(ctx context.Context, conf *audit.BackendConfig, useEventLogger bool
 
 	var w audit.Writer
 	switch format {
-	case "json":
+	case audit.JSONFormat.String():
 		w = &audit.JSONWriter{Prefix: conf.Config["prefix"]}
-	case "jsonx":
+	case audit.JSONxFormat.String():
 		w = &audit.JSONxWriter{Prefix: conf.Config["prefix"]}
 	}
 
