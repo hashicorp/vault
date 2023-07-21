@@ -22,6 +22,7 @@ func Factory(ctx context.Context, conf *audit.BackendConfig, useEventLogger bool
 	if conf.SaltConfig == nil {
 		return nil, fmt.Errorf("nil salt config")
 	}
+
 	if conf.SaltView == nil {
 		return nil, fmt.Errorf("nil salt view")
 	}
@@ -99,13 +100,12 @@ func Factory(ctx context.Context, conf *audit.BackendConfig, useEventLogger bool
 		saltConfig:   conf.SaltConfig,
 		saltView:     conf.SaltView,
 		formatConfig: cfg,
-
-		nodeIDList: make([]eventlogger.NodeID, 0),
-		nodeMap:    make(map[eventlogger.NodeID]eventlogger.Node),
+		nodeIDList:   make([]eventlogger.NodeID, 0),
+		nodeMap:      make(map[eventlogger.NodeID]eventlogger.Node),
 	}
 
 	// Configure the formatter for either case.
-	f, err := audit.NewEventFormatter(b.formatConfig, b)
+	f, err := audit.NewEntryFormatter(b.formatConfig, b, audit.WithPrefix(conf.Config["prefix"]))
 	if err != nil {
 		return nil, fmt.Errorf("error creating formatter: %w", err)
 	}
@@ -122,7 +122,7 @@ func Factory(ctx context.Context, conf *audit.BackendConfig, useEventLogger bool
 	b.nodeIDList = append(b.nodeIDList, formatterNodeID)
 	b.nodeMap[formatterNodeID] = f
 
-	fw, err := audit.NewEventFormatterWriter(b.formatConfig, f, w)
+	fw, err := audit.NewEntryFormatterWriter(b.formatConfig, f, w)
 	if err != nil {
 		return nil, fmt.Errorf("error creating formatter writer: %w", err)
 	}
@@ -145,7 +145,7 @@ func Factory(ctx context.Context, conf *audit.BackendConfig, useEventLogger bool
 type Backend struct {
 	logger gsyslog.Syslogger
 
-	formatter    *audit.EventFormatterWriter
+	formatter    *audit.EntryFormatterWriter
 	formatConfig audit.FormatterConfig
 
 	saltMutex  sync.RWMutex

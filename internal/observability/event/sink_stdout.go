@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package event
 
 import (
@@ -8,25 +11,25 @@ import (
 	"github.com/hashicorp/eventlogger"
 )
 
-var _ eventlogger.Node = (*StdoutSinkNode)(nil)
+var _ eventlogger.Node = (*StdoutSink)(nil)
 
-// StdoutSinkNode is structure that implements the eventlogger.Node interface
+// StdoutSink is structure that implements the eventlogger.Node interface
 // as a Sink node that writes the events to the standard output stream.
-type StdoutSinkNode struct {
+type StdoutSink struct {
 	requiredFormat string
 }
 
-// NewStdoutSinkNode creates a new StdoutSinkNode that will persist the events
+// NewStdoutSinkNode creates a new StdoutSink that will persist the events
 // it processes using the specified expected format.
-func NewStdoutSinkNode(format string) *StdoutSinkNode {
-	return &StdoutSinkNode{
+func NewStdoutSinkNode(format string) *StdoutSink {
+	return &StdoutSink{
 		requiredFormat: format,
 	}
 }
 
 // Process persists the provided eventlogger.Event to the standard output stream.
-func (n *StdoutSinkNode) Process(ctx context.Context, event *eventlogger.Event) (*eventlogger.Event, error) {
-	const op = "event.(StdoutSinkNode).Process"
+func (n *StdoutSink) Process(ctx context.Context, event *eventlogger.Event) (*eventlogger.Event, error) {
+	const op = "event.(StdoutSink).Process"
 
 	select {
 	case <-ctx.Done():
@@ -52,12 +55,12 @@ func (n *StdoutSinkNode) Process(ctx context.Context, event *eventlogger.Event) 
 	return nil, nil
 }
 
-// Reopen is a no-op for the StdoutSinkNode type.
-func (n *StdoutSinkNode) Reopen() error {
+// Reopen is a no-op for the StdoutSink type.
+func (n *StdoutSink) Reopen() error {
 	return nil
 }
 
 // Type returns the eventlogger.NodeTypeSink constant.
-func (n *StdoutSinkNode) Type() eventlogger.NodeType {
+func (n *StdoutSink) Type() eventlogger.NodeType {
 	return eventlogger.NodeTypeSink
 }

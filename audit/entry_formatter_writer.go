@@ -15,8 +15,8 @@ import (
 )
 
 var (
-	_ Formatter = (*EventFormatterWriter)(nil)
-	_ Writer    = (*EventFormatterWriter)(nil)
+	_ Formatter = (*EntryFormatterWriter)(nil)
+	_ Writer    = (*EntryFormatterWriter)(nil)
 )
 
 // Salt returns a new salt with default configuration and no storage usage, and no error.
@@ -24,9 +24,9 @@ func (s *nonPersistentSalt) Salt(_ context.Context) (*salt.Salt, error) {
 	return salt.NewNonpersistentSalt(), nil
 }
 
-// NewEventFormatterWriter should be used to create a new EventFormatterWriter.
-// Deprecated: Please move to using eventlogger.Event via EventFormatter and a sink.
-func NewEventFormatterWriter(config FormatterConfig, formatter Formatter, writer Writer) (*EventFormatterWriter, error) {
+// NewEntryFormatterWriter should be used to create a new EntryFormatterWriter.
+// Deprecated: Please move to using eventlogger.Event via EntryFormatter and a sink.
+func NewEntryFormatterWriter(config FormatterConfig, formatter Formatter, writer Writer) (*EntryFormatterWriter, error) {
 	switch {
 	case formatter == nil:
 		return nil, errors.New("cannot create a new audit formatter writer with nil formatter")
@@ -34,7 +34,7 @@ func NewEventFormatterWriter(config FormatterConfig, formatter Formatter, writer
 		return nil, errors.New("cannot create a new audit formatter writer with nil formatter")
 	}
 
-	fw := &EventFormatterWriter{
+	fw := &EntryFormatterWriter{
 		Formatter: formatter,
 		Writer:    writer,
 		config:    config,
@@ -45,8 +45,8 @@ func NewEventFormatterWriter(config FormatterConfig, formatter Formatter, writer
 
 // FormatAndWriteRequest attempts to format the specified logical.LogInput into an RequestEntry,
 // and then write the request using the specified io.Writer.
-// Deprecated: Please move to using eventlogger.Event via EventFormatter and a sink.
-func (f *EventFormatterWriter) FormatAndWriteRequest(ctx context.Context, w io.Writer, in *logical.LogInput) error {
+// Deprecated: Please move to using eventlogger.Event via EntryFormatter and a sink.
+func (f *EntryFormatterWriter) FormatAndWriteRequest(ctx context.Context, w io.Writer, in *logical.LogInput) error {
 	switch {
 	case in == nil || in.Request == nil:
 		return fmt.Errorf("request to request-audit a nil request")
@@ -68,8 +68,8 @@ func (f *EventFormatterWriter) FormatAndWriteRequest(ctx context.Context, w io.W
 
 // FormatAndWriteResponse attempts to format the specified logical.LogInput into an ResponseEntry,
 // and then write the response using the specified io.Writer.
-// Deprecated: Please move to using eventlogger.Event via EventFormatter and a sink.
-func (f *EventFormatterWriter) FormatAndWriteResponse(ctx context.Context, w io.Writer, in *logical.LogInput) error {
+// Deprecated: Please move to using eventlogger.Event via EntryFormatter and a sink.
+func (f *EntryFormatterWriter) FormatAndWriteResponse(ctx context.Context, w io.Writer, in *logical.LogInput) error {
 	switch {
 	case in == nil || in.Request == nil:
 		return errors.New("request to response-audit a nil request")
@@ -90,13 +90,13 @@ func (f *EventFormatterWriter) FormatAndWriteResponse(ctx context.Context, w io.
 }
 
 // NewTemporaryFormatter creates a formatter not backed by a persistent salt
-func NewTemporaryFormatter(requiredFormat, prefix string) (*EventFormatterWriter, error) {
+func NewTemporaryFormatter(requiredFormat, prefix string) (*EntryFormatterWriter, error) {
 	cfg, err := NewFormatterConfig(WithFormat(requiredFormat))
 	if err != nil {
 		return nil, err
 	}
 
-	eventFormatter, err := NewEventFormatter(cfg, &nonPersistentSalt{}, WithPrefix(prefix))
+	eventFormatter, err := NewEntryFormatter(cfg, &nonPersistentSalt{}, WithPrefix(prefix))
 	if err != nil {
 		return nil, err
 	}
@@ -110,7 +110,7 @@ func NewTemporaryFormatter(requiredFormat, prefix string) (*EventFormatterWriter
 		w = &JSONWriter{Prefix: prefix}
 	}
 
-	fw, err := NewEventFormatterWriter(cfg, eventFormatter, w)
+	fw, err := NewEntryFormatterWriter(cfg, eventFormatter, w)
 	if err != nil {
 		return nil, err
 	}

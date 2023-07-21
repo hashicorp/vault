@@ -112,7 +112,7 @@ func Factory(ctx context.Context, conf *audit.BackendConfig, useEventLogger bool
 	}
 
 	// Configure the formatter for either case.
-	f, err := audit.NewEventFormatter(b.formatConfig, b)
+	f, err := audit.NewEntryFormatter(b.formatConfig, b)
 	if err != nil {
 		return nil, fmt.Errorf("error creating formatter: %w", err)
 	}
@@ -127,8 +127,7 @@ func Factory(ctx context.Context, conf *audit.BackendConfig, useEventLogger bool
 	formatterNodeID := event.GenerateNodeID()
 	b.nodeIDList = append(b.nodeIDList, formatterNodeID)
 	b.nodeMap[formatterNodeID] = f
-
-	fw, err := audit.NewEventFormatterWriter(b.formatConfig, f, w)
+	fw, err := audit.NewEntryFormatterWriter(b.formatConfig, f, w)
 	if err != nil {
 		return nil, fmt.Errorf("error creating formatter writer: %w", err)
 	}
@@ -150,7 +149,7 @@ func Factory(ctx context.Context, conf *audit.BackendConfig, useEventLogger bool
 type Backend struct {
 	connection net.Conn
 
-	formatter    *audit.EventFormatterWriter
+	formatter    *audit.EntryFormatterWriter
 	formatConfig audit.FormatterConfig
 
 	writeDuration time.Duration

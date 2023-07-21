@@ -113,15 +113,16 @@ func TestFormatJSONx_formatRequest(t *testing.T) {
 
 	for name, tc := range cases {
 		var buf bytes.Buffer
-		cfg := FormatterConfig{
-			OmitTime:       true,
-			HMACAccessor:   false,
-			RequiredFormat: JSONxFormat,
-		}
-		f, err := NewEventFormatter(cfg, tempStaticSalt)
+		cfg, err := NewFormatterConfig(
+			WithOmitTime(true),
+			WithHMACAccessor(false),
+			WithFormat(JSONxFormat.String()),
+		)
+		require.NoError(t, err)
+		f, err := NewEntryFormatter(cfg, tempStaticSalt)
 		require.NoError(t, err)
 		writer := &JSONxWriter{Prefix: tc.Prefix}
-		formatter, err := NewEventFormatterWriter(cfg, f, writer)
+		formatter, err := NewEntryFormatterWriter(cfg, f, writer)
 		require.NoError(t, err)
 		require.NotNil(t, formatter)
 

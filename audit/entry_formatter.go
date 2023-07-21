@@ -24,14 +24,14 @@ import (
 )
 
 var (
-	_ Formatter        = (*EventFormatter)(nil)
-	_ eventlogger.Node = (*EventFormatter)(nil)
+	_ Formatter        = (*EntryFormatter)(nil)
+	_ eventlogger.Node = (*EntryFormatter)(nil)
 )
 
-// NewEventFormatter should be used to create an EventFormatter.
+// NewEntryFormatter should be used to create an EntryFormatter.
 // Accepted options: WithPrefix.
-func NewEventFormatter(config FormatterConfig, salter Salter, opt ...Option) (*EventFormatter, error) {
-	const op = "audit.NewEventFormatter"
+func NewEntryFormatter(config FormatterConfig, salter Salter, opt ...Option) (*EntryFormatter, error) {
+	const op = "audit.NewEntryFormatter"
 
 	if salter == nil {
 		return nil, fmt.Errorf("%s: cannot create a new audit formatter with nil salter: %w", op, event.ErrInvalidParameter)
@@ -47,7 +47,7 @@ func NewEventFormatter(config FormatterConfig, salter Salter, opt ...Option) (*E
 		return nil, fmt.Errorf("%s: error applying options: %w", op, err)
 	}
 
-	return &EventFormatter{
+	return &EntryFormatter{
 		salter: salter,
 		config: config,
 		prefix: opts.withPrefix,
@@ -55,19 +55,19 @@ func NewEventFormatter(config FormatterConfig, salter Salter, opt ...Option) (*E
 }
 
 // Reopen is a no-op for the formatter node.
-func (_ *EventFormatter) Reopen() error {
+func (_ *EntryFormatter) Reopen() error {
 	return nil
 }
 
 // Type describes the type of this node (formatter).
-func (_ *EventFormatter) Type() eventlogger.NodeType {
+func (_ *EntryFormatter) Type() eventlogger.NodeType {
 	return eventlogger.NodeTypeFormatter
 }
 
 // Process will attempt to parse the incoming event data into a corresponding
 // audit Request/Response which is serialized to JSON/JSONx and stored within the event.
-func (f *EventFormatter) Process(ctx context.Context, e *eventlogger.Event) (*eventlogger.Event, error) {
-	const op = "audit.(EventFormatter).Process"
+func (f *EntryFormatter) Process(ctx context.Context, e *eventlogger.Event) (*eventlogger.Event, error) {
+	const op = "audit.(EntryFormatter).Process"
 
 	select {
 	case <-ctx.Done():
@@ -137,7 +137,7 @@ func (f *EventFormatter) Process(ctx context.Context, e *eventlogger.Event) (*ev
 }
 
 // FormatRequest attempts to format the specified logical.LogInput into a RequestEntry.
-func (f *EventFormatter) FormatRequest(ctx context.Context, in *logical.LogInput) (*RequestEntry, error) {
+func (f *EntryFormatter) FormatRequest(ctx context.Context, in *logical.LogInput) (*RequestEntry, error) {
 	switch {
 	case in == nil || in.Request == nil:
 		return nil, errors.New("request to request-audit a nil request")
@@ -192,7 +192,7 @@ func (f *EventFormatter) FormatRequest(ctx context.Context, in *logical.LogInput
 		Type:          reqType,
 		Error:         errString,
 		ForwardedFrom: req.ForwardedFrom,
-		Auth: &AuditAuth{
+		Auth: &Auth{
 			ClientToken:               auth.ClientToken,
 			Accessor:                  auth.Accessor,
 			DisplayName:               auth.DisplayName,
@@ -267,7 +267,7 @@ func (f *EventFormatter) FormatRequest(ctx context.Context, in *logical.LogInput
 }
 
 // FormatResponse attempts to format the specified logical.LogInput into a ResponseEntry.
-func (f *EventFormatter) FormatResponse(ctx context.Context, in *logical.LogInput) (*ResponseEntry, error) {
+func (f *EntryFormatter) FormatResponse(ctx context.Context, in *logical.LogInput) (*ResponseEntry, error) {
 	switch {
 	case f == nil:
 		return nil, errors.New("formatter is nil")
@@ -342,9 +342,9 @@ func (f *EventFormatter) FormatResponse(ctx context.Context, in *logical.LogInpu
 		return nil, err
 	}
 
-	var respAuth *AuditAuth
+	var respAuth *Auth
 	if resp.Auth != nil {
-		respAuth = &AuditAuth{
+		respAuth = &Auth{
 			ClientToken:               resp.Auth.ClientToken,
 			Accessor:                  resp.Auth.Accessor,
 			DisplayName:               resp.Auth.DisplayName,
@@ -395,7 +395,7 @@ func (f *EventFormatter) FormatResponse(ctx context.Context, in *logical.LogInpu
 		Type:      respType,
 		Error:     errString,
 		Forwarded: req.ForwardedFrom != "",
-		Auth: &AuditAuth{
+		Auth: &Auth{
 			ClientToken:               auth.ClientToken,
 			Accessor:                  auth.Accessor,
 			DisplayName:               auth.DisplayName,

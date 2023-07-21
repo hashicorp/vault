@@ -49,11 +49,10 @@ func fakeEvent(tb testing.TB, subtype subtype, format format, input *logical.Log
 	return e
 }
 
-// TestNewEventFormatter ensures we can create new EventFormatter structs.
-func TestNewEventFormatter(t *testing.T) {
+// TestNewEntryFormatter ensures we can create new EntryFormatter structs.
+func TestNewEntryFormatter(t *testing.T) {
 	tests := map[string]struct {
 		UseStaticSalt        bool
-		Config               FormatterConfig
 		Options              []Option // Only supports WithPrefix
 		IsErrorExpected      bool
 		ExpectedErrorMessage string
@@ -63,44 +62,53 @@ func TestNewEventFormatter(t *testing.T) {
 		"nil-salter": {
 			UseStaticSalt:        false,
 			IsErrorExpected:      true,
-			ExpectedErrorMessage: "audit.NewEventFormatter: cannot create a new audit formatter with nil salter: invalid parameter",
+			ExpectedErrorMessage: "audit.NewEntryFormatter: cannot create a new audit formatter with nil salter: invalid parameter",
 		},
 		"static-salter": {
 			UseStaticSalt:   true,
 			IsErrorExpected: false,
-			Config:          FormatterConfig{RequiredFormat: JSONFormat},
-			ExpectedFormat:  JSONFormat,
+			Options: []Option{
+				WithFormat(JSONFormat.String()),
+			},
+			ExpectedFormat: JSONFormat,
 		},
 		"default": {
-			UseStaticSalt:        true,
-			Config:               FormatterConfig{},
-			IsErrorExpected:      true,
-			ExpectedErrorMessage: "audit.NewEventFormatter: format not valid: audit.(format).validate: '' is not a valid format: invalid parameter",
+			UseStaticSalt:   true,
+			IsErrorExpected: false,
+			ExpectedFormat:  JSONFormat,
 		},
 		"config-json": {
-			UseStaticSalt:   true,
-			Config:          FormatterConfig{RequiredFormat: JSONFormat},
+			UseStaticSalt: true,
+			Options: []Option{
+				WithFormat(JSONFormat.String()),
+			},
 			IsErrorExpected: false,
 			ExpectedFormat:  JSONFormat,
 		},
 		"config-jsonx": {
-			UseStaticSalt:   true,
-			Config:          FormatterConfig{RequiredFormat: JSONxFormat},
+			UseStaticSalt: true,
+			Options: []Option{
+				WithFormat(JSONxFormat.String()),
+			},
 			IsErrorExpected: false,
 			ExpectedFormat:  JSONxFormat,
 		},
 		"config-json-prefix": {
-			UseStaticSalt:   true,
-			Config:          FormatterConfig{RequiredFormat: JSONFormat},
-			Options:         []Option{WithPrefix("foo")},
+			UseStaticSalt: true,
+			Options: []Option{
+				WithPrefix("foo"),
+				WithFormat(JSONFormat.String()),
+			},
 			IsErrorExpected: false,
 			ExpectedFormat:  JSONFormat,
 			ExpectedPrefix:  "foo",
 		},
 		"config-jsonx-prefix": {
-			UseStaticSalt:   true,
-			Config:          FormatterConfig{RequiredFormat: JSONxFormat},
-			Options:         []Option{WithPrefix("foo")},
+			UseStaticSalt: true,
+			Options: []Option{
+				WithPrefix("foo"),
+				WithFormat(JSONxFormat.String()),
+			},
 			IsErrorExpected: false,
 			ExpectedFormat:  JSONxFormat,
 			ExpectedPrefix:  "foo",
@@ -117,7 +125,9 @@ func TestNewEventFormatter(t *testing.T) {
 				ss = newStaticSalt(t)
 			}
 
-			f, err := NewEventFormatter(tc.Config, ss, tc.Options...)
+			cfg, err := NewFormatterConfig(tc.Options...)
+			require.NoError(t, err)
+			f, err := NewEntryFormatter(cfg, ss, tc.Options...)
 
 			switch {
 			case tc.IsErrorExpected:
@@ -134,31 +144,33 @@ func TestNewEventFormatter(t *testing.T) {
 	}
 }
 
-// TestEventFormatter_Reopen ensures that we do not get an error when calling Reopen.
-func TestEventFormatter_Reopen(t *testing.T) {
+// TestEntryFormatter_Reopen ensures that we do not get an error when calling Reopen.
+func TestEntryFormatter_Reopen(t *testing.T) {
 	ss := newStaticSalt(t)
-	cfg := FormatterConfig{RequiredFormat: JSONFormat}
+	cfg, err := NewFormatterConfig()
+	require.NoError(t, err)
 
-	f, err := NewEventFormatter(cfg, ss)
+	f, err := NewEntryFormatter(cfg, ss)
 	require.NoError(t, err)
 	require.NotNil(t, f)
 	require.NoError(t, f.Reopen())
 }
 
-// TestEventFormatter_Type ensures that the node is a 'formatter' type.
-func TestEventFormatter_Type(t *testing.T) {
+// TestEntryFormatter_Type ensures that the node is a 'formatter' type.
+func TestEntryFormatter_Type(t *testing.T) {
 	ss := newStaticSalt(t)
-	cfg := FormatterConfig{RequiredFormat: JSONFormat}
+	cfg, err := NewFormatterConfig()
+	require.NoError(t, err)
 
-	f, err := NewEventFormatter(cfg, ss)
+	f, err := NewEntryFormatter(cfg, ss)
 	require.NoError(t, err)
 	require.NotNil(t, f)
 	require.Equal(t, eventlogger.NodeTypeFormatter, f.Type())
 }
 
-// TestEventFormatter_Process attempts to run the Process method to convert the
+// TestEntryFormatter_Process attempts to run the Process method to convert the
 // logical.LogInput within an audit event to JSON and JSONx (RequestEntry or ResponseEntry).
-func TestEventFormatter_Process(t *testing.T) {
+func TestEntryFormatter_Process(t *testing.T) {
 	tests := map[string]struct {
 		IsErrorExpected      bool
 		ExpectedErrorMessage string
@@ -169,42 +181,42 @@ func TestEventFormatter_Process(t *testing.T) {
 	}{
 		"json-request-no-data": {
 			IsErrorExpected:      true,
-			ExpectedErrorMessage: "audit.(EventFormatter).Process: unable to parse request from audit event: request to request-audit a nil request",
+			ExpectedErrorMessage: "audit.(EntryFormatter).Process: unable to parse request from audit event: request to request-audit a nil request",
 			Subtype:              RequestType,
 			RequiredFormat:       JSONFormat,
 			Data:                 nil,
 		},
 		"json-response-no-data": {
 			IsErrorExpected:      true,
-			ExpectedErrorMessage: "audit.(EventFormatter).Process: unable to parse response from audit event: request to response-audit a nil request",
+			ExpectedErrorMessage: "audit.(EntryFormatter).Process: unable to parse response from audit event: request to response-audit a nil request",
 			Subtype:              ResponseType,
 			RequiredFormat:       JSONFormat,
 			Data:                 nil,
 		},
 		"json-request-basic-input": {
 			IsErrorExpected:      true,
-			ExpectedErrorMessage: "audit.(EventFormatter).Process: unable to parse request from audit event: request to request-audit a nil request",
+			ExpectedErrorMessage: "audit.(EntryFormatter).Process: unable to parse request from audit event: request to request-audit a nil request",
 			Subtype:              RequestType,
 			RequiredFormat:       JSONFormat,
 			Data:                 &logical.LogInput{Type: "magic"},
 		},
 		"json-response-basic-input": {
 			IsErrorExpected:      true,
-			ExpectedErrorMessage: "audit.(EventFormatter).Process: unable to parse response from audit event: request to response-audit a nil request",
+			ExpectedErrorMessage: "audit.(EntryFormatter).Process: unable to parse response from audit event: request to response-audit a nil request",
 			Subtype:              ResponseType,
 			RequiredFormat:       JSONFormat,
 			Data:                 &logical.LogInput{Type: "magic"},
 		},
 		"json-request-basic-input-and-request-no-ns": {
 			IsErrorExpected:      true,
-			ExpectedErrorMessage: "audit.(EventFormatter).Process: unable to parse request from audit event: no namespace",
+			ExpectedErrorMessage: "audit.(EntryFormatter).Process: unable to parse request from audit event: no namespace",
 			Subtype:              RequestType,
 			RequiredFormat:       JSONFormat,
 			Data:                 &logical.LogInput{Request: &logical.Request{ID: "123"}},
 		},
 		"json-response-basic-input-and-request-no-ns": {
 			IsErrorExpected:      true,
-			ExpectedErrorMessage: "audit.(EventFormatter).Process: unable to parse response from audit event: no namespace",
+			ExpectedErrorMessage: "audit.(EntryFormatter).Process: unable to parse response from audit event: no namespace",
 			Subtype:              ResponseType,
 			RequiredFormat:       JSONFormat,
 			Data:                 &logical.LogInput{Request: &logical.Request{ID: "123"}},
@@ -225,42 +237,42 @@ func TestEventFormatter_Process(t *testing.T) {
 		},
 		"jsonx-request-no-data": {
 			IsErrorExpected:      true,
-			ExpectedErrorMessage: "audit.(EventFormatter).Process: unable to parse request from audit event: request to request-audit a nil request",
+			ExpectedErrorMessage: "audit.(EntryFormatter).Process: unable to parse request from audit event: request to request-audit a nil request",
 			Subtype:              RequestType,
 			RequiredFormat:       JSONxFormat,
 			Data:                 nil,
 		},
 		"jsonx-response-no-data": {
 			IsErrorExpected:      true,
-			ExpectedErrorMessage: "audit.(EventFormatter).Process: unable to parse response from audit event: request to response-audit a nil request",
+			ExpectedErrorMessage: "audit.(EntryFormatter).Process: unable to parse response from audit event: request to response-audit a nil request",
 			Subtype:              ResponseType,
 			RequiredFormat:       JSONxFormat,
 			Data:                 nil,
 		},
 		"jsonx-request-basic-input": {
 			IsErrorExpected:      true,
-			ExpectedErrorMessage: "audit.(EventFormatter).Process: unable to parse request from audit event: request to request-audit a nil request",
+			ExpectedErrorMessage: "audit.(EntryFormatter).Process: unable to parse request from audit event: request to request-audit a nil request",
 			Subtype:              RequestType,
 			RequiredFormat:       JSONxFormat,
 			Data:                 &logical.LogInput{Type: "magic"},
 		},
 		"jsonx-response-basic-input": {
 			IsErrorExpected:      true,
-			ExpectedErrorMessage: "audit.(EventFormatter).Process: unable to parse response from audit event: request to response-audit a nil request",
+			ExpectedErrorMessage: "audit.(EntryFormatter).Process: unable to parse response from audit event: request to response-audit a nil request",
 			Subtype:              ResponseType,
 			RequiredFormat:       JSONxFormat,
 			Data:                 &logical.LogInput{Type: "magic"},
 		},
 		"jsonx-request-basic-input-and-request-no-ns": {
 			IsErrorExpected:      true,
-			ExpectedErrorMessage: "audit.(EventFormatter).Process: unable to parse request from audit event: no namespace",
+			ExpectedErrorMessage: "audit.(EntryFormatter).Process: unable to parse request from audit event: no namespace",
 			Subtype:              RequestType,
 			RequiredFormat:       JSONxFormat,
 			Data:                 &logical.LogInput{Request: &logical.Request{ID: "123"}},
 		},
 		"jsonx-response-basic-input-and-request-no-ns": {
 			IsErrorExpected:      true,
-			ExpectedErrorMessage: "audit.(EventFormatter).Process: unable to parse response from audit event: no namespace",
+			ExpectedErrorMessage: "audit.(EntryFormatter).Process: unable to parse response from audit event: no namespace",
 			Subtype:              ResponseType,
 			RequiredFormat:       JSONxFormat,
 			Data:                 &logical.LogInput{Request: &logical.Request{ID: "123"}},
@@ -290,11 +302,10 @@ func TestEventFormatter_Process(t *testing.T) {
 			require.NotNil(t, e)
 
 			ss := newStaticSalt(t)
-			cfg := FormatterConfig{
-				RequiredFormat: tc.RequiredFormat,
-			}
+			cfg, err := NewFormatterConfig(WithFormat(tc.RequiredFormat.String()))
+			require.NoError(t, err)
 
-			f, err := NewEventFormatter(cfg, ss)
+			f, err := NewEntryFormatter(cfg, ss)
 			require.NoError(t, err)
 			require.NotNil(t, f)
 
@@ -326,7 +337,7 @@ func TestEventFormatter_Process(t *testing.T) {
 	}
 }
 
-// BenchmarkAuditFileSink_Process benchmarks the AuditFormatterJSON and then AuditFileSink calling Process.
+// BenchmarkAuditFileSink_Process benchmarks the EntryFormatter and then event.FileSink calling Process.
 // This should replicate the original benchmark testing which used to perform both of these roles together.
 func BenchmarkAuditFileSink_Process(b *testing.B) {
 	// Base input
@@ -358,9 +369,10 @@ func BenchmarkAuditFileSink_Process(b *testing.B) {
 	ctx := namespace.RootContext(nil)
 
 	// Create the formatter node.
-	cfg := FormatterConfig{}
+	cfg, err := NewFormatterConfig()
+	require.NoError(b, err)
 	ss := newStaticSalt(b)
-	formatter, err := NewEventFormatter(cfg, ss)
+	formatter, err := NewEntryFormatter(cfg, ss)
 	require.NoError(b, err)
 	require.NotNil(b, formatter)
 

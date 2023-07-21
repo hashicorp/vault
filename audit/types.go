@@ -82,15 +82,15 @@ type Writer interface {
 	WriteResponse(io.Writer, *ResponseEntry) error
 }
 
-// EventFormatter should be used to format audit requests and responses.
-type EventFormatter struct {
+// EntryFormatter should be used to format audit requests and responses.
+type EntryFormatter struct {
 	salter Salter
 	config FormatterConfig
 	prefix string
 }
 
-// EventFormatterWriter should be used to format and write out audit requests and responses.
-type EventFormatterWriter struct {
+// EntryFormatterWriter should be used to format and write out audit requests and responses.
+type EntryFormatterWriter struct {
 	Formatter
 	Writer
 	config FormatterConfig
@@ -133,23 +133,23 @@ type FormatterConfig struct {
 
 // RequestEntry is the structure of a request audit log entry.
 type RequestEntry struct {
-	Time          string     `json:"time,omitempty"`
-	Type          string     `json:"type,omitempty"`
-	Auth          *AuditAuth `json:"auth,omitempty"`
-	Request       *Request   `json:"request,omitempty"`
-	Error         string     `json:"error,omitempty"`
-	ForwardedFrom string     `json:"forwarded_from,omitempty"` // Populated in Enterprise when a request is forwarded
+	Time          string   `json:"time,omitempty"`
+	Type          string   `json:"type,omitempty"`
+	Auth          *Auth    `json:"auth,omitempty"`
+	Request       *Request `json:"request,omitempty"`
+	Error         string   `json:"error,omitempty"`
+	ForwardedFrom string   `json:"forwarded_from,omitempty"` // Populated in Enterprise when a request is forwarded
 }
 
 // ResponseEntry is the structure of a response audit log entry.
 type ResponseEntry struct {
-	Time      string     `json:"time,omitempty"`
-	Type      string     `json:"type,omitempty"`
-	Auth      *AuditAuth `json:"auth,omitempty"`
-	Request   *Request   `json:"request,omitempty"`
-	Response  *Response  `json:"response,omitempty"`
-	Error     string     `json:"error,omitempty"`
-	Forwarded bool       `json:"forwarded,omitempty"`
+	Time      string    `json:"time,omitempty"`
+	Type      string    `json:"type,omitempty"`
+	Auth      *Auth     `json:"auth,omitempty"`
+	Request   *Request  `json:"request,omitempty"`
+	Response  *Response `json:"response,omitempty"`
+	Error     string    `json:"error,omitempty"`
+	Forwarded bool      `json:"forwarded,omitempty"`
 }
 
 type Request struct {
@@ -178,7 +178,7 @@ type Request struct {
 }
 
 type Response struct {
-	Auth                  *AuditAuth             `json:"auth,omitempty"`
+	Auth                  *Auth                  `json:"auth,omitempty"`
 	MountPoint            string                 `json:"mount_point,omitempty"`
 	MountType             string                 `json:"mount_type,omitempty"`
 	MountAccessor         string                 `json:"mount_accessor,omitempty"`
@@ -194,7 +194,7 @@ type Response struct {
 	Headers               map[string][]string    `json:"headers,omitempty"`
 }
 
-type AuditAuth struct {
+type Auth struct {
 	ClientToken               string              `json:"client_token,omitempty"`
 	Accessor                  string              `json:"accessor,omitempty"`
 	DisplayName               string              `json:"display_name,omitempty"`

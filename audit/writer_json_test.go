@@ -98,16 +98,17 @@ func TestFormatJSON_formatRequest(t *testing.T) {
 
 	for name, tc := range cases {
 		var buf bytes.Buffer
-		f, err := NewEventFormatter(FormatterConfig{RequiredFormat: JSONFormat}, ss)
+
+		cfg, err := NewFormatterConfig()
 		require.NoError(t, err)
-		formatter := EventFormatterWriter{
+		f, err := NewEntryFormatter(cfg, ss)
+		require.NoError(t, err)
+		formatter := EntryFormatterWriter{
 			Formatter: f,
 			Writer: &JSONWriter{
 				Prefix: tc.Prefix,
 			},
-			config: FormatterConfig{
-				HMACAccessor: false,
-			},
+			config: cfg,
 		}
 
 		in := &logical.LogInput{

@@ -134,7 +134,7 @@ func Factory(ctx context.Context, conf *audit.BackendConfig, useEventLogger bool
 	b.salt.Store((*salt.Salt)(nil))
 
 	// Configure the formatter for either case.
-	f, err := audit.NewEventFormatter(b.formatConfig, b, audit.WithPrefix(conf.Config["prefix"]))
+	f, err := audit.NewEntryFormatter(b.formatConfig, b, audit.WithPrefix(conf.Config["prefix"]))
 	if err != nil {
 		return nil, fmt.Errorf("error creating formatter: %w", err)
 	}
@@ -146,7 +146,7 @@ func Factory(ctx context.Context, conf *audit.BackendConfig, useEventLogger bool
 		w = &audit.JSONxWriter{Prefix: conf.Config["prefix"]}
 	}
 
-	fw, err := audit.NewEventFormatterWriter(b.formatConfig, f, w)
+	fw, err := audit.NewEntryFormatterWriter(b.formatConfig, f, w)
 	if err != nil {
 		return nil, fmt.Errorf("error creating formatter writer: %w", err)
 	}
@@ -201,7 +201,7 @@ func Factory(ctx context.Context, conf *audit.BackendConfig, useEventLogger bool
 type Backend struct {
 	path string
 
-	formatter    *audit.EventFormatterWriter
+	formatter    *audit.EntryFormatterWriter
 	formatConfig audit.FormatterConfig
 
 	fileLock sync.RWMutex

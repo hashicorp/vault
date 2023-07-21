@@ -86,8 +86,8 @@ func (fw *testingFormatWriter) hashExpectedValueForComparison(input map[string]i
 	return copiedAsMap
 }
 
-// TestNewEventFormatterWriter tests that creating a new EventFormatterWriter can be done safely.
-func TestNewEventFormatterWriter(t *testing.T) {
+// TestNewEntryFormatterWriter tests that creating a new EntryFormatterWriter can be done safely.
+func TestNewEntryFormatterWriter(t *testing.T) {
 	tests := map[string]struct {
 		Salter               Salter
 		UseStaticSalter      bool
@@ -122,11 +122,12 @@ func TestNewEventFormatterWriter(t *testing.T) {
 				s = tc.Salter
 			}
 
-			cfg := FormatterConfig{RequiredFormat: JSONFormat}
+			cfg, err := NewFormatterConfig()
+			require.NoError(t, err)
 
 			var f Formatter
 			if !tc.UseNilFormatter {
-				tempFormatter, err := NewEventFormatter(cfg, s)
+				tempFormatter, err := NewEntryFormatter(cfg, s)
 				require.NoError(t, err)
 				require.NotNil(t, tempFormatter)
 				f = tempFormatter
@@ -137,7 +138,7 @@ func TestNewEventFormatterWriter(t *testing.T) {
 				w = &JSONWriter{}
 			}
 
-			fw, err := NewEventFormatterWriter(cfg, f, w)
+			fw, err := NewEntryFormatterWriter(cfg, f, w)
 			switch {
 			case tc.IsErrorExpected:
 				require.Error(t, err)
@@ -150,9 +151,9 @@ func TestNewEventFormatterWriter(t *testing.T) {
 	}
 }
 
-// TestAuditFormatter_FormatRequest exercises EventFormatter.FormatRequest with
+// TestEntryFormatter_FormatRequest exercises EntryFormatter.FormatRequest with
 // varying inputs.
-func TestAuditFormatter_FormatRequest(t *testing.T) {
+func TestEntryFormatter_FormatRequest(t *testing.T) {
 	tests := map[string]struct {
 		Input                *logical.LogInput
 		IsErrorExpected      bool
@@ -187,7 +188,10 @@ func TestAuditFormatter_FormatRequest(t *testing.T) {
 		tc := tc
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
-			f, err := NewEventFormatter(FormatterConfig{RequiredFormat: JSONFormat}, newStaticSalt(t))
+
+			cfg, err := NewFormatterConfig()
+			require.NoError(t, err)
+			f, err := NewEntryFormatter(cfg, newStaticSalt(t))
 			require.NoError(t, err)
 
 			var ctx context.Context
@@ -213,9 +217,9 @@ func TestAuditFormatter_FormatRequest(t *testing.T) {
 	}
 }
 
-// TestAuditFormatter_FormatResponse exercises EventFormatter.FormatResponse with
+// TestEntryFormatter_FormatResponse exercises EntryFormatter.FormatResponse with
 // varying inputs.
-func TestAuditFormatter_FormatResponse(t *testing.T) {
+func TestEntryFormatter_FormatResponse(t *testing.T) {
 	tests := map[string]struct {
 		Input                *logical.LogInput
 		IsErrorExpected      bool
@@ -250,7 +254,10 @@ func TestAuditFormatter_FormatResponse(t *testing.T) {
 		tc := tc
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
-			f, err := NewEventFormatter(FormatterConfig{RequiredFormat: JSONFormat}, newStaticSalt(t))
+
+			cfg, err := NewFormatterConfig()
+			require.NoError(t, err)
+			f, err := NewEntryFormatter(cfg, newStaticSalt(t))
 			require.NoError(t, err)
 
 			var ctx context.Context
@@ -352,9 +359,9 @@ func TestElideListResponses(t *testing.T) {
 
 	formatResponse := func(t *testing.T, config FormatterConfig, operation logical.Operation, inputData map[string]interface{},
 	) {
-		f, err := NewEventFormatter(config, &tfw)
+		f, err := NewEntryFormatter(config, &tfw)
 		require.NoError(t, err)
-		formatter, err := NewEventFormatterWriter(config, f, &tfw)
+		formatter, err := NewEntryFormatterWriter(config, f, &tfw)
 		require.NoError(t, err)
 		require.NotNil(t, formatter)
 		err = formatter.FormatAndWriteResponse(ctx, io.Discard, &logical.LogInput{
@@ -365,7 +372,8 @@ func TestElideListResponses(t *testing.T) {
 	}
 
 	t.Run("Default case", func(t *testing.T) {
-		config := FormatterConfig{ElideListResponses: true, RequiredFormat: JSONFormat}
+		config, err := NewFormatterConfig(WithElision(true))
+		require.NoError(t, err)
 		for _, tc := range tests {
 			t.Run(tc.name, func(t *testing.T) {
 				formatResponse(t, config, logical.ListOperation, tc.inputData)
@@ -375,21 +383,24 @@ func TestElideListResponses(t *testing.T) {
 	})
 
 	t.Run("When Operation is not list, eliding does not happen", func(t *testing.T) {
-		config := FormatterConfig{ElideListResponses: true, RequiredFormat: JSONFormat}
+		config, err := NewFormatterConfig(WithElision(true))
+		require.NoError(t, err)
 		tc := oneInterestingTestCase
 		formatResponse(t, config, logical.ReadOperation, tc.inputData)
 		assert.Equal(t, tfw.hashExpectedValueForComparison(tc.inputData), tfw.lastResponse.Response.Data)
 	})
 
 	t.Run("When ElideListResponses is false, eliding does not happen", func(t *testing.T) {
-		config := FormatterConfig{ElideListResponses: false, RequiredFormat: JSONFormat}
+		config, err := NewFormatterConfig(WithElision(false), WithFormat(JSONFormat.String()))
+		require.NoError(t, err)
 		tc := oneInterestingTestCase
 		formatResponse(t, config, logical.ListOperation, tc.inputData)
 		assert.Equal(t, tfw.hashExpectedValueForComparison(tc.inputData), tfw.lastResponse.Response.Data)
 	})
 
 	t.Run("When Raw is true, eliding still happens", func(t *testing.T) {
-		config := FormatterConfig{ElideListResponses: true, Raw: true, RequiredFormat: JSONFormat}
+		config, err := NewFormatterConfig(WithElision(true), WithRaw(true), WithFormat(JSONFormat.String()))
+		require.NoError(t, err)
 		tc := oneInterestingTestCase
 		formatResponse(t, config, logical.ListOperation, tc.inputData)
 		assert.Equal(t, tc.expectedData, tfw.lastResponse.Response.Data)
