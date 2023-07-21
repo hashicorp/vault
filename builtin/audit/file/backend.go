@@ -124,8 +124,6 @@ func Factory(ctx context.Context, conf *audit.BackendConfig, useEventLogger bool
 		saltView:     conf.SaltView,
 		salt:         new(atomic.Value),
 		formatConfig: cfg,
-		nodeIDList:   make([]eventlogger.NodeID, 0),
-		nodeMap:      make(map[eventlogger.NodeID]eventlogger.Node),
 	}
 
 	// Ensure we are working with the right type by explicitly storing a nil of
@@ -151,29 +149,42 @@ func Factory(ctx context.Context, conf *audit.BackendConfig, useEventLogger bool
 	}
 	b.formatter = fw
 
-	formatterNodeID := event.GenerateNodeID()
-
-	b.nodeIDList = append(b.nodeIDList, formatterNodeID)
-	b.nodeMap[formatterNodeID] = f
-
 	var sinkNode eventlogger.Node
 
-	switch path {
-	case "stdout":
-		sinkNode = event.NewStdoutSinkNode(format)
-	case "discard":
-		sinkNode = event.NewNoopSink()
-	default:
-		if useEventLogger {
+	if useEventLogger {
+		b.nodeIDList = make([]eventlogger.NodeID, 2)
+		b.nodeMap = make(map[eventlogger.NodeID]eventlogger.Node)
+
+		formatterNodeID := event.GenerateNodeID()
+
+		b.nodeIDList[0] = formatterNodeID
+		b.nodeMap[formatterNodeID] = f
+
+		switch path {
+		case "stdout":
+			sinkNode = event.NewStdoutSinkNode(format)
+		case "discard":
+			sinkNode = event.NewNoopSink()
+		default:
 			var err error
 
 			// The NewFileSink function attempts to open the file and will
 			// return an error if it can't.
-			sinkNode, err = event.NewFileSink(b.path, format, event.WithFileMode(mode.String()))
+			sinkNode, err = event.NewFileSink(b.path, format, event.WithFileMode(strconv.FormatUint(uint64(mode), 8)))
 			if err != nil {
 				return nil, fmt.Errorf("file sink creation failed for path %q: %w", path, err)
 			}
-		} else {
+		}
+
+		sinkNodeID := event.GenerateNodeID()
+
+		b.nodeIDList[1] = sinkNodeID
+		b.nodeMap[sinkNodeID] = sinkNode
+	} else {
+		switch path {
+		case "stdout":
+		case "discard":
+		default:
 			// Ensure that the file can be successfully opened for writing;
 			// otherwise it will be too late to catch later without problems
 			// (ref: https://github.com/hashicorp/vault/issues/550)
@@ -181,13 +192,7 @@ func Factory(ctx context.Context, conf *audit.BackendConfig, useEventLogger bool
 				return nil, fmt.Errorf("sanity check failed; unable to open %q for writing: %w", path, err)
 			}
 		}
-
 	}
-
-	sinkNodeID := event.GenerateNodeID()
-
-	b.nodeIDList = append(b.nodeIDList, sinkNodeID)
-	b.nodeMap[sinkNodeID] = sinkNode
 
 	return b, nil
 }

@@ -105,9 +105,6 @@ func Factory(ctx context.Context, conf *audit.BackendConfig, useEventLogger bool
 		writeDuration: writeDuration,
 		address:       address,
 		socketType:    socketType,
-
-		nodeIDList: make([]eventlogger.NodeID, 0),
-		nodeMap:    make(map[eventlogger.NodeID]eventlogger.Node),
 	}
 
 	// Configure the formatter for either case.
@@ -123,9 +120,6 @@ func Factory(ctx context.Context, conf *audit.BackendConfig, useEventLogger bool
 		w = &audit.JSONxWriter{Prefix: conf.Config["prefix"]}
 	}
 
-	formatterNodeID := event.GenerateNodeID()
-	b.nodeIDList = append(b.nodeIDList, formatterNodeID)
-	b.nodeMap[formatterNodeID] = f
 	fw, err := audit.NewEntryFormatterWriter(b.formatConfig, f, w)
 	if err != nil {
 		return nil, fmt.Errorf("error creating formatter writer: %w", err)
@@ -133,13 +127,22 @@ func Factory(ctx context.Context, conf *audit.BackendConfig, useEventLogger bool
 
 	b.formatter = fw
 
-	sinkNode, err := event.NewSocketSink(format, address, event.WithSocketType(socketType), event.WithMaxDuration(writeDuration.String()))
-	if err != nil {
-		return nil, fmt.Errorf("error creating socket sink node: %w", err)
+	if useEventLogger {
+		b.nodeIDList = make([]eventlogger.NodeID, 2)
+		b.nodeMap = make(map[eventlogger.NodeID]eventlogger.Node)
+
+		formatterNodeID := event.GenerateNodeID()
+		b.nodeIDList[0] = formatterNodeID
+		b.nodeMap[formatterNodeID] = f
+
+		sinkNode, err := event.NewSocketSink(format, address, event.WithSocketType(socketType), event.WithMaxDuration(writeDuration.String()))
+		if err != nil {
+			return nil, fmt.Errorf("error creating socket sink node: %w", err)
+		}
+		sinkNodeID := event.GenerateNodeID()
+		b.nodeIDList[1] = sinkNodeID
+		b.nodeMap[sinkNodeID] = sinkNode
 	}
-	sinkNodeID := event.GenerateNodeID()
-	b.nodeIDList = append(b.nodeIDList, sinkNodeID)
-	b.nodeMap[sinkNodeID] = sinkNode
 
 	return b, nil
 }
