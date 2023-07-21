@@ -77,6 +77,9 @@ export default class KvSecretMetadataModel extends Model {
   get canReadMetadata() {
     return this.metadataPath.get('canRead');
   }
+  get canUpdateMetadata() {
+    return this.metadataPath.get('canUpdate');
+  }
   get canEditData() {
     return this.dataPath.get('canUpdate');
   }

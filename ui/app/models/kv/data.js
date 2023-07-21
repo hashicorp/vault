@@ -77,17 +77,10 @@ export default class KvSecretDataModel extends Model {
   get canDestroyVersion() {
     return this.destroyPath.get('canUpdate');
   }
-  get canUpdateMetadata() {
-    return this.metadataPath.get('canUpdate');
+  get canEditData() {
+    return this.dataPath.get('canUpdate');
   }
   get canReadData() {
     return this.dataPath.get('canRead');
-  }
-  // duplicate permission checks on the kv/metadata model. We need them there also for the list view which doesn't have access ot the kv/data
-  get canReadMetadata() {
-    return this.metadataPath.get('canRead');
-  }
-  get canEditData() {
-    return this.dataPath.get('canUpdate');
   }
 }
