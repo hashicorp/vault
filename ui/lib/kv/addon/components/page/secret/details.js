@@ -25,8 +25,37 @@ import { tracked } from '@glimmer/tracking';
 
 export default class KvSecretDetails extends Component {
   @tracked showJsonView = false;
+
   @action
   toggleJsonView() {
     this.showJsonView = !this.showJsonView;
+  }
+
+  get emptyState() {
+    const { version, canReadData, destroyed, deletionTime } = this.args.secret;
+    if (!canReadData) {
+      return {
+        title: 'You do not have permission to read this secret',
+        message:
+          'Your policies may permit you to write a new version of this secret, but do not allow you to read its current contents.',
+      };
+    }
+    if (destroyed) {
+      return {
+        title: `Version ${version} of this secret has been permanently destroyed`,
+        message:
+          'A version that has been permanently deleted cannot be restored. You can view other versions of this secret in the Version History tab above.',
+        link: '/vault/docs/secrets/kv/kv-v2',
+      };
+    }
+    if (deletionTime) {
+      return {
+        title: `Version ${version} of this secret has been deleted`,
+        message:
+          'This version has been deleted but can be undeleted. View other versions of this secret by clicking the Version History tab above.',
+        link: '/vault/docs/secrets/kv/kv-v2',
+      };
+    }
+    return false;
   }
 }
