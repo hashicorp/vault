@@ -2411,8 +2411,7 @@ func (p *Policy) CreateCsr(keyVersion int, csrTemplate *x509.CertificateRequest)
 	csrTemplate.Signature = nil
 	csrTemplate.SignatureAlgorithm = x509.UnknownSignatureAlgorithm
 
-	var csrBytes []byte
-	var createCertReqErr error
+	var key crypto.Signer
 	switch p.Type {
 	case KeyType_ECDSA_P256, KeyType_ECDSA_P384, KeyType_ECDSA_P521:
 		var curve elliptic.Curve
@@ -2425,7 +2424,7 @@ func (p *Policy) CreateCsr(keyVersion int, csrTemplate *x509.CertificateRequest)
 			curve = elliptic.P256()
 		}
 
-		key := &ecdsa.PrivateKey{
+		key = &ecdsa.PrivateKey{
 			PublicKey: ecdsa.PublicKey{
 				Curve: curve,
 				X:     keyEntry.EC_X,
@@ -2434,22 +2433,21 @@ func (p *Policy) CreateCsr(keyVersion int, csrTemplate *x509.CertificateRequest)
 			D: keyEntry.EC_D,
 		}
 
-		csrBytes, createCertReqErr = x509.CreateCertificateRequest(rand.Reader, csrTemplate, key)
 	case KeyType_ED25519:
 		if p.Derived {
 			return nil, errutil.UserError{Err: "operation not supported on keys with derivation enabled"}
 		}
-		key := ed25519.PrivateKey(keyEntry.Key)
+		key = ed25519.PrivateKey(keyEntry.Key)
 
-		csrBytes, createCertReqErr = x509.CreateCertificateRequest(rand.Reader, csrTemplate, key)
 	case KeyType_RSA2048, KeyType_RSA3072, KeyType_RSA4096:
-		key := keyEntry.RSAKey
-		csrBytes, createCertReqErr = x509.CreateCertificateRequest(rand.Reader, csrTemplate, key)
+		key = keyEntry.RSAKey
+
 	default:
 		return nil, errutil.InternalError{Err: fmt.Sprintf("selected key type '%s' does not support signing", p.Type.String())}
 	}
-	if createCertReqErr != nil {
-		return nil, fmt.Errorf("could not create the cerfificate request: %w", createCertReqErr)
+	csrBytes, err := x509.CreateCertificateRequest(rand.Reader, csrTemplate, key)
+	if err != nil {
+		return nil, fmt.Errorf("could not create the cerfificate request: %w", err)
 	}
 
 	pemCsr := pem.EncodeToMemory(&pem.Block{
