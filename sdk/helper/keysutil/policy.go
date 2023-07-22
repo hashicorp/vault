@@ -2436,7 +2436,9 @@ func (p *Policy) CreateCsr(keyVersion int, csrTemplate *x509.CertificateRequest)
 
 		csrBytes, createCertReqErr = x509.CreateCertificateRequest(rand.Reader, csrTemplate, key)
 	case KeyType_ED25519:
-		// NOTE: Still check if derived is set and fail?
+		if p.Derived {
+			return nil, errutil.UserError{Err: "operation not supported on keys with derivation enabled"}
+		}
 		key := ed25519.PrivateKey(keyEntry.Key)
 
 		csrBytes, createCertReqErr = x509.CreateCertificateRequest(rand.Reader, csrTemplate, key)
