@@ -9,6 +9,7 @@ import (
 	"encoding/pem"
 	"errors"
 	"fmt"
+	"github.com/hashicorp/vault/sdk/helper/errutil"
 	"strings"
 
 	"github.com/hashicorp/vault/sdk/framework"
@@ -145,7 +146,12 @@ func (b *backend) pathCreateCsrWrite(ctx context.Context, req *logical.Request, 
 
 	pemCsr, err := p.CreateCsr(signingKeyVersion, csrTemplate)
 	if err != nil {
-		return nil, err
+		switch err.(type) {
+		case errutil.UserError:
+			return logical.ErrorResponse(err.Error()), logical.ErrInvalidRequest
+		default:
+			return nil, err
+		}
 	}
 
 	resp := &logical.Response{

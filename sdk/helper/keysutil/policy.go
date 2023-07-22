@@ -2405,7 +2405,6 @@ func (p *Policy) CreateCsr(keyVersion int, csrTemplate *x509.CertificateRequest)
 	}
 
 	if keyEntry.IsPrivateKeyMissing() {
-		// NOTE: Shouldn't this be a client error?
 		return nil, errutil.UserError{Err: "private key not imported for key version selected"}
 	}
 
