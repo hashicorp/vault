@@ -9,8 +9,9 @@ import (
 	"encoding/pem"
 	"errors"
 	"fmt"
-	"github.com/hashicorp/vault/sdk/helper/errutil"
 	"strings"
+
+	"github.com/hashicorp/vault/sdk/helper/errutil"
 
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/keysutil"
@@ -146,11 +147,12 @@ func (b *backend) pathCreateCsrWrite(ctx context.Context, req *logical.Request, 
 
 	pemCsr, err := p.CreateCsr(signingKeyVersion, csrTemplate)
 	if err != nil {
+		prefixedErr := fmt.Errorf("could not create the csr: %w", err)
 		switch err.(type) {
 		case errutil.UserError:
-			return logical.ErrorResponse(err.Error()), logical.ErrInvalidRequest
+			return logical.ErrorResponse(prefixedErr.Error()), logical.ErrInvalidRequest
 		default:
-			return nil, err
+			return nil, prefixedErr
 		}
 	}
 
@@ -218,11 +220,12 @@ func (b *backend) pathImportCertChainWrite(ctx context.Context, req *logical.Req
 	// Validate if leaf cert key matches with transit key
 	valid, err := p.ValidateLeafCertKeyMatch(keyVersion, leafCertPublicKeyAlgorithm, certChain[0].PublicKey)
 	if err != nil {
+		prefixedErr := fmt.Errorf("could not validate key match between leaf certificate key and key version in transit: %w", err)
 		switch err.(type) {
 		case errutil.UserError:
-			return logical.ErrorResponse(err.Error()), logical.ErrInvalidRequest
+			return logical.ErrorResponse(prefixedErr.Error()), logical.ErrInvalidRequest
 		default:
-			return nil, fmt.Errorf("could not validate key match between leaf certificate key and key version in transit: %w", err)
+			return nil, prefixedErr
 		}
 	}
 	if !valid {
@@ -231,7 +234,13 @@ func (b *backend) pathImportCertChainWrite(ctx context.Context, req *logical.Req
 
 	err = p.PersistCertificateChain(ctx, keyVersion, certChain, req.Storage)
 	if err != nil {
-		return nil, fmt.Errorf("failed to persist certificate chain: %w", err)
+		prefixedErr := fmt.Errorf("failed to persist certificate chain: %w", err)
+		switch err.(type) {
+		case errutil.UserError:
+			return logical.ErrorResponse(prefixedErr.Error()), logical.ErrInvalidRequest
+		default:
+			return nil, prefixedErr
+		}
 	}
 
 	return nil, nil

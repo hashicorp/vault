@@ -2399,6 +2399,10 @@ func wrapTargetPKCS8ForImport(wrappingKey *rsa.PublicKey, preppedTargetKey []byt
 }
 
 func (p *Policy) CreateCsr(keyVersion int, csrTemplate *x509.CertificateRequest) ([]byte, error) {
+	if !p.Type.SigningSupported() {
+		return nil, errutil.UserError{Err: fmt.Sprintf("key type '%s' does not support signing", p.Type)}
+	}
+
 	keyEntry, err := p.safeGetKeyEntry(keyVersion)
 	if err != nil {
 		return nil, err
@@ -2459,6 +2463,10 @@ func (p *Policy) CreateCsr(keyVersion int, csrTemplate *x509.CertificateRequest)
 }
 
 func (p *Policy) ValidateLeafCertKeyMatch(keyVersion int, certPublicKeyAlgorithm x509.PublicKeyAlgorithm, certPublicKey any) (bool, error) {
+	if !p.Type.SigningSupported() {
+		return false, errutil.UserError{Err: fmt.Sprintf("key type '%s' does not support signing", p.Type)}
+	}
+
 	var keyTypeMatches bool
 	switch p.Type {
 	case KeyType_ECDSA_P256, KeyType_ECDSA_P384, KeyType_ECDSA_P521:
@@ -2537,7 +2545,34 @@ func (p *Policy) ValidateLeafCertKeyMatch(keyVersion int, certPublicKeyAlgorithm
 }
 
 func (p *Policy) PersistCertificateChain(ctx context.Context, keyVersion int, certChain []*x509.Certificate, storage logical.Storage) error {
-	// NOTE: Use safeGetKeyEntry or just read from Keys dictionary?
+	if len(certChain) == 0 {
+		return errutil.UserError{Err: "expected at least one certificate in the parsed certificate chain"}
+	}
+
+	if certChain[0].BasicConstraintsValid && certChain[0].IsCA {
+		return errutil.UserError{Err: "certificate in the first position is not a leaf certificate"}
+	}
+
+	for _, cert := range certChain[1:] {
+		if cert.BasicConstraintsValid && !cert.IsCA {
+			return errutil.UserError{Err: "provided certificate chain contains more than one leaf certificate"}
+		}
+	}
+
+	valid, err := p.ValidateLeafCertKeyMatch(keyVersion, certChain[0].PublicKeyAlgorithm, certChain[0].PublicKey)
+	if err != nil {
+		prefixedErr := fmt.Errorf("could not validate key match between leaf certificate key and key version in transit: %w", err)
+		switch err.(type) {
+		case errutil.UserError:
+			return errutil.UserError{Err: prefixedErr.Error()}
+		default:
+			return prefixedErr
+		}
+	}
+	if !valid {
+		return fmt.Errorf("leaf certificate public key does match the key version selected")
+	}
+
 	keyEntry, err := p.safeGetKeyEntry(keyVersion)
 	if err != nil {
 		return err
