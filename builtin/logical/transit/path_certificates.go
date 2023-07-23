@@ -215,16 +215,15 @@ func (b *backend) pathImportCertChainWrite(ctx context.Context, req *logical.Req
 
 	leafCertPublicKeyAlgorithm := certChain[0].PublicKeyAlgorithm
 
-	// Check if end-entity public key algorithm matches transit key
-	err = validateKeyTypeMatch(p, leafCertPublicKeyAlgorithm)
-	if err != nil {
-		return logical.ErrorResponse(err.Error()), logical.ErrInvalidRequest
-	}
-
 	// Validate if leaf cert key matches with transit key
 	valid, err := p.ValidateLeafCertKeyMatch(keyVersion, leafCertPublicKeyAlgorithm, certChain[0].PublicKey)
 	if err != nil {
-		return nil, fmt.Errorf("could not validate key match between leaf certificate key and key version in transit: %w", err)
+		switch err.(type) {
+		case errutil.UserError:
+			return logical.ErrorResponse(err.Error()), logical.ErrInvalidRequest
+		default:
+			return nil, fmt.Errorf("could not validate key match between leaf certificate key and key version in transit: %w", err)
+		}
 	}
 	if !valid {
 		return logical.ErrorResponse("leaf certificate public key does match the key version selected"), logical.ErrInvalidRequest
@@ -305,31 +304,6 @@ func validateLeafCertPosition(certChain []*x509.Certificate) error {
 		if cert.BasicConstraintsValid && !cert.IsCA {
 			return errors.New("provided certificate chain contains more than one leaf certificate")
 		}
-	}
-
-	return nil
-}
-
-func validateKeyTypeMatch(p *keysutil.Policy, leafCertPublicKeyAlgorithm x509.PublicKeyAlgorithm) error {
-	var keyTypeMatches bool
-	switch p.Type {
-	case keysutil.KeyType_ECDSA_P256, keysutil.KeyType_ECDSA_P384, keysutil.KeyType_ECDSA_P521:
-		if leafCertPublicKeyAlgorithm == x509.ECDSA {
-			keyTypeMatches = true
-		}
-	case keysutil.KeyType_ED25519:
-		if leafCertPublicKeyAlgorithm == x509.Ed25519 {
-			keyTypeMatches = true
-		}
-	case keysutil.KeyType_RSA2048, keysutil.KeyType_RSA3072, keysutil.KeyType_RSA4096:
-		if leafCertPublicKeyAlgorithm == x509.RSA {
-			keyTypeMatches = true
-		}
-	}
-	if !keyTypeMatches {
-		// NOTE: Different type "names" might lead to confusion.
-		return fmt.Errorf("provided leaf certificate public key type '%s' does not match the transit key type '%s'",
-			leafCertPublicKeyAlgorithm.String(), p.Type.String())
 	}
 
 	return nil
