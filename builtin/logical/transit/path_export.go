@@ -105,7 +105,6 @@ func (b *backend) pathPolicyExportRead(ctx context.Context, req *logical.Request
 		if !p.Type.SigningSupported() {
 			return logical.ErrorResponse("signing not supported for the key"), logical.ErrInvalidRequest
 		}
-	// NOTE: Is this a valid assumption?
 	case exportTypeCertificateChain:
 		if !p.Type.SigningSupported() {
 			return logical.ErrorResponse("certificate chain not supported for keys that do not support signing"), logical.ErrInvalidRequest
