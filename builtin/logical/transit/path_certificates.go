@@ -221,7 +221,15 @@ func (b *backend) pathImportCertChainWrite(ctx context.Context, req *logical.Req
 		}
 	}
 
-	return nil, nil
+	resp := &logical.Response{
+		Data: map[string]interface{}{
+			"name":              p.Name,
+			"type":              p.Type.String(),
+			"certificate-chain": pemCertChain,
+		},
+	}
+
+	return resp, nil
 }
 
 func parseCsr(csrStr string) (*x509.CertificateRequest, error) {
