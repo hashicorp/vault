@@ -92,7 +92,7 @@ func (b *backend) pathPolicyExportRead(ctx context.Context, req *logical.Request
 	}
 	defer p.Unlock()
 
-	if !p.Exportable && exportType != exportTypePublicKey {
+	if !p.Exportable && exportType != exportTypePublicKey && exportType != exportTypeCertificateChain {
 		return logical.ErrorResponse("private key material is not exportable"), nil
 	}
 

@@ -501,7 +501,6 @@ func testTransit_exportCertificateChain(t *testing.T, apiClient *api.Client, key
 	_, err = apiClient.Logical().Write(fmt.Sprintf("/transit/keys/%s/import", keyName), map[string]interface{}{
 		"ciphertext": blob,
 		"type":       keyType,
-		"exportable": true, // NOTE: Like the public key, cert chain should not this param to be exported?
 	})
 	require.NoError(t, err)
 
