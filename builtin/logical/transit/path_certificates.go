@@ -210,29 +210,7 @@ func (b *backend) pathImportCertChainWrite(ctx context.Context, req *logical.Req
 		return logical.ErrorResponse(err.Error()), logical.ErrInvalidRequest
 	}
 
-	err = validateLeafCertPosition(certChain)
-	if err != nil {
-		return logical.ErrorResponse(err.Error()), logical.ErrInvalidRequest
-	}
-
-	leafCertPublicKeyAlgorithm := certChain[0].PublicKeyAlgorithm
-
-	// Validate if leaf cert key matches with transit key
-	valid, err := p.ValidateLeafCertKeyMatch(keyVersion, leafCertPublicKeyAlgorithm, certChain[0].PublicKey)
-	if err != nil {
-		prefixedErr := fmt.Errorf("could not validate key match between leaf certificate key and key version in transit: %w", err)
-		switch err.(type) {
-		case errutil.UserError:
-			return logical.ErrorResponse(prefixedErr.Error()), logical.ErrInvalidRequest
-		default:
-			return nil, prefixedErr
-		}
-	}
-	if !valid {
-		return logical.ErrorResponse("leaf certificate public key does match the key version selected"), logical.ErrInvalidRequest
-	}
-
-	err = p.PersistCertificateChain(ctx, keyVersion, certChain, req.Storage)
+	err = p.ValidateAndPersistCertificateChain(ctx, keyVersion, certChain, req.Storage)
 	if err != nil {
 		prefixedErr := fmt.Errorf("failed to persist certificate chain: %w", err)
 		switch err.(type) {
@@ -298,24 +276,6 @@ func parseCertificateChain(certChainString string) ([]*x509.Certificate, error) 
 	}
 
 	return certificates, nil
-}
-
-func validateLeafCertPosition(certChain []*x509.Certificate) error {
-	if len(certChain) == 0 {
-		return errors.New("expected at least one certificate in the parsed certificate chain")
-	}
-
-	if certChain[0].BasicConstraintsValid && certChain[0].IsCA {
-		return errors.New("certificate in the first position is not a leaf certificate")
-	}
-
-	for _, cert := range certChain[1:] {
-		if cert.BasicConstraintsValid && !cert.IsCA {
-			return errors.New("provided certificate chain contains more than one leaf certificate")
-		}
-	}
-
-	return nil
 }
 
 const pathCreateCsrHelpSyn = `Create a CSR from a key in transit`

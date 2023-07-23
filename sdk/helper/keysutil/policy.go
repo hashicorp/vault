@@ -2544,7 +2544,7 @@ func (p *Policy) ValidateLeafCertKeyMatch(keyVersion int, certPublicKeyAlgorithm
 	return false, nil
 }
 
-func (p *Policy) PersistCertificateChain(ctx context.Context, keyVersion int, certChain []*x509.Certificate, storage logical.Storage) error {
+func (p *Policy) ValidateAndPersistCertificateChain(ctx context.Context, keyVersion int, certChain []*x509.Certificate, storage logical.Storage) error {
 	if len(certChain) == 0 {
 		return errutil.UserError{Err: "expected at least one certificate in the parsed certificate chain"}
 	}
