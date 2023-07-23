@@ -186,8 +186,6 @@ func (b *backend) pathImportCertChainWrite(ctx context.Context, req *logical.Req
 	defer p.Unlock()
 
 	// Check if transit key supports signing
-	// NOTE: A key type that doesn't support signing cannot possible (?) have
-	// a certificate, so does it make sense to have this check?
 	if !p.Type.SigningSupported() {
 		return logical.ErrorResponse(fmt.Sprintf("key type %s does not support signing", p.Type)), logical.ErrInvalidRequest
 	}
