@@ -254,11 +254,11 @@ func getExportKey(policy *keysutil.Policy, key *keysutil.KeyEntry, exportType st
 		}
 
 		var pemCerts []string
-		for _, cert := range key.CertificateChain {
+		for _, derCertBytes := range key.CertificateChain {
 			pemCert := strings.TrimSpace(string(pem.EncodeToMemory(
 				&pem.Block{
 					Type:  "CERTIFICATE",
-					Bytes: cert.Raw,
+					Bytes: derCertBytes,
 				})))
 			pemCerts = append(pemCerts, pemCert)
 		}

@@ -247,7 +247,7 @@ type KeyEntry struct {
 
 	// Key entry certificate chain. If set, leaf certificate key matches the
 	// KeyEntry key
-	CertificateChain []*x509.Certificate `json:"certificate_chain"`
+	CertificateChain [][]byte `json:"certificate_chain"`
 }
 
 func (ke *KeyEntry) IsPrivateKeyMissing() bool {
@@ -2577,7 +2577,14 @@ func (p *Policy) ValidateAndPersistCertificateChain(ctx context.Context, keyVers
 	if err != nil {
 		return err
 	}
-	keyEntry.CertificateChain = certChain
+
+	// Convert the certificate chain to DER format
+	derCertificates := make([][]byte, len(certChain))
+	for i, cert := range certChain {
+		derCertificates[i] = cert.Raw
+	}
+
+	keyEntry.CertificateChain = derCertificates
 
 	p.Keys[strconv.Itoa(keyVersion)] = keyEntry
 	return p.Persist(ctx, storage)
