@@ -164,6 +164,8 @@ type OASSchema struct {
 	Description string                `json:"description,omitempty"`
 	Properties  map[string]*OASSchema `json:"properties,omitempty"`
 
+	AdditionalProperties interface{} `json:"additionalProperties,omitempty"`
+
 	// Required is a list of keys in Properties that are required to be present. This is a different
 	// approach than OASParameter (unfortunately), but is how JSONSchema handles 'required'.
 	Required []string `json:"required,omitempty"`
@@ -388,8 +390,20 @@ func documentPath(p *Path, backend *Backend, requestResponsePrefix string, doc *
 					s.Example = props.Examples[0].Data
 				}
 
+				// TakesArbitraryInput is a case like writing to:
+				//   - sys/wrapping/wrap
+				//   - kv-v1/{path}
+				//   - cubbyhole/{path}
+				// where the entire request body is an arbitrary JSON object used directly as input.
+				if p.TakesArbitraryInput {
+					// Whilst the default value of additionalProperties is true according to the JSON Schema standard,
+					// making this explicit helps communicate this to humans, and also tools such as
+					// https://openapi-generator.tech/ which treat it as defaulting to false.
+					s.AdditionalProperties = true
+				}
+
 				// Set the final request body. Only JSON request data is supported.
-				if len(s.Properties) > 0 || s.Example != nil {
+				if len(s.Properties) > 0 {
 					requestName := hyphenatedToTitleCase(operationID) + "Request"
 					doc.Components.Schemas[requestName] = s
 					op.RequestBody = &OASRequestBody{
@@ -397,6 +411,17 @@ func documentPath(p *Path, backend *Backend, requestResponsePrefix string, doc *
 						Content: OASContent{
 							"application/json": &OASMediaTypeObject{
 								Schema: &OASSchema{Ref: fmt.Sprintf("#/components/schemas/%s", requestName)},
+							},
+						},
+					}
+				} else if p.TakesArbitraryInput {
+					// When there are no properties, the schema is trivial enough that it makes more sense to write it
+					// inline, rather than as a named component.
+					op.RequestBody = &OASRequestBody{
+						Required: true,
+						Content: OASContent{
+							"application/json": &OASMediaTypeObject{
+								Schema: s,
 							},
 						},
 					}
