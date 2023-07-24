@@ -16,10 +16,6 @@ interface LdapRoleEditController extends Controller {
 }
 
 export default class LdapRoleEditRoute extends Route {
-  model() {
-    return this.modelFor('roles.role');
-  }
-
   setupController(controller: LdapRoleEditController, resolvedModel: LdapRoleModel, transition: Transition) {
     super.setupController(controller, resolvedModel, transition);
 
