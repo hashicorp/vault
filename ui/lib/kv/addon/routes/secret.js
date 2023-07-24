@@ -16,7 +16,8 @@ export default class KvSecretRoute extends Route {
   }
 
   async fetchSecretMetadata(backend, path) {
-    return await this.store.queryRecord('kv/metadata', { backend, path }).catch((error) => error.httpStatus);
+    // catch error and do nothing because kv/data model handles metadata capabilities
+    return await this.store.queryRecord('kv/metadata', { backend, path }).catch(() => {});
   }
 
   model() {

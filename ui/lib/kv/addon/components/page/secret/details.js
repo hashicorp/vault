@@ -14,7 +14,6 @@ import { tracked } from '@glimmer/tracking';
  *  @secretPath={{this.model.path}}
  *  @secret={{this.model.secret}}
  *  @metadata={{this.model.metadata}}
- *  @noMetadataPermission={{eq this.model.metadata 403}}
  *  @breadcrumbs={{this.breadcrumbs}}
   /> 
  *
