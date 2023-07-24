@@ -2614,7 +2614,6 @@ func TestAgent_Metrics(t *testing.T) {
 	//----------------------------------------------------
 
 	// Start a vault server
-	logger := logging.NewVaultLogger(hclog.Trace)
 	cluster := vault.NewTestCluster(t, nil,
 		&vault.TestClusterOptions{
 			HandlerFunc: vaulthttp.Handler,
@@ -2638,7 +2637,7 @@ listener "tcp" {
 	defer os.Remove(configPath)
 
 	// Start the agent
-	ui, cmd := testAgentCommand(t, logger)
+	ui, cmd := testAgentCommand(t, logging.NewVaultLogger(hclog.Trace))
 	cmd.client = serverClient
 	cmd.startedCh = make(chan struct{})
 
