@@ -61,8 +61,8 @@ module.exports = [
     permanent: true,
   },
   {
-    source: '/vault/docs/v1.13.x/agent-and-proxy/:slug',
-    destination: '/vault/docs/v1.13.x/agent/:slug',
+    source: '/vault/docs/:version(v1\.([4-9]|10|11|12|13)\.x)/agent-and-proxy/:slug',
+    destination: '/vault/docs/:version/agent/:slug',
     permanent: true,
   }
 ]
