@@ -22,7 +22,6 @@ export default class KvDataSerializer extends ApplicationSerializer {
     return {
       ...payload,
       data: {
-        ...payload.data,
         id,
         backend,
         path,
