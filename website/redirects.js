@@ -59,5 +59,10 @@ module.exports = [
     source: '/vault/docs/agent/caching/:slug',
     destination: '/vault/docs/agent-and-proxy/agent/caching/:slug',
     permanent: true,
+  },
+  {
+    source: '/vault/docs/v1.13.x/agent-and-proxy/:slug',
+    destination: '/vault/docs/v1.13.x/agent/:slug',
+    permanent: true,
   }
 ]
