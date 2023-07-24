@@ -186,6 +186,9 @@ func setupClusterAndAgentCommon(ctx context.Context, t *testing.T, coreConfig *v
 		ctx = context.Background()
 	}
 
+	if coreConfig == nil {
+		coreConfig = &vault.CoreConfig{}
+	}
 	// Always set up the userpass backend since we use that to generate an admin
 	// token for the client that will make proxied requests to through the agent.
 	if coreConfig.CredentialBackends == nil || coreConfig.CredentialBackends["userpass"] == nil {
