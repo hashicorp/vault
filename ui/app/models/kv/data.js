@@ -60,30 +60,30 @@ export default class KvSecretDataModel extends Model {
   @lazyCapabilities(apiPath`${'backend'}/undelete/${'path'}`, 'backend', 'path') undeletePath;
 
   get canDeleteLatestVersion() {
-    return this.dataPath.get('canDelete');
+    return this.dataPath.get('canDelete') !== false;
   }
   get canDeleteVersion() {
-    return this.deletePath.get('canUpdate');
+    return this.deletePath.get('canUpdate') !== false;
   }
   get canUndelete() {
-    return this.undeletePath.get('canUpdate');
+    return this.undeletePath.get('canUpdate') !== false;
   }
   get canDestroyVersion() {
-    return this.destroyPath.get('canUpdate');
+    return this.destroyPath.get('canUpdate') !== false;
   }
   get canEditData() {
-    return this.dataPath.get('canUpdate');
+    return this.dataPath.get('canUpdate') !== false;
   }
   get canReadData() {
-    return this.dataPath.get('canRead');
+    return this.dataPath.get('canRead') !== false;
   }
   get canReadMetadata() {
-    return this.metadataPath.get('canRead');
+    return this.metadataPath.get('canRead') !== false;
   }
   get canUpdateMetadata() {
-    return this.metadataPath.get('canUpdate');
+    return this.metadataPath.get('canUpdate') !== false;
   }
   get canListMetadata() {
-    return this.metadataPath.get('canList');
+    return this.metadataPath.get('canList') !== false;
   }
 }

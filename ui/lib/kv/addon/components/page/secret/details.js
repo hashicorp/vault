@@ -33,27 +33,34 @@ export default class KvSecretDetails extends Component {
   }
 
   get emptyState() {
-    const { version, canReadData, destroyed, deletionTime } = this.args.secret;
-    if (!canReadData) {
+    if (!this.args.secret.canReadData) {
       return {
         title: 'You do not have permission to read this secret',
         message:
           'Your policies may permit you to write a new version of this secret, but do not allow you to read its current contents.',
       };
     }
+    // only destructure if we can read secret data
+    const { version, destroyed, deletionTime } = this.args.secret;
     if (destroyed) {
       return {
         title: `Version ${version} of this secret has been permanently destroyed`,
-        message:
-          'A version that has been permanently deleted cannot be restored. You can view other versions of this secret in the Version History tab above.',
+        message: `A version that has been permanently deleted cannot be restored. ${
+          this.args.secret.canReadMetadata
+            ? ' You can view other versions of this secret in the Version History tab above.'
+            : ''
+        }`,
         link: '/vault/docs/secrets/kv/kv-v2',
       };
     }
     if (deletionTime) {
       return {
         title: `Version ${version} of this secret has been deleted`,
-        message:
-          'This version has been deleted but can be undeleted. View other versions of this secret by clicking the Version History tab above.',
+        message: `This version has been deleted but can be undeleted. ${
+          this.args.secret.canReadMetadata
+            ? 'View other versions of this secret by clicking the Version History tab above.'
+            : ''
+        }`,
         link: '/vault/docs/secrets/kv/kv-v2',
       };
     }

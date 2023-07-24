@@ -12,7 +12,10 @@ export default class KvSecretRoute extends Route {
   @service secretMountPath;
 
   async fetchSecretData(backend, path) {
-    return await this.store.queryRecord('kv/data', { backend, path }).catch((error) => error.httpStatus);
+    return await this.store.queryRecord('kv/data', { backend, path }).catch(() => {
+      // return empty record to access capability getters on model
+      return this.store.createRecord('kv/data', { backend, path });
+    });
   }
 
   async fetchSecretMetadata(backend, path) {
@@ -23,6 +26,7 @@ export default class KvSecretRoute extends Route {
   model() {
     const backend = this.secretMountPath.currentPath;
     const { name: path } = this.paramsFor('secret');
+
     return hash({
       path,
       backend,

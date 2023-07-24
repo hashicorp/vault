@@ -15,7 +15,14 @@ import { adminPolicy, dataPolicy, metadataPolicy } from 'vault/tests/helpers/pol
 import { tokenWithPolicy, runCommands, writeSecret } from 'vault/tests/helpers/kv/kv-run-commands';
 import { SELECTORS } from 'vault/tests/helpers/kv/kv-general-selectors';
 
-// This test module should test KV permissions views, each sub-module is a separate tab (i.e. secret, metadata)
+/* 
+This test module tests KV permissions views, each module is is a separate tab (i.e. secret, metadata)
+each sub-module is a different state, for example: 
+- it renders secret details
+- it renders secret details after a version is deleted
+
+And each test authenticates using varying permissions testing that view state renders as expected.
+*/
 
 module('Acceptance | kv permissions', function (hooks) {
   setupApplicationTest(hooks);
@@ -37,42 +44,74 @@ module('Acceptance | kv permissions', function (hooks) {
     await logout.visit();
   });
 
-  module('secret', function (hooks) {
+  module('secret tab', function (hooks) {
     hooks.beforeEach(async function () {
+      // Create secret
       await authPage.login();
       this.secretPath = `my-secret-${uuidv4()}`;
       await writeSecret(this.mountPath, this.secretPath, 'foo', 'bar');
 
+      // Create different policy test cases
       const kv_admin_policy = adminPolicy(this.mountPath);
       this.kvAdminToken = await tokenWithPolicy('kv-admin', kv_admin_policy);
 
       const no_metadata_read =
         dataPolicy({ backend: this.mountPath, secretPath: this.secretPath }) +
         metadataPolicy({ backend: this.mountPath, capabilities: ['list'] });
-      this.kvNoMetadataRead = await tokenWithPolicy('kv-no-metadata-read', no_metadata_read);
+      this.cannotReadMetadata = await tokenWithPolicy('kv-no-metadata-read', no_metadata_read);
+
+      const no_data_read = dataPolicy({
+        backend: this.mountPath,
+        secretPath: this.secretPath,
+        capabilities: ['list'],
+      });
+      this.cannotReadData = await tokenWithPolicy('kv-no-metadata-read', no_data_read);
       await logout.visit();
     });
 
-    test('it shows all tabs for admin policy', async function (assert) {
-      assert.expect(5);
-      await authPage.login(this.kvAdminToken);
-      await visit(`/vault/secrets/${this.mountPath}/kv/${this.secretPath}/details`);
-      assert.strictEqual(currentURL(), `/vault/secrets/${this.mountPath}/kv/${this.secretPath}/details`);
-      assert.dom(SELECTORS.secretTab('Secret')).exists();
-      assert.dom(SELECTORS.secretTab('Metadata')).exists();
-      assert.dom(SELECTORS.secretTab('Version History')).exists();
-      assert.dom(SELECTORS.secretTab('Version Diff')).exists();
+    module('it renders secret details page', function () {
+      test('it shows all tabs for admin policy', async function (assert) {
+        assert.expect(5);
+        await authPage.login(this.kvAdminToken);
+        await visit(`/vault/secrets/${this.mountPath}/kv/${this.secretPath}/details`);
+        assert.strictEqual(currentURL(), `/vault/secrets/${this.mountPath}/kv/${this.secretPath}/details`);
+        assert.dom(SELECTORS.secretTab('Secret')).exists();
+        assert.dom(SELECTORS.secretTab('Metadata')).exists();
+        assert.dom(SELECTORS.secretTab('Version History')).exists();
+        assert.dom(SELECTORS.secretTab('Version Diff')).exists();
+      });
+
+      test('it hides tabs when no metadata read', async function (assert) {
+        assert.expect(5);
+        await authPage.login(this.cannotReadMetadata);
+        await visit(`/vault/secrets/${this.mountPath}/kv/${this.secretPath}/details`);
+        assert.strictEqual(currentURL(), `/vault/secrets/${this.mountPath}/kv/${this.secretPath}/details`);
+        assert.dom(SELECTORS.secretTab('Secret')).exists();
+        assert.dom(SELECTORS.secretTab('Metadata')).exists();
+        assert.dom(SELECTORS.secretTab('Version History')).doesNotExist();
+        assert.dom(SELECTORS.secretTab('Version Diff')).doesNotExist();
+      });
+
+      test('it shows empty state when cannot read secret data', async function (assert) {
+        assert.expect(5);
+        await authPage.login(this.cannotReadData);
+        await visit(`/vault/secrets/${this.mountPath}/kv/${this.secretPath}/details`);
+        assert.strictEqual(currentURL(), `/vault/secrets/${this.mountPath}/kv/${this.secretPath}/details`);
+        assert.dom(SELECTORS.secretTab('Secret')).exists();
+        assert.dom(SELECTORS.secretTab('Metadata')).exists();
+        assert.dom(SELECTORS.secretTab('Version History')).doesNotExist();
+        assert.dom(SELECTORS.secretTab('Version Diff')).doesNotExist();
+        assert.dom(SELECTORS.emptyStateTitle).hasText('You do not have permission to read this secret');
+        assert
+          .dom(SELECTORS.emptyStateMessage)
+          .hasText(
+            'Your policies may permit you to write a new version of this secret, but do not allow you to read its current contents.'
+          );
+      });
     });
 
-    test('it hides tabs when no metadata read', async function (assert) {
-      assert.expect(5);
-      await authPage.login(this.kvNoMetadataRead);
-      await visit(`/vault/secrets/${this.mountPath}/kv/${this.secretPath}/details`);
-      assert.strictEqual(currentURL(), `/vault/secrets/${this.mountPath}/kv/${this.secretPath}/details`);
-      assert.dom(SELECTORS.secretTab('Secret')).exists();
-      assert.dom(SELECTORS.secretTab('Metadata')).exists();
-      assert.dom(SELECTORS.secretTab('Version History')).doesNotExist();
-      assert.dom(SELECTORS.secretTab('Version Diff')).doesNotExist();
+    module('it renders secret details page after deleting a version', function () {
+      // TODO delete secret and test different policy views
     });
   });
 });
