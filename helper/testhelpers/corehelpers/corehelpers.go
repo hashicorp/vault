@@ -420,6 +420,7 @@ type TestLogger struct {
 	File *os.File
 	sink hclog.SinkAdapter
 	// For managing temporary start-up state
+	sync.RWMutex
 	AllLoggers []hclog.Logger
 	logging.SubloggerAdder
 }
@@ -428,13 +429,17 @@ type TestLogger struct {
 // TestLogger and re-assigns the SubloggerHook implementation if so.
 func RegisterSubloggerAdder(logger hclog.Logger, adder logging.SubloggerAdder) {
 	if l, ok := logger.(*TestLogger); ok {
+		l.Lock()
 		l.SubloggerAdder = adder
+		l.Unlock()
 	}
 }
 
 // AppendToAllLoggers appends the sub logger to allLoggers, or if the TestLogger
 // is assigned to a SubloggerAdder implementation, it calls the underlying hook.
 func (l *TestLogger) AppendToAllLoggers(sub hclog.Logger) hclog.Logger {
+	l.Lock()
+	defer l.Unlock()
 	if l.SubloggerAdder == nil {
 		l.AllLoggers = append(l.AllLoggers, sub)
 		return sub
