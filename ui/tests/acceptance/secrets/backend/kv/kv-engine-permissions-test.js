@@ -11,11 +11,7 @@ import authPage from 'vault/tests/pages/auth';
 import logout from 'vault/tests/pages/logout';
 import enablePage from 'vault/tests/pages/settings/mount-secret-backend';
 import { currentURL, visit } from '@ember/test-helpers';
-import {
-  adminPolicy,
-  dataSecretPathCreateReadUpdate,
-  metadataListOnly,
-} from 'vault/tests/helpers/policy-generator/kv';
+import { adminPolicy, dataPolicy, metadataPolicy } from 'vault/tests/helpers/policy-generator/kv';
 import { tokenWithPolicy, runCommands, writeSecret } from 'vault/tests/helpers/kv/kv-run-commands';
 import { SELECTORS } from 'vault/tests/helpers/kv/kv-general-selectors';
 
@@ -50,10 +46,10 @@ module('Acceptance | kv permissions', function (hooks) {
       const kv_admin_policy = adminPolicy(this.mountPath);
       this.kvAdminToken = await tokenWithPolicy('kv-admin', kv_admin_policy);
 
-      const no_metadata_read_policy =
-        metadataListOnly(this.mountPath) + dataSecretPathCreateReadUpdate(this.mountPath, this.secretPath);
-      this.kvNoMetadataRead = await tokenWithPolicy('kv-no-metadata-read', no_metadata_read_policy);
-
+      const no_metadata_read =
+        dataPolicy({ backend: this.mountPath, secretPath: this.secretPath }) +
+        metadataPolicy({ backend: this.mountPath, capabilities: ['list'] });
+      this.kvNoMetadataRead = await tokenWithPolicy('kv-no-metadata-read', no_metadata_read);
       await logout.visit();
     });
 
