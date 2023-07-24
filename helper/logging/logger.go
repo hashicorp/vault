@@ -51,7 +51,7 @@ type LogConfig struct {
 
 	// SubloggerHook handles creation of new subloggers, automatically appending
 	// them to core's running list of allLoggers.
-	// see: server.AddSubloggerToAllLoggers for more details.
+	// see: server.AppendToAllLoggers for more details.
 	SubloggerHook func(log.Logger) log.Logger
 }
 
