@@ -200,24 +200,24 @@ export default class LdapRoleModel extends Model {
   @lazyCapabilities(apiPath`${'backend'}/rotate-role/${'name'}`, 'backend', 'name') staticRotateCredsPath;
 
   get canCreate() {
-    return this.rolePath.get('canCreate');
+    return this.rolePath.get('canCreate') !== false;
   }
   get canDelete() {
-    return this.rolePath.get('canDelete');
+    return this.rolePath.get('canDelete') !== false;
   }
   get canEdit() {
-    return this.rolePath.get('canUpdate');
+    return this.rolePath.get('canUpdate') !== false;
   }
   get canRead() {
-    return this.rolePath.get('canRead');
+    return this.rolePath.get('canRead') !== false;
   }
   get canList() {
-    return this.rolePath.get('canList');
+    return this.rolePath.get('canList') !== false;
   }
   get canReadCreds() {
-    return this.credsPath.get('canRead');
+    return this.credsPath.get('canRead') !== false;
   }
   get canRotateStaticCreds() {
-    return this.isStatic && this.staticRotateCredsPath.get('canCreate');
+    return this.isStatic && this.staticRotateCredsPath.get('canCreate') !== false;
   }
 }
