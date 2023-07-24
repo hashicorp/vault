@@ -5490,6 +5490,7 @@ func TestSystemBackend_LoggersByName(t *testing.T) {
 
 			core, _, _ := TestCoreUnsealed(t)
 			b := core.systemBackend
+			testLoggerName := t.Name() + "." + tc.logger
 
 			// Test core overrides logging level outside of config,
 			// an initial delete will ensure that we an initial read
@@ -5518,7 +5519,7 @@ func TestSystemBackend_LoggersByName(t *testing.T) {
 			initialLoggers := resp.Data
 
 			req = &logical.Request{
-				Path:      fmt.Sprintf("loggers/%s", tc.logger),
+				Path:      fmt.Sprintf("loggers/%s", testLoggerName),
 				Operation: logical.UpdateOperation,
 				Data: map[string]interface{}{
 					"level": tc.level,
@@ -5563,14 +5564,14 @@ func TestSystemBackend_LoggersByName(t *testing.T) {
 						t.Fatalf("expected logger %q to be %q, actual: %s", loggerName, tc.expectedLevel, levelStr)
 					}
 
-					if loggerName != tc.logger && levelStr != initialLevelStr {
-						t.Errorf("expected level of logger %q to be unchanged, exepcted: %s, actual: %s", loggerName, initialLevelStr, levelStr)
+					if loggerName != testLoggerName && levelStr != initialLevelStr {
+						t.Errorf("expected level of logger %q to be unchanged, expected: %s, actual: %s", loggerName, initialLevelStr, levelStr)
 					}
 				}
 			}
 
 			req = &logical.Request{
-				Path:      fmt.Sprintf("loggers/%s", tc.logger),
+				Path:      fmt.Sprintf("loggers/%s", testLoggerName),
 				Operation: logical.DeleteOperation,
 			}
 
@@ -5587,7 +5588,7 @@ func TestSystemBackend_LoggersByName(t *testing.T) {
 
 			if !tc.expectDeleteError {
 				req = &logical.Request{
-					Path:      fmt.Sprintf("loggers/%s", tc.logger),
+					Path:      fmt.Sprintf("loggers/%s", testLoggerName),
 					Operation: logical.ReadOperation,
 				}
 
@@ -5596,18 +5597,18 @@ func TestSystemBackend_LoggersByName(t *testing.T) {
 					t.Fatalf("unexpected error, err: %v, resp: %#v", err, resp)
 				}
 
-				currentLevel, ok := resp.Data[tc.logger].(string)
+				currentLevel, ok := resp.Data[testLoggerName].(string)
 				if !ok {
-					t.Fatalf("expected resp to include %q, resp: %#v", tc.logger, resp)
+					t.Fatalf("expected resp to include %q, resp: %#v", testLoggerName, resp)
 				}
 
-				initialLevel, ok := initialLoggers[tc.logger].(string)
+				initialLevel, ok := initialLoggers[testLoggerName].(string)
 				if !ok {
-					t.Fatalf("expected initial loggers to include %q, resp: %#v", tc.logger, initialLoggers)
+					t.Fatalf("expected initial loggers to include %q, resp: %#v", testLoggerName, initialLoggers)
 				}
 
 				if currentLevel != initialLevel {
-					t.Errorf("expected level of logger %q to match original config, expected: %s, actual: %s", tc.logger, initialLevel, currentLevel)
+					t.Errorf("expected level of logger %q to match original config, expected: %s, actual: %s", testLoggerName, initialLevel, currentLevel)
 				}
 			}
 		})

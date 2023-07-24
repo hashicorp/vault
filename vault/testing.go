@@ -253,8 +253,8 @@ func TestCoreWithSealAndUINoCleanup(t testing.T, opts *CoreConfig) *Core {
 		t.Fatalf("err: %s", err)
 	}
 
+	// Switch the SubloggerHook over to core
 	corehelpers.RegisterSubloggerAdder(logger, c)
-
 	return c
 }
 
