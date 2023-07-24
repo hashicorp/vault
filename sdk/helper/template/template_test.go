@@ -5,10 +5,14 @@ package template
 
 import (
 	"fmt"
+	"math/rand"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/require"
 )
+
+const templateCharSet = "abcdefghijklmnopqrstuvwxyz012346789"
 
 func TestGenerate(t *testing.T) {
 	type testCase struct {
@@ -205,5 +209,73 @@ func TestBadConstructorArguments(t *testing.T) {
 		str, err := st.Generate(nil)
 		require.Error(t, err)
 		require.Equal(t, "", str)
+	})
+}
+
+func TestTemplateInputLength(t *testing.T) {
+	type testCase struct {
+		name        string
+		length      int
+		wantErr     bool
+		expectedErr string
+	}
+
+	tests := []testCase{
+		{
+			name:    "below length limit",
+			length:  100,
+			wantErr: false,
+		},
+		{
+			name:   "at length limit",
+			length: maxTemplateInputLength,
+
+			wantErr: false,
+		},
+		{
+			name:        "exceeds length limit",
+			length:      maxTemplateInputLength + 1,
+			wantErr:     true,
+			expectedErr: "exceeds the desired length limit",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			input := randString(tt.length)
+
+			_, err := NewTemplate(Template(input))
+			if tt.wantErr && err == nil {
+				t.Fatalf("expected error, got nil")
+			}
+
+			if tt.wantErr && !strings.Contains(err.Error(), tt.expectedErr) {
+				t.Fatalf("expected error %s, got %s", tt.expectedErr, err.Error())
+			}
+		})
+	}
+}
+
+func randString(strlen int) string {
+	return randStringFromCharSet(strlen, templateCharSet)
+}
+
+// RandStringFromCharSet generates a random string by selecting characters from
+// the charset provided
+func randStringFromCharSet(strlen int, charSet string) string {
+	result := make([]byte, strlen)
+	for i := 0; i < strlen; i++ {
+		result[i] = charSet[rand.Intn(len(charSet))]
+	}
+	return string(result)
+}
+
+// Fuzz test to test different inputs to NewTemplate
+func FuzzNewTemplate(f *testing.F) {
+	template := `{{ if (eq .Type "STS") }}{{ printf "vault-%s-%s"  (unix_time) (random 20) | truncate 32 }}{{ else }}{{ printf "vault-%s-%s-%s" (printf "%s-%s" (.DisplayName) (.PolicyName) | truncate 42) (unix_time) (random 20) | truncate 64 }}{{ end }}`
+	f.Add(template)
+	f.Fuzz(func(t *testing.T, input string) {
+		st, _ := NewTemplate(Template(input))
+		st.Generate(nil)
 	})
 }

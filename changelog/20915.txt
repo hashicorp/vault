@@ -1,0 +1,3 @@
+```release-note:improvement
+sdk/helper/template: Adds a length check to template inputs to prevent stack overflow errors
+```
