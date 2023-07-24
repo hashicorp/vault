@@ -16,7 +16,7 @@ export default class KvEngine extends Engine {
   modulePrefix = modulePrefix;
   Resolver = Resolver;
   dependencies = {
-    services: ['download', 'router', 'store', 'secret-mount-path', 'flash-messages'],
+    services: ['download', 'namespace', 'router', 'store', 'secret-mount-path', 'flash-messages'],
     externalRoutes: ['secrets'],
   };
 }
