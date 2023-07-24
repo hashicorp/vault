@@ -5,7 +5,7 @@ description: >-
   Vault Helm supports deploying Vault Enterprise, including license autoloading.
 ---
 
-# Vault Enterprise License Management
+# Vault enterprise license management
 
 You can use this Helm chart to deploy Vault Enterprise by following a few extra steps around licensing.
 
@@ -13,9 +13,9 @@ You can use this Helm chart to deploy Vault Enterprise by following a few extra 
 
 @include 'helm/version.mdx'
 
-## Vault Enterprise 1.8+
+## Vault enterprise 1.8+
 
-### License Install
+### License install
 
 First create a Kubernetes secret using the contents of your license file. For example, the following commands create a secret with the name `vault-ent-license` and key `license`:
 
@@ -50,7 +50,7 @@ Once the cluster is [initialized and unsealed](/vault/docs/platform/k8s/helm/run
 kubectl exec -ti vault-0 -- vault license get
 ```
 
-### License Update
+### License update
 
 To update the autoloaded license in Vault, you may do the following:
 
@@ -95,7 +95,7 @@ kubectl exec vault-0 -- pkill -HUP vault
 kubectl exec vault-0 -- vault license get
 ```
 
-## Vault Enterprise prior to 1.8
+## Vault enterprise prior to 1.8
 
 In your chart overrides, set the values of `server.image` to one of the enterprise [release tags](https://hub.docker.com/r/hashicorp/vault-enterprise/tags). Install the chart, and initialize and unseal vault as described in [Running Vault](/vault/docs/platform/k8s/helm/run).
 

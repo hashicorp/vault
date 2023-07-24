@@ -356,7 +356,7 @@ func (b *backend) acmeNewAccountUpdateHandler(acmeCtx *acmeContext, userCtx *jws
 	}
 
 	if shouldUpdate {
-		err = b.acmeState.UpdateAccount(acmeCtx, account)
+		err = b.acmeState.UpdateAccount(acmeCtx.sc, account)
 		if err != nil {
 			return nil, fmt.Errorf("failed to update account: %w", err)
 		}
@@ -366,8 +366,8 @@ func (b *backend) acmeNewAccountUpdateHandler(acmeCtx *acmeContext, userCtx *jws
 	return resp, nil
 }
 
-func (b *backend) tidyAcmeAccountByThumbprint(as *acmeState, ac *acmeContext, keyThumbprint string, certTidyBuffer, accountTidyBuffer time.Duration) error {
-	thumbprintEntry, err := ac.sc.Storage.Get(ac.sc.Context, path.Join(acmeThumbprintPrefix, keyThumbprint))
+func (b *backend) tidyAcmeAccountByThumbprint(as *acmeState, sc *storageContext, keyThumbprint string, certTidyBuffer, accountTidyBuffer time.Duration) error {
+	thumbprintEntry, err := sc.Storage.Get(sc.Context, path.Join(acmeThumbprintPrefix, keyThumbprint))
 	if err != nil {
 		return fmt.Errorf("error retrieving thumbprint entry %v, unable to find corresponding account entry: %w", keyThumbprint, err)
 	}
@@ -386,13 +386,13 @@ func (b *backend) tidyAcmeAccountByThumbprint(as *acmeState, ac *acmeContext, ke
 	}
 
 	// Now Get the Account:
-	accountEntry, err := ac.sc.Storage.Get(ac.sc.Context, acmeAccountPrefix+thumbprint.Kid)
+	accountEntry, err := sc.Storage.Get(sc.Context, acmeAccountPrefix+thumbprint.Kid)
 	if err != nil {
 		return err
 	}
 	if accountEntry == nil {
 		// We delete the Thumbprint Associated with the Account, and we are done
-		err = ac.sc.Storage.Delete(ac.sc.Context, path.Join(acmeThumbprintPrefix, keyThumbprint))
+		err = sc.Storage.Delete(sc.Context, path.Join(acmeThumbprintPrefix, keyThumbprint))
 		if err != nil {
 			return err
 		}
@@ -405,16 +405,17 @@ func (b *backend) tidyAcmeAccountByThumbprint(as *acmeState, ac *acmeContext, ke
 	if err != nil {
 		return err
 	}
+	account.KeyId = thumbprint.Kid
 
 	// Tidy Orders On the Account
-	orderIds, err := as.ListOrderIds(ac, thumbprint.Kid)
+	orderIds, err := as.ListOrderIds(sc, thumbprint.Kid)
 	if err != nil {
 		return err
 	}
 	allOrdersTidied := true
 	maxCertExpiryUpdated := false
 	for _, orderId := range orderIds {
-		wasTidied, orderExpiry, err := b.acmeTidyOrder(ac, thumbprint.Kid, getOrderPath(thumbprint.Kid, orderId), certTidyBuffer)
+		wasTidied, orderExpiry, err := b.acmeTidyOrder(sc, thumbprint.Kid, getOrderPath(thumbprint.Kid, orderId), certTidyBuffer)
 		if err != nil {
 			return err
 		}
@@ -436,13 +437,13 @@ func (b *backend) tidyAcmeAccountByThumbprint(as *acmeState, ac *acmeContext, ke
 		// If it is Revoked or Deactivated:
 		if (account.Status == AccountStatusRevoked || account.Status == AccountStatusDeactivated) && now.After(account.AccountRevokedDate.Add(accountTidyBuffer)) {
 			// We Delete the Account Associated with this Thumbprint:
-			err = ac.sc.Storage.Delete(ac.sc.Context, path.Join(acmeAccountPrefix, thumbprint.Kid))
+			err = sc.Storage.Delete(sc.Context, path.Join(acmeAccountPrefix, thumbprint.Kid))
 			if err != nil {
 				return err
 			}
 
 			// Now we delete the Thumbprint Associated with the Account:
-			err = ac.sc.Storage.Delete(ac.sc.Context, path.Join(acmeThumbprintPrefix, keyThumbprint))
+			err = sc.Storage.Delete(sc.Context, path.Join(acmeThumbprintPrefix, keyThumbprint))
 			if err != nil {
 				return err
 			}
@@ -451,7 +452,7 @@ func (b *backend) tidyAcmeAccountByThumbprint(as *acmeState, ac *acmeContext, ke
 			// Revoke This Account
 			account.AccountRevokedDate = now
 			account.Status = AccountStatusRevoked
-			err := as.UpdateAccount(ac, &account)
+			err := as.UpdateAccount(sc, &account)
 			if err != nil {
 				return err
 			}
@@ -464,7 +465,7 @@ func (b *backend) tidyAcmeAccountByThumbprint(as *acmeState, ac *acmeContext, ke
 	// already written above.
 	if maxCertExpiryUpdated && account.Status == AccountStatusValid {
 		// Update our expiry time we previously setup.
-		err := as.UpdateAccount(ac, &account)
+		err := as.UpdateAccount(sc, &account)
 		if err != nil {
 			return err
 		}

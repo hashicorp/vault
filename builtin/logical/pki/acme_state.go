@@ -77,10 +77,7 @@ func (a *acmeState) Initialize(b *backend, sc *storageContext) error {
 	}
 
 	// Kick off our ACME challenge validation engine.
-	if err := a.validator.Initialize(b, sc); err != nil {
-		return fmt.Errorf("error initializing ACME engine: %w", err)
-	}
-	go a.validator.Run(b, a)
+	go a.validator.Run(b, a, sc)
 
 	// All good.
 	return nil
@@ -257,13 +254,13 @@ func (a *acmeState) CreateAccount(ac *acmeContext, c *jwsCtx, contact []string, 
 	return acct, nil
 }
 
-func (a *acmeState) UpdateAccount(ac *acmeContext, acct *acmeAccount) error {
+func (a *acmeState) UpdateAccount(sc *storageContext, acct *acmeAccount) error {
 	json, err := logical.StorageEntryJSON(acmeAccountPrefix+acct.KeyId, acct)
 	if err != nil {
 		return fmt.Errorf("error creating account entry: %w", err)
 	}
 
-	if err := ac.sc.Storage.Put(ac.sc.Context, json); err != nil {
+	if err := sc.Storage.Put(sc.Context, json); err != nil {
 		return fmt.Errorf("error writing account entry: %w", err)
 	}
 
@@ -519,10 +516,10 @@ func (a *acmeState) SaveOrder(ac *acmeContext, order *acmeOrder) error {
 	return nil
 }
 
-func (a *acmeState) ListOrderIds(ac *acmeContext, accountId string) ([]string, error) {
+func (a *acmeState) ListOrderIds(sc *storageContext, accountId string) ([]string, error) {
 	accountOrderPrefixPath := acmeAccountPrefix + accountId + "/orders/"
 
-	rawOrderIds, err := ac.sc.Storage.List(ac.sc.Context, accountOrderPrefixPath)
+	rawOrderIds, err := sc.Storage.List(sc.Context, accountOrderPrefixPath)
 	if err != nil {
 		return nil, fmt.Errorf("failed listing order ids for account %s: %w", accountId, err)
 	}

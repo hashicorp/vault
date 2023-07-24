@@ -6,6 +6,8 @@ package pointerutil
 import (
 	"os"
 	"time"
+
+	"github.com/hashicorp/go-secure-stdlib/parseutil"
 )
 
 // StringPtr returns a pointer to a string value
@@ -20,7 +22,7 @@ func BoolPtr(b bool) *bool {
 
 // TimeDurationPtr returns a pointer to a time duration value
 func TimeDurationPtr(duration string) *time.Duration {
-	d, _ := time.ParseDuration(duration)
+	d, _ := parseutil.ParseDurationSecond(duration)
 
 	return &d
 }

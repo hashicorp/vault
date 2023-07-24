@@ -75,12 +75,12 @@ func buildPathIssue(b *backend, pattern string, displayAttrs *framework.DisplayA
 							"serial_number": {
 								Type:        framework.TypeString,
 								Description: `Serial Number`,
-								Required:    false,
+								Required:    true,
 							},
 							"expiration": {
-								Type:        framework.TypeString,
+								Type:        framework.TypeInt64,
 								Description: `Time of expiration`,
-								Required:    false,
+								Required:    true,
 							},
 							"private_key": {
 								Type:        framework.TypeString,
@@ -163,7 +163,7 @@ func buildPathSign(b *backend, pattern string, displayAttrs *framework.DisplayAt
 								Required:    true,
 							},
 							"expiration": {
-								Type:        framework.TypeString,
+								Type:        framework.TypeInt64,
 								Description: `Time of expiration`,
 								Required:    true,
 							},
@@ -253,12 +253,12 @@ func buildPathIssuerSignVerbatim(b *backend, pattern string, displayAttrs *frame
 							"serial_number": {
 								Type:        framework.TypeString,
 								Description: `Serial Number`,
-								Required:    false,
+								Required:    true,
 							},
 							"expiration": {
-								Type:        framework.TypeString,
+								Type:        framework.TypeInt64,
 								Description: `Time of expiration`,
-								Required:    false,
+								Required:    true,
 							},
 							"private_key": {
 								Type:        framework.TypeString,

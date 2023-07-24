@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"os"
 	"testing"
+	"time"
 
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/builtin/logical/pki/dnstest"
@@ -37,7 +38,7 @@ func NewVaultPkiCluster(t *testing.T) *VaultPkiCluster {
 			VaultNodeConfig: &testcluster.VaultNodeConfig{
 				LogLevel: "TRACE",
 			},
-			NumCores: 1,
+			NumCores: 3,
 		},
 	}
 
@@ -60,8 +61,36 @@ func (vpc *VaultPkiCluster) Cleanup() {
 	}
 }
 
+func (vpc *VaultPkiCluster) GetActiveClusterNode() *docker.DockerClusterNode {
+	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
+	defer cancel()
+
+	node, err := testcluster.WaitForActiveNode(ctx, vpc.cluster)
+	if err != nil {
+		panic(fmt.Sprintf("no cluster node became active in timeout window: %v", err))
+	}
+
+	return vpc.cluster.ClusterNodes[node]
+}
+
+func (vpc *VaultPkiCluster) GetNonActiveNodes() []*docker.DockerClusterNode {
+	nodes := []*docker.DockerClusterNode{}
+	for _, node := range vpc.cluster.ClusterNodes {
+		leader, err := node.APIClient().Sys().Leader()
+		if err != nil {
+			continue
+		}
+
+		if !leader.IsSelf {
+			nodes = append(nodes, node)
+		}
+	}
+
+	return nodes
+}
+
 func (vpc *VaultPkiCluster) GetActiveContainerHostPort() string {
-	return vpc.cluster.ClusterNodes[0].HostPort
+	return vpc.GetActiveClusterNode().HostPort
 }
 
 func (vpc *VaultPkiCluster) GetContainerNetworkName() string {
@@ -69,15 +98,20 @@ func (vpc *VaultPkiCluster) GetContainerNetworkName() string {
 }
 
 func (vpc *VaultPkiCluster) GetActiveContainerIP() string {
-	return vpc.cluster.ClusterNodes[0].ContainerIPAddress
+	return vpc.GetActiveClusterNode().ContainerIPAddress
 }
 
 func (vpc *VaultPkiCluster) GetActiveContainerID() string {
-	return vpc.cluster.ClusterNodes[0].Container.ID
+	return vpc.GetActiveClusterNode().Container.ID
 }
 
 func (vpc *VaultPkiCluster) GetActiveNode() *api.Client {
-	return vpc.cluster.Nodes()[0].APIClient()
+	return vpc.GetActiveClusterNode().APIClient()
+}
+
+// GetListenerCACertPEM returns the Vault cluster's PEM-encoded CA certificate.
+func (vpc *VaultPkiCluster) GetListenerCACertPEM() []byte {
+	return vpc.cluster.CACertPEM
 }
 
 func (vpc *VaultPkiCluster) AddHostname(hostname, ip string) error {

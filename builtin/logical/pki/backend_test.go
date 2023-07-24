@@ -6125,22 +6125,23 @@ func TestPKI_TemplatedAIAs(t *testing.T) {
 	_, err = CBWrite(b, s, "config/urls", aiaData)
 	require.NoError(t, err)
 
-	// But root generation will fail.
+	// Root generation should succeed, but without AIA info.
 	rootData := map[string]interface{}{
 		"common_name": "Long-Lived Root X1",
 		"issuer_name": "long-root-x1",
 		"key_type":    "ec",
 	}
-	_, err = CBWrite(b, s, "root/generate/internal", rootData)
-	require.Error(t, err)
-	require.Contains(t, err.Error(), "unable to parse AIA URL")
+	resp, err = CBWrite(b, s, "root/generate/internal", rootData)
+	require.NoError(t, err)
+	_, err = CBDelete(b, s, "root")
+	require.NoError(t, err)
 
-	// Clearing the config and regenerating the root should succeed.
+	// Clearing the config and regenerating the root should still succeed.
 	_, err = CBWrite(b, s, "config/urls", map[string]interface{}{
-		"crl_distribution_points": "",
-		"issuing_certificates":    "",
-		"ocsp_servers":            "",
-		"enable_templating":       false,
+		"crl_distribution_points": "{{cluster_path}}/issuer/my-root-id/crl/der",
+		"issuing_certificates":    "{{cluster_aia_path}}/issuer/my-root-id/der",
+		"ocsp_servers":            "{{cluster_path}}/ocsp",
+		"enable_templating":       true,
 	})
 	require.NoError(t, err)
 	resp, err = CBWrite(b, s, "root/generate/internal", rootData)
@@ -6768,7 +6769,9 @@ func TestProperAuthing(t *testing.T) {
 		"certs":                                  shouldBeAuthed,
 		"certs/revoked":                          shouldBeAuthed,
 		"certs/revocation-queue":                 shouldBeAuthed,
+		"certs/revocation-queue/":                shouldBeAuthed,
 		"certs/unified-revoked":                  shouldBeAuthed,
+		"certs/unified-revoked/":                 shouldBeAuthed,
 		"config/acme":                            shouldBeAuthed,
 		"config/auto-tidy":                       shouldBeAuthed,
 		"config/ca":                              shouldBeAuthed,
@@ -7096,6 +7099,33 @@ func TestPatchIssuer(t *testing.T) {
 			require.Equal(t, []string{id}, resp.Data[testCase.Field], "failed persisting value")
 		}
 	}
+}
+
+func TestGenerateRootCAWithAIA(t *testing.T) {
+	// Generate a root CA at /pki-root
+	b_root, s_root := CreateBackendWithStorage(t)
+
+	// Setup templated AIA information
+	_, err := CBWrite(b_root, s_root, "config/cluster", map[string]interface{}{
+		"path":     "https://localhost:8200",
+		"aia_path": "https://localhost:8200",
+	})
+	require.NoError(t, err, "failed to write AIA settings")
+
+	_, err = CBWrite(b_root, s_root, "config/urls", map[string]interface{}{
+		"crl_distribution_points": "{{cluster_path}}/issuer/{{issuer_id}}/crl/der",
+		"issuing_certificates":    "{{cluster_aia_path}}/issuer/{{issuer_id}}/der",
+		"ocsp_servers":            "{{cluster_path}}/ocsp",
+		"enable_templating":       true,
+	})
+	require.NoError(t, err, "failed to write AIA settings")
+
+	// Write a root issuer, this should succeed.
+	resp, err := CBWrite(b_root, s_root, "root/generate/exported", map[string]interface{}{
+		"common_name": "root myvault.com",
+		"key_type":    "ec",
+	})
+	requireSuccessNonNilResponse(t, resp, err, "expected root generation to succeed")
 }
 
 var (

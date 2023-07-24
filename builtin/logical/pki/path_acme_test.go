@@ -24,6 +24,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/hashicorp/vault/sdk/helper/certutil"
+
 	"github.com/go-test/deep"
 	"github.com/stretchr/testify/require"
 	"golang.org/x/crypto/acme"
@@ -273,7 +275,7 @@ func TestAcmeBasicWorkflow(t *testing.T) {
 			_, _, err = acmeClient.CreateOrderCert(testCtx, createOrder.FinalizeURL, csrWithBadName, true)
 			require.Error(t, err, "should not be allowed to csr with different names than order")
 
-			// Validate we reject CSRs that contain IP addreses that weren't in the original order
+			// Validate we reject CSRs that contain IP addresses that weren't in the original order
 			badCr = &x509.CertificateRequest{
 				Subject:     pkix.Name{CommonName: createOrder.Identifiers[0].Value},
 				IPAddresses: []net.IP{{127, 0, 0, 1}},
@@ -313,6 +315,29 @@ func TestAcmeBasicWorkflow(t *testing.T) {
 			if maxAcmeNotAfter.Before(acmeCert.NotAfter) {
 				require.Fail(t, fmt.Sprintf("certificate has a NotAfter value %v greater than ACME max ttl %v", acmeCert.NotAfter, maxAcmeNotAfter))
 			}
+
+			// Can we revoke it using the account key revocation
+			err = acmeClient.RevokeCert(ctx, nil, certs[0], acme.CRLReasonUnspecified)
+			require.NoError(t, err, "failed to revoke certificate through account key")
+
+			// Make sure it was actually revoked
+			certResp, err := client.Logical().ReadWithContext(ctx, "pki/cert/"+serialFromCert(acmeCert))
+			require.NoError(t, err, "failed to read certificate status")
+			require.NotNil(t, certResp, "certificate status response was nil")
+			revocationTime := certResp.Data["revocation_time"].(json.Number)
+			revocationTimeInt, err := revocationTime.Int64()
+			require.NoError(t, err, "failed converting revocation_time value: %v", revocationTime)
+			require.Greater(t, revocationTimeInt, int64(0),
+				"revocation time was not greater than 0, revocation did not work value was: %v", revocationTimeInt)
+
+			// Make sure we can revoke an authorization as a client
+			err = acmeClient.RevokeAuthorization(ctx, authorizations[0].URI)
+			require.NoError(t, err, "failed revoking authorization status")
+
+			revokedAuth, err := acmeClient.GetAuthorization(ctx, authorizations[0].URI)
+			require.NoError(t, err, "failed fetching authorization")
+			require.Equal(t, acme.StatusDeactivated, revokedAuth.Status)
+
 			// Deactivate account
 			t.Logf("Testing deactivate account on %s", baseAcmeURL)
 			err = acmeClient.DeactivateReg(testCtx)
@@ -770,8 +795,10 @@ func TestAcmeTruncatesToIssuerExpiry(t *testing.T) {
 	require.Equal(t, shortCa.NotAfter, acmeCert.NotAfter, "certificate times aren't the same")
 }
 
-// TestAcmeIgnoresRoleExtKeyUsage
-func TestAcmeIgnoresRoleExtKeyUsage(t *testing.T) {
+// TestAcmeRoleExtKeyUsage verify that ACME by default ignores the role's various ExtKeyUsage flags,
+// but if the ACME configuration override of allow_role_ext_key_usage is set that we then honor
+// the role's flag.
+func TestAcmeRoleExtKeyUsage(t *testing.T) {
 	t.Parallel()
 
 	cluster, client, _ := setupAcmeBackend(t)
@@ -782,8 +809,8 @@ func TestAcmeIgnoresRoleExtKeyUsage(t *testing.T) {
 	roleName := "test-role"
 
 	roleOpt := map[string]interface{}{
-		"ttl_duration":                "365h",
-		"max_ttl_duration":            "720h",
+		"ttl":                         "365h",
+		"max_ttl":                     "720h",
 		"key_type":                    "any",
 		"allowed_domains":             "localdomain",
 		"allow_subdomains":            "true",
@@ -837,6 +864,37 @@ func TestAcmeIgnoresRoleExtKeyUsage(t *testing.T) {
 	require.Equal(t, 1, len(acmeCert.ExtKeyUsage), "mis-match on expected ExtKeyUsages")
 	require.ElementsMatch(t, []x509.ExtKeyUsage{x509.ExtKeyUsageServerAuth}, acmeCert.ExtKeyUsage,
 		"mismatch of ExtKeyUsage flags")
+
+	// Now turn the ACME configuration allow_role_ext_key_usage and retest to make sure we get a certificate
+	// with them all
+	_, err = client.Logical().WriteWithContext(context.Background(), "pki/config/acme", map[string]interface{}{
+		"enabled":                  true,
+		"eab_policy":               "not-required",
+		"allow_role_ext_key_usage": true,
+	})
+	require.NoError(t, err, "failed updating ACME configuration")
+
+	t.Logf("Testing Authorize Order on %s", baseAcmeURL)
+	order, err = acmeClient.AuthorizeOrder(testCtx, []acme.AuthzID{
+		{Type: "dns", Value: identifiers[0]},
+	})
+	require.NoError(t, err, "failed creating order")
+
+	// HACK: Update authorization/challenge to completed as we can't really do it properly in this workflow test.
+	markAuthorizationSuccess(t, client, acmeClient, acct, order)
+
+	certs, _, err = acmeClient.CreateOrderCert(testCtx, order.FinalizeURL, csr, true)
+	require.NoError(t, err, "order finalization failed")
+	require.GreaterOrEqual(t, len(certs), 1, "expected at least one cert in bundle")
+	acmeCert, err = x509.ParseCertificate(certs[0])
+	require.NoError(t, err, "failed parsing acme cert")
+
+	require.Equal(t, 4, len(acmeCert.ExtKeyUsage), "mis-match on expected ExtKeyUsages")
+	require.ElementsMatch(t, []x509.ExtKeyUsage{
+		x509.ExtKeyUsageServerAuth, x509.ExtKeyUsageClientAuth,
+		x509.ExtKeyUsageCodeSigning, x509.ExtKeyUsageEmailProtection,
+	},
+		acmeCert.ExtKeyUsage, "mismatch of ExtKeyUsage flags")
 }
 
 func TestIssuerRoleDirectoryAssociations(t *testing.T) {
@@ -970,13 +1028,131 @@ func TestIssuerRoleDirectoryAssociations(t *testing.T) {
 		require.Contains(t, leafCert.Subject.OrganizationalUnit, "IT Security", "on directory: %v", directory)
 		requireSignedByAtPath(t, client, leafCert, issuerPath)
 	}
-
-	// 5.
 }
 
-func markAuthorizationSuccess(t *testing.T, client *api.Client, acmeClient *acme.Client, acct *acme.Account,
-	order *acme.Order,
-) {
+func TestACMESubjectFieldsAndExtensionsIgnored(t *testing.T) {
+	t.Parallel()
+
+	// This creates two issuers for us (root-ca, int-ca) and two
+	// roles (test-role, acme) that we can use with various directory
+	// configurations.
+	cluster, client, _ := setupAcmeBackend(t)
+	defer cluster.Cleanup()
+
+	// Setup DNS for validations.
+	testCtx := context.Background()
+	dns := dnstest.SetupResolver(t, "dadgarcorp.com")
+	defer dns.Cleanup()
+	_, err := client.Logical().WriteWithContext(testCtx, "pki/config/acme", map[string]interface{}{
+		"dns_resolver": dns.GetLocalAddr(),
+	})
+	require.NoError(t, err, "failed to specify dns resolver")
+
+	// Use the default sign-verbatim policy and ensure OU does not get set.
+	directory := "/v1/pki/acme/"
+	domains := []string{"no-ou.dadgarcorp.com"}
+	acmeClient := getAcmeClientForCluster(t, cluster, directory, nil)
+	cr := &x509.CertificateRequest{
+		Subject:  pkix.Name{CommonName: domains[0], OrganizationalUnit: []string{"DadgarCorp IT"}},
+		DNSNames: domains,
+	}
+	cert := doACMEForCSRWithDNS(t, dns, acmeClient, domains, cr)
+	t.Logf("Got certificate: %v", cert)
+	require.Empty(t, cert.Subject.OrganizationalUnit)
+
+	// Use the default sign-verbatim policy and ensure extension does not get set.
+	domains = []string{"no-ext.dadgarcorp.com"}
+	extension, err := certutil.CreateDeltaCRLIndicatorExt(12345)
+	require.NoError(t, err)
+	cr = &x509.CertificateRequest{
+		Subject:         pkix.Name{CommonName: domains[0]},
+		DNSNames:        domains,
+		ExtraExtensions: []pkix.Extension{extension},
+	}
+	cert = doACMEForCSRWithDNS(t, dns, acmeClient, domains, cr)
+	t.Logf("Got certificate: %v", cert)
+	for _, ext := range cert.Extensions {
+		require.False(t, ext.Id.Equal(certutil.DeltaCRLIndicatorOID))
+	}
+	require.NotEmpty(t, cert.Extensions)
+}
+
+// TestAcmeWithCsrIncludingBasicConstraintExtension verify that we error out for a CSR that is requesting a
+// certificate with the IsCA set to true, false is okay, within the basic constraints extension and that no matter what
+// the extension is not present on the returned certificate.
+func TestAcmeWithCsrIncludingBasicConstraintExtension(t *testing.T) {
+	t.Parallel()
+
+	cluster, client, _ := setupAcmeBackend(t)
+	defer cluster.Cleanup()
+
+	testCtx := context.Background()
+
+	baseAcmeURL := "/v1/pki/acme/"
+	accountKey, err := rsa.GenerateKey(rand.Reader, 2048)
+	require.NoError(t, err, "failed creating rsa key")
+
+	acmeClient := getAcmeClientForCluster(t, cluster, baseAcmeURL, accountKey)
+
+	// Create new account
+	t.Logf("Testing register on %s", baseAcmeURL)
+	acct, err := acmeClient.Register(testCtx, &acme.Account{}, func(tosURL string) bool { return true })
+	require.NoError(t, err, "failed registering account")
+
+	// Create an order
+	t.Logf("Testing Authorize Order on %s", baseAcmeURL)
+	identifiers := []string{"*.localdomain"}
+	order, err := acmeClient.AuthorizeOrder(testCtx, []acme.AuthzID{
+		{Type: "dns", Value: identifiers[0]},
+	})
+	require.NoError(t, err, "failed creating order")
+
+	// HACK: Update authorization/challenge to completed as we can't really do it properly in this workflow test.
+	markAuthorizationSuccess(t, client, acmeClient, acct, order)
+
+	// Build a CSR with IsCA set to true, making sure we reject it
+	extension, err := certutil.CreateBasicConstraintExtension(true, -1)
+	require.NoError(t, err, "failed generating basic constraint extension")
+
+	isCATrueCSR := &x509.CertificateRequest{
+		DNSNames:        []string{identifiers[0]},
+		ExtraExtensions: []pkix.Extension{extension},
+	}
+	csrKey, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+	require.NoError(t, err, "failed generated key for CSR")
+	csr, err := x509.CreateCertificateRequest(rand.Reader, isCATrueCSR, csrKey)
+	require.NoError(t, err, "failed generating csr")
+
+	_, _, err = acmeClient.CreateOrderCert(testCtx, order.FinalizeURL, csr, true)
+	require.Error(t, err, "order finalization should have failed with IsCA set to true")
+
+	extension, err = certutil.CreateBasicConstraintExtension(false, -1)
+	require.NoError(t, err, "failed generating basic constraint extension")
+	isCAFalseCSR := &x509.CertificateRequest{
+		DNSNames:   []string{identifiers[0]},
+		Extensions: []pkix.Extension{extension},
+	}
+
+	csr, err = x509.CreateCertificateRequest(rand.Reader, isCAFalseCSR, csrKey)
+	require.NoError(t, err, "failed generating csr")
+
+	certs, _, err := acmeClient.CreateOrderCert(testCtx, order.FinalizeURL, csr, true)
+	require.NoError(t, err, "order finalization should have failed with IsCA set to false")
+
+	require.GreaterOrEqual(t, len(certs), 1, "expected at least one cert in bundle")
+	acmeCert, err := x509.ParseCertificate(certs[0])
+	require.NoError(t, err, "failed parsing acme cert")
+
+	// Make sure we don't have any basic constraint extension within the returned cert
+	for _, ext := range acmeCert.Extensions {
+		if ext.Id.Equal(certutil.ExtensionBasicConstraintsOID) {
+			// We shouldn't have this extension in our cert
+			t.Fatalf("acme csr contained a basic constraints extension")
+		}
+	}
+}
+
+func markAuthorizationSuccess(t *testing.T, client *api.Client, acmeClient *acme.Client, acct *acme.Account, order *acme.Order) {
 	testCtx := context.Background()
 
 	pkiMount := findStorageMountUuid(t, client, "pki")
@@ -990,8 +1166,15 @@ func markAuthorizationSuccess(t *testing.T, client *api.Client, acmeClient *acme
 		for _, authURI := range order.AuthzURLs {
 			authId := authURI[strings.LastIndex(authURI, "/"):]
 
-			rawPath := path.Join("/sys/raw/logical/", pkiMount, getAuthorizationPath(accountId, authId))
-			resp, err := client.Logical().ReadWithContext(testCtx, rawPath)
+			// sys/raw does not work with namespaces
+			baseClient := client.WithNamespace("")
+
+			values, err := baseClient.Logical().ListWithContext(testCtx, "sys/raw/logical/")
+			require.NoError(t, err)
+			require.True(t, true, "values: %v", values)
+
+			rawPath := path.Join("sys/raw/logical/", pkiMount, getAuthorizationPath(accountId, authId))
+			resp, err := baseClient.Logical().ReadWithContext(testCtx, rawPath)
 			require.NoError(t, err, "failed looking up authorization storage")
 			require.NotNil(t, resp, "sys raw response was nil")
 			require.NotEmpty(t, resp.Data["value"], "no value field in sys raw response")
@@ -1006,7 +1189,7 @@ func markAuthorizationSuccess(t *testing.T, client *api.Client, acmeClient *acme
 
 			encodeJSON, err := jsonutil.EncodeJSON(authz)
 			require.NoError(t, err, "failed encoding authz json")
-			_, err = client.Logical().WriteWithContext(testCtx, rawPath, map[string]interface{}{
+			_, err = baseClient.Logical().WriteWithContext(testCtx, rawPath, map[string]interface{}{
 				"value":    base64.StdEncoding.EncodeToString(encodeJSON),
 				"encoding": "base64",
 			})
@@ -1044,8 +1227,10 @@ func markAuthorizationSuccess(t *testing.T, client *api.Client, acmeClient *acme
 func deleteCvEntries(t *testing.T, client *api.Client, pkiMount string) bool {
 	testCtx := context.Background()
 
-	cvPath := path.Join("/sys/raw/logical/", pkiMount, acmeValidationPrefix)
-	resp, err := client.Logical().ListWithContext(testCtx, cvPath)
+	baseClient := client.WithNamespace("")
+
+	cvPath := path.Join("sys/raw/logical/", pkiMount, acmeValidationPrefix)
+	resp, err := baseClient.Logical().ListWithContext(testCtx, cvPath)
 	require.NoError(t, err, "failed listing cv path items")
 
 	deletedEntries := false
@@ -1053,7 +1238,7 @@ func deleteCvEntries(t *testing.T, client *api.Client, pkiMount string) bool {
 		cvEntries := resp.Data["keys"].([]interface{})
 		for _, cvEntry := range cvEntries {
 			cvEntryPath := path.Join(cvPath, cvEntry.(string))
-			_, err = client.Logical().DeleteWithContext(testCtx, cvEntryPath)
+			_, err = baseClient.Logical().DeleteWithContext(testCtx, cvEntryPath)
 			require.NoError(t, err, "failed to delete cv entry")
 			deletedEntries = true
 		}
@@ -1105,7 +1290,7 @@ func setupAcmeBackendOnClusterAtPath(t *testing.T, cluster *vault.TestCluster, c
 		require.NoError(t, err, "failed to mount new PKI instance at "+mount)
 	}
 
-	err := client.Sys().TuneMountWithContext(ctx, mountName, api.MountConfigInput{
+	err := client.Sys().TuneMountWithContext(ctx, mount, api.MountConfigInput{
 		DefaultLeaseTTL: "3000h",
 		MaxLeaseTTL:     "600000h",
 	})
@@ -1135,7 +1320,7 @@ func setupAcmeBackendOnClusterAtPath(t *testing.T, cluster *vault.TestCluster, c
 			"issuer_name": "root-ca",
 			"key_name":    "root-key",
 			"key_type":    "ec",
-			"common_name": "root.com",
+			"common_name": "Test Root R1 " + mount,
 			"ttl":         "7200h",
 			"max_ttl":     "920000h",
 		})
@@ -1145,7 +1330,7 @@ func setupAcmeBackendOnClusterAtPath(t *testing.T, cluster *vault.TestCluster, c
 		map[string]interface{}{
 			"key_name":    "int-key",
 			"key_type":    "ec",
-			"common_name": "test.com",
+			"common_name": "Test Int X1 " + mount,
 		})
 	require.NoError(t, err, "failed creating intermediary CSR")
 	intermediateCSR := resp.Data["csr"].(string)
@@ -1179,8 +1364,8 @@ func setupAcmeBackendOnClusterAtPath(t *testing.T, cluster *vault.TestCluster, c
 	require.NoError(t, err, "failed updating default issuer")
 
 	_, err = client.Logical().Write(mount+"/roles/test-role", map[string]interface{}{
-		"ttl_duration":                "168h",
-		"max_ttl_duration":            "168h",
+		"ttl":                         "168h",
+		"max_ttl":                     "168h",
 		"key_type":                    "any",
 		"allowed_domains":             "localdomain",
 		"allow_subdomains":            "true",
@@ -1189,9 +1374,9 @@ func setupAcmeBackendOnClusterAtPath(t *testing.T, cluster *vault.TestCluster, c
 	require.NoError(t, err, "failed creating role test-role")
 
 	_, err = client.Logical().Write(mount+"/roles/acme", map[string]interface{}{
-		"ttl_duration":     "3650h",
-		"max_ttl_duration": "7200h",
-		"key_type":         "any",
+		"ttl":      "3650h",
+		"max_ttl":  "7200h",
+		"key_type": "any",
 	})
 	require.NoError(t, err, "failed creating role acme")
 
@@ -1328,6 +1513,131 @@ func TestAcmeValidationError(t *testing.T) {
 	}
 }
 
+// TestAcmeRevocationAcrossAccounts makes sure that we can revoke certificates using different accounts if
+// we have another ACME account or not but access to the certificate key. Also verifies we can't revoke
+// certificates across account keys.
+func TestAcmeRevocationAcrossAccounts(t *testing.T) {
+	t.Parallel()
+
+	cluster, vaultClient, _ := setupAcmeBackend(t)
+	defer cluster.Cleanup()
+	testCtx := context.Background()
+
+	baseAcmeURL := "/v1/pki/acme/"
+	accountKey1, err := rsa.GenerateKey(rand.Reader, 2048)
+	require.NoError(t, err, "failed creating rsa key")
+
+	acmeClient1 := getAcmeClientForCluster(t, cluster, baseAcmeURL, accountKey1)
+
+	leafKey, certs := doACMEWorkflow(t, vaultClient, acmeClient1)
+	acmeCert, err := x509.ParseCertificate(certs[0])
+	require.NoError(t, err, "failed parsing acme cert bytes")
+
+	// Make sure our cert is not revoked
+	certResp, err := vaultClient.Logical().ReadWithContext(ctx, "pki/cert/"+serialFromCert(acmeCert))
+	require.NoError(t, err, "failed to read certificate status")
+	require.NotNil(t, certResp, "certificate status response was nil")
+	revocationTime := certResp.Data["revocation_time"].(json.Number)
+	revocationTimeInt, err := revocationTime.Int64()
+	require.NoError(t, err, "failed converting revocation_time value: %v", revocationTime)
+	require.Equal(t, revocationTimeInt, int64(0),
+		"revocation time was not 0, cert was already revoked: %v", revocationTimeInt)
+
+	// Test that we can't revoke the certificate with another account's key
+	accountKey2, err := ecdsa.GenerateKey(elliptic.P384(), rand.Reader)
+	require.NoError(t, err, "failed creating rsa key")
+
+	acmeClient2 := getAcmeClientForCluster(t, cluster, baseAcmeURL, accountKey2)
+	_, err = acmeClient2.Register(testCtx, &acme.Account{}, func(tosURL string) bool { return true })
+	require.NoError(t, err, "failed registering second account")
+
+	err = acmeClient2.RevokeCert(ctx, nil, certs[0], acme.CRLReasonUnspecified)
+	require.Error(t, err, "should have failed revoking the certificate with a different account")
+
+	// Make sure our cert is not revoked
+	certResp, err = vaultClient.Logical().ReadWithContext(ctx, "pki/cert/"+serialFromCert(acmeCert))
+	require.NoError(t, err, "failed to read certificate status")
+	require.NotNil(t, certResp, "certificate status response was nil")
+	revocationTime = certResp.Data["revocation_time"].(json.Number)
+	revocationTimeInt, err = revocationTime.Int64()
+	require.NoError(t, err, "failed converting revocation_time value: %v", revocationTime)
+	require.Equal(t, revocationTimeInt, int64(0),
+		"revocation time was not 0, cert was already revoked: %v", revocationTimeInt)
+
+	// But we can revoke if we sign the request with the certificate's key and a different account
+	err = acmeClient2.RevokeCert(ctx, leafKey, certs[0], acme.CRLReasonUnspecified)
+	require.NoError(t, err, "should have been allowed to revoke certificate with csr key across accounts")
+
+	// Make sure our cert is now revoked
+	certResp, err = vaultClient.Logical().ReadWithContext(ctx, "pki/cert/"+serialFromCert(acmeCert))
+	require.NoError(t, err, "failed to read certificate status")
+	require.NotNil(t, certResp, "certificate status response was nil")
+	revocationTime = certResp.Data["revocation_time"].(json.Number)
+	revocationTimeInt, err = revocationTime.Int64()
+	require.NoError(t, err, "failed converting revocation_time value: %v", revocationTime)
+	require.Greater(t, revocationTimeInt, int64(0),
+		"revocation time was not greater than 0, cert was not revoked: %v", revocationTimeInt)
+
+	// Make sure we can revoke a certificate without a registered ACME account
+	leafKey2, certs2 := doACMEWorkflow(t, vaultClient, acmeClient1)
+
+	acmeClient3 := getAcmeClientForCluster(t, cluster, baseAcmeURL, nil)
+	err = acmeClient3.RevokeCert(ctx, leafKey2, certs2[0], acme.CRLReasonUnspecified)
+	require.NoError(t, err, "should be allowed to revoke a cert with no ACME account but with cert key")
+
+	// Make sure our cert is now revoked
+	acmeCert2, err := x509.ParseCertificate(certs2[0])
+	require.NoError(t, err, "failed parsing acme cert 2 bytes")
+
+	certResp, err = vaultClient.Logical().ReadWithContext(ctx, "pki/cert/"+serialFromCert(acmeCert2))
+	require.NoError(t, err, "failed to read certificate status")
+	require.NotNil(t, certResp, "certificate status response was nil")
+	revocationTime = certResp.Data["revocation_time"].(json.Number)
+	revocationTimeInt, err = revocationTime.Int64()
+	require.NoError(t, err, "failed converting revocation_time value: %v", revocationTime)
+	require.Greater(t, revocationTimeInt, int64(0),
+		"revocation time was not greater than 0, cert was not revoked: %v", revocationTimeInt)
+}
+
+func doACMEWorkflow(t *testing.T, vaultClient *api.Client, acmeClient *acme.Client) (*ecdsa.PrivateKey, [][]byte) {
+	testCtx := context.Background()
+
+	// Create new account
+	acct, err := acmeClient.Register(testCtx, &acme.Account{}, func(tosURL string) bool { return true })
+	if err != nil {
+		if strings.Contains(err.Error(), "acme: account already exists") {
+			acct, err = acmeClient.GetReg(testCtx, "")
+			require.NoError(t, err, "failed looking up account after account exists error?")
+		} else {
+			require.NoError(t, err, "failed registering account")
+		}
+	}
+
+	// Create an order
+	identifiers := []string{"*.localdomain"}
+	order, err := acmeClient.AuthorizeOrder(testCtx, []acme.AuthzID{
+		{Type: "dns", Value: identifiers[0]},
+	})
+	require.NoError(t, err, "failed creating order")
+
+	// HACK: Update authorization/challenge to completed as we can't really do it properly in this workflow
+	//       test.
+	markAuthorizationSuccess(t, vaultClient, acmeClient, acct, order)
+
+	// Build a proper CSR, with the correct name and signed with a different key works.
+	goodCr := &x509.CertificateRequest{DNSNames: []string{identifiers[0]}}
+	csrKey, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+	require.NoError(t, err, "failed generated key for CSR")
+	csr, err := x509.CreateCertificateRequest(rand.Reader, goodCr, csrKey)
+	require.NoError(t, err, "failed generating csr")
+
+	certs, _, err := acmeClient.CreateOrderCert(testCtx, order.FinalizeURL, csr, true)
+	require.NoError(t, err, "failed finalizing order")
+	require.Len(t, certs, 3, "expected full acme chain")
+
+	return csrKey, certs
+}
+
 func setupTestPkiCluster(t *testing.T) (*vault.TestCluster, *api.Client) {
 	coreConfig := &vault.CoreConfig{
 		LogicalBackends: map[string]logical.Factory{
@@ -1359,6 +1669,9 @@ func getAcmeClientForCluster(t *testing.T, cluster *vault.TestCluster, baseUrl s
 	}
 	if !strings.HasPrefix(baseUrl, "v1/") {
 		baseUrl = "v1/" + baseUrl
+	}
+	if !strings.HasSuffix(baseUrl, "/") {
+		baseUrl = baseUrl + "/"
 	}
 	baseAcmeURL := fmt.Sprintf("https://%s/%s", coreAddr.String(), baseUrl)
 	return &acme.Client{

@@ -5,13 +5,11 @@ description: >-
   The Vault Secrets Operator allows Pods to consume Vault secrets natively from Kubernetes Secrets.
 ---
 
-@include 'vso-beta-note.mdx'
-
 <!--
   copied from docs/api/api-reference.md in the vault-secrets-operator repo.
-  commit SHA=27cb53cd860b78aa0a33897ec66b1d175ccaf4f6
+  commit SHA=90ae1b3095c65c1e3eeec157971bd6a3e2c3f5e1
 -->
-# API Reference
+# API reference
 
 ## Packages
 - [secrets.hashicorp.com/v1beta1](#secretshashicorpcomv1beta1)
@@ -21,7 +19,7 @@ description: >-
 
 Package v1beta1 contains API Schema definitions for the secrets v1beta1 API group
 
-### Resource Types
+### Resource types
 - [VaultAuth](#vaultauth)
 - [VaultAuthList](#vaultauthlist)
 - [VaultConnection](#vaultconnection)
@@ -383,7 +381,7 @@ _Appears in:_
 | `expiryOffset` _string_ | ExpiryOffset to use for computing when the certificate should be renewed. The rotation time will be difference between the expiration and the offset. Should be in duration notation e.g. 30s, 120s, etc. Set to empty string "" to prevent certificate rotation. |
 | `issuerRef` _string_ | IssuerRef reference to an existing PKI issuer, either by Vault-generated identifier, the literal string default to refer to the currently configured default issuer, or the name assigned to an issuer. This parameter is part of the request URL. |
 | `rolloutRestartTargets` _[RolloutRestartTarget](#rolloutrestarttarget) array_ | RolloutRestartTargets should be configured whenever the application(s) consuming the Vault secret does not support dynamically reloading a rotated secret. In that case one, or more RolloutRestartTarget(s) can be configured here. The Operator will trigger a "rollout-restart" for each target whenever the Vault secret changes between reconciliation events. See RolloutRestartTarget for more details. |
-| `destination` _[Destination](#destination)_ | Destination provides configuration necessary for syncing the Vault secret to Kubernetes. If the type is set to "kubernetes.io/tls", the Vault response fields "certificate" and "private_key" will be copied to fields "tls.crt" and "tls.key", respectively, in the Kubernetes secret. |
+| `destination` _[Destination](#destination)_ | Destination provides configuration necessary for syncing the Vault secret to Kubernetes. If the type is set to "kubernetes.io/tls", "tls.key" will be set to the "private_key" response from Vault, and "tls.crt" will be set to "certificate" + "ca_chain" from the Vault response ("issuing_ca" is used when "ca_chain" is empty). The "remove_roots_from_chain=true" option is used with Vault to exclude the root CA from the Vault response. |
 | `commonName` _string_ | CommonName to include in the request. |
 | `altNames` _string array_ | AltNames to include in the request May contain both DNS names and email addresses. |
 | `ipSans` _string array_ | IPSans to include in the request. |
@@ -478,14 +476,10 @@ _Appears in:_
 | `vaultAuthRef` _string_ | VaultAuthRef of the VaultAuth resource If no value is specified the Operator will default to the `default` VaultAuth, configured in its own Kubernetes namespace. |
 | `namespace` _string_ | Namespace to get the secret from in Vault |
 | `mount` _string_ | Mount for the secret in Vault |
-| `path` _string_ | Path of the secret in Vault, corresponds to the `path` parameter for, [kv-v1](/vault/api-docs/secret/kv/kv-v1#read-secret [kv-v2](/vault/api-docs/secret/kv/kv-v2#read-secret-version) |
-| `version` _integer_ | Version of the secret to fetch. Only valid for type kv-v2. Corresponds to version query parameter: [kv-v2](/vault/api-docs/secret/kv/kv-v2#version) |
+| `path` _string_ | Path of the secret in Vault, corresponds to the `path` parameter for, [kv-v1](/vault/api-docs/secret/kv/kv-v1#read-secret) [kv-v2](/vault/api-docs/secret/kv/kv-v2#read-secret-version) |
+| `version` _integer_ | Version of the secret to fetch. Only valid for type kv-v2. Corresponds to version query parameter: [version](/vault/api-docs/secret/kv/kv-v2#version) |
 | `type` _string_ | Type of the Vault static secret |
 | `refreshAfter` _string_ | RefreshAfter a period of time, in duration notation |
 | `hmacSecretData` _boolean_ | HMACSecretData determines whether the Operator computes the HMAC of the Secret's data. The MAC value will be stored in the resource's Status.SecretMac field, and will be used for drift detection and during incoming Vault secret comparison. Enabling this feature is recommended to ensure that Secret's data stays consistent with Vault. |
 | `rolloutRestartTargets` _[RolloutRestartTarget](#rolloutrestarttarget) array_ | RolloutRestartTargets should be configured whenever the application(s) consuming the Vault secret does not support dynamically reloading a rotated secret. In that case one, or more RolloutRestartTarget(s) can be configured here. The Operator will trigger a "rollout-restart" for each target whenever the Vault secret changes between reconciliation events. All configured targets wil be ignored if HMACSecretData is set to false. See RolloutRestartTarget for more details. |
 | `destination` _[Destination](#destination)_ | Destination provides configuration necessary for syncing the Vault secret to Kubernetes. |
-
-
-
-

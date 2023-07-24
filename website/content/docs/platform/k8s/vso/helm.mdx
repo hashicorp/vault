@@ -5,18 +5,16 @@ description: >-
   Configuration for the Vault Secrets Operator Helm chart.
 ---
 
-@include 'vso-beta-note.mdx'
-
-# Vault Secrets Operator Helm Chart
+# Vault secrets operator helm chart
 
 The chart is customizable using
 [Helm configuration values](https://helm.sh/docs/intro/using_helm/#customizing-the-chart-before-installing).
 
 <!-- DO NOT EDIT. The docs below are generated automatically. To change, edit
-                  the vault-secrets-operator repo's values.yaml: file commit=b9d4f2f8ac86bdc1de71ca101ea8ed1c4e8a429e -->
+                  the vault-secrets-operator repo's values.yaml: file commit=e9c2b499105d977fa23a9f746186253991ebcee1 -->
 <!-- codegen: start -->
 
-## Top-Level Stanzas
+## Top-Level stanzas
 
 Use these links to navigate to a particular top-level stanza.
 
@@ -27,7 +25,7 @@ Use these links to navigate to a particular top-level stanza.
 - [`telemetry`](#h-telemetry)
 - [`tests`](#h-tests)
 
-## All Values
+## All values
 
 ### controller ((#h-controller))
 
@@ -69,7 +67,7 @@ Use these links to navigate to a particular top-level stanza.
 
       - `repository` ((#v-controller-manager-image-repository)) (`string: hashicorp/vault-secrets-operator`)
 
-      - `tag` ((#v-controller-manager-image-tag)) (`string: 0.1.0-rc.1`)
+      - `tag` ((#v-controller-manager-image-tag)) (`string: 0.1.0`)
 
     - `clientCache` ((#v-controller-manager-clientcache)) - Configures the client cache which is used by the controller to cache (and potentially persist) vault tokens that
       are the result of using the VaultAuthMethod. This enables re-use of Vault Tokens
@@ -98,8 +96,8 @@ Use these links to navigate to a particular top-level stanza.
         This should only be configured when client cache persistence with encryption is enabled and
         will deploy an additional VaultAuthMethod to be used by the Vault Transit Engine.
         E.g. when `controller.manager.clientCache.persistenceModel=direct-encrypted`
-        Supported Vault authentication methods for the Transit Auth method are: jwt, approle,
-        and kubernetes.
+        Supported Vault authentication methods for the Transit Auth method are: jwt, appRole,
+        aws, and kubernetes.
         Typically, there should only ever be one VaultAuth configured with
         StorageEncryption in the Cluster.
 
@@ -135,7 +133,7 @@ Use these links to navigate to a particular top-level stanza.
             This is a required field and must be setup in Vault prior to deploying the helm chart
             if using JWT for the Transit VaultAuthMethod.
 
-          - `secretName` ((#v-controller-manager-clientcache-storageencryption-jwt-secretname)) (`string: ""`) - One of the following is required prior to deploying the helm chart
+          - `secretRef` ((#v-controller-manager-clientcache-storageencryption-jwt-secretref)) (`string: ""`) - One of the following is required prior to deploying the helm chart
             - K8s secret that contains the JWT
             - K8s service account if a service account JWT is used as a Vault JWT auth token and
             needs generating by VSO.
@@ -156,7 +154,7 @@ Use these links to navigate to a particular top-level stanza.
             This is a required field when using appRole and must be setup in Vault prior to deploying
             the helm chart.
 
-          - `secretName` ((#v-controller-manager-clientcache-storageencryption-approle-secretname)) (`string: ""`) - Name of Kubernetes Secret that has the AppRole Role's SecretID used to authenticate with
+          - `secretRef` ((#v-controller-manager-clientcache-storageencryption-approle-secretref)) (`string: ""`) - Name of Kubernetes Secret that has the AppRole Role's SecretID used to authenticate with
             Vault. The Kubernetes Secret must contain a key named `id` which references the AppRole
             Role's SecretID, and must exist in the namespace of any consuming VaultSecret CR.
             This is a required field when using appRole and must be setup in Vault prior to
@@ -187,15 +185,11 @@ Use these links to navigate to a particular top-level stanza.
 
         - `params` ((#v-controller-manager-clientcache-storageencryption-params)) (`map`) - Params to use when authenticating to Vault using this auth method.
           params:
-            vault-something1: "foo"
-            vault-something2: "bar"
-            vault-something3: "baz"
+            param-something1: "foo"
 
         - `headers` ((#v-controller-manager-clientcache-storageencryption-headers)) (` map: ""`) - Headers to be included in all Vault requests.
           headers:
-            vault-something1: "foo"
-            vault-something2: "bar"
-            vault-something3: "baz"
+            X-vault-something1: "foo"
 
     - `maxConcurrentReconciles` ((#v-controller-manager-maxconcurrentreconciles)) (`integer: ""`) - Defines the maximum number of concurrent reconciles by the controller.
       NOTE: Currently this is only used by the reconciliation logic of dynamic secrets.
@@ -283,11 +277,9 @@ Use these links to navigate to a particular top-level stanza.
 
   - `skipTLSVerify` ((#v-defaultvaultconnection-skiptlsverify)) (`boolean: false`) - SkipTLSVerify for TLS connections.
 
-  - `headers` ((#v-defaultvaultconnection-headers)) (`string: ""`) - Headers to be included in all Vault requests.
-    headers: |
-      "vault-something1": "foo"
-      "vault-something2": "bar"
-      "vault-something3": "baz"
+  - `headers` ((#v-defaultvaultconnection-headers)) (`map`) - Headers to be included in all Vault requests.
+    headers:
+      X-vault-something: "foo"
 
 ### defaultAuthMethod ((#h-defaultauthmethod))
 
@@ -322,7 +314,7 @@ Use these links to navigate to a particular top-level stanza.
       This is a required field and must be setup in Vault prior to deploying the helm chart
       if using the JWT for the default auth method.
 
-    - `secretName` ((#v-defaultauthmethod-jwt-secretname)) (`string: ""`) - One of the following is required prior to deploying the helm chart
+    - `secretRef` ((#v-defaultauthmethod-jwt-secretref)) (`string: ""`) - One of the following is required prior to deploying the helm chart
       - K8s secret that contains the JWT
       - K8s service account if a service account JWT is used as a Vault JWT auth token and needs generating by VSO
 
@@ -341,7 +333,7 @@ Use these links to navigate to a particular top-level stanza.
       This is a required field when using appRole and must be setup in Vault prior to deploying the
       helm chart.
 
-    - `secretName` ((#v-defaultauthmethod-approle-secretname)) (`string: ""`) - Name of Kubernetes Secret that has the AppRole Role's SecretID used to authenticate with Vault.
+    - `secretRef` ((#v-defaultauthmethod-approle-secretref)) (`string: ""`) - Name of Kubernetes Secret that has the AppRole Role's SecretID used to authenticate with Vault.
       The Kubernetes Secret must contain a key named `id` which references the AppRole Role's
       SecretID, and must exist in the namespace of any consuming VaultSecret CR.
       This is a required field when using appRole and must be setup in Vault prior to deploying the
@@ -372,15 +364,11 @@ Use these links to navigate to a particular top-level stanza.
 
   - `params` ((#v-defaultauthmethod-params)) (`map`) - Params to use when authenticating to Vault
     params:
-      vault-something1: "foo"
-      vault-something2: "bar"
-      vault-something3: "baz"
+      param-something1: "foo"
 
   - `headers` ((#v-defaultauthmethod-headers)) (`map`) - Headers to be included in all Vault requests.
     headers:
-      vault-something1: "foo"
-      vault-something2: "bar"
-      vault-something3: "baz"
+      X-vault-something1: "foo"
 
 ### telemetry ((#h-telemetry))
 
@@ -424,7 +412,7 @@ Use these links to navigate to a particular top-level stanza.
 
   <!-- codegen: end -->
 
-## Helm Chart Examples
+## Helm chart examples
 
 The below `config.yaml` results in a single replica installation of the Vault Secrets Operator
 with a default vault connection and auth method custom resource deployed.
@@ -443,7 +431,7 @@ defaultAuthMethod:
 
 ```
 
-## Customizing the Helm Chart
+## Customizing the helm chart
 
 If you need to extend the Helm chart with additional options, we recommend using a third-party tool,
 such as [kustomize](https://github.com/kubernetes-sigs/kustomize) using the project repo `config/` path

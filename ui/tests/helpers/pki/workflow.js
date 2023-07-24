@@ -12,6 +12,7 @@ import { SELECTORS as CONFIGURATION } from './pki-configure-create';
 import { SELECTORS as DELETE } from './pki-delete-all-issuers';
 import { SELECTORS as TIDY } from './page/pki-tidy-form';
 import { SELECTORS as CONFIGEDIT } from './page/pki-configuration-edit';
+import { SELECTORS as GENROOT } from './pki-generate-root';
 
 export const SELECTORS = {
   breadcrumbContainer: '[data-test-breadcrumbs]',
@@ -51,6 +52,7 @@ export const SELECTORS = {
     ...KEYPAGES,
   },
   // ISSUERS
+  issuerListItem: (id) => `[data-test-issuer-list="${id}"]`,
   importIssuerLink: '[data-test-generate-issuer="import"]',
   generateIssuerDropdown: '[data-test-issuer-generate-dropdown]',
   generateIssuerRoot: '[data-test-generate-issuer="root"]',
@@ -70,6 +72,7 @@ export const SELECTORS = {
     ...CONFIGURATION,
     ...DELETE,
     ...TIDY,
+    ...GENROOT,
   },
   // EDIT CONFIGURATION
   configEdit: {

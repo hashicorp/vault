@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package dnstest
 
 import (
@@ -204,6 +207,9 @@ func (ts *TestServer) PushConfig() {
 	ts.lock.Lock()
 	defer ts.lock.Unlock()
 
+	_, _, _, err := ts.runner.RunCmdWithOutput(ts.ctx, ts.startup.Container.ID, []string{"rndc", "freeze"})
+	require.NoError(ts.t, err, "failed to freeze DNS config")
+
 	// There's two cases here:
 	//
 	// 1. We've added a new top-level domain name. Here, we want to make
@@ -213,6 +219,9 @@ func (ts *TestServer) PushConfig() {
 	//    mostly likely the second push will be a no-op.
 	ts.pushZoneFiles()
 	ts.pushNamedConf()
+
+	_, _, _, err = ts.runner.RunCmdWithOutput(ts.ctx, ts.startup.Container.ID, []string{"rndc", "thaw"})
+	require.NoError(ts.t, err, "failed to thaw DNS config")
 
 	// Wait until our config has taken.
 	corehelpers.RetryUntil(ts.t, 15*time.Second, func() error {

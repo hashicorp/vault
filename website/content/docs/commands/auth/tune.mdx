@@ -9,13 +9,19 @@ description: |-
 # auth tune
 
 The `auth tune` command tunes the configuration options for the auth method at
-the given PATH. **The argument corresponds to the PATH where the auth method is
-enabled, not the TYPE!**
+the given PATH. 
+
+<Note>
+
+The argument corresponds to the **path** where the auth method is
+enabled, not the auth **type**.
+
+</Note>
 
 ## Examples
 
 Before tuning the auth method configuration, view the current configuration of the
-auth method enabled at "github/".
+auth method enabled at `github/`.
 
 ```shell-session
 $ vault read sys/auth/github/tune
@@ -28,13 +34,54 @@ max_lease_ttl        768h
 token_type           default-service
 ```
 
-The default lease for the auth method enabled at "github/" is currently set to
+The default lease for the auth method enabled at `github/` is currently set to
 768 hours. Tune this value to 72 hours.
 
 ```shell-session
 $ vault auth tune -default-lease-ttl=72h github/
 Success! Tuned the auth method at: github/
 ```
+
+Verify the updated configuration.
+
+<CodeBlockConfig highlight="1,4">
+
+```shell-session
+$ vault read sys/auth/github/tune
+Key                  Value
+---                  -----
+default_lease_ttl    72h
+description          n/a
+force_no_cache       false
+max_lease_ttl        768h
+token_type           default-service
+```
+
+</CodeBlockConfig>
+
+To restore back to the system default, you can use `-1`. 
+
+```shell-session
+$ vault auth tune -default-lease-ttl=-1 github/
+Success! Tuned the auth method at: github/
+```
+
+Verify the updated configuration.
+
+<CodeBlockConfig highlight="1,4">
+
+```shell-session
+$ vault read sys/auth/github/tune
+Key                  Value
+---                  -----
+default_lease_ttl    768h
+description          n/a
+force_no_cache       false
+max_lease_ttl        768h
+token_type           default-service
+```
+
+</CodeBlockConfig>
 
 You can specify multiple audit non-hmac request keys.
 
@@ -43,17 +90,27 @@ $ vault auth tune -audit-non-hmac-request-keys=value1 -audit-non-hmac-request-ke
 Success! Tuned the auth method at: github/
 ```
 
-User lockout feature is only supported for userpass, ldap, and approle auth methods.
+### Enable user lockout
+
+User lockout feature is only supported for
+[userpass](/vault/docs/auth/userpass), [ldap](/vault/docs/auth/ldap), and
+[approle](/vault/docs/auth/approle) auth methods.
+
+Tune the `userpass/` auth method to lock out the user after 10 failed login
+attempts within 10 minutes.
 
 ```shell-session
 $ vault auth tune -user-lockout-threshold=10  -user-lockout-duration=10m userpass/
 Success! Tuned the auth method at: userpass/
 ```
 
-View the current configuration of the auth method enabled at "userpass/".
+View the current configuration of the auth method enabled at `userpass/`.
+
+<CodeBlockConfig highlight="1,11-13">
 
 ```shell-session
 $ vault read sys/auth/userpass/tune
+
 Key                  Value
 ---                  -----
 default_lease_ttl    768h
@@ -66,6 +123,9 @@ user_lockout_disable                   false
 user_lockout_duration                  10m
 user_lockout_threshold                 10
 ```
+
+</CodeBlockConfig>
+
 
 ## Usage
 
