@@ -52,6 +52,14 @@
       "KvReadFooResponse": {
         "type": "object",
         "properties": {
+          "data": {
+            "$ref": "#/components/schemas/KvReadFooResponseData"
+          }
+        }
+      },
+      "KvReadFooResponseData": {
+        "type": "object",
+        "properties": {
           "field_a": {
             "type": "string",
             "description": "field_a description"

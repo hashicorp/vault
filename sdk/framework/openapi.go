@@ -368,7 +368,7 @@ func documentPath(p *Path, backend *Backend, requestResponsePrefix string, doc *
 						Enum:         field.AllowedValues,
 						Default:      field.Default,
 						Deprecated:   field.Deprecated,
-						DisplayAttrs: withoutOperationHints(field.DisplayAttrs),
+						DisplayAttrs: field.DisplayAttrs,
 					}
 					if openapiField.baseType == "array" {
 						p.Items = &OASSchema{
@@ -464,7 +464,7 @@ func documentPath(p *Path, backend *Backend, requestResponsePrefix string, doc *
 						}
 					}
 
-					responseSchema := &OASSchema{
+					responseSchemaData := &OASSchema{
 						Type:       "object",
 						Properties: make(map[string]*OASSchema),
 					}
@@ -479,23 +479,45 @@ func documentPath(p *Path, backend *Backend, requestResponsePrefix string, doc *
 							Enum:         field.AllowedValues,
 							Default:      field.Default,
 							Deprecated:   field.Deprecated,
-							DisplayAttrs: withoutOperationHints(field.DisplayAttrs),
+							DisplayAttrs: field.DisplayAttrs,
 						}
 						if openapiField.baseType == "array" {
 							p.Items = &OASSchema{
 								Type: openapiField.items,
 							}
 						}
-						responseSchema.Properties[name] = &p
+						responseSchemaData.Properties[name] = &p
 					}
 
 					if len(resp.Fields) != 0 {
-						responseName := hyphenatedToTitleCase(operationID) + "Response"
-						doc.Components.Schemas[responseName] = responseSchema
-						content = OASContent{
-							"application/json": &OASMediaTypeObject{
-								Schema: &OASSchema{Ref: fmt.Sprintf("#/components/schemas/%s", responseName)},
-							},
+						responseBaseName := hyphenatedToTitleCase(operationID) + "Response"
+
+						if resp.FieldsAreRaw {
+							// this is a "raw" response without the "data" wrapper
+							doc.Components.Schemas[responseBaseName+"Raw"] = responseSchemaData
+
+							content = OASContent{
+								"application/json": &OASMediaTypeObject{
+									Schema: &OASSchema{Ref: fmt.Sprintf("#/components/schemas/%sRaw", responseBaseName)},
+								},
+							}
+						} else {
+							// if the fields are not raw, enclose them in a "data" layer
+							responseSchema := &OASSchema{
+								Type: "object",
+								Properties: map[string]*OASSchema{
+									"data": {Ref: fmt.Sprintf("#/components/schemas/%sData", responseBaseName)},
+								},
+							}
+
+							doc.Components.Schemas[responseBaseName] = responseSchema
+							doc.Components.Schemas[responseBaseName+"Data"] = responseSchemaData
+
+							content = OASContent{
+								"application/json": &OASMediaTypeObject{
+									Schema: &OASSchema{Ref: fmt.Sprintf("#/components/schemas/%s", responseBaseName)},
+								},
+							}
 						}
 					}
 				}

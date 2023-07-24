@@ -282,10 +282,11 @@ type RequestExample struct {
 
 // Response describes and optional demonstrations an operation response.
 type Response struct {
-	Description string                  // summary of the the response and should always be provided
-	MediaType   string                  // media type of the response, defaulting to "application/json" if empty
-	Fields      map[string]*FieldSchema // the fields present in this response, used to generate openapi response
-	Example     *logical.Response       // example response data
+	Description  string                  // summary of the the response and should always be provided
+	MediaType    string                  // media type of the response, defaulting to "application/json" if empty
+	Fields       map[string]*FieldSchema // the fields present in this response, used to generate openapi response
+	FieldsAreRaw bool                    // if true, the fields above are not enclosed in a "data" element
+	Example      *logical.Response       // example response data
 }
 
 // PathOperation is a concrete implementation of OperationHandler.
