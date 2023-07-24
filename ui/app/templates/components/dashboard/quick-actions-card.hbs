@@ -8,9 +8,10 @@
     @selectLimit="1"
     @disallowNewItems={{true}}
     @fallbackComponent="input-search"
-    @onChange={{this.onSearchEngineSelect}}
+    @onChange={{this.handleSearchEngineSelect}}
     @placeholder="Type to select a mount..."
     @displayInherit={{true}}
+    @shouldRenderName={{true}}
     class="is-marginless"
   />
 </div>
@@ -18,7 +19,7 @@
 <h4 class="title is-6">Action</h4>
 <Select
   @name="auth-method"
-  @options={{this.selectedQuickActions}}
+  @options={{this.selectedActions}}
   @valueAttribute="actionType"
   @labelAttribute="actionTitle"
   @isFullwidth={{true}}
@@ -26,28 +27,41 @@
   @onChange={{this.setSelectedAction}}
 />
 
-<h4 class="title is-6">{{this.actionType.title}}</h4>
-{{#if (eq this.actionType.elementType "input")}}
-  <Input class="input" />
-{{else if (eq this.actionType.elementType "select")}}
+<h4 class="title is-6">{{this.actionParamField.title}}</h4>
+{{#if (eq this.actionParamField.elementType "input")}}
+  <Input @type="text" @value="hello" class="input" />
+{{else if (eq this.actionParamField.elementType "select")}}
   <Select
     @name="auth-method"
-    @options={{this.selectedQuickActions}}
+    @options={{this.selectedActions}}
     @valueAttribute="actionType"
     @labelAttribute="actionTitle"
     @isFullwidth={{true}}
     @selectedValue={{this.selectedAction}}
     @onChange={{this.setSelectedAction}}
   />
-{{else}}
+{{else if (eq this.actionParamField.elementType "search-select")}}
   <SearchSelect
-    @options={{this.secretsEnginesOptions}}
+    class="is-flex-1"
     @selectLimit="1"
+    @models={{array this.actionParamField.model}}
+    @backend={{this.selectedEngineName}}
+    @placeholder={{this.actionParamField.placeholder}}
     @disallowNewItems={{true}}
+    @onChange={{this.handleIssuerSearch}}
     @fallbackComponent="input-search"
-    @onChange={{this.onSearchEngineSelect}}
-    @placeholder="Type to select a mount..."
-    @displayInherit={{true}}
-    class="is-marginless"
+    @nameKey={{this.actionParamField.nameKey}}
+    @shouldRenderName={{true}}
   />
 {{/if}}
+
+<div>
+  <button
+    type="button"
+    class="button is-primary has-top-margin-m"
+    disabled={{(and (not this.selectedAction this.selectedEngine))}}
+    data-test-button={{this.actionParamField.buttonText}}
+  >
+    {{this.actionParamField.buttonText}}
+  </button>
+</div>

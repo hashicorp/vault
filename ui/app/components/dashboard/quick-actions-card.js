@@ -19,7 +19,7 @@ import { tracked } from '@glimmer/tracking';
  * @param {array}
  */
 
-const getQuickActions = (type) => {
+const getActionsByEngineType = (type) => {
   switch (type) {
     case 'kv':
       return [
@@ -40,8 +40,8 @@ const getQuickActions = (type) => {
     case 'pki':
       return [
         {
-          actionTitle: 'Generate certificate',
-          actionType: 'generate-certificate-pki',
+          actionTitle: 'Issue certificate',
+          actionType: 'issue-certificate-pki',
           path: 'vault.cluster.pki',
         },
         {
@@ -58,30 +58,61 @@ const getQuickActions = (type) => {
   }
 };
 
-const getActionMethod = (type) => {
+const getActionParamByAction = (type) => {
   switch (type) {
     case 'find-kv':
       return {
         title: 'Secret Path',
         subText: 'Path of the secret you want to read, including the mount. E.g., secret/data/foo.',
         elementType: 'input',
+        buttonText: 'Read secrets',
       };
     case 'generate-credentials-db':
-      return { title: 'Role to use', elementType: 'select' };
-    case 'generate-certificate-pki':
-      return { title: 'Role to use', elementType: 'select' };
+      return { title: 'Role to use', elementType: 'select', buttonText: 'Generate credentials' };
+    case 'issue-certificate-pki':
+      return {
+        title: 'Role to use',
+        elementType: 'search-select',
+        placeholder: 'Type to find a role...',
+        buttonText: 'Issue leaf certificate',
+        model: 'pki/role',
+      };
     case 'view-certificate-pki':
-      return { title: 'Certificate serial number', placeholder: '33:a3:...', elementType: 'search-select' };
+      return {
+        title: 'Certificate serial number',
+        placeholder: '33:a3:...',
+        elementType: 'search-select',
+        buttonText: 'View certificate',
+        model: 'pki/certificate/base',
+      };
     case 'view-issuer-pki':
-      return { title: 'Issuer', placeholder: 'Type issuer name or ID', elementType: 'search-select' };
+      return {
+        title: 'Issuer',
+        placeholder: 'Type issuer name or ID',
+        elementType: 'search-select',
+        buttonText: 'View issuer',
+        model: 'pki/issuer',
+        nameKey: 'issuerName',
+      };
   }
 };
 
 export default class DashboardQuickActionsCard extends Component {
   @tracked selectedEngine;
-  @tracked selectedQuickActions = [];
-  @tracked selectedAction = null;
-  @tracked actionType = '';
+  @tracked selectedActions = [];
+  @tracked selectedAction;
+  @tracked actionParamField;
+  @tracked selectedEngineName;
+  @tracked value;
+
+  constructor() {
+    super(...arguments);
+
+    if (!this.selectedEngine) {
+      this.selectedActions = getActionsByEngineType('kv');
+      this.actionParamField = getActionParamByAction('find-kv');
+    }
+  }
 
   get filteredSecretEngines() {
     return this.args.secretsEngines.filter(
@@ -95,22 +126,30 @@ export default class DashboardQuickActionsCard extends Component {
   get secretsEnginesOptions() {
     return this.filteredSecretEngines.map((filteredSecretEngine) => ({
       name: filteredSecretEngine.path,
-      id: filteredSecretEngine.type,
+      id: `${filteredSecretEngine.type} ${filteredSecretEngine.path}`,
     }));
   }
 
   @action
-  onSearchEngineSelect([selectedSearchEngines]) {
-    this.selectedEngine = selectedSearchEngines;
-    this.selectedQuickActions = getQuickActions(selectedSearchEngines);
-    if (!this.selectedAction) {
-      this.selectedAction = this.setSelectedAction(getQuickActions(selectedSearchEngines)?.[0]?.actionType);
-    }
+  handleSearchEngineSelect([selectedSearchEngines]) {
+    const selectedEngine = selectedSearchEngines.split(' ');
+    this.selectedEngine = selectedEngine[0];
+    this.selectedEngineName = selectedEngine[1].slice(0, selectedEngine[1].length - 1);
+    this.selectedActions = getActionsByEngineType(this.selectedEngine);
   }
 
   @action
   setSelectedAction(selectedAction) {
     this.selectedAction = selectedAction;
-    this.actionType = getActionMethod(selectedAction);
+    this.actionParamField = getActionParamByAction(selectedAction);
+  }
+
+  @action
+  handleIssuerSearch(val) {
+    if (Array.isArray(val)) {
+      this.value = val[0];
+    } else {
+      this.value = val;
+    }
   }
 }
