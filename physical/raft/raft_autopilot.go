@@ -215,13 +215,15 @@ func NewFollowerStates() *FollowerStates {
 	}
 }
 
-// Update the peer information in the follower states. Note that this function runs on the active node.
-func (s *FollowerStates) Update(req *EchoRequestUpdate) {
+// Update the peer information in the follower states. Note that this function
+// runs on the active node. Returns true if a new entry was added, as opposed
+// to modifying one already present.
+func (s *FollowerStates) Update(req *EchoRequestUpdate) bool {
 	s.l.Lock()
 	defer s.l.Unlock()
 
-	state, ok := s.followers[req.NodeID]
-	if !ok {
+	state, present := s.followers[req.NodeID]
+	if !present {
 		state = &FollowerState{
 			IsDead: atomic.NewBool(false),
 		}
@@ -236,6 +238,8 @@ func (s *FollowerStates) Update(req *EchoRequestUpdate) {
 	state.Version = req.SDKVersion
 	state.UpgradeVersion = req.UpgradeVersion
 	state.RedundancyZone = req.RedundancyZone
+
+	return !present
 }
 
 // Clear wipes all the information regarding peers in the follower states.
