@@ -93,7 +93,7 @@ module('Acceptance | kv permissions', function (hooks) {
       });
 
       test('it shows empty state when cannot read secret data', async function (assert) {
-        assert.expect(5);
+        assert.expect(7);
         await authPage.login(this.cannotReadData);
         await visit(`/vault/secrets/${this.mountPath}/kv/${this.secretPath}/details`);
         assert.strictEqual(currentURL(), `/vault/secrets/${this.mountPath}/kv/${this.secretPath}/details`);
