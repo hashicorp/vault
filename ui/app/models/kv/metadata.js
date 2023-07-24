@@ -15,7 +15,7 @@ const validations = {
     { type: 'length', options: { min: 1, max: 16 }, message: 'You cannot go over 16 characters.' },
   ],
 };
-const formFieldProps = ['maxVersions', 'casRequired', 'deleteVersionAfter', 'customerMetadata'];
+const formFieldProps = ['customMetadata', 'maxVersions', 'casRequired', 'deleteVersionAfter'];
 
 @withModelValidations(validations)
 @withFormFields(formFieldProps)
