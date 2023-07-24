@@ -8,7 +8,6 @@ import (
 	"strings"
 	"testing"
 
-	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/helper/builtinplugins"
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"

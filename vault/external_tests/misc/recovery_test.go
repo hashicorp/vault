@@ -7,18 +7,18 @@ import (
 	"path"
 	"testing"
 
+	"github.com/hashicorp/vault/helper/testhelpers/corehelpers"
+
 	"github.com/go-test/deep"
-	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/helper/testhelpers"
 	"github.com/hashicorp/vault/http"
-	"github.com/hashicorp/vault/sdk/helper/logging"
 	"github.com/hashicorp/vault/sdk/physical/inmem"
 	"github.com/hashicorp/vault/vault"
 	"go.uber.org/atomic"
 )
 
 func TestRecovery(t *testing.T) {
-	inm, err := inmem.NewTransactionalInmemHA(nil, logger)
+	inm, err := inmem.NewTransactionalInmemHA(nil, corehelpers.NewTestLogger(t))
 	if err != nil {
 		t.Fatal(err)
 	}

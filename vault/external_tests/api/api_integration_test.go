@@ -7,7 +7,6 @@ import (
 	"encoding/base64"
 	"testing"
 
-	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/audit"
 	auditFile "github.com/hashicorp/vault/builtin/audit/file"

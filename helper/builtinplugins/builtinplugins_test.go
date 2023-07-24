@@ -3,13 +3,11 @@ package builtinplugins
 import (
 	"testing"
 
-	"github.com/hashicorp/go-hclog"
 	logicalKv "github.com/hashicorp/vault-plugin-secrets-kv"
 	"github.com/hashicorp/vault/api"
 	logicalDb "github.com/hashicorp/vault/builtin/logical/database"
 	vaulthttp "github.com/hashicorp/vault/http"
 	"github.com/hashicorp/vault/sdk/helper/consts"
-	"github.com/hashicorp/vault/sdk/helper/logging"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/vault"
 )

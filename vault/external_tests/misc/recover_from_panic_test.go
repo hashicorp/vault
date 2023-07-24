@@ -6,7 +6,6 @@ package misc
 import (
 	"testing"
 
-	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/api"
 	vaulthttp "github.com/hashicorp/vault/http"
 	"github.com/hashicorp/vault/sdk/logical"
