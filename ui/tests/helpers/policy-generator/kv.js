@@ -11,24 +11,20 @@ export const adminPolicy = (backend) => {
   `;
 };
 
-export const secretPathCreateReadUpdate = (backend, secretPath) => {
+// DATA POLICIES
+export const dataSecretPathCreateReadUpdate = (backend, secretPath) => {
   return `
-    path "${backend}/metadata/*" {
-      capabilities = ["list"]
-    }
     path "${backend}/data/${secretPath}" {
       capabilities = ["create", "read", "update"]
     }
   `;
 };
 
-export const dataCRUDandMetadataUpdateDelete = (backend) => {
+// METADATA POLICIES
+export const metadataListOnly = (backend) => {
   return `
     path "${backend}/metadata/*" {
-      capabilities = ["update","delete"]
-    }
-    path "${backend}/data/*" {
-      capabilities = ["create", "read", "update", "delete"]
+      capabilities = ["list"]
     }
   `;
 };

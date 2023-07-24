@@ -10,6 +10,7 @@ export const SELECTORS = {
   tooltipTrigger: '[data-test-tooltip-trigger]',
   pageTitle: '[data-test-header-title]',
   infoRowValue: (label) => `[data-test-value-div="${label}"]`,
+  secretTab: (tab) => `[data-test-secrets-tab="${tab}"]`,
 };
 
 export const parseJsonEditor = (find) => {
