@@ -58,9 +58,7 @@ func (u *userpassTestMethod) Shutdown() {
 }
 
 func TestAuthHandler(t *testing.T) {
-	logger := logging.NewVaultLogger(hclog.Trace)
 	coreConfig := &vault.CoreConfig{
-		Logger: logger,
 		CredentialBackends: map[string]logical.Factory{
 			"userpass": userpass.Factory,
 		},
@@ -77,7 +75,7 @@ func TestAuthHandler(t *testing.T) {
 	ctx, cancelFunc := context.WithCancel(context.Background())
 
 	ah := NewAuthHandler(&AuthHandlerConfig{
-		Logger: logger.Named("auth.handler"),
+		Logger: logging.NewVaultLogger(hclog.Trace).Named("auth.handler"),
 		Client: client,
 	})
 

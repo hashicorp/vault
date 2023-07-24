@@ -15,6 +15,10 @@ export default Controller.extend({
       });
     },
 
+    reloadCluster() {
+      return this.model.reload();
+    },
+
     isUnsealed(data) {
       return data.sealed === false;
     },

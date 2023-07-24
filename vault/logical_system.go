@@ -83,10 +83,11 @@ func NewSystemBackend(core *Core, logger log.Logger) *SystemBackend {
 	db, _ := memdb.NewMemDB(systemBackendMemDBSchema())
 
 	b := &SystemBackend{
-		Core:       core,
-		db:         db,
-		logger:     logger,
-		mfaBackend: NewPolicyMFABackend(core, logger),
+		Core:        core,
+		db:          db,
+		logger:      logger,
+		mfaBackend:  NewPolicyMFABackend(core, logger),
+		syncBackend: NewSecretsSyncBackend(core, logger),
 	}
 
 	b.Backend = &framework.Backend{
@@ -120,6 +121,11 @@ func NewSystemBackend(core *Core, logger log.Logger) *SystemBackend {
 				"storage/raft/snapshot-auto/config/*",
 				"leases",
 				"internal/inspect/*",
+				// sys/seal and sys/step-down actually have their sudo requirement enforced through hardcoding
+				// PolicyCheckOpts.RootPrivsRequired in dedicated calls to Core.performPolicyChecks, but we still need
+				// to declare them here so that the generated OpenAPI spec gets their sudo status correct.
+				"seal",
+				"step-down",
 			},
 
 			Unauthenticated: []string{
@@ -238,10 +244,11 @@ func (b *SystemBackend) rawPaths() []*framework.Path {
 // prefix. Conceptually it is similar to procfs on Linux.
 type SystemBackend struct {
 	*framework.Backend
-	Core       *Core
-	db         *memdb.MemDB
-	logger     log.Logger
-	mfaBackend *PolicyMFABackend
+	Core        *Core
+	db          *memdb.MemDB
+	logger      log.Logger
+	mfaBackend  *PolicyMFABackend
+	syncBackend *SecretsSyncBackend
 }
 
 // handleConfigStateSanitized returns the current configuration state. The configuration
