@@ -6,6 +6,7 @@
 import Model, { attr } from '@ember-data/model';
 import { withFormFields } from 'vault/decorators/model-form-fields';
 import { withModelValidations } from 'vault/decorators/model-validations';
+import lazyCapabilities, { apiPath } from 'vault/macros/lazy-capabilities';
 
 const creationLdifExample = `# The example below is treated as a comment and will not be submitted
 # dn: cn={{.Username}},ou=users,dc=learn,dc=example
@@ -179,5 +180,44 @@ export default class LdapRoleModel extends Model {
       // name is the only common field
       return field.name === 'name' || this.fieldsForType.includes(field.name);
     });
+  }
+
+  get displayFields() {
+    // insert type after role name
+    const [name, ...rest] = this.formFields;
+    const typeField = { name: 'type', options: { label: 'Role type' } };
+    return [name, typeField, ...rest];
+  }
+
+  get roleUri() {
+    return this.isStatic ? 'static-role' : 'role';
+  }
+  get credsUri() {
+    return this.isStatic ? 'static-cred' : 'creds';
+  }
+  @lazyCapabilities(apiPath`${'backend'}/${'roleUri'}/${'name'}`, 'backend', 'roleUri', 'name') rolePath;
+  @lazyCapabilities(apiPath`${'backend'}/${'credsUri'}/${'name'}`, 'backend', 'credsUri', 'name') credsPath;
+  @lazyCapabilities(apiPath`${'backend'}/rotate-role/${'name'}`, 'backend', 'name') staticRotateCredsPath;
+
+  get canCreate() {
+    return this.rolePath.get('canCreate') !== false;
+  }
+  get canDelete() {
+    return this.rolePath.get('canDelete') !== false;
+  }
+  get canEdit() {
+    return this.rolePath.get('canUpdate') !== false;
+  }
+  get canRead() {
+    return this.rolePath.get('canRead') !== false;
+  }
+  get canList() {
+    return this.rolePath.get('canList') !== false;
+  }
+  get canReadCreds() {
+    return this.credsPath.get('canRead') !== false;
+  }
+  get canRotateStaticCreds() {
+    return this.isStatic && this.staticRotateCredsPath.get('canCreate') !== false;
   }
 }

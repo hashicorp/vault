@@ -69,7 +69,7 @@ export default class LdapCreateAndEditRolePageComponent extends Component<Args> 
           model.name
         );
       } catch (error) {
-        this.error = errorMessage(error, 'Error saving role. Please try again or contact support');
+        this.error = errorMessage(error, 'Error saving role. Please try again or contact support.');
       }
     }
   }
