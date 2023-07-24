@@ -90,7 +90,7 @@ func (f *EntryFormatterWriter) FormatAndWriteResponse(ctx context.Context, w io.
 }
 
 // NewTemporaryFormatter creates a formatter not backed by a persistent salt
-func NewTemporaryFormatter(requiredFormat, prefix string) (*EntryFormatterWriter, error) {
+func NewTemporaryFormatter(requiredFormat, prefix string, hashFunc func(context.Context, string) (string, error)) (*EntryFormatterWriter, error) {
 	cfg, err := NewFormatterConfig(WithFormat(requiredFormat))
 	if err != nil {
 		return nil, err

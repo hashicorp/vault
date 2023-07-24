@@ -338,7 +338,7 @@ func (b *Backend) LogTestMessage(ctx context.Context, in *logical.LogInput, conf
 
 	var buf bytes.Buffer
 
-	temporaryFormatter, err := audit.NewTemporaryFormatter(config["format"], config["prefix"])
+	temporaryFormatter, err := audit.NewTemporaryFormatter(config["format"], config["prefix"], b.GetHash)
 	if err != nil {
 		return err
 	}

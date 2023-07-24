@@ -356,7 +356,7 @@ func (n *NoopAudit) LogTestMessage(ctx context.Context, in *logical.LogInput, co
 	defer n.l.Unlock()
 	var w bytes.Buffer
 
-	tempFormatter, err := audit.NewTemporaryFormatter(config["format"], config["prefix"])
+	tempFormatter, err := audit.NewTemporaryFormatter(config["format"], config["prefix"], n.GetHash)
 	if err != nil {
 		return err
 	}

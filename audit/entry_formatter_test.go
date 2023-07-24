@@ -49,6 +49,17 @@ func fakeEvent(tb testing.TB, subtype subtype, format format, input *logical.Log
 	return e
 }
 
+func hashFunc(ss Salter) func(context.Context, string) (string, error) {
+	return func(ctx context.Context, data string) (string, error) {
+		s, err := ss.Salt(ctx)
+		if err != nil {
+			return "", err
+		}
+
+		return HashString(s, data), nil
+	}
+}
+
 // TestNewEntryFormatter ensures we can create new EntryFormatter structs.
 func TestNewEntryFormatter(t *testing.T) {
 	tests := map[string]struct {
