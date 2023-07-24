@@ -310,7 +310,8 @@ func (ts *TokenStore) paths() []*framework.Path {
 			Fields: map[string]*framework.FieldSchema{
 				"token": {
 					Type:        framework.TypeString,
-					Description: "Token to lookup (POST request body)",
+					Description: "Token to lookup",
+					Query:       true,
 				},
 			},
 
