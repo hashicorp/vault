@@ -34,8 +34,7 @@ module('Integration | Component | kv | Page::Secret::Details', function (hooks) 
     });
     this.secret = this.store.peekRecord('kv/data', this.id);
 
-    // this is a route model, not ember data model
-
+    // this is the route model, not an ember data model
     this.model = {
       backend: this.backend,
       path: this.path,
