@@ -119,7 +119,7 @@ func TestFormatJSONx_formatRequest(t *testing.T) {
 			WithFormat(JSONxFormat.String()),
 		)
 		require.NoError(t, err)
-		f, err := NewEntryFormatter(cfg, tempStaticSalt)
+		f, err := NewEntryFormatter(cfg, tempStaticSalt, hashFunc(tempStaticSalt))
 		require.NoError(t, err)
 		writer := &JSONxWriter{Prefix: tc.Prefix}
 		formatter, err := NewEntryFormatterWriter(cfg, f, writer)

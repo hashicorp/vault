@@ -49,6 +49,17 @@ func fakeEvent(tb testing.TB, subtype subtype, format format, input *logical.Log
 	return e
 }
 
+func hashFunc(ss Salter) func(context.Context, string) (string, error) {
+	return func(ctx context.Context, data string) (string, error) {
+		s, err := ss.Salt(ctx)
+		if err != nil {
+			return "", err
+		}
+
+		return HashString(s, data), nil
+	}
+}
+
 // TestNewEntryFormatter ensures we can create new EntryFormatter structs.
 func TestNewEntryFormatter(t *testing.T) {
 	tests := map[string]struct {
@@ -127,7 +138,7 @@ func TestNewEntryFormatter(t *testing.T) {
 
 			cfg, err := NewFormatterConfig(tc.Options...)
 			require.NoError(t, err)
-			f, err := NewEntryFormatter(cfg, ss, tc.Options...)
+			f, err := NewEntryFormatter(cfg, ss, hashFunc(ss), tc.Options...)
 
 			switch {
 			case tc.IsErrorExpected:
@@ -150,7 +161,7 @@ func TestEntryFormatter_Reopen(t *testing.T) {
 	cfg, err := NewFormatterConfig()
 	require.NoError(t, err)
 
-	f, err := NewEntryFormatter(cfg, ss)
+	f, err := NewEntryFormatter(cfg, ss, hashFunc(ss))
 	require.NoError(t, err)
 	require.NotNil(t, f)
 	require.NoError(t, f.Reopen())
@@ -162,7 +173,7 @@ func TestEntryFormatter_Type(t *testing.T) {
 	cfg, err := NewFormatterConfig()
 	require.NoError(t, err)
 
-	f, err := NewEntryFormatter(cfg, ss)
+	f, err := NewEntryFormatter(cfg, ss, hashFunc(ss))
 	require.NoError(t, err)
 	require.NotNil(t, f)
 	require.Equal(t, eventlogger.NodeTypeFormatter, f.Type())
@@ -305,7 +316,7 @@ func TestEntryFormatter_Process(t *testing.T) {
 			cfg, err := NewFormatterConfig(WithFormat(tc.RequiredFormat.String()))
 			require.NoError(t, err)
 
-			f, err := NewEntryFormatter(cfg, ss)
+			f, err := NewEntryFormatter(cfg, ss, hashFunc(ss))
 			require.NoError(t, err)
 			require.NotNil(t, f)
 
@@ -372,7 +383,7 @@ func BenchmarkAuditFileSink_Process(b *testing.B) {
 	cfg, err := NewFormatterConfig()
 	require.NoError(b, err)
 	ss := newStaticSalt(b)
-	formatter, err := NewEntryFormatter(cfg, ss)
+	formatter, err := NewEntryFormatter(cfg, ss, hashFunc(ss))
 	require.NoError(b, err)
 	require.NotNil(b, formatter)
 

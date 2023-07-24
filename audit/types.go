@@ -87,9 +87,10 @@ type Writer interface {
 
 // EntryFormatter should be used to format audit requests and responses.
 type EntryFormatter struct {
-	salter Salter
-	config FormatterConfig
-	prefix string
+	salter   Salter
+	hashFunc func(context.Context, string) (string, error)
+	config   FormatterConfig
+	prefix   string
 }
 
 // EntryFormatterWriter should be used to format and write out audit requests and responses.
