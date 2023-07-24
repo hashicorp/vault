@@ -6,7 +6,12 @@
 >
   {{#if @displayOnly}}
     {{#if this.showValue}}
-      <pre class="masked-value display-only is-word-break">{{@value}}</pre>
+      {{! Show minus icon if there is no value }}
+      {{#if (eq @value "")}}
+        <Icon class="masked-value" @name="minus" />
+      {{else}}
+        <pre class="masked-value display-only is-word-break">{{@value}}</pre>
+      {{/if}}
     {{else}}
       <pre class="masked-value display-only masked-font">***********</pre>
     {{/if}}
@@ -50,7 +55,7 @@
     type="button"
     aria-label={{if this.showValue "mask value" "show value"}}
     title={{if this.showValue "mask value" "show value"}}
-    class="{{if (eq @value '') 'has-text-grey'}} masked-input-toggle button"
+    class="masked-input-toggle button"
     data-test-button="toggle-masked"
   >
     <Icon @name={{if this.showValue "eye" "eye-off"}} />
