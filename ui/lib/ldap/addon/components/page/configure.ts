@@ -97,7 +97,7 @@ export default class LdapConfigurePageComponent extends Component<Args> {
         this.flashMessages.success('Successfully configured LDAP engine');
         this.leave('configuration');
       } catch (error) {
-        this.error = errorMessage(error, 'Error saving configuration. Please try again or contact support');
+        this.error = errorMessage(error, 'Error saving configuration. Please try again or contact support.');
       }
     }
   }

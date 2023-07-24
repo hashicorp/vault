@@ -23,7 +23,7 @@ export default class LdapRoleDetailsPageComponent extends Component<Args> {
       await this.args.model.destroyRecord();
       this.router.transitionTo('vault.cluster.secrets.backend.ldap.roles');
     } catch (error) {
-      const message = errorMessage(error, 'Unable to delete role. Please try again or contact support');
+      const message = errorMessage(error, 'Unable to delete role. Please try again or contact support.');
       this.flashMessages.danger(message);
     }
   }
