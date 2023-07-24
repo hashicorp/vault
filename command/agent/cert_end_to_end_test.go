@@ -66,7 +66,6 @@ func TestCertEndToEnd(t *testing.T) {
 func testCertEndToEnd(t *testing.T, withCertRoleName, ahWrapping bool) {
 	logger := logging.NewVaultLogger(hclog.Trace)
 	coreConfig := &vault.CoreConfig{
-		Logger: logger,
 		CredentialBackends: map[string]logical.Factory{
 			"cert": vaultcert.Factory,
 		},
@@ -306,7 +305,6 @@ func testCertEndToEnd(t *testing.T, withCertRoleName, ahWrapping bool) {
 func TestCertEndToEnd_CertsInConfig(t *testing.T) {
 	logger := logging.NewVaultLogger(hclog.Trace)
 	coreConfig := &vault.CoreConfig{
-		Logger: logger,
 		CredentialBackends: map[string]logical.Factory{
 			"cert": vaultcert.Factory,
 		},
