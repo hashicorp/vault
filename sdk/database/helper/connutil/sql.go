@@ -12,11 +12,22 @@ import (
 	"sync"
 	"time"
 
+	"cloud.google.com/go/cloudsqlconn"
+	"cloud.google.com/go/cloudsqlconn/mysql/mysql"
+	"cloud.google.com/go/cloudsqlconn/postgres/pgxv4"
+	"cloud.google.com/go/cloudsqlconn/sqlserver/mssql"
 	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/go-secure-stdlib/parseutil"
+	"github.com/mitchellh/mapstructure"
+
 	"github.com/hashicorp/vault/sdk/database/dbplugin"
 	"github.com/hashicorp/vault/sdk/database/helper/dbutil"
-	"github.com/mitchellh/mapstructure"
+)
+
+const (
+	cloudSQLPostgres = "cloudsql-postgres"
+	cloudSQLMSSQL    = "cloudsql-sqlserver"
+	cloudSQLMySQL    = "cloudsql-mysql"
 )
 
 var _ ConnectionProducer = &SQLConnectionProducer{}
@@ -29,6 +40,7 @@ type SQLConnectionProducer struct {
 	MaxConnectionLifetimeRaw interface{} `json:"max_connection_lifetime" mapstructure:"max_connection_lifetime" structs:"max_connection_lifetime"`
 	Username                 string      `json:"username" mapstructure:"username" structs:"username"`
 	Password                 string      `json:"password" mapstructure:"password" structs:"password"`
+	AuthType                 string      `json:"auth_type" mapstructure:"auth_type" structs:"auth_type"`
 	DisableEscaping          bool        `json:"disable_escaping" mapstructure:"disable_escaping" structs:"disable_escaping"`
 
 	Type                  string
@@ -139,10 +151,17 @@ func (c *SQLConnectionProducer) Connection(ctx context.Context) (interface{}, er
 		c.db.Close()
 	}
 
-	// For mssql backend, switch to sqlserver instead
-	dbType := c.Type
-	if c.Type == "mssql" {
-		dbType = "sqlserver"
+	// @TODO handle reading IAM credentials from RawConfig
+
+	var dbType string
+	if c.AuthType == "google_iam" {
+		dbType = c.getDBTypeForIAM()
+	} else {
+		dbType = c.Type
+		// For mssql backend, switch to sqlserver instead
+		if c.Type == "mssql" {
+			dbType = "sqlserver"
+		}
 	}
 
 	// Otherwise, attempt to make connection
@@ -178,6 +197,32 @@ func (c *SQLConnectionProducer) Connection(ctx context.Context) (interface{}, er
 	return c.db, nil
 }
 
+func (c *SQLConnectionProducer) getDBTypeForIAM() string {
+	var dbType string
+	switch c.Type {
+	case "mssql":
+		dbType = cloudSQLMSSQL
+	case "postgres":
+		dbType = cloudSQLPostgres
+	case "mysql":
+		dbType = cloudSQLMySQL
+	}
+	return dbType
+}
+
+func (c *SQLConnectionProducer) getCleanupFuncForIAM(dbType string) (func() error, error) {
+	switch dbType {
+	case cloudSQLMSSQL:
+		return mssql.RegisterDriver(cloudSQLMSSQL, cloudsqlconn.WithCredentialsFile("key.json"))
+	case cloudSQLPostgres:
+		return pgxv4.RegisterDriver(cloudSQLPostgres, cloudsqlconn.WithIAMAuthN())
+	case cloudSQLMySQL:
+		return mysql.RegisterDriver(cloudSQLMySQL, cloudsqlconn.WithCredentialsFile("key.json"))
+	}
+
+	return nil, fmt.Errorf("unrecognized database type encountered: %s", c.Type)
+}
+
 func (c *SQLConnectionProducer) SecretValues() map[string]interface{} {
 	return map[string]interface{}{
 		c.Password: "[password]",
@@ -191,7 +236,17 @@ func (c *SQLConnectionProducer) Close() error {
 	defer c.Unlock()
 
 	if c.db != nil {
-		c.db.Close()
+		// if auth_type is IAM, ensure cleanup
+		// of cloudSQL resources
+		if c.AuthType == "google_iam" {
+			cleanup, err := c.getCleanupFuncForIAM(c.getDBTypeForIAM())
+			if err != nil {
+				return fmt.Errorf("error performning cleanup for %s type with IAM authentication, err=%w", c.Type, err)
+			}
+			defer cleanup()
+		} else {
+			c.db.Close()
+		}
 	}
 
 	c.db = nil
