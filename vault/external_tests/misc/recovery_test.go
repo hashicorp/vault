@@ -7,10 +7,9 @@ import (
 	"path"
 	"testing"
 
-	"github.com/hashicorp/vault/helper/testhelpers/corehelpers"
-
 	"github.com/go-test/deep"
 	"github.com/hashicorp/vault/helper/testhelpers"
+	"github.com/hashicorp/vault/helper/testhelpers/corehelpers"
 	"github.com/hashicorp/vault/http"
 	"github.com/hashicorp/vault/sdk/physical/inmem"
 	"github.com/hashicorp/vault/vault"
