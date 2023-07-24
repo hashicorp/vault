@@ -21,10 +21,11 @@ jobs:
     name: Setup
     runs-on: ubuntu-latest
     outputs:
-      compute-tiny: ${{ steps.setup-outputs.outputs.compute-tiny }}
-      compute-standard: ${{ steps.setup-outputs.outputs.compute-standard }}
-      compute-larger: ${{ steps.setup-outputs.outputs.compute-larger }}
-      compute-huge: ${{ steps.setup-outputs.outputs.compute-huge }}
+      compute-small: ${{ steps.setup-outputs.outputs.compute-small }}
+      compute-medium: ${{ steps.setup-outputs.outputs.compute-medium }}
+      compute-large: ${{ steps.setup-outputs.outputs.compute-large }}
+      compute-largem: ${{ steps.setup-outputs.outputs.compute-largem }}
+      compute-xlarge: ${{ steps.setup-outputs.outputs.compute-xlarge }}
       enterprise: ${{ steps.setup-outputs.outputs.enterprise }}
       go-tags: ${{ steps.setup-outputs.outputs.go-tags }}
     steps:
@@ -36,18 +37,20 @@ jobs:
 
           if [ "${github_repository##*/}" == "vault-enterprise" ] ; then
             # shellcheck disable=SC2129
-            echo 'compute-tiny=["self-hosted","ondemand","linux","type=m5.large"]' >> "$GITHUB_OUTPUT"
-            echo 'compute-standard=["self-hosted","ondemand","linux","type=m5.xlarge"]' >> "$GITHUB_OUTPUT"
-            echo 'compute-larger=["self-hosted","ondemand","linux","type=m5.2xlarge"]' >> "$GITHUB_OUTPUT"
-            echo 'compute-huge=["self-hosted","ondemand","linux","type=m5.4xlarge"]' >> "$GITHUB_OUTPUT"
+            echo 'compute-small=["self-hosted","ondemand","linux","type=c6a.large"]' >> "$GITHUB_OUTPUT"     #  2x vCPUs,  4 GiB RAM,
+            echo 'compute-medium=["self-hosted","ondemand","linux","type=c6a.xlarge"]' >> "$GITHUB_OUTPUT"   #  4x vCPUs,  8 GiB RAM,
+            echo 'compute-large=["self-hosted","ondemand","linux","type=c6a.2xlarge"]' >> "$GITHUB_OUTPUT"   #  8x vCPUs, 16 GiB RAM,
+            echo 'compute-largem=["self-hosted","ondemand","linux","type=m6a.2xlarge"]' >> "$GITHUB_OUTPUT"  #  8x vCPUs, 32 GiB RAM,
+            echo 'compute-xlarge=["self-hosted","ondemand","linux","type=c6a.4xlarge"]' >> "$GITHUB_OUTPUT"  # 16x vCPUs, 32 GiB RAM,
             echo 'enterprise=1' >> "$GITHUB_OUTPUT"
             echo 'go-tags=ent,enterprise' >> "$GITHUB_OUTPUT"
           else
             # shellcheck disable=SC2129
-            echo 'compute-tiny="ubuntu-latest"' >> "$GITHUB_OUTPUT"                         #  2 cores,   7 GB RAM,   14 GB SSD
-            echo 'compute-standard="custom-linux-small-vault-latest"' >> "$GITHUB_OUTPUT"   #  8 cores,  32 GB RAM,  300 GB SSD
-            echo 'compute-larger="custom-linux-medium-vault-latest"' >> "$GITHUB_OUTPUT"    # 16 cores,  64 GB RAM,  600 GB SSD
-            echo 'compute-huge="custom-linux-xl-vault-latest"' >> "$GITHUB_OUTPUT"          # 32-cores, 128 GB RAM, 1200 GB SSD
+            echo 'compute-small="ubuntu-latest"' >> "$GITHUB_OUTPUT"                      #  2x vCPUs,   7 GiB RAM,   14 GB SSD
+            echo 'compute-medium="custom-linux-small-vault-latest"' >> "$GITHUB_OUTPUT"   #  8x vCPUs,  32 GiB RAM,  300 GB SSD
+            echo 'compute-large="custom-linux-medium-vault-latest"' >> "$GITHUB_OUTPUT"   # 16x vCPUs,  64 GiB RAM,  600 GB SSD
+            echo 'compute-largem="custom-linux-medium-vault-latest"' >> "$GITHUB_OUTPUT"  # 16x vCPUs,  64 GiB RAM,  600 GB SSD
+            echo 'compute-xlarge="custom-linux-xl-vault-latest"' >> "$GITHUB_OUTPUT"      # 32x vCPUs, 128 GiB RAM, 1200 GB SSD
             echo 'enterprise=' >> "$GITHUB_OUTPUT"
             echo 'go-tags=' >> "$GITHUB_OUTPUT"
           fi
@@ -62,7 +65,7 @@ jobs:
     needs:
       - setup
     if: ${{ needs.setup.outputs.enterprise != '' && github.base_ref != '' }}
-    runs-on: ${{ fromJSON(needs.setup.outputs.compute-tiny) }}
+    runs-on: ${{ fromJSON(needs.setup.outputs.compute-small) }}
     steps:
       - uses: actions/checkout@c85c95e3d7251135ab7dc9ce3241c5835cc595a9 # v3.5.3
         with:
@@ -101,9 +104,8 @@ jobs:
       - verify-changes
     # Don't run this job for docs/ui only PRs
     if: |
-      always() && (needs.verify-changes.result == 'skipped' ||
-      (needs.verify-changes.outputs.is_docs_change == 'false' &&
-      needs.verify-changes.outputs.is_ui_change == 'false'))
+      needs.verify-changes.outputs.is_docs_change == 'false' &&
+      needs.verify-changes.outputs.is_ui_change == 'false'
     uses: ./.github/workflows/test-go.yml
     with:
       # The regular Go tests use an extra runner to execute the
@@ -113,7 +115,7 @@ jobs:
       total-runners: 16
       go-arch: amd64
       go-tags: '${{ needs.setup.outputs.go-tags }},deadlock'
-      runs-on: ${{ needs.setup.outputs.compute-larger }}
+      runs-on: ${{ needs.setup.outputs.compute-large }}
       enterprise: ${{ needs.setup.outputs.enterprise }}
     secrets: inherit
 
@@ -137,7 +139,7 @@ jobs:
       extra-flags: '-race'
       go-arch: amd64
       go-tags: ${{ needs.setup.outputs.go-tags }}
-      runs-on: ${{ needs.setup.outputs.compute-huge }}
+      runs-on: ${{ needs.setup.outputs.compute-large }}
       enterprise: ${{ needs.setup.outputs.enterprise }}
       name: "race"
     secrets: inherit
@@ -162,7 +164,7 @@ jobs:
         }
       go-arch: amd64
       go-tags: '${{ needs.setup.outputs.go-tags }},deadlock,cgo,fips,fips_140_2'
-      runs-on: ${{ needs.setup.outputs.compute-larger }}
+      runs-on: ${{ needs.setup.outputs.compute-large }}
       enterprise: ${{ needs.setup.outputs.enterprise }}
       name: "fips"
     secrets: inherit
@@ -185,21 +187,21 @@ jobs:
     permissions:
       id-token: write
       contents: read
-    runs-on: ${{ fromJSON(needs.setup.outputs.compute-larger) }}
+    runs-on: ${{ fromJSON(needs.setup.outputs.compute-largem) }}
     steps:
       - uses: actions/checkout@c85c95e3d7251135ab7dc9ce3241c5835cc595a9 # v3.5.3
       - uses: ./.github/actions/set-up-go
         with:
           github-token: ${{ secrets.ELEVATED_GITHUB_TOKEN }}
       # Setup node.js without caching to allow running npm install -g yarn (next step)
-      - uses: actions/setup-node@64ed1c7eab4cce3362f8c340dee64e5eaeef8f7c # v3.6.0
+      - uses: actions/setup-node@e33196f7422957bea03ed53f6fbb155025ffc7b8 # v3.7.0
         with:
           node-version-file: './ui/package.json'
       - id: install-yarn
         run: |
           npm install -g yarn
       # Setup node.js with caching using the yarn.lock file
-      - uses: actions/setup-node@64ed1c7eab4cce3362f8c340dee64e5eaeef8f7c # v3.6.0
+      - uses: actions/setup-node@e33196f7422957bea03ed53f6fbb155025ffc7b8 # v3.7.0
         with:
           node-version-file: './ui/package.json'
           cache: yarn
@@ -271,7 +273,7 @@ jobs:
       - test-go
       - test-ui
     if: always()
-    runs-on: ${{ fromJSON(needs.setup.outputs.compute-tiny) }}
+    runs-on: ${{ fromJSON(needs.setup.outputs.compute-small) }}
     steps:
       - run: |
           tr -d '\n' <<< '${{ toJSON(needs.*.result) }}' | grep -q -v -E '(failure|cancelled)'
@@ -354,26 +356,25 @@ jobs:
           # Sort all of the summary table rows and push them to a temp file.
           temp_file_name=temp-$(date +%s)
           cat failure-summary-*.md | sort >> "$temp_file_name"
-          temp_message_file_name=temp-table-$(date +%s)
-          
+
           # If there are test failures, present them in a format of a GitHub Markdown table.
           if [ -s "$temp_file_name" ]; then
             # shellcheck disable=SC2129
             # Here we create the headings for the summary table
-            echo "| Test Type | Package | Test | Elapsed | Runner Index | Logs |" | tee -a "$GITHUB_STEP_SUMMARY" "$temp_message_file_name" 
-            echo "| --------- | ------- | ---- | ------- | ------------ | ---- |" | tee -a "$GITHUB_STEP_SUMMARY" "$temp_message_file_name"
+            echo "| Test Type | Package | Test | Elapsed | Runner Index | Logs |" >> "$GITHUB_STEP_SUMMARY"
+            echo "| --------- | ------- | ---- | ------- | ------------ | ---- |" >> "$GITHUB_STEP_SUMMARY"
             # shellcheck disable=SC2002
-            cat "$temp_file_name" | tee -a "$GITHUB_STEP_SUMMARY" "$temp_message_file_name"
+            cat "$temp_file_name" >> "$GITHUB_STEP_SUMMARY"
           else
-            echo "### All Go tests passed! :white_check_mark:" | tee -a "$GITHUB_STEP_SUMMARY" "$temp_message_file_name"
+            echo "### All Go tests passed! :white_check_mark:" >> "$GITHUB_STEP_SUMMARY"
           fi
-          
+
           # the random EOF is needed for a multiline environment variable
           EOF=$(dd if=/dev/urandom bs=15 count=1 status=none | base64)
           # shellcheck disable=SC2129
           echo "TABLE_TEST_RESULTS<<$EOF" >> "$GITHUB_ENV"
-          cat "$temp_message_file_name" >> "$GITHUB_ENV"
-          echo "$EOF" >> "$GITHUB_ENV" 
+          cat "$temp_file_name" >> "$GITHUB_ENV"
+          echo "$EOF" >> "$GITHUB_ENV"
       - uses: actions/checkout@c85c95e3d7251135ab7dc9ce3241c5835cc595a9 # v3.5.3
       - name: Create comment
         if: github.head_ref != ''
@@ -382,5 +383,5 @@ jobs:
           PR_NUMBER: ${{ github.event.pull_request.number }}
           RUN_ID: ${{ github.run_id }}
           REPO: ${{ github.event.repository.name }}
-          TABLE_DATA: ${{ env.TABLE_TEST_RESULTS }} 
+          TABLE_DATA: ${{ env.TABLE_TEST_RESULTS }}
         run: ./.github/scripts/report_failed_tests.sh
