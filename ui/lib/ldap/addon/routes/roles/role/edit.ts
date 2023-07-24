@@ -4,15 +4,11 @@
  */
 
 import Route from '@ember/routing/route';
-import { inject as service } from '@ember/service';
 
-import type Store from '@ember-data/store';
-import type SecretMountPath from 'vault/services/secret-mount-path';
 import type LdapRoleModel from 'vault/models/ldap/role';
 import type Controller from '@ember/controller';
 import type Transition from '@ember/routing/transition';
 import type { Breadcrumb } from 'vault/vault/app-types';
-import type { LdapRoleRouteParams } from './index';
 
 interface LdapRoleEditController extends Controller {
   breadcrumbs: Array<Breadcrumb>;
@@ -20,13 +16,8 @@ interface LdapRoleEditController extends Controller {
 }
 
 export default class LdapRoleEditRoute extends Route {
-  @service declare readonly store: Store;
-  @service declare readonly secretMountPath: SecretMountPath;
-
   model() {
-    const backend = this.secretMountPath.currentPath;
-    const { name, type } = this.paramsFor('roles.role') as LdapRoleRouteParams;
-    return this.store.queryRecord('ldap/role', { backend, name, type });
+    return this.modelFor('roles.role');
   }
 
   setupController(controller: LdapRoleEditController, resolvedModel: LdapRoleModel, transition: Transition) {
