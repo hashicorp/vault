@@ -83,7 +83,7 @@
 
   {{! wait until user has selected 'create a new item' before rendering modal}}
   {{#if (and this.nameInput this.showModal)}}
-    <Hds::Modal id="form-modal" @onClose={{fn (mut this.showRotationModal) false}} as |M|>
+    <Hds::Modal id="form-modal" @onClose={{fn (mut this.showModal) false}} as |M|>
       <M.Header @icon="info">
         Create new
         {{singularize @id}}
