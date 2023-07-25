@@ -6,6 +6,7 @@ package vault
 import (
 	"context"
 	"reflect"
+	"strings"
 	"testing"
 
 	"github.com/hashicorp/vault/sdk/helper/salt"
@@ -169,6 +170,12 @@ func testAuditedHeadersConfig_Remove(t *testing.T, conf *AuditedHeadersConfig) {
 	}
 }
 
+type TestSalter struct{}
+
+func (*TestSalter) Salt(ctx context.Context) (*salt.Salt, error) {
+	return salt.NewSalt(ctx, nil, nil)
+}
+
 func TestAuditedHeadersConfig_ApplyConfig(t *testing.T) {
 	conf := mockAuditedHeadersConfig(t)
 
@@ -181,20 +188,40 @@ func TestAuditedHeadersConfig_ApplyConfig(t *testing.T) {
 		"Content-Type":   {"json"},
 	}
 
-	hashFunc := func(ctx context.Context, s string) (string, error) { return "hashed", nil }
+	salter := &TestSalter{}
 
-	result, err := conf.ApplyConfig(context.Background(), reqHeaders, hashFunc)
+	result, err := conf.ApplyConfig(context.Background(), reqHeaders, salter)
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	expected := map[string][]string{
 		"x-test-header":  {"foo"},
-		"x-vault-header": {"hashed", "hashed"},
+		"x-vault-header": {"hmac-sha256:", "hmac-sha256:"},
 	}
 
-	if !reflect.DeepEqual(result, expected) {
-		t.Fatalf("Expected headers did not match actual: Expected %#v\n Got %#v\n", expected, result)
+	if len(expected) != len(result) {
+		t.Fatalf("Expected headers count did not match actual count: Expected count %d\n Got %d\n", len(expected), len(result))
+	}
+
+	for resultKey, resultValues := range result {
+		expectedValues := expected[resultKey]
+
+		if len(expectedValues) != len(resultValues) {
+			t.Fatalf("Expected header values count did not match actual values count: Expected count: %d\n Got %d\n", len(expectedValues), len(resultValues))
+		}
+
+		for i, e := range expectedValues {
+			if e == "hmac-sha256:" {
+				if !strings.HasPrefix(resultValues[i], e) {
+					t.Fatalf("Expected headers did not match actual: Expected %#v...\n Got %#v\n", e, resultValues[i])
+				}
+			} else {
+				if e != resultValues[i] {
+					t.Fatalf("Expected headers did not match actual: Expected %#v\n Got %#v\n", e, resultValues[i])
+				}
+			}
+		}
 	}
 
 	// Make sure we didn't edit the reqHeaders map
@@ -226,16 +253,11 @@ func BenchmarkAuditedHeaderConfig_ApplyConfig(b *testing.B) {
 		"Content-Type":   {"json"},
 	}
 
-	salter, err := salt.NewSalt(context.Background(), nil, nil)
-	if err != nil {
-		b.Fatal(err)
-	}
-
-	hashFunc := func(ctx context.Context, s string) (string, error) { return salter.GetIdentifiedHMAC(s), nil }
+	salter := &TestSalter{}
 
 	// Reset the timer since we did a lot above
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		conf.ApplyConfig(context.Background(), reqHeaders, hashFunc)
+		conf.ApplyConfig(context.Background(), reqHeaders, salter)
 	}
 }

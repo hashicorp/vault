@@ -252,7 +252,7 @@ func NewNoopAudit(config map[string]string) (*NoopAudit, error) {
 		return nil, err
 	}
 
-	f, err := audit.NewEntryFormatter(cfg, n, n.GetHash, nil)
+	f, err := audit.NewEntryFormatter(cfg, n, nil)
 	if err != nil {
 		return nil, fmt.Errorf("error creating formatter: %w", err)
 	}
@@ -356,7 +356,7 @@ func (n *NoopAudit) LogTestMessage(ctx context.Context, in *logical.LogInput, co
 	defer n.l.Unlock()
 	var w bytes.Buffer
 
-	tempFormatter, err := audit.NewTemporaryFormatter(config["format"], config["prefix"], n.GetHash)
+	tempFormatter, err := audit.NewTemporaryFormatter(config["format"], config["prefix"])
 	if err != nil {
 		return err
 	}

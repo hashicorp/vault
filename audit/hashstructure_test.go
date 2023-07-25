@@ -98,20 +98,28 @@ func TestCopy_response(t *testing.T) {
 	}
 }
 
-func TestHashString(t *testing.T) {
+type TestSalter struct{}
+
+func (*TestSalter) Salt(ctx context.Context) (*salt.Salt, error) {
 	inmemStorage := &logical.InmemStorage{}
 	inmemStorage.Put(context.Background(), &logical.StorageEntry{
 		Key:   "salt",
 		Value: []byte("foo"),
 	})
-	localSalt, err := salt.NewSalt(context.Background(), inmemStorage, &salt.Config{
+
+	return salt.NewSalt(context.Background(), inmemStorage, &salt.Config{
 		HMAC:     sha256.New,
 		HMACType: "hmac-sha256",
 	})
+}
+
+func TestHashString(t *testing.T) {
+	salter := &TestSalter{}
+
+	out, err := HashString(context.Background(), salter, "foo")
 	if err != nil {
 		t.Fatalf("Error instantiating salt: %s", err)
 	}
-	out := HashString(localSalt, "foo")
 	if out != "hmac-sha256:08ba357e274f528065766c770a639abf6809b39ccfd37c2a3157c7f51954da0a" {
 		t.Fatalf("err: HashString output did not match expected")
 	}
@@ -152,16 +160,10 @@ func TestHashAuth(t *testing.T) {
 		Key:   "salt",
 		Value: []byte("foo"),
 	})
-	localSalt, err := salt.NewSalt(context.Background(), inmemStorage, &salt.Config{
-		HMAC:     sha256.New,
-		HMACType: "hmac-sha256",
-	})
-	if err != nil {
-		t.Fatalf("Error instantiating salt: %s", err)
-	}
+	salter := &TestSalter{}
 	for _, tc := range cases {
 		input := fmt.Sprintf("%#v", tc.Input)
-		out, err := HashAuth(localSalt, tc.Input, tc.HMACAccessor)
+		out, err := HashAuth(context.Background(), salter, tc.Input, tc.HMACAccessor)
 		if err != nil {
 			t.Fatalf("err: %s\n\n%s", err, input)
 		}
@@ -216,16 +218,10 @@ func TestHashRequest(t *testing.T) {
 		Key:   "salt",
 		Value: []byte("foo"),
 	})
-	localSalt, err := salt.NewSalt(context.Background(), inmemStorage, &salt.Config{
-		HMAC:     sha256.New,
-		HMACType: "hmac-sha256",
-	})
-	if err != nil {
-		t.Fatalf("Error instantiating salt: %s", err)
-	}
+	salter := &TestSalter{}
 	for _, tc := range cases {
 		input := fmt.Sprintf("%#v", tc.Input)
-		out, err := HashRequest(localSalt, tc.Input, tc.HMACAccessor, tc.NonHMACDataKeys)
+		out, err := HashRequest(context.Background(), salter, tc.Input, tc.HMACAccessor, tc.NonHMACDataKeys)
 		if err != nil {
 			t.Fatalf("err: %s\n\n%s", err, input)
 		}
@@ -287,16 +283,10 @@ func TestHashResponse(t *testing.T) {
 		Key:   "salt",
 		Value: []byte("foo"),
 	})
-	localSalt, err := salt.NewSalt(context.Background(), inmemStorage, &salt.Config{
-		HMAC:     sha256.New,
-		HMACType: "hmac-sha256",
-	})
-	if err != nil {
-		t.Fatalf("Error instantiating salt: %s", err)
-	}
+	salter := &TestSalter{}
 	for _, tc := range cases {
 		input := fmt.Sprintf("%#v", tc.Input)
-		out, err := HashResponse(localSalt, tc.Input, tc.HMACAccessor, tc.NonHMACDataKeys, false)
+		out, err := HashResponse(context.Background(), salter, tc.Input, tc.HMACAccessor, tc.NonHMACDataKeys, false)
 		if err != nil {
 			t.Fatalf("err: %s\n\n%s", err, input)
 		}

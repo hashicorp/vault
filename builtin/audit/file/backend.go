@@ -131,7 +131,7 @@ func Factory(ctx context.Context, conf *audit.BackendConfig, useEventLogger bool
 	b.salt.Store((*salt.Salt)(nil))
 
 	// Configure the formatter for either case.
-	f, err := audit.NewEntryFormatter(b.formatConfig, b, b.GetHash, headersConfig, audit.WithPrefix(conf.Config["prefix"]))
+	f, err := audit.NewEntryFormatter(b.formatConfig, b, headersConfig, audit.WithPrefix(conf.Config["prefix"]))
 	if err != nil {
 		return nil, fmt.Errorf("error creating formatter: %w", err)
 	}
@@ -253,15 +253,6 @@ func (b *Backend) Salt(ctx context.Context) (*salt.Salt, error) {
 	return newSalt, nil
 }
 
-func (b *Backend) GetHash(ctx context.Context, data string) (string, error) {
-	salt, err := b.Salt(ctx)
-	if err != nil {
-		return "", err
-	}
-
-	return audit.HashString(salt, data), nil
-}
-
 func (b *Backend) LogRequest(ctx context.Context, in *logical.LogInput) error {
 	var writer io.Writer
 	switch b.path {
@@ -347,7 +338,7 @@ func (b *Backend) LogTestMessage(ctx context.Context, in *logical.LogInput, conf
 
 	var buf bytes.Buffer
 
-	temporaryFormatter, err := audit.NewTemporaryFormatter(config["format"], config["prefix"], b.GetHash)
+	temporaryFormatter, err := audit.NewTemporaryFormatter(config["format"], config["prefix"])
 	if err != nil {
 		return err
 	}

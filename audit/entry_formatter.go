@@ -30,7 +30,7 @@ var (
 
 // NewEntryFormatter should be used to create an EntryFormatter.
 // Accepted options: WithPrefix.
-func NewEntryFormatter(config FormatterConfig, salter Salter, hashFunc func(context.Context, string) (string, error), headersConfig HeaderAdjuster, opt ...Option) (*EntryFormatter, error) {
+func NewEntryFormatter(config FormatterConfig, salter Salter, headersConfig HeaderAdjuster, opt ...Option) (*EntryFormatter, error) {
 	const op = "audit.NewEntryFormatter"
 
 	if salter == nil {
@@ -50,19 +50,18 @@ func NewEntryFormatter(config FormatterConfig, salter Salter, hashFunc func(cont
 	return &EntryFormatter{
 		salter:        salter,
 		config:        config,
-		hashFunc:      hashFunc,
 		headersConfig: headersConfig,
 		prefix:        opts.withPrefix,
 	}, nil
 }
 
 // Reopen is a no-op for the formatter node.
-func (_ *EntryFormatter) Reopen() error {
+func (*EntryFormatter) Reopen() error {
 	return nil
 }
 
 // Type describes the type of this node (formatter).
-func (_ *EntryFormatter) Type() eventlogger.NodeType {
+func (*EntryFormatter) Type() eventlogger.NodeType {
 	return eventlogger.NodeTypeFormatter
 }
 
@@ -147,11 +146,6 @@ func (f *EntryFormatter) FormatRequest(ctx context.Context, in *logical.LogInput
 		return nil, errors.New("salt func not configured")
 	}
 
-	s, err := f.salter.Salt(ctx)
-	if err != nil {
-		return nil, fmt.Errorf("error fetching salt: %w", err)
-	}
-
 	// Set these to the input values at first
 	auth := in.Auth
 	req := in.Request
@@ -164,13 +158,15 @@ func (f *EntryFormatter) FormatRequest(ctx context.Context, in *logical.LogInput
 		connState = in.Request.Connection.ConnState
 	}
 
+	var err error
+
 	if !f.config.Raw {
-		auth, err = HashAuth(s, auth, f.config.HMACAccessor)
+		auth, err = HashAuth(ctx, f.salter, auth, f.config.HMACAccessor)
 		if err != nil {
 			return nil, err
 		}
 
-		req, err = HashRequest(s, req, f.config.HMACAccessor, in.NonHMACReqDataKeys)
+		req, err = HashRequest(ctx, f.salter, req, f.config.HMACAccessor, in.NonHMACReqDataKeys)
 		if err != nil {
 			return nil, err
 		}
@@ -279,11 +275,6 @@ func (f *EntryFormatter) FormatResponse(ctx context.Context, in *logical.LogInpu
 		return nil, errors.New("salt func not configured")
 	}
 
-	s, err := f.salter.Salt(ctx)
-	if err != nil {
-		return nil, fmt.Errorf("error fetching salt: %w", err)
-	}
-
 	// Set these to the input values at first
 	auth, req, resp := in.Auth, in.Request, in.Response
 	if auth == nil {
@@ -301,6 +292,7 @@ func (f *EntryFormatter) FormatResponse(ctx context.Context, in *logical.LogInpu
 	elideListResponseData := f.config.ElideListResponses && req.Operation == logical.ListOperation
 
 	var respData map[string]interface{}
+	var err error
 	if f.config.Raw {
 		// In the non-raw case, elision of list response data occurs inside HashResponse, to avoid redundant deep
 		// copies and hashing of data only to elide it later. In the raw case, we need to do it here.
@@ -316,17 +308,17 @@ func (f *EntryFormatter) FormatResponse(ctx context.Context, in *logical.LogInpu
 			respData = resp.Data
 		}
 	} else {
-		auth, err = HashAuth(s, auth, f.config.HMACAccessor)
+		auth, err = HashAuth(ctx, f.salter, auth, f.config.HMACAccessor)
 		if err != nil {
 			return nil, err
 		}
 
-		req, err = HashRequest(s, req, f.config.HMACAccessor, in.NonHMACReqDataKeys)
+		req, err = HashRequest(ctx, f.salter, req, f.config.HMACAccessor, in.NonHMACReqDataKeys)
 		if err != nil {
 			return nil, err
 		}
 
-		resp, err = HashResponse(s, resp, f.config.HMACAccessor, in.NonHMACRespDataKeys, elideListResponseData)
+		resp, err = HashResponse(ctx, f.salter, resp, f.config.HMACAccessor, in.NonHMACRespDataKeys, elideListResponseData)
 		if err != nil {
 			return nil, err
 		}

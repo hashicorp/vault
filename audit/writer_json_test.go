@@ -100,7 +100,7 @@ func TestFormatJSON_formatRequest(t *testing.T) {
 		var buf bytes.Buffer
 		cfg, err := NewFormatterConfig()
 		require.NoError(t, err)
-		f, err := NewEntryFormatter(cfg, ss, hashFunc(ss), &TestingHeadersAdjuster{})
+		f, err := NewEntryFormatter(cfg, ss, &TestingHeadersAdjuster{})
 		require.NoError(t, err)
 		formatter := EntryFormatterWriter{
 			Formatter: f,
