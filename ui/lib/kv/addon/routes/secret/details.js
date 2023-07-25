@@ -19,12 +19,7 @@ export default class KvSecretDetailsRoute extends Route {
 
   model(params) {
     const parentModel = this.modelFor('secret');
-    const queryVersion =
-      // first check version data exists (user has READ permission for kv/data)
-      // only query version if params have changed
-      parentModel.secret.version && params.version && parentModel.secret.version !== Number(params.version);
-
-    if (queryVersion) {
+    if (params.version) {
       // query params have changed by selecting a different version from the dropdown
       // fire off new request for that version's secret data
       const { backend, path } = parentModel;
