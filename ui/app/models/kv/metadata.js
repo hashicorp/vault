@@ -67,6 +67,16 @@ export default class KvSecretMetadataModel extends Model {
     return pathIsDirectory(this.path);
   }
 
+  // turns version object into an array for version dropdown menu
+  get sortedVersions() {
+    const array = [];
+    for (const key in this.versions) {
+      array.push({ version: key, ...this.versions[key] });
+    }
+    // version keys are in order created with 1 being the oldest, we want newest first
+    return array.reverse();
+  }
+
   // permissions needed for the list view where kv/data has not yet been called. Allows us to conditionally show action items in the LinkedBlock popups.
   @lazyCapabilities(apiPath`${'backend'}/data/${'path'}`, 'backend', 'path') dataPath;
   @lazyCapabilities(apiPath`${'backend'}/metadata/${'path'}`, 'backend', 'path') metadataPath;

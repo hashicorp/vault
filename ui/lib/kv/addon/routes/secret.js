@@ -8,8 +8,9 @@ import { inject as service } from '@ember/service';
 import { hash } from 'rsvp';
 
 export default class KvSecretRoute extends Route {
-  @service store;
+  @service router;
   @service secretMountPath;
+  @service store;
 
   async fetchSecretData(backend, path) {
     return await this.store.queryRecord('kv/data', { backend, path }).catch(() => {
@@ -33,5 +34,11 @@ export default class KvSecretRoute extends Route {
       secret: this.fetchSecretData(backend, path),
       metadata: this.fetchSecretMetadata(backend, path),
     });
+  }
+
+  afterModel({ secret }) {
+    if (secret?.version) {
+      this.router.transitionTo({ queryParams: { version: secret.version } });
+    }
   }
 }

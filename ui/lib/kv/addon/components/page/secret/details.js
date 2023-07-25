@@ -6,6 +6,7 @@
 import Component from '@glimmer/component';
 import { action } from '@ember/object';
 import { tracked } from '@glimmer/tracking';
+import { next } from '@ember/runloop';
 
 /**
  * @module KvSecretDetails renders the key/value data of a KV secret. 
@@ -30,6 +31,13 @@ export default class KvSecretDetails extends Component {
   @action
   toggleJsonView() {
     this.showJsonView = !this.showJsonView;
+  }
+
+  @action
+  onClose(dropdown) {
+    // strange issue where closing dropdown triggers full transition (which redirects to auth screen in production)
+    // closing dropdown in next tick of run loop fixes it
+    next(() => dropdown.actions.close());
   }
 
   get emptyState() {
