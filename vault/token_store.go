@@ -3296,16 +3296,6 @@ func (ts *TokenStore) handleRevokeOrphan(ctx context.Context, req *logical.Reque
 		return logical.ErrorResponse("missing token ID"), logical.ErrInvalidRequest
 	}
 
-	// TODO #21772 makes the sudo check below redundant, by correcting the TokenStore's PathsSpecial.Root to match this endpoint
-
-	// Check if the client token has sudo/root privileges for the requested path
-	isSudo := ts.System().(extendedSystemView).SudoPrivilege(ctx, req.MountPoint+req.Path, req.ClientToken)
-
-	if !isSudo {
-		return logical.ErrorResponse("root or sudo privileges required to revoke and orphan"),
-			logical.ErrInvalidRequest
-	}
-
 	// Do a lookup. Among other things, that will ensure that this is either
 	// running in the same namespace or a parent.
 	te, err := ts.Lookup(ctx, id)

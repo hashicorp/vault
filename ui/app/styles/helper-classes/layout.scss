@@ -52,6 +52,10 @@
   min-width: 0;
 }
 
+.is-medium-width {
+  width: $desktop / 3;
+}
+
 .is-medium-height {
   height: 125px;
 }
