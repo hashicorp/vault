@@ -15,7 +15,7 @@ Vault 1.14. **Please read carefully**.
 ## Consul service registration
 
 As of version 1.15, `service_tags` supplied to Vault for the purpose of [Consul
-service registration](https://developer.hashicorp.com/vault/docs/configuration/service-registration/consul#service_tags)
+service registration](/vault/docs/configuration/service-registration/consul#service_tags)
 will be **case-sensitive**. In previous versions of Vault tags were lower-cased which
 led to issues, for example when users supplied custom Traefik rules which use case-sensitive
 method names such as `Host()`.
