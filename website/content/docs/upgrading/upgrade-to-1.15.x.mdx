@@ -16,8 +16,18 @@ Vault 1.14. **Please read carefully**.
 
 As of version 1.15, `service_tags` supplied to Vault for the purpose of [Consul
 service registration](/vault/docs/configuration/service-registration/consul#service_tags)
-will be **case-sensitive**. In previous versions of Vault tags were lower-cased which
-led to issues, for example when users supplied custom Traefik rules which use case-sensitive
-method names such as `Host()`.
+will be **case-sensitive**. In previous versions of Vault tags were converted to
+lowercase which led to issues, for example when tags contained Traefik rules which
+use case-sensitive method names such as `Host()`.
+
+If you previously used Consul service registration tags ignoring case, or relying
+on lowercase tags being used by Vault, then this change may cause unexpected
+behavior.
+
+Please audit your Consul storage stanza to ensure that you either:
+
+* Manually convert your `service_tags` to lowercase if required
+* Ensure that any system that relies on the tags is aware of the new case-preserving behavior
+
 
 
