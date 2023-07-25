@@ -35,15 +35,18 @@ func pathUser(b *backend) *framework.Path {
 			"role_arn": {
 				Type:        framework.TypeString,
 				Description: "ARN of role to assume when credential_type is " + assumedRoleCred,
+				Query:       true,
 			},
 			"ttl": {
 				Type:        framework.TypeDurationSecond,
 				Description: "Lifetime of the returned credentials in seconds",
 				Default:     3600,
+				Query:       true,
 			},
 			"role_session_name": {
 				Type:        framework.TypeString,
 				Description: "Session name to use when assuming role. Max chars: 64",
+				Query:       true,
 			},
 		},
 

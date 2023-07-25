@@ -104,6 +104,13 @@ module "vault_agent" {
   vault_instance_count = var.vault_instance_count
 }
 
+module "vault_proxy" {
+  source = "./modules/vault_proxy"
+
+  vault_install_dir    = var.vault_install_dir
+  vault_instance_count = var.vault_instance_count
+}
+
 module "vault_verify_agent_output" {
   source = "./modules/vault_verify_agent_output"
 
