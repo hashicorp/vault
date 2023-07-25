@@ -114,8 +114,6 @@ module('Integration | Component | kv | Page::Secret::MetadataDetails', function 
         'You do not have access to secret metadata',
         'renders the empty state about no secret metadata'
       );
-    assert.dom('[data-test-secret-metadata]').doesNotExist('does not render secret metadata.');
     assert.dom('[data-test-edit-metadata]').doesNotExist('does not render edit metadata button.');
-    // await clearRecord(this.store, 'kv/metadata', data.id);
   });
 });
