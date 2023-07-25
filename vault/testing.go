@@ -1287,8 +1287,6 @@ func NewTestCluster(t testing.T, base *CoreConfig, opts *TestClusterOptions) *Te
 		}
 	}
 
-	// testLogger provides some extra utility for managing the list of
-	// allLoggers during testing.
 	var testCluster TestCluster
 	testCluster.base = base
 
