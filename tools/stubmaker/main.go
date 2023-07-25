@@ -50,12 +50,12 @@ func main() {
 
 	// Read the file and figure out if we need to do anything.
 	inputFile := os.Getenv("GOFILE")
-	if !strings.HasSuffix(inputFile, "_oss.go") {
-		fatal(fmt.Errorf("stubmaker should only be invoked from files ending in _oss.go"))
+	if !strings.HasSuffix(inputFile, "_stubs_oss.go") {
+		fatal(fmt.Errorf("stubmaker should only be invoked from files ending in _stubs_oss.go"))
 	}
 
-	baseFilename := strings.TrimSuffix(inputFile, "_oss.go")
-	outputFile := baseFilename + "_ent.go"
+	baseFilename := strings.TrimSuffix(inputFile, "_stubs_oss.go")
+	outputFile := baseFilename + "_stubs_ent.go"
 	b, err := os.ReadFile(inputFile)
 	if err != nil {
 		fatal(err)
