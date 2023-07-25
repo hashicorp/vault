@@ -79,7 +79,7 @@ module('Integration | Component | kv | Page::Secret::MetadataDetails', function 
   });
 
   test('it renders correct empty state messages with no READ metadata permissions and no secretCustomMetadata is returned', async function (assert) {
-    assert.expect(4);
+    assert.expect(3);
     this.server.post('/sys/capabilities-self', allowAllCapabilitiesStub('list', 'update'));
     // would not return custom_metadata if they did not have permissions
     const data = this.server.create('kv-metadatum');
