@@ -32,15 +32,13 @@ var sudoPaths = map[string]*regexp.Regexp{
 	// This entry is a bit wrong... sys/leases/lookup does NOT require sudo. But sys/leases/lookup/ with a trailing
 	// slash DOES require sudo. But the part of the Vault CLI that uses this logic doesn't pass operation-appropriate
 	// trailing slashes, it always strips them off, so we end up giving the wrong answer for one of these.
-	"/sys/leases/lookup":                 regexp.MustCompile(`^/sys/leases/lookup/?$`),
-	"/sys/leases/lookup/{prefix}":        regexp.MustCompile(`^/sys/leases/lookup/.+$`),
+	"/sys/leases/lookup/{prefix}":        regexp.MustCompile(`^/sys/leases/lookup(?:/.+)?$`),
 	"/sys/leases/revoke-force/{prefix}":  regexp.MustCompile(`^/sys/leases/revoke-force/.+$`),
 	"/sys/leases/revoke-prefix/{prefix}": regexp.MustCompile(`^/sys/leases/revoke-prefix/.+$`),
 	"/sys/plugins/catalog/{name}":        regexp.MustCompile(`^/sys/plugins/catalog/[^/]+$`),
 	"/sys/plugins/catalog/{type}":        regexp.MustCompile(`^/sys/plugins/catalog/[\w-]+$`),
 	"/sys/plugins/catalog/{type}/{name}": regexp.MustCompile(`^/sys/plugins/catalog/[\w-]+/[^/]+$`),
-	"/sys/raw":                           regexp.MustCompile(`^/sys/raw$`),
-	"/sys/raw/{path}":                    regexp.MustCompile(`^/sys/raw/.+$`),
+	"/sys/raw/{path}":                    regexp.MustCompile(`^/sys/raw(?:/.+)?$`),
 	"/sys/remount":                       regexp.MustCompile(`^/sys/remount$`),
 	"/sys/revoke-force/{prefix}":         regexp.MustCompile(`^/sys/revoke-force/.+$`),
 	"/sys/revoke-prefix/{prefix}":        regexp.MustCompile(`^/sys/revoke-prefix/.+$`),

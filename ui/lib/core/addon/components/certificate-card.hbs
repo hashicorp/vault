@@ -1,0 +1,28 @@
+<Hds::Card::Container
+  @level="mid"
+  @hasBorder={{true}}
+  class="is-flex-row has-top-padding-m has-bottom-padding-m is-medium-width"
+>
+  <span class="has-left-margin-s">
+    <Icon @name="certificate" @size="24" data-test-certificate-icon />
+  </span>
+  <div class="has-left-margin-m is-min-width-0 is-flex-1">
+    <p class="has-text-weight-bold" data-test-certificate-label>
+      PEM Format
+    </p>
+    <code class="is-size-8 truncate-second-line has-text-grey" data-test-certificate-value>
+      {{@certificateValue}}
+    </code>
+  </div>
+  <div class="is-flex has-background-white-bis has-side-padding-s has-top-bottom-margin-negative-m">
+    <CopyButton
+      data-test-certificate-copy
+      class="button is-transparent is-flex-v-centered"
+      @clipboardText={{@certificateValue}}
+      @buttonType="button"
+      @success={{action (set-flash-message "Certificate copied")}}
+    >
+      <Icon @name="clipboard-copy" aria-label="Copy" />
+    </CopyButton>
+  </div>
+</Hds::Card::Container>
