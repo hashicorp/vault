@@ -458,7 +458,7 @@ func TestRaft_Autopilot_DeadServerCleanup(t *testing.T) {
 	// Ensure Autopilot has the aggressive settings
 	config.CleanupDeadServers = true
 	config.ServerStabilizationTime = 5 * time.Second
-	config.DeadServerLastContactThreshold = 10 * time.Second
+	config.DeadServerLastContactThreshold = 1 * time.Minute
 	config.MaxTrailingLogs = 10
 	config.LastContactThreshold = 10 * time.Second
 	config.MinQuorum = 3
