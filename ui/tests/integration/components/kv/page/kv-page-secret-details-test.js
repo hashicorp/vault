@@ -42,7 +42,7 @@ module('Integration | Component | kv | Page::Secret::Details', function (hooks) 
     };
     this.breadcrumbs = [
       { label: 'secrets', route: 'secrets', linkExternal: true },
-      { label: this.model.backend, route: 'secrets' },
+      { label: this.model.backend, route: 'list' },
       { label: this.model.path },
     ];
   });

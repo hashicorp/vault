@@ -15,7 +15,7 @@ const validations = {
     { type: 'length', options: { min: 1, max: 16 }, message: 'You cannot go over 16 characters.' },
   ],
 };
-const formFieldProps = ['maxVersions', 'casRequired', 'deleteVersionAfter', 'customerMetadata'];
+const formFieldProps = ['customMetadata', 'maxVersions', 'casRequired', 'deleteVersionAfter'];
 
 @withModelValidations(validations)
 @withFormFields(formFieldProps)
@@ -71,19 +71,16 @@ export default class KvSecretMetadataModel extends Model {
   @lazyCapabilities(apiPath`${'backend'}/data/${'path'}`, 'backend', 'path') dataPath;
   @lazyCapabilities(apiPath`${'backend'}/metadata/${'path'}`, 'backend', 'path') metadataPath;
 
-  get canListMetadata() {
-    return this.metadataPath.get('canList');
-  }
   get canDeleteMetadata() {
-    return this.metadataPath.get('canDelete');
+    return this.metadataPath.get('canDelete') !== false;
   }
   get canReadMetadata() {
-    return this.metadataPath.get('canRead');
+    return this.metadataPath.get('canRead') !== false;
   }
-  get canReadData() {
-    return this.dataPath.get('canRead');
+  get canUpdateMetadata() {
+    return this.metadataPath.get('canUpdate') !== false;
   }
   get canEditData() {
-    return this.dataPath.get('canUpdate');
+    return this.dataPath.get('canUpdate') !== false;
   }
 }
