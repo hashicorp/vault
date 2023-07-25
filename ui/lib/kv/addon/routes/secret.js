@@ -35,10 +35,4 @@ export default class KvSecretRoute extends Route {
       metadata: this.fetchSecretMetadata(backend, path),
     });
   }
-
-  afterModel({ secret }) {
-    if (secret?.version) {
-      this.router.transitionTo({ queryParams: { version: secret.version } });
-    }
-  }
 }

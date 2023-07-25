@@ -10,6 +10,7 @@ import { hash } from 'rsvp';
 
 export default class KvSecretDetailsRoute extends Route {
   @service store;
+
   queryParams = {
     version: {
       refreshModel: true,
@@ -18,7 +19,12 @@ export default class KvSecretDetailsRoute extends Route {
 
   model(params) {
     const parentModel = this.modelFor('secret');
-    if (parentModel.secret.version !== Number(params.version)) {
+    const queryVersion =
+      // first check version data exists (user has READ permission for kv/data)
+      // only query version if params have changed
+      parentModel.secret.version && params.version && parentModel.secret.version !== Number(params.version);
+
+    if (queryVersion) {
       // query params have changed by selecting a different version from the dropdown
       // fire off new request for that version's secret data
       const { backend, path } = parentModel;
@@ -46,6 +52,14 @@ export default class KvSecretDetailsRoute extends Route {
     } else {
       breadcrumbsArray.push({ label: resolvedModel.path });
     }
+
     controller.breadcrumbs = breadcrumbsArray;
+    controller.set('version', resolvedModel.secret.version);
+  }
+
+  resetController(controller, isExiting) {
+    if (isExiting) {
+      controller.set('version', null);
+    }
   }
 }
