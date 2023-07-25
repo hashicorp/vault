@@ -38,18 +38,17 @@ module('Integration | Component | kv | Page::Secret::MetadataDetails', function 
       { label: 'metadata' },
     ];
     await render(
-      hbs`<Page::Secret::MetadataDetails @model={{this.model}} @breadcrumbs={{this.breadcrumbs}} />`,
+      hbs`<Page::Secret::MetadataDetails @metadata={{this.model}} @breadcrumbs={{this.breadcrumbs}} />`,
       {
         owner: this.engine,
       }
     );
-
     assert
       .dom('[data-test-empty-state-title]')
       .hasText('No custom metadata', 'renders the correct empty state');
     assert
       .dom('[data-test-value-div="Delete version after"]')
-      .hasText('3h25m19s', 'correctly shows and formats the timestamp.');
+      .hasText('3 hours 25 minutes 19 seconds', 'correctly shows and formats the timestamp.');
   });
 
   test('it renders custom metadata when it exists and user has permissions', async function (assert) {
@@ -70,7 +69,7 @@ module('Integration | Component | kv | Page::Secret::MetadataDetails', function 
     ];
 
     await render(
-      hbs`<Page::Secret::MetadataDetails @model={{this.model}} @breadcrumbs={{this.breadcrumbs}} />`,
+      hbs`<Page::Secret::MetadataDetails @metadata={{this.model}} @breadcrumbs={{this.breadcrumbs}} />`,
       {
         owner: this.engine,
       }
@@ -78,8 +77,8 @@ module('Integration | Component | kv | Page::Secret::MetadataDetails', function 
     assert.dom('[data-test-custom-metadata]').exists({ count: 3 }, 'renders three rows of custom metadata.');
   });
 
-  test('it renders correct empty state messages with no READ metadata permissions and no secretCustomMetadata is returned', async function (assert) {
-    assert.expect(4);
+  test('it renders correct empty state messages with no READ metadata permissions and no secret.customMetadata is returned', async function (assert) {
+    assert.expect(3);
     this.server.post('/sys/capabilities-self', allowAllCapabilitiesStub('list', 'update'));
     // would not return custom_metadata if they did not have permissions
     const data = this.server.create('kv-metadatum');
@@ -96,7 +95,7 @@ module('Integration | Component | kv | Page::Secret::MetadataDetails', function 
       { label: 'metadata' },
     ];
     await render(
-      hbs`<Page::Secret::MetadataDetails @model={{this.model}} @breadcrumbs={{this.breadcrumbs}} />`,
+      hbs`<Page::Secret::MetadataDetails @metadata={{this.model}} @breadcrumbs={{this.breadcrumbs}} />`,
       {
         owner: this.engine,
       }
