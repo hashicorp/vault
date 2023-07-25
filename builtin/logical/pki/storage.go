@@ -1338,6 +1338,20 @@ func (sc *storageContext) getRevocationConfig() (*crlConfig, error) {
 	return &result, nil
 }
 
+func (sc *storageContext) setRevocationConfig(config *crlConfig) error {
+	entry, err := logical.StorageEntryJSON("config/crl", config)
+	if err != nil {
+		return fmt.Errorf("failed building storage entry JSON: %w", err)
+	}
+
+	err = sc.Storage.Put(sc.Context, entry)
+	if err != nil {
+		return fmt.Errorf("failed writing storage entry: %w", err)
+	}
+
+	return nil
+}
+
 func (sc *storageContext) getAutoTidyConfig() (*tidyConfig, error) {
 	entry, err := sc.Storage.Get(sc.Context, autoTidyConfigPath)
 	if err != nil {

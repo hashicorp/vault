@@ -10,7 +10,7 @@ export default create({
   methodsLink: {
     isActive: hasClass('active'),
     text: text(),
-    scope: '[data-test-sidebar-nav-link="Authentication methods"]',
+    scope: '[data-test-sidebar-nav-link="Authentication Methods"]',
   },
 
   backendLinks: collection('[data-test-auth-backend-link]', {

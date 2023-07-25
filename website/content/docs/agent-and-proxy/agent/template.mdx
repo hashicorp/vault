@@ -6,9 +6,10 @@ description: >-
   files using Consul Template markup.
 ---
 
-# Vault Agent Templates
+# Vault agent templates
 
 Vault Agent's Template functionality allows Vault secrets to be rendered to files
+or environment variables (via the [Process Supervisor Mode](/vault/docs/agent-and-proxy/agent/process-supervisor))
 using [Consul Template markup][consul-templating-language].
 
 ## Functionality
@@ -32,7 +33,7 @@ for a short while (including some randomness to help prevent thundering herd
 scenarios) and retry. On success, secrets defined in the templates will be
 retrieved from Vault and rendered locally.
 
-## Templating Language
+## Templating language
 
 The template output content can be provided directly as part of the `contents`
 option in a `template` stanza or as a separate `.ctmpl` file and specified in
@@ -59,7 +60,7 @@ The following links contain additional resources for the templating language use
 - [Consul Templating Documentation][consul-templating-language]
 - [Go Templating Language Documentation](https://pkg.go.dev/text/template#pkg-overview)
 
-### Template Language Example
+### Template language example
 
 The following is an example of a template that retrieves a generic secret from Vault's
 KV store:
@@ -92,7 +93,7 @@ To fetch only the issuing CA for this mount, use:
 
 Alternatively, `pki/cert/ca_chain` can be used to fetch the full CA chain.
 
-## Global Configurations
+## Global configurations
 
 The top level `template_config` block has the following configuration entries that affect
 all templates:
@@ -106,7 +107,7 @@ failures.
   This setting will not change how often Vault Agent Templating renders leased
   secrets. Uses [duration format strings](/vault/docs/concepts/duration-format).
 
-### `template_config` Stanza Example
+### `template_config` stanza example
 
 ```hcl
 template_config {
@@ -154,38 +155,42 @@ missing, but will only error for a missing key if `error_on_missing_key` is set.
 Whether Vault Agent will exit when the templating engine errors depends on the
 value of `exit_on_retry_failure`.
 
-## Template Configurations
+## Template configurations
 
 The top level `template` block has multiple configuration entries. The
 parameters found in the template configuration section in the consul-template
 [documentation
 page](https://github.com/hashicorp/consul-template/blob/main/docs/configuration.md#templates)
 can be used here:
+<Tip>
+The parameters marked with `Δ` below are only applicable to file templates and
+cannot be used with `env_template` entries in process supervisor mode.
+</Tip>
 
 - `source` `(string: "")` - Path on disk to use as the input template. This
   option is required if not using the `contents` option.
-- `destination` `(string: required)` - Path on disk where the rendered secrets should
+- `destination`Δ `(string: required)` - Path on disk where the rendered secrets should
   be created. If the parent directories do not exist, Vault
   Agent will attempt to create them, unless `create_dest_dirs` is false.
-- `create_dest_dirs` `(bool: true)` - This option tells Vault Agent to create
+- `create_dest_dirs`Δ `(bool: true)` - This option tells Vault Agent to create
   the parent directories of the destination path if they do not exist.
 - `contents` `(string: "")` - This option allows embedding the contents of
   a template in the configuration file rather then supplying the `source` path to
   the template file. This is useful for short templates. This option is mutually
   exclusive with the `source` option.
-- `command` `(string: "")` - This is the optional command to run when the
+- `command`Δ `(string: "")` - This is the optional command to run when the
   template is rendered. The command will only run if the resulting template changes.
   The command must return within 30s (configurable), and it must have a successful
   exit code. Vault Agent is not a replacement for a process monitor or init system.
   This is deprecated in favor of the `exec` option.
-- `command_timeout` `(duration: 30s)` - This is the maximum amount of time to
+- `command_timeout`Δ `(duration: 30s)` - This is the maximum amount of time to
   wait for the optional command to return. This is deprecated in favor of the
   `exec` option.
 - `error_on_missing_key` `(bool: false)` - Exit with an error when accessing
   a struct or map field/key that does notexist. The default behavior will print `<no value>`
   when accessing a field that does not exist. It is highly recommended you set this
   to "true". Also see [`exit_on_retry_failure` in global Vault Agent Template Config](/vault/docs/agent-and-proxy/agent/template#interaction-between-exit_on_retry_failure-and-error_on_missing_key).
-- `exec` `(object: optional)` - The exec block executes a command when the
+- `exec`Δ `(object: optional)` - The exec block executes a command when the
   template is rendered and the output has changed. The block parameters are
   `command` `(string or array: required)` and `timeout` `(string: optional, defaults
   to 30s)`. `command` can be given as a string or array of strings to execute, such as
@@ -193,11 +198,11 @@ can be used here:
   strongly recommend using an array of strings, and we attempt to parse that way first.
   Note also that using a comma with the string approach will cause it to be interpreted as an
   array, which may not be desirable.
-- `perms` `(string: "")` - This is the permission to render the file. If
+- `perms`Δ `(string: "")` - This is the permission to render the file. If
   this option is left unspecified, Vault Agent will attempt to match the permissions
   of the file that already exists at the destination path. If no file exists at that
   path, the permissions are 0644.
-- `backup` `(bool: true)` - This option backs up the previously rendered template
+- `backup`Δ `(bool: true)` - This option backs up the previously rendered template
   at the destination path before writing a new one. It keeps exactly one backup.
   This option is useful for preventing accidental changes to the data without having
   a rollback strategy.
@@ -207,14 +212,14 @@ can be used here:
 - `right_delimiter` `(string: "}}")` - Delimiter to use in the template. The
   default is "}}" but for some templates, it may be easier to use a different
   delimiter that does not conflict with the output file itself.
-- `sandbox_path` `(string: "")` - If a sandbox path is provided, any path
+- `sandbox_path`Δ `(string: "")` - If a sandbox path is provided, any path
   provided to the `file` function is checked that it falls within the sandbox path.
   Relative paths that try to traverse outside the sandbox path will exit with an error.
-- `wait` `(object: required)` - This is the `minimum(:maximum)` to wait before rendering
+- `wait`Δ `(object: required)` - This is the `minimum(:maximum)` to wait before rendering
   a new template to disk and triggering a command, separated by a colon (`:`).
 
 
-### Example `template` Stanza
+### Example `template` stanza
 
 ```hcl
 template {
@@ -228,31 +233,31 @@ If you only want to use the Vault agent to render one or more templates and do
 not need to sink the acquired credentials, you can omit the `sink` stanza from
 the `auto_auth` stanza in the agent configuration.
 
-## Renewals and Updating Secrets
+## Renewals and updating secrets
 
 The Vault Agent templating automatically renews and fetches secrets/tokens.
 Unlike [Vault Agent caching](/vault/docs/agent-and-proxy/agent/caching), the behavior of how Vault Agent
 templating does this depends on the type of secret or token. The following is a
 high level overview of different behaviors.
 
-### Renewable Secrets
+### Renewable secrets
 
 If a secret or token is renewable, Vault Agent will renew the secret after 2/3
 of the secret's lease duration has elapsed.
 
-### Non-Renewable Secrets
+### Non-Renewable secrets
 
 If a secret or token isn't renewable or leased, Vault Agent will fetch the secret every 5 minutes.
 This can be configured using Template config [static_secret_render_interval](/vault/docs/agent-and-proxy/agent/template#static_secret_render_interval) (requires Vault 1.8+).
 Non-renewable secrets include (but not limited to) [KV Version 2](/vault/docs/secrets/kv/kv-v2).
 
-### Non-Renewable Leased Secrets
+### Non-Renewable leased secrets
 
 If a secret or token is non-renewable but leased, Vault Agent will fetch the secret when 85% of the
 secrets time-to-live (TTL) is reached. Leased, non-renewable secrets include (but not limited
 to) dynamic secrets such as [database credentials](/vault/docs/secrets/databases) and [KV Version 1](/vault/docs/secrets/kv/kv-v1).
 
-### Static Roles
+### Static roles
 
 If a secret has a `rotation_period`, such as a [database static role](/vault/docs/secrets/databases#static-roles),
 Vault Agent template will fetch the new secret as it changes in Vault. It does
@@ -292,12 +297,12 @@ behaviors on certificates:
   fetches and re-renders a new certificate even if the existing certificate is
   valid.
 
-## Templating Configuration Example
+## Templating configuration example
 
 The following demonstrates Vault Agent Templates configuration blocks.
 
 ```hcl
-# Other Vault Agent configuration blocks
+# Other Vault agent configuration blocks
 # ...
 
 template_config {
@@ -316,4 +321,27 @@ template {
 }
 ```
 
+And the following demonstrates how the templates look when using `env_template` with
+[Process Supervisor Mode](/vault/docs/agent-and-proxy/agent/process-supervisor)
+
+
+```hcl
+# Other Vault agent configuration blocks
+# ...
+
+template_config {
+  static_secret_render_interval = "10m"
+  exit_on_retry_failure = true
+}
+
+env_template "MY_ENV_VAR" {
+  contents = "{{ with secret \"secret/my-secret\" }}{{ .Data.data.foo }}{{ end }}"
+}
+
+env_template "ENV_VAR_FROM_FILE" {
+  source = "/tmp/agent/template.ctmpl"
+}
+```
+
 [consul-templating-language]: https://github.com/hashicorp/consul-template/blob/v0.28.1/docs/templating-language.md
+[process-supervisor]: /vault/docs/agent-and-proxy/agent/process-supervisor

@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package pki
 
 import (
@@ -60,14 +63,6 @@ func NewACMEChallengeEngine() *ACMEChallengeEngine {
 	return ace
 }
 
-func (ace *ACMEChallengeEngine) Initialize(b *backend, sc *storageContext) error {
-	if err := ace.LoadFromStorage(b, sc); err != nil {
-		return fmt.Errorf("failed loading initial in-progress validations: %w", err)
-	}
-
-	return nil
-}
-
 func (ace *ACMEChallengeEngine) LoadFromStorage(b *backend, sc *storageContext) error {
 	items, err := sc.Storage.List(sc.Context, acmeValidationPrefix)
 	if err != nil {
@@ -78,16 +73,30 @@ func (ace *ACMEChallengeEngine) LoadFromStorage(b *backend, sc *storageContext) 
 	defer ace.ValidationLock.Unlock()
 
 	// Add them to our queue of validations to work through later.
+	foundExistingValidations := false
 	for _, item := range items {
 		ace.Validations.PushBack(&ChallengeQueueEntry{
 			Identifier: item,
 		})
+		foundExistingValidations = true
+	}
+
+	if foundExistingValidations {
+		ace.NewValidation <- "existing"
 	}
 
 	return nil
 }
 
-func (ace *ACMEChallengeEngine) Run(b *backend, state *acmeState) {
+func (ace *ACMEChallengeEngine) Run(b *backend, state *acmeState, sc *storageContext) {
+	// We load the existing ACME challenges within the Run thread to avoid
+	// delaying the PKI mount initialization
+	b.Logger().Debug("Loading existing challenge validations on disk")
+	err := ace.LoadFromStorage(b, sc)
+	if err != nil {
+		b.Logger().Error("failed loading existing ACME challenge validations:", "err", err)
+	}
+
 	for true {
 		// err == nil on shutdown.
 		b.Logger().Debug("Starting ACME challenge validation engine")

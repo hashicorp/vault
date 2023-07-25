@@ -6,7 +6,7 @@ description: |-
   functionality automatically.
 ---
 
-# Vault Agent and Vault Proxy
+# Vault agent and Vault proxy
 
 A valid client token must accompany most requests to Vault. This
 includes all API requests, as well as via the Vault CLI and other libraries.
@@ -76,7 +76,7 @@ to update and maintain the Vault integration code for every application. When
 third party applications are being deployed by the application, it is prohibited
 to add the Vault integration code.
 
-### Introduce Vault Agent and Vault Proxy to the workflow
+### Introduce Vault agent and Vault proxy to the workflow
 
 [Vault Agent][vaultagent] and [Vault Proxy][vaultproxy] aim to remove this initial hurdle to adopt Vault by providing a
 more scalable and simpler way for applications to integrate with Vault. Vault Agent can
@@ -85,13 +85,14 @@ a proxy between Vault and the application, optionally simplifying the authentica
 and caching requests.
 
 
-| Capability                                               |    Vault Agent     | Vault Proxy |
-| -------------------------------------------------------- | :----------------: | :---------: |
-| [Auto-Auth][autoauth] to authenticate with Vault         |         x          |      x      |
-| [Caching][caching] the newly created tokens and leases   |         x          |      x      |
-| Run as a [Windows Service][winsvc]                       |         x          |             |
-| [Templating][template] to render user-supplied templates |         x          |             |
-| [API Proxy][apiproxy] to act as a proxy for Vault API    | Will be deprecated |      x      |
+| Capability                                                                               |    Vault Agent     | Vault Proxy |
+|------------------------------------------------------------------------------------------|:------------------:|:-----------:|
+| [Auto-Auth][autoauth] to authenticate with Vault                                         |         x          |      x      |
+| [Caching][caching] the newly created tokens and leases                                   |         x          |      x      |
+| Run as a [Windows Service][winsvc]                                                       |         x          |             |
+| [Templating][template] to render user-supplied templates                                 |         x          |             |
+| [API Proxy][apiproxy] to act as a proxy for Vault API                                    | Will be deprecated |      x      |
+| [Process Supervisor][exec] for injecting secrets as environment variables into a process |         x          |             |
 
 To learn more, refer to the [Vault Agent][vaultagent] or [Vault
 Proxy][vaultproxy] documentation page.
@@ -101,6 +102,7 @@ Proxy][vaultproxy] documentation page.
 [caching]: /vault/docs/agent-and-proxy/agent/caching
 [apiproxy]: /vault/docs/agent-and-proxy/proxy/apiproxy
 [template]: /vault/docs/agent-and-proxy/agent/template
+[exec]: /vault/docs/agent-and-proxy/agent/process-supervisor
 [template-config]: /vault/docs/agent-and-proxy/agent/template#template-configurations
 [vaultagent]: /vault/docs/agent-and-proxy/agent
 [vaultproxy]: /vault/docs/agent-and-proxy/proxy

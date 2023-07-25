@@ -101,8 +101,8 @@ func SealWrapStoredBarrierKeys(ctx context.Context, access seal.Access, keys [][
 
 // UnsealWrapStoredBarrierKeys is the counterpart to SealWrapStoredBarrierKeys.
 func UnsealWrapStoredBarrierKeys(ctx context.Context, access seal.Access, pe *physical.Entry) ([][]byte, error) {
-	blobInfo := &wrapping.BlobInfo{}
-	if err := proto.Unmarshal(pe.Value, blobInfo); err != nil {
+	blobInfo, err := UnmarshalSealWrappedValue(pe.Value)
+	if err != nil {
 		return nil, fmt.Errorf("failed to proto decode stored keys: %w", err)
 	}
 
@@ -120,4 +120,43 @@ func UnsealWrapStoredBarrierKeys(ctx context.Context, access seal.Access, pe *ph
 		return nil, fmt.Errorf("failed to decode stored keys: %v", err)
 	}
 	return keys, nil
+}
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// Recovery Key
+
+// SealWrapRecoveryKey encrypts the recovery key using the given seal access and returns a physical.Entry for storage.
+func SealWrapRecoveryKey(ctx context.Context, access seal.Access, key []byte) (*physical.Entry, error) {
+	blobInfo, err := SealWrapValue(ctx, access, true, key)
+	if err != nil {
+		return nil, &ErrEncrypt{Err: fmt.Errorf("failed to encrypt keys for storage: %w", err)}
+	}
+
+	// Not that we set Wrapped to false since it used to be that the BlobInfo returned by access.Encrypt()
+	// was marshalled directly. It probably would not matter if the value was true, it doesn't seem to
+	// break any tests.
+	blobInfo.Wrapped = false
+
+	wrappedValue, err := MarshalSealWrappedValue(blobInfo)
+	if err != nil {
+		return nil, fmt.Errorf("failed to marshal value for storage: %w", err)
+	}
+	return &physical.Entry{
+		Key:   recoveryKeyPath,
+		Value: wrappedValue,
+	}, nil
+}
+
+// UnsealWrapRecoveryKey is the counterpart to SealWrapRecoveryKey.
+func UnsealWrapRecoveryKey(ctx context.Context, access seal.Access, pe *physical.Entry) ([]byte, *wrapping.BlobInfo, error) {
+	blobInfo, err := UnmarshalSealWrappedValue(pe.Value)
+	if err != nil {
+		return nil, nil, fmt.Errorf("failed to proto decode recevory key: %w", err)
+	}
+
+	pt, err := access.Decrypt(ctx, blobInfo, nil)
+	if err != nil {
+		return nil, nil, fmt.Errorf("failed to decrypt recovery key from storage: %w", err)
+	}
+	return pt, blobInfo, nil
 }

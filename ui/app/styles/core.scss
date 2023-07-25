@@ -17,7 +17,6 @@
 @import './utils/animations';
 
 // Core Styles: each file styles a class that is not associated with a component. Ex: box and not box-label.
-@import './core/alert-banner';
 @import './core/box';
 @import './core/breadcrumb';
 @import './core/buttons';
@@ -87,7 +86,8 @@
 @import './components/namespace-picker';
 @import './components/namespace-reminder';
 @import './components/navigate-input';
-@import './components/page-header';
+@import './components/overview-card';
+@import './components/page-header-old';
 @import './components/popup-menu';
 @import './components/radio-card';
 @import './components/radial-progress';
@@ -112,7 +112,6 @@
 @import './components/stat-text';
 @import './components/tabs-component';
 @import './components/text-file';
-@import './components/token-expire-warning';
 @import './components/toolbar';
 @import './components/tool-tip';
 @import './components/transform-edit';
@@ -121,5 +120,4 @@
 @import './components/unseal-warning';
 // @import './components/ui-wizard'; // remove, see PR https://github.com/hashicorp/vault/pull/19220
 @import './components/vault-loading';
-@import './components/vlt-radio';
 @import './components/vlt-table';

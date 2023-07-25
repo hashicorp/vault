@@ -9,6 +9,7 @@ import { click, fillIn, render } from '@ember/test-helpers';
 import { setupEngine } from 'ember-engines/test-support';
 import { hbs } from 'ember-cli-htmlbars';
 import { setupMirage } from 'ember-cli-mirage/test-support';
+import { Response } from 'miragejs';
 import { SELECTORS } from 'vault/tests/helpers/pki/page/pki-configuration-edit';
 import sinon from 'sinon';
 import { allowAllCapabilitiesStub } from 'vault/tests/helpers/stubs';
@@ -19,10 +20,14 @@ module('Integration | Component | page/pki-configuration-edit', function (hooks)
   setupMirage(hooks);
 
   hooks.beforeEach(async function () {
+    // test context setup
     this.server.post('/sys/capabilities-self', allowAllCapabilitiesStub());
     this.context = { owner: this.engine }; // this.engine set by setupEngine
     this.store = this.owner.lookup('service:store');
-    this.cancelSpy = sinon.spy();
+    this.router = this.owner.lookup('service:router');
+    sinon.stub(this.router, 'transitionTo');
+
+    // component data setup
     this.backend = 'pki-engine';
     // both models only use findRecord. API parameters for pki/crl
     // are set by default backend values when the engine is mounted
@@ -57,6 +62,10 @@ module('Integration | Component | page/pki-configuration-edit', function (hooks)
     this.cluster = this.store.peekRecord('pki/config/cluster', this.backend);
     this.crl = this.store.peekRecord('pki/config/crl', this.backend);
     this.urls = this.store.peekRecord('pki/config/urls', this.backend);
+  });
+
+  hooks.afterEach(function () {
+    this.router.transitionTo.restore();
   });
 
   test('it renders with config data and updates config', async function (assert) {
@@ -400,5 +409,50 @@ module('Integration | Component | page/pki-configuration-edit', function (hooks)
       .hasText(
         "You do not have permission to set this mount's revocation configuration Ask your administrator if you think you should have access to: POST /pki-engine/config/crl"
       );
+  });
+
+  test('it renders alert banner and endpoint respective error', async function (assert) {
+    assert.expect(4);
+    this.server.post(`/${this.backend}/config/acme`, () => {
+      return new Response(500, {}, { errors: ['something wrong with acme'] });
+    });
+    this.server.post(`/${this.backend}/config/cluster`, () => {
+      return new Response(500, {}, { errors: ['something wrong with cluster'] });
+    });
+    this.server.post(`/${this.backend}/config/crl`, () => {
+      return new Response(500, {}, { errors: ['something wrong with crl'] });
+    });
+    this.server.post(`/${this.backend}/config/urls`, () => {
+      return new Response(500, {}, { errors: ['something wrong with urls'] });
+    });
+    await render(
+      hbs`
+      <Page::PkiConfigurationEdit
+        @acme={{this.acme}}
+        @cluster={{this.cluster}}
+        @urls={{this.urls}}
+        @crl={{this.crl}}
+        @backend={{this.backend}}
+      />
+    `,
+      this.context
+    );
+
+    await click(SELECTORS.saveButton);
+    assert
+      .dom(SELECTORS.errorBanner)
+      .hasText(
+        'Error POST config/cluster: something wrong with cluster POST config/acme: something wrong with acme POST config/urls: something wrong with urls POST config/crl: something wrong with crl'
+      );
+    assert.dom(`${SELECTORS.errorBanner} ul`).hasClass('bullet');
+
+    // change 3 out of 4 requests to be successful to assert single error renders correctly
+    this.server.post(`/${this.backend}/config/acme`, () => new Response(200));
+    this.server.post(`/${this.backend}/config/cluster`, () => new Response(200));
+    this.server.post(`/${this.backend}/config/crl`, () => new Response(200));
+
+    await click(SELECTORS.saveButton);
+    assert.dom(SELECTORS.errorBanner).hasText('Error POST config/urls: something wrong with urls');
+    assert.dom(`${SELECTORS.errorBanner} ul`).doesNotHaveClass('bullet');
   });
 });

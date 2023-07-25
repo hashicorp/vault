@@ -27,7 +27,7 @@ import (
 
 func TestAudit_ReadOnlyViewDuringMount(t *testing.T) {
 	c, _, _ := TestCoreUnsealed(t)
-	c.auditBackends["noop"] = func(ctx context.Context, config *audit.BackendConfig) (audit.Backend, error) {
+	c.auditBackends["noop"] = func(ctx context.Context, config *audit.BackendConfig, _ bool) (audit.Backend, error) {
 		err := config.SaltView.Put(ctx, &logical.StorageEntry{
 			Key:   "bar",
 			Value: []byte("baz"),
@@ -36,7 +36,7 @@ func TestAudit_ReadOnlyViewDuringMount(t *testing.T) {
 			t.Fatalf("expected a read-only error")
 		}
 		factory := corehelpers.NoopAuditFactory(nil)
-		return factory(ctx, config)
+		return factory(ctx, config, false)
 	}
 
 	me := &MountEntry{
@@ -103,7 +103,7 @@ func TestCore_EnableAudit(t *testing.T) {
 func TestCore_EnableAudit_MixedFailures(t *testing.T) {
 	c, _, _ := TestCoreUnsealed(t)
 	c.auditBackends["noop"] = corehelpers.NoopAuditFactory(nil)
-	c.auditBackends["fail"] = func(ctx context.Context, config *audit.BackendConfig) (audit.Backend, error) {
+	c.auditBackends["fail"] = func(ctx context.Context, config *audit.BackendConfig, _ bool) (audit.Backend, error) {
 		return nil, fmt.Errorf("failing enabling")
 	}
 
@@ -152,7 +152,7 @@ func TestCore_EnableAudit_MixedFailures(t *testing.T) {
 func TestCore_EnableAudit_Local(t *testing.T) {
 	c, _, _ := TestCoreUnsealed(t)
 	c.auditBackends["noop"] = corehelpers.NoopAuditFactory(nil)
-	c.auditBackends["fail"] = func(ctx context.Context, config *audit.BackendConfig) (audit.Backend, error) {
+	c.auditBackends["fail"] = func(ctx context.Context, config *audit.BackendConfig, _ bool) (audit.Backend, error) {
 		return nil, fmt.Errorf("failing enabling")
 	}
 
@@ -340,7 +340,10 @@ func verifyDefaultAuditTable(t *testing.T, table *MountTable) {
 
 func TestAuditBroker_LogRequest(t *testing.T) {
 	l := logging.NewVaultLogger(log.Trace)
-	b := NewAuditBroker(l)
+	b, err := NewAuditBroker(l, false)
+	if err != nil {
+		t.Fatal(err)
+	}
 	a1 := corehelpers.TestNoopAudit(t, nil)
 	a2 := corehelpers.TestNoopAudit(t, nil)
 	b.Register("foo", a1, false)
@@ -427,7 +430,10 @@ func TestAuditBroker_LogRequest(t *testing.T) {
 
 func TestAuditBroker_LogResponse(t *testing.T) {
 	l := logging.NewVaultLogger(log.Trace)
-	b := NewAuditBroker(l)
+	b, err := NewAuditBroker(l, false)
+	if err != nil {
+		t.Fatal(err)
+	}
 	a1 := corehelpers.TestNoopAudit(t, nil)
 	a2 := corehelpers.TestNoopAudit(t, nil)
 	b.Register("foo", a1, false)
@@ -532,7 +538,10 @@ func TestAuditBroker_LogResponse(t *testing.T) {
 
 func TestAuditBroker_AuditHeaders(t *testing.T) {
 	logger := logging.NewVaultLogger(log.Trace)
-	b := NewAuditBroker(logger)
+	b, err := NewAuditBroker(logger, false)
+	if err != nil {
+		t.Fatal(err)
+	}
 	_, barrier, _ := mockBarrier(t)
 	view := NewBarrierView(barrier, "headers/")
 	a1 := corehelpers.TestNoopAudit(t, nil)

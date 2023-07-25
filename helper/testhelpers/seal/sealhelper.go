@@ -7,13 +7,12 @@ import (
 	"path"
 	"strconv"
 
-	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/builtin/logical/transit"
+	"github.com/hashicorp/vault/helper/testhelpers/corehelpers"
 	"github.com/hashicorp/vault/helper/testhelpers/teststorage"
 	"github.com/hashicorp/vault/http"
 	"github.com/hashicorp/vault/internalshared/configutil"
-	"github.com/hashicorp/vault/sdk/helper/logging"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/vault"
 	"github.com/hashicorp/vault/vault/seal"
@@ -33,7 +32,7 @@ func NewTransitSealServer(t testing.T, idx int) *TransitSealServer {
 	opts := &vault.TestClusterOptions{
 		NumCores:    1,
 		HandlerFunc: http.Handler,
-		Logger:      logging.NewVaultLogger(hclog.Trace).Named(t.Name()).Named("transit-seal" + strconv.Itoa(idx)),
+		Logger:      corehelpers.NewTestLogger(t).Named("transit-seal" + strconv.Itoa(idx)),
 	}
 	teststorage.InmemBackendSetup(conf, opts)
 	cluster := vault.NewTestCluster(t, conf, opts)
