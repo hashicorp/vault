@@ -65,7 +65,6 @@ func TestProxy_ExitAfterAuth(t *testing.T) {
 func testProxyExitAfterAuth(t *testing.T, viaFlag bool) {
 	logger := logging.NewVaultLogger(hclog.Trace)
 	coreConfig := &vault.CoreConfig{
-		Logger: logger,
 		CredentialBackends: map[string]logical.Factory{
 			"jwt": vaultjwt.Factory,
 		},
@@ -249,7 +248,6 @@ func TestProxy_AutoAuth_UserAgent(t *testing.T) {
 	logger := logging.NewVaultLogger(hclog.Trace)
 	var h userAgentHandler
 	cluster := vault.NewTestCluster(t, &vault.CoreConfig{
-		Logger: logger,
 		CredentialBackends: map[string]logical.Factory{
 			"approle": credAppRole.Factory,
 		},
@@ -696,7 +694,6 @@ func TestProxy_ApiProxy_Retry(t *testing.T) {
 	var h handler
 	cluster := vault.NewTestCluster(t,
 		&vault.CoreConfig{
-			Logger: logger,
 			CredentialBackends: map[string]logical.Factory{
 				"approle": credAppRole.Factory,
 			},
@@ -844,10 +841,7 @@ vault {
 func TestProxy_Metrics(t *testing.T) {
 	// Start a vault server
 	logger := logging.NewVaultLogger(hclog.Trace)
-	cluster := vault.NewTestCluster(t,
-		&vault.CoreConfig{
-			Logger: logger,
-		},
+	cluster := vault.NewTestCluster(t, nil,
 		&vault.TestClusterOptions{
 			HandlerFunc: vaulthttp.Handler,
 		})

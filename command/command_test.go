@@ -21,7 +21,6 @@ import (
 	"github.com/hashicorp/vault/builtin/logical/transit"
 	"github.com/hashicorp/vault/helper/benchhelpers"
 	"github.com/hashicorp/vault/helper/builtinplugins"
-	"github.com/hashicorp/vault/sdk/helper/logging"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/sdk/physical/inmem"
 	"github.com/hashicorp/vault/vault"
@@ -126,9 +125,6 @@ func testVaultServerAllBackends(tb testing.TB) (*api.Client, func()) {
 	tb.Helper()
 
 	client, _, closer := testVaultServerCoreConfig(tb, &vault.CoreConfig{
-		DisableMlock:       true,
-		DisableCache:       true,
-		Logger:             defaultVaultLogger,
 		CredentialBackends: credentialBackends,
 		AuditBackends:      auditBackends,
 		LogicalBackends:    logicalBackends,
@@ -156,16 +152,8 @@ func testVaultServerUnseal(tb testing.TB) (*api.Client, []string, func()) {
 
 func testVaultServerUnsealWithKVVersionWithSeal(tb testing.TB, kvVersion string, seal vault.Seal) (*api.Client, []string, func()) {
 	tb.Helper()
-	logger := log.NewInterceptLogger(&log.LoggerOptions{
-		Output:     log.DefaultOutput,
-		Level:      log.Debug,
-		JSONFormat: logging.ParseEnvLogFormat() == logging.JSONFormat,
-	})
 
 	return testVaultServerCoreConfigWithOpts(tb, &vault.CoreConfig{
-		DisableMlock:       true,
-		DisableCache:       true,
-		Logger:             logger,
 		CredentialBackends: defaultVaultCredentialBackends,
 		AuditBackends:      defaultVaultAuditBackends,
 		LogicalBackends:    defaultVaultLogicalBackends,
@@ -185,9 +173,6 @@ func testVaultServerPluginDir(tb testing.TB, pluginDir string) (*api.Client, []s
 	tb.Helper()
 
 	return testVaultServerCoreConfig(tb, &vault.CoreConfig{
-		DisableMlock:       true,
-		DisableCache:       true,
-		Logger:             defaultVaultLogger,
 		CredentialBackends: defaultVaultCredentialBackends,
 		AuditBackends:      defaultVaultAuditBackends,
 		LogicalBackends:    defaultVaultLogicalBackends,
@@ -251,8 +236,6 @@ func testVaultServerUninit(tb testing.TB) (*api.Client, func()) {
 
 	core, err := vault.NewCore(&vault.CoreConfig{
 		DisableMlock:       true,
-		DisableCache:       true,
-		Logger:             defaultVaultLogger,
 		Physical:           inm,
 		CredentialBackends: defaultVaultCredentialBackends,
 		AuditBackends:      defaultVaultAuditBackends,

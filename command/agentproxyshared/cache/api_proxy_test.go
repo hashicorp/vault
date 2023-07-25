@@ -12,18 +12,16 @@ import (
 	"testing"
 	"time"
 
-	"github.com/hashicorp/vault/helper/useragent"
-
-	"github.com/hashicorp/vault/builtin/credential/userpass"
-	vaulthttp "github.com/hashicorp/vault/http"
-	"github.com/hashicorp/vault/sdk/logical"
-	"github.com/hashicorp/vault/vault"
-
 	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/api"
+	"github.com/hashicorp/vault/builtin/credential/userpass"
 	"github.com/hashicorp/vault/helper/namespace"
+	"github.com/hashicorp/vault/helper/useragent"
+	vaulthttp "github.com/hashicorp/vault/http"
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
 	"github.com/hashicorp/vault/sdk/helper/logging"
+	"github.com/hashicorp/vault/sdk/logical"
+	"github.com/hashicorp/vault/vault"
 )
 
 const policyAdmin = `
@@ -188,15 +186,9 @@ func setupClusterAndAgentCommon(ctx context.Context, t *testing.T, coreConfig *v
 		ctx = context.Background()
 	}
 
-	// Handle sane defaults
 	if coreConfig == nil {
-		coreConfig = &vault.CoreConfig{
-			DisableMlock: true,
-			DisableCache: true,
-			Logger:       logging.NewVaultLogger(hclog.Trace),
-		}
+		coreConfig = &vault.CoreConfig{}
 	}
-
 	// Always set up the userpass backend since we use that to generate an admin
 	// token for the client that will make proxied requests to through the agent.
 	if coreConfig.CredentialBackends == nil || coreConfig.CredentialBackends["userpass"] == nil {
@@ -257,7 +249,7 @@ func setupClusterAndAgentCommon(ctx context.Context, t *testing.T, coreConfig *v
 		t.Fatal(err)
 	}
 
-	apiProxyLogger := logging.NewVaultLogger(hclog.Trace).Named("apiproxy")
+	apiProxyLogger := cluster.Logger.Named("apiproxy")
 
 	// Create the API proxier
 	apiProxy, err := NewAPIProxy(&APIProxyConfig{
@@ -275,7 +267,7 @@ func setupClusterAndAgentCommon(ctx context.Context, t *testing.T, coreConfig *v
 
 	var leaseCache *LeaseCache
 	if useCache {
-		cacheLogger := logging.NewVaultLogger(hclog.Trace).Named("cache")
+		cacheLogger := cluster.Logger.Named("cache")
 
 		// Create the lease cache proxier and set its underlying proxier to
 		// the API proxier.
