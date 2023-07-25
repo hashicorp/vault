@@ -12,13 +12,13 @@ import { next } from '@ember/runloop';
  * @module KvSecretDetails renders the key/value data of a KV secret. 
  * It also renders a dropdown to display different versions of the secret.
  * <Page::Secret::Details
- *  @secretPath={{this.model.path}}
+ *  @path={{this.model.path}}
  *  @secret={{this.model.secret}}
  *  @metadata={{this.model.metadata}}
  *  @breadcrumbs={{this.breadcrumbs}}
   /> 
  *
- * @param {string} secretPath - path of kv secret 'my/secret' used as the title for the KV page header 
+ * @param {string} path - path of kv secret 'my/secret' used as the title for the KV page header 
  * @param {model} secret - Ember data model: 'kv/data'  
  * @param {model} metadata - Ember data model: 'kv/metadata'
  * @param {boolean} noMetadataPermission - True if we received a 403 from the kv/metadata network request
