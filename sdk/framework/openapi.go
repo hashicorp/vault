@@ -293,7 +293,7 @@ func documentPath(p *Path, backend *Backend, requestResponsePrefix string, doc *
 
 		// Sort parameters for a stable output
 		sort.Slice(pi.Parameters, func(i, j int) bool {
-			return strings.ToLower(pi.Parameters[i].Name) < strings.ToLower(pi.Parameters[j].Name)
+			return pi.Parameters[i].Name < pi.Parameters[j].Name
 		})
 
 		// Process each supported operation by building up an Operation object
@@ -439,6 +439,11 @@ func documentPath(p *Path, backend *Backend, requestResponsePrefix string, doc *
 					}
 					op.Parameters = append(op.Parameters, p)
 				}
+
+				// Sort parameters for a stable output
+				sort.Slice(op.Parameters, func(i, j int) bool {
+					return op.Parameters[i].Name < op.Parameters[j].Name
+				})
 			}
 
 			// Add tags based on backend type
