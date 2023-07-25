@@ -160,14 +160,6 @@ export default class SecretEngineModel extends Model {
     return 'vault.cluster.secrets.backend.list-root';
   }
 
-  /* eslint-disable-next-line no-dupe-class-members */
-  get accessor() {
-    if (this.version === 2) {
-      return `v2 ${this.accessor}`;
-    }
-    return this.accessor;
-  }
-
   get localDisplay() {
     return this.local ? 'local' : 'replicated';
   }
