@@ -4681,8 +4681,11 @@ func (b *SystemBackend) pathInternalOpenAPI(ctx context.Context, req *logical.Re
 
 	// Every backend that includes a ListOperation that uses the default response schema will have supplied its own
 	// version of that schema, on a last writer wins basis. To ensure an external plugin doesn't end up being the last
-	// writer, we now override with the version within the code of the hosting Vault instance:
-	doc.Components.Schemas["StandardListResponse"] = framework.OASStdSchemaStandardListResponse
+	// writer, we now override with the version within the code of the hosting Vault instance, if the document now
+	// being generated contains any version of this:
+	if _, ok := doc.Components.Schemas["StandardListResponse"]; ok {
+		doc.Components.Schemas["StandardListResponse"] = framework.OASStdSchemaStandardListResponse
+	}
 
 	buf, err := json.Marshal(doc)
 	if err != nil {
