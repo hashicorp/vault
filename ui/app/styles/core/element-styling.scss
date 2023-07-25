@@ -93,14 +93,17 @@ section {
   display: block;
 }
 
-body,
+body {
+  font-family: $family-sans;
+  overflow-x: hidden;
+  overflow-y: scroll;
+}
+
 button,
 input,
 select,
 textarea {
   font-family: $family-sans;
-  overflow-x: hidden;
-  overflow-y: scroll;
 }
 
 code,
