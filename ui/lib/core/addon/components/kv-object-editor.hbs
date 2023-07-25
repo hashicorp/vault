@@ -26,6 +26,13 @@
         <div class="column">
           {{#if (has-block)}}
             {{yield row this.kvData}}
+          {{else if @maskedInput}}
+            <MaskedInput
+              data-test-kv-value={{index}}
+              @name={{row.name}}
+              @onChange={{fn this.updateRow row index}}
+              @value={{row.value}}
+            />
           {{else}}
             <Textarea
               data-test-kv-value={{index}}
