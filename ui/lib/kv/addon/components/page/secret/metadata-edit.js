@@ -8,6 +8,7 @@ import { inject as service } from '@ember/service';
 import { task } from 'ember-concurrency';
 import { tracked } from '@glimmer/tracking';
 import errorMessage from 'vault/utils/error-message';
+import { action } from '@ember/object';
 
 /**
  * @module MetadataDetails
@@ -24,6 +25,12 @@ export default class KvMetadataEditComponent extends Component {
   @tracked errorBanner = '';
   @tracked invalidFormAlert = '';
   @tracked modelValidations = null;
+
+  @action
+  cancel() {
+    this.args.model.rollbackAttributes();
+    this.args.onCancel();
+  }
 
   @task
   *save(event) {
