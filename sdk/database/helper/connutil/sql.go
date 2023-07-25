@@ -12,10 +12,6 @@ import (
 	"sync"
 	"time"
 
-	"cloud.google.com/go/cloudsqlconn"
-	"cloud.google.com/go/cloudsqlconn/mysql/mysql"
-	"cloud.google.com/go/cloudsqlconn/postgres/pgxv4"
-	"cloud.google.com/go/cloudsqlconn/sqlserver/mssql"
 	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/go-secure-stdlib/parseutil"
 	"github.com/mitchellh/mapstructure"
@@ -25,6 +21,8 @@ import (
 )
 
 const (
+	authTypeIAM      = "iam"
+	dbTypePostgres   = "pgx"
 	cloudSQLPostgres = "cloudsql-postgres"
 	cloudSQLMSSQL    = "cloudsql-sqlserver"
 	cloudSQLMySQL    = "cloudsql-mysql"
@@ -48,6 +46,7 @@ type SQLConnectionProducer struct {
 	maxConnectionLifetime time.Duration
 	Initialized           bool
 	db                    *sql.DB
+	cleanupDrivers        []func() error
 	sync.Mutex
 }
 
@@ -153,11 +152,25 @@ func (c *SQLConnectionProducer) Connection(ctx context.Context) (interface{}, er
 
 	// @TODO handle reading IAM credentials from RawConfig
 
-	var dbType string
-	if c.AuthType == "google_iam" {
-		dbType = c.getDBTypeForIAM()
+	// default non-IAM behavior
+	dbType := c.Type
+
+	if c.AuthType == authTypeIAM {
+		typ, err := c.getCloudSQLDBType()
+		if err != nil {
+			return nil, err
+		}
+		dbType = typ
+
+		fmt.Sprintf("registering drivers for %s\n", dbType)
+		cleanupFunc, err := c.registerDrivers()
+		if err != nil {
+			return nil, err
+		}
+
+		// store driver cleanup
+		c.cleanupDrivers = append(c.cleanupDrivers, cleanupFunc)
 	} else {
-		dbType = c.Type
 		// For mssql backend, switch to sqlserver instead
 		if c.Type == "mssql" {
 			dbType = "sqlserver"
@@ -183,6 +196,7 @@ func (c *SQLConnectionProducer) Connection(ctx context.Context) (interface{}, er
 	}
 
 	var err error
+	fmt.Printf("Starting connection to server: %s\n", dbType)
 	c.db, err = sql.Open(dbType, conn)
 	if err != nil {
 		return nil, err
@@ -195,32 +209,6 @@ func (c *SQLConnectionProducer) Connection(ctx context.Context) (interface{}, er
 	c.db.SetConnMaxLifetime(c.maxConnectionLifetime)
 
 	return c.db, nil
-}
-
-func (c *SQLConnectionProducer) getDBTypeForIAM() string {
-	var dbType string
-	switch c.Type {
-	case "mssql":
-		dbType = cloudSQLMSSQL
-	case "postgres":
-		dbType = cloudSQLPostgres
-	case "mysql":
-		dbType = cloudSQLMySQL
-	}
-	return dbType
-}
-
-func (c *SQLConnectionProducer) getCleanupFuncForIAM(dbType string) (func() error, error) {
-	switch dbType {
-	case cloudSQLMSSQL:
-		return mssql.RegisterDriver(cloudSQLMSSQL, cloudsqlconn.WithCredentialsFile("key.json"))
-	case cloudSQLPostgres:
-		return pgxv4.RegisterDriver(cloudSQLPostgres, cloudsqlconn.WithIAMAuthN())
-	case cloudSQLMySQL:
-		return mysql.RegisterDriver(cloudSQLMySQL, cloudsqlconn.WithCredentialsFile("key.json"))
-	}
-
-	return nil, fmt.Errorf("unrecognized database type encountered: %s", c.Type)
 }
 
 func (c *SQLConnectionProducer) SecretValues() map[string]interface{} {
@@ -238,12 +226,11 @@ func (c *SQLConnectionProducer) Close() error {
 	if c.db != nil {
 		// if auth_type is IAM, ensure cleanup
 		// of cloudSQL resources
-		if c.AuthType == "google_iam" {
-			cleanup, err := c.getCleanupFuncForIAM(c.getDBTypeForIAM())
-			if err != nil {
-				return fmt.Errorf("error performning cleanup for %s type with IAM authentication, err=%w", c.Type, err)
+		if c.AuthType == authTypeIAM {
+			for _, cleanup := range c.cleanupDrivers {
+				fmt.Sprintf("cleaning up for %s\n", c.Type)
+				cleanup()
 			}
-			defer cleanup()
 		} else {
 			c.db.Close()
 		}
