@@ -21,7 +21,6 @@ import { next } from '@ember/runloop';
  * @param {string} path - path of kv secret 'my/secret' used as the title for the KV page header 
  * @param {model} secret - Ember data model: 'kv/data'  
  * @param {model} metadata - Ember data model: 'kv/metadata'
- * @param {boolean} noMetadataPermission - True if we received a 403 from the kv/metadata network request
  * @param {array} breadcrumbs - Array to generate breadcrumbs, passed to the page header component
  */
 
