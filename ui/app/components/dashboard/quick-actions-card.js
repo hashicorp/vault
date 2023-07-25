@@ -124,18 +124,26 @@ export default class DashboardQuickActionsCard extends Component {
   }
 
   get secretsEnginesOptions() {
-    return this.filteredSecretEngines.map((filteredSecretEngine) => ({
-      name: filteredSecretEngine.path,
-      id: `${filteredSecretEngine.type} ${filteredSecretEngine.path}`,
-    }));
+    return this.filteredSecretEngines.map((filteredSecretEngine) => {
+      const name = filteredSecretEngine.path.replace('/', '');
+
+      return {
+        name,
+        id: `${filteredSecretEngine.type} ${name}`,
+      };
+    });
   }
 
   @action
   handleSearchEngineSelect([selectedSearchEngines]) {
-    const selectedEngine = selectedSearchEngines.split(' ');
-    this.selectedEngine = selectedEngine[0];
-    this.selectedEngineName = selectedEngine[1].slice(0, selectedEngine[1].length - 1);
+    if (selectedSearchEngines?.length) {
+      const selectedEngine = selectedSearchEngines.split(' ');
+      this.selectedEngine = selectedEngine.firstObject;
+      this.selectedEngineName = selectedEngine[1];
+    }
+
     this.selectedActions = getActionsByEngineType(this.selectedEngine);
+    this.setSelectedAction(this.selectedActions?.firstObject.actionType);
   }
 
   @action
