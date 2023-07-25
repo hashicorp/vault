@@ -155,6 +155,12 @@ func TestNewEntryFormatter(t *testing.T) {
 	}
 }
 
+type TestingHeadersAdjuster struct{}
+
+func (ha *TestingHeadersAdjuster) ApplyConfig(_ context.Context, _ map[string][]string, _ func(context.Context, string) (string, error)) (map[string][]string, error) {
+	return map[string][]string{}, nil
+}
+
 // TestEntryFormatter_Reopen ensures that we do not get an error when calling Reopen.
 func TestEntryFormatter_Reopen(t *testing.T) {
 	ss := newStaticSalt(t)
