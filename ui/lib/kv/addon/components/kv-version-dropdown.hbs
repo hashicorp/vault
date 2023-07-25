@@ -8,7 +8,7 @@
     <nav class="box menu">
       <ul class="menu-list">
         {{#each @metadata.sortedVersions as |versionData|}}
-          <li class="action">
+          <li data-test-version={{versionData.version}} class="action">
             <LinkTo @query={{hash version=versionData.version}} {{on "click" (fn @onClose D)}}>
               Version
               {{versionData.version}}
@@ -22,7 +22,6 @@
             </LinkTo>
           </li>
         {{/each}}
-
       </ul>
     </nav>
   </D.Content>
