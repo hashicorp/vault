@@ -108,7 +108,7 @@ export const namespaceArrayToObject = (totalClientsByNamespace, newClientsByName
     const newNamespaceCounts = newClientsByNamespace?.find((n) => n.label === ns.label);
     if (newNamespaceCounts) {
       const { label, clients, entity_clients, non_entity_clients } = newNamespaceCounts;
-      const newClientsByMount = [...newNamespaceCounts?.mounts];
+      const newClientsByMount = [...newNamespaceCounts.mounts];
       const nestNewClientsWithinMounts = ns.mounts?.map((mount) => {
         const new_clients = newClientsByMount?.find((m) => m.label === mount.label) || {};
         return {
