@@ -74,13 +74,11 @@
                         </LinkTo>
                       </li>
                     {{else}}
-                      {{#if (or secret.canReadData secret.canReadMetadata)}}
-                        <li>
-                          <LinkTo @route="secret.details" @model={{secret.fullSecretPath}}>
-                            Details
-                          </LinkTo>
-                        </li>
-                      {{/if}}
+                      <li>
+                        <LinkTo @route="secret.details" @model={{secret.fullSecretPath}}>
+                          Details
+                        </LinkTo>
+                      </li>
                       {{#if secret.canReadMetadata}}
                         <li>
                           <LinkTo @route="secret.metadata.versions" @model={{secret.fullSecretPath}}>
@@ -88,6 +86,7 @@
                           </LinkTo>
                         </li>
                       {{/if}}
+                      {{! ARG TODO check that you don't also need create (this checks for update) }}
                       {{#if secret.canEditData}}
                         <li>
                           <LinkTo @route="secret.edit" @model={{secret.fullSecretPath}}>
