@@ -27,7 +27,7 @@ import (
 
 func TestAudit_ReadOnlyViewDuringMount(t *testing.T) {
 	c, _, _ := TestCoreUnsealed(t)
-	c.auditBackends["noop"] = func(ctx context.Context, config *audit.BackendConfig, _ bool) (audit.Backend, error) {
+	c.auditBackends["noop"] = func(ctx context.Context, config *audit.BackendConfig, _ bool, _ audit.HeaderAdjuster) (audit.Backend, error) {
 		err := config.SaltView.Put(ctx, &logical.StorageEntry{
 			Key:   "bar",
 			Value: []byte("baz"),
@@ -36,7 +36,7 @@ func TestAudit_ReadOnlyViewDuringMount(t *testing.T) {
 			t.Fatalf("expected a read-only error")
 		}
 		factory := corehelpers.NoopAuditFactory(nil)
-		return factory(ctx, config, false)
+		return factory(ctx, config, false, nil)
 	}
 
 	me := &MountEntry{
@@ -103,7 +103,7 @@ func TestCore_EnableAudit(t *testing.T) {
 func TestCore_EnableAudit_MixedFailures(t *testing.T) {
 	c, _, _ := TestCoreUnsealed(t)
 	c.auditBackends["noop"] = corehelpers.NoopAuditFactory(nil)
-	c.auditBackends["fail"] = func(ctx context.Context, config *audit.BackendConfig, _ bool) (audit.Backend, error) {
+	c.auditBackends["fail"] = func(ctx context.Context, config *audit.BackendConfig, _ bool, _ audit.HeaderAdjuster) (audit.Backend, error) {
 		return nil, fmt.Errorf("failing enabling")
 	}
 
@@ -152,7 +152,7 @@ func TestCore_EnableAudit_MixedFailures(t *testing.T) {
 func TestCore_EnableAudit_Local(t *testing.T) {
 	c, _, _ := TestCoreUnsealed(t)
 	c.auditBackends["noop"] = corehelpers.NoopAuditFactory(nil)
-	c.auditBackends["fail"] = func(ctx context.Context, config *audit.BackendConfig, _ bool) (audit.Backend, error) {
+	c.auditBackends["fail"] = func(ctx context.Context, config *audit.BackendConfig, _ bool, _ audit.HeaderAdjuster) (audit.Backend, error) {
 		return nil, fmt.Errorf("failing enabling")
 	}
 

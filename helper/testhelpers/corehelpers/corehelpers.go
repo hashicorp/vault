@@ -252,7 +252,7 @@ func NewNoopAudit(config map[string]string) (*NoopAudit, error) {
 		return nil, err
 	}
 
-	f, err := audit.NewEntryFormatter(cfg, n, n.GetHash)
+	f, err := audit.NewEntryFormatter(cfg, n, n.GetHash, nil)
 	if err != nil {
 		return nil, fmt.Errorf("error creating formatter: %w", err)
 	}
@@ -268,7 +268,7 @@ func NewNoopAudit(config map[string]string) (*NoopAudit, error) {
 }
 
 func NoopAuditFactory(records **[][]byte) audit.Factory {
-	return func(_ context.Context, config *audit.BackendConfig, _ bool) (audit.Backend, error) {
+	return func(_ context.Context, config *audit.BackendConfig, _ bool, _ audit.HeaderAdjuster) (audit.Backend, error) {
 		n, err := NewNoopAudit(config.Config)
 		if err != nil {
 			return nil, err

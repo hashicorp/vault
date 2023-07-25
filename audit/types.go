@@ -85,12 +85,20 @@ type Writer interface {
 	WriteResponse(io.Writer, *ResponseEntry) error
 }
 
+type HeaderAdjuster interface {
+	// ApplyConfig returns a map of header values that consists of the
+	// intersection of the provided set of header values with a configured
+	// set of headers and will hash headers that have been configured as such.
+	ApplyConfig(context.Context, map[string][]string, func(context.Context, string) (string, error)) (map[string][]string, error)
+}
+
 // EntryFormatter should be used to format audit requests and responses.
 type EntryFormatter struct {
-	salter   Salter
-	hashFunc func(context.Context, string) (string, error)
-	config   FormatterConfig
-	prefix   string
+	salter        Salter
+	hashFunc      func(context.Context, string) (string, error)
+	headersConfig HeaderAdjuster
+	config        FormatterConfig
+	prefix        string
 }
 
 // EntryFormatterWriter should be used to format and write out audit requests and responses.
@@ -306,4 +314,4 @@ type BackendConfig struct {
 }
 
 // Factory is the factory function to create an audit backend.
-type Factory func(context.Context, *BackendConfig, bool) (Backend, error)
+type Factory func(context.Context, *BackendConfig, bool, HeaderAdjuster) (Backend, error)

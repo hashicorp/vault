@@ -138,7 +138,7 @@ func TestNewEntryFormatter(t *testing.T) {
 
 			cfg, err := NewFormatterConfig(tc.Options...)
 			require.NoError(t, err)
-			f, err := NewEntryFormatter(cfg, ss, hashFunc(ss), tc.Options...)
+			f, err := NewEntryFormatter(cfg, ss, hashFunc(ss), &TestingHeadersAdjuster{}, tc.Options...)
 
 			switch {
 			case tc.IsErrorExpected:
@@ -155,13 +155,19 @@ func TestNewEntryFormatter(t *testing.T) {
 	}
 }
 
+type TestingHeadersAdjuster struct{}
+
+func (ha *TestingHeadersAdjuster) ApplyConfig(_ context.Context, _ map[string][]string, _ func(context.Context, string) (string, error)) (map[string][]string, error) {
+	return map[string][]string{}, nil
+}
+
 // TestEntryFormatter_Reopen ensures that we do not get an error when calling Reopen.
 func TestEntryFormatter_Reopen(t *testing.T) {
 	ss := newStaticSalt(t)
 	cfg, err := NewFormatterConfig()
 	require.NoError(t, err)
 
-	f, err := NewEntryFormatter(cfg, ss, hashFunc(ss))
+	f, err := NewEntryFormatter(cfg, ss, hashFunc(ss), &TestingHeadersAdjuster{})
 	require.NoError(t, err)
 	require.NotNil(t, f)
 	require.NoError(t, f.Reopen())
@@ -173,7 +179,7 @@ func TestEntryFormatter_Type(t *testing.T) {
 	cfg, err := NewFormatterConfig()
 	require.NoError(t, err)
 
-	f, err := NewEntryFormatter(cfg, ss, hashFunc(ss))
+	f, err := NewEntryFormatter(cfg, ss, hashFunc(ss), &TestingHeadersAdjuster{})
 	require.NoError(t, err)
 	require.NotNil(t, f)
 	require.Equal(t, eventlogger.NodeTypeFormatter, f.Type())
@@ -316,7 +322,7 @@ func TestEntryFormatter_Process(t *testing.T) {
 			cfg, err := NewFormatterConfig(WithFormat(tc.RequiredFormat.String()))
 			require.NoError(t, err)
 
-			f, err := NewEntryFormatter(cfg, ss, hashFunc(ss))
+			f, err := NewEntryFormatter(cfg, ss, hashFunc(ss), &TestingHeadersAdjuster{})
 			require.NoError(t, err)
 			require.NotNil(t, f)
 
@@ -383,7 +389,7 @@ func BenchmarkAuditFileSink_Process(b *testing.B) {
 	cfg, err := NewFormatterConfig()
 	require.NoError(b, err)
 	ss := newStaticSalt(b)
-	formatter, err := NewEntryFormatter(cfg, ss, hashFunc(ss))
+	formatter, err := NewEntryFormatter(cfg, ss, hashFunc(ss), &TestingHeadersAdjuster{})
 	require.NoError(b, err)
 	require.NotNil(b, formatter)
 
