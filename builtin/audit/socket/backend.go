@@ -12,14 +12,16 @@ import (
 	"sync"
 	"time"
 
+	"github.com/hashicorp/eventlogger"
 	"github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/go-secure-stdlib/parseutil"
 	"github.com/hashicorp/vault/audit"
+	"github.com/hashicorp/vault/internal/observability/event"
 	"github.com/hashicorp/vault/sdk/helper/salt"
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
-func Factory(ctx context.Context, conf *audit.BackendConfig) (audit.Backend, error) {
+func Factory(ctx context.Context, conf *audit.BackendConfig, useEventLogger bool) (audit.Backend, error) {
 	if conf.SaltConfig == nil {
 		return nil, fmt.Errorf("nil salt config")
 	}
@@ -48,10 +50,10 @@ func Factory(ctx context.Context, conf *audit.BackendConfig) (audit.Backend, err
 
 	format, ok := conf.Config["format"]
 	if !ok {
-		format = "json"
+		format = audit.JSONFormat.String()
 	}
 	switch format {
-	case "json", "jsonx":
+	case audit.JSONFormat.String(), audit.JSONxFormat.String():
 	default:
 		return nil, fmt.Errorf("unknown format type %q", format)
 	}
@@ -85,14 +87,20 @@ func Factory(ctx context.Context, conf *audit.BackendConfig) (audit.Backend, err
 		elideListResponses = value
 	}
 
+	cfg, err := audit.NewFormatterConfig(
+		audit.WithElision(elideListResponses),
+		audit.WithFormat(format),
+		audit.WithHMACAccessor(hmacAccessor),
+		audit.WithRaw(logRaw),
+	)
+	if err != nil {
+		return nil, err
+	}
+
 	b := &Backend{
-		saltConfig: conf.SaltConfig,
-		saltView:   conf.SaltView,
-		formatConfig: audit.FormatterConfig{
-			Raw:                logRaw,
-			HMACAccessor:       hmacAccessor,
-			ElideListResponses: elideListResponses,
-		},
+		saltConfig:   conf.SaltConfig,
+		saltView:     conf.SaltView,
+		formatConfig: cfg,
 
 		writeDuration: writeDuration,
 		address:       address,
@@ -100,24 +108,47 @@ func Factory(ctx context.Context, conf *audit.BackendConfig) (audit.Backend, err
 	}
 
 	// Configure the formatter for either case.
-	f, err := audit.NewAuditFormatter(b)
+	f, err := audit.NewEntryFormatter(b.formatConfig, b)
 	if err != nil {
 		return nil, fmt.Errorf("error creating formatter: %w", err)
 	}
 	var w audit.Writer
 	switch format {
-	case "json":
+	case audit.JSONFormat.String():
 		w = &audit.JSONWriter{Prefix: conf.Config["prefix"]}
-	case "jsonx":
+	case audit.JSONxFormat.String():
 		w = &audit.JSONxWriter{Prefix: conf.Config["prefix"]}
 	}
 
-	fw, err := audit.NewAuditFormatterWriter(f, w)
+	fw, err := audit.NewEntryFormatterWriter(b.formatConfig, f, w)
 	if err != nil {
 		return nil, fmt.Errorf("error creating formatter writer: %w", err)
 	}
 
 	b.formatter = fw
+
+	if useEventLogger {
+		b.nodeIDList = make([]eventlogger.NodeID, 2)
+		b.nodeMap = make(map[eventlogger.NodeID]eventlogger.Node)
+
+		formatterNodeID, err := event.GenerateNodeID()
+		if err != nil {
+			return nil, fmt.Errorf("error generating random NodeID for formatter node: %w", err)
+		}
+		b.nodeIDList[0] = formatterNodeID
+		b.nodeMap[formatterNodeID] = f
+
+		sinkNode, err := event.NewSocketSink(format, address, event.WithSocketType(socketType), event.WithMaxDuration(writeDuration.String()))
+		if err != nil {
+			return nil, fmt.Errorf("error creating socket sink node: %w", err)
+		}
+		sinkNodeID, err := event.GenerateNodeID()
+		if err != nil {
+			return nil, fmt.Errorf("error generating random NodeID for sink node: %w", err)
+		}
+		b.nodeIDList[1] = sinkNodeID
+		b.nodeMap[sinkNodeID] = sinkNode
+	}
 
 	return b, nil
 }
@@ -126,7 +157,7 @@ func Factory(ctx context.Context, conf *audit.BackendConfig) (audit.Backend, err
 type Backend struct {
 	connection net.Conn
 
-	formatter    *audit.AuditFormatterWriter
+	formatter    *audit.EntryFormatterWriter
 	formatConfig audit.FormatterConfig
 
 	writeDuration time.Duration
@@ -139,6 +170,9 @@ type Backend struct {
 	salt       *salt.Salt
 	saltConfig *salt.Config
 	saltView   logical.Storage
+
+	nodeIDList []eventlogger.NodeID
+	nodeMap    map[eventlogger.NodeID]eventlogger.Node
 }
 
 var _ audit.Backend = (*Backend)(nil)
@@ -153,7 +187,7 @@ func (b *Backend) GetHash(ctx context.Context, data string) (string, error) {
 
 func (b *Backend) LogRequest(ctx context.Context, in *logical.LogInput) error {
 	var buf bytes.Buffer
-	if err := b.formatter.FormatAndWriteRequest(ctx, &buf, b.formatConfig, in); err != nil {
+	if err := b.formatter.FormatAndWriteRequest(ctx, &buf, in); err != nil {
 		return err
 	}
 
@@ -176,7 +210,7 @@ func (b *Backend) LogRequest(ctx context.Context, in *logical.LogInput) error {
 
 func (b *Backend) LogResponse(ctx context.Context, in *logical.LogInput) error {
 	var buf bytes.Buffer
-	if err := b.formatter.FormatAndWriteResponse(ctx, &buf, b.formatConfig, in); err != nil {
+	if err := b.formatter.FormatAndWriteResponse(ctx, &buf, in); err != nil {
 		return err
 	}
 
@@ -199,15 +233,20 @@ func (b *Backend) LogResponse(ctx context.Context, in *logical.LogInput) error {
 
 func (b *Backend) LogTestMessage(ctx context.Context, in *logical.LogInput, config map[string]string) error {
 	var buf bytes.Buffer
-	temporaryFormatter := audit.NewTemporaryFormatter(config["format"], config["prefix"])
-	if err := temporaryFormatter.FormatAndWriteRequest(ctx, &buf, b.formatConfig, in); err != nil {
+
+	temporaryFormatter, err := audit.NewTemporaryFormatter(config["format"], config["prefix"])
+	if err != nil {
+		return err
+	}
+
+	if err = temporaryFormatter.FormatAndWriteRequest(ctx, &buf, in); err != nil {
 		return err
 	}
 
 	b.Lock()
 	defer b.Unlock()
 
-	err := b.write(ctx, buf.Bytes())
+	err = b.write(ctx, buf.Bytes())
 	if err != nil {
 		rErr := b.reconnect(ctx)
 		if rErr != nil {
@@ -294,4 +333,22 @@ func (b *Backend) Invalidate(_ context.Context) {
 	b.saltMutex.Lock()
 	defer b.saltMutex.Unlock()
 	b.salt = nil
+}
+
+// RegisterNodesAndPipeline registers the nodes and a pipeline as required by
+// the audit.Backend interface.
+func (b *Backend) RegisterNodesAndPipeline(broker *eventlogger.Broker, name string) error {
+	for id, node := range b.nodeMap {
+		if err := broker.RegisterNode(id, node); err != nil {
+			return err
+		}
+	}
+
+	pipeline := eventlogger.Pipeline{
+		PipelineID: eventlogger.PipelineID(name),
+		EventType:  eventlogger.EventType("audit"),
+		NodeIDs:    b.nodeIDList,
+	}
+
+	return broker.RegisterPipeline(pipeline)
 }
