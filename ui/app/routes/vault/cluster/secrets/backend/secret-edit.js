@@ -337,7 +337,7 @@ export default Route.extend(UnloadModelRoute, {
       // and explicity ignore it here
       if (
         (mode !== 'show' && changedKeys.length && changedKeys[0] !== 'backend') ||
-        (mode !== 'show' && version && Object.keys(version.changedAttributes()).length)
+        (mode !== 'show' && version && version.hasDirtyAttributes)
       ) {
         if (
           Ember.testing ||

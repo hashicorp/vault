@@ -74,7 +74,6 @@ module('Acceptance | secrets/secret/create, read, delete', function (hooks) {
 
   hooks.afterEach(async function () {
     this.server.shutdown();
-    await logout.visit();
   });
 
   test('it creates a secret and redirects', async function (assert) {

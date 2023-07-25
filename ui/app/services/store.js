@@ -7,7 +7,7 @@ import Store from '@ember-data/store';
 import { schedule } from '@ember/runloop';
 import { resolve, Promise } from 'rsvp';
 import { dasherize } from '@ember/string';
-import { assert, debug } from '@ember/debug';
+import { assert } from '@ember/debug';
 import { set, get } from '@ember/object';
 import clamp from 'vault/utils/clamp';
 import config from 'vault/config/environment';
@@ -187,22 +187,29 @@ export default class StoreService extends Store {
   clearAllDatasets() {
     this.clearDataset();
   }
-
-  unloadRecord(record) {
-    if (!this.isDestroyed && !this.isDestroying) {
-      // Prevent unload attempt after test teardown, resulting in test failure
-      super(...arguments);
+  /**
+   * this is designed to be a temporary workaround to an issue in the test environment after upgrading to Ember 4.12
+   * when performing an unloadAll or unloadRecord for auth-method or secret-engine models within the app code an error breaks the tests
+   * after the test run is finished during teardown an unloadAll happens and the error "Expected a stable identifier" is thrown
+   * it seems that when the unload happens in the app, for some reason the mount-config relationship models are not unloaded
+   * then when the unloadAll happens a second time during test teardown there seems to be an issue since those records should already have been unloaded
+   * when logging in the teardownRecord hook, it appears that other embedded inverse: null relationships such as replication-attributes are torn down when the parent model is unloaded
+   * the following fixes the issue by explicitly unloading the mount-config models associated to the parent
+   * this should be looked into further to find the root cause, at which time these overrides may be removed
+   */
+  unloadAll(modelName) {
+    const hasMountConfig = ['auth-method', 'secret-engine'];
+    if (hasMountConfig.includes(modelName)) {
+      this.peekAll(modelName).forEach((record) => this.unloadRecord(record));
     } else {
-      debug('skipped unload record', record, record.id, record.itemType);
+      super.unloadAll(modelName);
     }
   }
-
-  unloadAll(type) {
-    if (!this.isDestroyed && !this.isDestroying) {
-      // Prevent unload attempt after test teardown, resulting in test failure
-      super(...arguments);
-    } else {
-      debug(`skipped unload model of type ${type} because store is destroyed`);
+  unloadRecord(record) {
+    const hasMountConfig = ['auth-method', 'secret-engine'];
+    if (record && hasMountConfig.includes(record.constructor.modelName) && record.config) {
+      super.unloadRecord(record.config);
     }
+    super.unloadRecord(record);
   }
 }

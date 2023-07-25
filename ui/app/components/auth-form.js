@@ -219,6 +219,8 @@ export default Component.extend(DEFAULTS, {
             };
           })
         );
+        // without unloading the records there will be an issue where all methods set to list when unauthenticated will appear for all namespaces
+        // if possible, it would be more reliable to add a namespace attr to the model so we could filter against the current namespace rather than unloading all
         next(() => {
           store.unloadAll('auth-method');
         });

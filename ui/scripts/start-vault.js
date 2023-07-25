@@ -6,7 +6,7 @@
 /* eslint-env node */
 /* eslint-disable no-console */
 /* eslint-disable no-process-exit */
-/* eslint-disable node/no-extraneous-require */
+/* eslint-disable n/no-extraneous-require */
 
 var readline = require('readline');
 const testHelper = require('./test-helper');

@@ -134,7 +134,6 @@ module('Acceptance | oidc provider', function (hooks) {
   hooks.beforeEach(async function () {
     this.uid = uuidv4();
     this.store = await this.owner.lookup('service:store');
-    await logout.visit();
     return authPage.login();
   });
 
