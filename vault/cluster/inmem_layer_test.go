@@ -199,6 +199,8 @@ func TestInmemCluster_ConnectCluster(t *testing.T) {
 
 	var accepted atomic.Int32
 	stopCh := make(chan struct{})
+	defer close(stopCh)
+
 	var wg sync.WaitGroup
 	acceptConns := func(listener NetworkListener) {
 		wg.Add(1)
@@ -255,7 +257,6 @@ func TestInmemCluster_ConnectCluster(t *testing.T) {
 		}
 	}
 
-	close(stopCh)
 	wg.Wait()
 
 	if accepted.Load() != 18 {
