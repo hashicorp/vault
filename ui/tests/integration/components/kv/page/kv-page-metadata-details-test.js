@@ -7,10 +7,12 @@ import { module, test } from 'qunit';
 import { setupRenderingTest } from 'ember-qunit';
 import { setupEngine } from 'ember-engines/test-support';
 import { setupMirage } from 'ember-cli-mirage/test-support';
-import { render } from '@ember/test-helpers';
+import { findAll, render } from '@ember/test-helpers';
 import { hbs } from 'ember-cli-htmlbars';
 import { kvMetadataPath } from 'vault/utils/kv-path';
 import { allowAllCapabilitiesStub } from 'vault/tests/helpers/stubs';
+import { SELECTORS } from 'vault/tests/helpers/kv/kv-general-selectors';
+import { SELECTORS as PAGE } from 'vault/tests/helpers/kv/page/kv-secret-details';
 
 module('Integration | Component | kv | Page::Secret::MetadataDetails', function (hooks) {
   setupRenderingTest(hooks);
@@ -43,16 +45,14 @@ module('Integration | Component | kv | Page::Secret::MetadataDetails', function 
         owner: this.engine,
       }
     );
+    assert.dom(SELECTORS.emptyStateTitle).hasText('No custom metadata', 'renders the correct empty state');
     assert
-      .dom('[data-test-empty-state-title]')
-      .hasText('No custom metadata', 'renders the correct empty state');
-    assert
-      .dom('[data-test-value-div="Delete version after"]')
+      .dom(SELECTORS.infoRowValue('Delete version after'))
       .hasText('3 hours 25 minutes 19 seconds', 'correctly shows and formats the timestamp.');
   });
 
   test('it renders custom metadata when it exists and user has permissions', async function (assert) {
-    assert.expect(1);
+    assert.expect(3);
     this.server.post('/sys/capabilities-self', allowAllCapabilitiesStub());
     const data = this.server.create('kv-metadatum', 'withCustomMetadata');
     data.id = kvMetadataPath('kv-engine', 'my-secret');
@@ -74,7 +74,10 @@ module('Integration | Component | kv | Page::Secret::MetadataDetails', function 
         owner: this.engine,
       }
     );
-    assert.dom('[data-test-custom-metadata]').exists({ count: 3 }, 'renders three rows of custom metadata.');
+    for (const key in this.model.customMetadata) {
+      const value = this.model.customMetadata[key];
+      assert.dom(SELECTORS.infoRowValue(key)).hasText(value);
+    }
   });
 
   test('it renders correct empty state messages with no READ metadata permissions and no secret.customMetadata is returned', async function (assert) {
@@ -100,19 +103,20 @@ module('Integration | Component | kv | Page::Secret::MetadataDetails', function 
         owner: this.engine,
       }
     );
-    const emptyStateTitle = this.element.querySelectorAll('[data-test-empty-state-title]');
+
+    const [noCustomMetadata, noMetadata] = findAll(SELECTORS.emptyStateTitle);
     assert
-      .dom(emptyStateTitle[0])
+      .dom(noCustomMetadata)
       .exists(
         'You do not have access to read custom metadata',
         'renders the empty state about custom_metadata'
       );
     assert
-      .dom(emptyStateTitle[1])
+      .dom(noMetadata)
       .exists(
         'You do not have access to secret metadata',
         'renders the empty state about no secret metadata'
       );
-    assert.dom('[data-test-edit-metadata]').doesNotExist('does not render edit metadata button.');
+    assert.dom(PAGE.editMetadata).doesNotExist('does not render edit metadata button.');
   });
 });

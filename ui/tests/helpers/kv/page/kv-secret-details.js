@@ -6,4 +6,5 @@
 export const SELECTORS = {
   versionDropdown: '[data-test-version-dropdown]',
   version: (number) => `[data-test-version="${number}"]`,
+  editMetadata: '[data-test-edit-metadata]',
 };
