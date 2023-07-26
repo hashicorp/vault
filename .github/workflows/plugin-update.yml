@@ -14,7 +14,7 @@ on:
         required: true
 
 jobs:
-  plugin-update-check:
+  plugin-update:
     runs-on: ubuntu-latest
     env:
       VAULT_BRANCH: "update/${{ inputs.repo }}/${{ inputs.plugin_tag }}"
