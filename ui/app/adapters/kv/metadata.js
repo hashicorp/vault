@@ -26,6 +26,19 @@ export default class KvMetadataAdapter extends ApplicationAdapter {
     });
   }
 
+  updateRecord(store, type, snapshot) {
+    const { backend, path } = snapshot.record;
+    const id = kvMetadataPath(backend, path);
+    const url = this._url(id);
+    const data = this.serialize(snapshot);
+    return this.ajax(url, 'POST', { data }).then(() => {
+      return {
+        id,
+        data,
+      };
+    });
+  }
+
   query(store, type, query) {
     const { backend, pathToSecret } = query;
     // example of pathToSecret: beep/boop/
