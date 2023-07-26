@@ -4,18 +4,17 @@
  */
 
 // This cannot be called kv-metadata because mirage checks for plural factory names, and metadata and data are considered plural. It will throw an error.
-// metadatum is the singluar for metadata.
 import { Factory, trait } from 'ember-cli-mirage';
 
 // define data outside of factory for linting error: https://github.com/ember-cli/eslint-plugin-ember/issues/202#issuecomment-356255988
 const data = {
   path: 'my-secret',
   backend: 'kv-engine',
-  cas_required: false,
+  cas_required: true,
   created_time: '2018-03-22T02:24:06.945319214Z',
   current_version: 4,
   delete_version_after: '3h25m19s',
-  max_versions: 0,
+  max_versions: 15,
   oldest_version: 0,
   updated_time: '2018-03-22T02:36:43.986212308Z',
   versions: {
