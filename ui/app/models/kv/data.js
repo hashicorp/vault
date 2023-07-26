@@ -31,10 +31,8 @@ import { withFormFields } from 'vault/decorators/model-form-fields';
 const validations = {
   path: [{ type: 'presence', message: `Path can't be blank.` }],
 };
-const formFieldProps = ['path', 'data'];
-
 @withModelValidations(validations)
-@withFormFields(formFieldProps)
+@withFormFields()
 export default class KvSecretDataModel extends Model {
   @attr('string') backend; // dynamic path of secret -- set on response from value passed to queryRecord.
   @attr('string', { label: 'Path for this secret' }) path;
