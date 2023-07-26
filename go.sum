@@ -3293,7 +3293,6 @@ go.etcd.io/etcd/client/pkg/v3 v3.5.5/go.mod h1:ggrwbk069qxpKPq8/FKkQ3Xq9y39kbFR4
 go.etcd.io/etcd/client/pkg/v3 v3.5.7 h1:y3kf5Gbp4e4q7egZdn5T7W9TSHUvkClN6u+Rq9mEOmg=
 go.etcd.io/etcd/client/pkg/v3 v3.5.7/go.mod h1:o0Abi1MK86iad3YrWhgUsbGx1pmTS+hrORWc2CamuhY=
 go.etcd.io/etcd/client/v2 v2.305.0/go.mod h1:h9puh54ZTgAKtEbut2oe9P4L/oqKCVB6xsXlzd7alYQ=
-go.etcd.io/etcd/client/v2 v2.305.5 h1:DktRP60//JJpnPC0VBymAN/7V71GHMdjDCBt4ZPXDjI=
 go.etcd.io/etcd/client/v2 v2.305.5/go.mod h1:zQjKllfqfBVyVStbt4FaosoX2iYd8fV/GRy/PbowgP4=
 go.etcd.io/etcd/client/v3 v3.5.0/go.mod h1:AIKXXVX/DQXtfTEqBryiLTUXwON+GuvO6Z7lLS/oTh0=
 go.etcd.io/etcd/client/v3 v3.5.5/go.mod h1:aApjR4WGlSumpnJ2kloS75h6aHUmAyaPLjHMxpc7E7c=

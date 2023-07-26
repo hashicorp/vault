@@ -206,7 +206,6 @@ require (
 	github.com/stretchr/testify v1.8.4
 	go.etcd.io/bbolt v1.3.7
 	go.etcd.io/etcd/client/pkg/v3 v3.5.7
-	go.etcd.io/etcd/client/v2 v2.305.5
 	go.etcd.io/etcd/client/v3 v3.5.7
 	go.mongodb.org/atlas v0.33.0
 	go.mongodb.org/mongo-driver v1.12.1
