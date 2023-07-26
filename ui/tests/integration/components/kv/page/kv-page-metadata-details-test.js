@@ -43,7 +43,6 @@ module('Integration | Component | kv | Page::Secret::MetadataDetails', function 
         owner: this.engine,
       }
     );
-
     assert
       .dom('[data-test-empty-state-title]')
       .hasText('No custom metadata', 'renders the correct empty state');

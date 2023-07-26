@@ -11,13 +11,14 @@ import errorMessage from 'vault/utils/error-message';
 import { action } from '@ember/object';
 
 /**
- * @module MetadataDetails
- * MetadataDetails component xx
+ * @module MetadataEdit
+ * MetadataEdit component renders the view for editing a Kv secret's metadata. This form is not also used for create as create happens inside the secret create view.
+ * While secret data and metadata are created on the same view, they are edited on different views/routes.
  *
- * @param {array} model - An xx
+ * @param {array} metadata - The kv/metadata model. It is version agnostic.
  * @param {array} breadcrumbs - Breadcrumbs as an array of objects that contain label, route, and modelId. They are updated via the util kv-breadcrumbs to handle dynamic *pathToSecret on the list-directory route.
- * @param {onCancel} onCancel - Callback triggered when cancel button is clicked.
- * @param {onSave} onSave - Callback triggered on save success.
+ * @param {onCancel} onCancel - Callback triggered when cancel button is clicked that transitions to the metadata details route.
+ * @param {onSave} onSave - Callback triggered on save success that transitions to the metadata details route.
  */
 
 export default class KvMetadataEditComponent extends Component {

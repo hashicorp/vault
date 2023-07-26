@@ -29,16 +29,16 @@ module('Integration | Component | kv | Page::Secret::MetadataEdit', function (ho
       modelName: 'kv/metadata',
       ...data,
     });
-    // model used to test edit of model that has custom_metadata and/or previous inputs.
+    // Used to specifically test a model with custom_metadata and non-default inputs.
     this.metadataModelEdit = store.peekRecord('kv/metadata', data.id);
-    // model that hasn't been created yet, with all default inputs
+    // Used to specifically test a model with no custom_metadata and default values.
     this.metadataModelCreate = store.createRecord('kv/metadata', {
       backend: 'kv-engine',
       path: 'my-secret-new',
     });
   });
 
-  test('it renders all inputs for a new model', async function (assert) {
+  test('it renders all inputs for a model that has all default values', async function (assert) {
     assert.expect(5);
     this.breadcrumbs = [
       { label: 'secrets', route: 'secrets', linkExternal: true },
@@ -68,7 +68,7 @@ module('Integration | Component | kv | Page::Secret::MetadataEdit', function (ho
       .doesNotExist('the toggle for secret deletion is not triggered.');
   });
 
-  test('it displays previous inputs from record and saves new values', async function (assert) {
+  test('it displays previous inputs from metadata record and saves new values', async function (assert) {
     assert.expect(5);
     this.breadcrumbs = [
       { label: 'secrets', route: 'secrets', linkExternal: true },
@@ -98,8 +98,8 @@ module('Integration | Component | kv | Page::Secret::MetadataEdit', function (ho
       .dom(SELECTORS.automateSecretDeletion)
       .hasValue('12319', 'renders Automate secret deletion that was on the record.');
 
-    // change the values
-    await click('[data-test-kv-delete-row="0"]'); //delete the first bar 123 custom metadata
+    // change the "Additional option" values
+    await click('[data-test-kv-delete-row="0"]'); // delete the first kv row
     const keys = document.querySelectorAll('[data-test-kv-key]');
     const values = document.querySelectorAll('[data-test-kv-value]');
     await fillIn(keys[2], 'last');
@@ -127,7 +127,7 @@ module('Integration | Component | kv | Page::Secret::MetadataEdit', function (ho
     await click('[data-test-kv-metadata-save]');
   });
 
-  test('it displays validation errors and correct transitions on cancel', async function (assert) {
+  test('it displays validation errors and does not save inputs on cancel', async function (assert) {
     assert.expect(2);
     this.breadcrumbs = [
       { label: 'secrets', route: 'secrets', linkExternal: true },
@@ -155,5 +155,28 @@ module('Integration | Component | kv | Page::Secret::MetadataEdit', function (ho
 
     await click(SELECTORS.metadataCancel);
     assert.strictEqual(this.metadataModelEdit.maxVersions, 15, 'Model is rolled back on cancel.');
+  });
+
+  test('it empty state if the do not have metadata update permissions', async function (assert) {
+    assert.expect(1);
+    this.server.post('/sys/capabilities-self', allowAllCapabilitiesStub('list'));
+    this.breadcrumbs = [
+      { label: 'secrets', route: 'secrets', linkExternal: true },
+      { label: this.metadataModelEdit.backend, route: 'list' },
+      { label: this.metadataModelEdit.path, route: 'secret.details', model: this.metadataModelEdit.path },
+      { label: 'metadata' },
+    ];
+    await render(
+      hbs`
+      <Page::Secret::MetadataEdit
+        @metadata={{this.metadataModelEdit}}
+        @breadcrumbs={{this.breadcrumbs}}
+        @onCancel={{this.onCancel}}
+        @onSave={{this.onSave}} />`,
+      {
+        owner: this.engine,
+      }
+    );
+    assert.dom(SELECTORS.emptyStateTitle).hasText('You do not have permissions to edit metadata');
   });
 });
