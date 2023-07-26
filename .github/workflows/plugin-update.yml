@@ -95,6 +95,9 @@ jobs:
           ${PLUGIN_TYPE}/${PLUGIN_SERVICE}: Update plugin to ${{ inputs.plugin_tag }}
           \`\`\`" > changelog/${vault_pr_num}.txt
 
+          git add .
+          git commit -m "Add changelog"
+          git push origin ${{ github.ref_name }}:"$VAULT_BRANCH"
 
       - name: Add labels to Vault PR
         env:
