@@ -104,9 +104,9 @@ group-level policy.
 ![Relationship](/img/diagram-rgp-namespace_light.png#light-theme-only)
 ![Relationship](/img/diagram-rgp-namespace_dark.png#dark-theme-only)
 
-While ACL policies and EGPs set rules on a specific path, an RGP may not have a
-target path. RGPs are tied to tokens, identity entities, or identity groups that
-you can write rules without specifying a path.
+While ACL policies and EGPs set rules on a specific path, an RGP does not
+specify a target path. RGPs are tied to tokens, identity entities, or identity
+groups that you can write rules without specifying a path.
 
 What if the deny-all RGP in the training namespace looked like:
 
@@ -156,7 +156,7 @@ necessary to pre-populate Identity entries or supply additional parameters with
 the request if you require more information to use MFA than the endpoint is
 able to glean from the original request alone.
 
-# Using sentinel
+# Using Sentinel
 
 ## Configuration
 
