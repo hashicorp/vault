@@ -38,7 +38,11 @@ export default class LdapConfigurationRoute extends Route {
     return hash({
       backendModel,
       promptConfig: this.promptConfig,
-      roles: this.store.query('ldap/role', { backend: backendModel.id }),
+      roles: this.store.query(
+        'ldap/role',
+        { backend: backendModel.id },
+        { adapterOptions: { partialErrorInfo: true } }
+      ),
     });
   }
 
