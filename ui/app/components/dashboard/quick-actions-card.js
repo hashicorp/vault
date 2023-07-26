@@ -6,6 +6,7 @@
 import Component from '@glimmer/component';
 import { action } from '@ember/object';
 import { tracked } from '@glimmer/tracking';
+import { inject as service } from '@ember/service';
 
 /**
  * @module DashboardQuickActionsCard
@@ -26,7 +27,6 @@ const getActionsByEngineType = (type) => {
         {
           actionTitle: 'Find KV secrets',
           actionType: 'find-kv',
-          path: 'vault.cluster.secrets',
         },
       ];
     case 'database':
@@ -34,7 +34,6 @@ const getActionsByEngineType = (type) => {
         {
           actionTitle: 'Generate credentials for database',
           actionType: 'generate-credentials-db',
-          path: 'vault.cluster.database',
         },
       ];
     case 'pki':
@@ -42,17 +41,14 @@ const getActionsByEngineType = (type) => {
         {
           actionTitle: 'Issue certificate',
           actionType: 'issue-certificate-pki',
-          path: 'vault.cluster.pki',
         },
         {
           actionTitle: 'View certificate',
           actionType: 'view-certificate-pki',
-          path: 'vault.cluster.pki',
         },
         {
           actionTitle: 'View issuer',
           actionType: 'view-issuer-pki',
-          path: 'vault.cluster.pki',
         },
       ];
   }
@@ -66,9 +62,16 @@ const getActionParamByAction = (type) => {
         subText: 'Path of the secret you want to read, including the mount. E.g., secret/data/foo.',
         elementType: 'input',
         buttonText: 'Read secrets',
+        path: 'vault.cluster.secrets',
       };
     case 'generate-credentials-db':
-      return { title: 'Role to use', elementType: 'select', buttonText: 'Generate credentials' };
+      return {
+        title: 'Role to use',
+        elementType: 'search-select',
+        buttonText: 'Generate credentials',
+        model: 'database/role',
+        path: 'vault.cluster.secrets.backend.credentials',
+      };
     case 'issue-certificate-pki':
       return {
         title: 'Role to use',
@@ -76,6 +79,7 @@ const getActionParamByAction = (type) => {
         placeholder: 'Type to find a role...',
         buttonText: 'Issue leaf certificate',
         model: 'pki/role',
+        path: 'vault.cluster.secrets.backend.pki.roles.role.generate',
       };
     case 'view-certificate-pki':
       return {
@@ -84,6 +88,7 @@ const getActionParamByAction = (type) => {
         elementType: 'search-select',
         buttonText: 'View certificate',
         model: 'pki/certificate/base',
+        path: 'vault.cluster.secrets.backend.pki.certificates.certificate.details',
       };
     case 'view-issuer-pki':
       return {
@@ -93,11 +98,14 @@ const getActionParamByAction = (type) => {
         buttonText: 'View issuer',
         model: 'pki/issuer',
         nameKey: 'issuerName',
+        path: 'vault.cluster.secrets.backend.pki.issuers.issuer.details',
       };
   }
 };
 
 export default class DashboardQuickActionsCard extends Component {
+  @service router;
+
   @tracked selectedEngine;
   @tracked selectedActions = [];
   @tracked selectedAction;
@@ -159,5 +167,13 @@ export default class DashboardQuickActionsCard extends Component {
     } else {
       this.value = val;
     }
+  }
+
+  @action
+  navigateToPage() {
+    this.router.transitionTo(this.actionParamField.path, {
+      backend: this.selectedEngineName,
+      role: this.value,
+    });
   }
 }

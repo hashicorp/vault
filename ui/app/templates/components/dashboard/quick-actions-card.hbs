@@ -30,18 +30,8 @@
 
 <h4 class="title is-6">{{this.actionParamField.title}}</h4>
 {{#if (eq this.actionParamField.elementType "input")}}
-  <Input @type="text" @value="hello" class="input" />
-{{else if (eq this.actionParamField.elementType "select")}}
-  <Select
-    @name="auth-method"
-    @options={{this.selectedActions}}
-    @valueAttribute="actionType"
-    @labelAttribute="actionTitle"
-    @isFullwidth={{true}}
-    @selectedValue={{this.selectedAction}}
-    @onChange={{this.setSelectedAction}}
-  />
-{{else if (eq this.actionParamField.elementType "search-select")}}
+  <Input @type="text" @value={{this.value}} class="input" />
+{{else}}
   <SearchSelect
     class="is-flex-1"
     @selectLimit="1"
@@ -60,7 +50,8 @@
   <button
     type="button"
     class="button is-primary has-top-margin-m"
-    disabled={{(and (not this.selectedAction this.selectedEngine))}}
+    disabled={{(not (and this.selectedAction this.selectedEngine this.value))}}
+    {{on "click" this.navigateToPage}}
     data-test-button={{this.actionParamField.buttonText}}
   >
     {{this.actionParamField.buttonText}}
