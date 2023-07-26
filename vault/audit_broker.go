@@ -46,6 +46,8 @@ func NewAuditBroker(log log.Logger, useEventLogger bool) (*AuditBroker, error) {
 		if err != nil {
 			return nil, fmt.Errorf("error creating event broker for audit events: %w", err)
 		}
+
+		eventBroker.SetSuccessThresholdSinks(eventlogger.EventType("audit"), 1)
 	}
 
 	b := &AuditBroker{
@@ -178,28 +180,41 @@ func (a *AuditBroker) LogRequest(ctx context.Context, in *logical.LogInput, head
 		in.Request.Headers = headers
 	}()
 
-	// Ensure at least one backend logs
-	anyLogged := false
-	for name, be := range a.backends {
-		in.Request.Headers = nil
-		transHeaders, thErr := headersConfig.ApplyConfig(ctx, headers, be.backend)
-		if thErr != nil {
-			a.logger.Error("backend failed to include headers", "backend", name, "error", thErr)
-			continue
-		}
-		in.Request.Headers = transHeaders
+	if a.broker == nil {
+		// Ensure at least one backend logs
+		anyLogged := false
+		for name, be := range a.backends {
+			in.Request.Headers = nil
+			transHeaders, thErr := headersConfig.ApplyConfig(ctx, headers, be.backend)
+			if thErr != nil {
+				a.logger.Error("backend failed to include headers", "backend", name, "error", thErr)
+				continue
+			}
+			in.Request.Headers = transHeaders
 
-		start := time.Now()
-		lrErr := be.backend.LogRequest(ctx, in)
-		metrics.MeasureSince([]string{"audit", name, "log_request"}, start)
-		if lrErr != nil {
-			a.logger.Error("backend failed to log request", "backend", name, "error", lrErr)
-		} else {
-			anyLogged = true
+			start := time.Now()
+			lrErr := be.backend.LogRequest(ctx, in)
+			metrics.MeasureSince([]string{"audit", name, "log_request"}, start)
+			if lrErr != nil {
+				a.logger.Error("backend failed to log request", "backend", name, "error", lrErr)
+			} else {
+				anyLogged = true
+			}
 		}
-	}
-	if !anyLogged && len(a.backends) > 0 {
-		retErr = multierror.Append(retErr, fmt.Errorf("no audit backend succeeded in logging the request"))
+		if !anyLogged && len(a.backends) > 0 {
+			retErr = multierror.Append(retErr, fmt.Errorf("no audit backend succeeded in logging the request"))
+		}
+	} else {
+		event, err := audit.NewEvent(audit.RequestType)
+		if err != nil {
+			retErr = multierror.Append(retErr, err)
+		}
+
+		event.Data = in
+		_, err = a.broker.Send(ctx, eventlogger.EventType("audit"), event)
+		if err != nil {
+			retErr = multierror.Append(retErr, err)
+		}
 	}
 
 	return retErr.ErrorOrNil()
