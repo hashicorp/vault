@@ -96,4 +96,26 @@ module('Integration | Component | masked input', function (hooks) {
     const unMaskedValue = document.querySelector('.masked-value').value;
     assert.strictEqual(unMaskedValue, this.value);
   });
+
+  test('it renders correctly with empty string provided as value', async function (assert) {
+    await render(hbs`
+      <MaskedInput
+        @name={{"key"}}
+        @value={{""}}
+        @displayOnly={{true}}
+        @allowCopy={{true}}
+        @allowDownload={{true}}
+      />
+    `);
+    assert.dom('[data-test-masked-input]').exists('shows masked input');
+    assert.dom('[data-test-copy-button]').exists('shows copy button');
+    assert.dom('[data-test-download-button]').exists('shows download button');
+    assert.dom('[data-test-button="toggle-masked"]').exists('shows toggle mask button');
+
+    await component.toggleMasked();
+    assert.dom('.masked-value').doesNotHaveClass('masked-font', 'it unmasks when show button is clicked');
+    assert
+      .dom('[data-test-icon="minus"]')
+      .exists('shows minus icon when unmasked because value is empty string');
+  });
 });
