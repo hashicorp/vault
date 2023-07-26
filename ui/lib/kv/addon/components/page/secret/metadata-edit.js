@@ -12,7 +12,7 @@ import { action } from '@ember/object';
 
 /**
  * @module MetadataEdit
- * MetadataEdit component renders the view for editing a Kv secret's metadata. This form is not also used for create as create happens inside the secret create view.
+ * MetadataEdit component renders the view for editing a kv secret's metadata.
  * While secret data and metadata are created on the same view, they are edited on different views/routes.
  *
  * @param {array} metadata - The kv/metadata model. It is version agnostic.

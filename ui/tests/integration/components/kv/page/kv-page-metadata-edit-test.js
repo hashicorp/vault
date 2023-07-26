@@ -157,7 +157,7 @@ module('Integration | Component | kv | Page::Secret::MetadataEdit', function (ho
     assert.strictEqual(this.metadataModelEdit.maxVersions, 15, 'Model is rolled back on cancel.');
   });
 
-  test('it empty state if the do not have metadata update permissions', async function (assert) {
+  test('it shows an empty state if user does not have metadata update permissions', async function (assert) {
     assert.expect(1);
     this.server.post('/sys/capabilities-self', allowAllCapabilitiesStub('list'));
     this.breadcrumbs = [
