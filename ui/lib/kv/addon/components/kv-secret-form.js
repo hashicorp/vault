@@ -10,20 +10,21 @@ import { task } from 'ember-concurrency';
 import { inject as service } from '@ember/service';
 
 /**
- * @module KvSecretsCreate renders the form for creating a new secret. 
- * 
- * <Page::Secrets::Create
- *  @secret={{this.model.secret}}
- *  @breadcrumbs={{this.breadcrumbs}}
-  /> 
+ * @module KvSecretForm is used for creating a new secret or secret version (also considered 'editing')
  *
- * @param {model} secret - Ember data model: 'kv/data'  
- * @param {array} breadcrumbs - Array to generate breadcrumbs, passed to the page header component
+ * <KvSecretForm
+ *  @secret={{@secret}}
+ *  @onSave={{transition-to "vault.cluster.secrets.backend.kv.secret.details" @secret.path}}
+ *  @onCancel={{transition-to "vault.cluster.secrets.backend.kv.list"}}
+ * />
+ *
+ * @param {model} secret - Ember data model: 'kv/data'
+ * @param {callback} onSave - callback (usually a transition) from parent to perform after the model is saved
+ * @param {callback} onCancel - callback (usually a transition) from parent to perform when cancel button is clicked
  */
 
-export default class KvSecretsCreate extends Component {
+export default class KvSecretForm extends Component {
   @service flashMessages;
-  @service router;
   @tracked showJsonView = false;
   @tracked errorMessage;
   @tracked modelValidations;
@@ -42,10 +43,10 @@ export default class KvSecretsCreate extends Component {
       this.modelValidations = isValid ? null : state;
       this.invalidFormAlert = invalidFormMessage;
       if (isValid) {
+        const { path, isNew } = this.args.secret;
         yield this.args.secret.save();
-        const { path } = this.args.secret;
-        this.flashMessages.success(`Successfully created secret ${path}`);
-        this.router.transitionTo('vault.cluster.secrets.backend.kv.secret.details', path);
+        this.flashMessages.success(`Successfully created ${isNew ? '' : 'new version of'} secret ${path}`);
+        this.args.onSave();
       }
     } catch (error) {
       const message = error.errors ? error.errors.join('. ') : error.message;
@@ -56,9 +57,7 @@ export default class KvSecretsCreate extends Component {
 
   @action
   cancel() {
-    const method = this.args.model.isNew ? 'unloadRecord' : 'rollbackAttributes';
-    this.args.model[method]();
+    this.args.secret.rollbackAttributes();
     this.args.onCancel();
-    this.router.transitionTo('vault.cluster.secrets.backend.kv.list');
   }
 }
