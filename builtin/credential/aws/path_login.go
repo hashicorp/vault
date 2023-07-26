@@ -323,7 +323,7 @@ func (b *backend) pathLoginIamGetRoleNameCallerIdAndEntity(ctx context.Context, 
 
 	// Extract and use a regional STS endpoint
 	// based on the region set in the Authorization header.
-	if config.STSRegionFromClient {
+	if config.UseSTSRegionFromClient {
 		clientSpecifiedRegion, err := awsRegionFromHeader(headers.Get("Authorization"))
 		if err != nil {
 			return "", nil, nil, logical.ErrorResponse("region missing from Authorization header"), nil
@@ -334,7 +334,7 @@ func (b *backend) pathLoginIamGetRoleNameCallerIdAndEntity(ctx context.Context, 
 			return "", nil, nil, logical.ErrorResponse(err.Error()), nil
 		}
 
-		b.Logger().Debug("sts_region_from_client set; using region specified from header", "region", clientSpecifiedRegion)
+		b.Logger().Debug("use_sts_region_from_client set; using region specified from header", "region", clientSpecifiedRegion)
 		endpoint = url
 	}
 

@@ -62,7 +62,7 @@ func (b *backend) pathConfigClient() *framework.Path {
 				Description: "The region ID for the sts_endpoint, if set.",
 			},
 
-			"sts_region_from_client": {
+			"use_sts_region_from_client": {
 				Type:        framework.TypeBool,
 				Default:     false,
 				Description: "Uses the STS region from client requests for making AWS STS API calls.",
@@ -175,7 +175,7 @@ func (b *backend) pathConfigClientRead(ctx context.Context, req *logical.Request
 			"iam_endpoint":               clientConfig.IAMEndpoint,
 			"sts_endpoint":               clientConfig.STSEndpoint,
 			"sts_region":                 clientConfig.STSRegion,
-			"sts_region_from_client":     clientConfig.STSRegionFromClient,
+			"use_sts_region_from_client": clientConfig.UseSTSRegionFromClient,
 			"iam_server_id_header_value": clientConfig.IAMServerIdHeaderValue,
 			"max_retries":                clientConfig.MaxRetries,
 			"allowed_sts_header_values":  clientConfig.AllowedSTSHeaderValues,
@@ -289,11 +289,11 @@ func (b *backend) pathConfigClientCreateUpdate(ctx context.Context, req *logical
 		}
 	}
 
-	stsRegionFromClientRaw, ok := data.GetOk("sts_region_from_client")
+	useSTSRegionFromClientRaw, ok := data.GetOk("use_sts_region_from_client")
 	if ok {
-		if configEntry.STSRegionFromClient != stsRegionFromClientRaw.(bool) {
+		if configEntry.UseSTSRegionFromClient != useSTSRegionFromClientRaw.(bool) {
 			changedCreds = true
-			configEntry.STSRegionFromClient = stsRegionFromClientRaw.(bool)
+			configEntry.UseSTSRegionFromClient = useSTSRegionFromClientRaw.(bool)
 		}
 	}
 
@@ -379,7 +379,7 @@ type clientConfig struct {
 	IAMEndpoint            string   `json:"iam_endpoint"`
 	STSEndpoint            string   `json:"sts_endpoint"`
 	STSRegion              string   `json:"sts_region"`
-	STSRegionFromClient    bool     `json:"sts_region_from_client"`
+	UseSTSRegionFromClient bool     `json:"use_sts_region_from_client"`
 	IAMServerIdHeaderValue string   `json:"iam_server_id_header_value"`
 	AllowedSTSHeaderValues []string `json:"allowed_sts_header_values"`
 	MaxRetries             int      `json:"max_retries"`
