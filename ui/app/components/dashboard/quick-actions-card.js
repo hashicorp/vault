@@ -171,9 +171,6 @@ export default class DashboardQuickActionsCard extends Component {
 
   @action
   navigateToPage() {
-    this.router.transitionTo(this.actionParamField.path, {
-      backend: this.selectedEngineName,
-      role: this.value,
-    });
+    this.router.transitionTo(this.actionParamField.path, this.selectedEngineName, this.value);
   }
 }
