@@ -6,21 +6,21 @@
 import Component from '@glimmer/component';
 import { action } from '@ember/object';
 import { tracked } from '@glimmer/tracking';
+import { next } from '@ember/runloop';
 
 /**
  * @module KvSecretDetails renders the key/value data of a KV secret. 
  * It also renders a dropdown to display different versions of the secret.
  * <Page::Secret::Details
- *  @secretPath={{this.model.path}}
+ *  @path={{this.model.path}}
  *  @secret={{this.model.secret}}
  *  @metadata={{this.model.metadata}}
  *  @breadcrumbs={{this.breadcrumbs}}
   /> 
  *
- * @param {string} secretPath - path of kv secret 'my/secret' used as the title for the KV page header 
+ * @param {string} path - path of kv secret 'my/secret' used as the title for the KV page header 
  * @param {model} secret - Ember data model: 'kv/data'  
  * @param {model} metadata - Ember data model: 'kv/metadata'
- * @param {boolean} noMetadataPermission - True if we received a 403 from the kv/metadata network request
  * @param {array} breadcrumbs - Array to generate breadcrumbs, passed to the page header component
  */
 
@@ -30,6 +30,13 @@ export default class KvSecretDetails extends Component {
   @action
   toggleJsonView() {
     this.showJsonView = !this.showJsonView;
+  }
+
+  @action
+  onClose(dropdown) {
+    // strange issue where closing dropdown triggers full transition (which redirects to auth screen in production)
+    // closing dropdown in next tick of run loop fixes it
+    next(() => dropdown.actions.close());
   }
 
   get emptyState() {
