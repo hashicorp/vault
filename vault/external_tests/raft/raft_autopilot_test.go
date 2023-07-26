@@ -185,6 +185,14 @@ func TestRaft_Autopilot_Configuration(t *testing.T) {
 	writeConfigFunc(writableConfig, true)
 	configCheckFunc(config)
 
+	// Check dead server last contact threshold minimum
+	writableConfig = map[string]interface{}{
+		"cleanup_dead_servers":               true,
+		"dead_server_last_contact_threshold": "5s",
+	}
+	writeConfigFunc(writableConfig, true)
+	configCheckFunc(config)
+
 	// Ensure that the configuration stays across reboots
 	leaderCore := cluster.Cores[0]
 	testhelpers.EnsureCoreSealed(t, cluster.Cores[0])
