@@ -74,6 +74,13 @@ var (
 					Pattern:    pattern,
 					Operations: make(map[logical.Operation]framework.OperationHandler),
 					Fields:     make(map[string]*framework.FieldSchema),
+					DisplayAttrs: &framework.DisplayAttributes{
+						// Since we lack full information for Fields, and all information for Responses, the generated
+						// OpenAPI won't be good for much other than identifying the endpoint exists at all. Thus, it
+						// is useful to make it clear that this is only a stub. Code generation will use this to ignore
+						// these operations.
+						OperationPrefix: "enterprise-stub-system",
+					},
 				}
 
 				for _, parameter := range pathSpec.parameters {
