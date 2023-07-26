@@ -3,6 +3,7 @@
  * SPDX-License-Identifier: MPL-2.0
  */
 import type EmberDataModel from '@ember-data/model';
+import type Owner from '@ember/owner';
 
 // Type that comes back from expandAttributeMeta
 export interface FormField {
@@ -76,6 +77,10 @@ export interface Breadcrumb {
   label: string;
   route?: string;
   linkExternal?: boolean;
+}
+
+export interface EngineOwner extends Owner {
+  mountPoint: string;
 }
 
 // Generic interfaces
