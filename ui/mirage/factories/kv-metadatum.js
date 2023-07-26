@@ -10,11 +10,11 @@ import { Factory, trait } from 'ember-cli-mirage';
 const data = {
   path: 'my-secret',
   backend: 'kv-engine',
-  cas_required: false,
+  cas_required: true,
   created_time: '2018-03-22T02:24:06.945319214Z',
   current_version: 3,
   delete_version_after: '3h25m19s',
-  max_versions: 0,
+  max_versions: 15,
   oldest_version: 0,
   updated_time: '2018-03-22T02:36:43.986212308Z',
   versions: {

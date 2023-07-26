@@ -28,7 +28,7 @@ export default class KvMetadataEditComponent extends Component {
 
   @action
   cancel() {
-    this.args.model.rollbackAttributes();
+    this.args.metadata.rollbackAttributes();
     this.args.onCancel();
   }
 
@@ -36,12 +36,12 @@ export default class KvMetadataEditComponent extends Component {
   *save(event) {
     event.preventDefault();
     try {
-      const { isValid, state, invalidFormMessage } = this.args.model.validate();
+      const { isValid, state, invalidFormMessage } = this.args.metadata.validate();
       this.modelValidations = isValid ? null : state;
       this.invalidFormAlert = invalidFormMessage;
       if (isValid) {
-        const { path } = this.args.model;
-        yield this.args.model.save();
+        const { path } = this.args.metadata;
+        yield this.args.metadata.save();
         this.flashMessages.success(`Successfully updated ${path}'s metadata.`);
         this.args.onSave();
       }
