@@ -11,7 +11,7 @@ import { click, find, render } from '@ember/test-helpers';
 import { hbs } from 'ember-cli-htmlbars';
 import { kvDataPath, kvMetadataPath } from 'vault/utils/kv-path';
 import { SELECTORS, parseJsonEditor } from 'vault/tests/helpers/kv/kv-general-selectors';
-import { SELECTORS as PAGE } from 'vault/tests/helpers/kv/page/kv-secret-details';
+import { SELECTORS as PAGE } from 'vault/tests/helpers/kv/kv-page-selectors';
 import { allowAllCapabilitiesStub } from 'vault/tests/helpers/stubs';
 
 module('Integration | Component | kv | Page::Secret::Details', function (hooks) {
@@ -149,22 +149,22 @@ module('Integration | Component | kv | Page::Secret::Details', function (hooks) 
     );
 
     assert.dom(SELECTORS.tooltipTrigger).includesText(this.version, 'renders version');
-    assert.dom(PAGE.versionDropdown).hasText(`Version ${this.secret.version}`);
-    await click(PAGE.versionDropdown);
+    assert.dom(PAGE.details.versionDropdown).hasText(`Version ${this.secret.version}`);
+    await click(PAGE.details.versionDropdown);
 
     for (const version in this.metadata.versions) {
       const data = this.metadata.versions[version];
-      assert.dom(PAGE.version(version)).exists(`renders ${version} in dropdown menu`);
+      assert.dom(PAGE.details.version(version)).exists(`renders ${version} in dropdown menu`);
 
       if (data.destroyed || data.deletion_time) {
         assert
-          .dom(`${PAGE.version(version)} [data-test-icon="x-square-fill"]`)
+          .dom(`${PAGE.details.version(version)} [data-test-icon="x-square-fill"]`)
           .hasClass(`${data.destroyed ? 'has-text-danger' : 'has-text-grey'}`);
       }
     }
 
     assert
-      .dom(`${PAGE.version(this.metadata.currentVersion)} [data-test-icon="check-circle"]`)
+      .dom(`${PAGE.details.version(this.metadata.currentVersion)} [data-test-icon="check-circle"]`)
       .exists('renders current version icon');
   });
 });

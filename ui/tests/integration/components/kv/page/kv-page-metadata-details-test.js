@@ -12,7 +12,7 @@ import { hbs } from 'ember-cli-htmlbars';
 import { kvMetadataPath } from 'vault/utils/kv-path';
 import { allowAllCapabilitiesStub } from 'vault/tests/helpers/stubs';
 import { SELECTORS } from 'vault/tests/helpers/kv/kv-general-selectors';
-import { SELECTORS as PAGE } from 'vault/tests/helpers/kv/page/kv-secret-details';
+import { SELECTORS as PAGE } from 'vault/tests/helpers/kv/kv-page-selectors';
 
 module('Integration | Component | kv | Page::Secret::MetadataDetails', function (hooks) {
   setupRenderingTest(hooks);
@@ -117,6 +117,6 @@ module('Integration | Component | kv | Page::Secret::MetadataDetails', function 
         'You do not have access to secret metadata',
         'renders the empty state about no secret metadata'
       );
-    assert.dom(PAGE.editMetadata).doesNotExist('does not render edit metadata button.');
+    assert.dom(PAGE.details.editMetadataBtn).doesNotExist('does not render edit metadata button.');
   });
 });
