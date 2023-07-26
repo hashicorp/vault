@@ -79,7 +79,7 @@ var (
 						// OpenAPI won't be good for much other than identifying the endpoint exists at all. Thus, it
 						// is useful to make it clear that this is only a stub. Code generation will use this to ignore
 						// these operations.
-						OperationPrefix: "enterprise-stub-system",
+						OperationPrefix: "enterprise-stub",
 					},
 				}
 
@@ -179,14 +179,20 @@ var (
 		// This path, though an enterprise path, has always been handled in OSS.
 		paths = append(paths, &framework.Path{
 			Pattern: "replication/status",
-			Callbacks: map[logical.Operation]framework.OperationFunc{
-				logical.ReadOperation: func(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-					resp := &logical.Response{
-						Data: map[string]interface{}{
-							"mode": "disabled",
-						},
-					}
-					return resp, nil
+			Operations: map[logical.Operation]framework.OperationHandler{
+				logical.ReadOperation: &framework.PathOperation{
+					Callback: func(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+						resp := &logical.Response{
+							Data: map[string]interface{}{
+								"mode": "disabled",
+							},
+						}
+						return resp, nil
+					},
+					DisplayAttrs: &framework.DisplayAttributes{
+						OperationVerb:   "read",
+						OperationSuffix: "replication-status",
+					},
 				},
 			},
 		})
