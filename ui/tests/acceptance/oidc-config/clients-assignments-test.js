@@ -33,8 +33,8 @@ module('Acceptance | oidc-config clients and assignments', function (hooks) {
     ENV['ember-cli-mirage'].handler = 'oidcConfig';
   });
 
-  hooks.beforeEach(async function () {
-    this.store = await this.owner.lookup('service:store');
+  hooks.beforeEach(function () {
+    this.store = this.owner.lookup('service:store');
     return authPage.login();
   });
 

@@ -131,9 +131,9 @@ const setupOidc = async function (uid) {
 module('Acceptance | oidc provider', function (hooks) {
   setupApplicationTest(hooks);
 
-  hooks.beforeEach(async function () {
+  hooks.beforeEach(function () {
     this.uid = uuidv4();
-    this.store = await this.owner.lookup('service:store');
+    this.store = this.owner.lookup('service:store');
     return authPage.login();
   });
 
