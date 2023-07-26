@@ -6,6 +6,7 @@
 export const INIT = 'vault.cluster.init';
 export const UNSEAL = 'vault.cluster.unseal';
 export const AUTH = 'vault.cluster.auth';
+export const LOGOUT = 'vault.cluster.logout';
 export const REDIRECT = 'vault.cluster.redirect';
 export const CLUSTER = 'vault.cluster';
 export const CLUSTER_INDEX = 'vault.cluster.index';
