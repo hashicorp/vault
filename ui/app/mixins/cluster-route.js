@@ -19,7 +19,6 @@ import {
   DR_REPLICATION_SECONDARY_DETAILS,
   EXCLUDED_REDIRECT_URLS,
   REDIRECT,
-  LOGOUT,
 } from 'vault/lib/route-paths';
 
 export default Mixin.create({
@@ -27,40 +26,21 @@ export default Mixin.create({
   store: service(),
   router: service(),
 
-  _shouldInterceptTransition(targetRoute, transitionTarget, currentRouteName) {
-    const attemptingLogout = transitionTarget === LOGOUT || this.routeName === LOGOUT;
-    if (
-      // not attempting to logout
-      !attemptingLogout &&
-      // has target route to intercept to
-      targetRoute &&
-      // target route different from current route
-      targetRoute !== currentRouteName &&
-      // target route different from transition target
-      targetRoute !== transitionTarget
-    ) {
-      return true;
-    }
-    return false;
-  },
-
   transitionToTargetRoute(transition = {}) {
     const targetRoute = this.targetRouteName(transition);
-    const intercept = this._shouldInterceptTransition(
-      targetRoute,
-      transition.targetName,
-      this.routeName || this.router.currentRouteName
-    );
-    if (intercept) {
+    if (
+      targetRoute &&
+      targetRoute !== this.routeName &&
+      targetRoute !== transition.targetName &&
+      targetRoute !== this.router.currentRouteName
+    ) {
       // there may be query params so check for inclusion rather than exact match
       const isExcluded = EXCLUDED_REDIRECT_URLS.find((url) => this.router.currentURL?.includes(url));
       if (
-        // only want to add redirect_to if we're going to authenticate
+        // only want to redirect if we're going to authenticate
         targetRoute === AUTH &&
-        // and if we aren't redirecting from logout
-        !isExcluded &&
-        // and the target isn't the default
-        transition.targetName !== CLUSTER_INDEX
+        transition.targetName !== CLUSTER_INDEX &&
+        !isExcluded
       ) {
         return this.transitionTo(targetRoute, { queryParams: { redirect_to: this.router.currentURL } });
       }
