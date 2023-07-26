@@ -127,7 +127,7 @@ module('Integration | Component | kv | Page::Secret::MetadataEdit', function (ho
       };
       assert.deepEqual(expected, data, 'POST request made to save metadata with correct properties.');
     });
-    await click('[data-test-kv-metadata-save]');
+    await click(PAGE.edit.metadataUpdate);
   });
 
   test('it displays validation errors and does not save inputs on cancel', async function (assert) {
@@ -151,7 +151,7 @@ module('Integration | Component | kv | Page::Secret::MetadataEdit', function (ho
     );
     // trigger validation error
     await fillIn(PAGE.edit.inputByAttr('maxVersions'), 'a');
-    await click('[data-test-kv-metadata-save]');
+    await click(PAGE.edit.metadataUpdate);
     assert
       .dom(SELECTORS.inlineAlert)
       .hasText('Maximum versions must be a number.', 'Validation message is shown for max_versions');

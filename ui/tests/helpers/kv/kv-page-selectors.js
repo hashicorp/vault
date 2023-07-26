@@ -14,5 +14,6 @@ export const SELECTORS = {
     inputByAttr: (attr) => `[data-test-input="${attr}"]`,
     automateSecretDeletion: '[data-test-ttl-value="Automate secret deletion"]',
     metadataCancel: '[data-test-kv-metadata-cancel]',
+    metadataUpdate: '[data-test-kv-metadata-update]',
   },
 };
