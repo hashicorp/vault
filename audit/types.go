@@ -37,12 +37,11 @@ type format string
 
 // auditEvent is the audit event.
 type auditEvent struct {
-	ID             string            `json:"id"`
-	Version        string            `json:"version"`
-	Subtype        subtype           `json:"subtype"` // the subtype of the audit event.
-	Timestamp      time.Time         `json:"timestamp"`
-	Data           *logical.LogInput `json:"data"`
-	RequiredFormat format            `json:"format"`
+	ID        string            `json:"id"`
+	Version   string            `json:"version"`
+	Subtype   subtype           `json:"subtype"` // the subtype of the audit event.
+	Timestamp time.Time         `json:"timestamp"`
+	Data      *logical.LogInput `json:"data"`
 }
 
 // Option is how options are passed as arguments.
