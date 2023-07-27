@@ -96,7 +96,7 @@ func NewTemporaryFormatter(requiredFormat, prefix string) (*EntryFormatterWriter
 		return nil, err
 	}
 
-	eventFormatter, err := NewEntryFormatter(cfg, &nonPersistentSalt{}, WithPrefix(prefix))
+	eventFormatter, err := NewEntryFormatter(cfg, &nonPersistentSalt{}, nil, WithPrefix(prefix))
 	if err != nil {
 		return nil, err
 	}

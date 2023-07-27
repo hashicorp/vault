@@ -486,7 +486,7 @@ func (c *Core) newAuditBackend(ctx context.Context, entry *MountEntry, view logi
 		SaltView:   view,
 		SaltConfig: saltConfig,
 		Config:     conf,
-	}, c.IsExperimentEnabled(experiments.VaultExperimentCoreAuditEventsAlpha1))
+	}, c.IsExperimentEnabled(experiments.VaultExperimentCoreAuditEventsAlpha1), c.auditedHeaders)
 	if err != nil {
 		return nil, err
 	}

@@ -127,7 +127,7 @@ func TestNewEntryFormatterWriter(t *testing.T) {
 
 			var f Formatter
 			if !tc.UseNilFormatter {
-				tempFormatter, err := NewEntryFormatter(cfg, s)
+				tempFormatter, err := NewEntryFormatter(cfg, s, nil)
 				require.NoError(t, err)
 				require.NotNil(t, tempFormatter)
 				f = tempFormatter
@@ -189,9 +189,10 @@ func TestEntryFormatter_FormatRequest(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
+			ss := newStaticSalt(t)
 			cfg, err := NewFormatterConfig()
 			require.NoError(t, err)
-			f, err := NewEntryFormatter(cfg, newStaticSalt(t))
+			f, err := NewEntryFormatter(cfg, ss, nil)
 			require.NoError(t, err)
 
 			var ctx context.Context
@@ -255,9 +256,10 @@ func TestEntryFormatter_FormatResponse(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
+			ss := newStaticSalt(t)
 			cfg, err := NewFormatterConfig()
 			require.NoError(t, err)
-			f, err := NewEntryFormatter(cfg, newStaticSalt(t))
+			f, err := NewEntryFormatter(cfg, ss, nil)
 			require.NoError(t, err)
 
 			var ctx context.Context
@@ -359,7 +361,7 @@ func TestElideListResponses(t *testing.T) {
 
 	formatResponse := func(t *testing.T, config FormatterConfig, operation logical.Operation, inputData map[string]interface{},
 	) {
-		f, err := NewEntryFormatter(config, &tfw)
+		f, err := NewEntryFormatter(config, &tfw, nil)
 		require.NoError(t, err)
 		formatter, err := NewEntryFormatterWriter(config, f, &tfw)
 		require.NoError(t, err)
