@@ -6,11 +6,11 @@ on:
     inputs:
       repo:
         type: string
-        description: 'The owner and repository name as per the github.repository context property.'
+        description: 'The owner and repository name. Ex: hashicorp/vault-plugin-auth-jwt'
         required: true
       plugin_tag:
         type: string
-        description: 'The name of the plugin tag.'
+        description: 'The name of the plugin tag. Ex: v0.5.1'
         required: true
 
 jobs:
