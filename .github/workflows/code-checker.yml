@@ -43,6 +43,10 @@ jobs:
         # godoc for the function.
       - run: make ci-vet-codechecker
         name: Check custom linters
+      - run: |
+          make bootstrap
+          make protolint
+        name: Protobuf lint
 
   generate-delta:
     name: Protobuf generate delta

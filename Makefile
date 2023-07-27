@@ -150,6 +150,10 @@ lint:
 ci-lint:
 	@golangci-lint run --deadline 10m --new-from-rev=HEAD~
 
+# Lint protobuf files
+protolint: ci-bootstrap
+	buf lint
+
 # prep runs `go generate` to build the dynamically generated
 # source files.
 #
