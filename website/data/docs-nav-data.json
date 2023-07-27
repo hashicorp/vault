@@ -12,11 +12,21 @@
     "routes": [
       {
         "title": "CLI Quick Start",
-        "href": "https://learn.hashicorp.com/collections/vault/getting-started"
+        "href": "https://learn.hashicorp.com/collections/vault/getting-started",
+        "badge": {
+          "text": "TUTORIAL",
+          "type": "outlined",
+          "color": "neutral"
+        }
       },
       {
         "title": "HCP Quick Start",
-        "href": "https://learn.hashicorp.com/collections/vault/cloud"
+        "href": "https://learn.hashicorp.com/collections/vault/cloud",
+        "badge": {
+          "text": "TUTORIAL",
+          "type": "outlined",
+          "color": "neutral"
+        }
       },
       {
         "title": "Developer Quick Start",
@@ -279,14 +289,17 @@
     ]
   },
   {
-    "title": "Configuration",
+    "title": "Configure Vault",
     "routes": [
       {
         "title": "Overview",
         "path": "configuration"
       },
       {
-        "title": "<code>listener</code>",
+        "heading": "OPTIONS"
+      },
+      {
+        "title": "Listeners",
         "routes": [
           {
             "title": "Overview",
@@ -303,11 +316,11 @@
         ]
       },
       {
-        "title": "<code>replication</code>",
+        "title": "Replication",
         "path": "configuration/replication"
       },
       {
-        "title": "<code>seal</code>",
+        "title": "Data protection",
         "routes": [
           {
             "title": "Overview",
@@ -336,8 +349,8 @@
           {
             "title": "HSM PKCS11",
             "badge": {
-              "text": "ENT",
-              "type": "outlined",
+              "text": "ENTERPRISE",
+              "type": "filled",
               "color": "neutral"
             },
             "path": "configuration/seal/pkcs11"
@@ -349,11 +362,11 @@
         ]
       },
       {
-        "title": "<code>sentinel</code>",
+        "title": "Sentinel integration",
         "path": "configuration/sentinel"
       },
       {
-        "title": "<code>service_registration</code>",
+        "title": "Service registration",
         "routes": [
           {
             "title": "Overview",
@@ -370,7 +383,7 @@
         ]
       },
       {
-        "title": "<code>storage</code>",
+        "title": "Backend storage",
         "routes": [
           {
             "title": "Overview",
@@ -471,35 +484,35 @@
         ]
       },
       {
-        "title": "<code>telemetry</code>",
+        "title": "Telemetry",
         "path": "configuration/telemetry"
       },
       {
-        "title": "<code>ui</code>",
+        "title": "Vault GUI",
         "path": "configuration/ui"
       },
       {
-        "title": "<code>user_lockout</code>",
+        "title": "User lockout",
         "path": "configuration/user-lockout"
       },
       {
-        "title": "<code>Log Completed Requests</code>",
+        "title": "Logging",
         "path": "configuration/log-requests-level"
       },
       {
-        "title": "<code>Entropy Augmentation</code>",
+        "title": "Entropy augmentation",
         "badge": {
-          "text": "ENT",
-          "type": "outlined",
+          "text": "ENTERPRISE",
+          "type": "filled",
           "color": "neutral"
         },
         "path": "configuration/entropy-augmentation"
       },
       {
-        "title": "<code>kms_library</code>",
+        "title": "Managed keys",
         "badge": {
-          "text": "ENT",
-          "type": "outlined",
+          "text": "ENTERPRISE",
+          "type": "filled",
           "color": "neutral"
         },
         "path": "configuration/kms-library"
@@ -1286,7 +1299,7 @@
         "title": "Key Management",
         "badge": {
           "text": "ENTERPRISE",
-          "type": "outlined",
+          "type": "filled",
           "color": "neutral"
         },
         "routes": [
@@ -1329,7 +1342,7 @@
         "title": "KMIP",
         "badge": {
           "text": "ENTERPRISE",
-          "type": "outlined",
+          "type": "filled",
           "color": "neutral"
         },
         "path": "secrets/kmip"
@@ -1417,7 +1430,7 @@
         "title": "Transform",
         "badge": {
           "text": "ENTERPRISE",
-          "type": "outlined",
+          "type": "filled",
           "color": "neutral"
         },
         "routes": [
@@ -1433,7 +1446,7 @@
             "title": "Tokenization Transform",
             "badge": {
               "text": "ENTERPRISE",
-              "type": "outlined",
+              "type": "filled",
               "color": "neutral"
             },
             "path": "secrets/transform/tokenization"
