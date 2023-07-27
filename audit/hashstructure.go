@@ -177,7 +177,7 @@ func HashResponse(ctx context.Context, salter Salter, in *logical.Response, HMAC
 	return &resp, nil
 }
 
-// HashWrapInfo returns a hashed copy of the wrapping.ResponseWrapInfo input.
+// hashWrapInfo returns a hashed copy of the wrapping.ResponseWrapInfo input.
 func hashWrapInfo(hashFunc HashCallback, in *wrapping.ResponseWrapInfo, HMACAccessor bool) (*wrapping.ResponseWrapInfo, error) {
 	if in == nil {
 		return nil, nil
