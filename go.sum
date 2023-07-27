@@ -1914,10 +1914,10 @@ github.com/hashicorp/vault-plugin-secrets-azure v0.16.1 h1:eMU5qYPa5dQQALPP7B+UP
 github.com/hashicorp/vault-plugin-secrets-azure v0.16.1/go.mod h1:tNzshPyCxkuOL4PLF3cybN/XaSlWgvfl6dwEbCARybY=
 github.com/hashicorp/vault-plugin-secrets-gcp v0.16.0 h1:5ozLtt38Bw/DLt37dbccT8j56A+2T7CWFfYecKleGl4=
 github.com/hashicorp/vault-plugin-secrets-gcp v0.16.0/go.mod h1:Ax9/ALmpzyjU8mcqHVYR9lwjcyazdmimrShDYeK9CHc=
-github.com/hashicorp/vault-plugin-secrets-gcpkms v0.15.0 h1:CueteKXEuO52qGu1nUaDc/euSTSfQD9MONkXuvWdZQw=
-github.com/hashicorp/vault-plugin-secrets-gcpkms v0.15.0/go.mod h1:a0Z2DVGd2SPPwLb8edXeHyer3CXei/Y0cb7EFkiFMfA=
-github.com/hashicorp/vault-plugin-secrets-kubernetes v0.5.0 h1:g0W1ybHjO945jDtuDEFcqTINyW/s06wxZarE/7aLumc=
-github.com/hashicorp/vault-plugin-secrets-kubernetes v0.5.0/go.mod h1:2wobeIypBESGQYmhv12vuAorCvfETHpBoMyrb+6QTmQ=
+github.com/hashicorp/vault-plugin-secrets-gcpkms v0.14.0 h1:eUC5ltK+1bkc+SVMzAUq4tBeNrsDXyCuITH8jeajXcM=
+github.com/hashicorp/vault-plugin-secrets-gcpkms v0.14.0/go.mod h1:86YCY86XuiQesV1jfjnV4icgoaxQdoUHONzDru+XQHA=
+github.com/hashicorp/vault-plugin-secrets-kubernetes v0.4.0 h1:05Z1sSPbxoqkx0sQaiZ6CXJ8lljBY8MLRXiAvu4Zeek=
+github.com/hashicorp/vault-plugin-secrets-kubernetes v0.4.0/go.mod h1:k4KRtelciD3R7pVjJ5N236n/V5ADJ90mmsrTgdAvgts=
 github.com/hashicorp/vault-plugin-secrets-kv v0.15.0 h1:S2d1t4m4ilDNJRdMUzNUimvyu/+ll8huq5QncVgYz+s=
 github.com/hashicorp/vault-plugin-secrets-kv v0.15.0/go.mod h1:xu/eiT+BB2b2Gh/AZFJ1xCS8E7S29gOQcuh9VMxros8=
 github.com/hashicorp/vault-plugin-secrets-mongodbatlas v0.10.0 h1:FB860wKclwLBvBHkQb5nq8bGMUAsuw0khrYT1RM0NR0=
