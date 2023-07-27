@@ -46,8 +46,6 @@ func NewAuditBroker(log log.Logger, useEventLogger bool) (*AuditBroker, error) {
 		if err != nil {
 			return nil, fmt.Errorf("error creating event broker for audit events: %w", err)
 		}
-
-		eventBroker.SetSuccessThresholdSinks(eventlogger.EventType("audit"), 1)
 	}
 
 	b := &AuditBroker{
@@ -63,16 +61,21 @@ func (a *AuditBroker) Register(name string, b audit.Backend, local bool) error {
 	a.Lock()
 	defer a.Unlock()
 
-	if a.broker != nil {
-		err := b.RegisterNodesAndPipeline(a.broker, name)
-		if err != nil {
-			return err
-		}
-	}
-
 	a.backends[name] = backendEntry{
 		backend: b,
 		local:   local,
+	}
+
+	if a.broker != nil {
+		err := a.broker.SetSuccessThresholdSinks(eventlogger.EventType("audit"), 1)
+		if err != nil {
+			return err
+		}
+
+		err = b.RegisterNodesAndPipeline(a.broker, name)
+		if err != nil {
+			return err
+		}
 	}
 
 	return nil
@@ -89,6 +92,10 @@ func (a *AuditBroker) Deregister(ctx context.Context, name string) error {
 	delete(a.backends, name)
 
 	if a.broker != nil {
+		if len(a.backends) == 0 {
+			a.broker.SetSuccessThresholdSinks(eventlogger.EventType("audit"), 0)
+		}
+
 		// The first return value, a bool, indicates whether
 		// RemovePipelineAndNodes encountered the error while evaluating
 		// pre-conditions (false) or once it started removing the pipeline and
@@ -205,15 +212,17 @@ func (a *AuditBroker) LogRequest(ctx context.Context, in *logical.LogInput, head
 			retErr = multierror.Append(retErr, fmt.Errorf("no audit backend succeeded in logging the request"))
 		}
 	} else {
-		event, err := audit.NewEvent(audit.RequestType)
-		if err != nil {
-			retErr = multierror.Append(retErr, err)
-		}
+		if len(a.backends) > 0 {
+			event, err := audit.NewEvent(audit.RequestType)
+			if err != nil {
+				retErr = multierror.Append(retErr, err)
+			}
 
-		event.Data = in
-		_, err = a.broker.Send(ctx, eventlogger.EventType("audit"), event)
-		if err != nil {
-			retErr = multierror.Append(retErr, err)
+			event.Data = in
+			_, err = a.broker.Send(ctx, eventlogger.EventType("audit"), event)
+			if err != nil {
+				retErr = multierror.Append(retErr, err)
+			}
 		}
 	}
 
