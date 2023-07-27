@@ -15,7 +15,9 @@ import (
 	"sync"
 	"sync/atomic"
 
+	"github.com/hashicorp/eventlogger"
 	"github.com/hashicorp/vault/audit"
+	"github.com/hashicorp/vault/internal/observability/event"
 	"github.com/hashicorp/vault/sdk/helper/salt"
 	"github.com/hashicorp/vault/sdk/logical"
 )
@@ -46,10 +48,10 @@ func Factory(ctx context.Context, conf *audit.BackendConfig, useEventLogger bool
 
 	format, ok := conf.Config["format"]
 	if !ok {
-		format = "json"
+		format = audit.JSONFormat.String()
 	}
 	switch format {
-	case "json", "jsonx":
+	case audit.JSONFormat.String(), audit.JSONxFormat.String():
 	default:
 		return nil, fmt.Errorf("unknown format type %q", format)
 	}
@@ -102,22 +104,26 @@ func Factory(ctx context.Context, conf *audit.BackendConfig, useEventLogger bool
 			}
 		default:
 			mode = os.FileMode(m)
-
 		}
+	}
 
+	cfg, err := audit.NewFormatterConfig(
+		audit.WithElision(elideListResponses),
+		audit.WithFormat(format),
+		audit.WithHMACAccessor(hmacAccessor),
+		audit.WithRaw(logRaw),
+	)
+	if err != nil {
+		return nil, err
 	}
 
 	b := &Backend{
-		path:       path,
-		mode:       mode,
-		saltConfig: conf.SaltConfig,
-		saltView:   conf.SaltView,
-		salt:       new(atomic.Value),
-		formatConfig: audit.FormatterConfig{
-			Raw:                logRaw,
-			HMACAccessor:       hmacAccessor,
-			ElideListResponses: elideListResponses,
-		},
+		path:         path,
+		mode:         mode,
+		saltConfig:   conf.SaltConfig,
+		saltView:     conf.SaltView,
+		salt:         new(atomic.Value),
+		formatConfig: cfg,
 	}
 
 	// Ensure we are working with the right type by explicitly storing a nil of
@@ -125,7 +131,7 @@ func Factory(ctx context.Context, conf *audit.BackendConfig, useEventLogger bool
 	b.salt.Store((*salt.Salt)(nil))
 
 	// Configure the formatter for either case.
-	f, err := audit.NewAuditFormatter(b)
+	f, err := audit.NewEntryFormatter(b.formatConfig, b, audit.WithPrefix(conf.Config["prefix"]))
 	if err != nil {
 		return nil, fmt.Errorf("error creating formatter: %w", err)
 	}
@@ -137,21 +143,60 @@ func Factory(ctx context.Context, conf *audit.BackendConfig, useEventLogger bool
 		w = &audit.JSONxWriter{Prefix: conf.Config["prefix"]}
 	}
 
-	fw, err := audit.NewAuditFormatterWriter(f, w)
+	fw, err := audit.NewEntryFormatterWriter(b.formatConfig, f, w)
 	if err != nil {
 		return nil, fmt.Errorf("error creating formatter writer: %w", err)
 	}
 	b.formatter = fw
 
-	switch path {
-	case "stdout", "discard":
-		// no need to test opening file if outputting to stdout or discarding
-	default:
-		// Ensure that the file can be successfully opened for writing;
-		// otherwise it will be too late to catch later without problems
-		// (ref: https://github.com/hashicorp/vault/issues/550)
-		if err := b.open(); err != nil {
-			return nil, fmt.Errorf("sanity check failed; unable to open %q for writing: %w", path, err)
+	if useEventLogger {
+		b.nodeIDList = make([]eventlogger.NodeID, 2)
+		b.nodeMap = make(map[eventlogger.NodeID]eventlogger.Node)
+
+		formatterNodeID, err := event.GenerateNodeID()
+		if err != nil {
+			return nil, fmt.Errorf("error generating random NodeID for formatter node: %w", err)
+		}
+
+		b.nodeIDList[0] = formatterNodeID
+		b.nodeMap[formatterNodeID] = f
+
+		var sinkNode eventlogger.Node
+
+		switch path {
+		case "stdout":
+			sinkNode = event.NewStdoutSinkNode(format)
+		case "discard":
+			sinkNode = event.NewNoopSink()
+		default:
+			var err error
+
+			// The NewFileSink function attempts to open the file and will
+			// return an error if it can't.
+			sinkNode, err = event.NewFileSink(b.path, format, event.WithFileMode(strconv.FormatUint(uint64(mode), 8)))
+			if err != nil {
+				return nil, fmt.Errorf("file sink creation failed for path %q: %w", path, err)
+			}
+		}
+
+		sinkNodeID, err := event.GenerateNodeID()
+		if err != nil {
+			return nil, fmt.Errorf("error generating random NodeID for sink node: %w", err)
+		}
+
+		b.nodeIDList[1] = sinkNodeID
+		b.nodeMap[sinkNodeID] = sinkNode
+	} else {
+		switch path {
+		case "stdout":
+		case "discard":
+		default:
+			// Ensure that the file can be successfully opened for writing;
+			// otherwise it will be too late to catch later without problems
+			// (ref: https://github.com/hashicorp/vault/issues/550)
+			if err := b.open(); err != nil {
+				return nil, fmt.Errorf("sanity check failed; unable to open %q for writing: %w", path, err)
+			}
 		}
 	}
 
@@ -166,7 +211,7 @@ func Factory(ctx context.Context, conf *audit.BackendConfig, useEventLogger bool
 type Backend struct {
 	path string
 
-	formatter    *audit.AuditFormatterWriter
+	formatter    *audit.EntryFormatterWriter
 	formatConfig audit.FormatterConfig
 
 	fileLock sync.RWMutex
@@ -177,6 +222,9 @@ type Backend struct {
 	salt       *atomic.Value
 	saltConfig *salt.Config
 	saltView   logical.Storage
+
+	nodeIDList []eventlogger.NodeID
+	nodeMap    map[eventlogger.NodeID]eventlogger.Node
 }
 
 var _ audit.Backend = (*Backend)(nil)
@@ -224,7 +272,7 @@ func (b *Backend) LogRequest(ctx context.Context, in *logical.LogInput) error {
 	}
 
 	buf := bytes.NewBuffer(make([]byte, 0, 2000))
-	err := b.formatter.FormatAndWriteRequest(ctx, buf, b.formatConfig, in)
+	err := b.formatter.FormatAndWriteRequest(ctx, buf, in)
 	if err != nil {
 		return err
 	}
@@ -232,7 +280,7 @@ func (b *Backend) LogRequest(ctx context.Context, in *logical.LogInput) error {
 	return b.log(ctx, buf, writer)
 }
 
-func (b *Backend) log(ctx context.Context, buf *bytes.Buffer, writer io.Writer) error {
+func (b *Backend) log(_ context.Context, buf *bytes.Buffer, writer io.Writer) error {
 	reader := bytes.NewReader(buf.Bytes())
 
 	b.fileLock.Lock()
@@ -280,7 +328,7 @@ func (b *Backend) LogResponse(ctx context.Context, in *logical.LogInput) error {
 	}
 
 	buf := bytes.NewBuffer(make([]byte, 0, 6000))
-	err := b.formatter.FormatAndWriteResponse(ctx, buf, b.formatConfig, in)
+	err := b.formatter.FormatAndWriteResponse(ctx, buf, in)
 	if err != nil {
 		return err
 	}
@@ -298,8 +346,13 @@ func (b *Backend) LogTestMessage(ctx context.Context, in *logical.LogInput, conf
 	}
 
 	var buf bytes.Buffer
-	temporaryFormatter := audit.NewTemporaryFormatter(config["format"], config["prefix"])
-	if err := temporaryFormatter.FormatAndWriteRequest(ctx, &buf, b.formatConfig, in); err != nil {
+
+	temporaryFormatter, err := audit.NewTemporaryFormatter(config["format"], config["prefix"])
+	if err != nil {
+		return err
+	}
+
+	if err = temporaryFormatter.FormatAndWriteRequest(ctx, &buf, in); err != nil {
 		return err
 	}
 
@@ -365,4 +418,22 @@ func (b *Backend) Invalidate(_ context.Context) {
 	b.saltMutex.Lock()
 	defer b.saltMutex.Unlock()
 	b.salt.Store((*salt.Salt)(nil))
+}
+
+// RegisterNodesAndPipeline registers the nodes and a pipeline as required by
+// the audit.Backend interface.
+func (b *Backend) RegisterNodesAndPipeline(broker *eventlogger.Broker, name string) error {
+	for id, node := range b.nodeMap {
+		if err := broker.RegisterNode(id, node); err != nil {
+			return err
+		}
+	}
+
+	pipeline := eventlogger.Pipeline{
+		PipelineID: eventlogger.PipelineID(name),
+		EventType:  eventlogger.EventType("audit"),
+		NodeIDs:    b.nodeIDList,
+	}
+
+	return broker.RegisterPipeline(pipeline)
 }

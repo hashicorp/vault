@@ -7,9 +7,34 @@ description: Audit devices are mountable devices that log requests and responses
 # Audit devices
 
 Audit devices are the components in Vault that collectively keep a detailed log of all
-requests and response to Vault. Because every operation with Vault is an API
-request/response, when using a single audit device, the audit log contains _every authenticated_ interaction with
-Vault, including errors.
+requests to Vault, and their responses. Because every operation with Vault is an API
+request/response, when using a single audit device, the audit log contains _every_ interaction with
+the Vault API, including errors - except for a few paths which do not go via the audit system.
+
+The non-audited paths are:
+
+    sys/init
+    sys/seal-status
+    sys/seal
+    sys/step-down
+    sys/unseal
+    sys/leader
+    sys/health
+    sys/rekey/init
+    sys/rekey/update
+    sys/rekey/verify
+    sys/rekey-recovery-key/init
+    sys/rekey-recovery-key/update
+    sys/rekey-recovery-key/verify
+    sys/storage/raft/bootstrap
+    sys/storage/raft/join
+    sys/internal/ui/feature-flags
+
+and also, if the relevant listener configuration settings allow unauthenticated access:
+
+    sys/metrics
+    sys/pprof/*
+    sys/in-flight-req
 
 ## Enabling multiple devices
 

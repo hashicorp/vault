@@ -1,0 +1,11 @@
+### vault.quota.lease_count.counter ((#vault-quota-lease_count-counter))
+
+Metric type | Value | Description
+----------- | ----- | -----------
+gauge       | lease | Total number of leases associated with the named quota rule
+
+The number of leases reported is specific to the quota rule listed in the `name`
+label, not the number of leases in general. For example, if the named rule
+allows for 50 leases max and there are currently 40 leases in the scope of that
+quota rule, the value of `vault.quota.lease_count.counter` is 40 even if there
+are 1000 other leases that are unscoped or in the scope of other quota rules.
