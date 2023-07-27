@@ -100,8 +100,8 @@ module('Integration | Component | masked input', function (hooks) {
   test('it renders correctly with empty string provided as value', async function (assert) {
     await render(hbs`
       <MaskedInput
-        @name={{"key"}}
-        @value={{""}}
+        @name="key"
+        @value=""
         @displayOnly={{true}}
         @allowCopy={{true}}
         @allowDownload={{true}}
