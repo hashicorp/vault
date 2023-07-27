@@ -48,7 +48,7 @@ jobs:
         run: |
           git config user.name hc-github-team-secure-vault-ecosystem
           git config user.email hc-github-team-secure-vault-ecosystem@users.noreply.github.com
-          git add .
+          git add go.mod go.sum
           git commit -m "Automated dependency upgrades"
           git push -f origin ${{ github.ref_name }}:"$VAULT_BRANCH"
 
@@ -74,7 +74,7 @@ jobs:
           fi
 
       - name: Add changelog
-        if: steps.pr.outputs.vault_pr_url != ''
+        if: steps.pr.outputs.vault_pr_num != ''
         run: |
           # strip "hashicorp/" from repo name
           PLUGIN=$(echo ${{ inputs.repo }} | awk -F/ '{print $NF}')
@@ -92,12 +92,12 @@ jobs:
           ${PLUGIN_TYPE}/${PLUGIN_SERVICE}: Update plugin to ${{ inputs.plugin_tag }}
           \`\`\`" > "changelog/${vault_pr_num}.txt"
 
-          git add .
+          git add changelog/
           git commit -m "Add changelog"
           git push origin ${{ github.ref_name }}:"$VAULT_BRANCH"
 
       - name: Add labels to Vault PR
-        if: steps.pr.outputs.vault_pr_url != ''
+        if: steps.pr.outputs.vault_pr_num != ''
         env:
           # this is a different token to the one we have been using that should
           # allow us to add labels
