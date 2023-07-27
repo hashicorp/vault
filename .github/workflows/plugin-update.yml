@@ -90,7 +90,7 @@ jobs:
 
           echo "\`\`\`release-note:change
           ${PLUGIN_TYPE}/${PLUGIN_SERVICE}: Update plugin to ${{ inputs.plugin_tag }}
-          \`\`\`" > "changelog/${vault_pr_num}.txt"
+          \`\`\`" > "changelog/${{ steps.pr.outputs.vault_pr_num }}.txt"
 
           git add changelog/
           git commit -m "Add changelog"
