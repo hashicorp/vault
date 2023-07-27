@@ -61,6 +61,15 @@ jobs:
             echo "Code has formatting errors. Run 'make fmt' to fix"
             exit 1
           fi
+      - name: Protobuf format
+        run: |
+          make bootstrap
+          echo "Using buf version $(go run github.com/bufbuild/buf/cmd/buf --version)"
+          make protofmt
+          if ! git diff --exit-code; then
+            echo "Protobuf code has formatting errors. Run 'make protofmt' to fix"
+            exit 1
+          fi
 
   semgrep:
     name: Semgrep

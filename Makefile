@@ -11,7 +11,8 @@ EXTERNAL_TOOLS_CI=\
 	golang.org/x/tools/cmd/goimports \
 	github.com/golangci/revgrep/cmd/revgrep \
 	mvdan.cc/gofumpt \
-	honnef.co/go/tools/cmd/staticcheck
+	honnef.co/go/tools/cmd/staticcheck \
+	github.com/bufbuild/buf/cmd/buf
 EXTERNAL_TOOLS=\
 	github.com/client9/misspell/cmd/misspell
 GOFMT_FILES?=$$(find . -name '*.go' | grep -v pb.go | grep -v vendor)
@@ -232,6 +233,9 @@ fmtcheck:
 
 fmt: ci-bootstrap
 	find . -name '*.go' | grep -v pb.go | grep -v vendor | xargs go run mvdan.cc/gofumpt -w
+
+protofmt: ci-bootstrap
+	buf format -w
 
 semgrep:
 	semgrep --include '*.go' --exclude 'vendor' -a -f tools/semgrep .
