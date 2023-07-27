@@ -295,15 +295,17 @@ func (a *AuditBroker) LogResponse(ctx context.Context, in *logical.LogInput, hea
 			retErr = multierror.Append(retErr, fmt.Errorf("no audit backend succeeded in logging the response"))
 		}
 	} else {
-		event, err := audit.NewEvent(audit.ResponseType)
-		if err != nil {
-			return multierror.Append(retErr, err)
-		}
+		if len(a.backends) > 0 {
+			event, err := audit.NewEvent(audit.ResponseType)
+			if err != nil {
+				return multierror.Append(retErr, err)
+			}
 
-		event.Data = in
-		_, err = a.broker.Send(ctx, eventlogger.EventType("audit"), event)
-		if err != nil {
-			retErr = multierror.Append(retErr, err)
+			event.Data = in
+			_, err = a.broker.Send(ctx, eventlogger.EventType("audit"), event)
+			if err != nil {
+				retErr = multierror.Append(retErr, err)
+			}
 		}
 	}
 
