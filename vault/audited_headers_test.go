@@ -239,7 +239,7 @@ func TestAuditedHeadersConfig_ApplyConfig(t *testing.T) {
 
 // TestAuditedHeadersConfig_ApplyConfig_NoHeaders tests the case where there are
 // no headers in the request.
-func TestAuditedHeadersConfig_ApplyConfig_NoHeaders(t *testing.T) {
+func TestAuditedHeadersConfig_ApplyConfig_NoRequestHeaders(t *testing.T) {
 	conf := mockAuditedHeadersConfig(t)
 
 	conf.add(context.Background(), "X-TesT-Header", false)
@@ -256,6 +256,38 @@ func TestAuditedHeadersConfig_ApplyConfig_NoHeaders(t *testing.T) {
 
 	if len(result) != 0 {
 		t.Fatalf("Expected no headers but actually got: %d\n", len(result))
+	}
+}
+
+func TestAuditedHeadersConfig_ApplyConfig_NoConfiguredHeaders(t *testing.T) {
+	conf := mockAuditedHeadersConfig(t)
+
+	reqHeaders := map[string][]string{
+		"X-Test-Header":  {"foo"},
+		"X-Vault-Header": {"bar", "bar"},
+		"Content-Type":   {"json"},
+	}
+
+	salter := &TestSalter{}
+
+	result, err := conf.ApplyConfig(context.Background(), reqHeaders, salter)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if len(result) != 0 {
+		t.Fatalf("Expected no headers but actually got: %d\n", len(result))
+	}
+
+	// Make sure we didn't edit the reqHeaders map
+	reqHeadersCopy := map[string][]string{
+		"X-Test-Header":  {"foo"},
+		"X-Vault-Header": {"bar", "bar"},
+		"Content-Type":   {"json"},
+	}
+
+	if !reflect.DeepEqual(reqHeaders, reqHeadersCopy) {
+		t.Fatalf("Req headers were changed, expected %#v\n got %#v", reqHeadersCopy, reqHeaders)
 	}
 }
 
