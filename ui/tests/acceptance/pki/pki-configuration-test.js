@@ -6,7 +6,7 @@
 import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
 import { setupMirage } from 'ember-cli-mirage/test-support';
-import { click, currentURL, fillIn, visit, isSettled, waitUntil } from '@ember/test-helpers';
+import { click, currentURL, fillIn, visit, isSettled, waitUntil, find } from '@ember/test-helpers';
 import { v4 as uuidv4 } from 'uuid';
 
 import authPage from 'vault/tests/pages/auth';
@@ -192,6 +192,31 @@ module('Acceptance | pki configuration test', function (hooks) {
         .hasText(
           "This PKI mount hasn't yet been configured with a certificate issuer. There are existing certificates. Use the CLI to perform any operations with them until an issuer is configured."
         );
+    });
+
+    // test coverage for ed25519 certs not displaying because the verify() function errors
+    test('it generates and displays a root issuer of key type = ed25519', async function (assert) {
+      assert.expect(4);
+      await authPage.login(this.pkiAdminToken);
+      await visit(`/vault/secrets/${this.mountPath}/pki/overview`);
+      await click(SELECTORS.issuersTab);
+      await click(SELECTORS.generateIssuerDropdown);
+      await click(SELECTORS.generateIssuerRoot);
+      await fillIn(SELECTORS.configuration.inputByName('type'), 'internal');
+      await fillIn(SELECTORS.configuration.inputByName('commonName'), 'my-certificate');
+      await click(SELECTORS.configuration.keyParamsGroupToggle);
+      await fillIn(SELECTORS.configuration.inputByName('keyType'), 'ed25519');
+      await click(SELECTORS.configuration.generateRootSave);
+
+      const issuerId = find(SELECTORS.configuration.saved.issuerLink).innerHTML;
+      await visit(`/vault/secrets/${this.mountPath}/pki/issuers`);
+      assert.dom(SELECTORS.issuerListItem(issuerId)).exists();
+      assert
+        .dom('[data-test-common-name="0"]')
+        .hasText('my-certificate', 'parses certificate metadata in the list view');
+      await click(SELECTORS.issuerListItem(issuerId));
+      assert.strictEqual(currentURL(), `/vault/secrets/${this.mountPath}/pki/issuers/${issuerId}/details`);
+      assert.dom(SELECTORS.configuration.saved.commonName).exists('renders issuer details');
     });
   });
 });
