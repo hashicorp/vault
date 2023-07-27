@@ -257,7 +257,10 @@ Sets a named CRL.
 
 - `name` `(string: <required>)` - The name of the CRL.
 - `crl` `(string: <required>)` - The PEM format CRL.
-- `url` `(string: <required>)` - The URL of a CRL distribution point.
+- `crl` `(string: "")` - The PEM format CRL.
+- `url` `(string: "")` - The URL of a CRL distribution point.
+
+**Note**: Either 'crl' or 'url' parameters must be provided, if both are provided, 'crl' is used.
 
 ### Sample payload
 
