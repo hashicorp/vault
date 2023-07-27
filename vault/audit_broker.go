@@ -219,7 +219,10 @@ func (a *AuditBroker) LogRequest(ctx context.Context, in *logical.LogInput, head
 			}
 
 			event.Data = in
+
+			start := time.Now()
 			_, err = a.broker.Send(ctx, eventlogger.EventType("audit"), event)
+			metrics.MeasureSince([]string{"audit", "log_request"}, start)
 			if err != nil {
 				retErr = multierror.Append(retErr, err)
 			}
@@ -268,27 +271,40 @@ func (a *AuditBroker) LogResponse(ctx context.Context, in *logical.LogInput, hea
 	}()
 
 	// Ensure at least one backend logs
-	anyLogged := false
-	for name, be := range a.backends {
-		in.Request.Headers = nil
-		transHeaders, thErr := headersConfig.ApplyConfig(ctx, headers, be.backend)
-		if thErr != nil {
-			a.logger.Error("backend failed to include headers", "backend", name, "error", thErr)
-			continue
-		}
-		in.Request.Headers = transHeaders
+	if a.broker == nil {
+		anyLogged := false
+		for name, be := range a.backends {
+			in.Request.Headers = nil
+			transHeaders, thErr := headersConfig.ApplyConfig(ctx, headers, be.backend)
+			if thErr != nil {
+				a.logger.Error("backend failed to include headers", "backend", name, "error", thErr)
+				continue
+			}
+			in.Request.Headers = transHeaders
 
-		start := time.Now()
-		lrErr := be.backend.LogResponse(ctx, in)
-		metrics.MeasureSince([]string{"audit", name, "log_response"}, start)
-		if lrErr != nil {
-			a.logger.Error("backend failed to log response", "backend", name, "error", lrErr)
-		} else {
-			anyLogged = true
+			start := time.Now()
+			lrErr := be.backend.LogResponse(ctx, in)
+			metrics.MeasureSince([]string{"audit", name, "log_response"}, start)
+			if lrErr != nil {
+				a.logger.Error("backend failed to log response", "backend", name, "error", lrErr)
+			} else {
+				anyLogged = true
+			}
 		}
-	}
-	if !anyLogged && len(a.backends) > 0 {
-		retErr = multierror.Append(retErr, fmt.Errorf("no audit backend succeeded in logging the response"))
+		if !anyLogged && len(a.backends) > 0 {
+			retErr = multierror.Append(retErr, fmt.Errorf("no audit backend succeeded in logging the response"))
+		}
+	} else {
+		event, err := audit.NewEvent(audit.ResponseType)
+		if err != nil {
+			return multierror.Append(retErr, err)
+		}
+
+		event.Data = in
+		_, err = a.broker.Send(ctx, eventlogger.EventType("audit"), event)
+		if err != nil {
+			retErr = multierror.Append(retErr, err)
+		}
 	}
 
 	return retErr.ErrorOrNil()
