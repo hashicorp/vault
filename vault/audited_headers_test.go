@@ -5,6 +5,7 @@ package vault
 
 import (
 	"context"
+	"errors"
 	"reflect"
 	"strings"
 	"testing"
@@ -233,6 +234,59 @@ func TestAuditedHeadersConfig_ApplyConfig(t *testing.T) {
 
 	if !reflect.DeepEqual(reqHeaders, reqHeadersCopy) {
 		t.Fatalf("Req headers were changed, expected %#v\n got %#v", reqHeadersCopy, reqHeaders)
+	}
+}
+
+// TestAuditedHeadersConfig_ApplyConfig_NoHeaders tests the case where there are
+// no headers in the request.
+func TestAuditedHeadersConfig_ApplyConfig_NoHeaders(t *testing.T) {
+	conf := mockAuditedHeadersConfig(t)
+
+	conf.add(context.Background(), "X-TesT-Header", false)
+	conf.add(context.Background(), "X-Vault-HeAdEr", true)
+
+	reqHeaders := map[string][]string{}
+
+	salter := &TestSalter{}
+
+	result, err := conf.ApplyConfig(context.Background(), reqHeaders, salter)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if len(result) != 0 {
+		t.Fatalf("Expected no headers but actually got: %d\n", len(result))
+	}
+}
+
+// FailingSalter is an implementation of the Salter interface where the Salt
+// method always returns an error.
+type FailingSalter struct{}
+
+// Salt always returns an error.
+func (s *FailingSalter) Salt(context.Context) (*salt.Salt, error) {
+	return nil, errors.New("testing error")
+}
+
+// TestAuditedHeadersConfig_ApplyConfig_HashStringError tests the case where
+// an error is returned from HashString instead of a map of headers.
+func TestAuditedHeadersConfig_ApplyConfig_HashStringError(t *testing.T) {
+	conf := mockAuditedHeadersConfig(t)
+
+	conf.add(context.Background(), "X-TesT-Header", false)
+	conf.add(context.Background(), "X-Vault-HeAdEr", true)
+
+	reqHeaders := map[string][]string{
+		"X-Test-Header":  {"foo"},
+		"X-Vault-Header": {"bar", "bar"},
+		"Content-Type":   {"json"},
+	}
+
+	salter := &FailingSalter{}
+
+	_, err := conf.ApplyConfig(context.Background(), reqHeaders, salter)
+	if err == nil {
+		t.Fatal("expected error from ApplyConfig")
 	}
 }
 

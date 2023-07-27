@@ -98,8 +98,12 @@ func TestCopy_response(t *testing.T) {
 	}
 }
 
+// TestSalter is a structure that implements the Salter interface in a trivial
+// manner.
 type TestSalter struct{}
 
+// Salt returns a salt.Salt pointer based on dummy data stored in an in-memory
+// storage instance.
 func (*TestSalter) Salt(ctx context.Context) (*salt.Salt, error) {
 	inmemStorage := &logical.InmemStorage{}
 	inmemStorage.Put(context.Background(), &logical.StorageEntry{

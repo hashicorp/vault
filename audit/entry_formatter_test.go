@@ -127,7 +127,7 @@ func TestNewEntryFormatter(t *testing.T) {
 
 			cfg, err := NewFormatterConfig(tc.Options...)
 			require.NoError(t, err)
-			f, err := NewEntryFormatter(cfg, ss, &TestingHeadersAdjuster{}, tc.Options...)
+			f, err := NewEntryFormatter(cfg, ss, nil, tc.Options...)
 
 			switch {
 			case tc.IsErrorExpected:
@@ -144,19 +144,13 @@ func TestNewEntryFormatter(t *testing.T) {
 	}
 }
 
-type TestingHeadersAdjuster struct{}
-
-func (ha *TestingHeadersAdjuster) ApplyConfig(_ context.Context, _ map[string][]string, _ Salter) (map[string][]string, error) {
-	return map[string][]string{}, nil
-}
-
 // TestEntryFormatter_Reopen ensures that we do not get an error when calling Reopen.
 func TestEntryFormatter_Reopen(t *testing.T) {
 	ss := newStaticSalt(t)
 	cfg, err := NewFormatterConfig()
 	require.NoError(t, err)
 
-	f, err := NewEntryFormatter(cfg, ss, &TestingHeadersAdjuster{})
+	f, err := NewEntryFormatter(cfg, ss, nil)
 	require.NoError(t, err)
 	require.NotNil(t, f)
 	require.NoError(t, f.Reopen())
@@ -168,7 +162,7 @@ func TestEntryFormatter_Type(t *testing.T) {
 	cfg, err := NewFormatterConfig()
 	require.NoError(t, err)
 
-	f, err := NewEntryFormatter(cfg, ss, &TestingHeadersAdjuster{})
+	f, err := NewEntryFormatter(cfg, ss, nil)
 	require.NoError(t, err)
 	require.NotNil(t, f)
 	require.Equal(t, eventlogger.NodeTypeFormatter, f.Type())
@@ -311,7 +305,7 @@ func TestEntryFormatter_Process(t *testing.T) {
 			cfg, err := NewFormatterConfig(WithFormat(tc.RequiredFormat.String()))
 			require.NoError(t, err)
 
-			f, err := NewEntryFormatter(cfg, ss, &TestingHeadersAdjuster{})
+			f, err := NewEntryFormatter(cfg, ss, nil)
 			require.NoError(t, err)
 			require.NotNil(t, f)
 
@@ -378,7 +372,7 @@ func BenchmarkAuditFileSink_Process(b *testing.B) {
 	cfg, err := NewFormatterConfig()
 	require.NoError(b, err)
 	ss := newStaticSalt(b)
-	formatter, err := NewEntryFormatter(cfg, ss, &TestingHeadersAdjuster{})
+	formatter, err := NewEntryFormatter(cfg, ss, nil)
 	require.NoError(b, err)
 	require.NotNil(b, formatter)
 

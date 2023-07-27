@@ -30,7 +30,7 @@ var (
 
 // NewEntryFormatter should be used to create an EntryFormatter.
 // Accepted options: WithPrefix.
-func NewEntryFormatter(config FormatterConfig, salter Salter, headersConfig HeaderAdjuster, opt ...Option) (*EntryFormatter, error) {
+func NewEntryFormatter(config FormatterConfig, salter Salter, headersConfig HeaderFormatter, opt ...Option) (*EntryFormatter, error) {
 	const op = "audit.NewEntryFormatter"
 
 	if salter == nil {
@@ -158,9 +158,8 @@ func (f *EntryFormatter) FormatRequest(ctx context.Context, in *logical.LogInput
 		connState = in.Request.Connection.ConnState
 	}
 
-	var err error
-
 	if !f.config.Raw {
+		var err error
 		auth, err = HashAuth(ctx, f.salter, auth, f.config.HMACAccessor)
 		if err != nil {
 			return nil, err
@@ -292,7 +291,6 @@ func (f *EntryFormatter) FormatResponse(ctx context.Context, in *logical.LogInpu
 	elideListResponseData := f.config.ElideListResponses && req.Operation == logical.ListOperation
 
 	var respData map[string]interface{}
-	var err error
 	if f.config.Raw {
 		// In the non-raw case, elision of list response data occurs inside HashResponse, to avoid redundant deep
 		// copies and hashing of data only to elide it later. In the raw case, we need to do it here.
@@ -308,6 +306,7 @@ func (f *EntryFormatter) FormatResponse(ctx context.Context, in *logical.LogInpu
 			respData = resp.Data
 		}
 	} else {
+		var err error
 		auth, err = HashAuth(ctx, f.salter, auth, f.config.HMACAccessor)
 		if err != nil {
 			return nil, err

@@ -29,13 +29,13 @@ func HashString(ctx context.Context, salter Salter, data string) (string, error)
 
 // HashAuth returns a hashed copy of the logical.Auth input.
 func HashAuth(ctx context.Context, salter Salter, in *logical.Auth, HMACAccessor bool) (*logical.Auth, error) {
+	if in == nil {
+		return nil, nil
+	}
+
 	salt, err := salter.Salt(ctx)
 	if err != nil {
 		return nil, err
-	}
-
-	if in == nil {
-		return nil, nil
 	}
 
 	fn := salt.GetIdentifiedHMAC
@@ -52,13 +52,13 @@ func HashAuth(ctx context.Context, salter Salter, in *logical.Auth, HMACAccessor
 
 // HashRequest returns a hashed copy of the logical.Request input.
 func HashRequest(ctx context.Context, salter Salter, in *logical.Request, HMACAccessor bool, nonHMACDataKeys []string) (*logical.Request, error) {
+	if in == nil {
+		return nil, nil
+	}
+
 	salt, err := salter.Salt(ctx)
 	if err != nil {
 		return nil, err
-	}
-
-	if in == nil {
-		return nil, nil
 	}
 
 	fn := salt.GetIdentifiedHMAC
@@ -117,13 +117,13 @@ func hashMap(hashFunc HashCallback, data map[string]interface{}, nonHMACDataKeys
 
 // HashResponse returns a hashed copy of the logical.Request input.
 func HashResponse(ctx context.Context, salter Salter, in *logical.Response, HMACAccessor bool, nonHMACDataKeys []string, elideListResponseData bool) (*logical.Response, error) {
+	if in == nil {
+		return nil, nil
+	}
+
 	salt, err := salter.Salt(ctx)
 	if err != nil {
 		return nil, err
-	}
-
-	if in == nil {
-		return nil, nil
 	}
 
 	fn := salt.GetIdentifiedHMAC

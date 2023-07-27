@@ -85,7 +85,9 @@ type Writer interface {
 	WriteResponse(io.Writer, *ResponseEntry) error
 }
 
-type HeaderAdjuster interface {
+// HeaderFormatter is an interface defining the methods of the
+// vault.AuditedHeadersConfig structure needed in this package.
+type HeaderFormatter interface {
 	// ApplyConfig returns a map of header values that consists of the
 	// intersection of the provided set of header values with a configured
 	// set of headers and will hash headers that have been configured as such.
@@ -95,7 +97,7 @@ type HeaderAdjuster interface {
 // EntryFormatter should be used to format audit requests and responses.
 type EntryFormatter struct {
 	salter        Salter
-	headersConfig HeaderAdjuster
+	headersConfig HeaderFormatter
 	config        FormatterConfig
 	prefix        string
 }
@@ -311,4 +313,4 @@ type BackendConfig struct {
 }
 
 // Factory is the factory function to create an audit backend.
-type Factory func(context.Context, *BackendConfig, bool, HeaderAdjuster) (Backend, error)
+type Factory func(context.Context, *BackendConfig, bool, HeaderFormatter) (Backend, error)
