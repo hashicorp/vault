@@ -8,6 +8,7 @@ import { action } from '@ember/object';
 import { tracked } from '@glimmer/tracking';
 import { task } from 'ember-concurrency';
 import { inject as service } from '@ember/service';
+import KVObject from 'vault/lib/kv-object';
 
 /**
  * @module KvSecretForm is used for creating a new secret or secret version (also considered 'editing')
@@ -30,9 +31,30 @@ export default class KvSecretForm extends Component {
   @tracked modelValidations;
   @tracked invalidFormAlert;
 
+  get emptyJson() {
+    // if secretData is null, this specially formats a blank object and renders a nice initial state for the json editor
+    return KVObject.create({ content: [{ name: '', value: '' }] }).toJSONString(true);
+  }
+
   @action
   toggleJsonView() {
     this.showJsonView = !this.showJsonView;
+  }
+
+  @action
+  handleJson(value, codemirror) {
+    // to do, stuff
+    codemirror.performLint();
+  }
+
+  @action
+  keyUpValidations() {
+    // check warnings on key up
+    const { state } = this.args.secret.validate();
+    for (const attr in state) {
+      state[attr].errors = [];
+    }
+    this.modelValidations = state;
   }
 
   @task

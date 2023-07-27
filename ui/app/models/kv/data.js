@@ -29,7 +29,15 @@ import { withFormFields } from 'vault/decorators/model-form-fields';
 */
 
 const validations = {
-  path: [{ type: 'presence', message: `Path can't be blank.` }],
+  path: [
+    { type: 'presence', message: `Path can't be blank.` },
+    {
+      type: 'containsWhiteSpace',
+      message:
+        "Path contains whitespace. If this is desired, you'll need to encode it with %20 in API requests.",
+      level: 'warn',
+    },
+  ],
 };
 @withModelValidations(validations)
 @withFormFields()
