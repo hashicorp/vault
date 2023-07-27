@@ -73,7 +73,13 @@ export default class LdapRoleAdapter extends NamedPathAdapter {
 
   fetchCredentials(backend, type, name) {
     const url = this.getURL(backend, this.pathForRoleType(type, true), name);
-    return this.ajax(url, 'GET');
+    return this.ajax(url, 'GET').then((resp) => {
+      if (type === 'dynamic') {
+        const { lease_id, lease_duration, renewable } = resp;
+        return { ...resp.data, lease_id, lease_duration, renewable, type };
+      }
+      return { ...resp.data, type };
+    });
   }
   rotateStaticPassword(backend, name) {
     const url = this.getURL(backend, 'rotate-role', name);

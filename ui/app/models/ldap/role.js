@@ -220,4 +220,11 @@ export default class LdapRoleModel extends Model {
   get canRotateStaticCreds() {
     return this.isStatic && this.staticRotateCredsPath.get('canCreate') !== false;
   }
+
+  fetchCredentials() {
+    return this.store.adapterFor('ldap/role').fetchCredentials(this.backend, this.type, this.name);
+  }
+  rotateStaticPassword() {
+    return this.store.adapterFor('ldap/role').rotateStaticPassword(this.backend, this.name);
+  }
 }
