@@ -43,8 +43,11 @@ export default class KvSecretForm extends Component {
 
   @action
   handleJson(value, codemirror) {
-    // to do, stuff
     codemirror.performLint();
+    const lintingErrors = codemirror.state.lint.marked.length > 0;
+    if (!lintingErrors) {
+      this.args.secret.secretData = JSON.parse(value);
+    }
   }
 
   @action
