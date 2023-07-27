@@ -715,8 +715,8 @@ github.com/alecthomas/units v0.0.0-20190924025748-f65c72e2690d/go.mod h1:rBZYJk5
 github.com/alexflint/go-filemutex v0.0.0-20171022225611-72bdc8eae2ae/go.mod h1:CgnQgUtFrFz9mxFNtED3jI5tLDjKlOM+oUF/sTk6ps0=
 github.com/alexflint/go-filemutex v1.1.0/go.mod h1:7P4iRhttt/nUvUOrYIhcpMzv2G6CY9UnI16Z+UJqRyk=
 github.com/alexflint/go-filemutex v1.2.0/go.mod h1:mYyQSWvw9Tx2/H2n9qXPb52tTYfE0pZAWcBq5mK025c=
-github.com/aliyun/alibaba-cloud-sdk-go v1.62.301 h1:8mgvCpqsv3mQAcqZ/baAaMGUBj5J6MKMhxLd+K8L27Q=
-github.com/aliyun/alibaba-cloud-sdk-go v1.62.301/go.mod h1:Api2AkmMgGaSUAhmk76oaFObkoeCPc/bKAqcyplPODs=
+github.com/aliyun/alibaba-cloud-sdk-go v1.62.479 h1:/6t/wov072O+DarWb0OzGj9xTJBY9qbggh01NaCBt58=
+github.com/aliyun/alibaba-cloud-sdk-go v1.62.479/go.mod h1:Api2AkmMgGaSUAhmk76oaFObkoeCPc/bKAqcyplPODs=
 github.com/aliyun/aliyun-oss-go-sdk v0.0.0-20190307165228-86c17b95fcd5 h1:nWDRPCyCltiTsANwC/n3QZH7Vww33Npq9MKqlwRzI/c=
 github.com/aliyun/aliyun-oss-go-sdk v0.0.0-20190307165228-86c17b95fcd5/go.mod h1:T/Aws4fEfogEE9v+HPhhw+CntffsBHJ8nXQCwKr0/g8=
 github.com/andreyvit/diff v0.0.0-20170406064948-c7f18ee00883/go.mod h1:rCTlJbsFo29Kk6CurOXKm700vrz8f0KW0JNfpkRJY/8=
@@ -1874,8 +1874,8 @@ github.com/hashicorp/raft-snapshot v1.0.4/go.mod h1:5sL9eUn72lH5DzsFIJ9jaysITbHk
 github.com/hashicorp/serf v0.8.2/go.mod h1:6hOLApaqBFA1NXqRQAsxw9QxuDEvNxSQRwA/JwenrHc=
 github.com/hashicorp/serf v0.10.1 h1:Z1H2J60yRKvfDYAOZLd2MU0ND4AH/WDz7xYHDWQsIPY=
 github.com/hashicorp/serf v0.10.1/go.mod h1:yL2t6BqATOLGc5HF7qbFkTfXoPIY0WZdWHfEvMqbG+4=
-github.com/hashicorp/vault-plugin-auth-alicloud v0.15.0 h1:R2SVwOeVLG5DXzUx42UWhjfFqS0Z9+ncfebPu+gO9VA=
-github.com/hashicorp/vault-plugin-auth-alicloud v0.15.0/go.mod h1:YQXpa2s4rGYKm3Oa/Nkgh5SuGVfHFNEIUwDDYWyhloE=
+github.com/hashicorp/vault-plugin-auth-alicloud v0.16.0 h1:DgJ9v3sWQlvyvpmCU/YAFdmGgLi6t8PHQ+O9UeYIuCg=
+github.com/hashicorp/vault-plugin-auth-alicloud v0.16.0/go.mod h1:UQa534XDQsSwwR4MYhOGnkF2gEao9zVABySBTfjAq08=
 github.com/hashicorp/vault-plugin-auth-azure v0.15.1 h1:CknW0l2O70326KfepWeDuPszuNherhAtVNaSLRBsS4U=
 github.com/hashicorp/vault-plugin-auth-azure v0.15.1/go.mod h1:qRCibAYC0AV4s2+HxEwmLMPNLENK1kx2mrq9ldnGdkY=
 github.com/hashicorp/vault-plugin-auth-centrify v0.15.1 h1:6StAr5tltpySNgyUwWC8czm9ZqkO7NIZfcRmxxtFwQ8=
