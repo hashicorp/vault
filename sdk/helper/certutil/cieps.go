@@ -42,7 +42,6 @@ type CIEPSIssuanceConfig struct {
 type CIEPSVaultParams struct {
 	PolicyName string `json:"policy_name,omitempty"`
 	Mount      string `json:"mount"`
-	Namespace  string `json:"ns"`
 
 	// These indicate the type of the cluster node talking to the CIEPS
 	// service. When IsPerfStandby=true, setting StoreCert=true in the
