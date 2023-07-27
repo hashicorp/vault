@@ -74,13 +74,8 @@ jobs:
           fi
 
       - name: Add changelog
-        continue-on-error: true
+        if: steps.pr.outputs.vault_pr_url != ''
         run: |
-          if [ -z "${{ steps.pr.outputs.vault_pr_url }}" ]; then
-            echo "error: no vault PR found"
-            exit 1
-          fi
-
           # strip "hashicorp/" from repo name
           PLUGIN=$(echo ${{ inputs.repo }} | awk -F/ '{print $NF}')
           echo "plugin: $PLUGIN"
@@ -102,17 +97,13 @@ jobs:
           git push origin ${{ github.ref_name }}:"$VAULT_BRANCH"
 
       - name: Add labels to Vault PR
+        if: steps.pr.outputs.vault_pr_url != ''
         env:
           # this is a different token to the one we have been using that should
           # allow us to add labels
           GITHUB_TOKEN: ${{secrets.GITHUB_TOKEN}}
         continue-on-error: true
         run: |
-          if [ -z "${{ steps.pr.outputs.vault_pr_url }}" ]; then
-            echo "error: no vault PR found"
-            exit 1
-          fi
-
           gh pr edit "${{ steps.pr.outputs.vault_pr_num }}" \
             --add-label "dependencies" \
             --repo hashicorp/vault
