@@ -185,12 +185,15 @@ func TestCoreWithSealAndUI(t testing.T, opts *CoreConfig) *Core {
 		if err != nil {
 			t.Logf("shutdown returned error: %v", err)
 		}
+		if tl, ok := c.Logger().(*corehelpers.TestLogger); ok {
+			tl.StopLogging()
+		}
 	})
 	return c
 }
 
 func TestCoreWithSealAndUINoCleanup(t testing.T, opts *CoreConfig) *Core {
-	logger := logging.NewVaultLogger(log.Trace).Named(t.Name())
+	logger := corehelpers.NewTestLogger(t)
 	physicalBackend, err := physInmem.NewInmem(nil, logger)
 	if err != nil {
 		t.Fatal(err)
@@ -441,7 +444,7 @@ func testCoreAddSecretMount(t testing.T, core *Core, token string) {
 
 func TestCoreUnsealedBackend(t testing.T, backend physical.Backend) (*Core, [][]byte, string) {
 	t.Helper()
-	logger := logging.NewVaultLogger(log.Trace)
+	logger := corehelpers.NewTestLogger(t)
 	conf := testCoreConfig(t, backend, logger)
 	conf.Seal = NewTestSeal(t, nil)
 	conf.NumExpirationWorkers = numExpirationWorkersTest
