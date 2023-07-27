@@ -82,7 +82,7 @@ jobs:
           GITHUB_TOKEN: ${{secrets.GITHUB_TOKEN}}
         continue-on-error: true
         run: |
-          if [ -z "$vault_pr_num" ]; then
+          if [ -z "${{ steps.pr.outputs.vault_pr_url }}" ]; then
             echo "error: no vault PR found"
             exit 1
           fi
