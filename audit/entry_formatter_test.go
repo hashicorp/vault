@@ -127,7 +127,7 @@ func TestNewEntryFormatter(t *testing.T) {
 
 			cfg, err := NewFormatterConfig(tc.Options...)
 			require.NoError(t, err)
-			f, err := NewEntryFormatter(cfg, ss, tc.Options...)
+			f, err := NewEntryFormatter(cfg, ss, nil, tc.Options...)
 
 			switch {
 			case tc.IsErrorExpected:
@@ -150,7 +150,7 @@ func TestEntryFormatter_Reopen(t *testing.T) {
 	cfg, err := NewFormatterConfig()
 	require.NoError(t, err)
 
-	f, err := NewEntryFormatter(cfg, ss)
+	f, err := NewEntryFormatter(cfg, ss, nil)
 	require.NoError(t, err)
 	require.NotNil(t, f)
 	require.NoError(t, f.Reopen())
@@ -162,7 +162,7 @@ func TestEntryFormatter_Type(t *testing.T) {
 	cfg, err := NewFormatterConfig()
 	require.NoError(t, err)
 
-	f, err := NewEntryFormatter(cfg, ss)
+	f, err := NewEntryFormatter(cfg, ss, nil)
 	require.NoError(t, err)
 	require.NotNil(t, f)
 	require.Equal(t, eventlogger.NodeTypeFormatter, f.Type())
@@ -305,7 +305,7 @@ func TestEntryFormatter_Process(t *testing.T) {
 			cfg, err := NewFormatterConfig(WithFormat(tc.RequiredFormat.String()))
 			require.NoError(t, err)
 
-			f, err := NewEntryFormatter(cfg, ss)
+			f, err := NewEntryFormatter(cfg, ss, nil)
 			require.NoError(t, err)
 			require.NotNil(t, f)
 
@@ -366,13 +366,13 @@ func BenchmarkAuditFileSink_Process(b *testing.B) {
 		},
 	}
 
-	ctx := namespace.RootContext(nil)
+	ctx := namespace.RootContext(context.Background())
 
 	// Create the formatter node.
 	cfg, err := NewFormatterConfig()
 	require.NoError(b, err)
 	ss := newStaticSalt(b)
-	formatter, err := NewEntryFormatter(cfg, ss)
+	formatter, err := NewEntryFormatter(cfg, ss, nil)
 	require.NoError(b, err)
 	require.NotNil(b, formatter)
 
