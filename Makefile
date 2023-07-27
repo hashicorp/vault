@@ -18,7 +18,6 @@ GOFMT_FILES?=$$(find . -name '*.go' | grep -v pb.go | grep -v vendor)
 SED?=$(shell command -v gsed || command -v sed)
 
 GO_VERSION_MIN=$$(cat $(CURDIR)/.go-version)
-PROTOC_VERSION_MIN=3.21.12
 GO_CMD?=go
 CGO_ENABLED?=0
 ifneq ($(FDB_ENABLED), )
@@ -174,6 +173,7 @@ ci-bootstrap: .ci-bootstrap
 # bootstrap the build by downloading additional tools that may be used by devs
 bootstrap: ci-bootstrap
 	go generate -tags tools tools/tools.go
+	go install github.com/bufbuild/buf/cmd/buf@v1.25.0
 
 # Note: if you have plugins in GOPATH you can update all of them via something like:
 # for i in $(ls | grep vault-plugin-); do cd $i; git remote update; git reset --hard origin/master; dep ensure -update; git add .; git commit; git push; cd ..; done
@@ -215,22 +215,7 @@ static-dist: ember-dist
 static-dist-dev: ember-dist-dev
 
 proto: bootstrap
-	@sh -c "'$(CURDIR)/scripts/protocversioncheck.sh' '$(PROTOC_VERSION_MIN)'"
-	protoc --go_out=. --go_opt=paths=source_relative --go-grpc_out=. --go-grpc_opt=paths=source_relative vault/*.proto
-	protoc --go_out=. --go_opt=paths=source_relative --go-grpc_out=. --go-grpc_opt=paths=source_relative vault/activity/activity_log.proto
-	protoc --go_out=. --go_opt=paths=source_relative --go-grpc_out=. --go-grpc_opt=paths=source_relative vault/activity/generation/generate_data.proto
-	protoc --go_out=. --go_opt=paths=source_relative --go-grpc_out=. --go-grpc_opt=paths=source_relative helper/storagepacker/types.proto
-	protoc --go_out=. --go_opt=paths=source_relative --go-grpc_out=. --go-grpc_opt=paths=source_relative helper/forwarding/types.proto
-	protoc --go_out=. --go_opt=paths=source_relative --go-grpc_out=. --go-grpc_opt=paths=source_relative sdk/logical/*.proto
-	protoc --go_out=. --go_opt=paths=source_relative --go-grpc_out=. --go-grpc_opt=paths=source_relative physical/raft/types.proto
-	protoc --go_out=. --go_opt=paths=source_relative --go-grpc_out=. --go-grpc_opt=paths=source_relative helper/identity/mfa/types.proto
-	protoc --go_out=. --go_opt=paths=source_relative --go-grpc_out=. --go-grpc_opt=paths=source_relative helper/identity/types.proto
-	protoc --go_out=. --go_opt=paths=source_relative --go-grpc_out=. --go-grpc_opt=paths=source_relative sdk/database/dbplugin/*.proto
-	protoc --go_out=. --go_opt=paths=source_relative --go-grpc_out=. --go-grpc_opt=paths=source_relative sdk/database/dbplugin/v5/proto/*.proto
-	protoc --go_out=. --go_opt=paths=source_relative --go-grpc_out=. --go-grpc_opt=paths=source_relative sdk/plugin/pb/*.proto
-	protoc --go_out=. --go_opt=paths=source_relative --go-grpc_out=. --go-grpc_opt=paths=source_relative vault/tokens/token.proto
-	protoc --go_out=. --go_opt=paths=source_relative --go-grpc_out=. --go-grpc_opt=paths=source_relative sdk/helper/pluginutil/*.proto
-	protoc --go_out=. --go_opt=paths=source_relative --go-grpc_out=. --go-grpc_opt=paths=source_relative vault/hcp_link/proto/*/*.proto
+	buf generate
 
 	# No additional sed expressions should be added to this list. Going forward
 	# we should just use the variable names choosen by protobuf. These are left
