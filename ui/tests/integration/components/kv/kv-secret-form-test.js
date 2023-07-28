@@ -11,6 +11,8 @@ import { click, fillIn, render } from '@ember/test-helpers';
 import { hbs } from 'ember-cli-htmlbars';
 import { allowAllCapabilitiesStub } from 'vault/tests/helpers/stubs';
 import { SELECTORS as PAGE } from 'vault/tests/helpers/kv/kv-page-selectors';
+import { SELECTORS } from 'vault/tests/helpers/kv/kv-general-selectors';
+import codemirror from 'vault/tests/helpers/codemirror';
 
 module('Integration | Component | kv | KvSecretForm', function (hooks) {
   setupRenderingTest(hooks);
@@ -18,7 +20,6 @@ module('Integration | Component | kv | KvSecretForm', function (hooks) {
   setupMirage(hooks);
 
   hooks.beforeEach(function () {
-    this.codeMirror = this.owner.lookup('service:code-mirror');
     this.server.post('/sys/capabilities-self', allowAllCapabilitiesStub());
     this.store = this.owner.lookup('service:store');
     this.backend = 'my-kv-engine';
@@ -29,7 +30,8 @@ module('Integration | Component | kv | KvSecretForm', function (hooks) {
   });
 
   test('it makes post request on save', async function (assert) {
-    assert.expect(2);
+    assert.expect(3);
+    this.onSave = () => assert.ok(true, 'onSave callback fires on save success');
     this.server.post(`${this.backend}/data/${this.path}`, (schema, req) => {
       assert.ok(true, 'Request made to save secret');
       const payload = JSON.parse(req.requestBody);
@@ -41,8 +43,18 @@ module('Integration | Component | kv | KvSecretForm', function (hooks) {
           cas: 0,
         },
       });
+      return {
+        request_id: 'bd76db73-605d-fcbc-0dad-d44a008f9b95',
+        data: {
+          created_time: '2023-07-28T18:47:32.924809Z',
+          custom_metadata: null,
+          deletion_time: '',
+          destroyed: false,
+          version: 1,
+        },
+      };
     });
-    this.onSave = () => assert.ok(true, 'onSave callback fires on save success');
+
     await render(
       hbs`
         <KvSecretForm
@@ -53,8 +65,23 @@ module('Integration | Component | kv | KvSecretForm', function (hooks) {
     );
 
     await fillIn(PAGE.form.inputByAttr('path'), this.path);
-    await fillIn(PAGE.form.keyInput, 'foo');
-    await fillIn(PAGE.form.valueInput, 'bar');
+    await fillIn(PAGE.form.keyInput(), 'foo');
+    await fillIn(PAGE.form.maskedValueInput(), 'bar');
     await click(PAGE.form.secretSave);
+  });
+
+  test('it does JSON toggle in show mode when showing string data', async function (assert) {
+    await render(
+      hbs`
+        <KvSecretForm
+          @secret={{this.secret}}
+          @onSave={{this.onSave}}
+          @onCancel={{this.onCancel}}
+        />`,
+      { owner: this.engine }
+    );
+
+    await click(SELECTORS.toggleJson);
+    assert.ok(codemirror());
   });
 });
