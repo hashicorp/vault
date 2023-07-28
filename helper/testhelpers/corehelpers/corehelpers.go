@@ -252,7 +252,7 @@ func NewNoopAudit(config map[string]string) (*NoopAudit, error) {
 		return nil, err
 	}
 
-	f, err := audit.NewEntryFormatter(cfg, n, nil)
+	f, err := audit.NewEntryFormatter(cfg, n)
 	if err != nil {
 		return nil, fmt.Errorf("error creating formatter: %w", err)
 	}
