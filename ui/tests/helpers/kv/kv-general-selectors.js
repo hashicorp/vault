@@ -6,7 +6,7 @@
 export const SELECTORS = {
   toggleJson: '[data-test-toggle-input="json"]',
   toggleMasked: '[data-test-button="toggle-masked"]',
-  jsonEditor: '[data-test-component="code-mirror-modifier"] textarea',
+  jsonEditor: '[data-test-component="code-mirror-modifier"]',
   tooltipTrigger: '[data-test-tooltip-trigger]',
   pageTitle: '[data-test-header-title]',
   infoRowValue: (label) => `[data-test-value-div="${label}"]`,

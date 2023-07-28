@@ -118,7 +118,7 @@ module('Integration | Component | kv | KvSecretForm', function (hooks) {
       `{   \"\": \"\" }`, // eslint-disable-line no-useless-escape
       'json editor initializes with empty object'
     );
-    await fillIn(SELECTORS.jsonEditor, 'blah');
+    await fillIn(`${SELECTORS.jsonEditor} textarea`, 'blah');
     assert.strictEqual(codemirror().state.lint.marked.length, 1, 'codemirror lints input');
     codemirror().setValue(`{ "hello": "there"}`);
     assert.propEqual(this.secret.secretData, { hello: 'there' }, 'json editor updates secret data');
