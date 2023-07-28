@@ -7,14 +7,12 @@ const invariant = (truthy, error) => {
   if (!truthy) throw new Error(error);
 };
 
-export default function (context, selector) {
-  const cmService = context.owner.lookup('service:code-mirror');
+export default function () {
+  const element = document.querySelector('.CodeMirror');
+  invariant(element, `Selector '.CodeMirror' matched no elements`);
 
-  const element = document.querySelector(selector);
-  invariant(element, `Selector ${selector} matched no elements`);
-
-  const cm = cmService.instanceFor(element.id);
-  invariant(cm, `No registered CodeMirror instance for ${selector}`);
+  const cm = element.CodeMirror;
+  invariant(cm, `No registered CodeMirror instance for '.CodeMirror'`);
 
   return cm;
 }
