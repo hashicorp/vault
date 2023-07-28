@@ -60,13 +60,19 @@ export default class MfaLoginEnforcementForm extends Component {
     this.fetchAuthMethods();
   }
 
+  // Helper to add objects to target which sets the value of the tracked array
+  // in a way that will update the view
+  _addToTargets(targets) {
+    const combinedTargets = [...this.targets];
+    combinedTargets.addObjects(targets);
+    this.targets = combinedTargets;
+  }
+
   async flattenTargets() {
     for (const { label, key } of this.targetTypes) {
       const targetArray = await this.args.model[key];
       const targets = targetArray.map((value) => ({ label, key, value }));
-      this.targets.addObjects(targets);
-      // eslint-disable-next-line no-self-assign
-      this.targets = this.targets;
+      this._addToTargets(targets);
     }
   }
   async resetTargetState() {
@@ -145,7 +151,7 @@ export default class MfaLoginEnforcementForm extends Component {
   addTarget() {
     const { label, key } = this.selectedTarget;
     const value = this.selectedTargetValue;
-    this.targets.addObject({ label, value, key });
+    this._addToTargets([{ label, value, key }]);
     // add target to appropriate model property
     this.args.model[key].addObject(value);
     this.selectedTargetValue = null;
