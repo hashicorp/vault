@@ -49,15 +49,16 @@ type Option func(*options) error
 
 // options are used to represent configuration for a audit related nodes.
 type options struct {
-	withID           string
-	withNow          time.Time
-	withSubtype      subtype
-	withFormat       format
-	withPrefix       string
-	withRaw          bool
-	withElision      bool
-	withOmitTime     bool
-	withHMACAccessor bool
+	withID              string
+	withNow             time.Time
+	withSubtype         subtype
+	withFormat          format
+	withPrefix          string
+	withRaw             bool
+	withElision         bool
+	withOmitTime        bool
+	withHMACAccessor    bool
+	withHeaderFormatter HeaderFormatter
 }
 
 // Salter is an interface that provides a way to obtain a Salt for hashing.
@@ -95,10 +96,10 @@ type HeaderFormatter interface {
 
 // EntryFormatter should be used to format audit requests and responses.
 type EntryFormatter struct {
-	salter        Salter
-	headersConfig HeaderFormatter
-	config        FormatterConfig
-	prefix        string
+	salter          Salter
+	headerFormatter HeaderFormatter
+	config          FormatterConfig
+	prefix          string
 }
 
 // EntryFormatterWriter should be used to format and write out audit requests and responses.
