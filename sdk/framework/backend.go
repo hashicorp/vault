@@ -312,25 +312,43 @@ func (b *Backend) HandleRequest(ctx context.Context, req *logical.Request) (*log
 		return resp, err
 	}
 
-	// If fields supplied in the request are not present in the field schema
-	// of the path, add a warning to the response indicating that those
-	// parameters will be ignored.
-	if len(ignored) != 0 {
-		sort.Strings(ignored)
+	if len(ignored) != 0 || len(replaced) != 0 {
 		if resp == nil {
-			resp = &logical.Response{}
-		}
-		resp.AddWarning(fmt.Sprintf("Endpoint ignored these unrecognized parameters: %v", ignored))
-	}
+			// We are in the position of wanting to return a warning, but currently having a nil response - which can
+			// mean different things in different circumstances
+			switch req.Operation {
+			// For these three operations, nil maps to a 404 Not Found response (via logical.RespondErrorCommon) and
+			// there is nothing we can do to pass on the warning.
+			case logical.ReadOperation:
+			case logical.ListOperation:
+			case logical.HeaderOperation:
 
-	// If fields supplied in the request is being overwritten by the values
-	// supplied in the API request path, add a warning to the response
-	// indicating that those parameters will be replaced.
-	if len(replaced) != 0 {
-		if resp == nil {
-			resp = &logical.Response{}
+			// Otherwise nil maps to a 204 No Content response (via http.respondOk) which we can promote to a 200 OK
+			// response without fundamentally changing the meaning (and is also done extensively in code for specific
+			// endpoints).
+			default:
+				resp = &logical.Response{}
+			}
 		}
-		resp.AddWarning(fmt.Sprintf("Endpoint replaced the value of these parameters with the values captured from the endpoint's path: %v", replaced))
+
+		if resp != nil {
+			// If fields supplied in the request are not present in the field schema
+			// of the path, add a warning to the response indicating that those
+			// parameters will be ignored.
+			if len(ignored) != 0 {
+				sort.Strings(ignored)
+				resp.AddWarning(fmt.Sprintf("Endpoint ignored these unrecognized parameters: %v", ignored))
+				b.Logger().Error("Warning about unrecognized parameters", "params", ignored, "op", req.Operation, "path", req.Path)
+			}
+
+			// If fields supplied in the request is being overwritten by the values
+			// supplied in the API request path, add a warning to the response
+			// indicating that those parameters will be replaced.
+			if len(replaced) != 0 {
+				resp.AddWarning(fmt.Sprintf("Endpoint replaced the value of these parameters with the values captured from the endpoint's path: %v", replaced))
+				b.Logger().Error("Warning about replaced parameters", "params", replaced, "op", req.Operation, "path", req.Path)
+			}
+		}
 	}
 
 	return resp, nil
