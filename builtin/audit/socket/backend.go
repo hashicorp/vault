@@ -108,7 +108,7 @@ func Factory(ctx context.Context, conf *audit.BackendConfig, useEventLogger bool
 	}
 
 	// Configure the formatter for either case.
-	f, err := audit.NewEntryFormatter(b.formatConfig, b, headersConfig)
+	f, err := audit.NewEntryFormatter(b.formatConfig, b, audit.WithHeaderFormatter(headersConfig))
 	if err != nil {
 		return nil, fmt.Errorf("error creating formatter: %w", err)
 	}
