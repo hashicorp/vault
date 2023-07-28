@@ -143,7 +143,7 @@ func TestBackend_StaticRole_Rotate_basic(t *testing.T) {
 	}
 
 	// Trigger rotation
-	data = map[string]interface{}{"name": "plugin-role-test"}
+	data = map[string]interface{}{}
 	req = &logical.Request{
 		Operation: logical.UpdateOperation,
 		Path:      "rotate-role/plugin-role-test",

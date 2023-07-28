@@ -361,7 +361,6 @@ func TestCoreMetrics_AvailablePolicies(t *testing.T) {
 		"policy": base64.StdEncoding.EncodeToString([]byte(`path "ns1/secret/foo/*" {
     capabilities = ["create", "read", "update", "delete", "list"]
 }`)),
-		"name": "secret",
 	}
 
 	type pathPolicy struct {
@@ -421,7 +420,7 @@ func TestCoreMetrics_AvailablePolicies(t *testing.T) {
 					t.Fatalf("err: %v", err)
 				}
 				if resp != nil {
-					logger.Info("expected nil response", resp)
+					logger.Info("expected nil response", "actual_response", resp)
 					t.Fatalf("expected nil response")
 				}
 			}

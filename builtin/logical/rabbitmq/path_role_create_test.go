@@ -45,7 +45,6 @@ func TestBackend_RoleCreate_DefaultUsernameTemplate(t *testing.T) {
 	}
 
 	roleData := map[string]interface{}{
-		"name": "foo",
 		"tags": "bar",
 	}
 	roleReq := &logical.Request{
@@ -121,7 +120,6 @@ func TestBackend_RoleCreate_CustomUsernameTemplate(t *testing.T) {
 	}
 
 	roleData := map[string]interface{}{
-		"name": "foo",
 		"tags": "bar",
 	}
 	roleReq := &logical.Request{
