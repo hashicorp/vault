@@ -34,7 +34,8 @@ export function deleteEngineCmd(name) {
 }
 
 export function createPolicyCmd(name, contents) {
-  return [`write sys/policies/acl/${name} policy=${btoa(contents)}`];
+  const policyContent = window.btoa(contents);
+  return [`write sys/policies/acl/${name} policy=${policyContent}`];
 }
 
 export function tokenWithPolicyCmd(policyName = 'default') {
@@ -47,14 +48,14 @@ export function tokenWithPolicyCmd(policyName = 'default') {
  * @param {Array<string>} commands array of commands that should be run
  * @returns the last log output. Throws an error if it includes an error
  */
-export async function runCmd(console, commands) {
-  if (!console || !commands) {
-    throw new Error('runCmd requires console component and commands passed in');
+export async function runCmd(component, commands) {
+  if (!component || !commands) {
+    throw new Error('runCmd requires consoleComponent and commands passed in');
   }
-  await console.runCommands(commands);
-  const lastOutput = console.lastLogOutput;
-  if (!lastOutput.includes('Error')) {
-    throw new Error(`Error occurred while running commands: "${commands.join('; ')}"`);
+  await component.runCommands(commands);
+  const lastOutput = component.lastLogOutput;
+  if (lastOutput.includes('Error')) {
+    throw new Error(`Error occurred while running commands: "${commands.join('; ')}" - ${lastOutput}`);
   }
   return lastOutput;
 }
