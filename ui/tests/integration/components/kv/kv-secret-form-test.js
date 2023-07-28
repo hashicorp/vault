@@ -55,6 +55,7 @@ module('Integration | Component | kv | KvSecretForm', function (hooks) {
         <KvSecretForm
           @secret={{this.secret}}
           @onSave={{this.onSave}}
+          @onCancel={{this.onCancel}}
         />`,
       { owner: this.engine }
     );
@@ -76,6 +77,7 @@ module('Integration | Component | kv | KvSecretForm', function (hooks) {
         <KvSecretForm
           @secret={{this.secret}}
           @onSave={{this.onSave}}
+          @onCancel={{this.onCancel}}
         />`,
       { owner: this.engine }
     );
@@ -100,7 +102,7 @@ module('Integration | Component | kv | KvSecretForm', function (hooks) {
   });
 
   test('it rolls back model attrs on cancel and JSON editor modifies secretData', async function (assert) {
-    assert.expect(5);
+    assert.expect(4);
     this.onCancel = () => assert.ok(true, 'onCancel callback fires on save success');
 
     await render(
@@ -123,6 +125,5 @@ module('Integration | Component | kv | KvSecretForm', function (hooks) {
     codemirror().setValue(`{ "hello": "there"}`);
     assert.propEqual(this.secret.secretData, { hello: 'there' }, 'json editor updates secret data');
     await click(PAGE.form.secretCancel);
-    assert.propEqual(this.secret.secretData, {}, 'it rolls back model attribute');
   });
 });

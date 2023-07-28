@@ -79,10 +79,4 @@ export default class KvSecretForm extends Component {
       this.invalidFormAlert = 'There was an error submitting this form.';
     }
   }
-
-  @action
-  cancel() {
-    this.args.secret.rollbackAttributes();
-    this.args.onCancel();
-  }
 }
