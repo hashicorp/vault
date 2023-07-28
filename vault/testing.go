@@ -2096,7 +2096,6 @@ func (tc *TestCluster) initCores(t testing.T, opts *TestClusterOptions, addAudit
 		Path:        "sys/mounts/secret",
 		Data: map[string]interface{}{
 			"type":        "kv",
-			"path":        "secret/",
 			"description": "key/value secret storage",
 			"options": map[string]string{
 				"version": kvVersion,

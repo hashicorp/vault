@@ -585,7 +585,6 @@ func TestAwsEc2_RoleCrud(t *testing.T) {
 		"max_ttl":                        "20m",
 		"policies":                       "testpolicy1,testpolicy2",
 		"disallow_reauthentication":      false,
-		"hmac_key":                       "testhmackey",
 		"period":                         "1m",
 	}
 

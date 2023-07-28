@@ -66,12 +66,15 @@ func LeaseSwitchedPassthroughBackend(ctx context.Context, conf *logical.BackendC
 					logical.ListOperation:   b.handleList,
 				},
 
+				TakesArbitraryInput: true,
+
 				ExistenceCheck: b.handleExistenceCheck,
 
 				HelpSynopsis:    strings.TrimSpace(passthroughHelpSynopsis),
 				HelpDescription: strings.TrimSpace(passthroughHelpDescription),
 			},
 		},
+
 		BackendType: logical.TypeLogical,
 	}
 
