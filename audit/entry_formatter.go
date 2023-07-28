@@ -158,8 +158,6 @@ func (f *EntryFormatter) FormatRequest(ctx context.Context, in *logical.LogInput
 		connState = in.Request.Connection.ConnState
 	}
 
-	var err error
-
 	if !f.config.Raw {
 		var err error
 		auth, err = HashAuth(ctx, f.salter, auth, f.config.HMACAccessor)
@@ -230,7 +228,7 @@ func (f *EntryFormatter) FormatRequest(ctx context.Context, in *logical.LogInput
 			RemoteAddr:                    getRemoteAddr(req),
 			RemotePort:                    getRemotePort(req),
 			ReplicationCluster:            req.ReplicationCluster,
-			Headers:                       req.Headers,
+			Headers:                       req.Headers, // TODO: Handle filter/transform via HeaderFormatter.ApplyConfig
 			ClientCertificateSerialNumber: getClientCertificateSerialNumber(connState),
 		},
 	}
@@ -293,7 +291,6 @@ func (f *EntryFormatter) FormatResponse(ctx context.Context, in *logical.LogInpu
 	elideListResponseData := f.config.ElideListResponses && req.Operation == logical.ListOperation
 
 	var respData map[string]interface{}
-	var err error
 	if f.config.Raw {
 		// In the non-raw case, elision of list response data occurs inside HashResponse, to avoid redundant deep
 		// copies and hashing of data only to elide it later. In the raw case, we need to do it here.
@@ -432,7 +429,7 @@ func (f *EntryFormatter) FormatResponse(ctx context.Context, in *logical.LogInpu
 			RemotePort:                    getRemotePort(req),
 			ClientCertificateSerialNumber: getClientCertificateSerialNumber(connState),
 			ReplicationCluster:            req.ReplicationCluster,
-			Headers:                       req.Headers,
+			Headers:                       req.Headers, // TODO: Handle filter/transform via HeaderFormatter.ApplyConfig
 		},
 
 		Response: &Response{

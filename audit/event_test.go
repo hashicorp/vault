@@ -155,17 +155,6 @@ func TestAuditEvent_Validate(t *testing.T) {
 			IsErrorExpected:      true,
 			ExpectedErrorMessage: "audit.(auditEvent).validate: audit.(subtype).validate: 'moon' is not a valid event subtype: invalid parameter",
 		},
-		"format-fiddled": {
-			Value: &auditEvent{
-				ID:        "audit_123",
-				Version:   version,
-				Subtype:   ResponseType,
-				Timestamp: time.Now(),
-				Data:      nil,
-			},
-			IsErrorExpected:      true,
-			ExpectedErrorMessage: "audit.(auditEvent).validate: audit.(format).validate: 'blah' is not a valid format: invalid parameter",
-		},
 		"default-time": {
 			Value: &auditEvent{
 				ID:        "audit_123",

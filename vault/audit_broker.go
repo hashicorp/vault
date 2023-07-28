@@ -10,6 +10,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/hashicorp/vault/internal/observability/event"
+
 	metrics "github.com/armon/go-metrics"
 	"github.com/hashicorp/eventlogger"
 	log "github.com/hashicorp/go-hclog"
@@ -39,9 +41,6 @@ func NewAuditBroker(log log.Logger, useEventLogger bool) (*AuditBroker, error) {
 	var err error
 
 	if useEventLogger {
-		// Ignoring the second error return value since an error will only occur
-		// if an unrecognized eventlogger.RegistrationPolicy is provided to an
-		// eventlogger.Option function.
 		eventBroker, err = eventlogger.NewBroker(eventlogger.WithNodeRegistrationPolicy(eventlogger.DenyOverwrite), eventlogger.WithPipelineRegistrationPolicy(eventlogger.DenyOverwrite))
 		if err != nil {
 			return nil, fmt.Errorf("error creating event broker for audit events: %w", err)
@@ -67,7 +66,7 @@ func (a *AuditBroker) Register(name string, b audit.Backend, local bool) error {
 	}
 
 	if a.broker != nil {
-		err := a.broker.SetSuccessThresholdSinks(eventlogger.EventType("audit"), 1)
+		err := a.broker.SetSuccessThresholdSinks(eventlogger.EventType(event.AuditType.String()), 1)
 		if err != nil {
 			return err
 		}
@@ -93,14 +92,17 @@ func (a *AuditBroker) Deregister(ctx context.Context, name string) error {
 
 	if a.broker != nil {
 		if len(a.backends) == 0 {
-			a.broker.SetSuccessThresholdSinks(eventlogger.EventType("audit"), 0)
+			err := a.broker.SetSuccessThresholdSinks(eventlogger.EventType(event.AuditType.String()), 0)
+			if err != nil {
+				return err
+			}
 		}
 
 		// The first return value, a bool, indicates whether
 		// RemovePipelineAndNodes encountered the error while evaluating
 		// pre-conditions (false) or once it started removing the pipeline and
 		// the nodes (true). This code doesn't care either way.
-		_, err := a.broker.RemovePipelineAndNodes(ctx, eventlogger.EventType("audit"), eventlogger.PipelineID(name))
+		_, err := a.broker.RemovePipelineAndNodes(ctx, eventlogger.EventType(event.AuditType.String()), eventlogger.PipelineID(name))
 		if err != nil {
 			return err
 		}
@@ -175,18 +177,12 @@ func (a *AuditBroker) LogRequest(ctx context.Context, in *logical.LogInput, head
 		metrics.IncrCounter([]string{"audit", "log_request_failure"}, failure)
 	}()
 
-	// All logged requests must have an identifier
-	//if req.ID == "" {
-	//	a.logger.Error("missing identifier in request object", "request_path", req.Path)
-	//	retErr = multierror.Append(retErr, fmt.Errorf("missing identifier in request object: %s", req.Path))
-	//	return
-	//}
-
 	headers := in.Request.Headers
 	defer func() {
 		in.Request.Headers = headers
 	}()
 
+	// Old behavior (no events)
 	if a.broker == nil {
 		// Ensure at least one backend logs
 		anyLogged := false
@@ -213,15 +209,20 @@ func (a *AuditBroker) LogRequest(ctx context.Context, in *logical.LogInput, head
 		}
 	} else {
 		if len(a.backends) > 0 {
-			event, err := audit.NewEvent(audit.RequestType)
+			e, err := audit.NewEvent(audit.RequestType)
 			if err != nil {
 				retErr = multierror.Append(retErr, err)
 			}
 
-			event.Data = in
+			e.Data = in
 
 			start := time.Now()
-			_, err = a.broker.Send(ctx, eventlogger.EventType("audit"), event)
+			_, err = a.broker.Send(ctx, eventlogger.EventType(event.AuditType.String()), e)
+			// TODO: old behavior includes the name (path) for the audit device,
+			// but we cannot know this anymore, do we just omit it, or include
+			// something like 'all'?
+			// If we can later change the semantics of the eventbroker to report back
+			// as sinks complete then we might be able to reinstate the old behavior.
 			metrics.MeasureSince([]string{"audit", "log_request"}, start)
 			if err != nil {
 				retErr = multierror.Append(retErr, err)
@@ -296,13 +297,21 @@ func (a *AuditBroker) LogResponse(ctx context.Context, in *logical.LogInput, hea
 		}
 	} else {
 		if len(a.backends) > 0 {
-			event, err := audit.NewEvent(audit.ResponseType)
+			e, err := audit.NewEvent(audit.ResponseType)
 			if err != nil {
 				return multierror.Append(retErr, err)
 			}
 
-			event.Data = in
-			_, err = a.broker.Send(ctx, eventlogger.EventType("audit"), event)
+			e.Data = in
+
+			start := time.Now()
+			_, err = a.broker.Send(ctx, eventlogger.EventType(event.AuditType.String()), e)
+			// TODO: old behavior includes the name (path) for the audit device,
+			// but we cannot know this anymore, do we just omit it, or include
+			// something like 'all'?
+			// If we can later change the semantics of the eventbroker to report back
+			// as sinks complete then we might be able to reinstate the old behavior.
+			metrics.MeasureSince([]string{"audit", "log_response"}, start)
 			if err != nil {
 				retErr = multierror.Append(retErr, err)
 			}
@@ -313,7 +322,7 @@ func (a *AuditBroker) LogResponse(ctx context.Context, in *logical.LogInput, hea
 }
 
 func (a *AuditBroker) Invalidate(ctx context.Context, key string) {
-	// For now we ignore the key as this would only apply to salts. We just
+	// For now, we ignore the key as this would only apply to salts. We just
 	// sort of brute force it on each one.
 	a.Lock()
 	defer a.Unlock()
