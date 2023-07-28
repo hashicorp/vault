@@ -36,12 +36,8 @@ module('Integration | Component | kv | KvSecretForm', function (hooks) {
       assert.ok(true, 'Request made to save secret');
       const payload = JSON.parse(req.requestBody);
       assert.propEqual(payload, {
-        data: {
-          foo: 'bar',
-        },
-        options: {
-          cas: 0,
-        },
+        data: { foo: 'bar' },
+        options: { cas: 0 },
       });
       return {
         request_id: 'bd76db73-605d-fcbc-0dad-d44a008f9b95',
@@ -70,18 +66,30 @@ module('Integration | Component | kv | KvSecretForm', function (hooks) {
     await click(PAGE.form.secretSave);
   });
 
-  test('it does JSON toggle in show mode when showing string data', async function (assert) {
+  test('it rolls back model attrs on cancel and JSON editor modifies secretData', async function (assert) {
+    assert.expect(5);
+    this.onCancel = () => assert.ok(true, 'onCancel callback fires on save success');
+
     await render(
       hbs`
         <KvSecretForm
           @secret={{this.secret}}
-          @onSave={{this.onSave}}
           @onCancel={{this.onCancel}}
         />`,
       { owner: this.engine }
     );
 
     await click(SELECTORS.toggleJson);
-    assert.ok(codemirror());
+    assert.strictEqual(
+      codemirror().getValue(' '),
+      `{   \"\": \"\" }`, // eslint-disable-line no-useless-escape
+      'json editor initializes with empty object'
+    );
+    await fillIn(SELECTORS.jsonEditor, 'blah');
+    assert.strictEqual(codemirror().state.lint.marked.length, 1, 'codemirror lints input');
+    codemirror().setValue(`{ "hello": "there"}`);
+    assert.propEqual(this.secret.secretData, { hello: 'there' }, 'json editor updates secret data');
+    await click(PAGE.form.secretCancel);
+    assert.propEqual(this.secret.secretData, {}, 'it rolls back model attribute');
   });
 });

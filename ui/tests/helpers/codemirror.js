@@ -3,6 +3,18 @@
  * SPDX-License-Identifier: MPL-2.0
  */
 
+/*
+returns an instance of CodeMirror, see docs for callable functions https://codemirror.net/5/doc/manual.html#api_constructor
+sample use:
+
+  import codemirror from 'vault/tests/helpers/codemirror';
+
+  test('it renders initial value', function (assert) {
+
+    assert.strictEqual(codemirror.getValue(), 'some value')
+  )}
+*/
+
 const invariant = (truthy, error) => {
   if (!truthy) throw new Error(error);
 };
