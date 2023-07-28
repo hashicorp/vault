@@ -15,9 +15,12 @@ export const SELECTORS = {
     automateSecretDeletion: '[data-test-ttl-value="Automate secret deletion"]',
     metadataCancel: '[data-test-kv-metadata-cancel]',
     metadataUpdate: '[data-test-kv-metadata-update]',
-    keyInput: '[data-test-kv-key]',
-    valueInput: '[data-test-kv-value] textarea',
     secretSave: '[data-test-kv-secret-save]',
     secretCancel: '[data-test-kv-secret-cancel]',
+    // <KvObjectEditor>
+    keyInput: (idx = 0) => `[data-test-kv-key="${idx}"]`,
+    valueInput: (idx = 0) => `[data-test-kv-value="${idx}"]`,
+    maskedValueInput: (idx = 0) => `[data-test-kv-value="${idx}"] [data-test-textarea]`,
+    deleteRow: (idx = 0) => `[data-test-kv-delete-row="${idx}"]`,
   },
 };

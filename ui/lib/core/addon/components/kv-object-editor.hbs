@@ -16,7 +16,7 @@
       <div class="columns is-variable" data-test-kv-row>
         <div class="column is-one-quarter">
           <Input
-            data-test-kv-key={{true}}
+            data-test-kv-key={{index}}
             @value={{row.name}}
             placeholder={{this.placeholders.key}}
             {{on "change" (fn this.updateRow row index)}}

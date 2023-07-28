@@ -102,11 +102,9 @@ module('Integration | Component | kv | Page::Secret::MetadataEdit', function (ho
       .hasValue('12319', 'renders Automate secret deletion that was on the record.');
 
     // change the "Additional option" values
-    await click('[data-test-kv-delete-row="0"]'); // delete the first kv row
-    const keys = document.querySelectorAll(PAGE.form.keyInput);
-    const values = document.querySelectorAll(PAGE.form.valueInput);
-    await fillIn(keys[2], 'last');
-    await fillIn(values[2], 'value');
+    await click(PAGE.form.deleteRow()); // delete the first kv row
+    await fillIn(PAGE.form.keyInput(2), 'last');
+    await fillIn(PAGE.form.valueInput(2), 'value');
     await fillIn(PAGE.form.inputByAttr('maxVersions'), '8');
     await click(PAGE.form.inputByAttr('casRequired'));
     await fillIn(PAGE.form.automateSecretDeletion, '1000');
