@@ -62,6 +62,9 @@ func main() {
 	}
 
 	inputLines, err := readLines(bytes.NewBuffer(b))
+	if err != nil {
+		fatal(err)
+	}
 	funcs := getFuncs(inputLines)
 	if needed, err := isStubNeeded(funcs); err != nil {
 		fatal(err)
