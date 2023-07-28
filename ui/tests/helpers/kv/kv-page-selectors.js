@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: MPL-2.0
  */
 
-export const SELECTORS = {
+export const PAGE = {
   details: {
     versionDropdown: '[data-test-version-dropdown]',
     version: (number) => `[data-test-version="${number}"]`,

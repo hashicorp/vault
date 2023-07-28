@@ -11,7 +11,7 @@ import { click, find, render } from '@ember/test-helpers';
 import { hbs } from 'ember-cli-htmlbars';
 import { kvDataPath, kvMetadataPath } from 'vault/utils/kv-path';
 import { SELECTORS, parseJsonEditor } from 'vault/tests/helpers/kv/kv-general-selectors';
-import { SELECTORS as PAGE } from 'vault/tests/helpers/kv/kv-page-selectors';
+import { PAGE } from 'vault/tests/helpers/kv/kv-page-selectors';
 import { allowAllCapabilitiesStub } from 'vault/tests/helpers/stubs';
 
 module('Integration | Component | kv | Page::Secret::Details', function (hooks) {

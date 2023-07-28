@@ -13,7 +13,7 @@ import { kvMetadataPath } from 'vault/utils/kv-path';
 import { allowAllCapabilitiesStub } from 'vault/tests/helpers/stubs';
 import sinon from 'sinon';
 import { SELECTORS } from 'vault/tests/helpers/kv/kv-general-selectors';
-import { SELECTORS as PAGE } from 'vault/tests/helpers/kv/kv-page-selectors';
+import { PAGE } from 'vault/tests/helpers/kv/kv-page-selectors';
 
 module('Integration | Component | kv | Page::Secret::MetadataEdit', function (hooks) {
   setupRenderingTest(hooks);

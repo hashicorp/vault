@@ -12,7 +12,7 @@ import { hbs } from 'ember-cli-htmlbars';
 import { kvMetadataPath } from 'vault/utils/kv-path';
 import { allowAllCapabilitiesStub } from 'vault/tests/helpers/stubs';
 import { SELECTORS } from 'vault/tests/helpers/kv/kv-general-selectors';
-import { SELECTORS as PAGE } from 'vault/tests/helpers/kv/kv-page-selectors';
+import { PAGE } from 'vault/tests/helpers/kv/kv-page-selectors';
 
 module('Integration | Component | kv | Page::Secret::MetadataDetails', function (hooks) {
   setupRenderingTest(hooks);
