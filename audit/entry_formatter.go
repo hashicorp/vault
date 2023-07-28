@@ -30,7 +30,7 @@ var (
 
 // NewEntryFormatter should be used to create an EntryFormatter.
 // Accepted options: WithPrefix.
-func NewEntryFormatter(config FormatterConfig, salter Salter, headersConfig HeaderFormatter, opt ...Option) (*EntryFormatter, error) {
+func NewEntryFormatter(config FormatterConfig, salter Salter, opt ...Option) (*EntryFormatter, error) {
 	const op = "audit.NewEntryFormatter"
 
 	if salter == nil {
@@ -48,10 +48,10 @@ func NewEntryFormatter(config FormatterConfig, salter Salter, headersConfig Head
 	}
 
 	return &EntryFormatter{
-		salter:        salter,
-		config:        config,
-		headersConfig: headersConfig,
-		prefix:        opts.withPrefix,
+		salter:          salter,
+		config:          config,
+		headerFormatter: opts.withHeaderFormatter,
+		prefix:          opts.withPrefix,
 	}, nil
 }
 
