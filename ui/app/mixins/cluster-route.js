@@ -19,7 +19,6 @@ import {
   DR_REPLICATION_SECONDARY_DETAILS,
   EXCLUDED_REDIRECT_URLS,
   REDIRECT,
-  LOGOUT,
 } from 'vault/lib/route-paths';
 
 export default Mixin.create({
@@ -99,9 +98,6 @@ export default Mixin.create({
       }
       if ((transition && transition.targetName === OIDC_CALLBACK) || this.routeName === OIDC_CALLBACK) {
         return OIDC_CALLBACK;
-      }
-      if (transition && transition.targetName === LOGOUT) {
-        return LOGOUT;
       }
       return AUTH;
     }
