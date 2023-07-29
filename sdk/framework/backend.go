@@ -339,6 +339,7 @@ func (b *Backend) HandleRequest(ctx context.Context, req *logical.Request) (*log
 				sort.Strings(ignored)
 				resp.AddWarning(fmt.Sprintf("Endpoint ignored these unrecognized parameters: %v", ignored))
 				b.Logger().Error("Warning about unrecognized parameters", "params", ignored, "op", req.Operation, "path", req.Path)
+				panic(fmt.Sprintf("Endpoint ignored these unrecognized parameters: %v", ignored))
 			}
 
 			// If fields supplied in the request is being overwritten by the values
@@ -347,6 +348,7 @@ func (b *Backend) HandleRequest(ctx context.Context, req *logical.Request) (*log
 			if len(replaced) != 0 {
 				resp.AddWarning(fmt.Sprintf("Endpoint replaced the value of these parameters with the values captured from the endpoint's path: %v", replaced))
 				b.Logger().Error("Warning about replaced parameters", "params", replaced, "op", req.Operation, "path", req.Path)
+				panic(fmt.Sprintf("Endpoint replaced the value of these parameters with the values captured from the endpoint's path: %v", replaced))
 			}
 		}
 	}
