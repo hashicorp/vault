@@ -677,9 +677,9 @@ func TestSecret_TokenRemainingUses(t *testing.T) {
 			t.Fatal(err)
 		}
 		if _, err := client.Logical().Write("auth/userpass/users/test", map[string]interface{}{
-			"password": "test",
-			"policies": "default",
-			"num_uses": uses,
+			"password":       "test",
+			"token_policies": "default",
+			"token_num_uses": uses,
 		}); err != nil {
 			t.Fatal(err)
 		}
@@ -1844,10 +1844,10 @@ func TestSecret_TokenTTL(t *testing.T) {
 			t.Fatal(err)
 		}
 		if _, err := client.Logical().Write("auth/userpass/users/test", map[string]interface{}{
-			"password":         "test",
-			"policies":         "default",
-			"ttl":              ttl.String(),
-			"explicit_max_ttl": ttl.String(),
+			"password":               "test",
+			"token_policies":         "default",
+			"token_ttl":              ttl.String(),
+			"token_explicit_max_ttl": ttl.String(),
 		}); err != nil {
 			t.Fatal(err)
 		}
