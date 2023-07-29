@@ -212,9 +212,7 @@ func TestLogical_CreateToken(t *testing.T) {
 	TestServerAuth(t, addr, token)
 
 	// WRITE
-	resp := testHttpPut(t, token, addr+"/v1/auth/token/create", map[string]interface{}{
-		"data": "bar",
-	})
+	resp := testHttpPut(t, token, addr+"/v1/auth/token/create", map[string]interface{}{})
 
 	var actual map[string]interface{}
 	expected := map[string]interface{}{

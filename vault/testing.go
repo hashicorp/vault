@@ -426,7 +426,6 @@ func testCoreAddSecretMount(t testing.T, core *Core, token string) {
 		Path:        "sys/mounts/secret",
 		Data: map[string]interface{}{
 			"type":        "kv",
-			"path":        "secret/",
 			"description": "key/value secret storage",
 			"options": map[string]string{
 				"version": "1",

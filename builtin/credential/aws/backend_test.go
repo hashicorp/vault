@@ -20,6 +20,7 @@ import (
 	logicaltest "github.com/hashicorp/vault/helper/testhelpers/logical"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/policyutil"
+	"github.com/hashicorp/vault/sdk/helper/testhelpers"
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
@@ -611,26 +612,22 @@ func TestBackend_ConfigClient(t *testing.T) {
 }
 
 func TestBackend_pathConfigCertificate(t *testing.T) {
+	ctx := context.Background()
+	rf := testhelpers.NewRequestFactory()
 	config := logical.TestBackendConfig()
-	storage := &logical.InmemStorage{}
-	config.StorageView = storage
+	config.StorageView = rf.Storage
 
 	b, err := Backend(config)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	err = b.Setup(context.Background(), config)
+	err = b.Setup(ctx, config)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	certReq := &logical.Request{
-		Operation: logical.CreateOperation,
-		Storage:   storage,
-		Path:      "config/certificate/cert1",
-	}
-	checkFound, exists, err := b.HandleExistenceCheck(context.Background(), certReq)
+	checkFound, exists, err := b.HandleExistenceCheck(ctx, rf.Create("config/certificate/cert1", nil))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -665,16 +662,14 @@ MlpCclZOR3JOOU4yZjZST2swazlLCi0tLS0tRU5EIENFUlRJRklDQVRFLS0tLS0K
 `,
 	}
 
-	certReq.Data = data
 	// test create operation
-	resp, err := b.HandleRequest(context.Background(), certReq)
+	resp, err := b.HandleRequest(ctx, rf.Create("config/certificate/cert1", data))
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("resp: %#v, err: %v", resp, err)
 	}
 
-	certReq.Data = nil
 	// test existence check
-	checkFound, exists, err = b.HandleExistenceCheck(context.Background(), certReq)
+	checkFound, exists, err = b.HandleExistenceCheck(ctx, rf.Create("config/certificate/cert1", nil))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -685,9 +680,8 @@ MlpCclZOR3JOOU4yZjZST2swazlLCi0tLS0tRU5EIENFUlRJRklDQVRFLS0tLS0K
 		t.Fatal("existence check should have returned 'true' for 'config/certificate/cert1'")
 	}
 
-	certReq.Operation = logical.ReadOperation
 	// test read operation
-	resp, err = b.HandleRequest(context.Background(), certReq)
+	resp, err = b.HandleRequest(ctx, rf.Read("config/certificate/cert1"))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -714,19 +708,14 @@ vSeDCOUMYQR7R9LINYwouHIziqQYMAkGByqGSM44BAMDLwAwLAIUWXBlk40xTwSw
 		t.Fatalf("bad: expected:%s\n got:%s\n", expectedCert, resp.Data["aws_public_cert"].(string))
 	}
 
-	certReq.Operation = logical.CreateOperation
-	certReq.Path = "config/certificate/cert2"
-	certReq.Data = data
 	// create another entry to test the list operation
-	_, err = b.HandleRequest(context.Background(), certReq)
+	_, err = b.HandleRequest(ctx, rf.Create("config/certificate/cert2", data))
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	certReq.Operation = logical.ListOperation
-	certReq.Path = "config/certificates"
 	// test list operation
-	resp, err = b.HandleRequest(context.Background(), certReq)
+	resp, err = b.HandleRequest(ctx, rf.List("config/certificates"))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -738,23 +727,18 @@ vSeDCOUMYQR7R9LINYwouHIziqQYMAkGByqGSM44BAMDLwAwLAIUWXBlk40xTwSw
 		t.Fatalf("invalid keys listed: %#v\n", keys)
 	}
 
-	certReq.Operation = logical.DeleteOperation
-	certReq.Path = "config/certificate/cert1"
-	_, err = b.HandleRequest(context.Background(), certReq)
+	_, err = b.HandleRequest(ctx, rf.Delete("config/certificate/cert1"))
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	certReq.Path = "config/certificate/cert2"
-	_, err = b.HandleRequest(context.Background(), certReq)
+	_, err = b.HandleRequest(ctx, rf.Delete("config/certificate/cert2"))
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	certReq.Operation = logical.ListOperation
-	certReq.Path = "config/certificates"
 	// test list operation
-	resp, err = b.HandleRequest(context.Background(), certReq)
+	resp, err = b.HandleRequest(ctx, rf.List("config/certificates"))
 	if err != nil {
 		t.Fatal(err)
 	}

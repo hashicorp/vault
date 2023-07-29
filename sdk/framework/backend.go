@@ -312,7 +312,7 @@ func (b *Backend) HandleRequest(ctx context.Context, req *logical.Request) (*log
 		return resp, err
 	}
 
-	if len(ignored) != 0 || len(replaced) != 0 {
+	if (len(ignored) != 0 || len(replaced) != 0) && req.Operation != logical.ResolveRoleOperation {
 		if resp == nil {
 			// We are in the position of wanting to return a warning, but currently having a nil response - which can
 			// mean different things in different circumstances

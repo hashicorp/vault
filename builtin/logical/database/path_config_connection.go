@@ -163,6 +163,8 @@ func pathConfigurePluginConnection(b *databaseBackend) *framework.Path {
 			},
 		},
 
+		TakesArbitraryInput: true,
+
 		ExistenceCheck: b.connectionExistenceCheck(),
 
 		Operations: map[logical.Operation]framework.OperationHandler{

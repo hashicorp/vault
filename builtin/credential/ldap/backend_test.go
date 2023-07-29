@@ -13,7 +13,7 @@ import (
 
 	goldap "github.com/go-ldap/ldap/v3"
 	"github.com/go-test/deep"
-	hclog "github.com/hashicorp/go-hclog"
+	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-secure-stdlib/strutil"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/helper/testhelpers/ldap"
@@ -319,13 +319,13 @@ func TestLdapAuthBackend_UserPolicies(t *testing.T) {
 		Operation: logical.UpdateOperation,
 		Path:      "config",
 		Data: map[string]interface{}{
-			"url":          cfg.Url,
-			"userattr":     cfg.UserAttr,
-			"userdn":       cfg.UserDN,
-			"groupdn":      cfg.GroupDN,
-			"groupattr":    cfg.GroupAttr,
-			"binddn":       cfg.BindDN,
-			"bindpassword": cfg.BindPassword,
+			"url":       cfg.Url,
+			"userattr":  cfg.UserAttr,
+			"userdn":    cfg.UserDN,
+			"groupdn":   cfg.GroupDN,
+			"groupattr": cfg.GroupAttr,
+			"binddn":    cfg.BindDN,
+			"bindpass":  cfg.BindPassword,
 		},
 		Storage: storage,
 	}

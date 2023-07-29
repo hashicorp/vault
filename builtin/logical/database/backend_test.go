@@ -27,7 +27,6 @@ import (
 	v4 "github.com/hashicorp/vault/sdk/database/dbplugin"
 	v5 "github.com/hashicorp/vault/sdk/database/dbplugin/v5"
 	"github.com/hashicorp/vault/sdk/database/helper/dbutil"
-	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/pluginutil"
 	"github.com/hashicorp/vault/sdk/logical"
@@ -207,7 +206,6 @@ func TestBackend_config_connection(t *testing.T) {
 			"plugin_name":       "postgresql-database-plugin",
 			"verify_connection": false,
 			"allowed_roles":     []string{"*"},
-			"name":              "plugin-test",
 		}
 
 		configReq := &logical.Request{
@@ -217,12 +215,12 @@ func TestBackend_config_connection(t *testing.T) {
 			Data:      configData,
 		}
 
-		exists, err := b.connectionExistenceCheck()(context.Background(), configReq, &framework.FieldData{
-			Raw:    configData,
-			Schema: pathConfigurePluginConnection(b).Fields,
-		})
+		checkFound, exists, err := b.HandleExistenceCheck(namespace.RootContext(nil), configReq)
 		if err != nil {
 			t.Fatal(err)
+		}
+		if !checkFound {
+			t.Fatal("expected existence check to be found")
 		}
 		if exists {
 			t.Fatal("expected not exists")
@@ -250,7 +248,6 @@ func TestBackend_config_connection(t *testing.T) {
 			t.Fatalf("err:%s resp:%#v\n", err, resp)
 		}
 
-		delete(resp.Data["connection_details"].(map[string]interface{}), "name")
 		if !reflect.DeepEqual(expected, resp.Data) {
 			t.Fatalf("bad: expected:%#v\nactual:%#v\n", expected, resp.Data)
 		}
@@ -261,7 +258,6 @@ func TestBackend_config_connection(t *testing.T) {
 		configData := map[string]interface{}{
 			"connection_url":    "sample_convection_url",
 			"verify_connection": false,
-			"name":              "plugin-test",
 		}
 
 		configReq := &logical.Request{
@@ -271,12 +267,12 @@ func TestBackend_config_connection(t *testing.T) {
 			Data:      configData,
 		}
 
-		exists, err := b.connectionExistenceCheck()(context.Background(), configReq, &framework.FieldData{
-			Raw:    configData,
-			Schema: pathConfigurePluginConnection(b).Fields,
-		})
+		checkFound, exists, err := b.HandleExistenceCheck(namespace.RootContext(nil), configReq)
 		if err != nil {
 			t.Fatal(err)
+		}
+		if !checkFound {
+			t.Fatal("expected existence check to be found")
 		}
 		if !exists {
 			t.Fatal("expected exists")
@@ -304,7 +300,6 @@ func TestBackend_config_connection(t *testing.T) {
 			t.Fatalf("err:%s resp:%#v\n", err, resp)
 		}
 
-		delete(resp.Data["connection_details"].(map[string]interface{}), "name")
 		if !reflect.DeepEqual(expected, resp.Data) {
 			t.Fatalf("bad: expected:%#v\nactual:%#v\n", expected, resp.Data)
 		}
@@ -315,7 +310,6 @@ func TestBackend_config_connection(t *testing.T) {
 		configData := map[string]interface{}{
 			"verify_connection": false,
 			"allowed_roles":     []string{"flu", "barre"},
-			"name":              "plugin-test",
 		}
 
 		configReq := &logical.Request{
@@ -347,7 +341,6 @@ func TestBackend_config_connection(t *testing.T) {
 			t.Fatalf("err:%s resp:%#v\n", err, resp)
 		}
 
-		delete(resp.Data["connection_details"].(map[string]interface{}), "name")
 		if !reflect.DeepEqual(expected, resp.Data) {
 			t.Fatalf("bad: expected:%#v\nactual:%#v\n", expected, resp.Data)
 		}

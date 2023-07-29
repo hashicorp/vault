@@ -28,8 +28,8 @@ import (
 	"time"
 
 	"github.com/go-test/deep"
-	cleanhttp "github.com/hashicorp/go-cleanhttp"
-	rootcerts "github.com/hashicorp/go-rootcerts"
+	"github.com/hashicorp/go-cleanhttp"
+	"github.com/hashicorp/go-rootcerts"
 	"github.com/hashicorp/go-sockaddr"
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/builtin/logical/pki"
@@ -1840,9 +1840,6 @@ func testAccStepLoginWithMetadata(t *testing.T, connState tls.ConnectionState, c
 
 			fn := logicaltest.TestCheckAuth([]string{"default", "foo"})
 			return fn(resp)
-		},
-		Data: map[string]interface{}{
-			"metadata": metadata,
 		},
 	}
 }

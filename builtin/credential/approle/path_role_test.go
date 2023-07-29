@@ -1092,9 +1092,11 @@ func TestAppRole_RoleSecretIDWithValidFields(t *testing.T) {
 				Operation: logical.UpdateOperation,
 				Path:      "role/role1/secret-id",
 				Storage:   storage,
+				Data: map[string]interface{}{
+					"ttl":      tc.payload["ttl"],
+					"num_uses": tc.payload["num_uses"],
+				},
 			}
-			roleCustomSecretIDData := tc.payload
-			roleSecretIDReq.Data = roleCustomSecretIDData
 
 			resp = b.requestNoErr(t, roleSecretIDReq)
 
@@ -1109,7 +1111,7 @@ func TestAppRole_RoleSecretIDWithValidFields(t *testing.T) {
 			}
 
 			roleSecretIDReq.Path = "role/role1/custom-secret-id"
-			roleSecretIDReq.Data = roleCustomSecretIDData
+			roleSecretIDReq.Data["secret_id"] = tc.payload["secret_id"]
 			resp = b.requestNoErr(t, roleSecretIDReq)
 
 			if resp.Data["secret_id"] != tc.payload["secret_id"] {
@@ -1234,8 +1236,11 @@ func TestAppRole_ErrorsRoleSecretIDWithInvalidFields(t *testing.T) {
 					Operation: logical.UpdateOperation,
 					Path:      fmt.Sprintf("role/role%d/secret-id", i),
 					Storage:   storage,
+					Data: map[string]interface{}{
+						"ttl":      tc.payload["ttl"],
+						"num_uses": tc.payload["num_uses"],
+					},
 				}
-				roleSecretIDReq.Data = tc.payload
 				resp, err = b.HandleRequest(context.Background(), roleSecretIDReq)
 				if err != nil || (resp != nil && !resp.IsError()) {
 					t.Fatalf("err:%v resp:%#v", err, resp)
@@ -1245,6 +1250,7 @@ func TestAppRole_ErrorsRoleSecretIDWithInvalidFields(t *testing.T) {
 				}
 
 				roleSecretIDReq.Path = fmt.Sprintf("role/role%d/custom-secret-id", i)
+				roleSecretIDReq.Data["secret_id"] = tc.payload["secret_id"]
 				resp, err = b.HandleRequest(context.Background(), roleSecretIDReq)
 				if err != nil || (resp != nil && !resp.IsError()) {
 					t.Fatalf("err:%v resp:%#v", err, resp)
@@ -1281,6 +1287,7 @@ func TestAppRole_RoleCRUD(t *testing.T) {
 	resp = b.requestNoErr(t, roleReq)
 
 	roleReq.Operation = logical.ReadOperation
+	roleReq.Data = nil
 	resp = b.requestNoErr(t, roleReq)
 
 	expected := map[string]interface{}{
