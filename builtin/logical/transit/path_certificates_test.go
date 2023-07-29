@@ -242,4 +242,19 @@ func testTransit_ImportCertChain(t *testing.T, apiClient *api.Client, keyType st
 	})
 	require.NoError(t, err)
 	require.NotNil(t, resp)
+
+	resp, err = apiClient.Logical().Read(fmt.Sprintf("transit/keys/%s", keyName))
+	require.NotNil(t, resp)
+	keys, ok := resp.Data["keys"].(map[string]interface{})
+	if !ok {
+		t.Fatalf("could not cast Keys value")
+	}
+	keyData, ok := keys["1"].(map[string]interface{})
+	if !ok {
+		t.Fatalf("could not cast key version 1 from keys")
+	}
+	_, present := keyData["certificate_chain"]
+	if !present {
+		t.Fatalf("certificate chain not present in key version 1")
+	}
 }
