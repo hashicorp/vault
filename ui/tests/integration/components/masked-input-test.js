@@ -104,7 +104,7 @@ module('Integration | Component | masked input', function (hooks) {
     assert.strictEqual(unMaskedValue, this.value);
   });
 
-  test('it renders correctly with empty string provided as value', async function (assert) {
+  test('it renders a minus icon when an empty string is provided as a value', async function (assert) {
     await render(hbs`
       <MaskedInput
         @name="key"
