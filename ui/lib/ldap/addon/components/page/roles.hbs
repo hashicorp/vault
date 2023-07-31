@@ -69,7 +69,7 @@
             <li class="action">
               <LinkTo
                 class="has-text-black has-text-weight-semibold"
-                data-test-edit
+                data-test-get-creds
                 @route="roles.role.credentials"
                 @models={{array role.type role.name}}
                 @disabled={{not role.canReadCreds}}
@@ -80,7 +80,7 @@
             {{#if role.canRotateStaticCreds}}
               <li class="action">
                 <Menu.Message
-                  data-test-delete
+                  data-test-rotate-creds
                   @id={{concat "rotate-" role.id}}
                   @triggerText="Rotate credentials"
                   @title="Are you sure?"
