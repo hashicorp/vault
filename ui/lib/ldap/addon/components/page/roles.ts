@@ -8,14 +8,12 @@ import { tracked } from '@glimmer/tracking';
 import { inject as service } from '@ember/service';
 import { action } from '@ember/object';
 import { getOwner } from '@ember/application';
-import { debounce } from '@ember/runloop';
 import errorMessage from 'vault/utils/error-message';
 
 import type LdapRoleModel from 'vault/models/ldap/role';
 import type SecretEngineModel from 'vault/models/secret-engine';
 import type FlashMessageService from 'vault/services/flash-messages';
 import type { Breadcrumb, EngineOwner } from 'vault/vault/app-types';
-import type { HTMLElementEvent } from 'vault/forms';
 
 interface Args {
   roles: Array<LdapRoleModel>;
@@ -40,13 +38,6 @@ export default class LdapRolesPageComponent extends Component<Args> {
     return this.filterValue
       ? roles.filter((role) => role.name.toLowerCase().includes(this.filterValue.toLowerCase()))
       : roles;
-  }
-
-  @action onFilterInput(event: HTMLElementEvent<HTMLInputElement>) {
-    const setFilter = () => {
-      this.filterValue = event.target.value;
-    };
-    debounce(this, setFilter, 200);
   }
 
   @action

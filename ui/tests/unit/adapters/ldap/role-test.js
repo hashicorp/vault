@@ -54,11 +54,11 @@ module('Unit | Adapter | ldap/role', function (hooks) {
     await this.store.query(
       'ldap/role',
       { backend: 'ldap-test' },
-      { adapterOptions: { partialErrorInfo: true } }
+      { adapterOptions: { showPartialError: true } }
     );
 
     assert.true(
-      flashSpy.calledOnceWith('Error fetching roles from /v1/ldap-test/static-role. permission denied'),
+      flashSpy.calledOnceWith('Error fetching roles from /v1/ldap-test/static-role: permission denied'),
       'Partial error info only displays when adapter option is passed'
     );
   });
@@ -80,8 +80,8 @@ module('Unit | Adapter | ldap/role', function (hooks) {
       assert.deepEqual(
         error,
         {
-          message: 'Error fetching roles from /v1/ldap-test/static-role and /v1/ldap-test/role',
-          errors: ['permission denied', 'server error'],
+          message: 'Error fetching roles:',
+          errors: ['/v1/ldap-test/static-role: permission denied', '/v1/ldap-test/role: server error'],
         },
         'Error is thrown with correct payload from query'
       );

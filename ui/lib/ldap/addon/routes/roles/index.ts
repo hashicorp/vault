@@ -41,7 +41,7 @@ export default class LdapConfigurationRoute extends Route {
       roles: this.store.query(
         'ldap/role',
         { backend: backendModel.id },
-        { adapterOptions: { partialErrorInfo: true } }
+        { adapterOptions: { showPartialError: true } }
       ),
     });
   }
