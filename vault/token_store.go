@@ -1687,8 +1687,14 @@ func (ts *TokenStore) lookupInternal(ctx context.Context, id string, salted, tai
 	// If we are still restoring the expiration manager, we want to ensure the
 	// token is not expired
 	if ts.expiration == nil {
-		return nil, errors.New("expiration manager is nil on tokenstore")
+		switch ts.core.IsDRSecondary() {
+		case true: // Bail if on DR secondary as expiration manager is nil
+			return nil, nil
+		default:
+			return nil, errors.New("expiration manager is nil on tokenstore")
+		}
 	}
+
 	le, err := ts.expiration.FetchLeaseTimesByToken(ctx, entry)
 	if err != nil {
 		return nil, fmt.Errorf("failed to fetch lease times: %w", err)
