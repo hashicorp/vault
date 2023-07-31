@@ -1,12 +1,7 @@
 <TabPageHeader @model={{@backendModel}} @breadcrumbs={{@breadcrumbs}}>
   <:toolbarFilters>
     {{#if (and (not @promptConfig) @roles)}}
-      <div class="field">
-        <p class="control has-icons-left">
-          <Input class="filter input" placeholder="Filter roles" data-test-roles-filter {{on "input" this.onFilterInput}} />
-          <Icon @name="search" class="search-icon has-text-grey-light" />
-        </p>
-      </div>
+      <FilterInput @placeholder="Filter roles" @onInput={{fn (mut this.filterValue)}} />
     {{/if}}
   </:toolbarFilters>
   <:toolbarActions>

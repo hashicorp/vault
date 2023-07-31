@@ -75,7 +75,7 @@ module('Integration | Component | ldap | Page::Roles', function (hooks) {
       .dom('[data-test-toolbar-action="role"] svg')
       .hasClass('flight-icon-plus', 'Toolbar action has correct icon');
     assert
-      .dom('[data-test-roles-filter]')
+      .dom('[data-test-filter-input]')
       .doesNotExist('Roles filter input is hidden when roles have not been created');
     assert.dom('[data-test-empty-state-title]').hasText('No roles created yet', 'Title renders');
     assert
@@ -107,15 +107,15 @@ module('Integration | Component | ldap | Page::Roles', function (hooks) {
   test('it should filter roles', async function (assert) {
     await this.renderComponent();
 
-    await fillIn('[data-test-roles-filter]', 'foo');
+    await fillIn('[data-test-filter-input]', 'foo');
     assert
       .dom('[data-test-empty-state-title]')
       .hasText('There are no roles matching "foo"', 'Filter message renders');
 
-    await fillIn('[data-test-roles-filter]', 'static');
+    await fillIn('[data-test-filter-input]', 'static');
     assert.dom('[data-test-list-item-content]').exists({ count: 1 }, 'List is filtered with correct results');
 
-    await fillIn('[data-test-roles-filter]', '');
+    await fillIn('[data-test-filter-input]', '');
     assert
       .dom('[data-test-list-item-content]')
       .exists({ count: 2 }, 'All roles are displayed when filter is cleared');
