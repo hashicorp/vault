@@ -34,12 +34,12 @@ export default class MfaLoginEnforcementSerializer extends ApplicationSerializer
     }
     return payload;
   }
-  serialize(snapshot) {
+  serialize() {
     const json = super.serialize(...arguments);
     // empty arrays are being removed from serialized json
     // ensure that they are sent to the server, otherwise removing items will not be persisted
-    json.auth_method_accessors = snapshot.record.auth_method_accessors || [];
-    json.auth_method_types = snapshot.record.auth_method_types || [];
+    json.auth_method_accessors = json.auth_method_accessors || [];
+    json.auth_method_types = json.auth_method_types || [];
     // TODO: create array transform which serializes an empty array if empty
     return this.transformHasManyKeys(json, 'server');
   }

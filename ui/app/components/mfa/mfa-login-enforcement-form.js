@@ -101,6 +101,12 @@ export default class MfaLoginEnforcementForm extends Component {
     return this.args.modelErrors || this.modelErrors;
   }
 
+  updateModelForKey(key) {
+    const newValue = this.targets.filter((t) => t.key === key).map((t) => t.value);
+    // Set the model value directly instead of using Array methods (like .addObject)
+    this.args.model[key] = newValue;
+  }
+
   @task
   *save() {
     this.modelErrors = {};
@@ -140,21 +146,22 @@ export default class MfaLoginEnforcementForm extends Component {
       this.selectedTargetValue = selected;
     }
   }
+
   @action
   addTarget() {
     const { label, key } = this.selectedTarget;
     const value = this.selectedTargetValue;
     this.targets.addObject({ label, value, key });
-    // add target to appropriate model property
-    this.args.model[key].addObject(value);
+    // recalculate value for appropriate model property
+    this.updateModelForKey(key);
     this.selectedTargetValue = null;
     this.resetTargetState();
   }
   @action
   removeTarget(target) {
     this.targets.removeObject(target);
-    // remove target from appropriate model property
-    this.args.model[target.key].removeObject(target.value);
+    // recalculate value for appropriate model property
+    this.updateModelForKey(target.key);
   }
   @action
   cancel() {
