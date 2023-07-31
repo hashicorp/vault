@@ -30,7 +30,7 @@ export default class LdapRoleAdapter extends NamedPathAdapter {
   }
 
   async query(store, type, query, recordArray, options) {
-    const { partialErrorInfo } = options.adapterOptions || {};
+    const { showPartialError } = options.adapterOptions || {};
     const { backend } = query;
     const roles = [];
     const errors = [];
@@ -50,16 +50,20 @@ export default class LdapRoleAdapter extends NamedPathAdapter {
     }
 
     if (errors.length) {
-      const message = `Error fetching roles from ${errors.map((e) => e.path).join(' and ')}`;
-      const errorMessages = errors.map((e) => e.errors).flat();
+      const errorMessages = errors.reduce((errors, e) => {
+        e.errors.forEach((error) => {
+          errors.push(`${e.path}: ${error}`);
+        });
+        return errors;
+      }, []);
       if (errors.length === 2) {
         // throw error as normal if both requests fail
         // ignore status code and concat errors to be displayed in Page::Error component with generic message
-        throw { message, errors: errorMessages };
-      } else if (partialErrorInfo) {
+        throw { message: 'Error fetching roles:', errors: errorMessages };
+      } else if (showPartialError) {
         // if only one request fails, surface the error to the user an info level flash message
         // this may help for permissions errors where a users policy may be incorrect
-        this.flashMessages.info(`${message}. ${errorMessages.join(', ')}`);
+        this.flashMessages.info(`Error fetching roles from ${errorMessages.join(', ')}`);
       }
     }
 

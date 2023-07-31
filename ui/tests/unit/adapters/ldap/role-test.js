@@ -54,7 +54,7 @@ module('Unit | Adapter | ldap/role', function (hooks) {
     await this.store.query(
       'ldap/role',
       { backend: 'ldap-test' },
-      { adapterOptions: { partialErrorInfo: true } }
+      { adapterOptions: { showPartialError: true } }
     );
 
     assert.true(
