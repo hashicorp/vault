@@ -25,7 +25,7 @@ export default class LdapConfigModel extends Model {
   @attr('string', {
     label: 'Administrator Distinguished Name',
     subText:
-      'Distinguished name of the adminstrator to bind (Bind DN) when performing user and group search. Example: cn=vault,ou=Users,dc=example,dc=com.',
+      'Distinguished name of the administrator to bind (Bind DN) when performing user and group search. Example: cn=vault,ou=Users,dc=example,dc=com.',
   })
   binddn;
 

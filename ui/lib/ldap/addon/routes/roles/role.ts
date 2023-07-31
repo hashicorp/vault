@@ -14,7 +14,7 @@ interface LdapRoleRouteParams {
   type: string;
 }
 
-export default class LdapRoleEditRoute extends Route {
+export default class LdapRoleRoute extends Route {
   @service declare readonly store: Store;
   @service declare readonly secretMountPath: SecretMountPath;
 

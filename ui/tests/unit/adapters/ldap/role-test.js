@@ -6,6 +6,8 @@
 import { module, test } from 'qunit';
 import { setupTest } from 'ember-qunit';
 import { setupMirage } from 'ember-cli-mirage/test-support';
+import { Response } from 'miragejs';
+import sinon from 'sinon';
 
 module('Unit | Adapter | ldap/role', function (hooks) {
   setupTest(hooks);
@@ -18,27 +20,72 @@ module('Unit | Adapter | ldap/role', function (hooks) {
   });
 
   test('it should make request to correct endpoints when listing records', async function (assert) {
-    assert.expect(7);
+    assert.expect(6);
 
-    this.server.get('/ldap-test/:path', (schema, req) => {
+    const assertRequest = (schema, req) => {
       assert.ok(req.queryParams.list, 'list query param sent when listing roles');
-      assert.strictEqual(
-        req.params.path,
-        this.path,
-        'GET request made to correct endpoint when listing roles'
-      );
-      return { data: { keys: ['test-role'] } };
-    });
+      const name = req.params.path === 'static-role' ? 'static-test' : 'dynamic-test';
+      return { data: { keys: [name] } };
+    };
 
-    for (const type of ['dynamic', 'static']) {
-      this.models = await this.store.query('ldap/role', { backend: 'ldap-test', type });
-      this.path = 'static-role';
-    }
+    this.server.get('/ldap-test/static-role', assertRequest);
+    this.server.get('/ldap-test/role', assertRequest);
+
+    this.models = await this.store.query('ldap/role', { backend: 'ldap-test' });
 
     const model = this.models.firstObject;
+    assert.strictEqual(this.models.length, 2, 'Returns responses from both endpoints');
     assert.strictEqual(model.backend, 'ldap-test', 'Backend value is set on records returned from query');
-    assert.strictEqual(model.type, 'static', 'Type value is set on records returned from query');
-    assert.strictEqual(model.name, 'test-role', 'Name value is set on records returned from query');
+    // sorted alphabetically by name so dynamic should be first
+    assert.strictEqual(model.type, 'dynamic', 'Type value is set on records returned from query');
+    assert.strictEqual(model.name, 'dynamic-test', 'Name value is set on records returned from query');
+  });
+
+  test('it should conditionally trigger info level flash message for single endpoint error from query', async function (assert) {
+    const flashMessages = this.owner.lookup('service:flashMessages');
+    const flashSpy = sinon.spy(flashMessages, 'info');
+
+    this.server.get('/ldap-test/static-role', () => {
+      return new Response(403, {}, { errors: ['permission denied'] });
+    });
+    this.server.get('/ldap-test/role', () => ({ data: { keys: ['dynamic-test'] } }));
+
+    await this.store.query('ldap/role', { backend: 'ldap-test' });
+    await this.store.query(
+      'ldap/role',
+      { backend: 'ldap-test' },
+      { adapterOptions: { showPartialError: true } }
+    );
+
+    assert.true(
+      flashSpy.calledOnceWith('Error fetching roles from /v1/ldap-test/static-role: permission denied'),
+      'Partial error info only displays when adapter option is passed'
+    );
+  });
+
+  test('it should throw error for query when requests to both endpoints fail', async function (assert) {
+    assert.expect(1);
+
+    this.server.get('/ldap-test/:path', (schema, req) => {
+      const errors = {
+        'static-role': ['permission denied'],
+        role: ['server error'],
+      }[req.params.path];
+      return new Response(req.params.path === 'static-role' ? 403 : 500, {}, { errors });
+    });
+
+    try {
+      await this.store.query('ldap/role', { backend: 'ldap-test' });
+    } catch (error) {
+      assert.deepEqual(
+        error,
+        {
+          message: 'Error fetching roles:',
+          errors: ['/v1/ldap-test/static-role: permission denied', '/v1/ldap-test/role: server error'],
+        },
+        'Error is thrown with correct payload from query'
+      );
+    }
   });
 
   test('it should make request to correct endpoints when querying record', async function (assert) {
