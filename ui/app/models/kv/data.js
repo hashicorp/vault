@@ -38,6 +38,13 @@ const validations = {
       level: 'warn',
     },
   ],
+  secretData: [
+    {
+      validator: (model) =>
+        model.secretData !== undefined && typeof model.secretData !== 'object' ? false : true,
+      message: 'Vault expects data to be formatted as an JSON object.',
+    },
+  ],
 };
 @withModelValidations(validations)
 @withFormFields()

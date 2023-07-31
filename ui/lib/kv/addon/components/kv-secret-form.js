@@ -29,6 +29,7 @@ export default class KvSecretForm extends Component {
   @tracked showJsonView = false;
   @tracked errorMessage;
   @tracked modelValidations;
+  @tracked lintingErrors;
   @tracked invalidFormAlert;
 
   get emptyJson() {
@@ -44,20 +45,20 @@ export default class KvSecretForm extends Component {
   @action
   handleJson(value, codemirror) {
     codemirror.performLint();
-    const lintingErrors = codemirror.state.lint.marked.length > 0;
-    if (!lintingErrors) {
+    this.lintingErrors = codemirror.state.lint.marked.length > 0;
+    if (!this.lintingErrors) {
       this.args.secret.secretData = JSON.parse(value);
     }
   }
 
   @action
-  keyUpValidations() {
-    // check warnings on key up
+  pathValidations() {
+    // check path attribute warnings on key up
     const { state } = this.args.secret.validate();
-    for (const attr in state) {
-      state[attr].errors = [];
+    if (state?.path?.warnings) {
+      // only set model validations if warnings exist
+      this.modelValidations = state;
     }
-    this.modelValidations = state;
   }
 
   @task
