@@ -177,3 +177,8 @@ type PluginVersioner interface {
 }
 
 var EmptyPluginVersion = PluginVersion{""}
+
+// CredRotater is an optional interface to rotate credentials
+type CredRotater interface {
+	RotateCreds(context.Context, Storage)
+}

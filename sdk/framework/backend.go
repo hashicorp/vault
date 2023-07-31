@@ -459,6 +459,11 @@ func (b *Backend) PluginVersion() logical.PluginVersion {
 	}
 }
 
+// RotateCreds is used by Rotation Manager to rotate credentials
+func (b *Backend) RotateCreds(ctx context.Context, s logical.Storage) {
+	b.RotateCreds(ctx, s)
+}
+
 // Route looks up the path that would be used for a given path string.
 func (b *Backend) Route(path string) *Path {
 	result, _ := b.route(path)

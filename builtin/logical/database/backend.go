@@ -130,6 +130,11 @@ func Backend(conf *logical.BackendConfig) *databaseBackend {
 	return &b
 }
 
+// RotateCreds implements the logical.CredRotater interface
+func (b *databaseBackend) RotateCreds(ctx context.Context, s logical.Storage) {
+	b.logger.Debug(">>> RotateCreds CANARY <<<")
+}
+
 func (b *databaseBackend) collectPluginInstanceGaugeValues(context.Context) ([]metricsutil.GaugeLabelValues, error) {
 	// copy the map so we can release the lock
 	connectionsCopy := b.connections.Values()
