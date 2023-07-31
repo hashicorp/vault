@@ -1,3 +1,7 @@
+## Previous versions
+[v1.9 and earlier](CHANGELOG-pre-v1.10.md)
+[v0](CHANGELOG-v0.md)
+
 ## 1.14.1
 ### July 25, 2023
 
