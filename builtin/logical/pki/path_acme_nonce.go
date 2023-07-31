@@ -35,8 +35,8 @@ func patternAcmeNonce(b *backend, pattern string) *framework.Path {
 			},
 		},
 
-		HelpSynopsis:    pathAcmeDirectoryHelpSync,
-		HelpDescription: pathAcmeDirectoryHelpDesc,
+		HelpSynopsis:    pathAcmeHelpSync,
+		HelpDescription: pathAcmeHelpDesc,
 	}
 }
 

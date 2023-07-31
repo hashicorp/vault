@@ -9,7 +9,9 @@ INTEG_TEST_TIMEOUT=120m
 VETARGS?=-asmdecl -atomic -bool -buildtags -copylocks -methods -nilfunc -printf -rangeloops -shift -structtags -unsafeptr
 EXTERNAL_TOOLS_CI=\
 	golang.org/x/tools/cmd/goimports \
-	github.com/golangci/revgrep/cmd/revgrep
+	github.com/golangci/revgrep/cmd/revgrep \
+	mvdan.cc/gofumpt \
+	honnef.co/go/tools/cmd/staticcheck
 EXTERNAL_TOOLS=\
 	github.com/client9/misspell/cmd/misspell
 GOFMT_FILES?=$$(find . -name '*.go' | grep -v pb.go | grep -v vendor)
@@ -30,16 +32,16 @@ default: dev
 bin: prep
 	@CGO_ENABLED=$(CGO_ENABLED) BUILD_TAGS='$(BUILD_TAGS) ui' sh -c "'$(CURDIR)/scripts/build.sh'"
 
-testonly: 
-	$(eval BUILD_TAGS += testonly)
-    
 # dev creates binaries for testing Vault locally. These are put
 # into ./bin/ as well as $GOPATH/bin
-dev: prep testonly
+dev: BUILD_TAGS+=testonly
+dev: prep
 	@CGO_ENABLED=$(CGO_ENABLED) BUILD_TAGS='$(BUILD_TAGS)' VAULT_DEV_BUILD=1 sh -c "'$(CURDIR)/scripts/build.sh'"
-dev-ui: assetcheck prep testonly
+dev-ui: BUILD_TAGS+=testonly
+dev-ui: assetcheck prep
 	@CGO_ENABLED=$(CGO_ENABLED) BUILD_TAGS='$(BUILD_TAGS) ui' VAULT_DEV_BUILD=1 sh -c "'$(CURDIR)/scripts/build.sh'"
-dev-dynamic: prep testonly
+dev-dynamic: BUILD_TAGS+=testonly
+dev-dynamic: prep
 	@CGO_ENABLED=1 BUILD_TAGS='$(BUILD_TAGS)' VAULT_DEV_BUILD=1 sh -c "'$(CURDIR)/scripts/build.sh'"
 
 # *-mem variants will enable memory profiling which will write snapshots of heap usage
@@ -54,14 +56,17 @@ dev-dynamic-mem: dev-dynamic
 
 # Creates a Docker image by adding the compiled linux/amd64 binary found in ./bin.
 # The resulting image is tagged "vault:dev".
-docker-dev: prep testonly
+docker-dev: BUILD_TAGS+=testonly
+docker-dev: prep
 	docker build --build-arg VERSION=$(GO_VERSION_MIN) --build-arg BUILD_TAGS="$(BUILD_TAGS)" -f scripts/docker/Dockerfile -t vault:dev .
 
-docker-dev-ui: prep testonly
+docker-dev-ui: BUILD_TAGS+=testonly
+docker-dev-ui: prep
 	docker build --build-arg VERSION=$(GO_VERSION_MIN) --build-arg BUILD_TAGS="$(BUILD_TAGS)" -f scripts/docker/Dockerfile.ui -t vault:dev-ui .
 
 # test runs the unit tests and vets the code
-test: prep testonly
+test: BUILD_TAGS+=testonly
+test: prep
 	@CGO_ENABLED=$(CGO_ENABLED) \
 	VAULT_ADDR= \
 	VAULT_TOKEN= \
@@ -69,13 +74,15 @@ test: prep testonly
 	VAULT_ACC= \
 	$(GO_CMD) test -tags='$(BUILD_TAGS)' $(TEST) $(TESTARGS) -timeout=$(TEST_TIMEOUT) -parallel=20
 
-testcompile: prep testonly
+testcompile: BUILD_TAGS+=testonly
+testcompile: prep
 	@for pkg in $(TEST) ; do \
 		$(GO_CMD) test -v -c -tags='$(BUILD_TAGS)' $$pkg -parallel=4 ; \
 	done
 
 # testacc runs acceptance tests
-testacc: prep testonly
+testacc: BUILD_TAGS+=testonly
+testacc: prep
 	@if [ "$(TEST)" = "./..." ]; then \
 		echo "ERROR: Set TEST to a specific package"; \
 		exit 1; \
@@ -83,7 +90,8 @@ testacc: prep testonly
 	VAULT_ACC=1 $(GO_CMD) test -tags='$(BUILD_TAGS)' $(TEST) -v $(TESTARGS) -timeout=$(EXTENDED_TEST_TIMEOUT)
 
 # testrace runs the race checker
-testrace: prep testonly
+testrace: BUILD_TAGS+=testonly
+testrace: prep
 	@CGO_ENABLED=1 \
 	VAULT_ADDR= \
 	VAULT_TOKEN= \
@@ -107,31 +115,28 @@ vet:
 
 # deprecations runs staticcheck tool to look for deprecations. Checks entire code to see if it 
 # has deprecated function, variable, constant or field
-deprecations:
-	make bootstrap
-	repositoryName=$(basename `git rev-parse --show-toplevel`)
-	./scripts/deprecations-checker.sh "" repositoryName
+deprecations: bootstrap prep
+	@BUILD_TAGS='$(BUILD_TAGS)' ./scripts/deprecations-checker.sh ""
 
 # ci-deprecations runs staticcheck tool to look for deprecations. All output gets piped to revgrep
 # which will only return an error if changes that is not on main has deprecated function, variable, constant or field
-ci-deprecations:
-	make bootstrap
-	repositoryName=$(basename `git rev-parse --show-toplevel`)
-	./scripts/deprecations-checker.sh main repositoryName
+ci-deprecations: ci-bootstrap prep
+	@BUILD_TAGS='$(BUILD_TAGS)' ./scripts/deprecations-checker.sh main
 
-# tools/godoctests/.bin/godoctests builds the custom analyzer to check for godocs for tests
-tools/godoctests/.bin/godoctests:
-	@cd tools/godoctests && $(GO_CMD) build -o .bin/godoctests .
+tools/codechecker/.bin/codechecker:
+	@cd tools/codechecker && $(GO_CMD) build -o .bin/codechecker .
 
-# vet-godoctests runs godoctests on the test functions. All output gets piped to revgrep
-# which will only return an error if a new function is missing a godoc
-vet-godoctests: bootstrap tools/godoctests/.bin/godoctests
-	@$(GO_CMD) vet -vettool=./tools/godoctests/.bin/godoctests $(TEST) 2>&1 | revgrep
+# vet-codechecker runs our custom linters on the test functions. All output gets
+# piped to revgrep which will only return an error if new piece of code violates
+# the check 
+vet-codechecker: bootstrap tools/codechecker/.bin/codechecker prep
+	@$(GO_CMD) vet -vettool=./tools/codechecker/.bin/codechecker -tags=$(BUILD_TAGS) ./... 2>&1 | revgrep
 
-# ci-vet-godoctests runs godoctests on the test functions. All output gets piped to revgrep
-# which will only return an error if a new function that is not on main is missing a godoc
-ci-vet-godoctests: ci-bootstrap tools/godoctests/.bin/godoctests
-	@$(GO_CMD) vet -vettool=./tools/godoctests/.bin/godoctests $(TEST) 2>&1 | revgrep origin/main
+# vet-codechecker runs our custom linters on the test functions. All output gets
+# piped to revgrep which will only return an error if new piece of code that is 
+# not on main violates the check 
+ci-vet-codechecker: ci-bootstrap tools/codechecker/.bin/codechecker prep
+	@$(GO_CMD) vet -vettool=./tools/codechecker/.bin/codechecker -tags=$(BUILD_TAGS) ./... 2>&1 | revgrep origin/main
 
 # lint runs vet plus a number of other checkers, it is more comprehensive, but louder
 lint:
@@ -147,17 +152,24 @@ ci-lint:
 
 # prep runs `go generate` to build the dynamically generated
 # source files.
-prep: fmtcheck
+#
+# n.b.: prep used to depend on fmtcheck, but since fmtcheck is
+# now run as a pre-commit hook (and there's little value in
+# making every build run the formatter), we've removed that
+# dependency.
+prep:
 	@sh -c "'$(CURDIR)/scripts/goversioncheck.sh' '$(GO_VERSION_MIN)'"
-	@$(GO_CMD) generate $($(GO_CMD) list ./... | grep -v /vendor/)
+	@$(GO_CMD) generate $$($(GO_CMD) list ./... | grep -v /vendor/)
 	@if [ -d .git/hooks ]; then cp .hooks/* .git/hooks/; fi
 
 # bootstrap the build by downloading additional tools needed to build
-ci-bootstrap:
+ci-bootstrap: .ci-bootstrap
+.ci-bootstrap:
 	@for tool in  $(EXTERNAL_TOOLS_CI) ; do \
 		echo "Installing/Updating $$tool" ; \
 		GO111MODULE=off $(GO_CMD) get -u $$tool; \
 	done
+	@touch .ci-bootstrap
 
 # bootstrap the build by downloading additional tools that may be used by devs
 bootstrap: ci-bootstrap
@@ -173,7 +185,7 @@ static-assets-dir:
 
 install-ui-dependencies:
 	@echo "--> Installing JavaScript assets"
-	@cd ui && yarn --ignore-optional
+	@cd ui && yarn
 
 test-ember: install-ui-dependencies
 	@echo "--> Running ember tests"
@@ -231,10 +243,9 @@ proto: bootstrap
 	protoc-go-inject-tag -input=./helper/identity/mfa/types.pb.go
 
 fmtcheck:
-	@true
-#@sh -c "'$(CURDIR)/scripts/gofmtcheck.sh'"
+	@sh -c "'$(CURDIR)/scripts/gofmtcheck.sh'"
 
-fmt:
+fmt: ci-bootstrap
 	find . -name '*.go' | grep -v pb.go | grep -v vendor | xargs go run mvdan.cc/gofumpt -w
 
 semgrep:
@@ -275,7 +286,7 @@ hana-database-plugin:
 mongodb-database-plugin:
 	@CGO_ENABLED=0 $(GO_CMD) build -o bin/mongodb-database-plugin ./plugins/database/mongodb/mongodb-database-plugin
 
-.PHONY: bin default prep test vet bootstrap ci-bootstrap fmt fmtcheck mysql-database-plugin mysql-legacy-database-plugin cassandra-database-plugin influxdb-database-plugin postgresql-database-plugin mssql-database-plugin hana-database-plugin mongodb-database-plugin ember-dist ember-dist-dev static-dist static-dist-dev assetcheck check-vault-in-path packages build build-ci semgrep semgrep-ci vet-godoctests ci-vet-godoctests
+.PHONY: bin default prep test vet bootstrap ci-bootstrap fmt fmtcheck mysql-database-plugin mysql-legacy-database-plugin cassandra-database-plugin influxdb-database-plugin postgresql-database-plugin mssql-database-plugin hana-database-plugin mongodb-database-plugin ember-dist ember-dist-dev static-dist static-dist-dev assetcheck check-vault-in-path packages build build-ci semgrep semgrep-ci vet-codechecker ci-vet-codechecker 
 
 .NOTPARALLEL: ember-dist ember-dist-dev
 

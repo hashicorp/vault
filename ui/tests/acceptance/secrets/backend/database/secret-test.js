@@ -235,10 +235,10 @@ const connectionTests = [
         .dom('[data-test-input="root_rotation_statements"]')
         .exists(`Root rotation statements exists for ${name}`);
       assert
-        .dom('[data-test-alert-banner="alert"]')
+        .dom('[data-test-database-oracle-alert]')
         .hasTextContaining(
           `Warning Please ensure that your Oracle plugin has the default name of vault-plugin-database-oracle. Custom naming is not supported in the UI at this time. If the plugin is already named vault-plugin-database-oracle, disregard this warning.`,
-          'warning banner displays about connections with SSL.'
+          'warning banner displays for oracle plugin name'
         );
     },
   },

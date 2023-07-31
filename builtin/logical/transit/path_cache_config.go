@@ -45,15 +45,6 @@ func (b *backend) pathCacheConfig() *framework.Path {
 					OperationSuffix: "cache",
 				},
 			},
-
-			logical.CreateOperation: &framework.PathOperation{
-				Callback: b.pathCacheConfigWrite,
-				Summary:  "Configures a new cache of the specified size",
-				DisplayAttrs: &framework.DisplayAttributes{
-					OperationVerb:   "configure",
-					OperationSuffix: "cache",
-				},
-			},
 		},
 
 		HelpSynopsis:    pathCacheConfigHelpSyn,
@@ -84,7 +75,11 @@ func (b *backend) pathCacheConfigWrite(ctx context.Context, req *logical.Request
 		return nil, err
 	}
 
-	return nil, nil
+	return &logical.Response{
+		Data: map[string]interface{}{
+			"size": cacheSize,
+		},
+	}, nil
 }
 
 type configCache struct {

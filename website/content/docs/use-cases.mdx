@@ -6,24 +6,24 @@ description: >-
   are much broader than what we cover.
 ---
 
-# Use Cases
+# Use cases
 
 [HashiCorp Vault](/vault/docs/what-is-vault) is an identity-based secrets and encryption management system. Vault validates and authorizes clients (users, machines, apps) before providing them access to secrets or stored sensitive data.
 
 This page describes common Vault use cases and provides related resources that can be used to create Vault configurations and workflows. Please note that not all use cases may be listed.
 
-## General Secret Storage
+## General secret storage
 
-As workloads become more and more ephemeral and short-lived, having long-lived static credentials pose a big security threat vector. What if credentials are accidentally leaked, or an employee leaves with their post it notes that contain the AWS access key, or someone checks their S3 access token to a public GH repo?
+As workloads become more and more ephemeral and short-lived, having long-lived static credentials pose a big security threat vector. What if credentials are accidentally leaked, or an employee leaves with their post it notes that contain the AWS access key, or someone checks their S3 access token into a public GH repo?
 With Vault, you can generate short-lived, just-in-time credentials that are automatically revoked when their time expires. This means users and security teams do not have to worry about manually revoking or changing these credentials.
 
-### Static Secrets
+### Static secrets
 
-Credentials can be long-lived and static, where they don't change or are changed infrequently. Vault can store these secrets bedhind its cryptographic barrier, and clients can request them to use in their applications.
+Credentials can be long-lived and static, where they don't change or are changed infrequently. Vault can store these secrets behind its cryptographic barrier, and clients can request them to use in their applications.
 
 - Refer to the [Versioned Key/Vault Secrets Engine](/vault/tutorials/secrets-management/versioned-kv) tutorial and learn how a versioned key-value secrets engine protects your static secrets.
 
-### Dynamic Secrets
+### Dynamic secrets
 
 The key value with secrets storage is the ability to dynamically generate credentials. These credentials are created when clients need them. Vault can also manage the lifecycle of these credentials, including but not limited to, deleting them after a defined period of time.
 
@@ -31,7 +31,7 @@ The key value with secrets storage is the ability to dynamically generate creden
 
 In addition to database credential management, Vault can manage your Active Directory accounts, SSH keys, PKI certificates and more. Visit the [Secrets Management](/vault/tutorials/secrets-management) tutorial series to learn more about secrets management using Vault.
 
-## Data Encryption
+## Data encryption
 
 Many organizations seek solutions to encrypt/decrypt application data within a cloud or multi-datacenter environment; deploying cryptography and maintaining a complex key management infrastructure can be expensive and challenging to develop. Vault provides [encryption as a service](/vault/docs/secrets/transit) with centralized key management to simplify encrypting data in transit and stored across clouds and datacenters. Vault can encrypt/decrypt data stored elsewhere, essentially allowing applications to encrypt their data while storing it in the primary data store. Vault's security team manages and maintains the responsibility of the data encryption within the Vault environment, allowing developers to focus solely on encrypting/decrypting data as needed.
 
@@ -42,7 +42,7 @@ Many organizations seek solutions to encrypt/decrypt application data within a c
 - For more advanced data protection, refer to the [Advanced Data Protection](/vault/tutorials/adp) tutorial series. Vault's Transform secrets engine handles secure data transformation and tokenization against provided input value.
 
 
-## Identity-Based Access
+## Identity-Based access
 
 Organizations need a way to manage identity sprawl with the proliferation of different clouds, services, and systems- all with their identity providers. The risk of compromising an organization's security infrastructure increases as organizations are forced to manage multiple identity management systems as they try to implement solutions to unify a single logical identity across numerous cloud platforms. Different platforms support different methods and constructs for identity, making it difficult to recognize a user or identity across multiple forms of credentials. Vault solves this challenge by using a unified ACL system to broker access to systems and secrets and merges identities across providers. With [identity-based access](/vault/docs/secrets/identity), organizations can leverage any trusted resource identity to regulate and manage system and application access, and authentication across various clouds, systems, and endpoints.
 
@@ -52,7 +52,7 @@ Organizations need a way to manage identity sprawl with the proliferation of dif
 
 - Follow the [Policies](/vault/tutorials/policies) tutorial series to learn how Vault enforces role-based access control (RBAC) across multiple cloud environments.
 
-## Key Management
+## Key management
 
 Working with cloud providers requires that you use their security features, which involve encryption keys issued and stored by the provider in its own key management system (KMS). You may also have a requirement to maintain root of trust and control of the encryption key lifecycle, both within and outside of the cloud. The [Vault Key Management Secrets Engine](/vault/docs/secrets/key-management) provides a consistent workflow for distribution and lifecycle management of cloud provider keys, allowing organizations to maintain centralized control of their keys in Vault while leveraging the cryptographic capabilities native to the KMS providers.
 

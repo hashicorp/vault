@@ -25,29 +25,24 @@ scenario "agent" {
       "ent.hsm"          = ["ui", "enterprise", "cgo", "hsm", "venthsm"]
       "ent.hsm.fips1402" = ["ui", "enterprise", "cgo", "hsm", "fips", "fips_140_2", "ent.hsm.fips1402"]
     }
-    bundle_path = matrix.artifact_source != "artifactory" ? abspath(var.vault_bundle_path) : null
-    packages    = ["jq"]
+    bundle_path = matrix.artifact_source != "artifactory" ? abspath(var.vault_artifact_path) : null
+    distro_version = {
+      "rhel"   = var.rhel_distro_version
+      "ubuntu" = var.ubuntu_distro_version
+    }
     enos_provider = {
       rhel   = provider.enos.rhel
       ubuntu = provider.enos.ubuntu
     }
     install_artifactory_artifact = local.bundle_path == null
-    spot_price_max = {
-      // These prices are based on on-demand cost for t3.medium in us-east
-      "rhel"   = "0.1016"
-      "ubuntu" = "0.0416"
-    }
+    packages                     = ["jq"]
     tags = merge({
       "Project Name" : var.project_name
       "Project" : "Enos",
       "Environment" : "ci"
     }, var.tags)
-    vault_instance_types = {
-      amd64 = "t3a.small"
-      arm64 = "t4g.small"
-    }
-    vault_instance_type = coalesce(var.vault_instance_type, local.vault_instance_types[matrix.arch])
-    vault_license_path  = abspath(var.vault_license_path != null ? var.vault_license_path : joinpath(path.root, "./support/vault.hclic"))
+    vault_license_path = abspath(var.vault_license_path != null ? var.vault_license_path : joinpath(path.root, "./support/vault.hclic"))
+    vault_tag_key      = "Type" // enos_vault_start expects Type as the tag key
   }
 
   step "get_local_metadata" {
@@ -72,29 +67,19 @@ scenario "agent" {
       artifact_type        = matrix.artifact_source == "artifactory" ? var.vault_artifact_type : null
       distro               = matrix.artifact_source == "artifactory" ? matrix.distro : null
       edition              = matrix.artifact_source == "artifactory" ? matrix.edition : null
-      instance_type        = matrix.artifact_source == "artifactory" ? local.vault_instance_type : null
       revision             = var.vault_revision
     }
   }
 
-  step "find_azs" {
-    module = module.az_finder
-
-    variables {
-      instance_type = [
-        var.backend_instance_type,
-        local.vault_instance_type
-      ]
-    }
+  step "ec2_info" {
+    module = module.ec2_info
   }
 
   step "create_vpc" {
     module = module.create_vpc
 
     variables {
-      ami_architectures  = distinct([matrix.arch, "amd64"])
-      availability_zones = step.find_azs.availability_zones
-      common_tags        = local.tags
+      common_tags = local.tags
     }
   }
 
@@ -108,7 +93,7 @@ scenario "agent" {
   }
 
   step "create_vault_cluster_targets" {
-    module     = module.target_ec2_spot_fleet // "target_ec2_instances" can be used for on-demand instances
+    module     = module.target_ec2_instances
     depends_on = [step.create_vpc]
 
     providers = {
@@ -116,11 +101,10 @@ scenario "agent" {
     }
 
     variables {
-      ami_id                = step.create_vpc.ami_ids[matrix.distro][matrix.arch]
+      ami_id                = step.ec2_info.ami_ids[matrix.arch][matrix.distro][local.distro_version[matrix.distro]]
       awskms_unseal_key_arn = step.create_vpc.kms_key_arn
+      cluster_tag_key       = local.vault_tag_key
       common_tags           = local.tags
-      instance_type         = local.vault_instance_type // only used for on-demand instances
-      spot_price_max        = local.spot_price_max[matrix.distro]
       vpc_id                = step.create_vpc.vpc_id
     }
   }
@@ -137,19 +121,17 @@ scenario "agent" {
     }
 
     variables {
-      artifactory_release   = matrix.artifact_source == "artifactory" ? step.build_vault.vault_artifactory_release : null
-      awskms_unseal_key_arn = step.create_vpc.kms_key_arn
-      cluster_name          = step.create_vault_cluster_targets.cluster_name
-      config_env_vars = {
-        VAULT_LOG_LEVEL = var.vault_log_level
-      }
-      install_dir         = var.vault_install_dir
-      license             = matrix.edition != "oss" ? step.read_license.license : null
-      local_artifact_path = local.bundle_path
-      packages            = local.packages
-      storage_backend     = "raft"
-      target_hosts        = step.create_vault_cluster_targets.hosts
-      unseal_method       = "shamir"
+      artifactory_release      = matrix.artifact_source == "artifactory" ? step.build_vault.vault_artifactory_release : null
+      awskms_unseal_key_arn    = step.create_vpc.kms_key_arn
+      cluster_name             = step.create_vault_cluster_targets.cluster_name
+      enable_file_audit_device = var.vault_enable_file_audit_device
+      install_dir              = var.vault_install_dir
+      license                  = matrix.edition != "oss" ? step.read_license.license : null
+      local_artifact_path      = local.bundle_path
+      packages                 = local.packages
+      storage_backend          = "raft"
+      target_hosts             = step.create_vault_cluster_targets.hosts
+      unseal_method            = "shamir"
     }
   }
 
@@ -243,5 +225,10 @@ scenario "agent" {
   output "unseal_keys_hex" {
     description = "The Vault cluster unseal keys hex"
     value       = step.create_vault_cluster.unseal_keys_hex
+  }
+
+  output "vault_audit_device_file_path" {
+    description = "The file path for the file audit device, if enabled"
+    value       = step.create_vault_cluster.audit_device_file_path
   }
 }

@@ -8,6 +8,7 @@ import (
 	"context"
 	"crypto"
 	"crypto/x509"
+	"errors"
 	"fmt"
 	"sort"
 	"strings"
@@ -19,6 +20,8 @@ import (
 	"github.com/hashicorp/vault/sdk/helper/errutil"
 	"github.com/hashicorp/vault/sdk/logical"
 )
+
+var ErrStorageItemNotFound = errors.New("storage item not found")
 
 const (
 	storageKeyConfig        = "config/keys"
@@ -1333,6 +1336,20 @@ func (sc *storageContext) getRevocationConfig() (*crlConfig, error) {
 	}
 
 	return &result, nil
+}
+
+func (sc *storageContext) setRevocationConfig(config *crlConfig) error {
+	entry, err := logical.StorageEntryJSON("config/crl", config)
+	if err != nil {
+		return fmt.Errorf("failed building storage entry JSON: %w", err)
+	}
+
+	err = sc.Storage.Put(sc.Context, entry)
+	if err != nil {
+		return fmt.Errorf("failed writing storage entry: %w", err)
+	}
+
+	return nil
 }
 
 func (sc *storageContext) getAutoTidyConfig() (*tidyConfig, error) {

@@ -83,17 +83,8 @@ func (b *backend) pathLogin(ctx context.Context, req *logical.Request, d *framew
 	password := d.Get("password").(string)
 
 	effectiveUsername, policies, resp, groupNames, err := b.Login(ctx, req, username, password, cfg.UsernameAsAlias)
-	// Handle an internal error
-	if err != nil {
-		return nil, err
-	}
-	if resp != nil {
-		// Handle a logical error
-		if resp.IsError() {
-			return resp, nil
-		}
-	} else {
-		resp = &logical.Response{}
+	if err != nil || (resp != nil && resp.IsError()) {
+		return resp, err
 	}
 
 	auth := &logical.Auth{

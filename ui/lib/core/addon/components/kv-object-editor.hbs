@@ -60,12 +60,13 @@
       </div>
     {{/each}}
     {{#if this.hasDuplicateKeys}}
-      <AlertBanner
-        @type="warning"
-        @message="More than one key shares the same name. Please be sure to have unique key names or some data may be lost when saving."
-        @class="is-marginless"
-        data-test-duplicate-error-warnings
-      />
+      <Hds::Alert data-test-duplicate-keys-warning @type="inline" @color="warning" as |A|>
+        <A.Title>Warning</A.Title>
+        <A.Description>
+          More than one key shares the same name. Please be sure to have unique key names or some data may be lost when
+          saving.
+        </A.Description>
+      </Hds::Alert>
     {{/if}}
   {{/if}}
 </div>

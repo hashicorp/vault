@@ -129,6 +129,11 @@ export default class PkiIssuerCrossSign extends Component {
       id: intName,
     });
 
+    // Return if user is attempting to self-sign issuer
+    if (existingIssuer.issuerId === this.args.parentIssuer.issuerId) {
+      throw new Error('Cross-signing a root issuer with itself must be performed manually using the CLI.');
+    }
+
     // Translate certificate values to API parameters to pass along: CSR -> Signed CSR -> Cross-Signed issuer
     // some of these values do not apply to a CSR, but pass anyway. If there is any issue parsing the certificate,
     // (ex. the certificate contains unsupported values) direct user to manually cross-sign via CLI

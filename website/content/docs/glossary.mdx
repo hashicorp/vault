@@ -21,14 +21,14 @@ documentation for Vault.
 - [Server](#server)
 - [Storage Backend](#storage-backend)
 
-### Audit Device
+### Audit device
 
 An audit device is responsible for managing audit logs.
 Every request to Vault and response from Vault goes through the configured
 audit devices. This provides a simple way to integrate Vault with multiple
 audit logging destinations of different types.
 
-### Auth Method
+### Auth method
 
 An auth method is used to authenticate users or applications
 which are connecting to Vault. Once authenticated, the auth method returns the
@@ -42,7 +42,7 @@ allows users to authenticate via GitHub.
 
 Almost everything Vault writes to storage is encrypted using the keyring, which is protected by the seal. We refer to this practice as "the barrier". There are a few exceptions to the rule, for example, the seal configuration is stored in an unencrypted file since it's needed to unseal the barrier, and the keyring is encrypted using the root key, while the root key is encrypted using the seal.
 
-### Client Token
+### Client token
 
 A client token (aka "Vault Token") is conceptually
 similar to a session cookie on a web site. Once a user authenticates, Vault
@@ -56,13 +56,13 @@ Plugins are a feature of Vault that can be enabled, disabled, and customized to
 some degree. All Vault [auth methods](/vault/docs/auth) and [secrets engines](/vault/docs/secrets)
 are considered plugins.
 
-#### Built-in Plugin
+#### Built-in plugin
 
 Built-in plugins are shipped with Vault, often for commonly used
 implementations, and require no additional operator intervention to run.
 Built-in plugins are just like any other backend code inside Vault.
 
-#### External Plugin
+#### External plugin
 
 External plugins are not shipped with Vault and require additional operator
 intervention to run. Vault's external plugins are completely separate,
@@ -70,7 +70,7 @@ standalone applications that Vault executes and communicates with over RPC.
 Each time a Vault secret engine or auth method is mounted, a new process is
 spawned.
 
-#### External Multiplexed Plugin
+#### External multiplexed plugin
 
 An external plugin may make use of [plugin multiplexing](/vault/docs/plugins/plugin-architecture#plugin-multiplexing).
 A multiplexed plugin allows a single plugin process to be used for multiple
@@ -88,7 +88,7 @@ operator may intervene to revoke the Dynamic Secret before the lease is over. Th
 contract between Vault and its clients is critical, as it allows for changes
 in keys and policies without manual intervention.
 
-### Secrets Engine
+### Secrets engine
 
 A secrets engine is responsible for managing secrets.
 Simple secrets engines, such as the "kv" secrets engine, return the same
@@ -108,7 +108,7 @@ secret lease revocation. Having a server based architecture decouples clients
 from the security keys and policies, enables centralized audit logging, and
 simplifies administration for operators.
 
-### Storage Backend
+### Storage backend
 
 A storage backend is responsible for durable storage of
 _encrypted_ data. Backends are not trusted by Vault and are only expected to

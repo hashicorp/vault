@@ -40,7 +40,6 @@ import (
 	auditFile "github.com/hashicorp/vault/builtin/audit/file"
 	"github.com/hashicorp/vault/command/server"
 	"github.com/hashicorp/vault/helper/constants"
-	"github.com/hashicorp/vault/helper/experiments"
 	"github.com/hashicorp/vault/helper/metricsutil"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/helper/testhelpers/corehelpers"
@@ -186,12 +185,15 @@ func TestCoreWithSealAndUI(t testing.T, opts *CoreConfig) *Core {
 		if err != nil {
 			t.Logf("shutdown returned error: %v", err)
 		}
+		if tl, ok := c.Logger().(*corehelpers.TestLogger); ok {
+			tl.StopLogging()
+		}
 	})
 	return c
 }
 
 func TestCoreWithSealAndUINoCleanup(t testing.T, opts *CoreConfig) *Core {
-	logger := logging.NewVaultLogger(log.Trace)
+	logger := corehelpers.NewTestLogger(t)
 	physicalBackend, err := physInmem.NewInmem(nil, logger)
 	if err != nil {
 		t.Fatal(err)
@@ -217,8 +219,9 @@ func TestCoreWithSealAndUINoCleanup(t testing.T, opts *CoreConfig) *Core {
 	conf.DisableSSCTokens = opts.DisableSSCTokens
 	conf.PluginDirectory = opts.PluginDirectory
 	conf.DetectDeadlocks = opts.DetectDeadlocks
-	conf.Experiments = []string{experiments.VaultExperimentEventsAlpha1}
+	conf.Experiments = opts.Experiments
 	conf.CensusAgent = opts.CensusAgent
+	conf.AdministrativeNamespacePath = opts.AdministrativeNamespacePath
 
 	if opts.Logger != nil {
 		conf.Logger = opts.Logger
@@ -441,7 +444,7 @@ func testCoreAddSecretMount(t testing.T, core *Core, token string) {
 
 func TestCoreUnsealedBackend(t testing.T, backend physical.Backend) (*Core, [][]byte, string) {
 	t.Helper()
-	logger := logging.NewVaultLogger(log.Trace)
+	logger := corehelpers.NewTestLogger(t)
 	conf := testCoreConfig(t, backend, logger)
 	conf.Seal = NewTestSeal(t, nil)
 	conf.NumExpirationWorkers = numExpirationWorkersTest
@@ -799,6 +802,10 @@ type TestCluster struct {
 	LicensePublicKey  ed25519.PublicKey
 	LicensePrivateKey ed25519.PrivateKey
 	opts              *TestClusterOptions
+}
+
+func (c *TestCluster) SetRootToken(token string) {
+	c.RootToken = token
 }
 
 func (c *TestCluster) Start() {
@@ -1213,6 +1220,9 @@ type TestClusterOptions struct {
 
 	// if populated, the callback is called for every request
 	RequestResponseCallback func(logical.Backend, *logical.Request, *logical.Response)
+
+	// ABCDLoggerNames names the loggers according to our ABCD convention when generating 4 clusters
+	ABCDLoggerNames bool
 }
 
 type TestPluginConfig struct {
@@ -1536,6 +1546,8 @@ func NewTestCluster(t testing.T, base *CoreConfig, opts *TestClusterOptions) *Te
 		coreConfig.DisableSentinelTrace = base.DisableSentinelTrace
 		coreConfig.ClusterName = base.ClusterName
 		coreConfig.DisableAutopilot = base.DisableAutopilot
+		coreConfig.AdministrativeNamespacePath = base.AdministrativeNamespacePath
+		coreConfig.ServiceRegistration = base.ServiceRegistration
 
 		if base.BuiltinRegistry != nil {
 			coreConfig.BuiltinRegistry = base.BuiltinRegistry
@@ -2257,6 +2269,10 @@ func (c *TestCluster) GetRecoveryKeys() [][]byte {
 
 func (c *TestCluster) NamedLogger(name string) log.Logger {
 	return c.Logger.Named(name)
+}
+
+func (c *TestCluster) GetRootToken() string {
+	return c.RootToken
 }
 
 func (c *TestClusterCore) Name() string {

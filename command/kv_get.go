@@ -152,7 +152,7 @@ func (c *KVGetCommand) Run(args []string) int {
 	var fullPath string
 	// Add /data to v2 paths only
 	if v2 {
-		fullPath = addPrefixToKVPath(partialPath, mountPath, "data")
+		fullPath = addPrefixToKVPath(partialPath, mountPath, "data", false)
 
 		if c.flagVersion > 0 {
 			versionParam = map[string]string{

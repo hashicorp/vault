@@ -14,8 +14,8 @@ import lazyCapabilities, { apiPath } from 'vault/macros/lazy-capabilities';
  * The base certificate model contains shared attributes that make up a certificate's content.
  * Other models under pki/certificate will extend this model and include additional attributes
  * and associated adapter methods for performing various generation and signing actions.
- * This model also displays leaf certs and their parsed attributes (parsed parameters only
- * render if included in certDisplayFields below).
+ * This model also displays leaf certs and their parsed attributes (which exist as an object in
+ * the attribute `parsedCertificate`)
  */
 
 // also displays parsedCertificate values in the template
@@ -87,8 +87,8 @@ export default class PkiCertificateBaseModel extends Model {
   @attr('string', { masked: true }) certificate;
   @attr('number') expiration;
   @attr('string', { label: 'Issuing CA', masked: true }) issuingCa;
-  @attr('string') privateKey; // only returned for type=exported
-  @attr('string') privateKeyType; // only returned for type=exported
+  @attr('string', { masked: true }) privateKey; // only returned for type=exported and /issue
+  @attr('string') privateKeyType; // only returned for type=exported and /issue
   @attr('number', { formatDate: true }) revocationTime;
   @attr('string') serialNumber;
 

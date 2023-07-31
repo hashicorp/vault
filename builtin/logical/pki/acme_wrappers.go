@@ -9,8 +9,6 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
-	"os"
-	"strconv"
 	"strings"
 
 	"github.com/hashicorp/vault/sdk/framework"
@@ -27,6 +25,11 @@ type acmeContext struct {
 	// acmeDirectory is a string that can distinguish the various acme directories we have configured
 	// if something needs to remain locked into a directory path structure.
 	acmeDirectory string
+	eabPolicy     EabPolicy
+}
+
+func (c acmeContext) getAcmeState() *acmeState {
+	return c.sc.Backend.acmeState
 }
 
 type (
@@ -55,7 +58,18 @@ func (b *backend) acmeWrapper(op acmeOperation) framework.OperationFunc {
 	return acmeErrorWrapper(func(ctx context.Context, r *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 		sc := b.makeStorageContext(ctx, r.Storage)
 
-		if isAcmeDisabled(sc) {
+		config, err := sc.Backend.acmeState.getConfigWithUpdate(sc)
+		if err != nil {
+			return nil, fmt.Errorf("failed to fetch ACME configuration: %w", err)
+		}
+
+		// use string form in case someone messes up our config from raw storage.
+		eabPolicy, err := getEabPolicyByString(string(config.EabPolicyName))
+		if err != nil {
+			return nil, err
+		}
+
+		if isAcmeDisabled(sc, config, eabPolicy) {
 			return nil, ErrAcmeDisabled
 		}
 
@@ -63,17 +77,20 @@ func (b *backend) acmeWrapper(op acmeOperation) framework.OperationFunc {
 			return nil, fmt.Errorf("%w: Can not perform ACME operations until migration has completed", ErrServerInternal)
 		}
 
-		acmeBaseUrl, clusterBase, err := getAcmeBaseUrl(sc, r.Path)
+		acmeBaseUrl, clusterBase, err := getAcmeBaseUrl(sc, r)
 		if err != nil {
 			return nil, err
 		}
 
-		role, issuer, err := getAcmeRoleAndIssuer(sc, data)
+		role, issuer, err := getAcmeRoleAndIssuer(sc, data, config)
 		if err != nil {
 			return nil, err
 		}
 
-		acmeDirectory := getAcmeDirectory(data)
+		acmeDirectory, err := getAcmeDirectory(r)
+		if err != nil {
+			return nil, err
+		}
 
 		acmeCtx := &acmeContext{
 			baseUrl:       acmeBaseUrl,
@@ -82,6 +99,7 @@ func (b *backend) acmeWrapper(op acmeOperation) framework.OperationFunc {
 			role:          role,
 			issuer:        issuer,
 			acmeDirectory: acmeDirectory,
+			eabPolicy:     eabPolicy,
 		}
 
 		return op(acmeCtx, r, data)
@@ -175,18 +193,30 @@ func (b *backend) acmeAccountRequiredWrapper(op acmeAccountRequiredOperation) fr
 			return nil, fmt.Errorf("cannot process request without a 'kid': %w", ErrMalformed)
 		}
 
-		account, err := b.acmeState.LoadAccount(acmeCtx, uc.Kid)
+		account, err := requireValidAcmeAccount(acmeCtx, uc)
 		if err != nil {
-			return nil, fmt.Errorf("error loading account: %w", err)
-		}
-
-		if account.Status != StatusValid {
-			// Treating "revoked" and "deactivated" as the same here.
-			return nil, fmt.Errorf("%w: account in status: %s", ErrUnauthorized, account.Status)
+			return nil, err
 		}
 
 		return op(acmeCtx, r, fields, uc, data, account)
 	})
+}
+
+func requireValidAcmeAccount(acmeCtx *acmeContext, uc *jwsCtx) (*acmeAccount, error) {
+	account, err := acmeCtx.getAcmeState().LoadAccount(acmeCtx, uc.Kid)
+	if err != nil {
+		return nil, fmt.Errorf("error loading account: %w", err)
+	}
+
+	if err = acmeCtx.eabPolicy.EnforceForExistingAccount(account); err != nil {
+		return nil, err
+	}
+
+	if account.Status != AccountStatusValid {
+		// Treating "revoked" and "deactivated" as the same here.
+		return nil, fmt.Errorf("%w: account in status: %s", ErrUnauthorized, account.Status)
+	}
+	return account, nil
 }
 
 // A helper function that will build up the various path patterns we want for ACME APIs.
@@ -210,28 +240,36 @@ func buildAcmeFrameworkPaths(b *backend, patternFunc func(b *backend, pattern st
 	return patterns
 }
 
-func getAcmeBaseUrl(sc *storageContext, path string) (*url.URL, *url.URL, error) {
+func getAcmeBaseUrl(sc *storageContext, r *logical.Request) (*url.URL, *url.URL, error) {
+	baseUrl, err := getBasePathFromClusterConfig(sc)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	directoryPrefix, err := getAcmeDirectory(r)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	return baseUrl.JoinPath(directoryPrefix), baseUrl, nil
+}
+
+func getBasePathFromClusterConfig(sc *storageContext) (*url.URL, error) {
 	cfg, err := sc.getClusterConfig()
 	if err != nil {
-		return nil, nil, fmt.Errorf("failed loading cluster config: %w", err)
+		return nil, fmt.Errorf("failed loading cluster config: %w", err)
 	}
 
 	if cfg.Path == "" {
-		return nil, nil, fmt.Errorf("ACME feature requires local cluster path configuration to be set: %w", ErrServerInternal)
+		return nil, fmt.Errorf("ACME feature requires local cluster 'path' field configuration to be set")
 	}
 
 	baseUrl, err := url.Parse(cfg.Path)
 	if err != nil {
-		return nil, nil, fmt.Errorf("ACME feature a proper URL configured in local cluster path: %w", ErrServerInternal)
+		return nil, fmt.Errorf("failed parsing URL configured in local cluster 'path' configuration: %s: %s",
+			cfg.Path, err.Error())
 	}
-
-	directoryPrefix := ""
-	lastIndex := strings.LastIndex(path, "/acme/")
-	if lastIndex != -1 {
-		directoryPrefix = path[0:lastIndex]
-	}
-
-	return baseUrl.JoinPath(directoryPrefix, "/acme/"), baseUrl, nil
+	return baseUrl, nil
 }
 
 func getAcmeIssuer(sc *storageContext, issuerName string) (*issuerEntry, error) {
@@ -255,46 +293,84 @@ func getAcmeIssuer(sc *storageContext, issuerName string) (*issuerEntry, error) 
 	return nil, fmt.Errorf("%w: issuer missing proper issuance usage or key", ErrServerInternal)
 }
 
-func getAcmeDirectory(data *framework.FieldData) string {
-	requestedIssuer := getRequestedAcmeIssuerFromPath(data)
-	requestedRole := getRequestedAcmeRoleFromPath(data)
+// getAcmeDirectory return the base acme directory path, without a leading '/' and including
+// the trailing /acme/ folder which is the root of all our various directories
+func getAcmeDirectory(r *logical.Request) (string, error) {
+	acmePath := r.Path
+	if !strings.HasPrefix(acmePath, "/") {
+		acmePath = "/" + acmePath
+	}
 
-	return fmt.Sprintf("issuer-%s::role-%s", requestedIssuer, requestedRole)
+	lastIndex := strings.LastIndex(acmePath, "/acme/")
+	if lastIndex == -1 {
+		return "", fmt.Errorf("%w: unable to determine acme base folder path: %s", ErrServerInternal, acmePath)
+	}
+
+	// Skip the leading '/' and return our base path with the /acme/
+	return strings.TrimLeft(acmePath[0:lastIndex]+"/acme/", "/"), nil
 }
 
-func getAcmeRoleAndIssuer(sc *storageContext, data *framework.FieldData) (*roleEntry, *issuerEntry, error) {
+func getAcmeRoleAndIssuer(sc *storageContext, data *framework.FieldData, config *acmeConfigEntry) (*roleEntry, *issuerEntry, error) {
 	requestedIssuer := getRequestedAcmeIssuerFromPath(data)
 	requestedRole := getRequestedAcmeRoleFromPath(data)
 	issuerToLoad := requestedIssuer
 
 	var role *roleEntry
+	var err error
 
-	if len(requestedRole) > 0 {
-		var err error
-		role, err = sc.Backend.getRole(sc.Context, sc.Storage, requestedRole)
+	if len(requestedRole) == 0 { // Default Directory
+		policyType, err := getDefaultDirectoryPolicyType(config.DefaultDirectoryPolicy)
 		if err != nil {
-			return nil, nil, fmt.Errorf("%w: err loading role", ErrServerInternal)
+			return nil, nil, err
+		}
+		switch policyType {
+		case Forbid:
+			return nil, nil, fmt.Errorf("%w: default directory not allowed by ACME policy", ErrServerInternal)
+		case SignVerbatim:
+			role = buildSignVerbatimRoleWithNoData(&roleEntry{
+				Issuer:  requestedIssuer,
+				NoStore: false,
+				Name:    requestedRole,
+			})
+		case Role:
+			defaultRole, err := getDefaultDirectoryPolicyRole(config.DefaultDirectoryPolicy)
+			if err != nil {
+				return nil, nil, err
+			}
+			role, err = getAndValidateAcmeRole(sc, defaultRole)
+			if err != nil {
+				return nil, nil, err
+			}
+		}
+	} else { // Requested Role
+		role, err = getAndValidateAcmeRole(sc, requestedRole)
+		if err != nil {
+			return nil, nil, err
 		}
 
-		if role == nil {
-			return nil, nil, fmt.Errorf("%w: role does not exist", ErrMalformed)
+		// Check the Requested Role is Allowed
+		allowAnyRole := len(config.AllowedRoles) == 1 && config.AllowedRoles[0] == "*"
+		if !allowAnyRole {
+
+			var foundRole bool
+			for _, name := range config.AllowedRoles {
+				if name == role.Name {
+					foundRole = true
+					break
+				}
+			}
+
+			if !foundRole {
+				return nil, nil, fmt.Errorf("%w: specified role not allowed by ACME policy", ErrServerInternal)
+			}
 		}
 
-		if role.NoStore {
-			return nil, nil, fmt.Errorf("%w: role can not be used as NoStore is set to true", ErrServerInternal)
-		}
+	}
 
-		// If we haven't loaded an issuer directly from our path and the specified
-		// role does specify an issuer prefer the role's issuer rather than the default issuer.
-		if len(role.Issuer) > 0 && len(requestedIssuer) == 0 {
-			issuerToLoad = role.Issuer
-		}
-	} else {
-		role = buildSignVerbatimRoleWithNoData(&roleEntry{
-			Issuer:  requestedIssuer,
-			NoStore: false,
-			Name:    requestedRole,
-		})
+	// If we haven't loaded an issuer directly from our path and the specified (or default)
+	// role does specify an issuer prefer the role's issuer rather than the default issuer.
+	if len(role.Issuer) > 0 && len(requestedIssuer) == 0 {
+		issuerToLoad = role.Issuer
 	}
 
 	issuer, err := getAcmeIssuer(sc, issuerToLoad)
@@ -302,9 +378,56 @@ func getAcmeRoleAndIssuer(sc *storageContext, data *framework.FieldData) (*roleE
 		return nil, nil, err
 	}
 
-	// TODO: Need additional configuration validation here, for allowed roles/issuers.
+	allowAnyIssuer := len(config.AllowedIssuers) == 1 && config.AllowedIssuers[0] == "*"
+	if !allowAnyIssuer {
+		var foundIssuer bool
+		for index, name := range config.AllowedIssuers {
+			candidateId, err := sc.resolveIssuerReference(name)
+			if err != nil {
+				return nil, nil, fmt.Errorf("failed to resolve reference for allowed_issuer entry %d: %w", index, err)
+			}
+
+			if candidateId == issuer.ID {
+				foundIssuer = true
+				break
+			}
+		}
+
+		if !foundIssuer {
+			return nil, nil, fmt.Errorf("%w: specified issuer not allowed by ACME policy", ErrServerInternal)
+		}
+	}
+
+	// If not allowed in configuration, override ExtKeyUsage behavior to force it to only be
+	// ServerAuth within ACME issued certs
+	if !config.AllowRoleExtKeyUsage {
+		role.ExtKeyUsage = []string{"serverauth"}
+		role.ExtKeyUsageOIDs = []string{}
+		role.ServerFlag = true
+		role.ClientFlag = false
+		role.CodeSigningFlag = false
+		role.EmailProtectionFlag = false
+	}
 
 	return role, issuer, nil
+}
+
+func getAndValidateAcmeRole(sc *storageContext, requestedRole string) (*roleEntry, error) {
+	var err error
+	role, err := sc.Backend.getRole(sc.Context, sc.Storage, requestedRole)
+	if err != nil {
+		return nil, fmt.Errorf("%w: err loading role", ErrServerInternal)
+	}
+
+	if role == nil {
+		return nil, fmt.Errorf("%w: role does not exist", ErrMalformed)
+	}
+
+	if role.NoStore {
+		return nil, fmt.Errorf("%w: role can not be used as NoStore is set to true", ErrServerInternal)
+	}
+
+	return role, nil
 }
 
 func getRequestedAcmeRoleFromPath(data *framework.FieldData) string {
@@ -325,21 +448,23 @@ func getRequestedAcmeIssuerFromPath(data *framework.FieldData) string {
 	return requestedIssuer
 }
 
-func isAcmeDisabled(sc *storageContext) bool {
-	if disableAcmeRaw := os.Getenv("VAULT_DISABLE_PUBLIC_ACME"); disableAcmeRaw != "" {
-		disableAcme, err := strconv.ParseBool(disableAcmeRaw)
-		if err != nil {
-			sc.Backend.Logger().Warn("could not parse env var VAULT_DISABLE_PUBLIC_ACME", "error", err)
-			disableAcme = false
-		}
-
-		// The OS environment if true will override any configuration option.
-		if disableAcme {
-			return true
-		}
+func isAcmeDisabled(sc *storageContext, config *acmeConfigEntry, policy EabPolicy) bool {
+	if !config.Enabled {
+		return true
 	}
 
-	// TODO: Implement configuration based check here.
+	disableAcme, nonFatalErr := isPublicACMEDisabledByEnv()
+	if nonFatalErr != nil {
+		sc.Backend.Logger().Warn(fmt.Sprintf("could not parse env var '%s'", disableAcmeEnvVar), "error", nonFatalErr)
+	}
+
+	// The OS environment if true will override any configuration option.
+	if disableAcme {
+		if policy.OverrideEnvDisablingPublicAcme() {
+			return false
+		}
+		return true
+	}
 
 	return false
 }

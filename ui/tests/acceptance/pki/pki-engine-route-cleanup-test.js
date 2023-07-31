@@ -45,7 +45,7 @@ module('Acceptance | pki engine route cleanup test', function (hooks) {
       await visit(`/vault/secrets/${this.mountPath}/pki/overview`);
       await click(SELECTORS.emptyStateLink);
       configs = this.store.peekAll('pki/action');
-      urls = this.store.peekRecord('pki/urls', this.mountPath);
+      urls = this.store.peekRecord('pki/config/urls', this.mountPath);
       config = configs.objectAt(0);
       assert.strictEqual(configs.length, 1, 'One config model present');
       assert.false(urls.hasDirtyAttributes, 'URLs is loaded from endpoint');
@@ -54,13 +54,13 @@ module('Acceptance | pki engine route cleanup test', function (hooks) {
       // Cancel button rolls it back
       await click(SELECTORS.configuration.cancelButton);
       configs = this.store.peekAll('pki/action');
-      urls = this.store.peekRecord('pki/urls', this.mountPath);
+      urls = this.store.peekRecord('pki/config/urls', this.mountPath);
       assert.strictEqual(configs.length, 0, 'config model is rolled back on cancel');
       assert.strictEqual(urls.id, this.mountPath, 'Urls still exists on exit');
 
       await click(SELECTORS.emptyStateLink);
       configs = this.store.peekAll('pki/action');
-      urls = this.store.peekRecord('pki/urls', this.mountPath);
+      urls = this.store.peekRecord('pki/config/urls', this.mountPath);
       config = configs.objectAt(0);
       assert.strictEqual(configs.length, 1, 'One config model present');
       assert.false(urls.hasDirtyAttributes, 'URLs is loaded from endpoint');
@@ -69,7 +69,7 @@ module('Acceptance | pki engine route cleanup test', function (hooks) {
       // Exit page via link rolls it back
       await click(SELECTORS.overviewBreadcrumb);
       configs = this.store.peekAll('pki/action');
-      urls = this.store.peekRecord('pki/urls', this.mountPath);
+      urls = this.store.peekRecord('pki/config/urls', this.mountPath);
       assert.strictEqual(configs.length, 0, 'config model is rolled back on cancel');
       assert.strictEqual(urls.id, this.mountPath, 'Urls still exists on exit');
     });

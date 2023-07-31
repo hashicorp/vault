@@ -62,7 +62,7 @@
       {{else if @formatDate}}
         {{date-format @value @formatDate}}
       {{else if @formatTtl}}
-        {{this.formattedTtl}}
+        {{format-duration @value}}
       {{else}}
         {{#if (eq @type "array")}}
           <InfoTableItemArray

@@ -10,7 +10,7 @@ terraform {
 }
 
 resource "enos_local_exec" "get_build_date" {
-  scripts = ["${path.module}/scripts/build_date.sh"]
+  scripts = [abspath("${path.module}/scripts/build_date.sh")]
 }
 
 output "build_date" {
@@ -18,7 +18,7 @@ output "build_date" {
 }
 
 resource "enos_local_exec" "get_version" {
-  scripts = ["${path.module}/scripts/version.sh"]
+  scripts = [abspath("${path.module}/scripts/version.sh")]
 }
 
 output "version" {

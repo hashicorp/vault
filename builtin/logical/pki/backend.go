@@ -16,7 +16,6 @@ import (
 
 	"github.com/armon/go-metrics"
 	"github.com/hashicorp/go-multierror"
-	"github.com/hashicorp/vault/helper/constants"
 	"github.com/hashicorp/vault/helper/metricsutil"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/sdk/framework"
@@ -218,6 +217,8 @@ func Backend(conf *logical.BackendConfig) *backend {
 
 			// ACME
 			pathAcmeConfig(&b),
+			pathAcmeEabList(&b),
+			pathAcmeEabDelete(&b),
 		},
 
 		Secrets: []*framework.Secret{
@@ -245,6 +246,7 @@ func Backend(conf *logical.BackendConfig) *backend {
 	acmePaths = append(acmePaths, pathAcmeChallenge(&b)...)
 	acmePaths = append(acmePaths, pathAcmeAuthorization(&b)...)
 	acmePaths = append(acmePaths, pathAcmeRevoke(&b)...)
+	acmePaths = append(acmePaths, pathAcmeNewEab(&b)...) // auth'd API that lives underneath the various /acme paths
 
 	for _, acmePath := range acmePaths {
 		b.Backend.Paths = append(b.Backend.Paths, acmePath)
@@ -265,19 +267,7 @@ func Backend(conf *logical.BackendConfig) *backend {
 		b.PathsSpecial.Unauthenticated = append(b.PathsSpecial.Unauthenticated, acmePrefix+"acme/order/+")
 		b.PathsSpecial.Unauthenticated = append(b.PathsSpecial.Unauthenticated, acmePrefix+"acme/order/+/finalize")
 		b.PathsSpecial.Unauthenticated = append(b.PathsSpecial.Unauthenticated, acmePrefix+"acme/order/+/cert")
-	}
-
-	if constants.IsEnterprise {
-		// Unified CRL/OCSP paths are ENT only
-		entOnly := []*framework.Path{
-			pathGetIssuerUnifiedCRL(&b),
-			pathListCertsRevocationQueue(&b),
-			pathListUnifiedRevoked(&b),
-			pathFetchUnifiedCRL(&b),
-			buildPathUnifiedOcspGet(&b),
-			buildPathUnifiedOcspPost(&b),
-		}
-		b.Backend.Paths = append(b.Backend.Paths, entOnly...)
+		// We specifically do NOT add acme/new-eab to this as it should be auth'd
 	}
 
 	b.tidyCASGuard = new(uint32)
@@ -311,11 +301,14 @@ func Backend(conf *logical.BackendConfig) *backend {
 	b.unifiedTransferStatus = newUnifiedTransferStatus()
 
 	b.acmeState = NewACMEState()
+
+	b.SetupEnt()
 	return &b
 }
 
 type backend struct {
 	*framework.Backend
+	entBackend
 
 	backendUUID       string
 	storage           logical.Storage
@@ -345,7 +338,8 @@ type backend struct {
 	issuersLock sync.RWMutex
 
 	// Context around ACME operations
-	acmeState *acmeState
+	acmeState       *acmeState
+	acmeAccountLock sync.RWMutex // (Write) Locked on Tidy, (Read) Locked on Account Creation
 }
 
 type roleOperation func(ctx context.Context, req *logical.Request, data *framework.FieldData, role *roleEntry) (*logical.Response, error)
@@ -415,7 +409,7 @@ func (b *backend) metricsWrap(callType string, roleMode int, ofunc roleOperation
 }
 
 // initialize is used to perform a possible PKI storage migration if needed
-func (b *backend) initialize(ctx context.Context, _ *logical.InitializationRequest) error {
+func (b *backend) initialize(ctx context.Context, ir *logical.InitializationRequest) error {
 	sc := b.makeStorageContext(ctx, b.storage)
 	if err := b.crlBuilder.reloadConfigIfRequired(sc); err != nil {
 		return err
@@ -435,15 +429,18 @@ func (b *backend) initialize(ctx context.Context, _ *logical.InitializationReque
 	err = b.initializeStoredCertificateCounts(ctx)
 	if err != nil {
 		// Don't block/err initialize/startup for metrics.  Context on this call can time out due to number of certificates.
-		b.Logger().Error("Could not initialize stored certificate counts", err)
+		b.Logger().Error("Could not initialize stored certificate counts", "error", err)
 		b.certCountError = err.Error()
 	}
 
-	return nil
+	return b.initializeEnt(sc, ir)
 }
 
-func (b *backend) cleanup(_ context.Context) {
+func (b *backend) cleanup(ctx context.Context) {
+	sc := b.makeStorageContext(ctx, b.storage)
 	b.acmeState.validator.Closing <- struct{}{}
+
+	b.cleanupEnt(sc)
 }
 
 func (b *backend) initializePKIIssuersStorage(ctx context.Context) error {
@@ -542,6 +539,8 @@ func (b *backend) invalidate(ctx context.Context, key string) {
 	case key == "config/crl":
 		// We may need to reload our OCSP status flag
 		b.crlBuilder.markConfigDirty()
+	case key == storageAcmeConfig:
+		b.acmeState.markConfigDirty()
 	case key == storageIssuerConfig:
 		b.crlBuilder.invalidateCRLBuildTime()
 	case strings.HasPrefix(key, crossRevocationPrefix):
@@ -572,6 +571,8 @@ func (b *backend) invalidate(ctx context.Context, key string) {
 		serial := split[len(split)-1]
 		b.crlBuilder.addCertFromCrossRevocation(cluster, serial)
 	}
+
+	b.invalidateEnt(ctx, key)
 }
 
 func (b *backend) periodicFunc(ctx context.Context, request *logical.Request) error {
@@ -687,9 +688,14 @@ func (b *backend) periodicFunc(ctx context.Context, request *logical.Request) er
 		return nil
 	}
 
+	// First tidy any ACME nonces to free memory.
+	b.acmeState.DoTidyNonces()
+
+	// Then run unified transfer.
 	backgroundSc := b.makeStorageContext(context.Background(), b.storage)
 	go runUnifiedTransfer(backgroundSc)
 
+	// Then run the CRL rebuild and tidy operation.
 	crlErr := doCRL()
 	tidyErr := doAutoTidy()
 
@@ -720,7 +726,7 @@ func (b *backend) periodicFunc(ctx context.Context, request *logical.Request) er
 	}
 
 	// All good!
-	return nil
+	return b.periodicFuncEnt(backgroundSc, request)
 }
 
 func (b *backend) initializeStoredCertificateCounts(ctx context.Context) error {
