@@ -6,6 +6,7 @@
 import Component from '@glimmer/component';
 import { tracked } from '@glimmer/tracking';
 import { action } from '@ember/object';
+import { A } from '@ember/array';
 import { inject as service } from '@ember/service';
 import { task } from 'ember-concurrency';
 import handleHasManySelection from 'core/utils/search-select-has-many';
@@ -40,14 +41,14 @@ export default class MfaLoginEnforcementForm extends Component {
   searchSelectOptions = null;
 
   @tracked name;
-  @tracked targets = [];
+  @tracked targets = A([]);
   @tracked selectedTargetType = 'accessor';
   @tracked selectedTargetValue = null;
   @tracked searchSelect = {
     options: [],
     selected: [],
   };
-  @tracked authMethods = [];
+  @tracked authMethods = A([]);
   @tracked modelErrors;
 
   constructor() {
@@ -60,19 +61,11 @@ export default class MfaLoginEnforcementForm extends Component {
     this.fetchAuthMethods();
   }
 
-  // Helper to add objects to target which sets the value of the tracked array
-  // in a way that will update the view
-  _addToTargets(targets) {
-    const combinedTargets = [...this.targets];
-    combinedTargets.addObjects(targets);
-    this.targets = combinedTargets;
-  }
-
   async flattenTargets() {
     for (const { label, key } of this.targetTypes) {
       const targetArray = await this.args.model[key];
       const targets = targetArray.map((value) => ({ label, key, value }));
-      this._addToTargets(targets);
+      this.targets.addObjects(targets);
     }
   }
   async resetTargetState() {
@@ -151,7 +144,7 @@ export default class MfaLoginEnforcementForm extends Component {
   addTarget() {
     const { label, key } = this.selectedTarget;
     const value = this.selectedTargetValue;
-    this._addToTargets([{ label, value, key }]);
+    this.targets.addObject({ label, value, key });
     // add target to appropriate model property
     this.args.model[key].addObject(value);
     this.selectedTargetValue = null;
