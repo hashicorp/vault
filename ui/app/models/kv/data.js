@@ -29,12 +29,25 @@ import { withFormFields } from 'vault/decorators/model-form-fields';
 */
 
 const validations = {
-  path: [{ type: 'presence', message: `Path can't be blank.` }],
+  path: [
+    { type: 'presence', message: `Path can't be blank.` },
+    {
+      type: 'containsWhiteSpace',
+      message:
+        "Path contains whitespace. If this is desired, you'll need to encode it with %20 in API requests.",
+      level: 'warn',
+    },
+  ],
+  secretData: [
+    {
+      validator: (model) =>
+        model.secretData !== undefined && typeof model.secretData !== 'object' ? false : true,
+      message: 'Vault expects data to be formatted as an JSON object.',
+    },
+  ],
 };
-const formFieldProps = ['path', 'data'];
-
 @withModelValidations(validations)
-@withFormFields(formFieldProps)
+@withFormFields()
 export default class KvSecretDataModel extends Model {
   @attr('string') backend; // dynamic path of secret -- set on response from value passed to queryRecord.
   @attr('string', { label: 'Path for this secret' }) path;

@@ -4,7 +4,7 @@
  */
 
 export const SELECTORS = {
-  toggleJson: '[data-test-json-view-toggle]',
+  toggleJson: '[data-test-toggle-input="json"]',
   toggleMasked: '[data-test-button="toggle-masked"]',
   jsonEditor: '[data-test-component="code-mirror-modifier"]',
   tooltipTrigger: '[data-test-tooltip-trigger]',
@@ -14,6 +14,7 @@ export const SELECTORS = {
   emptyStateTitle: '[data-test-empty-state-title]',
   emptyStateMessage: '[data-test-empty-state-message]',
   inlineAlert: '[data-test-inline-alert]',
+  messageError: '[data-test-message-error]',
 };
 
 export const parseJsonEditor = (find) => {

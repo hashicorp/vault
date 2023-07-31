@@ -38,9 +38,15 @@ export default class KvDataAdapter extends ApplicationAdapter {
   queryRecord(store, type, query) {
     const { backend, path, version } = query;
     // ID is the full path for the data (including version)
-    const id = kvDataPath(backend, path, version);
+    let id = kvDataPath(backend, path, version);
     return this.ajax(this._url(id), 'GET')
       .then((resp) => {
+        // if no version is queried, add version from response to ID
+        // otherwise duplicate ember data models will exist in store
+        // (one with an ID that includes the version and one without)
+        if (!version) {
+          id = kvDataPath(backend, path, resp.data.metadata.version);
+        }
         return {
           ...resp,
           data: {
