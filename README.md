@@ -193,12 +193,13 @@ func Test_Something_With_Docker(t *testing.T) {
 }
 ```
 
-A more realistic example follows.  In this case, the test should be run
-with VAULT_BINARY pointing at a local Linux amd64 vault binary on disk
-that you wish to run inside the docker containers.  If it's an Enterprise
-binary, you'll also need to set VAULT_LICENSE. Optionally you can set
-COMMIT_SHA, which will be appended to the image name we build as a 
-debugging convenience.
+Here is a more realistic example.  This test should be run with VAULT_BINARY pointing
+at a local Linux vault binary on disk that you wish to run inside the docker containers. 
+If it's an Enterprise binary, you'll also need to set VAULT_LICENSE_CI, or the
+DockerClusterOptions field VaultLicnese. 
+
+Optionally you can set COMMIT_SHA, which will be appended to the image name we
+build as a debugging convenience.
 
 ```go
 func Test_Custom_Build_With_Docker(t *testing.T) {
@@ -220,5 +221,43 @@ func Test_Custom_Build_With_Docker(t *testing.T) {
   }
   cluster := docker.NewTestDockerCluster(t, opts)
   defer cluster.Cleanup()
+}
+```
+
+There are a variety of helpers in the `github.com/hashicorp/vault/sdk/helper/testcluster`
+package, e.g. these tests below will create a pair of 3-node clusters and link them using
+PR or DR replication respectively, and fail if the replication state doesn't become healthy.
+These depend on having a vault-enterprise binary locally and the env var VAULT_BINARY set to
+point to it, as well as having VAULT_LICENSE_CI set.
+
+```go
+func TestStandardPerfReplication_Docker(t *testing.T) {
+  opts := docker.DefaultOptions(t)
+  opts.ImageRepo = "hashicorp/vault-enterprise"
+  r, err := docker.NewReplicationSetDocker(t, opts)
+  if err != nil {
+      t.Fatal(err)
+  }
+  defer r.Cleanup()
+
+  err = r.StandardPerfReplication(context.Background())
+  if err != nil {
+    t.Fatal(err)
+  }
+}
+
+func TestStandardDRReplication_Docker(t *testing.T) {
+  opts := docker.DefaultOptions(t)
+  opts.ImageRepo = "hashicorp/vault-enterprise"
+  r, err := docker.NewReplicationSetDocker(t, opts)
+  if err != nil {
+    t.Fatal(err)
+  }
+  defer r.Cleanup()
+
+  err = r.StandardDRReplication(context.Background())
+  if err != nil {
+    t.Fatal(err)
+  }
 }
 ```
