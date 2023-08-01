@@ -14,6 +14,7 @@ export const SELECTORS = {
   emptyStateTitle: '[data-test-empty-state-title]',
   emptyStateMessage: '[data-test-empty-state-message]',
   inlineAlert: '[data-test-inline-alert]',
+  validation: (attr) => `[data-test-field="${attr}"] [data-test-inline-alert]`,
   messageError: '[data-test-message-error]',
 };
 

@@ -16,8 +16,7 @@
   </:toolbarFilters>
 
   <:toolbarActions>
-    {{! TODO this create link route needs to handle creating from a directory e.g. beep/boop/  "initialKey"}}
-    <ToolbarLink @route="create" @type="add">Create secret</ToolbarLink>
+    <ToolbarLink @route="create" @query={{hash initialKey=@model.pathToSecret}} @type="add">Create secret</ToolbarLink>
   </:toolbarActions>
 </KvPageHeader>
 
