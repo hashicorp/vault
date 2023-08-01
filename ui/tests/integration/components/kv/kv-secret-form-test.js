@@ -66,8 +66,8 @@ module('Integration | Component | kv | KvSecretForm', function (hooks) {
     await click(PAGE.form.secretSave);
   });
 
-  test('it renders inline alerts and API errors', async function (assert) {
-    assert.expect(5);
+  test('it renders API errors', async function (assert) {
+    assert.expect(2);
     this.server.post(`${this.backend}/data/${this.path}`, () => {
       return new Response(500, {}, { errors: ['nope'] });
     });
@@ -82,26 +82,57 @@ module('Integration | Component | kv | KvSecretForm', function (hooks) {
       { owner: this.engine }
     );
 
-    await typeIn(PAGE.form.inputByAttr('path'), 'space ');
-    assert
-      .dom(SELECTORS.inlineAlert)
-      .hasText(
-        `Path contains whitespace. If this is desired, you'll need to encode it with %20 in API requests.`
-      );
-
-    await fillIn(PAGE.form.inputByAttr('path'), '');
-    await click(PAGE.form.secretSave);
-    const [pathValidation, formAlert] = findAll(SELECTORS.inlineAlert);
-    assert.dom(pathValidation).hasText(`Path can't be blank.`);
-    assert.dom(formAlert).hasText('There is an error with this form.');
-
     await fillIn(PAGE.form.inputByAttr('path'), this.path);
     await click(PAGE.form.secretSave);
     assert.dom(SELECTORS.messageError).hasText('Error nope', 'it renders API error');
     assert.dom(SELECTORS.inlineAlert).hasText('There was an error submitting this form.');
   });
 
-  test('it rolls back model attrs on cancel and JSON editor modifies secretData', async function (assert) {
+  test('it renders kv secret validations', async function (assert) {
+    assert.expect(6);
+
+    await render(
+      hbs`
+        <KvSecretForm
+          @secret={{this.secret}}
+          @onSave={{this.onSave}}
+          @onCancel={{this.onCancel}}
+        />`,
+      { owner: this.engine }
+    );
+
+    await typeIn(PAGE.form.inputByAttr('path'), 'space ');
+    assert
+      .dom(SELECTORS.validation('path'))
+      .hasText(
+        `Path contains whitespace. If this is desired, you'll need to encode it with %20 in API requests.`
+      );
+
+    await fillIn(PAGE.form.inputByAttr('path'), ''); // clear input
+    await typeIn(PAGE.form.inputByAttr('path'), 'slash/');
+    assert.dom(SELECTORS.validation('path')).hasText(`Path can't end in forward slash '/'`);
+
+    await typeIn(PAGE.form.inputByAttr('path'), 'secret');
+    assert
+      .dom(SELECTORS.validation('path'))
+      .doesNotExist('it removes validation on key up when secret contains slash but does not end in one');
+
+    await click(SELECTORS.toggleJson);
+    codemirror().setValue('i am a string and not JSON');
+    assert
+      .dom(SELECTORS.inlineAlert)
+      .hasText('JSON is unparsable. Fix linting errors to avoid data discrepancies.');
+
+    codemirror().setValue('{}'); // clear linting error
+    await fillIn(PAGE.form.inputByAttr('path'), '');
+    await click(PAGE.form.secretSave);
+    const [pathValidation, formAlert] = findAll(SELECTORS.inlineAlert);
+    assert.dom(pathValidation).hasText(`Path can't be blank.`);
+    assert.dom(formAlert).hasText('There is an error with this form.');
+  });
+
+  // TODO validate onConfirmLeave() unloads model on cancel
+  test('it toggles JSON view and editor modifies secretData', async function (assert) {
     assert.expect(4);
     this.onCancel = () => assert.ok(true, 'onCancel callback fires on save success');
 
