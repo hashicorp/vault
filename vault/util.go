@@ -14,7 +14,7 @@ import (
 //
 // Use of memzero is not a guarantee against memory analysis as described in
 // the Vault threat model:
-// https://www.vaultproject.io/docs/internals/security.html .  Vault does not
+// https://developer.hashicorp.com/vault/docs/internals/security .  Vault does not
 // provide guarantees against memory analysis or raw memory dumping by
 // operators, however it does minimize this exposure by zeroing out buffers
 // that contain secrets as soon as they are no longer used.  Starting with Go

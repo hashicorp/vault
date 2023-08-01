@@ -241,7 +241,7 @@ func WithIAMAuth() LoginOption {
 // If this option is not provided, will default to using the PKCS #7 signature.
 // The signature type used should match the type of the public AWS cert Vault
 // has been configured with to verify EC2 instance identity.
-// https://www.vaultproject.io/api/auth/aws#create-certificate-configuration
+// https://developer.hashicorp.com/vault/api-docs/auth/aws#create-certificate-configuration
 func WithIdentitySignature() LoginOption {
 	return func(a *AWSAuth) error {
 		a.signatureType = identityType
@@ -254,7 +254,7 @@ func WithIdentitySignature() LoginOption {
 // PKCS #7 is the default, but this method is provided for additional clarity.
 // The signature type used should match the type of the public AWS cert Vault
 // has been configured with to verify EC2 instance identity.
-// https://www.vaultproject.io/api/auth/aws#create-certificate-configuration
+// https://developer.hashicorp.com/vault/api-docs/auth/aws#create-certificate-configuration
 func WithPKCS7Signature() LoginOption {
 	return func(a *AWSAuth) error {
 		a.signatureType = pkcs7Type
