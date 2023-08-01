@@ -117,8 +117,7 @@ export default class DashboardQuickActionsCard extends Component {
     super(...arguments);
 
     if (!this.selectedEngine) {
-      this.selectedActions = getActionsByEngineType('kv');
-      this.actionParamField = getActionParamByAction('find-kv');
+      this.setSelectedAction();
     }
   }
 
@@ -148,20 +147,27 @@ export default class DashboardQuickActionsCard extends Component {
       const selectedEngine = selectedSearchEngines.split(' ');
       this.selectedEngine = selectedEngine.firstObject;
       this.selectedEngineName = selectedEngine[1];
+      this.selectedActions = getActionsByEngineType(this.selectedEngine);
+      this.setSelectedAction(this.selectedActions?.firstObject.actionType);
+    } else {
+      this.selectedEngine = selectedSearchEngines;
+      this.setSelectedAction();
     }
-
-    this.selectedActions = getActionsByEngineType(this.selectedEngine);
-    this.setSelectedAction(this.selectedActions?.firstObject.actionType);
   }
 
   @action
   setSelectedAction(selectedAction) {
-    this.selectedAction = selectedAction;
-    this.actionParamField = getActionParamByAction(selectedAction);
+    if (selectedAction) {
+      this.selectedAction = selectedAction;
+      this.actionParamField = getActionParamByAction(selectedAction);
+    } else {
+      this.selectedActions = getActionsByEngineType('kv');
+      this.actionParamField = getActionParamByAction('find-kv');
+    }
   }
 
   @action
-  handleIssuerSearch(val) {
+  handleSearch(val) {
     if (Array.isArray(val)) {
       this.value = val[0];
     } else {
