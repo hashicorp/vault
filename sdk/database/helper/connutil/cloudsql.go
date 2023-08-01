@@ -7,7 +7,6 @@ import (
 	"fmt"
 
 	"cloud.google.com/go/cloudsqlconn"
-	"cloud.google.com/go/cloudsqlconn/mysql/mysql"
 	"cloud.google.com/go/cloudsqlconn/postgres/pgxv4"
 )
 
@@ -18,8 +17,6 @@ func (c *SQLConnectionProducer) getCloudSQLDBType() (string, error) {
 		dbType = cloudSQLMSSQL
 	case dbTypePostgres:
 		dbType = cloudSQLPostgres
-	case "mysql":
-		dbType = cloudSQLMySQL
 	default:
 		return "", fmt.Errorf("unrecognized DB type: %s", c.Type)
 	}
@@ -27,8 +24,20 @@ func (c *SQLConnectionProducer) getCloudSQLDBType() (string, error) {
 	return dbType, nil
 }
 
-func (c *SQLConnectionProducer) registerDrivers() (func() error, error) {
+func (c *SQLConnectionProducer) registerDrivers(filename, credentials interface{}) (func() error, error) {
 	typ, err := c.getCloudSQLDBType()
+	if err != nil {
+		return nil, err
+	}
+
+	if cacheGet(typ) != nil {
+		// drivers have already been registered
+		// return
+		fmt.Printf("drivers have already been registered, returning\n")
+		return nil, nil
+	}
+
+	opts, err := getAuthOptions(filename, credentials)
 	if err != nil {
 		return nil, err
 	}
@@ -37,21 +46,45 @@ func (c *SQLConnectionProducer) registerDrivers() (func() error, error) {
 	case cloudSQLMSSQL:
 		// return mssql.RegisterDriver(cloudSQLMSSQL, cloudsqlconn.WithCredentialsFile("key.json"))
 	case cloudSQLPostgres:
-		return registerDriverPostgres()
-	case cloudSQLMySQL:
-		return registerDriverMySQL()
+		return registerDriverPostgres(opts)
 	}
 
 	return nil, fmt.Errorf("unrecognized cloudsql type encountered: %s", typ)
 }
 
-// @TODO add support for credentials file
-func registerDriverPostgres() (func() error, error) {
-	fmt.Printf("registering driver for %s\n", cloudSQLPostgres)
-	return pgxv4.RegisterDriver(cloudSQLPostgres, cloudsqlconn.WithIAMAuthN())
+func registerDriverPostgres(opts cloudsqlconn.Option) (func() error, error) {
+	return pgxv4.RegisterDriver(cloudSQLPostgres, opts)
 }
 
-func registerDriverMySQL() (func() error, error) {
-	fmt.Printf("registering driver for %s\n", cloudSQLMySQL)
-	return mysql.RegisterDriver(cloudSQLMySQL, cloudsqlconn.WithIAMAuthN())
+func getAuthOptions(filename, credentials interface{}) (cloudsqlconn.Option, error) {
+	if filename != nil {
+		v, ok := filename.(string)
+		if !ok {
+			return nil, fmt.Errorf("error converting file name to string")
+		}
+
+		fmt.Printf("registering driver with credential file\n")
+		return cloudsqlconn.WithCredentialsFile(v), nil
+	}
+
+	if credentials != nil {
+		v, ok := credentials.([]byte)
+		if !ok {
+			return nil, fmt.Errorf("error converting JSON data to bytes")
+		}
+
+		fmt.Printf("registering driver with credential json\n")
+		return cloudsqlconn.WithCredentialsJSON(v), nil
+
+	}
+
+	return cloudsqlconn.WithIAMAuthN(), nil
+}
+
+func cacheCleanup(typ string, f func() error) {
+	basicCleanupCache[typ] = f
+}
+
+func cacheGet(typ string) func() error {
+	return basicCleanupCache[typ]
 }

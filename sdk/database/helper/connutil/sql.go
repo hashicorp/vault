@@ -25,10 +25,11 @@ const (
 	dbTypePostgres   = "pgx"
 	cloudSQLPostgres = "cloudsql-postgres"
 	cloudSQLMSSQL    = "cloudsql-sqlserver"
-	cloudSQLMySQL    = "cloudsql-mysql"
 )
 
 var _ ConnectionProducer = &SQLConnectionProducer{}
+
+var basicCleanupCache = map[string]func() error{}
 
 // SQLConnectionProducer implements ConnectionProducer and provides a generic producer for most sql databases
 type SQLConnectionProducer struct {
@@ -46,7 +47,6 @@ type SQLConnectionProducer struct {
 	maxConnectionLifetime time.Duration
 	Initialized           bool
 	db                    *sql.DB
-	cleanupDrivers        []func() error
 	sync.Mutex
 }
 
@@ -150,8 +150,6 @@ func (c *SQLConnectionProducer) Connection(ctx context.Context) (interface{}, er
 		c.db.Close()
 	}
 
-	// @TODO handle reading IAM credentials from RawConfig
-
 	// default non-IAM behavior
 	dbType := c.Type
 
@@ -161,15 +159,17 @@ func (c *SQLConnectionProducer) Connection(ctx context.Context) (interface{}, er
 			return nil, err
 		}
 		dbType = typ
+		filename := c.RawConfig["filename"]
+		credentials := c.RawConfig["credentials"]
 
-		fmt.Sprintf("registering drivers for %s\n", dbType)
-		cleanupFunc, err := c.registerDrivers()
+		fmt.Printf("registering drivers for %s\n", dbType)
+		cleanupFunc, err := c.registerDrivers(filename, credentials)
 		if err != nil {
 			return nil, err
 		}
 
 		// store driver cleanup
-		c.cleanupDrivers = append(c.cleanupDrivers, cleanupFunc)
+		cacheCleanup(dbType, cleanupFunc)
 	} else {
 		// For mssql backend, switch to sqlserver instead
 		if c.Type == "mssql" {
@@ -227,9 +227,9 @@ func (c *SQLConnectionProducer) Close() error {
 		// if auth_type is IAM, ensure cleanup
 		// of cloudSQL resources
 		if c.AuthType == authTypeIAM {
-			for _, cleanup := range c.cleanupDrivers {
+			for cleanupTyp := range basicCleanupCache {
 				fmt.Sprintf("cleaning up for %s\n", c.Type)
-				cleanup()
+				basicCleanupCache[cleanupTyp]()
 			}
 		} else {
 			c.db.Close()

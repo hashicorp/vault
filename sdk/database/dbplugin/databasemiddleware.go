@@ -6,12 +6,13 @@ package dbplugin
 import (
 	"context"
 	"errors"
+	"fmt"
 	"net/url"
 	"strings"
 	"sync"
 	"time"
 
-	metrics "github.com/armon/go-metrics"
+	"github.com/armon/go-metrics"
 	"github.com/hashicorp/errwrap"
 	log "github.com/hashicorp/go-hclog"
 	"google.golang.org/grpc/status"
@@ -314,7 +315,7 @@ func (mw *DatabaseErrorSanitizerMiddleware) sanitize(err error) error {
 		return nil
 	}
 	if errwrap.ContainsType(err, new(url.Error)) {
-		return errors.New("unable to parse connection url")
+		return fmt.Errorf("unable to parse connection url, err=%w", err)
 	}
 	if mw.secretsFn != nil {
 		for k, v := range mw.secretsFn() {

@@ -41,7 +41,6 @@ func newDatabaseWrapper(ctx context.Context, pluginName string, pluginVersion st
 		dbw = databaseVersionWrapper{
 			v5: newDB,
 		}
-		logger.Debug("got v5 db factory")
 		return dbw, nil
 	}
 
