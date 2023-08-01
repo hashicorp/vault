@@ -96,12 +96,7 @@
         {{#each fields as |attr|}}
           {{#if attr.options.masked}}
             <InfoTableRow @label={{or attr.options.label (humanize (dasherize attr.name))}} @value={{get @issuer attr.name}}>
-              <MaskedInput
-                @name={{or attr.options.label (humanize (dasherize attr.name))}}
-                @value={{get @issuer attr.name}}
-                @displayOnly={{true}}
-                @allowCopy={{true}}
-              />
+              <CertificateCard @certificateValue={{get @issuer attr.name}} />
             </InfoTableRow>
           {{else if (eq attr.name "keyId")}}
             <InfoTableRow @label={{or attr.options.label (humanize (dasherize attr.name))}} @value={{get @issuer attr.name}}>

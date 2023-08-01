@@ -22,7 +22,7 @@
               @addCopyButton={{eq attr.name "keyId"}}
             >
               {{#if (and attr.options.masked value)}}
-                <MaskedInput @value={{value}} @displayOnly={{true}} @allowCopy={{true}} />
+                <CertificateCard @certificateValue={{value}} />
               {{else if (eq attr.name "keyId")}}
                 <LinkTo @route="keys.key.details" @model={{@model.keyId}}>
                   {{@model.keyId}}
