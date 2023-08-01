@@ -3104,170 +3104,6 @@ func buildTestApp(t *testing.T) string {
 	return testAppBinary
 }
 
-// TestAgent_Exec_Restarts tests that vault agent restarts the app
-// on changes to relevant vault secrets
-func TestAgent_Exec_Restarts(t *testing.T) {
-	logger := logging.NewVaultLogger(hclog.Trace)
-
-	testAppBin := buildTestApp(t)
-	defer os.Remove(testAppBin)
-
-	vaultClient, cleanup := testVaultServer(t)
-	defer cleanup()
-	// TODO: this is required for vault agent to hit the correct vault url
-	t.Setenv(api.EnvVaultAddress, vaultClient.Address())
-
-	tokenFile := populateTempFile(t, "tokenfile.txt", vaultClient.Token())
-	defer os.Remove(tokenFile.Name())
-
-	// token file needs to have 600 permissions
-	if err := os.Chmod(tokenFile.Name(), 0o600); err != nil {
-		t.Fatalf("unable to change permissions of token file: %s", err)
-	}
-
-	const port = 34123
-	config := fmt.Sprintf(`
-template_config {
-  static_secret_render_interval = "1s"
-}
-
-vault {
-  address = "%s"
-  tls_skip_verify = true
-}
-
-auto_auth {
-	method {
-		type = "token_file"
-    	config {
-			token_file_path = "%s"
-		}
-	}
-}
-env_template "MY_DATABASE_USER" {
-  contents = "{{ with secret \"kv-v2/data/my-db\" }}{{ .Data.data.user }}{{ end }}"
-}
-env_template "MY_DATABASE_PASSWORD" {
-  contents = "{{ with secret \"kv-v2/data/my-db\" }}{{ .Data.data.password }}{{ end }}"
-}
-
-exec {
-	command = ["%s", "-port", "%d"]
-}`, vaultClient.Address(), tokenFile.Name(), testAppBin, port)
-	configFile := makeTempFile(t, "config.hcl", config)
-
-	// enable kv-v2 backend
-	if err := vaultClient.Sys().Mount("kv-v2/", &api.MountInput{
-		Type: "kv-v2",
-	}); err != nil {
-		t.Fatal(err)
-	}
-
-	_, err := vaultClient.KVv2("kv-v2/").Put(context.Background(), "my-db", map[string]interface{}{
-		"user":     "dbuser",
-		"password": "password1",
-	})
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	_, agentCmd := testAgentCommand(t, logger)
-	agentCmd.client = vaultClient
-	agentCmd.startedCh = make(chan struct{})
-
-	// the command blocks, so run in go-routine
-	agentExitCodeCh := make(chan int, 1)
-	go func(exitCodeCh chan<- int) {
-		args := []string{"-config", configFile}
-		exitCodeCh <- agentCmd.Run(args)
-	}(agentExitCodeCh)
-
-	// wait until agent starts
-	select {
-	case <-agentCmd.startedCh:
-	case <-time.After(10 * time.Second):
-		t.Fatal("agent did not start within 10 seconds")
-	}
-
-	// agent started, give some time to populate env vars from vault
-	time.Sleep(2 * time.Second)
-
-	testAppAddr := fmt.Sprintf("http://localhost:%d", port)
-
-	checkTestAppEnvVars := func(t *testing.T, expectedEnvVars map[string]string) {
-		t.Helper()
-		// verify the environment variables
-		resp, err := retryablehttp.Get(testAppAddr)
-		if err != nil {
-			t.Fatalf("error making request to the test app: %s", err)
-		}
-		defer resp.Body.Close()
-
-		decoder := json.NewDecoder(resp.Body)
-		type TestAppResponse struct {
-			EnvironmentVariables map[string]string `json:"environment_variables"`
-			ProcessID            int               `json:"process_id"`
-		}
-		var response TestAppResponse
-		if err := decoder.Decode(&response); err != nil {
-			t.Fatalf("unable to parse response from test app: %s", err)
-		}
-		logger.Info("checking process", "processid", response.ProcessID)
-		for envVar, expectedValue := range expectedEnvVars {
-			actualValue, ok := response.EnvironmentVariables[envVar]
-			if !ok {
-				t.Fatalf("expected env vars to include %q", envVar)
-			}
-			if actualValue != expectedValue {
-				t.Fatalf("expected env var %q to be %q, got %q", envVar, expectedValue, actualValue)
-			}
-		}
-	}
-
-	checkTestAppEnvVars(t, map[string]string{
-		"MY_DATABASE_USER":     "dbuser",
-		"MY_DATABASE_PASSWORD": "password1",
-	})
-
-	// update the secrets so we can test the refresh
-	_, err = vaultClient.KVv2("kv-v2/").Put(context.Background(), "my-db", map[string]interface{}{
-		"user":     "newuser",
-		"password": "password2",
-	})
-	if err != nil {
-		t.Fatal(err)
-	}
-	// wait for consul-template to fetch the new values
-	// see template_config.static_secret_render_interval
-	time.Sleep(10 * time.Second)
-	res, err := vaultClient.KVv2("kv-v2/").Get(context.Background(), "my-db")
-	userValue := res.Data["user"].(string)
-	passwordValue := res.Data["password"].(string)
-	if userValue != "newuser" || passwordValue != "password2" {
-		t.Fatal("unable to confirm values updated")
-	}
-
-	checkTestAppEnvVars(t, map[string]string{
-		"MY_DATABASE_USER":     "newuser",
-		"MY_DATABASE_PASSWORD": "password2",
-	})
-
-	close(agentCmd.ShutdownCh)
-
-	// wait until the vault agent command exits
-	// shouldn't take long, but we time it to make sure
-	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
-	defer cancel()
-	select {
-	case <-ctx.Done():
-		t.Fatalf("vault agent didn't exit within the timeout")
-	case exitCode := <-agentExitCodeCh:
-		if exitCode != 0 {
-			t.Fatalf("expected to exit successfully")
-		}
-	}
-}
-
 // TestExec_ExitCodes makes sure vault agent exits with the same
 // exit code as the exec app
 func TestExec_ExitCodes(t *testing.T) {
@@ -3410,6 +3246,175 @@ exec {
 				}
 			}
 		})
+	}
+}
+
+// TestAgent_Exec_Restarts tests that vault agent restarts the app
+// on changes to relevant vault secrets
+func TestAgent_Exec_Restarts(t *testing.T) {
+	logger := logging.NewVaultLogger(hclog.Trace)
+
+	testAppBin := buildTestApp(t)
+	defer os.Remove(testAppBin)
+
+	vaultClient, cleanup := testVaultServer(t)
+	defer cleanup()
+	// TODO: this is required for vault agent to hit the correct vault url
+	t.Setenv(api.EnvVaultAddress, vaultClient.Address())
+
+	tokenFile := populateTempFile(t, "tokenfile.txt", vaultClient.Token())
+	defer os.Remove(tokenFile.Name())
+
+	// token file needs to have 600 permissions
+	if err := os.Chmod(tokenFile.Name(), 0o600); err != nil {
+		t.Fatalf("unable to change permissions of token file: %s", err)
+	}
+
+	const port = 34123
+	config := fmt.Sprintf(`
+template_config {
+  static_secret_render_interval = "1s"
+}
+
+vault {
+  address = "%s"
+  tls_skip_verify = true
+}
+
+auto_auth {
+	method {
+		type = "token_file"
+    	config {
+			token_file_path = "%s"
+		}
+	}
+}
+env_template "MY_DATABASE_USER" {
+  contents = "{{ with secret \"kv-v2/data/my-db\" }}{{ .Data.data.user }}{{ end }}"
+}
+env_template "MY_DATABASE_PASSWORD" {
+  contents = "{{ with secret \"kv-v2/data/my-db\" }}{{ .Data.data.password }}{{ end }}"
+}
+
+exec {
+	command = ["%s", "-port", "%d"]
+}`, vaultClient.Address(), tokenFile.Name(), testAppBin, port)
+	configFile := makeTempFile(t, "config.hcl", config)
+
+	// enable kv-v2 backend
+	if err := vaultClient.Sys().Mount("kv-v2/", &api.MountInput{
+		Type: "kv-v2",
+	}); err != nil {
+		t.Fatal(err)
+	}
+
+	_, err := vaultClient.KVv2("kv-v2/").Put(context.Background(), "my-db", map[string]interface{}{
+		"user":     "dbuser",
+		"password": "password1",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	_, agentCmd := testAgentCommand(t, logger)
+	agentCmd.client = vaultClient
+	agentCmd.startedCh = make(chan struct{})
+
+	// the command blocks, so run in go-routine
+	agentExitCodeCh := make(chan int, 1)
+	go func(exitCodeCh chan<- int) {
+		args := []string{"-config", configFile}
+		exitCodeCh <- agentCmd.Run(args)
+	}(agentExitCodeCh)
+
+	// wait until agent starts
+	select {
+	case <-agentCmd.startedCh:
+	case <-time.After(10 * time.Second):
+		t.Fatal("agent did not start within 10 seconds")
+	}
+
+	// agent started, give some time to populate env vars from vault
+	time.Sleep(2 * time.Second)
+
+	testAppAddr := fmt.Sprintf("http://localhost:%d", port)
+
+	checkTestAppEnvVars := func(t *testing.T, expectedEnvVars map[string]string) {
+		t.Helper()
+		// verify the environment variables
+		resp, err := retryablehttp.Get(testAppAddr)
+		if err != nil {
+			t.Fatalf("error making request to the test app: %s", err)
+		}
+		defer resp.Body.Close()
+
+		decoder := json.NewDecoder(resp.Body)
+		type TestAppResponse struct {
+			EnvironmentVariables map[string]string `json:"environment_variables"`
+			ProcessID            int               `json:"process_id"`
+		}
+		var response TestAppResponse
+		if err := decoder.Decode(&response); err != nil {
+			t.Fatalf("unable to parse response from test app: %s", err)
+		}
+		logger.Info("checking process", "processid", response.ProcessID)
+		for envVar, expectedValue := range expectedEnvVars {
+			actualValue, ok := response.EnvironmentVariables[envVar]
+			if !ok {
+				t.Fatalf("expected env vars to include %q", envVar)
+			}
+			if actualValue != expectedValue {
+				t.Fatalf("expected env var %q to be %q, got %q", envVar, expectedValue, actualValue)
+			}
+		}
+	}
+
+	// wait for the app to start
+	if _, err := retryablehttp.Get(testAppAddr); err != nil {
+		t.Fatalf("app unable to start: %s", err)
+	}
+
+	checkTestAppEnvVars(t, map[string]string{
+		"MY_DATABASE_USER":     "dbuser",
+		"MY_DATABASE_PASSWORD": "password1",
+	})
+
+	// update the secrets so we can test the refresh
+	_, err = vaultClient.KVv2("kv-v2/").Put(context.Background(), "my-db", map[string]interface{}{
+		"user":     "newuser",
+		"password": "password2",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	// wait for consul-template to fetch the new values
+	// see template_config.static_secret_render_interval
+	time.Sleep(10 * time.Second)
+	res, err := vaultClient.KVv2("kv-v2/").Get(context.Background(), "my-db")
+	userValue := res.Data["user"].(string)
+	passwordValue := res.Data["password"].(string)
+	if userValue != "newuser" || passwordValue != "password2" {
+		t.Fatal("unable to confirm values updated")
+	}
+
+	checkTestAppEnvVars(t, map[string]string{
+		"MY_DATABASE_USER":     "newuser",
+		"MY_DATABASE_PASSWORD": "password2",
+	})
+
+	close(agentCmd.ShutdownCh)
+
+	// wait until the vault agent command exits
+	// shouldn't take long, but we time it to make sure
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+	select {
+	case <-ctx.Done():
+		t.Fatalf("vault agent didn't exit within the timeout")
+	case exitCode := <-agentExitCodeCh:
+		if exitCode != 0 {
+			t.Fatalf("expected to exit successfully")
+		}
 	}
 }
 
