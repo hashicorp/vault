@@ -279,7 +279,7 @@ jobs:
           tr -d '\n' <<< '${{ toJSON(needs.*.result) }}' | grep -q -v -E '(failure|cancelled)'
 
   notify-tests-completed-failures-oss:
-    if: ${{ always() && github.repository == 'hashicorp/vault' && needs.tests-completed.result == 'failure' && (github.ref_name == 'main' || startsWith(github.ref_name, 'release/')) }}
+    if: ${{ always() && github.repository == 'hashicorp/vault' && needs.*.result == 'failure' && (github.ref_name == 'main' || startsWith(github.ref_name, 'release/')) }}
     runs-on: ubuntu-latest
     permissions:
       id-token: write
@@ -287,7 +287,9 @@ jobs:
     strategy:
       fail-fast: false
     needs:
-      - tests-completed
+      - test-go
+      - test-go-fips
+      - test-go-race
     steps:
       - name: send-notification
         uses: slackapi/slack-github-action@e28cf165c92ffef168d23c5c9000cffc8a25e117 # v1.24.0
@@ -301,7 +303,7 @@ jobs:
             {"text":"OSS test failures on ${{ github.ref_name }}","blocks":[{"type":"header","text":{"type":"plain_text","text":":rotating_light: OSS test failures :rotating_light:","emoji":true}},{"type":"divider"},{"type":"section","text":{"type":"mrkdwn","text":"test(s) failed on ${{ github.ref_name }}"},"accessory":{"type":"button","text":{"type":"plain_text","text":"View Failing Workflow","emoji":true},"url":"${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"}}]}
 
   notify-tests-completed-failures-ent:
-    if: ${{ always() && github.repository == 'hashicorp/vault-enterprise' && needs.tests-completed.result == 'failure' && (github.ref_name == 'main' || startsWith(github.ref_name, 'release/')) }}
+    if: ${{ always() && github.repository == 'hashicorp/vault-enterprise' && needs.*.result == 'failure' && (github.ref_name == 'main' || startsWith(github.ref_name, 'release/')) }}
     runs-on: ['self-hosted', 'linux', 'small']
     permissions:
       id-token: write
@@ -309,7 +311,9 @@ jobs:
     strategy:
       fail-fast: false
     needs:
-      - tests-completed
+      - test-go
+      - test-go-fips
+      - test-go-race
     steps:
       - id: vault-auth
         name: Vault Authenticate
