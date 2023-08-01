@@ -53,6 +53,41 @@
             <li class="action">
               <LinkTo
                 class="has-text-black has-text-weight-semibold"
+                data-test-edit
+                @route="roles.role.edit"
+                @models={{array role.type role.name}}
+                @disabled={{not role.canEdit}}
+              >
+                Edit
+              </LinkTo>
+            </li>
+            <li class="action">
+              <LinkTo
+                class="has-text-black has-text-weight-semibold"
+                data-test-get-creds
+                @route="roles.role.credentials"
+                @models={{array role.type role.name}}
+                @disabled={{not role.canReadCreds}}
+              >
+                Get credentials
+              </LinkTo>
+            </li>
+            {{#if role.canRotateStaticCreds}}
+              <li class="action">
+                <Menu.Message
+                  data-test-rotate-creds
+                  @id={{concat "rotate-" role.id}}
+                  @triggerText="Rotate credentials"
+                  @title="Are you sure?"
+                  @message="When manually rotating credentials, the rotation period will start over."
+                  @confirmButtonText="Rotate"
+                  @onConfirm={{fn this.onRotate role}}
+                />
+              </li>
+            {{/if}}
+            <li class="action">
+              <LinkTo
+                class="has-text-black has-text-weight-semibold"
                 data-test-details
                 @route="roles.role.details"
                 {{! this will force the roles.role model hook to fire since we may only have a partial model loaded in the list view }}
@@ -62,22 +97,11 @@
                 Details
               </LinkTo>
             </li>
-            <li class="action">
-              <LinkTo
-                class="has-text-black has-text-weight-semibold"
-                data-test-edit
-                @route="roles.role.edit"
-                @models={{array role.type role.name}}
-                @disabled={{not role.canEdit}}
-              >
-                Edit
-              </LinkTo>
-            </li>
             {{#if role.canDelete}}
               <li class="action">
                 <Menu.Message
                   data-test-delete
-                  @id={{role.id}}
+                  @id={{concat "delete-" role.id}}
                   @triggerText="Delete"
                   @title="Are you sure?"
                   @message="Deleting this role means that you’ll need to recreate it in order to generate credentials again."

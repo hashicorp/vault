@@ -99,9 +99,16 @@ module('Integration | Component | ldap | Page::Roles', function (hooks) {
       .hasText(this.roles.firstObject.type, 'List item type badge renders');
 
     await click('[data-test-popup-menu-trigger]');
-    assert.dom('[data-test-details]').hasText('Details', 'Details link renders in menu');
     assert.dom('[data-test-edit]').hasText('Edit', 'Edit link renders in menu');
+    assert.dom('[data-test-get-creds]').hasText('Get credentials', 'Get credentials link renders in menu');
+    assert
+      .dom('[data-test-rotate-creds]')
+      .hasText('Rotate credentials', 'Rotate credentials link renders in menu');
+    assert.dom('[data-test-details]').hasText('Details', 'Details link renders in menu');
     assert.dom('[data-test-delete]').hasText('Delete', 'Details link renders in menu');
+
+    await click('[data-test-popup-menu-trigger]:last-of-type');
+    assert.dom('[data-test-rotate-creds]').doesNotExist('Rotate credentials link is hidden for dynamic type');
   });
 
   test('it should filter roles', async function (assert) {

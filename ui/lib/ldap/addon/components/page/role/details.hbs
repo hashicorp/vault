@@ -21,11 +21,19 @@
       <ToolbarLink @route="roles.role.credentials" data-test-get-credentials>
         Get credentials
       </ToolbarLink>
-      {{#if @model.canRotateStaticCreds}}
-        <ToolbarLink @route="roles.role.credentials" data-test-rotate-credentials>
-          Rotate credentials
-        </ToolbarLink>
-      {{/if}}
+    {{/if}}
+    {{#if @model.canRotateStaticCreds}}
+      <ConfirmAction
+        @buttonClasses="toolbar-link"
+        @confirmTitle="Rotate credentials?"
+        @confirmMessage="When manually rotating credentials, the rotation period will start over."
+        @confirmButtonText="Rotate"
+        @disabled={{this.rotateCredentials.isRunning}}
+        @onConfirmAction={{perform this.rotateCredentials}}
+        data-test-rotate-credentials
+      >
+        Rotate credentials
+      </ConfirmAction>
     {{/if}}
     {{#if @model.canEdit}}
       <ToolbarLink @route="roles.role.edit" data-test-edit>

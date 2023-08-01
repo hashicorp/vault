@@ -2,6 +2,8 @@ import Component from '@glimmer/component';
 import { action } from '@ember/object';
 import { inject as service } from '@ember/service';
 import errorMessage from 'vault/utils/error-message';
+import { task } from 'ember-concurrency';
+import { waitFor } from '@ember/test-waiters';
 
 import type LdapRoleModel from 'vault/models/ldap/role';
 import { Breadcrumb } from 'vault/vault/app-types';
@@ -26,6 +28,17 @@ export default class LdapRoleDetailsPageComponent extends Component<Args> {
     } catch (error) {
       const message = errorMessage(error, 'Unable to delete role. Please try again or contact support.');
       this.flashMessages.danger(message);
+    }
+  }
+
+  @task
+  @waitFor
+  *rotateCredentials() {
+    try {
+      yield this.args.model.rotateStaticPassword();
+      this.flashMessages.success('Credentials successfully rotated.');
+    } catch (error) {
+      this.flashMessages.danger(`Error rotating credentials \n ${errorMessage(error)}`);
     }
   }
 }

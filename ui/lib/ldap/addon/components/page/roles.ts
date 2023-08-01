@@ -41,6 +41,17 @@ export default class LdapRolesPageComponent extends Component<Args> {
   }
 
   @action
+  async onRotate(model: LdapRoleModel) {
+    try {
+      const message = `Successfully rotated credentials for ${model.name}.`;
+      await model.rotateStaticPassword();
+      this.flashMessages.success(message);
+    } catch (error) {
+      this.flashMessages.danger(`Error rotating credentials \n ${errorMessage(error)}`);
+    }
+  }
+
+  @action
   async onDelete(model: LdapRoleModel) {
     try {
       const message = `Successfully deleted role ${model.name}.`;
@@ -48,8 +59,7 @@ export default class LdapRolesPageComponent extends Component<Args> {
       this.args.roles.removeObject(model);
       this.flashMessages.success(message);
     } catch (error) {
-      const message = errorMessage(error, 'Error deleting role. Please try again or contact support.');
-      this.flashMessages.danger(message);
+      this.flashMessages.danger(`Error deleting role \n ${errorMessage(error)}`);
     }
   }
 }
