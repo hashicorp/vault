@@ -40,6 +40,7 @@ export default class MfaLoginEnforcementSerializer extends ApplicationSerializer
     // ensure that they are sent to the server, otherwise removing items will not be persisted
     json.auth_method_accessors = json.auth_method_accessors || [];
     json.auth_method_types = json.auth_method_types || [];
+    // TODO: create array transform which serializes an empty array if empty
     return this.transformHasManyKeys(json, 'server');
   }
 }
