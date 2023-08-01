@@ -32,6 +32,10 @@ const validations = {
   path: [
     { type: 'presence', message: `Path can't be blank.` },
     {
+      validator: (model) => (model.path.match(/\/$/) ? false : true),
+      message: `Path can't end in forward slash '/'`,
+    },
+    {
       type: 'containsWhiteSpace',
       message:
         "Path contains whitespace. If this is desired, you'll need to encode it with %20 in API requests.",
