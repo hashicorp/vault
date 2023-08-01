@@ -13,6 +13,7 @@ import { click, fillIn, findAll, render, typeIn } from '@ember/test-helpers';
 import { PAGE } from 'vault/tests/helpers/kv/kv-page-selectors';
 import { SELECTORS } from 'vault/tests/helpers/kv/kv-general-selectors';
 import codemirror from 'vault/tests/helpers/codemirror';
+import { kvDataPath } from 'vault/utils/kv-path';
 
 module('Integration | Component | kv | KvSecretForm', function (hooks) {
   setupRenderingTest(hooks);
@@ -186,7 +187,10 @@ module('Integration | Component | kv | KvSecretForm', function (hooks) {
       { owner: this.engine }
     );
 
+    assert.dom(PAGE.form.dataInputLabel({ isJson: false })).hasText('Secret data');
     await click(SELECTORS.toggleJson);
+    assert.dom(PAGE.form.dataInputLabel({ isJson: true })).hasText('Secret data');
+
     assert.strictEqual(
       codemirror().getValue(' '),
       `{   \"\": \"\" }`, // eslint-disable-line no-useless-escape
@@ -197,5 +201,63 @@ module('Integration | Component | kv | KvSecretForm', function (hooks) {
     codemirror().setValue(`{ "hello": "there"}`);
     assert.propEqual(this.secret.secretData, { hello: 'there' }, 'json editor updates secret data');
     await click(PAGE.form.secretCancel);
+  });
+
+  test('it saves a new secret version', async function (assert) {
+    assert.expect(8);
+    const version = 2;
+    this.dataId = kvDataPath(this.backend, this.path);
+    this.secretData = { foo: 'bar' };
+    this.store.pushPayload('kv/data', {
+      modelName: 'kv/data',
+      id: this.dataId,
+      path: this.path,
+      secret_data: this.secretData,
+      created_time: '2023-07-20T02:12:17.379762Z',
+      custom_metadata: null,
+      deletion_time: '',
+      destroyed: false,
+      version: version,
+    });
+    this.secret = this.store.peekRecord('kv/data', this.dataId);
+
+    this.onSave = () => assert.ok(true, 'onSave callback fires on save success');
+    this.server.post(`${this.backend}/data/${this.path}`, (schema, req) => {
+      assert.ok(true, 'Request made to save secret');
+      const payload = JSON.parse(req.requestBody);
+      assert.propEqual(payload, {
+        data: { foo: 'bar' },
+        options: { cas: version },
+      });
+      return {
+        request_id: 'bd76db73-605d-fcbc-0dad-d44a008f9b95',
+        data: {
+          created_time: '2023-07-28T18:47:32.924809Z',
+          custom_metadata: null,
+          deletion_time: '',
+          destroyed: false,
+          version: version + 1,
+        },
+      };
+    });
+
+    await render(
+      hbs`
+        <KvSecretForm
+          @secret={{this.secret}}
+          @onSave={{this.onSave}}
+          @onCancel={{this.onCancel}}
+        />`,
+      { owner: this.engine }
+    );
+
+    assert.dom(PAGE.form.inputByAttr('path')).isDisabled();
+    assert.dom(PAGE.form.inputByAttr('path')).hasValue(this.path);
+    assert.dom(PAGE.form.keyInput()).hasValue('foo');
+    assert.dom(PAGE.form.maskedValueInput()).hasValue('bar');
+
+    assert.dom(PAGE.form.dataInputLabel({ isJson: false })).hasText('Version data');
+    await click(SELECTORS.toggleJson);
+    assert.dom(PAGE.form.dataInputLabel({ isJson: true })).hasText('Version data');
   });
 });

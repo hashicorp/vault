@@ -22,5 +22,7 @@ export const PAGE = {
     valueInput: (idx = 0) => `[data-test-kv-value="${idx}"]`,
     maskedValueInput: (idx = 0) => `[data-test-kv-value="${idx}"] [data-test-textarea]`,
     deleteRow: (idx = 0) => `[data-test-kv-delete-row="${idx}"]`,
+    dataInputLabel: ({ isJson = false }) =>
+      isJson ? '[data-test-component="json-editor-title"]' : '[data-test-kv-label]',
   },
 };
