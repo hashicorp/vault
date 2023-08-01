@@ -16,6 +16,13 @@ const component = create(maskedInput);
 module('Integration | Component | masked input', function (hooks) {
   setupRenderingTest(hooks);
 
+  hooks.beforeEach(function () {
+    this.flashMessages = this.owner.lookup('service:flash-messages');
+    this.flashMessages.registerTypes(['success', 'danger']);
+    this.flashSuccessSpy = sinon.spy(this.flashMessages, 'success');
+    this.flashDangerSpy = sinon.spy(this.flashMessages, 'danger');
+  });
+
   test('it renders', async function (assert) {
     await render(hbs`<MaskedInput />`);
     assert.dom('[data-test-masked-input]').exists('shows masked input');
@@ -95,5 +102,57 @@ module('Integration | Component | masked input', function (hooks) {
     await component.toggleMasked();
     const unMaskedValue = document.querySelector('.masked-value').value;
     assert.strictEqual(unMaskedValue, this.value);
+  });
+
+  test('it renders a minus icon when an empty string is provided as a value', async function (assert) {
+    await render(hbs`
+      <MaskedInput
+        @name="key"
+        @value=""
+        @displayOnly={{true}}
+        @allowCopy={{true}}
+        @allowDownload={{true}}
+      />
+    `);
+    assert.dom('[data-test-masked-input]').exists('shows masked input');
+    assert.ok(component.copyButtonIsPresent);
+    assert.ok(component.downloadButtonIsPresent);
+    assert.dom('[data-test-button="toggle-masked"]').exists('shows toggle mask button');
+
+    await component.toggleMasked();
+    assert.dom('.masked-value').doesNotHaveClass('masked-font', 'it unmasks when show button is clicked');
+    assert
+      .dom('[data-test-icon="minus"]')
+      .exists('shows minus icon when unmasked because value is empty string');
+  });
+
+  test('it shows "success" flash message when the value is successfully copied', async function (assert) {
+    await render(hbs`
+      <MaskedInput
+        @name="key"
+        @value="value"
+        @displayOnly={{true}}
+        @allowCopy={{true}}
+      />
+    `);
+    assert.dom('[data-test-masked-input]').exists('shows masked input');
+    assert.ok(component.copyButtonIsPresent);
+    await component.copyValue();
+    assert.ok(this.flashSuccessSpy.calledWith('Data copied!'), 'Renders correct flash message');
+  });
+
+  test('it shows "danger" flash message when the value fails to be copied (no value)', async function (assert) {
+    await render(hbs`
+      <MaskedInput
+        @name="key"
+        @value=""
+        @displayOnly={{true}}
+        @allowCopy={{true}}
+      />
+    `);
+    assert.dom('[data-test-masked-input]').exists('shows masked input');
+    assert.ok(component.copyButtonIsPresent);
+    await component.copyValue();
+    assert.ok(this.flashDangerSpy.calledWith('Error copying data'), 'Renders correct flash message');
   });
 });
