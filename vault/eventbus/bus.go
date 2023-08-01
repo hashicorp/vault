@@ -6,6 +6,7 @@ package eventbus
 import (
 	"context"
 	"errors"
+	"fmt"
 	"net/url"
 	"strings"
 	"sync"
@@ -146,7 +147,10 @@ func init() {
 }
 
 func NewEventBus(logger hclog.Logger) (*EventBus, error) {
-	broker := eventlogger.NewBroker()
+	broker, err := eventlogger.NewBroker()
+	if err != nil {
+		return nil, err
+	}
 
 	formatterID, err := uuid.GenerateUUID()
 	if err != nil {
@@ -218,7 +222,8 @@ func (bus *EventBus) Subscribe(ctx context.Context, ns *namespace.Namespace, pat
 	// add info needed to cancel the subscription
 	asyncNode.pipelineID = eventlogger.PipelineID(pipelineID)
 	asyncNode.cancelFunc = cancel
-	return asyncNode.ch, asyncNode.Close, nil
+	// Capture context in a closure for the cancel func
+	return asyncNode.ch, func() { asyncNode.Close(ctx) }, nil
 }
 
 // SetSendTimeout sets the timeout of sending events. If the events are not accepted by the
@@ -257,13 +262,19 @@ func newAsyncNode(ctx context.Context, logger hclog.Logger) *asyncChanNode {
 }
 
 // Close tells the bus to stop sending us events.
-func (node *asyncChanNode) Close() {
+func (node *asyncChanNode) Close(ctx context.Context) {
 	node.closeOnce.Do(func() {
 		defer node.cancelFunc()
 		if node.broker != nil {
-			err := node.broker.RemovePipeline(eventTypeAll, node.pipelineID)
-			if err != nil {
-				node.logger.Warn("Error removing pipeline for closing node", "error", err)
+			isPipelineRemoved, err := node.broker.RemovePipelineAndNodes(ctx, eventTypeAll, node.pipelineID)
+
+			switch {
+			case err != nil && isPipelineRemoved:
+				msg := fmt.Sprintf("Error removing nodes referenced by pipeline %q", node.pipelineID)
+				node.logger.Warn(msg, err)
+			case err != nil:
+				msg := fmt.Sprintf("Error removing pipeline %q", node.pipelineID)
+				node.logger.Warn(msg, err)
 			}
 		}
 		addSubscriptions(-1)
@@ -283,7 +294,7 @@ func (node *asyncChanNode) Process(ctx context.Context, e *eventlogger.Event) (*
 		}
 		if timeout {
 			node.logger.Info("Subscriber took too long to process event, closing", "ID", e.Payload.(*logical.EventReceived).Event.Id)
-			node.Close()
+			node.Close(ctx)
 		}
 	}()
 	return e, nil

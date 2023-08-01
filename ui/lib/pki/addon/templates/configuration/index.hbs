@@ -1,27 +1,12 @@
-<SecretListHeader
-  @model={{this.model.engine}}
-  @backendCrumb={{hash
-    label=this.model.engine.id
-    text=this.model.engine.id
-    path="vault.cluster.secrets.backend.list-root"
-    model=this.model.engine.id
-  }}
-  @isEngine={{true}}
-/>
+<PkiPageHeader @backend={{this.model.engine}} />
 
-{{#if this.model.hasConfig}}
-  <Page::PkiConfigurationDetails
-    @urls={{this.model.urls}}
-    @crl={{this.model.crl}}
-    @mountConfig={{this.model.mountConfig}}
-    @currentPath={{this.model.engine.id}}
-    @canDeleteAllIssuers={{this.model.issuerModel.canDeleteAllIssuers}}
-  />
-{{else}}
-  <Toolbar />
-  <EmptyState @title="PKI not configured" @message={{this.message}}>
-    <LinkTo @route="configuration.create">
-      Configure PKI
-    </LinkTo>
-  </EmptyState>
-{{/if}}
+<Page::PkiConfigurationDetails
+  @acme={{this.model.acme}}
+  @cluster={{this.model.cluster}}
+  @urls={{this.model.urls}}
+  @crl={{this.model.crl}}
+  @mountConfig={{this.model.mountConfig}}
+  @backend={{this.model.engine.id}}
+  @canDeleteAllIssuers={{this.model.issuerModel.canDeleteAllIssuers}}
+  @hasConfig={{this.model.hasConfig}}
+/>

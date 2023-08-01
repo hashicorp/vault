@@ -462,7 +462,7 @@ func (b *databaseBackend) connectionWriteHandler() framework.OperationFunc {
 		b.Logger().Debug("created database object", "name", name, "plugin_name", config.PluginName)
 
 		// Close and remove the old connection
-		oldConn := b.connPut(name, &dbPluginInstance{
+		oldConn := b.connections.Put(name, &dbPluginInstance{
 			database: dbw,
 			name:     name,
 			id:       id,

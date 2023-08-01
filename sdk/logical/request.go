@@ -243,6 +243,9 @@ type Request struct {
 	// InboundSSCToken is the token that arrives on an inbound request, supplied
 	// by the vault user.
 	InboundSSCToken string
+
+	// When a request has been forwarded, contains information of the host the request was forwarded 'from'
+	ForwardedFrom string `json:"forwarded_from,omitempty"`
 }
 
 // Clone returns a deep copy of the request by using copystructure

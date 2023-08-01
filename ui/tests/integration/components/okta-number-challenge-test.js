@@ -66,7 +66,7 @@ module('Integration | Component | okta-number-challenge', function (hooks) {
         'Correct description renders'
       );
     assert
-      .dom('[data-test-error]')
+      .dom('[data-test-message-error]')
       .includesText('There was a problem', 'Displays error that there was a problem');
     await click('[data-test-return-from-okta-number-challenge]');
     assert.true(this.returnToLogin, 'onReturnToLogin was triggered');

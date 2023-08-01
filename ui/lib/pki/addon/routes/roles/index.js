@@ -5,7 +5,7 @@
 
 import Route from '@ember/routing/route';
 import { inject as service } from '@ember/service';
-import { withConfig } from 'pki/decorators/check-config';
+import { withConfig } from 'pki/decorators/check-issuers';
 import { hash } from 'rsvp';
 import { getCliMessage } from 'pki/routes/overview';
 @withConfig()
@@ -37,7 +37,7 @@ export default class PkiRolesIndexRoute extends Route {
     super.setupController(controller, resolvedModel);
     const roles = resolvedModel.roles;
 
-    if (roles?.length) controller.message = getCliMessage('roles');
-    else controller.message = getCliMessage();
+    if (roles?.length) controller.notConfiguredMessage = getCliMessage('roles');
+    else controller.notConfiguredMessage = getCliMessage();
   }
 }

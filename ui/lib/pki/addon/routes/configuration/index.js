@@ -5,55 +5,31 @@
 
 import Route from '@ember/routing/route';
 import { inject as service } from '@ember/service';
-import { withConfig } from 'pki/decorators/check-config';
+import { withConfig } from 'pki/decorators/check-issuers';
 import { hash } from 'rsvp';
-import { PKI_DEFAULT_EMPTY_STATE_MSG } from 'pki/routes/overview';
 
 @withConfig()
 export default class ConfigurationIndexRoute extends Route {
   @service store;
-  @service secretMountPath;
 
-  async fetchUrls(backend) {
-    try {
-      return await this.store.findRecord('pki/urls', backend);
-    } catch (e) {
-      return e.httpStatus;
-    }
-  }
-
-  async fetchCrl(backend) {
-    try {
-      return await this.store.findRecord('pki/crl', backend);
-    } catch (e) {
-      return e.httpStatus;
-    }
-  }
-
-  async fetchMountConfig(path) {
-    const mountConfig = await this.store.query('secret-engine', { path });
-
+  async fetchMountConfig(backend) {
+    const mountConfig = await this.store.query('secret-engine', { path: backend });
     if (mountConfig) {
       return mountConfig.get('firstObject');
     }
   }
 
-  async model() {
-    const backend = this.secretMountPath.currentPath;
-
+  model() {
+    const { acme, cluster, urls, crl, engine } = this.modelFor('configuration');
     return hash({
       hasConfig: this.shouldPromptConfig,
-      engine: this.modelFor('application'),
-      urls: this.fetchUrls(backend),
-      crl: this.fetchCrl(backend),
-      mountConfig: this.fetchMountConfig(backend),
+      engine,
+      acme,
+      cluster,
+      urls,
+      crl,
+      mountConfig: this.fetchMountConfig(engine.id),
       issuerModel: this.store.createRecord('pki/issuer'),
     });
-  }
-
-  setupController(controller, resolvedModel) {
-    super.setupController(controller, resolvedModel);
-
-    controller.message = PKI_DEFAULT_EMPTY_STATE_MSG;
   }
 }

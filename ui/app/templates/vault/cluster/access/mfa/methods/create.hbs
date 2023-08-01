@@ -6,7 +6,7 @@
         {{this.method.name}}
         MFA
       {{else}}
-        Multi-factor authentication
+        Multi-Factor Authentication
       {{/if}}
     </h1>
   </p.levelLeft>
@@ -25,12 +25,12 @@
 </PageHeader>
 <div class="has-border-top-light has-top-padding-l">
   {{#if this.showForms}}
-    <h3 class="is-size-4 has-text-semibold">Settings</h3>
+    <h3 class="is-size-4 has-text-weight-semibold">Settings</h3>
     <p class="has-border-top-light has-top-padding-l">
       {{this.description}}
       <DocLink @path={{concat "/vault/api-docs/secret/identity/mfa/" this.type}}>Learn more.</DocLink>
     </p>
-    <Mfa::MethodForm @model={{this.method}} @validations={{this.methodErrors}} class="is-box-shadowless" />
+    <Mfa::MethodForm @model={{this.method}} @validations={{this.methodErrors}} class="is-shadowless" />
     <Mfa::MfaLoginEnforcementHeader
       @isInline={{true}}
       @radioCardGroupValue={{this.enforcementPreference}}
@@ -66,7 +66,7 @@
                 @size="24"
                 class={{if (eq methodName "TOTP") "has-text-grey"}}
               />
-              <p class="has-text-semibold has-text-align-center {{if (eq methodName 'Okta') 'has-top-margin-xs'}}">
+              <p class="has-text-weight-semibold has-text-center {{if (eq methodName 'Okta') 'has-top-margin-xs'}}">
                 {{methodName}}
               </p>
             </div>

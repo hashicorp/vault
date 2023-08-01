@@ -42,7 +42,7 @@ resource "enos_remote_exec" "configure_pr_primary" {
     vault_install_dir = var.vault_install_dir
   }
 
-  scripts = ["${path.module}/scripts/configure-vault-pr-primary.sh"]
+  scripts = [abspath("${path.module}/scripts/configure-vault-pr-primary.sh")]
 
   transport = {
     ssh = {

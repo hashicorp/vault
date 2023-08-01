@@ -34,7 +34,7 @@ func pathRotateRoot(b *backend) *framework.Path {
 	pattern := "root/rotate/" + framework.GenericNameRegex("exported")
 
 	displayAttrs := &framework.DisplayAttributes{
-		OperationPrefix: operationPrefixPKIIssuers,
+		OperationPrefix: operationPrefixPKI,
 		OperationVerb:   "rotate",
 		OperationSuffix: "root",
 	}
@@ -55,8 +55,8 @@ func buildPathGenerateRoot(b *backend, pattern string, displayAttrs *framework.D
 						Description: "OK",
 						Fields: map[string]*framework.FieldSchema{
 							"expiration": {
-								Type:        framework.TypeString,
-								Description: `The expiration of the given.`,
+								Type:        framework.TypeInt64,
+								Description: `The expiration of the given issuer.`,
 								Required:    true,
 							},
 							"serial_number": {
@@ -243,6 +243,16 @@ secret-key (optional) and certificates.`,
 								Description: "Net-new issuers imported as a part of this request",
 								Required:    true,
 							},
+							"existing_keys": {
+								Type:        framework.TypeCommaStringSlice,
+								Description: "Existing keys specified as part of the import bundle of this request",
+								Required:    true,
+							},
+							"existing_issuers": {
+								Type:        framework.TypeCommaStringSlice,
+								Description: "Existing issuers specified as part of the import bundle of this request",
+								Required:    true,
+							},
 						},
 					}},
 				},
@@ -308,6 +318,8 @@ func (b *backend) pathImportIssuers(ctx context.Context, req *logical.Request, d
 
 	var createdKeys []string
 	var createdIssuers []string
+	var existingKeys []string
+	var existingIssuers []string
 	issuerKeyMap := make(map[string]string)
 
 	// Rather than using certutil.ParsePEMBundle (which restricts the
@@ -364,6 +376,8 @@ func (b *backend) pathImportIssuers(ctx context.Context, req *logical.Request, d
 
 		if !existing {
 			createdKeys = append(createdKeys, key.ID.String())
+		} else {
+			existingKeys = append(existingKeys, key.ID.String())
 		}
 	}
 
@@ -376,6 +390,8 @@ func (b *backend) pathImportIssuers(ctx context.Context, req *logical.Request, d
 		issuerKeyMap[cert.ID.String()] = cert.KeyID.String()
 		if !existing {
 			createdIssuers = append(createdIssuers, cert.ID.String())
+		} else {
+			existingIssuers = append(existingIssuers, cert.ID.String())
 		}
 	}
 
@@ -384,11 +400,13 @@ func (b *backend) pathImportIssuers(ctx context.Context, req *logical.Request, d
 			"mapping":          issuerKeyMap,
 			"imported_keys":    createdKeys,
 			"imported_issuers": createdIssuers,
+			"existing_keys":    existingKeys,
+			"existing_issuers": existingIssuers,
 		},
 	}
 
 	if len(createdIssuers) > 0 {
-		err := b.crlBuilder.rebuild(sc, true)
+		warnings, err := b.crlBuilder.rebuild(sc, true)
 		if err != nil {
 			// Before returning, check if the error message includes the
 			// string "PSS". If so, it indicates we might've wanted to modify
@@ -402,6 +420,9 @@ func (b *backend) pathImportIssuers(ctx context.Context, req *logical.Request, d
 			}
 
 			return nil, err
+		}
+		for index, warning := range warnings {
+			response.AddWarning(fmt.Sprintf("Warning %d during CRL rebuild: %v", index+1, warning))
 		}
 
 		var issuersWithKeys []string
@@ -709,7 +730,7 @@ func (b *backend) pathRevokeIssuer(ctx context.Context, req *logical.Request, da
 	}
 
 	// Rebuild the CRL to include the newly revoked issuer.
-	crlErr := b.crlBuilder.rebuild(sc, false)
+	warnings, crlErr := b.crlBuilder.rebuild(sc, false)
 	if crlErr != nil {
 		switch crlErr.(type) {
 		case errutil.UserError:
@@ -724,6 +745,9 @@ func (b *backend) pathRevokeIssuer(ctx context.Context, req *logical.Request, da
 	if err != nil {
 		// Impossible.
 		return nil, err
+	}
+	for index, warning := range warnings {
+		response.AddWarning(fmt.Sprintf("Warning %d during CRL rebuild: %v", index+1, warning))
 	}
 
 	// For sanity, we'll add a warning message here if there's no other

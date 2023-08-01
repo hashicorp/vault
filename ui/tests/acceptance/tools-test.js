@@ -10,6 +10,7 @@ import { setupApplicationTest } from 'ember-qunit';
 import { toolsActions } from 'vault/helpers/tools-actions';
 import authPage from 'vault/tests/pages/auth';
 import logout from 'vault/tests/pages/logout';
+import { capitalize } from '@ember/string';
 
 module('Acceptance | tools', function (hooks) {
   setupApplicationTest(hooks);
@@ -29,7 +30,7 @@ module('Acceptance | tools', function (hooks) {
   data-test-tools-input="wrapping-token"
   data-test-tools-input="rewrapped-token"
   data-test-tools="token-lookup-row"
-  data-test-tools-action-link=supportedAction
+  data-test-sidebar-nav-link=supportedAction
   */
 
   var createTokenStore = () => {
@@ -49,7 +50,7 @@ module('Acceptance | tools', function (hooks) {
 
     assert.strictEqual(currentURL(), '/vault/tools/wrap', 'forwards to the first action');
     TOOLS_ACTIONS.forEach((action) => {
-      assert.dom(`[data-test-tools-action-link="${action}"]`).exists(`${action} link renders`);
+      assert.dom(`[data-test-sidebar-nav-link="${capitalize(action)}"]`).exists(`${action} link renders`);
     });
 
     const { CodeMirror } = await waitUntil(() => find('.CodeMirror'));
@@ -64,7 +65,7 @@ module('Acceptance | tools', function (hooks) {
       .hasValue(wrappedToken.value, 'has a wrapping token');
 
     //lookup
-    await click('[data-test-tools-action-link="lookup"]');
+    await click('[data-test-sidebar-nav-link="Lookup"]');
 
     await fillIn('[data-test-tools-input="wrapping-token"]', tokenStore.get());
     await click('[data-test-tools-submit]');
@@ -75,7 +76,7 @@ module('Acceptance | tools', function (hooks) {
     assert.dom(rows[2]).hasText(/Creation TTL/, 'show creation ttl row');
 
     //rewrap
-    await click('[data-test-tools-action-link="rewrap"]');
+    await click('[data-test-sidebar-nav-link="Rewrap"]');
 
     await fillIn('[data-test-tools-input="wrapping-token"]', tokenStore.get());
     await click('[data-test-tools-submit]');
@@ -86,7 +87,7 @@ module('Acceptance | tools', function (hooks) {
     await settled();
 
     //unwrap
-    await click('[data-test-tools-action-link="unwrap"]');
+    await click('[data-test-sidebar-nav-link="Unwrap"]');
 
     await fillIn('[data-test-tools-input="wrapping-token"]', tokenStore.get());
     await click('[data-test-tools-submit]');
@@ -101,7 +102,7 @@ module('Acceptance | tools', function (hooks) {
     assert.dom('.CodeMirror').exists();
 
     //random
-    await click('[data-test-tools-action-link="random"]');
+    await click('[data-test-sidebar-nav-link="Random"]');
 
     assert.dom('[data-test-tools-input="bytes"]').hasValue('32', 'defaults to 32 bytes');
     await click('[data-test-tools-submit]');
@@ -109,7 +110,7 @@ module('Acceptance | tools', function (hooks) {
     assert.ok(randomBytes.value, 'shows the returned value of random bytes');
 
     //hash
-    await click('[data-test-tools-action-link="hash"]');
+    await click('[data-test-sidebar-nav-link="Hash"]');
 
     await fillIn('[data-test-tools-input="hash-input"]', 'foo');
     await click('[data-test-transit-b64-toggle="input"]');
@@ -158,7 +159,7 @@ module('Acceptance | tools', function (hooks) {
     await visit('/vault/tools');
 
     //unwrap
-    await click('[data-test-tools-action-link="unwrap"]');
+    await click('[data-test-sidebar-nav-link="Unwrap"]');
 
     await fillIn('[data-test-tools-input="wrapping-token"]', 'sometoken');
     await click('[data-test-tools-submit]');

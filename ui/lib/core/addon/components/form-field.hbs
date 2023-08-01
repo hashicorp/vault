@@ -46,7 +46,7 @@
               </option>
             {{/if}}
             {{#each (path-or-array @attr.options.possibleValues @model) as |val|}}
-              <option selected={{eq (get @model this.valuePath) (or val.value val)}} value={{or val.value val}}>
+              <option selected={{loose-equal (get @model this.valuePath) (or val.value val)}} value={{or val.value val}}>
                 {{or val.displayName val}}
               </option>
             {{/each}}
@@ -209,20 +209,18 @@
     <StringList
       data-test-input={{@attr.name}}
       @label={{this.labelString}}
-      @warning={{@attr.options.warning}}
       @helpText={{if this.showHelpText @attr.options.helpText}}
       @inputValue={{get @model this.valuePath}}
       @onChange={{this.setAndBroadcast}}
       @attrName={{@attr.name}}
-      @subText={{@attr.options.subText}}
+      @subText="{{@attr.options.subText}} Add one item per row."
     />
   {{else if (eq @attr.options.sensitive true)}}
-    {{! Masked Input }}
     <MaskedInput
+      @name={{@attr.name}}
       @value={{or (get @model this.valuePath) @attr.options.defaultValue}}
       @allowCopy="true"
       @onChange={{this.setAndBroadcast}}
-      @name={{@attr.name}}
       @onKeyUp={{@onKeyUp}}
     />
     {{#if this.validationError}}

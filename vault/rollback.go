@@ -43,12 +43,13 @@ type RollbackManager struct {
 	inflight     map[string]*rollbackState
 	inflightLock sync.RWMutex
 
-	doneCh       chan struct{}
-	shutdown     bool
-	shutdownCh   chan struct{}
-	shutdownLock sync.Mutex
-	stopTicker   chan struct{}
-	quitContext  context.Context
+	doneCh          chan struct{}
+	shutdown        bool
+	shutdownCh      chan struct{}
+	shutdownLock    sync.Mutex
+	stopTicker      chan struct{}
+	tickerIsStopped bool
+	quitContext     context.Context
 
 	core *Core
 }
@@ -103,7 +104,10 @@ func (m *RollbackManager) Stop() {
 //
 // THIS SHOULD ONLY BE CALLED FROM TEST HELPERS.
 func (m *RollbackManager) StopTicker() {
-	close(m.stopTicker)
+	if !m.tickerIsStopped {
+		close(m.stopTicker)
+		m.tickerIsStopped = true
+	}
 }
 
 // run is a long running routine to periodically invoke rollback

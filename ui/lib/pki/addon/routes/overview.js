@@ -5,7 +5,7 @@
 
 import Route from '@ember/routing/route';
 import { inject as service } from '@ember/service';
-import { withConfig } from 'pki/decorators/check-config';
+import { withConfig } from 'pki/decorators/check-issuers';
 import { hash } from 'rsvp';
 
 export const PKI_DEFAULT_EMPTY_STATE_MSG =
@@ -62,10 +62,11 @@ export default class PkiOverviewRoute extends Route {
     const roles = resolvedModel.roles;
     const certificates = resolvedModel.certificates;
 
-    controller.message = getCliMessage();
+    controller.notConfiguredMessage = getCliMessage();
 
-    if (roles?.length) controller.message = getCliMessage('roles');
-    if (certificates?.length) controller.message = getCliMessage('certificates');
-    if (roles?.length && certificates?.length) controller.message = getCliMessage('roles and certificates');
+    if (roles?.length) controller.notConfiguredMessage = getCliMessage('roles');
+    if (certificates?.length) controller.notConfiguredMessage = getCliMessage('certificates');
+    if (roles?.length && certificates?.length)
+      controller.notConfiguredMessage = getCliMessage('roles and certificates');
   }
 }

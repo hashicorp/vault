@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package pki
 
 import (
@@ -7,32 +10,9 @@ import (
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
-func pathAcmeRootChallenge(b *backend) *framework.Path {
-	return patternAcmeChallenge(b,
-		"acme/challenge/"+framework.MatchAllRegex("auth_id")+"/"+
-			framework.MatchAllRegex("challenge_type"))
-}
-
-func pathAcmeRoleChallenge(b *backend) *framework.Path {
-	return patternAcmeChallenge(b,
-		"roles/"+framework.GenericNameRegex("role")+"/acme/challenge/"+
-			framework.MatchAllRegex("auth_id")+"/"+
-			framework.MatchAllRegex("challenge_type"))
-}
-
-func pathAcmeIssuerChallenge(b *backend) *framework.Path {
-	return patternAcmeChallenge(b,
-		"issuer/"+framework.GenericNameRegex(issuerRefParam)+"/acme/challenge/"+
-			framework.MatchAllRegex("auth_id")+"/"+
-			framework.MatchAllRegex("challenge_type"))
-}
-
-func pathAcmeIssuerAndRoleChallenge(b *backend) *framework.Path {
-	return patternAcmeChallenge(b,
-		"issuer/"+framework.GenericNameRegex(issuerRefParam)+
-			"/roles/"+framework.GenericNameRegex("role")+"/acme/challenge/"+
-			framework.MatchAllRegex("auth_id")+"/"+
-			framework.MatchAllRegex("challenge_type"))
+func pathAcmeChallenge(b *backend) []*framework.Path {
+	return buildAcmeFrameworkPaths(b, patternAcmeChallenge,
+		"/challenge/"+framework.MatchAllRegex("auth_id")+"/"+framework.MatchAllRegex("challenge_type"))
 }
 
 func addFieldsForACMEChallenge(fields map[string]*framework.FieldSchema) map[string]*framework.FieldSchema {
@@ -62,18 +42,18 @@ func patternAcmeChallenge(b *backend, pattern string) *framework.Path {
 		Fields:  fields,
 		Operations: map[logical.Operation]framework.OperationHandler{
 			logical.UpdateOperation: &framework.PathOperation{
-				Callback:                    b.acmeParsedWrapper(b.acmeChallengeHandler),
+				Callback:                    b.acmeAccountRequiredWrapper(b.acmeChallengeHandler),
 				ForwardPerformanceSecondary: false,
 				ForwardPerformanceStandby:   true,
 			},
 		},
 
-		HelpSynopsis:    "",
-		HelpDescription: "",
+		HelpSynopsis:    pathAcmeHelpSync,
+		HelpDescription: pathAcmeHelpDesc,
 	}
 }
 
-func (b *backend) acmeChallengeHandler(acmeCtx *acmeContext, r *logical.Request, fields *framework.FieldData, userCtx *jwsCtx, data map[string]interface{}) (*logical.Response, error) {
+func (b *backend) acmeChallengeHandler(acmeCtx *acmeContext, r *logical.Request, fields *framework.FieldData, userCtx *jwsCtx, data map[string]interface{}, _ *acmeAccount) (*logical.Response, error) {
 	authId := fields.Get("auth_id").(string)
 	challengeType := fields.Get("challenge_type").(string)
 
@@ -107,9 +87,28 @@ func (b *backend) acmeChallengeFetchHandler(acmeCtx *acmeContext, r *logical.Req
 		return nil, fmt.Errorf("unexpected request parameters: %w", ErrMalformed)
 	}
 
-	// XXX: Prompt for challenge to be tried by the server.
+	// If data was nil, we got a POST-as-GET request, just return current challenge without an accept,
+	// otherwise we most likely got a "{}" payload which we should now accept the challenge.
+	if data != nil {
+		thumbprint, err := userCtx.GetKeyThumbprint()
+		if err != nil {
+			return nil, fmt.Errorf("failed to get thumbprint for key: %w", err)
+		}
+
+		if err := b.acmeState.validator.AcceptChallenge(acmeCtx.sc, userCtx.Kid, authz, challenge, thumbprint); err != nil {
+			return nil, fmt.Errorf("error submitting challenge for validation: %w", err)
+		}
+	}
 
 	return &logical.Response{
-		Data: challenge.NetworkMarshal(),
+		Data: challenge.NetworkMarshal(acmeCtx, authz.Id),
+
+		// Per RFC 8555 Section 7.1. Resources:
+		//
+		// > The "up" link relation is used with challenge resources to indicate
+		// > the authorization resource to which a challenge belongs.
+		Headers: map[string][]string{
+			"Link": {fmt.Sprintf("<%s>;rel=\"up\"", buildAuthorizationUrl(acmeCtx, authz.Id))},
+		},
 	}, nil
 }

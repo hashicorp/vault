@@ -251,6 +251,12 @@ Default: ({{.UserAttr}}={{.Username}})`,
 			Default:       "never",
 			AllowedValues: []interface{}{"never", "finding", "searching", "always"},
 		},
+
+		"max_page_size": {
+			Type:        framework.TypeInt,
+			Description: "If set to a value greater than 0, the LDAP backend will use the LDAP server's paged search control to request pages of up to the given size. This can be used to avoid hitting the LDAP server's maximum result size limit. Otherwise, the LDAP backend will not use the paged search control.",
+			Default:     0,
+		},
 	}
 }
 
@@ -425,6 +431,10 @@ func NewConfigEntry(existing *ConfigEntry, d *framework.FieldData) (*ConfigEntry
 		cfg.DerefAliases = d.Get("dereference_aliases").(string)
 	}
 
+	if _, ok := d.Raw["max_page_size"]; ok || !hadExisting {
+		cfg.MaximumPageSize = d.Get("max_page_size").(int)
+	}
+
 	return cfg, nil
 }
 
@@ -453,6 +463,7 @@ type ConfigEntry struct {
 	RequestTimeout           int    `json:"request_timeout"`
 	ConnectionTimeout        int    `json:"connection_timeout"`
 	DerefAliases             string `json:"dereference_aliases"`
+	MaximumPageSize          int    `json:"max_page_size"`
 
 	// These json tags deviate from snake case because there was a past issue
 	// where the tag was being ignored, causing it to be jsonified as "CaseSensitiveNames", etc.
@@ -493,6 +504,7 @@ func (c *ConfigEntry) PasswordlessMap() map[string]interface{} {
 		"connection_timeout":     c.ConnectionTimeout,
 		"username_as_alias":      c.UsernameAsAlias,
 		"dereference_aliases":    c.DerefAliases,
+		"max_page_size":          c.MaximumPageSize,
 	}
 	if c.CaseSensitiveNames != nil {
 		m["case_sensitive_names"] = *c.CaseSensitiveNames

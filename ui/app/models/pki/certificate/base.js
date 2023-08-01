@@ -14,8 +14,8 @@ import lazyCapabilities, { apiPath } from 'vault/macros/lazy-capabilities';
  * The base certificate model contains shared attributes that make up a certificate's content.
  * Other models under pki/certificate will extend this model and include additional attributes
  * and associated adapter methods for performing various generation and signing actions.
- * This model also displays leaf certs and their parsed attributes (parsed parameters only
- * render if included in certDisplayFields below).
+ * This model also displays leaf certs and their parsed attributes (which exist as an object in
+ * the attribute `parsedCertificate`)
  */
 
 // also displays parsedCertificate values in the template
@@ -59,7 +59,7 @@ export default class PkiCertificateBaseModel extends Model {
   @attr('string', {
     label: 'Subject Alternative Names (SANs)',
     subText:
-      'The requested Subject Alternative Names; if email protection is enabled for the role, this may contain email addresses. Add one per row.',
+      'The requested Subject Alternative Names; if email protection is enabled for the role, this may contain email addresses.',
     editType: 'stringArray',
   })
   altNames;
@@ -67,20 +67,18 @@ export default class PkiCertificateBaseModel extends Model {
   // SANs below are editType: stringArray from openApi
   @attr('string', {
     label: 'IP Subject Alternative Names (IP SANs)',
-    subText: 'Only valid if the role allows IP SANs (which is the default). Add one per row.',
+    subText: 'Only valid if the role allows IP SANs (which is the default).',
   })
   ipSans;
 
   @attr('string', {
     label: 'URI Subject Alternative Names (URI SANs)',
-    subText:
-      'If any requested URIs do not match role policy, the entire request will be denied. Add one per row.',
+    subText: 'If any requested URIs do not match role policy, the entire request will be denied.',
   })
   uriSans;
 
   @attr('string', {
-    subText:
-      'Requested other SANs with the format <oid>;UTF8:<utf8 string value> for each entry. Add one per row.',
+    subText: 'Requested other SANs with the format <oid>;UTF8:<utf8 string value> for each entry.',
   })
   otherSans;
 
@@ -89,8 +87,8 @@ export default class PkiCertificateBaseModel extends Model {
   @attr('string', { masked: true }) certificate;
   @attr('number') expiration;
   @attr('string', { label: 'Issuing CA', masked: true }) issuingCa;
-  @attr('string') privateKey; // only returned for type=exported
-  @attr('string') privateKeyType; // only returned for type=exported
+  @attr('string', { masked: true }) privateKey; // only returned for type=exported and /issue
+  @attr('string') privateKeyType; // only returned for type=exported and /issue
   @attr('number', { formatDate: true }) revocationTime;
   @attr('string') serialNumber;
 

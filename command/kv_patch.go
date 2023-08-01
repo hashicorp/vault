@@ -220,7 +220,7 @@ func (c *KVPatchCommand) Run(args []string) int {
 		return 2
 	}
 
-	fullPath := addPrefixToKVPath(partialPath, mountPath, "data")
+	fullPath := addPrefixToKVPath(partialPath, mountPath, "data", false)
 	if err != nil {
 		c.UI.Error(err.Error())
 		return 2

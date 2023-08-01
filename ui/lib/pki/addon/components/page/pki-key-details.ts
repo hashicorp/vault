@@ -3,13 +3,13 @@
  * SPDX-License-Identifier: MPL-2.0
  */
 
-import { action } from '@ember/object';
 import Component from '@glimmer/component';
-import RouterService from '@ember/routing/router-service';
-import FlashMessageService from 'vault/services/flash-messages';
+import { action } from '@ember/object';
 import { inject as service } from '@ember/service';
 import errorMessage from 'vault/utils/error-message';
-import PkiKeyModel from 'vault/models/pki/key';
+import type RouterService from '@ember/routing/router-service';
+import type FlashMessageService from 'vault/services/flash-messages';
+import type PkiKeyModel from 'vault/models/pki/key';
 interface Args {
   key: PkiKeyModel;
 }

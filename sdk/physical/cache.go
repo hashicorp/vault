@@ -32,6 +32,11 @@ var cacheExceptionsPaths = []string{
 	"sys/expire/",
 	"core/poison-pill",
 	"core/raft/tls",
+
+	// Add barrierSealConfigPath and recoverySealConfigPlaintextPath to the cache
+	// exceptions to avoid unseal errors. See VAULT-17227
+	"core/seal-config",
+	"core/recovery-config",
 }
 
 // CacheRefreshContext returns a context with an added value denoting if the

@@ -1,0 +1,3 @@
+```release-note:improvement
+sdk/framework: Fix non-deterministic ordering of 'required' fields in OpenAPI spec
+```

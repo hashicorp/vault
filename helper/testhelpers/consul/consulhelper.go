@@ -11,7 +11,7 @@ import (
 
 	consulapi "github.com/hashicorp/consul/api"
 	goversion "github.com/hashicorp/go-version"
-	"github.com/hashicorp/vault/helper/testhelpers/docker"
+	"github.com/hashicorp/vault/sdk/helper/docker"
 )
 
 type Config struct {

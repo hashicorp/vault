@@ -6,12 +6,11 @@
 import Component from '@glimmer/component';
 import { inject as service } from '@ember/service';
 import { tracked } from '@glimmer/tracking';
-// TYPES
-import Store from '@ember-data/store';
-import Router from '@ember/routing/router';
-import FlashMessageService from 'vault/services/flash-messages';
-import PkiActionModel from 'vault/models/pki/action';
-import { Breadcrumb } from 'vault/vault/app-types';
+import type Store from '@ember-data/store';
+import type Router from '@ember/routing/router';
+import type FlashMessageService from 'vault/services/flash-messages';
+import type PkiActionModel from 'vault/models/pki/action';
+import type { Breadcrumb } from 'vault/vault/app-types';
 
 interface Args {
   config: PkiActionModel;
