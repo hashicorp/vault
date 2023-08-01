@@ -123,10 +123,6 @@ export default Component.extend({
     return ['cubbyhole', 'system', 'token', 'identity', 'ns_system', 'ns_identity', 'ns_token'];
   }),
 
-  willDestroyElement() {
-    this._super(...arguments);
-  },
-
   actions: {
     async pathsChanged(paths) {
       // set paths on the model

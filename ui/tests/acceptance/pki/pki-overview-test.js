@@ -49,7 +49,6 @@ module('Acceptance | pki overview', function (hooks) {
     await authPage.login();
     // Cleanup engine
     await runCommands([`delete sys/mounts/${this.mountPath}`]);
-    await logout.visit();
   });
 
   test('navigates to view issuers when link is clicked on issuer card', async function (assert) {

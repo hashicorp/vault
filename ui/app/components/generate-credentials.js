@@ -55,7 +55,9 @@ export default Component.extend({
   },
 
   willDestroy() {
-    if (!this.model.isDestroyed && !this.model.isDestroying) {
+    // components are torn down after store is unloaded and will cause an error if attempt to unload record
+    const noTeardown = this.store && !this.store.isDestroying;
+    if (noTeardown && !this.model.isDestroyed && !this.model.isDestroying) {
       this.model.unloadRecord();
     }
     this._super(...arguments);

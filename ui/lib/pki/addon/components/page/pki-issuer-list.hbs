@@ -14,7 +14,7 @@
             {{#if pkiIssuer.isDefault}}
               <span class="tag has-text-grey-dark" data-test-is-default={{idx}}>default issuer</span>
             {{/if}}
-            {{#if (not (eq pkiIssuer.isRoot undefined))}}
+            {{#if (not-eq pkiIssuer.isRoot undefined)}}
               <span class="tag has-text-grey-dark" data-test-is-root-tag={{idx}}>{{if
                   pkiIssuer.isRoot
                   "root"

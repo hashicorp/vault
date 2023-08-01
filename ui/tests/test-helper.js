@@ -14,9 +14,8 @@ import preloadAssets from 'ember-asset-loader/test-support/preload-assets';
 import manifest from 'vault/config/asset-manifest';
 
 preloadAssets(manifest).then(() => {
-  setApplication(Application.create(config.APP));
-  // TODO CBS: Check what this is, upgrade added it
   setup(QUnit.assert);
+  setApplication(Application.create(config.APP));
   start({
     setupTestIsolationValidation: true,
   });
