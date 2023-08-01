@@ -405,6 +405,9 @@ type Core struct {
 	// renewal, expiration and revocation
 	expiration *ExpirationManager
 
+	// rotation manager is used for managing rotations
+	rotation *RotationManager
+
 	// rollback manager is used to run rollbacks periodically
 	rollback *RollbackManager
 
@@ -2332,6 +2335,9 @@ func (s standardUnsealStrategy) unseal(ctx context.Context, logger log.Logger, c
 			return err
 		}
 		if err := c.setupExpiration(expireLeaseStrategyFairsharing); err != nil {
+			return err
+		}
+		if err := c.setupRotation(rotateStrategyFairsharing); err != nil {
 			return err
 		}
 		if err := c.loadAudits(ctx); err != nil {
