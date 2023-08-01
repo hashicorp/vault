@@ -441,3 +441,12 @@ func (d dynamicSystemView) ClusterID(ctx context.Context) (string, error) {
 
 	return clusterInfo.ID, nil
 }
+
+// func (d dynamicSystemView) Rotate(ctx context.Context, rotationID string) error {
+// 	d.core.logger.Debug("dynamicSystemView.Rotate")
+
+// 	if err := d.core.rotation.Rotate(ctx, rotationID); err != nil {
+// 		fmt.Errorf("credential rotation failed", "rotation_id", rotationID, "error", err)
+// 	}
+// 	return nil
+// }

@@ -65,9 +65,9 @@ func newRotationJob(nsCtx context.Context, rotationID string, ns *namespace.Name
 	}, nil
 }
 
-// NewRotationManger creates a new RotationManager that is backed
+// NewRotationManager creates a new RotationManager that is backed
 // using a given view, and uses the provided router for rotation.
-func NewRotationManger(c *Core, view *BarrierView, r RotationStrategy, logger log.Logger) *RotationManager {
+func NewRotationManager(c *Core, view *BarrierView, r RotationStrategy, logger log.Logger) *RotationManager {
 	managerLogger := logger.Named("job-manager")
 	jobManager := fairshare.NewJobManager("rotate", getNumRotationWorkers(c, logger), managerLogger, c.metricSink)
 	jobManager.Start()
@@ -100,7 +100,7 @@ func (c *Core) setupRotation(r RotationStrategy) error {
 	// Create the manager
 	logger := c.baseLogger.Named("rotation")
 	c.AddLogger(logger)
-	mgr := NewRotationManger(c, view, r, logger)
+	mgr := NewRotationManager(c, view, r, logger)
 	c.rotation = mgr
 
 	// TODO: Restore the existing rotation state?

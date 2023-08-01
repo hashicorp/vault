@@ -97,6 +97,8 @@ type SystemView interface {
 	// write forwarding (WriteForwardedPaths). This value will be templated
 	// in for the {{cluterId}} sentinel.
 	ClusterID(ctx context.Context) (string, error)
+
+	// Rotate(ctx context.Context, rotationID string) error
 }
 
 type PasswordPolicy interface {
@@ -262,3 +264,7 @@ func (d StaticSystemView) ClusterID(ctx context.Context) (string, error) {
 func (d StaticSystemView) APILockShouldBlockRequest() (bool, error) {
 	return d.APILockShouldBlockRequestVal, nil
 }
+
+// func (d StaticSystemView) Rotate(ctx context.Context, rotationID string) error {
+// 	return errors.New("Rotate is not implemented in StaticSystemView")
+// }

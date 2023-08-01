@@ -239,6 +239,9 @@ func (b *databaseBackend) pathRotateRoleCredentialsUpdate() framework.OperationF
 				"continue in the background but it is also safe to retry manually: %w", err)
 		}
 
+		// request Core to rotate our credential
+		b.RotateCreds(ctx, req.Storage)
+
 		// return any err from the setStaticAccount call
 		return nil, nil
 	}

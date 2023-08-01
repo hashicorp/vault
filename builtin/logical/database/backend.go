@@ -132,7 +132,8 @@ func Backend(conf *logical.BackendConfig) *databaseBackend {
 
 // RotateCreds implements the logical.CredRotater interface
 func (b *databaseBackend) RotateCreds(ctx context.Context, s logical.Storage) {
-	b.logger.Debug(">>> RotateCreds CANARY <<<")
+	b.logger.Debug(">>> databaseBackend.RotateCreds CANARY <<<")
+	// TODO: call b.System().Rotate(ctx, "rotation_id")?
 }
 
 func (b *databaseBackend) collectPluginInstanceGaugeValues(context.Context) ([]metricsutil.GaugeLabelValues, error) {
