@@ -175,7 +175,7 @@ For more information on Vault Enterprise features, visit the [Vault Enterprise s
 ### Docker-based Tests
 
 We have created an experimental new testing mechanism inspired by NewTestCluster.
-A minimalist example of how to use it:
+An example of how to use it:
 
 ```go
 import (
@@ -185,40 +185,54 @@ import (
 
 func Test_Something_With_Docker(t *testing.T) {
   opts := &docker.DockerClusterOptions{
-    ImageRepo: "hashicorp/vault",
+    ImageRepo: "hashicorp/vault", // or "hashicorp/vault-enterprise"
     ImageTag:    "latest",
+  }
+  cluster := docker.NewTestDockerCluster(t, opts)
+  defer cluster.Cleanup()
+  
+  client := cluster.Nodes()[0].APIClient()
+  _, err := client.Logical().Read("sys/storage/raft/configuration")
+  if err != nil {
+    t.Fatal(err)
+  }
+}
+```
+
+Or for Enterprise:
+
+```go
+import (
+  "testing"
+  "github.com/hashicorp/vault/sdk/helper/testcluster/docker"
+)
+
+func Test_Something_With_Docker(t *testing.T) {
+  opts := &docker.DockerClusterOptions{
+    ImageRepo: "hashicorp/vault-enterprise",
+    ImageTag:  "latest",
+	VaultLicense: licenseString, // not a path, the actual license bytes
   }
   cluster := docker.NewTestDockerCluster(t, opts)
   defer cluster.Cleanup()
 }
 ```
 
-Here is a more realistic example.  This test should be run with VAULT_BINARY pointing
-at a local Linux vault binary on disk that you wish to run inside the docker containers. 
-If it's an Enterprise binary, you'll also need to set VAULT_LICENSE_CI, or the
-DockerClusterOptions field VaultLicnese. 
+Here is a more realistic example of how we use it in practice.  DefaultOptions uses 
+`hashicorp/vault`:`latest` as the repo and tag, but it also looks at the environment
+variable VAULT_BINARY. If populated, it will copy the local file referenced by
+VAULT_BINARY into the container. This is useful when there is no published image
+containing the vault binary you want to test.
+
+Instead of setting the VaultLicense option, you can set the VAULT_LICENSE_CI environment
+variable, which is better than committing a license to version control.
 
 Optionally you can set COMMIT_SHA, which will be appended to the image name we
 build as a debugging convenience.
 
 ```go
 func Test_Custom_Build_With_Docker(t *testing.T) {
-  binary := os.Getenv("VAULT_BINARY")
-  if binary == "" {
-    t.Skip("only running docker test when $VAULT_BINARY present")
-  }
-  opts := &docker.DockerClusterOptions{
-    ImageRepo: "hashicorp/vault",
-    // We're replacing the binary anyway, so we're not too particular about
-    // the docker image version tag.
-    ImageTag:    "latest",
-    VaultBinary: binary,
-    ClusterOptions: testcluster.ClusterOptions{
-      VaultNodeConfig: &testcluster.VaultNodeConfig{
-        LogLevel: "TRACE",
-      },
-    },
-  }
+  opts := docker.DefaultOptions(t)
   cluster := docker.NewTestDockerCluster(t, opts)
   defer cluster.Cleanup()
 }
@@ -226,21 +240,24 @@ func Test_Custom_Build_With_Docker(t *testing.T) {
 
 There are a variety of helpers in the `github.com/hashicorp/vault/sdk/helper/testcluster`
 package, e.g. these tests below will create a pair of 3-node clusters and link them using
-PR or DR replication respectively, and fail if the replication state doesn't become healthy.
-These depend on having a vault-enterprise binary locally and the env var VAULT_BINARY set to
-point to it, as well as having VAULT_LICENSE_CI set.
+PR or DR replication respectively, and fail if the replication state doesn't become healthy
+before the passed context expires.
+
+Again, as written, these depend on having a Vault Enterprise binary locally and the env
+var VAULT_BINARY set to point to it, as well as having VAULT_LICENSE_CI set.
 
 ```go
 func TestStandardPerfReplication_Docker(t *testing.T) {
   opts := docker.DefaultOptions(t)
-  opts.ImageRepo = "hashicorp/vault-enterprise"
   r, err := docker.NewReplicationSetDocker(t, opts)
   if err != nil {
       t.Fatal(err)
   }
   defer r.Cleanup()
 
-  err = r.StandardPerfReplication(context.Background())
+  ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
+  defer cancel()
+  err = r.StandardPerfReplication(ctx)
   if err != nil {
     t.Fatal(err)
   }
@@ -248,14 +265,15 @@ func TestStandardPerfReplication_Docker(t *testing.T) {
 
 func TestStandardDRReplication_Docker(t *testing.T) {
   opts := docker.DefaultOptions(t)
-  opts.ImageRepo = "hashicorp/vault-enterprise"
   r, err := docker.NewReplicationSetDocker(t, opts)
   if err != nil {
     t.Fatal(err)
   }
   defer r.Cleanup()
 
-  err = r.StandardDRReplication(context.Background())
+  ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
+  defer cancel()
+  err = r.StandardDRReplication(ctx)
   if err != nil {
     t.Fatal(err)
   }
