@@ -35,7 +35,9 @@ export default class MountBackendForm extends Component {
   @tracked errorMessage = '';
 
   willDestroy() {
-    if (this.args?.mountModel) {
+    // components are torn down after store is unloaded and will cause an error if attempt to unload record
+    const noTeardown = this.store && !this.store.isDestroying;
+    if (noTeardown && this.args?.mountModel) {
       this.args.mountModel.rollbackAttributes();
     }
     super.willDestroy(...arguments);
