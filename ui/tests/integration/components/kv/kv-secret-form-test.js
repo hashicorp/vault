@@ -28,7 +28,7 @@ module('Integration | Component | kv | KvSecretForm', function (hooks) {
     this.onCancel = () => {};
   });
 
-  test('it makes post request on save', async function (assert) {
+  test('it saves a secret', async function (assert) {
     assert.expect(3);
     this.onSave = () => assert.ok(true, 'onSave callback fires on save success');
     this.server.post(`${this.backend}/data/${this.path}`, (schema, req) => {
@@ -61,6 +61,47 @@ module('Integration | Component | kv | KvSecretForm', function (hooks) {
     );
 
     await fillIn(PAGE.form.inputByAttr('path'), this.path);
+    await fillIn(PAGE.form.keyInput(), 'foo');
+    await fillIn(PAGE.form.maskedValueInput(), 'bar');
+    await click(PAGE.form.secretSave);
+  });
+
+  test('it makes saves nested secrets', async function (assert) {
+    assert.expect(4);
+    const pathToSecret = 'path/to/secret/';
+    this.secret.path = pathToSecret;
+    this.onSave = () => assert.ok(true, 'onSave callback fires on save success');
+    this.server.post(`${this.backend}/data/${pathToSecret + this.path}`, (schema, req) => {
+      assert.ok(true, 'Request made to save secret');
+      const payload = JSON.parse(req.requestBody);
+      assert.propEqual(payload, {
+        data: { foo: 'bar' },
+        options: { cas: 0 },
+      });
+      return {
+        request_id: 'bd76db73-605d-fcbc-0dad-d44a008f9b95',
+        data: {
+          created_time: '2023-07-28T18:47:32.924809Z',
+          custom_metadata: null,
+          deletion_time: '',
+          destroyed: false,
+          version: 1,
+        },
+      };
+    });
+
+    await render(
+      hbs`
+        <KvSecretForm
+          @secret={{this.secret}}
+          @onSave={{this.onSave}}
+          @onCancel={{this.onCancel}}
+        />`,
+      { owner: this.engine }
+    );
+
+    assert.dom(PAGE.form.inputByAttr('path')).hasValue(pathToSecret);
+    await typeIn(PAGE.form.inputByAttr('path'), this.path);
     await fillIn(PAGE.form.keyInput(), 'foo');
     await fillIn(PAGE.form.maskedValueInput(), 'bar');
     await click(PAGE.form.secretSave);
