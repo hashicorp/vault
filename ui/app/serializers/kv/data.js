@@ -8,11 +8,10 @@ import ApplicationSerializer from '../application';
 export default class KvDataSerializer extends ApplicationSerializer {
   serialize(snapshot) {
     // Regardless of if CAS === true on the kv mount, the UI always sends the "options" object with the cas version.
-    const casVersion = snapshot.attr('casVersion');
     return {
       data: snapshot.attr('secretData'),
       options: {
-        cas: casVersion,
+        cas: snapshot.record.casVersion,
       },
     };
   }

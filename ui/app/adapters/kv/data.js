@@ -35,6 +35,10 @@ export default class KvDataAdapter extends ApplicationAdapter {
     return this._createOrUpdate(snapshot);
   }
 
+  updateRecord(store, type, snapshot) {
+    return this._createOrUpdate(snapshot);
+  }
+
   queryRecord(store, type, query) {
     const { backend, path, version } = query;
     // ID is the full path for the data (including version)
