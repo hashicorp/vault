@@ -15,7 +15,7 @@ import { inject as service } from '@ember/service';
  *
  * @example
  * ```js
- * <DashboardQuickActionsCard />
+ * <DashboardQuickActionsCard @secretsEngines={{@model.secretsEngines}} />
  * ```
  * @param {array}
  */
@@ -124,9 +124,7 @@ export default class DashboardQuickActionsCard extends Component {
   get filteredSecretEngines() {
     return this.args.secretsEngines.filter(
       (secretEngine) =>
-        (secretEngine.shouldIncludeInList && secretEngine.type === 'pki') ||
-        secretEngine.type === 'kv' ||
-        secretEngine.type === 'database'
+        secretEngine.type === 'pki' || secretEngine.type === 'kv' || secretEngine.type === 'database'
     );
   }
 
