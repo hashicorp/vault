@@ -7,6 +7,8 @@ description: |-
 
 # Oracle TDE
 
+@include 'alerts/enterprise-and-hcp.mdx'
+
 [Oracle Transparent Data Encryption](https://docs.oracle.com/database/121/ASOAG/introduction-to-transparent-data-encryption.htm#ASOAG10270) (TDE)
 is supported with the [Vault PKCS#11 provider](/vault/docs/enterprise/pkcs11-provider).
 In this setup, Vault's KMIP engine generates and store the "TDE Master Encryption Key" that the Oracle Database uses to encrypt and decrypt the "TDE Table Keys".

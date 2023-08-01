@@ -60,10 +60,74 @@
         "title": "Security Model",
         "path": "internals/security"
       },
+
       {
         "title": "Telemetry",
-        "path": "internals/telemetry"
+        "routes": [
+          {
+            "title": "Overview",
+            "path": "internals/telemetry"
+          },
+          {
+            "title": "Enable telemetry gathering",
+            "path": "internals/telemetry/enable-telemetry"
+          },
+          {
+            "title": "Metric reference",
+            "routes": [
+              {
+                "title": "Overview",
+                "path": "internals/telemetry/metrics"
+              },
+              {
+                "title": "Core system metrics",
+                "path": "internals/telemetry/metrics/core-system"
+              },
+              {
+                "title": "Audit log metrics",
+                "path": "internals/telemetry/metrics/audit"
+              },
+              {
+                "title": "Authentication metrics",
+                "path": "internals/telemetry/metrics/authn"
+              },
+              {
+                "title": "Auto-snapshot metrics",
+                "path": "internals/telemetry/metrics/autosnap"
+              },
+              {
+                "title": "Availability metrics",
+                "path": "internals/telemetry/metrics/availability"
+              },
+              {
+                "title": "Database metrics",
+                "path": "internals/telemetry/metrics/database"
+              },
+              {
+                "title": "Policy metrics",
+                "path": "internals/telemetry/metrics/policy"
+              },
+              {
+                "title": "Raft metrics",
+                "path": "internals/telemetry/metrics/raft"
+              },
+              {
+                "title": "Secrets metrics",
+                "path": "internals/telemetry/metrics/secrets"
+              },
+              {
+                "title": "Storage plugin metrics",
+                "path": "internals/telemetry/metrics/storage"
+              },
+              {
+                "title": "Full metrics list",
+                "path": "internals/telemetry/metrics/all"
+              }
+            ]
+          }
+        ]
       },
+
       {
         "title": "Token Authentication",
         "path": "internals/token"
@@ -171,11 +235,15 @@
         "path": "concepts/resource-quotas"
       },
       {
-        "title": "Client Count",
+        "title": "Client count",
         "routes": [
           {
-            "title": "Overview",
+            "title": "Clients and entities",
             "path": "concepts/client-count"
+          },
+          {
+            "title": "Client count calculation",
+            "path": "concepts/client-count/counting"
           },
           {
             "title": "FAQ",
@@ -1876,6 +1944,11 @@
       {
         "title": "Upgrade Plugins",
         "path": "upgrading/plugins"
+      },
+      {
+        "title": "Upgrade to 1.15.x",
+        "path": "upgrading/upgrade-to-1.15.x",
+        "hidden": true
       },
       {
         "title": "Upgrade to 1.14.x",

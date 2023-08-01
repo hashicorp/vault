@@ -68,7 +68,7 @@ func Factory(ctx context.Context, conf *logical.BackendConfig) (logical.Backend,
 
 	b.credRotationQueue = queue.New()
 	// Load queue and kickoff new periodic ticker
-	go b.initQueue(b.queueCtx, conf, conf.System.ReplicationState())
+	go b.initQueue(b.queueCtx, conf)
 
 	// collect metrics on number of plugin instances
 	var err error

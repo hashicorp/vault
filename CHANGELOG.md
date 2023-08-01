@@ -1,3 +1,55 @@
+## 1.14.1
+### July 25, 2023
+
+CHANGES:
+
+* auth/ldap: Normalize HTTP response codes when invalid credentials are provided [[GH-21282](https://github.com/hashicorp/vault/pull/21282)]
+* core/namespace (enterprise): Introduce the concept of high-privilege namespace (administrative namespace),
+which will have access to some system backend paths that were previously only accessible in the root namespace. [[GH-21215](https://github.com/hashicorp/vault/pull/21215)]
+* secrets/transform (enterprise): Enforce a transformation role's max_ttl setting on encode requests, a warning will be returned if max_ttl was applied.
+* storage/aerospike: Aerospike storage shouldn't be used on 32-bit architectures and is now unsupported on them. [[GH-20825](https://github.com/hashicorp/vault/pull/20825)]
+
+IMPROVEMENTS:
+
+* core/fips: Add RPM, DEB packages of FIPS 140-2 and HSM+FIPS 140-2 Vault Enterprise.
+* eventbus: updated go-eventlogger library to allow removal of nodes referenced by pipelines (used for subscriptions) [[GH-21623](https://github.com/hashicorp/vault/pull/21623)]
+* openapi: Better mount points for kv-v1 and kv-v2 in openapi.json [[GH-21563](https://github.com/hashicorp/vault/pull/21563)]
+* replication (enterprise): Avoid logging warning if request is forwarded from a performance standby and not a performance secondary
+* secrets/pki: Add a parameter to allow ExtKeyUsage field usage from a role within ACME. [[GH-21702](https://github.com/hashicorp/vault/pull/21702)]
+* secrets/transform (enterprise): Switch to pgx PostgreSQL driver for better timeout handling
+* sys/metrics (enterprise): Adds a gauge metric that tracks whether enterprise builtin secret plugins are enabled. [[GH-21681](https://github.com/hashicorp/vault/pull/21681)]
+
+BUG FIXES:
+
+* agent: Fix "generate-config" command documentation URL [[GH-21466](https://github.com/hashicorp/vault/pull/21466)]
+* auth/azure: Fix intermittent 401s by preventing performance secondary clusters from rotating root credentials. [[GH-21800](https://github.com/hashicorp/vault/pull/21800)]
+* auth/token, sys: Fix path-help being unavailable for some list-only endpoints [[GH-18571](https://github.com/hashicorp/vault/pull/18571)]
+* auth/token: Fix parsing of `auth/token/create` fields to avoid incorrect warnings about ignored parameters [[GH-18556](https://github.com/hashicorp/vault/pull/18556)]
+* awsutil: Update awsutil to v0.2.3 to fix a regression where Vault no longer
+respects `AWS_ROLE_ARN`, `AWS_WEB_IDENTITY_TOKEN_FILE`, and `AWS_ROLE_SESSION_NAME`. [[GH-21951](https://github.com/hashicorp/vault/pull/21951)]
+* core/managed-keys (enterprise): Allow certain symmetric PKCS#11 managed key mechanisms (AES CBC with and without padding) to operate without an HMAC.
+* core: Fixed an instance where incorrect route entries would get tainted. We now pre-calculate namespace specific paths to avoid this. [[GH-24170](https://github.com/hashicorp/vault/pull/24170)]
+* core: Fixed issue with some durations not being properly parsed to include days. [[GH-21357](https://github.com/hashicorp/vault/pull/21357)]
+* identity: Remove caseSensitivityKey to prevent errors while loading groups which could result in missing groups in memDB when duplicates are found. [[GH-20965](https://github.com/hashicorp/vault/pull/20965)]
+* openapi: Fix response schema for PKI Issue requests [[GH-21449](https://github.com/hashicorp/vault/pull/21449)]
+* openapi: Fix schema definitions for PKI EAB APIs [[GH-21458](https://github.com/hashicorp/vault/pull/21458)]
+* replication (enterprise): update primary cluster address after DR failover
+* secrets/azure: Fix intermittent 401s by preventing performance secondary clusters from rotating root credentials. [[GH-21631](https://github.com/hashicorp/vault/pull/21631)]
+* secrets/pki: Fix bug with ACME tidy, 'unable to determine acme base folder path'. [[GH-21870](https://github.com/hashicorp/vault/pull/21870)]
+* secrets/pki: Fix preserving acme_account_safety_buffer on config/auto-tidy. [[GH-21870](https://github.com/hashicorp/vault/pull/21870)]
+* secrets/pki: Prevent deleted issuers from reappearing when migrating from a version 1 bundle to a version 2 bundle (versions including 1.13.0, 1.12.2, and 1.11.6); when managed keys were removed but referenced in the Vault 1.10 legacy CA bundle, this the error: `no managed key found with uuid`. [[GH-21316](https://github.com/hashicorp/vault/pull/21316)]
+* secrets/transform (enterprise): Fix nil panic when deleting a template with tokenization transformations present
+* secrets/transform (enterprise): Grab shared locks for various read operations, only escalating to write locks if work is required
+* serviceregistration: Fix bug where multiple nodes in a secondary cluster could be labelled active after updating the cluster's primary [[GH-21642](https://github.com/hashicorp/vault/pull/21642)]
+* ui: Adds missing values to details view after generating PKI certificate [[GH-21635](https://github.com/hashicorp/vault/pull/21635)]
+* ui: Fixed an issue where editing an SSH role would clear `default_critical_options` and `default_extension` if left unchanged. [[GH-21739](https://github.com/hashicorp/vault/pull/21739)]
+* ui: Fixed secrets, leases, and policies filter dropping focus after a single character [[GH-21767](https://github.com/hashicorp/vault/pull/21767)]
+* ui: Fixes issue with certain navigational links incorrectly displaying in child namespaces [[GH-21562](https://github.com/hashicorp/vault/pull/21562)]
+* ui: Fixes login screen display issue with Safari browser [[GH-21582](https://github.com/hashicorp/vault/pull/21582)]
+* ui: Fixes problem displaying certificates issued with unsupported signature algorithms (i.e. ed25519) [[GH-21926](https://github.com/hashicorp/vault/pull/21926)]
+* ui: Fixes styling of private key input when configuring an SSH key [[GH-21531](https://github.com/hashicorp/vault/pull/21531)]
+* ui: Surface DOMException error when browser settings prevent localStorage. [[GH-21503](https://github.com/hashicorp/vault/pull/21503)]
+
 ## 1.14.0
 ### June 21, 2023
 
@@ -217,6 +269,39 @@ with a new entity alias to be incorrectly forwarded from perf standbys. [[GH-211
 * ui: fixes bug in kmip role form that caused `operation_all` to persist after deselecting all operation checkboxes [[GH-19139](https://github.com/hashicorp/vault/pull/19139)]
 * ui: fixes key_bits and signature_bits reverting to default values when editing a pki role [[GH-20907](https://github.com/hashicorp/vault/pull/20907)]
 * ui: wait for wanted message event during OIDC callback instead of using the first message event [[GH-18521](https://github.com/hashicorp/vault/pull/18521)]
+
+## 1.13.5
+### July 25, 2023
+
+CHANGES:
+
+* auth/ldap: Normalize HTTP response codes when invalid credentials are provided [[GH-21282](https://github.com/hashicorp/vault/pull/21282)]
+* core/namespace (enterprise): Introduce the concept of high-privilege namespace (administrative namespace),
+which will have access to some system backend paths that were previously only accessible in the root namespace. [[GH-21215](https://github.com/hashicorp/vault/pull/21215)]
+* secrets/transform (enterprise): Enforce a transformation role's max_ttl setting on encode requests, a warning will be returned if max_ttl was applied.
+
+IMPROVEMENTS:
+
+* core/fips: Add RPM, DEB packages of FIPS 140-2 and HSM+FIPS 140-2 Vault Enterprise.
+* core: Add a new periodic metric to track the number of available policies, `vault.policy.configured.count`. [[GH-21010](https://github.com/hashicorp/vault/pull/21010)]
+* replication (enterprise): Avoid logging warning if request is forwarded from a performance standby and not a performance secondary
+* secrets/transform (enterprise): Switch to pgx PostgreSQL driver for better timeout handling
+* sys/metrics (enterprise): Adds a gauge metric that tracks whether enterprise builtin secret plugins are enabled. [[GH-21681](https://github.com/hashicorp/vault/pull/21681)]
+
+BUG FIXES:
+
+* auth/azure: Fix intermittent 401s by preventing performance secondary clusters from rotating root credentials. [[GH-21799](https://github.com/hashicorp/vault/pull/21799)]
+* core: Fixed an instance where incorrect route entries would get tainted. We now pre-calculate namespace specific paths to avoid this. [[GH-24170](https://github.com/hashicorp/vault/pull/24170)]
+* identity: Remove caseSensitivityKey to prevent errors while loading groups which could result in missing groups in memDB when duplicates are found. [[GH-20965](https://github.com/hashicorp/vault/pull/20965)]
+* replication (enterprise): update primary cluster address after DR failover
+* secrets/azure: Fix intermittent 401s by preventing performance secondary clusters from rotating root credentials. [[GH-21632](https://github.com/hashicorp/vault/pull/21632)]
+* secrets/pki: Prevent deleted issuers from reappearing when migrating from a version 1 bundle to a version 2 bundle (versions including 1.13.0, 1.12.2, and 1.11.6); when managed keys were removed but referenced in the Vault 1.10 legacy CA bundle, this the error: `no managed key found with uuid`. [[GH-21316](https://github.com/hashicorp/vault/pull/21316)]
+* secrets/pki: Support setting both maintain_stored_certificate_counts=false and publish_stored_certificate_count_metrics=false explicitly in tidy config. [[GH-20664](https://github.com/hashicorp/vault/pull/20664)]
+* secrets/transform (enterprise): Fix nil panic when deleting a template with tokenization transformations present
+* secrets/transform (enterprise): Grab shared locks for various read operations, only escalating to write locks if work is required
+* serviceregistration: Fix bug where multiple nodes in a secondary cluster could be labelled active after updating the cluster's primary [[GH-21642](https://github.com/hashicorp/vault/pull/21642)]
+* ui: Fixed an issue where editing an SSH role would clear `default_critical_options` and `default_extension` if left unchanged. [[GH-21739](https://github.com/hashicorp/vault/pull/21739)]
+* ui: Surface DOMException error when browser settings prevent localStorage. [[GH-21503](https://github.com/hashicorp/vault/pull/21503)]
 
 ## 1.13.4
 ### June 21, 2023
@@ -449,6 +534,7 @@ Plugins using sdk/useragent.String must instead use sdk/useragent.PluginString. 
 
 FEATURES:
 
+* **User lockout**: Ignore repeated bad credentials from the same user for a configured period of time. Enabled by default.
 * **Azure Auth Managed Identities**: Allow any Azure resource that supports managed identities to authenticate with Vault [[GH-19077](https://github.com/hashicorp/vault/pull/19077)]
 * **Azure Auth Rotate Root**: Add support for rotate root in Azure Auth engine [[GH-19077](https://github.com/hashicorp/vault/pull/19077)]
 * **Event System (Alpha)**: Vault has a new opt-in experimental event system. Not yet suitable for production use. Events are currently only generated on writes to the KV secrets engine, but external plugins can also be updated to start generating events. [[GH-19194](https://github.com/hashicorp/vault/pull/19194)]
@@ -722,6 +808,32 @@ non-voter.  In some scenarios this resulted in loss of quorum. [[GH-18263](https
 * ui: fixes query parameters not passed in api explorer test requests [[GH-18743](https://github.com/hashicorp/vault/pull/18743)]
 * ui: fixes reliance on secure context (https) by removing methods using the Crypto interface [[GH-19403](https://github.com/hashicorp/vault/pull/19403)]
 * ui: show Get credentials button for static roles detail page when a user has the proper permissions. [[GH-19190](https://github.com/hashicorp/vault/pull/19190)]
+
+## 1.12.9
+### July 25, 2023
+
+CHANGES:
+
+* secrets/transform (enterprise): Enforce a transformation role's max_ttl setting on encode requests, a warning will be returned if max_ttl was applied.
+
+IMPROVEMENTS:
+
+* core/fips: Add RPM, DEB packages of FIPS 140-2 and HSM+FIPS 140-2 Vault Enterprise.
+* replication (enterprise): Avoid logging warning if request is forwarded from a performance standby and not a performance secondary
+* secrets/transform (enterprise): Switch to pgx PostgreSQL driver for better timeout handling
+
+BUG FIXES:
+
+* core: Fixed an instance where incorrect route entries would get tainted. We now pre-calculate namespace specific paths to avoid this. [[GH-24170](https://github.com/hashicorp/vault/pull/24170)]
+* identity: Remove caseSensitivityKey to prevent errors while loading groups which could result in missing groups in memDB when duplicates are found. [[GH-20965](https://github.com/hashicorp/vault/pull/20965)]
+* replication (enterprise): update primary cluster address after DR failover
+* secrets/azure: Fix intermittent 401s by preventing performance secondary clusters from rotating root credentials. [[GH-21633](https://github.com/hashicorp/vault/pull/21633)]
+* secrets/pki: Prevent deleted issuers from reappearing when migrating from a version 1 bundle to a version 2 bundle (versions including 1.13.0, 1.12.2, and 1.11.6); when managed keys were removed but referenced in the Vault 1.10 legacy CA bundle, this the error: `no managed key found with uuid`. [[GH-21316](https://github.com/hashicorp/vault/pull/21316)]
+* secrets/pki: Support setting both maintain_stored_certificate_counts=false and publish_stored_certificate_count_metrics=false explicitly in tidy config. [[GH-20664](https://github.com/hashicorp/vault/pull/20664)]
+* secrets/transform (enterprise): Fix nil panic when deleting a template with tokenization transformations present
+* secrets/transform (enterprise): Grab shared locks for various read operations, only escalating to write locks if work is required
+* serviceregistration: Fix bug where multiple nodes in a secondary cluster could be labelled active after updating the cluster's primary [[GH-21642](https://github.com/hashicorp/vault/pull/21642)]
+* ui: Fixed an issue where editing an SSH role would clear `default_critical_options` and `default_extension` if left unchanged. [[GH-21739](https://github.com/hashicorp/vault/pull/21739)]
 
 ## 1.12.8
 ### June 21, 2023

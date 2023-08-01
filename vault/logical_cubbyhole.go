@@ -61,6 +61,8 @@ func (b *CubbyholeBackend) paths() []*framework.Path {
 				},
 			},
 
+			TakesArbitraryInput: true,
+
 			Operations: map[logical.Operation]framework.OperationHandler{
 				logical.ReadOperation: &framework.PathOperation{
 					Callback: b.handleRead,
