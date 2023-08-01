@@ -33,7 +33,7 @@ const validations = {
     { type: 'presence', message: `Path can't be blank.` },
     {
       validator: (model) => (model.path.match(/\/$/) ? false : true),
-      message: `Path can't end in forward slash '/'`,
+      message: `Path can't end in forward slash '/'.`,
     },
     {
       type: 'containsWhiteSpace',

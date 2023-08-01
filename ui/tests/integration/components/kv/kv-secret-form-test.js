@@ -151,7 +151,7 @@ module('Integration | Component | kv | KvSecretForm', function (hooks) {
 
     await fillIn(PAGE.form.inputByAttr('path'), ''); // clear input
     await typeIn(PAGE.form.inputByAttr('path'), 'slash/');
-    assert.dom(SELECTORS.validation('path')).hasText(`Path can't end in forward slash '/'`);
+    assert.dom(SELECTORS.validation('path')).hasText(`Path can't end in forward slash '/'.`);
 
     await typeIn(PAGE.form.inputByAttr('path'), 'secret');
     assert
