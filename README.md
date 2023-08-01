@@ -279,3 +279,11 @@ func TestStandardDRReplication_Docker(t *testing.T) {
   }
 }
 ```
+
+Finally, here's an example of running an existing OSS docker test with a custom binary:
+
+```bash
+$ GOOS=linux make dev
+$ VAULT_BINARY=$(pwd)/bin/vault go test -run 'TestRaft_Configuration_Docker' ./vault/external_tests/raft/raft_binary
+ok      github.com/hashicorp/vault/vault/external_tests/raft/raft_binary        20.960s
+```
