@@ -127,7 +127,7 @@
           }
         ]
       },
-      
+
       {
         "title": "Token Authentication",
         "path": "internals/token"
@@ -1944,6 +1944,11 @@
       {
         "title": "Upgrade Plugins",
         "path": "upgrading/plugins"
+      },
+      {
+        "title": "Upgrade to 1.15.x",
+        "path": "upgrading/upgrade-to-1.15.x",
+        "hidden": true
       },
       {
         "title": "Upgrade to 1.14.x",

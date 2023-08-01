@@ -366,7 +366,7 @@ func BenchmarkAuditFileSink_Process(b *testing.B) {
 		},
 	}
 
-	ctx := namespace.RootContext(nil)
+	ctx := namespace.RootContext(context.Background())
 
 	// Create the formatter node.
 	cfg, err := NewFormatterConfig()
