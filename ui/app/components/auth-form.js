@@ -267,7 +267,7 @@ export default Component.extend(DEFAULTS, {
       return;
     }
     let response = null;
-    this.setOktaNumberChallenge(true);
+    this.args.setOktaNumberChallenge(true);
     this.setCancellingAuth(false);
     // keep polling /auth/okta/verify/:nonce API every 1s until a response is given with the correct number for the Okta Number Challenge
     while (response === null) {
@@ -330,7 +330,7 @@ export default Component.extend(DEFAULTS, {
       });
     },
     returnToLoginFromOktaNumberChallenge() {
-      this.setOktaNumberChallenge(false);
+      this.args.setOktaNumberChallenge(false);
       this.set('oktaNumberChallengeAnswer', null);
     },
   },
