@@ -66,7 +66,7 @@ module('Integration | Component | kv | KvSecretForm', function (hooks) {
     await click(PAGE.form.secretSave);
   });
 
-  test('it makes saves nested secrets', async function (assert) {
+  test('it saves nested secrets', async function (assert) {
     assert.expect(4);
     const pathToSecret = 'path/to/secret/';
     this.secret.path = pathToSecret;
