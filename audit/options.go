@@ -148,3 +148,11 @@ func WithHMACAccessor(h bool) Option {
 		return nil
 	}
 }
+
+// WithHeaderFormatter provides an Option to supply a HeaderFormatter.
+func WithHeaderFormatter(f HeaderFormatter) Option {
+	return func(o *options) error {
+		o.withHeaderFormatter = f
+		return nil
+	}
+}

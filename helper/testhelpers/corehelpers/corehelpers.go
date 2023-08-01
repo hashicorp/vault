@@ -268,7 +268,7 @@ func NewNoopAudit(config map[string]string) (*NoopAudit, error) {
 }
 
 func NoopAuditFactory(records **[][]byte) audit.Factory {
-	return func(_ context.Context, config *audit.BackendConfig, _ bool) (audit.Backend, error) {
+	return func(_ context.Context, config *audit.BackendConfig, _ bool, _ audit.HeaderFormatter) (audit.Backend, error) {
 		n, err := NewNoopAudit(config.Config)
 		if err != nil {
 			return nil, err
