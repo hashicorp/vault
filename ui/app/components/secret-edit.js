@@ -35,14 +35,13 @@ export default class SecretEdit extends Component {
   @service store;
 
   @tracked secretData = null;
-  @tracked isV2 = false;
   @tracked codemirrorString = null;
 
   // fired on did-insert from render modifier
   @action
   createKvData(elem, [model]) {
-    if (!model.secretData && model.selectedVersion) {
-      this.isV2 = true;
+    if (this.isV2) {
+      // pre-fill secret data from selected version
       model.secretData = model.belongsTo('selectedVersion').value().secretData;
     }
     this.secretData = KVObject.create({ content: [] }).fromJSON(model.secretData);
@@ -97,6 +96,9 @@ export default class SecretEdit extends Component {
   @or('model.isLoading', 'model.isReloading', 'model.isSaving') requestInFlight;
   @or('requestInFlight', 'model.isFolder', 'model.flagsIsInvalid') buttonDisabled;
 
+  get isV2() {
+    return !!this.args.model?.selectedVersion;
+  }
   get modelForData() {
     const { model } = this.args;
     if (!model) return null;
