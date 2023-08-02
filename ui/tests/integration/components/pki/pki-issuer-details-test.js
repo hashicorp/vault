@@ -167,4 +167,21 @@ module('Integration | Component | page/pki-issuer-details', function (hooks) {
         "There was an error parsing certificate metadata Vault cannot display unparsed values, but this will not interfere with the certificate's functionality. However, if you wish to cross-sign this issuer it must be done manually using the CLI."
       );
   });
+
+  test('it renders the <CertificateCard> component for both the certificate and the CA chain', async function (assert) {
+    await render(
+      hbs`
+        <Page::PkiIssuerDetails @issuer={{this.issuer}} />
+        <div id="modal-wormhole"></div>
+        `,
+      this.context
+    );
+
+    assert
+      .dom('[data-test-value-div="Certificate"] [data-test-certificate-card]')
+      .exists('Certificate card renders for certificate');
+    assert
+      .dom('[data-test-value-div="CA Chain"] [data-test-certificate-card]')
+      .exists('Certificate card renders for CA Chain');
+  });
 });
