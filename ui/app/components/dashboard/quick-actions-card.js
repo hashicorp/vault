@@ -60,9 +60,12 @@ const getActionParamByAction = (type) => {
       return {
         title: 'Secret Path',
         subText: 'Path of the secret you want to read, including the mount. E.g., secret/data/foo.',
-        elementType: 'input',
+        // elementType: 'input',
         buttonText: 'Read secrets',
-        path: 'vault.cluster.secrets',
+        model: 'secret-v2',
+        path: 'vault.cluster.secrets.backend.list',
+        // ends in forward --> 'vault.cluster.secrets.backends.list', id
+        // else --> 'vault.cluster.secrets.backends.show', id
       };
     case 'generate-credentials-db':
       return {
@@ -103,6 +106,9 @@ const getActionParamByAction = (type) => {
   }
 };
 
+const PKI_ENGINE_TYPE = 'pki';
+const KV_ENGINE_TYPE = 'kv';
+const DB_ENGINE_TYPE = 'database';
 export default class DashboardQuickActionsCard extends Component {
   @service router;
 
@@ -124,7 +130,9 @@ export default class DashboardQuickActionsCard extends Component {
   get filteredSecretEngines() {
     return this.args.secretsEngines.filter(
       (secretEngine) =>
-        secretEngine.type === 'pki' || secretEngine.type === 'kv' || secretEngine.type === 'database'
+        secretEngine.type === PKI_ENGINE_TYPE ||
+        secretEngine.type === KV_ENGINE_TYPE ||
+        secretEngine.type === DB_ENGINE_TYPE
     );
   }
 
