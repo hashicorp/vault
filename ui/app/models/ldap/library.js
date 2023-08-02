@@ -8,15 +8,10 @@ import { withFormFields } from 'vault/decorators/model-form-fields';
 import { withModelValidations } from 'vault/decorators/model-validations';
 
 const validations = {
-  name: [{ type: 'presence', message: 'Library Name is required.' }],
+  name: [{ type: 'presence', message: 'Library name is required.' }],
+  service_account_names: [{ type: 'presence', message: 'At least one service account is required.' }],
 };
-const formFields = [
-  'name',
-  'service_account_names',
-  'default_ttl',
-  'max_ttl',
-  'disable_check_in_enforcement',
-];
+const formFields = ['name', 'service_account_names', 'ttl', 'max_ttl', 'disable_check_in_enforcement'];
 
 @withModelValidations(validations)
 @withFormFields(formFields)
@@ -33,17 +28,17 @@ export default class LdapLibraryModel extends Model {
   })
   service_account_names;
 
-  @attr('number', {
+  @attr({
     editType: 'ttl',
     label: 'Default lease TTL',
     detailsLabel: 'TTL',
     helperTextDisabled: 'Vault will use the default lease duration.',
-    defaultValue: '1h',
+    defaultValue: '24h',
     defaultShown: 'Engine default',
   })
-  default_ttl;
+  ttl;
 
-  @attr('number', {
+  @attr({
     editType: 'ttl',
     label: 'Max lease TTL',
     detailsLabel: 'Max TTL',
