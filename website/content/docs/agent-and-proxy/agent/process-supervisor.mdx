@@ -6,7 +6,7 @@ description: >-
   into a process via environment variables using Consul Template markup.
 ---
 
-# Vault Agent's Process Supervisor Mode
+# Vault agent's process supervisor mode
 
 Vault Agent's Process Supervisor Mode allows Vault secrets to be injected into
 a process via environment variables using
@@ -102,7 +102,7 @@ The top level `exec` block has the following configuration entries.
   to force the child process to stop.
 
 
-## Configuration Example
+## Configuration example
 
 The following example was generated using
 [`vault agent generate-config`](/vault/docs/agent-and-proxy/agent/generate-config),
@@ -149,3 +149,10 @@ exec {
 
 [consul-templating-language]: https://github.com/hashicorp/consul-template/blob/v0.28.1/docs/templating-language.md
 [template-config]: /vault/docs/agent-and-proxy/agent/template#template-configurations
+
+
+## Tutorial
+
+Refer to the [Vault Agent - secrets as environment
+variables](/vault/tutorials/vault-agent/agent-env-vars) tutorial for an
+end-to-end example.

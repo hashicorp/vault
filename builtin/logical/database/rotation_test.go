@@ -20,7 +20,6 @@ import (
 	postgreshelper "github.com/hashicorp/vault/helper/testhelpers/postgresql"
 	v5 "github.com/hashicorp/vault/sdk/database/dbplugin/v5"
 	"github.com/hashicorp/vault/sdk/framework"
-	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/dbtxn"
 	"github.com/hashicorp/vault/sdk/helper/pluginutil"
 	"github.com/hashicorp/vault/sdk/logical"
@@ -1224,7 +1223,7 @@ func TestStoredWALsCorrectlyProcessed(t *testing.T) {
 			b.credRotationQueue = queue.New()
 
 			// Now finish the startup process by populating the queue, which should discard the WAL
-			b.initQueue(ctx, config, consts.ReplicationUnknown)
+			b.initQueue(ctx, config)
 
 			if tc.shouldRotate {
 				requireWALs(t, storage, 1)
@@ -1390,7 +1389,7 @@ func setupMockDB(b *databaseBackend) *mockNewDatabase {
 		id:       "foo-id",
 		name:     "mockV5",
 	}
-	b.connections["mockv5"] = dbi
+	b.connections.Put("mockv5", dbi)
 
 	return mockDB
 }

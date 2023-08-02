@@ -1,9 +1,13 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package pki
 
 import (
 	"bytes"
 	"context"
 	"crypto/sha256"
+	"crypto/subtle"
 	"crypto/tls"
 	"crypto/x509"
 	"encoding/asn1"
@@ -55,13 +59,29 @@ func ValidateKeyAuthorization(keyAuthz string, token string, thumbprint string) 
 // challenge matches our expectation, returning (true, nil) if so, or
 // (false, err) if not.
 //
-// This is for use with DNS challenges, which require
+// This is for use with DNS challenges, which require base64 encoding.
 func ValidateSHA256KeyAuthorization(keyAuthz string, token string, thumbprint string) (bool, error) {
 	authzContents := token + "." + thumbprint
 	checksum := sha256.Sum256([]byte(authzContents))
 	expectedAuthz := base64.RawURLEncoding.EncodeToString(checksum[:])
 
 	if keyAuthz != expectedAuthz {
+		return false, fmt.Errorf("sha256 key authorization was invalid")
+	}
+
+	return true, nil
+}
+
+// ValidateRawSHA256KeyAuthorization validates that the given keyAuthz from a
+// challenge matches our expectation, returning (true, nil) if so, or
+// (false, err) if not.
+//
+// This is for use with TLS challenges, which require the raw hash output.
+func ValidateRawSHA256KeyAuthorization(keyAuthz []byte, token string, thumbprint string) (bool, error) {
+	authzContents := token + "." + thumbprint
+	expectedAuthz := sha256.Sum256([]byte(authzContents))
+
+	if len(keyAuthz) != len(expectedAuthz) || subtle.ConstantTimeCompare(expectedAuthz[:], keyAuthz) != 1 {
 		return false, fmt.Errorf("sha256 key authorization was invalid")
 	}
 
@@ -286,9 +306,13 @@ func ValidateTLSALPN01Challenge(domain string, token string, thumbprint string, 
 			// Verify that this is a self-signed certificate that isn't signed
 			// by another certificate (i.e., with the same key material but
 			// different issuer).
-			if err := cert.CheckSignatureFrom(cert); err != nil {
-				return fmt.Errorf("server under test returned a non-self-signed certificate: %w", err)
+			// NOTE: Do not use cert.CheckSignatureFrom(cert) as we need to bypass the
+			//       checks for the parent certificate having the IsCA basic constraint set.
+			err := cert.CheckSignature(cert.SignatureAlgorithm, cert.RawTBSCertificate, cert.Signature)
+			if err != nil {
+				return fmt.Errorf("server under test returned a non-self-signed certificate: %v", err)
 			}
+
 			if !bytes.Equal(cert.RawSubject, cert.RawIssuer) {
 				return fmt.Errorf("server under test returned a non-self-signed certificate: invalid subject (%v) <-> issuer (%v) match", cert.Subject.String(), cert.Issuer.String())
 			}
@@ -339,8 +363,16 @@ func ValidateTLSALPN01Challenge(domain string, token string, thumbprint string, 
 					return fmt.Errorf("server under test returned a certificate with an acmeIdentifier extension marked non-Critical")
 				}
 
-				keyAuthz := string(ext.Value)
-				ok, err := ValidateSHA256KeyAuthorization(keyAuthz, token, thumbprint)
+				var keyAuthz []byte
+				remainder, err := asn1.Unmarshal(ext.Value, &keyAuthz)
+				if err != nil {
+					return fmt.Errorf("server under test returned a certificate with invalid acmeIdentifier extension value: %w", err)
+				}
+				if len(remainder) > 0 {
+					return fmt.Errorf("server under test returned a certificate with invalid acmeIdentifier extension value with additional trailing data")
+				}
+
+				ok, err := ValidateRawSHA256KeyAuthorization(keyAuthz, token, thumbprint)
 				if !ok || err != nil {
 					return fmt.Errorf("server under test returned a certificate with an invalid key authorization (%w)", err)
 				}

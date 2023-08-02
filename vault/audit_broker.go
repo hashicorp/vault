@@ -11,6 +11,7 @@ import (
 	"time"
 
 	metrics "github.com/armon/go-metrics"
+	"github.com/hashicorp/eventlogger"
 	log "github.com/hashicorp/go-hclog"
 	multierror "github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/vault/audit"
@@ -28,38 +29,82 @@ type AuditBroker struct {
 	sync.RWMutex
 	backends map[string]backendEntry
 	logger   log.Logger
+
+	broker *eventlogger.Broker
 }
 
 // NewAuditBroker creates a new audit broker
-func NewAuditBroker(log log.Logger) *AuditBroker {
+func NewAuditBroker(log log.Logger, useEventLogger bool) (*AuditBroker, error) {
+	var eventBroker *eventlogger.Broker
+	var err error
+
+	if useEventLogger {
+		// Ignoring the second error return value since an error will only occur
+		// if an unrecognized eventlogger.RegistrationPolicy is provided to an
+		// eventlogger.Option function.
+		eventBroker, err = eventlogger.NewBroker(eventlogger.WithNodeRegistrationPolicy(eventlogger.DenyOverwrite), eventlogger.WithPipelineRegistrationPolicy(eventlogger.DenyOverwrite))
+		if err != nil {
+			return nil, fmt.Errorf("error creating event broker for audit events: %w", err)
+		}
+	}
+
 	b := &AuditBroker{
 		backends: make(map[string]backendEntry),
 		logger:   log,
+		broker:   eventBroker,
 	}
-	return b
+	return b, nil
 }
 
 // Register is used to add new audit backend to the broker
-func (a *AuditBroker) Register(name string, b audit.Backend, local bool) {
+func (a *AuditBroker) Register(name string, b audit.Backend, local bool) error {
 	a.Lock()
 	defer a.Unlock()
+
+	if a.broker != nil {
+		err := b.RegisterNodesAndPipeline(a.broker, name)
+		if err != nil {
+			return err
+		}
+	}
+
 	a.backends[name] = backendEntry{
 		backend: b,
 		local:   local,
 	}
+
+	return nil
 }
 
 // Deregister is used to remove an audit backend from the broker
-func (a *AuditBroker) Deregister(name string) {
+func (a *AuditBroker) Deregister(ctx context.Context, name string) error {
 	a.Lock()
 	defer a.Unlock()
+
+	// Remove the Backend from the map first, so that if an error occurs while
+	// removing the pipeline and nodes, we can quickly exit this method with
+	// the error.
 	delete(a.backends, name)
+
+	if a.broker != nil {
+		// The first return value, a bool, indicates whether
+		// RemovePipelineAndNodes encountered the error while evaluating
+		// pre-conditions (false) or once it started removing the pipeline and
+		// the nodes (true). This code doesn't care either way.
+		_, err := a.broker.RemovePipelineAndNodes(ctx, eventlogger.EventType("audit"), eventlogger.PipelineID(name))
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
 
 // IsRegistered is used to check if a given audit backend is registered
 func (a *AuditBroker) IsRegistered(name string) bool {
 	a.RLock()
 	defer a.RUnlock()
+
 	_, ok := a.backends[name]
 	return ok
 }
@@ -84,15 +129,17 @@ func (a *AuditBroker) GetHash(ctx context.Context, name string, input string) (s
 		return "", fmt.Errorf("unknown audit backend %q", name)
 	}
 
-	return be.backend.GetHash(ctx, input)
+	return audit.HashString(ctx, be.backend, input)
 }
 
 // LogRequest is used to ensure all the audit backends have an opportunity to
 // log the given request and that *at least one* succeeds.
 func (a *AuditBroker) LogRequest(ctx context.Context, in *logical.LogInput, headersConfig *AuditedHeadersConfig) (ret error) {
 	defer metrics.MeasureSince([]string{"audit", "log_request"}, time.Now())
+
 	a.RLock()
 	defer a.RUnlock()
+
 	if in.Request.InboundSSCToken != "" {
 		if in.Auth != nil {
 			reqAuthToken := in.Auth.ClientToken
@@ -135,7 +182,7 @@ func (a *AuditBroker) LogRequest(ctx context.Context, in *logical.LogInput, head
 	anyLogged := false
 	for name, be := range a.backends {
 		in.Request.Headers = nil
-		transHeaders, thErr := headersConfig.ApplyConfig(ctx, headers, be.backend.GetHash)
+		transHeaders, thErr := headersConfig.ApplyConfig(ctx, headers, be.backend)
 		if thErr != nil {
 			a.logger.Error("backend failed to include headers", "backend", name, "error", thErr)
 			continue
@@ -200,7 +247,7 @@ func (a *AuditBroker) LogResponse(ctx context.Context, in *logical.LogInput, hea
 	anyLogged := false
 	for name, be := range a.backends {
 		in.Request.Headers = nil
-		transHeaders, thErr := headersConfig.ApplyConfig(ctx, headers, be.backend.GetHash)
+		transHeaders, thErr := headersConfig.ApplyConfig(ctx, headers, be.backend)
 		if thErr != nil {
 			a.logger.Error("backend failed to include headers", "backend", name, "error", thErr)
 			continue

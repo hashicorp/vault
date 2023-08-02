@@ -72,3 +72,7 @@ func (c *Core) mountEntrySysView(entry *MountEntry) extendedSystemView {
 	}
 	return c.NewAcmeBillingSystemView(esi)
 }
+
+func (c *Core) entBuiltinPluginMetrics(ctx context.Context, entry *MountEntry, val float32) error {
+	return nil
+}

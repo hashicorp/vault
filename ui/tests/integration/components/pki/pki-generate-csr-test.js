@@ -107,7 +107,7 @@ module('Integration | Component | pki-generate-csr', function (hooks) {
       owner: this.engine,
     });
     assert
-      .dom('[data-test-alert-banner="alert"]')
+      .dom('[data-test-next-steps-csr]')
       .hasText(
         'Next steps Copy the CSR below for a parent issuer to sign and then import the signed certificate back into this mount. The private_key is only available once. Make sure you copy and save it now.',
         'renders Next steps alert banner'
@@ -138,7 +138,7 @@ module('Integration | Component | pki-generate-csr', function (hooks) {
       owner: this.engine,
     });
     assert
-      .dom('[data-test-alert-banner="alert"]')
+      .dom('[data-test-next-steps-csr]')
       .hasText(
         'Next steps Copy the CSR below for a parent issuer to sign and then import the signed certificate back into this mount.',
         'renders Next steps alert banner'

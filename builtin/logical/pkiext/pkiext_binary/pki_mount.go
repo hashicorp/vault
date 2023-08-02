@@ -133,6 +133,16 @@ func (vpm *VaultPkiMount) GetEabKey(acmeDirectory string) (string, string, error
 	return eabId, base64EabKey, nil
 }
 
+// GetCACertPEM retrieves the PKI mount's PEM-encoded CA certificate.
+func (vpm *VaultPkiMount) GetCACertPEM() (string, error) {
+	caCertPath := path.Join(vpm.mount, "/cert/ca")
+	resp, err := vpm.GetActiveNode().Logical().ReadWithContext(context.Background(), caCertPath)
+	if err != nil {
+		return "", err
+	}
+	return resp.Data["certificate"].(string), nil
+}
+
 func mergeWithDefaults(config map[string]interface{}, defaults map[string]interface{}) map[string]interface{} {
 	myConfig := config
 	if myConfig == nil {

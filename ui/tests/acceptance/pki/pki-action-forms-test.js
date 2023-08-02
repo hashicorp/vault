@@ -33,7 +33,6 @@ module('Acceptance | pki action forms test', function (hooks) {
     await authPage.login();
     // Cleanup engine
     await runCommands([`delete sys/mounts/${this.mountPath}`]);
-    await logout.visit();
   });
 
   module('import', function (hooks) {
@@ -55,7 +54,7 @@ module('Acceptance | pki action forms test', function (hooks) {
       assert.dom(S.configuration.emptyState).doesNotExist();
       // Submit before filling out form shows an error
       await click('[data-test-pki-import-pem-bundle]');
-      assert.dom('[data-test-alert-banner="alert"]').hasText('Error please upload your PEM bundle');
+      assert.dom(S.configuration.importError).hasText('Error please upload your PEM bundle');
       // Fill in form data
       await click('[data-test-text-toggle]');
       await fillIn('[data-test-text-file-textarea]', this.pemBundle);
@@ -198,9 +197,9 @@ module('Acceptance | pki action forms test', function (hooks) {
         `/vault/secrets/${this.mountPath}/pki/configuration/create`,
         'stays on page on success'
       );
-      assert.dom(S.configuration.title).hasText('View root certificate');
-      assert.dom('[data-test-alert-banner="alert"]').doesNotExist('no private key warning');
-      assert.dom(S.configuration.title).hasText('View root certificate', 'Updates title on page');
+      assert.dom(S.configuration.title).hasText('View Root Certificate');
+      assert.dom(S.configuration.nextStepsBanner).doesNotExist('no private key warning');
+      assert.dom(S.configuration.title).hasText('View Root Certificate', 'Updates title on page');
       assert.dom(S.configuration.saved.certificate).hasClass('allow-copy', 'copyable certificate is masked');
       assert.dom(S.configuration.saved.issuerName).hasText(issuerName);
       assert.dom(S.configuration.saved.issuerLink).exists('Issuer link exists');
@@ -226,11 +225,11 @@ module('Acceptance | pki action forms test', function (hooks) {
         `/vault/secrets/${this.mountPath}/pki/configuration/create`,
         'stays on page on success'
       );
-      assert.dom(S.configuration.title).hasText('View root certificate');
+      assert.dom(S.configuration.title).hasText('View Root Certificate');
       assert
-        .dom('[data-test-alert-banner="alert"]')
+        .dom(S.configuration.nextStepsBanner)
         .hasText('Next steps The private_key is only available once. Make sure you copy and save it now.');
-      assert.dom(S.configuration.title).hasText('View root certificate', 'Updates title on page');
+      assert.dom(S.configuration.title).hasText('View Root Certificate', 'Updates title on page');
       assert
         .dom(S.configuration.saved.certificate)
         .hasClass('allow-copy', 'copyable masked certificate exists');
@@ -260,7 +259,7 @@ module('Acceptance | pki action forms test', function (hooks) {
       await fillIn(S.configuration.typeField, 'internal');
       await fillIn(S.configuration.inputByName('commonName'), 'my-common-name');
       await click('[data-test-save]');
-      assert.dom(S.configuration.title).hasText('View generated CSR');
+      assert.dom(S.configuration.title).hasText('View Generated CSR');
       await assert.dom(S.configuration.csrDetails).exists('renders CSR details after save');
       await click('[data-test-done]');
       assert.strictEqual(
@@ -278,9 +277,9 @@ module('Acceptance | pki action forms test', function (hooks) {
       await fillIn(S.configuration.inputByName('commonName'), 'my-common-name');
       await click('[data-test-save]');
       await assert.dom(S.configuration.csrDetails).exists('renders CSR details after save');
-      assert.dom(S.configuration.title).hasText('View generated CSR');
+      assert.dom(S.configuration.title).hasText('View Generated CSR');
       assert
-        .dom('[data-test-alert-banner="alert"]')
+        .dom('[data-test-next-steps-csr]')
         .hasText(
           'Next steps Copy the CSR below for a parent issuer to sign and then import the signed certificate back into this mount. The private_key is only available once. Make sure you copy and save it now.'
         );

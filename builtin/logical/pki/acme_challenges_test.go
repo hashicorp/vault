@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package pki
 
 import (
@@ -10,6 +13,7 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	"crypto/x509/pkix"
+	"encoding/asn1"
 	"encoding/base64"
 	"fmt"
 	"math/big"
@@ -19,6 +23,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/builtin/logical/pki/dnstest"
 
 	"github.com/stretchr/testify/require"
@@ -238,6 +243,8 @@ func TestAcmeValidateTLSALPN01Challenge(t *testing.T) {
 	host := "localhost"
 	config := &acmeConfigEntry{}
 
+	log := hclog.L()
+
 	returnedProtocols := []string{ALPNProtocol}
 	var certificates []*x509.Certificate
 	var privateKey crypto.PrivateKey
@@ -246,7 +253,7 @@ func TestAcmeValidateTLSALPN01Challenge(t *testing.T) {
 	tlsCfg.GetConfigForClient = func(*tls.ClientHelloInfo) (*tls.Config, error) {
 		var retCfg tls.Config = *tlsCfg
 		retCfg.NextProtos = returnedProtocols
-		t.Logf("[alpn-server] returned protocol: %v", returnedProtocols)
+		log.Info(fmt.Sprintf("[alpn-server] returned protocol: %v", returnedProtocols))
 		return &retCfg, nil
 	}
 	tlsCfg.GetCertificate = func(*tls.ClientHelloInfo) (*tls.Certificate, error) {
@@ -258,7 +265,7 @@ func TestAcmeValidateTLSALPN01Challenge(t *testing.T) {
 			}
 		}
 		ret.PrivateKey = privateKey
-		t.Logf("[alpn-server] returned certificates: %v", ret)
+		log.Info(fmt.Sprintf("[alpn-server] returned certificates: %v", ret))
 		return &ret, nil
 	}
 
@@ -266,27 +273,27 @@ func TestAcmeValidateTLSALPN01Challenge(t *testing.T) {
 	require.NoError(t, err, "failed to listen with TLS config")
 
 	doOneAccept := func() {
-		t.Logf("[alpn-server] starting accept...")
+		log.Info("[alpn-server] starting accept...")
 		connRaw, err := ln.Accept()
 		require.NoError(t, err, "failed to accept TLS connection")
 
-		t.Logf("[alpn-server] got connection...")
+		log.Info("[alpn-server] got connection...")
 		conn := tls.Server(connRaw.(*tls.Conn), tlsCfg)
 
 		ctx, cancel := context.WithTimeout(context.Background(), 1*time.Minute)
 		defer func() {
-			t.Logf("[alpn-server] defer context cancel executing")
+			log.Info("[alpn-server] canceling listener connection...")
 			cancel()
 		}()
 
-		t.Logf("[alpn-server] starting handshake...")
+		log.Info("[alpn-server] starting handshake...")
 		if err := conn.HandshakeContext(ctx); err != nil {
-			t.Logf("[alpn-server] got non-fatal error while handshaking connection: %v", err)
+			log.Info("[alpn-server] got non-fatal error while handshaking connection: %v", err)
 		}
 
-		t.Logf("[alpn-server] closing connection...")
+		log.Info("[alpn-server] closing connection...")
 		if err := conn.Close(); err != nil {
-			t.Logf("[alpn-server] got non-fatal error while closing connection: %v", err)
+			log.Info("[alpn-server] got non-fatal error while closing connection: %v", err)
 		}
 	}
 
@@ -305,10 +312,11 @@ func TestAcmeValidateTLSALPN01Challenge(t *testing.T) {
 	var alpnTestCases []alpnTestCase
 	// Add all of our keyAuthorizationTestCases into alpnTestCases
 	for index, tc := range keyAuthorizationTestCases {
-		t.Logf("using keyAuthorizationTestCase [tc=%d] as alpnTestCase [tc=%d]...", index, len(alpnTestCases))
+		log.Info(fmt.Sprintf("using keyAuthorizationTestCase [tc=%d] as alpnTestCase [tc=%d]...", index, len(alpnTestCases)))
 		// Properly encode the authorization.
 		checksum := sha256.Sum256([]byte(tc.keyAuthz))
-		authz := base64.RawURLEncoding.EncodeToString(checksum[:])
+		authz, err := asn1.Marshal(checksum[:])
+		require.NoError(t, err, "failed asn.1 marshalling authz")
 
 		// Build a self-signed certificate.
 		key, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
@@ -329,11 +337,11 @@ func TestAcmeValidateTLSALPN01Challenge(t *testing.T) {
 				{
 					Id:       OIDACMEIdentifier,
 					Critical: true,
-					Value:    []byte(authz),
+					Value:    authz,
 				},
 			},
 			BasicConstraintsValid: true,
-			IsCA:                  true,
+			IsCA:                  false,
 		}
 		certBytes, err := x509.CreateCertificate(rand.Reader, tmpl, tmpl, key.Public(), key)
 		require.NoError(t, err, "failed to create certificate")
@@ -378,7 +386,8 @@ func TestAcmeValidateTLSALPN01Challenge(t *testing.T) {
 
 		// Compute our authorization.
 		checksum := sha256.Sum256([]byte("valid.valid"))
-		authz := base64.RawURLEncoding.EncodeToString(checksum[:])
+		authz, err := asn1.Marshal(checksum[:])
+		require.NoError(t, err, "failed to marshal authz with asn.1 ")
 
 		// Build a leaf certificate which _could_ pass validation
 		key, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
@@ -399,11 +408,11 @@ func TestAcmeValidateTLSALPN01Challenge(t *testing.T) {
 				{
 					Id:       OIDACMEIdentifier,
 					Critical: true,
-					Value:    []byte(authz),
+					Value:    authz,
 				},
 			},
 			BasicConstraintsValid: true,
-			IsCA:                  true,
+			IsCA:                  false,
 		}
 		certBytes, err := x509.CreateCertificate(rand.Reader, tmpl, rootCert, key.Public(), rootKey)
 		require.NoError(t, err, "failed to create leaf certificate")
@@ -426,7 +435,8 @@ func TestAcmeValidateTLSALPN01Challenge(t *testing.T) {
 		// Test case: cert without DNSSan
 		// Compute our authorization.
 		checksum := sha256.Sum256([]byte("valid.valid"))
-		authz := base64.RawURLEncoding.EncodeToString(checksum[:])
+		authz, err := asn1.Marshal(checksum[:])
+		require.NoError(t, err, "failed to marshal authz with asn.1 ")
 
 		// Build a leaf certificate without a DNSSan
 		key, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
@@ -447,11 +457,11 @@ func TestAcmeValidateTLSALPN01Challenge(t *testing.T) {
 				{
 					Id:       OIDACMEIdentifier,
 					Critical: true,
-					Value:    []byte(authz),
+					Value:    authz,
 				},
 			},
 			BasicConstraintsValid: true,
-			IsCA:                  true,
+			IsCA:                  false,
 		}
 		certBytes, err := x509.CreateCertificate(rand.Reader, tmpl, tmpl, key.Public(), key)
 		require.NoError(t, err, "failed to create leaf certificate")
@@ -474,7 +484,8 @@ func TestAcmeValidateTLSALPN01Challenge(t *testing.T) {
 		// Test case: cert without matching DNSSan
 		// Compute our authorization.
 		checksum := sha256.Sum256([]byte("valid.valid"))
-		authz := base64.RawURLEncoding.EncodeToString(checksum[:])
+		authz, err := asn1.Marshal(checksum[:])
+		require.NoError(t, err, "failed to marshal authz with asn.1 ")
 
 		// Build a leaf certificate which fails validation due to bad DNSName
 		key, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
@@ -495,11 +506,11 @@ func TestAcmeValidateTLSALPN01Challenge(t *testing.T) {
 				{
 					Id:       OIDACMEIdentifier,
 					Critical: true,
-					Value:    []byte(authz),
+					Value:    authz,
 				},
 			},
 			BasicConstraintsValid: true,
-			IsCA:                  true,
+			IsCA:                  false,
 		}
 		certBytes, err := x509.CreateCertificate(rand.Reader, tmpl, tmpl, key.Public(), key)
 		require.NoError(t, err, "failed to create leaf certificate")
@@ -522,7 +533,8 @@ func TestAcmeValidateTLSALPN01Challenge(t *testing.T) {
 		// Test case: cert with additional SAN
 		// Compute our authorization.
 		checksum := sha256.Sum256([]byte("valid.valid"))
-		authz := base64.RawURLEncoding.EncodeToString(checksum[:])
+		authz, err := asn1.Marshal(checksum[:])
+		require.NoError(t, err, "failed to marshal authz with asn.1 ")
 
 		// Build a leaf certificate which has an invalid additional SAN
 		key, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
@@ -544,11 +556,11 @@ func TestAcmeValidateTLSALPN01Challenge(t *testing.T) {
 				{
 					Id:       OIDACMEIdentifier,
 					Critical: true,
-					Value:    []byte(authz),
+					Value:    authz,
 				},
 			},
 			BasicConstraintsValid: true,
-			IsCA:                  true,
+			IsCA:                  false,
 		}
 		certBytes, err := x509.CreateCertificate(rand.Reader, tmpl, tmpl, key.Public(), key)
 		require.NoError(t, err, "failed to create leaf certificate")
@@ -571,7 +583,8 @@ func TestAcmeValidateTLSALPN01Challenge(t *testing.T) {
 		// Test case: cert without CN
 		// Compute our authorization.
 		checksum := sha256.Sum256([]byte("valid.valid"))
-		authz := base64.RawURLEncoding.EncodeToString(checksum[:])
+		authz, err := asn1.Marshal(checksum[:])
+		require.NoError(t, err, "failed to marshal authz with asn.1 ")
 
 		// Build a leaf certificate which should pass validation
 		key, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
@@ -588,11 +601,11 @@ func TestAcmeValidateTLSALPN01Challenge(t *testing.T) {
 				{
 					Id:       OIDACMEIdentifier,
 					Critical: true,
-					Value:    []byte(authz),
+					Value:    authz,
 				},
 			},
 			BasicConstraintsValid: true,
-			IsCA:                  true,
+			IsCA:                  false,
 		}
 		certBytes, err := x509.CreateCertificate(rand.Reader, tmpl, tmpl, key.Public(), key)
 		require.NoError(t, err, "failed to create leaf certificate")
@@ -681,7 +694,7 @@ func TestAcmeValidateTLSALPN01Challenge(t *testing.T) {
 	}
 
 	for index, tc := range alpnTestCases {
-		t.Logf("\n\n[tc=%d/name=%s] starting validation", index, tc.name)
+		log.Info(fmt.Sprintf("\n\n[tc=%d/name=%s] starting validation", index, tc.name))
 		certificates = tc.certificates
 		privateKey = tc.privateKey
 		returnedProtocols = tc.protocols
@@ -697,7 +710,7 @@ func TestAcmeValidateTLSALPN01Challenge(t *testing.T) {
 		if expectedValid != isValid {
 			t.Fatalf("[tc=%d/name=%s] got ret=%v (err=%v), expected ret=%v (shouldFail=%v)", index, tc.name, isValid, err, expectedValid, tc.shouldFail)
 		} else if err != nil {
-			t.Logf("[tc=%d/name=%s] got expected failure: err=%v", index, tc.name, err)
+			log.Info(fmt.Sprintf("[tc=%d/name=%s] got expected failure: err=%v", index, tc.name, err))
 		}
 	}
 }

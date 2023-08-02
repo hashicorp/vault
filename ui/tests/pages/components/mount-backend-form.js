@@ -5,11 +5,9 @@
 
 import { clickable, collection, fillable, text, value, attribute } from 'ember-cli-page-object';
 import fields from './form-field';
-import errorText from './alert-banner';
 
 export default {
   ...fields,
-  ...errorText,
   header: text('[data-test-mount-form-header]'),
   submit: clickable('[data-test-mount-submit]'),
   next: clickable('[data-test-mount-next]'),

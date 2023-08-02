@@ -41,9 +41,6 @@ variable "distro" {
 variable "edition" {
   default = null
 }
-variable "instance_type" {
-  default = null
-}
 variable "revision" {
   default = null
 }

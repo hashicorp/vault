@@ -13,6 +13,7 @@ import (
 	"crypto/rand"
 	"crypto/rsa"
 	"crypto/sha1"
+	"crypto/tls"
 	"crypto/x509"
 	"crypto/x509/pkix"
 	"encoding/asn1"
@@ -302,6 +303,18 @@ func ParsePEMBundle(pemBundle string) (*ParsedCertBundle, error) {
 	}
 
 	return parsedBundle, nil
+}
+
+func (p *ParsedCertBundle) ToTLSCertificate() tls.Certificate {
+	var cert tls.Certificate
+	cert.Certificate = append(cert.Certificate, p.CertificateBytes)
+	cert.Leaf = p.Certificate
+	cert.PrivateKey = p.PrivateKey
+	for _, ca := range p.CAChain {
+		cert.Certificate = append(cert.Certificate, ca.Bytes)
+	}
+
+	return cert
 }
 
 // GeneratePrivateKey generates a private key with the specified type and key bits.
@@ -1292,7 +1305,7 @@ func NewCertPool(reader io.Reader) (*x509.CertPool, error) {
 	if err != nil {
 		return nil, err
 	}
-	certs, err := parseCertsPEM(pemBlock)
+	certs, err := ParseCertsPEM(pemBlock)
 	if err != nil {
 		return nil, fmt.Errorf("error reading certs: %s", err)
 	}
@@ -1303,9 +1316,9 @@ func NewCertPool(reader io.Reader) (*x509.CertPool, error) {
 	return pool, nil
 }
 
-// parseCertsPEM returns the x509.Certificates contained in the given PEM-encoded byte array
+// ParseCertsPEM returns the x509.Certificates contained in the given PEM-encoded byte array
 // Returns an error if a certificate could not be parsed, or if the data does not contain any certificates
-func parseCertsPEM(pemCerts []byte) ([]*x509.Certificate, error) {
+func ParseCertsPEM(pemCerts []byte) ([]*x509.Certificate, error) {
 	ok := false
 	certs := []*x509.Certificate{}
 	for len(pemCerts) > 0 {

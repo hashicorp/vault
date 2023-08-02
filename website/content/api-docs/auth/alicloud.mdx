@@ -4,7 +4,7 @@ page_title: AliCloud - Auth Methods - HTTP API
 description: This is the API documentation for the Vault AliCloud auth method.
 ---
 
-# AliCloud Auth Method (API)
+# AliCloud auth method (API)
 
 This is the API documentation for the Vault AliCloud auth method. For
 general information about the usage and operation of the AliCloud method, please
@@ -14,7 +14,7 @@ This documentation assumes the AliCloud auth method is mounted at the `/auth/ali
 path in Vault. Since it is possible to enable auth methods at any location,
 please update your API calls accordingly.
 
-## Create/Update Role
+## Create/Update role
 
 Registers a role. Only entities using the role registered using this endpoint
 will be able to perform the login operation.
@@ -30,7 +30,7 @@ will be able to perform the login operation.
 
 @include 'tokenfields.mdx'
 
-### Sample Payload
+### Sample payload
 
 ```json
 {
@@ -39,7 +39,7 @@ will be able to perform the login operation.
 }
 ```
 
-### Sample Request
+### Sample request
 
 ```shell-session
 $ curl \
@@ -49,7 +49,7 @@ $ curl \
     http://127.0.0.1:8200/v1/auth/alicloud/role/dev-role
 ```
 
-## Read Role
+## Read role
 
 Returns the previously registered role configuration.
 
@@ -61,7 +61,7 @@ Returns the previously registered role configuration.
 
 - `role` `(string: <required>)` - Name of the role.
 
-### Sample Request
+### Sample request
 
 ```shell-session
 $ curl \
@@ -69,7 +69,7 @@ $ curl \
     http://127.0.0.1:8200/v1/auth/alicloud/role/dev-role
 ```
 
-### Sample Response
+### Sample response
 
 ```json
 {
@@ -83,7 +83,7 @@ $ curl \
 }
 ```
 
-## List Roles
+## List roles
 
 Lists all the roles that are registered with the method.
 
@@ -91,7 +91,7 @@ Lists all the roles that are registered with the method.
 | :----- | :--------------------- |
 | `LIST` | `/auth/alicloud/roles` |
 
-### Sample Request
+### Sample request
 
 ```shell-session
 $ curl \
@@ -100,7 +100,7 @@ $ curl \
     http://127.0.0.1:8200/v1/auth/alicloud/roles
 ```
 
-### Sample Response
+### Sample response
 
 ```json
 {
@@ -110,7 +110,7 @@ $ curl \
 }
 ```
 
-## Delete Role
+## Delete role
 
 Deletes the previously registered role.
 
@@ -122,7 +122,7 @@ Deletes the previously registered role.
 
 - `role` `(string: <required>)` - Name of the role.
 
-### Sample Request
+### Sample request
 
 ```shell-session
 $ curl \
@@ -151,7 +151,7 @@ GetCallerIdentity request.
   string value or an array of string values (though the length of that array
   will probably only be one).
 
-### Sample Payload
+### Sample payload
 
 ```json
 {
@@ -161,7 +161,7 @@ GetCallerIdentity request.
 }
 ```
 
-### Sample Request
+### Sample request
 
 ```shell-session
 $ curl \
@@ -170,7 +170,7 @@ $ curl \
     http://127.0.0.1:8200/v1/auth/alicloud/login
 ```
 
-### Sample Response
+### Sample response
 
 ```json
 {

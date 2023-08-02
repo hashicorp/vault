@@ -9,7 +9,6 @@ import { setupApplicationTest } from 'ember-qunit';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 import page from 'vault/tests/pages/access/namespaces/index';
 import authPage from 'vault/tests/pages/auth';
-import logout from 'vault/tests/pages/logout';
 
 module('Acceptance | Enterprise | /access/namespaces', function (hooks) {
   setupApplicationTest(hooks);
@@ -17,10 +16,6 @@ module('Acceptance | Enterprise | /access/namespaces', function (hooks) {
 
   hooks.beforeEach(function () {
     return authPage.login();
-  });
-
-  hooks.afterEach(function () {
-    return logout.visit();
   });
 
   test('it navigates to namespaces page', async function (assert) {

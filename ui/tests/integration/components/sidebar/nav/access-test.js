@@ -44,9 +44,9 @@ module('Integration | Component | sidebar-nav-access', function (hooks) {
   test('it should render nav links', async function (assert) {
     const links = [
       'Back to main navigation',
-      'Authentication methods',
-      'Multi-factor authentication',
-      'OIDC provider',
+      'Authentication Methods',
+      'Multi-Factor Authentication',
+      'OIDC Provider',
       'Control Groups',
       'Namespaces',
       'Groups',
