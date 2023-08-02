@@ -630,7 +630,17 @@ func (b *databaseBackend) pathStaticRoleCreateUpdate(ctx context.Context, req *l
 		return nil, err
 	}
 
-	return nil, nil
+	resp := &logical.Response{
+		StaticSecret: &logical.StaticSecret{
+			RotationOptions: logical.RotationOptions{
+				Period: &role.StaticAccount.RotationPeriod,
+			},
+		},
+
+		// TODO: set data?
+		// Data: data,
+	}
+	return resp, nil
 }
 
 type roleEntry struct {

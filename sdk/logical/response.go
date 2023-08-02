@@ -59,6 +59,9 @@ type Response struct {
 	// Secret, if not nil, denotes that this response represents a secret.
 	Secret *Secret `json:"secret" structs:"secret" mapstructure:"secret"`
 
+	// StaticSecret, if not nil, denotes that this response represents a static secret.
+	StaticSecret *StaticSecret `json:"static_secret" structs:"static_secret" mapstructure:"static_secret"`
+
 	// Auth, if not nil, contains the authentication information for
 	// this response. This is only checked and means something for
 	// credential backends.

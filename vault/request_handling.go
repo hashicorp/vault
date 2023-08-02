@@ -1097,6 +1097,40 @@ func (c *Core) handleRequest(ctx context.Context, req *logical.Request) (retResp
 		}
 	}
 
+	// If there is a StaticSecret, we must register it with the RotationManager.
+	if resp != nil && resp.StaticSecret != nil {
+		registerRotation := true
+
+		matchingMountEntry := c.router.MatchingMountEntry(ctx, req.Path)
+		if matchingMountEntry == nil {
+			c.logger.Error("unable to retrieve mount entry from router")
+			retErr = multierror.Append(retErr, ErrInternalError)
+			return nil, auth, retErr
+		}
+
+		if registerRotation {
+			sysView := c.router.MatchingSystemView(ctx, req.Path)
+			if sysView == nil {
+				c.logger.Error("unable to look up sys view for login path", "request_path", req.Path)
+				return nil, nil, ErrInternalError
+			}
+
+			registerFunc, funcGetErr := getRotationRegisterFunc(c)
+			if funcGetErr != nil {
+				retErr = multierror.Append(retErr, funcGetErr)
+				return nil, auth, retErr
+			}
+
+			rotationID, err := registerFunc(ctx, req, resp)
+			if err != nil {
+				c.logger.Error("failed to register rotation", "request_path", req.Path, "error", err)
+				retErr = multierror.Append(retErr, ErrInternalError)
+				return nil, auth, retErr
+			}
+			resp.StaticSecret.RotationID = rotationID
+		}
+	}
+
 	// If there is a secret, we must register it with the expiration manager.
 	// We exclude renewal of a lease, since it does not need to be re-registered
 	if resp != nil && resp.Secret != nil && !strings.HasPrefix(req.Path, "sys/renew") &&
