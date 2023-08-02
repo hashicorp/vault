@@ -21,13 +21,13 @@ interface LdapRolesRouteModel {
   promptConfig: boolean;
   roles: Array<LdapRoleModel>;
 }
-interface LdapConfigurationController extends Controller {
+interface LdapRolesController extends Controller {
   breadcrumbs: Array<Breadcrumb>;
   model: LdapRolesRouteModel;
 }
 
 @withConfig('ldap/config')
-export default class LdapConfigurationRoute extends Route {
+export default class LdapRolesRoute extends Route {
   @service declare readonly store: Store;
   @service declare readonly secretMountPath: SecretMountPath;
 
@@ -47,7 +47,7 @@ export default class LdapConfigurationRoute extends Route {
   }
 
   setupController(
-    controller: LdapConfigurationController,
+    controller: LdapRolesController,
     resolvedModel: LdapRolesRouteModel,
     transition: Transition
   ) {
