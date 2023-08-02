@@ -88,7 +88,7 @@
                       {{! ARG TODO check that you don't also need create (this checks for update) }}
                       {{#if secret.canEditData}}
                         <li>
-                          <LinkTo @route="secret.edit" @model={{secret.fullSecretPath}}>
+                          <LinkTo @route="secret.details.edit" @model={{secret.fullSecretPath}}>
                             Create new version
                           </LinkTo>
                         </li>

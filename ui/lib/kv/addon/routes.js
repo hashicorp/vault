@@ -12,8 +12,9 @@ export default buildRoutes(function () {
   this.route('list-directory', { path: '/:path_to_secret/directory' });
   this.route('create');
   this.route('secret', { path: '/:name' }, function () {
-    this.route('details');
-    this.route('edit'); // route to create new version of a secret
+    this.route('details', function () {
+      this.route('edit'); // route to create new version of a secret
+    });
     this.route('metadata', function () {
       this.route('edit');
       this.route('versions');
