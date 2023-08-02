@@ -4,8 +4,13 @@
  */
 
 export const PAGE = {
+  list: {
+    createSecret: '[data-test-toolbar-create-secret]',
+    item: (secret) => `[data-test-list-item="${secret}"]`,
+  },
   details: {
     versionDropdown: '[data-test-version-dropdown]',
+    createNewVersion: '[data-test-create-new-version]',
     version: (number) => `[data-test-version="${number}"]`,
     editMetadataBtn: '[data-test-edit-metadata]',
   },

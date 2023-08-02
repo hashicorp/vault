@@ -54,7 +54,7 @@ const validations = {
 @withFormFields()
 export default class KvSecretDataModel extends Model {
   @attr('string') backend; // dynamic path of secret -- set on response from value passed to queryRecord.
-  @attr('string', { label: 'Path for this secret', editDisabled: true }) path;
+  @attr('string', { label: 'Path for this secret' }) path;
   @attr('object') secretData; // { key: value } data of the secret version
 
   // Params returned on the GET response.

@@ -175,7 +175,7 @@ module('Integration | Component | kv | KvSecretForm', function (hooks) {
 
   // TODO validate onConfirmLeave() unloads model on cancel
   test('it toggles JSON view and editor modifies secretData', async function (assert) {
-    assert.expect(4);
+    assert.expect(6);
     this.onCancel = () => assert.ok(true, 'onCancel callback fires on save success');
 
     await render(
@@ -203,47 +203,15 @@ module('Integration | Component | kv | KvSecretForm', function (hooks) {
     await click(PAGE.form.secretCancel);
   });
 
-  test('it saves a new secret version', async function (assert) {
-    assert.expect(8);
-    const version = 2;
+  test('it disables path and prefills secret data when creating a new secret version', async function (assert) {
+    assert.expect(6);
     this.dataId = kvDataPath(this.backend, this.path);
-    this.secretData = { foo: 'bar' };
-    this.store.pushPayload('kv/data', {
-      modelName: 'kv/data',
-      id: this.dataId,
-      path: this.path,
-      secret_data: this.secretData,
-      created_time: '2023-07-20T02:12:17.379762Z',
-      custom_metadata: null,
-      deletion_time: '',
-      destroyed: false,
-      version: version,
-    });
-    this.secret = this.store.peekRecord('kv/data', this.dataId);
-
-    this.onSave = () => assert.ok(true, 'onSave callback fires on save success');
-    this.server.post(`${this.backend}/data/${this.path}`, (schema, req) => {
-      assert.ok(true, 'Request made to save secret');
-      const payload = JSON.parse(req.requestBody);
-      assert.propEqual(payload, {
-        data: { foo: 'bar' },
-        options: { cas: version },
-      });
-      return {
-        request_id: 'bd76db73-605d-fcbc-0dad-d44a008f9b95',
-        data: {
-          created_time: '2023-07-28T18:47:32.924809Z',
-          custom_metadata: null,
-          deletion_time: '',
-          destroyed: false,
-          version: version + 1,
-        },
-      };
-    });
-
+    this.secret.secretData = { foo: 'bar' };
+    this.secret.path = this.path;
     await render(
       hbs`
         <KvSecretForm
+          @isNewVersion={{true}}
           @secret={{this.secret}}
           @onSave={{this.onSave}}
           @onCancel={{this.onCancel}}
