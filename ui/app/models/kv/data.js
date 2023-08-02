@@ -64,10 +64,11 @@ export default class KvSecretDataModel extends Model {
   @attr('boolean') destroyed;
   @attr('number') version;
 
-  // version 0 occurs on create (initial secret version) or if user cannot read secret data
-  get casVersion() {
-    return this.version || 0;
-  }
+  // the default value of 0 is only set when creating a new secret
+  // when creating a new version this value is set in the edit route's
+  // model hook from metadata or secret version, pending permissions
+  @attr('number', { defaultValue: 0 })
+  casVersion;
 
   // Permissions
   @lazyCapabilities(apiPath`${'backend'}/data/${'path'}`, 'backend', 'path') dataPath;
