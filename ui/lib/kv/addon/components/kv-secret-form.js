@@ -15,11 +15,15 @@ import KVObject from 'vault/lib/kv-object';
  *
  * <KvSecretForm
  *  @secret={{@secret}}
+ *  @previousVersion={{@previousVersion}}
+ *  @metadata={{@metadata}}
  *  @onSave={{transition-to "vault.cluster.secrets.backend.kv.secret.details" @secret.path}}
  *  @onCancel={{transition-to "vault.cluster.secrets.backend.kv.list"}}
  * />
  *
- * @param {model} secret - Ember data model: 'kv/data'
+ * @param {model} secret - Ember data model: 'kv/data', the new record saved by the form
+ * @param {model} metadata - Ember data model: 'kv/metadata'
+ * @param {number} [previousVersion] - optional, the version number we're creating a new secret from, used to render alert and change text for some form labels
  * @param {callback} onSave - callback (usually a transition) from parent to perform after the model is saved
  * @param {callback} onCancel - callback (usually a transition) from parent to perform when cancel button is clicked
  */
@@ -35,6 +39,14 @@ export default class KvSecretForm extends Component {
   get emptyJson() {
     // if secretData is null, this specially formats a blank object and renders a nice initial state for the json editor
     return KVObject.create({ content: [{ name: '', value: '' }] }).toJSONString(true);
+  }
+
+  get showAlert() {
+    const { metadata, previousVersion } = this.args;
+    if (!metadata?.currentVersion || !previousVersion) return false;
+    if (!this.args.secret.isNew) return false; // prevents alert from flashing after save before route transition
+    if (metadata.currentVersion !== previousVersion) return true;
+    return false;
   }
 
   @action
@@ -69,9 +81,11 @@ export default class KvSecretForm extends Component {
       this.modelValidations = isValid ? null : state;
       this.invalidFormAlert = invalidFormMessage;
       if (isValid) {
-        const { path, isNew } = this.args.secret;
+        const { secret, previousVersion } = this.args;
         yield this.args.secret.save();
-        this.flashMessages.success(`Successfully created ${isNew ? '' : 'new version of'} secret ${path}`);
+        this.flashMessages.success(
+          `Successfully created ${previousVersion ? 'new version of' : ''} secret ${secret.path}`
+        );
         this.args.onSave();
       }
     } catch (error) {

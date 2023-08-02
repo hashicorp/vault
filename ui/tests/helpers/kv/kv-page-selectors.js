@@ -22,6 +22,7 @@ export const PAGE = {
     metadataUpdate: '[data-test-kv-metadata-update]',
     secretSave: '[data-test-kv-secret-save]',
     secretCancel: '[data-test-kv-secret-cancel]',
+    versionAlert: '[data-test-secret-version-alert]',
     // <KvObjectEditor>
     keyInput: (idx = 0) => `[data-test-kv-key="${idx}"]`,
     valueInput: (idx = 0) => `[data-test-kv-value="${idx}"]`,
