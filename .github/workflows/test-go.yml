@@ -372,6 +372,7 @@ jobs:
           path: failure-summary-${{ matrix.id }}${{ inputs.name != '' && '-' || '' }}${{inputs.name}}.md
 
   test-collect-reports:
+    if: ${{ ! cancelled() }}
     needs: test-go
     runs-on: ${{ fromJSON(inputs.runs-on) }}
     steps:
