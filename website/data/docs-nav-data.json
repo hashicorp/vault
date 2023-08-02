@@ -576,7 +576,7 @@
 	    "path": "commands/pki/verify-sign"
 	  },
 	  {
-	    "title": "<code>list-intermeidates</code>",
+	    "title": "<code>list-intermediates</code>",
 	    "path": "commands/pki/list-intermediates"
 	  },
 	  {
@@ -1813,7 +1813,7 @@
       {
          "title": "Upgrade Vault HA installations",
          "path": "upgrading/vault-ha-upgrade"
-      }, 
+      },
       {
         "title": "Upgrade Plugins",
         "path": "upgrading/plugins"
