@@ -13,9 +13,9 @@ export default class KvSecretsCreateRoute extends Route {
   @service store;
   @service secretMountPath;
 
-  model() {
+  model(params) {
     const backend = this.secretMountPath.currentPath;
-    const { name: path } = this.paramsFor('secret');
+    const { initialKey: path } = params;
 
     return hash({
       backend,
