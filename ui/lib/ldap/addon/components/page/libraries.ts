@@ -10,19 +10,19 @@ import { action } from '@ember/object';
 import { getOwner } from '@ember/application';
 import errorMessage from 'vault/utils/error-message';
 
-import type LdapRoleModel from 'vault/models/ldap/role';
+import type LdapLibraryModel from 'vault/models/ldap/library';
 import type SecretEngineModel from 'vault/models/secret-engine';
 import type FlashMessageService from 'vault/services/flash-messages';
 import type { Breadcrumb, EngineOwner } from 'vault/vault/app-types';
 
 interface Args {
-  roles: Array<LdapRoleModel>;
+  libraries: Array<LdapLibraryModel>;
   promptConfig: boolean;
   backendModel: SecretEngineModel;
   breadcrumbs: Array<Breadcrumb>;
 }
 
-export default class LdapRolesPageComponent extends Component<Args> {
+export default class LdapLibrariesPageComponent extends Component<Args> {
   @service declare readonly flashMessages: FlashMessageService;
 
   @tracked filterValue = '';
@@ -32,33 +32,22 @@ export default class LdapRolesPageComponent extends Component<Args> {
     return owner.mountPoint;
   }
 
-  get filteredRoles() {
-    const { roles } = this.args;
+  get filteredLibraries() {
+    const { libraries } = this.args;
     return this.filterValue
-      ? roles.filter((role) => role.name.toLowerCase().includes(this.filterValue.toLowerCase()))
-      : roles;
+      ? libraries.filter((library) => library.name.toLowerCase().includes(this.filterValue.toLowerCase()))
+      : libraries;
   }
 
   @action
-  async onRotate(model: LdapRoleModel) {
+  async onDelete(model: LdapLibraryModel) {
     try {
-      const message = `Successfully rotated credentials for ${model.name}.`;
-      await model.rotateStaticPassword();
-      this.flashMessages.success(message);
-    } catch (error) {
-      this.flashMessages.danger(`Error rotating credentials \n ${errorMessage(error)}`);
-    }
-  }
-
-  @action
-  async onDelete(model: LdapRoleModel) {
-    try {
-      const message = `Successfully deleted role ${model.name}.`;
+      const message = `Successfully deleted library ${model.name}.`;
       await model.destroyRecord();
-      this.args.roles.removeObject(model);
+      this.args.libraries.removeObject(model);
       this.flashMessages.success(message);
     } catch (error) {
-      this.flashMessages.danger(`Error deleting role \n ${errorMessage(error)}`);
+      this.flashMessages.danger(`Error deleting library \n ${errorMessage(error)}`);
     }
   }
 }
