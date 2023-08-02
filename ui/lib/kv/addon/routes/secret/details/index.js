@@ -20,5 +20,7 @@ export default class KvSecretDetailsIndexRoute extends Route {
     } else {
       breadcrumbsArray.push({ label: resolvedModel.path });
     }
+
+    controller.breadcrumbs = breadcrumbsArray;
   }
 }
