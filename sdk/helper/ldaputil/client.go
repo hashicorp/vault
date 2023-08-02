@@ -22,6 +22,7 @@ import (
 	"github.com/hashicorp/go-secure-stdlib/tlsutil"
 )
 
+// Deprecated: Use ldap.Client instead
 type Client struct {
 	Logger hclog.Logger
 	LDAP   LDAP

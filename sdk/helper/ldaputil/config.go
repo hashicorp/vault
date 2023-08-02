@@ -12,7 +12,9 @@ import (
 	"strings"
 	"text/template"
 
+	capldap "github.com/hashicorp/cap/ldap"
 	"github.com/hashicorp/go-secure-stdlib/tlsutil"
+
 	"github.com/hashicorp/vault/sdk/framework"
 
 	"github.com/hashicorp/errwrap"
@@ -558,4 +560,41 @@ func (c *ConfigEntry) Validate() error {
 		}
 	}
 	return nil
+}
+
+func ConvertConfig(cfg *ConfigEntry) *capldap.ClientConfig {
+	urls := strings.Split(cfg.Url, ",")
+	config := &capldap.ClientConfig{
+		URLs:                                 urls,
+		UserDN:                               cfg.UserDN,
+		AnonymousGroupSearch:                 cfg.AnonymousGroupSearch,
+		GroupDN:                              cfg.GroupDN,
+		GroupFilter:                          cfg.GroupFilter,
+		GroupAttr:                            cfg.GroupAttr,
+		UPNDomain:                            cfg.UPNDomain,
+		UserFilter:                           cfg.UserFilter,
+		UserAttr:                             cfg.UserAttr,
+		ClientTLSCert:                        cfg.ClientTLSCert,
+		ClientTLSKey:                         cfg.ClientTLSKey,
+		InsecureTLS:                          cfg.InsecureTLS,
+		StartTLS:                             cfg.StartTLS,
+		BindDN:                               cfg.BindDN,
+		BindPassword:                         cfg.BindPassword,
+		AllowEmptyPasswordBinds:              true,
+		DiscoverDN:                           cfg.DiscoverDN,
+		TLSMinVersion:                        cfg.TLSMinVersion,
+		TLSMaxVersion:                        cfg.TLSMaxVersion,
+		UseTokenGroups:                       cfg.UseTokenGroups,
+		RequestTimeout:                       cfg.RequestTimeout,
+		IncludeUserAttributes:                true,
+		ExcludedUserAttributes:               nil,
+		IncludeUserGroups:                    true,
+		DeprecatedVaultPre111GroupCNBehavior: cfg.UsePre111GroupCNBehavior,
+	}
+
+	if cfg.Certificate != "" {
+		config.Certificates = []string{cfg.Certificate}
+	}
+
+	return config
 }
