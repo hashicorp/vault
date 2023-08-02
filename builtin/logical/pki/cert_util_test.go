@@ -184,7 +184,7 @@ func TestPki_PermitFQDNs(t *testing.T) {
 					},
 				},
 				role: &roleEntry{
-					AllowedDomains:   []string{"example.com", "*.example.com"},
+					AllowedDomains:   []string{"example.com", "*.Example.com"},
 					AllowGlobDomains: true,
 					MaxTTL:           3600,
 				},

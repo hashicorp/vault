@@ -1,3 +1,0 @@
-```release-note:bug
-pki: allowed_domains are compared case-sensitive if they use glob patterns
-```
