@@ -15,7 +15,7 @@ interface LdapLibraryEditController extends Controller {
   model: LdapLibraryModel;
 }
 
-export default class LdapRoleEditRoute extends Route {
+export default class LdapLibraryEditRoute extends Route {
   setupController(
     controller: LdapLibraryEditController,
     resolvedModel: LdapLibraryModel,
