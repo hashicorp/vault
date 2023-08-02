@@ -37,7 +37,6 @@ module('Acceptance | pki tidy', function (hooks) {
     await authPage.login();
     // Cleanup engine
     await runCommands([`delete sys/mounts/${this.mountPath}`]);
-    await logout.visit();
   });
 
   test('it configures a manual tidy operation and shows its details and tidy states', async function (assert) {
