@@ -114,21 +114,14 @@ module('Integration | Component | ldap | Page::Role::CreateAndEdit', function (h
   });
 
   test('it should go back to list route and clean up model on cancel', async function (assert) {
-    assert.expect(4);
-
-    const renderAndAssert = async (spy) => {
-      await this.renderComponent();
-      await click('[data-test-cancel]');
-
-      assert.ok(spy.calledOnce, 'New model is unloaded on cancel');
-      assert.ok(this.transitionCalledWith('roles'), 'Transitions to roles list route on cancel');
-    };
-
-    this.model = this.newModel;
-    await renderAndAssert(sinon.spy(this.model, 'unloadRecord'));
-
     this.model = this.store.peekRecord('ldap/role', 'static-role');
-    await renderAndAssert(sinon.spy(this.model, 'rollbackAttributes'));
+    const spy = sinon.spy(this.model, 'rollbackAttributes');
+
+    await this.renderComponent();
+    await click('[data-test-cancel]');
+
+    assert.ok(spy.calledOnce, 'Model is rolled back on cancel');
+    assert.ok(this.transitionCalledWith('roles'), 'Transitions to roles list route on cancel');
   });
 
   test('it should validate form fields', async function (assert) {

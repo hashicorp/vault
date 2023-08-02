@@ -27,4 +27,6 @@ export default function (server) {
   server.post('/:backend/role/:name', (schema, req) => createOrUpdateRecord(schema, req, 'ldapRoles'));
   server.get('/:backend/static-role/:name', (schema, req) => getRecord(schema, req, 'ldapRoles', 'static'));
   server.get('/:backend/role/:name', (schema, req) => getRecord(schema, req, 'ldapRoles', 'dynamic'));
+  server.post('/:backend/library/:name', (schema, req) => createOrUpdateRecord(schema, req, 'ldapLibraries'));
+  server.get('/:backend/library/:name', (schema, req) => getRecord(schema, req, 'ldapLibraries'));
 }
