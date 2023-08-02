@@ -217,7 +217,7 @@ require (
 	google.golang.org/api v0.124.0
 	google.golang.org/grpc v1.55.0
 	google.golang.org/grpc/cmd/protoc-gen-go-grpc v1.1.0
-	google.golang.org/protobuf v1.30.0
+	google.golang.org/protobuf v1.31.0
 	gopkg.in/ory-am/dockertest.v3 v3.3.4
 	gotest.tools/gotestsum v1.10.0
 	honnef.co/go/tools v0.4.3
