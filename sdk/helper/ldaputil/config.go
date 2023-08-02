@@ -463,7 +463,7 @@ type ConfigEntry struct {
 	UseTokenGroups           bool   `json:"use_token_groups"`
 	UsePre111GroupCNBehavior *bool  `json:"use_pre111_group_cn_behavior"`
 	RequestTimeout           int    `json:"request_timeout"`
-	ConnectionTimeout        int    `json:"connection_timeout"`
+	ConnectionTimeout        int    `json:"connection_timeout"` // deprecated: use RequestTimeout
 	DerefAliases             string `json:"dereference_aliases"`
 	MaximumPageSize          int    `json:"max_page_size"`
 
@@ -563,6 +563,10 @@ func (c *ConfigEntry) Validate() error {
 }
 
 func ConvertConfig(cfg *ConfigEntry) *capldap.ClientConfig {
+	// cap/ldap doesn't have a notion of connection_timeout, and uses a single timeout value for
+	// both the net.Dialer and ldap connection timeout.
+	// So take the smaller of the two values and use that as the timeout value.
+	minTimeout := min(cfg.ConnectionTimeout, cfg.RequestTimeout)
 	urls := strings.Split(cfg.Url, ",")
 	config := &capldap.ClientConfig{
 		URLs:                                 urls,
@@ -585,7 +589,7 @@ func ConvertConfig(cfg *ConfigEntry) *capldap.ClientConfig {
 		TLSMinVersion:                        cfg.TLSMinVersion,
 		TLSMaxVersion:                        cfg.TLSMaxVersion,
 		UseTokenGroups:                       cfg.UseTokenGroups,
-		RequestTimeout:                       cfg.RequestTimeout,
+		RequestTimeout:                       minTimeout,
 		IncludeUserAttributes:                true,
 		ExcludedUserAttributes:               nil,
 		IncludeUserGroups:                    true,
@@ -597,4 +601,11 @@ func ConvertConfig(cfg *ConfigEntry) *capldap.ClientConfig {
 	}
 
 	return config
+}
+
+func min(a, b int) int {
+	if a < b {
+		return a
+	}
+	return b
 }

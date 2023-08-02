@@ -86,7 +86,12 @@ func (b *backend) Login(ctx context.Context, req *logical.Request, username stri
 	defer ldapClient.Close(ctx)
 
 	c, err := ldapClient.Authenticate(ctx, username, password, ldap.WithGroups(), ldap.WithUserAttributes())
-	if c == nil {
+	if err != nil {
+		if strings.Contains(err.Error(), "discovery of user bind DN failed") ||
+			strings.Contains(err.Error(), "unable to bind user") {
+			return "", nil, logical.ErrorResponse(errUserBindFailed), nil, logical.ErrInvalidCredentials
+		}
+
 		return "", nil, logical.ErrorResponse(err.Error()), nil, nil
 	}
 
