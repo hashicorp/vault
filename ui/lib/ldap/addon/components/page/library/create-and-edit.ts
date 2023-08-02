@@ -39,7 +39,7 @@ export default class LdapCreateAndEditLibraryPageComponent extends Component<Arg
       try {
         const action = model.isNew ? 'created' : 'updated';
         yield model.save();
-        this.flashMessages.success(`Successfully ${action} the library ${model.name}`);
+        this.flashMessages.success(`Successfully ${action} the library ${model.name}.`);
         this.router.transitionTo('vault.cluster.secrets.backend.ldap.libraries.library.details', model.name);
       } catch (error) {
         this.error = errorMessage(error, 'Error saving library. Please try again or contact support.');
