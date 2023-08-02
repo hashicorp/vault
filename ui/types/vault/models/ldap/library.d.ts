@@ -6,7 +6,7 @@ import type { WithFormFieldsAndValidationsModel } from 'vault/app-types';
 import type { FormField } from 'vault/app-types';
 import CapabilitiesModel from '../capabilities';
 
-export default interface LdapRoleModel extends WithFormFieldsAndValidationsModel {
+export default interface LdapLibraryModel extends WithFormFieldsAndValidationsModel {
   backend: string;
   name: string;
   service_account_names: string;
