@@ -26,10 +26,10 @@ export default Component.extend(FocusOnInsertMixin, {
   requestInFlight: or('model.isLoading', 'model.isReloading', 'model.isSaving'),
 
   willDestroyElement() {
-    this._super(...arguments);
-    if (this.model && this.model.isError) {
+    if (this.model && this.model.isError && !this.model.isDestroyed && !this.model.isDestroying) {
       this.model.rollbackAttributes();
     }
+    this._super(...arguments);
   },
 
   waitForKeyUp: task(function* () {

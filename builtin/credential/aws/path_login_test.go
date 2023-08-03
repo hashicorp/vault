@@ -16,6 +16,8 @@ import (
 
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/sts"
+	"github.com/stretchr/testify/assert"
+
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
@@ -623,6 +625,58 @@ func TestBackend_defaultAliasMetadata(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestRegionFromHeader(t *testing.T) {
+	tcs := map[string]struct {
+		header              string
+		expectedRegion      string
+		expectedSTSEndpoint string
+	}{
+		"us-east-1": {
+			header:              "AWS4-HMAC-SHA256 Credential=AAAAAAAAAAAAAAAAAAAA/20230719/us-east-1/sts/aws4_request, SignedHeaders=content-length;content-type;host;x-amz-date, Signature=aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+			expectedRegion:      "us-east-1",
+			expectedSTSEndpoint: "https://sts.us-east-1.amazonaws.com",
+		},
+		"us-west-2": {
+			header:              "AWS4-HMAC-SHA256 Credential=AAAAAAAAAAAAAAAAAAAA/20230719/us-west-2/sts/aws4_request, SignedHeaders=content-length;content-type;host;x-amz-date, Signature=aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+			expectedRegion:      "us-west-2",
+			expectedSTSEndpoint: "https://sts.us-west-2.amazonaws.com",
+		},
+		"ap-northeast-3": {
+			header:              "AWS4-HMAC-SHA256 Credential=AAAAAAAAAAAAAAAAAAAA/20230719/ap-northeast-3/sts/aws4_request, SignedHeaders=content-length;content-type;host;x-amz-date, Signature=aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+			expectedRegion:      "ap-northeast-3",
+			expectedSTSEndpoint: "https://sts.ap-northeast-3.amazonaws.com",
+		},
+		"us-gov-east-1": {
+			header:              "AWS4-HMAC-SHA256 Credential=AAAAAAAAAAAAAAAAAAAA/20230719/us-gov-east-1/sts/aws4_request, SignedHeaders=content-length;content-type;host;x-amz-date, Signature=aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+			expectedRegion:      "us-gov-east-1",
+			expectedSTSEndpoint: "https://sts.us-gov-east-1.amazonaws.com",
+		},
+	}
+	for name, tc := range tcs {
+		t.Run(name, func(t *testing.T) {
+			region, err := awsRegionFromHeader(tc.header)
+			assert.NoError(t, err)
+			assert.Equal(t, tc.expectedRegion, region)
+
+			stsEndpoint, err := stsRegionalEndpoint(region)
+			assert.NoError(t, err)
+			assert.Equal(t, tc.expectedSTSEndpoint, stsEndpoint)
+		})
+	}
+
+	t.Run("invalid-header", func(t *testing.T) {
+		region, err := awsRegionFromHeader("this-is-an-invalid-header/foobar")
+		assert.EqualError(t, err, "invalid header format")
+		assert.Empty(t, region)
+	})
+
+	t.Run("invalid-region", func(t *testing.T) {
+		endpoint, err := stsRegionalEndpoint("fake-region-1")
+		assert.EqualError(t, err, "unable to get regional STS endpoint for region: fake-region-1")
+		assert.Empty(t, endpoint)
+	})
 }
 
 func defaultLoginData() (map[string]interface{}, error) {

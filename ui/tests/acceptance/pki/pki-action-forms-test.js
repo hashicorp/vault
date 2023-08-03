@@ -33,7 +33,6 @@ module('Acceptance | pki action forms test', function (hooks) {
     await authPage.login();
     // Cleanup engine
     await runCommands([`delete sys/mounts/${this.mountPath}`]);
-    await logout.visit();
   });
 
   module('import', function (hooks) {

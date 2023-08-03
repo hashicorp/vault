@@ -45,9 +45,6 @@ func TestCache_UsingAutoAuthToken(t *testing.T) {
 	var err error
 	logger := logging.NewVaultLogger(log.Trace)
 	coreConfig := &vault.CoreConfig{
-		DisableMlock: true,
-		DisableCache: true,
-		Logger:       log.NewNullLogger(),
 		LogicalBackends: map[string]logical.Factory{
 			"kv": vault.LeasedPassthroughBackendFactory,
 		},

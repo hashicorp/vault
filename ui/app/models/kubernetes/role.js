@@ -53,12 +53,6 @@ export default class KubernetesRoleModel extends Model {
   kubernetesRoleName;
 
   @attr('string', {
-    label: 'Service account name',
-    subText: 'Vault will use the default template when generating service accounts, roles and role bindings.',
-  })
-  serviceAccountName;
-
-  @attr('string', {
     label: 'Allowed Kubernetes namespaces',
     subText:
       'A list of the valid Kubernetes namespaces in which this role can be used for creating service accounts. If set to "*" all namespaces are allowed.',

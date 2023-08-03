@@ -55,7 +55,6 @@ func TestJWTEndToEnd(t *testing.T) {
 func testJWTEndToEnd(t *testing.T, ahWrapping, useSymlink, removeJWTAfterReading bool) {
 	logger := logging.NewVaultLogger(hclog.Trace)
 	coreConfig := &vault.CoreConfig{
-		Logger: logger,
 		CredentialBackends: map[string]logical.Factory{
 			"jwt": vaultjwt.Factory,
 		},

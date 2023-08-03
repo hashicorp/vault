@@ -1,0 +1,10 @@
+### vault.autopilot.node.healthy ((#vault-autopilot-node-healthy))
+
+Metric type | Value   | Description
+----------- | ------- | -----------
+gauge       | boolean | Indicates whether the active node is healthy
+
+- A value of `1` on the gauge means that Autopilot deems the node indicated by
+  `node_id` is healthy.
+- A value of `0` on the gauge means that Autopilot cannot communicate with the
+  node indicated by `node_id`, or deems the node unhealthy.

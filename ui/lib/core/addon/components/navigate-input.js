@@ -204,7 +204,7 @@ export default class NavigateInput extends Component {
       later(
         this,
         function () {
-          document.getElementById(this.inputId).focus();
+          document.getElementById(this.inputId)?.focus();
         },
         400
       );

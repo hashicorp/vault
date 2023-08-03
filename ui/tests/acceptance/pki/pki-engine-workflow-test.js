@@ -38,7 +38,6 @@ module('Acceptance | pki workflow', function (hooks) {
     await authPage.login();
     // Cleanup engine
     await runCommands([`delete sys/mounts/${this.mountPath}`]);
-    await logout.visit();
   });
 
   test('empty state messages are correct when PKI not configured', async function (assert) {
