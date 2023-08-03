@@ -18,6 +18,7 @@ const generateFromRole = [
       'ipSans',
       'uriSans',
       'otherSans',
+      'userIds',
     ],
   },
 ];
