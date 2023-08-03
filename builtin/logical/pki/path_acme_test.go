@@ -1600,7 +1600,8 @@ func TestAcmeRevocationAcrossAccounts(t *testing.T) {
 }
 
 func doACMEWorkflow(t *testing.T, vaultClient *api.Client, acmeClient *acme.Client) (*ecdsa.PrivateKey, [][]byte) {
-	testCtx := context.Background()
+	testCtx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
 
 	// Create new account
 	acct, err := acmeClient.Register(testCtx, &acme.Account{}, func(tosURL string) bool { return true })
@@ -1682,6 +1683,8 @@ func getAcmeClientForCluster(t *testing.T, cluster *vault.TestCluster, baseUrl s
 }
 
 func getEABKey(t *testing.T, client *api.Client, baseUrl string) (string, []byte) {
+	t.Helper()
+
 	resp, err := client.Logical().WriteWithContext(ctx, path.Join("pki/", baseUrl, "/new-eab"), map[string]interface{}{})
 	require.NoError(t, err, "failed getting eab key")
 	require.NotNil(t, resp, "eab key returned nil response")

@@ -659,7 +659,7 @@ func validateNames(b *backend, data *inputBundle, names []string) string {
 
 				if data.role.AllowGlobDomains &&
 					strings.Contains(currDomain, "*") &&
-					glob.Glob(currDomain, name) {
+					glob.Glob(strings.ToLower(currDomain), strings.ToLower(name)) {
 					valid = true
 					break
 				}

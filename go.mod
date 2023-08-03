@@ -40,7 +40,7 @@ require (
 	github.com/armon/go-metrics v0.4.1
 	github.com/armon/go-radix v1.0.0
 	github.com/asaskevich/govalidator v0.0.0-20200907205600-7a23bdc65eef
-	github.com/aws/aws-sdk-go v1.44.269
+	github.com/aws/aws-sdk-go v1.44.271
 	github.com/aws/aws-sdk-go-v2/config v1.18.19
 	github.com/axiomhq/hyperloglog v0.0.0-20220105174342-98591331716a
 	github.com/cenkalti/backoff/v3 v3.2.2
@@ -151,7 +151,7 @@ require (
 	github.com/hashicorp/vault/api v1.9.2
 	github.com/hashicorp/vault/api/auth/approle v0.1.0
 	github.com/hashicorp/vault/api/auth/userpass v0.1.0
-	github.com/hashicorp/vault/sdk v0.9.2-0.20230530190758-08ee474850e0
+	github.com/hashicorp/vault/sdk v0.9.3-0.20230731184456-8253e5975275
 	github.com/hashicorp/vault/vault/hcp_link/proto v0.0.0-20230201201504-b741fa893d77
 	github.com/influxdata/influxdb1-client v0.0.0-20200827194710-b269163b24ab
 	github.com/jackc/pgx/v4 v4.18.1
@@ -217,7 +217,7 @@ require (
 	google.golang.org/api v0.124.0
 	google.golang.org/grpc v1.55.0
 	google.golang.org/grpc/cmd/protoc-gen-go-grpc v1.1.0
-	google.golang.org/protobuf v1.30.0
+	google.golang.org/protobuf v1.31.0
 	gopkg.in/ory-am/dockertest.v3 v3.3.4
 	gotest.tools/gotestsum v1.10.0
 	honnef.co/go/tools v0.4.3

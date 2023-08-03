@@ -141,6 +141,7 @@ type CIEPSResponse struct {
 	ParsedCertificate *x509.Certificate `json:"-"`
 	IssuerRef         string            `json:"issuer_ref,omitempty"`
 	StoreCert         bool              `json:"store_certificate"`
+	GenerateLease     bool              `json:"generate_lease"`
 }
 
 func (c *CIEPSResponse) MarshalCertificate() error {
