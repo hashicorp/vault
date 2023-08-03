@@ -51,11 +51,23 @@ export async function runCmd(commands, throwErrors = true) {
 // Common commands
 export function mountEngineCmd(type, customName = '') {
   const name = customName || type;
+  if (type === 'kv-v2') {
+    return `write sys/mounts/${name} type=kv options=version=2`;
+  }
   return `write sys/mounts/${name} type=${type}`;
 }
 
 export function deleteEngineCmd(name) {
   return `delete sys/mounts/${name}`;
+}
+
+export function mountAuthCmd(type, customName = '') {
+  const name = customName || type;
+  return `write sys/auth/${name} type=${type}`;
+}
+
+export function deleteAuthCmd(name) {
+  return `delete sys/auth/${name}`;
 }
 
 export function createPolicyCmd(name, contents) {
