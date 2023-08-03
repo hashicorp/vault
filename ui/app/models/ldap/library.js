@@ -56,7 +56,7 @@ export default class LdapLibraryModel extends Model {
     subText:
       'When disabled, accounts must be checked in by the entity or client token that checked them out. If enabled, anyone with the right permission can check the account back in.',
     possibleValues: ['Disabled', 'Enabled'],
-    defaultValue: 'Disabled',
+    defaultValue: 'Enabled',
   })
   disable_check_in_enforcement;
 

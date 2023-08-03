@@ -52,19 +52,19 @@ module('Integration | Component | ldap | Page::Library::Details::Configuration',
 
     assert
       .dom('[data-test-check-in-icon]')
-      .hasClass('flight-icon-x-square', 'Correct icon renders for disabled check in enforcement');
-    assert
-      .dom('[data-test-check-in-icon]')
-      .hasClass('icon-false', 'Correct class renders for disabled check in enforcement');
-
-    this.model.disable_check_in_enforcement = 'Enabled';
-    await this.renderComponent();
-
-    assert
-      .dom('[data-test-check-in-icon]')
       .hasClass('flight-icon-check-circle', 'Correct icon renders for enabled check in enforcement');
     assert
       .dom('[data-test-check-in-icon]')
       .hasClass('icon-true', 'Correct class renders for enabled check in enforcement');
+
+    this.model.disable_check_in_enforcement = 'Disabled';
+    await this.renderComponent();
+
+    assert
+      .dom('[data-test-check-in-icon]')
+      .hasClass('flight-icon-x-square', 'Correct icon renders for disabled check in enforcement');
+    assert
+      .dom('[data-test-check-in-icon]')
+      .hasClass('icon-false', 'Correct class renders for disabled check in enforcement');
   });
 });

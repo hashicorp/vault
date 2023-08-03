@@ -15,13 +15,13 @@ export default class LdapLibrarySerializer extends ApplicationSerializer {
 
   // disable_check_in_enforcement is a boolean but needs to be presented as Disabled or Enabled
   normalize(modelClass, data) {
-    data.disable_check_in_enforcement = data.disable_check_in_enforcement ? 'Enabled' : 'Disabled';
+    data.disable_check_in_enforcement = data.disable_check_in_enforcement ? 'Disabled' : 'Enabled';
     return super.normalize(modelClass, data);
   }
 
   serialize() {
     const json = super.serialize(...arguments);
-    json.disable_check_in_enforcement = json.disable_check_in_enforcement === 'Enabled' ? true : false;
+    json.disable_check_in_enforcement = json.disable_check_in_enforcement === 'Enabled' ? false : true;
     return json;
   }
 }
