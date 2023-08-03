@@ -10,41 +10,41 @@ import (
 	"cloud.google.com/go/cloudsqlconn/postgres/pgxv4"
 )
 
-func (c *SQLConnectionProducer) getCloudSQLDBType() (string, error) {
-	var dbType string
+func (c *SQLConnectionProducer) getCloudSQLDriverName() (string, error) {
+	var driverName string
 	switch c.Type {
-	case "mssql":
-		dbType = cloudSQLMSSQL
+	case dbTypeMSSQL:
+		driverName = cloudSQLMSSQL
 	case dbTypePostgres:
-		dbType = cloudSQLPostgres
+		driverName = cloudSQLPostgres
 	default:
 		return "", fmt.Errorf("unrecognized DB type: %s", c.Type)
 	}
 
-	return dbType, nil
+	fmt.Printf("returning driver type: %s for dbType: %s", driverName, c.Type)
+	return driverName, nil
 }
 
 func (c *SQLConnectionProducer) registerDrivers(filename, credentials interface{}) (func() error, error) {
-	typ, err := c.getCloudSQLDBType()
+	typ, err := c.getCloudSQLDriverName()
 	if err != nil {
 		return nil, err
 	}
 
-	if cacheGet(typ) != nil {
-		// drivers have already been registered
-		// return
+	if isDriverRegistered(typ) {
+		// driver already registered
 		fmt.Printf("drivers have already been registered, returning\n")
 		return nil, nil
 	}
 
-	opts, err := getAuthOptions(filename, credentials)
+	opts, err := GetCloudSQLAuthOptions(filename, credentials)
 	if err != nil {
 		return nil, err
 	}
-	// @TODO add support for other drivers
+
 	switch typ {
 	case cloudSQLMSSQL:
-		// return mssql.RegisterDriver(cloudSQLMSSQL, cloudsqlconn.WithCredentialsFile("key.json"))
+		// return registerDriverMSSQL(opts)
 	case cloudSQLPostgres:
 		return registerDriverPostgres(opts)
 	}
@@ -56,7 +56,11 @@ func registerDriverPostgres(opts cloudsqlconn.Option) (func() error, error) {
 	return pgxv4.RegisterDriver(cloudSQLPostgres, opts)
 }
 
-func getAuthOptions(filename, credentials interface{}) (cloudsqlconn.Option, error) {
+//func registerDriverMSSQL(opts cloudsqlconn.Option) (func() error, error) {
+//	return mssql.RegisterDriver(cloudSQLMSSQL, opts)
+//}
+
+func GetCloudSQLAuthOptions(filename, credentials interface{}) (cloudsqlconn.Option, error) {
 	if filename != nil {
 		v, ok := filename.(string)
 		if !ok {
@@ -81,10 +85,28 @@ func getAuthOptions(filename, credentials interface{}) (cloudsqlconn.Option, err
 	return cloudsqlconn.WithIAMAuthN(), nil
 }
 
-func cacheCleanup(typ string, f func() error) {
-	basicCleanupCache[typ] = f
+func cacheDrivers(typ string, f cloudSQLCleanup) {
+	driversMu.Lock()
+	defer driversMu.Unlock()
+
+	drivers[typ] = f
 }
 
-func cacheGet(typ string) func() error {
-	return basicCleanupCache[typ]
+func cachePop(typ string) cloudSQLCleanup {
+	driversMu.Lock()
+	defer driversMu.Unlock()
+
+	var cleanup cloudSQLCleanup
+	if f, ok := drivers[typ]; ok {
+		cleanup = f
+		delete(drivers, typ)
+	}
+	return cleanup
+}
+
+func isDriverRegistered(typ string) bool {
+	driversMu.Lock()
+	defer driversMu.Unlock()
+
+	return drivers[typ] != nil
 }

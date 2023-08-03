@@ -13,12 +13,21 @@ import (
 	"sync"
 	"time"
 
+	cloudmysql "cloud.google.com/go/cloudsqlconn/mysql/mysql"
+
 	"github.com/go-sql-driver/mysql"
 	"github.com/hashicorp/go-secure-stdlib/parseutil"
 	"github.com/hashicorp/go-uuid"
+	"github.com/mitchellh/mapstructure"
+
 	"github.com/hashicorp/vault/sdk/database/helper/connutil"
 	"github.com/hashicorp/vault/sdk/database/helper/dbutil"
-	"github.com/mitchellh/mapstructure"
+)
+
+const (
+	authTypeIAM   = "iam"
+	cloudSQLMySQL = "cloudsql-mysql"
+	driverMySQL   = "mysql"
 )
 
 // mySQLConnectionProducer implements ConnectionProducer and provides a generic producer for most sql databases
@@ -142,12 +151,28 @@ func (c *mySQLConnectionProducer) Connection(ctx context.Context) (interface{}, 
 		c.db.Close()
 	}
 
+	driverName := driverMySQL
+	if c.RawConfig["auth_type"] == authTypeIAM {
+		driverName = cloudSQLMySQL
+
+		filename := c.RawConfig["filename"]
+		credentials := c.RawConfig["credentials"]
+
+		_, err := registerDriverMySQL(filename, credentials)
+		if err != nil {
+			return nil, err
+		}
+
+		//@TODO store driver cleanup
+		//c.cleanupDrivers = append(c.cleanupDrivers, cleanupFunc)
+	}
+
 	connURL, err := c.addTLStoDSN()
 	if err != nil {
 		return nil, err
 	}
 
-	c.db, err = sql.Open("mysql", connURL)
+	c.db, err = sql.Open(driverName, connURL)
 	if err != nil {
 		return nil, err
 	}
@@ -174,7 +199,13 @@ func (c *mySQLConnectionProducer) Close() error {
 	defer c.Unlock()
 
 	if c.db != nil {
-		c.db.Close()
+		// if auth_type is IAM, ensure cleanup
+		// of cloudSQL resources
+		if c.RawConfig["auth_type"] == authTypeIAM {
+			// @TODO implement cloudSQL Driver cleanup from cache
+		} else {
+			c.db.Close()
+		}
 	}
 
 	c.db = nil
@@ -229,4 +260,15 @@ func (c *mySQLConnectionProducer) addTLStoDSN() (connURL string, err error) {
 
 	connURL = config.FormatDSN()
 	return connURL, nil
+}
+
+func registerDriverMySQL(filename, credentials interface{}) (func() error, error) {
+	// @TODO implement driver cleanup cache
+	// if driver is already registered, return
+
+	opts, err := connutil.GetCloudSQLAuthOptions(filename, credentials)
+	if err != nil {
+		return nil, err
+	}
+	return cloudmysql.RegisterDriver(cloudSQLMySQL, opts)
 }

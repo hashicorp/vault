@@ -23,13 +23,19 @@ import (
 const (
 	authTypeIAM      = "iam"
 	dbTypePostgres   = "pgx"
+	dbTypeMSSQL      = "mssql"
 	cloudSQLPostgres = "cloudsql-postgres"
 	cloudSQLMSSQL    = "cloudsql-sqlserver"
 )
 
 var _ ConnectionProducer = &SQLConnectionProducer{}
 
-var basicCleanupCache = map[string]func() error{}
+var (
+	driversMu sync.RWMutex
+	drivers   = make(map[string]cloudSQLCleanup)
+)
+
+type cloudSQLCleanup func() error
 
 // SQLConnectionProducer implements ConnectionProducer and provides a generic producer for most sql databases
 type SQLConnectionProducer struct {
@@ -147,33 +153,34 @@ func (c *SQLConnectionProducer) Connection(ctx context.Context) (interface{}, er
 		}
 		// If the ping was unsuccessful, close it and ignore errors as we'll be
 		// reestablishing anyways
+
+		// @TODO confirm if we need driver cleanup here as well
 		c.db.Close()
 	}
 
 	// default non-IAM behavior
-	dbType := c.Type
+	driverName := c.Type
 
 	if c.AuthType == authTypeIAM {
-		typ, err := c.getCloudSQLDBType()
+		typ, err := c.getCloudSQLDriverName()
 		if err != nil {
 			return nil, err
 		}
-		dbType = typ
+		driverName = typ
 		filename := c.RawConfig["filename"]
 		credentials := c.RawConfig["credentials"]
 
-		fmt.Printf("registering drivers for %s\n", dbType)
-		cleanupFunc, err := c.registerDrivers(filename, credentials)
+		cleanup, err := c.registerDrivers(filename, credentials)
 		if err != nil {
 			return nil, err
 		}
 
 		// store driver cleanup
-		cacheCleanup(dbType, cleanupFunc)
+		cacheDrivers(driverName, cleanup)
 	} else {
 		// For mssql backend, switch to sqlserver instead
 		if c.Type == "mssql" {
-			dbType = "sqlserver"
+			driverName = "sqlserver"
 		}
 	}
 
@@ -196,8 +203,8 @@ func (c *SQLConnectionProducer) Connection(ctx context.Context) (interface{}, er
 	}
 
 	var err error
-	fmt.Printf("Starting connection to server: %s\n", dbType)
-	c.db, err = sql.Open(dbType, conn)
+	fmt.Printf("Starting connection to server: %s\n", driverName)
+	c.db, err = sql.Open(driverName, conn)
 	if err != nil {
 		return nil, err
 	}
@@ -227,9 +234,13 @@ func (c *SQLConnectionProducer) Close() error {
 		// if auth_type is IAM, ensure cleanup
 		// of cloudSQL resources
 		if c.AuthType == authTypeIAM {
-			for cleanupTyp := range basicCleanupCache {
-				fmt.Sprintf("cleaning up for %s\n", c.Type)
-				basicCleanupCache[cleanupTyp]()
+			driversMu.Lock()
+			defer driversMu.Unlock()
+
+			for driver := range drivers {
+				fmt.Printf("cleaning up for %s\n", c.Type)
+				cleanup := cachePop(driver)
+				cleanup()
 			}
 		} else {
 			c.db.Close()
