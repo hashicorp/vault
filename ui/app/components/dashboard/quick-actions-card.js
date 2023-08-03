@@ -15,22 +15,20 @@ import { inject as service } from '@ember/service';
  *
  * @example
  * ```js
- * <DashboardQuickActionsCard @secretsEngines={{@model.secretsEngines}} />
+ *   <Dashboard::QuickActionsCard @secretsEngines={{@model.secretsEngines}} />
  * ```
- * @param {array}
  */
 
-const ENGINE_TYPE = ['pki', 'kv', 'database'];
+const QUICK_ACTION_ENGINES = ['pki', 'kv', 'database'];
 
 export default class DashboardQuickActionsCard extends Component {
   @service router;
 
   @tracked selectedEngine;
   @tracked selectedAction;
-  @tracked selectedEngineName;
+  @tracked mountPath;
   @tracked paramValue;
 
-  // 2nd input field
   get actionOptions() {
     switch (this.selectedEngine) {
       case 'kv':
@@ -44,7 +42,6 @@ export default class DashboardQuickActionsCard extends Component {
     }
   }
 
-  // setting the search select object
   get searchSelectParams() {
     switch (this.selectedAction) {
       case 'Find KV secrets':
@@ -53,16 +50,14 @@ export default class DashboardQuickActionsCard extends Component {
           subText: 'Path of the secret you want to read, including the mount. E.g., secret/data/foo.',
           buttonText: 'Read secrets',
           model: 'secret-v2',
-          path: 'vault.cluster.secrets.backend.list',
-          // ends in forward --> 'vault.cluster.secrets.backends.list', id
-          // else --> 'vault.cluster.secrets.backends.show', id
+          route: 'vault.cluster.secrets.backends.show',
         };
       case 'Generate credentials for database':
         return {
           title: 'Role to use',
           buttonText: 'Generate credentials',
           model: 'database/role',
-          path: 'vault.cluster.secrets.backend.credentials',
+          route: 'vault.cluster.secrets.backend.credentials',
         };
       case 'Issue certificate':
         return {
@@ -70,7 +65,7 @@ export default class DashboardQuickActionsCard extends Component {
           placeholder: 'Type to find a role...',
           buttonText: 'Issue leaf certificate',
           model: 'pki/role',
-          path: 'vault.cluster.secrets.backend.pki.roles.role.generate',
+          route: 'vault.cluster.secrets.backend.pki.roles.role.generate',
         };
       case 'View certificate':
         return {
@@ -78,7 +73,7 @@ export default class DashboardQuickActionsCard extends Component {
           placeholder: '33:a3:...',
           buttonText: 'View certificate',
           model: 'pki/certificate/base',
-          path: 'vault.cluster.secrets.backend.pki.certificates.certificate.details',
+          route: 'vault.cluster.secrets.backend.pki.certificates.certificate.details',
         };
       case 'View issuer':
         return {
@@ -87,7 +82,7 @@ export default class DashboardQuickActionsCard extends Component {
           buttonText: 'View issuer',
           model: 'pki/issuer',
           nameKey: 'issuerName',
-          path: 'vault.cluster.secrets.backend.pki.issuers.issuer.details',
+          route: 'vault.cluster.secrets.backend.pki.issuers.issuer.details',
         };
       default:
         return {
@@ -99,7 +94,7 @@ export default class DashboardQuickActionsCard extends Component {
   }
 
   get filteredSecretEngines() {
-    return this.args.secretsEngines.filter((engine) => ENGINE_TYPE.includes(engine.type));
+    return this.args.secretsEngines.filter((engine) => QUICK_ACTION_ENGINES.includes(engine.type));
   }
 
   get mountOptions() {
@@ -112,14 +107,16 @@ export default class DashboardQuickActionsCard extends Component {
   @action
   handleSearchEngineSelect([selection]) {
     this.selectedEngine = selection?.type;
-    this.selectedEngineName = selection?.id;
+    this.mountPath = selection?.id;
     // reset tracked properties
     this.selectedAction = null;
+    this.paramValue = null;
   }
 
   @action
   setSelectedAction(selectedAction) {
     this.selectedAction = selectedAction;
+    this.paramValue = null;
   }
 
   @action
@@ -133,6 +130,17 @@ export default class DashboardQuickActionsCard extends Component {
 
   @action
   navigateToPage() {
-    this.router.transitionTo(this.searchSelectParams.path, this.selectedEngineName, this.paramValue);
+    let searchSelectParamRoute = this.searchSelectParams.route;
+
+    // kv has a special use case where if the paramValue ends in a '/' you should
+    // link to different route
+    if (this.selectedEngine === 'kv') {
+      searchSelectParamRoute =
+        this.paramValue && this.paramValue[this.paramValue?.length - 1] === '/'
+          ? 'vault.cluster.secrets.backend.list'
+          : 'vault.cluster.secrets.backend.show';
+    }
+
+    this.router.transitionTo(searchSelectParamRoute, this.mountPath, this.paramValue);
   }
 }

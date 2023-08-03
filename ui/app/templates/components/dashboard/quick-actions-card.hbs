@@ -21,7 +21,7 @@
 {{#if this.selectedEngine}}
   <h4 class="title is-6">Action</h4>
   <Select
-    @name="auth-method"
+    @name="action-select"
     @options={{this.actionOptions}}
     @isFullwidth={{true}}
     @selectedValue={{this.selectedAction}}
@@ -36,7 +36,7 @@
       class="is-flex-1"
       @selectLimit="1"
       @models={{array this.searchSelectParams.model}}
-      @backend={{this.selectedEngineName}}
+      @backend={{this.mountPath}}
       @placeholder={{this.searchSelectParams.placeholder}}
       @disallowNewItems={{true}}
       @onChange={{this.handleActionSelect}}
