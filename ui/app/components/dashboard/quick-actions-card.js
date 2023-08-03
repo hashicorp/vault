@@ -137,26 +137,23 @@ export default class DashboardQuickActionsCard extends Component {
   }
 
   get secretsEnginesOptions() {
-    return this.filteredSecretEngines.map((filteredSecretEngine) => {
-      const name = filteredSecretEngine.path.replace('/', '');
-
-      return {
-        name,
-        id: `${filteredSecretEngine.type} ${name}`,
-      };
+    return this.filteredSecretEngines.map((engine) => {
+      const { id, type } = engine;
+      return { name: id, type, id };
     });
   }
 
   @action
-  handleSearchEngineSelect([selectedSearchEngines]) {
-    if (selectedSearchEngines?.length) {
-      const selectedEngine = selectedSearchEngines.split(' ');
-      this.selectedEngine = selectedEngine.firstObject;
-      this.selectedEngineName = selectedEngine[1];
+  handleSearchEngineSelect([selection]) {
+    if (selection) {
+      this.selectedEngine = selection.type;
+      this.selectedEngineName = selection.id;
       this.selectedActions = getActionsByEngineType(this.selectedEngine);
       this.setSelectedAction(this.selectedActions?.firstObject.actionType);
     } else {
-      this.selectedEngine = selectedSearchEngines;
+      // no selection, clear tracked properties
+      this.selectedEngine = '';
+      this.selectedEngineName = '';
       this.setSelectedAction();
     }
   }
