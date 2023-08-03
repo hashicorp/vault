@@ -69,8 +69,8 @@ export default class CodeMirrorModifier extends Modifier {
 
     this._editor = editor;
 
-    if (this.args.named.onSetup) {
-      this.args.named.onSetup(editor);
+    if (namedArgs.onSetup) {
+      namedArgs.onSetup(editor);
     }
   }
 }
