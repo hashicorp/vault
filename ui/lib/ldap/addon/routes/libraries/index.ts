@@ -11,23 +11,23 @@ import { hash } from 'rsvp';
 import type Store from '@ember-data/store';
 import type SecretMountPath from 'vault/services/secret-mount-path';
 import type Transition from '@ember/routing/transition';
-import type LdapRoleModel from 'vault/models/ldap/role';
+import type LdapLibraryModel from 'vault/models/ldap/library';
 import type SecretEngineModel from 'vault/models/secret-engine';
 import type Controller from '@ember/controller';
 import type { Breadcrumb } from 'vault/vault/app-types';
 
-interface LdapRolesRouteModel {
+interface LdapLibrariesRouteModel {
   backendModel: SecretEngineModel;
   promptConfig: boolean;
-  roles: Array<LdapRoleModel>;
+  libraries: Array<LdapLibraryModel>;
 }
-interface LdapRolesController extends Controller {
+interface LdapLibrariesController extends Controller {
   breadcrumbs: Array<Breadcrumb>;
-  model: LdapRolesRouteModel;
+  model: LdapLibrariesRouteModel;
 }
 
 @withConfig('ldap/config')
-export default class LdapRolesRoute extends Route {
+export default class LdapLibrariesRoute extends Route {
   @service declare readonly store: Store;
   @service declare readonly secretMountPath: SecretMountPath;
 
@@ -38,17 +38,13 @@ export default class LdapRolesRoute extends Route {
     return hash({
       backendModel,
       promptConfig: this.promptConfig,
-      roles: this.store.query(
-        'ldap/role',
-        { backend: backendModel.id },
-        { adapterOptions: { showPartialError: true } }
-      ),
+      libraries: this.store.query('ldap/library', { backend: backendModel.id }),
     });
   }
 
   setupController(
-    controller: LdapRolesController,
-    resolvedModel: LdapRolesRouteModel,
+    controller: LdapLibrariesController,
+    resolvedModel: LdapLibrariesRouteModel,
     transition: Transition
   ) {
     super.setupController(controller, resolvedModel, transition);

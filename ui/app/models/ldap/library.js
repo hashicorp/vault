@@ -6,6 +6,7 @@
 import Model, { attr } from '@ember-data/model';
 import { withFormFields } from 'vault/decorators/model-form-fields';
 import { withModelValidations } from 'vault/decorators/model-validations';
+import lazyCapabilities, { apiPath } from 'vault/macros/lazy-capabilities';
 
 const validations = {
   name: [{ type: 'presence', message: 'Library name is required.' }],
@@ -58,4 +59,22 @@ export default class LdapLibraryModel extends Model {
     defaultValue: 'Disabled',
   })
   disable_check_in_enforcement;
+
+  @lazyCapabilities(apiPath`${'backend'}/library/${'name'}`, 'backend', 'name') libraryPath;
+
+  get canCreate() {
+    return this.libraryPath.get('canCreate') !== false;
+  }
+  get canDelete() {
+    return this.libraryPath.get('canDelete') !== false;
+  }
+  get canEdit() {
+    return this.libraryPath.get('canUpdate') !== false;
+  }
+  get canRead() {
+    return this.libraryPath.get('canRead') !== false;
+  }
+  get canList() {
+    return this.libraryPath.get('canList') !== false;
+  }
 }

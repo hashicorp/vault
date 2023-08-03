@@ -21,9 +21,16 @@ export default class LdapLibraryAdapter extends NamedPathAdapter {
 
   query(store, type, query) {
     const { backend } = query;
-    return this.ajax(this.getURL(backend), 'GET', { data: { list: true } }).then((resp) => {
-      return resp.data.keys.map((name) => ({ name, backend }));
-    });
+    return this.ajax(this.getURL(backend), 'GET', { data: { list: true } })
+      .then((resp) => {
+        return resp.data.keys.map((name) => ({ name, backend }));
+      })
+      .catch((error) => {
+        if (error.httpStatus === 404) {
+          return [];
+        }
+        throw error;
+      });
   }
   queryRecord(store, type, query) {
     const { backend, name } = query;
