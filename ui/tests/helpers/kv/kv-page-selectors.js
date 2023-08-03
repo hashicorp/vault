@@ -23,4 +23,9 @@ export const PAGE = {
     maskedValueInput: (idx = 0) => `[data-test-kv-value="${idx}"] [data-test-textarea]`,
     deleteRow: (idx = 0) => `[data-test-kv-delete-row="${idx}"]`,
   },
+  list: {
+    popup: '[data-test-popup-menu-trigger]',
+    rows: '[data-test-version-linked-block]',
+    linkedBlock: (version) => `[data-test-version-linked-block="${version}"]`,
+  },
 };
