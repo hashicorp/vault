@@ -1,6 +1,12 @@
 # Copyright (c) HashiCorp, Inc.
 # SPDX-License-Identifier: BUSL-1.1
 
+variable "arch" {
+  type        = string
+  description = "The architecture being used"
+  default     = null
+}
+
 variable "artifactory_release" {
   type = object({
     username = string
@@ -110,7 +116,7 @@ variable "initialize_cluster" {
 
 variable "install_dir" {
   type        = string
-  description = "The directory where the vault binary will be installed"
+  description = "The directory where the Vault binary will be installed"
   default     = "/opt/vault/bin"
 }
 
@@ -142,6 +148,11 @@ variable "manage_service" {
   type        = bool
   description = "Manage the Vault service users and systemd unit. Disable this to use configuration in RPM and Debian packages"
   default     = true
+}
+
+variable "package_manager" {
+  type        = string
+  description = "The package manager that comes with each Linux distro"
 }
 
 variable "packages" {
@@ -208,6 +219,12 @@ variable "shamir_unseal_keys" {
   type        = list(string)
   description = "Shamir unseal keys. Often only used adding additional nodes to an already initialized cluster."
   default     = null
+}
+
+variable "distro_version_sles" {
+  type        = string
+  description = "The SLES distro version; sometimes required to install packages on certain SLES versions"
+  default     = "15.5" // or 15.4
 }
 
 variable "storage_backend" {

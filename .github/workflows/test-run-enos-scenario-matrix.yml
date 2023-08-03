@@ -94,6 +94,11 @@ jobs:
       ENOS_VAR_vault_product_version: ${{ needs.metadata.outputs.vault-version }}
       ENOS_VAR_vault_revision: ${{ inputs.vault-revision }}
       ENOS_VAR_vault_license_path: ./support/vault.hclic
+      ENOS_VAR_distro_version_amazon_linux: ${{ matrix.attributes.distro_version_amazon_linux }}
+      ENOS_VAR_distro_version_leap: ${{ matrix.attributes.distro_version_leap }}
+      ENOS_VAR_distro_version_rhel: ${{ matrix.attributes.distro_version_rhel }}
+      ENOS_VAR_distro_version_sles: ${{ matrix.attributes.distro_version_sles }}
+      ENOS_VAR_distro_version_ubuntu: ${{ matrix.attributes.distro_version_ubuntu }}
       ENOS_DEBUG_DATA_ROOT_DIR: /tmp/enos-debug-data
     steps:
       - uses: actions/checkout@c85c95e3d7251135ab7dc9ce3241c5835cc595a9 # v3.5.3

@@ -9,6 +9,7 @@ sample "build_ce_linux_amd64_deb" {
       arch            = ["amd64"]
       artifact_source = ["crt"]
       artifact_type   = ["package"]
+      consul_edition  = ["ce"]
       distro          = ["ubuntu"]
       edition         = ["ce"]
     }
@@ -19,6 +20,7 @@ sample "build_ce_linux_amd64_deb" {
       arch            = ["amd64"]
       artifact_source = ["crt"]
       artifact_type   = ["package"]
+      consul_edition  = ["ce"]
       distro          = ["ubuntu"]
       edition         = ["ce"]
     }
@@ -29,6 +31,7 @@ sample "build_ce_linux_amd64_deb" {
       arch            = ["amd64"]
       artifact_source = ["crt"]
       artifact_type   = ["package"]
+      consul_edition  = ["ce"]
       distro          = ["ubuntu"]
       edition         = ["ce"]
     }
@@ -39,6 +42,7 @@ sample "build_ce_linux_amd64_deb" {
       arch            = ["amd64"]
       artifact_source = ["crt"]
       artifact_type   = ["package"]
+      consul_edition  = ["ce"]
       distro          = ["ubuntu"]
       edition         = ["ce"]
     }
@@ -53,6 +57,7 @@ sample "build_ce_linux_arm64_deb" {
       arch            = ["arm64"]
       artifact_source = ["crt"]
       artifact_type   = ["package"]
+      consul_edition  = ["ce"]
       distro          = ["ubuntu"]
       edition         = ["ce"]
     }
@@ -63,6 +68,7 @@ sample "build_ce_linux_arm64_deb" {
       arch            = ["arm64"]
       artifact_source = ["crt"]
       artifact_type   = ["package"]
+      consul_edition  = ["ce"]
       distro          = ["ubuntu"]
       edition         = ["ce"]
     }
@@ -73,6 +79,7 @@ sample "build_ce_linux_arm64_deb" {
       arch            = ["arm64"]
       artifact_source = ["crt"]
       artifact_type   = ["package"]
+      consul_edition  = ["ce"]
       distro          = ["ubuntu"]
       edition         = ["ce"]
     }
@@ -83,6 +90,7 @@ sample "build_ce_linux_arm64_deb" {
       arch            = ["arm64"]
       artifact_source = ["crt"]
       artifact_type   = ["package"]
+      consul_edition  = ["ce"]
       distro          = ["ubuntu"]
       edition         = ["ce"]
     }
@@ -97,6 +105,7 @@ sample "build_ce_linux_arm64_rpm" {
       arch            = ["arm64"]
       artifact_source = ["crt"]
       artifact_type   = ["package"]
+      consul_edition  = ["ce"]
       distro          = ["rhel"]
       edition         = ["ce"]
     }
@@ -107,7 +116,8 @@ sample "build_ce_linux_arm64_rpm" {
       arch            = ["arm64"]
       artifact_source = ["crt"]
       artifact_type   = ["package"]
-      distro          = ["rhel"]
+      consul_edition  = ["ce"]
+      distro          = ["amazon_linux", "leap", "rhel"]
       edition         = ["ce"]
     }
   }
@@ -117,7 +127,8 @@ sample "build_ce_linux_arm64_rpm" {
       arch            = ["arm64"]
       artifact_source = ["crt"]
       artifact_type   = ["package"]
-      distro          = ["rhel"]
+      consul_edition  = ["ce"]
+      distro          = ["amazon_linux", "leap", "rhel"]
       edition         = ["ce"]
     }
   }
@@ -127,7 +138,8 @@ sample "build_ce_linux_arm64_rpm" {
       arch            = ["arm64"]
       artifact_source = ["crt"]
       artifact_type   = ["package"]
-      distro          = ["rhel"]
+      consul_edition  = ["ce"]
+      distro          = ["amazon_linux", "leap", "rhel"]
       edition         = ["ce"]
     }
   }
@@ -141,7 +153,8 @@ sample "build_ce_linux_amd64_rpm" {
       arch            = ["amd64"]
       artifact_source = ["crt"]
       artifact_type   = ["package"]
-      distro          = ["rhel"]
+      consul_edition  = ["ce"]
+      distro          = ["amazon_linux", "leap", "rhel", "sles"]
       edition         = ["ce"]
     }
   }
@@ -151,7 +164,8 @@ sample "build_ce_linux_amd64_rpm" {
       arch            = ["amd64"]
       artifact_source = ["crt"]
       artifact_type   = ["package"]
-      distro          = ["rhel"]
+      consul_edition  = ["ce"]
+      distro          = ["amazon_linux", "leap", "rhel", "sles"]
       edition         = ["ce"]
     }
   }
@@ -161,7 +175,8 @@ sample "build_ce_linux_amd64_rpm" {
       arch            = ["amd64"]
       artifact_source = ["crt"]
       artifact_type   = ["package"]
-      distro          = ["rhel"]
+      consul_edition  = ["ce"]
+      distro          = ["amazon_linux", "leap", "rhel", "sles"]
       edition         = ["ce"]
     }
   }
@@ -171,7 +186,8 @@ sample "build_ce_linux_amd64_rpm" {
       arch            = ["amd64"]
       artifact_source = ["crt"]
       artifact_type   = ["package"]
-      distro          = ["rhel"]
+      consul_edition  = ["ce"]
+      distro          = ["amazon_linux", "leap", "rhel", "sles"]
       edition         = ["ce"]
 
       exclude {
@@ -191,6 +207,7 @@ sample "build_ce_linux_amd64_zip" {
       arch            = ["amd64"]
       artifact_type   = ["bundle"]
       artifact_source = ["crt"]
+      consul_edition  = ["ce"]
       edition         = ["ce"]
     }
   }
@@ -200,6 +217,7 @@ sample "build_ce_linux_amd64_zip" {
       arch            = ["amd64"]
       artifact_type   = ["bundle"]
       artifact_source = ["crt"]
+      consul_edition  = ["ce"]
       edition         = ["ce"]
     }
   }
@@ -209,6 +227,7 @@ sample "build_ce_linux_amd64_zip" {
       arch            = ["amd64"]
       artifact_type   = ["bundle"]
       artifact_source = ["crt"]
+      consul_edition  = ["ce"]
       edition         = ["ce"]
     }
   }
@@ -218,6 +237,7 @@ sample "build_ce_linux_amd64_zip" {
       arch            = ["amd64"]
       artifact_type   = ["bundle"]
       artifact_source = ["crt"]
+      consul_edition  = ["ce"]
       edition         = ["ce"]
     }
   }
@@ -231,6 +251,7 @@ sample "build_ce_linux_arm64_zip" {
       arch            = ["arm64"]
       artifact_source = ["crt"]
       artifact_type   = ["bundle"]
+      consul_edition  = ["ce"]
       edition         = ["ce"]
     }
   }
@@ -240,6 +261,7 @@ sample "build_ce_linux_arm64_zip" {
       arch            = ["arm64"]
       artifact_source = ["crt"]
       artifact_type   = ["bundle"]
+      consul_edition  = ["ce"]
       edition         = ["ce"]
     }
   }
@@ -249,6 +271,7 @@ sample "build_ce_linux_arm64_zip" {
       arch            = ["arm64"]
       artifact_source = ["crt"]
       artifact_type   = ["bundle"]
+      consul_edition  = ["ce"]
       edition         = ["ce"]
     }
   }
@@ -258,6 +281,7 @@ sample "build_ce_linux_arm64_zip" {
       arch            = ["arm64"]
       artifact_source = ["crt"]
       artifact_type   = ["bundle"]
+      consul_edition  = ["ce"]
       edition         = ["ce"]
     }
   }
