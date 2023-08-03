@@ -221,8 +221,7 @@ func Test_Something_With_Docker(t *testing.T) {
 Here is a more realistic example of how we use it in practice.  DefaultOptions uses 
 `hashicorp/vault`:`latest` as the repo and tag, but it also looks at the environment
 variable VAULT_BINARY. If populated, it will copy the local file referenced by
-VAULT_BINARY into the container. This is useful when there is no published image
-containing the vault binary you want to test.
+VAULT_BINARY into the container. This is useful when testing local changes.
 
 Instead of setting the VaultLicense option, you can set the VAULT_LICENSE_CI environment
 variable, which is better than committing a license to version control.
