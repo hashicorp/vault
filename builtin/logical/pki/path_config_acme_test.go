@@ -10,10 +10,13 @@ import (
 	"testing"
 	"time"
 
+	"github.com/hashicorp/vault/helper/constants"
 	"github.com/stretchr/testify/require"
 )
 
 func TestAcmeConfig(t *testing.T) {
+	t.Parallel()
+
 	cluster, client, _ := setupAcmeBackend(t)
 	defer cluster.Cleanup()
 
@@ -125,8 +128,28 @@ func TestAcmeConfig(t *testing.T) {
 			} else {
 				require.Error(t, err, "Acme Configuration should prevent usage")
 			}
+		})
+	}
+}
 
-			t.Logf("Completed case %v", tc.name)
+// TestAcmeExternalPolicyOss make sure setting external-policy on OSS within acme configuration fails
+func TestAcmeExternalPolicyOss(t *testing.T) {
+	if constants.IsEnterprise {
+		t.Skip("this test is only valid on OSS")
+	}
+
+	t.Parallel()
+	b, s := CreateBackendWithStorage(t)
+
+	values := []string{"external-policy", "external-policy:", "external-policy:test"}
+	for _, value := range values {
+		t.Run(value, func(st *testing.T) {
+			_, err := CBWrite(b, s, "config/acme", map[string]interface{}{
+				"enabled":                  true,
+				"default_directory_policy": value,
+			})
+
+			require.Error(st, err, "should have failed setting acme config")
 		})
 	}
 }
