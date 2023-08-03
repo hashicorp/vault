@@ -62,7 +62,7 @@ module('Integration | Component | ldap | Page::Library::CreateAndEdit', function
     });
     assert.dom('[data-test-ttl-value="Default lease TTL"]').hasAnyValue('Default lease ttl renders');
     assert.dom('[data-test-ttl-value="Max lease TTL"]').hasAnyValue('Max lease ttl renders');
-    const checkInValue = this.libraryData.disable_check_in_enforcement ? 'Enabled' : 'Disabled';
+    const checkInValue = this.libraryData.disable_check_in_enforcement ? 'Disabled' : 'Enabled';
     assert
       .dom(`[data-test-input="disable_check_in_enforcement"] input#${checkInValue}`)
       .isChecked('Correct radio is checked for check-in enforcement');
@@ -119,7 +119,7 @@ module('Integration | Component | ldap | Page::Library::CreateAndEdit', function
     await click('[data-test-string-list-button="add"]');
     await fillIn('[data-test-string-list-input="1"]', 'bar@baz.com');
     await click('[data-test-string-list-button="add"]');
-    await click('[data-test-input="disable_check_in_enforcement"] input#Enabled');
+    await click('[data-test-input="disable_check_in_enforcement"] input#Disabled');
     await click('[data-test-save]');
 
     assert.ok(
@@ -137,7 +137,7 @@ module('Integration | Component | ldap | Page::Library::CreateAndEdit', function
         service_account_names: this.libraryData.service_account_names[1],
         ttl: this.libraryData.ttl,
         max_ttl: this.libraryData.max_ttl,
-        disable_check_in_enforcement: false,
+        disable_check_in_enforcement: true,
       };
       assert.deepEqual(expected, data, 'POST request made to save library with correct properties');
     });

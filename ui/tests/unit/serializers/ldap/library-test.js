@@ -21,8 +21,8 @@ module('Unit | Serializer | ldap/library', function (hooks) {
       name: 'test-library',
     });
     const cases = [
-      { value: false, transformed: 'Disabled' },
-      { value: true, transformed: 'Enabled' },
+      { value: false, transformed: 'Enabled' },
+      { value: true, transformed: 'Disabled' },
     ];
 
     cases.forEach(({ value, transformed }) => {
