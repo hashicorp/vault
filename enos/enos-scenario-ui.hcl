@@ -22,7 +22,7 @@ scenario "ui" {
       "oss" = ["ui"]
       "ent" = ["ui", "enterprise", "ent"]
     }
-    bundle_path    = abspath(var.vault_bundle_path)
+    bundle_path    = abspath(var.vault_artifact_path)
     distro         = "ubuntu"
     consul_version = "1.14.2"
     seal           = "awskms"

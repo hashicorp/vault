@@ -9,32 +9,7 @@
     <InfoTableRow @label="Kubernetes host" @value={{@config.kubernetesHost}} />
     {{#if @config.kubernetesCaCert}}
       <InfoTableRow @label="Certificate">
-        <div class="column is-half box is-rounded">
-          <div class="is-flex-row">
-            <span class="has-left-margin-s">
-              <Icon @name="certificate" @size="24" data-test-certificate-icon />
-            </span>
-            <div class="has-left-margin-m is-min-width-0">
-              <p class="has-text-weight-bold" data-test-certificate-label>
-                PEM Format
-              </p>
-              <code class="is-size-8 truncate-second-line has-text-grey" data-test-certificate-value>
-                {{@config.kubernetesCaCert}}
-              </code>
-            </div>
-            <div class="is-flex has-background-white-bis has-side-padding-s has-top-bottom-margin-negative-m">
-              <CopyButton
-                data-test-certificate-copy
-                class="button is-transparent is-flex-v-centered"
-                @clipboardText={{@config.kubernetesCaCert}}
-                @buttonType="button"
-                @success={{action (set-flash-message "Certificate copied")}}
-              >
-                <Icon @name="clipboard-copy" aria-label="Copy" />
-              </CopyButton>
-            </div>
-          </div>
-        </div>
+        <CertificateCard @certificateValue={{@config.kubernetesCaCert}} />
       </InfoTableRow>
     {{/if}}
   {{else}}

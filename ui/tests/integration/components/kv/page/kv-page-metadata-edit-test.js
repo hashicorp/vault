@@ -30,9 +30,6 @@ module('Integration | Component | kv | Page::Secret::MetadataEdit', function (ho
       modelName: 'kv/metadata',
       ...data,
     });
-    // Used to test a model with custom_metadata and non-default inputs.
-    this.metadataModelEdit = store.peekRecord('kv/metadata', data.id);
-    // Used to test a model with no custom_metadata and default values.
     this.metadataModelCreate = store.createRecord('kv/metadata', {
       backend: 'kv-engine',
       path: 'my-secret-new',

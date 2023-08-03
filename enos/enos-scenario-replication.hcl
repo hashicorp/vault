@@ -50,7 +50,7 @@ scenario "replication" {
       "rhel"   = var.rhel_distro_version
       "ubuntu" = var.ubuntu_distro_version
     }
-    bundle_path = matrix.artifact_source != "artifactory" ? abspath(var.vault_bundle_path) : null
+    bundle_path = matrix.artifact_source != "artifactory" ? abspath(var.vault_artifact_path) : null
     enos_provider = {
       rhel   = provider.enos.rhel
       ubuntu = provider.enos.ubuntu

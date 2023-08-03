@@ -40,8 +40,8 @@
 
   {{#if @verticalBarChartData}}
     <div data-test-monthly-usage-legend class="legend-right">
-      <span class="light-dot"></span><span class="legend-label">{{capitalize @chartLegend.0.label}}</span>
-      <span class="dark-dot"></span><span class="legend-label">{{capitalize @chartLegend.1.label}}</span>
+      <span class="light-dot"></span><span class="legend-label">{{capitalize (get @chartLegend "0.label")}}</span>
+      <span class="dark-dot"></span><span class="legend-label">{{capitalize (get @chartLegend "1.label")}}</span>
     </div>
   {{/if}}
 </div>

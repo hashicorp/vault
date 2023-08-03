@@ -21,8 +21,10 @@ import (
 
 	"github.com/aws/aws-sdk-go/aws"
 	awsClient "github.com/aws/aws-sdk-go/aws/client"
+	"github.com/aws/aws-sdk-go/aws/endpoints"
 	"github.com/aws/aws-sdk-go/service/ec2"
 	"github.com/aws/aws-sdk-go/service/iam"
+	"github.com/aws/aws-sdk-go/service/sts"
 	"github.com/hashicorp/errwrap"
 	cleanhttp "github.com/hashicorp/go-cleanhttp"
 	"github.com/hashicorp/go-retryablehttp"
@@ -30,6 +32,7 @@ import (
 	"github.com/hashicorp/go-secure-stdlib/parseutil"
 	"github.com/hashicorp/go-secure-stdlib/strutil"
 	uuid "github.com/hashicorp/go-uuid"
+
 	"github.com/hashicorp/vault/builtin/credential/aws/pkcs7"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/cidrutil"
@@ -318,6 +321,24 @@ func (b *backend) pathLoginIamGetRoleNameCallerIdAndEntity(ctx context.Context, 
 		}
 	}
 
+	// Extract and use a regional STS endpoint
+	// based on the region set in the Authorization header.
+	if config.UseSTSRegionFromClient {
+		clientSpecifiedRegion, err := awsRegionFromHeader(headers.Get("Authorization"))
+		if err != nil {
+			return "", nil, nil, logical.ErrorResponse("region missing from Authorization header"), nil
+		}
+
+		url, err := stsRegionalEndpoint(clientSpecifiedRegion)
+		if err != nil {
+			return "", nil, nil, logical.ErrorResponse(err.Error()), nil
+		}
+
+		b.Logger().Debug("use_sts_region_from_client set; using region specified from header", "region", clientSpecifiedRegion)
+		endpoint = url
+	}
+
+	b.Logger().Debug("submitting caller identity request", "endpoint", endpoint)
 	callerID, err := submitCallerIdentityRequest(ctx, maxRetries, method, endpoint, parsedUrl, body, headers)
 	if err != nil {
 		return "", nil, nil, logical.ErrorResponse(fmt.Sprintf("error making upstream request: %v", err)), nil
@@ -1882,6 +1903,43 @@ func getMetadataValue(fromAuth *logical.Auth, forKey string) (string, error) {
 		return val, nil
 	}
 	return "", fmt.Errorf("%q not found in auth metadata", forKey)
+}
+
+func awsRegionFromHeader(authorizationHeader string) (string, error) {
+	// https://docs.aws.amazon.com/AmazonS3/latest/API/sigv4-auth-using-authorization-header.html
+	// The Authorization header takes the following form.
+	//  Authorization: AWS4-HMAC-SHA256
+	//	Credential=AKIAIOSFODNN7EXAMPLE/20230719/us-east-1/sts/aws4_request,
+	// 	SignedHeaders=content-length;content-type;host;x-amz-date,
+	//	Signature=fe5f80f77d5fa3beca038a248ff027d0445342fe2855ddc963176630326f1024
+	//
+	// The credential is in the form of "<your-access-key-id>/<date>/<aws-region>/<aws-service>/aws4_request"
+	fields := strings.Split(authorizationHeader, " ")
+	for _, field := range fields {
+		if strings.HasPrefix(field, "Credential=") {
+			fields := strings.Split(field, "/")
+			if len(fields) < 3 {
+				return "", fmt.Errorf("invalid header format")
+			}
+
+			region := fields[2]
+			return region, nil
+		}
+	}
+
+	return "", fmt.Errorf("invalid header format")
+}
+
+func stsRegionalEndpoint(region string) (string, error) {
+	stsService := sts.EndpointsID
+	resolver := endpoints.DefaultResolver()
+	resolvedEndpoint, err := resolver.EndpointFor(stsService, region,
+		endpoints.STSRegionalEndpointOption,
+		endpoints.StrictMatchingOption)
+	if err != nil {
+		return "", fmt.Errorf("unable to get regional STS endpoint for region: %v", region)
+	}
+	return resolvedEndpoint.URL, nil
 }
 
 const iamServerIdHeader = "X-Vault-AWS-IAM-Server-ID"

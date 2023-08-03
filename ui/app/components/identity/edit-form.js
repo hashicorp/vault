@@ -12,6 +12,7 @@ import { waitFor } from '@ember/test-waiters';
 
 export default Component.extend({
   flashMessages: service(),
+  store: service(),
   'data-test-component': 'identity-edit-form',
   attributeBindings: ['data-test-component'],
   model: null,
@@ -73,12 +74,13 @@ export default Component.extend({
   ).drop(),
 
   willDestroy() {
-    this._super(...arguments);
+    // components are torn down after store is disconnected and will cause an error if attempt to unload record
+    const noTeardown = this.store && !this.store.isDestroying;
     const model = this.model;
-    if (!model) return;
-    if ((model.get('isDirty') && !model.isDestroyed) || !model.isDestroying) {
+    if (noTeardown && model && model.get('isDirty') && !model.isDestroyed && !model.isDestroying) {
       model.rollbackAttributes();
     }
+    this._super(...arguments);
   },
 
   actions: {
