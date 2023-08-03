@@ -19,7 +19,6 @@ locals {
         "amzn2" = data.aws_ami.amazon_linux_2["arm64"].id
       }
       "openSUSE" = {
-        "15.4" = data.aws_ami.openSUSE_15.4["arm64"].id
         "15.5" = data.aws_ami.openSUSE_15.5["arm64"].id
       }
     }
@@ -194,23 +193,6 @@ data "aws_ami" "amazon_linux_2" {
   }
 
   owners = [local.amazon_owner_id]
-}
-
-data "aws_ami" "openSUSE_15.4" {
-  most_recent = true
-  for_each    = local.architectures
-
-  filter {
-    name   = "name"
-    values = ["openSUSE-Leap-15-4-*-hvm-*"]
-  }
-
-  filter {
-    name   = "architecture"
-    values = [each.value]
-  }
-
-  owners = [local.openSUSE_owner_id]
 }
 
 data "aws_ami" "openSUSE_15.5" {
