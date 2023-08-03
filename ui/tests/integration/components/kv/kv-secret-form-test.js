@@ -10,11 +10,10 @@ import { setupMirage } from 'ember-cli-mirage/test-support';
 import { Response } from 'miragejs';
 import { hbs } from 'ember-cli-htmlbars';
 import { click, fillIn, findAll, render, typeIn } from '@ember/test-helpers';
-import { PAGE } from 'vault/tests/helpers/kv/kv-page-selectors';
-import { SELECTORS } from 'vault/tests/helpers/kv/kv-general-selectors';
 import codemirror from 'vault/tests/helpers/codemirror';
+import { FORM } from 'vault/tests/helpers/kv/kv-selectors';
 
-module('Integration | Component | kv | KvSecretForm', function (hooks) {
+module('Integration | Component | kv-v2 | KvSecretForm', function (hooks) {
   setupRenderingTest(hooks);
   setupEngine(hooks, 'kv');
   setupMirage(hooks);
@@ -60,10 +59,10 @@ module('Integration | Component | kv | KvSecretForm', function (hooks) {
       { owner: this.engine }
     );
 
-    await fillIn(PAGE.form.inputByAttr('path'), this.path);
-    await fillIn(PAGE.form.keyInput(), 'foo');
-    await fillIn(PAGE.form.maskedValueInput(), 'bar');
-    await click(PAGE.form.secretSave);
+    await fillIn(FORM.inputByAttr('path'), this.path);
+    await fillIn(FORM.keyInput(), 'foo');
+    await fillIn(FORM.maskedValueInput(), 'bar');
+    await click(FORM.saveBtn);
   });
 
   test('it saves nested secrets', async function (assert) {
@@ -100,11 +99,11 @@ module('Integration | Component | kv | KvSecretForm', function (hooks) {
       { owner: this.engine }
     );
 
-    assert.dom(PAGE.form.inputByAttr('path')).hasValue(pathToSecret);
-    await typeIn(PAGE.form.inputByAttr('path'), this.path);
-    await fillIn(PAGE.form.keyInput(), 'foo');
-    await fillIn(PAGE.form.maskedValueInput(), 'bar');
-    await click(PAGE.form.secretSave);
+    assert.dom(FORM.inputByAttr('path')).hasValue(pathToSecret);
+    await typeIn(FORM.inputByAttr('path'), this.path);
+    await fillIn(FORM.keyInput(), 'foo');
+    await fillIn(FORM.maskedValueInput(), 'bar');
+    await click(FORM.saveBtn);
   });
 
   test('it renders API errors', async function (assert) {
@@ -123,10 +122,10 @@ module('Integration | Component | kv | KvSecretForm', function (hooks) {
       { owner: this.engine }
     );
 
-    await fillIn(PAGE.form.inputByAttr('path'), this.path);
-    await click(PAGE.form.secretSave);
-    assert.dom(SELECTORS.messageError).hasText('Error nope', 'it renders API error');
-    assert.dom(SELECTORS.inlineAlert).hasText('There was an error submitting this form.');
+    await fillIn(FORM.inputByAttr('path'), this.path);
+    await click(FORM.saveBtn);
+    assert.dom(FORM.messageError).hasText('Error nope', 'it renders API error');
+    assert.dom(FORM.inlineAlert).hasText('There was an error submitting this form.');
   });
 
   test('it renders kv secret validations', async function (assert) {
@@ -142,32 +141,32 @@ module('Integration | Component | kv | KvSecretForm', function (hooks) {
       { owner: this.engine }
     );
 
-    await typeIn(PAGE.form.inputByAttr('path'), 'space ');
+    await typeIn(FORM.inputByAttr('path'), 'space ');
     assert
-      .dom(SELECTORS.validation('path'))
+      .dom(FORM.validation('path'))
       .hasText(
         `Path contains whitespace. If this is desired, you'll need to encode it with %20 in API requests.`
       );
 
-    await fillIn(PAGE.form.inputByAttr('path'), ''); // clear input
-    await typeIn(PAGE.form.inputByAttr('path'), 'slash/');
-    assert.dom(SELECTORS.validation('path')).hasText(`Path can't end in forward slash '/'.`);
+    await fillIn(FORM.inputByAttr('path'), ''); // clear input
+    await typeIn(FORM.inputByAttr('path'), 'slash/');
+    assert.dom(FORM.validation('path')).hasText(`Path can't end in forward slash '/'.`);
 
-    await typeIn(PAGE.form.inputByAttr('path'), 'secret');
+    await typeIn(FORM.inputByAttr('path'), 'secret');
     assert
-      .dom(SELECTORS.validation('path'))
+      .dom(FORM.validation('path'))
       .doesNotExist('it removes validation on key up when secret contains slash but does not end in one');
 
-    await click(SELECTORS.toggleJson);
+    await click(FORM.toggleJson);
     codemirror().setValue('i am a string and not JSON');
     assert
-      .dom(SELECTORS.inlineAlert)
+      .dom(FORM.inlineAlert)
       .hasText('JSON is unparsable. Fix linting errors to avoid data discrepancies.');
 
     codemirror().setValue('{}'); // clear linting error
-    await fillIn(PAGE.form.inputByAttr('path'), '');
-    await click(PAGE.form.secretSave);
-    const [pathValidation, formAlert] = findAll(SELECTORS.inlineAlert);
+    await fillIn(FORM.inputByAttr('path'), '');
+    await click(FORM.saveBtn);
+    const [pathValidation, formAlert] = findAll(FORM.inlineAlert);
     assert.dom(pathValidation).hasText(`Path can't be blank.`);
     assert.dom(formAlert).hasText('There is an error with this form.');
   });
@@ -186,20 +185,20 @@ module('Integration | Component | kv | KvSecretForm', function (hooks) {
       { owner: this.engine }
     );
 
-    assert.dom(PAGE.form.dataInputLabel({ isJson: false })).hasText('Secret data');
-    await click(SELECTORS.toggleJson);
-    assert.dom(PAGE.form.dataInputLabel({ isJson: true })).hasText('Secret data');
+    assert.dom(FORM.dataInputLabel()).hasText('Secret data');
+    await click(FORM.toggleJson);
+    assert.dom(FORM.dataInputLabel({ isJson: true })).hasText('Secret data');
 
     assert.strictEqual(
       codemirror().getValue(' '),
       `{   \"\": \"\" }`, // eslint-disable-line no-useless-escape
       'json editor initializes with empty object'
     );
-    await fillIn(`${SELECTORS.jsonEditor} textarea`, 'blah');
+    await fillIn(`${FORM.jsonEditor} textarea`, 'blah');
     assert.strictEqual(codemirror().state.lint.marked.length, 1, 'codemirror lints input');
     codemirror().setValue(`{ "hello": "there"}`);
     assert.propEqual(this.secret.secretData, { hello: 'there' }, 'json editor updates secret data');
-    await click(PAGE.form.secretCancel);
+    await click(FORM.cancelBtn);
   });
 
   test('it disables path and prefills secret data when creating a new secret version', async function (assert) {
@@ -224,14 +223,14 @@ module('Integration | Component | kv | KvSecretForm', function (hooks) {
       { owner: this.engine }
     );
 
-    assert.dom(PAGE.form.inputByAttr('path')).isDisabled();
-    assert.dom(PAGE.form.inputByAttr('path')).hasValue(this.path);
-    assert.dom(PAGE.form.keyInput()).hasValue('foo');
-    assert.dom(PAGE.form.maskedValueInput()).hasValue('bar');
+    assert.dom(FORM.inputByAttr('path')).isDisabled();
+    assert.dom(FORM.inputByAttr('path')).hasValue(this.path);
+    assert.dom(FORM.keyInput()).hasValue('foo');
+    assert.dom(FORM.maskedValueInput()).hasValue('bar');
 
-    assert.dom(PAGE.form.dataInputLabel({ isJson: false })).hasText('Version data');
-    await click(SELECTORS.toggleJson);
-    assert.dom(PAGE.form.dataInputLabel({ isJson: true })).hasText('Version data');
+    assert.dom(FORM.dataInputLabel({ isJson: false })).hasText('Version data');
+    await click(FORM.toggleJson);
+    assert.dom(FORM.dataInputLabel({ isJson: true })).hasText('Version data');
   });
 
   test('it renders alert when creating a new secret version from an old version', async function (assert) {
@@ -263,7 +262,7 @@ module('Integration | Component | kv | KvSecretForm', function (hooks) {
     );
 
     assert
-      .dom(PAGE.form.versionAlert)
+      .dom(FORM.versionAlert)
       .hasText(
         `Warning You are creating a new version based on data from Version 2. The current version for my-secret is Version ${this.metadata.currentVersion}.`
       );

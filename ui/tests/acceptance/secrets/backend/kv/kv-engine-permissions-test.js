@@ -13,11 +13,11 @@ import enablePage from 'vault/tests/pages/settings/mount-secret-backend';
 import { currentURL, visit } from '@ember/test-helpers';
 import { adminPolicy, dataPolicy, metadataPolicy } from 'vault/tests/helpers/policy-generator/kv';
 import { tokenWithPolicy, runCommands, writeSecret } from 'vault/tests/helpers/kv/kv-run-commands';
-import { SELECTORS } from 'vault/tests/helpers/kv/kv-general-selectors';
+import { PAGE } from 'vault/tests/helpers/kv/kv-selectors';
 
-/* 
+/*
 This test module tests KV permissions views, each module is is a separate tab (i.e. secret, metadata)
-each sub-module is a different state, for example: 
+each sub-module is a different state, for example:
 - it renders secret details
 - it renders secret details after a version is deleted
 
@@ -75,10 +75,10 @@ module('Acceptance | kv permissions', function (hooks) {
         await authPage.login(this.kvAdminToken);
         await visit(`/vault/secrets/${this.mountPath}/kv/${this.secretPath}/details`);
         assert.strictEqual(currentURL(), `/vault/secrets/${this.mountPath}/kv/${this.secretPath}/details`);
-        assert.dom(SELECTORS.secretTab('Secret')).exists();
-        assert.dom(SELECTORS.secretTab('Metadata')).exists();
-        assert.dom(SELECTORS.secretTab('Version History')).exists();
-        assert.dom(SELECTORS.secretTab('Version Diff')).exists();
+        assert.dom(PAGE.secretTab('Secret')).exists();
+        assert.dom(PAGE.secretTab('Metadata')).exists();
+        assert.dom(PAGE.secretTab('Version History')).exists();
+        assert.dom(PAGE.secretTab('Version Diff')).exists();
       });
 
       test('it hides tabs when no metadata read', async function (assert) {
@@ -86,10 +86,10 @@ module('Acceptance | kv permissions', function (hooks) {
         await authPage.login(this.cannotReadMetadata);
         await visit(`/vault/secrets/${this.mountPath}/kv/${this.secretPath}/details`);
         assert.strictEqual(currentURL(), `/vault/secrets/${this.mountPath}/kv/${this.secretPath}/details`);
-        assert.dom(SELECTORS.secretTab('Secret')).exists();
-        assert.dom(SELECTORS.secretTab('Metadata')).exists();
-        assert.dom(SELECTORS.secretTab('Version History')).doesNotExist();
-        assert.dom(SELECTORS.secretTab('Version Diff')).doesNotExist();
+        assert.dom(PAGE.secretTab('Secret')).exists();
+        assert.dom(PAGE.secretTab('Metadata')).exists();
+        assert.dom(PAGE.secretTab('Version History')).doesNotExist();
+        assert.dom(PAGE.secretTab('Version Diff')).doesNotExist();
       });
 
       test('it shows empty state when cannot read secret data', async function (assert) {
@@ -97,13 +97,13 @@ module('Acceptance | kv permissions', function (hooks) {
         await authPage.login(this.cannotReadData);
         await visit(`/vault/secrets/${this.mountPath}/kv/${this.secretPath}/details`);
         assert.strictEqual(currentURL(), `/vault/secrets/${this.mountPath}/kv/${this.secretPath}/details`);
-        assert.dom(SELECTORS.secretTab('Secret')).exists();
-        assert.dom(SELECTORS.secretTab('Metadata')).exists();
-        assert.dom(SELECTORS.secretTab('Version History')).doesNotExist();
-        assert.dom(SELECTORS.secretTab('Version Diff')).doesNotExist();
-        assert.dom(SELECTORS.emptyStateTitle).hasText('You do not have permission to read this secret');
+        assert.dom(PAGE.secretTab('Secret')).exists();
+        assert.dom(PAGE.secretTab('Metadata')).exists();
+        assert.dom(PAGE.secretTab('Version History')).doesNotExist();
+        assert.dom(PAGE.secretTab('Version Diff')).doesNotExist();
+        assert.dom(PAGE.emptyStateTitle).hasText('You do not have permission to read this secret');
         assert
-          .dom(SELECTORS.emptyStateMessage)
+          .dom(PAGE.emptyStateMessage)
           .hasText(
             'Your policies may permit you to write a new version of this secret, but do not allow you to read its current contents.'
           );

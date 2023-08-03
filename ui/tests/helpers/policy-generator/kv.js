@@ -31,3 +31,11 @@ export const metadataPolicy = ({ backend, secretPath = '*', capabilities = root 
     }
   `;
 };
+
+export const metadataListPolicy = (backend) => {
+  return `
+    path "${backend}/metadata" {
+        capabilities = ["list"]
+    }
+  `;
+};
