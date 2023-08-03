@@ -13,6 +13,7 @@ export const SELECTORS = {
   secretTab: (tab) => `[data-test-secrets-tab="${tab}"]`,
   emptyStateTitle: '[data-test-empty-state-title]',
   emptyStateMessage: '[data-test-empty-state-message]',
+  emptyStateActions: '[data-test-empty-state-actions]',
   inlineAlert: '[data-test-inline-alert]',
   validation: (attr) => `[data-test-field="${attr}"] [data-test-inline-alert]`,
   messageError: '[data-test-message-error]',

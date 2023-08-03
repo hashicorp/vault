@@ -16,7 +16,12 @@
   </:toolbarFilters>
 
   <:toolbarActions>
-    <ToolbarLink @route="create" @query={{hash initialKey=@model.pathToSecret}} @type="add">Create secret</ToolbarLink>
+    <ToolbarLink
+      data-test-toolbar-create-secret
+      @route="create"
+      @query={{hash initialKey=@model.pathToSecret}}
+      @type="add"
+    >Create secret</ToolbarLink>
   </:toolbarActions>
 </KvPageHeader>
 
@@ -48,6 +53,7 @@
   {{#if @model.secrets}}
     {{#each @model.secrets as |secret|}}
       <LinkedBlock
+        data-test-list-item={{secret.path}}
         class="list-item-row"
         @params={{array (if secret.pathIsDirectory "list-directory" "secret.details") secret.fullSecretPath}}
         @linkPrefix={{this.mountPoint}}
@@ -88,7 +94,7 @@
                       {{! ARG TODO check that you don't also need create (this checks for update) }}
                       {{#if secret.canEditData}}
                         <li>
-                          <LinkTo @route="secret.edit" @model={{secret.fullSecretPath}}>
+                          <LinkTo @route="secret.details.edit" @model={{secret.fullSecretPath}}>
                             Create new version
                           </LinkTo>
                         </li>

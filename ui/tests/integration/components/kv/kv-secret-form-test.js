@@ -174,7 +174,7 @@ module('Integration | Component | kv | KvSecretForm', function (hooks) {
 
   // TODO validate onConfirmLeave() unloads model on cancel
   test('it toggles JSON view and editor modifies secretData', async function (assert) {
-    assert.expect(4);
+    assert.expect(6);
     this.onCancel = () => assert.ok(true, 'onCancel callback fires on save success');
 
     await render(
@@ -186,7 +186,10 @@ module('Integration | Component | kv | KvSecretForm', function (hooks) {
       { owner: this.engine }
     );
 
+    assert.dom(PAGE.form.dataInputLabel({ isJson: false })).hasText('Secret data');
     await click(SELECTORS.toggleJson);
+    assert.dom(PAGE.form.dataInputLabel({ isJson: true })).hasText('Secret data');
+
     assert.strictEqual(
       codemirror().getValue(' '),
       `{   \"\": \"\" }`, // eslint-disable-line no-useless-escape
@@ -197,5 +200,72 @@ module('Integration | Component | kv | KvSecretForm', function (hooks) {
     codemirror().setValue(`{ "hello": "there"}`);
     assert.propEqual(this.secret.secretData, { hello: 'there' }, 'json editor updates secret data');
     await click(PAGE.form.secretCancel);
+  });
+
+  test('it disables path and prefills secret data when creating a new secret version', async function (assert) {
+    assert.expect(6);
+    this.secret.secretData = { foo: 'bar' };
+    this.secret.path = this.path;
+
+    this.newVersion = this.store.createRecord('kv/data', {
+      backend: this.backend,
+      path: this.path,
+      secretData: this.secret.secretData,
+    });
+
+    await render(
+      hbs`
+        <KvSecretForm
+          @previousVersion={{this.secret}}
+          @secret={{this.newVersion}}
+          @onSave={{this.onSave}}
+          @onCancel={{this.onCancel}}
+        />`,
+      { owner: this.engine }
+    );
+
+    assert.dom(PAGE.form.inputByAttr('path')).isDisabled();
+    assert.dom(PAGE.form.inputByAttr('path')).hasValue(this.path);
+    assert.dom(PAGE.form.keyInput()).hasValue('foo');
+    assert.dom(PAGE.form.maskedValueInput()).hasValue('bar');
+
+    assert.dom(PAGE.form.dataInputLabel({ isJson: false })).hasText('Version data');
+    await click(SELECTORS.toggleJson);
+    assert.dom(PAGE.form.dataInputLabel({ isJson: true })).hasText('Version data');
+  });
+
+  test('it renders alert when creating a new secret version from an old version', async function (assert) {
+    assert.expect(1);
+    const metadata = this.server.create('kv-metadatum');
+    metadata.id = 'my-metadata';
+    metadata.backend = this.backend;
+    this.store.pushPayload('kv/metadata', {
+      modelName: 'kv/metadata',
+      ...metadata,
+    });
+    this.metadata = this.store.peekRecord('kv/metadata', 'my-metadata');
+    // mimics createRecord in model hook of details/edit route
+    this.newVersion = this.store.createRecord('kv/data', {
+      backend: this.backend,
+      path: this.path,
+      secretData: { foo: 'bar' },
+    });
+    await render(
+      hbs`
+        <KvSecretForm
+          @previousVersion={{2}}
+          @metadata={{this.metadata}}
+          @secret={{this.newVersion}}
+          @onSave={{this.onSave}}
+          @onCancel={{this.onCancel}}
+        />`,
+      { owner: this.engine }
+    );
+
+    assert
+      .dom(PAGE.form.versionAlert)
+      .hasText(
+        `Warning You are creating a new version based on data from Version 2. The current version for my-secret is Version ${this.metadata.currentVersion}.`
+      );
   });
 });
