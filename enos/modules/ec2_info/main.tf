@@ -1,6 +1,8 @@
 locals {
   architectures      = toset(["arm64", "x86_64"])
+  amazon_owner_id    = "013907871322"
   canonical_owner_id = "099720109477"
+  openSUSE_owner_id  = "679593333241"
   rhel_owner_id      = "309956199498"
   ids = {
     "arm64" = {
@@ -13,6 +15,13 @@ locals {
         "20.04" = data.aws_ami.ubuntu_2004["arm64"].id
         "22.04" = data.aws_ami.ubuntu_2204["arm64"].id
       }
+      "amazon_linux" = {
+        "amzn2" = data.aws_ami.amazon_linux_2["arm64"].id
+      }
+      "openSUSE" = {
+        "15.4" = data.aws_ami.openSUSE_15.4["arm64"].id
+        "15.5" = data.aws_ami.openSUSE_15.5["arm64"].id
+      }
     }
     "amd64" = {
       "rhel" = {
@@ -24,6 +33,13 @@ locals {
         "18.04" = data.aws_ami.ubuntu_1804["x86_64"].id
         "20.04" = data.aws_ami.ubuntu_2004["x86_64"].id
         "22.04" = data.aws_ami.ubuntu_2204["x86_64"].id
+      }
+      "amazon_linux" = {
+        "amzn2" = data.aws_ami.amazon_linux_2["x86_64"].id
+      }
+      "openSUSE" = {
+        "15.4" = data.aws_ami.openSUSE_15.4["x86_64"].id
+        "15.5" = data.aws_ami.openSUSE_15.5["x86_64"].id
       }
     }
   }
@@ -161,6 +177,57 @@ data "aws_ami" "rhel_91" {
   }
 
   owners = [local.rhel_owner_id]
+}
+
+data "aws_ami" "amazon_linux_2" {
+  most_recent = true
+  for_each    = local.architectures
+
+  filter {
+    name   = "name"
+    values = ["amzn2-ami-hvm*"]
+  }
+
+  filter {
+    name   = "architecture"
+    values = [each.value]
+  }
+
+  owners = [local.amazon_owner_id]
+}
+
+data "aws_ami" "openSUSE_15.4" {
+  most_recent = true
+  for_each    = local.architectures
+
+  filter {
+    name   = "name"
+    values = ["openSUSE-Leap-15-4-*-hvm-*"]
+  }
+
+  filter {
+    name   = "architecture"
+    values = [each.value]
+  }
+
+  owners = [local.openSUSE_owner_id]
+}
+
+data "aws_ami" "openSUSE_15.5" {
+  most_recent = true
+  for_each    = local.architectures
+
+  filter {
+    name   = "name"
+    values = ["openSUSE-Leap-15-5-*-hvm-*"]
+  }
+
+  filter {
+    name   = "architecture"
+    values = [each.value]
+  }
+
+  owners = [local.openSUSE_owner_id]
 }
 
 data "aws_region" "current" {}
