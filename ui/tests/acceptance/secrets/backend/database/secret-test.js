@@ -14,7 +14,6 @@ import connectionPage from 'vault/tests/pages/secrets/backend/database/connectio
 import rolePage from 'vault/tests/pages/secrets/backend/database/role';
 import authPage from 'vault/tests/pages/auth';
 import logout from 'vault/tests/pages/logout';
-import consoleClass from 'vault/tests/pages/components/console/ui-panel';
 import searchSelect from 'vault/tests/pages/components/search-select';
 import {
   createPolicyCmd,
@@ -25,7 +24,6 @@ import {
 } from 'vault/tests/helpers/commands';
 
 const searchSelectComponent = create(searchSelect);
-const consoleComponent = create(consoleClass);
 
 const newConnection = async (backend, plugin = 'mongodb-database-plugin') => {
   const name = `connection-${Date.now()}`;
@@ -231,10 +229,10 @@ module('Acceptance | secrets/database/*', function (hooks) {
   hooks.beforeEach(async function () {
     this.backend = `database-testing`;
     await authPage.login();
-    return consoleComponent.runCommands(mountEngineCmd('database', this.backend));
+    return runCmd(mountEngineCmd('database', this.backend), false);
   });
   hooks.afterEach(function () {
-    return consoleComponent.runCommands(deleteEngineCmd(this.backend));
+    return runCmd(deleteEngineCmd(this.backend), false);
   });
 
   test('can enable the database secrets engine', async function (assert) {
@@ -256,7 +254,7 @@ module('Acceptance | secrets/database/*', function (hooks) {
     assert.dom('[data-test-secret-list-tab="Roles"]').exists('Has Roles tab');
     await visit('/vault/secrets');
     // Cleanup backend
-    await consoleComponent.runCommands(deleteEngineCmd(backend));
+    await runCmd(deleteEngineCmd(backend), false);
   });
 
   for (const testCase of connectionTests) {
@@ -451,9 +449,9 @@ module('Acceptance | secrets/database/*', function (hooks) {
         capabilities = ["delete"]
       }
     `;
-    const token = await runCmd(consoleComponent, [
-      ...createPolicyCmd('test-policy', CONNECTION_VIEW_ONLY),
-      ...tokenWithPolicyCmd('test-policy'),
+    const token = await runCmd([
+      createPolicyCmd('test-policy', CONNECTION_VIEW_ONLY),
+      tokenWithPolicyCmd('test-policy'),
     ]);
     await navToConnection(backend, connection);
     assert
@@ -540,9 +538,9 @@ module('Acceptance | secrets/database/*', function (hooks) {
         capabilities = ["list", "create", "read", "update"]
       }
     `;
-    const token = await runCmd(consoleComponent, [
-      ...createPolicyCmd('test-policy', NO_ROLES_POLICY),
-      ...tokenWithPolicyCmd('test-policy'),
+    const token = await runCmd([
+      createPolicyCmd('test-policy', NO_ROLES_POLICY),
+      tokenWithPolicyCmd('test-policy'),
     ]);
 
     // test root user flow first
