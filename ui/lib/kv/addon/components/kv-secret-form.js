@@ -43,8 +43,8 @@ export default class KvSecretForm extends Component {
 
   get showAlert() {
     const { metadata, previousVersion } = this.args;
-    if (!metadata?.currentVersion || !previousVersion) return false;
-    if (!this.args.secret.isNew) return false; // prevents alert from flashing after save before route transition
+    // isNew check prevents alert from flashing after save but before route transitions
+    if (!metadata?.currentVersion || !previousVersion || !this.args.secret.isNew) return false;
     if (metadata.currentVersion !== previousVersion) return true;
     return false;
   }
