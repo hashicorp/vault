@@ -25,7 +25,7 @@ export const PAGE = {
   },
   list: {
     popup: '[data-test-popup-menu-trigger]',
-    rows: '[data-test-version-linked-block]',
+    icon: (version) => `[data-test-icon-holder="${version}"]`,
     linkedBlock: (version) => `[data-test-version-linked-block="${version}"]`,
   },
 };

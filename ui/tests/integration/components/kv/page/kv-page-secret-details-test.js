@@ -134,7 +134,7 @@ module('Integration | Component | kv | Page::Secret::Details', function (hooks) 
   });
 
   test('it renders secret version dropdown', async function (assert) {
-    assert.expect(9);
+    assert.expect(10);
 
     await render(
       hbs`
@@ -162,9 +162,8 @@ module('Integration | Component | kv | Page::Secret::Details', function (hooks) 
           .hasClass(`${data.destroyed ? 'has-text-danger' : 'has-text-grey'}`);
       }
     }
-
     assert
-      .dom(`${PAGE.details.version(this.metadata.currentVersion)} [data-test-icon="check-circle"]`)
-      .exists('renders current version icon');
+      .dom(`${PAGE.details.version(this.metadata.currentVersion)} [data-test-icon="x-square-fill"]`)
+      .exists('renders deleted icon instead of the current version icon');
   });
 });

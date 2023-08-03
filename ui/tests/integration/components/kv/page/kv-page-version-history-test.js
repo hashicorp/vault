@@ -37,7 +37,7 @@ module('Integration | Component | kv | Page::Secret::Version-History', function 
   });
 
   test('it renders version history and shows icons for deleted, destroyed and current', async function (assert) {
-    assert.expect(5);
+    assert.expect(8);
 
     await render(
       hbs`
@@ -49,34 +49,26 @@ module('Integration | Component | kv | Page::Secret::Version-History', function 
       `,
       { owner: this.engine }
     );
-    const rows = document.querySelectorAll(PAGE.list.rows);
-    rows.forEach((element, index) => {
-      if (index === 0) {
-        // using querySelector to search for nested classes instead of hasClass
+
+    for (const version in this.metadata.versions) {
+      const data = this.metadata.versions[version];
+      assert.dom(PAGE.list.linkedBlock(version)).exists(`renders the linked blocks for each version`);
+
+      if (data.destroyed) {
         assert
-          .dom(element.querySelector('.has-text-danger'))
-          .exists('version 4 has the destroyed flight icon');
+          .dom(`${PAGE.list.icon(version)} [data-test-icon="x-square-fill"]`)
+          .hasStyle({ color: 'rgb(199, 52, 69)' });
+      }
+      if (data.deletion_time) {
         assert
-          .dom(element.querySelector('.has-text-success'))
-          .exists('version 4 has the current version icon');
+          .dom(`${PAGE.list.icon(version)} [data-test-icon="x-square-fill"]`)
+          .hasStyle({ color: 'rgb(111, 118, 130)' });
       }
-      if (index === 1) {
-        assert
-          .dom(element.querySelector('.has-text-danger'))
-          .exists('version 3 has the destroyed flight icon');
-      }
-      if (index === 2) {
-        assert.dom(element.querySelector('.has-text-grey')).exists('version 2 has the deleted flight icon');
-      }
-      if (index === 3) {
-        assert
-          .dom(element.querySelector('.flight-icon'))
-          .exists(
-            { count: 1 },
-            'only shows the version icon if secret is not deleted or destroyed or current'
-          );
-      }
-    });
+    }
+
+    assert
+      .dom(`${PAGE.list.icon(this.metadata.currentVersion)} [data-test-icon="check-circle-fill"]`)
+      .exists('renders the current version');
   });
 
   test('it gives the option to create a new version from a secret from the popup menu', async function (assert) {
