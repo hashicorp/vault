@@ -17,6 +17,7 @@ import (
 	"github.com/hashicorp/vault/sdk/helper/locksutil"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/sdk/queue"
+	"github.com/robfig/cron"
 )
 
 func pathListRoles(b *databaseBackend) []*framework.Path {
@@ -198,6 +199,11 @@ func staticFields() map[string]*framework.FieldSchema {
 	credential rotation of the given username. Not valid unless used with
 	"username".`,
 		},
+		"rotation_schedule": {
+			Type: framework.TypeString,
+			Description: `Schedule for automatic credential rotation of the
+	given username.`,
+		},
 		"rotation_statements": {
 			Type: framework.TypeStringSlice,
 			Description: `Specifies the database statements to be executed to
@@ -297,6 +303,7 @@ func (b *databaseBackend) pathStaticRoleRead(ctx context.Context, req *logical.R
 		if !role.StaticAccount.LastVaultRotation.IsZero() {
 			data["last_vault_rotation"] = role.StaticAccount.LastVaultRotation
 		}
+		data["rotation_schedule"] = role.StaticAccount.RotationSchedule
 	}
 
 	if len(role.CredentialConfig) > 0 {
@@ -480,6 +487,7 @@ func (b *databaseBackend) pathRoleCreateUpdate(ctx context.Context, req *logical
 }
 
 func (b *databaseBackend) pathStaticRoleCreateUpdate(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	response := &logical.Response{}
 	name := data.Get("name").(string)
 	if name == "" {
 		return logical.ErrorResponse("empty role name attribute given"), nil
@@ -536,12 +544,17 @@ func (b *databaseBackend) pathStaticRoleCreateUpdate(ctx context.Context, req *l
 	}
 	role.StaticAccount.Username = username
 
-	// If it's a Create operation, both username and rotation_period must be included
-	rotationPeriodSecondsRaw, ok := data.GetOk("rotation_period")
-	if !ok && createRole {
-		return logical.ErrorResponse("rotation_period is required to create static accounts"), nil
+	rotationPeriodSecondsRaw, rotationPeriodOk := data.GetOk("rotation_period")
+	rotationSchedule := data.Get("rotation_schedule").(string)
+	rotationScheduleOk := rotationSchedule != ""
+
+	if rotationScheduleOk && rotationPeriodOk {
+		response.AddWarning("mutually exclusive fields rotation_period and rotation_schedule were both specified; rotation_period takes priority")
+	} else if createRole && (!rotationScheduleOk && !rotationPeriodOk) {
+		return logical.ErrorResponse("one of rotation_schedule or rotation_period must be provided to create a static account"), nil
 	}
-	if ok {
+
+	if rotationPeriodOk {
 		rotationPeriodSeconds := rotationPeriodSecondsRaw.(int)
 		if rotationPeriodSeconds < defaultQueueTickSeconds {
 			// If rotation frequency is specified, and this is an update, the value
@@ -550,6 +563,15 @@ func (b *databaseBackend) pathStaticRoleCreateUpdate(ctx context.Context, req *l
 			return logical.ErrorResponse(fmt.Sprintf("rotation_period must be %d seconds or more", defaultQueueTickSeconds)), nil
 		}
 		role.StaticAccount.RotationPeriod = time.Duration(rotationPeriodSeconds) * time.Second
+	}
+	if rotationScheduleOk {
+		// we will use cront.Parse to validate the input but disregard the
+		// parsed result for now.
+		_, err := cron.Parse(rotationSchedule)
+		if err != nil {
+			return logical.ErrorResponse("could not parse rotation_schedule", "error", err), nil
+		}
+		role.StaticAccount.RotationSchedule = rotationSchedule
 	}
 
 	if rotationStmtsRaw, ok := data.GetOk("rotation_statements"); ok {
@@ -630,6 +652,9 @@ func (b *databaseBackend) pathStaticRoleCreateUpdate(ctx context.Context, req *l
 		return nil, err
 	}
 
+	if response.IsError() {
+		return response, nil
+	}
 	return nil, nil
 }
 
@@ -734,6 +759,12 @@ type staticAccount struct {
 	// "time to live". This value is compared to the LastVaultRotation to
 	// determine if a password needs to be rotated
 	RotationPeriod time.Duration `json:"rotation_period"`
+
+	// RotationSchedule is a "chron style" string representing the allowed
+	// schedule for each rotation.
+	// e.g. "1 0 * * *" would rotate at one minute past midnight (00:01) every
+	// day.
+	RotationSchedule string `json:"rotation_scedule"`
 
 	// RevokeUser is a boolean flag to indicate if Vault should revoke the
 	// database user when the role is deleted
