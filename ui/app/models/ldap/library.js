@@ -60,6 +60,10 @@ export default class LdapLibraryModel extends Model {
   })
   disable_check_in_enforcement;
 
+  get displayFields() {
+    return this.formFields.filter((field) => field.name !== 'service_account_names');
+  }
+
   @lazyCapabilities(apiPath`${'backend'}/library/${'name'}`, 'backend', 'name') libraryPath;
 
   get canCreate() {
