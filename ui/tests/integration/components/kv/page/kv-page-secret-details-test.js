@@ -162,6 +162,7 @@ module('Integration | Component | kv | Page::Secret::Details', function (hooks) 
           .hasClass(`${data.destroyed ? 'has-text-danger' : 'has-text-grey'}`);
       }
     }
+
     assert
       .dom(`${PAGE.details.version(this.metadata.currentVersion)} [data-test-icon="check-circle"]`)
       .exists('renders current version icon');
