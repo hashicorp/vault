@@ -52,7 +52,7 @@ module('Acceptance | kv-v2 workflow | secret and version create', function (hook
       // click "Create secret"
       // ✅ URL is vault/secrets/:backend/kv/create
       // ✅ Path input is empty
-      // click [data-test-kv-secret-save]
+      // click [data-test-kv-save]
       // ✅ Shows validation errors
     });
     test.skip('create new nested secret flow', async function (assert) {
