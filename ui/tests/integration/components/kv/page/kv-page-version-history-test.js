@@ -13,7 +13,7 @@ import { kvMetadataPath } from 'vault/utils/kv-path';
 import { PAGE } from 'vault/tests/helpers/kv/kv-selectors';
 import { allowAllCapabilitiesStub } from 'vault/tests/helpers/stubs';
 
-module('Integration | Component | kv | Page::Secret::Version-History', function (hooks) {
+module('Integration | Component | kv | Page::Secret::Metadata::Version-History', function (hooks) {
   setupRenderingTest(hooks);
   setupEngine(hooks, 'kv');
   setupMirage(hooks);
