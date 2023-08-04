@@ -533,47 +533,49 @@ func (d *autoSeal) StartHealthCheck() {
 			testVal := fmt.Sprintf("Heartbeat %d", mathrand.Intn(1000))
 			anyUnhealthy := false
 			for _, w := range d.Access.GetSealInfoByPriority() {
-				w.HcLock.Lock()
-				defer w.HcLock.Unlock()
-				mLabels := []metrics.Label{{Name: "seal_name", Value: w.Name}}
-				fail := func(msg string, args ...interface{}) {
-					d.logger.Warn(msg, args...)
-					if w.Healthy {
-						healthCheck.Reset(sealHealthTestIntervalUnhealthy)
+				func() {
+					w.HcLock.Lock()
+					defer w.HcLock.Unlock()
+					mLabels := []metrics.Label{{Name: "seal_name", Value: w.Name}}
+					fail := func(msg string, args ...interface{}) {
+						d.logger.Warn(msg, args...)
+						if w.Healthy {
+							healthCheck.Reset(sealHealthTestIntervalUnhealthy)
+						}
+						w.Healthy = false
+						d.core.MetricSink().SetGaugeWithLabels(autoSealUnavailableDuration, float32(time.Since(w.LastSeenHealthy).Milliseconds()), mLabels)
 					}
-					w.Healthy = false
-					d.core.MetricSink().SetGaugeWithLabels(autoSealUnavailableDuration, float32(time.Since(w.LastSeenHealthy).Milliseconds()), mLabels)
-				}
-				ciphertext, err := w.Encrypt(ctx, []byte(testVal), nil)
-				checkTime := time.Now()
-				w.LastHealthCheck = checkTime
+					ciphertext, err := w.Encrypt(ctx, []byte(testVal), nil)
+					checkTime := time.Now()
+					w.LastHealthCheck = checkTime
 
-				if err != nil {
-					fail("failed to encrypt seal health test value, seal backend may be unreachable", "error", err, "seal_name", w.Name)
-					anyUnhealthy = true
-				} else {
-					func() {
-						ctx, cancel := context.WithTimeout(ctx, sealHealthTestTimeout)
-						defer cancel()
-						plaintext, err := w.Decrypt(ctx, ciphertext, nil)
-						if err != nil {
-							fail("failed to decrypt seal health test value, seal backend may be unreachable", "error", err, "seal_name", w.Name)
-						}
-						if !bytes.Equal([]byte(testVal), plaintext) {
-							fail("seal health test value failed to decrypt to expected value", "seal_name", w.Name)
-						} else {
-							d.logger.Debug("seal health test passed", "seal_name", w.Name)
-							if !w.Healthy {
-								d.logger.Info("seal backend is now healthy again", "downtime", t.Sub(w.LastSeenHealthy).String(), "seal_name", w.Name)
-								healthCheck.Reset(sealHealthTestIntervalNominal)
+					if err != nil {
+						fail("failed to encrypt seal health test value, seal backend may be unreachable", "error", err, "seal_name", w.Name)
+						anyUnhealthy = true
+					} else {
+						func() {
+							ctx, cancel := context.WithTimeout(ctx, sealHealthTestTimeout)
+							defer cancel()
+							plaintext, err := w.Decrypt(ctx, ciphertext, nil)
+							if err != nil {
+								fail("failed to decrypt seal health test value, seal backend may be unreachable", "error", err, "seal_name", w.Name)
 							}
+							if !bytes.Equal([]byte(testVal), plaintext) {
+								fail("seal health test value failed to decrypt to expected value", "seal_name", w.Name)
+							} else {
+								d.logger.Debug("seal health test passed", "seal_name", w.Name)
+								if !w.Healthy {
+									d.logger.Info("seal backend is now healthy again", "downtime", t.Sub(w.LastSeenHealthy).String(), "seal_name", w.Name)
+									healthCheck.Reset(sealHealthTestIntervalNominal)
+								}
 
-							w.Healthy = true
-							w.LastSeenHealthy = checkTime
-							d.core.MetricSink().SetGaugeWithLabels(autoSealUnavailableDuration, 0, mLabels)
-						}
-					}()
-				}
+								w.Healthy = true
+								w.LastSeenHealthy = checkTime
+								d.core.MetricSink().SetGaugeWithLabels(autoSealUnavailableDuration, 0, mLabels)
+							}
+						}()
+					}
+				}()
 			}
 			d.hcLock.Lock()
 			defer d.hcLock.Unlock()

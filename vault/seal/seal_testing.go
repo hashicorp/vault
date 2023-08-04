@@ -43,20 +43,31 @@ func NewTestSeal(opts *TestSealOpts) (Access, []*ToggleableWrapper) {
 	return sealAccess, wrappers
 }
 
-func NewToggleableTestSeal(opts *TestSealOpts) (Access, func(error)) {
+func NewToggleableTestSeal(opts *TestSealOpts) (Access, []func(error)) {
 	if opts == nil {
 		opts = new(TestSealOpts)
 	}
+	if opts.WrapperCount == 0 {
+		opts.WrapperCount = 1
+	}
 
-	w := &ToggleableWrapper{Wrapper: wrapping.NewTestWrapper(opts.Secret)}
-	sealAccess := NewAccess([]SealInfo{
-		{
-			Wrapper:  w,
-			Priority: 1,
-			Name:     "shamir",
-		},
-	})
-	return sealAccess, w.SetError
+	wrappers := make([]*ToggleableWrapper, opts.WrapperCount)
+	sealInfos := make([]SealInfo, opts.WrapperCount)
+	funcs := make([]func(error), opts.WrapperCount)
+	for i := 0; i < opts.WrapperCount; i++ {
+		w := &ToggleableWrapper{Wrapper: wrapping.NewTestWrapper(opts.Secret)}
+		wrappers[i] = w
+		sealInfos[i] = SealInfo{
+			Wrapper:  wrappers[i],
+			Priority: i + 1,
+			Name:     fmt.Sprintf("%s-%d", opts.Name, i+1),
+		}
+		funcs[i] = w.SetError
+	}
+
+	sealAccess := NewAccess(sealInfos)
+
+	return sealAccess, funcs
 }
 
 type ToggleableWrapper struct {

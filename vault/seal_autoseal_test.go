@@ -185,7 +185,7 @@ func TestAutoSeal_HealthCheck(t *testing.T) {
 	metrics.NewGlobal(metricsConf, inmemSink)
 
 	pBackend := newTestBackend(t)
-	testSealAccess, setErr := seal.NewToggleableTestSeal(nil)
+	testSealAccess, setErrs := seal.NewToggleableTestSeal(nil)
 	core, _, _ := TestCoreUnsealedWithConfig(t, &CoreConfig{
 		MetricSink: metricsutil.NewClusterMetricSink("", inmemSink),
 		Physical:   pBackend,
@@ -201,7 +201,7 @@ func TestAutoSeal_HealthCheck(t *testing.T) {
 	core.seal = autoSeal
 	autoSeal.StartHealthCheck()
 	defer autoSeal.StopHealthCheck()
-	setErr(errors.New("disconnected"))
+	setErrs[0](errors.New("disconnected"))
 
 	tries := 10
 	for tries = 10; tries > 0; tries-- {
@@ -214,7 +214,7 @@ func TestAutoSeal_HealthCheck(t *testing.T) {
 		t.Fatalf("Expected to detect unhealthy seals")
 	}
 
-	setErr(nil)
+	setErrs[0](nil)
 	time.Sleep(50 * time.Millisecond)
 	if !autoSeal.Healthy() {
 		t.Fatal("Expected seals to be healthy")
