@@ -92,7 +92,7 @@ module('Integration | Component | pki-sign-intermediate-form', function (hooks) 
     ].forEach(({ label, masked }) => {
       assert.dom(selectors.rowByName(label)).exists();
       if (masked) {
-        assert.dom(selectors.valueByName(label)).hasText('***********', `${label} is masked`);
+        assert.dom(selectors.valueByName(label)).includesText('PEM Format', `${label} is masked`);
       } else {
         assert.dom(selectors.valueByName(label)).hasText('31:52:b9:09:40', `Renders ${label}`);
         assert.dom(`${selectors.valueByName(label)} a`).exists(`${label} is a link`);
