@@ -15,7 +15,7 @@ import sinon from 'sinon';
 import { SELECTORS } from 'vault/tests/helpers/kv/kv-general-selectors';
 import { PAGE } from 'vault/tests/helpers/kv/kv-page-selectors';
 
-module('Integration | Component | kv | Page::Secret::MetadataEdit', function (hooks) {
+module('Integration | Component | kv | Page::Secret::Metadata::Edit', function (hooks) {
   setupRenderingTest(hooks);
   setupEngine(hooks, 'kv');
   setupMirage(hooks);
@@ -49,7 +49,7 @@ module('Integration | Component | kv | Page::Secret::MetadataEdit', function (ho
     ];
     await render(
       hbs`
-      <Page::Secret::MetadataEdit
+      <Page::Secret::Metadata::Edit
         @metadata={{this.metadataModelCreate}}
         @breadcrumbs={{this.breadcrumbs}}
         @onCancel={{this.onCancel}}
@@ -79,7 +79,7 @@ module('Integration | Component | kv | Page::Secret::MetadataEdit', function (ho
     ];
     await render(
       hbs`
-      <Page::Secret::MetadataEdit
+      <Page::Secret::Metadata::Edit
         @metadata={{this.metadataModelEdit}}
         @breadcrumbs={{this.breadcrumbs}}
         @onCancel={{this.onCancel}}
@@ -138,7 +138,7 @@ module('Integration | Component | kv | Page::Secret::MetadataEdit', function (ho
     ];
     await render(
       hbs`
-      <Page::Secret::MetadataEdit
+      <Page::Secret::Metadata::Edit
         @metadata={{this.metadataModelEdit}}
         @breadcrumbs={{this.breadcrumbs}}
         @onCancel={{this.onCancel}}
@@ -169,7 +169,7 @@ module('Integration | Component | kv | Page::Secret::MetadataEdit', function (ho
     ];
     await render(
       hbs`
-      <Page::Secret::MetadataEdit
+      <Page::Secret::Metadata::Edit
         @metadata={{this.metadataModelEdit}}
         @breadcrumbs={{this.breadcrumbs}}
         @onCancel={{this.onCancel}}

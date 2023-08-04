@@ -14,7 +14,7 @@ import { allowAllCapabilitiesStub } from 'vault/tests/helpers/stubs';
 import { SELECTORS } from 'vault/tests/helpers/kv/kv-general-selectors';
 import { PAGE } from 'vault/tests/helpers/kv/kv-page-selectors';
 
-module('Integration | Component | kv | Page::Secret::MetadataDetails', function (hooks) {
+module('Integration | Component | kv | Page::Secret::Metadata::Details', function (hooks) {
   setupRenderingTest(hooks);
   setupEngine(hooks, 'kv');
   setupMirage(hooks);
@@ -40,7 +40,7 @@ module('Integration | Component | kv | Page::Secret::MetadataDetails', function 
       { label: 'metadata' },
     ];
     await render(
-      hbs`<Page::Secret::MetadataDetails @metadata={{this.model}} @breadcrumbs={{this.breadcrumbs}} />`,
+      hbs`<Page::Secret::Metadata::Details @metadata={{this.model}} @breadcrumbs={{this.breadcrumbs}} />`,
       {
         owner: this.engine,
       }
@@ -69,7 +69,7 @@ module('Integration | Component | kv | Page::Secret::MetadataDetails', function 
     ];
 
     await render(
-      hbs`<Page::Secret::MetadataDetails @metadata={{this.model}} @breadcrumbs={{this.breadcrumbs}} />`,
+      hbs`<Page::Secret::Metadata::Details @metadata={{this.model}} @breadcrumbs={{this.breadcrumbs}} />`,
       {
         owner: this.engine,
       }
@@ -98,7 +98,7 @@ module('Integration | Component | kv | Page::Secret::MetadataDetails', function 
       { label: 'metadata' },
     ];
     await render(
-      hbs`<Page::Secret::MetadataDetails @metadata={{this.model}} @breadcrumbs={{this.breadcrumbs}} />`,
+      hbs`<Page::Secret::Metadata::Details @metadata={{this.model}} @breadcrumbs={{this.breadcrumbs}} />`,
       {
         owner: this.engine,
       }
