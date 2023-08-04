@@ -48,7 +48,7 @@ module('Integration | Component | kv | Page::Secret::Version-History', function 
 
     await render(
       hbs`
-       <Page::Secret::VersionHistory
+       <Page::Secret::Metadata::VersionHistory
         @path={{this.metadata.path}}
         @metadata={{this.metadata}}
         @breadcrumbs={{this.breadcrumbs}}
@@ -81,7 +81,7 @@ module('Integration | Component | kv | Page::Secret::Version-History', function 
     assert.expect(1);
     await render(
       hbs`
-       <Page::Secret::VersionHistory
+       <Page::Secret::Metadata::VersionHistory
         @path={{this.metadata.path}}
         @metadata={{this.metadata}}
         @breadcrumbs={{this.breadcrumbs}}
