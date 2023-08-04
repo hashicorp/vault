@@ -47,16 +47,6 @@ export default class KvSecretEdit extends Component {
     this.showJsonView = !this.showJsonView;
   }
 
-  @action
-  pathValidations() {
-    // check path attribute warnings on key up
-    const { state } = this.args.secret.validate();
-    if (state?.path?.warnings) {
-      // only set model validations if warnings exist
-      this.modelValidations = state;
-    }
-  }
-
   @task
   *save(event) {
     event.preventDefault();
