@@ -154,11 +154,11 @@ func (b *backend) Login(ctx context.Context, req *logical.Request, username stri
 		return username, policies, ldapResponse, allGroups, nil
 	}
 
-	cn := c.UserAttributes["cn"]
-	if len(cn) == 0 {
+	userAttrValues := c.UserAttributes[cfg.UserAttr]
+	if len(userAttrValues) == 0 {
 		return "", nil, logical.ErrorResponse("missing entity alias attribute value"), nil, nil
 	}
-	entityAliasAttribute := cn[0]
+	entityAliasAttribute := userAttrValues[0]
 
 	return entityAliasAttribute, policies, ldapResponse, allGroups, nil
 }
