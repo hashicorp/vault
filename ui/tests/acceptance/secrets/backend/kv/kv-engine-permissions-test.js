@@ -8,11 +8,10 @@ import { setupApplicationTest } from 'ember-qunit';
 import { v4 as uuidv4 } from 'uuid';
 
 import authPage from 'vault/tests/pages/auth';
-import logout from 'vault/tests/pages/logout';
-import enablePage from 'vault/tests/pages/settings/mount-secret-backend';
 import { currentURL, visit } from '@ember/test-helpers';
 import { adminPolicy, dataPolicy, metadataPolicy } from 'vault/tests/helpers/policy-generator/kv';
-import { tokenWithPolicy, runCommands, writeSecret } from 'vault/tests/helpers/kv/kv-run-commands';
+import { deleteEngineCmd, mountEngineCmd, runCmd, tokenWithPolicyCmd } from 'vault/tests/helpers/commands';
+import { writeSecret } from 'vault/tests/helpers/kv/kv-run-commands';
 import { PAGE } from 'vault/tests/helpers/kv/kv-selectors';
 
 /*
@@ -23,50 +22,47 @@ each sub-module is a different state, for example:
 
 And each test authenticates using varying permissions testing that view state renders as expected.
 */
-
+// TODO: replace with workflow-* tests
 module('Acceptance | kv permissions', function (hooks) {
   setupApplicationTest(hooks);
 
   hooks.beforeEach(async function () {
     await authPage.login();
+    this.uid = uuidv4();
     // Setup KV engine
-    const mountPath = `kv-engine-${uuidv4()}`;
-    await enablePage.enable('kv', mountPath);
-    this.mountPath = mountPath;
-    await logout.visit();
+    this.mountPath = `kv-engine-${this.uid}`;
+    await runCmd(mountEngineCmd('kv-v2', this.mountPath));
+    return authPage.logout();
   });
 
   hooks.afterEach(async function () {
-    await logout.visit();
     await authPage.login();
     // Cleanup engine
-    await runCommands([`delete sys/mounts/${this.mountPath}`]);
-    await logout.visit();
+    await runCmd(deleteEngineCmd(this.mountPath));
   });
 
   module('secret tab', function (hooks) {
     hooks.beforeEach(async function () {
       // Create secret
       await authPage.login();
-      this.secretPath = `my-secret-${uuidv4()}`;
+      this.secretPath = `my-secret-${this.uid}`;
       await writeSecret(this.mountPath, this.secretPath, 'foo', 'bar');
-
       // Create different policy test cases
       const kv_admin_policy = adminPolicy(this.mountPath);
-      this.kvAdminToken = await tokenWithPolicy('kv-admin', kv_admin_policy);
+      this.kvAdminToken = await runCmd(tokenWithPolicyCmd('kv-admin', kv_admin_policy));
 
       const no_metadata_read =
         dataPolicy({ backend: this.mountPath, secretPath: this.secretPath }) +
         metadataPolicy({ backend: this.mountPath, capabilities: ['list'] });
-      this.cannotReadMetadata = await tokenWithPolicy('kv-no-metadata-read', no_metadata_read);
+      this.cannotReadMetadata = await runCmd(tokenWithPolicyCmd('kv-no-metadata-read', no_metadata_read));
 
       const no_data_read = dataPolicy({
         backend: this.mountPath,
         secretPath: this.secretPath,
         capabilities: ['list'],
       });
-      this.cannotReadData = await tokenWithPolicy('kv-no-metadata-read', no_data_read);
-      await logout.visit();
+      this.cannotReadData = await runCmd(tokenWithPolicyCmd('kv-no-metadata-read', no_data_read));
+      await authPage.logout();
     });
 
     module('it renders secret details page', function () {
