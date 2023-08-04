@@ -19,9 +19,9 @@ import {
 import { writeSecret } from 'vault/tests/helpers/kv/kv-run-commands';
 
 /**
- * This test set is for testing version diff page
+ * This test set is for testing version history & diff pages
  */
-module('Acceptance | kv-v2 workflow | version diff', function (hooks) {
+module('Acceptance | kv-v2 workflow | version history & diff', function (hooks) {
   setupApplicationTest(hooks);
 
   hooks.beforeEach(async function () {
@@ -44,16 +44,28 @@ module('Acceptance | kv-v2 workflow | version diff', function (hooks) {
       ]);
       await authPage.login(token);
     });
+    test.skip('can navigate to the version history page', async function (assert) {
+      assert.expect(0);
+    });
+    test.skip('history works correctly when no secrets', async function (assert) {
+      assert.expect(0);
+    });
+    test.skip('history works correctly when only one secret version', async function (assert) {
+      assert.expect(0);
+    });
+    test.skip('history works correctly when many secret versions in various states', async function (assert) {
+      assert.expect(0);
+    });
     test.skip('can navigate to the version diff view', async function (assert) {
       assert.expect(0);
     });
-    test.skip('works correctly when no secrets', async function (assert) {
+    test.skip('diff works correctly when no secrets', async function (assert) {
       assert.expect(0);
     });
-    test.skip('works correctly when only one secret version', async function (assert) {
+    test.skip('diff works correctly when only one secret version', async function (assert) {
       assert.expect(0);
     });
-    test.skip('works correctly between various secret versions', async function (assert) {
+    test.skip('diff works correctly between various secret versions', async function (assert) {
       assert.expect(0);
     });
   });
