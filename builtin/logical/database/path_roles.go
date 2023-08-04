@@ -549,6 +549,7 @@ func (b *databaseBackend) pathStaticRoleCreateUpdate(ctx context.Context, req *l
 	rotationScheduleOk := rotationSchedule != ""
 
 	if rotationScheduleOk && rotationPeriodOk {
+		// TODO(JM): handle mutual exclusion
 		response.AddWarning("mutually exclusive fields rotation_period and rotation_schedule were both specified; rotation_period takes priority")
 	} else if createRole && (!rotationScheduleOk && !rotationPeriodOk) {
 		return logical.ErrorResponse("one of rotation_schedule or rotation_period must be provided to create a static account"), nil
@@ -665,10 +666,7 @@ func (b *databaseBackend) pathStaticRoleCreateUpdate(ctx context.Context, req *l
 		return nil, err
 	}
 
-	if response.IsError() {
-		return response, nil
-	}
-	return nil, nil
+	return response, nil
 }
 
 type roleEntry struct {
