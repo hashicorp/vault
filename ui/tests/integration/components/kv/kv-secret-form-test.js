@@ -185,7 +185,7 @@ module('Integration | Component | kv-v2 | KvSecretForm', function (hooks) {
       { owner: this.engine }
     );
 
-    assert.dom(FORM.dataInputLabel()).hasText('Secret data');
+    assert.dom(FORM.dataInputLabel({ isJson: false })).hasText('Secret data');
     await click(FORM.toggleJson);
     assert.dom(FORM.dataInputLabel({ isJson: true })).hasText('Secret data');
 

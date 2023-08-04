@@ -16,9 +16,9 @@ export const PAGE = {
   // specific page selectors
   metadata: {
     editBtn: '[data-test-edit-metadata]',
-    // TODO: add these
-    customMetadataSection: '[data-test-TODO]',
-    secretMetadataSection: '[data-test-TODO]',
+    addCustomMetadataBtn: '[data-test-add-custom-metadata]',
+    customMetadataSection: '[data-test-kv-custom-metadata-section]',
+    secretMetadataSection: '[data-test-kv-metadata-section]',
   },
   detail: {
     versionCreated: '[data-test-kv-version-tooltip-trigger]',
