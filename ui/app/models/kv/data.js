@@ -64,9 +64,10 @@ export default class KvSecretDataModel extends Model {
   @attr('boolean') destroyed;
   @attr('number') version;
 
-  @attr('number', {
-    defaultValue: 0, // version 0 only occurs on creating a secret
-  })
+  // the default value of 0 is only set when initially creating a secret
+  // if creating a new version this value is set in the edit route's
+  // model hook from metadata or secret version, pending permissions
+  @attr('number', { defaultValue: 0 })
   casVersion;
 
   // Permissions
