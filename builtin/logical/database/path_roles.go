@@ -17,7 +17,7 @@ import (
 	"github.com/hashicorp/vault/sdk/helper/locksutil"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/sdk/queue"
-	"github.com/robfig/cron"
+	"github.com/robfig/cron/v3"
 )
 
 func pathListRoles(b *databaseBackend) []*framework.Path {
@@ -565,13 +565,13 @@ func (b *databaseBackend) pathStaticRoleCreateUpdate(ctx context.Context, req *l
 		role.StaticAccount.RotationPeriod = time.Duration(rotationPeriodSeconds) * time.Second
 	}
 	if rotationScheduleOk {
-		// we will use cront.Parse to validate the input but disregard the
-		// parsed result for now.
-		_, err := cron.Parse(rotationSchedule)
+		// TODO(JM): validate this isn't less than defaultQueueTickSeconds?
+		schedule, err := cron.ParseStandard(rotationSchedule)
 		if err != nil {
 			return logical.ErrorResponse("could not parse rotation_schedule", "error", err), nil
 		}
 		role.StaticAccount.RotationSchedule = rotationSchedule
+		role.StaticAccount.schedule = &schedule
 	}
 
 	if rotationStmtsRaw, ok := data.GetOk("rotation_statements"); ok {
@@ -760,15 +760,24 @@ type staticAccount struct {
 	// determine if a password needs to be rotated
 	RotationPeriod time.Duration `json:"rotation_period"`
 
+	// NextVaultRotation represents the next time Vault should rotate the password
+	NextVaultRotation time.Time `json:"next_vault_rotation"`
+
 	// RotationSchedule is a "chron style" string representing the allowed
 	// schedule for each rotation.
 	// e.g. "1 0 * * *" would rotate at one minute past midnight (00:01) every
 	// day.
 	RotationSchedule string `json:"rotation_scedule"`
 
+	schedule *cron.Schedule
+
 	// RevokeUser is a boolean flag to indicate if Vault should revoke the
 	// database user when the role is deleted
 	RevokeUserOnDelete bool `json:"revoke_user_on_delete"`
+}
+
+func (s *staticAccount) Schedule() cron.Schedule {
+	return *s.schedule
 }
 
 // NextRotationTime calculates the next rotation by adding the Rotation Period
