@@ -22,6 +22,13 @@ module('Integration | Component | kv | Page::Secret::Version-History', function 
     const store = this.owner.lookup('service:store');
     this.server.post('/sys/capabilities-self', allowAllCapabilitiesStub());
     const metadata = this.server.create('kv-metadatum');
+    // we want to test a scenario where the current version is also destroy so there are two icons.
+    // we override the mirage factory to account for this use case.
+    metadata.data.versions[4] = {
+      created_time: '2023-07-21T03:11:58.095971Z',
+      deletion_time: '',
+      destroyed: true,
+    };
     metadata.id = kvMetadataPath('kv-engine', 'my-secret');
     store.pushPayload('kv/metadatum', {
       modelName: 'kv/metadata',
@@ -37,7 +44,7 @@ module('Integration | Component | kv | Page::Secret::Version-History', function 
   });
 
   test('it renders version history and shows icons for deleted, destroyed and current', async function (assert) {
-    assert.expect(8);
+    assert.expect(8); // 4 linked blocks, 2 destroyed, 1 deleted, 1 current version.
 
     await render(
       hbs`
@@ -52,22 +59,21 @@ module('Integration | Component | kv | Page::Secret::Version-History', function 
 
     for (const version in this.metadata.versions) {
       const data = this.metadata.versions[version];
-      assert.dom(PAGE.list.linkedBlock(version)).exists(`renders the linked blocks for each version`);
+      assert.dom(PAGE.versions.linkedBlock(version)).exists(`renders the linked blocks for each version`);
 
       if (data.destroyed) {
         assert
-          .dom(`${PAGE.list.icon(version)} [data-test-icon="x-square-fill"]`)
+          .dom(`${PAGE.versions.icon(version)} [data-test-icon="x-square-fill"]`)
           .hasStyle({ color: 'rgb(199, 52, 69)' });
       }
       if (data.deletion_time) {
         assert
-          .dom(`${PAGE.list.icon(version)} [data-test-icon="x-square-fill"]`)
+          .dom(`${PAGE.versions.icon(version)} [data-test-icon="x-square-fill"]`)
           .hasStyle({ color: 'rgb(111, 118, 130)' });
       }
     }
-
     assert
-      .dom(`${PAGE.list.icon(this.metadata.currentVersion)} [data-test-icon="check-circle-fill"]`)
+      .dom(`${PAGE.versions.icon(this.metadata.currentVersion)} [data-test-icon="check-circle-fill"]`)
       .exists('renders the current version');
   });
 
@@ -84,7 +90,7 @@ module('Integration | Component | kv | Page::Secret::Version-History', function 
       { owner: this.engine }
     );
     // because the popup menu is nested in a linked block we must combine the two selectors
-    const popupSelector = `${PAGE.list.linkedBlock(2)} ${PAGE.list.popup}`;
+    const popupSelector = `${PAGE.versions.linkedBlock(2)} ${PAGE.versions.popup}`;
     await click(popupSelector);
     assert
       .dom('[data-test-create-new-version-from="2"]')

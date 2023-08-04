@@ -36,7 +36,7 @@ const data = {
     4: {
       created_time: '2023-07-21T03:11:58.095971Z',
       deletion_time: '',
-      destroyed: true,
+      destroyed: false,
     },
   },
 };
