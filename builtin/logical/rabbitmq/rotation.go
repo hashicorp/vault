@@ -6,7 +6,6 @@ package rabbitmq
 import (
 	"context"
 	"fmt"
-	"strconv"
 	"time"
 
 	"github.com/hashicorp/go-multierror"
@@ -19,10 +18,6 @@ import (
 const (
 	// Default interval to check the queue for items needing rotation
 	defaultQueueTickSeconds = 5
-
-	// Config key to set an alternate interval
-	// TODO make this configurable in the backend
-	queueTickIntervalKey = "rotation_queue_tick_interval"
 
 	// WAL storage key used for static account rotations
 	staticWALKey = "staticRotationKey"
@@ -50,7 +45,7 @@ func (b *backend) rotateExpiredStaticCreds(ctx context.Context, s logical.Storag
 }
 
 func (b *backend) validateRotationPeriod(period time.Duration) error {
-	if period < defaultQueueTickSeconds {
+	if period < defaultQueueTickSeconds*time.Second {
 		return fmt.Errorf("role rotation period out of range: must be greater than %d seconds", defaultQueueTickSeconds)
 	}
 	return nil
@@ -152,14 +147,6 @@ func (b *backend) initQueue(ctx context.Context, conf *logical.BackendConfig, re
 		!replicationState.HasState(consts.ReplicationPerformanceStandby) {
 		b.Logger().Info("initializing rabbitmq rotation queue")
 		queueTickerInterval := defaultQueueTickSeconds * time.Second
-		if strVal, ok := conf.Config[queueTickIntervalKey]; ok {
-			newVal, err := strconv.Atoi(strVal)
-			if err == nil {
-				queueTickerInterval = time.Duration(newVal) * time.Second
-			} else {
-				b.Logger().Error("bad value for %q option: %q", queueTickIntervalKey, strVal)
-			}
-		}
 		go b.runTicker(ctx, queueTickerInterval, conf.StorageView)
 	}
 }
