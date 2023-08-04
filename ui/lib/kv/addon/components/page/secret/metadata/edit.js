@@ -11,8 +11,8 @@ import errorMessage from 'vault/utils/error-message';
 import { action } from '@ember/object';
 
 /**
- * @module MetadataEdit
- * MetadataEdit component renders the view for editing a kv secret's metadata.
+ * @module KvSecretMetadataEdit
+ * This component renders the view for editing a kv secret's metadata.
  * While secret data and metadata are created on the same view, they are edited on different views/routes.
  *
  * @param {array} metadata - The kv/metadata model. It is version agnostic.
@@ -21,7 +21,7 @@ import { action } from '@ember/object';
  * @param {onSave} onSave - Callback triggered on save success that transitions to the metadata details route.
  */
 
-export default class KvMetadataEditComponent extends Component {
+export default class KvSecretMetadataEditComponent extends Component {
   @service flashMessages;
   @tracked errorBanner = '';
   @tracked invalidFormAlert = '';
