@@ -564,6 +564,7 @@ func (b *databaseBackend) pathStaticRoleCreateUpdate(ctx context.Context, req *l
 		}
 		role.StaticAccount.RotationPeriod = time.Duration(rotationPeriodSeconds) * time.Second
 	}
+
 	if rotationScheduleOk {
 		// TODO(JM): validate this isn't less than defaultQueueTickSeconds?
 		schedule, err := b.scheduleParser.Parse(rotationSchedule)
@@ -571,7 +572,11 @@ func (b *databaseBackend) pathStaticRoleCreateUpdate(ctx context.Context, req *l
 			return logical.ErrorResponse("could not parse rotation_schedule", "error", err), nil
 		}
 		role.StaticAccount.RotationSchedule = rotationSchedule
-		role.StaticAccount.schedule = &schedule
+		sched, ok := schedule.(*cron.SpecSchedule)
+		if !ok {
+			return logical.ErrorResponse("could not parse rotation_schedule"), nil
+		}
+		role.StaticAccount.Schedule = *sched
 	}
 
 	if rotationStmtsRaw, ok := data.GetOk("rotation_statements"); ok {
@@ -649,10 +654,10 @@ func (b *databaseBackend) pathStaticRoleCreateUpdate(ctx context.Context, req *l
 		b.logger.Debug("init priority for RotationPeriod", "lvr", lvr, "next", lvr.Add(role.StaticAccount.RotationPeriod))
 		item.Priority = lvr.Add(role.StaticAccount.RotationPeriod).Unix()
 	} else {
-		next := role.StaticAccount.Schedule().Next(lvr)
+		next := role.StaticAccount.Schedule.Next(lvr)
 		b.logger.Debug("init priority for Schedule", "lvr", lvr)
 		b.logger.Debug("init priority for Schedule", "next", next)
-		item.Priority = role.StaticAccount.Schedule().Next(lvr).Unix()
+		item.Priority = role.StaticAccount.Schedule.Next(lvr).Unix()
 	}
 
 	// Add their rotation to the queue
@@ -775,17 +780,13 @@ type staticAccount struct {
 	// schedule for each rotation.
 	// e.g. "1 0 * * *" would rotate at one minute past midnight (00:01) every
 	// day.
-	RotationSchedule string `json:"rotation_scedule"`
+	RotationSchedule string `json:"rotation_schedule"`
 
-	schedule *cron.Schedule
+	Schedule cron.SpecSchedule `json:"schedule"`
 
 	// RevokeUser is a boolean flag to indicate if Vault should revoke the
 	// database user when the role is deleted
 	RevokeUserOnDelete bool `json:"revoke_user_on_delete"`
-}
-
-func (s *staticAccount) Schedule() cron.Schedule {
-	return *s.schedule
 }
 
 // NextRotationTime calculates the next rotation by adding the Rotation Period
