@@ -44,19 +44,19 @@ module('Acceptance | kv-v2 workflow | navigation', function (hooks) {
       ]);
       await authPage.login(token);
     });
-    test.todo('tabs are correct', async function (assert) {
+    test.skip('tabs are correct', async function (assert) {
       assert.expect(0);
     });
-    test.todo('breadcrumbs are correct', async function (assert) {
+    test.skip('breadcrumbs are correct', async function (assert) {
       assert.expect(0);
     });
-    test.todo('create and cancel buttons go to correct place', async function (assert) {
+    test.skip('create and cancel buttons go to correct place', async function (assert) {
       assert.expect(0);
     });
-    test.todo('toolbar actions are correct', async function (assert) {
+    test.skip('toolbar actions are correct', async function (assert) {
       assert.expect(0);
     });
-    test.todo('can access nested secret', async function (assert) {
+    test.skip('can access nested secret', async function (assert) {
       assert.expect(0);
     });
   });

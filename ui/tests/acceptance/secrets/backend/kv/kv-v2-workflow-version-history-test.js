@@ -44,16 +44,16 @@ module('Acceptance | kv-v2 workflow | version history', function (hooks) {
       ]);
       await authPage.login(token);
     });
-    test.todo('can navigate to the version history page', async function (assert) {
+    test.skip('can navigate to the version history page', async function (assert) {
       assert.expect(0);
     });
-    test.todo('works correctly when no secrets', async function (assert) {
+    test.skip('works correctly when no secrets', async function (assert) {
       assert.expect(0);
     });
-    test.todo('works correctly when only one secret version', async function (assert) {
+    test.skip('works correctly when only one secret version', async function (assert) {
       assert.expect(0);
     });
-    test.todo('works correctly when many secret versions in various states', async function (assert) {
+    test.skip('works correctly when many secret versions in various states', async function (assert) {
       assert.expect(0);
     });
   });

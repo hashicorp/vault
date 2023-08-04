@@ -44,7 +44,7 @@ module('Acceptance | kv-v2 workflow | secret and version create', function (hook
       ]);
       await authPage.login(token);
     });
-    test.todo('create new root secret flow', async function (assert) {
+    test.skip('create new root secret flow', async function (assert) {
       assert.expect(0);
       // TODO: navigate to kv backend from backends
       // ✅ shows list items / no empty state
@@ -55,13 +55,13 @@ module('Acceptance | kv-v2 workflow | secret and version create', function (hook
       // click [data-test-kv-secret-save]
       // ✅ Shows validation errors
     });
-    test.todo('create new nested secret flow', async function (assert) {
+    test.skip('create new nested secret flow', async function (assert) {
       assert.expect(0);
     });
-    test.todo('create new version of secret', async function (assert) {
+    test.skip('create new version of secret', async function (assert) {
       assert.expect(0);
     });
-    test.todo('create new version of secret from older version', async function (assert) {
+    test.skip('create new version of secret from older version', async function (assert) {
       assert.expect(0);
     });
   });

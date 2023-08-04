@@ -44,13 +44,13 @@ module('Acceptance | kv-v2 workflow | delete, undelete, destroy', function (hook
       ]);
       await authPage.login(token);
     });
-    test.todo('can soft delete and undelete a secret version', async function (assert) {
+    test.skip('can soft delete and undelete a secret version', async function (assert) {
       assert.expect(0);
     });
-    test.todo('can destroy a secret version', async function (assert) {
+    test.skip('can destroy a secret version', async function (assert) {
       assert.expect(0);
     });
-    test.todo('can destroy a secret', async function (assert) {
+    test.skip('can destroy a secret', async function (assert) {
       assert.expect(0);
     });
   });
