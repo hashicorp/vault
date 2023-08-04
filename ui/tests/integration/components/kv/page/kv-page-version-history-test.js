@@ -22,7 +22,7 @@ module('Integration | Component | kv | Page::Secret::Version-History', function 
     const store = this.owner.lookup('service:store');
     this.server.post('/sys/capabilities-self', allowAllCapabilitiesStub());
     const metadata = this.server.create('kv-metadatum');
-    // we want to test a scenario where the current version is also destroy so there are two icons.
+    // we want to test a scenario where the current version is also destroyed so there are two icons.
     // we override the mirage factory to account for this use case.
     metadata.data.versions[4] = {
       created_time: '2023-07-21T03:11:58.095971Z',
