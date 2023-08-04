@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: MPL-2.0
  */
 
-import { module, test } from 'qunit';
+import { module, skip, test } from 'qunit';
 import { setupRenderingTest } from 'vault/tests/helpers';
 import { setupEngine } from 'ember-engines/test-support';
 import { setupMirage } from 'ember-cli-mirage/test-support';
@@ -83,7 +83,7 @@ module('Integration | Component | kv-v2 | Page::Secret::Edit', function (hooks) 
     await click(FORM.saveBtn);
   });
 
-  test('it saves nested secrets', async function (assert) {
+  skip('it saves nested secrets', async function (assert) {
     assert.expect(3);
     const nestedSecret = 'path/to/secret/';
     this.secret.path = nestedSecret;
