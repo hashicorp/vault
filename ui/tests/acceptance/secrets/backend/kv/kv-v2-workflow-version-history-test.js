@@ -44,10 +44,18 @@ module('Acceptance | kv-v2 workflow | version history', function (hooks) {
       ]);
       await authPage.login(token);
     });
-    test.todo('can navigate to the version history page', async function () {});
-    test.todo('works correctly when no secrets', async function () {});
-    test.todo('works correctly when only one secret version', async function () {});
-    test.todo('works correctly when many secret versions in various states', async function () {});
+    test.todo('can navigate to the version history page', async function (assert) {
+      assert.expect(0);
+    });
+    test.todo('works correctly when no secrets', async function (assert) {
+      assert.expect(0);
+    });
+    test.todo('works correctly when only one secret version', async function (assert) {
+      assert.expect(0);
+    });
+    test.todo('works correctly when many secret versions in various states', async function (assert) {
+      assert.expect(0);
+    });
   });
 
   module('data-reader persona', function (hooks) {
@@ -81,10 +89,23 @@ module('Acceptance | kv-v2 workflow | version history', function (hooks) {
       const token = await runCmd([
         createPolicyCmd(
           'metadata-maintainer',
-          metadataPolicy({ backend: this.backend, capabilities: ['read', 'update', 'create', 'delete'] }) +
-            metadataListPolicy(this.backend)
+          metadataPolicy({ backend: this.backend }) + metadataListPolicy(this.backend)
         ),
         createTokenCmd('metadata-maintainer'),
+      ]);
+      await authPage.login(token);
+    });
+    // Copy test outline from admin persona
+  });
+
+  module('secret-creator persona', function (hooks) {
+    hooks.beforeEach(async function () {
+      const token = await runCmd([
+        createPolicyCmd(
+          'secret-creator',
+          dataPolicy({ backend: this.backend, capabilities: ['create', 'update'] })
+        ),
+        createTokenCmd('secret-creator'),
       ]);
       await authPage.login(token);
     });

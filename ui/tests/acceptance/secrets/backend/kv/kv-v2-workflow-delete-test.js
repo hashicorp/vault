@@ -44,9 +44,15 @@ module('Acceptance | kv-v2 workflow | delete, undelete, destroy', function (hook
       ]);
       await authPage.login(token);
     });
-    test.todo('can soft delete and undelete a secret version', async function () {});
-    test.todo('can destroy a secret version', async function () {});
-    test.todo('can destroy a secret', async function () {});
+    test.todo('can soft delete and undelete a secret version', async function (assert) {
+      assert.expect(0);
+    });
+    test.todo('can destroy a secret version', async function (assert) {
+      assert.expect(0);
+    });
+    test.todo('can destroy a secret', async function (assert) {
+      assert.expect(0);
+    });
   });
 
   module('data-reader persona', function (hooks) {
@@ -80,10 +86,23 @@ module('Acceptance | kv-v2 workflow | delete, undelete, destroy', function (hook
       const token = await runCmd([
         createPolicyCmd(
           'metadata-maintainer',
-          metadataPolicy({ backend: this.backend, capabilities: ['read', 'update', 'create', 'delete'] }) +
-            metadataListPolicy(this.backend)
+          metadataPolicy({ backend: this.backend }) + metadataListPolicy(this.backend)
         ),
         createTokenCmd('metadata-maintainer'),
+      ]);
+      await authPage.login(token);
+    });
+    // Copy test outline from admin persona
+  });
+
+  module('secret-creator persona', function (hooks) {
+    hooks.beforeEach(async function () {
+      const token = await runCmd([
+        createPolicyCmd(
+          'secret-creator',
+          dataPolicy({ backend: this.backend, capabilities: ['create', 'update'] })
+        ),
+        createTokenCmd('secret-creator'),
       ]);
       await authPage.login(token);
     });
