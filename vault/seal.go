@@ -12,6 +12,8 @@ import (
 	"fmt"
 	"sync/atomic"
 
+	"github.com/hashicorp/vault/internalshared/configutil"
+
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
 	"github.com/hashicorp/vault/sdk/physical"
 
@@ -45,6 +47,12 @@ const (
 
 	// hsmStoredIVPath is the path to the initialization vector for stored keys
 	hsmStoredIVPath = "core/hsm/iv"
+
+	// SealGenInfoPath is the path used to store our seal generation info.
+	// This is required so that we can detect any seal config changes and introduce
+	// a new generation which keeps track if a rewrap of all CSPs and seal wrapped
+	// values has completed .
+	SealGenInfoPath = "core/seal-gen-info"
 )
 
 const (
@@ -475,4 +483,49 @@ func readStoredKeys(ctx context.Context, storage physical.Backend, encryptor sea
 	}
 
 	return UnsealWrapStoredBarrierKeys(ctx, encryptor, pe)
+}
+
+type SealGenerationInfo struct {
+	Generation int
+	Seals      []*configutil.KMS
+	Rewrapped  bool
+}
+
+func (c *Core) SetPhysicalSealGenInfo(ctx context.Context, sealGenInfo SealGenerationInfo) error {
+	// Encode the seal generation info
+	buf, err := json.Marshal(sealGenInfo)
+	if err != nil {
+		return fmt.Errorf("failed to encode seal generation info: %w", err)
+	}
+
+	// Store the seal generation info
+	pe := &physical.Entry{
+		Key:   SealGenInfoPath,
+		Value: buf,
+	}
+
+	if err := c.physical.Put(ctx, pe); err != nil {
+		c.logger.Error("failed to write seal generation info", "error", err)
+		return fmt.Errorf("failed to write seal generation info: %w", err)
+	}
+
+	return nil
+}
+
+func (c *Core) PhysicalSealGenInfo(ctx context.Context) (*SealGenerationInfo, error) {
+	pe, err := c.physical.Get(ctx, SealGenInfoPath)
+	if err != nil {
+		return nil, fmt.Errorf("failed to fetch seal generation info: %w", err)
+	}
+	if pe == nil {
+		return nil, nil
+	}
+
+	sealGenInfo := new(SealGenerationInfo)
+
+	if err := jsonutil.DecodeJSON(pe.Value, sealGenInfo); err != nil {
+		return nil, fmt.Errorf("failed to decode seal generation info: %w", err)
+	}
+
+	return sealGenInfo, nil
 }

@@ -431,10 +431,15 @@ func (c *OperatorDiagnoseCommand) offlineDiagnostics(ctx context.Context) error 
 	})
 
 	sealcontext, sealspan := diagnose.StartSpan(ctx, "Create Vault Server Configuration Seals")
-	var seals []vault.Seal
-	var sealConfigError error
 
-	barrierSeal, barrierWrapper, unwrapSeal, seals, sealConfigError, err := setSeal(server, config, make([]string, 0), make(map[string]string))
+	setSealResponse := setSeal(server, config, make([]string, 0), make(map[string]string))
+	barrierSeal := setSealResponse.barrierSeal
+	barrierWrapper := setSealResponse.barrierWrapper
+	unwrapSeal := setSealResponse.unwrapSeal
+	createdSeals := setSealResponse.createdSeals
+	allSeals := setSealResponse.allSeals
+	sealConfigError := setSealResponse.sealConfigError
+	err := setSealResponse.err
 	// Check error here
 	if err != nil {
 		diagnose.Advise(ctx, "For assistance with the seal stanza, see the Vault configuration documentation.")
@@ -446,7 +451,7 @@ func (c *OperatorDiagnoseCommand) offlineDiagnostics(ctx context.Context) error 
 		goto SEALFAIL
 	}
 
-	for _, seal := range seals {
+	for _, seal := range createdSeals {
 		// There is always one nil seal. We need to skip it so we don't start an empty Finalize-Seal-Shamir
 		// section.
 		if seal == nil {
@@ -525,6 +530,12 @@ SEALFAIL:
 		return nil
 	})
 
+	sealGenInfo := vault.SealGenerationInfo{
+		Generation: 1,
+		Seals:      allSeals,
+		Rewrapped:  false,
+	}
+
 	var coreConfig vault.CoreConfig
 	diagnose.Test(ctx, "Create Core Configuration", func(ctx context.Context) error {
 		var secureRandomReader io.Reader
@@ -539,7 +550,7 @@ SEALFAIL:
 			return diagnose.SpotError(ctx, randReaderTestName, fmt.Errorf("Could not initialize randomness for core: %w.", err))
 		}
 		diagnose.SpotOk(ctx, randReaderTestName, "")
-		coreConfig = createCoreConfig(server, config, *backend, configSR, barrierSeal, unwrapSeal, metricsHelper, metricSink, secureRandomReader)
+		coreConfig = createCoreConfig(server, config, *backend, configSR, barrierSeal, unwrapSeal, sealGenInfo, metricsHelper, metricSink, secureRandomReader)
 		return nil
 	})
 

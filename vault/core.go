@@ -286,6 +286,9 @@ type Core struct {
 	// seal is our seal, for seal configuration information
 	seal Seal
 
+	// sealGenInfo tracks the generation of seals
+	sealGenInfo SealGenerationInfo
+
 	// raftJoinDoneCh is used by the raft retry join routine to inform unseal process
 	// that the join is complete
 	raftJoinDoneCh chan struct{}
@@ -748,6 +751,9 @@ type CoreConfig struct {
 	// seal in migration scenarios.
 	UnwrapSeal Seal
 
+	// SealGenInfo tracks the generation of seals
+	SealGenInfo SealGenerationInfo
+
 	SecureRandomReader io.Reader
 
 	LogLevel string
@@ -1029,6 +1035,7 @@ func CreateCore(conf *CoreConfig) (*Core, error) {
 		pendingRemovalMountsAllowed:    conf.PendingRemovalMountsAllowed,
 		expirationRevokeRetryBase:      conf.ExpirationRevokeRetryBase,
 		rollbackMountPathMetrics:       conf.MetricSink.TelemetryConsts.RollbackMetricsIncludeMountPoint,
+		sealGenInfo:                    conf.SealGenInfo,
 	}
 
 	c.standbyStopCh.Store(make(chan struct{}))
@@ -2380,6 +2387,13 @@ func (s standardUnsealStrategy) unseal(ctx context.Context, logger log.Logger, c
 	if !c.ReplicationState().HasState(consts.ReplicationPerformanceSecondary | consts.ReplicationDRSecondary) {
 		// Cannot do this above, as we need other resources like mounts to be setup
 		if err := c.setupPluginReload(); err != nil {
+			return err
+		}
+
+		// store the sealGenInfo
+		err := c.SetPhysicalSealGenInfo(context.Background(), c.sealGenInfo)
+		if err != nil {
+			c.logger.Error("failed to save seal generation info", "error", err)
 			return err
 		}
 	}
