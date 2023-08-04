@@ -10,11 +10,10 @@ import { setupMirage } from 'ember-cli-mirage/test-support';
 import { click, find, render } from '@ember/test-helpers';
 import { hbs } from 'ember-cli-htmlbars';
 import { kvDataPath, kvMetadataPath } from 'vault/utils/kv-path';
-import { SELECTORS, parseJsonEditor } from 'vault/tests/helpers/kv/kv-general-selectors';
-import { PAGE } from 'vault/tests/helpers/kv/kv-page-selectors';
 import { allowAllCapabilitiesStub } from 'vault/tests/helpers/stubs';
+import { FORM, PAGE, parseJsonEditor } from 'vault/tests/helpers/kv/kv-selectors';
 
-module('Integration | Component | kv | Page::Secret::Details', function (hooks) {
+module('Integration | Component | kv-v2 | Page::Secret::Details', function (hooks) {
   setupRenderingTest(hooks);
   setupEngine(hooks, 'kv');
   setupMirage(hooks);
@@ -79,14 +78,16 @@ module('Integration | Component | kv | Page::Secret::Details', function (hooks) 
       { owner: this.engine }
     );
 
-    assert.dom(SELECTORS.pageTitle).includesText(this.model.path, 'renders secret path as page title');
-    assert.dom(SELECTORS.infoRowValue('foo')).exists('renders row for secret data');
-    assert.dom(SELECTORS.infoRowValue('foo')).hasText('***********');
-    await click(SELECTORS.toggleMasked);
-    assert.dom(SELECTORS.infoRowValue('foo')).hasText('bar', 'renders secret value');
-    await click(SELECTORS.toggleJson);
+    assert.dom(PAGE.title).includesText(this.model.path, 'renders secret path as page title');
+    assert.dom(PAGE.infoRowValue('foo')).exists('renders row for secret data');
+    assert.dom(PAGE.infoRowValue('foo')).hasText('***********');
+    await click(FORM.toggleMasked);
+    assert.dom(PAGE.infoRowValue('foo')).hasText('bar', 'renders secret value');
+    await click(FORM.toggleJson);
     assert.propEqual(parseJsonEditor(find), this.secretData, 'json editor renders secret data');
-    assert.dom(SELECTORS.tooltipTrigger).includesText(this.version, 'renders version');
+    assert
+      .dom(PAGE.detail.versionCreated)
+      .includesText(`Version ${this.version} created`, 'renders version and time created');
   });
 
   test('it renders deleted empty state', async function (assert) {
@@ -103,9 +104,9 @@ module('Integration | Component | kv | Page::Secret::Details', function (hooks) 
       `,
       { owner: this.engine }
     );
-    assert.dom(SELECTORS.emptyStateTitle).hasText('Version 2 of this secret has been deleted');
+    assert.dom(PAGE.emptyStateTitle).hasText('Version 2 of this secret has been deleted');
     assert
-      .dom(SELECTORS.emptyStateMessage)
+      .dom(PAGE.emptyStateMessage)
       .hasText(
         'This version has been deleted but can be undeleted. View other versions of this secret by clicking the Version History tab above.'
       );
@@ -125,9 +126,9 @@ module('Integration | Component | kv | Page::Secret::Details', function (hooks) 
       `,
       { owner: this.engine }
     );
-    assert.dom(SELECTORS.emptyStateTitle).hasText('Version 2 of this secret has been permanently destroyed');
+    assert.dom(PAGE.emptyStateTitle).hasText('Version 2 of this secret has been permanently destroyed');
     assert
-      .dom(SELECTORS.emptyStateMessage)
+      .dom(PAGE.emptyStateMessage)
       .hasText(
         'A version that has been permanently deleted cannot be restored. You can view other versions of this secret in the Version History tab above.'
       );
@@ -148,23 +149,23 @@ module('Integration | Component | kv | Page::Secret::Details', function (hooks) 
       { owner: this.engine }
     );
 
-    assert.dom(SELECTORS.tooltipTrigger).includesText(this.version, 'renders version');
-    assert.dom(PAGE.details.versionDropdown).hasText(`Version ${this.secret.version}`);
-    await click(PAGE.details.versionDropdown);
+    assert.dom(PAGE.detail.versionCreated).includesText(this.version, 'renders version');
+    assert.dom(PAGE.detail.versionDropdown).hasText(`Version ${this.secret.version}`);
+    await click(PAGE.detail.versionDropdown);
 
     for (const version in this.metadata.versions) {
       const data = this.metadata.versions[version];
-      assert.dom(PAGE.details.version(version)).exists(`renders ${version} in dropdown menu`);
+      assert.dom(PAGE.detail.version(version)).exists(`renders ${version} in dropdown menu`);
 
       if (data.destroyed || data.deletion_time) {
         assert
-          .dom(`${PAGE.details.version(version)} [data-test-icon="x-square-fill"]`)
+          .dom(`${PAGE.detail.version(version)} [data-test-icon="x-square-fill"]`)
           .hasClass(`${data.destroyed ? 'has-text-danger' : 'has-text-grey'}`);
       }
     }
 
     assert
-      .dom(`${PAGE.details.version(this.metadata.currentVersion)} [data-test-icon="check-circle"]`)
+      .dom(`${PAGE.detail.version(this.metadata.currentVersion)} [data-test-icon="check-circle"]`)
       .exists('renders current version icon');
   });
 });

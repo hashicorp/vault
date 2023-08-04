@@ -9,11 +9,10 @@ import { setupEngine } from 'ember-engines/test-support';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 import { render, fillIn, click } from '@ember/test-helpers';
 import { hbs } from 'ember-cli-htmlbars';
+import sinon from 'sinon';
 import { kvMetadataPath } from 'vault/utils/kv-path';
 import { allowAllCapabilitiesStub } from 'vault/tests/helpers/stubs';
-import sinon from 'sinon';
-import { SELECTORS } from 'vault/tests/helpers/kv/kv-general-selectors';
-import { PAGE } from 'vault/tests/helpers/kv/kv-page-selectors';
+import { FORM, PAGE } from 'vault/tests/helpers/kv/kv-selectors';
 
 module('Integration | Component | kv | Page::Secret::Metadata::Edit', function (hooks) {
   setupRenderingTest(hooks);
@@ -58,14 +57,14 @@ module('Integration | Component | kv | Page::Secret::Metadata::Edit', function (
         owner: this.engine,
       }
     );
-    assert.dom(PAGE.form.kvRow).exists({ count: 1 }, 'renders one kv row when model is new.');
-    assert.dom(PAGE.form.inputByAttr('maxVersions')).exists('renders Max versions.');
-    assert.dom(PAGE.form.inputByAttr('casRequired')).exists('renders Required Check and Set.');
+    assert.dom(FORM.kvRow).exists({ count: 1 }, 'renders one kv row when model is new.');
+    assert.dom(FORM.inputByAttr('maxVersions')).exists('renders Max versions.');
+    assert.dom(FORM.inputByAttr('casRequired')).exists('renders Required Check and Set.');
     assert
       .dom('[data-test-toggle-label="Automate secret deletion"]')
       .exists('the label for automate secret deletion renders.');
     assert
-      .dom(PAGE.form.automateSecretDeletion)
+      .dom(FORM.ttlValue('Automate secret deletion'))
       .doesNotExist('the toggle for secret deletion is not triggered.');
   });
 
@@ -89,25 +88,25 @@ module('Integration | Component | kv | Page::Secret::Metadata::Edit', function (
       }
     );
     assert
-      .dom(PAGE.form.kvRow)
+      .dom(FORM.kvRow)
       .exists({ count: 4 }, 'renders all kv rows including previous data and one extra to fill out.');
     assert
-      .dom(PAGE.form.inputByAttr('maxVersions'))
+      .dom(FORM.inputByAttr('maxVersions'))
       .hasValue('15', 'renders Max versions that was on the record.');
     assert
-      .dom(PAGE.form.inputByAttr('casRequired'))
+      .dom(FORM.inputByAttr('casRequired'))
       .hasValue('on', 'renders Required Check and Set that was on the record.');
     assert
-      .dom(PAGE.form.automateSecretDeletion)
+      .dom(FORM.ttlValue('Automate secret deletion'))
       .hasValue('12319', 'renders Automate secret deletion that was on the record.');
 
     // change the "Additional option" values
-    await click(PAGE.form.deleteRow()); // delete the first kv row
-    await fillIn(PAGE.form.keyInput(2), 'last');
-    await fillIn(PAGE.form.valueInput(2), 'value');
-    await fillIn(PAGE.form.inputByAttr('maxVersions'), '8');
-    await click(PAGE.form.inputByAttr('casRequired'));
-    await fillIn(PAGE.form.automateSecretDeletion, '1000');
+    await click(FORM.deleteRow()); // delete the first kv row
+    await fillIn(FORM.keyInput(2), 'last');
+    await fillIn(FORM.valueInput(2), 'value');
+    await fillIn(FORM.inputByAttr('maxVersions'), '8');
+    await click(FORM.inputByAttr('casRequired'));
+    await fillIn(FORM.ttlValue('Automate secret deletion'), '1000');
     // save test and check record
     this.server.post('/kv-engine/metadata/my-secret', (schema, req) => {
       const data = JSON.parse(req.requestBody);
@@ -125,7 +124,7 @@ module('Integration | Component | kv | Page::Secret::Metadata::Edit', function (
       };
       assert.deepEqual(expected, data, 'POST request made to save metadata with correct properties.');
     });
-    await click(PAGE.form.metadataUpdate);
+    await click(FORM.saveBtn);
   });
 
   test('it displays validation errors and does not save inputs on cancel', async function (assert) {
@@ -148,13 +147,13 @@ module('Integration | Component | kv | Page::Secret::Metadata::Edit', function (
       }
     );
     // trigger validation error
-    await fillIn(PAGE.form.inputByAttr('maxVersions'), 'a');
-    await click(PAGE.form.metadataUpdate);
+    await fillIn(FORM.inputByAttr('maxVersions'), 'a');
+    await click(FORM.saveBtn);
     assert
-      .dom(SELECTORS.inlineAlert)
+      .dom(FORM.inlineAlert)
       .hasText('Maximum versions must be a number.', 'Validation message is shown for max_versions');
 
-    await click(PAGE.form.metadataCancel);
+    await click(FORM.cancelBtn);
     assert.strictEqual(this.metadataModelEdit.maxVersions, 15, 'Model is rolled back on cancel.');
   });
 
@@ -178,6 +177,6 @@ module('Integration | Component | kv | Page::Secret::Metadata::Edit', function (
         owner: this.engine,
       }
     );
-    assert.dom(SELECTORS.emptyStateTitle).hasText('You do not have permissions to edit metadata');
+    assert.dom(PAGE.emptyStateTitle).hasText('You do not have permissions to edit metadata');
   });
 });
