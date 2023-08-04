@@ -566,7 +566,7 @@ func (b *databaseBackend) pathStaticRoleCreateUpdate(ctx context.Context, req *l
 	}
 	if rotationScheduleOk {
 		// TODO(JM): validate this isn't less than defaultQueueTickSeconds?
-		schedule, err := cron.ParseStandard(rotationSchedule)
+		schedule, err := b.scheduleParser.Parse(rotationSchedule)
 		if err != nil {
 			return logical.ErrorResponse("could not parse rotation_schedule", "error", err), nil
 		}
@@ -645,7 +645,15 @@ func (b *databaseBackend) pathStaticRoleCreateUpdate(ctx context.Context, req *l
 		}
 	}
 
-	item.Priority = lvr.Add(role.StaticAccount.RotationPeriod).Unix()
+	if rotationPeriodOk {
+		b.logger.Debug("init priority for RotationPeriod", "lvr", lvr, "next", lvr.Add(role.StaticAccount.RotationPeriod))
+		item.Priority = lvr.Add(role.StaticAccount.RotationPeriod).Unix()
+	} else {
+		next := role.StaticAccount.Schedule().Next(lvr)
+		b.logger.Debug("init priority for Schedule", "lvr", lvr)
+		b.logger.Debug("init priority for Schedule", "next", next)
+		item.Priority = role.StaticAccount.Schedule().Next(lvr).Unix()
+	}
 
 	// Add their rotation to the queue
 	if err := b.pushItem(item); err != nil {
