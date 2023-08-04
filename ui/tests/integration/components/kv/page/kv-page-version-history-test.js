@@ -10,7 +10,7 @@ import { setupMirage } from 'ember-cli-mirage/test-support';
 import { click, render } from '@ember/test-helpers';
 import { hbs } from 'ember-cli-htmlbars';
 import { kvMetadataPath } from 'vault/utils/kv-path';
-import { PAGE } from 'vault/tests/helpers/kv/kv-page-selectors';
+import { PAGE } from 'vault/tests/helpers/kv/kv-selectors';
 import { allowAllCapabilitiesStub } from 'vault/tests/helpers/stubs';
 
 module('Integration | Component | kv | Page::Secret::Version-History', function (hooks) {
