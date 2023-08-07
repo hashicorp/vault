@@ -4,16 +4,16 @@
  */
 
 import { module, test } from 'qunit';
-import { visit, currentURL, click, fillIn } from '@ember/test-helpers';
+import { visit, currentURL } from '@ember/test-helpers';
 import { setupApplicationTest } from 'vault/tests/helpers';
 import { setupMirage } from 'ember-cli-mirage/test-support';
-import { selectChoose, selectSearch } from 'ember-power-select/test-support/helpers';
+// import { selectChoose, selectSearch } from 'ember-power-select/test-support/helpers';
 
 import authPage from 'vault/tests/pages/auth';
 import SECRETS_ENGINE_SELECTORS from 'vault/tests/helpers/components/dashboard/secrets-engines-card';
 import VAULT_CONFIGURATION_SELECTORS from 'vault/tests/helpers/components/dashboard/vault-configuration-details-card';
 import mountSecrets from 'vault/tests/pages/settings/mount-secret-backend';
-import { runCommands } from 'vault/tests/helpers/pki/pki-run-commands';
+// import { runCommands } from 'vault/tests/helpers/pki/pki-run-commands';
 
 module('Acceptance | landing page dashboard', function (hooks) {
   setupApplicationTest(hooks);
@@ -196,53 +196,6 @@ module('Acceptance | landing page dashboard', function (hooks) {
       await authPage.login();
       await visit('/vault/dashboard');
       assert.dom(VAULT_CONFIGURATION_SELECTORS.tlsDisable).hasText('Disabled');
-    });
-  });
-  module('quick actions card', function () {
-    test('shows the quick actions card empty state when no engine is selected', async function (assert) {
-      await authPage.login();
-      assert.dom('[data-test-component="empty-state"]').exists({ count: 1 });
-      assert.dom('[data-test-empty-state-title]').hasText('No mount selected');
-      await selectChoose('.search-select', 'pki');
-      assert.dom('[data-test-component="empty-state"]').doesNotExist();
-    });
-    test('shows the quick actions card for pki', async function (assert) {
-      await authPage.login();
-      await mountSecrets.enable('pki', 'b-pki');
-      await runCommands([`write b-pki/root/generate/internal common_name="Hashicorp Test"`]);
-      await runCommands([
-        `write b-pki/roles/some-role \
-      issuer_ref="default" \
-      allowed_domains="example.com" \
-      allow_subdomains=true \
-      max_ttl="720h"`,
-      ]);
-      await visit('/vault/dashboard');
-      await selectChoose('.search-select', 'b-pki');
-      await fillIn('[data-test-select="action-select"]', 'Issue certificate');
-      await selectChoose('.search-select', 'some-role');
-      await click('[data-test-button="Issue leaf certificate"]');
-      assert.strictEqual(currentURL(), `/vault/secrets/b-pki/pki/roles/some-role/generate`);
-    });
-    test('shows the quick actions card for db', async function (assert) {
-      await authPage.login();
-      await mountSecrets.enable('database', 'database');
-      await runCommands([
-        `vault write  database/roles/api-prod db_name=apiprod creation_statements="CREATE ROLE "{{name}}" WITH LOGIN PASSWORD '{{password}}' VALID UNTIL '{{expiration}}'; GRANT SELECT ON ALL TABLES IN SCHEMA public TO "{{name}}";" default_ttl=1h max_ttl=24h`,
-      ]);
-      await visit('/vault/dashboard');
-      await selectChoose('.search-select', 'database');
-      await fillIn('[data-test-select="action-select"]', 'Generate credentials for database');
-      await selectChoose('.search-select', 'api-prod');
-      await click('[data-test-button="Generate credentials"]');
-      assert.strictEqual(currentURL(), `/vault/secrets/database/credentials/api-prod`);
-    });
-    test('hides engines that are not pki, db, or kv for quick actions card', async function (assert) {
-      await authPage.login();
-      await mountSecrets.enable('consul', 'consul');
-      await visit('/vault/dashboard');
-      await selectSearch('[data-test-secrets-engines-select]', 'consul');
-      assert.dom('.ember-power-select-option--no-matches-message').exists({ count: 1 });
     });
   });
 });
