@@ -31,10 +31,10 @@ const (
 // leaf_not_after_behavior (permit/truncate/err) for TTLs exceeding the
 // issuer's validity period, and the mount's default and max TTL.
 type CIEPSIssuanceConfig struct {
-	AIAValues            *URLEntries      `json:"aia_values"`
-	LeafNotAfterBehavior NotAfterBehavior `json:"leaf_not_after_behavior"`
-	MountDefaultTTL      string           `json:"mount_default_ttl"`
-	MountMaxTTL          string           `json:"mount_max_ttl"`
+	AIAValues            *URLEntries `json:"aia_values"`
+	LeafNotAfterBehavior string      `json:"leaf_not_after_behavior"`
+	MountDefaultTTL      string      `json:"mount_default_ttl"`
+	MountMaxTTL          string      `json:"mount_max_ttl"`
 }
 
 // Structured parameters sent by Vault or explicitly validated by Vault
