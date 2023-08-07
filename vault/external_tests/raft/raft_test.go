@@ -550,7 +550,7 @@ func TestRaft_SnapshotAPI_MidstreamFailure(t *testing.T) {
 		wg.Done()
 	}()
 
-	setErr(errors.New("seal failure"))
+	setErr[0](errors.New("seal failure"))
 	// Take a snapshot
 	err = leaderClient.Sys().RaftSnapshot(w)
 	w.Close()

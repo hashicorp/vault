@@ -8,6 +8,7 @@ import (
 	"crypto/sha256"
 	"encoding/base64"
 	"encoding/hex"
+	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -64,7 +65,6 @@ import (
 	"github.com/hashicorp/vault/version"
 	"github.com/mitchellh/cli"
 	"github.com/mitchellh/go-testing-interface"
-	"github.com/pkg/errors"
 	"github.com/posener/complete"
 	"github.com/sasha-s/go-deadlock"
 	"go.uber.org/atomic"
@@ -1252,29 +1252,22 @@ func (c *ServerCommand) Run(args []string) int {
 		infoKeys = append(infoKeys, expKey)
 	}
 
-	setSealResponse := setSeal(c, config, infoKeys, info)
+	setSealResponse, err := setSeal(c, config, infoKeys, info)
 	// Check error here
 	if err != nil {
 		c.UI.Error(err.Error())
 		return 1
 	}
 
-	if setSealResponse.barrierSeal != nil {
+	for _, seal := range setSealResponse.getCreatedSeals() {
+		seal := seal // capture range variable
+		// Ensure that the seal finalizer is called, even if using verify-only
 		defer func(seal *vault.Seal) {
 			err = (*seal).Finalize(context.Background())
 			if err != nil {
 				c.UI.Error(fmt.Sprintf("Error finalizing seals: %v", err))
 			}
-		}(&setSealResponse.barrierSeal)
-	}
-
-	if setSealResponse.unwrapSeal != nil {
-		defer func(seal *vault.Seal) {
-			err = (*seal).Finalize(context.Background())
-			if err != nil {
-				c.UI.Error(fmt.Sprintf("Error finalizing seals: %v", err))
-			}
-		}(&setSealResponse.unwrapSeal)
+		}(seal)
 	}
 
 	if setSealResponse.barrierSeal == nil {
@@ -1292,7 +1285,7 @@ func (c *ServerCommand) Run(args []string) int {
 
 	sealGenInfo := vault.SealGenerationInfo{
 		Generation: 1,
-		Seals:      setSealResponse.allSeals,
+		Seals:      setSealResponse.allSealKmsConfigs,
 		Rewrapped:  false,
 	}
 
@@ -1400,7 +1393,7 @@ func (c *ServerCommand) Run(args []string) int {
 
 	if existingSealGenInfo == nil {
 		sealGenInfo.Generation = 1
-	} else if !cmp.Equal(existingSealGenInfo.Seals, setSealResponse.allSeals) { // If the stored copy doesn't match the current configuration, we introduce a new generation which keeps track if a rewrap of all CSPs and seal wrapped values has completed (initially false).
+	} else if !cmp.Equal(existingSealGenInfo.Seals, setSealResponse.allSealKmsConfigs) { // If the stored copy doesn't match the current configuration, we introduce a new generation which keeps track if a rewrap of all CSPs and seal wrapped values has completed (initially false).
 		sealGenInfo.Generation++
 		c.logger.Info("incrementing seal config gen, new generation: ", "sealGenInfo.Generation", sealGenInfo.Generation)
 	}
@@ -2553,35 +2546,35 @@ func CheckStorageMigration(b physical.Backend) (*StorageMigrationStatus, error) 
 }
 
 type SetSealResponse struct {
-	barrierSeal     vault.Seal
-	barrierWrapper  wrapping.Wrapper
-	unwrapSeal      vault.Seal
-	createdSeals    []vault.Seal
-	allSeals        []*configutil.KMS
+	barrierSeal       vault.Seal
+	unwrapSeal        vault.Seal
+	allSealKmsConfigs []*configutil.KMS
+
+	// sealConfigError is present if it was impossible to create barrierSeal or unwrapSeal
 	sealConfigError error
-	err             error
+}
+
+func (r *SetSealResponse) getCreatedSeals() []*vault.Seal {
+	var ret []*vault.Seal
+	if r.barrierSeal != nil {
+		ret = append(ret, &r.barrierSeal)
+	}
+	if r.unwrapSeal != nil {
+		ret = append(ret, &r.unwrapSeal)
+	}
+	return ret
 }
 
 // setSeal return barrierSeal, barrierWrapper, unwrapSeal, all the created seals, and all the provided seals from the configs so we can close them in Run
 // The two errors are the sealConfigError and the regular error
-func setSeal(c *ServerCommand, config *server.Config, infoKeys []string, info map[string]string) (setSealResponse SetSealResponse) {
-	var barrierSeal vault.Seal
-	var unwrapSeal vault.Seal
-
-	var sealConfigError error
-	var wrapper wrapping.Wrapper
-	var barrierWrapper wrapping.Wrapper
-
+func setSeal(c *ServerCommand, config *server.Config, infoKeys []string, info map[string]string) (*SetSealResponse, error) {
 	if c.flagDevAutoSeal {
-		var err error
 		access, _ := vaultseal.NewTestSeal(nil)
-		barrierSeal, err = vault.NewAutoSeal(access)
+		barrierSeal, err := vault.NewAutoSeal(access)
 		if err != nil {
-			setSealResponse.err = err
-			return setSealResponse
+			return nil, err
 		}
-		setSealResponse.barrierSeal = barrierSeal
-		return setSealResponse
+		return &SetSealResponse{barrierSeal: barrierSeal}, nil
 	}
 
 	// Handle the case where no seal is provided
@@ -2604,10 +2597,16 @@ func setSeal(c *ServerCommand, config *server.Config, infoKeys []string, info ma
 		}
 	}
 
-	var createdSeals []vault.Seal = make([]vault.Seal, 0)
-	enabledSeals := make([]vaultseal.SealInfo, 0)
-	disabledSeals := make([]vaultseal.SealInfo, 0)
-	allSeals := make([]*configutil.KMS, 0)
+	enabledSealInfos := make([]vaultseal.SealInfo, 0)
+	disabledSealInfos := make([]vaultseal.SealInfo, 0)
+	allSealKmsConfigs := make([]*configutil.KMS, 0)
+	sealWrapperErrors := make(map[string]error)
+
+	type infoKeysAndMap struct {
+		keys   []string
+		theMap map[string]string
+	}
+	sealWrapperInfoKeysMap := make(map[string]infoKeysAndMap)
 
 	var enabledSealType string
 	var disabledSealType string
@@ -2628,26 +2627,25 @@ func setSeal(c *ServerCommand, config *server.Config, infoKeys []string, info ma
 		}
 
 		sealLogger := c.logger.ResetNamed(fmt.Sprintf("seal.%s", sealType))
-		defaultSealWrapper := aeadwrapper.NewShamirWrapper()
-		var sealInfoKeys []string
-		sealInfoMap := map[string]string{}
-		wrapper, sealConfigError = configutil.ConfigureWrapper(configSeal, &sealInfoKeys, &sealInfoMap, sealLogger)
-		if sealConfigError != nil {
-			if !errwrap.ContainsType(sealConfigError, new(logical.KeyNotFoundError)) {
-				return SetSealResponse{
-					barrierSeal:     barrierSeal,
-					barrierWrapper:  barrierWrapper,
-					unwrapSeal:      unwrapSeal,
-					createdSeals:    createdSeals,
-					allSeals:        allSeals,
-					sealConfigError: sealConfigError,
-					err: fmt.Errorf(
-						"Error parsing Seal configuration: %s", sealConfigError),
-				}
+
+		var wrapperInfoKeys []string
+		wrapperInfoMap := map[string]string{}
+		wrapper, wrapperConfigError := configutil.ConfigureWrapper(configSeal, &wrapperInfoKeys, &wrapperInfoMap, sealLogger)
+		if wrapperConfigError != nil {
+			// It seems that we are checking for this particular error here is to distinguish between a
+			// mis-configured seal vs one that fails for another reason. Apparently the only other reason is
+			// a key not found error. It seems the intention is for the key not found error to be returned
+			// as a seal specific error later
+			if !errwrap.ContainsType(wrapperConfigError, new(logical.KeyNotFoundError)) {
+				return nil, fmt.Errorf("error parsing Seal configuration: %s", wrapperConfigError)
+			} else {
+				sealLogger.Error("error configuring seal", "name", configSeal.Name, "err", wrapperConfigError)
+				sealWrapperErrors[configSeal.Name] = wrapperConfigError
 			}
 		}
-		if wrapper == nil {
-			wrapper = defaultSealWrapper
+		// for some reason configureWrapper in kms.go returns nil wrapper and nil error for wrapping.WrapperTypeShamir
+		if wrapper == nil && wrapperConfigError == nil {
+			wrapper = aeadwrapper.NewShamirWrapper()
 		}
 
 		sealInfo := vaultseal.SealInfo{
@@ -2656,61 +2654,95 @@ func setSeal(c *ServerCommand, config *server.Config, infoKeys []string, info ma
 			Name:     configSeal.Name,
 		}
 
-		infoPrefix := ""
 		if configSeal.Disabled {
-			infoPrefix = "Old "
-
-			disabledSeals = append(disabledSeals, sealInfo)
-
+			disabledSealInfos = append(disabledSealInfos, sealInfo)
 			disabledSealType = configSeal.Type
 		} else {
-			enabledSeals = append(enabledSeals, sealInfo)
-
-			if configSeal.Priority == 1 {
-				barrierWrapper = wrapper
-			}
-
+			enabledSealInfos = append(enabledSealInfos, sealInfo)
 			enabledSealType = configSeal.Type
 		}
+		allSealKmsConfigs = append(allSealKmsConfigs, configSeal)
 
-		for _, k := range sealInfoKeys {
-			infoKeys = append(infoKeys, infoPrefix+k)
-			info[infoPrefix+k] = sealInfoMap[k]
+		sealWrapperInfoKeysMap[sealInfo.Name] = infoKeysAndMap{
+			keys:   wrapperInfoKeys,
+			theMap: wrapperInfoMap,
 		}
-		allSeals = append(allSeals, configSeal)
 	}
+
+	// Set the info keys, this modifies the function arguments `info` and `infoKeys`
+	// TODO(SEALHA): Why are we doing this? What is its use?
+	appendWrapperInfoKeys := func(prefix string, sealInfos []vaultseal.SealInfo) {
+		if len(sealInfos) > 0 {
+			useName := false
+			if len(sealInfos) > 1 {
+				useName = true
+			}
+			for _, sealInfo := range sealInfos {
+				if useName {
+					prefix = fmt.Sprintf("%s %s ", prefix, sealInfo.Name)
+				}
+				for _, k := range sealWrapperInfoKeysMap[sealInfo.Name].keys {
+					infoKeys = append(infoKeys, prefix+k)
+					info[prefix+k] = sealWrapperInfoKeysMap[sealInfo.Name].theMap[k]
+				}
+			}
+		}
+	}
+	appendWrapperInfoKeys("", enabledSealInfos)
+	appendWrapperInfoKeys("Old", disabledSealInfos)
+
+	var barrierSeal vault.Seal
+	var unwrapSeal vault.Seal
+	var sealConfigError error
 
 	var err error
 	if enabledSealType == "shamir" {
-		barrierSeal = vault.NewDefaultSeal(vaultseal.NewAccess(enabledSeals))
+		// We should only have one enabled SealInfo here
+		barrierSeal = vault.NewDefaultSeal(vaultseal.NewAccess(enabledSealInfos))
 	} else {
-		barrierSeal, err = vault.NewAutoSeal(vaultseal.NewAccess(enabledSeals))
+		if len(enabledSealInfos) == 0 {
+			return nil, errors.New("no enabled Seals in configuration")
+		}
+		barrierSeal, err = makeAutoSeal(enabledSealInfos, sealWrapperErrors)
 		if err != nil {
-			setSealResponse.err = err
-			return setSealResponse
+			sealConfigError = err
 		}
 	}
 
 	if disabledSealType == "shamir" {
-		unwrapSeal = vault.NewDefaultSeal(vaultseal.NewAccess(disabledSeals))
+		// We should only have one disabled SealInfo here
+		unwrapSeal = vault.NewDefaultSeal(vaultseal.NewAccess(disabledSealInfos))
 	} else if disabledSealType != "" {
-		unwrapSeal, err = vault.NewAutoSeal(vaultseal.NewAccess(disabledSeals))
+		// No need to check if disabledSealInfos is empty, since we only set the type if we found some
+		unwrapSeal, err = makeAutoSeal(disabledSealInfos, sealWrapperErrors)
 		if err != nil {
-			setSealResponse.err = err
-			return setSealResponse
+			if sealConfigError == nil {
+				sealConfigError = err
+			} else {
+				sealConfigError = errors.Join(sealConfigError, err)
+			}
 		}
 	}
-	createdSeals = append(createdSeals, barrierSeal)
 
-	return SetSealResponse{
-		barrierSeal:     barrierSeal,
-		barrierWrapper:  barrierWrapper,
-		unwrapSeal:      unwrapSeal,
-		createdSeals:    createdSeals,
-		allSeals:        allSeals,
-		sealConfigError: sealConfigError,
-		err:             nil,
+	return &SetSealResponse{
+		barrierSeal:       barrierSeal,
+		unwrapSeal:        unwrapSeal,
+		allSealKmsConfigs: allSealKmsConfigs,
+		sealConfigError:   sealConfigError,
+	}, nil
+}
+
+func makeAutoSeal(sealInfos []vaultseal.SealInfo, sealInfoErrorMap map[string]error) (vault.Seal, error) {
+	var working []vaultseal.SealInfo
+	for _, sealInfo := range sealInfos {
+		if err := sealInfoErrorMap[sealInfo.Name]; err == nil {
+			working = append(working, sealInfo)
+		}
 	}
+	if len(working) == 0 {
+		return nil, errors.New("error creating autoseal: no Seals were configured successfully")
+	}
+	return vault.NewAutoSeal(vaultseal.NewAccess(sealInfos))
 }
 
 func initHaBackend(c *ServerCommand, config *server.Config, coreConfig *vault.CoreConfig, backend physical.Backend) (bool, error) {

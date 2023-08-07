@@ -432,31 +432,19 @@ func (c *OperatorDiagnoseCommand) offlineDiagnostics(ctx context.Context) error 
 
 	sealcontext, sealspan := diagnose.StartSpan(ctx, "Create Vault Server Configuration Seals")
 
-	setSealResponse := setSeal(server, config, make([]string, 0), make(map[string]string))
-	barrierSeal := setSealResponse.barrierSeal
-	barrierWrapper := setSealResponse.barrierWrapper
-	unwrapSeal := setSealResponse.unwrapSeal
-	createdSeals := setSealResponse.createdSeals
-	allSeals := setSealResponse.allSeals
-	sealConfigError := setSealResponse.sealConfigError
-	err := setSealResponse.err
+	setSealResponse, err := setSeal(server, config, make([]string, 0), make(map[string]string))
 	// Check error here
 	if err != nil {
 		diagnose.Advise(ctx, "For assistance with the seal stanza, see the Vault configuration documentation.")
 		diagnose.Fail(sealcontext, fmt.Sprintf("Seal creation resulted in the following error: %s.", err.Error()))
 		goto SEALFAIL
 	}
-	if sealConfigError != nil {
+	if setSealResponse.sealConfigError != nil {
 		diagnose.Fail(sealcontext, "Seal could not be configured: seals may already be initialized.")
 		goto SEALFAIL
 	}
 
-	for _, seal := range createdSeals {
-		// There is always one nil seal. We need to skip it so we don't start an empty Finalize-Seal-Shamir
-		// section.
-		if seal == nil {
-			continue
-		}
+	for _, seal := range setSealResponse.getCreatedSeals() {
 		seal := seal // capture range variable
 		// Ensure that the seal finalizer is called, even if using verify-only
 		defer func(seal *vault.Seal) {
@@ -469,15 +457,31 @@ func (c *OperatorDiagnoseCommand) offlineDiagnostics(ctx context.Context) error 
 				finalizeSealSpan.End()
 			}
 			finalizeSealSpan.End()
-		}(&seal)
+		}(seal)
 	}
 
-	if barrierSeal == nil {
+	if setSealResponse.barrierSeal == nil {
 		diagnose.Fail(sealcontext, "Could not create barrier seal. No error was generated, but it is likely that the seal stanza is misconfigured. For guidance, see Vault's configuration documentation on the seal stanza.")
 	}
 
 SEALFAIL:
 	sealspan.End()
+
+	var barrierSeal vault.Seal
+	var unwrapSeal vault.Seal
+	var sealInfos []*seal.SealInfo
+	sealGenInfo := vault.SealGenerationInfo{
+		Generation: 1,
+		Rewrapped:  false,
+	}
+	if setSealResponse != nil {
+		barrierSeal = setSealResponse.barrierSeal
+		unwrapSeal = setSealResponse.unwrapSeal
+		if setSealResponse.barrierSeal != nil {
+			sealInfos = setSealResponse.barrierSeal.GetAccess().GetSealInfoByPriority()
+		}
+		sealGenInfo.Seals = setSealResponse.allSealKmsConfigs
+	}
 
 	diagnose.Test(ctx, "Check Transit Seal TLS", func(ctx context.Context) error {
 		var checkSealTransit bool
@@ -530,21 +534,11 @@ SEALFAIL:
 		return nil
 	})
 
-	sealGenInfo := vault.SealGenerationInfo{
-		Generation: 1,
-		Seals:      allSeals,
-		Rewrapped:  false,
-	}
-
 	var coreConfig vault.CoreConfig
 	diagnose.Test(ctx, "Create Core Configuration", func(ctx context.Context) error {
 		var secureRandomReader io.Reader
 		// prepare a secure random reader for core
 		randReaderTestName := "Initialize Randomness for Core"
-		var sealInfos []*seal.SealInfo
-		if barrierSeal != nil {
-			sealInfos = barrierSeal.GetAccess().GetSealInfoByPriority()
-		}
 		secureRandomReader, err = configutil.CreateSecureRandomReaderFunc(config.SharedConfig, sealInfos, server.logger)
 		if err != nil {
 			return diagnose.SpotError(ctx, randReaderTestName, fmt.Errorf("Could not initialize randomness for core: %w.", err))
@@ -698,11 +692,25 @@ SEALFAIL:
 			return fmt.Errorf("Diagnose could not create unique UUID for unsealing.")
 		}
 		barrierEncValue := "diagnose-" + barrierUUID
-		ciphertext, err := barrierWrapper.Encrypt(ctx, []byte(barrierEncValue), nil)
-		if err != nil {
-			return fmt.Errorf("Error encrypting with seal barrier: %w.", err)
+		ciphertext, errMap := barrierSeal.GetAccess().Encrypt(ctx, []byte(barrierEncValue), nil)
+		if len(errMap) > 0 {
+			var sealErrors []error
+			for name, err := range errMap {
+				sealErrors = append(sealErrors, fmt.Errorf("error encrypting with seal %q: %w", name, err))
+			}
+			if ciphertext == nil {
+				// Full failure
+				if len(sealErrors) == 1 {
+					return sealErrors[0]
+				} else {
+					return fmt.Errorf("complete seal encryption failure: %w", errors.Join())
+				}
+			} else {
+				// Partial failure
+				return fmt.Errorf("partial seal encryption failure: %w", errors.Join())
+			}
 		}
-		plaintext, err := barrierWrapper.Decrypt(ctx, ciphertext, nil)
+		plaintext, _, err := barrierSeal.GetAccess().Decrypt(ctx, ciphertext, nil)
 		if err != nil {
 			return fmt.Errorf("Error decrypting with seal barrier: %w", err)
 		}

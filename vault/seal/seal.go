@@ -70,7 +70,7 @@ type Access interface {
 	// information in the returned blob info. Which options are used depends on
 	// the underlying wrapper. Supported options: WithAad.
 	// Returns a MultiWrapValue as long as at least one seal Access wrapper encrypted the data successfully, and
-	// if this is the case errors may still be returned if any wrapper failed. The error map is keyd by seal name.
+	// if this is the case errors may still be returned if any wrapper failed. The error map is keyed by seal name.
 	Encrypt(ctx context.Context, plaintext []byte, options ...wrapping.Option) (*wrapping.MultiWrapValue, map[string]error)
 
 	// Decrypt decrypts the given byte slice and stores the resulting information in the
