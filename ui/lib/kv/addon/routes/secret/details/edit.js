@@ -1,7 +1,9 @@
 import Route from '@ember/routing/route';
 import { inject as service } from '@ember/service';
 import { hash } from 'rsvp';
+import { withConfirmLeave } from 'core/decorators/confirm-leave';
 
+@withConfirmLeave('model.newVersion')
 export default class KvSecretEditRoute extends Route {
   @service store;
 
