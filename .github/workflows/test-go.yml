@@ -372,9 +372,15 @@ jobs:
           path: failure-summary-${{ matrix.id }}${{ inputs.name != '' && '-' || '' }}${{inputs.name}}.md
 
   test-collect-reports:
+    if: ${{ ! cancelled() }}
     needs: test-go
     runs-on: ${{ fromJSON(inputs.runs-on) }}
     steps:
+      - uses: actions/cache@88522ab9f39a2ea568f7027eddc7d8d8bc9d59c8 # v3.3.1
+        with:
+          path: test-results/go-test
+          key: go-test-reports-${{ github.run_number }}
+          restore-keys: go-test-reports-
       - uses: actions/download-artifact@9bc31d5ccc31df68ecc42ccf4149144866c47d8a # v3.0.2
         with:
           name: test-results
@@ -383,7 +389,3 @@ jobs:
           ls -lhR test-results/go-test
           find test-results/go-test -mindepth 1 -mtime +3 -delete
           ls -lhR test-results/go-test
-      - uses: actions/cache/save@88522ab9f39a2ea568f7027eddc7d8d8bc9d59c8 # v3.3.1
-        with:
-          path: test-results/go-test
-          key: go-test-reports-${{ github.run_number }}

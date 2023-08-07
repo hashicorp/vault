@@ -189,9 +189,10 @@ func TestEntryFormatter_FormatRequest(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
+			ss := newStaticSalt(t)
 			cfg, err := NewFormatterConfig()
 			require.NoError(t, err)
-			f, err := NewEntryFormatter(cfg, newStaticSalt(t))
+			f, err := NewEntryFormatter(cfg, ss)
 			require.NoError(t, err)
 
 			var ctx context.Context
@@ -255,9 +256,10 @@ func TestEntryFormatter_FormatResponse(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
+			ss := newStaticSalt(t)
 			cfg, err := NewFormatterConfig()
 			require.NoError(t, err)
-			f, err := NewEntryFormatter(cfg, newStaticSalt(t))
+			f, err := NewEntryFormatter(cfg, ss)
 			require.NoError(t, err)
 
 			var ctx context.Context

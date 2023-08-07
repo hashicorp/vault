@@ -268,7 +268,7 @@ func NewNoopAudit(config map[string]string) (*NoopAudit, error) {
 }
 
 func NoopAuditFactory(records **[][]byte) audit.Factory {
-	return func(_ context.Context, config *audit.BackendConfig, _ bool) (audit.Backend, error) {
+	return func(_ context.Context, config *audit.BackendConfig, _ bool, _ audit.HeaderFormatter) (audit.Backend, error) {
 		n, err := NewNoopAudit(config.Config)
 		if err != nil {
 			return nil, err
@@ -414,7 +414,7 @@ func (n *NoopAudit) RegisterNodesAndPipeline(broker *eventlogger.Broker, _ strin
 }
 
 type TestLogger struct {
-	hclog.Logger
+	hclog.InterceptLogger
 	Path string
 	File *os.File
 	sink hclog.SinkAdapter
@@ -446,6 +446,7 @@ func NewTestLogger(t testing.T) *TestLogger {
 	logger := hclog.NewInterceptLogger(&hclog.LoggerOptions{
 		Output:            io.Discard,
 		IndependentLevels: true,
+		Name:              t.Name(),
 	})
 	sink := hclog.NewSinkAdapter(&hclog.LoggerOptions{
 		Output:            output,
@@ -454,13 +455,13 @@ func NewTestLogger(t testing.T) *TestLogger {
 	})
 	logger.RegisterSink(sink)
 	return &TestLogger{
-		Path:   logPath,
-		File:   logFile,
-		Logger: logger,
-		sink:   sink,
+		Path:            logPath,
+		File:            logFile,
+		InterceptLogger: logger,
+		sink:            sink,
 	}
 }
 
 func (tl *TestLogger) StopLogging() {
-	tl.Logger.(hclog.InterceptLogger).DeregisterSink(tl.sink)
+	tl.InterceptLogger.DeregisterSink(tl.sink)
 }

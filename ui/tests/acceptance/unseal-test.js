@@ -8,7 +8,6 @@ import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
 import VAULT_KEYS from 'vault/tests/helpers/vault-keys';
 import authPage from 'vault/tests/pages/auth';
-import logout from 'vault/tests/pages/logout';
 import { pollCluster } from 'vault/tests/helpers/poll-cluster';
 
 const { unsealKeys } = VAULT_KEYS;
@@ -18,10 +17,6 @@ module('Acceptance | unseal', function (hooks) {
 
   hooks.beforeEach(function () {
     return authPage.login();
-  });
-
-  hooks.afterEach(function () {
-    return logout.visit();
   });
 
   test('seal then unseal', async function (assert) {
