@@ -584,7 +584,7 @@ func ConvertConfig(cfg *ConfigEntry) *capldap.ClientConfig {
 		StartTLS:                             cfg.StartTLS,
 		BindDN:                               cfg.BindDN,
 		BindPassword:                         cfg.BindPassword,
-		AllowEmptyPasswordBinds:              true,
+		AllowEmptyPasswordBinds:              !cfg.DenyNullBind,
 		DiscoverDN:                           cfg.DiscoverDN,
 		TLSMinVersion:                        cfg.TLSMinVersion,
 		TLSMaxVersion:                        cfg.TLSMaxVersion,
