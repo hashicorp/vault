@@ -129,6 +129,7 @@ resource "enos_consul_start" "consul" {
     log_level        = var.consul_log_level
     log_file         = var.consul_log_file
   }
+  license   = var.consul_license
   unit_name = "consul"
   username  = "consul"
 

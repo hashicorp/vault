@@ -25,6 +25,7 @@ scenario "upgrade" {
   ]
 
   locals {
+    backend_license_path = abspath(var.backend_license_path != null ? var.backend_license_path : joinpath(path.root, "./support/consul.hclic"))
     backend_tag_key = "VaultStorage"
     build_tags = {
       "oss"              = ["ui"]
@@ -91,18 +92,24 @@ scenario "upgrade" {
     }
   }
 
-  step "read_license" {
+  // This step reads the contents of the backend license if we're using a Consul backend and
+  // the edition is "ent".
+  step "read_backend_license" {
+    skip_step = matrix.backend == "raft" || var.backend_edition == "oss"
+    module    = module.read_license
+
+    variables {
+      file_name = local.backend_license_path
+    }
+  }
+
+  step "read_vault_license" {
     skip_step = matrix.edition == "oss"
     module    = module.read_license
 
     variables {
       file_name = local.vault_license_path
     }
-  }
-
-  step "get_local_metadata" {
-    skip_step = matrix.artifact_source != "local"
-    module    = module.get_local_metadata
   }
 
   step "create_vault_cluster_targets" {
@@ -152,6 +159,7 @@ scenario "upgrade" {
     variables {
       cluster_name    = step.create_vault_cluster_backend_targets.cluster_name
       cluster_tag_key = local.backend_tag_key
+      license  = (matrix.backend == "consul" && var.backend_edition == "ent") ? step.read_backend_license.license : null
       release = {
         edition = var.backend_edition
         version = matrix.consul_version
@@ -176,6 +184,7 @@ scenario "upgrade" {
       awskms_unseal_key_arn   = step.create_vpc.kms_key_arn
       backend_cluster_name    = step.create_vault_cluster_backend_targets.cluster_name
       backend_cluster_tag_key = local.backend_tag_key
+      consul_license  = (matrix.backend == "consul" && var.backend_edition == "ent") ? step.read_backend_license.license : null
       cluster_name            = step.create_vault_cluster_targets.cluster_name
       consul_release = matrix.backend == "consul" ? {
         edition = var.backend_edition
@@ -183,7 +192,7 @@ scenario "upgrade" {
       } : null
       enable_file_audit_device = var.vault_enable_file_audit_device
       install_dir              = local.vault_install_dir
-      license                  = matrix.edition != "oss" ? step.read_license.license : null
+      license                  = matrix.edition != "oss" ? step.read_vault_license.license : null
       packages                 = local.packages
       release                  = var.vault_upgrade_initial_release
       storage_backend          = matrix.backend
