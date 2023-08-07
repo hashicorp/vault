@@ -11,10 +11,9 @@ import { findAll, render } from '@ember/test-helpers';
 import { hbs } from 'ember-cli-htmlbars';
 import { kvMetadataPath } from 'vault/utils/kv-path';
 import { allowAllCapabilitiesStub } from 'vault/tests/helpers/stubs';
-import { SELECTORS } from 'vault/tests/helpers/kv/kv-general-selectors';
-import { PAGE } from 'vault/tests/helpers/kv/kv-page-selectors';
+import { PAGE } from 'vault/tests/helpers/kv/kv-selectors';
 
-module('Integration | Component | kv | Page::Secret::MetadataDetails', function (hooks) {
+module('Integration | Component | kv | Page::Secret::Metadata::Details', function (hooks) {
   setupRenderingTest(hooks);
   setupEngine(hooks, 'kv');
   setupMirage(hooks);
@@ -40,14 +39,14 @@ module('Integration | Component | kv | Page::Secret::MetadataDetails', function 
       { label: 'metadata' },
     ];
     await render(
-      hbs`<Page::Secret::MetadataDetails @metadata={{this.model}} @breadcrumbs={{this.breadcrumbs}} />`,
+      hbs`<Page::Secret::Metadata::Details @metadata={{this.model}} @breadcrumbs={{this.breadcrumbs}} />`,
       {
         owner: this.engine,
       }
     );
-    assert.dom(SELECTORS.emptyStateTitle).hasText('No custom metadata', 'renders the correct empty state');
+    assert.dom(PAGE.emptyStateTitle).hasText('No custom metadata', 'renders the correct empty state');
     assert
-      .dom(SELECTORS.infoRowValue('Delete version after'))
+      .dom(PAGE.infoRowValue('Delete version after'))
       .hasText('3 hours 25 minutes 19 seconds', 'correctly shows and formats the timestamp.');
   });
 
@@ -69,14 +68,14 @@ module('Integration | Component | kv | Page::Secret::MetadataDetails', function 
     ];
 
     await render(
-      hbs`<Page::Secret::MetadataDetails @metadata={{this.model}} @breadcrumbs={{this.breadcrumbs}} />`,
+      hbs`<Page::Secret::Metadata::Details @metadata={{this.model}} @breadcrumbs={{this.breadcrumbs}} />`,
       {
         owner: this.engine,
       }
     );
     for (const key in this.model.customMetadata) {
       const value = this.model.customMetadata[key];
-      assert.dom(SELECTORS.infoRowValue(key)).hasText(value);
+      assert.dom(PAGE.infoRowValue(key)).hasText(value);
     }
   });
 
@@ -98,13 +97,13 @@ module('Integration | Component | kv | Page::Secret::MetadataDetails', function 
       { label: 'metadata' },
     ];
     await render(
-      hbs`<Page::Secret::MetadataDetails @metadata={{this.model}} @breadcrumbs={{this.breadcrumbs}} />`,
+      hbs`<Page::Secret::Metadata::Details @metadata={{this.model}} @breadcrumbs={{this.breadcrumbs}} />`,
       {
         owner: this.engine,
       }
     );
 
-    const [noCustomMetadata, noMetadata] = findAll(SELECTORS.emptyStateTitle);
+    const [noCustomMetadata, noMetadata] = findAll(PAGE.emptyStateTitle);
     assert
       .dom(noCustomMetadata)
       .exists(
@@ -117,6 +116,6 @@ module('Integration | Component | kv | Page::Secret::MetadataDetails', function 
         'You do not have access to secret metadata',
         'renders the empty state about no secret metadata'
       );
-    assert.dom(PAGE.details.editMetadataBtn).doesNotExist('does not render edit metadata button.');
+    assert.dom(PAGE.metadata.editBtn).doesNotExist('does not render edit metadata button.');
   });
 });
