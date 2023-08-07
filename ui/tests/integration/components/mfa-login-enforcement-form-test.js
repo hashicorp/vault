@@ -131,9 +131,9 @@ module('Integration | Component | mfa-login-enforcement-form', function (hooks) 
     assert.true(this.didSave, 'onSave callback triggered');
     assert.strictEqual(this.model.name, 'bar', 'Name property set on model');
     assert.strictEqual(this.model.mfa_methods.firstObject.id, '123456', 'Mfa method added to model');
-    assert.strictEqual(
-      this.model.auth_method_accessors.firstObject,
-      'auth_userpass_1234',
+    assert.deepEqual(
+      this.model.auth_method_accessors,
+      ['auth_userpass_1234'],
       'Target saved to correct model property'
     );
   });

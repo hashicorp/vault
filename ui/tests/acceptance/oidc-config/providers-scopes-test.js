@@ -9,7 +9,6 @@ import { setupApplicationTest } from 'ember-qunit';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 import ENV from 'vault/config/environment';
 import authPage from 'vault/tests/pages/auth';
-import logout from 'vault/tests/pages/logout';
 import { create } from 'ember-cli-page-object';
 import { clickTrigger, selectChoose } from 'ember-power-select/test-support/helpers';
 import ss from 'vault/tests/pages/components/search-select';
@@ -39,15 +38,11 @@ module('Acceptance |  oidc-config providers and scopes', function (hooks) {
     ENV['ember-cli-mirage'].handler = 'oidcConfig';
   });
 
-  hooks.beforeEach(async function () {
-    this.store = await this.owner.lookup('service:store');
+  hooks.beforeEach(function () {
+    this.store = this.owner.lookup('service:store');
     // mock client list so OIDC BASE URL does not redirect to landing call-to-action image
     this.server.get('/identity/oidc/client', () => overrideMirageResponse(null, CLIENT_LIST_RESPONSE));
     return authPage.login();
-  });
-
-  hooks.afterEach(function () {
-    return logout.visit();
   });
 
   hooks.after(function () {
