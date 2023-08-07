@@ -21,6 +21,7 @@ export default class KvSecretsCreateRoute extends Route {
       backend,
       path,
       secret: this.store.createRecord('kv/data', { backend, path }),
+      metadata: this.store.createRecord('kv/metadata', { backend, path }),
     });
   }
 
