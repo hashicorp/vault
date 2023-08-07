@@ -25,6 +25,10 @@ variable "config_dir" {
   default = null
 }
 
+variable "consul_log_level" {
+  default = null
+}
+
 variable "data_dir" {
   default = null
 }
