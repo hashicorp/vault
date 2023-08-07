@@ -20,7 +20,7 @@
     </ToolbarActions>
   </Toolbar>
 
-  {{#if (not (eq @cluster 403))}}
+  {{#if (not-eq @cluster 403)}}
     <h2 class="title is-4 has-bottom-margin-xs has-top-margin-xl has-border-bottom-light has-bottom-padding-s">
       Cluster Config
     </h2>
@@ -32,7 +32,7 @@
     {{/each}}
   {{/if}}
 
-  {{#if (not (eq @acme 403))}}
+  {{#if (not-eq @acme 403)}}
     <h2 class="title is-4 has-bottom-margin-xs has-top-margin-xl has-border-bottom-light has-bottom-padding-s">
       ACME Config
     </h2>
@@ -44,7 +44,7 @@
     {{/each}}
   {{/if}}
 
-  {{#if (not (eq @urls 403))}}
+  {{#if (not-eq @urls 403)}}
     <h2 class="title is-4 has-bottom-margin-xs has-top-margin-xl has-border-bottom-light has-bottom-padding-s">
       Global URLs
     </h2>
@@ -55,7 +55,7 @@
     />
   {{/if}}
 
-  {{#if (not (eq @crl 403))}}
+  {{#if (not-eq @crl 403)}}
     <h2 class="title is-4 has-bottom-margin-xs has-top-margin-xl has-border-bottom-light has-bottom-padding-s">
       Certificate Revocation List (CRL)
     </h2>
