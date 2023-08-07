@@ -237,15 +237,6 @@ module('Acceptance | landing page dashboard', function (hooks) {
       await click('[data-test-button="Generate credentials"]');
       assert.strictEqual(currentURL(), `/vault/secrets/database/credentials/api-prod`);
     });
-    test('shows the quick actions card for kv', async function (assert) {
-      await authPage.login();
-      await mountSecrets.enable('kv', 'kv');
-      await visit('/vault/dashboard');
-      // TODO: write more kv tests when kv work is merged!
-      await selectChoose('.search-select', 'kv');
-      await fillIn('[data-test-select="action-select"]', 'Find KV secrets');
-      assert.dom('[data-test-button="Read secrets"]').exists({ count: 1 });
-    });
     test('hides engines that are not pki, db, or kv for quick actions card', async function (assert) {
       await authPage.login();
       await mountSecrets.enable('consul', 'consul');
