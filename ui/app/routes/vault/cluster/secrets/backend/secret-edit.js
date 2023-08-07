@@ -320,7 +320,7 @@ export default Route.extend(UnloadModelRoute, {
       if (!model.hasDirtyAttributes || model.isDeleted) {
         return true;
       }
-      // TODO: below is KV v2 logic, remove with engine work
+      // TODO: below is KV v2 logic, remove with engine work. kv engine cleanup
       const version = model.get('selectedVersion');
       const changed = model.changedAttributes();
       const changedKeys = Object.keys(changed);
