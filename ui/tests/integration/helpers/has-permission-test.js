@@ -5,7 +5,7 @@
 
 import { module, test } from 'qunit';
 import { setupRenderingTest } from 'ember-qunit';
-import { render } from '@ember/test-helpers';
+import { render, settled } from '@ember/test-helpers';
 import { run } from '@ember/runloop';
 import hbs from 'htmlbars-inline-precompile';
 import Service from '@ember/service';
@@ -33,6 +33,7 @@ module('Integration | Helper | has-permission', function (hooks) {
     await run(() => {
       this.permissions.set('globPaths', { 'test/': { capabilities: ['update'] } });
     });
+    await settled();
     assert.dom(this.element).hasText('Yes', 'the helper re-computes when globPaths changes');
   });
 

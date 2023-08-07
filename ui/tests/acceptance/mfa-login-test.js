@@ -18,11 +18,17 @@ module('Acceptance | mfa-login', function (hooks) {
     ENV['ember-cli-mirage'].handler = 'mfaLogin';
   });
   hooks.beforeEach(function () {
+    this.auth = this.owner.lookup('service:auth');
     this.select = async (select = 0, option = 1) => {
       const selector = `[data-test-mfa-select="${select}"]`;
       const value = this.element.querySelector(`${selector} option:nth-child(${option + 1})`).value;
       await fillIn(`${selector} select`, value);
     };
+    return visit('/vault/logout');
+  });
+  hooks.afterEach(function () {
+    // Manually clear token after each so that future tests don't get into a weird state
+    this.auth.deleteCurrentToken();
   });
   hooks.after(function () {
     ENV['ember-cli-mirage'].handler = null;

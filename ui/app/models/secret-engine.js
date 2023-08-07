@@ -160,13 +160,6 @@ export default class SecretEngineModel extends Model {
     return 'vault.cluster.secrets.backend.list-root';
   }
 
-  get accessor() {
-    if (this.version === 2) {
-      return `v2 ${this.accessor}`;
-    }
-    return this.accessor;
-  }
-
   get localDisplay() {
     return this.local ? 'local' : 'replicated';
   }
