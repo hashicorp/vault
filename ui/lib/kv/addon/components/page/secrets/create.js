@@ -8,6 +8,8 @@ import { action } from '@ember/object';
 import { tracked } from '@glimmer/tracking';
 import { task } from 'ember-concurrency';
 import { inject as service } from '@ember/service';
+import { pathIsFromDirectory } from 'vault/lib/kv-breadcrumbs';
+
 /**
  * @module KvSecretCreate is used for creating the initial version of a secret
  *
@@ -57,7 +59,7 @@ export default class KvSecretCreate extends Component {
         const { secret } = this.args;
         yield this.args.secret.save();
         this.flashMessages.success(`Successfully created secret ${secret.path}.`);
-        this.router.transitionTo('vault.cluster.secrets.backend.kv.secret.details', this.args.secret.path);
+        this.router.transitionTo('vault.cluster.secrets.backend.kv.secret.details', secret.path);
       }
     } catch (error) {
       const message = error.errors ? error.errors.join('. ') : error.message;
@@ -68,6 +70,8 @@ export default class KvSecretCreate extends Component {
 
   @action
   onCancel() {
-    this.router.transitionTo('vault.cluster.secrets.backend.kv.list');
+    pathIsFromDirectory(this.args.secret?.path)
+      ? this.router.transitionTo('vault.cluster.secrets.backend.kv.list-directory', this.args.secret.path)
+      : this.router.transitionTo('vault.cluster.secrets.backend.kv.list');
   }
 }
