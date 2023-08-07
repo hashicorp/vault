@@ -56,7 +56,7 @@ export default class KvSecretCreate extends Component {
       if (isValid) {
         const { secret } = this.args;
         yield this.args.secret.save();
-        this.flashMessages.success(`Successfully created secret ${secret.path}`);
+        this.flashMessages.success(`Successfully created secret ${secret.path}.`);
         this.router.transitionTo('vault.cluster.secrets.backend.kv.secret.details', this.args.secret.path);
       }
     } catch (error) {
