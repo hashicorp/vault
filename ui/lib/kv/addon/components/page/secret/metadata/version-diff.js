@@ -14,14 +14,16 @@ import { typeOf } from '@ember/utils';
  * @module KvVersionDiff
  * This component produces a JSON diff view between 2 secret versions. It uses the library jsondiffpatch.
  *
+ * @param {string} backend - Backend from the kv/data model.
+ * @param {string} path - Backend from the kv/data model.
  * @param {array} metadata - The kv/metadata model. It is version agnostic.
- * @param {array} breadcrumbs - Array to generate breadcrumbs, passed to the page header component
+ * @param {array} breadcrumbs - Array to generate breadcrumbs, passed to the page header component.
  */
 
 export default class KvVersionDiffComponent extends Component {
   @service store;
 
-  @tracked leftSideVersion = this.args.secret.version;
+  @tracked leftSideVersion = this.args.metadata.currentVersion;
   @tracked rightSideVersion = this.defaultRightSideVersion;
   @tracked statesMatch = false;
   @tracked visualDiff;
@@ -44,7 +46,7 @@ export default class KvVersionDiffComponent extends Component {
   async fetchSecretData(version) {
     // ARG TODO ask if maybe we want to override the adapter peekRecord?
     version = typeOf(version) === 'string' ? Number(version) : version;
-    const { backend, path } = this.args.secret;
+    const { backend, path } = this.args;
     // check the store first, avoiding an extra network request if possible.
     const storeData = await this.store.peekRecord('kv/data', kvDataPath(backend, path, version));
     const data = storeData ? storeData : await this.store.queryRecord('kv/data', { backend, path, version });
