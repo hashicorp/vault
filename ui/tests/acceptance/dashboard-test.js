@@ -248,9 +248,9 @@ module('Acceptance | landing page dashboard', function (hooks) {
     });
     test('hides engines that are not pki, db, or kv for quick actions card', async function (assert) {
       await authPage.login();
-      await mountSecrets.enable('aws', 'aws');
+      await mountSecrets.enable('consul', 'consul');
       await visit('/vault/dashboard');
-      await selectSearch('[data-test-secrets-engines-select]', 'aws');
+      await selectSearch('[data-test-secrets-engines-select]', 'consul');
       assert.dom('.ember-power-select-option--no-matches-message').exists({ count: 1 });
     });
   });
