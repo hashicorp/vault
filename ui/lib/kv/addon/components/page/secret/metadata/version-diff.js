@@ -39,7 +39,6 @@ export default class KvVersionDiffComponent extends Component {
       (version) =>
         version.destroyed === false && version.deletion_time === '' && version.version != this.leftSideVersion
     );
-    // if all versions have been deleted or destroyed return one less than the current version;
     return versionData ? versionData.version : this.leftSideVersion - 1;
   }
 
