@@ -69,7 +69,7 @@ func (c *mySQLConnectionProducer) Init(ctx context.Context, conf map[string]inte
 	password := c.Password
 
 	// QueryHelper doesn't do any SQL escaping, but if it starts to do so
-	// then maybe we won't be able to use it to do URL substitution any more.
+	// then maybe we won't be able to use it to do URL substitution anymore.
 	c.ConnectionURL = dbutil.QueryHelper(c.ConnectionURL, map[string]string{
 		"username": url.PathEscape(c.Username),
 		"password": password,
