@@ -62,7 +62,6 @@ type CIEPSVaultParams struct {
 	// This information is included for audit tracking purposes.
 	IsPerfStandby bool `json:"vault_is_performance_standby"`
 	IsPRSecondary bool `json:"vault_is_performance_secondary"`
-	IsDRSecondary bool `json:"vault_is_disaster_secondary"`
 
 	IssuanceMode CIEPSIssuanceMode `json:"issuance_mode"`
 
