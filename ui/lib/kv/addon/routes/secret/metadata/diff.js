@@ -4,25 +4,9 @@
  */
 
 import Route from '@ember/routing/route';
-import { inject as service } from '@ember/service';
-import { hash } from 'rsvp';
 import { pathIsFromDirectory, breadcrumbsForDirectory } from 'vault/lib/kv-breadcrumbs';
 
 export default class KvSecretMetadataDiffRoute extends Route {
-  @service store;
-  @service secretMountPath;
-
-  model() {
-    const backend = this.secretMountPath.get();
-    const parentModel = this.modelFor('secret.metadata');
-    const { name } = this.paramsFor('secret');
-    return hash({
-      path: name,
-      backend,
-      ...parentModel,
-    });
-  }
-
   setupController(controller, resolvedModel) {
     super.setupController(controller, resolvedModel);
 
