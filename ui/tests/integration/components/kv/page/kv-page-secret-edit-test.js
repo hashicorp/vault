@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: MPL-2.0
  */
 
-import { module, skip, test } from 'qunit';
+import { module, test } from 'qunit';
 import { setupRenderingTest } from 'vault/tests/helpers';
 import { setupEngine } from 'ember-engines/test-support';
 import { setupMirage } from 'ember-cli-mirage/test-support';
@@ -12,6 +12,7 @@ import { hbs } from 'ember-cli-htmlbars';
 import { click, fillIn, render } from '@ember/test-helpers';
 import codemirror from 'vault/tests/helpers/codemirror';
 import { FORM } from 'vault/tests/helpers/kv/kv-selectors';
+import sinon from 'sinon';
 
 module('Integration | Component | kv-v2 | Page::Secret::Edit', function (hooks) {
   setupRenderingTest(hooks);
@@ -20,12 +21,15 @@ module('Integration | Component | kv-v2 | Page::Secret::Edit', function (hooks) 
 
   hooks.beforeEach(function () {
     this.store = this.owner.lookup('service:store');
+    this.router = this.owner.lookup('service:router');
+    this.transitionStub = sinon.stub(this.router, 'transitionTo');
     this.backend = 'my-kv-engine';
     this.path = 'my-secret';
     this.secret = this.store.createRecord('kv/data', {
       backend: this.backend,
       path: this.path,
       secretData: { foo: 'bar' },
+      casVersion: 1,
     });
     this.breadcrumbs = [
       { label: 'secrets', route: 'secrets', linkExternal: true },
@@ -34,14 +38,18 @@ module('Integration | Component | kv-v2 | Page::Secret::Edit', function (hooks) 
     ];
   });
 
+  hooks.afterEach(function () {
+    this.router.transitionTo.restore();
+  });
+
   test('it saves a new secret version', async function (assert) {
-    assert.expect(9);
+    assert.expect(10);
     this.server.post(`${this.backend}/data/${this.path}`, (schema, req) => {
       assert.ok(true, 'Request made to save secret');
       const payload = JSON.parse(req.requestBody);
       assert.propEqual(payload, {
         data: { foo: 'bar', foo2: 'bar2' },
-        options: { cas: 0 },
+        options: { cas: 1 },
       });
       return {
         request_id: 'bd76db73-605d-fcbc-0dad-d44a008f9b95',
@@ -50,7 +58,7 @@ module('Integration | Component | kv-v2 | Page::Secret::Edit', function (hooks) 
           custom_metadata: null,
           deletion_time: '',
           destroyed: false,
-          version: 1,
+          version: 2,
         },
       };
     });
@@ -81,18 +89,22 @@ module('Integration | Component | kv-v2 | Page::Secret::Edit', function (hooks) 
     await fillIn(FORM.keyInput(1), 'foo2');
     await fillIn(FORM.maskedValueInput(1), 'bar2');
     await click(FORM.saveBtn);
+    assert.ok(
+      this.transitionStub.calledWith('vault.cluster.secrets.backend.kv.secret'),
+      'router transitions to parent secret route on save'
+    );
   });
 
-  skip('it saves nested secrets', async function (assert) {
+  test('it saves nested secrets', async function (assert) {
     assert.expect(3);
-    const nestedSecret = 'path/to/secret/';
+    const nestedSecret = 'path/to/secret';
     this.secret.path = nestedSecret;
     this.server.post(`${this.backend}/data/${nestedSecret}`, (schema, req) => {
       assert.ok(true, 'Request made to save secret');
       const payload = JSON.parse(req.requestBody);
       assert.propEqual(payload, {
         data: { foo: 'bar' },
-        options: { cas: 0 },
+        options: { cas: 1 },
       });
       return {
         request_id: 'bd76db73-605d-fcbc-0dad-d44a008f9b95',
@@ -101,7 +113,7 @@ module('Integration | Component | kv-v2 | Page::Secret::Edit', function (hooks) 
           custom_metadata: null,
           deletion_time: '',
           destroyed: false,
-          version: 1,
+          version: 2,
         },
       };
     });
@@ -121,7 +133,7 @@ module('Integration | Component | kv-v2 | Page::Secret::Edit', function (hooks) 
   });
 
   test('it renders API errors', async function (assert) {
-    assert.expect(2);
+    assert.expect(3);
     this.server.post(`${this.backend}/data/${this.path}`, () => {
       return new Response(500, {}, { errors: ['nope'] });
     });
@@ -139,6 +151,11 @@ module('Integration | Component | kv-v2 | Page::Secret::Edit', function (hooks) 
     await click(FORM.saveBtn);
     assert.dom(FORM.messageError).hasText('Error nope', 'it renders API error');
     assert.dom(FORM.inlineAlert).hasText('There was an error submitting this form.');
+    await click(FORM.cancelBtn);
+    assert.ok(
+      this.transitionStub.calledWith('vault.cluster.secrets.backend.kv.secret.details'),
+      'router transitions to details on cancel'
+    );
   });
 
   test('it renders kv secret validations', async function (assert) {
@@ -173,7 +190,7 @@ module('Integration | Component | kv-v2 | Page::Secret::Edit', function (hooks) 
       const payload = JSON.parse(req.requestBody);
       assert.propEqual(payload, {
         data: { hello: 'there' },
-        options: { cas: 0 },
+        options: { cas: 1 },
       });
       return {
         request_id: 'bd76db73-605d-fcbc-0dad-d44a008f9b95',
@@ -182,7 +199,7 @@ module('Integration | Component | kv-v2 | Page::Secret::Edit', function (hooks) 
           custom_metadata: null,
           deletion_time: '',
           destroyed: false,
-          version: 1,
+          version: 2,
         },
       };
     });

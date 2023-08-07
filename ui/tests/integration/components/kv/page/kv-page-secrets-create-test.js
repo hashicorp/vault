@@ -12,6 +12,7 @@ import { hbs } from 'ember-cli-htmlbars';
 import { click, fillIn, findAll, render, typeIn } from '@ember/test-helpers';
 import codemirror from 'vault/tests/helpers/codemirror';
 import { FORM } from 'vault/tests/helpers/kv/kv-selectors';
+import sinon from 'sinon';
 
 module('Integration | Component | kv-v2 | Page::Secrets::Create', function (hooks) {
   setupRenderingTest(hooks);
@@ -20,6 +21,8 @@ module('Integration | Component | kv-v2 | Page::Secrets::Create', function (hook
 
   hooks.beforeEach(function () {
     this.store = this.owner.lookup('service:store');
+    this.router = this.owner.lookup('service:router');
+    this.transitionStub = sinon.stub(this.router, 'transitionTo');
     this.backend = 'my-kv-engine';
     this.path = 'my-secret';
     this.secret = this.store.createRecord('kv/data', { backend: this.backend });
@@ -30,8 +33,12 @@ module('Integration | Component | kv-v2 | Page::Secrets::Create', function (hook
     ];
   });
 
+  hooks.afterEach(function () {
+    this.router.transitionTo.restore();
+  });
+
   test('it saves a secret', async function (assert) {
-    assert.expect(2);
+    assert.expect(3);
     this.server.post(`${this.backend}/data/${this.path}`, (schema, req) => {
       assert.ok(true, 'Request made to save secret');
       const payload = JSON.parse(req.requestBody);
@@ -59,6 +66,11 @@ module('Integration | Component | kv-v2 | Page::Secrets::Create', function (hook
     await fillIn(FORM.keyInput(), 'foo');
     await fillIn(FORM.maskedValueInput(), 'bar');
     await click(FORM.saveBtn);
+
+    assert.ok(
+      this.transitionStub.calledWith('vault.cluster.secrets.backend.kv.secret.details'),
+      'router transitions to secret details route on save'
+    );
   });
 
   test('it saves nested secrets', async function (assert) {
@@ -96,7 +108,7 @@ module('Integration | Component | kv-v2 | Page::Secrets::Create', function (hook
   });
 
   test('it renders API errors', async function (assert) {
-    assert.expect(2);
+    assert.expect(3);
     this.server.post(`${this.backend}/data/${this.path}`, () => {
       return new Response(500, {}, { errors: ['nope'] });
     });
@@ -109,6 +121,11 @@ module('Integration | Component | kv-v2 | Page::Secrets::Create', function (hook
     await click(FORM.saveBtn);
     assert.dom(FORM.messageError).hasText('Error nope', 'it renders API error');
     assert.dom(FORM.inlineAlert).hasText('There was an error submitting this form.');
+    await click(FORM.cancelBtn);
+    assert.ok(
+      this.transitionStub.calledWith('vault.cluster.secrets.backend.kv.list'),
+      'router transitions to secret list route on cancel'
+    );
   });
 
   test('it renders kv secret validations', async function (assert) {
