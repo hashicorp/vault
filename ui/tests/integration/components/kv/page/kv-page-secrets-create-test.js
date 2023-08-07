@@ -12,24 +12,33 @@ import { hbs } from 'ember-cli-htmlbars';
 import { click, fillIn, findAll, render, typeIn } from '@ember/test-helpers';
 import codemirror from 'vault/tests/helpers/codemirror';
 import { FORM } from 'vault/tests/helpers/kv/kv-selectors';
+import sinon from 'sinon';
 
-module('Integration | Component | kv-v2 | KvSecretForm', function (hooks) {
+module('Integration | Component | kv-v2 | Page::Secrets::Create', function (hooks) {
   setupRenderingTest(hooks);
   setupEngine(hooks, 'kv');
   setupMirage(hooks);
 
   hooks.beforeEach(function () {
     this.store = this.owner.lookup('service:store');
+    this.router = this.owner.lookup('service:router');
+    this.transitionStub = sinon.stub(this.router, 'transitionTo');
     this.backend = 'my-kv-engine';
     this.path = 'my-secret';
     this.secret = this.store.createRecord('kv/data', { backend: this.backend });
-    this.onSave = () => {};
-    this.onCancel = () => {};
+    this.breadcrumbs = [
+      { label: 'secrets', route: 'secrets', linkExternal: true },
+      { label: this.backend, route: 'list' },
+      { label: 'create' },
+    ];
+  });
+
+  hooks.afterEach(function () {
+    this.router.transitionTo.restore();
   });
 
   test('it saves a secret', async function (assert) {
     assert.expect(3);
-    this.onSave = () => assert.ok(true, 'onSave callback fires on save success');
     this.server.post(`${this.backend}/data/${this.path}`, (schema, req) => {
       assert.ok(true, 'Request made to save secret');
       const payload = JSON.parse(req.requestBody);
@@ -49,27 +58,25 @@ module('Integration | Component | kv-v2 | KvSecretForm', function (hooks) {
       };
     });
 
-    await render(
-      hbs`
-        <KvSecretForm
-          @secret={{this.secret}}
-          @onSave={{this.onSave}}
-          @onCancel={{this.onCancel}}
-        />`,
-      { owner: this.engine }
-    );
+    await render(hbs`<Page::Secrets::Create @secret={{this.secret}} @breadcrumbs={{this.breadcrumbs}} />`, {
+      owner: this.engine,
+    });
 
     await fillIn(FORM.inputByAttr('path'), this.path);
     await fillIn(FORM.keyInput(), 'foo');
     await fillIn(FORM.maskedValueInput(), 'bar');
     await click(FORM.saveBtn);
+
+    assert.ok(
+      this.transitionStub.calledWith('vault.cluster.secrets.backend.kv.secret.details'),
+      'router transitions to secret details route on save'
+    );
   });
 
   test('it saves nested secrets', async function (assert) {
-    assert.expect(4);
+    assert.expect(3);
     const pathToSecret = 'path/to/secret/';
     this.secret.path = pathToSecret;
-    this.onSave = () => assert.ok(true, 'onSave callback fires on save success');
     this.server.post(`${this.backend}/data/${pathToSecret + this.path}`, (schema, req) => {
       assert.ok(true, 'Request made to save secret');
       const payload = JSON.parse(req.requestBody);
@@ -89,15 +96,9 @@ module('Integration | Component | kv-v2 | KvSecretForm', function (hooks) {
       };
     });
 
-    await render(
-      hbs`
-        <KvSecretForm
-          @secret={{this.secret}}
-          @onSave={{this.onSave}}
-          @onCancel={{this.onCancel}}
-        />`,
-      { owner: this.engine }
-    );
+    await render(hbs`<Page::Secrets::Create @secret={{this.secret}} @breadcrumbs={{this.breadcrumbs}} />`, {
+      owner: this.engine,
+    });
 
     assert.dom(FORM.inputByAttr('path')).hasValue(pathToSecret);
     await typeIn(FORM.inputByAttr('path'), this.path);
@@ -107,39 +108,32 @@ module('Integration | Component | kv-v2 | KvSecretForm', function (hooks) {
   });
 
   test('it renders API errors', async function (assert) {
-    assert.expect(2);
+    assert.expect(3);
     this.server.post(`${this.backend}/data/${this.path}`, () => {
       return new Response(500, {}, { errors: ['nope'] });
     });
 
-    await render(
-      hbs`
-        <KvSecretForm
-          @secret={{this.secret}}
-          @onSave={{this.onSave}}
-          @onCancel={{this.onCancel}}
-        />`,
-      { owner: this.engine }
-    );
+    await render(hbs`<Page::Secrets::Create @secret={{this.secret}} @breadcrumbs={{this.breadcrumbs}} />`, {
+      owner: this.engine,
+    });
 
     await fillIn(FORM.inputByAttr('path'), this.path);
     await click(FORM.saveBtn);
     assert.dom(FORM.messageError).hasText('Error nope', 'it renders API error');
     assert.dom(FORM.inlineAlert).hasText('There was an error submitting this form.');
+    await click(FORM.cancelBtn);
+    assert.ok(
+      this.transitionStub.calledWith('vault.cluster.secrets.backend.kv.list'),
+      'router transitions to secret list route on cancel'
+    );
   });
 
   test('it renders kv secret validations', async function (assert) {
     assert.expect(6);
 
-    await render(
-      hbs`
-        <KvSecretForm
-          @secret={{this.secret}}
-          @onSave={{this.onSave}}
-          @onCancel={{this.onCancel}}
-        />`,
-      { owner: this.engine }
-    );
+    await render(hbs`<Page::Secrets::Create @secret={{this.secret}} @breadcrumbs={{this.breadcrumbs}} />`, {
+      owner: this.engine,
+    });
 
     await typeIn(FORM.inputByAttr('path'), 'space ');
     assert
@@ -171,100 +165,37 @@ module('Integration | Component | kv-v2 | KvSecretForm', function (hooks) {
     assert.dom(formAlert).hasText('There is an error with this form.');
   });
 
-  // TODO validate onConfirmLeave() unloads model on cancel
-  test('it toggles JSON view and editor modifies secretData', async function (assert) {
-    assert.expect(6);
-    this.onCancel = () => assert.ok(true, 'onCancel callback fires on save success');
+  test('it toggles JSON view and saves modified data', async function (assert) {
+    assert.expect(4);
+    this.server.post(`${this.backend}/data/${this.path}`, (schema, req) => {
+      assert.ok(true, 'Request made to save secret');
+      const payload = JSON.parse(req.requestBody);
+      assert.propEqual(payload, {
+        data: { hello: 'there' },
+        options: { cas: 0 },
+      });
+      return {
+        request_id: 'bd76db73-605d-fcbc-0dad-d44a008f9b95',
+        data: {
+          created_time: '2023-07-28T18:47:32.924809Z',
+          custom_metadata: null,
+          deletion_time: '',
+          destroyed: false,
+          version: 1,
+        },
+      };
+    });
 
-    await render(
-      hbs`
-        <KvSecretForm
-          @secret={{this.secret}}
-          @onCancel={{this.onCancel}}
-        />`,
-      { owner: this.engine }
-    );
+    await render(hbs`<Page::Secrets::Create @secret={{this.secret}} @breadcrumbs={{this.breadcrumbs}} />`, {
+      owner: this.engine,
+    });
 
     assert.dom(FORM.dataInputLabel({ isJson: false })).hasText('Secret data');
     await click(FORM.toggleJson);
     assert.dom(FORM.dataInputLabel({ isJson: true })).hasText('Secret data');
 
-    assert.strictEqual(
-      codemirror().getValue(' '),
-      `{   \"\": \"\" }`, // eslint-disable-line no-useless-escape
-      'json editor initializes with empty object'
-    );
-    await fillIn(`${FORM.jsonEditor} textarea`, 'blah');
-    assert.strictEqual(codemirror().state.lint.marked.length, 1, 'codemirror lints input');
     codemirror().setValue(`{ "hello": "there"}`);
-    assert.propEqual(this.secret.secretData, { hello: 'there' }, 'json editor updates secret data');
-    await click(FORM.cancelBtn);
-  });
-
-  test('it disables path and prefills secret data when creating a new secret version', async function (assert) {
-    assert.expect(6);
-    this.secret.secretData = { foo: 'bar' };
-    this.secret.path = this.path;
-
-    this.newVersion = this.store.createRecord('kv/data', {
-      backend: this.backend,
-      path: this.path,
-      secretData: this.secret.secretData,
-    });
-
-    await render(
-      hbs`
-        <KvSecretForm
-          @previousVersion={{this.secret}}
-          @secret={{this.newVersion}}
-          @onSave={{this.onSave}}
-          @onCancel={{this.onCancel}}
-        />`,
-      { owner: this.engine }
-    );
-
-    assert.dom(FORM.inputByAttr('path')).isDisabled();
-    assert.dom(FORM.inputByAttr('path')).hasValue(this.path);
-    assert.dom(FORM.keyInput()).hasValue('foo');
-    assert.dom(FORM.maskedValueInput()).hasValue('bar');
-
-    assert.dom(FORM.dataInputLabel({ isJson: false })).hasText('Version data');
-    await click(FORM.toggleJson);
-    assert.dom(FORM.dataInputLabel({ isJson: true })).hasText('Version data');
-  });
-
-  test('it renders alert when creating a new secret version from an old version', async function (assert) {
-    assert.expect(1);
-    const metadata = this.server.create('kv-metadatum');
-    metadata.id = 'my-metadata';
-    metadata.backend = this.backend;
-    this.store.pushPayload('kv/metadata', {
-      modelName: 'kv/metadata',
-      ...metadata,
-    });
-    this.metadata = this.store.peekRecord('kv/metadata', 'my-metadata');
-    // mimics createRecord in model hook of details/edit route
-    this.newVersion = this.store.createRecord('kv/data', {
-      backend: this.backend,
-      path: this.path,
-      secretData: { foo: 'bar' },
-    });
-    await render(
-      hbs`
-        <KvSecretForm
-          @previousVersion={{2}}
-          @metadata={{this.metadata}}
-          @secret={{this.newVersion}}
-          @onSave={{this.onSave}}
-          @onCancel={{this.onCancel}}
-        />`,
-      { owner: this.engine }
-    );
-
-    assert
-      .dom(FORM.versionAlert)
-      .hasText(
-        `Warning You are creating a new version based on data from Version 2. The current version for my-secret is Version ${this.metadata.currentVersion}.`
-      );
+    await fillIn(FORM.inputByAttr('path'), this.path);
+    await click(FORM.saveBtn);
   });
 });
