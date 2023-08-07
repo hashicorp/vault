@@ -1,3 +1,6 @@
+# Copyright (c) HashiCorp, Inc.
+# SPDX-License-Identifier: MPL-2.0
+
 ---
 name: Set up gotestsum from Github releases
 description: Set up gotestsum from Github releases

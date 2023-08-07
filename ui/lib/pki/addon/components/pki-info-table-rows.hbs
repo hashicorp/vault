@@ -1,3 +1,8 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: MPL-2.0
+~}}
+
 {{#each @displayFields as |field|}}
   {{#let (find-by "name" field @model.allFields) as |attr|}}
     {{#let (get @model attr.name) as |value|}}

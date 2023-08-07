@@ -1,3 +1,6 @@
+# Copyright (c) HashiCorp, Inc.
+# SPDX-License-Identifier: MPL-2.0
+
 output "vpc_id" {
   description = "Created VPC ID"
   value       = aws_vpc.vpc.id

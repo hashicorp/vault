@@ -1,3 +1,8 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: MPL-2.0
+~}}
+
 {{#each this.possibleFields as |field|}}
   {{#let (get @model field.key) as |value|}}
     <InfoTableRow

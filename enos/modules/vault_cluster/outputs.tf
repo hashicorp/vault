@@ -1,3 +1,6 @@
+# Copyright (c) HashiCorp, Inc.
+# SPDX-License-Identifier: MPL-2.0
+
 output "audit_device_file_path" {
   description = "The file path for the audit device, if enabled"
   value       = var.enable_file_audit_device ? local.audit_device_file_path : "file audit device not enabled"

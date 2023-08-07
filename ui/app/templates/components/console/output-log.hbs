@@ -1,3 +1,8 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: MPL-2.0
+~}}
+
 {{#each this.outputLog as |message|}}
   {{#unless message.hidden}}
     {{component (concat "console/log-" message.type) content=message.content}}

@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
 export const SHAMIR_FORM = {
   input: '[data-test-shamir-key-input]',
   inputLabel: '[data-test-shamir-key-label]',
