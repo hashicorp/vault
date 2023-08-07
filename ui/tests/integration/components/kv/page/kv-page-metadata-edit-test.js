@@ -29,11 +29,11 @@ module('Integration | Component | kv | Page::Secret::Metadata::Edit', function (
       modelName: 'kv/metadata',
       ...data,
     });
-    // Used to specifically test a model with custom_metadata and non-default inputs.
+    // Used to test a model with custom_metadata and non-default inputs.
     this.metadataModelEdit = store.peekRecord('kv/metadata', data.id);
-    // Used to specifically test a model with no custom_metadata and default values.
+    // Used to test a model with no custom_metadata and default values.
     this.metadataModelCreate = store.createRecord('kv/metadata', {
-      backend: 'kv-engine',
+      backend: 'kv-engine-new',
       path: 'my-secret-new',
     });
   });

@@ -30,6 +30,11 @@ export const PAGE = {
     createSecret: '[data-test-toolbar-create-secret]',
     item: (secret) => `[data-test-list-item="${secret}"]`,
   },
+  versions: {
+    popup: '[data-test-popup-menu-trigger]',
+    icon: (version) => `[data-test-icon-holder="${version}"]`,
+    linkedBlock: (version) => `[data-test-version-linked-block="${version}"]`,
+  },
 };
 
 // Form/Interactive selectors that are common between pages and forms
