@@ -14,6 +14,8 @@ export const PAGE = {
   emptyStateTitle: '[data-test-empty-state-title]',
   emptyStateMessage: '[data-test-empty-state-message]',
   emptyStateActions: '[data-test-empty-state-actions]',
+  toolbar: 'nav.toolbar',
+  toolbarAction: 'nav.toolbar-actions .toolbar-link',
   // specific page selectors
   metadata: {
     editBtn: '[data-test-edit-metadata]',
