@@ -9,6 +9,7 @@ import { tracked } from '@glimmer/tracking';
 import { task } from 'ember-concurrency';
 import { inject as service } from '@ember/service';
 import { pathIsFromDirectory } from 'vault/lib/kv-breadcrumbs';
+import errorMessage from 'vault/utils/error-message';
 
 /**
  * @module KvSecretCreate is used for creating the initial version of a secret
@@ -29,7 +30,7 @@ export default class KvSecretCreate extends Component {
   @service router;
 
   @tracked showJsonView = false;
-  @tracked errorMessage;
+  @tracked errors;
   @tracked modelValidations;
   @tracked invalidFormAlert;
 
@@ -60,27 +61,45 @@ export default class KvSecretCreate extends Component {
   *save(event) {
     event.preventDefault();
     this.flashMessages.clearMessages();
-    try {
-      const { isValid, state } = this.validate();
-      this.modelValidations = isValid ? null : state;
-      this.invalidFormAlert = isValid ? '' : 'There was an error submitting this form.';
-      if (isValid) {
-        const { secret } = this.args;
-        yield this.args.secret.save();
-        this.flashMessages.success(`Successfully created secret ${secret.path}.`);
+    this.errors = [];
+    const { isValid, state } = this.validate();
+    this.modelValidations = isValid ? null : state;
+    this.invalidFormAlert = isValid ? '' : 'There was a problem submitting this form.';
+
+    const { secret, metadata } = this.args;
+    // users must have kv/data create to create metadata in the UI
+    if (isValid) {
+      try {
+        // try saving secret data first
+        yield secret.save();
+        this.flashMessages.success(`Successfully saved secret data for: ${secret.path}.`);
+      } catch (error) {
+        this.errors.pushObject({ endpoint: 'kv/data', message: errorMessage(error) });
+      }
+
+      try {
+        metadata.path = secret.path;
+        yield metadata.save();
+        this.flashMessages.success(`Successfully saved metadata.`);
+      } catch (error) {
+        this.flashMessages.danger(`POST kv/metadata: ${errorMessage(error)}`, {
+          sticky: true,
+        });
+      }
+
+      if (this.errors.length) {
+        this.invalidFormAlert = 'There was an error submitting this form.';
+      } else {
         this.router.transitionTo('vault.cluster.secrets.backend.kv.secret.details', secret.path);
       }
-    } catch (error) {
-      const message = error.errors ? error.errors.join('. ') : error.message;
-      this.errorMessage = message;
-      this.invalidFormAlert = 'There was an error submitting this form.';
     }
   }
 
   @action
   onCancel() {
-    pathIsFromDirectory(this.args.secret?.path)
-      ? this.router.transitionTo('vault.cluster.secrets.backend.kv.list-directory', this.args.secret.path)
+    const { path } = this.args.secret;
+    pathIsFromDirectory(path)
+      ? this.router.transitionTo('vault.cluster.secrets.backend.kv.list-directory', path)
       : this.router.transitionTo('vault.cluster.secrets.backend.kv.list');
   }
 }
