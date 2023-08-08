@@ -38,7 +38,7 @@ export default class DashboardQuickActionsCard extends Component {
       case 'pki':
         return ['Issue certificate', 'View certificate', 'View issuer'];
       default:
-        return ['Find KV secrets'];
+        return [];
     }
   }
 
@@ -62,7 +62,7 @@ export default class DashboardQuickActionsCard extends Component {
       case 'Issue certificate':
         return {
           title: 'Role to use',
-          placeholder: 'Type to find a role...',
+          placeholder: 'Type to find a role',
           buttonText: 'Issue leaf certificate',
           model: 'pki/role',
           route: 'vault.cluster.secrets.backend.pki.roles.role.generate',
