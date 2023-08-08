@@ -278,39 +278,39 @@ module('Acceptance | kv-v2 workflow | navigation', function (hooks) {
       await navToBackend(backend);
       await click(PAGE.secretTab('Configuration'));
       assertCorrectBreadcrumbs(assert, ['secrets', backend, 'configuration']);
-      assert.dom(PAGE.title).hasText(`${backend} Version 2`);
+      assert.dom(PAGE.title).hasText(`${backend} Version 2`, 'correct page title for configuration');
 
       await click(PAGE.secretTab('Secrets'));
       assertCorrectBreadcrumbs(assert, ['secrets', backend]);
-      assert.dom(PAGE.title).hasText(`${backend} Version 2`);
+      assert.dom(PAGE.title).hasText(`${backend} Version 2`, 'correct page title for secret list');
 
       await click(PAGE.list.item(secretPath));
       assertCorrectBreadcrumbs(assert, ['secrets', backend, secretPath]);
-      assert.dom(PAGE.title).hasText(secretPath);
+      assert.dom(PAGE.title).hasText(secretPath, 'correct page title for secret detail');
 
       await click(PAGE.detail.createNewVersion);
       assertCorrectBreadcrumbs(assert, ['secrets', backend, secretPath, 'edit']);
-      assert.dom(PAGE.title).hasText('Create New Version');
+      assert.dom(PAGE.title).hasText('Create New Version', 'correct page title for secret edit');
 
       await click(PAGE.breadcrumbAtIdx(2));
       await click(PAGE.secretTab('Metadata'));
       assertCorrectBreadcrumbs(assert, ['secrets', backend, secretPath, 'metadata']);
-      assert.dom(PAGE.title).hasText(secretPath);
+      assert.dom(PAGE.title).hasText(secretPath, 'correct page title for metadata');
 
       await click(PAGE.metadata.editBtn);
       assertCorrectBreadcrumbs(assert, ['secrets', backend, secretPath, 'metadata', 'edit']);
-      assert.dom(PAGE.title).hasText('Edit Secret Metadata');
+      assert.dom(PAGE.title).hasText('Edit Secret Metadata', 'correct page title for metadata edit');
 
       await click(PAGE.breadcrumbAtIdx(3));
       await click(PAGE.secretTab('Version History'));
       assertCorrectBreadcrumbs(assert, ['secrets', backend, secretPath, 'version history']);
       // TODO add title to version history page
-      // assert.dom(PAGE.title).hasText(secretPath);
+      // assert.dom(PAGE.title).hasText(secretPath, 'correct page title for version history');
 
       // TODO: fix this selector
       // await click(PAGE.secretTab('Version Diff'));
       // assertCorrectBreadcrumbs(assert, ['secrets', backend, secretPath, 'version diff']);
-      // assert.dom(PAGE.title).hasText(secretPath);
+      // assert.dom(PAGE.title).hasText(secretPath, 'correct page title for version diff');
     });
   });
 
@@ -524,14 +524,219 @@ module('Acceptance | kv-v2 workflow | navigation', function (hooks) {
       const token = await runCmd([
         createPolicyCmd(
           'data-reader-list',
-          dataPolicy({ backend: this.backend, capabilities: ['read'] }) + metadataListPolicy(this.backend)
+          dataPolicy({ backend: this.backend, capabilities: ['read', 'list'] }) +
+            metadataListPolicy(this.backend) +
+            dataPolicy({ backend: this.emptyBackend, capabilities: ['read', 'list'] }) +
+            metadataListPolicy(this.emptyBackend)
         ),
         createTokenCmd('data-reader-list'),
       ]);
 
       await authPage.login(token);
     });
-    // Copy test outline from admin persona
+    test('empty backend - breadcrumbs, title, tabs, emptyState', async function (assert) {
+      assert.expect(18);
+      const backend = this.emptyBackend;
+      await navToBackend(backend);
+
+      // URL correct
+      assert.strictEqual(currentURL(), `/vault/secrets/${backend}/kv/list`, 'lands on secrets list page');
+      // Breadcrumbs correct
+      assertCorrectBreadcrumbs(assert, ['secrets', backend]);
+      // Title correct
+      assert.dom(PAGE.title).hasText(`${backend} Version 2`);
+      // Tabs correct
+      assert.dom(PAGE.secretTab('list')).hasText('Secrets');
+      assert.dom(PAGE.secretTab('list')).hasClass('active');
+      assert.dom(PAGE.secretTab('Configuration')).hasText('Configuration');
+      assert.dom(PAGE.secretTab('Configuration')).doesNotHaveClass('active');
+      // Toolbar correct
+      assert.dom(PAGE.toolbar).exists({ count: 1 }, 'toolbar renders');
+      assert.dom(PAGE.list.filter).hasNoValue('List filter input is empty');
+      // Page content correct
+      assert.dom(PAGE.emptyStateTitle).hasText('No secrets yet');
+      assert.dom(PAGE.emptyStateActions).hasText('Create secret');
+      assert.dom(PAGE.list.createSecret).hasText('Create secret');
+
+      // Click empty state CTA
+      await click(`${PAGE.emptyStateActions} a`);
+      // TODO: initialKey should not show on query params if empty
+      assert.ok(
+        currentURL().startsWith(`/vault/secrets/${backend}/kv/create`),
+        `url includes /vault/secrets/${backend}/kv/create`
+      );
+
+      // Click cancel btn
+      await click(FORM.cancelBtn);
+      // TODO: pageFilter should not show on query params if empty
+      assert.ok(
+        currentURL().startsWith(`/vault/secrets/${backend}/kv/list`),
+        `url includes /vault/secrets/${backend}/kv/list`
+      );
+
+      // click toolbar CTA
+      await click(PAGE.list.createSecret);
+      // TODO: initialKey should not show on query params if empty
+      assert.ok(
+        currentURL().startsWith(`/vault/secrets/${backend}/kv/create`),
+        `url includes /vault/secrets/${backend}/kv/create`
+      );
+
+      // Click cancel btn
+      await click(FORM.cancelBtn);
+      // TODO: pageFilter should not show on query params if empty
+      assert.ok(
+        currentURL().startsWith(`/vault/secrets/${backend}/kv/list`),
+        `url includes /vault/secrets/${backend}/kv/list`
+      );
+    });
+    test('can access nested secret', async function (assert) {
+      assert.expect(36);
+      const backend = this.backend;
+      await navToBackend(backend);
+      assert.dom(PAGE.title).hasText(`${backend} Version 2`, 'title text correct');
+      assert.dom(PAGE.emptyStateTitle).doesNotExist('No empty state');
+      assertCorrectBreadcrumbs(assert, ['secret', backend]);
+      assert.dom(PAGE.list.filter).hasNoValue('List filter input is empty');
+
+      // Navigate through list items
+      await click(PAGE.list.item('app/'));
+      assert.strictEqual(currentURL(), `/vault/secrets/${backend}/kv/app%2F/directory`);
+      assertCorrectBreadcrumbs(assert, ['secret', backend, 'app']);
+      assert.dom(PAGE.title).hasText(`${backend} Version 2`);
+      assert.dom(PAGE.list.filter).hasValue('app/', 'List filter input is prefilled');
+      assert.dom(PAGE.list.item('nested/')).exists('Shows nested secret');
+
+      await click(PAGE.list.item('nested/'));
+      assert.strictEqual(currentURL(), `/vault/secrets/${backend}/kv/app%2Fnested%2F/directory`);
+      assertCorrectBreadcrumbs(assert, ['secret', backend, 'app', 'nested']);
+      assert.dom(PAGE.title).hasText(`${backend} Version 2`);
+      assert.dom(PAGE.list.filter).hasValue('app/nested/', 'List filter input is prefilled');
+      assert.dom(PAGE.list.item('secret')).exists('Shows deeply nested secret');
+
+      await click(PAGE.list.item('secret'));
+      assert.strictEqual(
+        currentURL(),
+        `/vault/secrets/${backend}/kv/app%2Fnested%2Fsecret/details?version=1`
+      );
+      assertCorrectBreadcrumbs(assert, ['secret', backend, 'app', 'nested', 'secret']);
+      assert.dom(PAGE.title).hasText('app/nested/secret', 'title is full secret path');
+      assert.dom(PAGE.toolbar).exists('toolbar renders');
+      assert.dom(PAGE.toolbarAction).exists({ count: 2 }, 'correct number of toolbar actions render');
+
+      await click(PAGE.breadcrumbAtIdx(3));
+      assert.ok(
+        currentURL().startsWith(`/vault/secrets/${backend}/kv/app%2Fnested%2F/directory`),
+        'links back to list directory'
+      );
+
+      await click(PAGE.breadcrumbAtIdx(2));
+      assert.ok(
+        currentURL().startsWith(`/vault/secrets/${backend}/kv/app%2F/directory`),
+        'links back to list directory'
+      );
+
+      await click(PAGE.breadcrumbAtIdx(1));
+      assert.ok(currentURL().startsWith(`/vault/secrets/${backend}/kv/list`), 'links back to list root');
+    });
+    test('versioned secret nav, tabs, breadcrumbs', async function (assert) {
+      assert.expect(28);
+      const backend = this.backend;
+      await navToBackend(backend);
+      await click(PAGE.list.item(secretPath));
+      assert.strictEqual(
+        currentURL(),
+        `/vault/secrets/${backend}/kv/${secretPathUrlEncoded}/details?version=3`,
+        'Url includes version query param'
+      );
+      assert.dom(PAGE.title).hasText(secretPath, 'Goes to secret detail view');
+      assert.dom(PAGE.secretTab('Secret')).hasText('Secret');
+      assert.dom(PAGE.secretTab('Secret')).hasClass('active');
+      assert.dom(PAGE.secretTab('Metadata')).hasText('Metadata');
+      assert.dom(PAGE.secretTab('Metadata')).doesNotHaveClass('active');
+      // TODO: version diff & history hidden
+      // assert.dom(PAGE.secretTab('Version History')).doesNotExist('Version History tab hidden');
+      // assert.dom(PAGE.secretTab('Version Diff')).doesNotExist('Version Diff tab hidden');
+      // TODO: version dropdown hidden
+      // assert.dom(PAGE.detail.versionDropdown).doesNotExist('Version dropdown hidden');
+      assert.dom(PAGE.detail.createNewVersion).hasText('Create new version', 'Create version button shows');
+      assert.dom(PAGE.detail.versionCreated).containsText('Version 3 created');
+      assert.dom(PAGE.infoRowValue('foo')).exists('renders current data');
+
+      await click(PAGE.detail.createNewVersion);
+      assert.strictEqual(
+        currentURL(),
+        `/vault/secrets/${backend}/kv/${secretPathUrlEncoded}/details/edit?version=3`,
+        'Url includes version query param'
+      );
+      assert.dom(FORM.versionAlert).doesNotExist('Does not show version alert for current version');
+      assert.dom(FORM.inputByAttr('path')).isDisabled();
+
+      await click(FORM.cancelBtn);
+      assert.strictEqual(
+        currentURL(),
+        `/vault/secrets/${backend}/kv/${secretPathUrlEncoded}/details?version=3`,
+        'Goes back to detail view'
+      );
+
+      // TODO: version dropdown should be hidden
+      // assert.dom(PAGE.detail.versionDropdown).doesNotExist('version dropdown hidden');
+      await visit(`/vault/secrets/${backend}/kv/${secretPathUrlEncoded}/details?version=1`);
+      assert.dom(PAGE.detail.versionCreated).containsText('Version 1 created');
+      assert.dom(PAGE.infoRowValue('key-1')).exists('renders previous data');
+
+      await click(PAGE.detail.createNewVersion);
+      assert.strictEqual(
+        currentURL(),
+        `/vault/secrets/${backend}/kv/${secretPathUrlEncoded}/details/edit?version=1`,
+        'Url includes version query param'
+      );
+      assert.dom(FORM.inputByAttr('path')).isDisabled();
+      assert.dom(FORM.keyInput()).hasValue('key-1', 'pre-populates form with selected version data');
+      assert.dom(FORM.maskedValueInput()).hasValue('val-1', 'pre-populates form with selected version data');
+      // TODO: should show
+      // assert.dom(FORM.versionAlert).exists('Shows version alert');
+      await click(FORM.cancelBtn);
+
+      await click(PAGE.secretTab('Metadata'));
+      assert.strictEqual(
+        currentURL(),
+        `/vault/secrets/${backend}/kv/${secretPathUrlEncoded}/metadata`,
+        `goes to metadata page`
+      );
+      assertCorrectBreadcrumbs(assert, ['secrets', backend, secretPath, 'metadata']);
+      assert.dom(PAGE.title).hasText(secretPath);
+      assert
+        .dom(`${PAGE.metadata.customMetadataSection} ${PAGE.emptyStateTitle}`)
+        .hasText('No custom metadata');
+      assert.dom(PAGE.metadata.editBtn).doesNotExist('edit button hidden');
+    });
+    test('breadcrumbs & page titles are correct', async function (assert) {
+      assert.expect(26);
+      const backend = this.backend;
+      await navToBackend(backend);
+
+      await click(PAGE.secretTab('Configuration'));
+      assertCorrectBreadcrumbs(assert, ['secrets', backend, 'configuration']);
+      assert.dom(PAGE.title).hasText(`${backend} Version 2`, 'correct page title for configuration');
+
+      await click(PAGE.secretTab('Secrets'));
+      assertCorrectBreadcrumbs(assert, ['secrets', backend]);
+      assert.dom(PAGE.title).hasText(`${backend} Version 2`, 'correct page title for secret list');
+
+      await click(PAGE.list.item(secretPath));
+      assertCorrectBreadcrumbs(assert, ['secrets', backend, secretPath]);
+      assert.dom(PAGE.title).hasText(secretPath, 'correct page title for secret detail');
+
+      await click(PAGE.detail.createNewVersion);
+      assertCorrectBreadcrumbs(assert, ['secrets', backend, secretPath, 'edit']);
+      assert.dom(PAGE.title).hasText('Create New Version', 'correct page title for secret edit');
+
+      await click(PAGE.breadcrumbAtIdx(2));
+      await click(PAGE.secretTab('Metadata'));
+      assertCorrectBreadcrumbs(assert, ['secrets', backend, secretPath, 'metadata']);
+      assert.dom(PAGE.title).hasText(secretPath, 'correct page title for metadata');
+    });
   });
 
   module('metadata-maintainer persona', function (hooks) {
