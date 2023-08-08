@@ -149,5 +149,4 @@ func TestClient_renderUserSearchFilter(t *testing.T) {
 			assert.Equal(t, tc.want, f)
 		})
 	}
-
 }
