@@ -14,3 +14,9 @@ export const writeSecret = async function (backend, path, key, val) {
   await listPage.create();
   return editPage.createSecret(path, key, val);
 };
+
+export const updateSecret = async function (backend, path, key, val) {
+  await editPage.visit({ backend, path });
+  await editPage.createNewVersion();
+  return editPage.updateSecret(key, val);
+};
