@@ -228,7 +228,7 @@ func (f *EntryFormatter) FormatRequest(ctx context.Context, in *logical.LogInput
 			RemoteAddr:                    getRemoteAddr(req),
 			RemotePort:                    getRemotePort(req),
 			ReplicationCluster:            req.ReplicationCluster,
-			Headers:                       req.Headers, // TODO: Handle filter/transform via HeaderFormatter.ApplyConfig
+			Headers:                       req.Headers,
 			ClientCertificateSerialNumber: getClientCertificateSerialNumber(connState),
 		},
 	}
@@ -429,7 +429,7 @@ func (f *EntryFormatter) FormatResponse(ctx context.Context, in *logical.LogInpu
 			RemotePort:                    getRemotePort(req),
 			ClientCertificateSerialNumber: getClientCertificateSerialNumber(connState),
 			ReplicationCluster:            req.ReplicationCluster,
-			Headers:                       req.Headers, // TODO: Handle filter/transform via HeaderFormatter.ApplyConfig
+			Headers:                       req.Headers,
 		},
 
 		Response: &Response{
