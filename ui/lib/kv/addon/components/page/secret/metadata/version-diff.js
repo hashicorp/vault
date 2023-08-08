@@ -8,7 +8,6 @@ import { inject as service } from '@ember/service';
 import { tracked } from '@glimmer/tracking';
 import { action } from '@ember/object';
 import { kvDataPath } from 'vault/utils/kv-path';
-import { typeOf } from '@ember/utils';
 
 /**
  * @module KvVersionDiff
@@ -46,7 +45,6 @@ export default class KvVersionDiffComponent extends Component {
   }
 
   async fetchSecretData(version) {
-    version = typeOf(version) === 'string' ? Number(version) : version;
     const { backend, path } = this.args;
     // check the store first, avoiding an extra network request if possible.
     const storeData = await this.store.peekRecord('kv/data', kvDataPath(backend, path, version));
@@ -57,8 +55,8 @@ export default class KvVersionDiffComponent extends Component {
 
   async createVisualDiff() {
     /* eslint-disable no-undef */
-    const leftSideData = await this.fetchSecretData(this.leftSideVersion);
-    const rightSideData = await this.fetchSecretData(this.rightSideVersion);
+    const leftSideData = await this.fetchSecretData(Number(this.leftSideVersion));
+    const rightSideData = await this.fetchSecretData(Number(this.rightSideVersion));
     const diffpatcher = jsondiffpatch.create({});
     const delta = diffpatcher.diff(rightSideData, leftSideData);
 

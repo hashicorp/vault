@@ -34,6 +34,7 @@ export const PAGE = {
     popup: '[data-test-popup-menu-trigger]',
     icon: (version) => `[data-test-icon-holder="${version}"]`,
     linkedBlock: (version) => `[data-test-version-linked-block="${version}"]`,
+    button: (version) => `[data-test-version-button="${version}"]`,
   },
 };
 
