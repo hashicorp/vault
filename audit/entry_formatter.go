@@ -91,7 +91,9 @@ func (f *EntryFormatter) Process(ctx context.Context, e *eventlogger.Event) (*ev
 
 	if a.Data != nil {
 		*data = *a.Data
-		headers = a.Data.Request.Headers
+		if a.Data.Request != nil && a.Data.Request.Headers != nil {
+			headers = a.Data.Request.Headers
+		}
 	}
 
 	if f.headerFormatter != nil {
