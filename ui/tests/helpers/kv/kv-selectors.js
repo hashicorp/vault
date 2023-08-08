@@ -8,6 +8,7 @@ export const PAGE = {
   title: '[data-test-header-title]',
   breadcrumbs: '[data-test-breadcrumbs]',
   breadcrumb: '[data-test-breadcrumbs] li',
+  breadcrumbAtIdx: (idx) => `[data-test-crumb="${idx}"] a`,
   infoRowValue: (label) => `[data-test-value-div="${label}"]`,
   secretTab: (tab) => `[data-test-secrets-tab="${tab}"]`,
   emptyStateTitle: '[data-test-empty-state-title]',
@@ -29,6 +30,7 @@ export const PAGE = {
   list: {
     createSecret: '[data-test-toolbar-create-secret]',
     item: (secret) => `[data-test-list-item="${secret}"]`,
+    filter: `[data-test-component="kv-list-filter"]`,
   },
   versions: {
     popup: '[data-test-popup-menu-trigger]',
