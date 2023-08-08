@@ -9,7 +9,7 @@ import PkiCertificateBaseModel from './base';
 
 const generateFromRole = [
   {
-    default: ['commonName', 'customTtl', 'format', 'privateKeyFormat'],
+    default: ['commonName', 'userIds', 'customTtl', 'format', 'privateKeyFormat'],
   },
   {
     'Subject Alternative Name (SAN) Options': [
@@ -18,7 +18,6 @@ const generateFromRole = [
       'ipSans',
       'uriSans',
       'otherSans',
-      'userIds',
     ],
   },
 ];
