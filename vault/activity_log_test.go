@@ -20,19 +20,18 @@ import (
 	"testing"
 	"time"
 
-	"github.com/stretchr/testify/require"
-
-	"github.com/hashicorp/go-uuid"
-
 	"github.com/axiomhq/hyperloglog"
 	"github.com/go-test/deep"
 	"github.com/golang/protobuf/proto"
+	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/helper/constants"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/helper/timeutil"
+	"github.com/hashicorp/vault/sdk/helper/strutil"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/vault/activity"
 	"github.com/mitchellh/mapstructure"
+	"github.com/stretchr/testify/require"
 )
 
 // TestActivityLog_Creation calls AddEntityToFragment and verifies that it appears correctly in a.fragment.
@@ -170,7 +169,7 @@ func checkExpectedEntitiesInMap(t *testing.T, a *ActivityLog, entityIDs []string
 		t.Fatalf("mismatched number of entities, expected %v got %v", len(entityIDs), activeClients)
 	}
 	for _, e := range entityIDs {
-		if _, present := activeClients[e]; !present {
+		if !strutil.StrListContains(entityIDs, e) {
 			t.Errorf("entity ID %q is missing", e)
 		}
 	}
@@ -1315,8 +1314,8 @@ func TestActivityLog_loadCurrentClientSegment(t *testing.T) {
 		}
 
 		activeClients := core.GetActiveClients()
-		if !ActiveEntitiesEqual(activeClients, tc.entities.Clients) {
-			t.Errorf("bad data loaded into active entities. expected only set of EntityID from %v in %v for path %q", tc.entities.Clients, activeClients, tc.path)
+		if err := ActiveEntitiesEqual(activeClients, tc.entities.Clients); err != nil {
+			t.Errorf("bad data loaded into active entities. expected only set of EntityID from %v in %v for path %q: %v", tc.entities.Clients, activeClients, tc.path, err)
 		}
 
 		a.resetEntitiesInMemory(t)
@@ -1410,8 +1409,8 @@ func TestActivityLog_loadPriorEntitySegment(t *testing.T) {
 		}
 
 		activeClients := core.GetActiveClients()
-		if !ActiveEntitiesEqual(activeClients, tc.entities.Clients) {
-			t.Errorf("bad data loaded into active entities. expected only set of EntityID from %v in %v for path %q", tc.entities.Clients, activeClients, tc.path)
+		if err := ActiveEntitiesEqual(activeClients, tc.entities.Clients); err != nil {
+			t.Errorf("bad data loaded into active entities. expected only set of EntityID from %v in %v for path %q: %v", tc.entities.Clients, activeClients, tc.path, err)
 		}
 	}
 }
@@ -1636,9 +1635,9 @@ func TestActivityLog_refreshFromStoredLog(t *testing.T) {
 	}
 
 	activeClients := a.core.GetActiveClients()
-	if !ActiveEntitiesEqual(activeClients, expectedActive.Clients) {
+	if err := ActiveEntitiesEqual(activeClients, expectedActive.Clients); err != nil {
 		// we expect activeClients to be loaded for the entire month
-		t.Errorf("bad data loaded into active entities. expected only set of EntityID from %v in %v", expectedActive.Clients, activeClients)
+		t.Errorf("bad data loaded into active entities. expected only set of EntityID from %v in %v: %v", expectedActive.Clients, activeClients, err)
 	}
 }
 
@@ -1680,9 +1679,9 @@ func TestActivityLog_refreshFromStoredLogWithBackgroundLoadingCancelled(t *testi
 	}
 
 	activeClients := a.core.GetActiveClients()
-	if !ActiveEntitiesEqual(activeClients, expected.Clients) {
+	if err := ActiveEntitiesEqual(activeClients, expected.Clients); err != nil {
 		// we only expect activeClients to be loaded for the newest segment (for the current month)
-		t.Errorf("bad data loaded into active entities. expected only set of EntityID from %v in %v", expected.Clients, activeClients)
+		t.Error(err)
 	}
 }
 
@@ -1727,8 +1726,8 @@ func TestActivityLog_refreshFromStoredLogNoTokens(t *testing.T) {
 		t.Errorf("bad activity entity logs loaded. expected: %v got: %v", expectedCurrent, currentEntities)
 	}
 	activeClients := a.core.GetActiveClients()
-	if !ActiveEntitiesEqual(activeClients, expectedActive.Clients) {
-		t.Errorf("bad data loaded into active entities. expected only set of EntityID from %v in %v", expectedActive.Clients, activeClients)
+	if err := ActiveEntitiesEqual(activeClients, expectedActive.Clients); err != nil {
+		t.Error(err)
 	}
 
 	// we expect no tokens
@@ -1841,9 +1840,9 @@ func TestActivityLog_refreshFromStoredLogPreviousMonth(t *testing.T) {
 	}
 
 	activeClients := a.core.GetActiveClients()
-	if !ActiveEntitiesEqual(activeClients, expectedActive.Clients) {
+	if err := ActiveEntitiesEqual(activeClients, expectedActive.Clients); err != nil {
 		// we expect activeClients to be loaded for the entire month
-		t.Errorf("bad data loaded into active entities. expected only set of EntityID from %v in %v", expectedActive.Clients, activeClients)
+		t.Error(err)
 	}
 }
 
