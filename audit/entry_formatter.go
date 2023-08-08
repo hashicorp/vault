@@ -94,17 +94,17 @@ func (f *EntryFormatter) Process(ctx context.Context, e *eventlogger.Event) (*ev
 		headers = a.Data.Request.Headers
 	}
 
-	switch a.Subtype {
-	case RequestType:
-		if f.headerFormatter != nil {
-			adjustedHeaders, err := f.headerFormatter.ApplyConfig(ctx, headers, f.salter)
-			if err != nil {
-				return nil, fmt.Errorf("%s: unable to transform headers for auditing: %w", op, err)
-			}
-
-			data.Request.Headers = adjustedHeaders
+	if f.headerFormatter != nil {
+		adjustedHeaders, err := f.headerFormatter.ApplyConfig(ctx, headers, f.salter)
+		if err != nil {
+			return nil, fmt.Errorf("%s: unable to transform headers for auditing: %w", op, err)
 		}
 
+		data.Request.Headers = adjustedHeaders
+	}
+
+	switch a.Subtype {
+	case RequestType:
 		entry, err := f.FormatRequest(ctx, data)
 		if err != nil {
 			return nil, fmt.Errorf("%s: unable to parse request from audit event: %w", op, err)
@@ -115,15 +115,6 @@ func (f *EntryFormatter) Process(ctx context.Context, e *eventlogger.Event) (*ev
 			return nil, fmt.Errorf("%s: unable to format request: %w", op, err)
 		}
 	case ResponseType:
-		if f.headerFormatter != nil {
-			adjustedHeaders, err := f.headerFormatter.ApplyConfig(ctx, headers, f.salter)
-			if err != nil {
-				return nil, fmt.Errorf("%s: unable to transform headers for auditing: %w", op, err)
-			}
-
-			data.Request.Headers = adjustedHeaders
-		}
-
 		entry, err := f.FormatResponse(ctx, data)
 		if err != nil {
 			return nil, fmt.Errorf("%s: unable to parse response from audit event: %w", op, err)
