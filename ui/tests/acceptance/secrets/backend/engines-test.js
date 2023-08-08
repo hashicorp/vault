@@ -89,7 +89,6 @@ module('Acceptance | secret-engine list view', function (hooks) {
     await mountSecrets.enable('aws', enginePath2);
     await backendsPage.visit();
     await settled();
-
     // filter by type
     await clickTrigger('#filter-by-engine-type');
     await searchSelect.options.objectAt(0).click();
