@@ -62,7 +62,6 @@ export default class KvVersionDiffComponent extends Component {
     const diffpatcher = jsondiffpatch.create({});
     const delta = diffpatcher.diff(rightSideData, leftSideData);
 
-    // ARG TODO account for destroyed, deleted current version
     this.statesMatch = !delta;
     this.visualDiff = delta
       ? jsondiffpatch.formatters.html.format(delta, rightSideData)
