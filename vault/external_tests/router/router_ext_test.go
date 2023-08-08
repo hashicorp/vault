@@ -70,7 +70,7 @@ func TestRouter_UnmountRollbackIsntFatal(t *testing.T) {
 	if _, err := client.Logical().Write("sys/plugins/reload/backend", map[string]interface{}{
 		"mounts": "noop",
 	}); err != nil {
-		t.Fatalf("expected remount of noop with broken periodic func to succeed; got err=%v", err)
+		t.Fatalf("expected reload of noop with broken periodic func to succeed; got err=%v", err)
 	}
 
 	if _, err := client.Logical().Write("sys/remount", map[string]interface{}{
