@@ -37,8 +37,5 @@ export const metadataListPolicy = (backend) => {
     path "${backend}/metadata" {
         capabilities = ["list"]
     }
-    path "${backend}/metadata/*" {
-        capabilities = ["list"]
-    }
   `;
 };

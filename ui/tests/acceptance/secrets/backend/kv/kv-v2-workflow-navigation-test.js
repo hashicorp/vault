@@ -591,7 +591,7 @@ module('Acceptance | kv-v2 workflow | navigation', function (hooks) {
       );
     });
     test('can access nested secret', async function (assert) {
-      assert.expect(36);
+      assert.expect(26);
       const backend = this.backend;
       await navToBackend(backend);
       assert.dom(PAGE.title).hasText(`${backend} Version 2`, 'title text correct');
@@ -604,17 +604,16 @@ module('Acceptance | kv-v2 workflow | navigation', function (hooks) {
       assert.strictEqual(currentURL(), `/vault/secrets/${backend}/kv/app%2F/directory`);
       assertCorrectBreadcrumbs(assert, ['secret', backend, 'app']);
       assert.dom(PAGE.title).hasText(`${backend} Version 2`);
-      assert.dom(PAGE.list.filter).hasValue('app/', 'List filter input is prefilled');
-      assert.dom(PAGE.list.item('nested/')).exists('Shows nested secret');
+      assert.dom(PAGE.list.filter).doesNotExist('List filter hidden since no nested list access');
 
-      await click(PAGE.list.item('nested/'));
-      assert.strictEqual(currentURL(), `/vault/secrets/${backend}/kv/app%2Fnested%2F/directory`);
-      assertCorrectBreadcrumbs(assert, ['secret', backend, 'app', 'nested']);
-      assert.dom(PAGE.title).hasText(`${backend} Version 2`);
-      assert.dom(PAGE.list.filter).hasValue('app/nested/', 'List filter input is prefilled');
-      assert.dom(PAGE.list.item('secret')).exists('Shows deeply nested secret');
+      // TODO: overview card with pageFilter
+      // assert
+      //   .dom(PAGE.list.overviewInput)
+      //   .hasValue('app/', 'overview card is pre-filled with directory param');
+      // await typeIn(PAGE.list.overviewInput, 'nested/secret');
+      await typeIn(PAGE.list.overviewInput, 'app/nested/secret'); // this is a workaround
+      await click(PAGE.list.overviewButton);
 
-      await click(PAGE.list.item('secret'));
       assert.strictEqual(
         currentURL(),
         `/vault/secrets/${backend}/kv/app%2Fnested%2Fsecret/details?version=1`
