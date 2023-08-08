@@ -4,7 +4,7 @@ page_title: Install Vault ServiceNow Credential Resolver
 description: Installation steps for the Vault ServiceNow Credential Resolver.
 ---
 
-# Installing the Vault Credential Resolver
+# Installing the Vault credential resolver
 
 ## Prerequisites
 
@@ -13,9 +13,9 @@ description: Installation steps for the Vault ServiceNow Credential Resolver.
 * Discovery and external credential plugins activated on ServiceNow
 * Working Vault deployment accessible from the MID server
 
-## Installing Vault Agent
+## Installing Vault agent
 
-* Select your desired auth method from Agent's [supported auth methods](/vault/docs/agent/autoauth/methods)
+* Select your desired auth method from Agent's [supported auth methods](/vault/docs/agent-and-proxy/autoauth/methods)
   and set it up in Vault
   * For example, to set up AppRole auth and a role called `role1` with the `demo` policy attached:
 
@@ -65,7 +65,7 @@ description: Installation steps for the Vault ServiceNow Credential Resolver.
   ```
 
 * Install Vault Agent as a service running `vault agent -config=/path/to/agent.hcl`
-  * Documentation for Windows service installation [here](/vault/docs/agent/winsvc)
+  * Documentation for Windows service installation [here](/vault/docs/agent-and-proxy/agent/winsvc)
 
 ## Uploading JAR file to MID server
 

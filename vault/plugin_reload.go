@@ -197,7 +197,7 @@ func (c *Core) reloadBackendCommon(ctx context.Context, entry *MountEntry, isAut
 	entry.RunningVersion = entry.Version
 	if entry.RunningVersion == "" {
 		// don't set the running version to a builtin if it is running as an external plugin
-		if externaler, ok := backend.(logical.Externaler); !ok || !externaler.IsExternal() {
+		if entry.RunningSha256 == "" {
 			if isAuth {
 				entry.RunningVersion = versions.GetBuiltinVersion(consts.PluginTypeCredential, entry.Type)
 			} else {

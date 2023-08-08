@@ -16,6 +16,8 @@ export const SELECTORS = {
   fieldByName: (name) => `[data-test-field="${name}"]`,
   generateRootSave: '[data-test-pki-generate-root-save]',
   generateRootCancel: '[data-test-pki-generate-root-cancel]',
+  generateRootCommonNameField: '[data-test-input="commonName"]',
+  generateRootIssuerNameField: '[data-test-input="issuerName"]',
   formInvalidError: '[data-test-pki-generate-root-validation-error]',
   urlsSection: '[data-test-urls-section]',
   urlField: '[data-test-urls-section] [data-test-input]',

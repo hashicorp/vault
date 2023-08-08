@@ -461,6 +461,46 @@ func TestIdentityStore_AliasUpdate(t *testing.T) {
 				"custom_metadata": map[string]string{},
 			},
 		},
+		{
+			name: "only-metadata",
+			createData: map[string]interface{}{
+				"name":           "only",
+				"mount_accessor": githubAccessor,
+				"custom_metadata": map[string]string{
+					"foo": "bar",
+				},
+			},
+			updateData: map[string]interface{}{
+				"custom_metadata": map[string]string{
+					"bar": "baz",
+				},
+			},
+		},
+		{
+			name: "only-metadata-clear",
+			createData: map[string]interface{}{
+				"name":           "only-clear",
+				"mount_accessor": githubAccessor,
+				"custom_metadata": map[string]string{
+					"foo": "bar",
+				},
+			},
+			updateData: map[string]interface{}{
+				"custom_metadata": map[string]string{},
+			},
+		},
+		{
+			name: "only-metadata-none-before",
+			createData: map[string]interface{}{
+				"name":           "no-metadata",
+				"mount_accessor": githubAccessor,
+			},
+			updateData: map[string]interface{}{
+				"custom_metadata": map[string]string{
+					"foo": "bar",
+				},
+			},
+		},
 	}
 
 	handleRequest := func(t *testing.T, req *logical.Request) *logical.Response {

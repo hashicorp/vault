@@ -16,6 +16,11 @@ const configAccessKey = "config/access"
 func pathConfigAccess(b *backend) *framework.Path {
 	return &framework.Path{
 		Pattern: "config/access",
+
+		DisplayAttrs: &framework.DisplayAttributes{
+			OperationPrefix: operationPrefixNomad,
+		},
+
 		Fields: map[string]*framework.FieldSchema{
 			"address": {
 				Type:        framework.TypeString,
@@ -48,11 +53,35 @@ must be x509 PEM encoded and if this is set you need to also set client_cert.`,
 			},
 		},
 
-		Callbacks: map[logical.Operation]framework.OperationFunc{
-			logical.ReadOperation:   b.pathConfigAccessRead,
-			logical.CreateOperation: b.pathConfigAccessWrite,
-			logical.UpdateOperation: b.pathConfigAccessWrite,
-			logical.DeleteOperation: b.pathConfigAccessDelete,
+		Operations: map[logical.Operation]framework.OperationHandler{
+			logical.ReadOperation: &framework.PathOperation{
+				Callback: b.pathConfigAccessRead,
+				DisplayAttrs: &framework.DisplayAttributes{
+					OperationVerb:   "read",
+					OperationSuffix: "access-configuration",
+				},
+			},
+			logical.CreateOperation: &framework.PathOperation{
+				Callback: b.pathConfigAccessWrite,
+				DisplayAttrs: &framework.DisplayAttributes{
+					OperationVerb:   "configure",
+					OperationSuffix: "access",
+				},
+			},
+			logical.UpdateOperation: &framework.PathOperation{
+				Callback: b.pathConfigAccessWrite,
+				DisplayAttrs: &framework.DisplayAttributes{
+					OperationVerb:   "configure",
+					OperationSuffix: "access",
+				},
+			},
+			logical.DeleteOperation: &framework.PathOperation{
+				Callback: b.pathConfigAccessDelete,
+				DisplayAttrs: &framework.DisplayAttributes{
+					OperationVerb:   "delete",
+					OperationSuffix: "access-configuration",
+				},
+			},
 		},
 
 		ExistenceCheck: b.configExistenceCheck,

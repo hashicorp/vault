@@ -341,9 +341,10 @@ func (a *ACL) AllowOperation(ctx context.Context, req *logical.Request, capCheck
 		ret.RootPrivs = true
 		ret.IsRoot = true
 		ret.GrantingPolicies = []logical.PolicyInfo{{
-			Name:        "root",
-			NamespaceId: "root",
-			Type:        "acl",
+			Name:          "root",
+			NamespaceId:   "root",
+			NamespacePath: "",
+			Type:          "acl",
 		}}
 		return
 	}

@@ -27,7 +27,7 @@ Usage: vault transit <subcommand> [options] [args]
   Engine. Here are some simple examples, and more detailed examples are
   available in the subcommands or the documentation.
 
-  To import a key into the specified Transit or Transform mount:
+  To import a key into the specified Transit mount:
 
   $ vault transit import transit/keys/newly-imported @path/to/key type=rsa-2048
 

@@ -46,7 +46,7 @@ export default class App extends Application {
     },
     kubernetes: {
       dependencies: {
-        services: ['router', 'store', 'secret-mount-path', 'flashMessages'],
+        services: ['router', 'store', 'secret-mount-path', 'flash-messages'],
         externalRoutes: {
           secrets: 'vault.cluster.secrets.backends',
         },
@@ -68,7 +68,6 @@ export default class App extends Application {
         externalRoutes: {
           secrets: 'vault.cluster.secrets.backends',
           externalMountIssuer: 'vault.cluster.secrets.backend.pki.issuers.issuer.details',
-          secretsListRoot: 'vault.cluster.secrets.backend.list-root',
           secretsListRootConfiguration: 'vault.cluster.secrets.backend.configuration',
         },
       },

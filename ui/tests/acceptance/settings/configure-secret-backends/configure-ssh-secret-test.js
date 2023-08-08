@@ -8,7 +8,7 @@ import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
 import { v4 as uuidv4 } from 'uuid';
 
-import page from 'vault/tests/pages/settings/configure-secret-backends/pki/index';
+import { visit } from '@ember/test-helpers';
 import authPage from 'vault/tests/pages/auth';
 import enablePage from 'vault/tests/pages/settings/mount-secret-backend';
 import { create } from 'ember-cli-page-object';
@@ -31,7 +31,7 @@ module('Acceptance | settings/configure/secrets/ssh', function (hooks) {
     const path = `ssh-configure-${this.uid}`;
     await enablePage.enable('ssh', path);
     await settled();
-    await page.visit({ backend: path });
+    visit(`/vault/settings/secrets/configure/${path}`);
     await settled();
     assert.dom(SELECTORS.generateSigningKey).isChecked('generate_signing_key defaults to true');
     await click(SELECTORS.generateSigningKey);

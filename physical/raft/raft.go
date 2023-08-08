@@ -23,6 +23,7 @@ import (
 	log "github.com/hashicorp/go-hclog"
 	wrapping "github.com/hashicorp/go-kms-wrapping/v2"
 	"github.com/hashicorp/go-raftchunking"
+	"github.com/hashicorp/go-secure-stdlib/parseutil"
 	"github.com/hashicorp/go-secure-stdlib/tlsutil"
 	"github.com/hashicorp/go-uuid"
 	goversion "github.com/hashicorp/go-version"
@@ -371,7 +372,7 @@ func NewRaftBackend(conf map[string]string, logger log.Logger) (physical.Backend
 	}
 
 	if delayRaw, ok := conf["apply_delay"]; ok {
-		delay, err := time.ParseDuration(delayRaw)
+		delay, err := parseutil.ParseDurationSecond(delayRaw)
 		if err != nil {
 			return nil, fmt.Errorf("apply_delay does not parse as a duration: %w", err)
 		}
@@ -428,7 +429,7 @@ func NewRaftBackend(conf map[string]string, logger log.Logger) (physical.Backend
 	}
 
 	if delayRaw, ok := conf["snapshot_delay"]; ok {
-		delay, err := time.ParseDuration(delayRaw)
+		delay, err := parseutil.ParseDurationSecond(delayRaw)
 		if err != nil {
 			return nil, fmt.Errorf("snapshot_delay does not parse as a duration: %w", err)
 		}
@@ -447,7 +448,7 @@ func NewRaftBackend(conf map[string]string, logger log.Logger) (physical.Backend
 
 	var reconcileInterval time.Duration
 	if interval := conf["autopilot_reconcile_interval"]; interval != "" {
-		interval, err := time.ParseDuration(interval)
+		interval, err := parseutil.ParseDurationSecond(interval)
 		if err != nil {
 			return nil, fmt.Errorf("autopilot_reconcile_interval does not parse as a duration: %w", err)
 		}
@@ -456,7 +457,7 @@ func NewRaftBackend(conf map[string]string, logger log.Logger) (physical.Backend
 
 	var updateInterval time.Duration
 	if interval := conf["autopilot_update_interval"]; interval != "" {
-		interval, err := time.ParseDuration(interval)
+		interval, err := parseutil.ParseDurationSecond(interval)
 		if err != nil {
 			return nil, fmt.Errorf("autopilot_update_interval does not parse as a duration: %w", err)
 		}
@@ -624,10 +625,13 @@ func (b *RaftBackend) DisableUpgradeMigration() (bool, bool) {
 }
 
 func (b *RaftBackend) CollectMetrics(sink *metricsutil.ClusterMetricSink) {
+	var stats map[string]string
 	b.l.RLock()
 	logstoreStats := b.stableStore.(*raftboltdb.BoltStore).Stats()
 	fsmStats := b.fsm.Stats()
-	stats := b.raft.Stats()
+	if b.raft != nil {
+		stats = b.raft.Stats()
+	}
 	b.l.RUnlock()
 	b.collectMetricsWithStats(logstoreStats, sink, "logstore")
 	b.collectMetricsWithStats(fsmStats, sink, "fsm")
@@ -637,10 +641,12 @@ func (b *RaftBackend) CollectMetrics(sink *metricsutil.ClusterMetricSink) {
 			Value: b.localID,
 		},
 	}
-	for _, key := range []string{"term", "commit_index", "applied_index", "fsm_pending"} {
-		n, err := strconv.ParseUint(stats[key], 10, 64)
-		if err == nil {
-			sink.SetGaugeWithLabels([]string{"raft_storage", "stats", key}, float32(n), labels)
+	if stats != nil {
+		for _, key := range []string{"term", "commit_index", "applied_index", "fsm_pending"} {
+			n, err := strconv.ParseUint(stats[key], 10, 64)
+			if err == nil {
+				sink.SetGaugeWithLabels([]string{"raft_storage", "stats", key}, float32(n), labels)
+			}
 		}
 	}
 }
@@ -812,7 +818,7 @@ func (b *RaftBackend) applyConfigSettings(config *raft.Config) error {
 	snapshotIntervalRaw, ok := b.conf["snapshot_interval"]
 	if ok {
 		var err error
-		snapshotInterval, err := time.ParseDuration(snapshotIntervalRaw)
+		snapshotInterval, err := parseutil.ParseDurationSecond(snapshotIntervalRaw)
 		if err != nil {
 			return err
 		}
@@ -1367,7 +1373,7 @@ func (b *RaftBackend) Peers(ctx context.Context) ([]Peer, error) {
 
 // SnapshotHTTP is a wrapper for Snapshot that sends the snapshot as an HTTP
 // response.
-func (b *RaftBackend) SnapshotHTTP(out *logical.HTTPResponseWriter, access *seal.Access) error {
+func (b *RaftBackend) SnapshotHTTP(out *logical.HTTPResponseWriter, access seal.Access) error {
 	out.Header().Add("Content-Disposition", "attachment")
 	out.Header().Add("Content-Type", "application/gzip")
 
@@ -1377,7 +1383,7 @@ func (b *RaftBackend) SnapshotHTTP(out *logical.HTTPResponseWriter, access *seal
 // Snapshot takes a raft snapshot, packages it into a archive file and writes it
 // to the provided writer. Seal access is used to encrypt the SHASUM file so we
 // can validate the snapshot was taken using the same root keys or not.
-func (b *RaftBackend) Snapshot(out io.Writer, access *seal.Access) error {
+func (b *RaftBackend) Snapshot(out io.Writer, access seal.Access) error {
 	b.l.RLock()
 	defer b.l.RUnlock()
 
@@ -1401,7 +1407,7 @@ func (b *RaftBackend) Snapshot(out io.Writer, access *seal.Access) error {
 // access is used to decrypt the SHASUM file in the archive to ensure this
 // snapshot has the same root key as the running instance. If the provided
 // access is nil then it will skip that validation.
-func (b *RaftBackend) WriteSnapshotToTemp(in io.ReadCloser, access *seal.Access) (*os.File, func(), raft.SnapshotMeta, error) {
+func (b *RaftBackend) WriteSnapshotToTemp(in io.ReadCloser, access seal.Access) (*os.File, func(), raft.SnapshotMeta, error) {
 	b.l.RLock()
 	defer b.l.RUnlock()
 
@@ -1894,7 +1900,7 @@ func (l *RaftLock) Value() (bool, string, error) {
 // sealer implements the snapshot.Sealer interface and is used in the snapshot
 // process for encrypting/decrypting the SHASUM file in snapshot archives.
 type sealer struct {
-	access *seal.Access
+	access seal.Access
 }
 
 // Seal encrypts the data with using the seal access object.

@@ -57,6 +57,11 @@ var (
 func (b *backend) pathConfigIdentity() *framework.Path {
 	return &framework.Path{
 		Pattern: "config/identity$",
+
+		DisplayAttrs: &framework.DisplayAttributes{
+			OperationPrefix: operationPrefixAWS,
+		},
+
 		Fields: map[string]*framework.FieldSchema{
 			"iam_alias": {
 				Type:        framework.TypeString,
@@ -75,9 +80,16 @@ func (b *backend) pathConfigIdentity() *framework.Path {
 		Operations: map[logical.Operation]framework.OperationHandler{
 			logical.ReadOperation: &framework.PathOperation{
 				Callback: pathConfigIdentityRead,
+				DisplayAttrs: &framework.DisplayAttributes{
+					OperationSuffix: "identity-integration-configuration",
+				},
 			},
 			logical.UpdateOperation: &framework.PathOperation{
 				Callback: pathConfigIdentityUpdate,
+				DisplayAttrs: &framework.DisplayAttributes{
+					OperationVerb:   "configure",
+					OperationSuffix: "identity-integration",
+				},
 			},
 		},
 

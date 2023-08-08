@@ -10,7 +10,7 @@ import (
 	"testing"
 
 	"github.com/Azure/azure-storage-blob-go/azblob"
-	"github.com/hashicorp/vault/helper/testhelpers/docker"
+	"github.com/hashicorp/vault/sdk/helper/docker"
 )
 
 type Config struct {

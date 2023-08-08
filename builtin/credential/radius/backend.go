@@ -10,6 +10,8 @@ import (
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
+const operationPrefixRadius = "radius"
+
 func Factory(ctx context.Context, conf *logical.BackendConfig) (logical.Backend, error) {
 	b := Backend()
 	if err := b.Setup(ctx, conf); err != nil {

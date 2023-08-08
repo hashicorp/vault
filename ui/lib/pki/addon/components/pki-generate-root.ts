@@ -3,17 +3,18 @@
  * SPDX-License-Identifier: MPL-2.0
  */
 
+import Component from '@glimmer/component';
 import { action } from '@ember/object';
-import RouterService from '@ember/routing/router-service';
 import { service } from '@ember/service';
 import { waitFor } from '@ember/test-waiters';
-import Component from '@glimmer/component';
 import { tracked } from '@glimmer/tracking';
 import { task } from 'ember-concurrency';
-import PkiActionModel from 'vault/models/pki/action';
-import PkiUrlsModel from 'vault/models/pki/urls';
-import FlashMessageService from 'vault/services/flash-messages';
 import errorMessage from 'vault/utils/error-message';
+import type PkiActionModel from 'vault/models/pki/action';
+import type PkiConfigUrlsModel from 'vault/models/pki/config/urls';
+import type FlashMessageService from 'vault/services/flash-messages';
+import type RouterService from '@ember/routing/router-service';
+import type { ValidationMap } from 'vault/vault/app-types';
 
 interface AdapterOptions {
   actionType: string;
@@ -21,11 +22,12 @@ interface AdapterOptions {
 }
 interface Args {
   model: PkiActionModel;
-  urls: PkiUrlsModel;
+  urls: PkiConfigUrlsModel;
   onCancel: CallableFunction;
   onComplete: CallableFunction;
   onSave?: CallableFunction;
   adapterOptions: AdapterOptions;
+  hideAlertBanner: boolean;
 }
 
 /**
@@ -51,7 +53,7 @@ export default class PkiGenerateRootComponent extends Component<Args> {
   @service declare readonly flashMessages: FlashMessageService;
   @service declare readonly router: RouterService;
 
-  @tracked modelValidations = null;
+  @tracked modelValidations: ValidationMap | null = null;
   @tracked errorBanner = '';
   @tracked invalidFormAlert = '';
 
@@ -71,12 +73,12 @@ export default class PkiGenerateRootComponent extends Component<Args> {
   get returnedFields() {
     return [
       'certificate',
-      'expiration',
+      'commonName',
       'issuerId',
       'issuerName',
       'issuingCa',
-      'keyId',
       'keyName',
+      'keyId',
       'serialNumber',
     ];
   }
@@ -105,12 +107,16 @@ export default class PkiGenerateRootComponent extends Component<Args> {
     const continueSave = this.checkFormValidity();
     if (!continueSave) return;
     try {
-      yield this.setUrls();
       yield this.args.model.save({ adapterOptions: this.args.adapterOptions });
+      // root generation must occur first in case templates are used for URL fields
+      // this way an issuer_id exists for backend to interpolate into the template
+      yield this.setUrls();
       this.flashMessages.success('Successfully generated root.');
+      // This component shows the results, but call `onSave` for any side effects on parent
       if (this.args.onSave) {
         this.args.onSave();
       }
+      window?.scrollTo(0, 0);
     } catch (e) {
       this.errorBanner = errorMessage(e);
       this.invalidFormAlert = 'There was a problem generating the root.';

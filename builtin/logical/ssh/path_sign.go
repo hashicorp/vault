@@ -15,6 +15,12 @@ func pathSign(b *backend) *framework.Path {
 	return &framework.Path{
 		Pattern: "sign/" + framework.GenericNameWithAtRegex("role"),
 
+		DisplayAttrs: &framework.DisplayAttributes{
+			OperationPrefix: operationPrefixSSH,
+			OperationVerb:   "sign",
+			OperationSuffix: "certificate",
+		},
+
 		Callbacks: map[logical.Operation]framework.OperationFunc{
 			logical.UpdateOperation: b.pathSign,
 		},

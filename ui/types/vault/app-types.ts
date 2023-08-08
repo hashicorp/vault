@@ -7,7 +7,13 @@
 export interface FormField {
   name: string;
   type: string;
-  options: unknown;
+  options: AttributeOptions;
+}
+
+interface AttributeOptions {
+  label: string;
+  mapToBoolean: string;
+  isOppositeValue: boolean;
 }
 
 export interface FormFieldGroups {
@@ -18,7 +24,13 @@ export interface FormFieldGroupOptions {
   [key: string]: Array<string>;
 }
 
-export interface ModelValidation {
+export interface ValidationMap {
+  [key: string]: {
+    isValid: boolean;
+    errors: Array<string>;
+  };
+}
+export interface ModelValidations {
   isValid: boolean;
   state: {
     [key: string]: {
@@ -33,4 +45,16 @@ export interface Breadcrumb {
   label: string;
   route?: string;
   linkExternal?: boolean;
+}
+
+export interface TtlEvent {
+  enabled: boolean;
+  seconds: number;
+  timeString: string;
+  goSafeTimeString: string;
+}
+
+// Generic interfaces
+export interface StringMap {
+  [key: string]: string;
 }

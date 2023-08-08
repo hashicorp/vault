@@ -16,6 +16,11 @@ const keysStoragePrefix = "keys/"
 func pathCleanupKeys(b *backend) *framework.Path {
 	return &framework.Path{
 		Pattern: "tidy/dynamic-keys",
+		DisplayAttrs: &framework.DisplayAttributes{
+			OperationPrefix: operationPrefixSSH,
+			OperationVerb:   "tidy",
+			OperationSuffix: "dynamic-host-keys",
+		},
 		Callbacks: map[logical.Operation]framework.OperationFunc{
 			logical.DeleteOperation: b.handleCleanupKeys,
 		},

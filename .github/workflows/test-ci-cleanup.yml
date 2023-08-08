@@ -11,7 +11,7 @@ jobs:
       regions: ${{steps.setup.outputs.regions}}
     steps:
       - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v1-node16
+        uses: aws-actions/configure-aws-credentials@5fd3084fc36e372ff1fff382a39b10d03659f355 # v2.2.0
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID_CI }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY_CI }}
@@ -40,7 +40,7 @@ jobs:
     steps:
       - name: Configure AWS credentials
         id: aws-configure
-        uses: aws-actions/configure-aws-credentials@v1-node16
+        uses: aws-actions/configure-aws-credentials@5fd3084fc36e372ff1fff382a39b10d03659f355 # v2.2.0
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID_CI }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY_CI }}
@@ -49,7 +49,7 @@ jobs:
           role-skip-session-tagging: true
           role-duration-seconds: 3600
           mask-aws-account-id: false
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@c85c95e3d7251135ab7dc9ce3241c5835cc595a9 # v3.5.3
       - name: Configure
         run: |
           cp enos/ci/aws-nuke.yml .
@@ -75,7 +75,7 @@ jobs:
         region: ${{ fromJSON(needs.setup.outputs.regions) }}
     steps:
       - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v1-node16
+        uses: aws-actions/configure-aws-credentials@5fd3084fc36e372ff1fff382a39b10d03659f355 # v2.2.0
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID_CI }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY_CI }}

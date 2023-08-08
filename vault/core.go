@@ -361,7 +361,7 @@ type Core struct {
 
 	// mountsLock is used to ensure that the mounts table does not
 	// change underneath a calling function
-	mountsLock sync.RWMutex
+	mountsLock locking.DeadlockRWMutex
 
 	// mountMigrationTracker tracks past and ongoing remount operations
 	// against their migration ids
@@ -373,7 +373,7 @@ type Core struct {
 
 	// authLock is used to ensure that the auth table does not
 	// change underneath a calling function
-	authLock sync.RWMutex
+	authLock locking.DeadlockRWMutex
 
 	// audit is loaded after unseal since it is a protected
 	// configuration
@@ -419,6 +419,8 @@ type Core struct {
 
 	// activityLog is used to track active client count
 	activityLog *ActivityLog
+	// activityLogLock protects the activityLog and activityLogConfig
+	activityLogLock sync.RWMutex
 
 	// metricsCh is used to stop the metrics streaming
 	metricsCh chan struct{}
@@ -517,12 +519,6 @@ type Core struct {
 	// CORS Information
 	corsConfig *CORSConfig
 
-	// The active set of upstream cluster addresses; stored via the Echo
-	// mechanism, loaded by the balancer
-	atomicPrimaryClusterAddrs *atomic.Value
-
-	atomicPrimaryFailoverAddrs *atomic.Value
-
 	// replicationState keeps the current replication state cached for quick
 	// lookup; activeNodeReplicationState stores the active value on standbys
 	replicationState           *uint32
@@ -597,10 +593,6 @@ type Core struct {
 	// active, or give up active as soon as it gets it
 	neverBecomeActive *uint32
 
-	// loadCaseSensitiveIdentityStore enforces the loading of identity store
-	// artifacts in a case sensitive manner. To be used only in testing.
-	loadCaseSensitiveIdentityStore bool
-
 	// clusterListener starts up and manages connections on the cluster ports
 	clusterListener *atomic.Value
 
@@ -639,10 +631,11 @@ type Core struct {
 
 	clusterHeartbeatInterval time.Duration
 
+	// activityLogConfig contains override values for the activity log
+	// it is protected by activityLogLock
 	activityLogConfig ActivityLogCoreConfig
 
-	// censusAgent is the mechanism used for reporting Vault's billing data.
-	censusAgent *CensusAgent
+	censusConfig atomic.Value
 
 	// activeTime is set on active nodes indicating the time at which this node
 	// became active.
@@ -698,9 +691,6 @@ type Core struct {
 	// if populated, the callback is called for every request
 	// for testing purposes
 	requestResponseCallback func(logical.Backend, *logical.Request, *logical.Response)
-
-	// if populated, override the default gRPC min connect timeout (currently 20s in grpc 1.51)
-	grpcMinConnectTimeout time.Duration
 }
 
 // c.stateLock needs to be held in read mode before calling this function.
@@ -815,7 +805,7 @@ type CoreConfig struct {
 	LicensingConfig *LicensingConfig
 
 	// Configured Census Agent
-	censusAgent *CensusAgent
+	CensusAgent CensusReporter
 
 	DisablePerformanceStandby bool
 	DisableIndexing           bool
@@ -858,6 +848,10 @@ type CoreConfig struct {
 	PendingRemovalMountsAllowed bool
 
 	ExpirationRevokeRetryBase time.Duration
+
+	// AdministrativeNamespacePath is used to configure the administrative namespace, which has access to some sys endpoints that are
+	// only accessible in the root namespace, currently sys/audit-hash and sys/monitor.
+	AdministrativeNamespacePath string
 }
 
 // GetServiceRegistration returns the config's ServiceRegistration, or nil if it does
@@ -987,8 +981,6 @@ func CreateCore(conf *CoreConfig) (*Core, error) {
 		introspectionEnabled:           conf.EnableIntrospection,
 		shutdownDoneCh:                 new(atomic.Value),
 		replicationState:               new(uint32),
-		atomicPrimaryClusterAddrs:      new(atomic.Value),
-		atomicPrimaryFailoverAddrs:     new(atomic.Value),
 		localClusterPrivateKey:         new(atomic.Value),
 		localClusterCert:               new(atomic.Value),
 		localClusterParsedCert:         new(atomic.Value),
@@ -1100,9 +1092,7 @@ func CreateCore(conf *CoreConfig) (*Core, error) {
 		wrapper := aeadwrapper.NewShamirWrapper()
 		wrapper.SetConfig(context.Background(), awskms.WithLogger(c.logger.Named("shamir")))
 
-		c.seal = NewDefaultSeal(&vaultseal.Access{
-			Wrapper: wrapper,
-		})
+		c.seal = NewDefaultSeal(vaultseal.NewAccess(wrapper))
 	}
 	c.seal.SetCore(c)
 	return c, nil
@@ -1214,7 +1204,7 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 		c.AddLogger(identityLogger)
 		return NewIdentityStore(ctx, c, config, identityLogger)
 	}
-	addExtraLogicalBackends(c, logicalBackends)
+	addExtraLogicalBackends(c, logicalBackends, conf.AdministrativeNamespacePath)
 	c.logicalBackends = logicalBackends
 
 	credentialBackends := make(map[string]logical.Factory)
@@ -1287,16 +1277,6 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 	c.events = events
 	if c.IsExperimentEnabled(experiments.VaultExperimentEventsAlpha1) {
 		c.events.Start()
-	}
-
-	minConnectTimeoutRaw := os.Getenv("VAULT_GRPC_MIN_CONNECT_TIMEOUT")
-	if minConnectTimeoutRaw != "" {
-		dur, err := time.ParseDuration(minConnectTimeoutRaw)
-		if err != nil {
-			c.logger.Warn("VAULT_GRPC_MIN_CONNECT_TIMEOUT contains non-duration value, ignoring")
-		} else if dur != 0 {
-			c.grpcMinConnectTimeout = dur
-		}
 	}
 
 	return c, nil
@@ -1546,7 +1526,10 @@ func (c *Core) unsealWithRaft(combinedKey []byte) error {
 	if c.seal.BarrierType() == wrapping.WrapperTypeShamir {
 		// If this is a legacy shamir seal this serves no purpose but it
 		// doesn't hurt.
-		err := c.seal.GetAccess().Wrapper.(*aeadwrapper.ShamirWrapper).SetAesGcmKeyBytes(combinedKey)
+		shamirWrapper, err := c.seal.GetShamirWrapper()
+		if err == nil {
+			err = shamirWrapper.SetAesGcmKeyBytes(combinedKey)
+		}
 		if err != nil {
 			return err
 		}
@@ -1797,7 +1780,11 @@ func (c *Core) migrateSeal(ctx context.Context) error {
 		}
 
 		// We have recovery keys; we're going to use them as the new shamir KeK.
-		err = c.seal.GetAccess().Wrapper.(*aeadwrapper.ShamirWrapper).SetAesGcmKeyBytes(recoveryKey)
+		shamirWrapper, err := c.seal.GetShamirWrapper()
+		if err != nil {
+			return err
+		}
+		err = shamirWrapper.SetAesGcmKeyBytes(recoveryKey)
 		if err != nil {
 			return fmt.Errorf("failed to set master key in seal: %w", err)
 		}
@@ -2367,13 +2354,22 @@ func (s standardUnsealStrategy) unseal(ctx context.Context, logger log.Logger, c
 		if err := c.setupAuditedHeadersConfig(ctx); err != nil {
 			return err
 		}
+
+		if err := c.setupCensusAgent(); err != nil {
+			c.logger.Error("skipping reporting for nil agent", "error", err)
+		}
+
 		// not waiting on wg to avoid changing existing behavior
 		var wg sync.WaitGroup
 		if err := c.setupActivityLog(ctx, &wg); err != nil {
 			return err
 		}
 	} else {
-		c.auditBroker = NewAuditBroker(c.logger)
+		var err error
+		c.auditBroker, err = NewAuditBroker(c.logger, c.IsExperimentEnabled(experiments.VaultExperimentCoreAuditEventsAlpha1))
+		if err != nil {
+			return err
+		}
 	}
 
 	if !c.ReplicationState().HasState(consts.ReplicationPerformanceSecondary | consts.ReplicationDRSecondary) {
@@ -2567,6 +2563,10 @@ func (c *Core) preSeal() error {
 		result = multierror.Append(result, fmt.Errorf("error stopping expiration: %w", err))
 	}
 	c.stopActivityLog()
+	// Clean up the censusAgent on seal
+	if err := c.teardownCensusAgent(); err != nil {
+		result = multierror.Append(result, fmt.Errorf("error tearing down reporting agent: %w", err))
+	}
 
 	if err := c.teardownCredentials(context.Background()); err != nil {
 		result = multierror.Append(result, fmt.Errorf("error tearing down credentials: %w", err))
@@ -2790,9 +2790,7 @@ func (c *Core) adjustForSealMigration(unwrapSeal Seal) error {
 		case existBarrierSealConfig.Type == wrapping.WrapperTypeShamir.String():
 			// The configured seal is not Shamir, the stored seal config is Shamir.
 			// This is a migration away from Shamir.
-			unwrapSeal = NewDefaultSeal(&vaultseal.Access{
-				Wrapper: aeadwrapper.NewShamirWrapper(),
-			})
+			unwrapSeal = NewDefaultSeal(vaultseal.NewAccess(aeadwrapper.NewShamirWrapper()))
 		default:
 			// We know at this point that there is a configured non-Shamir seal,
 			// that it does not match the stored non-Shamir seal config, and that
@@ -2955,9 +2953,7 @@ func (c *Core) unsealKeyToMasterKey(ctx context.Context, seal Seal, combinedKey 
 
 	case vaultseal.StoredKeysSupportedShamirRoot:
 		if useTestSeal {
-			testseal := NewDefaultSeal(&vaultseal.Access{
-				Wrapper: aeadwrapper.NewShamirWrapper(),
-			})
+			testseal := NewDefaultSeal(vaultseal.NewAccess(aeadwrapper.NewShamirWrapper()))
 			testseal.SetCore(c)
 			cfg, err := seal.BarrierConfig(ctx)
 			if err != nil {
@@ -2967,7 +2963,11 @@ func (c *Core) unsealKeyToMasterKey(ctx context.Context, seal Seal, combinedKey 
 			seal = testseal
 		}
 
-		err := seal.GetAccess().Wrapper.(*aeadwrapper.ShamirWrapper).SetAesGcmKeyBytes(combinedKey)
+		shamirWrapper, err := seal.GetShamirWrapper()
+		if err != nil {
+			return nil, err
+		}
+		err = shamirWrapper.SetAesGcmKeyBytes(combinedKey)
 		if err != nil {
 			return nil, &ErrInvalidKey{fmt.Sprintf("failed to setup unseal key: %v", err)}
 		}
@@ -3181,6 +3181,7 @@ type BuiltinRegistry interface {
 	Get(name string, pluginType consts.PluginType) (func() (interface{}, error), bool)
 	Keys(pluginType consts.PluginType) []string
 	DeprecationStatus(name string, pluginType consts.PluginType) (consts.DeprecationStatus, bool)
+	IsBuiltinEntPlugin(name string, pluginType consts.PluginType) bool
 }
 
 func (c *Core) AuditLogger() AuditLogger {
@@ -3550,18 +3551,19 @@ func (c *Core) runLockedUserEntryUpdatesForMountAccessor(ctx context.Context, mo
 		lockoutDurationFromConfiguration := userLockoutConfiguration.LockoutDuration
 
 		// get the entry for the locked user from userFailedLoginInfo map
-		failedLoginInfoFromMap := c.GetUserFailedLoginInfo(ctx, loginUserInfoKey)
+		failedLoginInfoFromMap := c.LocalGetUserFailedLoginInfo(ctx, loginUserInfoKey)
 
 		// check if the storage entry for locked user is stale
 		if time.Now().After(lastFailedLoginTimeFromStorageEntry.Add(lockoutDurationFromConfiguration)) {
 			// stale entry, remove from storage
+			// leaving this as it is as this happens on the active node
+			// also handles case where namespace is deleted
 			if err := c.barrier.Delete(ctx, path+alias); err != nil {
 				return 0, err
 			}
-
 			// remove entry for this user from userFailedLoginInfo map if present as the user is not locked
 			if failedLoginInfoFromMap != nil {
-				if err = c.UpdateUserFailedLoginInfo(ctx, loginUserInfoKey, nil, true); err != nil {
+				if err = updateUserFailedLoginInfo(ctx, c, loginUserInfoKey, nil, true); err != nil {
 					return 0, err
 				}
 			}
@@ -3578,7 +3580,7 @@ func (c *Core) runLockedUserEntryUpdatesForMountAccessor(ctx context.Context, mo
 
 		if failedLoginInfoFromMap != &actualFailedLoginInfo {
 			// entry is invalid, updating the entry in userFailedLoginMap with correct information
-			if err = c.UpdateUserFailedLoginInfo(ctx, loginUserInfoKey, &actualFailedLoginInfo, false); err != nil {
+			if err = updateUserFailedLoginInfo(ctx, c, loginUserInfoKey, &actualFailedLoginInfo, false); err != nil {
 				return 0, err
 			}
 		}
@@ -3869,8 +3871,8 @@ func (c *Core) ListAuths() ([]*MountEntry, error) {
 		return nil, fmt.Errorf("vault is sealed")
 	}
 
-	c.mountsLock.RLock()
-	defer c.mountsLock.RUnlock()
+	c.authLock.RLock()
+	defer c.authLock.RUnlock()
 
 	var entries []*MountEntry
 

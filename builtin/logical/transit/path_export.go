@@ -7,7 +7,6 @@ import (
 	"context"
 	"crypto/ecdsa"
 	"crypto/elliptic"
-	"crypto/rsa"
 	"crypto/x509"
 	"encoding/base64"
 	"encoding/pem"
@@ -25,15 +24,23 @@ const (
 	exportTypeEncryptionKey = "encryption-key"
 	exportTypeSigningKey    = "signing-key"
 	exportTypeHMACKey       = "hmac-key"
+	exportTypePublicKey     = "public-key"
 )
 
 func (b *backend) pathExportKeys() *framework.Path {
 	return &framework.Path{
 		Pattern: "export/" + framework.GenericNameRegex("type") + "/" + framework.GenericNameRegex("name") + framework.OptionalParamRegex("version"),
+
+		DisplayAttrs: &framework.DisplayAttributes{
+			OperationPrefix: operationPrefixTransit,
+			OperationVerb:   "export",
+			OperationSuffix: "key|key-version",
+		},
+
 		Fields: map[string]*framework.FieldSchema{
 			"type": {
 				Type:        framework.TypeString,
-				Description: "Type of key to export (encryption-key, signing-key, hmac-key)",
+				Description: "Type of key to export (encryption-key, signing-key, hmac-key, public-key)",
 			},
 			"name": {
 				Type:        framework.TypeString,
@@ -63,6 +70,7 @@ func (b *backend) pathPolicyExportRead(ctx context.Context, req *logical.Request
 	case exportTypeEncryptionKey:
 	case exportTypeSigningKey:
 	case exportTypeHMACKey:
+	case exportTypePublicKey:
 	default:
 		return logical.ErrorResponse(fmt.Sprintf("invalid export type: %s", exportType)), logical.ErrInvalidRequest
 	}
@@ -82,8 +90,8 @@ func (b *backend) pathPolicyExportRead(ctx context.Context, req *logical.Request
 	}
 	defer p.Unlock()
 
-	if !p.Exportable {
-		return logical.ErrorResponse("key is not exportable"), nil
+	if !p.Exportable && exportType != exportTypePublicKey {
+		return logical.ErrorResponse("private key material is not exportable"), nil
 	}
 
 	switch exportType {
@@ -154,7 +162,11 @@ func getExportKey(policy *keysutil.Policy, key *keysutil.KeyEntry, exportType st
 
 	switch exportType {
 	case exportTypeHMACKey:
-		return strings.TrimSpace(base64.StdEncoding.EncodeToString(key.HMACKey)), nil
+		src := key.HMACKey
+		if policy.Type == keysutil.KeyType_HMAC {
+			src = key.Key
+		}
+		return strings.TrimSpace(base64.StdEncoding.EncodeToString(src)), nil
 
 	case exportTypeEncryptionKey:
 		switch policy.Type {
@@ -162,7 +174,11 @@ func getExportKey(policy *keysutil.Policy, key *keysutil.KeyEntry, exportType st
 			return strings.TrimSpace(base64.StdEncoding.EncodeToString(key.Key)), nil
 
 		case keysutil.KeyType_RSA2048, keysutil.KeyType_RSA3072, keysutil.KeyType_RSA4096:
-			return encodeRSAPrivateKey(key.RSAKey), nil
+			rsaKey, err := encodeRSAPrivateKey(key)
+			if err != nil {
+				return "", err
+			}
+			return rsaKey, nil
 		}
 
 	case exportTypeSigningKey:
@@ -184,26 +200,92 @@ func getExportKey(policy *keysutil.Policy, key *keysutil.KeyEntry, exportType st
 			return ecKey, nil
 
 		case keysutil.KeyType_ED25519:
+			if len(key.Key) == 0 {
+				return "", nil
+			}
+
 			return strings.TrimSpace(base64.StdEncoding.EncodeToString(key.Key)), nil
 
 		case keysutil.KeyType_RSA2048, keysutil.KeyType_RSA3072, keysutil.KeyType_RSA4096:
-			return encodeRSAPrivateKey(key.RSAKey), nil
+			rsaKey, err := encodeRSAPrivateKey(key)
+			if err != nil {
+				return "", err
+			}
+			return rsaKey, nil
+		}
+	case exportTypePublicKey:
+		switch policy.Type {
+		case keysutil.KeyType_ECDSA_P256, keysutil.KeyType_ECDSA_P384, keysutil.KeyType_ECDSA_P521:
+			var curve elliptic.Curve
+			switch policy.Type {
+			case keysutil.KeyType_ECDSA_P384:
+				curve = elliptic.P384()
+			case keysutil.KeyType_ECDSA_P521:
+				curve = elliptic.P521()
+			default:
+				curve = elliptic.P256()
+			}
+			ecKey, err := keyEntryToECPublicKey(key, curve)
+			if err != nil {
+				return "", err
+			}
+			return ecKey, nil
+
+		case keysutil.KeyType_ED25519:
+			return strings.TrimSpace(key.FormattedPublicKey), nil
+
+		case keysutil.KeyType_RSA2048, keysutil.KeyType_RSA3072, keysutil.KeyType_RSA4096:
+			rsaKey, err := encodeRSAPublicKey(key)
+			if err != nil {
+				return "", err
+			}
+			return rsaKey, nil
 		}
 	}
 
-	return "", fmt.Errorf("unknown key type %v", policy.Type)
+	return "", fmt.Errorf("unknown key type %v for export type %v", policy.Type, exportType)
 }
 
-func encodeRSAPrivateKey(key *rsa.PrivateKey) string {
+func encodeRSAPrivateKey(key *keysutil.KeyEntry) (string, error) {
+	if key == nil {
+		return "", errors.New("nil KeyEntry provided")
+	}
+
+	if key.IsPrivateKeyMissing() {
+		return "", nil
+	}
+
 	// When encoding PKCS1, the PEM header should be `RSA PRIVATE KEY`. When Go
 	// has PKCS8 encoding support, we may want to change this.
-	derBytes := x509.MarshalPKCS1PrivateKey(key)
-	pemBlock := &pem.Block{
-		Type:  "RSA PRIVATE KEY",
+	blockType := "RSA PRIVATE KEY"
+	derBytes := x509.MarshalPKCS1PrivateKey(key.RSAKey)
+	pemBlock := pem.Block{
+		Type:  blockType,
 		Bytes: derBytes,
 	}
-	pemBytes := pem.EncodeToMemory(pemBlock)
-	return string(pemBytes)
+
+	pemBytes := pem.EncodeToMemory(&pemBlock)
+	return string(pemBytes), nil
+}
+
+func encodeRSAPublicKey(key *keysutil.KeyEntry) (string, error) {
+	if key == nil {
+		return "", errors.New("nil KeyEntry provided")
+	}
+
+	blockType := "RSA PUBLIC KEY"
+	derBytes, err := x509.MarshalPKIXPublicKey(key.RSAPublicKey)
+	if err != nil {
+		return "", err
+	}
+
+	pemBlock := pem.Block{
+		Type:  blockType,
+		Bytes: derBytes,
+	}
+
+	pemBytes := pem.EncodeToMemory(&pemBlock)
+	return string(pemBytes), nil
 }
 
 func keyEntryToECPrivateKey(k *keysutil.KeyEntry, curve elliptic.Curve) (string, error) {
@@ -211,27 +293,57 @@ func keyEntryToECPrivateKey(k *keysutil.KeyEntry, curve elliptic.Curve) (string,
 		return "", errors.New("nil KeyEntry provided")
 	}
 
-	privKey := &ecdsa.PrivateKey{
-		PublicKey: ecdsa.PublicKey{
-			Curve: curve,
-			X:     k.EC_X,
-			Y:     k.EC_Y,
-		},
-		D: k.EC_D,
+	if k.IsPrivateKeyMissing() {
+		return "", nil
 	}
-	ecder, err := x509.MarshalECPrivateKey(privKey)
+
+	pubKey := ecdsa.PublicKey{
+		Curve: curve,
+		X:     k.EC_X,
+		Y:     k.EC_Y,
+	}
+
+	blockType := "EC PRIVATE KEY"
+	privKey := &ecdsa.PrivateKey{
+		PublicKey: pubKey,
+		D:         k.EC_D,
+	}
+	derBytes, err := x509.MarshalECPrivateKey(privKey)
 	if err != nil {
 		return "", err
 	}
-	if ecder == nil {
-		return "", errors.New("no data returned when marshalling to private key")
+
+	pemBlock := pem.Block{
+		Type:  blockType,
+		Bytes: derBytes,
 	}
 
-	block := pem.Block{
-		Type:  "EC PRIVATE KEY",
-		Bytes: ecder,
+	return strings.TrimSpace(string(pem.EncodeToMemory(&pemBlock))), nil
+}
+
+func keyEntryToECPublicKey(k *keysutil.KeyEntry, curve elliptic.Curve) (string, error) {
+	if k == nil {
+		return "", errors.New("nil KeyEntry provided")
 	}
-	return strings.TrimSpace(string(pem.EncodeToMemory(&block))), nil
+
+	pubKey := ecdsa.PublicKey{
+		Curve: curve,
+		X:     k.EC_X,
+		Y:     k.EC_Y,
+	}
+
+	blockType := "PUBLIC KEY"
+	derBytes, err := x509.MarshalPKIXPublicKey(&pubKey)
+	if err != nil {
+		return "", err
+	}
+
+	pemBlock := pem.Block{
+		Type:  blockType,
+		Bytes: derBytes,
+	}
+
+	return strings.TrimSpace(string(pem.EncodeToMemory(&pemBlock))), nil
 }
 
 const pathExportHelpSyn = `Export named encryption or signing key`

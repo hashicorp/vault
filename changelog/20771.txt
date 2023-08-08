@@ -1,0 +1,4 @@
+```release-note:improvement
+auth/kerberos: Enable plugin multiplexing
+auth/kerberos: Upgrade plugin dependencies
+```

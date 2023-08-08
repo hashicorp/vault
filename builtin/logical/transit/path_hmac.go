@@ -48,6 +48,13 @@ type batchResponseHMACItem struct {
 func (b *backend) pathHMAC() *framework.Path {
 	return &framework.Path{
 		Pattern: "hmac/" + framework.GenericNameRegex("name") + framework.OptionalParamRegex("urlalgorithm"),
+
+		DisplayAttrs: &framework.DisplayAttributes{
+			OperationPrefix: operationPrefixTransit,
+			OperationVerb:   "generate",
+			OperationSuffix: "hmac|hmac-with-algorithm",
+		},
+
 		Fields: map[string]*framework.FieldSchema{
 			"name": {
 				Type:        framework.TypeString,

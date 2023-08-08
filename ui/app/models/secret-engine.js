@@ -8,13 +8,24 @@ import { computed } from '@ember/object'; // eslint-disable-line
 import { equal } from '@ember/object/computed'; // eslint-disable-line
 import { withModelValidations } from 'vault/decorators/model-validations';
 import { withExpandedAttributes } from 'vault/decorators/model-expanded-attributes';
+import { supportedSecretBackends } from 'vault/helpers/supported-secret-backends';
+
+const LINKED_BACKENDS = supportedSecretBackends();
 
 // identity will be managed separately and the inclusion
 // of the system backend is an implementation detail
 const LIST_EXCLUDED_BACKENDS = ['system', 'identity'];
 
 const validations = {
-  path: [{ type: 'presence', message: "Path can't be blank." }],
+  path: [
+    { type: 'presence', message: "Path can't be blank." },
+    {
+      type: 'containsWhiteSpace',
+      message:
+        "Path contains whitespace. If this is desired, you'll need to encode it with %20 in API requests.",
+      level: 'warn',
+    },
+  ],
   maxVersions: [
     { type: 'number', message: 'Maximum versions must be a number.' },
     { type: 'length', options: { min: 1, max: 16 }, message: 'You cannot go over 16 characters.' },
@@ -135,6 +146,20 @@ export default class SecretEngineModel extends Model {
     return !LIST_EXCLUDED_BACKENDS.includes(this.engineType);
   }
 
+  get isSupportedBackend() {
+    return LINKED_BACKENDS.includes(this.engineType);
+  }
+
+  get backendLink() {
+    if (this.engineType === 'kmip') {
+      return 'vault.cluster.secrets.backend.kmip.scopes';
+    }
+    if (this.engineType === 'database') {
+      return 'vault.cluster.secrets.backend.overview';
+    }
+    return 'vault.cluster.secrets.backend.list-root';
+  }
+
   get localDisplay() {
     return this.local ? 'local' : 'replicated';
   }
@@ -147,6 +172,7 @@ export default class SecretEngineModel extends Model {
       fields.push('config.defaultLeaseTtl', 'config.maxLeaseTtl');
     }
     fields.push(
+      'config.allowedManagedKeys',
       'config.auditNonHmacRequestKeys',
       'config.auditNonHmacResponseKeys',
       'config.passthroughRequestHeaders',
@@ -181,6 +207,7 @@ export default class SecretEngineModel extends Model {
           ...CORE_OPTIONS,
           'config.defaultLeaseTtl',
           'config.maxLeaseTtl',
+          'config.allowedManagedKeys',
           ...STANDARD_CONFIG,
         ];
         break;
@@ -190,21 +217,32 @@ export default class SecretEngineModel extends Model {
           ...CORE_OPTIONS,
           'config.defaultLeaseTtl',
           'config.maxLeaseTtl',
+          'config.allowedManagedKeys',
           ...STANDARD_CONFIG,
         ];
         break;
       case 'database':
         // Highlight TTLs in default
         defaultFields = ['path', 'config.defaultLeaseTtl', 'config.maxLeaseTtl'];
+        optionFields = [...CORE_OPTIONS, 'config.allowedManagedKeys', ...STANDARD_CONFIG];
+        break;
+      case 'pki':
+        defaultFields = ['path', 'config.defaultLeaseTtl', 'config.maxLeaseTtl', 'config.allowedManagedKeys'];
         optionFields = [...CORE_OPTIONS, ...STANDARD_CONFIG];
         break;
       case 'keymgmt':
         // no ttl options for keymgmt
-        optionFields = [...CORE_OPTIONS, ...STANDARD_CONFIG];
+        optionFields = [...CORE_OPTIONS, 'config.allowedManagedKeys', ...STANDARD_CONFIG];
         break;
       default:
         defaultFields = ['path'];
-        optionFields = [...CORE_OPTIONS, 'config.defaultLeaseTtl', 'config.maxLeaseTtl', ...STANDARD_CONFIG];
+        optionFields = [
+          ...CORE_OPTIONS,
+          'config.defaultLeaseTtl',
+          'config.maxLeaseTtl',
+          'config.allowedManagedKeys',
+          ...STANDARD_CONFIG,
+        ];
         break;
     }
 

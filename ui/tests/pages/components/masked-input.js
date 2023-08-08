@@ -8,5 +8,7 @@ import { clickable, isPresent } from 'ember-cli-page-object';
 export default {
   textareaIsPresent: isPresent('[data-test-textarea]'),
   copyButtonIsPresent: isPresent('[data-test-copy-button]'),
+  downloadButtonIsPresent: isPresent('[data-test-download-button]'),
   toggleMasked: clickable('[data-test-button="toggle-masked"]'),
+  copyValue: clickable('[data-test-copy-button]'),
 };

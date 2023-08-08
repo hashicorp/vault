@@ -9,7 +9,8 @@ import { setComponentTemplate } from '@ember/component';
 
 /**
  * @module MessageError
- * `MessageError` extracts an error from a model or a passed error and displays it using the `AlertBanner` component.
+ * Renders form errors using the <Hds::Alert> component and extracts errors from
+ * a model, passed errorMessage or array of errors and displays each in a separate banner.
  *
  * @example
  * ```js
