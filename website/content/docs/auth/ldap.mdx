@@ -112,6 +112,10 @@ management tool.
 
 There are two alternate methods of resolving the user object used to authenticate the end user: _Search_ or _User Principal Name_. When using _Search_, the bind can be either anonymous or authenticated. User Principal Name is a method of specifying users supported by Active Directory. More information on UPN can be found [here](<https://msdn.microsoft.com/en-us/library/ms677605(v=vs.85).aspx#userPrincipalName>).
 
+`userfilter` works with both authenticated and anonymous _Search_.
+In order for `userfilter` to apply for authenticated searches, `binddn` and `bindpass` must be set.
+For anonymous search, `discoverdn` must be set to `true`, and `deny_null_bind` must be set to false.
+
 #### Binding - authenticated search
 
 - `binddn` (string, optional) - Distinguished name of object to bind when performing user and group search. Example: `cn=vault,ou=Users,dc=example,dc=com`
