@@ -77,16 +77,20 @@ export default class KvSecretCreate extends Component {
         this.errors.pushObject({ endpoint: 'kv/data', message: errorMessage(error) });
       }
 
-      try {
-        metadata.path = secret.path;
-        yield metadata.save();
-        this.flashMessages.success(`Successfully saved metadata.`);
-      } catch (error) {
-        this.flashMessages.danger(`POST kv/metadata: ${errorMessage(error)}`, {
-          sticky: true,
-        });
+      // only attempt to save metadata secret data was saved
+      if (secret.createdTime) {
+        try {
+          metadata.path = secret.path;
+          yield metadata.save();
+          this.flashMessages.success(`Successfully saved metadata.`);
+        } catch (error) {
+          this.flashMessages.danger(`POST kv/metadata: ${errorMessage(error)}`, {
+            sticky: true,
+          });
+        }
       }
 
+      // prevent transition if there are errors with secret data
       if (this.errors.length) {
         this.invalidFormAlert = 'There was an error submitting this form.';
       } else {
