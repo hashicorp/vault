@@ -15,6 +15,8 @@ import (
 	"github.com/hashicorp/eventlogger"
 )
 
+var _ eventlogger.Node = (*SocketSink)(nil)
+
 // SocketSink is a sink node which handles writing events to socket.
 type SocketSink struct {
 	requiredFormat string
