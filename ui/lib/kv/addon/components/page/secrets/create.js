@@ -48,13 +48,22 @@ export default class KvSecretCreate extends Component {
     }
   }
 
+  validate() {
+    const dataValidations = this.args.secret.validate();
+    const metadataValidations = this.args.metadata.validate();
+    const state = { ...dataValidations.state, ...metadataValidations.state };
+    const failed = !dataValidations.isValid || !metadataValidations.isValid;
+    return { state, isValid: !failed };
+  }
+
   @task
   *save(event) {
     event.preventDefault();
+    this.flashMessages.clearMessages();
     try {
-      const { isValid, state, invalidFormMessage } = this.args.secret.validate();
+      const { isValid, state } = this.validate();
       this.modelValidations = isValid ? null : state;
-      this.invalidFormAlert = invalidFormMessage;
+      this.invalidFormAlert = isValid ? '' : 'There was an error submitting this form.';
       if (isValid) {
         const { secret } = this.args;
         yield this.args.secret.save();
