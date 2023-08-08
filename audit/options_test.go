@@ -50,16 +50,16 @@ func TestOptions_WithFormat(t *testing.T) {
 		tc := tc
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
-			options := &options{}
+			opts := &options{}
 			applyOption := WithFormat(tc.Value)
-			err := applyOption(options)
+			err := applyOption(opts)
 			switch {
 			case tc.IsErrorExpected:
 				require.Error(t, err)
 				require.EqualError(t, err, tc.ExpectedErrorMessage)
 			default:
 				require.NoError(t, err)
-				require.Equal(t, tc.ExpectedValue, options.withFormat)
+				require.Equal(t, tc.ExpectedValue, opts.withFormat)
 			}
 		})
 	}
@@ -95,16 +95,16 @@ func TestOptions_WithSubtype(t *testing.T) {
 		tc := tc
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
-			options := &options{}
+			opts := &options{}
 			applyOption := WithSubtype(tc.Value)
-			err := applyOption(options)
+			err := applyOption(opts)
 			switch {
 			case tc.IsErrorExpected:
 				require.Error(t, err)
 				require.EqualError(t, err, tc.ExpectedErrorMessage)
 			default:
 				require.NoError(t, err)
-				require.Equal(t, tc.ExpectedValue, options.withSubtype)
+				require.Equal(t, tc.ExpectedValue, opts.withSubtype)
 			}
 		})
 	}
@@ -136,16 +136,16 @@ func TestOptions_WithNow(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			options := &options{}
+			opts := &options{}
 			applyOption := WithNow(tc.Value)
-			err := applyOption(options)
+			err := applyOption(opts)
 			switch {
 			case tc.IsErrorExpected:
 				require.Error(t, err)
 				require.EqualError(t, err, tc.ExpectedErrorMessage)
 			default:
 				require.NoError(t, err)
-				require.Equal(t, tc.ExpectedValue, options.withNow)
+				require.Equal(t, tc.ExpectedValue, opts.withNow)
 			}
 		})
 	}
@@ -181,16 +181,16 @@ func TestOptions_WithID(t *testing.T) {
 		tc := tc
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
-			options := &options{}
+			opts := &options{}
 			applyOption := WithID(tc.Value)
-			err := applyOption(options)
+			err := applyOption(opts)
 			switch {
 			case tc.IsErrorExpected:
 				require.Error(t, err)
 				require.EqualError(t, err, tc.ExpectedErrorMessage)
 			default:
 				require.NoError(t, err)
-				require.Equal(t, tc.ExpectedValue, options.withID)
+				require.Equal(t, tc.ExpectedValue, opts.withID)
 			}
 		})
 	}
@@ -226,16 +226,16 @@ func TestOptions_WithPrefix(t *testing.T) {
 		tc := tc
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
-			options := &options{}
+			opts := &options{}
 			applyOption := WithPrefix(tc.Value)
-			err := applyOption(options)
+			err := applyOption(opts)
 			switch {
 			case tc.IsErrorExpected:
 				require.Error(t, err)
 				require.EqualError(t, err, tc.ExpectedErrorMessage)
 			default:
 				require.NoError(t, err)
-				require.Equal(t, tc.ExpectedValue, options.withPrefix)
+				require.Equal(t, tc.ExpectedValue, opts.withPrefix)
 			}
 		})
 	}
@@ -262,11 +262,11 @@ func TestOptions_WithRaw(t *testing.T) {
 		tc := tc
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
-			options := &options{}
+			opts := &options{}
 			applyOption := WithRaw(tc.Value)
-			err := applyOption(options)
+			err := applyOption(opts)
 			require.NoError(t, err)
-			require.Equal(t, tc.ExpectedValue, options.withRaw)
+			require.Equal(t, tc.ExpectedValue, opts.withRaw)
 		})
 	}
 }
@@ -292,11 +292,11 @@ func TestOptions_WithElision(t *testing.T) {
 		tc := tc
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
-			options := &options{}
+			opts := &options{}
 			applyOption := WithElision(tc.Value)
-			err := applyOption(options)
+			err := applyOption(opts)
 			require.NoError(t, err)
-			require.Equal(t, tc.ExpectedValue, options.withElision)
+			require.Equal(t, tc.ExpectedValue, opts.withElision)
 		})
 	}
 }
@@ -322,11 +322,11 @@ func TestOptions_WithHMACAccessor(t *testing.T) {
 		tc := tc
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
-			options := &options{}
+			opts := &options{}
 			applyOption := WithHMACAccessor(tc.Value)
-			err := applyOption(options)
+			err := applyOption(opts)
 			require.NoError(t, err)
-			require.Equal(t, tc.ExpectedValue, options.withHMACAccessor)
+			require.Equal(t, tc.ExpectedValue, opts.withHMACAccessor)
 		})
 	}
 }
@@ -352,11 +352,11 @@ func TestOptions_WithOmitTime(t *testing.T) {
 		tc := tc
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
-			options := &options{}
+			opts := &options{}
 			applyOption := WithOmitTime(tc.Value)
-			err := applyOption(options)
+			err := applyOption(opts)
 			require.NoError(t, err)
-			require.Equal(t, tc.ExpectedValue, options.withOmitTime)
+			require.Equal(t, tc.ExpectedValue, opts.withOmitTime)
 		})
 	}
 }
