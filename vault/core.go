@@ -2337,6 +2337,10 @@ func (s standardUnsealStrategy) unseal(ctx context.Context, logger log.Logger, c
 		if err := c.loadAudits(ctx); err != nil {
 			return err
 		}
+		if err := c.setupAuditedHeadersConfig(ctx); err != nil {
+			return err
+		}
+
 		if err := c.setupAudits(ctx); err != nil {
 			return err
 		}
@@ -2348,10 +2352,6 @@ func (s standardUnsealStrategy) unseal(ctx context.Context, logger log.Logger, c
 		}
 		c.setupCachedMFAResponseAuth()
 		if err := c.loadLoginMFAConfigs(ctx); err != nil {
-			return err
-		}
-
-		if err := c.setupAuditedHeadersConfig(ctx); err != nil {
 			return err
 		}
 
