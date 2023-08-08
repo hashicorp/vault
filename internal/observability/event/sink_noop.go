@@ -9,6 +9,8 @@ import (
 	"github.com/hashicorp/eventlogger"
 )
 
+var _ eventlogger.Node = (*NoopSink)(nil)
+
 // NoopSink is a sink node which handles ignores everything.
 type NoopSink struct{}
 
