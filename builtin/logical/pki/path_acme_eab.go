@@ -75,8 +75,8 @@ func pathAcmeEabList(b *backend) *framework.Path {
 	}
 }
 
-func pathAcmeNewEab(b *backend) []*framework.Path {
-	return buildAcmeFrameworkPaths(b, patternAcmeNewEab, "/new-eab")
+func pathAcmeNewEab(b *backend, baseUrl string) *framework.Path {
+	return patternAcmeNewEab(b, baseUrl+"/new-eab")
 }
 
 func patternAcmeNewEab(b *backend, pattern string) *framework.Path {
