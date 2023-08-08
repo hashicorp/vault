@@ -11,7 +11,7 @@ import { fillIn } from '@ember/test-helpers';
 
 import { selectChoose } from 'ember-power-select/test-support/helpers';
 
-// import SELECTORS from 'vault/tests/helpers/components/dashboard/quick-actions-card';
+// // TODO LANDING PAGE: create SELECTORS for the data-test attributes
 
 module('Integration | Component | dashboard/quick-actions-card', function (hooks) {
   setupRenderingTest(hooks);
