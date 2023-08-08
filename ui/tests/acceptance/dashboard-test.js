@@ -108,7 +108,6 @@ module('Acceptance | landing page dashboard', function (hooks) {
     return authPage.login();
   });
 
-  // TODO LANDING PAGE: create a test that will navigate to dashboard if user opts into new dashboard ui
   test('navigate to dashboard on login', async function (assert) {
     assert.strictEqual(currentURL(), '/vault/dashboard');
   });
