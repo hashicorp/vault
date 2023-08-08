@@ -87,15 +87,17 @@ func (f *EntryFormatter) Process(ctx context.Context, e *eventlogger.Event) (*ev
 
 	var result []byte
 	data := new(logical.LogInput)
+	headers := make(map[string][]string)
 
 	if a.Data != nil {
 		*data = *a.Data
+		headers = a.Data.Request.Headers
 	}
 
 	switch a.Subtype {
 	case RequestType:
 		if f.headerFormatter != nil {
-			adjustedHeaders, err := f.headerFormatter.ApplyConfig(ctx, a.Data.Request.Headers, f.salter)
+			adjustedHeaders, err := f.headerFormatter.ApplyConfig(ctx, headers, f.salter)
 			if err != nil {
 				return nil, fmt.Errorf("%s: unable to transform headers for auditing: %w", op, err)
 			}
@@ -114,7 +116,7 @@ func (f *EntryFormatter) Process(ctx context.Context, e *eventlogger.Event) (*ev
 		}
 	case ResponseType:
 		if f.headerFormatter != nil {
-			adjustedHeaders, err := f.headerFormatter.ApplyConfig(ctx, a.Data.Request.Headers, f.salter)
+			adjustedHeaders, err := f.headerFormatter.ApplyConfig(ctx, headers, f.salter)
 			if err != nil {
 				return nil, fmt.Errorf("%s: unable to transform headers for auditing: %w", op, err)
 			}
