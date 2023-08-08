@@ -579,7 +579,7 @@ func computeIndexID(req *SendRequest) (string, error) {
 
 	// Append req.Token into the byte slice. This is needed since auto-auth'ed
 	// requests sets the token directly into SendRequest.Token
-	if _, err := b.Write([]byte(req.Token)); err != nil {
+	if _, err := b.WriteString(req.Token); err != nil {
 		return "", fmt.Errorf("failed to write token to hash input: %w", err)
 	}
 
