@@ -10,7 +10,6 @@ import { setupApplicationTest } from 'ember-qunit';
 import { v4 as uuidv4 } from 'uuid';
 
 import authPage from 'vault/tests/pages/auth';
-import logout from 'vault/tests/pages/logout';
 import enablePage from 'vault/tests/pages/settings/auth/enable';
 import { supportedAuthBackends } from 'vault/helpers/supported-auth-backends';
 import { supportedManagedAuthBackends } from 'vault/helpers/supported-managed-auth-backends';
@@ -24,10 +23,6 @@ module('Acceptance | auth backend list', function (hooks) {
 
   hooks.beforeEach(function () {
     return authPage.login();
-  });
-
-  hooks.afterEach(function () {
-    return logout.visit();
   });
 
   test('userpass secret backend', async function (assert) {

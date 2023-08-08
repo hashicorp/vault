@@ -8,9 +8,12 @@ description: |-
 
 # Entropy augmentation
 
--> **Note**: This feature requires [Vault Enterprise Plus](https://www.hashicorp.com/products/vault/).
+@include 'alerts/enterprise-only.mdx'
 
-~> **Warning** This feature is not available with FIPS 140-2 Inside variants of Vault.
+<Warning>
+  Entropy augmentation <b>is not</b> available with "FIPS 140-2 Inside" variants of
+  Vault.
+</Warning>
 
 Vault Enterprise features a mechanism to sample entropy (or randomness for
 cryptographic operations) from external cryptographic modules via the [seals](/vault/docs/configuration/seal)

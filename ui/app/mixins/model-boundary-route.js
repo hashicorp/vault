@@ -56,6 +56,11 @@ export default Mixin.create({
       );
       return;
     }
+    if (this.store.isDestroyed || this.store.isDestroying) {
+      // Prevent unload attempt after test teardown, resulting in test failure
+      return;
+    }
+
     if (modelType) {
       this.store.unloadAll(modelType);
     }

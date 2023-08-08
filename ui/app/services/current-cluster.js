@@ -4,11 +4,12 @@
  */
 
 import Service from '@ember/service';
+import { tracked } from '@glimmer/tracking';
 
-export default Service.extend({
-  cluster: null,
+export default class CurrentClusterService extends Service {
+  @tracked cluster = null;
 
   setCluster(cluster) {
-    this.set('cluster', cluster);
-  },
-});
+    this.cluster = cluster;
+  }
+}

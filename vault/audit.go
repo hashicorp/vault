@@ -156,7 +156,7 @@ func (c *Core) enableAudit(ctx context.Context, entry *MountEntry, updateStorage
 	c.audit = newTable
 
 	// Register the backend
-	c.auditBroker.Register(entry.Path, backend, entry.Local, c.IsExperimentEnabled(experiments.VaultExperimentCoreAuditEventsAlpha1))
+	c.auditBroker.Register(entry.Path, backend, entry.Local)
 	if c.logger.IsInfo() {
 		c.logger.Info("enabled audit backend", "path", entry.Path, "type", entry.Type)
 	}
@@ -208,8 +208,9 @@ func (c *Core) disableAudit(ctx context.Context, path string, updateStorage bool
 
 	c.audit = newTable
 
-	// Unmount the backend
-	c.auditBroker.Deregister(path, c.IsExperimentEnabled(experiments.VaultExperimentCoreAuditEventsAlpha1))
+	// Unmount the backend, any returned error can be ignored since the
+	// Backend will already have been removed from the AuditBroker's map.
+	c.auditBroker.Deregister(ctx, path)
 	if c.logger.IsInfo() {
 		c.logger.Info("disabled audit backend", "path", path)
 	}
@@ -383,7 +384,10 @@ func (c *Core) persistAudit(ctx context.Context, table *MountTable, localOnly bo
 func (c *Core) setupAudits(ctx context.Context) error {
 	brokerLogger := c.baseLogger.Named("audit")
 	c.AddLogger(brokerLogger)
-	broker := NewAuditBroker(brokerLogger)
+	broker, err := NewAuditBroker(brokerLogger, c.IsExperimentEnabled(experiments.VaultExperimentCoreAuditEventsAlpha1))
+	if err != nil {
+		return err
+	}
 
 	c.auditLock.Lock()
 	defer c.auditLock.Unlock()
@@ -417,7 +421,7 @@ func (c *Core) setupAudits(ctx context.Context) error {
 		}
 
 		// Mount the backend
-		broker.Register(entry.Path, backend, entry.Local, c.IsExperimentEnabled(experiments.VaultExperimentCoreAuditEventsAlpha1))
+		broker.Register(entry.Path, backend, entry.Local)
 
 		successCount++
 	}
@@ -482,7 +486,7 @@ func (c *Core) newAuditBackend(ctx context.Context, entry *MountEntry, view logi
 		SaltView:   view,
 		SaltConfig: saltConfig,
 		Config:     conf,
-	})
+	}, c.IsExperimentEnabled(experiments.VaultExperimentCoreAuditEventsAlpha1), c.auditedHeaders)
 	if err != nil {
 		return nil, err
 	}

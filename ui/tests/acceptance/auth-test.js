@@ -13,7 +13,6 @@ import authForm from '../pages/components/auth-form';
 import jwtForm from '../pages/components/auth-jwt';
 import { create } from 'ember-cli-page-object';
 import apiStub from 'vault/tests/helpers/noop-all-api-requests';
-import logout from 'vault/tests/pages/logout';
 
 const component = create(authForm);
 const jwtComponent = create(jwtForm);
@@ -27,13 +26,11 @@ module('Acceptance | auth', function (hooks) {
       shouldAdvanceTime: true,
     });
     this.server = apiStub({ usePassthrough: true });
-    return logout.visit();
   });
 
   hooks.afterEach(function () {
     this.clock.restore();
     this.server.shutdown();
-    return logout.visit();
   });
 
   test('auth query params', async function (assert) {

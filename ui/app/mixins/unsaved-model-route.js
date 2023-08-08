@@ -4,6 +4,7 @@
  */
 
 import Mixin from '@ember/object/mixin';
+import Ember from 'ember';
 
 // this mixin relies on `unload-model-route` also being used
 export default Mixin.create({
@@ -15,6 +16,7 @@ export default Mixin.create({
       }
       if (model.hasDirtyAttributes) {
         if (
+          Ember.testing ||
           window.confirm(
             'You have unsaved changes. Navigating away will discard these changes. Are you sure you want to discard your changes?'
           )
