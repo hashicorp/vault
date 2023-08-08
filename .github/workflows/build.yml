@@ -27,7 +27,9 @@ jobs:
     # do not run build and test steps for docs changes
     # Following https://docs.github.com/en/repositories/configuring-branches-and-merges-in-your-repository/managing-protected-branches/troubleshooting-required-status-checks#handling-skipped-but-required-checks
     # we conditionally skip the build and tests for docs(website) changes
-    if: ${{ needs.verify-changes.outputs.is_docs_change == 'false' }}
+    if: |
+      github.event.pull_request.draft == false &&
+      needs.verify-changes.outputs.is_docs_change == 'false'
     runs-on: ubuntu-latest
     needs: verify-changes
     outputs:
@@ -94,7 +96,7 @@ jobs:
           key: ui-${{ steps.ui-hash.outputs.ui-hash }}
       - if: steps.cache-ui-assets.outputs.cache-hit != 'true'
         name: Set up node and yarn
-        uses: actions/setup-node@64ed1c7eab4cce3362f8c340dee64e5eaeef8f7c # v3.6.0
+        uses: actions/setup-node@e33196f7422957bea03ed53f6fbb155025ffc7b8 # v3.7.0
         with:
           node-version-file: ui/package.json
           cache: yarn

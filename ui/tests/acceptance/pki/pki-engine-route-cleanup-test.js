@@ -35,7 +35,6 @@ module('Acceptance | pki engine route cleanup test', function (hooks) {
     await authPage.login();
     // Cleanup engine
     await runCommands([`delete sys/mounts/${this.mountPath}`]);
-    await logout.visit();
   });
 
   module('configuration', function () {

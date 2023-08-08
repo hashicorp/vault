@@ -19,7 +19,6 @@ export default Mixin.create({
       return;
     }
     removeRecord(this.store, model);
-    model.destroy();
     // it's important to unset the model on the controller since controllers are singletons
     this.controller.set(modelPath, null);
   },

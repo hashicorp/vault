@@ -4,15 +4,16 @@
  */
 
 import Service from '@ember/service';
+import { tracked } from '@glimmer/tracking';
 
-export default Service.extend({
-  mode: null,
+export default class ReplicationModeService extends Service {
+  @tracked mode = null;
 
   getMode() {
     return this.mode;
-  },
+  }
 
   setMode(mode) {
-    this.set('mode', mode);
-  },
-});
+    this.mode = mode;
+  }
+}

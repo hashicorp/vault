@@ -17,5 +17,11 @@ module.exports = {
         printWidth: 125,
       },
     },
+    {
+      files: '*.{js,ts}',
+      options: {
+        singleQuote: true,
+      },
+    },
   ],
 };
