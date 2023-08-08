@@ -107,7 +107,7 @@ func (l *InmemLayer) Listeners() []NetworkListener {
 
 	l.listener = &inmemListener{
 		addr:         l.addr,
-		pendingConns: make(chan net.Conn),
+		pendingConns: make(chan net.Conn, 1),
 
 		stopped: atomic.NewBool(false),
 		stopCh:  make(chan struct{}),

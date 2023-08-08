@@ -21,7 +21,7 @@ import (
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
-func Factory(ctx context.Context, conf *audit.BackendConfig, useEventLogger bool) (audit.Backend, error) {
+func Factory(ctx context.Context, conf *audit.BackendConfig, useEventLogger bool, headersConfig audit.HeaderFormatter) (audit.Backend, error) {
 	if conf.SaltConfig == nil {
 		return nil, fmt.Errorf("nil salt config")
 	}
@@ -108,7 +108,7 @@ func Factory(ctx context.Context, conf *audit.BackendConfig, useEventLogger bool
 	}
 
 	// Configure the formatter for either case.
-	f, err := audit.NewEntryFormatter(b.formatConfig, b)
+	f, err := audit.NewEntryFormatter(b.formatConfig, b, audit.WithHeaderFormatter(headersConfig))
 	if err != nil {
 		return nil, fmt.Errorf("error creating formatter: %w", err)
 	}
@@ -176,14 +176,6 @@ type Backend struct {
 }
 
 var _ audit.Backend = (*Backend)(nil)
-
-func (b *Backend) GetHash(ctx context.Context, data string) (string, error) {
-	salt, err := b.Salt(ctx)
-	if err != nil {
-		return "", err
-	}
-	return audit.HashString(salt, data), nil
-}
 
 func (b *Backend) LogRequest(ctx context.Context, in *logical.LogInput) error {
 	var buf bytes.Buffer

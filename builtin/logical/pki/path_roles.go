@@ -32,18 +32,6 @@ func pathListRoles(b *backend) *framework.Path {
 		Operations: map[logical.Operation]framework.OperationHandler{
 			logical.ListOperation: &framework.PathOperation{
 				Callback: b.pathRoleList,
-				Responses: map[int][]framework.Response{
-					http.StatusOK: {{
-						Description: "OK",
-						Fields: map[string]*framework.FieldSchema{
-							"keys": {
-								Type:        framework.TypeStringSlice,
-								Description: "List of roles",
-								Required:    true,
-							},
-						},
-					}},
-				},
 			},
 		},
 

@@ -31,10 +31,10 @@ const (
 // leaf_not_after_behavior (permit/truncate/err) for TTLs exceeding the
 // issuer's validity period, and the mount's default and max TTL.
 type CIEPSIssuanceConfig struct {
-	AIAValues            *URLEntries      `json:"aia_values"`
-	LeafNotAfterBehavior NotAfterBehavior `json:"leaf_not_after_behavior"`
-	MountDefaultTTL      string           `json:"mount_default_ttl"`
-	MountMaxTTL          string           `json:"mount_max_ttl"`
+	AIAValues            *URLEntries `json:"aia_values"`
+	LeafNotAfterBehavior string      `json:"leaf_not_after_behavior"`
+	MountDefaultTTL      string      `json:"mount_default_ttl"`
+	MountMaxTTL          string      `json:"mount_max_ttl"`
 }
 
 // Structured parameters sent by Vault or explicitly validated by Vault
@@ -62,7 +62,6 @@ type CIEPSVaultParams struct {
 	// This information is included for audit tracking purposes.
 	IsPerfStandby bool `json:"vault_is_performance_standby"`
 	IsPRSecondary bool `json:"vault_is_performance_secondary"`
-	IsDRSecondary bool `json:"vault_is_disaster_secondary"`
 
 	IssuanceMode CIEPSIssuanceMode `json:"issuance_mode"`
 
@@ -141,6 +140,7 @@ type CIEPSResponse struct {
 	ParsedCertificate *x509.Certificate `json:"-"`
 	IssuerRef         string            `json:"issuer_ref,omitempty"`
 	StoreCert         bool              `json:"store_certificate"`
+	GenerateLease     bool              `json:"generate_lease"`
 }
 
 func (c *CIEPSResponse) MarshalCertificate() error {

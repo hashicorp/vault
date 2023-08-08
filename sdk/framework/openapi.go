@@ -197,6 +197,29 @@ var OASStdRespNoContent = &OASResponse{
 	Description: "empty body",
 }
 
+var OASStdRespListOK = &OASResponse{
+	Description: "OK",
+	Content: OASContent{
+		"application/json": &OASMediaTypeObject{
+			Schema: &OASSchema{
+				Ref: "#/components/schemas/StandardListResponse",
+			},
+		},
+	},
+}
+
+var OASStdSchemaStandardListResponse = &OASSchema{
+	Type: "object",
+	Properties: map[string]*OASSchema{
+		"keys": {
+			Type: "array",
+			Items: &OASSchema{
+				Type: "string",
+			},
+		},
+	},
+}
+
 // Regex for handling fields in paths, and string cleanup.
 // Predefined here to avoid substantial recompilation.
 
@@ -293,7 +316,7 @@ func documentPath(p *Path, backend *Backend, requestResponsePrefix string, doc *
 
 		// Sort parameters for a stable output
 		sort.Slice(pi.Parameters, func(i, j int) bool {
-			return strings.ToLower(pi.Parameters[i].Name) < strings.ToLower(pi.Parameters[j].Name)
+			return pi.Parameters[i].Name < pi.Parameters[j].Name
 		})
 
 		// Process each supported operation by building up an Operation object
@@ -439,6 +462,11 @@ func documentPath(p *Path, backend *Backend, requestResponsePrefix string, doc *
 					}
 					op.Parameters = append(op.Parameters, p)
 				}
+
+				// Sort parameters for a stable output
+				sort.Slice(op.Parameters, func(i, j int) bool {
+					return op.Parameters[i].Name < op.Parameters[j].Name
+				})
 			}
 
 			// Add tags based on backend type
@@ -456,6 +484,9 @@ func documentPath(p *Path, backend *Backend, requestResponsePrefix string, doc *
 			if len(props.Responses) == 0 {
 				if opType == logical.DeleteOperation {
 					op.Responses[204] = OASStdRespNoContent
+				} else if opType == logical.ListOperation {
+					op.Responses[200] = OASStdRespListOK
+					doc.Components.Schemas["StandardListResponse"] = OASStdSchemaStandardListResponse
 				} else {
 					op.Responses[200] = OASStdRespOK
 				}

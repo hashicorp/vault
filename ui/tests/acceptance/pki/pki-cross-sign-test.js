@@ -9,7 +9,6 @@ import { setupApplicationTest } from 'vault/tests/helpers';
 import { v4 as uuidv4 } from 'uuid';
 
 import authPage from 'vault/tests/pages/auth';
-import logout from 'vault/tests/pages/logout';
 import enablePage from 'vault/tests/pages/settings/mount-secret-backend';
 import { runCommands } from 'vault/tests/helpers/pki/pki-run-commands';
 import { SELECTORS } from 'vault/tests/helpers/pki/pki-issuer-cross-sign';
@@ -39,7 +38,6 @@ module('Acceptance | pki/pki cross sign', function (hooks) {
     // Cleanup engine
     await runCommands([`delete sys/mounts/${this.intMountPath}`]);
     await runCommands([`delete sys/mounts/${this.parentMountPath}`]);
-    await logout.visit();
   });
 
   test('it cross-signs an issuer', async function (assert) {
