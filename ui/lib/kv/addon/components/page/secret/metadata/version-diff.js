@@ -18,6 +18,7 @@ import { typeOf } from '@ember/utils';
  * @param {string} path - Backend from the kv/data model.
  * @param {array} metadata - The kv/metadata model. It is version agnostic.
  * @param {array} breadcrumbs - Array to generate breadcrumbs, passed to the page header component.
+ * @param {object} currentSecretData - The model class for kv/data. Need version and deleted or destroyed information.
  */
 
 export default class KvVersionDiffComponent extends Component {
