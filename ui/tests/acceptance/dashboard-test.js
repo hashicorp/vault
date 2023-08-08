@@ -7,13 +7,11 @@ import { module, test } from 'qunit';
 import { visit, currentURL } from '@ember/test-helpers';
 import { setupApplicationTest } from 'vault/tests/helpers';
 import { setupMirage } from 'ember-cli-mirage/test-support';
-// import { selectChoose, selectSearch } from 'ember-power-select/test-support/helpers';
 
 import authPage from 'vault/tests/pages/auth';
 import SECRETS_ENGINE_SELECTORS from 'vault/tests/helpers/components/dashboard/secrets-engines-card';
 import VAULT_CONFIGURATION_SELECTORS from 'vault/tests/helpers/components/dashboard/vault-configuration-details-card';
 import mountSecrets from 'vault/tests/pages/settings/mount-secret-backend';
-// import { runCommands } from 'vault/tests/helpers/pki/pki-run-commands';
 
 module('Acceptance | landing page dashboard', function (hooks) {
   setupApplicationTest(hooks);
@@ -123,10 +121,10 @@ module('Acceptance | landing page dashboard', function (hooks) {
 
   module('secrets engines card', function () {
     test('shows a secrets engine card', async function (assert) {
-      await mountSecrets.enable('pki', 'a-pki');
+      await mountSecrets.enable('pki', 'pki');
       await visit('/vault/dashboard');
       assert.dom(SECRETS_ENGINE_SELECTORS.cardTitle).hasText('Secrets engines');
-      assert.dom(SECRETS_ENGINE_SELECTORS.getSecretEngineAccessor('a-pki')).exists();
+      assert.dom(SECRETS_ENGINE_SELECTORS.getSecretEngineAccessor('pki')).exists();
     });
 
     test('it adds disabled css styling to unsupported secret engines', async function (assert) {
