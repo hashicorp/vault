@@ -55,7 +55,7 @@ func PrepareTestContainer(t *testing.T, version string, isEnterprise bool, doBoo
 	}
 
 	name := "consul"
-	repo := "consul"
+	repo := "docker.mirror.hashicorp.services/library/consul"
 	var envVars []string
 	// If running the enterprise container, set the appropriate values below.
 	if isEnterprise {

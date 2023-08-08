@@ -11,10 +11,7 @@
     <nav class="tabs has-bottom-margin-l">
       <ul>
         {{! template-lint-configure no-nested-interactive "warn" }}
-        <li
-          aria-selected={{if (eq @unwrapActiveTab "data") "true" "false"}}
-          class={{if (eq @unwrapActiveTab "data") "is-active"}}
-        >
+        <li class={{if (eq @unwrapActiveTab "data") "is-active"}}>
           <button
             type="button"
             class="link link-plain tab has-text-weight-semibold"
@@ -24,10 +21,7 @@
             Data
           </button>
         </li>
-        <li
-          aria-selected={{if (eq @unwrapActiveTab "data") "true" "false"}}
-          class={{if (eq @unwrapActiveTab "details") "is-active"}}
-        >
+        <li class={{if (eq @unwrapActiveTab "details") "is-active"}}>
           <button
             type="button"
             class="link link-plain tab has-text-weight-semibold"

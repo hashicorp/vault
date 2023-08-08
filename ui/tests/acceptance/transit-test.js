@@ -6,13 +6,16 @@
 import { click, fillIn, find, currentURL, settled, visit, waitUntil, findAll } from '@ember/test-helpers';
 import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
+import { create } from 'ember-cli-page-object';
 import { v4 as uuidv4 } from 'uuid';
 
 import { encodeString } from 'vault/utils/b64';
 import authPage from 'vault/tests/pages/auth';
-import enablePage from 'vault/tests/pages/settings/mount-secret-backend';
 import secretListPage from 'vault/tests/pages/secrets/backend/list';
+import consoleClass from 'vault/tests/pages/components/console/ui-panel';
+import { deleteEngineCmd, mountEngineCmd } from '../helpers/commands';
 
+const consoleComponent = create(consoleClass);
 const keyTypes = [
   {
     name: (ts) => `aes-${ts}`,
@@ -297,8 +300,13 @@ module('Acceptance | transit', function (hooks) {
     this.uid = uid;
     this.path = `transit-${uid}`;
 
-    await enablePage.enable('transit', `transit-${uid}`);
-    await settled();
+    await consoleComponent.runCommands(mountEngineCmd('transit', this.path));
+    // Start test on backend main page
+    return visit(`/vault/secrets/${this.path}/list`);
+  });
+
+  hooks.afterEach(function () {
+    return consoleComponent.runCommands(deleteEngineCmd(this.path));
   });
 
   test(`transit backend: list menu`, async function (assert) {
@@ -332,7 +340,6 @@ module('Acceptance | transit', function (hooks) {
         .dom('[data-test-transit-key-version-row]')
         .exists({ count: 2 }, `${name}: two key versions after rotate`);
       await click('[data-test-transit-key-actions-link]');
-
       assert.ok(
         currentURL().startsWith(`/vault/secrets/${this.path}/show/${name}?tab=actions`),
         `${name}: navigates to transit actions`
