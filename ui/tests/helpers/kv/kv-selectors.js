@@ -33,6 +33,9 @@ export const PAGE = {
     createSecret: '[data-test-toolbar-create-secret]',
     item: (secret) => `[data-test-list-item="${secret}"]`,
     filter: `[data-test-component="kv-list-filter"]`,
+    overviewCard: '[data-test-overview-card-container="View secret"]',
+    overviewInput: '[data-test-search-roles] input',
+    overviewButton: '[data-test-get-secret-detail]',
   },
   versions: {
     popup: '[data-test-popup-menu-trigger]',
