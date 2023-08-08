@@ -22,7 +22,6 @@ export default create({
   hasMetadataFields: isPresent('[data-test-metadata-fields]'),
   maxVersion: fillable('[data-test-input="maxVersions"]'),
   startCreateSecret: clickable('[data-test-secret-create]'),
-  visit: visitable('/vault/secrets/:backend/kv/:path/details'),
   deleteSecret() {
     return this.deleteBtn().confirmBtn();
   },
