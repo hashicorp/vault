@@ -7,8 +7,9 @@ import (
 	"os"
 	"testing"
 
-	_ "github.com/denisenkom/go-mssqldb"
 	log "github.com/hashicorp/go-hclog"
+	_ "github.com/microsoft/go-mssqldb"
+
 	"github.com/hashicorp/vault/sdk/helper/logging"
 	"github.com/hashicorp/vault/sdk/physical"
 )

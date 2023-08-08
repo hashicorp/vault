@@ -8,6 +8,7 @@ import (
 
 	"cloud.google.com/go/cloudsqlconn"
 	"cloud.google.com/go/cloudsqlconn/postgres/pgxv4"
+	"cloud.google.com/go/cloudsqlconn/sqlserver/mssql"
 )
 
 func (c *SQLConnectionProducer) getCloudSQLDriverName() (string, error) {
@@ -21,7 +22,6 @@ func (c *SQLConnectionProducer) getCloudSQLDriverName() (string, error) {
 		return "", fmt.Errorf("unrecognized DB type: %s", c.Type)
 	}
 
-	fmt.Printf("returning driver type: %s for dbType: %s", driverName, c.Type)
 	return driverName, nil
 }
 
@@ -44,7 +44,7 @@ func (c *SQLConnectionProducer) registerDrivers(filename, credentials interface{
 
 	switch typ {
 	case cloudSQLMSSQL:
-		// return registerDriverMSSQL(opts)
+		return registerDriverMSSQL(opts)
 	case cloudSQLPostgres:
 		return registerDriverPostgres(opts)
 	}
@@ -56,9 +56,9 @@ func registerDriverPostgres(opts cloudsqlconn.Option) (func() error, error) {
 	return pgxv4.RegisterDriver(cloudSQLPostgres, opts)
 }
 
-//func registerDriverMSSQL(opts cloudsqlconn.Option) (func() error, error) {
-//	return mssql.RegisterDriver(cloudSQLMSSQL, opts)
-//}
+func registerDriverMSSQL(opts cloudsqlconn.Option) (func() error, error) {
+	return mssql.RegisterDriver(cloudSQLMSSQL, opts)
+}
 
 func GetCloudSQLAuthOptions(filename, credentials interface{}) (cloudsqlconn.Option, error) {
 	if filename != nil {
@@ -67,7 +67,6 @@ func GetCloudSQLAuthOptions(filename, credentials interface{}) (cloudsqlconn.Opt
 			return nil, fmt.Errorf("error converting file name to string")
 		}
 
-		fmt.Printf("registering driver with credential file\n")
 		return cloudsqlconn.WithCredentialsFile(v), nil
 	}
 
@@ -77,7 +76,6 @@ func GetCloudSQLAuthOptions(filename, credentials interface{}) (cloudsqlconn.Opt
 			return nil, fmt.Errorf("error converting JSON data to bytes")
 		}
 
-		fmt.Printf("registering driver with credential json\n")
 		return cloudsqlconn.WithCredentialsJSON(v), nil
 
 	}
