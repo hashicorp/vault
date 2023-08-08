@@ -35,3 +35,8 @@ func GenerateNodeID() (eventlogger.NodeID, error) {
 
 	return eventlogger.NodeID(id), err
 }
+
+// String returns the string version of an EventType.
+func (t EventType) String() string {
+	return string(t)
+}
