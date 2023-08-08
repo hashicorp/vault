@@ -22,14 +22,16 @@ import { typeOf } from '@ember/utils';
 
 export default class KvVersionDiffComponent extends Component {
   @service store;
-
-  @tracked leftSideVersion = this.args.metadata.currentVersion;
-  @tracked rightSideVersion = this.defaultRightSideVersion;
-  @tracked statesMatch = false;
+  @tracked leftSideVersion;
+  @tracked rightSideVersion;
   @tracked visualDiff;
+  @tracked statesMatch = false;
 
   constructor() {
     super(...arguments);
+    // tracked properties set here because they use args.
+    this.leftSideVersion = this.args.metadata.currentVersion;
+    this.rightSideVersion = this.defaultRightSideVersion;
     this.createVisualDiff();
   }
 
@@ -43,7 +45,6 @@ export default class KvVersionDiffComponent extends Component {
   }
 
   async fetchSecretData(version) {
-    // ARG TODO ask if maybe we want to override the adapter peekRecord?
     version = typeOf(version) === 'string' ? Number(version) : version;
     const { backend, path } = this.args;
     // check the store first, avoiding an extra network request if possible.
@@ -55,15 +56,16 @@ export default class KvVersionDiffComponent extends Component {
 
   async createVisualDiff() {
     /* eslint-disable no-undef */
+    const leftSideData = await this.fetchSecretData(this.leftSideVersion);
+    const rightSideData = await this.fetchSecretData(this.rightSideVersion);
     const diffpatcher = jsondiffpatch.create({});
-    const leftSideVersionData = await this.fetchSecretData(this.leftSideVersion);
-    const rightSideVersionData = await this.fetchSecretData(this.rightSideVersion);
-    const delta = diffpatcher.diff(rightSideVersionData, leftSideVersionData);
+    const delta = diffpatcher.diff(rightSideData, leftSideData);
 
+    // ARG TODO account for destroyed, deleted current version
     this.statesMatch = !delta;
     this.visualDiff = delta
-      ? jsondiffpatch.formatters.html.format(delta, rightSideVersionData)
-      : JSON.stringify(leftSideVersionData, undefined, 2);
+      ? jsondiffpatch.formatters.html.format(delta, rightSideData)
+      : JSON.stringify(leftSideData, undefined, 2);
   }
 
   @action selectVersion(version, actions, side) {
@@ -73,8 +75,8 @@ export default class KvVersionDiffComponent extends Component {
     if (side === 'left') {
       this.leftSideVersion = version;
     }
-    this.createVisualDiff();
     // close dropdown menu.
-    actions.close();
+    if (actions) actions.close();
+    this.createVisualDiff();
   }
 }
