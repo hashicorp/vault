@@ -23,7 +23,6 @@ export default create({
   maxVersion: fillable('[data-test-input="maxVersions"]'),
   startCreateSecret: clickable('[data-test-secret-create]'),
   visit: visitable('/vault/secrets/:backend/kv/:path/details'),
-  createNewVersion: clickable('[data-test-create-new-version]'),
   deleteSecret() {
     return this.deleteBtn().confirmBtn();
   },
@@ -38,12 +37,5 @@ export default create({
   },
   editSecret: async function (key, value) {
     return this.secretKey(key).secretValue(value).save();
-  },
-  // KV cleanup: edit secret is the same but uses selectors on the old view.
-  dataKey: fillable('[data-test-kv-key="1"]'),
-  dataValue: fillable('[data-test-kv-value="1"] textarea'),
-  saveSecret: clickable('[data-test-kv-save]'),
-  updateSecret: async function (key, value) {
-    return await this.dataKey(key).dataValue(value).saveSecret();
   },
 });
