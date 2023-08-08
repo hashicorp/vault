@@ -32,7 +32,6 @@ module('Integration | Component | sidebar-nav-cluster', function (hooks) {
 
   test('it should hide links and headings user does not have access too', async function (assert) {
     await renderComponent();
-    // TODO LANDING PAGE: VAULT-17055 update this test once dashboard has localStorage set up!
     assert
       .dom('[data-test-sidebar-nav-link]')
       .exists({ count: 2 }, 'Nav links are hidden other than secrets and dashboard');
