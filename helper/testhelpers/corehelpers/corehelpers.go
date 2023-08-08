@@ -9,7 +9,7 @@ import (
 	"bytes"
 	"context"
 	"crypto/sha256"
-	"io/ioutil"
+	"io"
 	"os"
 	"path/filepath"
 	"sync"
@@ -18,6 +18,7 @@ import (
 	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/audit"
 	"github.com/hashicorp/vault/builtin/credential/approle"
+	"github.com/hashicorp/vault/helper/logging"
 	"github.com/hashicorp/vault/plugins/database/mysql"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/consts"
@@ -386,10 +387,36 @@ func (n *NoopAudit) Invalidate(ctx context.Context) {
 }
 
 type TestLogger struct {
-	hclog.Logger
+	hclog.InterceptLogger
 	Path string
 	File *os.File
 	sink hclog.SinkAdapter
+	// For managing temporary start-up state
+	sync.RWMutex
+	AllLoggers []hclog.Logger
+	logging.SubloggerAdder
+}
+
+// RegisterSubloggerAdder checks to see if the provided logger interface is a
+// TestLogger and re-assigns the SubloggerHook implementation if so.
+func RegisterSubloggerAdder(logger hclog.Logger, adder logging.SubloggerAdder) {
+	if l, ok := logger.(*TestLogger); ok {
+		l.Lock()
+		l.SubloggerAdder = adder
+		l.Unlock()
+	}
+}
+
+// AppendToAllLoggers appends the sub logger to allLoggers, or if the TestLogger
+// is assigned to a SubloggerAdder implementation, it calls the underlying hook.
+func (l *TestLogger) AppendToAllLoggers(sub hclog.Logger) hclog.Logger {
+	l.Lock()
+	defer l.Unlock()
+	if l.SubloggerAdder == nil {
+		l.AllLoggers = append(l.AllLoggers, sub)
+		return sub
+	}
+	return l.SubloggerHook(sub)
 }
 
 func NewTestLogger(t testing.T) *TestLogger {
@@ -413,26 +440,33 @@ func NewTestLogger(t testing.T) *TestLogger {
 		output = logFile
 	}
 
-	// We send nothing on the regular logger, that way we can later deregister
-	// the sink to stop logging during cluster cleanup.
-	logger := hclog.NewInterceptLogger(&hclog.LoggerOptions{
-		Output:            ioutil.Discard,
-		IndependentLevels: true,
-	})
 	sink := hclog.NewSinkAdapter(&hclog.LoggerOptions{
 		Output:            output,
 		Level:             hclog.Trace,
 		IndependentLevels: true,
 	})
-	logger.RegisterSink(sink)
-	return &TestLogger{
-		Path:   logPath,
-		File:   logFile,
-		Logger: logger,
-		sink:   sink,
+
+	testLogger := &TestLogger{
+		Path: logPath,
+		File: logFile,
+		sink: sink,
 	}
+
+	// We send nothing on the regular logger, that way we can later deregister
+	// the sink to stop logging during cluster cleanup.
+	logger := hclog.NewInterceptLogger(&hclog.LoggerOptions{
+		Output:            io.Discard,
+		IndependentLevels: true,
+		Name:              t.Name(),
+		SubloggerHook:     testLogger.AppendToAllLoggers,
+	})
+
+	logger.RegisterSink(sink)
+	testLogger.InterceptLogger = logger
+
+	return testLogger
 }
 
 func (tl *TestLogger) StopLogging() {
-	tl.Logger.(hclog.InterceptLogger).DeregisterSink(tl.sink)
+	tl.InterceptLogger.DeregisterSink(tl.sink)
 }
