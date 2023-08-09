@@ -103,7 +103,7 @@ export default class KvDataAdapter extends ApplicationAdapter {
         });
       default:
         assert(
-          'deletType must be one of delete-latest-version, delete-specific-version, destroy-specific-version, destroy-everything, undelete-specific-version.'
+          'deleteType must be one of delete-latest-version, delete-specific-version, destroy-specific-version, destroy-everything, undelete-specific-version.'
         );
     }
   }

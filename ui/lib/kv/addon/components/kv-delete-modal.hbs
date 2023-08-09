@@ -1,0 +1,63 @@
+{{this.deleteType "deleteType"}}
+<button type="button" class="toolbar-link" {{on "click" (fn this.handleButtonClick @mode)}} data-test-kv-delete={{@mode}}>
+  {{capitalize @mode}}
+</button>
+
+<Modal
+  @title="{{capitalize @mode}} version?"
+  @onClose={{action (mut this.modalOpen) false}}
+  @isActive={{this.modalOpen}}
+  @type={{if (eq @mode "delete") "warning" "danger"}}
+  @showCloseButton={{true}}
+>
+  <section class="modal-card-body">
+    <p class="has-bottom-margin-s">
+      <MessageError @model={{@model}} @errorMessage={{this.error}} />
+      {{this.modalIntro}}
+    </p>
+    {{#if (eq @mode "delete")}}
+      <div class="is-flex-column">
+        {{#each this.generateRadioDeleteOptions as |option|}}
+          <ToolTip @verticalPosition="above" @horizontalPosition="left" as |T|>
+            <T.Trigger @tabindex="-1">
+              <div class="is-flex-align-baseline has-bottom-margin-m">
+                <RadioButton
+                  id={{dasherize option.label}}
+                  class="radio top-xxs"
+                  @disabled={{option.disabled}}
+                  @value={{option.key}}
+                  @groupValue={{this.deleteType}}
+                  @onChange={{fn (mut this.deleteType) option.key}}
+                />
+                <div class="has-left-margin-s {{if option.disabled 'text-disabled'}}">
+                  <label class="has-text-weight-semibold">{{option.label}}</label>
+                  <p>{{option.description}}</p>
+                </div>
+              </div>
+            </T.Trigger>
+            {{#if option.disabled}}
+              <T.Content @defaultClass="tool-tip">
+                <div class="box">
+                  {{option.tooltipMessage}}
+                </div>
+              </T.Content>
+            {{/if}}
+          </ToolTip>
+        {{/each}}
+      </div>
+    {{/if}}
+  </section>
+  <footer class="modal-card-foot modal-card-foot-outlined">
+    <button
+      type="button"
+      class="button {{if (eq @mode 'destroy') 'is-danger-outlined' 'is-warning-outlined'}}"
+      {{on "click" (perform this.save)}}
+      disabled={{(not this.deleteType)}}
+    >
+      {{capitalize @mode}}
+    </button>
+    <button type="button" class="button is-secondary" {{on "click" (fn (mut this.modalOpen) false)}}>
+      Cancel
+    </button>
+  </footer>
+</Modal>
