@@ -189,6 +189,12 @@ func (b *Backend) LogResponse(ctx context.Context, in *logical.LogInput) error {
 }
 
 func (b *Backend) LogTestMessage(ctx context.Context, in *logical.LogInput, config map[string]string) error {
+	// Event logger behavior - manually Process each node
+	if len(b.nodeIDList) > 0 {
+		return audit.ProcessManual(ctx, in, b.nodeIDList, b.nodeMap)
+	}
+
+	// Old behavior
 	var buf bytes.Buffer
 
 	temporaryFormatter, err := audit.NewTemporaryFormatter(config["format"], config["prefix"])
