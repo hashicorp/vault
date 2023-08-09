@@ -28,10 +28,8 @@ import { FORM, PAGE } from 'vault/tests/helpers/kv/kv-selectors';
 const secretPath = `my-#:$=?-secret`;
 // This doesn't encode in a normal way, so hardcoding it here until we sort that out
 const secretPathUrlEncoded = `my-%23:$=%3F-secret`;
-const navToBackend = async (backend) => {
-  await visit(`/vault/secrets/${backend}/kv/list`);
-  // await click(`[data-test-auth-backend-link="${backend}"]`);
-  return;
+const navToBackend = (backend) => {
+  return visit(`/vault/secrets/${backend}/kv/list`);
 };
 const assertCorrectBreadcrumbs = (assert, expected) => {
   assert.dom(PAGE.breadcrumb).exists({ count: expected.length }, 'correct number of breadcrumbs');
