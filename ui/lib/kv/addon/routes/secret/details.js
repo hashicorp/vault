@@ -18,6 +18,7 @@ export default class KvSecretDetailsRoute extends Route {
 
   model(params) {
     const parentModel = this.modelFor('secret');
+    // TODO: don't fetch if parentModel.secret has readError, permissions aren't version specific
     if (params.version) {
       // query params have changed by selecting a different version from the dropdown
       // fire off new request for that version's secret data
