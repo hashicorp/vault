@@ -74,8 +74,7 @@ func (h *EnableAcmeIssuance) FetchResources(e *Executor) error {
 	}
 
 	h.TotalIssuers, h.RootIssuers, err = doesMountContainOnlyRootIssuers(e)
-
-	return nil
+	return err
 }
 
 func doesMountContainOnlyRootIssuers(e *Executor) (int, int, error) {
