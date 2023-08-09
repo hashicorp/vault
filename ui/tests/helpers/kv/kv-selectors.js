@@ -64,6 +64,7 @@ export const FORM = {
   validation: (attr) => `[data-test-field="${attr}"] [data-test-inline-alert]`,
   messageError: '[data-test-message-error]',
   versionAlert: '[data-test-secret-version-alert]',
+  noReadAlert: '[data-test-warning-no-read-permissions]',
   // Form btns
   saveBtn: '[data-test-kv-save]',
   cancelBtn: '[data-test-kv-cancel]',
