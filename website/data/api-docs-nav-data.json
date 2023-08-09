@@ -259,7 +259,36 @@
       },
       {
         "title": "PKI",
-        "path": "secret/pki"
+        "routes": [
+          {
+            "title": "Single Page",
+            "path": "secret/pki"
+          },
+          {
+            "title": "Overview",
+            "path": "secret/pki/overview"
+          },
+          {
+            "title": "ACME Issuance",
+            "path": "secret/pki/acme-issuance"
+          },
+          {
+            "title": "Issuance",
+            "path": "secret/pki/issuance"
+          },
+          {
+            "title": "Accessing Authority Information",
+            "path": "secret/pki/accessing-authority-information"
+          },
+          {
+            "title": "Managing Keys and Issuers",
+            "path": "secret/pki/managing-keys-and-issuers"
+          },
+          {
+            "title": "Managing Authority Information",
+            "path": "secret/pki/managing-authority-information"
+          }
+        ]
       },
       {
         "title": "RabbitMQ",

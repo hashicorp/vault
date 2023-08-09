@@ -1,0 +1,21 @@
+## Managed keys
+
+~> Note: Managed keys are an Enterprise only feature.
+
+The [Generate Root](#generate-root) and [Generate Intermediate](#generate-intermediate)
+API calls can leverage the Managed Keys feature, delegating operations that
+require private key material to an external system.
+
+To leverage a Managed Key, assuming it has already been configured, set the type
+parameter to `kms` within either, [Generate Root](#generate-root) or
+[Generate Intermediate](#generate-intermediate) APIs, and one of either
+`managed_key_name` or `managed_key_id` parameters specifying a Managed Key to use.
+As with the `internal` type for those APIs, if the type parameter is set to `kms`,
+there is no way to read/fetch the private key.
+
+The API call will fail if the specified Managed Key is not properly configured or
+arguments detailing private key attributes are specified such as `key_type` or
+`key_bits`.
+
+Once either of the certificate APIs have successfully executed, all other PKI
+operations behave the same, with no other special configuration or parameters required.

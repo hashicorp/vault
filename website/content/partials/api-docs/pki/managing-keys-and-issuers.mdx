@@ -1,0 +1,1134 @@
+## Managing keys and issuers
+
+The following endpoints are highly privileged and allow operators to generate
+or import new issuer certificates and keys, remove existing keys and issuers,
+or read internal information about keys and issuers.
+
+### List issuers
+
+Refer to the [earlier section](#list-issuers) for more information about
+listing issuers.
+
+### List keys
+
+This endpoint returns a list of keys currently provisioned in this mount.
+The response includes both the key's identifier as well as the name chosen
+by the operators; either can be used to refer to the key later.
+
+This endpoint is authenticated.
+
+| Method | Path         |
+| :----- | :----------- |
+| `LIST` | `/pki/keys`  |
+
+#### Sample request
+
+```shell-session
+$ curl \
+    --header "X-Vault-Token: ..." \
+    --request LIST \
+    http://127.0.0.1:8200/v1/pki/keys
+```
+
+#### Sample response
+
+```json
+{
+  "data": {
+    "key_info": {
+      "f9244f54-adc7-4a5c-6b08-6ca3a3325620": {
+        "key_name": "imported-root-key"
+      },
+    },
+    "keys": [
+      "f9244f54-adc7-4a5c-6b08-6ca3a3325620",
+    ]
+  }
+}
+```
+
+### Generate key
+
+This endpoint generates a new private key for use in the PKI mount. This key
+can be used with either the [root](#generate-root) or [intermediate](#generate-intermediate-csr)
+endpoints, using the `type=existing` variant.
+
+If the path ends with `exported`, the private key will be returned in the
+response; if it is `internal` the private key will not be returned and _cannot
+be retrieved later_; if it is `kms`, a [managed keys](#managed-keys) will be
+used.
+
+| Method | Path                               |
+| :----- | :--------------------------------- |
+| `POST` | `/pki/keys/generate/:type`         |
+
+#### Parameters
+
+- `type` `(string: <required>)` - Specifies the type of the key to
+  create. If `exported`, the private key will be returned in the response; if
+  `internal` the private key will not be returned and _cannot be retrieved
+  later_; `kms` is also supported: [see below for more details about managed
+  keys](#managed-keys). This parameter is part of the request URL.
+
+- `key_name` `(string: "")` - When a new key is created with this request,
+  optionally specifies the name for this. The global ref `default` may not
+  be used as a name.
+
+- `key_type` `(string: "rsa")` - Specifies the desired key type; must be `rsa`, `ed25519`
+  or `ec`.
+
+~> **Note**: In FIPS 140-2 mode, the following algorithms are not certified
+   and thus should not be used: `ed25519`.
+
+- `key_bits` `(int: 0)` - Specifies the number of bits to use for the
+  generated keys. Allowed values are 0 (universal default); with
+  `key_type=rsa`, allowed values are: 2048 (default), 3072, or
+  4096; with `key_type=ec`, allowed values are: 224, 256 (default),
+  384, or 521; ignored with `key_type=ed25519`.
+
+#### Managed keys parameters
+
+See [Managed Keys](#managed-keys) for additional details on this feature, if
+`type` was set to `kms`. One of the following parameters must be set
+
+- `managed_key_name` `(string: "")` - The managed key's configured name.
+
+- `managed_key_id` `(string: "")` - The managed key's UUID.
+
+#### Sample payload
+
+```json
+{
+  "key_type": "ec",
+  "key_bits": "256",
+  "key_name": "root-key-2022"
+}
+```
+
+#### Sample request
+
+```shell-session
+$ curl \
+    --header "X-Vault-Token: ..." \
+    --request POST \
+    --data @payload.json \
+    http://127.0.0.1:8200/v1/pki/keys/generate/internal
+```
+
+#### Sample response
+
+```json
+{
+  "request_id": "8ad22b2f-7d14-f2cd-a10a-d1abc33676ab",
+  "lease_id": "",
+  "lease_duration": 0,
+  "renewable": false,
+  "data": {
+    "key_id": "adda2443-a8aa-d181-9d07-07c7be6a76ab",
+    "key_name": "root-key-2022",
+    "key_type": "ec"
+  },
+  "warnings": null
+}
+```
+
+### Generate root
+
+This endpoint generates a new self-signed CA certificate and private key. If
+the path ends with `exported`, the private key will be returned in the
+response; if it is `internal` the private key will not be returned and _cannot
+be retrieved later_; if it is `existing`, the key specified by `key_ref` will
+be reused for this root; if it is `kms`, a [managed keys](#managed-keys) will
+be used.
+
+This generated root will sign its own CRL. Authority Access distribution points
+use the values set via `config/urls`.
+
+~> **Note**: As of Vault 1.11.0, the PKI Secrets Engine now supports multiple
+   issuers under a single mount. Use the management operations in this section
+   to [list](#list-issuers) and [modify issuers](#update-issuer) within this
+   mount. No issuers will be overridden by calling this operation. Deleting
+   individual keys and issuers should be preferred to calling `DELETE /pki/root`,
+   [which deletes everything](#delete-all-issuers-and-keys).
+
+| Method | Path                               |
+| :----- | :--------------------------------- |
+| `POST` | `/pki/root/generate/:type`         |
+| `POST` | `/pki/issuers/generate/root/:type` |
+| `POST` | `/pki/root/rotate/:type`           |
+
+#### Parameters
+
+- `type` `(string: <required>)` - Specifies the type of the root to
+  create. If `exported`, the private key will be returned in the response; if
+  `internal` the private key will not be returned and _cannot be retrieved
+  later_; if `existing`, we use the value of the `key_ref` parameter to find
+  existing key material to create the CSR; `kms` is also supported: [see below
+  for more details about managed keys](#managed-keys). This parameter is part
+  of the request URL.
+
+- `issuer_name` `(string: "")` - Provides a name to the specified issuer. The
+  name must be unique across all issuers and not be the reserved value
+  `default`. When no value is supplied and the path is `/pki/root/rotate/:type`,
+  the default value of `"next"` will be used.
+
+- `key_name` `(string: "")` - When a new key is created with this request,
+  optionally specifies the name for this. The global ref `default` may not
+  be used as a name.
+
+- `key_ref` `(string: "default")` - Specifies the key (either `default`, by
+  name, or by identifier) to use for generating this request. Only suitable
+  for `type=existing` requests.
+
+- `common_name` `(string: <required>)` - Specifies the requested CN for the
+  certificate. If more than one `common_name` is desired, specify the
+  alternative names in the `alt_names` list.
+
+- `alt_names` `(string: "")` - Specifies the requested Subject Alternative
+  Names, in a comma-delimited list. These can be host names or email addresses;
+  they will be parsed into their respective fields.
+
+- `ip_sans` `(string: "")` - Specifies the requested IP Subject Alternative
+  Names, in a comma-delimited list.
+
+- `uri_sans` `(string: "")` - Specifies the requested URI Subject Alternative
+  Names, in a comma-delimited list.
+
+- `other_sans` `(string: "")` - Specifies custom OID/UTF8-string SANs. These
+  must match values specified on the role in `allowed_other_sans` (see role
+  creation for allowed_other_sans globbing rules).
+  The format is the same as OpenSSL: `<oid>;<type>:<value>` where the
+  only current valid type is `UTF8`. This can be a comma-delimited list or a
+  JSON string slice.
+
+- `ttl` `(string: "")` - Specifies the requested Time To Live (after which the
+  certificate will be expired). This cannot be larger than the engine's max (or,
+  if not set, the system max). See `not_after` as an alternative for setting an
+  absolute end date (rather than a relative one).
+
+- `format` `(string: "pem")` - Specifies the format for returned data. Can be
+  `pem`, `der`, or `pem_bundle`. If `der`, the output is base64 encoded. If
+  `pem_bundle`, the `certificate` field will contain the private key (if
+  exported) and certificate, concatenated; if the issuing CA is not a
+  Vault-derived self-signed root, this will be included as well.
+
+- `private_key_format` `(string: "der")` - Specifies the format for marshaling
+  the private key within the private_key response field. Defaults to `der` which will
+  return either base64-encoded DER or PEM-encoded DER, depending on the value of
+  `format`. The other option is `pkcs8` which will return the key marshalled as
+  PEM-encoded PKCS8.
+
+~> **Note** that this does not apply to the private key within the certificate
+  field if `format=pem_bundle` parameter is specified.
+
+- `key_type` `(string: "rsa")` - Specifies the desired key type; must be `rsa`, `ed25519`
+  or `ec`.
+
+~> **Note**: In FIPS 140-2 mode, the following algorithms are not certified
+   and thus should not be used: `ed25519`.
+
+- `key_bits` `(int: 0)` - Specifies the number of bits to use for the
+  generated keys. Allowed values are 0 (universal default); with
+  `key_type=rsa`, allowed values are: 2048 (default), 3072, or
+  4096; with `key_type=ec`, allowed values are: 224, 256 (default),
+  384, or 521; ignored with `key_type=ed25519`.
+
+- `max_path_length` `(int: -1)` - Specifies the maximum path length to encode in
+  the generated certificate. `-1` means no limit. Unless the signing certificate
+  has a maximum path length set, in which case the path length is set to one
+  less than that of the signing certificate. A limit of `0` means a literal
+  path length of zero.
+
+- `exclude_cn_from_sans` `(bool: false)` - If true, the given `common_name` will
+  not be included in DNS or Email Subject Alternate Names (as appropriate).
+  Useful if the CN is not a hostname or email address, but is instead some
+  human-readable identifier.
+
+- `permitted_dns_domains` `(string: "")` - A comma separated string (or, string
+  array) containing DNS domains for which certificates are allowed to be issued
+  or signed by this CA certificate. Note that subdomains are allowed, as per
+  [RFC 5280 Section 4.2.1.10 - Name
+  Constraints](https://tools.ietf.org/html/rfc5280#section-4.2.1.10).
+
+- `ou` `(string: "")` - Specifies the OU (OrganizationalUnit) values in the
+  subject field of the resulting certificate. This is a comma-separated string
+  or JSON array.
+
+- `organization` `(string: "")` - Specifies the O (Organization) values in the
+  subject field of the resulting certificate. This is a comma-separated string
+  or JSON array.
+
+- `country` `(string: "")` - Specifies the C (Country) values in the subject
+  field of the resulting certificate. This is a comma-separated string or JSON
+  array.
+
+- `locality` `(string: "")` - Specifies the L (Locality) values in the subject
+  field of the resulting certificate. This is a comma-separated string or JSON
+  array.
+
+- `province` `(string: "")` - Specifies the ST (Province) values in the subject
+  field of the resulting certificate. This is a comma-separated string or JSON
+  array.
+
+- `street_address` `(string: "")` - Specifies the Street Address values in the
+  subject field of the resulting certificate. This is a comma-separated string
+  or JSON array.
+
+- `postal_code` `(string: "")` - Specifies the Postal Code values in the
+  subject field of the resulting certificate. This is a comma-separated string
+  or JSON array.
+
+- `serial_number` `(string: "")` -  - Specifies the default Subject's named
+  [Serial Number](https://datatracker.ietf.org/doc/html/rfc4519#section-2.31)
+  value, if any. If you want more than one, specify alternative names in the
+  `alt_names` map using OID 2.5.4.5. Note that this has no impact on the
+  Certificate's serial number field, which Vault randomly generates.
+
+- `not_before_duration` `(duration: "30s")` - Specifies the duration by which to
+  backdate the NotBefore property. This value has no impact in the validity period
+  of the requested certificate, specified in the `ttl` field.
+  Uses [duration format strings](/vault/docs/concepts/duration-format).
+
+- `not_after` `(string)` - Set the Not After field of the certificate with
+  specified date value. The value format should be given in UTC format
+  `YYYY-MM-ddTHH:MM:SSZ`. Supports the Y10K end date for IEEE 802.1AR-2018
+  standard devices, `9999-12-31T23:59:59Z`.
+
+* ~> Note: Keys of type `rsa` currently only support PKCS#1 v1.5 signatures.
+
+#### Managed keys parameters
+
+See [Managed Keys](#managed-keys) for additional details on this feature, if
+`type` was set to `kms`. One of the following parameters must be set
+
+- `managed_key_name` `(string: "")` - The managed key's configured name.
+
+- `managed_key_id` `(string: "")` - The managed key's UUID.
+
+#### Sample payload
+
+```json
+{
+  "common_name": "example.com"
+}
+```
+
+#### Sample request
+
+```shell-session
+$ curl \
+    --header "X-Vault-Token: ..." \
+    --request POST \
+    --data @payload.json \
+    http://127.0.0.1:8200/v1/pki/root/generate/internal
+```
+
+#### Sample response
+
+```json
+{
+  "lease_id": "",
+  "lease_duration": 0,
+  "renewable": false,
+  "data": {
+    "expiration": "1654105687",
+    "certificate": "-----BEGIN CERTIFICATE-----\nMIIDzDCCAragAwIBAgIUOd0ukLcjH43TfTHFG9qE0FtlMVgwCwYJKoZIhvcNAQEL\n...\numkqeYeO30g1uYvDuWLXVA==\n-----END CERTIFICATE-----\n",
+    "issuing_ca": "-----BEGIN CERTIFICATE-----\nMIIDzDCCAragAwIBAgIUOd0ukLcjH43TfTHFG9qE0FtlMVgwCwYJKoZIhvcNAQEL\n...\numkqeYeO30g1uYvDuWLXVA==\n-----END CERTIFICATE-----\n",
+    "serial_number": "39:dd:2e:90:b7:23:1f:8d:d3:7d:31:c5:1b:da:84:d0:5b:65:31:58",
+    "issuer_id": "7b493f17-6c08-ff73-cf1a-99bfcc448a73",
+    "issuer_name": "",
+    "key_id": "22b82e37-529d-7251-7d78-3862bfd069ac",
+    "key_name": ""
+  },
+  "auth": null
+}
+```
+
+<a name="generate-intermediate"></a>
+
+### Generate intermediate CSR
+
+This endpoint returns a new CSR for signing, optionally generating a new private
+key. If using Vault as a root (and, like many other CAs), the various parameters
+on the final signed certificate are set at signing time and _may or may not honor
+the parameters set here_ (and transmitted in the returned CSR).
+
+Note that this API supports [Managed Keys](/vault/docs/enterprise/managed-keys);
+additional details are available [below in a dedicated section](#managed-keys).
+
+The parameters below are mostly meant as a helper function; not all possible
+parameters that can be set in a CSR are supported in this request.
+
+No new issuer is yet created by this call; note that a new key may be
+generated depending on the `type` request parameter.
+
+~> **Note**: In order to complete the intermediate generation, the CSR must be
+   signed and the resulting certificate imported. This may involve working with
+   external systems (such as an external or offline root CA) to transmit the
+   CSR and complete the signing before the signed intermediate certificate is
+   [imported](#import-ca-certificate-and-keys) into this mount.
+
+| Method | Path                                       | Private key source (`type`) |
+| :----- |:-------------------------------------------| :-------------------------- |
+| `POST` | `/pki/intermediate/generate/:type`         | specified per request       |
+| `POST` | `/pki/issuers/generate/intermediate/:type` | specified per request       |
+| `POST` | `/pki/intermediate/cross-sign`             | `existing`                  |
+
+#### Parameters
+
+- `type` `(string: <required>)` - Specifies the type of the intermediate to
+  create. If `exported`, the private key will be returned in the response; if
+  `internal` the private key will not be returned and _cannot be retrieved
+  later_; if `existing`, we expect the `key_ref` parameter to use existing
+  key material to create the CSR; `kms` is also supported: [see below for more
+  details](#managed-keys). This parameter is part of the request URL.
+
+- `common_name` `(string: <required>)` - Specifies the requested CN for the
+  certificate. If more than one `common_name` is desired, specify the
+  alternative names in the `alt_names` list.
+
+- `alt_names` `(string: "")` - Specifies the requested Subject Alternative
+  Names, in a comma-delimited list. These can be host names or email addresses;
+  they will be parsed into their respective fields.
+
+- `ip_sans` `(string: "")` - Specifies the requested IP Subject Alternative
+  Names, in a comma-delimited list.
+
+- `uri_sans` `(string: "")` - Specifies the requested URI Subject Alternative
+  Names, in a comma-delimited list.
+
+- `other_sans` `(string: "")` - Specifies custom OID/UTF8-string SANs. These
+  must match values specified on the role in `allowed_other_sans` (see role
+  creation for allowed_other_sans globbing rules).
+  The format is the same as OpenSSL: `<oid>;<type>:<value>` where the
+  only current valid type is `UTF8`. This can be a comma-delimited list or a
+  JSON string slice.
+
+- `format` `(string: "pem")` - Specifies the format for returned data. This can be
+  `pem`, `der`, or `pem_bundle`; defaults to `pem`. If `der`, the output is
+  base64 encoded. If `pem_bundle`, the `csr` field will contain the private key
+  (if exported) and CSR, concatenated.
+
+- `private_key_format` `(string: "der")` - Specifies the format for marshaling
+  the private key within the private_key response field. Defaults to `der` which will
+  return either base64-encoded DER or PEM-encoded DER, depending on the value of
+  `format`. The other option is `pkcs8` which will return the key marshalled as
+  PEM-encoded PKCS8.
+
+~> **Note** that this does not apply to the private key within the certificate
+  field if `format=pem_bundle` parameter is specified.
+
+- `key_type` `(string: "rsa")` - Specifies the desired key type; must be `rsa`, `ed25519`
+  or `ec`. Not suitable for `type=existing` requests.
+
+~> **Note**: In FIPS 140-2 mode, the following algorithms are not certified
+   and thus should not be used: `ed25519`.
+
+~> **Note**: Keys of type `rsa` currently only support PKCS#1 v1.5 signatures.
+   This includes any managed keys.
+
+- `key_bits` `(int: 0)` - Specifies the number of bits to use for the
+  generated keys. Allowed values are 0 (universal default); with
+  `key_type=rsa`, allowed values are: 2048 (default), 3072, or
+  4096; with `key_type=ec`, allowed values are: 224, 256 (default),
+  384, or 521; ignored with `key_type=ed25519`. Not suitable for
+  `type=existing` requests.
+
+- `key_name` `(string: "")` - When a new key is created with this request,
+  optionally specifies the name for this. The global ref `default` may not
+  be used as a name.
+
+- `key_ref` `(string: "default")` - Specifies the key (either `default`, by
+  name, or by identifier) to use for generating this request. Only suitable
+  for `type=existing` requests.
+
+- `signature_bits` `(int: 0)` - Specifies the number of bits to use in
+  the signature algorithm; accepts 256 for SHA-2-256, 384 for SHA-2-384,
+  and 512 for SHA-2-512. Defaults to 0 to automatically detect based
+  on issuer's key length (SHA-2-256 for RSA keys, and matching the curve size
+  for NIST P-Curves).
+
+~> **Note**: ECDSA and Ed25519 issuers do not follow configuration of the
+`signature_bits` value; only RSA issuers will change signature types
+based on this parameter.
+
+- `exclude_cn_from_sans` `(bool: false)` - If true, the given `common_name` will
+  not be included in DNS or Email Subject Alternate Names (as appropriate).
+  Useful if the CN is not a hostname or email address, but is instead some
+  human-readable identifier.
+
+- `ou` `(string: "")` - Specifies the OU (OrganizationalUnit) values in the
+  subject field of the resulting CSR. This is a comma-separated string
+  or JSON array.
+
+- `organization` `(string: "")` - Specifies the O (Organization) values in the
+  subject field of the resulting CSR. This is a comma-separated string
+  or JSON array.
+
+- `country` `(string: "")` - Specifies the C (Country) values in the subject
+  field of the resulting CSR. This is a comma-separated string or JSON
+  array.
+
+- `locality` `(string: "")` - Specifies the L (Locality) values in the subject
+  field of the resulting CSR. This is a comma-separated string or JSON
+  array.
+
+- `province` `(string: "")` - Specifies the ST (Province) values in the subject
+  field of the resulting CSR. This is a comma-separated string or JSON
+  array.
+
+- `street_address` `(string: "")` - Specifies the Street Address values in the
+  subject field of the resulting CSR. This is a comma-separated string
+  or JSON array.
+
+- `postal_code` `(string: "")` - Specifies the Postal Code values in the
+  subject field of the resulting CSR. This is a comma-separated string
+  or JSON array.
+
+- `serial_number` `(string: "")` - Specifies the requested Subject's named
+  [Serial Number](https://datatracker.ietf.org/doc/html/rfc4519#section-2.31)
+  value, if any. If you want more than one, specify alternative names in the
+  `alt_names` map using OID 2.5.4.5. Note that this has no impact on the
+  Certificate's serial number field, which Vault randomly generates.
+
+- `add_basic_constraints` `(bool: false)` - Whether to add a Basic Constraints
+  extension with CA: true. Only needed as a workaround in some compatibility
+  scenarios with Active Directory Certificate Services.
+
+#### Managed keys parameters
+
+See [Managed Keys](#managed-keys) for additional details on this feature, if
+`type` was set to `kms`. One of the following parameters must be set
+
+- `managed_key_name` `(string: "")` - The managed key's configured name.
+
+- `managed_key_id` `(string: "")` - The managed key's UUID.
+
+#### Sample payload
+
+```json
+{
+  "common_name": "www.example.com"
+}
+```
+
+#### Sample request
+
+```shell-session
+$ curl \
+    --header "X-Vault-Token: ..." \
+    --request POST \
+    --data @payload.json \
+    http://127.0.0.1:8200/v1/pki/intermediate/generate/exported
+```
+
+```json
+{
+  "lease_id": "",
+  "renewable": false,
+  "lease_duration": 0,
+  "data": {
+    "csr": "-----BEGIN CERTIFICATE REQUEST-----\nMIIDzDCCAragAwIBAgIUOd0ukLcjH43TfTHFG9qE0FtlMVgwCwYJKoZIhvcNAQEL\n...\numkqeYeO30g1uYvDuWLXVA==\n-----END CERTIFICATE REQUEST-----\n",
+    "private_key": "-----BEGIN RSA PRIVATE KEY-----\\nMIIEpAIBAAKCAQEAwsANtGz9gS3o5SwTSlOG1l-----END RSA PRIVATE KEY-----",
+    "private_key_type": "rsa"
+  },
+  "warnings": null,
+  "auth": null
+}
+```
+
+
+<a name="submit-ca-information"></a>
+<a name="set-signed-intermediate"></a>
+
+### Import CA certificates and keys
+
+This endpoint allows submitting (importing) the CA information for the backend
+via a PEM file containing the CA certificate and any private keys, concatenated
+together, in any order.
+
+Each certificate will be validated to ensure it is a valid CA (has an asserted
+isCA basic constraint); non-CA certs will err. Any provided CRLs will be
+ignored. Each unique certificate and private key will be imported as its own
+issuer or key entry; duplicates (including with existing keys) will be ignored.
+
+The response will indicate what issuers and keys were created as part of this
+request (in the `imported_issuers` and `imported_keys`), along with a `mapping`
+field, indicating which keys belong to which issuers (including from already
+imported entries present in the same bundle). In Vault 1.14.0, the response
+also contains an `existing_issuers` and `existing_keys` fields, which specifies
+the issuer and key IDs of any entries in the bundle that already
+existed within this mount.
+
+| Method | Path                           | Allows private keys | Request Parameter |
+| :----- | :----------------------------- | :------------------ | :---------------- |
+| `POST` | `/pki/config/ca`               | yes                 | `pem_bundle`      |
+| `POST` | `/pki/issuers/import/bundle`   | yes                 | `pem_bundle`      |
+| `POST` | `/pki/issuers/import/cert`     | no                  | `pem_bundle`      |
+| `POST` | `/pki/intermediate/set-signed` | no                  | `certificate`     |
+
+~> **Note**: endpoints which allow importing private keys _should_ be considered
+   highly privileged and restricted appropriately. Endpoints which allow
+   importing issuers should also be restricted, but note that issuers without
+   keys are unable to issue certificates or CRLs.
+
+~> Note: Vault will deduplicate differently-encoded but same-valued keys and
+   issuers. This means the returned certificate _may_ differ in encoding from
+   the one provided on subsequent re-imports of the same issuer or key.
+
+~> Note: This import may fail due to CRL rebuilding issues or other potential
+   issues; this may impact long-term use of these issuers, but some issuers or
+   keys may still be imported as a result of this process.
+
+~> Warning: See the [note](/vault/docs/secrets/pki/considerations#issuer-subjects-and-crls)
+   regarding Subject naming on externally created CA certificates and
+   shortcomings with CRL building.
+
+#### Parameters
+
+- `pem_bundle` `(string: <required>)` - Specifies the unencrypted private key
+  and certificate, concatenated in PEM format.
+
+~> Note: this parameter is on the `/pki/config/ca` and `/pki/issuers/import/*`
+   paths; it is not on the `/pki/intermediate/set-signed` path.
+
+- `certificate` `(string: <required>)` - Specifies the certificates to import,
+  concatenated in PEM format.
+
+~> Note: this parameter is **only** on the `/pki/intermediate/set-signed` path.
+
+#### Sample request
+
+```shell-session
+$ curl \
+    --header "X-Vault-Token: ..." \
+    --request POST \
+    --data "@payload.json" \
+    http://127.0.0.1:8200/v1/pki/config/ca
+```
+
+Note that if you provide the data through the HTTP API, it must be
+JSON-formatted, with newlines replaced with `\n`, like so:
+
+```json
+{
+  "pem_bundle": "-----BEGIN RSA PRIVATE KEY-----\n...\n-----END CERTIFICATE-----"
+}
+```
+
+#### Sample response
+
+```json
+{
+  "data": {
+    "imported_issuers": ["1ae8ce9d-2f70-0761-a465-8c9840a247a2"],
+    "imported_keys": ["97be2525-717a-e2f7-88da-0a20e11aad88"],
+    "mapping": {
+      "1ae8ce9d-2f70-0761-a465-8c9840a247a2": "97be2525-717a-e2f7-88da-0a20e11aad88"
+    },
+    "existing_issuers": [],
+    "existing_keys": []
+  }
+}
+```
+
+### Read issuer
+
+This endpoint allows an operator to fetch a single issuer certificate and its
+chain, including internal information not exposed on the [unauthenticated
+`/pki/issuer/:issuer_ref/json`](#read-issuer-certificate) endpoint. This
+includes information about the name, the key material, if an explicitly
+constructed chain has been set, what the behavior is for signing longer TTL'd
+certificates, and what usage modes are set on this issuer.
+
+| Method | Path                      |
+| :----- | :------------------------ |
+| `GET`  | `/pki/issuer/:issuer_ref` |
+
+#### Parameters
+
+- `issuer_ref` `(string: <required>)` - Reference to an existing issuer,
+  either by Vault-generated identifier, the literal string `default` to
+  refer to the currently configured default issuer, or the name assigned
+  to an issuer. This parameter is part of the request URL.
+
+#### Sample request
+
+```shell-session
+$ curl \
+    --header "X-Vault-Token: ..." \
+    http://127.0.0.1:8200/v1/pki/issuer/default
+```
+
+#### Sample response
+
+```text
+{
+  "data": {
+    "ca_chain": [
+      "-----BEGIN CERTIFICATE-----\nMIIDFDCCAfygAwIBAgIUXgxy54mKooz5soqQoRINazH/3pQwDQYJKoZIhvcNAQEL\n...",
+      "-----BEGIN CERTIFICATE-----\nMIIDFTCCAf2gAwIBAgIUUo/qwLm5AyqUWqFHw1MlgwUtS/kwDQYJKoZIhvcNAQEL\n..."
+    ],
+    "certificate": "-----BEGIN CERTIFICATE-----\nMIIDFDCCAfygAwIBAgIUXgxy54mKooz5soqQoRINazH/3pQwDQYJKoZIhvcNAQEL\n...",
+    "issuer_id": "7545992c-1910-0898-9e64-d575549fbe9c",
+    "issuer_name": "root-x1",
+    "key_id": "baadd98d-ec5a-66ac-06b7-dfc91c02c9cf",
+    "leaf_not_after_behavior": "truncate",
+    "manual_chain": null,
+    "usage": "read-only,issuing-certificates,crl-signing,ocsp-signing"
+  }
+}
+```
+
+### Update issuer
+
+This endpoint allows an operator to manage a single issuer, updating various
+properties about it, including its name, an explicitly constructed chain,
+what the behavior is for signing longer TTL'd certificates, and what usage
+modes are set on this issuer.
+
+Note that it is not possible to change the certificate of this issuer; to
+do so, import a new issuer and a new `issuer_id` will be assigned.
+
+| Method  | Path                      |
+| :------ | :------------------------ |
+| `POST`  | `/pki/issuer/:issuer_ref` |
+| `PATCH` | `/pki/issuer/:issuer_ref` |
+
+~> **Note** `POST`ing to this endpoint causes Vault to overwrite the previous
+   contents of the issuer, using the provided request data (and any defaults
+   for elided parameters). It does not update only the provided fields.<br /><br />
+   Since Vault 1.11.0, Vault supports the PATCH operation to this endpoint,
+   using the [JSON patch format](https://datatracker.ietf.org/doc/html/rfc6902)
+   supported by KVv2, allowing update of specific fields. Note that
+   `vault write` uses `POST`.
+
+#### Parameters
+
+- `issuer_ref` `(string: <required>)` - Reference to an existing issuer,
+  either by Vault-generated identifier, the literal string `default` to
+  refer to the currently configured default issuer, or the name assigned
+  to an issuer. This parameter is part of the request URL.
+
+- `issuer_name` `(string: "")` - Provides a name to the specified issuer. The
+  name must be unique across all issuers and not be the reserved value
+  `default`.
+
+- `leaf_not_after_behavior` `(string: "err")` - Behavior of a leaf's
+  `NotAfter` field during issuance. Valid options are:
+
+  - `err`, to error if the computed `NotAfter` exceeds that of this issuer;
+  - `truncate` to silently truncate the requested `NotAfter` value to that
+    of this issuer; or
+  - `permit` to allow this issuance to succeed with a `NotAfter` value
+    exceeding that of this issuer.
+
+~> Note: Not all values result in leaf certificates that can be validated
+   through the entire validity period. It is suggested to use `truncate` for
+   intermediate CAs and `permit` only for root CAs. This is because
+   (root) certificates in browsers' trust stores typically aren't checked
+   for validity, whereas intermediate CA certificates sent in TLS connections
+   are checked for validity at the time of use. This means that a leaf
+   certificate permitted to be issued for longer than the intermediate likely
+   won't continue to validate after the intermediate has expired.
+
+- `manual_chain` `([]string: nil)` - Chain of issuer references to build this
+  issuer's computed CAChain field from, when non-empty.
+
+~> Note: the `manual_chain` field is an advanced field useful when automatic
+   chain building isn't desired. The first element _must_ be the present
+   issuer's reference. Subsequent references _should_ validate previous
+   entries, terminating with a root certificate. _Ideally_ a single linear
+   chain would come first (from this issuer to a single root certificate)
+   before any parallel, alternate chains appear.<br /><br />
+   This field is especially useful for cross-signed intermediates within
+   Vault. Because each cross-signed intermediate will only know of the
+   one root, but issuance should serve both, update the issuers' entries
+   with the desired `manual_chain` value.<br /><br />
+   The CA Chain returned by a GET to the issuer configuration is the same
+   chain presented during signing and (if this issuer is the default) on
+   the `/ca_chain` path. Setting `manual_chain` thus allows controlling
+   the presented chain as desired.
+
+- `usage` `([]string: read-only,issuing-certificates,crl-signing,ocsp-signing)` - Allowed
+  usages for this issuer. Valid options are:
+
+  - `read-only`, to allow this issuer to be read; implict; always allowed;
+  - `issuing-certificates`, to allow this issuer to be used for issuing other
+    certificates; or
+  - `crl-signing`, to allow this issuer to be used for signing CRLs. This is
+    separate from the CRLSign KeyUsage on the x509 certificate, but this usage
+    cannot be set unless that KeyUsage is allowed on the x509 certificate.
+  - `ocsp-signing`, to allow this issuer to be used for signing OCSP responses
+
+~> Note: The `usage` field allows for a soft-delete capability on the issuer,
+   or to prevent use of the issuer prior to it being enabled. For example,
+   as issuance is rotated to a new issuer, the old issuer could be marked
+   `usage=read-only,crl-signing,ocsp-signing`, allowing existing certificates to be revoked
+   (and the CRL updated), but preventing new certificate issuance. After all
+   certificates issued under this certificate have expired, this certificate
+   could be marked `usage=read-only`, freezing the CRL. Finally, after a grace
+   period, the issuer could be deleted.
+
+- `revocation_signature_algorithm` `(string: "")` - Which signature algorithm
+  to use when building CRLs. See Go's [`x509.SignatureAlgorithm`](https://pkg.go.dev/crypto/x509#SignatureAlgorithm)
+  constant for possible values. This flag allows control over hash function
+  and signature scheme (PKCS#1v1.5 vs PSS). The default (empty string) value
+  is for Go to select the signature algorithm automatically, which may not
+  always work.
+
+~> Note: This can fail if the underlying key does not support the requested
+   signature algorithm; this may not always be known at modification time.
+   This most commonly needs to be modified when using PKCS#11 managed keys
+   with the `CKM_RSA_PKCS_PSS` mechanism type.
+
+- `issuing_certificates` `(array<string>: nil)` - Specifies the URL values for
+  the Issuing Certificate field. This can be an array or a comma-separated
+  string list. See also [RFC 5280 Section 4.2.2.1](https://datatracker.ietf.org/doc/html/rfc5280#section-4.2.2.1)
+  for information about the Authority Information Access field.
+
+- `crl_distribution_points` `(array<string>: nil)` - Specifies the URL values
+  for the CRL Distribution Points field. This can be an array or a
+  comma-separated string list. See also [RFC 5280 Section 4.2.1.13](https://datatracker.ietf.org/doc/html/rfc5280#section-4.2.1.13)
+  for information about the CRL Distribution Points field.
+
+~> Note: When multiple Performance Replication clusters are enabled, each
+   cluster will have its own CRL. Additionally, when multiple issuers are
+   in use under a single mount, each issuer will also have its own CRL
+   distribution point. These separate CRLs should either be aggregated into a
+   single CRL (externally; as Vault does not support this functionality)
+   or multiple `crl_distribution_points` should be specified here, pointing
+   to each cluster and issuer.
+
+- `ocsp_servers` `(array<string>: nil)` - Specifies the URL values for the OCSP
+  Servers field. This can be an array or a comma-separated string list. See also
+  [RFC 5280 Section 4.2.2.1](https://datatracker.ietf.org/doc/html/rfc5280#section-4.2.2.1)
+  for information about the Authority Information Access field.
+
+- `enable_aia_url_templating` `(bool: false)` - Specifies that the above AIA
+  URL values (`issuing_certificates`, `crl_distribution_points`, and
+  `ocsp_servers`) should be templated. This replaces the literal value
+  `{{issuer_id}}` with the ID of the issuer doing the issuance, the
+  literal value `{{cluster_path}}` with the value of `path` from the
+  cluster-local configuration endpoint `/config/cluster`, and the
+  literal value '{{cluster_aia_path}}' with the value of `aia_path` from
+  the cluster-local configuration endpoint `/config/cluster`.
+
+~> **Note**: If no cluster-local address is present and templating is used,
+   issuance will fail.
+
+#### Sample payload
+
+```json
+{
+  "issuer_name": "root-x1"
+}
+```
+
+#### Sample request
+
+```shell-session
+$ curl \
+    --header "X-Vault-Token: ..." \
+    --request POST \
+    --data @payload.json \
+    http://127.0.0.1:8200/v1/pki/issuer/default
+```
+
+#### Sample response
+
+```text
+{
+  "data": {
+    "ca_chain": [
+      "-----BEGIN CERTIFICATE-----\nMIIDFDCCAfygAwIBAgIUXgxy54mKooz5soqQoRINazH/3pQwDQYJKoZIhvcNAQEL\n...",
+      "-----BEGIN CERTIFICATE-----\nMIIDFTCCAf2gAwIBAgIUUo/qwLm5AyqUWqFHw1MlgwUtS/kwDQYJKoZIhvcNAQEL\n..."
+    ],
+    "certificate": "-----BEGIN CERTIFICATE-----\nMIIDFDCCAfygAwIBAgIUXgxy54mKooz5soqQoRINazH/3pQwDQYJKoZIhvcNAQEL\n...",
+    "issuer_id": "7545992c-1910-0898-9e64-d575549fbe9c",
+    "issuer_name": "root-x1",
+    "key_id": "baadd98d-ec5a-66ac-06b7-dfc91c02c9cf",
+    "leaf_not_after_behavior": "truncate",
+    "manual_chain": null,
+    "usage": "read-only,issuing-certificates,crl-signing,ocsp-signing",
+    "revocation_signature_algorithm": "",
+    "issuing_certificates": ["<url1>", "<url2>"],
+    "crl_distribution_points": ["<url1>", "<url2>"],
+    "ocsp_servers": ["<url1>", "<url2>"]
+  }
+}
+```
+
+### Revoke issuer
+
+This endpoint allows an operator to revoke an issuer certificate, marking it
+unable to issue new certificates and adding it to other issuers' CRLs, if they
+have signed this issuer's certificate. This will cause all CRLs to be rebuilt.
+
+This is mostly provided for book-keeping and as a soft-delete feature, to
+ensure this issuer is not accidentally reused in the future.
+
+~> **Warning**: This operation cannot be undone!
+
+~> Note: This operation **does not** have any impact on other clusters or
+   mounts and **may not** have any impact on whether clients consider these
+   issuers revoked. Revoked issuers will not appear on their own CRLs. Revoked
+   issuers may not appear on other CRLs if a suitable parent is not present in
+   the same mount point. Revoked issuers will still need to be revoked in any
+   other mounts they appear in, both as issuers, in the event of issuer reuse,
+   and as issued certificates, in the event of an external parent mount.
+
+| Method  | Path                             |
+| :------ | :------------------------------- |
+| `POST`  | `/pki/issuer/:issuer_ref/revoke` |
+
+#### Parameters
+
+No parameters.
+
+#### Sample request
+
+```shell-session
+$ curl \
+    --header "X-Vault-Token: ..." \
+    --request POST \
+    http://127.0.0.1:8200/v1/pki/issuer/old-intermediate/revoke
+```
+
+#### Sample response
+
+```text
+{
+  "data": {
+    "ca_chain": [
+      "-----BEGIN CERTIFICATE-----\nMIIDFDCCAfygAwIBAgIUXgxy54mKooz5soqQoRINazH/3pQwDQYJKoZIhvcNAQEL\n...",
+      "-----BEGIN CERTIFICATE-----\nMIIDFTCCAf2gAwIBAgIUUo/qwLm5AyqUWqFHw1MlgwUtS/kwDQYJKoZIhvcNAQEL\n..."
+    ],
+    "certificate": "-----BEGIN CERTIFICATE-----\nMIIDFDCCAfygAwIBAgIUXgxy54mKooz5soqQoRINazH/3pQwDQYJKoZIhvcNAQEL\n...",
+    "issuer_id": "7545992c-1910-0898-9e64-d575549fbe9c",
+    "issuer_name": "old-intermediate",
+    "key_id": "baadd98d-ec5a-66ac-06b7-dfc91c02c9cf",
+    "leaf_not_after_behavior": "truncate",
+    "manual_chain": null,
+    "usage": "read-only,issuing-certificates,crl-signing"
+    "revocation_time": 1433269787,
+  }
+}
+```
+
+### Delete issuer
+
+This endpoint deletes the specified issuer. A warning is emitted and the
+default is cleared if this issuer is the default issuer.
+
+~> **Note**: If an issuer is incorrectly deleted, but its key material
+   remains, it is possible to re-import just the issuer certificate. The
+   `issuer_id` will change, but the name can be re-assigned to the new
+   issuer.
+
+| Method   | Path                      |
+| :------- | :------------------------ |
+| `DELETE` | `/pki/issuer/:issuer_ref` |
+
+#### Sample request
+
+```shell-session
+$ curl \
+    --header "X-Vault-Token: ..." \
+    --request DELETE \
+    http://127.0.0.1:8200/v1/pki/issuer/root-x1
+```
+
+### Import key
+
+This endpoint allows an operator to import a single pem encoded `rsa`, `ec`, or `ed25519`
+key.
+
+~> **Note**: This API does not protect against importing keys using insecure combinations of
+  algorithm and key length.
+
+| Method | Path               |
+|:-------|:-------------------|
+| `POST` | `/pki/keys/import` |
+
+#### Parameters
+
+- `pem_bundle` `(string: <required>)` - Specifies the unencrypted private key in PEM format.
+
+- `key_name` `(string: "")` - Provides a name to the specified key. The
+  name must be unique across all keys and not be the reserved value
+  `default`.
+
+#### Sample payload
+
+```json
+{
+  "key_name": "my-imported-key",
+  "pem_bundle": "-----BEGIN RSA PRIVATE KEY-----\n...\n-----END CERTIFICATE-----"
+}
+```
+
+#### Sample request
+
+```shell-session
+$ curl \
+    --header "X-Vault-Token: ..." \
+    --request POST \
+    --data @payload.json \
+    http://127.0.0.1:8200/v1/pki/keys/import
+```
+
+#### Sample response
+
+```text
+{
+  "data": {
+    "key_id": "2cf03991-b052-1dc3-393e-374b41f8dcd8",
+    "key_name": "my-imported-key",
+    "key_type": "rsa"
+  },
+}
+```
+
+### Read key
+
+This endpoint allows an operator to fetch information about an existing key.
+
+~> **Note**: Vault does not allow reading the value of the private key after
+   it has been created.
+
+| Method | Path                |
+| :----- | :------------------ |
+| `GET`  | `/pki/key/:key_ref` |
+
+#### Parameters
+
+- `key_ref` `(string: <required>)` - Reference to an existing key,
+  either by Vault-generated identifier, the literal string `default` to
+  refer to the currently configured default key, or the name assigned
+  to a key. This parameter is part of the request URL.
+
+#### Sample request
+
+```shell-session
+$ curl \
+    --header "X-Vault-Token: ..." \
+    http://127.0.0.1:8200/v1/pki/key/default
+```
+
+#### Sample response
+
+```text
+{
+  "data": {
+    "key_id": "8c4046f8-52a8-0974-29d2-745d8a0dd848",
+    "key_name": "key-root-x1",
+    "key_type": "rsa"
+  }
+}
+```
+
+### Update key
+
+This endpoint allows an operator to manage a single key. Currently, the only
+parameter that is configurable is the key's name.
+
+Note that it is not possible to change the private key of this key; to
+do so, import a new key and a new `key_id` will be assigned.
+
+| Method | Path                |
+| :----- | :------------------ |
+| `POST` | `/pki/key/:key_ref` |
+
+~> **Note** `POST`ing to this endpoint causes Vault to overwrite the previous
+   contents of the key, using the provided request data (and any defaults
+   for elided parameters). It does not update only the provided fields.
+
+#### Parameters
+
+- `key_ref` `(string: <required>)` - Reference to an existing key,
+  either by Vault-generated identifier, the literal string `default` to
+  refer to the currently configured default key, or the name assigned
+  to a key. This parameter is part of the request URL.
+
+- `key_name` `(string: "")` - Provides a name to the specified key. The
+  name must be unique across all keys and not be the reserved value
+  `default`.
+
+#### Sample payload
+
+```json
+{
+  "key_name": "key-root-x1"
+}
+```
+
+#### Sample request
+
+```shell-session
+$ curl \
+    --header "X-Vault-Token: ..." \
+    --request POST \
+    --data @payload.json \
+    http://127.0.0.1:8200/v1/pki/key/default
+```
+
+#### Sample response
+
+```text
+{
+  "data": {
+    "key_id": "8c4046f8-52a8-0974-29d2-745d8a0dd848",
+    "key_name": "key-root-x1",
+    "key_type": "rsa"
+  }
+}
+```
+
+### Delete key
+
+This endpoint deletes the specified key. A warning is emitted and the
+default is cleared if this key is the default key.
+
+~> **Note**: Because Vault does not allow exporting the private key
+   after it is initially generated, deletion of keys is a sensitive
+   operation. Additionally, one key may be used by more than one issuer.
+   As a result, Vault prohibits deletion of keys until **all** issuers
+   using this key have also been deleted. If these issuers are still
+   necessary for chain building, re-import them without the corresponding
+   keys after the key has been deleted or use the soft-delete feature
+   of issuers.
+
+| Method   | Path                |
+| :------- | :------------------ |
+| `DELETE` | `/pki/key/:key_ref` |
+
+#### Sample request
+
+```shell-session
+$ curl \
+    --header "X-Vault-Token: ..." \
+    --request DELETE \
+    http://127.0.0.1:8200/v1/pki/key/key-root-x1
+```
+
+### Delete all issuers and keys
+
+This endpoint deletes all issuers and keys within the mount. It is highly
+recommended to use the individual delete operations instead. This mount
+will be unusable until new issuers and keys are provisioned.
+
+_This endpoint requires sudo/root privileges._
+
+| Method   | Path        |
+| :------- | :---------- |
+| `DELETE` | `/pki/root` |
+
+#### Sample request
+
+```shell-session
+$ curl \
+    --header "X-Vault-Token: ..." \
+    --request DELETE \
+    http://127.0.0.1:8200/v1/pki/root
+```

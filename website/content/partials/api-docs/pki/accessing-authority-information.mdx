@@ -1,0 +1,395 @@
+## Accessing authority information
+
+All consumers of the PKI Secrets Engine mount point will have access to the
+following unauthenticated APIs, useful for reading information about the
+certificate authority in this mount point.
+
+This includes information about [CA certificates](#read-issuer-certificate),
+[their chains](#read-default-issuer-certificate-chain), and [their signed
+CRLs](#read-issuer-crl), containing an encoded list of revoked certificates
+previously issued by this authority. Individual issued [certificates can
+also be read](#read-certificate), assuming their serial number is known.
+Finally, the list of issuing certificates is public information in this
+mount.
+
+### List issuers
+
+This endpoint returns a list of issuers currently provisioned in this mount.
+The response includes both the issuer's identifier as well as the name chosen
+by the operators; either can be used to refer to the issuer later.
+
+This endpoint is unauthenticated.
+
+| Method | Path           |
+| :----- | :------------- |
+| `LIST` | `/pki/issuers` |
+
+#### Sample request
+
+```shell-session
+$ curl \
+    --request LIST \
+    http://127.0.0.1:8200/v1/pki/issuers
+```
+
+#### Sample response
+
+```json
+{
+  "data": {
+    "key_info": {
+      "1ae8ce9d-2f70-0761-a465-8c9840a247a2": {
+        "issuer_name": "imported-root"
+      },
+      "3dc79a5a-7a6c-70e2-1123-94b88557ba12": {
+        "issuer_name": "root-x1"
+      }
+    },
+    "keys": [
+      "1ae8ce9d-2f70-0761-a465-8c9840a247a2",
+      "3dc79a5a-7a6c-70e2-1123-94b88557ba12"
+    ]
+  }
+}
+```
+
+<a name="read-ca-certificate"></a>
+
+### Read issuer certificate
+
+This endpoint retrieves the specified issuer's certificate.
+
+Note that the response differs between the older `/pki/cert/ca`
+path and the newer `/pki/issuer/:issuer_ref/json` path; the latter
+includes the full `ca_chain` of the issuer, removing the need for a separate
+endpoint.
+
+These are unauthenticated endpoints.
+
+~> Note: this endpoint accepts the `If-Modified-Since` header, to respond with
+   304 Not Modified when the requested resource has not changed. This header
+   needs to be allowed on the PKI mount by tuning the `passthrough_request_headers`
+   option. In order for clients to know the last modified time, the response
+   header `Last-Modified` needs to be added to the mount tunable
+   `allowed_response_headers`.
+
+| Method | Path                           | Issuer    | Format                                                                            |
+| :----- | :----------------------------- | :-------- |:----------------------------------------------------------------------------------|
+| `GET`  | `/pki/cert/ca`                 | `default` | JSON                                                                              |
+| `GET`  | `/pki/ca`                      | `default` | DER [\[1\]](#vault-cli-with-der-pem-responses "Vault CLI With DER/PEM Responses") |
+| `GET`  | `/pki/ca/pem`                  | `default` | PEM [\[1\]](#vault-cli-with-der-pem-responses "Vault CLI With DER/PEM Responses") |
+| `GET`  | `/pki/issuer/:issuer_ref/json` | Selected  | JSON                                                                              |
+| `GET`  | `/pki/issuer/:issuer_ref/der`  | Selected  | DER [\[1\]](#vault-cli-with-der-pem-responses "Vault CLI With DER/PEM Responses") |
+| `GET`  | `/pki/issuer/:issuer_ref/pem`  | Selected  | PEM [\[1\]](#vault-cli-with-der-pem-responses "Vault CLI With DER/PEM Responses") |
+
+#### Parameters
+
+- `issuer_ref` `(string: <required>)` - Reference to an existing issuer,
+  either by Vault-generated identifier, the literal string `default` to
+  refer to the currently configured default issuer, or the name assigned
+  to an issuer. This parameter is part of the request URL.
+
+~> Note: This parameter is not present on the `/pki/cert/ca` and
+   `/pki/ca(/pem)?` paths and takes the implicit value `default`.
+
+#### Sample request
+
+```shell-session
+$ curl \
+    http://127.0.0.1:8200/v1/pki/issuer/root-x1/json
+```
+
+#### Sample response
+
+```text
+{
+  "data": {
+    "ca_chain": [
+      "-----BEGIN CERTIFICATE-----\nMIIDFDCCAfygAwIBAgIUXgxy54mKooz5soqQoRINazH/3pQwDQYJKoZIhvcNAQEL\n...",
+      "-----BEGIN CERTIFICATE-----\nMIIDFTCCAf2gAwIBAgIUUo/qwLm5AyqUWqFHw1MlgwUtS/kwDQYJKoZIhvcNAQEL\n..."
+    ],
+    "certificate": "-----BEGIN CERTIFICATE-----\nnMIIDFDCCAfygAwIBAgIUXgxy54mKooz5soqQoRINazH/3pQwDQYJKoZIhvcNAQEL...",
+    "revocation_time": 0
+  }
+}
+```
+
+<a name="read-ca-certificate-chain"></a>
+
+### Read default issuer certificate chain
+
+This endpoint retrieves the default issuer's CA certificate chain, including
+the default issuer.
+
+To read [other issuers' chains](#read-issuer-certificate), use the
+`/pki/issuer/:issuer_ref/json` endpoint instead.
+
+These are unauthenticated endpoints.
+
+| Method | Path                 | Issuer    | Format                                                                            |
+| :----- | :------------------- | :-------- |:----------------------------------------------------------------------------------|
+| `GET`  | `/pki/ca_chain`      | `default` | PEM [\[1\]](#vault-cli-with-der-pem-responses "Vault CLI With DER/PEM Responses") |
+| `GET`  | `/pki/cert/ca_chain` | `default` | JSON                                                                              |
+
+~> **Note**: As of Vault 1.11.0, these endpoints now return the full chain
+   (including the default issuer's certificate and all parent issuers known
+   to Vault) in these responses.
+
+#### Sample request
+
+```shell-session
+$ curl \
+    http://127.0.0.1:8200/v1/pki/ca_chain
+```
+
+#### Sample response
+
+```text
+<PEM-encoded certificate chain>
+```
+
+<a name="read-crl"></a>
+
+### Read issuer CRL
+
+This endpoint retrieves the specified issuer's CRL.
+
+Note that the response differs between the older `/pki/cert/crl` path and
+the newer `/pki/issuer/:issuer_ref/crl` path; the latter correctly places the
+PEM-encoded CRL in the `crl` field whereas the former incorrectly places it
+in the `certificate` field.
+
+Endpoints with type `complete` are full CRLs containing all revoked
+certificates (as of the time of generation. Endpoints with type `delta`
+contain incremental CRLs on top of the last complete CRL, with any new
+certificates that have been revoked. See the [revocation configuration
+section](#set-crl-configuration) for more information about these options.
+The delta CRL clears when the next complete CRL is rebuilt. Consumers of
+delta CRLs will need to update their client to support fetching the
+corresponding full CRL when it has been regenerated; otherwise, some serial
+numbers may not appear in the local copy of the full CRL if the remote
+complete and delta CRLs has been regenerated.
+
+Endpoints with source `local` only include cluster-local revocations. When
+the `unified_crl` parameters is enabled in the [CRL
+configuration](#set-crl-configuration), endpoints with source `unified`
+will have revocations from all clusters. Generally use of the `unified`
+source is more consistent with expectations of external apps, but see
+the [PKI Considerations](/vault/docs/secrets/pki/considerations) page
+for a discussion on cluster size and unified CRLs/OCSP.
+
+<EnterpriseAlert product="vault">
+  Unified CRLs require a Vault Enterprise license or HCP Plus cluster.
+</EnterpriseAlert>
+
+These are unauthenticated endpoints.
+
+~> **Note**: As of Vault 1.11.0, these endpoints now serve a [version 2](https://datatracker.ietf.org/doc/html/rfc5280#section-5.1.2.1) CRL response.
+
+~> Note: this endpoint accepts the `If-Modified-Since` header, to respond with
+   304 Not Modified when the requested resource has not changed. This header
+   needs to be allowed on the PKI mount by tuning the `passthrough_request_headers`
+   option. In order for clients to know the last modified time, the response
+   header `Last-Modified` needs to be added to the mount tunable
+   `allowed_response_headers`.
+
+| Method | Path                                            | Issuer    | Format                                                                            | Type     | Source  |
+| :----- | :---------------------------------------------- | :-------- | :-------------------------------------------------------------------------------- | :------- | :------ |
+| `GET`  | `/pki/cert/crl`                                 | `default` | JSON                                                                              | Complete | Local   |
+| `GET`  | `/pki/crl`                                      | `default` | DER [\[1\]](#vault-cli-with-der-pem-responses "Vault CLI With DER/PEM Responses") | Complete | Local   |
+| `GET`  | `/pki/crl/pem`                                  | `default` | PEM [\[1\]](#vault-cli-with-der-pem-responses "Vault CLI With DER/PEM Responses") | Complete | Local   |
+| `GET`  | `/pki/cert/delta-crl`                           | `default` | JSON                                                                              | Delta    | Local   |
+| `GET`  | `/pki/crl/delta`                                | `default` | DER [\[1\]](#vault-cli-with-der-pem-responses "Vault CLI With DER/PEM Responses") | Delta    | Local   |
+| `GET`  | `/pki/crl/delta/pem`                            | `default` | PEM [\[1\]](#vault-cli-with-der-pem-responses "Vault CLI With DER/PEM Responses") | Delta    | Local   |
+| `GET`  | `/pki/issuer/:issuer_ref/crl`                   | Selected  | JSON                                                                              | Complete | Local   |
+| `GET`  | `/pki/issuer/:issuer_ref/crl/der`               | Selected  | DER [\[1\]](#vault-cli-with-der-pem-responses "Vault CLI With DER/PEM Responses") | Complete | Local   |
+| `GET`  | `/pki/issuer/:issuer_ref/crl/pem`               | Selected  | PEM [\[1\]](#vault-cli-with-der-pem-responses "Vault CLI With DER/PEM Responses") | Complete | Local   |
+| `GET`  | `/pki/issuer/:issuer_ref/crl/delta`             | Selected  | JSON                                                                              | Delta    | Local   |
+| `GET`  | `/pki/issuer/:issuer_ref/crl/delta/der`         | Selected  | DER [\[1\]](#vault-cli-with-der-pem-responses "Vault CLI With DER/PEM Responses") | Delta    | Local   |
+| `GET`  | `/pki/issuer/:issuer_ref/crl/delta/pem`         | Selected  | PEM [\[1\]](#vault-cli-with-der-pem-responses "Vault CLI With DER/PEM Responses") | Delta    | Local   |
+| `GET`  | `/pki/cert/unified-crl`                         | `default` | JSON                                                                              | Complete | Unified |
+| `GET`  | `/pki/unified-crl`                              | `default` | DER [\[1\]](#vault-cli-with-der-pem-responses "Vault CLI With DER/PEM Responses") | Complete | Unified |
+| `GET`  | `/pki/unified-crl/pem`                          | `default` | PEM [\[1\]](#vault-cli-with-der-pem-responses "Vault CLI With DER/PEM Responses") | Complete | Unified |
+| `GET`  | `/pki/cert/unified-delta-crl`                   | `default` | JSON                                                                              | Delta    | Unified |
+| `GET`  | `/pki/unified-crl/delta`                        | `default` | DER [\[1\]](#vault-cli-with-der-pem-responses "Vault CLI With DER/PEM Responses") | Delta    | Unified |
+| `GET`  | `/pki/unified-crl/delta/pem`                    | `default` | PEM [\[1\]](#vault-cli-with-der-pem-responses "Vault CLI With DER/PEM Responses") | Delta    | Unified |
+| `GET`  | `/pki/issuer/:issuer_ref/unified-crl`           | Selected  | JSON                                                                              | Complete | Unified |
+| `GET`  | `/pki/issuer/:issuer_ref/unified-crl/der`       | Selected  | DER [\[1\]](#vault-cli-with-der-pem-responses "Vault CLI With DER/PEM Responses") | Complete | Unified |
+| `GET`  | `/pki/issuer/:issuer_ref/unified-crl/pem`       | Selected  | PEM [\[1\]](#vault-cli-with-der-pem-responses "Vault CLI With DER/PEM Responses") | Complete | Unified |
+| `GET`  | `/pki/issuer/:issuer_ref/unified-crl/delta`     | Selected  | JSON                                                                              | Delta    | Unified |
+| `GET`  | `/pki/issuer/:issuer_ref/unified-crl/delta/der` | Selected  | DER [\[1\]](#vault-cli-with-der-pem-responses "Vault CLI With DER/PEM Responses") | Delta    | Unified |
+| `GET`  | `/pki/issuer/:issuer_ref/unified-crl/delta/pem` | Selected  | PEM [\[1\]](#vault-cli-with-der-pem-responses "Vault CLI With DER/PEM Responses") | Delta    | Unified |
+
+#### Parameters
+
+- `issuer_ref` `(string: <required>)` - Reference to an existing issuer,
+  either by Vault-generated identifier, the literal string `default` to
+  refer to the currently configured default issuer, or the name assigned
+  to an issuer. This parameter is part of the request URL.
+
+~> Note: This parameter is not present on the `/pki/cert/crl` and
+   `/pki/crl(/pem)?` paths and takes the implicit value `default`.
+
+#### Sample request
+
+```shell-session
+$ curl \
+    http://127.0.0.1:8200/v1/pki/issuer/root-x1/crl
+```
+
+#### Sample response
+
+```json
+{
+  "data": {
+    "crl": "-----BEGIN X509 CRL-----\nMIIBizB1AgEBMA0GCSqGSIb3DQEBCwUAMBIxEDAOBgNVBAMTB3Jvb3QgeDEXDTIy\n..."
+  }
+}
+```
+
+### OCSP request
+
+This endpoint retrieves an OCSP response (revocation status) for a given serial number. The request/response formats are
+based on [RFC 6960](https://datatracker.ietf.org/doc/html/rfc6960)
+
+Endpoints with source `local` only include cluster-local revocations. When
+the `unified_crl` parameters is enabled in the [CRL
+configuration](#set-crl-configuration), endpoints with source `unified`
+will have revocations from all clusters. Generally use of the `unified`
+source is more consistent with expectations of external apps, but see
+the [PKI Considerations](/vault/docs/secrets/pki/considerations) page
+for a discussion on cluster size and unified CRLs/OCSP.
+
+<EnterpriseAlert product="vault">
+  Unified OCSP requires a Vault Enterprise license or HCP Plus cluster.
+</EnterpriseAlert>
+
+At this time there are certain limitations of the OCSP implementation at this path:
+
+ 1. Only a single serial number within the request will appear in the response,
+ 1. None of the extensions defined in the RFC are supported for requests or responses,
+ 1. Ed25519 backed CA's are not supported for OCSP requests,
+ 1. Note that this API will not work with the Vault client as both request and responses are DER encoded, and
+ 1. Note that KMS based issuers which require PSS support are not supported either (such as PKCS#11 HSMs or GCP in certain scenarios).
+
+These are unauthenticated endpoints.
+
+| Method | Path                                                       | Response Format                                                                   | Source  |
+| :----- | :--------------------------------------------------------- | :-------------------------------------------------------------------------------- | :------ |
+| `GET`  | `/pki/ocsp/<base 64+URL encoded ocsp DER request>`         | DER [\[1\]](#vault-cli-with-der-pem-responses "Vault CLI With DER/PEM Responses") | Local   |
+| `POST` | `/pki/ocsp`                                                | DER [\[1\]](#vault-cli-with-der-pem-responses "Vault CLI With DER/PEM Responses") | Local   |
+| `GET`  | `/pki/unified-ocsp/<base 64+URL encoded ocsp DER request>` | DER [\[1\]](#vault-cli-with-der-pem-responses "Vault CLI With DER/PEM Responses") | Unified |
+| `POST` | `/pki/unified-ocsp`                                        | DER [\[1\]](#vault-cli-with-der-pem-responses "Vault CLI With DER/PEM Responses") | Unified |
+
+#### Parameters
+
+ - None
+
+#### Sample request
+
+```shell-session
+openssl ocsp -no_nonce -issuer issuer.pem -CAfile ca_chain.pem -cert cert-to-revoke.pem -text -url $VAULT_ADDR/v1/pki/ocsp
+```
+
+### List certificates
+
+This endpoint returns a list of the current certificates by serial number only.
+The response does not include the [special serial numbers](#read-certificate-serial-param-values)
+(`ca`, `ca_chain`, and `crl`) that can be used with `/pki/cert/:serial`.
+
+This includes only certificates issued by this mount with `no_store=false`.
+While root generation does create entries here, importing certificates
+(including both roots and intermediates) will not cause the imported
+certificate's serial number to appear in this list.
+
+~> Note: The endpoint to list all certificates is authenticated. This is to
+   prevent automated enumeration of issued certificates for internal services;
+   however, this information should generally be considered non-sensitive and
+   the certificates themselves are exposed without authentication (provided
+   their serial number is known).<br /><br />
+   Many Public CAs participate in the Certificate Transparency initiative,
+   where all issued certificates are publicly disclosed in the interest
+   of third-party verification of CA integrity.
+
+| Method | Path         |
+| :----- | :----------- |
+| `LIST` | `/pki/certs` |
+
+#### Sample request
+
+```shell-session
+$ curl \
+    --header "X-Vault-Token: ..." \
+    --request LIST \
+    http://127.0.0.1:8200/v1/pki/certs
+```
+
+#### Sample response
+
+```json
+{
+  "data": {
+    "keys": [
+      "17:67:16:b0:b9:45:58:c0:3a:29:e3:cb:d6:98:33:7a:a6:3b:66:c1",
+      "26:0f:76:93:73:cb:3f:a0:7a:ff:97:85:42:48:3a:aa:e5:96:03:21"
+    ]
+  }
+}
+```
+
+<a name="read-raw-certificate"></a>
+
+### Read certificate
+
+This endpoint retrieves the certificate specified by its serial number,
+including issued certificates.
+
+~> Note: With the exception of the special values (`ca`, `crl`, and
+   `ca_chain`), `/pki/cert/:serial` will return different results on
+   different clusters. This is because stored certificates are not
+   replicated across different Performance Replication clusters.
+
+These are unauthenticated endpoints.
+
+| Method | Path                        | Format                                                                            |
+| :----- | :-------------------------- |:----------------------------------------------------------------------------------|
+| `GET`  | `/pki/cert/:serial`         | JSON                                                                              |
+| `GET`  | `/pki/cert/:serial/raw`     | DER [\[1\]](#vault-cli-with-der-pem-responses "Vault CLI With DER/PEM Responses") |
+| `GET`  | `/pki/cert/:serial/raw/pem` | PEM [\[1\]](#vault-cli-with-der-pem-responses "Vault CLI With DER/PEM Responses") |
+
+#### Parameters
+
+- `serial` `(string: <required>)` - Specifies the serial of the key to read.
+  This is part of the request URL. Valid values for `serial` are:
+
+<a name="read-certificate-serial-param-values"></a>
+
+  - `<serial>` for the certificate with the given serial number, in hyphen-separated or colon-separated hexadecimal.
+  - `ca` for the _default_ issuer's CA certificate
+  - `crl` for the _default_ issuer's CRL
+  - `ca_chain` for the _default_ issuer's CA trust chain.
+
+~> **Note**: As of Vault 1.11.0, these endpoints return the full chain
+   (including this certificate and all parent issuers known to Vault) in
+   the `ca_chain` response, for both the `certificate` and newer `ca_chain`
+   fields. The root certificate is no longer elided.
+
+#### Sample request
+
+```shell-session
+$ curl \
+    http://127.0.0.1:8200/v1/pki/cert/67:b4:f7:2c:aa:ef:b9:30:f6:ae:f5:12:21:79:ac:08:8a:86:89:72
+```
+
+#### Sample response
+
+```json
+{
+  "data": {
+    "certificate": "-----BEGIN CERTIFICATE-----\nMIIGmDCCBYCgAwIBAgIHBzEB3fTzhTANBgkqhkiG9w0BAQsFADCBjDELMAkGA1UE\n...",
+    "revocation_time": 1667400107,
+    "revocation_time_rfc3339": "2022-11-02T14:41:47.327515Z",
+    "issuer_id": "e27bf456-51e1-d937-0001-4a609184fd9b"
+  }
+}
+```

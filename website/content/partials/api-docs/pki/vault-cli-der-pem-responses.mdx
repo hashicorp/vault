@@ -1,0 +1,5 @@
+## Vault CLI with DER/PEM responses
+
+The Vault CLI can only display JSON responses. For APIs that return non-JSON formatted
+data such as DER and PEM formats, `vault read` will fail without the `-format=raw`
+option added in Vault 1.13 or another client such as `curl` must be used.
