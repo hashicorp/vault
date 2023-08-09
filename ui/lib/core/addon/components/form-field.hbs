@@ -302,7 +302,6 @@
           autocomplete="off"
           spellcheck="false"
           value={{or (get @model this.valuePath) @attr.options.defaultValue}}
-          {{on "input" this.onChangeWithEvent}}
           {{on "change" this.onChangeWithEvent}}
           {{on "keyup" this.handleKeyUp}}
           class="input {{if this.validationError 'has-error-border'}}"

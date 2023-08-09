@@ -383,7 +383,6 @@ func (c *Core) persistAudit(ctx context.Context, table *MountTable, localOnly bo
 // initialize the audit backends
 func (c *Core) setupAudits(ctx context.Context) error {
 	brokerLogger := c.baseLogger.Named("audit")
-	c.AddLogger(brokerLogger)
 	broker, err := NewAuditBroker(brokerLogger, c.IsExperimentEnabled(experiments.VaultExperimentCoreAuditEventsAlpha1))
 	if err != nil {
 		return err
@@ -495,7 +494,6 @@ func (c *Core) newAuditBackend(ctx context.Context, entry *MountEntry, view logi
 	}
 
 	auditLogger := c.baseLogger.Named("audit")
-	c.AddLogger(auditLogger)
 
 	switch entry.Type {
 	case "file":
