@@ -310,6 +310,9 @@ type BackendConfig struct {
 
 	// Config is the opaque user configuration provided when mounting
 	Config map[string]string
+
+	// MountPath is the path where this Backend is mounted
+	MountPath string
 }
 
 // Factory is the factory function to create an audit backend.
