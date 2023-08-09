@@ -1,8 +1,8 @@
 locals {
   architectures      = toset(["arm64", "x86_64"])
-  amazon_owner_id    = "013907871322"
+  amazon_owner_id    = "591542846629"
   canonical_owner_id = "099720109477"
-  openSUSE_owner_id  = "679593333241"
+  suse_owner_id      = "679593333241"
   rhel_owner_id      = "309956199498"
   ids = {
     "arm64" = {
@@ -18,8 +18,9 @@ locals {
       "amazon_linux" = {
         "amzn2" = data.aws_ami.amazon_linux_2["arm64"].id
       }
-      "openSUSE" = {
-        "15.5" = data.aws_ami.openSUSE_15.5["arm64"].id
+      "leap" = {
+        "15.4" = data.aws_ami.leap_154["arm64"].id
+        "15.5" = data.aws_ami.leap_155["arm64"].id
       }
     }
     "amd64" = {
@@ -36,9 +37,15 @@ locals {
       "amazon_linux" = {
         "amzn2" = data.aws_ami.amazon_linux_2["x86_64"].id
       }
-      "openSUSE" = {
-        "15.4" = data.aws_ami.openSUSE_15.4["x86_64"].id
-        "15.5" = data.aws_ami.openSUSE_15.5["x86_64"].id
+      "leap" = {
+        "15.4" = data.aws_ami.leap_154["x86_64"].id
+        "15.5" = data.aws_ami.leap_155["x86_64"].id
+      }
+      "sles" = {
+        "v12_sp4_standard" = data.aws_ami.sles_12_sp4_standard.id
+        "v12_sp5_standard" = data.aws_ami.sles_12_sp5_standard.id
+        "v15_sp4_standard" = data.aws_ami.sles_15_sp4_standard.id
+        "v15_sp5_standard" = data.aws_ami.sles_15_sp5_standard.id
       }
     }
   }
@@ -184,7 +191,7 @@ data "aws_ami" "amazon_linux_2" {
 
   filter {
     name   = "name"
-    values = ["amzn2-ami-hvm*"]
+    values = ["amzn2-ami-ecs-hvm-*"]
   }
 
   filter {
@@ -195,13 +202,81 @@ data "aws_ami" "amazon_linux_2" {
   owners = [local.amazon_owner_id]
 }
 
-data "aws_ami" "openSUSE_15.5" {
+data "aws_ami" "sles_12_sp4_standard" {
+  most_recent = true
+
+  filter {
+    name   = "name"
+    values = ["suse-sles-sap-12-sp4-v*-hvm-ssd-*"]
+  }
+
+  filter {
+    name   = "architecture"
+    # not available for arm64
+    values = ["x86_64"]
+  }
+
+  owners = [local.suse_owner_id]
+}
+
+data "aws_ami" "sles_12_sp5_standard" {
+  most_recent = true
+
+  filter {
+    name   = "name"
+    values = ["suse-sles-sap-12-sp5-v*-hvm-ssd-*"]
+  }
+
+  filter {
+    name   = "architecture"
+    # not available for arm64
+    values = ["x86_64"]
+  }
+
+  owners = [local.suse_owner_id]
+}
+
+data "aws_ami" "sles_15_sp4_standard" {
+  most_recent = true
+
+  filter {
+    name   = "name"
+    values = ["suse-sles-sap-15-sp4-v*-hvm-ssd-*"]
+  }
+
+  filter {
+    name   = "architecture"
+    # not available for arm64
+    values = ["x86_64"]
+  }
+
+  owners = [local.suse_owner_id]
+}
+
+data "aws_ami" "sles_15_sp5_standard" {
+  most_recent = true
+
+  filter {
+    name   = "name"
+    values = ["suse-sles-sap-15-sp5-v*-hvm-ssd-*"]
+  }
+
+  filter {
+    name   = "architecture"
+    # not available for arm64
+    values = ["x86_64"]
+  }
+
+  owners = [local.suse_owner_id]
+}
+
+data "aws_ami" "leap_154" {
   most_recent = true
   for_each    = local.architectures
 
   filter {
     name   = "name"
-    values = ["openSUSE-Leap-15-5-*-hvm-*"]
+    values = ["openSUSE-Leap-15-4*"]
   }
 
   filter {
@@ -209,7 +284,24 @@ data "aws_ami" "openSUSE_15.5" {
     values = [each.value]
   }
 
-  owners = [local.openSUSE_owner_id]
+  owners = [local.suse_owner_id]
+}
+
+data "aws_ami" "leap_155" {
+  most_recent = true
+  for_each    = local.architectures
+
+  filter {
+    name   = "name"
+    values = ["openSUSE-Leap-15-5*"]
+  }
+
+  filter {
+    name   = "architecture"
+    values = [each.value]
+  }
+
+  owners = [local.suse_owner_id]
 }
 
 data "aws_region" "current" {}
