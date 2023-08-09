@@ -9,11 +9,10 @@ import (
 	"github.com/hashicorp/vault/internal/observability/event"
 )
 
-// newEvent should be used to create an audit event.
-// subtype and format are needed for audit.
-// It will generate an ID if no ID is supplied.
-// Supported options: WithID, WithNow.
-func newEvent(s subtype, f format, opt ...Option) (*auditEvent, error) {
+// NewEvent should be used to create an audit event. The subtype field is needed
+// for audit events. It will generate an ID if no ID is supplied. Supported
+// options: WithID, WithNow.
+func NewEvent(s subtype, opt ...Option) (*auditEvent, error) {
 	const op = "audit.newEvent"
 
 	// Get the default options
@@ -32,11 +31,10 @@ func newEvent(s subtype, f format, opt ...Option) (*auditEvent, error) {
 	}
 
 	audit := &auditEvent{
-		ID:             opts.withID,
-		Timestamp:      opts.withNow,
-		Version:        version,
-		Subtype:        s,
-		RequiredFormat: f,
+		ID:        opts.withID,
+		Timestamp: opts.withNow,
+		Version:   version,
+		Subtype:   s,
 	}
 
 	if err := audit.validate(); err != nil {
@@ -66,11 +64,6 @@ func (a *auditEvent) validate() error {
 	}
 
 	err := a.Subtype.validate()
-	if err != nil {
-		return fmt.Errorf("%s: %w", op, err)
-	}
-
-	err = a.RequiredFormat.validate()
 	if err != nil {
 		return fmt.Errorf("%s: %w", op, err)
 	}
