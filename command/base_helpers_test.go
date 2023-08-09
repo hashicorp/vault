@@ -61,7 +61,7 @@ func TestParseArgsData(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		f.Write([]byte(`{"foo":"bar"}`))
+		f.WriteString(`{"foo":"bar"}`)
 		f.Close()
 		defer os.Remove(f.Name())
 
@@ -82,7 +82,7 @@ func TestParseArgsData(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		f.Write([]byte(`bar`))
+		f.WriteString(`bar`)
 		f.Close()
 		defer os.Remove(f.Name())
 

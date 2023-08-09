@@ -4,7 +4,7 @@
  */
 
 /* eslint-env node */
-/* eslint-disable node/no-extraneous-require */
+/* eslint-disable n/no-extraneous-require */
 'use strict';
 
 var path = require('path');

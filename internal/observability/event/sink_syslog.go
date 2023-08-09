@@ -12,6 +12,8 @@ import (
 	"github.com/hashicorp/eventlogger"
 )
 
+var _ eventlogger.Node = (*SyslogSink)(nil)
+
 // SyslogSink is a sink node which handles writing events to syslog.
 type SyslogSink struct {
 	requiredFormat string
