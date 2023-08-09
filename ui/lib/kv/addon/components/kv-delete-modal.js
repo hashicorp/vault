@@ -11,14 +11,19 @@ import { inject as service } from '@ember/service';
 import { assert } from '@ember/debug';
 
 /**
- * @module KvDeleteModal TODO
+ * @module KvDeleteModal displays a button for a delete type and launches a the respective modal. All destroyRecord network requests are handled inside the component.
  *
  * <KvDeleteModal
-todo
- *  @secret={{@secret}}
+ *  @mode="destroy"
+ *  @secret={{this.model.secret}}
  * />
- * todo
- * @param {model} secret - Ember data model: 'kv/data', the new record saved by the form
+ *
+ * @param {string} mode - Either: delete, destroy, or metadata-delete.
+ * @param {number} version - This is the version the user is currently viewing.
+ * @param {number} currentVersion - This is the current version of the secret.
+ * @param {string} path - The name of the secret.
+ * @param {boolean} canDeleteVersion - True if the user has UPDATE on the kv/delete endpoint and access to send the version.
+ * @param {boolean} canDeleteLatestVersion - True if the user has DELETE on the kv/data endpoint.
  */
 
 export default class KvDeleteModal extends Component {
@@ -31,7 +36,7 @@ export default class KvDeleteModal extends Component {
       case 'delete':
         return 'There are two ways to delete a version of a secret. Both delete actions can be un-deleted later if you need. How would you like to proceed?';
       case 'destroy':
-        return `This action will permanently destroy Version ${this.args.secret.version}
+        return `This action will permanently destroy Version ${this.args.version}
         of the secret, and the secret data cannot be read or recovered later.`;
       case 'metadata-delete':
         return 'This will permanently delete the metadata and versions of the secret. All version history will be removed. This cannot be undone.';
@@ -45,15 +50,15 @@ export default class KvDeleteModal extends Component {
       {
         key: 'delete-specific-version',
         label: 'Delete this version',
-        description: `This deletes Version ${this.args.secret.version} of the secret.`,
-        disabled: !this.args.secret.canDeleteVersion,
+        description: `This deletes Version ${this.args.version} of the secret.`,
+        disabled: !this.args.canDeleteVersion,
         tooltipMessage: 'You do not have permission to delete a specific version.',
       },
       {
         key: 'delete-latest-version',
         label: 'Delete latest version',
         description: 'This deletes the most recent version of the secret.',
-        disabled: !this.args.secret.canDeleteLatestVersion,
+        disabled: !this.args.canDeleteLatestVersion,
         tooltipMessage: 'You do not have permission to delete the latest version.',
       },
     ];
@@ -69,12 +74,12 @@ export default class KvDeleteModal extends Component {
   @(task(function* () {
     try {
       yield this.args.secret.destroyRecord({
-        adapterOptions: { deleteType: this.deleteType, deleteVersions: [this.args.secret.version] },
+        adapterOptions: { deleteType: this.deleteType, deleteVersions: [this.args.version] },
       });
       this.flashMessages.success(
         `Successfully ${this.args.mode === 'delete' ? 'deleted' : 'destroyed'} Version ${
-          this.args.secret.version
-        } of secret ${this.args.secret.path}.`
+          this.args.version
+        } of secret ${this.args.path}.`
       );
       this.router.transitionTo('vault.cluster.secrets.backend.kv.secret');
     } catch (err) {
