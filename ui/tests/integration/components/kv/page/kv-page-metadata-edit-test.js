@@ -111,8 +111,6 @@ module('Integration | Component | kv | Page::Secret::Metadata::Edit', function (
     this.server.post('/kv-engine/metadata/my-secret', (schema, req) => {
       const data = JSON.parse(req.requestBody);
       const expected = {
-        backend: 'kv-engine',
-        path: 'my-secret',
         max_versions: 8,
         cas_required: false,
         delete_version_after: '1000s',
@@ -122,7 +120,7 @@ module('Integration | Component | kv | Page::Secret::Metadata::Edit', function (
           last: 'value',
         },
       };
-      assert.deepEqual(expected, data, 'POST request made to save metadata with correct properties.');
+      assert.propEqual(data, expected, 'POST request made to save metadata with correct properties.');
     });
     await click(FORM.saveBtn);
   });

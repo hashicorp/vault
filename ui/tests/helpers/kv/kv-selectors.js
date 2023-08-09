@@ -49,6 +49,7 @@ export const FORM = {
   inputByAttr: (attr) => `[data-test-input="${attr}"]`,
   toggleJson: '[data-test-toggle-input="json"]',
   toggleMasked: '[data-test-button="toggle-masked"]',
+  toggleMetadata: '[data-test-metadata-toggle]',
   jsonEditor: '[data-test-component="code-mirror-modifier"]',
   ttlValue: (name) => `[data-test-ttl-value="${name}"]`,
   dataInputLabel: ({ isJson = false }) =>

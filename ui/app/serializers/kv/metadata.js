@@ -9,6 +9,8 @@ import { kvMetadataPath } from 'vault/utils/kv-path';
 
 export default class KvMetadataSerializer extends ApplicationSerializer {
   attrs = {
+    backend: { serialize: false },
+    path: { serialize: false },
     oldestVersion: { serialize: false },
     createdTime: { serialize: false },
     updatedTime: { serialize: false },
