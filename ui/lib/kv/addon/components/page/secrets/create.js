@@ -112,7 +112,7 @@ export default class KvSecretCreate extends Component {
   hasChanged(model) {
     const fieldName = model.formFields.map((attr) => attr.name);
     const changedAttrs = Object.keys(model.changedAttributes());
-    // exclusively check form attr changes ('backend' and 'path' are passed to createRecord)
+    // exclusively check if form field attributes have changed ('backend' and 'path' are passed to createRecord)
     return changedAttrs.any((attr) => fieldName.includes(attr));
   }
 
