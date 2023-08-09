@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
 import { module, test } from 'qunit';
 import { setupRenderingTest } from 'ember-qunit';
 import { render, triggerEvent } from '@ember/test-helpers';
@@ -8,7 +13,7 @@ module('Integration | Component | toolbar-link', function (hooks) {
   setupRenderingTest(hooks);
 
   test('it renders', async function (assert) {
-    await render(hbs`<ToolbarLink @params={{array '/secrets'}}>Link</ToolbarLink>`);
+    await render(hbs`<ToolbarLink @route="/secrets">Link</ToolbarLink>`);
 
     assert.dom(this.element).hasText('Link');
     assert.ok(isPresent('.toolbar-link'));
@@ -20,7 +25,7 @@ module('Integration | Component | toolbar-link', function (hooks) {
 
     await render(hbs`
       <ToolbarLink
-        @params={{array '/secrets'}}
+        @route="/secrets"
         @type={{this.type}}
       >
         Test Link
@@ -37,7 +42,7 @@ module('Integration | Component | toolbar-link', function (hooks) {
 
     await render(hbs`
       <ToolbarLink
-        @params={{array '/secrets'}}
+        @route="/secrets"
         @disabled={{true}}
         @disabledTooltip={{this.tooltip}}
       >

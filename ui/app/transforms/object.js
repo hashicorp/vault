@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
 import Transform from '@ember-data/serializer/transform';
 import { typeOf } from '@ember/utils';
 /*

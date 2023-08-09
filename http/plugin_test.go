@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package http
 
 import (
@@ -42,7 +45,6 @@ func getPluginClusterAndCore(t testing.TB, logger log.Logger) (*vault.TestCluste
 
 	cluster := vault.NewTestCluster(benchhelpers.TBtoT(t), coreConfig, &vault.TestClusterOptions{
 		HandlerFunc: Handler,
-		Logger:      logger.Named("testclusteroptions"),
 	})
 	cluster.Start()
 
@@ -52,7 +54,7 @@ func getPluginClusterAndCore(t testing.TB, logger log.Logger) (*vault.TestCluste
 	os.Setenv(pluginutil.PluginCACertPEMEnv, cluster.CACertPEMFile)
 
 	vault.TestWaitActive(benchhelpers.TBtoT(t), core.Core)
-	vault.TestAddTestPlugin(benchhelpers.TBtoT(t), core.Core, "mock-plugin", consts.PluginTypeSecrets, "TestPlugin_PluginMain", []string{}, "")
+	vault.TestAddTestPlugin(benchhelpers.TBtoT(t), core.Core, "mock-plugin", consts.PluginTypeSecrets, "", "TestPlugin_PluginMain", []string{}, "")
 
 	// Mount the mock plugin
 	err = core.Client.Sys().Mount("mock", &api.MountInput{
@@ -81,14 +83,10 @@ func TestPlugin_PluginMain(t *testing.T) {
 	flags := apiClientMeta.FlagSet()
 	flags.Parse(args)
 
-	tlsConfig := apiClientMeta.GetTLSConfig()
-	tlsProviderFunc := api.VaultPluginTLSProvider(tlsConfig)
-
 	factoryFunc := mock.FactoryType(logical.TypeLogical)
 
 	err := plugin.Serve(&plugin.ServeOpts{
 		BackendFactoryFunc: factoryFunc,
-		TLSProviderFunc:    tlsProviderFunc,
 	})
 	if err != nil {
 		t.Fatal(err)

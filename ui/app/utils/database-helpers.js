@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
 export const AVAILABLE_PLUGIN_TYPES = [
   {
     value: 'elasticsearch-database-plugin',

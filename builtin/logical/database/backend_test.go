@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package database
 
 import (
@@ -13,7 +16,9 @@ import (
 	"time"
 
 	"github.com/go-test/deep"
+	"github.com/hashicorp/go-hclog"
 	mongodbatlas "github.com/hashicorp/vault-plugin-database-mongodbatlas"
+	"github.com/hashicorp/vault/helper/builtinplugins"
 	"github.com/hashicorp/vault/helper/namespace"
 	postgreshelper "github.com/hashicorp/vault/helper/testhelpers/postgresql"
 	vaulthttp "github.com/hashicorp/vault/http"
@@ -36,6 +41,7 @@ func getCluster(t *testing.T) (*vault.TestCluster, logical.SystemView) {
 		LogicalBackends: map[string]logical.Factory{
 			"database": Factory,
 		},
+		BuiltinRegistry: builtinplugins.Registry,
 	}
 
 	cluster := vault.NewTestCluster(t, coreConfig, &vault.TestClusterOptions{
@@ -48,12 +54,12 @@ func getCluster(t *testing.T) (*vault.TestCluster, logical.SystemView) {
 	os.Setenv(pluginutil.PluginCACertPEMEnv, cluster.CACertPEMFile)
 
 	sys := vault.TestDynamicSystemView(cores[0].Core, nil)
-	vault.TestAddTestPlugin(t, cores[0].Core, "postgresql-database-plugin", consts.PluginTypeDatabase, "TestBackend_PluginMain_Postgres", []string{}, "")
-	vault.TestAddTestPlugin(t, cores[0].Core, "postgresql-database-plugin-muxed", consts.PluginTypeDatabase, "TestBackend_PluginMain_PostgresMultiplexed", []string{}, "")
-	vault.TestAddTestPlugin(t, cores[0].Core, "mongodb-database-plugin", consts.PluginTypeDatabase, "TestBackend_PluginMain_Mongo", []string{}, "")
-	vault.TestAddTestPlugin(t, cores[0].Core, "mongodb-database-plugin-muxed", consts.PluginTypeDatabase, "TestBackend_PluginMain_MongoMultiplexed", []string{}, "")
-	vault.TestAddTestPlugin(t, cores[0].Core, "mongodbatlas-database-plugin", consts.PluginTypeDatabase, "TestBackend_PluginMain_MongoAtlas", []string{}, "")
-	vault.TestAddTestPlugin(t, cores[0].Core, "mongodbatlas-database-plugin-muxed", consts.PluginTypeDatabase, "TestBackend_PluginMain_MongoAtlasMultiplexed", []string{}, "")
+	vault.TestAddTestPlugin(t, cores[0].Core, "postgresql-database-plugin", consts.PluginTypeDatabase, "", "TestBackend_PluginMain_Postgres", []string{}, "")
+	vault.TestAddTestPlugin(t, cores[0].Core, "postgresql-database-plugin-muxed", consts.PluginTypeDatabase, "", "TestBackend_PluginMain_PostgresMultiplexed", []string{}, "")
+	vault.TestAddTestPlugin(t, cores[0].Core, "mongodb-database-plugin", consts.PluginTypeDatabase, "", "TestBackend_PluginMain_Mongo", []string{}, "")
+	vault.TestAddTestPlugin(t, cores[0].Core, "mongodb-database-plugin-muxed", consts.PluginTypeDatabase, "", "TestBackend_PluginMain_MongoMultiplexed", []string{}, "")
+	vault.TestAddTestPlugin(t, cores[0].Core, "mongodbatlas-database-plugin", consts.PluginTypeDatabase, "", "TestBackend_PluginMain_MongoAtlas", []string{}, "")
+	vault.TestAddTestPlugin(t, cores[0].Core, "mongodbatlas-database-plugin-muxed", consts.PluginTypeDatabase, "", "TestBackend_PluginMain_MongoAtlasMultiplexed", []string{}, "")
 
 	return cluster, sys
 }
@@ -236,6 +242,7 @@ func TestBackend_config_connection(t *testing.T) {
 			"allowed_roles":                      []string{"*"},
 			"root_credentials_rotate_statements": []string{},
 			"password_policy":                    "",
+			"plugin_version":                     "",
 		}
 		configReq.Operation = logical.ReadOperation
 		resp, err = b.HandleRequest(namespace.RootContext(nil), configReq)
@@ -289,6 +296,7 @@ func TestBackend_config_connection(t *testing.T) {
 			"allowed_roles":                      []string{"*"},
 			"root_credentials_rotate_statements": []string{},
 			"password_policy":                    "",
+			"plugin_version":                     "",
 		}
 		configReq.Operation = logical.ReadOperation
 		resp, err = b.HandleRequest(namespace.RootContext(nil), configReq)
@@ -331,6 +339,7 @@ func TestBackend_config_connection(t *testing.T) {
 			"allowed_roles":                      []string{"flu", "barre"},
 			"root_credentials_rotate_statements": []string{},
 			"password_policy":                    "",
+			"plugin_version":                     "",
 		}
 		configReq.Operation = logical.ReadOperation
 		resp, err = b.HandleRequest(namespace.RootContext(nil), configReq)
@@ -728,6 +737,7 @@ func TestBackend_connectionCrud(t *testing.T) {
 		"allowed_roles":                      []string{"plugin-role-test"},
 		"root_credentials_rotate_statements": []string(nil),
 		"password_policy":                    "",
+		"plugin_version":                     "",
 	}
 	req.Operation = logical.ReadOperation
 	resp, err = b.HandleRequest(namespace.RootContext(nil), req)
@@ -1503,7 +1513,7 @@ func TestBackend_AsyncClose(t *testing.T) {
 	// Test that having a plugin that takes a LONG time to close will not cause the cleanup function to take
 	// longer than 750ms.
 	cluster, sys := getCluster(t)
-	vault.TestAddTestPlugin(t, cluster.Cores[0].Core, "hanging-plugin", consts.PluginTypeDatabase, "TestBackend_PluginMain_Hanging", []string{}, "")
+	vault.TestAddTestPlugin(t, cluster.Cores[0].Core, "hanging-plugin", consts.PluginTypeDatabase, "", "TestBackend_PluginMain_Hanging", []string{}, "")
 	t.Cleanup(cluster.Cleanup)
 
 	config := logical.TestBackendConfig()
@@ -1543,6 +1553,15 @@ func TestBackend_AsyncClose(t *testing.T) {
 	case <-timeout.C:
 		t.Error("Hanging plugin caused Close() to take longer than 750ms")
 	case <-done:
+	}
+}
+
+func TestNewDatabaseWrapper_IgnoresBuiltinVersion(t *testing.T) {
+	cluster, sys := getCluster(t)
+	t.Cleanup(cluster.Cleanup)
+	_, err := newDatabaseWrapper(context.Background(), "hana-database-plugin", "v1.0.0+builtin", sys, hclog.Default())
+	if err != nil {
+		t.Fatal(err)
 	}
 }
 

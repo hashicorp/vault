@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package pki
 
 import (
@@ -15,8 +18,16 @@ var ctx = context.Background()
 
 func Test_ConfigsRoundTrip(t *testing.T) {
 	t.Parallel()
-	b, s := createBackendWithStorage(t)
+	b, s := CreateBackendWithStorage(t)
 	sc := b.makeStorageContext(ctx, s)
+
+	// Create an empty key, issuer for testing.
+	key := keyEntry{ID: genKeyId()}
+	err := sc.writeKey(key)
+	require.NoError(t, err)
+	issuer := &issuerEntry{ID: genIssuerId()}
+	err = sc.writeIssuer(issuer)
+	require.NoError(t, err)
 
 	// Verify we handle nothing stored properly
 	keyConfigEmpty, err := sc.getKeysConfig()
@@ -29,10 +40,10 @@ func Test_ConfigsRoundTrip(t *testing.T) {
 
 	// Now attempt to store and reload properly
 	origKeyConfig := &keyConfigEntry{
-		DefaultKeyId: genKeyId(),
+		DefaultKeyId: key.ID,
 	}
 	origIssuerConfig := &issuerConfigEntry{
-		DefaultIssuerId: genIssuerId(),
+		DefaultIssuerId: issuer.ID,
 	}
 
 	err = sc.setKeysConfig(origKeyConfig)
@@ -46,12 +57,12 @@ func Test_ConfigsRoundTrip(t *testing.T) {
 
 	issuerConfig, err := sc.getIssuersConfig()
 	require.NoError(t, err)
-	require.Equal(t, origIssuerConfig, issuerConfig)
+	require.Equal(t, origIssuerConfig.DefaultIssuerId, issuerConfig.DefaultIssuerId)
 }
 
 func Test_IssuerRoundTrip(t *testing.T) {
 	t.Parallel()
-	b, s := createBackendWithStorage(t)
+	b, s := CreateBackendWithStorage(t)
 	sc := b.makeStorageContext(ctx, s)
 	issuer1, key1 := genIssuerAndKey(t, b, s)
 	issuer2, key2 := genIssuerAndKey(t, b, s)
@@ -97,7 +108,7 @@ func Test_IssuerRoundTrip(t *testing.T) {
 
 func Test_KeysIssuerImport(t *testing.T) {
 	t.Parallel()
-	b, s := createBackendWithStorage(t)
+	b, s := CreateBackendWithStorage(t)
 	sc := b.makeStorageContext(ctx, s)
 
 	issuer1, key1 := genIssuerAndKey(t, b, s)
@@ -164,6 +175,41 @@ func Test_KeysIssuerImport(t *testing.T) {
 	require.Equal(t, "", key2Ref.Name)
 }
 
+func Test_IssuerUpgrade(t *testing.T) {
+	t.Parallel()
+	b, s := CreateBackendWithStorage(t)
+	sc := b.makeStorageContext(ctx, s)
+
+	// Make sure that we add OCSP signing to v0 issuers if CRLSigning is enabled
+	issuer, _ := genIssuerAndKey(t, b, s)
+	issuer.Version = 0
+	issuer.Usage.ToggleUsage(OCSPSigningUsage)
+
+	err := sc.writeIssuer(&issuer)
+	require.NoError(t, err, "failed writing out issuer")
+
+	newIssuer, err := sc.fetchIssuerById(issuer.ID)
+	require.NoError(t, err, "failed fetching issuer")
+
+	require.Equal(t, uint(1), newIssuer.Version)
+	require.True(t, newIssuer.Usage.HasUsage(OCSPSigningUsage))
+
+	// If CRLSigning is not present on a v0, we should not have OCSP signing after upgrade.
+	issuer, _ = genIssuerAndKey(t, b, s)
+	issuer.Version = 0
+	issuer.Usage.ToggleUsage(OCSPSigningUsage)
+	issuer.Usage.ToggleUsage(CRLSigningUsage)
+
+	err = sc.writeIssuer(&issuer)
+	require.NoError(t, err, "failed writing out issuer")
+
+	newIssuer, err = sc.fetchIssuerById(issuer.ID)
+	require.NoError(t, err, "failed fetching issuer")
+
+	require.Equal(t, uint(1), newIssuer.Version)
+	require.False(t, newIssuer.Usage.HasUsage(OCSPSigningUsage))
+}
+
 func genIssuerAndKey(t *testing.T, b *backend, s logical.Storage) (issuerEntry, keyEntry) {
 	certBundle := genCertBundle(t, b, s)
 
@@ -183,6 +229,8 @@ func genIssuerAndKey(t *testing.T, b *backend, s logical.Storage) (issuerEntry, 
 		Certificate:  strings.TrimSpace(certBundle.Certificate) + "\n",
 		CAChain:      certBundle.CAChain,
 		SerialNumber: certBundle.SerialNumber,
+		Usage:        AllIssuerUsages,
+		Version:      latestIssuerVersion,
 	}
 
 	return pkiIssuer, pkiKey
@@ -214,10 +262,18 @@ func genCertBundle(t *testing.T, b *backend, s logical.Storage) *certutil.CertBu
 		apiData: apiData,
 		role:    role,
 	}
-	parsedCertBundle, err := generateCert(sc, input, nil, true, b.GetRandomReader())
+	parsedCertBundle, _, err := generateCert(sc, input, nil, true, b.GetRandomReader())
 
 	require.NoError(t, err)
 	certBundle, err := parsedCertBundle.ToCertBundle()
 	require.NoError(t, err)
 	return certBundle
+}
+
+func writeLegacyBundle(t *testing.T, b *backend, s logical.Storage, bundle *certutil.CertBundle) {
+	entry, err := logical.StorageEntryJSON(legacyCertBundlePath, bundle)
+	require.NoError(t, err)
+
+	err = s.Put(context.Background(), entry)
+	require.NoError(t, err)
 }

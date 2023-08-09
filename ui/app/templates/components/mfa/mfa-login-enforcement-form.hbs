@@ -10,7 +10,7 @@
     spellcheck="false"
     value={{@model.name}}
     disabled={{not @model.isNew}}
-    class="input field"
+    class="input field {{if this.errors.name.errors 'has-error-border'}}"
     data-test-mlef-input="name"
     {{on "input" (pipe (pick "target.value") (fn (mut @model.name)))}}
   />
@@ -105,8 +105,7 @@
           <SearchSelect
             @placeholder="Search for an existing target"
             @options={{this.searchSelect.options}}
-            {{! workaround since there is no way provided by component to externally clear selected options }}
-            @selectedOptions={{this.searchSelect.selected}}
+            @parentManageSelected={{this.searchSelect.selected}}
             @shouldRenderName={{true}}
             @selectLimit={{1}}
             @onChange={{this.setTargetValue}}

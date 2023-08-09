@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
 import { createUrlRegEx, urlMatchesAnyPattern } from 'ember-service-worker/service-worker/url-utils';
 
 var patterns = ['/v1/sys/storage/raft/snapshot'];
@@ -23,7 +28,7 @@ function sendMessage(message) {
 
 function authenticateRequest(request) {
   // copy the reaquest headers so we can mutate them
-  let headers = new Headers(request.headers);
+  const headers = new Headers(request.headers);
 
   // get and set vault token so the request is authenticated
   return sendMessage({ action: 'getToken' }).then(function (token) {

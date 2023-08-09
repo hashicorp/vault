@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package sealmigration
 
 import (
@@ -9,7 +12,7 @@ import (
 
 	"github.com/go-test/deep"
 	"github.com/hashicorp/go-hclog"
-	wrapping "github.com/hashicorp/go-kms-wrapping"
+	wrapping "github.com/hashicorp/go-kms-wrapping/v2"
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/helper/testhelpers"
@@ -132,7 +135,11 @@ func ParamTestSealMigrationShamirToTransit_Post14(t *testing.T, logger hclog.Log
 
 	// Migrate the backend from shamir to transit.
 	opts.SealFunc = func() vault.Seal {
-		return tss.MakeSeal(t, sealKeyName)
+		seal, err := tss.MakeSeal(t, sealKeyName)
+		if err != nil {
+			t.Fatal(err)
+		}
+		return seal
 	}
 
 	// Restart each follower with the new config, and migrate to Transit.
@@ -173,7 +180,11 @@ func ParamTestSealMigration_TransitToTransit(t *testing.T, logger hclog.Logger,
 	// Migrate the backend from transit to transit.
 	opts.UnwrapSealFunc = opts.SealFunc
 	opts.SealFunc = func() vault.Seal {
-		return tss2.MakeSeal(t, "transit-seal-key-2")
+		seal, err := tss2.MakeSeal(t, "transit-seal-key-2")
+		if err != nil {
+			t.Fatal(err)
+		}
+		return seal
 	}
 	leaderIdx := migratePost14(t, storage, cluster, opts, cluster.RecoveryKeys)
 	validateMigration(t, storage, cluster, leaderIdx, verifySealConfigTransit)
@@ -256,7 +267,7 @@ func migrateFromTransitToShamir_Pre14(t *testing.T, logger hclog.Logger, storage
 	if err != nil {
 		t.Fatal(err)
 	}
-	verifyBarrierConfig(t, b, wrapping.Shamir, keyShares, keyThreshold, 1)
+	verifyBarrierConfig(t, b, wrapping.WrapperTypeShamir.String(), keyShares, keyThreshold, 1)
 	if r != nil {
 		t.Fatalf("expected nil recovery config, got: %#v", r)
 	}
@@ -279,7 +290,11 @@ func migrateFromShamirToTransit_Pre14(t *testing.T, logger hclog.Logger, storage
 		SkipInit:              true,
 		// N.B. Providing a transit seal puts us in migration mode.
 		SealFunc: func() vault.Seal {
-			return tss.MakeSeal(t, "transit-seal-key")
+			seal, err := tss.MakeSeal(t, "transit-seal-key")
+			if err != nil {
+				t.Fatal(err)
+			}
+			return seal
 		},
 	}
 	storage.Setup(&conf, &opts)
@@ -322,7 +337,8 @@ func migrateFromShamirToTransit_Pre14(t *testing.T, logger hclog.Logger, storage
 }
 
 func validateMigration(t *testing.T, storage teststorage.ReusableStorage,
-	cluster *vault.TestCluster, leaderIdx int, f func(t *testing.T, core *vault.TestClusterCore)) {
+	cluster *vault.TestCluster, leaderIdx int, f func(t *testing.T, core *vault.TestClusterCore),
+) {
 	t.Helper()
 
 	leader := cluster.Cores[leaderIdx]
@@ -523,7 +539,7 @@ func verifySealConfigShamir(t *testing.T, core *vault.TestClusterCore) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	verifyBarrierConfig(t, b, wrapping.Shamir, keyShares, keyThreshold, 1)
+	verifyBarrierConfig(t, b, wrapping.WrapperTypeShamir.String(), keyShares, keyThreshold, 1)
 	if r != nil {
 		t.Fatal("should not have recovery config for shamir")
 	}
@@ -535,8 +551,8 @@ func verifySealConfigTransit(t *testing.T, core *vault.TestClusterCore) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	verifyBarrierConfig(t, b, wrapping.Transit, 1, 1, 1)
-	verifyBarrierConfig(t, r, wrapping.Shamir, keyShares, keyThreshold, 0)
+	verifyBarrierConfig(t, b, wrapping.WrapperTypeTransit.String(), 1, 1, 1)
+	verifyBarrierConfig(t, r, wrapping.WrapperTypeShamir.String(), keyShares, keyThreshold, 0)
 }
 
 // verifyBarrierConfig verifies that a barrier configuration is correct.
@@ -681,7 +697,8 @@ func runShamir(t *testing.T, logger hclog.Logger, storage teststorage.ReusableSt
 
 // initializeTransit initializes a brand new backend storage with Transit.
 func InitializeTransit(t *testing.T, logger hclog.Logger, storage teststorage.ReusableStorage, basePort int,
-	tss *sealhelper.TransitSealServer, sealKeyName string) (*vault.TestCluster, *vault.TestClusterOptions) {
+	tss *sealhelper.TransitSealServer, sealKeyName string,
+) (*vault.TestCluster, *vault.TestClusterOptions) {
 	t.Helper()
 
 	baseClusterPort := basePort + 10
@@ -697,7 +714,11 @@ func InitializeTransit(t *testing.T, logger hclog.Logger, storage teststorage.Re
 		BaseListenAddress:     fmt.Sprintf("127.0.0.1:%d", basePort),
 		BaseClusterListenPort: baseClusterPort,
 		SealFunc: func() vault.Seal {
-			return tss.MakeSeal(t, sealKeyName)
+			seal, err := tss.MakeSeal(t, sealKeyName)
+			if err != nil {
+				t.Fatal(err)
+			}
+			return seal
 		},
 	}
 	storage.Setup(&conf, &opts)
@@ -823,7 +844,7 @@ func joinRaftFollowers(t *testing.T, cluster *vault.TestCluster, useStoredKeys b
 	leaderInfos := []*raft.LeaderJoinInfo{
 		{
 			LeaderAPIAddr: leader.Client.Address(),
-			TLSConfig:     leader.TLSConfig,
+			TLSConfig:     leader.TLSConfig(),
 		},
 	}
 

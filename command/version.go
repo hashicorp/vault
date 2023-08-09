@@ -1,9 +1,12 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package command
 
 import (
 	"strings"
 
-	"github.com/hashicorp/vault/sdk/version"
+	"github.com/hashicorp/vault/version"
 	"github.com/mitchellh/cli"
 	"github.com/posener/complete"
 )

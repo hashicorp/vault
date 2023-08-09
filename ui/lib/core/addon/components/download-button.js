@@ -1,51 +1,80 @@
-import Component from '@ember/component';
-import { computed } from '@ember/object';
-import hbs from 'htmlbars-inline-precompile';
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
 
-export default Component.extend({
-  layout: hbs`{{#if (has-block)}} {{yield}} {{else}} {{actionText}} {{/if}}`,
-  tagName: 'a',
-  role: 'button',
-  attributeBindings: ['role', 'download', 'href'],
-  download: computed('filename', 'extension', function () {
-    return `${this.filename}-${new Date().toISOString()}.${this.extension}`;
-  }),
+import Component from '@glimmer/component';
+import { action } from '@ember/object';
+import { inject as service } from '@ember/service';
+import errorMessage from 'vault/utils/error-message';
+import timestamp from 'vault/utils/timestamp';
+import { tracked } from '@glimmer/tracking';
+import { assert } from '@ember/debug';
+/**
+ * @module DownloadButton
+ * DownloadButton components are an action button used to download data. Both the action text and icon are yielded.
+ * * NOTE: when using in an engine, remember to add the 'download' service to its dependencies (in /engine.js) and map to it in /app.js
+ * [ember-docs](https://ember-engines.com/docs/services)
+ * @example
+ * ```js
+ *   <DownloadButton
+ *     class="button"
+ *     @data={{this.data}}
+ *     @filename={{this.filename}}
+ *     @mime={{this.mime}}
+ *     @extension={{this.extension}}
+ *     @stringify={{true}}
+ *   >
+ *    <Icon @name="download" />
+ *      Download
+ *   </DownloadButton>
+ * ```
+ * @param {string} [filename] - name of file that prefixes the ISO timestamp generated at download
+ * @param {string} [data] - data to download
+ * @param {function} [fetchData] - function that fetches data and returns download content
+ * @param {string} [extension='txt'] - file extension, the download service uses this to determine the mimetype
+ * @param {boolean} [stringify=false] - argument to stringify the data before passing to the File constructor
+ */
 
-  fileLike: computed('data', 'mime', 'stringify', 'download', function () {
-    let file;
-    let data = this.data;
-    let filename = this.download;
-    let mime = this.mime;
-    if (this.stringify) {
-      data = JSON.stringify(data, null, 2);
+export default class DownloadButton extends Component {
+  @service download;
+  @service flashMessages;
+  @tracked fetchedData;
+
+  constructor() {
+    super(...arguments);
+    const hasConflictingArgs = this.args.data && this.args.fetchData;
+    assert(
+      'Only pass either @data or @fetchData, passing both means @data will be overwritten by the return value of @fetchData',
+      !hasConflictingArgs
+    );
+  }
+  get filename() {
+    const ts = timestamp.now().toISOString();
+    return this.args.filename ? this.args.filename + '-' + ts : ts;
+  }
+
+  get content() {
+    if (this.args.stringify) {
+      return JSON.stringify(this.args.data, null, 2);
     }
-    if (window.navigator.msSaveOrOpenBlob) {
-      file = new Blob([data], { type: mime });
-      file.name = filename;
-    } else {
-      file = new File([data], filename, { type: mime });
+    return this.fetchedData || this.args.data;
+  }
+
+  get extension() {
+    return this.args.extension || 'txt';
+  }
+
+  @action
+  async handleDownload() {
+    if (this.args.fetchData) {
+      this.fetchedData = await this.args.fetchData();
     }
-    return file;
-  }),
-
-  href: computed('fileLike', function () {
-    return window.URL.createObjectURL(this.fileLike);
-  }),
-
-  click(event) {
-    if (!window.navigator.msSaveOrOpenBlob) {
-      return;
+    try {
+      this.download.miscExtension(this.filename, this.content, this.extension);
+      this.flashMessages.info(`Downloading ${this.filename}`);
+    } catch (error) {
+      this.flashMessages.danger(errorMessage(error, 'There was a problem downloading. Please try again.'));
     }
-    event.preventDefault();
-    let file = this.fileLike;
-    //lol whyyyy
-    window.navigator.msSaveOrOpenBlob(file, file.name);
-  },
-
-  actionText: 'Download',
-  data: null,
-  filename: null,
-  mime: 'text/plain',
-  extension: 'txt',
-  stringify: false,
-});
+  }
+}

@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package vault
 
 import (
@@ -13,7 +16,7 @@ import (
 	"github.com/hashicorp/vault/helper/metricsutil"
 
 	proto "github.com/golang/protobuf/proto"
-	wrapping "github.com/hashicorp/go-kms-wrapping"
+	wrapping "github.com/hashicorp/go-kms-wrapping/v2"
 	"github.com/hashicorp/vault/sdk/physical"
 	"github.com/hashicorp/vault/vault/seal"
 )
@@ -66,18 +69,22 @@ func (p *phy) Len() int {
 
 func TestAutoSeal_UpgradeKeys(t *testing.T) {
 	core, _, _ := TestCoreUnsealed(t)
-	testSeal := seal.NewTestSeal(nil)
+	testSeal, toggleableWrapper := seal.NewTestSeal(nil)
 
 	var encKeys []string
 	changeKey := func(key string) {
 		encKeys = append(encKeys, key)
-		testSeal.Wrapper.(*wrapping.TestWrapper).SetKeyID(key)
+		toggleableWrapper.Wrapper.(*wrapping.TestWrapper).SetKeyId(key)
 	}
 
 	// Set initial encryption key.
 	changeKey("kaz")
 
-	autoSeal := NewAutoSeal(testSeal)
+	autoSeal, err := NewAutoSeal(testSeal)
+	if err != nil {
+		t.Fatal(err)
+	}
+
 	autoSeal.SetCore(core)
 	pBackend := newTestBackend(t)
 	core.physical = pBackend
@@ -130,14 +137,14 @@ func TestAutoSeal_UpgradeKeys(t *testing.T) {
 			// in encKeys. Iterate over each phyEntry and verify it was
 			// encrypted with its corresponding key in encKeys.
 			for i, phyEntry := range phyEntries {
-				blobInfo := &wrapping.EncryptedBlobInfo{}
+				blobInfo := &wrapping.BlobInfo{}
 				if err := proto.Unmarshal(phyEntry.Value, blobInfo); err != nil {
 					t.Errorf("phyKey = %s: failed to proto decode stored keys: %s", phyKey, err)
 				}
 				if blobInfo.KeyInfo == nil {
 					t.Errorf("phyKey = %s: KeyInfo missing: %+v", phyKey, blobInfo)
 				}
-				if want, got := encKeys[i], blobInfo.KeyInfo.KeyID; want != got {
+				if want, got := encKeys[i], blobInfo.KeyInfo.KeyId; want != got {
 					t.Errorf("phyKey = %s: Incorrect encryption key: want %s, got %s", phyKey, want, got)
 				}
 			}
@@ -185,7 +192,11 @@ func TestAutoSeal_HealthCheck(t *testing.T) {
 	})
 	sealHealthTestIntervalNominal = 10 * time.Millisecond
 	sealHealthTestIntervalUnhealthy = 10 * time.Millisecond
-	autoSeal := NewAutoSeal(testSealAccess)
+	autoSeal, err := NewAutoSeal(testSealAccess)
+	if err != nil {
+		t.Fatal(err)
+	}
+
 	autoSeal.SetCore(core)
 	core.seal = autoSeal
 	autoSeal.StartHealthCheck()

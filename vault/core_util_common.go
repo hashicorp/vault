@@ -1,9 +1,12 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package vault
 
 import (
 	"context"
 
-	uuid "github.com/hashicorp/go-uuid"
+	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/command/server"
 	"github.com/hashicorp/vault/sdk/logical"
 )

@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
 import ApplicationSerializer from './application';
 
 export default ApplicationSerializer.extend({
@@ -8,7 +13,7 @@ export default ApplicationSerializer.extend({
     if (id) {
       payload.path = id;
     }
-    let response = {
+    const response = {
       ...payload.data,
       path: payload.path,
     };

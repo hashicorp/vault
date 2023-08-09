@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
 import { module, test } from 'qunit';
 import { setupRenderingTest } from 'ember-qunit';
 import { render } from '@ember/test-helpers';
@@ -32,7 +37,7 @@ module('Integration | Component | features-selection', function (hooks) {
     await render(hbs`<Wizard::FeaturesSelection/>`);
 
     component.wizardItems.forEach((i) => {
-      assert.equal(
+      assert.strictEqual(
         i.hasDisabledTooltip,
         !enabled[i.text],
         'shows a tooltip only when the wizard item is not enabled'

@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package command
 
 import (
@@ -5,6 +8,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"path"
 	"strings"
 
 	"github.com/hashicorp/vault/api"
@@ -20,10 +24,11 @@ var (
 type KVPatchCommand struct {
 	*BaseCommand
 
-	flagCAS    int
-	flagMethod string
-	flagMount  string
-	testStdin  io.Reader // for tests
+	flagCAS        int
+	flagMethod     string
+	flagMount      string
+	testStdin      io.Reader // for tests
+	flagRemoveData []string
 }
 
 func (c *KVPatchCommand) Synopsis() string {
@@ -75,6 +80,10 @@ Usage: vault kv patch [options] KEY [DATA]
 
       $ vault kv patch -mount=secret -method=rw foo bar=baz
 
+  To remove data from the corresponding path in the key-value store, kv patch can be used.
+
+      $ vault kv patch -mount=secret -remove-data=bar foo
+
   Additional flags and more advanced use cases are detailed below.
 
 ` + c.Flags().Help()
@@ -116,11 +125,18 @@ func (c *KVPatchCommand) Flags() *FlagSets {
 		v2 secrets.`,
 	})
 
+	f.StringSliceVar(&StringSliceVar{
+		Name:    "remove-data",
+		Target:  &c.flagRemoveData,
+		Default: []string{},
+		Usage:   "Key to remove from data. To specify multiple values, specify this flag multiple times.",
+	})
+
 	return set
 }
 
 func (c *KVPatchCommand) AutocompleteArgs() complete.Predictor {
-	return nil
+	return c.PredictVaultFiles()
 }
 
 func (c *KVPatchCommand) AutocompleteFlags() complete.Flags {
@@ -146,7 +162,7 @@ func (c *KVPatchCommand) Run(args []string) int {
 	case len(args) < 1:
 		c.UI.Error(fmt.Sprintf("Not enough arguments (expected >1, got %d)", len(args)))
 		return 1
-	case len(args) == 1:
+	case len(c.flagRemoveData) == 0 && len(args) == 1:
 		c.UI.Error("Must supply data")
 		return 1
 	}
@@ -167,7 +183,7 @@ func (c *KVPatchCommand) Run(args []string) int {
 
 	// If true, we're working with "-mount=secret foo" syntax.
 	// If false, we're using "secret/foo" syntax.
-	mountFlagSyntax := (c.flagMount != "")
+	mountFlagSyntax := c.flagMount != ""
 
 	var (
 		mountPath   string
@@ -179,11 +195,14 @@ func (c *KVPatchCommand) Run(args []string) int {
 	if mountFlagSyntax {
 		// In this case, this arg is the secret path (e.g. "foo").
 		partialPath = sanitizePath(args[0])
-		mountPath = sanitizePath(c.flagMount)
-		_, v2, err = isKVv2(mountPath, client)
+		mountPath, v2, err = isKVv2(sanitizePath(c.flagMount), client)
 		if err != nil {
 			c.UI.Error(err.Error())
 			return 2
+		}
+
+		if v2 {
+			partialPath = path.Join(mountPath, partialPath)
 		}
 	} else {
 		// In this case, this arg is a path-like combination of mountPath/secretPath.
@@ -201,10 +220,20 @@ func (c *KVPatchCommand) Run(args []string) int {
 		return 2
 	}
 
-	fullPath := addPrefixToKVPath(partialPath, mountPath, "data")
+	fullPath := addPrefixToKVPath(partialPath, mountPath, "data", false)
 	if err != nil {
 		c.UI.Error(err.Error())
 		return 2
+	}
+
+	// collecting data to be removed
+	if newData == nil {
+		newData = make(map[string]interface{})
+	}
+
+	for _, key := range c.flagRemoveData {
+		// A null in a JSON merge patch payload will remove the associated key
+		newData[key] = nil
 	}
 
 	// Check the method and behave accordingly
@@ -225,6 +254,14 @@ func (c *KVPatchCommand) Run(args []string) int {
 
 	if code != 0 {
 		return code
+	}
+	if secret == nil {
+		// Don't output anything if there's no secret
+		return 0
+	}
+
+	if c.flagField != "" {
+		return PrintRawField(c.UI, secret, c.flagField)
 	}
 
 	if Format(c.UI) == "table" {

@@ -1,10 +1,16 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
 import Component from '@glimmer/component';
 import layout from '../templates/components/message-error';
 import { setComponentTemplate } from '@ember/component';
 
 /**
  * @module MessageError
- * `MessageError` extracts an error from a model or a passed error and displays it using the `AlertBanner` component.
+ * Renders form errors using the <Hds::Alert> component and extracts errors from
+ * a model, passed errorMessage or array of errors and displays each in a separate banner.
  *
  * @example
  * ```js
@@ -19,7 +25,7 @@ import { setComponentTemplate } from '@ember/component';
 
 class MessageError extends Component {
   get displayErrors() {
-    let { errorMessage, errors, model } = this.args;
+    const { errorMessage, errors, model } = this.args;
     if (errorMessage) {
       return [errorMessage];
     }
@@ -29,7 +35,7 @@ class MessageError extends Component {
     }
 
     if (model?.isError) {
-      let adapterError = model?.adapterError;
+      const adapterError = model?.adapterError;
       if (!adapterError) {
         return null;
       }

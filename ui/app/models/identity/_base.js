@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
 import Model from '@ember-data/model';
 import { assert } from '@ember/debug';
 import { computed } from '@ember/object';
@@ -13,7 +18,7 @@ export default Model.extend({
   }),
 
   identityType: computed('constructor.modelName', function () {
-    let modelType = this.constructor.modelName.split('/')[1];
+    const modelType = this.constructor.modelName.split('/')[1];
     return modelType;
   }),
 });

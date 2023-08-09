@@ -1,4 +1,9 @@
 /**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
+/**
  * @module GenerateCredentialsDatabase
  * GenerateCredentialsDatabase component is used on the credentials route for the Database metrics.
  * The component assumes that you will need to make an ajax request using queryRecord to return a model for the component that has username, password, leaseId and leaseDuration

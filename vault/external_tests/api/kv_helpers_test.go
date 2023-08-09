@@ -1,7 +1,11 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package api
 
 import (
 	"context"
+	"errors"
 	"reflect"
 	"testing"
 	"time"
@@ -80,7 +84,7 @@ func TestKVHelpers(t *testing.T) {
 	}
 
 	//// v1 ////
-	t.Run("kv v1 helpers", func(t *testing.T) {
+	t.Run("kv v1: put, get, and delete data", func(t *testing.T) {
 		if err := client.KVv1(v1MountPath).Put(context.Background(), secretPath, secretData); err != nil {
 			t.Fatal(err)
 		}
@@ -97,10 +101,25 @@ func TestKVHelpers(t *testing.T) {
 		if err := client.KVv1(v1MountPath).Delete(context.Background(), secretPath); err != nil {
 			t.Fatal(err)
 		}
+
+		_, err = client.KVv1(v1MountPath).Get(context.Background(), secretPath)
+		if !errors.Is(err, api.ErrSecretNotFound) {
+			t.Fatalf("KVv1.Get is expected to return an api.ErrSecretNotFound wrapped error after secret had been deleted; got %v", err)
+		}
+	})
+
+	t.Run("kv v1: get secret that does not exist", func(t *testing.T) {
+		_, err = client.KVv1(v1MountPath).Get(context.Background(), "does/not/exist")
+		if err == nil {
+			t.Fatalf("KVv1.Get is expected to return an error for a missing secret")
+		}
+		if !errors.Is(err, api.ErrSecretNotFound) {
+			t.Fatalf("KVv1.Get is expected to return an api.ErrSecretNotFound wrapped error for a missing secret; got %v", err)
+		}
 	})
 
 	//// v2 ////
-	t.Run("get data and full metadata", func(t *testing.T) {
+	t.Run("kv v2: get data and full metadata", func(t *testing.T) {
 		teardownTest, originalSecret := setupKVv2Test(t)
 		defer teardownTest(t)
 
@@ -125,7 +144,27 @@ func TestKVHelpers(t *testing.T) {
 		}
 	})
 
-	t.Run("multiple versions", func(t *testing.T) {
+	t.Run("kv v2: get secret that does not exist", func(t *testing.T) {
+		teardownTest, _ := setupKVv2Test(t)
+		defer teardownTest(t)
+
+		_, err = client.KVv2(v2MountPath).Get(context.Background(), "does/not/exist")
+		if !errors.Is(err, api.ErrSecretNotFound) {
+			t.Fatalf("KVv2.Get is expected to return an api.ErrSecretNotFound wrapped error for a missing secret; got %v", err)
+		}
+
+		_, err = client.KVv2(v2MountPath).GetMetadata(context.Background(), "does/not/exist")
+		if !errors.Is(err, api.ErrSecretNotFound) {
+			t.Fatalf("KVv2.GetMetadata is expected to return an api.ErrSecretNotFound wrapped error for a missing secret; got %v", err)
+		}
+
+		_, err = client.KVv2(v2MountPath).GetVersion(context.Background(), secretPath, 99)
+		if !errors.Is(err, api.ErrSecretNotFound) {
+			t.Fatalf("KVv2.GetVersion is expected to return an api.ErrSecretNotFound wrapped error for a missing secret version; got %v", err)
+		}
+	})
+
+	t.Run("kv v2: multiple versions", func(t *testing.T) {
 		teardownTest, _ := setupKVv2Test(t)
 		defer teardownTest(t)
 
@@ -149,7 +188,7 @@ func TestKVHelpers(t *testing.T) {
 		}
 	})
 
-	t.Run("delete and undelete", func(t *testing.T) {
+	t.Run("kv v2: delete and undelete", func(t *testing.T) {
 		teardownTest, _ := setupKVv2Test(t)
 		defer teardownTest(t)
 
@@ -193,9 +232,18 @@ func TestKVHelpers(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
+
+		s1AfterUndelete, err := client.KVv2(v2MountPath).GetVersion(context.Background(), secretPath, 1)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		if s1AfterUndelete.Data == nil {
+			t.Fatalf("data is empty for the first version of the secret despite this version being undeleted")
+		}
 	})
 
-	t.Run("destroy", func(t *testing.T) {
+	t.Run("kv v2: destroy", func(t *testing.T) {
 		teardownTest, _ := setupKVv2Test(t)
 		defer teardownTest(t)
 
@@ -214,7 +262,7 @@ func TestKVHelpers(t *testing.T) {
 		}
 	})
 
-	t.Run("use named functional options and generic WithOption", func(t *testing.T) {
+	t.Run("kv v2: use named functional options and generic WithOption", func(t *testing.T) {
 		teardownTest, _ := setupKVv2Test(t)
 		defer teardownTest(t)
 
@@ -238,7 +286,7 @@ func TestKVHelpers(t *testing.T) {
 		}
 	})
 
-	t.Run("patch", func(t *testing.T) {
+	t.Run("kv v2: patch", func(t *testing.T) {
 		teardownTest, _ := setupKVv2Test(t)
 		defer teardownTest(t)
 
@@ -273,14 +321,6 @@ func TestKVHelpers(t *testing.T) {
 		}
 		if patchRW.VersionMetadata.Version != 4 {
 			t.Fatalf("incorrect version %d, expected 4", patchRW.VersionMetadata.Version)
-		}
-
-		// patch something that doesn't exist
-		_, err = client.KVv2(v2MountPath).Patch(context.Background(), "nonexistent-secret", map[string]interface{}{
-			"no": "nope",
-		})
-		if err == nil {
-			t.Fatal("expected error from trying to patch something that doesn't exist")
 		}
 
 		secretAfterPatches, err := client.KVv2(v2MountPath).Get(context.Background(), secretPath)
@@ -353,7 +393,25 @@ func TestKVHelpers(t *testing.T) {
 		}
 	})
 
-	t.Run("roll back to an old version", func(t *testing.T) {
+	t.Run("kv v2: patch a secret that does not exist", func(t *testing.T) {
+		for _, method := range [][]api.KVOption{
+			{},
+			{api.WithMergeMethod(api.KVMergeMethodPatch)},
+			{api.WithMergeMethod(api.KVMergeMethodReadWrite)},
+		} {
+			_, err = client.KVv2(v2MountPath).Patch(
+				context.Background(),
+				"does/not/exist",
+				map[string]interface{}{"no": "nope"},
+				method...,
+			)
+			if !errors.Is(err, api.ErrSecretNotFound) {
+				t.Fatalf("expected an api.ErrSecretNotFound wrapped error from trying to patch something that doesn't exist for %v method; got: %v", method, err)
+			}
+		}
+	})
+
+	t.Run("kv v2: roll back to an old version", func(t *testing.T) {
 		teardownTest, _ := setupKVv2Test(t)
 		defer teardownTest(t)
 
@@ -402,7 +460,7 @@ func TestKVHelpers(t *testing.T) {
 		}
 	})
 
-	t.Run("delete all versions of a secret", func(t *testing.T) {
+	t.Run("kv v2: delete all versions of a secret", func(t *testing.T) {
 		teardownTest, _ := setupKVv2Test(t)
 		defer teardownTest(t)
 
@@ -429,7 +487,7 @@ func TestKVHelpers(t *testing.T) {
 		}
 	})
 
-	t.Run("create a secret with metadata but no data", func(t *testing.T) {
+	t.Run("kv v2: create a secret with metadata but no data", func(t *testing.T) {
 		// put and patch metadata
 		////
 		noDataSecretPath := "empty"
@@ -457,7 +515,7 @@ func TestKVHelpers(t *testing.T) {
 		}
 	})
 
-	t.Run("put and patch metadata", func(t *testing.T) {
+	t.Run("kv v2: put and patch metadata", func(t *testing.T) {
 		teardownTest, _ := setupKVv2Test(t)
 		defer teardownTest(t)
 
@@ -529,7 +587,7 @@ func TestKVHelpers(t *testing.T) {
 		}
 	})
 
-	t.Run("patch with explicit zero values", func(t *testing.T) {
+	t.Run("kv v2: patch with explicit zero values", func(t *testing.T) {
 		teardownTest, _ := setupKVv2Test(t)
 		defer teardownTest(t)
 

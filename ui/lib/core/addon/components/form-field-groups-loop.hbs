@@ -1,0 +1,46 @@
+{{#each (get @model this.fieldGroups) as |fieldGroup|}}
+  {{#each-in fieldGroup as |group fields|}}
+    {{#if (eq group "default")}}
+      {{#each fields as |attr|}}
+        {{! template-lint-configure simple-unless "warn"  }}
+        {{#unless (and (not-eq @mode "create") (eq attr.name "name"))}}
+          <FormField
+            data-test-field={{true}}
+            @attr={{attr}}
+            @model={{@model}}
+            @modelValidations={{@modelValidations}}
+            @showHelpText={{@showHelpText}}
+          >
+            {{yield attr}}
+          </FormField>
+        {{/unless}}
+      {{/each}}
+    {{else}}
+      {{#let (camelize (concat "show" group)) as |prop|}}
+        <ToggleButton
+          @isOpen={{get @model prop}}
+          @openLabel={{concat "Hide " group}}
+          @closedLabel={{group}}
+          @onClick={{fn (mut (get @model prop))}}
+          class="is-block"
+          data-test-toggle-group={{group}}
+        />
+        {{#if (get @model prop)}}
+          <div class="box is-marginless">
+            {{#each fields as |attr|}}
+              <FormField
+                data-test-field={{true}}
+                @attr={{attr}}
+                @model={{@model}}
+                @modelValidations={{@modelValidations}}
+                @showHelpText={{@showHelpText}}
+              >
+                {{yield attr}}
+              </FormField>
+            {{/each}}
+          </div>
+        {{/if}}
+      {{/let}}
+    {{/if}}
+  {{/each-in}}
+{{/each}}

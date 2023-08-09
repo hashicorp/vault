@@ -1,10 +1,15 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package rafttests
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"math"
 	"reflect"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -12,18 +17,21 @@ import (
 	"github.com/hashicorp/go-secure-stdlib/strutil"
 	autopilot "github.com/hashicorp/raft-autopilot"
 	"github.com/hashicorp/vault/api"
+	"github.com/hashicorp/vault/helper/constants"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/helper/testhelpers"
 	"github.com/hashicorp/vault/helper/testhelpers/teststorage"
 	"github.com/hashicorp/vault/physical/raft"
 	"github.com/hashicorp/vault/vault"
+	"github.com/hashicorp/vault/version"
 	"github.com/kr/pretty"
 	testingintf "github.com/mitchellh/go-testing-interface"
 	"github.com/stretchr/testify/require"
 )
 
 func TestRaft_Autopilot_Disable(t *testing.T) {
-	cluster := raftCluster(t, &RaftClusterOpts{
+	t.Parallel()
+	cluster, _ := raftCluster(t, &RaftClusterOpts{
 		DisableFollowerJoins: true,
 		InmemCluster:         true,
 		// Not setting EnableAutopilot here.
@@ -37,7 +45,8 @@ func TestRaft_Autopilot_Disable(t *testing.T) {
 }
 
 func TestRaft_Autopilot_Stabilization_And_State(t *testing.T) {
-	cluster := raftCluster(t, &RaftClusterOpts{
+	t.Parallel()
+	cluster, _ := raftCluster(t, &RaftClusterOpts{
 		DisableFollowerJoins: true,
 		InmemCluster:         true,
 		EnableAutopilot:      true,
@@ -108,7 +117,8 @@ func TestRaft_Autopilot_Stabilization_And_State(t *testing.T) {
 }
 
 func TestRaft_Autopilot_Configuration(t *testing.T) {
-	cluster := raftCluster(t, &RaftClusterOpts{
+	t.Parallel()
+	cluster, _ := raftCluster(t, &RaftClusterOpts{
 		DisableFollowerJoins: true,
 		InmemCluster:         true,
 		EnableAutopilot:      true,
@@ -184,6 +194,14 @@ func TestRaft_Autopilot_Configuration(t *testing.T) {
 	writeConfigFunc(writableConfig, true)
 	configCheckFunc(config)
 
+	// Check dead server last contact threshold minimum
+	writableConfig = map[string]interface{}{
+		"cleanup_dead_servers":               true,
+		"dead_server_last_contact_threshold": "5s",
+	}
+	writeConfigFunc(writableConfig, true)
+	configCheckFunc(config)
+
 	// Ensure that the configuration stays across reboots
 	leaderCore := cluster.Cores[0]
 	testhelpers.EnsureCoreSealed(t, cluster.Cores[0])
@@ -195,6 +213,7 @@ func TestRaft_Autopilot_Configuration(t *testing.T) {
 // TestRaft_Autopilot_Stabilization_Delay verifies that if a node takes a long
 // time to become ready, it doesn't get promoted to voter until then.
 func TestRaft_Autopilot_Stabilization_Delay(t *testing.T) {
+	t.Parallel()
 	conf, opts := teststorage.ClusterSetup(nil, nil, teststorage.RaftBackendSetup)
 	conf.DisableAutopilot = false
 	opts.InmemClusterLayers = true
@@ -254,8 +273,8 @@ func TestRaft_Autopilot_Stabilization_Delay(t *testing.T) {
 		}
 	}
 
-	join(t, cluster.Cores[1], client, cluster)
-	join(t, cluster.Cores[2], client, cluster)
+	joinAndUnseal(t, cluster.Cores[1], cluster, false, false)
+	joinAndUnseal(t, cluster.Cores[2], cluster, false, false)
 
 	core2shouldBeHealthyAt := time.Now().Add(timeToHealthyCore2)
 
@@ -300,7 +319,8 @@ func TestRaft_Autopilot_Stabilization_Delay(t *testing.T) {
 }
 
 func TestRaft_AutoPilot_Peersets_Equivalent(t *testing.T) {
-	cluster := raftCluster(t, &RaftClusterOpts{
+	t.Parallel()
+	cluster, _ := raftCluster(t, &RaftClusterOpts{
 		InmemCluster:         true,
 		EnableAutopilot:      true,
 		DisableFollowerJoins: true,
@@ -316,8 +336,8 @@ func TestRaft_AutoPilot_Peersets_Equivalent(t *testing.T) {
 	})
 	require.NoError(t, err)
 
-	join(t, cluster.Cores[1], client, cluster)
-	join(t, cluster.Cores[2], client, cluster)
+	joinAsVoterAndUnseal(t, cluster.Cores[1], cluster)
+	joinAsVoterAndUnseal(t, cluster.Cores[2], cluster)
 
 	deadline := time.Now().Add(10 * time.Second)
 	var core0Peers, core1Peers, core2Peers []raft.Peer
@@ -345,7 +365,152 @@ func TestRaft_AutoPilot_Peersets_Equivalent(t *testing.T) {
 	require.Equal(t, core1Peers, core2Peers)
 }
 
+// TestRaft_VotersStayVoters ensures that autopilot doesn't demote a node just
+// because it hasn't been heard from in some time.
+func TestRaft_VotersStayVoters(t *testing.T) {
+	t.Parallel()
+	cluster, _ := raftCluster(t, &RaftClusterOpts{
+		DisableFollowerJoins: true,
+		InmemCluster:         true,
+		EnableAutopilot:      true,
+		PhysicalFactoryConfig: map[string]interface{}{
+			"performance_multiplier":       "5",
+			"autopilot_reconcile_interval": "300ms",
+			"autopilot_update_interval":    "100ms",
+		},
+		VersionMap: map[int]string{
+			0: version.Version,
+			1: version.Version,
+			2: version.Version,
+		},
+	})
+	defer cluster.Cleanup()
+	testhelpers.WaitForActiveNode(t, cluster)
+
+	client := cluster.Cores[0].Client
+
+	config, err := client.Sys().RaftAutopilotConfiguration()
+	require.NoError(t, err)
+	joinAndStabilizeAndPromote(t, cluster.Cores[1], client, cluster, config, "core-1", 2)
+	joinAndStabilizeAndPromote(t, cluster.Cores[2], client, cluster, config, "core-2", 3)
+
+	errIfNonVotersExist := func() error {
+		t.Helper()
+		resp, err := client.Sys().RaftAutopilotState()
+		if err != nil {
+			t.Fatal(err)
+		}
+		for k, v := range resp.Servers {
+			if v.Status == "non-voter" {
+				return fmt.Errorf("node %q is a non-voter", k)
+			}
+		}
+		return nil
+	}
+	testhelpers.RetryUntil(t, 10*time.Second, errIfNonVotersExist)
+
+	// Core0 is the leader, sealing it will both cause an election - and the
+	// new leader won't have seen any heartbeats initially - and create a "down"
+	// node that won't be sending heartbeats.
+	testhelpers.EnsureCoreSealed(t, cluster.Cores[0])
+	time.Sleep(config.ServerStabilizationTime + 2*time.Second)
+	client = cluster.Cores[1].Client
+	err = errIfNonVotersExist()
+	require.NoError(t, err)
+}
+
+// TestRaft_Autopilot_DeadServerCleanup tests that dead servers are correctly
+// removed by Vault and autopilot when a node stops and a replacement node joins.
+// The expected behavior is that removing a node from a 3 node cluster wouldn't
+// remove it from Raft until a replacement voter had joined and stabilized/been promoted.
+func TestRaft_Autopilot_DeadServerCleanup(t *testing.T) {
+	t.Parallel()
+	conf, opts := teststorage.ClusterSetup(nil, nil, teststorage.RaftBackendSetup)
+	conf.DisableAutopilot = false
+	opts.NumCores = 4
+	opts.SetupFunc = nil
+	opts.PhysicalFactoryConfig = map[string]interface{}{
+		"autopilot_reconcile_interval": "300ms",
+		"autopilot_update_interval":    "100ms",
+	}
+
+	cluster := vault.NewTestCluster(t, conf, opts)
+	cluster.Start()
+	defer cluster.Cleanup()
+	leader, addressProvider := setupLeaderAndUnseal(t, cluster)
+
+	// Join 2 extra nodes manually, store the 3rd for later
+	core1 := cluster.Cores[1]
+	core2 := cluster.Cores[2]
+	core3 := cluster.Cores[3]
+	core1.UnderlyingRawStorage.(*raft.RaftBackend).SetServerAddressProvider(addressProvider)
+	core2.UnderlyingRawStorage.(*raft.RaftBackend).SetServerAddressProvider(addressProvider)
+	core3.UnderlyingRawStorage.(*raft.RaftBackend).SetServerAddressProvider(addressProvider)
+	joinAsVoterAndUnseal(t, core1, cluster)
+	joinAsVoterAndUnseal(t, core2, cluster)
+	// Do not join node 3
+	testhelpers.WaitForNodesExcludingSelectedStandbys(t, cluster, 3)
+
+	config, err := leader.Client.Sys().RaftAutopilotConfiguration()
+	require.NoError(t, err)
+	require.True(t, isHealthyAfterStabilization(t, leader, config.ServerStabilizationTime))
+
+	// Ensure Autopilot has the aggressive settings
+	config.CleanupDeadServers = true
+	config.ServerStabilizationTime = 5 * time.Second
+	config.DeadServerLastContactThreshold = 1 * time.Minute
+	config.MaxTrailingLogs = 10
+	config.LastContactThreshold = 10 * time.Second
+	config.MinQuorum = 3
+	config.DisableUpgradeMigration = true
+
+	// We can't use Client.Sys().PutRaftAutopilotConfiguration(config) in OSS as disable_upgrade_migration isn't in OSS
+	b, err := json.Marshal(&config)
+	require.NoError(t, err)
+	var m map[string]interface{}
+	err = json.Unmarshal(b, &m)
+	require.NoError(t, err)
+	if !constants.IsEnterprise {
+		delete(m, "disable_upgrade_migration")
+	}
+	_, err = leader.Client.Logical().Write("sys/storage/raft/autopilot/configuration", m)
+	require.NoError(t, err)
+
+	// Observe for healthy state
+	state, err := leader.Client.Sys().RaftAutopilotState()
+	require.NoError(t, err)
+	require.True(t, state.Healthy)
+
+	// Kill a node (core-2)
+	cluster.StopCore(t, 2)
+	// Wait for just over the dead server threshold to ensure the core is classed as 'dead'
+	time.Sleep(config.DeadServerLastContactThreshold + 2*time.Second)
+
+	// Observe for an unhealthy state (but we still have 3 voters according to Raft)
+	state, err = leader.Client.Sys().RaftAutopilotState()
+	require.NoError(t, err)
+	require.False(t, state.Healthy)
+	require.Len(t, state.Voters, 3)
+
+	// Join node 3 now
+	joinAsVoterAndUnseal(t, core3, cluster)
+
+	// Stabilization time
+	require.True(t, isHealthyAfterStabilization(t, leader, config.ServerStabilizationTime))
+
+	// Observe for healthy and contains 3 correct voters
+	state, err = leader.Client.Sys().RaftAutopilotState()
+	require.NoError(t, err)
+	require.True(t, state.Healthy)
+	require.Len(t, state.Voters, 3)
+	require.Contains(t, state.Voters, "core-0")
+	require.Contains(t, state.Voters, "core-1")
+	require.NotContains(t, state.Voters, "core-2")
+	require.Contains(t, state.Voters, "core-3")
+}
+
 func joinAndStabilizeAndPromote(t *testing.T, core *vault.TestClusterCore, client *api.Client, cluster *vault.TestCluster, config *api.AutopilotConfig, nodeID string, numServers int) {
+	t.Helper()
 	joinAndStabilize(t, core, client, cluster, config, nodeID, numServers)
 
 	// Now that the server is stable, wait for autopilot to reconcile and
@@ -372,7 +537,7 @@ func joinAndStabilizeAndPromote(t *testing.T, core *vault.TestClusterCore, clien
 
 func joinAndStabilize(t *testing.T, core *vault.TestClusterCore, client *api.Client, cluster *vault.TestCluster, config *api.AutopilotConfig, nodeID string, numServers int) {
 	t.Helper()
-	join(t, core, client, cluster)
+	joinAndUnseal(t, core, cluster, false, false)
 	time.Sleep(2 * time.Second)
 
 	state, err := client.Sys().RaftAutopilotState()
@@ -399,16 +564,90 @@ func joinAndStabilize(t *testing.T, core *vault.TestClusterCore, client *api.Cli
 	}
 }
 
-func join(t *testing.T, core *vault.TestClusterCore, client *api.Client, cluster *vault.TestCluster) {
+// joinAsVoterAndUnseal joins the specified core to the specified cluster as a voter and unseals it.
+// It will wait (up to a timeout) for the core to be fully unsealed before returning
+func joinAsVoterAndUnseal(t *testing.T, core *vault.TestClusterCore, cluster *vault.TestCluster) {
 	t.Helper()
+	joinAndUnseal(t, core, cluster, false, true)
+}
+
+// joinAndUnseal joins the specified core to the specified cluster and unseals it.
+// You can specify if the core should be joined as a voter/non-voter,
+// and whether to wait (up to a timeout) for the core to be unsealed before returning.
+func joinAndUnseal(t *testing.T, core *vault.TestClusterCore, cluster *vault.TestCluster, nonVoter bool, waitForUnseal bool) {
+	t.Helper()
+	leader, leaderAddr := clusterLeader(t, cluster)
 	_, err := core.JoinRaftCluster(namespace.RootContext(context.Background()), []*raft.LeaderJoinInfo{
 		{
-			LeaderAPIAddr: client.Address(),
-			TLSConfig:     cluster.Cores[0].TLSConfig,
+			LeaderAPIAddr: leaderAddr,
+			TLSConfig:     leader.TLSConfig(),
 			Retry:         true,
 		},
-	}, false)
+	}, nonVoter)
 	require.NoError(t, err)
+
 	time.Sleep(1 * time.Second)
 	cluster.UnsealCore(t, core)
+	if waitForUnseal {
+		waitForCoreUnseal(t, core)
+	}
+}
+
+// clusterLeader gets the leader node and its address from the specified cluster
+func clusterLeader(t *testing.T, cluster *vault.TestCluster) (*vault.TestClusterCore, string) {
+	t.Helper()
+	for _, core := range cluster.Cores {
+		isLeader, addr, _, err := core.Leader()
+		require.NoError(t, err)
+		if isLeader {
+			return core, addr
+		}
+	}
+
+	t.Fatal("unable to find leader")
+	return nil, ""
+}
+
+// setupLeaderAndUnseal configures and unseals the leader node.
+// It will wait until the node is active before returning the core and the address of the leader.
+func setupLeaderAndUnseal(t *testing.T, cluster *vault.TestCluster) (*vault.TestClusterCore, *testhelpers.TestRaftServerAddressProvider) {
+	t.Helper()
+	leader, _ := clusterLeader(t, cluster)
+
+	// Lots of tests seem to do this when they deal with a TestRaftServerAddressProvider, it makes the test work rather than error out.
+	atomic.StoreUint32(&vault.TestingUpdateClusterAddr, 1)
+
+	addressProvider := &testhelpers.TestRaftServerAddressProvider{Cluster: cluster}
+	testhelpers.EnsureCoreSealed(t, leader)
+	leader.UnderlyingRawStorage.(*raft.RaftBackend).SetServerAddressProvider(addressProvider)
+	cluster.UnsealCore(t, leader)
+	vault.TestWaitActive(t, leader.Core)
+
+	return leader, addressProvider
+}
+
+// waitForCoreUnseal waits until the specified core is unsealed.
+// It fails the calling test if the deadline has elapsed and the core is still sealed.
+func waitForCoreUnseal(t *testing.T, core *vault.TestClusterCore) {
+	t.Helper()
+	deadline := time.Now().Add(30 * time.Second)
+	for time.Now().Before(deadline) {
+		if !core.Sealed() {
+			return
+		}
+		time.Sleep(time.Second)
+	}
+	t.Fatalf("expected core %v to unseal before deadline but it has not", core.NodeID)
+}
+
+// isHealthyAfterStabilization will use the supplied leader core to query the
+// health of Raft Autopilot just after the specified deadline.
+func isHealthyAfterStabilization(t *testing.T, leaderCore *vault.TestClusterCore, stabilizationTime time.Duration) bool {
+	t.Helper()
+	timeoutGrace := 2 * time.Second
+	time.Sleep(stabilizationTime + timeoutGrace)
+	state, err := leaderCore.Client.Sys().RaftAutopilotState()
+	require.NoError(t, err)
+	require.NotNil(t, state)
+	return state.Healthy
 }

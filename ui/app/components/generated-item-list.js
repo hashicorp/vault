@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
 import { inject as service } from '@ember/service';
 import Component from '@glimmer/component';
 import { action } from '@ember/object';
@@ -31,7 +36,7 @@ export default class GeneratedItemList extends Component {
 
   @action
   refreshItemList() {
-    let route = getOwner(this).lookup(`route:${this.router.currentRouteName}`);
+    const route = getOwner(this).lookup(`route:${this.router.currentRouteName}`);
     this.store.clearAllDatasets();
     route.refresh();
   }

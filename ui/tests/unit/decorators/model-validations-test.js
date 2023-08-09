@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
 import { module, test } from 'qunit';
 import { setupTest } from 'ember-qunit';
 import { withModelValidations } from 'vault/decorators/model-validations';
@@ -33,7 +38,7 @@ module('Unit | Decorators | ModelValidations', function (hooks) {
     try {
       createClass();
     } catch (e) {
-      assert.equal(e.message, 'Validations object must be provided to constructor for setup');
+      assert.strictEqual(e.message, 'Validations object must be provided to constructor for setup');
     }
   });
 
@@ -69,7 +74,7 @@ module('Unit | Decorators | ModelValidations', function (hooks) {
     assert.false(v1.isValid, 'isValid state is correct when errors exist');
     assert.deepEqual(
       v1.state,
-      { foo: { isValid: false, errors: [message] } },
+      { foo: { isValid: false, errors: [message], warnings: [] } },
       'Correct state returned when property is invalid'
     );
 
@@ -78,7 +83,7 @@ module('Unit | Decorators | ModelValidations', function (hooks) {
     assert.true(v2.isValid, 'isValid state is correct when no errors exist');
     assert.deepEqual(
       v2.state,
-      { foo: { isValid: true, errors: [] } },
+      { foo: { isValid: true, errors: [], warnings: [] } },
       'Correct state returned when property is valid'
     );
   });
@@ -92,7 +97,7 @@ module('Unit | Decorators | ModelValidations', function (hooks) {
     };
     const fooClass = createClass(validations);
     const v1 = fooClass.validate();
-    assert.equal(
+    assert.strictEqual(
       v1.invalidFormMessage,
       'There are 2 errors with this form.',
       'error message says form as 2 errors'
@@ -100,7 +105,7 @@ module('Unit | Decorators | ModelValidations', function (hooks) {
 
     fooClass.integer = 9;
     const v2 = fooClass.validate();
-    assert.equal(
+    assert.strictEqual(
       v2.invalidFormMessage,
       'There is an error with this form.',
       'error message says form has an error'
@@ -108,6 +113,24 @@ module('Unit | Decorators | ModelValidations', function (hooks) {
 
     fooClass.foo = true;
     const v3 = fooClass.validate();
-    assert.equal(v3.invalidFormMessage, null, 'invalidFormMessage is null when form is valid');
+    assert.strictEqual(v3.invalidFormMessage, null, 'invalidFormMessage is null when form is valid');
+  });
+
+  test('it should validate warnings', function (assert) {
+    const message = 'Value contains whitespace.';
+    const validations = {
+      foo: [
+        {
+          type: 'containsWhiteSpace',
+          message,
+          level: 'warn',
+        },
+      ],
+    };
+    const fooClass = createClass(validations);
+    fooClass.foo = 'foo bar';
+    const { state, isValid } = fooClass.validate();
+    assert.true(isValid, 'Model is considered valid when there are only warnings');
+    assert.strictEqual(state.foo.warnings.join(' '), message, 'Warnings are returned');
   });
 });

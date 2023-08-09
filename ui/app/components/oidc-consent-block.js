@@ -1,4 +1,9 @@
 /**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
+/**
  * @module OidcConsentBlock
  * OidcConsentBlock components are used to show the consent form for the OIDC Authorization Code Flow
  *
@@ -26,7 +31,7 @@ export default class OidcConsentBlockComponent extends Component {
 
   buildUrl(urlString, params) {
     try {
-      let url = new URL(urlString);
+      const url = new URL(urlString);
       Object.keys(params).forEach((key) => {
         if (params[key] && validParameters.includes(key)) {
           url.searchParams.append(key, params[key]);
@@ -34,7 +39,7 @@ export default class OidcConsentBlockComponent extends Component {
       });
       return url;
     } catch (e) {
-      console.debug('DEBUG: parsing url failed for', urlString);
+      console.debug('DEBUG: parsing url failed for', urlString); // eslint-disable-line
       throw new Error('Invalid URL');
     }
   }
@@ -42,8 +47,8 @@ export default class OidcConsentBlockComponent extends Component {
   @action
   handleSubmit(evt) {
     evt.preventDefault();
-    let { redirect, ...params } = this.args;
-    let redirectUrl = this.buildUrl(redirect, params);
+    const { redirect, ...params } = this.args;
+    const redirectUrl = this.buildUrl(redirect, params);
     if (Ember.testing) {
       this.args.testRedirect(redirectUrl.toString());
     } else {

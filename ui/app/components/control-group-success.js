@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
 import { inject as service } from '@ember/service';
 import Component from '@ember/component';
 import { task } from 'ember-concurrency';
@@ -16,10 +21,10 @@ export default Component.extend({
   unwrapData: null,
 
   unwrap: task(function* (token) {
-    let adapter = this.store.adapterFor('tools');
+    const adapter = this.store.adapterFor('tools');
     this.set('error', null);
     try {
-      let response = yield adapter.toolAction('unwrap', null, { clientToken: token });
+      const response = yield adapter.toolAction('unwrap', null, { clientToken: token });
       this.set('unwrapData', response.auth || response.data);
       this.controlGroup.deleteControlGroupToken(this.model.id);
     } catch (e) {
@@ -29,7 +34,7 @@ export default Component.extend({
 
   markAndNavigate: task(function* () {
     this.controlGroup.markTokenForUnwrap(this.model.id);
-    let { url } = this.controlGroupResponse.uiParams;
+    const { url } = this.controlGroupResponse.uiParams;
     yield this.router.transitionTo(url);
   }).drop(),
 });

@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
 import ApplicationAdapter from './application';
 
 export default class MfaMethodAdapter extends ApplicationAdapter {
@@ -46,7 +51,7 @@ export default class MfaMethodAdapter extends ApplicationAdapter {
 
   buildURL(modelName, id, snapshot, requestType) {
     if (requestType === 'POST') {
-      let url = `${super.buildURL(modelName)}/${snapshot.attr('type')}`;
+      const url = `${super.buildURL(modelName)}/${snapshot.attr('type')}`;
       return id ? `${url}/${id}` : url;
     }
     return super.buildURL(...arguments);

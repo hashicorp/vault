@@ -1,9 +1,13 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
 import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 import { click, visit } from '@ember/test-helpers';
 import authPage from 'vault/tests/pages/auth';
-import logout from 'vault/tests/pages/logout';
 
 module('Acceptance | raft storage', function (hooks) {
   setupApplicationTest(hooks);
@@ -16,9 +20,6 @@ module('Acceptance | raft storage', function (hooks) {
     );
     this.server.get('/sys/license/features', () => ({}));
     await authPage.login();
-  });
-  hooks.afterEach(function () {
-    return logout.visit();
   });
 
   test('it should render correct number of raft peers', async function (assert) {
@@ -41,7 +42,7 @@ module('Acceptance | raft storage', function (hooks) {
     await visit('/vault/secrets');
     await visit('/vault/storage/raft');
     const store = this.owner.lookup('service:store');
-    assert.equal(
+    assert.strictEqual(
       store.peekAll('server').length,
       2,
       'Store contains 2 server records since remove peer was triggered externally'
@@ -55,7 +56,7 @@ module('Acceptance | raft storage', function (hooks) {
     this.server.get('/sys/storage/raft/configuration', () => this.config);
     this.server.post('/sys/storage/raft/remove-peer', (schema, req) => {
       const body = JSON.parse(req.requestBody);
-      assert.equal(
+      assert.strictEqual(
         body.server_id,
         this.config.data.config.servers[1].node_id,
         'Remove peer request made with node id'

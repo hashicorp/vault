@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
 import { attribute, clickable, isVisible, focusable, text } from 'ember-cli-page-object';
 import { triggerEvent, focus } from '@ember/test-helpers';
 

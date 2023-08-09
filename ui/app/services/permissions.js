@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
 import Service, { inject as service } from '@ember/service';
 import { task } from 'ember-concurrency';
 
@@ -5,6 +10,7 @@ const API_PATHS = {
   access: {
     methods: 'sys/auth',
     mfa: 'identity/mfa/method',
+    oidc: 'identity/oidc/client',
     entities: 'identity/entity/id',
     groups: 'identity/group/id',
     leases: 'sys/leases/lookup',
@@ -44,6 +50,7 @@ const API_PATHS_TO_ROUTE_PARAMS = {
   'sys/namespaces': { route: 'vault.cluster.access.namespaces', models: [] },
   'sys/control-group/': { route: 'vault.cluster.access.control-groups', models: [] },
   'identity/mfa/method': { route: 'vault.cluster.access.mfa', models: [] },
+  'identity/oidc/client': { route: 'vault.cluster.access.oidc', models: [] },
 };
 
 /*
@@ -67,7 +74,7 @@ export default Service.extend({
     }
 
     try {
-      let resp = yield this.store.adapterFor('permissions').query();
+      const resp = yield this.store.adapterFor('permissions').query();
       this.setPaths(resp);
       return;
     } catch (err) {
@@ -88,12 +95,17 @@ export default Service.extend({
     this.set('canViewAll', null);
   },
 
-  hasNavPermission(navItem, routeParams) {
+  hasNavPermission(navItem, routeParams, requireAll) {
     if (routeParams) {
-      // viewing the entity and groups pages require the list capability, while the others require the default, which is anything other than deny
-      let capability = routeParams === 'entities' || routeParams === 'groups' ? ['list'] : [null];
-
-      return this.hasPermission(API_PATHS[navItem][routeParams], capability);
+      // check that the user has permission to access all (requireAll = true) or any of the routes when array is passed
+      // useful for hiding nav headings when user does not have access to any of the links
+      const params = Array.isArray(routeParams) ? routeParams : [routeParams];
+      const evalMethod = !Array.isArray(routeParams) || requireAll ? 'every' : 'some';
+      return params[evalMethod]((param) => {
+        // viewing the entity and groups pages require the list capability, while the others require the default, which is anything other than deny
+        const capability = param === 'entities' || param === 'groups' ? ['list'] : [null];
+        return this.hasPermission(API_PATHS[navItem][param], capability);
+      });
     }
     return Object.values(API_PATHS[navItem]).some((path) => this.hasPermission(path));
   },

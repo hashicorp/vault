@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package awsauth
 
 import (
@@ -1021,31 +1024,33 @@ func TestBackend_PathBlacklistRoleTag(t *testing.T) {
 	}
 }
 
-/* This is an acceptance test.
-   Requires the following env vars:
-   TEST_AWS_EC2_RSA2048
-   TEST_AWS_EC2_PKCS7
-   TEST_AWS_EC2_IDENTITY_DOCUMENT
-   TEST_AWS_EC2_IDENTITY_DOCUMENT_SIG
-   TEST_AWS_EC2_AMI_ID
-   TEST_AWS_EC2_ACCOUNT_ID
-   TEST_AWS_EC2_IAM_ROLE_ARN
+/*
+This is an acceptance test.
 
-   If this is being run on an EC2 instance, you can set the environment vars using this bash snippet:
+	Requires the following env vars:
+	TEST_AWS_EC2_RSA2048
+	TEST_AWS_EC2_PKCS7
+	TEST_AWS_EC2_IDENTITY_DOCUMENT
+	TEST_AWS_EC2_IDENTITY_DOCUMENT_SIG
+	TEST_AWS_EC2_AMI_ID
+	TEST_AWS_EC2_ACCOUNT_ID
+	TEST_AWS_EC2_IAM_ROLE_ARN
 
-   export TEST_AWS_EC2_RSA2048=$(curl -s http://169.254.169.254/latest/dynamic/instance-identity/rsa2048)
-   export TEST_AWS_EC2_PKCS7=$(curl -s http://169.254.169.254/latest/dynamic/instance-identity/pkcs7)
-   export TEST_AWS_EC2_IDENTITY_DOCUMENT=$(curl -s http://169.254.169.254/latest/dynamic/instance-identity/document | base64 -w 0)
-   export TEST_AWS_EC2_IDENTITY_DOCUMENT_SIG=$(curl -s http://169.254.169.254/latest/dynamic/instance-identity/signature | tr -d '\n')
-   export TEST_AWS_EC2_AMI_ID=$(curl -s http://169.254.169.254/latest/meta-data/ami-id)
-   export TEST_AWS_EC2_IAM_ROLE_ARN=$(aws iam get-role --role-name $(curl -q http://169.254.169.254/latest/meta-data/iam/security-credentials/ -S -s) --query Role.Arn --output text)
-   export TEST_AWS_EC2_ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
+	If this is being run on an EC2 instance, you can set the environment vars using this bash snippet:
 
-   If the test is not being run on an EC2 instance that has access to
-   credentials using EC2RoleProvider, on top of the above vars, following
-   needs to be set:
-   TEST_AWS_SECRET_KEY
-   TEST_AWS_ACCESS_KEY
+	export TEST_AWS_EC2_RSA2048=$(curl -s http://169.254.169.254/latest/dynamic/instance-identity/rsa2048)
+	export TEST_AWS_EC2_PKCS7=$(curl -s http://169.254.169.254/latest/dynamic/instance-identity/pkcs7)
+	export TEST_AWS_EC2_IDENTITY_DOCUMENT=$(curl -s http://169.254.169.254/latest/dynamic/instance-identity/document | base64 -w 0)
+	export TEST_AWS_EC2_IDENTITY_DOCUMENT_SIG=$(curl -s http://169.254.169.254/latest/dynamic/instance-identity/signature | tr -d '\n')
+	export TEST_AWS_EC2_AMI_ID=$(curl -s http://169.254.169.254/latest/meta-data/ami-id)
+	export TEST_AWS_EC2_IAM_ROLE_ARN=$(aws iam get-role --role-name $(curl -q http://169.254.169.254/latest/meta-data/iam/security-credentials/ -S -s) --query Role.Arn --output text)
+	export TEST_AWS_EC2_ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
+
+	If the test is not being run on an EC2 instance that has access to
+	credentials using EC2RoleProvider, on top of the above vars, following
+	needs to be set:
+	TEST_AWS_SECRET_KEY
+	TEST_AWS_ACCESS_KEY
 */
 func TestBackendAcc_LoginWithInstanceIdentityDocAndAccessListIdentity(t *testing.T) {
 	for _, path := range []string{"identity-whitelist/", "identity-accesslist/"} {
@@ -1519,6 +1524,7 @@ func TestBackendAcc_LoginWithCallerIdentity(t *testing.T) {
 		return
 	}
 
+	ctx := context.Background()
 	storage := &logical.InmemStorage{}
 	config := logical.TestBackendConfig()
 	config.StorageView = storage
@@ -1597,7 +1603,7 @@ func TestBackendAcc_LoginWithCallerIdentity(t *testing.T) {
 		Storage:   storage,
 		Data:      clientConfigData,
 	}
-	_, err = b.HandleRequest(context.Background(), clientRequest)
+	_, err = b.HandleRequest(ctx, clientRequest)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1611,7 +1617,7 @@ func TestBackendAcc_LoginWithCallerIdentity(t *testing.T) {
 		Storage:   storage,
 		Data:      configIdentityData,
 	}
-	resp, err := b.HandleRequest(context.Background(), configIdentityRequest)
+	resp, err := b.HandleRequest(ctx, configIdentityRequest)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1631,7 +1637,7 @@ func TestBackendAcc_LoginWithCallerIdentity(t *testing.T) {
 		Storage:   storage,
 		Data:      roleData,
 	}
-	resp, err = b.HandleRequest(context.Background(), roleRequest)
+	resp, err = b.HandleRequest(ctx, roleRequest)
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("bad: failed to create role: resp:%#v\nerr:%v", resp, err)
 	}
@@ -1648,7 +1654,7 @@ func TestBackendAcc_LoginWithCallerIdentity(t *testing.T) {
 		Storage:   storage,
 		Data:      roleDataEc2,
 	}
-	resp, err = b.HandleRequest(context.Background(), roleRequestEc2)
+	resp, err = b.HandleRequest(ctx, roleRequestEc2)
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("bad: failed to create role; resp:%#v\nerr:%v", resp, err)
 	}
@@ -1686,7 +1692,7 @@ func TestBackendAcc_LoginWithCallerIdentity(t *testing.T) {
 		Storage:   storage,
 		Data:      loginData,
 	}
-	resp, err = b.HandleRequest(context.Background(), loginRequest)
+	resp, err = b.HandleRequest(ctx, loginRequest)
 	if err != nil || resp == nil || !resp.IsError() {
 		t.Errorf("bad: expected failed login due to missing header: resp:%#v\nerr:%v", resp, err)
 	}
@@ -1709,7 +1715,7 @@ func TestBackendAcc_LoginWithCallerIdentity(t *testing.T) {
 		Storage:   storage,
 		Data:      loginData,
 	}
-	resp, err = b.HandleRequest(context.Background(), loginRequest)
+	resp, err = b.HandleRequest(ctx, loginRequest)
 	if err != nil || resp == nil || !resp.IsError() {
 		t.Errorf("bad: expected failed login due to invalid header: resp:%#v\nerr:%v", resp, err)
 	}
@@ -1728,13 +1734,13 @@ func TestBackendAcc_LoginWithCallerIdentity(t *testing.T) {
 		Storage:   storage,
 		Data:      loginData,
 	}
-	resp, err = b.HandleRequest(context.Background(), loginRequest)
+	resp, err = b.HandleRequest(ctx, loginRequest)
 	if err != nil || resp == nil || !resp.IsError() {
 		t.Errorf("bad: expected failed login due to invalid role: resp:%#v\nerr:%v", resp, err)
 	}
 
 	loginData["role"] = "ec2only"
-	resp, err = b.HandleRequest(context.Background(), loginRequest)
+	resp, err = b.HandleRequest(ctx, loginRequest)
 	if err != nil || resp == nil || !resp.IsError() {
 		t.Errorf("bad: expected failed login due to bad auth type: resp:%#v\nerr:%v", resp, err)
 	}
@@ -1742,7 +1748,7 @@ func TestBackendAcc_LoginWithCallerIdentity(t *testing.T) {
 	// finally, the happy path test :)
 
 	loginData["role"] = testValidRoleName
-	resp, err = b.HandleRequest(context.Background(), loginRequest)
+	resp, err = b.HandleRequest(ctx, loginRequest)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1765,7 +1771,7 @@ func TestBackendAcc_LoginWithCallerIdentity(t *testing.T) {
 		Schema: b.pathLogin().Fields,
 	}
 	// ensure we can renew
-	resp, err = b.pathLoginRenew(context.Background(), renewReq, emptyLoginFd)
+	resp, err = b.pathLoginRenew(ctx, renewReq, emptyLoginFd)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1783,17 +1789,17 @@ func TestBackendAcc_LoginWithCallerIdentity(t *testing.T) {
 	// pick up the fake user ID
 	roleData["bound_iam_principal_arn"] = entity.canonicalArn()
 	roleRequest.Path = "role/" + testValidRoleName
-	resp, err = b.HandleRequest(context.Background(), roleRequest)
+	resp, err = b.HandleRequest(ctx, roleRequest)
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("bad: failed to recreate role: resp:%#v\nerr:%v", resp, err)
 	}
-	resp, err = b.HandleRequest(context.Background(), loginRequest)
+	resp, err = b.HandleRequest(ctx, loginRequest)
 	if err != nil || resp == nil || !resp.IsError() {
 		t.Errorf("bad: expected failed login due to changed AWS role ID: resp: %#v\nerr:%v", resp, err)
 	}
 
 	// and ensure a renew no longer works
-	resp, err = b.pathLoginRenew(context.Background(), renewReq, emptyLoginFd)
+	resp, err = b.pathLoginRenew(ctx, renewReq, emptyLoginFd)
 	if err == nil || (resp != nil && !resp.IsError()) {
 		t.Errorf("bad: expected failed renew due to changed AWS role ID: resp: %#v", resp)
 	}
@@ -1806,13 +1812,13 @@ func TestBackendAcc_LoginWithCallerIdentity(t *testing.T) {
 	wildcardEntity.FriendlyName = "*"
 	roleData["bound_iam_principal_arn"] = []string{wildcardEntity.canonicalArn(), "arn:aws:iam::123456789012:role/DoesNotExist/Vault_Fake_Role*"}
 	roleRequest.Path = "role/" + wildcardRoleName
-	resp, err = b.HandleRequest(context.Background(), roleRequest)
+	resp, err = b.HandleRequest(ctx, roleRequest)
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("bad: failed to create wildcard roles: resp:%#v\nerr:%v", resp, err)
 	}
 
 	loginData["role"] = wildcardRoleName
-	resp, err = b.HandleRequest(context.Background(), loginRequest)
+	resp, err = b.HandleRequest(ctx, loginRequest)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1821,7 +1827,7 @@ func TestBackendAcc_LoginWithCallerIdentity(t *testing.T) {
 	}
 	// and ensure we can renew
 	renewReq = generateRenewRequest(storage, resp.Auth)
-	resp, err = b.pathLoginRenew(context.Background(), renewReq, emptyLoginFd)
+	resp, err = b.pathLoginRenew(ctx, renewReq, emptyLoginFd)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1832,7 +1838,17 @@ func TestBackendAcc_LoginWithCallerIdentity(t *testing.T) {
 		t.Fatalf("got error when renewing: %#v", *resp)
 	}
 	// ensure the cache is populated
-	cachedArn := b.getCachedUserId(resp.Auth.Metadata["client_user_id"])
+
+	clientUserIDRaw, ok := resp.Auth.InternalData["client_user_id"]
+	if !ok {
+		t.Errorf("client_user_id not found in response")
+	}
+	clientUserID, ok := clientUserIDRaw.(string)
+	if !ok {
+		t.Errorf("client_user_id is not a string: %#v", clientUserIDRaw)
+	}
+
+	cachedArn := b.getCachedUserId(clientUserID)
 	if cachedArn == "" {
 		t.Errorf("got empty ARN back from user ID cache; expected full arn")
 	}
@@ -1841,13 +1857,13 @@ func TestBackendAcc_LoginWithCallerIdentity(t *testing.T) {
 	period := 600 * time.Second
 	roleData["period"] = period.String()
 	roleRequest.Path = "role/" + testValidRoleName
-	resp, err = b.HandleRequest(context.Background(), roleRequest)
+	resp, err = b.HandleRequest(ctx, roleRequest)
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("bad: failed to create wildcard role: resp:%#v\nerr:%v", resp, err)
 	}
 
 	loginData["role"] = testValidRoleName
-	resp, err = b.HandleRequest(context.Background(), loginRequest)
+	resp, err = b.HandleRequest(ctx, loginRequest)
 	if err != nil {
 		t.Fatal(err)
 	}

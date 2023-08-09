@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
 import { module, test } from 'qunit';
 import { setupRenderingTest } from 'ember-qunit';
 import { render } from '@ember/test-helpers';
@@ -20,11 +25,12 @@ module('Integration | Component | chevron', function (hooks) {
     await render(hbs`<Chevron @direction='left' @isButton={{true}} />`);
     assert.dom('.flight-icon').doesNotHaveClass('hs-icon-button-right', 'renders');
 
-    let promise = waitForError();
+    const promise = waitForError();
     render(hbs`<Chevron @direction='lol' />`);
-    let err = await promise;
+    const err = await promise;
+
     assert.ok(
-      err.message.includes('The direction property of <vault@component:chevron:'),
+      err.message.includes('The direction property of Chevron'),
       'asserts about unsupported direction'
     );
   });

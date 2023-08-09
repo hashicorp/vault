@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
 import { module, test } from 'qunit';
 import { setupRenderingTest } from 'ember-qunit';
 import { create } from 'ember-cli-page-object';
@@ -34,7 +39,7 @@ module('Integration | Component | json-editor', function (hooks) {
         @readOnly={{true}}
       />`);
 
-    assert.equal(component.title, 'Test title', 'renders the provided title');
+    assert.strictEqual(component.title, 'Test title', 'renders the provided title');
     assert.true(component.hasToolbar, 'renders the toolbar');
     assert.true(component.hasJSONEditor, 'renders the code mirror modifier');
     assert.ok(component.canEdit, 'json editor can be edited');

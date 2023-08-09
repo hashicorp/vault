@@ -7,7 +7,7 @@
         @icon="alert-circle"
         @bottomBorder={{true}}
         @subTitle={{join ". " this.mfaErrors}}
-        class="is-box-shadowless"
+        class="is-shadowless"
       >
         <button type="button" class="button is-ghost is-transparent" {{on "click" (action "onMfaErrorDismiss")}}>
           <Icon @name="chevron-left" />
@@ -22,14 +22,23 @@
         <LogoEdition aria-label="Sign in with Hashicorp Vault" />
       </div>
     {{else}}
+      <div class="is-flex-v-centered has-bottom-margin-xxl">
+        <div class="brand-icon-large">
+          <Icon @name="vault" @size="24" @stretched={{true}} />
+        </div>
+      </div>
       <div class="is-flex-row">
         {{#if this.mfaAuthData}}
           <button type="button" class="icon-button" {{on "click" (fn (mut this.mfaAuthData) null)}}>
             <Icon @name="arrow-left" @size="24" aria-label="Back to login" class="icon-blue" />
           </button>
+        {{else if this.waitingForOktaNumberChallenge}}
+          <button type="button" class="icon-button" {{on "click" (action "cancelAuthentication")}}>
+            <Icon @name="arrow-left" @size="24" aria-label="Back to login" class="icon-blue" />
+          </button>
         {{/if}}
         <h1 class="title is-3">
-          {{if this.mfaAuthData "Authenticate" "Sign in to Vault"}}
+          {{if (or this.mfaAuthData this.waitingForOktaNumberChallenge) "Authenticate" "Sign in to Vault"}}
         </h1>
       </div>
     {{/if}}
@@ -78,6 +87,7 @@
               <div class="field">
                 <div class="control">
                   <input
+                    data-test-auth-form-ns-input
                     value={{this.namespaceQueryParam}}
                     placeholder="/ (Root)"
                     oninput={{perform this.updateNamespace value="target.value"}}
@@ -113,6 +123,10 @@
         @redirectTo={{this.redirectTo}}
         @selectedAuth={{this.authMethod}}
         @onSuccess={{action "onAuthResponse"}}
+        @setOktaNumberChallenge={{fn (mut this.waitingForOktaNumberChallenge)}}
+        @waitingForOktaNumberChallenge={{this.waitingForOktaNumberChallenge}}
+        @setCancellingAuth={{fn (mut this.cancelAuth)}}
+        @cancelAuthForOktaNumberChallenge={{this.cancelAuth}}
       />
     {{/if}}
   </Page.content>

@@ -37,9 +37,10 @@
 <Toolbar>
   <ToolbarActions>
     <ToolbarLink
-      data-test-entity-create-link={{this.itemType}}
+      @route="vault.cluster.access.method.item.create"
+      @model={{this.itemType}}
       @type="add"
-      @params={{array "vault.cluster.access.method.item.create" this.itemType}}
+      data-test-entity-create-link={{this.itemType}}
     >
       Create
       {{singularize this.itemType}}

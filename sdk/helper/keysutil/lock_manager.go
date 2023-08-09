@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package keysutil
 
 import (
@@ -36,6 +39,9 @@ type PolicyRequest struct {
 	// The key type
 	KeyType KeyType
 
+	// The key size for variable key size algorithms
+	KeySize int
+
 	// Whether it should be derived
 	Derived bool
 
@@ -56,6 +62,12 @@ type PolicyRequest struct {
 
 	// AllowImportedKeyRotation indicates whether an imported key may be rotated by Vault
 	AllowImportedKeyRotation bool
+
+	// Indicates whether a private or public key is imported/upserted
+	IsPrivateKey bool
+
+	// The UUID of the managed key, if using one
+	ManagedKeyUUID string
 }
 
 type LockManager struct {
@@ -373,6 +385,17 @@ func (lm *LockManager) GetPolicy(ctx context.Context, req PolicyRequest, rand io
 				cleanup()
 				return nil, false, fmt.Errorf("key derivation and convergent encryption not supported for keys of type %v", req.KeyType)
 			}
+		case KeyType_HMAC:
+			if req.Derived || req.Convergent {
+				cleanup()
+				return nil, false, fmt.Errorf("key derivation and convergent encryption not supported for keys of type %v", req.KeyType)
+			}
+
+		case KeyType_MANAGED_KEY:
+			if req.Derived || req.Convergent {
+				cleanup()
+				return nil, false, fmt.Errorf("key derivation and convergent encryption not supported for keys of type %v", req.KeyType)
+			}
 
 		default:
 			cleanup()
@@ -387,6 +410,7 @@ func (lm *LockManager) GetPolicy(ctx context.Context, req PolicyRequest, rand io
 			Exportable:           req.Exportable,
 			AllowPlaintextBackup: req.AllowPlaintextBackup,
 			AutoRotatePeriod:     req.AutoRotatePeriod,
+			KeySize:              req.KeySize,
 		}
 
 		if req.Derived {
@@ -403,7 +427,11 @@ func (lm *LockManager) GetPolicy(ctx context.Context, req PolicyRequest, rand io
 		}
 
 		// Performs the actual persist and does setup
-		err = p.Rotate(ctx, req.Storage, rand)
+		if p.Type == KeyType_MANAGED_KEY {
+			err = p.RotateManagedKey(ctx, req.Storage, req.ManagedKeyUUID)
+		} else {
+			err = p.Rotate(ctx, req.Storage, rand)
+		}
 		if err != nil {
 			cleanup()
 			return nil, false, err
@@ -486,7 +514,7 @@ func (lm *LockManager) ImportPolicy(ctx context.Context, req PolicyRequest, key 
 		}
 	}
 
-	err = p.Import(ctx, req.Storage, key, rand)
+	err = p.ImportPublicOrPrivate(ctx, req.Storage, key, req.IsPrivateKey, rand)
 	if err != nil {
 		return fmt.Errorf("error importing key: %s", err)
 	}

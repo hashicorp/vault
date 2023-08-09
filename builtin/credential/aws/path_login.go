@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package awsauth
 
 import (
@@ -18,14 +21,18 @@ import (
 
 	"github.com/aws/aws-sdk-go/aws"
 	awsClient "github.com/aws/aws-sdk-go/aws/client"
+	"github.com/aws/aws-sdk-go/aws/endpoints"
 	"github.com/aws/aws-sdk-go/service/ec2"
 	"github.com/aws/aws-sdk-go/service/iam"
+	"github.com/aws/aws-sdk-go/service/sts"
 	"github.com/hashicorp/errwrap"
 	cleanhttp "github.com/hashicorp/go-cleanhttp"
 	"github.com/hashicorp/go-retryablehttp"
 	"github.com/hashicorp/go-secure-stdlib/awsutil"
+	"github.com/hashicorp/go-secure-stdlib/parseutil"
 	"github.com/hashicorp/go-secure-stdlib/strutil"
 	uuid "github.com/hashicorp/go-uuid"
+
 	"github.com/hashicorp/vault/builtin/credential/aws/pkcs7"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/cidrutil"
@@ -52,6 +59,10 @@ var (
 func (b *backend) pathLogin() *framework.Path {
 	return &framework.Path{
 		Pattern: "login$",
+		DisplayAttrs: &framework.DisplayAttributes{
+			OperationPrefix: operationPrefixAWS,
+			OperationVerb:   "login",
+		},
 		Fields: map[string]*framework.FieldSchema{
 			"role": {
 				Type: framework.TypeString,
@@ -103,8 +114,8 @@ This must match the request body included in the signature.`,
 			"iam_request_headers": {
 				Type: framework.TypeHeader,
 				Description: `Key/value pairs of headers for use in the
-sts:GetCallerIdentity HTTP requests headers when auth_type is iam. Can be either 
-a Base64-encoded, JSON-serialized string, or a JSON object of key/value pairs. 
+sts:GetCallerIdentity HTTP requests headers when auth_type is iam. Can be either
+a Base64-encoded, JSON-serialized string, or a JSON object of key/value pairs.
 This must at a minimum include the headers over which AWS has included a  signature.`,
 			},
 			"identity": {
@@ -310,6 +321,24 @@ func (b *backend) pathLoginIamGetRoleNameCallerIdAndEntity(ctx context.Context, 
 		}
 	}
 
+	// Extract and use a regional STS endpoint
+	// based on the region set in the Authorization header.
+	if config.UseSTSRegionFromClient {
+		clientSpecifiedRegion, err := awsRegionFromHeader(headers.Get("Authorization"))
+		if err != nil {
+			return "", nil, nil, logical.ErrorResponse("region missing from Authorization header"), nil
+		}
+
+		url, err := stsRegionalEndpoint(clientSpecifiedRegion)
+		if err != nil {
+			return "", nil, nil, logical.ErrorResponse(err.Error()), nil
+		}
+
+		b.Logger().Debug("use_sts_region_from_client set; using region specified from header", "region", clientSpecifiedRegion)
+		endpoint = url
+	}
+
+	b.Logger().Debug("submitting caller identity request", "endpoint", endpoint)
 	callerID, err := submitCallerIdentityRequest(ctx, maxRetries, method, endpoint, parsedUrl, body, headers)
 	if err != nil {
 		return "", nil, nil, logical.ErrorResponse(fmt.Sprintf("error making upstream request: %v", err)), nil
@@ -337,7 +366,7 @@ func (b *backend) pathLoginResolveRoleIam(ctx context.Context, req *logical.Requ
 
 // instanceIamRoleARN fetches the IAM role ARN associated with the given
 // instance profile name
-func (b *backend) instanceIamRoleARN(iamClient *iam.IAM, instanceProfileName string) (string, error) {
+func (b *backend) instanceIamRoleARN(ctx context.Context, iamClient *iam.IAM, instanceProfileName string) (string, error) {
 	if iamClient == nil {
 		return "", fmt.Errorf("nil iamClient")
 	}
@@ -345,7 +374,7 @@ func (b *backend) instanceIamRoleARN(iamClient *iam.IAM, instanceProfileName str
 		return "", fmt.Errorf("missing instance profile name")
 	}
 
-	profile, err := iamClient.GetInstanceProfile(&iam.GetInstanceProfileInput{
+	profile, err := iamClient.GetInstanceProfileWithContext(ctx, &iam.GetInstanceProfileInput{
 		InstanceProfileName: aws.String(instanceProfileName),
 	})
 	if err != nil {
@@ -379,7 +408,7 @@ func (b *backend) validateInstance(ctx context.Context, s logical.Storage, insta
 		return nil, err
 	}
 
-	status, err := ec2Client.DescribeInstances(&ec2.DescribeInstancesInput{
+	status, err := ec2Client.DescribeInstancesWithContext(ctx, &ec2.DescribeInstancesInput{
 		InstanceIds: []*string{
 			aws.String(instanceID),
 		},
@@ -721,7 +750,7 @@ func (b *backend) verifyInstanceMeetsRoleRequirements(ctx context.Context,
 		} else if iamClient == nil {
 			return nil, fmt.Errorf("received a nil iamClient")
 		}
-		iamRoleARN, err := b.instanceIamRoleARN(iamClient, iamInstanceProfileEntity.FriendlyName)
+		iamRoleARN, err := b.instanceIamRoleARN(ctx, iamClient, iamInstanceProfileEntity.FriendlyName)
 		if err != nil {
 			return nil, fmt.Errorf("IAM role ARN could not be fetched: %w", err)
 		}
@@ -1284,7 +1313,7 @@ func (b *backend) pathLoginRenewEc2(ctx context.Context, req *logical.Request, _
 	// If the login was made using the role tag, then max_ttl from tag
 	// is cached in internal data during login and used here to cap the
 	// max_ttl of renewal.
-	rTagMaxTTL, err := time.ParseDuration(req.Auth.Metadata["role_tag_max_ttl"])
+	rTagMaxTTL, err := parseutil.ParseDurationSecond(req.Auth.Metadata["role_tag_max_ttl"])
 	if err != nil {
 		return nil, err
 	}
@@ -1832,7 +1861,7 @@ func (b *backend) fullArn(ctx context.Context, e *iamEntity, s logical.Storage) 
 		input := iam.GetUserInput{
 			UserName: aws.String(e.FriendlyName),
 		}
-		resp, err := client.GetUser(&input)
+		resp, err := client.GetUserWithContext(ctx, &input)
 		if err != nil {
 			return "", fmt.Errorf("error fetching user %q: %w", e.FriendlyName, err)
 		}
@@ -1846,7 +1875,7 @@ func (b *backend) fullArn(ctx context.Context, e *iamEntity, s logical.Storage) 
 		input := iam.GetRoleInput{
 			RoleName: aws.String(e.FriendlyName),
 		}
-		resp, err := client.GetRole(&input)
+		resp, err := client.GetRoleWithContext(ctx, &input)
 		if err != nil {
 			return "", fmt.Errorf("error fetching role %q: %w", e.FriendlyName, err)
 		}
@@ -1874,6 +1903,43 @@ func getMetadataValue(fromAuth *logical.Auth, forKey string) (string, error) {
 		return val, nil
 	}
 	return "", fmt.Errorf("%q not found in auth metadata", forKey)
+}
+
+func awsRegionFromHeader(authorizationHeader string) (string, error) {
+	// https://docs.aws.amazon.com/AmazonS3/latest/API/sigv4-auth-using-authorization-header.html
+	// The Authorization header takes the following form.
+	//  Authorization: AWS4-HMAC-SHA256
+	//	Credential=AKIAIOSFODNN7EXAMPLE/20230719/us-east-1/sts/aws4_request,
+	// 	SignedHeaders=content-length;content-type;host;x-amz-date,
+	//	Signature=fe5f80f77d5fa3beca038a248ff027d0445342fe2855ddc963176630326f1024
+	//
+	// The credential is in the form of "<your-access-key-id>/<date>/<aws-region>/<aws-service>/aws4_request"
+	fields := strings.Split(authorizationHeader, " ")
+	for _, field := range fields {
+		if strings.HasPrefix(field, "Credential=") {
+			fields := strings.Split(field, "/")
+			if len(fields) < 3 {
+				return "", fmt.Errorf("invalid header format")
+			}
+
+			region := fields[2]
+			return region, nil
+		}
+	}
+
+	return "", fmt.Errorf("invalid header format")
+}
+
+func stsRegionalEndpoint(region string) (string, error) {
+	stsService := sts.EndpointsID
+	resolver := endpoints.DefaultResolver()
+	resolvedEndpoint, err := resolver.EndpointFor(stsService, region,
+		endpoints.STSRegionalEndpointOption,
+		endpoints.StrictMatchingOption)
+	if err != nil {
+		return "", fmt.Errorf("unable to get regional STS endpoint for region: %v", region)
+	}
+	return resolvedEndpoint.URL, nil
 }
 
 const iamServerIdHeader = "X-Vault-AWS-IAM-Server-ID"

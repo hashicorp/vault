@@ -1,0 +1,5 @@
+<Oidc::KeyForm
+  @model={{this.model}}
+  @onCancel={{transition-to "vault.cluster.access.oidc.keys"}}
+  @onSave={{transition-to "vault.cluster.access.oidc.keys.key.details" this.model.name}}
+/>

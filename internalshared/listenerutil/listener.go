@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package listenerutil
 
 import (
@@ -75,7 +78,8 @@ func UnixSocketListener(path string, unixSocketsConfig *UnixSocketsConfig) (net.
 func TLSConfig(
 	l *configutil.Listener,
 	props map[string]string,
-	ui cli.Ui) (*tls.Config, reloadutil.ReloadFunc, error) {
+	ui cli.Ui,
+) (*tls.Config, reloadutil.ReloadFunc, error) {
 	props["tls"] = "disabled"
 
 	if l.TLSDisable {

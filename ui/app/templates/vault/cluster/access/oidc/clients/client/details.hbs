@@ -1,0 +1,44 @@
+<Toolbar data-test-oidc-client-toolbar>
+  <ToolbarActions>
+    {{#if this.model.canDelete}}
+      <ConfirmAction
+        data-test-oidc-client-delete
+        @buttonClasses="toolbar-link"
+        @onConfirmAction={{this.delete}}
+        @confirmTitle="Delete application?"
+        @confirmMessage="This application will be permanently deleted. You will need to re-create it to use it again."
+        @confirmButtonText="Delete"
+      >
+        Delete application
+      </ConfirmAction>
+      <div class="toolbar-separator"></div>
+    {{/if}}
+    {{#if this.model.canEdit}}
+      <ToolbarLink
+        @route="vault.cluster.access.oidc.clients.client.edit"
+        @model={{this.model.name}}
+        data-test-oidc-client-edit
+      >
+        Edit application
+      </ToolbarLink>
+    {{/if}}
+  </ToolbarActions>
+</Toolbar>
+
+<div class="box is-fullwidth is-sideless is-paddingless is-marginless">
+  <InfoTableRow @label="Name" @value={{this.model.name}} @alwaysRender={{true}} />
+  <InfoTableRow @label="Type" @value={{this.model.clientType}} @alwaysRender={{true}} />
+  <InfoTableRow @label="Redirect URI" @value={{this.model.redirectUris}} @alwaysRender={{true}} />
+  <InfoTableRow @label="Assignment" @value={{this.model.assignments}} @alwaysRender={{true}} />
+  <InfoTableRow @label="Key" @alwaysRender={{true}}>
+    <LinkTo @route="vault.cluster.access.oidc.keys.key.details" @model={{this.model.key}}>
+      {{this.model.key}}
+    </LinkTo>
+  </InfoTableRow>
+  <InfoTableRow @label="Client ID" @value={{this.model.clientId}} @addCopyButton={{true}} @alwaysRender={{true}} />
+  <InfoTableRow @label="Client Secret">
+    <MaskedInput @value={{this.model.clientSecret}} @displayOnly={{true}} @allowCopy={{true}} @alwaysRender={{true}} />
+  </InfoTableRow>
+  <InfoTableRow @label="ID Token TTL" @value={{format-duration this.model.idTokenTtl}} @alwaysRender={{true}} />
+  <InfoTableRow @label="Access Token TTL" @value={{format-duration this.model.accessTokenTtl}} @alwaysRender={{true}} />
+</div>

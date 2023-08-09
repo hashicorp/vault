@@ -3,9 +3,7 @@
 </div>
 {{#if this.featureComponent}}
   {{#component
-    (if this.shouldRender this.tutorialComponent)
-    onAdvance=(action "advanceWizard")
-    onDismiss=(action "dismissWizard")
+    (if this.shouldRender this.tutorialComponent) onAdvance=(action "advanceWizard") onDismiss=(action "dismissWizard")
   }}
     {{component
       this.featureComponent
@@ -16,6 +14,7 @@
       onRepeat=(action "repeatStep")
       onReset=(action "resetFeature")
       onAdvance=(action "advanceFeature")
+      currentRouteName=this.currentRouteName
     }}
   {{/component}}
 {{/if}}

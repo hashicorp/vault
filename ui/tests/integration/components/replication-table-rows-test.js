@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
 import { module, test } from 'qunit';
 import { setupRenderingTest } from 'ember-qunit';
 import { render } from '@ember/test-helpers';
@@ -20,14 +25,14 @@ module('Integration | Component | replication-table-rows', function (hooks) {
 
   test('it renders', async function (assert) {
     await render(
-      hbs`<ReplicationTableRows @replicationDetails={{replicationDetails}} @clusterMode={{clusterMode}}/>`
+      hbs`<ReplicationTableRows @replicationDetails={{this.replicationDetails}} @clusterMode={{this.clusterMode}}/>`
     );
     assert.dom('[data-test-table-rows]').exists();
   });
 
   test('it renders with merkle root, mode, replication set', async function (assert) {
     await render(
-      hbs`<ReplicationTableRows @replicationDetails={{replicationDetails}} @clusterMode={{clusterMode}}/>`
+      hbs`<ReplicationTableRows @replicationDetails={{this.replicationDetails}} @clusterMode={{this.clusterMode}}/>`
     );
     assert.dom('.empty-state').doesNotExist('does not show empty state when data is found');
 
@@ -49,7 +54,7 @@ module('Integration | Component | replication-table-rows', function (hooks) {
     this.set('replicationDetails', noAttrs);
     this.set('clusterMode', clusterMode);
     await render(
-      hbs`<ReplicationTableRows @replicationDetails={{replicationDetails}} @clusterMode={{clusterMode}}/>`
+      hbs`<ReplicationTableRows @replicationDetails={{this.replicationDetails}} @clusterMode={{this.clusterMode}}/>`
     );
 
     assert.dom('[data-test-table-rows]').includesText('unknown');

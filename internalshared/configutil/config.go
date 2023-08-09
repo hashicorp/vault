@@ -1,8 +1,10 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package configutil
 
 import (
 	"fmt"
-	"io/ioutil"
 	"time"
 
 	"github.com/hashicorp/go-secure-stdlib/parseutil"
@@ -21,6 +23,8 @@ type SharedConfig struct {
 
 	Listeners []*Listener `hcl:"-"`
 
+	UserLockouts []*UserLockout `hcl:"-"`
+
 	Seals   []*KMS   `hcl:"-"`
 	Entropy *Entropy `hcl:"-"`
 
@@ -29,37 +33,28 @@ type SharedConfig struct {
 
 	Telemetry *Telemetry `hcl:"telemetry"`
 
+	HCPLinkConf *HCPLinkConfig `hcl:"cloud"`
+
 	DefaultMaxRequestDuration    time.Duration `hcl:"-"`
 	DefaultMaxRequestDurationRaw interface{}   `hcl:"default_max_request_duration"`
 
 	// LogFormat specifies the log format. Valid values are "standard" and
 	// "json". The values are case-insenstive. If no log format is specified,
 	// then standard format will be used.
-	LogFormat string `hcl:"log_format"`
-	LogLevel  string `hcl:"log_level"`
+	LogFile              string      `hcl:"log_file"`
+	LogFormat            string      `hcl:"log_format"`
+	LogLevel             string      `hcl:"log_level"`
+	LogRotateBytes       int         `hcl:"log_rotate_bytes"`
+	LogRotateBytesRaw    interface{} `hcl:"log_rotate_bytes"`
+	LogRotateDuration    string      `hcl:"log_rotate_duration"`
+	LogRotateMaxFiles    int         `hcl:"log_rotate_max_files"`
+	LogRotateMaxFilesRaw interface{} `hcl:"log_rotate_max_files"`
 
 	PidFile string `hcl:"pid_file"`
 
 	ClusterName string `hcl:"cluster_name"`
-}
 
-// LoadConfigFile loads the configuration from the given file.
-func LoadConfigFile(path string) (*SharedConfig, error) {
-	// Read the file
-	d, err := ioutil.ReadFile(path)
-	if err != nil {
-		return nil, err
-	}
-	return ParseConfig(string(d))
-}
-
-func LoadConfigKMSes(path string) ([]*KMS, error) {
-	// Read the file
-	d, err := ioutil.ReadFile(path)
-	if err != nil {
-		return nil, err
-	}
-	return ParseKMSes(string(d))
+	AdministrativeNamespacePath string `hcl:"administrative_namespace_path"`
 }
 
 func ParseConfig(d string) (*SharedConfig, error) {
@@ -106,7 +101,7 @@ func ParseConfig(d string) (*SharedConfig, error) {
 
 	if o := list.Filter("seal"); len(o.Items) > 0 {
 		result.found("seal", "Seal")
-		if err := parseKMS(&result.Seals, o, "seal", 3); err != nil {
+		if err := parseKMS(&result.Seals, o, "seal", 5); err != nil {
 			return nil, fmt.Errorf("error parsing 'seal': %w", err)
 		}
 	}
@@ -132,10 +127,24 @@ func ParseConfig(d string) (*SharedConfig, error) {
 		}
 	}
 
+	if o := list.Filter("user_lockout"); len(o.Items) > 0 {
+		result.found("user_lockout", "UserLockout")
+		if err := ParseUserLockouts(&result, o); err != nil {
+			return nil, fmt.Errorf("error parsing 'user_lockout': %w", err)
+		}
+	}
+
 	if o := list.Filter("telemetry"); len(o.Items) > 0 {
 		result.found("telemetry", "Telemetry")
 		if err := parseTelemetry(&result, o); err != nil {
 			return nil, fmt.Errorf("error parsing 'telemetry': %w", err)
+		}
+	}
+
+	if o := list.Filter("cloud"); len(o.Items) > 0 {
+		result.found("cloud", "Cloud")
+		if err := parseCloud(&result, o); err != nil {
+			return nil, fmt.Errorf("error parsing 'cloud': %w", err)
 		}
 	}
 
@@ -160,16 +169,27 @@ func (c *SharedConfig) Sanitized() map[string]interface{} {
 	}
 
 	result := map[string]interface{}{
-		"disable_mlock": c.DisableMlock,
+		"default_max_request_duration":  c.DefaultMaxRequestDuration,
+		"disable_mlock":                 c.DisableMlock,
+		"log_level":                     c.LogLevel,
+		"log_format":                    c.LogFormat,
+		"pid_file":                      c.PidFile,
+		"cluster_name":                  c.ClusterName,
+		"administrative_namespace_path": c.AdministrativeNamespacePath,
+	}
 
-		"default_max_request_duration": c.DefaultMaxRequestDuration,
-
-		"log_level":  c.LogLevel,
-		"log_format": c.LogFormat,
-
-		"pid_file": c.PidFile,
-
-		"cluster_name": c.ClusterName,
+	// Optional log related settings
+	if c.LogFile != "" {
+		result["log_file"] = c.LogFile
+	}
+	if c.LogRotateBytes != 0 {
+		result["log_rotate_bytes"] = c.LogRotateBytes
+	}
+	if c.LogRotateDuration != "" {
+		result["log_rotate_duration"] = c.LogRotateDuration
+	}
+	if c.LogRotateMaxFiles != 0 {
+		result["log_rotate_max_files"] = c.LogRotateMaxFiles
 	}
 
 	// Sanitize listeners
@@ -185,6 +205,22 @@ func (c *SharedConfig) Sanitized() map[string]interface{} {
 		result["listeners"] = sanitizedListeners
 	}
 
+	// Sanitize user lockout stanza
+	if len(c.UserLockouts) != 0 {
+		var sanitizedUserLockouts []interface{}
+		for _, userlockout := range c.UserLockouts {
+			cleanUserLockout := map[string]interface{}{
+				"type":                  userlockout.Type,
+				"lockout_threshold":     userlockout.LockoutThreshold,
+				"lockout_duration":      userlockout.LockoutDuration,
+				"lockout_counter_reset": userlockout.LockoutCounterReset,
+				"disable_lockout":       userlockout.DisableLockout,
+			}
+			sanitizedUserLockouts = append(sanitizedUserLockouts, cleanUserLockout)
+		}
+		result["user_lockout_configs"] = sanitizedUserLockouts
+	}
+
 	// Sanitize seals stanza
 	if len(c.Seals) != 0 {
 		var sanitizedSeals []interface{}
@@ -192,7 +228,12 @@ func (c *SharedConfig) Sanitized() map[string]interface{} {
 			cleanSeal := map[string]interface{}{
 				"type":     s.Type,
 				"disabled": s.Disabled,
+				"name":     s.Name,
 			}
+			if s.Priority > 0 {
+				cleanSeal["priority"] = s.Priority
+			}
+
 			sanitizedSeals = append(sanitizedSeals, cleanSeal)
 		}
 		result["seals"] = sanitizedSeals

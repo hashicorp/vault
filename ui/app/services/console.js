@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
 // Low level service that allows users to input paths to make requests to vault
 // this service provides the UI synecdote to the cli commands read, write, delete, and list
 import { filterBy } from '@ember/object/computed';
@@ -37,7 +42,7 @@ export default Service.extend({
   commandIndex: null,
 
   shiftCommandIndex(keyCode, setCommandFn = () => {}) {
-    let [newIndex, newCommand] = shiftCommandIndex(keyCode, this.commandHistory, this.commandIndex);
+    const [newIndex, newCommand] = shiftCommandIndex(keyCode, this.commandHistory, this.commandIndex);
     if (newCommand !== undefined && newIndex !== undefined) {
       this.set('commandIndex', newIndex);
       setCommandFn(newCommand);
@@ -45,7 +50,7 @@ export default Service.extend({
   },
 
   clearLog(clearAll = false) {
-    let log = this.log;
+    const log = this.log;
     let history;
     if (!clearAll) {
       history = this.commandHistory.slice();
@@ -58,7 +63,7 @@ export default Service.extend({
   },
 
   logAndOutput(command, logContent) {
-    let log = this.log;
+    const log = this.log;
     if (command) {
       log.pushObject({ type: 'command', content: command });
       this.set('commandIndex', null);
@@ -69,21 +74,32 @@ export default Service.extend({
   },
 
   ajax(operation, path, options = {}) {
-    let verb = VERBS[operation];
-    let adapter = this.adapter();
-    let url = adapter.buildURL(encodePath(path));
-    let { data, wrapTTL } = options;
+    const verb = VERBS[operation];
+    const adapter = this.adapter();
+    const url = adapter.buildURL(encodePath(path));
+    const { data, wrapTTL } = options;
     return adapter.ajax(url, verb, {
       data,
       wrapTTL,
     });
   },
 
-  read(path, data, wrapTTL) {
+  kvGet(path, data, flags = {}) {
+    const { wrapTTL, metadata } = flags;
+    // Split on first / to find backend and secret path
+    const pathSegment = metadata ? 'metadata' : 'data';
+    const [backend, secretPath] = path.split(/\/(.+)?/);
+    const kvPath = `${backend}/${pathSegment}/${secretPath}`;
+    return this.ajax('read', sanitizePath(kvPath), { wrapTTL });
+  },
+
+  read(path, data, flags) {
+    const wrapTTL = flags?.wrapTTL;
     return this.ajax('read', sanitizePath(path), { wrapTTL });
   },
 
-  write(path, data, wrapTTL) {
+  write(path, data, flags) {
+    const wrapTTL = flags?.wrapTTL;
     return this.ajax('write', sanitizePath(path), { data, wrapTTL });
   },
 
@@ -91,8 +107,9 @@ export default Service.extend({
     return this.ajax('delete', sanitizePath(path));
   },
 
-  list(path, data, wrapTTL) {
-    let listPath = ensureTrailingSlash(sanitizePath(path));
+  list(path, data, flags) {
+    const wrapTTL = flags?.wrapTTL;
+    const listPath = ensureTrailingSlash(sanitizePath(path));
     return this.ajax('list', listPath, {
       data: {
         list: true,

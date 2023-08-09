@@ -1,3 +1,0 @@
-```release-note:improvement
-secrets/kubernetes: Add allowed_kubernetes_namespace_selector to allow selecting Kubernetes namespaces with a label selector when configuring roles.
-```

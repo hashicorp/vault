@@ -1,19 +1,19 @@
+# Copyright (c) HashiCorp, Inc.
+# SPDX-License-Identifier: MPL-2.0
+
 schema = "1"
 
 project "vault" {
   team = "vault"
   slack {
-    notification_channel = "CRF6FFKEW" // #vault-releases
+    notification_channel = "C03RXFX5M4L" // #feed-vault-releases
   }
   github {
     organization = "hashicorp"
     repository = "vault"
     release_branches = [
       "main",
-      "release/1.8.x",
-      "release/1.9.x",
-      "release/1.10.x",
-      "release/1.11.x",
+      "release/**",
     ]
   }
 }
@@ -32,13 +32,13 @@ event "build" {
   }
 }
 
-event "upload-dev" {
+event "prepare" {
   depends = ["build"]
-  action "upload-dev" {
+  action "prepare" {
     organization = "hashicorp"
-    repository = "crt-workflows-common"
-    workflow = "upload-dev"
-    depends = ["build"]
+    repository   = "crt-workflows-common"
+    workflow     = "prepare"
+    depends      = ["build"]
   }
 
   notification {
@@ -46,131 +46,12 @@ event "upload-dev" {
   }
 }
 
-event "quality-tests" {
-  depends = ["upload-dev"]
-  action "quality-tests" {
+event "enos-release-testing-oss" {
+  depends = ["prepare"]
+  action "enos-release-testing-oss" {
     organization = "hashicorp"
-    repository = "crt-workflows-common"
-    workflow = "quality-tests"
-  }
-
-  notification {
-    on = "fail"
-  }
-}
-
-event "security-scan-binaries" {
-  depends = ["quality-tests"]
-  action "security-scan-binaries" {
-    organization = "hashicorp"
-    repository = "crt-workflows-common"
-    workflow = "security-scan-binaries"
-    config = "security-scan.hcl"
-  }
-
-  notification {
-    on = "fail"
-  }
-}
-
-event "security-scan-containers" {
-  depends = ["security-scan-binaries"]
-  action "security-scan-containers" {
-    organization = "hashicorp"
-    repository = "crt-workflows-common"
-    workflow = "security-scan-containers"
-    config = "security-scan.hcl"
-  }
-
-  notification {
-    on = "fail"
-  }
-}
-
-event "notarize-darwin-amd64" {
-  depends = ["security-scan-containers"]
-  action "notarize-darwin-amd64" {
-    organization = "hashicorp"
-    repository = "crt-workflows-common"
-    workflow = "notarize-darwin-amd64"
-  }
-
-  notification {
-    on = "fail"
-  }
-}
-
-event "notarize-darwin-arm64" {
-  depends = ["notarize-darwin-amd64"]
-  action "notarize-darwin-arm64" {
-    organization = "hashicorp"
-    repository = "crt-workflows-common"
-    workflow = "notarize-darwin-arm64"
-  }
-
-  notification {
-    on = "fail"
-  }
-}
-
-event "notarize-windows-386" {
-  depends = ["notarize-darwin-arm64"]
-  action "notarize-windows-386" {
-    organization = "hashicorp"
-    repository = "crt-workflows-common"
-    workflow = "notarize-windows-386"
-  }
-
-  notification {
-    on = "fail"
-  }
-}
-
-event "notarize-windows-amd64" {
-  depends = ["notarize-windows-386"]
-  action "notarize-windows-amd64" {
-    organization = "hashicorp"
-    repository = "crt-workflows-common"
-    workflow = "notarize-windows-amd64"
-  }
-
-  notification {
-    on = "fail"
-  }
-}
-
-event "sign" {
-  depends = ["notarize-windows-amd64"]
-  action "sign" {
-    organization = "hashicorp"
-    repository = "crt-workflows-common"
-    workflow = "sign"
-  }
-
-  notification {
-    on = "fail"
-  }
-}
-
-event "sign-linux-rpms" {
-  depends = ["sign"]
-  action "sign-linux-rpms" {
-    organization = "hashicorp"
-    repository = "crt-workflows-common"
-    workflow = "sign-linux-rpms"
-  }
-
-  notification {
-    on = "fail"
-  }
-}
-
-event "verify" {
-  depends = ["sign-linux-rpms"]
-  action "verify" {
-    organization = "hashicorp"
-    repository = "crt-workflows-common"
-    workflow = "verify"
+    repository = "vault"
+    workflow = "enos-release-testing-oss"
   }
 
   notification {
@@ -254,5 +135,33 @@ event "promote-production-packaging" {
 
   notification {
     on = "always"
+  }
+}
+
+# The post-publish-website event should not be merged into the enterprise repo.
+# It is for OSS use only.
+event "post-publish-website" {
+  depends = ["promote-production-packaging"]
+  action "post-publish-website" {
+    organization = "hashicorp"
+    repository = "crt-workflows-common"
+    workflow = "post-publish-website"
+  }
+
+  notification {
+    on = "always"
+  }
+}
+
+event "update-ironbank" {
+  depends = ["post-publish-website"]
+  action "update-ironbank" {
+    organization = "hashicorp"
+    repository = "crt-workflows-common"
+    workflow = "update-ironbank"
+  }
+
+  notification {
+    on = "fail"
   }
 }
