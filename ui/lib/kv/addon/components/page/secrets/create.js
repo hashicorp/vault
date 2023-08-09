@@ -77,7 +77,7 @@ export default class KvSecretCreate extends Component {
         this.errors.pushObject({ endpoint: 'kv/data', message: errorMessage(error) });
       }
 
-      // only attempt to save metadata secret data was saved
+      // only attempt to save metadata if secret data was saved
       if (secret.createdTime) {
         try {
           metadata.path = secret.path;
