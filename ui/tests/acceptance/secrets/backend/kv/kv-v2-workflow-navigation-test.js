@@ -8,7 +8,6 @@ import {
   mountEngineCmd,
   runCmd,
   createTokenCmd,
-  mountAuthCmd,
   tokenWithPolicyCmd,
 } from 'vault/tests/helpers/commands';
 import {
@@ -19,6 +18,7 @@ import {
 } from 'vault/tests/helpers/policy-generator/kv';
 import {
   addSecretMetadataCmd,
+  setupControlGroup,
   writeSecret,
   writeVersionedSecret,
 } from 'vault/tests/helpers/kv/kv-run-commands';
@@ -1198,16 +1198,13 @@ module('Acceptance | kv-v2 workflow | navigation', function (hooks) {
   module('enterprise controlled access persona', function (hooks) {
     hooks.beforeEach(async function () {
       // Set up control group scenario
-      const adminUser = 'admin';
-      const adminPassword = 'password';
-      const userpassMount = 'userpass';
-      const POLICY = `
+      const userPolicy = `
 path "${this.backend}/data/*" {
   capabilities = ["create", "read", "update", "delete", "list"]
   control_group = {
     max_ttl = "24h"
     factor "approver" {
-      controlled_capabilities = ["write"]
+      controlled_capabilities = ["read"]
       identity {
           group_names = ["managers"]
           approvals = 1
@@ -1219,47 +1216,57 @@ path "${this.backend}/data/*" {
 path "${this.backend}/*" {
   capabilities = ["list"]
 }
-
-// Can we allow this so user can self-authorize?
-path "sys/control-group/authorize" {
-  capabilities = ["update"]
-}
-
-path "sys/control-group/request" {
-  capabilities = ["update"]
-}
 `;
-      const AUTHORIZER_POLICY = `
-path "sys/control-group/authorize" {
-  capabilities = ["update"]
-}
-
-path "sys/control-group/request" {
-  capabilities = ["update"]
-}
-`;
-      const userpassAccessor = await runCmd([
-        //enable userpass, create user and associated entity
-        mountAuthCmd('userpass', userpassMount),
-        `write auth/${userpassMount}/users/${adminUser} password=${adminPassword} policies=default`,
-        `write identity/entity name=${adminUser} policies=default`,
-        // write policies for control group + authorization
-        createPolicyCmd('kv-control-group', POLICY),
-        createPolicyCmd('authorizer', AUTHORIZER_POLICY),
-        // read out mount to get the accessor
-        `read -field=accessor sys/internal/ui/mounts/auth/${userpassMount}`,
-      ]);
-      const authorizerEntityId = await runCmd(`write -field=id identity/lookup/entity name=${adminUser}`);
-      const userToken = await runCmd([
-        // create alias for authorizor and add them to the managers group
-        `write identity/alias mount_accessor=${userpassAccessor} entity_id=${authorizerEntityId} name=${adminUser}`,
-        `write identity/group name=managers member_entity_ids=${authorizerEntityId} policies=authorizer`,
-        // create a token to request access to kv/foo
-        'write -field=client_token auth/token/create policies=kv-control-group',
-      ]);
+      const { userToken } = await setupControlGroup({ userPolicy });
       this.userToken = userToken;
       await authPage.login(userToken);
     });
-    // Copy test outline from admin persona
+    test('can access nested secret', async function (assert) {
+      assert.expect(23);
+      const backend = this.backend;
+      await navToBackend(backend);
+      assert.dom(PAGE.title).hasText(`${backend} Version 2`, 'title text correct');
+      assert.dom(PAGE.emptyStateTitle).doesNotExist('No empty state');
+      assertCorrectBreadcrumbs(assert, ['secret', backend]);
+      assert.dom(PAGE.list.filter).hasNoValue('List filter input is empty');
+
+      // Navigate through list items
+      await click(PAGE.list.item('app/'));
+      assert.strictEqual(currentURL(), `/vault/secrets/${backend}/kv/app%2F/directory`);
+      assertCorrectBreadcrumbs(assert, ['secret', backend, 'app']);
+      assert.dom(PAGE.title).hasText(`${backend} Version 2`);
+      assert.dom(PAGE.list.filter).hasValue('app/', 'List filter input is prefilled');
+      assert.dom(PAGE.list.item('nested/')).exists('Shows nested secret');
+
+      await click(PAGE.list.item('nested/'));
+      assert.strictEqual(currentURL(), `/vault/secrets/${backend}/kv/app%2Fnested%2F/directory`);
+      assertCorrectBreadcrumbs(assert, ['secret', backend, 'app', 'nested']);
+      assert.dom(PAGE.title).hasText(`${backend} Version 2`);
+      assert.dom(PAGE.list.filter).hasValue('app/nested/', 'List filter input is prefilled');
+      assert.dom(PAGE.list.item('secret')).exists('Shows deeply nested secret');
+
+      await click(PAGE.list.item('secret'));
+      // TODO: Should redirect to control group
+      // assert.strictEqual(currentRouteName(), `vault.cluster.access.control-group-accessor`);
+      // assertCorrectBreadcrumbs(assert, ['secret', backend, 'app', 'nested', 'secret']);
+      // assert.dom(PAGE.title).hasText('app/nested/secret', 'title is full secret path');
+      // assert.dom(PAGE.toolbar).exists('toolbar renders');
+      // assert.dom(PAGE.toolbarAction).exists({ count: 2 }, 'correct number of toolbar actions render');
+
+      // await click(PAGE.breadcrumbAtIdx(3));
+      // assert.ok(
+      //   currentURL().startsWith(`/vault/secrets/${backend}/kv/app%2Fnested%2F/directory`),
+      //   'links back to list directory'
+      // );
+
+      // await click(PAGE.breadcrumbAtIdx(2));
+      // assert.ok(
+      //   currentURL().startsWith(`/vault/secrets/${backend}/kv/app%2F/directory`),
+      //   'links back to list directory'
+      // );
+
+      // await click(PAGE.breadcrumbAtIdx(1));
+      // assert.ok(currentURL().startsWith(`/vault/secrets/${backend}/kv/list`), 'links back to list root');
+    });
   });
 });
