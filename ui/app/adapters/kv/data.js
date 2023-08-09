@@ -4,9 +4,9 @@
  */
 
 import ApplicationAdapter from '../application';
-import AdapterError from '@ember-data/adapter/error';
 import { kvDataPath, kvDestroyPath, kvMetadataPath, kvUndeletePath } from 'vault/utils/kv-path';
 import { assert } from '@ember/debug';
+import ControlGroupError from 'vault/lib/control-group-error';
 
 export default class KvDataAdapter extends ApplicationAdapter {
   namespace = 'v1';
@@ -54,24 +54,45 @@ export default class KvDataAdapter extends ApplicationAdapter {
         };
       })
       .catch((errorOrResponse) => {
+        const errorCode = errorOrResponse.httpStatus;
         // if it's a legitimate error - throw it!
-        if (errorOrResponse instanceof AdapterError) {
+        if (errorOrResponse instanceof ControlGroupError) {
           throw errorOrResponse;
         }
-        // in the case of a deleted/destroyed secret the API returns a 404 because { data: null }
-        // however, there could be a metadata block with important information like deletion_time
-        // handleResponse below checks 404 status codes for metadata and updates the code to 200 if it exists.
-        // we still end up in the good ol' catch() block, but instead of a 404 adapter error we've "caught"
-        // the metadata that sneakily tried to hide from us
-        return {
-          ...errorOrResponse,
-          data: {
-            ...errorOrResponse.data, // includes the { metadata } key we want
-            id,
-            backend,
-            path,
-          },
-        };
+
+        if (errorCode === 403) {
+          return {
+            data: {
+              id,
+              backend,
+              path,
+              version,
+              fail_read_error_code: errorCode,
+            },
+          };
+        }
+
+        if (errorOrResponse.data) {
+          // in the case of a deleted/destroyed secret the API returns a 404 because { data: null }
+          // however, there could be a metadata block with important information like deletion_time
+          // handleResponse below checks 404 status codes for metadata and updates the code to 200 if it exists.
+          // we still end up in the good ol' catch() block, but instead of a 404 adapter error we've "caught"
+          // the metadata that sneakily tried to hide from us
+          return {
+            ...errorOrResponse,
+            data: {
+              ...errorOrResponse.data, // includes the { metadata } key we want
+              id,
+              backend,
+              path,
+              version,
+              fail_read_error_code: errorCode,
+            },
+          };
+        }
+
+        // If we get here, it's probably a 404 because it doesn't exist
+        throw errorOrResponse;
       });
   }
 
@@ -111,7 +132,7 @@ export default class KvDataAdapter extends ApplicationAdapter {
   handleResponse(status, headers, payload, requestData) {
     // after deleting a secret version, data is null and the API returns a 404
     // but there could be relevant metadata
-    if (status === 404 && payload.data.metadata) {
+    if (status === 404 && payload.data?.metadata) {
       return super.handleResponse(200, headers, payload, requestData);
     }
     return super.handleResponse(...arguments);

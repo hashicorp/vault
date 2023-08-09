@@ -35,12 +35,51 @@ const EXAMPLE_KV_DATA_GET_RESPONSE = {
   },
 };
 
+const EXAMPLE_CONTROL_GROUP_RESPONSE = {
+  data: null,
+  wrap_info: {
+    token: 'hvs.kQC7bJuXHBhXHmkOrD2s2uyD',
+    accessor: 'S6RoG8QpScWlBrF8AodC1nFi',
+    ttl: 86400,
+    creation_time: '2023-08-09T16:08:06-05:00',
+    creation_path: 'some/path/here',
+  },
+};
+
+const EXAMPLE_KV_DATA_DESTROYED = {
+  data: {
+    data: null,
+    metadata: {
+      created_time: '2023-08-09T20:10:24.4825Z',
+      custom_metadata: null,
+      deletion_time: '',
+      destroyed: true,
+      version: 2,
+    },
+  },
+};
+
+const EXAMPLE_KV_DATA_DELETED = {
+  data: {
+    data: null,
+    metadata: {
+      created_time: '2023-08-09T20:10:24.571332Z',
+      custom_metadata: null,
+      deletion_time: '2023-08-09T20:10:24.70176Z',
+      destroyed: false,
+      version: 2,
+    },
+  },
+};
+
 module('Unit | Adapter | kv/data', function (hooks) {
   setupTest(hooks);
   setupMirage(hooks);
 
   hooks.beforeEach(function () {
     this.store = this.owner.lookup('service:store');
+    this.version = this.owner.lookup('service:version');
+    this.version.version = 'example+ent'; // Required for testing control-group flow
     this.secretMountPath = this.owner.lookup('service:secret-mount-path');
     this.backend = 'my/kv-back&end';
     this.secretMountPath.currentPath = this.backend;
@@ -119,6 +158,94 @@ module('Unit | Adapter | kv/data', function (hooks) {
       `${encodePath(this.backend)}/data/${encodePath(this.path)}?version=${this.version}`,
       'record has correct id'
     );
+  });
+
+  test('it should handle a 404 not found response properly', async function (assert) {
+    assert.expect(1);
+    this.server.get(this.endpoint, () => {
+      // This is what the API currently returns for not found
+      return new Response(404, {}, { errors: [] });
+    });
+
+    try {
+      await this.store.queryRecord('kv/data', this.payload);
+    } catch (e) {
+      assert.ok('throws the error');
+    }
+  });
+
+  test('it should handle a 403 permission denied properly', async function (assert) {
+    assert.expect(8);
+    this.server.get(this.endpoint, (schema, req) => {
+      assert.ok(true, 'request is made to correct url on queryRecord.');
+      assert.strictEqual(
+        req.queryParams.version,
+        this.version,
+        'request includes the version flag on queryRecord.'
+      );
+      return new Response(403, {}, { errors: ['1 error occurred:\n\t* permission denied\n\n'] });
+    });
+
+    const record = await this.store.queryRecord('kv/data', this.payload);
+    assert.strictEqual(record.path, this.path, 'record has correct path');
+    assert.strictEqual(record.backend, this.backend, 'record has correct backend');
+    assert.strictEqual(record.version, 2, 'record has version based on request');
+    assert.strictEqual(record.secretData, undefined, 'record does not include data');
+    assert.strictEqual(record.failReadErrorCode, 403, 'record has error response recorded');
+    assert.strictEqual(
+      record.id,
+      `${encodePath(this.backend)}/data/${encodePath(this.path)}?version=${this.version}`,
+      'record has correct id'
+    );
+  });
+
+  test('it should handle a soft-deleted version properly', async function (assert) {
+    this.server.get(this.endpoint, () => {
+      return new Response(404, {}, EXAMPLE_KV_DATA_DELETED);
+    });
+
+    const record = await this.store.queryRecord('kv/data', this.payload);
+    assert.strictEqual(record.path, this.path, 'record has correct path');
+    assert.strictEqual(record.backend, this.backend, 'record has correct backend');
+    assert.strictEqual(record.version, 2, 'record has version based on request');
+    assert.strictEqual(record.deletionTime, '2023-08-09T20:10:24.70176Z', 'record includes deletion time');
+    assert.strictEqual(record.failReadErrorCode, undefined, 'record does not have failed error code');
+    assert.strictEqual(
+      record.id,
+      `${encodePath(this.backend)}/data/${encodePath(this.path)}?version=${this.version}`,
+      'record has correct id'
+    );
+  });
+
+  test('it should handle a destroyed version properly', async function (assert) {
+    this.server.get(this.endpoint, () => {
+      return new Response(404, {}, EXAMPLE_KV_DATA_DESTROYED);
+    });
+
+    const record = await this.store.queryRecord('kv/data', this.payload);
+    assert.strictEqual(record.path, this.path, 'record has correct path');
+    assert.strictEqual(record.backend, this.backend, 'record has correct backend');
+    assert.strictEqual(record.version, 2, 'record has version based on request');
+    assert.true(record.destroyed, 'record has destroyed value');
+    assert.strictEqual(record.failReadErrorCode, undefined, 'record does not have error code');
+    assert.strictEqual(
+      record.id,
+      `${encodePath(this.backend)}/data/${encodePath(this.path)}?version=${this.version}`,
+      'record has correct id'
+    );
+  });
+
+  test('it should handle a control group response properly', async function (assert) {
+    assert.expect(1);
+    this.server.get(this.endpoint, () => {
+      return EXAMPLE_CONTROL_GROUP_RESPONSE;
+    });
+
+    try {
+      await this.store.queryRecord('kv/data', this.payload);
+    } catch (e) {
+      assert.ok('throws the error');
+    }
   });
 
   test('it should make request to correct endpoint on delete latest version', async function (assert) {
