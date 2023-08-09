@@ -13,7 +13,7 @@
         {{#let (find-by "name" fieldName @model.allFields) as |attr|}}
           <InfoTableRow @label={{or attr.options.label (humanize (dasherize attr.name))}} @value={{get @model attr.name}}>
             {{#if (and attr.options.masked (get @model attr.name))}}
-              <CertificateCard @certificateValue={{get @model attr.name}} />
+              <CertificateCard @data={{get @model attr.name}} />
             {{else if (eq attr.name "serialNumber")}}
               <LinkTo
                 @route="certificates.certificate.details"

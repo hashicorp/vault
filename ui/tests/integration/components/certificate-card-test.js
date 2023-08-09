@@ -32,10 +32,10 @@ module('Integration | Component | certificate-card', function (hooks) {
   test('it renders with an example PEM Certificate', async function (assert) {
     const certificate = rootPem;
     this.set('certificate', certificate);
-    await render(hbs`<CertificateCard @certificateValue={{this.certificate}} />`);
+    await render(hbs`<CertificateCard @data={{this.certificate}} />`);
 
     assert.dom(SELECTORS.label).hasText('PEM Format', 'The label text is PEM Format');
-    assert.dom(SELECTORS.value).hasText(certificate, 'The value for the certificate card is correct');
+    assert.dom(SELECTORS.value).hasText(certificate, 'The data rendered is correct');
     assert.dom(SELECTORS.icon).exists('The certificate icon exists');
     assert.dom(SELECTORS.copyButton).exists('The copy button exists');
   });
@@ -43,10 +43,10 @@ module('Integration | Component | certificate-card', function (hooks) {
   test('it renders with an example DER Certificate', async function (assert) {
     const certificate = rootDer;
     this.set('certificate', certificate);
-    await render(hbs`<CertificateCard @certificateValue={{this.certificate}} />`);
+    await render(hbs`<CertificateCard @data={{this.certificate}} />`);
 
     assert.dom(SELECTORS.label).hasText('DER Format', 'The label text is DER Format');
-    assert.dom(SELECTORS.value).hasText(certificate, 'The value for the certificate card is correct');
+    assert.dom(SELECTORS.value).hasText(certificate, 'The data rendered is correct');
     assert.dom(SELECTORS.icon).exists('The certificate icon exists');
     assert.dom(SELECTORS.copyButton).exists('The copy button exists');
   });
@@ -54,10 +54,10 @@ module('Integration | Component | certificate-card', function (hooks) {
   test('it renders with the PEM Format label regardless of the value provided when @isPem is true', async function (assert) {
     const certificate = 'example-certificate-text';
     this.set('certificate', certificate);
-    await render(hbs`<CertificateCard @certificateValue={{this.certificate}} @isPem={{true}}/>`);
+    await render(hbs`<CertificateCard @data={{this.certificate}} @isPem={{true}}/>`);
 
     assert.dom(SELECTORS.label).hasText('PEM Format', 'The label text is PEM Format');
-    assert.dom(SELECTORS.value).hasText(certificate, 'The value for the certificate card is correct');
+    assert.dom(SELECTORS.value).hasText(certificate, 'The data rendered is correct');
     assert.dom(SELECTORS.icon).exists('The certificate icon exists');
     assert.dom(SELECTORS.copyButton).exists('The copy button exists');
   });

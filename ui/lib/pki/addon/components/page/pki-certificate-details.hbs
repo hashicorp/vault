@@ -34,7 +34,7 @@
 {{#each @model.formFields as |field|}}
   {{#if field.options.masked}}
     <InfoTableRow @label={{or field.options.label (capitalize (humanize (dasherize field.name)))}}>
-      <CertificateCard @certificateValue={{or (get @model field.name) null}} />
+      <CertificateCard @data={{or (get @model field.name) null}} />
     </InfoTableRow>
   {{else if (eq field.name "serialNumber")}}
     <InfoTableRow @label="Serial number">

@@ -96,7 +96,7 @@
         {{#each fields as |attr|}}
           {{#if attr.options.masked}}
             <InfoTableRow @label={{or attr.options.label (humanize (dasherize attr.name))}} @value={{get @issuer attr.name}}>
-              <CertificateCard @certificateValue={{get @issuer attr.name}} />
+              <CertificateCard @data={{get @issuer attr.name}} />
             </InfoTableRow>
           {{else if (eq attr.name "keyId")}}
             <InfoTableRow @label={{or attr.options.label (humanize (dasherize attr.name))}} @value={{get @issuer attr.name}}>

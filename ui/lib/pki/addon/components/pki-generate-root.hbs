@@ -15,7 +15,7 @@
           <InfoTableRow
             @label={{capitalize (or attr.options.detailsLabel attr.options.label (humanize (dasherize attr.name)))}}
           >
-            <CertificateCard @certificateValue={{get @model attr.name}} />
+            <CertificateCard @data={{get @model attr.name}} />
           </InfoTableRow>
         {{else}}
           <InfoTableRow
@@ -27,7 +27,7 @@
     {{/each}}
     <InfoTableRow @label="Private key">
       {{#if @model.privateKey}}
-        <CertificateCard @certificateValue={{@model.privateKey}} />
+        <CertificateCard @data={{@model.privateKey}} />
       {{else}}
         <span class="tag">internal</span>
       {{/if}}

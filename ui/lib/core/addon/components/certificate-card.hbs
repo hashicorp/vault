@@ -12,14 +12,14 @@
       {{this.format}}
     </p>
     <code class="is-size-8 truncate-second-line has-text-grey" data-test-certificate-value>
-      {{@certificateValue}}
+      {{@data}}
     </code>
   </div>
   <div class="is-flex has-background-white-bis has-side-padding-s has-top-bottom-margin-negative-m">
     <CopyButton
       data-test-copy-button
       class="button is-transparent is-flex-v-centered"
-      @clipboardText={{@certificateValue}}
+      @clipboardText={{@data}}
       @buttonType="button"
       @success={{action (set-flash-message "Certificate copied")}}
     >
