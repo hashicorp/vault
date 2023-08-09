@@ -8,11 +8,14 @@ export const PAGE = {
   title: '[data-test-header-title]',
   breadcrumbs: '[data-test-breadcrumbs]',
   breadcrumb: '[data-test-breadcrumbs] li',
+  breadcrumbAtIdx: (idx) => `[data-test-crumb="${idx}"] a`,
   infoRowValue: (label) => `[data-test-value-div="${label}"]`,
   secretTab: (tab) => `[data-test-secrets-tab="${tab}"]`,
   emptyStateTitle: '[data-test-empty-state-title]',
   emptyStateMessage: '[data-test-empty-state-message]',
   emptyStateActions: '[data-test-empty-state-actions]',
+  toolbar: 'nav.toolbar',
+  toolbarAction: 'nav.toolbar-actions .toolbar-link',
   // specific page selectors
   metadata: {
     editBtn: '[data-test-edit-metadata]',
@@ -29,6 +32,10 @@ export const PAGE = {
   list: {
     createSecret: '[data-test-toolbar-create-secret]',
     item: (secret) => `[data-test-list-item="${secret}"]`,
+    filter: `[data-test-component="kv-list-filter"]`,
+    overviewCard: '[data-test-overview-card-container="View secret"]',
+    overviewInput: '[data-test-search-roles] input',
+    overviewButton: '[data-test-get-secret-detail]',
   },
   versions: {
     popup: '[data-test-popup-menu-trigger]',
@@ -58,6 +65,7 @@ export const FORM = {
   validation: (attr) => `[data-test-field="${attr}"] [data-test-inline-alert]`,
   messageError: '[data-test-message-error]',
   versionAlert: '[data-test-secret-version-alert]',
+  noReadAlert: '[data-test-warning-no-read-permissions]',
   // Form btns
   saveBtn: '[data-test-kv-save]',
   cancelBtn: '[data-test-kv-cancel]',
