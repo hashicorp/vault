@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
 import Model, { attr } from '@ember-data/model';
 import fieldToAttrs from 'vault/utils/field-to-attrs';
 import { computed } from '@ember/object';
@@ -19,7 +24,7 @@ const ModelExport = Model.extend({
     defaultValue: 'pem',
     label: 'Certificate format',
   }),
-  fieldGroups: computed(function() {
+  fieldGroups: computed(function () {
     const groups = [
       {
         default: ['format'],

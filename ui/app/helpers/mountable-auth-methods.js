@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
 import { helper as buildHelper } from '@ember/component/helper';
 
 const MOUNTABLE_AUTH_METHODS = [
@@ -18,24 +23,28 @@ const MOUNTABLE_AUTH_METHODS = [
     value: 'aws',
     type: 'aws',
     category: 'cloud',
+    glyph: 'aws-color',
   },
   {
     displayName: 'Azure',
     value: 'azure',
     type: 'azure',
     category: 'cloud',
+    glyph: 'azure-color',
   },
   {
     displayName: 'Google Cloud',
     value: 'gcp',
     type: 'gcp',
     category: 'cloud',
+    glyph: 'gcp-color',
   },
   {
     displayName: 'GitHub',
     value: 'github',
     type: 'github',
     category: 'cloud',
+    glyph: 'github-color',
   },
   {
     displayName: 'JWT',
@@ -56,6 +65,7 @@ const MOUNTABLE_AUTH_METHODS = [
     value: 'kubernetes',
     type: 'kubernetes',
     category: 'infra',
+    glyph: 'kubernetes-color',
   },
   {
     displayName: 'LDAP',
@@ -69,6 +79,7 @@ const MOUNTABLE_AUTH_METHODS = [
     value: 'okta',
     type: 'okta',
     category: 'infra',
+    glyph: 'okta-color',
   },
   {
     displayName: 'RADIUS',

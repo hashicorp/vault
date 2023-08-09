@@ -11,7 +11,14 @@ description: |-
 This page contains the list of deprecations and important or breaking changes
 for Vault 0.7.0 compared to the most recent release. Please read it carefully.
 
-## List Operations Always Use Trailing Slash
+## Rename of `backend` config key to `storage`
+
+When configuring Vault, the `backend` key previously used to configure
+storage has now been renamed to `storage`. Vault will alias the old key to the
+new path, though users are encouraged to update their configuration to ensure
+minimal disruption in the future when the alias is removed.
+
+## List operations always use trailing slash
 
 Any list operation, whether via the `GET` or `LIST` HTTP verb, will now
 internally canonicalize the path to have a trailing slash. This makes policy
@@ -21,7 +28,7 @@ it also means that policies allowing `list` capability must be carefully
 checked to ensure that they contain a trailing slash; some policies may need
 to be split into multiple stanzas to accommodate.
 
-## PKI Defaults to Unleased Certificates
+## PKI defaults to unleased certificates
 
 When issuing certificates from the PKI backend, by default, no leases will be
 issued. If you want to manually revoke a certificate, its serial number can be

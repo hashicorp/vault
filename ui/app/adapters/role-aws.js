@@ -1,4 +1,8 @@
-import { assign } from '@ember/polyfills';
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
 import ApplicationAdapter from './application';
 import { encodePath } from 'vault/utils/path-encoding-helpers';
 
@@ -6,12 +10,18 @@ export default ApplicationAdapter.extend({
   namespace: 'v1',
 
   createOrUpdate(store, type, snapshot, requestType) {
+    const { name, backend } = snapshot.record;
     const serializer = store.serializerFor(type.modelName);
     const data = serializer.serialize(snapshot, requestType);
-    const { id } = snapshot;
-    let url = this.urlForRole(snapshot.record.get('backend'), id);
+    const url = this.urlForRole(backend, name);
 
-    return this.ajax(url, 'POST', { data });
+    return this.ajax(url, 'POST', { data }).then((resp) => {
+      // Ember data doesn't like 204 responses except for DELETE method
+      const response = resp || { data: {} };
+      response.data.name = name;
+      response.data.backend = name;
+      return response;
+    });
   },
 
   createRecord() {
@@ -40,7 +50,7 @@ export default ApplicationAdapter.extend({
   },
 
   optionsForQuery(id) {
-    let data = {};
+    const data = {};
     if (!id) {
       data['list'] = true;
     }
@@ -49,14 +59,14 @@ export default ApplicationAdapter.extend({
 
   fetchByQuery(store, query) {
     const { id, backend } = query;
-    return this.ajax(this.urlForRole(backend, id), 'GET', this.optionsForQuery(id)).then(resp => {
+    return this.ajax(this.urlForRole(backend, id), 'GET', this.optionsForQuery(id)).then((resp) => {
       const data = {
         id,
         name: id,
         backend,
       };
 
-      return assign({}, resp, data);
+      return { ...resp, ...data };
     });
   },
 

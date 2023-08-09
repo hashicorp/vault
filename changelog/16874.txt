@@ -1,0 +1,3 @@
+```release-note:improvement
+secrets/pki: Improve stability of association of revoked cert with its parent issuer; when an issuer loses crl-signing usage, do not place certs on default issuer's CRL.
+```

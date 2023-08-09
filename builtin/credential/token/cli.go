@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package token
 
 import (
@@ -7,8 +10,8 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/hashicorp/go-secure-stdlib/password"
 	"github.com/hashicorp/vault/api"
-	"github.com/hashicorp/vault/sdk/helper/password"
 )
 
 type CLIHandler struct {

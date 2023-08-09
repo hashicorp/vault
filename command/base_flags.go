@@ -1,15 +1,20 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package command
 
 import (
 	"errors"
 	"flag"
 	"fmt"
+	"math"
 	"os"
 	"sort"
 	"strconv"
 	"strings"
 	"time"
 
+	"github.com/hashicorp/go-secure-stdlib/parseutil"
 	"github.com/posener/complete"
 )
 
@@ -207,8 +212,8 @@ type IntVar struct {
 func (f *FlagSet) IntVar(i *IntVar) {
 	initial := i.Default
 	if v, exist := os.LookupEnv(i.EnvVar); exist {
-		if i, err := strconv.ParseInt(v, 0, 64); err == nil {
-			initial = int(i)
+		if i, err := parseutil.SafeParseInt(v); err == nil {
+			initial = i
 		}
 	}
 
@@ -242,17 +247,19 @@ func newIntValue(def int, target *int, hidden bool) *intValue {
 }
 
 func (i *intValue) Set(s string) error {
-	v, err := strconv.ParseInt(s, 0, 64)
+	v, err := parseutil.SafeParseInt(s)
 	if err != nil {
 		return err
 	}
-
-	*i.target = int(v)
-	return nil
+	if v >= math.MinInt && v <= math.MaxInt {
+		*i.target = v
+		return nil
+	}
+	return fmt.Errorf("Incorrect conversion of a 64-bit integer to a lower bit size. Value %d is not within bounds for int32", v)
 }
 
-func (i *intValue) Get() interface{} { return int(*i.target) }
-func (i *intValue) String() string   { return strconv.Itoa(int(*i.target)) }
+func (i *intValue) Get() interface{} { return *i.target }
+func (i *intValue) String() string   { return strconv.Itoa(*i.target) }
 func (i *intValue) Example() string  { return "int" }
 func (i *intValue) Hidden() bool     { return i.hidden }
 
@@ -374,9 +381,12 @@ func (i *uintValue) Set(s string) error {
 	if err != nil {
 		return err
 	}
+	if v >= 0 && v <= math.MaxUint {
+		*i.target = uint(v)
+		return nil
+	}
 
-	*i.target = uint(v)
-	return nil
+	return fmt.Errorf("Incorrect conversion of a 64-bit integer to a lower bit size. Value %d is not within bounds for uint32", v)
 }
 
 func (i *uintValue) Get() interface{} { return uint(*i.target) }
@@ -584,7 +594,7 @@ type DurationVar struct {
 func (f *FlagSet) DurationVar(i *DurationVar) {
 	initial := i.Default
 	if v, exist := os.LookupEnv(i.EnvVar); exist {
-		if d, err := time.ParseDuration(appendDurationSuffix(v)); err == nil {
+		if d, err := parseutil.ParseDurationSecond(v); err == nil {
 			initial = d
 		}
 	}
@@ -624,7 +634,7 @@ func (d *durationValue) Set(s string) error {
 		s = "-1"
 	}
 
-	v, err := time.ParseDuration(appendDurationSuffix(s))
+	v, err := parseutil.ParseDurationSecond(s)
 	if err != nil {
 		return err
 	}
@@ -887,28 +897,28 @@ func parseTimeAlternatives(input string, allowedFormats TimeFormat) (time.Time, 
 	if allowedFormats&TimeVar_RFC3339Nano != 0 {
 		t, err := time.Parse(time.RFC3339Nano, input)
 		if err == nil {
-			return t, err
+			return t, nil
 		}
 	}
 
 	if allowedFormats&TimeVar_RFC3339Second != 0 {
 		t, err := time.Parse(time.RFC3339, input)
 		if err == nil {
-			return t, err
+			return t, nil
 		}
 	}
 
 	if allowedFormats&TimeVar_Day != 0 {
 		t, err := time.Parse("2006-01-02", input)
 		if err == nil {
-			return t, err
+			return t, nil
 		}
 	}
 
 	if allowedFormats&TimeVar_Month != 0 {
 		t, err := time.Parse("2006-01", input)
 		if err == nil {
-			return t, err
+			return t, nil
 		}
 	}
 
@@ -979,33 +989,3 @@ func (d *timeValue) Get() interface{} { return *d.target }
 func (d *timeValue) String() string   { return (*d.target).String() }
 func (d *timeValue) Example() string  { return "time" }
 func (d *timeValue) Hidden() bool     { return d.hidden }
-
-// -- helpers
-func envDefault(key, def string) string {
-	if v, exist := os.LookupEnv(key); exist {
-		return v
-	}
-	return def
-}
-
-func envBoolDefault(key string, def bool) bool {
-	if v, exist := os.LookupEnv(key); exist {
-		b, err := strconv.ParseBool(v)
-		if err != nil {
-			panic(err)
-		}
-		return b
-	}
-	return def
-}
-
-func envDurationDefault(key string, def time.Duration) time.Duration {
-	if v, exist := os.LookupEnv(key); exist {
-		d, err := time.ParseDuration(v)
-		if err != nil {
-			panic(err)
-		}
-		return d
-	}
-	return def
-}

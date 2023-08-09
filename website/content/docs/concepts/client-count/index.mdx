@@ -1,0 +1,184 @@
+---
+layout: docs
+page_title: Clients and entities
+description: |-
+  Technical overview covering the concept of clients, entities, and entity IDs
+  in Vault 
+---
+
+# Clients and entities
+
+Anything that connects and authenticates to Vault to accomplish a task is a
+**client**. For example, a user logging into a cluster to manage policies or a
+machine-based system (application or cloud service) requesting a database token
+are both considered clients.
+
+![Vault Client Workflows](https://www.datocms-assets.com/2885/1617325020-valult-client-workflows.png)
+
+While there are many different potential clients, the most common are:
+
+1. **Human users** interacting directly with Vault.
+1. **Applications and microservices**.
+1. **Servers and platforms** like VMs, Docker containers, or Kubernetes pods.
+1. **Orchestrators** like Nomad, Terraform, Ansible, ACME, and other continuous
+   integration / continuous delivery (CI/CD) pipelines.
+1. **Vault agents and proxies** that act on behalf of an application or
+   microservice.
+
+## Identity and entity assignment
+
+Authorized clients can connect to Vault with a variety of authentication methods.
+
+Authorization source       | AuthN method
+-------------------------- | ---------------------------------
+Externally managed or SSO  | Active Directory, LDAP, OIDC, JWT, GitHub, username+password
+Platform- or server-based  | Kubernetes, AWS, GCP, Azure, Cert, Cloud Foundry
+Self                       | AppRole, tokens with no associated authN path or role
+
+![Vault client types](https://www.datocms-assets.com/2885/1617325030-vault-clients.png)
+
+When a client authenticates, Vault assigns a unique identifier
+(**client entity**) in the [Vault identity system](/vault/docs/secrets/identity)
+based on the authentication method used or a previously assigned alias.
+**Entity aliases** let clients authenticate with multiple methods but still be
+associated with a single policy, share resources, and count as the same entity,
+regardless of the authentication method used for a particular session.
+
+## Standard entity assignments
+
+@include "authn-names.mdx"
+
+Each authentication method has a unique ID string that corresponds to a client
+entity used for telemetry. For example, a microservice authenticating with
+AppRole takes the associated role ID as the entity. If you are running at scale
+and have multiple copies of the microservices using the same role id, the full
+set of instances will share the same identifier.
+
+As a result, it is critical that you configure different clients
+(microservices, humans, applications, services, platforms, servers, or pipelines)
+in a way that results in distinct clients having unique identifiers. For example,
+the role IDs should be different **between** two microservices, MicroserviceA and
+MicroServiceB, even if the **specific instances** of MicroServiceA and
+MicroServiceB share a common role ID.
+
+## Entity assignment with ACME
+
+Vault treats all ACME connections that authenticate under the same certificate
+identifier (domain) as the same **certificate entity** for client count
+calculations.
+
+For example:
+
+- Authentication requests from two ACME clients living on different servers that
+  request the same set of certificate identifiers are assigned to the same
+  certificate entity.
+- Multiple requests for the same certificate identifier from a single ACME
+  client are assigned to the same certificate entity.
+- Two authentication requests from a single ACME client for different
+  certificate identifiers are assigned to separate certificate entities.
+
+## Entity assignment with namespaces
+
+A namespace represents a isolated, logical space within a single Vault
+cluster and is typically used for administrative purposes.
+
+When a client authenticates **within a given namespace**, Vault assigns the same
+client entity to activities within any child namespaces because the namespaces
+exist within the same larger scope.
+
+When a client authenticates **across namespace boundaries**, Vault treats the
+single client as two distinct entities because the client is operating
+across different scopes with different policy assignments and resources.
+
+For example:
+
+- Different requests under parent and child namespaces from a single client
+  authenticated under the **parent** namespace are assigned **the same entity
+  ID**. All the client activities occur **within** the boundaries of the
+  namespace referenced in the original authentication request.
+- Different requests under parent and child namespaces from a single client
+  authenticated under the **child** namespace are assigned **different entity
+  IDs**. Some of the client activities occur **outside** the boundaries of the
+  namespace referenced in the original authentication request.
+- Requests by the same client to two different namespaces, NAMESPACE<sub>A</sub>
+  and NAMESPACE<sub>B</sub> are assigned **different entity IDs**.
+
+## Entity assignment with non-entity tokens
+
+Vault uses tokens as the core method for authentication. You can use tokens to
+authenticate directly, or use token [auth methods](/vault/docs/concepts/auth)
+to dynamically generate tokens based on external identities.
+
+When clients authenticate with the [token auth method](/vault/docs/auth/token)
+**without** a client identity, the result is a **non-entity token**. For example,
+a service might use the token authentication method to create a token for a user
+whose explicit identity is unknown. 
+
+Ultimately, non-entity tokens trace back to a particular client or purpose so
+Vault assigns unique entity IDs to non-entity tokens based on a combination of
+the:
+
+- assigned entity alias name (if present),
+- associated policies, and
+- namespace under which the token was created.
+
+In **rare** cases, tokens may be created outside of the Vault identity system
+**without** an associated entity or identity. Vault treats every unaffiliated
+token as a unique client for production usage. We strongly discourage the use of
+unaffiliated tokens and recommend that you always associate a token with an
+entity alias and token role.
+
+<Note title="Behavior change in Vault 1.9+">
+  As of Vault 1.9, all non-entity tokens with the same namespace and policy
+  assignments are treated as the same client entity. Prior to Vault 1.9, every
+  non-entity token was treated as a unique client entity, which drastically
+  inflated telemetry around client count.
+
+  If you are using Vault 1.8 or earlier, and need to address client count
+  inflation without upgrading, we recommend creating a
+  [token role](/vault/api-docs/auth/token#create-update-token-role) with
+  allowable entity aliases and assigning all tokens to an appropriate
+  [role and entity alias name](/vault/api-docs/auth/token#create-token) before
+  using them.
+</Note>
+
+@include "content-footer-title.mdx"
+
+<Tabs>
+
+<Tab heading="Related concepts">
+<ul>
+  <li>
+    <a href="/vault/docs/concepts/client-count/counting">Client count calculation</a>
+  </li>
+  <li>
+    <a href="/vault/docs/concepts/client-count/faq">Client count FAQ</a>
+  </li>
+  <li>
+    <a href="/vault/docs/secrets/pki/best-practices/cicd-pipelines">Best practices for CI/CD pipelines</a>
+  </li>
+</ul>
+</Tab>
+
+<Tab heading="Related tutorials">
+<ul>
+  <li>
+    <a href="/vault/tutorials/auth-methods/identity">Identity: Entities and Groups</a>
+  </li>
+  <li>
+    <a href="/vault/tutorials/enterprise/namespaces">Secure Multi-Tenancy with Namespaces</a>
+  </li>
+</ul>
+</Tab>
+
+<Tab heading="Other resources">
+<ul>
+  <li>
+    Article: <a href="https://www.hashicorp.com/identity-based-security-and-low-trust-networks">
+      Identity-based Security and Low-trust Networks
+    </a>
+  </li>
+</ul>
+</Tab>
+
+</Tabs>

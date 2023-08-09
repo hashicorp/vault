@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
 import { computed } from '@ember/object';
 import Mixin from '@ember/object/mixin';
 import escapeStringRegexp from 'escape-string-regexp';
@@ -16,22 +21,22 @@ export default Mixin.create({
 
   isLoading: false,
 
-  filterMatchesKey: computed('filter', 'model', 'model.[]', function() {
-    let { filter, model: content } = this;
+  filterMatchesKey: computed('filter', 'model', 'model.[]', function () {
+    const { filter, model: content } = this;
     return !!(content.length && content.findBy('id', filter));
   }),
 
-  firstPartialMatch: computed('filter', 'model', 'model.[]', 'filterMatchesKey', function() {
-    let { filter, filterMatchesKey, model: content } = this;
-    let re = new RegExp('^' + escapeStringRegexp(filter));
-    let matchSet = content.filter(key => re.test(key.id));
-    let match = matchSet[0];
+  firstPartialMatch: computed('filter', 'model', 'model.[]', 'filterMatchesKey', function () {
+    const { filter, filterMatchesKey, model: content } = this;
+    const re = new RegExp('^' + escapeStringRegexp(filter));
+    const matchSet = content.filter((key) => re.test(key.id));
+    const match = matchSet[0];
 
     if (filterMatchesKey || !match) {
       return null;
     }
 
-    let sharedPrefix = commonPrefix(content);
+    const sharedPrefix = commonPrefix(content);
     // if we already are filtering the prefix, then next we want
     // the exact match
     if (filter === sharedPrefix || matchSet.length === 1) {

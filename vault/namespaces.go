@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package vault
 
 import (
@@ -7,10 +10,6 @@ import (
 )
 
 var NamespaceByID func(context.Context, string, *Core) (*namespace.Namespace, error) = namespaceByID
-
-const (
-	mountTypeNSCubbyhole = "ns_cubbyhole"
-)
 
 func namespaceByID(ctx context.Context, nsID string, c *Core) (*namespace.Namespace, error) {
 	if nsID == namespace.RootNamespaceID {

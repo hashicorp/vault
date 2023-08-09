@@ -1,0 +1,20 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
+.linked-block-seemore {
+  grid-column: 2;
+  grid-row: 1;
+  align-self: baseline;
+}
+
+.overflow-ellipsis {
+  box-sizing: border-box;
+
+  &.is-closed {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+}

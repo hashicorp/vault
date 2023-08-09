@@ -1,4 +1,4 @@
-{{#if hasMenu}}
+{{#if this.hasMenu}}
   <PopupMenu>
     <Confirm as |c|>
       <nav class="menu">
@@ -9,5 +9,5 @@
     </Confirm>
   </PopupMenu>
 {{else}}
-  {{yield item}}
+  {{yield this.item}}
 {{/if}}

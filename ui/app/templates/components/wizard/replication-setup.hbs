@@ -1,3 +1,4 @@
+{{! template-lint-disable quotes }}
 <WizardContent @headerText="Replication" @glyph="tour">
   <WizardSection
     @headerText="Setting up Replication"
@@ -6,22 +7,26 @@
     @instructions='Choose the one that is right for your needs and click "Enable Replication"'
   >
     <p>
-      Vault has two kinds of replication, each for a different purpose. Do you want to keep a backup of your data, or are you more interested in speed of access?
+      Vault has two kinds of replication, each for a different purpose. Do you want to keep a backup of your data, or are you
+      more interested in speed of access?
     </p>
 
-    <LearnLink @path="/vault/operations/ops-replication">
-      <Icon @glyph="learn" aria-hidden="true" />Learn: Setting Up Performance Replication
-    </LearnLink>
+    <DocLink @path="/vault/tutorials/enterprise/performance-replication">
+      <Icon @name="learn-link" />
+      Learn: Setting Up Performance Replication
+    </DocLink>
 
-    <LearnLink @path="/vault/operations/ops-disaster-recovery">
-      <Icon @glyph="learn" aria-hidden="true" />
+    <DocLink @path="/vault/tutorials/enterprise/disaster-recovery">
+      <Icon @name="learn-link" />
       Learn: Setting up Disaster Recovery
-    </LearnLink>
+    </DocLink>
 
   </WizardSection>
   <WizardSection @headerText="Cluster mode" @class="wizard-details">
     <p>
-      A cluster is set as either a primary or secondary. The primary cluster is authoritative, and is the only cluster allowed to perform actions that write to the underlying data storage, such as modifying policies or secrets. Secondary clusters can service all other operations and forward any writes to the primary cluster.
+      A cluster is set as either a primary or secondary. The primary cluster is authoritative, and is the only cluster
+      allowed to perform actions that write to the underlying data storage, such as modifying policies or secrets. Secondary
+      clusters can service all other operations and forward any writes to the primary cluster.
     </p>
   </WizardSection>
 </WizardContent>

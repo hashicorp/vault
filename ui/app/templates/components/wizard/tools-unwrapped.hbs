@@ -1,14 +1,12 @@
 <WizardContent @headerText="Tools" @glyph="tour">
-  <WizardSection
-    @headerText="Your unwrapped data"
-    @docText="API: Unwrap Data"
-    @docPath="/api/system/wrapping-unwrap.html"
-  >
+  <WizardSection @headerText="Your unwrapped data" @docText="API: Unwrap Data" @docPath="/api/system/wrapping-unwrap.html">
     <p>
-      Here you can see that your data survived intact. These tools are mostly handy for applications to use, but if you ever do need to wrap data or handle the wrapping token, now you know how.
+      Here you can see that your data survived intact. These tools are mostly handy for applications to use, but if you ever
+      do need to wrap data or handle the wrapped token, now you know how.
     </p>
   </WizardSection>
   <button type="button" class="button next-feature-step" {{action @onAdvance}}>
-   {{@nextFeature}} <Chevron @isButton={{true}} />
+    {{@nextFeature}}
+    <Chevron @isButton={{true}} />
   </button>
 </WizardContent>

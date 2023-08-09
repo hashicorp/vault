@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package rabbitmq
 
 import (
@@ -7,12 +10,12 @@ import (
 	"os"
 	"testing"
 
-	"github.com/hashicorp/vault/helper/testhelpers/docker"
+	"github.com/hashicorp/go-secure-stdlib/base62"
 	logicaltest "github.com/hashicorp/vault/helper/testhelpers/logical"
-	"github.com/hashicorp/vault/sdk/helper/base62"
+	"github.com/hashicorp/vault/sdk/helper/docker"
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
 	"github.com/hashicorp/vault/sdk/logical"
-	rabbithole "github.com/michaelklishin/rabbit-hole"
+	rabbithole "github.com/michaelklishin/rabbit-hole/v2"
 	"github.com/mitchellh/mapstructure"
 )
 
@@ -36,7 +39,7 @@ func prepareRabbitMQTestContainer(t *testing.T) (func(), string) {
 	}
 
 	runner, err := docker.NewServiceRunner(docker.RunOptions{
-		ImageRepo:     "rabbitmq",
+		ImageRepo:     "docker.mirror.hashicorp.services/library/rabbitmq",
 		ImageTag:      "3-management",
 		ContainerName: "rabbitmq",
 		Ports:         []string{"15672/tcp"},
@@ -132,7 +135,7 @@ func TestBackend_roleCrud(t *testing.T) {
 
 func TestBackend_roleWithPasswordPolicy(t *testing.T) {
 	if os.Getenv(logicaltest.TestEnvVar) == "" {
-		t.Skip(fmt.Sprintf("Acceptance tests skipped unless env '%s' set", logicaltest.TestEnvVar))
+		t.Skip(fmt.Sprintf("Acceptance tests skipped unless env %q set", logicaltest.TestEnvVar))
 		return
 	}
 

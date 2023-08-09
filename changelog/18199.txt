@@ -1,0 +1,3 @@
+```release-note:improvement
+secrets/pki: Allow templating performance replication cluster- and issuer-specific AIA URLs.
+```

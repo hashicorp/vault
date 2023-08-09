@@ -1,10 +1,14 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package configutil
 
 import (
 	"fmt"
+
 	"github.com/asaskevich/govalidator"
+	"github.com/hashicorp/go-secure-stdlib/strutil"
 	"github.com/hashicorp/hcl/hcl/token"
-	"github.com/hashicorp/vault/sdk/helper/strutil"
 )
 
 type UnusedKeyMap map[string][]token.Pos

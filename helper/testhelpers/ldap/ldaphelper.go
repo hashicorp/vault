@@ -1,20 +1,30 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package ldap
 
 import (
 	"context"
 	"fmt"
+	"runtime"
+	"strings"
 	"testing"
 
 	hclog "github.com/hashicorp/go-hclog"
-	"github.com/hashicorp/vault/helper/testhelpers/docker"
+	"github.com/hashicorp/vault/sdk/helper/docker"
 	"github.com/hashicorp/vault/sdk/helper/ldaputil"
 )
 
 func PrepareTestContainer(t *testing.T, version string) (cleanup func(), cfg *ldaputil.ConfigEntry) {
+	// Skipping on ARM, as this image can't run on ARM architecture
+	if strings.Contains(runtime.GOARCH, "arm") {
+		t.Skip("Skipping, as this image is not supported on ARM architectures")
+	}
+
 	runner, err := docker.NewServiceRunner(docker.RunOptions{
 		// Currently set to "michelvocks" until https://github.com/rroemhild/docker-test-openldap/pull/14
 		// has been merged.
-		ImageRepo:     "michelvocks/docker-test-openldap",
+		ImageRepo:     "docker.mirror.hashicorp.services/michelvocks/docker-test-openldap",
 		ImageTag:      version,
 		ContainerName: "ldap",
 		Ports:         []string{"389/tcp"},
@@ -27,11 +37,13 @@ func PrepareTestContainer(t *testing.T, version string) (cleanup func(), cfg *ld
 	cfg = new(ldaputil.ConfigEntry)
 	cfg.UserDN = "ou=people,dc=planetexpress,dc=com"
 	cfg.UserAttr = "cn"
+	cfg.UserFilter = "({{.UserAttr}}={{.Username}})"
 	cfg.BindDN = "cn=admin,dc=planetexpress,dc=com"
 	cfg.BindPassword = "GoodNewsEveryone"
 	cfg.GroupDN = "ou=people,dc=planetexpress,dc=com"
 	cfg.GroupAttr = "cn"
 	cfg.RequestTimeout = 60
+	cfg.MaximumPageSize = 1000
 
 	svc, err := runner.StartService(context.Background(), func(ctx context.Context, host string, port int) (docker.ServiceConfig, error) {
 		connURL := fmt.Sprintf("ldap://%s:%d", host, port)

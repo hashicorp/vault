@@ -1,0 +1,56 @@
+<Toolbar>
+  <ToolbarActions>
+    <ToolbarLink @route="vault.cluster.access.oidc.keys.create" @type="add" data-test-oidc-key-create>
+      Create key
+    </ToolbarLink>
+  </ToolbarActions>
+</Toolbar>
+
+{{#each this.model as |model|}}
+  <LinkedBlock
+    class="list-item-row"
+    @params={{array "vault.cluster.access.oidc.keys.key.details" model.name}}
+    data-test-oidc-key-linked-block={{model.name}}
+  >
+    <div class="level is-mobile">
+      <div class="level-left">
+        <div>
+          <Icon @name="key" class="has-text-grey-light" />
+          <span class="has-text-weight-semibold is-underline">
+            {{model.name}}
+          </span>
+        </div>
+      </div>
+      <div class="level-right is-flex is-paddingless is-marginless">
+        <div class="level-item">
+          <PopupMenu>
+            <nav class="menu">
+              <ul class="menu-list">
+                <li>
+                  <LinkTo
+                    @route="vault.cluster.access.oidc.keys.key.details"
+                    @model={{model.name}}
+                    @disabled={{eq model.canRead false}}
+                    data-test-oidc-key-menu-link="details"
+                  >
+                    Details
+                  </LinkTo>
+                </li>
+                <li>
+                  <LinkTo
+                    @route="vault.cluster.access.oidc.keys.key.edit"
+                    @model={{model.name}}
+                    @disabled={{eq model.canEdit false}}
+                    data-test-oidc-key-menu-link="edit"
+                  >
+                    Edit
+                  </LinkTo>
+                </li>
+              </ul>
+            </nav>
+          </PopupMenu>
+        </div>
+      </div>
+    </div>
+  </LinkedBlock>
+{{/each}}

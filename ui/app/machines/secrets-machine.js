@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
 import { supportedSecretBackends } from 'vault/helpers/supported-secret-backends';
 const supportedBackends = supportedSecretBackends();
 
@@ -27,8 +32,8 @@ export default {
       ],
       on: {
         CONTINUE: {
-          details: { cond: type => supportedBackends.includes(type) },
-          list: { cond: type => !supportedBackends.includes(type) },
+          details: { cond: (type) => supportedBackends.includes(type) },
+          list: { cond: (type) => !supportedBackends.includes(type) },
         },
       },
     },
@@ -40,16 +45,19 @@ export default {
       on: {
         CONTINUE: {
           connection: {
-            cond: type => type === 'database',
+            cond: (type) => type === 'database',
           },
           role: {
-            cond: type => ['pki', 'aws', 'ssh'].includes(type),
+            cond: (type) => ['pki', 'aws', 'ssh'].includes(type),
           },
           secret: {
-            cond: type => ['kv'].includes(type),
+            cond: (type) => ['kv'].includes(type),
           },
           encryption: {
-            cond: type => type === 'transit',
+            cond: (type) => type === 'transit',
+          },
+          provider: {
+            cond: (type) => type === 'keymgmt',
           },
         },
       },
@@ -126,6 +134,33 @@ export default {
         CONTINUE: 'display',
       },
     },
+    provider: {
+      onEntry: [
+        { type: 'render', level: 'step', component: 'wizard/secrets-keymgmt' },
+        { type: 'render', level: 'feature', component: 'wizard/mounts-wizard' },
+      ],
+      on: {
+        CONTINUE: 'displayProvider',
+      },
+    },
+    displayProvider: {
+      onEntry: [
+        { type: 'render', level: 'step', component: 'wizard/secrets-keymgmt' },
+        { type: 'render', level: 'feature', component: 'wizard/mounts-wizard' },
+      ],
+      on: {
+        CONTINUE: 'distribute',
+      },
+    },
+    distribute: {
+      onEntry: [
+        { type: 'render', level: 'step', component: 'wizard/secrets-keymgmt' },
+        { type: 'render', level: 'feature', component: 'wizard/mounts-wizard' },
+      ],
+      on: {
+        CONTINUE: 'display',
+      },
+    },
     display: {
       onEntry: [
         { type: 'render', level: 'step', component: 'wizard/secrets-display' },
@@ -134,20 +169,32 @@ export default {
       on: {
         REPEAT: {
           connection: {
-            cond: type => type === 'database',
+            cond: (type) => type === 'database',
             actions: [{ type: 'routeTransition', params: ['vault.cluster.secrets.backend.create-root'] }],
           },
           role: {
-            cond: type => ['pki', 'aws', 'ssh'].includes(type),
+            cond: (type) => ['pki', 'aws', 'ssh'].includes(type),
             actions: [{ type: 'routeTransition', params: ['vault.cluster.secrets.backend.create-root'] }],
           },
           secret: {
-            cond: type => ['kv'].includes(type),
+            cond: (type) => ['kv'].includes(type),
             actions: [{ type: 'routeTransition', params: ['vault.cluster.secrets.backend.create-root'] }],
           },
           encryption: {
-            cond: type => type === 'transit',
+            cond: (type) => type === 'transit',
             actions: [{ type: 'routeTransition', params: ['vault.cluster.secrets.backend.create-root'] }],
+          },
+          provider: {
+            cond: (type) => type === 'keymgmt',
+            actions: [
+              {
+                type: 'routeTransition',
+                params: [
+                  'vault.cluster.secrets.backend.create-root',
+                  { queryParams: { itemType: 'provider' } },
+                ],
+              },
+            ],
           },
         },
       },

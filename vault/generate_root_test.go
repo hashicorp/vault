@@ -1,13 +1,16 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package vault
 
 import (
 	"encoding/base64"
 	"testing"
 
+	"github.com/hashicorp/go-secure-stdlib/base62"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/helper/pgpkeys"
-	"github.com/hashicorp/vault/helper/xor"
-	"github.com/hashicorp/vault/sdk/helper/base62"
+	"github.com/hashicorp/vault/sdk/helper/xor"
 )
 
 func TestCore_GenerateRoot_Lifecycle(t *testing.T) {
@@ -45,7 +48,7 @@ func testCore_GenerateRoot_Lifecycle_Common(t *testing.T, c *Core, keys [][]byte
 		t.Fatalf("err: %v", err)
 	}
 
-	otp, err := base62.Random(26)
+	otp, err := base62.Random(TokenPrefixLength + TokenLength)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -89,7 +92,7 @@ func TestCore_GenerateRoot_Init(t *testing.T) {
 }
 
 func testCore_GenerateRoot_Init_Common(t *testing.T, c *Core) {
-	otp, err := base62.Random(26)
+	otp, err := base62.Random(TokenPrefixLength + TokenLength)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -114,7 +117,7 @@ func TestCore_GenerateRoot_InvalidMasterNonce(t *testing.T) {
 }
 
 func testCore_GenerateRoot_InvalidMasterNonce_Common(t *testing.T, c *Core, keys [][]byte) {
-	otp, err := base62.Random(26)
+	otp, err := base62.Random(TokenPrefixLength + TokenLength)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -154,7 +157,7 @@ func TestCore_GenerateRoot_Update_OTP(t *testing.T) {
 }
 
 func testCore_GenerateRoot_Update_OTP_Common(t *testing.T, c *Core, keys [][]byte) {
-	otp, err := base62.Random(26)
+	otp, err := base62.Random(TokenPrefixLength + TokenLength)
 	if err != nil {
 		t.Fatal(err)
 	}

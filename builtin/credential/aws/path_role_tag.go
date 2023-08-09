@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package awsauth
 
 import (
@@ -11,10 +14,11 @@ import (
 	"strings"
 	"time"
 
+	"github.com/hashicorp/go-secure-stdlib/parseutil"
+	"github.com/hashicorp/go-secure-stdlib/strutil"
 	uuid "github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/policyutil"
-	"github.com/hashicorp/vault/sdk/helper/strutil"
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
@@ -23,6 +27,12 @@ const roleTagVersion = "v1"
 func (b *backend) pathRoleTag() *framework.Path {
 	return &framework.Path{
 		Pattern: "role/" + framework.GenericNameRegex("role") + "/tag$",
+
+		DisplayAttrs: &framework.DisplayAttributes{
+			OperationPrefix: operationPrefixAWS,
+			OperationSuffix: "role-tag",
+		},
+
 		Fields: map[string]*framework.FieldSchema{
 			"role": {
 				Type:        framework.TypeString,
@@ -338,7 +348,7 @@ func (b *backend) parseAndVerifyRoleTagValue(ctx context.Context, s logical.Stor
 				return nil, err
 			}
 		case strings.HasPrefix(tagItem, "t="):
-			rTag.MaxTTL, err = time.ParseDuration(fmt.Sprintf("%ss", strings.TrimPrefix(tagItem, "t=")))
+			rTag.MaxTTL, err = parseutil.ParseDurationSecond(fmt.Sprintf("%ss", strings.TrimPrefix(tagItem, "t=")))
 			if err != nil {
 				return nil, err
 			}

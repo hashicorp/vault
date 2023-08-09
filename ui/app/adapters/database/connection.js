@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
 import ApplicationAdapter from '../application';
 
 export default ApplicationAdapter.extend({
@@ -16,7 +21,7 @@ export default ApplicationAdapter.extend({
     return url;
   },
   optionsForQuery(id) {
-    let data = {};
+    const data = {};
     if (!id) {
       data['list'] = true;
     }
@@ -24,7 +29,7 @@ export default ApplicationAdapter.extend({
   },
   fetchByQuery(store, query) {
     const { backend, id } = query;
-    return this.ajax(this.urlFor(backend, id), 'GET', this.optionsForQuery(id)).then(resp => {
+    return this.ajax(this.urlFor(backend, id), 'GET', this.optionsForQuery(id)).then((resp) => {
       resp.backend = backend;
       if (id) {
         resp.id = id;

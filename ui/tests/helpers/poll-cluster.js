@@ -1,8 +1,12 @@
-import { run } from '@ember/runloop';
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
 
-export function pollCluster(owner) {
+import { settled } from '@ember/test-helpers';
+
+export async function pollCluster(owner) {
   const store = owner.lookup('service:store');
-  return run(() => {
-    return store.peekAll('cluster').firstObject.reload();
-  });
+  await store.peekAll('cluster').firstObject.reload();
+  await settled();
 }

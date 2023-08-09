@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
 import {
   create,
   collection,
@@ -34,7 +39,7 @@ export default create({
   confirmDelete: clickable('[data-test-confirm-button]', {
     testContainer: '#ember-testing',
   }),
-  backendIsEmpty: getter(function() {
+  backendIsEmpty: getter(function () {
     return this.secrets.length === 0;
   }),
 });

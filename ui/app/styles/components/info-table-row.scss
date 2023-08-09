@@ -1,8 +1,17 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
 .info-table-row {
   box-shadow: 0 1px 0 $grey-light;
   margin: 0;
 
-  @include from($tablet) {
+  &.has-no-shadow {
+    box-shadow: none;
+  }
+
+  @include from($mobile) {
     display: flex;
   }
 
@@ -18,6 +27,7 @@
 
   .column {
     align-self: center;
+    padding: $spacing-m;
 
     &.info-table-row-edit {
       padding-bottom: 0.3rem;
@@ -31,14 +41,20 @@
     .helper-text {
       font-weight: normal;
     }
+    &.justify-right {
+      display: flex;
+      justify-content: right;
+    }
   }
 
   .hs-icon {
-    margin-right: 0.25rem;
+    margin-right: $size-11;
   }
+
   .icon-true {
     color: $green-500;
   }
+
   .icon-false {
     color: $ui-gray-300;
   }
@@ -49,14 +65,14 @@
 }
 
 .info-table-row:not(.is-mobile) .column {
-  @include until($tablet) {
+  @include until($mobile) {
     padding: 0;
   }
 
   &:first-child {
     padding-left: 0;
 
-    @include until($tablet) {
+    @include until($mobile) {
       padding: $size-8 0 0;
     }
   }
@@ -64,7 +80,7 @@
   &:last-child {
     padding-right: 0;
 
-    @include until($tablet) {
+    @include until($mobile) {
       padding: 0 0 $size-8;
     }
   }
@@ -72,11 +88,28 @@
 
 .info-table-row-header {
   margin: 0;
+  font-size: $size-8;
+  color: $grey;
+  font-weight: $font-weight-semibold;
 
-  @include until($tablet) {
+  @include until($mobile) {
     display: none;
   }
   .info-table-row:not(.is-mobile) .column:last-child {
     padding-left: 0;
+  }
+}
+
+.label-overflow {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+
+  // inline display necessary for nested elements so ellipsis shows
+  > div {
+    display: inline;
+  }
+  > div > span {
+    display: inline;
   }
 }

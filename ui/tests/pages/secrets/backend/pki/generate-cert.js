@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
 import { Base } from '../credentials';
 import { clickable, text, value, create, fillable, isPresent } from 'ember-cli-page-object';
 
@@ -15,16 +20,11 @@ export default create({
   hasCert: isPresent('[data-test-row-value="Certificate"]'),
   fillInTime: fillable('[data-test-ttl-value]'),
   fillInField: fillable('[data-test-select="ttl-unit"]'),
-  issueCert: async function(commonName) {
-    await this.commonName(commonName)
-      .toggleOptions()
-      .enableTtl()
-      .fillInField('h')
-      .fillInTime('30')
-      .submit();
+  issueCert: async function (commonName) {
+    await this.commonName(commonName).toggleOptions().enableTtl().fillInField('h').fillInTime('30').submit();
   },
 
-  sign: async function(commonName, csr) {
+  sign: async function (commonName, csr) {
     return this.csr(csr)
       .commonName(commonName)
       .toggleOptions()

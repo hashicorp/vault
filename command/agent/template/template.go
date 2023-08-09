@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 // Package template is responsible for rendering user supplied templates to
 // disk. The Server type accepts configuration to communicate to a Vault server
 // and a Vault token for authentication. Internally, the Server creates a Consul
@@ -10,15 +13,16 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"strings"
 
 	"go.uber.org/atomic"
 
 	ctconfig "github.com/hashicorp/consul-template/config"
-	ctlogging "github.com/hashicorp/consul-template/logging"
 	"github.com/hashicorp/consul-template/manager"
 	"github.com/hashicorp/go-hclog"
+
 	"github.com/hashicorp/vault/command/agent/config"
+	"github.com/hashicorp/vault/command/agent/internal/ctmanager"
+	"github.com/hashicorp/vault/helper/useragent"
 	"github.com/hashicorp/vault/sdk/helper/pointerutil"
 )
 
@@ -107,7 +111,14 @@ func (ts *Server) Run(ctx context.Context, incoming chan string, templates []*ct
 	// configuration
 	var runnerConfig *ctconfig.Config
 	var runnerConfigErr error
-	if runnerConfig, runnerConfigErr = newRunnerConfig(ts.config, templates); runnerConfigErr != nil {
+	managerConfig := ctmanager.ManagerConfig{
+		AgentConfig: ts.config.AgentConfig,
+		Namespace:   ts.config.Namespace,
+		LogLevel:    ts.config.LogLevel,
+		LogWriter:   ts.config.LogWriter,
+	}
+	runnerConfig, runnerConfigErr = ctmanager.NewConfig(managerConfig, templates)
+	if runnerConfigErr != nil {
 		return fmt.Errorf("template server failed to runner generate config: %w", runnerConfigErr)
 	}
 
@@ -156,7 +167,8 @@ func (ts *Server) Run(ctx context.Context, incoming chan string, templates []*ct
 				*latestToken = token
 				ctv := ctconfig.Config{
 					Vault: &ctconfig.VaultConfig{
-						Token: latestToken,
+						Token:           latestToken,
+						ClientUserAgent: pointerutil.StringPtr(useragent.AgentTemplatingString()),
 					},
 				}
 
@@ -172,8 +184,20 @@ func (ts *Server) Run(ctx context.Context, incoming chan string, templates []*ct
 			}
 
 		case err := <-ts.runner.ErrCh:
+			ts.logger.Error("template server error", "error", err.Error())
 			ts.runner.StopImmediately()
-			return fmt.Errorf("template server: %w", err)
+
+			// Return after stopping the runner if exit on retry failure was
+			// specified
+			if ts.config.AgentConfig.TemplateConfig != nil && ts.config.AgentConfig.TemplateConfig.ExitOnRetryFailure {
+				return fmt.Errorf("template server: %w", err)
+			}
+
+			ts.runner, err = manager.NewRunner(runnerConfig, false)
+			if err != nil {
+				return fmt.Errorf("template server failed to create: %w", err)
+			}
+			go ts.runner.Start()
 
 		case <-ts.runner.TemplateRenderedCh():
 			// A template has been rendered, figure out what to do
@@ -210,118 +234,4 @@ func (ts *Server) Stop() {
 	if ts.stopped.CAS(false, true) {
 		close(ts.DoneCh)
 	}
-}
-
-// newRunnerConfig returns a consul-template runner configuration, setting the
-// Vault and Consul configurations based on the clients configs.
-func newRunnerConfig(sc *ServerConfig, templates ctconfig.TemplateConfigs) (*ctconfig.Config, error) {
-	conf := ctconfig.DefaultConfig()
-	conf.Templates = templates.Copy()
-
-	// Setup the Vault config
-	// Always set these to ensure nothing is picked up from the environment
-	conf.Vault.RenewToken = pointerutil.BoolPtr(false)
-	conf.Vault.Token = pointerutil.StringPtr("")
-	conf.Vault.Address = &sc.AgentConfig.Vault.Address
-
-	if sc.Namespace != "" {
-		conf.Vault.Namespace = &sc.Namespace
-	}
-
-	conf.Vault.SSL = &ctconfig.SSLConfig{
-		Enabled:    pointerutil.BoolPtr(false),
-		Verify:     pointerutil.BoolPtr(false),
-		Cert:       pointerutil.StringPtr(""),
-		Key:        pointerutil.StringPtr(""),
-		CaCert:     pointerutil.StringPtr(""),
-		CaPath:     pointerutil.StringPtr(""),
-		ServerName: pointerutil.StringPtr(""),
-	}
-
-	// The cache does its own retry management based on sc.AgentConfig.Retry,
-	// so we only want to set this up for templating if we're not routing
-	// templating through the cache.  We do need to assign something to Retry
-	// though or it will use its default of 12 retries.
-	var attempts int
-	if sc.AgentConfig.Vault != nil && sc.AgentConfig.Vault.Retry != nil {
-		attempts = sc.AgentConfig.Vault.Retry.NumRetries
-	}
-
-	// Use the cache if available or fallback to the Vault server values.
-	// For now we're only routing templating through the cache when persistence
-	// is enabled. The templating engine and the cache have some inconsistencies
-	// that need to be fixed for 1.7x/1.8
-	if sc.AgentConfig.Cache != nil && sc.AgentConfig.Cache.Persist != nil && len(sc.AgentConfig.Listeners) != 0 {
-		attempts = 0
-		scheme := "unix://"
-		if sc.AgentConfig.Listeners[0].Type == "tcp" {
-			scheme = "https://"
-			if sc.AgentConfig.Listeners[0].TLSDisable {
-				scheme = "http://"
-			}
-		}
-		address := fmt.Sprintf("%s%s", scheme, sc.AgentConfig.Listeners[0].Address)
-		conf.Vault.Address = &address
-
-		// Skip verification if its using the cache because they're part of the same agent.
-		if scheme == "https://" {
-			if sc.AgentConfig.Listeners[0].TLSRequireAndVerifyClientCert {
-				return nil, errors.New("template server cannot use local cache when mTLS is enabled")
-			}
-			conf.Vault.SSL.Verify = pointerutil.BoolPtr(false)
-		}
-	} else if strings.HasPrefix(sc.AgentConfig.Vault.Address, "https") || sc.AgentConfig.Vault.CACert != "" {
-		skipVerify := sc.AgentConfig.Vault.TLSSkipVerify
-		verify := !skipVerify
-		conf.Vault.SSL = &ctconfig.SSLConfig{
-			Enabled:    pointerutil.BoolPtr(true),
-			Verify:     &verify,
-			Cert:       &sc.AgentConfig.Vault.ClientCert,
-			Key:        &sc.AgentConfig.Vault.ClientKey,
-			CaCert:     &sc.AgentConfig.Vault.CACert,
-			CaPath:     &sc.AgentConfig.Vault.CAPath,
-			ServerName: &sc.AgentConfig.Vault.TLSServerName,
-		}
-	}
-	enabled := attempts > 0
-	conf.Vault.Retry = &ctconfig.RetryConfig{
-		Attempts: &attempts,
-		Enabled:  &enabled,
-	}
-
-	conf.Finalize()
-
-	// setup log level from TemplateServer config
-	conf.LogLevel = logLevelToStringPtr(sc.LogLevel)
-
-	if err := ctlogging.Setup(&ctlogging.Config{
-		Level:  *conf.LogLevel,
-		Writer: sc.LogWriter,
-	}); err != nil {
-		return nil, err
-	}
-	return conf, nil
-}
-
-// logLevelToString converts a go-hclog level to a matching, uppercase string
-// value. It's used to convert Vault Agent's hclog level to a string version
-// suitable for use in Consul Template's runner configuration input.
-func logLevelToStringPtr(level hclog.Level) *string {
-	// consul template's default level is WARN, but Vault Agent's default is INFO,
-	// so we use that for the Runner's default.
-	var levelStr string
-
-	switch level {
-	case hclog.Trace:
-		levelStr = "TRACE"
-	case hclog.Debug:
-		levelStr = "DEBUG"
-	case hclog.Warn:
-		levelStr = "WARN"
-	case hclog.Error:
-		levelStr = "ERROR"
-	default:
-		levelStr = "INFO"
-	}
-	return pointerutil.StringPtr(levelStr)
 }

@@ -1,0 +1,88 @@
+<PageHeader as |p|>
+  <p.top>
+    <nav class="breadcrumb" aria-label="breadcrumbs">
+      <ul>
+        <li>
+          <span class="sep">&#x0002f;</span>
+          <LinkTo @route="vault.cluster.access.oidc.assignments">
+            Assignments
+          </LinkTo>
+        </li>
+      </ul>
+    </nav>
+  </p.top>
+  <p.levelLeft>
+    <h1 class="title is-3" data-test-oidc-assignment-title>
+      {{@model.name}}
+    </h1>
+  </p.levelLeft>
+</PageHeader>
+
+<div class="tabs-container box is-sideless is-fullwidth is-paddingless is-marginless">
+  <nav class="tabs" aria-label="tabs">
+    <ul>
+      <LinkTo
+        @route="vault.cluster.access.oidc.assignments.assignment.details"
+        @model={{@model}}
+        data-test-oidc-assignment-details
+      >
+        Details
+      </LinkTo>
+    </ul>
+  </nav>
+</div>
+
+<Toolbar>
+  <ToolbarActions>
+    {{#if @model.canDelete}}
+      <ConfirmAction
+        @buttonClasses="toolbar-link"
+        @onConfirmAction={{this.delete}}
+        @confirmTitle="Delete assignment?"
+        @confirmMessage="This assignment will be permanently deleted. You will not be able to recover it."
+        @confirmButtonText="Delete"
+        data-test-oidc-assignment-delete
+      >
+        Delete assignment
+      </ConfirmAction>
+      <div class="toolbar-separator"></div>
+    {{/if}}
+    {{#if @model.canEdit}}
+      <ToolbarLink
+        @route="vault.cluster.access.oidc.assignments.assignment.edit"
+        @model={{@model.name}}
+        data-test-oidc-assignment-edit
+      >
+        Edit assignment
+      </ToolbarLink>
+    {{/if}}
+  </ToolbarActions>
+</Toolbar>
+
+<div class="box is-fullwidth is-sideless is-paddingless is-marginless">
+  <InfoTableRow @label="Name" @value={{@model.name}} />
+  <InfoTableRow
+    @label="Entities"
+    @type="array"
+    @value={{@model.entityIds}}
+    @model={{@model}}
+    @isLink={{true}}
+    @renderItemName={{true}}
+    @modelType="identity/entity"
+    @itemRoute={{(array "vault.cluster.access.identity.show" "entities" "details")}}
+    @alwaysRender={{true}}
+    @toggleViewAll={{true}}
+  />
+  <InfoTableRow
+    @label="Groups"
+    @type="array"
+    @value={{@model.groupIds}}
+    @model={{@model}}
+    @isLink={{true}}
+    @renderItemName={{true}}
+    @modelType="identity/group"
+    @itemRoute={{(array "vault.cluster.access.identity.show" "groups" "details")}}
+    @alwaysRender={{true}}
+    @doNotTruncate={{true}}
+  />
+</div>

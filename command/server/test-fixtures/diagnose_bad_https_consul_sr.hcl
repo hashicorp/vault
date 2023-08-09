@@ -1,3 +1,6 @@
+# Copyright (c) HashiCorp, Inc.
+# SPDX-License-Identifier: MPL-2.0
+
 disable_cache = true
 disable_mlock = true
 
@@ -26,17 +29,6 @@ service_registration "consul" {
     foo = "bar"
     tls_cert_file = "./../vault/diagnose/test-fixtures/expiredcert.pem"
     tls_key_file = "./../vault/diagnose/test-fixtures/expiredprivatekey.pem"
-}
-
-telemetry {
-    statsd_address = "bar"
-    usage_gauge_period = "5m"
-    maximum_gauge_cardinality = 100
-
-    statsite_address = "foo"
-    dogstatsd_addr = "127.0.0.1:7254"
-    dogstatsd_tags = ["tag_1:val_1", "tag_2:val_2"]
-    metrics_prefix = "myprefix"
 }
 
 sentinel {

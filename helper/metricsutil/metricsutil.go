@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package metricsutil
 
 import (
@@ -105,7 +108,7 @@ func (m *MetricsHelper) ResponseForFormat(format string) *logical.Response {
 		return &logical.Response{
 			Data: map[string]interface{}{
 				logical.HTTPContentType: ErrorContentType,
-				logical.HTTPRawBody:     fmt.Sprintf("metric response format \"%s\" unknown", format),
+				logical.HTTPRawBody:     fmt.Sprintf("metric response format %q unknown", format),
 				logical.HTTPStatusCode:  http.StatusBadRequest,
 			},
 		}

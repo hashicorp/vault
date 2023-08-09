@@ -1,0 +1,23 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
+import Application from '../application';
+
+export default Application.extend({
+  queryRecord() {
+    return this.ajax(this.urlForQuery(), 'GET').then((resp) => {
+      resp.id = resp.request_id;
+      return resp;
+    });
+  },
+
+  urlForUpdateRecord() {
+    return this.buildURL() + '/internal/counters/config';
+  },
+
+  urlForQuery() {
+    return this.buildURL() + '/internal/counters/config';
+  },
+});

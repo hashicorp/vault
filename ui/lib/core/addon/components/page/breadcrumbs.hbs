@@ -1,0 +1,18 @@
+<nav class="breadcrumb" aria-label="breadcrumbs" data-test-breadcrumbs>
+  <ul>
+    {{#each @breadcrumbs as |breadcrumb|}}
+      <li>
+        <span class="sep">/</span>
+        {{#if breadcrumb.linkExternal}}
+          <LinkToExternal @route={{breadcrumb.route}}>{{breadcrumb.label}}</LinkToExternal>
+        {{else if breadcrumb.route}}
+          <LinkTo @route={{breadcrumb.route}}>
+            {{breadcrumb.label}}
+          </LinkTo>
+        {{else}}
+          {{breadcrumb.label}}
+        {{/if}}
+      </li>
+    {{/each}}
+  </ul>
+</nav>

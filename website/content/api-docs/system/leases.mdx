@@ -8,19 +8,19 @@ description: The `/sys/leases` endpoints are used to view and manage leases.
 
 The `/sys/leases` endpoints are used to view and manage leases in Vault.
 
-## Read Lease
+## Read lease
 
 This endpoint retrieve lease metadata.
 
 | Method | Path                 |
 | :----- | :------------------- |
-| `PUT`  | `/sys/leases/lookup` |
+| `POST` | `/sys/leases/lookup` |
 
 ### Parameters
 
 - `lease_id` `(string: <required>)` – Specifies the ID of the lease to lookup.
 
-### Sample Payload
+### Sample payload
 
 ```json
 {
@@ -28,17 +28,17 @@ This endpoint retrieve lease metadata.
 }
 ```
 
-### Sample Request
+### Sample request
 
 ```shell-session
 $ curl \
     --header "X-Vault-Token: ..." \
-    --request PUT \
+    --request POST \
     --data @payload.json \
     http://127.0.0.1:8200/v1/sys/leases/lookup
 ```
 
-### Sample Response
+### Sample response
 
 ```json
 {
@@ -51,7 +51,7 @@ $ curl \
 }
 ```
 
-## List Leases
+## List leases
 
 This endpoint returns a list of lease ids.
 
@@ -61,7 +61,7 @@ This endpoint returns a list of lease ids.
 | :----- | :--------------------------- |
 | `LIST` | `/sys/leases/lookup/:prefix` |
 
-### Sample Request
+### Sample request
 
 ```shell-session
 $ curl \
@@ -70,7 +70,7 @@ $ curl \
     http://127.0.0.1:8200/v1/sys/leases/lookup/aws/creds/deploy/
 ```
 
-### Sample Response
+### Sample response
 
 ```json
 {
@@ -80,24 +80,26 @@ $ curl \
 }
 ```
 
-## Renew Lease
+## Renew lease
 
 This endpoint renews a lease, requesting to extend the lease. Token leases
 cannot be renewed using this endpoint, use instead the auth/token/renew endpoint.
 
 | Method | Path                |
 | :----- | :------------------ |
-| `PUT`  | `/sys/leases/renew` |
+| `POST` | `/sys/leases/renew` |
 
 ### Parameters
 
-- `lease_id` `(string: <required>)` – Specifies the ID of the lease to extend.
-  This can be specified as part of the URL or as part of the request body.
+- `lease_id` `(string: <required>)` – Specifies the ID of the lease to extend. This 
+  parameter can either be specified in a json request, as shown below, or provided as
+  a path parameter to the endpoint, like /sys/leases/revoke/:lease_id. If both are 
+  provided, the leaseID in the request json takes precedence.
 
 - `increment` `(int: 0)` – Specifies the requested amount of time (in seconds)
   to extend the lease.
 
-### Sample Payload
+### Sample payload
 
 ```json
 {
@@ -106,17 +108,17 @@ cannot be renewed using this endpoint, use instead the auth/token/renew endpoint
 }
 ```
 
-### Sample Request
+### Sample request
 
 ```shell-session
 $ curl \
     --header "X-Vault-Token: ..." \
-    --request PUT \
+    --request POST \
     --data @payload.json \
     http://127.0.0.1:8200/v1/sys/leases/renew
 ```
 
-### Sample Response
+### Sample response
 
 ```json
 {
@@ -126,22 +128,25 @@ $ curl \
 }
 ```
 
-## Revoke Lease
+## Revoke lease
 
 This endpoint revokes a lease immediately.
 
 | Method | Path                 |
 | :----- | :------------------- |
-| `PUT`  | `/sys/leases/revoke` |
+| `POST` | `/sys/leases/revoke` |
 
 ### Parameters
 
-- `lease_id` `(string: <required>)` – Specifies the ID of the lease to revoke.
+- `lease_id` `(string: <required>)` – Specifies the ID of the lease to revoke. This 
+  parameter can either be specified in a json request, as shown below, or provided as
+  a path parameter to the endpoint, like /sys/leases/revoke/:lease_id. If both are 
+  provided, the leaseID in the request json takes precedence.
 - `sync` `(bool: false)` - Instead of the default behaviour of queueing the lease
   revocation, sync=true will revoke the lease immediately and only return once
   complete.
 
-### Sample Payload
+### Sample payload
 
 ```json
 {
@@ -149,17 +154,17 @@ This endpoint revokes a lease immediately.
 }
 ```
 
-### Sample Request
+### Sample request
 
 ```shell-session
 $ curl \
     --header "X-Vault-Token: ..." \
-    --request PUT \
+    --request POST \
     --data @payload.json \
     http://127.0.0.1:8200/v1/sys/leases/revoke
 ```
 
-## Revoke Force
+## Revoke force
 
 This endpoint revokes all secrets or tokens generated under a given prefix
 immediately. Unlike `/sys/leases/revoke-prefix`, this path ignores backend errors
@@ -175,23 +180,23 @@ this endpoint should be tightly controlled.
 
 | Method | Path                               |
 | :----- | :--------------------------------- |
-| `PUT`  | `/sys/leases/revoke-force/:prefix` |
+| `POST` | `/sys/leases/revoke-force/:prefix` |
 
 ### Parameters
 
 - `prefix` `(string: <required>)` – Specifies the prefix to revoke. This is
   specified as part of the URL.
 
-### Sample Request
+### Sample request
 
 ```shell-session
 $ curl \
     --header "X-Vault-Token: ..." \
-    --request PUT \
+    --request POST \
     http://127.0.0.1:8200/v1/sys/leases/revoke-force/aws/creds
 ```
 
-## Revoke Prefix
+## Revoke prefix
 
 This endpoint revokes all secrets (via a lease ID prefix) or tokens (via the
 tokens' path property) generated under a given prefix immediately. This requires
@@ -202,7 +207,7 @@ used to revoke very large numbers of secrets/tokens at once.
 
 | Method | Path                                |
 | :----- | :---------------------------------- |
-| `PUT`  | `/sys/leases/revoke-prefix/:prefix` |
+| `POST` | `/sys/leases/revoke-prefix/:prefix` |
 
 ### Parameters
 
@@ -212,16 +217,16 @@ used to revoke very large numbers of secrets/tokens at once.
   revocations, sync=true will revoke ths leases immediately and only return once
   complete.
 
-### Sample Request
+### Sample request
 
 ```shell-session
 $ curl \
     --header "X-Vault-Token: ..." \
-    --request PUT \
+    --request POST \
     http://127.0.0.1:8200/v1/sys/leases/revoke-prefix/aws/creds
 ```
 
-## Tidy Leases
+## Tidy leases
 
 This endpoint cleans up the dangling storage entries for leases: for each lease
 entry in storage, Vault will verify that it has an associated valid non-expired
@@ -235,7 +240,7 @@ used sparingly.
 | :----- | :----------------- |
 | `POST` | `/sys/leases/tidy` |
 
-### Sample Request
+### Sample request
 
 ```shell-session
 $ curl \
@@ -244,7 +249,7 @@ $ curl \
     http://127.0.0.1:8200/v1/sys/leases/tidy
 ```
 
-## Lease Counts
+## Lease counts
 
 This endpoint returns the total count of a `type` of lease, as well as a count
 per mount point. Note that it currently only supports type "irrevocable".
@@ -264,7 +269,7 @@ This endpoint was added in Vault 1.8.
 | :----- | :------------------ |
 | `GET`  | `/sys/leases/count` |
 
-### Sample Request
+### Sample request
 
 ```shell-session
 $ curl \
@@ -274,7 +279,7 @@ $ curl \
     -d type=irrevocable
 ```
 
-## Leases List
+## Leases list
 
 This endpoint returns the total count of a `type` of lease, as well as a list
 of leases per mount point. Note that it currently only supports type
@@ -299,7 +304,7 @@ This endpoint was added in Vault 1.8.
 | :----- | :------------ |
 | `GET`  | `/sys/leases` |
 
-### Sample Request
+### Sample request
 
 ```shell-session
 $ curl \

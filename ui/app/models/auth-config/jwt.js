@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
 import { attr } from '@ember-data/model';
 import { computed } from '@ember/object';
 import AuthConfig from '../auth-config';
@@ -36,8 +41,8 @@ export default AuthConfig.extend({
   boundIssuer: attr('string', {
     helpText: 'The value against which to match the iss claim in a JWT',
   }),
-  fieldGroups: computed('constructor.modelName', 'newFields', function() {
-    let type = this.constructor.modelName.split('/')[1].toUpperCase();
+  fieldGroups: computed('constructor.modelName', 'newFields', function () {
+    const type = this.constructor.modelName.split('/')[1].toUpperCase();
     let groups = [
       {
         default: ['oidcDiscoveryUrl', 'defaultRole'],

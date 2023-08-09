@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
 import { helper as buildHelper } from '@ember/component/helper';
 
 //list from http://docs.aws.amazon.com/general/latest/gr/rande.html#sts_region

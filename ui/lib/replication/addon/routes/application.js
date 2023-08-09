@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
 import { inject as service } from '@ember/service';
 import { setProperties } from '@ember/object';
 import { hash } from 'rsvp';
@@ -16,18 +21,17 @@ export default Route.extend(ClusterRoute, {
   },
 
   model() {
-    const activeClusterId = this.auth.activeCluster;
-    return this.store.peekRecord('cluster', activeClusterId);
+    return this.auth.activeCluster;
   },
 
   afterModel(model) {
     return hash({
       canEnablePrimary: this.store
         .findRecord('capabilities', 'sys/replication/primary/enable')
-        .then(c => c.get('canUpdate')),
+        .then((c) => c.get('canUpdate')),
       canEnableSecondary: this.store
         .findRecord('capabilities', 'sys/replication/secondary/enable')
-        .then(c => c.get('canUpdate')),
+        .then((c) => c.get('canUpdate')),
     }).then(({ canEnablePrimary, canEnableSecondary }) => {
       setProperties(model, {
         canEnablePrimary,

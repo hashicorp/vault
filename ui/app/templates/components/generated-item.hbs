@@ -6,66 +6,89 @@
           <span class="sep">
             /
           </span>
-          <LinkTo @route="vault.cluster.access.method.item.list" @model={{itemType}}>
-            {{pluralize itemType}}
+          <LinkTo @route="vault.cluster.access.method.item.list" @model={{this.itemType}}>
+            {{pluralize this.itemType}}
           </LinkTo>
         </li>
       </ul>
     </nav>
   </p.top>
   <p.levelLeft>
-    {{#if (eq mode "show")}}
+    {{#if (eq this.mode "show")}}
       <h1 class="title is-3">
-        {{model.id}}
+        {{this.model.id}}
       </h1>
     {{else}}
       <h1 class="title is-3">
-        {{capitalize mode}}
-        {{singularize itemType}}
-        {{#if (eq mode "edit")}}
-          {{model.id}}
+        {{capitalize this.mode}}
+        {{singularize this.itemType}}
+        {{#if (eq this.mode "edit")}}
+          {{this.model.id}}
         {{/if}}
       </h1>
     {{/if}}
   </p.levelLeft>
 </PageHeader>
-{{#if (eq mode "show")}}
+{{#if (eq this.mode "show")}}
   <Toolbar>
     <ToolbarActions>
-      <ConfirmAction @buttonClasses="toolbar-link" @onConfirmAction={{action "deleteItem"}}
-        @confirmMessage={{concat "Are you sure you want to delete " itemType " " model.id "?"}} @cancelButtonText="Cancel"
-        data-test-secret-delete="true">
+      <ConfirmAction
+        @buttonClasses="toolbar-link"
+        @onConfirmAction={{action "deleteItem"}}
+        @confirmMessage={{concat "Are you sure you want to delete " this.itemType " " this.model.id "?"}}
+        @cancelButtonText="Cancel"
+        data-test-secret-delete="true"
+      >
         Delete
-        {{itemType}}
+        {{this.itemType}}
       </ConfirmAction>
-      <ToolbarLink @params={{array "vault.cluster.access.method.item.edit" itemType model.id}}
-        @data-test-configure-link="true">
-        Edit {{singularize itemType}}
+      <div class="toolbar-separator"></div>
+      <ToolbarLink
+        @route="vault.cluster.access.method.item.edit"
+        @models={{array this.itemType this.model.id}}
+        data-test-configure-link="true"
+      >
+        Edit
+        {{singularize this.itemType}}
       </ToolbarLink>
     </ToolbarActions>
   </Toolbar>
 {{/if}}
-{{#if (eq mode "show")}}
-  <FieldGroupShow @model={{model}} @showAllFields=true />
+{{#if (eq this.mode "show")}}
+  <FieldGroupShow @model={{this.model}} @showAllFields={{true}} />
 {{else}}
-  <form {{action (perform saveModel) on="submit"}}>
+  <form {{action (perform this.saveModel) on="submit"}}>
     <div class="box is-sideless is-fullwidth is-marginless">
-      <NamespaceReminder @mode="save" @noun={{itemType}} />
-      <MessageError @model={{model}} />
-      <FormFieldGroups @model={{model}} @mode={{mode}} />
+      <NamespaceReminder @mode="save" @noun={{this.itemType}} />
+      <MessageError @model={{this.model}} />
+      <FormFieldGroups
+        @model={{this.model}}
+        @mode={{this.mode}}
+        @onKeyUp={{action "onKeyUp"}}
+        @modelValidations={{this.modelValidations}}
+      />
     </div>
     <div class="field is-grouped-split box is-fullwidth is-bottomless">
       <div class="control">
-        <button type="submit" data-test-save-config="true"
-          class="button is-primary {{if saveModel.isRunning "loading"}}" disabled={{saveModel.isRunning}}>
+        <button
+          type="submit"
+          data-test-save-config="true"
+          class="button is-primary {{if this.saveModel.isRunning 'loading'}}"
+          disabled={{or this.saveModel.isRunning this.isFormInvalid}}
+        >
           Save
         </button>
-        {{#if (eq mode "create")}}
+        {{#if (eq this.mode "create")}}
           <LinkTo @route="vault.cluster.access.method.item.list" class="button" data-test-cancel-link={{true}}>
             Cancel
           </LinkTo>
         {{else}}
-          <LinkTo @route="vault.cluster.access.method.item.show" @model={{model.id}} class="button" data-test-cancel-link={{true}}>
+          <LinkTo
+            @route="vault.cluster.access.method.item.show"
+            @model={{this.model.id}}
+            class="button"
+            data-test-cancel-link={{true}}
+          >
             Cancel
           </LinkTo>
         {{/if}}

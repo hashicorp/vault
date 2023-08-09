@@ -1,20 +1,25 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
 import JSONSerializer from '@ember-data/serializer/json';
 import { isNone, isBlank } from '@ember/utils';
 import { assign } from '@ember/polyfills';
 import { decamelize } from '@ember/string';
 
 export default JSONSerializer.extend({
-  keyForAttribute: function(attr) {
+  keyForAttribute: function (attr) {
     return decamelize(attr);
   },
 
   normalizeItems(payload) {
     if (payload.data && payload.data.keys && Array.isArray(payload.data.keys)) {
-      let models = payload.data.keys.map(key => {
+      const models = payload.data.keys.map((key) => {
         if (typeof key !== 'string') {
           return key;
         }
-        let pk = this.primaryKey || 'id';
+        const pk = this.primaryKey || 'id';
         let model = { [pk]: key };
         // if we've added _requestQuery in the adapter, we want
         // attach it to the individual models
@@ -59,9 +64,6 @@ export default JSONSerializer.extend({
     const valHasNotChanged = isNone(snapshot.changedAttributes()[key]);
     const valIsBlank = isBlank(val);
     if (attributes.options.readOnly) {
-      return;
-    }
-    if (attributes.type === 'object' && val && Object.keys(val).length > 0 && valHasNotChanged) {
       return;
     }
     if (valIsBlank && valHasNotChanged) {

@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package vault
 
 import (
@@ -12,7 +15,7 @@ func TestCoreUnsealedWithConfigs(t testing.T, barrierConf, recoveryConf *SealCon
 	t.Helper()
 	opts := &seal.TestSealOpts{}
 	if recoveryConf == nil {
-		opts.StoredKeys = seal.StoredKeysSupportedShamirMaster
+		opts.StoredKeys = seal.StoredKeysSupportedShamirRoot
 	}
 	return TestCoreUnsealedWithConfigSealOpts(t, barrierConf, recoveryConf, opts)
 }

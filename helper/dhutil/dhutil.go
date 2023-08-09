@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package dhutil
 
 import (
@@ -6,7 +9,6 @@ import (
 	"crypto/cipher"
 	"crypto/rand"
 	"crypto/sha256"
-	"encoding/hex"
 	"errors"
 	"fmt"
 	"io"
@@ -90,7 +92,6 @@ func DeriveSharedKey(secret, ourPublic, theirPublic []byte) ([]byte, error) {
 	if n != 32 {
 		return nil, errors.New("short read from hkdf")
 	}
-	fmt.Printf("Key: %s\n", hex.EncodeToString(key[:]))
 
 	return key[:], nil
 }

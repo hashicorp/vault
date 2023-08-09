@@ -1,5 +1,9 @@
+# Copyright (c) HashiCorp, Inc.
+# SPDX-License-Identifier: MPL-2.0
+
 disable_cache = true
 disable_mlock = true
+log_requests_level = "Basic"
 
 ui = true
 
@@ -44,10 +48,11 @@ seal "awskms" {
   secret_key = "wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY"
 }
 
-max_lease_ttl = "10h"
-default_lease_ttl = "10h"
+max_lease_ttl = "30d"
+default_lease_ttl = "365d"
 cluster_name = "testcluster"
 pid_file = "./pidfile"
 raw_storage_endpoint = true
 disable_sealwrap = true
 disable_sentinel_trace = true
+administrative_namespace_path = "admin/"

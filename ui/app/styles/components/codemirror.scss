@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
 $light-grey: #dde3e7;
 $light-gray: #a4a4a4;
 $light-grey-blue: #6c7b81;
@@ -31,9 +36,9 @@ $gutter-grey: #2a2f36;
 
 .cm-s-hashi-read-only {
   &.CodeMirror {
-    background-color: $grey-lighter;
+    background-color: $grey-lightest;
     border: none;
-    color: #626873;
+    color: $ui-gray-600;
     font-family: $family-monospace;
     -webkit-font-smoothing: auto;
     line-height: 1.4;
@@ -51,6 +56,7 @@ $gutter-grey: #2a2f36;
 .cm-s-hashi {
   &.CodeMirror {
     background-color: $black !important;
+    resize: vertical;
     color: #cfd2d1 !important;
     border: none;
     font-family: $family-monospace;
@@ -167,34 +173,14 @@ $gutter-grey: #2a2f36;
 }
 
 .readonly-codemirror {
-  .CodeMirror-cursors {
+  .CodeMirror-code {
+    cursor: default;
+  }
+  .CodeMirror-cursor {
+    // https://github.com/codemirror/CodeMirror/issues/1099
     display: none;
   }
-
-  .cm-s-hashi {
-    span {
-      color: $light-grey;
-    }
-
-    span.cm-string,
-    span.cm-string-2 {
-      color: $faded-gray;
-    }
-
-    span.cm-number {
-      color: lighten($dark-gray, 30%);
-    }
-
-    span.cm-property {
-      color: white;
-    }
-
-    span.cm-variable-2 {
-      color: $light-grey-blue;
-    }
-  }
 }
-
 .cm-s-auto-height.CodeMirror {
   height: auto;
 }

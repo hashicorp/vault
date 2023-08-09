@@ -1,0 +1,22 @@
+# Copyright (c) HashiCorp, Inc.
+# SPDX-License-Identifier: MPL-2.0
+
+rules:
+  - id: hc-return-nil
+    patterns:
+      - pattern-either:
+          - pattern: |
+              if $X == nil {
+                      return $X
+              }
+          - pattern: |
+              if $X != nil {
+                      return ...
+              }
+              return $X
+    message: return nil instead of nil value
+    languages:
+      - go
+    severity: ERROR
+    metadata:
+      license: MIT

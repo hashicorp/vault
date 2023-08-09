@@ -1,4 +1,7 @@
-// +build !foundationdb
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
+//go:build !foundationdb
 
 package foundationdb
 

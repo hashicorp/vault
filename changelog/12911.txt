@@ -1,0 +1,3 @@
+```release-note:bug
+cli: fixes CLI requests when namespace is both provided as argument and part of the path
+```

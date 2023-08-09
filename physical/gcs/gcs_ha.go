@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package gcs
 
 import (
@@ -321,9 +324,10 @@ OUTER:
 //
 // - lock does not exist
 //   - write the lock
+//
 // - lock exists
 //   - if key is empty or identity is the same or timestamp exceeds TTL
-//     - update the lock to self
+//   - update the lock to self
 func (l *Lock) writeLock() (bool, error) {
 	// Create a transaction to read and the update (maybe)
 	ctx, cancel := context.WithCancel(context.Background())

@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
 import { inject as service } from '@ember/service';
 
 /**
@@ -24,7 +29,8 @@ export default Component.extend({
   preference: 'join',
   showJoinForm: false,
   actions: {
-    advanceFirstScreen() {
+    advanceFirstScreen(event) {
+      event.preventDefault();
       if (this.preference !== 'join') {
         this.onDismiss();
         return;

@@ -1,7 +1,11 @@
-<InfoTableRow @label="Name" @value={{@model.name}} @data-test-alias-name={{true}} />
+<InfoTableRow @label="Name" @value={{@model.name}} data-test-alias-name={{true}} />
 <InfoTableRow @label="ID" @value={{@model.id}} />
-<InfoTableRow @label={{if (eq @model.identityType "entity-alias") "Entity ID" "Group ID"}} @value={{model.canonicalId}}>
-  <LinkTo @route="vault.cluster.access.identity.show" @models={{array (if (eq @model.identityType "entity-alias") "entities" "groups") @model.canonicalId "details"}} class="has-text-black is-font-mono">
+<InfoTableRow @label={{if (eq @model.identityType "entity-alias") "Entity ID" "Group ID"}} @value={{this.model.canonicalId}}>
+  <LinkTo
+    @route="vault.cluster.access.identity.show"
+    @models={{array (if (eq @model.identityType "entity-alias") "entities" "groups") @model.canonicalId "details"}}
+    class="has-text-black is-font-mono"
+  >
     {{@model.canonicalId}}
   </LinkTo>
 </InfoTableRow>
@@ -17,11 +21,11 @@
 </InfoTableRow>
 <InfoTableRow @label="Created" @value={{@model.creationTime}}>
   <time datetime={{@model.creationTime}} title={{@model.creationTime}}>
-    {{date-format @model.creationTime 'MMM dd, yyyy [at] h:mm a'}}
+    {{date-format @model.creationTime "MMM dd, yyyy h:mm a"}}
   </time>
 </InfoTableRow>
 <InfoTableRow @label="Last Updated" @value={{@model.lastUpdateTime}}>
   <time datetime={{@model.lastUpdateTime}} title={{@model.lastUpdateTime}}>
-    {{date-format @model.lastUpdateTime 'MMM dd, yyyy [at] h:mm a'}}
+    {{date-format @model.lastUpdateTime "MMM dd, yyyy h:mm a"}}
   </time>
 </InfoTableRow>

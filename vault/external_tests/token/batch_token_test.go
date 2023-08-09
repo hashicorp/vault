@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package token
 
 import (
@@ -6,29 +9,19 @@ import (
 	"time"
 
 	"github.com/hashicorp/vault/api"
-	"github.com/hashicorp/vault/builtin/credential/approle"
-	vaulthttp "github.com/hashicorp/vault/http"
+	"github.com/hashicorp/vault/helper/testhelpers/minimal"
+	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/vault"
 )
 
 func TestBatchTokens(t *testing.T) {
-	coreConfig := &vault.CoreConfig{
+	t.Parallel()
+	cluster := minimal.NewTestSoloCluster(t, &vault.CoreConfig{
 		LogicalBackends: map[string]logical.Factory{
 			"kv": vault.LeasedPassthroughBackendFactory,
 		},
-		CredentialBackends: map[string]logical.Factory{
-			"approle": approle.Factory,
-		},
-	}
-	cluster := vault.NewTestCluster(t, coreConfig, &vault.TestClusterOptions{
-		HandlerFunc: vaulthttp.Handler,
 	})
-	cluster.Start()
-	defer cluster.Cleanup()
-
-	core := cluster.Cores[0].Core
-	vault.TestWaitActive(t, core)
 	client := cluster.Cores[0].Client
 	rootToken := client.Token()
 	var err error
@@ -133,10 +126,10 @@ path "kv/*" {
 		if resp.Auth.ClientToken == "" {
 			t.Fatal("expected a client token")
 		}
-		if batch && !strings.HasPrefix(resp.Auth.ClientToken, "b.") {
+		if batch && !strings.HasPrefix(resp.Auth.ClientToken, consts.BatchTokenPrefix) {
 			t.Fatal("expected a batch token")
 		}
-		if !batch && strings.HasPrefix(resp.Auth.ClientToken, "b.") {
+		if !batch && strings.HasPrefix(resp.Auth.ClientToken, consts.BatchTokenPrefix) {
 			t.Fatal("expected a non-batch token")
 		}
 		return resp.Auth.ClientToken
@@ -199,22 +192,12 @@ path "kv/*" {
 }
 
 func TestBatchToken_ParentLeaseRevoke(t *testing.T) {
-	coreConfig := &vault.CoreConfig{
+	t.Parallel()
+	cluster := minimal.NewTestSoloCluster(t, &vault.CoreConfig{
 		LogicalBackends: map[string]logical.Factory{
 			"kv": vault.LeasedPassthroughBackendFactory,
 		},
-		CredentialBackends: map[string]logical.Factory{
-			"approle": approle.Factory,
-		},
-	}
-	cluster := vault.NewTestCluster(t, coreConfig, &vault.TestClusterOptions{
-		HandlerFunc: vaulthttp.Handler,
 	})
-	cluster.Start()
-	defer cluster.Cleanup()
-
-	core := cluster.Cores[0].Core
-	vault.TestWaitActive(t, core)
 	client := cluster.Cores[0].Client
 	rootToken := client.Token()
 	var err error
@@ -268,7 +251,7 @@ path "kv/*" {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if secret.Auth.ClientToken[0:2] != "b." {
+	if secret.Auth.ClientToken[0:vault.TokenPrefixLength] != consts.BatchTokenPrefix {
 		t.Fatal(secret.Auth.ClientToken)
 	}
 
@@ -319,14 +302,8 @@ path "kv/*" {
 }
 
 func TestTokenStore_Roles_Batch(t *testing.T) {
-	cluster := vault.NewTestCluster(t, nil, &vault.TestClusterOptions{
-		HandlerFunc: vaulthttp.Handler,
-	})
-	cluster.Start()
-	defer cluster.Cleanup()
-
-	core := cluster.Cores[0].Core
-	vault.TestWaitActive(t, core)
+	t.Parallel()
+	cluster := minimal.NewTestSoloCluster(t, nil)
 	client := cluster.Cores[0].Client
 	rootToken := client.Token()
 
@@ -354,7 +331,7 @@ func TestTokenStore_Roles_Batch(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		if secret.Auth.ClientToken[0:2] != "s." {
+		if secret.Auth.ClientToken[0:vault.TokenPrefixLength] != consts.ServiceTokenPrefix {
 			t.Fatal(secret.Auth.ClientToken)
 		}
 	}
@@ -397,7 +374,7 @@ func TestTokenStore_Roles_Batch(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		if secret.Auth.ClientToken[0:2] != "b." {
+		if secret.Auth.ClientToken[0:vault.TokenPrefixLength] != consts.BatchTokenPrefix {
 			t.Fatal(secret.Auth.ClientToken)
 		}
 	}
@@ -424,7 +401,7 @@ func TestTokenStore_Roles_Batch(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		if secret.Auth.ClientToken[0:2] != "b." {
+		if secret.Auth.ClientToken[0:vault.TokenPrefixLength] != consts.BatchTokenPrefix {
 			t.Fatal(secret.Auth.ClientToken)
 		}
 		// Client specifies service
@@ -441,7 +418,7 @@ func TestTokenStore_Roles_Batch(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		if secret.Auth.ClientToken[0:2] != "s." {
+		if secret.Auth.ClientToken[0:vault.TokenPrefixLength] != consts.ServiceTokenPrefix {
 			t.Fatal(secret.Auth.ClientToken)
 		}
 		// Client doesn't specify
@@ -457,7 +434,7 @@ func TestTokenStore_Roles_Batch(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		if secret.Auth.ClientToken[0:2] != "s." {
+		if secret.Auth.ClientToken[0:vault.TokenPrefixLength] != consts.ServiceTokenPrefix {
 			t.Fatal(secret.Auth.ClientToken)
 		}
 	}
@@ -484,7 +461,7 @@ func TestTokenStore_Roles_Batch(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		if secret.Auth.ClientToken[0:2] != "b." {
+		if secret.Auth.ClientToken[0:vault.TokenPrefixLength] != consts.BatchTokenPrefix {
 			t.Fatal(secret.Auth.ClientToken)
 		}
 		// Client specifies service
@@ -501,7 +478,7 @@ func TestTokenStore_Roles_Batch(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		if secret.Auth.ClientToken[0:2] != "s." {
+		if secret.Auth.ClientToken[0:vault.TokenPrefixLength] != consts.ServiceTokenPrefix {
 			t.Fatal(secret.Auth.ClientToken)
 		}
 		// Client doesn't specify
@@ -517,7 +494,7 @@ func TestTokenStore_Roles_Batch(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		if secret.Auth.ClientToken[0:2] != "b." {
+		if secret.Auth.ClientToken[0:vault.TokenPrefixLength] != consts.BatchTokenPrefix {
 			t.Fatal(secret.Auth.ClientToken)
 		}
 	}

@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
 import { setProperties } from '@ember/object';
 import { hash } from 'rsvp';
 import Route from '@ember/routing/route';
@@ -12,10 +17,10 @@ export default Route.extend({
       cluster: this.modelFor('mode'),
       canAddSecondary: this.store
         .findRecord('capabilities', `sys/replication/${replicationMode}/primary/secondary-token`)
-        .then(c => c.get('canUpdate')),
+        .then((c) => c.get('canUpdate')),
       canRevokeSecondary: this.store
         .findRecord('capabilities', `sys/replication/${replicationMode}/primary/revoke-secondary`)
-        .then(c => c.get('canUpdate')),
+        .then((c) => c.get('canUpdate')),
     }).then(({ cluster, canAddSecondary, canRevokeSecondary }) => {
       setProperties(cluster, {
         canRevokeSecondary,

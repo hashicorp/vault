@@ -1,9 +1,14 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
 import { attr } from '@ember-data/model';
 import { computed } from '@ember/object';
 import IdentityModel from './_base';
 
 export default IdentityModel.extend({
-  formFields: computed(function() {
+  formFields: computed(function () {
     return ['toEntityId', 'fromEntityIds', 'force'];
   }),
   toEntityId: attr('string', {

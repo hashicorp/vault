@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package command
 
 import (
@@ -53,7 +56,7 @@ Usage: vault delete [options] PATH
 }
 
 func (c *DeleteCommand) Flags() *FlagSets {
-	return c.flagSet(FlagSetHTTP)
+	return c.flagSet(FlagSetHTTP | FlagSetOutputField | FlagSetOutputFormat)
 }
 
 func (c *DeleteCommand) AutocompleteArgs() complete.Predictor {
@@ -95,7 +98,7 @@ func (c *DeleteCommand) Run(args []string) int {
 
 	data, err := parseArgsDataStringLists(stdin, args[1:])
 	if err != nil {
-		c.UI.Error(fmt.Sprintf("Failed to parse K=V data: %s", err))
+		c.UI.Error(fmt.Sprintf("Failed to parse string list data: %s", err))
 		return 1
 	}
 
@@ -108,6 +111,18 @@ func (c *DeleteCommand) Run(args []string) int {
 		return 2
 	}
 
-	c.UI.Info(fmt.Sprintf("Success! Data deleted (if it existed) at: %s", path))
-	return 0
+	if secret == nil {
+		// Don't output anything unless using the "table" format
+		if Format(c.UI) == "table" {
+			c.UI.Info(fmt.Sprintf("Success! Data deleted (if it existed) at: %s", path))
+		}
+		return 0
+	}
+
+	// Handle single field output
+	if c.flagField != "" {
+		return PrintRawField(c.UI, secret, c.flagField)
+	}
+
+	return OutputSecret(c.UI, secret)
 }

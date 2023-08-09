@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
 import Component from '@ember/component';
 import layout from '../templates/components/replication-header';
 
@@ -28,4 +33,5 @@ export default Component.extend({
   secondaryId: null,
   isSummaryDashboard: false,
   'data-test-replication-header': true,
+  attributeBindings: ['data-test-replication-header'],
 });

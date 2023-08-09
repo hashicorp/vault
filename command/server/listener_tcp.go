@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package server
 
 import (
@@ -9,9 +12,9 @@ import (
 	"strings"
 	"time"
 
+	"github.com/hashicorp/go-secure-stdlib/reloadutil"
 	"github.com/hashicorp/vault/internalshared/configutil"
 	"github.com/hashicorp/vault/internalshared/listenerutil"
-	"github.com/hashicorp/vault/internalshared/reloadutil"
 	"github.com/mitchellh/cli"
 )
 

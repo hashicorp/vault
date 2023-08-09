@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package transit
 
 import (
@@ -11,6 +14,11 @@ import (
 func (b *backend) pathCacheConfig() *framework.Path {
 	return &framework.Path{
 		Pattern: "cache-config",
+
+		DisplayAttrs: &framework.DisplayAttributes{
+			OperationPrefix: operationPrefixTransit,
+		},
+
 		Fields: map[string]*framework.FieldSchema{
 			"size": {
 				Type:        framework.TypeInt,
@@ -24,16 +32,18 @@ func (b *backend) pathCacheConfig() *framework.Path {
 			logical.ReadOperation: &framework.PathOperation{
 				Callback: b.pathCacheConfigRead,
 				Summary:  "Returns the size of the active cache",
+				DisplayAttrs: &framework.DisplayAttributes{
+					OperationSuffix: "cache-configuration",
+				},
 			},
 
 			logical.UpdateOperation: &framework.PathOperation{
 				Callback: b.pathCacheConfigWrite,
 				Summary:  "Configures a new cache of the specified size",
-			},
-
-			logical.CreateOperation: &framework.PathOperation{
-				Callback: b.pathCacheConfigWrite,
-				Summary:  "Configures a new cache of the specified size",
+				DisplayAttrs: &framework.DisplayAttributes{
+					OperationVerb:   "configure",
+					OperationSuffix: "cache",
+				},
 			},
 		},
 
@@ -45,8 +55,8 @@ func (b *backend) pathCacheConfig() *framework.Path {
 func (b *backend) pathCacheConfigWrite(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	// get target size
 	cacheSize := d.Get("size").(int)
-	if cacheSize < 0 {
-		return logical.ErrorResponse("size must be greater or equal to 0"), logical.ErrInvalidRequest
+	if cacheSize != 0 && cacheSize < minCacheSize {
+		return logical.ErrorResponse("size must be 0 or a value greater or equal to %d", minCacheSize), logical.ErrInvalidRequest
 	}
 
 	// store cache size
@@ -60,11 +70,16 @@ func (b *backend) pathCacheConfigWrite(ctx context.Context, req *logical.Request
 		return nil, err
 	}
 
-	resp := &logical.Response{
-		Warnings: []string{"cache configurations will be applied when this backend is restarted"},
+	err = b.lm.InitCache(cacheSize)
+	if err != nil {
+		return nil, err
 	}
 
-	return resp, nil
+	return &logical.Response{
+		Data: map[string]interface{}{
+			"size": cacheSize,
+		},
+	}, nil
 }
 
 type configCache struct {
@@ -86,14 +101,17 @@ func (b *backend) pathCacheConfigRead(ctx context.Context, req *logical.Request,
 		return nil, err
 	}
 
+	if currentCacheSize != storedCacheSize {
+		err = b.lm.InitCache(storedCacheSize)
+		if err != nil {
+			return nil, err
+		}
+	}
+
 	resp := &logical.Response{
 		Data: map[string]interface{}{
 			"size": storedCacheSize,
 		},
-	}
-
-	if currentCacheSize != storedCacheSize {
-		resp.Warnings = []string{"This cache size will not be applied until the transit mount is reloaded"}
 	}
 
 	return resp, nil

@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
 /* eslint-disable ember/no-observers */
 import { inject as service } from '@ember/service';
 import { assert } from '@ember/debug';
@@ -15,6 +20,7 @@ const POSSIBLE_FEATURES = [
   'Namespaces',
   'KMIP',
   'Transform Secrets Engine',
+  'Key Management Secrets Engine',
 ];
 
 export function hasFeature(featureName, features) {
@@ -27,7 +33,7 @@ export function hasFeature(featureName, features) {
 
 export default Helper.extend({
   version: service(),
-  onFeaturesChange: observer('version.features.[]', function() {
+  onFeaturesChange: observer('version.features.[]', function () {
     this.recompute();
   }),
   compute([featureName]) {

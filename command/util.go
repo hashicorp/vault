@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package command
 
 import (
@@ -14,6 +17,7 @@ import (
 )
 
 // DefaultTokenHelper returns the token helper that is configured for Vault.
+// This helper should only be used for non-server CLI commands.
 func DefaultTokenHelper() (token.TokenHelper, error) {
 	return config.DefaultTokenHelper()
 }
@@ -90,11 +94,11 @@ func RawField(secret *api.Secret, field string) interface{} {
 // PrintRawField prints raw field from the secret.
 func PrintRawField(ui cli.Ui, data interface{}, field string) int {
 	var val interface{}
-	switch data.(type) {
+	switch data := data.(type) {
 	case *api.Secret:
-		val = RawField(data.(*api.Secret), field)
+		val = RawField(data, field)
 	case map[string]interface{}:
-		val = data.(map[string]interface{})[field]
+		val = data[field]
 	}
 
 	if val == nil {
@@ -103,7 +107,7 @@ func PrintRawField(ui cli.Ui, data interface{}, field string) int {
 	}
 
 	format := Format(ui)
-	if format == "" || format == "table" {
+	if format == "" || format == "table" || format == "raw" {
 		return PrintRaw(ui, fmt.Sprintf("%v", val))
 	}
 

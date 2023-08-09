@@ -1,10 +1,15 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
 import { assign } from '@ember/polyfills';
 import ApplicationAdapter from './application';
 
 export default ApplicationAdapter.extend({
   namespace: 'v1/sys',
   pathForType(type) {
-    let path = type.replace('policy', 'policies');
+    const path = type.replace('policy', 'policies');
     return path;
   },
 
@@ -16,7 +21,7 @@ export default ApplicationAdapter.extend({
     return this.ajax(this.buildURL(type.modelName, name), 'PUT', { data }).then(() => {
       // doing this to make it like a Vault response - ember data doesn't like 204s if it's not a DELETE
       return {
-        data: assign({}, snapshot.record.toJSON(), { id: name }),
+        data: assign({}, this.serialize(snapshot), { id: name }),
       };
     });
   },

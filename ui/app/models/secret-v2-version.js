@@ -1,20 +1,27 @@
-import { belongsTo, attr } from '@ember-data/model';
-import Secret from './secret';
-import { computed } from '@ember/object';
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
 
-export default Secret.extend({
-  failedServerRead: attr('boolean'),
-  pathAttr: 'path',
-  version: attr('number'),
-  secret: belongsTo('secret-v2'),
-  path: attr('string'),
-  deletionTime: attr('string'),
-  createdTime: attr('string'),
-  deleted: computed('deletionTime', function() {
+import { belongsTo, attr } from '@ember-data/model';
+import timestamp from 'core/utils/timestamp';
+import SecretModel from './secret';
+
+export default class SecretV2VersionModel extends SecretModel {
+  @attr('boolean') failedServerRead;
+  @attr('number') version;
+  @attr('string') path;
+  @attr('string') deletionTime;
+  @attr('string') createdTime;
+  @attr('boolean') destroyed;
+  @attr('number') currentVersion;
+  @belongsTo('secret-v2') secret;
+
+  pathAttr = 'path';
+
+  get deleted() {
     const deletionTime = new Date(this.deletionTime);
-    const now = new Date();
+    const now = timestamp.now();
     return deletionTime <= now;
-  }),
-  destroyed: attr('boolean'),
-  currentVersion: attr('number'),
-});
+  }
+}

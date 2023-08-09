@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package random
 
 import (
@@ -294,6 +297,15 @@ func TestParser_ParsePolicy(t *testing.T) {
 						}
 					]
 				}`,
+			expected:  StringGenerator{},
+			expectErr: true,
+		},
+		"config value with empty slice": {
+			registry: defaultRuleNameMapping,
+			rawConfig: `
+                rule {
+                    n = []
+                }`,
 			expected:  StringGenerator{},
 			expectErr: true,
 		},

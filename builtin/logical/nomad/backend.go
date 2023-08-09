@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package nomad
 
 import (
@@ -7,6 +10,8 @@ import (
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/logical"
 )
+
+const operationPrefixNomad = "nomad"
 
 // Factory returns a Nomad backend that satisfies the logical.Backend interface
 func Factory(ctx context.Context, conf *logical.BackendConfig) (logical.Backend, error) {
@@ -48,12 +53,7 @@ type backend struct {
 	*framework.Backend
 }
 
-func (b *backend) client(ctx context.Context, s logical.Storage) (*api.Client, error) {
-	conf, err := b.readConfigAccess(ctx, s)
-	if err != nil {
-		return nil, err
-	}
-
+func clientFromConfig(conf *accessConfig) (*api.Client, error) {
 	nomadConf := api.DefaultConfig()
 	if conf != nil {
 		if conf.Address != "" {
@@ -72,11 +72,14 @@ func (b *backend) client(ctx context.Context, s logical.Storage) (*api.Client, e
 			nomadConf.TLSConfig.ClientKeyPEM = []byte(conf.ClientKey)
 		}
 	}
+	return api.NewClient(nomadConf)
+}
 
-	client, err := api.NewClient(nomadConf)
+func (b *backend) client(ctx context.Context, s logical.Storage) (*api.Client, error) {
+	conf, err := b.readConfigAccess(ctx, s)
 	if err != nil {
 		return nil, err
 	}
 
-	return client, nil
+	return clientFromConfig(conf)
 }

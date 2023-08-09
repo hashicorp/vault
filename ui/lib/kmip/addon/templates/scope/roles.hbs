@@ -9,84 +9,85 @@
   </p.levelLeft>
 </PageHeader>
 <Toolbar>
-  {{#if model.meta.total}}
+  {{#if this.model.meta.total}}
     <ToolbarFilters>
-    <NavigateInput
-      @filterFocusDidChange={{action "setFilterFocus" }}
-      @filterDidChange={{action "setFilter"}}
-      @filter={{this.filter}}
-      @filterMatchesKey={{filterMatchesKey}}
-      @firstPartialMatch={{firstPartialMatch}}
-      @placeholder="Filter roles by name"
-      @extraNavParams={{this.scope}}
-      @urls={{hash
-        create="vault.cluster.secrets.backend.kmip.scope.roles.create"
-        list="vault.cluster.secrets.backend.kmip.scope.roles"
-        show="vault.cluster.secrets.backend.kmip.credentials"
-      }}
-    />
-      {{#if filterFocused}}
-        {{#if filterMatchesKey}}
+      <NavigateInput
+        @filterFocusDidChange={{action "setFilterFocus"}}
+        @filterDidChange={{action "setFilter"}}
+        @filter={{this.filter}}
+        @filterMatchesKey={{this.filterMatchesKey}}
+        @firstPartialMatch={{this.firstPartialMatch}}
+        @placeholder="Filter roles by name"
+        @extraNavParams={{this.scope}}
+        @urls={{hash
+          create="vault.cluster.secrets.backend.kmip.scope.roles.create"
+          list="vault.cluster.secrets.backend.kmip.scope.roles"
+          show="vault.cluster.secrets.backend.kmip.credentials"
+        }}
+      />
+      {{#if this.filterFocused}}
+        {{#if this.filterMatchesKey}}
           <p class="input-hint">
-            <kbd>ENTER</kbd> to go to <code>{{this.filter}}</code> roles
+            <kbd>ENTER</kbd>
+            to go to
+            <code>{{this.filter}}</code>
+            roles
           </p>
         {{/if}}
-        {{#if firstPartialMatch}}
+        {{#if this.firstPartialMatch}}
           <p class="input-hint">
-            <kbd>TAB</kbd> to complete <code>{{firstPartialMatch.id}}</code>
+            <kbd>TAB</kbd>
+            to complete
+            <code>{{this.firstPartialMatch.id}}</code>
           </p>
         {{/if}}
       {{/if}}
     </ToolbarFilters>
   {{/if}}
   <ToolbarActions>
-    <ToolbarLink
-      @type="add"
-      @params={{array "scope.roles.create"}}
-      data-test-role-create
-    >
+    <ToolbarLink @route="scope.roles.create" @type="add" data-test-role-create>
       Create role
     </ToolbarLink>
   </ToolbarActions>
 </Toolbar>
-<ListView @items={{model}} @itemNoun="role" @paginationRouteName="scope.roles" as |list|>
+<ListView @items={{this.model}} @itemNoun="role" @paginationRouteName="scope.roles" as |list|>
   {{#if list.empty}}
     <list.empty
       @title="No roles in this scope yet"
       @message="Roles let you generate credentials with a specified set of KMIP operations permissions that clients are allowed to perform."
     >
-      {{#link-to "scope.roles.create"}}
+      <LinkTo @route="scope.roles.create">
         Create a role
-      {{/link-to}}
+      </LinkTo>
     </list.empty>
   {{else if list.item}}
     <ListItem @linkPrefix={{this.mountPoint}} @linkParams={{array "credentials" this.scope list.item.id}} as |Item|>
       <Item.content>
-        <Icon @glyph="user-plain" class="has-text-grey-light" @size="l" />{{list.item.id}}
+        <Icon @name="user" class="has-text-grey-light" />{{list.item.id}}
       </Item.content>
       <Item.menu as |m|>
         <li class="action">
-          {{#link-to "credentials" this.scope list.item.id class="is-block"}}
+          <LinkTo @route="credentials" @models={{array this.scope list.item.id}} class="is-block">
             View credentials
-          {{/link-to}}
+          </LinkTo>
         </li>
         <li class="action">
-          {{#link-to "role" this.scope list.item.id class="is-block"}}
+          <LinkTo @route="role" @models={{array this.scope list.item.id}} class="is-block">
             View role
-          {{/link-to}}
+          </LinkTo>
         </li>
         {{#if list.item.updatePath.canUpdate}}
           <MenuLoader @loadingParam={{list.item.updatePath.isPending}}>
-            {{#link-to "role.edit" this.scope list.item.id class="is-block"}}
+            <LinkTo @route="role.edit" @models={{array this.scope list.item.id}} class="is-block">
               Edit role
-            {{/link-to}}
+            </LinkTo>
           </MenuLoader>
         {{/if}}
         {{#if list.item.updatePath.canDelete}}
           <MenuLoader @loadingParam={{list.item.updatePath.isPending}}>
             <m.Message
               @id={{list.item.id}}
-              @triggerText='Delete role'
+              @triggerText="Delete role"
               @message={{concat "Are you sure you want to delete " list.item.id "?"}}
               @onConfirm={{action
                 (perform
@@ -107,7 +108,10 @@
   {{else}}
     <ListItem as |Item|>
       <Item.content>
-        There are no roles that match {{this.filter}}, press <kbd>ENTER</kbd> to add one.
+        There are no roles that match
+        {{this.filter}}, press
+        <kbd>ENTER</kbd>
+        to add one.
       </Item.content>
     </ListItem>
   {{/if}}

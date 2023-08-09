@@ -1,0 +1,4 @@
+```release-note:improvement
+auth/ldap: Add a response warning and server log whenever the config is accessed
+if `userfilter` doesn't consider `userattr`
+```

@@ -23,41 +23,36 @@
 
   {{#if this.isUploading}}
     <div class="box is-sideless is-fullwidth is-marginless">
-    <AlertBanner
-      @type="warning"
-      @title="Uploading your file..."
-      @message="Raft snapshots can be very large files. Uploading the snapshot may take some time."
-      />
+      <Hds::Alert @type="inline" @color="warning" class="has-bottom-margin-s" as |A|>
+        <A.Title>Uploading your file...</A.Title>
+        <A.Description>Raft snapshots can be very large files. Uploading the snapshot may take some time.</A.Description>
+      </Hds::Alert>
     </div>
     <div class="box is-fullwidth is-shadowless">
-    <button type="button" class="button" onclick={{action "cancelUpload"}}>
-      Cancel upload
-    </button>
+      <button type="button" class="button" onclick={{action "cancelUpload"}}>
+        Cancel upload
+      </button>
     </div>
   {{else}}
     <div class="box is-sideless is-fullwidth is-marginless">
-      <AlertBanner
-        @type="warning"
-        @title="This might take a while"
-        @message="Raft snapshots can be very large files. Uploading the snapshot may take some time."
-        />
-      <FileToArrayBuffer @onChange={{action (mut file)}} />
+      <Hds::Alert @type="inline" @color="warning" class="has-bottom-margin-s" as |A|>
+        <A.Title>This might take a while</A.Title>
+        <A.Description>Raft snapshots can be very large files. Uploading the snapshot may take some time.</A.Description>
+      </Hds::Alert>
+      <FileToArrayBuffer @onChange={{action (mut this.file)}} />
       <div class="b-checkbox">
         <input
           type="checkbox"
           id="force-restore"
           class="styled"
           checked={{this.forceRestore}}
-          onchange={{action
-            (mut this.forceRestore)
-            value="target.checked"
-          }}
+          onchange={{action (mut this.forceRestore) value="target.checked"}}
         />
         <label for="force-restore" class="is-label">
           Force restore
         </label>
         <p class="checkbox-help-text">
-        Bypass checks to ensure the AutoUnseal or Shamir keys are consistent with the snapshot data.
+          Bypass checks to ensure the AutoUnseal or Shamir keys are consistent with the snapshot data.
         </p>
       </div>
     </div>

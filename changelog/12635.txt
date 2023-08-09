@@ -1,0 +1,3 @@
+```release-note:bug
+core (enterprise): Fix bug where password generation through password policies do not work on namespaces if performed outside a request callback or from an external plugin.
+```

@@ -1,10 +1,18 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package vault
 
 import (
+	"context"
+	"encoding/base64"
 	"errors"
+	"sort"
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/stretchr/testify/assert"
 
 	"github.com/armon/go-metrics"
 	logicalKv "github.com/hashicorp/vault-plugin-secrets-kv"
@@ -23,15 +31,17 @@ func TestCoreMetrics_KvSecretGauge(t *testing.T) {
 
 	testMounts := []struct {
 		Path          string
+		Type          string
 		Version       string
 		ExpectedCount int
 	}{
-		{"secret/", "2", 0},
-		{"secret1/", "1", 3},
-		{"secret2/", "1", 0},
-		{"secret3/", "2", 4},
-		{"prefix/secret3/", "2", 0},
-		{"prefix/secret4/", "2", 5},
+		{"secret/", "kv", "2", 0},
+		{"secret1/", "kv", "1", 3},
+		{"secret2/", "kv", "1", 0},
+		{"secret3/", "kv", "2", 4},
+		{"prefix/secret3/", "kv", "2", 0},
+		{"prefix/secret4/", "kv", "2", 5},
+		{"generic/", "generic", "1", 3},
 	}
 	ctx := namespace.RootContext(nil)
 
@@ -40,7 +50,7 @@ func TestCoreMetrics_KvSecretGauge(t *testing.T) {
 		me := &MountEntry{
 			Table:   mountTableType,
 			Path:    sanitizePath(tm.Path),
-			Type:    "kv",
+			Type:    tm.Type,
 			Options: map[string]string{"version": tm.Version},
 		}
 		err := core.mount(ctx, me)
@@ -53,6 +63,9 @@ func TestCoreMetrics_KvSecretGauge(t *testing.T) {
 		"secret1/a", // 3
 		"secret1/b",
 		"secret1/c/d",
+		"generic/a",
+		"generic/b",
+		"generic/c",
 	}
 	v2secrets := []string{
 		"secret3/data/a", // 4
@@ -254,7 +267,7 @@ func metricLabelsMatch(t *testing.T, actual []metrics.Label, expected map[string
 
 func TestCoreMetrics_EntityGauges(t *testing.T) {
 	ctx := namespace.RootContext(nil)
-	is, ghAccessor, core := testIdentityStoreWithGithubAuth(ctx, t)
+	is, ghAccessor, upAccessor, core := testIdentityStoreWithGithubUserpassAuth(ctx, t)
 
 	// Create an entity
 	alias1 := &logical.Alias{
@@ -263,7 +276,7 @@ func TestCoreMetrics_EntityGauges(t *testing.T) {
 		Name:          "githubuser",
 	}
 
-	entity, err := is.CreateOrFetchEntity(ctx, alias1)
+	entity, _, err := is.CreateOrFetchEntity(ctx, alias1)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -273,12 +286,11 @@ func TestCoreMetrics_EntityGauges(t *testing.T) {
 		Operation: logical.UpdateOperation,
 		Path:      "entity-alias",
 		Data: map[string]interface{}{
-			"name":           "githubuser2",
+			"name":           "userpassuser",
 			"canonical_id":   entity.ID,
-			"mount_accessor": ghAccessor,
+			"mount_accessor": upAccessor,
 		},
 	}
-
 	resp, err := is.HandleRequest(ctx, registerReq)
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("err:%v resp:%#v", err, resp)
@@ -307,13 +319,26 @@ func TestCoreMetrics_EntityGauges(t *testing.T) {
 		t.Fatalf("err: %v", err)
 	}
 
-	if len(glv) != 1 {
+	if len(glv) != 2 {
 		t.Fatalf("Wrong number of gauges %v, expected %v", len(glv), 1)
 	}
 
-	if glv[0].Value != 2.0 {
-		t.Errorf("Alias count %v, expected %v", glv[0].Value, 2.0)
+	if glv[0].Value != 1.0 {
+		t.Errorf("Alias count %v, expected %v", glv[0].Value, 1.0)
 	}
+
+	if glv[1].Value != 1.0 {
+		t.Errorf("Alias count %v, expected %v", glv[0].Value, 1.0)
+	}
+
+	// Sort both metrics.Label slices by Name, causing the Label
+	// with Name auth_method to be first in both arrays
+	sort.Slice(glv[0].Labels, func(i, j int) bool { return glv[0].Labels[i].Name < glv[0].Labels[j].Name })
+	sort.Slice(glv[1].Labels, func(i, j int) bool { return glv[1].Labels[i].Name < glv[1].Labels[j].Name })
+
+	// Sort the GaugeLabelValues slice by the Value of the first metric,
+	// in this case auth_method, in each metrics.Label slice
+	sort.Slice(glv, func(i, j int) bool { return glv[i].Labels[0].Value < glv[j].Labels[0].Value })
 
 	metricLabelsMatch(t, glv[0].Labels,
 		map[string]string{
@@ -321,4 +346,98 @@ func TestCoreMetrics_EntityGauges(t *testing.T) {
 			"auth_method": "github",
 			"mount_point": "auth/github/",
 		})
+
+	metricLabelsMatch(t, glv[1].Labels,
+		map[string]string{
+			"namespace":   "root",
+			"auth_method": "userpass",
+			"mount_point": "auth/userpass/",
+		})
+}
+
+// TestCoreMetrics_AvailablePolicies tests the that available metrics are getting correctly collected when the availablePoliciesGaugeCollector function is invoked
+func TestCoreMetrics_AvailablePolicies(t *testing.T) {
+	aclPolicy := map[string]interface{}{
+		"policy": base64.StdEncoding.EncodeToString([]byte(`path "ns1/secret/foo/*" {
+    capabilities = ["create", "read", "update", "delete", "list"]
+}`)),
+		"name": "secret",
+	}
+
+	type pathPolicy struct {
+		Path   string
+		Policy map[string]interface{}
+	}
+
+	tests := map[string]struct {
+		Policies       []pathPolicy
+		ExpectedValues map[string]float32
+	}{
+		"single acl": {
+			Policies: []pathPolicy{
+				{
+					"sys/policy/secret", aclPolicy,
+				},
+			},
+			ExpectedValues: map[string]float32{
+				// The "default" policy will always be included
+				"acl": 2,
+				"egp": 0,
+				"rgp": 0,
+			},
+		},
+		"multiple acl": {
+			Policies: []pathPolicy{
+				{
+					"sys/policy/secret", aclPolicy,
+				},
+				{
+					"sys/policy/secret2", aclPolicy,
+				},
+			},
+			ExpectedValues: map[string]float32{
+				// The "default" policy will always be included
+				"acl": 3,
+				"egp": 0,
+				"rgp": 0,
+			},
+		},
+	}
+
+	for name, tst := range tests {
+		t.Run(name, func(t *testing.T) {
+			core, _, root := TestCoreUnsealed(t)
+
+			ctxRoot := namespace.RootContext(context.Background())
+
+			// Create policies
+			for _, p := range tst.Policies {
+				req := logical.TestRequest(t, logical.UpdateOperation, p.Path)
+				req.Data = p.Policy
+				req.ClientToken = root
+
+				resp, err := core.HandleRequest(ctxRoot, req)
+				if err != nil {
+					t.Fatalf("err: %v", err)
+				}
+				if resp != nil {
+					logger.Info("expected nil response", resp)
+					t.Fatalf("expected nil response")
+				}
+			}
+
+			gValues, err := core.configuredPoliciesGaugeCollector(ctxRoot)
+			if err != nil {
+				t.Fatalf("err: %v", err)
+			}
+
+			// Check the metrics values match the expected values
+			mgValues := make(map[string]float32, len(gValues))
+			for _, v := range gValues {
+				mgValues[v.Labels[0].Value] = v.Value
+			}
+
+			assert.EqualValues(t, tst.ExpectedValues, mgValues)
+		})
+	}
 }

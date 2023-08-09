@@ -1,3 +1,6 @@
+# Copyright (c) HashiCorp, Inc.
+# SPDX-License-Identifier: MPL-2.0
+
 pid_file = "./pidfile"
 
 auto_auth {
@@ -46,6 +49,14 @@ listener {
 
 listener {
     type = "tcp"
+    address = "127.0.0.1:3000"
+    tls_disable = true
+    role = "metrics_only"
+}
+
+listener {
+    type = "tcp"
+    role = "default"
     address = "127.0.0.1:8400"
     tls_key_file = "/path/to/cakey.pem"
     tls_cert_file = "/path/to/cacert.pem"

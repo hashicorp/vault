@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package approle
 
 import (
@@ -8,12 +11,11 @@ import (
 	"testing"
 	"time"
 
+	"github.com/hashicorp/vault/sdk/helper/testhelpers/schema"
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
 func TestAppRole_TidyDanglingAccessors_Normal(t *testing.T) {
-	var resp *logical.Response
-	var err error
 	b, storage := createBackendWithStorage(t)
 
 	// Create a role
@@ -25,10 +27,7 @@ func TestAppRole_TidyDanglingAccessors_Normal(t *testing.T) {
 		Path:      "role/role1/secret-id",
 		Storage:   storage,
 	}
-	resp, err = b.HandleRequest(context.Background(), roleSecretIDReq)
-	if err != nil || (resp != nil && resp.IsError()) {
-		t.Fatalf("err:%v resp:%#v", err, resp)
-	}
+	_ = b.requestNoErr(t, roleSecretIDReq)
 
 	accessorHashes, err := storage.List(context.Background(), "accessor/")
 	if err != nil {
@@ -44,8 +43,11 @@ func TestAppRole_TidyDanglingAccessors_Normal(t *testing.T) {
 			SecretIDHMAC: "samplesecretidhmac",
 		},
 	)
-	err = storage.Put(context.Background(), entry1)
 	if err != nil {
+		t.Fatal(err)
+	}
+
+	if err := storage.Put(context.Background(), entry1); err != nil {
 		t.Fatal(err)
 	}
 
@@ -55,8 +57,10 @@ func TestAppRole_TidyDanglingAccessors_Normal(t *testing.T) {
 			SecretIDHMAC: "samplesecretidhmac2",
 		},
 	)
-	err = storage.Put(context.Background(), entry2)
 	if err != nil {
+		t.Fatal(err)
+	}
+	if err := storage.Put(context.Background(), entry2); err != nil {
 		t.Fatal(err)
 	}
 
@@ -68,12 +72,18 @@ func TestAppRole_TidyDanglingAccessors_Normal(t *testing.T) {
 		t.Fatalf("bad: len(accessorHashes); expect 3, got %d", len(accessorHashes))
 	}
 
-	_, err = b.tidySecretID(context.Background(), &logical.Request{
+	secret, err := b.tidySecretID(context.Background(), &logical.Request{
 		Storage: storage,
 	})
 	if err != nil {
 		t.Fatal(err)
 	}
+	schema.ValidateResponse(
+		t,
+		schema.GetResponseSchema(t, pathTidySecretID(b), logical.UpdateOperation),
+		secret,
+		true,
+	)
 
 	// It runs async so we give it a bit of time to run
 	time.Sleep(10 * time.Second)
@@ -88,8 +98,6 @@ func TestAppRole_TidyDanglingAccessors_Normal(t *testing.T) {
 }
 
 func TestAppRole_TidyDanglingAccessors_RaceTest(t *testing.T) {
-	var resp *logical.Response
-	var err error
 	b, storage := createBackendWithStorage(t)
 
 	// Create a role
@@ -101,22 +109,26 @@ func TestAppRole_TidyDanglingAccessors_RaceTest(t *testing.T) {
 		Path:      "role/role1/secret-id",
 		Storage:   storage,
 	}
-	resp, err = b.HandleRequest(context.Background(), roleSecretIDReq)
-	if err != nil || (resp != nil && resp.IsError()) {
-		t.Fatalf("err:%v resp:%#v", err, resp)
-	}
+	_ = b.requestNoErr(t, roleSecretIDReq)
+
 	count := 1
 
 	wg := &sync.WaitGroup{}
 	start := time.Now()
 	for time.Now().Sub(start) < 10*time.Second {
 		if time.Now().Sub(start) > 100*time.Millisecond && atomic.LoadUint32(b.tidySecretIDCASGuard) == 0 {
-			_, err = b.tidySecretID(context.Background(), &logical.Request{
+			secret, err := b.tidySecretID(context.Background(), &logical.Request{
 				Storage: storage,
 			})
 			if err != nil {
 				t.Fatal(err)
 			}
+			schema.ValidateResponse(
+				t,
+				schema.GetResponseSchema(t, pathTidySecretID(b), logical.UpdateOperation),
+				secret,
+				true,
+			)
 		}
 		wg.Add(1)
 		go func() {
@@ -126,10 +138,7 @@ func TestAppRole_TidyDanglingAccessors_RaceTest(t *testing.T) {
 				Path:      "role/role1/secret-id",
 				Storage:   storage,
 			}
-			resp, err := b.HandleRequest(context.Background(), roleSecretIDReq)
-			if err != nil || (resp != nil && resp.IsError()) {
-				t.Fatalf("err:%v resp:%#v", err, resp)
-			}
+			_ = b.requestNoErr(t, roleSecretIDReq)
 		}()
 
 		entry, err := logical.StorageEntryJSON(
@@ -138,8 +147,11 @@ func TestAppRole_TidyDanglingAccessors_RaceTest(t *testing.T) {
 				SecretIDHMAC: "samplesecretidhmac",
 			},
 		)
-		err = storage.Put(context.Background(), entry)
 		if err != nil {
+			t.Fatal(err)
+		}
+
+		if err := storage.Put(context.Background(), entry); err != nil {
 			t.Fatal(err)
 		}
 
@@ -165,6 +177,12 @@ func TestAppRole_TidyDanglingAccessors_RaceTest(t *testing.T) {
 	if err != nil || len(secret.Warnings) > 0 {
 		t.Fatal(err, secret.Warnings)
 	}
+	schema.ValidateResponse(
+		t,
+		schema.GetResponseSchema(t, pathTidySecretID(b), logical.UpdateOperation),
+		secret,
+		true,
+	)
 
 	// Wait for tidy to start
 	for atomic.LoadUint32(b.tidySecretIDCASGuard) == 0 {

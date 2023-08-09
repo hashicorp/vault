@@ -1,29 +1,30 @@
-
-  {{#if label}}
-    <label
-      for="select-{{this.elementId}}"
-      class="is-label"
-      data-test-select-label
-      >
-      {{label}}
-    </label>
-  {{/if}}
-  <div class="control {{if isInline "select is-inline-block"}}">
-    <div class="select {{if isFullwidth "is-fullwidth"}}">
+{{#if this.label}}
+  <label for="select-{{this.elementId}}" class="is-label" data-test-select-label>
+    {{this.label}}
+  </label>
+{{/if}}
+<div class="control {{if this.isInline 'select is-inline-block'}}">
+  <div class="select {{if this.isFullwidth 'is-fullwidth'}}">
     <select
       class="select"
       id="select-{{this.elementId}}"
       onchange={{action this.onChange value="target.value"}}
-      data-test-select={{name}}
-      >
-      {{#each options as |op|}}
+      data-test-select={{this.name}}
+    >
+      {{#if this.noDefault}}
+        <option value="">
+          Select one
+        </option>
+      {{/if}}
+      {{#each this.options as |op|}}
         <option
-          value={{or (get op valueAttribute) op}}
-          selected={{eq selectedValue (or (get op valueAttribute) op)}}>
-          {{or (get op labelAttribute) op}}
+          disabled={{or op.isDisabled false}}
+          value={{or (get op this.valueAttribute) op}}
+          selected={{eq this.selectedValue (or (get op this.valueAttribute) op)}}
+        >
+          {{or (get op this.labelAttribute) op}}
         </option>
       {{/each}}
     </select>
-    </div>
   </div>
-
+</div>

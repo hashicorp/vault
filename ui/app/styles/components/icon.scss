@@ -1,0 +1,89 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
+.icon {
+  align-items: center;
+  display: inline-flex;
+  height: $size-4;
+  justify-content: center;
+  vertical-align: middle;
+  width: $size-4;
+  // override the display if .button.icon to .button's default display: inline-block. See manage namespaces icon button in the namespace picker
+  &.button {
+    display: inline-block;
+  }
+}
+
+.icon-blue {
+  color: $blue;
+}
+
+.flight-icon {
+  &.flight-icon-display-inline {
+    vertical-align: middle;
+    margin-left: $spacing-xxs;
+    margin-right: $spacing-xxs;
+  }
+}
+
+.hs-icon {
+  flex: 0 0 auto;
+  display: inline-flex;
+  justify-content: center;
+  align-items: flex-start;
+  vertical-align: middle;
+  width: 16px;
+  height: 16px;
+  margin: 2px 4px;
+}
+
+.hs-icon svg {
+  fill: currentColor;
+  flex: 1 1 0;
+}
+
+.hs-icon-button-right {
+  margin-left: 0.25rem;
+  margin-right: -0.5rem;
+  align-items: center;
+}
+
+.hs-icon-s {
+  width: 12px;
+  height: 12px;
+}
+
+.hs-icon-l {
+  width: 20px;
+  height: 20px;
+}
+
+.hs-icon-xlm {
+  width: 24px;
+  height: 24px;
+}
+
+.hs-icon-xl {
+  width: 28px;
+  height: 28px;
+}
+
+.hs-icon-xxl {
+  width: 32px;
+  height: 32px;
+}
+
+// if using @stretched on FlightIcon there must be an explicit height set on the parent if used in a flexbox
+// without height set the flexbox will scale out of proportion on Safari
+
+.brand-icon-large {
+  width: 62px;
+  height: 62px;
+}
+
+.error-icon {
+  width: 48px;
+  height: 48px;
+}

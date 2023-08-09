@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package tokenutil
 
 import (
@@ -5,11 +8,11 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/hashicorp/go-secure-stdlib/parseutil"
+	"github.com/hashicorp/go-secure-stdlib/strutil"
 	sockaddr "github.com/hashicorp/go-sockaddr"
 	"github.com/hashicorp/vault/sdk/framework"
-	"github.com/hashicorp/vault/sdk/helper/parseutil"
 	"github.com/hashicorp/vault/sdk/helper/policyutil"
-	"github.com/hashicorp/vault/sdk/helper/strutil"
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
@@ -75,8 +78,9 @@ func TokenFields() map[string]*framework.FieldSchema {
 			Type:        framework.TypeCommaStringSlice,
 			Description: `Comma separated string or JSON list of CIDR blocks. If set, specifies the blocks of IP addresses which are allowed to use the generated token.`,
 			DisplayAttrs: &framework.DisplayAttributes{
-				Name:  "Generated Token's Bound CIDRs",
-				Group: "Tokens",
+				Name:        "Generated Token's Bound CIDRs",
+				Group:       "Tokens",
+				Description: "A list of CIDR blocks. If set, specifies the blocks of IP addresses which are allowed to use the generated token.",
 			},
 		},
 
@@ -120,8 +124,9 @@ func TokenFields() map[string]*framework.FieldSchema {
 			Type:        framework.TypeCommaStringSlice,
 			Description: "Comma-separated list of policies",
 			DisplayAttrs: &framework.DisplayAttributes{
-				Name:  "Generated Token's Policies",
-				Group: "Tokens",
+				Name:        "Generated Token's Policies",
+				Group:       "Tokens",
+				Description: "A list of policies that will apply to the generated token for this user.",
 			},
 		},
 

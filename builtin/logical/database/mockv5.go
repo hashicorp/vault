@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package database
 
 import (
@@ -32,6 +35,13 @@ func RunV5() error {
 	}
 
 	v5.Serve(dbType.(v5.Database))
+
+	return nil
+}
+
+// Run instantiates a MongoDB object, and runs the RPC server for the plugin
+func RunV6Multiplexed() error {
+	v5.ServeMultiplex(New)
 
 	return nil
 }

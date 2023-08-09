@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package vault
 
 import (
@@ -8,13 +11,13 @@ import (
 	"sync"
 	"time"
 
-	metrics "github.com/armon/go-metrics"
+	"github.com/armon/go-metrics"
 	log "github.com/hashicorp/go-hclog"
+	"github.com/hashicorp/go-secure-stdlib/strutil"
 	lru "github.com/hashicorp/golang-lru"
 	"github.com/hashicorp/vault/helper/identity"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/sdk/helper/consts"
-	"github.com/hashicorp/vault/sdk/helper/strutil"
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
@@ -150,6 +153,11 @@ path "sys/tools/hash/*" {
 path "sys/control-group/request" {
     capabilities = ["update"]
 }
+
+# Allow a token to make requests to the Authorization Endpoint for OIDC providers.
+path "identity/oidc/provider/+/authorize" {
+    capabilities = ["read", "update"]
+}
 `
 )
 
@@ -246,9 +254,8 @@ func NewPolicyStore(ctx context.Context, core *Core, baseView *BarrierView, syst
 func (c *Core) setupPolicyStore(ctx context.Context) error {
 	// Create the policy store
 	var err error
-	sysView := &dynamicSystemView{core: c}
+	sysView := &dynamicSystemView{core: c, perfStandby: c.perfStandby}
 	psLogger := c.baseLogger.Named("policy")
-	c.AddLogger(psLogger)
 	c.policyStore, err = NewPolicyStore(ctx, c, c.systemBarrierView, sysView, psLogger)
 	if err != nil {
 		return err
@@ -256,6 +263,11 @@ func (c *Core) setupPolicyStore(ctx context.Context) error {
 
 	if c.ReplicationState().HasState(consts.ReplicationPerformanceSecondary | consts.ReplicationDRSecondary) {
 		// Policies will sync from the primary
+		return nil
+	}
+
+	if c.perfStandby {
+		// Policies will sync from the active
 		return nil
 	}
 
@@ -636,6 +648,60 @@ func (ps *PolicyStore) ListPolicies(ctx context.Context, policyType PolicyType) 
 	return keys, err
 }
 
+// policiesByNamespace is used to list the available policies for the given namespace
+func (ps *PolicyStore) policiesByNamespace(ctx context.Context, policyType PolicyType, ns *namespace.Namespace) ([]string, error) {
+	var err error
+	var keys []string
+	var view *BarrierView
+
+	// Scan the view, since the policy names are the same as the
+	// key names.
+	switch policyType {
+	case PolicyTypeACL:
+		view = ps.getACLView(ns)
+	case PolicyTypeRGP:
+		view = ps.getRGPView(ns)
+	case PolicyTypeEGP:
+		view = ps.getEGPView(ns)
+	default:
+		return nil, fmt.Errorf("unknown policy type %q", policyType)
+	}
+
+	if view == nil {
+		return nil, fmt.Errorf("unable to get the barrier subview for policy type %q", policyType)
+	}
+
+	// Get the appropriate view based on policy type and namespace
+	ctx = namespace.ContextWithNamespace(ctx, ns)
+	keys, err = logical.CollectKeys(ctx, view)
+	if err != nil {
+		return nil, err
+	}
+
+	if policyType == PolicyTypeACL {
+		// We only have non-assignable ACL policies at the moment
+		keys = strutil.Difference(keys, nonAssignablePolicies, false)
+	}
+
+	return keys, err
+}
+
+// policiesByNamespaces is used to list the available policies for the given namespaces
+func (ps *PolicyStore) policiesByNamespaces(ctx context.Context, policyType PolicyType, ns []*namespace.Namespace) ([]string, error) {
+	var err error
+	var keys []string
+
+	for _, nspace := range ns {
+		ks, err := ps.policiesByNamespace(ctx, policyType, nspace)
+		if err != nil {
+			return nil, err
+		}
+		keys = append(keys, ks...)
+	}
+
+	return keys, err
+}
+
 // DeletePolicy is used to delete the named policy
 func (ps *PolicyStore) DeletePolicy(ctx context.Context, name string, policyType PolicyType) error {
 	return ps.switchedDeletePolicy(ctx, name, policyType, true, false)
@@ -735,23 +801,12 @@ func (ps *PolicyStore) switchedDeletePolicy(ctx context.Context, name string, po
 	return nil
 }
 
-type TemplateError struct {
-	Err error
-}
-
-func (t *TemplateError) WrappedErrors() []error {
-	return []error{t.Err}
-}
-
-func (t *TemplateError) Error() string {
-	return t.Err.Error()
-}
-
 // ACL is used to return an ACL which is built using the
-// named policies.
-func (ps *PolicyStore) ACL(ctx context.Context, entity *identity.Entity, policyNames map[string][]string) (*ACL, error) {
-	var policies []*Policy
-	// Fetch the policies
+// named policies and pre-fetched policies if given.
+func (ps *PolicyStore) ACL(ctx context.Context, entity *identity.Entity, policyNames map[string][]string, additionalPolicies ...*Policy) (*ACL, error) {
+	var allPolicies []*Policy
+
+	// Fetch the named policies
 	for nsID, nsPolicyNames := range policyNames {
 		policyNS, err := NamespaceByID(ctx, nsID, ps.core)
 		if err != nil {
@@ -767,14 +822,17 @@ func (ps *PolicyStore) ACL(ctx context.Context, entity *identity.Entity, policyN
 				return nil, fmt.Errorf("failed to get policy: %w", err)
 			}
 			if p != nil {
-				policies = append(policies, p)
+				allPolicies = append(allPolicies, p)
 			}
 		}
 	}
 
+	// Append any pre-fetched policies that were given
+	allPolicies = append(allPolicies, additionalPolicies...)
+
 	var fetchedGroups bool
 	var groups []*identity.Group
-	for i, policy := range policies {
+	for i, policy := range allPolicies {
 		if policy.Type == PolicyTypeACL && policy.Templated {
 			if !fetchedGroups {
 				fetchedGroups = true
@@ -791,12 +849,12 @@ func (ps *PolicyStore) ACL(ctx context.Context, entity *identity.Entity, policyN
 				return nil, fmt.Errorf("error parsing templated policy %q: %w", policy.Name, err)
 			}
 			p.Name = policy.Name
-			policies[i] = p
+			allPolicies[i] = p
 		}
 	}
 
 	// Construct the ACL
-	acl, err := NewACL(ctx, policies)
+	acl, err := NewACL(ctx, allPolicies)
 	if err != nil {
 		return nil, fmt.Errorf("failed to construct ACL: %w", err)
 	}

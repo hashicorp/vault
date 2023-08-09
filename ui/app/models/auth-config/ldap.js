@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
 import { attr } from '@ember-data/model';
 import { computed } from '@ember/object';
 
@@ -11,7 +16,7 @@ export default AuthConfig.extend({
     label: 'Certificate',
     editType: 'file',
   }),
-  fieldGroups: computed('newFields', function() {
+  fieldGroups: computed('newFields', function () {
     let groups = [
       {
         default: ['url'],
@@ -33,7 +38,7 @@ export default AuthConfig.extend({
         ],
       },
       {
-        'Customize User Search': ['binddn', 'userdn', 'bindpass'],
+        'Customize User Search': ['binddn', 'userdn', 'bindpass', 'userfilter'],
       },
       {
         'Customize Group Membership Search': ['groupfilter', 'groupattr', 'groupdn', 'useTokenGroups'],

@@ -1,17 +1,19 @@
-<ToolTip @onClose={{action (mut tooltipText) "Copy"}} as |T|>
-  <T.trigger data-test-tooltip-trigger tabindex="-1">
-    <CopyButton
-      data-test-hover-copy-button
-      class="copy-button button is-compact is-transparent"
-      @clipboardText={{copyValue}}
-      @success={{action (mut tooltipText) "Copied!"}}
-    >
-      <Icon @glyph="copy-action" aria-label="Copy" />
-    </CopyButton>
-  </T.trigger>
-  <T.content @class="tool-tip">
-    <div class="box" data-test-hover-copy-tooltip-text>
-      {{tooltipText}}
-    </div>
-  </T.content>
-</ToolTip>
+<div class={{if this.alwaysShow "hover-copy-button-static" "hover-copy-button"}} data-test-hover-copy>
+  <ToolTip @onClose={{action (mut this.tooltipText) "Copy"}} as |T|>
+    <T.Trigger data-test-tooltip-trigger tabindex="-1">
+      <CopyButton
+        data-test-hover-copy-button
+        class="copy-button button is-compact is-transparent"
+        @clipboardText={{this.copyValue}}
+        @success={{action (mut this.tooltipText) "Copied!"}}
+      >
+        <Icon @name="clipboard-copy" aria-label="Copy" />
+      </CopyButton>
+    </T.Trigger>
+    <T.Content @defaultClass="tool-tip">
+      <div class="box" data-test-hover-copy-tooltip-text>
+        {{this.tooltipText}}
+      </div>
+    </T.Content>
+  </ToolTip>
+</div>

@@ -6,17 +6,18 @@
       </h1>
     </Page.header>
     <Page.content>
-      <RaftJoin @onDismiss={{action (mut prefersInit) true}} />
+      <RaftJoin @onDismiss={{action (mut this.prefersInit) true}} />
     </Page.content>
-  {{else if keyData}}
+  {{else if this.keyData}}
     <Page.header>
-      {{#let (or keyData.recovery_keys keyData.keys) as |keyArray|}}
+      {{#let (or this.keyData.recovery_keys this.keyData.keys) as |keyArray|}}
         <h1 class="title is-4">
           Vault has been initialized!
           {{#if (eq keyArray.length 1)}}
             Here is your key.
           {{else}}
-            Here are your {{pluralize keyArray.length "key"}}.
+            Here are your
+            {{pluralize keyArray.length "key"}}.
           {{/if}}
         </h1>
       {{/let}}
@@ -25,23 +26,22 @@
       <div class="box is-marginless is-shadowless">
         <div class="content">
           <p>
-            {{#if keyData.recovery_keys}}
-              Please securely distribute the keys below. Certain privileged operations in Vault such as rekeying the
-              barrier or generating a new root token will require you to provide
-              at least <strong class="has-text-danger">{{secret_threshold}}</strong> of these keys to perform the
-              operation.
+            {{#if this.keyData.recovery_keys}}
+              Please securely distribute the keys below. Certain privileged operations in Vault such as rekeying the barrier
+              or generating a new root token will require you to provide at least
+              <strong class="has-text-danger">{{this.secret_threshold}}</strong>
+              of these keys to perform the operation.
             {{else}}
-              Please securely distribute the keys below. When the Vault is re-sealed, restarted, or stopped, you must
-              provide at least <strong class="has-text-danger">{{secret_threshold}}</strong> of these keys to unseal it
-              again.
-              Vault does not store the master key. Without at least <strong class="has-text-danger">{{secret_threshold}}</strong>
+              Please securely distribute the keys below. When the Vault is re-sealed, restarted, or stopped, you must provide
+              at least
+              <strong class="has-text-danger">{{this.secret_threshold}}</strong>
+              of these keys to unseal it again. Vault does not store the root key. Without at least
+              <strong class="has-text-danger">{{this.secret_threshold}}</strong>
               keys, your Vault will remain permanently sealed.
             {{/if}}
           </p>
         </div>
-        <div
-          class="message is-list is-highlight"
-        >
+        <div class="message is-list is-highlight">
           <div class="message-body">
             <h4 class="title is-7 is-marginless">
               Initial root token
@@ -49,60 +49,55 @@
             <MaskedInput
               @class="is-highlight has-label"
               @displayOnly={{true}}
-              @value={{keyData.root_token}}
+              @value={{this.keyData.root_token}}
               @allowCopy={{true}}
             />
           </div>
         </div>
-        {{#each (or keyData.recovery_keys_base64 keyData.recovery_keys keyData.keys_base64 keyData.keys) as |key index|}}
-          <div
-            data-test-key-box
-            class="message is-list"
-          >
+        {{#each
+          (or this.keyData.recovery_keys_base64 this.keyData.recovery_keys this.keyData.keys_base64 this.keyData.keys)
+          as |key index|
+        }}
+          <div data-test-key-box class="message is-list">
             <div class="message-body">
               <h4 class="title is-7 is-marginless">
-                Key {{add index 1}}
+                Key
+                {{add index 1}}
               </h4>
-              <MaskedInput
-                @class="has-label"
-                @displayOnly={{true}}
-                @value={{key}}
-                @allowCopy={{true}}
-              />
+              <MaskedInput @class="has-label" @displayOnly={{true}} @value={{key}} @allowCopy={{true}} />
             </div>
           </div>
         {{/each}}
       </div>
       <div class="box is-marginless is-shadowless">
         <div class="field is-grouped-split">
-          {{#if (and model.sealed (not keyData.recovery_keys))}}
-            <div
-              data-test-advance-button
-              class="control"
-            >
-              <LinkTo @route="vault.cluster.unseal" @model={{model.name}} class="button is-primary">
+          {{#if (and this.model.sealed (not this.keyData.recovery_keys))}}
+            <div data-test-advance-button class="control">
+              <LinkTo @route="vault.cluster.unseal" @model={{this.model.name}} class="button is-primary">
                 Continue to Unseal
               </LinkTo>
             </div>
           {{else}}
-            <div
-              data-test-advance-button
-              class="control"
-            >
-              <LinkTo @route="vault.cluster.auth" @model={{model.name}} class={{concat (if model.sealed "is-loading " "") "button is-primary"}} @disabled={{model.sealed}}>
+            <div data-test-advance-button class="control">
+              <LinkTo
+                @route="vault.cluster.auth"
+                @model={{this.model.name}}
+                @disabled={{this.model.sealed}}
+                class={{concat (if this.model.sealed "is-loading " "") "button is-primary"}}
+              >
                 Continue to Authenticate
               </LinkTo>
             </div>
           {{/if}}
           <DownloadButton
-            @data={{keyData}}
-            @filename={{keyFilename}}
-            @mime="application/json"
+            class="button is-ghost"
+            @filename={{this.keyFilename}}
+            @data={{this.keyData}}
             @extension="json"
-            @class="button is-ghost"
             @stringify={{true}}
           >
-            <Icon @glyph="download" /> Download keys
+            <Icon @name="download" />
+            Download keys
           </DownloadButton>
         </div>
       </div>
@@ -110,87 +105,99 @@
   {{else}}
     <Page.header>
       <h1 class="title h5">
-        Let's set up the initial set of master keys that you’ll need in case of an emergency
+        Let's set up the initial set of root keys that you’ll need in case of an emergency
       </h1>
     </Page.header>
     <Page.content>
       <form
-        {{action 'initCluster' (hash
-          secret_shares=secret_shares
-          secret_threshold=secret_threshold
-          pgp_keys=pgp_keys
-          use_pgp=use_pgp
-          use_pgp_for_root=use_pgp_for_root
-          root_token_pgp_key=root_token_pgp_key
-         )
-         on="submit"
-       }}
+        {{action
+          "initCluster"
+          (hash
+            secret_shares=this.secret_shares
+            secret_threshold=this.secret_threshold
+            pgp_keys=this.pgp_keys
+            use_pgp=this.use_pgp
+            use_pgp_for_root=this.use_pgp_for_root
+            root_token_pgp_key=this.root_token_pgp_key
+          )
+          on="submit"
+        }}
         id="init"
       >
         <div class="box is-marginless is-shadowless">
-          <MessageError @errors={{errors}} />
+          <MessageError @errors={{this.errors}} />
           <div class="field">
-            <label
-              for="key-shares"
-              class="is-label"
-            >
+            <label for="key-shares" class="is-label">
               Key shares
             </label>
             <div class="control">
-              <Input data-test-key-shares="true" class="input" @autocomplete="off" @spellcheck="false" @name="key-shares" @type="number" @step="1" @min="1" @pattern="[0-9]*" @value={{secret_shares}} />
+              <Input
+                data-test-key-shares="true"
+                class="input"
+                autocomplete="off"
+                spellcheck="false"
+                name="key-shares"
+                @type="number"
+                step="1"
+                min="1"
+                pattern="[0-9]*"
+                @value={{this.secret_shares}}
+              />
             </div>
             <p class="help has-text-grey">
-              The number of key shares to split the master key into
+              The number of key shares to split the root key into
             </p>
           </div>
           <div class="field">
-            <label
-              for="key-threshold"
-              class="is-label"
-            >
+            <label for="key-threshold" class="is-label">
               Key threshold
             </label>
             <div class="control">
-              <Input data-test-key-threshold="true" class="input" @autocomplete="off" @spellcheck="false" @name="key-threshold" @type="number" @step="1" @min="1" @pattern="[0-9]*" @value={{secret_threshold}} />
+              <Input
+                data-test-key-threshold="true"
+                class="input"
+                autocomplete="off"
+                spellcheck="false"
+                name="key-threshold"
+                @type="number"
+                step="1"
+                min="1"
+                pattern="[0-9]*"
+                @value={{this.secret_threshold}}
+              />
             </div>
             <p class="help has-text-grey">
-              The number of key shares required to reconstruct the master key
+              The number of key shares required to reconstruct the root key
             </p>
           </div>
           <ToggleButton
+            @isOpen={{this.use_pgp}}
             @openLabel="Encrypt output with PGP"
             @closedLabel="Encrypt output with PGP"
-            @toggleTarget={{this}}
-            @toggleAttr="use_pgp"
-            @class="is-block"
+            @onClick={{fn (mut this.use_pgp)}}
+            class="is-block"
           />
-          {{#if use_pgp}}
+          {{#if this.use_pgp}}
             <div class="box init-box">
               <p class="help has-text-grey">
                 The output unseal keys will be encrypted and hex-encoded, in order, with the given public keys.
               </p>
-              <PgpList
-                @listLength={{secret_shares}}
-                @onDataUpdate={{action 'setKeys'}}
-              />
+              <PgpList @listLength={{this.secret_shares}} @onDataUpdate={{action "setKeys"}} />
             </div>
           {{/if}}
           <ToggleButton
+            @isOpen={{this.use_pgp_for_root}}
             @openLabel="Encrypt root token with PGP"
             @closedLabel="Encrypt root token with PGP"
-            @toggleTarget={{this}}
-            @toggleAttr="use_pgp_for_root"
-            @class="is-block"
+            @onClick={{fn (mut this.use_pgp_for_root)}}
+            class="is-block"
           />
-          {{#if use_pgp_for_root}}
+          {{#if this.use_pgp_for_root}}
             <div class="box init-box">
               <p class="help has-text-grey">
                 The root unseal key will be encrypted and hex-encoded with the given public key.
               </p>
-              <PgpList
-                @listLength=1
-                @onDataUpdate={{action 'setRootKey'}}
-              />
+              <PgpList @listLength={{1}} @onDataUpdate={{action "setRootKey"}} />
             </div>
           {{/if}}
         </div>
@@ -198,8 +205,8 @@
           <button
             data-test-init-submit
             type="submit"
-            class="button is-primary {{if loading 'is-loading'}}"
-            disabled={{loading}}
+            class="button is-primary {{if this.loading 'is-loading'}}"
+            disabled={{this.loading}}
           >
             Initialize
           </button>

@@ -1,93 +1,97 @@
-  <HeaderScope />
-  <Toolbar>
-    {{#if model.meta.total}}
-      <ToolbarFilters>
-        <NavigateInput
-          @filterFocusDidChange={{action "setFilterFocus" }}
-          @filterDidChange={{action "setFilter"}}
-          @filter={{this.filter}}
-          @filterMatchesKey={{filterMatchesKey}}
-          @firstPartialMatch={{firstPartialMatch}}
-          @placeholder="Filter scopes by name"
-          @urls={{hash
-            create="vault.cluster.secrets.backend.kmip.scopes.create"
-            list="vault.cluster.secrets.backend.kmip.scopes.index"
-            show="vault.cluster.secrets.backend.kmip.scope.roles"
-          }}
-        />
-        {{#if filterFocused}}
-          {{#if filterMatchesKey}}
-            <p class="input-hint">
-              <kbd>ENTER</kbd> to go to <code>{{this.filter}}</code>
-            </p>
-          {{/if}}
-          {{#if firstPartialMatch}}
-            <p class="input-hint">
-              <kbd>TAB</kbd> to complete <code>{{firstPartialMatch.id}}</code>
-            </p>
-          {{/if}}
+<HeaderScope />
+<Toolbar>
+  {{#if this.model.meta.total}}
+    <ToolbarFilters>
+      <NavigateInput
+        @filterFocusDidChange={{action "setFilterFocus"}}
+        @filterDidChange={{action "setFilter"}}
+        @filter={{this.filter}}
+        @filterMatchesKey={{this.filterMatchesKey}}
+        @firstPartialMatch={{this.firstPartialMatch}}
+        @placeholder="Filter scopes by name"
+        @urls={{hash
+          create="vault.cluster.secrets.backend.kmip.scopes.create"
+          list="vault.cluster.secrets.backend.kmip.scopes.index"
+          show="vault.cluster.secrets.backend.kmip.scope.roles"
+        }}
+      />
+      {{#if this.filterFocused}}
+        {{#if this.filterMatchesKey}}
+          <p class="input-hint">
+            <kbd>ENTER</kbd>
+            to go to
+            <code>{{this.filter}}</code>
+          </p>
         {{/if}}
-      </ToolbarFilters>
-    {{/if}}
-    <ToolbarActions>
-      <ToolbarLink
-        @type="add"
-        @params={{array "scopes.create"}}
-        data-test-scope-create
-      >
-        Create scope
-      </ToolbarLink>
-    </ToolbarActions>
-  </Toolbar>
-  <ListView @items={{model}} @itemNoun="scope" @paginationRouteName="scopes.index" as |list|>
-    {{#if list.empty}}
-      <list.empty
-        @title="KMIP Secrets Engine"
-        @message="First, let's create a scope that our roles and credentials will belong to. A client can only access objects within their role's scope."
-      >
-        {{#link-to "scopes.create"}}
-          Create a scope
-        {{/link-to}}
-      </list.empty>
-    {{else if list.item}}
+        {{#if this.firstPartialMatch}}
+          <p class="input-hint">
+            <kbd>TAB</kbd>
+            to complete
+            <code>{{this.firstPartialMatch.id}}</code>
+          </p>
+        {{/if}}
+      {{/if}}
+    </ToolbarFilters>
+  {{/if}}
+  <ToolbarActions>
+    <ToolbarLink @route="scopes.create" @type="add" data-test-scope-create>
+      Create scope
+    </ToolbarLink>
+  </ToolbarActions>
+</Toolbar>
+<ListView @items={{this.model}} @itemNoun="scope" @paginationRouteName="scopes.index" as |list|>
+  {{#if list.empty}}
+    <list.empty
+      @title="KMIP Secrets Engine"
+      @message="First, let's create a scope that our roles and credentials will belong to. A client can only access objects within their role's scope."
+    >
+      <LinkTo @route="scopes.create">
+        Create a scope
+      </LinkTo>
+    </list.empty>
+  {{else if list.item}}
     <ListItem @linkPrefix={{this.mountPoint}} @linkParams={{array "scope.roles" list.item.id}} as |Item|>
-        <Item.content>
-          <Icon @glyph="folder-outline" class="has-text-grey-light" @size="l" />{{list.item.id}}
-        </Item.content>
-        <Item.menu as |m|>
-          <li class="action">
-            {{#link-to "scope" list.item.id class="is-block"}}
-              View scope
-            {{/link-to}}
-          </li>
-          {{#if list.item.updatePath.canDelete}}
-            <MenuLoader @loadingParam={{list.item.updatePath.isPending}}>
-              <m.Message
-                @id={{list.item.id}}
-                @triggerText='Delete scope'
-                @title={{concat "Delete scope " list.item.id "?"}}
-                @message="This will permanently delete this scope and all roles and credentials contained within"
-                @cancelButtonText="Cancel"
-                @onConfirm={{action
-                  (perform
-                    Item.callMethod
-                    "destroyRecord"
-                    list.item
-                    (concat "Successfully deleted scope " list.item.id)
-                    (concat "There was an error deleting the scope " list.item.id)
-                    (action "refresh")
-                  )
-                }}
-                data-test-scope-delete="true" />
-            </MenuLoader>
-          {{/if}}
-        </Item.menu>
-      </ListItem>
-    {{else}}
-      <ListItem as |Item|>
-        <Item.content>
-          There are no scopes that match {{this.filter}}, press <kbd>ENTER</kbd> to add one.
-        </Item.content>
-      </ListItem>
-    {{/if}}
-  </ListView>
+      <Item.content>
+        <Icon @name="folder" class="has-text-grey-light" />{{list.item.id}}
+      </Item.content>
+      <Item.menu as |m|>
+        <li class="action">
+          <LinkTo @route="scope" @model={{list.item.id}} class="is-block">
+            View scope
+          </LinkTo>
+        </li>
+        {{#if list.item.updatePath.canDelete}}
+          <MenuLoader @loadingParam={{list.item.updatePath.isPending}}>
+            <m.Message
+              @id={{list.item.id}}
+              @triggerText="Delete scope"
+              @title={{concat "Delete scope " list.item.id "?"}}
+              @message="This will permanently delete this scope and all roles and credentials contained within"
+              @cancelButtonText="Cancel"
+              @onConfirm={{action
+                (perform
+                  Item.callMethod
+                  "destroyRecord"
+                  list.item
+                  (concat "Successfully deleted scope " list.item.id)
+                  (concat "There was an error deleting the scope " list.item.id)
+                  (action "refresh")
+                )
+              }}
+              data-test-scope-delete="true"
+            />
+          </MenuLoader>
+        {{/if}}
+      </Item.menu>
+    </ListItem>
+  {{else}}
+    <ListItem as |Item|>
+      <Item.content>
+        There are no scopes that match
+        {{this.filter}}, press
+        <kbd>ENTER</kbd>
+        to add one.
+      </Item.content>
+    </ListItem>
+  {{/if}}
+</ListView>

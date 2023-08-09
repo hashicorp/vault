@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package expiration
 
 import (
@@ -6,18 +9,13 @@ import (
 	"testing"
 
 	"github.com/hashicorp/vault/helper/namespace"
-	vaulthttp "github.com/hashicorp/vault/http"
+	"github.com/hashicorp/vault/helper/testhelpers/minimal"
 	"github.com/hashicorp/vault/vault"
 )
 
 func TestExpiration_irrevocableLeaseCountsAPI(t *testing.T) {
-	cluster := vault.NewTestCluster(t, nil, &vault.TestClusterOptions{
-		HandlerFunc: vaulthttp.Handler,
-		NumCores:    1,
-	})
-	cluster.Start()
-	defer cluster.Cleanup()
-
+	t.Parallel()
+	cluster := minimal.NewTestSoloCluster(t, nil)
 	client := cluster.Cores[0].Client
 	core := cluster.Cores[0].Core
 
@@ -58,7 +56,10 @@ func TestExpiration_irrevocableLeaseCountsAPI(t *testing.T) {
 	}
 
 	expectedNumLeases := 50
-	expectedCountPerMount := core.InjectIrrevocableLeases(t, namespace.RootContext(nil), expectedNumLeases)
+	expectedCountPerMount, err := core.InjectIrrevocableLeases(namespace.RootContext(nil), expectedNumLeases)
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	resp, err = client.Logical().ReadWithData("sys/leases/count", params)
 	if err != nil {
@@ -114,13 +115,8 @@ func TestExpiration_irrevocableLeaseCountsAPI(t *testing.T) {
 }
 
 func TestExpiration_irrevocableLeaseListAPI(t *testing.T) {
-	cluster := vault.NewTestCluster(t, nil, &vault.TestClusterOptions{
-		HandlerFunc: vaulthttp.Handler,
-		NumCores:    1,
-	})
-	cluster.Start()
-	defer cluster.Cleanup()
-
+	t.Parallel()
+	cluster := minimal.NewTestSoloCluster(t, nil)
 	client := cluster.Cores[0].Client
 	core := cluster.Cores[0].Core
 
@@ -162,7 +158,10 @@ func TestExpiration_irrevocableLeaseListAPI(t *testing.T) {
 
 	// test with a low enough number to not give an error without limit set to none
 	expectedNumLeases := 50
-	expectedCountPerMount := core.InjectIrrevocableLeases(t, namespace.RootContext(nil), expectedNumLeases)
+	expectedCountPerMount, err := core.InjectIrrevocableLeases(namespace.RootContext(nil), expectedNumLeases)
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	resp, err = client.Logical().ReadWithData("sys/leases", params)
 	if err != nil {
@@ -213,19 +212,17 @@ func TestExpiration_irrevocableLeaseListAPI(t *testing.T) {
 }
 
 func TestExpiration_irrevocableLeaseListAPI_includeAll(t *testing.T) {
-	cluster := vault.NewTestCluster(t, nil, &vault.TestClusterOptions{
-		HandlerFunc: vaulthttp.Handler,
-		NumCores:    1,
-	})
-	cluster.Start()
-	defer cluster.Cleanup()
-
+	t.Parallel()
+	cluster := minimal.NewTestSoloCluster(t, nil)
 	client := cluster.Cores[0].Client
 	core := cluster.Cores[0].Core
 
 	// test with a low enough number to not give an error with the default limit
 	expectedNumLeases := vault.MaxIrrevocableLeasesToReturn + 50
-	expectedCountPerMount := core.InjectIrrevocableLeases(t, namespace.RootContext(nil), expectedNumLeases)
+	expectedCountPerMount, err := core.InjectIrrevocableLeases(namespace.RootContext(nil), expectedNumLeases)
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	params := make(map[string][]string)
 	params["type"] = []string{"irrevocable"}

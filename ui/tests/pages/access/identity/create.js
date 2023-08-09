@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
 import { create, visitable } from 'ember-cli-page-object';
 import editForm from 'vault/tests/pages/components/identity/edit-form';
 
@@ -6,9 +11,7 @@ export default create({
   editForm,
   createItem(item_type, type) {
     if (type) {
-      return this.visit({ item_type })
-        .editForm.type(type)
-        .submit();
+      return this.visit({ item_type }).editForm.type(type).submit();
     }
     return this.visit({ item_type }).editForm.submit();
   },

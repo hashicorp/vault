@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package vault
 
 import (
@@ -9,15 +12,15 @@ import (
 	"testing"
 	"time"
 
-	log "github.com/hashicorp/go-hclog"
 	ldapcred "github.com/hashicorp/vault/builtin/credential/ldap"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
-var testPolicyName = "testpolicy"
-var rawTestPasswordPolicy = `
+var (
+	testPolicyName        = "testpolicy"
+	rawTestPasswordPolicy = `
 length = 20
 rule "charset" {
 	charset = "abcdefghijklmnopqrstuvwxyz"
@@ -31,13 +34,10 @@ rule "charset" {
 	charset = "0123456789"
 	min_chars = 1
 }`
+)
 
 func TestIdentity_BackendTemplating(t *testing.T) {
-	var err error
 	coreConfig := &CoreConfig{
-		DisableMlock: true,
-		DisableCache: true,
-		Logger:       log.NewNullLogger(),
 		CredentialBackends: map[string]logical.Factory{
 			"ldap": ldapcred.Factory,
 		},
@@ -173,11 +173,7 @@ func TestIdentity_BackendTemplating(t *testing.T) {
 }
 
 func TestDynamicSystemView_GeneratePasswordFromPolicy_successful(t *testing.T) {
-	var err error
 	coreConfig := &CoreConfig{
-		DisableMlock:       true,
-		DisableCache:       true,
-		Logger:             log.NewNullLogger(),
 		CredentialBackends: map[string]logical.Factory{},
 	}
 
@@ -196,7 +192,7 @@ func TestDynamicSystemView_GeneratePasswordFromPolicy_successful(t *testing.T) {
 	req.ClientToken = cluster.RootToken
 	req.Data["policy"] = b64Policy
 
-	_, err = core.HandleRequest(namespace.RootContext(nil), req)
+	_, err := core.HandleRequest(namespace.RootContext(nil), req)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -205,7 +201,7 @@ func TestDynamicSystemView_GeneratePasswordFromPolicy_successful(t *testing.T) {
 	defer cancel()
 
 	ctx = namespace.RootContext(ctx)
-	dsv := dynamicSystemView{core: cluster.Cores[0].Core}
+	dsv := TestDynamicSystemView(cluster.Cores[0].Core, nil)
 
 	runeset := map[rune]bool{}
 	runesFound := []rune{}
@@ -272,11 +268,11 @@ func TestDynamicSystemView_GeneratePasswordFromPolicy_failed(t *testing.T) {
 				getErr:   test.getErr,
 			}
 
-			dsv := dynamicSystemView{
-				core: &Core{
-					systemBarrierView: NewBarrierView(testStorage, "sys/"),
-				},
+			core := &Core{
+				systemBarrierView: NewBarrierView(testStorage, "sys/"),
 			}
+			dsv := TestDynamicSystemView(core, nil)
+
 			ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
 			defer cancel()
 			actualPassword, err := dsv.GeneratePasswordFromPolicy(ctx, test.policyName)

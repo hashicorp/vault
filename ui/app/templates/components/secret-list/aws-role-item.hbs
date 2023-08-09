@@ -1,23 +1,19 @@
-{{#linked-block
-  (concat
-    "vault.cluster.secrets.backend."
-    "credentials"
-    (unless @item.id "-root")
-  )
-  @item.id
+<LinkedBlock
+  @params={{array (concat "vault.cluster.secrets.backend." "credentials" (unless @item.id "-root")) @item.id}}
   class="list-item-row"
-  data-test-secret-link=@item.id
-  encode=true
-}}
+  data-test-secret-link={{@item.id}}
+  @encode={{true}}
+>
   <div class="columns is-mobile">
     <div class="column is-10">
-      <LinkTo @route={{concat "vault.cluster.secrets.backend." "credentials" (unless @item.id "-root") }} @model={{@item.id}} class="has-text-black has-text-weight-semibold">
-        <Icon
-          @glyph="user-square-outline"
-          class="has-text-grey-light is-pulled-left"
-        />
+      <LinkTo
+        @route={{concat "vault.cluster.secrets.backend." "credentials" (unless @item.id "-root")}}
+        @model={{@item.id}}
+        class="has-text-black has-text-weight-semibold"
+      >
+        <Icon @name="user" class="has-text-grey-light is-pulled-left" />
         <div class="role-item-details">
-          <span class="is-underline">{{if (eq @item.id ' ') '(self)' (or @item.keyWithoutParent @item.id)}}</span>
+          <span class="is-underline">{{if (eq @item.id " ") "(self)" (or @item.keyWithoutParent @item.id)}}</span>
         </div>
       </LinkTo>
     </div>
@@ -34,7 +30,11 @@
                 </li>
               {{else if @item.canGenerate}}
                 <li class="action">
-                  <LinkTo @route="vault.cluster.secrets.backend.credentials" @model={{@item.id}} data-test-role-aws-link="generate">
+                  <LinkTo
+                    @route="vault.cluster.secrets.backend.credentials"
+                    @model={{@item.id}}
+                    data-test-role-aws-link="generate"
+                  >
                     Generate credentials
                   </LinkTo>
                 </li>
@@ -67,10 +67,7 @@
                 {{/if}}
                 {{#if @item.canDelete}}
                   <li class="action">
-                    <c.Message
-                      @id={{@item.id}}
-                      @onConfirm={{@delete}}
-                      data-test-aws-role-delete={{@item.id}}/>
+                    <c.Message @id={{@item.id}} @onConfirm={{@delete}} data-test-aws-role-delete={{@item.id}} />
                   </li>
                 {{/if}}
               {{/if}}
@@ -80,4 +77,4 @@
       </PopupMenu>
     </div>
   </div>
-{{/linked-block}}
+</LinkedBlock>

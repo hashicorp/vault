@@ -1,23 +1,23 @@
-    {{#if (eq model.httpStatus 404)}}
-      <NotFound @model={{model}} />
-    {{else}}
-      <PageHeader as |p|>
-        <p.levelLeft>
-          <h1 class="title is-3 has-text-grey">
-            {{#if (eq model.httpStatus 403)}}
-              Not authorized
-            {{else}}
-              Error
-            {{/if}}
-          </h1>
-        </p.levelLeft>
-      </PageHeader>
-      <div class="box is-sideless has-background-white-bis has-text-grey has-text-centered">
-        {{#if model.message}}
-          <p>{{model.message}}</p>
+{{#if (eq this.model.httpStatus 404)}}
+  <NotFound @model={{this.model}} />
+{{else}}
+  <PageHeader as |p|>
+    <p.levelLeft>
+      <h1 class="title is-3 has-text-grey">
+        {{#if (eq this.model.httpStatus 403)}}
+          Not authorized
+        {{else}}
+          Error
         {{/if}}
-        {{#each model.errors as |error|}}
-          <p>{{error}}</p>
-        {{/each}}
-      </div>
+      </h1>
+    </p.levelLeft>
+  </PageHeader>
+  <div class="box is-sideless has-background-white-bis has-text-grey has-text-centered">
+    {{#if this.model.message}}
+      <p>{{this.model.message}}</p>
     {{/if}}
+    {{#each this.model.errors as |error|}}
+      <p>{{error}}</p>
+    {{/each}}
+  </div>
+{{/if}}

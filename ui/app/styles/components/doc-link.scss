@@ -1,5 +1,22 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
 .doc-link {
-  color: $link;
+  color: $blue;
   text-decoration: none;
   font-weight: $font-weight-semibold;
+  &:hover {
+    text-decoration: underline !important;
+  }
+}
+
+.doc-link-subtle {
+  color: inherit;
+  text-decoration: underline;
+  font-weight: inherit;
+  &:hover {
+    color: inherit;
+  }
 }

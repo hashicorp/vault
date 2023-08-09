@@ -1,0 +1,53 @@
+<Toolbar>
+  <ToolbarActions>
+    {{#if this.model.canDelete}}
+      <ToolTip @verticalPosition="above" as |T|>
+        <T.Trigger tabindex="-1">
+          <ConfirmAction
+            data-test-oidc-provider-delete
+            @disabled={{eq this.model.name "default"}}
+            @buttonClasses="toolbar-link"
+            @onConfirmAction={{this.delete}}
+            @confirmTitle="Delete provider?"
+            @confirmMessage="This provider will be permanently deleted. You will need to re-create it to use it again."
+            @confirmButtonText="Delete"
+          >
+            Delete provider
+          </ConfirmAction>
+        </T.Trigger>
+        {{#if (eq this.model.name "default")}}
+          <T.Content @defaultClass="tool-tip smaller-font">
+            <div class="box">
+              This is a built-in provider that cannot be deleted.
+            </div>
+          </T.Content>
+        {{/if}}
+      </ToolTip>
+      <div class="toolbar-separator"></div>
+    {{/if}}
+    {{#if this.model.canEdit}}
+      <ToolbarLink
+        @route="vault.cluster.access.oidc.providers.provider.edit"
+        @model={{this.model.name}}
+        data-test-oidc-provider-edit
+      >
+        Edit provider
+      </ToolbarLink>
+    {{/if}}
+  </ToolbarActions>
+</Toolbar>
+<div class="box is-fullwidth is-sideless is-paddingless is-marginless">
+  <InfoTableRow @label="Name" @value={{this.model.name}} @alwaysRender={{true}} />
+  <InfoTableRow @label="Issuer URL" @value={{this.model.issuer}} @addCopyButton={{true}} @alwaysRender={{true}} />
+  <InfoTableRow
+    @label="Scopes"
+    @type="array"
+    @value={{@model.scopesSupported}}
+    @model={{@model}}
+    @isLink={{true}}
+    @modelType="oidc/scope"
+    @itemRoute={{"vault.cluster.access.oidc.scopes.scope.details"}}
+    @alwaysRender={{true}}
+    @doNotTruncate={{true}}
+  />
+</div>

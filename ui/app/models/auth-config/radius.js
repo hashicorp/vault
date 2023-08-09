@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
 import { attr } from '@ember-data/model';
 import { computed } from '@ember/object';
 import AuthConfig from '../auth-config';
@@ -9,7 +14,7 @@ export default AuthConfig.extend({
   host: attr('string'),
   secret: attr('string'),
 
-  fieldGroups: computed('newFields', function() {
+  fieldGroups: computed('newFields', function () {
     let groups = [
       {
         default: ['host', 'secret'],

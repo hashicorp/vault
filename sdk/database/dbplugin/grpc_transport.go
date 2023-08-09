@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package dbplugin
 
 import (
@@ -22,6 +25,8 @@ var (
 // ---- gRPC Server domain ----
 
 type gRPCServer struct {
+	UnimplementedDatabaseServer
+
 	impl Database
 }
 

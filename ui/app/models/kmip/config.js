@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
 import Model, { belongsTo } from '@ember-data/model';
 import { computed } from '@ember/object';
 import { combineFieldGroups } from 'vault/utils/openapi-to-attrs';
@@ -10,7 +15,7 @@ export default Model.extend({
     return `/v1/${path}/config?help=1`;
   },
 
-  fieldGroups: computed('newFields', function() {
+  fieldGroups: computed('newFields', function () {
     let groups = [{ default: ['listenAddrs', 'connectionTimeout'] }];
 
     groups = combineFieldGroups(groups, this.newFields, []);

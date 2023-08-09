@@ -1,6 +1,12 @@
 <PageHeader as |p|>
   <p.top>
-    <KeyValueHeader @baseKey={{baseKey}} @path="vault.cluster.access.leases.list" @root={{backendCrumb}} @showCurrent={{true}} @linkToPaths={{capabilities.leases.canList}} />
+    <KeyValueHeader
+      @baseKey={{this.baseKey}}
+      @path="vault.cluster.access.leases.list"
+      @root={{this.backendCrumb}}
+      @showCurrent={{true}}
+      @linkToPaths={{this.capabilities.leases.canList}}
+    />
   </p.top>
   <p.levelLeft>
     <h1 class="title is-3">
@@ -11,7 +17,7 @@
   </p.levelLeft>
 </PageHeader>
 
-{{#if capabilities.revoke.canUpdate}}
+{{#if this.capabilities.revoke.canUpdate}}
   <Toolbar>
     <ToolbarActions>
       <ConfirmAction
@@ -19,7 +25,7 @@
         @confirmTitle="Revoke this?"
         @confirmMessage={{concat "All leases under this one will also be removed"}}
         @confirmButtonText="Confirm"
-        @onConfirmAction={{action "revokeLease" model}}
+        @onConfirmAction={{action "revokeLease" this.model}}
         data-test-lease-revoke="true"
       >
         Revoke lease
@@ -29,50 +35,48 @@
 {{/if}}
 
 <div class="field box is-fullwidth is-sideless is-paddingless is-marginless">
-  <InfoTableRow @label="Issue time" @value={{model.issueTime}}>
-    {{date-format model.issueTime 'MMM dd, yyyy hh:mm:ss a'}}
-    <br/>
+  <InfoTableRow @label="Issue time" @value={{this.model.issueTime}}>
+    {{date-format this.model.issueTime "MMM dd, yyyy hh:mm:ss a"}}
+    <br />
     <code>
-      {{model.issueTime}}
+      {{this.model.issueTime}}
     </code>
   </InfoTableRow>
-  <InfoTableRow @label="Renewable" @value={{model.renewable}} />
-  <InfoTableRow @label="Last renewal" @value={{model.lastRenewal}}>
-    {{date-format model.lastRenewal 'MMM dd, yyyy hh:mm:ss a'}}
-    <br/>
+  <InfoTableRow @label="Renewable" @value={{this.model.renewable}} />
+  <InfoTableRow @label="Last renewal" @value={{this.model.lastRenewal}}>
+    {{date-format this.model.lastRenewal "MMM dd, yyyy hh:mm:ss a"}}
+    <br />
     <code>
-      {{model.lastRenewal}}
+      {{this.model.lastRenewal}}
     </code>
   </InfoTableRow>
-  {{#if model.expireTime}}
-    <InfoTableRow @label="Expiration time" @value={{model.expireTime}}>
-      {{date-format model.expireTime 'MMM dd, yyyy hh:mm:ss a'}}
-      <br/>
+  {{#if this.model.expireTime}}
+    <InfoTableRow @label="Expiration time" @value={{this.model.expireTime}}>
+      {{date-format this.model.expireTime "MMM dd, yyyy hh:mm:ss a"}}
+      <br />
       <code>
-        {{model.expireTime}}
+        {{this.model.expireTime}}
       </code>
     </InfoTableRow>
-    <InfoTableRow @label="Expires in" @value={{date-from-now model.expireTime increment=1000 hideSuffix=true}} />
+    <InfoTableRow @label="Expires in" @value={{date-from-now this.model.expireTime increment=1000 hideSuffix=true}} />
   {{/if}}
-  <InfoTableRow @label="TTL" @value={{model.ttl}} />
+  <InfoTableRow @label="TTL" @value={{this.model.ttl}} />
 </div>
-{{#if (and (not model.isAuthLease) model.renewable capabilities.renew.canUpdate)}}
-  <div class="box is-shadowless" data-test-lease-renew-picker=true>
+{{#if (and (not this.model.isAuthLease) this.model.renewable this.capabilities.renew.canUpdate)}}
+  <div class="box is-shadowless" data-test-lease-renew-picker={{true}}>
     <h2 class="title is-6">Renew Lease</h2>
-    <form {{action "renewLease" model increment on="submit"}}>
-      <TtlPicker2 
+    <form {{action "renewLease" this.model this.increment on="submit"}}>
+      <TtlPicker
         @label="Increment"
-        @helperTextEnabled="Lease will expire after" 
-        @helperTextDisabled="Vault will use the default lease duration" 
-        @labelClass="is-label" 
-        @onChange={{action (mut increment)}} @unit="s" 
+        @helperTextEnabled="Lease will expire after"
+        @helperTextDisabled="Vault will use the default lease duration"
+        @labelClass="is-label"
+        @onChange={{action (mut this.increment)}}
+        @unit="s"
       />
       <div class="field has-top-margin-s">
         <div class="control">
-          <button
-            type="submit"
-            class="button is-primary"
-          >
+          <button type="submit" class="button is-primary">
             Renew lease
           </button>
         </div>

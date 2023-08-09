@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package cassandra
 
 import (
@@ -6,20 +9,43 @@ import (
 	"net"
 	"os"
 	"path/filepath"
+	"runtime"
+	"strings"
 	"testing"
 	"time"
 
 	"github.com/gocql/gocql"
-	"github.com/hashicorp/vault/helper/testhelpers/docker"
+	"github.com/hashicorp/vault/sdk/helper/docker"
 )
 
 type containerConfig struct {
-	version    string
-	copyFromTo map[string]string
-	sslOpts    *gocql.SslOptions
+	containerName string
+	imageName     string
+	version       string
+	copyFromTo    map[string]string
+	env           []string
+
+	sslOpts *gocql.SslOptions
 }
 
 type ContainerOpt func(*containerConfig)
+
+func ContainerName(name string) ContainerOpt {
+	return func(cfg *containerConfig) {
+		cfg.containerName = name
+	}
+}
+
+func Image(imageName string, version string) ContainerOpt {
+	return func(cfg *containerConfig) {
+		cfg.imageName = imageName
+		cfg.version = version
+
+		// Reset the environment because there's a very good chance the default environment doesn't apply to the
+		// non-default image being used
+		cfg.env = nil
+	}
+}
 
 func Version(version string) ContainerOpt {
 	return func(cfg *containerConfig) {
@@ -30,6 +56,12 @@ func Version(version string) ContainerOpt {
 func CopyFromTo(copyFromTo map[string]string) ContainerOpt {
 	return func(cfg *containerConfig) {
 		cfg.copyFromTo = copyFromTo
+	}
+}
+
+func Env(keyValue string) ContainerOpt {
+	return func(cfg *containerConfig) {
+		cfg.env = append(cfg.env, keyValue)
 	}
 }
 
@@ -50,6 +82,12 @@ func (h Host) ConnectionURL() string {
 
 func PrepareTestContainer(t *testing.T, opts ...ContainerOpt) (Host, func()) {
 	t.Helper()
+
+	// Skipping on ARM, as this image can't run on ARM architecture
+	if strings.Contains(runtime.GOARCH, "arm") {
+		t.Skip("Skipping, as this image is not supported on ARM architectures")
+	}
+
 	if os.Getenv("CASSANDRA_HOSTS") != "" {
 		host, port, err := net.SplitHostPort(os.Getenv("CASSANDRA_HOSTS"))
 		if err != nil {
@@ -63,7 +101,10 @@ func PrepareTestContainer(t *testing.T, opts ...ContainerOpt) (Host, func()) {
 	}
 
 	containerCfg := &containerConfig{
-		version: "3.11",
+		imageName:     "docker.mirror.hashicorp.services/library/cassandra",
+		containerName: "cassandra",
+		version:       "3.11",
+		env:           []string{"CASSANDRA_BROADCAST_ADDRESS=127.0.0.1"},
 	}
 
 	for _, opt := range opts {
@@ -79,13 +120,15 @@ func PrepareTestContainer(t *testing.T, opts ...ContainerOpt) (Host, func()) {
 		copyFromTo[absFrom] = to
 	}
 
-	runner, err := docker.NewServiceRunner(docker.RunOptions{
-		ImageRepo:  "cassandra",
-		ImageTag:   containerCfg.version,
-		Ports:      []string{"9042/tcp"},
-		CopyFromTo: copyFromTo,
-		Env:        []string{"CASSANDRA_BROADCAST_ADDRESS=127.0.0.1"},
-	})
+	runOpts := docker.RunOptions{
+		ContainerName: containerCfg.containerName,
+		ImageRepo:     containerCfg.imageName,
+		ImageTag:      containerCfg.version,
+		Ports:         []string{"9042/tcp"},
+		CopyFromTo:    copyFromTo,
+		Env:           containerCfg.env,
+	}
+	runner, err := docker.NewServiceRunner(runOpts)
 	if err != nil {
 		t.Fatalf("Could not start docker cassandra: %s", err)
 	}

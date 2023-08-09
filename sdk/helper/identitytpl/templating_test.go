@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package identitytpl
 
 import (
@@ -17,23 +20,24 @@ var testNow = time.Now().Add(100 * time.Hour)
 
 func TestPopulate_Basic(t *testing.T) {
 	tests := []struct {
-		mode              int
-		name              string
-		input             string
-		output            string
-		err               error
-		entityName        string
-		metadata          map[string]string
-		aliasAccessor     string
-		aliasID           string
-		aliasName         string
-		nilEntity         bool
-		validityCheckOnly bool
-		aliasMetadata     map[string]string
-		groupName         string
-		groupMetadata     map[string]string
-		groupMemberships  []string
-		now               time.Time
+		mode                int
+		name                string
+		input               string
+		output              string
+		err                 error
+		entityName          string
+		metadata            map[string]string
+		aliasAccessor       string
+		aliasID             string
+		aliasName           string
+		nilEntity           bool
+		validityCheckOnly   bool
+		aliasMetadata       map[string]string
+		aliasCustomMetadata map[string]string
+		groupName           string
+		groupMetadata       map[string]string
+		groupMemberships    []string
+		now                 time.Time
 	}{
 		// time.* tests. Keep tests with time.Now() at the front to avoid false
 		// positives due to the second changing during the test
@@ -329,6 +333,53 @@ func TestPopulate_Basic(t *testing.T) {
 			aliasMetadata: map[string]string{"foo": "bar", "color": "green"},
 			output:        `{}`,
 		},
+		{
+			mode:                JSONTemplating,
+			name:                "one alias custom metadata key",
+			input:               "{{identity.entity.aliases.aws_123.custom_metadata.foo}}",
+			aliasAccessor:       "aws_123",
+			aliasCustomMetadata: map[string]string{"foo": "abc", "bar": "123"},
+			output:              `"abc"`,
+		},
+		{
+			mode:                JSONTemplating,
+			name:                "one alias custom metadata key not found",
+			input:               "{{identity.entity.aliases.aws_123.custom_metadata.size}}",
+			aliasAccessor:       "aws_123",
+			aliasCustomMetadata: map[string]string{"foo": "abc", "bar": "123"},
+			output:              `""`,
+		},
+		{
+			mode:                JSONTemplating,
+			name:                "one alias custom metadata, accessor not found",
+			input:               "{{identity.entity.aliases.aws_123.custom_metadata.size}}",
+			aliasAccessor:       "not_gonna_match",
+			aliasCustomMetadata: map[string]string{"foo": "abc", "bar": "123"},
+			output:              `""`,
+		},
+		{
+			mode:                JSONTemplating,
+			name:                "all alias custom metadata",
+			input:               "{{identity.entity.aliases.aws_123.custom_metadata}}",
+			aliasAccessor:       "aws_123",
+			aliasCustomMetadata: map[string]string{"foo": "abc", "bar": "123"},
+			output:              `{"bar":"123","foo":"abc"}`,
+		},
+		{
+			mode:          JSONTemplating,
+			name:          "null alias custom metadata",
+			input:         "{{identity.entity.aliases.aws_123.custom_metadata}}",
+			aliasAccessor: "aws_123",
+			output:        `{}`,
+		},
+		{
+			mode:                JSONTemplating,
+			name:                "all alias custom metadata, accessor not found",
+			input:               "{{identity.entity.aliases.aws_123.custom_metadata}}",
+			aliasAccessor:       "not_gonna_match",
+			aliasCustomMetadata: map[string]string{"foo": "abc", "bar": "123"},
+			output:              `{}`,
+		},
 	}
 
 	for _, test := range tests {
@@ -343,10 +394,11 @@ func TestPopulate_Basic(t *testing.T) {
 		if test.aliasAccessor != "" {
 			entity.Aliases = []*logical.Alias{
 				{
-					MountAccessor: test.aliasAccessor,
-					ID:            test.aliasID,
-					Name:          test.aliasName,
-					Metadata:      test.aliasMetadata,
+					MountAccessor:  test.aliasAccessor,
+					ID:             test.aliasID,
+					Name:           test.aliasName,
+					Metadata:       test.aliasMetadata,
+					CustomMetadata: test.aliasCustomMetadata,
 				},
 			}
 		}
@@ -436,6 +488,10 @@ func TestPopulate_FullObject(t *testing.T) {
 					"service": "ec2",
 					"region":  "west",
 				},
+				CustomMetadata: map[string]string{
+					"foo": "abc",
+					"bar": "123",
+				},
 			},
 		},
 	}
@@ -458,7 +514,11 @@ func TestPopulate_FullObject(t *testing.T) {
 			    "one not found alias metadata key": {{identity.entity.aliases.blahblah.metadata.service}},
 			    "group names": {{identity.entity.groups.names}},
 			    "group ids": {{identity.entity.groups.ids}},
-			    "repeated and": {"nested element": {{identity.entity.name}}}
+			    "repeated and": {"nested element": {{identity.entity.name}}},
+				"alias custom metadata": {{identity.entity.aliases.aws_123.custom_metadata}},
+				"alias not found custom metadata": {{identity.entity.aliases.blahblah.custom_metadata}},
+				"one alias custom metadata key": {{identity.entity.aliases.aws_123.custom_metadata.foo}},
+				"one not found alias custom metadata key": {{identity.entity.aliases.blahblah.custom_metadata.foo}},
 			}`
 
 	expected := `
@@ -474,7 +534,11 @@ func TestPopulate_FullObject(t *testing.T) {
 			    "one not found alias metadata key": "",
 			    "group names": ["g1","g2"],
 			    "group ids": ["a08b0c02","239bef91"],
-			    "repeated and": {"nested element": "Entity Name"}
+			    "repeated and": {"nested element": "Entity Name"},
+				"alias custom metadata": {"bar":"123","foo":"abc"},
+				"alias not found custom metadata": {},
+				"one alias custom metadata key": "abc",
+				"one not found alias custom metadata key": "",
 			}`
 
 	input := PopulateStringInput{

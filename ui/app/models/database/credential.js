@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
 import Model, { attr } from '@ember-data/model';
 
 export default Model.extend({
@@ -8,4 +13,5 @@ export default Model.extend({
   lastVaultRotation: attr('string'),
   rotationPeriod: attr('number'),
   ttl: attr('number'),
+  roleType: attr('string'),
 });

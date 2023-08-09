@@ -1,0 +1,3 @@
+```release-note:bug
+secrets/keymgmt (enterprise): Fix support for Azure Managed HSM Key Vault instances.
+```

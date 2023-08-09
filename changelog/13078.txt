@@ -1,0 +1,3 @@
+```release-note:improvement
+core: Periodically test the health of connectivity to auto-seal backends
+```

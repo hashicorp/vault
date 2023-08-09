@@ -1,9 +1,13 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package transit
 
 import (
 	"context"
 	"crypto/hmac"
 	"encoding/base64"
+	"errors"
 	"fmt"
 	"strconv"
 	"strings"
@@ -35,11 +39,22 @@ type batchResponseHMACItem struct {
 	// For batch processing to successfully mimic previous handling for simple 'input',
 	// both output values are needed - though 'err' should never be serialized.
 	err error
+
+	// Reference is an arbitrary caller supplied string value that will be placed on the
+	// batch response to ease correlation between inputs and outputs
+	Reference string `json:"reference" mapstructure:"reference"`
 }
 
 func (b *backend) pathHMAC() *framework.Path {
 	return &framework.Path{
 		Pattern: "hmac/" + framework.GenericNameRegex("name") + framework.OptionalParamRegex("urlalgorithm"),
+
+		DisplayAttrs: &framework.DisplayAttributes{
+			OperationPrefix: operationPrefixTransit,
+			OperationVerb:   "generate",
+			OperationSuffix: "hmac|hmac-with-algorithm",
+		},
+
 		Fields: map[string]*framework.FieldSchema{
 			"name": {
 				Type:        framework.TypeString,
@@ -60,6 +75,10 @@ func (b *backend) pathHMAC() *framework.Path {
 * sha2-256
 * sha2-384
 * sha2-512
+* sha3-224
+* sha3-256
+* sha3-384
+* sha3-512
 
 Defaults to "sha2-256".`,
 			},
@@ -74,6 +93,14 @@ Defaults to "sha2-256".`,
 				Description: `The version of the key to use for generating the HMAC.
 Must be 0 (for latest) or a value greater than or equal
 to the min_encryption_version configured on the key.`,
+			},
+
+			"batch_input": {
+				Type: framework.TypeSlice,
+				Description: `
+Specifies a list of items to be processed in a single batch. When this parameter
+is set, if the parameter 'input' is also set, it will be ignored.
+Any batch output will preserve the order of the batch input.`,
 			},
 		},
 
@@ -96,7 +123,7 @@ func (b *backend) pathHMACWrite(ctx context.Context, req *logical.Request, d *fr
 	}
 
 	// Get the policy
-	p, _, err := b.lm.GetPolicy(ctx, keysutil.PolicyRequest{
+	p, _, err := b.GetPolicy(ctx, keysutil.PolicyRequest{
 		Storage: req.Storage,
 		Name:    name,
 	}, b.GetRandomReader())
@@ -127,7 +154,7 @@ func (b *backend) pathHMACWrite(ctx context.Context, req *logical.Request, d *fr
 		p.Unlock()
 		return logical.ErrorResponse(err.Error()), logical.ErrInvalidRequest
 	}
-	if key == nil {
+	if key == nil && p.Type != keysutil.KeyType_MANAGED_KEY {
 		p.Unlock()
 		return nil, fmt.Errorf("HMAC key value could not be computed")
 	}
@@ -183,9 +210,23 @@ func (b *backend) pathHMACWrite(ctx context.Context, req *logical.Request, d *fr
 			continue
 		}
 
-		hf := hmac.New(hashAlg, key)
-		hf.Write(input)
-		retBytes := hf.Sum(nil)
+		var retBytes []byte
+
+		if p.Type == keysutil.KeyType_MANAGED_KEY {
+			managedKeySystemView, ok := b.System().(logical.ManagedKeySystemView)
+			if !ok {
+				response[i].err = errors.New("unsupported system view")
+			}
+
+			retBytes, err = p.HMACWithManagedKey(ctx, ver, managedKeySystemView, b.backendUUID, algorithm, input)
+			if err != nil {
+				response[i].err = err
+			}
+		} else {
+			hf := hmac.New(hashAlg, key)
+			hf.Write(input)
+			retBytes = hf.Sum(nil)
+		}
 
 		retStr := base64.StdEncoding.EncodeToString(retBytes)
 		retStr = fmt.Sprintf("vault:v%s:%s", strconv.Itoa(ver), retStr)
@@ -197,6 +238,10 @@ func (b *backend) pathHMACWrite(ctx context.Context, req *logical.Request, d *fr
 	// Generate the response
 	resp := &logical.Response{}
 	if batchInputRaw != nil {
+		// Copy the references
+		for i := range batchInputItems {
+			response[i].Reference = batchInputItems[i]["reference"]
+		}
 		resp.Data = map[string]interface{}{
 			"batch_results": response,
 		}
@@ -224,7 +269,7 @@ func (b *backend) pathHMACVerify(ctx context.Context, req *logical.Request, d *f
 	}
 
 	// Get the policy
-	p, _, err := b.lm.GetPolicy(ctx, keysutil.PolicyRequest{
+	p, _, err := b.GetPolicy(ctx, keysutil.PolicyRequest{
 		Storage: req.Storage,
 		Name:    name,
 	}, b.GetRandomReader())
@@ -358,6 +403,10 @@ func (b *backend) pathHMACVerify(ctx context.Context, req *logical.Request, d *f
 	// Generate the response
 	resp := &logical.Response{}
 	if batchInputRaw != nil {
+		// Copy the references
+		for i := range batchInputItems {
+			response[i].Reference = batchInputItems[i]["reference"]
+		}
 		resp.Data = map[string]interface{}{
 			"batch_results": response,
 		}

@@ -1,12 +1,20 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package http
 
 import (
 	"encoding/hex"
 	"net/http"
 	"reflect"
+	"strconv"
 	"testing"
 
+	"github.com/hashicorp/vault/builtin/logical/transit"
+	"github.com/hashicorp/vault/helper/testhelpers/corehelpers"
+	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/vault"
+	"github.com/hashicorp/vault/vault/seal"
 )
 
 func TestSysInit_get(t *testing.T) {
@@ -121,5 +129,67 @@ func TestSysInit_put(t *testing.T) {
 
 	if core.Sealed() {
 		t.Fatal("should not be sealed")
+	}
+}
+
+func TestSysInit_Put_ValidateParams(t *testing.T) {
+	core := vault.TestCore(t)
+	ln, addr := TestServer(t, core)
+	defer ln.Close()
+
+	resp := testHttpPut(t, "", addr+"/v1/sys/init", map[string]interface{}{
+		"secret_shares":      5,
+		"secret_threshold":   3,
+		"recovery_shares":    5,
+		"recovery_threshold": 3,
+	})
+	testResponseStatus(t, resp, http.StatusBadRequest)
+	body := map[string][]string{}
+	testResponseBody(t, resp, &body)
+	if body["errors"][0] != "parameters recovery_shares,recovery_threshold not applicable to seal type shamir" {
+		t.Fatal(body)
+	}
+}
+
+func TestSysInit_Put_ValidateParams_AutoUnseal(t *testing.T) {
+	testSeal, _ := seal.NewTestSeal(&seal.TestSealOpts{Name: "transit"})
+	autoSeal, err := vault.NewAutoSeal(testSeal)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Create the transit server.
+	conf := &vault.CoreConfig{
+		LogicalBackends: map[string]logical.Factory{
+			"transit": transit.Factory,
+		},
+		Seal: autoSeal,
+	}
+	opts := &vault.TestClusterOptions{
+		NumCores:    1,
+		HandlerFunc: Handler,
+		Logger:      corehelpers.NewTestLogger(t).Named("transit-seal" + strconv.Itoa(0)),
+	}
+	cluster := vault.NewTestCluster(t, conf, opts)
+	cluster.Start()
+	defer cluster.Cleanup()
+
+	cores := cluster.Cores
+	core := cores[0].Core
+
+	ln, addr := TestServer(t, core)
+	defer ln.Close()
+
+	resp := testHttpPut(t, "", addr+"/v1/sys/init", map[string]interface{}{
+		"secret_shares":      5,
+		"secret_threshold":   3,
+		"recovery_shares":    5,
+		"recovery_threshold": 3,
+	})
+	testResponseStatus(t, resp, http.StatusBadRequest)
+	body := map[string][]string{}
+	testResponseBody(t, resp, &body)
+	if body["errors"][0] != "parameters secret_shares,secret_threshold not applicable to seal type transit" {
+		t.Fatal(body)
 	}
 }

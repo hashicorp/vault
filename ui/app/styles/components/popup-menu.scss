@@ -1,14 +1,19 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
 .popup-menu-content,
 .ember-power-select-options {
-  border-radius: 2px;
+  border-radius: $radius;
   margin: -2px 0 0 0;
 
   & > .box {
-    border-radius: 2px;
+    border-radius: $radius;
     box-shadow: $box-shadow, $box-shadow-middle;
     padding: 0;
     position: relative;
-    width: 200px;
+    width: 210px;
   }
 
   &.is-wide > .box {
@@ -48,16 +53,17 @@
   .ember-power-select-option[aria-current='true'],
   a {
     background-color: $white;
-    color: $menu-item-color;
+    color: $grey-darkest;
 
     &:hover {
-      background-color: $menu-item-hover-background-color;
-      color: $menu-item-hover-color;
+      background-color: $ui-gray-050;
+      color: $ui-gray-900;
     }
 
+    &.active,
     &.is-active {
-      background-color: $menu-item-active-background-color;
-      color: $menu-item-active-color;
+      background-color: transparent;
+      color: $blue;
     }
 
     &.is-destroy {
@@ -109,6 +115,12 @@
   flex-shrink: 1;
 }
 
+// when you need to limit the height and have dropdown scroll in child nav element
+.popup-menu-content > nav.scroll {
+  height: 200px;
+  overflow-y: scroll;
+}
+
 .list-item-row,
 .info-table-row,
 .wizard-dismiss-menu {
@@ -117,16 +129,6 @@
     min-width: 0;
     padding: 0;
     width: 2.5rem;
-  }
-}
-
-.status-menu-content {
-  margin-top: 8px;
-
-  .box {
-    @include until($mobile) {
-      width: $drawer-width - ($spacing-xs * 2);
-    }
   }
 }
 

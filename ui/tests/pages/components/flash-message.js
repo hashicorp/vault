@@ -1,12 +1,17 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
 import { waitFor, settled } from '@ember/test-helpers';
 import { collection, text, clickable } from 'ember-cli-page-object';
 import { getter } from 'ember-cli-page-object/macros';
 
 export default {
-  latestMessage: getter(function() {
+  latestMessage: getter(function () {
     return this.latestItem.text;
   }),
-  latestItem: getter(function() {
+  latestItem: getter(function () {
     const count = this.messages.length;
     return this.messages.objectAt(count - 1);
   }),
@@ -21,7 +26,7 @@ export default {
     return this.latestItem.click();
   },
   async clickAll() {
-    for (let message of this.messages) {
+    for (const message of this.messages) {
       message.click();
     }
     await settled();

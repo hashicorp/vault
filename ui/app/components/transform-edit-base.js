@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
 import { inject as service } from '@ember/service';
 import { or } from '@ember/object/computed';
 import { isBlank } from '@ember/utils';
@@ -39,10 +44,10 @@ export default Component.extend(FocusOnInsertMixin, {
   },
 
   willDestroyElement() {
-    this._super(...arguments);
-    if (this.model && this.model.isError) {
+    if (this.model && this.model.isError && !this.model.isDestroyed && !this.model.isDestroying) {
       this.model.rollbackAttributes();
     }
+    this._super(...arguments);
   },
 
   transitionToRoute() {
@@ -71,7 +76,7 @@ export default Component.extend(FocusOnInsertMixin, {
       .then(() => {
         successCallback(model);
       })
-      .catch(e => {
+      .catch((e) => {
         model.set('displayErrors', e.errors);
         throw e;
       });

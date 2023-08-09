@@ -1,0 +1,24 @@
+<div {{did-insert this.setElement}} ...attributes>
+  {{#if @label}}
+    <FormFieldLabel @label={{@label}} @subText={{@subText}} />
+  {{/if}}
+  <div class="control">
+    <Input
+      @value={{@value}}
+      autocomplete="off"
+      spellcheck="false"
+      placeholder={{@placeholder}}
+      class="input"
+      {{on "input" this.onInput}}
+    />
+    <BasicDropdown @registerAPI={{this.setDropdownAPI}} @renderInPlace={{true}} as |D|>
+      <D.Content @defaultClass="autocomplete-input">
+        {{#each @options as |option|}}
+          <div class="autocomplete-input-option" role="button" {{on "click" (fn this.selectOption option.value)}}>
+            {{option.label}}
+          </div>
+        {{/each}}
+      </D.Content>
+    </BasicDropdown>
+  </div>
+</div>

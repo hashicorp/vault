@@ -1,9 +1,15 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
 import AdapterError from '@ember-data/adapter/error';
 import { inject as service } from '@ember/service';
 import Component from '@ember/component';
 import { task } from 'ember-concurrency';
 import layout from '../templates/components/edit-form';
 import { next } from '@ember/runloop';
+import { waitFor } from '@ember/test-waiters';
 
 export default Component.extend({
   layout,
@@ -32,38 +38,40 @@ export default Component.extend({
   // is the case, set this value to true
   callOnSaveAfterRender: false,
 
-  save: task(function*(model, options = { method: 'save' }) {
-    let { method } = options;
-    let messageKey = method === 'save' ? 'successMessage' : 'deleteSuccessMessage';
-    try {
-      yield model[method]();
-    } catch (err) {
-      // err will display via model state
-      // AdapterErrors are handled by the error-message component
-      if (err instanceof AdapterError === false) {
-        throw err;
+  save: task(
+    waitFor(function* (model, options = { method: 'save' }) {
+      const { method } = options;
+      const messageKey = method === 'save' ? 'successMessage' : 'deleteSuccessMessage';
+      try {
+        yield model[method]();
+      } catch (err) {
+        // err will display via model state
+        // AdapterErrors are handled by the error-message component
+        if (err instanceof AdapterError === false) {
+          throw err;
+        }
+        return;
       }
-      return;
-    }
-    if (this.flashEnabled) {
-      this.flashMessages.success(this.get(messageKey));
-    }
-    if (this.callOnSaveAfterRender) {
-      next(() => {
-        this.onSave({ saveType: method, model });
-      });
-      return;
-    }
-    yield this.onSave({ saveType: method, model });
-  })
-    .drop()
-    .withTestWaiter(),
+      if (this.flashEnabled) {
+        this.flashMessages.success(this.get(messageKey));
+      }
+      if (this.callOnSaveAfterRender) {
+        next(() => {
+          this.onSave({ saveType: method, model });
+        });
+        return;
+      }
+      this.onSave({ saveType: method, model });
+    })
+  ).drop(),
 
   willDestroy() {
-    let { model } = this;
-    if (!model) return;
-    if ((model.get('isDirty') && !model.isDestroyed) || !model.isDestroying) {
+    // components are torn down after store is unloaded and will cause an error if attempt to unload record
+    const noTeardown = this.store && !this.store.isDestroying;
+    const { model } = this;
+    if (noTeardown && model && model.get('isDirty') && !model.isDestroyed && !model.isDestroying) {
       model.rollbackAttributes();
     }
+    this._super(...arguments);
   },
 });

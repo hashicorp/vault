@@ -1,85 +1,87 @@
 <PageHeader as |p|>
   <p.top>
-    {{#key-value-header path="vault.cluster.access.methods"}}
+    <KeyValueHeader @path="vault.cluster.access.methods">
       <li>
         <span class="sep">
           /
         </span>
-        {{#link-to "vault.cluster.access.methods"}}
+        <LinkTo @route="vault.cluster.access.methods">
           methods
-        {{/link-to}}
+        </LinkTo>
       </li>
-    {{/key-value-header}}
+    </KeyValueHeader>
   </p.top>
   <p.levelLeft>
     <h1 class="title is-3">
-      {{methodModel.id}}
+      {{@methodModel.id}}
     </h1>
   </p.levelLeft>
 </PageHeader>
-{{#with (tabs-for-auth-section methodModel 'authConfig' paths) as |tabs|}}
+{{#let (tabs-for-auth-section @methodModel "authConfig" @paths) as |tabs|}}
   {{#if tabs.length}}
     <div class="tabs-container box is-sideless is-fullwidth is-paddingless is-marginless">
       <nav class="tabs">
         <ul>
           {{#each tabs as |tab|}}
-            {{#link-to
-              params=tab.routeParams
-              tagName="li"
-              data-test-auth-section-tab=true
-            }}
-              {{#link-to params=tab.routeParams}}
+            <li>
+              <LinkTo @route={{get tab.routeParams 0}} @model={{get tab.routeParams 1}} data-test-auth-section-tab={{true}}>
                 {{tab.label}}
-              {{/link-to}}
-            {{/link-to}}
+              </LinkTo>
+            </li>
           {{/each}}
         </ul>
       </nav>
     </div>
   {{/if}}
-{{/with}}
+{{/let}}
 <Toolbar>
   <ToolbarActions>
     <ToolbarLink
-      data-test-create={{itemType}}
+      @route="vault.cluster.access.method.item.create"
+      @model={{this.itemType}}
       @type="add"
-      @params={{array
-        "vault.cluster.access.method.item.create"
-        itemType
-      }}>
+      data-test-entity-create-link={{this.itemType}}
+    >
       Create
-      {{singularize itemType}}
+      {{singularize this.itemType}}
     </ToolbarLink>
   </ToolbarActions>
 </Toolbar>
-<ListView @items={{model}} @itemNoun={{itemType}} as |list|>
+<ListView
+  @items={{this.model}}
+  @itemNoun={{this.itemType}}
+  @paginationRouteName="vault.cluster.access.method.item.list"
+  as |list|
+>
   {{#if list.empty}}
-    <list.empty @title="No {{pluralize itemType}} yet"
-      @message="A list of {{pluralize itemType}} will be listed here. Create your first {{itemType}} to get started.">
-      {{#link-to
-        "vault.cluster.access.method.item.create"
-        itemType
-        class="link"
-      }}
-        Create {{singularize itemType}}
-      {{/link-to}}
+    <list.empty
+      @title="No {{pluralize this.itemType}} yet"
+      @message="A list of {{pluralize
+        this.itemType
+      }} will be listed here. Create your first {{this.itemType}} to get started."
+    >
+      <LinkTo @route="vault.cluster.access.method.item.create" @model={{this.itemType}} class="link">
+        Create
+        {{singularize this.itemType}}
+      </LinkTo>
     </list.empty>
   {{else if list.item}}
-    <ListItem @linkParams={{array "vault.cluster.access.method.item.show"
-      itemType list.item.id}} as |Item|>
+    <ListItem @linkParams={{array "vault.cluster.access.method.item.show" this.itemType list.item.id}} as |Item|>
       <Item.content>
-        <Icon @glyph="folder-outline" class="has-text-grey-light" @size="l" />{{list.item.id}}
+        <Icon @name="folder" class="has-text-grey-light" />{{list.item.id}}
       </Item.content>
       <Item.menu as |Menu|>
         <li class="action">
-          {{#link-to "vault.cluster.access.method.item.show" list.item.id class="is-block"}}
-            View {{singularize itemType}}
-          {{/link-to}}
+          <LinkTo @route="vault.cluster.access.method.item.show" @model={{list.item.id}} class="is-block">
+            View
+            {{singularize this.itemType}}
+          </LinkTo>
         </li>
         <li class="action">
-          {{#link-to "vault.cluster.access.method.item.edit" list.item.id class="is-block"}}
-            Edit {{singularize itemType}}
-          {{/link-to}}
+          <LinkTo @route="vault.cluster.access.method.item.edit" @model={{list.item.id}} class="is-block">
+            Edit
+            {{singularize this.itemType}}
+          </LinkTo>
         </li>
         <li>
           <Menu.Message
@@ -90,14 +92,15 @@
                 Item.callMethod
                 "destroyRecord"
                 list.item
-                (concat "Successfully deleted " (singularize itemType) " " list.item.id ".")
-                (concat "There was an error deleting this " (singularize itemType))
+                (concat "Successfully deleted " (singularize this.itemType) " " list.item.id ".")
+                (concat "There was an error deleting this " (singularize this.itemType))
                 (action "refreshItemList")
               )
             }}
-            @message={{concat "Are you sure you want to delete " (singularize itemType) " " list.item.id "?"}}
+            @message={{concat "Are you sure you want to delete " (singularize this.itemType) " " list.item.id "?"}}
             data-test-secret-delete="true"
-            @triggerText={{concat "Delete " (singularize itemType)}}/>
+            @triggerText={{concat "Delete " (singularize this.itemType)}}
+          />
         </li>
       </Item.menu>
     </ListItem>

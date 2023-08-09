@@ -2,19 +2,20 @@
   <p.top>
     <nav class="breadcrumb">
       <li>
-        <LinkTo @route="vault.cluster.policies" @model={{policyType}} data-test-policy-list-link={{true}}>
+        <LinkTo @route="vault.cluster.policies" @model={{this.policyType}} data-test-policy-list-link={{true}}>
           <span class="sep">&#x0002f;</span>
-          {{uppercase policyType}} policies
+          {{uppercase this.policyType}}
+          policies
         </LinkTo>
       </li>
     </nav>
   </p.top>
   <p.levelLeft>
     <h1 class="title is-3" data-test-policy-name="true">
-      {{model.id}}
-      {{#if model.enforcementLevel}}
-        <span class="tag" aria-label="Enforcement level: {{model.enforcementLevel}}">
-          {{model.enforcementLevel}}
+      {{this.model.id}}
+      {{#if this.model.enforcementLevel}}
+        <span class="tag" aria-label="Enforcement level: {{this.model.enforcementLevel}}">
+          {{this.model.enforcementLevel}}
         </span>
       {{/if}}
     </h1>
@@ -22,17 +23,17 @@
 </PageHeader>
 <Toolbar>
   <ToolbarActions>
-    <ToolbarDownloadButton
-      @actionText="Download policy"
-      @extension={{if (eq policyType "acl") model.format "sentinel"}}
-      @filename={{model.name}}
-      @data={{model.policy}}
-    />
-    {{#if (and (not-eq model.id "root") (or capabilities.canUpdate capabilities.canDelete))}}
-      <ToolbarLink
-        @params={{array 'vault.cluster.policy.edit' model.id}}
-        @data-test-policy-edit-toggle=true
-      >
+    <DownloadButton
+      class="toolbar-link"
+      @filename={{this.model.name}}
+      @data={{this.model.policy}}
+      @extension={{if (eq this.policyType "acl") this.model.format "sentinel"}}
+    >
+      Download policy
+      <Chevron @isButton={{true}} />
+    </DownloadButton>
+    {{#if (and (not-eq this.model.id "root") (or this.capabilities.canUpdate this.capabilities.canDelete))}}
+      <ToolbarLink @route="vault.cluster.policy.edit" @model={{this.model.id}} data-test-policy-edit-toggle>
         Edit policy
       </ToolbarLink>
     {{/if}}
@@ -42,18 +43,17 @@
   <div class="field">
     <JsonEditor
       @title="Policy"
-      @subTitle={{if (eq policyType "acl") (concat uppercase model.format " format")}}
-      @value={{model.policy}} 
-      @options={{hash
-        readOnly=true
-        mode='ruby'
-      }} />
+      @subTitle={{if (eq this.policyType "acl") (concat this.uppercase this.model.format " format")}}
+      @value={{this.model.policy}}
+      @readOnly={{true}}
+      @mode="ruby"
+    />
   </div>
-  {{#if model.paths}}
+  {{#if this.model.paths}}
     <div class="field box is-shadowless no-bottom-padding is-marginless">
       <h2 class="title is-6">Paths</h2>
       <ul data-test-egp-paths>
-        {{#each model.paths as |path|}}
+        {{#each this.model.paths as |path|}}
           <li class="box has-slim-padding no-top-shadow is-marginless">
             <code class="has-text-black">{{path}}</code>
           </li>

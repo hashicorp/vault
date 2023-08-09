@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package http
 
 import (
@@ -122,6 +125,16 @@ func testResponseStatus(t *testing.T, resp *http.Response, code int) {
 		t.Fatalf(
 			"Expected status %d, got %d. Body:\n\n%s",
 			code, resp.StatusCode, body.String())
+	}
+}
+
+func testResponseHeader(t *testing.T, resp *http.Response, expectedHeaders map[string]string) {
+	t.Helper()
+	for k, v := range expectedHeaders {
+		hv := resp.Header.Get(k)
+		if v != hv {
+			t.Fatalf("expected header value %v=%v, got %v=%v", k, v, k, hv)
+		}
 	}
 }
 

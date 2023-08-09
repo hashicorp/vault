@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
 import Component from '@ember/component';
 import filesize from 'filesize';
 
@@ -11,7 +16,7 @@ import filesize from 'filesize';
  *   <FileToArrayBuffer @onChange={{action (mut file)}} />
  * ```
  * @param onChange=null {Function} - The function to call when the file read is complete. This function
- * recieves the file as a JS ArrayBuffer
+ * receives the file as a JS ArrayBuffer
  * @param [label=null {String}] - Text to use as the label for the file input
  * @param [fileHelpText=null {String} - Text to use as help under the file input
  *
@@ -23,19 +28,23 @@ export default Component.extend({
   fileHelpText: null,
 
   file: null,
-  fileName: null,
+  filename: null,
   fileSize: null,
   fileLastModified: null,
 
   readFile(file) {
     const reader = new FileReader();
-    reader.onload = () => this.send('onChange', reader.result, file);
+    // raft-snapshot-restore test was failing on CI trying to send action on destroyed object
+    // ensure that the component has not been torn down prior to sending onChange action
+    if (!this.isDestroyed && !this.isDestroying) {
+      reader.onload = () => this.send('onChange', reader.result, file);
+    }
     reader.readAsArrayBuffer(file);
   },
 
   actions: {
     pickedFile(e) {
-      let { files } = e.target;
+      const { files } = e.target;
       if (!files.length) {
         return;
       }
@@ -47,10 +56,10 @@ export default Component.extend({
       this.send('onChange');
     },
     onChange(fileAsBytes, fileMeta) {
-      let { name, size, lastModifiedDate } = fileMeta || {};
-      let fileSize = size ? filesize(size) : null;
+      const { name, size, lastModifiedDate } = fileMeta || {};
+      const fileSize = size ? filesize(size) : null;
       this.set('file', fileAsBytes);
-      this.set('fileName', name);
+      this.set('filename', name);
       this.set('fileSize', fileSize);
       this.set('fileLastModified', lastModifiedDate);
       this.onChange(fileAsBytes, name);

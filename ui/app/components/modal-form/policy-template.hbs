@@ -1,0 +1,46 @@
+{{#if this.policy.policyType}}
+  <nav class="tabs has-bottom-margin-l">
+    <ul>
+      <li class={{unless this.showExamplePolicy "active"}}>
+        <button
+          data-test-tab-your-policy
+          type="button"
+          name="form"
+          class="link link-plain tab has-text-weight-semibold {{unless this.showExamplePolicy ' is-active'}}"
+          {{on "click" (fn (mut this.showExamplePolicy) false)}}
+        >
+          Your Policy
+        </button>
+      </li>
+      <li class={{if this.showExamplePolicy "active"}}>
+        <button
+          data-test-tab-example-policy
+          type="button"
+          name="form"
+          class="link link-plain tab has-text-weight-semibold {{if this.showExamplePolicy ' is-active'}}"
+          {{on "click" (fn (mut this.showExamplePolicy) true)}}
+        >
+          Example Policy
+        </button>
+      </li>
+    </ul>
+  </nav>
+{{/if}}
+{{#if this.showExamplePolicy}}
+  <PolicyExample @policyType={{this.policy.policyType}} />
+{{else}}
+  <Select
+    @name="policyType"
+    @label="Type"
+    @options={{this.policyOptions}}
+    @isFullwidth={{true}}
+    @selectedValue={{this.policy.policyType}}
+    @onChange={{this.setPolicyType}}
+    @noDefault={{true}}
+  />
+  {{#if this.policy.policyType}}
+    <PolicyForm @onSave={{this.onSave}} @model={{this.policy}} @onCancel={{@onCancel}} />
+  {{else}}
+    <EmptyState @title="No policy type selected" @message="Select a policy type to continue creating." />
+  {{/if}}
+{{/if}}
