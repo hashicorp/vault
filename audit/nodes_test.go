@@ -19,6 +19,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+// TestProcessManual_NilData tests ProcessManual when nil data is supplied.
 func TestProcessManual_NilData(t *testing.T) {
 	t.Parallel()
 
@@ -40,6 +41,7 @@ func TestProcessManual_NilData(t *testing.T) {
 	require.EqualError(t, err, "data cannot be nil")
 }
 
+// TestProcessManual_NoIds tests ProcessManual when no IDs are supplied
 func TestProcessManual_NoIds(t *testing.T) {
 	t.Parallel()
 
@@ -64,6 +66,7 @@ func TestProcessManual_NoIds(t *testing.T) {
 	require.EqualError(t, err, "ids are required")
 }
 
+// TestProcessManual_NoNodes tests ProcessManual when no nodes are supplied.
 func TestProcessManual_NoNodes(t *testing.T) {
 	t.Parallel()
 
@@ -88,6 +91,8 @@ func TestProcessManual_NoNodes(t *testing.T) {
 	require.EqualError(t, err, "nodes are required")
 }
 
+// TestProcessManual_IdNodeMismatch tests ProcessManual when IDs don't match with
+// the nodes in the supplied map.
 func TestProcessManual_IdNodeMismatch(t *testing.T) {
 	t.Parallel()
 
@@ -113,6 +118,8 @@ func TestProcessManual_IdNodeMismatch(t *testing.T) {
 	require.ErrorContains(t, err, "node not found: ")
 }
 
+// TestProcessManual_LastNodeNotSink tests ProcessManual when the last node (by ID)
+// is not an eventlogger.NodeTypeSink.
 func TestProcessManual_LastNodeNotSink(t *testing.T) {
 	t.Parallel()
 
@@ -135,7 +142,7 @@ func TestProcessManual_LastNodeNotSink(t *testing.T) {
 }
 
 // TestProcessManual ensures that the manual processing of a test message works
-// as expected, covering various inputs.
+// as expected with proper inputs.
 func TestProcessManual(t *testing.T) {
 	t.Parallel()
 
