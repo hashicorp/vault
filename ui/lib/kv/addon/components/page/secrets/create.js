@@ -56,7 +56,7 @@ export default class KvSecretCreate extends Component {
 
     const { isValid, state } = this.validate();
     this.modelValidations = isValid ? null : state;
-    this.invalidFormAlert = isValid ? '' : 'There was a problem submitting this form.';
+    this.invalidFormAlert = isValid ? '' : 'There is an error with this form.';
 
     const { secret, metadata } = this.args;
     if (isValid) {
