@@ -160,9 +160,6 @@ func (a *azureMethod) Authenticate(ctx context.Context, client *api.Client) (ret
 		}
 	}
 
-	a.logger.Info("Logging in with the following:", "role", a.role, "vm_name", instance.Compute.Name, "vmss_name", instance.Compute.VMScaleSetName,
-		"resource_group_name", instance.Compute.ResourceGroupName, "subscription_id", instance.Compute.SubscriptionID, "jwt", token)
-
 	// Attempt login
 	data := map[string]interface{}{
 		"role":                a.role,
