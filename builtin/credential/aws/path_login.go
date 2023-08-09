@@ -1194,7 +1194,7 @@ func (b *backend) pathLoginRenewIam(ctx context.Context, req *logical.Request, d
 		// 1: clientUserId is in roleEntry.BoundIamPrincipalIDs (entries in roleEntry.BoundIamPrincipalIDs
 		//    implies that roleEntry.ResolveAWSUniqueIDs is true)
 		// 2: roleEntry.ResolveAWSUniqueIDs is false and canonical_arn is in roleEntry.BoundIamPrincipalARNs
-		// 3: Full ARN matches one of the wildcard globs in roleEntry.BoundIamPrincipalARNs
+		// 3: Canonical ARN matches one of the wildcard globs in roleEntry.BoundIamPrincipalARNs
 		clientUserId, err := getMetadataValue(req.Auth, "client_user_id")
 		switch {
 		case err == nil && strutil.StrListContains(roleEntry.BoundIamPrincipalIDs, clientUserId): // check 1 passed
@@ -1206,36 +1206,9 @@ func (b *backend) pathLoginRenewIam(ctx context.Context, req *logical.Request, d
 				return nil, fmt.Errorf("role %q no longer bound to ARN %q", roleName, canonicalArn)
 			}
 
-			fullArn := b.getCachedUserId(clientUserId)
-			if fullArn == "" {
-				entity, err := parseIamArn(canonicalArn)
-				if err != nil {
-					return nil, fmt.Errorf(
-						"error parsing ARN %q when updating login for role %q: %w",
-						canonicalArn,
-						roleName,
-						err,
-					)
-				}
-				fullArn, err = b.fullArn(ctx, entity, req.Storage)
-				if err != nil {
-					return nil, fmt.Errorf(
-						"error looking up full ARN of entity %v when updating login for role %q: %w",
-						entity,
-						roleName,
-						err,
-					)
-				}
-				if fullArn == "" {
-					return nil, fmt.Errorf("got empty string back when looking up full ARN of entity %v when updating login for role %q", entity, roleName)
-				}
-				if clientUserId != "" {
-					b.setCachedUserId(clientUserId, fullArn)
-				}
-			}
 			matchedWildcardBind := false
 			for _, principalARN := range roleEntry.BoundIamPrincipalARNs {
-				if strings.HasSuffix(principalARN, "*") && strutil.GlobbedStringsMatch(principalARN, fullArn) {
+				if strings.HasSuffix(principalARN, "*") && strutil.GlobbedStringsMatch(principalARN, canonicalArn) {
 					matchedWildcardBind = true
 					break
 				}
@@ -1396,7 +1369,7 @@ func (b *backend) pathLoginUpdateIam(ctx context.Context, req *logical.Request, 
 		// 1: callerUniqueId is in roleEntry.BoundIamPrincipalIDs (entries in roleEntry.BoundIamPrincipalIDs
 		//    implies that roleEntry.ResolveAWSUniqueIDs is true)
 		// 2: roleEntry.ResolveAWSUniqueIDs is false and entity.canonicalArn() is in roleEntry.BoundIamPrincipalARNs
-		// 3: Full ARN matches one of the wildcard globs in roleEntry.BoundIamPrincipalARNs
+		// 3: entity.canonicalArn() matches one of the wildcard globs in roleEntry.BoundIamPrincipalARNs
 		// Need to be able to handle pathological configurations such as roleEntry.BoundIamPrincipalARNs looking something like:
 		// arn:aw:iam::123456789012:{user/UserName,user/path/*,role/RoleName,role/path/*}
 		switch {
@@ -1408,20 +1381,9 @@ func (b *backend) pathLoginUpdateIam(ctx context.Context, req *logical.Request, 
 				return logical.ErrorResponse("IAM Principal %q does not belong to the role %q", callerID.Arn, roleName), nil
 			}
 
-			fullArn := b.getCachedUserId(callerUniqueId)
-			if fullArn == "" {
-				fullArn, err = b.fullArn(ctx, entity, req.Storage)
-				if err != nil {
-					return logical.ErrorResponse("error looking up full ARN of entity %v when attempting login for role %q: %v", entity, roleName, err), nil
-				}
-				if fullArn == "" {
-					return logical.ErrorResponse("got empty string back when looking up full ARN of entity %v when attempting login for role %q", entity, roleName), nil
-				}
-				b.setCachedUserId(callerUniqueId, fullArn)
-			}
 			matchedWildcardBind := false
 			for _, principalARN := range roleEntry.BoundIamPrincipalARNs {
-				if strings.HasSuffix(principalARN, "*") && strutil.GlobbedStringsMatch(principalARN, fullArn) {
+				if strings.HasSuffix(principalARN, "*") && strutil.GlobbedStringsMatch(principalARN, entity.canonicalArn()) {
 					matchedWildcardBind = true
 					break
 				}
