@@ -58,7 +58,7 @@ dev-dynamic-mem: dev-dynamic
 # The resulting image is tagged "vault:dev".
 docker-dev: BUILD_TAGS+=testonly
 docker-dev: prep
-	docker build --build-arg VERSION=$(GO_VERSION_MIN) --build-arg BUILD_TAGS="$(BUILD_TAGS)" --platform=linux/amd64 -f scripts/docker/Dockerfile -t vault:dev .
+	docker build --build-arg VERSION=$(GO_VERSION_MIN) --build-arg BUILD_TAGS="$(BUILD_TAGS)" -f scripts/docker/Dockerfile -t vault:dev .
 
 docker-dev-ui: BUILD_TAGS+=testonly
 docker-dev-ui: prep
