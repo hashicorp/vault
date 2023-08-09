@@ -1050,7 +1050,7 @@ module('Acceptance | secrets/secret/create, read, delete', function (hooks) {
     assert
       .dom('[data-test-warning-no-read-permissions]')
       .hasText(
-        'You do not have read permissions. If a secret exists here creating a new secret will overwrite it.'
+        'You do not have read permissions. If a secret exists at this path creating a new secret will overwrite it.'
       );
 
     await editPage.editSecret('bar', 'baz');
