@@ -19,149 +19,146 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+func TestProcessManual_NilData(t *testing.T) {
+	t.Parallel()
+
+	var ids []eventlogger.NodeID
+	nodes := make(map[eventlogger.NodeID]eventlogger.Node)
+
+	// Filter node
+	filterId, filterNode := newFilterNode(t)
+	ids = append(ids, filterId)
+	nodes[filterId] = filterNode
+
+	// Sink node
+	sinkId, sinkNode := newSinkNode(t)
+	ids = append(ids, sinkId)
+	nodes[sinkId] = sinkNode
+
+	err := ProcessManual(namespace.RootContext(context.Background()), nil, ids, nodes)
+	require.Error(t, err)
+	require.EqualError(t, err, "data cannot be nil")
+}
+
+func TestProcessManual_NoIds(t *testing.T) {
+	t.Parallel()
+
+	var ids []eventlogger.NodeID
+	nodes := make(map[eventlogger.NodeID]eventlogger.Node)
+
+	// Filter node
+	filterId, filterNode := newFilterNode(t)
+	nodes[filterId] = filterNode
+
+	// Sink node
+	sinkId, sinkNode := newSinkNode(t)
+	nodes[sinkId] = sinkNode
+
+	// Data
+	requestId, err := uuid.GenerateUUID()
+	require.NoError(t, err)
+	data := newData(requestId)
+
+	err = ProcessManual(namespace.RootContext(context.Background()), data, ids, nodes)
+	require.Error(t, err)
+	require.EqualError(t, err, "ids are required")
+}
+
+func TestProcessManual_NoNodes(t *testing.T) {
+	t.Parallel()
+
+	var ids []eventlogger.NodeID
+	nodes := make(map[eventlogger.NodeID]eventlogger.Node)
+
+	// Filter node
+	filterId, _ := newFilterNode(t)
+	ids = append(ids, filterId)
+
+	// Sink node
+	sinkId, _ := newSinkNode(t)
+	ids = append(ids, sinkId)
+
+	// Data
+	requestId, err := uuid.GenerateUUID()
+	require.NoError(t, err)
+	data := newData(requestId)
+
+	err = ProcessManual(namespace.RootContext(context.Background()), data, ids, nodes)
+	require.Error(t, err)
+	require.EqualError(t, err, "nodes are required")
+}
+
+func TestProcessManual_IdNodeMismatch(t *testing.T) {
+	t.Parallel()
+
+	var ids []eventlogger.NodeID
+	nodes := make(map[eventlogger.NodeID]eventlogger.Node)
+
+	// Filter node
+	filterId, filterNode := newFilterNode(t)
+	ids = append(ids, filterId)
+	nodes[filterId] = filterNode
+
+	// Sink node
+	sinkId, _ := newSinkNode(t)
+	ids = append(ids, sinkId)
+
+	// Data
+	requestId, err := uuid.GenerateUUID()
+	require.NoError(t, err)
+	data := newData(requestId)
+
+	err = ProcessManual(namespace.RootContext(context.Background()), data, ids, nodes)
+	require.Error(t, err)
+	require.ErrorContains(t, err, "node not found: ")
+}
+
+func TestProcessManual_LastNodeNotSink(t *testing.T) {
+	t.Parallel()
+
+	var ids []eventlogger.NodeID
+	nodes := make(map[eventlogger.NodeID]eventlogger.Node)
+
+	// Filter node
+	filterId, filterNode := newFilterNode(t)
+	ids = append(ids, filterId)
+	nodes[filterId] = filterNode
+
+	// Data
+	requestId, err := uuid.GenerateUUID()
+	require.NoError(t, err)
+	data := newData(requestId)
+
+	err = ProcessManual(namespace.RootContext(context.Background()), data, ids, nodes)
+	require.Error(t, err)
+	require.EqualError(t, err, "last node must be a sink")
+}
+
 // TestProcessManual ensures that the manual processing of a test message works
 // as expected, covering various inputs.
 func TestProcessManual(t *testing.T) {
-	tests := map[string]struct {
-		IsErrorExpected        bool
-		IsErrorContains        bool
-		ExpectedErrorMessage   string
-		ShouldUseData          bool
-		ShouldUseIDs           bool
-		ShouldUseNodes         bool
-		ShouldCreateFilterNode bool
-		ShouldCreateSinkNode   bool
-		ShouldMatchIdToFilter  bool
-		ShouldMatchIdToSink    bool
-	}{
-		"nil-data": {
-			IsErrorExpected:        true,
-			IsErrorContains:        false,
-			ExpectedErrorMessage:   "data cannot be nil",
-			ShouldUseData:          false,
-			ShouldUseIDs:           false,
-			ShouldUseNodes:         false,
-			ShouldCreateFilterNode: false,
-			ShouldCreateSinkNode:   false,
-			ShouldMatchIdToFilter:  false,
-			ShouldMatchIdToSink:    false,
-		},
-		"no-ids": {
-			IsErrorExpected:        true,
-			IsErrorContains:        false,
-			ExpectedErrorMessage:   "ids are required",
-			ShouldUseData:          true,
-			ShouldUseIDs:           false,
-			ShouldUseNodes:         false,
-			ShouldCreateFilterNode: false,
-			ShouldCreateSinkNode:   false,
-			ShouldMatchIdToFilter:  false,
-			ShouldMatchIdToSink:    false,
-		},
-		"no-nodes": {
-			IsErrorExpected:        true,
-			IsErrorContains:        false,
-			ExpectedErrorMessage:   "nodes are required",
-			ShouldUseData:          true,
-			ShouldUseIDs:           true,
-			ShouldUseNodes:         true,
-			ShouldCreateFilterNode: true,
-			ShouldCreateSinkNode:   true,
-			ShouldMatchIdToFilter:  false,
-			ShouldMatchIdToSink:    false,
-		},
-		"id-node-mismatch": {
-			IsErrorExpected:        true,
-			IsErrorContains:        true,
-			ExpectedErrorMessage:   "node not found",
-			ShouldUseData:          true,
-			ShouldUseIDs:           true,
-			ShouldUseNodes:         true,
-			ShouldCreateFilterNode: true,
-			ShouldMatchIdToFilter:  true,
-			ShouldCreateSinkNode:   true,
-			ShouldMatchIdToSink:    false,
-		},
-		"last-node-not-sink": {
-			IsErrorExpected:        true,
-			IsErrorContains:        false,
-			ExpectedErrorMessage:   "last node must be a sink",
-			ShouldUseData:          true,
-			ShouldUseIDs:           true,
-			ShouldUseNodes:         true,
-			ShouldCreateFilterNode: true,
-			ShouldCreateSinkNode:   false,
-			ShouldMatchIdToFilter:  true,
-			ShouldMatchIdToSink:    false,
-		},
-		"normal-operation": {
-			IsErrorExpected:        false,
-			ShouldUseData:          true,
-			ShouldUseIDs:           true,
-			ShouldUseNodes:         true,
-			ShouldCreateFilterNode: true,
-			ShouldCreateSinkNode:   true,
-			ShouldMatchIdToFilter:  true,
-			ShouldMatchIdToSink:    true,
-		},
-	}
+	t.Parallel()
 
-	for name, tc := range tests {
-		name := name
-		tc := tc
-		t.Run(name, func(t *testing.T) {
-			t.Parallel()
+	var ids []eventlogger.NodeID
+	nodes := make(map[eventlogger.NodeID]eventlogger.Node)
 
-			var ids []eventlogger.NodeID
-			var nodes map[eventlogger.NodeID]eventlogger.Node
-			var data *logical.LogInput
+	// Filter node
+	filterId, filterNode := newFilterNode(t)
+	ids = append(ids, filterId)
+	nodes[filterId] = filterNode
 
-			if tc.ShouldUseNodes {
-				nodes = make(map[eventlogger.NodeID]eventlogger.Node)
+	// Sink node
+	sinkId, sinkNode := newSinkNode(t)
+	ids = append(ids, sinkId)
+	nodes[sinkId] = sinkNode
 
-				if tc.ShouldCreateFilterNode {
-					filterId, filterNode := newFilterNode(t)
+	// Data
+	requestId, err := uuid.GenerateUUID()
+	require.NoError(t, err)
+	data := newData(requestId)
 
-					if tc.ShouldUseIDs {
-						ids = append(ids, filterId)
-					}
-
-					if tc.ShouldMatchIdToFilter {
-						nodes[filterId] = filterNode
-					}
-				}
-
-				if tc.ShouldCreateSinkNode {
-					sinkId, sinkNode := newSinkNode(t)
-					if tc.ShouldUseIDs {
-						ids = append(ids, sinkId)
-					}
-
-					if tc.ShouldMatchIdToSink {
-						nodes[sinkId] = sinkNode
-					}
-				}
-			}
-
-			if tc.ShouldUseData {
-				requestId, err := uuid.GenerateUUID()
-				require.NoError(t, err)
-				data = newData(requestId)
-			}
-
-			err := ProcessManual(namespace.RootContext(context.Background()), data, ids, nodes)
-			if tc.IsErrorExpected {
-				require.Error(t, err)
-				if tc.IsErrorContains {
-					require.ErrorContains(t, err, tc.ExpectedErrorMessage)
-				} else {
-					require.EqualError(t, err, tc.ExpectedErrorMessage)
-				}
-			} else {
-				require.NoError(t, err)
-			}
-		})
-	}
+	err = ProcessManual(namespace.RootContext(context.Background()), data, ids, nodes)
+	require.NoError(t, err)
 }
 
 // newFilterNode creates a new UUID and EntryFormatter (filter node).
