@@ -1,7 +1,7 @@
 <BasicDropdown @class="popup-menu" @horizontalPosition="auto-right" @verticalPosition="below" as |D|>
   <D.Trigger data-test-version-dropdown class="toolbar-link {{if D.isOpen ' is-active'}}">
     Version
-    {{@secret.version}}
+    {{or @currentVersion "current"}}
     <Chevron @direction="down" @isButton={{true}} />
   </D.Trigger>
   <D.Content @defaultClass="popup-menu-content">
