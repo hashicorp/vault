@@ -14,7 +14,6 @@ import (
 	"strings"
 	"sync"
 	"sync/atomic"
-	"time"
 
 	"github.com/hashicorp/eventlogger"
 	"github.com/hashicorp/vault/audit"
@@ -331,62 +330,30 @@ func (b *Backend) LogResponse(ctx context.Context, in *logical.LogInput) error {
 func (b *Backend) LogTestMessage(ctx context.Context, in *logical.LogInput, config map[string]string) error {
 	// Event logger behavior - manually Process each node
 	if len(b.nodeIDList) > 0 {
-		// Create an audit event.
-		a, err := audit.NewEvent(audit.RequestType)
-		if err != nil {
-			return err
-		}
-
-		// Insert the data into the audit event.
-		a.Data = in
-
-		// Create an eventlogger event with the audit event as the payload.
-		e := &eventlogger.Event{
-			Type:      eventlogger.EventType(event.AuditType.String()),
-			CreatedAt: time.Now(),
-			Formatted: make(map[string][]byte),
-			Payload:   a,
-		}
-
-		// Process nodes in order, updating the event with the result.
-		// This means we *should* do:
-		// 1. formatter
-		// 2. sink
-		for _, id := range b.nodeIDList {
-			node, ok := b.nodeMap[id]
-			if !ok {
-				return fmt.Errorf("node not found: %v", id)
-			}
-			e, err = node.Process(ctx, e)
-			if err != nil {
-				return err
-			}
-		}
-
-		return nil
-	} else {
-		// Old behavior
-		var writer io.Writer
-		switch b.path {
-		case "stdout":
-			writer = os.Stdout
-		case "discard":
-			return nil
-		}
-
-		var buf bytes.Buffer
-
-		temporaryFormatter, err := audit.NewTemporaryFormatter(config["format"], config["prefix"])
-		if err != nil {
-			return err
-		}
-
-		if err = temporaryFormatter.FormatAndWriteRequest(ctx, &buf, in); err != nil {
-			return err
-		}
-
-		return b.log(ctx, &buf, writer)
+		return audit.ManuallyProcess(ctx, in, b.nodeIDList, b.nodeMap)
 	}
+
+	// Old behavior
+	var writer io.Writer
+	switch b.path {
+	case "stdout":
+		writer = os.Stdout
+	case "discard":
+		return nil
+	}
+
+	var buf bytes.Buffer
+
+	temporaryFormatter, err := audit.NewTemporaryFormatter(config["format"], config["prefix"])
+	if err != nil {
+		return err
+	}
+
+	if err = temporaryFormatter.FormatAndWriteRequest(ctx, &buf, in); err != nil {
+		return err
+	}
+
+	return b.log(ctx, &buf, writer)
 }
 
 // The file lock must be held before calling this

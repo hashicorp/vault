@@ -226,68 +226,36 @@ func (b *Backend) LogResponse(ctx context.Context, in *logical.LogInput) error {
 func (b *Backend) LogTestMessage(ctx context.Context, in *logical.LogInput, config map[string]string) error {
 	// Event logger behavior - manually Process each node
 	if len(b.nodeIDList) > 0 {
-		// Create an audit event.
-		a, err := audit.NewEvent(audit.RequestType)
-		if err != nil {
-			return err
-		}
+		return audit.ProcessManual(ctx, in, b.nodeIDList, b.nodeMap)
+	}
 
-		// Insert the data into the audit event.
-		a.Data = in
+	// Old behavior
+	var buf bytes.Buffer
 
-		// Create an eventlogger event with the audit event as the payload.
-		e := &eventlogger.Event{
-			Type:      eventlogger.EventType(event.AuditType.String()),
-			CreatedAt: time.Now(),
-			Formatted: make(map[string][]byte),
-			Payload:   a,
-		}
-
-		// Process nodes in order, updating the event with the result.
-		// This means we *should* do:
-		// 1. formatter
-		// 2. sink
-		for _, id := range b.nodeIDList {
-			node, ok := b.nodeMap[id]
-			if !ok {
-				return fmt.Errorf("node not found: %v", id)
-			}
-			e, err = node.Process(ctx, e)
-			if err != nil {
-				return err
-			}
-		}
-
-		return nil
-	} else {
-		// Old behavior
-		var buf bytes.Buffer
-
-		temporaryFormatter, err := audit.NewTemporaryFormatter(config["format"], config["prefix"])
-		if err != nil {
-			return err
-		}
-
-		if err = temporaryFormatter.FormatAndWriteRequest(ctx, &buf, in); err != nil {
-			return err
-		}
-
-		b.Lock()
-		defer b.Unlock()
-
-		err = b.write(ctx, buf.Bytes())
-		if err != nil {
-			rErr := b.reconnect(ctx)
-			if rErr != nil {
-				err = multierror.Append(err, rErr)
-			} else {
-				// Try once more after reconnecting
-				err = b.write(ctx, buf.Bytes())
-			}
-		}
-
+	temporaryFormatter, err := audit.NewTemporaryFormatter(config["format"], config["prefix"])
+	if err != nil {
 		return err
 	}
+
+	if err = temporaryFormatter.FormatAndWriteRequest(ctx, &buf, in); err != nil {
+		return err
+	}
+
+	b.Lock()
+	defer b.Unlock()
+
+	err = b.write(ctx, buf.Bytes())
+	if err != nil {
+		rErr := b.reconnect(ctx)
+		if rErr != nil {
+			err = multierror.Append(err, rErr)
+		} else {
+			// Try once more after reconnecting
+			err = b.write(ctx, buf.Bytes())
+		}
+	}
+
+	return err
 }
 
 func (b *Backend) write(ctx context.Context, buf []byte) error {
