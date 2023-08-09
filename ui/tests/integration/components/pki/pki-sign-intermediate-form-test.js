@@ -71,9 +71,9 @@ module('Integration | Component | pki-sign-intermediate-form', function (hooks) 
         request_id: 'some-id',
         data: {
           serial_number: '31:52:b9:09:40',
-          ca_chain: ['-----root pem------'],
-          issuing_ca: '-----issuing ca------',
-          certificate: '-----certificate------',
+          ca_chain: ['-----BEGIN CERTIFICATE-----'],
+          issuing_ca: '-----BEGIN CERTIFICATE-----',
+          certificate: '-----BEGIN CERTIFICATE-----',
         },
       };
     });
