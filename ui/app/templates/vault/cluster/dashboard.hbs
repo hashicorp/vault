@@ -9,9 +9,20 @@
     <Dashboard::QuickActionsCard @secretsEngines={{@model.secretsEngines}} />
   </Hds::Card::Container>
 
-  <Hds::Card::Container @hasBorder={{true}} class="has-padding-l is-flex-column is-flex-half">
-    <Dashboard::LearnMoreCard />
-  </Hds::Card::Container>
+  <div>
+    <Hds::Card::Container @hasBorder={{true}} class="has-padding-l is-flex-column is-flex-half">
+      <Dashboard::LearnMoreCard />
+    </Hds::Card::Container>
+
+    <div class="has-padding-s has-top-margin-m">
+      <small>
+        Don't see what you're looking for on this page? Let us know via our
+        <Hds::Link::Inline @icon="external-link" @href="https://hashicorp.sjc1.qualtrics.com/jfe/form/SV_1SNUsZLdWHpfw0e">
+          feedback form
+        </Hds::Link::Inline>
+      </small>
+    </div>
+  </div>
 
   {{#if @model.vaultConfiguration}}
     <Hds::Card::Container @hasBorder={{true}} class="has-padding-l is-flex-column is-flex-half">
