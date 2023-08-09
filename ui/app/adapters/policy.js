@@ -1,10 +1,15 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
 import { assign } from '@ember/polyfills';
 import ApplicationAdapter from './application';
 
 export default ApplicationAdapter.extend({
   namespace: 'v1/sys',
   pathForType(type) {
-    let path = type.replace('policy', 'policies');
+    const path = type.replace('policy', 'policies');
     return path;
   },
 

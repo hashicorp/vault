@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
 import { module, test } from 'qunit';
 import { setupRenderingTest } from 'ember-qunit';
 import { render, settled } from '@ember/test-helpers';
@@ -34,7 +39,7 @@ module('Integration | Component | secret edit', function (hooks) {
       },
     });
 
-    await render(hbs`{{secret-edit mode=mode model=model }}`);
+    await render(hbs`{{secret-edit mode=this.mode model=this.model }}`);
     assert.dom('[data-test-toggle-input="json"]').isDisabled();
   });
 
@@ -48,7 +53,7 @@ module('Integration | Component | secret edit', function (hooks) {
       },
     });
 
-    await render(hbs`{{secret-edit mode=mode model=model }}`);
+    await render(hbs`{{secret-edit mode=this.mode model=this.model }}`);
     assert.dom('[data-test-toggle-input="json"]').isNotDisabled();
   });
 
@@ -58,12 +63,14 @@ module('Integration | Component | secret edit', function (hooks) {
       secretData: null,
     });
 
-    await render(hbs`{{secret-edit mode=mode model=model preferAdvancedEdit=true }}`);
+    await render(hbs`{{secret-edit mode=this.mode model=this.model preferAdvancedEdit=true }}`);
 
-    let instance = document.querySelector('.CodeMirror').CodeMirror;
+    const instance = document.querySelector('.CodeMirror').CodeMirror;
     instance.setValue(JSON.stringify([{ foo: 'bar' }]));
     await settled();
-    assert.dom('[data-test-error]').includesText('Vault expects data to be formatted as an JSON object');
+    assert
+      .dom('[data-test-message-error]')
+      .includesText('Vault expects data to be formatted as an JSON object');
   });
 
   test('it allows saving when the model isError', async function (assert) {
@@ -76,7 +83,7 @@ module('Integration | Component | secret edit', function (hooks) {
         float: '1.234',
       },
     });
-    await render(hbs`<SecretEdit @mode={{mode}} @model={{model}} />`);
+    await render(hbs`<SecretEdit @mode={{this.mode}} @model={{this.model}} />`);
     assert.dom('[data-test-secret-save]').isNotDisabled();
   });
 
@@ -94,11 +101,13 @@ module('Integration | Component | secret edit', function (hooks) {
       canReadSecretData: true,
     });
 
-    await render(hbs`{{secret-edit mode=mode model=model preferAdvancedEdit=true }}`);
+    await render(hbs`{{secret-edit mode=this.mode model=this.model preferAdvancedEdit=true }}`);
 
-    let instance = document.querySelector('.CodeMirror').CodeMirror;
+    const instance = document.querySelector('.CodeMirror').CodeMirror;
     instance.setValue(JSON.stringify([{ foo: 'bar' }]));
     await settled();
-    assert.dom('[data-test-error]').includesText('Vault expects data to be formatted as an JSON object');
+    assert
+      .dom('[data-test-message-error]')
+      .includesText('Vault expects data to be formatted as an JSON object');
   });
 });

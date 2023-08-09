@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
 /* eslint qunit/no-conditional-assertions: "warn" */
 import { module, test } from 'qunit';
 import { setupTest } from 'ember-qunit';
@@ -45,7 +50,7 @@ module('Unit | Service | wizard', function (hooks) {
     };
   }
 
-  let testCases = [
+  const testCases = [
     {
       method: 'getExtState',
       args: [STORAGE_KEYS.TUTORIAL_STATE],
@@ -323,10 +328,10 @@ module('Unit | Service | wizard', function (hooks) {
   ];
 
   testCases.forEach((testCase) => {
-    let store = storage();
+    const store = storage();
     test(`${testCase.method}`, function (assert) {
       assert.expect(testCase.assertCount);
-      let wizard = this.owner.factoryFor('service:wizard').create({
+      const wizard = this.owner.factoryFor('service:wizard').create({
         storage() {
           return store;
         },
@@ -342,7 +347,7 @@ module('Unit | Service | wizard', function (hooks) {
         testCase.storage.forEach((item) => wizard.storage().setItem(item.key, item.value));
       }
 
-      let result = wizard[testCase.method](...testCase.args);
+      const result = wizard[testCase.method](...testCase.args);
       if (testCase.expectedResults.props) {
         testCase.expectedResults.props.forEach((property) => {
           assert.deepEqual(
@@ -362,7 +367,7 @@ module('Unit | Service | wizard', function (hooks) {
         });
       }
       if (testCase.expectedResults.value !== null && testCase.expectedResults.value !== undefined) {
-        assert.equal(result, testCase.expectedResults.value, `${testCase.method} gives correct value`);
+        assert.strictEqual(result, testCase.expectedResults.value, `${testCase.method} gives correct value`);
       }
     });
   });

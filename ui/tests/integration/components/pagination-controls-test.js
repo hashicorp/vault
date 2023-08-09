@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
 import { module, test } from 'qunit';
 import { setupRenderingTest } from 'ember-qunit';
 import { render } from '@ember/test-helpers';
@@ -28,7 +33,7 @@ module('Integration | Component | pagination-controls', function (hooks) {
 
     let expectedPage = 2;
     this.onChange = (page) => {
-      assert.equal(page, expectedPage, 'onChange callback is fired with correct page number');
+      assert.strictEqual(page, expectedPage, 'onChange callback is fired with correct page number');
     };
 
     await render(hbs`<PaginationControls @total={{75}} @onChange={{this.onChange}} />`);

@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
 import Component from '@ember/component';
 import { computed } from '@ember/object';
 
@@ -11,7 +16,7 @@ export default Component.extend({
   strokeWidth: 1,
 
   viewBox: computed('size', function () {
-    let s = this.size;
+    const s = this.size;
     return `0 0 ${s} ${s}`;
   }),
   centerValue: computed('size', function () {

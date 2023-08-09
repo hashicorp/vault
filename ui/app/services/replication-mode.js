@@ -1,13 +1,19 @@
-import Service from '@ember/service';
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
 
-export default Service.extend({
-  mode: null,
+import Service from '@ember/service';
+import { tracked } from '@glimmer/tracking';
+
+export default class ReplicationModeService extends Service {
+  @tracked mode = null;
 
   getMode() {
-    this.mode;
-  },
+    return this.mode;
+  }
 
   setMode(mode) {
-    this.set('mode', mode);
-  },
-});
+    this.mode = mode;
+  }
+}

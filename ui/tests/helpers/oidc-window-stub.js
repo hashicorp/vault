@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
 import EmberObject, { computed } from '@ember/object';
 import Evented from '@ember/object/evented';
 

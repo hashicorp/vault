@@ -1,0 +1,3 @@
+```release-note:improvement
+secrets/kubernetes: upgrade to v0.2.0
+```

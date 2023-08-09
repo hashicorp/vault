@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package command
 
 import (
@@ -80,7 +83,7 @@ func (c *KVGetCommand) Flags() *FlagSets {
 }
 
 func (c *KVGetCommand) AutocompleteArgs() complete.Predictor {
-	return nil
+	return c.PredictVaultFiles()
 }
 
 func (c *KVGetCommand) AutocompleteFlags() complete.Flags {
@@ -113,7 +116,7 @@ func (c *KVGetCommand) Run(args []string) int {
 
 	// If true, we're working with "-mount=secret foo" syntax.
 	// If false, we're using "secret/foo" syntax.
-	mountFlagSyntax := (c.flagMount != "")
+	mountFlagSyntax := c.flagMount != ""
 
 	var (
 		mountPath string
@@ -126,11 +129,14 @@ func (c *KVGetCommand) Run(args []string) int {
 	// Parse the paths and grab the KV version
 	if mountFlagSyntax {
 		// In this case, this arg is the secret path (e.g. "foo").
-		mountPath = sanitizePath(c.flagMount)
-		_, v2, err = isKVv2(mountPath, client)
+		mountPath, v2, err = isKVv2(sanitizePath(c.flagMount), client)
 		if err != nil {
 			c.UI.Error(err.Error())
 			return 2
+		}
+
+		if v2 {
+			partialPath = path.Join(mountPath, partialPath)
 		}
 	} else {
 		// In this case, this arg is a path-like combination of mountPath/secretPath.
@@ -146,7 +152,7 @@ func (c *KVGetCommand) Run(args []string) int {
 	var fullPath string
 	// Add /data to v2 paths only
 	if v2 {
-		fullPath = addPrefixToKVPath(partialPath, mountPath, "data")
+		fullPath = addPrefixToKVPath(partialPath, mountPath, "data", false)
 
 		if c.flagVersion > 0 {
 			versionParam = map[string]string{

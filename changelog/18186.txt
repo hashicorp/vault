@@ -1,0 +1,6 @@
+```release-note:breaking-change
+secrets/pki: Maintaining running count of certificates will be turned off by default.
+To re-enable keeping these metrics available on the tidy status endpoint, enable
+maintain_stored_certificate_counts on tidy-config, to also publish them to the
+metrics consumer, enable publish_stored_certificate_count_metrics .
+```

@@ -1,0 +1,3 @@
+```release-note:bug
+website/docs: Fix Kubernetes Auth Code Example to use the correct whitespace in import.
+```

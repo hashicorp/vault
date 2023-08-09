@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
 import Component from '@glimmer/component';
 import { action } from '@ember/object';
 import { inject as service } from '@ember/service';
@@ -28,7 +33,7 @@ export default class SecretEditMetadata extends Component {
   @tracked modelValidations;
 
   async save() {
-    let model = this.args.model;
+    const model = this.args.model;
     try {
       await model.save();
     } catch (e) {
@@ -49,7 +54,7 @@ export default class SecretEditMetadata extends Component {
       if (name === 'customMetadata') {
         // atypical case where property is not set on model on change - validate independently
         /* eslint-disable no-useless-escape */
-        let regex = /^[^\\]+$/g; // looking for a backward slash
+        const regex = /^[^\\]+$/g; // looking for a backward slash
         if (!value.match(regex)) {
           state[name] = {
             errors: ['Custom values cannot contain a backward slash.'],
@@ -63,7 +68,7 @@ export default class SecretEditMetadata extends Component {
       }
     }
     let count = 0;
-    for (let key in state) {
+    for (const key in state) {
       if (!state[key].isValid) {
         count++;
       }

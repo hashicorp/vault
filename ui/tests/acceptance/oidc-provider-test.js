@@ -1,13 +1,20 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
 import { create } from 'ember-cli-page-object';
 import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
+import { v4 as uuidv4 } from 'uuid';
+
 import authPage from 'vault/tests/pages/auth';
 import logout from 'vault/tests/pages/logout';
 import authForm from 'vault/tests/pages/components/auth-form';
 import enablePage from 'vault/tests/pages/settings/auth/enable';
 import consoleClass from 'vault/tests/pages/components/console/ui-panel';
 import { visit, settled, currentURL } from '@ember/test-helpers';
-
+import { clearRecord } from 'vault/tests/helpers/oidc-config';
 const consoleComponent = create(consoleClass);
 const authFormComponent = create(authForm);
 
@@ -28,7 +35,7 @@ const GROUP_TOKEN_TEMPLATE = `{
 }`;
 const oidcEntity = async function (name, policy) {
   await consoleComponent.runCommands([
-    `write sys/policies/acl/${name} policy=${btoa(policy)}`,
+    `write sys/policies/acl/${name} policy=${window.btoa(policy)}`,
     `write identity/entity name="${OIDC_USER}" policies="${name}" metadata="email=vault@hashicorp.com" metadata="phone_number=123-456-7890"`,
     `read -field=id identity/entity/name/${OIDC_USER}`,
   ]);
@@ -66,19 +73,19 @@ const entityAlias = async function (entityId, accessor, groupId) {
   return consoleComponent.lastLogOutput.includes('Success');
 };
 const setupWebapp = async function (redirect) {
-  let webappName = `my-webapp-${new Date().getTime()}`;
+  const webappName = 'my-webapp';
   await consoleComponent.runCommands([
     `write identity/oidc/client/${webappName} redirect_uris="${redirect}" assignments="my-assignment" key="sigkey" id_token_ttl="30m" access_token_ttl="1h"`,
     `read -field=client_id identity/oidc/client/${webappName}`,
   ]);
-  let output = consoleComponent.lastLogOutput;
+  const output = consoleComponent.lastLogOutput;
   if (output.includes('error occurred')) {
     throw new Error(`OIDC setup failed: ${output}`);
   }
   return output;
 };
 const setupProvider = async function (clientId) {
-  let providerName = `my-provider-${new Date().getTime()}`;
+  const providerName = `my-provider`;
   await consoleComponent.runCommands(
     `write identity/oidc/provider/${providerName} allowed_client_ids="${clientId}" scopes="user,groups"`
   );
@@ -86,7 +93,7 @@ const setupProvider = async function (clientId) {
 };
 
 const getAuthzUrl = (providerName, redirect, clientId, params) => {
-  let queryParams = {
+  const queryParams = {
     client_id: clientId,
     nonce: 'abc123',
     redirect_uri: encodeURIComponent(redirect),
@@ -95,7 +102,7 @@ const getAuthzUrl = (providerName, redirect, clientId, params) => {
     state: 'foobar',
     ...params,
   };
-  let queryString = Object.keys(queryParams).reduce((prev, key, idx) => {
+  const queryString = Object.keys(queryParams).reduce((prev, key, idx) => {
     if (idx === 0) {
       return `${prev}${key}=${queryParams[key]}`;
     }
@@ -104,15 +111,15 @@ const getAuthzUrl = (providerName, redirect, clientId, params) => {
   return `/vault/identity/oidc/provider/${providerName}/authorize${queryString}`;
 };
 
-const setupOidc = async function () {
+const setupOidc = async function (uid) {
   const callback = 'http://127.0.0.1:8251/callback';
   const entityId = await oidcEntity('oidc', OIDC_POLICY);
   const groupId = await oidcGroup(entityId);
-  let authMethodPath = `userpass-${new Date().getTime()}`;
+  const authMethodPath = `oidc-userpass-${uid}`;
   const accessor = await authAccessor(authMethodPath);
   await entityAlias(entityId, accessor, groupId);
   const clientId = await setupWebapp(callback);
-  let providerName = await setupProvider(clientId);
+  const providerName = await setupProvider(clientId);
   return {
     providerName,
     callback,
@@ -124,17 +131,18 @@ const setupOidc = async function () {
 module('Acceptance | oidc provider', function (hooks) {
   setupApplicationTest(hooks);
 
-  hooks.beforeEach(async function () {
-    await logout.visit();
+  hooks.beforeEach(function () {
+    this.uid = uuidv4();
+    this.store = this.owner.lookup('service:store');
     return authPage.login();
   });
 
   test('OIDC Provider logs in and redirects correctly', async function (assert) {
-    let { providerName, callback, clientId, authMethodPath } = await setupOidc();
+    const { providerName, callback, clientId, authMethodPath } = await setupOidc(this.uid);
 
     await logout.visit();
     await settled();
-    let url = getAuthzUrl(providerName, callback, clientId);
+    const url = getAuthzUrl(providerName, callback, clientId);
     await visit(url);
 
     assert.ok(currentURL().startsWith('/vault/auth'), 'redirects to auth when no token');
@@ -154,15 +162,19 @@ module('Acceptance | oidc provider', function (hooks) {
     await authFormComponent.password(USER_PASSWORD);
     await authFormComponent.login();
     await settled();
-    assert.equal(currentURL(), url, 'URL is as expected after login');
+    assert.strictEqual(currentURL(), url, 'URL is as expected after login');
     assert.dom('[data-test-oidc-redirect]').exists('redirect text exists');
     assert
       .dom('[data-test-oidc-redirect]')
       .hasTextContaining(`${callback}?code=`, 'Successful redirect to callback');
+
+    //* clean up test state
+    await clearRecord(this.store, 'oidc/client', 'my-webapp');
+    await clearRecord(this.store, 'oidc/provider', 'my-provider');
   });
 
   test('OIDC Provider redirects to auth if current token and prompt = login', async function (assert) {
-    const { providerName, callback, clientId, authMethodPath } = await setupOidc();
+    const { providerName, callback, clientId, authMethodPath } = await setupOidc(this.uid);
     await settled();
     const url = getAuthzUrl(providerName, callback, clientId, { prompt: 'login' });
     await visit(url);
@@ -180,10 +192,14 @@ module('Acceptance | oidc provider', function (hooks) {
     assert
       .dom('[data-test-oidc-redirect]')
       .hasTextContaining(`${callback}?code=`, 'Successful redirect to callback');
+
+    //* clean up test state
+    await clearRecord(this.store, 'oidc/client', 'my-webapp');
+    await clearRecord(this.store, 'oidc/provider', 'my-provider');
   });
 
   test('OIDC Provider shows consent form when prompt = consent', async function (assert) {
-    const { providerName, callback, clientId, authMethodPath } = await setupOidc();
+    const { providerName, callback, clientId, authMethodPath } = await setupOidc(this.uid);
     const url = getAuthzUrl(providerName, callback, clientId, { prompt: 'consent' });
     await logout.visit();
     await authFormComponent.selectMethod(authMethodPath);
@@ -197,5 +213,9 @@ module('Acceptance | oidc provider', function (hooks) {
       'Does not redirect to auth because user is already logged in'
     );
     assert.dom('[data-test-consent-form]').exists('Consent form exists');
+
+    //* clean up test state
+    await clearRecord(this.store, 'oidc/client', 'my-webapp');
+    await clearRecord(this.store, 'oidc/provider', 'my-provider');
   });
 });

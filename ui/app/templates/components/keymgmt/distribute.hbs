@@ -1,4 +1,10 @@
 {{#if @backend}}
+  {{#if this.formErrors}}
+    <Hds::Alert data-test-keymgmt-distribute-error @type="inline" @color="critical" as |A|>
+      <A.Title>Error</A.Title>
+      <A.Description>{{this.formErrors}}</A.Description>
+    </Hds::Alert>
+  {{/if}}
   <form {{on "submit" (perform this.createDistribution)}} class="form-section" data-test-keymgmt-distribution-form>
     {{#unless @key}}
       <div class="field" data-test-keymgmt-dist-key>
@@ -10,8 +16,7 @@
           @inputValue={{this.formData.key}}
           @subText="Type to use the name of an existing key that you’d like to add to this provider, or to create one."
           @wildcardLabel="key"
-          @label=""
-          @subLabel="Key name"
+          @label="Key name"
           @fallbackComponent="string-list"
           @selectLimit="1"
           @backend={{@backend}}
@@ -21,7 +26,7 @@
             <AlertInline @paddingTop={{true}} @sizeSmall={{true}} @type="danger" data-test-keymgmt-error="key">
               {{this.validMatchError.key}}
               To check compatibility,
-              <DocLink class="doc-link-subtle" @path="/docs/secrets/key-management#compatibility">refer to this table</DocLink>.
+              <DocLink class="doc-link-subtle" @path="/vault/docs/secrets/key-management#compatibility">refer to this table</DocLink>.
             </AlertInline>
           {{/if}}
         </SearchSelect>
@@ -55,7 +60,7 @@
             <AlertInline @paddingTop={{true}} @sizeSmall={{true}} @type="danger" data-test-keymgmt-error="new-key">
               {{this.validMatchError.key}}
               To check compatibility,
-              <DocLink class="doc-link-subtle" @path="/docs/secrets/key-management#compatibility">refer to this table</DocLink>.
+              <DocLink class="doc-link-subtle" @path="/vault/docs/secrets/key-management#compatibility">refer to this table</DocLink>.
             </AlertInline>
           {{/if}}
         </div>
@@ -71,8 +76,7 @@
           @passObject={{false}}
           @inputValue={{this.formData.provider}}
           @subText="Select a provider in Vault. If it doesn’t exist yet, you’ll need to add it first."
-          @label=""
-          @subLabel="Provider"
+          @label="Provider"
           @fallbackComponent="input-search"
           @selectLimit="1"
           @backend={{@backend}}
@@ -83,7 +87,7 @@
             <AlertInline @paddingTop={{true}} @sizeSmall={{true}} @type="danger" data-test-keymgmt-error="provider">
               {{this.validMatchError.provider}}
               To check compatibility,
-              <DocLink class="doc-link-subtle" @path="/docs/secrets/key-management#compatibility">refer to this table</DocLink>.
+              <DocLink class="doc-link-subtle" @path="/vault/docs/secrets/key-management#compatibility">refer to this table</DocLink>.
             </AlertInline>
           {{/if}}
         </SearchSelect>
@@ -142,9 +146,6 @@
       </div>
     </fieldset>
 
-    {{#if this.formErrors}}
-      <AlertBanner @type="danger" @message={{this.formErrors}} data-test-keymgmt-distribute-error />
-    {{/if}}
     <div class="field is-grouped box is-fullwidth is-bottomless">
       <div class="control">
         <button

@@ -1,7 +1,12 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package consul
 
 import (
+	"bytes"
 	"context"
+	"encoding/hex"
 	"fmt"
 	"math/rand"
 	"reflect"
@@ -246,6 +251,185 @@ func TestConsul_TooLarge(t *testing.T) {
 	}
 	if !strings.Contains(err.Error(), physical.ErrValueTooLarge) {
 		t.Fatalf("expected value too large error, got %v", err)
+	}
+}
+
+func TestConsul_ExpandedCapabilitiesAvailable(t *testing.T) {
+	testCases := map[string]bool{
+		"1.13.5": false,
+		"1.14.3": true,
+	}
+
+	for version, shouldBeAvailable := range testCases {
+		t.Run(version, func(t *testing.T) {
+			cleanup, config := consul.PrepareTestContainer(t, version, false, true)
+			defer cleanup()
+
+			logger := logging.NewVaultLogger(log.Debug)
+			backendConfig := map[string]string{
+				"address":      config.Address(),
+				"token":        config.Token,
+				"path":         "vault/",
+				"max_parallel": "-1",
+			}
+
+			be, err := NewConsulBackend(backendConfig, logger)
+			if err != nil {
+				t.Fatal(err)
+			}
+			b := be.(*ConsulBackend)
+
+			isAvailable := b.ExpandedCapabilitiesAvailable(context.Background())
+			if isAvailable != shouldBeAvailable {
+				t.Errorf("%t != %t, version %s\n", isAvailable, shouldBeAvailable, version)
+			}
+		})
+	}
+}
+
+func TestConsul_TransactionalBackend_GetTransactionsForNonExistentValues(t *testing.T) {
+	cleanup, config := consul.PrepareTestContainer(t, "1.14.2", false, true)
+	defer cleanup()
+
+	client, err := api.NewClient(config.APIConfig())
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	txns := make([]*physical.TxnEntry, 0)
+	ctx := context.Background()
+	logger := logging.NewVaultLogger(log.Debug)
+	backendConfig := map[string]string{
+		"address":      config.Address(),
+		"token":        config.Token,
+		"path":         "vault/",
+		"max_parallel": "-1",
+	}
+
+	be, err := NewConsulBackend(backendConfig, logger)
+	if err != nil {
+		t.Fatal(err)
+	}
+	b := be.(*ConsulBackend)
+
+	defer func() {
+		_, _ = client.KV().DeleteTree("foo/", nil)
+	}()
+
+	txns = append(txns, &physical.TxnEntry{
+		Operation: physical.GetOperation,
+		Entry: &physical.Entry{
+			Key: "foo/bar",
+		},
+	})
+	txns = append(txns, &physical.TxnEntry{
+		Operation: physical.PutOperation,
+		Entry: &physical.Entry{
+			Key:   "foo/bar",
+			Value: []byte("baz"),
+		},
+	})
+
+	err = b.Transaction(ctx, txns)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// This should return nil, because the key foo/bar didn't exist when we ran that transaction, so the get
+	// should return nil, and the put always returns nil
+	for _, txn := range txns {
+		if txn.Operation == physical.GetOperation {
+			if txn.Entry.Value != nil {
+				t.Fatalf("expected txn.entry.value to be nil but it was %q", string(txn.Entry.Value))
+			}
+		}
+	}
+}
+
+// TestConsul_TransactionalBackend_GetTransactions tests that passing a slice of transactions to the
+// consul backend will populate values for any transactions that are Get operations.
+func TestConsul_TransactionalBackend_GetTransactions(t *testing.T) {
+	cleanup, config := consul.PrepareTestContainer(t, "1.14.2", false, true)
+	defer cleanup()
+
+	client, err := api.NewClient(config.APIConfig())
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	txns := make([]*physical.TxnEntry, 0)
+	ctx := context.Background()
+	logger := logging.NewVaultLogger(log.Debug)
+	backendConfig := map[string]string{
+		"address":      config.Address(),
+		"token":        config.Token,
+		"path":         "vault/",
+		"max_parallel": "-1",
+	}
+
+	be, err := NewConsulBackend(backendConfig, logger)
+	if err != nil {
+		t.Fatal(err)
+	}
+	b := be.(*ConsulBackend)
+
+	defer func() {
+		_, _ = client.KV().DeleteTree("foo/", nil)
+	}()
+
+	// Add some seed values to consul, and prepare our slice of transactions at the same time
+	for i := 0; i < 64; i++ {
+		key := fmt.Sprintf("foo/lol-%d", i)
+		err := b.Put(ctx, &physical.Entry{Key: key, Value: []byte(fmt.Sprintf("value-%d", i))})
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		txns = append(txns, &physical.TxnEntry{
+			Operation: physical.GetOperation,
+			Entry: &physical.Entry{
+				Key: key,
+			},
+		})
+	}
+
+	for i := 0; i < 64; i++ {
+		key := fmt.Sprintf("foo/lol-%d", i)
+		if i%2 == 0 {
+			txns = append(txns, &physical.TxnEntry{
+				Operation: physical.PutOperation,
+				Entry: &physical.Entry{
+					Key:   key,
+					Value: []byte("lmao"),
+				},
+			})
+		} else {
+			txns = append(txns, &physical.TxnEntry{
+				Operation: physical.DeleteOperation,
+				Entry: &physical.Entry{
+					Key: key,
+				},
+			})
+		}
+	}
+
+	if len(txns) != 128 {
+		t.Fatal("wrong number of transactions")
+	}
+
+	err = b.Transaction(ctx, txns)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Check that our Get operations were populated with their values
+	for i, txn := range txns {
+		if txn.Operation == physical.GetOperation {
+			val := []byte(fmt.Sprintf("value-%d", i))
+			if !bytes.Equal(val, txn.Entry.Value) {
+				t.Fatalf("expected %s to equal %s but it didn't", hex.EncodeToString(val), hex.EncodeToString(txn.Entry.Value))
+			}
+		}
 	}
 }
 

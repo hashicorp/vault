@@ -1,4 +1,7 @@
 #!/usr/bin/dumb-init /bin/sh
+# Copyright (c) HashiCorp, Inc.
+# SPDX-License-Identifier: MPL-2.0
+
 set -e
 
 # Note above that we run dumb-init as PID 1 in order to reap zombie processes

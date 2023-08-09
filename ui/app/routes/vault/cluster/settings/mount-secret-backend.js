@@ -1,14 +1,17 @@
-import Route from '@ember/routing/route';
-import UnloadModelRoute from 'vault/mixins/unload-model-route';
-import UnsavedModelRoute from 'vault/mixins/unsaved-model-route';
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
 
-export default Route.extend(UnloadModelRoute, UnsavedModelRoute, {
-  // intentionally blank - we don't want a model until one is
-  // created via the form in the controller
+import Route from '@ember/routing/route';
+import { inject as service } from '@ember/service';
+
+export default class VaultClusterSettingsMountSecretBackendRoute extends Route {
+  @service store;
+
   model() {
-    return {};
-  },
-  activate() {
-    this.store.unloadAll('secret-engine');
-  },
-});
+    const secretEngine = this.store.createRecord('secret-engine');
+    secretEngine.set('config', this.store.createRecord('mount-config'));
+    return secretEngine;
+  }
+}

@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package pgpkeys
 
 import (
@@ -8,7 +11,7 @@ import (
 	"os"
 	"strings"
 
-	"github.com/keybase/go-crypto/openpgp"
+	"github.com/ProtonMail/go-crypto/openpgp"
 )
 
 // PubKeyFileFlag implements flag.Value and command.Example to receive exactly

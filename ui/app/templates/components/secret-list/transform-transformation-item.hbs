@@ -12,7 +12,7 @@
         <SecretLink
           @mode="show"
           @secret={{@item.id}}
-          @queryParams={{if (eq @backendModel.type "transform") (query-params tab="actions") ""}}
+          @queryParams={{if (eq @backendModel.type "transform") (hash tab="actions") ""}}
           class="has-text-black has-text-weight-semibold"
         >
           <Icon @name="file" class="has-text-grey-light" />

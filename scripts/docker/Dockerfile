@@ -1,6 +1,9 @@
+# Copyright (c) HashiCorp, Inc.
+# SPDX-License-Identifier: MPL-2.0
+
 # Multi-stage builder to avoid polluting users environment with wrong
 # architecture binaries.
-ARG VERSION=1.18.4
+ARG VERSION
 
 FROM golang:${VERSION} AS builder
 

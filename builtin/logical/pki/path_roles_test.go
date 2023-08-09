@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package pki
 
 import (
@@ -11,6 +14,7 @@ import (
 
 	"github.com/go-errors/errors"
 	"github.com/hashicorp/go-secure-stdlib/strutil"
+	"github.com/hashicorp/vault/sdk/helper/testhelpers/schema"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -20,7 +24,7 @@ func TestPki_RoleGenerateLease(t *testing.T) {
 	t.Parallel()
 	var resp *logical.Response
 	var err error
-	b, storage := createBackendWithStorage(t)
+	b, storage := CreateBackendWithStorage(t)
 
 	roleData := map[string]interface{}{
 		"allowed_domains": "myvault.com",
@@ -125,7 +129,7 @@ func TestPki_RoleKeyUsage(t *testing.T) {
 	t.Parallel()
 	var resp *logical.Response
 	var err error
-	b, storage := createBackendWithStorage(t)
+	b, storage := CreateBackendWithStorage(t)
 
 	roleData := map[string]interface{}{
 		"allowed_domains": "myvault.com",
@@ -141,12 +145,14 @@ func TestPki_RoleKeyUsage(t *testing.T) {
 	}
 
 	resp, err = b.HandleRequest(context.Background(), roleReq)
+	schema.ValidateResponse(t, schema.GetResponseSchema(t, b.Route(roleReq.Path), logical.UpdateOperation), resp, true)
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("bad: err: %v resp: %#v", err, resp)
 	}
 
 	roleReq.Operation = logical.ReadOperation
 	resp, err = b.HandleRequest(context.Background(), roleReq)
+	schema.ValidateResponse(t, schema.GetResponseSchema(t, b.Route(roleReq.Path), logical.ReadOperation), resp, true)
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("bad: err: %v resp: %#v", err, resp)
 	}
@@ -216,7 +222,7 @@ func TestPki_RoleOUOrganizationUpgrade(t *testing.T) {
 	t.Parallel()
 	var resp *logical.Response
 	var err error
-	b, storage := createBackendWithStorage(t)
+	b, storage := CreateBackendWithStorage(t)
 
 	roleData := map[string]interface{}{
 		"allowed_domains": "myvault.com",
@@ -322,7 +328,7 @@ func TestPki_RoleAllowedDomains(t *testing.T) {
 	t.Parallel()
 	var resp *logical.Response
 	var err error
-	b, storage := createBackendWithStorage(t)
+	b, storage := CreateBackendWithStorage(t)
 
 	roleData := map[string]interface{}{
 		"allowed_domains": []string{"foobar.com", "*example.com"},
@@ -410,7 +416,7 @@ func TestPki_RoleAllowedURISANs(t *testing.T) {
 	t.Parallel()
 	var resp *logical.Response
 	var err error
-	b, storage := createBackendWithStorage(t)
+	b, storage := CreateBackendWithStorage(t)
 
 	roleData := map[string]interface{}{
 		"allowed_uri_sans": []string{"http://foobar.com", "spiffe://*"},
@@ -445,7 +451,7 @@ func TestPki_RolePkixFields(t *testing.T) {
 	t.Parallel()
 	var resp *logical.Response
 	var err error
-	b, storage := createBackendWithStorage(t)
+	b, storage := CreateBackendWithStorage(t)
 
 	roleData := map[string]interface{}{
 		"ttl":            "5h",
@@ -537,7 +543,7 @@ func TestPki_RoleNoStore(t *testing.T) {
 	t.Parallel()
 	var resp *logical.Response
 	var err error
-	b, storage := createBackendWithStorage(t)
+	b, storage := CreateBackendWithStorage(t)
 
 	roleData := map[string]interface{}{
 		"allowed_domains": "myvault.com",
@@ -658,7 +664,7 @@ func TestPki_CertsLease(t *testing.T) {
 	t.Parallel()
 	var resp *logical.Response
 	var err error
-	b, storage := createBackendWithStorage(t)
+	b, storage := CreateBackendWithStorage(t)
 
 	caData := map[string]interface{}{
 		"common_name": "myvault.com",
@@ -949,7 +955,7 @@ func TestPki_RolePatch(t *testing.T) {
 		},
 	}
 
-	b, storage := createBackendWithStorage(t)
+	b, storage := CreateBackendWithStorage(t)
 
 	for index, testCase := range testCases {
 		var resp *logical.Response
@@ -1045,7 +1051,7 @@ func TestPKI_RolePolicyInformation_Flat(t *testing.T) {
 		},
 	}
 
-	b, storage := createBackendWithStorage(t)
+	b, storage := CreateBackendWithStorage(t)
 
 	caData := map[string]interface{}{
 		"common_name": "myvault.com",

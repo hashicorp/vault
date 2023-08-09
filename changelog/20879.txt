@@ -1,0 +1,3 @@
+```release-note:bug
+identity/mfa: Fixes to OpenAPI representation and returned error codes for `identity/mfa/method/*` APIs
+```

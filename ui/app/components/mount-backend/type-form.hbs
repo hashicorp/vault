@@ -1,0 +1,37 @@
+{{#each (array "generic" "cloud" "infra") as |category|}}
+  <h3 class="title box-radio-header">
+    {{capitalize category}}
+  </h3>
+  <div class="box-radio-container">
+    {{#each (filter-by "category" category this.mountTypes) as |type|}}
+      <BoxRadio
+        @displayName={{type.displayName}}
+        @type={{type.type}}
+        @glyph={{or type.glyph type.type}}
+        @groupValue={{this.selection}}
+        @groupName="mount-type"
+        @onRadioChange={{mut this.selection}}
+        @disabled={{if type.requiredFeature (not (has-feature type.requiredFeature)) false}}
+        @tooltipMessage={{if
+          (or (eq type.type "transform") (eq type.type "kmip") (eq type.type "keymgmt"))
+          (concat
+            type.displayName
+            " is part of the Advanced Data Protection module, which is not included in your enterprise license."
+          )
+          "This secret engine is not included in your license."
+        }}
+      />
+    {{/each}}
+  </div>
+{{/each}}
+<div class="field is-grouped box is-fullwidth is-bottomless">
+  <button
+    data-test-mount-next
+    type="button"
+    class="button is-primary"
+    {{on "click" (fn @setMountType this.selection)}}
+    disabled={{not this.selection}}
+  >
+    Next
+  </button>
+</div>

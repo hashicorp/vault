@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package ldap
 
 import (
@@ -382,19 +385,19 @@ func TestLdapAuthBackend_UserPolicies(t *testing.T) {
 }
 
 /*
- * Acceptance test for LDAP Auth Method
- *
- * The tests here rely on a docker LDAP server:
- * [https://github.com/rroemhild/docker-test-openldap]
- *
- * ...as well as existence of a person object, `cn=Hermes Conrad,dc=example,dc=com`,
- *    which is a member of a group, `cn=admin_staff,ou=people,dc=example,dc=com`
- *
- * Querying the server from the command line:
- *   $ docker run --privileged -d -p 389:389 --name ldap --rm rroemhild/test-openldap
- *   $ ldapsearch -x -H ldap://localhost -b dc=planetexpress,dc=com -s sub uid=hermes
- *   $ ldapsearch -x -H ldap://localhost -b dc=planetexpress,dc=com -s sub \
-         'member=cn=Hermes Conrad,ou=people,dc=planetexpress,dc=com'
+* Acceptance test for LDAP Auth Method
+*
+* The tests here rely on a docker LDAP server:
+* [https://github.com/rroemhild/docker-test-openldap]
+*
+* ...as well as existence of a person object, `cn=Hermes Conrad,dc=example,dc=com`,
+*    which is a member of a group, `cn=admin_staff,ou=people,dc=example,dc=com`
+*
+  - Querying the server from the command line:
+  - $ docker run --privileged -d -p 389:389 --name ldap --rm rroemhild/test-openldap
+  - $ ldapsearch -x -H ldap://localhost -b dc=planetexpress,dc=com -s sub uid=hermes
+  - $ ldapsearch -x -H ldap://localhost -b dc=planetexpress,dc=com -s sub \
+    'member=cn=Hermes Conrad,ou=people,dc=planetexpress,dc=com'
 */
 func factory(t *testing.T) logical.Backend {
 	defaultLeaseTTLVal := time.Hour * 24
@@ -829,6 +832,7 @@ func testAccStepConfigUrl(t *testing.T, cfg *ldaputil.ConfigEntry) logicaltest.T
 			"case_sensitive_names": true,
 			"token_policies":       "abc,xyz",
 			"request_timeout":      cfg.RequestTimeout,
+			"connection_timeout":   cfg.ConnectionTimeout,
 			"username_as_alias":    cfg.UsernameAsAlias,
 		},
 	}
@@ -851,6 +855,7 @@ func testAccStepConfigUrlWithAuthBind(t *testing.T, cfg *ldaputil.ConfigEntry) l
 			"case_sensitive_names": true,
 			"token_policies":       "abc,xyz",
 			"request_timeout":      cfg.RequestTimeout,
+			"connection_timeout":   cfg.ConnectionTimeout,
 		},
 	}
 }
@@ -871,6 +876,7 @@ func testAccStepConfigUrlWithDiscover(t *testing.T, cfg *ldaputil.ConfigEntry) l
 			"case_sensitive_names": true,
 			"token_policies":       "abc,xyz",
 			"request_timeout":      cfg.RequestTimeout,
+			"connection_timeout":   cfg.ConnectionTimeout,
 		},
 	}
 }
@@ -888,6 +894,7 @@ func testAccStepConfigUrlNoGroupDN(t *testing.T, cfg *ldaputil.ConfigEntry) logi
 			"discoverdn":           true,
 			"case_sensitive_names": true,
 			"request_timeout":      cfg.RequestTimeout,
+			"connection_timeout":   cfg.ConnectionTimeout,
 		},
 	}
 }
@@ -908,6 +915,7 @@ func testAccStepConfigUrlWarningCheck(t *testing.T, cfg *ldaputil.ConfigEntry, o
 			"case_sensitive_names": true,
 			"token_policies":       "abc,xyz",
 			"request_timeout":      cfg.RequestTimeout,
+			"connection_timeout":   cfg.ConnectionTimeout,
 		},
 		Check: func(response *logical.Response) error {
 			if len(response.Warnings) == 0 {
@@ -1189,6 +1197,8 @@ func TestLdapAuthBackend_ConfigUpgrade(t *testing.T) {
 			"token_period":           "5m",
 			"token_explicit_max_ttl": "24h",
 			"request_timeout":        cfg.RequestTimeout,
+			"max_page_size":          cfg.MaximumPageSize,
+			"connection_timeout":     cfg.ConnectionTimeout,
 		},
 		Storage:    storage,
 		Connection: &logical.Connection{},
@@ -1230,7 +1240,10 @@ func TestLdapAuthBackend_ConfigUpgrade(t *testing.T) {
 			CaseSensitiveNames:       falseBool,
 			UsePre111GroupCNBehavior: new(bool),
 			RequestTimeout:           cfg.RequestTimeout,
+			ConnectionTimeout:        cfg.ConnectionTimeout,
 			UsernameAsAlias:          false,
+			DerefAliases:             "never",
+			MaximumPageSize:          1000,
 		},
 	}
 

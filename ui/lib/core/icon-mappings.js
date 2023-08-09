@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
 // icons that exist in the public folder which are not part of the Structure set
 // values represent match to icon in Flight set with null representing no match
 export const localIconMap = {

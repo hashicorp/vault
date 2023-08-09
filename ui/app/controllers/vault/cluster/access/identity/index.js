@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
 import { inject as service } from '@ember/service';
 import Controller from '@ember/controller';
 import ListController from 'core/mixins/list-controller';
@@ -7,8 +12,8 @@ export default Controller.extend(ListController, {
 
   actions: {
     delete(model) {
-      let type = model.get('identityType');
-      let id = model.id;
+      const type = model.get('identityType');
+      const id = model.id;
       return model
         .destroyRecord()
         .then(() => {
@@ -23,9 +28,9 @@ export default Controller.extend(ListController, {
     },
 
     toggleDisabled(model) {
-      let action = model.get('disabled') ? ['enabled', 'enabling'] : ['disabled', 'disabling'];
-      let type = model.get('identityType');
-      let id = model.id;
+      const action = model.get('disabled') ? ['enabled', 'enabling'] : ['disabled', 'disabling'];
+      const type = model.get('identityType');
+      const id = model.id;
       model.toggleProperty('disabled');
 
       model

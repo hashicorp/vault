@@ -1,8 +1,15 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
 import ArrayProxy from '@ember/array/proxy';
 import Component from '@glimmer/component';
 import autosize from 'autosize';
 import { action } from '@ember/object';
 import { set } from '@ember/object';
+import { next } from '@ember/runloop';
+import { tracked } from '@glimmer/tracking';
 
 /**
  * @module StringList
@@ -14,13 +21,15 @@ import { set } from '@ember/object';
  * @param {string} label - Text displayed in the header above all the inputs.
  * @param {function} onChange - Function called when any of the inputs change.
  * @param {string} inputValue - A string or an array of strings.
- * @param {string} warning - Text displayed as a warning.
  * @param {string} helpText - Text displayed as a tooltip.
  * @param {string} type=array - Optional type for inputValue.
  * @param {string} attrName - We use this to check the type so we can modify the tooltip content.
+ * @param {string} subText - Text below the label.
  */
 
 export default class StringList extends Component {
+  @tracked indicesWithComma = [];
+
   constructor() {
     super(...arguments);
 
@@ -37,8 +46,10 @@ export default class StringList extends Component {
     });
     this.type = this.args.type || 'array';
     this.setType();
-    this.toList();
-    this.addInput();
+    next(() => {
+      this.toList();
+      this.addInput();
+    });
   }
 
   setType() {
@@ -60,18 +71,10 @@ export default class StringList extends Component {
 
   toVal() {
     const inputs = this.inputList.filter((x) => x.value).mapBy('value');
-    if (this.format === 'string') {
+    if (this.args.type === 'string') {
       return inputs.join(',');
     }
     return inputs;
-  }
-
-  get helpText() {
-    if (this.args.attrName === 'tokenBoundCidrs') {
-      return 'Specifies the blocks of IP addresses which are allowed to use the generated token. One entry per row.';
-    } else {
-      return this.args.helpText;
-    }
   }
 
   @action
@@ -86,10 +89,14 @@ export default class StringList extends Component {
 
   @action
   inputChanged(idx, event) {
+    if (event.target.value.includes(',') && !this.indicesWithComma.includes(idx)) {
+      this.indicesWithComma.pushObject(idx);
+    }
+    if (!event.target.value.includes(',')) this.indicesWithComma.removeObject(idx);
+
     const inputObj = this.inputList.objectAt(idx);
-    const onChange = this.args.onChange;
     set(inputObj, 'value', event.target.value);
-    onChange(this.toVal());
+    this.args.onChange(this.toVal());
   }
 
   @action
@@ -102,9 +109,8 @@ export default class StringList extends Component {
 
   @action
   removeInput(idx) {
-    const onChange = this.args.onChange;
     const inputs = this.inputList;
     inputs.removeObject(inputs.objectAt(idx));
-    onChange(this.toVal());
+    this.args.onChange(this.toVal());
   }
 }

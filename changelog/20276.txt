@@ -1,0 +1,3 @@
+```release-note:improvement
+secrets/pki: Include CA serial number, key UUID on issuers list endpoint.
+```

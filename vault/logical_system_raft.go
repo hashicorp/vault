@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package vault
 
 import (
@@ -10,7 +13,7 @@ import (
 	"time"
 
 	"github.com/golang/protobuf/proto"
-	wrapping "github.com/hashicorp/go-kms-wrapping"
+	wrapping "github.com/hashicorp/go-kms-wrapping/v2"
 	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/helper/constants"
 	"github.com/hashicorp/vault/helper/namespace"
@@ -193,6 +196,10 @@ func (b *SystemBackend) raftStoragePaths() []*framework.Path {
 					Type:        framework.TypeBool,
 					Description: "Whether or not to perform automated version upgrades.",
 				},
+				"dr_operation_token": {
+					Type:        framework.TypeString,
+					Description: "DR operation token used to authorize this request (if a DR secondary node).",
+				},
 			},
 
 			Operations: map[logical.Operation]framework.OperationHandler{
@@ -245,9 +252,8 @@ func (b *SystemBackend) handleRaftRemovePeerUpdate() framework.OperationFunc {
 		if err := raftBackend.RemovePeer(ctx, serverID); err != nil {
 			return nil, err
 		}
-		if b.Core.raftFollowerStates != nil {
-			b.Core.raftFollowerStates.Delete(serverID)
-		}
+
+		b.Core.raftFollowerStates.Delete(serverID)
 
 		return nil, nil
 	}
@@ -348,6 +354,19 @@ func (b *SystemBackend) handleRaftBootstrapAnswerWrite() framework.OperationFunc
 			return nil, errors.New("could not decode raft TLS configuration")
 		}
 
+		var desiredSuffrage string
+		switch nonVoter {
+		case true:
+			desiredSuffrage = "non-voter"
+		default:
+			desiredSuffrage = "voter"
+		}
+
+		added := b.Core.raftFollowerStates.Update(&raft.EchoRequestUpdate{
+			NodeID:          serverID,
+			DesiredSuffrage: desiredSuffrage,
+		})
+
 		switch nonVoter {
 		case true:
 			err = raftBackend.AddNonVotingPeer(ctx, serverID, clusterAddr)
@@ -355,22 +374,10 @@ func (b *SystemBackend) handleRaftBootstrapAnswerWrite() framework.OperationFunc
 			err = raftBackend.AddPeer(ctx, serverID, clusterAddr)
 		}
 		if err != nil {
+			if added {
+				b.Core.raftFollowerStates.Delete(serverID)
+			}
 			return nil, err
-		}
-
-		var desiredSuffrage string
-		switch nonVoter {
-		case true:
-			desiredSuffrage = "voter"
-		default:
-			desiredSuffrage = "non-voter"
-		}
-
-		if b.Core.raftFollowerStates != nil {
-			b.Core.raftFollowerStates.Update(&raft.EchoRequestUpdate{
-				NodeID:          serverID,
-				DesiredSuffrage: desiredSuffrage,
-			})
 		}
 
 		peers, err := raftBackend.Peers(ctx)
@@ -530,6 +537,10 @@ func (b *SystemBackend) handleStorageRaftAutopilotConfigUpdate() framework.Opera
 			return logical.ErrorResponse(fmt.Sprintf("min_quorum must be set when cleanup_dead_servers is set and it should at least be 3; cleanup_dead_servers: %#v, min_quorum: %#v", effectiveConf.CleanupDeadServers, effectiveConf.MinQuorum)), logical.ErrInvalidRequest
 		}
 
+		if effectiveConf.CleanupDeadServers && effectiveConf.DeadServerLastContactThreshold.Seconds() < 60 {
+			return logical.ErrorResponse(fmt.Sprintf("dead_server_last_contact_threshold should not be set to less than 1m; received: %v", deadServerLastContactThreshold)), logical.ErrInvalidRequest
+		}
+
 		// Persist only the user supplied fields
 		if persist {
 			entry, err := logical.StorageEntryJSON(raftAutopilotConfigurationStoragePath, config)
@@ -572,7 +583,7 @@ func (b *SystemBackend) handleStorageRaftSnapshotWrite(force bool) framework.Ope
 		case err == nil:
 		case strings.Contains(err.Error(), "failed to open the sealed hashes"):
 			switch b.Core.seal.BarrierType() {
-			case wrapping.Shamir:
+			case wrapping.WrapperTypeShamir:
 				return logical.ErrorResponse("could not verify hash file, possibly the snapshot is using a different set of unseal keys; use the snapshot-force API to bypass this check"), logical.ErrInvalidRequest
 			default:
 				return logical.ErrorResponse("could not verify hash file, possibly the snapshot is using a different autoseal key; use the snapshot-force API to bypass this check"), logical.ErrInvalidRequest
@@ -589,7 +600,9 @@ func (b *SystemBackend) handleStorageRaftSnapshotWrite(force bool) framework.Ope
 			defer cleanup()
 
 			// Grab statelock
-			if stopped := grabLockOrStop(b.Core.stateLock.Lock, b.Core.stateLock.Unlock, b.Core.standbyStopCh.Load().(chan struct{})); stopped {
+			l := newLockGrabber(b.Core.stateLock.Lock, b.Core.stateLock.Unlock, b.Core.standbyStopCh.Load().(chan struct{}))
+			go l.grab()
+			if stopped := l.lockOrStop(); stopped {
 				b.Core.logger.Error("not applying snapshot; shutting down")
 				return
 			}

@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
 import { resolve } from 'rsvp';
 import { run } from '@ember/runloop';
 import { module, test } from 'qunit';
@@ -12,7 +17,7 @@ module('Unit | Service | store', function (hooks) {
   setupTest(hooks);
 
   test('normalizeModelName', function (assert) {
-    assert.equal(normalizeModelName('oneThing'), 'one-thing', 'dasherizes modelName');
+    assert.strictEqual(normalizeModelName('oneThing'), 'one-thing', 'dasherizes modelName');
   });
 
   test('keyForCache', function (assert) {
@@ -23,10 +28,10 @@ module('Unit | Service | store', function (hooks) {
   });
 
   test('clamp', function (assert) {
-    assert.equal(clamp('foo', 0, 100), 0, 'returns the min if passed a non-number');
-    assert.equal(clamp(0, 1, 100), 1, 'returns the min when passed number is less than the min');
-    assert.equal(clamp(200, 1, 100), 100, 'returns the max passed number is greater than the max');
-    assert.equal(clamp(50, 1, 100), 50, 'returns the passed number when it is in range');
+    assert.strictEqual(clamp('foo', 0, 100), 0, 'returns the min if passed a non-number');
+    assert.strictEqual(clamp(0, 1, 100), 1, 'returns the min when passed number is less than the min');
+    assert.strictEqual(clamp(200, 1, 100), 100, 'returns the max passed number is greater than the max');
+    assert.strictEqual(clamp(50, 1, 100), 50, 'returns the passed number when it is in range');
   });
 
   test('store.storeDataset', function (assert) {
@@ -47,11 +52,11 @@ module('Unit | Service | store', function (hooks) {
     const arr2 = ['one', 'two', 'three', 'four'];
     store.storeDataset('data', { id: 1 }, {}, arr);
     store.storeDataset('transit-key', { id: 2 }, {}, arr2);
-    assert.equal(store.get('lazyCaches').size, 2, 'it stores both keys');
+    assert.strictEqual(store.get('lazyCaches').size, 2, 'it stores both keys');
 
     store.clearDataset('transit-key');
-    assert.equal(store.get('lazyCaches').size, 1, 'deletes one key');
-    assert.notOk(store.get('lazyCaches').has(), 'cache is no longer stored');
+    assert.strictEqual(store.get('lazyCaches').size, 1, 'deletes one key');
+    assert.notOk(store.get('lazyCaches').has('transit-key'), 'cache is no longer stored');
   });
 
   test('store.clearAllDatasets', function (assert) {
@@ -60,10 +65,10 @@ module('Unit | Service | store', function (hooks) {
     const arr2 = ['one', 'two', 'three', 'four'];
     store.storeDataset('data', { id: 1 }, {}, arr);
     store.storeDataset('transit-key', { id: 2 }, {}, arr2);
-    assert.equal(store.get('lazyCaches').size, 2, 'it stores both keys');
+    assert.strictEqual(store.get('lazyCaches').size, 2, 'it stores both keys');
 
     store.clearAllDatasets();
-    assert.equal(store.get('lazyCaches').size, 0, 'deletes all of the keys');
+    assert.strictEqual(store.get('lazyCaches').size, 0, 'deletes all of the keys');
     assert.notOk(store.get('lazyCaches').has('transit-key'), 'first cache key is no longer stored');
     assert.notOk(store.get('lazyCaches').has('data'), 'second cache key is no longer stored');
   });
@@ -91,8 +96,7 @@ module('Unit | Service | store', function (hooks) {
     );
   });
 
-  test('store.fetchPage', function (assert) {
-    let done = assert.async(4);
+  test('store.fetchPage', async function (assert) {
     const keys = ['zero', 'one', 'two', 'three', 'four', 'five', 'six'];
     const data = {
       data: {
@@ -109,14 +113,8 @@ module('Unit | Service | store', function (hooks) {
     store.storeDataset('transit-key', query, data, keys);
 
     let result;
-    run(() => {
-      store.fetchPage('transit-key', query).then((r) => {
-        result = r;
-        done();
-      });
-    });
-
-    assert.equal(result.get('length'), pageSize, 'returns the correct number of items');
+    result = await store.fetchPage('transit-key', query);
+    assert.strictEqual(result.get('length'), pageSize, 'returns the correct number of items');
     assert.deepEqual(result.mapBy('id'), keys.slice(0, pageSize), 'returns the first page of items');
     assert.deepEqual(
       result.get('meta'),
@@ -131,19 +129,11 @@ module('Unit | Service | store', function (hooks) {
       'returns correct meta values'
     );
 
-    run(() => {
-      store
-        .fetchPage('transit-key', {
-          size: pageSize,
-          page: 3,
-          responsePath: 'data.keys',
-        })
-        .then((r) => {
-          result = r;
-          done();
-        });
+    result = await store.fetchPage('transit-key', {
+      size: pageSize,
+      page: 3,
+      responsePath: 'data.keys',
     });
-
     const pageThreeEnd = 3 * pageSize;
     const pageThreeStart = pageThreeEnd - pageSize;
     assert.deepEqual(
@@ -152,17 +142,10 @@ module('Unit | Service | store', function (hooks) {
       'returns the third page of items'
     );
 
-    run(() => {
-      store
-        .fetchPage('transit-key', {
-          size: pageSize,
-          page: 99,
-          responsePath: 'data.keys',
-        })
-        .then((r) => {
-          result = r;
-          done();
-        });
+    result = await store.fetchPage('transit-key', {
+      size: pageSize,
+      page: 99,
+      responsePath: 'data.keys',
     });
 
     assert.deepEqual(
@@ -171,17 +154,10 @@ module('Unit | Service | store', function (hooks) {
       'returns the last page when the page value is beyond the of bounds'
     );
 
-    run(() => {
-      store
-        .fetchPage('transit-key', {
-          size: pageSize,
-          page: 0,
-          responsePath: 'data.keys',
-        })
-        .then((r) => {
-          result = r;
-          done();
-        });
+    result = await store.fetchPage('transit-key', {
+      size: pageSize,
+      page: 0,
+      responsePath: 'data.keys',
     });
     assert.deepEqual(
       result.mapBy('id'),
@@ -191,7 +167,7 @@ module('Unit | Service | store', function (hooks) {
   });
 
   test('store.lazyPaginatedQuery', function (assert) {
-    let response = {
+    const response = {
       data: ['foo'],
     };
     let queryArgs;
@@ -220,7 +196,7 @@ module('Unit | Service | store', function (hooks) {
     run(function () {
       store.lazyPaginatedQuery('secret', { page: 1, responsePath: 'data' });
     });
-    assert.equal(queryArgs.size, DEFAULT_PAGE_SIZE, 'calls query with DEFAULT_PAGE_SIZE');
+    assert.strictEqual(queryArgs.size, DEFAULT_PAGE_SIZE, 'calls query with DEFAULT_PAGE_SIZE');
 
     assert.throws(
       () => {

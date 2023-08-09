@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package vault
 
 import (
@@ -11,6 +14,7 @@ import (
 	"time"
 
 	"github.com/go-test/deep"
+	"github.com/hashicorp/go-secure-stdlib/parseutil"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/logical"
@@ -2250,8 +2254,8 @@ func TestOIDC_Path_OIDC_Client_List_KeyInfo(t *testing.T) {
 		expected := clients[name].(map[string]interface{})
 		require.Contains(t, keys, name)
 
-		idTokenTTL, _ := time.ParseDuration(expected["id_token_ttl"].(string))
-		accessTokenTTL, _ := time.ParseDuration(expected["access_token_ttl"].(string))
+		idTokenTTL, _ := parseutil.ParseDurationSecond(expected["id_token_ttl"].(string))
+		accessTokenTTL, _ := parseutil.ParseDurationSecond(expected["access_token_ttl"].(string))
 		require.EqualValues(t, idTokenTTL.Seconds(), actual["id_token_ttl"])
 		require.EqualValues(t, accessTokenTTL.Seconds(), actual["access_token_ttl"])
 		require.Equal(t, expected["redirect_uris"], actual["redirect_uris"])
@@ -3623,6 +3627,7 @@ func TestOIDC_Path_OpenIDProviderConfig(t *testing.T) {
 		Keys:                  basePath + "/.well-known/keys",
 		ResponseTypes:         []string{"code"},
 		Scopes:                []string{"test-scope-1", "openid"},
+		Claims:                []string{},
 		Subjects:              []string{"public"},
 		IDTokenAlgs:           supportedAlgs,
 		AuthorizationEndpoint: "/ui/vault/identity/oidc/provider/test-provider/authorize",
@@ -3678,6 +3683,7 @@ func TestOIDC_Path_OpenIDProviderConfig(t *testing.T) {
 		Keys:                  basePath + "/.well-known/keys",
 		ResponseTypes:         []string{"code"},
 		Scopes:                []string{"test-scope-2", "openid"},
+		Claims:                []string{},
 		Subjects:              []string{"public"},
 		IDTokenAlgs:           supportedAlgs,
 		AuthorizationEndpoint: testIssuer + "/ui/vault/identity/oidc/provider/test-provider/authorize",
