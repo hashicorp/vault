@@ -5,6 +5,7 @@ package audit
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"time"
 
@@ -19,6 +20,17 @@ import (
 // (Audit) Event will be of RequestType (as opposed to ResponseType).
 // The last node must be a sink node (eventlogger.NodeTypeSink).
 func ProcessManual(ctx context.Context, data *logical.LogInput, ids []eventlogger.NodeID, nodes map[eventlogger.NodeID]eventlogger.Node) error {
+	switch {
+	case data == nil:
+		return errors.New("data cannot be nil")
+	case len(ids) == 0:
+		return errors.New("ids are required")
+	case nodes == nil:
+		return errors.New("nodes cannot be nil")
+	case len(nodes) == 0:
+		return errors.New("nodes are required")
+	}
+
 	// Create an audit event.
 	a, err := NewEvent(RequestType)
 	if err != nil {
@@ -57,7 +69,7 @@ func ProcessManual(ctx context.Context, data *logical.LogInput, ids []eventlogge
 	}
 
 	if lastSeen != eventlogger.NodeTypeSink {
-		return fmt.Errorf("last node must be a sink: %v", lastSeen)
+		return errors.New("last node must be a sink")
 	}
 
 	return nil
