@@ -36,6 +36,25 @@ on the value of the `resource` parameter.
   when acquiring an [access token][azure-access-token]. Only one of `object_id` or `client_id`
   may be provided.
 
+
+## Example configuration
+
+An example auto-auth configuration block for an example Azure [Workload Identity][workload-identity] configured client follows:
+
+```hcl
+auto_auth {
+  method {
+    type = "azure"
+    config = {
+      authenticate_from_environment = true
+      role = "dev-role"
+      resource = "https://management.azure.com/"
+    }
+  }
+}
+```
+
+
 [azure-access-token]: https://docs.microsoft.com/en-us/azure/active-directory/managed-identities-azure-resources/how-to-use-vm-token#get-a-token-using-http
 [environment-variables]: https://pkg.go.dev/github.com/Azure/azure-sdk-for-go/sdk/azidentity#readme-environment-variables
 [workload-identity]: https://learn.microsoft.com/en-us/azure/aks/workload-identity-overview
