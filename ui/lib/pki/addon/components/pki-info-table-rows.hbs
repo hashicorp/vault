@@ -8,7 +8,7 @@
           @value={{value}}
           @addCopyButton={{or (eq attr.name "issuerId") (eq attr.name "keyId")}}
         >
-          {{#if (and attr.options.displayCard value)}}
+          {{#if (and attr.options.isCertificate value)}}
             <CertificateCard @data={{value}} />
           {{else if attr.options.detailLinkTo}}
             <LinkTo @route={{attr.options.detailLinkTo}} @model={{value}}>{{value}}</LinkTo>

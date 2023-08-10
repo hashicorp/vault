@@ -21,7 +21,7 @@
               @value={{value}}
               @addCopyButton={{eq attr.name "keyId"}}
             >
-              {{#if (and attr.options.displayCard value)}}
+              {{#if (and attr.options.isCertificate value)}}
                 <CertificateCard @data={{value}} />
               {{else if (eq attr.name "keyId")}}
                 <LinkTo @route="keys.key.details" @model={{@model.keyId}}>
