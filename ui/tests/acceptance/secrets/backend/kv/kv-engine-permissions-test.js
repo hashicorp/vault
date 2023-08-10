@@ -67,14 +67,15 @@ module('Acceptance | kv permissions', function (hooks) {
 
     module('it renders secret details page', function () {
       test('it shows all tabs for admin policy', async function (assert) {
-        assert.expect(5);
+        assert.expect(4);
         await authPage.login(this.kvAdminToken);
         await visit(`/vault/secrets/${this.mountPath}/kv/${this.secretPath}/details`);
         assert.strictEqual(currentURL(), `/vault/secrets/${this.mountPath}/kv/${this.secretPath}/details`);
         assert.dom(PAGE.secretTab('Secret')).exists();
         assert.dom(PAGE.secretTab('Metadata')).exists();
         assert.dom(PAGE.secretTab('Version History')).exists();
-        assert.dom(PAGE.secretTab('Version Diff')).exists();
+        // TODO KV engine clean up. This needs to be skipped until we have two versions of the secret.
+        // assert.dom(PAGE.secretTab('Version Diff')).exists();
       });
 
       test('it hides tabs when no metadata read', async function (assert) {

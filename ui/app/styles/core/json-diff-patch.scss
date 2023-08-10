@@ -2,15 +2,8 @@
  * Copyright (c) HashiCorp, Inc.
  * SPDX-License-Identifier: MPL-2.0
  */
-//  TODO kv engine cleanup safe to remove this, the new component does not rely on this css
 
-.visual-diff {
-  background-color: black;
-
-  pre {
-    color: $ui-gray-010;
-  }
-}
+// used in KV version diff view. https://github.com/benjamine/jsondiffpatch/tree/master
 
 .jsondiffpatch-deleted .jsondiffpatch-property-name,
 .jsondiffpatch-deleted pre,

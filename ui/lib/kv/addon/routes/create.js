@@ -9,7 +9,7 @@ import { hash } from 'rsvp';
 import { pathIsFromDirectory, breadcrumbsForDirectory } from 'vault/lib/kv-breadcrumbs';
 import { withConfirmLeave } from 'core/decorators/confirm-leave';
 
-@withConfirmLeave('model.secret')
+@withConfirmLeave('model.secret', ['model.metadata'])
 export default class KvSecretsCreateRoute extends Route {
   @service store;
   @service secretMountPath;
@@ -22,6 +22,7 @@ export default class KvSecretsCreateRoute extends Route {
       backend,
       path,
       secret: this.store.createRecord('kv/data', { backend, path }),
+      metadata: this.store.createRecord('kv/metadata', { backend, path }),
     });
   }
 

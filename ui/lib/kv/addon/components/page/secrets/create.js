@@ -9,6 +9,7 @@ import { tracked } from '@glimmer/tracking';
 import { task } from 'ember-concurrency';
 import { inject as service } from '@ember/service';
 import { pathIsFromDirectory } from 'vault/lib/kv-breadcrumbs';
+import errorMessage from 'vault/utils/error-message';
 
 /**
  * @module KvSecretCreate is used for creating the initial version of a secret
@@ -29,7 +30,7 @@ export default class KvSecretCreate extends Component {
   @service router;
 
   @tracked showJsonView = false;
-  @tracked errorMessage;
+  @tracked errorMessage; // only renders for kv/data API errors
   @tracked modelValidations;
   @tracked invalidFormAlert;
 
@@ -51,27 +52,72 @@ export default class KvSecretCreate extends Component {
   @task
   *save(event) {
     event.preventDefault();
-    try {
-      const { isValid, state, invalidFormMessage } = this.args.secret.validate();
-      this.modelValidations = isValid ? null : state;
-      this.invalidFormAlert = invalidFormMessage;
-      if (isValid) {
-        const { secret } = this.args;
-        yield this.args.secret.save();
-        this.flashMessages.success(`Successfully created secret ${secret.path}.`);
+    this.resetErrors();
+
+    const { isValid, state } = this.validate();
+    this.modelValidations = isValid ? null : state;
+    this.invalidFormAlert = isValid ? '' : 'There is an error with this form.';
+
+    const { secret, metadata } = this.args;
+    if (isValid) {
+      try {
+        // try saving secret data first
+        yield secret.save();
+        this.flashMessages.success(`Successfully saved secret data for: ${secret.path}.`);
+      } catch (error) {
+        this.errorMessage = errorMessage(error);
+      }
+
+      // users must have permission to create secret data to create metadata in the UI
+      // only attempt to save metadata if secret data saves successfully and metadata is edited
+      if (secret.createdTime && this.hasChanged(metadata)) {
+        try {
+          metadata.path = secret.path;
+          yield metadata.save();
+          this.flashMessages.success(`Successfully saved metadata.`);
+        } catch (error) {
+          this.flashMessages.danger(`Secret data was saved but metadata was not: ${errorMessage(error)}`, {
+            sticky: true,
+          });
+        }
+      }
+
+      // prevent transition if there are errors with secret data
+      if (this.errorMessage) {
+        this.invalidFormAlert = 'There was an error submitting this form.';
+      } else {
         this.router.transitionTo('vault.cluster.secrets.backend.kv.secret.details', secret.path);
       }
-    } catch (error) {
-      const message = error.errors ? error.errors.join('. ') : error.message;
-      this.errorMessage = message;
-      this.invalidFormAlert = 'There was an error submitting this form.';
     }
   }
 
   @action
   onCancel() {
-    pathIsFromDirectory(this.args.secret?.path)
-      ? this.router.transitionTo('vault.cluster.secrets.backend.kv.list-directory', this.args.secret.path)
+    const { path } = this.args.secret;
+    pathIsFromDirectory(path)
+      ? this.router.transitionTo('vault.cluster.secrets.backend.kv.list-directory', path)
       : this.router.transitionTo('vault.cluster.secrets.backend.kv.list');
+  }
+
+  // HELPERS
+
+  validate() {
+    const dataValidations = this.args.secret.validate();
+    const metadataValidations = this.args.metadata.validate();
+    const state = { ...dataValidations.state, ...metadataValidations.state };
+    const failed = !dataValidations.isValid || !metadataValidations.isValid;
+    return { state, isValid: !failed };
+  }
+
+  hasChanged(model) {
+    const fieldName = model.formFields.map((attr) => attr.name);
+    const changedAttrs = Object.keys(model.changedAttributes());
+    // exclusively check if form field attributes have changed ('backend' and 'path' are passed to createRecord)
+    return changedAttrs.any((attr) => fieldName.includes(attr));
+  }
+
+  resetErrors() {
+    this.flashMessages.clearMessages();
+    this.errors = '';
   }
 }

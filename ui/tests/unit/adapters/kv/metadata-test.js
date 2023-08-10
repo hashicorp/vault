@@ -86,8 +86,6 @@ module('Unit | Adapter | kv/metadata', function (hooks) {
       },
     };
     const expectedBody = {
-      backend: this.backend,
-      path: this.path,
       max_versions: 0,
       delete_version_after: '45h',
       cas_required: false,
@@ -96,7 +94,7 @@ module('Unit | Adapter | kv/metadata', function (hooks) {
     this.server.post(this.endpoint, (schema, req) => {
       const body = JSON.parse(req.requestBody);
       assert.ok('POST request made to correct endpoint when creating new record');
-      assert.deepEqual(body, expectedBody, 'POST request has correct body');
+      assert.propEqual(body, expectedBody, 'POST request has correct body');
       return new Response(204);
     });
     const record = this.store.createRecord('kv/metadata', recordData);
