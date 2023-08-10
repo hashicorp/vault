@@ -1,23 +1,13 @@
 {{! template-lint-configure simple-unless "warn" }}
 <div class="field" data-test-field={{or @attr.name true}}>
-  {{#unless
-    (or
-      (eq @attr.type "boolean")
-      (includes
-        @attr.options.editType
-        (array "boolean" "optionalText" "searchSelect" "mountAccessor" "kv" "file" "ttl" "stringArray" "json" "regex")
-      )
-    )
-  }}
-    {{#if (not (eq @attr.type "object"))}}
-      <FormFieldLabel
-        for={{@attr.name}}
-        @label={{this.labelString}}
-        @helpText={{(if this.showHelpText @attr.options.helpText)}}
-        @subText={{@attr.options.subText}}
-        @docLink={{@attr.options.docLink}}
-      />
-    {{/if}}
+  {{#unless this.hideLabel}}
+    <FormFieldLabel
+      for={{@attr.name}}
+      @label={{this.labelString}}
+      @helpText={{(if this.showHelpText @attr.options.helpText)}}
+      @subText={{@attr.options.subText}}
+      @docLink={{@attr.options.docLink}}
+    />
   {{/unless}}
   {{#if @attr.options.possibleValues}}
     {{#if (eq @attr.options.editType "radio")}}
@@ -43,19 +33,33 @@
     {{else}}
       <div class="control is-expanded">
         <div class="select is-fullwidth">
-          <select name={{@attr.name}} id={{@attr.name}} onchange={{this.onChangeWithEvent}} data-test-input={{@attr.name}}>
+          <select
+            class="{{if this.validationError 'has-error-border'}}"
+            name={{@attr.name}}
+            id={{@attr.name}}
+            onchange={{this.onChangeWithEvent}}
+            data-test-input={{@attr.name}}
+          >
             {{#if @attr.options.noDefault}}
               <option value="">
                 Select one
               </option>
             {{/if}}
             {{#each (path-or-array @attr.options.possibleValues @model) as |val|}}
-              <option selected={{eq (get @model this.valuePath) (or val.value val)}} value={{or val.value val}}>
+              <option selected={{loose-equal (get @model this.valuePath) (or val.value val)}} value={{or val.value val}}>
                 {{or val.displayName val}}
               </option>
             {{/each}}
           </select>
         </div>
+        {{#if this.validationError}}
+          <AlertInline
+            @type="danger"
+            @message={{this.validationError}}
+            @paddingTop={{true}}
+            data-test-field-validation={{@attr.name}}
+          />
+        {{/if}}
       </div>
     {{/if}}
   {{else if (and (eq @attr.type "string") (eq @attr.options.editType "boolean"))}}
@@ -121,17 +125,19 @@
     />
   {{else if (eq @attr.options.editType "file")}}
     {{! File Input }}
-    <TextFile
-      @helpText={{@attr.options.helpText}}
-      @file={{this.file}}
-      @onChange={{this.setFile}}
-      @label={{this.labelString}}
-    />
+    <div class="has-bottom-margin-m">
+      <TextFile
+        @label={{this.labelString}}
+        @helpText={{@attr.options.helpText}}
+        @onChange={{this.setFile}}
+        @validationError={{this.validationError}}
+      />
+    </div>
   {{else if (eq @attr.options.editType "ttl")}}
     {{! TTL Picker }}
     <div class="field">
       {{#let (or (get @model this.valuePath) @attr.options.setDefault) as |initialValue|}}
-        <TtlPicker2
+        <TtlPicker
           data-test-input={{@attr.name}}
           @onChange={{this.setAndBroadcastTtl}}
           @label={{this.labelString}}
@@ -203,21 +209,18 @@
     <StringList
       data-test-input={{@attr.name}}
       @label={{this.labelString}}
-      @warning={{@attr.options.warning}}
       @helpText={{if this.showHelpText @attr.options.helpText}}
       @inputValue={{get @model this.valuePath}}
       @onChange={{this.setAndBroadcast}}
       @attrName={{@attr.name}}
-      @subText={{@attr.options.subText}}
-      @hideFormSection={{@attr.options.hideFormSection}}
+      @subText="{{@attr.options.subText}} Add one item per row."
     />
   {{else if (eq @attr.options.sensitive true)}}
-    {{! Masked Input }}
     <MaskedInput
+      @name={{@attr.name}}
       @value={{or (get @model this.valuePath) @attr.options.defaultValue}}
       @allowCopy="true"
       @onChange={{this.setAndBroadcast}}
-      @name={{@attr.name}}
       @onKeyUp={{@onKeyUp}}
     />
     {{#if this.validationError}}
@@ -232,8 +235,11 @@
           id={{@attr.name}}
           value={{or (get @model this.valuePath) @attr.options.defaultValue}}
           oninput={{this.onChangeWithEvent}}
-          class="textarea"
+          class="textarea {{if this.validationError 'has-error-border'}}"
         ></textarea>
+        {{#if this.validationError}}
+          <AlertInline @type="danger" @message={{this.validationError}} @paddingTop={{true}} />
+        {{/if}}
       {{else if (eq @attr.options.editType "password")}}
         <Input
           data-test-input={{@attr.name}}
@@ -296,8 +302,8 @@
           autocomplete="off"
           spellcheck="false"
           value={{or (get @model this.valuePath) @attr.options.defaultValue}}
-          onchange={{this.onChangeWithEvent}}
-          onkeyup={{this.handleKeyUp}}
+          {{on "change" this.onChangeWithEvent}}
+          {{on "keyup" this.handleKeyUp}}
           class="input {{if this.validationError 'has-error-border'}}"
           maxLength={{@attr.options.characterLimit}}
         />
@@ -308,6 +314,14 @@
         {{/if}}
         {{#if this.validationError}}
           <AlertInline @type="danger" @message={{this.validationError}} @paddingTop={{true}} />
+        {{/if}}
+        {{#if this.validationWarning}}
+          <AlertInline
+            @type="warning"
+            @message={{this.validationWarning}}
+            @paddingTop={{true}}
+            data-test-validation-warning
+          />
         {{/if}}
       {{/if}}
     </div>

@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package http
 
 import (
@@ -118,9 +121,25 @@ func init() {
 	})
 }
 
-// Handler returns an http.Handler for the API. This can be used on
+type HandlerAnchor struct{}
+
+func (h HandlerAnchor) Handler(props *vault.HandlerProperties) http.Handler {
+	return handler(props)
+}
+
+var Handler vault.HandlerHandler = HandlerAnchor{}
+
+type HandlerFunc func(props *vault.HandlerProperties) http.Handler
+
+func (h HandlerFunc) Handler(props *vault.HandlerProperties) http.Handler {
+	return h(props)
+}
+
+var _ vault.HandlerHandler = HandlerFunc(func(props *vault.HandlerProperties) http.Handler { return nil })
+
+// handler returns an http.Handler for the API. This can be used on
 // its own to mount the Vault API within another web server.
-func Handler(props *vault.HandlerProperties) http.Handler {
+func handler(props *vault.HandlerProperties) http.Handler {
 	core := props.Core
 
 	// Create the muxer to handle the actual endpoints
@@ -159,6 +178,7 @@ func Handler(props *vault.HandlerProperties) http.Handler {
 		mux.Handle("/v1/sys/storage/raft/bootstrap", handleSysRaftBootstrap(core))
 		mux.Handle("/v1/sys/storage/raft/join", handleSysRaftJoin(core))
 		mux.Handle("/v1/sys/internal/ui/feature-flags", handleSysInternalFeatureFlags(core))
+
 		for _, path := range injectDataIntoTopRoutes {
 			mux.Handle(path, handleRequestForwarding(core, handleLogicalWithInjector(core)))
 		}
@@ -332,8 +352,8 @@ func wrapGenericHandler(core *vault.Core, h http.Handler, props *vault.HandlerPr
 		// Start with the request context
 		ctx := r.Context()
 		var cancelFunc context.CancelFunc
-		// Add our timeout, but not for the monitor endpoint, as it's streaming
-		if strings.HasSuffix(r.URL.Path, "sys/monitor") {
+		// Add our timeout, but not for the monitor or events endpoints, as they are streaming
+		if strings.HasSuffix(r.URL.Path, "sys/monitor") || strings.Contains(r.URL.Path, "sys/events") {
 			ctx, cancelFunc = context.WithCancel(ctx)
 		} else {
 			ctx, cancelFunc = context.WithTimeout(ctx, maxRequestDuration)
@@ -812,16 +832,9 @@ func handleRequestForwarding(core *vault.Core, handler http.Handler) http.Handle
 				return
 			}
 			path := ns.TrimmedPath(r.URL.Path[len("/v1/"):])
-			switch {
-			case !perfStandbyAlwaysForwardPaths.HasPath(path) && !alwaysRedirectPaths.HasPath(path):
+			if !perfStandbyAlwaysForwardPaths.HasPath(path) && !alwaysRedirectPaths.HasPath(path) {
 				handler.ServeHTTP(w, r)
 				return
-			case strings.HasPrefix(path, "auth/token/create/"):
-				isBatch, err := core.IsBatchTokenCreationRequest(r.Context(), path)
-				if err == nil && isBatch {
-					handler.ServeHTTP(w, r)
-					return
-				}
 			}
 		}
 

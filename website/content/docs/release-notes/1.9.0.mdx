@@ -5,17 +5,17 @@ description: |-
   This page contains release notes for Vault 1.9.0.
 ---
 
-# Vault 1.9.0 Release notes
+# Vault 1.9.0 release notes
 
 **Software Release Date**: November 19, 2021
 
 **Summary**: This document captures major updates as part of Vault release 1.9.0, including new features, breaking changes, enhancements, deprecation, and EOL plans. Refer to the [Changelog](https://github.com/hashicorp/vault/blob/main/CHANGELOG.md) for additional changes made within the Vault 1.9 release.
 
-## New Features
+## New features
 
 This section describes the new features introduced as part of Vault 1.9.0.
 
-### Client Count Improvements
+### Client count improvements
 
 Several improvements to client count were made to help customers better track and identify client attribution and reduce overcomputing.
 
@@ -29,29 +29,29 @@ The improvements made include the following:
 * Displays client counts per namespace (top ten, descending order by attribution) in the usage metrics UI with the ability to export data for all namespaces
 * Displays clients earlier than a month in the usage metrics UI (within ten minutes since initiation of computation)
 
-### Advanced Data Protection Module (ADP) Enhancements
+### Advanced data protection module (ADP) enhancements
 
 The following section provides details about the ADP module features added in this release.
 
-#### Advanced I/O handling for Tranform FPE (ADP-Transform)
+#### Advanced I/O handling for tranform FPE (ADP-Transform)
 
-Users of the Format Preserving Encryption (FPE) feature of ADP Transform will now benefit from increased flexibility with regards to formatting the input and output of their data. [Transformation templates](https://learn.hashicorp.com/tutorials/vault/transform#advanced-handling) are receiving two new fields- **encode_format** and **decode_formats** -that allow users to specify and format individual [capturing groups](https://www.regular-expressions.info/refcapture.html) within the regular expressions that define their formats.
+Users of the Format Preserving Encryption (FPE) feature of ADP Transform will now benefit from increased flexibility with regards to formatting the input and output of their data. [Transformation templates](/vault/tutorials/adp/transform#advanced-handling) are receiving two new fields- **encode_format** and **decode_formats** -that allow users to specify and format individual [capturing groups](https://www.regular-expressions.info/refcapture.html) within the regular expressions that define their formats.
 
 #### MS SQL TDE (ADP-KM)
 
 We added support to Vault Enterprise for customers who want Vault to manage encryption keys for Transparent Data Encryption on MSSQL servers.
 
-#### Key Management Secrets(KMS) engine - GCP (ADP-KM)
+#### Key management Secrets(KMS) engine - GCP (ADP-KM)
 
-The [KMS Engine for GCP](https://www.vaultproject.io/docs/secrets/gcpkms) provides key management via the Google Cloud KMS to assist with automating many GCP key management functions.
+The [KMS Engine for GCP](/vault/docs/secrets/gcpkms) provides key management via the Google Cloud KMS to assist with automating many GCP key management functions.
 
-## Other Features and Enhancements
+## Other features and enhancements
 
 This section describes other features and enhancements introduced as part of the Vault 1.9 release.
 
-### Vault Agent improvements
+### Vault agent improvements
 
-Improvements were made to the Vault Agent Cache to ensure that [consul-template is always routed through the Vault Agent cache](/docs/agent/template), therefore, eliminating the need for listeners to be defined in the Vault Agent for just templating.
+Improvements were made to the Vault Agent Cache to ensure that [consul-template is always routed through the Vault Agent cache](/vault/docs/agent/template), therefore, eliminating the need for listeners to be defined in the Vault Agent for just templating.
 
 ### Customized username generation for database dynamic credentials
 
@@ -59,7 +59,7 @@ This feature enables customization of username for database dynamic credentials.
 
 ### Customizable HTTP headers for Vault
 
-This feature allows security operators to configure [custom response headers](/docs/configuration/listener/tcp) to HTTP root path (`/`) and API endpoints (`/v1/*`), in addition to the previously supported UI paths through the server HCL configuration file.
+This feature allows security operators to configure [custom response headers](/vault/docs/configuration/listener/tcp) to HTTP root path (`/`) and API endpoints (`/v1/*`), in addition to the previously supported UI paths through the server HCL configuration file.
 
 ### Support for IBM s390X CPU architecture
 
@@ -67,13 +67,13 @@ This feature adds support for Vault to run on the IBM s390x architecture via the
 
 ### Namespace API lock
 
-This [feature](/docs/concepts/namespace-api-lock) allows namespace administrators to flexibly control operations such as locking APIs from child namespaces to which they have access. This enables them to restrict access to their domain in a multi-tenant environment and perform break-glass procedures in times of emergency to protect a cluster from within their child namespace.
+This [feature](/vault/docs/concepts/namespace-api-lock) allows namespace administrators to flexibly control operations such as locking APIs from child namespaces to which they have access. This enables them to restrict access to their domain in a multi-tenant environment and perform break-glass procedures in times of emergency to protect a cluster from within their child namespace.
 
-### Vault Terraform Provider v3
+### Vault terraform provider v3
 
-We have upgraded the [Vault Terraform Provider](https://registry.terraform.io/providers/hashicorp/vault/latest/docs) to the latest version of the [Terraform Plugin SDKv2](https://www.terraform.io/plugin/sdkv2) to leverage new features.
+We have upgraded the [Vault Terraform Provider](https://registry.terraform.io/providers/hashicorp/vault/latest/docs) to the latest version of the [Terraform Plugin SDKv2](/terraform/plugin/sdkv2) to leverage new features.
 
-### Azure Secrets Engine
+### Azure secrets engine
 
 The following enhancement are included:
 
@@ -82,38 +82,38 @@ The following enhancement are included:
 
 ### Customized metadata for KV
 
-This [enhancement](https://www.vaultproject.io/api-docs/secret/kv/kv-v2) provides the ability to set version-agnostic custom key metadata for Vault KVv2 secrets via a metadata endpoint. This custom metadata is also visible in the UI.
+This [enhancement](/vault/api-docs/secret/kv/kv-v2) provides the ability to set version-agnostic custom key metadata for Vault KVv2 secrets via a metadata endpoint. This custom metadata is also visible in the UI.
 
-## UI Enhancements
+## UI enhancements
 ### Expanding the UI for more DB secrets engines
 
-We have been adding support for DB secrets engines in the UI over the past few releases. In the Vault 1.9 release, we have added support for [Oracle](/docs/secrets/databases/oracle) and [ElasticSearch](/docs/secrets/databases/elasticdb) and [PostgresSQL](/docs/secrets/databases/postgresql) database secrets engines in the UI.
+We have been adding support for DB secrets engines in the UI over the past few releases. In the Vault 1.9 release, we have added support for [Oracle](/vault/docs/secrets/databases/oracle) and [ElasticSearch](/vault/docs/secrets/databases/elasticdb) and [PostgresSQL](/vault/docs/secrets/databases/postgresql) database secrets engines in the UI.
 
 ### PKI certificate metadata
 
-The [PKI Secrets Engine](/docs/secrets/pki) now displays additional PKI certificate metadata in the UI, such as date issued, date of expiry, serial number, and subject/name.
+The [PKI Secrets Engine](/vault/docs/secrets/pki) now displays additional PKI certificate metadata in the UI, such as date issued, date of expiry, serial number, and subject/name.
 
-## Tech Preview Features
+## Tech preview features
 
-### KV Secrets Engine v2 patch operations
+### KV secrets engine v2 patch operations
 
-This feature provides a more streamlined method for managing [KV v2 secrets](https://www.vaultproject.io/api-docs/secret/kv/kv-v2), enabling customers to better maintain least privilege security in automated environments. This feature allows performing partial updates to KV v2 secrets without requiring to read the full KV secret's key/value pairs.
+This feature provides a more streamlined method for managing [KV v2 secrets](/vault/api-docs/secret/kv/kv-v2), enabling customers to better maintain least privilege security in automated environments. This feature allows performing partial updates to KV v2 secrets without requiring to read the full KV secret's key/value pairs.
 
-### Vault as an OIDC Provider
+### Vault as an OIDC provider
 
-Vault can now act as an OIDC Provider so applications can leverage the pre-existing [Vault identities](/api-docs/secret/identity) to authenticate into applications.
+Vault can now act as an OIDC Provider so applications can leverage the pre-existing [Vault identities](/vault/api-docs/secret/identity) to authenticate into applications.
 
-## Breaking Changes
+## Breaking changes
 
 The following section details breaking changes introduced in Vault 1.9.
 
 ### Removal of HTTP request counters
 
-In Vault 1.9, the [internal HTTP Request count API](https://www.vaultproject.io/api-docs/system/internal-counters#http-requests) was removed from the product. Calls to the endpoint will result in a **404 error** with a message stating that functionality on this path has been removed.
-Please refer to the [upgrade guide](/docs/upgrading/upgrade-to-1.9.x) for more information.
+In Vault 1.9, the [internal HTTP Request count API](/vault/api-docs/system/internal-counters#http-requests) was removed from the product. Calls to the endpoint will result in a **404 error** with a message stating that functionality on this path has been removed.
+Please refer to the [upgrade guide](/vault/docs/upgrading/upgrade-to-1.9.x) for more information.
 
 As called out in the documentation, Vault does not make backwards compatible guarantees on internal APIs (those prefaced with `sys/internal`). They are subject to change and may disappear without notice.
 
-## Feature Deprecations and EOL
+## Feature deprecations and EOL
 
-Please refer to the [Deprecation Plans and Notice](/docs/deprecation) page for up-to-date information on feature deprecations and plans. An [FAQ](/docs/deprecation/faq) page is also available to address questions concerning decisions made about Vault feature deprecations.
+Please refer to the [Deprecation Plans and Notice](/vault/docs/deprecation) page for up-to-date information on feature deprecations and plans. An [FAQ](/vault/docs/deprecation/faq) page is also available to address questions concerning decisions made about Vault feature deprecations.

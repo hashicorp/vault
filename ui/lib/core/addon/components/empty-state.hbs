@@ -1,0 +1,40 @@
+<div data-test-component="empty-state" class="empty-state" ...attributes>
+  <div class="empty-state-content">
+    {{#if @icon}}
+      <div class="empty-state-icon">
+        <Icon @name={{@icon}} @size="24" />
+        <h3 class="empty-state-title" data-test-empty-state-title>
+          {{@title}}
+        </h3>
+      </div>
+      {{#if @subTitle}}
+        <p class="empty-state-subTitle" data-test-empty-state-subText>
+          {{@subTitle}}
+        </p>
+      {{/if}}
+    {{else}}
+      <h3 class={{concat "empty-state-title" (if @subTitle " has-bottom-margin-m")}} data-test-empty-state-title>
+        {{@title}}
+      </h3>
+      {{#if @subTitle}}
+        <p class="empty-state-subTitle" data-test-empty-state-subText>
+          {{@subTitle}}
+        </p>
+      {{/if}}
+    {{/if}}
+    {{#if @message}}
+      <p class={{concat "empty-state-message" (if @bottomBorder " has-border-bottom-light")}} data-test-empty-state-message>
+        {{@message}}
+      </p>
+    {{/if}}
+    {{#if (has-block)}}
+      <div class="empty-state-actions" data-test-empty-state-actions>
+        {{yield}}
+      </div>
+    {{else if @emptyActions}}
+      <div class="empty-state-actions" data-test-empty-state-actions>
+        {{component @emptyActions}}
+      </div>
+    {{/if}}
+  </div>
+</div>

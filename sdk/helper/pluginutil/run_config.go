@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package pluginutil
 
 import (
@@ -10,7 +13,6 @@ import (
 	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-plugin"
 	"github.com/hashicorp/vault/sdk/helper/consts"
-	"github.com/hashicorp/vault/sdk/version"
 )
 
 type PluginClientConfig struct {
@@ -46,7 +48,11 @@ func (rc runConfig) makeConfig(ctx context.Context) (*plugin.ClientConfig, error
 	if rc.MLock || (rc.Wrapper != nil && rc.Wrapper.MlockEnabled()) {
 		cmd.Env = append(cmd.Env, fmt.Sprintf("%s=%s", PluginMlockEnabled, "true"))
 	}
-	cmd.Env = append(cmd.Env, fmt.Sprintf("%s=%s", PluginVaultVersionEnv, version.GetVersion().Version))
+	version, err := rc.Wrapper.VaultVersion(ctx)
+	if err != nil {
+		return nil, err
+	}
+	cmd.Env = append(cmd.Env, fmt.Sprintf("%s=%s", PluginVaultVersionEnv, version))
 
 	if rc.IsMetadataMode {
 		rc.Logger = rc.Logger.With("metadata", "true")

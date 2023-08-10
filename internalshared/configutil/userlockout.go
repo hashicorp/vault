@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package configutil
 
 import (
@@ -30,6 +33,10 @@ type UserLockout struct {
 	LockoutCounterResetRaw interface{}   `hcl:"lockout_counter_reset"`
 	DisableLockout         bool          `hcl:"-"`
 	DisableLockoutRaw      interface{}   `hcl:"disable_lockout"`
+}
+
+func GetSupportedUserLockoutsAuthMethods() []string {
+	return []string{"userpass", "approle", "ldap"}
 }
 
 func ParseUserLockouts(result *SharedConfig, list *ast.ObjectList) error {

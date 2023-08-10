@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package transit
 
 import (
@@ -19,9 +22,9 @@ func TestTransit_BatchDecryption(t *testing.T) {
 	b, s := createBackendWithStorage(t)
 
 	batchEncryptionInput := []interface{}{
-		map[string]interface{}{"plaintext": ""},     // empty string
-		map[string]interface{}{"plaintext": "Cg=="}, // newline
-		map[string]interface{}{"plaintext": "dGhlIHF1aWNrIGJyb3duIGZveA=="},
+		map[string]interface{}{"plaintext": "", "reference": "foo"},     // empty string
+		map[string]interface{}{"plaintext": "Cg==", "reference": "bar"}, // newline
+		map[string]interface{}{"plaintext": "dGhlIHF1aWNrIGJyb3duIGZveA==", "reference": "baz"},
 	}
 	batchEncryptionData := map[string]interface{}{
 		"batch_input": batchEncryptionInput,
@@ -41,7 +44,7 @@ func TestTransit_BatchDecryption(t *testing.T) {
 	batchResponseItems := resp.Data["batch_results"].([]EncryptBatchResponseItem)
 	batchDecryptionInput := make([]interface{}, len(batchResponseItems))
 	for i, item := range batchResponseItems {
-		batchDecryptionInput[i] = map[string]interface{}{"ciphertext": item.Ciphertext}
+		batchDecryptionInput[i] = map[string]interface{}{"ciphertext": item.Ciphertext, "reference": item.Reference}
 	}
 	batchDecryptionData := map[string]interface{}{
 		"batch_input": batchDecryptionInput,
@@ -59,7 +62,8 @@ func TestTransit_BatchDecryption(t *testing.T) {
 	}
 
 	batchDecryptionResponseItems := resp.Data["batch_results"].([]DecryptBatchResponseItem)
-	expectedResult := "[{\"plaintext\":\"\"},{\"plaintext\":\"Cg==\"},{\"plaintext\":\"dGhlIHF1aWNrIGJyb3duIGZveA==\"}]"
+	// This seems fragile
+	expectedResult := "[{\"plaintext\":\"\",\"reference\":\"foo\"},{\"plaintext\":\"Cg==\",\"reference\":\"bar\"},{\"plaintext\":\"dGhlIHF1aWNrIGJyb3duIGZveA==\",\"reference\":\"baz\"}]"
 
 	jsonResponse, err := json.Marshal(batchDecryptionResponseItems)
 	if err != nil || err == nil && string(jsonResponse) != expectedResult {

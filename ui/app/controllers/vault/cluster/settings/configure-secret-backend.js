@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
 import { isPresent } from '@ember/utils';
 import { inject as service } from '@ember/service';
 import Controller from '@ember/controller';
@@ -31,7 +36,6 @@ export default Controller.extend(CONFIG_ATTRS, {
         this.model
           .saveCA({ isDelete })
           .then(() => {
-            this.set('loading', false);
             this.send('refreshRoute');
             this.set('configured', !isDelete);
             if (isDelete) {
@@ -43,6 +47,9 @@ export default Controller.extend(CONFIG_ATTRS, {
           .catch((error) => {
             const errorMessage = error.errors ? error.errors.join('. ') : error;
             this.flashMessages.danger(errorMessage);
+          })
+          .finally(() => {
+            this.set('loading', false);
           });
       }
     },

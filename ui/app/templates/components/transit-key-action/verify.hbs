@@ -14,7 +14,7 @@
   }}
 >
   <div class="box is-sideless is-fullwidth is-marginless">
-    <div class="content">
+    <div class="content has-bottom-margin-l">
       <p>Check whether the provided signature is valid for the given data.</p>
     </div>
     <div class="field">
@@ -189,11 +189,14 @@
 </form>
 <Modal @title="Results" @onClose={{action (mut @isModalActive) false}} @isActive={{@isModalActive}}>
   <section class="modal-card-body">
-    <AlertBanner
-      @type={{if @valid "success" "danger"}}
-      @title={{if @valid "Valid" "Not Valid"}}
-      @message="The input is {{if @valid 'valid' 'not valid'}} for the given {{if @signature 'signature' 'HMAC'}}"
-      data-test-transit-verify="true"
-    />
+    <Hds::Alert @type="inline" @color={{if @valid "success" "critical"}} as |A|>
+      <A.Title>{{if @valid "Valid" "Not Valid"}}</A.Title>
+      <A.Description>
+        The input is
+        {{if @valid "valid" "not valid"}}
+        for the given
+        {{if @signature "signature." "HMAC."}}
+      </A.Description>
+    </Hds::Alert>
   </section>
 </Modal>

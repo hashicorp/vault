@@ -1,4 +1,9 @@
 /**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
+/**
  * base adapter for resources that are saved to a path whose unique identifier is name
  * save requests are made to the same endpoint and the resource is either created if not found or updated
  * */

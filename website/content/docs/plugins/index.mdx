@@ -5,7 +5,7 @@ description: Learn about Vault's plugin system.
 ---
 
 
-# Plugin System
+# Plugin system
 
 Vault supports 3 types of plugins; auth methods, secret engines, and database
 plugins. This concept allows both built-in and external plugins to be treated
@@ -18,31 +18,34 @@ A plugin is uniquely identified by its type (one of `secret`, `auth`, or
 implies either the built-in plugin or the single unversioned plugin that can
 be registered.
 
-See [Plugin Upgrade Procedure](/docs/upgrading/plugins#plugin-upgrade-procedure)
+See [Plugin Upgrade Procedure](/vault/docs/upgrading/plugins#plugin-upgrade-procedure)
 for details on how to upgrade a built-in plugin in-place.
 
-## Built-In Plugins
+## Built-In plugins
 
 Built-in plugins are shipped with Vault, often for commonly used integrations,
 and can be used without any prerequisite steps.
 
-## External Plugins
+## External plugins
 
 External plugins are not shipped with Vault and require additional operator
 intervention to run.
 
 To run an external plugin, a binary of the plugin is required. Plugin
 binaries can be obtained from [releases.hashicorp.com](https://releases.hashicorp.com/)
-or they can be [built from source](/docs/plugins/plugin-development#building-a-plugin-from-source).
+or they can be [built from source](/vault/docs/plugins/plugin-development#building-a-plugin-from-source).
 
 Vault's external plugins are completely separate, standalone applications that
 Vault executes and communicates with over RPC. Each time a Vault secret engine,
 auth method, or database plugin is mounted, a new process is spawned. However,
-plugins can be made to implement [plugin multiplexing](/docs/plugins/plugin-architecture#plugin-multiplexing)
+plugins can be made to implement [plugin multiplexing](/vault/docs/plugins/plugin-architecture#plugin-multiplexing)
 to improve performance. Plugin multiplexing allows plugin processes to be
 reused across all mounts of a given type.
 
-## Plugin Versioning
+-> **NOTE:** See the [Vault Integrations](/vault/integrations) page to find a
+curated collection of official, partner, and community Vault plugins. 
+
+## Plugin versioning
 
 Vault supports managing, running and upgrading plugins using semantic version
 information.
@@ -59,7 +62,7 @@ for any available plugins whose type and name match:
 * The plugin with the most recent semantic version among any registered versions
 * The plugin built into Vault
 
-### Built-In Versions
+### Built-In versions
 
 Vault will report a version for built-in plugins to indicate what version of the
 plugin code got built into Vault as a dependency. For example:

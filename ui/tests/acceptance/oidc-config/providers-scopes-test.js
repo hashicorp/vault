@@ -1,10 +1,14 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
 import { module, test } from 'qunit';
 import { visit, currentURL, click, fillIn, findAll, currentRouteName } from '@ember/test-helpers';
 import { setupApplicationTest } from 'ember-qunit';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 import ENV from 'vault/config/environment';
 import authPage from 'vault/tests/pages/auth';
-import logout from 'vault/tests/pages/logout';
 import { create } from 'ember-cli-page-object';
 import { clickTrigger, selectChoose } from 'ember-power-select/test-support/helpers';
 import ss from 'vault/tests/pages/components/search-select';
@@ -34,15 +38,11 @@ module('Acceptance |  oidc-config providers and scopes', function (hooks) {
     ENV['ember-cli-mirage'].handler = 'oidcConfig';
   });
 
-  hooks.beforeEach(async function () {
-    this.store = await this.owner.lookup('service:store');
+  hooks.beforeEach(function () {
+    this.store = this.owner.lookup('service:store');
     // mock client list so OIDC BASE URL does not redirect to landing call-to-action image
     this.server.get('/identity/oidc/client', () => overrideMirageResponse(null, CLIENT_LIST_RESPONSE));
     return authPage.login();
-  });
-
-  hooks.afterEach(function () {
-    return logout.visit();
   });
 
   hooks.after(function () {
@@ -273,7 +273,7 @@ module('Acceptance |  oidc-config providers and scopes', function (hooks) {
       'vault.cluster.access.oidc.providers.provider.edit',
       'navigates to provider edit page from details'
     );
-    await click('label[for=limited]');
+    await click('[data-test-oidc-radio="limited"]');
     await click('[data-test-component="search-select"]#allowedClientIds .ember-basic-dropdown-trigger');
     await fillIn('.ember-power-select-search input', 'test-app');
     await searchSelect.options.objectAt(0).click();
@@ -302,7 +302,7 @@ module('Acceptance |  oidc-config providers and scopes', function (hooks) {
     // edit back to allow all
     await click(SELECTORS.providerDetailsTab);
     await click(SELECTORS.providerEditButton);
-    await click('label[for=allow-all]');
+    await click('[data-test-oidc-radio="allow-all"]');
     await click(SELECTORS.providerSaveButton);
     await click(SELECTORS.providerClientsTab);
     assert.strictEqual(

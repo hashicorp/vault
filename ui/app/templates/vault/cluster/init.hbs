@@ -90,11 +90,10 @@
             </div>
           {{/if}}
           <DownloadButton
-            @data={{this.keyData}}
+            class="button is-ghost"
             @filename={{this.keyFilename}}
-            @mime="application/json"
+            @data={{this.keyData}}
             @extension="json"
-            @class="button is-ghost"
             @stringify={{true}}
           >
             <Icon @name="download" />

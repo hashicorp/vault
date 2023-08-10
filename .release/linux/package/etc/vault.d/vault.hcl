@@ -1,3 +1,6 @@
+# Copyright (c) HashiCorp, Inc.
+# SPDX-License-Identifier: MPL-2.0
+
 # Full configuration options can be found at https://www.vaultproject.io/docs/configuration
 
 ui = true
