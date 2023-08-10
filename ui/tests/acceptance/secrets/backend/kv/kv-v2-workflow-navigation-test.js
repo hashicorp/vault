@@ -22,8 +22,12 @@ import {
   writeSecret,
   writeVersionedSecret,
 } from 'vault/tests/helpers/kv/kv-run-commands';
-import { click, currentURL, typeIn, visit } from '@ember/test-helpers';
+import { click, currentRouteName, currentURL, typeIn, visit } from '@ember/test-helpers';
 import { FORM, PAGE } from 'vault/tests/helpers/kv/kv-selectors';
+import { create } from 'ember-cli-page-object';
+import controlGroup from 'vault/tests/pages/components/control-group';
+import { CONTROL_GROUP_PREFIX, TOKEN_SEPARATOR } from 'vault/services/control-group';
+const controlGroupComponent = create(controlGroup);
 
 const secretPath = `my-#:$=?-secret`;
 // This doesn't encode in a normal way, so hardcoding it here until we sort that out
@@ -1201,7 +1205,7 @@ path "${this.backend}/data/*" {
   capabilities = ["create", "read", "update", "delete", "list"]
   control_group = {
     max_ttl = "24h"
-    factor "approver" {
+    factor "ops_manager" {
       controlled_capabilities = ["read"]
       identity {
           group_names = ["managers"]
@@ -1219,8 +1223,11 @@ path "${this.backend}/*" {
       this.userToken = userToken;
       await authPage.login(userToken);
     });
+    const storageKey = (accessor, path) => {
+      return `${CONTROL_GROUP_PREFIX}${accessor}${TOKEN_SEPARATOR}${path}`;
+    };
     test('can access nested secret', async function (assert) {
-      assert.expect(23);
+      assert.expect(38);
       const backend = this.backend;
       await navToBackend(backend);
       assert.dom(PAGE.title).hasText(`${backend} Version 2`, 'title text correct');
@@ -1243,28 +1250,66 @@ path "${this.backend}/*" {
       assert.dom(PAGE.list.filter).hasValue('app/nested/', 'List filter input is prefilled');
       assert.dom(PAGE.list.item('secret')).exists('Shows deeply nested secret');
 
+      // For some reason when we click on the item in tests it throws a global control group error
+      // But not when we visit the page directly
+      await visit(`/vault/secrets/${backend}/kv/app%2Fnested%2Fsecret/details`);
+      assert.strictEqual(
+        currentRouteName(),
+        'vault.cluster.access.control-group-accessor',
+        'redirects to access control group route'
+      );
+      const accessor = controlGroupComponent.accessor;
+      const controlGroupToken = controlGroupComponent.token;
+
+      await authPage.loginUsername('authorizer', 'password');
+      await visit(`/vault/access/control-groups/${accessor}`);
+      await controlGroupComponent.authorize();
+
+      await authPage.login(this.userToken);
+      localStorage.setItem(
+        storageKey(accessor, `${backend}/data/app/nested/secret`),
+        JSON.stringify({
+          accessor,
+          token: controlGroupToken,
+          creation_path: `${backend}/data/app/nested/secret`,
+          uiParams: {
+            url: `/vault/secrets/${backend}/kv/app%2Fnested%2F/directory`,
+          },
+        })
+      );
+      await visit(`/vault/access/control-groups/${accessor}`);
+      await click(`[data-test-navigate-button]`);
+      assert.strictEqual(
+        currentURL(),
+        `/vault/secrets/${backend}/kv/app%2Fnested%2F/directory`,
+        'navigates to list url where secret is'
+      );
       await click(PAGE.list.item('secret'));
-      // TODO: Should redirect to control group
-      // assert.strictEqual(currentRouteName(), `vault.cluster.access.control-group-accessor`);
-      // assertCorrectBreadcrumbs(assert, ['secret', backend, 'app', 'nested', 'secret']);
-      // assert.dom(PAGE.title).hasText('app/nested/secret', 'title is full secret path');
-      // assert.dom(PAGE.toolbar).exists('toolbar renders');
-      // assert.dom(PAGE.toolbarAction).exists({ count: 2 }, 'correct number of toolbar actions render');
 
-      // await click(PAGE.breadcrumbAtIdx(3));
-      // assert.ok(
-      //   currentURL().startsWith(`/vault/secrets/${backend}/kv/app%2Fnested%2F/directory`),
-      //   'links back to list directory'
-      // );
+      assert.strictEqual(
+        currentURL(),
+        `/vault/secrets/${backend}/kv/app%2Fnested%2Fsecret/details?version=1`,
+        'goes to secret details'
+      );
+      assertCorrectBreadcrumbs(assert, ['secret', backend, 'app', 'nested', 'secret']);
+      assert.dom(PAGE.title).hasText('app/nested/secret', 'title is full secret path');
+      assert.dom(PAGE.toolbar).exists('toolbar renders');
+      assert.dom(PAGE.toolbarAction).exists({ count: 2 }, 'correct number of toolbar actions render');
 
-      // await click(PAGE.breadcrumbAtIdx(2));
-      // assert.ok(
-      //   currentURL().startsWith(`/vault/secrets/${backend}/kv/app%2F/directory`),
-      //   'links back to list directory'
-      // );
+      await click(PAGE.breadcrumbAtIdx(3));
+      assert.ok(
+        currentURL().startsWith(`/vault/secrets/${backend}/kv/app%2Fnested%2F/directory`),
+        'links back to list directory'
+      );
 
-      // await click(PAGE.breadcrumbAtIdx(1));
-      // assert.ok(currentURL().startsWith(`/vault/secrets/${backend}/kv/list`), 'links back to list root');
+      await click(PAGE.breadcrumbAtIdx(2));
+      assert.ok(
+        currentURL().startsWith(`/vault/secrets/${backend}/kv/app%2F/directory`),
+        'links back to list directory'
+      );
+
+      await click(PAGE.breadcrumbAtIdx(1));
+      assert.ok(currentURL().startsWith(`/vault/secrets/${backend}/kv/list`), 'links back to list root');
     });
   });
 });
