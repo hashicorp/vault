@@ -54,6 +54,7 @@ export default class KvDataAdapter extends ApplicationAdapter {
         };
       })
       .catch((errorOrResponse) => {
+        const baseResponse = { id, backend, path, version };
         const errorCode = errorOrResponse.httpStatus;
         // if it's a legitimate error - throw it!
         if (errorOrResponse instanceof ControlGroupError) {
@@ -63,10 +64,7 @@ export default class KvDataAdapter extends ApplicationAdapter {
         if (errorCode === 403) {
           return {
             data: {
-              id,
-              backend,
-              path,
-              version,
+              ...baseResponse,
               fail_read_error_code: errorCode,
             },
           };
@@ -81,12 +79,8 @@ export default class KvDataAdapter extends ApplicationAdapter {
           return {
             ...errorOrResponse,
             data: {
+              ...baseResponse,
               ...errorOrResponse.data, // includes the { metadata } key we want
-              id,
-              backend,
-              path,
-              version,
-              fail_read_error_code: errorCode,
             },
           };
         }
@@ -124,7 +118,7 @@ export default class KvDataAdapter extends ApplicationAdapter {
         });
       default:
         assert(
-          'deletType must be one of delete-latest-version, delete-specific-version, destroy-specific-version, destroy-everything, undelete-specific-version.'
+          'deleteType must be one of delete-latest-version, delete-specific-version, destroy-specific-version, destroy-everything, undelete-specific-version.'
         );
     }
   }
