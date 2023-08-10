@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package consul
 
 import (
@@ -7,6 +10,7 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
+	"sync/atomic"
 	"time"
 
 	"github.com/armon/go-metrics"
@@ -29,6 +33,9 @@ const (
 	// consistencyModeStrong is the configuration value used to tell
 	// consul to use strong consistency.
 	consistencyModeStrong = "strong"
+
+	// nonExistentKey is used as part of a capabilities check against Consul
+	nonExistentKey = "F35C28E1-7035-40BB-B865-6BED9E3A1B28"
 )
 
 // Verify ConsulBackend satisfies the correct interfaces
@@ -37,11 +44,14 @@ var (
 	_ physical.HABackend     = (*ConsulBackend)(nil)
 	_ physical.Lock          = (*ConsulLock)(nil)
 	_ physical.Transactional = (*ConsulBackend)(nil)
+
+	GetInTxnDisabledError = errors.New("get operations inside transactions are disabled in consul backend")
 )
 
 // ConsulBackend is a physical backend that stores data at specific
 // prefix within Consul. It is used for most production situations as
 // it allows Vault to run on multiple machines in a highly-available manner.
+// failGetInTxn is only used in tests.
 type ConsulBackend struct {
 	client          *api.Client
 	path            string
@@ -51,6 +61,7 @@ type ConsulBackend struct {
 	consistencyMode string
 	sessionTTL      string
 	lockWaitTime    time.Duration
+	failGetInTxn    *uint32
 }
 
 // NewConsulBackend constructs a Consul backend using the given API client
@@ -147,9 +158,9 @@ func NewConsulBackend(conf map[string]string, logger log.Logger) (physical.Backe
 		txn:             client.Txn(),
 		permitPool:      physical.NewPermitPool(maxParInt),
 		consistencyMode: consistencyMode,
-
-		sessionTTL:   sessionTTL,
-		lockWaitTime: lockWaitTime,
+		sessionTTL:      sessionTTL,
+		lockWaitTime:    lockWaitTime,
+		failGetInTxn:    new(uint32),
 	}
 
 	return c, nil
@@ -224,12 +235,46 @@ func SetupSecureTLS(ctx context.Context, consulConf *api.Config, conf map[string
 	return nil
 }
 
+// ExpandedCapabilitiesAvailable tests to see if Consul has KVGetOrEmpty and 128 entries per transaction available
+func (c *ConsulBackend) ExpandedCapabilitiesAvailable(ctx context.Context) bool {
+	available := false
+
+	maxEntries := 128
+	ops := make([]*api.TxnOp, maxEntries)
+	for i := 0; i < maxEntries; i++ {
+		ops[i] = &api.TxnOp{KV: &api.KVTxnOp{
+			Key:  c.path + nonExistentKey,
+			Verb: api.KVGetOrEmpty,
+		}}
+	}
+
+	c.permitPool.Acquire()
+	defer c.permitPool.Release()
+
+	queryOpts := &api.QueryOptions{}
+	queryOpts = queryOpts.WithContext(ctx)
+
+	ok, resp, _, err := c.txn.Txn(ops, queryOpts)
+	if ok && len(resp.Errors) == 0 && err == nil {
+		available = true
+	}
+
+	return available
+}
+
 // Transaction is used to run multiple entries via a transaction.
 func (c *ConsulBackend) Transaction(ctx context.Context, txns []*physical.TxnEntry) error {
 	if len(txns) == 0 {
 		return nil
 	}
 	defer metrics.MeasureSince([]string{"consul", "transaction"}, time.Now())
+
+	failGetInTxn := atomic.LoadUint32(c.failGetInTxn)
+	for _, t := range txns {
+		if t.Operation == physical.GetOperation && failGetInTxn != 0 {
+			return GetInTxnDisabledError
+		}
+	}
 
 	ops := make([]*api.TxnOp, 0, len(txns))
 	for _, t := range txns {
@@ -301,8 +346,7 @@ func (c *ConsulBackend) makeApiTxn(txn *physical.TxnEntry) (*api.TxnOp, error) {
 	}
 	switch txn.Operation {
 	case physical.GetOperation:
-		// TODO: This is currently broken. Once Consul releases 1.14, this should be updated to use api.KVGetOrEmpty
-		op.Verb = api.KVGet
+		op.Verb = api.KVGetOrEmpty
 	case physical.DeleteOperation:
 		op.Verb = api.KVDelete
 	case physical.PutOperation:
@@ -407,6 +451,14 @@ func (c *ConsulBackend) List(ctx context.Context, prefix string) ([]string, erro
 	}
 
 	return out, err
+}
+
+func (c *ConsulBackend) FailGetInTxn(fail bool) {
+	var val uint32
+	if fail {
+		val = 1
+	}
+	atomic.StoreUint32(c.failGetInTxn, val)
 }
 
 // LockWith is used for mutual exclusion based on the given key.

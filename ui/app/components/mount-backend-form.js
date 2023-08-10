@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
 import Component from '@glimmer/component';
 import { tracked } from '@glimmer/tracking';
 import { inject as service } from '@ember/service';
@@ -21,7 +26,6 @@ import { methods } from 'vault/helpers/mountable-auth-methods';
 
 export default class MountBackendForm extends Component {
   @service store;
-  @service wizard;
   @service flashMessages;
 
   // validation related properties
@@ -31,9 +35,12 @@ export default class MountBackendForm extends Component {
   @tracked errorMessage = '';
 
   willDestroy() {
-    // if unsaved, we want to unload so it doesn't show up in the auth mount list
+    // components are torn down after store is unloaded and will cause an error if attempt to unload record
+    const noTeardown = this.store && !this.store.isDestroying;
+    if (noTeardown && this.args?.mountModel) {
+      this.args.mountModel.rollbackAttributes();
+    }
     super.willDestroy(...arguments);
-    this.args.mountModel.rollbackAttributes();
   }
 
   checkPathChange(type) {
@@ -49,11 +56,33 @@ export default class MountBackendForm extends Component {
     }
   }
 
+  typeChangeSideEffect(type) {
+    if (!this.args.mountType === 'secret') return;
+    if (type === 'pki') {
+      // If type PKI, set max lease to ~10years
+      this.args.mountModel.config.maxLeaseTtl = '3650d';
+    } else {
+      // otherwise reset
+      this.args.mountModel.config.maxLeaseTtl = 0;
+    }
+  }
+
   checkModelValidity(model) {
     const { isValid, state, invalidFormMessage } = model.validate();
     this.modelValidations = state;
     this.invalidFormAlert = invalidFormMessage;
     return isValid;
+  }
+
+  checkModelWarnings() {
+    // check for warnings on change
+    // since we only show errors on submit we need to clear those out and only send warning state
+    const { state } = this.args.mountModel.validate();
+    for (const key in state) {
+      state[key].errors = [];
+    }
+    this.modelValidations = state;
+    this.invalidFormAlert = null;
   }
 
   async showWarningsForKvv2() {
@@ -124,7 +153,7 @@ export default class MountBackendForm extends Component {
     }
     this.flashMessages.success(
       `Successfully mounted the ${type} ${
-        this.mountType === 'secret' ? 'secrets engine' : 'auth method'
+        this.args.mountType === 'secret' ? 'secrets engine' : 'auth method'
       } at ${path}.`
     );
     yield this.args.onMountSuccess(type, path);
@@ -134,24 +163,13 @@ export default class MountBackendForm extends Component {
   @action
   onKeyUp(name, value) {
     this.args.mountModel[name] = value;
-  }
-
-  @action
-  onTypeChange(path, value) {
-    if (path === 'type') {
-      this.wizard.set('componentState', value);
-    }
+    this.checkModelWarnings();
   }
 
   @action
   setMountType(value) {
     this.args.mountModel.type = value;
+    this.typeChangeSideEffect(value);
     this.checkPathChange(value);
-    if (value) {
-      this.wizard.transitionFeatureMachine(this.wizard.featureState, 'CONTINUE', this.args.mountModel.type);
-    } else if (this.wizard.featureState === 'idle') {
-      // resets wizard
-      this.wizard.transitionFeatureMachine(this.wizard.featureState, 'RESET', this.args.mountModel.type);
-    }
   }
 }

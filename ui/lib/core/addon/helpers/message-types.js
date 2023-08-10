@@ -1,4 +1,10 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
 import { helper as buildHelper } from '@ember/component/helper';
+import { assert } from '@ember/debug';
 
 export const MESSAGE_TYPES = {
   info: {
@@ -31,9 +37,17 @@ export const MESSAGE_TYPES = {
     glyph: 'loading',
     text: 'Loading',
   },
+  rotation: {
+    class: 'is-info',
+    glyphClass: 'has-text-grey',
+    glyph: 'rotate-cw',
+  },
 };
 
 export function messageTypes([type]) {
+  if (!(type in MESSAGE_TYPES)) {
+    assert('type is not a valid message type.');
+  }
   return MESSAGE_TYPES[type];
 }
 

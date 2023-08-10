@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
 'use strict';
 
 const fs = require('fs');
@@ -41,6 +46,7 @@ module.exports = {
       allow: ['supported-auth-backends'],
     },
     'require-input-label': 'off',
+    'no-array-prototype-extensions': 'off',
   },
   ignore: ['lib/story-md', 'tests/**'],
   // ember language server vscode extension does not currently respect the ignore field

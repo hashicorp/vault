@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
 const selectors = {
   ttlFormGroup: '[data-test-ttl-inputs]',
   toggle: '[data-test-ttl-toggle]',

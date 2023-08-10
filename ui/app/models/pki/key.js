@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
 import Model, { attr } from '@ember-data/model';
 import { inject as service } from '@ember/service';
 import lazyCapabilities, { apiPath } from 'vault/macros/lazy-capabilities';
@@ -7,6 +12,15 @@ import { withModelValidations } from 'vault/decorators/model-validations';
 const validations = {
   type: [{ type: 'presence', message: 'Type is required.' }],
   keyType: [{ type: 'presence', message: 'Please select a key type.' }],
+  keyName: [
+    {
+      validator(model) {
+        if (model.keyName === 'default') return false;
+        return true;
+      },
+      message: `Key name cannot be the reserved value 'default'`,
+    },
+  ],
 };
 const displayFields = ['keyId', 'keyName', 'keyType', 'keyBits'];
 const formFieldGroups = [{ default: ['keyName', 'type'] }, { 'Key parameters': ['keyType', 'keyBits'] }];
@@ -51,7 +65,7 @@ export default class PkiKeyModel extends Model {
    * Default to show UI elements unless we know they can't access the given path
    */
 
-  @lazyCapabilities(apiPath`${'backend'}/key/${'key_id'}`, 'backend', 'key_id') keyPath;
+  @lazyCapabilities(apiPath`${'backend'}/key/${'keyId'}`, 'backend', 'keyId') keyPath;
   get canRead() {
     return this.keyPath.get('canRead') !== false;
   }

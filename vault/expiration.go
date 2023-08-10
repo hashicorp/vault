@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package vault
 
 import (
@@ -139,7 +142,7 @@ type ExpirationManager struct {
 	quitCh             chan struct{}
 
 	// do not hold coreStateLock in any API handler code - it is already held
-	coreStateLock     *locking.DeadlockRWMutex
+	coreStateLock     locking.RWMutex
 	quitContext       context.Context
 	leaseCheckCounter *uint32
 
@@ -325,8 +328,6 @@ func NewExpirationManager(c *Core, view *BarrierView, e ExpireLeaseStrategy, log
 	jobManager := fairshare.NewJobManager("expire", getNumExpirationWorkers(c, logger), managerLogger, c.metricSink)
 	jobManager.Start()
 
-	c.AddLogger(managerLogger)
-
 	exp := &ExpirationManager{
 		core:        c,
 		router:      c.router,
@@ -350,7 +351,7 @@ func NewExpirationManager(c *Core, view *BarrierView, e ExpireLeaseStrategy, log
 		restoreLocks: locksutil.CreateLocks(),
 		quitCh:       make(chan struct{}),
 
-		coreStateLock:     &c.stateLock,
+		coreStateLock:     c.stateLock,
 		quitContext:       c.activeContext,
 		leaseCheckCounter: new(uint32),
 
@@ -385,7 +386,6 @@ func (c *Core) setupExpiration(e ExpireLeaseStrategy) error {
 
 	// Create the manager
 	expLogger := c.baseLogger.Named("expiration")
-	c.AddLogger(expLogger)
 	mgr := NewExpirationManager(c, view, e, expLogger)
 	c.expiration = mgr
 
@@ -541,7 +541,6 @@ func (m *ExpirationManager) Tidy(ctx context.Context) error {
 	var tidyErrors *multierror.Error
 
 	logger := m.logger.Named("tidy")
-	m.core.AddLogger(logger)
 
 	if !atomic.CompareAndSwapInt32(m.tidyLock, 0, 1) {
 		logger.Warn("tidy operation on leases is already in progress")

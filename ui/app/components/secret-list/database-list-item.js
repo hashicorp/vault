@@ -1,4 +1,9 @@
 /**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
+/**
  * @module DatabaseListItem
  * DatabaseListItem components are used for the list items for the Database Secret Engines for Roles.
  * This component automatically handles read-only list items if capabilities are not granted or the item is internal only.

@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
 import { create, clickable, text, visitable, collection } from 'ember-cli-page-object';
 import flashMessage from 'vault/tests/pages/components/flash-message';
 

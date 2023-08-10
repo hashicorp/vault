@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package configutil
 
 import (
@@ -97,6 +100,8 @@ type Listener struct {
 
 	AgentAPI *AgentAPI `hcl:"agent_api"`
 
+	ProxyAPI *ProxyAPI `hcl:"proxy_api"`
+
 	Telemetry              ListenerTelemetry              `hcl:"telemetry"`
 	Profiling              ListenerProfiling              `hcl:"profiling"`
 	InFlightRequestLogging ListenerInFlightRequestLogging `hcl:"inflight_requests_logging"`
@@ -117,6 +122,11 @@ type Listener struct {
 
 // AgentAPI allows users to select which parts of the Agent API they want enabled.
 type AgentAPI struct {
+	EnableQuit bool `hcl:"enable_quit"`
+}
+
+// ProxyAPI allows users to select which parts of the Vault Proxy API they want enabled.
+type ProxyAPI struct {
 	EnableQuit bool `hcl:"enable_quit"`
 }
 
