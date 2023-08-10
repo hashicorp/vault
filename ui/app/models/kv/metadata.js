@@ -77,6 +77,21 @@ export default class KvSecretMetadataModel extends Model {
     return array.reverse();
   }
 
+  // helps in long logic statements for the status of a currentVersion
+  get currentSecret() {
+    const currentVersionObject = this.versions[this.currentVersion];
+    let state = 'created';
+    if (currentVersionObject.destroyed) {
+      state = 'destroyed';
+    } else if (currentVersionObject.deletion_time) {
+      state = 'deleted';
+    }
+    return {
+      state,
+      isDeactivated: state !== 'created',
+    };
+  }
+
   // permissions needed for the list view where kv/data has not yet been called. Allows us to conditionally show action items in the LinkedBlock popups.
   @lazyCapabilities(apiPath`${'backend'}/data/${'path'}`, 'backend', 'path') dataPath;
   @lazyCapabilities(apiPath`${'backend'}/metadata/${'path'}`, 'backend', 'path') metadataPath;

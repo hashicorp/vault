@@ -9,6 +9,7 @@ import { tracked } from '@glimmer/tracking';
 import { task } from 'ember-concurrency';
 import { inject as service } from '@ember/service';
 import { assert } from '@ember/debug';
+import { verbToPastTense } from 'core/helpers/verb-to-past-tense';
 
 /**
  * @module KvDeleteModal displays a button for a delete type and launches a the respective modal. All destroyRecord network requests are handled inside the component.
@@ -17,11 +18,13 @@ import { assert } from '@ember/debug';
  *  @mode="destroy"
  *  @path="my-secret"
  *  @secret={{this.model.secret}}
+ *  @metadata={{this.model.metadata}}
  * />
  *
  * @param {string} mode - Either: delete, destroy, undelete, or destroy-everything.
  * @param {string} path - The name of the secret.
  * @param {object} secret - The kv/data model.
+ * @param {object} [metadata] - The kv/metadata model. It is only required when mode id "Delete".
  */
 
 export default class KvDeleteModal extends Component {
@@ -46,6 +49,7 @@ export default class KvDeleteModal extends Component {
   }
 
   get generateRadioDeleteOptions() {
+    const { isDeactivated, state } = this.args.metadata.currentSecret;
     return [
       {
         key: 'delete-version',
@@ -58,23 +62,12 @@ export default class KvDeleteModal extends Component {
         key: 'delete-latest-version',
         label: 'Delete latest version',
         description: 'This deletes the most recent version of the secret.',
-        disabled: !this.args.secret.canDeleteLatestVersion,
-        tooltipMessage: 'You do not have permission to delete the latest version.',
+        disabled: !this.args.secret.canDeleteLatestVersion || isDeactivated,
+        tooltipMessage: isDeactivated
+          ? `The latest version of the secret is already ${state}.`
+          : 'You do not have permission to delete the latest version.',
       },
     ];
-  }
-
-  get flashMessageVerb() {
-    switch (this.args.mode) {
-      case 'delete':
-        return 'deleted';
-      case 'destroy':
-        return 'destroyed';
-      case 'undelete':
-        return 'undeleted';
-      default:
-        return assert('mode must be one of undelete, delete, destroy, metadata-delete.');
-    }
   }
 
   @action handleButtonClick(mode) {
@@ -96,12 +89,20 @@ export default class KvDeleteModal extends Component {
         adapterOptions: { deleteType: this.deleteType, deleteVersions: this.args.secret.version },
       });
       this.flashMessages.success(
-        `Successfully ${this.flashMessageVerb} Version ${this.args.secret.version} of ${this.args.path}.`
+        `Successfully ${verbToPastTense(this.args.mode, 'past')} Version ${this.args.secret.version} of ${
+          this.args.path
+        }.`
       );
       this.modalOpen = false;
-      this.router.transitionTo('vault.cluster.secrets.backend.kv.secret');
+      this.router.transitionTo('vault.cluster.secrets.backend.kv.secret', {
+        queryParams: { version: this.args.secret.version },
+      });
     } catch (err) {
-      // ARG TODO handle in flash message.
+      this.flashMessages.danger(
+        `There was an issue ${verbToPastTense(this.args.mode, 'gerund')} Version ${
+          this.args.secret.version
+        } of ${this.args.path}. Error: ${err.message}`
+      );
       this.modalOpen = false;
     }
   }).drop())
