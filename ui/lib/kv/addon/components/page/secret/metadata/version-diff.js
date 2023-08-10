@@ -34,13 +34,6 @@ export default class KvVersionDiffComponent extends Component {
     this.createVisualDiff();
   }
 
-  get deactivated() {
-    const { currentVersion, versions } = this.args.metadata;
-    const { destroyed, deleted } = versions[currentVersion].destroyed;
-    if (!destroyed || !deleted) return '';
-    return destroyed ? 'destroyed' : 'deleted';
-  }
-
   get defaultRightSideVersion() {
     // unless the version is destroyed or deleted we return the version prior to the current version.
     const versionData = this.args.metadata.sortedVersions.find(
