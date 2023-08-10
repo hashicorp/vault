@@ -212,7 +212,7 @@ func (c *ServerCommand) Flags() *FlagSets {
 		Name:   "recovery",
 		Target: &c.flagRecovery,
 		Usage: "Enable recovery mode. In this mode, Vault is used to perform recovery actions." +
-			"Using a recovery operation token, \"sys/raw\" API can be used to manipulate the storage.",
+			"Using a recovery token, \"sys/raw\" API can be used to manipulate the storage.",
 	})
 
 	f.StringSliceVar(&StringSliceVar{
