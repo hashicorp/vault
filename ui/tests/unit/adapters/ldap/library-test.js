@@ -86,7 +86,7 @@ module('Unit | Adapter | ldap/library', function (hooks) {
       assert.ok('GET request made to correct endpoint when fetching check-out status');
     });
 
-    await this.adapter.fetchCheckOutStatus('ldap-test', 'test-library');
+    await this.adapter.fetchStatus('ldap-test', 'test-library');
   });
 
   test('it should make request to correct endpoint when checking out library', async function (assert) {
@@ -100,7 +100,7 @@ module('Unit | Adapter | ldap/library', function (hooks) {
       };
     });
 
-    await this.adapter.checkOutServiceAccounts('ldap-test', 'test-library', '1h');
+    await this.adapter.checkOutAccount('ldap-test', 'test-library', '1h');
   });
 
   test('it should make request to correct endpoint when checking in service accounts', async function (assert) {
@@ -120,6 +120,6 @@ module('Unit | Adapter | ldap/library', function (hooks) {
       };
     });
 
-    await this.adapter.checkInServiceAccounts('ldap-test', 'test-library', ['foo@bar.com']);
+    await this.adapter.checkInAccount('ldap-test', 'test-library', ['foo@bar.com']);
   });
 });
