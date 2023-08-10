@@ -9,7 +9,7 @@ import { tracked } from '@glimmer/tracking';
 import { task } from 'ember-concurrency';
 import { inject as service } from '@ember/service';
 import { assert } from '@ember/debug';
-import { verbToPastTense } from 'core/helpers/verb-to-past-tense';
+import { verbToPastTense } from 'core/helpers/verb-to-tense';
 
 /**
  * @module KvDeleteModal displays a button for a delete type and launches a the respective modal. All destroyRecord network requests are handled inside the component.
@@ -49,7 +49,11 @@ export default class KvDeleteModal extends Component {
   }
 
   get generateDeleteRadioOptions() {
-    const { isDeactivated, state } = this.args.metadata.currentSecret;
+    let isDeactivated;
+    this.args.secret.canReadMetadata
+      ? (isDeactivated = this.args.metadata?.currentSecret.isDeactivated)
+      : (isDeactivated = false);
+
     return [
       {
         key: 'delete-version',
@@ -64,7 +68,7 @@ export default class KvDeleteModal extends Component {
         description: 'This deletes the most recent version of the secret.',
         disabled: !this.args.secret.canDeleteLatestVersion || isDeactivated,
         tooltipMessage: isDeactivated
-          ? `The latest version of the secret is already ${state}.`
+          ? `The latest version of the secret is already ${this.args.metadata.secretState.state}.`
           : 'You do not have permission to delete the latest version.',
       },
     ];

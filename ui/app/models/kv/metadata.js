@@ -77,7 +77,7 @@ export default class KvSecretMetadataModel extends Model {
     return array.reverse();
   }
 
-  // helps in long logic statements for the status of a currentVersion
+  // helps in long logic statements for state of a currentVersion
   get currentSecret() {
     const currentVersionObject = this.versions[this.currentVersion];
     let state = 'created';
