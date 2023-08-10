@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package command
 
 import (
@@ -37,11 +40,11 @@ Usage: vault namespace patch [options] PATH
 
   Patch an existing child namespace by adding and removing custom-metadata (e.g. ns1/):
 
-      $ vault namespace patch ns1 -custom-metadata=foo=abc -remove-custom-metadata=bar
+      $ vault namespace patch -custom-metadata=foo=abc -remove-custom-metadata=bar ns1
 
   Patch an existing child namespace from a parent namespace (e.g. ns1/ns2/):
 
-      $ vault namespace patch -namespace=ns1 ns2 -custom-metadata=foo=abc
+      $ vault namespace patch -namespace=ns1 -custom-metadata=foo=abc ns2
 
 ` + c.Flags().Help()
 

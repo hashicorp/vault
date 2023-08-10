@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 //go:build !enterprise
 
 package vault
@@ -5,6 +8,7 @@ package vault
 import (
 	"context"
 	"sync"
+	"time"
 
 	"github.com/hashicorp/vault/helper/identity"
 	"github.com/hashicorp/vault/sdk/logical"
@@ -50,12 +54,12 @@ func getAuthRegisterFunc(c *Core) (RegisterAuthFunc, error) {
 	return c.RegisterAuth, nil
 }
 
-func getUserFailedLoginInfo(ctx context.Context, c *Core, userInfo FailedLoginUser) *FailedLoginInfo {
-	return c.GetUserFailedLoginInfo(ctx, userInfo)
+func getUserFailedLoginInfo(ctx context.Context, c *Core, userInfo FailedLoginUser) (*FailedLoginInfo, error) {
+	return c.LocalGetUserFailedLoginInfo(ctx, userInfo), nil
 }
 
-func (c *Core) updateUserFailedLoginInfo(ctx context.Context, userInfo FailedLoginUser, failedLoginInfo FailedLoginInfo) error {
-	return c.UpdateUserFailedLoginInfo(ctx, userInfo, failedLoginInfo)
+func updateUserFailedLoginInfo(ctx context.Context, c *Core, userInfo FailedLoginUser, failedLoginInfo *FailedLoginInfo, deleteEntry bool) error {
+	return c.LocalUpdateUserFailedLoginInfo(ctx, userInfo, failedLoginInfo, deleteEntry)
 }
 
 func possiblyForwardAliasCreation(ctx context.Context, c *Core, inErr error, auth *logical.Auth, entity *identity.Entity) (*identity.Entity, bool, error) {
@@ -79,4 +83,8 @@ func possiblyForwardSaveCachedAuthResponse(ctx context.Context, c *Core, respAut
 	}
 
 	return nil
+}
+
+func forwardCreateTokenRegisterAuth(ctx context.Context, c *Core, te *logical.TokenEntry, roleName string, renewable bool, periodToUse, explicitMaxTTLToUse time.Duration) (*logical.TokenEntry, error) {
+	return nil, nil
 }

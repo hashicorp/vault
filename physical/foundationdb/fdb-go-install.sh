@@ -1,4 +1,7 @@
 #!/bin/bash -eu
+# Copyright (c) HashiCorp, Inc.
+# SPDX-License-Identifier: MPL-2.0
+
 #
 # fdb-go-install.sh
 #

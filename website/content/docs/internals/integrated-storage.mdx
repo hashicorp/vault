@@ -4,7 +4,7 @@ page_title: Integrated Storage
 description: Learn about the integrated raft storage in Vault.
 ---
 
-# Integrated Storage
+# Integrated storage
 
 Vault supports several storage options for the durable storage of Vault's
 information. Each backend offers pros, cons, advantages, and trade-offs. For
@@ -15,7 +15,7 @@ As of Vault 1.4, an Integrated Storage option is offered. This storage backend
 does not rely on any third party systems; it implements high availability,
 supports Enterprise Replication features, and provides backup/restore workflows.
 
-## Consensus Protocol
+## Consensus protocol
 
 Vault's Integrated Storage uses a [consensus
 protocol](<https://en.wikipedia.org/wiki/Consensus_(computer_science)>) to provide
@@ -24,7 +24,7 @@ The consensus protocol is based on ["Raft: In search of an Understandable
 Consensus Algorithm"](https://raft.github.io/raft.pdf). For a visual explanation
 of Raft, see [The Secret Lives of Data](http://thesecretlivesofdata.com/raft).
 
-### Raft Protocol Overview
+### Raft protocol overview
 
 Raft is a consensus algorithm that is based on
 [Paxos](https://en.wikipedia.org/wiki/Paxos_%28computer_science%29). Compared
@@ -41,7 +41,7 @@ There are a few key terms to know when discussing Raft:
 
 - **Leader** - At any given time, the peer set elects a single node to be the leader.
 The leader is responsible for ingesting new log entries, replicating to followers,
-and managing when an entry is committed. The leader node is also the active Vault node and followers are standby nodes. Refer to the [High Availability](/docs/internals/high-availability#design-overview) document for more information.
+and managing when an entry is committed. The leader node is also the active Vault node and followers are standby nodes. Refer to the [High Availability](/vault/docs/internals/high-availability#design-overview) document for more information.
 
 - **Log** - An ordered sequence of entries (replicated log) to keep track of any cluster changes. The leader is responsible for _log replication_. When new data is written, for example, a new event creates a log entry. The leader then sends the new log entry to its followers. Any inconsistency within the replicated log entries will indicate an issue.
 
@@ -61,14 +61,14 @@ and managing when an entry is committed. The leader node is also the active Vaul
 - **Committed Entry** - An entry is considered _committed_ when it is durably stored
   on a quorum of nodes. An entry is applied once its committed.
 
-#### Node States
+#### Node states
 
 Raft nodes are always in one of three states: follower, candidate, or leader. All
 nodes initially start out as a follower. In this state, nodes can accept log entries
 from a leader and cast votes. If no entries are received for a period of time, nodes
 will self-promote to the candidate state. In the candidate state, nodes request votes from their peers. If a candidate receives a quorum of votes, then it is promoted to a leader. The leader must accept new log entries and replicate to all the other followers.
 
-#### Writing Logs
+#### Writing logs
 
 Once a cluster has a leader, it is able to accept new log entries. A client can
 request that a leader append a new log entry (from Raft's perspective, a log entry
@@ -79,7 +79,7 @@ is application specific; in Vault's case, we use
 [BoltDB](https://github.com/etcd-io/bbolt) to maintain a cluster state. Vault's writes
 are blocked until they are _committed_ and _applied_.
 
-#### Compacting Logs
+#### Compacting logs
 
 It would be undesirable to allow a replicated log to grow in an unbounded
 fashion. Raft provides a mechanism by which the current state is saved to 
@@ -103,11 +103,11 @@ or remove a node or to commit any additional log entries. This results in
 _unavailability_. At this point, manual intervention is required to remove
 either A or B and restart the remaining node in bootstrap mode.
 
-A Raft cluster of 3 nodes can tolerate a single node failure while a cluster
-of 5 can tolerate 2 node failures. The recommended configuration is to either
-run 3 or 5 Vault servers per cluster. This maximizes availability without
-greatly sacrificing performance. The [deployment table](#deployment-table) below
-summarizes the potential cluster size options and the fault tolerance of each.
+A Raft cluster of 3 nodes can tolerate a single node failure while a cluster of
+5 can tolerate 2 node failures. The recommended Vault production deployment is
+to run 5 Vault servers per cluster. See the [Minimum &
+Scaling](#minimums-scaling) and [Deployment Table](#deployment-table) to learn
+more about the failure tolerance using Integrated Storage.
 
 #### Performance
 
@@ -118,7 +118,7 @@ Thus, performance is bound by disk I/O and network latency.
 ### Raft in Vault
 
 When getting started, a single Vault server is
-[initialized](/docs/commands/operator/init/#operator-init). At this point, the
+[initialized](/vault/docs/commands/operator/init/#operator-init). At this point, the
 cluster is of size 1, which allows the node to self-elect as a leader. Once a
 leader is elected, other servers can be added to the peer set in a way that
 preserves consistency and safety.
@@ -138,15 +138,11 @@ forwarded to the leader.
 Similar to other storage backends, data that is written to the Raft log and FSM
 will be encrypted by Vault's barrier.
 
-Vault does not currently offer automated dead server cleanup. If you wish to
-decommission a node, or a node dies and must be replaced, the node must manually
-be removed from the cluster with the `remove peer` [command](/docs/commands/operator/raft#remove-peer).
-
-### Quorum Management
+### Quorum management
 
 #### Autopilot
 
-An [Autopilot feature](https://www.vaultproject.io/docs/concepts/integrated-storage/autopilot) 
+An [Autopilot feature](/vault/docs/concepts/integrated-storage/autopilot) 
 is available since 1.7.x & later versions that include configurable parameters 
 for when a node is treated as healthy before it's considered an eligible voter in the 
 quorum list. Other features which may be enabled include the ability to remove nodes 
@@ -164,17 +160,17 @@ counted as voters before they are capable of voting.
 
 As of Vault 1.7, a dead server cleanup capability is available. With this feature 
 enabled, unhealthy nodes are automatically removed from the Raft cluster without 
-manual operator intervention. This is enabled via the [Autopilot API](/api-docs/system/storage/raftautopilot).
+manual operator intervention. This is enabled via the [Autopilot API](/vault/api-docs/system/storage/raftautopilot).
 If you wish to decommission a node manually, this can be done with the 
-`remove peer` [command](/docs/commands/operator/raft#remove-peer).
+`remove peer` [command](/vault/docs/commands/operator/raft#remove-peer).
 
-#### Without Autopilot
+#### Without autopilot
 
 Older versions of Vault, 1.6.x & lower, as well as cases where Autopilot may be 
 disabled or misconfigured, behave differently.
 
 In scenarios involving those when a node joins a Raft cluster, it attempts to 
-catch up with the reset of the nodes through the data that it's replicating from 
+catch up with the rest of the nodes through the data that it's replicating from 
 the leader. While in this initial synchronisation state, the node cannot 
 vote but is counted for the purposes of quorum. If a number of new nodes join 
 the cluster simultaneously or at similar times, and thereby exceeding the failure
@@ -194,12 +190,12 @@ For this reason, we recommend ensuring new nodes have Raft indexes that are
 close to the leader before adding additional nodes. Raft indexes are visible via
 `vault status`.
 
-### Deployment Table
+### Deployment table
 
 Below is a table that shows quorum size and failure tolerance for various
-cluster sizes. The recommended deployment is either 3 or 5 servers. A single
-server deployment is _**highly**_ discouraged as data loss is inevitable in a
-failure scenario.
+cluster sizes. The recommended production deployment consists of 5 servers. A
+single server deployment is _**highly**_ discouraged as data loss is inevitable
+in a failure scenario.
 
 <table class="table table-bordered table-striped">
   <thead>
@@ -248,9 +244,9 @@ failure scenario.
   </tbody>
 </table>
 
-### Minimums & Scaling
+### Minimums & scaling
 
-The [Vault Reference Architecture](https://learn.hashicorp.com/tutorials/vault/raft-reference-architecture#recommended-architecture) 
+The [Vault Reference Architecture](/vault/tutorials/day-one-raft/raft-reference-architecture#recommended-architecture) 
 recommends a 5 node cluster to ensure a minimum failure tolerance of at least 2.
 
 It is good practise, wherever possible, to retain a failure tolerance of 2 or 

@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
 import BaseAdapter from './base';
 import { decamelize } from '@ember/string';
 import { getProperties } from '@ember/object';

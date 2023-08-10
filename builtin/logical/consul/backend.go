@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package consul
 
 import (
@@ -6,6 +9,8 @@ import (
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/logical"
 )
+
+const operationPrefixConsul = "consul"
 
 // ReportedVersion is used to report a specific version to Vault.
 var ReportedVersion = ""

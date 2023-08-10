@@ -1,12 +1,12 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
 import buildRoutes from 'ember-engines/routes';
 
 export default buildRoutes(function () {
   this.route('overview');
-  this.route('configuration', function () {
-    this.route('tidy');
-    this.route('create');
-    this.route('edit');
-  });
   this.route('roles', function () {
     this.route('index', { path: '/' });
     this.route('create');
@@ -27,6 +27,16 @@ export default buildRoutes(function () {
       this.route('edit');
       this.route('sign');
       this.route('cross-sign');
+      this.route('rotate-root');
+    });
+  });
+  this.route('keys', function () {
+    this.route('index', { path: '/' });
+    this.route('create');
+    this.route('import');
+    this.route('key', { path: '/:key_id' }, function () {
+      this.route('details');
+      this.route('edit');
     });
   });
   this.route('certificates', function () {
@@ -36,13 +46,16 @@ export default buildRoutes(function () {
       this.route('edit');
     });
   });
-  this.route('keys', function () {
+  this.route('tidy', function () {
+    this.route('index', { path: '/' });
+    this.route('auto', function () {
+      this.route('configure');
+    });
+    this.route('manual');
+  });
+  this.route('configuration', function () {
     this.route('index', { path: '/' });
     this.route('create');
-    this.route('import');
-    this.route('key', { path: '/:key_ref' }, function () {
-      this.route('details');
-      this.route('edit');
-    });
+    this.route('edit');
   });
 });

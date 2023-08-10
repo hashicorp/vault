@@ -171,7 +171,7 @@
   <InfoTableRow @label="Type" @value={{@key.type}} />
   <InfoTableRow
     @label="Auto-rotation period"
-    @value={{or (format-duration @key.autoRotatePeriod nullable=true) "Key will not be automatically rotated"}}
+    @value={{or (format-duration @key.autoRotatePeriod) "Key will not be automatically rotated"}}
   />
   <InfoTableRow @label="Deletion allowed" @value={{stringify @key.deletionAllowed}} />
 

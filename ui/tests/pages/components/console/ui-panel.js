@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
 import { text, triggerable, clickable, collection, fillable, value, isPresent } from 'ember-cli-page-object';
 import { getter } from 'ember-cli-page-object/macros';
 import { settled } from '@ember/test-helpers';

@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 //go:build !race
 
 package command
@@ -8,6 +11,8 @@ import (
 	"regexp"
 	"strings"
 	"testing"
+
+	"github.com/hashicorp/vault/sdk/helper/roottoken"
 
 	"github.com/hashicorp/vault/api"
 	"github.com/mitchellh/cli"
@@ -254,6 +259,83 @@ func TestOperatorRekeyCommand_Run(t *testing.T) {
 		}
 	})
 
+	t.Run("provide_arg_recovery_keys", func(t *testing.T) {
+		t.Parallel()
+
+		client, keys, closer := testVaultServerAutoUnseal(t)
+		defer closer()
+
+		// Initialize a rekey
+		status, err := client.Sys().RekeyRecoveryKeyInit(&api.RekeyInitRequest{
+			SecretShares:    1,
+			SecretThreshold: 1,
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+		nonce := status.Nonce
+
+		// Supply the first n-1 recovery keys
+		for _, key := range keys[:len(keys)-1] {
+			ui, cmd := testOperatorRekeyCommand(t)
+			cmd.client = client
+
+			code := cmd.Run([]string{
+				"-nonce", nonce,
+				"-target", "recovery",
+				key,
+			})
+			if exp := 0; code != exp {
+				t.Errorf("expected %d to be %d: %s", code, exp, ui.ErrorWriter.String())
+			}
+		}
+
+		ui, cmd := testOperatorRekeyCommand(t)
+		cmd.client = client
+
+		code := cmd.Run([]string{
+			"-nonce", nonce,
+			"-target", "recovery",
+			keys[len(keys)-1], // the last recovery key
+		})
+		if exp := 0; code != exp {
+			t.Errorf("expected %d to be %d: %s", code, exp, ui.ErrorWriter.String())
+		}
+
+		re := regexp.MustCompile(`Key 1: (.+)`)
+		output := ui.OutputWriter.String()
+		match := re.FindAllStringSubmatch(output, -1)
+		if len(match) < 1 || len(match[0]) < 2 {
+			t.Fatalf("bad match: %#v", match)
+		}
+		recoveryKey := match[0][1]
+
+		if strings.Contains(strings.ToLower(output), "unseal key") {
+			t.Fatalf(`output %s shouldn't contain "unseal key"`, output)
+		}
+
+		// verify that we can perform operations with the recovery key
+		// below we generate a root token using the recovery key
+		rootStatus, err := client.Sys().GenerateRootStatus()
+		if err != nil {
+			t.Fatal(err)
+		}
+		otp, err := roottoken.GenerateOTP(rootStatus.OTPLength)
+		if err != nil {
+			t.Fatal(err)
+		}
+		genRoot, err := client.Sys().GenerateRootInit(otp, "")
+		if err != nil {
+			t.Fatal(err)
+		}
+		r, err := client.Sys().GenerateRootUpdate(recoveryKey, genRoot.Nonce)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if !r.Complete {
+			t.Fatal("expected root update to be complete")
+		}
+	})
 	t.Run("provide_arg", func(t *testing.T) {
 		t.Parallel()
 
@@ -392,6 +474,94 @@ func TestOperatorRekeyCommand_Run(t *testing.T) {
 		}
 	})
 
+	t.Run("provide_stdin_recovery_keys", func(t *testing.T) {
+		t.Parallel()
+
+		client, keys, closer := testVaultServerAutoUnseal(t)
+		defer closer()
+
+		// Initialize a rekey
+		status, err := client.Sys().RekeyRecoveryKeyInit(&api.RekeyInitRequest{
+			SecretShares:    1,
+			SecretThreshold: 1,
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+		nonce := status.Nonce
+		for _, key := range keys[:len(keys)-1] {
+			stdinR, stdinW := io.Pipe()
+			go func() {
+				_, _ = stdinW.Write([]byte(key))
+				_ = stdinW.Close()
+			}()
+
+			ui, cmd := testOperatorRekeyCommand(t)
+			cmd.client = client
+			cmd.testStdin = stdinR
+
+			code := cmd.Run([]string{
+				"-target", "recovery",
+				"-nonce", nonce,
+				"-",
+			})
+			if exp := 0; code != exp {
+				t.Errorf("expected %d to be %d: %s", code, exp, ui.ErrorWriter.String())
+			}
+		}
+
+		stdinR, stdinW := io.Pipe()
+		go func() {
+			_, _ = stdinW.Write([]byte(keys[len(keys)-1])) // the last recovery key
+			_ = stdinW.Close()
+		}()
+
+		ui, cmd := testOperatorRekeyCommand(t)
+		cmd.client = client
+		cmd.testStdin = stdinR
+
+		code := cmd.Run([]string{
+			"-nonce", nonce,
+			"-target", "recovery",
+			"-",
+		})
+		if exp := 0; code != exp {
+			t.Errorf("expected %d to be %d: %s", code, exp, ui.ErrorWriter.String())
+		}
+
+		re := regexp.MustCompile(`Key 1: (.+)`)
+		output := ui.OutputWriter.String()
+		match := re.FindAllStringSubmatch(output, -1)
+		if len(match) < 1 || len(match[0]) < 2 {
+			t.Fatalf("bad match: %#v", match)
+		}
+		recoveryKey := match[0][1]
+
+		if strings.Contains(strings.ToLower(output), "unseal key") {
+			t.Fatalf(`output %s shouldn't contain "unseal key"`, output)
+		}
+		// verify that we can perform operations with the recovery key
+		// below we generate a root token using the recovery key
+		rootStatus, err := client.Sys().GenerateRootStatus()
+		if err != nil {
+			t.Fatal(err)
+		}
+		otp, err := roottoken.GenerateOTP(rootStatus.OTPLength)
+		if err != nil {
+			t.Fatal(err)
+		}
+		genRoot, err := client.Sys().GenerateRootInit(otp, "")
+		if err != nil {
+			t.Fatal(err)
+		}
+		r, err := client.Sys().GenerateRootUpdate(recoveryKey, genRoot.Nonce)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if !r.Complete {
+			t.Fatal("expected root update to be complete")
+		}
+	})
 	t.Run("backup", func(t *testing.T) {
 		t.Parallel()
 

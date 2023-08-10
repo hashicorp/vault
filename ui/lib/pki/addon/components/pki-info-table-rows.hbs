@@ -1,0 +1,26 @@
+{{#each @displayFields as |field|}}
+  {{#let (find-by "name" field @model.allFields) as |attr|}}
+    {{#let (get @model attr.name) as |value|}}
+      {{! only render if there's a value, unless it's the commonName or privateKey/Type }}
+      {{#if (or value (or (eq attr.name "commonName") (eq attr.name "privateKey") (eq attr.name "privateKeyType")))}}
+        <InfoTableRow
+          @label={{or attr.options.label (humanize (dasherize attr.name))}}
+          @value={{value}}
+          @addCopyButton={{or (eq attr.name "issuerId") (eq attr.name "keyId")}}
+        >
+          {{#if (and attr.options.masked value)}}
+            <MaskedInput @value={{value}} @displayOnly={{true}} @allowCopy={{true}} />
+          {{else if attr.options.detailLinkTo}}
+            <LinkTo @route={{attr.options.detailLinkTo}} @model={{value}}>{{value}}</LinkTo>
+          {{else if (or (eq attr.name "privateKey") (eq attr.name "privateKeyType"))}}
+            <span class="{{unless value 'tag'}}">{{or value "internal"}}</span>
+          {{else if attr.options.formatDate}}
+            {{date-format value "MMM d yyyy HH:mm:ss a zzzz"}}
+          {{else}}
+            {{value}}
+          {{/if}}
+        </InfoTableRow>
+      {{/if}}
+    {{/let}}
+  {{/let}}
+{{/each}}

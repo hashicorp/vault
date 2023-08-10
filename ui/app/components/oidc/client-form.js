@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
 import Component from '@glimmer/component';
 import { action } from '@ember/object';
 import { inject as service } from '@ember/service';
@@ -11,15 +16,13 @@ import { task } from 'ember-concurrency';
  * ```js
  * <OidcClientForm @model={{this.model}} />
  * ```
- * @callback onCancel
- * @callback onSave
  * @param {Object} model - oidc client model
- * @param {onCancel} onCancel - callback triggered when cancel button is clicked
- * @param {onSave} onSave - callback triggered on save success
+ * @callback onCancel - callback triggered when cancel button is clicked
+ * @callback onSave - callback triggered on save success
+ * @param {boolean} [isInline=false] - true when form is rendered within a modal
  */
 
 export default class OidcClientForm extends Component {
-  @service store;
   @service flashMessages;
   @tracked modelValidations;
   @tracked errorBanner;

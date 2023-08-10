@@ -1,13 +1,23 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package pki
 
 import (
 	"crypto/x509"
 	"crypto/x509/pkix"
 	"encoding/asn1"
+	"encoding/base64"
 	"fmt"
 	"math/big"
 	"testing"
 	"time"
+
+	"github.com/hashicorp/vault/sdk/helper/testhelpers/schema"
+
+	"github.com/hashicorp/vault/api"
+	vaulthttp "github.com/hashicorp/vault/http"
+	"github.com/hashicorp/vault/vault"
 
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/stretchr/testify/require"
@@ -50,6 +60,7 @@ func TestResignCrls_NormalCrl(t *testing.T) {
 		"format":      "pem",
 		"crls":        []string{crl1, crl2},
 	})
+	schema.ValidateResponse(t, schema.GetResponseSchema(t, b1.Route("issuer/default/resign-crls"), logical.UpdateOperation), resp, true)
 	requireSuccessNonNilResponse(t, resp, err)
 	requireFieldsSetInResp(t, resp, "crl")
 	pemCrl := resp.Data["crl"].(string)
@@ -217,6 +228,186 @@ func TestResignCrls_DeltaCrl(t *testing.T) {
 	require.NoError(t, err, "failed signature check of CRL")
 }
 
+func TestSignRevocationList(t *testing.T) {
+	t.Parallel()
+
+	coreConfig := &vault.CoreConfig{
+		LogicalBackends: map[string]logical.Factory{
+			"pki": Factory,
+		},
+	}
+	cluster := vault.NewTestCluster(t, coreConfig, &vault.TestClusterOptions{
+		HandlerFunc: vaulthttp.Handler,
+	})
+	cluster.Start()
+	defer cluster.Cleanup()
+	client := cluster.Cores[0].Client
+
+	// Mount PKI, use this form of backend so our request is closer to reality (json parsed)
+	err := client.Sys().Mount("pki", &api.MountInput{
+		Type: "pki",
+		Config: api.MountConfigInput{
+			DefaultLeaseTTL: "16h",
+			MaxLeaseTTL:     "60h",
+		},
+	})
+	require.NoError(t, err)
+
+	// Generate internal CA.
+	resp, err := client.Logical().Write("pki/root/generate/internal", map[string]interface{}{
+		"ttl":         "40h",
+		"common_name": "myvault.com",
+	})
+	require.NoError(t, err)
+	caCert := parseCert(t, resp.Data["certificate"].(string))
+
+	resp, err = client.Logical().Write("pki/issuer/default/sign-revocation-list", map[string]interface{}{
+		"crl_number":  "1",
+		"next_update": "12h",
+		"format":      "pem",
+		"revoked_certs": []map[string]interface{}{
+			{
+				"serial_number":   "37:60:16:e4:85:d5:96:38:3a:ed:31:06:8d:ed:7a:46:d4:22:63:d8",
+				"revocation_time": "1668614976",
+				"extensions":      []map[string]interface{}{},
+			},
+			{
+				"serial_number":   "27:03:89:76:5a:d4:d8:19:48:47:ca:96:db:6f:27:86:31:92:9f:82",
+				"revocation_time": "2022-11-16T16:09:36.739592Z",
+			},
+			{
+				"serial_number":   "27:03:89:76:5a:d4:d8:19:48:47:ca:96:db:6f:27:86:31:92:9f:81",
+				"revocation_time": "2022-10-16T16:09:36.739592Z",
+				"extensions": []map[string]interface{}{
+					{
+						"id":       "2.5.29.100",
+						"critical": "true",
+						"value":    "aGVsbG8=", // "hello" base64 encoded
+					},
+					{
+						"id":       "2.5.29.101",
+						"critical": "false",
+						"value":    "Ynll", // "bye" base64 encoded
+					},
+				},
+			},
+		},
+		"extensions": []map[string]interface{}{
+			{
+				"id":       "2.5.29.200",
+				"critical": "true",
+				"value":    "aGVsbG8=", // "hello" base64 encoded
+			},
+			{
+				"id":       "2.5.29.201",
+				"critical": "false",
+				"value":    "Ynll", // "bye" base64 encoded
+			},
+		},
+	})
+	require.NoError(t, err)
+	pemCrl := resp.Data["crl"].(string)
+	crl, err := decodePemCrl(pemCrl)
+	require.NoError(t, err, "failed decoding CRL")
+	serials := extractSerialsFromCrl(t, crl)
+	require.Contains(t, serials, "37:60:16:e4:85:d5:96:38:3a:ed:31:06:8d:ed:7a:46:d4:22:63:d8")
+	require.Contains(t, serials, "27:03:89:76:5a:d4:d8:19:48:47:ca:96:db:6f:27:86:31:92:9f:82")
+	require.Contains(t, serials, "27:03:89:76:5a:d4:d8:19:48:47:ca:96:db:6f:27:86:31:92:9f:81")
+	require.Equal(t, 3, len(serials), "expected 3 serials within CRL")
+
+	// Make sure extensions on serials match what we expect.
+	require.Equal(t, 0, len(crl.RevokedCertificates[0].Extensions), "Expected no extensions on 1st serial")
+	require.Equal(t, 0, len(crl.RevokedCertificates[1].Extensions), "Expected no extensions on 2nd serial")
+	require.Equal(t, 2, len(crl.RevokedCertificates[2].Extensions), "Expected 2 extensions on 3 serial")
+	require.Equal(t, "2.5.29.100", crl.RevokedCertificates[2].Extensions[0].Id.String())
+	require.True(t, crl.RevokedCertificates[2].Extensions[0].Critical)
+	require.Equal(t, []byte("hello"), crl.RevokedCertificates[2].Extensions[0].Value)
+
+	require.Equal(t, "2.5.29.101", crl.RevokedCertificates[2].Extensions[1].Id.String())
+	require.False(t, crl.RevokedCertificates[2].Extensions[1].Critical)
+	require.Equal(t, []byte("bye"), crl.RevokedCertificates[2].Extensions[1].Value)
+
+	// CRL Number and times
+	require.Equal(t, big.NewInt(int64(1)), crl.Number)
+	require.Equal(t, crl.ThisUpdate.Add(12*time.Hour), crl.NextUpdate)
+
+	// Verify top level extensions are present
+	extensions := crl.Extensions
+	requireExtensionOid(t, []int{2, 5, 29, 20}, extensions)  // CRL Number Extension
+	requireExtensionOid(t, []int{2, 5, 29, 35}, extensions)  // akidOid
+	requireExtensionOid(t, []int{2, 5, 29, 200}, extensions) // Added value from param
+	requireExtensionOid(t, []int{2, 5, 29, 201}, extensions) // Added value from param
+	require.Equal(t, 4, len(extensions))
+
+	// Signature
+	err = crl.CheckSignatureFrom(caCert)
+	require.NoError(t, err, "failed signature check of CRL")
+}
+
+func TestSignRevocationList_NoRevokedCerts(t *testing.T) {
+	t.Parallel()
+	b, s := CreateBackendWithStorage(t)
+	resp, err := CBWrite(b, s, "root/generate/internal", map[string]interface{}{
+		"common_name": "test.com",
+	})
+	requireSuccessNonNilResponse(t, resp, err)
+
+	resp, err = CBWrite(b, s, "issuer/default/sign-revocation-list", map[string]interface{}{
+		"crl_number":  "10000",
+		"next_update": "12h",
+		"format":      "pem",
+	})
+	schema.ValidateResponse(t, schema.GetResponseSchema(t, b.Route("issuer/default/sign-revocation-list"), logical.UpdateOperation), resp, true)
+	requireSuccessNonNilResponse(t, resp, err)
+	requireFieldsSetInResp(t, resp, "crl")
+	pemCrl := resp.Data["crl"].(string)
+	crl, err := decodePemCrl(pemCrl)
+	require.NoError(t, err, "failed decoding CRL")
+
+	serials := extractSerialsFromCrl(t, crl)
+	require.Equal(t, 0, len(serials), "no serials were expected in CRL")
+
+	require.Equal(t, big.NewInt(int64(10000)), crl.Number)
+	require.Equal(t, crl.ThisUpdate.Add(12*time.Hour), crl.NextUpdate)
+}
+
+func TestSignRevocationList_ReservedExtensions(t *testing.T) {
+	t.Parallel()
+
+	reservedOids := []asn1.ObjectIdentifier{
+		akOid, deltaCrlOid, crlNumOid,
+	}
+	// Validate there isn't copy/paste issues with our constants...
+	require.Equal(t, asn1.ObjectIdentifier{2, 5, 29, 27}, deltaCrlOid) // Delta CRL Extension
+	require.Equal(t, asn1.ObjectIdentifier{2, 5, 29, 20}, crlNumOid)   // CRL Number Extension
+	require.Equal(t, asn1.ObjectIdentifier{2, 5, 29, 35}, akOid)       // akidOid
+
+	for _, reservedOid := range reservedOids {
+		t.Run(reservedOid.String(), func(t *testing.T) {
+			b, s := CreateBackendWithStorage(t)
+			resp, err := CBWrite(b, s, "root/generate/internal", map[string]interface{}{
+				"common_name": "test.com",
+			})
+			requireSuccessNonNilResponse(t, resp, err)
+
+			resp, err = CBWrite(b, s, "issuer/default/sign-revocation-list", map[string]interface{}{
+				"crl_number":  "1",
+				"next_update": "12h",
+				"format":      "pem",
+				"extensions": []map[string]interface{}{
+					{
+						"id":       reservedOid.String(),
+						"critical": "false",
+						"value":    base64.StdEncoding.EncodeToString([]byte("hello")),
+					},
+				},
+			})
+
+			require.ErrorContains(t, err, "is reserved")
+		})
+	}
+}
+
 func setupResignCrlMounts(t *testing.T, b1 *backend, s1 logical.Storage, b2 *backend, s2 logical.Storage) (*x509.Certificate, string, string, string, string) {
 	t.Helper()
 
@@ -242,14 +433,14 @@ func setupResignCrlMounts(t *testing.T, b1 *backend, s1 logical.Storage, b2 *bac
 		"allow_subdomains": "true",
 		"max_ttl":          "1h",
 	})
-	requireSuccessNilResponse(t, resp, err, "error setting up pki role on backend 1")
+	requireSuccessNonNilResponse(t, resp, err, "error setting up pki role on backend 1")
 
 	resp, err = CBWrite(b2, s2, "roles/test", map[string]interface{}{
 		"allowed_domains":  "test.com",
 		"allow_subdomains": "true",
 		"max_ttl":          "1h",
 	})
-	requireSuccessNilResponse(t, resp, err, "error setting up pki role on backend 2")
+	requireSuccessNonNilResponse(t, resp, err, "error setting up pki role on backend 2")
 
 	// Issue and revoke a cert in backend 1
 	resp, err = CBWrite(b1, s1, "issue/test", map[string]interface{}{
@@ -306,6 +497,8 @@ func requireExtensionOid(t *testing.T, identifier asn1.ObjectIdentifier, extensi
 }
 
 func extractSerialsFromCrl(t *testing.T, crl *x509.RevocationList) map[string]time.Time {
+	t.Helper()
+
 	serials := map[string]time.Time{}
 
 	for _, revokedCert := range crl.RevokedCertificates {

@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package healthcheck
 
 import (
@@ -13,12 +16,14 @@ type HardwareBackedRoot struct {
 
 	UnsupportedVersion bool
 
+	FetchIssues  map[string]*PathFetch
 	IssuerKeyMap map[string]string
 	KeyIsManaged map[string]string
 }
 
 func NewHardwareBackedRootCheck() Check {
 	return &HardwareBackedRoot{
+		FetchIssues:  make(map[string]*PathFetch),
 		IssuerKeyMap: make(map[string]string),
 		KeyIsManaged: make(map[string]string),
 	}
@@ -49,7 +54,7 @@ func (h *HardwareBackedRoot) LoadConfig(config map[string]interface{}) error {
 }
 
 func (h *HardwareBackedRoot) FetchResources(e *Executor) error {
-	exit, _, issuers, err := pkiFetchIssuers(e, func() {
+	exit, _, issuers, err := pkiFetchIssuersList(e, func() {
 		h.UnsupportedVersion = true
 	})
 	if exit || err != nil {
@@ -64,6 +69,7 @@ func (h *HardwareBackedRoot) FetchResources(e *Executor) error {
 			if err != nil {
 				return err
 			}
+			h.FetchIssues[issuer] = ret
 			continue
 		}
 
@@ -83,13 +89,15 @@ func (h *HardwareBackedRoot) FetchResources(e *Executor) error {
 		}
 
 		h.IssuerKeyMap[issuer] = keyId
-		skip, _, keyEntry, err := pkiFetchKeyEntry(e, keyId, func() {
+		skip, ret, keyEntry, err := pkiFetchKeyEntry(e, keyId, func() {
 			h.UnsupportedVersion = true
 		})
 		if skip || err != nil || keyEntry == nil {
 			if err != nil {
 				return err
 			}
+
+			h.FetchIssues[issuer] = ret
 			continue
 		}
 
@@ -112,11 +120,30 @@ func (h *HardwareBackedRoot) Evaluate(e *Executor) (results []*Result, err error
 		return []*Result{&ret}, nil
 	}
 
+	for issuer, fetchPath := range h.FetchIssues {
+		if fetchPath != nil && fetchPath.IsSecretPermissionsError() {
+			delete(h.IssuerKeyMap, issuer)
+			ret := Result{
+				Status:   ResultInsufficientPermissions,
+				Endpoint: fetchPath.Path,
+				Message:  "Without this information, this health check is unable to function.",
+			}
+
+			if e.Client.Token() == "" {
+				ret.Message = "No token available so unable for the endpoint for this mount. " + ret.Message
+			} else {
+				ret.Message = "This token lacks permission for the endpoint for this mount. " + ret.Message
+			}
+
+			results = append(results, &ret)
+		}
+	}
+
 	for name, keyId := range h.IssuerKeyMap {
 		var ret Result
 		ret.Status = ResultInformational
 		ret.Endpoint = "/{{mount}}/issuer/" + name
-		ret.Message = "Root issuer was created using Vault-backed software keys; for added safety of long-lived, important root CAs, it is suggested to use a HSM or KSM Managed Key to store key material for this issuer."
+		ret.Message = "Root issuer was created using Vault-backed software keys; for added safety of long-lived, important root CAs, you may wish to consider using a HSM or KSM Managed Key to store key material for this issuer."
 
 		uuid, present := h.KeyIsManaged[keyId]
 		if present {

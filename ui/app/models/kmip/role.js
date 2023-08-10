@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
 import Model, { attr } from '@ember-data/model';
 import { computed } from '@ember/object';
 import fieldToAttrs, { expandAttributeMeta } from 'vault/utils/field-to-attrs';
@@ -58,7 +63,7 @@ const ModelExport = Model.extend(COMPUTEDS, {
     ];
 
     const attributes = ['operationAddAttribute', 'operationGetAttributes'];
-    const server = ['operationDiscoverVersion'];
+    const server = ['operationDiscoverVersions'];
     const others = this.operationFieldsWithoutSpecial
       .slice()
       .removeObjects(objects.concat(attributes, server));

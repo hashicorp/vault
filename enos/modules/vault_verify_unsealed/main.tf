@@ -1,3 +1,6 @@
+# Copyright (c) HashiCorp, Inc.
+# SPDX-License-Identifier: MPL-2.0
+
 terraform {
   required_providers {
     enos = {
@@ -30,11 +33,6 @@ variable "vault_instances" {
   description = "The vault cluster instances that were created"
 }
 
-variable "vault_root_token" {
-  type        = string
-  description = "The vault root token"
-}
-
 locals {
   instances = {
     for idx in range(var.vault_instance_count) : idx => {
@@ -51,7 +49,6 @@ resource "enos_remote_exec" "verify_node_unsealed" {
     vault_cluster_addr      = "${each.value.private_ip}:${var.vault_cluster_addr_port}"
     vault_install_dir       = var.vault_install_dir
     vault_local_binary_path = "${var.vault_install_dir}/vault"
-    vault_token             = var.vault_root_token
   })
 
   transport = {
