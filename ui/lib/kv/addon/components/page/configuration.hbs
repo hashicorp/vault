@@ -1,24 +1,33 @@
-<KvPageHeader @breadcrumbs={{@breadcrumbs}} @isEngineView={{true}} @pageTitle={{@config.id}}>
+<KvPageHeader @breadcrumbs={{@breadcrumbs}} @isEngineView={{true}} @pageTitle={{@backend.id}}>
   <:tabLinks>
     <LinkTo @route="list" data-test-secrets-tab="Secrets">Secrets</LinkTo>
     <LinkTo @route="configuration" data-test-secrets-tab="Configuration">Configuration</LinkTo>
   </:tabLinks>
 </KvPageHeader>
 
+{{! engine configuration }}
 <div class="box is-fullwidth is-sideless is-paddingless is-marginless">
-  {{#each @config.attrs as |attr|}}
-    {{#if (eq attr.type "object")}}
+  {{#each @engineConfig.allFields as |attr|}}
+    <InfoTableRow
+      @alwaysRender={{true}}
+      @label={{or attr.options.label (to-label attr.name)}}
+      @value={{if
+        (eq attr.name "deleteVersionAfter")
+        (or @engineConfig.isNeverDelete (format-duration @engineConfig.deleteVersionAfter))
+        (get @engineConfig attr.name)
+      }}
+    />
+  {{/each}}
+</div>
+
+{{! mount configuration }}
+<div class="box is-fullwidth is-sideless is-paddingless is-marginless">
+  {{#each @mountConfig.attrs as |attr|}}
+    {{#if (not (includes attr.name @engineConfig.displayFields))}}
       <InfoTableRow
-        @alwaysRender={{not (is-empty-value (get @config attr.name))}}
-        @label={{or attr.options.label (to-label attr.name)}}
-        @value={{stringify (get @config (or attr.options.fieldValue attr.name))}}
-      />
-    {{else}}
-      <InfoTableRow
-        @alwaysRender={{and (not (is-empty-value (get @config attr.name))) (not-eq attr.name "version")}}
         @formatTtl={{eq attr.options.editType "ttl"}}
         @label={{or attr.options.label (to-label attr.name)}}
-        @value={{get @config (or attr.options.fieldValue attr.name)}}
+        @value={{get @mountConfig attr.name}}
       />
     {{/if}}
   {{/each}}
