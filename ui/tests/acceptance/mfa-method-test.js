@@ -1,8 +1,12 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
 import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
 import { click, currentRouteName, currentURL, fillIn, visit } from '@ember/test-helpers';
 import authPage from 'vault/tests/pages/auth';
-import logout from 'vault/tests/pages/logout';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 import ENV from 'vault/config/environment';
 import { Response } from 'miragejs';
@@ -22,7 +26,6 @@ module('Acceptance | mfa-method', function (hooks) {
         methods.addObjects(this.server.db[`mfa${type}Methods`].where({}));
         return methods;
       }, []);
-    await logout.visit();
     return authPage.login();
   });
   hooks.after(function () {
@@ -219,7 +222,7 @@ module('Acceptance | mfa-method', function (hooks) {
     );
     await click('[data-test-tab="enforcements"]');
     assert.dom('[data-test-list-item]').hasText('bar', 'Enforcement is listed in method view');
-    await click('[data-test-link="mfa"]');
+    await click('[data-test-sidebar-nav-link="Multi-Factor Authentication"]');
     await click('[data-test-tab="enforcements"]');
     assert.dom('[data-test-list-item="bar"]').hasText('bar', 'Enforcement is listed in enforcements view');
     await click('[data-test-list-item="bar"]');
@@ -264,7 +267,7 @@ module('Acceptance | mfa-method', function (hooks) {
           .hasValue(model.period.toString(), 'Period form field is populated with model value');
         assert.dom('[data-test-select="ttl-unit"]').hasValue('s', 'Correct time unit is shown for period');
       } else if (key === 'algorithm' || key === 'digits' || key === 'skew') {
-        let radioElem = this.element.querySelector(`input[name=${key}]:checked`);
+        const radioElem = this.element.querySelector(`input[name=${key}]:checked`);
         assert
           .dom(radioElem)
           .hasValue(model[key].toString(), `${key} form field is populated with model value`);
@@ -276,7 +279,7 @@ module('Acceptance | mfa-method', function (hooks) {
     });
 
     await fillIn('[data-test-input="issuer"]', 'foo');
-    let SHA1radioBtn = this.element.querySelectorAll('input[name=algorithm]')[0];
+    const SHA1radioBtn = this.element.querySelectorAll('input[name=algorithm]')[0];
     await click(SHA1radioBtn);
     await fillIn('[data-test-input="max_validation_attempts"]', 10);
     await click('[data-test-mfa-method-save]');
@@ -288,5 +291,17 @@ module('Acceptance | mfa-method', function (hooks) {
     assert
       .dom('[data-test-row-value="Max validation attempts"]')
       .hasText('10', 'Max validation attempts field is updated');
+  });
+
+  test('it should navigate to enforcements create route from method enforcement tab', async function (assert) {
+    await visit('/vault/access/mfa/methods');
+    await click('[data-test-mfa-method-list-item]');
+    await click('[data-test-tab="enforcements"]');
+    await click('[data-test-enforcement-create]');
+    assert.strictEqual(
+      currentRouteName(),
+      'vault.cluster.access.mfa.enforcements.create',
+      'Navigates to enforcements create route from toolbar action'
+    );
   });
 });

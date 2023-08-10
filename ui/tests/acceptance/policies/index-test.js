@@ -1,4 +1,9 @@
-import { currentURL, currentRouteName, settled } from '@ember/test-helpers';
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
+import { currentURL, currentRouteName, settled, find, findAll, click } from '@ember/test-helpers';
 import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
 import { create } from 'ember-cli-page-object';
@@ -20,8 +25,13 @@ module('Acceptance | policies/acl', function (hooks) {
     await page.visit({ type: 'acl' });
     await settled();
     assert.strictEqual(currentURL(), '/vault/policies/acl');
-    assert.ok(page.findPolicyByName('root'), 'root policy shown in the list');
     assert.ok(page.findPolicyByName('default'), 'default policy shown in the list');
+    if (find('nav.pagination')) {
+      // Root ACL is always last in the list
+      const paginationLinks = findAll('.pagination-link');
+      await click(paginationLinks[paginationLinks.length - 1]);
+    }
+    assert.ok(page.findPolicyByName('root'), 'root policy shown in the list');
   });
 
   test('it navigates to show when clicking on the link', async function (assert) {
@@ -35,12 +45,12 @@ module('Acceptance | policies/acl', function (hooks) {
 
   test('it allows deletion of policies with dots in names', async function (assert) {
     const POLICY = 'path "*" { capabilities = ["list"]}';
-    let policyName = 'list.policy';
+    const policyName = 'list.policy';
     await consoleComponent.runCommands([`write sys/policies/acl/${policyName} policy=${btoa(POLICY)}`]);
     await settled();
     await page.visit({ type: 'acl' });
     await settled();
-    let policy = page.row.filterBy('name', policyName)[0];
+    const policy = page.row.filterBy('name', policyName)[0];
     assert.ok(policy, 'policy is shown in the list');
     await policy.menu();
     await settled();

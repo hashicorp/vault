@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
 import { belongsTo, attr } from '@ember-data/model';
 import { alias } from '@ember/object/computed';
 import { computed } from '@ember/object';
@@ -7,7 +12,7 @@ import identityCapabilities from 'vault/macros/identity-capabilities';
 
 export default IdentityModel.extend({
   formFields: computed('type', function () {
-    let fields = ['name', 'type', 'policies', 'metadata'];
+    const fields = ['name', 'type', 'policies', 'metadata'];
     if (this.type === 'internal') {
       return fields.concat(['memberGroupIds', 'memberEntityIds']);
     }
@@ -34,11 +39,8 @@ export default IdentityModel.extend({
     editType: 'kv',
   }),
   policies: attr({
-    label: 'Policies',
-    editType: 'searchSelect',
+    editType: 'yield',
     isSectionHeader: true,
-    fallbackComponent: 'string-list',
-    models: ['policy/acl', 'policy/rgp'],
   }),
   memberGroupIds: attr({
     label: 'Member Group IDs',
@@ -67,13 +69,14 @@ export default IdentityModel.extend({
     'memberGroupIds',
     'memberGroupIds.[]',
     function () {
-      let { memberEntityIds, memberGroupIds } = this;
-      let numEntities = (memberEntityIds && memberEntityIds.length) || 0;
-      let numGroups = (memberGroupIds && memberGroupIds.length) || 0;
+      const { memberEntityIds, memberGroupIds } = this;
+      const numEntities = (memberEntityIds && memberEntityIds.length) || 0;
+      const numGroups = (memberGroupIds && memberGroupIds.length) || 0;
       return numEntities + numGroups > 0;
     }
   ),
-
+  policyPath: lazyCapabilities(apiPath`sys/policies`),
+  canCreatePolicies: alias('policyPath.canCreate'),
   alias: belongsTo('identity/group-alias', { async: false, readOnly: true }),
   updatePath: identityCapabilities(),
   canDelete: alias('updatePath.canDelete'),
@@ -81,8 +84,8 @@ export default IdentityModel.extend({
 
   aliasPath: lazyCapabilities(apiPath`identity/group-alias`),
   canAddAlias: computed('aliasPath.canCreate', 'type', 'alias', function () {
-    let type = this.type;
-    let alias = this.alias;
+    const type = this.type;
+    const alias = this.alias;
     // internal groups can't have aliases, and external groups can only have one
     if (type === 'internal' || alias) {
       return false;

@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
 import Component from '@glimmer/component';
 import { action } from '@ember/object';
 import { inject as service } from '@ember/service';
@@ -34,7 +39,7 @@ export default class OidcProviderForm extends Component {
   // function passed to search select
   renderInfoTooltip(selection, dropdownOptions) {
     // if a client has been deleted it will not exist in dropdownOptions (response from search select's query)
-    let clientExists = !!dropdownOptions.findBy('clientId', selection);
+    const clientExists = !!dropdownOptions.findBy('clientId', selection);
     return !clientExists ? 'The application associated with this client_id no longer exists' : false;
   }
 

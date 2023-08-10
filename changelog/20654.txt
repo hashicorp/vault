@@ -1,0 +1,3 @@
+```release-note:change
+secrets/pki: Warning when issuing leafs from CSRs with basic constraints. In the future, issuance of non-CA leaf certs from CSRs with asserted IsCA Basic Constraints will be prohibited.
+```

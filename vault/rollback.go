@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package vault
 
 import (
@@ -40,11 +43,13 @@ type RollbackManager struct {
 	inflight     map[string]*rollbackState
 	inflightLock sync.RWMutex
 
-	doneCh       chan struct{}
-	shutdown     bool
-	shutdownCh   chan struct{}
-	shutdownLock sync.Mutex
-	quitContext  context.Context
+	doneCh          chan struct{}
+	shutdown        bool
+	shutdownCh      chan struct{}
+	shutdownLock    sync.Mutex
+	stopTicker      chan struct{}
+	tickerIsStopped bool
+	quitContext     context.Context
 
 	core *Core
 }
@@ -67,6 +72,7 @@ func NewRollbackManager(ctx context.Context, logger log.Logger, backendsFunc fun
 		inflight:    make(map[string]*rollbackState),
 		doneCh:      make(chan struct{}),
 		shutdownCh:  make(chan struct{}),
+		stopTicker:  make(chan struct{}),
 		quitContext: ctx,
 		core:        core,
 	}
@@ -91,10 +97,24 @@ func (m *RollbackManager) Stop() {
 	m.inflightAll.Wait()
 }
 
+// StopTicker stops the automatic Rollback manager's ticker, causing us
+// to not do automatic rollbacks. This is useful for testing plugin's
+// periodic function's behavior, without trying to race against the
+// rollback manager proper.
+//
+// THIS SHOULD ONLY BE CALLED FROM TEST HELPERS.
+func (m *RollbackManager) StopTicker() {
+	if !m.tickerIsStopped {
+		close(m.stopTicker)
+		m.tickerIsStopped = true
+	}
+}
+
 // run is a long running routine to periodically invoke rollback
 func (m *RollbackManager) run() {
 	m.logger.Info("starting rollback manager")
 	tick := time.NewTicker(m.period)
+	logTestStopOnce := false
 	defer tick.Stop()
 	defer close(m.doneCh)
 	for {
@@ -105,6 +125,13 @@ func (m *RollbackManager) run() {
 		case <-m.shutdownCh:
 			m.logger.Info("stopping rollback manager")
 			return
+
+		case <-m.stopTicker:
+			if !logTestStopOnce {
+				m.logger.Info("stopping rollback manager ticker for tests")
+				logTestStopOnce = true
+			}
+			tick.Stop()
 		}
 	}
 }
@@ -296,7 +323,6 @@ func (c *Core) startRollback() error {
 		return ret
 	}
 	rollbackLogger := c.baseLogger.Named("rollback")
-	c.AddLogger(rollbackLogger)
 	c.rollback = NewRollbackManager(c.activeContext, rollbackLogger, backendsFunc, c.router, c)
 	c.rollback.Start()
 	return nil

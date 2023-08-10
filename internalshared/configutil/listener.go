@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package configutil
 
 import (
@@ -44,6 +47,7 @@ type Listener struct {
 	Type       string
 	Purpose    []string    `hcl:"-"`
 	PurposeRaw interface{} `hcl:"purpose"`
+	Role       string      `hcl:"role"`
 
 	Address                 string        `hcl:"address"`
 	ClusterAddress          string        `hcl:"cluster_address"`
@@ -96,6 +100,8 @@ type Listener struct {
 
 	AgentAPI *AgentAPI `hcl:"agent_api"`
 
+	ProxyAPI *ProxyAPI `hcl:"proxy_api"`
+
 	Telemetry              ListenerTelemetry              `hcl:"telemetry"`
 	Profiling              ListenerProfiling              `hcl:"profiling"`
 	InFlightRequestLogging ListenerInFlightRequestLogging `hcl:"inflight_requests_logging"`
@@ -116,6 +122,11 @@ type Listener struct {
 
 // AgentAPI allows users to select which parts of the Agent API they want enabled.
 type AgentAPI struct {
+	EnableQuit bool `hcl:"enable_quit"`
+}
+
+// ProxyAPI allows users to select which parts of the Vault Proxy API they want enabled.
+type ProxyAPI struct {
 	EnableQuit bool `hcl:"enable_quit"`
 }
 
@@ -181,6 +192,13 @@ func ParseListeners(result *SharedConfig, list *ast.ObjectList) error {
 				}
 
 				l.PurposeRaw = nil
+			}
+
+			switch l.Role {
+			case "default", "metrics_only", "":
+				result.found(l.Type, l.Type)
+			default:
+				return multierror.Prefix(fmt.Errorf("unsupported listener role %q", l.Role), fmt.Sprintf("listeners.%d:", i))
 			}
 		}
 

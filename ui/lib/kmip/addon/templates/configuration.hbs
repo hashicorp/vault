@@ -2,12 +2,15 @@
 <Toolbar>
   <ToolbarActions>
     {{#if this.model}}
-      <ToolbarDownloadButton
-        @actionText="Download CA cert"
-        @extension="pem"
+      <DownloadButton
+        class="toolbar-link"
         @filename={{concat this.model.ca.id "-ca"}}
         @data={{this.model.ca.caPem}}
-      />
+        @extension="pem"
+      >
+        Download CA cert
+        <Chevron @isButton={{true}} />
+      </DownloadButton>
     {{/if}}
     <ToolbarLink @route="configure" data-test-kmip-link-configure>
       Configure

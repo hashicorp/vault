@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
 import { resolve } from 'rsvp';
 import EmberObject from '@ember/object';
 import { module, test } from 'qunit';
@@ -18,7 +23,7 @@ module('Integration | Component | identity/item details', function (hooks) {
   });
 
   test('it renders the disabled warning', async function (assert) {
-    let model = EmberObject.create({
+    const model = EmberObject.create({
       save() {
         return resolve();
       },
@@ -35,18 +40,18 @@ module('Integration | Component | identity/item details', function (hooks) {
   });
 
   test('it does not render the button if canEdit is false', async function (assert) {
-    let model = EmberObject.create({
+    const model = EmberObject.create({
       disabled: true,
     });
 
     this.set('model', model);
     await render(hbs`{{identity/item-details model=this.model}}`);
     assert.dom('[data-test-disabled-warning]').exists('shows the warning banner');
-    assert.dom('[data-test-enable]').doesNotExist('does not show the enable button');
+    assert.dom('[data-test-enable-identity]').doesNotExist('does not show the enable button');
   });
 
   test('it does not render the banner when item is enabled', async function (assert) {
-    let model = EmberObject.create();
+    const model = EmberObject.create();
     this.set('model', model);
 
     await render(hbs`{{identity/item-details model=this.model}}`);

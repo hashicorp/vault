@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
 import Pretender from 'pretender';
 import { module, test } from 'qunit';
 import { setupTest } from 'ember-qunit';
@@ -20,9 +25,9 @@ module('Unit | Adapter | identity/entity-merge', function (hooks) {
 
   test(`entity-merge#createRecord`, function (assert) {
     assert.expect(2);
-    let adapter = this.owner.lookup('adapter:identity/entity-merge');
+    const adapter = this.owner.lookup('adapter:identity/entity-merge');
     adapter.createRecord(storeMVP, { modelName: 'identity/entity-merge' }, { attr: (x) => x });
-    let { url, method } = this.server.handledRequests[0];
+    const { url, method } = this.server.handledRequests[0];
     assert.strictEqual(url, `/v1/identity/entity/merge`, ` calls the correct url`);
     assert.strictEqual(method, 'POST', `uses the correct http verb: POST`);
   });

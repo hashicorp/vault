@@ -5,7 +5,10 @@
         <div class="box is-shadowless is-flex-v-centered">
           <LogoEdition />
         </div>
-        <AlertBanner @type="danger" @title={{this.model.error.title}} @message={{this.model.error.message}} />
+        <Hds::Alert @type="inline" @color="critical" class="has-bottom-margin-s" as |A|>
+          <A.Title>{{this.model.error.title}}</A.Title>
+          <A.Description>{{this.model.error.message}}</A.Description>
+        </Hds::Alert>
       {{else if this.model.consent}}
         <OidcConsentBlock
           @code={{this.model.consent.code}}

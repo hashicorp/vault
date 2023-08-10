@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
 import { helper } from '@ember/component/helper';
 
 /*
@@ -14,11 +19,11 @@ etc.
 */
 
 export function changelogUrlFor([version]) {
-  let url = 'https://www.github.com/hashicorp/vault/blob/main/CHANGELOG.md#';
+  const url = 'https://www.github.com/hashicorp/vault/blob/main/CHANGELOG.md#';
   if (!version) return url;
   try {
     // strip the '+prem' from enterprise versions and remove periods
-    let versionNumber = version.split('+')[0].split('.').join('');
+    const versionNumber = version.split('+')[0].split('.').join('');
 
     // only recent versions have a predictable url
     if (versionNumber >= '143') {

@@ -8,7 +8,7 @@ description: |-
 
 # kv patch
 
-~> **NOTE:** This is a [K/V Version 2](/docs/secrets/kv/kv-v2) secrets
+~> **NOTE:** This is a [K/V Version 2](/vault/docs/secrets/kv/kv-v2) secrets
 engine command, and not available for Version 1.
 
 The `kv patch` command writes the data to the given path in the K/V v2 secrets
@@ -58,7 +58,7 @@ $ echo "abcd1234" | vault kv patch -mount=secret foo bar=-
 
 ## Usage
 
-### Output Options
+### Output options
 
 - `-field` `(string: "")` - Print only the field with the given name. Specifying
   this option will take precedence over other formatting directives. The result
@@ -69,7 +69,7 @@ $ echo "abcd1234" | vault kv patch -mount=secret foo bar=-
   formats are "table", "json", or "yaml". This can also be specified via the
   `VAULT_FORMAT` environment variable.
 
-### Command Options
+### Command options
 
 - `-method` `(string: "patch")` - Specifies the patch method to use. Valid
   methods are `patch` and `rw`. The `patch` method uses an HTTP `PATCH` request

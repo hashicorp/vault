@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
 import { run } from '@ember/runloop';
 import { copy } from 'ember-copy';
 import { module, test } from 'qunit';
@@ -27,7 +32,7 @@ function storage() {
   };
 }
 
-let ROOT_TOKEN_RESPONSE = {
+const ROOT_TOKEN_RESPONSE = {
   request_id: 'e6674d7f-c96f-d51f-4463-cc95f0ad307e',
   lease_id: '',
   renewable: false,
@@ -51,7 +56,7 @@ let ROOT_TOKEN_RESPONSE = {
   auth: null,
 };
 
-let TOKEN_NON_ROOT_RESPONSE = function () {
+const TOKEN_NON_ROOT_RESPONSE = function () {
   return {
     request_id: '3ca32cd9-fd40-891d-02d5-ea23138e8642',
     lease_id: '',
@@ -78,7 +83,7 @@ let TOKEN_NON_ROOT_RESPONSE = function () {
   };
 };
 
-let USERPASS_RESPONSE = {
+const USERPASS_RESPONSE = {
   request_id: '7e5e8d3d-599e-6ef7-7570-f7057fc7c53d',
   lease_id: '',
   renewable: false,
@@ -98,7 +103,7 @@ let USERPASS_RESPONSE = {
   },
 };
 
-let GITHUB_RESPONSE = {
+const GITHUB_RESPONSE = {
   request_id: '4913f9cd-a95f-d1f9-5746-4c3af4e15660',
   lease_id: '',
   renewable: false,
@@ -128,20 +133,20 @@ module('Integration | Service | auth', function (hooks) {
     this.memStore = storage();
     this.server = new Pretender(function () {
       this.get('/v1/auth/token/lookup-self', function (request) {
-        let resp = copy(ROOT_TOKEN_RESPONSE, true);
+        const resp = copy(ROOT_TOKEN_RESPONSE, true);
         resp.id = request.requestHeaders['X-Vault-Token'];
         resp.data.id = request.requestHeaders['X-Vault-Token'];
         return [200, {}, resp];
       });
       this.post('/v1/auth/userpass/login/:username', function (request) {
         const { username } = request.params;
-        let resp = copy(USERPASS_RESPONSE, true);
+        const resp = copy(USERPASS_RESPONSE, true);
         resp.auth.metadata.username = username;
         return [200, {}, resp];
       });
 
       this.post('/v1/auth/github/login', function () {
-        let resp = copy(GITHUB_RESPONSE, true);
+        const resp = copy(GITHUB_RESPONSE, true);
         return [200, {}, resp];
       });
     });
@@ -162,9 +167,9 @@ module('Integration | Service | auth', function (hooks) {
 
   test('token authentication: root token', function (assert) {
     assert.expect(6);
-    let done = assert.async();
-    let self = this;
-    let service = this.owner.factoryFor('service:auth').create({
+    const done = assert.async();
+    const self = this;
+    const service = this.owner.factoryFor('service:auth').create({
       storage(tokenName) {
         if (
           tokenName &&
@@ -178,37 +183,41 @@ module('Integration | Service | auth', function (hooks) {
       },
     });
     run(() => {
-      service.authenticate({ clusterId: '1', backend: 'token', data: { token: 'test' } }).then(() => {
-        const clusterTokenName = service.get('currentTokenName');
-        const clusterToken = service.get('currentToken');
-        const authData = service.get('authData');
+      service
+        .authenticate({ clusterId: '1', backend: 'token', data: { token: 'test' } })
+        .then(() => {
+          const clusterTokenName = service.get('currentTokenName');
+          const clusterToken = service.get('currentToken');
+          const authData = service.get('authData');
 
-        const expectedTokenName = `${TOKEN_PREFIX}${ROOT_PREFIX}${TOKEN_SEPARATOR}1`;
-        assert.strictEqual(clusterToken, 'test', 'token is saved properly');
-        assert.strictEqual(
-          `${TOKEN_PREFIX}${ROOT_PREFIX}${TOKEN_SEPARATOR}1`,
-          clusterTokenName,
-          'token name is saved properly'
-        );
-        assert.strictEqual(authData.backend.type, 'token', 'backend is saved properly');
-        assert.strictEqual(
-          ROOT_TOKEN_RESPONSE.data.display_name,
-          authData.displayName,
-          'displayName is saved properly'
-        );
-        assert.ok(
-          this.memStore.keys().includes(expectedTokenName),
-          'root token is stored in the memory store'
-        );
-        assert.strictEqual(this.store.keys().length, 0, 'normal storage is empty');
-        done();
-      });
+          const expectedTokenName = `${TOKEN_PREFIX}${ROOT_PREFIX}${TOKEN_SEPARATOR}1`;
+          assert.strictEqual(clusterToken, 'test', 'token is saved properly');
+          assert.strictEqual(
+            `${TOKEN_PREFIX}${ROOT_PREFIX}${TOKEN_SEPARATOR}1`,
+            clusterTokenName,
+            'token name is saved properly'
+          );
+          assert.strictEqual(authData.backend.type, 'token', 'backend is saved properly');
+          assert.strictEqual(
+            ROOT_TOKEN_RESPONSE.data.display_name,
+            authData.displayName,
+            'displayName is saved properly'
+          );
+          assert.ok(
+            this.memStore.keys().includes(expectedTokenName),
+            'root token is stored in the memory store'
+          );
+          assert.strictEqual(this.store.keys().length, 0, 'normal storage is empty');
+        })
+        .finally(() => {
+          done();
+        });
     });
   });
 
   test('token authentication: root token in ember development environment', async function (assert) {
-    let self = this;
-    let service = this.owner.factoryFor('service:auth').create({
+    const self = this;
+    const service = this.owner.factoryFor('service:auth').create({
       storage(tokenName) {
         if (
           tokenName &&
@@ -246,8 +255,8 @@ module('Integration | Service | auth', function (hooks) {
 
   test('github authentication', function (assert) {
     assert.expect(6);
-    let done = assert.async();
-    let service = this.owner.factoryFor('service:auth').create({
+    const done = assert.async();
+    const service = this.owner.factoryFor('service:auth').create({
       storage: (type) => (type === 'memory' ? this.memStore : this.store),
     });
 
@@ -275,8 +284,8 @@ module('Integration | Service | auth', function (hooks) {
 
   test('userpass authentication', function (assert) {
     assert.expect(4);
-    let done = assert.async();
-    let service = this.owner.factoryFor('service:auth').create({ storage: () => this.store });
+    const done = assert.async();
+    const service = this.owner.factoryFor('service:auth').create({ storage: () => this.store });
     run(() => {
       service
         .authenticate({
@@ -311,15 +320,15 @@ module('Integration | Service | auth', function (hooks) {
     const tokenResp = TOKEN_NON_ROOT_RESPONSE();
     this.server.map(function () {
       this.get('/v1/auth/token/lookup-self', function (request) {
-        let resp = copy(tokenResp, true);
+        const resp = copy(tokenResp, true);
         resp.id = request.requestHeaders['X-Vault-Token'];
         resp.data.id = request.requestHeaders['X-Vault-Token'];
         return [200, {}, resp];
       });
     });
 
-    let done = assert.async();
-    let service = this.owner.factoryFor('service:auth').create({ storage: () => this.store });
+    const done = assert.async();
+    const service = this.owner.factoryFor('service:auth').create({ storage: () => this.store });
     run(() => {
       service.authenticate({ clusterId: '1', backend: 'token', data: { token: 'test' } }).then(() => {
         const clusterTokenName = service.get('currentTokenName');

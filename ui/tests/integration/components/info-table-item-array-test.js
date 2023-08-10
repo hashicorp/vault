@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
 import { module, test } from 'qunit';
 import Service from '@ember/service';
 import { setupRenderingTest } from 'ember-qunit';
@@ -68,7 +73,7 @@ module('Integration | Component | InfoTableItemArray', function (hooks) {
       />`);
 
     assert.dom('[data-test-info-table-item-array]').exists();
-    let noLinkString = document.querySelector('code').textContent.trim();
+    const noLinkString = document.querySelector('code').textContent.trim();
     assert.strictEqual(
       noLinkString.length,
       DISPLAY_ARRAY.toString().length,

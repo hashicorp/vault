@@ -1,19 +1,24 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
 import { hash } from 'rsvp';
 import { inject as service } from '@ember/service';
 import EditBase from './secret-edit';
 
-let secretModel = (store, backend, key) => {
-  let backendModel = store.peekRecord('secret-engine', backend);
-  let modelType = backendModel.get('modelTypeForKV');
+const secretModel = (store, backend, key) => {
+  const backendModel = store.peekRecord('secret-engine', backend);
+  const modelType = backendModel.modelTypeForKV;
   if (modelType !== 'secret-v2') {
-    let model = store.createRecord(modelType, {
+    const model = store.createRecord(modelType, {
       path: key,
     });
     return model;
   }
-  let secret = store.createRecord(modelType);
+  const secret = store.createRecord(modelType);
   secret.set('engine', backendModel);
-  let version = store.createRecord('secret-v2-version', {
+  const version = store.createRecord('secret-v2-version', {
     path: key,
   });
   secret.set('selectedVersion', version);
@@ -21,7 +26,7 @@ let secretModel = (store, backend, key) => {
 };
 
 const transformModel = (queryParams) => {
-  let modelType = 'transform';
+  const modelType = 'transform';
   if (!queryParams || !queryParams.itemType) return modelType;
 
   return `${modelType}/${queryParams.itemType}`;
@@ -29,7 +34,6 @@ const transformModel = (queryParams) => {
 
 export default EditBase.extend({
   store: service(),
-  wizard: service(),
 
   createModel(transition) {
     const { backend } = this.paramsFor('vault.cluster.secrets.backend');
@@ -44,9 +48,6 @@ export default EditBase.extend({
       modelType = 'database/role';
     }
     if (modelType !== 'secret' && modelType !== 'secret-v2') {
-      if (this.wizard.featureState === 'details' && this.wizard.componentState === 'transit') {
-        this.wizard.transitionFeatureMachine('details', 'CONTINUE', 'transit');
-      }
       return this.store.createRecord(modelType);
     }
     // create record in capabilities that checks for access to create metadata
@@ -59,10 +60,6 @@ export default EditBase.extend({
   },
 
   model(params, transition) {
-    // wizard will pause unless we manually continue it -- verify that keymgmt tutorial is in progress
-    if (params.itemType === 'provider' && this.wizard.nextStep === 'provider') {
-      this.wizard.transitionFeatureMachine(this.wizard.featureState, 'CONTINUE', 'keymgmt');
-    }
     return hash({
       secret: this.createModel(transition),
       capabilities: {},

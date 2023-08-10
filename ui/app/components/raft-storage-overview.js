@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
 import Component from '@ember/component';
 import { getOwner } from '@ember/application';
 import config from '../config/environment';
@@ -47,11 +52,11 @@ export default Component.extend({
 
   actions: {
     async removePeer(model) {
-      let { nodeId } = model;
+      const { nodeId } = model;
       try {
         await model.destroyRecord();
       } catch (e) {
-        let errString = e.errors ? e.errors.join(' ') : e.message || e;
+        const errString = e.errors ? e.errors.join(' ') : e.message || e;
         this.flashMessages.danger(`There was an issue removing the peer ${nodeId}: ${errString}`);
         return;
       }
@@ -72,7 +77,7 @@ export default Component.extend({
       // then forcing a download by clicking a link that has a download attribute
       //
       // this is not the default because
-      let adapter = getOwner(this).lookup('adapter:application');
+      const adapter = getOwner(this).lookup('adapter:application');
 
       this.flashMessages.success('The snapshot download has begun.');
       let resp, blob;
@@ -80,18 +85,18 @@ export default Component.extend({
         resp = await adapter.rawRequest('/v1/sys/storage/raft/snapshot', 'GET');
         blob = await resp.blob();
       } catch (e) {
-        let errString = e.errors ? e.errors.join(' ') : e.message || e;
+        const errString = e.errors ? e.errors.join(' ') : e.message || e;
         this.flashMessages.danger(`There was an error trying to download the snapshot: ${errString}`);
       }
-      let filename = 'snapshot.gz';
-      let file = new Blob([blob], { type: 'application/x-gzip' });
+      const filename = 'snapshot.gz';
+      const file = new Blob([blob], { type: 'application/x-gzip' });
       file.name = filename;
       if ('msSaveOrOpenBlob' in navigator) {
         navigator.msSaveOrOpenBlob(file, filename);
         return;
       }
-      let a = document.createElement('a');
-      let objectURL = window.URL.createObjectURL(file);
+      const a = document.createElement('a');
+      const objectURL = window.URL.createObjectURL(file);
       a.href = objectURL;
       a.download = filename;
       document.body.appendChild(a);

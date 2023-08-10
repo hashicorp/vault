@@ -1,10 +1,14 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
 import { module, test } from 'qunit';
 import { visit, click, fillIn, findAll, currentRouteName } from '@ember/test-helpers';
 import { setupApplicationTest } from 'ember-qunit';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 import ENV from 'vault/config/environment';
 import authPage from 'vault/tests/pages/auth';
-import logout from 'vault/tests/pages/logout';
 import { create } from 'ember-cli-page-object';
 import { clickTrigger, selectChoose } from 'ember-power-select/test-support/helpers';
 import ss from 'vault/tests/pages/components/search-select';
@@ -32,13 +36,9 @@ module('Acceptance | oidc-config clients and keys', function (hooks) {
     ENV['ember-cli-mirage'].handler = 'oidcConfig';
   });
 
-  hooks.beforeEach(async function () {
-    this.store = await this.owner.lookup('service:store');
+  hooks.beforeEach(function () {
+    this.store = this.owner.lookup('service:store');
     return authPage.login();
-  });
-
-  hooks.afterEach(function () {
-    return logout.visit();
   });
 
   hooks.after(function () {
@@ -139,7 +139,7 @@ module('Acceptance | oidc-config clients and keys', function (hooks) {
       'vault.cluster.access.oidc.keys.key.edit',
       'key linked block popup menu navigates to edit'
     );
-    await click('label[for=limited]');
+    await click('[data-test-oidc-radio="limited"]');
     await clickTrigger();
     assert.strictEqual(searchSelect.options.length, 1, 'dropdown has only application that uses this key');
     assert
@@ -166,7 +166,7 @@ module('Acceptance | oidc-config clients and keys', function (hooks) {
     // edit back to allow all
     await click(SELECTORS.keyDetailsTab);
     await click(SELECTORS.keyEditButton);
-    await click('label[for=allow-all]');
+    await click('[data-test-oidc-radio="allow-all"]');
     await click(SELECTORS.keySaveButton);
     await click(SELECTORS.keyClientsTab);
     assert.notEqual(
@@ -199,8 +199,12 @@ module('Acceptance | oidc-config clients and keys', function (hooks) {
     // toggle ttls to false, testing it sets correct default duration
     await click('[data-test-input="rotationPeriod"]');
     await click('[data-test-input="verificationTtl"]');
-    assert.dom('input#limited').isDisabled('limiting access radio button is disabled on create');
-    assert.dom('label[for=limited]').hasClass('is-disabled', 'limited radio button label has disabled class');
+    assert
+      .dom('[data-test-oidc-radio="limited"] input')
+      .isDisabled('limiting access radio button is disabled on create');
+    assert
+      .dom('[data-test-oidc-radio="limited"]')
+      .hasClass('is-disabled', 'limited radio button label has disabled class');
     await click(SELECTORS.keySaveButton);
     assert.strictEqual(
       flashMessage.latestMessage,

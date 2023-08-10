@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
 import { resolve } from 'rsvp';
 import { module, test } from 'qunit';
 import { setupTest } from 'ember-qunit';
@@ -7,7 +12,7 @@ module('Unit | Adapter | tools', function (hooks) {
 
   test('wrapping api urls', function (assert) {
     let url, method, options;
-    let adapter = this.owner.factoryFor('adapter:tools').create({
+    const adapter = this.owner.factoryFor('adapter:tools').create({
       ajax: (...args) => {
         [url, method, options] = args;
         return resolve();
@@ -40,7 +45,7 @@ module('Unit | Adapter | tools', function (hooks) {
 
   test('tools api urls', function (assert) {
     let url, method;
-    let adapter = this.owner.factoryFor('adapter:tools').create({
+    const adapter = this.owner.factoryFor('adapter:tools').create({
       ajax: (...args) => {
         [url, method] = args;
         return resolve();

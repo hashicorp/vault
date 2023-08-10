@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
 import { clickTrigger } from 'ember-power-select/test-support/helpers';
 import { click, fillIn, findAll, currentURL, find, visit, settled, waitUntil } from '@ember/test-helpers';
 import { module, test } from 'qunit';
@@ -64,7 +69,6 @@ module('Acceptance | Enterprise | replication', function (hooks) {
     assert.expect(17);
     const secondaryName = 'firstSecondary';
     const mode = 'deny';
-    let mountPath;
 
     // confirm unable to visit dr secondary details page when both replications are disabled
     await visit('/vault/replication-dr-promote/details');
@@ -106,7 +110,7 @@ module('Acceptance | Enterprise | replication', function (hooks) {
 
     await click('#deny');
     await clickTrigger();
-    mountPath = searchSelect.options.objectAt(0).text;
+    const mountPath = searchSelect.options.objectAt(0).text;
     await searchSelect.options.objectAt(0).click();
     await click('[data-test-secondary-add]');
 
@@ -275,7 +279,7 @@ module('Acceptance | Enterprise | replication', function (hooks) {
 
     await pollCluster(this.owner);
     await settled();
-    let modalDefaultTtl = document.querySelector('[data-test-row-value="TTL"]').innerText;
+    const modalDefaultTtl = document.querySelector('[data-test-row-value="TTL"]').innerText;
     // checks on secondary token modal
     assert.dom('#modal-wormhole').exists();
     assert.strictEqual(modalDefaultTtl, '1800s', 'shows the correct TTL of 1800s');
@@ -293,7 +297,7 @@ module('Acceptance | Enterprise | replication', function (hooks) {
 
     await pollCluster(this.owner);
     await settled();
-    let modalTtl = document.querySelector('[data-test-row-value="TTL"]').innerText;
+    const modalTtl = document.querySelector('[data-test-row-value="TTL"]').innerText;
     assert.strictEqual(modalTtl, '180s', 'shows the correct TTL of 180s');
     await click('[data-test-modal-background="Copy your token"]');
 
@@ -326,10 +330,7 @@ module('Acceptance | Enterprise | replication', function (hooks) {
       .doesNotExist(`does not render replication summary card when both modes are not enabled as primary`);
 
     // enable DR primary replication
-    const enableButton = document.querySelector('.is-primary');
-
-    await click(enableButton);
-
+    await click('[data-test-replication-promote-secondary]');
     await click('[data-test-replication-enable]');
 
     await pollCluster(this.owner);

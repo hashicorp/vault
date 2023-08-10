@@ -1,0 +1,3 @@
+```release-note:improvement
+aws/auth: Adds a new config field `use_sts_region_from_client` which allows for using dynamic regional sts endpoints based on Authorization header when using IAM-based authentication.
+```

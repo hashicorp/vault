@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
 import Engine from 'ember-engines/engine';
 import loadInitializers from 'ember-load-initializers';
 import Resolver from './resolver';

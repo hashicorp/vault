@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
 import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
 import { currentURL, click, settled } from '@ember/test-helpers';
@@ -15,7 +20,7 @@ import searchSelect from 'vault/tests/pages/components/search-select';
 const searchSelectComponent = create(searchSelect);
 
 const mount = async () => {
-  let path = `transform-${Date.now()}`;
+  const path = `transform-${Date.now()}`;
   await mountSecrets.enable('transform', path);
   await settled();
   return path;
@@ -61,7 +66,7 @@ module('Acceptance | Enterprise | Transform secrets', function (hooks) {
   });
 
   test('it enables Transform secrets engine and shows tabs', async function (assert) {
-    let backend = `transform-${Date.now()}`;
+    const backend = `transform-${Date.now()}`;
     await mountSecrets.enable('transform', backend);
     await settled();
     assert.strictEqual(
@@ -79,7 +84,7 @@ module('Acceptance | Enterprise | Transform secrets', function (hooks) {
   });
 
   test('it can create a transformation and add itself to the role attached', async function (assert) {
-    let backend = await mount();
+    const backend = await mount();
     const transformationName = 'foo';
     const roleName = 'foo-role';
     await settled();
@@ -129,7 +134,7 @@ module('Acceptance | Enterprise | Transform secrets', function (hooks) {
 
   test('it can create a role and add itself to the transformation attached', async function (assert) {
     const roleName = 'my-role';
-    let backend = await mount();
+    const backend = await mount();
     // create transformation without role
     await newTransformation(backend, 'a-transformation', true);
     await click(`[data-test-secret-breadcrumb="${backend}"]`);
@@ -168,8 +173,8 @@ module('Acceptance | Enterprise | Transform secrets', function (hooks) {
 
   test('it adds a role to a transformation when added to a role', async function (assert) {
     const roleName = 'role-test';
-    let backend = await mount();
-    let transformation = await newTransformation(backend, 'b-transformation', true);
+    const backend = await mount();
+    const transformation = await newTransformation(backend, 'b-transformation', true);
     await newRole(backend, roleName);
     await transformationsPage.visitShow({ backend, id: transformation });
     await settled();
@@ -178,9 +183,9 @@ module('Acceptance | Enterprise | Transform secrets', function (hooks) {
 
   test('it shows a message if an update fails after save', async function (assert) {
     const roleName = 'role-remove';
-    let backend = await mount();
+    const backend = await mount();
     // Create transformation
-    let transformation = await newTransformation(backend, 'c-transformation', true);
+    const transformation = await newTransformation(backend, 'c-transformation', true);
     // create role
     await newRole(backend, roleName);
     await settled();
@@ -215,7 +220,7 @@ module('Acceptance | Enterprise | Transform secrets', function (hooks) {
 
   test('it allows creation and edit of a template', async function (assert) {
     const templateName = 'my-template';
-    let backend = await mount();
+    const backend = await mount();
     await click('[data-test-secret-list-tab="Templates"]');
 
     assert.strictEqual(
@@ -257,7 +262,7 @@ module('Acceptance | Enterprise | Transform secrets', function (hooks) {
 
   test('it allows creation and edit of an alphabet', async function (assert) {
     const alphabetName = 'vowels-only';
-    let backend = await mount();
+    const backend = await mount();
     await click('[data-test-secret-list-tab="Alphabets"]');
 
     assert.strictEqual(

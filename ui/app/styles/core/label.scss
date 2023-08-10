@@ -1,0 +1,26 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
+// This file defines the style for .is-label
+
+.is-label {
+  color: $grey-darkest;
+  display: inline-block;
+  font-size: 14px;
+  font-weight: $font-weight-bold;
+
+  &:not(:last-child) {
+    margin-bottom: 0.25rem;
+  }
+
+  &::before,
+  &::after {
+    transform: translateY(0.2em);
+  }
+
+  &::before {
+    border-color: $grey-light;
+  }
+}

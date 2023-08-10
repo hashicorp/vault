@@ -1,8 +1,12 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
 import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
 import { click, fillIn } from '@ember/test-helpers';
 import authPage from 'vault/tests/pages/auth';
-import logout from 'vault/tests/pages/logout';
 import mountSecrets from 'vault/tests/pages/settings/mount-secret-backend';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 
@@ -11,7 +15,6 @@ module('Acceptance | Enterprise | keymgmt', function (hooks) {
   setupMirage(hooks);
 
   hooks.beforeEach(async function () {
-    await logout.visit();
     return authPage.login();
   });
 

@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
 import { inject as service } from '@ember/service';
 import Route from '@ember/routing/route';
 import ClusterRoute from 'vault/mixins/cluster-route';
@@ -6,20 +11,13 @@ import ListRoute from 'core/mixins/list-route';
 export default Route.extend(ClusterRoute, ListRoute, {
   store: service(),
   version: service(),
-  wizard: service(),
-
-  activate() {
-    if (this.wizard.featureState === 'details') {
-      this.wizard.transitionFeatureMachine('details', 'CONTINUE', this.policyType());
-    }
-  },
 
   shouldReturnEmptyModel(policyType, version) {
     return policyType !== 'acl' && (version.get('isOSS') || !version.get('hasSentinel'));
   },
 
   model(params) {
-    let policyType = this.policyType();
+    const policyType = this.policyType();
     if (this.shouldReturnEmptyModel(policyType, this.version)) {
       return;
     }

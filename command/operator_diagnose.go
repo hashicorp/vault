@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package command
 
 import (
@@ -15,7 +18,6 @@ import (
 
 	wrapping "github.com/hashicorp/go-kms-wrapping/v2"
 
-	"github.com/docker/docker/pkg/ioutils"
 	"github.com/hashicorp/consul/api"
 	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-secure-stdlib/reloadutil"
@@ -28,17 +30,15 @@ import (
 	physconsul "github.com/hashicorp/vault/physical/consul"
 	"github.com/hashicorp/vault/physical/raft"
 	"github.com/hashicorp/vault/sdk/physical"
-	"github.com/hashicorp/vault/sdk/version"
 	sr "github.com/hashicorp/vault/serviceregistration"
 	srconsul "github.com/hashicorp/vault/serviceregistration/consul"
 	"github.com/hashicorp/vault/vault"
 	"github.com/hashicorp/vault/vault/diagnose"
 	"github.com/hashicorp/vault/vault/hcp_link"
+	"github.com/hashicorp/vault/version"
 	"github.com/mitchellh/cli"
 	"github.com/posener/complete"
 )
-
-const OperatorDiagnoseEnableEnv = "VAULT_DIAGNOSE"
 
 const CoreConfigUninitializedErr = "Diagnose cannot attempt this step because core config could not be set."
 
@@ -161,7 +161,7 @@ func (c *OperatorDiagnoseCommand) RunWithParsedFlags() int {
 
 	if c.diagnose == nil {
 		if c.flagFormat == "json" {
-			c.diagnose = diagnose.New(&ioutils.NopWriter{})
+			c.diagnose = diagnose.New(io.Discard)
 		} else {
 			c.UI.Output(version.GetVersion().FullVersionNumber(true))
 			c.diagnose = diagnose.New(os.Stdout)

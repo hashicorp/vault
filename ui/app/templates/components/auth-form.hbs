@@ -19,7 +19,7 @@
                   "is-active"
                   ""
                 }}
-                data-test-auth-method
+                data-test-auth-method={{method.id}}
               >
                 <LinkTo
                   @route="vault.cluster.auth"
@@ -32,26 +32,21 @@
               </li>
             {{/let}}
           {{/each}}
-          {{#if this.hasMethodsWithPath}}
-            <li class={{unless this.selectedAuthIsPath "is-active" ""}} data-test-auth-method>
-              <LinkTo
-                @route="vault.cluster.auth"
-                @model={{this.cluster.name}}
-                @query={{hash with="token"}}
-                data-test-auth-method-link="other"
-              >
-                Other
-              </LinkTo>
-            </li>
-          {{/if}}
+          <li class={{unless this.selectedAuthIsPath "is-active" ""}} data-test-auth-method>
+            <LinkTo
+              @route="vault.cluster.auth"
+              @model={{this.cluster.name}}
+              @query={{hash with="token"}}
+              data-test-auth-method-link="other"
+            >
+              Other
+            </LinkTo>
+          </li>
         </ul>
       </nav>
     {{/if}}
     <div class="box is-marginless is-shadowless">
-      <MessageError
-        @errorMessage={{if (and this.cluster.standby this.hasCSPError) this.cspErrorText this.error}}
-        data-test-auth-error
-      />
+      <MessageError @errorMessage={{if (and this.cluster.standby this.hasCSPError) this.cspErrorText this.error}} />
       <div class="has-bottom-margin-s">
         <p class="is-label">{{this.selectedAuthBackend.path}}</p>
         <span class="description has-text-grey" data-test-description={{true}}>

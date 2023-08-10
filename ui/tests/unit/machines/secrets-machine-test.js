@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
 import { module, test } from 'qunit';
 import { Machine } from 'xstate';
 import SecretsMachineConfig from 'vault/machines/secrets-machine';
@@ -1062,7 +1067,7 @@ module('Unit | Machine | secrets-machine', function () {
 
   testCases.forEach((testCase) => {
     test(`transition: ${testCase.event} for currentState ${testCase.currentState} and componentState ${testCase.params}`, function (assert) {
-      let result = secretsMachine.transition(testCase.currentState, testCase.event, testCase.params);
+      const result = secretsMachine.transition(testCase.currentState, testCase.event, testCase.params);
       assert.strictEqual(result.value, testCase.expectedResults.value);
       assert.deepEqual(result.actions, testCase.expectedResults.actions);
     });

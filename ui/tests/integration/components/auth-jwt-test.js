@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
 import { _cancelTimers as cancelTimers } from '@ember/runloop';
 import { module, test } from 'qunit';
 import { setupRenderingTest } from 'ember-qunit';
@@ -34,11 +39,11 @@ const OIDC_AUTH_RESPONSE = {
 };
 
 const renderIt = async (context, path = 'jwt') => {
-  let handler = (data, e) => {
+  const handler = (data, e) => {
     if (e && e.preventDefault) e.preventDefault();
     return resolve();
   };
-  let fake = fakeWindow.create();
+  const fake = fakeWindow.create();
   context.set('window', fake);
   context.set('handler', sinon.spy(handler));
   context.set('roleName', '');
@@ -150,7 +155,7 @@ module('Integration | Component | auth jwt', function (hooks) {
       return this.openSpy.calledOnce;
     });
     cancelTimers();
-    let call = this.openSpy.getCall(0);
+    const call = this.openSpy.getCall(0);
     assert.deepEqual(
       call.args,
       ['http://example.com', 'vaultOIDCWindow', 'width=500,height=600,resizable,scrollbars=yes,top=0,left=0'],

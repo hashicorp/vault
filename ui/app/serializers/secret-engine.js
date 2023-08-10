@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
 import { assign } from '@ember/polyfills';
 import ApplicationSerializer from './application';
 import { EmbeddedRecordsMixin } from '@ember-data/serializer/rest';
@@ -20,7 +25,7 @@ export default ApplicationSerializer.extend(EmbeddedRecordsMixin, {
 
   normalizeBackend(path, backend) {
     let struct = {};
-    for (let attribute in backend) {
+    for (const attribute in backend) {
       struct[attribute] = backend[attribute];
     }
     //queryRecord adds path to the response
@@ -67,8 +72,8 @@ export default ApplicationSerializer.extend(EmbeddedRecordsMixin, {
   },
 
   serialize(snapshot) {
-    let type = snapshot.record.get('engineType');
-    let data = this._super(...arguments);
+    const type = snapshot.record.get('engineType');
+    const data = this._super(...arguments);
     // move version back to options
     data.options = data.version ? { version: data.version } : {};
     delete data.version;

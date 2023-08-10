@@ -1,10 +1,15 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
 import { module, test } from 'qunit';
 import { setupRenderingTest } from 'ember-qunit';
 import { render, findAll } from '@ember/test-helpers';
 import sinon from 'sinon';
 import hbs from 'htmlbars-inline-precompile';
 
-let handler = (data, e) => {
+const handler = (data, e) => {
   if (e && e.preventDefault) e.preventDefault();
   return;
 };

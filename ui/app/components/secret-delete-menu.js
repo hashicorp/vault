@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
 /* eslint ember/no-computed-properties-in-native-classes: 'warn' */
 import Ember from 'ember';
 import { inject as service } from '@ember/service';
@@ -8,7 +13,8 @@ import { alias } from '@ember/object/computed';
 import { maybeQueryRecord } from 'vault/macros/maybe-query-record';
 
 const getErrorMessage = (errors) => {
-  let errorMessage = errors?.join('. ') || 'Something went wrong. Check the Vault logs for more information.';
+  const errorMessage =
+    errors?.join('. ') || 'Something went wrong. Check the Vault logs for more information.';
   return errorMessage;
 };
 export default class SecretDeleteMenu extends Component {
@@ -22,7 +28,7 @@ export default class SecretDeleteMenu extends Component {
     'capabilities',
     (context) => {
       if (!context.args || !context.args.modelForData || !context.args.modelForData.id) return;
-      let [backend, id] = JSON.parse(context.args.modelForData.id);
+      const [backend, id] = JSON.parse(context.args.modelForData.id);
       return {
         id: `${backend}/undelete/${id}`,
       };
@@ -36,7 +42,7 @@ export default class SecretDeleteMenu extends Component {
     'capabilities',
     (context) => {
       if (!context.args || !context.args.modelForData || !context.args.modelForData.id) return;
-      let [backend, id] = JSON.parse(context.args.modelForData.id);
+      const [backend, id] = JSON.parse(context.args.modelForData.id);
       return {
         id: `${backend}/destroy/${id}`,
       };
@@ -50,8 +56,8 @@ export default class SecretDeleteMenu extends Component {
     'capabilities',
     (context) => {
       if (!context.args.model || !context.args.model.engine || !context.args.model.id) return;
-      let backend = context.args.model.engine.id;
-      let id = context.args.model.id;
+      const backend = context.args.model.engine.id;
+      const id = context.args.model.id;
       return {
         id: `${backend}/metadata/${id}`,
       };
@@ -69,9 +75,9 @@ export default class SecretDeleteMenu extends Component {
       if (!context.args.model || context.args.mode === 'create') {
         return;
       }
-      let backend = context.args.isV2 ? context.args.model.engine.id : context.args.model.backend;
-      let id = context.args.model.id;
-      let path = context.args.isV2 ? `${backend}/data/${id}` : `${backend}/${id}`;
+      const backend = context.args.isV2 ? context.args.model.engine.id : context.args.model.backend;
+      const id = context.args.model.id;
+      const path = context.args.isV2 ? `${backend}/data/${id}` : `${backend}/${id}`;
       return {
         id: path,
       };
@@ -90,9 +96,9 @@ export default class SecretDeleteMenu extends Component {
       if (!context.args.model || context.args.mode === 'create') {
         return;
       }
-      let backend = context.args.isV2 ? context.args.model.engine.id : context.args.model.backend;
-      let id = context.args.model.id;
-      let path = context.args.isV2 ? `${backend}/delete/${id}` : `${backend}/${id}`;
+      const backend = context.args.isV2 ? context.args.model.engine.id : context.args.model.backend;
+      const id = context.args.model.id;
+      const path = context.args.isV2 ? `${backend}/delete/${id}` : `${backend}/${id}`;
       return {
         id: path,
       };
@@ -107,10 +113,10 @@ export default class SecretDeleteMenu extends Component {
 
   get isLatestVersion() {
     // must have metadata access.
-    let { model } = this.args;
+    const { model } = this.args;
     if (!model) return false;
-    let latestVersion = model.currentVersion;
-    let selectedVersion = model.selectedVersion.version;
+    const latestVersion = model.currentVersion;
+    const selectedVersion = model.selectedVersion.version;
     if (latestVersion !== selectedVersion) {
       return false;
     }

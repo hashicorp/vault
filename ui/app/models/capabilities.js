@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
 // This model represents the capabilities on a given `path`
 // `path` is also the primaryId
 // https://www.vaultproject.io/docs/concepts/policies.html#capabilities

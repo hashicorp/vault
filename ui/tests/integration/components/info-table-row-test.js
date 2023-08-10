@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
 import { module, test } from 'qunit';
 import { resolve } from 'rsvp';
 import Service from '@ember/service';
@@ -66,7 +71,7 @@ module('Integration | Component | InfoTableRow', function (hooks) {
 
     await triggerEvent('[data-test-value-div="test label"] .ember-basic-dropdown-trigger', 'mouseenter');
 
-    let tooltip = document.querySelector('div.box').textContent.trim();
+    const tooltip = document.querySelector('div.box').textContent.trim();
     assert.strictEqual(tooltip, 'Tooltip text!', 'renders tooltip text');
   });
 
@@ -147,7 +152,7 @@ module('Integration | Component | InfoTableRow', function (hooks) {
     this.set('value', '');
     this.set('label', '');
     this.set('default', '');
-    let dashCount = document.querySelectorAll('.flight-icon').length;
+    const dashCount = document.querySelectorAll('.flight-icon').length;
     assert.strictEqual(
       dashCount,
       2,
@@ -163,7 +168,7 @@ module('Integration | Component | InfoTableRow', function (hooks) {
       Block content is here
       </InfoTableRow>`);
 
-    let block = document.querySelector('[data-test-value-div]').textContent.trim();
+    const block = document.querySelector('[data-test-value-div]').textContent.trim();
     assert.strictEqual(block, 'Block content is here', 'renders block passed through');
   });
 
@@ -254,14 +259,37 @@ module('Integration | Component | InfoTableRow', function (hooks) {
   });
 
   test('Formats the value as date when formatDate present', async function (assert) {
-    let yearString = new Date().getFullYear().toString();
-    this.set('value', new Date());
+    this.set('value', new Date('2018-04-03T14:15:30'));
     await render(hbs`<InfoTableRow
       @label={{this.label}}
       @value={{this.value}}
       @formatDate={{'yyyy'}}
     />`);
 
-    assert.dom('[data-test-value-div]').hasText(yearString, 'Renders date with passed format');
+    assert.dom('[data-test-value-div]').hasText('2018', 'Renders date with passed format');
+  });
+
+  test('Formats the value as TTL when formatTtl present', async function (assert) {
+    this.set('value', 6000);
+    await render(hbs`<InfoTableRow
+      @label={{this.label}}
+      @value={{this.value}}
+      @formatTtl={{true}}
+    />`);
+
+    assert
+      .dom('[data-test-value-div]')
+      .hasText('1 hour 40 minutes', 'Translates number value to largest unit with carryover of minutes');
+  });
+
+  test('Formats string value when formatTtl present', async function (assert) {
+    this.set('value', '45m');
+    await render(hbs`<InfoTableRow
+      @label={{this.label}}
+      @value={{this.value}}
+      @formatTtl={{true}}
+    />`);
+
+    assert.dom('[data-test-value-div]').hasText('45 minutes', 'it formats string duration');
   });
 });

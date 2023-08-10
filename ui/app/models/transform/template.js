@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
 import Model, { attr } from '@ember-data/model';
 import { computed } from '@ember/object';
 import { apiPath } from 'vault/macros/lazy-capabilities';
@@ -7,12 +12,11 @@ import { expandAttributeMeta } from 'vault/utils/field-to-attrs';
 const M = Model.extend({
   idPrefix: 'template/',
   idForNav: computed('id', 'idPrefix', function () {
-    let modelId = this.id || '';
+    const modelId = this.id || '';
     return `${this.idPrefix}${modelId}`;
   }),
 
   name: attr('string', {
-    fieldValue: 'id',
     readOnly: true,
     subText:
       'Templates allow Vault to determine what and how to capture the value to be transformed. This cannot be edited later.',
@@ -37,7 +41,7 @@ const M = Model.extend({
   backend: attr('string', { readOnly: true }),
 
   readAttrs: computed(function () {
-    let keys = ['name', 'pattern', 'encodeFormat', 'decodeFormats', 'alphabet'];
+    const keys = ['name', 'pattern', 'encodeFormat', 'decodeFormats', 'alphabet'];
     return expandAttributeMeta(this, keys);
   }),
   writeAttrs: computed(function () {

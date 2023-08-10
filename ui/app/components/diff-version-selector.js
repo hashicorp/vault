@@ -1,9 +1,13 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
 /* eslint-disable no-undef */
 import Component from '@glimmer/component';
 import { inject as service } from '@ember/service';
 import { action } from '@ember/object';
 import { tracked } from '@glimmer/tracking';
-import { htmlSafe } from '@ember/template';
 
 /**
  * @module DiffVersionSelector
@@ -33,14 +37,14 @@ export default class DiffVersionSelector extends Component {
   }
 
   get leftSideDataInit() {
-    let string = `["${this.args.model.engineId}", "${this.args.model.id}", "${this.args.model.currentVersion}"]`;
+    const string = `["${this.args.model.engineId}", "${this.args.model.id}", "${this.args.model.currentVersion}"]`;
     return this.adapter
       .querySecretDataByVersion(string)
       .then((response) => response.data)
       .catch(() => null);
   }
   get rightSideDataInit() {
-    let string = `["${this.args.model.engineId}", "${this.args.model.id}", "${this.rightSideVersionInit}"]`;
+    const string = `["${this.args.model.engineId}", "${this.args.model.id}", "${this.rightSideVersionInit}"]`;
     return this.adapter
       .querySecretDataByVersion(string)
       .then((response) => response.data)
@@ -52,24 +56,24 @@ export default class DiffVersionSelector extends Component {
   }
 
   async createVisualDiff() {
-    let diffpatcher = jsondiffpatch.create({});
-    let leftSideVersionData = this.leftSideVersionDataSelected || (await this.leftSideDataInit);
-    let rightSideVersionData = this.rightSideVersionDataSelected || (await this.rightSideDataInit);
-    let delta = diffpatcher.diff(rightSideVersionData, leftSideVersionData);
+    const diffpatcher = jsondiffpatch.create({});
+    const leftSideVersionData = this.leftSideVersionDataSelected || (await this.leftSideDataInit);
+    const rightSideVersionData = this.rightSideVersionDataSelected || (await this.rightSideDataInit);
+    const delta = diffpatcher.diff(rightSideVersionData, leftSideVersionData);
     if (delta === undefined) {
       this.statesMatch = true;
       // params: value, replacer (all properties included), space (white space and indentation, line break, etc.)
-      this.visualDiff = htmlSafe(JSON.stringify(leftSideVersionData, undefined, 2));
+      this.visualDiff = JSON.stringify(leftSideVersionData, undefined, 2);
     } else {
       this.statesMatch = false;
-      this.visualDiff = htmlSafe(jsondiffpatch.formatters.html.format(delta, rightSideVersionData));
+      this.visualDiff = jsondiffpatch.formatters.html.format(delta, rightSideVersionData);
     }
   }
 
   @action
   async selectVersion(selectedVersion, actions, side) {
-    let string = `["${this.args.model.engineId}", "${this.args.model.id}", "${selectedVersion}"]`;
-    let secretData = await this.adapter.querySecretDataByVersion(string);
+    const string = `["${this.args.model.engineId}", "${this.args.model.id}", "${selectedVersion}"]`;
+    const secretData = await this.adapter.querySecretDataByVersion(string);
     if (side === 'left') {
       this.leftSideVersionDataSelected = secretData.data;
       this.leftSideVersionSelected = selectedVersion;

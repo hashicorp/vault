@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
 import { module, test } from 'qunit';
 import { setupRenderingTest } from 'ember-qunit';
 import { render } from '@ember/test-helpers';
@@ -37,7 +42,7 @@ module('Integration | Component | kv-object-editor', function (hooks) {
   });
 
   test('it renders passed data', async function (assert) {
-    let metadata = { foo: 'bar', baz: 'bop' };
+    const metadata = { foo: 'bar', baz: 'bop' };
     this.set('value', metadata);
     await render(hbs`{{kv-object-editor value=this.value}}`);
     assert.strictEqual(
@@ -61,7 +66,7 @@ module('Integration | Component | kv-object-editor', function (hooks) {
   });
 
   test('it shows a warning if there are duplicate keys', async function (assert) {
-    let metadata = { foo: 'bar', baz: 'bop' };
+    const metadata = { foo: 'bar', baz: 'bop' };
     this.set('value', metadata);
     await render(hbs`{{kv-object-editor value=this.value onChange=this.spy}}`);
     await component.rows.objectAt(0).kvKey('foo');

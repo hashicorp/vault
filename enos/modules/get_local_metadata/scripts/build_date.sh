@@ -1,10 +1,9 @@
 #!/bin/env bash
+# Copyright (c) HashiCorp, Inc.
+# SPDX-License-Identifier: MPL-2.0
+
 set -eu -o pipefail
 
-# Set up the environment for building Vault.
-root_dir="$(git rev-parse --show-toplevel)"
-
-pushd "$root_dir" > /dev/null
-
-IFS="-" read -r VAULT_BUILD_DATE _other <<< "$(make build-date)"
-echo $VAULT_BUILD_DATE
+pushd "$(git rev-parse --show-toplevel)" > /dev/null
+make ci-get-date
+popd > /dev/null

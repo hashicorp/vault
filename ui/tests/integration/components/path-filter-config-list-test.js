@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
 import { module, test } from 'qunit';
 import { setupRenderingTest } from 'ember-qunit';
 import { render, click, findAll } from '@ember/test-helpers';
@@ -35,7 +40,7 @@ module('Integration | Component | path filter config list', function (hooks) {
 
   hooks.beforeEach(function () {
     this.context = { owner: this.engine }; // this.engine set by setupEngine
-    let ajaxStub = sinon.stub().usingPromise(Promise);
+    const ajaxStub = sinon.stub().usingPromise(Promise);
     ajaxStub.withArgs('/v1/sys/internal/ui/mounts', 'GET').resolves(MOUNTS_RESPONSE);
     ajaxStub
       .withArgs('/v1/sys/internal/ui/mounts', 'GET', { namespace: 'ns1' })

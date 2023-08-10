@@ -1,0 +1,3 @@
+```release-note:improvement
+Add debug symbols back to builds to fix Dynatrace support
+```

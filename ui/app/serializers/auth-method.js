@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
 import ApplicationSerializer from './application';
 import { EmbeddedRecordsMixin } from '@ember-data/serializer/rest';
 
@@ -14,7 +19,7 @@ export default ApplicationSerializer.extend(EmbeddedRecordsMixin, {
     return this._super(modelClass, data);
   },
   normalizeBackend(path, backend) {
-    let struct = { ...backend };
+    const struct = { ...backend };
     // strip the trailing slash off of the path so we
     // can navigate to it without getting `//` in the url
     struct.id = path.slice(0, -1);

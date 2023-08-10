@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package cert
 
 import (
@@ -25,24 +28,20 @@ import (
 	"time"
 
 	"github.com/go-test/deep"
-	"github.com/hashicorp/go-sockaddr"
-
-	"golang.org/x/net/http2"
-
 	cleanhttp "github.com/hashicorp/go-cleanhttp"
-	log "github.com/hashicorp/go-hclog"
-	"github.com/hashicorp/vault/api"
-	vaulthttp "github.com/hashicorp/vault/http"
-
 	rootcerts "github.com/hashicorp/go-rootcerts"
+	"github.com/hashicorp/go-sockaddr"
+	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/builtin/logical/pki"
 	logicaltest "github.com/hashicorp/vault/helper/testhelpers/logical"
+	vaulthttp "github.com/hashicorp/vault/http"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/certutil"
 	"github.com/hashicorp/vault/sdk/helper/tokenutil"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/vault"
 	"github.com/mitchellh/mapstructure"
+	"golang.org/x/net/http2"
 )
 
 const (
@@ -250,9 +249,6 @@ func connectionState(serverCAPath, serverCertPath, serverKeyPath, clientCertPath
 func TestBackend_PermittedDNSDomainsIntermediateCA(t *testing.T) {
 	// Enable PKI secret engine and Cert auth method
 	coreConfig := &vault.CoreConfig{
-		DisableMlock: true,
-		DisableCache: true,
-		Logger:       log.NewNullLogger(),
 		CredentialBackends: map[string]logical.Factory{
 			"cert": Factory,
 		},
@@ -445,7 +441,7 @@ func TestBackend_PermittedDNSDomainsIntermediateCA(t *testing.T) {
 	}
 
 	// Create a new api client with the desired TLS configuration
-	newClient := getAPIClient(cores[0].Listeners[0].Address.Port, cores[0].TLSConfig)
+	newClient := getAPIClient(cores[0].Listeners[0].Address.Port, cores[0].TLSConfig())
 
 	secret, err = newClient.Logical().Write("auth/cert/login", map[string]interface{}{
 		"name": "myvault-dot-com",
@@ -456,14 +452,26 @@ func TestBackend_PermittedDNSDomainsIntermediateCA(t *testing.T) {
 	if secret.Auth == nil || secret.Auth.ClientToken == "" {
 		t.Fatalf("expected a successful authentication")
 	}
+
+	// testing pathLoginRenew for cert auth
+	oldAccessor := secret.Auth.Accessor
+	newClient.SetToken(client.Token())
+	secret, err = newClient.Logical().Write("auth/token/renew-accessor", map[string]interface{}{
+		"accessor":  secret.Auth.Accessor,
+		"increment": 3600,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if secret.Auth == nil || secret.Auth.ClientToken != "" || secret.Auth.LeaseDuration != 3600 || secret.Auth.Accessor != oldAccessor {
+		t.Fatalf("unexpected accessor renewal")
+	}
 }
 
 func TestBackend_MetadataBasedACLPolicy(t *testing.T) {
 	// Start cluster with cert auth method enabled
 	coreConfig := &vault.CoreConfig{
-		DisableMlock: true,
-		DisableCache: true,
-		Logger:       log.NewNullLogger(),
 		CredentialBackends: map[string]logical.Factory{
 			"cert": Factory,
 		},
@@ -580,7 +588,7 @@ path "kv/ext/{{identity.entity.aliases.%s.metadata.2-1-1-1}}" {
 	}
 
 	// Create a new api client with the desired TLS configuration
-	newClient := getAPIClient(cores[0].Listeners[0].Address.Port, cores[0].TLSConfig)
+	newClient := getAPIClient(cores[0].Listeners[0].Address.Port, cores[0].TLSConfig())
 
 	var secret *api.Secret
 
@@ -910,6 +918,21 @@ func TestBackend_RegisteredNonCA_CRL(t *testing.T) {
 		t.Fatalf("err:%v resp:%#v", err, resp)
 	}
 
+	// Ensure the CRL shows up on a list.
+	listReq := &logical.Request{
+		Operation: logical.ListOperation,
+		Storage:   storage,
+		Path:      "crls",
+		Data:      map[string]interface{}{},
+	}
+	resp, err = b.HandleRequest(context.Background(), listReq)
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("err:%v resp:%#v", err, resp)
+	}
+	if len(resp.Data) != 1 || len(resp.Data["keys"].([]string)) != 1 || resp.Data["keys"].([]string)[0] != "issuedcrl" {
+		t.Fatalf("bad listing: resp:%v", resp)
+	}
+
 	// Attempt login with the same connection state but with the CRL registered
 	resp, err = b.HandleRequest(context.Background(), loginReq)
 	if err != nil {
@@ -1062,14 +1085,20 @@ func TestBackend_CRLs(t *testing.T) {
 }
 
 func testFactory(t *testing.T) logical.Backend {
+	storage := &logical.InmemStorage{}
 	b, err := Factory(context.Background(), &logical.BackendConfig{
 		System: &logical.StaticSystemView{
 			DefaultLeaseTTLVal: 1000 * time.Second,
 			MaxLeaseTTLVal:     1800 * time.Second,
 		},
-		StorageView: &logical.InmemStorage{},
+		StorageView: storage,
 	})
 	if err != nil {
+		t.Fatalf("error: %s", err)
+	}
+	if err := b.Initialize(context.Background(), &logical.InitializationRequest{
+		Storage: storage,
+	}); err != nil {
 		t.Fatalf("error: %s", err)
 	}
 	return b
@@ -1267,6 +1296,12 @@ func TestBackend_ext_singleCert(t *testing.T) {
 			testAccStepLoginInvalid(t, connState),
 			testAccStepCert(t, "web", ca, "foo", allowed{names: "invalid", ext: "2.1.1.1:*,2.1.1.2:The Wrong Value"}, false),
 			testAccStepLoginInvalid(t, connState),
+			testAccStepCert(t, "web", ca, "foo", allowed{names: "example.com", ext: "hex:2.5.29.17:*87047F000002*"}, false),
+			testAccStepLoginInvalid(t, connState),
+			testAccStepCert(t, "web", ca, "foo", allowed{names: "example.com", ext: "hex:2.5.29.17:*87047F000001*"}, false),
+			testAccStepLogin(t, connState),
+			testAccStepCert(t, "web", ca, "foo", allowed{names: "example.com", ext: "2.5.29.17:"}, false),
+			testAccStepLogin(t, connState),
 			testAccStepReadConfig(t, config{EnableIdentityAliasMetadata: false}, connState),
 			testAccStepCert(t, "web", ca, "foo", allowed{metadata_ext: "2.1.1.1,1.2.3.45"}, false),
 			testAccStepLoginWithMetadata(t, connState, "web", map[string]string{"2-1-1-1": "A UTF8String Extension"}, false),
@@ -1893,30 +1928,57 @@ type allowed struct {
 	metadata_ext         string // allowed metadata extensions to add to identity alias
 }
 
-func testAccStepCert(
-	t *testing.T, name string, cert []byte, policies string, testData allowed, expectError bool,
-) logicaltest.TestStep {
+func testAccStepCert(t *testing.T, name string, cert []byte, policies string, testData allowed, expectError bool) logicaltest.TestStep {
+	return testAccStepCertWithExtraParams(t, name, cert, policies, testData, expectError, nil)
+}
+
+func testAccStepCertWithExtraParams(t *testing.T, name string, cert []byte, policies string, testData allowed, expectError bool, extraParams map[string]interface{}) logicaltest.TestStep {
+	data := map[string]interface{}{
+		"certificate":                  string(cert),
+		"policies":                     policies,
+		"display_name":                 name,
+		"allowed_names":                testData.names,
+		"allowed_common_names":         testData.common_names,
+		"allowed_dns_sans":             testData.dns,
+		"allowed_email_sans":           testData.emails,
+		"allowed_uri_sans":             testData.uris,
+		"allowed_organizational_units": testData.organizational_units,
+		"required_extensions":          testData.ext,
+		"allowed_metadata_extensions":  testData.metadata_ext,
+		"lease":                        1000,
+	}
+	for k, v := range extraParams {
+		data[k] = v
+	}
 	return logicaltest.TestStep{
 		Operation: logical.UpdateOperation,
 		Path:      "certs/" + name,
 		ErrorOk:   expectError,
-		Data: map[string]interface{}{
-			"certificate":                  string(cert),
-			"policies":                     policies,
-			"display_name":                 name,
-			"allowed_names":                testData.names,
-			"allowed_common_names":         testData.common_names,
-			"allowed_dns_sans":             testData.dns,
-			"allowed_email_sans":           testData.emails,
-			"allowed_uri_sans":             testData.uris,
-			"allowed_organizational_units": testData.organizational_units,
-			"required_extensions":          testData.ext,
-			"allowed_metadata_extensions":  testData.metadata_ext,
-			"lease":                        1000,
-		},
+		Data:      data,
 		Check: func(resp *logical.Response) error {
 			if resp == nil && expectError {
 				return fmt.Errorf("expected error but received nil")
+			}
+			return nil
+		},
+	}
+}
+
+func testAccStepReadCertPolicy(t *testing.T, name string, expectError bool, expected map[string]interface{}) logicaltest.TestStep {
+	return logicaltest.TestStep{
+		Operation: logical.ReadOperation,
+		Path:      "certs/" + name,
+		ErrorOk:   expectError,
+		Data:      nil,
+		Check: func(resp *logical.Response) error {
+			if (resp == nil || len(resp.Data) == 0) && expectError {
+				return fmt.Errorf("expected error but received nil")
+			}
+			for key, expectedValue := range expected {
+				actualValue := resp.Data[key]
+				if expectedValue != actualValue {
+					return fmt.Errorf("Expected to get [%v]=[%v] but read [%v]=[%v] from server for certs/%v: %v", key, expectedValue, key, actualValue, name, resp)
+				}
 			}
 			return nil
 		},

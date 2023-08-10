@@ -9,10 +9,10 @@ description: The `/sys/raw` endpoint is used to access the raw underlying store 
 The `/sys/raw` endpoint is used to access the raw underlying store in Vault.
 
 This endpoint is off by default. See the
-[Vault configuration documentation](/docs/configuration) to
+[Vault configuration documentation](/vault/docs/configuration) to
 enable.
 
-## Read Raw
+## Read raw
 
 This endpoint reads the value of the key at the given path. This is the raw path
 in the storage backend and not the logical path that is exposed via the mount
@@ -32,7 +32,7 @@ system.
 - `encoding` `(string: "")` - Specifies the encoding of the returned data. Defaults to no encoding.
   "base64" returns the value encoded in base64.
 
-### Sample Request
+### Sample request
 
 ```shell-session
 $ curl \
@@ -40,7 +40,7 @@ $ curl \
     http://127.0.0.1:8200/v1/sys/raw/secret/foo
 ```
 
-### Sample Response
+### Sample response
 
 ```json
 {
@@ -48,7 +48,7 @@ $ curl \
 }
 ```
 
-## Create/Update Raw
+## Create/Update raw
 
 This endpoint updates the value of the key at the given path. This is the raw
 path in the storage backend and not the logical path that is exposed via the
@@ -72,7 +72,7 @@ mount system.
 - `encoding` `(string: "")` - Specifies the encoding of `value`. Defaults to no encoding.
   Use "base64" if `value` is encoded in base64.
 
-### Sample Payload
+### Sample payload
 
 ```json
 {
@@ -80,7 +80,7 @@ mount system.
 }
 ```
 
-### Sample Request
+### Sample request
 
 ```shell-session
 $ curl \
@@ -90,7 +90,7 @@ $ curl \
     http://127.0.0.1:8200/v1/sys/raw/secret/foo
 ```
 
-## List Raw
+## List raw
 
 This endpoint returns a list keys for a given path prefix.
 
@@ -101,7 +101,7 @@ This endpoint returns a list keys for a given path prefix.
 | `LIST` | `/sys/raw/:prefix`           |
 | `GET`  | `/sys/raw/:prefix?list=true` |
 
-### Sample Request
+### Sample request
 
 ```shell-session
 $ curl \
@@ -110,7 +110,7 @@ $ curl \
     http://127.0.0.1:8200/v1/sys/raw/logical
 ```
 
-### Sample Response
+### Sample response
 
 ```json
 {
@@ -120,7 +120,7 @@ $ curl \
 }
 ```
 
-## Delete Raw
+## Delete raw
 
 This endpoint deletes the key with given path. This is the raw path in the
 storage backend and not the logical path that is exposed via the mount system.
@@ -134,7 +134,7 @@ storage backend and not the logical path that is exposed via the mount system.
 - `path` `(string: <required>)` – Specifies the raw path in the storage backend.
   This is specified as part of the URL.
 
-### Sample Request
+### Sample request
 
 ```shell-session
 $ curl \

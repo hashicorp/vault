@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
 /*eslint-disable no-constant-condition*/
 import { computed } from '@ember/object';
 
@@ -24,7 +29,7 @@ export default Service.extend({
     this.events.clear();
 
     while (true) {
-      let event = yield waitForEvent(window.document, 'securitypolicyviolation');
+      const event = yield waitForEvent(window.document, 'securitypolicyviolation');
       this.events.addObject(event);
     }
   }),

@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
 import { module, test } from 'qunit';
 import { setupRenderingTest } from 'ember-qunit';
 import { render, settled } from '@ember/test-helpers';
@@ -60,10 +65,12 @@ module('Integration | Component | secret edit', function (hooks) {
 
     await render(hbs`{{secret-edit mode=this.mode model=this.model preferAdvancedEdit=true }}`);
 
-    let instance = document.querySelector('.CodeMirror').CodeMirror;
+    const instance = document.querySelector('.CodeMirror').CodeMirror;
     instance.setValue(JSON.stringify([{ foo: 'bar' }]));
     await settled();
-    assert.dom('[data-test-error]').includesText('Vault expects data to be formatted as an JSON object');
+    assert
+      .dom('[data-test-message-error]')
+      .includesText('Vault expects data to be formatted as an JSON object');
   });
 
   test('it allows saving when the model isError', async function (assert) {
@@ -96,9 +103,11 @@ module('Integration | Component | secret edit', function (hooks) {
 
     await render(hbs`{{secret-edit mode=this.mode model=this.model preferAdvancedEdit=true }}`);
 
-    let instance = document.querySelector('.CodeMirror').CodeMirror;
+    const instance = document.querySelector('.CodeMirror').CodeMirror;
     instance.setValue(JSON.stringify([{ foo: 'bar' }]));
     await settled();
-    assert.dom('[data-test-error]').includesText('Vault expects data to be formatted as an JSON object');
+    assert
+      .dom('[data-test-message-error]')
+      .includesText('Vault expects data to be formatted as an JSON object');
   });
 });

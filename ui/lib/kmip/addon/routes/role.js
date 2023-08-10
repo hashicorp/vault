@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
 import Route from '@ember/routing/route';
 import { inject as service } from '@ember/service';
 
@@ -20,7 +25,7 @@ export default class KmipRoleRoute extends Route {
 
   setupController(controller) {
     super.setupController(...arguments);
-    let { scope_name: scope, role_name: role } = this.paramsFor('role');
+    const { scope_name: scope, role_name: role } = this.paramsFor('role');
     controller.setProperties({ role, scope });
   }
 }

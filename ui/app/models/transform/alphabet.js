@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
 import Model, { attr } from '@ember-data/model';
 import { computed } from '@ember/object';
 import { apiPath } from 'vault/macros/lazy-capabilities';
@@ -7,12 +12,11 @@ import { expandAttributeMeta } from 'vault/utils/field-to-attrs';
 const M = Model.extend({
   idPrefix: 'alphabet/',
   idForNav: computed('id', 'idPrefix', function () {
-    let modelId = this.id || '';
+    const modelId = this.id || '';
     return `${this.idPrefix}${modelId}`;
   }),
 
   name: attr('string', {
-    fieldValue: 'id',
     readOnly: true,
     subText: 'The alphabet name. Keep in mind that spaces are not allowed and this cannot be edited later.',
   }),
@@ -23,7 +27,7 @@ const M = Model.extend({
   }),
 
   attrs: computed(function () {
-    let keys = ['name', 'alphabet'];
+    const keys = ['name', 'alphabet'];
     return expandAttributeMeta(this, keys);
   }),
 

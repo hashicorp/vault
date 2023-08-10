@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
 import Component from '@glimmer/component';
 import { inject as service } from '@ember/service';
 import { action } from '@ember/object';
@@ -25,7 +30,7 @@ export default class MfaSetupStepTwo extends Component {
   @action
   async restartSetup() {
     this.error = null;
-    let adapter = this.store.adapterFor('mfa-setup');
+    const adapter = this.store.adapterFor('mfa-setup');
     try {
       await adapter.adminDestroy({
         entity_id: this.args.entityId,

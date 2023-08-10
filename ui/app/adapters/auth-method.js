@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
 import AdapterError from '@ember-data/adapter/error';
 import { assign } from '@ember/polyfills';
 import { set } from '@ember/object';
@@ -16,9 +21,9 @@ export default ApplicationAdapter.extend({
   },
 
   findAll(store, type, sinceToken, snapshotRecordArray) {
-    let isUnauthenticated = snapshotRecordArray?.adapterOptions?.unauthenticated;
+    const isUnauthenticated = snapshotRecordArray?.adapterOptions?.unauthenticated;
     if (isUnauthenticated) {
-      let url = `/${this.urlPrefix()}/internal/ui/mounts`;
+      const url = `/${this.urlPrefix()}/internal/ui/mounts`;
       return this.ajax(url, 'GET', {
         unauthenticated: true,
       })

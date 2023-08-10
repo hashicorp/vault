@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package http
 
 import (
@@ -46,7 +49,7 @@ func TestHandler_XForwardedFor(t *testing.T) {
 		}
 
 		cluster := vault.NewTestCluster(t, nil, &vault.TestClusterOptions{
-			HandlerFunc: testHandler,
+			HandlerFunc: HandlerFunc(testHandler),
 		})
 		cluster.Start()
 		defer cluster.Cleanup()
@@ -89,7 +92,7 @@ func TestHandler_XForwardedFor(t *testing.T) {
 		}
 
 		cluster := vault.NewTestCluster(t, nil, &vault.TestClusterOptions{
-			HandlerFunc: testHandler,
+			HandlerFunc: HandlerFunc(testHandler),
 		})
 		cluster.Start()
 		defer cluster.Cleanup()
@@ -125,7 +128,7 @@ func TestHandler_XForwardedFor(t *testing.T) {
 		}
 
 		cluster := vault.NewTestCluster(t, nil, &vault.TestClusterOptions{
-			HandlerFunc: testHandler,
+			HandlerFunc: HandlerFunc(testHandler),
 		})
 		cluster.Start()
 		defer cluster.Cleanup()
@@ -159,7 +162,7 @@ func TestHandler_XForwardedFor(t *testing.T) {
 		}
 
 		cluster := vault.NewTestCluster(t, nil, &vault.TestClusterOptions{
-			HandlerFunc: testHandler,
+			HandlerFunc: HandlerFunc(testHandler),
 		})
 		cluster.Start()
 		defer cluster.Cleanup()
@@ -193,7 +196,7 @@ func TestHandler_XForwardedFor(t *testing.T) {
 		}
 
 		cluster := vault.NewTestCluster(t, nil, &vault.TestClusterOptions{
-			HandlerFunc: testHandler,
+			HandlerFunc: HandlerFunc(testHandler),
 		})
 		cluster.Start()
 		defer cluster.Cleanup()
@@ -230,7 +233,7 @@ func TestHandler_XForwardedFor(t *testing.T) {
 		}
 
 		cluster := vault.NewTestCluster(t, nil, &vault.TestClusterOptions{
-			HandlerFunc: testHandler,
+			HandlerFunc: HandlerFunc(testHandler),
 		})
 		cluster.Start()
 		defer cluster.Cleanup()
