@@ -3,44 +3,6 @@
     {{this.versionHeader}}
   </h1>
   <span class="has-left-margin-xxs">
-    <Hds::Button
-      @text="New"
-      @color="secondary"
-      @size="small"
-      @icon="wand"
-      class="hds-highlight-background hds-purple-text is-borderless is-shadowless is-underline has-text-weight-semibold new-features-modal-button"
-      {{on "click" (fn (mut this.showNewFeatureModal) true)}}
-    />
-  </span>
-  <span class="has-left-margin-xxs">
     <Hds::Badge @text={{this.namespaceDisplay}} @icon="org" data-test-badge-namespace />
   </span>
 </div>
-
-<Modal
-  @title="New dashboard"
-  @onClose={{action (mut this.showNewFeatureModal) false}}
-  @isActive={{this.showNewFeatureModal}}
-  @showCloseButton={{true}}
->
-  <section class="modal-card-body has-top-padding-l has-bottom-padding-l">
-    <div>
-      <div class="has-bottom-margin-s">
-        Vault now has a dashboard that includes, among other things:
-      </div>
-      <ul class="bullet">
-        <li>An overview of Vault's metrics, shortcuts, and at-a-glance information</li>
-        <li>Configuration details such as cluster address, TTL, TLS, log format, and storage type</li>
-        <li>Quick actions: perform important tasks such as finding a secret or generating a leaf certificate</li>
-      </ul>
-      <div class="has-top-margin-s">
-        You can still access the Secrets engines page on the sidebar.
-      </div>
-    </div>
-  </section>
-  <footer class="modal-card-foot modal-card-foot-outlined">
-    <button type="button" class="button is-primary" {{on "click" (fn (mut this.showNewFeatureModal) false)}}>
-      Got it
-    </button>
-  </footer>
-</Modal>
