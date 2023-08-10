@@ -86,10 +86,28 @@ func (f *EntryFormatter) Process(ctx context.Context, e *eventlogger.Event) (*ev
 	}
 
 	var result []byte
+	data := new(logical.LogInput)
+	headers := make(map[string][]string)
+
+	if a.Data != nil {
+		*data = *a.Data
+		if a.Data.Request != nil && a.Data.Request.Headers != nil {
+			headers = a.Data.Request.Headers
+		}
+	}
+
+	if f.headerFormatter != nil {
+		adjustedHeaders, err := f.headerFormatter.ApplyConfig(ctx, headers, f.salter)
+		if err != nil {
+			return nil, fmt.Errorf("%s: unable to transform headers for auditing: %w", op, err)
+		}
+
+		data.Request.Headers = adjustedHeaders
+	}
 
 	switch a.Subtype {
 	case RequestType:
-		entry, err := f.FormatRequest(ctx, a.Data)
+		entry, err := f.FormatRequest(ctx, data)
 		if err != nil {
 			return nil, fmt.Errorf("%s: unable to parse request from audit event: %w", op, err)
 		}
@@ -99,7 +117,7 @@ func (f *EntryFormatter) Process(ctx context.Context, e *eventlogger.Event) (*ev
 			return nil, fmt.Errorf("%s: unable to format request: %w", op, err)
 		}
 	case ResponseType:
-		entry, err := f.FormatResponse(ctx, a.Data)
+		entry, err := f.FormatResponse(ctx, data)
 		if err != nil {
 			return nil, fmt.Errorf("%s: unable to parse response from audit event: %w", op, err)
 		}
