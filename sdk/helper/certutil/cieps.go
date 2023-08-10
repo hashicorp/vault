@@ -22,7 +22,7 @@ const (
 	SignCIEPSMode  = "sign"
 	IssueCIEPSMode = "issue"
 	ACMECIEPSMode  = "acme"
-	ICACIEPSMOde   = "ica"
+	ICACIEPSMode   = "ica"
 )
 
 // Configuration of the issuer and mount at the time of this request;
