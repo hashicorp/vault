@@ -18,6 +18,9 @@
   background-color: $ui-gray-200;
 }
 
+.has-background-gray-900 {
+  background-color: $ui-gray-900;
+}
 // borders
 .has-border-top-light {
   border-radius: 0;
@@ -80,4 +83,8 @@ select.has-error-border,
 
 .has-text-danger {
   color: $red-500 !important;
+}
+
+.has-text-primary {
+  color: $blue;
 }

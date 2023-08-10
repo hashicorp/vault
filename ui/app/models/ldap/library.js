@@ -54,7 +54,7 @@ export default class LdapLibraryModel extends Model {
     editType: 'radio',
     label: 'Check-in enforcement',
     subText:
-      'When disabled, accounts must be checked in by the entity or client token that checked them out. If enabled, anyone with the right permission can check the account back in.',
+      'When enabled, accounts must be checked in by the entity or client token that checked them out. If disabled, anyone with the right permission can check the account back in.',
     possibleValues: ['Disabled', 'Enabled'],
     defaultValue: 'Enabled',
   })
@@ -65,6 +65,9 @@ export default class LdapLibraryModel extends Model {
   }
 
   @lazyCapabilities(apiPath`${'backend'}/library/${'name'}`, 'backend', 'name') libraryPath;
+  @lazyCapabilities(apiPath`${'backend'}/library/${'name'}/status`, 'backend', 'name') statusPath;
+  @lazyCapabilities(apiPath`${'backend'}/library/${'name'}/check-out`, 'backend', 'name') checkOutPath;
+  @lazyCapabilities(apiPath`${'backend'}/library/${'name'}/check-in`, 'backend', 'name') checkInPath;
 
   get canCreate() {
     return this.libraryPath.get('canCreate') !== false;
@@ -80,5 +83,24 @@ export default class LdapLibraryModel extends Model {
   }
   get canList() {
     return this.libraryPath.get('canList') !== false;
+  }
+  get canReadStatus() {
+    return this.statusPath.get('canRead') !== false;
+  }
+  get canCheckOut() {
+    return this.checkOutPath.get('canCreate') !== false;
+  }
+  get canCheckIn() {
+    return this.checkInPath.get('canCreate') !== false;
+  }
+
+  fetchStatus() {
+    return this.store.adapterFor('ldap/library').fetchStatus(this.backend, this.name);
+  }
+  checkOutAccount(ttl) {
+    return this.store.adapterFor('ldap/library').checkOutAccount(this.backend, this.name, ttl);
+  }
+  checkInAccount(account) {
+    return this.store.adapterFor('ldap/library').checkInAccount(this.backend, this.name, [account]);
   }
 }

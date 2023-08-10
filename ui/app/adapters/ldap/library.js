@@ -37,15 +37,29 @@ export default class LdapLibraryAdapter extends NamedPathAdapter {
     return this.ajax(this.getURL(backend, name), 'GET').then((resp) => ({ ...resp.data, backend, name }));
   }
 
-  fetchCheckOutStatus(backend, name) {
+  fetchStatus(backend, name) {
     const url = `${this.getURL(backend, name)}/status`;
-    return this.ajax(url, 'GET').then((resp) => resp.data);
+    return this.ajax(url, 'GET').then((resp) => {
+      const statuses = [];
+      for (const key in resp.data) {
+        const status = {
+          ...resp.data[key],
+          account: key,
+        };
+        statuses.push(status);
+      }
+      return statuses;
+    });
   }
-  checkOutServiceAccounts(backend, name, ttl) {
+  checkOutAccount(backend, name, ttl) {
     const url = `${this.getURL(backend, name)}/check-out`;
-    return this.ajax(url, 'POST', { data: { ttl } }).then((resp) => resp.data);
+    return this.ajax(url, 'POST', { data: { ttl } }).then((resp) => {
+      const { lease_id, lease_duration, renewable } = resp;
+      const { service_account_name: account, password } = resp.data;
+      return { account, password, lease_id, lease_duration, renewable };
+    });
   }
-  checkInServiceAccounts(backend, name, service_account_names) {
+  checkInAccount(backend, name, service_account_names) {
     const url = `${this.getURL(backend, name)}/check-in`;
     return this.ajax(url, 'POST', { data: { service_account_names } }).then((resp) => resp.data);
   }
