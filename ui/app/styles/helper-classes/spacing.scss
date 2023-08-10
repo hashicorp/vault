@@ -26,8 +26,16 @@
   padding-right: $spacing-s;
 }
 
+.has-padding-s {
+  padding: $spacing-s;
+}
+
 .has-padding-m {
   padding: $spacing-m;
+}
+
+.has-padding-l {
+  padding: $spacing-l;
 }
 
 .has-bottom-padding-s {

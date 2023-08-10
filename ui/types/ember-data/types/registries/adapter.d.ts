@@ -9,11 +9,13 @@ import ModelRegistry from 'ember-data/types/registries/model';
 import PkiIssuerAdapter from 'vault/adapters/pki/issuer';
 import PkiTidyAdapter from 'vault/adapters/pki/tidy';
 import LdapRoleAdapter from 'vault/adapters/ldap/role';
+import LdapLibraryAdapter from 'vault/adapters/ldap/library';
 
 /**
  * Catch-all for ember-data.
  */
 export default interface AdapterRegistry {
+  'ldap/library': LdapLibraryAdapter;
   'ldap/role': LdapRoleAdapter;
   'pki/issuer': PkiIssuerAdapter;
   'pki/tidy': PkiTidyAdapter;
