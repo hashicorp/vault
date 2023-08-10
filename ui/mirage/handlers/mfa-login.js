@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
 import { Response } from 'miragejs';
 import Ember from 'ember';
 import fetch from 'fetch';
@@ -31,7 +36,8 @@ export const validationHandler = (schema, req) => {
       // validate totp passcode
       const passcode = mfa_payload[constraintId][0];
       if (method.uses_passcode) {
-        if (passcode !== 'test') {
+        const expectedPasscode = method.type === 'duo' ? 'passcode=test' : 'test';
+        if (passcode !== expectedPasscode) {
           const error =
             {
               used: 'code already used; new code is available in 30 seconds',
@@ -92,12 +98,10 @@ export default function (server) {
       [mfa_constraints, methods] = generator([m('okta'), m('totp')], [m('totp')]); // 2 constraints 1 passcode/1 non-passcode 1 non-passcode
     } else if (user === 'mfa-j') {
       [mfa_constraints, methods] = generator([m('pingid')]); // use to test push failures
+    } else if (user === 'mfa-k') {
+      [mfa_constraints, methods] = generator([m('duo', true)]); // test duo passcode and prepending passcode= to user input
     }
-    const numbers = (length) =>
-      Math.random()
-        .toString()
-        .substring(2, length + 2);
-    const mfa_request_id = `${numbers(8)}-${numbers(4)}-${numbers(4)}-${numbers(4)}-${numbers(12)}`;
+    const mfa_request_id = crypto.randomUUID();
     const mfa_requirement = {
       mfa_request_id,
       mfa_constraints,

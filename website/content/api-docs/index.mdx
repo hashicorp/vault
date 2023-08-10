@@ -6,8 +6,8 @@ description: Vault has an HTTP API that can be used to control every aspect of V
 
 # HTTP API
 
-The Vault HTTP API gives you full access to Vault using [REST like HTTP verbs](https://en.wikipedia.org/wiki/Representational_state_transfer). 
-Every aspect of Vault can be controlled using the APIs. The Vault CLI uses the 
+The Vault HTTP API gives you full access to Vault using [REST like HTTP verbs](https://en.wikipedia.org/wiki/Representational_state_transfer).
+Every aspect of Vault can be controlled using the APIs. The Vault CLI uses the
 HTTP API to access Vault similar to all other consumers.
 
 All API routes are prefixed with `/v1/`.
@@ -36,7 +36,7 @@ either the `X-Vault-Token` HTTP Header or as `Authorization` HTTP Header using
 the `Bearer <token>` scheme.
 
 Otherwise, a client token can be retrieved using an [authentication
-engine](/docs/auth).
+engine](/vault/docs/auth).
 
 Each auth method has one or more unauthenticated login endpoints. These
 endpoints can be reached without any authentication, and are used for
@@ -49,21 +49,21 @@ client or passed via the `X-Vault-Token` or `Authorization` header for future re
 
 ## Parameter restrictions
 
-Several Vault APIs require specifying path parameters. The path parameter cannot end 
+Several Vault APIs require specifying path parameters. The path parameter cannot end
 in periods. Otherwise, Vault will return a 404 unsupported path error.
 
 ## Namespaces
 
-When using [Namespaces](/docs/enterprise/namespaces) the final path of the API 
-request is relative to the `X-Vault-Namespace` header. For instance, if a 
-request URI is `secret/foo` with the `X-Vault-Namespace` header set as `ns1/ns2/`, 
+When using [Namespaces](/vault/docs/enterprise/namespaces) the final path of the API
+request is relative to the `X-Vault-Namespace` header. For instance, if a
+request URI is `secret/foo` with the `X-Vault-Namespace` header set as `ns1/ns2/`,
 then the resulting request path to Vault will be `ns1/ns2/secret/foo`.
 
-Note that it is semantically equivalent to use the full path rather than the 
-`X-Vault-Namespace` header, Vault will match the corresponding namespace 
-based on correlating user input. Similar path results may be achieved if 
-`X-Vault-Namespace` is set to `ns1/` with the request path of `ns2/secret/foo` 
-as well, or otherwise if `X-Vault-Namespace` is omitted entirely and instead a 
+Note that it is semantically equivalent to use the full path rather than the
+`X-Vault-Namespace` header, Vault will match the corresponding namespace
+based on correlating user input. Similar path results may be achieved if
+`X-Vault-Namespace` is set to `ns1/` with the request path of `ns2/secret/foo`
+as well, or otherwise if `X-Vault-Namespace` is omitted entirely and instead a
 complete path is provided such as: `ns1/ns2/secret/foo`.
 
 For example, the following two commands result in equivalent requests:
@@ -83,15 +83,15 @@ $ curl \
     http://127.0.0.1:8200/v1/ns1/ns2/secret/foo
 ```
 
-## API Operations
+## API operations
 
-Typically the request data, body and response data to and from Vault is in JSON. 
-Vault sets the `Content-Type` header appropriately with its response and does 
+Typically the request data, body and response data to and from Vault is in JSON.
+Vault sets the `Content-Type` header appropriately with its response and does
 not require it from the clients request.
 
-The demonstration below uses the [`KVv1` secrets engine](/api/secret/kv/kv-v1), which is a 
-simple Key/Value store. Please read [the API documentation of KV secret engines](/api/secret/kv) 
-for details of `KVv1` compared to `KVv2` and how they differ in their URI paths 
+The demonstration below uses the [`KVv1` secrets engine](/vault/api-docs/secret/kv/kv-v1), which is a
+simple Key/Value store. Please read [the API documentation of KV secret engines](/vault/api-docs/secret/kv)
+for details of `KVv1` compared to `KVv2` and how they differ in their URI paths
 as well as the features available in version 2 of the KV secrets engine.
 
 For `KVv1`, reading a secret using the HTTP API is done by issuing a GET:
@@ -112,14 +112,14 @@ $ curl \
     http://127.0.0.1:8200/v1/secret/foo
 ```
 
-A few endpoints consume calls with `GET` query string parameters, but only if 
-those parameters are not sensitive, especially since  some load balancers will 
-be able log these. Most endpoints that accept `POST` query string parameters 
+A few endpoints consume calls with `GET` query string parameters, but only if
+those parameters are not sensitive, especially since  some load balancers will
+be able log these. Most endpoints that accept `POST` query string parameters
 expect those parameters in the request body.
 
 You can list secrets as well. To do this, either issue a `GET` with the query
-string parameter `list=true`, or you use the `LIST` HTTP verb. For the `kv` secrets 
-engine, listing is allowed on directories only, which returns the keys at the 
+string parameter `list=true`, or you use the `LIST` HTTP verb. For the `kv` secrets
+engine, listing is allowed on directories only, which returns the keys at the
 requested path:
 
 ```shell-session
@@ -163,7 +163,7 @@ discover whether an operation is actually a create or update operation based on
 the data already stored within Vault. This makes permission management via ACLs
 more flexible.
 
-A [KVv2 example](api/secret/kv/kv-v2#sample-request-3) for the engine path of `secret` requires that URI is 
+A [KVv2 example](/vault/api-docs/secret/kv/kv-v2#sample-request-3) for the engine path of `secret` requires that URI is
 appended with ***`data/`***  prior to the secret name (`baz`) such as:
 
 ```shell-session
@@ -177,9 +177,9 @@ $ curl \
 
 For more examples, please look at the Vault API client.
 
-## The `X-Vault-Request` Header
+## The `X-Vault-Request` header
 
-Requests that are sent to a [Vault Agent][agent] that is configured to use the
+Requests that are sent to a [Vault Proxy][proxy] that is configured to use the
 `require_request_header` option must include the `X-Vault-Request` header
 entry, e.g.:
 
@@ -201,12 +201,12 @@ addition, the Vault SDK always adds this header to every request.
 
 To retrieve the help for any API within Vault, including mounted engines, auth
 methods, etc. then append `?help=1` to any URL. If you have valid permission to
-access the path, then the help text will be returned as a markdown-formatted block 
+access the path, then the help text will be returned as a markdown-formatted block
 in the `help` attribute of the response.
 
-Additionally, with the [OpenAPI generation](/api/system/internal-specs-openapi) in Vault, you will get back a small
-OpenAPI document in the `openapi` attribute. This document is relevant for the 
-path you're looking up and any paths under it - also note paths in the OpenAPI 
+Additionally, with the [OpenAPI generation](/vault/api-docs/system/internal-specs-openapi) in Vault, you will get back a small
+OpenAPI document in the `openapi` attribute. This document is relevant for the
+path you're looking up and any paths under it - also note paths in the OpenAPI
 document are relative to the initial path queried.
 
 
@@ -256,7 +256,7 @@ Example response:
 }
 ```
 
-## Error Response
+## Error response
 
 A common JSON structure is always returned to return errors:
 
@@ -271,10 +271,10 @@ A common JSON structure is always returned to return errors:
 
 This structure will be returned for any HTTP status greater than or equal to 400.
 
-## HTTP Status Codes
+## HTTP status codes
 
 The following HTTP status codes are used throughout the API. Vault tries to
-adhere to these whenever possible, but in case it doesn't -- then feel free to 
+adhere to these whenever possible, but in case it doesn't -- then feel free to
 [raise a bug](https://github.com/hashicorp/vault/issues) for our attention!
 
 ~> _Note_: Applications should be prepared to accept both `200` and `204` as
@@ -297,12 +297,14 @@ warnings are generated during the operation.
 - `412` - Precondition failed.  Returned on Enterprise when a request can't be
   processed yet due to some missing eventually consistent data.  Should be retried,
   perhaps with a little backoff.
-  See [Vault Eventual Consistency](/docs/enterprise/consistency).
+  See [Vault Eventual Consistency](/vault/docs/enterprise/consistency).
 - `429` - Default return code for health status of standby nodes. This will
   likely change in the future.
+- `472` - Default return code for disaster recovery mode replication secondary and active.
 - `473` - Default return code for health status of performance standby nodes.
 - `500` - Internal server error. An internal error has occurred, try again
   later. If the error persists, report a bug.
+- `501` - Vault is not initialized.
 - `502` - A request to Vault required Vault making a request to a third party;
   the third party responded with an error of some kind.
 - `503` - Vault is down for maintenance or is currently sealed. Try again
@@ -314,4 +316,4 @@ A maximum request size of 32MB is imposed to prevent a denial of service attack
 with arbitrarily large requests; this can be tuned per `listener` block in
 Vault's server configuration file.
 
-[agent]: /docs/agent#listener-stanza
+[proxy]: /vault/docs/agent-and-proxy/proxy#listener-stanza

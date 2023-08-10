@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package command
 
 import (
@@ -178,7 +181,7 @@ func (c *KVPutCommand) Run(args []string) int {
 	// Add /data to v2 paths only
 	var fullPath string
 	if v2 {
-		fullPath = addPrefixToKVPath(partialPath, mountPath, "data")
+		fullPath = addPrefixToKVPath(partialPath, mountPath, "data", false)
 		data = map[string]interface{}{
 			"data":    data,
 			"options": map[string]interface{}{},

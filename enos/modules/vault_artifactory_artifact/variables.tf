@@ -1,3 +1,6 @@
+# Copyright (c) HashiCorp, Inc.
+# SPDX-License-Identifier: MPL-2.0
+
 
 variable "artifactory_username" {
   type        = string
@@ -27,9 +30,8 @@ variable "arch" {}
 variable "artifact_type" {}
 variable "distro" {}
 variable "edition" {}
-variable "instance_type" {}
 variable "revision" {}
-variable "vault_product_version" {}
+variable "product_version" {}
 variable "build_tags" { default = null }
 variable "bundle_path" { default = null }
 variable "goarch" { default = null }

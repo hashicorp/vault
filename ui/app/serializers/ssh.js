@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
 import RESTSerializer from '@ember-data/serializer/rest';
 import { isNone, isBlank } from '@ember/utils';
 import { assign } from '@ember/polyfills';

@@ -1,3 +1,6 @@
+# Copyright (c) HashiCorp, Inc.
+# SPDX-License-Identifier: MPL-2.0
+
 terraform {
   required_providers {
     aws = {
@@ -30,11 +33,6 @@ variable "vault_instances" {
     public_ip  = string
   }))
   description = "The vault cluster instances that were created"
-}
-
-variable "vault_local_bundle_path" {
-  type        = string
-  description = "The path to the local Vault (vault.zip) bundle"
 }
 
 variable "vault_local_artifact_path" {
@@ -81,7 +79,8 @@ resource "enos_bundle_install" "upgrade_vault_binary" {
   for_each = local.instances
 
   destination = var.vault_install_dir
-  path        = var.vault_local_bundle_path
+  artifactory = var.vault_artifactory_release
+  path        = var.vault_local_artifact_path
 
   transport = {
     ssh = {

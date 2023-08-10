@@ -1,32 +1,28 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
 /* eslint qunit/no-conditional-assertions: "warn" */
-import {
-  click,
-  findAll,
-  fillIn,
-  settled,
-  visit,
-  triggerEvent,
-  triggerKeyEvent,
-  find,
-  waitUntil,
-} from '@ember/test-helpers';
+import { click, fillIn, settled, visit, triggerKeyEvent, find, waitUntil } from '@ember/test-helpers';
 import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
+import { v4 as uuidv4 } from 'uuid';
+
 import authPage from 'vault/tests/pages/auth';
-import logout from 'vault/tests/pages/logout';
 import enablePage from 'vault/tests/pages/settings/auth/enable';
 import { supportedAuthBackends } from 'vault/helpers/supported-auth-backends';
 import { supportedManagedAuthBackends } from 'vault/helpers/supported-managed-auth-backends';
+import { create } from 'ember-cli-page-object';
+import consoleClass from 'vault/tests/pages/components/console/ui-panel';
+
+const consoleComponent = create(consoleClass);
 
 module('Acceptance | auth backend list', function (hooks) {
   setupApplicationTest(hooks);
 
   hooks.beforeEach(function () {
     return authPage.login();
-  });
-
-  hooks.afterEach(function () {
-    return logout.visit();
   });
 
   test('userpass secret backend', async function (assert) {
@@ -70,17 +66,6 @@ module('Acceptance | auth backend list', function (hooks) {
     await triggerKeyEvent('[data-test-input="username"]', 'keyup', 65);
     await fillIn('[data-test-textarea]', user2);
     await triggerKeyEvent('[data-test-textarea]', 'keyup', 65);
-    // test for modified helpText on generated token policies
-    await click('[data-test-toggle-group="Tokens"]');
-    const policyFormField = document.querySelector('[data-test-input="tokenPolicies"]');
-    const tooltipTrigger = policyFormField.querySelector('[data-test-tool-tip-trigger]');
-    await triggerEvent(tooltipTrigger, 'mouseenter');
-    assert
-      .dom('[data-test-info-tooltip-content]')
-      .hasText(
-        'Add policies that will apply to the generated token for this user. One policy per row.',
-        'Overwritten tooltip text displays in token form field.'
-      );
 
     await click('[data-test-save-config="true"]');
 
@@ -99,24 +84,22 @@ module('Acceptance | auth backend list', function (hooks) {
 
   test('auth methods are linkable and link to correct view', async function (assert) {
     assert.expect(16);
-
+    const uid = uuidv4();
     await visit('/vault/access');
 
     const supportManaged = supportedManagedAuthBackends();
     const backends = supportedAuthBackends();
-
     for (const backend of backends) {
       const { type } = backend;
-
+      const path = `auth-list-${type}-${uid}`;
       if (type !== 'token') {
-        await enablePage.enable(type, type);
+        await enablePage.enable(type, path);
       }
       await settled();
       await visit('/vault/access');
 
       // all auth methods should be linkable
-      await click(`[data-test-auth-backend-link="${type}"]`);
-
+      await click(`[data-test-auth-backend-link="${type === 'token' ? type : path}"]`);
       if (!supportManaged.includes(type)) {
         assert.dom('[data-test-auth-section-tab]').exists({ count: 1 });
         assert
@@ -124,12 +107,15 @@ module('Acceptance | auth backend list', function (hooks) {
           .hasText('Configuration', `only shows configuration tab for ${type} auth method`);
         assert.dom('[data-test-doc-link] .doc-link').exists(`includes doc link for ${type} auth method`);
       } else {
-        // managed auth methods should have more than 1 tab
-        assert.notEqual(
-          findAll('[data-test-auth-section-tab]').length,
-          1,
-          `has management tabs for ${type} auth method`
-        );
+        let expectedTabs = 2;
+        if (type == 'ldap' || type === 'okta') {
+          expectedTabs = 3;
+        }
+        assert
+          .dom('[data-test-auth-section-tab]')
+          .exists({ count: expectedTabs }, `has management tabs for ${type} auth method`);
+        // cleanup method
+        await consoleComponent.runCommands(`delete sys/auth/${path}`);
       }
     }
   });

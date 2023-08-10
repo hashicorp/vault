@@ -6,7 +6,7 @@ description: |-
   Vault.
 ---
 
-# AppRole Auth Method
+# AppRole auth method
 
 The `approle` auth method allows machines or _apps_ to authenticate with
 Vault-defined _roles_. The open design of `AppRole` enables a varied set of
@@ -205,7 +205,7 @@ AppRole either via generation of a 128-bit purely random UUID by the role
 itself (`Pull` mode) or via specific, custom values (`Push` mode). Similarly to
 tokens, SecretIDs have properties like usage-limit, TTLs and expirations.
 
-#### Pull And Push SecretID Modes
+#### Pull and push SecretID modes
 
 If the SecretID used for login is fetched from an AppRole, this is operating in
 Pull mode. If a "custom" SecretID is set against an AppRole by the client, it
@@ -216,13 +216,13 @@ full set of client credentials (RoleID and SecretID) in order to create the
 entry, even if these are then distributed via different paths. However, in Pull
 mode, even though the RoleID must be known in order to distribute it to the
 client, the SecretID can be kept confidential from all parties except for the
-final authenticating client by using [Response Wrapping](/docs/concepts/response-wrapping).
+final authenticating client by using [Response Wrapping](/vault/docs/concepts/response-wrapping).
 
 Push mode is available for App-ID workflow compatibility, which in some
 specific cases is preferable, but in most cases Pull mode is more secure and
 should be preferred.
 
-### Further Constraints
+### Further constraints
 
 `role_id` is a required credential at the login endpoint. AppRole pointed to by
 the `role_id` will have constraints set on it. This dictates other `required`
@@ -236,16 +236,16 @@ belonging to configured CIDR blocks on the AppRole.
 ## Tutorial
 
 Refer to the [AppRole Pull
-Authentication](https://learn.hashicorp.com/vault/identity-access-management/iam-authentication)
+Authentication](/vault/tutorials/auth-methods/approle)
 tutorial to learn how to use the AppRole method to generate tokens for machines or apps.
 
 ## API
 
 The AppRole auth method has a full HTTP API. Please see the
-[AppRole API](/api-docs/auth/approle) for more
+[AppRole API](/vault/api-docs/auth/approle) for more
 details.
 
-## Code Example
+## Code example
 
 The following example demonstrates AppRole authentication with response
 wrapping.

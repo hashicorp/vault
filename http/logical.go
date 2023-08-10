@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package http
 
 import (
@@ -13,7 +16,8 @@ import (
 	"strings"
 	"time"
 
-	uuid "github.com/hashicorp/go-uuid"
+	"github.com/hashicorp/go-uuid"
+	"github.com/hashicorp/vault/helper/experiments"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/logical"
@@ -179,8 +183,10 @@ func buildLogicalRequestNoAuth(perfStandby bool, w http.ResponseWriter, r *http.
 		}
 
 		data = parseQuery(r.URL.Query())
-
-	case "OPTIONS", "HEAD":
+	case "HEAD":
+		op = logical.HeaderOperation
+		data = parseQuery(r.URL.Query())
+	case "OPTIONS":
 	default:
 		return nil, nil, http.StatusMethodNotAllowed, nil
 	}
@@ -344,6 +350,24 @@ func handleLogicalInternal(core *vault.Core, injectDataIntoTopLevel bool, noForw
 		if err != nil || statusCode != 0 {
 			respondError(w, statusCode, err)
 			return
+		}
+
+		// Websockets need to be handled at HTTP layer instead of logical requests.
+		if core.IsExperimentEnabled(experiments.VaultExperimentEventsAlpha1) {
+			ns, err := namespace.FromContext(r.Context())
+			if err != nil {
+				respondError(w, http.StatusInternalServerError, err)
+				return
+			}
+			nsPath := ns.Path
+			if ns.ID == namespace.RootNamespaceID {
+				nsPath = ""
+			}
+			if strings.HasPrefix(r.URL.Path, fmt.Sprintf("/v1/%ssys/events/subscribe/", nsPath)) {
+				handler := handleEventsSubscribe(core, req)
+				handler.ServeHTTP(w, r)
+				return
+			}
 		}
 
 		// Make the internal request. We attach the connection info

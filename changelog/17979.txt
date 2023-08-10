@@ -1,0 +1,3 @@
+```release-note:improvement
+core: Add read support to `sys/loggers` and `sys/loggers/:name` endpoints
+```

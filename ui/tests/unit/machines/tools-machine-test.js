@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
 import { module, test } from 'qunit';
 import { Machine } from 'xstate';
 import ToolsMachineConfig from 'vault/machines/tools-machine';

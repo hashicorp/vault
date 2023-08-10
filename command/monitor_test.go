@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package command
 
 import (
@@ -6,7 +9,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/hashicorp/vault/helper/testhelpers"
 	"github.com/mitchellh/cli"
 )
 
@@ -72,14 +74,11 @@ func TestMonitorCommand_Run(t *testing.T) {
 			cmd.client = client
 			cmd.ShutdownCh = shutdownCh
 
-			stopCh := testhelpers.GenerateDebugLogs(t, client)
-
 			go func() {
 				atomic.StoreInt64(&code, int64(cmd.Run(tc.args)))
 			}()
 
 			<-time.After(3 * time.Second)
-			stopCh <- struct{}{}
 			close(shutdownCh)
 
 			if atomic.LoadInt64(&code) != tc.code {
@@ -90,8 +89,6 @@ func TestMonitorCommand_Run(t *testing.T) {
 			if !strings.Contains(combined, tc.out) {
 				t.Fatalf("expected %q to contain %q", combined, tc.out)
 			}
-
-			<-stopCh
 		})
 	}
 }

@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package logging
 
 import (
@@ -6,8 +9,10 @@ import (
 	"io"
 	"path/filepath"
 	"strings"
+	"time"
 
 	log "github.com/hashicorp/go-hclog"
+	"github.com/hashicorp/go-multierror"
 )
 
 const (
@@ -16,27 +21,52 @@ const (
 	JSONFormat
 )
 
+// defaultRotateDuration is the default time taken by the agent to rotate logs
+const defaultRotateDuration = 24 * time.Hour
+
 type LogFormat int
 
 // LogConfig should be used to supply configuration when creating a new Vault logger
 type LogConfig struct {
-	name        string
-	logLevel    log.Level
-	logFormat   LogFormat
-	logFilePath string
+	// Name is the name the returned logger will use to prefix log lines.
+	Name string
+
+	// LogLevel is the minimum level to be logged.
+	LogLevel log.Level
+
+	// LogFormat is the log format to use, supported formats are 'standard' and 'json'.
+	LogFormat LogFormat
+
+	// LogFilePath is the path to write the logs to the user specified file.
+	LogFilePath string
+
+	// LogRotateDuration is the user specified time to rotate logs
+	LogRotateDuration time.Duration
+
+	// LogRotateBytes is the user specified byte limit to rotate logs
+	LogRotateBytes int
+
+	// LogRotateMaxFiles is the maximum number of past archived log files to keep
+	LogRotateMaxFiles int
+
+	// SubloggerHook handles creation of new subloggers, automatically appending
+	// them to core's running list of allLoggers.
+	// see: server.AppendToAllLoggers for more details.
+	SubloggerHook func(log.Logger) log.Logger
 }
 
-func NewLogConfig(name string, logLevel log.Level, logFormat LogFormat, logFilePath string) LogConfig {
-	return LogConfig{
-		name:        name,
-		logLevel:    logLevel,
-		logFormat:   logFormat,
-		logFilePath: strings.TrimSpace(logFilePath),
-	}
+// SubloggerAdder is an interface which facilitates tracking of new subloggers
+// added between phases of server startup.
+type SubloggerAdder interface {
+	SubloggerHook(logger log.Logger) log.Logger
 }
 
-func (c LogConfig) IsFormatJson() bool {
-	return c.logFormat == JSONFormat
+func (c *LogConfig) isLevelInvalid() bool {
+	return c.LogLevel == log.NoLevel || c.LogLevel == log.Off || c.LogLevel.String() == "unknown"
+}
+
+func (c *LogConfig) isFormatJson() bool {
+	return c.LogFormat == JSONFormat
 }
 
 // Stringer implementation
@@ -65,11 +95,30 @@ func (w noErrorWriter) Write(p []byte) (n int, err error) {
 	return len(p), nil
 }
 
+// parseFullPath takes a full path intended to be the location for log files and
+// breaks it down into a directory and a file name. It checks both of these for
+// the common globbing character '*' and returns an error if it is present.
+func parseFullPath(fullPath string) (directory, fileName string, err error) {
+	directory, fileName = filepath.Split(fullPath)
+
+	globChars := "*?["
+	if strings.ContainsAny(directory, globChars) {
+		err = multierror.Append(err, fmt.Errorf("directory contains glob character"))
+	}
+	if fileName == "" {
+		fileName = "vault.log"
+	} else if strings.ContainsAny(fileName, globChars) {
+		err = multierror.Append(err, fmt.Errorf("file name contains globbing character"))
+	}
+
+	return directory, fileName, err
+}
+
 // Setup creates a new logger with the specified configuration and writer
-func Setup(config LogConfig, w io.Writer) (log.InterceptLogger, error) {
+func Setup(config *LogConfig, w io.Writer) (log.InterceptLogger, error) {
 	// Validate the log level
-	if config.logLevel.String() == "unknown" {
-		return nil, fmt.Errorf("invalid log level: %v", config.logLevel)
+	if config.isLevelInvalid() {
+		return nil, fmt.Errorf("invalid log level: %v", config.LogLevel)
 	}
 
 	// If out is os.Stdout and Vault is being run as a Windows Service, writes will
@@ -77,24 +126,42 @@ func Setup(config LogConfig, w io.Writer) (log.InterceptLogger, error) {
 	// noErrorWriter is used as a wrapper to suppress any errors when writing to out.
 	writers := []io.Writer{noErrorWriter{w: w}}
 
-	if config.logFilePath != "" {
-		dir, fileName := filepath.Split(config.logFilePath)
-		if fileName == "" {
-			fileName = "vault-agent.log"
+	// Create a file logger if the user has specified the path to the log file
+	if config.LogFilePath != "" {
+		dir, fileName, err := parseFullPath(config.LogFilePath)
+		if err != nil {
+			return nil, err
 		}
-		logFile := NewLogFile(dir, fileName)
+
+		if config.LogRotateDuration == 0 {
+			config.LogRotateDuration = defaultRotateDuration
+		}
+
+		logFile := &LogFile{
+			fileName:         fileName,
+			logPath:          dir,
+			duration:         config.LogRotateDuration,
+			maxBytes:         config.LogRotateBytes,
+			maxArchivedFiles: config.LogRotateMaxFiles,
+		}
+		if err := logFile.pruneFiles(); err != nil {
+			return nil, fmt.Errorf("failed to prune log files: %w", err)
+		}
 		if err := logFile.openNew(); err != nil {
-			return nil, fmt.Errorf("failed to set up file logging: %w", err)
+			return nil, fmt.Errorf("failed to setup logging: %w", err)
 		}
 		writers = append(writers, logFile)
 	}
 
 	logger := log.NewInterceptLogger(&log.LoggerOptions{
-		Name:       config.name,
-		Level:      config.logLevel,
-		Output:     io.MultiWriter(writers...),
-		JSONFormat: config.IsFormatJson(),
+		Name:              config.Name,
+		Level:             config.LogLevel,
+		IndependentLevels: true,
+		Output:            io.MultiWriter(writers...),
+		JSONFormat:        config.isFormatJson(),
+		SubloggerHook:     config.SubloggerHook,
 	})
+
 	return logger, nil
 }
 
@@ -112,6 +179,8 @@ func ParseLogFormat(format string) (LogFormat, error) {
 	}
 }
 
+// ParseLogLevel returns the hclog.Level that corresponds with the provided level string.
+// This differs hclog.LevelFromString in that it supports additional level strings.
 func ParseLogLevel(logLevel string) (log.Level, error) {
 	var result log.Level
 	logLevel = strings.ToLower(strings.TrimSpace(logLevel))
@@ -132,4 +201,16 @@ func ParseLogLevel(logLevel string) (log.Level, error) {
 	}
 
 	return result, nil
+}
+
+// TranslateLoggerLevel returns the string that corresponds with logging level of the hclog.Logger.
+func TranslateLoggerLevel(logger log.Logger) (string, error) {
+	logLevel := logger.GetLevel()
+
+	switch logLevel {
+	case log.Trace, log.Debug, log.Info, log.Warn, log.Error:
+		return logLevel.String(), nil
+	default:
+		return "", fmt.Errorf("unknown log level")
+	}
 }

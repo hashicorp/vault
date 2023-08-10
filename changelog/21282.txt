@@ -1,0 +1,3 @@
+```release-note:change
+auth/ldap: Normalize HTTP response codes when invalid credentials are provided
+```

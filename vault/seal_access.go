@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package vault
 
 import (
@@ -43,6 +46,7 @@ func (s *SealAccess) VerifyRecoveryKey(ctx context.Context, key []byte) error {
 	return s.seal.VerifyRecoveryKey(ctx, key)
 }
 
+// TODO(SEALHA): This looks like it belongs in Seal instead, it only has two callers
 func (s *SealAccess) ClearCaches(ctx context.Context) {
 	s.seal.SetBarrierConfig(ctx, nil)
 	if s.RecoveryKeySupported() {
@@ -50,6 +54,6 @@ func (s *SealAccess) ClearCaches(ctx context.Context) {
 	}
 }
 
-func (s *SealAccess) GetAccess() *seal.Access {
+func (s *SealAccess) GetAccess() seal.Access {
 	return s.seal.GetAccess()
 }
