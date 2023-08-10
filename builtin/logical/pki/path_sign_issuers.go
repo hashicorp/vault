@@ -55,7 +55,7 @@ func buildPathIssuerSignIntermediateRaw(b *backend, pattern string, displayAttrs
 							"serial_number": {
 								Type:        framework.TypeString,
 								Description: `Serial Number`,
-								Required:    false,
+								Required:    true,
 							},
 							"certificate": {
 								Type:        framework.TypeString,
