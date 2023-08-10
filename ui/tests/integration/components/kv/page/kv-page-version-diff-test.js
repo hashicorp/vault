@@ -63,7 +63,6 @@ module('Integration | Component | kv | Page::Secret::Metadata::Version-Diff', fu
       destroyed: false,
       version: 4,
     });
-    this.secret = store.peekRecord('kv/data', kvDataPath('kv-engine', 'my-secret', 4));
 
     this.endpoint = `${encodePath('kv-engine')}/data/${'my-secret'}`;
   });
@@ -87,7 +86,6 @@ module('Integration | Component | kv | Page::Secret::Metadata::Version-Diff', fu
         @path={{this.metadata.path}}
         @backend={{this.metadata.backend}}
         @breadcrumbs={{this.breadcrumbs}}
-        @currentSecretData={{this.secret}}
       />
       `,
       { owner: this.engine }

@@ -17,7 +17,6 @@ import { kvDataPath } from 'vault/utils/kv-path';
  * @param {string} path - Backend from the kv/data model.
  * @param {array} metadata - The kv/metadata model. It is version agnostic.
  * @param {array} breadcrumbs - Array to generate breadcrumbs, passed to the page header component.
- * @param {object} currentSecretData - The model class for kv/data. Need version and deleted or destroyed information.
  */
 
 export default class KvVersionDiffComponent extends Component {
@@ -33,6 +32,13 @@ export default class KvVersionDiffComponent extends Component {
     this.leftSideVersion = this.args.metadata.currentVersion;
     this.rightSideVersion = this.defaultRightSideVersion;
     this.createVisualDiff();
+  }
+
+  get deactivated() {
+    const { currentVersion, versions } = this.args.metadata;
+    const { destroyed, deleted } = versions[currentVersion].destroyed;
+    if (!destroyed || !deleted) return '';
+    return destroyed ? 'destroyed' : 'deleted';
   }
 
   get defaultRightSideVersion() {

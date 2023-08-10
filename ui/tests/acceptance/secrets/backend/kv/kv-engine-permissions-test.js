@@ -67,7 +67,7 @@ module('Acceptance | kv permissions', function (hooks) {
 
     module('it renders secret details page', function () {
       test('it shows all tabs for admin policy', async function (assert) {
-        assert.expect(5);
+        assert.expect(4);
         await authPage.login(this.kvAdminToken);
         await visit(`/vault/secrets/${this.mountPath}/kv/${this.secretPath}/details`);
         assert.strictEqual(currentURL(), `/vault/secrets/${this.mountPath}/kv/${this.secretPath}/details`);
