@@ -54,7 +54,7 @@
   {{/each}}
   {{#if @key.privateKey}}
     <InfoTableRow @label="Private key">
-      <MaskedInput @value={{@key.privateKey}} @name="Private key" @displayOnly={{true}} @allowCopy={{true}} />
+      <CertificateCard @data={{@key.privateKey}} />
     </InfoTableRow>
   {{/if}}
 </div>

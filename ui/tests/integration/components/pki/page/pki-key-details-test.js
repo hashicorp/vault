@@ -75,4 +75,20 @@ module('Integration | Component | pki key details page', function (hooks) {
     assert.dom(SELECTORS.keyDeleteButton).doesNotExist('does not render delete button if no permission');
     assert.dom(SELECTORS.keyEditLink).doesNotExist('does not render edit button if no permission');
   });
+
+  test('it renders the private key as a <CertificateCard> component when there is a private key', async function (assert) {
+    this.model.privateKey = 'private-key-value';
+    await render(
+      hbs`
+        <Page::PkiKeyDetails
+          @key={{this.model}} 
+          @canDelete={{false}}
+          @canEdit={{false}} 
+        />
+      `,
+      { owner: this.engine }
+    );
+
+    assert.dom('[data-test-certificate-card]').exists('Certificate card renders for the private key');
+  });
 });
