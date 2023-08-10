@@ -91,7 +91,7 @@ export default class KvDeleteModal extends Component {
   flashMessageMessage(isSuccess) {
     if (isSuccess) {
       if (this.deleteType === 'delete-metadata') {
-        return `Successfully permanently deleted the metadata and all version data for the secret ${this.args.path}.`;
+        return `Successfully deleted the metadata and all version data for the secret ${this.args.path}.`;
       } else {
         return `Successfully ${verbToPastTense(this.args.mode, 'past')} Version ${
           this.args.secret.version
@@ -115,8 +115,10 @@ export default class KvDeleteModal extends Component {
         adapterOptions: { deleteType: this.deleteType, deleteVersions: this.args.secret.version },
       });
       this.flashMessages.success(this.flashMessageMessage(true));
-
-      this.router.transitionTo('vault.cluster.secrets.backend.kv.secret', {
+      if (this.deleteType === 'delete-metadata') {
+        return this.router.transitionTo('vault.cluster.secrets.backend.kv.list');
+      }
+      return this.router.transitionTo('vault.cluster.secrets.backend.kv.secret', {
         queryParams: { version: this.args.secret.version },
       });
     } catch (err) {
