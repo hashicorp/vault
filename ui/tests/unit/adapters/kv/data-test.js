@@ -155,7 +155,7 @@ module('Unit | Adapter | kv/data', function (hooks) {
     });
     let record = await this.store.peekRecord('kv/data', this.id);
     await record.destroyRecord({
-      adapterOptions: { deleteType: 'delete-specific-version', deleteVersions: 2 },
+      adapterOptions: { deleteType: 'delete-version', deleteVersions: 2 },
     });
     assert.true(record.isDeleted, 'record is deleted');
     record = await this.store.peekRecord('kv/data', this.id);
@@ -178,7 +178,7 @@ module('Unit | Adapter | kv/data', function (hooks) {
     let record = await this.store.peekRecord('kv/data', this.id);
 
     await record.destroyRecord({
-      adapterOptions: { deleteType: 'undelete-specific-version', deleteVersions: 2 },
+      adapterOptions: { deleteType: 'undelete-version', deleteVersions: 2 },
     });
     assert.true(record.isDeleted, 'record is deleted');
     record = await this.store.peekRecord('kv/data', this.id);
@@ -200,7 +200,7 @@ module('Unit | Adapter | kv/data', function (hooks) {
     });
     let record = await this.store.peekRecord('kv/data', this.id);
     await record.destroyRecord({
-      adapterOptions: { deleteType: 'destroy-specific-version', deleteVersions: 2 },
+      adapterOptions: { deleteType: 'destroy-version', deleteVersions: 2 },
     });
     assert.true(record.isDeleted, 'record is deleted');
     record = await this.store.peekRecord('kv/data', this.id);
