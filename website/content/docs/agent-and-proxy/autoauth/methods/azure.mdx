@@ -19,11 +19,13 @@ on the value of the `resource` parameter.
 - `authenticate_from_environment` `(boolean: false)` - If set to true, will attempt to make an Azure
   identity object through Azure specific environment variables, in priority order and as specified [in
   Azure documentation][environment-variables]. Will work seamlessly with Azure
-  [Workload Identity][workload-identity] and others. If set to true, `object_id`, and
-  `client_id` will be ignored in favour of this authentication approach.
+  [Workload Identity][workload-identity] and others.
 
-- `scope` `(string: optional)` - The scope to use when obtaining the token. If not given, will be
-  the value used for `resource` appended with `/.default` appended to it. For more information on
+~> Note: If `authenticate_from_environment` is set to true, `object_id`, and `client_id` will be ignored
+in favour of that authentication approach.
+
+- `scope` `(string: optional)` - The scope to use when obtaining a token. If not supplied, will default to
+  the value used for `resource` appended with "`/.default`" appended as a suffix. For more information on
   scopes in Azure, see [this document][scopes].
 
 - `resource` `(string: required)` - The resource name to use when getting identity information.
@@ -39,7 +41,7 @@ on the value of the `resource` parameter.
 
 ## Example configuration
 
-An example auto-auth configuration block for an example Azure [Workload Identity][workload-identity] configured client follows:
+Example client auto-auth configuration block for an [Azure Workload Identity][workload-identity]:
 
 ```hcl
 auto_auth {

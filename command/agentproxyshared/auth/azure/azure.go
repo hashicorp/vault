@@ -203,6 +203,8 @@ func getAzureTokenFromEnvironment(ctx context.Context, scope string) (string, er
 	return tk.Token, nil
 }
 
+// getInstanceMetadataInfo calls the Azure Instance Metadata endpoint to get
+// information about the Azure environment it's running in.
 func getInstanceMetadataInfo(ctx context.Context) ([]byte, error) {
 	return getMetadataInfo(ctx, instanceEndpoint, "", "", "")
 }
@@ -227,6 +229,8 @@ func getTokenFromIdentityEndpoint(ctx context.Context, resource, objectID, clien
 	return identity.AccessToken, nil
 }
 
+// getMetadataInfo calls the Azure metadata endpoint with the given parameters.
+// An empty resource, objectID and clientID will return metadata information.
 func getMetadataInfo(ctx context.Context, endpoint, resource, objectID, clientID string) ([]byte, error) {
 	req, err := http.NewRequest("GET", endpoint, nil)
 	if err != nil {
