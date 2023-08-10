@@ -11,11 +11,7 @@
     <InfoTableRow
       @alwaysRender={{true}}
       @label={{or attr.options.label (to-label attr.name)}}
-      @value={{if
-        (eq attr.name "deleteVersionAfter")
-        (or @engineConfig.isNeverDelete (format-duration @engineConfig.deleteVersionAfter))
-        (get @engineConfig attr.name)
-      }}
+      @value={{if (eq attr.name "deleteVersionAfter") @engineConfig.displayDeleteTtl (get @engineConfig attr.name)}}
     />
   {{/each}}
 </div>

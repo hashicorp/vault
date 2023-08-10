@@ -1,6 +1,7 @@
 import Model, { attr } from '@ember-data/model';
 import lazyCapabilities, { apiPath } from 'vault/macros/lazy-capabilities';
 import { withFormFields } from 'vault/decorators/model-form-fields';
+import { duration } from 'core/helpers/format-duration';
 
 // This model is used only for display only - configuration happens via secret-engine model when an engine is mounted
 @withFormFields()
@@ -22,10 +23,9 @@ export default class KvConfigModel extends Model {
     return ['casRequired', 'deleteVersionAfter', 'maxVersions'];
   }
 
-  get isNeverDelete() {
-    if (this.deleteVersionAfter === '0s') {
-      return 'Never delete';
-    }
-    return false;
+  get displayDeleteTtl() {
+    if (this.deleteVersionAfter === '0s') return 'Never delete';
+
+    return duration([this.deleteVersionAfter]);
   }
 }
