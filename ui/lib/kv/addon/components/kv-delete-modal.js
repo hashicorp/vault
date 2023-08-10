@@ -12,7 +12,8 @@ import { assert } from '@ember/debug';
 import { verbToPastTense } from 'core/helpers/verb-to-tense';
 
 /**
- * @module KvDeleteModal displays a button for a delete type and launches a the respective modal. All destroyRecord network requests are handled inside the component.
+ * @module KvDeleteModal displays a button for a delete type and launches a modal (undelete is the only mode that does not launch the modal).
+ *  All destroyRecord network requests are handled inside the component.
  *
  * <KvDeleteModal
  *  @mode="destroy"
@@ -37,7 +38,7 @@ export default class KvDeleteModal extends Component {
   get modalIntro() {
     switch (this.args.mode) {
       case 'delete':
-        return 'There are two ways to delete a version of a secret. Both delete actions can be un-deleted later if you need. How would you like to proceed?';
+        return 'There are two ways to delete a version of a secret. Both delete actions can be un-deleted later. How would you like to proceed?';
       case 'destroy':
         return `This action will permanently destroy Version ${this.args.secret.version}
         of the secret, and the secret data cannot be read or recovered later.`;
@@ -49,10 +50,10 @@ export default class KvDeleteModal extends Component {
   }
 
   get generateDeleteRadioOptions() {
-    let isDeactivated;
-    this.args.secret.canReadMetadata
-      ? (isDeactivated = this.args.metadata?.currentSecret.isDeactivated)
-      : (isDeactivated = false);
+    let isDeactivated = false;
+    if (this.args.secret.canReadMetadata) {
+      isDeactivated = this.args.metadata?.currentSecret.isDeactivated;
+    }
 
     return [
       {
@@ -69,7 +70,7 @@ export default class KvDeleteModal extends Component {
         disabled: !this.args.secret.canDeleteLatestVersion || isDeactivated,
         tooltipMessage: isDeactivated
           ? `The latest version of the secret is already ${this.args.metadata.secretState.state}.`
-          : 'You do not have permission to delete the latest version.',
+          : 'You do not have permission to delete the latest version of this secret.',
       },
     ];
   }
