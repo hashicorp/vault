@@ -198,8 +198,6 @@ module('Acceptance | kv-v2 workflow | navigation', function (hooks) {
       assert.dom(PAGE.secretTab('Metadata')).doesNotHaveClass('active');
       assert.dom(PAGE.secretTab('Version History')).hasText('Version History');
       assert.dom(PAGE.secretTab('Version History')).doesNotHaveClass('active');
-      assert.dom(PAGE.secretTab('Version Diff')).hasText('Version Diff');
-      assert.dom(PAGE.secretTab('Version Diff')).doesNotHaveClass('active');
       assert.dom(PAGE.detail.versionDropdown).hasText('Version 3', 'Version dropdown shows current version');
       assert.dom(PAGE.detail.createNewVersion).hasText('Create new version', 'Create version button shows');
       assert.dom(PAGE.detail.versionCreated).containsText('Version 3 created');
@@ -275,7 +273,7 @@ module('Acceptance | kv-v2 workflow | navigation', function (hooks) {
       );
     });
     test('breadcrumbs & page titles are correct', async function (assert) {
-      assert.expect(38);
+      assert.expect(39);
       const backend = this.backend;
       await navToBackend(backend);
       await click(PAGE.secretTab('Configuration'));
@@ -306,13 +304,7 @@ module('Acceptance | kv-v2 workflow | navigation', function (hooks) {
       await click(PAGE.breadcrumbAtIdx(3));
       await click(PAGE.secretTab('Version History'));
       assertCorrectBreadcrumbs(assert, ['secrets', backend, secretPath, 'version history']);
-      // TODO add title to version history page
-      // assert.dom(PAGE.title).hasText(secretPath, 'correct page title for version history');
-
-      // TODO: fix this selector
-      // await click(PAGE.secretTab('Version Diff'));
-      // assertCorrectBreadcrumbs(assert, ['secrets', backend, secretPath, 'version diff']);
-      // assert.dom(PAGE.title).hasText(secretPath, 'correct page title for version diff');
+      assert.dom(PAGE.title).hasText(secretPath, 'correct page title for version history');
     });
   });
 
@@ -433,8 +425,6 @@ module('Acceptance | kv-v2 workflow | navigation', function (hooks) {
       assert.dom(PAGE.secretTab('Metadata')).doesNotHaveClass('active');
       // TODO: hide tab
       // assert.dom(PAGE.secretTab('Version History')).doesNotExist('Version history tab not shown');
-      // TODO: hide tab
-      // assert.dom(PAGE.secretTab('Version Diff')).doesNotExist('Version diff tab not shown');
       // TODO: hide dropdown
       // assert.dom(PAGE.detail.versionDropdown).doesNotExist('Version dropdown hidden');
       assert.dom(PAGE.detail.createNewVersion).hasText('Create new version', 'Create version button shows');
@@ -655,9 +645,6 @@ module('Acceptance | kv-v2 workflow | navigation', function (hooks) {
       assert.dom(PAGE.secretTab('Secret')).hasClass('active');
       assert.dom(PAGE.secretTab('Metadata')).hasText('Metadata');
       assert.dom(PAGE.secretTab('Metadata')).doesNotHaveClass('active');
-      // TODO: version diff & history hidden
-      // assert.dom(PAGE.secretTab('Version History')).doesNotExist('Version History tab hidden');
-      // assert.dom(PAGE.secretTab('Version Diff')).doesNotExist('Version Diff tab hidden');
       // TODO: version dropdown hidden
       // assert.dom(PAGE.detail.versionDropdown).doesNotExist('Version dropdown hidden');
       assert.dom(PAGE.detail.createNewVersion).hasText('Create new version', 'Create version button shows');
@@ -811,7 +798,7 @@ module('Acceptance | kv-v2 workflow | navigation', function (hooks) {
       );
     });
     test('can access nested secret', async function (assert) {
-      assert.expect(35);
+      assert.expect(36);
       const backend = this.backend;
       await navToBackend(backend);
       assert.dom(PAGE.title).hasText(`${backend} Version 2`, 'title text correct');
@@ -835,12 +822,11 @@ module('Acceptance | kv-v2 workflow | navigation', function (hooks) {
       assert.dom(PAGE.list.item('secret')).exists('Shows deeply nested secret');
 
       await click(PAGE.list.item('secret'));
-      // TODO: url does not have version
-      // assert.strictEqual(
-      //   currentURL(),
-      //   `/vault/secrets/${backend}/kv/app%2Fnested%2Fsecret/details?version=1`,
-      //   `Goes to URL with version`
-      // );
+      assert.strictEqual(
+        currentURL(),
+        `/vault/secrets/${backend}/kv/app%2Fnested%2Fsecret/details`,
+        `Goes to URL with version`
+      );
       assertCorrectBreadcrumbs(assert, ['secret', backend, 'app', 'nested', 'secret']);
       assert.dom(PAGE.title).hasText('app/nested/secret', 'title is full secret path');
       assert.dom(PAGE.toolbar).exists('toolbar renders');
@@ -865,7 +851,7 @@ module('Acceptance | kv-v2 workflow | navigation', function (hooks) {
       assert.ok(currentURL().startsWith(`/vault/secrets/${backend}/kv/list`), 'links back to list root');
     });
     test('versioned secret nav, tabs, breadcrumbs', async function (assert) {
-      assert.expect(33);
+      assert.expect(34);
       const backend = this.backend;
       await navToBackend(backend);
       await click(PAGE.list.item(secretPath));
@@ -882,13 +868,12 @@ module('Acceptance | kv-v2 workflow | navigation', function (hooks) {
       assert.dom(PAGE.secretTab('Metadata')).doesNotHaveClass('active');
       assert.dom(PAGE.secretTab('Version History')).hasText('Version History');
       assert.dom(PAGE.secretTab('Version History')).doesNotHaveClass('active');
-      assert.dom(PAGE.secretTab('Version Diff')).hasText('Version Diff');
-      assert.dom(PAGE.secretTab('Version Diff')).doesNotHaveClass('active');
-      // TODO: missing version number
-      // assert.dom(PAGE.detail.versionDropdown).hasText('Version 3', 'Version dropdown shows current version');
+      assert
+        .dom(PAGE.detail.versionDropdown)
+        .hasText('Version current', 'Version dropdown shows current version');
       assert.dom(PAGE.detail.createNewVersion).doesNotExist('Create new version button not shown');
-      // TODO: Should show this
-      // assert.dom(PAGE.detail.versionCreated).containsText('Version 3 created');
+      // TODO: should the created metadata show?
+      assert.dom(PAGE.detail.versionCreated).doesNotExist('Version created text not shown');
       assert.dom(PAGE.infoRowValue('foo')).doesNotExist('does not render current data');
       assert
         .dom(PAGE.emptyStateTitle)
@@ -897,11 +882,11 @@ module('Acceptance | kv-v2 workflow | navigation', function (hooks) {
       await click(PAGE.detail.versionDropdown);
       await click(`${PAGE.detail.version(1)} a`);
       // TODO: version param missing
-      // assert.strictEqual(
-      //   currentURL(),
-      //   `/vault/secrets/${backend}/kv/${secretPathUrlEncoded}/details?version=1`,
-      //   'Goes to detail view for version 1'
-      // );
+      assert.strictEqual(
+        currentURL(),
+        `/vault/secrets/${backend}/kv/${secretPathUrlEncoded}/details?version=1`,
+        'Goes to detail view for version 1'
+      );
       // TODO: version number missing
       // assert.dom(PAGE.detail.versionDropdown).hasText('Version 1', 'Version dropdown shows selected version');
       // TODO: versionCreated missing
@@ -945,7 +930,7 @@ module('Acceptance | kv-v2 workflow | navigation', function (hooks) {
       );
     });
     test('breadcrumbs & page titles are correct', async function (assert) {
-      assert.expect(32);
+      assert.expect(33);
       const backend = this.backend;
       await navToBackend(backend);
       await click(PAGE.secretTab('Configuration'));
@@ -971,13 +956,7 @@ module('Acceptance | kv-v2 workflow | navigation', function (hooks) {
       await click(PAGE.breadcrumbAtIdx(3));
       await click(PAGE.secretTab('Version History'));
       assertCorrectBreadcrumbs(assert, ['secrets', backend, secretPath, 'version history']);
-      // TODO add title to version history page
-      // assert.dom(PAGE.title).hasText(secretPath, 'correct page title for version history');
-
-      // TODO: fix this selector
-      // await click(PAGE.secretTab('Version Diff'));
-      // assertCorrectBreadcrumbs(assert, ['secrets', backend, secretPath, 'version diff']);
-      // assert.dom(PAGE.title).hasText(secretPath, 'correct page title for version diff');
+      assert.dom(PAGE.title).hasText(secretPath, 'correct page title for version history');
     });
   });
 
@@ -1073,7 +1052,7 @@ module('Acceptance | kv-v2 workflow | navigation', function (hooks) {
       assert.ok(currentURL().startsWith(`/vault/secrets/${backend}/kv/list`), 'links back to list root');
     });
     test('versioned secret nav, tabs, breadcrumbs', async function (assert) {
-      assert.expect(27);
+      assert.expect(26);
       const backend = this.backend;
       await navToBackend(backend);
 
@@ -1091,7 +1070,6 @@ module('Acceptance | kv-v2 workflow | navigation', function (hooks) {
       assert.dom(PAGE.secretTab('Metadata')).hasText('Metadata');
       assert.dom(PAGE.secretTab('Metadata')).doesNotHaveClass('active');
       assert.dom(PAGE.secretTab('Version History')).doesNotExist('Version History tab does not render');
-      assert.dom(PAGE.secretTab('Version Diff')).doesNotExist('Version Diff tab does not render');
       assert.dom(PAGE.detail.versionDropdown).doesNotExist('Version dropdown does not render');
       assert.dom(PAGE.detail.createNewVersion).hasText('Create new version', 'Create version button shows');
       assert.dom(PAGE.detail.versionCreated).doesNotExist('Version created info is not rendered');
@@ -1187,13 +1165,7 @@ module('Acceptance | kv-v2 workflow | navigation', function (hooks) {
 
       await click(PAGE.secretTab('Version History'));
       assertCorrectBreadcrumbs(assert, ['secrets', backend, secretPath, 'version history']);
-      // TODO add title to version history page
-      // assert.dom(PAGE.title).hasText(secretPath, 'correct page title for version history');
-
-      // TODO: fix this selector
-      // await click(PAGE.secretTab('Version Diff'));
-      // assertCorrectBreadcrumbs(assert, ['secrets', backend, secretPath, 'version diff']);
-      // assert.dom(PAGE.title).hasText(secretPath, 'correct page title for version diff');
+      assert.dom(PAGE.title).hasText(secretPath, 'correct page title for version history');
     });
   });
 
