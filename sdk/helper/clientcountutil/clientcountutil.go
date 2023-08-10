@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 // Package clientcountutil provides a library to generate activity log data for
 // testing.
 package clientcountutil
@@ -36,8 +39,7 @@ func NewActivityLogData(client *api.Client) *ActivityLogDataGenerator {
 // clients will continue to be added to this month until a new month is created
 // with NewPreviousMonthData.
 func (d *ActivityLogDataGenerator) NewCurrentMonthData() *ActivityLogDataGenerator {
-	d.newMonth(&generation.Data{Month: &generation.Data_CurrentMonth{CurrentMonth: true}})
-	return d
+	return d.newMonth(&generation.Data{Month: &generation.Data_CurrentMonth{CurrentMonth: true}})
 }
 
 // NewPreviousMonthData opens a new month of data, where the clients will be
@@ -80,6 +82,10 @@ func WithMaximumSegmentIndex(n int) MonthOption {
 // segments in the open month. If you use this option, you must either:
 //  1. ensure that you've called Segment() for the open month
 //  2. use WithMaximumSegmentIndex() to set the total number of segments
+//
+// If you haven't set either of those values then this option will be ignored,
+// unless you included 0 as an empty segment index in which case only an empty
+// segment will be created.
 func WithEmptySegmentIndexes(i ...int) MonthOption {
 	return func(m *generation.Data) {
 		indexes := make([]int32, 0, len(i))
@@ -94,6 +100,10 @@ func WithEmptySegmentIndexes(i ...int) MonthOption {
 // segments in the open month. If you use this option, you must either:
 //  1. ensure that you've called Segment() for the open month
 //  2. use WithMaximumSegmentIndex() to set the total number of segments
+//
+// If you haven't set either of those values then this option will be ignored,
+// unless you included 0 as a skipped segment index in which case no segments
+// will be created.
 func WithSkipSegmentIndexes(i ...int) MonthOption {
 	return func(m *generation.Data) {
 		indexes := make([]int32, 0, len(i))
@@ -276,6 +286,9 @@ func (d *ActivityLogDataGenerator) Write(ctx context.Context, writeOptions ...ge
 	if err != nil {
 		return nil, err
 	}
+	if resp.Data == nil {
+		return nil, fmt.Errorf("received no data")
+	}
 	paths := resp.Data["paths"]
 	castedPaths, ok := paths.([]interface{})
 	if !ok {
@@ -316,7 +329,7 @@ func VerifyInput(input *generation.ActivityLogMockInput) error {
 
 		// the number of segments should be correct
 		if month.NumSegments > 0 && int(month.NumSegments)-len(month.GetSkipSegmentIndexes())-len(month.GetEmptySegmentIndexes()) <= 0 {
-			return fmt.Errorf("number of segments %d is too small. It must be large enough to include the empty and skipped segments", month.NumSegments)
+			return fmt.Errorf("number of segments %d is too small. It must be large enough to include the empty (%v) and skipped (%v) segments", month.NumSegments, month.GetSkipSegmentIndexes(), month.GetEmptySegmentIndexes())
 		}
 
 		if segments := month.GetSegments(); segments != nil {

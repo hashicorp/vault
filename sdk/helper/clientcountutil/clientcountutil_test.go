@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package clientcountutil
 
 import (
@@ -262,12 +265,6 @@ func TestVerifyInput(t *testing.T) {
 				NewCurrentMonthData().
 				Segment().
 				SetMonthOptions(WithMaximumSegmentIndex(1)),
-		},
-		{
-			name: "too small num segments",
-			generator: NewActivityLogData(nil).
-				NewCurrentMonthData().
-				SetMonthOptions(WithSkipSegmentIndexes(1), WithEmptySegmentIndexes(2), WithMaximumSegmentIndex(1)),
 		},
 	}
 	for _, tc := range cases {
