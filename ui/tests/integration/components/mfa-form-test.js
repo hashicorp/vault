@@ -123,13 +123,9 @@ module('Integration | Component | mfa-form', function (hooks) {
     this.onSuccess = (resp) =>
       assert.strictEqual(resp, 'test response', 'Response is returned in onSuccess callback');
 
-    await render(hbs`
-      <Mfa::MfaForm
-        @clusterId={{this.clusterId}}
-        @authData={{this.mfaAuthData}}
-        @onSuccess={{this.onSuccess}}
-      />
-    `);
+    await render(
+      hbs`<Mfa::MfaForm @clusterId={{this.clusterId}} @authData={{this.mfaAuthData}} @onSuccess={{this.onSuccess}} />`
+    );
     await fillIn('[data-test-mfa-select="0"] select', oktaConstraint.id);
     await fillIn('[data-test-mfa-passcode="1"]', 'test-code');
     await click('[data-test-mfa-validate]');
@@ -164,17 +160,15 @@ module('Integration | Component | mfa-form', function (hooks) {
     this.onSuccess = (resp) =>
       assert.strictEqual(resp, 'test response', 'Response is returned in onSuccess callback');
 
-    await render(hbs`
-      <Mfa::MfaForm
-        @clusterId={{this.clusterId}}
-        @authData={{this.mfaAuthData}}
-        @onSuccess={{this.onSuccess}}
-      />
-    `);
+    await render(
+      hbs`<Mfa::MfaForm @clusterId={{this.clusterId}} @authData={{this.mfaAuthData}} @onSuccess={{this.onSuccess}} />`
+    );
+
     await fillIn('[data-test-mfa-passcode]', 'test-code');
     await click('[data-test-mfa-validate]');
   });
 
+  // TODO JLR: It doesn't appear that cancelTimers is working and tests wait for the full countdown
   test('it should show countdown on passcode already used and rate limit errors', async function (assert) {
     const messages = {
       used: 'code already used; new code is available in 45 seconds',
@@ -188,12 +182,7 @@ module('Integration | Component | mfa-form', function (hooks) {
           throw { errors: [messages[code]] };
         },
       });
-      await render(hbs`
-        <Mfa::MfaForm
-          @clusterId={{this.clusterId}}
-          @authData={{this.mfaAuthData}}
-        />
-      `);
+      await render(hbs`<Mfa::MfaForm @clusterId={{this.clusterId}} @authData={{this.mfaAuthData}} />`);
 
       await fillIn('[data-test-mfa-passcode]', code);
       later(() => cancelTimers(), 50);
@@ -214,12 +203,7 @@ module('Integration | Component | mfa-form', function (hooks) {
         throw { errors: ['failed to validate'] };
       },
     });
-    await render(hbs`
-      <Mfa::MfaForm
-        @clusterId={{this.clusterId}}
-        @authData={{this.mfaAuthData}}
-      />
-    `);
+    await render(hbs`<Mfa::MfaForm @clusterId={{this.clusterId}} @authData={{this.mfaAuthData}} />`);
 
     await fillIn('[data-test-mfa-passcode]', 'test-code');
     later(() => cancelTimers(), 50);

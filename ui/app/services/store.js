@@ -5,7 +5,6 @@
 
 import Store from '@ember-data/store';
 import { schedule } from '@ember/runloop';
-import { copy } from 'ember-copy';
 import { resolve, Promise } from 'rsvp';
 import { dasherize } from '@ember/string';
 import { assert } from '@ember/debug';
@@ -115,8 +114,8 @@ export default class StoreService extends Store {
   // currentPage, lastPage, nextPage, prevPage, total, filteredTotal
   constructResponse(modelName, query) {
     const { pageFilter, responsePath, size, page } = query;
-    let { response, dataset } = this.getDataset(modelName, query);
-    response = copy(response, true);
+    const { response, dataset } = this.getDataset(modelName, query);
+    const resp = { ...response };
     const data = this.filterData(pageFilter, dataset);
 
     const lastPage = Math.ceil(data.length / size);
@@ -125,9 +124,8 @@ export default class StoreService extends Store {
     const start = end - size;
     const slicedDataSet = data.slice(start, end);
 
-    set(response, responsePath || '', slicedDataSet);
-
-    response.meta = {
+    set(resp, responsePath || '', slicedDataSet);
+    resp.meta = {
       currentPage,
       lastPage,
       nextPage: clamp(currentPage + 1, 1, lastPage),
@@ -136,7 +134,7 @@ export default class StoreService extends Store {
       filteredTotal: data.length || 0,
     };
 
-    return response;
+    return resp;
   }
 
   // pushes records into the store and returns the result
@@ -144,6 +142,7 @@ export default class StoreService extends Store {
     const response = this.constructResponse(modelName, query);
     this.unloadAll(modelName);
     return new Promise((resolve) => {
+      // after the above unloadRecords are finished, push into store
       schedule('destroy', () => {
         this.push(
           this.serializerFor(modelName).normalizeResponse(
@@ -187,5 +186,30 @@ export default class StoreService extends Store {
 
   clearAllDatasets() {
     this.clearDataset();
+  }
+  /**
+   * this is designed to be a temporary workaround to an issue in the test environment after upgrading to Ember 4.12
+   * when performing an unloadAll or unloadRecord for auth-method or secret-engine models within the app code an error breaks the tests
+   * after the test run is finished during teardown an unloadAll happens and the error "Expected a stable identifier" is thrown
+   * it seems that when the unload happens in the app, for some reason the mount-config relationship models are not unloaded
+   * then when the unloadAll happens a second time during test teardown there seems to be an issue since those records should already have been unloaded
+   * when logging in the teardownRecord hook, it appears that other embedded inverse: null relationships such as replication-attributes are torn down when the parent model is unloaded
+   * the following fixes the issue by explicitly unloading the mount-config models associated to the parent
+   * this should be looked into further to find the root cause, at which time these overrides may be removed
+   */
+  unloadAll(modelName) {
+    const hasMountConfig = ['auth-method', 'secret-engine'];
+    if (hasMountConfig.includes(modelName)) {
+      this.peekAll(modelName).forEach((record) => this.unloadRecord(record));
+    } else {
+      super.unloadAll(modelName);
+    }
+  }
+  unloadRecord(record) {
+    const hasMountConfig = ['auth-method', 'secret-engine'];
+    if (record && hasMountConfig.includes(record.constructor.modelName) && record.config) {
+      super.unloadRecord(record.config);
+    }
+    super.unloadRecord(record);
   }
 }

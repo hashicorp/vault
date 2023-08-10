@@ -55,6 +55,7 @@ const fieldGroups = [
   },
   {
     'Additional subject fields': [
+      'allowedUserIds',
       'allowedSerialNumbers',
       'requireCn',
       'useCsrCommonName',
@@ -293,6 +294,7 @@ export default class PkiRoleModel extends Model {
   })
   extKeyUsageOids;
 
+  @attr({ editType: 'stringArray' }) allowedUserIds;
   @attr({ editType: 'stringArray' }) organization;
   @attr({ editType: 'stringArray' }) country;
   @attr({ editType: 'stringArray' }) locality;

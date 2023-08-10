@@ -45,7 +45,6 @@ func getPluginClusterAndCore(t testing.TB, logger log.Logger) (*vault.TestCluste
 
 	cluster := vault.NewTestCluster(benchhelpers.TBtoT(t), coreConfig, &vault.TestClusterOptions{
 		HandlerFunc: Handler,
-		Logger:      logger.Named("testclusteroptions"),
 	})
 	cluster.Start()
 

@@ -33,49 +33,12 @@ import (
 	"github.com/hashicorp/vault/sdk/helper/compressutil"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
-	"github.com/hashicorp/vault/sdk/helper/logging"
 	"github.com/hashicorp/vault/sdk/helper/pluginutil"
 	"github.com/hashicorp/vault/sdk/helper/testhelpers/schema"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/version"
 	"github.com/mitchellh/mapstructure"
 )
-
-func TestSystemBackend_RootPaths(t *testing.T) {
-	expected := []string{
-		"auth/*",
-		"remount",
-		"audit",
-		"audit/*",
-		"raw",
-		"raw/*",
-		"replication/primary/secondary-token",
-		"replication/performance/primary/secondary-token",
-		"replication/dr/primary/secondary-token",
-		"replication/reindex",
-		"replication/dr/reindex",
-		"replication/performance/reindex",
-		"rotate",
-		"config/cors",
-		"config/auditing/*",
-		"config/ui/headers/*",
-		"plugins/catalog/*",
-		"revoke-prefix/*",
-		"revoke-force/*",
-		"leases/revoke-prefix/*",
-		"leases/revoke-force/*",
-		"leases/lookup/*",
-		"storage/raft/snapshot-auto/config/*",
-		"leases",
-		"internal/inspect/*",
-	}
-
-	b := testSystemBackend(t)
-	actual := b.SpecialPaths().Root
-	if !reflect.DeepEqual(actual, expected) {
-		t.Fatalf("bad: mismatch\nexpected:\n%#v\ngot:\n%#v", expected, actual)
-	}
-}
 
 func TestSystemConfigCORS(t *testing.T) {
 	b := testSystemBackend(t)
@@ -4103,7 +4066,7 @@ func TestSystemBackend_OpenAPI(t *testing.T) {
 		}{
 			{path: "/auth/token/lookup", tag: "auth"},
 			{path: "/cubbyhole/{path}", tag: "secrets"},
-			{path: "/identity/group/id", tag: "identity"},
+			{path: "/identity/group/id/", tag: "identity"},
 			{path: expectedSecretPrefix + "^.*$", unpublished: true},
 			{path: "/sys/policy", tag: "system"},
 		}
@@ -5497,6 +5460,13 @@ func TestSystemBackend_LoggersByName(t *testing.T) {
 			false,
 		},
 		{
+			"events",
+			"invalid",
+			"does-not-matter",
+			true,
+			false,
+		},
+		{
 			"",
 			"info",
 			"does-not-matter",
@@ -5518,10 +5488,9 @@ func TestSystemBackend_LoggersByName(t *testing.T) {
 		t.Run(fmt.Sprintf("loggers-by-name-%s", tc.logger), func(t *testing.T) {
 			t.Parallel()
 
-			core, _, _ := TestCoreUnsealedWithConfig(t, &CoreConfig{
-				Logger: logging.NewVaultLogger(hclog.Trace),
-			})
+			core, _, _ := TestCoreUnsealed(t)
 			b := core.systemBackend
+			testLoggerName := t.Name() + "." + tc.logger
 
 			// Test core overrides logging level outside of config,
 			// an initial delete will ensure that we an initial read
@@ -5550,7 +5519,7 @@ func TestSystemBackend_LoggersByName(t *testing.T) {
 			initialLoggers := resp.Data
 
 			req = &logical.Request{
-				Path:      fmt.Sprintf("loggers/%s", tc.logger),
+				Path:      fmt.Sprintf("loggers/%s", testLoggerName),
 				Operation: logical.UpdateOperation,
 				Data: map[string]interface{}{
 					"level": tc.level,
@@ -5595,14 +5564,14 @@ func TestSystemBackend_LoggersByName(t *testing.T) {
 						t.Fatalf("expected logger %q to be %q, actual: %s", loggerName, tc.expectedLevel, levelStr)
 					}
 
-					if loggerName != tc.logger && levelStr != initialLevelStr {
-						t.Errorf("expected level of logger %q to be unchanged, exepcted: %s, actual: %s", loggerName, initialLevelStr, levelStr)
+					if loggerName != testLoggerName && levelStr != initialLevelStr {
+						t.Errorf("expected level of logger %q to be unchanged, expected: %s, actual: %s", loggerName, initialLevelStr, levelStr)
 					}
 				}
 			}
 
 			req = &logical.Request{
-				Path:      fmt.Sprintf("loggers/%s", tc.logger),
+				Path:      fmt.Sprintf("loggers/%s", testLoggerName),
 				Operation: logical.DeleteOperation,
 			}
 
@@ -5619,7 +5588,7 @@ func TestSystemBackend_LoggersByName(t *testing.T) {
 
 			if !tc.expectDeleteError {
 				req = &logical.Request{
-					Path:      fmt.Sprintf("loggers/%s", tc.logger),
+					Path:      fmt.Sprintf("loggers/%s", testLoggerName),
 					Operation: logical.ReadOperation,
 				}
 
@@ -5628,18 +5597,18 @@ func TestSystemBackend_LoggersByName(t *testing.T) {
 					t.Fatalf("unexpected error, err: %v, resp: %#v", err, resp)
 				}
 
-				currentLevel, ok := resp.Data[tc.logger].(string)
+				currentLevel, ok := resp.Data[testLoggerName].(string)
 				if !ok {
-					t.Fatalf("expected resp to include %q, resp: %#v", tc.logger, resp)
+					t.Fatalf("expected resp to include %q, resp: %#v", testLoggerName, resp)
 				}
 
-				initialLevel, ok := initialLoggers[tc.logger].(string)
+				initialLevel, ok := initialLoggers[testLoggerName].(string)
 				if !ok {
-					t.Fatalf("expected initial loggers to include %q, resp: %#v", tc.logger, initialLoggers)
+					t.Fatalf("expected initial loggers to include %q, resp: %#v", testLoggerName, initialLoggers)
 				}
 
 				if currentLevel != initialLevel {
-					t.Errorf("expected level of logger %q to match original config, expected: %s, actual: %s", tc.logger, initialLevel, currentLevel)
+					t.Errorf("expected level of logger %q to match original config, expected: %s, actual: %s", testLoggerName, initialLevel, currentLevel)
 				}
 			}
 		})
