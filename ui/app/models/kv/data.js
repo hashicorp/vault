@@ -56,7 +56,6 @@ export default class KvSecretDataModel extends Model {
   @attr('string') backend; // dynamic path of secret -- set on response from value passed to queryRecord.
   @attr('string', { label: 'Path for this secret' }) path;
   @attr('object') secretData; // { key: value } data of the secret version
-  @attr('number') failReadErrorCode; // { key: value } data of the secret version
 
   // Params returned on the GET response.
   @attr('string') createdTime;
@@ -64,6 +63,8 @@ export default class KvSecretDataModel extends Model {
   @attr('string') deletionTime;
   @attr('boolean') destroyed;
   @attr('number') version;
+  // Set in adapter if read failed
+  @attr('number') failReadErrorCode;
 
   // the default value of 0 is only set when initially creating a secret
   // if creating a new version this value is set in the edit route's
