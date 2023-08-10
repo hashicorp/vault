@@ -21,10 +21,10 @@ import { verbToPastTense } from 'core/helpers/verb-to-past-tense';
  *  @metadata={{this.model.metadata}}
  * />
  *
- * @param {string} mode - Either: delete, destroy, undelete, or destroy-everything.
+ * @param {string} mode - Either: delete, destroy, undelete, or delete metadata.
  * @param {string} path - The name of the secret.
  * @param {object} secret - The kv/data model.
- * @param {object} [metadata] - The kv/metadata model. It is only required when mode id "Delete".
+ * @param {object} [metadata] - The kv/metadata model. It is only required when mode is "delete" or "metadata-delete".
  */
 
 export default class KvDeleteModal extends Component {
@@ -41,14 +41,14 @@ export default class KvDeleteModal extends Component {
       case 'destroy':
         return `This action will permanently destroy Version ${this.args.secret.version}
         of the secret, and the secret data cannot be read or recovered later.`;
-      case 'metadata-delete':
+      case 'delete metadata':
         return 'This will permanently delete the metadata and versions of the secret. All version history will be removed. This cannot be undone.';
       default:
-        return assert('mode must be one of undelete, delete, destroy, metadata-delete.');
+        return assert('mode must be one of undelete, delete, destroy, delete metadata.');
     }
   }
 
-  get generateRadioDeleteOptions() {
+  get generateDeleteRadioOptions() {
     const { isDeactivated, state } = this.args.metadata.currentSecret;
     return [
       {
@@ -78,32 +78,49 @@ export default class KvDeleteModal extends Component {
       return;
     }
     this.modalOpen = true;
-    // if mode is destroy, the deleteType is destroy-version.
-    // if mode is delete, they still need to select what kind of delete operation they'd like to perform.
-    this.deleteType = mode === 'destroy' ? 'destroy-version' : '';
+    // deleteType is the param used in the case/switch for deleteRecord on the adapter.
+    if (mode === 'destroy') {
+      this.deleteType = 'destroy-version';
+    }
+    if (mode === 'delete metadata') {
+      this.deleteType = 'delete-metadata';
+    }
+    // if mode is delete, they still need to select what kind of delete operation they'd like to perform so we don't set the deleteType until they select a radio option.
+  }
+
+  flashMessageMessage(isSuccess) {
+    if (isSuccess) {
+      if (this.deleteType === 'delete-metadata') {
+        return `Successfully permanently deleted the metadata and all version data for the secret ${this.args.path}.`;
+      } else {
+        return `Successfully ${verbToPastTense(this.args.mode, 'past')} Version ${
+          this.args.secret.version
+        } of ${this.args.path}.`;
+      }
+    } else {
+      if (this.deleteType === 'delete-metadata') {
+        return `There was an issue deleting ${this.args.path} metadata.`;
+      } else {
+        return `There was an issue ${verbToPastTense(this.args.mode, 'gerund')} Version ${
+          this.args.secret.version
+        } of ${this.args.path}.`;
+      }
+    }
   }
 
   @(task(function* () {
+    this.modalOpen = false;
     try {
       yield this.args.secret.destroyRecord({
         adapterOptions: { deleteType: this.deleteType, deleteVersions: this.args.secret.version },
       });
-      this.flashMessages.success(
-        `Successfully ${verbToPastTense(this.args.mode, 'past')} Version ${this.args.secret.version} of ${
-          this.args.path
-        }.`
-      );
-      this.modalOpen = false;
+      this.flashMessages.success(this.flashMessageMessage(true));
+
       this.router.transitionTo('vault.cluster.secrets.backend.kv.secret', {
         queryParams: { version: this.args.secret.version },
       });
     } catch (err) {
-      this.flashMessages.danger(
-        `There was an issue ${verbToPastTense(this.args.mode, 'gerund')} Version ${
-          this.args.secret.version
-        } of ${this.args.path}. Error: ${err.message}`
-      );
-      this.modalOpen = false;
+      this.flashMessages.danger(`${this.flashMessageMessage(false)} Error: ${err.message}`);
     }
   }).drop())
   save;

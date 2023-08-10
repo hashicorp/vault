@@ -6,6 +6,7 @@
 import { helper as buildHelper } from '@ember/component/helper';
 import { assert } from '@ember/debug';
 
+// only works for regular verbs. Irregular verbs ex: arise, awake, be.
 export function verbToPastTense(verb, tense) {
   if (!tense) {
     assert('You must provide a tense.');

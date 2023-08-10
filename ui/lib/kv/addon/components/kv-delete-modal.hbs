@@ -3,7 +3,7 @@
 </button>
 {{#if this.modalOpen}}
   <Modal
-    @title="{{capitalize @mode}} version?"
+    @title="{{capitalize @mode}} {{if (not-eq @mode 'delete metadata') 'version?' ''}}"
     @onClose={{action (mut this.modalOpen) false}}
     @isActive={{this.modalOpen}}
     @type={{if (eq @mode "delete") "warning" "danger"}}
@@ -15,7 +15,7 @@
       </p>
       {{#if (eq @mode "delete")}}
         <div class="is-flex-column">
-          {{#each this.generateRadioDeleteOptions as |option|}}
+          {{#each this.generateDeleteRadioOptions as |option|}}
             <ToolTip @verticalPosition="above" @horizontalPosition="left" as |T|>
               <T.Trigger @tabindex="-1">
                 <div class="is-flex-align-baseline has-bottom-margin-m">
@@ -48,7 +48,8 @@
     <footer class="modal-card-foot modal-card-foot-outlined">
       <button
         type="button"
-        class="button {{if (eq @mode 'destroy') 'is-danger-outlined' 'is-warning-outlined'}}"
+        class="button
+          {{if (or (eq @mode 'destroy') (eq @mode 'delete metadata')) 'is-danger-outlined' 'is-warning-outlined'}}"
         {{on "click" (perform this.save)}}
         disabled={{(not this.deleteType)}}
       >

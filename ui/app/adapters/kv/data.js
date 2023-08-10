@@ -95,7 +95,7 @@ export default class KvDataAdapter extends ApplicationAdapter {
         return this.ajax(this._url(kvDestroyPath(backend, path)), 'PUT', {
           data: { versions: deleteVersions },
         });
-      case 'destroy-everything':
+      case 'delete-metadata':
         return this.ajax(this._url(kvMetadataPath(backend, path)), 'DELETE');
       case 'undelete-version':
         return this.ajax(this._url(kvUndeletePath(backend, path)), 'POST', {
@@ -103,7 +103,7 @@ export default class KvDataAdapter extends ApplicationAdapter {
         });
       default:
         assert(
-          'deleteType must be one of delete-latest-version, delete-version, destroy-version, destroy-everything, undelete-version.'
+          'deleteType must be one of delete-latest-version, delete-version, destroy-version, delete-metadata, undelete-version.'
         );
     }
   }

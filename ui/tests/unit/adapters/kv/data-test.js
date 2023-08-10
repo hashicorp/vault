@@ -220,7 +220,7 @@ module('Unit | Adapter | kv/data', function (hooks) {
     });
     let record = await this.store.peekRecord('kv/data', this.id);
     await record.destroyRecord({
-      adapterOptions: { deleteType: 'destroy-everything' },
+      adapterOptions: { deleteType: 'delete-metadata' },
     });
     assert.true(record.isDeleted, 'record is deleted');
     record = await this.store.peekRecord('kv/data', this.id);
