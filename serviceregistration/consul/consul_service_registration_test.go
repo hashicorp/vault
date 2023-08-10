@@ -10,6 +10,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/require"
+
 	"github.com/go-test/deep"
 	"github.com/hashicorp/consul/api"
 	log "github.com/hashicorp/go-hclog"
@@ -561,5 +563,46 @@ func TestConsul_serviceID(t *testing.T) {
 		if serviceID != test.expected {
 			t.Fatalf("bad: %v != %v", serviceID, test.expected)
 		}
+	}
+}
+
+// TestConsul_NewServiceRegistration_serviceTags ensures that we do not modify
+// the case of any 'service_tags' set by the config.
+// We do expect tags to be sorted in lexicographic order (A-Z).
+func TestConsul_NewServiceRegistration_serviceTags(t *testing.T) {
+	tests := map[string]struct {
+		Tags         string
+		ExpectedTags []string
+	}{
+		"lowercase": {
+			Tags:         "foo,bar",
+			ExpectedTags: []string{"bar", "foo"},
+		},
+		"uppercase": {
+			Tags:         "FOO,BAR",
+			ExpectedTags: []string{"BAR", "FOO"},
+		},
+		"PascalCase": {
+			Tags:         "FooBar, Feedface",
+			ExpectedTags: []string{"Feedface", "FooBar"},
+		},
+	}
+
+	for name, tc := range tests {
+		name := name
+		tc := tc
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+
+			cfg := map[string]string{"service_tags": tc.Tags}
+			logger := logging.NewVaultLogger(log.Trace)
+			be, err := NewServiceRegistration(cfg, logger, sr.State{})
+			require.NoError(t, err)
+			require.NotNil(t, be)
+			c, ok := be.(*serviceRegistration)
+			require.True(t, ok)
+			require.NotNil(t, c)
+			require.Equal(t, tc.ExpectedTags, c.serviceTags)
+		})
 	}
 }

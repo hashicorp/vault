@@ -6,7 +6,12 @@
 >
   {{#if @displayOnly}}
     {{#if this.showValue}}
-      <pre class="masked-value display-only is-word-break">{{@value}}</pre>
+      {{! Show minus icon if there is no value }}
+      {{#if (eq @value "")}}
+        <Icon class="masked-value" @name="minus" />
+      {{else}}
+        <pre class="masked-value display-only is-word-break">{{@value}}</pre>
+      {{/if}}
     {{else}}
       <pre class="masked-value display-only masked-font">***********</pre>
     {{/if}}
@@ -28,10 +33,11 @@
     <CopyButton
       @clipboardText={{@value}}
       @success={{action (set-flash-message "Data copied!")}}
+      @error={{action (set-flash-message "Error copying data" "danger")}}
       class="copy-button button {{if @displayOnly 'is-compact'}}"
       data-test-copy-button
     >
-      <Icon @name="clipboard-copy" aria-hidden="Copy value" />
+      <Icon @name="clipboard-copy" aria-label="Copy value" />
     </CopyButton>
   {{/if}}
   {{#if @allowDownload}}
@@ -50,7 +56,7 @@
     type="button"
     aria-label={{if this.showValue "mask value" "show value"}}
     title={{if this.showValue "mask value" "show value"}}
-    class="{{if (eq @value '') 'has-text-grey'}} masked-input-toggle button"
+    class="masked-input-toggle button"
     data-test-button="toggle-masked"
   >
     <Icon @name={{if this.showValue "eye" "eye-off"}} />

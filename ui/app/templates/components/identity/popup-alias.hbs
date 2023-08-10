@@ -1,6 +1,6 @@
 <PopupMenu @name="alias-menu">
   <Confirm as |c|>
-    {{#let this.params.firstObject as |item|}}
+    {{#let (get this.params "0") as |item|}}
       <nav class="menu">
         <ul class="menu-list">
           <li class="action">

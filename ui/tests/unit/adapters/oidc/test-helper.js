@@ -88,28 +88,24 @@ export default (test) => {
       let testQuery = ['*', 'a123'];
       await this.store
         .query(this.modelName, { paramKey: 'model_id', filterFor: testQuery })
-        .then((resp) =>
-          assert.strictEqual(resp.content.length, 3, 'returns all models when ids include glob (*)')
-        );
+        .then((resp) => assert.strictEqual(resp.length, 3, 'returns all models when ids include glob (*)'));
 
       testQuery = ['*'];
       await this.store
         .query(this.modelName, { paramKey: 'model_id', filterFor: testQuery })
-        .then((resp) =>
-          assert.strictEqual(resp.content.length, 3, 'returns all models when glob (*) is only id')
-        );
+        .then((resp) => assert.strictEqual(resp.length, 3, 'returns all models when glob (*) is only id'));
 
       testQuery = ['b123'];
       await this.store.query(this.modelName, { paramKey: 'model_id', filterFor: testQuery }).then((resp) => {
-        assert.strictEqual(resp.content.length, 1, 'filters response and returns only matching id');
+        assert.strictEqual(resp.length, 1, 'filters response and returns only matching id');
 
-        assert.strictEqual(resp.firstObject.name, 'model-2', 'response contains correct model');
+        assert.strictEqual(resp[0].name, 'model-2', 'response contains correct model');
       });
 
       testQuery = ['b123', 'c123'];
       await this.store.query(this.modelName, { paramKey: 'model_id', filterFor: testQuery }).then((resp) => {
-        assert.strictEqual(resp.content.length, 2, 'filters response when passed multiple ids');
-        resp.content.forEach((m) =>
+        assert.strictEqual(resp.length, 2, 'filters response when passed multiple ids');
+        resp.forEach((m) =>
           assert.ok(['model-2', 'model-3'].includes(m.id), `it filters correctly and included: ${m.id}`)
         );
       });

@@ -185,12 +185,15 @@ func TestCoreWithSealAndUI(t testing.T, opts *CoreConfig) *Core {
 		if err != nil {
 			t.Logf("shutdown returned error: %v", err)
 		}
+		if tl, ok := c.Logger().(*corehelpers.TestLogger); ok {
+			tl.StopLogging()
+		}
 	})
 	return c
 }
 
 func TestCoreWithSealAndUINoCleanup(t testing.T, opts *CoreConfig) *Core {
-	logger := logging.NewVaultLogger(log.Trace).Named(t.Name())
+	logger := corehelpers.NewTestLogger(t)
 	physicalBackend, err := physInmem.NewInmem(nil, logger)
 	if err != nil {
 		t.Fatal(err)
@@ -200,6 +203,8 @@ func TestCoreWithSealAndUINoCleanup(t testing.T, opts *CoreConfig) *Core {
 
 	// Start off with base test core config
 	conf := testCoreConfig(t, errInjector, logger)
+
+	corehelpers.RegisterSubloggerAdder(logger, conf)
 
 	// Override config values with ones that gets passed in
 	conf.EnableUI = opts.EnableUI
@@ -219,6 +224,7 @@ func TestCoreWithSealAndUINoCleanup(t testing.T, opts *CoreConfig) *Core {
 	conf.Experiments = opts.Experiments
 	conf.CensusAgent = opts.CensusAgent
 	conf.AdministrativeNamespacePath = opts.AdministrativeNamespacePath
+	conf.AllLoggers = logger.AllLoggers
 
 	if opts.Logger != nil {
 		conf.Logger = opts.Logger
@@ -247,6 +253,8 @@ func TestCoreWithSealAndUINoCleanup(t testing.T, opts *CoreConfig) *Core {
 		t.Fatalf("err: %s", err)
 	}
 
+	// Switch the SubloggerHook over to core
+	corehelpers.RegisterSubloggerAdder(logger, c)
 	return c
 }
 
@@ -441,7 +449,7 @@ func testCoreAddSecretMount(t testing.T, core *Core, token string) {
 
 func TestCoreUnsealedBackend(t testing.T, backend physical.Backend) (*Core, [][]byte, string) {
 	t.Helper()
-	logger := logging.NewVaultLogger(log.Trace)
+	logger := corehelpers.NewTestLogger(t)
 	conf := testCoreConfig(t, backend, logger)
 	conf.Seal = NewTestSeal(t, nil)
 	conf.NumExpirationWorkers = numExpirationWorkersTest
@@ -1518,6 +1526,8 @@ func NewTestCluster(t testing.T, base *CoreConfig, opts *TestClusterOptions) *Te
 		BuiltinRegistry:    corehelpers.NewMockBuiltinRegistry(),
 	}
 
+	corehelpers.RegisterSubloggerAdder(testCluster.Logger, coreConfig)
+
 	if base != nil {
 		coreConfig.DetectDeadlocks = TestDeadlockDetection
 		coreConfig.RawConfig = base.RawConfig
@@ -1684,6 +1694,8 @@ func NewTestCluster(t testing.T, base *CoreConfig, opts *TestClusterOptions) *Te
 
 	for i := 0; i < numCores; i++ {
 		cleanup, c, localConfig, handler := testCluster.newCore(t, i, coreConfig, opts, listeners[i], testCluster.LicensePublicKey)
+
+		corehelpers.RegisterSubloggerAdder(testCluster.Logger, c)
 
 		testCluster.cleanupFuncs = append(testCluster.cleanupFuncs, cleanup)
 		cores = append(cores, c)
@@ -2038,7 +2050,7 @@ func (tc *TestCluster) initCores(t testing.T, opts *TestClusterOptions, addAudit
 	}
 	var buf bytes.Buffer
 	for i, key := range tc.BarrierKeys {
-		buf.Write([]byte(base64.StdEncoding.EncodeToString(key)))
+		buf.WriteString(base64.StdEncoding.EncodeToString(key))
 		if i < len(tc.BarrierKeys)-1 {
 			buf.WriteRune('\n')
 		}
@@ -2048,7 +2060,7 @@ func (tc *TestCluster) initCores(t testing.T, opts *TestClusterOptions, addAudit
 		t.Fatal(err)
 	}
 	for i, key := range tc.RecoveryKeys {
-		buf.Write([]byte(base64.StdEncoding.EncodeToString(key)))
+		buf.WriteString(base64.StdEncoding.EncodeToString(key))
 		if i < len(tc.RecoveryKeys)-1 {
 			buf.WriteRune('\n')
 		}

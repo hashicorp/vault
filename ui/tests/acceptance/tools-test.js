@@ -9,7 +9,6 @@ import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
 import { toolsActions } from 'vault/helpers/tools-actions';
 import authPage from 'vault/tests/pages/auth';
-import logout from 'vault/tests/pages/logout';
 import { capitalize } from '@ember/string';
 
 module('Acceptance | tools', function (hooks) {
@@ -17,10 +16,6 @@ module('Acceptance | tools', function (hooks) {
 
   hooks.beforeEach(function () {
     return authPage.login();
-  });
-
-  hooks.afterEach(function () {
-    return logout.visit();
   });
 
   const DATA_TO_WRAP = JSON.stringify({ tools: 'tests' });

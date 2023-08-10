@@ -26,7 +26,6 @@ import (
 func TestTokenPreload_UsingAutoAuth(t *testing.T) {
 	logger := logging.NewVaultLogger(hclog.Trace)
 	coreConfig := &vault.CoreConfig{
-		Logger: logger,
 		LogicalBackends: map[string]logical.Factory{
 			"kv": vault.LeasedPassthroughBackendFactory,
 		},
