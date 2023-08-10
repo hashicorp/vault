@@ -11,7 +11,7 @@
           >
             <LinkTo @route={{attr.options.detailLinkTo}} @model={{get @model attr.name}}>{{get @model attr.name}}</LinkTo>
           </InfoTableRow>
-        {{else if attr.options.masked}}
+        {{else if attr.options.displayCard}}
           <InfoTableRow
             @label={{capitalize (or attr.options.detailsLabel attr.options.label (humanize (dasherize attr.name)))}}
           >

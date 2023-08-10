@@ -94,7 +94,7 @@
           </h2>
         {{/if}}
         {{#each fields as |attr|}}
-          {{#if attr.options.masked}}
+          {{#if attr.options.displayCard}}
             <InfoTableRow @label={{or attr.options.label (humanize (dasherize attr.name))}} @value={{get @issuer attr.name}}>
               <CertificateCard @data={{get @issuer attr.name}} />
             </InfoTableRow>

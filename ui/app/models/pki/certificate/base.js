@@ -83,11 +83,11 @@ export default class PkiCertificateBaseModel extends Model {
   otherSans;
 
   // Attrs that come back from API POST request
-  @attr({ label: 'CA Chain', masked: true }) caChain;
-  @attr('string', { masked: true }) certificate;
+  @attr({ label: 'CA Chain', displayCard: true }) caChain;
+  @attr('string', { displayCard: true }) certificate;
   @attr('number') expiration;
-  @attr('string', { label: 'Issuing CA', masked: true }) issuingCa;
-  @attr('string', { masked: true }) privateKey; // only returned for type=exported and /issue
+  @attr('string', { label: 'Issuing CA', displayCard: true }) issuingCa;
+  @attr('string', { displayCard: true }) privateKey; // only returned for type=exported and /issue
   @attr('string') privateKeyType; // only returned for type=exported and /issue
   @attr('number', { formatDate: true }) revocationTime;
   @attr('string') serialNumber;

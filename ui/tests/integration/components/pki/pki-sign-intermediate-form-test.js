@@ -86,13 +86,13 @@ module('Integration | Component | pki-sign-intermediate-form', function (hooks) 
     await click(selectors.saveButton);
     [
       { label: 'Serial number' },
-      { label: 'CA Chain', masked: true },
-      { label: 'Certificate', masked: true },
-      { label: 'Issuing CA', masked: true },
-    ].forEach(({ label, masked }) => {
+      { label: 'CA Chain', displayCard: true },
+      { label: 'Certificate', displayCard: true },
+      { label: 'Issuing CA', displayCard: true },
+    ].forEach(({ label, displayCard }) => {
       assert.dom(selectors.rowByName(label)).exists();
-      if (masked) {
-        assert.dom(selectors.valueByName(label)).includesText('PEM Format', `${label} is masked`);
+      if (displayCard) {
+        assert.dom(selectors.valueByName(label)).includesText('PEM Format', `${label} is displayCard`);
       } else {
         assert.dom(selectors.valueByName(label)).hasText('31:52:b9:09:40', `Renders ${label}`);
         assert.dom(`${selectors.valueByName(label)} a`).exists(`${label} is a link`);

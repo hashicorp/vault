@@ -61,13 +61,13 @@ export default class PkiActionModel extends Model {
   @attr importedIssuers;
   @attr importedKeys;
   @attr mapping;
-  @attr('string', { readOnly: true, masked: true }) certificate;
+  @attr('string', { readOnly: true, displayCard: true }) certificate;
 
   /* actionType generate-root */
 
   // readonly attrs returned right after root generation
   @attr serialNumber;
-  @attr('string', { label: 'Issuing CA', readOnly: true, masked: true }) issuingCa;
+  @attr('string', { label: 'Issuing CA', readOnly: true, displayCard: true }) issuingCa;
   // end of readonly
 
   @attr('string', {
@@ -212,10 +212,10 @@ export default class PkiActionModel extends Model {
   @attr('string', { label: 'Issuer ID', readOnly: true, detailLinkTo: 'issuers.issuer.details' }) issuerId; // returned from generate-root action
 
   // For generating and signing a CSR
-  @attr('string', { label: 'CSR', masked: true }) csr;
+  @attr('string', { label: 'CSR', displayCard: true }) csr;
   @attr caChain;
   @attr('string', { label: 'Key ID', detailLinkTo: 'keys.key.details' }) keyId;
-  @attr('string', { masked: true }) privateKey;
+  @attr('string', { displayCard: true }) privateKey;
   @attr('string') privateKeyType;
 
   get backend() {
