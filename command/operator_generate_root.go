@@ -63,11 +63,10 @@ Usage: vault operator generate-root [options] -init [-otp=...] [-pgp-key=...]
 
   Generates a new root token by combining a quorum of share holders.
 
-  This command is unusual, as it is effectively six separate subcommands, but
-  instead of being implemented as actual subcommands, there are six different
-  forms of the command, selected via the options -init, -decode,
-  -generate-otp, -status, -cancel, or the absence of any of the previous five
-  options (which selects the "provide a key share" form).
+  This command is unusual, as it is effectively six separate subcommands,
+  selected via the options -init, -decode, -generate-otp, -status, -cancel, 
+  or the absence of any of the previous five options (which selects the 
+  "provide a key share" form).
 
   With the -dr-token or -recovery-token options, a DR operation token or a
   recovery token is generated instead of a root token - the relevant option
