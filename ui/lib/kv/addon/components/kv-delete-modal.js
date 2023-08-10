@@ -15,11 +15,11 @@ import { assert } from '@ember/debug';
  *
  * <KvDeleteModal
  *  @mode="destroy"
+ *  @path="my-secret"
  *  @secret={{this.model.secret}}
  * />
  *
  * @param {string} mode - Either: delete, destroy, undelete, or destroy-everything.
- * @param {number} version - This is the version the user is currently viewing.
  * @param {string} path - The name of the secret.
  * @param {object} secret - The kv/data model.
  */
@@ -41,7 +41,7 @@ export default class KvDeleteModal extends Component {
       case 'metadata-delete':
         return 'This will permanently delete the metadata and versions of the secret. All version history will be removed. This cannot be undone.';
       default:
-        return assert('mode must be one of delete, destroy, metadata-delete.');
+        return assert('mode must be one of undelete, delete, destroy, metadata-delete.');
     }
   }
 
@@ -64,7 +64,26 @@ export default class KvDeleteModal extends Component {
     ];
   }
 
+  get flashMessageVerb() {
+    switch (this.args.mode) {
+      case 'delete':
+        return 'deleted';
+      case 'destroy':
+        return 'destroyed';
+      case 'undelete':
+        return 'undeleted';
+      default:
+        return assert('mode must be one of undelete, delete, destroy, metadata-delete.');
+    }
+  }
+
   @action handleButtonClick(mode) {
+    // undelete is the only use case were a modal is not shown.
+    if (mode === 'undelete') {
+      this.deleteType = 'undelete-version';
+      this.save.perform();
+      return;
+    }
     this.modalOpen = true;
     // if mode is destroy, the deleteType is destroy-version.
     // if mode is delete, they still need to select what kind of delete operation they'd like to perform.
@@ -77,9 +96,7 @@ export default class KvDeleteModal extends Component {
         adapterOptions: { deleteType: this.deleteType, deleteVersions: this.args.secret.version },
       });
       this.flashMessages.success(
-        `Successfully ${this.args.mode === 'delete' ? 'deleted' : 'destroyed'} Version ${
-          this.args.secret.version
-        } of secret ${this.args.path}.`
+        `Successfully ${this.flashMessageVerb} Version ${this.args.secret.version} of ${this.args.path}.`
       );
       this.modalOpen = false;
       this.router.transitionTo('vault.cluster.secrets.backend.kv.secret');
