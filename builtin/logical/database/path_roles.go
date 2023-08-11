@@ -9,8 +9,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/robfig/cron"
-
 	"github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/go-secure-stdlib/strutil"
 	v4 "github.com/hashicorp/vault/sdk/database/dbplugin"
@@ -19,6 +17,7 @@ import (
 	"github.com/hashicorp/vault/sdk/helper/locksutil"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/sdk/queue"
+	"github.com/robfig/cron/v3"
 )
 
 func pathListRoles(b *databaseBackend) []*framework.Path {
