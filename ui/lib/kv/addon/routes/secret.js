@@ -12,16 +12,14 @@ export default class KvSecretRoute extends Route {
   @service secretMountPath;
   @service store;
 
-  async fetchSecretData(backend, path) {
-    return await this.store.queryRecord('kv/data', { backend, path }).catch(() => {
-      // return empty record to access capability getters on model
-      return this.store.createRecord('kv/data', { backend, path });
-    });
+  fetchSecretData(backend, path) {
+    // This will always return a record unless 404 not found (show error) or control group
+    return this.store.queryRecord('kv/data', { backend, path });
   }
 
-  async fetchSecretMetadata(backend, path) {
+  fetchSecretMetadata(backend, path) {
     // catch error and do nothing because kv/data model handles metadata capabilities
-    return await this.store.queryRecord('kv/metadata', { backend, path }).catch(() => {});
+    return this.store.queryRecord('kv/metadata', { backend, path }).catch(() => {});
   }
 
   model() {

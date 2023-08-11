@@ -63,6 +63,8 @@ export default class KvSecretDataModel extends Model {
   @attr('string') deletionTime;
   @attr('boolean') destroyed;
   @attr('number') version;
+  // Set in adapter if read failed
+  @attr('number') failReadErrorCode;
 
   // the default value of 0 is only set when initially creating a secret
   // if creating a new version this value is set in the edit route's

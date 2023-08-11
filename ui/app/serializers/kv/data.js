@@ -23,13 +23,11 @@ export default class KvDataSerializer extends ApplicationSerializer {
   }
 
   normalizeKvData(payload) {
-    const { id, backend, path, data, metadata } = payload.data;
+    const { data, metadata } = payload.data;
     return {
       ...payload,
       data: {
-        id,
-        backend,
-        path,
+        ...payload.data,
         // Rename to secret_data so it doesn't get removed by normalizer
         secret_data: data,
         ...metadata,
