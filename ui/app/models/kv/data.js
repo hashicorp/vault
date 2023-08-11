@@ -72,6 +72,10 @@ export default class KvSecretDataModel extends Model {
   @attr('number', { defaultValue: 0 })
   casVersion;
 
+  get state() {
+    return this.destroyed ? 'destroyed' : this.deletionTime ? 'deleted' : 'created';
+  }
+
   // Permissions
   @lazyCapabilities(apiPath`${'backend'}/data/${'path'}`, 'backend', 'path') dataPath;
   @lazyCapabilities(apiPath`${'backend'}/metadata/${'path'}`, 'backend', 'path') metadataPath;

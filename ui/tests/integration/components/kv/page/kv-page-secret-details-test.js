@@ -86,12 +86,12 @@ module('Integration | Component | kv-v2 | Page::Secret::Details', function (hook
     await click(FORM.toggleJson);
     assert.propEqual(parseJsonEditor(find), this.secretData, 'json editor renders secret data');
     assert
-      .dom(PAGE.detail.versionCreated)
+      .dom(PAGE.detail.versionTooltip)
       .includesText(`Version ${this.version} created`, 'renders version and time created');
   });
 
   test('it renders deleted empty state', async function (assert) {
-    assert.expect(2);
+    assert.expect(3);
     this.secret.deletionTime = '2023-07-23T02:12:17.379762Z';
     await render(
       hbs`
@@ -110,6 +110,9 @@ module('Integration | Component | kv-v2 | Page::Secret::Details', function (hook
       .hasText(
         'This version has been deleted but can be undeleted. View other versions of this secret by clicking the Version History tab above.'
       );
+    assert
+      .dom(PAGE.detail.versionTooltip)
+      .includesText(`Version ${this.version} deleted`, 'renders version and time deleted');
   });
 
   test('it renders destroyed empty state', async function (assert) {
@@ -149,7 +152,7 @@ module('Integration | Component | kv-v2 | Page::Secret::Details', function (hook
       { owner: this.engine }
     );
 
-    assert.dom(PAGE.detail.versionCreated).includesText(this.version, 'renders version');
+    assert.dom(PAGE.detail.versionTooltip).includesText(this.version, 'renders version');
     assert.dom(PAGE.detail.versionDropdown).hasText(`Version ${this.secret.version}`);
     await click(PAGE.detail.versionDropdown);
 
