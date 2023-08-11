@@ -1,7 +1,7 @@
 {{!
   Copyright (c) HashiCorp, Inc.
   SPDX-License-Identifier: BUSL-1.1
-~}}
+}}
 
 <form id="auth-form" onsubmit={{action (if this.isOIDC "startOIDCAuth" @onSubmit) (hash role=this.roleName jwt=this.jwt)}}>
   <div class="field">
