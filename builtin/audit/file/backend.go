@@ -80,7 +80,7 @@ func Factory(ctx context.Context, conf *audit.BackendConfig, useEventLogger bool
 		if err != nil {
 			return nil, err
 		}
-		cfgOpts = append(cfgOpts, audit.WithRaw(v))
+		cfgOpts = append(cfgOpts, audit.WithElision(v))
 	}
 
 	mode := os.FileMode(0o600)
