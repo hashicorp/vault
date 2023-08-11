@@ -15,6 +15,7 @@ export default class KvConfigurationRoute extends Route {
     return hash({
       mountConfig: backend,
       engineConfig: this.store.findRecord('kv/config', backend.id).catch(() => {
+        // return an empty record so we have access to model capabilities
         return this.store.createRecord('kv/config', { backend: backend.id });
       }),
     });
