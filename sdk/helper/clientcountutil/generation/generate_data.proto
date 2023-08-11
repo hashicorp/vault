@@ -5,7 +5,7 @@ syntax = "proto3";
 
 package generation;
 
-option go_package = "github.com/hashicorp/vault/vault/activity/generation";
+option go_package = "github.com/hashicorp/vault/sdk/clientcountutil/generation";
 enum WriteOptions {
   WRITE_UNKNOWN = 0;
   WRITE_PRECOMPUTED_QUERIES = 1;
