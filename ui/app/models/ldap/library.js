@@ -88,10 +88,10 @@ export default class LdapLibraryModel extends Model {
     return this.statusPath.get('canRead') !== false;
   }
   get canCheckOut() {
-    return this.checkOutPath.get('canCreate') !== false;
+    return this.checkOutPath.get('canUpdate') !== false;
   }
   get canCheckIn() {
-    return this.checkInPath.get('canCreate') !== false;
+    return this.checkInPath.get('canUpdate') !== false;
   }
 
   fetchStatus() {
