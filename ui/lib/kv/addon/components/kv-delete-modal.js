@@ -9,7 +9,7 @@ import { tracked } from '@glimmer/tracking';
 import { task } from 'ember-concurrency';
 import { inject as service } from '@ember/service';
 import { assert } from '@ember/debug';
-import { verbToPastTense } from 'core/helpers/verb-to-tense';
+import { verbToTense } from 'core/helpers/verb-to-tense';
 
 /**
  * @module KvDeleteModal displays a button for a delete type and launches a modal (undelete is the only mode that does not launch the modal).
@@ -98,15 +98,15 @@ export default class KvDeleteModal extends Component {
       if (this.deleteType === 'delete-metadata') {
         return `Successfully deleted the metadata and all version data for the secret ${this.args.path}.`;
       } else {
-        return `Successfully ${verbToPastTense(this.args.mode, 'past')} Version ${
-          this.args.secret.version
-        } of ${this.args.path}.`;
+        return `Successfully ${verbToTense(this.args.mode, 'past')} Version ${this.args.secret.version} of ${
+          this.args.path
+        }.`;
       }
     } else {
       if (this.deleteType === 'delete-metadata') {
         return `There was an issue deleting ${this.args.path} metadata.`;
       } else {
-        return `There was an issue ${verbToPastTense(this.args.mode, 'gerund')} Version ${
+        return `There was an issue ${verbToTense(this.args.mode, 'gerund')} Version ${
           this.args.secret.version
         } of ${this.args.path}.`;
       }
