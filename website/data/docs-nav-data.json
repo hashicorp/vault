@@ -1009,6 +1009,10 @@
                 "path": "agent-and-proxy/autoauth/methods/jwt"
               },
               {
+                "title": "LDAP",
+                "path": "agent-and-proxy/autoauth/methods/ldap"
+              },
+              {
                 "title": "Kerberos",
                 "path": "agent-and-proxy/autoauth/methods/kerberos"
               },
