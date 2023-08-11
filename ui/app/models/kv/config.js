@@ -4,7 +4,7 @@ import { withFormFields } from 'vault/decorators/model-form-fields';
 import { duration } from 'core/helpers/format-duration';
 
 // This model is used only for display only - configuration happens via secret-engine model when an engine is mounted
-@withFormFields()
+@withFormFields(['casRequired', 'deleteVersionAfter', 'maxVersions'])
 export default class KvConfigModel extends Model {
   @attr backend;
   @attr('number', { label: 'Maximum number of versions' }) maxVersions;
@@ -26,7 +26,6 @@ export default class KvConfigModel extends Model {
 
   get displayDeleteTtl() {
     if (this.deleteVersionAfter === '0s') return 'Never delete';
-
     return duration([this.deleteVersionAfter]);
   }
 }

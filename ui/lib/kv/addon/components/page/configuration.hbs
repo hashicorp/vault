@@ -8,7 +8,7 @@
 {{! engine configuration }}
 {{#if @engineConfig.canRead}}
   <div class="box is-fullwidth is-sideless is-paddingless is-marginless">
-    {{#each @engineConfig.allFields as |attr|}}
+    {{#each @engineConfig.formFields as |attr|}}
       <InfoTableRow
         @alwaysRender={{true}}
         @label={{or attr.options.label (to-label attr.name)}}
@@ -25,7 +25,7 @@
       <InfoTableRow
         @formatTtl={{eq attr.options.editType "ttl"}}
         @label={{or attr.options.label (to-label attr.name)}}
-        @value={{get @mountConfig attr.name}}
+        @value={{get @mountConfig (or attr.options.fieldValue attr.name)}}
       />
     {{/if}}
   {{/each}}
