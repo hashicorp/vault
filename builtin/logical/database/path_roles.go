@@ -314,7 +314,10 @@ func (b *databaseBackend) pathStaticRoleRead(ctx context.Context, req *logical.R
 			data["rotation_period"] = role.StaticAccount.RotationPeriod.Seconds()
 		} else if role.StaticAccount.RotationSchedule != "" {
 			data["rotation_schedule"] = role.StaticAccount.RotationSchedule
-			data["rotation_window"] = role.StaticAccount.RotationWindow.Seconds()
+			// rotation_window is only valid with rotation_schedule
+			if role.StaticAccount.RotationWindow != 0 {
+				data["rotation_window"] = role.StaticAccount.RotationWindow.Seconds()
+			}
 		}
 	}
 
@@ -578,6 +581,7 @@ func (b *databaseBackend) pathStaticRoleCreateUpdate(ctx context.Context, req *l
 		role.StaticAccount.RotationPeriod = time.Duration(rotationPeriodSeconds) * time.Second
 		// Unset rotation schedule if rotation period is set
 		role.StaticAccount.RotationSchedule = ""
+
 		if rotationWindowOk {
 			return logical.ErrorResponse("rotation_window is invalid with use of rotation_period"), nil
 		}
@@ -597,6 +601,7 @@ func (b *databaseBackend) pathStaticRoleCreateUpdate(ctx context.Context, req *l
 		role.StaticAccount.Schedule = *sched
 		// Unset rotation period if rotation schedule is set
 		role.StaticAccount.RotationPeriod = 0
+
 		if rotationWindowOk {
 			rotationWindowSeconds := rotationWindowSecondsRaw.(int)
 			if rotationWindowSeconds < minRotationWindowSeconds {
