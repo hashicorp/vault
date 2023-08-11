@@ -789,7 +789,8 @@ func testConfig_Sanitized(t *testing.T) {
 		"listeners": []interface{}{
 			map[string]interface{}{
 				"config": map[string]interface{}{
-					"address": "127.0.0.1:443",
+					"address":          "127.0.0.1:443",
+					"chroot_namespace": "admin/",
 				},
 				"type": "tcp",
 			},
@@ -882,6 +883,7 @@ listener "tcp" {
   proxy_api {
     enable_quit = true
   }
+  chroot_namespace = "admin"
 }`))
 
 	config := Config{
@@ -926,6 +928,7 @@ listener "tcp" {
 						EnableQuit: true,
 					},
 					CustomResponseHeaders: DefaultCustomHeaders,
+					ChrootNamespace:       "admin/",
 				},
 			},
 		},
