@@ -1180,7 +1180,7 @@ path "${this.backend}/*" {
 `;
       const { userToken } = await setupControlGroup({ userPolicy });
       this.userToken = userToken;
-      await authPage.login(userToken);
+      return authPage.login(userToken);
     });
     const storageKey = (accessor, path) => {
       return `${CONTROL_GROUP_PREFIX}${accessor}${TOKEN_SEPARATOR}${path}`;
@@ -1268,6 +1268,65 @@ path "${this.backend}/*" {
 
       await click(PAGE.breadcrumbAtIdx(1));
       assert.ok(currentURL().startsWith(`/vault/secrets/${backend}/kv/list`), 'links back to list root');
+    });
+    test('breadcrumbs & page titles are correct', async function (assert) {
+      assert.expect(34);
+      const backend = this.backend;
+      await navToBackend(backend);
+      await click(PAGE.secretTab('Configuration'));
+      assertCorrectBreadcrumbs(assert, ['secrets', backend, 'configuration']);
+      assert.dom(PAGE.title).hasText(`${backend} Version 2`, 'correct page title for configuration');
+
+      await click(PAGE.secretTab('Secrets'));
+      assertCorrectBreadcrumbs(assert, ['secrets', backend]);
+      assert.dom(PAGE.title).hasText(`${backend} Version 2`, 'correct page title for secret list');
+
+      await visit(`/vault/secrets/${backend}/kv/${secretPathUrlEncoded}/details`);
+
+      /* Control group grant access flow */
+      assert.ok(
+        await waitUntil(() => currentRouteName() === 'vault.cluster.access.control-group-accessor'),
+        'redirects to access control group route'
+      );
+      const accessor = controlGroupComponent.accessor;
+      const controlGroupToken = controlGroupComponent.token;
+      await authPage.loginUsername('authorizer', 'password');
+      await visit(`/vault/access/control-groups/${accessor}`);
+      await controlGroupComponent.authorize();
+      await authPage.login(this.userToken);
+      localStorage.setItem(
+        storageKey(accessor, `${backend}/data/${encodeURIComponent(secretPath)}`),
+        JSON.stringify({
+          accessor,
+          token: controlGroupToken,
+          creation_path: `${backend}/data/${encodeURIComponent(secretPath)}`,
+          uiParams: {
+            url: `/vault/secrets/${backend}/kv/list`,
+          },
+        })
+      );
+      await visit(`/vault/access/control-groups/${accessor}`);
+      await click(`[data-test-navigate-button]`);
+      /* end of control group authorization flow */
+
+      assert.strictEqual(currentURL(), `/vault/secrets/${backend}/kv/list`, 'navigates back to list url');
+      await click(PAGE.list.item(secretPath));
+
+      assertCorrectBreadcrumbs(assert, ['secrets', backend, secretPath]);
+      assert.dom(PAGE.title).hasText(secretPath, 'correct page title for secret detail');
+
+      await click(PAGE.detail.createNewVersion);
+      assertCorrectBreadcrumbs(assert, ['secrets', backend, secretPath, 'edit']);
+      assert.dom(PAGE.title).hasText('Create New Version', 'correct page title for secret edit');
+
+      await click(FORM.cancelBtn);
+      await click(PAGE.secretTab('Metadata'));
+      assertCorrectBreadcrumbs(assert, ['secrets', backend, secretPath, 'metadata']);
+      assert.dom(PAGE.title).hasText(secretPath, 'correct page title for metadata');
+
+      await click(PAGE.secretTab('Version History'));
+      assertCorrectBreadcrumbs(assert, ['secrets', backend, secretPath, 'version history']);
+      assert.dom(PAGE.title).hasText(secretPath, 'correct page title for version history');
     });
   });
 });
