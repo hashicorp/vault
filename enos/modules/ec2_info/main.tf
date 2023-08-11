@@ -1,3 +1,6 @@
+# Copyright (c) HashiCorp, Inc.
+# SPDX-License-Identifier: BUSL-1.1
+
 locals {
   architectures      = toset(["arm64", "x86_64"])
   canonical_owner_id = "099720109477"

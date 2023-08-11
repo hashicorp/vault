@@ -1,6 +1,6 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 import { click, fillIn, find, findAll, currentURL, visit, settled, waitUntil } from '@ember/test-helpers';
