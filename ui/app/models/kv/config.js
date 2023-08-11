@@ -6,6 +6,7 @@ import { duration } from 'core/helpers/format-duration';
 // This model is used only for display only - configuration happens via secret-engine model when an engine is mounted
 @withFormFields()
 export default class KvConfigModel extends Model {
+  @attr backend;
   @attr('number', { label: 'Maximum number of versions' }) maxVersions;
 
   @attr('boolean', { label: 'Require check and set' }) casRequired;

@@ -6,15 +6,17 @@
 </KvPageHeader>
 
 {{! engine configuration }}
-<div class="box is-fullwidth is-sideless is-paddingless is-marginless">
-  {{#each @engineConfig.allFields as |attr|}}
-    <InfoTableRow
-      @alwaysRender={{true}}
-      @label={{or attr.options.label (to-label attr.name)}}
-      @value={{if (eq attr.name "deleteVersionAfter") @engineConfig.displayDeleteTtl (get @engineConfig attr.name)}}
-    />
-  {{/each}}
-</div>
+{{#if @engineConfig.canRead}}
+  <div class="box is-fullwidth is-sideless is-paddingless is-marginless">
+    {{#each @engineConfig.allFields as |attr|}}
+      <InfoTableRow
+        @alwaysRender={{true}}
+        @label={{or attr.options.label (to-label attr.name)}}
+        @value={{if (eq attr.name "deleteVersionAfter") @engineConfig.displayDeleteTtl (get @engineConfig attr.name)}}
+      />
+    {{/each}}
+  </div>
+{{/if}}
 
 {{! mount configuration }}
 <div class="box is-fullwidth is-sideless is-paddingless is-marginless">
