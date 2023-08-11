@@ -507,7 +507,7 @@ func testUnknownFieldValidation(t *testing.T) {
 			Problem: "unknown or unsupported field bad_value found in configuration",
 			Position: token.Pos{
 				Filename: "./test-fixtures/config.hcl",
-				Offset:   651,
+				Offset:   652,
 				Line:     37,
 				Column:   5,
 			},
