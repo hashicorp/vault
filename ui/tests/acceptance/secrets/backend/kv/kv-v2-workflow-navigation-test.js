@@ -1,5 +1,7 @@
 import { module, test } from 'qunit';
 import { v4 as uuidv4 } from 'uuid';
+import { click, currentRouteName, currentURL, typeIn, visit, waitUntil } from '@ember/test-helpers';
+import { create } from 'ember-cli-page-object';
 import { setupApplicationTest } from 'vault/tests/helpers';
 import authPage from 'vault/tests/pages/auth';
 import {
@@ -10,23 +12,17 @@ import {
   createTokenCmd,
   tokenWithPolicyCmd,
 } from 'vault/tests/helpers/commands';
-import {
-  adminPolicy,
-  dataPolicy,
-  metadataListPolicy,
-  metadataPolicy,
-} from 'vault/tests/helpers/policy-generator/kv';
+import { personas } from 'vault/tests/helpers/policy-generator/kv';
 import {
   addSecretMetadataCmd,
   setupControlGroup,
   writeSecret,
   writeVersionedSecret,
 } from 'vault/tests/helpers/kv/kv-run-commands';
-import { click, currentRouteName, currentURL, typeIn, visit } from '@ember/test-helpers';
 import { FORM, PAGE } from 'vault/tests/helpers/kv/kv-selectors';
-import { create } from 'ember-cli-page-object';
 import controlGroup from 'vault/tests/pages/components/control-group';
 import { CONTROL_GROUP_PREFIX, TOKEN_SEPARATOR } from 'vault/services/control-group';
+
 const controlGroupComponent = create(controlGroup);
 
 const secretPath = `my-#:$=?-secret`;
@@ -72,7 +68,7 @@ module('Acceptance | kv-v2 workflow | navigation', function (hooks) {
   module('admin persona', function (hooks) {
     hooks.beforeEach(async function () {
       const token = await runCmd(
-        tokenWithPolicyCmd('admin', adminPolicy(this.backend) + adminPolicy(this.emptyBackend))
+        tokenWithPolicyCmd('admin', personas.admin(this.backend) + personas.admin(this.emptyBackend))
       );
       await authPage.login(token);
     });
@@ -182,7 +178,7 @@ module('Acceptance | kv-v2 workflow | navigation', function (hooks) {
       assert.ok(currentURL().startsWith(`/vault/secrets/${backend}/kv/list`), 'links back to list root');
     });
     test('versioned secret nav, tabs, breadcrumbs', async function (assert) {
-      assert.expect(45);
+      assert.expect(43);
       const backend = this.backend;
       await navToBackend(backend);
       await click(PAGE.list.item(secretPath));
@@ -313,8 +309,7 @@ module('Acceptance | kv-v2 workflow | navigation', function (hooks) {
       const token = await runCmd([
         createPolicyCmd(
           'data-reader',
-          dataPolicy({ backend: this.backend, capabilities: ['read'] }) +
-            dataPolicy({ backend: this.emptyBackend, capabilities: ['read'] })
+          personas.dataReader(this.backend) + personas.dataReader(this.emptyBackend)
         ),
         createTokenCmd('data-reader'),
       ]);
@@ -516,10 +511,7 @@ module('Acceptance | kv-v2 workflow | navigation', function (hooks) {
       const token = await runCmd([
         createPolicyCmd(
           'data-reader-list',
-          dataPolicy({ backend: this.backend, capabilities: ['read', 'list'] }) +
-            metadataListPolicy(this.backend) +
-            dataPolicy({ backend: this.emptyBackend, capabilities: ['read', 'list'] }) +
-            metadataListPolicy(this.emptyBackend)
+          personas.dataListReader(this.backend) + personas.dataListReader(this.emptyBackend)
         ),
         createTokenCmd('data-reader-list'),
       ]);
@@ -732,10 +724,7 @@ module('Acceptance | kv-v2 workflow | navigation', function (hooks) {
       const token = await runCmd([
         createPolicyCmd(
           'metadata-maintainer',
-          metadataPolicy({ backend: this.backend }) +
-            metadataListPolicy(this.backend) +
-            metadataPolicy({ backend: this.emptyBackend }) +
-            metadataListPolicy(this.emptyBackend)
+          personas.metadataMaintainer(this.backend) + personas.metadataMaintainer(this.emptyBackend)
         ),
         createTokenCmd('metadata-maintainer'),
       ]);
@@ -965,8 +954,7 @@ module('Acceptance | kv-v2 workflow | navigation', function (hooks) {
       const token = await runCmd([
         createPolicyCmd(
           'secret-creator',
-          dataPolicy({ backend: this.backend, capabilities: ['create', 'update'] }) +
-            dataPolicy({ backend: this.emptyBackend, capabilities: ['create', 'update'] })
+          personas.secretCreator(this.backend) + personas.secretCreator(this.emptyBackend)
         ),
         createTokenCmd('secret-creator'),
       ]);
@@ -1138,7 +1126,7 @@ module('Acceptance | kv-v2 workflow | navigation', function (hooks) {
       assert.dom(PAGE.metadata.editBtn).doesNotExist('edit metadata button does not render');
     });
     test('breadcrumbs & page titles are correct', async function (assert) {
-      assert.expect(31);
+      assert.expect(32);
       const backend = this.backend;
       await navToBackend(backend);
       await click(PAGE.secretTab('Configuration'));
@@ -1225,9 +1213,8 @@ path "${this.backend}/*" {
       // For some reason when we click on the item in tests it throws a global control group error
       // But not when we visit the page directly
       await visit(`/vault/secrets/${backend}/kv/app%2Fnested%2Fsecret/details`);
-      assert.strictEqual(
-        currentRouteName(),
-        'vault.cluster.access.control-group-accessor',
+      assert.ok(
+        await waitUntil(() => currentRouteName() === 'vault.cluster.access.control-group-accessor'),
         'redirects to access control group route'
       );
       const accessor = controlGroupComponent.accessor;
