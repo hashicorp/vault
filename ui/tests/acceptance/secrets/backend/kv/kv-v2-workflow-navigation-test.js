@@ -196,7 +196,7 @@ module('Acceptance | kv-v2 workflow | navigation', function (hooks) {
       assert.dom(PAGE.secretTab('Version History')).doesNotHaveClass('active');
       assert.dom(PAGE.detail.versionDropdown).hasText('Version 3', 'Version dropdown shows current version');
       assert.dom(PAGE.detail.createNewVersion).hasText('Create new version', 'Create version button shows');
-      assert.dom(PAGE.detail.versionCreated).containsText('Version 3 created');
+      assert.dom(PAGE.detail.versionTooltip).containsText('Version 3 created');
       assert.dom(PAGE.infoRowValue('foo')).exists('renders current data');
 
       await click(PAGE.detail.createNewVersion);
@@ -223,7 +223,7 @@ module('Acceptance | kv-v2 workflow | navigation', function (hooks) {
         'Goes to detail view for version 1'
       );
       assert.dom(PAGE.detail.versionDropdown).hasText('Version 1', 'Version dropdown shows selected version');
-      assert.dom(PAGE.detail.versionCreated).containsText('Version 1 created');
+      assert.dom(PAGE.detail.versionTooltip).containsText('Version 1 created');
       assert.dom(PAGE.infoRowValue('key-1')).exists('renders previous data');
 
       await click(PAGE.detail.createNewVersion);
@@ -423,7 +423,7 @@ module('Acceptance | kv-v2 workflow | navigation', function (hooks) {
       // TODO: hide dropdown
       // assert.dom(PAGE.detail.versionDropdown).doesNotExist('Version dropdown hidden');
       assert.dom(PAGE.detail.createNewVersion).hasText('Create new version', 'Create version button shows');
-      assert.dom(PAGE.detail.versionCreated).containsText('Version 3 created');
+      assert.dom(PAGE.detail.versionTooltip).containsText('Version 3 created');
       assert.dom(PAGE.infoRowValue('foo')).exists('renders current data');
 
       await click(PAGE.detail.createNewVersion);
@@ -446,7 +446,7 @@ module('Acceptance | kv-v2 workflow | navigation', function (hooks) {
       await visit(`/vault/secrets/${backend}/kv/${secretPathUrlEncoded}/details?version=1`);
       // TODO: hide version dropdown
       // assert.dom(PAGE.detail.versionDropdown).doesNotExist('Version dropdown does not exist');
-      assert.dom(PAGE.detail.versionCreated).containsText('Version 1 created');
+      assert.dom(PAGE.detail.versionTooltip).containsText('Version 1 created');
       assert.dom(PAGE.infoRowValue('key-1')).exists('renders previous data');
 
       await click(PAGE.detail.createNewVersion);
@@ -640,7 +640,7 @@ module('Acceptance | kv-v2 workflow | navigation', function (hooks) {
       // TODO: version dropdown hidden
       // assert.dom(PAGE.detail.versionDropdown).doesNotExist('Version dropdown hidden');
       assert.dom(PAGE.detail.createNewVersion).hasText('Create new version', 'Create version button shows');
-      assert.dom(PAGE.detail.versionCreated).containsText('Version 3 created');
+      assert.dom(PAGE.detail.versionTooltip).containsText('Version 3 created');
       assert.dom(PAGE.infoRowValue('foo')).exists('renders current data');
 
       await click(PAGE.detail.createNewVersion);
@@ -662,7 +662,7 @@ module('Acceptance | kv-v2 workflow | navigation', function (hooks) {
       // TODO: version dropdown should be hidden
       // assert.dom(PAGE.detail.versionDropdown).doesNotExist('version dropdown hidden');
       await visit(`/vault/secrets/${backend}/kv/${secretPathUrlEncoded}/details?version=1`);
-      assert.dom(PAGE.detail.versionCreated).containsText('Version 1 created');
+      assert.dom(PAGE.detail.versionTooltip).containsText('Version 1 created');
       assert.dom(PAGE.infoRowValue('key-1')).exists('renders previous data');
 
       await click(PAGE.detail.createNewVersion);
@@ -862,7 +862,7 @@ module('Acceptance | kv-v2 workflow | navigation', function (hooks) {
         .hasText('Version current', 'Version dropdown shows current version');
       assert.dom(PAGE.detail.createNewVersion).doesNotExist('Create new version button not shown');
       // TODO: should the created metadata show?
-      assert.dom(PAGE.detail.versionCreated).doesNotExist('Version created text not shown');
+      assert.dom(PAGE.detail.versionTooltip).doesNotExist('Version created text not shown');
       assert.dom(PAGE.infoRowValue('foo')).doesNotExist('does not render current data');
       assert
         .dom(PAGE.emptyStateTitle)
@@ -878,8 +878,8 @@ module('Acceptance | kv-v2 workflow | navigation', function (hooks) {
       );
       // TODO: version number missing
       // assert.dom(PAGE.detail.versionDropdown).hasText('Version 1', 'Version dropdown shows selected version');
-      // TODO: versionCreated missing
-      // assert.dom(PAGE.detail.versionCreated).containsText('Version 1 created');
+      // TODO: versionTooltip missing
+      // assert.dom(PAGE.detail.versionTooltip).containsText('Version 1 created');
       assert.dom(PAGE.infoRowValue('key-1')).doesNotExist('does not render previous data');
       assert
         .dom(PAGE.emptyStateTitle)
@@ -1060,7 +1060,7 @@ module('Acceptance | kv-v2 workflow | navigation', function (hooks) {
       assert.dom(PAGE.secretTab('Version History')).doesNotExist('Version History tab does not render');
       assert.dom(PAGE.detail.versionDropdown).doesNotExist('Version dropdown does not render');
       assert.dom(PAGE.detail.createNewVersion).hasText('Create new version', 'Create version button shows');
-      assert.dom(PAGE.detail.versionCreated).doesNotExist('Version created info is not rendered');
+      assert.dom(PAGE.detail.versionTooltip).doesNotExist('Version created info is not rendered');
       assert.dom(PAGE.infoRowValue('foo')).doesNotExist('current data not rendered');
       assert
         .dom(PAGE.emptyStateTitle)
@@ -1094,7 +1094,7 @@ module('Acceptance | kv-v2 workflow | navigation', function (hooks) {
 
       await visit(`/vault/secrets/${backend}/kv/${secretPathUrlEncoded}/details?version=1`);
       assert.dom(PAGE.detail.versionDropdown).doesNotExist('Version dropdown does not exist');
-      assert.dom(PAGE.detail.versionCreated).doesNotExist('version created data not rendered');
+      assert.dom(PAGE.detail.versionTooltip).doesNotExist('version created data not rendered');
       assert.dom(PAGE.infoRowValue('key-1')).doesNotExist('does not render previous data');
 
       await click(PAGE.detail.createNewVersion);
@@ -1126,7 +1126,7 @@ module('Acceptance | kv-v2 workflow | navigation', function (hooks) {
       assert.dom(PAGE.metadata.editBtn).doesNotExist('edit metadata button does not render');
     });
     test('breadcrumbs & page titles are correct', async function (assert) {
-      assert.expect(32);
+      assert.expect(27);
       const backend = this.backend;
       await navToBackend(backend);
       await click(PAGE.secretTab('Configuration'));
@@ -1151,9 +1151,7 @@ module('Acceptance | kv-v2 workflow | navigation', function (hooks) {
       assertCorrectBreadcrumbs(assert, ['secrets', backend, secretPath, 'metadata']);
       assert.dom(PAGE.title).hasText(secretPath, 'correct page title for metadata');
 
-      await click(PAGE.secretTab('Version History'));
-      assertCorrectBreadcrumbs(assert, ['secrets', backend, secretPath, 'version history']);
-      assert.dom(PAGE.title).hasText(secretPath, 'correct page title for version history');
+      assert.dom(PAGE.secretTab('Version History')).doesNotExist('Version history tab not shown');
     });
   });
 
