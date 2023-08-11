@@ -39,57 +39,45 @@ func Factory(ctx context.Context, conf *audit.BackendConfig, useEventLogger bool
 		tag = "vault"
 	}
 
-	format, ok := conf.Config["format"]
-	if !ok {
-		format = audit.JSONFormat.String()
-	}
-	switch format {
-	case audit.JSONFormat.String(), audit.JSONxFormat.String():
-	default:
-		return nil, fmt.Errorf("unknown format type %q", format)
+	var cfgOpts []audit.Option
+
+	if format, ok := conf.Config["format"]; ok {
+		cfgOpts = append(cfgOpts, audit.WithFormat(format))
 	}
 
 	// Check if hashing of accessor is disabled
-	hmacAccessor := true
 	if hmacAccessorRaw, ok := conf.Config["hmac_accessor"]; ok {
-		value, err := strconv.ParseBool(hmacAccessorRaw)
+		v, err := strconv.ParseBool(hmacAccessorRaw)
 		if err != nil {
 			return nil, err
 		}
-		hmacAccessor = value
+		cfgOpts = append(cfgOpts, audit.WithHMACAccessor(v))
 	}
 
 	// Check if raw logging is enabled
-	logRaw := false
 	if raw, ok := conf.Config["log_raw"]; ok {
-		b, err := strconv.ParseBool(raw)
+		v, err := strconv.ParseBool(raw)
 		if err != nil {
 			return nil, err
 		}
-		logRaw = b
+		cfgOpts = append(cfgOpts, audit.WithRaw(v))
 	}
 
-	elideListResponses := false
 	if elideListResponsesRaw, ok := conf.Config["elide_list_responses"]; ok {
-		value, err := strconv.ParseBool(elideListResponsesRaw)
+		v, err := strconv.ParseBool(elideListResponsesRaw)
 		if err != nil {
 			return nil, err
 		}
-		elideListResponses = value
+		cfgOpts = append(cfgOpts, audit.WithElision(v))
 	}
 
-	// Get the logger
-	logger, err := gsyslog.NewLogger(gsyslog.LOG_INFO, facility, tag)
+	cfg, err := audit.NewFormatterConfig(cfgOpts...)
 	if err != nil {
 		return nil, err
 	}
 
-	cfg, err := audit.NewFormatterConfig(
-		audit.WithElision(elideListResponses),
-		audit.WithFormat(format),
-		audit.WithHMACAccessor(hmacAccessor),
-		audit.WithRaw(logRaw),
-	)
+	// Get the logger
+	logger, err := gsyslog.NewLogger(gsyslog.LOG_INFO, facility, tag)
 	if err != nil {
 		return nil, err
 	}
@@ -108,10 +96,10 @@ func Factory(ctx context.Context, conf *audit.BackendConfig, useEventLogger bool
 	}
 
 	var w audit.Writer
-	switch format {
-	case audit.JSONFormat.String():
+	switch b.formatConfig.RequiredFormat {
+	case audit.JSONFormat:
 		w = &audit.JSONWriter{Prefix: conf.Config["prefix"]}
-	case audit.JSONxFormat.String():
+	case audit.JSONxFormat:
 		w = &audit.JSONxWriter{Prefix: conf.Config["prefix"]}
 	}
 
@@ -144,7 +132,7 @@ func Factory(ctx context.Context, conf *audit.BackendConfig, useEventLogger bool
 		b.nodeIDList[0] = formatterNodeID
 		b.nodeMap[formatterNodeID] = f
 
-		n, err := event.NewSyslogSink(format, opts...)
+		n, err := event.NewSyslogSink(b.formatConfig.RequiredFormat.String(), opts...)
 		if err != nil {
 			return nil, fmt.Errorf("error creating syslog sink node: %w", err)
 		}
