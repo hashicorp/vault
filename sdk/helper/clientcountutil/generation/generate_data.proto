@@ -1,11 +1,11 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 syntax = "proto3";
 
 package generation;
 
-option go_package = "github.com/hashicorp/vault/vault/activity/generation";
+option go_package = "github.com/hashicorp/vault/sdk/clientcountutil/generation";
 enum WriteOptions {
   WRITE_UNKNOWN = 0;
   WRITE_PRECOMPUTED_QUERIES = 1;
@@ -52,5 +52,5 @@ message Client {
   int32 repeated_from_month = 4;
   string namespace = 5;
   string mount = 6;
-  bool non_entity = 7;
+  string client_type = 7;
 }

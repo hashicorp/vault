@@ -1,4 +1,9 @@
 /**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
+/**
  * Helper functions to run common commands in the consoleComponent during tests.
  * Please note that a user must be logged in during the test context for the commands to run
  *

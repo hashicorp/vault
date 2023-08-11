@@ -1,6 +1,6 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 import { Response } from 'miragejs';
@@ -14,7 +14,7 @@ import { Response } from 'miragejs';
   Filtering (data without mounts)
   * -- HISTORY ONLY --
   Filtering different date ranges (hist only)
-  Upgrade warning 
+  Upgrade warning
   No permissions for license
   Version
   queries available
