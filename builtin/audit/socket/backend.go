@@ -12,9 +12,10 @@ import (
 	"sync"
 	"time"
 
+	"github.com/hashicorp/go-secure-stdlib/parseutil"
+
 	"github.com/hashicorp/eventlogger"
 	"github.com/hashicorp/go-multierror"
-	"github.com/hashicorp/go-secure-stdlib/parseutil"
 	"github.com/hashicorp/vault/audit"
 	"github.com/hashicorp/vault/internal/observability/event"
 	"github.com/hashicorp/vault/sdk/helper/salt"
@@ -38,7 +39,6 @@ func Factory(ctx context.Context, conf *audit.BackendConfig, useEventLogger bool
 	if !ok {
 		socketType = "tcp"
 	}
-
 	writeDeadline, ok := conf.Config["write_timeout"]
 	if !ok {
 		writeDeadline = "2s"
@@ -116,6 +116,16 @@ func Factory(ctx context.Context, conf *audit.BackendConfig, useEventLogger bool
 	b.formatter = fw
 
 	if useEventLogger {
+		var opts []event.Option
+
+		if socketType, ok := conf.Config["socket_type"]; ok {
+			opts = append(opts, event.WithSocketType(socketType))
+		}
+
+		if writeDeadline, ok := conf.Config["write_timeout"]; ok {
+			opts = append(opts, event.WithMaxDuration(writeDeadline))
+		}
+
 		b.nodeIDList = make([]eventlogger.NodeID, 2)
 		b.nodeMap = make(map[eventlogger.NodeID]eventlogger.Node)
 
@@ -126,7 +136,7 @@ func Factory(ctx context.Context, conf *audit.BackendConfig, useEventLogger bool
 		b.nodeIDList[0] = formatterNodeID
 		b.nodeMap[formatterNodeID] = f
 
-		n, err := event.NewSocketSink(b.formatConfig.RequiredFormat.String(), address, event.WithSocketType(socketType), event.WithMaxDuration(writeDuration.String()))
+		n, err := event.NewSocketSink(b.formatConfig.RequiredFormat.String(), address, opts...)
 		if err != nil {
 			return nil, fmt.Errorf("error creating socket sink node: %w", err)
 		}
