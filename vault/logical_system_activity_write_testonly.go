@@ -188,17 +188,14 @@ func (s *singleMonthActivityClients) addNewClients(c *generation.Client, mountAc
 	if c.Count > 1 {
 		count = int(c.Count)
 	}
-	clientType := entityActivityType
-	if c.NonEntity {
-		clientType = nonEntityTokenActivityType
-	}
+	isNonEntity := c.ClientType != entityActivityType
 	for i := 0; i < count; i++ {
 		record := &activity.EntityRecord{
 			ClientID:      c.Id,
 			NamespaceID:   c.Namespace,
-			NonEntity:     c.NonEntity,
 			MountAccessor: mountAccessor,
-			ClientType:    clientType,
+			NonEntity:     isNonEntity,
+			ClientType:    c.ClientType,
 		}
 		if record.ClientID == "" {
 			var err error
@@ -232,6 +229,9 @@ func (m *multipleMonthsActivityClients) processMonth(ctx context.Context, core *
 
 			if clients.Namespace == "" {
 				clients.Namespace = namespace.RootNamespaceID
+			}
+			if clients.ClientType == "" {
+				clients.ClientType = entityActivityType
 			}
 
 			// verify that the namespace exists
@@ -310,7 +310,7 @@ func (m *multipleMonthsActivityClients) addRepeatedClients(monthsAgo int32, c *g
 		numClients = int(c.Count)
 	}
 	for _, client := range repeatedFrom.clients {
-		if c.NonEntity == client.NonEntity && mountAccessor == client.MountAccessor && c.Namespace == client.NamespaceID {
+		if c.ClientType == client.ClientType && mountAccessor == client.MountAccessor && c.Namespace == client.NamespaceID {
 			addingTo.addEntityRecord(client, segmentIndex)
 			numClients--
 			if numClients == 0 {
@@ -330,6 +330,8 @@ func (m *multipleMonthsActivityClients) write(ctx context.Context, opts map[gene
 
 	_, writePQ := opts[generation.WriteOptions_WRITE_PRECOMPUTED_QUERIES]
 	_, writeDistinctClients := opts[generation.WriteOptions_WRITE_DISTINCT_CLIENTS]
+	_, writeEntities := opts[generation.WriteOptions_WRITE_ENTITIES]
+	_, writeIntentLog := opts[generation.WriteOptions_WRITE_INTENT_LOGS]
 
 	pqOpts := pqOptions{}
 	if writePQ || writeDistinctClients {
@@ -340,6 +342,7 @@ func (m *multipleMonthsActivityClients) write(ctx context.Context, opts map[gene
 		pqOpts.activePeriodStart = m.earliestTimestamp(now)
 	}
 
+	var earliestTimestamp, latestTimestamp time.Time
 	for i, month := range m.months {
 		if month.generationParameters == nil {
 			continue
@@ -350,12 +353,18 @@ func (m *multipleMonthsActivityClients) write(ctx context.Context, opts map[gene
 		} else {
 			timestamp = now
 		}
+		if earliestTimestamp.IsZero() || timestamp.Before(earliestTimestamp) {
+			earliestTimestamp = timestamp
+		}
+		if timestamp.After(latestTimestamp) {
+			latestTimestamp = timestamp
+		}
 		segments, err := month.populateSegments()
 		if err != nil {
 			return nil, err
 		}
 		for segmentIndex, segment := range segments {
-			if _, ok := opts[generation.WriteOptions_WRITE_ENTITIES]; ok {
+			if writeEntities || writeIntentLog {
 				if segment == nil {
 					// skip the index
 					continue
@@ -379,6 +388,13 @@ func (m *multipleMonthsActivityClients) write(ctx context.Context, opts map[gene
 			if err != nil {
 				return nil, err
 			}
+		}
+
+	}
+	if writeIntentLog {
+		err := activityLog.writeIntentLog(ctx, earliestTimestamp.UTC().Unix(), latestTimestamp.UTC())
+		if err != nil {
+			return nil, err
 		}
 	}
 	wg := sync.WaitGroup{}

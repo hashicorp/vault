@@ -145,8 +145,15 @@ func WithClientMount(m string) ClientOption {
 // WithClientIsNonEntity sets whether the client is an entity client or a non-
 // entity token client
 func WithClientIsNonEntity() ClientOption {
+	return WithClientType("non-entity")
+}
+
+// WithClientType sets the client type to the given string. If this client type
+// is not "entity", then the client will be counted in the activity log as a
+// non-entity client
+func WithClientType(typ string) ClientOption {
 	return func(client *generation.Client) {
-		client.NonEntity = true
+		client.ClientType = typ
 	}
 }
 
