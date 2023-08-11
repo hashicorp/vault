@@ -98,7 +98,7 @@ func TestFormatJSON_formatRequest(t *testing.T) {
 
 	for name, tc := range cases {
 		var buf bytes.Buffer
-		cfg, err := NewFormatterConfig()
+		cfg, err := NewFormatterConfig(WithHMACAccessor(false))
 		require.NoError(t, err)
 		f, err := NewEntryFormatter(cfg, ss)
 		require.NoError(t, err)

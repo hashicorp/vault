@@ -12,8 +12,9 @@ import (
 // getDefaultOptions returns options with their default values.
 func getDefaultOptions() options {
 	return options{
-		withNow:    time.Now(),
-		withFormat: JSONFormat,
+		withNow:          time.Now(),
+		withFormat:       JSONFormat,
+		withHMACAccessor: true,
 	}
 }
 
