@@ -549,8 +549,7 @@ func (b *databaseBackend) pathStaticRoleCreateUpdate(ctx context.Context, req *l
 	rotationScheduleOk := rotationSchedule != ""
 
 	if rotationScheduleOk && rotationPeriodOk {
-		// TODO(JM): handle mutual exclusion
-		response.AddWarning("mutually exclusive fields rotation_period and rotation_schedule were both specified; rotation_period takes priority")
+		return logical.ErrorResponse("mutually exclusive fields rotation_period and rotation_schedule were both specified; only one of them can be provided"), nil
 	} else if createRole && (!rotationScheduleOk && !rotationPeriodOk) {
 		return logical.ErrorResponse("one of rotation_schedule or rotation_period must be provided to create a static account"), nil
 	}
@@ -564,6 +563,8 @@ func (b *databaseBackend) pathStaticRoleCreateUpdate(ctx context.Context, req *l
 			return logical.ErrorResponse(fmt.Sprintf("rotation_period must be %d seconds or more", defaultQueueTickSeconds)), nil
 		}
 		role.StaticAccount.RotationPeriod = time.Duration(rotationPeriodSeconds) * time.Second
+		// Unset rotation schedule if rotation period is set
+		role.StaticAccount.RotationSchedule = ""
 	}
 
 	if rotationScheduleOk {
@@ -578,6 +579,8 @@ func (b *databaseBackend) pathStaticRoleCreateUpdate(ctx context.Context, req *l
 			return logical.ErrorResponse("could not parse rotation_schedule"), nil
 		}
 		role.StaticAccount.Schedule = *sched
+		// Unset rotation period if rotation schedule is set
+		role.StaticAccount.RotationPeriod = 0
 	}
 
 	if rotationStmtsRaw, ok := data.GetOk("rotation_statements"); ok {
