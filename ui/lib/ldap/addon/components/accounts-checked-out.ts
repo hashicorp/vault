@@ -48,6 +48,7 @@ export default class LdapAccountsCheckedOutComponent extends Component<Args> {
       // transitioning to the current route to trigger the model hook so we can fetch the updated status
       this.router.transitionTo('vault.cluster.secrets.backend.ldap.libraries.library.details.accounts');
     } catch (error) {
+      this.checkInAccount = '';
       this.flashMessages.danger(
         `Error checking in the account ${this.checkInAccount}. \n ${errorMessage(error)}`
       );

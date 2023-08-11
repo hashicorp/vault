@@ -12,7 +12,7 @@
           <Body.Td>
             <button
               type="button"
-              class="text-button has-text-primary has-text-weight-semibold"
+              class="text-button has-text-info has-text-weight-semibold"
               disabled={{not @library.canCheckIn}}
               data-test-checked-out-account-action={{Body.data}}
               {{on "click" (fn (mut this.checkInAccount) Body.data)}}
