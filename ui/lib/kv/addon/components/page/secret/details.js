@@ -39,6 +39,10 @@ export default class KvSecretDetails extends Component {
     next(() => dropdown.actions.close());
   }
 
+  get hideHeaders() {
+    return this.showJsonView || this.emptyState;
+  }
+
   get emptyState() {
     if (!this.args.secret.canReadData) {
       return {
