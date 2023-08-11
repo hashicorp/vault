@@ -205,7 +205,7 @@ func TestOptions_WithFacility(t *testing.T) {
 		},
 		"whitespace": {
 			Value:         "    ",
-			ExpectedValue: "",
+			ExpectedValue: "    ",
 		},
 		"value": {
 			Value:         "juan",
@@ -213,7 +213,7 @@ func TestOptions_WithFacility(t *testing.T) {
 		},
 		"spacey-value": {
 			Value:         "   juan   ",
-			ExpectedValue: "juan",
+			ExpectedValue: "   juan   ",
 		},
 	}
 
@@ -243,7 +243,7 @@ func TestOptions_WithTag(t *testing.T) {
 		},
 		"whitespace": {
 			Value:         "    ",
-			ExpectedValue: "",
+			ExpectedValue: "    ",
 		},
 		"value": {
 			Value:         "juan",
@@ -251,7 +251,7 @@ func TestOptions_WithTag(t *testing.T) {
 		},
 		"spacey-value": {
 			Value:         "   juan   ",
-			ExpectedValue: "juan",
+			ExpectedValue: "   juan   ",
 		},
 	}
 

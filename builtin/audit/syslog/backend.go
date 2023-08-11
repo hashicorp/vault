@@ -123,6 +123,17 @@ func Factory(ctx context.Context, conf *audit.BackendConfig, useEventLogger bool
 	b.formatter = fw
 
 	if useEventLogger {
+		var opts []event.Option
+
+		// Get facility or default to AUTH
+		if facility, ok := conf.Config["facility"]; ok {
+			opts = append(opts, event.WithFacility(facility))
+		}
+
+		if tag, ok := conf.Config["tag"]; ok {
+			opts = append(opts, event.WithTag(tag))
+		}
+
 		b.nodeIDList = make([]eventlogger.NodeID, 2)
 		b.nodeMap = make(map[eventlogger.NodeID]eventlogger.Node)
 
@@ -133,7 +144,7 @@ func Factory(ctx context.Context, conf *audit.BackendConfig, useEventLogger bool
 		b.nodeIDList[0] = formatterNodeID
 		b.nodeMap[formatterNodeID] = f
 
-		n, err := event.NewSyslogSink(format, event.WithFacility(facility), event.WithTag(tag))
+		n, err := event.NewSyslogSink(format, opts...)
 		if err != nil {
 			return nil, fmt.Errorf("error creating syslog sink node: %w", err)
 		}
