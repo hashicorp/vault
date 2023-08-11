@@ -29,6 +29,27 @@ func ProcessManual(ctx context.Context, data *logical.LogInput, ids []eventlogge
 		return errors.New("nodes cannot be nil")
 	case len(nodes) == 0:
 		return errors.New("nodes are required")
+	case len(ids) < 2:
+		return errors.New("not enough nodes")
+	}
+
+	// Replace the second last node (the formatter node) with a temporary
+	// formatter node that doesn't use a Salter that persists its salt
+	// value in the storage backend.
+
+	formatterNodeID := ids[len(ids)-2]
+
+	nodeMap := make(map[eventlogger.NodeID]eventlogger.Node)
+	for id, node := range nodes {
+		if id == formatterNodeID {
+			formatNode, ok := node.(*EntryFormatter)
+			if !ok {
+				return errors.New("formatter node cannot be cast correctly")
+			}
+			nodeMap[id] = NewTemporaryFormatNode(formatNode)
+		} else {
+			nodeMap[id] = node
+		}
 	}
 
 	// Create an audit event.
@@ -55,7 +76,7 @@ func ProcessManual(ctx context.Context, data *logical.LogInput, ids []eventlogge
 	// 1. formatter
 	// 2. sink
 	for _, id := range ids {
-		node, ok := nodes[id]
+		node, ok := nodeMap[id]
 		if !ok {
 			return fmt.Errorf("node not found: %v", id)
 		}

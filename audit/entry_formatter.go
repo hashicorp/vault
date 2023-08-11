@@ -580,3 +580,14 @@ func doElideListResponseData(data map[string]interface{}) {
 		}
 	}
 }
+
+// NewTemporaryFormatNode creates an EntryFormatter instance that is used as a
+// Node and that is cloned nearly as is, with the exception of the Salter.
+func NewTemporaryFormatNode(n *EntryFormatter) *EntryFormatter {
+	return &EntryFormatter{
+		salter:          &nonPersistentSalt{},
+		headerFormatter: n.headerFormatter,
+		config:          n.config,
+		prefix:          n.prefix,
+	}
+}
