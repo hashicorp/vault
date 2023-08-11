@@ -197,12 +197,18 @@ func staticFields() map[string]*framework.FieldSchema {
 			Type: framework.TypeDurationSecond,
 			Description: `Period for automatic
 	credential rotation of the given username. Not valid unless used with
-	"username".`,
+	"username". Mutually exclusive with "rotation_schedule."`,
 		},
 		"rotation_schedule": {
 			Type: framework.TypeString,
 			Description: `Schedule for automatic credential rotation of the
-	given username.`,
+	given username. Mutually exclusive with "rotation_period."`,
+		},
+		"rotation_window": {
+			Type: framework.TypeDurationSecond,
+			Description: `The window of time in which rotations are allowed to
+	occur starting from a given "rotation_schedule". Requires "rotation_schedule"
+	to be specified`,
 		},
 		"rotation_statements": {
 			Type: framework.TypeStringSlice,
@@ -299,11 +305,17 @@ func (b *databaseBackend) pathStaticRoleRead(ctx context.Context, req *logical.R
 	if role.StaticAccount != nil {
 		data["username"] = role.StaticAccount.Username
 		data["rotation_statements"] = role.Statements.Rotation
-		data["rotation_period"] = role.StaticAccount.RotationPeriod.Seconds()
 		if !role.StaticAccount.LastVaultRotation.IsZero() {
 			data["last_vault_rotation"] = role.StaticAccount.LastVaultRotation
 		}
-		data["rotation_schedule"] = role.StaticAccount.RotationSchedule
+
+		// only return one of the mutually exclusive fields in the response
+		if role.StaticAccount.RotationPeriod != 0 {
+			data["rotation_period"] = role.StaticAccount.RotationPeriod.Seconds()
+		} else if role.StaticAccount.RotationSchedule != "" {
+			data["rotation_schedule"] = role.StaticAccount.RotationSchedule
+			data["rotation_window"] = role.StaticAccount.RotationWindow.Seconds()
+		}
 	}
 
 	if len(role.CredentialConfig) > 0 {
@@ -547,6 +559,7 @@ func (b *databaseBackend) pathStaticRoleCreateUpdate(ctx context.Context, req *l
 	rotationPeriodSecondsRaw, rotationPeriodOk := data.GetOk("rotation_period")
 	rotationSchedule := data.Get("rotation_schedule").(string)
 	rotationScheduleOk := rotationSchedule != ""
+	rotationWindowSecondsRaw, rotationWindowOk := data.GetOk("rotation_window")
 
 	if rotationScheduleOk && rotationPeriodOk {
 		return logical.ErrorResponse("mutually exclusive fields rotation_period and rotation_schedule were both specified; only one of them can be provided"), nil
@@ -565,6 +578,9 @@ func (b *databaseBackend) pathStaticRoleCreateUpdate(ctx context.Context, req *l
 		role.StaticAccount.RotationPeriod = time.Duration(rotationPeriodSeconds) * time.Second
 		// Unset rotation schedule if rotation period is set
 		role.StaticAccount.RotationSchedule = ""
+		if rotationWindowOk {
+			return logical.ErrorResponse("rotation_window is invalid with use of rotation_period"), nil
+		}
 	}
 
 	if rotationScheduleOk {
@@ -581,6 +597,13 @@ func (b *databaseBackend) pathStaticRoleCreateUpdate(ctx context.Context, req *l
 		role.StaticAccount.Schedule = *sched
 		// Unset rotation period if rotation schedule is set
 		role.StaticAccount.RotationPeriod = 0
+		if rotationWindowOk {
+			rotationWindowSeconds := rotationWindowSecondsRaw.(int)
+			if rotationWindowSeconds < minRotationWindowSeconds {
+				return logical.ErrorResponse(fmt.Sprintf("rotation_window must be %d seconds or more", minRotationWindowSeconds)), nil
+			}
+			role.StaticAccount.RotationWindow = time.Duration(rotationWindowSeconds) * time.Second
+		}
 	}
 
 	if rotationStmtsRaw, ok := data.GetOk("rotation_statements"); ok {
@@ -654,10 +677,12 @@ func (b *databaseBackend) pathStaticRoleCreateUpdate(ctx context.Context, req *l
 		}
 	}
 
-	if rotationPeriodOk {
+	_, rotationPeriodChanged := data.Raw["rotation_period"]
+	_, rotationScheduleChanged := data.Raw["rotation_schedule"]
+	if rotationPeriodChanged {
 		b.logger.Debug("init priority for RotationPeriod", "lvr", lvr, "next", lvr.Add(role.StaticAccount.RotationPeriod))
 		item.Priority = lvr.Add(role.StaticAccount.RotationPeriod).Unix()
-	} else {
+	} else if rotationScheduleChanged {
 		next := role.StaticAccount.Schedule.Next(lvr)
 		b.logger.Debug("init priority for Schedule", "lvr", lvr)
 		b.logger.Debug("init priority for Schedule", "next", next)
@@ -783,6 +808,12 @@ type staticAccount struct {
 	// day.
 	RotationSchedule string `json:"rotation_schedule"`
 
+	// RotationWindow is number in seconds in which rotations are allowed to
+	// occur starting from a given rotation_schedule.
+	RotationWindow time.Duration `json:"rotation_window"`
+
+	// Schedule holds the parsed "chron style" string representing the allowed
+	// schedule for each rotation.
 	Schedule cron.SpecSchedule `json:"schedule"`
 
 	// RevokeUser is a boolean flag to indicate if Vault should revoke the

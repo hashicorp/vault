@@ -266,12 +266,29 @@ func TestBackend_StaticRole_Config(t *testing.T) {
 				"rotation_period": float64(5400),
 			},
 		},
-		"missing rotation period": {
+		"missing required fields": {
 			account: map[string]interface{}{
 				"username": dbUser,
 			},
 			path: "plugin-role-test",
-			err:  errors.New("rotation_period is required to create static accounts"),
+			err:  errors.New("one of rotation_schedule or rotation_period must be provided to create a static account"),
+		},
+		"rotation window invalid with rotation_period": {
+			account: map[string]interface{}{
+				"username":        dbUser,
+				"rotation_window": "3600s",
+			},
+			path: "plugin-role-test",
+			err:  errors.New("one of rotation_schedule or rotation_period must be provided to create a static account"),
+		},
+		"rotation window invalid without rotation_schedule": {
+			account: map[string]interface{}{
+				"username":        dbUser,
+				"rotation_period": "5400s",
+				"rotation_window": "3600s",
+			},
+			path: "disallowed-role",
+			err:  errors.New("rotation_window is invalid with use of rotation_period"),
 		},
 		"disallowed role config": {
 			account: map[string]interface{}{
