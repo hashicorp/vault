@@ -31,9 +31,16 @@ export default ApplicationAdapter.extend({
   },
 
   async query(store, type, query) {
-    let mountModel;
+    let mountModel, configModel;
     try {
       mountModel = await this.ajax(this.internalURL(query.path), 'GET');
+      // TODO kv engine cleanup - this logic can be removed when KV exists in separate ember engine
+      // if kv2 then add the config data to the mountModel
+      // version comes in as a string
+      if (mountModel?.data?.type === 'kv' && mountModel?.data?.options?.version === '2') {
+        configModel = await this.ajax(this.urlForConfig(query.path), 'GET');
+        mountModel.data = { ...mountModel.data, ...configModel.data };
+      }
     } catch (error) {
       // no path means this was an error on listing
       if (!query.path || !mountModel) {

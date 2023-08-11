@@ -6,6 +6,7 @@
 import { inject as service } from '@ember/service';
 import Route from '@ember/routing/route';
 
+// TODO kv engine cleanup - this can be removed when KV has fully moved to separate ember engine
 export default Route.extend({
   store: service(),
   async model() {
