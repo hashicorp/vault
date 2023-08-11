@@ -83,7 +83,6 @@ func Factory(ctx context.Context, conf *audit.BackendConfig, useEventLogger bool
 		cfgOpts = append(cfgOpts, audit.WithRaw(v))
 	}
 
-	// Check if mode is provided
 	mode := os.FileMode(0o600)
 	if modeRaw, ok := conf.Config["mode"]; ok {
 		m, err := strconv.ParseUint(modeRaw, 8, 32)
@@ -166,12 +165,17 @@ func Factory(ctx context.Context, conf *audit.BackendConfig, useEventLogger bool
 		default:
 			var err error
 
+			var opts []event.Option
+			// Check if mode is provided
+			if modeRaw, ok := conf.Config["mode"]; ok {
+				opts = append(opts, event.WithFileMode(modeRaw))
+			}
+
 			// The NewFileSink function attempts to open the file and will
 			// return an error if it can't.
 			n, err := event.NewFileSink(
 				b.path,
-				b.formatConfig.RequiredFormat.String(),
-				event.WithFileMode(strconv.FormatUint(uint64(mode), 8)))
+				b.formatConfig.RequiredFormat.String(), opts...)
 			if err != nil {
 				return nil, fmt.Errorf("file sink creation failed for path %q: %w", path, err)
 			}

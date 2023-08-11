@@ -32,12 +32,15 @@ type options struct {
 
 // getDefaultOptions returns Options with their default values.
 func getDefaultOptions() options {
+	fileMode := os.FileMode(0o600)
+
 	return options{
 		withNow:         time.Now(),
 		withFacility:    "AUTH",
 		withTag:         "vault",
 		withSocketType:  "tcp",
 		withMaxDuration: 2 * time.Second,
+		withFileMode:    &fileMode,
 	}
 }
 
