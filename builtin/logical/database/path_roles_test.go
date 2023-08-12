@@ -7,6 +7,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"strings"
 	"testing"
 	"time"
@@ -254,6 +255,8 @@ func TestBackend_StaticRole_Config(t *testing.T) {
 		path     string
 		expected map[string]interface{}
 		err      error
+		// use this field to check partial error strings, otherwise use err
+		errContains string
 	}{
 		"basic": {
 			account: map[string]interface{}{
@@ -266,12 +269,62 @@ func TestBackend_StaticRole_Config(t *testing.T) {
 				"rotation_period": float64(5400),
 			},
 		},
-		"missing rotation period": {
+		"missing required fields": {
 			account: map[string]interface{}{
 				"username": dbUser,
 			},
 			path: "plugin-role-test",
-			err:  errors.New("rotation_period is required to create static accounts"),
+			err:  errors.New("one of rotation_schedule or rotation_period must be provided to create a static account"),
+		},
+		"rotation window invalid with rotation_period": {
+			account: map[string]interface{}{
+				"username":        dbUser,
+				"rotation_period": "5400s",
+				"rotation_window": "3600s",
+			},
+			path: "disallowed-role",
+			err:  errors.New("rotation_window is invalid with use of rotation_period"),
+		},
+		"happy path for rotation_schedule": {
+			account: map[string]interface{}{
+				"username":          dbUser,
+				"rotation_schedule": "* * * * *",
+			},
+			path: "plugin-role-test",
+			expected: map[string]interface{}{
+				"username":          dbUser,
+				"rotation_schedule": "* * * * *",
+			},
+		},
+		"happy path for rotation_schedule and rotation_window": {
+			account: map[string]interface{}{
+				"username":          dbUser,
+				"rotation_schedule": "* * * * *",
+				"rotation_window":   "3600s",
+			},
+			path: "plugin-role-test",
+			expected: map[string]interface{}{
+				"username":          dbUser,
+				"rotation_schedule": "* * * * *",
+				"rotation_window":   float64(3600),
+			},
+		},
+		"error parsing rotation_schedule": {
+			account: map[string]interface{}{
+				"username":          dbUser,
+				"rotation_schedule": "foo",
+			},
+			path:        "plugin-role-test",
+			errContains: "could not parse rotation_schedule",
+		},
+		"rotation_window invalid": {
+			account: map[string]interface{}{
+				"username":          dbUser,
+				"rotation_schedule": "* * * * *",
+				"rotation_window":   "59s",
+			},
+			path: "plugin-role-test",
+			err:  errors.New(fmt.Sprintf("rotation_window must be %d seconds or more", minRotationWindowSeconds)),
 		},
 		"disallowed role config": {
 			account: map[string]interface{}{
@@ -305,7 +358,12 @@ func TestBackend_StaticRole_Config(t *testing.T) {
 			}
 
 			resp, err = b.HandleRequest(namespace.RootContext(nil), req)
-			if err != nil || (resp != nil && resp.IsError()) {
+			if tc.errContains != "" {
+				if !strings.Contains(resp.Error().Error(), tc.errContains) {
+					t.Fatalf("expected err message: (%s), got (%s), response error: (%s)", tc.err, err, resp.Error())
+				}
+				return
+			} else if err != nil || (resp != nil && resp.IsError()) {
 				if tc.err == nil {
 					t.Fatalf("err:%s resp:%#v\n", err, resp)
 				}
@@ -341,7 +399,14 @@ func TestBackend_StaticRole_Config(t *testing.T) {
 
 			expected := tc.expected
 			actual := make(map[string]interface{})
-			dataKeys := []string{"username", "password", "last_vault_rotation", "rotation_period"}
+			dataKeys := []string{
+				"username",
+				"password",
+				"last_vault_rotation",
+				"rotation_period",
+				"rotation_schedule",
+				"rotation_window",
+			}
 			for _, key := range dataKeys {
 				if v, ok := resp.Data[key]; ok {
 					actual[key] = v
