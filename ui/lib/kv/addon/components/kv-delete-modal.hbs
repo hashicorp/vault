@@ -1,26 +1,26 @@
-<button type="button" class="toolbar-link" {{on "click" (fn this.handleButtonClick @mode)}} data-test-kv-delete={{@mode}}>
-  {{capitalize @mode}}
+<button type="button" class="toolbar-link" {{on "click" (fn (mut this.modalOpen) true)}} data-test-kv-delete={{@mode}}>
+  {{yield}}
 </button>
 {{#if this.modalOpen}}
   <Modal
-    @title="{{capitalize @mode}} {{if (not-eq @mode 'delete metadata') 'version?' ''}}"
-    @onClose={{action (mut this.modalOpen) false}}
+    @title={{this.modalDisplay.title}}
+    @onClose={{fn (mut this.modalOpen) false}}
     @isActive={{this.modalOpen}}
-    @type={{if (eq @mode "delete") "warning" "danger"}}
+    @type={{this.modalDisplay.type}}
     @showCloseButton={{true}}
   >
     <section class="modal-card-body">
       <p class="has-bottom-margin-s">
-        {{this.modalIntro}}
+        {{this.modalDisplay.intro}}
       </p>
       {{#if (eq @mode "delete")}}
         <div class="is-flex-column">
-          {{#each this.generateDeleteRadioOptions as |option|}}
+          {{#each this.deleteOptions as |option|}}
             <ToolTip @verticalPosition="above" @horizontalPosition="left" as |T|>
               <T.Trigger @tabindex="-1">
                 <div class="is-flex-align-baseline has-bottom-margin-m">
                   <RadioButton
-                    id={{dasherize option.label}}
+                    id={{option.key}}
                     class="radio top-xxs"
                     @disabled={{option.disabled}}
                     @value={{option.key}}
@@ -48,12 +48,10 @@
     <footer class="modal-card-foot modal-card-foot-outlined">
       <button
         type="button"
-        class="button
-          {{if (or (eq @mode 'destroy') (eq @mode 'delete metadata')) 'is-danger-outlined' 'is-warning-outlined'}}"
-        {{on "click" (perform this.save)}}
-        disabled={{(not this.deleteType)}}
+        class="button {{if (eq this.modalDisplay.type 'danger') 'is-danger-outlined' 'is-warning-outlined'}}"
+        {{on "click" this.onDelete}}
       >
-        {{capitalize @mode}}
+        Confirm
       </button>
       <button type="button" class="button is-secondary" {{on "click" (fn (mut this.modalOpen) false)}}>
         Cancel

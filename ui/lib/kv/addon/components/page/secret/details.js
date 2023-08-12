@@ -39,6 +39,45 @@ export default class KvSecretDetails extends Component {
     next(() => dropdown.actions.close());
   }
 
+  @action
+  async undelete() {
+    const { secret } = this.args;
+    try {
+      await secret.destroyRecord({
+        adapterOptions: { deleteType: 'undelete-version', deleteVersions: secret.version },
+      });
+      this.flashMessages.success(`Successfully undeleted ${secret.path}`);
+      this.router.transitionTo('vault.cluster.secrets.backend.kv.secret', {
+        queryParams: { version: secret.version },
+      });
+    } catch (err) {
+      this.flashMessages.danger(`There was a problem un-deleting ${secret.path}`);
+    }
+  }
+
+  @action
+  async handleDestruction(type) {
+    const { secret } = this.args;
+    // TODO can use secret.state getter for verb once branch is updated
+    try {
+      await secret.destroyRecord({ adapterOptions: { deleteType: type, deleteVersions: secret.version } });
+      const verb = type.includes('delete') ? 'deleted' : 'destroyed';
+      this.flashMessages.success(`Successfully ${verb} Version ${secret.version} of ${secret.path}.`);
+      this.router.transitionTo('vault.cluster.secrets.backend.kv.secret', {
+        queryParams: { version: secret.version },
+      });
+    } catch (err) {
+      const verb = type.includes('delete') ? 'deleting' : 'destroying';
+      this.flashMessages.danger(`There was a problem ${verb} Version ${secret.version} of ${secret.path}`);
+    }
+  }
+
+  get isDeactivated() {
+    // TODO can use secret.state getter for verb once branch is updated
+    const secret = this.args;
+    return !secret.deletionTime && !secret.destroyed;
+  }
+
   get emptyState() {
     if (!this.args.secret.canReadData) {
       return {
