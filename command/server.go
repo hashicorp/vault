@@ -704,6 +704,7 @@ func (c *ServerCommand) runRecoveryMode() int {
 			Core:                  core,
 			ListenerConfig:        ln.Config,
 			DisablePrintableCheck: config.DisablePrintableCheck,
+			DisableRateLimitQuota: config.DisableRateLimitQuota,
 			RecoveryMode:          c.flagRecovery,
 			RecoveryToken:         atomic.NewString(""),
 		})
@@ -3009,6 +3010,7 @@ func startHttpServers(c *ServerCommand, core *vault.Core, config *server.Config,
 			Core:                  core,
 			ListenerConfig:        ln.Config,
 			DisablePrintableCheck: config.DisablePrintableCheck,
+			DisableRateLimitQuota: config.DisableRateLimitQuota,
 			RecoveryMode:          c.flagRecovery,
 		})
 

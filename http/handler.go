@@ -227,7 +227,12 @@ func handler(props *vault.HandlerProperties) http.Handler {
 	// Wrap the handler in another handler to trigger all help paths.
 	helpWrappedHandler := wrapHelpHandler(mux, core)
 	corsWrappedHandler := wrapCORSHandler(helpWrappedHandler, core)
-	quotaWrappedHandler := rateLimitQuotaWrapping(corsWrappedHandler, core)
+
+	quotaWrappedHandler := corsWrappedHandler
+	if !props.DisableRateLimitQuota {
+		quotaWrappedHandler = rateLimitQuotaWrapping(corsWrappedHandler, core)
+	}
+
 	genericWrappedHandler := genericWrapping(core, quotaWrappedHandler, props)
 
 	// Wrap the handler with PrintablePathCheckHandler to check for non-printable

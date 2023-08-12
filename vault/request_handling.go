@@ -65,6 +65,7 @@ type HandlerProperties struct {
 	Core                  *Core
 	ListenerConfig        *configutil.Listener
 	DisablePrintableCheck bool
+	DisableRateLimitQuota bool
 	RecoveryMode          bool
 	RecoveryToken         *uberAtomic.String
 }

@@ -63,6 +63,8 @@ type Config struct {
 	DisableCacheRaw          interface{} `hcl:"disable_cache"`
 	DisablePrintableCheck    bool        `hcl:"-"`
 	DisablePrintableCheckRaw interface{} `hcl:"disable_printable_check"`
+	DisableRateLimitQuota    bool        `hcl:"-"`
+	DisableRateLimitQuotaRaw interface{} `hcl:"disable_ratelimit_quota"`
 
 	EnableUI    bool        `hcl:"-"`
 	EnableUIRaw interface{} `hcl:"ui"`
@@ -315,6 +317,11 @@ func (c *Config) Merge(c2 *Config) *Config {
 	result.DisablePrintableCheck = c.DisablePrintableCheck
 	if c2.DisablePrintableCheckRaw != nil {
 		result.DisablePrintableCheck = c2.DisablePrintableCheck
+	}
+
+	result.DisableRateLimitQuota = c.DisableRateLimitQuota
+	if c2.DisableRateLimitQuotaRaw != nil {
+		result.DisableRateLimitQuota = c2.DisableRateLimitQuota
 	}
 
 	// merge these integers via a MAX operation
@@ -616,6 +623,12 @@ func ParseConfig(d, source string) (*Config, error) {
 
 	if result.DisablePrintableCheckRaw != nil {
 		if result.DisablePrintableCheck, err = parseutil.ParseBool(result.DisablePrintableCheckRaw); err != nil {
+			return nil, err
+		}
+	}
+
+	if result.DisableRateLimitQuotaRaw != nil {
+		if result.DisableRateLimitQuota, err = parseutil.ParseBool(result.DisableRateLimitQuotaRaw); err != nil {
 			return nil, err
 		}
 	}
@@ -1104,6 +1117,7 @@ func (c *Config) Sanitized() map[string]interface{} {
 		"disable_sentinel_trace":  c.DisableSentinelTrace,
 		"disable_cache":           c.DisableCache,
 		"disable_printable_check": c.DisablePrintableCheck,
+		"disable_ratelimit_quota": c.DisableRateLimitQuota,
 
 		"enable_ui": c.EnableUI,
 

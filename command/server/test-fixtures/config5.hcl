@@ -52,3 +52,4 @@ disable_cache = true
  raw_storage_endpoint = true
  disable_sealwrap = true
  disable_printable_check = true
+ disable_ratelimit_quota = true

@@ -453,6 +453,8 @@ func testLoadConfigFile(t *testing.T) {
 		DisableCacheRaw:          true,
 		DisablePrintableCheckRaw: true,
 		DisablePrintableCheck:    true,
+		DisableRateLimitQuotaRaw: true,
+		DisableRateLimitQuota:    true,
 		EnableUI:                 true,
 		EnableUIRaw:              true,
 
@@ -771,6 +773,7 @@ func testConfig_Sanitized(t *testing.T) {
 		"plugin_file_uid":                     0,
 		"plugin_file_permissions":             0,
 		"disable_printable_check":             false,
+		"disable_ratelimit_quota":             false,
 		"disable_sealwrap":                    true,
 		"raw_storage_endpoint":                true,
 		"introspection_endpoint":              false,
@@ -1210,6 +1213,8 @@ func testLoadConfigFileLeaseMetrics(t *testing.T) {
 		DisableCacheRaw:          true,
 		DisablePrintableCheckRaw: true,
 		DisablePrintableCheck:    true,
+		DisableRateLimitQuotaRaw: true,
+		DisableRateLimitQuota:    true,
 		EnableUI:                 true,
 		EnableUIRaw:              true,
 

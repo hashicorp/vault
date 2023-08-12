@@ -61,6 +61,7 @@ type VaultNodeConfig struct {
 	CacheSize                      int           `json:"cache_size"`
 	DisableCache                   bool          `json:"disable_cache"`
 	DisablePrintableCheck          bool          `json:"disable_printable_check"`
+	DisableRateLimitQuota          bool          `json:"disable_ratelimit_quota"`
 	EnableUI                       bool          `json:"ui"`
 	MaxLeaseTTL                    time.Duration `json:"max_lease_ttl"`
 	DefaultLeaseTTL                time.Duration `json:"default_lease_ttl"`
