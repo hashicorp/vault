@@ -22,6 +22,9 @@ const (
 	// Default interval to check the queue for items needing rotation
 	defaultQueueTickSeconds = 5
 
+	// Minimum allowed value for rotation_window
+	minRotationWindowSeconds = 3600
+
 	// Config key to set an alternate interval
 	queueTickIntervalKey = "rotation_queue_tick_interval"
 

@@ -129,8 +129,10 @@ func Backend(conf *logical.BackendConfig) *databaseBackend {
 	b.queueCtx, b.cancelQueueCtx = context.WithCancel(context.Background())
 	b.roleLocks = locksutil.CreateLocks()
 
+	// TODO(JM): don't allow seconds in production, this is helpful for
+	// development/testing though
 	parser := cron.NewParser(
-		cron.Second | cron.Minute | cron.Hour | cron.Dom | cron.Month | cron.DowOptional | cron.Descriptor,
+		cron.Second | cron.Minute | cron.Hour | cron.Dom | cron.Month | cron.DowOptional,
 	)
 	b.scheduleParser = parser
 	return &b
