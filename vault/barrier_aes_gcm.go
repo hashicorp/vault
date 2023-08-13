@@ -337,7 +337,7 @@ func (b *AESGCMBarrier) ReloadKeyring(ctx context.Context) error {
 	// Verify the term is always just one
 	term := binary.BigEndian.Uint32(out.Value[:4])
 	if term != initialKeyTerm {
-		return errors.New("term mis-match")
+		return errors.New("term mismatch")
 	}
 
 	// Decrypt the barrier init key

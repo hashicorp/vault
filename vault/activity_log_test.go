@@ -3120,7 +3120,7 @@ func TestActivityLog_Precompute(t *testing.T) {
 			}
 		}
 		if !found {
-			t.Errorf("No gage found for %v %v",
+			t.Errorf("No gauge found for %v %v",
 				g.Name, g.NamespaceLabel)
 		}
 	}
@@ -3648,7 +3648,7 @@ func TestActivityLog_PrecomputeNonEntityTokensWithID(t *testing.T) {
 			}
 		}
 		if !found {
-			t.Errorf("No gage found for %v %v",
+			t.Errorf("No gauge found for %v %v",
 				g.Name, g.NamespaceLabel)
 		}
 	}
