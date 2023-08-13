@@ -16,7 +16,7 @@ function update_or_create_comment {
   # We only want for the GH bot to place one comment to report build failures
   # and if we rerun a job, that comment needs to be updated.
   # Let's try to find if the GH bot has placed a similar comment
-  printf -v COMMENT_ID_QUERY '.[] | select (.body | startswith(%s)) | .id') "${SEARCH_KEY}"
+  printf -v COMMENT_ID_QUERY '.[] | select (.body | startswith(%s)) | .id' "${SEARCH_KEY}"
   comment_id="$(
     gh api "/repos/hashicorp/${REPO}/issues/${PR_NUMBER}/comments" \
       --header "Accept: application/vnd.github+json" \
