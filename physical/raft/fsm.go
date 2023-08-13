@@ -100,7 +100,7 @@ type FSM struct {
 
 	db *bolt.DB
 
-	// retoreCb is called after we've restored a snapshot
+	// restoreCb is called after we've restored a snapshot
 	restoreCb restoreCallback
 
 	chunker *raftchunking.ChunkingBatchingFSM
@@ -610,8 +610,8 @@ func (f *FSM) ApplyBatch(logs []*raft.Log) []interface{} {
 			command := &LogData{}
 			err := proto.Unmarshal(l.Data, command)
 			if err != nil {
-				f.logger.Error("error proto unmarshaling log data", "error", err)
-				panic("error proto unmarshaling log data")
+				f.logger.Error("error proto unmarshalling log data", "error", err)
+				panic("error proto unmarshalling log data")
 			}
 			commands = append(commands, command)
 		case raft.LogConfiguration:

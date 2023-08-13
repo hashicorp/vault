@@ -40,7 +40,7 @@ Usage: vault secrets move [options] SOURCE DESTINATION
   exiting if a final state is reached.
 
   This command works within or across namespaces, both source and destination paths
-  can be prefixed with a namespace heirarchy relative to the current namespace.
+  can be prefixed with a namespace hierarchy relative to the current namespace.
 
   WARNING! Moving a secrets engine will revoke any leases from the
   old engine.

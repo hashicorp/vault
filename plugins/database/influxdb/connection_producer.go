@@ -258,8 +258,8 @@ func isUserAdmin(cli influx.Client, user string) (bool, error) {
 		return false, response.Error()
 	}
 	for _, res := range response.Results {
-		for _, serie := range res.Series {
-			for _, val := range serie.Values {
+		for _, series := range res.Series {
+			for _, val := range series.Values {
 				if val[0].(string) == user && val[1].(bool) {
 					return true, nil
 				}

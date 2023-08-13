@@ -45,7 +45,7 @@ func TestACMEIssuerRoleLoading(t *testing.T) {
 	require.NoError(t, err, "failed creating issuer issuer-2")
 
 	_, err = CBWrite(b, s, "roles/role-bad-issuer", map[string]interface{}{
-		issuerRefParam: "non-existant",
+		issuerRefParam: "non-existent",
 		"no_store":     "false",
 	})
 	require.NoError(t, err, "failed creating role role-bad-issuer")
@@ -75,8 +75,8 @@ func TestACMEIssuerRoleLoading(t *testing.T) {
 		{name: "fail-role-has-bad-issuer", roleName: "role-bad-issuer", issuerName: "", expectedIssuerName: "", expectErr: true},
 		{name: "fail-role-no-store-enabled", roleName: "role-no-store-enabled", issuerName: "", expectedIssuerName: "", expectErr: true},
 		{name: "fail-role-no-store-enabled", roleName: "role-no-store-enabled", issuerName: "", expectedIssuerName: "", expectErr: true},
-		{name: "fail-role-does-not-exist", roleName: "non-existant", issuerName: "", expectedIssuerName: "", expectErr: true},
-		{name: "fail-issuer-does-not-exist", roleName: "", issuerName: "non-existant", expectedIssuerName: "", expectErr: true},
+		{name: "fail-role-does-not-exist", roleName: "non-existent", issuerName: "", expectedIssuerName: "", expectErr: true},
+		{name: "fail-issuer-does-not-exist", roleName: "", issuerName: "non-existent", expectedIssuerName: "", expectErr: true},
 	}
 
 	for _, tt := range tc {

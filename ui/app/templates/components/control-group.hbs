@@ -26,16 +26,16 @@
     />
   {{else}}
     <div class="control-group">
-      <div data-test-requestor-text>
+      <div data-test-requester-text>
         {{#if this.model.requestEntity.canRead}}
           <LinkTo
             @route="vault.cluster.access.identity.show"
             @models={{array "entities" this.model.requestEntity.id "details"}}
           >
-            {{this.requestorName}}
+            {{this.requesterName}}
           </LinkTo>
         {{else}}
-          {{this.requestorName}}
+          {{this.requesterName}}
         {{/if}}
         {{#if this.currentUserIsRequesting}}are{{else}}is{{/if}}
         {{#if this.model.approved}}

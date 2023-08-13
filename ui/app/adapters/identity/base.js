@@ -3,9 +3,9 @@
  * SPDX-License-Identifier: BUSL-1.1
  */
 
-import ApplicationAdapater from '../application';
+import ApplicationAdapter from '../application';
 
-export default ApplicationAdapater.extend({
+export default ApplicationAdapter.extend({
   namespace: 'v1',
   pathForType(type) {
     return type;

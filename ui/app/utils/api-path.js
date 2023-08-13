@@ -18,7 +18,7 @@ export default function apiPath(strings, ...keys) {
     const dict = data || {};
     const result = [strings[0]];
     assert(
-      `Expected ${keys.length} keys in apiPath context, only recieved ${Object.keys(data).join(',')}`,
+      `Expected ${keys.length} keys in apiPath context, only received ${Object.keys(data).join(',')}`,
       Object.keys(data).length >= keys.length
     );
     keys.forEach((key, i) => {

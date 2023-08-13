@@ -594,7 +594,7 @@ func documentPath(p *Path, backend *Backend, requestResponsePrefix string, doc *
 		// one for "auth/token/accessors/" immediately below.
 		//
 		// On the other hand, we do still write the OpenAPI path here if we generated ZERO operation types - this serves
-		// to provide documentation to a human that an endpoint exists, even if it has no invokable OpenAPI operations.
+		// to provide documentation to a human that an endpoint exists, even if it has no invocable OpenAPI operations.
 		// Examples of this include kv-v2's ".*" endpoint (regex cannot be translated to OpenAPI parameters), and the
 		// auth/oci/login endpoint (implements ResolveRoleOperation only, only callable from inside Vault).
 		if listOperation == nil || pi.Get != nil || pi.Post != nil || pi.Delete != nil {

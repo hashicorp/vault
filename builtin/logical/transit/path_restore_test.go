@@ -90,7 +90,7 @@ func TestTransit_Restore(t *testing.T) {
 
 	testCases := []struct {
 		Name string
-		// Seed dermines if we start the test by restoring the initial backup we
+		// Seed determines if we start the test by restoring the initial backup we
 		// took, to test a restore operation based on the key existing or not
 		Seed bool
 		// Force is a pointer to differentiate between default false and given false
@@ -98,7 +98,7 @@ func TestTransit_Restore(t *testing.T) {
 		// The error we expect, if any
 		ExpectedErr error
 
-		// RestoreName is used to restore the key to a differnt name
+		// RestoreName is used to restore the key to a different name
 		RestoreName string
 	}{
 		{

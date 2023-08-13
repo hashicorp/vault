@@ -133,7 +133,7 @@ message Request {
   // to make this request
   string entity_id = 17;
 
-  // PolicyOverride indicates that the requestor wishes to override
+  // PolicyOverride indicates that the requester wishes to override
   // soft-mandatory Sentinel policies
   bool policy_override = 18;
 

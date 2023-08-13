@@ -29,7 +29,7 @@ type GRPCDatabasePlugin struct {
 	FactoryFunc Factory
 	Impl        Database
 
-	// Embeding this will disable the netRPC protocol
+	// Embedding this will disable the netRPC protocol
 	plugin.NetRPCUnsupportedPlugin
 }
 

@@ -312,7 +312,7 @@ func TestClientRedirect(t *testing.T) {
 	}
 }
 
-func TestDefaulRetryPolicy(t *testing.T) {
+func TestDefaultRetryPolicy(t *testing.T) {
 	cases := map[string]struct {
 		resp      *http.Response
 		err       error

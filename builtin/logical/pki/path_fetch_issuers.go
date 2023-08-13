@@ -255,7 +255,7 @@ to be set on all PR secondary clusters.`,
 				},
 				"revocation_signature_algorithm": {
 					Type:        framework.TypeString,
-					Description: `Revocation Signature Alogrithm`,
+					Description: `Revocation Signature Algorithm`,
 					Required:    false,
 				},
 				"revoked": {

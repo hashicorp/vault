@@ -855,7 +855,7 @@ func TestPki_RolePatch(t *testing.T) {
 		// due to their non-default stored nature.
 		{
 			Field:   "key_usage",
-			Before:  []string{"DigitialSignature"},
+			Before:  []string{"DigitalSignature"},
 			Patched: []string{"DigitalSignature", "KeyAgreement"},
 		},
 		{

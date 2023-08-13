@@ -82,7 +82,7 @@ module('Unit | Adapter | secret-v2-version', function (hooks) {
       2,
     ],
   ].forEach(
-    ([testName, adapterMethod, args, expectedHttpVerb, expectedURL, exptectedRequestBody, assertCount]) => {
+    ([testName, adapterMethod, args, expectedHttpVerb, expectedURL, expectedRequestBody, assertCount]) => {
       test(`${testName}`, function (assert) {
         assert.expect(assertCount);
         const adapter = this.owner.lookup('adapter:secret-v2-version');
@@ -94,8 +94,8 @@ module('Unit | Adapter | secret-v2-version', function (hooks) {
           expectedHttpVerb,
           `${adapterMethod} uses the correct http verb: ${expectedHttpVerb}`
         );
-        if (exptectedRequestBody) {
-          assert.deepEqual(JSON.parse(requestBody), exptectedRequestBody);
+        if (expectedRequestBody) {
+          assert.deepEqual(JSON.parse(requestBody), expectedRequestBody);
         }
       });
     }

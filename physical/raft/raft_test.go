@@ -181,7 +181,7 @@ func TestRaft_ParseAutopilotUpgradeVersion(t *testing.T) {
 	}
 
 	if !strings.Contains(err.Error(), "does not parse") {
-		t.Fatal("expected an error about unparseable versions but got none")
+		t.Fatal("expected an error about unparsable versions but got none")
 	}
 }
 

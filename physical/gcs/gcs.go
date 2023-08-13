@@ -33,7 +33,7 @@ const (
 	// storage bucket name.
 	envBucket = "GOOGLE_STORAGE_BUCKET"
 
-	// envChunkSize is the environment variable to serach for the chunk size for
+	// envChunkSize is the environment variable to search for the chunk size for
 	// requests.
 	envChunkSize = "GOOGLE_STORAGE_CHUNK_SIZE"
 

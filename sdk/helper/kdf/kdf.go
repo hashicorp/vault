@@ -63,7 +63,7 @@ func CounterMode(prf PRF, prfLen uint32, key []byte, context []byte, bits uint32
 			return nil, err
 		}
 		if uint32(len(part)*8) != prfLen {
-			return nil, fmt.Errorf("PRF length mis-match (%d vs %d)", len(part)*8, prfLen)
+			return nil, fmt.Errorf("PRF length mismatch (%d vs %d)", len(part)*8, prfLen)
 		}
 		out = append(out, part...)
 	}

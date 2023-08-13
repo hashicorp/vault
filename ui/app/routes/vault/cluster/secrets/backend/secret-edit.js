@@ -334,7 +334,7 @@ export default Route.extend(UnloadModelRoute, {
       }
       // until we have time to move `backend` on a v1 model to a relationship,
       // it's going to dirty the model state, so we need to look for it
-      // and explicity ignore it here
+      // and explicitly ignore it here
       if (
         (mode !== 'show' && changedKeys.length && changedKeys[0] !== 'backend') ||
         (mode !== 'show' && version && version.hasDirtyAttributes)

@@ -27,7 +27,7 @@ type HostInfo struct {
 	CPU []cpu.InfoStat `json:"cpu"`
 	// CPUTimes returns statistics on CPU usage represented in Jiffies.
 	CPUTimes []cpu.TimesStat `json:"cpu_times"`
-	// Disk returns statitics on disk usage for all accessible partitions.
+	// Disk returns statistics on disk usage for all accessible partitions.
 	Disk []*disk.UsageStat `json:"disk"`
 	// Host returns general host information such as hostname, platform, uptime,
 	// kernel version, etc.

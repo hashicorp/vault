@@ -130,7 +130,7 @@ func TLSCertCheck(certpath string) ([]string, error) {
 	return warnings, err
 }
 
-// ParseTLSInformation parses certficate information and returns it from a cert path.
+// ParseTLSInformation parses certificate information and returns it from a cert path.
 func ParseTLSInformation(certFilePath string) ([]*x509.Certificate, []*x509.Certificate, []*x509.Certificate, error) {
 	leafCerts := []*x509.Certificate{}
 	interCerts := []*x509.Certificate{}
@@ -270,7 +270,7 @@ func TLSFileWarningChecks(leafCerts, interCerts, rootCerts []*x509.Certificate) 
 	return warnings, nil
 }
 
-// NearExpiration returns a true if a certficate will expire in a month and false otherwise
+// NearExpiration returns a true if a certificate will expire in a month and false otherwise
 func NearExpiration(c *x509.Certificate) (bool, time.Duration) {
 	oneMonthFromNow := time.Now().Add(30 * 24 * time.Hour)
 	var timeToExpiry time.Duration

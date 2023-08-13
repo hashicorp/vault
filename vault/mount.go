@@ -174,7 +174,7 @@ type MountMigrationInfo struct {
 // Note that the reported storage sizes are pre-encryption
 // sizes. Currently barrier uses aes-gcm for encryption, which
 // preserves plaintext size, adding a constant of 30 bytes of
-// padding, which is negligable and subject to change, and thus
+// padding, which is negligible and subject to change, and thus
 // not accounted for.
 func (c *Core) tableMetrics(entryCount int, isLocal bool, isAuth bool, compressedTable []byte) {
 	if c.metricsHelper == nil {

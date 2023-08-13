@@ -57,7 +57,7 @@ func TestCombine_invalid(t *testing.T) {
 		t.Fatalf("should err")
 	}
 
-	// Mis-match in length
+	// Mismatch in length
 	parts := [][]byte{
 		[]byte("foo"),
 		[]byte("ba"),

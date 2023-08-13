@@ -555,7 +555,7 @@ func (c *SSHCommand) handleTypeOTP(username, ip, port string, sshArgs []string) 
 		env = append(env, fmt.Sprintf("SSHPASS=%s", string(cred.Key)))
 	}
 
-	// Only harcode the knownhostsfile path if it has been set
+	// Only hardcode the known_hosts file path if it has been set
 	if c.flagUserKnownHostsFile != "" {
 		args = append(args,
 			"-o UserKnownHostsFile="+c.flagUserKnownHostsFile,
@@ -606,7 +606,7 @@ func (c *SSHCommand) handleTypeOTP(username, ip, port string, sshArgs []string) 
 	return 0
 }
 
-// handleTypeDynamic is used to handle SSH logins using the "dyanmic" key type.
+// handleTypeDynamic is used to handle SSH logins using the "dynamic" key type.
 func (c *SSHCommand) handleTypeDynamic(username, ip, port string, sshArgs []string) int {
 	// Generate the credential
 	secret, cred, err := c.generateCredential(username, ip)

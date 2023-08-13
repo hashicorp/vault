@@ -4317,7 +4317,7 @@ func (b *SystemBackend) mountPaths() []*framework.Path {
 									Required: false,
 								},
 								"user_lockout_threshold": {
-									Type:     framework.TypeInt64, // TODO this is actuall a Uint64 do we need a new type?
+									Type:     framework.TypeInt64, // TODO this is actually a Uint64 do we need a new type?
 									Required: false,
 								},
 								"user_lockout_duration": {

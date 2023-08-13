@@ -19,7 +19,7 @@ import { tracked } from '@glimmer/tracking';
  * ```js
  * <MountBackend::TypeForm @setMountType={{this.setMountType}} @mountType="secret" />
  * ```
- * @param {CallableFunction} setMountType - function will recieve the mount type string. Should update the model type value
+ * @param {CallableFunction} setMountType - function will receive the mount type string. Should update the model type value
  * @param {string} [mountType=auth] - mount type can be `auth` or `secret`
  */
 

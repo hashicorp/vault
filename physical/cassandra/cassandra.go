@@ -338,7 +338,7 @@ func (c *CassandraBackend) Delete(ctx context.Context, key string) error {
 	return nil
 }
 
-// List is used ot list all the keys under a given
+// List is used to list all the keys under a given
 // prefix, up to the next prefix.
 func (c *CassandraBackend) List(ctx context.Context, prefix string) ([]string, error) {
 	defer metrics.MeasureSince([]string{"cassandra", "list"}, time.Now())

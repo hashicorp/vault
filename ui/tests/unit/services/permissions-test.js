@@ -58,7 +58,7 @@ module('Unit | Service | permissions', function (hooks) {
     assert.true(this.service.hasPermission('foo'));
   });
 
-  test('returns true if a paths prefix is included in the policys exact paths', function (assert) {
+  test('returns true if a paths prefix is included in the policy\'s exact paths', function (assert) {
     this.service.set('exactPaths', PERMISSIONS_RESPONSE.data.exact_paths);
     assert.true(this.service.hasPermission('bar'));
   });

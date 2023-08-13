@@ -89,7 +89,7 @@ func TestSIDBytesToString(t *testing.T) {
 	for answer, test := range testcases {
 		res, err := sidBytesToString(test)
 		if err != nil {
-			t.Errorf("Failed to conver %#v: %s", test, err)
+			t.Errorf("Failed to convert %#v: %s", test, err)
 		} else if answer != res {
 			t.Errorf("Failed to convert %#v: %s != %s", test, res, answer)
 		}

@@ -15,7 +15,7 @@ import (
 )
 
 // ErrUnsupportedAlgorithm tells you when our quick dev assumptions have failed
-var ErrUnsupportedAlgorithm = errors.New("pkcs7: cannot decrypt data: only RSA, DES, DES-EDE3, AES-256-CBC and AES-128-GCM supported")
+var ErrUnsupportedAlgorithm = errors.New("pkcs7: cannot decrypt data: only RSA, DES, DES-EDGE3, AES-256-CBC and AES-128-GCM supported")
 
 // ErrNotEncryptedContent is returned when attempting to Decrypt data that is not encrypted data
 var ErrNotEncryptedContent = errors.New("pkcs7: content data is a decryptable data type")
@@ -63,9 +63,9 @@ func (eci encryptedContentInfo) decrypt(key []byte) ([]byte, error) {
 		return nil, ErrUnsupportedAlgorithm
 	}
 
-	// EncryptedContent can either be constructed of multple OCTET STRINGs
+	// EncryptedContent can either be constructed of multiple OCTET STRINGs
 	// or _be_ a tagged OCTET STRING
-	var cyphertext []byte
+	var ciphertext []byte
 	if eci.EncryptedContent.IsCompound {
 		// Complex case to concat all of the children OCTET STRINGs
 		var buf bytes.Buffer
@@ -78,10 +78,10 @@ func (eci encryptedContentInfo) decrypt(key []byte) ([]byte, error) {
 				break
 			}
 		}
-		cyphertext = buf.Bytes()
+		ciphertext = buf.Bytes()
 	} else {
-		// Simple case, the bytes _are_ the cyphertext
-		cyphertext = eci.EncryptedContent.Bytes
+		// Simple case, the bytes _are_ the ciphertext
+		ciphertext = eci.EncryptedContent.Bytes
 	}
 
 	var block cipher.Block
@@ -123,7 +123,7 @@ func (eci encryptedContentInfo) decrypt(key []byte) ([]byte, error) {
 			return nil, errors.New("pkcs7: encryption algorithm parameters are incorrect")
 		}
 
-		plaintext, err := gcm.Open(nil, params.Nonce, cyphertext, nil)
+		plaintext, err := gcm.Open(nil, params.Nonce, ciphertext, nil)
 		if err != nil {
 			return nil, err
 		}
@@ -136,8 +136,8 @@ func (eci encryptedContentInfo) decrypt(key []byte) ([]byte, error) {
 		return nil, errors.New("pkcs7: encryption algorithm parameters are malformed")
 	}
 	mode := cipher.NewCBCDecrypter(block, iv)
-	plaintext := make([]byte, len(cyphertext))
-	mode.CryptBlocks(plaintext, cyphertext)
+	plaintext := make([]byte, len(ciphertext))
+	mode.CryptBlocks(plaintext, ciphertext)
 	if plaintext, err = unpad(plaintext, mode.BlockSize()); err != nil {
 		return nil, err
 	}

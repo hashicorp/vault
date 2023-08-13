@@ -43,7 +43,7 @@ export default class KeymgmtKeyAdapter extends ApplicationAdapter {
     const { backend } = query;
     const url = this.buildURL(type.modelName, null, null, 'query', query);
     return this.ajax(url, 'GET', this.listPayload).then(async (resp) => {
-      // additional data is needed to fullfil the list view requirements
+      // additional data is needed to fulfil the list view requirements
       // pull in full record for listed items
       const records = await all(
         resp.data.keys.map((name) => this.findRecord(store, type, name, this._mockSnapshot(query.backend)))

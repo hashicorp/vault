@@ -160,7 +160,7 @@ func TestBackend_RoleUpgrade(t *testing.T) {
 	}
 
 	// Upgrade case
-	badJSON := `{"statments":{"creation_statments":"test","revocation_statements":"","rollback_statements":"","renew_statements":""}}`
+	badJSON := `{"statements":{"creation_statements":"test","revocation_statements":"","rollback_statements":"","renew_statements":""}}`
 	entry = &logical.StorageEntry{
 		Key:   "role/test",
 		Value: []byte(badJSON),

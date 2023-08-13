@@ -4,7 +4,7 @@
  */
 
 // THIS COMPONENT IS ONLY FOR EXTENDING
-// You should use this component if you want to use outerHTML symantics
+// You should use this component if you want to use outerHTML semantics
 // in your components - this is the default for upcoming Glimmer components
 import Component from '@ember/component';
 

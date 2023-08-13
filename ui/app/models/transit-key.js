@@ -127,7 +127,7 @@ export default Model.extend({
   }),
 
   encryptionKeyVersions: computed(
-    'keyVerisons',
+    'keyVersions',
     'keyVersions',
     'latestVersion',
     'minDecryptionVersion',

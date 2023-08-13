@@ -365,7 +365,7 @@ func (s *BoltSnapshotSink) writeBoltDBFile() error {
 		defer close(s.doneWritingCh)
 		defer boltDB.Close()
 
-		// The delimted reader will parse full proto messages from the snapshot
+		// The delimited reader will parse full proto messages from the snapshot
 		// data.
 		protoReader := NewDelimitedReader(reader, math.MaxInt32)
 		defer protoReader.Close()

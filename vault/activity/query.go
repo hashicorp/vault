@@ -101,7 +101,7 @@ func (s *PrecomputedQueryStore) Put(ctx context.Context, p *PrecomputedQuery) er
 
 func (s *PrecomputedQueryStore) listStartTimes(ctx context.Context) ([]time.Time, error) {
 	// We could cache this to save a storage operation on each query,
-	// but that seems like a marginal improvment.
+	// but that seems like a marginal improvement.
 	rawStartTimes, err := s.view.List(ctx, "")
 	if err != nil {
 		return nil, err
@@ -195,7 +195,7 @@ func (s *PrecomputedQueryStore) Get(ctx context.Context, startTime, endTime time
 	//     (if there is some report that overlaps, it will
 	//      have a start time in the range-- an overlap
 	//      only at the end is impossible.)
-	// (2) take the latest continguous region within
+	// (2) take the latest contiguous region within
 	//     that set
 	// i.e., walk up the diagonal as far as we can in a single
 	// triangle.

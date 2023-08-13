@@ -166,7 +166,7 @@ func (c *Client) makeLdapSearchRequest(cfg *ConfigEntry, conn Connection, userna
  * 1. If DiscoverDN is set, the user object will be searched for using userdn (base search path)
  *    and userattr (the attribute that maps to the provided username) or user search filter.
  *    The bind will either be anonymous or use binddn and bindpassword if they were provided.
- * 2. If upndomain is set, the user dn and alias attribte are constructed as 'username@upndomain'.
+ * 2. If upndomain is set, the user dn and alias attribute are constructed as 'username@upndomain'.
  *    See https://msdn.microsoft.com/en-us/library/cc223499.aspx
  *
  */
@@ -254,7 +254,7 @@ func (c *Client) RenderUserSearchFilter(cfg *ConfigEntry, username string) (stri
  * 1. If DiscoverDN is set, the user will be searched for using userdn (base search path)
  *    and userattr (the attribute that maps to the provided username) or user search filter.
  *    The bind will either be anonymous or use binddn and bindpassword if they were provided.
- * 2. If upndomain is set, the alias attribte is constructed as 'username@upndomain'.
+ * 2. If upndomain is set, the alias attribute is constructed as 'username@upndomain'.
  *
  */
 func (c *Client) GetUserAliasAttributeValue(cfg *ConfigEntry, conn Connection, username string) (string, error) {

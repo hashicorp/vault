@@ -143,7 +143,7 @@ module('Acceptance | Enterprise | control groups', function (hooks) {
     const url = '/vault/secrets/kv/show/foo';
     await setupControlGroup(context);
     await settled();
-    // as the requestor, go to the URL that's blocked by the control group
+    // as the requester, go to the URL that's blocked by the control group
     // and store the values
     await visit(url);
 

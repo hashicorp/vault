@@ -50,7 +50,7 @@ func (a *ActivityLog) CreateOrFetchHyperlogLog(ctx context.Context, startTime ti
 	} else {
 		err = hll.UnmarshalBinary(data.Value)
 		if err != nil {
-			return hll, fmt.Errorf("error unmarshaling hyperloglog at path %s: error %w", monthlyHLLPath, err)
+			return hll, fmt.Errorf("error unmarshalling hyperloglog at path %s: error %w", monthlyHLLPath, err)
 		}
 	}
 	return hll, nil
@@ -88,7 +88,7 @@ func (a *ActivityLog) computeCurrentMonthForBillingPeriodInternal(ctx context.Co
 	// hll, warn and continue.
 
 	// hllMonthlyTimestamp is the start time of the month corresponding to which a hyperloglog of that month's
-	// client data is stored. The path at which the hyperloglog for a month is stored containes this timestamp.
+	// client data is stored. The path at which the hyperloglog for a month is stored contains this timestamp.
 	hllMonthlyTimestamp := timeutil.StartOfMonth(startTime)
 	billingPeriodHLL := hyperloglog.New()
 	for hllMonthlyTimestamp.Before(timeutil.StartOfMonth(endTime)) {

@@ -99,7 +99,7 @@ func DecryptBytes(encodedCrypt, privKey string) (*bytes.Buffer, error) {
 
 	cryptBytes, err := base64.StdEncoding.DecodeString(encodedCrypt)
 	if err != nil {
-		return nil, fmt.Errorf("error decoding base64 crypted bytes: %w", err)
+		return nil, fmt.Errorf("error decoding base64 encrypted bytes: %w", err)
 	}
 
 	entity, err := openpgp.ReadEntity(packet.NewReader(bytes.NewBuffer(privKeyBytes)))

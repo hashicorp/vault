@@ -88,7 +88,7 @@ func (f *FlagSet) addLogFlags(l *logFlags) {
 }
 
 // envVarValue attempts to get a named value from the environment variables.
-// The value will be returned as a string along with a boolean value indiciating
+// The value will be returned as a string along with a boolean value indicating
 // to the caller whether the named env var existed.
 func envVarValue(key string) (string, bool) {
 	if key == "" {

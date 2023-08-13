@@ -93,6 +93,6 @@ func TestPathConfigRotateRoot(t *testing.T) {
 		t.Fatal(err)
 	}
 	if resp.Data["access_key"].(string) != newClientConf.AccessKey {
-		t.Fatalf("expected new access key buzz2 to be saved to storage but receieved %s", clientConf.AccessKey)
+		t.Fatalf("expected new access key buzz2 to be saved to storage but received %s", clientConf.AccessKey)
 	}
 }

@@ -981,7 +981,7 @@ type awsRoleEntry struct {
 	HMACKey                     string   `json:"hmac_key"`
 	Version                     int      `json:"version"`
 
-	// Deprecated: These are superceded by TokenUtil
+	// Deprecated: These are superseded by TokenUtil
 	TTL      time.Duration `json:"ttl"`
 	MaxTTL   time.Duration `json:"max_ttl"`
 	Period   time.Duration `json:"period"`

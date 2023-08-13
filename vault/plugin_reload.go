@@ -99,7 +99,7 @@ func (c *Core) reloadMatchingPlugin(ctx context.Context, pluginName string) erro
 		}
 	}
 
-	// Filter auth mount entries that ony matches the plugin name
+	// Filter auth mount entries that only matches the plugin name
 	for _, entry := range c.auth.Entries {
 		// We dont reload mounts that are not in the same namespace
 		if ns.ID != entry.Namespace().ID {

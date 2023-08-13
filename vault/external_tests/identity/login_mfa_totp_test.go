@@ -201,7 +201,7 @@ func TestLoginMfaGenerateTOTPTestAuditIncluded(t *testing.T) {
 		t.Fatalf("failed to find the mfaConstrains")
 	}
 	if mfaConstraints.Any == nil || len(mfaConstraints.Any) == 0 {
-		t.Fatalf("expected to see the methodID is enforced in MFAConstaint.Any")
+		t.Fatalf("expected to see the methodID is enforced in MFAConstraint.Any")
 	}
 	for _, mfaAny := range mfaConstraints.Any {
 		if mfaAny.ID != methodID || mfaAny.Type != "totp" || !mfaAny.UsesPasscode {

@@ -3191,7 +3191,7 @@ func TestOIDC_Path_OIDCProvider(t *testing.T) {
 	}
 }
 
-// TestOIDC_Path_OIDCProvider_DuplicateTempalteKeys tests that no two
+// TestOIDC_Path_OIDCProvider_DuplicateTemplateKeys tests that no two
 // scopes have the same top-level keys when creating a provider
 func TestOIDC_Path_OIDCProvider_DuplicateTemplateKeys(t *testing.T) {
 	c, _, _ := TestCoreUnsealed(t)

@@ -6,7 +6,7 @@
 
 /* eslint-env node */
 /**
- * Codemod to transform Icon component to new API to accomodate FlightIcon
+ * Codemod to transform Icon component to new API to accommodate FlightIcon
  * example execution from ui directory -> npx ember-template-recast ./templates -t ./scripts/codemods/icon-transform.js
  * above will run transform on all files in templates directory
  */
@@ -64,7 +64,7 @@ module.exports = (env) => {
     ElementNode(node) {
       if (node.tag === 'Icon') {
         const { attributes } = node;
-        // the inital refactor of the component introduced a sizeClass attribute
+        // the initial refactor of the component introduced a sizeClass attribute
         // this can now be mapped to size and removed
         transformSize(attributes, '@sizeClass');
         // check for old component instances that may still have a letter for size value

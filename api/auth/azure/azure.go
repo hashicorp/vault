@@ -192,7 +192,7 @@ func (a *AzureAuth) getJWT() (string, error) {
 	var r responseJSON
 	err = json.Unmarshal(responseBytes, &r)
 	if err != nil {
-		return "", fmt.Errorf("error unmarshaling response from Azure token endpoint: %w", err)
+		return "", fmt.Errorf("error unmarshalling response from Azure token endpoint: %w", err)
 	}
 
 	return r.AccessToken, nil
@@ -239,7 +239,7 @@ func getMetadata() (metadataJSON, error) {
 	var r metadataJSON
 	err = json.Unmarshal(responseBytes, &r)
 	if err != nil {
-		return metadataJSON{}, fmt.Errorf("error unmarshaling the response from metadata endpoint: %w", err)
+		return metadataJSON{}, fmt.Errorf("error unmarshalling the response from metadata endpoint: %w", err)
 	}
 
 	return r, nil

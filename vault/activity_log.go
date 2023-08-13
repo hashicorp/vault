@@ -813,7 +813,7 @@ func (a *ActivityLog) resetCurrentLog() {
 		Clients: make([]*activity.EntityRecord, 0),
 	}
 
-	// We must still initialize the tokenCount to recieve tokenCounts from fragments
+	// We must still initialize the tokenCount to receive tokenCounts from fragments
 	// during the month where customers upgrade to 1.9
 	a.currentSegment.tokenCount = &activity.TokenCount{
 		CountByNamespaceID: make(map[string]uint64),
@@ -2815,7 +2815,7 @@ func (a *ActivityLog) writeExport(ctx context.Context, rw http.ResponseWriter, f
 	defer a.inprocessExport.Store(false)
 
 	// Find the months with activity log data that are between the start and end
-	// months. We want to walk this in cronological order so the oldest instance of a
+	// months. We want to walk this in chronological order so the oldest instance of a
 	// client usage is recorded, not the most recent.
 	times, err := a.availableLogs(ctx)
 	if err != nil {
@@ -2892,7 +2892,7 @@ func (a *ActivityLog) writeExport(ctx context.Context, rw http.ResponseWriter, f
 		}
 	}
 
-	// Flush and error check the encoder. This is neccessary for buffered
+	// Flush and error check the encoder. This is necessary for buffered
 	// encoders like csv.
 	encoder.Flush()
 	if err := encoder.Error(); err != nil {

@@ -63,7 +63,7 @@ func IsCurrentMonth(t, compare time.Time) bool {
 }
 
 // GetMostRecentContinuousMonths finds the start time of the most
-// recent set of continguous months.
+// recent set of contiguous months.
 //
 // For example, if the most recent start time is Aug 15, then that range is just 1 month
 // If the recent start times are Aug 1 and July 1 and June 15, then that range is

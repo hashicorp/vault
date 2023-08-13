@@ -12,7 +12,7 @@ import (
 	"time"
 )
 
-// TestConstructTemplates tests the construcTemplates helper function
+// TestConstructTemplates tests the constructTemplates helper function
 func TestConstructTemplates(t *testing.T) {
 	ctx, cancelContextFunc := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancelContextFunc()

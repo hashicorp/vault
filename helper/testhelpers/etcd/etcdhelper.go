@@ -19,7 +19,7 @@ type Config struct {
 	docker.ServiceURL
 }
 
-// PrepareTestContainer creates etcd docker container.  If environment variabe
+// PrepareTestContainer creates etcd docker container.  If environment variable
 // ETCD_ADDR is set, the tests are executed against specified address and etcd
 // container is not launched.
 func PrepareTestContainer(t *testing.T, version string) (func(), *Config) {

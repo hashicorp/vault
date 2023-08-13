@@ -18,7 +18,7 @@ module('Integration | Component | read-more', function (hooks) {
   test('it can toggle open and closed when text is longer than parent', async function (assert) {
     this.set(
       'description',
-      'My super long template block text dignissim dictum sem, ut varius ligula lacinia quis.'
+      'My super long template block text dignissim dictum sem, ut various ligula lacinia quis.'
     );
     await render(hbs`
       <div style="width: 150px">

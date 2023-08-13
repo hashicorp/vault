@@ -84,7 +84,7 @@ export default Mixin.create({
         })
       );
       if (mode === 'secondary' && replicationMode === 'performance') {
-        // if we're enabing a secondary, there could be mount filtering,
+        // if we're enabling a secondary, there could be mount filtering,
         // so we should unload all of the backends
         store.unloadAll('secret-engine');
       }

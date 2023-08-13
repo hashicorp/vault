@@ -51,7 +51,7 @@ module('Integration | Component | control group success', function (hooks) {
     approved: false,
     requestPath: 'foo/bar',
     id: 'accessor',
-    requestEntity: { id: 'requestor', name: 'entity8509' },
+    requestEntity: { id: 'requester', name: 'entity8509' },
     reload: sinon.stub(),
   };
   test('render with saved token', async function (assert) {

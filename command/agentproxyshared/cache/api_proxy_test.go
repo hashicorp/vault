@@ -151,7 +151,7 @@ func TestAPIProxy_queryParams(t *testing.T) {
 	}
 
 	if resp.Response.StatusCode != http.StatusOK {
-		t.Fatalf("exptected standby to return 200, got: %v", resp.Response.StatusCode)
+		t.Fatalf("expected standby to return 200, got: %v", resp.Response.StatusCode)
 	}
 }
 
@@ -209,10 +209,10 @@ func setupClusterAndAgentCommon(ctx context.Context, t *testing.T, coreConfig *v
 	activeClient := cores[0].Client
 	standbyClient := cores[1].Client
 
-	// clienToUse is the client for the agent to point to.
-	clienToUse := activeClient
+	// clientToUse is the client for the agent to point to.
+	clientToUse := activeClient
 	if onStandby {
-		clienToUse = standbyClient
+		clientToUse = standbyClient
 	}
 
 	// Add an admin policy
@@ -239,7 +239,7 @@ func setupClusterAndAgentCommon(ctx context.Context, t *testing.T, coreConfig *v
 
 	// Set up env vars for agent consumption
 	origEnvVaultAddress := os.Getenv(api.EnvVaultAddress)
-	os.Setenv(api.EnvVaultAddress, clienToUse.Address())
+	os.Setenv(api.EnvVaultAddress, clientToUse.Address())
 
 	origEnvVaultCACert := os.Getenv(api.EnvVaultCACert)
 	os.Setenv(api.EnvVaultCACert, fmt.Sprintf("%s/ca_cert.pem", cluster.TempDir))
@@ -253,7 +253,7 @@ func setupClusterAndAgentCommon(ctx context.Context, t *testing.T, coreConfig *v
 
 	// Create the API proxier
 	apiProxy, err := NewAPIProxy(&APIProxyConfig{
-		Client:                  clienToUse,
+		Client:                  clientToUse,
 		Logger:                  apiProxyLogger,
 		UserAgentStringFunction: useragent.ProxyStringWithProxiedUserAgent,
 		UserAgentString:         useragent.ProxyAPIProxyString(),
@@ -272,7 +272,7 @@ func setupClusterAndAgentCommon(ctx context.Context, t *testing.T, coreConfig *v
 		// Create the lease cache proxier and set its underlying proxier to
 		// the API proxier.
 		leaseCache, err = NewLeaseCache(&LeaseCacheConfig{
-			Client:      clienToUse,
+			Client:      clientToUse,
 			BaseContext: ctx,
 			Proxier:     apiProxy,
 			Logger:      cacheLogger.Named("leasecache"),
@@ -327,5 +327,5 @@ func setupClusterAndAgentCommon(ctx context.Context, t *testing.T, coreConfig *v
 		listener.Close()
 	}
 
-	return cleanup, clienToUse, testClient, leaseCache
+	return cleanup, clientToUse, testClient, leaseCache
 }

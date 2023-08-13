@@ -211,7 +211,7 @@ type Quota interface {
 	// Clone creates a clone of the calling quota
 	Clone() Quota
 
-	// handleRemount updates the mount and namesapce paths of the quota
+	// handleRemount updates the mount and namespace paths of the quota
 	handleRemount(string, string)
 }
 

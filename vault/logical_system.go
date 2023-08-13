@@ -2165,7 +2165,7 @@ func (b *SystemBackend) handleTuneWriteCommon(ctx context.Context, path string, 
 		// The version options should only apply to the KV mount, check that first
 		if v, ok := options["version"]; ok {
 			// Special case to make sure we can not disable versioning once it's
-			// enabled. If the vkv backend suports downgrading this can be removed.
+			// enabled. If the vkv backend supports downgrading this can be removed.
 			meVersion, err := parseutil.ParseInt(mountEntry.Options["version"])
 			if err != nil {
 				return nil, fmt.Errorf("unable to parse mount entry: %w", err)

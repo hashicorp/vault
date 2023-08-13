@@ -167,7 +167,7 @@ variable "release" {
 
 variable "root_token" {
   type        = string
-  description = "The Vault root token that we can use to intialize and configure the cluster"
+  description = "The Vault root token that we can use to initialize and configure the cluster"
   default     = null
 }
 

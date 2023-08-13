@@ -2418,12 +2418,12 @@ func TestSystemBackend_decodeToken(t *testing.T) {
 		t.Fatalf("bad token back: %s", token.(string))
 	}
 
-	datas := []map[string]interface{}{
+	data := []map[string]interface{}{
 		nil,
 		{"encoded_token": encodedToken},
 		{"otp": otp},
 	}
-	for _, data := range datas {
+	for _, data := range data {
 		req.Data = data
 		resp, err := b.HandleRequest(namespace.RootContext(nil), req)
 		if err == nil {
@@ -2757,7 +2757,7 @@ func TestSystemBackend_rawReadWrite(t *testing.T) {
 	// simply parse this out directly via GetPolicy, so the test now ends here.
 }
 
-func TestSystemBackend_rawWrite_ExistanceCheck(t *testing.T) {
+func TestSystemBackend_rawWrite_ExistenceCheck(t *testing.T) {
 	b := testSystemBackendRaw(t)
 	req := logical.TestRequest(t, logical.CreateOperation, "raw/core/mounts")
 	_, exist, err := b.HandleExistenceCheck(namespace.RootContext(nil), req)
@@ -3674,7 +3674,7 @@ func TestSystemBackend_ToolsRandom(t *testing.T) {
 			t.Fatal("length of output random bytes not what is expected")
 		}
 		if reflect.DeepEqual(rand1, rand2) {
-			t.Fatal("found identical ouputs")
+			t.Fatal("found identical outputs")
 		}
 	}
 

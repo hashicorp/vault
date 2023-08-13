@@ -15,7 +15,7 @@ var _ heap.Interface = &queue{}
 
 // some tests rely on the ordering of items from this method
 func testCases() (tc []*Item) {
-	// create a slice of items with priority / times offest by these seconds
+	// create a slice of items with priority / times offset by these seconds
 	for i, m := range []time.Duration{
 		5,
 		183600,  // 51 hours

@@ -82,7 +82,7 @@ func TestTransit_Random(t *testing.T) {
 			t.Fatal("length of output random bytes not what is expected")
 		}
 		if reflect.DeepEqual(rand1, rand2) {
-			t.Fatal("found identical ouputs")
+			t.Fatal("found identical outputs")
 		}
 	}
 

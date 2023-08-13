@@ -165,7 +165,7 @@ var (
 type GRPCDatabasePlugin struct {
 	Impl Database
 
-	// Embeding this will disable the netRPC protocol
+	// Embedding this will disable the netRPC protocol
 	plugin.NetRPCUnsupportedPlugin
 }
 

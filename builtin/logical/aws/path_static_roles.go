@@ -193,7 +193,7 @@ func (b *backend) pathStaticRolesWrite(ctx context.Context, req *logical.Request
 	}
 
 	// Bootstrap initial set of keys if they did not exist before. AWS Secret Access Keys can only be obtained on creation,
-	// so we need to boostrap new roles with a new initial set of keys to be able to serve valid credentials to Vault clients.
+	// so we need to bootstrap new roles with a new initial set of keys to be able to serve valid credentials to Vault clients.
 	existingCreds, err := req.Storage.Get(ctx, formatCredsStoragePath(config.Name))
 	if err != nil {
 		return nil, fmt.Errorf("unable to verify if credentials already exist for role %q: %w", config.Name, err)

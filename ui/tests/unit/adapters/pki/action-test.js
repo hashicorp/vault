@@ -77,7 +77,7 @@ module('Unit | Adapter | pki/action', function (hooks) {
         return this.emptyResponse;
       });
       this.server.post(`${this.backend}/root/generate/existing`, () => {
-        assert.ok(true, 'request made correctly when type = exising');
+        assert.ok(true, 'request made correctly when type = existing');
         return this.emptyResponse;
       });
       this.server.post(`${this.backend}/root/generate/kms`, () => {
@@ -119,7 +119,7 @@ module('Unit | Adapter | pki/action', function (hooks) {
         return this.emptyResponse;
       });
       this.server.post(`${this.backend}/issuers/generate/root/existing`, () => {
-        assert.ok(true, 'request made correctly when type = exising');
+        assert.ok(true, 'request made correctly when type = existing');
         return this.emptyResponse;
       });
       this.server.post(`${this.backend}/issuers/generate/root/kms`, () => {
@@ -163,7 +163,7 @@ module('Unit | Adapter | pki/action', function (hooks) {
         return this.emptyResponse;
       });
       this.server.post(`${this.backend}/intermediate/generate/existing`, () => {
-        assert.ok(true, 'request made correctly when type = exising');
+        assert.ok(true, 'request made correctly when type = existing');
         return this.emptyResponse;
       });
       this.server.post(`${this.backend}/intermediate/generate/kms`, () => {
@@ -205,7 +205,7 @@ module('Unit | Adapter | pki/action', function (hooks) {
         return this.emptyResponse;
       });
       this.server.post(`${this.backend}/issuers/generate/intermediate/existing`, () => {
-        assert.ok(true, 'request made correctly when type = exising');
+        assert.ok(true, 'request made correctly when type = existing');
         return this.emptyResponse;
       });
       this.server.post(`${this.backend}/issuers/generate/intermediate/kms`, () => {

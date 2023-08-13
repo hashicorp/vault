@@ -165,7 +165,7 @@ func PrepareTestContainer(t *testing.T, version string, isEnterprise bool, doBoo
 				}
 			}
 
-			// Configure a namespace and parition if testing enterprise Consul
+			// Configure a namespace and partition if testing enterprise Consul
 			if isEnterprise {
 				// Namespaces require Consul 1.7 or newer
 				namespaceVersion, _ := goversion.NewVersion("1.7")

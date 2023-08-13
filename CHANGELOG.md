@@ -173,9 +173,9 @@ reporting via the `OPTOUT_LICENSE_REPORTING` environment variable. [[GH-3939](ht
 * openapi: add openapi response definitions to /sys/tool endpoints [[GH-18626](https://github.com/hashicorp/vault/pull/18626)]
 * openapi: add openapi response definitions to /sys/version-history, /sys/leader, /sys/ha-status, /sys/host-info, /sys/in-flight-req [[GH-18628](https://github.com/hashicorp/vault/pull/18628)]
 * openapi: add openapi response definitions to /sys/wrapping endpoints [[GH-18627](https://github.com/hashicorp/vault/pull/18627)]
-* openapi: add openapi response defintions to /sys/auth endpoints [[GH-18465](https://github.com/hashicorp/vault/pull/18465)]
-* openapi: add openapi response defintions to /sys/capabilities endpoints [[GH-18468](https://github.com/hashicorp/vault/pull/18468)]
-* openapi: add openapi response defintions to /sys/config and /sys/generate-root endpoints [[GH-18472](https://github.com/hashicorp/vault/pull/18472)]
+* openapi: add openapi response definitions to /sys/auth endpoints [[GH-18465](https://github.com/hashicorp/vault/pull/18465)]
+* openapi: add openapi response definitions to /sys/capabilities endpoints [[GH-18468](https://github.com/hashicorp/vault/pull/18468)]
+* openapi: add openapi response definitions to /sys/config and /sys/generate-root endpoints [[GH-18472](https://github.com/hashicorp/vault/pull/18472)]
 * openapi: added ability to validate response structures against openapi schema for test clusters [[GH-19043](https://github.com/hashicorp/vault/pull/19043)]
 * sdk/framework: Fix non-deterministic ordering of 'required' fields in OpenAPI spec [[GH-20881](https://github.com/hashicorp/vault/pull/20881)]
 * sdk: Add new docker-based cluster testing framework to the sdk. [[GH-20247](https://github.com/hashicorp/vault/pull/20247)]
@@ -230,7 +230,7 @@ on this secondary if we don't have a corresponding mount entry.
 * core (enterprise): Fix panic when using invalid accessor for control-group request
 * core (enterprise): Fix perf standby WAL streaming silently failures when replication setup happens at a bad time.
 * core (enterprise): Fix read on perf standbys failing with 412 after leadership change, unseal, restores or restarts when no writes occur
-* core (enterprise): Remove MFA Enforcment configuration for namespace when deleting namespace
+* core (enterprise): Remove MFA Enforcement configuration for namespace when deleting namespace
 * core/ssct (enterprise): Fixed race condition where a newly promoted DR may revert `sscGenCounter`
 resulting in 412 errors.
 * core: Change where we evaluate filtered paths as part of mount operations; this is part of an enterprise bugfix that will
@@ -398,7 +398,7 @@ BUG FIXES:
 * command/server: fixes panic in Vault server command when running in recovery mode [[GH-20418](https://github.com/hashicorp/vault/pull/20418)]
 * core (enterprise): Fix log shipper buffer size overflow issue for 32 bit architecture.
 * core (enterprise): Fix logshipper buffer size to default to DefaultBufferSize only when reported system memory is zero.
-* core (enterprise): Remove MFA Enforcment configuration for namespace when deleting namespace
+* core (enterprise): Remove MFA Enforcement configuration for namespace when deleting namespace
 * core/identity: Allow updates of only the custom-metadata for entity alias. [[GH-20368](https://github.com/hashicorp/vault/pull/20368)]
 * core: Fix Forwarded Writer construction to correctly find active nodes, allowing PKI cross-cluster functionality to succeed on existing mounts.
 * core: Fix writes to readonly storage on performance standbys when user lockout feature is enabled. [[GH-20783](https://github.com/hashicorp/vault/pull/20783)]
@@ -638,7 +638,7 @@ to apply to a group in `any` namespace. The default, `within_namespace_hierarchy
 * openapi: Add openapi response definitions to approle/path_role.go [[GH-18198](https://github.com/hashicorp/vault/pull/18198)]
 * openapi: Change gen_openapi.sh to generate schema with generic mount paths [[GH-18934](https://github.com/hashicorp/vault/pull/18934)]
 * openapi: Mark request body objects as required [[GH-17909](https://github.com/hashicorp/vault/pull/17909)]
-* openapi: add openapi response defintions to /sys/audit endpoints [[GH-18456](https://github.com/hashicorp/vault/pull/18456)]
+* openapi: add openapi response definitions to /sys/audit endpoints [[GH-18456](https://github.com/hashicorp/vault/pull/18456)]
 * openapi: generic_mount_paths: Move implementation fully into server, rather than partially in plugin framework; recognize all 4 singleton mounts (auth/token, cubbyhole, identity, system) rather than just 2; change parameter from `{mountPath}` to `{<type>_mount_path}` [[GH-18663](https://github.com/hashicorp/vault/pull/18663)]
 * plugins: Add plugin version information to key plugin lifecycle log lines. [[GH-17430](https://github.com/hashicorp/vault/pull/17430)]
 * plugins: Allow selecting builtin plugins by their reported semantic version of the form `vX.Y.Z+builtin` or `vX.Y.Z+builtin.vault`. [[GH-17289](https://github.com/hashicorp/vault/pull/17289)]
@@ -796,7 +796,7 @@ break replication.
 * secrets/transit: Honor `partial_success_response_code` on decryption failures. [[GH-18310](https://github.com/hashicorp/vault/pull/18310)]
 * server/config:  Use file.Stat when checking file permissions when VAULT_ENABLE_FILE_PERMISSIONS_CHECK is enabled [[GH-19311](https://github.com/hashicorp/vault/pull/19311)]
 * storage/raft (enterprise): An already joined node can rejoin by wiping storage
-and re-issueing a join request, but in doing so could transiently become a
+and re-issuing a join request, but in doing so could transiently become a
 non-voter.  In some scenarios this resulted in loss of quorum. [[GH-18263](https://github.com/hashicorp/vault/pull/18263)]
 * storage/raft: Don't panic on unknown raft ops [[GH-17732](https://github.com/hashicorp/vault/pull/17732)]
 * storage/raft: Fix race with follower heartbeat tracker during teardown. [[GH-18704](https://github.com/hashicorp/vault/pull/18704)]
@@ -925,7 +925,7 @@ BUG FIXES:
 * cli: disable printing flags warnings messages for the ssh command [[GH-20502](https://github.com/hashicorp/vault/pull/20502)]
 * core (enterprise): Fix log shipper buffer size overflow issue for 32 bit architecture.
 * core (enterprise): Fix logshipper buffer size to default to DefaultBufferSize only when reported system memory is zero.
-* core (enterprise): Remove MFA Enforcment configuration for namespace when deleting namespace
+* core (enterprise): Remove MFA Enforcement configuration for namespace when deleting namespace
 * core: prevent panic on login after namespace is deleted that had mfa enforcement [[GH-20375](https://github.com/hashicorp/vault/pull/20375)]
 * replication (enterprise): Fix a race condition with invalid tokens during WAL streaming that was causing Secondary clusters to be unable to connect to a Primary.
 * replication (enterprise): fix bug where secondary grpc connections would timeout when connecting to a primary host that no longer exists.
@@ -1093,7 +1093,7 @@ BUG FIXES:
 * secrets/transit: Do not warn about unrecognized parameter 'batch_input' [[GH-18299](https://github.com/hashicorp/vault/pull/18299)]
 * secrets/transit: Honor `partial_success_response_code` on decryption failures. [[GH-18310](https://github.com/hashicorp/vault/pull/18310)]
 * storage/raft (enterprise): An already joined node can rejoin by wiping storage
-and re-issueing a join request, but in doing so could transiently become a
+and re-issuing a join request, but in doing so could transiently become a
 non-voter.  In some scenarios this resulted in loss of quorum. [[GH-18263](https://github.com/hashicorp/vault/pull/18263)]
 * storage/raft: Don't panic on unknown raft ops [[GH-17732](https://github.com/hashicorp/vault/pull/17732)]
 * ui: cleanup unsaved auth method ember data record when navigating away from mount backend form [[GH-18651](https://github.com/hashicorp/vault/pull/18651)]
@@ -1464,7 +1464,7 @@ BUG FIXES:
 * cli: CLI should take days as a unit of time for ttl like flags [[GH-20477](https://github.com/hashicorp/vault/pull/20477)]
 * core (enterprise): Fix log shipper buffer size overflow issue for 32 bit architecture.
 * core (enterprise): Fix logshipper buffer size to default to DefaultBufferSize only when reported system memory is zero.
-* core (enterprise): Remove MFA Enforcment configuration for namespace when deleting namespace
+* core (enterprise): Remove MFA Enforcement configuration for namespace when deleting namespace
 * core: prevent panic on login after namespace is deleted that had mfa enforcement [[GH-20375](https://github.com/hashicorp/vault/pull/20375)]
 * replication (enterprise): Fix a race condition with invalid tokens during WAL streaming that was causing Secondary clusters to be unable to connect to a Primary.
 * replication (enterprise): fix bug where secondary grpc connections would timeout when connecting to a primary host that no longer exists.
@@ -1597,7 +1597,7 @@ BUG FIXES:
 * secrets/pki: Allow patching issuer to set an empty issuer name. [[GH-18466](https://github.com/hashicorp/vault/pull/18466)]
 * secrets/transit: Do not warn about unrecognized parameter 'batch_input' [[GH-18299](https://github.com/hashicorp/vault/pull/18299)]
 * storage/raft (enterprise): An already joined node can rejoin by wiping storage
-and re-issueing a join request, but in doing so could transiently become a
+and re-issuing a join request, but in doing so could transiently become a
 non-voter.  In some scenarios this resulted in loss of quorum. [[GH-18263](https://github.com/hashicorp/vault/pull/18263)]
 * storage/raft (enterprise): Fix some storage-modifying RPCs used by perf standbys that weren't returning the resulting WAL state.
 * storage/raft: Don't panic on unknown raft ops [[GH-17732](https://github.com/hashicorp/vault/pull/17732)]
@@ -2361,7 +2361,7 @@ has also been added to the PROXY protocol v1. [[GH-13540](https://github.com/has
 * secrets/database: Add database configuration parameter 'disable_escaping' for username and password when connecting to a database. [[GH-13414](https://github.com/hashicorp/vault/pull/13414)]
 * secrets/kv: add full secret path output to table-formatted responses [[GH-14301](https://github.com/hashicorp/vault/pull/14301)]
 * secrets/kv: add patch support for KVv2 key metadata [[GH-13215](https://github.com/hashicorp/vault/pull/13215)]
-* secrets/kv: add subkeys endpoint to retrieve a secret's stucture without its values [[GH-13893](https://github.com/hashicorp/vault/pull/13893)]
+* secrets/kv: add subkeys endpoint to retrieve a secret's structure without its values [[GH-13893](https://github.com/hashicorp/vault/pull/13893)]
 * secrets/pki: Add ability to fetch individual certificate as DER or PEM [[GH-10948](https://github.com/hashicorp/vault/pull/10948)]
 * secrets/pki: Add count and duration metrics to PKI issue and revoke calls. [[GH-13889](https://github.com/hashicorp/vault/pull/13889)]
 * secrets/pki: Add error handling for error types other than UserError or InternalError [[GH-14195](https://github.com/hashicorp/vault/pull/14195)]

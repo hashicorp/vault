@@ -141,7 +141,7 @@ func (b *backend) Login(ctx context.Context, req *logical.Request, username stri
 		if err != nil {
 			return "", nil, logical.ErrorResponse("ldap operation failed: failed to connect to LDAP server"), nil, nil
 		}
-		defer c.Close() // Defer closing of this connection as the deferal above closes the other defined connection
+		defer c.Close() // Defer closing of this connection as the deferral above closes the other defined connection
 	}
 
 	ldapGroups, err := ldapClient.GetLdapGroups(cfg.ConfigEntry, c, userDN, username)

@@ -73,7 +73,7 @@ module('Integration | Component | kubernetes | Page::Configuration', function (h
       .dom('[data-test-inferred-message] svg')
       .hasClass('flight-icon-check-circle-fill', 'Inferred message icon renders');
     const message =
-      'These details were successfully inferred from Vault’s kubernetes environment and were not explicity set in this config.';
+      'These details were successfully inferred from Vault’s kubernetes environment and were not explicitly set in this config.';
     assert.dom('[data-test-inferred-message]').hasText(message, 'Inferred message renders');
     assert
       .dom('[data-test-toolbar-config-action]')

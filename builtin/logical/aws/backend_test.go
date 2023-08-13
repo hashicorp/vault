@@ -86,7 +86,7 @@ func TestAcceptanceBackend_basicSTS(t *testing.T) {
 	t.Parallel()
 	awsAccountID, err := getAccountID()
 	if err != nil {
-		t.Logf("Unable to retrive user via sts:GetCallerIdentity: %#v", err)
+		t.Logf("Unable to retrieve user via sts:GetCallerIdentity: %#v", err)
 		t.Skip("Could not determine AWS account ID from sts:GetCallerIdentity for acceptance tests, skipping")
 	}
 	roleName := generateUniqueRoleName(t.Name())
@@ -1115,7 +1115,7 @@ func TestAcceptanceBackend_AssumedRoleWithPolicyDoc(t *testing.T) {
 `
 	awsAccountID, err := getAccountID()
 	if err != nil {
-		t.Logf("Unable to retrive user via sts:GetCallerIdentity: %#v", err)
+		t.Logf("Unable to retrieve user via sts:GetCallerIdentity: %#v", err)
 		t.Skip("Could not determine AWS account ID from sts:GetCallerIdentity for acceptance tests, skipping")
 	}
 	roleData := map[string]interface{}{
@@ -1151,7 +1151,7 @@ func TestAcceptanceBackend_AssumedRoleWithPolicyARN(t *testing.T) {
 
 	awsAccountID, err := getAccountID()
 	if err != nil {
-		t.Logf("Unable to retrive user via sts:GetCallerIdentity: %#v", err)
+		t.Logf("Unable to retrieve user via sts:GetCallerIdentity: %#v", err)
 		t.Skip("Could not determine AWS account ID from sts:GetCallerIdentity for acceptance tests, skipping")
 	}
 	roleData := map[string]interface{}{
@@ -1202,7 +1202,7 @@ func TestAcceptanceBackend_AssumedRoleWithGroups(t *testing.T) {
 }`
 	awsAccountID, err := getAccountID()
 	if err != nil {
-		t.Logf("Unable to retrive user via sts:GetCallerIdentity: %#v", err)
+		t.Logf("Unable to retrieve user via sts:GetCallerIdentity: %#v", err)
 		t.Skip("Could not determine AWS account ID from sts:GetCallerIdentity for acceptance tests, skipping")
 	}
 
@@ -1324,7 +1324,7 @@ func TestAcceptanceBackend_RoleDefaultSTSTTL(t *testing.T) {
 	minAwsAssumeRoleDuration := 900
 	awsAccountID, err := getAccountID()
 	if err != nil {
-		t.Logf("Unable to retrive user via sts:GetCallerIdentity: %#v", err)
+		t.Logf("Unable to retrieve user via sts:GetCallerIdentity: %#v", err)
 		t.Skip("Could not determine AWS account ID from sts:GetCallerIdentity for acceptance tests, skipping")
 	}
 	roleData := map[string]interface{}{

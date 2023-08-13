@@ -6106,7 +6106,7 @@ func expectInGaugeCollection(t *testing.T, expectedLabels map[string]string, exp
 		}
 		if labelsMatch(actualLabels, expectedLabels) {
 			if expectedValue != glv.Value {
-				t.Errorf("expeced %v for %v, got %v", expectedValue, expectedLabels, glv.Value)
+				t.Errorf("expected %v for %v, got %v", expectedValue, expectedLabels, glv.Value)
 			}
 			return
 		}

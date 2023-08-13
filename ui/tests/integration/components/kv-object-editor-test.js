@@ -35,7 +35,7 @@ module('Integration | Component | kv-object-editor', function (hooks) {
     assert.deepEqual(
       this.spy.lastCall.args[0],
       { foo: 'bar' },
-      'calls onChange with the JSON respresentation of the data'
+      'calls onChange with the JSON representation of the data'
     );
     await component.addRow();
     assert.strictEqual(component.rows.length, 2, 'adds a row when there is no blank one');

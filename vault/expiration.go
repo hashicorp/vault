@@ -2607,7 +2607,7 @@ func (m *ExpirationManager) getIrrevocableLeaseCounts(ctx context.Context, inclu
 		leaseID := k.(string)
 		leaseNS, err := m.getNamespaceFromLeaseID(ctx, leaseID)
 		if err != nil {
-			// We should probably note that an error occured, but continue counting
+			// We should probably note that an error occurred, but continue counting
 			m.logger.Warn("could not get lease namespace from ID", "error", err)
 			return true
 		}
@@ -2664,7 +2664,7 @@ func (m *ExpirationManager) listIrrevocableLeases(ctx context.Context, includeCh
 
 		leaseNS, err := m.getNamespaceFromLeaseID(ctx, leaseID)
 		if err != nil {
-			// We probably want to track that an error occured, but continue counting
+			// We probably want to track that an error occurred, but continue counting
 			m.logger.Warn("could not get lease namespace from ID", "error", err)
 			return true
 		}

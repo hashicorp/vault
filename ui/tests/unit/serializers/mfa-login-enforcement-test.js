@@ -18,7 +18,7 @@ module('Unit | Serializer | mfa-login-enforcement', function (hooks) {
       identity_entity_ids: ['2', '3'],
       identity_group_ids: ['4', '5', '6'],
     };
-    const tranformedData = {
+    const transformedData = {
       name: 'foo',
       mfa_methods: ['1'],
       auth_method_types: ['userpass'],
@@ -30,7 +30,7 @@ module('Unit | Serializer | mfa-login-enforcement', function (hooks) {
     const serializer = this.owner.lookup('serializer:mfa-login-enforcement');
 
     serializer.transformHasManyKeys(mutableData, 'model');
-    assert.deepEqual(mutableData, tranformedData, 'hasMany property names are transformed for model');
+    assert.deepEqual(mutableData, transformedData, 'hasMany property names are transformed for model');
 
     serializer.transformHasManyKeys(mutableData, 'server');
     assert.deepEqual(mutableData, serverData, 'hasMany property names are transformed for server');

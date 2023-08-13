@@ -259,7 +259,7 @@ jobs:
           fi
 
           # On a release branch, add a flag to rerun failed tests
-          # shellcheck disable=SC2193 # can get false positive for this comparision
+          # shellcheck disable=SC2193 # can get false positive for this comparison
           if [[  "${{ github.base_ref }}" == release/* ]] || [[  -z "${{ github.base_ref }}" && "${{ github.ref_name }}" == release/* ]]
           then
            RERUN_FAILS="--rerun-fails"

@@ -37,7 +37,7 @@ module('Unit | Util | trim right', function () {
     assert.strictEqual(trimmedName, 'my-policy');
   });
 
-  test('it allows the last extension to also be part of the file name and the extenstion', function (assert) {
+  test('it allows the last extension to also be part of the file name and the extension', function (assert) {
     const trimmedName = trimRight('my-policy.policy', ['.json', '.txt', '.hcl', '.policy']);
 
     assert.strictEqual(trimmedName, 'my-policy');

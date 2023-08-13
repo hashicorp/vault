@@ -37,7 +37,7 @@ export default Component.extend({
   }),
 
   isSuccess: or('currentUserHasAuthorized', 'model.approved'),
-  requestorName: computed('currentUserIsRequesting', 'model.requestEntity', function () {
+  requesterName: computed('currentUserIsRequesting', 'model.requestEntity', function () {
     const entity = this.model.requestEntity;
 
     if (this.currentUserIsRequesting) {

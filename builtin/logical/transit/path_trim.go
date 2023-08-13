@@ -84,7 +84,7 @@ func (b *backend) pathTrimUpdate() framework.OperationFunc {
 		case p.MinDecryptionVersion == 0:
 			return logical.ErrorResponse("minimum available version cannot be set when minimum decryption version is not set"), nil
 		case minAvailableVersion > p.MinEncryptionVersion:
-			return logical.ErrorResponse("minimum available version cannot be greater than minmum encryption version"), nil
+			return logical.ErrorResponse("minimum available version cannot be greater than minimum encryption version"), nil
 		case minAvailableVersion > p.MinDecryptionVersion:
 			return logical.ErrorResponse("minimum available version cannot be greater than minimum decryption version"), nil
 		case minAvailableVersion < 0:

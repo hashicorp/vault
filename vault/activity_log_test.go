@@ -79,13 +79,13 @@ func TestActivityLog_Creation(t *testing.T) {
 
 	er := a.fragment.Clients[0]
 	if er.ClientID != entity_id {
-		t.Errorf("mimatched entity ID, %q vs %q", er.ClientID, entity_id)
+		t.Errorf("mismatched entity ID, %q vs %q", er.ClientID, entity_id)
 	}
 	if er.NamespaceID != namespace_id {
-		t.Errorf("mimatched namespace ID, %q vs %q", er.NamespaceID, namespace_id)
+		t.Errorf("mismatched namespace ID, %q vs %q", er.NamespaceID, namespace_id)
 	}
 	if er.Timestamp != ts.Unix() {
-		t.Errorf("mimatched timestamp, %v vs %v", er.Timestamp, ts.Unix())
+		t.Errorf("mismatched timestamp, %v vs %v", er.Timestamp, ts.Unix())
 	}
 
 	// Reset and test the other code path
@@ -1896,7 +1896,7 @@ func TestActivityLog_Export(t *testing.T) {
 			0,
 			entityRecords[40:45],
 		},
-		// Artifically split August and October
+		// Artificially split August and October
 		{ // 1
 			august.Unix(),
 			0,
@@ -2837,7 +2837,7 @@ func TestActivityLog_Precompute(t *testing.T) {
 			0,
 			entityRecords[40:45],
 		},
-		// Artifically split August and October
+		// Artificially split August and October
 		{ // 1
 			august.Unix(),
 			0,
@@ -3120,7 +3120,7 @@ func TestActivityLog_Precompute(t *testing.T) {
 			}
 		}
 		if !found {
-			t.Errorf("No guage found for %v %v",
+			t.Errorf("No gage found for %v %v",
 				g.Name, g.NamespaceLabel)
 		}
 	}
@@ -3365,7 +3365,7 @@ func TestActivityLog_PrecomputeNonEntityTokensWithID(t *testing.T) {
 			0,
 			clientRecords[40:45],
 		},
-		// Artifically split August and October
+		// Artificially split August and October
 		{ // 1
 			august.Unix(),
 			0,
@@ -3648,7 +3648,7 @@ func TestActivityLog_PrecomputeNonEntityTokensWithID(t *testing.T) {
 			}
 		}
 		if !found {
-			t.Errorf("No guage found for %v %v",
+			t.Errorf("No gage found for %v %v",
 				g.Name, g.NamespaceLabel)
 		}
 	}
@@ -3877,7 +3877,7 @@ func TestActivityLog_Deletion(t *testing.T) {
 	checkPresent(21)
 }
 
-// TestActivityLog_partialMonthClientCount writes segment data for the curren month and runs refreshFromStoredLog and
+// TestActivityLog_partialMonthClientCount writes segment data for the current month and runs refreshFromStoredLog and
 // then partialMonthClientCount. The test verifies that the values returned by partialMonthClientCount are correct.
 func TestActivityLog_partialMonthClientCount(t *testing.T) {
 	timeutil.SkipAtEndOfMonth(t)

@@ -164,7 +164,7 @@ func (b *backend) acmeNewAccountHandler(acmeCtx *acmeContext, r *logical.Request
 	if eabDataRaw, ok := data["externalAccountBinding"]; ok {
 		eabData, ok = eabDataRaw.(map[string]interface{})
 		if !ok {
-			return nil, fmt.Errorf("%w: externalAccountBinding field was unparseable", ErrMalformed)
+			return nil, fmt.Errorf("%w: externalAccountBinding field was unparsable", ErrMalformed)
 		}
 	}
 

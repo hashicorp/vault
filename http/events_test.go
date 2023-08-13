@@ -104,7 +104,7 @@ func TestEventsSubscribe(t *testing.T) {
 			t.Log(string(msg))
 			data := event["data"].(map[string]interface{})
 			if actualType := data["event_type"].(string); actualType != eventType {
-				t.Fatalf("Expeced event type %s, got %s", eventType, actualType)
+				t.Fatalf("Expected event type %s, got %s", eventType, actualType)
 			}
 			pluginInfo, ok := data["plugin_info"].(map[string]interface{})
 			if !ok || pluginInfo == nil {

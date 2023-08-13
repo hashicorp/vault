@@ -75,7 +75,7 @@ resource "enos_remote_exec" "restart_followers" {
   }
 }
 
-# We cannot use the vault_unseal resouce due to the known issue
+# We cannot use the vault_unseal resource due to the known issue
 # (https://hashicorp.atlassian.net/browse/VAULT-12311). We use a custom
 # script to allow retry for unsealing the secondary followers
 resource "enos_remote_exec" "unseal_followers" {

@@ -125,7 +125,7 @@ func (b *backend) pathConfigAccessWrite(ctx context.Context, req *logical.Reques
 		ClientKey:  data.Get("client_key").(string),
 	}
 
-	// If a token has not been given by the user, we try to boostrap the ACL
+	// If a token has not been given by the user, we try to bootstrap the ACL
 	// support
 	if config.Token == "" {
 		consulConf := config.NewConfig()

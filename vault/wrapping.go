@@ -225,13 +225,13 @@ DONELISTHANDLING:
 			c.logger.Error("failed to create JWT builder", "error", err)
 			return nil, ErrInternalError
 		}
-		ser, err := jwt.Signed(sig).Claims(claims).Claims(priClaims).CompactSerialize()
+		set, err := jwt.Signed(sig).Claims(claims).Claims(priClaims).CompactSerialize()
 		if err != nil {
 			c.tokenStore.revokeOrphan(ctx, te.ID)
 			c.logger.Error("failed to serialize JWT", "error", err)
 			return nil, ErrInternalError
 		}
-		resp.WrapInfo.Token = ser
+		resp.WrapInfo.Token = set
 		if c.redirectAddr == "" {
 			resp.AddWarning("No redirect address set in Vault so none could be encoded in the token. You may need to supply Vault's API address when unwrapping the token.")
 		}

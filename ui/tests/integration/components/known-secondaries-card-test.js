@@ -62,7 +62,7 @@ module('Integration | Component | replication known-secondaries-card', function 
       .includesText('No known dr secondary clusters', 'has a message with the replication mode');
   });
 
-  test('it renders an Add secondary link if user has capabilites', async function (assert) {
+  test('it renders an Add secondary link if user has capabilities', async function (assert) {
     await render(
       hbs`<KnownSecondariesCard @cluster={{this.cluster}} @replicationAttrs={{this.replicationAttrs}} />`,
       this.context
@@ -71,7 +71,7 @@ module('Integration | Component | replication known-secondaries-card', function 
     assert.dom('.add-secondaries').exists();
   });
 
-  test('it does not render an Add secondary link if user does not have capabilites', async function (assert) {
+  test('it does not render an Add secondary link if user does not have capabilities', async function (assert) {
     const noCapabilities = {
       canAddSecondary: false,
     };

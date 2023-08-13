@@ -12,9 +12,9 @@ import { ancestorKeysForKey } from 'core/utils/key-utils';
 
 // Controller in Ember are singletons so there's no cancellation there
 // during the loop. For components, it might be expected that the task would
-// be cancelled when we transitioned to a new route and a rerender occured, but this is not
+// be cancelled when we transitioned to a new route and a rerender occurred, but this is not
 // the case since we are catching the error. Since Ember's route transitions are lazy
-// and we're catching any 404s, the loop continues until the transtion succeeds, or exhausts
+// and we're catching any 404s, the loop continues until the transition succeeds, or exhausts
 // the ancestors array and transitions to the root
 export default Mixin.create({
   navToNearestAncestor: task(function* (key) {

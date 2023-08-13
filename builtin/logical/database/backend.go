@@ -198,7 +198,7 @@ func (b *databaseBackend) DatabaseConfig(ctx context.Context, s logical.Storage,
 type upgradeStatements struct {
 	// This json tag has a typo in it, the new version does not. This
 	// necessitates this upgrade logic.
-	CreationStatements   string `json:"creation_statments"`
+	CreationStatements   string `json:"creation_statements"`
 	RevocationStatements string `json:"revocation_statements"`
 	RollbackStatements   string `json:"rollback_statements"`
 	RenewStatements      string `json:"renew_statements"`
@@ -207,7 +207,7 @@ type upgradeStatements struct {
 type upgradeCheck struct {
 	// This json tag has a typo in it, the new version does not. This
 	// necessitates this upgrade logic.
-	Statements *upgradeStatements `json:"statments,omitempty"`
+	Statements *upgradeStatements `json:"statements,omitempty"`
 }
 
 func (b *databaseBackend) Role(ctx context.Context, s logical.Storage, roleName string) (*roleEntry, error) {

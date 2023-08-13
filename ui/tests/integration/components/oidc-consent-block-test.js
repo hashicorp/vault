@@ -103,7 +103,7 @@ module('Integration | Component | oidc-consent-block', function (hooks) {
     await click('[data-test-edit-form-submit]');
     assert.ok(
       spy.calledWith(`${redirectBase}/?code=unescaped%3Cstring&state=foo`),
-      'Redirects to correct route, with escaped values and without superflous params'
+      'Redirects to correct route, with escaped values and without superfluous params'
     );
   });
 });

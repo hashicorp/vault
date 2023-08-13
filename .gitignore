@@ -51,7 +51,7 @@ Vagrantfile
 
 # Configs
 *.hcl
-!.copywrite.hcl
+!.copyright.hcl
 !.release/ci.hcl
 !.release/security-scan.hcl
 !.release/linux/package/etc/vault.d/vault.hcl

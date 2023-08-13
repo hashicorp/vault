@@ -1178,7 +1178,7 @@ func deriveNamespaceAndRevocationPath(req *SendRequest) (string, string) {
 			continue
 		}
 
-		// If the index is 0, this is a relative path with no namespace preppended,
+		// If the index is 0, this is a relative path with no namespace prepended,
 		// so we can break early
 		if i == 0 {
 			break

@@ -30,7 +30,7 @@ type GRPCBackendPlugin struct {
 
 	MultiplexingSupport bool
 
-	// Embeding this will disable the netRPC protocol
+	// Embedding this will disable the netRPC protocol
 	plugin.NetRPCUnsupportedPlugin
 }
 

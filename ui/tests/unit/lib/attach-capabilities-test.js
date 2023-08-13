@@ -92,10 +92,10 @@ module('Unit | lib | attach capabilities', function (hooks) {
       2,
       'document now has 2 relationships'
     );
-    assert.deepEqual(jsonAPIDocSingle, expected, 'has the exected new document structure');
+    assert.deepEqual(jsonAPIDocSingle, expected, 'has the expected new document structure');
   });
 
-  test('calling static method with an arrary response JSON-API document adds expected relationships', function (assert) {
+  test('calling static method with an array response JSON-API document adds expected relationships', function (assert) {
     let mc = makeModelClass();
     mc = attachCapabilities(mc, {
       updatePath: apiPath`update/${'id'}`,
@@ -163,6 +163,6 @@ module('Unit | lib | attach capabilities', function (hooks) {
       included: [],
     };
     mc.relatedCapabilities(jsonAPIDocSingle);
-    assert.deepEqual(jsonAPIDocSingle, expected, 'has the exected new document structure');
+    assert.deepEqual(jsonAPIDocSingle, expected, 'has the expected new document structure');
   });
 });

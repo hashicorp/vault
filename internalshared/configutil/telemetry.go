@@ -394,7 +394,7 @@ func SetupTelemetry(opts *SetupTelemetryOpts) (*metrics.InmemSink, *metricsutil.
 		return nil, nil, false, err
 	}
 
-	// Intialize a wrapper around the global sink; this will be passed to Core
+	// Initialize a wrapper around the global sink; this will be passed to Core
 	// and to any backend.
 	wrapper := metricsutil.NewClusterMetricSink(opts.ClusterName, globalMetrics)
 	wrapper.MaxGaugeCardinality = opts.Config.MaximumGaugeCardinality

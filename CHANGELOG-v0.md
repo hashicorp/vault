@@ -381,7 +381,7 @@ IMPROVEMENTS:
    the maximum allowed size per request [[GH-4824](https://github.com/hashicorp/vault/pull/4824)]
  * core: Add control group request endpoint to default policy [[GH-4904](https://github.com/hashicorp/vault/pull/4904)]
  * identity: Identity metadata is now passed through to plugins [[GH-4967](https://github.com/hashicorp/vault/pull/4967)]
- * replication: Add additional saftey checks and logging when replication is
+ * replication: Add additional safety checks and logging when replication is
    in a bad state
  * secrets/kv: Add support for using `-field=data` to KVv2 when using `vault
    kv` [[GH-4895](https://github.com/hashicorp/vault/pull/4895)]
@@ -738,7 +738,7 @@ BUG FIXES:
    interface properly [[GH-4398](https://github.com/hashicorp/vault/pull/4398)]
  * ui: Corrected the saving of mount tune ttls for auth methods [[GH-4431](https://github.com/hashicorp/vault/pull/4431)]
  * ui: Credentials generation no longer checks capabilities before making
-   api calls. This should fix needing "update" capabilites to read IAM
+   api calls. This should fix needing "update" capabilities to read IAM
    credentials in the AWS secrets engine [[GH-4446](https://github.com/hashicorp/vault/pull/4446)]
 
 ## 0.10.0 (April 10th, 2018)
@@ -3424,7 +3424,7 @@ BUG FIXES:
  * http: Return 503 when sealed [GH-225]
  * secret/postgres: Username length is capped to exceeding limit
  * server: Do not panic if backend not configured [GH-222]
- * server: Explicitly check value of tls_diable [GH-201]
+ * server: Explicitly check value of tls_disable [GH-201]
  * storage/zk: Fixed issues with version conflicts [GH-190]
 
 MISC:
@@ -3466,7 +3466,7 @@ BUG FIXES:
 
 SECURITY CHANGES:
 
-  * physical/file: create the storge with 0600 permissions [GH-102]
+  * physical/file: create the storage with 0600 permissions [GH-102]
   * token/disk: write the token to disk with 0600 perms
 
 IMPROVEMENTS:

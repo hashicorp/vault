@@ -80,7 +80,7 @@ func fakeVaultServer(t *testing.T) *httptest.Server {
 // high-level scenarios we want to test for:
 //
 //  1. test app is started and is injected with environment variables
-//  2. test app exits early (either with zero or non-zero extit code)
+//  2. test app exits early (either with zero or non-zero exit code)
 //  3. test app needs to be stopped (and restarted) by exec.Server
 func TestExecServer_Run(t *testing.T) {
 	// we must build a test-app binary since 'go run' does not propagate signals correctly

@@ -475,7 +475,7 @@ func (q *revocationQueue) Iterate() []*revocationQueueEntry {
 	q._l.Lock()
 	defer q._l.Unlock()
 
-	// Heuristic: by storing by serial, occasionally we'll get double entires
+	// Heuristic: by storing by serial, occasionally we'll get double entries
 	// if it was already revoked, but otherwise we'll be off by fewer when
 	// building this list.
 	ret := make([]*revocationQueueEntry, 0, len(q.queue))

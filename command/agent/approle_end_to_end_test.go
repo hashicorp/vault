@@ -718,7 +718,7 @@ func testAppRoleWithWrapping(t *testing.T, bindSecretID bool, secretIDLess bool,
 		}
 	}
 	origEntity := checkToken()
-	logger.Trace("cheking token", "origEntity", origEntity)
+	logger.Trace("checking token", "origEntity", origEntity)
 
 	if !expectToken && origEntity != "" {
 		t.Fatal("did not expect a token to be written: " + origEntity)

@@ -49,7 +49,7 @@ const CONFIG = (SwaggerUIBundle, componentInstance, initialFilter) => {
     defaultModelExpandDepth: 1,
     requestInterceptor: (req) => {
       // we need to add vault authorization header
-      // and namepace headers for things to work properly
+      // and namespace headers for things to work properly
       req.headers['X-Vault-Token'] = componentInstance.auth.currentToken;
 
       const namespace = componentInstance.namespaceService.path;

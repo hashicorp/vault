@@ -2062,7 +2062,7 @@ func getUnifiedRevokedCertEntries(sc *storageContext, issuerIDCertMap map[issuer
 		// At this point, we need the storage entry. Rather than using the
 		// clusterPath and adding the serial, we need to use the true
 		// cross-cluster revocation entry (as, our above listing might have
-		// used delta WAL entires without the full revocation info).
+		// used delta WAL entries without the full revocation info).
 		serialPrefix := unifiedRevocationReadPathPrefix + clusterId
 		for _, serial := range serials {
 			if isDelta && (serial == deltaWALLastBuildSerialName || serial == deltaWALLastRevokedSerialName) {

@@ -43,7 +43,7 @@ func TestCounterMode(t *testing.T) {
 		}
 
 		if l == 256 && !bytes.Equal(out, expect256) {
-			t.Fatalf("mis-match")
+			t.Fatalf("mismatch")
 		}
 	}
 }
@@ -73,6 +73,6 @@ func TestHMACSHA256PRF(t *testing.T) {
 		90, 246, 133, 191, 124,
 	}
 	if !bytes.Equal(expect, out) {
-		t.Fatalf("mis-matched output")
+		t.Fatalf("mismatched output")
 	}
 }

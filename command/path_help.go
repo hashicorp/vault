@@ -62,7 +62,7 @@ func (c *PathHelpCommand) Flags() *FlagSets {
 }
 
 func (c *PathHelpCommand) AutocompleteArgs() complete.Predictor {
-	return complete.PredictAnything // TODO: programatic way to invoke help
+	return complete.PredictAnything // TODO: programmatic way to invoke help
 }
 
 func (c *PathHelpCommand) AutocompleteFlags() complete.Flags {

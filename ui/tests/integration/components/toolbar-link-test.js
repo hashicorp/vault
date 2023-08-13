@@ -34,7 +34,7 @@ module('Integration | Component | toolbar-link', function (hooks) {
 
     assert.dom('[data-test-icon="chevron-right"]').exists('Default chevron right icon renders');
     this.set('type', 'add');
-    assert.dom('[data-test-icon="plus"]').exists('Icon can be overriden to show plus sign');
+    assert.dom('[data-test-icon="plus"]').exists('Icon can be overridden to show plus sign');
   });
 
   test('it should disable and show tooltip if provided', async function (assert) {

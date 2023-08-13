@@ -13,7 +13,7 @@ import (
 
 // some tests rely on the ordering of items from this method
 func testCases() (tc []*MFACachedAuthResponse) {
-	// create a slice of items with times offest by these seconds
+	// create a slice of items with times offset by these seconds
 	for _, m := range []time.Duration{
 		5,
 		183600,  // 51 hours

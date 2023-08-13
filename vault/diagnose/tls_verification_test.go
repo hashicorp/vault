@@ -297,9 +297,9 @@ func TestTLSInvalidMaxVersion(t *testing.T) {
 	}
 }
 
-// TestDisabledClientCertsAndDisabledTLSClientCAVerfiy checks that a listener works properly when both
+// TestDisabledClientCertsAndDisabledTLSClientCAVerify checks that a listener works properly when both
 // TLSRequireAndVerifyClientCert and TLSDisableClientCerts are false
-func TestDisabledClientCertsAndDisabledTLSClientCAVerfiy(t *testing.T) {
+func TestDisabledClientCertsAndDisabledTLSClientCAVerify(t *testing.T) {
 	listeners := []*configutil.Listener{
 		{
 			Type:                          "tcp",
@@ -319,8 +319,8 @@ func TestDisabledClientCertsAndDisabledTLSClientCAVerfiy(t *testing.T) {
 	}
 }
 
-// TestTLSClientCAVerfiy checks that a listener which has TLS client certs checks enabled works as expected
-func TestTLSClientCAVerfiy(t *testing.T) {
+// TestTLSClientCAVerify checks that a listener which has TLS client certs checks enabled works as expected
+func TestTLSClientCAVerify(t *testing.T) {
 	listeners := []*configutil.Listener{
 		{
 			Type:                          "tcp",
@@ -340,9 +340,9 @@ func TestTLSClientCAVerfiy(t *testing.T) {
 	}
 }
 
-// TestTLSClientCAVerfiySkip checks that TLS client cert checks are skipped if TLSDisableClientCerts is true
+// TestTLSClientCAVerifySkip checks that TLS client cert checks are skipped if TLSDisableClientCerts is true
 // regardless of the value for TLSRequireAndVerifyClientCert
-func TestTLSClientCAVerfiySkip(t *testing.T) {
+func TestTLSClientCAVerifySkip(t *testing.T) {
 	listeners := []*configutil.Listener{
 		{
 			Type:                          "tcp",
@@ -362,9 +362,9 @@ func TestTLSClientCAVerfiySkip(t *testing.T) {
 	}
 }
 
-// TestTLSClientCAVerfiyMutualExclusion checks that TLS client cert checks are skipped if TLSDisableClientCerts is true
+// TestTLSClientCAVerifyMutualExclusion checks that TLS client cert checks are skipped if TLSDisableClientCerts is true
 // regardless of the value for TLSRequireAndVerifyClientCert
-func TestTLSClientCAVerfiyMutualExclusion(t *testing.T) {
+func TestTLSClientCAVerifyMutualExclusion(t *testing.T) {
 	listeners := []*configutil.Listener{
 		{
 			Type:                          "tcp",
@@ -388,7 +388,7 @@ func TestTLSClientCAVerfiyMutualExclusion(t *testing.T) {
 	}
 }
 
-// TestTLSClientCAVerfiy checks that a listener which has TLS client certs checks enabled works as expected
+// TestTLSClientCAVerify checks that a listener which has TLS client certs checks enabled works as expected
 func TestTLSClientCAFileCheck(t *testing.T) {
 	listeners := []*configutil.Listener{
 		{

@@ -741,7 +741,7 @@ type TokenStore struct {
 
 	tidyLock *uint32
 
-	identityPoliciesDeriverFunc func(string) (*identity.Entity, []string, error)
+	identityPoliciesDriverFunc func(string) (*identity.Entity, []string, error)
 
 	quitContext context.Context
 

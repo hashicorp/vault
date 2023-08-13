@@ -1918,7 +1918,7 @@ func testAccStepListCerts(
 }
 
 type allowed struct {
-	names                string // allowed names in the certificate, looks at common, name, dns, email [depricated]
+	names                string // allowed names in the certificate, looks at common, name, dns, email [deprecated]
 	common_names         string // allowed common names in the certificate
 	dns                  string // allowed dns names in the SAN extension of the certificate
 	emails               string // allowed email names in SAN extension of the certificate

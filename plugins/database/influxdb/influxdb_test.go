@@ -207,7 +207,7 @@ func TestInfluxdb_Initialize(t *testing.T) {
 			if test.expectInitialized && !db.Initialized {
 				t.Fatalf("Database should be initialized but wasn't")
 			} else if !test.expectInitialized && db.Initialized {
-				t.Fatalf("Database was initiailized when it shouldn't")
+				t.Fatalf("Database was initialized when it shouldn't")
 			}
 		})
 	}

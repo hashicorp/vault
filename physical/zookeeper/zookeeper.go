@@ -151,7 +151,7 @@ func NewZooKeeperBackend(conf map[string]string, logger log.Logger) (physical.Ba
 	return c, nil
 }
 
-func caseInsenstiveContains(superset, val string) bool {
+func caseInsensitiveContains(superset, val string) bool {
 	return strings.Contains(strings.ToUpper(superset), strings.ToUpper(val))
 }
 
@@ -238,7 +238,7 @@ func customTLSDial(conf map[string]string, machines string) zk.Dialer {
 						// Allow serverName to be replaced only if the lookupname is part of the
 						// supplied machine names
 						// If there is no match, the serverName will continue to be an IP value.
-						if caseInsenstiveContains(machines, lookupAddress) {
+						if caseInsensitiveContains(machines, lookupAddress) {
 							serverName = lookupAddress
 							break
 						}
@@ -435,7 +435,7 @@ func (c *ZooKeeperBackend) Delete(ctx context.Context, key string) error {
 	return err
 }
 
-// List is used ot list all the keys under a given
+// List is used to list all the keys under a given
 // prefix, up to the next prefix.
 func (c *ZooKeeperBackend) List(ctx context.Context, prefix string) ([]string, error) {
 	defer metrics.MeasureSince([]string{"zookeeper", "list"}, time.Now())

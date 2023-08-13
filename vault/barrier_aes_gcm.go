@@ -446,7 +446,7 @@ func (b *AESGCMBarrier) Unseal(ctx context.Context, key []byte) error {
 		// Verify the term is always just one
 		term := binary.BigEndian.Uint32(out.Value[:4])
 		if term != initialKeyTerm {
-			return errors.New("term mis-match")
+			return errors.New("term mismatch")
 		}
 
 		// Decrypt the barrier init key
@@ -482,7 +482,7 @@ func (b *AESGCMBarrier) Unseal(ctx context.Context, key []byte) error {
 	// Verify the term is always just one
 	term := binary.BigEndian.Uint32(out.Value[:4])
 	if term != initialKeyTerm {
-		return errors.New("term mis-match")
+		return errors.New("term mismatch")
 	}
 
 	// Decrypt the barrier init key
@@ -894,7 +894,7 @@ func (b *AESGCMBarrier) Delete(ctx context.Context, key string) error {
 	return b.backend.Delete(ctx, key)
 }
 
-// List is used ot list all the keys under a given
+// List is used to list all the keys under a given
 // prefix, up to the next prefix.
 func (b *AESGCMBarrier) List(ctx context.Context, prefix string) ([]string, error) {
 	defer metrics.MeasureSince([]string{"barrier", "list"}, time.Now())
@@ -1036,7 +1036,7 @@ func (b *AESGCMBarrier) decrypt(path string, gcm cipher.AEAD, cipher []byte) ([]
 		}
 		return gcm.Open(out, nonce, raw, aad)
 	default:
-		return nil, fmt.Errorf("version bytes mis-match")
+		return nil, fmt.Errorf("version bytes mismatch")
 	}
 }
 

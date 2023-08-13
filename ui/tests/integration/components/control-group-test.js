@@ -41,10 +41,10 @@ module('Integration | Component | control group', function (hooks) {
       approved: false,
       requestPath: 'foo/bar',
       id: 'accessor',
-      requestEntity: { id: 'requestor', name: 'entity8509' },
+      requestEntity: { id: 'requester', name: 'entity8509' },
       reload: sinon.stub(),
     };
-    const authDataDefaults = { entity_id: 'requestor' };
+    const authDataDefaults = { entity_id: 'requester' };
 
     return {
       model: {
@@ -58,7 +58,7 @@ module('Integration | Component | control group', function (hooks) {
     };
   };
 
-  test('requestor rendering', async function (assert) {
+  test('requester rendering', async function (assert) {
     const { model, authData } = setup();
     this.set('model', model);
     this.set('auth.authData', authData);
@@ -66,13 +66,13 @@ module('Integration | Component | control group', function (hooks) {
     assert.ok(component.showsAccessorCallout, 'shows accessor callout');
     assert.strictEqual(component.bannerPrefix, 'Locked');
     assert.strictEqual(component.bannerText, 'The path you requested is locked by a Control Group');
-    assert.strictEqual(component.requestorText, `You are requesting access to ${model.requestPath}`);
+    assert.strictEqual(component.requesterText, `You are requesting access to ${model.requestPath}`);
     assert.false(component.showsTokenText, 'does not show token message when there is no token');
     assert.ok(component.showsRefresh, 'shows refresh button');
     assert.ok(component.authorizationText, 'Awaiting authorization.');
   });
 
-  test('requestor rendering: with token', async function (assert) {
+  test('requester rendering: with token', async function (assert) {
     const { model, authData } = setup();
     this.set('model', model);
     this.set('auth.authData', authData);
@@ -82,7 +82,7 @@ module('Integration | Component | control group', function (hooks) {
     assert.strictEqual(component.token, 'token', 'shows token value');
   });
 
-  test('requestor rendering: some approvals', async function (assert) {
+  test('requester rendering: some approvals', async function (assert) {
     const { model, authData } = setup({ authorizations: [{ name: 'manager 1' }, { name: 'manager 2' }] });
     this.set('model', model);
     this.set('auth.authData', authData);
@@ -90,7 +90,7 @@ module('Integration | Component | control group', function (hooks) {
     assert.ok(component.authorizationText, 'Already approved by manager 1, manager 2');
   });
 
-  test('requestor rendering: approved with no token', async function (assert) {
+  test('requester rendering: approved with no token', async function (assert) {
     const { model, authData } = setup({ approved: true });
     this.set('model', model);
     this.set('auth.authData', authData);
@@ -103,7 +103,7 @@ module('Integration | Component | control group', function (hooks) {
     assert.ok(component.showsSuccessComponent, 'renders control group success');
   });
 
-  test('requestor rendering: approved with token', async function (assert) {
+  test('requester rendering: approved with token', async function (assert) {
     const { model, authData } = setup({ approved: true });
     this.set('model', model);
     this.set('auth.authData', authData);
@@ -127,7 +127,7 @@ module('Integration | Component | control group', function (hooks) {
       'Someone is requesting access to a path locked by a Control Group'
     );
     assert.strictEqual(
-      component.requestorText,
+      component.requesterText,
       `${model.requestEntity.name} is requesting access to ${model.requestPath}`
     );
     assert.false(component.showsTokenText, 'does not show token message when there is no token');
@@ -164,7 +164,7 @@ module('Integration | Component | control group', function (hooks) {
     assert.strictEqual(component.bannerText, 'You have given authorization');
     assert.ok(component.showsBackLink, 'back link is visible');
     assert.strictEqual(
-      component.requestorText,
+      component.requesterText,
       `${model.requestEntity.name} is authorized to access ${model.requestPath}`
     );
     assert.notOk(component.showsSuccessComponent, 'does not render control group success');

@@ -141,7 +141,7 @@ func doUnifiedTransferMissingLocalSerials(sc *storageContext, clusterId string) 
 	}
 
 	if errCount > 0 {
-		sc.Backend.Logger().Warn(fmt.Sprintf("Failed transfering %d local serials to unified storage", errCount))
+		sc.Backend.Logger().Warn(fmt.Sprintf("Failed transferring %d local serials to unified storage", errCount))
 	}
 
 	return nil
@@ -273,7 +273,7 @@ func doUnifiedTransferMissingDeltaWALSerials(sc *storageContext, clusterId strin
 
 	if errCount > 0 {
 		// See note above about why we don't fail here.
-		sc.Backend.Logger().Warn(fmt.Sprintf("Failed transfering %d local delta WAL serials to unified storage", errCount))
+		sc.Backend.Logger().Warn(fmt.Sprintf("Failed transferring %d local delta WAL serials to unified storage", errCount))
 		return nil
 	}
 

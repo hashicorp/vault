@@ -602,7 +602,7 @@ func (c *Core) loadCredentials(ctx context.Context) error {
 		c.auth = c.defaultAuthTable()
 		needPersist = true
 	} else {
-		// only record tableMetrics if we have loaded something from storge
+		// only record tableMetrics if we have loaded something from storage
 		c.tableMetrics(len(c.auth.Entries), false, true, raw.Value)
 	}
 	if rawLocal != nil {

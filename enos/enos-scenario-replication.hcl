@@ -575,7 +575,7 @@ scenario "replication" {
     }
   }
 
-  step "verify_addtional_primary_nodes_are_unsealed" {
+  step "verify_additional_primary_nodes_are_unsealed" {
     module     = module.vault_verify_unsealed
     depends_on = [step.add_additional_nodes_to_primary_cluster]
 
@@ -595,7 +595,7 @@ scenario "replication" {
     depends_on = [
       step.add_additional_nodes_to_primary_cluster,
       step.create_primary_cluster,
-      step.verify_addtional_primary_nodes_are_unsealed
+      step.verify_additional_primary_nodes_are_unsealed
     ]
 
     providers = {
@@ -613,7 +613,7 @@ scenario "replication" {
     module = module.shutdown_node
     depends_on = [
       step.get_primary_cluster_ips,
-      step.verify_addtional_primary_nodes_are_unsealed
+      step.verify_additional_primary_nodes_are_unsealed
     ]
 
     providers = {
@@ -744,7 +744,7 @@ scenario "replication" {
     value       = step.verify_performance_replication.secondary_replication_status
   }
 
-  output "intial_primary_replication_data_secondaries" {
+  output "initial_primary_replication_data_secondaries" {
     description = "The Vault primary cluster secondaries connection status"
     value       = step.verify_performance_replication.primary_replication_data_secondaries
   }

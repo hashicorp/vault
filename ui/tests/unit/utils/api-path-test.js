@@ -23,6 +23,6 @@ module('Unit | Util | api path', function () {
     const ret = apiPath`foo/${'one'}/${'two'}`;
     assert.throws(() => {
       ret({ one: 1 });
-    }, /Error: Assertion Failed: Expected 2 keys in apiPath context, only recieved one/);
+    }, /Error: Assertion Failed: Expected 2 keys in apiPath context, only received one/);
   });
 });

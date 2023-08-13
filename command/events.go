@@ -100,7 +100,7 @@ func (c *EventsSubscribeCommands) subscribeRequest(client *api.Client, path stri
 	q.Set("json", "true")
 	u.RawQuery = q.Encode()
 	client.AddHeader("X-Vault-Token", client.Token())
-	client.AddHeader("X-Vault-Namesapce", client.Namespace())
+	client.AddHeader("X-Vault-Namespace", client.Namespace())
 	ctx := context.Background()
 	conn, resp, err := websocket.Dial(ctx, u.String(), &websocket.DialOptions{
 		HTTPClient: client.CloneConfig().HttpClient,

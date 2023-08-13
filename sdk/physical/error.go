@@ -14,7 +14,7 @@ import (
 )
 
 const (
-	// DefaultErrorPercent is used to determin how often we error
+	// DefaultErrorPercent is used to determine how often we error
 	DefaultErrorPercent = 20
 )
 

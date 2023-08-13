@@ -52,11 +52,11 @@ export default Component.extend(ReplicationActions, DEFAULTS, {
     'tokenIncludesAPIAddr',
     'primary_api_addr',
     function () {
-      const inculdesAPIAddr = this.tokenIncludesAPIAddr;
+      const includesAPIAddr = this.tokenIncludesAPIAddr;
       if (this.replicationMode === 'performance' && this.version.hasPerfReplication === false) {
         return true;
       }
-      if (this.mode !== 'secondary' || inculdesAPIAddr || (!inculdesAPIAddr && this.primary_api_addr)) {
+      if (this.mode !== 'secondary' || includesAPIAddr || (!includesAPIAddr && this.primary_api_addr)) {
         return false;
       }
       return true;

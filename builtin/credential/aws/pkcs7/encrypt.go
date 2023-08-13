@@ -170,13 +170,13 @@ func encryptDESCBC(content []byte, key []byte) ([]byte, *encryptedContentInfo, e
 	if err != nil {
 		return nil, nil, err
 	}
-	mode := cipher.NewCBCEncrypter(block, iv)
+	mode := cipher.NewCBCEncryptor(block, iv)
 	plaintext, err := pad(content, mode.BlockSize())
 	if err != nil {
 		return nil, nil, err
 	}
-	cyphertext := make([]byte, len(plaintext))
-	mode.CryptBlocks(cyphertext, plaintext)
+	ciphertext := make([]byte, len(plaintext))
+	mode.CryptBlocks(ciphertext, plaintext)
 
 	// Prepare ASN.1 Encrypted Content Info
 	eci := encryptedContentInfo{
@@ -185,7 +185,7 @@ func encryptDESCBC(content []byte, key []byte) ([]byte, *encryptedContentInfo, e
 			Algorithm:  OIDEncryptionAlgorithmDESCBC,
 			Parameters: asn1.RawValue{Tag: 4, Bytes: iv},
 		},
-		EncryptedContent: marshalEncryptedContent(cyphertext),
+		EncryptedContent: marshalEncryptedContent(ciphertext),
 	}
 
 	return key, &eci, nil
@@ -227,13 +227,13 @@ func encryptAESCBC(content []byte, key []byte) ([]byte, *encryptedContentInfo, e
 	if err != nil {
 		return nil, nil, err
 	}
-	mode := cipher.NewCBCEncrypter(block, iv)
+	mode := cipher.NewCBCEncryptor(block, iv)
 	plaintext, err := pad(content, mode.BlockSize())
 	if err != nil {
 		return nil, nil, err
 	}
-	cyphertext := make([]byte, len(plaintext))
-	mode.CryptBlocks(cyphertext, plaintext)
+	ciphertext := make([]byte, len(plaintext))
+	mode.CryptBlocks(ciphertext, plaintext)
 
 	// Prepare ASN.1 Encrypted Content Info
 	eci := encryptedContentInfo{
@@ -242,7 +242,7 @@ func encryptAESCBC(content []byte, key []byte) ([]byte, *encryptedContentInfo, e
 			Algorithm:  algID,
 			Parameters: asn1.RawValue{Tag: 4, Bytes: iv},
 		},
-		EncryptedContent: marshalEncryptedContent(cyphertext),
+		EncryptedContent: marshalEncryptedContent(ciphertext),
 	}
 
 	return key, &eci, nil

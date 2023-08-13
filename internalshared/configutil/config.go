@@ -39,7 +39,7 @@ type SharedConfig struct {
 	DefaultMaxRequestDurationRaw interface{}   `hcl:"default_max_request_duration"`
 
 	// LogFormat specifies the log format. Valid values are "standard" and
-	// "json". The values are case-insenstive. If no log format is specified,
+	// "json". The values are case-insensitive. If no log format is specified,
 	// then standard format will be used.
 	LogFile              string      `hcl:"log_file"`
 	LogFormat            string      `hcl:"log_format"`

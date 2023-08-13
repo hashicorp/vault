@@ -502,7 +502,7 @@ func Test_handleActivityWriteData(t *testing.T) {
 		},
 	}
 
-	t.Run("write entitites", func(t *testing.T) {
+	t.Run("write entities", func(t *testing.T) {
 		core, _, _ := TestCoreUnsealed(t)
 		marshaled, err := protojson.Marshal(&generation.ActivityLogMockInput{
 			Data:  data,

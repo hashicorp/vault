@@ -700,7 +700,7 @@ func defaultLoginData() (map[string]interface{}, error) {
 
 // setupIAMTestServer configures httptest server to intercept and respond to the
 // IAM login path's invocation of submitCallerIdentityRequest (which does not
-// use the AWS SDK), which receieves the mocked response responseFromUser
+// use the AWS SDK), which receives the mocked response responseFromUser
 // containing user information matching the role.
 func setupIAMTestServer() *httptest.Server {
 	return httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {

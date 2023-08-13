@@ -869,7 +869,7 @@ func TestAcmeRoleExtKeyUsage(t *testing.T) {
 	acmeCert, err := x509.ParseCertificate(certs[0])
 	require.NoError(t, err, "failed parsing acme cert")
 
-	require.Equal(t, 1, len(acmeCert.ExtKeyUsage), "mis-match on expected ExtKeyUsages")
+	require.Equal(t, 1, len(acmeCert.ExtKeyUsage), "mismatch on expected ExtKeyUsages")
 	require.ElementsMatch(t, []x509.ExtKeyUsage{x509.ExtKeyUsageServerAuth}, acmeCert.ExtKeyUsage,
 		"mismatch of ExtKeyUsage flags")
 
@@ -897,7 +897,7 @@ func TestAcmeRoleExtKeyUsage(t *testing.T) {
 	acmeCert, err = x509.ParseCertificate(certs[0])
 	require.NoError(t, err, "failed parsing acme cert")
 
-	require.Equal(t, 4, len(acmeCert.ExtKeyUsage), "mis-match on expected ExtKeyUsages")
+	require.Equal(t, 4, len(acmeCert.ExtKeyUsage), "mismatch on expected ExtKeyUsages")
 	require.ElementsMatch(t, []x509.ExtKeyUsage{
 		x509.ExtKeyUsageServerAuth, x509.ExtKeyUsageClientAuth,
 		x509.ExtKeyUsageCodeSigning, x509.ExtKeyUsageEmailProtection,
@@ -1713,8 +1713,8 @@ func getEABKey(t *testing.T, client *api.Client, baseUrl string) (string, []byte
 	privateKeyBytes, err := base64.RawURLEncoding.DecodeString(base64Key)
 	require.NoError(t, err, "failed base 64 decoding eab key response")
 
-	require.Equal(t, "hs", resp.Data["key_type"], "eab key_type field mis-match")
-	require.Equal(t, baseUrl+"directory", resp.Data["acme_directory"], "eab acme_directory field mis-match")
+	require.Equal(t, "hs", resp.Data["key_type"], "eab key_type field mismatch")
+	require.Equal(t, baseUrl+"directory", resp.Data["acme_directory"], "eab acme_directory field mismatch")
 	require.NotEmpty(t, resp.Data["created_on"], "empty created_on field")
 	_, err = time.Parse(time.RFC3339, resp.Data["created_on"].(string))
 	require.NoError(t, err, "failed parsing eab created_on field")

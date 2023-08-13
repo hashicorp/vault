@@ -183,7 +183,7 @@ type Request struct {
 	// to make this request
 	EntityID string `json:"entity_id" structs:"entity_id" mapstructure:"entity_id" sentinel:""`
 
-	// PolicyOverride indicates that the requestor wishes to override
+	// PolicyOverride indicates that the requester wishes to override
 	// soft-mandatory Sentinel policies
 	PolicyOverride bool `json:"policy_override" structs:"policy_override" mapstructure:"policy_override"`
 

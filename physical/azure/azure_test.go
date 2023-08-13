@@ -27,7 +27,7 @@ import (
 ///
 /// To run the tests using managed identities, the following pre-requisites have to be met:
 /// 1. Access to the Azure Instance Metadata Service (IMDS) is required (e.g. run it on a Azure VM)
-/// 2. A system-assigned oder user-assigned identity attached to the host running the test
+/// 2. A system-assigned or user-assigned identity attached to the host running the test
 /// 3. A role assignment for a storage account with "Storage Blob Data Contributor" permissions
 
 func testFixture(t *testing.T) (*AzureBackend, func()) {

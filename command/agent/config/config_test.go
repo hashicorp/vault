@@ -636,7 +636,7 @@ func TestLoadConfigFile_AgentCache_NoAutoAuth(t *testing.T) {
 	}
 }
 
-func TestLoadConfigFile_Bad_AgentCache_InconsisentAutoAuth(t *testing.T) {
+func TestLoadConfigFile_Bad_AgentCache_InconsistentAutoAuth(t *testing.T) {
 	config, err := LoadConfigFile("./test-fixtures/bad-config-cache-inconsistent-auto_auth.hcl")
 	if err != nil {
 		t.Fatalf("LoadConfigFile should not return an error for this config, err: %v", err)

@@ -68,7 +68,7 @@ func TestOIDC_Path_OIDC_RoleNilKeyEntry(t *testing.T) {
 }
 
 // TestOIDC_Path_OIDCRole_UpdateNoKey test that we cannot update a role without
-// prividing a key param
+// providing a key param
 func TestOIDC_Path_OIDCRole_UpdateNoKey(t *testing.T) {
 	c, _, _ := TestCoreUnsealed(t)
 	ctx := namespace.RootContext(nil)
@@ -97,7 +97,7 @@ func TestOIDC_Path_OIDCRole_UpdateNoKey(t *testing.T) {
 	})
 	expectSuccess(t, resp, err)
 
-	// Update "test-role1" without prividing a key param -- should succeed
+	// Update "test-role1" without providing a key param -- should succeed
 	resp, err = c.identityStore.HandleRequest(ctx, &logical.Request{
 		Path:      "oidc/role/test-role1",
 		Operation: logical.UpdateOperation,

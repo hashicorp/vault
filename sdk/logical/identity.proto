@@ -14,7 +14,7 @@ message Entity {
   // Name is the human-friendly unique identifier for the entity
   string name = 2;
 
-  // Aliases contains thhe alias mappings for the given entity
+  // Aliases contains the alias mappings for the given entity
   repeated Alias aliases = 3;
 
   // Metadata represents the custom data tied to this entity

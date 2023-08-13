@@ -1587,7 +1587,7 @@ func TestBackendAcc_LoginWithCallerIdentity(t *testing.T) {
 	//    b. One bound to a garbage ARN
 	// 4. Pass in a request that doesn't have the signed header, ensure
 	//    we're not allowed to login
-	// 5. Passin a request that has a validly signed header, but the wrong
+	// 5. Passing a request that has a validly signed header, but the wrong
 	//    value, ensure it doesn't allow login
 	// 6. Pass in a request that has a validly signed request, ensure
 	//    it allows us to login to our role

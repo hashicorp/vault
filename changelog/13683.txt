@@ -1,4 +1,4 @@
 ```release-note:improvement
 ui: The integrated web terminal now accepts both `-f` and `--force` as aliases
-for `-force` for the `write` commmand.
+for `-force` for the `write` command.
 ```

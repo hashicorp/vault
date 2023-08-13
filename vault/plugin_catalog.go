@@ -52,7 +52,7 @@ type PluginCatalog struct {
 	// externalPlugins holds plugin process connections by a key which is
 	// generated from the plugin runner config.
 	//
-	// This allows plugins that suppport multiplexing to use a single grpc
+	// This allows plugins that support multiplexing to use a single grpc
 	// connection to communicate with multiple "backends". Each backend
 	// configuration using the same plugin will be routed to the existing
 	// plugin process.

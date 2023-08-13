@@ -337,7 +337,7 @@ type Request struct {
 	// EntityID is the identity of the caller extracted out of the token used
 	// to make this request
 	EntityID string `protobuf:"bytes,17,opt,name=entity_id,json=entityId,proto3" json:"entity_id,omitempty"`
-	// PolicyOverride indicates that the requestor wishes to override
+	// PolicyOverride indicates that the requester wishes to override
 	// soft-mandatory Sentinel policies
 	PolicyOverride bool `protobuf:"varint,18,opt,name=policy_override,json=policyOverride,proto3" json:"policy_override,omitempty"`
 	// Whether the request is unauthenticated, as in, had no client token

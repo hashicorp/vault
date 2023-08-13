@@ -636,7 +636,7 @@ func TestAwsEc2_RoleCrud(t *testing.T) {
 	}
 
 	if resp.Data["role_id"] == nil {
-		t.Fatal("role_id not found in repsonse")
+		t.Fatal("role_id not found in response")
 	}
 	expected["role_id"] = resp.Data["role_id"]
 	if diff := deep.Equal(expected, resp.Data); diff != nil {

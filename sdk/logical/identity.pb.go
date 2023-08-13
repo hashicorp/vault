@@ -32,7 +32,7 @@ type Entity struct {
 	ID string `protobuf:"bytes,1,opt,name=ID,proto3" json:"ID,omitempty"`
 	// Name is the human-friendly unique identifier for the entity
 	Name string `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
-	// Aliases contains thhe alias mappings for the given entity
+	// Aliases contains the alias mappings for the given entity
 	Aliases []*Alias `protobuf:"bytes,3,rep,name=aliases,proto3" json:"aliases,omitempty"`
 	// Metadata represents the custom data tied to this entity
 	Metadata map[string]string `protobuf:"bytes,4,rep,name=metadata,proto3" json:"metadata,omitempty" protobuf_key:"bytes,1,opt,name=key,proto3" protobuf_val:"bytes,2,opt,name=value,proto3"`

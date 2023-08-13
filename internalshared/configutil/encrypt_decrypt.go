@@ -76,7 +76,7 @@ func EncryptDecrypt(rawStr string, decrypt, strip bool, wrapper wrapping.Wrapper
 			}
 			inBlob := new(wrapping.BlobInfo)
 			if err := proto.Unmarshal(inMsg, inBlob); err != nil {
-				return "", fmt.Errorf("error unmarshaling encrypted parameter: %w", err)
+				return "", fmt.Errorf("error unmarshalling encrypted parameter: %w", err)
 			}
 			dec, err := wrapper.Decrypt(context.Background(), inBlob, nil)
 			if err != nil {

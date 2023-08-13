@@ -88,7 +88,7 @@ func (x *Item) GetMessage() *anypb.Any {
 
 // Bucket is a construct to hold multiple items within itself. This
 // abstraction contains multiple buckets of the same kind within itself and
-// shares amont them the items that get inserted. When the bucket as a whole
+// shares among them the items that get inserted. When the bucket as a whole
 // gets too big to hold more items, the contained buckets gets pushed out only
 // to become independent buckets. Hence, this can grow infinitely in terms of
 // storage space for items that get inserted.

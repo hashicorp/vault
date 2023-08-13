@@ -279,7 +279,7 @@ func humanDurationInt(i interface{}) interface{} {
 	return i
 }
 
-// parseFlagFile accepts a flag value returns the contets of that value. If the
+// parseFlagFile accepts a flag value returns the contents of that value. If the
 // value starts with '@', that indicates the value is a file and its content
 // should be read and returned. Otherwise, the raw value is returned.
 func parseFlagFile(raw string) (string, error) {

@@ -3630,7 +3630,7 @@ func TestReadWriteDeleteRoles(t *testing.T) {
 	}
 
 	if resp != nil {
-		t.Fatalf("response should have been emtpy but was:\n%#v", resp)
+		t.Fatalf("response should have been empty but was:\n%#v", resp)
 	}
 
 	// Write role PKI.
@@ -4116,7 +4116,7 @@ func TestBackend_RevokePlusTidy_Intermediate(t *testing.T) {
 			}
 			for counter, value := range expectedCounters {
 				if _, ok := interval.Counters[counter]; !ok {
-					t.Fatalf("Expected metrics to include a value for couter %s", counter)
+					t.Fatalf("Expected metrics to include a value for counter %s", counter)
 				}
 				if value != interval.Counters[counter].Sum {
 					t.Fatalf("Expected the sum of metric %s to be %f but got %f", counter, value, interval.Counters[counter].Sum)
@@ -4361,7 +4361,7 @@ func requireCertInCaChainArray(t *testing.T, chain []string, cert string, msgAnd
 func requireCertInCaChainString(t *testing.T, chain string, cert string, msgAndArgs ...interface{}) {
 	count := strings.Count(chain, cert)
 	if count != 1 {
-		failMsg := fmt.Sprintf("Found %d occurrances of the cert in the provided chain", count)
+		failMsg := fmt.Sprintf("Found %d occurrences of the cert in the provided chain", count)
 		require.FailNow(t, failMsg, msgAndArgs...)
 	}
 }

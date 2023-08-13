@@ -120,7 +120,7 @@ func TestInspectAPIReload(t *testing.T) {
 		t.Fatal("expected invalid configuration error")
 	}
 	if !strings.Contains(resp.Error().Error(), ErrIntrospectionNotEnabled.Error()) {
-		t.Fatalf("expected invalid configuration error but recieved: %s", resp.Error())
+		t.Fatalf("expected invalid configuration error but received: %s", resp.Error())
 	}
 
 	originalConfig := core.rawConfig.Load().(*server.Config)

@@ -215,7 +215,7 @@ You can set the iam_alias parameter to one of the following values:
 * 'unique_id': This retains Vault's default behavior
 * 'full_arn': This maps the full authenticated ARN to the identity alias, e.g.,
    "arn:aws:sts::<account_id>:assumed-role/<role_name>/<role_session_name>
-   This is useful where you have an identity provder that sets role_session_name
+   This is useful where you have an identity provider that sets role_session_name
    to a known value of a person, such as a username or email address, and allows
    you to map those roles back to entries in your identity store.
 `

@@ -137,7 +137,7 @@ func TestRotation(t *testing.T) {
 					}),
 				)(nil)
 				if err != nil {
-					t.Fatalf("couldn't initialze mock IAM handler: %s", err)
+					t.Fatalf("couldn't initialize mock IAM handler: %s", err)
 				}
 				b.iamClient = miam
 
@@ -182,7 +182,7 @@ func TestRotation(t *testing.T) {
 				}),
 			)(nil)
 			if err != nil {
-				t.Fatalf("couldn't initialze mock IAM handler: %s", err)
+				t.Fatalf("couldn't initialize mock IAM handler: %s", err)
 			}
 			b.iamClient = miam
 

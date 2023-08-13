@@ -53,7 +53,7 @@ func (f *EntryFormatterWriter) FormatAndWriteRequest(ctx context.Context, w io.W
 	case w == nil:
 		return fmt.Errorf("writer for audit request is nil")
 	case f.Formatter == nil:
-		return fmt.Errorf("no formatter specifed")
+		return fmt.Errorf("no formatter specified")
 	case f.Writer == nil:
 		return fmt.Errorf("no writer specified")
 	}

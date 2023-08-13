@@ -64,7 +64,7 @@ type EncryptedKeyStorageConfig struct {
 	Prefix string
 
 	// CacheSize is the number of elements to cache. If not set the
-	// DetaultCacheSize will be used.
+	// DefaultCacheSize will be used.
 	CacheSize int
 }
 

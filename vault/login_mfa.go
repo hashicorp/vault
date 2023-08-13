@@ -725,7 +725,7 @@ func (b *LoginMFABackend) handleMFALoginValidate(ctx context.Context, req *logic
 	}
 
 	if ns.ID != cachedResponseAuth.RequestNSID {
-		return nil, fmt.Errorf("original request was issued in a different namesapce %v, current namespace is %v", cachedResponseAuth.RequestNSPath, ns.Path)
+		return nil, fmt.Errorf("original request was issued in a different namespace %v, current namespace is %v", cachedResponseAuth.RequestNSPath, ns.Path)
 	}
 
 	entity, _, err := b.Core.fetchEntityAndDerivedPolicies(ctx, ns, cachedResponseAuth.CachedAuth.EntityID, true)
@@ -2067,7 +2067,7 @@ func (c *Core) validateOkta(ctx context.Context, mConfig *mfa.Config, username s
 
 	for {
 		// Okta provides an SDK method `GetFactorTransactionStatus` but does not provide the transaction id in
-		// the VerifyFactor respone. This code effectively reimplements that method.
+		// the VerifyFactor response. This code effectively reimplements that method.
 		rq := client.CloneRequestExecutor()
 		req, err := rq.WithAccept("application/json").WithContentType("application/json").NewRequest("GET", url.String(), nil)
 		if err != nil {
