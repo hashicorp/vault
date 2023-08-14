@@ -1,0 +1,32 @@
+<div class="is-flex-between">
+  <h3 class="title is-4 has-bottom-margin-xxs" data-test-client-count-title>
+    Client count
+  </h3>
+
+  <div>
+    <Hds::Link::Inline @route="vault.cluster.clients.dashboard">Details</Hds::Link::Inline>
+  </div>
+</div>
+
+<div class="is-grid grid-2-columns grid-gap-2 has-top-margin-m has-bottom-margin-m grid-align-items-start">
+  <StatText
+    @label="Total"
+    @value={{@activityData.total.clients}}
+    @size="l"
+    @subText="The total number of clients in this billing period."
+    data-test-stat-text="total-clients"
+  />
+  <StatText
+    @label="New"
+    @value={{@activityData.total.entity_clients}}
+    @size="l"
+    @subText="The number of clients new to Vault in the current month."
+    data-test-stat-text="total-clients"
+  />
+  <Hds::Link::Standalone @icon="film" @text="Watch tutorial video" @href="..." />
+  <small>
+    {{date-format @clientCountStartDate "MMM yyyy"}}
+    -
+    {{date-format @clientCountCurrentDate "MMM yyyy"}}
+  </small>
+</div>

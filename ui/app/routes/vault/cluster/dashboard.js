@@ -57,6 +57,8 @@ export default class VaultClusterDashboardRoute extends Route.extend(ClusterRout
       vaultConfiguration,
       secretsEngines: this.store.query('secret-engine', {}),
       clientCountActivity: activity,
+      clientCountCurrentDate: this.currentDate,
+      clientCountStartDate: licenseStart,
       version: this.version,
     });
   }
