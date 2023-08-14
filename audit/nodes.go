@@ -23,8 +23,8 @@ func ProcessManual(ctx context.Context, data *logical.LogInput, ids []eventlogge
 	switch {
 	case data == nil:
 		return errors.New("data cannot be nil")
-	case len(ids) == 0:
-		return errors.New("ids are required")
+	case len(ids) < 2:
+		return errors.New("minimum of 2 ids are required")
 	case nodes == nil:
 		return errors.New("nodes cannot be nil")
 	case len(nodes) == 0:
@@ -50,16 +50,26 @@ func ProcessManual(ctx context.Context, data *logical.LogInput, ids []eventlogge
 
 	var lastSeen eventlogger.NodeType
 
-	// Process nodes data order, updating the event with the result.
+	// Process nodes in order, updating the event with the result.
 	// This means we *should* do:
-	// 1. formatter
+	// 1. formatter (temporary)
 	// 2. sink
 	for _, id := range ids {
 		node, ok := nodes[id]
 		if !ok {
 			return fmt.Errorf("node not found: %v", id)
 		}
-		e, err = node.Process(ctx, e)
+
+		switch node.Type() {
+		case eventlogger.NodeTypeFormatter:
+			// Use a temporary formatter node  which doesn't persist its salt anywhere.
+			if formatNode, ok := node.(*EntryFormatter); ok && formatNode != nil {
+				e, err = newTemporaryEntryFormatter(formatNode).Process(ctx, e)
+			}
+		default:
+			e, err = node.Process(ctx, e)
+		}
+
 		if err != nil {
 			return err
 		}
