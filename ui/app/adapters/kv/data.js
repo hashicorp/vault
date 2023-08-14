@@ -5,7 +5,7 @@
 
 import ApplicationAdapter from '../application';
 import AdapterError from '@ember-data/adapter/error';
-import { kvDataPath, kvDeletePath, kvDestroyPath, kvMetadataPath, kvUndeletePath } from 'vault/utils/kv-path';
+import { kvDataPath, kvDeletePath, kvDestroyPath, kvUndeletePath } from 'vault/utils/kv-path';
 import { assert } from '@ember/debug';
 
 export default class KvDataAdapter extends ApplicationAdapter {
@@ -91,20 +91,16 @@ export default class KvDataAdapter extends ApplicationAdapter {
         return this.ajax(this._url(kvDeletePath(backend, path)), 'POST', {
           data: { versions: deleteVersions },
         });
-      case 'destroy-version':
+      case 'destroy':
         return this.ajax(this._url(kvDestroyPath(backend, path)), 'PUT', {
           data: { versions: deleteVersions },
         });
-      case 'delete-metadata':
-        return this.ajax(this._url(kvMetadataPath(backend, path)), 'DELETE');
-      case 'undelete-version':
+      case 'undelete':
         return this.ajax(this._url(kvUndeletePath(backend, path)), 'POST', {
           data: { versions: deleteVersions },
         });
       default:
-        assert(
-          'deleteType must be one of delete-latest-version, delete-version, destroy-version, delete-metadata, undelete-version.'
-        );
+        assert('deleteType must be one of delete-latest-version, delete-version, destroy,  undelete.');
     }
   }
 
