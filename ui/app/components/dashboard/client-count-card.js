@@ -38,7 +38,7 @@ export default class DashboardClientCountCard extends Component {
   }
 
   get currentMonthActivityTotalCount() {
-    return this.activityData.byMonth.lastObject.new_clients.clients;
+    return this.activityData.byMonth?.lastObject?.new_clients.clients;
   }
 
   @task
