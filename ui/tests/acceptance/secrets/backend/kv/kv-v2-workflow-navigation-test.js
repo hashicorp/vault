@@ -1,4 +1,4 @@
-import { module, test, skip } from 'qunit';
+import { module, test } from 'qunit';
 import { v4 as uuidv4 } from 'uuid';
 import { click, currentRouteName, currentURL, typeIn, visit, waitUntil } from '@ember/test-helpers';
 import { create } from 'ember-cli-page-object';
@@ -72,7 +72,7 @@ module('Acceptance | kv-v2 workflow | navigation', function (hooks) {
       );
       await authPage.login(token);
     });
-    test('empty backend - breadcrumbs, title, tabs, emptyState', async function (assert) {
+    test('empty backend - breadcrumbs, title, tabs, emptyState (a)', async function (assert) {
       assert.expect(18);
       const backend = this.emptyBackend;
       await navToBackend(backend);
@@ -128,7 +128,7 @@ module('Acceptance | kv-v2 workflow | navigation', function (hooks) {
         `url includes /vault/secrets/${backend}/kv/list`
       );
     });
-    test('can access nested secret', async function (assert) {
+    test('can access nested secret (a)', async function (assert) {
       assert.expect(36);
       const backend = this.backend;
       await navToBackend(backend);
@@ -177,7 +177,7 @@ module('Acceptance | kv-v2 workflow | navigation', function (hooks) {
       await click(PAGE.breadcrumbAtIdx(1));
       assert.ok(currentURL().startsWith(`/vault/secrets/${backend}/kv/list`), 'links back to list root');
     });
-    test('versioned secret nav, tabs, breadcrumbs', async function (assert) {
+    test('versioned secret nav, tabs, breadcrumbs (a) (a)', async function (assert) {
       assert.expect(43);
       const backend = this.backend;
       await navToBackend(backend);
@@ -268,7 +268,7 @@ module('Acceptance | kv-v2 workflow | navigation', function (hooks) {
         `cancel btn goes back to metadata page`
       );
     });
-    test('breadcrumbs & page titles are correct', async function (assert) {
+    test('breadcrumbs & page titles are correct (a)', async function (assert) {
       assert.expect(39);
       const backend = this.backend;
       await navToBackend(backend);
@@ -315,7 +315,7 @@ module('Acceptance | kv-v2 workflow | navigation', function (hooks) {
       ]);
       await authPage.login(token);
     });
-    test('empty backend - breadcrumbs, title, tabs, emptyState', async function (assert) {
+    test('empty backend - breadcrumbs, title, tabs, emptyState (dr)', async function (assert) {
       assert.expect(15);
       const backend = this.emptyBackend;
       await navToBackend(backend);
@@ -360,7 +360,7 @@ module('Acceptance | kv-v2 workflow | navigation', function (hooks) {
         `url includes /vault/secrets/${backend}/kv/list`
       );
     });
-    test('can access nested secret', async function (assert) {
+    test('can access nested secret (dr)', async function (assert) {
       assert.expect(19);
       const backend = this.backend;
       await navToBackend(backend);
@@ -399,7 +399,7 @@ module('Acceptance | kv-v2 workflow | navigation', function (hooks) {
       await click(PAGE.breadcrumbAtIdx(1));
       assert.ok(currentURL().startsWith(`/vault/secrets/${backend}/kv/list`), 'links back to list root');
     });
-    test('versioned secret nav, tabs, breadcrumbs', async function (assert) {
+    test('versioned secret nav, tabs, breadcrumbs (dr)', async function (assert) {
       assert.expect(29);
       const backend = this.backend;
       await navToBackend(backend);
@@ -478,7 +478,7 @@ module('Acceptance | kv-v2 workflow | navigation', function (hooks) {
         .dom(`${PAGE.metadata.secretMetadataSection} ${PAGE.emptyStateTitle}`)
         .hasText('You do not have access to secret metadata');
     });
-    test('breadcrumbs & page titles are correct', async function (assert) {
+    test('breadcrumbs & page titles are correct (dr)', async function (assert) {
       assert.expect(30);
       const backend = this.backend;
       await navToBackend(backend);
@@ -518,7 +518,7 @@ module('Acceptance | kv-v2 workflow | navigation', function (hooks) {
 
       await authPage.login(token);
     });
-    test('empty backend - breadcrumbs, title, tabs, emptyState', async function (assert) {
+    test('empty backend - breadcrumbs, title, tabs, emptyState (dlr)', async function (assert) {
       assert.expect(18);
       const backend = this.emptyBackend;
       await navToBackend(backend);
@@ -574,7 +574,7 @@ module('Acceptance | kv-v2 workflow | navigation', function (hooks) {
         `url includes /vault/secrets/${backend}/kv/list`
       );
     });
-    test('can access nested secret', async function (assert) {
+    test('can access nested secret (dlr)', async function (assert) {
       assert.expect(26);
       const backend = this.backend;
       await navToBackend(backend);
@@ -622,7 +622,7 @@ module('Acceptance | kv-v2 workflow | navigation', function (hooks) {
       await click(PAGE.breadcrumbAtIdx(1));
       assert.ok(currentURL().startsWith(`/vault/secrets/${backend}/kv/list`), 'links back to list root');
     });
-    test('versioned secret nav, tabs, breadcrumbs', async function (assert) {
+    test('versioned secret nav, tabs, breadcrumbs (dlr)', async function (assert) {
       assert.expect(28);
       const backend = this.backend;
       await navToBackend(backend);
@@ -691,7 +691,7 @@ module('Acceptance | kv-v2 workflow | navigation', function (hooks) {
         .hasText('No custom metadata');
       assert.dom(PAGE.metadata.editBtn).doesNotExist('edit button hidden');
     });
-    test('breadcrumbs & page titles are correct', async function (assert) {
+    test('breadcrumbs & page titles are correct (dlr)', async function (assert) {
       assert.expect(26);
       const backend = this.backend;
       await navToBackend(backend);
@@ -730,7 +730,7 @@ module('Acceptance | kv-v2 workflow | navigation', function (hooks) {
       ]);
       await authPage.login(token);
     });
-    test('empty backend - breadcrumbs, title, tabs, emptyState', async function (assert) {
+    test('empty backend - breadcrumbs, title, tabs, emptyState (mm)', async function (assert) {
       assert.expect(18);
       const backend = this.emptyBackend;
       await navToBackend(backend);
@@ -786,7 +786,7 @@ module('Acceptance | kv-v2 workflow | navigation', function (hooks) {
         `url includes /vault/secrets/${backend}/kv/list`
       );
     });
-    test('can access nested secret', async function (assert) {
+    test('can access nested secret (mm)', async function (assert) {
       assert.expect(36);
       const backend = this.backend;
       await navToBackend(backend);
@@ -840,7 +840,7 @@ module('Acceptance | kv-v2 workflow | navigation', function (hooks) {
       await click(PAGE.breadcrumbAtIdx(1));
       assert.ok(currentURL().startsWith(`/vault/secrets/${backend}/kv/list`), 'links back to list root');
     });
-    test('versioned secret nav, tabs, breadcrumbs', async function (assert) {
+    test('versioned secret nav, tabs, breadcrumbs (mm)', async function (assert) {
       assert.expect(34);
       const backend = this.backend;
       await navToBackend(backend);
@@ -919,7 +919,7 @@ module('Acceptance | kv-v2 workflow | navigation', function (hooks) {
         `cancel btn goes back to metadata page`
       );
     });
-    test('breadcrumbs & page titles are correct', async function (assert) {
+    test('breadcrumbs & page titles are correct (mm)', async function (assert) {
       assert.expect(33);
       const backend = this.backend;
       await navToBackend(backend);
@@ -961,7 +961,7 @@ module('Acceptance | kv-v2 workflow | navigation', function (hooks) {
       ]);
       await authPage.login(token);
     });
-    test('empty backend - breadcrumbs, title, tabs, emptyState', async function (assert) {
+    test('empty backend - breadcrumbs, title, tabs, emptyState (sc)', async function (assert) {
       assert.expect(15);
       const backend = this.emptyBackend;
       await navToBackend(backend);
@@ -1002,7 +1002,7 @@ module('Acceptance | kv-v2 workflow | navigation', function (hooks) {
         `url includes /vault/secrets/${backend}/kv/list`
       );
     });
-    test('can access nested secret', async function (assert) {
+    test('can access nested secret (sc)', async function (assert) {
       assert.expect(19);
       const backend = this.backend;
       await navToBackend(backend);
@@ -1040,7 +1040,7 @@ module('Acceptance | kv-v2 workflow | navigation', function (hooks) {
       await click(PAGE.breadcrumbAtIdx(1));
       assert.ok(currentURL().startsWith(`/vault/secrets/${backend}/kv/list`), 'links back to list root');
     });
-    test('versioned secret nav, tabs, breadcrumbs', async function (assert) {
+    test('versioned secret nav, tabs, breadcrumbs (sc)', async function (assert) {
       assert.expect(26);
       const backend = this.backend;
       await navToBackend(backend);
@@ -1126,7 +1126,7 @@ module('Acceptance | kv-v2 workflow | navigation', function (hooks) {
         .hasText('You do not have access to read custom metadata', 'shows correct empty state');
       assert.dom(PAGE.metadata.editBtn).doesNotExist('edit metadata button does not render');
     });
-    test('breadcrumbs & page titles are correct', async function (assert) {
+    test('breadcrumbs & page titles are correct (sc)', async function (assert) {
       assert.expect(27);
       const backend = this.backend;
       await navToBackend(backend);
@@ -1185,7 +1185,7 @@ path "${this.backend}/*" {
     const storageKey = (accessor, path) => {
       return `${CONTROL_GROUP_PREFIX}${accessor}${TOKEN_SEPARATOR}${path}`;
     };
-    skip('can access nested secret', async function (assert) {
+    test('can access nested secret (cg)', async function (assert) {
       assert.expect(38);
       const backend = this.backend;
       await navToBackend(backend);
@@ -1269,7 +1269,7 @@ path "${this.backend}/*" {
       await click(PAGE.breadcrumbAtIdx(1));
       assert.ok(currentURL().startsWith(`/vault/secrets/${backend}/kv/list`), 'links back to list root');
     });
-    test('breadcrumbs & page titles are correct', async function (assert) {
+    test('breadcrumbs & page titles are correct (cg)', async function (assert) {
       assert.expect(34);
       const backend = this.backend;
       await navToBackend(backend);
