@@ -1,0 +1,58 @@
+---
+layout: docs
+page_title: Behavioral Changes - HSM Integration - Vault Enterprise
+description: >-
+  Vault Enterprise HSM support changes the way Vault works with regard to unseal
+  and recovery keys as well as rekey and recovery operations.
+---
+
+# Vault enterprise HSM behavioral changes
+
+@include 'alerts/enterprise-and-hcp.mdx'
+
+This page contains information about the behavioral differences that take
+effect when using Vault with an HSM.
+
+## Key split between unseal keys and recovery keys
+
+Normally, Vault uses a single set of unseal keys to perform both decryption of
+the cryptographic barrier and to authorize recovery operations, such as the
+[`generate-root`](/vault/api-docs/system/generate-root)
+functionality.
+
+When using an HSM, because the HSM automatically unseals the barrier but
+recovery operations should still have human oversight, Vault instead uses two
+sets of keys: unseal keys and recovery keys. 
+
+-> **Recovery keys:** Refer to the
+ [Seal/Unseal](/vault/docs/concepts/seal#recovery-key) documentation to learn more
+ about recovery keys.
+
+## Unseal (Root) key
+
+Vault usually generates a root key and splits it using [Shamir's Secret
+Sharing](https://en.wikipedia.org/wiki/Shamir%27s_Secret_Sharing) to prevent a
+single operator from being able to modify and unseal Vault (see more
+information about Vault's security model
+[here](/vault/docs/internals/security)).
+
+When using an HSM, Vault instead stores the root key, encrypted by the HSM,
+into its internal storage. As a result, during an `init` command, the number of
+key shares, threshold, and stored shares are required to be set to `1`, meaning
+to not split the root key, so that the single key share is itself the root
+key. (Vault does not do this automatically as it generally prefers to error
+rather than change parameters set by an operator.)
+
+Both rekeying the root key and rotation of the underlying data
+encryption key are supported when using an HSM.
+
+## Performance and availability
+
+When an HSM is used for generating various Critical Security Parameters (CSPs) or for entropy augmentation,
+interaction with the HSM becomes part of the request processing for
+functionality using it. This means the HSM must be online and available for
+those requests to succeed. Additionally, some operations are performed much
+more frequently than key generation where interaction with the HSM may
+impact performance. A mount with seal wrapping enabled will interact with
+the HSM on every write for example. Vault tokens (non-batch) generated with
+entropy augmentation enabled will interact with the HSM when created.

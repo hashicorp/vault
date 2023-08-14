@@ -1,0 +1,4 @@
+```release-note: bug
+transform (enterprise): Fix an issue with malformed transform configuration
+storage when upgrading from 1.5 to 1.6.  See Upgrade Notes for 1.6.x.
+```

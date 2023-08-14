@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package api
 
 import (
@@ -33,7 +36,7 @@ func TestSSH_CreateTLSClient(t *testing.T) {
 
 func TestSSH_CreateTLSClient_tlsServerName(t *testing.T) {
 	// Ensure that the HTTP client is associated with the configured TLS server name.
-	var tlsServerName = "tls.server.name"
+	tlsServerName := "tls.server.name"
 
 	config, err := ParseSSHHelperConfig(fmt.Sprintf(`
 vault_addr = "1.2.3.4"
@@ -93,13 +96,12 @@ nope = "bad"
 }
 
 func TestParseSSHHelperConfig_tlsServerName(t *testing.T) {
-	var tlsServerName = "tls.server.name"
+	tlsServerName := "tls.server.name"
 
 	config, err := ParseSSHHelperConfig(fmt.Sprintf(`
 vault_addr = "1.2.3.4"
 tls_server_name = "%s"
 `, tlsServerName))
-
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import { belongsTo } from '@ember-data/model';
 import { assert, debug } from '@ember/debug';
 import { typeOf } from '@ember/utils';
@@ -9,9 +14,9 @@ import { isArray } from '@ember/array';
  *
  * @param modelClass = An Ember Data model class
  * @param capabilities - an Object whose keys will added to the model class as related 'capabilities' models
- * and whose values should be functions that return the id of the related capabilites model
+ * and whose values should be functions that return the id of the related capabilities model
  *
- * definition of capabilities be done shorthand with the apiPath tagged template funtion
+ * definition of capabilities be done shorthand with the apiPath tagged template function
  *
  *
  * @usage
@@ -27,8 +32,8 @@ import { isArray } from '@ember/array';
  *
  */
 export default function attachCapabilities(modelClass, capabilities) {
-  let capabilityKeys = Object.keys(capabilities);
-  let newRelationships = capabilityKeys.reduce((ret, key) => {
+  const capabilityKeys = Object.keys(capabilities);
+  const newRelationships = capabilityKeys.reduce((ret, key) => {
     ret[key] = belongsTo('capabilities');
     return ret;
   }, {});
@@ -46,19 +51,19 @@ export default function attachCapabilities(modelClass, capabilities) {
         data = jsonAPIDoc;
       }
       if (isArray(data)) {
-        let newData = data.map(this.relatedCapabilities);
+        const newData = data.map(this.relatedCapabilities);
         return {
           data: newData,
           included,
         };
       }
-      let context = {
+      const context = {
         id: data.id,
         ...data.attributes,
       };
-      for (let newCapability of capabilityKeys) {
-        let templateFn = capabilities[newCapability];
-        let type = typeOf(templateFn);
+      for (const newCapability of capabilityKeys) {
+        const templateFn = capabilities[newCapability];
+        const type = typeOf(templateFn);
         assert(`expected value of ${newCapability} to be a function but found ${type}.`, type === 'function');
         data.relationships[newCapability] = {
           data: {

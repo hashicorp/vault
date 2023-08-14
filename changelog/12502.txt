@@ -1,0 +1,3 @@
+```release-note:feature
+core: adds custom_metadata field for aliases
+```

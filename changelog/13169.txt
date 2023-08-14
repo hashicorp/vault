@@ -1,0 +1,3 @@
+```release-note:bug
+identity: Fix regression preventing startup when aliases were created pre-1.9.
+```

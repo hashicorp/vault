@@ -1,0 +1,9 @@
+```release-note:improvement
+secrets/database/mongodb: Add ability to customize `SocketTimeout`, `ConnectTimeout`, and `ServerSelectionTimeout`
+```
+```release-note:improvement
+secrets/database/mongodb: Increased throughput by allowing for multiple request threads to simultaneously update users in MongoDB
+```
+```release-note:bug
+secrets/database: Fixed minor race condition when rotate-root is called
+```

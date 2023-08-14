@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package command
 
 import (
@@ -8,8 +11,10 @@ import (
 	"github.com/posener/complete"
 )
 
-var _ cli.Command = (*PolicyDeleteCommand)(nil)
-var _ cli.CommandAutocomplete = (*PolicyDeleteCommand)(nil)
+var (
+	_ cli.Command             = (*PolicyDeleteCommand)(nil)
+	_ cli.CommandAutocomplete = (*PolicyDeleteCommand)(nil)
+)
 
 type PolicyDeleteCommand struct {
 	*BaseCommand

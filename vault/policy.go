@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package vault
 
 import (
@@ -6,15 +9,15 @@ import (
 	"strings"
 	"time"
 
-	"github.com/hashicorp/errwrap"
 	multierror "github.com/hashicorp/go-multierror"
+	"github.com/hashicorp/go-secure-stdlib/parseutil"
 	"github.com/hashicorp/hcl"
 	"github.com/hashicorp/hcl/hcl/ast"
 	"github.com/hashicorp/vault/helper/identity"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/sdk/helper/hclutil"
 	"github.com/hashicorp/vault/sdk/helper/identitytpl"
-	"github.com/hashicorp/vault/sdk/helper/parseutil"
+	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/mitchellh/copystructure"
 )
 
@@ -27,6 +30,7 @@ const (
 	ListCapability   = "list"
 	SudoCapability   = "sudo"
 	RootCapability   = "root"
+	PatchCapability  = "patch"
 
 	// Backwards compatibility
 	OldDenyPathPolicy  = "deny"
@@ -43,6 +47,14 @@ const (
 	DeleteCapabilityInt
 	ListCapabilityInt
 	SudoCapabilityInt
+	PatchCapabilityInt
+)
+
+// Error constants for testing
+const (
+	// ControlledCapabilityPolicySubsetError is thrown when a control group's controlled capabilities
+	// are not a subset of the policy's capabilities.
+	ControlledCapabilityPolicySubsetError = "control group factor capabilities must be a subset of the policy's capabilities"
 )
 
 type PolicyType uint32
@@ -69,17 +81,16 @@ func (p PolicyType) String() string {
 	return ""
 }
 
-var (
-	cap2Int = map[string]uint32{
-		DenyCapability:   DenyCapabilityInt,
-		CreateCapability: CreateCapabilityInt,
-		ReadCapability:   ReadCapabilityInt,
-		UpdateCapability: UpdateCapabilityInt,
-		DeleteCapability: DeleteCapabilityInt,
-		ListCapability:   ListCapabilityInt,
-		SudoCapability:   SudoCapabilityInt,
-	}
-)
+var cap2Int = map[string]uint32{
+	DenyCapability:   DenyCapabilityInt,
+	CreateCapability: CreateCapabilityInt,
+	ReadCapability:   ReadCapabilityInt,
+	UpdateCapability: UpdateCapabilityInt,
+	DeleteCapability: DeleteCapabilityInt,
+	ListCapability:   ListCapabilityInt,
+	SudoCapability:   SudoCapabilityInt,
+	PatchCapability:  PatchCapabilityInt,
+}
 
 type egpPath struct {
 	Path string `json:"path"`
@@ -141,9 +152,21 @@ type ControlGroup struct {
 	Factors []*ControlGroupFactor
 }
 
+func (c *ControlGroup) Clone() (*ControlGroup, error) {
+	clonedControlGroup, err := copystructure.Copy(c)
+	if err != nil {
+		return nil, err
+	}
+
+	cg := clonedControlGroup.(*ControlGroup)
+
+	return cg, nil
+}
+
 type ControlGroupFactor struct {
-	Name     string
-	Identity *IdentityFactor `hcl:"identity"`
+	Name                   string
+	Identity               *IdentityFactor `hcl:"identity"`
+	ControlledCapabilities []string        `hcl:"controlled_capabilities"`
 }
 
 type IdentityFactor struct {
@@ -153,14 +176,15 @@ type IdentityFactor struct {
 }
 
 type ACLPermissions struct {
-	CapabilitiesBitmap uint32
-	MinWrappingTTL     time.Duration
-	MaxWrappingTTL     time.Duration
-	AllowedParameters  map[string][]interface{}
-	DeniedParameters   map[string][]interface{}
-	RequiredParameters []string
-	MFAMethods         []string
-	ControlGroup       *ControlGroup
+	CapabilitiesBitmap  uint32
+	MinWrappingTTL      time.Duration
+	MaxWrappingTTL      time.Duration
+	AllowedParameters   map[string][]interface{}
+	DeniedParameters    map[string][]interface{}
+	RequiredParameters  []string
+	MFAMethods          []string
+	ControlGroup        *ControlGroup
+	GrantingPoliciesMap map[uint32][]logical.PolicyInfo
 }
 
 func (p *ACLPermissions) Clone() (*ACLPermissions, error) {
@@ -217,7 +241,42 @@ func (p *ACLPermissions) Clone() (*ACLPermissions, error) {
 		ret.ControlGroup = clonedControlGroup.(*ControlGroup)
 	}
 
+	switch {
+	case p.GrantingPoliciesMap == nil:
+	case len(p.GrantingPoliciesMap) == 0:
+		ret.GrantingPoliciesMap = make(map[uint32][]logical.PolicyInfo)
+	default:
+		clonedGrantingPoliciesMap, err := copystructure.Copy(p.GrantingPoliciesMap)
+		if err != nil {
+			return nil, err
+		}
+		ret.GrantingPoliciesMap = clonedGrantingPoliciesMap.(map[uint32][]logical.PolicyInfo)
+	}
+
 	return ret, nil
+}
+
+func addGrantingPoliciesToMap(m map[uint32][]logical.PolicyInfo, policy *Policy, capabilitiesBitmap uint32) map[uint32][]logical.PolicyInfo {
+	if m == nil {
+		m = make(map[uint32][]logical.PolicyInfo)
+	}
+
+	// For all possible policies, check if the provided capabilities include
+	// them
+	for _, capability := range cap2Int {
+		if capabilitiesBitmap&capability == 0 {
+			continue
+		}
+
+		m[capability] = append(m[capability], logical.PolicyInfo{
+			Name:          policy.Name,
+			NamespaceId:   policy.namespace.ID,
+			NamespacePath: policy.namespace.Path,
+			Type:          "acl",
+		})
+	}
+
+	return m
 }
 
 // ParseACLPolicy is used to parse the specified ACL rules into an
@@ -235,7 +294,7 @@ func parseACLPolicyWithTemplating(ns *namespace.Namespace, rules string, perform
 	// Parse the rules
 	root, err := hcl.Parse(rules)
 	if err != nil {
-		return nil, errwrap.Wrapf("failed to parse policy: {{err}}", err)
+		return nil, fmt.Errorf("failed to parse policy: %w", err)
 	}
 
 	// Top-level item should be the object list
@@ -250,7 +309,7 @@ func parseACLPolicyWithTemplating(ns *namespace.Namespace, rules string, perform
 		"path",
 	}
 	if err := hclutil.CheckHCLKeys(list, valid); err != nil {
-		return nil, errwrap.Wrapf("failed to parse policy: {{err}}", err)
+		return nil, fmt.Errorf("failed to parse policy: %w", err)
 	}
 
 	// Create the initial policy and store the raw text of the rules
@@ -260,12 +319,12 @@ func parseACLPolicyWithTemplating(ns *namespace.Namespace, rules string, perform
 		namespace: ns,
 	}
 	if err := hcl.DecodeObject(&p, list); err != nil {
-		return nil, errwrap.Wrapf("failed to parse policy: {{err}}", err)
+		return nil, fmt.Errorf("failed to parse policy: %w", err)
 	}
 
 	if o := list.Filter("path"); len(o.Items) > 0 {
 		if err := parsePaths(&p, o, performTemplating, entity, groups); err != nil {
-			return nil, errwrap.Wrapf("failed to parse policy: {{err}}", err)
+			return nil, fmt.Errorf("failed to parse policy: %w", err)
 		}
 	}
 
@@ -300,7 +359,7 @@ func parsePaths(result *Policy, list *ast.ObjectList, performTemplating bool, en
 				String:            key,
 			})
 			if err != nil {
-				return errwrap.Wrapf("failed to validate policy templating: {{err}}", err)
+				return fmt.Errorf("failed to validate policy templating: %w", err)
 			}
 			if hasTemplating {
 				result.Templated = true
@@ -385,7 +444,7 @@ func parsePaths(result *Policy, list *ast.ObjectList, performTemplating bool, en
 				pc.Capabilities = []string{DenyCapability}
 				pc.Permissions.CapabilitiesBitmap = DenyCapabilityInt
 				goto PathFinished
-			case CreateCapability, ReadCapability, UpdateCapability, DeleteCapability, ListCapability, SudoCapability:
+			case CreateCapability, ReadCapability, UpdateCapability, DeleteCapability, ListCapability, SudoCapability, PatchCapability:
 				pc.Permissions.CapabilitiesBitmap |= cap2Int[cap]
 			default:
 				return fmt.Errorf("path %q: invalid capability %q", key, cap)
@@ -394,47 +453,44 @@ func parsePaths(result *Policy, list *ast.ObjectList, performTemplating bool, en
 
 		if pc.AllowedParametersHCL != nil {
 			pc.Permissions.AllowedParameters = make(map[string][]interface{}, len(pc.AllowedParametersHCL))
-			for key, val := range pc.AllowedParametersHCL {
-				pc.Permissions.AllowedParameters[strings.ToLower(key)] = val
+			for k, v := range pc.AllowedParametersHCL {
+				pc.Permissions.AllowedParameters[strings.ToLower(k)] = v
 			}
 		}
 		if pc.DeniedParametersHCL != nil {
 			pc.Permissions.DeniedParameters = make(map[string][]interface{}, len(pc.DeniedParametersHCL))
 
-			for key, val := range pc.DeniedParametersHCL {
-				pc.Permissions.DeniedParameters[strings.ToLower(key)] = val
+			for k, v := range pc.DeniedParametersHCL {
+				pc.Permissions.DeniedParameters[strings.ToLower(k)] = v
 			}
 		}
 		if pc.MinWrappingTTLHCL != nil {
 			dur, err := parseutil.ParseDurationSecond(pc.MinWrappingTTLHCL)
 			if err != nil {
-				return errwrap.Wrapf("error parsing min_wrapping_ttl: {{err}}", err)
+				return fmt.Errorf("error parsing min_wrapping_ttl: %w", err)
 			}
 			pc.Permissions.MinWrappingTTL = dur
 		}
 		if pc.MaxWrappingTTLHCL != nil {
 			dur, err := parseutil.ParseDurationSecond(pc.MaxWrappingTTLHCL)
 			if err != nil {
-				return errwrap.Wrapf("error parsing max_wrapping_ttl: {{err}}", err)
+				return fmt.Errorf("error parsing max_wrapping_ttl: %w", err)
 			}
 			pc.Permissions.MaxWrappingTTL = dur
 		}
 		if pc.MFAMethodsHCL != nil {
 			pc.Permissions.MFAMethods = make([]string, len(pc.MFAMethodsHCL))
-			for idx, item := range pc.MFAMethodsHCL {
-				pc.Permissions.MFAMethods[idx] = item
-			}
+			copy(pc.Permissions.MFAMethods, pc.MFAMethodsHCL)
 		}
 		if pc.ControlGroupHCL != nil {
 			pc.Permissions.ControlGroup = new(ControlGroup)
 			if pc.ControlGroupHCL.TTL != nil {
 				dur, err := parseutil.ParseDurationSecond(pc.ControlGroupHCL.TTL)
 				if err != nil {
-					return errwrap.Wrapf("error parsing control group max ttl: {{err}}", err)
+					return fmt.Errorf("error parsing control group max ttl: %w", err)
 				}
 				pc.Permissions.ControlGroup.TTL = dur
 			}
-
 			var factors []*ControlGroupFactor
 			if pc.ControlGroupHCL.Factors != nil {
 				for key, factor := range pc.ControlGroupHCL.Factors {
@@ -449,9 +505,27 @@ func parsePaths(result *Policy, list *ast.ObjectList, performTemplating bool, en
 						return errors.New("must provide more than one identity group and approvals > 0")
 					}
 
+					// Ensure that configured ControlledCapabilities for factor are a subset of the
+					// Capabilities of the policy.
+					if len(factor.ControlledCapabilities) > 0 {
+						var found bool
+						for _, controlledCapability := range factor.ControlledCapabilities {
+							found = false
+							for _, policyCap := range pc.Capabilities {
+								if controlledCapability == policyCap {
+									found = true
+								}
+							}
+							if !found {
+								return errors.New(ControlledCapabilityPolicySubsetError)
+							}
+						}
+					}
+
 					factors = append(factors, &ControlGroupFactor{
-						Name:     key,
-						Identity: factor.Identity,
+						Name:                   key,
+						Identity:               factor.Identity,
+						ControlledCapabilities: factor.ControlledCapabilities,
 					})
 				}
 			}

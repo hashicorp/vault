@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import { Base } from '../create';
 import { clickable, visitable, create, fillable } from 'ember-cli-page-object';
 
@@ -14,10 +19,6 @@ export default create({
 
   async createOTPRole(name) {
     await this.name(name);
-    await this.toggleMore()
-      .keyType('otp')
-      .defaultUser('admin')
-      .CIDR('0.0.0.0/0')
-      .save();
+    await this.toggleMore().keyType('otp').defaultUser('admin').CIDR('0.0.0.0/0').save();
   },
 });

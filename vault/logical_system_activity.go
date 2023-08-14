@@ -1,12 +1,18 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package vault
 
 import (
 	"context"
+	"fmt"
 	"net/http"
+	"os"
 	"path"
 	"strings"
 	"time"
 
+	"github.com/hashicorp/go-secure-stdlib/parseutil"
 	"github.com/hashicorp/vault/helper/timeutil"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/logical"
@@ -16,14 +22,30 @@ import (
 func (b *SystemBackend) activityQueryPath() *framework.Path {
 	return &framework.Path{
 		Pattern: "internal/counters/activity$",
+
+		DisplayAttrs: &framework.DisplayAttributes{
+			OperationPrefix: "internal-client-activity",
+			OperationVerb:   "report",
+			OperationSuffix: "counts",
+		},
+
 		Fields: map[string]*framework.FieldSchema{
-			"start_time": &framework.FieldSchema{
+			"current_billing_period": {
+				Type:        framework.TypeBool,
+				Description: "Query utilization for configured billing period",
+			},
+			"start_time": {
 				Type:        framework.TypeTime,
 				Description: "Start of query interval",
 			},
-			"end_time": &framework.FieldSchema{
+			"end_time": {
 				Type:        framework.TypeTime,
 				Description: "End of query interval",
+			},
+			"limit_namespaces": {
+				Type:        framework.TypeInt,
+				Default:     0,
+				Description: "Limit query output by namespaces",
 			},
 		},
 		HelpSynopsis:    strings.TrimSpace(sysHelp["activity-query"][0]),
@@ -38,24 +60,59 @@ func (b *SystemBackend) activityQueryPath() *framework.Path {
 	}
 }
 
+// monthlyActivityCountPath is available in every namespace
+func (b *SystemBackend) monthlyActivityCountPath() *framework.Path {
+	return &framework.Path{
+		Pattern: "internal/counters/activity/monthly$",
+
+		DisplayAttrs: &framework.DisplayAttributes{
+			OperationPrefix: "internal-client-activity",
+			OperationVerb:   "report",
+			OperationSuffix: "counts-this-month",
+		},
+
+		HelpSynopsis:    strings.TrimSpace(sysHelp["activity-monthly"][0]),
+		HelpDescription: strings.TrimSpace(sysHelp["activity-monthly"][1]),
+		Operations: map[logical.Operation]framework.OperationHandler{
+			logical.ReadOperation: &framework.PathOperation{
+				Callback: b.handleMonthlyActivityCount,
+				Summary:  "Report the number of clients for this month, for this namespace and all child namespaces.",
+			},
+		},
+	}
+}
+
+func (b *SystemBackend) activityPaths() []*framework.Path {
+	return []*framework.Path{
+		b.monthlyActivityCountPath(),
+		b.activityQueryPath(),
+	}
+}
+
 // rootActivityPaths are available only in the root namespace
 func (b *SystemBackend) rootActivityPaths() []*framework.Path {
-	return []*framework.Path{
+	paths := []*framework.Path{
 		b.activityQueryPath(),
+		b.monthlyActivityCountPath(),
 		{
 			Pattern: "internal/counters/config$",
+
+			DisplayAttrs: &framework.DisplayAttributes{
+				OperationPrefix: "internal-client-activity",
+			},
+
 			Fields: map[string]*framework.FieldSchema{
-				"default_report_months": &framework.FieldSchema{
+				"default_report_months": {
 					Type:        framework.TypeInt,
 					Default:     12,
 					Description: "Number of months to report if no start date specified.",
 				},
-				"retention_months": &framework.FieldSchema{
+				"retention_months": {
 					Type:        framework.TypeInt,
 					Default:     24,
 					Description: "Number of months of client data to retain. Setting to 0 will clear all existing data.",
 				},
-				"enabled": &framework.FieldSchema{
+				"enabled": {
 					Type:        framework.TypeString,
 					Default:     "default",
 					Description: "Enable or disable collection of client count: enable, disable, or default.",
@@ -66,23 +123,63 @@ func (b *SystemBackend) rootActivityPaths() []*framework.Path {
 			Operations: map[logical.Operation]framework.OperationHandler{
 				logical.ReadOperation: &framework.PathOperation{
 					Callback: b.handleActivityConfigRead,
-					Summary:  "Read the client count tracking configuration.",
+					DisplayAttrs: &framework.DisplayAttributes{
+						OperationVerb:   "read",
+						OperationSuffix: "configuration",
+					},
+					Summary: "Read the client count tracking configuration.",
 				},
 				logical.UpdateOperation: &framework.PathOperation{
 					Callback: b.handleActivityConfigUpdate,
-					Summary:  "Enable or disable collection of client count, set retention period, or set default reporting period.",
+					DisplayAttrs: &framework.DisplayAttributes{
+						OperationVerb: "configure",
+					},
+					Summary: "Enable or disable collection of client count, set retention period, or set default reporting period.",
+				},
+			},
+		},
+		{
+			Pattern: "internal/counters/activity/export$",
+
+			DisplayAttrs: &framework.DisplayAttributes{
+				OperationPrefix: "internal-client-activity",
+				OperationVerb:   "export",
+			},
+
+			Fields: map[string]*framework.FieldSchema{
+				"start_time": {
+					Type:        framework.TypeTime,
+					Description: "Start of query interval",
+				},
+				"end_time": {
+					Type:        framework.TypeTime,
+					Description: "End of query interval",
+				},
+				"format": {
+					Type:        framework.TypeString,
+					Description: "Format of the file. Either a CSV or a JSON file with an object per line.",
+					Default:     "json",
+				},
+			},
+
+			HelpSynopsis:    strings.TrimSpace(sysHelp["activity-export"][0]),
+			HelpDescription: strings.TrimSpace(sysHelp["activity-export"][1]),
+
+			Operations: map[logical.Operation]framework.OperationHandler{
+				logical.ReadOperation: &framework.PathOperation{
+					Callback: b.handleClientExport,
+					Summary:  "Report the client count metrics, for this namespace and all child namespaces.",
 				},
 			},
 		},
 	}
+	if writePath := b.activityWritePath(); writePath != nil {
+		paths = append(paths, writePath)
+	}
+	return paths
 }
 
-func (b *SystemBackend) handleClientMetricQuery(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-	a := b.Core.activityLog
-	if a == nil {
-		return logical.ErrorResponse("no activity log present"), nil
-	}
-
+func parseStartEndTimes(a *ActivityLog, d *framework.FieldData) (time.Time, time.Time, error) {
 	startTime := d.Get("start_time").(time.Time)
 	endTime := d.Get("end_time").(time.Time)
 
@@ -93,7 +190,7 @@ func (b *SystemBackend) handleClientMetricQuery(ctx context.Context, req *logica
 	// Also convert any user inputs to UTC to avoid
 	// problems later.
 	if endTime.IsZero() {
-		endTime = timeutil.EndOfMonth(time.Now().UTC().AddDate(0, -1, 0))
+		endTime = timeutil.EndOfMonth(timeutil.StartOfPreviousMonth(time.Now().UTC()))
 	} else {
 		endTime = endTime.UTC()
 	}
@@ -103,10 +200,72 @@ func (b *SystemBackend) handleClientMetricQuery(ctx context.Context, req *logica
 		startTime = startTime.UTC()
 	}
 	if startTime.After(endTime) {
-		return logical.ErrorResponse("start_time is later than end_time"), nil
+		return time.Time{}, time.Time{}, fmt.Errorf("start_time is later than end_time")
 	}
 
-	results, err := a.handleQuery(ctx, startTime, endTime)
+	return startTime, endTime, nil
+}
+
+// This endpoint is not used by the UI. The UI's "export" feature is entirely client-side.
+func (b *SystemBackend) handleClientExport(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	b.Core.activityLogLock.RLock()
+	a := b.Core.activityLog
+	b.Core.activityLogLock.RUnlock()
+	if a == nil {
+		return logical.ErrorResponse("no activity log present"), nil
+	}
+
+	startTime, endTime, err := parseStartEndTimes(a, d)
+	if err != nil {
+		return logical.ErrorResponse(err.Error()), nil
+	}
+
+	// This is to avoid the default 90s context timeout.
+	timeout := 10 * time.Minute
+	if durationRaw := os.Getenv("VAULT_ACTIVITY_EXPORT_DURATION"); durationRaw != "" {
+		d, err := parseutil.ParseDurationSecond(durationRaw)
+		if err == nil {
+			timeout = d
+		}
+	}
+
+	runCtx, cancelFunc := context.WithTimeout(b.Core.activeContext, timeout)
+	defer cancelFunc()
+
+	err = a.writeExport(runCtx, req.ResponseWriter, d.Get("format").(string), startTime, endTime)
+	if err != nil {
+		return nil, err
+	}
+
+	return nil, nil
+}
+
+func (b *SystemBackend) handleClientMetricQuery(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	var startTime, endTime time.Time
+	b.Core.activityLogLock.RLock()
+	a := b.Core.activityLog
+	b.Core.activityLogLock.RUnlock()
+	if a == nil {
+		return logical.ErrorResponse("no activity log present"), nil
+	}
+
+	if d.Get("current_billing_period").(bool) {
+		startTime = b.Core.BillingStart()
+		endTime = time.Now().UTC()
+	} else {
+		var err error
+		startTime, endTime, err = parseStartEndTimes(a, d)
+		if err != nil {
+			return logical.ErrorResponse(err.Error()), nil
+		}
+	}
+
+	var limitNamespaces int
+	if limitNamespacesRaw, ok := d.GetOk("limit_namespaces"); ok {
+		limitNamespaces = limitNamespacesRaw.(int)
+	}
+
+	results, err := a.handleQuery(ctx, startTime, endTime, limitNamespaces)
 	if err != nil {
 		return nil, err
 	}
@@ -120,8 +279,31 @@ func (b *SystemBackend) handleClientMetricQuery(ctx context.Context, req *logica
 	}, nil
 }
 
-func (b *SystemBackend) handleActivityConfigRead(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+func (b *SystemBackend) handleMonthlyActivityCount(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	b.Core.activityLogLock.RLock()
 	a := b.Core.activityLog
+	b.Core.activityLogLock.RUnlock()
+	if a == nil {
+		return logical.ErrorResponse("no activity log present"), nil
+	}
+
+	results, err := a.partialMonthClientCount(ctx)
+	if err != nil {
+		return nil, err
+	}
+	if results == nil {
+		return logical.RespondWithStatusCode(nil, req, http.StatusNoContent)
+	}
+
+	return &logical.Response{
+		Data: results,
+	}, nil
+}
+
+func (b *SystemBackend) handleActivityConfigRead(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	b.Core.activityLogLock.RLock()
+	a := b.Core.activityLog
+	b.Core.activityLogLock.RUnlock()
 	if a == nil {
 		return logical.ErrorResponse("no activity log present"), nil
 	}
@@ -142,19 +324,26 @@ func (b *SystemBackend) handleActivityConfigRead(ctx context.Context, req *logic
 
 	return &logical.Response{
 		Data: map[string]interface{}{
-			"default_report_months": config.DefaultReportMonths,
-			"retention_months":      config.RetentionMonths,
-			"enabled":               config.Enabled,
-			"queries_available":     qa,
+			"default_report_months":    config.DefaultReportMonths,
+			"retention_months":         config.RetentionMonths,
+			"enabled":                  config.Enabled,
+			"queries_available":        qa,
+			"reporting_enabled":        b.Core.CensusLicensingEnabled(),
+			"billing_start_timestamp":  b.Core.BillingStart(),
+			"minimum_retention_months": a.configOverrides.MinimumRetentionMonths,
 		},
 	}, nil
 }
 
 func (b *SystemBackend) handleActivityConfigUpdate(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	b.Core.activityLogLock.RLock()
 	a := b.Core.activityLog
+	b.Core.activityLogLock.RUnlock()
 	if a == nil {
 		return logical.ErrorResponse("no activity log present"), nil
 	}
+
+	warnings := make([]string, 0)
 
 	config, err := a.loadConfigOrDefault(ctx)
 	if err != nil {
@@ -181,20 +370,43 @@ func (b *SystemBackend) handleActivityConfigUpdate(ctx context.Context, req *log
 		if config.RetentionMonths < 0 {
 			return logical.ErrorResponse("retention_months must be greater than or equal to 0"), logical.ErrInvalidRequest
 		}
+
+		if config.RetentionMonths > 36 {
+			config.RetentionMonths = 36
+			warnings = append(warnings, "retention_months cannot be greater than 36; capped to 36.")
+		}
 	}
 
 	{
 		// Parse the enabled setting
 		if enabledRaw, ok := d.GetOk("enabled"); ok {
-			config.Enabled = enabledRaw.(string)
-		}
-		switch config.Enabled {
-		case "default", "enable", "disable":
-		default:
-			return logical.ErrorResponse("enabled must be one of \"default\", \"enable\", \"disable\""), logical.ErrInvalidRequest
+			enabledStr := enabledRaw.(string)
+
+			// If we switch from enabled to disabled, then we return a warning to the client.
+			// We have to keep the default state of activity log enabled in mind
+			if config.Enabled == "enable" && enabledStr == "disable" ||
+				!activityLogEnabledDefault && config.Enabled == "enable" && enabledStr == "default" ||
+				activityLogEnabledDefault && config.Enabled == "default" && enabledStr == "disable" {
+
+				// if census is enabled, the activity log cannot be disabled
+				if a.core.CensusLicensingEnabled() {
+					return logical.ErrorResponse("cannot disable the activity log while Reporting is enabled"), logical.ErrInvalidRequest
+				}
+				warnings = append(warnings, "the current monthly segment will be deleted because the activity log was disabled")
+			}
+
+			switch enabledStr {
+			case "default", "enable", "disable":
+				config.Enabled = enabledStr
+			default:
+				return logical.ErrorResponse("enabled must be one of \"default\", \"enable\", \"disable\""), logical.ErrInvalidRequest
+			}
 		}
 	}
 
+	a.core.activityLogLock.RLock()
+	minimumRetentionMonths := a.configOverrides.MinimumRetentionMonths
+	a.core.activityLogLock.RUnlock()
 	enabled := config.Enabled == "enable"
 	if !enabled && config.Enabled == "default" {
 		enabled = activityLogEnabledDefault
@@ -202,6 +414,10 @@ func (b *SystemBackend) handleActivityConfigUpdate(ctx context.Context, req *log
 
 	if enabled && config.RetentionMonths == 0 {
 		return logical.ErrorResponse("retention_months cannot be 0 while enabled"), logical.ErrInvalidRequest
+	}
+
+	if a.core.CensusLicensingEnabled() && config.RetentionMonths < minimumRetentionMonths {
+		return logical.ErrorResponse("retention_months must be at least %d while Reporting is enabled", minimumRetentionMonths), logical.ErrInvalidRequest
 	}
 
 	// Store the config
@@ -215,6 +431,12 @@ func (b *SystemBackend) handleActivityConfigUpdate(ctx context.Context, req *log
 
 	// Set the new config on the activity log
 	a.SetConfig(ctx, config)
+
+	if len(warnings) > 0 {
+		return &logical.Response{
+			Warnings: warnings,
+		}, nil
+	}
 
 	return nil, nil
 }

@@ -1,0 +1,3 @@
+```release-note:bug
+ui: Fix bug where the UI does not recognize version 2 KV until refresh, and fix [object Object] error message
+```

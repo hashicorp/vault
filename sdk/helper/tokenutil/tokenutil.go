@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package tokenutil
 
 import (
@@ -5,11 +8,11 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/hashicorp/go-secure-stdlib/parseutil"
+	"github.com/hashicorp/go-secure-stdlib/strutil"
 	sockaddr "github.com/hashicorp/go-sockaddr"
 	"github.com/hashicorp/vault/sdk/framework"
-	"github.com/hashicorp/vault/sdk/helper/parseutil"
 	"github.com/hashicorp/vault/sdk/helper/policyutil"
-	"github.com/hashicorp/vault/sdk/helper/strutil"
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
@@ -71,16 +74,17 @@ func AddTokenFieldsWithAllowList(m map[string]*framework.FieldSchema, allowed []
 // TokenFields provides a set of field schemas for the parameters
 func TokenFields() map[string]*framework.FieldSchema {
 	return map[string]*framework.FieldSchema{
-		"token_bound_cidrs": &framework.FieldSchema{
+		"token_bound_cidrs": {
 			Type:        framework.TypeCommaStringSlice,
 			Description: `Comma separated string or JSON list of CIDR blocks. If set, specifies the blocks of IP addresses which are allowed to use the generated token.`,
 			DisplayAttrs: &framework.DisplayAttributes{
-				Name:  "Generated Token's Bound CIDRs",
-				Group: "Tokens",
+				Name:        "Generated Token's Bound CIDRs",
+				Group:       "Tokens",
+				Description: "A list of CIDR blocks. If set, specifies the blocks of IP addresses which are allowed to use the generated token.",
 			},
 		},
 
-		"token_explicit_max_ttl": &framework.FieldSchema{
+		"token_explicit_max_ttl": {
 			Type:        framework.TypeDurationSecond,
 			Description: tokenExplicitMaxTTLHelp,
 			DisplayAttrs: &framework.DisplayAttributes{
@@ -89,7 +93,7 @@ func TokenFields() map[string]*framework.FieldSchema {
 			},
 		},
 
-		"token_max_ttl": &framework.FieldSchema{
+		"token_max_ttl": {
 			Type:        framework.TypeDurationSecond,
 			Description: "The maximum lifetime of the generated token",
 			DisplayAttrs: &framework.DisplayAttributes{
@@ -98,7 +102,7 @@ func TokenFields() map[string]*framework.FieldSchema {
 			},
 		},
 
-		"token_no_default_policy": &framework.FieldSchema{
+		"token_no_default_policy": {
 			Type:        framework.TypeBool,
 			Description: "If true, the 'default' policy will not automatically be added to generated tokens",
 			DisplayAttrs: &framework.DisplayAttributes{
@@ -107,7 +111,7 @@ func TokenFields() map[string]*framework.FieldSchema {
 			},
 		},
 
-		"token_period": &framework.FieldSchema{
+		"token_period": {
 			Type:        framework.TypeDurationSecond,
 			Description: tokenPeriodHelp,
 			DisplayAttrs: &framework.DisplayAttributes{
@@ -116,16 +120,17 @@ func TokenFields() map[string]*framework.FieldSchema {
 			},
 		},
 
-		"token_policies": &framework.FieldSchema{
+		"token_policies": {
 			Type:        framework.TypeCommaStringSlice,
 			Description: "Comma-separated list of policies",
 			DisplayAttrs: &framework.DisplayAttributes{
-				Name:  "Generated Token's Policies",
-				Group: "Tokens",
+				Name:        "Generated Token's Policies",
+				Group:       "Tokens",
+				Description: "A list of policies that will apply to the generated token for this user.",
 			},
 		},
 
-		"token_type": &framework.FieldSchema{
+		"token_type": {
 			Type:        framework.TypeString,
 			Default:     "default-service",
 			Description: "The type of token to generate, service or batch",
@@ -135,7 +140,7 @@ func TokenFields() map[string]*framework.FieldSchema {
 			},
 		},
 
-		"token_ttl": &framework.FieldSchema{
+		"token_ttl": {
 			Type:        framework.TypeDurationSecond,
 			Description: "The initial ttl of the token to generate",
 			DisplayAttrs: &framework.DisplayAttributes{
@@ -144,7 +149,7 @@ func TokenFields() map[string]*framework.FieldSchema {
 			},
 		},
 
-		"token_num_uses": &framework.FieldSchema{
+		"token_num_uses": {
 			Type:        framework.TypeInt,
 			Description: "The maximum number of times a token may be used, a value of zero means unlimited",
 			DisplayAttrs: &framework.DisplayAttributes{
@@ -207,6 +212,13 @@ func (t *TokenParams) ParseTokenFields(req *logical.Request, d *framework.FieldD
 		t.TokenType = tokenType
 	}
 
+	if tokenNumUses, ok := d.GetOk("token_num_uses"); ok {
+		t.TokenNumUses = tokenNumUses.(int)
+	}
+	if t.TokenNumUses < 0 {
+		return errors.New("'token_num_uses' cannot be negative")
+	}
+
 	if t.TokenType == logical.TokenTypeBatch || t.TokenType == logical.TokenTypeDefaultBatch {
 		if t.TokenPeriod != 0 {
 			return errors.New("'token_type' cannot be 'batch' or 'default_batch' when set to generate periodic tokens")
@@ -224,13 +236,6 @@ func (t *TokenParams) ParseTokenFields(req *logical.Request, d *framework.FieldD
 	}
 	if t.TokenTTL > 0 && t.TokenMaxTTL > 0 && t.TokenTTL > t.TokenMaxTTL {
 		return errors.New("'token_ttl' cannot be greater than 'token_max_ttl'")
-	}
-
-	if tokenNumUses, ok := d.GetOk("token_num_uses"); ok {
-		t.TokenNumUses = tokenNumUses.(int)
-	}
-	if t.TokenNumUses < 0 {
-		return errors.New("'token_num_uses' cannot be negative")
 	}
 
 	return nil

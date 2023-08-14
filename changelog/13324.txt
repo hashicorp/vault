@@ -1,0 +1,3 @@
+```release-note:improvement
+core: Replace "master key" terminology with "root key"
+```

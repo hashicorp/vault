@@ -1,15 +1,20 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package command
 
 import (
 	"strings"
 
-	"github.com/hashicorp/vault/sdk/version"
+	"github.com/hashicorp/vault/version"
 	"github.com/mitchellh/cli"
 	"github.com/posener/complete"
 )
 
-var _ cli.Command = (*VersionCommand)(nil)
-var _ cli.CommandAutocomplete = (*VersionCommand)(nil)
+var (
+	_ cli.Command             = (*VersionCommand)(nil)
+	_ cli.CommandAutocomplete = (*VersionCommand)(nil)
+)
 
 // VersionCommand is a Command implementation prints the version.
 type VersionCommand struct {

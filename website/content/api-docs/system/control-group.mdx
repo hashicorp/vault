@@ -1,0 +1,102 @@
+---
+layout: api
+page_title: /sys/control-group - HTTP API
+description: The '/sys/control-group' endpoint handles the Control Group workflow.
+---
+
+## Authorize control group request
+
+@include 'alerts/enterprise-and-hcp.mdx'
+
+This endpoint authorizes a control group request.
+
+| Method | Path                           |
+| :----- | :----------------------------- |
+| `POST` | `/sys/control-group/authorize` |
+
+### Parameters
+
+- `accessor` `(string: <required>)` – The accessor for the control group wrapping token.
+
+### Sample payload
+
+```json
+{
+  "accessor": "0ad21b78-e9bb-64fa-88b8-1e38db217bde"
+}
+```
+
+### Sample request
+
+```shell-session
+$ curl \
+    --header "X-Vault-Token: ..." \
+    --request POST \
+    --data @payload.json \
+    http://127.0.0.1:8200/v1/sys/control-group/authorize
+```
+
+### Sample response
+
+```json
+{
+  "data": {
+    "approved": false
+  }
+}
+```
+
+## Check control group request status
+
+This endpoint checks the status of a control group request.
+
+| Method | Path                         |
+| :----- | :--------------------------- |
+| `POST` | `/sys/control-group/request` |
+
+### Parameters
+
+- `accessor` `(string: <required>)` – The accessor for the control group wrapping token.
+
+### Sample payload
+
+```json
+{
+  "accessor": "0ad21b78-e9bb-64fa-88b8-1e38db217bde"
+}
+```
+
+### Sample request
+
+```shell-session
+$ curl \
+    --header "X-Vault-Token: ..." \
+    --request POST \
+    --data @payload.json \
+    http://127.0.0.1:8200/v1/sys/control-group/request
+```
+
+### Sample response
+
+```json
+{
+  "data": {
+    "approved": false,
+    "request_path": "secret/foo",
+    "request_entity": {
+      "id": "c8b6e404-de4b-50a4-2917-715ff8beec8e",
+      "name": "Bob"
+    },
+    "authorizations": [
+      {
+        "entity_id": "6544a3ec-d3cd-443b-b87b-4fd2e889e0b7",
+        "entity_name": "Abby Jones"
+      },
+      {
+        "entity_id": "919084a4-417e-42ee-9d78-87fa2843af37",
+        "entity_name": "James Franklin"
+      }
+    ]
+  }
+}
+```

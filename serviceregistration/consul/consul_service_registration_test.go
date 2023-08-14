@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package consul
 
 import (
@@ -6,6 +9,8 @@ import (
 	"sync"
 	"testing"
 	"time"
+
+	"github.com/stretchr/testify/require"
 
 	"github.com/go-test/deep"
 	"github.com/hashicorp/consul/api"
@@ -50,7 +55,7 @@ func testConsulServiceRegistrationConfig(t *testing.T, conf *consulConf) *servic
 // TestConsul_ServiceRegistration tests whether consul ServiceRegistration works
 func TestConsul_ServiceRegistration(t *testing.T) {
 	// Prepare a docker-based consul instance
-	cleanup, config := consul.PrepareTestContainer(t, "")
+	cleanup, config := consul.PrepareTestContainer(t, "", false, true)
 	defer cleanup()
 
 	// Create a consul client
@@ -118,10 +123,11 @@ func TestConsul_ServiceRegistration(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	defer core.Shutdown()
 
 	waitForServices(t, map[string][]string{
-		"consul": []string{},
-		"vault":  []string{"standby"},
+		"consul": {},
+		"vault":  {"standby"},
 	})
 
 	// Initialize and unseal the core
@@ -139,8 +145,8 @@ func TestConsul_ServiceRegistration(t *testing.T) {
 	vault.TestWaitActive(t, core)
 
 	waitForServices(t, map[string][]string{
-		"consul": []string{},
-		"vault":  []string{"active", "initialized"},
+		"consul": {},
+		"vault":  {"active", "initialized"},
 	})
 }
 
@@ -317,7 +323,7 @@ func TestConsul_newConsulServiceRegistration(t *testing.T) {
 		}
 		c.disableRegistration = true
 
-		if c.disableRegistration == false {
+		if !c.disableRegistration {
 			addr := os.Getenv("CONSUL_HTTP_ADDR")
 			if addr == "" {
 				continue
@@ -557,5 +563,46 @@ func TestConsul_serviceID(t *testing.T) {
 		if serviceID != test.expected {
 			t.Fatalf("bad: %v != %v", serviceID, test.expected)
 		}
+	}
+}
+
+// TestConsul_NewServiceRegistration_serviceTags ensures that we do not modify
+// the case of any 'service_tags' set by the config.
+// We do expect tags to be sorted in lexicographic order (A-Z).
+func TestConsul_NewServiceRegistration_serviceTags(t *testing.T) {
+	tests := map[string]struct {
+		Tags         string
+		ExpectedTags []string
+	}{
+		"lowercase": {
+			Tags:         "foo,bar",
+			ExpectedTags: []string{"bar", "foo"},
+		},
+		"uppercase": {
+			Tags:         "FOO,BAR",
+			ExpectedTags: []string{"BAR", "FOO"},
+		},
+		"PascalCase": {
+			Tags:         "FooBar, Feedface",
+			ExpectedTags: []string{"Feedface", "FooBar"},
+		},
+	}
+
+	for name, tc := range tests {
+		name := name
+		tc := tc
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+
+			cfg := map[string]string{"service_tags": tc.Tags}
+			logger := logging.NewVaultLogger(log.Trace)
+			be, err := NewServiceRegistration(cfg, logger, sr.State{})
+			require.NoError(t, err)
+			require.NotNil(t, be)
+			c, ok := be.(*serviceRegistration)
+			require.True(t, ok)
+			require.NotNil(t, c)
+			require.Equal(t, tc.ExpectedTags, c.serviceTags)
+		})
 	}
 }

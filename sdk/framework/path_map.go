@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package framework
 
 import (
@@ -37,7 +40,7 @@ func (p *PathMap) init() {
 
 	if p.Schema == nil {
 		p.Schema = map[string]*FieldSchema{
-			"value": &FieldSchema{
+			"value": {
 				Type:        TypeString,
 				Description: fmt.Sprintf("Value for %s mapping", p.Name),
 			},
@@ -207,7 +210,7 @@ func (p *PathMap) Paths() []*Path {
 	}
 
 	return []*Path{
-		&Path{
+		{
 			Pattern: fmt.Sprintf("%s/%s/?$", p.Prefix, p.Name),
 
 			Callbacks: map[logical.Operation]OperationFunc{
@@ -218,7 +221,7 @@ func (p *PathMap) Paths() []*Path {
 			HelpSynopsis: fmt.Sprintf("Read mappings for %s", p.Name),
 		},
 
-		&Path{
+		{
 			Pattern: fmt.Sprintf(`%s/%s/(?P<key>[-\w]+)`, p.Prefix, p.Name),
 
 			Fields: schema,

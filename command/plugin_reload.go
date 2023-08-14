@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package command
 
 import (
@@ -9,8 +12,10 @@ import (
 	"github.com/posener/complete"
 )
 
-var _ cli.Command = (*PluginReloadCommand)(nil)
-var _ cli.CommandAutocomplete = (*PluginReloadCommand)(nil)
+var (
+	_ cli.Command             = (*PluginReloadCommand)(nil)
+	_ cli.CommandAutocomplete = (*PluginReloadCommand)(nil)
+)
 
 type PluginReloadCommand struct {
 	*BaseCommand

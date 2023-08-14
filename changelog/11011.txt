@@ -1,0 +1,3 @@
+```release-note:bug
+ui: Fix KMIP failing test and a bug that ocurred because the configuration model was not being unloaded.
+```

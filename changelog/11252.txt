@@ -1,0 +1,3 @@
+```release-note:bug
+storage/raft: leader_tls_servername wasn't used unless leader_ca_cert_file and/or mTLS were configured.
+```

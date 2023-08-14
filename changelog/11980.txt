@@ -1,0 +1,3 @@
+```release-note:improvement
+physical/etcd: Upgrade etcd3 client to v3.5.0 and etcd2 to v2.305.0.
+```

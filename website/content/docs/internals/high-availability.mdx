@@ -1,0 +1,58 @@
+---
+layout: docs
+page_title: High Availability
+description: Learn about the high availability design of Vault.
+---
+
+# High availability
+
+Vault can run in a high availability (HA) mode to protect against outages by running multiple Vault servers.
+
+
+# Design overview
+
+The primary design goal for making Vault Highly Available (HA) is to
+minimize downtime without affecting horizontal scalability. Vault is
+bound by the IO limits of the storage backend rather than the compute
+requirements. Being bound by the IO limits simplifies the HA approach and avoids complex
+coordination.
+
+Storage backends, such as Integrated Storage, provide additional coordinative
+functions enabling Vault to run in an HA configuration. Supported
+by the backend, Vault will automatically run in HA mode without further
+configuration.
+
+When running in HA mode, Vault servers have two states they
+can be: **standby** and **active**. For multiple Vault servers sharing a storage
+backend, only a single instance is active at any time. All standby instances are placed in hot standbys.
+
+Only the active server processes all requests; the standby server redirects all requests to an active Vault server.
+
+Meanwhile, if the active server is sealed, fails, or loses network connectivity,
+then one of the standby Vault server becomes the active instance.
+
+Please note that only _unsealed_ Vault servers may act as a standby.
+If a server is in a sealed state, it cannot act as a standby. Servers in a sealed state cannot
+ serve any requests if the active server fails.
+
+# Performance standby nodes (Enterprise)
+
+Performance Standby Nodes service read-only requests from users or applications.
+Read-only requests are requests that do not modify Vault's storage. Vault quickly scales its ability to service these operations,
+providing a near-linear request-per-second scaling for most scenarios and secrets engines like K/V and Transit. Traffic is distributed across performance standby nodes, allowing clients to scale these IOPS horizontally, and control high traffic workloads.
+
+If a request comes into a Performance Standby Node that causes a storage to write
+the request, the request is forwarded to the active server. Read-only requests are serviced locally on the Performance Standby.
+
+Like traditional HA standbys, a Performance Standby Node becomes the active instance when the active node is sealed, fails, or loses
+network connectivity.
+
+# Tutorial 
+
+Refer to the following tutorials to learn more.
+
+- [Vault with Integrated Storage Reference Architecture](/vault/tutorials/day-one-raft/raft-reference-architecture)
+- [Vault HA Cluster with Integrated Storage](/vault/tutorials/raft/raft-storage)
+- [Vault High Availability with Consul](/vault/tutorials/day-one-consul/ha-with-consul)
+- [Performance Standby Nodes](/vault/tutorials/enterprise/performance-standbys)
+

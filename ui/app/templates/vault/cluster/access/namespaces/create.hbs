@@ -1,3 +1,8 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
 {{#if (has-feature "Namespaces")}}
   <PageHeader as |p|>
     <p.top>
@@ -15,7 +20,7 @@
     </p.levelLeft>
   </PageHeader>
   <EditForm
-    @model={{model}}
+    @model={{this.model}}
     @onSave={{action "onSave"}}
     @cancelLinkParams={{array "vault.cluster.access.namespaces.index"}}
   />

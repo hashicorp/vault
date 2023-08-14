@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package aws
 
 import (
@@ -70,7 +73,7 @@ func (b *backend) getGroupPolicies(ctx context.Context, s logical.Storage, iamGr
 
 	for _, g := range iamGroups {
 		// Collect managed policy ARNs from the IAM Group
-		agp, err = iamClient.ListAttachedGroupPolicies(&iam.ListAttachedGroupPoliciesInput{
+		agp, err = iamClient.ListAttachedGroupPoliciesWithContext(ctx, &iam.ListAttachedGroupPoliciesInput{
 			GroupName: aws.String(g),
 		})
 		if err != nil {
@@ -81,14 +84,14 @@ func (b *backend) getGroupPolicies(ctx context.Context, s logical.Storage, iamGr
 		}
 
 		// Collect inline policy names from the IAM Group
-		inlinePolicies, err = iamClient.ListGroupPolicies(&iam.ListGroupPoliciesInput{
+		inlinePolicies, err = iamClient.ListGroupPoliciesWithContext(ctx, &iam.ListGroupPoliciesInput{
 			GroupName: aws.String(g),
 		})
 		if err != nil {
 			return nil, nil, err
 		}
 		for _, iP := range inlinePolicies.PolicyNames {
-			inlinePolicyDoc, err = iamClient.GetGroupPolicy(&iam.GetGroupPolicyInput{
+			inlinePolicyDoc, err = iamClient.GetGroupPolicyWithContext(ctx, &iam.GetGroupPolicyInput{
 				GroupName:  &g,
 				PolicyName: iP,
 			})
@@ -113,7 +116,7 @@ func combinePolicyDocuments(policies ...string) (string, error) {
 	var policy string
 	var err error
 	var policyBytes []byte
-	var newPolicy = PolicyDocument{
+	newPolicy := PolicyDocument{
 		// 2012-10-17 is the current version of the AWS policy language:
 		// https://docs.aws.amazon.com/IAM/latest/UserGuide/reference_policies_elements_version.html
 		Version: "2012-10-17",

@@ -1,0 +1,3 @@
+```release-note:feature
+cli/api: Add lease lookup command
+```

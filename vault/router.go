@@ -1,28 +1,33 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package vault
 
 import (
 	"context"
 	"fmt"
+	"regexp"
 	"strings"
 	"sync"
 	"sync/atomic"
 	"time"
 
-	metrics "github.com/armon/go-metrics"
-	radix "github.com/armon/go-radix"
-	hclog "github.com/hashicorp/go-hclog"
+	"github.com/armon/go-metrics"
+	"github.com/armon/go-radix"
+	"github.com/hashicorp/go-hclog"
+	"github.com/hashicorp/go-secure-stdlib/strutil"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/salt"
-	"github.com/hashicorp/vault/sdk/helper/strutil"
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
-var (
-	deniedPassthroughRequestHeaders = []string{
-		consts.AuthHeaderName,
-	}
-)
+var deniedPassthroughRequestHeaders = []string{
+	consts.AuthHeaderName,
+}
+
+// matches when '+' is next to a non-slash char
+var wcAdjacentNonSlashRegEx = regexp.MustCompile(`\+[^/]|[^/]\+`).MatchString
 
 // Router is used to do prefix based routing of a request to a logical backend
 type Router struct {
@@ -45,13 +50,15 @@ func NewRouter() *Router {
 		storagePrefix:      radix.New(),
 		mountUUIDCache:     radix.New(),
 		mountAccessorCache: radix.New(),
+		// this will get replaced in production with a real logger but it's useful to have a default in place for tests
+		logger: hclog.NewNullLogger(),
 	}
 	return r
 }
 
 // routeEntry is used to represent a mount point in the router
 type routeEntry struct {
-	tainted       bool
+	tainted       atomic.Bool
 	backend       logical.Backend
 	mountEntry    *MountEntry
 	storageView   logical.Storage
@@ -61,7 +68,20 @@ type routeEntry struct {
 	l             sync.RWMutex
 }
 
-type validateMountResponse struct {
+type wildcardPath struct {
+	// this sits in the hot path of requests so we are micro-optimizing by
+	// storing pre-split slices of path segments
+	segments []string
+	isPrefix bool
+}
+
+// loginPathsEntry is used to hold the routeEntry loginPaths
+type loginPathsEntry struct {
+	paths         *radix.Tree
+	wildcardPaths []wildcardPath
+}
+
+type ValidateMountResponse struct {
 	MountType     string `json:"mount_type" structs:"mount_type" mapstructure:"mount_type"`
 	MountAccessor string `json:"mount_accessor" structs:"mount_accessor" mapstructure:"mount_accessor"`
 	MountPath     string `json:"mount_path" structs:"mount_path" mapstructure:"mount_path"`
@@ -77,9 +97,46 @@ func (r *Router) reset() {
 	r.mountAccessorCache = radix.New()
 }
 
-// validateMountByAccessor returns the mount type and ID for a given mount
+func (r *Router) GetRecords(tag string) ([]map[string]interface{}, error) {
+	r.l.RLock()
+	defer r.l.RUnlock()
+	var data []map[string]interface{}
+	var tree *radix.Tree
+	switch tag {
+	case "root":
+		tree = r.root
+	case "uuid":
+		tree = r.mountUUIDCache
+	case "accessor":
+		tree = r.mountAccessorCache
+	case "storage":
+		tree = r.storagePrefix
+	default:
+		return nil, logical.ErrUnsupportedPath
+	}
+	for _, v := range tree.ToMap() {
+		info := v.(Deserializable).Deserialize()
+		data = append(data, info)
+	}
+	return data, nil
+}
+
+func (entry *routeEntry) Deserialize() map[string]interface{} {
+	entry.l.RLock()
+	defer entry.l.RUnlock()
+	ret := map[string]interface{}{
+		"tainted":        entry.tainted.Load(),
+		"storage_prefix": entry.storagePrefix,
+	}
+	for k, v := range entry.mountEntry.Deserialize() {
+		ret[k] = v
+	}
+	return ret
+}
+
+// ValidateMountByAccessor returns the mount type and ID for a given mount
 // accessor
-func (r *Router) validateMountByAccessor(accessor string) *validateMountResponse {
+func (r *Router) ValidateMountByAccessor(accessor string) *ValidateMountResponse {
 	if accessor == "" {
 		return nil
 	}
@@ -94,7 +151,7 @@ func (r *Router) validateMountByAccessor(accessor string) *validateMountResponse
 		mountPath = credentialRoutePrefix + mountPath
 	}
 
-	return &validateMountResponse{
+	return &ValidateMountResponse{
 		MountAccessor: mountEntry.Accessor,
 		MountType:     mountEntry.Type,
 		MountPath:     mountPath,
@@ -132,14 +189,18 @@ func (r *Router) Mount(backend logical.Backend, prefix string, mountEntry *Mount
 
 	// Create a mount entry
 	re := &routeEntry{
-		tainted:       mountEntry.Tainted,
 		backend:       backend,
 		mountEntry:    mountEntry,
 		storagePrefix: storageView.Prefix(),
 		storageView:   storageView,
 	}
+	re.tainted.Store(mountEntry.Tainted)
 	re.rootPaths.Store(pathsToRadix(paths.Root))
-	re.loginPaths.Store(pathsToRadix(paths.Unauthenticated))
+	loginPathsEntry, err := parseUnauthenticatedPaths(paths.Unauthenticated)
+	if err != nil {
+		return err
+	}
+	re.loginPaths.Store(loginPathsEntry)
 
 	switch {
 	case prefix == "":
@@ -229,7 +290,7 @@ func (r *Router) Taint(ctx context.Context, path string) error {
 	defer r.l.Unlock()
 	_, raw, ok := r.root.LongestPrefix(path)
 	if ok {
-		raw.(*routeEntry).tainted = true
+		raw.(*routeEntry).tainted.Store(true)
 	}
 	return nil
 }
@@ -246,7 +307,7 @@ func (r *Router) Untaint(ctx context.Context, path string) error {
 	defer r.l.Unlock()
 	_, raw, ok := r.root.LongestPrefix(path)
 	if ok {
-		raw.(*routeEntry).tainted = false
+		raw.(*routeEntry).tainted.Store(false)
 	}
 	return nil
 }
@@ -346,9 +407,11 @@ func (r *Router) MountConflict(ctx context.Context, path string) string {
 func (r *Router) MatchingStorageByAPIPath(ctx context.Context, path string) logical.Storage {
 	return r.matchingStorage(ctx, path, true)
 }
+
 func (r *Router) MatchingStorageByStoragePath(ctx context.Context, path string) logical.Storage {
 	return r.matchingStorage(ctx, path, false)
 }
+
 func (r *Router) matchingStorage(ctx context.Context, path string, apiPath bool) logical.Storage {
 	ns, err := namespace.FromContext(ctx)
 	if err != nil {
@@ -402,7 +465,12 @@ func (r *Router) MatchingBackend(ctx context.Context, path string) logical.Backe
 	if !ok {
 		return nil
 	}
-	return raw.(*routeEntry).backend
+
+	re := raw.(*routeEntry)
+	re.l.RLock()
+	defer re.l.RUnlock()
+
+	return re.backend
 }
 
 // MatchingSystemView returns the SystemView used for a path
@@ -509,11 +577,15 @@ func (r *Router) routeCommon(ctx context.Context, req *logical.Request, existenc
 	}
 	r.l.RUnlock()
 	if !ok {
-		return logical.ErrorResponse(fmt.Sprintf("no handler for route '%s'", req.Path)), false, false, logical.ErrUnsupportedPath
+		return logical.ErrorResponse(fmt.Sprintf("no handler for route %q. route entry not found.", req.Path)), false, false, logical.ErrUnsupportedPath
 	}
 	req.Path = adjustedPath
-	defer metrics.MeasureSince([]string{"route", string(req.Operation),
-		strings.Replace(mount, "/", "-", -1)}, time.Now())
+	if !existenceCheck {
+		defer metrics.MeasureSince([]string{
+			"route", string(req.Operation),
+			strings.ReplaceAll(mount, "/", "-"),
+		}, time.Now())
+	}
 	re := raw.(*routeEntry)
 
 	// Grab a read lock on the route entry, this protects against the backend
@@ -528,16 +600,16 @@ func (r *Router) routeCommon(ctx context.Context, req *logical.Request, existenc
 
 	// Filtered mounts will have a nil backend
 	if re.backend == nil {
-		return logical.ErrorResponse(fmt.Sprintf("no handler for route '%s'", req.Path)), false, false, logical.ErrUnsupportedPath
+		return logical.ErrorResponse(fmt.Sprintf("no handler for route %q. route entry found, but backend is nil.", req.Path)), false, false, logical.ErrUnsupportedPath
 	}
 
 	// If the path is tainted, we reject any operation except for
 	// Rollback and Revoke
-	if re.tainted {
+	if re.tainted.Load() {
 		switch req.Operation {
 		case logical.RevokeOperation, logical.RollbackOperation:
 		default:
-			return logical.ErrorResponse(fmt.Sprintf("no handler for route '%s'", req.Path)), false, false, logical.ErrUnsupportedPath
+			return logical.ErrorResponse(fmt.Sprintf("no handler for route %q. route entry is tainted.", req.Path)), false, false, logical.ErrUnsupportedPath
 		}
 	}
 
@@ -546,6 +618,11 @@ func (r *Router) routeCommon(ctx context.Context, req *logical.Request, existenc
 	req.Path = strings.TrimPrefix(ns.Path+req.Path, mount)
 	req.MountPoint = mount
 	req.MountType = re.mountEntry.Type
+	req.SetMountRunningSha256(re.mountEntry.RunningSha256)
+	req.SetMountRunningVersion(re.mountEntry.RunningVersion)
+	req.SetMountIsExternalPlugin(re.mountEntry.IsExternalPlugin())
+	req.SetMountClass(re.mountEntry.MountClass())
+
 	if req.Path == "/" {
 		req.Path = ""
 	}
@@ -561,6 +638,7 @@ func (r *Router) routeCommon(ctx context.Context, req *logical.Request, existenc
 	switch {
 	case strings.HasPrefix(originalPath, "auth/token/"):
 	case strings.HasPrefix(originalPath, "sys/"):
+	case strings.HasPrefix(originalPath, "identity/"):
 	case strings.HasPrefix(originalPath, cubbyholeMountPath):
 		if req.Operation == logical.RollbackOperation {
 			// Backend doesn't support this and it can't properly look up a
@@ -579,7 +657,8 @@ func (r *Router) routeCommon(ctx context.Context, req *logical.Request, existenc
 		}
 
 		switch {
-		case te.NamespaceID == namespace.RootNamespaceID && !strings.HasPrefix(req.ClientToken, "s."):
+		case te.NamespaceID == namespace.RootNamespaceID && !strings.HasPrefix(req.ClientToken, consts.LegacyServiceTokenPrefix) &&
+			!strings.HasPrefix(req.ClientToken, consts.ServiceTokenPrefix):
 			// In order for the token store to revoke later, we need to have the same
 			// salted ID, so we double-salt what's going to the cubbyhole backend
 			salt, err := r.tokenStoreSaltFunc(ctx)
@@ -619,6 +698,13 @@ func (r *Router) routeCommon(ctx context.Context, req *logical.Request, existenc
 	headers := req.Headers
 	req.Headers = nil
 
+	// Cache the saved request SSC token
+	inboundToken := req.InboundSSCToken
+
+	// Ensure that the inbound token we cache in the
+	// request during token creation isn't sent to backends
+	req.InboundSSCToken = ""
+
 	// Filter and add passthrough headers to the backend
 	var passthroughRequestHeaders []string
 	if rawVal, ok := re.mountEntry.synthesizedConfigCache.Load("passthrough_request_headers"); ok {
@@ -652,6 +738,11 @@ func (r *Router) routeCommon(ctx context.Context, req *logical.Request, existenc
 		req.Path = originalPath
 		req.MountPoint = mount
 		req.MountType = re.mountEntry.Type
+		req.SetMountRunningSha256(re.mountEntry.RunningSha256)
+		req.SetMountRunningVersion(re.mountEntry.RunningVersion)
+		req.SetMountIsExternalPlugin(re.mountEntry.IsExternalPlugin())
+		req.SetMountClass(re.mountEntry.MountClass())
+
 		req.Connection = originalConn
 		req.ID = originalReqID
 		req.Storage = nil
@@ -671,6 +762,13 @@ func (r *Router) routeCommon(ctx context.Context, req *logical.Request, existenc
 		req.EntityID = originalEntityID
 
 		req.MFACreds = originalMFACreds
+
+		req.InboundSSCToken = inboundToken
+
+		// Before resetting the tokenEntry, see if an ExternalID was added
+		if req.TokenEntry() != nil && req.TokenEntry().ExternalID != "" {
+			reqTokenEntry.ExternalID = req.TokenEntry().ExternalID
+		}
 
 		req.SetTokenEntry(reqTokenEntry)
 		req.ControlGroup = originalControlGroup
@@ -779,6 +877,10 @@ func (r *Router) RootPath(ctx context.Context, path string) bool {
 }
 
 // LoginPath checks if the given path is used for logins
+// Matching Priority
+//  1. prefix
+//  2. exact
+//  3. wildcard
 func (r *Router) LoginPath(ctx context.Context, path string) bool {
 	ns, err := namespace.FromContext(ctx)
 	if err != nil {
@@ -799,20 +901,114 @@ func (r *Router) LoginPath(ctx context.Context, path string) bool {
 	remain := strings.TrimPrefix(adjustedPath, mount)
 
 	// Check the loginPaths of this backend
-	loginPaths := re.loginPaths.Load().(*radix.Tree)
-	match, raw, ok := loginPaths.LongestPrefix(remain)
-	if !ok {
+	pe := re.loginPaths.Load().(*loginPathsEntry)
+	match, raw, ok := pe.paths.LongestPrefix(remain)
+	if !ok && len(pe.wildcardPaths) == 0 {
+		// no match found
 		return false
 	}
-	prefixMatch := raw.(bool)
 
-	// Handle the prefix match case
-	if prefixMatch {
-		return strings.HasPrefix(remain, match)
+	if ok {
+		prefixMatch := raw.(bool)
+		if prefixMatch {
+			// Handle the prefix match case
+			return strings.HasPrefix(remain, match)
+		}
+		if match == remain {
+			// Handle the exact match case
+			return true
+		}
 	}
 
-	// Handle the exact match case
-	return match == remain
+	// check Login Paths containing wildcards
+	reqPathParts := strings.Split(remain, "/")
+	for _, w := range pe.wildcardPaths {
+		if pathMatchesWildcardPath(reqPathParts, w.segments, w.isPrefix) {
+			return true
+		}
+	}
+	return false
+}
+
+// pathMatchesWildcardPath returns true if the path made up of the path slice
+// matches the given wildcard path slice
+func pathMatchesWildcardPath(path, wcPath []string, isPrefix bool) bool {
+	if len(wcPath) == 0 {
+		return false
+	}
+
+	if len(path) < len(wcPath) {
+		// check if the path coming in is shorter; if so it can't match
+		return false
+	}
+	if !isPrefix && len(wcPath) != len(path) {
+		// If it's not a prefix we expect the same number of segments
+		return false
+	}
+
+	for i, wcPathPart := range wcPath {
+		switch {
+		case wcPathPart == "+":
+		case wcPathPart == path[i]:
+		case isPrefix && i == len(wcPath)-1 && strings.HasPrefix(path[i], wcPathPart):
+		default:
+			// we encountered segments that did not match
+			return false
+		}
+	}
+	return true
+}
+
+func wildcardError(path, msg string) error {
+	return fmt.Errorf("path %q: invalid use of wildcards %s", path, msg)
+}
+
+func isValidUnauthenticatedPath(path string) (bool, error) {
+	switch {
+	case strings.Count(path, "*") > 1:
+		return false, wildcardError(path, "(multiple '*' is forbidden)")
+	case strings.Contains(path, "+*"):
+		return false, wildcardError(path, "('+*' is forbidden)")
+	case strings.Contains(path, "*") && path[len(path)-1] != '*':
+		return false, wildcardError(path, "('*' is only allowed at the end of a path)")
+	case wcAdjacentNonSlashRegEx(path):
+		return false, wildcardError(path, "('+' is not allowed next to a non-slash)")
+	}
+	return true, nil
+}
+
+// parseUnauthenticatedPaths converts a list of special paths to a
+// loginPathsEntry
+func parseUnauthenticatedPaths(paths []string) (*loginPathsEntry, error) {
+	var tempPaths []string
+	tempWildcardPaths := make([]wildcardPath, 0)
+	for _, path := range paths {
+		if ok, err := isValidUnauthenticatedPath(path); !ok {
+			return nil, err
+		}
+
+		if strings.Contains(path, "+") {
+			// Paths with wildcards are not stored in the radix tree because
+			// the radix tree does not handle wildcards in the middle of strings.
+			isPrefix := false
+			if path[len(path)-1] == '*' {
+				isPrefix = true
+				path = path[0 : len(path)-1]
+			}
+			// We are micro-optimizing by storing pre-split slices of path segments
+			wcPath := wildcardPath{segments: strings.Split(path, "/"), isPrefix: isPrefix}
+			tempWildcardPaths = append(tempWildcardPaths, wcPath)
+		} else {
+			// accumulate paths that do not contain wildcards
+			// to be stored in the radix tree
+			tempPaths = append(tempPaths, path)
+		}
+	}
+
+	return &loginPathsEntry{
+		paths:         pathsToRadix(tempPaths),
+		wildcardPaths: tempWildcardPaths,
+	}, nil
 }
 
 // pathsToRadix converts a list of special paths to a radix tree.

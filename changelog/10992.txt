@@ -1,0 +1,3 @@
+```release-note:improvement
+core: dev mode listener allows unauthenticated sys/metrics requests
+```

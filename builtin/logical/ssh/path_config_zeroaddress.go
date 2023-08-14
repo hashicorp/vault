@@ -1,10 +1,13 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package ssh
 
 import (
 	"context"
 	"fmt"
 
-	"github.com/hashicorp/vault/sdk/helper/strutil"
+	"github.com/hashicorp/go-secure-stdlib/strutil"
 
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/logical"
@@ -18,18 +21,40 @@ type zeroAddressRoles struct {
 func pathConfigZeroAddress(b *backend) *framework.Path {
 	return &framework.Path{
 		Pattern: "config/zeroaddress",
+
+		DisplayAttrs: &framework.DisplayAttributes{
+			OperationPrefix: operationPrefixSSH,
+		},
+
 		Fields: map[string]*framework.FieldSchema{
-			"roles": &framework.FieldSchema{
+			"roles": {
 				Type: framework.TypeCommaStringSlice,
 				Description: `[Required] Comma separated list of role names which
 				allows credentials to be requested for any IP address. CIDR blocks
 				previously registered under these roles will be ignored.`,
 			},
 		},
-		Callbacks: map[logical.Operation]framework.OperationFunc{
-			logical.UpdateOperation: b.pathConfigZeroAddressWrite,
-			logical.ReadOperation:   b.pathConfigZeroAddressRead,
-			logical.DeleteOperation: b.pathConfigZeroAddressDelete,
+
+		Operations: map[logical.Operation]framework.OperationHandler{
+			logical.UpdateOperation: &framework.PathOperation{
+				Callback: b.pathConfigZeroAddressWrite,
+				DisplayAttrs: &framework.DisplayAttributes{
+					OperationVerb:   "configure",
+					OperationSuffix: "zero-address",
+				},
+			},
+			logical.ReadOperation: &framework.PathOperation{
+				Callback: b.pathConfigZeroAddressRead,
+				DisplayAttrs: &framework.DisplayAttributes{
+					OperationSuffix: "zero-address-configuration",
+				},
+			},
+			logical.DeleteOperation: &framework.PathOperation{
+				Callback: b.pathConfigZeroAddressDelete,
+				DisplayAttrs: &framework.DisplayAttributes{
+					OperationSuffix: "zero-address-configuration",
+				},
+			},
 		},
 		HelpSynopsis:    pathConfigZeroAddressSyn,
 		HelpDescription: pathConfigZeroAddressDesc,

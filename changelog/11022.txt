@@ -1,0 +1,3 @@
+```release-note:improvement
+core: add partial month client count api
+```

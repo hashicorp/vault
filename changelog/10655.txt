@@ -1,0 +1,3 @@
+```release-note:feature
+ui: Database secrets engine, supporting MongoDB only
+```

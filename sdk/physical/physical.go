@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package physical
 
 import (
@@ -21,6 +24,7 @@ const (
 
 const (
 	ErrValueTooLarge = "put failed due to value being too large"
+	ErrKeyTooLarge   = "put failed due to key being too large"
 )
 
 // Backend is the interface required for a physical

@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import { assign } from '@ember/polyfills';
 import { copy } from 'ember-copy';
 import { assert } from '@ember/debug';
@@ -67,7 +72,7 @@ export default Component.extend(TRANSIT_PARAMS, {
     this._super(...arguments);
     // TODO figure out why get is needed here Ember Upgrade
     // eslint-disable-next-line ember/no-get
-    if (get(this, 'selectedAction')) {
+    if (this.selectedAction) {
       return;
     }
     // eslint-disable-next-line ember/no-get
@@ -92,8 +97,8 @@ export default Component.extend(TRANSIT_PARAMS, {
     });
   },
 
-  keyIsRSA: computed('key.type', function() {
-    let type = this.key.type;
+  keyIsRSA: computed('key.type', function () {
+    const type = this.key.type;
     return type === 'rsa-2048' || type === 'rsa-3072' || type === 'rsa-4096';
   }),
 
@@ -102,8 +107,8 @@ export default Component.extend(TRANSIT_PARAMS, {
     if (!model) {
       return null;
     }
-    const backend = get(model, 'backend') || get(model, 'id');
-    const id = get(model, 'id');
+    const backend = model.backend || model.id;
+    const id = model.id;
 
     return {
       backend,
@@ -120,9 +125,9 @@ export default Component.extend(TRANSIT_PARAMS, {
   },
 
   resetParams(oldAction, action) {
-    let params = copy(TRANSIT_PARAMS);
+    const params = copy(TRANSIT_PARAMS);
     let paramsToKeep;
-    let clearWithoutCheck =
+    const clearWithoutCheck =
       !oldAction ||
       // don't save values from datakey
       oldAction === 'datakey' ||
@@ -134,7 +139,7 @@ export default Component.extend(TRANSIT_PARAMS, {
     }
 
     if (paramsToKeep) {
-      paramsToKeep.forEach(param => delete params[param]);
+      paramsToKeep.forEach((param) => delete params[param]);
     }
     //resets params still left in the object to defaults
     this.clearErrors();
@@ -170,8 +175,10 @@ export default Component.extend(TRANSIT_PARAMS, {
     if (options.wrapTTL) {
       props = assign({}, props, { wrappedToken: resp.wrap_info.token });
     }
-    this.toggleProperty('isModalActive');
-    this.setProperties(props);
+    if (!this.isDestroyed && !this.isDestroying) {
+      this.toggleProperty('isModalActive');
+      this.setProperties(props);
+    }
     if (action === 'rotate') {
       this.onRefresh();
     }
@@ -179,8 +186,8 @@ export default Component.extend(TRANSIT_PARAMS, {
   },
 
   compactData(data) {
-    let type = this.key.type;
-    let isRSA = type === 'rsa-2048' || type === 'rsa-3072' || type === 'rsa-4096';
+    const type = this.key.type;
+    const isRSA = type === 'rsa-2048' || type === 'rsa-3072' || type === 'rsa-4096';
     return Object.keys(data).reduce((result, key) => {
       if (key === 'signature_algorithm' && !isRSA) {
         return result;
@@ -204,7 +211,7 @@ export default Component.extend(TRANSIT_PARAMS, {
 
     clearParams(params) {
       const arr = Array.isArray(params) ? params : [params];
-      arr.forEach(param => this.set(param, null));
+      arr.forEach((param) => this.set(param, null));
     },
 
     toggleModal(successMessage) {
@@ -214,7 +221,11 @@ export default Component.extend(TRANSIT_PARAMS, {
       this.toggleProperty('isModalActive');
     },
 
-    doSubmit(data, options = {}) {
+    doSubmit(data, options = {}, maybeEvent) {
+      const event = options.type === 'submit' ? options : maybeEvent;
+      if (event) {
+        event.preventDefault();
+      }
       const { backend, id } = this.getModelInfo();
       const action = this.selectedAction;
       const { encodedBase64, ...formData } = data || {};
@@ -226,7 +237,7 @@ export default Component.extend(TRANSIT_PARAMS, {
           formData.input = encodeString(formData.input);
         }
       }
-      let payload = formData ? this.compactData(formData) : null;
+      const payload = formData ? this.compactData(formData) : null;
       this.setProperties({
         errors: null,
         result: null,
@@ -235,7 +246,7 @@ export default Component.extend(TRANSIT_PARAMS, {
         .adapterFor('transit-key')
         .keyAction(action, { backend, id, payload }, options)
         .then(
-          resp => this.handleSuccess(resp, options, action),
+          (resp) => this.handleSuccess(resp, options, action),
           (...errArgs) => this.handleError(...errArgs)
         );
     },

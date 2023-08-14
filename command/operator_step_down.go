@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package command
 
 import (
@@ -8,8 +11,10 @@ import (
 	"github.com/posener/complete"
 )
 
-var _ cli.Command = (*OperatorStepDownCommand)(nil)
-var _ cli.CommandAutocomplete = (*OperatorStepDownCommand)(nil)
+var (
+	_ cli.Command             = (*OperatorStepDownCommand)(nil)
+	_ cli.CommandAutocomplete = (*OperatorStepDownCommand)(nil)
+)
 
 type OperatorStepDownCommand struct {
 	*BaseCommand

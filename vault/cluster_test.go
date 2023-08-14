@@ -1,15 +1,20 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package vault
 
 import (
 	"bytes"
 	"context"
 	"crypto/tls"
+	"fmt"
 	"net/http"
 	"sync"
 	"testing"
 	"time"
 
 	log "github.com/hashicorp/go-hclog"
+	"github.com/hashicorp/vault/helper/testhelpers/corehelpers"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/logging"
 	"github.com/hashicorp/vault/sdk/logical"
@@ -18,9 +23,7 @@ import (
 	"github.com/hashicorp/vault/vault/cluster"
 )
 
-var (
-	clusterTestPausePeriod = 2 * time.Second
-)
+var clusterTestPausePeriod = 2 * time.Second
 
 func TestClusterFetching(t *testing.T) {
 	c, _, _ := TestCoreUnsealed(t)
@@ -62,6 +65,7 @@ func TestClusterHAFetching(t *testing.T) {
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
+	defer c.Shutdown()
 	keys, _ := TestCoreInit(t, c)
 	for _, key := range keys {
 		if _, err := TestCoreUnseal(c, TestKeyCopy(key)); err != nil {
@@ -320,6 +324,13 @@ func testCluster_ForwardRequests(t *testing.T, c *TestClusterCore, rootToken, re
 	if isLeader {
 		t.Fatal("core should not be leader")
 	}
+	corehelpers.RetryUntil(t, 5*time.Second, func() error {
+		state := c.ActiveNodeReplicationState()
+		if state == 0 {
+			return fmt.Errorf("heartbeats have not yet returned a valid active node replication state: %d", state)
+		}
+		return nil
+	})
 
 	bodBuf := bytes.NewReader([]byte(`{ "foo": "bar", "zip": "zap" }`))
 	req, err := http.NewRequest("PUT", "https://pushit.real.good:9281/"+remoteCoreID, bodBuf)

@@ -1,0 +1,3 @@
+```release-note:improvement
+secrets/database/influxdb: Switch/upgrade to the `influxdb1-client` module
+```

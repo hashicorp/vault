@@ -1,0 +1,67 @@
+---
+layout: docs
+page_title: Vault Enterprise Entropy Augmentation
+description: |-
+  Vault Enterprise features a mechanism to sample entropy from external
+  cryptographic modules.
+---
+
+# Entropy augmentation
+
+@include 'alerts/enterprise-only.mdx'
+
+<Warning>
+  Entropy augmentation <b>is not</b> available with "FIPS 140-2 Inside" variants of
+  Vault.
+</Warning>
+
+Vault Enterprise features a mechanism to sample entropy (or randomness for
+cryptographic operations) from external cryptographic modules via the [seals](/vault/docs/configuration/seal)
+interface. While the system entropy used by Vault is more than capable of
+operating in most threat models, there are some situations where additional
+entropy from hardware-based random number generators is desirable.
+
+To use this feature, you must have an active or trial license for Vault
+Enterprise. To start a trial, contact [HashiCorp sales](mailto:sales@hashicorp.com).
+
+# Critical security parameters (CSPs)
+
+Entropy augmentation allows Vault Enterprise to supplement its system entropy with
+entropy from an external cryptography module. Designed to operate in environments
+where alignment with cryptographic regulations like [NIST SP800-90B](https://csrc.nist.gov/publications/detail/sp/800-90b/final)
+is required or when augmented entropy from external sources such as hardware true
+random number generators (TRNGs) or [quantum computing TRNGs](https://www.hashicorp.com/blog/quantum-security-and-cryptography-in-hashicorp-vault/)
+are desirable, augmented entropy replaces system entropy when performing random
+number operations on critical security parameters (CSPs).
+
+These CSPs have been selected from our previous work in [evaluating Vault for conformance with
+FIPS 140-2 guidelines for key storage and key transport](https://www.datocms-assets.com/2885/1510600487-vault_compliance_letter_fips_140-2.pdf)
+and include the following:
+
+- Vault’s root key
+- Keyring encryption keys
+- Auto Unseal recovery keys
+- TLS private keys for inter-node and inter cluster communication (HA leader, raft, and replication)
+- Enterprise MFA TOTP token keys
+- JWT token wrapping keys
+- Root tokens
+- DR operation tokens
+- [Transit](/vault/docs/secrets/transit) backend key generation and `/random` endpoint (`/random` only on Vault 1.11+)
+- [PKI](/vault/docs/secrets/pki) issuer key generation, but not for leaf certificate private keys
+- [`/sys/tools/random`](/vault/api-docs/system/tools#generate-random-bytes) endpoint (Vault 1.11+)
+- [SSH](/vault/docs/secrets/ssh) CA key generation, but not for key pair generation
+- [KMIP](/vault/docs/secrets/kmip) uses EA for its TLS CA, server, and client
+  certificates.
+
+## Enabling/Disabling
+
+Entropy augmentation is disabled by default. To enable entropy augmentation Vault's
+[configuration file][configuration] must include a properly configured [entropy and seal stanza](/vault/docs/configuration/entropy-augmentation)
+for a supported seal type.
+
+[configuration]: /vault/docs/configuration
+
+## Tutorial
+
+Refer to the [HSM Integration - Entropy Augmentation](/vault/tutorials/enterprise/hsm-entropy) tutorial
+to learn how to use the Entropy Augmentation function to leverage an external Hardware Security Module to augment system entropy.

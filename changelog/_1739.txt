@@ -1,0 +1,6 @@
+```release-note:feature
+secrets/keymgmt (enterprise): Adds general availability for distributing and managing keys in Azure Key Vault.
+```
+```release-note:feature
+secrets/keymgmt (enterprise): Adds beta support for distributing and managing keys in AWS KMS.
+```

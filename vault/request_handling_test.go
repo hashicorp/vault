@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package vault
 
 import (
@@ -344,7 +347,6 @@ func checkCounter(t *testing.T, inmemSink *metrics.InmemSink, keyPrefix string, 
 	if counter.Sum != 1.0 {
 		t.Errorf("Counter sum %v is not 1.", counter.Sum)
 	}
-
 }
 
 func TestRequestHandling_LoginMetric(t *testing.T) {
@@ -429,7 +431,6 @@ func TestRequestHandling_LoginMetric(t *testing.T) {
 			"token_type":   "service",
 		},
 	)
-
 }
 
 func TestRequestHandling_SecretLeaseMetric(t *testing.T) {
@@ -450,7 +451,10 @@ func TestRequestHandling_SecretLeaseMetric(t *testing.T) {
 	// Read a key with a LeaseID
 	req = logical.TestRequest(t, logical.ReadOperation, "secret/foo")
 	req.ClientToken = root
-	req.SetTokenEntry(&logical.TokenEntry{ID: root, NamespaceID: "root", Policies: []string{"root"}})
+	err = core.PopulateTokenEntry(namespace.RootContext(nil), req)
+	if err != nil {
+		t.Fatalf("err: %s", err)
+	}
 	resp, err = core.HandleRequest(namespace.RootContext(nil), req)
 	if err != nil {
 		t.Fatalf("err: %v", err)

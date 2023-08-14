@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package transit
 
 import (
@@ -25,6 +28,7 @@ func TestTransit_Export_KeyVersion_ExportsCorrectVersion(t *testing.T) {
 	verifyExportsCorrectVersion(t, "hmac-key", "ecdsa-p384")
 	verifyExportsCorrectVersion(t, "hmac-key", "ecdsa-p521")
 	verifyExportsCorrectVersion(t, "hmac-key", "ed25519")
+	verifyExportsCorrectVersion(t, "hmac-key", "hmac")
 }
 
 func verifyExportsCorrectVersion(t *testing.T, exportType, keyType string) {
@@ -39,6 +43,9 @@ func verifyExportsCorrectVersion(t *testing.T, exportType, keyType string) {
 	req.Data = map[string]interface{}{
 		"exportable": true,
 		"type":       keyType,
+	}
+	if keyType == "hmac" {
+		req.Data["key_size"] = 32
 	}
 	_, err := b.HandleRequest(context.Background(), req)
 	if err != nil {
@@ -80,7 +87,7 @@ func verifyExportsCorrectVersion(t *testing.T, exportType, keyType string) {
 			t.Fatal("unexpected number of keys found")
 		}
 
-		for k, _ := range keys {
+		for k := range keys {
 			if k != strconv.Itoa(expectedVersion) {
 				t.Fatalf("expected version %q, received version %q", strconv.Itoa(expectedVersion), k)
 			}

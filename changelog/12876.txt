@@ -1,0 +1,3 @@
+```release-note:improvement
+auth/oidc: Adds the `skip_browser` CLI option to allow users to skip opening the default browser during the authentication flow.
+```

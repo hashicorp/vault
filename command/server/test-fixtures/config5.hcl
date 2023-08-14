@@ -1,3 +1,6 @@
+# Copyright (c) HashiCorp, Inc.
+# SPDX-License-Identifier: BUSL-1.1
+
 disable_cache = true
  disable_mlock = true
 
@@ -5,7 +8,7 @@ disable_cache = true
 
  listener "tcp" {
      address = "127.0.0.1:443"
- 	allow_stuff = true
+ 	 allow_stuff = true
  }
 
  backend "consul" {

@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package listenerutil
 
 import (
@@ -84,5 +87,4 @@ func TestUnixSocketListener(t *testing.T) {
 			t.Fatalf("failed to set permissions on the socket file")
 		}
 	})
-
 }

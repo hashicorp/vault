@@ -1,0 +1,3 @@
+```release-note: bug
+identity: Fix a panic on arm64 platform when doing identity I/O.
+```

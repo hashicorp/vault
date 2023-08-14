@@ -1,0 +1,3 @@
+```release-note: bug
+ui: Fixes metrics page when read on counter config not allowed
+```

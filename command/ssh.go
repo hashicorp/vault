@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package command
 
 import (
@@ -11,7 +14,6 @@ import (
 	"strings"
 	"syscall"
 
-	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/builtin/logical/ssh"
 	"github.com/mitchellh/cli"
@@ -20,8 +22,10 @@ import (
 	"github.com/posener/complete"
 )
 
-var _ cli.Command = (*SSHCommand)(nil)
-var _ cli.CommandAutocomplete = (*SSHCommand)(nil)
+var (
+	_ cli.Command             = (*SSHCommand)(nil)
+	_ cli.CommandAutocomplete = (*SSHCommand)(nil)
+)
 
 type SSHCommand struct {
 	*BaseCommand
@@ -237,7 +241,7 @@ type SSHCredentialResp struct {
 func (c *SSHCommand) Run(args []string) int {
 	f := c.Flags()
 
-	if err := f.Parse(args); err != nil {
+	if err := f.Parse(args, DisableDisplayFlagWarning(true)); err != nil {
 		c.UI.Error(err.Error())
 		return 1
 	}
@@ -371,7 +375,7 @@ func (c *SSHCommand) handleTypeCA(username, ip, port string, sshArgs []string) i
 
 	sshClient := c.client.SSHWithMountPoint(c.flagMountPoint)
 
-	var principals = username
+	principals := username
 	if c.flagValidPrincipals != "" {
 		principals = c.flagValidPrincipals
 	}
@@ -446,7 +450,7 @@ func (c *SSHCommand) handleTypeCA(username, ip, port string, sshArgs []string) i
 		// Write the known_hosts file
 		name := fmt.Sprintf("vault_ssh_ca_known_hosts_%s_%s", username, ip)
 		data := fmt.Sprintf("@cert-authority %s %s", c.flagHostKeyHostnames, publicKey)
-		knownHosts, err, closer := c.writeTemporaryFile(name, []byte(data), 0644)
+		knownHosts, err, closer := c.writeTemporaryFile(name, []byte(data), 0o644)
 		defer closer()
 		if err != nil {
 			c.UI.Error(fmt.Sprintf("failed to write host public key: %s", err))
@@ -737,7 +741,7 @@ func (c *SSHCommand) writeTemporaryFile(name string, data []byte, perms os.FileM
 // writeTemporaryKey writes the key to a temporary file and returns the path.
 // The caller should defer the closer to cleanup the key.
 func (c *SSHCommand) writeTemporaryKey(name string, data []byte) (string, error, func() error) {
-	return c.writeTemporaryFile(name, data, 0600)
+	return c.writeTemporaryFile(name, data, 0o600)
 }
 
 // If user did not provide the role with which SSH connection has
@@ -749,10 +753,10 @@ func (c *SSHCommand) defaultRole(mountPoint, ip string) (string, error) {
 	}
 	secret, err := c.client.Logical().Write(mountPoint+"/lookup", data)
 	if err != nil {
-		return "", errwrap.Wrapf(fmt.Sprintf("error finding roles for IP %q: {{err}}", ip), err)
+		return "", fmt.Errorf("error finding roles for IP %q: %w", ip, err)
 	}
 	if secret == nil || secret.Data == nil {
-		return "", errwrap.Wrapf(fmt.Sprintf("error finding roles for IP %q: {{err}}", ip), err)
+		return "", fmt.Errorf("error finding roles for IP %q: %w", ip, err)
 	}
 
 	if secret.Data["roles"] == nil {

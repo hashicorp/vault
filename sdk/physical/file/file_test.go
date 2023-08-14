@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package file
 
 import (
@@ -45,7 +48,7 @@ func TestFileBackend_Base64URLEncoding(t *testing.T) {
 	f, err := os.OpenFile(
 		rawFullPath,
 		os.O_CREATE|os.O_TRUNC|os.O_WRONLY,
-		0600)
+		0o600)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -117,7 +120,7 @@ func TestFileBackend_Base64URLEncoding(t *testing.T) {
 	f, err = os.OpenFile(
 		rawFullPath,
 		os.O_CREATE|os.O_TRUNC|os.O_WRONLY,
-		0600)
+		0o600)
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -1,0 +1,3 @@
+```release-note:bug
+identity: Use correct mount accessor when refreshing external group memberships.
+```

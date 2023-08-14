@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package teststorage
 
 import (
@@ -18,7 +21,6 @@ import (
 // seal migration, wherein a given physical backend must be re-used as several
 // test clusters are sequentially created, tested, and discarded.
 type ReusableStorage struct {
-
 	// IsRaft specifies whether the storage is using a raft backend.
 	IsRaft bool
 
@@ -39,12 +41,11 @@ type StorageCleanup func()
 // MakeReusableStorage makes a physical backend that can be re-used across
 // multiple test clusters in sequence.
 func MakeReusableStorage(t testing.T, logger hclog.Logger, bundle *vault.PhysicalBackendBundle) (ReusableStorage, StorageCleanup) {
-
 	storage := ReusableStorage{
 		IsRaft: false,
 
 		Setup: func(conf *vault.CoreConfig, opts *vault.TestClusterOptions) {
-			opts.PhysicalFactory = func(t testing.T, coreIdx int, logger hclog.Logger) *vault.PhysicalBackendBundle {
+			opts.PhysicalFactory = func(t testing.T, coreIdx int, logger hclog.Logger, conf map[string]interface{}) *vault.PhysicalBackendBundle {
 				if coreIdx == 0 {
 					// We intentionally do not clone the backend's Cleanup func,
 					// because we don't want it to be run until the entire test has
@@ -74,7 +75,6 @@ func MakeReusableStorage(t testing.T, logger hclog.Logger, bundle *vault.Physica
 // MakeReusableRaftStorage makes a physical raft backend that can be re-used
 // across multiple test clusters in sequence.
 func MakeReusableRaftStorage(t testing.T, logger hclog.Logger, numCores int, addressProvider raftlib.ServerAddressProvider) (ReusableStorage, StorageCleanup) {
-
 	raftDirs := make([]string, numCores)
 	for i := 0; i < numCores; i++ {
 		raftDirs[i] = makeRaftDir(t)
@@ -86,7 +86,7 @@ func MakeReusableRaftStorage(t testing.T, logger hclog.Logger, numCores int, add
 		Setup: func(conf *vault.CoreConfig, opts *vault.TestClusterOptions) {
 			conf.DisablePerformanceStandby = true
 			opts.KeepStandbysSealed = true
-			opts.PhysicalFactory = func(t testing.T, coreIdx int, logger hclog.Logger) *vault.PhysicalBackendBundle {
+			opts.PhysicalFactory = func(t testing.T, coreIdx int, logger hclog.Logger, conf map[string]interface{}) *vault.PhysicalBackendBundle {
 				return makeReusableRaftBackend(t, coreIdx, logger, raftDirs[coreIdx], addressProvider, false)
 			}
 		},
@@ -125,7 +125,7 @@ func MakeReusableRaftHAStorage(t testing.T, logger hclog.Logger, numCores int, b
 	storage := ReusableStorage{
 		Setup: func(conf *vault.CoreConfig, opts *vault.TestClusterOptions) {
 			opts.KeepStandbysSealed = true
-			opts.PhysicalFactory = func(t testing.T, coreIdx int, logger hclog.Logger) *vault.PhysicalBackendBundle {
+			opts.PhysicalFactory = func(t testing.T, coreIdx int, logger hclog.Logger, conf map[string]interface{}) *vault.PhysicalBackendBundle {
 				haBundle := makeReusableRaftBackend(t, coreIdx, logger, raftDirs[coreIdx], nil, true)
 
 				return &vault.PhysicalBackendBundle{
@@ -164,17 +164,18 @@ func makeRaftDir(t testing.T) string {
 	if err != nil {
 		t.Fatal(err)
 	}
-	//t.Logf("raft dir: %s", raftDir)
+	// t.Logf("raft dir: %s", raftDir)
 	return raftDir
 }
 
 func makeReusableRaftBackend(t testing.T, coreIdx int, logger hclog.Logger, raftDir string, addressProvider raftlib.ServerAddressProvider, ha bool) *vault.PhysicalBackendBundle {
-
 	nodeID := fmt.Sprintf("core-%d", coreIdx)
 	conf := map[string]string{
-		"path":                   raftDir,
-		"node_id":                nodeID,
-		"performance_multiplier": "8",
+		"path":                         raftDir,
+		"node_id":                      nodeID,
+		"performance_multiplier":       "8",
+		"autopilot_reconcile_interval": "300ms",
+		"autopilot_update_interval":    "100ms",
 	}
 
 	backend, err := raft.NewRaftBackend(conf, logger)

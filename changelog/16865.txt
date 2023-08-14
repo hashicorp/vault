@@ -1,0 +1,3 @@
+```release-note:bug
+secrets/pki: Allow import of issuers without CRLSign KeyUsage; prohibit setting crl-signing usage on such issuers
+```

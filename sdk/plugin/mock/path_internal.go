@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package mock
 
 import (
@@ -13,7 +16,7 @@ func pathInternal(b *backend) *framework.Path {
 	return &framework.Path{
 		Pattern: "internal",
 		Fields: map[string]*framework.FieldSchema{
-			"value": &framework.FieldSchema{Type: framework.TypeString},
+			"value": {Type: framework.TypeString},
 		},
 		Callbacks: map[logical.Operation]framework.OperationFunc{
 			logical.UpdateOperation: b.pathInternalUpdate,

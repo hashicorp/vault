@@ -1,0 +1,3 @@
+```release-note:bug
+storage/raft: Units for bolt metrics now given in milliseconds instead of nanoseconds
+```

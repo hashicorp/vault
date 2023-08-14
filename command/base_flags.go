@@ -1,15 +1,20 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package command
 
 import (
 	"errors"
 	"flag"
 	"fmt"
+	"math"
 	"os"
 	"sort"
 	"strconv"
 	"strings"
 	"time"
 
+	"github.com/hashicorp/go-secure-stdlib/parseutil"
 	"github.com/posener/complete"
 )
 
@@ -28,6 +33,107 @@ type FlagVisibility interface {
 // FlagBool is an interface which boolean flags implement.
 type FlagBool interface {
 	IsBoolFlag() bool
+}
+
+// BoolPtr is a bool which is aware if it has been set.
+type BoolPtr struct {
+	v *bool
+}
+
+func (b *BoolPtr) Set(v string) error {
+	val, err := strconv.ParseBool(v)
+	if err != nil {
+		return err
+	}
+
+	if b.v == nil {
+		b.v = new(bool)
+	}
+	*b.v = val
+
+	return nil
+}
+
+func (b *BoolPtr) IsSet() bool {
+	return b.v != nil
+}
+
+func (b *BoolPtr) Get() bool {
+	if b.v == nil {
+		return false
+	}
+	return *b.v
+}
+
+func (b *BoolPtr) String() string {
+	var current bool
+	if b.v != nil {
+		current = *(b.v)
+	}
+	return fmt.Sprintf("%v", current)
+}
+
+type boolPtrValue struct {
+	hidden bool
+	target *BoolPtr
+}
+
+func newBoolPtrValue(def *bool, target *BoolPtr, hidden bool) *boolPtrValue {
+	val := &boolPtrValue{
+		hidden: hidden,
+		target: target,
+	}
+	if def != nil {
+		_ = val.target.Set(strconv.FormatBool(*def))
+	}
+	return val
+}
+
+func (b *boolPtrValue) IsBoolFlag() bool {
+	return true
+}
+
+func (b *boolPtrValue) Set(s string) error {
+	if b.target == nil {
+		b.target = new(BoolPtr)
+	}
+	return b.target.Set(s)
+}
+
+func (b *boolPtrValue) Get() interface{} { return *b.target }
+func (b *boolPtrValue) String() string   { return b.target.String() }
+func (b *boolPtrValue) Example() string  { return "*bool" }
+func (b *boolPtrValue) Hidden() bool     { return b.hidden }
+
+type BoolPtrVar struct {
+	Name       string
+	Aliases    []string
+	Usage      string
+	Hidden     bool
+	EnvVar     string
+	Default    *bool
+	Target     *BoolPtr
+	Completion complete.Predictor
+}
+
+func (f *FlagSet) BoolPtrVar(i *BoolPtrVar) {
+	def := i.Default
+	if v, exist := os.LookupEnv(i.EnvVar); exist {
+		if b, err := strconv.ParseBool(v); err == nil {
+			if def == nil {
+				def = new(bool)
+			}
+			*def = b
+		}
+	}
+
+	f.VarFlag(&VarFlag{
+		Name:       i.Name,
+		Aliases:    i.Aliases,
+		Usage:      i.Usage,
+		Value:      newBoolPtrValue(i.Default, i.Target, i.Hidden),
+		Completion: i.Completion,
+	})
 }
 
 // -- BoolVar  and boolValue
@@ -106,8 +212,8 @@ type IntVar struct {
 func (f *FlagSet) IntVar(i *IntVar) {
 	initial := i.Default
 	if v, exist := os.LookupEnv(i.EnvVar); exist {
-		if i, err := strconv.ParseInt(v, 0, 64); err == nil {
-			initial = int(i)
+		if i, err := parseutil.SafeParseInt(v); err == nil {
+			initial = i
 		}
 	}
 
@@ -141,17 +247,19 @@ func newIntValue(def int, target *int, hidden bool) *intValue {
 }
 
 func (i *intValue) Set(s string) error {
-	v, err := strconv.ParseInt(s, 0, 64)
+	v, err := parseutil.SafeParseInt(s)
 	if err != nil {
 		return err
 	}
-
-	*i.target = int(v)
-	return nil
+	if v >= math.MinInt && v <= math.MaxInt {
+		*i.target = v
+		return nil
+	}
+	return fmt.Errorf("Incorrect conversion of a 64-bit integer to a lower bit size. Value %d is not within bounds for int32", v)
 }
 
-func (i *intValue) Get() interface{} { return int(*i.target) }
-func (i *intValue) String() string   { return strconv.Itoa(int(*i.target)) }
+func (i *intValue) Get() interface{} { return *i.target }
+func (i *intValue) String() string   { return strconv.Itoa(*i.target) }
 func (i *intValue) Example() string  { return "int" }
 func (i *intValue) Hidden() bool     { return i.hidden }
 
@@ -273,9 +381,12 @@ func (i *uintValue) Set(s string) error {
 	if err != nil {
 		return err
 	}
+	if v >= 0 && v <= math.MaxUint {
+		*i.target = uint(v)
+		return nil
+	}
 
-	*i.target = uint(v)
-	return nil
+	return fmt.Errorf("Incorrect conversion of a 64-bit integer to a lower bit size. Value %d is not within bounds for uint32", v)
 }
 
 func (i *uintValue) Get() interface{} { return uint(*i.target) }
@@ -483,7 +594,7 @@ type DurationVar struct {
 func (f *FlagSet) DurationVar(i *DurationVar) {
 	initial := i.Default
 	if v, exist := os.LookupEnv(i.EnvVar); exist {
-		if d, err := time.ParseDuration(appendDurationSuffix(v)); err == nil {
+		if d, err := parseutil.ParseDurationSecond(v); err == nil {
 			initial = d
 		}
 	}
@@ -523,7 +634,7 @@ func (d *durationValue) Set(s string) error {
 		s = "-1"
 	}
 
-	v, err := time.ParseDuration(appendDurationSuffix(s))
+	v, err := parseutil.ParseDurationSecond(s)
 	if err != nil {
 		return err
 	}
@@ -668,7 +779,7 @@ func (s *stringMapValue) Hidden() bool     { return s.hidden }
 
 func mapToKV(m map[string]string) string {
 	list := make([]string, 0, len(m))
-	for k, _ := range m {
+	for k := range m {
 		list = append(list, k)
 	}
 	sort.Strings(list)
@@ -786,28 +897,28 @@ func parseTimeAlternatives(input string, allowedFormats TimeFormat) (time.Time, 
 	if allowedFormats&TimeVar_RFC3339Nano != 0 {
 		t, err := time.Parse(time.RFC3339Nano, input)
 		if err == nil {
-			return t, err
+			return t, nil
 		}
 	}
 
 	if allowedFormats&TimeVar_RFC3339Second != 0 {
 		t, err := time.Parse(time.RFC3339, input)
 		if err == nil {
-			return t, err
+			return t, nil
 		}
 	}
 
 	if allowedFormats&TimeVar_Day != 0 {
 		t, err := time.Parse("2006-01-02", input)
 		if err == nil {
-			return t, err
+			return t, nil
 		}
 	}
 
 	if allowedFormats&TimeVar_Month != 0 {
 		t, err := time.Parse("2006-01", input)
 		if err == nil {
-			return t, err
+			return t, nil
 		}
 	}
 
@@ -878,33 +989,3 @@ func (d *timeValue) Get() interface{} { return *d.target }
 func (d *timeValue) String() string   { return (*d.target).String() }
 func (d *timeValue) Example() string  { return "time" }
 func (d *timeValue) Hidden() bool     { return d.hidden }
-
-// -- helpers
-func envDefault(key, def string) string {
-	if v, exist := os.LookupEnv(key); exist {
-		return v
-	}
-	return def
-}
-
-func envBoolDefault(key string, def bool) bool {
-	if v, exist := os.LookupEnv(key); exist {
-		b, err := strconv.ParseBool(v)
-		if err != nil {
-			panic(err)
-		}
-		return b
-	}
-	return def
-}
-
-func envDurationDefault(key string, def time.Duration) time.Duration {
-	if v, exist := os.LookupEnv(key); exist {
-		d, err := time.ParseDuration(v)
-		if err != nil {
-			panic(err)
-		}
-		return d
-	}
-	return def
-}

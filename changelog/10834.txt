@@ -1,0 +1,3 @@
+```release-note:feature
+secrets/database/mysql: Add ability to customize dynamic usernames
+```

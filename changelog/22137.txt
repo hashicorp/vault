@@ -1,0 +1,3 @@
+```release-note:bug
+core:  Remove "expiration manager is nil on tokenstore" error log for unauth requests on DR secondary as they do not have expiration manager. 
+```

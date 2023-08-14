@@ -1,0 +1,3 @@
+```release-note:improvement
+secrets/pki: Return issuer_id and issuer_name on /issuer/:issuer_ref/json endpoint.
+```

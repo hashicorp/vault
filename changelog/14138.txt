@@ -1,0 +1,3 @@
+```release-note:bug
+Fixed bug where auth method only considers system-identity when multiple identities are available. [#50](https://github.com/hashicorp/vault-plugin-auth-azure/pull/50)
+```

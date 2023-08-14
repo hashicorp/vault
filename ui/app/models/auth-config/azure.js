@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import { attr } from '@ember-data/model';
 import { computed } from '@ember/object';
 import AuthConfig from '../auth-config';
@@ -24,7 +29,7 @@ export default AuthConfig.extend({
 
   googleCertsEndpoint: attr('string'),
 
-  fieldGroups: computed('newFields', function() {
+  fieldGroups: computed('newFields', function () {
     let groups = [
       { default: ['tenantId', 'resource'] },
       {

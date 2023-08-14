@@ -1,6 +1,11 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package quotas
 
 import (
+	"context"
+	"encoding/hex"
 	"fmt"
 	"math"
 	"strconv"
@@ -11,6 +16,7 @@ import (
 	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/helper/metricsutil"
+	"github.com/hashicorp/vault/sdk/helper/cryptoutil"
 	"github.com/sethvargo/go-limiter"
 	"github.com/sethvargo/go-limiter/httplimit"
 	"github.com/sethvargo/go-limiter/memorystore"
@@ -51,6 +57,13 @@ type RateLimitQuota struct {
 	// MountPath is the path of the mount to which this quota is applicable
 	MountPath string `json:"mount_path"`
 
+	// Role is the role on an auth mount to apply the quota to upon /login requests
+	// Not applicable for use with path suffixes
+	Role string `json:"role"`
+
+	// PathSuffix is the path suffix to which this quota is applicable
+	PathSuffix string `json:"path_suffix"`
+
 	// Rate defines the number of requests allowed per Interval.
 	Rate float64 `json:"rate"`
 
@@ -78,18 +91,42 @@ type RateLimitQuota struct {
 // provided, which will default to 1s when initialized. An optional block
 // duration may be provided, where if set, when a client reaches the rate limit,
 // subsequent requests will fail until the block duration has passed.
-func NewRateLimitQuota(name, nsPath, mountPath string, rate float64, interval, block time.Duration) *RateLimitQuota {
+func NewRateLimitQuota(name, nsPath, mountPath, pathSuffix, role string, rate float64, interval, block time.Duration) *RateLimitQuota {
+	id, err := uuid.GenerateUUID()
+	if err != nil {
+		// Fall back to generating with a hash of the name, later in initialize
+		id = ""
+	}
 	return &RateLimitQuota{
 		Name:          name,
+		ID:            id,
 		Type:          TypeRateLimit,
 		NamespacePath: nsPath,
 		MountPath:     mountPath,
+		Role:          role,
+		PathSuffix:    pathSuffix,
 		Rate:          rate,
 		Interval:      interval,
 		BlockInterval: block,
 		purgeInterval: DefaultRateLimitPurgeInterval,
 		staleAge:      DefaultRateLimitStaleAge,
 	}
+}
+
+func (q *RateLimitQuota) Clone() Quota {
+	rlq := &RateLimitQuota{
+		ID:            q.ID,
+		Name:          q.Name,
+		MountPath:     q.MountPath,
+		Role:          q.Role,
+		Type:          q.Type,
+		NamespacePath: q.NamespacePath,
+		PathSuffix:    q.PathSuffix,
+		BlockInterval: q.BlockInterval,
+		Rate:          q.Rate,
+		Interval:      q.Interval,
+	}
+	return rlq
 }
 
 // initialize ensures the namespace and max requests are initialized, sets the ID
@@ -130,12 +167,24 @@ func (rlq *RateLimitQuota) initialize(logger log.Logger, ms *metricsutil.Cluster
 	}
 
 	if rlq.ID == "" {
-		id, err := uuid.GenerateUUID()
-		if err != nil {
-			return err
-		}
+		// A lease which was created with a blank ID may have been persisted
+		// to storage already (this is the case up to release 1.6.2.)
+		// So, performance standby nodes could call initialize() on their copy
+		// of the lease; for consistency we need to generate an ID that is
+		// deterministic. That ensures later invalidation removes the original
+		// lease from the memdb, instead of creating a duplicate.
+		rlq.ID = hex.EncodeToString(cryptoutil.Blake2b256Hash(rlq.Name))
+	}
 
-		rlq.ID = id
+	// Set purgeInterval if coming from a previous version where purgeInterval was
+	// not defined.
+	if rlq.purgeInterval == 0 {
+		rlq.purgeInterval = DefaultRateLimitPurgeInterval
+	}
+
+	// Set staleAge if coming from a previous version where staleAge was not defined.
+	if rlq.staleAge == 0 {
+		rlq.staleAge = DefaultRateLimitStaleAge
 	}
 
 	rlStore, err := memorystore.New(&memorystore.Config{
@@ -233,7 +282,7 @@ func (rlq *RateLimitQuota) QuotaName() string {
 // returned if the request ID or address is empty. If the path is exempt, the
 // quota will not be evaluated. Otherwise, the client rate limiter is retrieved
 // by address and the rate limit quota is checked against that limiter.
-func (rlq *RateLimitQuota) allow(req *Request) (Response, error) {
+func (rlq *RateLimitQuota) allow(ctx context.Context, req *Request) (Response, error) {
 	resp := Response{
 		Headers: make(map[string]string),
 	}
@@ -269,7 +318,11 @@ func (rlq *RateLimitQuota) allow(req *Request) (Response, error) {
 		}
 	}
 
-	limit, remaining, reset, allow := rlq.store.Take(req.ClientAddress)
+	limit, remaining, reset, allow, err := rlq.store.Take(ctx, req.ClientAddress)
+	if err != nil {
+		return resp, err
+	}
+
 	resp.Allowed = allow
 	resp.Headers[httplimit.HeaderRateLimitLimit] = strconv.FormatUint(limit, 10)
 	resp.Headers[httplimit.HeaderRateLimitRemaining] = strconv.FormatUint(remaining, 10)
@@ -288,18 +341,20 @@ func (rlq *RateLimitQuota) allow(req *Request) (Response, error) {
 }
 
 // close stops the current running client purge loop.
-func (rlq *RateLimitQuota) close() error {
+// It should be called with the write lock held.
+func (rlq *RateLimitQuota) close(ctx context.Context) error {
 	if rlq.purgeBlocked {
 		close(rlq.closePurgeBlockedCh)
 	}
 
 	if rlq.store != nil {
-		return rlq.store.Close()
+		return rlq.store.Close(ctx)
 	}
 
 	return nil
 }
 
-func (rlq *RateLimitQuota) handleRemount(toPath string) {
-	rlq.MountPath = toPath
+func (rlq *RateLimitQuota) handleRemount(mountpath, nspath string) {
+	rlq.MountPath = mountpath
+	rlq.NamespacePath = nspath
 }

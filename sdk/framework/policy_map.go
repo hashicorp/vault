@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package framework
 
 import (
@@ -59,7 +62,7 @@ func (p *PolicyMap) Policies(ctx context.Context, s logical.Storage, names ...st
 	}
 
 	list := make([]string, 0, len(set))
-	for k, _ := range set {
+	for k := range set {
 		list = append(list, k)
 	}
 	sort.Strings(list)

@@ -1,0 +1,3 @@
+```release-note:feature
+secrets/database/mssql: Add ability to customize dynamic usernames
+```

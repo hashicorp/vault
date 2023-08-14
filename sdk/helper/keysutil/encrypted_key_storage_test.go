@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package keysutil
 
 import (
@@ -7,7 +10,7 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/hashicorp/vault/sdk/helper/strutil"
+	"github.com/hashicorp/go-secure-stdlib/strutil"
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
@@ -234,7 +237,6 @@ func TestEncryptedKeysStorage_CRUD(t *testing.T) {
 	if data != nil {
 		t.Fatal("data should be nil")
 	}
-
 }
 
 func BenchmarkEncrytedKeyStorage_List(b *testing.B) {

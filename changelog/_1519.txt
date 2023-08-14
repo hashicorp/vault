@@ -1,3 +1,0 @@
-```release-note:bug
-agent (enterprise): Only set the namespace if the env var isn't present
-```

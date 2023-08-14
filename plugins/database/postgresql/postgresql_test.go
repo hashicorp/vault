@@ -1,20 +1,29 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package postgresql
 
 import (
 	"context"
 	"database/sql"
 	"fmt"
+	"os"
 	"strings"
 	"testing"
 	"time"
 
 	"github.com/hashicorp/vault/helper/testhelpers/postgresql"
-	dbplugin "github.com/hashicorp/vault/sdk/database/dbplugin/v5"
+	"github.com/hashicorp/vault/sdk/database/dbplugin/v5"
 	dbtesting "github.com/hashicorp/vault/sdk/database/dbplugin/v5/testing"
+	"github.com/hashicorp/vault/sdk/database/helper/dbutil"
+	"github.com/hashicorp/vault/sdk/helper/docker"
+	"github.com/hashicorp/vault/sdk/helper/template"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func getPostgreSQL(t *testing.T, options map[string]interface{}) (*PostgreSQL, func()) {
-	cleanup, connURL := postgresql.PrepareTestContainer(t, "latest")
+	cleanup, connURL := postgresql.PrepareTestContainer(t, "13.4-buster")
 
 	connectionDetails := map[string]interface{}{
 		"connection_url": connURL,
@@ -59,6 +68,123 @@ func TestPostgreSQL_InitializeWithStringVals(t *testing.T) {
 	}
 }
 
+func TestPostgreSQL_Initialize_ConnURLWithDSNFormat(t *testing.T) {
+	cleanup, connURL := postgresql.PrepareTestContainer(t, "13.4-buster")
+	defer cleanup()
+
+	dsnConnURL, err := dbutil.ParseURL(connURL)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	connectionDetails := map[string]interface{}{
+		"connection_url": dsnConnURL,
+	}
+
+	req := dbplugin.InitializeRequest{
+		Config:           connectionDetails,
+		VerifyConnection: true,
+	}
+
+	db := new()
+	dbtesting.AssertInitialize(t, db, req)
+
+	if !db.Initialized {
+		t.Fatal("Database should be initialized")
+	}
+}
+
+// TestPostgreSQL_PasswordAuthentication tests that the default "password_authentication" is "none", and that
+// an error is returned if an invalid "password_authentication" is provided.
+func TestPostgreSQL_PasswordAuthentication(t *testing.T) {
+	cleanup, connURL := postgresql.PrepareTestContainer(t, "13.4-buster")
+	defer cleanup()
+
+	dsnConnURL, err := dbutil.ParseURL(connURL)
+	assert.NoError(t, err)
+	db := new()
+
+	ctx := context.Background()
+
+	t.Run("invalid-password-authentication", func(t *testing.T) {
+		connectionDetails := map[string]interface{}{
+			"connection_url":          dsnConnURL,
+			"password_authentication": "invalid-password-authentication",
+		}
+
+		req := dbplugin.InitializeRequest{
+			Config:           connectionDetails,
+			VerifyConnection: true,
+		}
+
+		_, err := db.Initialize(ctx, req)
+		assert.EqualError(t, err, "'invalid-password-authentication' is not a valid password authentication type")
+	})
+
+	t.Run("default-is-none", func(t *testing.T) {
+		connectionDetails := map[string]interface{}{
+			"connection_url": dsnConnURL,
+		}
+
+		req := dbplugin.InitializeRequest{
+			Config:           connectionDetails,
+			VerifyConnection: true,
+		}
+
+		_ = dbtesting.AssertInitialize(t, db, req)
+		assert.Equal(t, passwordAuthenticationPassword, db.passwordAuthentication)
+	})
+}
+
+// TestPostgreSQL_PasswordAuthentication_SCRAMSHA256 tests that password_authentication works when set to scram-sha-256.
+// When sending an encrypted password, the raw password should still successfully authenticate the user.
+func TestPostgreSQL_PasswordAuthentication_SCRAMSHA256(t *testing.T) {
+	cleanup, connURL := postgresql.PrepareTestContainer(t, "13.4-buster")
+	defer cleanup()
+
+	dsnConnURL, err := dbutil.ParseURL(connURL)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	connectionDetails := map[string]interface{}{
+		"connection_url":          dsnConnURL,
+		"password_authentication": string(passwordAuthenticationSCRAMSHA256),
+	}
+
+	req := dbplugin.InitializeRequest{
+		Config:           connectionDetails,
+		VerifyConnection: true,
+	}
+
+	db := new()
+	resp := dbtesting.AssertInitialize(t, db, req)
+	assert.Equal(t, string(passwordAuthenticationSCRAMSHA256), resp.Config["password_authentication"])
+
+	if !db.Initialized {
+		t.Fatal("Database should be initialized")
+	}
+
+	ctx := context.Background()
+	newUserRequest := dbplugin.NewUserRequest{
+		Statements: dbplugin.Statements{
+			Commands: []string{
+				`
+						CREATE ROLE "{{name}}" WITH
+						  LOGIN
+						  PASSWORD '{{password}}'
+						  VALID UNTIL '{{expiration}}';
+						GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO "{{name}}";`,
+			},
+		},
+		Password:   "somesecurepassword",
+		Expiration: time.Now().Add(1 * time.Minute),
+	}
+	newUserResponse, err := db.NewUser(ctx, newUserRequest)
+
+	assertCredsExist(t, db.ConnectionURL, newUserResponse.Username, newUserRequest.Password)
+}
+
 func TestPostgreSQL_NewUser(t *testing.T) {
 	type testCase struct {
 		req            dbplugin.NewUserRequest
@@ -77,8 +203,11 @@ func TestPostgreSQL_NewUser(t *testing.T) {
 				Password:   "somesecurepassword",
 				Expiration: time.Now().Add(1 * time.Minute),
 			},
-			expectErr:      true,
-			credsAssertion: assertCredsDoNotExist,
+			expectErr: true,
+			credsAssertion: assertCreds(
+				assertUsernameRegex("^$"),
+				assertCredsDoNotExist,
+			),
 		},
 		"admin name": {
 			req: dbplugin.NewUserRequest{
@@ -87,7 +216,8 @@ func TestPostgreSQL_NewUser(t *testing.T) {
 					RoleName:    "test",
 				},
 				Statements: dbplugin.Statements{
-					Commands: []string{`
+					Commands: []string{
+						`
 						CREATE ROLE "{{name}}" WITH
 						  LOGIN
 						  PASSWORD '{{password}}'
@@ -98,8 +228,11 @@ func TestPostgreSQL_NewUser(t *testing.T) {
 				Password:   "somesecurepassword",
 				Expiration: time.Now().Add(1 * time.Minute),
 			},
-			expectErr:      false,
-			credsAssertion: assertCredsExist,
+			expectErr: false,
+			credsAssertion: assertCreds(
+				assertUsernameRegex("^v-test-test-[a-zA-Z0-9]{20}-[0-9]{10}$"),
+				assertCredsExist,
+			),
 		},
 		"admin username": {
 			req: dbplugin.NewUserRequest{
@@ -108,7 +241,8 @@ func TestPostgreSQL_NewUser(t *testing.T) {
 					RoleName:    "test",
 				},
 				Statements: dbplugin.Statements{
-					Commands: []string{`
+					Commands: []string{
+						`
 						CREATE ROLE "{{username}}" WITH
 						  LOGIN
 						  PASSWORD '{{password}}'
@@ -119,8 +253,11 @@ func TestPostgreSQL_NewUser(t *testing.T) {
 				Password:   "somesecurepassword",
 				Expiration: time.Now().Add(1 * time.Minute),
 			},
-			expectErr:      false,
-			credsAssertion: assertCredsExist,
+			expectErr: false,
+			credsAssertion: assertCreds(
+				assertUsernameRegex("^v-test-test-[a-zA-Z0-9]{20}-[0-9]{10}$"),
+				assertCredsExist,
+			),
 		},
 		"read only name": {
 			req: dbplugin.NewUserRequest{
@@ -129,7 +266,8 @@ func TestPostgreSQL_NewUser(t *testing.T) {
 					RoleName:    "test",
 				},
 				Statements: dbplugin.Statements{
-					Commands: []string{`
+					Commands: []string{
+						`
 						CREATE ROLE "{{name}}" WITH
 						  LOGIN
 						  PASSWORD '{{password}}'
@@ -141,8 +279,11 @@ func TestPostgreSQL_NewUser(t *testing.T) {
 				Password:   "somesecurepassword",
 				Expiration: time.Now().Add(1 * time.Minute),
 			},
-			expectErr:      false,
-			credsAssertion: assertCredsExist,
+			expectErr: false,
+			credsAssertion: assertCreds(
+				assertUsernameRegex("^v-test-test-[a-zA-Z0-9]{20}-[0-9]{10}$"),
+				assertCredsExist,
+			),
 		},
 		"read only username": {
 			req: dbplugin.NewUserRequest{
@@ -151,7 +292,8 @@ func TestPostgreSQL_NewUser(t *testing.T) {
 					RoleName:    "test",
 				},
 				Statements: dbplugin.Statements{
-					Commands: []string{`
+					Commands: []string{
+						`
 						CREATE ROLE "{{username}}" WITH
 						  LOGIN
 						  PASSWORD '{{password}}'
@@ -163,8 +305,11 @@ func TestPostgreSQL_NewUser(t *testing.T) {
 				Password:   "somesecurepassword",
 				Expiration: time.Now().Add(1 * time.Minute),
 			},
-			expectErr:      false,
-			credsAssertion: assertCredsExist,
+			expectErr: false,
+			credsAssertion: assertCreds(
+				assertUsernameRegex("^v-test-test-[a-zA-Z0-9]{20}-[0-9]{10}$"),
+				assertCredsExist,
+			),
 		},
 		// https://github.com/hashicorp/vault/issues/6098
 		"reproduce GH-6098": {
@@ -182,8 +327,11 @@ func TestPostgreSQL_NewUser(t *testing.T) {
 				Password:   "somesecurepassword",
 				Expiration: time.Now().Add(1 * time.Minute),
 			},
-			expectErr:      false,
-			credsAssertion: assertCredsDoNotExist,
+			expectErr: false,
+			credsAssertion: assertCreds(
+				assertUsernameRegex("^v-test-test-[a-zA-Z0-9]{20}-[0-9]{10}$"),
+				assertCredsDoNotExist,
+			),
 		},
 		"reproduce issue with template": {
 			req: dbplugin.NewUserRequest{
@@ -199,8 +347,11 @@ func TestPostgreSQL_NewUser(t *testing.T) {
 				Password:   "somesecurepassword",
 				Expiration: time.Now().Add(1 * time.Minute),
 			},
-			expectErr:      false,
-			credsAssertion: assertCredsDoNotExist,
+			expectErr: false,
+			credsAssertion: assertCreds(
+				assertUsernameRegex("^v-test-test-[a-zA-Z0-9]{20}-[0-9]{10}$"),
+				assertCredsDoNotExist,
+			),
 		},
 		"large block statements": {
 			req: dbplugin.NewUserRequest{
@@ -214,8 +365,11 @@ func TestPostgreSQL_NewUser(t *testing.T) {
 				Password:   "somesecurepassword",
 				Expiration: time.Now().Add(1 * time.Minute),
 			},
-			expectErr:      false,
-			credsAssertion: assertCredsExist,
+			expectErr: false,
+			credsAssertion: assertCreds(
+				assertUsernameRegex("^v-test-test-[a-zA-Z0-9]{20}-[0-9]{10}$"),
+				assertCredsExist,
+			),
 		},
 	}
 
@@ -529,6 +683,19 @@ func TestDeleteUser(t *testing.T) {
 			// Wait for a short time before checking because postgres takes a moment to finish deleting the user
 			credsAssertion: assertCredsExistAfter(100 * time.Millisecond),
 		},
+		"multiline": {
+			revokeStmts: []string{`
+				DO $$ BEGIN
+					REVOKE ALL PRIVILEGES ON ALL TABLES IN SCHEMA public FROM "{{username}}";
+					REVOKE ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA public FROM "{{username}}";
+					REVOKE USAGE ON SCHEMA public FROM "{{username}}";
+					DROP ROLE IF EXISTS "{{username}}";
+				END $$;
+				`},
+			expectErr: false,
+			// Wait for a short time before checking because postgres takes a moment to finish deleting the user
+			credsAssertion: waitUntilCredsDoNotExist(2 * time.Second),
+		},
 	}
 
 	// Shared test container for speed - there should not be any overlap between the tests
@@ -577,6 +744,22 @@ func TestDeleteUser(t *testing.T) {
 }
 
 type credsAssertion func(t testing.TB, connURL, username, password string)
+
+func assertCreds(assertions ...credsAssertion) credsAssertion {
+	return func(t testing.TB, connURL, username, password string) {
+		t.Helper()
+		for _, assertion := range assertions {
+			assertion(t, connURL, username, password)
+		}
+	}
+}
+
+func assertUsernameRegex(rawRegex string) credsAssertion {
+	return func(t testing.TB, _, username, _ string) {
+		t.Helper()
+		require.Regexp(t, rawRegex, username)
+	}
+}
 
 func assertCredsExist(t testing.TB, connURL, username, password string) {
 	t.Helper()
@@ -629,7 +812,7 @@ func testCredsExist(t testing.TB, connURL, username, password string) error {
 	t.Helper()
 	// Log in with the new creds
 	connURL = strings.Replace(connURL, "postgres:secret", fmt.Sprintf("%s:%s", username, password), 1)
-	db, err := sql.Open("postgres", connURL)
+	db, err := sql.Open("pgx", connURL)
 	if err != nil {
 		return err
 	}
@@ -744,4 +927,314 @@ func TestExtractQuotedStrings(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestUsernameGeneration(t *testing.T) {
+	type testCase struct {
+		data          dbplugin.UsernameMetadata
+		expectedRegex string
+	}
+
+	tests := map[string]testCase{
+		"simple display and role names": {
+			data: dbplugin.UsernameMetadata{
+				DisplayName: "token",
+				RoleName:    "myrole",
+			},
+			expectedRegex: `v-token-myrole-[a-zA-Z0-9]{20}-[0-9]{10}`,
+		},
+		"display name has dash": {
+			data: dbplugin.UsernameMetadata{
+				DisplayName: "token-foo",
+				RoleName:    "myrole",
+			},
+			expectedRegex: `v-token-fo-myrole-[a-zA-Z0-9]{20}-[0-9]{10}`,
+		},
+		"display name has underscore": {
+			data: dbplugin.UsernameMetadata{
+				DisplayName: "token_foo",
+				RoleName:    "myrole",
+			},
+			expectedRegex: `v-token_fo-myrole-[a-zA-Z0-9]{20}-[0-9]{10}`,
+		},
+		"display name has period": {
+			data: dbplugin.UsernameMetadata{
+				DisplayName: "token.foo",
+				RoleName:    "myrole",
+			},
+			expectedRegex: `v-token.fo-myrole-[a-zA-Z0-9]{20}-[0-9]{10}`,
+		},
+		"role name has dash": {
+			data: dbplugin.UsernameMetadata{
+				DisplayName: "token",
+				RoleName:    "myrole-foo",
+			},
+			expectedRegex: `v-token-myrole-f-[a-zA-Z0-9]{20}-[0-9]{10}`,
+		},
+		"role name has underscore": {
+			data: dbplugin.UsernameMetadata{
+				DisplayName: "token",
+				RoleName:    "myrole_foo",
+			},
+			expectedRegex: `v-token-myrole_f-[a-zA-Z0-9]{20}-[0-9]{10}`,
+		},
+		"role name has period": {
+			data: dbplugin.UsernameMetadata{
+				DisplayName: "token",
+				RoleName:    "myrole.foo",
+			},
+			expectedRegex: `v-token-myrole.f-[a-zA-Z0-9]{20}-[0-9]{10}`,
+		},
+	}
+
+	for name, test := range tests {
+		t.Run(fmt.Sprintf("new-%s", name), func(t *testing.T) {
+			up, err := template.NewTemplate(
+				template.Template(defaultUserNameTemplate),
+			)
+			require.NoError(t, err)
+
+			for i := 0; i < 1000; i++ {
+				username, err := up.Generate(test.data)
+				require.NoError(t, err)
+				require.Regexp(t, test.expectedRegex, username)
+			}
+		})
+	}
+}
+
+func TestNewUser_CustomUsername(t *testing.T) {
+	cleanup, connURL := postgresql.PrepareTestContainer(t, "13.4-buster")
+	defer cleanup()
+
+	type testCase struct {
+		usernameTemplate string
+		newUserData      dbplugin.UsernameMetadata
+		expectedRegex    string
+	}
+
+	tests := map[string]testCase{
+		"default template": {
+			usernameTemplate: "",
+			newUserData: dbplugin.UsernameMetadata{
+				DisplayName: "displayname",
+				RoleName:    "longrolename",
+			},
+			expectedRegex: "^v-displayn-longrole-[a-zA-Z0-9]{20}-[0-9]{10}$",
+		},
+		"explicit default template": {
+			usernameTemplate: defaultUserNameTemplate,
+			newUserData: dbplugin.UsernameMetadata{
+				DisplayName: "displayname",
+				RoleName:    "longrolename",
+			},
+			expectedRegex: "^v-displayn-longrole-[a-zA-Z0-9]{20}-[0-9]{10}$",
+		},
+		"unique template": {
+			usernameTemplate: "foo-bar",
+			newUserData: dbplugin.UsernameMetadata{
+				DisplayName: "displayname",
+				RoleName:    "longrolename",
+			},
+			expectedRegex: "^foo-bar$",
+		},
+		"custom prefix": {
+			usernameTemplate: "foobar-{{.DisplayName | truncate 8}}-{{.RoleName | truncate 8}}-{{random 20}}-{{unix_time}}",
+			newUserData: dbplugin.UsernameMetadata{
+				DisplayName: "displayname",
+				RoleName:    "longrolename",
+			},
+			expectedRegex: "^foobar-displayn-longrole-[a-zA-Z0-9]{20}-[0-9]{10}$",
+		},
+		"totally custom template": {
+			usernameTemplate: "foobar_{{random 10}}-{{.RoleName | uppercase}}.{{unix_time}}x{{.DisplayName | truncate 5}}",
+			newUserData: dbplugin.UsernameMetadata{
+				DisplayName: "displayname",
+				RoleName:    "longrolename",
+			},
+			expectedRegex: `^foobar_[a-zA-Z0-9]{10}-LONGROLENAME\.[0-9]{10}xdispl$`,
+		},
+	}
+
+	for name, test := range tests {
+		t.Run(name, func(t *testing.T) {
+			initReq := dbplugin.InitializeRequest{
+				Config: map[string]interface{}{
+					"connection_url":    connURL,
+					"username_template": test.usernameTemplate,
+				},
+				VerifyConnection: true,
+			}
+
+			db := new()
+
+			ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+			defer cancel()
+
+			_, err := db.Initialize(ctx, initReq)
+			require.NoError(t, err)
+
+			newUserReq := dbplugin.NewUserRequest{
+				UsernameConfig: test.newUserData,
+				Statements: dbplugin.Statements{
+					Commands: []string{
+						`
+						CREATE ROLE "{{name}}" WITH
+						  LOGIN
+						  PASSWORD '{{password}}'
+						  VALID UNTIL '{{expiration}}';
+						GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO "{{name}}";`,
+					},
+				},
+				Password:   "myReally-S3curePassword",
+				Expiration: time.Now().Add(1 * time.Hour),
+			}
+			ctx, cancel = context.WithTimeout(context.Background(), 2*time.Second)
+			defer cancel()
+
+			newUserResp, err := db.NewUser(ctx, newUserReq)
+			require.NoError(t, err)
+
+			require.Regexp(t, test.expectedRegex, newUserResp.Username)
+		})
+	}
+}
+
+// This is a long-running integration test which tests the functionality of Postgres's multi-host
+// connection strings. It uses two Postgres containers preconfigured with Replication Manager
+// provided by Bitnami. This test currently does not run in CI and must be run manually. This is
+// due to the test length, as it requires multiple sleep calls to ensure cluster setup and
+// primary node failover occurs before the test steps continue.
+//
+// To run the test, set the environment variable POSTGRES_MULTIHOST_NET to the value of
+// a docker network you've preconfigured, e.g.
+// 'docker network create -d bridge postgres-repmgr'
+// 'export POSTGRES_MULTIHOST_NET=postgres-repmgr'
+func TestPostgreSQL_Repmgr(t *testing.T) {
+	_, exists := os.LookupEnv("POSTGRES_MULTIHOST_NET")
+	if !exists {
+		t.Skipf("POSTGRES_MULTIHOST_NET not set, skipping test")
+	}
+
+	// Run two postgres-repmgr containers in a replication cluster
+	db0, runner0, url0, container0 := testPostgreSQL_Repmgr_Container(t, "psql-repl-node-0")
+	_, _, url1, _ := testPostgreSQL_Repmgr_Container(t, "psql-repl-node-1")
+
+	ctx, cancel := context.WithTimeout(context.Background(), 300*time.Second)
+	defer cancel()
+
+	time.Sleep(10 * time.Second)
+
+	// Write a read role to the cluster
+	_, err := db0.NewUser(ctx, dbplugin.NewUserRequest{
+		Statements: dbplugin.Statements{
+			Commands: []string{
+				`CREATE ROLE "ro" NOINHERIT;
+				GRANT SELECT ON ALL TABLES IN SCHEMA public TO "ro";`,
+			},
+		},
+	})
+	if err != nil {
+		t.Fatalf("no error expected, got: %s", err)
+	}
+
+	// Open a connection to both databases using the multihost connection string
+	connectionDetails := map[string]interface{}{
+		"connection_url": fmt.Sprintf("postgresql://{{username}}:{{password}}@%s,%s/postgres?target_session_attrs=read-write", getHost(url0), getHost(url1)),
+		"username":       "postgres",
+		"password":       "secret",
+	}
+	req := dbplugin.InitializeRequest{
+		Config:           connectionDetails,
+		VerifyConnection: true,
+	}
+
+	db := new()
+	dbtesting.AssertInitialize(t, db, req)
+	if !db.Initialized {
+		t.Fatal("Database should be initialized")
+	}
+	defer db.Close()
+
+	// Add a user to the cluster, then stop the primary container
+	if err = testPostgreSQL_Repmgr_AddUser(ctx, db); err != nil {
+		t.Fatalf("no error expected, got: %s", err)
+	}
+	postgresql.StopContainer(t, ctx, runner0, container0)
+
+	// Try adding a new user immediately - expect failure as the database
+	// cluster is still switching primaries
+	err = testPostgreSQL_Repmgr_AddUser(ctx, db)
+	if !strings.HasSuffix(err.Error(), "ValidateConnect failed (read only connection)") {
+		t.Fatalf("expected error was not received, got: %s", err)
+	}
+
+	time.Sleep(20 * time.Second)
+
+	// Try adding a new user again which should succeed after the sleep
+	// as the primary failover should have finished. Then, restart
+	// the first container which should become a secondary DB.
+	if err = testPostgreSQL_Repmgr_AddUser(ctx, db); err != nil {
+		t.Fatalf("no error expected, got: %s", err)
+	}
+	postgresql.RestartContainer(t, ctx, runner0, container0)
+
+	time.Sleep(10 * time.Second)
+
+	// A final new user to add, which should succeed after the secondary joins.
+	if err = testPostgreSQL_Repmgr_AddUser(ctx, db); err != nil {
+		t.Fatalf("no error expected, got: %s", err)
+	}
+
+	if err := db.Close(); err != nil {
+		t.Fatalf("err: %s", err)
+	}
+}
+
+func testPostgreSQL_Repmgr_Container(t *testing.T, name string) (*PostgreSQL, *docker.Runner, string, string) {
+	envVars := []string{
+		"REPMGR_NODE_NAME=" + name,
+		"REPMGR_NODE_NETWORK_NAME=" + name,
+	}
+
+	runner, cleanup, connURL, containerID := postgresql.PrepareTestContainerRepmgr(t, name, "13.4.0", envVars)
+	t.Cleanup(cleanup)
+
+	connectionDetails := map[string]interface{}{
+		"connection_url": connURL,
+	}
+	req := dbplugin.InitializeRequest{
+		Config:           connectionDetails,
+		VerifyConnection: true,
+	}
+	db := new()
+	dbtesting.AssertInitialize(t, db, req)
+	if !db.Initialized {
+		t.Fatal("Database should be initialized")
+	}
+
+	if err := db.Close(); err != nil {
+		t.Fatalf("err: %s", err)
+	}
+
+	return db, runner, connURL, containerID
+}
+
+func testPostgreSQL_Repmgr_AddUser(ctx context.Context, db *PostgreSQL) error {
+	_, err := db.NewUser(ctx, dbplugin.NewUserRequest{
+		Statements: dbplugin.Statements{
+			Commands: []string{
+				`CREATE ROLE "{{name}}" WITH LOGIN PASSWORD '{{password}}' VALID UNTIL '{{expiration}}' INHERIT;
+				GRANT ro TO "{{name}}";`,
+			},
+		},
+	})
+
+	return err
+}
+
+func getHost(url string) string {
+	splitCreds := strings.Split(url, "@")[1]
+
+	return strings.Split(splitCreds, "/")[0]
 }

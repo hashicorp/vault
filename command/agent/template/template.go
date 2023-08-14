@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 // Package template is responsible for rendering user supplied templates to
 // disk. The Server type accepts configuration to communicate to a Vault server
 // and a Vault token for authentication. Internally, the Server creates a Consul
@@ -10,15 +13,16 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"strings"
 
 	"go.uber.org/atomic"
 
 	ctconfig "github.com/hashicorp/consul-template/config"
-	ctlogging "github.com/hashicorp/consul-template/logging"
 	"github.com/hashicorp/consul-template/manager"
 	"github.com/hashicorp/go-hclog"
+
 	"github.com/hashicorp/vault/command/agent/config"
+	"github.com/hashicorp/vault/command/agent/internal/ctmanager"
+	"github.com/hashicorp/vault/helper/useragent"
 	"github.com/hashicorp/vault/sdk/helper/pointerutil"
 )
 
@@ -27,10 +31,10 @@ import (
 type ServerConfig struct {
 	Logger hclog.Logger
 	// Client        *api.Client
-	VaultConf     *config.Vault
-	ExitAfterAuth bool
+	AgentConfig *config.Config
 
-	Namespace string
+	ExitAfterAuth bool
+	Namespace     string
 
 	// LogLevel is needed to set the internal Consul Template Runner's log level
 	// to match the log level of Vault Agent. The internal Runner creates it's own
@@ -65,10 +69,6 @@ type Server struct {
 
 	logger        hclog.Logger
 	exitAfterAuth bool
-
-	// testingLimitRetry is used for tests to limit the number of retries
-	// performed by the template server
-	testingLimitRetry int
 }
 
 // NewServer returns a new configured server
@@ -111,7 +111,14 @@ func (ts *Server) Run(ctx context.Context, incoming chan string, templates []*ct
 	// configuration
 	var runnerConfig *ctconfig.Config
 	var runnerConfigErr error
-	if runnerConfig, runnerConfigErr = newRunnerConfig(ts.config, templates); runnerConfigErr != nil {
+	managerConfig := ctmanager.ManagerConfig{
+		AgentConfig: ts.config.AgentConfig,
+		Namespace:   ts.config.Namespace,
+		LogLevel:    ts.config.LogLevel,
+		LogWriter:   ts.config.LogWriter,
+	}
+	runnerConfig, runnerConfigErr = ctmanager.NewConfig(managerConfig, templates)
+	if runnerConfigErr != nil {
 		return fmt.Errorf("template server failed to runner generate config: %w", runnerConfigErr)
 	}
 
@@ -160,14 +167,9 @@ func (ts *Server) Run(ctx context.Context, incoming chan string, templates []*ct
 				*latestToken = token
 				ctv := ctconfig.Config{
 					Vault: &ctconfig.VaultConfig{
-						Token: latestToken,
+						Token:           latestToken,
+						ClientUserAgent: pointerutil.StringPtr(useragent.AgentTemplatingString()),
 					},
-				}
-
-				// If we're testing, limit retries to 3 attempts to avoid
-				// long test runs from exponential back-offs
-				if ts.testingLimitRetry != 0 {
-					ctv.Vault.Retry = &ctconfig.RetryConfig{Attempts: &ts.testingLimitRetry}
 				}
 
 				runnerConfig = runnerConfig.Merge(&ctv)
@@ -182,8 +184,20 @@ func (ts *Server) Run(ctx context.Context, incoming chan string, templates []*ct
 			}
 
 		case err := <-ts.runner.ErrCh:
+			ts.logger.Error("template server error", "error", err.Error())
 			ts.runner.StopImmediately()
-			return fmt.Errorf("template server: %w", err)
+
+			// Return after stopping the runner if exit on retry failure was
+			// specified
+			if ts.config.AgentConfig.TemplateConfig != nil && ts.config.AgentConfig.TemplateConfig.ExitOnRetryFailure {
+				return fmt.Errorf("template server: %w", err)
+			}
+
+			ts.runner, err = manager.NewRunner(runnerConfig, false)
+			if err != nil {
+				return fmt.Errorf("template server failed to create: %w", err)
+			}
+			go ts.runner.Start()
 
 		case <-ts.runner.TemplateRenderedCh():
 			// A template has been rendered, figure out what to do
@@ -220,80 +234,4 @@ func (ts *Server) Stop() {
 	if ts.stopped.CAS(false, true) {
 		close(ts.DoneCh)
 	}
-}
-
-// newRunnerConfig returns a consul-template runner configuration, setting the
-// Vault and Consul configurations based on the clients configs.
-func newRunnerConfig(sc *ServerConfig, templates ctconfig.TemplateConfigs) (*ctconfig.Config, error) {
-	conf := ctconfig.DefaultConfig()
-	conf.Templates = templates.Copy()
-
-	// Setup the Vault config
-	// Always set these to ensure nothing is picked up from the environment
-	conf.Vault.RenewToken = pointerutil.BoolPtr(false)
-	conf.Vault.Token = pointerutil.StringPtr("")
-	conf.Vault.Address = &sc.VaultConf.Address
-
-	if sc.Namespace != "" {
-		conf.Vault.Namespace = &sc.Namespace
-	}
-
-	conf.Vault.SSL = &ctconfig.SSLConfig{
-		Enabled:    pointerutil.BoolPtr(false),
-		Verify:     pointerutil.BoolPtr(false),
-		Cert:       pointerutil.StringPtr(""),
-		Key:        pointerutil.StringPtr(""),
-		CaCert:     pointerutil.StringPtr(""),
-		CaPath:     pointerutil.StringPtr(""),
-		ServerName: pointerutil.StringPtr(""),
-	}
-
-	if strings.HasPrefix(sc.VaultConf.Address, "https") || sc.VaultConf.CACert != "" {
-		skipVerify := sc.VaultConf.TLSSkipVerify
-		verify := !skipVerify
-		conf.Vault.SSL = &ctconfig.SSLConfig{
-			Enabled: pointerutil.BoolPtr(true),
-			Verify:  &verify,
-			Cert:    &sc.VaultConf.ClientCert,
-			Key:     &sc.VaultConf.ClientKey,
-			CaCert:  &sc.VaultConf.CACert,
-			CaPath:  &sc.VaultConf.CAPath,
-		}
-	}
-
-	conf.Finalize()
-
-	// setup log level from TemplateServer config
-	conf.LogLevel = logLevelToStringPtr(sc.LogLevel)
-
-	if err := ctlogging.Setup(&ctlogging.Config{
-		Level:  *conf.LogLevel,
-		Writer: sc.LogWriter,
-	}); err != nil {
-		return nil, err
-	}
-	return conf, nil
-}
-
-// logLevelToString converts a go-hclog level to a matching, uppercase string
-// value. It's used to convert Vault Agent's hclog level to a string version
-// suitable for use in Consul Template's runner configuration input.
-func logLevelToStringPtr(level hclog.Level) *string {
-	// consul template's default level is WARN, but Vault Agent's default is INFO,
-	// so we use that for the Runner's default.
-	var levelStr string
-
-	switch level {
-	case hclog.Trace:
-		levelStr = "TRACE"
-	case hclog.Debug:
-		levelStr = "DEBUG"
-	case hclog.Warn:
-		levelStr = "WARN"
-	case hclog.Error:
-		levelStr = "ERROR"
-	default:
-		levelStr = "INFO"
-	}
-	return pointerutil.StringPtr(levelStr)
 }

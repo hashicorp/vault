@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package command
 
 import (
@@ -8,9 +11,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/hashicorp/errwrap"
+	kvbuilder "github.com/hashicorp/go-secure-stdlib/kv-builder"
 	"github.com/hashicorp/vault/api"
-	kvbuilder "github.com/hashicorp/vault/internalshared/kv-builder"
 	"github.com/kr/text"
 	homedir "github.com/mitchellh/go-homedir"
 	"github.com/mitchellh/mapstructure"
@@ -52,7 +54,7 @@ func ensureTrailingSlash(s string) string {
 	return s
 }
 
-// ensureNoTrailingSlash ensures the given string has a trailing slash.
+// ensureNoTrailingSlash ensures the given string does not have a trailing slash.
 func ensureNoTrailingSlash(s string) string {
 	s = strings.TrimSpace(s)
 	if s == "" {
@@ -65,7 +67,7 @@ func ensureNoTrailingSlash(s string) string {
 	return s
 }
 
-// ensureNoLeadingSlash ensures the given string has a trailing slash.
+// ensureNoLeadingSlash ensures the given string does not have a leading slash.
 func ensureNoLeadingSlash(s string) string {
 	s = strings.TrimSpace(s)
 	if s == "" {
@@ -78,7 +80,7 @@ func ensureNoLeadingSlash(s string) string {
 	return s
 }
 
-// columnOuput prints the list of items as a table with no headers.
+// columnOutput prints the list of items as a table with no headers.
 func columnOutput(list []string, c *columnize.Config) string {
 	if len(list) == 0 {
 		return ""
@@ -193,6 +195,7 @@ func printKeyStatus(ks *api.KeyStatus) string {
 	return columnOutput([]string{
 		fmt.Sprintf("Key Term | %d", ks.Term),
 		fmt.Sprintf("Install Time | %s", ks.InstallTime.UTC().Format(time.RFC822)),
+		fmt.Sprintf("Encryption Count | %d", ks.Encryptions),
 	}, nil)
 }
 
@@ -261,13 +264,13 @@ func humanDuration(d time.Duration) string {
 // humanDurationInt prints the given int as if it were a time.Duration  number
 // of seconds.
 func humanDurationInt(i interface{}) interface{} {
-	switch i.(type) {
+	switch i := i.(type) {
 	case int:
-		return humanDuration(time.Duration(i.(int)) * time.Second)
+		return humanDuration(time.Duration(i) * time.Second)
 	case int64:
-		return humanDuration(time.Duration(i.(int64)) * time.Second)
+		return humanDuration(time.Duration(i) * time.Second)
 	case json.Number:
-		if i, err := i.(json.Number).Int64(); err == nil {
+		if i, err := i.Int64(); err == nil {
 			return humanDuration(time.Duration(i) * time.Second)
 		}
 	}
@@ -284,11 +287,58 @@ func parseFlagFile(raw string) (string, error) {
 	if len(raw) > 0 && raw[0] == '@' {
 		contents, err := ioutil.ReadFile(raw[1:])
 		if err != nil {
-			return "", errwrap.Wrapf("error reading file: {{err}}", err)
+			return "", fmt.Errorf("error reading file: %w", err)
 		}
 
 		return string(contents), nil
 	}
 
 	return raw, nil
+}
+
+func generateFlagWarnings(args []string) string {
+	var trailingFlags []string
+	for _, arg := range args {
+		// "-" can be used where a file is expected to denote stdin.
+		if !strings.HasPrefix(arg, "-") || arg == "-" {
+			continue
+		}
+
+		isGlobalFlag := false
+		trimmedArg, _, _ := strings.Cut(strings.TrimLeft(arg, "-"), "=")
+		for _, flag := range globalFlags {
+			if trimmedArg == flag {
+				isGlobalFlag = true
+			}
+		}
+		if isGlobalFlag {
+			continue
+		}
+
+		trailingFlags = append(trailingFlags, arg)
+	}
+
+	if len(trailingFlags) > 0 {
+		return fmt.Sprintf("Command flags must be provided before positional arguments. "+
+			"The following arguments will not be parsed as flags: [%s]", strings.Join(trailingFlags, ","))
+	} else {
+		return ""
+	}
+}
+
+func generateFlagErrors(f *FlagSets, opts ...ParseOptions) error {
+	if Format(f.ui) == "raw" {
+		canUseRaw := false
+		for _, opt := range opts {
+			if value, ok := opt.(ParseOptionAllowRawFormat); ok {
+				canUseRaw = bool(value)
+			}
+		}
+
+		if !canUseRaw {
+			return fmt.Errorf("This command does not support the -format=raw option.")
+		}
+	}
+
+	return nil
 }

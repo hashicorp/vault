@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package identitytpl
 
 import (
@@ -9,6 +12,7 @@ import (
 	"time"
 
 	"github.com/hashicorp/errwrap"
+	"github.com/hashicorp/go-secure-stdlib/parseutil"
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
@@ -164,7 +168,6 @@ func PopulateString(p PopulateStringInput) (bool, string, error) {
 }
 
 func performTemplating(input string, p *PopulateStringInput) (string, error) {
-
 	performAliasTemplating := func(trimmed string, alias *logical.Alias) (string, error) {
 		switch {
 		case trimmed == "id":
@@ -179,6 +182,15 @@ func performTemplating(input string, p *PopulateStringInput) (string, error) {
 		case strings.HasPrefix(trimmed, "metadata."):
 			split := strings.SplitN(trimmed, ".", 2)
 			return p.templateHandler(alias.Metadata, split[1])
+
+		case trimmed == "custom_metadata":
+			return p.templateHandler(alias.CustomMetadata)
+
+		case strings.HasPrefix(trimmed, "custom_metadata."):
+
+			split := strings.SplitN(trimmed, ".", 2)
+			return p.templateHandler(alias.CustomMetadata, split[1])
+
 		}
 
 		return "", ErrTemplateValueNotFound
@@ -223,7 +235,7 @@ func performTemplating(input string, p *PopulateStringInput) (string, error) {
 				}
 
 				// An empty alias is sufficient for generating defaults
-				alias = &logical.Alias{Metadata: make(map[string]string)}
+				alias = &logical.Alias{Metadata: make(map[string]string), CustomMetadata: make(map[string]string)}
 			}
 			return performAliasTemplating(split[1], alias)
 		}
@@ -319,7 +331,7 @@ func performTemplating(input string, p *PopulateStringInput) (string, error) {
 			return "", errors.New("missing time operand")
 
 		case 3:
-			duration, err := time.ParseDuration(opsSplit[2])
+			duration, err := parseutil.ParseDurationSecond(opsSplit[2])
 			if err != nil {
 				return "", errwrap.Wrapf("invalid duration: {{err}}", err)
 			}

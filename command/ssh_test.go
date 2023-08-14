@@ -1,6 +1,10 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package command
 
 import (
+	"strings"
 	"testing"
 
 	"github.com/mitchellh/cli"
@@ -26,7 +30,7 @@ func TestParseSSHCommand(t *testing.T) {
 	t.Parallel()
 
 	_, cmd := testSSHCommand(t)
-	var tests = []struct {
+	tests := []struct {
 		name     string
 		args     []string
 		hostname string
@@ -162,7 +166,6 @@ func TestParseSSHCommand(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-
 			hostname, username, port, err := cmd.parseSSHCommand(test.args)
 			if err != test.err {
 				t.Errorf("got error: %q want %q", err, test.err)
@@ -184,7 +187,7 @@ func TestIsSingleSSHArg(t *testing.T) {
 	t.Parallel()
 
 	_, cmd := testSSHCommand(t)
-	var tests = []struct {
+	tests := []struct {
 		name string
 		arg  string
 		want bool
@@ -213,5 +216,20 @@ func TestIsSingleSSHArg(t *testing.T) {
 				t.Errorf("arg %q got %v want %v", test.arg, got, test.want)
 			}
 		})
+	}
+}
+
+// TestSSHCommandOmitFlagWarning checks if flags warning messages are printed
+// in the output of the CLI command or not. If so, it will fail.
+func TestSSHCommandOmitFlagWarning(t *testing.T) {
+	t.Parallel()
+
+	ui, cmd := testSSHCommand(t)
+
+	_ = cmd.Run([]string{"-mode", "ca", "-role", "otp_key_role", "user@1.2.3.4", "-extraFlag", "bug"})
+
+	combined := ui.OutputWriter.String() + ui.ErrorWriter.String()
+	if strings.Contains(combined, "Command flags must be provided before positional arguments. The following arguments will not be parsed as flags") {
+		t.Fatalf("ssh command displayed flag warnings")
 	}
 }

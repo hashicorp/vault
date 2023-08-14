@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package shamir
 
 import (
@@ -63,7 +66,7 @@ func TestCombine_invalid(t *testing.T) {
 		t.Fatalf("should err")
 	}
 
-	//Too short
+	// Too short
 	parts = [][]byte{
 		[]byte("f"),
 		[]byte("b"),

@@ -1,0 +1,15 @@
+- `token_ttl` `(integer: 0 or string: "")` - The incremental lifetime for
+  generated tokens. This current value of this will be referenced at renewal
+  time.
+- `token_max_ttl` `(integer: 0 or string: "")` - The maximum lifetime for
+  generated tokens. This current value of this will be referenced at renewal
+  time.
+- `token_policies` `(array: [] or comma-delimited string: "")` - List of
+  token policies to encode onto generated tokens. Depending on the auth method, this
+  list may be supplemented by user/group/other values.
+- `policies` `(array: [] or comma-delimited string: "")` - DEPRECATED: Please
+  use the `token_policies` parameter instead. List of token policies to encode
+  onto generated tokens. Depending on the auth method, this list may be
+  supplemented by user/group/other values.
+
+@include 'tokenstorefields.mdx'

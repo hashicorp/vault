@@ -1,15 +1,20 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
 <PageHeader as |p|>
   <p.top>
     <KmipBreadcrumb @scope={{this.scope}} />
   </p.top>
   <p.levelLeft>
     <h1 class="title is-3">
-      Create a role
+      Create a Role
     </h1>
   </p.levelLeft>
 </PageHeader>
 <EditFormKmipRole
-  @model={{model}}
+  @model={{this.model}}
   @mode="create"
   @onSave={{transition-to "vault.cluster.secrets.backend.kmip.scope.roles" this.scope}}
   @cancelLinkParams={{array "scope.roles" this.scope}}

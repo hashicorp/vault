@@ -1,0 +1,99 @@
+---
+layout: docs
+page_title: Vault Enterprise Seal Wrap
+description: |-
+  Vault Enterprise features a mechanism to wrap values with an extra layer of
+  encryption for supporting seals.
+---
+
+# Seal wrap
+
+@include 'alerts/enterprise-and-hcp.mdx'
+
+Vault Enterprise features a mechanism to wrap values with an extra layer of
+encryption for supporting [seals](/vault/docs/configuration/seal). This adds an
+extra layer of protection and is useful in some compliance and regulatory
+environments, including FIPS 140-2 environments.
+
+To use this feature, you must have an active or trial license for Vault
+Enterprise Plus (HSMs). To start a trial, contact [HashiCorp
+sales](mailto:sales@hashicorp.com).
+
+## Enabling/Disabling
+
+Seal Wrap is enabled by default on supporting seals. This implies that the seal
+must be available throughout Vault's runtime. Most cloud-based seals should be
+quite reliable, but, for instance, if using an HSM in a non-HA setup a
+connection interruption to the HSM will result in issues with Vault
+functionality.
+
+To disable seal wrapping, set `disable_sealwrap = true` in Vault's
+[configuration file][configuration]. This will not affect auto-unsealing functionality; Vault's
+root key will still be protected by the seal wrapping mechanism. It will
+simply prevent other storage entries within Vault from being seal wrapped.
+
+_N.B._: This is a lazy downgrade; as keys are accessed or written their seal
+wrapping status will change. Similarly, if the flag is removed, it will be a
+lazy upgrade (which is the case when initially upgrading to a seal
+wrap-supporting version of Vault).
+
+## Activating seal wrapping
+
+For some values, seal wrapping is always enabled with a supporting seal. This
+includes the recovery key, any stored key shares, the root key, the keyring,
+and more; essentially, any Critical Security Parameter (CSP) within Vault's
+core. If upgrading from a version of Vault that did not support seal wrapping,
+the next time these values are read they will be seal-wrapped and stored.
+
+Backend mounts within Vault can also take advantage of seal wrapping. Seal
+wrapping can be activated at mount time for a given mount by mounting the
+backend with the `seal_wrap` configuration value set to `true`. (This value
+cannot currently be changed later.)
+
+A given backend's author can specify which values should be seal-wrapped by
+identifying where CSPs are stored.  They may also choose to seal wrap all or none
+of their values.
+
+Note that it is often an order of magnitude or two slower to write to and read
+from HSMs or remote seals. However, values will be cached in memory
+un-seal-wrapped (but still encrypted by Vault's built-in cryptographic barrier)
+in Vault, which will mitigate this for read-heavy workloads.
+
+## Seal wrap and replication
+
+Seal wrapping takes place below the replication logic. As a result, it is
+transparent to replication. Replication will convey which values should be
+seal-wrapped, but it is up to the seal on the local cluster to implement it.
+In practice, this means that seal wrapping can be used without needing to have
+the replicated keys on both ends of the connection; each cluster can have
+distinct keys in an HSM or in KMS.
+
+In addition, it is possible to replicate from a Shamir-protected primary
+cluster to clusters that use HSMs when seal wrapping is required in downstream
+datacenters but not in the primary.
+
+## Wrapped parameters
+
+Each plugin (whether secret or auth) maintains control over parameters it
+feels are best to Seal Wrap. These are usually just a few core values as
+Seal Wrapping does incur some performance overhead.
+
+Some examples of places where seal wrapping is used include:
+
+- The [LDAP](/vault/docs/auth/ldap), [RADIUS](/vault/docs/auth/radius),
+  [Okta](/vault/docs/auth/okta), and [AWS](/vault/docs/auth/aws) auth methods,
+  for storing their config.
+- [PKI](/vault/docs/secrets/pki) for storing the issuers and their keys,
+- [SSH](/vault/docs/secrets/ssh) for storing the CA's keys,
+- [KMIP](/vault/docs/secrets/kmip) for storing managed objects (externally-provided
+  keys) and its CA keys.
+- [Transit](/vault/docs/secrets/transit) for storing keys and their policy.
+
+## FIPS status
+
+See the [FIPS-specific Seal Wrap documentation](/vault/docs/enterprise/fips/sealwrap)
+for more information about using Seal Wrapping to achieve FIPS 140-2 compliance.
+Note that there are additional [FIPS considerations](/vault/docs/enterprise/sealwrap#seal-wrap-and-replication)
+regarding Seal Wrap usage and Vault Replication.
+
+[configuration]: /vault/docs/configuration

@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package plugin
 
 import (
@@ -6,19 +9,20 @@ import (
 	"math"
 	"sync/atomic"
 
-	"google.golang.org/grpc"
-	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/status"
-
 	log "github.com/hashicorp/go-hclog"
-	plugin "github.com/hashicorp/go-plugin"
+	"github.com/hashicorp/go-plugin"
 	"github.com/hashicorp/vault/sdk/helper/pluginutil"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/sdk/plugin/pb"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 )
 
-var ErrPluginShutdown = errors.New("plugin is shut down")
-var ErrClientInMetadataMode = errors.New("plugin client can not perform action while in metadata mode")
+var (
+	ErrPluginShutdown       = errors.New("plugin is shut down")
+	ErrClientInMetadataMode = errors.New("plugin client can not perform action while in metadata mode")
+)
 
 // Validate backendGRPCPluginClient satisfies the logical.Backend interface
 var _ logical.Backend = &backendGRPCPluginClient{}
@@ -26,9 +30,10 @@ var _ logical.Backend = &backendGRPCPluginClient{}
 // backendPluginClient implements logical.Backend and is the
 // go-plugin client.
 type backendGRPCPluginClient struct {
-	broker       *plugin.GRPCBroker
-	client       pb.BackendClient
-	metadataMode bool
+	broker        *plugin.GRPCBroker
+	client        pb.BackendClient
+	versionClient logical.PluginVersionClient
+	metadataMode  bool
 
 	system logical.SystemView
 	logger log.Logger
@@ -40,10 +45,7 @@ type backendGRPCPluginClient struct {
 	// server is the grpc server used for serving storage and sysview requests.
 	server *atomic.Value
 
-	// clientConn is the underlying grpc connection to the server, we store it
-	// so it can be cleaned up.
-	clientConn *grpc.ClientConn
-	doneCtx    context.Context
+	doneCtx context.Context
 }
 
 func (b *backendGRPCPluginClient) Initialize(ctx context.Context, _ *logical.InitializationRequest) error {
@@ -125,10 +127,11 @@ func (b *backendGRPCPluginClient) SpecialPaths() *logical.Paths {
 	}
 
 	return &logical.Paths{
-		Root:            reply.Paths.Root,
-		Unauthenticated: reply.Paths.Unauthenticated,
-		LocalStorage:    reply.Paths.LocalStorage,
-		SealWrapStorage: reply.Paths.SealWrapStorage,
+		Root:                  reply.Paths.Root,
+		Unauthenticated:       reply.Paths.Unauthenticated,
+		LocalStorage:          reply.Paths.LocalStorage,
+		SealWrapStorage:       reply.Paths.SealWrapStorage,
+		WriteForwardedStorage: reply.Paths.WriteForwardedStorage,
 	}
 }
 
@@ -192,7 +195,6 @@ func (b *backendGRPCPluginClient) Cleanup(ctx context.Context) {
 	if server != nil {
 		server.(*grpc.Server).GracefulStop()
 	}
-	b.clientConn.Close()
 }
 
 func (b *backendGRPCPluginClient) InvalidateKey(ctx context.Context, key string) {
@@ -229,6 +231,10 @@ func (b *backendGRPCPluginClient) Setup(ctx context.Context, config *logical.Bac
 		impl: sysViewImpl,
 	}
 
+	events := &GRPCEventsServer{
+		impl: config.EventsSender,
+	}
+
 	// Register the server in this closure.
 	serverFunc := func(opts []grpc.ServerOption) *grpc.Server {
 		opts = append(opts, grpc.MaxRecvMsgSize(math.MaxInt32))
@@ -237,6 +243,7 @@ func (b *backendGRPCPluginClient) Setup(ctx context.Context, config *logical.Bac
 		s := grpc.NewServer(opts...)
 		pb.RegisterSystemViewServer(s, sysView)
 		pb.RegisterStorageServer(s, storage)
+		pb.RegisterEventsServer(s, events)
 		b.server.Store(s)
 		close(b.cleanupCh)
 		return s
@@ -277,4 +284,24 @@ func (b *backendGRPCPluginClient) Type() logical.BackendType {
 	}
 
 	return logical.BackendType(reply.Type)
+}
+
+func (b *backendGRPCPluginClient) PluginVersion() logical.PluginVersion {
+	reply, err := b.versionClient.Version(b.doneCtx, &logical.Empty{})
+	if err != nil {
+		if stErr, ok := status.FromError(err); ok {
+			if stErr.Code() == codes.Unimplemented {
+				return logical.EmptyPluginVersion
+			}
+		}
+		b.Logger().Warn("Unknown error getting plugin version", "err", err)
+		return logical.EmptyPluginVersion
+	}
+	return logical.PluginVersion{
+		Version: reply.GetPluginVersion(),
+	}
+}
+
+func (b *backendGRPCPluginClient) IsExternal() bool {
+	return true
 }
