@@ -12,6 +12,7 @@ cluster_addr = "top_level_cluster_addr"
 
 listener "tcp" {
   address = "127.0.0.1:443"
+  chroot_namespace="admin/"
 }
 
 backend "consul" {
