@@ -1,7 +1,6 @@
 <Hds::SideNav::Portal @ariaLabel="Cluster Navigation Links" data-test-sidebar-nav-panel="Cluster" as |Nav|>
   <Nav.Title data-test-sidebar-nav-heading="Vault">Vault</Nav.Title>
 
-  {{! TODO LANDING PAGE: VAULT-17055 hide dashboard nav link when user isn't opted into the new dashboard ui }}
   <Nav.Link @route="vault.cluster.dashboard" @text="Dashboard" data-test-sidebar-nav-link="Dashboard" />
   <Nav.Link
     @route="vault.cluster.secrets"
