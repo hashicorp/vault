@@ -1007,22 +1007,19 @@ func TestAgent_Template_VaultClientFromEnv(t *testing.T) {
 
 	vaultAddr := "https://" + cluster.Cores[0].Listeners[0].Address.String()
 	testCases := map[string]struct {
-		env           map[string]string
-		expectFailure bool
+		env map[string]string
 	}{
 		"VAULT_ADDR and VAULT_CACERT": {
 			env: map[string]string{
 				api.EnvVaultAddress: vaultAddr,
 				api.EnvVaultCACert:  cluster.CACertPEMFile,
 			},
-			expectFailure: false,
 		},
 		"VAULT_ADDR and VAULT_CACERT_BYTES": {
 			env: map[string]string{
 				api.EnvVaultAddress:     vaultAddr,
 				api.EnvVaultCACertBytes: string(cluster.CACertPEM),
 			},
-			expectFailure: false,
 		},
 	}
 
@@ -1040,8 +1037,13 @@ func TestAgent_Template_VaultClientFromEnv(t *testing.T) {
 			}
 
 			// build up the template config to be added to the Agent config.hcl file
-			const targetFile = "render.json"
-			templateConfigString := fmt.Sprintf(templateConfigString, templateFile, tmpDir, targetFile)
+			targetFile := filepath.Join(tmpDir, "render.json")
+			templateConfig := fmt.Sprintf(`
+template {
+    source      = "%s"
+    destination = "%s"
+}
+			`, templateFile, targetFile)
 
 			// Create a config file
 			config := `
@@ -1059,7 +1061,7 @@ auto_auth {
 %s
 `
 
-			config = fmt.Sprintf(config, roleIDPath, secretIDPath, templateConfigString)
+			config = fmt.Sprintf(config, roleIDPath, secretIDPath, templateConfig)
 			configPath := makeTempFile(t, "config.hcl", config)
 			defer os.Remove(configPath)
 
@@ -1104,7 +1106,7 @@ auto_auth {
 				case <-tick:
 				}
 
-				c, err := os.ReadFile(filepath.Join(tmpDir, targetFile))
+				contents, err := os.ReadFile(targetFile)
 				if err != nil {
 					// If the file simply doesn't exist, continue waiting for
 					// the template rendering to complete.
@@ -1114,8 +1116,8 @@ auto_auth {
 					t.Fatal(err)
 				}
 
-				if string(c) != templateRendered(0) {
-					t.Fatalf("expected=%q, got=%q", templateRendered(0), string(c))
+				if string(contents) != templateRendered(0) {
+					t.Fatalf("expected=%q, got=%q", templateRendered(0), string(contents))
 				}
 
 				// Success! Break out of the retry loop.
