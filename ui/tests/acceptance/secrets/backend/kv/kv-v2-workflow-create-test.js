@@ -71,7 +71,6 @@ module('Acceptance | kv-v2 workflow | secret and version create', function (hook
       assert.dom(FORM.invalidFormAlert).hasText('There is an error with this form.');
       assert.dom(FORM.validation('path')).hasText("Path can't be blank.");
       await typeIn(FORM.inputByAttr('path'), secretPath);
-      // TODO: clear invalid form alert on form change?
       assert
         .dom(FORM.validationWarning)
         .hasText(
@@ -107,7 +106,6 @@ module('Acceptance | kv-v2 workflow | secret and version create', function (hook
       assert
         .dom(`${PAGE.metadata.secretMetadataSection} ${PAGE.secretRow}`)
         .exists({ count: 3 }, '3 metadata rows show');
-      // await this.pauseTest();
       assert.dom(PAGE.infoRowValue('Maximum versions')).hasText('0', 'max versions shows 0');
       assert.dom(PAGE.infoRowValue('Check-and-Set required')).hasText('No', 'cas not enforced');
       assert
@@ -200,7 +198,6 @@ module('Acceptance | kv-v2 workflow | secret and version create', function (hook
       assert
         .dom(`${PAGE.metadata.secretMetadataSection} ${PAGE.secretRow}`)
         .exists({ count: 3 }, '3 metadata rows show');
-      // await this.pauseTest();
       assert.dom(PAGE.infoRowValue('Maximum versions')).hasText('7', 'max versions shows 0');
       assert.dom(PAGE.infoRowValue('Check-and-Set required')).hasText('Yes', 'cas enforced');
       assert
