@@ -12,12 +12,12 @@ import { tracked } from '@glimmer/tracking';
 import { inject as service } from '@ember/service';
 
 /**
- * @module DashboardLearnMoreCard
- * DashboardLearnMoreCard component are used to display external links
+ * @module DashboardClientCountCard
+ * DashboardClientCountCard component are used to display total and new client count information
  *
  * @example
  * ```js
- * <DashboardLearnMoreCard  />
+ * <Dashboard::ClientCountCard  />
  * ```
  */
 
