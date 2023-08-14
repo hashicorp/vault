@@ -1,6 +1,6 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 /* This helper includes styles relating to: box-shadow, border, transition, pointer, grouped css in one helper, and screen-reader only.*/
@@ -97,4 +97,9 @@
   position: absolute;
   white-space: nowrap;
   width: 1px;
+}
+
+// border-radius
+.border-radius-2 {
+  border-radius: $radius;
 }

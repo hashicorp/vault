@@ -1,3 +1,8 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
 <PageHeader as |p|>
   <p.top>
     <Page::Breadcrumbs @breadcrumbs={{@breadcrumbs}} />
@@ -69,14 +74,14 @@
     @urls={{@urls}}
     @onCancel={{@onCancel}}
     @adapterOptions={{hash actionType=@config.actionType useIssuer=@config.canGenerateIssuerRoot}}
-    @onSave={{fn (mut this.title) "View root certificate"}}
+    @onSave={{fn (mut this.title) "View Root Certificate"}}
     @onComplete={{transition-to "vault.cluster.secrets.backend.pki.overview"}}
   />
 {{else if (eq @config.actionType "generate-csr")}}
   <PkiGenerateCsr
     @model={{@config}}
     @onCancel={{@onCancel}}
-    @onSave={{fn (mut this.title) "View generated CSR"}}
+    @onSave={{fn (mut this.title) "View Generated CSR"}}
     @onComplete={{transition-to "vault.cluster.secrets.backend.pki.overview"}}
   />
 {{else}}

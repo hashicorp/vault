@@ -1,6 +1,6 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 import { module, test } from 'qunit';
 import { setupRenderingTest } from 'vault/tests/helpers';
@@ -88,7 +88,7 @@ module('Integration | Component | page/pki-issuer-rotate-root', function (hooks)
     `,
       { owner: this.engine }
     );
-    assert.dom(SELECTORS.pageTitle).hasText('Generate new root');
+    assert.dom(SELECTORS.pageTitle).hasText('Generate New Root');
     assert.dom(SELECTORS.oldRadioSelect).isChecked('defaults to use-old-settings');
     assert.dom(SELECTORS.rotateRootForm).exists('it renders old settings form');
     assert
@@ -197,7 +197,7 @@ module('Integration | Component | page/pki-issuer-rotate-root', function (hooks)
       `,
       { owner: this.engine }
     );
-    assert.dom(SELECTORS.pageTitle).hasText('View issuer certificate');
+    assert.dom(SELECTORS.pageTitle).hasText('View Issuer Certificate');
     assert
       .dom(SELECTORS.nextSteps)
       .hasText(
@@ -206,7 +206,7 @@ module('Integration | Component | page/pki-issuer-rotate-root', function (hooks)
     assert.dom(SELECTORS.infoRowValue('Certificate')).exists();
     assert.dom(SELECTORS.infoRowValue('Issuer name')).exists();
     assert.dom(SELECTORS.infoRowValue('Issuing CA')).exists();
-    assert.dom(`${SELECTORS.infoRowValue('Private key')} .masked-input`).hasClass('allow-copy');
+    assert.dom(SELECTORS.infoRowValue('Private key')).exists();
     assert.dom(`${SELECTORS.infoRowValue('Private key type')} span`).hasText('rsa');
     assert.dom(SELECTORS.infoRowValue('Serial number')).hasText(this.returnedData.serial_number);
     assert.dom(SELECTORS.infoRowValue('Key ID')).hasText(this.returnedData.key_id);
@@ -234,7 +234,7 @@ module('Integration | Component | page/pki-issuer-rotate-root', function (hooks)
       `,
       { owner: this.engine }
     );
-    assert.dom(SELECTORS.pageTitle).hasText('View issuer certificate');
+    assert.dom(SELECTORS.pageTitle).hasText('View Issuer Certificate');
     assert.dom(SELECTORS.toolbarCrossSign).exists();
     assert.dom(SELECTORS.toolbarSignInt).exists();
     assert.dom(SELECTORS.toolbarDownload).exists();

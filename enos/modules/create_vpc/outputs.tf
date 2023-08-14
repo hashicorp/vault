@@ -1,7 +1,5 @@
-output "aws_region" {
-  description = "AWS Region for resources"
-  value       = data.aws_region.current.name
-}
+# Copyright (c) HashiCorp, Inc.
+# SPDX-License-Identifier: BUSL-1.1
 
 output "vpc_id" {
   description = "Created VPC ID"

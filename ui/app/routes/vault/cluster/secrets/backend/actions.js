@@ -1,10 +1,10 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
+import { parentKeyForKey } from 'core/utils/key-utils';
 import EditBase from './secret-edit';
-import utils from 'vault/lib/key-utils';
 
 export default EditBase.extend({
   queryParams: {
@@ -17,7 +17,7 @@ export default EditBase.extend({
 
   beforeModel() {
     const { secret } = this.paramsFor(this.routeName);
-    const parentKey = utils.parentKeyForKey(secret);
+    const parentKey = parentKeyForKey(secret);
     const { backend } = this.paramsFor('vault.cluster.secrets.backend');
     if (this.backendType(backend) !== 'transit') {
       if (parentKey) {

@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 package cert
 
@@ -10,6 +10,7 @@ import (
 	"crypto/x509"
 	"encoding/asn1"
 	"encoding/base64"
+	"encoding/hex"
 	"encoding/pem"
 	"errors"
 	"fmt"
@@ -507,17 +508,42 @@ func (b *backend) matchesCertificateExtensions(clientCert *x509.Certificate, con
 	// including its ASN.1 type tag bytes. For the sake of simplicity, assume string type
 	// and drop the tag bytes. And get the number of bytes from the tag.
 	clientExtMap := make(map[string]string, len(clientCert.Extensions))
+	hexExtMap := make(map[string]string, len(clientCert.Extensions))
+
 	for _, ext := range clientCert.Extensions {
 		var parsedValue string
-		asn1.Unmarshal(ext.Value, &parsedValue)
-		clientExtMap[ext.Id.String()] = parsedValue
+		_, err := asn1.Unmarshal(ext.Value, &parsedValue)
+		if err != nil {
+			clientExtMap[ext.Id.String()] = ""
+		} else {
+			clientExtMap[ext.Id.String()] = parsedValue
+		}
+
+		hexExtMap[ext.Id.String()] = hex.EncodeToString(ext.Value)
 	}
-	// If any of the required extensions don'log match the constraint fails
+
+	// If any of the required extensions don't match the constraint fails
 	for _, requiredExt := range config.Entry.RequiredExtensions {
 		reqExt := strings.SplitN(requiredExt, ":", 2)
-		clientExtValue, clientExtValueOk := clientExtMap[reqExt[0]]
-		if !clientExtValueOk || !glob.Glob(reqExt[1], clientExtValue) {
+		if len(reqExt) != 2 {
 			return false
+		}
+
+		if reqExt[0] == "hex" {
+			reqHexExt := strings.SplitN(reqExt[1], ":", 2)
+			if len(reqHexExt) != 2 {
+				return false
+			}
+
+			clientExtValue, clientExtValueOk := hexExtMap[reqHexExt[0]]
+			if !clientExtValueOk || !glob.Glob(strings.ToLower(reqHexExt[1]), clientExtValue) {
+				return false
+			}
+		} else {
+			clientExtValue, clientExtValueOk := clientExtMap[reqExt[0]]
+			if !clientExtValueOk || !glob.Glob(reqExt[1], clientExtValue) {
+				return false
+			}
 		}
 	}
 	return true

@@ -1,6 +1,6 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 // Variables
@@ -86,6 +86,7 @@
 @import './components/namespace-picker';
 @import './components/namespace-reminder';
 @import './components/navigate-input';
+@import './components/overview-card';
 @import './components/page-header-old';
 @import './components/popup-menu';
 @import './components/radio-card';
@@ -119,5 +120,4 @@
 @import './components/unseal-warning';
 // @import './components/ui-wizard'; // remove, see PR https://github.com/hashicorp/vault/pull/19220
 @import './components/vault-loading';
-@import './components/vlt-radio';
 @import './components/vlt-table';

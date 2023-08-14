@@ -1,6 +1,6 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 import { click, fillIn, findAll, currentURL, find, settled, waitUntil } from '@ember/test-helpers';
@@ -111,7 +111,7 @@ module('Acceptance | ssh secret backend', function (hooks) {
       await click('[ data-test-secret-create]');
 
       assert.ok(
-        find('[data-test-secret-header]').textContent.includes('SSH role'),
+        find('[data-test-secret-header]').textContent.includes('SSH Role'),
         `${role.type}: renders the create page`
       );
 

@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 package cluster
 
@@ -27,6 +27,7 @@ func TestInmemCluster_Connect(t *testing.T) {
 	listener := server.Listeners()[0]
 	var accepted int
 	stopCh := make(chan struct{})
+	defer close(stopCh)
 	var wg sync.WaitGroup
 	wg.Add(1)
 	go func() {
@@ -69,7 +70,6 @@ func TestInmemCluster_Connect(t *testing.T) {
 		t.Fatal("nil conn")
 	}
 
-	close(stopCh)
 	wg.Wait()
 
 	if accepted != 2 {
@@ -93,6 +93,7 @@ func TestInmemCluster_Disconnect(t *testing.T) {
 	listener := server.Listeners()[0]
 	var accepted int
 	stopCh := make(chan struct{})
+	defer close(stopCh)
 	var wg sync.WaitGroup
 	wg.Add(1)
 	go func() {
@@ -136,7 +137,6 @@ func TestInmemCluster_Disconnect(t *testing.T) {
 		t.Fatal("nil conn")
 	}
 
-	close(stopCh)
 	wg.Wait()
 
 	if accepted != 1 {
@@ -199,6 +199,8 @@ func TestInmemCluster_ConnectCluster(t *testing.T) {
 
 	var accepted atomic.Int32
 	stopCh := make(chan struct{})
+	defer close(stopCh)
+
 	var wg sync.WaitGroup
 	acceptConns := func(listener NetworkListener) {
 		wg.Add(1)
@@ -255,7 +257,6 @@ func TestInmemCluster_ConnectCluster(t *testing.T) {
 		}
 	}
 
-	close(stopCh)
 	wg.Wait()
 
 	if accepted.Load() != 18 {

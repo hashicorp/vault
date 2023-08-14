@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Copyright (c) HashiCorp, Inc.
-# SPDX-License-Identifier: MPL-2.0
+# SPDX-License-Identifier: BUSL-1.1
 
 
 # The ci-helper is used to determine build metadata, build Vault binaries,
@@ -155,6 +155,8 @@ function build() {
   build_date=$(build_date)
   : "${GO_TAGS:=""}"
   : "${REMOVE_SYMBOLS:=""}"
+
+  GOOS= GOARCH= go generate ./...
 
   # Build our ldflags
   msg="--> Building Vault v$version, revision $revision, built $build_date"

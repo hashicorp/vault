@@ -1,5 +1,5 @@
 # Copyright (c) HashiCorp, Inc.
-# SPDX-License-Identifier: MPL-2.0
+# SPDX-License-Identifier: BUSL-1.1
 
 module "autopilot_upgrade_storageconfig" {
   source = "./modules/autopilot_upgrade_storageconfig"
@@ -61,31 +61,51 @@ module "shutdown_multiple_nodes" {
   source = "./modules/shutdown_multiple_nodes"
 }
 
+# create target instances using ec2:CreateFleet
 module "target_ec2_fleet" {
   source = "./modules/target_ec2_fleet"
 
-  capacity_type    = "on-demand" // or "spot", use on-demand until we can stabilize spot fleets
-  common_tags      = var.tags
-  instance_mem_min = 4096
-  instance_cpu_min = 2
-  max_price        = "0.1432" // On-demand cost for RHEL amd64 on t3.medium in us-east
-  project_name     = var.project_name
-  ssh_keypair      = var.aws_ssh_keypair_name
+  common_tags  = var.tags
+  project_name = var.project_name
+  ssh_keypair  = var.aws_ssh_keypair_name
 }
 
+# create target instances using ec2:RunInstances
+module "target_ec2_instances" {
+  source = "./modules/target_ec2_instances"
+
+  common_tags  = var.tags
+  project_name = var.project_name
+  ssh_keypair  = var.aws_ssh_keypair_name
+}
+
+# don't create instances but satisfy the module interface
+module "target_ec2_shim" {
+  source = "./modules/target_ec2_shim"
+
+  common_tags  = var.tags
+  project_name = var.project_name
+  ssh_keypair  = var.aws_ssh_keypair_name
+}
+
+# create target instances using ec2:RequestSpotFleet
 module "target_ec2_spot_fleet" {
   source = "./modules/target_ec2_spot_fleet"
 
-  common_tags      = var.tags
-  instance_mem_min = 4096
-  instance_cpu_min = 2
-  max_price        = "0.1432" // On-demand cost for RHEL amd64 on t3.medium in us-east
-  project_name     = var.project_name
-  ssh_keypair      = var.aws_ssh_keypair_name
+  common_tags  = var.tags
+  project_name = var.project_name
+  ssh_keypair  = var.aws_ssh_keypair_name
 }
 
 module "vault_agent" {
   source = "./modules/vault_agent"
+
+  vault_install_dir    = var.vault_install_dir
+  vault_instance_count = var.vault_instance_count
+}
+
+module "vault_proxy" {
+  source = "./modules/vault_proxy"
 
   vault_install_dir    = var.vault_install_dir
   vault_instance_count = var.vault_instance_count

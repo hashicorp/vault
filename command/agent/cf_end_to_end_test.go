@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 package agent
 
@@ -29,9 +29,6 @@ func TestCFEndToEnd(t *testing.T) {
 	logger := logging.NewVaultLogger(hclog.Trace)
 
 	coreConfig := &vault.CoreConfig{
-		DisableMlock: true,
-		DisableCache: true,
-		Logger:       hclog.NewNullLogger(),
 		CredentialBackends: map[string]logical.Factory{
 			"cf": credCF.Factory,
 		},
