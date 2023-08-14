@@ -92,9 +92,7 @@ func (b *databaseBackend) populateQueue(ctx context.Context, s logical.Storage) 
 					log.Warn("unable to delete WAL", "error", err, "WAL ID", walEntry.walID)
 				}
 			} else {
-				log.Info("found WAL for role",
-					"role", item.Key,
-					"WAL ID", walEntry.walID)
+				log.Info("found WAL for role", "role", item.Key, "WAL ID", walEntry.walID)
 				item.Value = walEntry.walID
 				item.Priority = time.Now().Unix()
 			}
@@ -191,39 +189,45 @@ func (b *databaseBackend) rotateCredential(ctx context.Context, s logical.Storag
 		return false
 	}
 
+	roleName := item.Key
+	logger := b.Logger().With("role", roleName)
+
 	// Grab the exclusive lock for this Role, to make sure we don't incur and
 	// writes during the rotation process
-	lock := locksutil.LockForKey(b.roleLocks, item.Key)
+	lock := locksutil.LockForKey(b.roleLocks, roleName)
 	lock.Lock()
 	defer lock.Unlock()
 
 	// Validate the role still exists
-	role, err := b.StaticRole(ctx, s, item.Key)
+	role, err := b.StaticRole(ctx, s, roleName)
 	if err != nil {
-		b.logger.Error("unable to load role", "role", item.Key, "error", err)
+		logger.Error("unable to load role", "error", err)
+
 		item.Priority = time.Now().Add(10 * time.Second).Unix()
 		if err := b.pushItem(item); err != nil {
-			b.logger.Error("unable to push item on to queue", "error", err)
+			logger.Error("unable to push item on to queue", "error", err)
 		}
 		return true
 	}
 	if role == nil {
-		b.logger.Warn("role not found", "role", item.Key, "error", err)
+		logger.Warn("role not found", "error", err)
 		return true
 	}
+
+	logger = logger.With("database", role.DBName)
 
 	// If "now" is less than the Item priority, then this item does not need to
 	// be rotated
 	if time.Now().Unix() < item.Priority {
 		if err := b.pushItem(item); err != nil {
-			b.logger.Error("unable to push item on to queue", "error", err)
+			logger.Error("unable to push item on to queue", "error", err)
 		}
 		// Break out of the for loop
 		return false
 	}
 
 	input := &setStaticAccountInput{
-		RoleName: item.Key,
+		RoleName: roleName,
 		Role:     role,
 	}
 
@@ -235,7 +239,8 @@ func (b *databaseBackend) rotateCredential(ctx context.Context, s logical.Storag
 
 	resp, err := b.setStaticAccount(ctx, s, input)
 	if err != nil {
-		b.logger.Error("unable to rotate credentials in periodic function", "error", err)
+		logger.Error("unable to rotate credentials in periodic function", "error", err)
+
 		// Increment the priority enough so that the next call to this method
 		// likely will not attempt to rotate it, as a back-off of sorts
 		item.Priority = time.Now().Add(10 * time.Second).Unix()
@@ -246,7 +251,7 @@ func (b *databaseBackend) rotateCredential(ctx context.Context, s logical.Storag
 		}
 
 		if err := b.pushItem(item); err != nil {
-			b.logger.Error("unable to push item on to queue", "error", err)
+			logger.Error("unable to push item on to queue", "error", err)
 		}
 		// Go to next item
 		return true
@@ -263,7 +268,7 @@ func (b *databaseBackend) rotateCredential(ctx context.Context, s logical.Storag
 	nextRotation := lvr.Add(role.StaticAccount.RotationPeriod)
 	item.Priority = nextRotation.Unix()
 	if err := b.pushItem(item); err != nil {
-		b.logger.Warn("unable to push item on to queue", "error", err)
+		logger.Warn("unable to push item on to queue", "error", err)
 	}
 	return true
 }

@@ -21,28 +21,15 @@ concurrency:
 jobs:
   # verify-changes determines if the changes are only for docs (website)
   verify-changes:
-    if: github.event.pull_request.draft == false
-    runs-on: ubuntu-latest
-    outputs:
-      is_docs_change: ${{ steps.get-changeddir.outputs.is_docs_change }}
-    steps:
-      - uses: actions/checkout@c85c95e3d7251135ab7dc9ce3241c5835cc595a9 # v3.5.3
-        with:
-          ref: ${{ github.event.pull_request.head.sha }}
-          fetch-depth: 0 # Use fetch depth 0 for comparing changes to base branch
-      - name: Get changed directories
-        id: get-changeddir
-        env:
-          TYPE: ${{ github.event_name }}
-          REF_NAME: ${{ github.ref_name }}
-          BASE: ${{ github.base_ref }}
-        run: ./.github/scripts/verify_changes.sh ${{ env.TYPE }} ${{ env.REF_NAME }} ${{ env.BASE }}
+    uses: ./.github/workflows/verify_changes.yml
 
   product-metadata:
     # do not run build and test steps for docs changes
     # Following https://docs.github.com/en/repositories/configuring-branches-and-merges-in-your-repository/managing-protected-branches/troubleshooting-required-status-checks#handling-skipped-but-required-checks
     # we conditionally skip the build and tests for docs(website) changes
-    if: ${{ needs.verify-changes.outputs.is_docs_change == 'false' }}
+    if: |
+      github.event.pull_request.draft == false &&
+      needs.verify-changes.outputs.is_docs_change == 'false'
     runs-on: ubuntu-latest
     needs: verify-changes
     outputs:
@@ -109,7 +96,7 @@ jobs:
           key: ui-${{ steps.ui-hash.outputs.ui-hash }}
       - if: steps.cache-ui-assets.outputs.cache-hit != 'true'
         name: Set up node and yarn
-        uses: actions/setup-node@64ed1c7eab4cce3362f8c340dee64e5eaeef8f7c # v3.6.0
+        uses: actions/setup-node@e33196f7422957bea03ed53f6fbb155025ffc7b8 # v3.7.0
         with:
           node-version-file: ui/package.json
           cache: yarn
@@ -292,10 +279,7 @@ jobs:
       - build-ubi
       - test
       - test-docker-k8s
-    if: |
-      always() && (cancelled() ||
-      contains(needs.*.result, 'cancelled') ||
-      contains(needs.*.result, 'failure'))
+    if: (success() || failure()) && github.head_ref != ''
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@c85c95e3d7251135ab7dc9ce3241c5835cc595a9 # v3.5.3
@@ -317,10 +301,7 @@ jobs:
   completed-successfully:
     # We force a failure if any of the dependent jobs fail,
     # this is a workaround for the issue reported https://github.com/actions/runner/issues/2566
-    if: |
-      always() && (cancelled() ||
-      contains(needs.*.result, 'cancelled') ||
-      contains(needs.*.result, 'failure'))
+    if: always()
     runs-on: ubuntu-latest
     needs:
       - build-other
@@ -332,5 +313,57 @@ jobs:
       - test-docker-k8s
     steps:
       - run: |
-          echo "Some of the required build and test workflows have failed!"
-          exit 1
+          tr -d '\n' <<< '${{ toJSON(needs.*.result) }}' | grep -q -v -E '(failure|cancelled)'
+  
+  notify-completed-successfully-failures-oss:
+    if: ${{ always() && github.repository == 'hashicorp/vault' && needs.completed-successfully.result == 'failure' && (github.ref_name == 'main' || startsWith(github.ref_name, 'release/')) }}
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
+    strategy:
+      fail-fast: false
+    needs:
+      - completed-successfully
+    steps:
+      - name: send-notification
+        uses: slackapi/slack-github-action@e28cf165c92ffef168d23c5c9000cffc8a25e117 # v1.24.0
+        # We intentionally aren't using the following here since it's from an internal repo
+        # uses: hashicorp/cloud-gha-slack-notifier@730a033037b8e603adf99ebd3085f0fdfe75e2f4 #v1
+        env:
+          SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
+        with:
+          channel-id: "C05AABYEA9Y" # sent to #feed-vault-ci-official
+          payload: |
+            {"text":"OSS build failures on ${{ github.ref_name }}","blocks":[{"type":"header","text":{"type":"plain_text","text":":rotating_light: OSS build failures :rotating_light:","emoji":true}},{"type":"divider"},{"type":"section","text":{"type":"mrkdwn","text":"build(s) failed on ${{ github.ref_name }}"},"accessory":{"type":"button","text":{"type":"plain_text","text":"View Failing Workflow","emoji":true},"url":"${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"}}]}
+
+  notify-completed-successfully-failures-ent:
+    if: ${{ always() && github.repository == 'hashicorp/vault-enterprise' && needs.completed-successfully.result == 'failure' && (github.ref_name == 'main' || startsWith(github.ref_name, 'release/')) }}
+    runs-on: ['self-hosted', 'linux', 'small']
+    permissions:
+      id-token: write
+      contents: read
+    strategy:
+      fail-fast: false
+    needs:
+      - completed-successfully
+    steps:
+      - id: vault-auth
+        name: Vault Authenticate
+        run: vault-auth
+      - id: secrets
+        name: Fetch Vault Secrets
+        uses: hashicorp/vault-action@130d1f5f4fe645bb6c83e4225c04d64cfb62de6e
+        with:
+          url: ${{ steps.vault-auth.outputs.addr }}
+          caCertificate: ${{ steps.vault-auth.outputs.ca_certificate }}
+          token: ${{ steps.vault-auth.outputs.token }}
+          secrets: |
+            kv/data/github/${{ github.repository }}/github_actions_notifications_bot token | SLACK_BOT_TOKEN;
+      - name: send-notification
+        uses: hashicorp/cloud-gha-slack-notifier@730a033037b8e603adf99ebd3085f0fdfe75e2f4 #v1
+        with:
+          channel-id: "C05AABYEA9Y" # sent to #feed-vault-ci-official
+          slack-bot-token: ${{ steps.secrets.outputs.SLACK_BOT_TOKEN }}
+          payload: |
+            {"text":"Enterprise build failures on ${{ github.ref_name }}","blocks":[{"type":"header","text":{"type":"plain_text","text":":rotating_light: Enterprise build failures :rotating_light:","emoji":true}},{"type":"divider"},{"type":"section","text":{"type":"mrkdwn","text":"build(s) failed on ${{ github.ref_name }}"},"accessory":{"type":"button","text":{"type":"plain_text","text":"View Failing Workflow","emoji":true},"url":"${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"}}]}

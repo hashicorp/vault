@@ -248,9 +248,8 @@ func (b *SystemBackend) handleRaftRemovePeerUpdate() framework.OperationFunc {
 		if err := raftBackend.RemovePeer(ctx, serverID); err != nil {
 			return nil, err
 		}
-		if b.Core.raftFollowerStates != nil {
-			b.Core.raftFollowerStates.Delete(serverID)
-		}
+
+		b.Core.raftFollowerStates.Delete(serverID)
 
 		return nil, nil
 	}
@@ -351,16 +350,6 @@ func (b *SystemBackend) handleRaftBootstrapAnswerWrite() framework.OperationFunc
 			return nil, errors.New("could not decode raft TLS configuration")
 		}
 
-		switch nonVoter {
-		case true:
-			err = raftBackend.AddNonVotingPeer(ctx, serverID, clusterAddr)
-		default:
-			err = raftBackend.AddPeer(ctx, serverID, clusterAddr)
-		}
-		if err != nil {
-			return nil, err
-		}
-
 		var desiredSuffrage string
 		switch nonVoter {
 		case true:
@@ -369,11 +358,22 @@ func (b *SystemBackend) handleRaftBootstrapAnswerWrite() framework.OperationFunc
 			desiredSuffrage = "voter"
 		}
 
-		if b.Core.raftFollowerStates != nil {
-			b.Core.raftFollowerStates.Update(&raft.EchoRequestUpdate{
-				NodeID:          serverID,
-				DesiredSuffrage: desiredSuffrage,
-			})
+		added := b.Core.raftFollowerStates.Update(&raft.EchoRequestUpdate{
+			NodeID:          serverID,
+			DesiredSuffrage: desiredSuffrage,
+		})
+
+		switch nonVoter {
+		case true:
+			err = raftBackend.AddNonVotingPeer(ctx, serverID, clusterAddr)
+		default:
+			err = raftBackend.AddPeer(ctx, serverID, clusterAddr)
+		}
+		if err != nil {
+			if added {
+				b.Core.raftFollowerStates.Delete(serverID)
+			}
+			return nil, err
 		}
 
 		peers, err := raftBackend.Peers(ctx)
@@ -531,6 +531,10 @@ func (b *SystemBackend) handleStorageRaftAutopilotConfigUpdate() framework.Opera
 
 		if effectiveConf.CleanupDeadServers && effectiveConf.MinQuorum < 3 {
 			return logical.ErrorResponse(fmt.Sprintf("min_quorum must be set when cleanup_dead_servers is set and it should at least be 3; cleanup_dead_servers: %#v, min_quorum: %#v", effectiveConf.CleanupDeadServers, effectiveConf.MinQuorum)), logical.ErrInvalidRequest
+		}
+
+		if effectiveConf.CleanupDeadServers && effectiveConf.DeadServerLastContactThreshold.Seconds() < 60 {
+			return logical.ErrorResponse(fmt.Sprintf("dead_server_last_contact_threshold should not be set to less than 1m; received: %v", deadServerLastContactThreshold)), logical.ErrInvalidRequest
 		}
 
 		// Persist only the user supplied fields
