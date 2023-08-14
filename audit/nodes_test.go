@@ -118,8 +118,31 @@ func TestProcessManual_IdNodeMismatch(t *testing.T) {
 	require.ErrorContains(t, err, "node not found: ")
 }
 
-// TestProcessManual_LastNodeNotSink tests ProcessManual when the last node (by ID)
-// is not an eventlogger.NodeTypeSink.
+// TestProcessManual_NotEnoughNodes tests ProcessManual when there is only one
+// node provided.
+func TestProcessManual_NotEnoughNodes(t *testing.T) {
+	t.Parallel()
+
+	var ids []eventlogger.NodeID
+	nodes := make(map[eventlogger.NodeID]eventlogger.Node)
+
+	// Filter node
+	filterId, filterNode := newFilterNode(t)
+	ids = append(ids, filterId)
+	nodes[filterId] = filterNode
+
+	// Data
+	requestId, err := uuid.GenerateUUID()
+	require.NoError(t, err)
+	data := newData(requestId)
+
+	err = ProcessManual(namespace.RootContext(context.Background()), data, ids, nodes)
+	require.Error(t, err)
+	require.EqualError(t, err, "not enough nodes")
+}
+
+// TestProcessManual_LastNodeNotSink tests ProcessManual when the last node is
+// not a Sink node.
 func TestProcessManual_LastNodeNotSink(t *testing.T) {
 	t.Parallel()
 
@@ -130,6 +153,10 @@ func TestProcessManual_LastNodeNotSink(t *testing.T) {
 	filterId, filterNode := newFilterNode(t)
 	ids = append(ids, filterId)
 	nodes[filterId] = filterNode
+
+	formatterId, formatterNode := newFormatterNode(t)
+	ids = append(ids, formatterId)
+	nodes[formatterId] = formatterNode
 
 	// Data
 	requestId, err := uuid.GenerateUUID()
@@ -191,6 +218,37 @@ func newSinkNode(t *testing.T) (eventlogger.NodeID, *event.NoopSink) {
 	sinkNode := event.NewNoopSink()
 
 	return sinkId, sinkNode
+}
+
+// TestFormatter is a trivial implementation of the eventlogger.Node interface
+// used as a place-holder for Formatter nodes in tests.
+type TestFormatter struct{}
+
+// Process trivially formats the event by storing "test" as a byte slice under
+// the test format type.
+func (f *TestFormatter) Process(_ context.Context, e *eventlogger.Event) (*eventlogger.Event, error) {
+	e.FormattedAs("test", []byte("test"))
+
+	return e, nil
+}
+
+// Reopen does nothing.
+func (f *TestFormatter) Reopen() error {
+	return nil
+}
+
+// Type returns the eventlogger.NodeTypeFormatter type.
+func (f *TestFormatter) Type() eventlogger.NodeType {
+	return eventlogger.NodeTypeFormatter
+}
+
+// newFormatterNode creates a new TestFormatter (formatter node).
+func newFormatterNode(t *testing.T) (eventlogger.NodeID, *TestFormatter) {
+	nodeId, err := event.GenerateNodeID()
+	require.NoError(t, err)
+	node := &TestFormatter{}
+
+	return nodeId, node
 }
 
 // newData creates a sample logical.LogInput to be used as data for tests.
