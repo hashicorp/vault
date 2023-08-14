@@ -1,7 +1,7 @@
 {{!
   Copyright (c) HashiCorp, Inc.
   SPDX-License-Identifier: BUSL-1.1
-}}
+~}}
 
 <div class="box is-sideless is-fullwidth is-marginless is-bottomless">
   <p class="has-bottom-margin-xl">
@@ -131,7 +131,7 @@
              or viewing the current month filtered down to auth method }}
             <Clients::UsageStats
               @title="Total usage"
-              @description="These totals are within
+              @description="These totals are within 
               {{if this.selectedAuthMethod this.selectedAuthMethod 'this namespace and all its children'}}.
               {{if
                 this.isCurrentMonth

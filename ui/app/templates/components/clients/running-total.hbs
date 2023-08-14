@@ -1,7 +1,7 @@
 {{!
   Copyright (c) HashiCorp, Inc.
   SPDX-License-Identifier: BUSL-1.1
-}}
+~}}
 
 {{#if (gt @byMonthActivityData.length 1)}}
   <div class="chart-wrapper stacked-charts" data-test-running-total="monthly-charts">
@@ -133,7 +133,7 @@
       </div>
     </div>
   {{else}}
-    {{! This renders when either:
+    {{! This renders when either: 
     -> viewing the current month and all namespaces (no filters)
     -> filtering by a namespace with no month over month data
     if filtering by a mount with no month over month data <UsageStats> in dashboard.hbs renders }}
