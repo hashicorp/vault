@@ -59,12 +59,14 @@ set [`disable_mlock`](/vault/docs/configuration#disable_mlock) to `true`, and to
   Lower values are used to tighten timing and increase sensitivity while higher 
   values relax timings and reduce sensitivity.
 
-  By default, Vault will use a balanced timing value of 5 that's suitable for 
-  most platforms & scenarios. Setting this to a value of 1 will configure Raft 
-  to its highest-performance mode. The maximum allowed value is 10. Only 
-  adjust this value if required and subject to the overall reliability your 
-  platform (network, etc) as well as using available telemetry indicators that 
-  may suggest a need for an increase or decrease.
+
+By default, Vault uses a balanced timing value of 5, which is suitable for most
+platforms and scenarios. You should only adjust the timing value when platform
+telemetry indicators that a change is needed or different timing is required due
+to the overall reliability your platform (network, etc.).
+
+Setting the timing value to 1 configures Raft to its highest performance (lowest
+delay) mode. The maximum allowed value is 10. 
 
 - `trailing_logs` `(integer: 10000)` - This controls how many log entries are
   left in the log store on disk after a snapshot is made. This should only be
