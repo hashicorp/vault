@@ -27,22 +27,11 @@ import { inject as service } from '@ember/service';
 
 export default class KvSecretDetails extends Component {
   @tracked showJsonView = false;
-  @tracked deleteModalOpen = false;
-  @tracked destroyModalOpen = false;
-  @tracked deleteType = ''; // when set this is either delete-latest-version or delete-version.
   @service flashMessages;
-  @service router;
 
   @action
   toggleJsonView() {
     this.showJsonView = !this.showJsonView;
-  }
-
-  @action
-  toggleModal(btn) {
-    btn === 'delete'
-      ? (this.deleteModalOpen = !this.deleteModalOpen)
-      : (this.destroyModalOpen = !this.destroyModalOpen);
   }
 
   @action
@@ -52,73 +41,43 @@ export default class KvSecretDetails extends Component {
     next(() => dropdown.actions.close());
   }
 
-  @action async handleDelete(mode) {
-    // mode is either: delete, destroy or undelete.
-    const deleteType = mode === 'delete' ? this.deleteType : mode;
+  @action
+  async undelete() {
+    const { secret } = this.args;
     try {
-      await this.args.secret.destroyRecord({
-        adapterOptions: { deleteType, deleteVersions: this.args.secret.version },
+      await secret.destroyRecord({
+        adapterOptions: { deleteType: 'undelete-version', deleteVersions: secret.version },
       });
-      this.flashMessages.success(
-        `Successfully ${this.verbToTense(mode, 'past')} Version ${this.args.secret.version} of ${
-          this.args.path
-        }.`
-      );
-      return this.router.transitionTo('vault.cluster.secrets.backend.kv.secret', {
-        queryParams: { version: this.args.secret.version },
+      this.flashMessages.success(`Successfully undeleted ${secret.path}`);
+      this.router.transitionTo('vault.cluster.secrets.backend.kv.secret', {
+        queryParams: { version: secret.version },
       });
-    } catch {
-      return `There was an issue ${this.verbToTense(mode, 'gerund')} Version ${this.args.secret.version} of ${
-        this.args.path
-      }.`;
+    } catch (err) {
+      this.flashMessages.danger(`There was a problem un-deleting ${secret.path}`);
     }
   }
 
-  get generateDeleteRadioOptions() {
-    let isDeactivated = false;
-    if (this.args.secret.canReadMetadata) {
-      isDeactivated = this.args.metadata?.currentSecret.isDeactivated;
+  @action
+  async handleDestruction(type) {
+    const { secret } = this.args;
+    // TODO can use secret.state getter for verb once branch is updated
+    try {
+      await secret.destroyRecord({ adapterOptions: { deleteType: type, deleteVersions: secret.version } });
+      const verb = type.includes('delete') ? 'deleted' : 'destroyed';
+      this.flashMessages.success(`Successfully ${verb} Version ${secret.version} of ${secret.path}.`);
+      this.router.transitionTo('vault.cluster.secrets.backend.kv.secret', {
+        queryParams: { version: secret.version },
+      });
+    } catch (err) {
+      const verb = type.includes('delete') ? 'deleting' : 'destroying';
+      this.flashMessages.danger(`There was a problem ${verb} Version ${secret.version} of ${secret.path}`);
     }
-
-    return [
-      {
-        key: 'delete-version',
-        label: 'Delete this version',
-        description: `This deletes Version ${this.args.secret.version} of the secret.`,
-        disabled: !this.args.secret.canDeleteVersion,
-        tooltipMessage: 'You do not have permission to delete a specific version.',
-      },
-      {
-        key: 'delete-latest-version',
-        label: 'Delete latest version',
-        description: 'This deletes the most recent version of the secret.',
-        disabled: !this.args.secret.canDeleteLatestVersion || isDeactivated,
-        tooltipMessage: isDeactivated
-          ? `The latest version of the secret is already ${this.args.metadata.currentSecret.state}.`
-          : 'You do not have permission to delete the latest version of this secret.',
-      },
-    ];
   }
 
-  verbToTense(verb, tense) {
-    if (tense === 'gerund') {
-      // ending in 'ing ex: delete => deleting || destroy => destroying
-      return (
-        verb
-          .replace(/([^aeiouy])y$/, '$1i')
-          .replace(/([^aeiouy][aeiou])([^aeiouy])$/, '$1$2$2')
-          .replace(/e$/, '') + 'ing'
-      );
-    }
-    if (tense === 'past') {
-      // ending in 'ing ex: delete => deleted || destroy => destroyed
-      return (
-        verb
-          .replace(/([^aeiouy])y$/, '$1i')
-          .replace(/([^aeiouy][aeiou])([^aeiouy])$/, '$1$2$2')
-          .replace(/e$/, '') + 'ed'
-      );
-    }
+  get isDeactivated() {
+    // TODO can use secret.state getter for verb once branch is updated
+    const secret = this.args;
+    return !secret.deletionTime && !secret.destroyed;
   }
 
   get emptyState() {
