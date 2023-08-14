@@ -29,6 +29,7 @@ export default class DashboardClientCountCard extends Component {
   @tracked startDate = null;
   @tracked activityData = null;
   @tracked clientConfig = null;
+  @tracked updatedAt = null;
 
   constructor() {
     super(...arguments);
@@ -72,6 +73,7 @@ export default class DashboardClientCountCard extends Component {
     try {
       this.startDate = yield this.getLicenseStartTime.perform();
       this.activityData = yield this.getActivity.perform(this.startDate);
+      this.updatedAt = timestamp.now().toISOString();
       this.noActivityData = this.activityData.activity.id === 'no-data' ? true : false;
     } catch (error) {
       this.error = error;

@@ -37,14 +37,15 @@
   </div>
 
   {{#unless this.fetchClientActivity.isRunning}}
-    <div class="has-top-margin-m">
+    <div class="has-top-margin-l is-flex-center">
       <Hds::Button
         @text="{{date-format this.startDate 'MMM yyyy'}} - {{date-format this.currentDate 'MMM yyyy'}}"
-        @color="tertiary"
+        @color="secondary"
         @icon="sync"
         disabled={{this.fetchClientActivity.isRunning}}
         {{on "click" (perform this.fetchClientActivity)}}
       />
+      <small class="has-left-margin-s">Updated {{date-format this.updatedAt "MMM dd, yyyy HH:mm:SS"}}</small>
     </div>
   {{/unless}}
 {{/if}}
