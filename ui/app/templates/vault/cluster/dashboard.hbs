@@ -3,11 +3,7 @@
 <div class="is-grid grid-2-columns grid-gap-2 has-bottom-margin-m grid-align-items-start">
   {{#if @model.version.isEnterprise}}
     <Hds::Card::Container @hasBorder={{true}} class="has-padding-l is-flex-column is-flex-half">
-      <Dashboard::ClientCountCard
-        @activityData={{@model.clientCountActivity}}
-        @clientCountCurrentDate={{@model.clientCountCurrentDate}}
-        @clientCountStartDate={{@model.clientCountStartDate}}
-      />
+      <Dashboard::ClientCountCard />
     </Hds::Card::Container>
   {{/if}}
   <Hds::Card::Container @hasBorder={{true}} class="has-padding-l is-flex-column is-flex-half">

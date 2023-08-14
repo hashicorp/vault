@@ -8,25 +8,30 @@
   </div>
 </div>
 
-<div class="is-grid grid-2-columns grid-gap-2 has-top-margin-m has-bottom-margin-m grid-align-items-start">
-  <StatText
-    @label="Total"
-    @value={{@activityData.total.clients}}
-    @size="l"
-    @subText="The total number of clients in this billing period."
-    data-test-stat-text="total-clients"
-  />
-  <StatText
-    @label="New"
-    @value={{@activityData.total.entity_clients}}
-    @size="l"
-    @subText="The number of clients new to Vault in the current month."
-    data-test-stat-text="total-clients"
-  />
-  <Hds::Link::Standalone @icon="film" @text="Watch tutorial video" @href="..." />
-  <small>
-    {{date-format @clientCountStartDate "MMM yyyy"}}
-    -
-    {{date-format @clientCountCurrentDate "MMM yyyy"}}
-  </small>
+<div class="is-grid grid-2-columns grid-gap-2 has-top-margin-l grid-align-items-start is-flex-v-centered">
+  {{#if this.fetchClientActivity.isRunning}}
+    <VaultLogoSpinner />
+  {{else}}
+    <StatText
+      @label="Total"
+      @value={{this.activityData.total.clients}}
+      @size="l"
+      @subText="The total number of clients in this billing period."
+      data-test-stat-text="total-clients"
+    />
+    <StatText
+      @label="New"
+      @value={{this.activityData.total.entity_clients}}
+      @size="l"
+      @subText="The number of clients new to Vault in the current month."
+      data-test-stat-text="total-clients"
+    />
+    <Hds::Button
+      @text="{{date-format this.startDate 'MMM yyyy'}} - {{date-format this.currentDate 'MMM yyyy'}}"
+      @color="tertiary"
+      @icon="sync"
+      disabled={{this.fetchClientActivity.isRunning}}
+      {{on "click" (perform this.fetchClientActivity)}}
+    />
+  {{/if}}
 </div>
