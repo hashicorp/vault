@@ -358,6 +358,7 @@ func wrapGenericHandler(core *vault.Core, h http.Handler, props *vault.HandlerPr
 		} else {
 			ctx, cancelFunc = context.WithTimeout(ctx, maxRequestDuration)
 		}
+
 		// if maxRequestSize < 0, no need to set context value
 		// Add a size limiter if desired
 		if maxRequestSize > 0 {
@@ -379,11 +380,14 @@ func wrapGenericHandler(core *vault.Core, h http.Handler, props *vault.HandlerPr
 			nw.Header().Set("X-Vault-Hostname", hostname)
 		}
 
+		// Extract the namespace from the header before we modify it
+		ns := r.Header.Get(consts.NamespaceHeaderName)
 		switch {
 		case strings.HasPrefix(r.URL.Path, "/v1/"):
-			newR, status := adjustRequest(core, r)
+			// Setting the namespace in the header to be included in the error message
+			newR, status, err := adjustRequest(core, props.ListenerConfig, r)
 			if status != 0 {
-				respondError(nw, status, nil)
+				respondError(nw, status, err)
 				cancelFunc()
 				return
 			}
@@ -434,7 +438,6 @@ func wrapGenericHandler(core *vault.Core, h http.Handler, props *vault.HandlerPr
 		}()
 
 		// Setting the namespace in the header to be included in the error message
-		ns := r.Header.Get(consts.NamespaceHeaderName)
 		if ns != "" {
 			nw.Header().Set(consts.NamespaceHeaderName, ns)
 		}
