@@ -764,7 +764,7 @@ auto_auth {
         config = {
             role_id_file_path = "%s"
             secret_id_file_path = "%s"
-						remove_secret_id_file_after_reading = false
+			remove_secret_id_file_after_reading = false
         }
     }
 }
@@ -1031,14 +1031,10 @@ func TestAgent_Template_VaultClientFromEnv(t *testing.T) {
 			for k, v := range tc.env {
 				t.Setenv(k, v)
 			}
-			// create temp dir for this test run
-			tmpDir, err := os.MkdirTemp(tmpDirRoot, tcname)
-			if err != nil {
-				t.Fatal(err)
-			}
+			tmpDir := t.TempDir()
 
 			// Make a template.
-			const templateFile = "render.tmpl"
+			templateFile := filepath.Join(tmpDir, "render.tmpl")
 			if err := os.WriteFile(templateFile, []byte(templateContents(0)), 0o600); err != nil {
 				t.Fatal(err)
 			}
@@ -1055,7 +1051,7 @@ auto_auth {
         config = {
             role_id_file_path = "%s"
             secret_id_file_path = "%s"
-						remove_secret_id_file_after_reading = false
+			remove_secret_id_file_after_reading = false
         }
     }
 }
@@ -1107,30 +1103,23 @@ auto_auth {
 					t.Fatalf("timed out waiting for templates to render, last error: %v", err)
 				case <-tick:
 				}
-				// Check for files rendered in the directory and break
-				// early for shutdown if we do have all the files
-				// rendered
 
-				//----------------------------------------------------
-				// Perform the tests
-				//----------------------------------------------------
-
-				if numFiles := testListFiles(t, tmpDir, ".json"); numFiles != 1 {
-					err = fmt.Errorf("expected (%d) templates, got (%d)", 1, numFiles)
-					continue
-				}
-
-				fileName := filepath.Join(tmpDir, targetFile)
-				var c []byte
-				c, err = os.ReadFile(fileName)
+				c, err := os.ReadFile(filepath.Join(tmpDir, targetFile))
 				if err != nil {
-					continue
+					// If the file simply doesn't exist, continue waiting for
+					// the template rendering to complete.
+					if os.IsNotExist(err) {
+						continue
+					}
+					t.Fatal(err)
 				}
+
 				if string(c) != templateRendered(0) {
-					err = fmt.Errorf("expected=%q, got=%q", templateRendered(0), string(c))
-					continue
+					t.Fatalf("expected=%q, got=%q", templateRendered(0), string(c))
 				}
-				return
+
+				// Success! Break out of the retry loop.
+				break
 			}
 		})
 	}
