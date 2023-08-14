@@ -31,7 +31,36 @@ module('Acceptance | kv-v2 workflow | secret and version create', function (hook
       const token = await runCmd(tokenWithPolicyCmd('admin', personas.admin(this.backend)));
       await authPage.login(token);
     });
-    test('create & update root secret with default metadata', async function (assert) {
+    test('cancel on create clears model (a)', async function (assert) {
+      const backend = this.backend;
+      await visit(`/vault/secrets/${backend}/kv/list`);
+      assert.dom(PAGE.list.item()).exists({ count: 1 }, 'single secret exists on list');
+      assert.dom(PAGE.list.item('app/')).hasText('app/', 'expected list item');
+      await click(PAGE.list.createSecret);
+      await fillIn(FORM.inputByAttr('path'), 'jk');
+      await click(FORM.cancelBtn);
+      assert.dom(PAGE.list.item()).exists({ count: 1 }, 'same amount of secrets');
+      assert.dom(PAGE.list.item('app/')).hasText('app/', 'expected list item');
+      await click(PAGE.list.createSecret);
+      await fillIn(FORM.inputByAttr('path'), 'psych');
+      await click(PAGE.breadcrumbAtIdx(1));
+      assert.dom(PAGE.list.item()).exists({ count: 1 }, 'same amount of secrets');
+      assert.dom(PAGE.list.item('app/')).hasText('app/', 'expected list item');
+    });
+    test('cancel on new version rolls back model (a)', async function (assert) {
+      const backend = this.backend;
+      await visit(`/vault/secrets/${backend}/kv/${encodeURIComponent('app/first')}/details`);
+      assert.dom(PAGE.infoRowValue('foo')).exists('key has expected value');
+      await click(PAGE.detail.createNewVersion);
+      await fillIn(FORM.keyInput(), 'bar');
+      await click(FORM.cancelBtn);
+      assert.dom(PAGE.infoRowValue('foo')).exists('key rolls back to previous value');
+      await click(PAGE.detail.createNewVersion);
+      await fillIn(FORM.keyInput(), 'bar');
+      await click(PAGE.breadcrumbAtIdx(2));
+      assert.dom(PAGE.infoRowValue('foo')).exists('key rolls back to previous value');
+    });
+    test('create & update root secret with default metadata (a)', async function (assert) {
       const backend = this.backend;
       const secretPath = 'some secret';
       await visit(`/vault/secrets/${backend}/kv/list`);
@@ -111,7 +140,7 @@ module('Acceptance | kv-v2 workflow | secret and version create', function (hook
       assert.dom(PAGE.infoRowValue('api_key')).hasText('partyparty', 'secret value shows after toggle');
       assert.dom(PAGE.infoRowValue('api_url')).hasText('hashicorp.com', 'secret value shows after toggle');
     });
-    test('create nested secret with metadata', async function (assert) {
+    test('create nested secret with metadata (a)', async function (assert) {
       const backend = this.backend;
       await visit(`/vault/secrets/${backend}/kv/list`);
       await click(PAGE.list.createSecret);
@@ -178,7 +207,7 @@ module('Acceptance | kv-v2 workflow | secret and version create', function (hook
         .dom(PAGE.infoRowValue('Delete version after'))
         .hasText('16 minutes 40 seconds', 'Delete version after has custom value');
     });
-    test('creates a secret at a sub-directory', async function (assert) {
+    test('creates a secret at a sub-directory (a)', async function (assert) {
       const backend = this.backend;
       await visit(`/vault/secrets/${backend}/kv/app%2F/directory`);
       assert.dom(PAGE.list.item('first')).exists('Lists first sub-secret');
@@ -207,7 +236,7 @@ module('Acceptance | kv-v2 workflow | secret and version create', function (hook
       );
       assert.dom(PAGE.list.item('new')).exists('Lists new secret in sub-dir');
     });
-    test('create new version of secret from older version', async function (assert) {
+    test('create new version of secret from older version (a)', async function (assert) {
       const backend = this.backend;
       await visit(`/vault/secrets/${backend}/kv/app%2Ffirst/details`);
       await click(PAGE.detail.versionDropdown);
