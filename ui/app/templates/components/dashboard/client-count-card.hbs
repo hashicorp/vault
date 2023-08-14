@@ -23,10 +23,10 @@
         @label="Total"
         @value={{this.activityData.total.clients}}
         @size="l"
-        @subText="The total number of clients in this billing period ({{date-format
-          this.startDate
+        @subText="The number of clients in this billing period ({{date-format this.startDate 'MMM yyyy'}} - {{date-format
+          this.currentDate
           'MMM yyyy'
-        }} - {{date-format this.currentDate 'MMM yyyy'}})."
+        }})."
         data-test-stat-text="total-clients"
       />
       <StatText
@@ -44,12 +44,16 @@
       <Hds::Button
         @text="Refresh"
         @isIconOnly={{true}}
-        @color="secondary"
+        @color="tertiary"
         @icon="sync"
         disabled={{this.fetchClientActivity.isRunning}}
+        class="has-padding-xxs"
         {{on "click" (perform this.fetchClientActivity)}}
       />
-      <small class="has-left-margin-s">Updated {{date-format this.updatedAt "MMM dd, yyyy HH:mm:SS"}}</small>
+      <small class="has-left-margin-xs has-text-grey">
+        Updated
+        {{date-format this.updatedAt "MMM dd, yyyy HH:mm:SS"}}
+      </small>
     </div>
   {{/unless}}
 {{/if}}
