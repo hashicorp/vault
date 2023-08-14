@@ -23,33 +23,12 @@ func ProcessManual(ctx context.Context, data *logical.LogInput, ids []eventlogge
 	switch {
 	case data == nil:
 		return errors.New("data cannot be nil")
-	case len(ids) == 0:
-		return errors.New("ids are required")
+	case len(ids) < 2:
+		return errors.New("minimum of 2 ids are required")
 	case nodes == nil:
 		return errors.New("nodes cannot be nil")
 	case len(nodes) == 0:
 		return errors.New("nodes are required")
-	case len(ids) < 2:
-		return errors.New("not enough nodes")
-	}
-
-	// Replace the second last node (the formatter node) with a temporary
-	// formatter node that doesn't use a Salter that persists its salt
-	// value in the storage backend.
-
-	formatterNodeID := ids[len(ids)-2]
-
-	nodeMap := make(map[eventlogger.NodeID]eventlogger.Node)
-	for id, node := range nodes {
-		if id == formatterNodeID {
-			formatNode, ok := node.(*EntryFormatter)
-			if !ok {
-				return errors.New("formatter node cannot be cast correctly")
-			}
-			nodeMap[id] = NewTemporaryFormatNode(formatNode)
-		} else {
-			nodeMap[id] = node
-		}
 	}
 
 	// Create an audit event.
@@ -71,16 +50,26 @@ func ProcessManual(ctx context.Context, data *logical.LogInput, ids []eventlogge
 
 	var lastSeen eventlogger.NodeType
 
-	// Process nodes data order, updating the event with the result.
+	// Process nodes in order, updating the event with the result.
 	// This means we *should* do:
-	// 1. formatter
+	// 1. formatter (temporary)
 	// 2. sink
 	for _, id := range ids {
-		node, ok := nodeMap[id]
+		node, ok := nodes[id]
 		if !ok {
 			return fmt.Errorf("node not found: %v", id)
 		}
-		e, err = node.Process(ctx, e)
+
+		switch node.Type() {
+		case eventlogger.NodeTypeFormatter:
+			// Use a temporary formatter node  which doesn't persist its salt anywhere.
+			if formatNode, ok := node.(*EntryFormatter); ok && formatNode != nil {
+				e, err = newTemporaryEntryFormatter(formatNode).Process(ctx, e)
+			}
+		default:
+			e, err = node.Process(ctx, e)
+		}
+
 		if err != nil {
 			return err
 		}

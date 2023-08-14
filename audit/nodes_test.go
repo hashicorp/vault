@@ -41,29 +41,48 @@ func TestProcessManual_NilData(t *testing.T) {
 	require.EqualError(t, err, "data cannot be nil")
 }
 
-// TestProcessManual_NoIds tests ProcessManual when no IDs are supplied
-func TestProcessManual_NoIds(t *testing.T) {
-	t.Parallel()
+// TestProcessManual_BadIDs tests ProcessManual when different bad values are
+// supplied for the ID parameter.
+func TestProcessManual_BadIDs(t *testing.T) {
+	tests := map[string]struct {
+		IDs                  []eventlogger.NodeID
+		ExpectedErrorMessage string
+	}{
+		"nil": {
+			IDs:                  nil,
+			ExpectedErrorMessage: "minimum of 2 ids are required",
+		},
+		"one": {
+			IDs:                  []eventlogger.NodeID{"1"},
+			ExpectedErrorMessage: "minimum of 2 ids are required",
+		},
+	}
 
-	var ids []eventlogger.NodeID
-	nodes := make(map[eventlogger.NodeID]eventlogger.Node)
+	for name, tc := range tests {
+		name := name
+		tc := tc
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+			nodes := make(map[eventlogger.NodeID]eventlogger.Node)
 
-	// Filter node
-	filterId, filterNode := newFilterNode(t)
-	nodes[filterId] = filterNode
+			// Filter node
+			filterId, filterNode := newFilterNode(t)
+			nodes[filterId] = filterNode
 
-	// Sink node
-	sinkId, sinkNode := newSinkNode(t)
-	nodes[sinkId] = sinkNode
+			// Sink node
+			sinkId, sinkNode := newSinkNode(t)
+			nodes[sinkId] = sinkNode
 
-	// Data
-	requestId, err := uuid.GenerateUUID()
-	require.NoError(t, err)
-	data := newData(requestId)
+			// Data
+			requestId, err := uuid.GenerateUUID()
+			require.NoError(t, err)
+			data := newData(requestId)
 
-	err = ProcessManual(namespace.RootContext(context.Background()), data, ids, nodes)
-	require.Error(t, err)
-	require.EqualError(t, err, "ids are required")
+			err = ProcessManual(namespace.RootContext(context.Background()), data, tc.IDs, nodes)
+			require.Error(t, err)
+			require.EqualError(t, err, tc.ExpectedErrorMessage)
+		})
+	}
 }
 
 // TestProcessManual_NoNodes tests ProcessManual when no nodes are supplied.
@@ -138,7 +157,7 @@ func TestProcessManual_NotEnoughNodes(t *testing.T) {
 
 	err = ProcessManual(namespace.RootContext(context.Background()), data, ids, nodes)
 	require.Error(t, err)
-	require.EqualError(t, err, "not enough nodes")
+	require.EqualError(t, err, "minimum of 2 ids are required")
 }
 
 // TestProcessManual_LastNodeNotSink tests ProcessManual when the last node is
