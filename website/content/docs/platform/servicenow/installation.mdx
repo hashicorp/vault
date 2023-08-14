@@ -69,11 +69,14 @@ description: Installation steps for the Vault ServiceNow Credential Resolver.
 
 ## Uploading JAR file to MID server
 
-!> ServiceNow version UTAH onwards, please use the  "HashiCorp Vault Credential Resolver" App 
-from the ServiceNow App store to install the Vault Credential Resolver. Post installation of the app,
-ensure that the name of the credential resolver matches the name of the jar,
-`vault-servicenow-credential-resolver`.If a custom name is desired, please rename the deployed jar. 
-The steps below are for pre ServiceNow UTAH versions
+<Warning heading="Use the ServiceNow app store to install Vault Credential Resolver">
+  The steps documented below are for **pre ServiceNow UTAH versions**.
+
+  As of ServiceNow version UTAH, use the "HashiCorp Vault Credential Resolver" App 
+  from the ServiceNow App store to install the Vault Credential Resolver and verify
+  the jar file installed is `vault-servicenow-credential-resolver`. If you wish to
+  use a custom name, you must manually rename the deployed jar. 
+</Warning>
 
 * Download the latest version of the Vault Credential Resolver JAR file from
   [releases.hashicorp.com](https://releases.hashicorp.com/vault-servicenow-credential-resolver/)
