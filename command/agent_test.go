@@ -567,7 +567,7 @@ auto_auth {
         config = {
             role_id_file_path = "%s"
             secret_id_file_path = "%s"
-						remove_secret_id_file_after_reading = false
+            remove_secret_id_file_after_reading = false
         }
     }
 }
@@ -764,7 +764,7 @@ auto_auth {
         config = {
             role_id_file_path = "%s"
             secret_id_file_path = "%s"
-			remove_secret_id_file_after_reading = false
+            remove_secret_id_file_after_reading = false
         }
     }
 }
@@ -1051,7 +1051,7 @@ auto_auth {
         config = {
             role_id_file_path = "%s"
             secret_id_file_path = "%s"
-			remove_secret_id_file_after_reading = false
+            remove_secret_id_file_after_reading = false
         }
     }
 }
@@ -1196,7 +1196,7 @@ func TestAgent_Template_ExitCounter(t *testing.T) {
 	config := `
 vault {
   address = "%s"
-	tls_skip_verify = true
+  tls_skip_verify = true
 }
 
 auto_auth {
@@ -1205,7 +1205,7 @@ auto_auth {
         config = {
             role_id_file_path = "%s"
             secret_id_file_path = "%s"
-						remove_secret_id_file_after_reading = false
+            remove_secret_id_file_after_reading = false
         }
     }
 }
@@ -1231,7 +1231,7 @@ template {
 {{ end }}
 EOF
     destination = "%s/render-other.txt"
-		}
+}
 
 exit_after_auth = true
 `
@@ -1700,7 +1700,7 @@ auto_auth {
         config = {
             role_id_file_path = "%s"
             secret_id_file_path = "%s"
-			remove_secret_id_file_after_reading = false
+            remove_secret_id_file_after_reading = false
         }
     }
 }
