@@ -1,3 +1,8 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
 <div class="auth-form" data-test-auth-form>
   {{#if (and this.waitingForOktaNumberChallenge (not this.cancelAuthForOktaNumberChallenge))}}
     <OktaNumberChallenge
@@ -46,10 +51,7 @@
       </nav>
     {{/if}}
     <div class="box is-marginless is-shadowless">
-      <MessageError
-        @errorMessage={{if (and this.cluster.standby this.hasCSPError) this.cspErrorText this.error}}
-        data-test-auth-error
-      />
+      <MessageError @errorMessage={{if (and this.cluster.standby this.hasCSPError) this.cspErrorText this.error}} />
       <div class="has-bottom-margin-s">
         <p class="is-label">{{this.selectedAuthBackend.path}}</p>
         <span class="description has-text-grey" data-test-description={{true}}>

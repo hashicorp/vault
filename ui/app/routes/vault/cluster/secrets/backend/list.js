@@ -1,10 +1,10 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 import { set } from '@ember/object';
-import { hash, all } from 'rsvp';
+import { hash } from 'rsvp';
 import Route from '@ember/routing/route';
 import { supportedSecretBackends } from 'vault/helpers/supported-secret-backends';
 import { allEngines } from 'vault/helpers/mountable-secret-engines';
@@ -97,7 +97,6 @@ export default Route.extend({
       ssh: 'role-ssh',
       transform: this.modelTypeForTransform(tab),
       aws: 'role-aws',
-      pki: `pki/${tab || 'pki-role'}`,
       // secret or secret-v2
       cubbyhole: 'secret',
       kv: secretEngine.modelTypeForKV,
@@ -142,29 +141,6 @@ export default Route.extend({
           }
         }),
     });
-  },
-
-  afterModel(model) {
-    const { tab } = this.paramsFor(this.routeName);
-    const backend = this.enginePathParam();
-    if (!tab || tab !== 'cert') {
-      return;
-    }
-    return all(
-      // these ids are treated specially by vault's api, but it's also
-      // possible that there is no certificate for them in order to know,
-      // we fetch them specifically on the list page, and then unload the
-      // records if there is no `certificate` attribute on the resultant model
-      ['ca', 'crl', 'ca_chain'].map((id) => this.store.queryRecord('pki/cert', { id, backend }))
-    ).then(
-      (results) => {
-        results.rejectBy('certificate').forEach((record) => record.unloadRecord());
-        return model;
-      },
-      () => {
-        return model;
-      }
-    );
   },
 
   setupController(controller, resolvedModel) {

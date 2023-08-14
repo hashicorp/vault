@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 package pki
 
@@ -249,7 +249,7 @@ to be set on all PR secondary clusters.`,
 					Required:    false,
 				},
 				"usage": {
-					Type:        framework.TypeStringSlice,
+					Type:        framework.TypeString,
 					Description: `Usage`,
 					Required:    false,
 				},

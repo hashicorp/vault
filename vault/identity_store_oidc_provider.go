@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 package vault
 
@@ -477,42 +477,51 @@ func oidcProviderPaths(i *IdentityStore) []*framework.Path {
 					Type:        framework.TypeString,
 					Description: "The ID of the requesting client.",
 					Required:    true,
+					Query:       true,
 				},
 				"scope": {
 					Type:        framework.TypeString,
 					Description: "A space-delimited, case-sensitive list of scopes to be requested. The 'openid' scope is required.",
 					Required:    true,
+					Query:       true,
 				},
 				"redirect_uri": {
 					Type:        framework.TypeString,
 					Description: "The redirection URI to which the response will be sent.",
 					Required:    true,
+					Query:       true,
 				},
 				"response_type": {
 					Type:        framework.TypeString,
 					Description: "The OIDC authentication flow to be used. The following response types are supported: 'code'",
 					Required:    true,
+					Query:       true,
 				},
 				"state": {
 					Type:        framework.TypeString,
 					Description: "The value used to maintain state between the authentication request and client.",
+					Query:       true,
 				},
 				"nonce": {
 					Type:        framework.TypeString,
 					Description: "The value that will be returned in the ID token nonce claim after a token exchange.",
+					Query:       true,
 				},
 				"max_age": {
 					Type:        framework.TypeInt,
 					Description: "The allowable elapsed time in seconds since the last time the end-user was actively authenticated.",
+					Query:       true,
 				},
 				"code_challenge": {
 					Type:        framework.TypeString,
 					Description: "The code challenge derived from the code verifier.",
+					Query:       true,
 				},
 				"code_challenge_method": {
 					Type:        framework.TypeString,
 					Description: "The method that was used to derive the code challenge. The following methods are supported: 'S256', 'plain'. Defaults to 'plain'.",
 					Default:     codeChallengeMethodPlain,
+					Query:       true,
 				},
 			},
 			Operations: map[logical.Operation]framework.OperationHandler{

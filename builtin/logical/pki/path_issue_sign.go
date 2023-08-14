@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 package pki
 
@@ -75,12 +75,12 @@ func buildPathIssue(b *backend, pattern string, displayAttrs *framework.DisplayA
 							"serial_number": {
 								Type:        framework.TypeString,
 								Description: `Serial Number`,
-								Required:    false,
+								Required:    true,
 							},
 							"expiration": {
-								Type:        framework.TypeString,
+								Type:        framework.TypeInt64,
 								Description: `Time of expiration`,
-								Required:    false,
+								Required:    true,
 							},
 							"private_key": {
 								Type:        framework.TypeString,
@@ -163,19 +163,9 @@ func buildPathSign(b *backend, pattern string, displayAttrs *framework.DisplayAt
 								Required:    true,
 							},
 							"expiration": {
-								Type:        framework.TypeString,
+								Type:        framework.TypeInt64,
 								Description: `Time of expiration`,
 								Required:    true,
-							},
-							"private_key": {
-								Type:        framework.TypeString,
-								Description: `Private key`,
-								Required:    false,
-							},
-							"private_key_type": {
-								Type:        framework.TypeString,
-								Description: `Private key type`,
-								Required:    false,
 							},
 						},
 					}},
@@ -253,22 +243,12 @@ func buildPathIssuerSignVerbatim(b *backend, pattern string, displayAttrs *frame
 							"serial_number": {
 								Type:        framework.TypeString,
 								Description: `Serial Number`,
-								Required:    false,
+								Required:    true,
 							},
 							"expiration": {
-								Type:        framework.TypeString,
+								Type:        framework.TypeInt64,
 								Description: `Time of expiration`,
-								Required:    false,
-							},
-							"private_key": {
-								Type:        framework.TypeString,
-								Description: `Private key`,
-								Required:    false,
-							},
-							"private_key_type": {
-								Type:        framework.TypeString,
-								Description: `Private key type`,
-								Required:    false,
+								Required:    true,
 							},
 						},
 					}},
@@ -403,86 +383,19 @@ func (b *backend) pathIssueSignCert(ctx context.Context, req *logical.Request, d
 		}
 	}
 
-	signingCB, err := signingBundle.ToCertBundle()
-	if err != nil {
-		return nil, fmt.Errorf("error converting raw signing bundle to cert bundle: %w", err)
-	}
-
 	cb, err := parsedBundle.ToCertBundle()
 	if err != nil {
 		return nil, fmt.Errorf("error converting raw cert bundle to cert bundle: %w", err)
 	}
 
-	caChainGen := newCaChainOutput(parsedBundle, data)
-
-	respData := map[string]interface{}{
-		"expiration":    int64(parsedBundle.Certificate.NotAfter.Unix()),
-		"serial_number": cb.SerialNumber,
+	generateLease := false
+	if role.GenerateLease != nil && *role.GenerateLease {
+		generateLease = true
 	}
 
-	switch format {
-	case "pem":
-		respData["issuing_ca"] = signingCB.Certificate
-		respData["certificate"] = cb.Certificate
-		if caChainGen.containsChain() {
-			respData["ca_chain"] = caChainGen.pemEncodedChain()
-		}
-		if !useCSR {
-			respData["private_key"] = cb.PrivateKey
-			respData["private_key_type"] = cb.PrivateKeyType
-		}
-
-	case "pem_bundle":
-		respData["issuing_ca"] = signingCB.Certificate
-		respData["certificate"] = cb.ToPEMBundle()
-		if caChainGen.containsChain() {
-			respData["ca_chain"] = caChainGen.pemEncodedChain()
-		}
-		if !useCSR {
-			respData["private_key"] = cb.PrivateKey
-			respData["private_key_type"] = cb.PrivateKeyType
-		}
-
-	case "der":
-		respData["certificate"] = base64.StdEncoding.EncodeToString(parsedBundle.CertificateBytes)
-		respData["issuing_ca"] = base64.StdEncoding.EncodeToString(signingBundle.CertificateBytes)
-
-		if caChainGen.containsChain() {
-			respData["ca_chain"] = caChainGen.derEncodedChain()
-		}
-
-		if !useCSR {
-			respData["private_key"] = base64.StdEncoding.EncodeToString(parsedBundle.PrivateKeyBytes)
-			respData["private_key_type"] = cb.PrivateKeyType
-		}
-	default:
-		return nil, fmt.Errorf("unsupported format: %s", format)
-	}
-
-	var resp *logical.Response
-	switch {
-	case role.GenerateLease == nil:
-		return nil, fmt.Errorf("generate lease in role is nil")
-	case !*role.GenerateLease:
-		// If lease generation is disabled do not populate `Secret` field in
-		// the response
-		resp = &logical.Response{
-			Data: respData,
-		}
-	default:
-		resp = b.Secret(SecretCertsType).Response(
-			respData,
-			map[string]interface{}{
-				"serial_number": cb.SerialNumber,
-			})
-		resp.Secret.TTL = parsedBundle.Certificate.NotAfter.Sub(time.Now())
-	}
-
-	if data.Get("private_key_format").(string) == "pkcs8" {
-		err = convertRespToPKCS8(resp)
-		if err != nil {
-			return nil, err
-		}
+	resp, err := signIssueApiResponse(b, data, parsedBundle, signingBundle, generateLease, warnings)
+	if err != nil {
+		return nil, err
 	}
 
 	if !role.NoStore {
@@ -554,6 +467,93 @@ func (cac *caChainOutput) derEncodedChain() []string {
 		derCaChain = append(derCaChain, base64.StdEncoding.EncodeToString(caCert.Bytes))
 	}
 	return derCaChain
+}
+
+func signIssueApiResponse(b *backend, data *framework.FieldData, parsedBundle *certutil.ParsedCertBundle, signingBundle *certutil.CAInfoBundle, generateLease bool, warnings []string) (*logical.Response, error) {
+	cb, err := parsedBundle.ToCertBundle()
+	if err != nil {
+		return nil, fmt.Errorf("error converting raw cert bundle to cert bundle: %w", err)
+	}
+
+	signingCB, err := signingBundle.ToCertBundle()
+	if err != nil {
+		return nil, fmt.Errorf("error converting raw signing bundle to cert bundle: %w", err)
+	}
+
+	caChainGen := newCaChainOutput(parsedBundle, data)
+	includeKey := parsedBundle.PrivateKey != nil
+
+	respData := map[string]interface{}{
+		"expiration":    parsedBundle.Certificate.NotAfter.Unix(),
+		"serial_number": cb.SerialNumber,
+	}
+
+	format := getFormat(data)
+	switch format {
+	case "pem":
+		respData["issuing_ca"] = signingCB.Certificate
+		respData["certificate"] = cb.Certificate
+		if caChainGen.containsChain() {
+			respData["ca_chain"] = caChainGen.pemEncodedChain()
+		}
+		if includeKey {
+			respData["private_key"] = cb.PrivateKey
+			respData["private_key_type"] = cb.PrivateKeyType
+		}
+
+	case "pem_bundle":
+		respData["issuing_ca"] = signingCB.Certificate
+		respData["certificate"] = cb.ToPEMBundle()
+		if caChainGen.containsChain() {
+			respData["ca_chain"] = caChainGen.pemEncodedChain()
+		}
+		if includeKey {
+			respData["private_key"] = cb.PrivateKey
+			respData["private_key_type"] = cb.PrivateKeyType
+		}
+
+	case "der":
+		respData["certificate"] = base64.StdEncoding.EncodeToString(parsedBundle.CertificateBytes)
+		respData["issuing_ca"] = base64.StdEncoding.EncodeToString(signingBundle.CertificateBytes)
+
+		if caChainGen.containsChain() {
+			respData["ca_chain"] = caChainGen.derEncodedChain()
+		}
+
+		if includeKey {
+			respData["private_key"] = base64.StdEncoding.EncodeToString(parsedBundle.PrivateKeyBytes)
+			respData["private_key_type"] = cb.PrivateKeyType
+		}
+	default:
+		return nil, fmt.Errorf("unsupported format: %s", format)
+	}
+
+	var resp *logical.Response
+	if generateLease {
+		resp = b.Secret(SecretCertsType).Response(
+			respData,
+			map[string]interface{}{
+				"serial_number": cb.SerialNumber,
+			})
+		resp.Secret.TTL = parsedBundle.Certificate.NotAfter.Sub(time.Now())
+	} else {
+		resp = &logical.Response{
+			Data: respData,
+		}
+	}
+
+	if includeKey {
+		if keyFormat := data.Get("private_key_format"); keyFormat == "pkcs8" {
+			err := convertRespToPKCS8(resp)
+			if err != nil {
+				return nil, err
+			}
+		}
+	}
+
+	resp = addWarnings(resp, warnings)
+
+	return resp, nil
 }
 
 const pathIssueHelpSyn = `

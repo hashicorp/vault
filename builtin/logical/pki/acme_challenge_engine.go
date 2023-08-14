@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package pki
 
 import (
@@ -13,6 +16,8 @@ import (
 var MaxChallengeTimeout = 1 * time.Minute
 
 const MaxRetryAttempts = 5
+
+const ChallengeAttemptFailedMsg = "this may occur if the validation target was misconfigured: check that challenge responses are available at the required locations and retry."
 
 type ChallengeValidation struct {
 	// Account KID that this validation attempt is recorded under.
@@ -58,14 +63,6 @@ func NewACMEChallengeEngine() *ACMEChallengeEngine {
 	return ace
 }
 
-func (ace *ACMEChallengeEngine) Initialize(b *backend, sc *storageContext) error {
-	if err := ace.LoadFromStorage(b, sc); err != nil {
-		return fmt.Errorf("failed loading initial in-progress validations: %w", err)
-	}
-
-	return nil
-}
-
 func (ace *ACMEChallengeEngine) LoadFromStorage(b *backend, sc *storageContext) error {
 	items, err := sc.Storage.List(sc.Context, acmeValidationPrefix)
 	if err != nil {
@@ -76,16 +73,30 @@ func (ace *ACMEChallengeEngine) LoadFromStorage(b *backend, sc *storageContext) 
 	defer ace.ValidationLock.Unlock()
 
 	// Add them to our queue of validations to work through later.
+	foundExistingValidations := false
 	for _, item := range items {
 		ace.Validations.PushBack(&ChallengeQueueEntry{
 			Identifier: item,
 		})
+		foundExistingValidations = true
+	}
+
+	if foundExistingValidations {
+		ace.NewValidation <- "existing"
 	}
 
 	return nil
 }
 
-func (ace *ACMEChallengeEngine) Run(b *backend, state *acmeState) {
+func (ace *ACMEChallengeEngine) Run(b *backend, state *acmeState, sc *storageContext) {
+	// We load the existing ACME challenges within the Run thread to avoid
+	// delaying the PKI mount initialization
+	b.Logger().Debug("Loading existing challenge validations on disk")
+	err := ace.LoadFromStorage(b, sc)
+	if err != nil {
+		b.Logger().Error("failed loading existing ACME challenge validations:", "err", err)
+	}
+
 	for true {
 		// err == nil on shutdown.
 		b.Logger().Debug("Starting ACME challenge validation engine")
@@ -401,7 +412,7 @@ func (ace *ACMEChallengeEngine) _verifyChallenge(sc *storageContext, id string, 
 
 		valid, err = ValidateHTTP01Challenge(authz.Identifier.Value, cv.Token, cv.Thumbprint, config)
 		if err != nil {
-			err = fmt.Errorf("%w: error validating http-01 challenge %v: %s", ErrIncorrectResponse, id, err.Error())
+			err = fmt.Errorf("%w: error validating http-01 challenge %v: %v; %v", ErrIncorrectResponse, id, err, ChallengeAttemptFailedMsg)
 			return ace._verifyChallengeRetry(sc, cv, authzPath, authz, challenge, err, id)
 		}
 	case ACMEDNSChallenge:
@@ -412,7 +423,23 @@ func (ace *ACMEChallengeEngine) _verifyChallenge(sc *storageContext, id string, 
 
 		valid, err = ValidateDNS01Challenge(authz.Identifier.Value, cv.Token, cv.Thumbprint, config)
 		if err != nil {
-			err = fmt.Errorf("%w: error validating dns-01 challenge %v: %s", ErrIncorrectResponse, id, err.Error())
+			err = fmt.Errorf("%w: error validating dns-01 challenge %v: %v; %v", ErrIncorrectResponse, id, err, ChallengeAttemptFailedMsg)
+			return ace._verifyChallengeRetry(sc, cv, authzPath, authz, challenge, err, id)
+		}
+	case ACMEALPNChallenge:
+		if authz.Identifier.Type != ACMEDNSIdentifier {
+			err = fmt.Errorf("unsupported identifier type for authorization %v/%v in challenge %v: %v", cv.Account, cv.Authorization, id, authz.Identifier.Type)
+			return ace._verifyChallengeCleanup(sc, err, id)
+		}
+
+		if authz.Wildcard {
+			err = fmt.Errorf("unable to validate wildcard authorization %v/%v in challenge %v via tls-alpn-01 challenge", cv.Account, cv.Authorization, id)
+			return ace._verifyChallengeCleanup(sc, err, id)
+		}
+
+		valid, err = ValidateTLSALPN01Challenge(authz.Identifier.Value, cv.Token, cv.Thumbprint, config)
+		if err != nil {
+			err = fmt.Errorf("%w: error validating tls-alpn-01 challenge %v: %s", ErrIncorrectResponse, id, err.Error())
 			return ace._verifyChallengeRetry(sc, cv, authzPath, authz, challenge, err, id)
 		}
 	default:

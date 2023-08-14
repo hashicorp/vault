@@ -1,15 +1,23 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
 {{#if @model.id}}
   {{! Model only has ID once form has been submitted and saved }}
   <main data-test-generate-csr-result>
     <div class="box is-sideless is-fullwidth is-shadowless">
-      <AlertBanner @title="Next steps" @type="warning">
-        Copy the CSR below for a parent issuer to sign and then import the signed certificate back into this mount.
-        {{#if @model.privateKey}}
-          The
-          <code>private_key</code>
-          is only available once. Make sure you copy and save it now.
-        {{/if}}
-      </AlertBanner>
+      <Hds::Alert data-test-next-steps-csr @type="inline" @color="highlight" class="has-bottom-margin-s" as |A|>
+        <A.Title>Next steps</A.Title>
+        <A.Description>
+          Copy the CSR below for a parent issuer to sign and then import the signed certificate back into this mount.
+          {{#if @model.privateKey}}
+            The
+            <code>private_key</code>
+            is only available once. Make sure you copy and save it now.
+          {{/if}}
+        </A.Description>
+      </Hds::Alert>
       {{#each this.showFields as |fieldName|}}
         {{#let (find-by "name" fieldName @model.allFields) as |attr|}}
           {{#let (get @model attr.name) as |value|}}
@@ -18,8 +26,8 @@
               @value={{value}}
               @addCopyButton={{eq attr.name "keyId"}}
             >
-              {{#if (and attr.options.masked value)}}
-                <MaskedInput @value={{value}} @displayOnly={{true}} @allowCopy={{true}} />
+              {{#if (and attr.options.isCertificate value)}}
+                <CertificateCard @data={{value}} />
               {{else if (eq attr.name "keyId")}}
                 <LinkTo @route="keys.key.details" @model={{@model.keyId}}>
                   {{@model.keyId}}

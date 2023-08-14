@@ -1,6 +1,6 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 import { inject as service } from '@ember/service';
@@ -115,7 +115,7 @@ export default Component.extend({
       content = `Welcome to the Vault API explorer! \nWe've filtered the list of endpoints for '${filter}'.`;
     }
     try {
-      yield this.router.transitionTo('vault.cluster.open-api-explorer.index', {
+      yield this.router.transitionTo('vault.cluster.tools.open-api-explorer', {
         queryParams: { filter },
       });
       this.logAndOutput(null, {

@@ -1,6 +1,6 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 .global-flash {
@@ -11,14 +11,4 @@
   position: fixed;
   width: 95%;
   z-index: 300;
-
-  .message {
-    box-shadow: $box-shadow-high;
-    .message-body {
-      overflow-wrap: break-word;
-      word-wrap: break-word;
-      word-break: break-word;
-      display: inline-flex;
-    }
-  }
 }

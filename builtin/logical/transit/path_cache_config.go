@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 package transit
 
@@ -38,15 +38,6 @@ func (b *backend) pathCacheConfig() *framework.Path {
 			},
 
 			logical.UpdateOperation: &framework.PathOperation{
-				Callback: b.pathCacheConfigWrite,
-				Summary:  "Configures a new cache of the specified size",
-				DisplayAttrs: &framework.DisplayAttributes{
-					OperationVerb:   "configure",
-					OperationSuffix: "cache",
-				},
-			},
-
-			logical.CreateOperation: &framework.PathOperation{
 				Callback: b.pathCacheConfigWrite,
 				Summary:  "Configures a new cache of the specified size",
 				DisplayAttrs: &framework.DisplayAttributes{

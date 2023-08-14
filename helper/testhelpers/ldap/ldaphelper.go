@@ -1,11 +1,13 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 package ldap
 
 import (
 	"context"
 	"fmt"
+	"runtime"
+	"strings"
 	"testing"
 
 	hclog "github.com/hashicorp/go-hclog"
@@ -14,6 +16,11 @@ import (
 )
 
 func PrepareTestContainer(t *testing.T, version string) (cleanup func(), cfg *ldaputil.ConfigEntry) {
+	// Skipping on ARM, as this image can't run on ARM architecture
+	if strings.Contains(runtime.GOARCH, "arm") {
+		t.Skip("Skipping, as this image is not supported on ARM architectures")
+	}
+
 	runner, err := docker.NewServiceRunner(docker.RunOptions{
 		// Currently set to "michelvocks" until https://github.com/rroemhild/docker-test-openldap/pull/14
 		// has been merged.

@@ -1,10 +1,10 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 export const SELECTORS = {
-  errorBanner: '[data-test-error-banner]',
+  errorBanner: '[data-test-config-edit-error]',
   acmeEditSection: '[data-test-acme-edit-section]',
   configEditSection: '[data-test-cluster-config-edit-section]',
   configInput: (attr) => `[data-test-input="${attr}"]`,

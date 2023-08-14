@@ -60,10 +60,74 @@
         "title": "Security Model",
         "path": "internals/security"
       },
+
       {
         "title": "Telemetry",
-        "path": "internals/telemetry"
+        "routes": [
+          {
+            "title": "Overview",
+            "path": "internals/telemetry"
+          },
+          {
+            "title": "Enable telemetry gathering",
+            "path": "internals/telemetry/enable-telemetry"
+          },
+          {
+            "title": "Metric reference",
+            "routes": [
+              {
+                "title": "Overview",
+                "path": "internals/telemetry/metrics"
+              },
+              {
+                "title": "Core system metrics",
+                "path": "internals/telemetry/metrics/core-system"
+              },
+              {
+                "title": "Audit log metrics",
+                "path": "internals/telemetry/metrics/audit"
+              },
+              {
+                "title": "Authentication metrics",
+                "path": "internals/telemetry/metrics/authn"
+              },
+              {
+                "title": "Auto-snapshot metrics",
+                "path": "internals/telemetry/metrics/autosnap"
+              },
+              {
+                "title": "Availability metrics",
+                "path": "internals/telemetry/metrics/availability"
+              },
+              {
+                "title": "Database metrics",
+                "path": "internals/telemetry/metrics/database"
+              },
+              {
+                "title": "Policy metrics",
+                "path": "internals/telemetry/metrics/policy"
+              },
+              {
+                "title": "Raft metrics",
+                "path": "internals/telemetry/metrics/raft"
+              },
+              {
+                "title": "Secrets metrics",
+                "path": "internals/telemetry/metrics/secrets"
+              },
+              {
+                "title": "Storage plugin metrics",
+                "path": "internals/telemetry/metrics/storage"
+              },
+              {
+                "title": "Full metrics list",
+                "path": "internals/telemetry/metrics/all"
+              }
+            ]
+          }
+        ]
       },
+
       {
         "title": "Token Authentication",
         "path": "internals/token"
@@ -171,11 +235,15 @@
         "path": "concepts/resource-quotas"
       },
       {
-        "title": "Client Count",
+        "title": "Client count",
         "routes": [
           {
-            "title": "Overview",
+            "title": "Clients and entities",
             "path": "concepts/client-count"
+          },
+          {
+            "title": "Client count calculation",
+            "path": "concepts/client-count/counting"
           },
           {
             "title": "FAQ",
@@ -207,7 +275,7 @@
           "type": "outlined",
           "color": "neutral"
         }
-  }
+      }
     ]
   },
   {
@@ -571,22 +639,22 @@
             "title": "<code>health-check</code>",
             "path": "commands/pki/health-check"
           },
-	  {
-	    "title": "<code>verify-sign</code>",
-	    "path": "commands/pki/verify-sign"
-	  },
-	  {
-	    "title": "<code>list-intermeidates</code>",
-	    "path": "commands/pki/list-intermediates"
-	  },
-	  {
-	    "title": "<code>issue</code>",
-	    "path": "commands/pki/issue"
-	  },
-	  {
-	    "title": "<code>reissue</code>",
-	    "path": "commands/pki/reissue"
-	  }
+          {
+            "title": "<code>verify-sign</code>",
+            "path": "commands/pki/verify-sign"
+          },
+          {
+            "title": "<code>list-intermediates</code>",
+            "path": "commands/pki/list-intermediates"
+          },
+          {
+            "title": "<code>issue</code>",
+            "path": "commands/pki/issue"
+          },
+          {
+            "title": "<code>reissue</code>",
+            "path": "commands/pki/reissue"
+          }
         ]
       },
       {
@@ -775,6 +843,10 @@
         "path": "commands/print"
       },
       {
+        "title": "<code>proxy</code>",
+        "path": "commands/proxy"
+      },
+      {
         "title": "<code>read</code>",
         "path": "commands/read"
       },
@@ -937,6 +1009,10 @@
                 "path": "agent-and-proxy/autoauth/methods/jwt"
               },
               {
+                "title": "LDAP",
+                "path": "agent-and-proxy/autoauth/methods/ldap"
+              },
+              {
                 "title": "Kerberos",
                 "path": "agent-and-proxy/autoauth/methods/kerberos"
               },
@@ -1040,6 +1116,14 @@
                 ]
               }
             ]
+          },
+          {
+            "title": "generate-config",
+            "path": "agent-and-proxy/agent/generate-config"
+          },
+          {
+            "title": "Process Supervisor Mode",
+            "path": "agent-and-proxy/agent/process-supervisor"
           },
           {
             "title": "Templates",
@@ -1523,15 +1607,6 @@
       },
       {
         "divider": true
-      },
-      {
-        "title": "App ID",
-        "badge": {
-          "text": "DEPRECATED",
-          "type": "outlined",
-          "color": "neutral"
-        },
-        "path": "auth/app-id"
       }
     ]
   },
@@ -1867,17 +1942,21 @@
         "path": "upgrading"
       },
       {
-         "title": "Upgrade Vault HA installations",
-         "path": "upgrading/vault-ha-upgrade"
+        "title": "Upgrade Vault HA installations",
+        "path": "upgrading/vault-ha-upgrade"
       },
       {
         "title": "Upgrade Plugins",
         "path": "upgrading/plugins"
       },
       {
-        "title": "Upgrade to 1.14.x",
-        "path": "upgrading/upgrade-to-1.14.x",
+        "title": "Upgrade to 1.15.x",
+        "path": "upgrading/upgrade-to-1.15.x",
         "hidden": true
+      },
+      {
+        "title": "Upgrade to 1.14.x",
+        "path": "upgrading/upgrade-to-1.14.x"
       },
       {
         "title": "Upgrade to 1.13.x",
@@ -2124,13 +2203,12 @@
         "path": "release-notes"
       },
       {
-         "title": "1.14.0",
-         "path": "release-notes/1.14.0",
-         "hidden": true
+        "title": "1.14.0",
+        "path": "release-notes/1.14.0"
       },
       {
-         "title": "1.13.0",
-         "path": "release-notes/1.13.0"
+        "title": "1.13.0",
+        "path": "release-notes/1.13.0"
       },
       {
         "title": "1.12.0",

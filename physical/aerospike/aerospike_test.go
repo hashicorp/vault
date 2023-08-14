@@ -1,11 +1,13 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 package aerospike
 
 import (
 	"context"
 	"math/bits"
+	"runtime"
+	"strings"
 	"testing"
 	"time"
 
@@ -47,6 +49,11 @@ type aerospikeConfig struct {
 }
 
 func prepareAerospikeContainer(t *testing.T) (func(), *aerospikeConfig) {
+	// Skipping on ARM, as this image can't run on ARM architecture
+	if strings.Contains(runtime.GOARCH, "arm") {
+		t.Skip("Skipping, as this image is not supported on ARM architectures")
+	}
+
 	runner, err := docker.NewServiceRunner(docker.RunOptions{
 		ImageRepo:     "docker.mirror.hashicorp.services/aerospike/aerospike-server",
 		ContainerName: "aerospikedb",

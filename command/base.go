@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 package command
 
@@ -222,7 +222,7 @@ func (c *BaseCommand) DefaultWrappingLookupFunc(operation, path string) string {
 	return api.DefaultWrappingLookupFunc(operation, path)
 }
 
-// getValidationRequired checks to see if the secret exists and has an MFA
+// getMFAValidationRequired checks to see if the secret exists and has an MFA
 // requirement. If MFA is required and the number of constraints is greater than
 // 1, we can assert that interactive validation is not required.
 func (c *BaseCommand) getMFAValidationRequired(secret *api.Secret) bool {
