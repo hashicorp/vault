@@ -36,10 +36,10 @@ import (
 	"github.com/hashicorp/go-cleanhttp"
 	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-multierror"
-	"github.com/hashicorp/go-set"
 	"github.com/hashicorp/vault/api"
 	dockhelper "github.com/hashicorp/vault/sdk/helper/docker"
 	"github.com/hashicorp/vault/sdk/helper/logging"
+	"github.com/hashicorp/vault/sdk/helper/strutil"
 	"github.com/hashicorp/vault/sdk/helper/testcluster"
 	uberAtomic "go.uber.org/atomic"
 	"golang.org/x/net/http2"
@@ -629,7 +629,6 @@ func (n *DockerClusterNode) Start(ctx context.Context, opts *DockerClusterOption
 	var listenerConfig []map[string]interface{}
 	listenerConfig = append(listenerConfig, n.createDefaultListenerConfig())
 	ports := []string{"8200/tcp", "8201/tcp"}
-	portSet := set.From(ports)
 
 	if opts.VaultNodeConfig != nil && opts.VaultNodeConfig.AdditionalListeners != nil {
 		for _, config := range opts.VaultNodeConfig.AdditionalListeners {
@@ -639,10 +638,9 @@ func (n *DockerClusterNode) Start(ctx context.Context, opts *DockerClusterOption
 			listener["chroot_namespace"] = config.ChrootNamespace
 			listenerConfig = append(listenerConfig, cfg)
 			portStr := fmt.Sprintf("%d/tcp", config.Port)
-			if portSet.Contains(portStr) {
+			if strutil.StrListContains(ports, portStr) {
 				return fmt.Errorf("duplicate port %d specified", config.Port)
 			}
-			portSet.Insert(portStr)
 			ports = append(ports, portStr)
 		}
 	}
