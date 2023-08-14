@@ -23,7 +23,7 @@ export default class VaultClusterDashboardRoute extends Route.extend(ClusterRout
     }
   }
 
-  async model() {
+  model() {
     const vaultConfiguration = this.getVaultConfiguration();
 
     return hash({
