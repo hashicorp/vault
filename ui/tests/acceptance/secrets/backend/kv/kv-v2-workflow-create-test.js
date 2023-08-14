@@ -173,7 +173,7 @@ module('Acceptance | kv-v2 workflow | secret and version create', function (hook
         .exists({ count: 3 }, '3 metadata rows show');
       // await this.pauseTest();
       assert.dom(PAGE.infoRowValue('Maximum versions')).hasText('7', 'max versions shows 0');
-      assert.dom(PAGE.infoRowValue('Check-and-Set required')).hasText('Yes', 'cas not enforced');
+      assert.dom(PAGE.infoRowValue('Check-and-Set required')).hasText('Yes', 'cas enforced');
       assert
         .dom(PAGE.infoRowValue('Delete version after'))
         .hasText('16 minutes 40 seconds', 'Delete version after has custom value');
