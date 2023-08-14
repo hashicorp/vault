@@ -1,3 +1,3 @@
 ```release-note:improvement
-core: add a listener configuration "chroot_namespace" that will be used as new root directory
+core: add a listener configuration "chroot_namespace" that forces requests to use a namespace hierarchy
 ```
