@@ -26,10 +26,10 @@ func TestProcessManual_NilData(t *testing.T) {
 	var ids []eventlogger.NodeID
 	nodes := make(map[eventlogger.NodeID]eventlogger.Node)
 
-	// Filter node
-	filterId, filterNode := newFilterNode(t)
-	ids = append(ids, filterId)
-	nodes[filterId] = filterNode
+	// Formatter node
+	formatterId, formatterNode := newFormatterNode(t)
+	ids = append(ids, formatterId)
+	nodes[formatterId] = formatterNode
 
 	// Sink node
 	sinkId, sinkNode := newSinkNode(t)
@@ -65,9 +65,9 @@ func TestProcessManual_BadIDs(t *testing.T) {
 			t.Parallel()
 			nodes := make(map[eventlogger.NodeID]eventlogger.Node)
 
-			// Filter node
-			filterId, filterNode := newFilterNode(t)
-			nodes[filterId] = filterNode
+			// Formatter node
+			formatterId, formatterNode := newFormatterNode(t)
+			nodes[formatterId] = formatterNode
 
 			// Sink node
 			sinkId, sinkNode := newSinkNode(t)
@@ -92,9 +92,9 @@ func TestProcessManual_NoNodes(t *testing.T) {
 	var ids []eventlogger.NodeID
 	nodes := make(map[eventlogger.NodeID]eventlogger.Node)
 
-	// Filter node
-	filterId, _ := newFilterNode(t)
-	ids = append(ids, filterId)
+	// Formatter node
+	formatterId, _ := newFormatterNode(t)
+	ids = append(ids, formatterId)
 
 	// Sink node
 	sinkId, _ := newSinkNode(t)
@@ -118,10 +118,10 @@ func TestProcessManual_IdNodeMismatch(t *testing.T) {
 	var ids []eventlogger.NodeID
 	nodes := make(map[eventlogger.NodeID]eventlogger.Node)
 
-	// Filter node
-	filterId, filterNode := newFilterNode(t)
-	ids = append(ids, filterId)
-	nodes[filterId] = filterNode
+	// Formatter node
+	formatterId, formatterNode := newFormatterNode(t)
+	ids = append(ids, formatterId)
+	nodes[formatterId] = formatterNode
 
 	// Sink node
 	sinkId, _ := newSinkNode(t)
@@ -145,10 +145,10 @@ func TestProcessManual_NotEnoughNodes(t *testing.T) {
 	var ids []eventlogger.NodeID
 	nodes := make(map[eventlogger.NodeID]eventlogger.Node)
 
-	// Filter node
-	filterId, filterNode := newFilterNode(t)
-	ids = append(ids, filterId)
-	nodes[filterId] = filterNode
+	// Formatter node
+	formatterId, formatterNode := newFormatterNode(t)
+	ids = append(ids, formatterId)
+	nodes[formatterId] = formatterNode
 
 	// Data
 	requestId, err := uuid.GenerateUUID()
@@ -168,12 +168,13 @@ func TestProcessManual_LastNodeNotSink(t *testing.T) {
 	var ids []eventlogger.NodeID
 	nodes := make(map[eventlogger.NodeID]eventlogger.Node)
 
-	// Filter node
-	filterId, filterNode := newFilterNode(t)
-	ids = append(ids, filterId)
-	nodes[filterId] = filterNode
-
+	// Formatter node
 	formatterId, formatterNode := newFormatterNode(t)
+	ids = append(ids, formatterId)
+	nodes[formatterId] = formatterNode
+
+	// Another Formatter node
+	formatterId, formatterNode = newFormatterNode(t)
 	ids = append(ids, formatterId)
 	nodes[formatterId] = formatterNode
 
@@ -195,10 +196,10 @@ func TestProcessManual(t *testing.T) {
 	var ids []eventlogger.NodeID
 	nodes := make(map[eventlogger.NodeID]eventlogger.Node)
 
-	// Filter node
-	filterId, filterNode := newFilterNode(t)
-	ids = append(ids, filterId)
-	nodes[filterId] = filterNode
+	// Formatter node
+	formatterId, formatterNode := newFormatterNode(t)
+	ids = append(ids, formatterId)
+	nodes[formatterId] = formatterNode
 
 	// Sink node
 	sinkId, sinkNode := newSinkNode(t)
@@ -212,20 +213,6 @@ func TestProcessManual(t *testing.T) {
 
 	err = ProcessManual(namespace.RootContext(context.Background()), data, ids, nodes)
 	require.NoError(t, err)
-}
-
-// newFilterNode creates a new UUID and EntryFormatter (filter node).
-func newFilterNode(t *testing.T) (eventlogger.NodeID, *EntryFormatter) {
-	t.Helper()
-
-	filterId, err := event.GenerateNodeID()
-	require.NoError(t, err)
-	cfg, err := NewFormatterConfig()
-	require.NoError(t, err)
-	filterNode, err := NewEntryFormatter(cfg, newStaticSalt(t))
-	require.NoError(t, err)
-
-	return filterId, filterNode
 }
 
 // newSinkNode creates a new UUID and NoopSink (sink node).
