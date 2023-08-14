@@ -28,10 +28,16 @@ export default class DashboardClientCountCard extends Component {
 
   @tracked startDate = null;
   @tracked activityData = null;
+  @tracked clientConfig = null;
 
   constructor() {
     super(...arguments);
     this.fetchClientActivity.perform();
+    this.clientConfig = this.store.queryRecord('clients/config', {}).catch(() => {});
+  }
+
+  get currentMonthActivityTotalCount() {
+    return this.activityData.byMonth.lastObject.new_clients.clients;
   }
 
   @task
@@ -66,6 +72,7 @@ export default class DashboardClientCountCard extends Component {
     try {
       this.startDate = yield this.getLicenseStartTime.perform();
       this.activityData = yield this.getActivity.perform(this.startDate);
+      this.noActivityData = this.activityData.activity.id === 'no-data' ? true : false;
     } catch (error) {
       this.error = error;
     }
