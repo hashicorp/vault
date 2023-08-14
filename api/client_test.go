@@ -1,8 +1,12 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package api
 
 import (
 	"bytes"
 	"context"
+	"crypto/tls"
 	"crypto/x509"
 	"encoding/base64"
 	"fmt"
@@ -222,6 +226,7 @@ func TestClientDisableRedirects(t *testing.T) {
 
 	for name, tc := range tests {
 		test := tc
+		name := name
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 			numReqs := 0
@@ -587,6 +592,24 @@ func TestClone(t *testing.T) {
 			},
 			token: "cloneToken",
 		},
+		{
+			name: "cloneTLSConfig-enabled",
+			config: &Config{
+				CloneTLSConfig: true,
+				clientTLSConfig: &tls.Config{
+					ServerName: "foo.bar.baz",
+				},
+			},
+		},
+		{
+			name: "cloneTLSConfig-disabled",
+			config: &Config{
+				CloneTLSConfig: false,
+				clientTLSConfig: &tls.Config{
+					ServerName: "foo.bar.baz",
+				},
+			},
+		},
 	}
 
 	for _, tt := range tests {
@@ -694,6 +717,22 @@ func TestClone(t *testing.T) {
 			if !reflect.DeepEqual(parent.replicationStateStore, clone.replicationStateStore) {
 				t.Fatalf("expected replicationStateStore %v, actual %v", parent.replicationStateStore,
 					clone.replicationStateStore)
+			}
+			if tt.config.CloneTLSConfig {
+				if !reflect.DeepEqual(parent.config.TLSConfig(), clone.config.TLSConfig()) {
+					t.Fatalf("config.clientTLSConfig doesn't match: %v vs %v",
+						parent.config.TLSConfig(), clone.config.TLSConfig())
+				}
+			} else if tt.config.clientTLSConfig != nil {
+				if reflect.DeepEqual(parent.config.TLSConfig(), clone.config.TLSConfig()) {
+					t.Fatalf("config.clientTLSConfig should not match: %v vs %v",
+						parent.config.TLSConfig(), clone.config.TLSConfig())
+				}
+			} else {
+				if !reflect.DeepEqual(parent.config.TLSConfig(), clone.config.TLSConfig()) {
+					t.Fatalf("config.clientTLSConfig doesn't match: %v vs %v",
+						parent.config.TLSConfig(), clone.config.TLSConfig())
+				}
 			}
 		})
 	}

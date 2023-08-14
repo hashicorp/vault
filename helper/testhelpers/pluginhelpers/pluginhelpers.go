@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 // Package pluginhelpers contains testhelpers that don't depend on package
 // vault, and thus can be used within vault (as well as elsewhere.)
 package pluginhelpers

@@ -58,7 +58,7 @@ $ echo "abcd1234" | vault kv patch -mount=secret foo bar=-
 
 ## Usage
 
-### Output Options
+### Output options
 
 - `-field` `(string: "")` - Print only the field with the given name. Specifying
   this option will take precedence over other formatting directives. The result
@@ -69,7 +69,7 @@ $ echo "abcd1234" | vault kv patch -mount=secret foo bar=-
   formats are "table", "json", or "yaml". This can also be specified via the
   `VAULT_FORMAT` environment variable.
 
-### Command Options
+### Command options
 
 - `-method` `(string: "patch")` - Specifies the patch method to use. Valid
   methods are `patch` and `rw`. The `patch` method uses an HTTP `PATCH` request

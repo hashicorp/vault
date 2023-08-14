@@ -1,4 +1,7 @@
 #!/bin/bash
+# Copyright (c) HashiCorp, Inc.
+# SPDX-License-Identifier: BUSL-1.1
+
 
 set -e
 
@@ -21,12 +24,16 @@ then
 fi
 
 vault server -dev -dev-root-token-id=root &
-sleep 2
 VAULT_PID=$!
+
+# Allow time for Vault to start its HTTP listener
+sleep 1
 
 defer_stop_vault() {
     echo "Stopping Vault..."
     kill $VAULT_PID
+    # Allow time for Vault to print final logging and exit,
+    # before this script ends, and the shell prints its next prompt
     sleep 1
 }
 
@@ -34,7 +41,13 @@ trap defer_stop_vault INT TERM EXIT
 
 export VAULT_ADDR=http://127.0.0.1:8200
 
-echo "Mounting all builtin plugins..."
+echo "Unmounting the default kv-v2 secrets engine ..."
+
+# Unmount the default kv-v2 engine so that we can remount it at 'kv_v2/' later.
+# The mount path will be reflected in the resultant OpenAPI document.
+vault secrets disable "secret/"
+
+echo "Mounting all builtin plugins ..."
 
 # Enable auth plugins
 vault auth enable "alicloud"
@@ -51,14 +64,11 @@ vault auth enable "kerberos"
 vault auth enable "kubernetes"
 vault auth enable "ldap"
 vault auth enable "oci"
-vault auth enable "oidc"
 vault auth enable "okta"
-vault auth enable "pcf"
 vault auth enable "radius"
 vault auth enable "userpass"
 
 # Enable secrets plugins
-vault secrets enable "ad"
 vault secrets enable "alicloud"
 vault secrets enable "aws"
 vault secrets enable "azure"
@@ -67,11 +77,11 @@ vault secrets enable "database"
 vault secrets enable "gcp"
 vault secrets enable "gcpkms"
 vault secrets enable "kubernetes"
-vault secrets enable "kv"
+vault secrets enable -path="kv-v1/" -version=1 "kv"
+vault secrets enable -path="kv-v2/" -version=2 "kv"
 vault secrets enable "ldap"
 vault secrets enable "mongodbatlas"
 vault secrets enable "nomad"
-vault secrets enable "openldap"
 vault secrets enable "pki"
 vault secrets enable "rabbitmq"
 vault secrets enable "ssh"
@@ -81,8 +91,6 @@ vault secrets enable "transit"
 
 # Enable enterprise features
 if [[ -n "${VAULT_LICENSE:-}" ]]; then
-    vault write sys/license text="${VAULT_LICENSE}"
-
     vault secrets enable "keymgmt"
     vault secrets enable "kmip"
     vault secrets enable "transform"

@@ -1,3 +1,8 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
 {{yield}}
 {{#each @fields as |attr|}}
   {{#if (eq attr.name "keyBits")}}
@@ -24,7 +29,7 @@
                   </option>
                 {{/if}}
                 {{#each this.keyBitOptions as |val|}}
-                  <option selected={{eq (get @model "keyBits") val}} value={{val}}>
+                  <option selected={{loose-equal (get @model "keyBits") val}} value={{val}}>
                     {{val}}
                   </option>
                 {{/each}}

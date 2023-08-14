@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import { inject as service } from '@ember/service';
 import { or } from '@ember/object/computed';
 import { isBlank } from '@ember/utils';
@@ -21,10 +26,10 @@ export default Component.extend(FocusOnInsertMixin, {
   requestInFlight: or('key.isLoading', 'key.isReloading', 'key.isSaving'),
 
   willDestroyElement() {
-    this._super(...arguments);
-    if (this.key && this.key.isError) {
+    if (this.key && this.key.isError && !this.key.isDestroyed && !this.key.isDestroying) {
       this.key.rollbackAttributes();
     }
+    this._super(...arguments);
   },
 
   waitForKeyUp: task(function* () {

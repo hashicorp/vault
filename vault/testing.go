@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package vault
 
 import (
@@ -37,7 +40,6 @@ import (
 	auditFile "github.com/hashicorp/vault/builtin/audit/file"
 	"github.com/hashicorp/vault/command/server"
 	"github.com/hashicorp/vault/helper/constants"
-	"github.com/hashicorp/vault/helper/experiments"
 	"github.com/hashicorp/vault/helper/metricsutil"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/helper/testhelpers/corehelpers"
@@ -48,6 +50,7 @@ import (
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/logging"
 	"github.com/hashicorp/vault/sdk/helper/pluginutil"
+	"github.com/hashicorp/vault/sdk/helper/testcluster"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/sdk/physical"
 	physInmem "github.com/hashicorp/vault/sdk/physical/inmem"
@@ -182,12 +185,15 @@ func TestCoreWithSealAndUI(t testing.T, opts *CoreConfig) *Core {
 		if err != nil {
 			t.Logf("shutdown returned error: %v", err)
 		}
+		if tl, ok := c.Logger().(*corehelpers.TestLogger); ok {
+			tl.StopLogging()
+		}
 	})
 	return c
 }
 
 func TestCoreWithSealAndUINoCleanup(t testing.T, opts *CoreConfig) *Core {
-	logger := logging.NewVaultLogger(log.Trace)
+	logger := corehelpers.NewTestLogger(t)
 	physicalBackend, err := physInmem.NewInmem(nil, logger)
 	if err != nil {
 		t.Fatal(err)
@@ -197,6 +203,8 @@ func TestCoreWithSealAndUINoCleanup(t testing.T, opts *CoreConfig) *Core {
 
 	// Start off with base test core config
 	conf := testCoreConfig(t, errInjector, logger)
+
+	corehelpers.RegisterSubloggerAdder(logger, conf)
 
 	// Override config values with ones that gets passed in
 	conf.EnableUI = opts.EnableUI
@@ -213,7 +221,10 @@ func TestCoreWithSealAndUINoCleanup(t testing.T, opts *CoreConfig) *Core {
 	conf.DisableSSCTokens = opts.DisableSSCTokens
 	conf.PluginDirectory = opts.PluginDirectory
 	conf.DetectDeadlocks = opts.DetectDeadlocks
-	conf.Experiments = []string{experiments.VaultExperimentEventsAlpha1}
+	conf.Experiments = opts.Experiments
+	conf.CensusAgent = opts.CensusAgent
+	conf.AdministrativeNamespacePath = opts.AdministrativeNamespacePath
+	conf.AllLoggers = logger.AllLoggers
 
 	if opts.Logger != nil {
 		conf.Logger = opts.Logger
@@ -235,12 +246,15 @@ func TestCoreWithSealAndUINoCleanup(t testing.T, opts *CoreConfig) *Core {
 	}
 
 	conf.ActivityLogConfig = opts.ActivityLogConfig
+	testApplyEntBaseConfig(conf, opts)
 
 	c, err := NewCore(conf)
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
 
+	// Switch the SubloggerHook over to core
+	corehelpers.RegisterSubloggerAdder(logger, c)
 	return c
 }
 
@@ -435,7 +449,7 @@ func testCoreAddSecretMount(t testing.T, core *Core, token string) {
 
 func TestCoreUnsealedBackend(t testing.T, backend physical.Backend) (*Core, [][]byte, string) {
 	t.Helper()
-	logger := logging.NewVaultLogger(log.Trace)
+	logger := corehelpers.NewTestLogger(t)
 	conf := testCoreConfig(t, backend, logger)
 	conf.Seal = NewTestSeal(t, nil)
 	conf.NumExpirationWorkers = numExpirationWorkersTest
@@ -526,6 +540,9 @@ func TestAddTestPlugin(t testing.T, c *Core, name string, pluginType consts.Plug
 
 		// Copy over the file to the temp dir
 		dst := filepath.Join(tempDir, fileName)
+
+		// delete the file first to avoid notary failures in macOS
+		_ = os.Remove(dst) // ignore error
 		out, err := os.OpenFile(dst, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, fi.Mode())
 		if err != nil {
 			t.Fatal(err)
@@ -792,6 +809,10 @@ type TestCluster struct {
 	opts              *TestClusterOptions
 }
 
+func (c *TestCluster) SetRootToken(token string) {
+	c.RootToken = token
+}
+
 func (c *TestCluster) Start() {
 }
 
@@ -963,6 +984,10 @@ func (c *TestClusterCore) Seal(t testing.T) {
 	}
 }
 
+func (c *TestClusterCore) LogicalStorage() logical.Storage {
+	return c.barrier
+}
+
 func (c *TestClusterCore) stop() error {
 	c.Logger().Info("stopping vault test core")
 
@@ -995,6 +1020,10 @@ func (c *TestClusterCore) stop() error {
 	return nil
 }
 
+func (c *TestClusterCore) StopAutomaticRollbacks() {
+	c.rollback.StopTicker()
+}
+
 func (c *TestClusterCore) GrabRollbackLock() {
 	// Ensure we don't hold this lock while there are in flight rollbacks.
 	c.rollback.inflightAll.Wait()
@@ -1011,6 +1040,10 @@ func (c *TestClusterCore) TriggerRollbacks() {
 
 func (c *TestClusterCore) TLSConfig() *tls.Config {
 	return c.tlsConfig.Clone()
+}
+
+func (c *TestClusterCore) ClusterListener() *cluster.Listener {
+	return c.getClusterListener()
 }
 
 func (c *TestCluster) Cleanup() {
@@ -1192,6 +1225,9 @@ type TestClusterOptions struct {
 
 	// if populated, the callback is called for every request
 	RequestResponseCallback func(logical.Backend, *logical.Request, *logical.Response)
+
+	// ABCDLoggerNames names the loggers according to our ABCD convention when generating 4 clusters
+	ABCDLoggerNames bool
 }
 
 type TestPluginConfig struct {
@@ -1490,6 +1526,8 @@ func NewTestCluster(t testing.T, base *CoreConfig, opts *TestClusterOptions) *Te
 		BuiltinRegistry:    corehelpers.NewMockBuiltinRegistry(),
 	}
 
+	corehelpers.RegisterSubloggerAdder(testCluster.Logger, coreConfig)
+
 	if base != nil {
 		coreConfig.DetectDeadlocks = TestDeadlockDetection
 		coreConfig.RawConfig = base.RawConfig
@@ -1515,6 +1553,8 @@ func NewTestCluster(t testing.T, base *CoreConfig, opts *TestClusterOptions) *Te
 		coreConfig.DisableSentinelTrace = base.DisableSentinelTrace
 		coreConfig.ClusterName = base.ClusterName
 		coreConfig.DisableAutopilot = base.DisableAutopilot
+		coreConfig.AdministrativeNamespacePath = base.AdministrativeNamespacePath
+		coreConfig.ServiceRegistration = base.ServiceRegistration
 
 		if base.BuiltinRegistry != nil {
 			coreConfig.BuiltinRegistry = base.BuiltinRegistry
@@ -1654,6 +1694,8 @@ func NewTestCluster(t testing.T, base *CoreConfig, opts *TestClusterOptions) *Te
 
 	for i := 0; i < numCores; i++ {
 		cleanup, c, localConfig, handler := testCluster.newCore(t, i, coreConfig, opts, listeners[i], testCluster.LicensePublicKey)
+
+		corehelpers.RegisterSubloggerAdder(testCluster.Logger, c)
 
 		testCluster.cleanupFuncs = append(testCluster.cleanupFuncs, cleanup)
 		cores = append(cores, c)
@@ -2008,7 +2050,7 @@ func (tc *TestCluster) initCores(t testing.T, opts *TestClusterOptions, addAudit
 	}
 	var buf bytes.Buffer
 	for i, key := range tc.BarrierKeys {
-		buf.Write([]byte(base64.StdEncoding.EncodeToString(key)))
+		buf.WriteString(base64.StdEncoding.EncodeToString(key))
 		if i < len(tc.BarrierKeys)-1 {
 			buf.WriteRune('\n')
 		}
@@ -2018,7 +2060,7 @@ func (tc *TestCluster) initCores(t testing.T, opts *TestClusterOptions, addAudit
 		t.Fatal(err)
 	}
 	for i, key := range tc.RecoveryKeys {
-		buf.Write([]byte(base64.StdEncoding.EncodeToString(key)))
+		buf.WriteString(base64.StdEncoding.EncodeToString(key))
 		if i < len(tc.RecoveryKeys)-1 {
 			buf.WriteRune('\n')
 		}
@@ -2179,3 +2221,78 @@ func (testCluster *TestCluster) getAPIClient(
 	}
 	return apiClient
 }
+
+func (c *TestCluster) GetBarrierOrRecoveryKeys() [][]byte {
+	if c.Cores[0].SealAccess().RecoveryKeySupported() {
+		return c.GetRecoveryKeys()
+	} else {
+		return c.GetBarrierKeys()
+	}
+}
+
+func (c *TestCluster) GetCACertPEMFile() string {
+	return c.CACertPEMFile
+}
+
+func (c *TestCluster) ClusterID() string {
+	return c.ID
+}
+
+func (c *TestCluster) Nodes() []testcluster.VaultClusterNode {
+	ret := make([]testcluster.VaultClusterNode, len(c.Cores))
+	for i, core := range c.Cores {
+		ret[i] = core
+	}
+	return ret
+}
+
+func (c *TestCluster) SetBarrierKeys(keys [][]byte) {
+	c.BarrierKeys = make([][]byte, len(keys))
+	for i, k := range keys {
+		c.BarrierKeys[i] = TestKeyCopy(k)
+	}
+}
+
+func (c *TestCluster) SetRecoveryKeys(keys [][]byte) {
+	c.RecoveryKeys = make([][]byte, len(keys))
+	for i, k := range keys {
+		c.RecoveryKeys[i] = TestKeyCopy(k)
+	}
+}
+
+func (c *TestCluster) GetBarrierKeys() [][]byte {
+	ret := make([][]byte, len(c.BarrierKeys))
+	for i, k := range c.BarrierKeys {
+		ret[i] = TestKeyCopy(k)
+	}
+	return ret
+}
+
+func (c *TestCluster) GetRecoveryKeys() [][]byte {
+	ret := make([][]byte, len(c.RecoveryKeys))
+	for i, k := range c.RecoveryKeys {
+		ret[i] = TestKeyCopy(k)
+	}
+	return ret
+}
+
+func (c *TestCluster) NamedLogger(name string) log.Logger {
+	return c.Logger.Named(name)
+}
+
+func (c *TestCluster) GetRootToken() string {
+	return c.RootToken
+}
+
+func (c *TestClusterCore) Name() string {
+	return c.NodeID
+}
+
+func (c *TestClusterCore) APIClient() *api.Client {
+	return c.Client
+}
+
+var (
+	_ testcluster.VaultCluster     = &TestCluster{}
+	_ testcluster.VaultClusterNode = &TestClusterCore{}
+)

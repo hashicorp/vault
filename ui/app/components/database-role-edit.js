@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import Component from '@glimmer/component';
 import { inject as service } from '@ember/service';
 import { action } from '@ember/object';
@@ -57,7 +62,7 @@ export default class DatabaseRoleEdit extends Component {
   delete() {
     const secret = this.args.model;
     const backend = secret.backend;
-    secret
+    return secret
       .destroyRecord()
       .then(() => {
         try {
@@ -84,7 +89,7 @@ export default class DatabaseRoleEdit extends Component {
       const path = roleSecret.type === 'static' ? 'static-roles' : 'roles';
       roleSecret.set('path', path);
     }
-    roleSecret
+    return roleSecret
       .save()
       .then(() => {
         try {
@@ -105,7 +110,7 @@ export default class DatabaseRoleEdit extends Component {
   rotateRoleCred(id) {
     const backend = this.args.model?.backend;
     const adapter = this.store.adapterFor('database/credential');
-    adapter
+    return adapter
       .rotateRoleCredentials(backend, id)
       .then(() => {
         this.flashMessages.success(`Success: Credentials for ${id} role were rotated`);

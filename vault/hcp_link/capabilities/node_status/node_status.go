@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package node_status
 
 import (
@@ -74,7 +77,7 @@ func (c *NodeStatusReporter) GetNodeStatus(ctx context.Context) (retStatus nodes
 		ReplicationState:       replState.StateStrings(),
 		Hostname:               hostInfo.Hostname,
 		ListenerAddresses:      listenerAddresses,
-		OperatingSystem:        hostInfo.OS,
+		OperatingSystem:        hostInfo.Platform,
 		OperatingSystemVersion: hostInfo.PlatformVersion,
 		LogLevel:               node_status.LogLevel(logLevel),
 		ActiveTime:             timestamppb.New(c.NodeStatusGetter.ActiveTime()),

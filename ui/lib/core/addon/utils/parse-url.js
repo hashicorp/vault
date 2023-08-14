@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 // adapted from https://gist.github.com/jed/964849
 const fn = (function (anchor) {
   return function (url) {

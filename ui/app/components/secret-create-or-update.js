@@ -1,4 +1,9 @@
 /**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
+/**
  * @module SecretCreateOrUpdate
  * SecretCreateOrUpdate component displays either the form for creating a new secret or creating a new version of the secret
  *
@@ -248,21 +253,15 @@ export default class SecretCreateOrUpdate extends Component {
     this.codemirrorString = this.args.secretData.toJSONString(true);
   }
   @action
+  handleMaskedInputChange(secret, index, value) {
+    const row = { ...secret, value };
+    set(this.args.secretData, index, row);
+    this.handleChange();
+  }
+  @action
   handleChange() {
     this.codemirrorString = this.args.secretData.toJSONString(true);
     set(this.args.modelForData, 'secretData', this.args.secretData.toJSON());
-  }
-  //submit on shift + enter
-  @action
-  handleKeyDown(e) {
-    e.stopPropagation();
-    if (!(e.keyCode === keys.ENTER && e.metaKey)) {
-      return;
-    }
-    const $form = this.element.querySelector('form');
-    if ($form.length) {
-      $form.submit();
-    }
   }
   @action
   updateValidationErrorCount(errorCount) {

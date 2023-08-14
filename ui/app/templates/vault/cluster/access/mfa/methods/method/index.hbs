@@ -1,3 +1,8 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
 <PageHeader as |p|>
   <p.top>
     <nav class="breadcrumb" aria-label="breadcrumbs">
@@ -78,7 +83,7 @@
 {{else if (eq this.tab "enforcements")}}
   <Toolbar>
     <ToolbarActions>
-      <ToolbarLink @type="add" @params={{array "vault.cluster.access.mfa.enforcements.create"}}>
+      <ToolbarLink @route="vault.cluster.access.mfa.enforcements.create" @type="add" data-test-enforcement-create>
         New enforcement
       </ToolbarLink>
     </ToolbarActions>

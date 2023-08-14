@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package http
 
 import (
@@ -12,6 +15,7 @@ import (
 
 	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/api"
+	"github.com/hashicorp/vault/helper/experiments"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/vault"
@@ -21,7 +25,10 @@ import (
 // TestEventsSubscribe tests the websocket endpoint for subscribing to events
 // by generating some events.
 func TestEventsSubscribe(t *testing.T) {
-	core := vault.TestCore(t)
+	core := vault.TestCoreWithConfig(t, &vault.CoreConfig{
+		Experiments: []string{experiments.VaultExperimentEventsAlpha1},
+	})
+
 	ln, addr := TestServer(t, core)
 	defer ln.Close()
 

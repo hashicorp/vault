@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import Component from '@glimmer/component';
 import { action } from '@ember/object';
 import { inject as service } from '@ember/service';
@@ -78,7 +83,7 @@ export default class OidcProviderForm extends Component {
         }
         yield this.args.model.save();
         this.flashMessages.success(
-          `Successfully ${isNew ? 'created' : 'updated'} the OIDC provider 
+          `Successfully ${isNew ? 'created' : 'updated'} the OIDC provider
           ${name}.`
         );
         this.args.onSave();

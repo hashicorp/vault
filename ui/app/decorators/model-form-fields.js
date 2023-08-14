@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import fieldToAttrs, { expandAttributeMeta } from 'vault/utils/field-to-attrs';
 import Model from '@ember-data/model';
 

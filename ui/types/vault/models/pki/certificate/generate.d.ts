@@ -1,10 +1,13 @@
-import { FormField } from 'vault/app-types';
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
+import { FormField, FormFieldGroups } from 'vault/app-types';
 import PkiCertificateBaseModel from './base';
 
 export default class PkiCertificateGenerateModel extends PkiCertificateBaseModel {
-  name: string;
+  role: string;
   formFields: FormField[];
-  formFieldsGroup: {
-    [k: string]: FormField[];
-  }[];
+  formFieldGroups: FormFieldGroups;
 }

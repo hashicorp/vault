@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package command
 
 import (
@@ -46,40 +49,98 @@ type OperatorGenerateRootCommand struct {
 }
 
 func (c *OperatorGenerateRootCommand) Synopsis() string {
-	return "Generates a new root token"
+	return "Generates a new root, DR operation, or recovery token"
 }
 
 func (c *OperatorGenerateRootCommand) Help() string {
 	helpText := `
-Usage: vault operator generate-root [options] [KEY]
+Usage: vault operator generate-root [options] -init [-otp=...] [-pgp-key=...]
+       vault operator generate-root [options] [-nonce=... KEY]
+       vault operator generate-root [options] -decode=... -otp=...
+       vault operator generate-root [options] -generate-otp
+       vault operator generate-root [options] -status
+       vault operator generate-root [options] -cancel
 
-  Generates a new root token by combining a quorum of share holders. One of
-  the following must be provided to start the root token generation:
+  Generates a new root token by combining a quorum of share holders.
 
-    - A base64-encoded one-time-password (OTP) provided via the "-otp" flag.
-      Use the "-generate-otp" flag to generate a usable value. The resulting
-      token is XORed with this value when it is returned. Use the "-decode"
-      flag to output the final value.
+  This command is unusual, as it is effectively six separate subcommands,
+  selected via the options -init, -decode, -generate-otp, -status, -cancel, 
+  or the absence of any of the previous five options (which selects the 
+  "provide a key share" form).
 
-    - A file containing a PGP key or a keybase username in the "-pgp-key"
-      flag. The resulting token is encrypted with this public key.
+  With the -dr-token or -recovery-token options, a DR operation token or a
+  recovery token is generated instead of a root token - the relevant option
+  must be included in every form of the generate-root command.
 
-  An unseal key may be provided directly on the command line as an argument to
-  the command. If key is specified as "-", the command will read from stdin. If
-  a TTY is available, the command will prompt for text.
+  Form 1 (-init) - Start a token generation:
 
-  Generate an OTP code for the final token:
+    When starting a root or privileged operation token generation, you must
+    choose one of the following protection methods for how the token will be
+    returned:
 
-      $ vault operator generate-root -generate-otp
+      - A base64-encoded one-time-password (OTP). The resulting token is XORed
+        with this value when it is returned. Use the "-decode" form of this
+        command to output the final value.
 
-  Start a root token generation:
+        The Vault server will generate a suitable OTP for you, and return it:
 
-      $ vault operator generate-root -init -otp="..."
-      $ vault operator generate-root -init -pgp-key="..."
+            $ vault operator generate-root -init
 
-  Enter an unseal key to progress root token generation:
+        Vault versions before 0.11.2, released in 2018, required you to
+        generate your own OTP (see the "-generate-otp" form) and pass it in,
+        but this is no longer necessary. The command is still supported for
+        compatibility, though:
 
-      $ vault operator generate-root -otp="..."
+            $ vault operator generate-root -init -otp="..."
+
+      - A PGP key. The resulting token is encrypted with this public key.
+        The key may be specified as a path to a file, or a string of the
+        form "keybase:<username>" to fetch the key from the keybase.io API.
+
+            $ vault operator generate-root -init -pgp-key="..."
+
+  Form 2 (no option) - Enter an unseal key to progress root token generation:
+
+    In the sub-form intended for interactive use, the command will
+    automatically look up the nonce of the currently active generation
+    operation, and will prompt for the key to be entered:
+
+        $ vault operator generate-root
+
+    In the sub-form intended for automation, the operation nonce must be
+    explicitly provided, and the key is provided directly on the command line
+
+        $ vault operator generate-root -nonce=... KEY
+
+    If key is specified as "-", the command will read from stdin.
+
+  Form 3 (-decode) - Decode a generated token protected with an OTP:
+
+        $ vault operator generate-root -decode=ENCODED_TOKEN -otp=OTP
+
+    If encoded token is specified as "-", the command will read from stdin.
+
+  Form 4 (-generate-otp) - Generate an OTP code for the final token:
+
+        $ vault operator generate-root -generate-otp
+
+    Since changes in Vault 0.11.2 in 2018, there is no longer any reason to
+    use this form, as a suitable OTP will be returned as part of the "-init"
+    command.
+
+  Form 5 (-status) - Get the status of a token generation that is in progress:
+
+        $ vault operator generate-root -status
+
+    This form also returns the length of the a correct OTP, for the running
+    version and configuration of Vault.
+
+  Form 6 (-cancel) - Cancel a token generation that is in progress:
+
+    This would be used to remove an in progress generation operation, so that
+    a new one can be started with different parameters.
+
+        $ vault operator generate-root -cancel
 
 ` + c.Flags().Help()
 	return strings.TrimSpace(helpText)
@@ -146,7 +207,7 @@ func (c *OperatorGenerateRootCommand) Flags() *FlagSets {
 		Default:    false,
 		EnvVar:     "",
 		Completion: complete.PredictNothing,
-		Usage: "Set this flag to do generate root operations on DR Operational " +
+		Usage: "Set this flag to do generate root operations on DR operation " +
 			"tokens.",
 	})
 
@@ -156,7 +217,7 @@ func (c *OperatorGenerateRootCommand) Flags() *FlagSets {
 		Default:    false,
 		EnvVar:     "",
 		Completion: complete.PredictNothing,
-		Usage: "Set this flag to do generate root operations on Recovery Operational " +
+		Usage: "Set this flag to do generate root operations on recovery " +
 			"tokens.",
 	})
 
@@ -179,7 +240,7 @@ func (c *OperatorGenerateRootCommand) Flags() *FlagSets {
 			"public PGP key. This can also be specified as a Keybase username " +
 			"using the format \"keybase:<username>\". When supplied, the generated " +
 			"root token will be encrypted and base64-encoded with the given public " +
-			"key.",
+			"key. Must be used with \"-init\".",
 	})
 
 	f.StringVar(&StringVar{
@@ -188,8 +249,9 @@ func (c *OperatorGenerateRootCommand) Flags() *FlagSets {
 		Default:    "",
 		EnvVar:     "",
 		Completion: complete.PredictAnything,
-		Usage: "Nonce value provided at initialization. The same nonce value " +
-			"must be provided with each unseal key.",
+		Usage: "Nonce value returned at initialization. The same nonce value " +
+			"must be provided with each unseal or recovery key. Only needed " +
+			"when providing an unseal or recovery key.",
 	})
 
 	return set

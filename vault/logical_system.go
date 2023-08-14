@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package vault
 
 import (
@@ -10,13 +13,13 @@ import (
 	"errors"
 	"fmt"
 	"hash"
+	"math/rand"
 	"net/http"
 	"path"
 	"path/filepath"
 	"sort"
 	"strconv"
 	"strings"
-	"sync"
 	"time"
 	"unicode"
 
@@ -30,6 +33,7 @@ import (
 	"github.com/hashicorp/vault/helper/experiments"
 	"github.com/hashicorp/vault/helper/hostutil"
 	"github.com/hashicorp/vault/helper/identity"
+	"github.com/hashicorp/vault/helper/locking"
 	"github.com/hashicorp/vault/helper/logging"
 	"github.com/hashicorp/vault/helper/metricsutil"
 	"github.com/hashicorp/vault/helper/monitor"
@@ -40,6 +44,7 @@ import (
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
 	"github.com/hashicorp/vault/sdk/helper/pluginutil"
+	"github.com/hashicorp/vault/sdk/helper/roottoken"
 	"github.com/hashicorp/vault/sdk/helper/wrapping"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/version"
@@ -78,10 +83,11 @@ func NewSystemBackend(core *Core, logger log.Logger) *SystemBackend {
 	db, _ := memdb.NewMemDB(systemBackendMemDBSchema())
 
 	b := &SystemBackend{
-		Core:       core,
-		db:         db,
-		logger:     logger,
-		mfaBackend: NewPolicyMFABackend(core, logger),
+		Core:        core,
+		db:          db,
+		logger:      logger,
+		mfaBackend:  NewPolicyMFABackend(core, logger),
+		syncBackend: NewSecretsSyncBackend(core, logger),
 	}
 
 	b.Backend = &framework.Backend{
@@ -115,6 +121,11 @@ func NewSystemBackend(core *Core, logger log.Logger) *SystemBackend {
 				"storage/raft/snapshot-auto/config/*",
 				"leases",
 				"internal/inspect/*",
+				// sys/seal and sys/step-down actually have their sudo requirement enforced through hardcoding
+				// PolicyCheckOpts.RootPrivsRequired in dedicated calls to Core.performPolicyChecks, but we still need
+				// to declare them here so that the generated OpenAPI spec gets their sudo status correct.
+				"seal",
+				"step-down",
 			},
 
 			Unauthenticated: []string{
@@ -146,6 +157,7 @@ func NewSystemBackend(core *Core, logger log.Logger) *SystemBackend {
 				"health",
 				"generate-root/attempt",
 				"generate-root/update",
+				"decode-token",
 				"rekey/init",
 				"rekey/update",
 				"rekey/verify",
@@ -232,10 +244,11 @@ func (b *SystemBackend) rawPaths() []*framework.Path {
 // prefix. Conceptually it is similar to procfs on Linux.
 type SystemBackend struct {
 	*framework.Backend
-	Core       *Core
-	db         *memdb.MemDB
-	logger     log.Logger
-	mfaBackend *PolicyMFABackend
+	Core        *Core
+	db          *memdb.MemDB
+	logger      log.Logger
+	mfaBackend  *PolicyMFABackend
+	syncBackend *SecretsSyncBackend
 }
 
 // handleConfigStateSanitized returns the current configuration state. The configuration
@@ -919,6 +932,24 @@ func (b *SystemBackend) handleRekeyDeleteRecovery(ctx context.Context, req *logi
 	return b.handleRekeyDelete(ctx, req, data, true)
 }
 
+func (b *SystemBackend) handleGenerateRootDecodeTokenUpdate(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	encodedToken := data.Get("encoded_token").(string)
+	otp := data.Get("otp").(string)
+
+	token, err := roottoken.DecodeToken(encodedToken, otp, len(otp))
+	if err != nil {
+		return nil, err
+	}
+
+	// Generate the response
+	resp := &logical.Response{
+		Data: map[string]interface{}{
+			"token": token,
+		},
+	}
+	return resp, nil
+}
+
 func (b *SystemBackend) mountInfo(ctx context.Context, entry *MountEntry) map[string]interface{} {
 	info := map[string]interface{}{
 		"type":                    entry.Type,
@@ -1381,11 +1412,11 @@ func (b *SystemBackend) handleRemount(ctx context.Context, req *logical.Request,
 			logical.ErrInvalidRequest
 	}
 
-	if strings.Contains(fromPath, " ") {
-		return logical.ErrorResponse("'from' path cannot contain whitespace"), logical.ErrInvalidRequest
+	if strings.HasPrefix(fromPath, " ") || strings.HasSuffix(fromPath, " ") {
+		return logical.ErrorResponse("'from' path cannot contain trailing whitespace"), logical.ErrInvalidRequest
 	}
-	if strings.Contains(toPath, " ") {
-		return logical.ErrorResponse("'to' path cannot contain whitespace"), logical.ErrInvalidRequest
+	if strings.HasPrefix(toPath, " ") || strings.HasSuffix(toPath, " ") {
+		return logical.ErrorResponse("'to' path cannot contain trailing whitespace"), logical.ErrInvalidRequest
 	}
 
 	fromPathDetails := b.Core.splitNamespaceAndMountFromPath(ns.Path, fromPath)
@@ -1696,7 +1727,7 @@ func (b *SystemBackend) handleTuneWriteCommon(ctx context.Context, path string, 
 		return nil, logical.ErrReadOnly
 	}
 
-	var lock *sync.RWMutex
+	var lock *locking.DeadlockRWMutex
 	switch {
 	case strings.HasPrefix(path, credentialRoutePrefix):
 		lock = &b.Core.authLock
@@ -3016,28 +3047,44 @@ func (*SystemBackend) handlePoliciesPasswordSet(ctx context.Context, req *logica
 			fmt.Sprintf("passwords must be between %d and %d characters", minPasswordLength, maxPasswordLength))
 	}
 
-	// Generate some passwords to ensure that we're confident that the policy isn't impossible
-	timeout := 1 * time.Second
-	genCtx, cancel := context.WithTimeout(ctx, timeout)
-	defer cancel()
+	// Attempt to construct a test password from the rules to ensure that the policy isn't impossible
+	var testPassword []rune
 
-	attempts := 10
-	failed := 0
-	for i := 0; i < attempts; i++ {
-		_, err = policy.Generate(genCtx, nil)
-		if err != nil {
-			failed++
+	for _, rule := range policy.Rules {
+		charsetRule, ok := rule.(random.CharsetRule)
+		if !ok {
+			return nil, logical.CodedError(http.StatusBadRequest, fmt.Sprintf("unexpected rule type %T", charsetRule))
+		}
+
+		for j := 0; j < charsetRule.MinLength(); j++ {
+			charIndex := rand.Intn(len(charsetRule.Chars()))
+			testPassword = append(testPassword, charsetRule.Chars()[charIndex])
 		}
 	}
 
-	if failed == attempts {
-		return nil, logical.CodedError(http.StatusBadRequest,
-			fmt.Sprintf("unable to generate password from provided policy in %s: are the rules impossible?", timeout))
+	for i := len(testPassword); i < policy.Length; i++ {
+		for _, rule := range policy.Rules {
+			if len(testPassword) >= policy.Length {
+				break
+			}
+			charsetRule, ok := rule.(random.CharsetRule)
+			if !ok {
+				return nil, logical.CodedError(http.StatusBadRequest, fmt.Sprintf("unexpected rule type %T", charsetRule))
+			}
+
+			charIndex := rand.Intn(len(charsetRule.Chars()))
+			testPassword = append(testPassword, charsetRule.Chars()[charIndex])
+		}
 	}
 
-	if failed > 0 {
-		return nil, logical.CodedError(http.StatusBadRequest,
-			fmt.Sprintf("failed to generate passwords %d times out of %d attempts in %s - is the policy too restrictive?", failed, attempts, timeout))
+	rand.Shuffle(policy.Length, func(i, j int) {
+		testPassword[i], testPassword[j] = testPassword[j], testPassword[i]
+	})
+
+	for _, rule := range policy.Rules {
+		if !rule.Pass(testPassword) {
+			return nil, logical.CodedError(http.StatusBadRequest, "unable to construct test password from provided policy: are the rules impossible?")
+		}
 	}
 
 	cfg := passwordPolicyConfig{
@@ -4501,7 +4548,7 @@ func (b *SystemBackend) pathInternalOpenAPI(ctx context.Context, req *logical.Re
 	// Generic mount paths will primarily be used for code generation purposes.
 	// This will result in parameterized mount paths being returned instead of
 	// hardcoded actual paths. For example /auth/my-auth-method/login would be
-	// replaced with /auth/{my-auth-method_mount_path}/login.
+	// replaced with /auth/{my_auth_method_mount_path}/login.
 	//
 	// Note that for this to actually be useful, you have to be using it with
 	// a Vault instance in which you have mounted one of each secrets engine
@@ -4575,7 +4622,7 @@ func (b *SystemBackend) pathInternalOpenAPI(ctx context.Context, req *logical.Re
 						(pluginType == "system" || pluginType == "identity" || pluginType == "cubbyhole"))
 
 				if !isSingletonMount {
-					mountPathParameterName = strings.TrimRight(mount, "/") + "_mount_path"
+					mountPathParameterName = strings.TrimRight(strings.ReplaceAll(mount, "-", "_"), "/") + "_mount_path"
 				}
 			}
 
@@ -4632,6 +4679,14 @@ func (b *SystemBackend) pathInternalOpenAPI(ctx context.Context, req *logical.Re
 
 	doc.CreateOperationIDs(context)
 
+	// Every backend that includes a ListOperation that uses the default response schema will have supplied its own
+	// version of that schema, on a last writer wins basis. To ensure an external plugin doesn't end up being the last
+	// writer, we now override with the version within the code of the hosting Vault instance, if the document now
+	// being generated contains any version of this:
+	if _, ok := doc.Components.Schemas["StandardListResponse"]; ok {
+		doc.Components.Schemas["StandardListResponse"] = framework.OASStdSchemaStandardListResponse
+	}
+
 	buf, err := json.Marshal(doc)
 	if err != nil {
 		return nil, err
@@ -4666,19 +4721,6 @@ type SealStatusResponse struct {
 	HCPLinkStatus     string   `json:"hcp_link_status,omitempty"`
 	HCPLinkResourceID string   `json:"hcp_link_resource_ID,omitempty"`
 	Warnings          []string `json:"warnings,omitempty"`
-}
-
-// getStatusWarnings exposes potentially dangerous overrides in the status response
-// currently, this only warns about VAULT_DISABLE_SERVER_SIDE_CONSISTENT_TOKENS,
-// but should be extended to report more warnings where appropriate
-func (core *Core) getStatusWarnings() []string {
-	var warnings []string
-	if core.GetCoreConfigInternal() != nil && core.GetCoreConfigInternal().DisableSSCTokens {
-		warnings = append(warnings, "Server Side Consistent Tokens are disabled, due to the "+
-			"VAULT_DISABLE_SERVER_SIDE_CONSISTENT_TOKENS environment variable being set. "+
-			"It is not recommended to run Vault for an extended period of time with this configuration.")
-	}
-	return warnings
 }
 
 func (core *Core) GetSealStatus(ctx context.Context) (*SealStatusResponse, error) {
@@ -4751,7 +4793,6 @@ func (core *Core) GetSealStatus(ctx context.Context) (*SealStatusResponse, error
 		ClusterID:    clusterID,
 		RecoverySeal: core.SealAccess().RecoveryKeySupported(),
 		StorageType:  core.StorageType(),
-		Warnings:     core.getStatusWarnings(),
 	}
 
 	if resourceIDonHCP != "" {
