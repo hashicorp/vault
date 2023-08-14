@@ -1,6 +1,6 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 import Ember from 'ember';
@@ -205,7 +205,7 @@ export default class NavigateInput extends Component {
       later(
         this,
         function () {
-          document.getElementById(this.inputId).focus();
+          document.getElementById(this.inputId)?.focus();
         },
         400
       );

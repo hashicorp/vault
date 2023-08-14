@@ -1,6 +1,6 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 import Model, { attr, belongsTo } from '@ember-data/model';
@@ -158,13 +158,6 @@ export default class SecretEngineModel extends Model {
       return 'vault.cluster.secrets.backend.overview';
     }
     return 'vault.cluster.secrets.backend.list-root';
-  }
-
-  get accessor() {
-    if (this.version === 2) {
-      return `v2 ${this.accessor}`;
-    }
-    return this.accessor;
   }
 
   get localDisplay() {

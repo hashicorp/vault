@@ -1,6 +1,6 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 import Component from '@glimmer/component';
@@ -83,7 +83,7 @@ export default class OidcProviderForm extends Component {
         }
         yield this.args.model.save();
         this.flashMessages.success(
-          `Successfully ${isNew ? 'created' : 'updated'} the OIDC provider 
+          `Successfully ${isNew ? 'created' : 'updated'} the OIDC provider
           ${name}.`
         );
         this.args.onSave();
