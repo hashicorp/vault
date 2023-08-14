@@ -29,8 +29,14 @@ module('Integration | Component | ldap | Page::Library::Details::Accounts', func
     });
     this.model = this.store.peekRecord('ldap/library', 'test-library');
     this.statuses = [
-      { account: 'foo.bar', available: false, borrower_client_token: '123', borrower_entity_id: '456' },
-      { account: 'bar.baz', available: true },
+      {
+        account: 'foo.bar',
+        available: false,
+        library: 'test-library',
+        borrower_client_token: '123',
+        borrower_entity_id: '456',
+      },
+      { account: 'bar.baz', available: true, library: 'test-library' },
     ];
     this.renderComponent = () => {
       return render(

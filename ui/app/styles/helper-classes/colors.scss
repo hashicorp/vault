@@ -72,6 +72,10 @@ select.has-error-border,
 .has-text-info {
   color: $blue-500 !important;
 }
+// same without the !important
+.has-text-primary {
+  color: $blue-500;
+}
 
 .has-text-success {
   color: $green-500 !important;

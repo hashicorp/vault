@@ -42,7 +42,12 @@ module('Integration | Component | ldap | Page::Configuration', function (hooks) 
 
     this.renderComponent = () => {
       return render(
-        hbs`<Page::Configuration @backendModel={{this.backend}} @configModel={{this.config}} @configError={{this.error}} @breadcrumbs={{this.breadcrumbs}} />`,
+        hbs`<Page::Configuration
+          @backendModel={{this.backend}}
+          @configModel={{this.config}}
+          @configError={{this.error}}
+          @breadcrumbs={{this.breadcrumbs}}
+        />`,
         {
           owner: this.engine,
         }

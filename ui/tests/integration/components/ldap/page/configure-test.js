@@ -11,6 +11,7 @@ import { render, click, fillIn } from '@ember/test-helpers';
 import hbs from 'htmlbars-inline-precompile';
 import { Response } from 'miragejs';
 import sinon from 'sinon';
+import { generateBreadcrumbs } from 'vault/tests/helpers/ldap';
 
 const selectors = {
   radioCard: '[data-test-radio-card="OpenLDAP"]',
@@ -46,11 +47,7 @@ module('Integration | Component | ldap | Page::Configure', function (hooks) {
       ...this.existingConfig,
     });
     this.editModel = this.store.peekRecord('ldap/config', 'ldap-edit');
-    this.breadcrumbs = [
-      { label: 'secrets', route: 'secrets', linkExternal: true },
-      { label: 'ldap', route: 'overview' },
-      { label: 'configure' },
-    ];
+    this.breadcrumbs = generateBreadcrumbs('ldap', 'configure');
     this.model = this.newModel; // most of the tests use newModel but set this to editModel when needed
     this.renderComponent = () => {
       return render(

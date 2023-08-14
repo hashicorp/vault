@@ -10,6 +10,7 @@ import { setupMirage } from 'ember-cli-mirage/test-support';
 import { render, click, fillIn } from '@ember/test-helpers';
 import hbs from 'htmlbars-inline-precompile';
 import { allowAllCapabilitiesStub } from 'vault/tests/helpers/stubs';
+import { createSecretsEngine, generateBreadcrumbs } from 'vault/tests/helpers/ldap';
 
 module('Integration | Component | ldap | Page::Libraries', function (hooks) {
   setupRenderingTest(hooks);
@@ -20,16 +21,8 @@ module('Integration | Component | ldap | Page::Libraries', function (hooks) {
     this.server.post('/sys/capabilities-self', allowAllCapabilitiesStub());
 
     this.store = this.owner.lookup('service:store');
-
-    this.store.pushPayload('secret-engine', {
-      modelName: 'secret-engine',
-      data: {
-        accessor: 'ldap_f3400dee',
-        path: 'ldap-test/',
-        type: 'ldap',
-      },
-    });
-    this.backend = this.store.peekRecord('secret-engine', 'ldap-test');
+    this.backend = createSecretsEngine(this.store);
+    this.breadcrumbs = generateBreadcrumbs(this.backend.id);
 
     for (const name of ['foo', 'bar']) {
       this.store.pushPayload('ldap/library', {
@@ -39,16 +32,16 @@ module('Integration | Component | ldap | Page::Libraries', function (hooks) {
       });
     }
     this.libraries = this.store.peekAll('ldap/library');
-
-    this.breadcrumbs = [
-      { label: 'secrets', route: 'secrets', linkExternal: true },
-      { label: this.backend.id },
-    ];
     this.promptConfig = false;
 
     this.renderComponent = () => {
       return render(
-        hbs`<Page::Libraries @promptConfig={{this.promptConfig}} @backendModel={{this.backend}} @libraries={{this.libraries}} @breadcrumbs={{this.breadcrumbs}} />`,
+        hbs`<Page::Libraries
+          @promptConfig={{this.promptConfig}}
+          @backendModel={{this.backend}}
+          @libraries={{this.libraries}}
+          @breadcrumbs={{this.breadcrumbs}}
+        />`,
         { owner: this.engine }
       );
     };
