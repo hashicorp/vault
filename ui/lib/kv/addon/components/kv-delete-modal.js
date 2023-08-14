@@ -10,31 +10,31 @@ import { inject as service } from '@ember/service';
 import { assert } from '@ember/debug';
 
 /**
- * @module KvDeleteModal displays a button for a delete type and launches a modal (undelete is the only mode that does not launch the modal).
- *  All destroyRecord network requests are handled inside the component.
+ * @module KvDeleteModal displays a button for a delete type and launches a modal. Undelete is the only mode that does not launch the modal and is not handled in this component.
  *
  * <KvDeleteModal
  *  @mode="destroy"
- *  @path="my-secret"
  *  @secret={{this.model.secret}}
  *  @metadata={{this.model.metadata}}
+ *  @onDelete={{this.handleDestruction}}
  * />
  *
  * @param {string} mode - delete, delete-metadata, or destroy.
  * @param {object} secret - The kv/data model.
  * @param {object} [metadata] - The kv/metadata model. It is only required when mode is "delete" or "metadata-delete".
+ * @param {callback} onDelete - callback function fired to handle delete event.
  */
 
 export default class KvDeleteModal extends Component {
   @service flashMessages;
   @service router;
   @service store;
-  @tracked deleteType = null;
+  @tracked deleteType = null; // Either delete-version or delete-current-version.
   @tracked modalOpen = false;
 
   get modalDisplay() {
     switch (this.args.mode) {
-      // does not match serializer key directly because a delete type must be selected
+      // Does not match adapter key directly because a delete type must be selected.
       case 'delete':
         return {
           title: 'Delete version?',
@@ -42,7 +42,7 @@ export default class KvDeleteModal extends Component {
           intro:
             'There are two ways to delete a version of a secret. Both delete actions can be un-deleted later. How would you like to proceed?',
         };
-      case 'destroy-version':
+      case 'destroy':
         return {
           title: 'Destroy version?',
           type: 'danger',
@@ -56,7 +56,7 @@ export default class KvDeleteModal extends Component {
             'This will permanently delete the metadata and versions of the secret. All version history will be removed. This cannot be undone.',
         };
       default:
-        return assert('mode must be one of delete, destroy-version, delete-metadata.');
+        return assert('mode must be one of delete, destroy, or delete-metadata.');
     }
   }
 
@@ -77,7 +77,7 @@ export default class KvDeleteModal extends Component {
         description: 'This deletes the most recent version of the secret.',
         disabled: !secret.canDeleteLatestVersion || isDeactivated,
         tooltipMessage: isDeactivated
-          ? `The latest version of the secret is already ${metadata.secretState.state}.`
+          ? `The latest version of the secret is already ${metadata.currentSecret.state}.`
           : 'You do not have permission to delete the latest version of this secret.',
       },
     ];

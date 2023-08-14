@@ -28,6 +28,7 @@ import { inject as service } from '@ember/service';
 export default class KvSecretDetails extends Component {
   @tracked showJsonView = false;
   @service flashMessages;
+  @service router;
 
   @action
   toggleJsonView() {
@@ -46,14 +47,16 @@ export default class KvSecretDetails extends Component {
     const { secret } = this.args;
     try {
       await secret.destroyRecord({
-        adapterOptions: { deleteType: 'undelete-version', deleteVersions: secret.version },
+        adapterOptions: { deleteType: 'undelete', deleteVersions: secret.version },
       });
-      this.flashMessages.success(`Successfully undeleted ${secret.path}`);
+      this.flashMessages.success(`Successfully undeleted ${secret.path}.`);
       this.router.transitionTo('vault.cluster.secrets.backend.kv.secret', {
         queryParams: { version: secret.version },
       });
     } catch (err) {
-      this.flashMessages.danger(`There was a problem un-deleting ${secret.path}`);
+      this.flashMessages.danger(
+        `There was a problem undeleting ${secret.path}. Error: ${err.errors.join(' ')}.`
+      );
     }
   }
 
@@ -70,14 +73,16 @@ export default class KvSecretDetails extends Component {
       });
     } catch (err) {
       const verb = type.includes('delete') ? 'deleting' : 'destroying';
-      this.flashMessages.danger(`There was a problem ${verb} Version ${secret.version} of ${secret.path}`);
+      this.flashMessages.danger(
+        `There was a problem ${verb} Version ${secret.version} of ${secret.path}. Error: ${err.errors.join(
+          ' '
+        )}.`
+      );
     }
   }
 
   get isDeactivated() {
-    // TODO can use secret.state getter for verb once branch is updated
-    const secret = this.args;
-    return !secret.deletionTime && !secret.destroyed;
+    return this.args.secret.state === 'created' ? false : true;
   }
 
   get hideHeaders() {

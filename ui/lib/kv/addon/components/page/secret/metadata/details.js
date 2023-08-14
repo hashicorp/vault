@@ -19,7 +19,7 @@ import { inject as service } from '@ember/service';
   /> 
  *
  * @param {string} path - path of kv secret 'my/secret' used as the title for the KV page header 
- * @param {model} secret - Ember data model: 'kv/data'  
+ * @param {model} [secret] - Ember data model: 'kv/data' 
  * @param {model} metadata - Ember data model: 'kv/metadata'
  * @param {array} breadcrumbs - Array to generate breadcrumbs, passed to the page header component
  */
@@ -29,11 +29,6 @@ export default class KvSecretMetadataDetails extends Component {
   @service flashMessages;
   @service router;
 
-  @action
-  toggleModal() {
-    this.deleteModalOpen = !this.deleteModalOpen;
-  }
-
   @action async handleDelete() {
     // the only delete option from this view is delete on metadata.
     try {
@@ -41,11 +36,11 @@ export default class KvSecretMetadataDetails extends Component {
         adapterOptions: { deleteType: 'delete-metadata' },
       });
       this.flashMessages.success(
-        `Successfully deleted the metadata and all version data for the secret ${this.args.path}.`
+        `Successfully deleted the metadata and all version data for the secret ${this.args.metadata.path}.`
       );
       return this.router.transitionTo('vault.cluster.secrets.backend.kv.list');
     } catch (err) {
-      this.flashMessages.danger(`There was an issue deleting ${this.args.path} metadata.`);
+      this.flashMessages.danger(`There was an issue deleting ${this.args.metadata.path} metadata.`);
     }
   }
 }
