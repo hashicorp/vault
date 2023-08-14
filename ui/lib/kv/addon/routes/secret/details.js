@@ -18,16 +18,19 @@ export default class KvSecretDetailsRoute extends Route {
 
   model(params) {
     const parentModel = this.modelFor('secret');
-    if (params.version) {
+    // Only fetch versioned data if selected version does not match parent (current) version
+    // and parentModel.secret has failReadErrorCode since permissions aren't version specific
+    if (
+      params.version &&
+      parentModel.secret.version !== params.version &&
+      !parentModel.secret.failReadErrorCode
+    ) {
       // query params have changed by selecting a different version from the dropdown
       // fire off new request for that version's secret data
       const { backend, path } = parentModel;
       return hash({
         ...parentModel,
-        secret: this.store.queryRecord('kv/data', { backend, path, version: params.version }).catch(() => {
-          // return empty record to access capability getters on model
-          return this.store.createRecord('kv/data', { backend, path });
-        }),
+        secret: this.store.queryRecord('kv/data', { backend, path, version: params.version }),
       });
     }
     return parentModel;

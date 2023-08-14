@@ -4,27 +4,28 @@
  */
 
 import Route from '@ember/routing/route';
-import { hash } from 'rsvp';
 import { inject as service } from '@ember/service';
+import { hash } from 'rsvp';
 
 export default class KvConfigurationRoute extends Route {
   @service store;
-  @service secretMountPath;
 
   model() {
-    const backend = this.secretMountPath.get();
-    // TODO: bring in model from secret-engine.
+    const backend = this.modelFor('application');
     return hash({
-      backend,
+      mountConfig: backend,
+      engineConfig: this.store.findRecord('kv/config', backend.id).catch(() => {
+        // return an empty record so we have access to model capabilities
+        return this.store.createRecord('kv/config', { backend: backend.id });
+      }),
     });
   }
 
   setupController(controller, resolvedModel) {
     super.setupController(controller, resolvedModel);
-    controller.pageTitle = resolvedModel.backend;
     controller.breadcrumbs = [
       { label: 'secrets', route: 'secrets', linkExternal: true },
-      { label: resolvedModel.backend, route: 'list' },
+      { label: resolvedModel.mountConfig.id, route: 'list' },
       { label: 'configuration' },
     ];
   }

@@ -80,6 +80,10 @@ export default class KvSecretDetails extends Component {
     return !secret.deletionTime && !secret.destroyed;
   }
 
+  get hideHeaders() {
+    return this.showJsonView || this.emptyState;
+  }
+
   get emptyState() {
     if (!this.args.secret.canReadData) {
       return {

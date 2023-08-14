@@ -63,12 +63,18 @@ export default class KvSecretDataModel extends Model {
   @attr('string') deletionTime;
   @attr('boolean') destroyed;
   @attr('number') version;
+  // Set in adapter if read failed
+  @attr('number') failReadErrorCode;
 
   // the default value of 0 is only set when initially creating a secret
   // if creating a new version this value is set in the edit route's
   // model hook from metadata or secret version, pending permissions
   @attr('number', { defaultValue: 0 })
   casVersion;
+
+  get state() {
+    return this.destroyed ? 'destroyed' : this.deletionTime ? 'deleted' : 'created';
+  }
 
   // Permissions
   @lazyCapabilities(apiPath`${'backend'}/data/${'path'}`, 'backend', 'path') dataPath;
