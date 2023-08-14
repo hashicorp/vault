@@ -7,6 +7,9 @@ import Component from '@glimmer/component';
 import { action } from '@ember/object';
 import { tracked } from '@glimmer/tracking';
 import { next } from '@ember/runloop';
+import { inject as service } from '@ember/service';
+import { task } from 'ember-concurrency';
+import { waitFor } from '@ember/test-waiters';
 
 /**
  * @module KvSecretDetails renders the key/value data of a KV secret. 
@@ -25,7 +28,11 @@ import { next } from '@ember/runloop';
  */
 
 export default class KvSecretDetails extends Component {
+  @service store;
+  @service flashMessages;
+
   @tracked showJsonView = false;
+  @tracked wrappedData = null;
 
   @action
   toggleJsonView() {
@@ -33,10 +40,21 @@ export default class KvSecretDetails extends Component {
   }
 
   @action
-  onClose(dropdown) {
+  closeVersionMenu(dropdown) {
     // strange issue where closing dropdown triggers full transition (which redirects to auth screen in production)
     // closing dropdown in next tick of run loop fixes it
     next(() => dropdown.actions.close());
+  }
+
+  @action
+  clearWrappedData() {
+    this.wrappedData = null;
+  }
+
+  @task
+  @waitFor
+  *wrapSecret() {
+    // do stuff
   }
 
   get hideHeaders() {
