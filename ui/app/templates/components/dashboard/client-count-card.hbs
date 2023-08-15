@@ -26,7 +26,7 @@
         @subText="The number of clients in this billing period ({{date-format
           this.licenseStartTime
           'MMM yyyy'
-        }} - {{date-format this.currentDate 'MMM yyyy'}})."
+        }} - {{date-format this.updatedAt 'MMM yyyy'}})."
         data-test-stat-text="total-clients"
       />
       <StatText
@@ -53,7 +53,7 @@
       />
       <small class="has-left-margin-xs has-text-grey">
         Updated
-        {{date-format this.currentDate "MMM dd, yyyy HH:mm:SS"}}
+        {{date-format this.updatedAt "MMM dd, yyyy HH:mm:SS"}}
       </small>
     </div>
   {{/unless}}
