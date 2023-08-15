@@ -44,7 +44,7 @@ func (c *SQLConnectionProducer) registerDrivers(credentials, credentialsJSON int
 
 	switch typ {
 	case cloudSQLMSSQL:
-		return registerDriverMSSQL(opts)
+		return registerDriverMSSQL(opts...)
 	case cloudSQLPostgres:
 		return registerDriverPostgres(opts...)
 	}
@@ -56,8 +56,8 @@ func registerDriverPostgres(opts ...cloudsqlconn.Option) (func() error, error) {
 	return pgxv4.RegisterDriver(cloudSQLPostgres, opts...)
 }
 
-func registerDriverMSSQL(opts cloudsqlconn.Option) (func() error, error) {
-	return mssql.RegisterDriver(cloudSQLMSSQL, opts)
+func registerDriverMSSQL(opts ...cloudsqlconn.Option) (func() error, error) {
+	return mssql.RegisterDriver(cloudSQLMSSQL, opts...)
 }
 
 func GetCloudSQLAuthOptions(credentials, credentialsJSON interface{}) ([]cloudsqlconn.Option, error) {
