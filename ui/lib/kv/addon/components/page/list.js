@@ -34,7 +34,7 @@ export default class KvListPageComponent extends Component {
   @action
   async onDelete(model) {
     try {
-      const message = `Successfully deleted secret ${model.fullSecretPath}.`;
+      const message = `Successfully deleted the metadata and all version data of the secret ${model.fullSecretPath}.`;
       await model.destroyRecord();
       this.flashMessages.success(message);
       // if you've deleted a secret from within a directory, transition to its parent directory.

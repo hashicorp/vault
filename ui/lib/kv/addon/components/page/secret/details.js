@@ -7,6 +7,7 @@ import Component from '@glimmer/component';
 import { action } from '@ember/object';
 import { tracked } from '@glimmer/tracking';
 import { next } from '@ember/runloop';
+import { inject as service } from '@ember/service';
 
 /**
  * @module KvSecretDetails renders the key/value data of a KV secret. 
@@ -26,6 +27,8 @@ import { next } from '@ember/runloop';
 
 export default class KvSecretDetails extends Component {
   @tracked showJsonView = false;
+  @service flashMessages;
+  @service router;
 
   @action
   toggleJsonView() {
@@ -37,6 +40,47 @@ export default class KvSecretDetails extends Component {
     // strange issue where closing dropdown triggers full transition (which redirects to auth screen in production)
     // closing dropdown in next tick of run loop fixes it
     next(() => dropdown.actions.close());
+  }
+
+  @action
+  async undelete() {
+    const { secret } = this.args;
+    try {
+      await secret.destroyRecord({
+        adapterOptions: { deleteType: 'undelete', deleteVersions: secret.version },
+      });
+      this.flashMessages.success(`Successfully undeleted ${secret.path}.`);
+      this.router.transitionTo('vault.cluster.secrets.backend.kv.secret', {
+        queryParams: { version: secret.version },
+      });
+    } catch (err) {
+      this.flashMessages.danger(
+        `There was a problem undeleting ${secret.path}. Error: ${err.errors.join(' ')}.`
+      );
+    }
+  }
+
+  @action
+  async handleDestruction(type) {
+    const { secret } = this.args;
+    try {
+      await secret.destroyRecord({ adapterOptions: { deleteType: type, deleteVersions: secret.version } });
+      this.flashMessages.success(`Successfully ${secret.state} Version ${secret.version} of ${secret.path}.`);
+      this.router.transitionTo('vault.cluster.secrets.backend.kv.secret', {
+        queryParams: { version: secret.version },
+      });
+    } catch (err) {
+      const verb = type.includes('delete') ? 'deleting' : 'destroying';
+      this.flashMessages.danger(
+        `There was a problem ${verb} Version ${secret.version} of ${secret.path}. Error: ${err.errors.join(
+          ' '
+        )}.`
+      );
+    }
+  }
+
+  get isDeactivated() {
+    return this.args.secret.state === 'created' ? false : true;
   }
 
   get hideHeaders() {
