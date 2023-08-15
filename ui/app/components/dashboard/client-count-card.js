@@ -23,13 +23,12 @@ import { inject as service } from '@ember/service';
  */
 
 export default class DashboardClientCountCard extends Component {
-  currentDate = timestamp.now().toISOString();
+  @tracked currentDate = timestamp.now().toISOString();
 
   @service store;
 
   @tracked activityData = null;
   @tracked clientConfig = null;
-  @tracked updatedAt = timestamp.now().toISOString();
 
   constructor() {
     super(...arguments);
@@ -48,6 +47,7 @@ export default class DashboardClientCountCard extends Component {
   @task
   @waitFor
   *getActivity(start_time) {
+    this.currentDate = timestamp.now().toISOString();
     // on init ONLY make network request if we have a start_time
     return start_time
       ? yield this.store.queryRecord('clients/activity', {
