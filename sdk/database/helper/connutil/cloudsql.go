@@ -46,21 +46,23 @@ func (c *SQLConnectionProducer) registerDrivers(filename, credentials interface{
 	case cloudSQLMSSQL:
 		// return registerDriverMSSQL(opts)
 	case cloudSQLPostgres:
-		return registerDriverPostgres(opts)
+		return registerDriverPostgres(opts...)
 	}
 
 	return nil, fmt.Errorf("unrecognized cloudsql type encountered: %s", typ)
 }
 
-func registerDriverPostgres(opts cloudsqlconn.Option) (func() error, error) {
-	return pgxv4.RegisterDriver(cloudSQLPostgres, opts)
+func registerDriverPostgres(opts ...cloudsqlconn.Option) (func() error, error) {
+	return pgxv4.RegisterDriver(cloudSQLPostgres, opts...)
 }
 
 //func registerDriverMSSQL(opts cloudsqlconn.Option) (func() error, error) {
 //	return mssql.RegisterDriver(cloudSQLMSSQL, opts)
 //}
 
-func GetCloudSQLAuthOptions(filename, credentials interface{}) (cloudsqlconn.Option, error) {
+func GetCloudSQLAuthOptions(filename, credentials interface{}) ([]cloudsqlconn.Option, error) {
+	opts := []cloudsqlconn.Option{cloudsqlconn.WithIAMAuthN()}
+
 	if filename != nil {
 		v, ok := filename.(string)
 		if !ok {
@@ -68,21 +70,22 @@ func GetCloudSQLAuthOptions(filename, credentials interface{}) (cloudsqlconn.Opt
 		}
 
 		fmt.Printf("registering driver with credential file\n")
-		return cloudsqlconn.WithCredentialsFile(v), nil
+		opts = append(opts, cloudsqlconn.WithCredentialsFile(v))
 	}
 
 	if credentials != nil {
-		v, ok := credentials.([]byte)
-		if !ok {
-			return nil, fmt.Errorf("error converting JSON data to bytes")
-		}
-
 		fmt.Printf("registering driver with credential json\n")
-		return cloudsqlconn.WithCredentialsJSON(v), nil
-
+		switch v := credentials.(type) {
+		case string:
+			opts = append(opts, cloudsqlconn.WithCredentialsJSON([]byte(v)))
+		case []byte:
+			opts = append(opts, cloudsqlconn.WithCredentialsJSON(v))
+		default:
+			return nil, fmt.Errorf("error converting credentials of type %T to []byte", credentials)
+		}
 	}
 
-	return cloudsqlconn.WithIAMAuthN(), nil
+	return opts, nil
 }
 
 func cacheDrivers(typ string, f cloudSQLCleanup) {
