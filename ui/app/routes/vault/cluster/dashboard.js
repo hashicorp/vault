@@ -23,6 +23,14 @@ export default class VaultClusterDashboardRoute extends Route.extend(ClusterRout
     }
   }
 
+  async getLicense() {
+    try {
+      return await this.store.queryRecord('license', {});
+    } catch (e) {
+      return null;
+    }
+  }
+
   model() {
     const vaultConfiguration = this.getVaultConfiguration();
 
@@ -30,6 +38,7 @@ export default class VaultClusterDashboardRoute extends Route.extend(ClusterRout
       vaultConfiguration,
       secretsEngines: this.store.query('secret-engine', {}),
       version: this.version,
+      license: this.getLicense(),
     });
   }
 }

@@ -8,13 +8,17 @@ import { setupRenderingTest } from 'vault/tests/helpers';
 import { render } from '@ember/test-helpers';
 import { hbs } from 'ember-cli-htmlbars';
 import { setupMirage } from 'ember-cli-mirage/test-support';
+import timestamp from 'core/utils/timestamp';
+import { parseAPITimestamp } from 'core/utils/date-formatters';
 
 module('Integration | Component | dashboard/client-count-card', function (hooks) {
   setupRenderingTest(hooks);
   setupMirage(hooks);
 
   hooks.beforeEach(function () {
-    this.store = this.owner.lookup('service:store');
+    this.license = {
+      startTime: '2018-04-03T14:15:30',
+    };
   });
 
   test('it should display client count information', async function (assert) {
@@ -59,12 +63,18 @@ module('Integration | Component | dashboard/client-count-card', function (hooks)
         },
       };
     });
-    await render(hbs`<Dashboard::ClientCountCard />`);
+
+    await render(hbs`<Dashboard::ClientCountCard @license={{this.license}} />`);
     assert.dom('[data-test-client-count-title]').hasText('Client count');
     assert.dom('[data-test-stat-text="total-clients"] .stat-label').hasText('Total');
     assert
       .dom('[data-test-stat-text="total-clients"] .stat-text')
-      .hasText('The number of clients in this billing period (Apr 2020 - Aug 2023).');
+      .hasText(
+        `The number of clients in this billing period (Apr 2018 - ${parseAPITimestamp(
+          timestamp.now().toISOString(),
+          'MMM yyyy'
+        )}).`
+      );
     assert.dom('[data-test-stat-text="total-clients"] .stat-value').hasText('300,417');
     assert.dom('[data-test-stat-text="new-clients"] .stat-label').hasText('New');
     assert

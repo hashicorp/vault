@@ -41,6 +41,10 @@ export default class DashboardClientCountCard extends Component {
     return this.activityData?.byMonth?.lastObject?.new_clients.clients;
   }
 
+  get licenseStartTime() {
+    return this.args.license.startTime || getStorage().getItem('vault:ui-inputted-start-date') || null;
+  }
+
   @task
   @waitFor
   *getActivity(start_time) {
@@ -55,23 +59,9 @@ export default class DashboardClientCountCard extends Component {
 
   @task
   @waitFor
-  *getLicenseStartTime() {
-    try {
-      const license = yield this.store.queryRecord('license', {});
-      // if license.startTime is 'undefined' return 'null' for consistency
-      return license.startTime || getStorage().getItem('vault:ui-inputted-start-date') || null;
-    } catch (e) {
-      // return null so user can input date manually
-      // if already inputted manually, will be in localStorage
-      return getStorage().getItem('vault:ui-inputted-start-date') || null;
-    }
-  }
-
-  @task
-  @waitFor
   *fetchClientActivity() {
     try {
-      this.startDate = yield this.getLicenseStartTime.perform();
+      this.startDate = this.licenseStartTime;
       this.activityData = yield this.getActivity.perform(this.startDate);
       this.updatedAt = timestamp.now().toISOString();
       this.noActivityData = this.activityData.activity.id === 'no-data' ? true : false;
