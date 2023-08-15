@@ -37,10 +37,11 @@ module('Integration | Component | copy-secret-dropdown', function (hooks) {
     await click(SELECTORS.dropdown);
     assert.dom(SELECTORS.copyButton).hasText('Copy JSON');
     assert.dom(SELECTORS.wrapButton).hasText('Wrap secret');
-    await click(SELECTORS.wrapButton);
     assert
       .dom(SELECTORS.copyButton)
       .hasAttribute('data-clipboard-text', `${this.data}`, 'it renders copyable data');
+
+    await click(SELECTORS.wrapButton);
     await click(SELECTORS.dropdown);
   });
 
