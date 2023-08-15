@@ -8,6 +8,7 @@ import (
 	"errors"
 	"net/http"
 	"net/textproto"
+	"net/url"
 	"strings"
 
 	"github.com/aws/aws-sdk-go/aws"
@@ -388,10 +389,28 @@ type clientConfig struct {
 func (c *clientConfig) validateAllowedSTSHeaderValues(headers http.Header) error {
 	for k := range headers {
 		h := textproto.CanonicalMIMEHeaderKey(k)
+		if h == "X-Amz-Signedheaders" {
+			h = amzSignedHeaders
+		}
 		if strings.HasPrefix(h, amzHeaderPrefix) &&
 			!strutil.StrListContains(defaultAllowedSTSRequestHeaders, h) &&
 			!strutil.StrListContains(c.AllowedSTSHeaderValues, h) {
 			return errors.New("invalid request header: " + k)
+		}
+	}
+	return nil
+}
+
+func (c *clientConfig) validateAllowedSTSQueryValues(params url.Values) error {
+	for k := range params {
+		h := textproto.CanonicalMIMEHeaderKey(k)
+		if h == "X-Amz-Signedheaders" {
+			h = amzSignedHeaders
+		}
+		if strings.HasPrefix(h, amzHeaderPrefix) &&
+			!strutil.StrListContains(defaultAllowedSTSRequestHeaders, k) &&
+			!strutil.StrListContains(c.AllowedSTSHeaderValues, k) {
+			return errors.New("invalid request query param: " + k)
 		}
 	}
 	return nil
