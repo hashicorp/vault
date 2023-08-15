@@ -22,14 +22,11 @@ import { inject as service } from '@ember/service';
  */
 
 export default class DashboardClientCountCard extends Component {
-  currentDate = timestamp.now().toISOString();
-
   @service store;
 
-  @tracked startDate = null;
   @tracked activityData = null;
   @tracked clientConfig = null;
-  @tracked updatedAt = null;
+  @tracked updatedAt = timestamp.now().toISOString();
 
   constructor() {
     super(...arguments);
@@ -47,23 +44,15 @@ export default class DashboardClientCountCard extends Component {
 
   @task
   @waitFor
-  *getActivity(start_time) {
-    // on init ONLY make network request if we have a start_time
-    return start_time
-      ? yield this.store.queryRecord('clients/activity', {
-          start_time: { timestamp: start_time },
-          end_time: { timestamp: this.currentDate },
-        })
-      : {};
-  }
-
-  @task
-  @waitFor
   *fetchClientActivity() {
+    this.updatedAt = timestamp.now().toISOString();
+    // only make the network request if we have a start_time
+    if (!this.licenseStartTime) return {};
     try {
-      this.startDate = this.licenseStartTime;
-      this.activityData = yield this.getActivity.perform(this.startDate);
-      this.updatedAt = timestamp.now().toISOString();
+      this.activityData = yield this.store.queryRecord('clients/activity', {
+        start_time: { timestamp: this.licenseStartTime },
+        end_time: { timestamp: this.updatedAt },
+      });
       this.noActivityData = this.activityData.activity.id === 'no-data' ? true : false;
     } catch (error) {
       this.error = error;
