@@ -134,12 +134,14 @@ func TestCapabilities_TemplatedPolicies(t *testing.T) {
 		t.Fatalf("bad: resp: %#v\nerr: %#v\n", resp, err)
 	}
 	entityID := resp.Data["id"].(string)
+	metaSubpath := "foo"
 
 	// Create a token for the entity and assign policy2 on the token
 	ent := &logical.TokenEntry{
 		ID:       "capabilitiestoken",
 		Path:     "auth/token/create",
 		Policies: []string{"testpolicy"},
+		Meta:     map[string]string{"subpath": metaSubpath},
 		EntityID: entityID,
 		TTL:      time.Hour,
 	}
@@ -168,6 +170,11 @@ func TestCapabilities_TemplatedPolicies(t *testing.T) {
 			`{"name": "testpolicy", "path": {"secret/sample": {"capabilities": ["read"]}}}`,
 			"secret/sample",
 			[]string{"read"},
+		},
+		{
+			`{"name": "testpolicy", "path": {"secret/{{token.metadata.subpath}}/sample": {"capabilities": ["read", "create"]}}}`,
+			fmt.Sprintf("secret/%s/sample", metaSubpath),
+			[]string{"read", "create"},
 		},
 	}
 	for _, tCase := range tCases {
