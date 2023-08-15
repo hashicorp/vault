@@ -19,6 +19,7 @@ import { inject as service } from '@ember/service';
  * ```js
  * <Dashboard::ClientCountCard @license={{@model.license}}  />
  * ```
+ *  @param {object} license - license object passed from the parent
  */
 
 export default class DashboardClientCountCard extends Component {
