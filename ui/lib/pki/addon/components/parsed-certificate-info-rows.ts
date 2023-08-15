@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import Component from '@glimmer/component';
 import { parsedParameterKeys } from 'vault/utils/parse-pki-cert-oids';
 import { ParsedCertificateData } from 'vault/vault/utils/parse-pki-cert';
