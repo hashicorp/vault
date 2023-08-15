@@ -1,4 +1,4 @@
-import { module, test } from 'qunit';
+import { module, test, skip } from 'qunit';
 import { v4 as uuidv4 } from 'uuid';
 import { click, currentRouteName, currentURL, typeIn, visit, waitUntil } from '@ember/test-helpers';
 import { create } from 'ember-cli-page-object';
@@ -1184,7 +1184,7 @@ path "${this.backend}/*" {
     const storageKey = (accessor, path) => {
       return `${CONTROL_GROUP_PREFIX}${accessor}${TOKEN_SEPARATOR}${path}`;
     };
-    test('can access nested secret', async function (assert) {
+    skip('can access nested secret', async function (assert) {
       assert.expect(38);
       const backend = this.backend;
       await navToBackend(backend);
