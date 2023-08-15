@@ -26,10 +26,9 @@ export default class DashboardClientCountCard extends Component {
 
   @service store;
 
-  @tracked startDate = null;
   @tracked activityData = null;
   @tracked clientConfig = null;
-  @tracked updatedAt = null;
+  @tracked updatedAt = timestamp.now().toISOString();
 
   constructor() {
     super(...arguments);
@@ -61,8 +60,7 @@ export default class DashboardClientCountCard extends Component {
   @waitFor
   *fetchClientActivity() {
     try {
-      this.startDate = this.licenseStartTime;
-      this.activityData = yield this.getActivity.perform(this.startDate);
+      this.activityData = yield this.getActivity.perform(this.licenseStartTime);
       this.updatedAt = timestamp.now().toISOString();
       this.noActivityData = this.activityData.activity.id === 'no-data' ? true : false;
     } catch (error) {
