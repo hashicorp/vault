@@ -1,6 +1,11 @@
 <Dashboard::VaultVersionTitle />
 
 <div class="is-grid grid-2-columns grid-gap-2 has-bottom-margin-m grid-align-items-start">
+  {{#if (and @model.version.isEnterprise @model.license)}}
+    <Hds::Card::Container @hasBorder={{true}} class="has-padding-l has-bottom-padding-m is-flex-column is-flex-half">
+      <Dashboard::ClientCountCard @license={{@model.license}} />
+    </Hds::Card::Container>
+  {{/if}}
   <Hds::Card::Container @hasBorder={{true}} class="has-padding-l is-flex-column is-flex-half">
     <Dashboard::SecretsEnginesCard @secretsEngines={{@model.secretsEngines}} />
   </Hds::Card::Container>

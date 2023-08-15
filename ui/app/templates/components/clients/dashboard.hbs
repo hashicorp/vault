@@ -27,25 +27,7 @@
     {{this.versionText.description}}
   </p>
   {{#if this.noActivityData}}
-    {{#if (eq @model.config.enabled "On")}}
-      <EmptyState
-        @title="No data received  {{if this.dateRangeMessage this.dateRangeMessage}}"
-        @message="Tracking is turned on and Vault is gathering data. It should appear here within 30 minutes."
-      />
-    {{else}}
-      <EmptyState
-        @title="Data tracking is disabled"
-        @message="Tracking is disabled, and no data is being collected. To turn it on, edit the configuration."
-      >
-        {{#if @model.config.canEdit}}
-          <p>
-            <LinkTo @route="vault.cluster.clients.config">
-              Go to configuration
-            </LinkTo>
-          </p>
-        {{/if}}
-      </EmptyState>
-    {{/if}}
+    <Clients::NoData @config={{@model.config}} @dateRangeMessage={{this.dateRangeMessage}} />
   {{else if this.errorObject}}
     <Clients::Error @error={{this.errorObject}} />
   {{else}}
