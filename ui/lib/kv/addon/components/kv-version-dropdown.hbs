@@ -22,6 +22,14 @@
             </LinkTo>
           </li>
         {{/each}}
+        {{! version diff }}
+        {{#if (gt @metadata.sortedVersions.length 1)}}
+          <li>
+            <LinkTo @route="secret.metadata.diff" {{on "click" (fn @onClose D)}} data-test-version="Version Diff">
+              Version Diff
+            </LinkTo>
+          </li>
+        {{/if}}
       </ul>
     </nav>
   </D.Content>
