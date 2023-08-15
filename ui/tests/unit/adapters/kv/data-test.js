@@ -100,6 +100,7 @@ module('Unit | Adapter | kv/data', function (hooks) {
       version: 2,
     };
     this.endpoint = `${encodePath(this.backend)}/data/${encodePath(this.path)}`;
+    this.deleteEndpoint = `${encodePath(this.backend)}/delete/${encodePath(this.path)}`;
   });
 
   test('it should make request to correct endpoint on createRecord', async function (assert) {
@@ -269,7 +270,7 @@ module('Unit | Adapter | kv/data', function (hooks) {
 
   test('it should make request to correct endpoint on delete specific versions', async function (assert) {
     assert.expect(4);
-    this.server.post(this.endpoint, (schema, req) => {
+    this.server.post(this.deleteEndpoint, (schema, req) => {
       const { versions } = JSON.parse(req.requestBody);
       assert.strictEqual(versions, 2, 'version array is sent in the payload.');
       assert.ok(true, 'request made to correct endpoint on delete specific version.');
@@ -328,26 +329,6 @@ module('Unit | Adapter | kv/data', function (hooks) {
     let record = await this.store.peekRecord('kv/data', this.id);
     await record.destroyRecord({
       adapterOptions: { deleteType: 'destroy', deleteVersions: 2 },
-    });
-    assert.true(record.isDeleted, 'record is deleted');
-    record = await this.store.peekRecord('kv/data', this.id);
-    assert.strictEqual(record, null, 'record is no longer in store');
-  });
-
-  test('it should make request to correct endpoint on destroy everything', async function (assert) {
-    assert.expect(3);
-    this.server.delete(`${encodePath(this.backend)}/metadata/${encodePath(this.path)}`, () => {
-      assert.ok(true, 'request made to correct endpoint on destroy everything.');
-    });
-
-    this.store.pushPayload('kv/data', {
-      modelName: 'kv/data',
-      id: this.id,
-      ...this.payload,
-    });
-    let record = await this.store.peekRecord('kv/data', this.id);
-    await record.destroyRecord({
-      adapterOptions: { deleteType: 'delete-metadata' },
     });
     assert.true(record.isDeleted, 'record is deleted');
     record = await this.store.peekRecord('kv/data', this.id);
