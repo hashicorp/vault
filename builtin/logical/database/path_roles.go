@@ -693,7 +693,7 @@ func (b *databaseBackend) pathStaticRoleCreateUpdate(ctx context.Context, req *l
 		item.Priority = lvr.Add(role.StaticAccount.RotationPeriod).Unix()
 	} else if rotationScheduleChanged {
 		next := role.StaticAccount.Schedule.Next(lvr)
-		b.logger.Debug("init priority for Schedule", "next", next)
+		b.logger.Debug("init priority for Schedule", "lvr", lvr, "next", next)
 		item.Priority = role.StaticAccount.Schedule.Next(lvr).Unix()
 	}
 
@@ -832,7 +832,10 @@ type staticAccount struct {
 // NextRotationTime calculates the next rotation by adding the Rotation Period
 // to the last known vault rotation
 func (s *staticAccount) NextRotationTime() time.Time {
-	return s.LastVaultRotation.Add(s.RotationPeriod)
+	if s.UsesRotationPeriod() {
+		return s.LastVaultRotation.Add(s.RotationPeriod)
+	}
+	return s.Schedule.Next(s.LastVaultRotation)
 }
 
 // UsesRotationSchedule returns true if the given static account has been
