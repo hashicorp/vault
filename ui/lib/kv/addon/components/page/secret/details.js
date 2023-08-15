@@ -63,11 +63,9 @@ export default class KvSecretDetails extends Component {
   @action
   async handleDestruction(type) {
     const { secret } = this.args;
-    // TODO can use secret.state getter for verb once branch is updated
     try {
       await secret.destroyRecord({ adapterOptions: { deleteType: type, deleteVersions: secret.version } });
-      const verb = type.includes('delete') ? 'deleted' : 'destroyed';
-      this.flashMessages.success(`Successfully ${verb} Version ${secret.version} of ${secret.path}.`);
+      this.flashMessages.success(`Successfully ${secret.state} Version ${secret.version} of ${secret.path}.`);
       this.router.transitionTo('vault.cluster.secrets.backend.kv.secret', {
         queryParams: { version: secret.version },
       });

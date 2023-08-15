@@ -19,7 +19,7 @@ import { inject as service } from '@ember/service';
   /> 
  *
  * @param {string} path - path of kv secret 'my/secret' used as the title for the KV page header 
- * @param {model} [secret] - Ember data model: 'kv/data' 
+ * @param {model} [secret] - Ember data model: 'kv/data'. Param not required for delete-metadata.
  * @param {model} metadata - Ember data model: 'kv/metadata'
  * @param {array} breadcrumbs - Array to generate breadcrumbs, passed to the page header component
  */

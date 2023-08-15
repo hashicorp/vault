@@ -40,7 +40,7 @@ export default class KvDeleteModal extends Component {
           title: 'Delete version?',
           type: 'warning',
           intro:
-            'There are two ways to delete a version of a secret. Both delete actions can be un-deleted later. How would you like to proceed?',
+            'There are two ways to delete a version of a secret. Both delete actions can be undeleted later. How would you like to proceed?',
         };
       case 'destroy':
         return {
