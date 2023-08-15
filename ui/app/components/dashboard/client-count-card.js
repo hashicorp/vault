@@ -17,7 +17,7 @@ import { inject as service } from '@ember/service';
  *
  * @example
  * ```js
- * <Dashboard::ClientCountCard  />
+ * <Dashboard::ClientCountCard @license={{@model.license}}  />
  * ```
  */
 
