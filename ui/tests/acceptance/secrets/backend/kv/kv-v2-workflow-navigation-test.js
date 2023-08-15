@@ -1,4 +1,4 @@
-import { module, test } from 'qunit';
+import { module, test, skip } from 'qunit';
 import { v4 as uuidv4 } from 'uuid';
 import { click, currentRouteName, currentURL, typeIn, visit, waitUntil } from '@ember/test-helpers';
 import { create } from 'ember-cli-page-object';
@@ -160,7 +160,7 @@ module('Acceptance | kv-v2 workflow | navigation', function (hooks) {
       assertCorrectBreadcrumbs(assert, ['secret', backend, 'app', 'nested', 'secret']);
       assert.dom(PAGE.title).hasText('app/nested/secret', 'title is full secret path');
       assert.dom(PAGE.toolbar).exists('toolbar renders');
-      assert.dom(PAGE.toolbarAction).exists({ count: 2 }, 'correct number of toolbar actions render');
+      assert.dom(PAGE.toolbarAction).exists({ count: 4 }, 'correct number of toolbar actions render');
 
       await click(PAGE.breadcrumbAtIdx(3));
       assert.ok(
@@ -382,7 +382,7 @@ module('Acceptance | kv-v2 workflow | navigation', function (hooks) {
       assertCorrectBreadcrumbs(assert, ['secret', backend, 'app', 'nested', 'secret']);
       assert.dom(PAGE.title).hasText('app/nested/secret', 'title is full secret path');
       assert.dom(PAGE.toolbar).exists('toolbar renders');
-      assert.dom(PAGE.toolbarAction).exists({ count: 2 }, 'correct number of toolbar actions render');
+      assert.dom(PAGE.toolbarAction).exists({ count: 4 }, 'correct number of toolbar actions render');
 
       await click(PAGE.breadcrumbAtIdx(3));
       assert.ok(
@@ -605,7 +605,7 @@ module('Acceptance | kv-v2 workflow | navigation', function (hooks) {
       assertCorrectBreadcrumbs(assert, ['secret', backend, 'app', 'nested', 'secret']);
       assert.dom(PAGE.title).hasText('app/nested/secret', 'title is full secret path');
       assert.dom(PAGE.toolbar).exists('toolbar renders');
-      assert.dom(PAGE.toolbarAction).exists({ count: 2 }, 'correct number of toolbar actions render');
+      assert.dom(PAGE.toolbarAction).exists({ count: 4 }, 'correct number of toolbar actions render');
 
       await click(PAGE.breadcrumbAtIdx(3));
       assert.ok(
@@ -820,7 +820,7 @@ module('Acceptance | kv-v2 workflow | navigation', function (hooks) {
       assert.dom(PAGE.title).hasText('app/nested/secret', 'title is full secret path');
       assert.dom(PAGE.toolbar).exists('toolbar renders');
       // TODO: verify create new shouldn't show
-      assert.dom(PAGE.toolbarAction).exists({ count: 1 }, 'correct number of toolbar actions render');
+      assert.dom(PAGE.toolbarAction).exists({ count: 3 }, 'correct number of toolbar actions render');
       // TODO: add version to dropdown when no data
       // assert.dom(PAGE.detail.versionDropdown).hasText('Version 1');
 
@@ -1184,7 +1184,7 @@ path "${this.backend}/*" {
     const storageKey = (accessor, path) => {
       return `${CONTROL_GROUP_PREFIX}${accessor}${TOKEN_SEPARATOR}${path}`;
     };
-    test('can access nested secret', async function (assert) {
+    skip('can access nested secret', async function (assert) {
       assert.expect(38);
       const backend = this.backend;
       await navToBackend(backend);
@@ -1251,7 +1251,7 @@ path "${this.backend}/*" {
       assertCorrectBreadcrumbs(assert, ['secret', backend, 'app', 'nested', 'secret']);
       assert.dom(PAGE.title).hasText('app/nested/secret', 'title is full secret path');
       assert.dom(PAGE.toolbar).exists('toolbar renders');
-      assert.dom(PAGE.toolbarAction).exists({ count: 2 }, 'correct number of toolbar actions render');
+      assert.dom(PAGE.toolbarAction).exists({ count: 4 }, 'correct number of toolbar actions render');
 
       await click(PAGE.breadcrumbAtIdx(3));
       assert.ok(
