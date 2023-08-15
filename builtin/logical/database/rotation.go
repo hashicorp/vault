@@ -94,6 +94,11 @@ func (b *databaseBackend) populateQueue(ctx context.Context, s logical.Storage) 
 					log.Warn("unable to delete WAL", "error", err, "WAL ID", walEntry.walID)
 				}
 			} else {
+				// previous rotation attempt was interrupted, so we set the
+				// Priority as highest to be processed immediately
+
+				// TODO(JM): ensure we don't process schedule-based rotations
+				// outside the rotation_window
 				log.Info("found WAL for role", "role", item.Key, "WAL ID", walEntry.walID)
 				item.Value = walEntry.walID
 				item.Priority = time.Now().Unix()
@@ -220,6 +225,8 @@ func (b *databaseBackend) rotateCredential(ctx context.Context, s logical.Storag
 
 	// If "now" is less than the Item priority, then this item does not need to
 	// be rotated
+	// TODO(JM): ensure we don't process schedule-based rotations
+	// outside the rotation_window
 	if time.Now().Unix() < item.Priority {
 		if err := b.pushItem(item); err != nil {
 			logger.Error("unable to push item on to queue", "error", err)

@@ -807,9 +807,6 @@ type staticAccount struct {
 	// determine if a password needs to be rotated
 	RotationPeriod time.Duration `json:"rotation_period"`
 
-	// NextVaultRotation represents the next time Vault should rotate the password
-	NextVaultRotation time.Time `json:"next_vault_rotation"`
-
 	// RotationSchedule is a "chron style" string representing the allowed
 	// schedule for each rotation.
 	// e.g. "1 0 * * *" would rotate at one minute past midnight (00:01) every
@@ -829,8 +826,12 @@ type staticAccount struct {
 	RevokeUserOnDelete bool `json:"revoke_user_on_delete"`
 }
 
-// NextRotationTime calculates the next rotation by adding the Rotation Period
-// to the last known vault rotation
+// NextRotationTime calculates the next rotation for period and schedule-based
+// rotations.
+//
+// Period-based expiries are calculated by adding the Rotation Period to the
+// last known vault rotation. Schedule-based expiries are calculated by
+// querying for the next schedule expiry since the last known vault rotation.
 func (s *staticAccount) NextRotationTime() time.Time {
 	if s.UsesRotationPeriod() {
 		return s.LastVaultRotation.Add(s.RotationPeriod)
@@ -851,7 +852,7 @@ func (s *staticAccount) UsesRotationPeriod() bool {
 }
 
 // CredentialTTL calculates the approximate time remaining until the credential is
-// no longer valid. This is approximate because the periodic rotation is only
+// no longer valid. This is approximate because the rotation expiry is only
 // checked approximately every 5 seconds, and each rotation can take a small
 // amount of time to process. This can result in a negative TTL time while the
 // rotation function processes the Static Role and performs the rotation. If the
