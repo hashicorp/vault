@@ -351,6 +351,9 @@ func performTemplating(input string, p *PopulateStringInput) (string, error) {
 	}
 
 	performTokenTemplating := func(trimmed string) (string, error) {
+		if p.Token == nil {
+			return "", ErrTemplateValueNotFound
+		}
 		switch {
 		case trimmed == "metadata":
 			return p.templateHandler(p.Token.Meta)
