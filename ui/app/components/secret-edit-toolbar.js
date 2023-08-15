@@ -57,14 +57,14 @@ export default class SecretEditToolbar extends Component {
   @task
   @waitFor
   *wrapSecret() {
-    const { backend, isV2 } = this.args;
     const { id } = this.args.modelForData;
+    const { backend } = this.args.model;
     const wrapTTL = { wrapTTL: 1800 };
 
     try {
-      const resp = yield isV2
+      const resp = yield this.args.isV2
         ? this.store.adapterFor('secret-v2-version').queryRecord(id, wrapTTL)
-        : this.store.adapterFor('secret').queryRecord(null, null, { backend, id, wrapTTL });
+        : this.store.adapterFor('secret').queryRecord(null, null, { backend, id, ...wrapTTL });
       this.wrappedData = resp.wrap_info.token;
       this.flashMessages.success('Secret successfully wrapped!');
     } catch (e) {
