@@ -1,6 +1,6 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 /* This helper includes styles relating to: display, width, height, float, visibility, position, alignment. */
@@ -50,6 +50,10 @@
 
 .is-min-width-0 {
   min-width: 0;
+}
+
+.is-medium-width {
+  width: $desktop / 3;
 }
 
 .is-medium-height {

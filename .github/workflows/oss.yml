@@ -68,7 +68,7 @@ jobs:
       - if: github.event.pull_request != null && steps.changes.outputs.ui == 'true'
         run: echo "PROJECT=171" >> "$GITHUB_ENV"
 
-      - uses: actions/add-to-project@a9f041ddd462ed185893ea1024cec954f50dbe42 # v0.3.0 # TSCCR: no entry for repository "actions/add-to-project"
+      - uses: actions/add-to-project@31b3f3ccdc584546fc445612dec3f38ff5edb41c # v0.5.0
         with:
           project-url: https://github.com/orgs/hashicorp/projects/${{ env.PROJECT }}
           github-token: ${{ secrets.TRIAGE_GITHUB_TOKEN }}

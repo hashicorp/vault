@@ -1,24 +1,24 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 syntax = "proto3";
-
-option go_package = "github.com/hashicorp/vault/helper/storagepacker";
 
 package storagepacker;
 
 import "google/protobuf/any.proto";
 
+option go_package = "github.com/hashicorp/vault/helper/storagepacker";
+
 // Item represents an entry that gets inserted into the storage packer
 message Item {
-	// ID must be provided by the caller; the same value, if used with GetItem,
-	// can be used to fetch the item. However, when iterating through a bucket,
-	// this ID will be an internal ID. In other words, outside of the use-case
-	// described above, the caller *must not* rely on this value to be
-	// consistent with what they passed in.
-	string id = 1;
-	// message is the contents of the item
-	google.protobuf.Any message = 2;
+  // ID must be provided by the caller; the same value, if used with GetItem,
+  // can be used to fetch the item. However, when iterating through a bucket,
+  // this ID will be an internal ID. In other words, outside of the use-case
+  // described above, the caller *must not* rely on this value to be
+  // consistent with what they passed in.
+  string id = 1;
+  // message is the contents of the item
+  google.protobuf.Any message = 2;
 }
 
 // Bucket is a construct to hold multiple items within itself. This
@@ -28,10 +28,10 @@ message Item {
 // to become independent buckets. Hence, this can grow infinitely in terms of
 // storage space for items that get inserted.
 message Bucket {
-	// Key is the storage path where the bucket gets stored
-	string key = 1;
-	// Items holds the items contained within this bucket. Used by v1.
-	repeated Item items = 2;
-	// ItemMap stores a mapping of item ID to message. Used by v2.
-	map <string, google.protobuf.Any> item_map = 3;
+  // Key is the storage path where the bucket gets stored
+  string key = 1;
+  // Items holds the items contained within this bucket. Used by v1.
+  repeated Item items = 2;
+  // ItemMap stores a mapping of item ID to message. Used by v2.
+  map<string, google.protobuf.Any> item_map = 3;
 }

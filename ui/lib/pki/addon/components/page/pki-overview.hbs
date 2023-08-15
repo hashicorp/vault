@@ -1,3 +1,8 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
 <div class="is-grid grid-2-columns grid-gap-2 has-top-margin-l">
   <OverviewCard
     @cardTitle="Issuers"
@@ -7,7 +12,7 @@
   >
     <h2 class="title-number">{{format-number (if (eq @issuers 404) 0 @issuers.length)}}</h2>
   </OverviewCard>
-  {{#if (not (eq @roles 403))}}
+  {{#if (not-eq @roles 403)}}
     <OverviewCard
       @cardTitle="Roles"
       @subText="The total number of roles in this PKI mount that have been created to generate certificates."

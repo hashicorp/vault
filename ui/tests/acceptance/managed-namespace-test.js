@@ -1,13 +1,12 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 import { module, test } from 'qunit';
 import { currentURL, visit, fillIn } from '@ember/test-helpers';
 import { setupApplicationTest } from 'ember-qunit';
 import Pretender from 'pretender';
-import logout from 'vault/tests/pages/logout';
 import { getManagedNamespace } from 'vault/routes/vault/cluster';
 
 const FEATURE_FLAGS_RESPONSE = {
@@ -39,7 +38,6 @@ module('Acceptance | Enterprise | Managed namespace root', function (hooks) {
   });
 
   test('it shows the managed namespace toolbar when feature flag exists', async function (assert) {
-    await logout.visit();
     await visit('/vault/auth');
     assert.ok(currentURL().startsWith('/vault/auth'), 'Redirected to auth');
     assert.ok(currentURL().includes('?namespace=admin'), 'with base namespace');
@@ -72,7 +70,6 @@ module('Acceptance | Enterprise | Managed namespace root', function (hooks) {
   });
 
   test('it redirects to root prefixed ns when non-root passed', async function (assert) {
-    await logout.visit();
     await visit('/vault/auth?namespace=admindev');
     assert.ok(currentURL().startsWith('/vault/auth'), 'Redirected to auth');
     assert.ok(

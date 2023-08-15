@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 package http
 
@@ -482,7 +482,7 @@ func TestLogical_Audit_invalidWrappingToken(t *testing.T) {
 	noop := corehelpers.TestNoopAudit(t, nil)
 	c, _, root := vault.TestCoreUnsealedWithConfig(t, &vault.CoreConfig{
 		AuditBackends: map[string]audit.Factory{
-			"noop": func(ctx context.Context, config *audit.BackendConfig) (audit.Backend, error) {
+			"noop": func(ctx context.Context, config *audit.BackendConfig, _ bool, _ audit.HeaderFormatter) (audit.Backend, error) {
 				return noop, nil
 			},
 		},

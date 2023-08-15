@@ -60,10 +60,74 @@
         "title": "Security Model",
         "path": "internals/security"
       },
+
       {
         "title": "Telemetry",
-        "path": "internals/telemetry"
+        "routes": [
+          {
+            "title": "Overview",
+            "path": "internals/telemetry"
+          },
+          {
+            "title": "Enable telemetry gathering",
+            "path": "internals/telemetry/enable-telemetry"
+          },
+          {
+            "title": "Metric reference",
+            "routes": [
+              {
+                "title": "Overview",
+                "path": "internals/telemetry/metrics"
+              },
+              {
+                "title": "Core system metrics",
+                "path": "internals/telemetry/metrics/core-system"
+              },
+              {
+                "title": "Audit log metrics",
+                "path": "internals/telemetry/metrics/audit"
+              },
+              {
+                "title": "Authentication metrics",
+                "path": "internals/telemetry/metrics/authn"
+              },
+              {
+                "title": "Auto-snapshot metrics",
+                "path": "internals/telemetry/metrics/autosnap"
+              },
+              {
+                "title": "Availability metrics",
+                "path": "internals/telemetry/metrics/availability"
+              },
+              {
+                "title": "Database metrics",
+                "path": "internals/telemetry/metrics/database"
+              },
+              {
+                "title": "Policy metrics",
+                "path": "internals/telemetry/metrics/policy"
+              },
+              {
+                "title": "Raft metrics",
+                "path": "internals/telemetry/metrics/raft"
+              },
+              {
+                "title": "Secrets metrics",
+                "path": "internals/telemetry/metrics/secrets"
+              },
+              {
+                "title": "Storage plugin metrics",
+                "path": "internals/telemetry/metrics/storage"
+              },
+              {
+                "title": "Full metrics list",
+                "path": "internals/telemetry/metrics/all"
+              }
+            ]
+          }
+        ]
       },
+
       {
         "title": "Token Authentication",
         "path": "internals/token"
@@ -580,7 +644,7 @@
             "path": "commands/pki/verify-sign"
           },
           {
-            "title": "<code>list-intermeidates</code>",
+            "title": "<code>list-intermediates</code>",
             "path": "commands/pki/list-intermediates"
           },
           {
@@ -943,6 +1007,10 @@
               {
                 "title": "JWT",
                 "path": "agent-and-proxy/autoauth/methods/jwt"
+              },
+              {
+                "title": "LDAP",
+                "path": "agent-and-proxy/autoauth/methods/ldap"
               },
               {
                 "title": "Kerberos",
@@ -1882,6 +1950,11 @@
         "path": "upgrading/plugins"
       },
       {
+        "title": "Upgrade to 1.15.x",
+        "path": "upgrading/upgrade-to-1.15.x",
+        "hidden": true
+      },
+      {
         "title": "Upgrade to 1.14.x",
         "path": "upgrading/upgrade-to-1.14.x"
       },
@@ -2199,19 +2272,19 @@
       },
       {
         "title": "Feature Deprecation Notice and Plans",
-        "href": "https://www.vaultproject.io/docs/deprecation/faq"
+        "href": "https://developer.hashicorp.com/vault/docs/deprecation/faq"
       },
       {
         "title": "License",
-        "href": "https://www.vaultproject.io/docs/enterprise/license/faq"
+        "href": "https://developer.hashicorp.com/vault/docs/enterprise/license/faq"
       },
       {
         "title": "Client Count",
-        "href": "https://www.vaultproject.io/docs/concepts/client-count/faq"
+        "href": "https://developer.hashicorp.com/vault/docs/concepts/client-count/faq"
       },
       {
         "title": "Login MFA",
-        "href": "https://www.vaultproject.io/docs/auth/login-mfa/faq"
+        "href": "https://developer.hashicorp.com/vault/docs/auth/login-mfa/faq"
       },
       {
         "title": "Server Side Consistent Token",
