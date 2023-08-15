@@ -1,4 +1,7 @@
-Rollback metrics for each configured mount point. Metric names convert
-forward slashes (`/`) in mount names to dashes (`-`). For example, if you
-have the `auth/token` backend configured, the corresponding mount point metric
-string is `auth-token`
+Prior to Vault 1.15, rollback metrics are defined for each configured mount point.
+Metric names convert forward slashes (`/`) in mount names to dashes (`-`). For
+example, if you have the `auth/token` backend configured, the corresponding mount
+point metric string is `auth-token`
+
+Starting in Vault 1.15, rollback metrics do not have the mount point in their
+metric name or in their labels.

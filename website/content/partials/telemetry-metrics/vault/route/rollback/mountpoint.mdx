@@ -1,4 +1,4 @@
-### vault.route.rollback.{MOUNTPOINT} ((#vault-route-rollback-mountpoint))
+### vault.route.rollback.{MOUNTPOINT} ((#vault-route-rollback-mountpoint)) (deprecated)
 
 Metric type | Value | Description
 ----------- | ----- | -----------
@@ -6,3 +6,14 @@ summary     | ms    | Time required to send a rollback request to the backend an
 
 Vault automatically schedules and performs mount point rollback operations to
 clean up partial errors.
+
+### vault.route.rollback ((#vault-route-rollback)) (introduced in 1.15)
+
+Metric type | Value | Description
+----------- | ----- | -----------
+summary     | ms    | Time required to send a rollback request to the backend and for the backend to complete the operation
+
+Vault automatically schedules and performs mount point rollback operations to
+clean up partial errors.
+
+
