@@ -1,0 +1,4 @@
+```release-note:improvement
+core: Added sys/lockedusers/[mount_accessor]/unlock/[alias_identifier] endpoint to unlock an user
+with given mount_accessor and alias_identifier if locked 
+```

@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package main
 
 import (
@@ -5,7 +8,7 @@ import (
 	"os"
 
 	"github.com/hashicorp/vault/plugins/database/mysql"
-	dbplugin "github.com/hashicorp/vault/sdk/database/dbplugin/v5"
+	"github.com/hashicorp/vault/sdk/database/dbplugin/v5"
 )
 
 func main() {
@@ -20,12 +23,8 @@ func main() {
 func Run() error {
 	var f func() (interface{}, error)
 	f = mysql.New(mysql.DefaultUserNameTemplate)
-	dbType, err := f()
-	if err != nil {
-		return err
-	}
 
-	dbplugin.Serve(dbType.(dbplugin.Database))
+	dbplugin.ServeMultiplex(f)
 
 	return nil
 }

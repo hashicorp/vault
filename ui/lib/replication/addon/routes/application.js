@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import { inject as service } from '@ember/service';
 import { setProperties } from '@ember/object';
 import { hash } from 'rsvp';
@@ -16,8 +21,7 @@ export default Route.extend(ClusterRoute, {
   },
 
   model() {
-    const activeClusterId = this.auth.activeCluster;
-    return this.store.peekRecord('cluster', activeClusterId);
+    return this.auth.activeCluster;
   },
 
   afterModel(model) {

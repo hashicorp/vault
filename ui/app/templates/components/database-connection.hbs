@@ -1,3 +1,8 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
 <PageHeader as |p|>
   <p.top>
     <KeyValueHeader @path="vault.cluster.secrets.backend.show" @mode={{this.mode}} @root={{@root}} @showCurrent={{true}} />
@@ -63,7 +68,7 @@
             @secret=""
             @mode="create"
             @type="add"
-            @queryParams={{query-params initialKey=@model.name itemType="role"}}
+            @queryParams={{hash initialKey=@model.name itemType="role"}}
             data-test-secret-create={{true}}
           >
             Add role
@@ -82,14 +87,17 @@
 {{#if (eq @mode "create")}}
 
   {{#if (eq @model.plugin_name "vault-plugin-database-oracle")}}
-    <AlertBanner @type="warning">
-      Please ensure that your Oracle plugin has the default name of
-      <b>vault-plugin-database-oracle</b>. Custom naming is not supported in the UI at this time. If the plugin is already
-      named vault-plugin-database-oracle, disregard this warning.
-    </AlertBanner>
+    <Hds::Alert @type="inline" @color="warning" class="has-bottom-margin-s" data-test-database-oracle-alert as |A|>
+      <A.Title>Warning</A.Title>
+      <A.Description>
+        Please ensure that your Oracle plugin has the default name of
+        <strong>vault-plugin-database-oracle</strong>. Custom naming is not supported in the UI at this time. If the plugin
+        is already named vault-plugin-database-oracle, disregard this warning.
+      </A.Description>
+    </Hds::Alert>
   {{/if}}
 
-  <form {{on "submit" this.handleCreateConnection}}>
+  <form {{on "submit" this.handleCreateConnection}} aria-label="create connection form">
     {{#each @model.fieldAttrs as |attr|}}
       {{#if (not-eq attr.options.readOnly true)}}
         <FormField data-test-field={{true}} @attr={{attr}} @model={{@model}} />
@@ -107,7 +115,7 @@
                 <div class="columns is-desktop is-multiline">
                   {{#each fields as |attr|}}
                     {{#if
-                      (contains attr.name (array "max_open_connections" "max_idle_connections" "max_connection_lifetime"))
+                      (includes attr.name (array "max_open_connections" "max_idle_connections" "max_connection_lifetime"))
                     }}
                       <div class="column is-one-third">
                         <FormField data-test-field={{true}} @attr={{attr}} @model={{@model}} />
@@ -177,7 +185,7 @@
     </div>
   </form>
 {{else if (and (eq @mode "edit") @model.isAvailablePlugin)}}
-  <form {{on "submit" this.handleUpdateConnection}}>
+  <form {{on "submit" this.handleUpdateConnection}} aria-label="plugin config form">
     {{#each @model.fieldAttrs as |attr|}}
       {{#if (or (eq attr.name "name") (eq attr.name "plugin_name"))}}
         <ReadonlyFormField @attr={{attr}} @value={{get @model attr.name}} />
@@ -196,7 +204,7 @@
               <div class="columns is-desktop is-multiline">
                 {{#each fields as |attr|}}
                   {{#if
-                    (contains attr.name (array "max_open_connections" "max_idle_connections" "max_connection_lifetime"))
+                    (includes attr.name (array "max_open_connections" "max_idle_connections" "max_connection_lifetime"))
                   }}
                     <div class="column is-one-third">
                       <FormField data-test-field={{true}} @attr={{attr}} @model={{@model}} />
@@ -272,7 +280,7 @@
     </div>
 
     {{! Statements Edit Section }}
-    {{#unless (and @model.plugin_name (not @model.statementFields))}}
+    {{#if (not (and @model.plugin_name (not @model.statementFields)))}}
       <div class="form-section box is-shadowless is-fullwidth">
         <fieldset class="form-fieldset">
           <legend class="title is-5">Statements</legend>
@@ -281,7 +289,7 @@
           {{/each}}
         </fieldset>
       </div>
-    {{/unless}}
+    {{/if}}
 
     <div class="field is-grouped is-grouped-split is-fullwidth box is-bottomless">
       <div class="field is-grouped">
@@ -310,7 +318,7 @@
       <Chevron @direction="left" />
       Go back
     </LinkTo>
-    <a href="https://www.vaultproject.io/api/secret/databases" target="_blank" rel="noreferrer noopener">Documentation</a>
+    <DocLink @path="/api/secret/databases">Documentation</DocLink>
   </EmptyState>
 {{else}}
   {{#each @model.showAttrs as |attr|}}

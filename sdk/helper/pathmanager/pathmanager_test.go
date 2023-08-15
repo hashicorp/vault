@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package pathmanager
 
 import (
@@ -20,7 +23,7 @@ func TestPathManager(t *testing.T) {
 
 	for _, path := range paths {
 		if m.HasPath(path) {
-			t.Fatalf("path should not exist in filtered paths '%s'", path)
+			t.Fatalf("path should not exist in filtered paths %q", path)
 		}
 	}
 
@@ -34,7 +37,7 @@ func TestPathManager(t *testing.T) {
 	}
 	for _, path := range paths {
 		if !m.HasPath(path) {
-			t.Fatalf("path should exist in filtered paths '%s'", path)
+			t.Fatalf("path should exist in filtered paths %q", path)
 		}
 	}
 
@@ -43,7 +46,7 @@ func TestPathManager(t *testing.T) {
 
 	for _, path := range paths {
 		if m.HasPath(path) {
-			t.Fatalf("path should not exist in filtered paths '%s'", path)
+			t.Fatalf("path should not exist in filtered paths %q", path)
 		}
 	}
 }
@@ -63,7 +66,7 @@ func TestPathManager_RemovePrefix(t *testing.T) {
 
 	for _, path := range paths {
 		if m.HasPath(path) {
-			t.Fatalf("path should not exist in filtered paths '%s'", path)
+			t.Fatalf("path should not exist in filtered paths %q", path)
 		}
 	}
 
@@ -77,7 +80,7 @@ func TestPathManager_RemovePrefix(t *testing.T) {
 	}
 	for _, path := range paths {
 		if !m.HasPath(path) {
-			t.Fatalf("path should exist in filtered paths '%s'", path)
+			t.Fatalf("path should exist in filtered paths %q", path)
 		}
 	}
 
@@ -90,7 +93,7 @@ func TestPathManager_RemovePrefix(t *testing.T) {
 
 	for _, path := range paths {
 		if m.HasPath(path) {
-			t.Fatalf("path should not exist in filtered paths '%s'", path)
+			t.Fatalf("path should not exist in filtered paths %q", path)
 		}
 	}
 }

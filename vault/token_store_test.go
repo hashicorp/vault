@@ -1,8 +1,12 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package vault
 
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"path"
 	"reflect"
@@ -50,8 +54,22 @@ func TestTokenStore_CreateOrphanResponse(t *testing.T) {
 	}
 }
 
+// TestTokenStore_CubbyholeDeletion tests that a token's cubbyhole
+// can be used and that the cubbyhole is removed after the token is revoked.
 func TestTokenStore_CubbyholeDeletion(t *testing.T) {
 	c, _, root := TestCoreUnsealed(t)
+	testTokenStore_CubbyholeDeletion(t, c, root)
+}
+
+// TestTokenStore_CubbyholeDeletionSSCTokensDisabled tests that a legacy token's
+// cubbyhole can be used, and that the cubbyhole is removed after the token is revoked.
+func TestTokenStore_CubbyholeDeletionSSCTokensDisabled(t *testing.T) {
+	c, _, root := TestCoreUnsealed(t)
+	c.disableSSCTokens = true
+	testTokenStore_CubbyholeDeletion(t, c, root)
+}
+
+func testTokenStore_CubbyholeDeletion(t *testing.T, c *Core, root string) {
 	ts := c.tokenStore
 
 	for i := 0; i < 10; i++ {
@@ -2308,12 +2326,12 @@ func TestTokenStore_HandleRequest_RevokeOrphan(t *testing.T) {
 	testMakeServiceTokenViaBackend(t, ts, root, "child", "60s", []string{"root", "foo"})
 	testMakeServiceTokenViaBackend(t, ts, "child", "sub-child", "50s", []string{"foo"})
 
-	req := logical.TestRequest(t, logical.UpdateOperation, "revoke-orphan")
+	req := logical.TestRequest(t, logical.UpdateOperation, "auth/token/revoke-orphan")
 	req.Data = map[string]interface{}{
 		"token": "child",
 	}
 	req.ClientToken = root
-	resp, err := ts.HandleRequest(namespace.RootContext(nil), req)
+	resp, err := c.HandleRequest(namespace.RootContext(nil), req)
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("err: %v\nresp: %#v", err, resp)
 	}
@@ -2367,14 +2385,14 @@ func TestTokenStore_HandleRequest_RevokeOrphan_NonRoot(t *testing.T) {
 		t.Fatalf("bad: %v", out)
 	}
 
-	req := logical.TestRequest(t, logical.UpdateOperation, "revoke-orphan")
+	req := logical.TestRequest(t, logical.UpdateOperation, "auth/token/revoke-orphan")
 	req.Data = map[string]interface{}{
 		"token": "child",
 	}
 	req.ClientToken = "child"
-	resp, err := ts.HandleRequest(namespace.RootContext(nil), req)
-	if err != logical.ErrInvalidRequest {
-		t.Fatalf("did not get error when non-root revoking itself with orphan flag; resp is %#v", resp)
+	resp, err := c.HandleRequest(namespace.RootContext(nil), req)
+	if !errors.Is(err, logical.ErrPermissionDenied) {
+		t.Fatalf("did not get expected error when non-root revoking itself with orphan flag; resp is %#v; err is %#v", resp, err)
 	}
 
 	time.Sleep(200 * time.Millisecond)
@@ -2732,7 +2750,7 @@ func TestTokenStore_HandleRequest_CreateToken_ExistingEntityAlias(t *testing.T) 
 		t.Fatal("expected a response")
 	}
 	if resp.Auth.EntityID != entityID {
-		t.Fatalf("expected '%s' got '%s'", entityID, resp.Auth.EntityID)
+		t.Fatalf("expected %q got %q", entityID, resp.Auth.EntityID)
 	}
 
 	policyFound := false
@@ -2742,7 +2760,7 @@ func TestTokenStore_HandleRequest_CreateToken_ExistingEntityAlias(t *testing.T) 
 		}
 	}
 	if !policyFound {
-		t.Fatalf("Policy '%s' not derived by entity but should be. Auth %#v", testPolicyName, resp.Auth)
+		t.Fatalf("Policy %q not derived by entity but should be. Auth %#v", testPolicyName, resp.Auth)
 	}
 }
 
@@ -2822,7 +2840,7 @@ func TestTokenStore_HandleRequest_CreateToken_ExistingEntityAliasMixedCase(t *te
 		t.Fatalf("error handling request: %v", err)
 	}
 	if respMixedCase.Auth.EntityID != entityID {
-		t.Fatalf("expected '%s' got '%s'", entityID, respMixedCase.Auth.EntityID)
+		t.Fatalf("expected %q got %q", entityID, respMixedCase.Auth.EntityID)
 	}
 
 	// lowercase entity alias should match a mixed case alias
@@ -2841,7 +2859,7 @@ func TestTokenStore_HandleRequest_CreateToken_ExistingEntityAliasMixedCase(t *te
 	// A token created with the mixed case alias should return the same entity
 	// id as the normal case response.
 	if respLowerCase.Auth.EntityID != entityID {
-		t.Fatalf("expected '%s' got '%s'", entityID, respLowerCase.Auth.EntityID)
+		t.Fatalf("expected %q got %q", entityID, respLowerCase.Auth.EntityID)
 	}
 }
 
@@ -2905,7 +2923,7 @@ func TestTokenStore_HandleRequest_CreateToken_NonExistingEntityAlias(t *testing.
 
 	// Validate
 	if alias.Name != entityAliasName {
-		t.Fatalf("alias name should be '%s' but is '%s'", entityAliasName, alias.Name)
+		t.Fatalf("alias name should be %q but is %q", entityAliasName, alias.Name)
 	}
 }
 
@@ -2992,7 +3010,7 @@ func TestTokenStore_HandleRequest_CreateToken_GlobPatternWildcardEntityAlias(t *
 
 			// Validate
 			if alias.Name != test.aliasName {
-				t.Fatalf("alias name should be '%s' but is '%s'", test.aliasName, alias.Name)
+				t.Fatalf("alias name should be %q but is %q", test.aliasName, alias.Name)
 			}
 		})
 	}
@@ -3403,7 +3421,7 @@ func TestTokenStore_RoleCRUD(t *testing.T) {
 		t.Fatalf("unexpected number of keys: %d", len(keys))
 	}
 	if keys[0] != "test" {
-		t.Fatalf("expected \"test\", got \"%s\"", keys[0])
+		t.Fatalf("expected \"test\", got %q", keys[0])
 	}
 
 	req.Operation = logical.DeleteOperation

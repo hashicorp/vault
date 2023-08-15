@@ -11,7 +11,7 @@ description: |-
 This page contains the list of deprecations and important or breaking changes
 for Vault 1.1.0 compared to 1.1.1. Please read it carefully.
 
-## Known Issues
+## Known issues
 
 ### Issue with some KVv2 mounts
 
@@ -21,7 +21,7 @@ contains no data. This will be fixed in 1.1.2. Additionally a work around does
 exist: prior to upgrading ensure all KV v2 mounts have at least one key written
 to it.
 
-### Change in LDAP Group CN handling
+### Change in LDAP group CN handling
 
 A bug fix to allow group CNs to be found from an LDAP server in lowercase `cn`
 as well as uppercase `CN` had an unintended consequence. If prior to that a
@@ -50,11 +50,11 @@ and we recommend upgrading to Vault 1.1.3+ rather than any prior 1.1.x version.
 We also strongly recommend upgrading your Vault cluster to 1.1.3 if you are
 running Vault Enterprise 1.1.0, 1.1.1 or 1.1.2.
 
-## JWT/OIDC Plugin
+## JWT/OIDC plugin
 
 Logins of role_type "oidc" via the /login path are no longer allowed.
 
-## ACL Wildcards
+## ACL wildcards
 
 New ordering defines which policy wins when there are multiple inexact matches
 and at least one path contains `+`. `+*` is now illegal in policy paths. The

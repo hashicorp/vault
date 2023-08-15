@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package dbplugin
 
 import (
@@ -120,6 +123,10 @@ type NewUserRequest struct {
 	// The value is set when the credential type is CredentialTypeRSAPrivateKey.
 	PublicKey []byte
 
+	// Subject is the distinguished name for the client certificate credential.
+	// Value is set when the credential type is CredentialTypeClientCertificate.
+	Subject string
+
 	// Expiration of the user. Not all database plugins will support this.
 	Expiration time.Time
 }
@@ -143,6 +150,7 @@ type CredentialType int
 const (
 	CredentialTypePassword CredentialType = iota
 	CredentialTypeRSAPrivateKey
+	CredentialTypeClientCertificate
 )
 
 func (k CredentialType) String() string {
@@ -151,6 +159,8 @@ func (k CredentialType) String() string {
 		return "password"
 	case CredentialTypeRSAPrivateKey:
 		return "rsa_private_key"
+	case CredentialTypeClientCertificate:
+		return "client_certificate"
 	default:
 		return "unknown"
 	}

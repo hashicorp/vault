@@ -10,7 +10,7 @@ The `/sys/plugins/catalog` endpoint is used to read, register, update, and
 remove plugins in Vault's catalog. Plugins must be registered before use, and
 once registered backends can use the plugin by querying the catalog.
 
-## LIST Plugins
+## LIST plugins
 
 This endpoint lists the plugins in the catalog by type.
 
@@ -18,7 +18,7 @@ This endpoint lists the plugins in the catalog by type.
 | :----- | :--------------------- |
 | `GET`  | `/sys/plugins/catalog` |
 
-### Sample Request
+### Sample request
 
 ```shell-session
 $ curl \
@@ -26,9 +26,9 @@ $ curl \
     http://127.0.0.1:8200/v1/sys/plugins/catalog
 ```
 
-### Sample Response
+### Sample response
 
-```javascript
+```json
 {
     "data": {
         "auth": [
@@ -44,6 +44,32 @@ $ curl \
             "mysql-database-plugin",
             "postgresql-database-plugin"
         ],
+        "detailed": [
+            {
+                "builtin": true,
+                "deprecation_status": "supported",
+                "name": "aws",
+                "type": "auth",
+                "version": "v1.12.0+builtin.vault"
+            },
+            ...
+            {
+                "builtin": true,
+                "deprecation_status": "supported",
+                "name": "cassandra-database-plugin",
+                "type": "database",
+                "version": "v1.12.0+builtin.vault"
+            },
+            ...
+            {
+                "builtin": true,
+                "deprecation_status": "supported",
+                "name": "aws",
+                "type": "secret",
+                "version": "v1.12.0+builtin.vault"
+            },
+            ...
+        ],
         "secret": [
             "ad",
             "aws",
@@ -55,7 +81,7 @@ $ curl \
 }
 ```
 
-## LIST Plugins
+## LIST plugins
 
 This endpoint lists the plugins in the catalog by type.
 
@@ -65,7 +91,7 @@ This endpoint lists the plugins in the catalog by type.
 | `LIST` | `/sys/plugins/catalog/database` |
 | `LIST` | `/sys/plugins/catalog/secret`   |
 
-### Sample Request
+### Sample request
 
 ```shell-session
 $ curl \
@@ -74,9 +100,9 @@ $ curl \
     http://127.0.0.1:8200/v1/sys/plugins/catalog/auth
 ```
 
-### Sample Response
+### Sample response
 
-```javascript
+```json
 {
     "data": {
         "keys": [
@@ -90,7 +116,7 @@ $ curl \
 }
 ```
 
-## Register Plugin
+## Register plugin
 
 This endpoint registers a new plugin, or updates an existing one with the
 supplied name.
@@ -111,6 +137,8 @@ supplied name.
 - `type` `(string: <required>)` – Specifies the type of this plugin. May be
   "auth", "database", or "secret".
 
+- `version` `(string: "")` - Specifies the semantic version of this plugin.
+
 - `sha256` `(string: <required>)` – This is the SHA256 sum of the plugin's
   binary. Before a plugin is run it's SHA will be checked against this value, if
   they do not match the plugin can not be run.
@@ -126,7 +154,7 @@ supplied name.
   execution of the plugin. Each entry is of the form "key=value". e.g
   `"FOO=BAR"`.
 
-### Sample Payload
+### Sample payload
 
 ```json
 {
@@ -135,7 +163,7 @@ supplied name.
 }
 ```
 
-### Sample Request
+### Sample request
 
 ```shell-session
 $ curl \
@@ -145,16 +173,16 @@ $ curl \
     http://127.0.0.1:8200/v1/sys/plugins/catalog/secret/example-plugin
 ```
 
-## Read Plugin
+## Read plugin
 
 This endpoint returns the configuration data for the plugin with the given name.
 
 - **`sudo` required** – This endpoint requires `sudo` capability in addition to
   any path-specific capabilities.
 
-| Method | Path                               |
-| :----- | :--------------------------------- |
-| `GET`  | `/sys/plugins/catalog/:type/:name` |
+| Method | Path                                                |
+| :----- | :-------------------------------------------------- |
+| `GET`  | `/sys/plugins/catalog/:type/:name?version=:version` |
 
 ### Parameters
 
@@ -164,39 +192,43 @@ This endpoint returns the configuration data for the plugin with the given name.
 - `type` `(string: <required>)` – Specifies the type of this plugin. May be
   "auth", "database", or "secret".
 
-### Sample Request
+- `version` `(string: "")` – The semantic version of the plugin to read. Required
+  if the plugin was registered with a version.
+
+### Sample request
 
 ```shell-session
 $ curl \
     --header "X-Vault-Token: ..." \
     --request GET \
-    http://127.0.0.1:8200/v1/sys/plugins/catalog/secret/example-plugin
+    http://127.0.0.1:8200/v1/sys/plugins/catalog/secret/example-plugin?version=v1.0.0
 ```
 
-### Sample Response
+### Sample response
 
-```javascript
+```json
 {
-	"data": {
-		"args": [],
-		"builtin": false,
-		"command": "/tmp/vault-plugins/mysql-database-plugin",
-		"name": "example-plugin",
-		"sha256": "0TC5oPv93vlwnY/5Ll5gU8zSRreGMvwDuFSEVwJpYek="
-	}
+  "data": {
+    "args": [],
+    "builtin": false,
+    "command": "/tmp/vault-plugins/mysql-database-plugin",
+    "name": "example-plugin",
+    "sha256": "0TC5oPv93vlwnY/5Ll5gU8zSRreGMvwDuFSEVwJpYek=",
+    "version": "v1.0.0"
+  }
 }
 ```
 
-## Remove Plugin from Catalog
+## Remove plugin from catalog
 
 This endpoint removes the plugin with the given name.
 
 - **`sudo` required** – This endpoint requires `sudo` capability in addition to
   any path-specific capabilities.
 
-| Method   | Path                               |
-| :------- | :--------------------------------- |
-| `DELETE` | `/sys/plugins/catalog/:type/:name` |
+| Method   | Path                                                |
+| :------- | :-------------------------------------------------- |
+| `DELETE` | `/sys/plugins/catalog/:type/:name?version=:version` |
 
 ### Parameters
 
@@ -206,11 +238,14 @@ This endpoint removes the plugin with the given name.
 - `type` `(string: <required>)` – Specifies the type of this plugin. May be
   "auth", "database", or "secret".
 
-### Sample Request
+- `version` `(string: "")` – Specifies the semantic version of the plugin
+  to delete.
+
+### Sample request
 
 ```shell-session
 $ curl \
     --header "X-Vault-Token: ..." \
     --request DELETE \
-    http://127.0.0.1:8200/v1/sys/plugins/catalog/secret/example-plugin
+    http://127.0.0.1:8200/v1/sys/plugins/catalog/secret/example-plugin?version=v1.0.0
 ```

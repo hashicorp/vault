@@ -1,0 +1,3 @@
+```release-note:improvement
+secrets/pki: Allow revocation via proving possession of certificate's private key
+```

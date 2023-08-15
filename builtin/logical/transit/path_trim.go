@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package transit
 
 import (
@@ -11,6 +14,13 @@ import (
 func (b *backend) pathTrim() *framework.Path {
 	return &framework.Path{
 		Pattern: "keys/" + framework.GenericNameRegex("name") + "/trim",
+
+		DisplayAttrs: &framework.DisplayAttributes{
+			OperationPrefix: operationPrefixTransit,
+			OperationVerb:   "trim",
+			OperationSuffix: "key",
+		},
+
 		Fields: map[string]*framework.FieldSchema{
 			"name": {
 				Type:        framework.TypeString,
@@ -90,7 +100,7 @@ func (b *backend) pathTrimUpdate() framework.OperationFunc {
 			return nil, err
 		}
 
-		return nil, nil
+		return b.formatKeyPolicy(p, nil)
 	}
 }
 

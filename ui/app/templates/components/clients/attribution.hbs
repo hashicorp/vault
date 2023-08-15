@@ -1,6 +1,11 @@
-{{! show single horizontal bar chart unless data is from a single, historical month (isDateRange = false) }}
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
+{{! only show side-by-side horizontal bar charts if data is from a single, historical month }}
 <div
-  class={{concat "chart-wrapper" (if (or @isCurrentMonth @isDateRange) " single-chart-grid" " dual-chart-grid")}}
+  class={{concat "chart-wrapper" (if @isHistoricalMonth " dual-chart-grid" " single-chart-grid")}}
   data-test-clients-attribution
 >
   <div class="chart-header has-header-link has-bottom-margin-m">
@@ -21,12 +26,32 @@
       {{/if}}
     </div>
   </div>
-
   {{#if this.barChartTotalClients}}
-    {{#if (or @isDateRange @isCurrentMonth)}}
+    {{#if @isHistoricalMonth}}
+      <div class="chart-container-left" data-test-chart-container="new-clients">
+        <h2 class="chart-title">New clients</h2>
+        <p class="chart-description">{{this.chartText.newCopy}}</p>
+        <Clients::HorizontalBarChart
+          @dataset={{this.barChartNewClients}}
+          @chartLegend={{@chartLegend}}
+          @totalCounts={{@newUsageCounts}}
+          @noDataMessage="There are no new clients for this namespace during this time period."
+        />
+      </div>
+
+      <div class="chart-container-right" data-test-chart-container="total-clients">
+        <h2 class="chart-title">Total clients</h2>
+        <p class="chart-description">{{this.chartText.totalCopy}}</p>
+        <Clients::HorizontalBarChart
+          @dataset={{this.barChartTotalClients}}
+          @chartLegend={{@chartLegend}}
+          @totalCounts={{@totalUsageCounts}}
+        />
+      </div>
+    {{else}}
       <div
         class={{concat (unless this.barChartTotalClients "chart-empty-state ") "chart-container-wide"}}
-        data-test-chart-container="total-clients"
+        data-test-chart-container="single-chart"
       >
         <Clients::HorizontalBarChart
           @dataset={{this.barChartTotalClients}}
@@ -47,31 +72,10 @@
         <h3 class="data-details">Clients in {{this.attributionBreakdown}}</h3>
         <p class="data-details">{{format-number this.topClientCounts.clients}}</p>
       </div>
-    {{else}}
-      <div class="chart-container-left" data-test-chart-container="new-clients">
-        <h2 class="chart-title">New clients</h2>
-        <p class="chart-description">{{this.chartText.newCopy}}</p>
-        <Clients::HorizontalBarChart
-          @dataset={{this.barChartNewClients}}
-          @chartLegend={{@chartLegend}}
-          @totalCounts={{@newUsageCounts}}
-          @noDataMessage={{"There are no new clients for this namespace during this time period."}}
-        />
-      </div>
-
-      <div class="chart-container-right" data-test-chart-container="total-clients">
-        <h2 class="chart-title">Total clients</h2>
-        <p class="chart-description">{{this.chartText.totalCopy}}</p>
-        <Clients::HorizontalBarChart
-          @dataset={{this.barChartTotalClients}}
-          @chartLegend={{@chartLegend}}
-          @totalCounts={{@totalUsageCounts}}
-        />
-      </div>
     {{/if}}
     <div class="legend-center">
-      <span class="light-dot"></span><span class="legend-label">{{capitalize @chartLegend.0.label}}</span>
-      <span class="dark-dot"></span><span class="legend-label">{{capitalize @chartLegend.1.label}}</span>
+      <span class="light-dot"></span><span class="legend-label">{{capitalize (get @chartLegend "0.label")}}</span>
+      <span class="dark-dot"></span><span class="legend-label">{{capitalize (get @chartLegend "1.label")}}</span>
     </div>
   {{else}}
     <div class="chart-empty-state">
@@ -79,12 +83,13 @@
     </div>
   {{/if}}
   <div class="timestamp" data-test-attribution-timestamp>
-    {{#if @timestamp}}
+    {{#if @responseTimestamp}}
       Updated
-      {{date-format @timestamp "MMM d yyyy, h:mm:ss aaa"}}
+      {{date-format @responseTimestamp "MMM d yyyy, h:mm:ss aaa" withTimeZone=true}}
     {{/if}}
   </div>
 </div>
+
 {{! MODAL FOR CSV DOWNLOAD }}
 <Modal
   @title="Export attribution data"
@@ -97,17 +102,30 @@
     <p class="has-bottom-margin-s">
       This export will include the namespace path, authentication method path, and the associated total, entity, and
       non-entity clients for the below
-      {{if @isCurrentMonth "month" "date range"}}.
+      {{if this.formattedEndDate "date range" "month"}}.
     </p>
-    <p class="has-bottom-margin-s is-subtitle-gray">SELECTED DATE {{if @endTimeDisplay " RANGE"}}</p>
-    <p class="has-bottom-margin-s">{{@startTimeDisplay}} {{if @endTimeDisplay "-"}} {{@endTimeDisplay}}</p>
+    <p class="has-bottom-margin-s is-subtitle-gray">SELECTED DATE {{if this.formattedEndDate " RANGE"}}</p>
+    <p class="has-bottom-margin-s">{{this.formattedStartDate}} {{if this.formattedEndDate "-"}} {{this.formattedEndDate}}</p>
   </section>
   <footer class="modal-card-foot modal-card-foot-outlined">
-    <button type="button" class="button is-primary" {{on "click" (fn this.exportChartData this.getCsvFileName)}}>
+    <button type="button" class="button is-primary" {{on "click" (fn this.exportChartData this.formattedCsvFileName)}}>
       Export
     </button>
     <button type="button" class="button is-secondary" onclick={{action (mut this.showCSVDownloadModal) false}}>
       Cancel
     </button>
+    {{#if @upgradeExplanation}}
+      <div class="has-text-grey is-size-8">
+        <AlertInline @type="warning" @isMarginless={{true}}>
+          Your data contains an upgrade.
+          <DocLink
+            @path="/vault/docs/concepts/client-count/faq#q-which-vault-version-reflects-the-most-accurate-client-counts"
+          >
+            Learn more here.
+          </DocLink>
+        </AlertInline>
+        <p class="has-left-padding-l">{{@upgradeExplanation}}</p>
+      </div>
+    {{/if}}
   </footer>
 </Modal>

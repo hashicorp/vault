@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import { assign } from '@ember/polyfills';
 import { assert } from '@ember/debug';
 import ControlGroupError from 'vault/lib/control-group-error';
@@ -53,7 +58,7 @@ export default ApplicationAdapter.extend({
   },
 
   optionsForQuery(id) {
-    let data = {};
+    const data = {};
     if (!id) {
       data['list'] = true;
     }
@@ -83,9 +88,9 @@ export default ApplicationAdapter.extend({
         }
         // Names are distinct across both types of role,
         // so only one request should ever come back with value
-        let type = staticResp.value ? 'static' : 'dynamic';
-        let successful = staticResp.value || dynamicResp.value;
-        let resp = {
+        const type = staticResp.value ? 'static' : 'dynamic';
+        const successful = staticResp.value || dynamicResp.value;
+        const resp = {
           data: {},
           backend,
           id,
@@ -105,7 +110,7 @@ export default ApplicationAdapter.extend({
     const dynamicReq = this.dynamicRoles(backend);
 
     return allSettled([staticReq, dynamicReq]).then(([staticResp, dynamicResp]) => {
-      let resp = {
+      const resp = {
         backend,
         data: { keys: [] },
       };
@@ -139,7 +144,7 @@ export default ApplicationAdapter.extend({
 
   async _updateAllowedRoles(store, { role, backend, db, type = 'add' }) {
     const connection = await store.queryRecord('database/connection', { backend, id: db });
-    let roles = [...connection.allowed_roles];
+    const roles = [...connection.allowed_roles];
     const allowedRoles = type === 'add' ? addToArray([roles, role]) : removeFromArray([roles, role]);
     connection.allowed_roles = allowedRoles;
     return connection.save();

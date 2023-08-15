@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import Ember from 'ember';
 import Route from '@ember/routing/route';
 import { inject as service } from '@ember/service';
@@ -16,7 +21,7 @@ export default class VaultClusterOidcProviderRoute extends Route {
 
   _redirect(url, params) {
     if (!url) return;
-    let redir = this._buildUrl(url, params);
+    const redir = this._buildUrl(url, params);
     if (Ember.testing) {
       return redir;
     }
@@ -25,7 +30,7 @@ export default class VaultClusterOidcProviderRoute extends Route {
 
   beforeModel(transition) {
     const currentToken = this.auth.get('currentTokenName');
-    let qp = transition.to.queryParams;
+    const qp = transition.to.queryParams;
     // remove redirect_to if carried over from auth
     qp.redirect_to = null;
     if (!currentToken && 'none' === qp.prompt?.toLowerCase()) {
@@ -34,7 +39,7 @@ export default class VaultClusterOidcProviderRoute extends Route {
         error: 'login_required',
       });
     } else if (!currentToken || 'login' === qp.prompt?.toLowerCase()) {
-      let logout = !!currentToken;
+      const logout = !!currentToken;
       if ('login' === qp.prompt?.toLowerCase()) {
         // need to remove before redirect to avoid infinite loop
         qp.prompt = null;
@@ -48,7 +53,7 @@ export default class VaultClusterOidcProviderRoute extends Route {
   }
 
   _redirectToAuth({ provider_name, namespace = null, qp, logout = false }) {
-    let { cluster_name } = this.paramsFor('vault.cluster');
+    const { cluster_name } = this.paramsFor('vault.cluster');
     let url = namespace
       ? this.router.urlFor(NS_PROVIDER, cluster_name, namespace, provider_name, { queryParams: qp })
       : this.router.urlFor(PROVIDER, cluster_name, provider_name, { queryParams: qp });
@@ -61,7 +66,7 @@ export default class VaultClusterOidcProviderRoute extends Route {
       this.auth.deleteCurrentToken();
     }
     // o param can be anything, as long as it's present the auth page will change
-    let queryParams = {
+    const queryParams = {
       redirect_to: url,
       o: provider_name,
     };
@@ -73,7 +78,7 @@ export default class VaultClusterOidcProviderRoute extends Route {
 
   _buildUrl(urlString, params) {
     try {
-      let url = new URL(urlString);
+      const url = new URL(urlString);
       Object.keys(params).forEach((key) => {
         if (params[key]) {
           url.searchParams.append(key, params[key]);
@@ -81,21 +86,21 @@ export default class VaultClusterOidcProviderRoute extends Route {
       });
       return url;
     } catch (e) {
-      console.debug('DEBUG: parsing url failed for', urlString);
+      console.debug('DEBUG: parsing url failed for', urlString); // eslint-disable-line
       throw new Error('Invalid URL');
     }
   }
 
   _handleSuccess(response, baseUrl, state) {
     const { code } = response;
-    let redirectUrl = this._buildUrl(baseUrl, { code, state });
+    const redirectUrl = this._buildUrl(baseUrl, { code, state });
     if (Ember.testing) {
       return { redirectUrl };
     }
     this.win.location.replace(redirectUrl);
   }
   _handleError(errorResp, baseUrl) {
-    let redirectUrl = this._buildUrl(baseUrl, { ...errorResp });
+    const redirectUrl = this._buildUrl(baseUrl, { ...errorResp });
     if (Ember.testing) {
       return { redirectUrl };
     }
@@ -108,8 +113,8 @@ export default class VaultClusterOidcProviderRoute extends Route {
    * @returns object with provider_name (string), qp (object of query params), decodedRedirect (string, FQDN)
    */
   _getInfoFromParams(params) {
-    let { provider_name, namespace, ...qp } = params;
-    let decodedRedirect = decodeURI(qp.redirect_uri);
+    const { provider_name, namespace, ...qp } = params;
+    const decodedRedirect = decodeURI(qp.redirect_uri);
     return {
       provider_name,
       qp,
@@ -119,9 +124,9 @@ export default class VaultClusterOidcProviderRoute extends Route {
   }
 
   async model(params) {
-    let modelInfo = this._getInfoFromParams(params);
-    let { qp, decodedRedirect, ...routeParams } = modelInfo;
-    let endpoint = this._buildUrl(
+    const modelInfo = this._getInfoFromParams(params);
+    const { qp, decodedRedirect, ...routeParams } = modelInfo;
+    const endpoint = this._buildUrl(
       `${this.win.origin}/v1/identity/oidc/provider/${routeParams.provider_name}/authorize`,
       qp
     );
@@ -141,8 +146,8 @@ export default class VaultClusterOidcProviderRoute extends Route {
       }
       return this._handleSuccess(response, decodedRedirect, qp.state);
     } catch (errorRes) {
-      let resp = await errorRes.json();
-      let code = resp.error;
+      const resp = await errorRes.json();
+      const code = resp.error;
       if (code === 'max_age_violation' || resp?.errors?.includes('permission denied')) {
         this._redirectToAuth({ ...routeParams, qp, logout: true });
       } else if (code === 'invalid_redirect_uri') {

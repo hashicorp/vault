@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import { module, test } from 'qunit';
 import { setupRenderingTest } from 'ember-qunit';
 import { render } from '@ember/test-helpers';
@@ -28,15 +33,19 @@ module('Integration | Component | replication-header', function (hooks) {
   });
 
   test('it renders', async function (assert) {
-    await render(hbs`<ReplicationHeader @data={{data}} @isSecondary={{isSecondary}} @title={{title}}/>`);
+    await render(hbs`
+      <div id="modal-wormhole"></div>
+      <ReplicationHeader @data={{this.data}} @isSecondary={{this.isSecondary}} @title={{this.title}}/>
+    `);
 
     assert.dom('[data-test-replication-header]').exists();
   });
 
   test('it renders with mode and secondaryId when set', async function (assert) {
-    await render(
-      hbs`<ReplicationHeader @data={{data}} @isSecondary={{isSecondary}} @title={{title}} @secondaryId={{secondaryId}}/>`
-    );
+    await render(hbs`
+      <div id="modal-wormhole"></div>
+      <ReplicationHeader @data={{this.data}} @isSecondary={{this.isSecondary}} @title={{this.title}} @secondaryId={{this.secondaryId}}/>
+    `);
 
     assert.dom('[data-test-secondaryId]').includesText(SECONDARY_ID, `shows the correct secondaryId value`);
     assert.dom('[data-test-mode]').includesText('secondary', `shows the correct mode value`);
@@ -48,16 +57,20 @@ module('Integration | Component | replication-header', function (hooks) {
     this.set('data', notEnabled);
     this.set('secondaryId', noId);
 
-    await render(
-      hbs`<ReplicationHeader @data={{data}} @isSecondary={{isSecondary}} @title={{title}} @secondaryId={{secondaryId}}/>`
-    );
+    await render(hbs`
+      <div id="modal-wormhole"></div>
+      <ReplicationHeader @data={{this.data}} @isSecondary={{this.isSecondary}} @title={{this.title}} @secondaryId={{this.secondaryId}}/>
+    `);
 
     assert.dom('[data-test-secondaryId]').doesNotExist();
     assert.dom('[data-test-mode]').doesNotExist();
   });
 
   test('it does not show tabs when showTabs is not set', async function (assert) {
-    await render(hbs`<ReplicationHeader @data={{data}} @isSecondary={{isSecondary}} @title={{title}}/>`);
+    await render(hbs`
+      <div id="modal-wormhole"></div>
+      <ReplicationHeader @data={{this.data}} @isSecondary={{this.isSecondary}} @title={{this.title}}/>
+    `);
 
     assert.dom('[data-test-tabs]').doesNotExist();
   });

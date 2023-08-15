@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package api
 
 import (
@@ -19,7 +22,7 @@ func (kv *KVv1) Get(ctx context.Context, secretPath string) (*KVSecret, error) {
 		return nil, fmt.Errorf("error encountered while reading secret at %s: %w", pathToRead, err)
 	}
 	if secret == nil {
-		return nil, fmt.Errorf("no secret found at %s", pathToRead)
+		return nil, fmt.Errorf("%w: at %s", ErrSecretNotFound, pathToRead)
 	}
 
 	return &KVSecret{

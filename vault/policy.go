@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package vault
 
 import (
@@ -149,6 +152,17 @@ type ControlGroup struct {
 	Factors []*ControlGroupFactor
 }
 
+func (c *ControlGroup) Clone() (*ControlGroup, error) {
+	clonedControlGroup, err := copystructure.Copy(c)
+	if err != nil {
+		return nil, err
+	}
+
+	cg := clonedControlGroup.(*ControlGroup)
+
+	return cg, nil
+}
+
 type ControlGroupFactor struct {
 	Name                   string
 	Identity               *IdentityFactor `hcl:"identity"`
@@ -255,9 +269,10 @@ func addGrantingPoliciesToMap(m map[uint32][]logical.PolicyInfo, policy *Policy,
 		}
 
 		m[capability] = append(m[capability], logical.PolicyInfo{
-			Name:        policy.Name,
-			NamespaceId: policy.namespace.ID,
-			Type:        "acl",
+			Name:          policy.Name,
+			NamespaceId:   policy.namespace.ID,
+			NamespacePath: policy.namespace.Path,
+			Type:          "acl",
 		})
 	}
 

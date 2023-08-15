@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package pki
 
 import (
@@ -26,6 +29,7 @@ import (
 )
 
 func TestBackend_CA_Steps(t *testing.T) {
+	t.Parallel()
 	var b *backend
 
 	factory := func(ctx context.Context, conf *logical.BackendConfig) (logical.Backend, error) {
@@ -303,6 +307,14 @@ func runSteps(t *testing.T, rootB, intB *backend, client *api.Client, rootName, 
 			if path == "issuer/default/json" {
 				// Preserves the new line.
 				expected += "\n"
+				_, present := resp.Data["issuer_id"]
+				if !present {
+					t.Fatalf("expected issuer/default/json to include issuer_id")
+				}
+				_, present = resp.Data["issuer_name"]
+				if !present {
+					t.Fatalf("expected issuer/default/json to include issuer_name")
+				}
 			}
 			if diff := deep.Equal(resp.Data["certificate"].(string), expected); diff != nil {
 				t.Fatal(diff)

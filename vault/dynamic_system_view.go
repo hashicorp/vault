@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package vault
 
 import (
@@ -13,7 +16,7 @@ import (
 	"github.com/hashicorp/vault/sdk/helper/pluginutil"
 	"github.com/hashicorp/vault/sdk/helper/wrapping"
 	"github.com/hashicorp/vault/sdk/logical"
-	"github.com/hashicorp/vault/sdk/version"
+	"github.com/hashicorp/vault/version"
 )
 
 type ctxKeyForwardedRequestMountAccessor struct{}
@@ -23,8 +26,9 @@ func (c ctxKeyForwardedRequestMountAccessor) String() string {
 }
 
 type dynamicSystemView struct {
-	core       *Core
-	mountEntry *MountEntry
+	core        *Core
+	mountEntry  *MountEntry
+	perfStandby bool
 }
 
 type extendedSystemView interface {
@@ -132,6 +136,20 @@ func (e extendedSystemViewImpl) SudoPrivilege(ctx context.Context, path string, 
 	return authResults.RootPrivs
 }
 
+func (e extendedSystemViewImpl) APILockShouldBlockRequest() (bool, error) {
+	mountEntry := e.mountEntry
+	if mountEntry == nil {
+		return false, fmt.Errorf("no mount entry")
+	}
+	ns := mountEntry.Namespace()
+
+	if err := enterpriseBlockRequestIfError(e.core, ns.Path, mountEntry.Path); err != nil {
+		return true, nil
+	}
+
+	return false, nil
+}
+
 func (d dynamicSystemView) DefaultLeaseTTL() time.Duration {
 	def, _ := d.fetchTTLs()
 	return def
@@ -178,7 +196,7 @@ func (d dynamicSystemView) LocalMount() bool {
 // in read mode.
 func (d dynamicSystemView) ReplicationState() consts.ReplicationState {
 	state := d.core.ReplicationState()
-	if d.core.perfStandby {
+	if d.perfStandby {
 		state |= consts.ReplicationPerformanceStandby
 	}
 	return state
@@ -234,21 +252,43 @@ func (d dynamicSystemView) NewPluginClient(ctx context.Context, config pluginuti
 // LookupPlugin looks for a plugin with the given name in the plugin catalog. It
 // returns a PluginRunner or an error if no plugin was found.
 func (d dynamicSystemView) LookupPlugin(ctx context.Context, name string, pluginType consts.PluginType) (*pluginutil.PluginRunner, error) {
+	return d.LookupPluginVersion(ctx, name, pluginType, "")
+}
+
+// LookupPluginVersion looks for a plugin with the given name and version in the plugin catalog. It
+// returns a PluginRunner or an error if no plugin was found.
+func (d dynamicSystemView) LookupPluginVersion(ctx context.Context, name string, pluginType consts.PluginType, version string) (*pluginutil.PluginRunner, error) {
 	if d.core == nil {
 		return nil, fmt.Errorf("system view core is nil")
 	}
 	if d.core.pluginCatalog == nil {
 		return nil, fmt.Errorf("system view core plugin catalog is nil")
 	}
-	r, err := d.core.pluginCatalog.Get(ctx, name, pluginType)
+	r, err := d.core.pluginCatalog.Get(ctx, name, pluginType, version)
 	if err != nil {
 		return nil, err
 	}
 	if r == nil {
-		return nil, fmt.Errorf("%w: %s", ErrPluginNotFound, name)
+		errContext := name
+		if version != "" {
+			errContext += fmt.Sprintf(", version=%s", version)
+		}
+		return nil, fmt.Errorf("%w: %s", ErrPluginNotFound, errContext)
 	}
 
 	return r, nil
+}
+
+// ListVersionedPlugins returns information about all plugins of a certain
+// typein the catalog, including any versioning information stored for them.
+func (d dynamicSystemView) ListVersionedPlugins(ctx context.Context, pluginType consts.PluginType) ([]pluginutil.VersionedPlugin, error) {
+	if d.core == nil {
+		return nil, fmt.Errorf("system view core is nil")
+	}
+	if d.core.pluginCatalog == nil {
+		return nil, fmt.Errorf("system view core plugin catalog is nil")
+	}
+	return d.core.pluginCatalog.ListVersionedPlugins(ctx, pluginType)
 }
 
 // MlockEnabled returns the configuration setting for enabling mlock on plugins.
@@ -358,6 +398,10 @@ func (d dynamicSystemView) PluginEnv(_ context.Context) (*logical.PluginEnvironm
 	}, nil
 }
 
+func (d dynamicSystemView) VaultVersion(_ context.Context) (string, error) {
+	return version.GetVersion().Version, nil
+}
+
 func (d dynamicSystemView) GeneratePasswordFromPolicy(ctx context.Context, policyName string) (password string, err error) {
 	if policyName == "" {
 		return "", fmt.Errorf("missing password policy name")
@@ -387,4 +431,13 @@ func (d dynamicSystemView) GeneratePasswordFromPolicy(ctx context.Context, polic
 	}
 
 	return passPolicy.Generate(ctx, nil)
+}
+
+func (d dynamicSystemView) ClusterID(ctx context.Context) (string, error) {
+	clusterInfo, err := d.core.Cluster(ctx)
+	if err != nil || clusterInfo.ID == "" {
+		return "", fmt.Errorf("unable to retrieve cluster info or empty ID: %w", err)
+	}
+
+	return clusterInfo.ID, nil
 }

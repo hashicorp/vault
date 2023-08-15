@@ -1,3 +1,8 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
 <Modal @title={{@title}} @onClose={{@onClose}} @isActive={{@isActive}} @type={{this.type}} @showCloseButton={{true}}>
   <section class="modal-card-body">
     {{yield}}
@@ -5,7 +10,10 @@
       <p class="has-text-weight-semibold is-size-6">
         Confirm
       </p>
-      <p class="is-help">Type <strong>{{this.confirmText}}</strong> to confirm {{this.toConfirmMsg}}</p>
+      <p class="sub-text has-top-bottom-margin-xxs">Type
+        <strong>{{this.confirmText}}</strong>
+        to confirm
+        {{this.toConfirmMsg}}</p>
       <Input
         @type="text"
         @value={{this.confirmationInput}}

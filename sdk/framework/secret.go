@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package framework
 
 import (
@@ -42,7 +45,8 @@ func (s *Secret) Renewable() bool {
 }
 
 func (s *Secret) Response(
-	data, internal map[string]interface{}) *logical.Response {
+	data, internal map[string]interface{},
+) *logical.Response {
 	internalData := make(map[string]interface{})
 	for k, v := range internal {
 		internalData[k] = v

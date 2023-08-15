@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package consul
 
 import (
@@ -7,6 +10,7 @@ import (
 	"log"
 	"os"
 	"reflect"
+	"strings"
 	"testing"
 	"time"
 
@@ -39,7 +43,7 @@ func TestBackend_Config_Access(t *testing.T) {
 	})
 }
 
-func testBackendConfigAccess(t *testing.T, version string, bootstrap bool) {
+func testBackendConfigAccess(t *testing.T, version string, autoBootstrap bool) {
 	config := logical.TestBackendConfig()
 	config.StorageView = &logical.InmemStorage{}
 	b, err := Factory(context.Background(), config)
@@ -47,12 +51,14 @@ func testBackendConfigAccess(t *testing.T, version string, bootstrap bool) {
 		t.Fatal(err)
 	}
 
-	cleanup, consulConfig := consul.PrepareTestContainer(t, version, false, bootstrap)
+	cleanup, consulConfig := consul.PrepareTestContainer(t, version, false, autoBootstrap)
 	defer cleanup()
 
 	connData := map[string]interface{}{
 		"address": consulConfig.Address(),
-		"token":   consulConfig.Token,
+	}
+	if autoBootstrap || strings.HasPrefix(version, "1.3") {
+		connData["token"] = consulConfig.Token
 	}
 
 	confReq := &logical.Request{

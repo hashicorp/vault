@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package vault
 
 import (
@@ -5,6 +8,7 @@ import (
 	"context"
 	"encoding/base64"
 	"fmt"
+	"net/http"
 	"strings"
 
 	log "github.com/hashicorp/go-hclog"
@@ -56,7 +60,7 @@ func (b *RawBackend) handleRawRead(ctx context.Context, req *logical.Request, da
 
 	encoding := data.Get("encoding").(string)
 	if encoding != "" && encoding != "base64" {
-		return logical.ErrorResponse("invalid encoding '%s'", encoding), logical.ErrInvalidRequest
+		return logical.ErrorResponse("invalid encoding %q", encoding), logical.ErrInvalidRequest
 	}
 
 	if b.recoveryMode {
@@ -66,7 +70,7 @@ func (b *RawBackend) handleRawRead(ctx context.Context, req *logical.Request, da
 	// Prevent access of protected paths
 	for _, p := range protectedPaths {
 		if strings.HasPrefix(path, p) {
-			err := fmt.Sprintf("cannot read '%s'", path)
+			err := fmt.Sprintf("cannot read %q", path)
 			return logical.ErrorResponse(err), logical.ErrInvalidRequest
 		}
 	}
@@ -74,7 +78,7 @@ func (b *RawBackend) handleRawRead(ctx context.Context, req *logical.Request, da
 	// Run additional checks if needed
 	if err := b.checkRaw(path); err != nil {
 		b.logger.Warn(err.Error(), "path", path)
-		return logical.ErrorResponse("cannot read '%s'", path), logical.ErrInvalidRequest
+		return logical.ErrorResponse("cannot read %q", path), logical.ErrInvalidRequest
 	}
 
 	entry, err := b.barrier.Get(ctx, path)
@@ -127,7 +131,7 @@ func (b *RawBackend) handleRawWrite(ctx context.Context, req *logical.Request, d
 
 	encoding := data.Get("encoding").(string)
 	if encoding != "" && encoding != "base64" {
-		return logical.ErrorResponse("invalid encoding '%s'", encoding), logical.ErrInvalidRequest
+		return logical.ErrorResponse("invalid encoding %q", encoding), logical.ErrInvalidRequest
 	}
 
 	if b.recoveryMode {
@@ -137,7 +141,7 @@ func (b *RawBackend) handleRawWrite(ctx context.Context, req *logical.Request, d
 	// Prevent access of protected paths
 	for _, p := range protectedPaths {
 		if strings.HasPrefix(path, p) {
-			err := fmt.Sprintf("cannot write '%s'", path)
+			err := fmt.Sprintf("cannot write %q", path)
 			return logical.ErrorResponse(err), logical.ErrInvalidRequest
 		}
 	}
@@ -203,7 +207,7 @@ func (b *RawBackend) handleRawWrite(ctx context.Context, req *logical.Request, d
 			}
 			break
 		default:
-			err := fmt.Sprintf("invalid compression type '%s'", compressionType)
+			err := fmt.Sprintf("invalid compression type %q", compressionType)
 			return logical.ErrorResponse(err), logical.ErrInvalidRequest
 		}
 
@@ -236,7 +240,7 @@ func (b *RawBackend) handleRawDelete(ctx context.Context, req *logical.Request, 
 	// Prevent access of protected paths
 	for _, p := range protectedPaths {
 		if strings.HasPrefix(path, p) {
-			err := fmt.Sprintf("cannot delete '%s'", path)
+			err := fmt.Sprintf("cannot delete %q", path)
 			return logical.ErrorResponse(err), logical.ErrInvalidRequest
 		}
 	}
@@ -261,7 +265,7 @@ func (b *RawBackend) handleRawList(ctx context.Context, req *logical.Request, da
 	// Prevent access of protected paths
 	for _, p := range protectedPaths {
 		if strings.HasPrefix(path, p) {
-			err := fmt.Sprintf("cannot list '%s'", path)
+			err := fmt.Sprintf("cannot list %q", path)
 			return logical.ErrorResponse(err), logical.ErrInvalidRequest
 		}
 	}
@@ -269,7 +273,7 @@ func (b *RawBackend) handleRawList(ctx context.Context, req *logical.Request, da
 	// Run additional checks if needed
 	if err := b.checkRaw(path); err != nil {
 		b.logger.Warn(err.Error(), "path", path)
-		return logical.ErrorResponse("cannot list '%s'", path), logical.ErrInvalidRequest
+		return logical.ErrorResponse("cannot list %q", path), logical.ErrInvalidRequest
 	}
 
 	keys, err := b.barrier.List(ctx, path)
@@ -292,7 +296,7 @@ func (b *RawBackend) existenceCheck(ctx context.Context, request *logical.Reques
 func rawPaths(prefix string, r *RawBackend) []*framework.Path {
 	return []*framework.Path{
 		{
-			Pattern: prefix + "(raw/?$|raw/(?P<path>.+))",
+			Pattern: prefix + "raw/" + framework.MatchAllRegex("path"),
 
 			Fields: map[string]*framework.FieldSchema{
 				"path": {
@@ -315,23 +319,65 @@ func rawPaths(prefix string, r *RawBackend) []*framework.Path {
 			Operations: map[logical.Operation]framework.OperationHandler{
 				logical.ReadOperation: &framework.PathOperation{
 					Callback: r.handleRawRead,
-					Summary:  "Read the value of the key at the given path.",
+					DisplayAttrs: &framework.DisplayAttributes{
+						OperationPrefix: "raw",
+						OperationVerb:   "read",
+					},
+					Responses: map[int][]framework.Response{
+						http.StatusOK: {{
+							Description: "OK",
+							Fields: map[string]*framework.FieldSchema{
+								"value": {
+									Type:     framework.TypeString,
+									Required: true,
+								},
+							},
+						}},
+					},
+					Summary: "Read the value of the key at the given path.",
 				},
 				logical.UpdateOperation: &framework.PathOperation{
 					Callback: r.handleRawWrite,
-					Summary:  "Update the value of the key at the given path.",
+					DisplayAttrs: &framework.DisplayAttributes{
+						OperationPrefix: "raw",
+						OperationVerb:   "write",
+					},
+					Responses: map[int][]framework.Response{
+						http.StatusOK: {{
+							Description: "OK",
+						}},
+					},
+					Summary: "Update the value of the key at the given path.",
 				},
 				logical.CreateOperation: &framework.PathOperation{
 					Callback: r.handleRawWrite,
-					Summary:  "Create a key with value at the given path.",
+					Responses: map[int][]framework.Response{
+						http.StatusNoContent: {{
+							Description: "OK",
+						}},
+					},
+					Summary: "Create a key with value at the given path.",
 				},
 				logical.DeleteOperation: &framework.PathOperation{
 					Callback: r.handleRawDelete,
-					Summary:  "Delete the key with given path.",
+					DisplayAttrs: &framework.DisplayAttributes{
+						OperationPrefix: "raw",
+						OperationVerb:   "delete",
+					},
+					Responses: map[int][]framework.Response{
+						http.StatusNoContent: {{
+							Description: "OK",
+						}},
+					},
+					Summary: "Delete the key with given path.",
 				},
 				logical.ListOperation: &framework.PathOperation{
 					Callback: r.handleRawList,
-					Summary:  "Return a list keys for a given path prefix.",
+					DisplayAttrs: &framework.DisplayAttributes{
+						OperationPrefix: "raw",
+						OperationVerb:   "list",
+					},
+					Summary: "Return a list keys for a given path prefix.",
 				},
 			},
 
