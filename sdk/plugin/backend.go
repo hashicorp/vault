@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package plugin
 
 import (
@@ -7,7 +10,7 @@ import (
 	"google.golang.org/grpc"
 
 	log "github.com/hashicorp/go-hclog"
-	plugin "github.com/hashicorp/go-plugin"
+	"github.com/hashicorp/go-plugin"
 	"github.com/hashicorp/vault/sdk/helper/pluginutil"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/sdk/plugin/pb"
@@ -51,17 +54,18 @@ func (b GRPCBackendPlugin) GRPCServer(broker *plugin.GRPCBroker, s *grpc.Server)
 	}
 
 	pb.RegisterBackendServer(s, &server)
+	logical.RegisterPluginVersionServer(s, &server)
 	return nil
 }
 
 func (b *GRPCBackendPlugin) GRPCClient(ctx context.Context, broker *plugin.GRPCBroker, c *grpc.ClientConn) (interface{}, error) {
 	ret := &backendGRPCPluginClient{
-		client:       pb.NewBackendClient(c),
-		clientConn:   c,
-		broker:       broker,
-		cleanupCh:    make(chan struct{}),
-		doneCtx:      ctx,
-		metadataMode: b.MetadataMode,
+		client:        pb.NewBackendClient(c),
+		versionClient: logical.NewPluginVersionClient(c),
+		broker:        broker,
+		cleanupCh:     make(chan struct{}),
+		doneCtx:       ctx,
+		metadataMode:  b.MetadataMode,
 	}
 
 	// Create the value and set the type

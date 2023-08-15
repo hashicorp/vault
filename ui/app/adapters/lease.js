@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import ApplicationAdapter from './application';
 import { encodePath } from 'vault/utils/path-encoding-helpers';
 
@@ -15,7 +20,7 @@ export default ApplicationAdapter.extend({
   },
 
   renew(lease_id, increment) {
-    let url = this.buildURL() + '/leases/renew';
+    const url = this.buildURL() + '/leases/renew';
     return this.ajax(url, 'PUT', {
       data: {
         lease_id,

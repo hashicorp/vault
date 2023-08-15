@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import Model, { attr } from '@ember-data/model';
 import lazyCapabilities, { apiPath } from 'vault/macros/lazy-capabilities';
 import { withModelValidations } from 'vault/decorators/model-validations';
@@ -29,11 +34,6 @@ export default class OidcAssignmentModel extends Model {
 
   // CAPABILITIES
   @lazyCapabilities(apiPath`identity/oidc/assignment/${'name'}`, 'name') assignmentPath;
-  @lazyCapabilities(apiPath`identity/oidc/assignment`) assignmentsPath;
-
-  get canCreate() {
-    return this.assignmentPath.get('canCreate');
-  }
   get canRead() {
     return this.assignmentPath.get('canRead');
   }
@@ -42,18 +42,5 @@ export default class OidcAssignmentModel extends Model {
   }
   get canDelete() {
     return this.assignmentPath.get('canDelete');
-  }
-  get canList() {
-    return this.assignmentsPath.get('canList');
-  }
-
-  @lazyCapabilities(apiPath`identity/entity`) entitiesPath;
-  get canListEntities() {
-    return this.entitiesPath.get('canList');
-  }
-
-  @lazyCapabilities(apiPath`identity/group`) groupsPath;
-  get canListGroups() {
-    return this.groupsPath.get('canList');
   }
 }

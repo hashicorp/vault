@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import EmberObject from '@ember/object';
 import { module, test } from 'qunit';
 import { setupRenderingTest } from 'ember-qunit';
@@ -96,7 +101,7 @@ module('Integration | Component | database-role-setting-form', function (hooks) 
   });
 
   test('it shows empty states when no roleType passed in', async function (assert) {
-    await render(hbs`<DatabaseRoleSettingForm @attrs={{model.attrs}} @model={{model}}/>`);
+    await render(hbs`<DatabaseRoleSettingForm @attrs={{this.model.attrs}} @model={{this.model}}/>`);
     assert.dom('[data-test-component="empty-state"]').exists({ count: 2 }, 'Two empty states exist');
   });
 
@@ -105,16 +110,16 @@ module('Integration | Component | database-role-setting-form', function (hooks) 
     this.set('dbType', '');
     await render(hbs`
       <DatabaseRoleSettingForm
-        @attrs={{model.attrs}}
-        @model={{model}}
-        @roleType={{roleType}}
-        @dbType={{dbType}}
+        @attrs={{this.model.attrs}}
+        @model={{this.model}}
+        @roleType={{this.roleType}}
+        @dbType={{this.dbType}}
       />
     `);
     assert.dom('[data-test-component="empty-state"]').doesNotExist('Does not show empty states');
-    for (let testCase of testCases) {
-      let staticFields = getFields(testCase.staticRoleFields);
-      let dynamicFields = getFields(testCase.dynamicRoleFields);
+    for (const testCase of testCases) {
+      const staticFields = getFields(testCase.staticRoleFields);
+      const dynamicFields = getFields(testCase.dynamicRoleFields);
       this.set('dbType', testCase.pluginType);
       this.set('roleType', 'static');
       staticFields.show.forEach((attr) => {

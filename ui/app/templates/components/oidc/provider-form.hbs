@@ -1,3 +1,8 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
 <PageHeader as |p|>
   <p.top>
     <nav class="breadcrumb">
@@ -20,14 +25,14 @@
   <p.levelLeft>
     <h1 class="title is-3" data-test-oidc-provider-title>
       {{if @model.isNew "Create" "Edit"}}
-      provider
+      Provider
     </h1>
   </p.levelLeft>
 </PageHeader>
 
-<form {{on "submit" (perform this.save)}}>
+<form {{on "submit" (perform this.save)}} {{did-insert this.setIssuer @model}}>
   <div class="box is-sideless is-fullwidth is-bottomless">
-    <MessageError @errorMessage={{this.errorBanner}} class="has-top-margin-s" />
+    <MessageError @errorMessage={{this.errorBanner}} />
     {{! name field }}
     <FormField
       data-test-field={{true}}
@@ -60,7 +65,6 @@
       @attr={{get @model.formFields "2"}}
       @model={{@model}}
       @modelValidations={{this.modelValidations}}
-      @labelClass="is-label"
     />
   </div>
   {{! RADIO CARD + SEARCH SELECT }}
@@ -68,6 +72,7 @@
     <h4 class="title is-4">Allowed applications</h4>
     <div class="is-flex-row">
       <RadioCard
+        data-test-oidc-radio="allow-all"
         @title="Allow every application to use"
         @description="All applications can use this provider for authentication requests."
         @icon="globe"
@@ -76,6 +81,7 @@
         @onChange={{this.handleClientSelection}}
       />
       <RadioCard
+        data-test-oidc-radio="limited"
         @title="Limit access to selected application"
         @description="Only selected applications can use this provider for authentication requests."
         @icon="globe-private"
@@ -87,7 +93,7 @@
     {{#if (eq this.radioCardGroupValue "limited")}}
       <SearchSelect
         @id="allowedClientIds"
-        @subLabel="Application name"
+        @label="Application name"
         @models={{array "oidc/client"}}
         @inputValue={{@model.allowedClientIds}}
         @onChange={{this.handleClientSelection}}
@@ -95,6 +101,7 @@
         @fallbackComponent="string-list"
         @passObject={{true}}
         @objectKeys={{array "clientId"}}
+        @renderInfoTooltip={{this.renderInfoTooltip}}
       />
     {{/if}}
   </div>

@@ -1,3 +1,8 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
 <PageHeader as |p|>
   <p.top>
     <KeyValueHeader
@@ -52,11 +57,15 @@
       <MessageError @model={{this.model}} />
       <NamespaceReminder @mode={{this.mode}} @noun="AWS role" />
       {{#if (gt this.model.credentialTypes.length 1)}}
-        <AlertBanner
-          @type="warning"
-          @message="This role has more than one credential_type, currently: {{join ', ' this.model.credentialTypes}}.
-            Multiple credential types is deprecated and you must choose one in order to save this role."
-        />
+        <Hds::Alert @type="inline" @color="warning" class="has-bottom-margin-s" as |A|>
+          <A.Title>Warning</A.Title>
+          <A.Description>
+            This role has more than one
+            <code>credential_type</code>, currently:
+            {{join ", " this.model.credentialTypes}}. Multiple credential types is deprecated and you must choose one in
+            order to save this role.
+          </A.Description>
+        </Hds::Alert>
       {{/if}}
       {{#each (if (eq this.mode "edit") (drop 1 (or this.model.fields (array))) this.model.fields) as |attr|}}
         <FormField data-test-field={{true}} @attr={{attr}} @model={{@model}} />
@@ -80,11 +89,15 @@
 {{else}}
   <div class="box is-fullwidth is-sideless is-paddingless is-marginless">
     {{#if (gt this.model.credentialTypes.length 1)}}
-      <AlertBanner
-        @type="warning"
-        @message="This role has more than one credential_type, currently: {{join ', ' this.model.credentialTypes}}.
-          When you next edit this role, you will have to choose a single credential type."
-      />
+      <Hds::Alert @type="inline" @color="warning" class="has-bottom-margin-s" as |A|>
+        <A.Title>Warning</A.Title>
+        <A.Description>
+          This role has more than one
+          <code>credential_type</code>, currently:
+          {{join ", " this.model.credentialTypes}}. When you next edit this role, you will have to choose a single credential
+          type.
+        </A.Description>
+      </Hds::Alert>
     {{/if}}
     {{#each this.model.fields as |attr|}}
       {{#if (eq attr.name "policyDocument")}}

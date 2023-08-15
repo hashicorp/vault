@@ -1,0 +1,161 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
+<div class="box is-sideless is-fullwidth is-marginless">
+  {{#if this.errors}}
+    <Hds::Alert data-test-config-edit-error @type="inline" @color="critical" as |A|>
+      <A.Title>Error</A.Title>
+      <A.Description>
+        <ul class={{if (gt this.errors.length 1) "bullet"}}>
+          {{#each this.errors as |error|}}
+            <li>
+              <code>POST config/{{error.modelName}}</code>:
+              {{error.message}}
+            </li>
+          {{/each}}
+        </ul>
+      </A.Description>
+    </Hds::Alert>
+  {{/if}}
+  <form {{on "submit" (perform this.save)}}>
+    <fieldset class="is-shadowless is-marginless is-borderless is-fullwidth" data-test-cluster-config-edit-section>
+      <h2 class="title is-size-5 has-border-bottom-light page-header">
+        Cluster Config
+      </h2>
+      {{#if @cluster.canSet}}
+        {{#each @cluster.allFields as |attr|}}
+          <FormField @attr={{attr}} @model={{@cluster}} @showHelpText={{false}} />
+        {{/each}}
+      {{else}}
+        <EmptyState
+          class="is-shadowless"
+          @title="You do not have permission to set this mount's the cluster config"
+          @message="Ask your administrator if you think you should have access to:"
+        >
+          <code>POST /{{@backend}}/config/cluster</code>
+        </EmptyState>
+      {{/if}}
+    </fieldset>
+
+    <fieldset class="box is-shadowless is-marginless is-borderless is-fullwidth" data-test-acme-edit-section>
+      <h2 class="title is-size-5 has-border-bottom-light page-header">
+        ACME Config
+      </h2>
+      {{#if @acme.canSet}}
+        {{#each @acme.allFields as |attr|}}
+          <FormField @attr={{attr}} @model={{@acme}} @showHelpText={{false}} @backend={{@backend}} />
+        {{/each}}
+      {{else}}
+        <EmptyState
+          class="is-shadowless"
+          @title="You do not have permission to set this mount's ACME config"
+          @message="Ask your administrator if you think you should have access to:"
+        >
+          <code>POST /{{@backend}}/config/acme</code>
+        </EmptyState>
+      {{/if}}
+    </fieldset>
+
+    <fieldset class="box is-shadowless is-marginless is-borderless is-fullwidth" data-test-urls-edit-section>
+      <h2 class="title is-size-5 has-border-bottom-light page-header">
+        Global URLs
+      </h2>
+      {{#if @urls.canSet}}
+        {{#each @urls.allFields as |attr|}}
+          <FormField @attr={{attr}} @model={{@urls}} @showHelpText={{false}} />
+        {{/each}}
+      {{else}}
+        <EmptyState
+          class="is-shadowless"
+          @title="You do not have permission to set this mount's URLs"
+          @message="Ask your administrator if you think you should have access to:"
+        >
+          <code>POST /{{@backend}}/config/urls</code>
+        </EmptyState>
+      {{/if}}
+    </fieldset>
+
+    <fieldset class="box is-shadowless is-marginless is-borderless is-fullwidth" data-test-crl-edit-section>
+      {{#if @crl.canSet}}
+        {{#each @crl.formFieldGroups as |fieldGroup|}}
+          {{#each-in fieldGroup as |group fields|}}
+            {{#if (or (not-eq group "Unified Revocation") this.isEnterprise)}}
+              <h2 class="title is-size-5 has-border-bottom-light page-header" data-test-crl-header={{group}}>
+                {{group}}
+              </h2>
+            {{/if}}
+            {{#each fields as |attr|}}
+              {{#if (eq attr.options.editType "ttl")}}
+                {{#if (or (includes attr.name (array "expiry" "ocspExpiry")) (not @crl.disable))}}
+                  {{#let (get @crl attr.options.mapToBoolean) as |enabled|}}
+                    {{! 'enabled' is the pki/crl model's boolean attr that corresponds to the duration set by the ttl }}
+                    <div class="field">
+                      <TtlPicker
+                        data-test-input={{attr.name}}
+                        @onChange={{fn this.handleTtl attr}}
+                        @label={{attr.options.label}}
+                        @labelDisabled={{attr.options.labelDisabled}}
+                        @helperTextDisabled={{attr.options.helperTextDisabled}}
+                        @helperTextEnabled={{attr.options.helperTextEnabled}}
+                        @initialEnabled={{if attr.options.isOppositeValue (not enabled) enabled}}
+                        @initialValue={{get @crl attr.name}}
+                      />
+                    </div>
+                  {{/let}}
+                {{/if}}
+              {{else}}
+                {{#if this.isEnterprise}}
+                  <FormField @attr={{attr}} @model={{@crl}} />
+                {{/if}}
+              {{/if}}
+            {{/each}}
+          {{/each-in}}
+        {{/each}}
+      {{else}}
+        <EmptyState
+          @title="You do not have permission to set this mount's revocation configuration"
+          @message="Ask your administrator if you think you should have access to:"
+        >
+          <code>POST /{{@backend}}/config/crl</code>
+        </EmptyState>
+      {{/if}}
+    </fieldset>
+
+    <div class="field is-grouped box is-fullwidth is-bottomless">
+      <div class="control">
+        {{#if (or @urls.canSet @crl.canSet)}}
+          <button
+            type="submit"
+            class="button is-primary {{if this.save.isRunning 'is-loading'}}"
+            disabled={{this.save.isRunning}}
+            data-test-configuration-edit-save
+          >
+            Save
+          </button>
+        {{/if}}
+        <button
+          {{on "click" this.cancel}}
+          type="button"
+          class="button has-left-margin-s"
+          disabled={{this.save.isRunning}}
+          data-test-configuration-edit-cancel
+        >
+          Cancel
+        </button>
+      </div>
+      {{#if this.invalidFormAlert}}
+        <div class="control">
+          <AlertInline
+            @type="danger"
+            @paddingTop={{true}}
+            @message={{this.invalidFormAlert}}
+            @mimicRefresh={{true}}
+            data-test-configuration-edit-validation-alert
+          />
+        </div>
+      {{/if}}
+    </div>
+  </form>
+</div>

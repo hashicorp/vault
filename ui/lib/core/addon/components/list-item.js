@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import { inject as service } from '@ember/service';
 import Component from '@ember/component';
 import { task } from 'ember-concurrency';
@@ -14,13 +19,13 @@ export default Component.extend({
   hasMenu: true,
 
   callMethod: task(function* (method, model, successMessage, failureMessage, successCallback = () => {}) {
-    let flash = this.flashMessages;
+    const flash = this.flashMessages;
     try {
       yield model[method]();
       flash.success(successMessage);
       successCallback();
     } catch (e) {
-      let errString = e.errors.join(' ');
+      const errString = e.errors.join(' ');
       flash.danger(failureMessage + ' ' + errString);
       model.rollbackAttributes();
     }

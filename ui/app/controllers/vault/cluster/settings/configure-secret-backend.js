@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import { isPresent } from '@ember/utils';
 import { inject as service } from '@ember/service';
 import Controller from '@ember/controller';
@@ -28,16 +33,24 @@ export default Controller.extend(CONFIG_ATTRS, {
       const isDelete = options.delete;
       if (this.model.type === 'ssh') {
         this.set('loading', true);
-        this.model.saveCA({ isDelete }).then(() => {
-          this.set('loading', false);
-          this.send('refreshRoute');
-          this.set('configured', !isDelete);
-          if (isDelete) {
-            this.flashMessages.success('SSH Certificate Authority Configuration deleted!');
-          } else {
-            this.flashMessages.success('SSH Certificate Authority Configuration saved!');
-          }
-        });
+        this.model
+          .saveCA({ isDelete })
+          .then(() => {
+            this.send('refreshRoute');
+            this.set('configured', !isDelete);
+            if (isDelete) {
+              this.flashMessages.success('SSH Certificate Authority Configuration deleted!');
+            } else {
+              this.flashMessages.success('SSH Certificate Authority Configuration saved!');
+            }
+          })
+          .catch((error) => {
+            const errorMessage = error.errors ? error.errors.join('. ') : error;
+            this.flashMessages.danger(errorMessage);
+          })
+          .finally(() => {
+            this.set('loading', false);
+          });
       }
     },
 
@@ -57,7 +70,6 @@ export default Controller.extend(CONFIG_ATTRS, {
           },
         })
         .then(() => {
-          this.model.send('pushedData');
           this.reset();
           this.flashMessages.success('The backend configuration saved successfully!');
         })

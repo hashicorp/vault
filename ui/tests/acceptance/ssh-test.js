@@ -1,6 +1,13 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import { click, fillIn, findAll, currentURL, find, settled, waitUntil } from '@ember/test-helpers';
 import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
+import { v4 as uuidv4 } from 'uuid';
+
 import authPage from 'vault/tests/pages/auth';
 import enablePage from 'vault/tests/pages/settings/mount-secret-backend';
 
@@ -8,6 +15,7 @@ module('Acceptance | ssh secret backend', function (hooks) {
   setupApplicationTest(hooks);
 
   hooks.beforeEach(function () {
+    this.uid = uuidv4();
     return authPage.login();
   });
 
@@ -31,12 +39,16 @@ module('Acceptance | ssh secret backend', function (hooks) {
       },
       assertBeforeGenerate(assert) {
         assert.dom('[data-test-form-field-from-model]').exists('renders the FormFieldFromModel');
-        let value = document.querySelector('[data-test-ttl-value="TTL"]').value;
+        const value = document.querySelector('[data-test-ttl-value="TTL"]').value;
         // confirms that the actions are correctly being passed down to the FormFieldFromModel component
-        assert.equal(value, '30', 'renders action updateTtl');
+        assert.strictEqual(value, '30', 'renders action updateTtl');
       },
       assertAfterGenerate(assert, sshPath) {
-        assert.equal(currentURL(), `/vault/secrets/${sshPath}/sign/${this.name}`, 'ca sign url is correct');
+        assert.strictEqual(
+          currentURL(),
+          `/vault/secrets/${sshPath}/sign/${this.name}`,
+          'ca sign url is correct'
+        );
         assert.dom('[data-test-row-label="Signed key"]').exists({ count: 1 }, 'renders the signed key');
         assert
           .dom('[data-test-row-value="Signed key"]')
@@ -58,7 +70,7 @@ module('Acceptance | ssh secret backend', function (hooks) {
         await fillIn('[data-test-input="ip"]', '1.2.3.4');
       },
       assertAfterGenerate(assert, sshPath) {
-        assert.equal(
+        assert.strictEqual(
           currentURL(),
           `/vault/secrets/${sshPath}/credentials/${this.name}`,
           'otp credential url is correct'
@@ -71,9 +83,8 @@ module('Acceptance | ssh secret backend', function (hooks) {
     },
   ];
   test('ssh backend', async function (assert) {
-    assert.expect(26);
-    const now = new Date().getTime();
-    const sshPath = `ssh-${now}`;
+    assert.expect(28);
+    const sshPath = `ssh-${this.uid}`;
 
     await enablePage.enable('ssh', sshPath);
     await settled();
@@ -81,7 +92,7 @@ module('Acceptance | ssh secret backend', function (hooks) {
 
     await click('[data-test-secret-backend-configure]');
 
-    assert.equal(currentURL(), `/vault/settings/secrets/configure/${sshPath}`);
+    assert.strictEqual(currentURL(), `/vault/settings/secrets/configure/${sshPath}`);
     assert.ok(findAll('[data-test-ssh-configure-form]').length, 'renders the empty configuration form');
 
     // default has generate CA checked so we just submit the form
@@ -93,14 +104,14 @@ module('Acceptance | ssh secret backend', function (hooks) {
     );
     await click('[data-test-backend-view-link]');
 
-    assert.equal(currentURL(), `/vault/secrets/${sshPath}/list`, `redirects to ssh index`);
+    assert.strictEqual(currentURL(), `/vault/secrets/${sshPath}/list`, `redirects to ssh index`);
 
-    for (let role of ROLES) {
+    for (const role of ROLES) {
       // create a role
       await click('[ data-test-secret-create]');
 
       assert.ok(
-        find('[data-test-secret-header]').textContent.includes('SSH role'),
+        find('[data-test-secret-header]').textContent.includes('SSH Role'),
         `${role.type}: renders the create page`
       );
 
@@ -112,7 +123,7 @@ module('Acceptance | ssh secret backend', function (hooks) {
       // save the role
       await click('[data-test-role-ssh-create]');
       await waitUntil(() => currentURL() === `/vault/secrets/${sshPath}/show/${role.name}`); // flaky without this
-      assert.equal(
+      assert.strictEqual(
         currentURL(),
         `/vault/secrets/${sshPath}/show/${role.name}`,
         `${role.type}: navigates to the show page on creation`
@@ -142,7 +153,7 @@ module('Acceptance | ssh secret backend', function (hooks) {
 
       await click('[data-test-secret-generate-cancel]');
 
-      assert.equal(
+      assert.strictEqual(
         currentURL(),
         `/vault/secrets/${sshPath}/list`,
         `${role.type}: cancel takes you to ssh index`
@@ -153,17 +164,13 @@ module('Acceptance | ssh secret backend', function (hooks) {
       );
 
       //and delete
-      // TODO confirmed functionality works, but it can not find the data-test-ssh-role-delete in time.
-      // await click(`[data-test-secret-link="${role.name}"] [data-test-popup-menu-trigger]`);
-      // await settled();
-      // await click(`[data-test-ssh-role-delete]`);
-      // await settled();
-      // await click(`[data-test-confirm-button]`);
-
-      // await settled();
-      // assert
-      //   .dom(`[data-test-secret-link="${role.name}"]`)
-      //   .doesNotExist(`${role.type}: role is no longer in the list`);
+      await click(`[data-test-secret-link="${role.name}"] [data-test-popup-menu-trigger]`);
+      await waitUntil(() => find('[data-test-ssh-role-delete]')); // flaky without
+      await click(`[data-test-ssh-role-delete]`);
+      await click(`[data-test-confirm-button]`);
+      assert
+        .dom(`[data-test-secret-link="${role.name}"]`)
+        .doesNotExist(`${role.type}: role is no longer in the list`);
     }
   });
 });

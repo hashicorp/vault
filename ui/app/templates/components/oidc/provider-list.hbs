@@ -1,3 +1,8 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
 {{#each @model as |provider|}}
   <LinkedBlock
     class="list-item-row"
@@ -26,7 +31,7 @@
                   <LinkTo
                     @route="vault.cluster.access.oidc.providers.provider.details"
                     @model={{provider.name}}
-                    @disabled={{not provider.canRead}}
+                    @disabled={{eq provider.canRead false}}
                     data-test-oidc-provider-menu-link="details"
                   >
                     Details

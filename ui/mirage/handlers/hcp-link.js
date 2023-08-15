@@ -1,26 +1,29 @@
-export default function (server) {
-  const handleResponse = (req, props) => {
-    const xhr = req.passthrough();
-    xhr.onreadystatechange = () => {
-      if (xhr.readyState === 4 && xhr.status < 300) {
-        // XMLHttpRequest response prop only has a getter -- redefine as writable and set value
-        Object.defineProperty(xhr, 'response', {
-          writable: true,
-          value: JSON.stringify({
-            ...JSON.parse(xhr.responseText),
-            ...props,
-          }),
-        });
-      }
-    };
-  };
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
 
+import modifyPassthroughResponse from '../helpers/modify-passthrough-response';
+
+export const statuses = [
+  'connected',
+  'disconnected since 2022-09-21T11:25:02.196835-07:00; error: unable to establish a connection with HCP',
+  'connecting since 2022-09-21T11:25:02.196835-07:00; error: unable to establish a connection with HCP',
+  'connecting since 2022-09-21T11:25:02.196835-07:00; error: principal does not have the permission to register as a provider',
+  'connecting since 2022-09-21T11:25:02.196835-07:00; error: could not obtain a token with the supplied credentials',
+];
+let index = null;
+
+export default function (server) {
   server.get('sys/seal-status', (schema, req) => {
-    // randomly return one of the various states to test polling
-    // 401 and 500 are stubs -- update with actual API values once determined
-    const hcp_link_status = ['connected', 'disconnected', '401', '500'][Math.floor(Math.random() * 2)];
-    return handleResponse(req, { hcp_link_status });
+    // return next status from statuses array
+    if (index === null || index === statuses.length - 1) {
+      index = 0;
+    } else {
+      index++;
+    }
+    return modifyPassthroughResponse(req, { hcp_link_status: statuses[index] });
   });
   // enterprise only feature initially
-  server.get('sys/health', (schema, req) => handleResponse(req, { version: '1.12.0-dev1+ent' }));
+  server.get('sys/health', (schema, req) => modifyPassthroughResponse(req, { version: '1.12.0-dev1+ent' }));
 }

@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package plugin
 
 import (
@@ -5,7 +8,7 @@ import (
 	"net/rpc"
 	"sync"
 
-	uuid "github.com/hashicorp/go-uuid"
+	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/sdk/plugin"
@@ -35,7 +38,7 @@ func Backend(ctx context.Context, conf *logical.BackendConfig) (logical.Backend,
 	return &b, nil
 }
 
-// backend is a thin wrapper around plugin.BackendPluginClientV5
+// backend is a thin wrapper around a builtin plugin or a plugin.BackendPluginClientV5
 type backend struct {
 	logical.Backend
 	mu sync.RWMutex
@@ -46,7 +49,7 @@ type backend struct {
 	canary string
 }
 
-func (b *backend) reloadBackend(ctx context.Context) error {
+func (b *backend) reloadBackend(ctx context.Context, storage logical.Storage) error {
 	pluginName := b.config.Config["plugin_name"]
 	pluginType, err := consts.ParsePluginType(b.config.Config["plugin_type"])
 	if err != nil {
@@ -72,6 +75,16 @@ func (b *backend) reloadBackend(ctx context.Context) error {
 	}
 	b.Backend = nb
 
+	// Re-initialize the backend in case plugin was reloaded
+	// after it crashed
+	err = b.Backend.Initialize(ctx, &logical.InitializationRequest{
+		Storage: storage,
+	})
+
+	if err != nil {
+		return err
+	}
+
 	return nil
 }
 
@@ -88,7 +101,7 @@ func (b *backend) HandleRequest(ctx context.Context, req *logical.Request) (*log
 		// Reload plugin if it's an rpc.ErrShutdown
 		b.mu.Lock()
 		if b.canary == canary {
-			err := b.reloadBackend(ctx)
+			err := b.reloadBackend(ctx, req.Storage)
 			if err != nil {
 				b.mu.Unlock()
 				return nil, err
@@ -120,7 +133,7 @@ func (b *backend) HandleExistenceCheck(ctx context.Context, req *logical.Request
 		// Reload plugin if it's an rpc.ErrShutdown
 		b.mu.Lock()
 		if b.canary == canary {
-			err := b.reloadBackend(ctx)
+			err := b.reloadBackend(ctx, req.Storage)
 			if err != nil {
 				b.mu.Unlock()
 				return false, false, err
@@ -146,4 +159,12 @@ func (b *backend) InvalidateKey(ctx context.Context, key string) {
 	b.mu.RLock()
 	defer b.mu.RUnlock()
 	b.Backend.InvalidateKey(ctx, key)
+}
+
+func (b *backend) IsExternal() bool {
+	switch b.Backend.(type) {
+	case *plugin.BackendPluginClientV5:
+		return true
+	}
+	return false
 }

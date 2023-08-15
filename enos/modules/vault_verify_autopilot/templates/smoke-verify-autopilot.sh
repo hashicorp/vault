@@ -1,4 +1,7 @@
 #!/bin/bash
+# Copyright (c) HashiCorp, Inc.
+# SPDX-License-Identifier: BUSL-1.1
+
 
 token="${vault_token}"
 autopilot_version="${vault_autopilot_upgrade_version}"

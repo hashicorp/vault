@@ -1,0 +1,3 @@
+```release-note:bug
+cli/pki: Properly report permission issues within health-check mount tune checks
+```

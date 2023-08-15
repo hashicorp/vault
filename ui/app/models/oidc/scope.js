@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import Model, { attr } from '@ember-data/model';
 import lazyCapabilities, { apiPath } from 'vault/macros/lazy-capabilities';
 import { expandAttributeMeta } from 'vault/utils/field-to-attrs';
@@ -23,10 +28,6 @@ export default class OidcScopeModel extends Model {
   }
 
   @lazyCapabilities(apiPath`identity/oidc/scope/${'name'}`, 'name') scopePath;
-  @lazyCapabilities(apiPath`identity/oidc/scope`) scopesPath;
-  get canCreate() {
-    return this.scopePath.get('canCreate');
-  }
   get canRead() {
     return this.scopePath.get('canRead');
   }
@@ -35,8 +36,5 @@ export default class OidcScopeModel extends Model {
   }
   get canDelete() {
     return this.scopePath.get('canDelete');
-  }
-  get canList() {
-    return this.scopesPath.get('canList');
   }
 }

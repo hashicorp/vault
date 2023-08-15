@@ -1,14 +1,25 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package plugin
 
 import (
+	"context"
 	"testing"
 
 	"google.golang.org/grpc"
 
-	plugin "github.com/hashicorp/go-plugin"
+	"github.com/hashicorp/go-plugin"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/sdk/plugin/pb"
 )
+
+func TestStorage_GRPC_ReturnsErrIfStorageNil(t *testing.T) {
+	_, err := new(GRPCStorageServer).Get(context.Background(), nil)
+	if err == nil {
+		t.Error("Expected error when using server with no impl")
+	}
+}
 
 func TestStorage_impl(t *testing.T) {
 	var _ logical.Storage = new(GRPCStorageClient)

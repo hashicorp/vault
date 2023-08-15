@@ -1,0 +1,4 @@
+```release-note:improvement
+auth/azure: Adds support for authentication with Managed Service Identity (MSI) from a 
+Virtual Machine Scale Set (VMSS) in flexible orchestration mode.
+```

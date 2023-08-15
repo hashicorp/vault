@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import { module, test } from 'qunit';
 import { setupRenderingTest } from 'ember-qunit';
 import { render } from '@ember/test-helpers';
@@ -15,15 +20,15 @@ module('Integration | Component selectable-card', function (hooks) {
   });
 
   test('it shows the card total', async function (assert) {
-    await render(hbs`<SelectableCard @total={{total}} @cardTitle={{cardTitle}}/>`);
-    let titleNumber = this.element.querySelector('.title-number').innerText;
+    await render(hbs`<SelectableCard @total={{this.total}} @cardTitle={{this.cardTitle}}/>`);
+    const titleNumber = this.element.querySelector('.title-number').innerText;
 
-    assert.equal(titleNumber, 15);
+    assert.strictEqual(titleNumber, '15');
   });
 
   test('it returns card title, ', async function (assert) {
-    await render(hbs`<SelectableCard @total={{1}} @cardTitle={{cardTitle}}/>`);
-    let titleText = this.element.querySelector('.title').innerText;
-    assert.equal(titleText, 'Connections');
+    await render(hbs`<SelectableCard @total={{1}} @cardTitle={{this.cardTitle}}/>`);
+    const titleText = this.element.querySelector('.title').innerText;
+    assert.strictEqual(titleText, 'Connections');
   });
 });

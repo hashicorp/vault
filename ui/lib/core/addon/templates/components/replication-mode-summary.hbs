@@ -1,3 +1,8 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
 {{#if this.isMenu}}
   {{! this is the status menu }}
   <div class="level is-mobile">
@@ -60,14 +65,14 @@
             Performance Replication is a feature of Vault Enterprise Premium.
           </p>
           <p class="has-text-centered">
-            <a
-              href="https://hashicorp.com/products/vault/trial?source=vaultui_Performance%20Replication"
+            <ExternalLink
+              @href="https://hashicorp.com/products/vault/trial?source=vaultui_Performance%20Replication"
               class="button is-ghost has-icon-right"
-              data-test-upgrade-link="true"
+              data-test-upgrade-link
             >
               Learn more
               <Chevron />
-            </a>
+            </ExternalLink>
           </p>
         {{else if this.replicationEnabled}}
           <h6 class="title is-6 is-uppercase">
@@ -98,7 +103,12 @@
     </div>
     <div class="level-right">
       {{#if this.replicationDisabled}}
-        <LinkTo @route="mode.index" @models={{array this.cluster.name this.mode}} class="button is-primary">
+        <LinkTo
+          @route="mode.index"
+          @models={{array this.cluster.name this.mode}}
+          class="button is-primary"
+          data-test-replication-promote-secondary
+        >
           Enable
         </LinkTo>
       {{else}}

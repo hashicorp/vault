@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package plugin
 
 import (
@@ -7,7 +10,7 @@ import (
 	"sync"
 
 	log "github.com/hashicorp/go-hclog"
-	plugin "github.com/hashicorp/go-plugin"
+	"github.com/hashicorp/go-plugin"
 	"github.com/hashicorp/vault/sdk/helper/pluginutil"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/sdk/plugin/pb"
@@ -27,6 +30,7 @@ type backendInstance struct {
 
 type backendGRPCPluginServer struct {
 	pb.UnimplementedBackendServer
+	logical.UnimplementedPluginVersionServer
 
 	broker *plugin.GRPCBroker
 
@@ -91,13 +95,15 @@ func (b *backendGRPCPluginServer) Setup(ctx context.Context, args *pb.SetupArgs)
 
 	storage := newGRPCStorageClient(brokeredClient)
 	sysView := newGRPCSystemView(brokeredClient)
+	events := newGRPCEventsClient(brokeredClient)
 
 	config := &logical.BackendConfig{
-		StorageView: storage,
-		Logger:      b.logger,
-		System:      sysView,
-		Config:      args.Config,
-		BackendUUID: args.BackendUUID,
+		StorageView:  storage,
+		Logger:       b.logger,
+		System:       sysView,
+		Config:       args.Config,
+		BackendUUID:  args.BackendUUID,
+		EventsSender: events,
 	}
 
 	// Call the underlying backend factory after shims have been created
@@ -108,6 +114,9 @@ func (b *backendGRPCPluginServer) Setup(ctx context.Context, args *pb.SetupArgs)
 			Err: pb.ErrToString(err),
 		}, nil
 	}
+
+	b.instancesLock.Lock()
+	defer b.instancesLock.Unlock()
 	b.instances[id] = backendInstance{
 		brokeredClient: brokeredClient,
 		backend:        backend,
@@ -182,10 +191,11 @@ func (b *backendGRPCPluginServer) SpecialPaths(ctx context.Context, args *pb.Emp
 
 	return &pb.SpecialPathsReply{
 		Paths: &pb.Paths{
-			Root:            paths.Root,
-			Unauthenticated: paths.Unauthenticated,
-			LocalStorage:    paths.LocalStorage,
-			SealWrapStorage: paths.SealWrapStorage,
+			Root:                  paths.Root,
+			Unauthenticated:       paths.Unauthenticated,
+			LocalStorage:          paths.LocalStorage,
+			SealWrapStorage:       paths.SealWrapStorage,
+			WriteForwardedStorage: paths.WriteForwardedStorage,
 		},
 	}, nil
 }
@@ -264,5 +274,21 @@ func (b *backendGRPCPluginServer) Type(ctx context.Context, _ *pb.Empty) (*pb.Ty
 
 	return &pb.TypeReply{
 		Type: uint32(backend.Type()),
+	}, nil
+}
+
+func (b *backendGRPCPluginServer) Version(ctx context.Context, _ *logical.Empty) (*logical.VersionReply, error) {
+	backend, _, err := b.getBackendAndBrokeredClient(ctx)
+	if err != nil {
+		return &logical.VersionReply{}, err
+	}
+
+	if versioner, ok := backend.(logical.PluginVersioner); ok {
+		return &logical.VersionReply{
+			PluginVersion: versioner.PluginVersion().Version,
+		}, nil
+	}
+	return &logical.VersionReply{
+		PluginVersion: "",
 	}, nil
 }

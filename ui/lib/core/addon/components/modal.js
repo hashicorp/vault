@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import Component from '@glimmer/component';
 import { messageTypes } from 'core/helpers/message-types';
 /**
@@ -20,7 +25,7 @@ import { messageTypes } from 'core/helpers/message-types';
  * @callback onClose
  * @param {onClose} onClose - onClose is the action taken when someone clicks the modal background or close button (if shown).
  * @param {boolean} isActive=false - whether or not modal displays
- * @param {string} [title] - This text shows up in the header section of the modal.
+ * @param {string} [title] - This text shows up in the header section of the modal. Only the first word should be capitalized.
  * @param {boolean} [showCloseButton=false] - controls whether the close button in the top right corner shows.
  * @param {string} [type=null] - The header styling based on type passed into the message-types helper.
  */

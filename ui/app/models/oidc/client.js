@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import Model, { attr } from '@ember-data/model';
 import lazyCapabilities, { apiPath } from 'vault/macros/lazy-capabilities';
 import { expandAttributeMeta } from 'vault/utils/field-to-attrs';
@@ -73,45 +78,6 @@ export default class OidcClientModel extends Model {
   @attr('string', { label: 'Client ID' }) clientId;
   @attr('string') clientSecret;
 
-  // CAPABILITIES //
-  @lazyCapabilities(apiPath`identity/oidc/client/${'name'}`, 'name') clientPath;
-  @lazyCapabilities(apiPath`identity/oidc/client`) clientsPath;
-  get canCreate() {
-    return this.clientPath.get('canCreate');
-  }
-  get canRead() {
-    return this.clientPath.get('canRead');
-  }
-  get canEdit() {
-    return this.clientPath.get('canUpdate');
-  }
-  get canDelete() {
-    return this.clientPath.get('canDelete');
-  }
-  get canList() {
-    return this.clientsPath.get('canList');
-  }
-
-  @lazyCapabilities(apiPath`identity/oidc/key`) keysPath;
-  get canListKeys() {
-    return this.keysPath.get('canList');
-  }
-
-  @lazyCapabilities(apiPath`identity/oidc/assignment/${'name'}`, 'name') assignmentPath;
-  @lazyCapabilities(apiPath`identity/oidc/assignment`) assignmentsPath;
-  get canCreateAssignments() {
-    return this.assignmentPath.get('canCreate');
-  }
-  get canListAssignments() {
-    return this.assignmentsPath.get('canList');
-  }
-
-  // API WIP
-  @lazyCapabilities(apiPath`identity/oidc/${'name'}/provider`, 'backend', 'name') clientProvidersPath;
-  get canListProviders() {
-    return this.clientProvidersPath.get('canList');
-  }
-
   // TODO refactor when field-to-attrs util is refactored as decorator
   _attributeMeta = null; // cache initial result of expandAttributeMeta in getter and return
   get formFields() {
@@ -130,5 +96,17 @@ export default class OidcClientModel extends Model {
       ]);
     }
     return this._fieldToAttrsGroups;
+  }
+
+  // CAPABILITIES //
+  @lazyCapabilities(apiPath`identity/oidc/client/${'name'}`, 'name') clientPath;
+  get canRead() {
+    return this.clientPath.get('canRead');
+  }
+  get canEdit() {
+    return this.clientPath.get('canUpdate');
+  }
+  get canDelete() {
+    return this.clientPath.get('canDelete');
   }
 }
