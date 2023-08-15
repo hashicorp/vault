@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 package audit
 
@@ -257,7 +257,7 @@ type Namespace struct {
 	Path string `json:"path,omitempty"`
 }
 
-// nonPersistentSalt is used for obtaining a salt that is
+// nonPersistentSalt is used for obtaining a salt that is not persisted.
 type nonPersistentSalt struct{}
 
 // Backend interface must be implemented for an audit
@@ -310,6 +310,9 @@ type BackendConfig struct {
 
 	// Config is the opaque user configuration provided when mounting
 	Config map[string]string
+
+	// MountPath is the path where this Backend is mounted
+	MountPath string
 }
 
 // Factory is the factory function to create an audit backend.

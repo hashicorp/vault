@@ -1,6 +1,6 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 import { module, test } from 'qunit';
@@ -83,6 +83,6 @@ module('Integration | Component | policy-example', function (hooks) {
       @policyType="egp"
     />
     `);
-    assert.dom(SELECTORS.jsonText).includesText(`# Expect requests to only happen during work days (Monday `);
+    assert.dom(SELECTORS.jsonText).includesText(`# Expect requests to only happen during work days (Monday`);
   });
 });

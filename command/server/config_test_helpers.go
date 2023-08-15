@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 package server
 
@@ -507,7 +507,7 @@ func testUnknownFieldValidation(t *testing.T) {
 			Problem: "unknown or unsupported field bad_value found in configuration",
 			Position: token.Pos{
 				Filename: "./test-fixtures/config.hcl",
-				Offset:   651,
+				Offset:   652,
 				Line:     37,
 				Column:   5,
 			},
@@ -789,7 +789,8 @@ func testConfig_Sanitized(t *testing.T) {
 		"listeners": []interface{}{
 			map[string]interface{}{
 				"config": map[string]interface{}{
-					"address": "127.0.0.1:443",
+					"address":          "127.0.0.1:443",
+					"chroot_namespace": "admin/",
 				},
 				"type": "tcp",
 			},
@@ -882,6 +883,7 @@ listener "tcp" {
   proxy_api {
     enable_quit = true
   }
+  chroot_namespace = "admin"
 }`))
 
 	config := Config{
@@ -926,6 +928,7 @@ listener "tcp" {
 						EnableQuit: true,
 					},
 					CustomResponseHeaders: DefaultCustomHeaders,
+					ChrootNamespace:       "admin/",
 				},
 			},
 		},
