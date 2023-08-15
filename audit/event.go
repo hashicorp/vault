@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 package audit
 
@@ -96,4 +96,16 @@ func (f format) validate() error {
 // String returns the string version of a format.
 func (f format) String() string {
 	return string(f)
+}
+
+// MetricTag returns a tag corresponding to this subtype to include in metrics.
+func (st subtype) MetricTag() string {
+	switch st {
+	case RequestType:
+		return "log_request"
+	case ResponseType:
+		return "log_response"
+	}
+
+	return ""
 }
