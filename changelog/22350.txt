@@ -1,0 +1,3 @@
+```release-note:change
+shamir: update the license of shamir to MPLv2.0 
+```
