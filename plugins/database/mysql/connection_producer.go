@@ -131,6 +131,14 @@ func (c *mySQLConnectionProducer) Init(ctx context.Context, conf map[string]inte
 		mysql.RegisterTLSConfig(c.tlsConfigName, tlsConfig)
 	}
 
+	if c.RawConfig["auth_type"] == authTypeIAM {
+		c.cloudDriverName, err = uuid.GenerateUUID()
+		if err != nil {
+			return nil, fmt.Errorf("unable to generate UUID for IAM configuration: %w", err)
+		}
+		c.isCloud = true
+	}
+
 	// Set initialized to true at this point since all fields are set,
 	// and the connection can be established at a later time.
 	c.Initialized = true
@@ -164,15 +172,10 @@ func (c *mySQLConnectionProducer) Connection(ctx context.Context) (interface{}, 
 	}
 
 	driverName := driverMySQL
-	if c.RawConfig["auth_type"] == authTypeIAM {
-		var err error
-		c.cloudDriverName, err = uuid.GenerateUUID()
-		c.isCloud = true
-		if err != nil {
-			return nil, fmt.Errorf("unable to generate UUID for connection producer: %w", err)
-		}
+	if c.isCloud {
 		driverName = c.cloudDriverName
 
+		//@TODO - move these to init?
 		filename := c.RawConfig["filename"]
 		credentials := c.RawConfig["credentials"]
 
@@ -186,8 +189,7 @@ func (c *mySQLConnectionProducer) Connection(ctx context.Context) (interface{}, 
 		// is registered. This means that either we can't hid the name of the dialer from the user OR we have to rewrite
 		// the DSN after the user provides it. We already do this, KIND OF for the TLS config, but this modification
 		// is much more dramatic.
-		_, err = registerDriverMySQL(driverName, filename, credentials)
-
+		_, err := registerDriverMySQL(driverName, filename, credentials)
 		if err != nil {
 			return nil, err
 		}
@@ -323,5 +325,6 @@ func registerDriverMySQL(driverName string, filename, credentials interface{}) (
 	if err != nil {
 		return nil, err
 	}
+
 	return cloudmysql.RegisterDriver(driverName, opts...)
 }

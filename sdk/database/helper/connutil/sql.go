@@ -12,6 +12,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/hashicorp/go-uuid"
+
 	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/go-secure-stdlib/parseutil"
 	"github.com/mitchellh/mapstructure"
@@ -47,6 +49,9 @@ type SQLConnectionProducer struct {
 	Password                 string      `json:"password" mapstructure:"password" structs:"password"`
 	AuthType                 string      `json:"auth_type" mapstructure:"auth_type" structs:"auth_type"`
 	DisableEscaping          bool        `json:"disable_escaping" mapstructure:"disable_escaping" structs:"disable_escaping"`
+
+	cloudDriverName string
+	isCloud         bool
 
 	Type                  string
 	RawConfig             map[string]interface{}
@@ -122,6 +127,14 @@ func (c *SQLConnectionProducer) Init(ctx context.Context, conf map[string]interf
 	c.maxConnectionLifetime, err = parseutil.ParseDurationSecond(c.MaxConnectionLifetimeRaw)
 	if err != nil {
 		return nil, errwrap.Wrapf("invalid max_connection_lifetime: {{err}}", err)
+	}
+
+	if c.AuthType == authTypeIAM {
+		c.cloudDriverName, err = uuid.GenerateUUID()
+		if err != nil {
+			return nil, fmt.Errorf("unable to generate UUID for IAM configuration: %w", err)
+		}
+		c.isCloud = true
 	}
 
 	// Set initialized to true at this point since all fields are set,
