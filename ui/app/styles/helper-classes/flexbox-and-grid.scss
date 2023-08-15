@@ -33,6 +33,11 @@
   align-items: center;
 }
 
+.is-flex-align-start {
+  display: flex;
+  align-items: flex-start;
+}
+
 .is-flex-align-baseline {
   display: flex;
   align-items: baseline;

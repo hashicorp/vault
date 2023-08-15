@@ -7,14 +7,10 @@ import { module, test } from 'qunit';
 import { setupRenderingTest } from 'ember-qunit';
 import { setupEngine } from 'ember-engines/test-support';
 import { setupMirage } from 'ember-cli-mirage/test-support';
-import { render } from '@ember/test-helpers';
+import { render, click } from '@ember/test-helpers';
 import hbs from 'htmlbars-inline-precompile';
 import { createSecretsEngine, generateBreadcrumbs } from 'vault/tests/helpers/ldap';
-
-const selectors = {
-  configAction: '[data-test-toolbar-action="config"]',
-  configCta: '[data-test-config-cta]',
-};
+import sinon from 'sinon';
 
 module('Integration | Component | ldap | Page::Overview', function (hooks) {
   setupRenderingTest(hooks);
@@ -24,16 +20,34 @@ module('Integration | Component | ldap | Page::Overview', function (hooks) {
   hooks.beforeEach(function () {
     this.store = this.owner.lookup('service:store');
 
-    this.backend = createSecretsEngine(this.store);
-    this.breadcrumbs = generateBreadcrumbs(this.backend.id);
+    this.backendModel = createSecretsEngine(this.store);
+    this.breadcrumbs = generateBreadcrumbs(this.backendModel.id);
+
+    const pushPayload = (type) => {
+      this.store.pushPayload(`ldap/${type}`, {
+        modelName: `ldap/${type}`,
+        backend: 'ldap-test',
+        ...this.server.create(`ldap-${type}`),
+      });
+    };
+
+    ['role', 'library'].forEach((type) => {
+      pushPayload(type);
+      if (type === 'role') {
+        pushPayload(type);
+      }
+      const key = type === 'role' ? 'roles' : 'libraries';
+      this[key] = this.store.peekAll(`ldap/${type}`);
+    });
 
     this.renderComponent = () => {
       return render(
         hbs`<Page::Overview
           @promptConfig={{this.promptConfig}}
-          @backendModel={{this.backend}}
+          @backendModel={{this.backendModel}}
           @roles={{this.roles}}
           @libraries={{this.libraries}}
+          @librariesStatus={{(array)}}
           @breadcrumbs={{this.breadcrumbs}}
         />`,
         {
@@ -50,9 +64,36 @@ module('Integration | Component | ldap | Page::Overview', function (hooks) {
 
     assert.dom('.title svg').hasClass('flight-icon-folder-users', 'LDAP icon renders in title');
     assert.dom('.title').hasText('ldap-test', 'Mount path renders in title');
-    assert.dom(selectors.configAction).hasText('Configure LDAP', 'Correct toolbar action renders');
-    assert.dom(selectors.configCta).exists('Config cta renders');
+    assert
+      .dom('[data-test-toolbar-action="config"]')
+      .hasText('Configure LDAP', 'Correct toolbar action renders');
+    assert.dom('[data-test-config-cta]').exists('Config cta renders');
   });
 
-  // TODO:JLR add test to check that card components render once created and that Create role action renders in toolbar
+  test('it should render toolbar actions and overview cards', async function (assert) {
+    const transitionStub = sinon.stub(this.owner.lookup('service:router'), 'transitionTo');
+
+    await this.renderComponent();
+
+    assert.dom('[data-test-toolbar-action="role"]').hasText('Create role', 'Correct toolbar action renders');
+    assert
+      .dom('[data-test-toolbar-action="library"]')
+      .hasText('Create library', 'Correct toolbar action renders');
+    assert.dom('[data-test-roles-count]').hasText('2', 'Roles card renders with correct count');
+    assert.dom('[data-test-libraries-count]').hasText('1', 'Libraries card renders with correct count');
+    assert
+      .dom('[data-test-overview-card-container="Accounts checked-out"]')
+      .exists('Accounts checked-out card renders');
+
+    await click('[data-test-component="search-select"] .ember-power-select-trigger');
+    await click('.ember-power-select-option');
+    await click('[data-test-generate-credential-button]');
+
+    const didTransition = transitionStub.calledWith(
+      'vault.cluster.secrets.backend.ldap.roles.role.credentials',
+      this.roles[0].type,
+      this.roles[0].name
+    );
+    assert.true(didTransition, 'Transitions to credentials route when generating credentials');
+  });
 });

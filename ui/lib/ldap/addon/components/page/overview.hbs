@@ -8,6 +8,9 @@
       <ToolbarLink @route="roles.create" @type="add" data-test-toolbar-action="role">
         Create role
       </ToolbarLink>
+      <ToolbarLink @route="libraries.create" @type="add" data-test-toolbar-action="library">
+        Create library
+      </ToolbarLink>
     {{/if}}
   </:toolbarActions>
 </TabPageHeader>
@@ -15,5 +18,59 @@
 {{#if @promptConfig}}
   <ConfigCta />
 {{else}}
-  {{! add card components here once created }}
+  <div class="is-grid has-top-margin-l grid-2-columns grid-gap-2">
+    <OverviewCard
+      @cardTitle="Roles"
+      @subText="The total number of roles that have been set up in this secret engine in order to generate credentials."
+      @actionText={{if @roles.length "View roles" "Create new"}}
+      @actionTo={{if @roles.length "roles" "roles.create"}}
+    >
+      <h2 class="title is-2 has-font-weight-normal has-top-margin-m" data-test-roles-count>
+        {{or @roles.length "None"}}
+      </h2>
+    </OverviewCard>
+    <OverviewCard
+      @cardTitle="Libraries"
+      @subText="The total number of libraries that have been created for service account management."
+      @actionText={{if @libraries.length "View libraries" "Create new"}}
+      @actionTo={{if @libraries.length "libraries" "libraries.create"}}
+    >
+      <h2 class="title is-2 has-font-weight-normal has-top-margin-m" data-test-libraries-count>
+        {{or @libraries.length "None"}}
+      </h2>
+    </OverviewCard>
+  </div>
+  <div class="is-flex-align-start has-top-margin-l">
+    <AccountsCheckedOut
+      @libraries={{@libraries}}
+      @statuses={{@librariesStatus}}
+      @showLibraryColumn={{true}}
+      class="is-flex-half"
+    />
+
+    <div class="has-left-margin-l is-flex-half">
+      <OverviewCard @cardTitle="Generate credentials" @subText="Quickly generate credentials by typing the role name.">
+        <div class="has-top-margin-m is-flex">
+          <SearchSelect
+            class="is-flex-1"
+            @placeholder="Select a role"
+            @disallowNewItems={{true}}
+            @options={{@roles}}
+            @selectLimit="1"
+            @fallbackComponent="input-search"
+            @onChange={{this.selectRole}}
+          />
+          <button
+            class="button has-left-margin-s"
+            type="button"
+            disabled={{not this.selectedRole}}
+            {{on "click" this.generateCredentials}}
+            data-test-generate-credential-button
+          >
+            Get credentials
+          </button>
+        </div>
+      </OverviewCard>
+    </div>
+  </div>
 {{/if}}

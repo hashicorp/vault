@@ -45,6 +45,7 @@ export default class LdapLibraryAdapter extends NamedPathAdapter {
         const status = {
           ...resp.data[key],
           account: key,
+          library: name,
         };
         statuses.push(status);
       }

@@ -10,6 +10,7 @@ import { setupMirage } from 'ember-cli-mirage/test-support';
 import { render, click, fillIn } from '@ember/test-helpers';
 import hbs from 'htmlbars-inline-precompile';
 import { allowAllCapabilitiesStub } from 'vault/tests/helpers/stubs';
+import { createSecretsEngine, generateBreadcrumbs } from 'vault/tests/helpers/ldap';
 
 module('Integration | Component | ldap | Page::Roles', function (hooks) {
   setupRenderingTest(hooks);
@@ -20,14 +21,9 @@ module('Integration | Component | ldap | Page::Roles', function (hooks) {
     this.server.post('/sys/capabilities-self', allowAllCapabilitiesStub());
 
     this.store = this.owner.lookup('service:store');
-    this.store.pushPayload('secret-engine', {
-      modelName: 'secret-engine',
-      data: {
-        accessor: 'ldap_f3400dee',
-        path: 'ldap-test/',
-        type: 'ldap',
-      },
-    });
+    this.backend = createSecretsEngine(this.store);
+    this.breadcrumbs = generateBreadcrumbs(this.backend.id);
+
     for (const type of ['static', 'dynamic']) {
       this.store.pushPayload('ldap/role', {
         modelName: 'ldap/role',
@@ -38,15 +34,16 @@ module('Integration | Component | ldap | Page::Roles', function (hooks) {
     }
     this.backend = this.store.peekRecord('secret-engine', 'ldap-test');
     this.roles = this.store.peekAll('ldap/role');
-    this.breadcrumbs = [
-      { label: 'secrets', route: 'secrets', linkExternal: true },
-      { label: this.backend.id },
-    ];
     this.promptConfig = false;
 
     this.renderComponent = () => {
       return render(
-        hbs`<Page::Roles @promptConfig={{this.promptConfig}} @backendModel={{this.backend}} @roles={{this.roles}} @breadcrumbs={{this.breadcrumbs}} />`,
+        hbs`<Page::Roles
+          @promptConfig={{this.promptConfig}}
+          @backendModel={{this.backend}}
+          @roles={{this.roles}}
+          @breadcrumbs={{this.breadcrumbs}}
+        />`,
         { owner: this.engine }
       );
     };

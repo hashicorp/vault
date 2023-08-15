@@ -1,21 +1,26 @@
-<Hds::Card::Container @hasBorder={{true}} class="has-padding-l" ...attributes>
-  <h3 class="is-size-4 has-text-weight-semibold">Accounts checked out by this token</h3>
-
-  <p class="has-text-grey">The accounts that are currently on lease with this token</p>
+<OverviewCard
+  @cardTitle="Accounts checked-out"
+  @subText="The accounts that are currently on lease with this token or exist in a library set with check-in enforcement disabled."
+  class="has-padding-l"
+  ...attributes
+>
   <hr class="has-background-gray-200" />
 
   {{#if this.filteredAccounts}}
-    <Hds::Table @model={{this.filteredAccounts}} @columns={{array (hash label="Accounts") (hash label="Action")}}>
+    <Hds::Table @model={{this.filteredAccounts}} @columns={{this.columns}}>
       <:body as |Body|>
         <Body.Tr>
-          <Body.Td data-test-checked-out-account={{Body.data}}>{{Body.data}}</Body.Td>
+          <Body.Td data-test-checked-out-account={{Body.data.account}}>{{Body.data.account}}</Body.Td>
+          {{#if @showLibraryColumn}}
+            <Body.Td data-test-checked-out-library={{Body.data.account}}>{{Body.data.library}}</Body.Td>
+          {{/if}}
           <Body.Td>
             <button
               type="button"
-              class="text-button has-text-info has-text-weight-semibold"
-              disabled={{not @library.canCheckIn}}
-              data-test-checked-out-account-action={{Body.data}}
-              {{on "click" (fn (mut this.checkInAccount) Body.data)}}
+              class="text-button has-text-primary has-text-weight-semibold"
+              disabled={{this.disableCheckIn Body.data.library}}
+              data-test-checked-out-account-action={{Body.data.account}}
+              {{on "click" (fn (mut this.selectedStatus) Body.data)}}
             >
               <Icon @name="queue" />
               Check-in
@@ -31,19 +36,19 @@
       class="is-shadowless"
     />
   {{/if}}
-</Hds::Card::Container>
+</OverviewCard>
 
-{{#if this.checkInAccount}}
+{{#if this.selectedStatus}}
   <Modal
     @title="Account Check-in"
-    @isActive={{this.checkInAccount}}
+    @isActive={{this.selectedStatus}}
     @showCloseButton={{true}}
-    @onClose={{fn (mut this.checkInAccount) ""}}
+    @onClose={{fn (mut this.selectedStatus) undefined}}
   >
     <section class="modal-card-body">
       <p>
         This action will check-in account
-        {{this.checkInAccount}}
+        {{this.selectedStatus.account}}
         back to the library. Do you want to proceed?
       </p>
     </section>
@@ -61,7 +66,7 @@
         type="button"
         class="button"
         disabled={{this.checkIn.isRunning}}
-        {{on "click" (fn (mut this.checkInAccount) "")}}
+        {{on "click" (fn (mut this.selectedStatus) "")}}
       >
         Cancel
       </button>

@@ -30,15 +30,21 @@ module('Integration | Component | ldap | AccountsCheckedOut', function (hooks) {
     });
     this.library = this.store.peekRecord('ldap/library', 'test-library');
     this.statuses = [
-      { account: 'foo.bar', available: false, borrower_client_token: '123', borrower_entity_id: '456' },
-      { account: 'bar.baz', available: false },
-      { account: 'checked.in', available: true },
+      {
+        account: 'foo.bar',
+        available: false,
+        library: 'test-library',
+        borrower_client_token: '123',
+        borrower_entity_id: '456',
+      },
+      { account: 'bar.baz', available: false, library: 'test-library' },
+      { account: 'checked.in', available: true, library: 'test-library' },
     ];
     this.renderComponent = () => {
       return render(
         hbs`
           <div id="modal-wormhole"></div>
-          <AccountsCheckedOut @library={{this.library}} @statuses={{this.statuses}} />
+          <AccountsCheckedOut @libraries={{array this.library}} @statuses={{this.statuses}} @showLibraryColumn={{this.showLibraryColumn}} />
         `,
         {
           owner: this.engine,
@@ -49,8 +55,8 @@ module('Integration | Component | ldap | AccountsCheckedOut', function (hooks) {
 
   test('it should render empty state when no accounts are checked out', async function (assert) {
     this.statuses = [
-      { account: 'foo', available: true },
-      { account: 'bar', available: true },
+      { account: 'foo', available: true, library: 'test-library' },
+      { account: 'bar', available: true, library: 'test-library' },
     ];
 
     await this.renderComponent();
@@ -94,6 +100,23 @@ module('Integration | Component | ldap | AccountsCheckedOut', function (hooks) {
     assert
       .dom('[data-test-checked-out-account="checked.in"]')
       .doesNotExist('checked.in', 'Checked in accounts do not render');
+  });
+
+  test('it should display details in table', async function (assert) {
+    this.authStub.value({ entity_id: '456' });
+
+    await this.renderComponent();
+
+    assert.dom('[data-test-checked-out-account="foo.bar"]').hasText('foo.bar', 'Account renders');
+    assert.dom('[data-test-checked-out-library="foo.bar"]').doesNotExist('Library column is hidden');
+    assert
+      .dom('[data-test-checked-out-account-action="foo.bar"]')
+      .includesText('Check-in', 'Check-in action renders');
+
+    this.showLibraryColumn = true;
+    await this.renderComponent();
+
+    assert.dom('[data-test-checked-out-library="foo.bar"]').hasText('test-library', 'Library column renders');
   });
 
   test('it should check in account', async function (assert) {

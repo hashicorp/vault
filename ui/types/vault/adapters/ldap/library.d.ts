@@ -9,6 +9,7 @@ import { AdapterRegistry } from 'ember-data/adapter';
 export interface LdapLibraryAccountStatus {
   account: string;
   available: boolean;
+  library: string;
   borrower_client_token?: string;
   borrower_entity_id?: string;
 }
