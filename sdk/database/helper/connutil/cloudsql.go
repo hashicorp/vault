@@ -25,7 +25,7 @@ func (c *SQLConnectionProducer) getCloudSQLDriverName() (string, error) {
 	return driverName, nil
 }
 
-func (c *SQLConnectionProducer) registerDrivers(filename, credentials interface{}) (func() error, error) {
+func (c *SQLConnectionProducer) registerDrivers(credentials, credentialsJSON interface{}) (func() error, error) {
 	typ, err := c.getCloudSQLDriverName()
 	if err != nil {
 		return nil, err
@@ -37,7 +37,7 @@ func (c *SQLConnectionProducer) registerDrivers(filename, credentials interface{
 		return nil, nil
 	}
 
-	opts, err := GetCloudSQLAuthOptions(filename, credentials)
+	opts, err := GetCloudSQLAuthOptions(credentials, credentialsJSON)
 	if err != nil {
 		return nil, err
 	}
@@ -60,9 +60,9 @@ func registerDriverMSSQL(opts cloudsqlconn.Option) (func() error, error) {
 	return mssql.RegisterDriver(cloudSQLMSSQL, opts)
 }
 
-func GetCloudSQLAuthOptions(filename, credentials interface{}) (cloudsqlconn.Option, error) {
-	if filename != nil {
-		v, ok := filename.(string)
+func GetCloudSQLAuthOptions(credentials, credentialsJSON interface{}) (cloudsqlconn.Option, error) {
+	if credentials != nil {
+		v, ok := credentials.(string)
 		if !ok {
 			return nil, fmt.Errorf("error converting file name to string")
 		}
@@ -70,8 +70,8 @@ func GetCloudSQLAuthOptions(filename, credentials interface{}) (cloudsqlconn.Opt
 		return cloudsqlconn.WithCredentialsFile(v), nil
 	}
 
-	if credentials != nil {
-		v, ok := credentials.([]byte)
+	if credentialsJSON != nil {
+		v, ok := credentialsJSON.([]byte)
 		if !ok {
 			return nil, fmt.Errorf("error converting JSON data to bytes")
 		}

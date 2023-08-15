@@ -155,10 +155,10 @@ func (c *mySQLConnectionProducer) Connection(ctx context.Context) (interface{}, 
 	if c.RawConfig["auth_type"] == authTypeIAM {
 		driverName = cloudSQLMySQL
 
-		filename := c.RawConfig["filename"]
 		credentials := c.RawConfig["credentials"]
+		credentialsJSON := c.RawConfig["credentials_json"]
 
-		_, err := registerDriverMySQL(filename, credentials)
+		_, err := registerDriverMySQL(credentials, credentialsJSON)
 		if err != nil {
 			return nil, err
 		}
@@ -262,11 +262,11 @@ func (c *mySQLConnectionProducer) addTLStoDSN() (connURL string, err error) {
 	return connURL, nil
 }
 
-func registerDriverMySQL(filename, credentials interface{}) (func() error, error) {
+func registerDriverMySQL(credentials, credentialsJSON interface{}) (func() error, error) {
 	// @TODO implement driver cleanup cache
 	// if driver is already registered, return
 
-	opts, err := connutil.GetCloudSQLAuthOptions(filename, credentials)
+	opts, err := connutil.GetCloudSQLAuthOptions(credentials, credentialsJSON)
 	if err != nil {
 		return nil, err
 	}

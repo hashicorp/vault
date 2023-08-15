@@ -167,10 +167,10 @@ func (c *SQLConnectionProducer) Connection(ctx context.Context) (interface{}, er
 			return nil, err
 		}
 		driverName = typ
-		filename := c.RawConfig["filename"]
 		credentials := c.RawConfig["credentials"]
+		credentialsJSON := c.RawConfig["credentials_json"]
 
-		cleanup, err := c.registerDrivers(filename, credentials)
+		cleanup, err := c.registerDrivers(credentials, credentialsJSON)
 		if err != nil {
 			return nil, err
 		}
@@ -203,7 +203,6 @@ func (c *SQLConnectionProducer) Connection(ctx context.Context) (interface{}, er
 	}
 
 	var err error
-	fmt.Printf("Starting connection to server: %s\n", driverName)
 	c.db, err = sql.Open(driverName, conn)
 	if err != nil {
 		return nil, err
@@ -237,11 +236,12 @@ func (c *SQLConnectionProducer) Close() error {
 			driversMu.Lock()
 			defer driversMu.Unlock()
 
-			for driver := range drivers {
-				fmt.Printf("cleaning up for %s\n", c.Type)
-				cleanup := cachePop(driver)
-				cleanup()
-			}
+			// @TODO cleanup
+			//for driver := range drivers {
+			//	fmt.Printf("cleaning up for %s\n", c.Type)
+			//	cleanup := cachePop(driver)
+			//	cleanup()
+			//}
 		} else {
 			c.db.Close()
 		}
