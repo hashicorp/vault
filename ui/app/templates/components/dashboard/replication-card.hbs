@@ -1,0 +1,60 @@
+<div class="is-flex-between">
+  <h3 class="title is-4 has-bottom-margin-xxs" data-test-client-count-title>
+    Replication
+  </h3>
+
+  <div>
+    <Hds::Link::Inline @route="vault.cluster.replication.index" class="is-no-underline">Details</Hds::Link::Inline>
+  </div>
+</div>
+
+{{#if (or @replication.dr.clusterId @replication.performance.clusterId)}}
+  <hr class="has-background-gray-100" />
+  <div class="is-grid grid-2-columns grid-gap-2 has-top-margin-m has-bottom-margin-m grid-align-items-start">
+    <div>
+      <div class="has-bottom-margin-s">
+        <Hds::Link::Inline
+          class="title is-5 is-no-underline has-text-weight-semibold"
+          @route="vault.cluster.replication.mode.index"
+          @model="dr"
+        >DR Primary</Hds::Link::Inline>
+      </div>
+      <div>
+        <Hds::TooltipButton @text="The cluster’s current operating state" @offset={{array 50 30}}>
+          {{@replication.dr.state}}
+          <Icon @name="check-circle-fill" class="has-text-success" />
+        </Hds::TooltipButton>
+      </div>
+    </div>
+    <div>
+      <div class="has-bottom-margin-s">
+        <Hds::Link::Inline
+          class="title is-5 is-no-underline has-text-weight-semibold"
+          @route="vault.cluster.replication.mode.index"
+          @model="performance"
+        >Perf primary</Hds::Link::Inline>
+      </div>
+      {{#if @replication.performance.clusterId}}
+        <Hds::TooltipButton @text="The cluster’s current operating state" @offset={{array 50 30}}>
+          {{@replication.performance.state}}
+          <Icon @name="check-circle-fill" class="has-text-success" />
+        </Hds::TooltipButton>
+      {{else}}
+        <Hds::TooltipButton @text="The cluster’s current operating state" @offset={{array 50 30}}>
+          not set up
+          <Icon @name="x-circle-fill" class="has-text-danger" />
+        </Hds::TooltipButton>
+      {{/if}}
+    </div>
+  </div>
+{{else}}
+  <EmptyState
+    @title="Replication not set up"
+    @message="Data will be listed here. Enable a primary replication cluster to get started."
+    class="has-top-margin-m"
+  >
+    <div>
+      <Hds::Link::Inline @route="vault.cluster.replication" class="is-no-underline">Details</Hds::Link::Inline>
+    </div>
+  </EmptyState>
+{{/if}}

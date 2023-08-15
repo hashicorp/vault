@@ -10,6 +10,8 @@ import { hash } from 'rsvp';
 import ClusterRoute from 'vault/mixins/cluster-route';
 export default class VaultClusterDashboardRoute extends Route.extend(ClusterRoute) {
   @service store;
+  @service namespace;
+  @service version;
 
   async getVaultConfiguration() {
     try {
@@ -23,10 +25,20 @@ export default class VaultClusterDashboardRoute extends Route.extend(ClusterRout
 
   model() {
     const vaultConfiguration = this.getVaultConfiguration();
+    const dr = this.modelFor('vault.cluster').dr;
+    const performance = this.modelFor('vault.cluster').performance;
+    const replication = {
+      dr,
+      performance,
+    };
 
     return hash({
       vaultConfiguration,
+      replication,
       secretsEngines: this.store.query('secret-engine', {}),
+      isRootNamespace: this.namespace.inRootNamespace,
+      version: this.version,
+      license: this.getLicense(),
     });
   }
 }
