@@ -1134,6 +1134,8 @@ func TestCore_HandleLogin_Token(t *testing.T) {
 }
 
 func TestCore_HandleRequest_AuditTrail(t *testing.T) {
+	t.Setenv("VAULT_AUDIT_DISABLE_EVENTLOGGER", "true")
+
 	// Create a noop audit backend
 	noop := &corehelpers.NoopAudit{}
 	c, _, root := TestCoreUnsealed(t)
