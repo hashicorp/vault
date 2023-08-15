@@ -2,6 +2,7 @@ locals {
   architectures      = toset(["arm64", "x86_64"])
   amazon_owner_id    = "591542846629"
   canonical_owner_id = "099720109477"
+  sles_owner_id      = "013907871322"
   suse_owner_id      = "679593333241"
   rhel_owner_id      = "309956199498"
   ids = {
@@ -42,10 +43,9 @@ locals {
         "15.5" = data.aws_ami.leap_155["x86_64"].id
       }
       "sles" = {
-        "v12_sp4_standard" = data.aws_ami.sles_12_sp4_standard.id
         "v12_sp5_standard" = data.aws_ami.sles_12_sp5_standard.id
-        "v15_sp4_standard" = data.aws_ami.sles_15_sp4_standard.id
-        "v15_sp5_standard" = data.aws_ami.sles_15_sp5_standard.id
+        "v15_sp4_standard" = data.aws_ami.sles_15_sp4_standard["x86_64"].id
+        "v15_sp5_standard" = data.aws_ami.sles_15_sp5_standard["x86_64"].id
       }
     }
   }
@@ -191,7 +191,7 @@ data "aws_ami" "amazon_linux_2" {
 
   filter {
     name   = "name"
-    values = ["amzn2-ami-ecs-hvm-*"]
+    values = ["amzn2-ami-ecs-hvm-2.0*"]
   }
 
   filter {
@@ -202,72 +202,55 @@ data "aws_ami" "amazon_linux_2" {
   owners = [local.amazon_owner_id]
 }
 
-data "aws_ami" "sles_12_sp4_standard" {
-  most_recent = true
-
-  filter {
-    name   = "name"
-    values = ["suse-sles-sap-12-sp4-v*-hvm-ssd-*"]
-  }
-
-  filter {
-    name   = "architecture"
-    # not available for arm64
-    values = ["x86_64"]
-  }
-
-  owners = [local.suse_owner_id]
-}
-
 data "aws_ami" "sles_12_sp5_standard" {
   most_recent = true
 
   filter {
-    name   = "name"
-    values = ["suse-sles-sap-12-sp5-v*-hvm-ssd-*"]
+    name   = "description"
+    values = ["SUSE Linux Enterprise Server 12 SP5 (HVM*"]
   }
 
   filter {
     name   = "architecture"
-    # not available for arm64
+    # arm64 only available for BYOS images for SLES 12 SP5
     values = ["x86_64"]
   }
 
-  owners = [local.suse_owner_id]
+  owners = [local.sles_owner_id]
 }
 
 data "aws_ami" "sles_15_sp4_standard" {
   most_recent = true
+  for_each    = local.architectures
 
   filter {
-    name   = "name"
-    values = ["suse-sles-sap-15-sp4-v*-hvm-ssd-*"]
+    name   = "description"
+    values = ["SUSE Linux Enterprise Server 15 SP4 (HVM*"]
   }
 
   filter {
     name   = "architecture"
-    # not available for arm64
-    values = ["x86_64"]
+    values = [each.value]
   }
 
-  owners = [local.suse_owner_id]
+  owners = [local.sles_owner_id]
 }
 
 data "aws_ami" "sles_15_sp5_standard" {
   most_recent = true
+  for_each    = local.architectures
 
   filter {
-    name   = "name"
-    values = ["suse-sles-sap-15-sp5-v*-hvm-ssd-*"]
+    name   = "description"
+    values = ["SUSE Linux Enterprise Server 15 SP5 (HVM*"]
   }
 
   filter {
     name   = "architecture"
-    # not available for arm64
-    values = ["x86_64"]
+    values = [each.value]
   }
 
-  owners = [local.suse_owner_id]
+  owners = [local.sles_owner_id]
 }
 
 data "aws_ami" "leap_154" {
