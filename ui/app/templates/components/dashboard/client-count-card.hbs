@@ -49,6 +49,7 @@
         disabled={{this.fetchClientActivity.isRunning}}
         class="has-padding-xxs"
         {{on "click" (perform this.fetchClientActivity)}}
+        data-test-refresh
       />
       <small class="has-left-margin-xs has-text-grey">
         Updated

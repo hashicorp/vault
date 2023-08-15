@@ -5,7 +5,7 @@
 
 import { module, test } from 'qunit';
 import { setupRenderingTest } from 'vault/tests/helpers';
-import { render } from '@ember/test-helpers';
+import { render, click } from '@ember/test-helpers';
 import { hbs } from 'ember-cli-htmlbars';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 import timestamp from 'core/utils/timestamp';
@@ -81,5 +81,62 @@ module('Integration | Component | dashboard/client-count-card', function (hooks)
       .dom('[data-test-stat-text="new-clients"] .stat-text')
       .hasText('The number of clients new to Vault in the current month.');
     assert.dom('[data-test-stat-text="new-clients"] .stat-value').hasText('12');
+    this.server.get('sys/internal/counters/activity', () => {
+      return {
+        request_id: 'some-activity-id',
+        data: {
+          months: [
+            {
+              timestamp: '2023-09-01T00:00:00-07:00',
+              counts: {},
+              namespaces: [
+                {
+                  namespace_id: 'root',
+                  namespace_path: '',
+                  counts: {},
+                  mounts: [{ mount_path: 'auth/up2/', counts: {} }],
+                },
+              ],
+              new_clients: {
+                counts: {
+                  clients: 5,
+                },
+                namespaces: [
+                  {
+                    namespace_id: 'root',
+                    namespace_path: '',
+                    counts: {
+                      clients: 12,
+                    },
+                    mounts: [{ mount_path: 'auth/up2/', counts: {} }],
+                  },
+                ],
+              },
+            },
+          ],
+          total: {
+            clients: 120,
+            entity_clients: 100,
+            non_entity_clients: 100,
+          },
+        },
+      };
+    });
+    await click('[data-test-refresh]');
+    assert.dom('[data-test-stat-text="total-clients"] .stat-label').hasText('Total');
+    assert
+      .dom('[data-test-stat-text="total-clients"] .stat-text')
+      .hasText(
+        `The number of clients in this billing period (Apr 2018 - ${parseAPITimestamp(
+          timestamp.now().toISOString(),
+          'MMM yyyy'
+        )}).`
+      );
+    assert.dom('[data-test-stat-text="total-clients"] .stat-value').hasText('120');
+    assert.dom('[data-test-stat-text="new-clients"] .stat-label').hasText('New');
+    assert
+      .dom('[data-test-stat-text="new-clients"] .stat-text')
+      .hasText('The number of clients new to Vault in the current month.');
+    assert.dom('[data-test-stat-text="new-clients"] .stat-value').hasText('5');
   });
 });
