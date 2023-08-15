@@ -23,10 +23,10 @@
         @label="Total"
         @value={{this.activityData.total.clients}}
         @size="l"
-        @subText="The number of clients in this billing period ({{date-format this.startDate 'MMM yyyy'}} - {{date-format
-          this.currentDate
+        @subText="The number of clients in this billing period ({{date-format
+          this.licenseStartTime
           'MMM yyyy'
-        }})."
+        }} - {{date-format this.currentDate 'MMM yyyy'}})."
         data-test-stat-text="total-clients"
       />
       <StatText
