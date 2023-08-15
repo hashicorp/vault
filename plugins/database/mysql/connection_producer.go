@@ -30,6 +30,13 @@ const (
 	driverMySQL   = "mysql"
 )
 
+// ensure cloud driver registration only happens once.
+// the complication here is that registration happens at point X, and is not allowed to happen again, ever.
+// This cannot be stored as state within a connection producer, because those producers are config-specific,
+// so if we configure, say, two databases that are both cloud-mysql, we must only register once.
+// we might be able to cleverly do this with init().
+var onceler sync.Once
+
 // mySQLConnectionProducer implements ConnectionProducer and provides a generic producer for most sql databases
 type mySQLConnectionProducer struct {
 	ConnectionURL            string      `json:"connection_url"          mapstructure:"connection_url"          structs:"connection_url"`
@@ -46,6 +53,11 @@ type mySQLConnectionProducer struct {
 
 	// tlsConfigName is a globally unique name that references the TLS config for this instance in the mysql driver
 	tlsConfigName string
+
+	// cloudDriverName is a globally unique name that references the cloud dialer config for this instance of the driver
+	// I would like to reuse the tlsConfigName value, but there are parts of the code that expect its emptyness to equal "no-tls"
+	cloudDriverName string
+	isCloud         bool
 
 	RawConfig             map[string]interface{}
 	maxConnectionLifetime time.Duration
@@ -119,6 +131,14 @@ func (c *mySQLConnectionProducer) Init(ctx context.Context, conf map[string]inte
 		mysql.RegisterTLSConfig(c.tlsConfigName, tlsConfig)
 	}
 
+	if c.RawConfig["auth_type"] == authTypeIAM {
+		c.cloudDriverName, err = uuid.GenerateUUID()
+		if err != nil {
+			return nil, fmt.Errorf("unable to generate UUID for IAM configuration: %w", err)
+		}
+		c.isCloud = true
+	}
+
 	// Set initialized to true at this point since all fields are set,
 	// and the connection can be established at a later time.
 	c.Initialized = true
@@ -152,13 +172,24 @@ func (c *mySQLConnectionProducer) Connection(ctx context.Context) (interface{}, 
 	}
 
 	driverName := driverMySQL
-	if c.RawConfig["auth_type"] == authTypeIAM {
-		driverName = cloudSQLMySQL
+	if c.isCloud {
+		driverName = c.cloudDriverName
 
+		//@TODO - move these to init?
 		credentials := c.RawConfig["credentials"]
 		credentialsJSON := c.RawConfig["credentials_json"]
 
-		_, err := registerDriverMySQL(credentials, credentialsJSON)
+		// for _most_ sql databases, the driver itself contains no state. In the case of google's cloudsql drivers,
+		// however, the driver might store a credentials file, in which case the state stored by the driver is in
+		// fact critical to the proper function of the connection.
+		//
+		// This poses one big obvious problem - each configured cloud database might/will need its own driver registration,
+		// the name of which we have to track, and even worse in the MySQL case, that name is also the name of the
+		// dialer that is registered by MySQL in the dsn: protocol in the DSN acts double duty if a custom dialer
+		// is registered. This means that either we can't hid the name of the dialer from the user OR we have to rewrite
+		// the DSN after the user provides it. We already do this, KIND OF for the TLS config, but this modification
+		// is much more dramatic.
+		_, err := registerDriverMySQL(driverName, credentials, credentialsJSON)
 		if err != nil {
 			return nil, err
 		}
@@ -172,7 +203,12 @@ func (c *mySQLConnectionProducer) Connection(ctx context.Context) (interface{}, 
 		return nil, err
 	}
 
-	c.db, err = sql.Open(driverName, connURL)
+	cloudURL, err := c.rewriteProtocolForGCP(connURL)
+	if err != nil {
+		return nil, err
+	}
+
+	c.db, err = sql.Open(driverName, cloudURL)
 	if err != nil {
 		return nil, err
 	}
@@ -262,13 +298,33 @@ func (c *mySQLConnectionProducer) addTLStoDSN() (connURL string, err error) {
 	return connURL, nil
 }
 
-func registerDriverMySQL(credentials, credentialsJSON interface{}) (func() error, error) {
+// rewriteProtocolForGCP rewrites the protocl in the DSN to contain the protocol name associated
+// with the dialer and therefore driver associated with the provided cloudsqlconn.DialerOpts
+func (c *mySQLConnectionProducer) rewriteProtocolForGCP(inDSN string) (string, error) {
+	config, err := mysql.ParseDSN(inDSN)
+	if err != nil {
+		return "", fmt.Errorf("unable to parseeeee connectionURL: %s", err)
+	}
+
+	if config.Net != "cloudsql-mysql" {
+		return "", fmt.Errorf("didn't update net name because it wasn't what we expected as a placeholder: %s", config.Net)
+	}
+
+	if c.isCloud {
+		config.Net = c.cloudDriverName // todo format to something reasonable
+	}
+
+	return config.FormatDSN(), nil
+}
+
+func registerDriverMySQL(driverName string, credentials, credentialsJSON interface{}) (func() error, error) {
 	// @TODO implement driver cleanup cache
 	// if driver is already registered, return
 
-	opts, err := connutil.GetCloudSQLAuthOptions(credentials, credentialsJSON)
+	opts, err := connutil.GetCloudSQLAuthOptions(credentials, credentials)
 	if err != nil {
 		return nil, err
 	}
-	return cloudmysql.RegisterDriver(cloudSQLMySQL, opts)
+
+	return cloudmysql.RegisterDriver(driverName, opts...)
 }

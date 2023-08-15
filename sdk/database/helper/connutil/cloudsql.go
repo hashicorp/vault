@@ -46,41 +46,45 @@ func (c *SQLConnectionProducer) registerDrivers(credentials, credentialsJSON int
 	case cloudSQLMSSQL:
 		return registerDriverMSSQL(opts)
 	case cloudSQLPostgres:
-		return registerDriverPostgres(opts)
+		return registerDriverPostgres(opts...)
 	}
 
 	return nil, fmt.Errorf("unrecognized cloudsql type encountered: %s", typ)
 }
 
-func registerDriverPostgres(opts cloudsqlconn.Option) (func() error, error) {
-	return pgxv4.RegisterDriver(cloudSQLPostgres, opts)
+func registerDriverPostgres(opts ...cloudsqlconn.Option) (func() error, error) {
+	return pgxv4.RegisterDriver(cloudSQLPostgres, opts...)
 }
 
 func registerDriverMSSQL(opts cloudsqlconn.Option) (func() error, error) {
 	return mssql.RegisterDriver(cloudSQLMSSQL, opts)
 }
 
-func GetCloudSQLAuthOptions(credentials, credentialsJSON interface{}) (cloudsqlconn.Option, error) {
+func GetCloudSQLAuthOptions(credentials, credentialsJSON interface{}) ([]cloudsqlconn.Option, error) {
+	opts := []cloudsqlconn.Option{cloudsqlconn.WithIAMAuthN()}
 	if credentials != nil {
 		v, ok := credentials.(string)
 		if !ok {
 			return nil, fmt.Errorf("error converting file name to string")
 		}
 
-		return cloudsqlconn.WithCredentialsFile(v), nil
+		fmt.Printf("registering driver with credential file\n")
+		opts = append(opts, cloudsqlconn.WithCredentialsFile(v))
 	}
 
 	if credentialsJSON != nil {
-		v, ok := credentialsJSON.([]byte)
-		if !ok {
-			return nil, fmt.Errorf("error converting JSON data to bytes")
+		fmt.Printf("registering driver with credential json\n")
+		switch v := credentialsJSON.(type) {
+		case string:
+			opts = append(opts, cloudsqlconn.WithCredentialsJSON([]byte(v)))
+		case []byte:
+			opts = append(opts, cloudsqlconn.WithCredentialsJSON(v))
+		default:
+			return nil, fmt.Errorf("error converting credentials of type %T to []byte", credentials)
 		}
-
-		return cloudsqlconn.WithCredentialsJSON(v), nil
-
 	}
 
-	return cloudsqlconn.WithIAMAuthN(), nil
+	return opts, nil
 }
 
 func cacheDrivers(typ string, f cloudSQLCleanup) {
