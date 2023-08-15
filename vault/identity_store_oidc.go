@@ -878,6 +878,9 @@ func (i *IdentityStore) pathOIDCGenerateToken(ctx context.Context, req *logical.
 		return nil, err
 	}
 
+	// Resolve the token
+	te, _ := i.tokenStorer.LookupToken(ctx, req.ClientToken)
+
 	roleName := d.Get("name").(string)
 
 	role, err := i.getOIDCRole(ctx, req.Storage, roleName)
@@ -952,6 +955,7 @@ func (i *IdentityStore) pathOIDCGenerateToken(ctx context.Context, req *logical.
 		String:      role.Template,
 		Entity:      identity.ToSDKEntity(e),
 		Groups:      identity.ToSDKGroups(groups),
+		Token:       te,
 		NamespaceID: ns.ID,
 	})
 	if err != nil {
@@ -1194,6 +1198,7 @@ func (i *IdentityStore) pathOIDCCreateUpdateRole(ctx context.Context, req *logic
 			String: role.Template,
 			Entity: new(logical.Entity),
 			Groups: make([]*logical.Group, 0),
+			Token:  new(logical.TokenEntry),
 			// namespace?
 		})
 		if err != nil {
