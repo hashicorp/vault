@@ -74,8 +74,6 @@ module('Acceptance | kv permissions', function (hooks) {
         assert.dom(PAGE.secretTab('Secret')).exists();
         assert.dom(PAGE.secretTab('Metadata')).exists();
         assert.dom(PAGE.secretTab('Version History')).exists();
-        // TODO KV engine clean up. This needs to be skipped until we have two versions of the secret.
-        // assert.dom(PAGE.secretTab('Version Diff')).exists();
       });
 
       test('it hides tabs when no metadata read', async function (assert) {
@@ -86,7 +84,6 @@ module('Acceptance | kv permissions', function (hooks) {
         assert.dom(PAGE.secretTab('Secret')).exists();
         assert.dom(PAGE.secretTab('Metadata')).exists();
         assert.dom(PAGE.secretTab('Version History')).doesNotExist();
-        assert.dom(PAGE.secretTab('Version Diff')).doesNotExist();
       });
 
       test('it shows empty state when cannot read secret data', async function (assert) {
@@ -97,7 +94,6 @@ module('Acceptance | kv permissions', function (hooks) {
         assert.dom(PAGE.secretTab('Secret')).exists();
         assert.dom(PAGE.secretTab('Metadata')).exists();
         assert.dom(PAGE.secretTab('Version History')).doesNotExist();
-        assert.dom(PAGE.secretTab('Version Diff')).doesNotExist();
         assert.dom(PAGE.emptyStateTitle).hasText('You do not have permission to read this secret');
         assert
           .dom(PAGE.emptyStateMessage)
