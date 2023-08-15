@@ -26,7 +26,7 @@ export const PAGE = {
     secretMetadataSection: '[data-test-kv-metadata-section]',
   },
   detail: {
-    versionTooltip: '[data-test-kv-version-tooltip-trigger]',
+    versionCreated: '[data-test-kv-version-tooltip-trigger]',
     versionDropdown: '[data-test-version-dropdown]',
     version: (number) => `[data-test-version="${number}"]`,
     createNewVersion: '[data-test-create-new-version]',
