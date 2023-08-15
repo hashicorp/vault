@@ -1,6 +1,6 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 import { module, test } from 'qunit';
@@ -40,9 +40,9 @@ module('Integration | Component | pki key details page', function (hooks) {
     await render(
       hbs`
         <Page::PkiKeyDetails
-          @key={{this.model}} 
+          @key={{this.model}}
           @canDelete={{true}}
-          @canEdit={{true}} 
+          @canEdit={{true}}
         />
       `,
       { owner: this.engine }
@@ -64,9 +64,9 @@ module('Integration | Component | pki key details page', function (hooks) {
     await render(
       hbs`
         <Page::PkiKeyDetails
-          @key={{this.model}} 
+          @key={{this.model}}
           @canDelete={{false}}
-          @canEdit={{false}} 
+          @canEdit={{false}}
         />
       `,
       { owner: this.engine }
