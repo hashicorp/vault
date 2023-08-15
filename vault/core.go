@@ -647,6 +647,8 @@ type Core struct {
 
 	autoRotateCancel context.CancelFunc
 
+	updateLockedUserEntriesCancel context.CancelFunc
+
 	// number of workers to use for lease revocation in the expiration manager
 	numExpirationWorkers int
 
@@ -2320,12 +2322,15 @@ func (s standardUnsealStrategy) unseal(ctx context.Context, logger log.Logger, c
 	if err := c.setupHeaderHMACKey(ctx, false); err != nil {
 		return err
 	}
-	if err := c.runLockedUserEntryUpdates(ctx); err != nil {
-		return err
-	}
-	c.updateLockedUserEntries()
-
 	if !c.IsDRSecondary() {
+		if err := c.runLockedUserEntryUpdates(ctx); err != nil {
+			return err
+		}
+		if c.updateLockedUserEntriesCancel == nil {
+			var updateLockedUserEntriesCtx context.Context
+			updateLockedUserEntriesCtx, c.updateLockedUserEntriesCancel = context.WithCancel(c.activeContext)
+			c.updateLockedUserEntries(updateLockedUserEntriesCtx)
+		}
 		if err := c.startRollback(); err != nil {
 			return err
 		}
@@ -2586,6 +2591,11 @@ func (c *Core) preSeal() error {
 	if c.autoRotateCancel != nil {
 		c.autoRotateCancel()
 		c.autoRotateCancel = nil
+	}
+
+	if c.updateLockedUserEntriesCancel != nil {
+		c.updateLockedUserEntriesCancel()
+		c.updateLockedUserEntriesCancel = nil
 	}
 
 	if seal, ok := c.seal.(*autoSeal); ok {
@@ -3443,8 +3453,7 @@ func (c *Core) setupCachedMFAResponseAuth() {
 
 // updateLockedUserEntries runs every 15 mins to remove stale user entries from storage
 // it also updates the userFailedLoginInfo map with correct information for locked users if incorrect
-func (c *Core) updateLockedUserEntries() {
-	ctx := c.activeContext
+func (c *Core) updateLockedUserEntries(ctx context.Context) {
 	go func() {
 		ticker := time.NewTicker(15 * time.Minute)
 		for {
