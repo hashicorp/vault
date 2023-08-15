@@ -31,6 +31,12 @@ export default class KvDataAdapter extends ApplicationAdapter {
     });
   }
 
+  fetchWrapInfo(query) {
+    const { backend, path, version, wrapTTL } = query;
+    const id = kvDataPath(backend, path, version);
+    return this.ajax(this._url(id), 'GET', { wrapTTL }).then((resp) => resp.wrap_info);
+  }
+
   queryRecord(store, type, query) {
     const { backend, path, version } = query;
     // ID is the full path for the data (including version)

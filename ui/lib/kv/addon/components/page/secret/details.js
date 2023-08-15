@@ -54,7 +54,16 @@ export default class KvSecretDetails extends Component {
   @task
   @waitFor
   *wrapSecret() {
-    // do stuff
+    const { backend, path } = this.args.secret;
+    const adapter = this.store.adapterFor('kv/data');
+    try {
+      const { token } = yield adapter.fetchWrapInfo({ backend, path, wrapTTL: 1800 });
+      if (!token) throw 'No token';
+      this.wrappedData = token;
+      this.flashMessages.success('Secret successfully wrapped!');
+    } catch (error) {
+      this.flashMessages.danger('Could not wrap secret.');
+    }
   }
 
   get hideHeaders() {
