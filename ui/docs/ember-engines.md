@@ -36,7 +36,7 @@ In the engine’s `index.js` file:
 ```js
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 /* eslint-disable node/no-extraneous-require */
@@ -58,7 +58,7 @@ Within your Engine’s `config/environment.js` file:
 ```js
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 // config/environment.js
@@ -80,7 +80,7 @@ Within your Engine’s `addon/engine.js` file:
 ```js
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 import Engine from '@ember/engine';
@@ -133,7 +133,7 @@ In our `app/app.js` file in the engines object, add your engine’s name and dep
 ```js
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 import Application from '@ember/application';

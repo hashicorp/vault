@@ -1,3 +1,6 @@
+# Copyright (c) HashiCorp, Inc.
+# SPDX-License-Identifier: BUSL-1.1
+  
 # Note: in order to use the openSUSE Leap AMIs, the AWS account in use must have an
 # active subscription. There is no additional charge for using these instances other
 # than the usage AWS usage charges, but because the images belong to an AWS Marketplace 

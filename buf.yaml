@@ -1,12 +1,15 @@
+# Copyright (c) HashiCorp, Inc.
+# SPDX-License-Identifier: BUSL-1.1
+
 version: v1
 lint:
   ignore_only:
     ENUM_VALUE_PREFIX:
-      - vault/activity/generation/generate_data.proto
+      - sdk/helper/clientcountutil/generation/generate_data.proto
       - vault/hcp_link/proto/node_status/status.proto
       - vault/replication_services_ent.proto
     ENUM_ZERO_VALUE_SUFFIX:
-      - vault/activity/generation/generate_data.proto
+      - sdk/helper/clientcountutil/generation/generate_data.proto
       - vault/hcp_link/proto/node_status/status.proto
       - vault/replication_services_ent.proto
     FIELD_LOWER_SNAKE_CASE:
@@ -39,7 +42,7 @@ lint:
       - sdk/logical/version.proto
       - sdk/plugin/pb/backend.proto
       - vault/activity/activity_log.proto
-      - vault/activity/generation/generate_data.proto
+      - sdk/helper/clientcountutil/generation/generate_data.proto
       - vault/hcp_link/proto/link_control/link_control.proto
       - vault/hcp_link/proto/meta/meta.proto
       - vault/hcp_link/proto/node_status/status.proto
@@ -69,7 +72,7 @@ lint:
       - sdk/logical/version.proto
       - sdk/plugin/pb/backend.proto
       - vault/activity/activity_log.proto
-      - vault/activity/generation/generate_data.proto
+      - sdk/helper/clientcountutil/generation/generate_data.proto
       - vault/hcp_link/proto/link_control/link_control.proto
       - vault/hcp_link/proto/meta/meta.proto
       - vault/hcp_link/proto/node_status/status.proto

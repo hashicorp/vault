@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 package pki
 
@@ -334,9 +334,7 @@ func (b *backend) pathIssuerSignIntermediate(ctx context.Context, req *logical.R
 
 	format := getFormat(data)
 	if format == "" {
-		return logical.ErrorResponse(
-			`The "format" path parameter must be "pem" or "der"`,
-		), nil
+		return logical.ErrorResponse(`The "format" path parameter must be "pem", "der" or "pem_bundle"`), nil
 	}
 
 	role := &roleEntry{
@@ -416,6 +414,26 @@ func (b *backend) pathIssuerSignIntermediate(ctx context.Context, req *logical.R
 		return nil, fmt.Errorf("verification of parsed bundle failed: %w", err)
 	}
 
+	resp, err := signIntermediateResponse(signingBundle, parsedBundle, format, warnings)
+	if err != nil {
+		return nil, err
+	}
+
+	key := "certs/" + normalizeSerialFromBigInt(parsedBundle.Certificate.SerialNumber)
+	certsCounted := b.certsCounted.Load()
+	err = req.Storage.Put(ctx, &logical.StorageEntry{
+		Key:   key,
+		Value: parsedBundle.CertificateBytes,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("unable to store certificate locally: %w", err)
+	}
+	b.ifCountEnabledIncrementTotalCertificatesCount(certsCounted, key)
+
+	return resp, nil
+}
+
+func signIntermediateResponse(signingBundle *certutil.CAInfoBundle, parsedBundle *certutil.ParsedCertBundle, format string, warnings []string) (*logical.Response, error) {
 	signingCB, err := signingBundle.ToCertBundle()
 	if err != nil {
 		return nil, fmt.Errorf("error converting raw signing bundle to cert bundle: %w", err)
@@ -485,23 +503,11 @@ func (b *backend) pathIssuerSignIntermediate(ctx context.Context, req *logical.R
 		return nil, fmt.Errorf("unsupported format argument: %s", format)
 	}
 
-	key := "certs/" + normalizeSerial(cb.SerialNumber)
-	certsCounted := b.certsCounted.Load()
-	err = req.Storage.Put(ctx, &logical.StorageEntry{
-		Key:   key,
-		Value: parsedBundle.CertificateBytes,
-	})
-	if err != nil {
-		return nil, fmt.Errorf("unable to store certificate locally: %w", err)
-	}
-	b.ifCountEnabledIncrementTotalCertificatesCount(certsCounted, key)
-
 	if parsedBundle.Certificate.MaxPathLen == 0 {
 		resp.AddWarning("Max path length of the signed certificate is zero. This certificate cannot be used to issue intermediate CA certificates.")
 	}
 
 	resp = addWarnings(resp, warnings)
-
 	return resp, nil
 }
 
