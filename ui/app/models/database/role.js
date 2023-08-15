@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import Model, { attr } from '@ember-data/model';
 import { computed } from '@ember/object';
 import { alias } from '@ember/object/computed';
@@ -12,13 +17,13 @@ export default Model.extend({
     label: 'Role name',
   }),
   database: attr('array', {
-    label: 'Database name',
+    label: 'Connection name',
     editType: 'searchSelect',
     fallbackComponent: 'string-list',
     models: ['database/connection'],
     selectLimit: 1,
     onlyAllowExisting: true,
-    subText: 'The database for which credentials will be generated.',
+    subText: 'The database connection for which credentials will be generated.',
   }),
   type: attr('string', {
     label: 'Type of role',
@@ -91,7 +96,7 @@ export default Model.extend({
   get showFields() {
     let fields = ['name', 'database', 'type'];
     fields = fields.concat(getRoleFields(this.type)).concat(['creation_statements']);
-    // elasticsearch does not support revocation statements: https://www.vaultproject.io/api-docs/secret/databases/elasticdb#parameters-1
+    // elasticsearch does not support revocation statements: https://developer.hashicorp.com/vault/api-docs/secret/databases/elasticdb#parameters-1
     if (this.database[0] !== 'elasticsearch') {
       fields = fields.concat(['revocation_statements']);
     }

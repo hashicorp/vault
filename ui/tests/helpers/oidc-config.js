@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import { Response } from 'miragejs';
 
 export const OIDC_BASE_URL = `/vault/access/oidc`;

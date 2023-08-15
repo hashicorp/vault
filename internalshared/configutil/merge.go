@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package configutil
 
 func (c *SharedConfig) Merge(c2 *SharedConfig) *SharedConfig {
@@ -69,13 +72,15 @@ func (c *SharedConfig) Merge(c2 *SharedConfig) *SharedConfig {
 	}
 
 	result.LogRotateBytes = c.LogRotateBytes
-	if c2.LogRotateBytes != "" {
+	if c2.LogRotateBytesRaw != nil {
 		result.LogRotateBytes = c2.LogRotateBytes
+		result.LogRotateBytesRaw = c2.LogRotateBytesRaw
 	}
 
 	result.LogRotateMaxFiles = c.LogRotateMaxFiles
-	if c2.LogRotateMaxFiles != "" {
+	if c2.LogRotateMaxFilesRaw != nil {
 		result.LogRotateMaxFiles = c2.LogRotateMaxFiles
+		result.LogRotateMaxFilesRaw = c2.LogRotateMaxFilesRaw
 	}
 
 	result.LogRotateDuration = c.LogRotateDuration

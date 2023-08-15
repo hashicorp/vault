@@ -1,9 +1,12 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package command
 
 import (
 	"flag"
 	"os"
-	"strings"
+	"strconv"
 
 	"github.com/hashicorp/vault/internalshared/configutil"
 	"github.com/posener/complete"
@@ -15,20 +18,18 @@ type logFlags struct {
 	flagLogLevel          string
 	flagLogFormat         string
 	flagLogFile           string
-	flagLogRotateBytes    string
+	flagLogRotateBytes    int
 	flagLogRotateDuration string
-	flagLogRotateMaxFiles string
+	flagLogRotateMaxFiles int
 }
-
-type provider = func(key string) (string, bool)
 
 // valuesProvider has the intention of providing a way to supply a func with a
 // way to retrieve values for flags and environment variables without having to
-// directly call a specific implementation. The reasoning for its existence is
-// to facilitate testing.
+// directly call a specific implementation.
+// The reasoning for its existence is to facilitate testing.
 type valuesProvider struct {
-	flagProvider   provider
-	envVarProvider provider
+	flagProvider   func(string) (flag.Value, bool)
+	envVarProvider func(string) (string, bool)
 }
 
 // addLogFlags will add the set of 'log' related flags to a flag set.
@@ -65,7 +66,7 @@ func (f *FlagSet) addLogFlags(l *logFlags) {
 		Usage:  "Path to the log file that Vault should use for logging",
 	})
 
-	f.StringVar(&StringVar{
+	f.IntVar(&IntVar{
 		Name:   flagNameLogRotateBytes,
 		Target: &l.flagLogRotateBytes,
 		Usage: "Number of bytes that should be written to a log before it needs to be rotated. " +
@@ -79,23 +80,34 @@ func (f *FlagSet) addLogFlags(l *logFlags) {
 			"Must be a duration value such as 30s",
 	})
 
-	f.StringVar(&StringVar{
+	f.IntVar(&IntVar{
 		Name:   flagNameLogRotateMaxFiles,
 		Target: &l.flagLogRotateMaxFiles,
 		Usage:  "The maximum number of older log file archives to keep",
 	})
 }
 
-// getValue will attempt to find the flag with the corresponding flag name (key)
-// and return the value along with a bool representing whether of not the flag had been found/set.
-func (f *FlagSets) getValue(flagName string) (string, bool) {
-	var result string
+// envVarValue attempts to get a named value from the environment variables.
+// The value will be returned as a string along with a boolean value indiciating
+// to the caller whether the named env var existed.
+func envVarValue(key string) (string, bool) {
+	if key == "" {
+		return "", false
+	}
+	return os.LookupEnv(key)
+}
+
+// flagValue attempts to find the named flag in a set of FlagSets.
+// The flag.Value is returned if it was specified, and the boolean value indicates
+// to the caller if the flag was specified by the end user.
+func (f *FlagSets) flagValue(flagName string) (flag.Value, bool) {
+	var result flag.Value
 	var isFlagSpecified bool
 
 	if f != nil {
 		f.Visit(func(fl *flag.Flag) {
 			if fl.Name == flagName {
-				result = fl.Value.String()
+				result = fl.Value
 				isFlagSpecified = true
 			}
 		})
@@ -104,51 +116,63 @@ func (f *FlagSets) getValue(flagName string) (string, bool) {
 	return result, isFlagSpecified
 }
 
-// getAggregatedConfigValue uses the provided keys to check CLI flags and environment
+// overrideValue uses the provided keys to check CLI flags and environment
 // variables for values that may be used to override any specified configuration.
-// If nothing can be found in flags/env vars or config, the 'fallback' (default) value will be provided.
-func (p *valuesProvider) getAggregatedConfigValue(flagKey, envVarKey, current, fallback string) string {
+func (p *valuesProvider) overrideValue(flagKey, envVarKey string) (string, bool) {
 	var result string
-	current = strings.TrimSpace(current)
+	found := true
 
 	flg, flgFound := p.flagProvider(flagKey)
 	env, envFound := p.envVarProvider(envVarKey)
 
 	switch {
 	case flgFound:
-		result = flg
+		result = flg.String()
 	case envFound:
-		// Use value from env var
 		result = env
-	case current != "":
-		// Use value from config
-		result = current
 	default:
-		// Use the default value
-		result = fallback
+		found = false
 	}
 
-	return result
+	return result, found
 }
 
-// updateLogConfig will accept a shared config and specifically attempt to update the 'log' related config keys.
-// For each 'log' key we aggregate file config/env vars and CLI flags to select the one with the highest precedence.
+// applyLogConfigOverrides will accept a shared config and specifically attempt to update the 'log' related config keys.
+// For each 'log' key, we aggregate file config, env vars and CLI flags to select the one with the highest precedence.
 // This method mutates the config object passed into it.
-func (f *FlagSets) updateLogConfig(config *configutil.SharedConfig) {
+func (f *FlagSets) applyLogConfigOverrides(config *configutil.SharedConfig) {
 	p := &valuesProvider{
-		flagProvider: func(key string) (string, bool) { return f.getValue(key) },
-		envVarProvider: func(key string) (string, bool) {
-			if key == "" {
-				return "", false
-			}
-			return os.LookupEnv(key)
-		},
+		flagProvider:   f.flagValue,
+		envVarProvider: envVarValue,
 	}
 
-	config.LogLevel = p.getAggregatedConfigValue(flagNameLogLevel, EnvVaultLogLevel, config.LogLevel, "info")
-	config.LogFormat = p.getAggregatedConfigValue(flagNameLogFormat, EnvVaultLogFormat, config.LogFormat, "")
-	config.LogFile = p.getAggregatedConfigValue(flagNameLogFile, "", config.LogFile, "")
-	config.LogRotateDuration = p.getAggregatedConfigValue(flagNameLogRotateDuration, "", config.LogRotateDuration, "")
-	config.LogRotateBytes = p.getAggregatedConfigValue(flagNameLogRotateBytes, "", config.LogRotateBytes, "")
-	config.LogRotateMaxFiles = p.getAggregatedConfigValue(flagNameLogRotateMaxFiles, "", config.LogRotateMaxFiles, "")
+	// Update log level
+	if val, found := p.overrideValue(flagNameLogLevel, EnvVaultLogLevel); found {
+		config.LogLevel = val
+	}
+
+	// Update log format
+	if val, found := p.overrideValue(flagNameLogFormat, EnvVaultLogFormat); found {
+		config.LogFormat = val
+	}
+
+	// Update log file name
+	if val, found := p.overrideValue(flagNameLogFile, ""); found {
+		config.LogFile = val
+	}
+
+	// Update log rotation duration
+	if val, found := p.overrideValue(flagNameLogRotateDuration, ""); found {
+		config.LogRotateDuration = val
+	}
+
+	// Update log max files
+	if val, found := p.overrideValue(flagNameLogRotateMaxFiles, ""); found {
+		config.LogRotateMaxFiles, _ = strconv.Atoi(val)
+	}
+
+	// Update log rotation max bytes
+	if val, found := p.overrideValue(flagNameLogRotateBytes, ""); found {
+		config.LogRotateBytes, _ = strconv.Atoi(val)
+	}
 }

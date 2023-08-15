@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import { module, test } from 'qunit';
 import { setupRenderingTest } from 'ember-qunit';
 import { render } from '@ember/test-helpers';
@@ -25,6 +30,7 @@ module('Integration | Component | secret-list-header', function (hooks) {
         />
       `);
       const selector = '[data-test-kv-version-badge]';
+
       if (['kv', 'generic'].includes(type)) {
         assert
           .dom(selector)

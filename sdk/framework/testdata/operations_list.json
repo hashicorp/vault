@@ -10,7 +10,7 @@
     }
   },
   "paths": {
-    "/foo/{id}": {
+    "/foo/{id}/": {
       "description": "Synopsis",
       "x-vault-sudo": true,
       "x-vault-displayAttrs": {
@@ -33,20 +33,13 @@
             "type": "string"
           },
           "required": true
-        },
-        {
-          "name": "secret_mount_path",
-          "description": "Path where the backend was mounted; the endpoint path will be offset by the mount path",
-          "in": "path",
-          "schema": {
-            "type": "string",
-            "default": "secret"
-          }
         }
       ],
       "get": {
-        "operationId": "getFooId",
-        "tags": ["secrets"],
+        "operationId": "kv-list-foo-id",
+        "tags": [
+          "secrets"
+        ],
         "summary": "List Summary",
         "description": "List Description",
         "responses": {
@@ -62,7 +55,9 @@
             "in": "query",
             "schema": {
               "type": "string",
-              "enum": ["true"]
+              "enum": [
+                "true"
+              ]
             }
           }
         ]
@@ -70,7 +65,6 @@
     }
   },
   "components": {
-    "schemas": {
-    }
+    "schemas": {}
   }
 }

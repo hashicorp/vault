@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import Component from '@glimmer/component';
 import { action } from '@ember/object';
 import { stack } from 'd3-shape';
@@ -179,9 +184,9 @@ export default class HorizontalBarChart extends Component {
         this.tooltipTarget = hoveredElement;
         this.isLabel = false;
         this.tooltipText = this.total
-          ? `${Math.round((data[xKey] * 100) / this.total)}% 
+          ? `${Math.round((data[xKey] * 100) / this.total)}%
         of total client counts:
-        ${formatTooltipNumber(data.entity_clients)} entity clients, 
+        ${formatTooltipNumber(data.entity_clients)} entity clients,
         ${formatTooltipNumber(data.non_entity_clients)} non-entity clients.`
           : '';
 

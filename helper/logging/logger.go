@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package logging
 
 import (
@@ -45,6 +48,17 @@ type LogConfig struct {
 
 	// LogRotateMaxFiles is the maximum number of past archived log files to keep
 	LogRotateMaxFiles int
+
+	// SubloggerHook handles creation of new subloggers, automatically appending
+	// them to core's running list of allLoggers.
+	// see: server.AppendToAllLoggers for more details.
+	SubloggerHook func(log.Logger) log.Logger
+}
+
+// SubloggerAdder is an interface which facilitates tracking of new subloggers
+// added between phases of server startup.
+type SubloggerAdder interface {
+	SubloggerHook(logger log.Logger) log.Logger
 }
 
 func (c *LogConfig) isLevelInvalid() bool {
@@ -122,6 +136,7 @@ func Setup(config *LogConfig, w io.Writer) (log.InterceptLogger, error) {
 		if config.LogRotateDuration == 0 {
 			config.LogRotateDuration = defaultRotateDuration
 		}
+
 		logFile := &LogFile{
 			fileName:         fileName,
 			logPath:          dir,
@@ -144,6 +159,7 @@ func Setup(config *LogConfig, w io.Writer) (log.InterceptLogger, error) {
 		IndependentLevels: true,
 		Output:            io.MultiWriter(writers...),
 		JSONFormat:        config.isFormatJson(),
+		SubloggerHook:     config.SubloggerHook,
 	})
 
 	return logger, nil

@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import Model, { attr } from '@ember-data/model';
 import { alias } from '@ember/object/computed';
 import { computed } from '@ember/object';
@@ -53,7 +58,7 @@ export default Model.extend({
   }),
   name: attr('string', {
     label: 'Role Name',
-    fieldValue: 'id',
+    fieldValue: 'name',
     readOnly: true,
   }),
   keyType: attr('string', {
@@ -120,6 +125,7 @@ export default Model.extend({
   }),
   algorithmSigner: attr('string', {
     helpText: 'When supplied, this value specifies a signing algorithm for the key',
+    possibleValues: ['default', 'ssh-rsa', 'rsa-sha2-256', 'rsa-sha2-512'],
   }),
 
   showFields: computed('keyType', function () {

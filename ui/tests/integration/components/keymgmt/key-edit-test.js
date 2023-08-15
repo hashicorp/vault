@@ -1,14 +1,24 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import { module, test } from 'qunit';
+import sinon from 'sinon';
 import EmberObject from '@ember/object';
 import { setupRenderingTest } from 'ember-qunit';
 import { render } from '@ember/test-helpers';
 import { hbs } from 'ember-cli-htmlbars';
+import timestamp from 'core/utils/timestamp';
 
 module('Integration | Component | keymgmt/key-edit', function (hooks) {
   setupRenderingTest(hooks);
 
+  hooks.before(function () {
+    sinon.stub(timestamp, 'now').callsFake(() => new Date('2018-04-03T14:15:30'));
+  });
   hooks.beforeEach(function () {
-    const now = new Date().toString();
+    const now = timestamp.now();
     const model = EmberObject.create({
       name: 'Unicorns',
       id: 'Unicorns',
@@ -16,17 +26,20 @@ module('Integration | Component | keymgmt/key-edit', function (hooks) {
       versions: [
         {
           id: 1,
-          creation_time: now,
+          creation_time: now.toString(),
         },
         {
           id: 2,
-          creation_time: now,
+          creation_time: now.toString(),
         },
       ],
       canDelete: true,
     });
     this.model = model;
     this.tab = '';
+  });
+  hooks.after(function () {
+    timestamp.now.restore();
   });
 
   // TODO: Add capabilities tests
@@ -61,7 +74,7 @@ module('Integration | Component | keymgmt/key-edit', function (hooks) {
     await render(
       hbs`<Keymgmt::KeyEdit @model={{this.model}} @mode={{this.mode}} /><div id="modal-wormhole" />`
     );
-    assert.dom('[data-test-secret-header]').hasText('Edit key', 'Shows edit header');
+    assert.dom('[data-test-secret-header]').hasText('Edit Key', 'Shows edit header');
     assert.dom('[data-test-keymgmt-key-toolbar]').doesNotExist('Subnav toolbar does not exist');
     assert.dom('[data-test-tab="Details"]').doesNotExist('Details tab does not exist');
     assert.dom('[data-test-tab="Versions"]').doesNotExist('Versions tab does not exist');
@@ -76,7 +89,7 @@ module('Integration | Component | keymgmt/key-edit', function (hooks) {
     await render(
       hbs`<Keymgmt::KeyEdit @model={{this.model}} @mode={{this.mode}} /><div id="modal-wormhole" />`
     );
-    assert.dom('[data-test-secret-header]').hasText('Create key', 'Shows edit header');
+    assert.dom('[data-test-secret-header]').hasText('Create Key', 'Shows edit header');
     assert.dom('[data-test-keymgmt-key-toolbar]').doesNotExist('Subnav toolbar does not exist');
     assert.dom('[data-test-tab="Details"]').doesNotExist('Details tab does not exist');
     assert.dom('[data-test-tab="Versions"]').doesNotExist('Versions tab does not exist');

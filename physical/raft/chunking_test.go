@@ -1,16 +1,19 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package raft
 
 import (
 	"bytes"
 	"context"
-	fmt "fmt"
+	"fmt"
 	"os"
 	"testing"
 
-	proto "github.com/golang/protobuf/proto"
+	"github.com/golang/protobuf/proto"
 	"github.com/hashicorp/go-raftchunking"
 	raftchunkingtypes "github.com/hashicorp/go-raftchunking/types"
-	uuid "github.com/hashicorp/go-uuid"
+	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/raft"
 	"github.com/hashicorp/raft-boltdb/v2"
 	"github.com/hashicorp/vault/sdk/physical"
@@ -26,7 +29,7 @@ func TestRaft_Chunking_Lifecycle(t *testing.T) {
 	require := require.New(t)
 	assert := assert.New(t)
 
-	b, dir := getRaft(t, true, false)
+	b, dir := GetRaft(t, true, false)
 	defer os.RemoveAll(dir)
 
 	t.Log("applying configuration")
@@ -111,7 +114,7 @@ func TestFSM_Chunking_TermChange(t *testing.T) {
 	require := require.New(t)
 	assert := assert.New(t)
 
-	b, dir := getRaft(t, true, false)
+	b, dir := GetRaft(t, true, false)
 	defer os.RemoveAll(dir)
 
 	t.Log("applying configuration")
@@ -185,7 +188,7 @@ func TestFSM_Chunking_TermChange(t *testing.T) {
 func TestRaft_Chunking_AppliedIndex(t *testing.T) {
 	t.Parallel()
 
-	raft, dir := getRaft(t, true, false)
+	raft, dir := GetRaft(t, true, false)
 	defer os.RemoveAll(dir)
 
 	// Lower the size for tests

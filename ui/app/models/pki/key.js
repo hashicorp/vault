@@ -1,11 +1,26 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import Model, { attr } from '@ember-data/model';
 import { inject as service } from '@ember/service';
+import lazyCapabilities, { apiPath } from 'vault/macros/lazy-capabilities';
 import { withFormFields } from 'vault/decorators/model-form-fields';
 import { withModelValidations } from 'vault/decorators/model-validations';
 
 const validations = {
   type: [{ type: 'presence', message: 'Type is required.' }],
   keyType: [{ type: 'presence', message: 'Please select a key type.' }],
+  keyName: [
+    {
+      validator(model) {
+        if (model.keyName === 'default') return false;
+        return true;
+      },
+      message: `Key name cannot be the reserved value 'default'`,
+    },
+  ],
 };
 const displayFields = ['keyId', 'keyName', 'keyType', 'keyBits'];
 const formFieldGroups = [{ default: ['keyName', 'type'] }, { 'Key parameters': ['keyType', 'keyBits'] }];
@@ -15,8 +30,10 @@ export default class PkiKeyModel extends Model {
   @service secretMountPath;
 
   @attr('string', { detailsLabel: 'Key ID' }) keyId;
-  @attr('string', { subText: 'Optional, human-readable name for this key.' }) keyName;
-  @attr('string') privateKey;
+  @attr('string', {
+    subText: `Optional, human-readable name for this key. The name must be unique across all keys and cannot be 'default'.`,
+  })
+  keyName;
   @attr('string', {
     noDefault: true,
     possibleValues: ['internal', 'exported'],
@@ -37,7 +54,35 @@ export default class PkiKeyModel extends Model {
   })
   keyBits; // no possibleValues because dependent on selected key type
 
+  @attr('string') pemBundle;
+  @attr('string') privateKey;
+
   get backend() {
     return this.secretMountPath.currentPath;
+  }
+
+  /* CAPABILITIES
+   * Default to show UI elements unless we know they can't access the given path
+   */
+
+  @lazyCapabilities(apiPath`${'backend'}/key/${'keyId'}`, 'backend', 'keyId') keyPath;
+  get canRead() {
+    return this.keyPath.get('canRead') !== false;
+  }
+  get canEdit() {
+    return this.keyPath.get('canUpdate') !== false;
+  }
+  get canDelete() {
+    return this.keyPath.get('canDelete') !== false;
+  }
+
+  @lazyCapabilities(apiPath`${'backend'}/keys/generate`, 'backend') generatePath;
+  get canGenerateKey() {
+    return this.generatePath.get('canUpdate') !== false;
+  }
+
+  @lazyCapabilities(apiPath`${'backend'}/keys/import`, 'backend') importPath;
+  get canImportKey() {
+    return this.importPath.get('canUpdate') !== false;
   }
 }

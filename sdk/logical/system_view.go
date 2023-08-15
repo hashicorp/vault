@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package logical
 
 import (
@@ -89,6 +92,11 @@ type SystemView interface {
 	// GeneratePasswordFromPolicy generates a password from the policy referenced.
 	// If the policy does not exist, this will return an error.
 	GeneratePasswordFromPolicy(ctx context.Context, policyName string) (password string, err error)
+
+	// ClusterID returns the replication ClusterID, for use with path-based
+	// write forwarding (WriteForwardedPaths). This value will be templated
+	// in for the {{cluterId}} sentinel.
+	ClusterID(ctx context.Context) (string, error)
 }
 
 type PasswordPolicy interface {
@@ -99,26 +107,32 @@ type PasswordPolicy interface {
 type ExtendedSystemView interface {
 	Auditor() Auditor
 	ForwardGenericRequest(context.Context, *Request) (*Response, error)
+
+	// APILockShouldBlockRequest returns whether a namespace for the requested
+	// mount is locked and should be blocked
+	APILockShouldBlockRequest() (bool, error)
 }
 
 type PasswordGenerator func() (password string, err error)
 
 type StaticSystemView struct {
-	DefaultLeaseTTLVal  time.Duration
-	MaxLeaseTTLVal      time.Duration
-	SudoPrivilegeVal    bool
-	TaintedVal          bool
-	CachingDisabledVal  bool
-	Primary             bool
-	EnableMlock         bool
-	LocalMountVal       bool
-	ReplicationStateVal consts.ReplicationState
-	EntityVal           *Entity
-	GroupsVal           []*Group
-	Features            license.Features
-	PluginEnvironment   *PluginEnvironment
-	PasswordPolicies    map[string]PasswordGenerator
-	VersionString       string
+	DefaultLeaseTTLVal           time.Duration
+	MaxLeaseTTLVal               time.Duration
+	SudoPrivilegeVal             bool
+	TaintedVal                   bool
+	CachingDisabledVal           bool
+	Primary                      bool
+	EnableMlock                  bool
+	LocalMountVal                bool
+	ReplicationStateVal          consts.ReplicationState
+	EntityVal                    *Entity
+	GroupsVal                    []*Group
+	Features                     license.Features
+	PluginEnvironment            *PluginEnvironment
+	PasswordPolicies             map[string]PasswordGenerator
+	VersionString                string
+	ClusterUUID                  string
+	APILockShouldBlockRequestVal bool
 }
 
 type noopAuditor struct{}
@@ -239,4 +253,12 @@ func (d *StaticSystemView) DeletePasswordPolicy(name string) (existed bool) {
 	_, existed = d.PasswordPolicies[name]
 	delete(d.PasswordPolicies, name)
 	return existed
+}
+
+func (d StaticSystemView) ClusterID(ctx context.Context) (string, error) {
+	return d.ClusterUUID, nil
+}
+
+func (d StaticSystemView) APILockShouldBlockRequest() (bool, error) {
+	return d.APILockShouldBlockRequestVal, nil
 }

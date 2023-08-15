@@ -8,20 +8,20 @@ description: |-
   maps directly to the HTTP API internally.
 ---
 
-# Vault Commands (CLI)
+# Vault commands (CLI)
 
 ~> **Note:** The Vault command-line interface (CLI) changed substantially in
 0.9.2+ and may cause confusion while using older versions of Vault with this
 documentation. Read our [upgrade
-guide](/docs/upgrading/upgrade-to-0.9.2#backwards-compatible-cli-changes) for
+guide](/vault/docs/upgrading/upgrade-to-0.9.2#backwards-compatible-cli-changes) for
 more information.
 
-In addition to a verbose [HTTP API](/api-docs), Vault features a command-line
+In addition to a verbose [HTTP API](/vault/api-docs), Vault features a command-line
 interface (CLI) that wraps common functionality and formats output. The Vault
 CLI is a single static binary. It is a thin wrapper around the HTTP API. Every
 CLI command maps directly to the HTTP API internally.
 
-## CLI Command Structure
+## CLI command structure
 
 Each command is represented as a command or subcommand, and there are a number
 of command and subcommand options available: HTTP options, output options, and
@@ -38,7 +38,7 @@ vault <command> [options] [path] [args]
 
 </CodeBlockConfig>
 
-- `options` - [Flags](/docs/commands#flags) to specify additional settings
+- `options` - [Flags](/vault/docs/commands#flags) to specify additional settings
 - `args` - API arguments specific to the operation
 
 -> **NOTE:** Use the [command help](#command-help) to display available options
@@ -49,7 +49,7 @@ and arguments.
 The following `write` command creates a new user (`bob`) in the userpass auth
 method. It passes the `-address` flag to specify the Vault server address which
 precedes the path (`auth/userpass/users/bob`) and its
-[argument](/api-docs/auth/userpass#create-update-user)
+[argument](/vault/api-docs/auth/userpass#create-update-user)
 (`password="long-password"`) at last.
 
 ```shell-session
@@ -57,7 +57,7 @@ $ vault write -address="http://127.0.0.1:8200" auth/userpass/users/bob password=
 ```
 
 If multiple options (`-address` and `-namespace`) and
-[arguments](/api-docs/auth/userpass#create-update-user) (`password` and
+[arguments](/vault/api-docs/auth/userpass#create-update-user) (`password` and
 `policies`) are specified, the command would look like:
 
 ```shell-session
@@ -68,13 +68,13 @@ $ vault write -address="http://127.0.0.1:8200" -namespace="my-organization" \
 The options (flags) come after the command (or subcommand) preceding the path,
 and the args always follow the path to set API parameter values.
 
-The four most common operations in Vault are [read](/docs/commands/read),
-[write](/docs/commands/write), [delete](/docs/commands/delete), and
-[list](/docs/commands/list). These operations work on most paths in Vault. Some
+The four most common operations in Vault are [read](/vault/docs/commands/read),
+[write](/vault/docs/commands/write), [delete](/vault/docs/commands/delete), and
+[list](/vault/docs/commands/list). These operations work on most paths in Vault. Some
 paths will contain secrets while other paths may contain configuration. Whatever it
 is, the primary interface for reading and writing data to Vault is similar.
 
-### Print cURL Command
+### Print cURL command
 
 To see the equivalent API call to perform the same operation, use the
 `-output-curl-string` flag after the subcommand.
@@ -85,7 +85,7 @@ $ vault write -output-curl-string  auth/userpass/users/bob password="long-passwo
 curl -X PUT -H "X-Vault-Request: true" -H "X-Vault-Token: $(vault print token)" -d '{"password":"long-password"}' http://127.0.0.1:8200/v1/auth/userpass/users/bob
 ```
 
-#### Print Policy Requirements
+#### Print policy requirements
 
 To view the policy requirements to perform an operation, use the `-output-policy` flag after the subcommand.
 
@@ -97,12 +97,12 @@ path "kv/data/secret" {
 }
 ```
 
-## Command Help
+## Command help
 
 There are two primary ways to get help in Vault: [CLI help (`help`)](#cli-help)
 and [API help (`path-help`)](#api-help).
 
-### CLI Help
+### CLI help
 
 Use `help` (or `-h` for shorthand) to see the CLI help output which corresponds
 to your Vault version.
@@ -121,12 +121,12 @@ $ vault kv help
 
 The help output displays available subcommands, parameters, and command flags.
 
-### API Help
+### API help
 
-To invoke the Vault API paths, you can use the [read](/docs/commands/read) (for
-HTTP GET), [write](/docs/commands/write) (for HTTP PUT or POST),
-[delete](/docs/commands/delete) (for HTTP DELETE), and
-[list](/docs/commands/list) (for HTTP LIST) commands.
+To invoke the Vault API paths, you can use the [read](/vault/docs/commands/read) (for
+HTTP GET), [write](/vault/docs/commands/write) (for HTTP PUT or POST),
+[delete](/vault/docs/commands/delete) (for HTTP DELETE), and
+[list](/vault/docs/commands/list) (for HTTP LIST) commands.
 
 Use `path-help` to get Vault API help:
 
@@ -138,7 +138,7 @@ The `path-help` retrieves API help on any API paths. Vault API paths provide
 built-in help in markdown format. This includes system paths, secret engines,
 and auth methods.
 
-**Example:** API help on the [`sys/mounts/`](/api-docs/system/mounts) path.
+**Example:** API help on the [`sys/mounts/`](/vault/api-docs/system/mounts) path.
 
 ```shell-session
 $ vault path-help sys/mounts
@@ -170,7 +170,7 @@ This path responds to the following HTTP methods.
 The help output displays supported child-paths and available parameters if there
 are any.
 
-## Command Input
+## Command input
 
 To write data to Vault, the input can be a part of the command in key-value
 format.
@@ -225,7 +225,7 @@ instead of `$ vault kv get secret/password`. The mount flag syntax was created t
 their full path (used in policies and raw API calls) actually contains a nested `/data/` element (e.g. `secret/data/password`) which can be easily overlooked when using
 the above KV v1-like syntax `secret/password`. To avoid this confusion, all KV-specific docs pages will use the `-mount` flag.
 
-## Exit Codes
+## Exit codes
 
 The Vault CLI aims to be consistent and well-behaved unless documented
 otherwise.
@@ -258,7 +258,7 @@ list of available completions. Type `-<tab>` to show available flag completions.
 If the `VAULT_*` environment variables are set, the autocompletion will
 automatically query the Vault server and return helpful argument suggestions.
 
-## Token Helper
+## Token helper
 
 By default, the Vault CLI uses a "token helper" to cache the token after
 authentication. This is conceptually similar to how a website securely stores
@@ -268,18 +268,20 @@ customizable, and you can even build your own.
 The default token helper stores the token in `~/.vault-token`. You can delete
 this file at any time to "logout" of Vault.
 
-## Environment Variables
+## Environment variables
 
 The CLI reads the following environment variables to set behavioral defaults.
 This can alleviate the need to repetitively type a flag. Flags always take
-precedence over the environment variables.
+precedence over the environment variables. Each of the following environment 
+variables must be set on the Vault process.  In Vault 1.13+, all environment 
+variables available to the Vault process will be logged during startup.
 
 ### `VAULT_TOKEN`
 
 Vault authentication token. Conceptually similar to a session token on a
 website, the `VAULT_TOKEN` environment variable holds the contents of the token.
 For more information, please see the [token
-concepts](/docs/concepts/tokens) page.
+concepts](/vault/docs/concepts/tokens) page.
 
 ### `VAULT_ADDR`
 
@@ -324,12 +326,17 @@ Provide Vault output (read/status/write) in the specified format. Valid formats 
 
 [Enterprise, Server only] Specify a license to use for this node. This takes
 precedence over [#VAULT_LICENSE_PATH](#vault_license_path) and
-[license_path in config](/docs/configuration#license_path).
+[license_path in config](/vault/docs/configuration#license_path).
 
 ### `VAULT_LICENSE_PATH`
 
 [Enterprise, Server only] Specify a path to a license on disk to use for this node.
-This takes precedence over [license_path in config](/docs/configuration#license_path).
+This takes precedence over [license_path in config](/vault/docs/configuration#license_path).
+
+### `VAULT_LOG_LEVEL`
+
+Set the Vault server's log level. The supported values are `trace`, `debug`,
+`info`, `warn`, and `err`. The default log leve is `info`.
 
 ### `VAULT_MAX_RETRIES`
 
@@ -348,7 +355,7 @@ High Availability mode.
 
 Do not verify Vault's presented certificate before communicating with it.
 Setting this variable is not recommended and voids Vault's [security
-model](/docs/internals/security).
+model](/vault/docs/internals/security).
 
 ### `VAULT_TLS_SERVER_NAME`
 
@@ -372,7 +379,7 @@ limiting is off by default.
 _Note:_ The rate is limited for each invocation of the `vault` CLI. Since
 each invocation of the `vault` CLI typically only makes a few requests,
 this environment variable is most useful when using the Go
-[Vault client API](/api-docs/libraries#go).
+[Vault client API](/vault/api-docs/libraries#go).
 
 ### `VAULT_NAMESPACE`
 

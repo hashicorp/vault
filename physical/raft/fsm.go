@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package raft
 
 import (
@@ -236,6 +239,13 @@ func (f *FSM) openDBFile(dbPath string) error {
 
 	f.db = boltDB
 	return nil
+}
+
+func (f *FSM) Stats() bolt.Stats {
+	f.l.RLock()
+	defer f.l.RUnlock()
+
+	return f.db.Stats()
 }
 
 func (f *FSM) Close() error {

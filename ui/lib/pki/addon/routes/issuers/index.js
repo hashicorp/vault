@@ -1,21 +1,19 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import Route from '@ember/routing/route';
 import { inject as service } from '@ember/service';
+import { PKI_DEFAULT_EMPTY_STATE_MSG } from 'pki/routes/overview';
 
-export default class PkiIssuersIndexRoute extends Route {
+export default class PkiIssuersListRoute extends Route {
   @service store;
   @service secretMountPath;
-  @service pathHelp;
-
-  beforeModel() {
-    // Must call this promise before the model hook otherwise it doesn't add OpenApi to record.
-    return this.pathHelp.getNewModel('pki/issuer', this.secretMountPath.currentPath);
-  }
 
   model() {
-    // the pathHelp service is needed for adding openAPI to the model
-    this.pathHelp.getNewModel('pki/issuer', 'pki');
     return this.store
-      .query('pki/issuer', { backend: this.secretMountPath.currentPath })
+      .query('pki/issuer', { backend: this.secretMountPath.currentPath, isListView: true })
       .then((issuersModel) => {
         return { issuersModel, parentModel: this.modelFor('issuers') };
       })
@@ -26,5 +24,15 @@ export default class PkiIssuersIndexRoute extends Route {
           throw err;
         }
       });
+  }
+
+  setupController(controller, resolvedModel) {
+    super.setupController(controller, resolvedModel);
+    controller.breadcrumbs = [
+      { label: 'secrets', route: 'secrets', linkExternal: true },
+      { label: this.secretMountPath.currentPath, route: 'overview' },
+      { label: 'issuers', route: 'issuers.index' },
+    ];
+    controller.notConfiguredMessage = PKI_DEFAULT_EMPTY_STATE_MSG;
   }
 }

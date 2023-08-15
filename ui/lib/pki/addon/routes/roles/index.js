@@ -1,29 +1,43 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import Route from '@ember/routing/route';
 import { inject as service } from '@ember/service';
-
+import { withConfig } from 'pki/decorators/check-issuers';
+import { hash } from 'rsvp';
+import { getCliMessage } from 'pki/routes/overview';
+@withConfig()
 export default class PkiRolesIndexRoute extends Route {
   @service store;
   @service secretMountPath;
-  @service pathHelp;
 
-  beforeModel() {
-    // Must call this promise before the model hook otherwise
-    // the model doesn't hydrate from OpenAPI correctly.
-    return this.pathHelp.getNewModel('pki/role', this.secretMountPath.currentPath);
+  async fetchRoles() {
+    try {
+      return await this.store.query('pki/role', { backend: this.secretMountPath.currentPath });
+    } catch (e) {
+      if (e.httpStatus === 404) {
+        return { parentModel: this.modelFor('roles') };
+      } else {
+        throw e;
+      }
+    }
   }
 
   model() {
-    return this.store
-      .query('pki/role', { backend: this.secretMountPath.currentPath })
-      .then((roleModel) => {
-        return { roleModel, parentModel: this.modelFor('roles') };
-      })
-      .catch((err) => {
-        if (err.httpStatus === 404) {
-          return { parentModel: this.modelFor('roles') };
-        } else {
-          throw err;
-        }
-      });
+    return hash({
+      hasConfig: this.shouldPromptConfig,
+      roles: this.fetchRoles(),
+      parentModel: this.modelFor('roles'),
+    });
+  }
+
+  setupController(controller, resolvedModel) {
+    super.setupController(controller, resolvedModel);
+    const roles = resolvedModel.roles;
+
+    if (roles?.length) controller.notConfiguredMessage = getCliMessage('roles');
+    else controller.notConfiguredMessage = getCliMessage();
   }
 }

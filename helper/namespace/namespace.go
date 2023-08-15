@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package namespace
 
 import (
@@ -61,11 +64,8 @@ func RootContext(ctx context.Context) context.Context {
 	return ContextWithNamespace(ctx, RootNamespace)
 }
 
-// This function caches the ns to avoid doing a .Value lookup over and over,
-// because it's called a *lot* in the request critical path. .Value is
-// concurrency-safe so uses some kind of locking/atomicity, but it should never
-// be read before first write, plus we don't believe this will be called from
-// different goroutines, so it should be safe.
+// FromContext retrieves the namespace from a context, or an error
+// if there is no namespace in the context.
 func FromContext(ctx context.Context) (*Namespace, error) {
 	if ctx == nil {
 		return nil, errors.New("context was nil")
