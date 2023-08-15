@@ -267,19 +267,15 @@ func (b *databaseBackend) rotateCredential(ctx context.Context, s logical.Storag
 	}
 
 	// Update priority and push updated Item to the queue
-	if role.StaticAccount.RotationSchedule != "" {
-		schedule, err := b.scheduleParser.Parse(role.StaticAccount.RotationSchedule)
-		if err != nil {
-			b.logger.Error("could not parse rotation_schedule", "error", err)
-			return true
-		}
-		next := schedule.Next(lvr)
-		b.logger.Debug("update priority for Schedule", "lvr", lvr)
-		b.logger.Debug("update priority for Schedule", "next", next)
-		item.Priority = schedule.Next(lvr).Unix()
-	} else {
-		b.logger.Debug("update priority for RotationPeriod", "lvr", lvr, "next", lvr.Add(role.StaticAccount.RotationPeriod))
+	if role.StaticAccount.UsesRotationSchedule() {
+		next := role.StaticAccount.Schedule.Next(lvr)
+		logger.Debug("update priority for Schedule", "next", next)
+		item.Priority = role.StaticAccount.Schedule.Next(lvr).Unix()
+	} else if role.StaticAccount.UsesRotationPeriod() {
+		logger.Debug("update priority for RotationPeriod", "lvr", lvr, "next", lvr.Add(role.StaticAccount.RotationPeriod))
 		item.Priority = lvr.Add(role.StaticAccount.RotationPeriod).Unix()
+	} else {
+		logger.Error("rotation has not been properly configured")
 	}
 
 	if err := b.pushItem(item); err != nil {
