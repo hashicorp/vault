@@ -26,8 +26,7 @@ export default class LdapRoleEditRoute extends Route {
     controller.breadcrumbs = [
       { label: resolvedModel.backend, route: 'overview' },
       { label: 'roles', route: 'roles' },
-      { label: resolvedModel.name, route: 'roles.role' },
-      { label: 'edit' },
+      { label: resolvedModel.name },
     ];
   }
 }

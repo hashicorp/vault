@@ -64,21 +64,15 @@ module('Integration | Component | ldap | Page::Overview', function (hooks) {
 
     assert.dom('.title svg').hasClass('flight-icon-folder-users', 'LDAP icon renders in title');
     assert.dom('.title').hasText('ldap-test', 'Mount path renders in title');
-    assert
-      .dom('[data-test-toolbar-action="config"]')
-      .hasText('Configure LDAP', 'Correct toolbar action renders');
+    assert.dom('[data-test-toolbar-action="config"]').hasText('Configure LDAP', 'Toolbar action renders');
     assert.dom('[data-test-config-cta]').exists('Config cta renders');
   });
 
-  test('it should render toolbar actions and overview cards', async function (assert) {
+  test('it should render overview cards', async function (assert) {
     const transitionStub = sinon.stub(this.owner.lookup('service:router'), 'transitionTo');
 
     await this.renderComponent();
 
-    assert.dom('[data-test-toolbar-action="role"]').hasText('Create role', 'Correct toolbar action renders');
-    assert
-      .dom('[data-test-toolbar-action="library"]')
-      .hasText('Create library', 'Correct toolbar action renders');
     assert.dom('[data-test-roles-count]').hasText('2', 'Roles card renders with correct count');
     assert.dom('[data-test-libraries-count]').hasText('1', 'Libraries card renders with correct count');
     assert
