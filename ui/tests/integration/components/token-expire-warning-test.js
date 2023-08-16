@@ -11,7 +11,7 @@ module('Integration | Component | token-expire-warning', function (hooks) {
     const expirationDate = subMinutes(Date.now(), 30);
     this.set('expirationDate', expirationDate);
 
-    await render(hbs`<TokenExpireWarning @expirationDate={{expirationDate}}/>`);
+    await render(hbs`<TokenExpireWarning @expirationDate={{this.expirationDate}}/>`);
     await waitUntil(() => find('#modal-overlays'));
     assert.dom().includesText('Your auth token expired on');
   });
@@ -21,7 +21,7 @@ module('Integration | Component | token-expire-warning', function (hooks) {
     this.set('expirationDate', expirationDate);
 
     await render(hbs`
-      <TokenExpireWarning @expirationDate={{expirationDate}}>
+      <TokenExpireWarning @expirationDate={{this.expirationDate}}>
         <p>Do not worry, your token has not expired.</p>
       </TokenExpireWarning>
     `);
