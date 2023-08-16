@@ -276,6 +276,15 @@ func TestBackend_StaticRole_Config(t *testing.T) {
 			path: "plugin-role-test",
 			err:  errors.New("one of rotation_schedule or rotation_period must be provided to create a static account"),
 		},
+		"rotation_period with rotation_schedule": {
+			account: map[string]interface{}{
+				"username":          dbUser,
+				"rotation_period":   "5400s",
+				"rotation_schedule": "* * * * *",
+			},
+			path: "plugin-role-test",
+			err:  errors.New("mutually exclusive fields rotation_period and rotation_schedule were both specified; only one of them can be provided"),
+		},
 		"rotation window invalid with rotation_period": {
 			account: map[string]interface{}{
 				"username":        dbUser,
