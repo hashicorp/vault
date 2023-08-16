@@ -69,7 +69,9 @@ flags](/docs/commands) included on all commands.
   this auth method.
 
 - `-listing-visibility` `(string: "")` - The flag to toggle whether to show the
-  mount in the UI-specific listing endpoint.
+  mount in the UI-specific listing endpoint. Valid values are `"unauth"` or `"hidden"`,
+  with the default `""` being equivalent to `"hidden"`.
+
 
 - `-local` `(bool: false)` - Mark the auth method as local-only. Local auth
   methods are not replicated nor removed by replication.

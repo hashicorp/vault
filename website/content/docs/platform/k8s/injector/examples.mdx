@@ -284,8 +284,10 @@ spec:
       containers:
         - name: web
           image: alpine:latest
+          command:
+            ['sh', '-c']
           args:
-            ['sh', '-c', 'source /vault/secrets/config && <entrypoint script>']
+            ['source /vault/secrets/config && <entrypoint script>']
           ports:
             - containerPort: 9090
 ```

@@ -14,16 +14,13 @@ The `operator init` command initializes a Vault server. Initialization is the
 process by which Vault's storage backend is prepared to receive data. Since
 Vault servers share the same storage backend in HA mode, you only need to
 initialize one Vault to initialize the storage backend.
-
-During initialization, Vault generates an in-memory root key and applies
-Shamir's secret sharing algorithm to disassemble that root key into a
-configuration number of key shares such that a configurable subset of those key
-shares must come together to regenerate the root key. These keys are often
-called "unseal keys" in Vault's documentation.
-
 This command cannot be run against already-initialized Vault cluster.
 
-For more information on sealing and unsealing, please the [seal concepts page](/docs/concepts/seal).
+During initialization, Vault generates a root key, which is stored in the storage backend alongside all other Vault data. The root key itself is encrypted and requires an _unseal key_ to decrypt it.
+
+The default Vault configuration uses [Shamir's Secret Sharing](https://en.wikipedia.org/wiki/Shamir%27s_Secret_Sharing) to split the root key into a configured number of shards (referred as key shares, or unseal keys). A certain threshold of shards is required to reconstruct the root key, which is then used to decrypt the Vault's encryption key.
+
+Refer to the [Seal/Unseal](/docs/concepts/seal#seal-unseal) documentation for further details.
 
 ## Examples
 
@@ -122,3 +119,7 @@ flags](/docs/commands) included on all commands.
 
 - `-stored-shares` `(int: 0)` - Number of unseal keys to store on an HSM. This
   must be equal to `-key-shares`.
+
+-> **Recovery keys:** Refer to the
+ [Seal/Unseal](/docs/concepts/seal#recovery-key) documentation to learn more
+ about recovery keys.

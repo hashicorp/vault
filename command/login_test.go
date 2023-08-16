@@ -10,6 +10,7 @@ import (
 	credToken "github.com/hashicorp/vault/builtin/credential/token"
 	credUserpass "github.com/hashicorp/vault/builtin/credential/userpass"
 	"github.com/hashicorp/vault/command/token"
+	"github.com/hashicorp/vault/helper/testhelpers"
 	"github.com/hashicorp/vault/vault"
 )
 
@@ -425,6 +426,91 @@ func TestLoginCommand_Run(t *testing.T) {
 		output := ui.OutputWriter.String() + ui.ErrorWriter.String()
 		if !strings.Contains(output, expected) {
 			t.Errorf("expected %q to contain %q", output, expected)
+		}
+	})
+
+	t.Run("login_mfa_single_phase", func(t *testing.T) {
+		t.Parallel()
+
+		client, closer := testVaultServer(t)
+		defer closer()
+
+		ui, cmd := testLoginCommand(t)
+
+		userclient, entityID, methodID := testhelpers.SetupLoginMFATOTP(t, client)
+		cmd.client = userclient
+
+		enginePath := testhelpers.RegisterEntityInTOTPEngine(t, client, entityID, methodID)
+		totpCode := testhelpers.GetTOTPCodeFromEngine(t, client, enginePath)
+
+		// login command bails early for test clients, so we have to explicitly set this
+		cmd.client.SetMFACreds([]string{methodID + ":" + totpCode})
+		code := cmd.Run([]string{
+			"-method", "userpass",
+			"username=testuser1",
+			"password=testpassword",
+		})
+		if exp := 0; code != exp {
+			t.Errorf("expected %d to be %d", code, exp)
+		}
+
+		tokenHelper, err := cmd.TokenHelper()
+		if err != nil {
+			t.Fatal(err)
+		}
+		storedToken, err := tokenHelper.Get()
+		if err != nil {
+			t.Fatal(err)
+		}
+		output = ui.OutputWriter.String() + ui.ErrorWriter.String()
+		t.Logf("\n%+v", output)
+		if !strings.Contains(output, storedToken) {
+			t.Fatalf("expected stored token: %q, got: %q", storedToken, output)
+		}
+	})
+
+	t.Run("login_mfa_two_phase", func(t *testing.T) {
+		t.Parallel()
+
+		client, closer := testVaultServer(t)
+		defer closer()
+
+		ui, cmd := testLoginCommand(t)
+
+		userclient, entityID, methodID := testhelpers.SetupLoginMFATOTP(t, client)
+		cmd.client = userclient
+
+		_ = testhelpers.RegisterEntityInTOTPEngine(t, client, entityID, methodID)
+
+		// clear the MFA creds just to be sure
+		cmd.client.SetMFACreds([]string{})
+
+		code := cmd.Run([]string{
+			"-method", "userpass",
+			"username=testuser1",
+			"password=testpassword",
+		})
+		if exp := 0; code != exp {
+			t.Errorf("expected %d to be %d", code, exp)
+		}
+
+		expected := methodID
+		output = ui.OutputWriter.String() + ui.ErrorWriter.String()
+		t.Logf("\n%+v", output)
+		if !strings.Contains(output, expected) {
+			t.Fatalf("expected stored token: %q, got: %q", expected, output)
+		}
+
+		tokenHelper, err := cmd.TokenHelper()
+		if err != nil {
+			t.Fatal(err)
+		}
+		storedToken, err := tokenHelper.Get()
+		if storedToken != "" {
+			t.Fatal("expected empty stored token")
+		}
+		if err != nil {
+			t.Fatal(err)
 		}
 	})
 

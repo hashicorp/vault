@@ -1,5 +1,8 @@
 import { create, visitable, fillable, clickable } from 'ember-cli-page-object';
 import { settled } from '@ember/test-helpers';
+import VAULT_KEYS from 'vault/tests/helpers/vault-keys';
+
+const { rootToken } = VAULT_KEYS;
 
 export default create({
   visit: visitable('/vault/auth'),
@@ -11,7 +14,7 @@ export default create({
     await this.logout();
     await settled();
     // clear session storage to ensure we have a clean state
-    window.sessionStorage.clear();
+    window.localStorage.clear();
     await this.visit({ with: 'token' });
     await settled();
     if (token) {
@@ -19,7 +22,7 @@ export default create({
       return;
     }
 
-    await this.tokenInput('root').submit();
+    await this.tokenInput(rootToken).submit();
     return;
   },
 });

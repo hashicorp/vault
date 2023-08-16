@@ -2,6 +2,7 @@ package cache
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"io"
 	"math/rand"
@@ -13,7 +14,7 @@ import (
 	"time"
 
 	"github.com/go-test/deep"
-	hclog "github.com/hashicorp/go-hclog"
+	"github.com/hashicorp/go-hclog"
 	kv "github.com/hashicorp/vault-plugin-secrets-kv"
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/builtin/credential/userpass"
@@ -214,9 +215,13 @@ func tokenRevocationValidation(t *testing.T, sampleSpace map[string]string, expe
 func TestCache_AutoAuthTokenStripping(t *testing.T) {
 	response1 := `{"data": {"id": "testid", "accessor": "testaccessor", "request": "lookup-self"}}`
 	response2 := `{"data": {"id": "testid", "accessor": "testaccessor", "request": "lookup"}}`
+	response3 := `{"auth": {"client_token": "testid", "accessor": "testaccessor"}}`
+	response4 := `{"auth": {"client_token": "testid", "accessor": "testaccessor"}}`
 	responses := []*SendResponse{
 		newTestSendResponse(http.StatusOK, response1),
 		newTestSendResponse(http.StatusOK, response2),
+		newTestSendResponse(http.StatusOK, response3),
+		newTestSendResponse(http.StatusOK, response4),
 	}
 
 	leaseCache := testNewLeaseCache(t, responses)
@@ -278,6 +283,30 @@ func TestCache_AutoAuthTokenStripping(t *testing.T) {
 	}
 	if secret.Data["id"] != nil || secret.Data["accessor"] != nil || secret.Data["request"].(string) != "lookup" {
 		t.Fatalf("failed to strip off auto-auth token on lookup")
+	}
+
+	secret, err = testClient.Auth().Token().RenewSelf(1)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if secret.Auth == nil {
+		secretJson, _ := json.Marshal(secret)
+		t.Fatalf("Expected secret to have Auth but was %s", secretJson)
+	}
+	if secret.Auth.ClientToken != "" || secret.Auth.Accessor != "" {
+		t.Fatalf("failed to strip off auto-auth token on renew-self")
+	}
+
+	secret, err = testClient.Auth().Token().Renew("testid", 1)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if secret.Auth == nil {
+		secretJson, _ := json.Marshal(secret)
+		t.Fatalf("Expected secret to have Auth but was %s", secretJson)
+	}
+	if secret.Auth.ClientToken != "" || secret.Auth.Accessor != "" {
+		t.Fatalf("failed to strip off auto-auth token on renew")
 	}
 }
 

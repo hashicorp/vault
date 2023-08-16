@@ -137,9 +137,11 @@ func RaftHAFactory(f PhysicalBackendBundler) func(t testing.T, coreIdx int, logg
 
 		nodeID := fmt.Sprintf("core-%d", coreIdx)
 		backendConf := map[string]string{
-			"path":                   raftDir,
-			"node_id":                nodeID,
-			"performance_multiplier": "8",
+			"path":                         raftDir,
+			"node_id":                      nodeID,
+			"performance_multiplier":       "8",
+			"autopilot_reconcile_interval": "300ms",
+			"autopilot_update_interval":    "100ms",
 		}
 
 		// Create and set the HA Backend

@@ -417,7 +417,6 @@ func ParsePublicKeyPEM(data []byte) (interface{}, error) {
 }
 
 // addPolicyIdentifiers adds certificate policies extension
-//
 func AddPolicyIdentifiers(data *CreationBundle, certTemplate *x509.Certificate) {
 	for _, oidstr := range data.Params.PolicyIdentifiers {
 		oid, err := StringToOid(oidstr)
@@ -585,25 +584,17 @@ func DefaultOrValueKeyBits(keyType string, keyBits int) (int, error) {
 // certain internal circumstances.
 func DefaultOrValueHashBits(keyType string, keyBits int, hashBits int) (int, error) {
 	if keyType == "ec" {
-		// To comply with BSI recommendations Section 4.2 and Mozilla root
-		// store policy section 5.1.2, enforce that NIST P-curves use a hash
-		// length corresponding to curve length. Note that ed25519 does not
-		// the "ec" key type.
-		expectedHashBits := expectedNISTPCurveHashBits[keyBits]
-
-		if expectedHashBits != hashBits && hashBits != 0 {
-			return hashBits, fmt.Errorf("unsupported signature hash algorithm length (%d) for NIST P-%d", hashBits, keyBits)
-		} else if hashBits == 0 {
-			hashBits = expectedHashBits
-		}
+		// Enforcement of curve moved to selectSignatureAlgorithmForECDSA. See
+		// note there about why.
 	} else if keyType == "rsa" && hashBits == 0 {
 		// To match previous behavior (and ignoring NIST's recommendations for
 		// hash size to align with RSA key sizes), default to SHA-2-256.
 		hashBits = 256
-	} else if keyType == "ed25519" || keyType == "ed448" {
+	} else if keyType == "ed25519" || keyType == "ed448" || keyType == "any" {
 		// No-op; ed25519 and ed448 internally specify their own hash and
 		// we do not need to select one. Double hashing isn't supported in
-		// certificate signing and we must
+		// certificate signing. Additionally, the any key type can't know
+		// what hash algorithm to use yet, so default to zero.
 		return 0, nil
 	}
 
@@ -642,7 +633,7 @@ func ValidateDefaultOrValueKeyTypeSignatureLength(keyType string, keyBits int, h
 // Validates that the length of the hash (in bits) used in the signature
 // calculation is a known, approved value.
 func ValidateSignatureLength(keyType string, hashBits int) error {
-	if keyType == "ed25519" || keyType == "ed448" {
+	if keyType == "any" || keyType == "ec" || keyType == "ed25519" || keyType == "ed448" {
 		// ed25519 and ed448 include built-in hashing and is not externally
 		// configurable. There are three modes for each of these schemes:
 		//
@@ -654,6 +645,13 @@ func ValidateSignatureLength(keyType string, hashBits int) error {
 		//
 		// In all cases, we won't have a hash algorithm to validate here, so
 		// return nil.
+		//
+		// Additionally, when KeyType is any, we can't yet validate the
+		// signature algorithm size, so it takes the default zero value.
+		//
+		// When KeyType is ec, we also can't validate this value as we're
+		// forcefully ignoring the users' choice and specifying a value based
+		// on issuer type.
 		return nil
 	}
 
@@ -859,16 +857,25 @@ func createCertificate(data *CreationBundle, randReader io.Reader, privateKeyGen
 }
 
 func selectSignatureAlgorithmForECDSA(pub crypto.PublicKey, signatureBits int) x509.SignatureAlgorithm {
-	// If signature bits are configured, prefer them to the default choice.
-	switch signatureBits {
-	case 256:
-		return x509.ECDSAWithSHA256
-	case 384:
-		return x509.ECDSAWithSHA384
-	case 512:
-		return x509.ECDSAWithSHA512
-	}
-
+	// Previously we preferred the user-specified signature bits for ECDSA
+	// keys. However, this could result in using a longer hash function than
+	// the underlying NIST P-curve will encode (e.g., a SHA-512 hash with a
+	// P-256 key). This isn't ideal: the hash is implicitly truncated
+	// (effectively turning it into SHA-512/256) and we then need to rely
+	// on the prefix security of the hash. Since both NIST and Mozilla guidance
+	// suggest instead using the correct hash function, we should prefer that
+	// over the operator-specified signatureBits.
+	//
+	// Lastly, note that pub above needs to be the _signer's_ public key;
+	// the issue with DefaultOrValueHashBits is that it is called at role
+	// configuration time, which might _precede_ issuer generation. Thus
+	// it only has access to the desired key type and not the actual issuer.
+	// The reference from that function is reproduced below:
+	//
+	// > To comply with BSI recommendations Section 4.2 and Mozilla root
+	// > store policy section 5.1.2, enforce that NIST P-curves use a hash
+	// > length corresponding to curve length. Note that ed25519 does not
+	// > implement the "ec" key type.
 	key, ok := pub.(*ecdsa.PublicKey)
 	if !ok {
 		return x509.ECDSAWithSHA256
@@ -1026,7 +1033,12 @@ func signCertificate(data *CreationBundle, randReader io.Reader) (*ParsedCertBun
 		certTemplate.NotBefore = time.Now().Add(-1 * data.Params.NotBeforeDuration)
 	}
 
-	switch data.SigningBundle.PrivateKeyType {
+	privateKeyType := data.SigningBundle.PrivateKeyType
+	if privateKeyType == ManagedPrivateKey {
+		privateKeyType = GetPrivateKeyTypeFromSigner(data.SigningBundle.PrivateKey)
+	}
+
+	switch privateKeyType {
 	case RSAPrivateKey:
 		switch data.Params.SignatureBits {
 		case 256:

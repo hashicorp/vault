@@ -34,6 +34,7 @@ import (
 	config2 "github.com/hashicorp/vault/command/config"
 	"github.com/hashicorp/vault/command/server"
 	"github.com/hashicorp/vault/helper/builtinplugins"
+	"github.com/hashicorp/vault/helper/constants"
 	"github.com/hashicorp/vault/helper/metricsutil"
 	"github.com/hashicorp/vault/helper/namespace"
 	vaulthttp "github.com/hashicorp/vault/http"
@@ -424,6 +425,12 @@ func (c *ServerCommand) parseConfig() (*server.Config, []configutil.ConfigError,
 			config = config.Merge(current)
 		}
 	}
+
+	if config != nil && config.Entropy != nil && config.Entropy.Mode == configutil.EntropyAugmentation && constants.IsFIPS() {
+		c.UI.Warn("WARNING: Entropy Augmentation is not supported in FIPS 140-2 Inside mode; disabling from server configuration!\n")
+		config.Entropy = nil
+	}
+
 	return config, configErrors, nil
 }
 
@@ -451,8 +458,9 @@ func (c *ServerCommand) runRecoveryMode() int {
 	}
 
 	c.logger = hclog.NewInterceptLogger(&hclog.LoggerOptions{
-		Output: c.gatedWriter,
-		Level:  level,
+		Output:            c.gatedWriter,
+		Level:             level,
+		IndependentLevels: true,
 		// Note that if logFormat is either unspecified or standard, then
 		// the resulting logger's format will be standard.
 		JSONFormat: logFormat == logging.JSONFormat,
@@ -583,6 +591,7 @@ func (c *ServerCommand) runRecoveryMode() int {
 		Physical:     backend,
 		StorageType:  config.Storage.Type,
 		Seal:         barrierSeal,
+		LogLevel:     logLevelString,
 		Logger:       c.logger,
 		DisableMlock: config.DisableMlock,
 		RecoveryMode: c.flagRecovery,
@@ -1107,14 +1116,16 @@ func (c *ServerCommand) Run(args []string) int {
 
 	if c.flagDevThreeNode || c.flagDevFourCluster {
 		c.logger = hclog.NewInterceptLogger(&hclog.LoggerOptions{
-			Mutex:  &sync.Mutex{},
-			Output: c.gatedWriter,
-			Level:  hclog.Trace,
+			Mutex:             &sync.Mutex{},
+			Output:            c.gatedWriter,
+			Level:             hclog.Trace,
+			IndependentLevels: true,
 		})
 	} else {
 		c.logger = hclog.NewInterceptLogger(&hclog.LoggerOptions{
-			Output: c.gatedWriter,
-			Level:  level,
+			Output:            c.gatedWriter,
+			Level:             level,
+			IndependentLevels: true,
 			// Note that if logFormat is either unspecified or standard, then
 			// the resulting logger's format will be standard.
 			JSONFormat: logFormat == logging.JSONFormat,
@@ -1236,6 +1247,21 @@ func (c *ServerCommand) Run(args []string) int {
 	info := make(map[string]string)
 	info["log level"] = logLevelString
 	infoKeys = append(infoKeys, "log level")
+
+	// returns a slice of env vars formatted as "key=value"
+	envVars := os.Environ()
+	var envVarKeys []string
+	for _, v := range envVars {
+		splitEnvVars := strings.Split(v, "=")
+		envVarKeys = append(envVarKeys, splitEnvVars[0])
+	}
+
+	sort.Strings(envVarKeys)
+
+	key := "environment variables"
+	info[key] = strings.Join(envVarKeys, ", ")
+	infoKeys = append(infoKeys, key)
+
 	barrierSeal, barrierWrapper, unwrapSeal, seals, sealConfigError, err := setSeal(c, config, infoKeys, info)
 	// Check error here
 	if err != nil {
@@ -1627,6 +1653,9 @@ func (c *ServerCommand) Run(args []string) int {
 			// changes in kms_libraries)
 			core.ReloadManagedKeyRegistryConfig()
 
+			// Notify systemd that the server has completed reloading config
+			c.notifySystemd(systemd.SdNotifyReady)
+
 		case <-c.SigUSR2Ch:
 			logWriter := c.logger.StandardWriter(&hclog.StandardLoggerOptions{})
 			pprof.Lookup("goroutine").WriteTo(logWriter, 2)
@@ -1926,7 +1955,7 @@ func (c *ServerCommand) enableThreeNodeDevCluster(base *vault.CoreConfig, info m
 		return 1
 	}
 
-	if err := ioutil.WriteFile(filepath.Join(testCluster.TempDir, "root_token"), []byte(testCluster.RootToken), 0o755); err != nil {
+	if err := ioutil.WriteFile(filepath.Join(testCluster.TempDir, "root_token"), []byte(testCluster.RootToken), 0o600); err != nil {
 		c.UI.Error(fmt.Sprintf("Error writing token to tempfile: %s", err))
 		return 1
 	}
@@ -2051,7 +2080,8 @@ func (c *ServerCommand) addPlugin(path, token string, core *vault.Core) error {
 
 // detectRedirect is used to attempt redirect address detection
 func (c *ServerCommand) detectRedirect(detect physical.RedirectDetect,
-	config *server.Config) (string, error) {
+	config *server.Config,
+) (string, error) {
 	// Get the hostname
 	host, err := detect.DetectHostAddr()
 	if err != nil {
@@ -2158,7 +2188,7 @@ func (c *ServerCommand) storePidFile(pidPath string) error {
 	}
 
 	// Open the PID file
-	pidFile, err := os.OpenFile(pidPath, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0o644)
+	pidFile, err := os.OpenFile(pidPath, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0o600)
 	if err != nil {
 		return fmt.Errorf("could not open pid file: %w", err)
 	}
@@ -2496,7 +2526,8 @@ func runUnseal(c *ServerCommand, core *vault.Core, ctx context.Context) {
 }
 
 func createCoreConfig(c *ServerCommand, config *server.Config, backend physical.Backend, configSR sr.ServiceRegistration, barrierSeal, unwrapSeal vault.Seal,
-	metricsHelper *metricsutil.MetricsHelper, metricSink *metricsutil.ClusterMetricSink, secureRandomReader io.Reader) vault.CoreConfig {
+	metricsHelper *metricsutil.MetricsHelper, metricSink *metricsutil.ClusterMetricSink, secureRandomReader io.Reader,
+) vault.CoreConfig {
 	coreConfig := &vault.CoreConfig{
 		RawConfig:                      config,
 		Physical:                       backend,
