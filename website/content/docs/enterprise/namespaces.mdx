@@ -6,7 +6,7 @@ description: >-
   Multi-tenancy (SMT) and self-management.
 ---
 
-# Vault Enterprise Namespaces
+# Vault enterprise namespaces
 
 ## Overview
 
@@ -22,7 +22,7 @@ There are two common challenges when implementing this architecture in Vault:
 
 Frequently teams within a VaaS environment require strong isolation from other
 users in their policies, secrets, and identities. Tenant isolation is typically a
-result of compliance regulations such as [GDPR](https://www.eugdpr.org/), though it may
+result of compliance regulations such as [GDPR](https://gdpr.eu/), though it may
 be necessitated by corporate or organizational infosec requirements.
 
 **Self-Management**
@@ -59,7 +59,7 @@ For example, these three requests are equivalent:
 2. Path: `secret/foo`, Header: `X-Vault-Namespace: ns1/ns2/`
 3. Path: `ns2/secret/foo`, Header: `X-Vault-Namespace: ns1/`
 
-## Root only API Paths
+## Root only API paths
 
 There are certain API paths that can only be called from the root namespace:
 

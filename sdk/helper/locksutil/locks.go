@@ -25,7 +25,6 @@ type LockEntry struct {
 // Lock B, Lock A
 //
 // Where process 1 is now deadlocked trying to lock B, and process 2 deadlocked trying to lock A
-//
 func CreateLocks() []*LockEntry {
 	ret := make([]*LockEntry, LockCount)
 	for i := range ret {

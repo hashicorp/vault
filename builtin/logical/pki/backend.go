@@ -83,7 +83,7 @@ func Backend(conf *logical.BackendConfig) *backend {
 				"issuer/+/pem",
 				"issuer/+/der",
 				"issuer/+/json",
-				"issuers",
+				"issuers/", // LIST operations append a '/' to the requested path
 			},
 
 			LocalStorage: []string{
@@ -127,6 +127,7 @@ func Backend(conf *logical.BackendConfig) *backend {
 			// Issuer APIs
 			pathListIssuers(&b),
 			pathGetIssuer(&b),
+			pathGetUnauthedIssuer(&b),
 			pathGetIssuerCRL(&b),
 			pathImportIssuer(&b),
 			pathIssuerIssue(&b),

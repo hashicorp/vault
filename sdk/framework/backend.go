@@ -221,7 +221,7 @@ func (b *Backend) HandleRequest(ctx context.Context, req *logical.Request) (*log
 	var ignored []string
 	for k, v := range req.Data {
 		raw[k] = v
-		if path.Fields[k] == nil {
+		if !path.TakesArbitraryInput && path.Fields[k] == nil {
 			ignored = append(ignored, k)
 		}
 	}

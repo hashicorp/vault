@@ -58,6 +58,7 @@ type AuthHandler struct {
 	minBackoff                   time.Duration
 	enableReauthOnNewCredentials bool
 	enableTemplateTokenCh        bool
+	exitOnError                  bool
 }
 
 type AuthHandlerConfig struct {
@@ -69,6 +70,7 @@ type AuthHandlerConfig struct {
 	Token                        string
 	EnableReauthOnNewCredentials bool
 	EnableTemplateTokenCh        bool
+	ExitOnError                  bool
 }
 
 func NewAuthHandler(conf *AuthHandlerConfig) *AuthHandler {
@@ -86,12 +88,17 @@ func NewAuthHandler(conf *AuthHandlerConfig) *AuthHandler {
 		maxBackoff:                   conf.MaxBackoff,
 		enableReauthOnNewCredentials: conf.EnableReauthOnNewCredentials,
 		enableTemplateTokenCh:        conf.EnableTemplateTokenCh,
+		exitOnError:                  conf.ExitOnError,
 	}
 
 	return ah
 }
 
-func backoffOrQuit(ctx context.Context, backoff *agentBackoff) {
+func backoff(ctx context.Context, backoff *agentBackoff) bool {
+	if backoff.exitOnErr {
+		return false
+	}
+
 	select {
 	case <-time.After(backoff.current):
 	case <-ctx.Done():
@@ -100,6 +107,7 @@ func backoffOrQuit(ctx context.Context, backoff *agentBackoff) {
 	// Increase exponential backoff for the next time if we don't
 	// successfully auth/renew/etc.
 	backoff.next()
+	return true
 }
 
 func (ah *AuthHandler) Run(ctx context.Context, am AuthMethod) error {
@@ -111,9 +119,9 @@ func (ah *AuthHandler) Run(ctx context.Context, am AuthMethod) error {
 		ah.minBackoff = defaultMinBackoff
 	}
 
-	backoff := newAgentBackoff(ah.minBackoff, ah.maxBackoff)
+	backoffCfg := newAgentBackoff(ah.minBackoff, ah.maxBackoff, ah.exitOnError)
 
-	if backoff.min >= backoff.max {
+	if backoffCfg.min >= backoffCfg.max {
 		return errors.New("auth handler: min_backoff cannot be greater than max_backoff")
 	}
 
@@ -167,9 +175,13 @@ func (ah *AuthHandler) Run(ctx context.Context, am AuthMethod) error {
 			clientToUse, err = am.(AuthMethodWithClient).AuthClient(ah.client)
 			if err != nil {
 				ah.logger.Error("error creating client for authentication call", "error", err, "backoff", backoff)
-				backoffOrQuit(ctx, backoff)
 				metrics.IncrCounter([]string{"agent", "auth", "failure"}, 1)
-				continue
+
+				if backoff(ctx, backoffCfg) {
+					continue
+				}
+
+				return err
 			}
 		default:
 			clientToUse = ah.client
@@ -189,10 +201,13 @@ func (ah *AuthHandler) Run(ctx context.Context, am AuthMethod) error {
 
 			secret, err = clientToUse.Auth().Token().LookupSelfWithContext(ctx)
 			if err != nil {
-				ah.logger.Error("could not look up token", "err", err, "backoff", backoff)
-				backoffOrQuit(ctx, backoff)
+				ah.logger.Error("could not look up token", "err", err, "backoff", backoffCfg)
 				metrics.IncrCounter([]string{"agent", "auth", "failure"}, 1)
-				continue
+
+				if backoff(ctx, backoffCfg) {
+					continue
+				}
+				return err
 			}
 
 			duration, _ := secret.Data["ttl"].(json.Number).Int64()
@@ -206,20 +221,26 @@ func (ah *AuthHandler) Run(ctx context.Context, am AuthMethod) error {
 
 			path, header, data, err = am.Authenticate(ctx, ah.client)
 			if err != nil {
-				ah.logger.Error("error getting path or data from method", "error", err, "backoff", backoff)
-				backoffOrQuit(ctx, backoff)
+				ah.logger.Error("error getting path or data from method", "error", err, "backoff", backoffCfg)
 				metrics.IncrCounter([]string{"agent", "auth", "failure"}, 1)
-				continue
+
+				if backoff(ctx, backoffCfg) {
+					continue
+				}
+				return err
 			}
 		}
 
 		if ah.wrapTTL > 0 {
 			wrapClient, err := clientToUse.Clone()
 			if err != nil {
-				ah.logger.Error("error creating client for wrapped call", "error", err, "backoff", backoff)
-				backoffOrQuit(ctx, backoff)
+				ah.logger.Error("error creating client for wrapped call", "error", err, "backoff", backoffCfg)
 				metrics.IncrCounter([]string{"agent", "auth", "failure"}, 1)
-				continue
+
+				if backoff(ctx, backoffCfg) {
+					continue
+				}
+				return err
 			}
 			wrapClient.SetWrappingLookupFunc(func(string, string) string {
 				return ah.wrapTTL.String()
@@ -238,33 +259,45 @@ func (ah *AuthHandler) Run(ctx context.Context, am AuthMethod) error {
 			secret, err = clientToUse.Logical().WriteWithContext(ctx, path, data)
 			// Check errors/sanity
 			if err != nil {
-				ah.logger.Error("error authenticating", "error", err, "backoff", backoff)
-				backoffOrQuit(ctx, backoff)
+				ah.logger.Error("error authenticating", "error", err, "backoff", backoffCfg)
 				metrics.IncrCounter([]string{"agent", "auth", "failure"}, 1)
-				continue
+
+				if backoff(ctx, backoffCfg) {
+					continue
+				}
+				return err
 			}
 		}
 
 		switch {
 		case ah.wrapTTL > 0:
 			if secret.WrapInfo == nil {
-				ah.logger.Error("authentication returned nil wrap info", "backoff", backoff)
-				backoffOrQuit(ctx, backoff)
+				ah.logger.Error("authentication returned nil wrap info", "backoff", backoffCfg)
 				metrics.IncrCounter([]string{"agent", "auth", "failure"}, 1)
-				continue
+
+				if backoff(ctx, backoffCfg) {
+					continue
+				}
+				return err
 			}
 			if secret.WrapInfo.Token == "" {
-				ah.logger.Error("authentication returned empty wrapped client token", "backoff", backoff)
-				backoffOrQuit(ctx, backoff)
+				ah.logger.Error("authentication returned empty wrapped client token", "backoff", backoffCfg)
 				metrics.IncrCounter([]string{"agent", "auth", "failure"}, 1)
-				continue
+
+				if backoff(ctx, backoffCfg) {
+					continue
+				}
+				return err
 			}
 			wrappedResp, err := jsonutil.EncodeJSON(secret.WrapInfo)
 			if err != nil {
-				ah.logger.Error("failed to encode wrapinfo", "error", err, "backoff", backoff)
-				backoffOrQuit(ctx, backoff)
+				ah.logger.Error("failed to encode wrapinfo", "error", err, "backoff", backoffCfg)
 				metrics.IncrCounter([]string{"agent", "auth", "failure"}, 1)
-				continue
+
+				if backoff(ctx, backoffCfg) {
+					continue
+				}
+				return err
 			}
 			ah.logger.Info("authentication successful, sending wrapped token to sinks and pausing")
 			ah.OutputCh <- string(wrappedResp)
@@ -273,7 +306,7 @@ func (ah *AuthHandler) Run(ctx context.Context, am AuthMethod) error {
 			}
 
 			am.CredSuccess()
-			backoff.reset()
+			backoffCfg.reset()
 
 			select {
 			case <-ctx.Done():
@@ -287,16 +320,22 @@ func (ah *AuthHandler) Run(ctx context.Context, am AuthMethod) error {
 
 		default:
 			if secret == nil || secret.Auth == nil {
-				ah.logger.Error("authentication returned nil auth info", "backoff", backoff)
-				backoffOrQuit(ctx, backoff)
+				ah.logger.Error("authentication returned nil auth info", "backoff", backoffCfg)
 				metrics.IncrCounter([]string{"agent", "auth", "failure"}, 1)
-				continue
+
+				if backoff(ctx, backoffCfg) {
+					continue
+				}
+				return err
 			}
 			if secret.Auth.ClientToken == "" {
-				ah.logger.Error("authentication returned empty client token", "backoff", backoff)
-				backoffOrQuit(ctx, backoff)
+				ah.logger.Error("authentication returned empty client token", "backoff", backoffCfg)
 				metrics.IncrCounter([]string{"agent", "auth", "failure"}, 1)
-				continue
+
+				if backoff(ctx, backoffCfg) {
+					continue
+				}
+				return err
 			}
 			ah.logger.Info("authentication successful, sending token to sinks")
 			ah.OutputCh <- secret.Auth.ClientToken
@@ -305,7 +344,7 @@ func (ah *AuthHandler) Run(ctx context.Context, am AuthMethod) error {
 			}
 
 			am.CredSuccess()
-			backoff.reset()
+			backoffCfg.reset()
 		}
 
 		if watcher != nil {
@@ -316,10 +355,13 @@ func (ah *AuthHandler) Run(ctx context.Context, am AuthMethod) error {
 			Secret: secret,
 		})
 		if err != nil {
-			ah.logger.Error("error creating lifetime watcher, backing off and retrying", "error", err, "backoff", backoff)
-			backoffOrQuit(ctx, backoff)
+			ah.logger.Error("error creating lifetime watcher", "error", err, "backoff", backoffCfg)
 			metrics.IncrCounter([]string{"agent", "auth", "failure"}, 1)
-			continue
+
+			if backoff(ctx, backoffCfg) {
+				continue
+			}
+			return err
 		}
 
 		// Start the renewal process
@@ -357,12 +399,13 @@ func (ah *AuthHandler) Run(ctx context.Context, am AuthMethod) error {
 
 // agentBackoff tracks exponential backoff state.
 type agentBackoff struct {
-	min     time.Duration
-	max     time.Duration
-	current time.Duration
+	min       time.Duration
+	max       time.Duration
+	current   time.Duration
+	exitOnErr bool
 }
 
-func newAgentBackoff(min, max time.Duration) *agentBackoff {
+func newAgentBackoff(min, max time.Duration, exitErr bool) *agentBackoff {
 	if max <= 0 {
 		max = defaultMaxBackoff
 	}
@@ -372,9 +415,10 @@ func newAgentBackoff(min, max time.Duration) *agentBackoff {
 	}
 
 	return &agentBackoff{
-		current: min,
-		max:     max,
-		min:     min,
+		current:   min,
+		max:       max,
+		min:       min,
+		exitOnErr: exitErr,
 	}
 }
 

@@ -4,7 +4,7 @@ page_title: Install Vault ServiceNow Credential Resolver
 description: Installation steps for the Vault ServiceNow Credential Resolver.
 ---
 
-# Installing the Vault Credential Resolver
+# Installing the Vault credential resolver
 
 ## Prerequisites
 
@@ -13,7 +13,7 @@ description: Installation steps for the Vault ServiceNow Credential Resolver.
 * Discovery and external credential plugins activated on ServiceNow
 * Working Vault deployment accessible from the MID server
 
-## Installing Vault Agent
+## Installing Vault agent
 
 * Select your desired auth method from Agent's [supported auth methods](/docs/agent/autoauth/methods)
   and set it up in Vault
@@ -36,7 +36,7 @@ description: Installation steps for the Vault ServiceNow Credential Resolver.
   must set `cache.use_auto_auth_token = true`, and the `listener`, `vault` and
   `auto_auth` blocks are also required to set up a working Agent, e.g.:
 
-  ```
+  ```hcl
   listener "tcp" {
     address = "127.0.0.1:8200"
     tls_disable = false

@@ -146,6 +146,9 @@ func TestHTTP_Wrapping(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	if secret.Warnings != nil {
+		t.Fatalf("Warnings found: %v", secret.Warnings)
+	}
 	if secret == nil || secret.Data == nil {
 		t.Fatal("secret or secret data is nil")
 	}
@@ -222,6 +225,9 @@ func TestHTTP_Wrapping(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	if secret.Warnings != nil {
+		t.Fatalf("Warnings found: %v", secret.Warnings)
+	}
 	ret4 := secret
 	// Should be expired and fail
 	_, err = client.Logical().Unwrap(wrapInfo.Token)
@@ -286,9 +292,15 @@ func TestHTTP_Wrapping(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	if secret.Warnings != nil {
+		t.Fatalf("Warnings found: %v", secret.Warnings)
+	}
 	secret, err = client.Logical().Unwrap(secret.WrapInfo.Token)
 	if err != nil {
 		t.Fatal(err)
+	}
+	if secret.Warnings != nil {
+		t.Fatalf("Warnings found: %v", secret.Warnings)
 	}
 	if !reflect.DeepEqual(data, secret.Data) {
 		t.Fatalf("custom wrap did not match expected: %#v", secret.Data)
@@ -319,6 +331,9 @@ func TestHTTP_Wrapping(t *testing.T) {
 	})
 	if err != nil {
 		t.Fatal(err)
+	}
+	if secret.Warnings != nil {
+		t.Fatalf("Warnings found: %v", secret.Warnings)
 	}
 
 	// Check for correct Creation path after rewrap

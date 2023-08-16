@@ -9,6 +9,7 @@ const (
 	keyIdParam     = "key_id"
 	keyTypeParam   = "key_type"
 	keyBitsParam   = "key_bits"
+	skidParam      = "subject_key_id"
 )
 
 // addIssueAndSignCommonFields adds fields common to both CA and non-CA issuing
