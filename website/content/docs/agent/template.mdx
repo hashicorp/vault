@@ -115,6 +115,23 @@ template_config {
 }
 ```
 
+In another example `template_config` with [`error_on_missing_key` parameter in the template stanza](/docs/agent/template#error_on_missing_key)
+as well as `exit_on_retry_failure` result in the agent exiting in case of no key 
+/ value issues instead of the default retry behavior.
+
+```hcl
+template_config {
+  exit_on_retry_failure = true
+  static_secret_render_interval = "10m"
+}
+
+template {
+  source      = "/tmp/agent/template.ctmpl"
+  destination = "/tmp/agent/render.txt"
+  error_on_missing_key = true
+}
+```
+
 ### Interaction between `exit_on_retry_failure` and `error_on_missing_key`
 
 The parameter
@@ -167,7 +184,7 @@ can be used here:
 - `error_on_missing_key` `(bool: false)` - Exit with an error when accessing
   a struct or map field/key that does notexist. The default behavior will print `<no value>`
   when accessing a field that does not exist. It is highly recommended you set this
-  to "true".
+  to "true". Also see [`exit_on_retry_failure` in global Vault Agent Template Config](/docs/agent/template#interaction-between-exit_on_retry_failure-and-error_on_missing_key).
 - `exec` `(object: optional)` - The exec block executes a command when the
   template is rendered and the output has changed. The block parameters are
   `command` `(string slice: required)` and `timeout` `(string: optional, defaults
@@ -199,6 +216,7 @@ can be used here:
 template {
   source      = "/tmp/agent/template.ctmpl"
   destination = "/tmp/agent/render.txt"
+  error_on_missing_key = true
 }
 ```
 
@@ -221,7 +239,7 @@ of the secret's lease duration has elapsed.
 ### Non-Renewable secrets
 
 If a secret or token isn't renewable or leased, Vault Agent will fetch the secret every 5 minutes.
-This can be configured using Template config [static_secret_render_interval](/docs/agent/template-config#static_secret_render_interval) (requires Vault 1.8+).
+This can be configured using Template config [static_secret_render_interval](/docs/agent/template#static_secret_render_interval) (requires Vault 1.8+).
 Non-renewable secrets include (but not limited to) [KV Version 2](/docs/secrets/kv/kv-v2).
 
 ### Non-Renewable leased secrets
