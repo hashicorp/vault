@@ -185,7 +185,7 @@ func TestCoreWithSealAndUI(t testing.T, opts *CoreConfig) *Core {
 }
 
 func TestCoreWithSealAndUINoCleanup(t testing.T, opts *CoreConfig) *Core {
-	logger := logging.NewVaultLogger(log.Trace)
+	logger := logging.NewVaultLogger(log.Trace).Named(t.Name())
 	physicalBackend, err := physInmem.NewInmem(nil, logger)
 	if err != nil {
 		t.Fatal(err)
@@ -209,6 +209,7 @@ func TestCoreWithSealAndUINoCleanup(t testing.T, opts *CoreConfig) *Core {
 	conf.EnableResponseHeaderHostname = opts.EnableResponseHeaderHostname
 	conf.DisableSSCTokens = opts.DisableSSCTokens
 	conf.PluginDirectory = opts.PluginDirectory
+	conf.CensusAgent = opts.CensusAgent
 
 	if opts.Logger != nil {
 		conf.Logger = opts.Logger
@@ -230,6 +231,7 @@ func TestCoreWithSealAndUINoCleanup(t testing.T, opts *CoreConfig) *Core {
 	}
 
 	conf.ActivityLogConfig = opts.ActivityLogConfig
+	testApplyEntBaseConfig(conf, opts)
 
 	c, err := NewCore(conf)
 	if err != nil {
@@ -540,6 +542,9 @@ func TestAddTestPlugin(t testing.T, c *Core, name string, pluginType consts.Plug
 
 		// Copy over the file to the temp dir
 		dst := filepath.Join(tempDir, fileName)
+
+		// delete the file first to avoid notary failures in macOS
+		_ = os.Remove(dst) // ignore error
 		out, err := os.OpenFile(dst, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, fi.Mode())
 		if err != nil {
 			t.Fatal(err)
@@ -553,6 +558,9 @@ func TestAddTestPlugin(t testing.T, c *Core, name string, pluginType consts.Plug
 		if err != nil {
 			t.Fatal(err)
 		}
+		// Ensure that the file is closed and written. This seems to be
+		// necessary on Linux systems.
+		out.Close()
 
 		dirPath = tempDir
 	}
@@ -1225,6 +1233,9 @@ type TestClusterOptions struct {
 	RedundancyZoneMap      map[int]string
 	KVVersion              string
 	EffectiveSDKVersionMap map[int]string
+
+	// ABCDLoggerNames names the loggers according to our ABCD convention when generating 4 clusters
+	ABCDLoggerNames bool
 }
 
 var DefaultNumCores = 3
@@ -1593,6 +1604,7 @@ func NewTestCluster(t testing.T, base *CoreConfig, opts *TestClusterOptions) *Te
 		coreConfig.DisableSentinelTrace = base.DisableSentinelTrace
 		coreConfig.ClusterName = base.ClusterName
 		coreConfig.DisableAutopilot = base.DisableAutopilot
+		coreConfig.ServiceRegistration = base.ServiceRegistration
 
 		if base.BuiltinRegistry != nil {
 			coreConfig.BuiltinRegistry = base.BuiltinRegistry
@@ -1639,18 +1651,15 @@ func NewTestCluster(t testing.T, base *CoreConfig, opts *TestClusterOptions) *Te
 		}
 
 		coreConfig.ClusterCipherSuites = base.ClusterCipherSuites
-
 		coreConfig.DisableCache = base.DisableCache
-
 		coreConfig.DevToken = base.DevToken
 		coreConfig.RecoveryMode = base.RecoveryMode
-
 		coreConfig.ActivityLogConfig = base.ActivityLogConfig
 		coreConfig.EnableResponseHeaderHostname = base.EnableResponseHeaderHostname
 		coreConfig.EnableResponseHeaderRaftNodeID = base.EnableResponseHeaderRaftNodeID
-
 		coreConfig.RollbackPeriod = base.RollbackPeriod
-
+		coreConfig.PendingRemovalMountsAllowed = base.PendingRemovalMountsAllowed
+		coreConfig.ExpirationRevokeRetryBase = base.ExpirationRevokeRetryBase
 		testApplyEntBaseConfig(coreConfig, base)
 	}
 	if coreConfig.ClusterName == "" {
@@ -2246,31 +2255,41 @@ func toFunc(f logical.Factory) func() (interface{}, error) {
 
 func NewMockBuiltinRegistry() *mockBuiltinRegistry {
 	return &mockBuiltinRegistry{
-		forTesting: map[string]consts.PluginType{
-			"mysql-database-plugin":      consts.PluginTypeDatabase,
-			"postgresql-database-plugin": consts.PluginTypeDatabase,
-			"approle":                    consts.PluginTypeCredential,
-			"aws":                        consts.PluginTypeCredential,
-			"consul":                     consts.PluginTypeSecrets,
+		forTesting: map[string]mockBackend{
+			"mysql-database-plugin":      {PluginType: consts.PluginTypeDatabase},
+			"postgresql-database-plugin": {PluginType: consts.PluginTypeDatabase},
+			"approle":                    {PluginType: consts.PluginTypeCredential},
+			"pending-removal-test-plugin": {
+				PluginType:        consts.PluginTypeCredential,
+				DeprecationStatus: consts.PendingRemoval,
+			},
+			"aws":    {PluginType: consts.PluginTypeCredential},
+			"consul": {PluginType: consts.PluginTypeSecrets},
 		},
 	}
 }
 
+type mockBackend struct {
+	consts.PluginType
+	consts.DeprecationStatus
+}
+
 type mockBuiltinRegistry struct {
-	forTesting map[string]consts.PluginType
+	forTesting map[string]mockBackend
 }
 
 func (m *mockBuiltinRegistry) Get(name string, pluginType consts.PluginType) (func() (interface{}, error), bool) {
-	testPluginType, ok := m.forTesting[name]
+	testBackend, ok := m.forTesting[name]
 	if !ok {
 		return nil, false
 	}
+	testPluginType := testBackend.PluginType
 	if pluginType != testPluginType {
 		return nil, false
 	}
 
 	switch name {
-	case "approle":
+	case "approle", "pending-removal-test-plugin":
 		return toFunc(approle.Factory), true
 	case "aws":
 		return toFunc(func(ctx context.Context, config *logical.BackendConfig) (logical.Backend, error) {
@@ -2330,6 +2349,7 @@ func (m *mockBuiltinRegistry) Keys(pluginType consts.PluginType) []string {
 		}
 	case consts.PluginTypeCredential:
 		return []string{
+			"pending-removal-test-plugin",
 			"approle",
 		}
 	}
@@ -2347,7 +2367,7 @@ func (m *mockBuiltinRegistry) Contains(name string, pluginType consts.PluginType
 
 func (m *mockBuiltinRegistry) DeprecationStatus(name string, pluginType consts.PluginType) (consts.DeprecationStatus, bool) {
 	if m.Contains(name, pluginType) {
-		return consts.Supported, true
+		return m.forTesting[name].DeprecationStatus, true
 	}
 
 	return consts.Unknown, false

@@ -383,7 +383,7 @@ and consider if they're appropriate for your deployment.
 
     - `hosts` - Values that configure the Ingress host rules.
 
-      - `host` (`string: required`): Name of the host to use for Ingress.
+      - `host` (`string: "chart-example.local"`): Name of the host to use for Ingress.
 
       - `paths` (`array: []`): Deprecated: `server.ingress.extraPaths` should be used instead. A list of paths that will be directed to the Vault service. At least one path is required.
 
@@ -509,7 +509,7 @@ and consider if they're appropriate for your deployment.
     extraArgs: '-config=/path/to/extra/config.hcl -log-format=json'
     ```
 
-  - `extraSecretEnvironmentVars` (`string: null`) - The extra environment variables populated from a secret to be applied to the Vault server. This should be a multi-line key/value string.
+  - `extraSecretEnvironmentVars` (`array: []`) - The extra environment variables populated from a secret to be applied to the Vault server.
 
     - `envName` (`string: required`) -
       Name of the environment variable to be populated in the Vault container.
@@ -552,7 +552,7 @@ and consider if they're appropriate for your deployment.
         path: '/etc/pki'
     ```
 
-  - `volumes` (`array: []`) - A list of volumes made available to all containers. This takes
+  - `volumes` (`array: null`) - A list of volumes made available to all containers. This takes
     standard Kubernetes volume definitions.
 
     ```yaml
@@ -561,7 +561,7 @@ and consider if they're appropriate for your deployment.
         emptyDir: {}
     ```
 
-  - `volumeMounts` (`array: []`) - A list of volumes mounts made available to all containers. This takes
+  - `volumeMounts` (`array: null`) - A list of volumes mounts made available to all containers. This takes
     standard Kubernetes volume definitions.
 
     ```yaml
@@ -751,7 +751,7 @@ and consider if they're appropriate for your deployment.
 
   - `auditStorage` - This configures the volume used for storing Vault's audit logs. See the [Vault documentation](/docs/audit) for more information.
 
-    - `enabled` (`boolean: true`) -
+    - `enabled` (`boolean: false`) -
       Enables a persistent volume to be created for storing Vault's audit logs.
 
     - `size` (`string: 10Gi`) -
@@ -843,7 +843,7 @@ and consider if they're appropriate for your deployment.
         This can be used to add additional configuration that isn't directly exposed by the chart.
         If an object is provided, it will be written as JSON.
 
-    - `replicas` (`int: 5`) -
+    - `replicas` (`int: 3`) -
       The number of pods to deploy to create a highly available cluster of Vault servers.
 
     - `updatePartition` (`int: 0`) -
@@ -948,7 +948,7 @@ and consider if they're appropriate for your deployment.
 
   - `externalTrafficPolicy` (`string: "Cluster"`) - The [externalTrafficPolicy](https://kubernetes.io/docs/concepts/services-networking/service/#external-traffic-policy) can be set to either Cluster or Local and is only valid for LoadBalancer and NodePort service types.
 
-  - `loadBalancerSourceRanges` (`string`) - This value defines additional source CIDRs when using `serviceType: LoadBalancer`. This should be formatted as a multi-line string.
+  - `loadBalancerSourceRanges` (`array`) - This value defines additional source CIDRs when using `serviceType: LoadBalancer`.
 
   ```yaml
   loadBalancerSourceRanges:
@@ -982,7 +982,7 @@ and consider if they're appropriate for your deployment.
 
     - `pullPolicy` (`string: "IfNotPresent"`) - The pull policy for container images. The default pull policy is `IfNotPresent` which causes the Kubelet to skip pulling an image if it already exists locally.
 
-  - `volumes` (`array: []`) - A list of volumes made available to all containers. This takes
+  - `volumes` (`array: null`) - A list of volumes made available to all containers. This takes
     standard Kubernetes volume definitions.
 
     ```yaml
@@ -991,7 +991,7 @@ and consider if they're appropriate for your deployment.
         emptyDir: {}
     ```
 
-  - `volumeMounts` (`array: []`) - A list of volumes mounts made available to all containers. This takes
+  - `volumeMounts` (`array: null`) - A list of volumes mounts made available to all containers. This takes
     standard Kubernetes volume mount definitions.
 
     ```yaml

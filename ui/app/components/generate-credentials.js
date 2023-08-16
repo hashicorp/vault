@@ -26,7 +26,6 @@ const MODEL_TYPES = {
 };
 
 export default Component.extend({
-  wizard: service(),
   store: service(),
   router: service(),
   // set on the component
@@ -56,13 +55,6 @@ export default Component.extend({
   init() {
     this._super(...arguments);
     this.createOrReplaceModel();
-  },
-
-  didReceiveAttrs() {
-    this._super();
-    if (this.wizard.featureState === 'displayRole') {
-      this.wizard.transitionFeatureMachine(this.wizard.featureState, 'CONTINUE', this.backendType);
-    }
   },
 
   willDestroy() {
@@ -96,17 +88,10 @@ export default Component.extend({
     create() {
       let model = this.model;
       this.set('loading', true);
-      this.model
-        .save()
-        .catch(() => {
-          if (this.wizard.featureState === 'credentials') {
-            this.wizard.transitionFeatureMachine(this.wizard.featureState, 'ERROR', this.backendType);
-          }
-        })
-        .finally(() => {
-          model.set('hasGenerated', true);
-          this.set('loading', false);
-        });
+      this.model.save().finally(() => {
+        model.set('hasGenerated', true);
+        this.set('loading', false);
+      });
     },
 
     codemirrorUpdated(attr, val, codemirror) {

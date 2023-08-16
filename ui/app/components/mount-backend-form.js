@@ -25,7 +25,6 @@ const ENGINES = engines();
 
 export default class MountBackendForm extends Component {
   @service store;
-  @service wizard;
   @service flashMessages;
   @service version;
 
@@ -67,7 +66,10 @@ export default class MountBackendForm extends Component {
   willDestroy() {
     // if unsaved, we want to unload so it doesn't show up in the auth mount list
     super.willDestroy(...arguments);
-    this.mountModel.rollbackAttributes();
+    if (this.mountModel) {
+      const method = this.mountModel.isNew ? 'unloadRecord' : 'rollbackAttributes';
+      this.mountModel[method]();
+    }
   }
 
   checkPathChange(type) {
@@ -175,7 +177,6 @@ export default class MountBackendForm extends Component {
   @action
   onTypeChange(path, value) {
     if (path === 'type') {
-      this.wizard.set('componentState', value);
       this.checkPathChange(value);
     }
   }
@@ -183,10 +184,5 @@ export default class MountBackendForm extends Component {
   @action
   toggleShowEnable(value) {
     this.showEnable = value;
-    if (value === true && this.wizard.featureState === 'idle') {
-      this.wizard.transitionFeatureMachine(this.wizard.featureState, 'CONTINUE', this.mountModel.type);
-    } else {
-      this.wizard.transitionFeatureMachine(this.wizard.featureState, 'RESET', this.mountModel.type);
-    }
   }
 }

@@ -35,7 +35,6 @@ export default class KeymgmtDistribute extends Component {
   @service store;
   @service flashMessages;
   @service router;
-  @service wizard;
 
   @tracked keyModel;
   @tracked isNewKey = false;
@@ -57,14 +56,6 @@ export default class KeymgmtDistribute extends Component {
       this.getKeyInfo(this.args.key);
     }
     this.formData.operations = [];
-    this.updateWizard('nextStep');
-  }
-
-  updateWizard(key) {
-    // wizard will pause unless we manually continue it -- verify that keymgmt tutorial is in progress
-    if (this.wizard[key] === 'distribute') {
-      this.wizard.transitionFeatureMachine(this.wizard.featureState, 'CONTINUE', 'keymgmt');
-    }
   }
 
   get keyTypes() {
@@ -198,8 +189,6 @@ export default class KeymgmtDistribute extends Component {
         this.store.clearDataset('keymgmt/key');
         const providerModel = this.store.peekRecord('keymgmt/provider', provider);
         providerModel.fetchKeys(providerModel.keys?.meta?.currentPage || 1);
-        // move wizard forward if tutorial is in progress
-        this.updateWizard('featureState');
         this.args.onClose();
       })
       .catch((e) => {

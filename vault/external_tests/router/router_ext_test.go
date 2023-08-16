@@ -65,3 +65,41 @@ func testRouter_MountSubpath(t *testing.T, mountPoints []string) {
 	cluster.UnsealCores(t)
 	t.Logf("Done: %#v", mountPoints)
 }
+
+func TestRouter_UnmountRollbackIsntFatal(t *testing.T) {
+	coreConfig := &vault.CoreConfig{
+		LogicalBackends: map[string]logical.Factory{
+			"noop": vault.NoopBackendRollbackErrFactory,
+		},
+	}
+	cluster := vault.NewTestCluster(t, coreConfig, &vault.TestClusterOptions{
+		HandlerFunc: vaulthttp.Handler,
+	})
+	cluster.Start()
+	defer cluster.Cleanup()
+
+	vault.TestWaitActive(t, cluster.Cores[0].Core)
+	client := cluster.Cores[0].Client
+
+	if err := client.Sys().Mount("noop", &api.MountInput{
+		Type: "noop",
+	}); err != nil {
+		t.Fatalf("failed to mount PKI: %v", err)
+	}
+
+	if _, err := client.Logical().Write("sys/plugins/reload/backend", map[string]interface{}{
+		"mounts": "noop",
+	}); err != nil {
+		t.Fatalf("expected reload of noop with broken periodic func to succeed; got err=%v", err)
+	}
+
+	if _, err := client.Logical().Write("sys/remount", map[string]interface{}{
+		"from": "noop",
+		"to":   "noop-to",
+	}); err != nil {
+		t.Fatalf("expected remount of noop with broken periodic func to succeed; got err=%v", err)
+	}
+
+	cluster.EnsureCoresSealed(t)
+	cluster.UnsealCores(t)
+}

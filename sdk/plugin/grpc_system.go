@@ -18,6 +18,8 @@ import (
 	"google.golang.org/grpc/status"
 )
 
+var errMissingSystemView = errors.New("missing system view implementation: this method should not be called during plugin Setup, but only during and after Initialize")
+
 func newGRPCSystemView(conn *grpc.ClientConn) *gRPCSystemViewClient {
 	return &gRPCSystemViewClient{
 		client: pb.NewSystemViewClient(conn),
@@ -193,6 +195,9 @@ type gRPCSystemViewServer struct {
 }
 
 func (s *gRPCSystemViewServer) DefaultLeaseTTL(ctx context.Context, _ *pb.Empty) (*pb.TTLReply, error) {
+	if s.impl == nil {
+		return nil, errMissingSystemView
+	}
 	ttl := s.impl.DefaultLeaseTTL()
 	return &pb.TTLReply{
 		TTL: int64(ttl),
@@ -200,6 +205,9 @@ func (s *gRPCSystemViewServer) DefaultLeaseTTL(ctx context.Context, _ *pb.Empty)
 }
 
 func (s *gRPCSystemViewServer) MaxLeaseTTL(ctx context.Context, _ *pb.Empty) (*pb.TTLReply, error) {
+	if s.impl == nil {
+		return nil, errMissingSystemView
+	}
 	ttl := s.impl.MaxLeaseTTL()
 	return &pb.TTLReply{
 		TTL: int64(ttl),
@@ -207,6 +215,9 @@ func (s *gRPCSystemViewServer) MaxLeaseTTL(ctx context.Context, _ *pb.Empty) (*p
 }
 
 func (s *gRPCSystemViewServer) Tainted(ctx context.Context, _ *pb.Empty) (*pb.TaintedReply, error) {
+	if s.impl == nil {
+		return nil, errMissingSystemView
+	}
 	tainted := s.impl.Tainted()
 	return &pb.TaintedReply{
 		Tainted: tainted,
@@ -214,6 +225,9 @@ func (s *gRPCSystemViewServer) Tainted(ctx context.Context, _ *pb.Empty) (*pb.Ta
 }
 
 func (s *gRPCSystemViewServer) CachingDisabled(ctx context.Context, _ *pb.Empty) (*pb.CachingDisabledReply, error) {
+	if s.impl == nil {
+		return nil, errMissingSystemView
+	}
 	cachingDisabled := s.impl.CachingDisabled()
 	return &pb.CachingDisabledReply{
 		Disabled: cachingDisabled,
@@ -221,6 +235,9 @@ func (s *gRPCSystemViewServer) CachingDisabled(ctx context.Context, _ *pb.Empty)
 }
 
 func (s *gRPCSystemViewServer) ReplicationState(ctx context.Context, _ *pb.Empty) (*pb.ReplicationStateReply, error) {
+	if s.impl == nil {
+		return nil, errMissingSystemView
+	}
 	replicationState := s.impl.ReplicationState()
 	return &pb.ReplicationStateReply{
 		State: int32(replicationState),
@@ -228,6 +245,9 @@ func (s *gRPCSystemViewServer) ReplicationState(ctx context.Context, _ *pb.Empty
 }
 
 func (s *gRPCSystemViewServer) ResponseWrapData(ctx context.Context, args *pb.ResponseWrapDataArgs) (*pb.ResponseWrapDataReply, error) {
+	if s.impl == nil {
+		return nil, errMissingSystemView
+	}
 	data := map[string]interface{}{}
 	err := json.Unmarshal([]byte(args.Data), &data)
 	if err != nil {
@@ -253,6 +273,9 @@ func (s *gRPCSystemViewServer) ResponseWrapData(ctx context.Context, args *pb.Re
 }
 
 func (s *gRPCSystemViewServer) MlockEnabled(ctx context.Context, _ *pb.Empty) (*pb.MlockEnabledReply, error) {
+	if s.impl == nil {
+		return nil, errMissingSystemView
+	}
 	enabled := s.impl.MlockEnabled()
 	return &pb.MlockEnabledReply{
 		Enabled: enabled,
@@ -260,6 +283,9 @@ func (s *gRPCSystemViewServer) MlockEnabled(ctx context.Context, _ *pb.Empty) (*
 }
 
 func (s *gRPCSystemViewServer) LocalMount(ctx context.Context, _ *pb.Empty) (*pb.LocalMountReply, error) {
+	if s.impl == nil {
+		return nil, errMissingSystemView
+	}
 	local := s.impl.LocalMount()
 	return &pb.LocalMountReply{
 		Local: local,
@@ -267,6 +293,9 @@ func (s *gRPCSystemViewServer) LocalMount(ctx context.Context, _ *pb.Empty) (*pb
 }
 
 func (s *gRPCSystemViewServer) EntityInfo(ctx context.Context, args *pb.EntityInfoArgs) (*pb.EntityInfoReply, error) {
+	if s.impl == nil {
+		return nil, errMissingSystemView
+	}
 	entity, err := s.impl.EntityInfo(args.EntityID)
 	if err != nil {
 		return &pb.EntityInfoReply{
@@ -279,6 +308,9 @@ func (s *gRPCSystemViewServer) EntityInfo(ctx context.Context, args *pb.EntityIn
 }
 
 func (s *gRPCSystemViewServer) GroupsForEntity(ctx context.Context, args *pb.EntityInfoArgs) (*pb.GroupsForEntityReply, error) {
+	if s.impl == nil {
+		return nil, errMissingSystemView
+	}
 	groups, err := s.impl.GroupsForEntity(args.EntityID)
 	if err != nil {
 		return &pb.GroupsForEntityReply{
@@ -291,6 +323,9 @@ func (s *gRPCSystemViewServer) GroupsForEntity(ctx context.Context, args *pb.Ent
 }
 
 func (s *gRPCSystemViewServer) PluginEnv(ctx context.Context, _ *pb.Empty) (*pb.PluginEnvReply, error) {
+	if s.impl == nil {
+		return nil, errMissingSystemView
+	}
 	pluginEnv, err := s.impl.PluginEnv(ctx)
 	if err != nil {
 		return &pb.PluginEnvReply{
@@ -303,6 +338,9 @@ func (s *gRPCSystemViewServer) PluginEnv(ctx context.Context, _ *pb.Empty) (*pb.
 }
 
 func (s *gRPCSystemViewServer) GeneratePasswordFromPolicy(ctx context.Context, req *pb.GeneratePasswordFromPolicyRequest) (*pb.GeneratePasswordFromPolicyReply, error) {
+	if s.impl == nil {
+		return nil, errMissingSystemView
+	}
 	policyName := req.PolicyName
 	if policyName == "" {
 		return &pb.GeneratePasswordFromPolicyReply{}, status.Errorf(codes.InvalidArgument, "no password policy specified")

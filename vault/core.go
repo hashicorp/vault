@@ -395,6 +395,8 @@ type Core struct {
 
 	// activityLog is used to track active client count
 	activityLog *ActivityLog
+	// activityLogLock protects the activityLog and activityLogConfig
+	activityLogLock sync.RWMutex
 
 	// metricsCh is used to stop the metrics streaming
 	metricsCh chan struct{}
@@ -561,10 +563,6 @@ type Core struct {
 	// active, or give up active as soon as it gets it
 	neverBecomeActive *uint32
 
-	// loadCaseSensitiveIdentityStore enforces the loading of identity store
-	// artifacts in a case sensitive manner. To be used only in testing.
-	loadCaseSensitiveIdentityStore bool
-
 	// clusterListener starts up and manages connections on the cluster ports
 	clusterListener *atomic.Value
 
@@ -603,7 +601,11 @@ type Core struct {
 
 	clusterHeartbeatInterval time.Duration
 
+	// activityLogConfig contains override values for the activity log
+	// it is protected by activityLogLock
 	activityLogConfig ActivityLogCoreConfig
+
+	censusConfig atomic.Value
 
 	// activeTime is set on active nodes indicating the time at which this node
 	// became active.
@@ -642,6 +644,9 @@ type Core struct {
 	effectiveSDKVersion string
 
 	rollbackPeriod time.Duration
+
+	pendingRemovalMountsAllowed bool
+	expirationRevokeRetryBase   time.Duration
 }
 
 func (c *Core) HAState() consts.HAState {
@@ -741,6 +746,9 @@ type CoreConfig struct {
 	LicensePath     string
 	LicensingConfig *LicensingConfig
 
+	// Configured Census Agent
+	CensusAgent CensusReporter
+
 	DisablePerformanceStandby bool
 	DisableIndexing           bool
 	DisableKeyEncodingChecks  bool
@@ -776,6 +784,10 @@ type CoreConfig struct {
 	EffectiveSDKVersion string
 
 	RollbackPeriod time.Duration
+
+	PendingRemovalMountsAllowed bool
+
+	ExpirationRevokeRetryBase time.Duration
 }
 
 // GetServiceRegistration returns the config's ServiceRegistration, or nil if it does
@@ -928,6 +940,8 @@ func CreateCore(conf *CoreConfig) (*Core, error) {
 		mountMigrationTracker:          &sync.Map{},
 		disableSSCTokens:               conf.DisableSSCTokens,
 		effectiveSDKVersion:            effectiveSDKVersion,
+		pendingRemovalMountsAllowed:    conf.PendingRemovalMountsAllowed,
+		expirationRevokeRetryBase:      conf.ExpirationRevokeRetryBase,
 	}
 
 	c.standbyStopCh.Store(make(chan struct{}))
@@ -1198,7 +1212,8 @@ func (c *Core) handleVersionTimeStamps(ctx context.Context) error {
 	if isUpdated {
 		c.logger.Info("Recorded vault version", "vault version", version.Version, "upgrade time", currentTime, "build date", version.BuildDate)
 	}
-	// Finally, populate the version history cache
+
+	// Finally, repopulate the version history cache
 	err = c.loadVersionHistory(ctx)
 	if err != nil {
 		return err
@@ -1221,6 +1236,14 @@ func (c *Core) RaftNodeIDHeaderEnabled() bool {
 // DisableSSCTokens determines whether to use server side consistent tokens or not.
 func (c *Core) DisableSSCTokens() bool {
 	return c.disableSSCTokens
+}
+
+// ShutdownCoreError logs a shutdown error and shuts down the Vault core.
+func (c *Core) ShutdownCoreError(err error) {
+	c.Logger().Error("shutting down core", "error", err)
+	if shutdownErr := c.ShutdownWait(); shutdownErr != nil {
+		c.Logger().Error("failed to shutdown core", "error", shutdownErr)
+	}
 }
 
 // Shutdown is invoked when the Vault instance is about to be terminated. It
@@ -2165,9 +2188,6 @@ func (s standardUnsealStrategy) unseal(ctx context.Context, logger log.Logger, c
 			return err
 		}
 	}
-	if err := c.handleVersionTimeStamps(ctx); err != nil {
-		return err
-	}
 	if err := c.setupPluginCatalog(ctx); err != nil {
 		return err
 	}
@@ -2235,6 +2255,11 @@ func (s standardUnsealStrategy) unseal(ctx context.Context, logger log.Logger, c
 		if err := c.setupAuditedHeadersConfig(ctx); err != nil {
 			return err
 		}
+
+		if err := c.setupCensusAgent(); err != nil {
+			c.logger.Error("skipping reporting for nil agent", "error", err)
+		}
+
 		// not waiting on wg to avoid changing existing behavior
 		var wg sync.WaitGroup
 		if err := c.setupActivityLog(ctx, &wg); err != nil {
@@ -2270,6 +2295,11 @@ func (s standardUnsealStrategy) unseal(ctx context.Context, logger log.Logger, c
 
 	c.metricsCh = make(chan struct{})
 	go c.emitMetricsActiveNode(c.metricsCh)
+
+	// Establish version timestamps at the end of unseal on active nodes only.
+	if err := c.handleVersionTimeStamps(ctx); err != nil {
+		return err
+	}
 
 	return nil
 }
@@ -2309,6 +2339,12 @@ func (c *Core) postUnseal(ctx context.Context, ctxCancelFunc context.CancelFunc,
 		_ = c.seal.SetRecoveryConfig(ctx, nil)
 	}
 
+	// Load prior un-updated store into version history cache to compare
+	// previous state.
+	if err := c.loadVersionHistory(ctx); err != nil {
+		return err
+	}
+
 	if err := unsealer.unseal(ctx, c.logger, c); err != nil {
 		return err
 	}
@@ -2332,8 +2368,39 @@ func (c *Core) postUnseal(ctx context.Context, ctxCancelFunc context.CancelFunc,
 	// This is intentionally the last block in this function. We want to allow
 	// writes just before allowing client requests, to ensure everything has
 	// been set up properly before any writes can have happened.
-	for _, v := range c.postUnsealFuncs {
-		v()
+	//
+	// Use a small temporary worker pool to run postUnsealFuncs in parallel
+	postUnsealFuncConcurrency := 1 // Disabled in backports
+	if v := os.Getenv("VAULT_POSTUNSEAL_FUNC_CONCURRENCY"); v != "" {
+		pv, err := strconv.Atoi(v)
+		if err != nil || pv < 1 {
+			c.logger.Warn("invalid value for VAULT_POSTUNSEAL_FUNC_CURRENCY, must be a positive integer", "error", err, "value", pv)
+		} else {
+			postUnsealFuncConcurrency = pv
+		}
+	}
+	if postUnsealFuncConcurrency <= 1 {
+		// Out of paranoia, keep the old logic for parallism=1
+		for _, v := range c.postUnsealFuncs {
+			v()
+		}
+	} else {
+		jobs := make(chan func())
+		var wg sync.WaitGroup
+		for i := 0; i < postUnsealFuncConcurrency; i++ {
+			go func() {
+				for v := range jobs {
+					v()
+					wg.Done()
+				}
+			}()
+		}
+		for _, v := range c.postUnsealFuncs {
+			wg.Add(1)
+			jobs <- v
+		}
+		wg.Wait()
+		close(jobs)
 	}
 
 	if atomic.LoadUint32(c.sealMigrationDone) == 1 {
@@ -2393,6 +2460,10 @@ func (c *Core) preSeal() error {
 		result = multierror.Append(result, fmt.Errorf("error stopping expiration: %w", err))
 	}
 	c.stopActivityLog()
+	// Clean up the censusAgent on seal
+	if err := c.teardownCensusAgent(); err != nil {
+		result = multierror.Append(result, fmt.Errorf("error tearing down reporting agent: %w", err))
+	}
 
 	if err := c.teardownCredentials(context.Background()); err != nil {
 		result = multierror.Append(result, fmt.Errorf("error tearing down credentials: %w", err))
@@ -3049,23 +3120,34 @@ func (c *Core) readFeatureFlags(ctx context.Context) (*FeatureFlags, error) {
 // with misconfigured plugins. It should not be possible for existing builtins
 // to be misconfigured, so that is a fatal error.
 func (c *Core) isMountable(ctx context.Context, entry *MountEntry, pluginType consts.PluginType) bool {
+	return !c.isMountEntryBuiltin(ctx, entry, pluginType)
+}
+
+// isMountEntryBuiltin determines whether a mount entry is associated with a
+// builtin of the specified plugin type.
+func (c *Core) isMountEntryBuiltin(ctx context.Context, entry *MountEntry, pluginType consts.PluginType) bool {
 	// Prevent a panic early on
 	if entry == nil || c.pluginCatalog == nil {
 		return false
 	}
 
-	// Handle aliases
-	t := entry.Type
-	if alias, ok := mountAliases[t]; ok {
-		t = alias
+	// Allow type to be determined from mount entry when not otherwise specified
+	if pluginType == consts.PluginTypeUnknown {
+		pluginType = c.builtinTypeFromMountEntry(ctx, entry)
 	}
 
-	plug, err := c.pluginCatalog.Get(ctx, t, pluginType, entry.Version)
-	if err != nil {
+	// Handle aliases
+	pluginName := entry.Type
+	if alias, ok := mountAliases[pluginName]; ok {
+		pluginName = alias
+	}
+
+	plug, err := c.pluginCatalog.Get(ctx, pluginName, pluginType, entry.Version)
+	if err != nil || plug == nil {
 		return false
 	}
 
-	return plug == nil || !plug.Builtin
+	return plug.Builtin
 }
 
 // MatchingMount returns the path of the mount that will be responsible for
@@ -3457,6 +3539,10 @@ func (c *Core) DetermineRoleFromLoginRequest(mountPoint string, data map[string]
 
 // ListMounts will provide a slice containing a deep copy each mount entry
 func (c *Core) ListMounts() ([]*MountEntry, error) {
+	if c.Sealed() {
+		return nil, fmt.Errorf("vault is sealed")
+	}
+
 	c.mountsLock.RLock()
 	defer c.mountsLock.RUnlock()
 
@@ -3476,8 +3562,12 @@ func (c *Core) ListMounts() ([]*MountEntry, error) {
 
 // ListAuths will provide a slice containing a deep copy each auth entry
 func (c *Core) ListAuths() ([]*MountEntry, error) {
-	c.mountsLock.RLock()
-	defer c.mountsLock.RUnlock()
+	if c.Sealed() {
+		return nil, fmt.Errorf("vault is sealed")
+	}
+
+	c.authLock.RLock()
+	defer c.authLock.RUnlock()
 
 	var entries []*MountEntry
 

@@ -60,16 +60,6 @@ func (c *Core) enableCredential(ctx context.Context, entry *MountEntry) error {
 		return err
 	}
 
-	// Re-evaluate filtered paths
-	if err := runFilteredPathsEvaluation(ctx, c); err != nil {
-		c.logger.Error("failed to evaluate filtered paths", "error", err)
-
-		// We failed to evaluate filtered paths so we are undoing the mount operation
-		if disableCredentialErr := c.disableCredentialInternal(ctx, entry.Path, MountTableUpdateStorage); disableCredentialErr != nil {
-			c.logger.Error("failed to disable credential", "error", disableCredentialErr)
-		}
-		return err
-	}
 	return nil
 }
 
@@ -85,8 +75,17 @@ func (c *Core) enableCredentialInternal(ctx context.Context, entry *MountEntry, 
 		return fmt.Errorf("backend path must be specified")
 	}
 
+	c.mountsLock.Lock()
 	c.authLock.Lock()
-	defer c.authLock.Unlock()
+	locked := true
+	unlock := func() {
+		if locked {
+			c.authLock.Unlock()
+			c.mountsLock.Unlock()
+			locked = false
+		}
+	}
+	defer unlock()
 
 	ns, err := namespace.FromContext(ctx)
 	if err != nil {
@@ -220,6 +219,18 @@ func (c *Core) enableCredentialInternal(ctx context.Context, entry *MountEntry, 
 		return err
 	}
 
+	// Re-evaluate filtered paths
+	if err := runFilteredPathsEvaluation(ctx, c, false); err != nil {
+		c.logger.Error("failed to evaluate filtered paths", "error", err)
+
+		unlock()
+		// We failed to evaluate filtered paths so we are undoing the mount operation
+		if disableCredentialErr := c.disableCredentialInternal(ctx, entry.Path, MountTableUpdateStorage); disableCredentialErr != nil {
+			c.logger.Error("failed to disable credential", "error", disableCredentialErr)
+		}
+		return err
+	}
+
 	if !nilMount {
 		// restore the original readOnlyErr, so we can write to the view in
 		// Initialize() if necessary
@@ -255,7 +266,7 @@ func (c *Core) disableCredential(ctx context.Context, path string) error {
 	}
 
 	// Re-evaluate filtered paths
-	if err := runFilteredPathsEvaluation(ctx, c); err != nil {
+	if err := runFilteredPathsEvaluation(ctx, c, true); err != nil {
 		// Even we failed to evaluate filtered paths, the unmount operation was still successful
 		c.logger.Error("failed to evaluate filtered paths", "error", err)
 	}
@@ -522,11 +533,6 @@ func (c *Core) remountCredEntryForceInternal(ctx context.Context, path string, u
 		return err
 	}
 
-	// Re-evaluate filtered paths
-	if err := runFilteredPathsEvaluation(ctx, c); err != nil {
-		c.logger.Error("failed to evaluate filtered paths", "error", err)
-		return err
-	}
 	return nil
 }
 
@@ -790,10 +796,6 @@ func (c *Core) setupCredentials(ctx context.Context) error {
 		view.setReadOnlyErr(logical.ErrSetupReadOnly)
 		if strutil.StrListContains(singletonMounts, entry.Type) {
 			defer view.setReadOnlyErr(origViewReadOnlyErr)
-		} else {
-			c.postUnsealFuncs = append(c.postUnsealFuncs, func() {
-				view.setReadOnlyErr(origViewReadOnlyErr)
-			})
 		}
 
 		// Initialize the backend
@@ -804,7 +806,7 @@ func (c *Core) setupCredentials(ctx context.Context) error {
 			c.logger.Error("failed to create credential entry", "path", entry.Path, "error", err)
 
 			if c.isMountable(ctx, entry, consts.PluginTypeCredential) {
-				c.logger.Warn("skipping plugin-based credential entry", "path", entry.Path)
+				c.logger.Warn("skipping plugin-based auth entry", "path", entry.Path)
 				goto ROUTER_MOUNT
 			}
 			return errLoadAuthFailed
@@ -819,6 +821,22 @@ func (c *Core) setupCredentials(ctx context.Context) error {
 			// don't set the running version to a builtin if it is running as an external plugin
 			if externaler, ok := backend.(logical.Externaler); !ok || !externaler.IsExternal() {
 				entry.RunningVersion = versions.GetBuiltinVersion(consts.PluginTypeCredential, entry.Type)
+			}
+		}
+
+		// Do not start up deprecated builtin plugins. If this is a major
+		// upgrade, stop unsealing and shutdown. If we've already mounted this
+		// plugin, skip backend initialization and mount the data for posterity.
+		if versions.IsBuiltinVersion(entry.RunningVersion) {
+			_, err := c.handleDeprecatedMountEntry(ctx, entry, consts.PluginTypeCredential)
+			if c.isMajorVersionFirstMount(ctx) && err != nil {
+				go c.ShutdownCoreError(fmt.Errorf("could not mount %q: %w", entry.Type, err))
+				return errLoadAuthFailed
+			} else if err != nil {
+				c.logger.Error("skipping deprecated auth entry", "name", entry.Type, "path", entry.Path, "error", err)
+				backend.Cleanup(ctx)
+				backend = nil
+				goto ROUTER_MOUNT
 			}
 		}
 
@@ -850,7 +868,7 @@ func (c *Core) setupCredentials(ctx context.Context) error {
 		}
 
 		if c.logger.IsInfo() {
-			c.logger.Info("successfully enabled credential backend", "type", entry.Type, "version", entry.Version, "path", entry.Path, "namespace", entry.Namespace())
+			c.logger.Info("successfully mounted", "type", entry.Type, "version", entry.RunningVersion, "path", entry.Path, "namespace", entry.Namespace())
 		}
 
 		// Ensure the path is tainted if set in the mount table
@@ -858,6 +876,7 @@ func (c *Core) setupCredentials(ctx context.Context) error {
 			// Calculate any namespace prefixes here, because when Taint() is called, there won't be
 			// a namespace to pull from the context. This is similar to what we do above in c.router.Mount().
 			path = entry.Namespace().Path + path
+			c.logger.Debug("tainting a mount due to it being marked as tainted in mount table", "entry.path", entry.Path, "entry.namespace.path", entry.Namespace().Path, "full_path", path)
 			c.router.Taint(ctx, path)
 		}
 
@@ -884,14 +903,18 @@ func (c *Core) setupCredentials(ctx context.Context) error {
 			// Bind locally
 			localEntry := entry
 			c.postUnsealFuncs = append(c.postUnsealFuncs, func() {
+				postUnsealLogger := c.logger.With("type", localEntry.Type, "version", localEntry.RunningVersion, "path", localEntry.Path)
 				if backend == nil {
-					c.logger.Error("skipping initialization on nil backend", "path", localEntry.Path)
+					postUnsealLogger.Error("skipping initialization for nil auth backend")
 					return
+				}
+				if !strutil.StrListContains(singletonMounts, localEntry.Type) {
+					view.setReadOnlyErr(origViewReadOnlyErr)
 				}
 
 				err := backend.Initialize(ctx, &logical.InitializationRequest{Storage: view})
 				if err != nil {
-					c.logger.Error("failed to initialize auth entry", "path", localEntry.Path, "error", err)
+					postUnsealLogger.Error("failed to initialize auth backend", "error", err)
 				}
 			})
 		}
