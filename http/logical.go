@@ -16,6 +16,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/helper/experiments"
 	"github.com/hashicorp/vault/helper/namespace"
@@ -364,9 +365,23 @@ func handleLogicalInternal(core *vault.Core, injectDataIntoTopLevel bool, noForw
 				nsPath = ""
 			}
 			if strings.HasPrefix(r.URL.Path, fmt.Sprintf("/v1/%ssys/events/subscribe/", nsPath)) {
-				handler := handleEventsSubscribe(core, req)
-				handler.ServeHTTP(w, r)
-				return
+				// Only the leader handles event subscriptions.
+				// It is safe to call core.Leader() since we have not yet grabbed the stateLock.
+				isLeader, _, _, err := core.Leader()
+				if isLeader || (err != nil && errwrap.Contains(err, vault.ErrHANotEnabled.Error())) {
+					handler := handleEventsSubscribe(core, req)
+					handler.ServeHTTP(w, r)
+					return
+				} else if noForward {
+					respondError(w, http.StatusBadRequest, vault.ErrCannotForwardLocalOnly)
+					return
+				} else {
+					if origBody != nil {
+						r.Body = origBody
+					}
+					forwardRequest(core, w, r)
+					return
+				}
 			}
 		}
 
