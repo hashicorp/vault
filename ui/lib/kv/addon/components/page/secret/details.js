@@ -12,17 +12,17 @@ import { task } from 'ember-concurrency';
 import { waitFor } from '@ember/test-waiters';
 
 /**
- * @module KvSecretDetails renders the key/value data of a KV secret. 
+ * @module KvSecretDetails renders the key/value data of a KV secret.
  * It also renders a dropdown to display different versions of the secret.
  * <Page::Secret::Details
  *  @path={{this.model.path}}
  *  @secret={{this.model.secret}}
  *  @metadata={{this.model.metadata}}
  *  @breadcrumbs={{this.breadcrumbs}}
-  /> 
+  />
  *
- * @param {string} path - path of kv secret 'my/secret' used as the title for the KV page header 
- * @param {model} secret - Ember data model: 'kv/data'  
+ * @param {string} path - path of kv secret 'my/secret' used as the title for the KV page header
+ * @param {model} secret - Ember data model: 'kv/data'
  * @param {model} metadata - Ember data model: 'kv/metadata'
  * @param {array} breadcrumbs - Array to generate breadcrumbs, passed to the page header component
  */
@@ -34,7 +34,6 @@ export default class KvSecretDetails extends Component {
 
   @tracked showJsonView = false;
   @tracked wrappedData = null;
-
 
   @action
   toggleJsonView() {
