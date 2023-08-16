@@ -1,12 +1,14 @@
 import { module, test } from 'qunit';
 import { v4 as uuidv4 } from 'uuid';
+import { click, currentURL, fillIn, typeIn, visit } from '@ember/test-helpers';
+
 import { setupApplicationTest } from 'vault/tests/helpers';
 import authPage from 'vault/tests/pages/auth';
 import { deleteEngineCmd, mountEngineCmd, runCmd, tokenWithPolicyCmd } from 'vault/tests/helpers/commands';
 import { personas } from 'vault/tests/helpers/policy-generator/kv';
-import { setupControlGroup, writeVersionedSecret } from 'vault/tests/helpers/kv/kv-run-commands';
+import { writeVersionedSecret } from 'vault/tests/helpers/kv/kv-run-commands';
 import { FORM, PAGE } from 'vault/tests/helpers/kv/kv-selectors';
-import { click, currentURL, fillIn, typeIn, visit } from '@ember/test-helpers';
+import { setupControlGroup } from 'vault/tests/helpers/control-groups';
 
 /**
  * This test set is for testing the flow for creating new secrets and versions
@@ -716,7 +718,7 @@ module('Acceptance | kv-v2 workflow | secret and version create', function (hook
       assert
         .dom(FORM.noReadAlert)
         .hasText(
-          'You do not have read permissions for this secret data. Saving will overwrite the existing secret.',
+          'Warning You do not have read permissions for this secret data. Saving will overwrite the existing secret.',
           'shows alert for no read permissions'
         );
 
@@ -810,7 +812,7 @@ module('Acceptance | kv-v2 workflow | secret and version create', function (hook
       assert
         .dom(FORM.noReadAlert)
         .hasText(
-          'You do not have read permissions for this secret data. Saving will overwrite the existing secret.',
+          'Warning You do not have read permissions for this secret data. Saving will overwrite the existing secret.',
           'shows alert for no read permissions'
         );
 
@@ -1087,8 +1089,8 @@ path "${this.backend}/data/*" {
   capabilities = ["create", "read", "update", "delete", "list"]
   control_group = {
     max_ttl = "24h"
-    factor "approver" {
-      controlled_capabilities = ["write"]
+    factor "authorizer" {
+      controlled_capabilities = ["update"]
       identity {
           group_names = ["managers"]
           approvals = 1
@@ -1097,17 +1099,11 @@ path "${this.backend}/data/*" {
   }
 }
 
-path "${this.backend}/*" {
-  capabilities = ["list"]
+path "${this.backend}/metadata" {
+  capabilities = ["list", "read"]
 }
-
-// Can we allow this so user can self-authorize?
-path "sys/control-group/authorize" {
-  capabilities = ["update"]
-}
-
-path "sys/control-group/request" {
-  capabilities = ["update"]
+path "${this.backend}/metadata/*" {
+  capabilities = ["list", "read"]
 }
 `;
       const { userToken } = await setupControlGroup({ userPolicy });
