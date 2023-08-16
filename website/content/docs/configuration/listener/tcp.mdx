@@ -22,7 +22,6 @@ specify [`api_addr`][api-addr] and [`cluster_addr`][cluster-addr] so Vault will
 advertise the correct address to other nodes.
 
 ## Listener's custom response headers
-
 As of version 1.9, Vault supports defining custom HTTP response headers for the root path (`/`) and also on API endpoints (`/v1/*`).
 The headers are defined based on the returned status code. For example, a user can define a list of
 custom response headers for the `200` status code, and another list of custom response headers for

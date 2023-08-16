@@ -8,6 +8,13 @@ console.log(`VERCEL_ENV: ${process.env.VERCEL_ENV}`)
 console.log(`MKTG_CONTENT_API: ${process.env.MKTG_CONTENT_API}`)
 console.log(`ENABLE_VERSIONED_DOCS: ${process.env.ENABLE_VERSIONED_DOCS}`)
 
+// log out our primary environment variables for clarity in build logs
+console.log(`HASHI_ENV: ${process.env.HASHI_ENV}`)
+console.log(`NODE_ENV: ${process.env.NODE_ENV}`)
+console.log(`VERCEL_ENV: ${process.env.VERCEL_ENV}`)
+console.log(`MKTG_CONTENT_API: ${process.env.MKTG_CONTENT_API}`)
+console.log(`ENABLE_VERSIONED_DOCS: ${process.env.ENABLE_VERSIONED_DOCS}`)
+
 module.exports = withHashicorp({
   dato: {
     // This token is safe to be in this public repository, it only has access to content that is publicly viewable on the website
