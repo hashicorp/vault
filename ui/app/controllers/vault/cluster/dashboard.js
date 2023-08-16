@@ -14,6 +14,6 @@ export default class DashboardController extends Controller {
   @action
   refreshModel() {
     this.replicationUpdatedAt = timestamp.now().toISOString();
-    this.refresh();
+    this.send('refreshRoute');
   }
 }
