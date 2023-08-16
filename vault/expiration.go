@@ -240,12 +240,12 @@ func (r *revocationJob) OnFailure(err error) {
 	r.m.core.metricSink.IncrCounterWithLabels([]string{"expire", "lease_expiration", "error"}, 1, []metrics.Label{metricsutil.NamespaceLabel(r.ns)})
 
 	r.m.pendingLock.Lock()
-	defer r.m.pendingLock.Unlock()
 	pendingRaw, ok := r.m.pending.Load(r.leaseID)
 	if !ok {
 		r.m.logger.Warn("failed to find lease in pending map for revocation retry", "lease_id", r.leaseID)
 		return
 	}
+	r.m.pendingLock.Unlock()
 
 	pending := pendingRaw.(pendingInfo)
 	pending.revokesAttempted++
@@ -277,7 +277,9 @@ func (r *revocationJob) OnFailure(err error) {
 	}
 
 	pending.timer.Reset(newTimer)
+	r.m.pendingLock.Lock()
 	r.m.pending.Store(r.leaseID, pending)
+	r.m.pendingLock.Unlock()
 }
 
 func expireLeaseStrategyFairsharing(ctx context.Context, m *ExpirationManager, leaseID string, ns *namespace.Namespace) {
