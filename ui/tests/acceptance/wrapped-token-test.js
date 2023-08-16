@@ -1,7 +1,8 @@
 import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
-import { settled, currentURL } from '@ember/test-helpers';
+import { settled, currentURL, visit } from '@ember/test-helpers';
 import { create } from 'ember-cli-page-object';
+import { setupMirage } from 'ember-cli-mirage/test-support';
 import auth from 'vault/tests/pages/auth';
 import consoleClass from 'vault/tests/pages/components/console/ui-panel';
 
@@ -27,6 +28,7 @@ const setupWrapping = async () => {
 };
 module('Acceptance | wrapped_token query param functionality', function (hooks) {
   setupApplicationTest(hooks);
+  setupMirage(hooks);
 
   test('it authenticates you if the query param is present', async function (assert) {
     let token = await setupWrapping();
@@ -40,5 +42,14 @@ module('Acceptance | wrapped_token query param functionality', function (hooks) 
     await auth.visit({ wrapped_token: token, with: 'token' });
     await settled();
     assert.equal(currentURL(), '/vault/secrets', 'authenticates and redirects to home');
+  });
+
+  test('it should authenticate when hitting logout url with wrapped_token when logged out', async function (assert) {
+    this.server.post('/sys/wrapping/unwrap', () => {
+      return { auth: { client_token: 'root' } };
+    });
+
+    await visit(`/vault/logout?wrapped_token=1234`);
+    assert.strictEqual(currentURL(), '/vault/secrets', 'authenticates and redirects to home');
   });
 });

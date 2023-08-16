@@ -72,6 +72,13 @@ const (
 	MountTableNoUpdateStorage = false
 )
 
+// DeprecationStatus errors
+var (
+	errMountDeprecated     = errors.New("mount entry associated with deprecated builtin")
+	errMountPendingRemoval = errors.New("mount entry associated with pending removal builtin")
+	errMountRemoved        = errors.New("mount entry associated with removed builtin")
+)
+
 var (
 	// loadMountsFailed if loadMounts encounters an error
 	errLoadMountsFailed = errors.New("failed to setup mount table")
@@ -104,8 +111,6 @@ var (
 	// mountAliases maps old backend names to new backend names, allowing us
 	// to move/rename backends but maintain backwards compatibility
 	mountAliases = map[string]string{"generic": "kv"}
-
-	PendingRemovalMountsAllowed = false
 )
 
 func (c *Core) generateMountAccessor(entryType string) (string, error) {
@@ -445,6 +450,11 @@ func (e *MountEntry) SyncCache() {
 	}
 }
 
+// DecodeMountTable is used for testing
+func (c *Core) DecodeMountTable(ctx context.Context, raw []byte) (*MountTable, error) {
+	return c.decodeMountTable(ctx, raw)
+}
+
 func (c *Core) decodeMountTable(ctx context.Context, raw []byte) (*MountTable, error) {
 	// Decode into mount table
 	mountTable := new(MountTable)
@@ -465,12 +475,6 @@ func (c *Core) decodeMountTable(ctx context.Context, raw []byte) (*MountTable, e
 		if ns == nil {
 			c.logger.Error("namespace on mount entry not found", "namespace_id", entry.NamespaceID, "mount_path", entry.Path, "mount_description", entry.Description)
 			continue
-		}
-
-		// Immediately shutdown the core if deprecated mounts are detected and VAULT_ALLOW_PENDING_REMOVAL_MOUNTS is unset
-		if _, err := c.handleDeprecatedMountEntry(ctx, entry, consts.PluginTypeUnknown); err != nil {
-			c.logger.Error("shutting down core", "error", err)
-			c.Shutdown()
 		}
 
 		entry.namespace = ns
@@ -509,23 +513,21 @@ func (c *Core) mount(ctx context.Context, entry *MountEntry) error {
 		return err
 	}
 
-	// Re-evaluate filtered paths
-	if err := runFilteredPathsEvaluation(ctx, c); err != nil {
-		c.logger.Error("failed to evaluate filtered paths", "error", err)
-
-		// We failed to evaluate filtered paths so we are undoing the mount operation
-		if unmountInternalErr := c.unmountInternal(ctx, entry.Path, MountTableUpdateStorage); unmountInternalErr != nil {
-			c.logger.Error("failed to unmount", "error", unmountInternalErr)
-		}
-		return err
-	}
-
 	return nil
 }
 
 func (c *Core) mountInternal(ctx context.Context, entry *MountEntry, updateStorage bool) error {
 	c.mountsLock.Lock()
-	defer c.mountsLock.Unlock()
+	c.authLock.Lock()
+	locked := true
+	unlock := func() {
+		if locked {
+			c.authLock.Unlock()
+			c.mountsLock.Unlock()
+			locked = false
+		}
+	}
+	defer unlock()
 
 	ns, err := namespace.FromContext(ctx)
 	if err != nil {
@@ -594,11 +596,13 @@ func (c *Core) mountInternal(ctx context.Context, entry *MountEntry, updateStora
 	if strutil.StrListContains(singletonMounts, entry.Type) {
 		addFilterablePath(c, viewPath)
 	}
+	addKnownPath(c, viewPath)
 
 	nilMount, err := preprocessMount(c, entry, view)
 	if err != nil {
 		return err
 	}
+
 	origReadOnlyErr := view.getReadOnlyErr()
 
 	// Mark the view as read-only until the mounting is complete and
@@ -667,6 +671,18 @@ func (c *Core) mountInternal(ctx context.Context, entry *MountEntry, updateStora
 		return err
 	}
 
+	// Re-evaluate filtered paths
+	if err := runFilteredPathsEvaluation(ctx, c, false); err != nil {
+		c.logger.Error("failed to evaluate filtered paths", "error", err)
+
+		unlock()
+		// We failed to evaluate filtered paths so we are undoing the mount operation
+		if unmountInternalErr := c.unmountInternal(ctx, entry.Path, MountTableUpdateStorage); unmountInternalErr != nil {
+			c.logger.Error("failed to unmount", "error", unmountInternalErr)
+		}
+		return err
+	}
+
 	if !nilMount {
 		// restore the original readOnlyErr, so we can write to the view in
 		// Initialize() if necessary
@@ -691,8 +707,7 @@ func (c *Core) builtinTypeFromMountEntry(ctx context.Context, entry *MountEntry)
 		return consts.PluginTypeUnknown
 	}
 
-	// Builtin plugins should contain the "builtin" string in their RunningVersion
-	if !strings.Contains(entry.RunningVersion, "builtin") {
+	if !versions.IsBuiltinVersion(entry.RunningVersion) {
 		return consts.PluginTypeUnknown
 	}
 
@@ -747,7 +762,7 @@ func (c *Core) unmount(ctx context.Context, path string) error {
 	}
 
 	// Re-evaluate filtered paths
-	if err := runFilteredPathsEvaluation(ctx, c); err != nil {
+	if err := runFilteredPathsEvaluation(ctx, c, true); err != nil {
 		// Even we failed to evaluate filtered paths, the unmount operation was still successful
 		c.logger.Error("failed to evaluate filtered paths", "error", err)
 	}
@@ -788,9 +803,13 @@ func (c *Core) unmountInternal(ctx context.Context, path string, updateStorage b
 
 	rCtx := namespace.ContextWithNamespace(c.activeContext, ns)
 	if backend != nil && c.rollback != nil {
-		// Invoke the rollback manager a final time
+		// Invoke the rollback manager a final time. This is not fatal as
+		// various periodic funcs (e.g., PKI) can legitimately error; the
+		// periodic rollback manager logs these errors rather than failing
+		// replication like returning this error would do.
 		if err := c.rollback.Rollback(rCtx, path); err != nil {
-			return err
+			c.logger.Error("ignoring rollback error during unmount", "error", err, "path", path)
+			err = nil
 		}
 	}
 	if backend != nil && c.expiration != nil && updateStorage {
@@ -929,14 +948,12 @@ func (c *Core) taintMountEntry(ctx context.Context, nsID, mountPath string, upda
 }
 
 // handleDeprecatedMountEntry handles the Deprecation Status of the specified
-// mount entry's builtin engine as follows:
-//
-// * Supported - do nothing
-// * Deprecated - log a warning about builtin deprecation
-// * PendingRemoval - log an error about builtin deprecation and return an error
-// if VAULT_ALLOW_PENDING_REMOVAL_MOUNTS is unset
-// * Removed - log an error about builtin deprecation and return an error
+// mount entry's builtin engine. Warnings are appended to the returned response
+// and logged. Errors are returned with a nil response to be processed by the
+// caller.
 func (c *Core) handleDeprecatedMountEntry(ctx context.Context, entry *MountEntry, pluginType consts.PluginType) (*logical.Response, error) {
+	resp := &logical.Response{}
+
 	if c.builtinRegistry == nil || entry == nil {
 		return nil, nil
 	}
@@ -954,28 +971,22 @@ func (c *Core) handleDeprecatedMountEntry(ctx context.Context, entry *MountEntry
 
 	status, ok := c.builtinRegistry.DeprecationStatus(t, pluginType)
 	if ok {
-		resp := &logical.Response{}
-		// Deprecation sublogger with some identifying information
-		dl := c.logger.With("name", t, "type", pluginType, "status", status, "path", entry.Path)
-		errDeprecatedMount := fmt.Errorf("mount entry associated with %s builtin", status)
-
 		switch status {
 		case consts.Deprecated:
-			dl.Warn(errDeprecatedMount.Error())
-			resp.AddWarning(errDeprecatedMount.Error())
+			c.logger.Warn("mounting deprecated builtin", "name", t, "type", pluginType, "path", entry.Path)
+			resp.AddWarning(errMountDeprecated.Error())
 			return resp, nil
 
 		case consts.PendingRemoval:
-			dl.Error(errDeprecatedMount.Error())
-			if !PendingRemovalMountsAllowed {
-				return nil, fmt.Errorf("could not mount %q: %w", t, errDeprecatedMount)
+			if c.pendingRemovalMountsAllowed {
+				c.Logger().Info("mount allowed by environment variable", "env", consts.EnvVaultAllowPendingRemovalMounts)
+				resp.AddWarning(errMountPendingRemoval.Error())
+				return resp, nil
 			}
-			resp.AddWarning(errDeprecatedMount.Error())
-			c.Logger().Info("mount allowed by environment variable", "env", consts.VaultAllowPendingRemovalMountsEnv)
-			return resp, nil
+			return nil, errMountPendingRemoval
 
 		case consts.Removed:
-			return nil, fmt.Errorf("could not mount %s: %w", t, errDeprecatedMount)
+			return nil, errMountRemoved
 		}
 	}
 	return nil, nil
@@ -1004,11 +1015,6 @@ func (c *Core) remountForceInternal(ctx context.Context, path string, updateStor
 		return err
 	}
 
-	// Re-evaluate filtered paths
-	if err := runFilteredPathsEvaluation(ctx, c); err != nil {
-		c.logger.Error("failed to evaluate filtered paths", "error", err)
-		return err
-	}
 	return nil
 }
 
@@ -1065,11 +1071,15 @@ func (c *Core) remountSecretsEngine(ctx context.Context, src, dst namespace.Moun
 	}
 
 	if !c.IsDRSecondary() {
-		// Invoke the rollback manager a final time
+		// Invoke the rollback manager a final time. This is not fatal as
+		// various periodic funcs (e.g., PKI) can legitimately error; the
+		// periodic rollback manager logs these errors rather than failing
+		// replication like returning this error would do.
 		rCtx := namespace.ContextWithNamespace(c.activeContext, ns)
 		if c.rollback != nil && c.router.MatchingBackend(ctx, srcRelativePath) != nil {
 			if err := c.rollback.Rollback(rCtx, srcRelativePath); err != nil {
-				return err
+				c.logger.Error("ignoring rollback error during remount", "error", err, "path", src.Namespace.Path+src.MountPath)
+				err = nil
 			}
 		}
 
@@ -1280,6 +1290,12 @@ func (c *Core) runMountUpdates(ctx context.Context, needPersist bool) error {
 			entry.NamespaceID = namespace.RootNamespaceID
 			needPersist = true
 		}
+
+		// Don't store built-in version in the mount table, to make upgrades smoother.
+		if versions.IsBuiltinVersion(entry.Version) {
+			entry.Version = ""
+			needPersist = true
+		}
 	}
 
 	// Done if we have restored the mount table and we don't need
@@ -1403,6 +1419,7 @@ func (c *Core) setupMounts(ctx context.Context) error {
 		if strutil.StrListContains(singletonMounts, entry.Type) {
 			addFilterablePath(c, barrierPath)
 		}
+		addKnownPath(c, barrierPath)
 
 		// Determining the replicated state of the mount
 		nilMount, err := preprocessMount(c, entry, view)
@@ -1417,10 +1434,6 @@ func (c *Core) setupMounts(ctx context.Context) error {
 		view.setReadOnlyErr(logical.ErrSetupReadOnly)
 		if strutil.StrListContains(singletonMounts, entry.Type) {
 			defer view.setReadOnlyErr(origReadOnlyErr)
-		} else {
-			c.postUnsealFuncs = append(c.postUnsealFuncs, func() {
-				view.setReadOnlyErr(origReadOnlyErr)
-			})
 		}
 
 		var backend logical.Backend
@@ -1429,10 +1442,8 @@ func (c *Core) setupMounts(ctx context.Context) error {
 		backend, entry.RunningSha256, err = c.newLogicalBackend(ctx, entry, sysView, view)
 		if err != nil {
 			c.logger.Error("failed to create mount entry", "path", entry.Path, "error", err)
-			if !c.builtinRegistry.Contains(entry.Type, consts.PluginTypeSecrets) {
-				// If we encounter an error instantiating the backend due to an error,
-				// skip backend initialization but register the entry to the mount table
-				// to preserve storage and path.
+
+			if c.isMountable(ctx, entry, consts.PluginTypeSecrets) {
 				c.logger.Warn("skipping plugin-based mount entry", "path", entry.Path)
 				goto ROUTER_MOUNT
 			}
@@ -1448,6 +1459,22 @@ func (c *Core) setupMounts(ctx context.Context) error {
 			// don't set the running version to a builtin if it is running as an external plugin
 			if externaler, ok := backend.(logical.Externaler); !ok || !externaler.IsExternal() {
 				entry.RunningVersion = versions.GetBuiltinVersion(consts.PluginTypeSecrets, entry.Type)
+			}
+		}
+
+		// Do not start up deprecated builtin plugins. If this is a major
+		// upgrade, stop unsealing and shutdown. If we've already mounted this
+		// plugin, proceed with unsealing and skip backend initialization.
+		if versions.IsBuiltinVersion(entry.RunningVersion) {
+			_, err := c.handleDeprecatedMountEntry(ctx, entry, consts.PluginTypeSecrets)
+			if c.isMajorVersionFirstMount(ctx) && err != nil {
+				go c.ShutdownCoreError(fmt.Errorf("could not mount %q: %w", entry.Type, err))
+				return errLoadMountsFailed
+			} else if err != nil {
+				c.logger.Error("skipping deprecated mount entry", "name", entry.Type, "path", entry.Path, "error", err)
+				backend.Cleanup(ctx)
+				backend = nil
+				goto ROUTER_MOUNT
 			}
 		}
 
@@ -1487,25 +1514,33 @@ func (c *Core) setupMounts(ctx context.Context) error {
 			// Bind locally
 			localEntry := entry
 			c.postUnsealFuncs = append(c.postUnsealFuncs, func() {
+				postUnsealLogger := c.logger.With("type", localEntry.Type, "version", localEntry.RunningVersion, "path", localEntry.Path)
 				if backend == nil {
-					c.logger.Error("skipping initialization on nil backend", "path", localEntry.Path)
+					postUnsealLogger.Error("skipping initialization for nil backend", "path", localEntry.Path)
 					return
+				}
+				if !strutil.StrListContains(singletonMounts, localEntry.Type) {
+					view.setReadOnlyErr(origReadOnlyErr)
 				}
 
 				err := backend.Initialize(ctx, &logical.InitializationRequest{Storage: view})
 				if err != nil {
-					c.logger.Error("failed to initialize mount entry", "path", localEntry.Path, "error", err)
+					postUnsealLogger.Error("failed to initialize mount backend", "error", err)
 				}
 			})
 		}
 
 		if c.logger.IsInfo() {
-			c.logger.Info("successfully mounted backend", "type", entry.Type, "version", entry.Version, "path", entry.Path)
+			c.logger.Info("successfully mounted", "type", entry.Type, "version", entry.RunningVersion, "path", entry.Path, "namespace", entry.Namespace())
 		}
 
 		// Ensure the path is tainted if set in the mount table
 		if entry.Tainted {
-			c.router.Taint(ctx, entry.Path)
+			// Calculate any namespace prefixes here, because when Taint() is called, there won't be
+			// a namespace to pull from the context. This is similar to what we do above in c.router.Mount().
+			path := entry.Namespace().Path + entry.Path
+			c.logger.Debug("tainting a mount due to it being marked as tainted in mount table", "entry.path", entry.Path, "entry.namespace.path", entry.Namespace().Path, "full_path", path)
+			c.router.Taint(ctx, path)
 		}
 
 		// Ensure the cache is populated, don't need the result

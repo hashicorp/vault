@@ -23,6 +23,10 @@ Usage: vault audit <subcommand> [options] [args]
   This command groups subcommands for interacting with Vault's audit devices.
   Users can list, enable, and disable audit devices.
 
+  *NOTE*: Once an audit device has been enabled, failure to audit could prevent
+  Vault from servicing future requests. It is highly recommended that you enable
+  multiple audit devices.
+
   List all enabled audit devices:
 
       $ vault audit list

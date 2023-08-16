@@ -18,7 +18,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@c85c95e3d7251135ab7dc9ce3241c5835cc595a9 # v3.5.3
         with:
           ref: ${{ github.event.pull_request.head.sha }}
           fetch-depth: 0 # by default the checkout action doesn't checkout all branches
@@ -56,9 +56,9 @@ jobs:
             # Else, we found some toolchain files. Let's make sure the contents are correct.
             if ! grep -q 'release-note:change' "$toolchain_files" || ! grep -q '^core: Bump Go version to' "$toolchain_files"; then
               echo "Invalid format for changelog. Expected format:"
-              echo "```release-note:change"
+              echo '```release-note:change'
               echo "core: Bump Go version to x.y.z."
-              echo "```"
+              echo '```'
               exit 1
             else
               echo "Found Go toolchain changelog entry in PR!"

@@ -37,15 +37,27 @@ func pathLogin(b *backend) *framework.Path {
 			},
 		},
 		Callbacks: map[logical.Operation]framework.OperationFunc{
-			logical.UpdateOperation:         b.pathLogin,
+			logical.UpdateOperation:         b.loginPathWrapper(b.pathLogin),
 			logical.AliasLookaheadOperation: b.pathLoginAliasLookahead,
-			logical.ResolveRoleOperation:    b.pathLoginResolveRole,
+			logical.ResolveRoleOperation:    b.loginPathWrapper(b.pathLoginResolveRole),
 		},
+	}
+}
+
+func (b *backend) loginPathWrapper(wrappedOp func(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error)) framework.OperationFunc {
+	return func(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+		// Make sure that the CRLs have been loaded before processing a login request,
+		// they might have been nil'd by an invalidate func call.
+		if err := b.populateCrlsIfNil(ctx, req.Storage); err != nil {
+			return nil, err
+		}
+		return wrappedOp(ctx, req, data)
 	}
 }
 
 func (b *backend) pathLoginResolveRole(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	var matched *ParsedCert
+
 	if verifyResp, resp, err := b.verifyCredentials(ctx, req, data); err != nil {
 		return nil, err
 	} else if resp != nil {
@@ -80,13 +92,6 @@ func (b *backend) pathLogin(ctx context.Context, req *logical.Request, data *fra
 	config, err := b.Config(ctx, req.Storage)
 	if err != nil {
 		return nil, err
-	}
-
-	if b.crls == nil {
-		// Probably invalidated due to replication, but we need these to proceed
-		if err := b.populateCRLs(ctx, req.Storage); err != nil {
-			return nil, err
-		}
 	}
 
 	var matched *ParsedCert
@@ -160,12 +165,6 @@ func (b *backend) pathLoginRenew(ctx context.Context, req *logical.Request, d *f
 	config, err := b.Config(ctx, req.Storage)
 	if err != nil {
 		return nil, err
-	}
-
-	if b.crls == nil {
-		if err := b.populateCRLs(ctx, req.Storage); err != nil {
-			return nil, err
-		}
 	}
 
 	if !config.DisableBinding {

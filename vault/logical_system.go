@@ -20,9 +20,6 @@ import (
 	"time"
 	"unicode"
 
-	"github.com/hashicorp/vault/helper/versions"
-	"golang.org/x/crypto/sha3"
-
 	"github.com/hashicorp/errwrap"
 	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-memdb"
@@ -32,10 +29,12 @@ import (
 	semver "github.com/hashicorp/go-version"
 	"github.com/hashicorp/vault/helper/hostutil"
 	"github.com/hashicorp/vault/helper/identity"
+	"github.com/hashicorp/vault/helper/logging"
 	"github.com/hashicorp/vault/helper/metricsutil"
 	"github.com/hashicorp/vault/helper/monitor"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/helper/random"
+	"github.com/hashicorp/vault/helper/versions"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
@@ -44,6 +43,7 @@ import (
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/sdk/version"
 	"github.com/mitchellh/mapstructure"
+	"golang.org/x/crypto/sha3"
 )
 
 const (
@@ -431,7 +431,28 @@ func (b *SystemBackend) handlePluginCatalogUntypedList(ctx context.Context, _ *l
 	}
 
 	if len(versionedPlugins) != 0 {
-		data["detailed"] = versionedPlugins
+		// Audit logging uses reflection to HMAC the values of all fields in the
+		// response recursively, which panics if it comes across any unexported
+		// fields. Therefore, we have to rebuild the VersionedPlugin struct as
+		// a map of primitive types to avoid the panic that would happen when
+		// audit logging tries to HMAC the contents of the SemanticVersion field.
+		var detailed []map[string]any
+		for _, p := range versionedPlugins {
+			entry := map[string]any{
+				"type":    p.Type,
+				"name":    p.Name,
+				"version": p.Version,
+				"builtin": p.Builtin,
+			}
+			if p.SHA256 != "" {
+				entry["sha256"] = p.SHA256
+			}
+			if p.DeprecationStatus != "" {
+				entry["deprecation_status"] = p.DeprecationStatus
+			}
+			detailed = append(detailed, entry)
+		}
+		data["detailed"] = detailed
 	}
 
 	return &logical.Response{
@@ -634,20 +655,12 @@ func getVersion(d *framework.FieldData) (version string, builtin bool, err error
 			return "", false, fmt.Errorf("version %q is not a valid semantic version: %w", version, err)
 		}
 
-		metadataIdentifiers := strings.Split(semanticVersion.Metadata(), ".")
-		for _, identifier := range metadataIdentifiers {
-			if identifier == "builtin" {
-				builtin = true
-				break
-			}
-		}
-
 		// Canonicalize the version string.
 		// Add the 'v' back in, since semantic version strips it out, and we want to be consistent with internal plugins.
 		version = "v" + semanticVersion.String()
 	}
 
-	return version, builtin, nil
+	return version, versions.IsBuiltinVersion(version), nil
 }
 
 func (b *SystemBackend) handlePluginReloadUpdate(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
@@ -1164,10 +1177,12 @@ func (b *SystemBackend) handleMount(ctx context.Context, req *logical.Request, d
 		Version:               pluginVersion,
 	}
 
-	// Detect and handle deprecated secrets engines
-	resp, err = b.Core.handleDeprecatedMountEntry(ctx, me, consts.PluginTypeSecrets)
-	if err != nil {
-		return handleError(err)
+	if b.Core.isMountEntryBuiltin(ctx, me, consts.PluginTypeSecrets) {
+		resp, err = b.Core.handleDeprecatedMountEntry(ctx, me, consts.PluginTypeSecrets)
+		if err != nil {
+			b.Core.logger.Error("could not mount builtin", "name", me.Type, "path", me.Path, "error", err)
+			return handleError(fmt.Errorf("could not mount %q: %w", me.Type, err))
+		}
 	}
 
 	// Attempt mount
@@ -1353,11 +1368,11 @@ func (b *SystemBackend) handleRemount(ctx context.Context, req *logical.Request,
 			logical.ErrInvalidRequest
 	}
 
-	if strings.Contains(fromPath, " ") {
-		return logical.ErrorResponse("'from' path cannot contain whitespace"), logical.ErrInvalidRequest
+	if strings.HasPrefix(fromPath, " ") || strings.HasSuffix(fromPath, " ") {
+		return logical.ErrorResponse("'from' path cannot contain trailing whitespace"), logical.ErrInvalidRequest
 	}
-	if strings.Contains(toPath, " ") {
-		return logical.ErrorResponse("'to' path cannot contain whitespace"), logical.ErrInvalidRequest
+	if strings.HasPrefix(toPath, " ") || strings.HasSuffix(toPath, " ") {
+		return logical.ErrorResponse("'to' path cannot contain trailing whitespace"), logical.ErrInvalidRequest
 	}
 
 	fromPathDetails := b.Core.splitNamespaceAndMountFromPath(ns.Path, fromPath)
@@ -2481,9 +2496,13 @@ func (b *SystemBackend) handleEnableAuth(ctx context.Context, req *logical.Reque
 		Version:               pluginVersion,
 	}
 
-	resp, err := b.Core.handleDeprecatedMountEntry(ctx, me, consts.PluginTypeCredential)
-	if err != nil {
-		return handleError(err)
+	var resp *logical.Response
+	if b.Core.isMountEntryBuiltin(ctx, me, consts.PluginTypeCredential) {
+		resp, err = b.Core.handleDeprecatedMountEntry(ctx, me, consts.PluginTypeCredential)
+		if err != nil {
+			b.Core.logger.Error("could not mount builtin", "name", me.Type, "path", me.Path, "error", err)
+			return handleError(fmt.Errorf("could not mount %q: %w", me.Type, err))
+		}
 	}
 
 	// Attempt enabling
@@ -2514,6 +2533,19 @@ func (b *SystemBackend) validateVersion(ctx context.Context, version string, plu
 
 		// Canonicalize the version.
 		version = "v" + semanticVersion.String()
+
+		if version == versions.GetBuiltinVersion(pluginType, pluginName) {
+			unversionedPlugin, err := b.System().LookupPlugin(ctx, pluginName, pluginType)
+			if err == nil && !unversionedPlugin.Builtin {
+				// Builtin is overridden, return "not found" error.
+				return "", logical.ErrorResponse("%s plugin %q, version %s not found, as it is"+
+					" overridden by an unversioned plugin of the same name. Omit `plugin_version` to use the unversioned plugin", pluginType.String(), pluginName, version), nil
+			}
+
+			// Don't put the builtin version in storage. Ensures that builtins
+			// can always be overridden, and upgrades are much simpler to handle.
+			version = ""
+		}
 	}
 
 	// if a non-builtin version is requested for a builtin plugin, return an error
@@ -4677,28 +4709,35 @@ func (b *SystemBackend) handleVersionHistoryList(ctx context.Context, req *logic
 	return logical.ListResponseWithInfo(respKeys, respKeyInfo), nil
 }
 
-// getLogLevel returns the hclog.Level that corresponds with the provided level string.
-// This differs hclog.LevelFromString in that it supports additional level strings so
-// that in remains consistent with the handling found in the "vault server" command.
-func getLogLevel(logLevel string) (log.Level, error) {
-	var level log.Level
+func (b *SystemBackend) handleLoggersRead(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	b.Core.allLoggersLock.RLock()
+	defer b.Core.allLoggersLock.RUnlock()
 
-	switch logLevel {
-	case "trace":
-		level = log.Trace
-	case "debug":
-		level = log.Debug
-	case "notice", "info", "":
-		level = log.Info
-	case "warn", "warning":
-		level = log.Warn
-	case "err", "error":
-		level = log.Error
-	default:
-		return level, fmt.Errorf("unrecognized log level %q", logLevel)
+	loggers := make(map[string]interface{})
+	warnings := make([]string, 0)
+
+	for _, logger := range b.Core.allLoggers {
+		loggerName := logger.Name()
+
+		// ignore base logger
+		if loggerName == "" {
+			continue
+		}
+
+		logLevel, err := logging.TranslateLoggerLevel(logger)
+		if err != nil {
+			warnings = append(warnings, fmt.Sprintf("cannot translate level for %q: %s", loggerName, err.Error()))
+		} else {
+			loggers[loggerName] = logLevel
+		}
 	}
 
-	return level, nil
+	resp := &logical.Response{
+		Data:     loggers,
+		Warnings: warnings,
+	}
+
+	return resp, nil
 }
 
 func (b *SystemBackend) handleLoggersWrite(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
@@ -4713,7 +4752,7 @@ func (b *SystemBackend) handleLoggersWrite(ctx context.Context, req *logical.Req
 		return logical.ErrorResponse("level is empty"), nil
 	}
 
-	level, err := getLogLevel(logLevel)
+	level, err := logging.ParseLogLevel(logLevel)
 	if err != nil {
 		return logical.ErrorResponse(fmt.Sprintf("invalid level provided: %s", err.Error())), nil
 	}
@@ -4724,7 +4763,7 @@ func (b *SystemBackend) handleLoggersWrite(ctx context.Context, req *logical.Req
 }
 
 func (b *SystemBackend) handleLoggersDelete(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-	level, err := getLogLevel(b.Core.logLevel)
+	level, err := logging.ParseLogLevel(b.Core.logLevel)
 	if err != nil {
 		return logical.ErrorResponse(fmt.Sprintf("log level from config is invalid: %s", err.Error())), nil
 	}
@@ -4734,10 +4773,61 @@ func (b *SystemBackend) handleLoggersDelete(ctx context.Context, req *logical.Re
 	return nil, nil
 }
 
+func (b *SystemBackend) handleLoggersByNameRead(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	nameRaw, nameOk := d.GetOk("name")
+	if !nameOk {
+		return logical.ErrorResponse("name is required"), nil
+	}
+
+	name := nameRaw.(string)
+	if name == "" {
+		return logical.ErrorResponse("name is empty"), nil
+	}
+
+	b.Core.allLoggersLock.RLock()
+	defer b.Core.allLoggersLock.RUnlock()
+
+	loggers := make(map[string]interface{})
+	warnings := make([]string, 0)
+
+	for _, logger := range b.Core.allLoggers {
+		loggerName := logger.Name()
+
+		// ignore base logger
+		if loggerName == "" {
+			continue
+		}
+
+		if loggerName == name {
+			logLevel, err := logging.TranslateLoggerLevel(logger)
+
+			if err != nil {
+				warnings = append(warnings, fmt.Sprintf("cannot translate level for %q: %s", loggerName, err.Error()))
+			} else {
+				loggers[loggerName] = logLevel
+			}
+
+			break
+		}
+	}
+
+	resp := &logical.Response{
+		Data:     loggers,
+		Warnings: warnings,
+	}
+
+	return resp, nil
+}
+
 func (b *SystemBackend) handleLoggersByNameWrite(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	nameRaw, nameOk := d.GetOk("name")
 	if !nameOk {
 		return logical.ErrorResponse("name is required"), nil
+	}
+
+	name := nameRaw.(string)
+	if name == "" {
+		return logical.ErrorResponse("name is empty"), nil
 	}
 
 	logLevelRaw, logLevelOk := d.GetOk("level")
@@ -4751,14 +4841,14 @@ func (b *SystemBackend) handleLoggersByNameWrite(ctx context.Context, req *logic
 		return logical.ErrorResponse("level is empty"), nil
 	}
 
-	level, err := getLogLevel(logLevel)
+	level, err := logging.ParseLogLevel(logLevel)
 	if err != nil {
 		return logical.ErrorResponse(fmt.Sprintf("invalid level provided: %s", err.Error())), nil
 	}
 
-	err = b.Core.SetLogLevelByName(nameRaw.(string), level)
-	if err != nil {
-		return logical.ErrorResponse(fmt.Sprintf("invalid params: %s", err.Error())), nil
+	success := b.Core.SetLogLevelByName(name, level)
+	if !success {
+		return logical.ErrorResponse(fmt.Sprintf("logger %q not found", name)), nil
 	}
 
 	return nil, nil
@@ -4770,14 +4860,19 @@ func (b *SystemBackend) handleLoggersByNameDelete(ctx context.Context, req *logi
 		return logical.ErrorResponse("name is required"), nil
 	}
 
-	level, err := getLogLevel(b.Core.logLevel)
+	level, err := logging.ParseLogLevel(b.Core.logLevel)
 	if err != nil {
 		return logical.ErrorResponse(fmt.Sprintf("log level from config is invalid: %s", err.Error())), nil
 	}
 
-	err = b.Core.SetLogLevelByName(nameRaw.(string), level)
-	if err != nil {
-		return logical.ErrorResponse(fmt.Sprintf("invalid params: %s", err.Error())), nil
+	name := nameRaw.(string)
+	if name == "" {
+		return logical.ErrorResponse("name is empty"), nil
+	}
+
+	success := b.Core.SetLogLevelByName(name, level)
+	if !success {
+		return logical.ErrorResponse(fmt.Sprintf("logger %q not found", name)), nil
 	}
 
 	return nil, nil

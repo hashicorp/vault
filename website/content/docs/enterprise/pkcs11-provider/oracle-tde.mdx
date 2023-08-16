@@ -21,9 +21,9 @@ To setup Oracle TDE backed by Vault, the following are required:
 - Vault has TCP port 5696 accessible to the Oracle database.
 - `libvault-pkcs11.so` downloaded from [releases.hashicorp.com](https://releases.hashicorp.com/vault-pkcs11-provider) for the operating system running the Oracle database (the RHEL 7 x86-64 version for Oracle Enterprise Linux 7).
 
-## Vault Setup
+## Vault setup
 
-On the Vault server, we need to [setup the KMIP Secrets Engine](/docs/secrets/kmip), e.g.:
+On the Vault server, we need to [setup the KMIP Secrets Engine](/docs/secrets/kmip):
 
 1. Start the KMIP Secrets Engine and listener:
 
@@ -53,6 +53,8 @@ On the Vault server, we need to [setup the KMIP Secrets Engine](/docs/secrets/km
 
 1. Create TLS credentials (a certificate, key, and CA bundle) for the KMIP role:
 
+    ~> **Note**: This command will output the credentials in plaintext.
+
     ```sh
     vault write -f -format=json kmip/scope/my-service/role/admin/credential/generate | tee kmip.json
     ```
@@ -63,11 +65,11 @@ On the Vault server, we need to [setup the KMIP Secrets Engine](/docs/secrets/km
     Save these to, e.g., `cert.pem` and `ca.pem`:
 
     ```sh
-    jq -r '.data.ca_chain[]' kmip.json > ca.pem
-    jq -r '.data.certificate' kmip.json > cert.pem
+    jq --raw-output --exit-status '.data.ca_chain[]' kmip.json > ca.pem
+    jq --raw-output --exit-status '.data.certificate' kmip.json > cert.pem
     ```
 
-## Oracle TDE Preparation
+## Oracle TDE preparation
 
 The rest of the steps take place on the Oracle server.
 

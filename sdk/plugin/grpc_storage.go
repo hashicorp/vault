@@ -10,6 +10,8 @@ import (
 	"github.com/hashicorp/vault/sdk/plugin/pb"
 )
 
+var errMissingStorage = errors.New("missing storage implementation: this method should not be called during plugin Setup, but only during and after Initialize")
+
 func newGRPCStorageClient(conn *grpc.ClientConn) *GRPCStorageClient {
 	return &GRPCStorageClient{
 		client: pb.NewStorageClient(conn),
@@ -74,13 +76,16 @@ func (s *GRPCStorageClient) Delete(ctx context.Context, key string) error {
 	return nil
 }
 
-// StorageServer is a net/rpc compatible structure for serving
+// GRPCStorageServer is a net/rpc compatible structure for serving
 type GRPCStorageServer struct {
 	pb.UnimplementedStorageServer
 	impl logical.Storage
 }
 
 func (s *GRPCStorageServer) List(ctx context.Context, args *pb.StorageListArgs) (*pb.StorageListReply, error) {
+	if s.impl == nil {
+		return nil, errMissingStorage
+	}
 	keys, err := s.impl.List(ctx, args.Prefix)
 	return &pb.StorageListReply{
 		Keys: keys,
@@ -89,6 +94,9 @@ func (s *GRPCStorageServer) List(ctx context.Context, args *pb.StorageListArgs) 
 }
 
 func (s *GRPCStorageServer) Get(ctx context.Context, args *pb.StorageGetArgs) (*pb.StorageGetReply, error) {
+	if s.impl == nil {
+		return nil, errMissingStorage
+	}
 	storageEntry, err := s.impl.Get(ctx, args.Key)
 	if storageEntry == nil {
 		return &pb.StorageGetReply{
@@ -103,6 +111,9 @@ func (s *GRPCStorageServer) Get(ctx context.Context, args *pb.StorageGetArgs) (*
 }
 
 func (s *GRPCStorageServer) Put(ctx context.Context, args *pb.StoragePutArgs) (*pb.StoragePutReply, error) {
+	if s.impl == nil {
+		return nil, errMissingStorage
+	}
 	err := s.impl.Put(ctx, pb.ProtoStorageEntryToLogicalStorageEntry(args.Entry))
 	return &pb.StoragePutReply{
 		Err: pb.ErrToString(err),
@@ -110,6 +121,9 @@ func (s *GRPCStorageServer) Put(ctx context.Context, args *pb.StoragePutArgs) (*
 }
 
 func (s *GRPCStorageServer) Delete(ctx context.Context, args *pb.StorageDeleteArgs) (*pb.StorageDeleteReply, error) {
+	if s.impl == nil {
+		return nil, errMissingStorage
+	}
 	err := s.impl.Delete(ctx, args.Key)
 	return &pb.StorageDeleteReply{
 		Err: pb.ErrToString(err),

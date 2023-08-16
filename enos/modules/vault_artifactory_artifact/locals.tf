@@ -26,6 +26,9 @@ locals {
     }
   }
 
+  // product_version --> artifact_version
+  artifact_version = replace(var.product_version, var.edition, "ent")
+
   // file name prefixes for the install packages of vault for the various distributions and artifact types (package or bundle)
   artifact_package_release_names = {
     ubuntu = {
@@ -52,6 +55,6 @@ locals {
   }
 
   artifact_name_prefix    = var.artifact_type == "package" ? local.artifact_package_release_names[var.distro][var.edition] : "vault_"
-  artifact_name_extension = var.artifact_type == "package" ? local.package_extensions[var.arch][var.distro][var.edition] : "${local.artifact_name_edition[var.edition]}_linux_${var.arch}.zip"
-  artifact_name           = var.artifact_type == "package" ? "${local.artifact_name_prefix}${replace(var.product_version, "-", "~")}${local.artifact_name_extension}" : "${local.artifact_name_prefix}${var.product_version}${local.artifact_name_extension}"
+  artifact_name_extension = var.artifact_type == "package" ? local.package_extensions[var.arch][var.distro][var.edition] : "_linux_${var.arch}.zip"
+  artifact_name           = var.artifact_type == "package" ? "${local.artifact_name_prefix}${replace(local.artifact_version, "-", "~")}${local.artifact_name_extension}" : "${local.artifact_name_prefix}${var.product_version}${local.artifact_name_extension}"
 }

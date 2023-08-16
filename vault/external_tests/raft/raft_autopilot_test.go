@@ -24,7 +24,7 @@ import (
 )
 
 func TestRaft_Autopilot_Disable(t *testing.T) {
-	cluster := raftCluster(t, &RaftClusterOpts{
+	cluster, _ := raftCluster(t, &RaftClusterOpts{
 		DisableFollowerJoins: true,
 		InmemCluster:         true,
 		// Not setting EnableAutopilot here.
@@ -38,7 +38,7 @@ func TestRaft_Autopilot_Disable(t *testing.T) {
 }
 
 func TestRaft_Autopilot_Stabilization_And_State(t *testing.T) {
-	cluster := raftCluster(t, &RaftClusterOpts{
+	cluster, _ := raftCluster(t, &RaftClusterOpts{
 		DisableFollowerJoins: true,
 		InmemCluster:         true,
 		EnableAutopilot:      true,
@@ -109,7 +109,7 @@ func TestRaft_Autopilot_Stabilization_And_State(t *testing.T) {
 }
 
 func TestRaft_Autopilot_Configuration(t *testing.T) {
-	cluster := raftCluster(t, &RaftClusterOpts{
+	cluster, _ := raftCluster(t, &RaftClusterOpts{
 		DisableFollowerJoins: true,
 		InmemCluster:         true,
 		EnableAutopilot:      true,
@@ -181,6 +181,14 @@ func TestRaft_Autopilot_Configuration(t *testing.T) {
 	writableConfig = map[string]interface{}{
 		"min_quorum":                         2,
 		"dead_server_last_contact_threshold": "48h",
+	}
+	writeConfigFunc(writableConfig, true)
+	configCheckFunc(config)
+
+	// Check dead server last contact threshold minimum
+	writableConfig = map[string]interface{}{
+		"cleanup_dead_servers":               true,
+		"dead_server_last_contact_threshold": "5s",
 	}
 	writeConfigFunc(writableConfig, true)
 	configCheckFunc(config)
@@ -301,7 +309,7 @@ func TestRaft_Autopilot_Stabilization_Delay(t *testing.T) {
 }
 
 func TestRaft_AutoPilot_Peersets_Equivalent(t *testing.T) {
-	cluster := raftCluster(t, &RaftClusterOpts{
+	cluster, _ := raftCluster(t, &RaftClusterOpts{
 		InmemCluster:         true,
 		EnableAutopilot:      true,
 		DisableFollowerJoins: true,
@@ -417,7 +425,7 @@ func join(t *testing.T, core *vault.TestClusterCore, client *api.Client, cluster
 // TestRaft_VotersStayVoters ensures that autopilot doesn't demote a node just
 // because it hasn't been heard from in some time.
 func TestRaft_VotersStayVoters(t *testing.T) {
-	cluster := raftCluster(t, &RaftClusterOpts{
+	cluster, _ := raftCluster(t, &RaftClusterOpts{
 		DisableFollowerJoins: true,
 		InmemCluster:         true,
 		EnableAutopilot:      true,

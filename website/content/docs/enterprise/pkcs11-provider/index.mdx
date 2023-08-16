@@ -7,7 +7,7 @@ description: |-
   This requires the Enterprise ADP-KM license.
 ---
 
-# PKCS#11 Provider
+# PKCS#11 provider
 
 [PKCS#11](http://docs.oasis-open.org/pkcs11/pkcs11-base/v2.40/os/pkcs11-base-v2.40-os.html)
 is an open standard C API that provides a means to access cryptographic capabilities on a device.
@@ -17,7 +17,7 @@ Vault provides a PKCS#11 library (or provider) so that Vault can be used as an S
 This allows a user to treat Vault like any other PKCS#11 device to manage keys, objects, and perform encryption and decryption in Vault using PKCS#11 calls.
 The PKCS#11 library connects to Vault's [KMIP Secrets Engine](/docs/secrets/kmip) to provide cryptographic operations and object storage.
 
-## Platform Support
+## Platform support
 
 This library works with Vault Enterprise 1.11+ with the advanced data protection module in the license
 with the KMIP Secrets Engine.
@@ -32,7 +32,7 @@ with the KMIP Secrets Engine.
 The provider comes in the form of a shared C library, `libvault-pkcs11.so` (for Linux) or `libvault-pkcs11.dylib` (for macOS).
 It can be downloaded from [releases.hashicorp.com](https://releases.hashicorp.com/vault-pkcs11-provider).
 
-## Quick Start
+## Quick start
 
 1. To use the provider, you will need access to a Vault Enterprise instance with the KMIP Secrets Engine.
 
@@ -53,6 +53,8 @@ It can be downloaded from [releases.hashicorp.com](https://releases.hashicorp.co
 
 1. Configure the [KMIP Secrets Engine](/docs/secrets/kmip) and a KMIP *scope*. The scope is used to hold keys and objects.
 
+    ~> **Note**: These commands will output the credentials in plaintext.
+
     ```sh
     vault secrets enable kmip
     vault write kmip/config listen_addrs=0.0.0.0:5696
@@ -69,8 +71,8 @@ It can be downloaded from [releases.hashicorp.com](https://releases.hashicorp.co
     to the KMIP server. You'll need to save these to files so that the PKCS#11 provider can use them.
 
     ```sh
-    jq -r '.data.ca_chain[]' kmip.json > ca.pem
-    jq -r '.data.certificate' kmip.json > cert.pem
+    jq --raw-output --exit-status '.data.ca_chain[]' kmip.json > ca.pem
+    jq --raw-output --exit-status '.data.certificate' kmip.json > cert.pem
     ```
     The certificate file from the KMIP Secrets Engine also contains the key.
 
@@ -164,7 +166,7 @@ Environment variables can be also used to configure these parameters and more.
 - `VAULT_LOG_FILE`: the location of the file the provider will use for logging. Defaults to standard out.
 - `VAULT_EMULATE_HARDWARE`: whether or not the provider will report that it is backed by a hardware device.
 
-## Encrypted TLS Key Support
+## Encrypted TLS key support
 
 The TLS key returned by the KMIP engine is unencrypted by default.
 However, the PKCS#11 provider does support (limited) encryption options for the key using [RFC 1423](https://www.rfc-editor.org/rfc/rfc1423).
@@ -184,7 +186,7 @@ The password can be supplied to the provider in two ways:
 
 Note that only a single password can be supplied via the `VAULT_KMIP_KEY_PASSWORD`, so if multiple slots in the HCL file use encrypted TLS keys, they will need to be encrypted with the same password, or use the `C_Login` method to specify the password.
 
-## Error Handling
+## Error handling
 
 If an error occurs, the first place to check will be the `VAULT_LOG_FILE` for any relevant error messages.
 
@@ -290,11 +292,11 @@ Here is the list of supported and unsupported PKCS#11 functions:
   - [ ]  `C_DecryptDigestUpdate`
   - [ ]  `C_SignEncryptUpdate`
   - [ ]  `C_DecryptVerifyUpdate`
-- Random Number Generation
-  - [ ]  `C_SeedRandom`
-  - [ ]  `C_GenerateRandom`
+- Random Number Generation (see note below)
+  - [X]  `C_SeedRandom`
+  - [X]  `C_GenerateRandom`
 
-## Limitations and Notes
+## Limitations and notes
 
 Due to the nature of Vault, the KMIP Secrets Engine, and PKCS#11, there are some other limitations to be aware of:
 
@@ -304,3 +306,5 @@ Due to the nature of Vault, the KMIP Secrets Engine, and PKCS#11, there are some
   This is because nearly all PKCS#11 API calls are translated 1-1 to KMIP calls, aside from some object attribute calls (which can be locally cached).
   Multiple sessions can be safely used simultaneously though, and a single Vault server node has been tested as supporting thousands of ongoing sessions.
 - The object attribute cache is valid only for a single object per session, and will be cleared when another object's attributes are queried.
+- The random number generator function, `C_GenerateRandom`, is currently implemented in software in the library by calling out to Go's [`crypto/rand`](https://pkg.go.dev/crypto/rand) package,
+  and does **not** call Vault.
