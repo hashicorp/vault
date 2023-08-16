@@ -113,7 +113,7 @@ make sure the executable referenced in the command exists in the plugin
 directory. When added to the catalog the plugin is not automatically executed,
 it instead becomes visible to backends and can be executed by them. For more
 information on the plugin catalog please see the [Plugin Catalog API
-docs](/api/system/plugins-catalog).
+docs](/api-docs/system/plugins-catalog).
 
 An example of plugin registration in current versions of Vault:
 
@@ -231,6 +231,26 @@ func main() {
 ```
 
 And that's basically it! You would just need to change `myPlugin` to your actual
-plugin. For more information on how to register and enable your plugin, check out the [Building Plugin Backends](https://learn.hashicorp.com/vault/developer/plugin-backends) tutorial.
+plugin.
 
 [api_addr]: /docs/configuration#api_addr
+
+## Plugin Development - Resources
+
+For more information on how to register and enable your plugin, check out the
+[Building Plugin Backends](https://learn.hashicorp.com/vault/developer/plugin-backends)
+tutorial.
+
+Other HashiCorp plugin development resources:
+
+- [vault-auth-plugin-example](https://github.com/hashicorp/vault-auth-plugin-example)
+
+### Plugin Development - Resources - Community
+
+Community plugin examples/guides are developed by community members. HashiCorp
+does not validate these for correctness.
+
+- [Enigma (good starting point)](https://github.com/ixe013/benigma)
+
+Authors who wish to have their guides or examples listed may file a submission
+via a GitHub issue or directly open a pull request with changes to this page.

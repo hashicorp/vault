@@ -102,7 +102,7 @@ func (c *KVGetCommand) Run(args []string) int {
 	var versionParam map[string]string
 
 	if v2 {
-		path = addPrefixToVKVPath(path, mountPath, "data")
+		path = addPrefixToKVPath(path, mountPath, "data")
 
 		if c.flagVersion > 0 {
 			versionParam = map[string]string{

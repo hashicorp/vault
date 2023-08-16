@@ -320,7 +320,6 @@ func testParseEntropy(t *testing.T, oss bool) {
 		case err != test.outErr:
 			t.Fatalf("error mismatch: expected %#v got %#v", err, test.outErr)
 		case err == nil && config.Entropy != nil && *config.Entropy != test.outEntropy:
-			fmt.Printf("\n config.Entropy: %#v", config.Entropy)
 			t.Fatalf("entropy config mismatch: expected %#v got %#v", test.outEntropy, *config.Entropy)
 		}
 	}

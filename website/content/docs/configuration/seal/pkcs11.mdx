@@ -57,19 +57,19 @@ These parameters apply to the `seal` stanza in the Vault configuration file:
 - `lib` `(string: <required>)`: The path to the PKCS#11 library shared object
   file. May also be specified by the `VAULT_HSM_LIB` environment variable.
 
-  ~> **Note:** Depending on your HSM, this may be either a binary or a dynamic
-  library, and its use may require other libraries depending on which system the
-  Vault binary is currently running on (e.g.: a Linux system may require other
-  libraries to interpret Windows .dll files).
+  ~> **Note:** Depending on your HSM, the value of the `lib` parameter may be
+  either a binary or a dynamic library, and its use may require other libraries
+  depending on which system the Vault binary is currently running on (e.g.: a
+  Linux system may require other libraries to interpret Windows .dll files).
 
 - `slot` `(string: <slot or token label required>)`: The slot number to use,
-  specified as a string (e.g. `"2305843009213693953"`). May also be specified by 
+  specified as a string (e.g. `"2305843009213693953"`). May also be specified by
   the `VAULT_HSM_SLOT` environment variable.
 
-  ~> **Note**: Slots are typically listed as hex-decimal values in the OS setup 
-  utility and their decimal equivalent is what should be used. For example using the 
-  HSM command-line `pkcs11-tool` a slot listed as `0x2000000000000001`in hex is equal 
-  to `2305843009213693953` in decimal; these values may be listed shorter or 
+  ~> **Note**: Slots are typically listed as hex-decimal values in the OS setup
+  utility but this configuration uses their decimal equivalent. For example, using the
+  HSM command-line `pkcs11-tool`, a slot listed as `0x2000000000000001`in hex is equal
+  to `2305843009213693953` in decimal; these values may be listed shorter or
   differently as determined by the HSM in use.
 
 - `token_label` `(string: <slot or token label required>)`: The slot token label to
@@ -92,6 +92,10 @@ These parameters apply to the `seal` stanza in the Vault configuration file:
   set, decryption may fail. May also be specified by the `VAULT_HSM_DEFAULT_KEY_LABEL`
   environment variable. This value is ignored in new installations.
 
+- `key_id` `(string: "")`: The ID of the key to use. The value should be a hexadecimal
+  string (e.g., "0x33333435363434373537"). May also be specified by the
+  `VAULT_HSM_KEY_ID` environment variable.
+
 - `hmac_key_label` `(string: <required>)`: The label of the key to use for
   HMACing. This needs to be a suitable type. If Vault tries to create this it
   will attempt to use CKK_GENERIC_SECRET_KEY. If the key does not exist and
@@ -107,9 +111,13 @@ These parameters apply to the `seal` stanza in the Vault configuration file:
   `VAULT_HSM_HMAC_DEFAULT_KEY_LABEL` environment variable. This value is ignored in
   new installations.
 
+- `hmac_key_id` `(string: "")`: The ID of the HMAC key to use. The value should be a
+  hexadecimal string (e.g., "0x33333435363434373537"). May also be specified by the
+  `VAULT_HSM_HMAC_KEY_ID` environment variable.
+
 - `mechanism` `(string: <best available>)`: The encryption/decryption mechanism to use,
   specified as a decimal or hexadecimal (prefixed by `0x`) string. May also be
-  specified by the `VAULT_HSM_MECHANISM` environment variable.  
+  specified by the `VAULT_HSM_MECHANISM` environment variable.
   Currently supported mechanisms (in order of precedence):
 
   - `0x1085` `CKM_AES_CBC_PAD` (HMAC mechanism required)
@@ -136,6 +144,12 @@ These parameters apply to the `seal` stanza in the Vault configuration file:
   variable. Vault may not be able to successfully generate keys in all
   circumstances, such as if proprietary vendor extensions are required to
   create keys of a suitable type.
+
+- `force_rw_session` `(string: "false")`: Force all operations to open up
+  a read-write session to the HSM. This is a boolean expressed as a string (e.g.
+  `"true"`). May also be specified by the `VAULT_HSM_FORCE_RW_SESSION` environment
+  variable. This key is mainly to work around a limitation within AWS's CloudHSM v5
+  pkcs11 implementation.
 
 ### Mechanism Specific Flags
 
@@ -166,13 +180,16 @@ VAULT_HSM_TOKEN_LABEL
 VAULT_HSM_PIN
 VAULT_HSM_KEY_LABEL
 VAULT_HSM_DEFAULT_KEY_LABEL
+VAULT_HSM_KEY_ID
 VAULT_HSM_HMAC_KEY_LABEL
 VAULT_HSM_HMAC_DEFAULT_KEY_LABEL
+VAULT_HSM_HMAC_KEY_ID
 VAULT_HSM_MECHANISM
 VAULT_HSM_HMAC_MECHANISM
 VAULT_HSM_GENERATE_KEY
 VAULT_HSM_RSA_ENCRYPT_LOCAL
 VAULT_HSM_RSA_OAEP_HASH
+VAULT_HSM_FORCE_RW_SESSION
 ```
 
 ## Vault Key Generation Attributes

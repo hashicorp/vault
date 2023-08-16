@@ -431,6 +431,10 @@ func (i *IdentityStore) Invalidate(ctx context.Context, key string) {
 				i.logger.Error("failed to fetch entity during local alias invalidation", "entity_id", alias.CanonicalID, "error", err)
 				return
 			}
+			if entity == nil {
+				i.logger.Error("failed to fetch entity during local alias invalidation, missing entity", "entity_id", alias.CanonicalID, "error", err)
+				continue
+			}
 
 			// Delete local aliases from the entity.
 			err = i.deleteAliasesInEntityInTxn(txn, entity, []*identity.Alias{alias})
@@ -846,7 +850,7 @@ func (i *IdentityStore) CreateOrFetchEntity(ctx context.Context, alias *logical.
 // names match or no metadata is different, -1 is returned.
 func changedAliasIndex(entity *identity.Entity, alias *logical.Alias) int {
 	for i, a := range entity.Aliases {
-		if a.Name == alias.Name && !strutil.EqualStringMaps(a.Metadata, alias.Metadata) {
+		if a.Name == alias.Name && a.MountAccessor == alias.MountAccessor && !strutil.EqualStringMaps(a.Metadata, alias.Metadata) {
 			return i
 		}
 	}

@@ -35,7 +35,7 @@ func TestOIDC_Path_OIDC_Cross_Provider_Exchange(t *testing.T) {
 	s := new(logical.InmemStorage)
 
 	// Create the common OIDC configuration
-	entityID, _, clientID, clientSecret := setupOIDCCommon(t, c, s)
+	entityID, _, _, clientID, clientSecret := setupOIDCCommon(t, c, s)
 
 	// Create a second provider
 	providerPath := "oidc/provider/test-provider-2"
@@ -76,7 +76,7 @@ func TestOIDC_Path_OIDC_Token(t *testing.T) {
 	ctx := namespace.RootContext(nil)
 	s := new(logical.InmemStorage)
 
-	entityID, groupID, clientID, clientSecret := setupOIDCCommon(t, c, s)
+	entityID, groupID, _, clientID, clientSecret := setupOIDCCommon(t, c, s)
 
 	type args struct {
 		clientReq              *logical.Request
@@ -460,7 +460,7 @@ func TestOIDC_Path_OIDC_Authorize(t *testing.T) {
 	ctx := namespace.RootContext(nil)
 	s := new(logical.InmemStorage)
 
-	entityID, groupID, clientID, _ := setupOIDCCommon(t, c, s)
+	entityID, groupID, parentGroupID, clientID, _ := setupOIDCCommon(t, c, s)
 
 	type args struct {
 		entityID               string
@@ -805,6 +805,88 @@ func TestOIDC_Path_OIDC_Authorize(t *testing.T) {
 				authorizeReq:  testAuthorizeReq(s, clientID),
 			},
 		},
+		{
+			name: "valid authorize request using client assignment with inherited group membership",
+			args: args{
+				entityID:      entityID,
+				clientReq:     testClientReq(s),
+				providerReq:   testProviderReq(s, clientID),
+				assignmentReq: testAssignmentReq(s, "", parentGroupID),
+				authorizeReq:  testAuthorizeReq(s, clientID),
+			},
+		},
+		{
+			name: "valid authorize request with port-agnostic loopback redirect_uri 127.0.0.1",
+			args: args{
+				entityID: entityID,
+				clientReq: func() *logical.Request {
+					req := testClientReq(s)
+					req.Data["redirect_uris"] = []string{"http://127.0.0.1/callback"}
+					return req
+				}(),
+				providerReq:   testProviderReq(s, clientID),
+				assignmentReq: testAssignmentReq(s, entityID, groupID),
+				authorizeReq: func() *logical.Request {
+					req := testAuthorizeReq(s, clientID)
+					req.Data["redirect_uri"] = "http://127.0.0.1:51004/callback"
+					return req
+				}(),
+			},
+		},
+		{
+			name: "valid authorize request with port-agnostic loopback redirect_uri 127.0.0.1 with port",
+			args: args{
+				entityID: entityID,
+				clientReq: func() *logical.Request {
+					req := testClientReq(s)
+					req.Data["redirect_uris"] = []string{"http://127.0.0.1:8251/callback"}
+					return req
+				}(),
+				providerReq:   testProviderReq(s, clientID),
+				assignmentReq: testAssignmentReq(s, entityID, groupID),
+				authorizeReq: func() *logical.Request {
+					req := testAuthorizeReq(s, clientID)
+					req.Data["redirect_uri"] = "http://127.0.0.1:51005/callback"
+					return req
+				}(),
+			},
+		},
+		{
+			name: "valid authorize request with port-agnostic loopback redirect_uri localhost",
+			args: args{
+				entityID: entityID,
+				clientReq: func() *logical.Request {
+					req := testClientReq(s)
+					req.Data["redirect_uris"] = []string{"http://localhost:8251/callback"}
+					return req
+				}(),
+				providerReq:   testProviderReq(s, clientID),
+				assignmentReq: testAssignmentReq(s, entityID, groupID),
+				authorizeReq: func() *logical.Request {
+					req := testAuthorizeReq(s, clientID)
+					req.Data["redirect_uri"] = "http://localhost:51006/callback"
+					return req
+				}(),
+			},
+		},
+		{
+			name: "valid authorize request with port-agnostic loopback redirect_uri [::1]",
+			args: args{
+				entityID: entityID,
+				clientReq: func() *logical.Request {
+					req := testClientReq(s)
+					req.Data["redirect_uris"] = []string{"http://[::1]:8251/callback"}
+					return req
+				}(),
+				providerReq:   testProviderReq(s, clientID),
+				assignmentReq: testAssignmentReq(s, entityID, groupID),
+				authorizeReq: func() *logical.Request {
+					req := testAuthorizeReq(s, clientID)
+					req.Data["redirect_uri"] = "http://[::1]:51007/callback"
+					return req
+				}(),
+			},
+		},
 	}
 
 	for _, tt := range tests {
@@ -886,7 +968,7 @@ func TestOIDC_Path_OIDC_Authorize(t *testing.T) {
 
 // setupOIDCCommon creates all of the resources needed to test a Vault OIDC provider.
 // Returns the entity ID, group ID, client ID, client secret to be used in tests.
-func setupOIDCCommon(t *testing.T, c *Core, s logical.Storage) (string, string, string, string) {
+func setupOIDCCommon(t *testing.T, c *Core, s logical.Storage) (string, string, string, string, string) {
 	t.Helper()
 	ctx := namespace.RootContext(nil)
 
@@ -901,10 +983,18 @@ func setupOIDCCommon(t *testing.T, c *Core, s logical.Storage) (string, string, 
 	entityID := resp.Data["id"].(string)
 
 	// Create a group
-	resp, err = c.identityStore.HandleRequest(ctx, testGroupReq(s, "test-group", []string{entityID}))
+	resp, err = c.identityStore.HandleRequest(ctx, testGroupReq(s, "test-group",
+		[]string{entityID}, nil))
 	expectSuccess(t, resp, err)
 	require.NotNil(t, resp.Data["id"])
 	groupID := resp.Data["id"].(string)
+
+	// Create a parent group
+	resp, err = c.identityStore.HandleRequest(ctx, testGroupReq(s, "test-parent-group",
+		nil, []string{groupID}))
+	expectSuccess(t, resp, err)
+	require.NotNil(t, resp.Data["id"])
+	parentGroupID := resp.Data["id"].(string)
 
 	// Create an assignment
 	resp, err = c.identityStore.HandleRequest(ctx, testAssignmentReq(s, entityID, groupID))
@@ -953,7 +1043,7 @@ func setupOIDCCommon(t *testing.T, c *Core, s logical.Storage) (string, string, 
 	resp, err = c.identityStore.HandleRequest(ctx, testProviderReq(s, clientID))
 	expectSuccess(t, resp, err)
 
-	return entityID, groupID, clientID, clientSecret
+	return entityID, groupID, parentGroupID, clientID, clientSecret
 }
 
 // resetCommonOIDCConfig resets the state of common configuration resources
@@ -1078,7 +1168,7 @@ func testKeyReq(s logical.Storage, allowedClientIDs []string, alg string) *logic
 	}
 }
 
-func testGroupReq(s logical.Storage, name string, entityIDs []string) *logical.Request {
+func testGroupReq(s logical.Storage, name string, entityIDs, groupIDs []string) *logical.Request {
 	return &logical.Request{
 		Storage:   s,
 		Path:      "group",
@@ -1086,6 +1176,7 @@ func testGroupReq(s logical.Storage, name string, entityIDs []string) *logical.R
 		Data: map[string]interface{}{
 			"name":              name,
 			"member_entity_ids": entityIDs,
+			"member_group_ids":  groupIDs,
 		},
 	}
 }

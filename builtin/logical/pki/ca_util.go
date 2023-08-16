@@ -30,25 +30,27 @@ func (b *backend) getGenerationParams(
 	}
 
 	role = &roleEntry{
-		TTL:                  time.Duration(data.Get("ttl").(int)) * time.Second,
-		KeyType:              data.Get("key_type").(string),
-		KeyBits:              data.Get("key_bits").(int),
-		SignatureBits:        data.Get("signature_bits").(int),
-		AllowLocalhost:       true,
-		AllowAnyName:         true,
-		AllowIPSANs:          true,
-		EnforceHostnames:     false,
-		AllowedURISANs:       []string{"*"},
-		AllowedOtherSANs:     []string{"*"},
-		AllowedSerialNumbers: []string{"*"},
-		OU:                   data.Get("ou").([]string),
-		Organization:         data.Get("organization").([]string),
-		Country:              data.Get("country").([]string),
-		Locality:             data.Get("locality").([]string),
-		Province:             data.Get("province").([]string),
-		StreetAddress:        data.Get("street_address").([]string),
-		PostalCode:           data.Get("postal_code").([]string),
+		TTL:                       time.Duration(data.Get("ttl").(int)) * time.Second,
+		KeyType:                   data.Get("key_type").(string),
+		KeyBits:                   data.Get("key_bits").(int),
+		SignatureBits:             data.Get("signature_bits").(int),
+		AllowLocalhost:            true,
+		AllowAnyName:              true,
+		AllowIPSANs:               true,
+		AllowWildcardCertificates: new(bool),
+		EnforceHostnames:          false,
+		AllowedURISANs:            []string{"*"},
+		AllowedOtherSANs:          []string{"*"},
+		AllowedSerialNumbers:      []string{"*"},
+		OU:                        data.Get("ou").([]string),
+		Organization:              data.Get("organization").([]string),
+		Country:                   data.Get("country").([]string),
+		Locality:                  data.Get("locality").([]string),
+		Province:                  data.Get("province").([]string),
+		StreetAddress:             data.Get("street_address").([]string),
+		PostalCode:                data.Get("postal_code").([]string),
 	}
+	*role.AllowWildcardCertificates = true
 
 	if role.KeyType == "rsa" && role.KeyBits < 2048 {
 		errorResp = logical.ErrorResponse("RSA keys < 2048 bits are unsafe and not supported")

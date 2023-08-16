@@ -104,7 +104,7 @@ func (c *KVDestroyCommand) Run(args []string) int {
 		c.UI.Error("Destroy not supported on KV Version 1")
 		return 1
 	}
-	path = addPrefixToVKVPath(path, mountPath, "destroy")
+	path = addPrefixToKVPath(path, mountPath, "destroy")
 	if err != nil {
 		c.UI.Error(err.Error())
 		return 2

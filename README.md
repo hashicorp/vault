@@ -37,7 +37,7 @@ The key features of Vault are:
 
 * **Data Encryption**: Vault can encrypt and decrypt data without storing
   it. This allows security teams to define encryption parameters and
-  developers to store encrypted data in a location such as SQL without
+  developers to store encrypted data in a location such as a SQL database without
   having to design their own encryption methods.
 
 * **Leasing and Renewal**: All secrets in Vault have a _lease_ associated
@@ -72,7 +72,7 @@ Developing Vault
 
 If you wish to work on Vault itself or any of its built-in systems, you'll
 first need [Go](https://www.golang.org) installed on your machine. Go version
-1.17.5+ is *required*.
+1.17.13+ is *required*.
 
 For local dev first make sure Go is properly installed, including setting up a
 [GOPATH](https://golang.org/doc/code.html#GOPATH). Ensure that `$GOPATH/bin` is in

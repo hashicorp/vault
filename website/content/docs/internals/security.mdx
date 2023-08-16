@@ -23,7 +23,7 @@ The following are the various parts of the Vault threat model:
 
 - Eavesdropping on any Vault communication. Client communication with Vault
   should be secure from eavesdropping as well as communication from Vault to
-  its storage backend.
+  its storage backend or between Vault cluster nodes.
 
 - Tampering with data at rest or in transit. Any tampering should be detectable
   and cause Vault to abort processing of the transaction.
@@ -70,6 +70,11 @@ The following are not parts of the Vault threat model:
   If an attacker can gain code execution or write privileges to the underlying host,
   then the confidentiality or the integrity of data may be compromised.
 
+- Protecting against flaws in clients or systems that access Vault. If an attacker
+  can compromise a Vault client (e.g., system, browser) and obtain this client’s Vault
+  credentials, they can access Vault with the level of privilege associated with this
+  client.
+
 # External Threat Overview
 
 Given the architecture of Vault, there are 3 distinct systems we are concerned
@@ -84,6 +89,13 @@ identity of the server and to establish a secure communication channel. Servers
 require that a client provides a client token for every request which is used
 to identify the client. A client that does not provide their token is only
 permitted to make login requests.
+
+All server-to-server traffic between Vault instances within a cluster (i.e,
+high availability, enterprise replication or integrated storage) uses
+mutually-authenticated TLS to ensure the confidentiality and integrity of data
+in transit. Nodes are authenticated prior to joining the cluster, by an
+[unseal challenge](/docs/concepts/integrated-storage#vault-networking-recap) or
+a [one-time-use activation token](/docs/enterprise/replication#security-model).
 
 The storage backends used by Vault are also untrusted by design. Vault uses a
 security barrier for all requests made to the backend. The security barrier

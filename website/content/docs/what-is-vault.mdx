@@ -7,17 +7,6 @@ description: >-
   compares to existing software, and contains a quick start for using Vault.
 ---
 
-# Introduction to Vault
-
-Welcome to the introduction guide to HashiCorp Vault! This guide is the best
-place to get started with Vault. This guide covers what Vault is, what problems
-it can solve, how it compares to existing software, and contains a quick start
-for using Vault.
-
-If you are already familiar with the basics of Vault, the
-[documentation](/docs) provides a better reference guide for all
-available features as well as internals.
-
 ## What is Vault?
 
 Vault is an identity-based **secrets** and encryption management system. A secret is anything that you want to tightly control access to, such as API encryption keys, passwords, or certificates. Vault provides encryption services that are gated by authentication and authorization methods. Using Vault’s UI, CLI, or HTTP API, access to secrets and other sensitive data can be securely stored and managed, tightly controlled (restricted), and auditable.
@@ -49,8 +38,8 @@ The key features of Vault are:
 
 - **Data Encryption**: Vault can encrypt and decrypt data without storing
   it. This allows security teams to define encryption parameters and
-  developers to store encrypted data in a location such as SQL without
-  having to design their own encryption methods.
+  developers to store encrypted data in a location such as a SQL database
+  without having to design their own encryption methods.
 
 - **Leasing and Renewal**: All secrets in Vault have a _lease_ associated
   with them. At the end of the lease, Vault will automatically revoke that
@@ -61,6 +50,14 @@ The key features of Vault are:
   all secrets read by a specific user, or all secrets of a particular type.
   Revocation assists in key rolling as well as locking down systems in the
   case of an intrusion.
+
+## What is HCP Vault?
+
+HCP Vault is a hosted version of Vault, which is operated by HashiCorp to allow organizations to get up and running quickly. HCP Vault uses the same binary as self-hosted Vault, which means you will have a consistent user experience. You can use the same Vault clients to communicate with HCP Vault as you use to communicate with a self-hosted Vault.
+
+~> **Note**: Currently, HCP Vault clusters are located on AWS running in multiple regions across North America, Asia, and Europe. We will support additional cloud providers in the future.
+
+To learn more about HCP Vault, see the [HCP Vault documentation](https://cloud.hashicorp.com/docs/vault). You can also get started with HCP Vault by using the HCP portal to set up your managed Vault cluster. Refer to the [Getting Started with HCP Vault](https://learn.hashicorp.com/collections/vault/cloud) tutorial.
 
 ## Next Steps
 

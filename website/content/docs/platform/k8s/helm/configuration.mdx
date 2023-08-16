@@ -329,13 +329,14 @@ and consider if they're appropriate for your deployment.
                 number: use-annotation
       ```
 
-    - `tls` (`array: []`) - Configure the TLS portion of the Ingress spec.
+    - `tls` (`array: []`) - Configures the TLS portion of the [Ingress spec](https://kubernetes.io/docs/concepts/services-networking/ingress/#tls), where `hosts` is a list of the hosts defined in the Common Name of the TLS certificate, and `secretName` is the name of the Secret containing the required TLS files such as certificates and keys.
 
       ```yaml
       tls:
-        - secretName: chart-example-tls
-          hosts:
-            - chart-example.local
+        - hosts:
+            - sslexample.foo.com
+            - sslexample.bar.com
+          secretName: testsecret-tls
       ```
 
     - `hosts` - Values that configure the Ingress host rules.
@@ -365,19 +366,6 @@ and consider if they're appropriate for your deployment.
     - `host` (`string: "chart-example.local"`) - Sets the hostname for the Route.
 
     - `tls` (`dictionary: {termination: passthrough}`) - TLS config that will be passed directly to the route's TLS config, which can be used to configure other termination methods that terminate TLS at the router.
-
-  - `tls` - Values that configure the Ingress TLS rules.
-
-    - `hosts` (`array: []`): List of the hosts defined in the Common Name of the TLS Certificate.
-
-    - `secretName` (`string: null`): Name of the secret containing the required TLS files such as certificates and keys.
-
-    ```yaml
-    hosts:
-      - sslexample.foo.com
-      - sslexample.bar.com
-      secretName: testsecret-tls
-    ```
 
   - `authDelegator` - Values that configure the Cluster Role Binding attached to the Vault service account.
 

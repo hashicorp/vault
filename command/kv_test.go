@@ -134,6 +134,13 @@ func TestKVPutCommand(t *testing.T) {
 			v2ExpectedFields,
 			0,
 		},
+
+		{
+			"v2_single_value_backslash",
+			[]string{"kv/write/foo", "foo=\\"},
+			[]string{"created_time"},
+			0,
+		},
 	}
 
 	for _, tc := range cases {
@@ -557,7 +564,7 @@ func TestKVMetadataGetCommand(t *testing.T) {
 		{
 			"versions_exist",
 			[]string{"kv/foo"},
-			append(expectedTopLevelFields,  expectedVersionFields[:]...),
+			append(expectedTopLevelFields, expectedVersionFields[:]...),
 			0,
 		},
 	}

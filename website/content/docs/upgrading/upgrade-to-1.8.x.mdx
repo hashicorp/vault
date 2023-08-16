@@ -43,6 +43,10 @@ Notes](https://golang.org/doc/go1.16) for full details. Of particular note:
 
 @include 'entity-alias-mapping.mdx'
 
+@include 'pki-forwarding-bug.mdx'
+
+@include 'raft-panic-old-tls-key.mdx'
+
 ## Known Issues
 
 - MSSQL integrations (storage and secrets engine) will crash with a "panic: not implemented" error
@@ -59,5 +63,5 @@ Notes](https://golang.org/doc/go1.16) for full details. Of particular note:
   packages for Vault 1.8.0 and the 1.8.1-0 package, and is fixed in 1.8.1-1 and up.
 - The introduction of `/gcp/roleset/:roleset/token` and `/gcp/roleset/:roleset/key` could inadvertently give
   users the ability to generate tokens and key if globs are used in policies. To avoid issues like this,
-  globs should be avoided in policies to help adhere to the principle of least privilege. See the 
+  globs should be avoided in policies to help adhere to the principle of least privilege. See the
   [roleset documentation](/docs/secrets/gcp#rolesets) for more information.
