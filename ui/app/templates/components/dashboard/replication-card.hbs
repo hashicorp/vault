@@ -23,7 +23,7 @@
         </div>
         <div class="title is-4 has-text-weight-semibold has-top-margin-xs">
           {{@replication.dr.state}}
-          <Hds::TooltipButton @text="The cluster’s current operating state">
+          <Hds::TooltipButton @text="The cluster's current operating state">
             <FlightIcon @name={{get (cluster-states @replication.dr.state) "glyph"}} class="has-text-success" />
           </Hds::TooltipButton>
         </div>
@@ -90,6 +90,21 @@
       </div>
     </div>
   {{/if}}
+  <div class="has-top-margin-l is-flex-center">
+    <Hds::Button
+      @text="Refresh"
+      @isIconOnly={{true}}
+      @color="tertiary"
+      @icon="sync"
+      class="has-padding-xxs"
+      {{on "click" @refresh}}
+      data-test-refresh
+    />
+    <small class="has-left-margin-xs has-text-grey">
+      Updated
+      {{date-format @updatedAt "MMM dd, yyyy HH:mm:SS"}}
+    </small>
+  </div>
 {{else}}
   <EmptyState
     @title="Replication not set up"

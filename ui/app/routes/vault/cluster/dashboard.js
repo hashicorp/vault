@@ -8,6 +8,7 @@ import { inject as service } from '@ember/service';
 import { hash } from 'rsvp';
 // eslint-disable-next-line ember/no-mixins
 import ClusterRoute from 'vault/mixins/cluster-route';
+import { action } from '@ember/object';
 
 export default class VaultClusterDashboardRoute extends Route.extend(ClusterRoute) {
   @service store;
@@ -48,5 +49,10 @@ export default class VaultClusterDashboardRoute extends Route.extend(ClusterRout
       version: this.version,
       license: this.getLicense(),
     });
+  }
+
+  @action
+  refreshRoute() {
+    this.refresh();
   }
 }
