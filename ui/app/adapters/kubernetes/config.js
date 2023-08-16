@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import ApplicationAdapter from 'vault/adapters/application';
 import { encodePath } from 'vault/utils/path-encoding-helpers';
 

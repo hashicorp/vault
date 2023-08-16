@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import Model, { attr } from '@ember-data/model';
 import lazyCapabilities, { apiPath } from 'vault/macros/lazy-capabilities';
 import { withModelValidations } from 'vault/decorators/model-validations';
@@ -50,6 +55,7 @@ const fieldGroups = [
   },
   {
     'Additional subject fields': [
+      'allowedUserIds',
       'allowedSerialNumbers',
       'requireCn',
       'useCsrCommonName',
@@ -128,7 +134,7 @@ export default class PkiRoleModel extends Model {
     subText:
       'Specifies if certificates issued/signed against this role will have Vault leases attached to them.',
     editType: 'boolean',
-    docLink: '/api-docs/secret/pki#create-update-role',
+    docLink: '/vault/api-docs/secret/pki#create-update-role',
   })
   generateLease;
 
@@ -138,7 +144,7 @@ export default class PkiRoleModel extends Model {
     subText:
       'This can improve performance when issuing large numbers of certificates. However, certificates issued in this way cannot be enumerated or revoked.',
     editType: 'boolean',
-    docLink: '/api-docs/secret/pki#create-update-role',
+    docLink: '/vault/api-docs/secret/pki#create-update-role',
   })
   noStore;
 
@@ -154,9 +160,8 @@ export default class PkiRoleModel extends Model {
   /* Overriding OpenApi Domain handling options */
   @attr({
     label: 'Allowed domains',
-    subText: 'Specifies the domains this role is allowed to issue certificates for. Add one item per row.',
+    subText: 'Specifies the domains this role is allowed to issue certificates for.',
     editType: 'stringArray',
-    hideFormSection: true,
   })
   allowedDomains;
 
@@ -180,7 +185,7 @@ export default class PkiRoleModel extends Model {
   })
   keyBits; // no possibleValues because options are dependent on selected key type
 
-  @attr('number', {
+  @attr('string', {
     label: 'Signature bits',
     subText: `Only applicable for key_type 'RSA'. Ignore for other key types.`,
     defaultValue: '0',
@@ -192,9 +197,8 @@ export default class PkiRoleModel extends Model {
   /* Overriding API Policy identifier option */
   @attr({
     label: 'Policy identifiers',
-    subText: 'A comma-separated string or list of policy object identifiers (OIDs). Add one per row. ',
+    subText: 'A list of policy object identifiers (OIDs).',
     editType: 'stringArray',
-    hideFormSection: true,
   })
   policyIdentifiers;
   /* End of overriding Policy identifier options */
@@ -210,10 +214,9 @@ export default class PkiRoleModel extends Model {
 
   @attr({
     label: 'URI Subject Alternative Names (URI SANs)',
-    subText: 'Defines allowed URI Subject Alternative Names. Add one item per row',
+    subText: 'Defines allowed URI Subject Alternative Names.',
     editType: 'stringArray',
-    docLink: '/docs/concepts/policies',
-    hideFormSection: true,
+    docLink: '/vault/docs/concepts/policies',
   })
   allowedUriSans;
 
@@ -221,15 +224,14 @@ export default class PkiRoleModel extends Model {
     label: 'Allow URI SANs template',
     subText: 'If true, the URI SANs above may contain templates, as with ACL Path Templating.',
     editType: 'boolean',
-    docLink: '/docs/concepts/policies',
+    docLink: '/vault/docs/concepts/policies',
   })
   allowUriSansTemplate;
 
   @attr({
     label: 'Other SANs',
-    subText: 'Defines allowed custom OID/UTF8-string SANs. Add one item per row.',
+    subText: 'Defines allowed custom OID/UTF8-string SANs.',
     editType: 'stringArray',
-    hideFormSection: true,
   })
   allowedOtherSans;
   /* End of overriding SAN options */
@@ -240,7 +242,6 @@ export default class PkiRoleModel extends Model {
     subText:
       'A list of allowed serial numbers to be requested during certificate issuance. Shell-style globbing is supported. If empty, custom-specified serial numbers will be forbidden.',
     editType: 'stringArray',
-    hideFormSection: true,
   })
   allowedSerialNumbers;
 
@@ -271,7 +272,7 @@ export default class PkiRoleModel extends Model {
     label: 'Organization Units (OU)',
     subText:
       'A list of allowed serial numbers to be requested during certificate issuance. Shell-style globbing is supported. If empty, custom-specified serial numbers will be forbidden.',
-    hideFormSection: true,
+    editType: 'stringArray',
   })
   ou;
 
@@ -293,12 +294,13 @@ export default class PkiRoleModel extends Model {
   })
   extKeyUsageOids;
 
-  @attr({ hideFormSection: true }) organization;
-  @attr({ hideFormSection: true }) country;
-  @attr({ hideFormSection: true }) locality;
-  @attr({ hideFormSection: true }) province;
-  @attr({ hideFormSection: true }) streetAddress;
-  @attr({ hideFormSection: true }) postalCode;
+  @attr({ editType: 'stringArray' }) allowedUserIds;
+  @attr({ editType: 'stringArray' }) organization;
+  @attr({ editType: 'stringArray' }) country;
+  @attr({ editType: 'stringArray' }) locality;
+  @attr({ editType: 'stringArray' }) province;
+  @attr({ editType: 'stringArray' }) streetAddress;
+  @attr({ editType: 'stringArray' }) postalCode;
   /* End of overriding Additional subject field options */
 
   /* CAPABILITIES
@@ -335,7 +337,7 @@ export default class PkiRoleModel extends Model {
         footer: {
           text: 'These options can interact intricately with one another. For more information,',
           docText: 'learn more here.',
-          docLink: '/api-docs/secret/pki#allowed_domains',
+          docLink: '/vault/api-docs/secret/pki#allowed_domains',
         },
       },
       'Key parameters': {

@@ -1,3 +1,8 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
 <PageHeader as |p|>
   <p.top>
     <KeyValueHeader @path="vault.cluster.secrets.backend.show" @mode={{@mode}} @root={{@root}} @showCurrent={{true}} />
@@ -5,12 +10,12 @@
   <p.levelLeft>
     <h1 class="title is-3" data-test-kms-provider-header>
       {{#if this.isDistributing}}
-        Destribute key to provider
+        Distribute Key to Provider
       {{else if this.isShowing}}
         Provider
         <span class="has-font-weight-normal">{{@model.id}}</span>
       {{else}}
-        {{if this.isCreating "Create provider" "Update credentials"}}
+        {{if this.isCreating "Create Provider" "Update Credentials"}}
       {{/if}}
     </h1>
   </p.levelLeft>

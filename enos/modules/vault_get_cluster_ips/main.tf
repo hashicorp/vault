@@ -1,3 +1,6 @@
+# Copyright (c) HashiCorp, Inc.
+# SPDX-License-Identifier: BUSL-1.1
+
 terraform {
   required_providers {
     enos = {
@@ -74,7 +77,7 @@ resource "enos_remote_exec" "get_leader_private_ip" {
     VAULT_INSTANCE_PRIVATE_IPS = jsonencode(local.instance_private_ips)
   }
 
-  scripts = ["${path.module}/scripts/get-leader-private-ip.sh"]
+  scripts = [abspath("${path.module}/scripts/get-leader-private-ip.sh")]
 
   transport = {
     ssh = {

@@ -1,3 +1,8 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
 {{outlet}}
 <footer class="footer has-text-grey has-text-centered">
   <span class="is-inline-block">
@@ -7,9 +12,9 @@
     HashiCorp
   </span>
   <span>
-    <ExternalLink @href={{changelog-url-for this.activeCluster.leaderNode.version}} class="link has-text-grey">
+    <ExternalLink @href={{changelog-url-for this.auth.activeCluster.leaderNode.version}} class="link has-text-grey">
       Vault
-      {{this.activeCluster.leaderNode.version}}
+      {{this.auth.activeCluster.leaderNode.version}}
     </ExternalLink>
   </span>
   {{#if (is-version "OSS")}}
@@ -20,7 +25,7 @@
     </span>
   {{/if}}
   <span>
-    <DocLink @path="/docs/index.html" class="has-text-grey">
+    <DocLink @path="/vault" class="has-text-grey">
       Documentation
     </DocLink>
   </span>
@@ -34,4 +39,3 @@
     </div>
   </div>
 {{/if}}
-<div id="modal-wormhole"></div>

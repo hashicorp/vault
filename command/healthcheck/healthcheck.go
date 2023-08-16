@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 /*
  * The healthcheck package attempts to allow generic checks of arbitrary
  * engines, while providing a common framework with some performance
@@ -117,6 +120,10 @@ func (e *Executor) Execute() (map[string][]*Result, error) {
 		results, err := checker.Evaluate(e)
 		if err != nil {
 			return nil, fmt.Errorf("failed to evaluate %v: %w", checker.Name(), err)
+		}
+
+		if results == nil {
+			results = []*Result{}
 		}
 
 		for _, result := range results {

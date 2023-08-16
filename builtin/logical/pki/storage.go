@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package pki
 
 import (
@@ -5,23 +8,28 @@ import (
 	"context"
 	"crypto"
 	"crypto/x509"
+	"errors"
 	"fmt"
 	"sort"
 	"strings"
 	"time"
 
 	"github.com/hashicorp/go-uuid"
+	"github.com/hashicorp/vault/helper/constants"
 	"github.com/hashicorp/vault/sdk/helper/certutil"
 	"github.com/hashicorp/vault/sdk/helper/errutil"
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
+var ErrStorageItemNotFound = errors.New("storage item not found")
+
 const (
-	storageKeyConfig      = "config/keys"
-	storageIssuerConfig   = "config/issuers"
-	keyPrefix             = "config/key/"
-	issuerPrefix          = "config/issuer/"
-	storageLocalCRLConfig = "crls/config"
+	storageKeyConfig        = "config/keys"
+	storageIssuerConfig     = "config/issuers"
+	keyPrefix               = "config/key/"
+	issuerPrefix            = "config/issuer/"
+	storageLocalCRLConfig   = "crls/config"
+	storageUnifiedCRLConfig = "unified-crls/config"
 
 	legacyMigrationBundleLogKey = "config/legacyMigrationBundleLog"
 	legacyCertBundlePath        = "config/ca_bundle"
@@ -29,6 +37,9 @@ const (
 	legacyCRLPath               = "crl"
 	deltaCRLPath                = "delta-crl"
 	deltaCRLPathSuffix          = "-delta"
+	unifiedCRLPath              = "unified-crl"
+	unifiedDeltaCRLPath         = "unified-delta-crl"
+	unifiedCRLPathPrefix        = "unified-"
 
 	autoTidyConfigPath = "config/auto-tidy"
 	clusterConfigPath  = "config/cluster"
@@ -182,6 +193,7 @@ type internalCRLConfigEntry struct {
 	CRLExpirationMap      map[crlID]time.Time `json:"crl_expiration_map"`
 	LastModified          time.Time           `json:"last_modified"`
 	DeltaLastModified     time.Time           `json:"delta_last_modified"`
+	UseGlobalQueue        bool                `json:"cross_cluster_revocation"`
 }
 
 type keyConfigEntry struct {
@@ -273,6 +285,15 @@ func (b *backend) makeStorageContext(ctx context.Context, s logical.Storage) *st
 		Storage: s,
 		Backend: b,
 	}
+}
+
+func (sc *storageContext) WithFreshTimeout(timeout time.Duration) (*storageContext, context.CancelFunc) {
+	ctx, cancel := context.WithTimeout(context.Background(), timeout)
+	return &storageContext{
+		Context: ctx,
+		Storage: sc.Storage,
+		Backend: sc.Backend,
+	}, cancel
 }
 
 func (sc *storageContext) listKeys() ([]keyID, error) {
@@ -700,7 +721,7 @@ func (sc *storageContext) upgradeIssuerIfRequired(issuer *issuerEntry) *issuerEn
 		// Remove CRL signing usage if it exists on the issuer but doesn't
 		// exist in the KU of the x509 certificate.
 		if hadCRL && (cert.KeyUsage&x509.KeyUsageCRLSign) == 0 {
-			issuer.Usage.ToggleUsage(OCSPSigningUsage)
+			issuer.Usage.ToggleUsage(CRLSigningUsage)
 		}
 
 		// Handle our new OCSPSigning usage flag for earlier versions. If we
@@ -909,8 +930,8 @@ func areCertificatesEqual(cert1 *x509.Certificate, cert2 *x509.Certificate) bool
 	return bytes.Equal(cert1.Raw, cert2.Raw)
 }
 
-func (sc *storageContext) setLocalCRLConfig(mapping *internalCRLConfigEntry) error {
-	json, err := logical.StorageEntryJSON(storageLocalCRLConfig, mapping)
+func (sc *storageContext) _setInternalCRLConfig(mapping *internalCRLConfigEntry, path string) error {
+	json, err := logical.StorageEntryJSON(path, mapping)
 	if err != nil {
 		return err
 	}
@@ -918,8 +939,16 @@ func (sc *storageContext) setLocalCRLConfig(mapping *internalCRLConfigEntry) err
 	return sc.Storage.Put(sc.Context, json)
 }
 
-func (sc *storageContext) getLocalCRLConfig() (*internalCRLConfigEntry, error) {
-	entry, err := sc.Storage.Get(sc.Context, storageLocalCRLConfig)
+func (sc *storageContext) setLocalCRLConfig(mapping *internalCRLConfigEntry) error {
+	return sc._setInternalCRLConfig(mapping, storageLocalCRLConfig)
+}
+
+func (sc *storageContext) setUnifiedCRLConfig(mapping *internalCRLConfigEntry) error {
+	return sc._setInternalCRLConfig(mapping, storageUnifiedCRLConfig)
+}
+
+func (sc *storageContext) _getInternalCRLConfig(path string) (*internalCRLConfigEntry, error) {
+	entry, err := sc.Storage.Get(sc.Context, path)
 	if err != nil {
 		return nil, err
 	}
@@ -962,6 +991,14 @@ func (sc *storageContext) getLocalCRLConfig() (*internalCRLConfigEntry, error) {
 	}
 
 	return mapping, nil
+}
+
+func (sc *storageContext) getLocalCRLConfig() (*internalCRLConfigEntry, error) {
+	return sc._getInternalCRLConfig(storageLocalCRLConfig)
+}
+
+func (sc *storageContext) getUnifiedCRLConfig() (*internalCRLConfigEntry, error) {
+	return sc._getInternalCRLConfig(storageUnifiedCRLConfig)
 }
 
 func (sc *storageContext) setKeysConfig(config *keyConfigEntry) error {
@@ -1073,7 +1110,7 @@ func (sc *storageContext) resolveIssuerReference(reference string) (issuerID, er
 	return IssuerRefNotFound, errutil.UserError{Err: fmt.Sprintf("unable to find PKI issuer for reference: %v", reference)}
 }
 
-func (sc *storageContext) resolveIssuerCRLPath(reference string) (string, error) {
+func (sc *storageContext) resolveIssuerCRLPath(reference string, unified bool) (string, error) {
 	if sc.Backend.useLegacyBundleCaStorage() {
 		return legacyCRLPath, nil
 	}
@@ -1083,13 +1120,23 @@ func (sc *storageContext) resolveIssuerCRLPath(reference string) (string, error)
 		return legacyCRLPath, err
 	}
 
-	crlConfig, err := sc.getLocalCRLConfig()
+	configPath := storageLocalCRLConfig
+	if unified {
+		configPath = storageUnifiedCRLConfig
+	}
+
+	crlConfig, err := sc._getInternalCRLConfig(configPath)
 	if err != nil {
 		return legacyCRLPath, err
 	}
 
 	if crlId, ok := crlConfig.IssuerIDCRLMap[issuer]; ok && len(crlId) > 0 {
-		return fmt.Sprintf("crls/%v", crlId), nil
+		path := fmt.Sprintf("crls/%v", crlId)
+		if unified {
+			path = unifiedCRLPathPrefix + path
+		}
+
+		return path, nil
 	}
 
 	return legacyCRLPath, fmt.Errorf("unable to find CRL for issuer: id:%v/ref:%v", issuer, reference)
@@ -1278,7 +1325,31 @@ func (sc *storageContext) getRevocationConfig() (*crlConfig, error) {
 		result.Expiry = defaultCrlConfig.Expiry
 	}
 
+	isLocalMount := sc.Backend.System().LocalMount()
+	if (!constants.IsEnterprise || isLocalMount) && (result.UnifiedCRLOnExistingPaths || result.UnifiedCRL || result.UseGlobalQueue) {
+		// An end user must have had Enterprise, enabled the unified config args and then downgraded to OSS.
+		sc.Backend.Logger().Warn("Not running Vault Enterprise or using a local mount, " +
+			"disabling unified_crl, unified_crl_on_existing_paths and cross_cluster_revocation config flags.")
+		result.UnifiedCRLOnExistingPaths = false
+		result.UnifiedCRL = false
+		result.UseGlobalQueue = false
+	}
+
 	return &result, nil
+}
+
+func (sc *storageContext) setRevocationConfig(config *crlConfig) error {
+	entry, err := logical.StorageEntryJSON("config/crl", config)
+	if err != nil {
+		return fmt.Errorf("failed building storage entry JSON: %w", err)
+	}
+
+	err = sc.Storage.Put(sc.Context, entry)
+	if err != nil {
+		return fmt.Errorf("failed writing storage entry: %w", err)
+	}
+
+	return nil
 }
 
 func (sc *storageContext) getAutoTidyConfig() (*tidyConfig, error) {
@@ -1310,7 +1381,33 @@ func (sc *storageContext) writeAutoTidyConfig(config *tidyConfig) error {
 		return err
 	}
 
-	return sc.Storage.Put(sc.Context, entry)
+	err = sc.Storage.Put(sc.Context, entry)
+	if err != nil {
+		return err
+	}
+
+	sc.Backend.publishCertCountMetrics.Store(config.PublishMetrics)
+
+	// To Potentially Disable Certificate Counting
+	if config.MaintainCount == false {
+		certCountWasEnabled := sc.Backend.certCountEnabled.Swap(config.MaintainCount)
+		if certCountWasEnabled {
+			sc.Backend.certsCounted.Store(true)
+			sc.Backend.certCountError = "Cert Count is Disabled: enable via Tidy Config maintain_stored_certificate_counts"
+			sc.Backend.possibleDoubleCountedSerials = nil        // This won't stop a list operation, but will stop an expensive clean-up during initialize
+			sc.Backend.possibleDoubleCountedRevokedSerials = nil // This won't stop a list operation, but will stop an expensive clean-up during initialize
+			sc.Backend.certCount.Store(0)
+			sc.Backend.revokedCertCount.Store(0)
+		}
+	} else { // To Potentially Enable Certificate Counting
+		if sc.Backend.certCountEnabled.Load() == false {
+			// We haven't written "re-enable certificate counts" outside the initialize function
+			// Any call derived call to do so is likely to time out on ~2 million certs
+			sc.Backend.certCountError = "Certificate Counting Has Not Been Initialized, re-initialize this mount"
+		}
+	}
+
+	return nil
 }
 
 func (sc *storageContext) listRevokedCerts() ([]string, error) {
@@ -1347,4 +1444,20 @@ func (sc *storageContext) writeClusterConfig(config *clusterConfigEntry) error {
 	}
 
 	return sc.Storage.Put(sc.Context, entry)
+}
+
+func (sc *storageContext) fetchRevocationInfo(serial string) (*revocationInfo, error) {
+	var revInfo *revocationInfo
+	revEntry, err := fetchCertBySerial(sc, revokedPath, serial)
+	if err != nil {
+		return nil, err
+	}
+	if revEntry != nil {
+		err = revEntry.DecodeJSON(&revInfo)
+		if err != nil {
+			return nil, fmt.Errorf("error decoding existing revocation info: %w", err)
+		}
+	}
+
+	return revInfo, nil
 }

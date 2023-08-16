@@ -1,3 +1,8 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
 {{#if (has-feature "Namespaces")}}
   <PageHeader as |p|>
     <p.levelLeft>
@@ -35,7 +40,7 @@
           {{#let (concat this.currentNamespace (if this.currentNamespace "/") list.item.id) as |targetNamespace|}}
             {{#if (includes targetNamespace this.accessibleNamespaces)}}
               <li class="action">
-                <NamespaceLink @targetNamespace={{targetNamespace}} @class="is-block">
+                <NamespaceLink @targetNamespace={{targetNamespace}} @unparsed={{true}} @class="is-block">
                   Switch to Namespace
                 </NamespaceLink>
               </li>

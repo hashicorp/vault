@@ -1,40 +1,17 @@
-<SecretListHeader
-  @model={{this.model}}
-  @backendCrumb={{hash
-    label=this.model.id
-    text=this.model.id
-    path="vault.cluster.secrets.backend.list-root"
-    model=this.model.id
-  }}
-  @isEngine={{true}}
-/>
-<Toolbar>
-  <ToolbarActions>
-    <ToolbarLink @route="configuration.tidy">
-      Tidy
-    </ToolbarLink>
-    <ToolbarLink @route="configuration.edit">
-      Edit configuration
-    </ToolbarLink>
-  </ToolbarActions>
-</Toolbar>
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
 
-<div class="form-section">
-  <label class="title has-padding-top is-5">
-    URLs
-  </label>
-</div>
-<div class="form-section">
-  <label class="title has-padding-top is-5">
-    CRL
-  </label>
-</div>
-<div class="form-section">
-  <label class="title has-padding-top is-5">
-    Mount Configuration
-  </label>
-  <div class="box is-fullwidth is-sideless is-paddingless is-marginless">
-    {{! ARG TODO component and empty state }}
-  </div>
-</div>
-{{outlet}}
+<PkiPageHeader @backend={{this.model.engine}} />
+
+<Page::PkiConfigurationDetails
+  @acme={{this.model.acme}}
+  @cluster={{this.model.cluster}}
+  @urls={{this.model.urls}}
+  @crl={{this.model.crl}}
+  @mountConfig={{this.model.mountConfig}}
+  @backend={{this.model.engine.id}}
+  @canDeleteAllIssuers={{this.model.issuerModel.canDeleteAllIssuers}}
+  @hasConfig={{this.model.hasConfig}}
+/>

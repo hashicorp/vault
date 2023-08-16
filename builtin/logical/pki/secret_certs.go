@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package pki
 
 import (
@@ -50,8 +53,9 @@ func (b *backend) secretCredsRevoke(ctx context.Context, req *logical.Request, _
 	defer b.revokeStorageLock.Unlock()
 
 	sc := b.makeStorageContext(ctx, req.Storage)
+	serial := serialInt.(string)
 
-	certEntry, err := fetchCertBySerial(sc, "certs/", serialInt.(string))
+	certEntry, err := fetchCertBySerial(sc, "certs/", serial)
 	if err != nil {
 		return nil, err
 	}
@@ -59,7 +63,7 @@ func (b *backend) secretCredsRevoke(ctx context.Context, req *logical.Request, _
 		// We can't write to revoked/ or update the CRL anyway because we don't have the cert,
 		// and there's no reason to expect this will work on a subsequent
 		// retry.  Just give up and let the lease get deleted.
-		b.Logger().Warn("expired certificate revoke failed because not found in storage, treating as success", "serial", serialInt.(string))
+		b.Logger().Warn("expired certificate revoke failed because not found in storage, treating as success", "serial", serial)
 		return nil, nil
 	}
 
@@ -73,5 +77,10 @@ func (b *backend) secretCredsRevoke(ctx context.Context, req *logical.Request, _
 		return nil, nil
 	}
 
-	return revokeCert(sc, cert)
+	config, err := sc.Backend.crlBuilder.getConfigWithUpdate(sc)
+	if err != nil {
+		return nil, fmt.Errorf("error revoking serial: %s: failed reading config: %w", serial, err)
+	}
+
+	return revokeCert(sc, config, cert)
 }

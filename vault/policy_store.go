@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package vault
 
 import (
@@ -153,7 +156,7 @@ path "sys/control-group/request" {
 
 # Allow a token to make requests to the Authorization Endpoint for OIDC providers.
 path "identity/oidc/provider/+/authorize" {
-	capabilities = ["read", "update"]
+    capabilities = ["read", "update"]
 }
 `
 )
@@ -253,7 +256,6 @@ func (c *Core) setupPolicyStore(ctx context.Context) error {
 	var err error
 	sysView := &dynamicSystemView{core: c, perfStandby: c.perfStandby}
 	psLogger := c.baseLogger.Named("policy")
-	c.AddLogger(psLogger)
 	c.policyStore, err = NewPolicyStore(ctx, c, c.systemBarrierView, sysView, psLogger)
 	if err != nil {
 		return err
@@ -641,6 +643,60 @@ func (ps *PolicyStore) ListPolicies(ctx context.Context, policyType PolicyType) 
 		if deleteIndex != -1 {
 			keys = append(keys[:deleteIndex], keys[deleteIndex+1:]...)
 		}
+	}
+
+	return keys, err
+}
+
+// policiesByNamespace is used to list the available policies for the given namespace
+func (ps *PolicyStore) policiesByNamespace(ctx context.Context, policyType PolicyType, ns *namespace.Namespace) ([]string, error) {
+	var err error
+	var keys []string
+	var view *BarrierView
+
+	// Scan the view, since the policy names are the same as the
+	// key names.
+	switch policyType {
+	case PolicyTypeACL:
+		view = ps.getACLView(ns)
+	case PolicyTypeRGP:
+		view = ps.getRGPView(ns)
+	case PolicyTypeEGP:
+		view = ps.getEGPView(ns)
+	default:
+		return nil, fmt.Errorf("unknown policy type %q", policyType)
+	}
+
+	if view == nil {
+		return nil, fmt.Errorf("unable to get the barrier subview for policy type %q", policyType)
+	}
+
+	// Get the appropriate view based on policy type and namespace
+	ctx = namespace.ContextWithNamespace(ctx, ns)
+	keys, err = logical.CollectKeys(ctx, view)
+	if err != nil {
+		return nil, err
+	}
+
+	if policyType == PolicyTypeACL {
+		// We only have non-assignable ACL policies at the moment
+		keys = strutil.Difference(keys, nonAssignablePolicies, false)
+	}
+
+	return keys, err
+}
+
+// policiesByNamespaces is used to list the available policies for the given namespaces
+func (ps *PolicyStore) policiesByNamespaces(ctx context.Context, policyType PolicyType, ns []*namespace.Namespace) ([]string, error) {
+	var err error
+	var keys []string
+
+	for _, nspace := range ns {
+		ks, err := ps.policiesByNamespace(ctx, policyType, nspace)
+		if err != nil {
+			return nil, err
+		}
+		keys = append(keys, ks...)
 	}
 
 	return keys, err

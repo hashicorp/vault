@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 /*
   This service is used to pull an OpenAPI document describing the
   shape of data at a specific path to hydrate a model with attrs it

@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package agent
 
 import (
@@ -13,10 +16,10 @@ import (
 	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/api"
 	credAppRole "github.com/hashicorp/vault/builtin/credential/approle"
-	"github.com/hashicorp/vault/command/agent/auth"
-	agentapprole "github.com/hashicorp/vault/command/agent/auth/approle"
-	"github.com/hashicorp/vault/command/agent/sink"
-	"github.com/hashicorp/vault/command/agent/sink/file"
+	"github.com/hashicorp/vault/command/agentproxyshared/auth"
+	agentapprole "github.com/hashicorp/vault/command/agentproxyshared/auth/approle"
+	"github.com/hashicorp/vault/command/agentproxyshared/sink"
+	"github.com/hashicorp/vault/command/agentproxyshared/sink/file"
 	vaulthttp "github.com/hashicorp/vault/http"
 	"github.com/hashicorp/vault/sdk/helper/logging"
 	"github.com/hashicorp/vault/sdk/logical"
@@ -69,7 +72,6 @@ func testAppRoleEndToEnd(t *testing.T, removeSecretIDFile bool, bindSecretID boo
 	coreConfig := &vault.CoreConfig{
 		DisableMlock: true,
 		DisableCache: true,
-		Logger:       log.NewNullLogger(),
 		CredentialBackends: map[string]logical.Factory{
 			"approle": credAppRole.Factory,
 		},
@@ -408,9 +410,6 @@ func TestAppRoleLongRoleName(t *testing.T) {
 	approleName := strings.Repeat("a", 5000)
 
 	coreConfig := &vault.CoreConfig{
-		DisableMlock: true,
-		DisableCache: true,
-		Logger:       log.NewNullLogger(),
 		CredentialBackends: map[string]logical.Factory{
 			"approle": credAppRole.Factory,
 		},
@@ -474,9 +473,6 @@ func testAppRoleWithWrapping(t *testing.T, bindSecretID bool, secretIDLess bool,
 	var err error
 	logger := logging.NewVaultLogger(log.Trace)
 	coreConfig := &vault.CoreConfig{
-		DisableMlock: true,
-		DisableCache: true,
-		Logger:       log.NewNullLogger(),
 		CredentialBackends: map[string]logical.Factory{
 			"approle": credAppRole.Factory,
 		},

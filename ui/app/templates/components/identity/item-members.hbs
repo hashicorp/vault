@@ -1,3 +1,8 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
 {{#if @model.hasMembers}}
   {{#each @model.memberGroupIds as |gid|}}
     <LinkedBlock @params={{array "vault.cluster.access.identity.show" "groups" gid this.details}} class="list-item-row">

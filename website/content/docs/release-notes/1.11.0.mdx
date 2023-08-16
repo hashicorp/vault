@@ -5,7 +5,7 @@ description: |-
   This page contains release notes for Vault 1.11.0
 ---
 
-# Vault 1.11.0 Release Notes
+# Vault 1.11.0 release notes
 
 **Software Release date:** June 21, 2022
 
@@ -26,22 +26,22 @@ Some of these enhancements and changes in this release include:
 - Plugin Multiplexing support is extended to secret and auth plugins, allowing them to be managed more efficiently with a single process
 
 
-## New Features
+## New features
 
 This section describes the new features introduced as part of Vault 1.11.0.
 
 ### Configure GCP auth to target non-public good API addresses
 
-The GCP auth method only allows for public API endpoints to be configured for authentication purposes. Workloads running in GCP that do not have external internet access need the ability to authenticate using [Private Google Access](https://cloud.google.com/vpc/docs/private-google-access#pga). In Vault 1.11.0, we allow for customization of certain service endpoints. For more information, refer to the [GCP auth method](/api-docs/auth/gcp#custom_endpoint) documentation.
+The GCP auth method only allows for public API endpoints to be configured for authentication purposes. Workloads running in GCP that do not have external internet access need the ability to authenticate using [Private Google Access](https://cloud.google.com/vpc/docs/private-google-access#pga). In Vault 1.11.0, we allow for customization of certain service endpoints. For more information, refer to the [GCP auth method](/vault/api-docs/auth/gcp#custom_endpoint) documentation.
 
 
-### Support for key/pair based authentication for Snowflake
+### Support for key/pair based authentication for snowflake
 
-In Vault 1.11.0, the Snowflake Database Engine supports an additional credential type that can be generated. For users not wanting to rely on the standard user/pass authentication to Snowflake, Vault can now dynamically generate RSA key pairs that allow users to authenticate into Snowflake. For more information, refer to the [Snowflake Database Secrets Engine](/docs/secrets/databases/snowflake) and [Database Secrets Engine (API)](/api-docs/secret/databases) documentation.
+In Vault 1.11.0, the Snowflake Database Engine supports an additional credential type that can be generated. For users not wanting to rely on the standard user/pass authentication to Snowflake, Vault can now dynamically generate RSA key pairs that allow users to authenticate into Snowflake. For more information, refer to the [Snowflake Database Secrets Engine](/vault/docs/secrets/databases/snowflake) and [Database Secrets Engine (API)](/vault/api-docs/secret/databases) documentation.
 
-### Dynamic Kubernetes service account secrets
+### Dynamic kubernetes service account secrets
 
-Kubernetes service accounts must be manually generated and passed to a Kubernetes configuration file or the command line using a CLI tool such as kubectl to interact with Kubernetes clusters. With this method, service account credentials, which contain static secrets, can be exposed and would require a periodic manual rotation. To address this issue, we now support generating short-lived dynamic service accounts and associate role bindings to specific Kubernetes namespaces. For more information, refer to the [Kubernetes Auth Method](/docs/auth/kubernetes) and [Kubernetes Auth Method (API)](/api-docs/auth/kubernetes) documentation.
+Kubernetes service accounts must be manually generated and passed to a Kubernetes configuration file or the command line using a CLI tool such as kubectl to interact with Kubernetes clusters. With this method, service account credentials, which contain static secrets, can be exposed and would require a periodic manual rotation. To address this issue, we now support generating short-lived dynamic service accounts and associate role bindings to specific Kubernetes namespaces. For more information, refer to the [Kubernetes Auth Method](/vault/docs/auth/kubernetes) and [Kubernetes Auth Method (API)](/vault/api-docs/auth/kubernetes) documentation.
 
 ### New KV secrets engine (v2) utilities
 
@@ -51,17 +51,17 @@ The KV version 2 secrets engine now includes a set of utilities and enhancements
 * New flag to output a sample policy in HCL (`-output-policy`) for any Vault CLI command.
 * New KV convenience/helper methods (GET and PUT) added to the Go client library.
 
-For more details, refer to the [Version Key/Value Secrets Engine](https://learn.hashicorp.com/tutorials/vault/versioned-kv) tutorial.
+For more details, refer to the [Version Key/Value Secrets Engine](/vault/tutorials/secrets-management/versioned-kv) tutorial.
 
-### Support for node identity and service identity for Vault Consul secrets engine
+### Support for node identity and service identity for Vault consul secrets engine
 
-Within the Consul secrets engine, practitioners writing a Vault role can specify node-identity or service-identity. You can also specify multiples of each identity on a Vault role. For more information, refer to the [Consul Secrets Engine](/docs/secrets/consul) and [Consul Secrets Engine (API)](/api-docs/secret/consul) documentation.
+Within the Consul secrets engine, practitioners writing a Vault role can specify node-identity or service-identity. You can also specify multiples of each identity on a Vault role. For more information, refer to the [Consul Secrets Engine](/vault/docs/secrets/consul) and [Consul Secrets Engine (API)](/vault/api-docs/secret/consul) documentation.
 
-### Autopilot (Vault Enterprise)
+### Autopilot (Vault enterprise)
 
-Vault release 1.7 introduced the Autopilot feature to Integrated Storage. In this release, new Autopilot features are added to Vault Enterprise to perform seamless automatic upgrades and support redundancy zones for improved cluster resiliency. Refer to the [autopilot endpoint](/api-docs/system/storage/raftautopilot#sys-storage-raft-autopilot), [operator raft](/docs/commands/operator/raft), [Autopilot](/docs/concepts/integrated-storage/autopilot),  [Automated Upgrades](/docs/enterprise/automated-upgrades), and [Redundancy Zones](/docs/enterprise/redundancy-zones) documentation for more information.
+Vault release 1.7 introduced the Autopilot feature to Integrated Storage. In this release, new Autopilot features are added to Vault Enterprise to perform seamless automatic upgrades and support redundancy zones for improved cluster resiliency. Refer to the [autopilot endpoint](/vault/api-docs/system/storage/raftautopilot#sys-storage-raft-autopilot), [operator raft](/vault/docs/commands/operator/raft), [Autopilot](/vault/docs/concepts/integrated-storage/autopilot),  [Automated Upgrades](/vault/docs/enterprise/automated-upgrades), and [Redundancy Zones](/vault/docs/enterprise/redundancy-zones) documentation for more information.
 
-## Other Features and Enhancements
+## Other features and enhancements
 
 This section describes other features and enhancements introduced as part of the Vault 1.11.0 release.
 
@@ -69,36 +69,36 @@ This section describes other features and enhancements introduced as part of the
 
 Historically, Vault has only allowed the Transit secrets engine to utilize keys that were created by Vault itself. In this release, we have introduced an import feature for the Transit secrets engine that enables individuals to bring externally-generated encryption keys into a Transit keyring. These keys can then be used identically to internally-generated Transit keys.
 
-### Improved CA Rotation
+### Improved CA rotation
 
 PKI secrets engine users have sought a way to rotate root or intermediate CAs without causing service interruptions to any entities referencing them. Vault can now create the newly rotated PKI key pairs for servicing new certificates at the same path as the pre-existing keypair. This allows operators to gradually transition entities over to the new root certificate while the old is still active.
 
-### Client Count tooling improvements
+### Client count tooling improvements
 
 We have made the following improvements to the Client Count tooling:
 
-* Provide the ability to export the unique clients that contribute to the client count aggregate for the selected billing period via a new [activity export API endpoint](/api-docs/system/internal-counters#activity-export). This feature is available in tech preview mode.
+* Provide the ability to export the unique clients that contribute to the client count aggregate for the selected billing period via a new [activity export API endpoint](/vault/api-docs/system/internal-counters#activity-export). This feature is available in tech preview mode.
 * Provide the ability to view changes to client counts month over month in the UI.
 
-### MFA Enhancements
+### MFA enhancements
 
-Vault 1.10 introduced [Login MFA](/docs/auth/login-mfa) support for Vault OSS. In this release, we included additional enhancements to the Login MFA feature by introducing the ability to configure Login MFA via the UI and providing an enhanced TOTP configuration experience via the QR code scan.
+Vault 1.10 introduced [Login MFA](/vault/docs/auth/login-mfa) support for Vault Community Edition. In this release, we included additional enhancements to the Login MFA feature by introducing the ability to configure Login MFA via the UI and providing an enhanced TOTP configuration experience via the QR code scan.
 
-### Vault Agent: Support for using an existing valid certificate upon re-authentication
+### Vault agent: support for using an existing valid certificate upon re-authentication
 
 Enhancements have been made to the Vault Agent to support the parsing of a certificate that's been fetched. A new certificate will only be fetched upon a re-authentication if the certificate's lifetime has expired. This enhancement drastically reduces the resource overhead that Vault Agent users often experience due to over-fetching certificates.
 
-### Namespace enhancements for Vault Terraform
+### Namespace enhancements for Vault terraform
 
 With Terraform Vault provider v3.7.0, we have made enhancements where it’s now possible to specify the namespace directly within the resource or data source. All resource or data source-specific namespaces are relative to their provider’s configured namespace. This enhancement encourages a better workflow for namespaces, reduces execution time when handling failures of a Terraform plan, and eases the burden on system resources such as memory, CPU, etc.
 
 ### ADP-Tranform enhancements
 
-Two new enhancements were made to the Transform secrets engine. The first is Convergent Tokenization, which allows tokenization transformations to be configured as _convergent_. When enabled, this guarantees that tokenizing a given plaintext and expiration more than once always results in the same token value being produced. Please refer to the [Convergent Tokenization](/docs/secrets/transform/tokenization#convergence) document for more information. Token Lookup allows you to look up the value of a token given its plaintext. While this is not typically encouraged from a security perspective, it may be necessary for particular circumstances that require this operation. Note that token lookup is only supported when convergence is enabled. For more information on the endpoint, refer to the [Lookup Token](/api-docs/secret/transform#lookup-token) documentation.
+Two new enhancements were made to the Transform secrets engine. The first is Convergent Tokenization, which allows tokenization transformations to be configured as _convergent_. When enabled, this guarantees that tokenizing a given plaintext and expiration more than once always results in the same token value being produced. Please refer to the [Convergent Tokenization](/vault/docs/secrets/transform/tokenization#convergence) document for more information. Token Lookup allows you to look up the value of a token given its plaintext. While this is not typically encouraged from a security perspective, it may be necessary for particular circumstances that require this operation. Note that token lookup is only supported when convergence is enabled. For more information on the endpoint, refer to the [Lookup Token](/vault/api-docs/secret/transform#lookup-token) documentation.
 
 ### KMIP support for import, query, encryption and decryption
 
-Previously, KMIP did not support certain operations such as import, decrypt, encrypt, and query. These operations are now supported. For a complete list of supported KMIP operations, please refer to the [Supported KMIP Operations](/docs/secrets/kmip) documentation.
+Previously, KMIP did not support certain operations such as import, decrypt, encrypt, and query. These operations are now supported. For a complete list of supported KMIP operations, please refer to the [Supported KMIP Operations](/vault/docs/secrets/kmip) documentation.
 
 @include 'pgx-params.mdx'
 
@@ -108,6 +108,6 @@ When you use Vault 1.11.0+ as a Consul's Connect CA, you may encounter an issue 
 
 -> Refer to this [Knowledge Base article](https://support.hashicorp.com/hc/en-us/articles/11308460105491) for more details.
 
-## Feature Deprecations and EOL
+## Feature deprecations and EOL
 
-Please refer to the [Deprecation Plans and Notice](/docs/deprecation) page for up-to-date information on feature deprecations and plans. An [Feature Deprecation FAQ](/docs/deprecation/faq) page is also available to address questions concerning decisions made about Vault feature deprecations.
+Please refer to the [Deprecation Plans and Notice](/vault/docs/deprecation) page for up-to-date information on feature deprecations and plans. An [Feature Deprecation FAQ](/vault/docs/deprecation/faq) page is also available to address questions concerning decisions made about Vault feature deprecations.

@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 // this is the base route for
 // all of the CLUSTER_ROUTES that are states before you can use vault
 //

@@ -1,3 +1,8 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
 <Toolbar>
   <ToolbarActions>
     {{#if @role.canDelete}}
@@ -35,7 +40,7 @@
 {{#each @role.formFieldGroups as |fg|}}
   {{#each-in fg as |group fields|}}
     {{#if (not-eq group "default")}}
-      <h3 class="is-size-4 has-text-semibold has-top-margin-m">{{group}}</h3>
+      <h3 class="is-size-4 has-text-weight-semibold has-top-margin-m">{{group}}</h3>
     {{/if}}
     {{#each fields as |attr|}}
       {{#let (get @role attr.name) as |val|}}
@@ -52,15 +57,7 @@
             @label={{capitalize (or attr.options.detailsLabel attr.options.label (humanize (dasherize attr.name)))}}
             @value={{val}}
             @alwaysRender={{true}}
-          >
-            {{#if (gt val.length 0)}}
-              {{#each val as |key|}}
-                <span>{{key}}, </span>
-              {{/each}}
-            {{else}}
-              None
-            {{/if}}
-          </InfoTableRow>
+          />
         {{else if (eq attr.name "noStore")}}
           <InfoTableRow
             @label={{capitalize (or attr.options.detailsLabel attr.options.label (humanize (dasherize attr.name)))}}

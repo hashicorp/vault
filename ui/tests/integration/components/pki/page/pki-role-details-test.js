@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import { module, test } from 'qunit';
 import { setupRenderingTest } from 'ember-qunit';
 import { render } from '@ember/test-helpers';
@@ -30,12 +35,14 @@ module('Integration | Component | pki role details page', function (hooks) {
       { owner: this.engine }
     );
     assert.dom(SELECTORS.issuerLabel).hasText('Issuer', 'Label is');
-    assert.dom(SELECTORS.keyUsageValue).hasText('None', 'Key usage shows none when array is empty');
+    assert
+      .dom(`${SELECTORS.keyUsageValue} [data-test-icon="minus"]`)
+      .exists('Key usage shows dash when array is empty');
     assert
       .dom(SELECTORS.extKeyUsageValue)
-      .hasText('bar, baz,', 'Key usage shows comma-joined values when array has items');
+      .hasText('bar,baz', 'Key usage shows comma-joined values when array has items');
     assert.dom(SELECTORS.noStoreValue).containsText('Yes', 'noStore shows opposite of what the value is');
-    assert.dom(SELECTORS.customTtlValue).containsText('10m', 'TTL shown as duration');
+    assert.dom(SELECTORS.customTtlValue).containsText('10 minutes', 'TTL shown as duration');
   });
 
   test('it should render the notAfter date if present', async function (assert) {

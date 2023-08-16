@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import Component from '@glimmer/component';
 import { tracked } from '@glimmer/tracking';
 import { action, set } from '@ember/object';

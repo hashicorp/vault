@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package consts
 
 // AgentPathCacheClear is the path that the agent will use as its cache-clear

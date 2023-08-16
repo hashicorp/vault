@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import { clickTrigger } from 'ember-power-select/test-support/helpers';
 import { click, fillIn, findAll, currentURL, find, visit, settled, waitUntil } from '@ember/test-helpers';
 import { module, test } from 'qunit';
@@ -325,10 +330,7 @@ module('Acceptance | Enterprise | replication', function (hooks) {
       .doesNotExist(`does not render replication summary card when both modes are not enabled as primary`);
 
     // enable DR primary replication
-    const enableButton = document.querySelector('.is-primary');
-
-    await click(enableButton);
-
+    await click('[data-test-replication-promote-secondary]');
     await click('[data-test-replication-enable]');
 
     await pollCluster(this.owner);

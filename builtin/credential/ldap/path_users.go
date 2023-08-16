@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package ldap
 
 import (
@@ -14,22 +17,33 @@ func pathUsersList(b *backend) *framework.Path {
 	return &framework.Path{
 		Pattern: "users/?$",
 
+		DisplayAttrs: &framework.DisplayAttributes{
+			OperationPrefix: operationPrefixLDAP,
+			OperationSuffix: "users",
+			Navigation:      true,
+			ItemType:        "User",
+		},
+
 		Callbacks: map[logical.Operation]framework.OperationFunc{
 			logical.ListOperation: b.pathUserList,
 		},
 
 		HelpSynopsis:    pathUserHelpSyn,
 		HelpDescription: pathUserHelpDesc,
-		DisplayAttrs: &framework.DisplayAttributes{
-			Navigation: true,
-			ItemType:   "User",
-		},
 	}
 }
 
 func pathUsers(b *backend) *framework.Path {
 	return &framework.Path{
 		Pattern: `users/(?P<name>.+)`,
+
+		DisplayAttrs: &framework.DisplayAttributes{
+			OperationPrefix: operationPrefixLDAP,
+			OperationSuffix: "user",
+			Action:          "Create",
+			ItemType:        "User",
+		},
+
 		Fields: map[string]*framework.FieldSchema{
 			"name": {
 				Type:        framework.TypeString,
@@ -39,11 +53,17 @@ func pathUsers(b *backend) *framework.Path {
 			"groups": {
 				Type:        framework.TypeCommaStringSlice,
 				Description: "Comma-separated list of additional groups associated with the user.",
+				DisplayAttrs: &framework.DisplayAttributes{
+					Description: "A list of additional groups associated with the user.",
+				},
 			},
 
 			"policies": {
 				Type:        framework.TypeCommaStringSlice,
 				Description: "Comma-separated list of policies associated with the user.",
+				DisplayAttrs: &framework.DisplayAttributes{
+					Description: "A list of policies associated with the user.",
+				},
 			},
 		},
 
@@ -55,10 +75,6 @@ func pathUsers(b *backend) *framework.Path {
 
 		HelpSynopsis:    pathUserHelpSyn,
 		HelpDescription: pathUserHelpDesc,
-		DisplayAttrs: &framework.DisplayAttributes{
-			Action:   "Create",
-			ItemType: "User",
-		},
 	}
 }
 

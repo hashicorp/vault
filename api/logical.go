@@ -1,8 +1,12 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package api
 
 import (
 	"bytes"
 	"context"
+	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
@@ -11,7 +15,6 @@ import (
 	"strings"
 
 	"github.com/hashicorp/errwrap"
-	"github.com/hashicorp/vault/sdk/helper/jsonutil"
 )
 
 const (
@@ -390,7 +393,9 @@ func (c *Logical) UnwrapWithContext(ctx context.Context, wrappingToken string) (
 
 	wrappedSecret := new(Secret)
 	buf := bytes.NewBufferString(secret.Data["response"].(string))
-	if err := jsonutil.DecodeJSONFromReader(buf, wrappedSecret); err != nil {
+	dec := json.NewDecoder(buf)
+	dec.UseNumber()
+	if err := dec.Decode(wrappedSecret); err != nil {
 		return nil, errwrap.Wrapf("error unmarshalling wrapped secret: {{err}}", err)
 	}
 

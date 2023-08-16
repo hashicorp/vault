@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 export const SELECTORS = {
   form: '[data-test-pki-generate-cert-form]',
   commonNameField: '[data-test-input="commonName"]',
@@ -8,4 +13,7 @@ export const SELECTORS = {
   revokeButton: '[data-test-pki-cert-revoke-button]',
   serialNumber: '[data-test-value-div="Serial number"]',
   certificate: '[data-test-value-div="Certificate"]',
+  inlineAlert: '[data-test-alert]',
+  commonNameInlineError: '[data-test-field="commonName"] [data-test-inline-alert]',
+  commonNameErrorBorder: '[data-test-input="commonName"]',
 };

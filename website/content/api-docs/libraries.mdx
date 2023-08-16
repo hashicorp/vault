@@ -11,7 +11,7 @@ description: >-
 The programming libraries listed on this page can be used to consume the API more conveniently.
 Some are officially maintained while others are provided by the community.
 
-For a step-by-step walkthrough on using these client libraries, see the [developer quickstart](https://www.vaultproject.io/docs/get-started/developer-qs).
+For a step-by-step walkthrough on using these client libraries, see the [developer quickstart](/vault/docs/get-started/developer-qs).
 For copy-pastable code examples, see the [vault-examples](https://github.com/hashicorp/vault-examples) repo.
 
 ## Official
@@ -36,13 +36,23 @@ $ go get github.com/hashicorp/vault/api
 $ gem install vault
 ```
 
+## C#
+
+- [Vault DotNet Client](https://github.com/hashicorp/vault-client-dotnet) - Note that this is currently in early development, and is not yet production-ready. 
+
+```shell-session
+# Install-Package HashiCorp.Vault
+```
+
+[Example application](https://github.com/hashicorp/vault-client-dotnet#getting-started)
+
 ## Community
 
 These libraries are provided by the community.
 
 ### Ansible
 
-- [ansible-vault](https://github.com/jhaals/ansible-vault) lookup plugin without third-party dependencies.
+- [ansible-vault](https://github.com/jhaals/ansible-vault) - Lookup plugin without third-party dependencies.
 - [Ansible Modules Hashivault](https://pypi.python.org/pypi/ansible-modules-hashivault)
 
 ```shell-session
@@ -51,7 +61,8 @@ $ pip install ansible-modules-hashivault
 
 ### C&#35;
 
-- [VaultSharp](https://github.com/rajanadar/VaultSharp) (.NET Standard 2.0 & 1.3, .NET Core >= 1.0.0, .NET 4.5, .NET 4.6, Mono, iOS, Android, Mac, UWP etc.)
+- [VaultSharp](https://github.com/rajanadar/VaultSharp)
+  - Supports .NET 4.6.x, 4.7.x, 4.8.x, .NET Standard 2.x, .NET 6.0 and 7.0.
 
 ```shell-session
 $ Install-Package VaultSharp
@@ -84,12 +95,6 @@ $ Install-Package Vault
 
 ### Go
 
-- [vc](https://github.com/adfinis-sygroup/vault-client)
-
-```shell-session
-$ go get github.com/adfinis-sygroup/vault-client
-```
-
 - [vaultgo](https://github.com/mittwald/vaultgo)
 
 ```shell-session
@@ -113,7 +118,7 @@ $ stack install gothic
 ### Java
 
 - [Spring Vault](https://github.com/spring-projects/spring-vault)
-- [vault-java-driver](https://github.com/BetterCloud/vault-java-driver)
+- [vault-java-driver](https://github.com/jopenlibs/vault-java-driver)
 
 ### Kotlin
 
@@ -137,6 +142,12 @@ $ npm install @mittwald/vaults
 
 ```shell-session
 $ npm install vault-api
+```
+
+- [loopback4-vault](https://github.com/sourcefuse/loopback4-vault) (LoopBack 4 Extension)
+
+```shell-session
+$ npm i @sourceloop/vault
 ```
 
 ### PHP

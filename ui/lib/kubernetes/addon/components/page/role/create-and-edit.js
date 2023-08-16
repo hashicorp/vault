@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import Component from '@glimmer/component';
 import { inject as service } from '@ember/service';
 import { tracked } from '@glimmer/tracking';
@@ -5,7 +10,6 @@ import { action } from '@ember/object';
 import { task } from 'ember-concurrency';
 import { waitFor } from '@ember/test-waiters';
 import { getRules } from '../../../utils/generated-role-rules';
-import { htmlSafe } from '@ember/template';
 import errorMessage from 'vault/utils/error-message';
 
 /**
@@ -22,10 +26,15 @@ export default class CreateAndEditRolePageComponent extends Component {
   @tracked roleRulesTemplates;
   @tracked selectedTemplateId;
   @tracked modelValidations;
+  @tracked invalidFormAlert;
+  @tracked errorBanner;
 
   constructor() {
     super(...arguments);
-    this.initRoleRules();
+    // generated role rules are only rendered for the full object chain option
+    if (this.args.model.generationPreference === 'full') {
+      this.initRoleRules();
+    }
     // if editing and annotations or labels exist expand the section
     const { extraAnnotations, extraLabels } = this.args.model;
     if (extraAnnotations || extraLabels) {
@@ -77,7 +86,7 @@ export default class CreateAndEditRolePageComponent extends Component {
       'This specifies the Role or ClusterRole rules to use when generating a role. Kubernetes documentation is';
     const link =
       '<a href="https://kubernetes.io/docs/reference/access-authn-authz/rbac/" target="_blank" rel="noopener noreferrer">available here</>';
-    return htmlSafe(`${message} ${link}.`);
+    return `${message} ${link}.`;
   }
 
   @action
@@ -125,7 +134,7 @@ export default class CreateAndEditRolePageComponent extends Component {
   *save() {
     try {
       // set generatedRoleRoles to value of selected template
-      const selectedTemplate = this.roleRulesTemplates.findBy('id', this.selectedTemplateId);
+      const selectedTemplate = this.roleRulesTemplates?.findBy('id', this.selectedTemplateId);
       if (selectedTemplate) {
         this.args.model.generatedRoleRules = selectedTemplate.rules;
       }
@@ -136,19 +145,20 @@ export default class CreateAndEditRolePageComponent extends Component {
       );
     } catch (error) {
       const message = errorMessage(error, 'Error saving role. Please try again or contact support');
-      this.flashMessages.danger(message);
+      this.errorBanner = message;
+      this.invalidFormAlert = 'There was an error submitting this form.';
     }
   }
 
   @action
   async onSave(event) {
     event.preventDefault();
-    const { isValid, state } = await this.args.model.validate();
+    const { isValid, state, invalidFormMessage } = await this.args.model.validate();
     if (isValid) {
       this.modelValidations = null;
       this.save.perform();
     } else {
-      this.flashMessages.info('Save not performed. Check form for errors');
+      this.invalidFormAlert = invalidFormMessage;
       this.modelValidations = state;
     }
   }

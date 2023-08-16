@@ -4,7 +4,7 @@ page_title: AliCloud - Auth Methods
 description: The AliCloud auth method allows automated authentication of AliCloud entities.
 ---
 
-# AliCloud Auth Method
+# AliCloud auth method
 
 The `alicloud` auth method provides an automated mechanism to retrieve
 a Vault token for AliCloud entities. Unlike most Vault auth methods, this
@@ -18,7 +18,7 @@ that's ideally suited for the purpose. By launching an instance with a role,
 the role's STS credentials under instance metadata can be used to securely
 build the request.
 
-## Authentication Workflow
+## Authentication workflow
 
 The AliCloud STS API includes a method,
 [`sts:GetCallerIdentity`](https://www.alibabacloud.com/help/doc-detail/43767.htm),
@@ -46,7 +46,7 @@ non-MFA authenticated credentials will still be able to authenticate to Vault
 using this method. It does not appear possible to enforce a RAM principal to be
 MFA authenticated while authenticating to Vault.
 
-## Authorization Workflow
+## Authorization workflow
 
 The basic mechanism of operation is per-role.
 
@@ -108,5 +108,5 @@ can be found found in the
 ## API
 
 The AliCloud auth method has a full HTTP API. Please see the
-[AliCloud Auth API](/api-docs/auth/alicloud) for more
+[AliCloud Auth API](/vault/api-docs/auth/alicloud) for more
 details.

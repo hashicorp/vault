@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import { helper as buildHelper } from '@ember/component/helper';
 
 const ENTERPRISE_SECRET_ENGINES = [
@@ -82,6 +87,7 @@ const MOUNTABLE_SECRET_ENGINES = [
   {
     displayName: 'PKI Certificates',
     type: 'pki',
+    engineRoute: 'pki.overview',
     category: 'generic',
   },
   {
