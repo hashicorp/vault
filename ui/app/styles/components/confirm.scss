@@ -1,7 +1,12 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 .confirm-wrapper {
   position: relative;
   overflow: hidden;
-  border-radius: 2px;
+  border-radius: $radius;
   box-shadow: $box-shadow, $box-shadow-middle;
 }
 
@@ -32,16 +37,16 @@
   button.link,
   a {
     background-color: $white;
-    color: $menu-item-color;
+    color: $grey-darkest;
 
     &:hover {
-      background-color: $menu-item-hover-background-color;
-      color: $menu-item-hover-color;
+      background-color: $ui-gray-050;
+      color: $ui-gray-900;
     }
 
     &.is-active {
-      background-color: $menu-item-active-background-color;
-      color: $menu-item-active-color;
+      background-color: $blue-500;
+      color: $blue;
     }
 
     &.is-destroy {
@@ -71,7 +76,7 @@
 }
 
 .confirm-action > span {
-  @include from($tablet) {
+  @include from($mobile) {
     align-items: center;
     display: flex;
   }
@@ -83,7 +88,7 @@
   .confirm-action-text:not(.is-block) {
     text-align: right;
 
-    @include until($tablet) {
+    @include until($mobile) {
       display: block;
       margin-bottom: $size-8;
       text-align: left;

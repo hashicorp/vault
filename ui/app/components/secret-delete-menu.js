@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 /* eslint ember/no-computed-properties-in-native-classes: 'warn' */
 import Ember from 'ember';
 import { inject as service } from '@ember/service';

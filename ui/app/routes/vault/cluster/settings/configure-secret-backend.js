@@ -1,8 +1,13 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import AdapterError from '@ember-data/adapter/error';
 import { set } from '@ember/object';
 import Route from '@ember/routing/route';
 import { inject as service } from '@ember/service';
-const CONFIGURABLE_BACKEND_TYPES = ['aws', 'ssh', 'pki'];
+const CONFIGURABLE_BACKEND_TYPES = ['aws', 'ssh'];
 
 export default Route.extend({
   store: service(),
@@ -27,15 +32,9 @@ export default Route.extend({
     });
   },
 
-  afterModel(model, transition) {
+  afterModel(model) {
     const type = model.get('type');
-    if (type === 'pki') {
-      if (transition.targetName === this.routeName) {
-        return this.transitionTo(`${this.routeName}.section`, 'cert');
-      } else {
-        return;
-      }
-    }
+
     if (type === 'aws') {
       return this.store
         .queryRecord('secret-engine', {

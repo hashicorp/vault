@@ -1,6 +1,11 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package pkiext
 
 import (
+	"bufio"
+	"bytes"
 	"crypto"
 	"crypto/x509"
 	"encoding/pem"
@@ -62,4 +67,20 @@ func parseKey(t *testing.T, pemKey string) crypto.Signer {
 	key, _, err := certutil.ParseDERKey(block.Bytes)
 	require.NoError(t, err)
 	return key
+}
+
+type LogConsumerWriter struct {
+	Consumer func(string)
+}
+
+func (l LogConsumerWriter) Write(p []byte) (n int, err error) {
+	// TODO this assumes that we're never passed partial log lines, which
+	// seems a safe assumption for now based on how docker looks to implement
+	// logging, but might change in the future.
+	scanner := bufio.NewScanner(bytes.NewReader(p))
+	scanner.Buffer(make([]byte, 64*1024), bufio.MaxScanTokenSize)
+	for scanner.Scan() {
+		l.Consumer(scanner.Text())
+	}
+	return len(p), nil
 }

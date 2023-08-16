@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import Component from '@glimmer/component';
 import { action } from '@ember/object';
 import { inject as service } from '@ember/service';
@@ -14,19 +19,21 @@ import { tracked } from '@glimmer/tracking';
  *    @model={{this.model}}
  *    @onSave={{transition-to "vault.cluster.policy.show" this.model.policyType this.model.name}}
  *    @onCancel={{transition-to "vault.cluster.policies.index"}}
+ *    @renderPolicyExampleModal={{true}}
  *  />
  * ```
  * @callback onCancel - callback triggered when cancel button is clicked
  * @callback onSave - callback triggered when save button is clicked. Passes saved model
  * @param {object} model - ember data model from createRecord
+ * @param {boolean} renderPolicyExampleModal - whether or not the policy form should render the modal containing the policy example
  */
 
 export default class PolicyFormComponent extends Component {
   @service flashMessages;
 
   @tracked errorBanner = '';
-  @tracked file = null;
   @tracked showFileUpload = false;
+  @tracked showTemplateModal = false;
 
   @task
   *save(event) {
@@ -50,11 +57,11 @@ export default class PolicyFormComponent extends Component {
   }
 
   @action
-  setPolicyFromFile(index, fileInfo) {
-    const { value, fileName } = fileInfo;
+  setPolicyFromFile(fileInfo) {
+    const { value, filename } = fileInfo;
     this.args.model.policy = value;
     if (!this.args.model.name) {
-      const trimmedFileName = trimRight(fileName, ['.json', '.txt', '.hcl', '.policy']);
+      const trimmedFileName = trimRight(filename, ['.json', '.txt', '.hcl', '.policy']);
       this.args.model.name = trimmedFileName.toLowerCase();
     }
     this.showFileUpload = false;

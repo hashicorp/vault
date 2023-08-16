@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 .vlt-table {
   .is-collapsed {
     visibility: collapse;
@@ -13,6 +18,11 @@
     }
   }
 
+  table {
+    border-collapse: collapse;
+    border-spacing: 0;
+  }
+
   th,
   td {
     padding: $spacing-s;
@@ -22,6 +32,8 @@
     color: $grey-dark;
     font-weight: 500;
     font-size: $size-8;
+    text-align: left;
+    vertical-align: top;
   }
 
   tbody th {

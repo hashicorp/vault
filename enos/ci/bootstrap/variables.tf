@@ -1,3 +1,6 @@
+# Copyright (c) HashiCorp, Inc.
+# SPDX-License-Identifier: BUSL-1.1
+
 variable "aws_ssh_public_key" {
   description = "The public key to use for the ssh key"
   type        = string

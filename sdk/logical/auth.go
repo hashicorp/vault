@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package logical
 
 import (
@@ -123,7 +126,8 @@ type PolicyResults struct {
 }
 
 type PolicyInfo struct {
-	Name        string `json:"name"`
-	NamespaceId string `json:"namespace_id"`
-	Type        string `json:"type"`
+	Name          string `json:"name"`
+	NamespaceId   string `json:"namespace_id"`
+	NamespacePath string `json:"namespace_path"`
+	Type          string `json:"type"`
 }

@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 // By Mozilla Contributors licensed under CC-BY-SA 2.5 (http://creativecommons.org/licenses/by-sa/2.5/)
 // https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String/includes#Polyfill
 if (!String.prototype.includes) {

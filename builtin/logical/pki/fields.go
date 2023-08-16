@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package pki
 
 import (
@@ -13,6 +16,7 @@ const (
 	keyIdParam     = "key_id"
 	keyTypeParam   = "key_type"
 	keyBitsParam   = "key_bits"
+	skidParam      = "subject_key_id"
 )
 
 // addIssueAndSignCommonFields adds fields common to both CA and non-CA issuing
@@ -150,6 +154,16 @@ The value format should be given in UTC format YYYY-MM-ddTHH:MM:SSZ`,
 		Default: false,
 		Description: `Whether or not to remove self-signed CA certificates in the output
 of the ca_chain field.`,
+	}
+
+	fields["user_ids"] = &framework.FieldSchema{
+		Type: framework.TypeCommaStringSlice,
+		Description: `The requested user_ids value to place in the subject,
+if any, in a comma-delimited list. Restricted by allowed_user_ids.
+Any values are added with OID 0.9.2342.19200300.100.1.1.`,
+		DisplayAttrs: &framework.DisplayAttributes{
+			Name: "User ID(s)",
+		},
 	}
 
 	fields = addIssuerRefField(fields)
@@ -461,6 +475,40 @@ past the issuer_safety_buffer. No keys will be removed as part of this
 operation.`,
 	}
 
+	fields["tidy_move_legacy_ca_bundle"] = &framework.FieldSchema{
+		Type: framework.TypeBool,
+		Description: `Set to true to move the legacy ca_bundle from
+/config/ca_bundle to /config/ca_bundle.bak. This prevents downgrades
+to pre-Vault 1.11 versions (as older PKI engines do not know about
+the new multi-issuer storage layout), but improves the performance
+on seal wrapped PKI mounts. This will only occur if at least
+issuer_safety_buffer time has occurred after the initial storage
+migration.
+
+This backup is saved in case of an issue in future migrations.
+Operators may consider removing it via sys/raw if they desire.
+The backup will be removed via a DELETE /root call, but note that
+this removes ALL issuers within the mount (and is thus not desirable
+in most operational scenarios).`,
+	}
+
+	fields["tidy_acme"] = &framework.FieldSchema{
+		Type: framework.TypeBool,
+		Description: `Set to true to enable tidying ACME accounts,
+orders and authorizations.  ACME orders are tidied (deleted) 
+safety_buffer after the certificate associated with them expires,
+or after the order and relevant authorizations have expired if no 
+certificate was produced.  Authorizations are tidied with the 
+corresponding order.
+
+When a valid ACME Account is at least acme_account_safety_buffer
+old, and has no remaining orders associated with it, the account is
+marked as revoked.  After another acme_account_safety_buffer has 
+passed from the revocation or deactivation date, a revoked or 
+deactivated ACME account is deleted.`,
+		Default: false,
+	}
+
 	fields["safety_buffer"] = &framework.FieldSchema{
 		Type: framework.TypeDurationSecond,
 		Description: `The amount of extra time that must have passed
@@ -479,6 +527,14 @@ Defaults to 8760 hours (1 year).`,
 		Default: int(defaultTidyConfig.IssuerSafetyBuffer / time.Second), // TypeDurationSecond currently requires defaults to be int
 	}
 
+	fields["acme_account_safety_buffer"] = &framework.FieldSchema{
+		Type: framework.TypeDurationSecond,
+		Description: `The amount of time that must pass after creation
+that an account with no orders is marked revoked, and the amount of time
+after being marked revoked or deactivated.`,
+		Default: int(defaultTidyConfig.AcmeAccountSafetyBuffer / time.Second), // TypeDurationSecond currently requires defaults to be int
+	}
+
 	fields["pause_duration"] = &framework.FieldSchema{
 		Type: framework.TypeString,
 		Description: `The amount of time to wait between processing
@@ -489,6 +545,100 @@ stored in memory during the entire tidy operation, but resources to
 read/process/update existing entries will be spread out over a
 greater period of time. By default this is zero seconds.`,
 		Default: "0s",
+	}
+
+	fields["tidy_revocation_queue"] = &framework.FieldSchema{
+		Type: framework.TypeBool,
+		Description: `Set to true to remove stale revocation queue entries
+that haven't been confirmed by any active cluster. Only runs on the
+active primary node`,
+		Default: defaultTidyConfig.RevocationQueue,
+	}
+
+	fields["revocation_queue_safety_buffer"] = &framework.FieldSchema{
+		Type: framework.TypeDurationSecond,
+		Description: `The amount of time that must pass from the
+cross-cluster revocation request being initiated to when it will be
+slated for removal. Setting this too low may remove valid revocation
+requests before the owning cluster has a chance to process them,
+especially if the cluster is offline.`,
+		Default: int(defaultTidyConfig.QueueSafetyBuffer / time.Second), // TypeDurationSecond currently requires defaults to be int
+	}
+
+	fields["tidy_cross_cluster_revoked_certs"] = &framework.FieldSchema{
+		Type: framework.TypeBool,
+		Description: `Set to true to enable tidying up
+the cross-cluster revoked certificate store. Only runs on the active
+primary node.`,
+	}
+
+	return fields
+}
+
+// generate the entire list of schema fields we need for CSR sign verbatim, this is also
+// leveraged by ACME internally.
+func getCsrSignVerbatimSchemaFields() map[string]*framework.FieldSchema {
+	fields := map[string]*framework.FieldSchema{}
+	fields = addNonCACommonFields(fields)
+	fields = addSignVerbatimRoleFields(fields)
+
+	fields["csr"] = &framework.FieldSchema{
+		Type:    framework.TypeString,
+		Default: "",
+		Description: `PEM-format CSR to be signed. Values will be
+taken verbatim from the CSR, except for
+basic constraints.`,
+	}
+
+	return fields
+}
+
+// addSignVerbatimRoleFields provides the fields and defaults to be used by anything that is building up the fields
+// and their corresponding default values when generating/using a sign-verbatim type role such as buildSignVerbatimRole.
+func addSignVerbatimRoleFields(fields map[string]*framework.FieldSchema) map[string]*framework.FieldSchema {
+	fields["key_usage"] = &framework.FieldSchema{
+		Type:    framework.TypeCommaStringSlice,
+		Default: []string{"DigitalSignature", "KeyAgreement", "KeyEncipherment"},
+		Description: `A comma-separated string or list of key usages (not extended
+key usages). Valid values can be found at
+https://golang.org/pkg/crypto/x509/#KeyUsage
+-- simply drop the "KeyUsage" part of the name.
+To remove all key usages from being set, set
+this value to an empty list.`,
+	}
+
+	fields["ext_key_usage"] = &framework.FieldSchema{
+		Type:    framework.TypeCommaStringSlice,
+		Default: []string{},
+		Description: `A comma-separated string or list of extended key usages. Valid values can be found at
+https://golang.org/pkg/crypto/x509/#ExtKeyUsage
+-- simply drop the "ExtKeyUsage" part of the name.
+To remove all key usages from being set, set
+this value to an empty list.`,
+	}
+
+	fields["ext_key_usage_oids"] = &framework.FieldSchema{
+		Type:        framework.TypeCommaStringSlice,
+		Description: `A comma-separated string or list of extended key usage oids.`,
+	}
+
+	fields["signature_bits"] = &framework.FieldSchema{
+		Type:    framework.TypeInt,
+		Default: 0,
+		Description: `The number of bits to use in the signature
+algorithm; accepts 256 for SHA-2-256, 384 for SHA-2-384, and 512 for
+SHA-2-512. Defaults to 0 to automatically detect based on key length
+(SHA-2-256 for RSA keys, and matching the curve size for NIST P-Curves).`,
+		DisplayAttrs: &framework.DisplayAttributes{
+			Value: 0,
+		},
+	}
+
+	fields["use_pss"] = &framework.FieldSchema{
+		Type:    framework.TypeBool,
+		Default: false,
+		Description: `Whether or not to use PSS signatures when using a
+RSA key-type issuer. Defaults to false.`,
 	}
 
 	return fields

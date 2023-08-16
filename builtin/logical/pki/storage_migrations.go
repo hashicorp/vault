@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package pki
 
 import (
@@ -85,23 +88,40 @@ func migrateStorage(ctx context.Context, b *backend, s logical.Storage) error {
 	var keyIdentifier keyID
 	sc := b.makeStorageContext(ctx, s)
 	if migrationInfo.legacyBundle != nil {
-		// Generate a unique name for the migrated items in case things were to be re-migrated again
-		// for some weird reason in the future...
-		migrationName := fmt.Sprintf("current-%d", time.Now().Unix())
+		// When the legacy bundle still exists, there's three scenarios we
+		// need to worry about:
+		//
+		// 1. When we have no migration log, we definitely want to migrate.
+		haveNoLog := migrationInfo.migrationLog == nil
+		// 2. When we have an (empty) log and the version is zero, we want to
+		//    migrate.
+		haveOldVersion := !haveNoLog && migrationInfo.migrationLog.MigrationVersion == 0
+		// 3. When we have a log and the version is at least 1 (where this
+		//    migration was introduced), we want to run the migration again
+		//    only if the legacy bundle hash has changed.
+		isCurrentOrBetterVersion := !haveNoLog && migrationInfo.migrationLog.MigrationVersion >= 1
+		haveChange := !haveNoLog && migrationInfo.migrationLog.Hash != migrationInfo.legacyBundleHash
+		haveVersionWithChange := isCurrentOrBetterVersion && haveChange
 
-		b.Logger().Info("performing PKI migration to new keys/issuers layout")
-		anIssuer, aKey, err := sc.writeCaBundle(migrationInfo.legacyBundle, migrationName, migrationName)
-		if err != nil {
-			return err
+		if haveNoLog || haveOldVersion || haveVersionWithChange {
+			// Generate a unique name for the migrated items in case things were to be re-migrated again
+			// for some weird reason in the future...
+			migrationName := fmt.Sprintf("current-%d", time.Now().Unix())
+
+			b.Logger().Info("performing PKI migration to new keys/issuers layout")
+			anIssuer, aKey, err := sc.writeCaBundle(migrationInfo.legacyBundle, migrationName, migrationName)
+			if err != nil {
+				return err
+			}
+			b.Logger().Info("Migration generated the following ids and set them as defaults",
+				"issuer id", anIssuer.ID, "key id", aKey.ID)
+			issuerIdentifier = anIssuer.ID
+			keyIdentifier = aKey.ID
+
+			// Since we do not have all the mount information available we must schedule
+			// the CRL to be rebuilt at a later time.
+			b.crlBuilder.requestRebuildIfActiveNode(b)
 		}
-		b.Logger().Info("Migration generated the following ids and set them as defaults",
-			"issuer id", anIssuer.ID, "key id", aKey.ID)
-		issuerIdentifier = anIssuer.ID
-		keyIdentifier = aKey.ID
-
-		// Since we do not have all the mount information available we must schedule
-		// the CRL to be rebuilt at a later time.
-		b.crlBuilder.requestRebuildIfActiveNode(b)
 	}
 
 	if migrationInfo.migrationLog != nil && migrationInfo.migrationLog.MigrationVersion == 1 {

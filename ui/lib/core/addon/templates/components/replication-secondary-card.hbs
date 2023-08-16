@@ -1,5 +1,10 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
 <div
-  class="selectable-card is-rounded card-container {{if this.hasErrorClass 'has-border-danger'}}"
+  class="selectable-card is-rounded card-container {{if this.hasErrorClass 'has-error-border'}}"
   data-test-replication-secondary-card
 >
   {{! Check if Status or Primary Cluster Card }}
@@ -105,9 +110,9 @@
           @title="No known_primary_cluster_addrs"
           @message="These addresses are used by the secondary to communicate with the primary cluster. Should always be non-zero in a functioning replication setup."
         >
-          <LearnLink @path="/vault/operations/monitor-replication">
+          <DocLink @path="/vault/tutorials/monitoring/monitor-replication">
             Learn more
-          </LearnLink>
+          </DocLink>
         </EmptyState>
       {{else}}
         <InfoTable @title="Known Primary Cluster Addrs" @header="cluster_addr" @items={{this.knownPrimaryClusterAddrs}} />

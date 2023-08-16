@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import ApplicationAdapter from '../application';
 import { assign } from '@ember/polyfills';
 import { encodePath } from 'vault/utils/path-encoding-helpers';
@@ -34,6 +39,13 @@ export default class PkiRoleAdapter extends ApplicationAdapter {
     });
   }
 
+  updateRecord(store, type, snapshot) {
+    const { name, backend } = snapshot.record;
+    const data = this.serialize(snapshot);
+    const url = this._urlForRole(backend, name);
+    return this.ajax(url, 'POST', { data });
+  }
+
   fetchByQuery(store, query) {
     const { id, backend } = query;
 
@@ -55,6 +67,7 @@ export default class PkiRoleAdapter extends ApplicationAdapter {
   queryRecord(store, type, query) {
     return this.fetchByQuery(store, query);
   }
+
   deleteRecord(store, type, snapshot) {
     const { id, record } = snapshot;
     return this.ajax(this._urlForRole(record.backend, id), 'DELETE');

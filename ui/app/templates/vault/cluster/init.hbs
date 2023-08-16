@@ -1,3 +1,8 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
 <SplashPage as |Page|>
   {{#if (and this.model.usingRaft (not this.prefersInit))}}
     <Page.header>
@@ -91,9 +96,8 @@
           {{/if}}
           <DownloadButton
             class="button is-ghost"
-            @data={{this.keyData}}
             @filename={{this.keyFilename}}
-            @mime="application/json"
+            @data={{this.keyData}}
             @extension="json"
             @stringify={{true}}
           >

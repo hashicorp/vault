@@ -1,3 +1,8 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
 {{#if (has-feature "Namespaces")}}
   <PageHeader as |p|>
     <p.levelLeft>
@@ -22,9 +27,9 @@
           Create Namespace
         </LinkTo>
 
-        <LearnLink @path="/vault/security/namespaces">
+        <DocLink @path="/vault/tutorials/enterprise/namespaces">
           Learn more
-        </LearnLink>
+        </DocLink>
       </list.empty>
     {{else}}
       <ListItem as |Item|>
@@ -35,7 +40,7 @@
           {{#let (concat this.currentNamespace (if this.currentNamespace "/") list.item.id) as |targetNamespace|}}
             {{#if (includes targetNamespace this.accessibleNamespaces)}}
               <li class="action">
-                <NamespaceLink @targetNamespace={{targetNamespace}} @class="is-block">
+                <NamespaceLink @targetNamespace={{targetNamespace}} @unparsed={{true}} @class="is-block">
                   Switch to Namespace
                 </NamespaceLink>
               </li>

@@ -1,12 +1,16 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import { inject as service } from '@ember/service';
 import { alias, gt } from '@ember/object/computed';
 import Component from '@ember/component';
 import { computed } from '@ember/object';
-import keyUtils from 'vault/lib/key-utils';
-import pathToTree from 'vault/lib/path-to-tree';
 import { task, timeout } from 'ember-concurrency';
+import pathToTree from 'vault/lib/path-to-tree';
+import { ancestorKeysForKey } from 'core/utils/key-utils';
 
-const { ancestorKeysForKey } = keyUtils;
 const DOT_REPLACEMENT = '☃';
 const ANIMATION_DURATION = 250;
 
@@ -150,7 +154,9 @@ export default Component.extend({
 
   namespaceDisplay: computed('namespacePath', 'accessibleNamespaces', 'accessibleNamespaces.[]', function () {
     const namespace = this.namespacePath;
-    if (!namespace) return '';
+    if (!namespace) {
+      return 'root';
+    }
     const parts = namespace?.split('/');
     return parts[parts.length - 1];
   }),
