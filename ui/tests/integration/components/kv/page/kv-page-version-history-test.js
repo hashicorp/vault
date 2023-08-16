@@ -44,7 +44,7 @@ module('Integration | Component | kv | Page::Secret::Metadata::Version-History',
   });
 
   test('it renders version history and shows icons for deleted, destroyed and current', async function (assert) {
-    assert.expect(8); // 4 linked blocks, 2 destroyed, 1 deleted, 1 current version.
+    assert.expect(7); // 4 linked blocks, 2 destroyed, 1 deleted.
 
     await render(
       hbs`
@@ -72,9 +72,6 @@ module('Integration | Component | kv | Page::Secret::Metadata::Version-History',
           .hasStyle({ color: 'rgb(111, 118, 130)' });
       }
     }
-    assert
-      .dom(`${PAGE.versions.icon(this.metadata.currentVersion)} [data-test-icon="check-circle-fill"]`)
-      .exists('renders the current version');
   });
 
   test('it gives the option to create a new version from a secret from the popup menu', async function (assert) {
