@@ -1,7 +1,6 @@
 import { module, test } from 'qunit';
 import { v4 as uuidv4 } from 'uuid';
 import { click, currentRouteName, currentURL, typeIn, visit, waitUntil } from '@ember/test-helpers';
-import { create } from 'ember-cli-page-object';
 import { setupApplicationTest } from 'vault/tests/helpers';
 import authPage from 'vault/tests/pages/auth';
 import {
@@ -15,15 +14,11 @@ import {
 import { personas } from 'vault/tests/helpers/policy-generator/kv';
 import {
   addSecretMetadataCmd,
-  setupControlGroup,
   writeSecret,
   writeVersionedSecret,
 } from 'vault/tests/helpers/kv/kv-run-commands';
 import { FORM, PAGE } from 'vault/tests/helpers/kv/kv-selectors';
-import controlGroup from 'vault/tests/pages/components/control-group';
-import { CONTROL_GROUP_PREFIX, TOKEN_SEPARATOR } from 'vault/services/control-group';
-
-const controlGroupComponent = create(controlGroup);
+import { setupControlGroup, grantAccess } from 'vault/tests/helpers/control-groups';
 
 const secretPath = `my-#:$=?-secret`;
 // This doesn't encode in a normal way, so hardcoding it here until we sort that out
@@ -1182,9 +1177,6 @@ path "${this.backend}/*" {
       this.userToken = userToken;
       return authPage.login(userToken);
     });
-    const storageKey = (accessor, path) => {
-      return `${CONTROL_GROUP_PREFIX}${accessor}${TOKEN_SEPARATOR}${path}`;
-    };
     test('can access nested secret (cg)', async function (assert) {
       assert.expect(38);
       const backend = this.backend;
@@ -1216,27 +1208,11 @@ path "${this.backend}/*" {
         await waitUntil(() => currentRouteName() === 'vault.cluster.access.control-group-accessor'),
         'redirects to access control group route'
       );
-      const accessor = controlGroupComponent.accessor;
-      const controlGroupToken = controlGroupComponent.token;
-
-      await authPage.loginUsername('authorizer', 'password');
-      await visit(`/vault/access/control-groups/${accessor}`);
-      await controlGroupComponent.authorize();
-
-      await authPage.login(this.userToken);
-      localStorage.setItem(
-        storageKey(accessor, `${backend}/data/app/nested/secret`),
-        JSON.stringify({
-          accessor,
-          token: controlGroupToken,
-          creation_path: `${backend}/data/app/nested/secret`,
-          uiParams: {
-            url: `/vault/secrets/${backend}/kv/app%2Fnested%2F/directory`,
-          },
-        })
-      );
-      await visit(`/vault/access/control-groups/${accessor}`);
-      await click(`[data-test-navigate-button]`);
+      await grantAccess({
+        apiPath: `${backend}/data/app/nested/secret`,
+        originUrl: `/vault/secrets/${backend}/kv/app%2Fnested%2F/directory`,
+        userToken: this.userToken,
+      });
       assert.strictEqual(
         currentURL(),
         `/vault/secrets/${backend}/kv/app%2Fnested%2F/directory`,
@@ -1283,33 +1259,22 @@ path "${this.backend}/*" {
 
       await visit(`/vault/secrets/${backend}/kv/${secretPathUrlEncoded}/details`);
 
-      /* Control group grant access flow */
       assert.ok(
         await waitUntil(() => currentRouteName() === 'vault.cluster.access.control-group-accessor'),
         'redirects to access control group route'
       );
-      const accessor = controlGroupComponent.accessor;
-      const controlGroupToken = controlGroupComponent.token;
-      await authPage.loginUsername('authorizer', 'password');
-      await visit(`/vault/access/control-groups/${accessor}`);
-      await controlGroupComponent.authorize();
-      await authPage.login(this.userToken);
-      localStorage.setItem(
-        storageKey(accessor, `${backend}/data/${encodeURIComponent(secretPath)}`),
-        JSON.stringify({
-          accessor,
-          token: controlGroupToken,
-          creation_path: `${backend}/data/${encodeURIComponent(secretPath)}`,
-          uiParams: {
-            url: `/vault/secrets/${backend}/kv/list`,
-          },
-        })
-      );
-      await visit(`/vault/access/control-groups/${accessor}`);
-      await click(`[data-test-navigate-button]`);
-      /* end of control group authorization flow */
 
-      assert.strictEqual(currentURL(), `/vault/secrets/${backend}/kv/list`, 'navigates back to list url');
+      await grantAccess({
+        apiPath: `${backend}/data/${encodeURIComponent(secretPath)}`,
+        originUrl: `/vault/secrets/${backend}/kv/list`,
+        userToken: this.userToken,
+      });
+
+      assert.strictEqual(
+        currentURL(),
+        `/vault/secrets/${backend}/kv/list`,
+        'navigates back to list url after authorized'
+      );
       await click(PAGE.list.item(secretPath));
 
       assertCorrectBreadcrumbs(assert, ['secrets', backend, secretPath]);
