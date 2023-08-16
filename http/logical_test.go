@@ -17,6 +17,7 @@ import (
 	kv "github.com/hashicorp/vault-plugin-secrets-kv"
 	"github.com/hashicorp/vault/api"
 	auditFile "github.com/hashicorp/vault/builtin/audit/file"
+	credUserpass "github.com/hashicorp/vault/builtin/credential/userpass"
 	"github.com/hashicorp/vault/internalshared/configutil"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/logging"
@@ -589,5 +590,77 @@ func TestLogical_AuditPort(t *testing.T) {
 
 	if count != 4 {
 		t.Fatalf("wrong number of audit entries: %d", count)
+	}
+}
+
+func TestLogical_ErrRelativePath(t *testing.T) {
+	coreConfig := &vault.CoreConfig{
+		CredentialBackends: map[string]logical.Factory{
+			"userpass": credUserpass.Factory,
+		},
+	}
+
+	cluster := vault.NewTestCluster(t, coreConfig, &vault.TestClusterOptions{
+		HandlerFunc: Handler,
+	})
+
+	cluster.Start()
+	defer cluster.Cleanup()
+
+	cores := cluster.Cores
+
+	core := cores[0].Core
+	c := cluster.Cores[0].Client
+	vault.TestWaitActive(t, core)
+
+	err := c.Sys().EnableAuthWithOptions("userpass", &api.EnableAuthOptions{
+		Type: "userpass",
+	})
+	if err != nil {
+		t.Fatalf("failed to enable userpass, err: %v", err)
+	}
+
+	resp, err := c.Logical().Read("auth/userpass/users/user..aaa")
+
+	if err == nil || resp != nil {
+		t.Fatalf("expected read request to fail, resp: %#v, err: %v", resp, err)
+	}
+
+	respErr, ok := err.(*api.ResponseError)
+
+	if !ok {
+		t.Fatalf("unexpected error type, err: %#v", err)
+	}
+
+	if respErr.StatusCode != 400 {
+		t.Errorf("expected 400 response for read, actual: %d", respErr.StatusCode)
+	}
+
+	if !strings.Contains(respErr.Error(), logical.ErrRelativePath.Error()) {
+		t.Errorf("expected response for read to include %q", logical.ErrRelativePath.Error())
+	}
+
+	data := map[string]interface{}{
+		"password": "abc123",
+	}
+
+	resp, err = c.Logical().Write("auth/userpass/users/user..aaa", data)
+
+	if err == nil || resp != nil {
+		t.Fatalf("expected write request to fail, resp: %#v, err: %v", resp, err)
+	}
+
+	respErr, ok = err.(*api.ResponseError)
+
+	if !ok {
+		t.Fatalf("unexpected error type, err: %#v", err)
+	}
+
+	if respErr.StatusCode != 400 {
+		t.Errorf("expected 400 response for write, actual: %d", respErr.StatusCode)
+	}
+
+	if !strings.Contains(respErr.Error(), logical.ErrRelativePath.Error()) {
+		t.Errorf("expected response for write to include %q", logical.ErrRelativePath.Error())
 	}
 }

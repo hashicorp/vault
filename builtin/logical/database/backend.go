@@ -286,12 +286,15 @@ func (b *databaseBackend) GetConnectionWithConfig(ctx context.Context, name stri
 
 // invalidateQueue cancels any background queue loading and destroys the queue.
 func (b *databaseBackend) invalidateQueue() {
-	b.Lock()
-	defer b.Unlock()
-
+	// cancel context before grabbing lock to start closing any open connections
+	// this is safe to do without the lock since it is only written to once in initialization
+	// and can be canceled multiple times safely
 	if b.cancelQueue != nil {
 		b.cancelQueue()
 	}
+	b.Lock()
+	defer b.Unlock()
+
 	b.credRotationQueue = nil
 }
 

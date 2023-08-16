@@ -115,7 +115,7 @@ func postUnsealPhysical(c *Core) error {
 	return nil
 }
 
-func loadMFAConfigs(context.Context, *Core) error { return nil }
+func loadPolicyMFAConfigs(context.Context, *Core) error { return nil }
 
 func shouldStartClusterListener(*Core) bool { return true }
 

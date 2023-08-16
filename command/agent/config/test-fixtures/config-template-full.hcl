@@ -46,4 +46,9 @@ template {
     min = "10s"
     max = "40s"
   }
+
+  exec {
+    command = ["foo"]
+    timeout = "10s"
+  }
 }

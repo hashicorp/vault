@@ -77,10 +77,6 @@
         "path": "internals/replication"
       },
       {
-        "title": "Plugins",
-        "path": "internals/plugins"
-      },
-      {
         "title": "Limits and Maximums",
         "path": "internals/limits"
       }
@@ -902,10 +898,6 @@
         "path": "agent/template"
       },
       {
-        "title": "Template Config",
-        "path": "agent/template-config"
-      },
-      {
         "title": "Windows service",
         "path": "agent/winsvc"
       }
@@ -967,6 +959,10 @@
           {
             "title": "HanaDB",
             "path": "secrets/databases/hanadb"
+          },
+          {
+            "title": "IBM Db2",
+            "path": "secrets/databases/db2"
           },
           {
             "title": "InfluxDB",
@@ -1285,14 +1281,30 @@
     ]
   },
   {
-    "title": "Plugin Backends",
-    "path": "plugin"
+    "title": "Plugins",
+    "routes": [
+      {
+        "title": "Overview",
+        "path": "plugins"
+      },
+      {
+        "title": "Plugin Architecture",
+        "path": "plugins/plugin-architecture"
+      },
+      {
+        "title": "Plugin Development",
+        "path": "plugins/plugin-development"
+      },
+      {
+        "title": "Plugin Management",
+        "path": "plugins/plugin-management"
+      },
+      {
+        "title": "Plugin Portal",
+        "path": "plugins/plugin-portal"
+      }
+    ]
   },
-  {
-    "title": "Plugin Portal",
-    "path": "plugin-portal"
-  },
-
   {
     "title": "Vault Integration Program",
     "path": "partnerships"
@@ -1454,15 +1466,19 @@
         ]
       },
       {
-        "title": "AWS Marketplace",
+        "title": "AWS",
         "routes": [
           {
             "title": "Overview",
-            "path": "platform/aws-mp"
+            "path": "platform/aws"
+          },
+          {
+            "title": "Vault Lambda Extension",
+            "path": "platform/aws/lambda-extension"
           },
           {
             "title": "Running Vault",
-            "path": "platform/aws-mp/run"
+            "path": "platform/aws/run"
           }
         ]
       },
@@ -1753,8 +1769,8 @@
         "path": "release-notes"
       },
       {
-        "title": "1.10",
-        "path": "release-notes/1.10"
+        "title": "1.10.0",
+        "path": "release-notes/1.10.0"
       },
       {
         "title": "1.9.0",
@@ -1819,6 +1835,10 @@
       {
         "title": "Login MFA",
         "href": "https://www.vaultproject.io/docs/auth/login-mfa/faq"
+      },
+      {
+        "title": "Server Side Consistent Token",
+        "path": "faq/ssct"
       }
     ]
   },
@@ -1892,7 +1912,24 @@
         "path": "enterprise/entropy-augmentation"
       },
       {
-        "title": "Seal Wrap / FIPS 140-2",
+        "title": "FIPS",
+        "routes": [
+          {
+            "title": "Overview",
+            "path": "enterprise/fips"
+          },
+          {
+            "title": "FIPS 140-2 Inside Vault",
+            "path": "enterprise/fips/fips1402"
+          },
+          {
+            "title": "Seal Wrap for FIPS 140-2",
+            "path": "enterprise/fips/sealwrap"
+          }
+        ]
+      },
+      {
+        "title": "Seal Wrap",
         "path": "enterprise/sealwrap"
       },
       {
