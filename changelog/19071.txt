@@ -1,0 +1,3 @@
+```release-note:bug
+ui: Fix bug where logging in via OIDC fails if browser is in fullscreen mode
+```

@@ -4,7 +4,7 @@ page_title: External Plugin Architecture
 description: Learn about Vault's plugin architecture.
 ---
 
-# External Plugin Architecture
+# External plugin architecture
 
 Vault's external plugins are completely separate, standalone applications that Vault
 executes and communicates with over RPC. This means the plugin process does not
@@ -16,7 +16,7 @@ It is possible to enable a custom plugin with a name that's identical to a
 built-in plugin. In such a situation, Vault will always choose the custom plugin
 when enabling it.
 
-## External Plugin Lifecycle
+## External plugin lifecycle
 
 Vault external plugins are long-running processes that remain running once they are
 spawned by Vault, the parent process. Plugin processes can be started by Vault's
@@ -43,7 +43,7 @@ processes within Vault as well. Since Vault manages and tracks the lifecycle of
 its plugins, these processes should not be terminated by anything other than
 Vault.
 
-### External Plugin Scaling Characteristics
+### External plugin scaling characteristics
 
 External plugins are able to leverage [Performance Standbys](/docs/enterprise/performance-standby)
 without any explicit action by a plugin author. The default behavior of Vault
@@ -54,7 +54,7 @@ code will then forward the full original request transparently to the active
 node. In other words, plugins can scale horizontally on Vault Enterprise
 without any effort on the plugin author's part.
 
-## Plugin Communication
+## Plugin communication
 
 Vault creates a mutually authenticated TLS connection for communication with
 the plugin's RPC server. Database secrets engines make use of the AutoMTLS
@@ -75,14 +75,14 @@ detection (e.g. Consul), Vault will automatically attempt to determine the
 ~> Note: Prior to Vault version 1.9.2, reading the original connection's TLS
 connection state is not supported in plugins.
 
-## Plugin Registration
+## Plugin registration
 
 An important consideration of Vault's plugin system is to ensure the plugin
 invoked by Vault is authentic and maintains integrity. There are two components
 that a Vault operator needs to configure before external plugins can be run- the
 plugin directory and the plugin catalog entry.
 
-### Plugin Directory
+### Plugin directory
 
 The plugin directory is a configuration option of Vault and can be specified in
 the [configuration file](/docs/configuration).
@@ -98,7 +98,7 @@ Vault allows operators to specify the user and permissions of the plugin directo
 using parameters `plugin_file_uid` and `plugin_file_permissions` in config if an operator needs those to be different.  
 This check can be disabled via the environment variable `VAULT_DISABLE_FILE_PERMISSIONS_CHECK`.
 
-### Plugin Catalog
+### Plugin catalog
 
 The plugin catalog is Vault's list of approved plugins. The catalog is stored in
 Vault's barrier and can only be updated by a Vault user with sudo permissions.
@@ -131,7 +131,7 @@ $ vault write sys/plugins/catalog/database/myplugin-database-plugin \
 Success! Data written to: sys/plugins/catalog/database/myplugin-database-plugin
 ```
 
-### Plugin Execution
+### Plugin execution
 
 When a backend wants to run a plugin, it first looks up the plugin, by name, in
 the catalog. It then checks the executable's SHA256 sum against the one
@@ -143,13 +143,13 @@ settings. Like Vault, plugins support [the use of mlock when available](/docs/co
 and each plugin executable in your [plugins directory](/docs/plugins/plugin-architecture#plugin-directory)
 must be given the ability to use the `mlock` syscall.
 
-### Plugin Upgrades
+### Plugin upgrades
 
 External plugins may be updated by registering and reloading them. More details
 on the upgrade procedure can be found in
 [Upgrading Vault Plugins](/docs/upgrading/plugins).
 
-## Plugin Multiplexing
+## Plugin multiplexing
 
 Database plugins can be made to implement plugin multiplexing,
 allowing a single plugin process to be used for multiple database

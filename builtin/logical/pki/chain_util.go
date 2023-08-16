@@ -44,7 +44,7 @@ func rebuildIssuersChains(ctx context.Context, s logical.Storage, referenceCert 
 	// To begin, we fetch all known issuers from disk.
 	issuers, err := listIssuers(ctx, s)
 	if err != nil {
-		return fmt.Errorf("unable to list issuers to build chain: %v", err)
+		return fmt.Errorf("unable to list issuers to build chain: %w", err)
 	}
 
 	// Fast path: no issuers means we can set the reference cert's value, if
@@ -80,6 +80,28 @@ func rebuildIssuersChains(ctx context.Context, s logical.Storage, referenceCert 
 	// Now call a stable sorting algorithm here. We want to ensure the results
 	// are the same across multiple calls to rebuildIssuersChains with the same
 	// input data.
+	//
+	// Note: while we want to ensure referenceCert is written last (because it
+	// is the user-facing action), we need to balance this with always having
+	// a stable chain order, regardless of which certificate was chosen as the
+	// reference cert. (E.g., for a given collection of unchanging certificates,
+	// if we repeatedly set+unset a manual chain, triggering rebuilds, we should
+	// always have the same chain after each unset). Thus, delay the write of
+	// the referenceCert below when persisting -- but keep the sort AFTER the
+	// referenceCert was added to the list, not before.
+	//
+	// (Otherwise, if this is called with one existing issuer and one new
+	//  reference cert, and the reference cert sorts before the existing
+	//  issuer, we will sort this list and have persisted the new issuer
+	//  first, and may fail on the subsequent write to the existing issuer.
+	//  Alternatively, if we don't sort the issuers in this order and there's
+	//  a parallel chain (where cert A is a child of both B and C, with
+	//  C.ID < B.ID and C was passed in as the yet unwritten referenceCert),
+	//  then we'll create a chain with order A -> B -> C on initial write (as
+	//  A and B come from disk) but A -> C -> B on subsequent writes (when all
+	//  certs come from disk). Thus the sort must be done after adding in the
+	//  referenceCert, thus sorting it consistently, but its write must be
+	//  singled out to occur last.)
 	sort.SliceStable(issuers, func(i, j int) bool {
 		return issuers[i] > issuers[j]
 	})
@@ -117,7 +139,7 @@ func rebuildIssuersChains(ctx context.Context, s logical.Storage, referenceCert 
 			// Otherwise, fetch it from disk.
 			stored, err = fetchIssuerById(ctx, s, identifier)
 			if err != nil {
-				return fmt.Errorf("unable to fetch issuer %v to build chain: %v", identifier, err)
+				return fmt.Errorf("unable to fetch issuer %v to build chain: %w", identifier, err)
 			}
 		}
 
@@ -128,7 +150,7 @@ func rebuildIssuersChains(ctx context.Context, s logical.Storage, referenceCert 
 		issuerIdEntryMap[identifier] = stored
 		cert, err := stored.GetCertificate()
 		if err != nil {
-			return fmt.Errorf("unable to parse issuer %v to certificate to build chain: %v", identifier, err)
+			return fmt.Errorf("unable to parse issuer %v to certificate to build chain: %w", identifier, err)
 		}
 
 		issuerIdCertMap[identifier] = cert
@@ -416,13 +438,27 @@ func rebuildIssuersChains(ctx context.Context, s logical.Storage, referenceCert 
 	}
 
 	// Finally, write all issuers to disk.
+	//
+	// See the note above when sorting issuers for why we delay persisting
+	// the referenceCert, if it was provided.
 	for _, issuer := range issuers {
 		entry := issuerIdEntryMap[issuer]
+
+		if referenceCert != nil && issuer == referenceCert.ID {
+			continue
+		}
 
 		err := writeIssuer(ctx, s, entry)
 		if err != nil {
 			pretty := prettyIssuer(issuerIdEntryMap, issuer)
-			return fmt.Errorf("failed to persist issuer (%v) chain to disk: %v", pretty, err)
+			return fmt.Errorf("failed to persist issuer (%v) chain to disk: %w", pretty, err)
+		}
+	}
+	if referenceCert != nil {
+		err := writeIssuer(ctx, s, issuerIdEntryMap[referenceCert.ID])
+		if err != nil {
+			pretty := prettyIssuer(issuerIdEntryMap, referenceCert.ID)
+			return fmt.Errorf("failed to persist issuer (%v) chain to disk: %w", pretty, err)
 		}
 	}
 

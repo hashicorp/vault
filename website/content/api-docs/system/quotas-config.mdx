@@ -8,7 +8,7 @@ description: The `/sys/quotas/config` endpoint is used to configure rate limit q
 
 The `/sys/quotas/config` endpoint is used to configure rate limit quotas.
 
-## Create or Update the Rate Limit Configuration
+## Create or update the rate limit configuration
 
 | Method | Path                 |
 | :----- | :------------------- |
@@ -23,7 +23,7 @@ The `/sys/quotas/config` endpoint is used to configure rate limit quotas.
 - `enable_rate_limit_response_headers` `(bool: false)` - If set, additional rate
   limit quota HTTP headers will be added to responses.
 
-### Sample Payload
+### Sample payload
 
 ```json
 {
@@ -42,7 +42,7 @@ The `/sys/quotas/config` endpoint is used to configure rate limit quotas.
 }
 ```
 
-### Sample Request
+### Sample request
 
 ```shell-session
 $ curl \
@@ -52,13 +52,13 @@ $ curl \
     http://127.0.0.1:8200/v1/sys/quotas/config
 ```
 
-## Get the Rate Limit Configuration
+## Get the rate limit configuration
 
 | Method | Path                 |
 | :----- | :------------------- |
 | `GET`  | `/sys/quotas/config` |
 
-### Sample Request
+### Sample request
 
 ```shell-session
 $ curl \
@@ -67,7 +67,7 @@ $ curl \
     http://127.0.0.1:8200/v1/sys/quotas/config
 ```
 
-### Sample Response
+### Sample response
 
 ```json
 {

@@ -4,7 +4,7 @@ page_title: Integrated Storage
 description: Learn about the integrated raft storage in Vault.
 ---
 
-# Integrated Storage
+# Integrated storage
 
 Vault supports several storage options for the durable storage of Vault's
 information. Each backend offers pros, cons, advantages, and trade-offs. For
@@ -15,7 +15,7 @@ As of Vault 1.4, an Integrated Storage option is offered. This storage backend
 does not rely on any third party systems; it implements high availability,
 supports Enterprise Replication features, and provides backup/restore workflows.
 
-## Consensus Protocol
+## Consensus protocol
 
 Vault's Integrated Storage uses a [consensus
 protocol](<https://en.wikipedia.org/wiki/Consensus_(computer_science)>) to provide
@@ -24,7 +24,7 @@ The consensus protocol is based on ["Raft: In search of an Understandable
 Consensus Algorithm"](https://raft.github.io/raft.pdf). For a visual explanation
 of Raft, see [The Secret Lives of Data](http://thesecretlivesofdata.com/raft).
 
-### Raft Protocol Overview
+### Raft protocol overview
 
 Raft is a consensus algorithm that is based on
 [Paxos](https://en.wikipedia.org/wiki/Paxos_%28computer_science%29). Compared
@@ -77,7 +77,7 @@ attempts to replicate to a quorum of followers. Once the log entry is considered
 _committed_, it can be _applied_ to a finite state machine. The finite state machine
 is application specific; in Vault's case, we use
 [BoltDB](https://github.com/etcd-io/bbolt) to maintain a cluster state. Vault's writes
-are block until they are _committed_ and _applied_.
+are blocked until they are _committed_ and _applied_.
 
 #### Compacting Logs
 
@@ -188,7 +188,7 @@ For this reason, we recommend ensuring new nodes have Raft indexes that are
 close to the leader before adding additional nodes. Raft indexes are visible via
 `vault status`.
 
-### Deployment Table
+### Deployment table
 
 Below is a table that shows quorum size and failure tolerance for various
 cluster sizes. The recommended deployment is either 3 or 5 servers. A single
