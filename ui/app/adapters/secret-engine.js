@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import { assign } from '@ember/polyfills';
 import ApplicationAdapter from './application';
 import { encodePath } from 'vault/utils/path-encoding-helpers';
@@ -31,14 +36,17 @@ export default ApplicationAdapter.extend({
       mountModel = await this.ajax(this.internalURL(query.path), 'GET');
       // if kv2 then add the config data to the mountModel
       // version comes in as a string
-      if (mountModel.data.type === 'kv' && mountModel.data.options.version === '2') {
+      if (mountModel?.data?.type === 'kv' && mountModel?.data?.options?.version === '2') {
         configModel = await this.ajax(this.urlForConfig(query.path), 'GET');
         mountModel.data = { ...mountModel.data, ...configModel.data };
       }
     } catch (error) {
+      // no path means this was an error on listing
+      if (!query.path || !mountModel) {
+        throw error;
+      }
       // control groups will throw a 403 permission denied error. If this happens return the mountModel
       // error is handled on routing
-      console.log(error);
     }
     return mountModel;
   },
@@ -48,9 +56,10 @@ export default ApplicationAdapter.extend({
     let data = serializer.serialize(snapshot);
     const path = snapshot.attr('path');
     // for kv2 we make two network requests
+    data.config.id = path; // config relationship needs an id so use path for now
     if (data.type === 'kv' && data.options.version === 2) {
       // data has both data for sys mount and the config, we need to separate them
-      let splitObjects = splitObject(data, ['max_versions', 'delete_version_after', 'cas_required']);
+      const splitObjects = splitObject(data, ['max_versions', 'delete_version_after', 'cas_required']);
       let configData;
       [configData, data] = splitObjects;
 
@@ -58,15 +67,8 @@ export default ApplicationAdapter.extend({
         data.id = path;
       }
       // first create the engine
-      try {
-        await this.ajax(this.url(path), 'POST', { data });
-      } catch (e) {
-        // if error determine if path duplicate or permissions
-        if (e.httpStatus === 400) {
-          throw new Error('samePath');
-        }
-        throw new Error('mountIssue');
-      }
+      await this.ajax(this.url(path), 'POST', { data });
+
       // second post to config
       try {
         await this.ajax(this.urlForConfig(path), 'POST', { data: configData });
@@ -97,7 +99,7 @@ export default ApplicationAdapter.extend({
 
   queryRecord(store, type, query) {
     if (query.type === 'aws') {
-      return this.ajax(`/v1/${encodePath(query.backend)}/config/lease`, 'GET').then(resp => {
+      return this.ajax(`/v1/${encodePath(query.backend)}/config/lease`, 'GET').then((resp) => {
         resp.path = query.backend + '/';
         return resp;
       });
@@ -119,24 +121,20 @@ export default ApplicationAdapter.extend({
   },
 
   saveAWSRoot(store, type, snapshot) {
-    let { data } = snapshot.adapterOptions;
+    const { data } = snapshot.adapterOptions;
     const path = encodePath(snapshot.id);
     return this.ajax(`/v1/${path}/config/root`, 'POST', { data });
   },
 
   saveAWSLease(store, type, snapshot) {
-    let { data } = snapshot.adapterOptions;
+    const { data } = snapshot.adapterOptions;
     const path = encodePath(snapshot.id);
     return this.ajax(`/v1/${path}/config/lease`, 'POST', { data });
   },
 
   saveZeroAddressConfig(store, type, snapshot) {
     const path = encodePath(snapshot.id);
-    const roles = store
-      .peekAll('role-ssh')
-      .filterBy('zeroAddress')
-      .mapBy('id')
-      .join(',');
+    const roles = store.peekAll('role-ssh').filterBy('zeroAddress').mapBy('id').join(',');
     const url = `/v1/${path}/config/zeroaddress`;
     const data = { roles };
     if (roles === '') {

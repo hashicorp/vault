@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package command
 
 import (
@@ -76,7 +79,7 @@ func (c *OperatorRaftSnapshotSaveCommand) Run(args []string) int {
 
 	w := &lazyOpenWriter{
 		openFunc: func() (io.WriteCloser, error) {
-			return os.OpenFile(path, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0o644)
+			return os.OpenFile(path, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0o600)
 		},
 	}
 

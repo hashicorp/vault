@@ -1,0 +1,3 @@
+```release-note:improvement
+secrets/transit: Don't abort transit encrypt or decrypt batches on single item failure.
+```

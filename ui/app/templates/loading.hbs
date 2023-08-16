@@ -1,1 +1,10 @@
-<LogoSplash />
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
+{{#if this.isCallback}}
+  <OidcCallbackSplash />
+{{else}}
+  <LogoSplash />
+{{/if}}

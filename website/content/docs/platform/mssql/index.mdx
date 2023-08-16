@@ -1,0 +1,34 @@
+---
+layout: docs
+page_title: Vault EKM provider for SQL Server
+description: >-
+  The Vault EKM module for Microsoft SQL Server allows Vault to act as a provider for TDE.
+---
+
+# Vault EKM provider for SQL server
+
+<EnterpriseAlert product="vault">
+Requires&nbsp;
+<a href="https://www.hashicorp.com/products/vault/pricing">Vault Enterprise</a>
+&nbsp;with <b>Advanced Data Protection Key Management</b> module.
+</EnterpriseAlert>
+
+Microsoft SQL Server supports [Transparent Data Encryption][tde] (TDE). The
+Database Encryption Keys (DEK) can be protected by asymmetric Key Encryption
+Keys (KEK) managed by Vault's [Transit][transit] secret engine using SQL Server's
+[Extensible Key Management][tde] (EKM).
+
+[tde]: https://docs.microsoft.com/en-us/sql/relational-databases/security/encryption/transparent-data-encryption?view=sql-server-ver15
+[ekm]: https://docs.microsoft.com/sql/relational-databases/security/encryption/extensible-key-management-ekm?view=sql-server-ver15
+[transit]: /vault/docs/secrets/transit
+
+
+See [installation](/vault/docs/platform/mssql/installation) and [configuration](/vault/docs/platform/mssql/configuration)
+for help getting started with the Vault EKM provider for SQL Server.
+
+## Features
+
+The following features are supported by the Vault EKM provider:
+
+* Management of KEK with Transit secret engine using `rsa-2048` key cipher
+* AppRole auth

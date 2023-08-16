@@ -1,6 +1,10 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package api
 
 import (
+	"context"
 	"crypto/tls"
 	"crypto/x509"
 	"encoding/base64"
@@ -9,12 +13,27 @@ import (
 	"net/url"
 	"os"
 
-	squarejwt "gopkg.in/square/go-jose.v2/jwt"
+	"github.com/go-jose/go-jose/v3/jwt"
 
 	"github.com/hashicorp/errwrap"
 )
 
-var (
+// This file contains helper code used when writing Vault auth method or secrets engine plugins.
+//
+// As such, it would be better located in the sdk module with the rest of the code which is only to support plugins,
+// rather than api, but is here for historical reasons. (The api module used to depend on the sdk module, this code
+// calls NewClient within the api package, so placing it in the sdk would have created a dependency cycle. This reason
+// is now historical, as the dependency between sdk and api has since been reversed in direction.)
+// Moving this code to the sdk would be appropriate if an api v2.0.0 release is ever planned.
+//
+// This helper code is used when a plugin is hosted by Vault 1.11 and earlier. Vault 1.12 and sdk v0.6.0 introduced
+// version 5 of the backend plugin interface, which uses go-plugin's AutoMTLS feature instead of this code.
+
+const (
+	// PluginAutoMTLSEnv is used to ensure AutoMTLS is used. This will override
+	// setting a TLSProviderFunc for a plugin.
+	PluginAutoMTLSEnv = "VAULT_PLUGIN_AUTOMTLS_ENABLED"
+
 	// PluginMetadataModeEnv is an ENV name used to disable TLS communication
 	// to bootstrap mounting plugins.
 	PluginMetadataModeEnv = "VAULT_PLUGIN_METADATA_MODE"
@@ -67,17 +86,22 @@ func (f *PluginAPIClientMeta) GetTLSConfig() *TLSConfig {
 	return nil
 }
 
-// VaultPluginTLSProvider is run inside a plugin and retrieves the response
-// wrapped TLS certificate from vault. It returns a configured TLS Config.
+// VaultPluginTLSProvider wraps VaultPluginTLSProviderContext using context.Background.
 func VaultPluginTLSProvider(apiTLSConfig *TLSConfig) func() (*tls.Config, error) {
-	if os.Getenv(PluginMetadataModeEnv) == "true" {
+	return VaultPluginTLSProviderContext(context.Background(), apiTLSConfig)
+}
+
+// VaultPluginTLSProviderContext is run inside a plugin and retrieves the response
+// wrapped TLS certificate from vault. It returns a configured TLS Config.
+func VaultPluginTLSProviderContext(ctx context.Context, apiTLSConfig *TLSConfig) func() (*tls.Config, error) {
+	if os.Getenv(PluginAutoMTLSEnv) == "true" || os.Getenv(PluginMetadataModeEnv) == "true" {
 		return nil
 	}
 
 	return func() (*tls.Config, error) {
 		unwrapToken := os.Getenv(PluginUnwrapTokenEnv)
 
-		parsedJWT, err := squarejwt.ParseSigned(unwrapToken)
+		parsedJWT, err := jwt.ParseSigned(unwrapToken)
 		if err != nil {
 			return nil, errwrap.Wrapf("error parsing wrapping token: {{err}}", err)
 		}
@@ -121,7 +145,7 @@ func VaultPluginTLSProvider(apiTLSConfig *TLSConfig) func() (*tls.Config, error)
 		// Reset token value to make sure nothing has been set by default
 		client.ClearToken()
 
-		secret, err := client.Logical().Unwrap(unwrapToken)
+		secret, err := client.Logical().UnwrapWithContext(ctx, unwrapToken)
 		if err != nil {
 			return nil, errwrap.Wrapf("error during token unwrap request: {{err}}", err)
 		}
@@ -182,7 +206,6 @@ func VaultPluginTLSProvider(apiTLSConfig *TLSConfig) func() (*tls.Config, error)
 			Certificates: []tls.Certificate{cert},
 			ServerName:   serverCert.Subject.CommonName,
 		}
-		tlsConfig.BuildNameToCertificate()
 
 		return tlsConfig, nil
 	}

@@ -1,0 +1,3 @@
+```release-note:improvement
+core: Update github.com/prometheus/client_golang to fix security vulnerability CVE-2022-21698.
+```

@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package vault
 
 import (
@@ -68,6 +71,13 @@ func aliasesTableSchema(lowerCaseName bool) *memdb.TableSchema {
 				Name: "namespace_id",
 				Indexer: &memdb.StringFieldIndex{
 					Field: "NamespaceID",
+				},
+			},
+			"local_bucket_key": {
+				Name:         "local_bucket_key",
+				AllowMissing: true,
+				Indexer: &memdb.StringFieldIndex{
+					Field: "LocalBucketKey",
 				},
 			},
 		},

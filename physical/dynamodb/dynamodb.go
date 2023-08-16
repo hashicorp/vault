@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package dynamodb
 
 import (
@@ -163,13 +166,16 @@ func NewDynamoDBBackend(conf map[string]string, logger log.Logger) (physical.Bac
 	if endpoint == "" {
 		endpoint = conf["endpoint"]
 	}
-	region := os.Getenv("AWS_REGION")
+	region := os.Getenv("AWS_DYNAMODB_REGION")
 	if region == "" {
-		region = os.Getenv("AWS_DEFAULT_REGION")
+		region = os.Getenv("AWS_REGION")
 		if region == "" {
-			region = conf["region"]
+			region = os.Getenv("AWS_DEFAULT_REGION")
 			if region == "" {
-				region = DefaultDynamoDBRegion
+				region = conf["region"]
+				if region == "" {
+					region = DefaultDynamoDBRegion
+				}
 			}
 		}
 	}
@@ -800,44 +806,47 @@ func ensureTableExists(client *dynamodb.DynamoDB, table string, readCapacity, wr
 	_, err := client.DescribeTable(&dynamodb.DescribeTableInput{
 		TableName: aws.String(table),
 	})
-	if awsError, ok := err.(awserr.Error); ok {
-		if awsError.Code() == "ResourceNotFoundException" {
-			_, err = client.CreateTable(&dynamodb.CreateTableInput{
-				TableName: aws.String(table),
-				ProvisionedThroughput: &dynamodb.ProvisionedThroughput{
-					ReadCapacityUnits:  aws.Int64(int64(readCapacity)),
-					WriteCapacityUnits: aws.Int64(int64(writeCapacity)),
-				},
-				KeySchema: []*dynamodb.KeySchemaElement{{
-					AttributeName: aws.String("Path"),
-					KeyType:       aws.String("HASH"),
-				}, {
-					AttributeName: aws.String("Key"),
-					KeyType:       aws.String("RANGE"),
-				}},
-				AttributeDefinitions: []*dynamodb.AttributeDefinition{{
-					AttributeName: aws.String("Path"),
-					AttributeType: aws.String("S"),
-				}, {
-					AttributeName: aws.String("Key"),
-					AttributeType: aws.String("S"),
-				}},
-			})
-			if err != nil {
-				return err
-			}
+	if err != nil {
+		if awsError, ok := err.(awserr.Error); ok {
+			if awsError.Code() == "ResourceNotFoundException" {
+				_, err := client.CreateTable(&dynamodb.CreateTableInput{
+					TableName: aws.String(table),
+					ProvisionedThroughput: &dynamodb.ProvisionedThroughput{
+						ReadCapacityUnits:  aws.Int64(int64(readCapacity)),
+						WriteCapacityUnits: aws.Int64(int64(writeCapacity)),
+					},
+					KeySchema: []*dynamodb.KeySchemaElement{{
+						AttributeName: aws.String("Path"),
+						KeyType:       aws.String("HASH"),
+					}, {
+						AttributeName: aws.String("Key"),
+						KeyType:       aws.String("RANGE"),
+					}},
+					AttributeDefinitions: []*dynamodb.AttributeDefinition{{
+						AttributeName: aws.String("Path"),
+						AttributeType: aws.String("S"),
+					}, {
+						AttributeName: aws.String("Key"),
+						AttributeType: aws.String("S"),
+					}},
+				})
+				if err != nil {
+					return err
+				}
 
-			err = client.WaitUntilTableExists(&dynamodb.DescribeTableInput{
-				TableName: aws.String(table),
-			})
-			if err != nil {
-				return err
+				err = client.WaitUntilTableExists(&dynamodb.DescribeTableInput{
+					TableName: aws.String(table),
+				})
+				if err != nil {
+					return err
+				}
+				// table created successfully
+				return nil
 			}
 		}
-	}
-	if err != nil {
 		return err
 	}
+
 	return nil
 }
 

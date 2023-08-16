@@ -1,29 +1,44 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package awsauth
 
 import (
 	"context"
 	"testing"
-	"time"
 
 	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/aws/request"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/iam"
 	"github.com/aws/aws-sdk-go/service/iam/iamiface"
-	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-secure-stdlib/awsutil"
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
+type mockIAMClient awsutil.MockIAM
+
+func (m *mockIAMClient) GetUserWithContext(_ aws.Context, input *iam.GetUserInput, _ ...request.Option) (*iam.GetUserOutput, error) {
+	return (*awsutil.MockIAM)(m).GetUser(input)
+}
+
+func (m *mockIAMClient) CreateAccessKeyWithContext(_ aws.Context, input *iam.CreateAccessKeyInput, _ ...request.Option) (*iam.CreateAccessKeyOutput, error) {
+	return (*awsutil.MockIAM)(m).CreateAccessKey(input)
+}
+
+func (m *mockIAMClient) DeleteAccessKeyWithContext(_ aws.Context, input *iam.DeleteAccessKeyInput, _ ...request.Option) (*iam.DeleteAccessKeyOutput, error) {
+	return (*awsutil.MockIAM)(m).DeleteAccessKey(input)
+}
+
 func TestPathConfigRotateRoot(t *testing.T) {
 	getIAMClient = func(sess *session.Session) iamiface.IAMAPI {
-		return &awsutil.MockIAM{
+		return &mockIAMClient{
 			CreateAccessKeyOutput: &iam.CreateAccessKeyOutput{
 				AccessKey: &iam.AccessKey{
 					AccessKeyId:     aws.String("fizz2"),
 					SecretAccessKey: aws.String("buzz2"),
 				},
 			},
-			DeleteAccessKeyOutput: &iam.DeleteAccessKeyOutput{},
 			GetUserOutput: &iam.GetUserOutput{
 				User: &iam.User{
 					UserName: aws.String("ellen"),
@@ -33,15 +48,12 @@ func TestPathConfigRotateRoot(t *testing.T) {
 	}
 
 	ctx := context.Background()
+	config := logical.TestBackendConfig()
+	logical.TestBackendConfig()
 	storage := &logical.InmemStorage{}
-	b, err := Factory(ctx, &logical.BackendConfig{
-		StorageView: storage,
-		Logger:      hclog.Default(),
-		System: &logical.StaticSystemView{
-			DefaultLeaseTTLVal: time.Hour,
-			MaxLeaseTTLVal:     time.Hour,
-		},
-	})
+	config.StorageView = storage
+
+	b, err := Backend(config)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -75,5 +87,12 @@ func TestPathConfigRotateRoot(t *testing.T) {
 	}
 	if resp.Data["access_key"].(string) != "fizz2" {
 		t.Fatalf("expected new access key buzz2 but received %s", resp.Data["access_key"])
+	}
+	newClientConf, err := b.nonLockedClientConfigEntry(ctx, req.Storage)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if resp.Data["access_key"].(string) != newClientConf.AccessKey {
+		t.Fatalf("expected new access key buzz2 to be saved to storage but receieved %s", clientConf.AccessKey)
 	}
 }

@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 .replication-dashboard {
   box-shadow: none;
 
@@ -57,7 +62,7 @@
         grid-template-rows: 0.2fr 1fr 0.2fr 1fr;
       }
 
-      &.has-border-danger:hover {
+      &.has-error-border:hover {
         box-shadow: none;
       }
 

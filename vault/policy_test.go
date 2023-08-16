@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package vault
 
 import (
@@ -82,6 +85,9 @@ path "test/types" {
 path "test/req" {
 	capabilities = ["create", "sudo"]
 	required_parameters = ["foo"]
+}
+path "test/patch" {
+	capabilities = ["patch"]
 }
 path "test/mfa" {
 	capabilities = ["create", "sudo"]
@@ -242,6 +248,13 @@ func TestPolicy_Parse(t *testing.T) {
 			Permissions: &ACLPermissions{
 				CapabilitiesBitmap: (CreateCapabilityInt | SudoCapabilityInt),
 				RequiredParameters: []string{"foo"},
+			},
+		},
+		{
+			Path:         "test/patch",
+			Capabilities: []string{"patch"},
+			Permissions: &ACLPermissions{
+				CapabilitiesBitmap: (PatchCapabilityInt),
 			},
 		},
 		{

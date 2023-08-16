@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package transit
 
 import (
@@ -76,6 +79,20 @@ func TestTransit_Trim(t *testing.T) {
 	req.Path = "keys/aes/trim"
 	req.Data = map[string]interface{}{
 		"min_available_version": 1,
+	}
+	doErrReq(t, req)
+
+	// Set min_encryption_version to 0
+	req.Path = "keys/aes/config"
+	req.Data = map[string]interface{}{
+		"min_encryption_version": 0,
+	}
+	doReq(t, req)
+
+	// Min available version should not be converted to 0 for nil values
+	req.Path = "keys/aes/trim"
+	req.Data = map[string]interface{}{
+		"min_available_version": nil,
 	}
 	doErrReq(t, req)
 

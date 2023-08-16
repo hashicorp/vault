@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package vault
 
 import (
@@ -76,6 +79,12 @@ type IdentityStore struct {
 	// buckets
 	entityPacker *storagepacker.StoragePacker
 
+	// localAliasPacker is used to pack multiple local alias entries into lesser
+	// storage entries. This is also used to cache entities in the secondary
+	// clusters, those entities which were created by the primary but hasn't
+	// reached secondary via invalidations.
+	localAliasPacker *storagepacker.StoragePacker
+
 	// groupPacker is used to pack multiple group storage entries into 256
 	// buckets
 	groupPacker *storagepacker.StoragePacker
@@ -92,6 +101,8 @@ type IdentityStore struct {
 	totpPersister TOTPPersister
 	groupUpdater  GroupUpdater
 	tokenStorer   TokenStorer
+	entityCreator EntityCreator
+	mfaBackend    *LoginMFABackend
 }
 
 type groupDiff struct {
@@ -113,7 +124,7 @@ var _ LocalNode = &Core{}
 
 type Namespacer interface {
 	NamespaceByID(context.Context, string) (*namespace.Namespace, error)
-	ListNamespaces() []*namespace.Namespace
+	ListNamespaces(includePath bool) []*namespace.Namespace
 }
 
 var _ Namespacer = &Core{}
@@ -131,7 +142,14 @@ type GroupUpdater interface {
 var _ GroupUpdater = &Core{}
 
 type TokenStorer interface {
-	LookupToken(ctx context.Context, token string) (*logical.TokenEntry, error)
+	LookupToken(context.Context, string) (*logical.TokenEntry, error)
+	CreateToken(context.Context, *logical.TokenEntry) error
 }
 
 var _ TokenStorer = &Core{}
+
+type EntityCreator interface {
+	CreateEntity(ctx context.Context) (*identity.Entity, error)
+}
+
+var _ EntityCreator = &Core{}

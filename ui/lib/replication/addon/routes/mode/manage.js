@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import { camelize } from '@ember/string';
 import { all } from 'rsvp';
 import { inject as service } from '@ember/service';
@@ -24,8 +29,8 @@ export default Route.extend({
     const clusterMode = model.get(replicationMode).get('modeForUrl');
     const actions = replicationActionForMode([replicationMode, clusterMode]);
     return all(
-      actions.map(action => {
-        return store.findRecord('capabilities', pathForAction(action)).then(capability => {
+      actions.map((action) => {
+        return store.findRecord('capabilities', pathForAction(action)).then((capability) => {
           model.set(`can${camelize(action)}`, capability.get('canUpdate'));
         });
       })

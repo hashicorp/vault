@@ -1,8 +1,13 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package http
 
 import (
 	"testing"
 	"time"
+
+	"github.com/hashicorp/vault/helper/testhelpers/corehelpers"
 
 	"github.com/armon/go-metrics"
 	"github.com/hashicorp/vault/helper/metricsutil"
@@ -14,7 +19,7 @@ func TestSysMetricsUnauthenticated(t *testing.T) {
 	inm := metrics.NewInmemSink(10*time.Second, time.Minute)
 	metrics.DefaultInmemSignal(inm)
 	conf := &vault.CoreConfig{
-		BuiltinRegistry: vault.NewMockBuiltinRegistry(),
+		BuiltinRegistry: corehelpers.NewMockBuiltinRegistry(),
 		MetricsHelper:   metricsutil.NewMetricsHelper(inm, true),
 	}
 	core, _, token := vault.TestCoreUnsealedWithConfig(t, conf)
@@ -23,7 +28,7 @@ func TestSysMetricsUnauthenticated(t *testing.T) {
 
 	// Default: Only authenticated access
 	resp := testHttpGet(t, "", addr+"/v1/sys/metrics")
-	testResponseStatus(t, resp, 400)
+	testResponseStatus(t, resp, 403)
 	resp = testHttpGet(t, token, addr+"/v1/sys/metrics")
 	testResponseStatus(t, resp, 200)
 
@@ -65,7 +70,7 @@ func TestSysPProfUnauthenticated(t *testing.T) {
 
 	// Default: Only authenticated access
 	resp := testHttpGet(t, "", addr+"/v1/sys/pprof/cmdline")
-	testResponseStatus(t, resp, 400)
+	testResponseStatus(t, resp, 403)
 	resp = testHttpGet(t, token, addr+"/v1/sys/pprof/cmdline")
 	testResponseStatus(t, resp, 200)
 

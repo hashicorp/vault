@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 /* eslint-disable ember/no-observers */
 import Helper from '@ember/component/helper';
 import { inject as service } from '@ember/service';
@@ -9,15 +14,15 @@ export default Helper.extend({
     'permissions.exactPaths',
     'permissions.globPaths',
     'permissions.canViewAll',
-    function() {
+    function () {
       this.recompute();
     }
   ),
 
   compute([route], params) {
-    let { routeParams } = params;
-    let permissions = this.permissions;
+    const { routeParams, requireAll } = params;
+    const permissions = this.permissions;
 
-    return permissions.hasNavPermission(route, routeParams);
+    return permissions.hasNavPermission(route, routeParams, requireAll);
   },
 });

@@ -148,7 +148,6 @@ func getOIDForEncryptionAlgorithm(pkey crypto.PrivateKey, OIDDigestAlg asn1.Obje
 		return OIDDigestAlgorithmDSA, nil
 	}
 	return nil, fmt.Errorf("pkcs7: cannot convert encryption algorithm to oid, unknown private key type %T", pkey)
-
 }
 
 // Parse decodes a DER encoded PKCS7 package

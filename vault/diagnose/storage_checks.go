@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package diagnose
 
 import (
@@ -35,7 +38,6 @@ func EndToEndLatencyCheckWrite(ctx context.Context, uuid string, b physical.Back
 }
 
 func EndToEndLatencyCheckRead(ctx context.Context, uuid string, b physical.Backend) (time.Duration, error) {
-
 	start := time.Now()
 	val, err := b.Get(context.Background(), uuid)
 	duration := time.Since(start)
@@ -53,8 +55,8 @@ func EndToEndLatencyCheckRead(ctx context.Context, uuid string, b physical.Backe
 	}
 	return time.Duration(0), nil
 }
-func EndToEndLatencyCheckDelete(ctx context.Context, uuid string, b physical.Backend) (time.Duration, error) {
 
+func EndToEndLatencyCheckDelete(ctx context.Context, uuid string, b physical.Backend) (time.Duration, error) {
 	start := time.Now()
 	err := b.Delete(context.Background(), uuid)
 	duration := time.Since(start)

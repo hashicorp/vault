@@ -1,0 +1,3 @@
+```release-note:improvement
+ui: Updates font for table row value fields 
+```

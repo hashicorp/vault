@@ -1,0 +1,3 @@
+```release-note:improvement
+agent: fix incorrectly used loop variables in parallel tests and when finalizing seals
+```

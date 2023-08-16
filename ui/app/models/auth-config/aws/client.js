@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import { attr } from '@ember-data/model';
 import { computed } from '@ember/object';
 import AuthConfig from '../../auth-config';
@@ -19,7 +24,7 @@ export default AuthConfig.extend({
     label: 'IAM Server ID Header Value',
   }),
 
-  fieldGroups: computed(function() {
+  fieldGroups: computed(function () {
     const groups = [
       { default: ['accessKey', 'secretKey'] },
       { 'AWS Options': ['endpoint', 'iamEndpoint', 'stsEndpoint', 'iamServerIdHeaderValue'] },

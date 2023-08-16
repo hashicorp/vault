@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package consts
 
 const (
@@ -32,4 +35,12 @@ const (
 	// ReplicationResolverALPN is the negotiated protocol used for
 	// resolving replicaiton addresses
 	ReplicationResolverALPN = "replication_resolver_v1"
+
+	VaultEnableFilePermissionsCheckEnv = "VAULT_ENABLE_FILE_PERMISSIONS_CHECK"
+
+	VaultDisableUserLockout = "VAULT_DISABLE_USER_LOCKOUT"
+
+	PerformanceReplicationPathTarget = "performance"
+
+	DRReplicationPathParget = "dr"
 )

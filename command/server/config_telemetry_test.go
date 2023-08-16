@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package server
 
 import (
@@ -29,7 +32,6 @@ func TestMetricFilterConfigs(t *testing.T) {
 
 		for _, tc := range cases {
 			config, err := LoadConfigFile(tc.configFile)
-
 			if err != nil {
 				t.Fatalf("Error encountered when loading config %+v", err)
 			}

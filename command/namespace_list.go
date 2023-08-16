@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package command
 
 import (
@@ -37,7 +40,18 @@ Usage: vault namespace list [options]
 }
 
 func (c *NamespaceListCommand) Flags() *FlagSets {
-	return c.flagSet(FlagSetHTTP | FlagSetOutputFormat)
+	set := c.flagSet(FlagSetHTTP | FlagSetOutputFormat)
+
+	f := set.NewFlagSet("Command Options")
+
+	f.BoolVar(&BoolVar{
+		Name:    "detailed",
+		Target:  &c.flagDetailed,
+		Default: false,
+		Usage:   "Print detailed information such as namespace ID.",
+	})
+
+	return set
 }
 
 func (c *NamespaceListCommand) AutocompleteArgs() complete.Predictor {
@@ -83,7 +97,7 @@ func (c *NamespaceListCommand) Run(args []string) int {
 	}
 
 	if secret == nil {
-		c.UI.Error(fmt.Sprintf("No namespaces found"))
+		c.UI.Error("No namespaces found")
 		return 2
 	}
 
@@ -97,8 +111,12 @@ func (c *NamespaceListCommand) Run(args []string) int {
 	}
 
 	if !ok {
-		c.UI.Error(fmt.Sprintf("No entries found"))
+		c.UI.Error("No entries found")
 		return 2
+	}
+
+	if c.flagDetailed && Format(c.UI) != "table" {
+		return OutputData(c.UI, secret.Data["key_info"])
 	}
 
 	return OutputList(c.UI, secret)

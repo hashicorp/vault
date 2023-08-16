@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package influxdb
 
 import (
@@ -12,7 +15,7 @@ import (
 	dbplugin "github.com/hashicorp/vault/sdk/database/dbplugin/v5"
 	"github.com/hashicorp/vault/sdk/database/helper/connutil"
 	"github.com/hashicorp/vault/sdk/helper/certutil"
-	influx "github.com/influxdata/influxdb/client/v2"
+	influx "github.com/influxdata/influxdb1-client/v2"
 	"github.com/mitchellh/mapstructure"
 )
 
@@ -257,7 +260,7 @@ func isUserAdmin(cli influx.Client, user string) (bool, error) {
 	for _, res := range response.Results {
 		for _, serie := range res.Series {
 			for _, val := range serie.Values {
-				if val[0].(string) == user && val[1].(bool) == true {
+				if val[0].(string) == user && val[1].(bool) {
 					return true, nil
 				}
 			}

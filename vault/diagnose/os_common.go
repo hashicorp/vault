@@ -1,4 +1,7 @@
-// +build !openbsd !arm
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
+//go:build !openbsd || !arm
 
 package diagnose
 
@@ -8,7 +11,7 @@ import (
 	"strings"
 
 	"github.com/dustin/go-humanize"
-	"github.com/shirou/gopsutil/disk"
+	"github.com/shirou/gopsutil/v3/disk"
 )
 
 func diskUsage(ctx context.Context) error {
