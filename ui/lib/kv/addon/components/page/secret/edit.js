@@ -34,7 +34,7 @@ export default class KvSecretEdit extends Component {
   @tracked modelValidations;
   @tracked invalidFormAlert;
 
-  get showAlert() {
+  get showOldVersionAlert() {
     const { currentVersion, previousVersion } = this.args;
     // isNew check prevents alert from flashing after save but before route transitions
     if (!currentVersion || !previousVersion || !this.args.secret.isNew) return false;

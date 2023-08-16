@@ -77,7 +77,7 @@ export const FORM = {
   validationWarning: '[data-test-validation-warning]',
   invalidFormAlert: '[data-test-invalid-form-alert]',
   versionAlert: '[data-test-secret-version-alert]',
-  noReadAlert: '[data-test-warning-no-read-permissions]',
+  noReadAlert: '[data-test-secret-no-read-alert]',
   // Form btns
   saveBtn: '[data-test-kv-save]',
   cancelBtn: '[data-test-kv-cancel]',
