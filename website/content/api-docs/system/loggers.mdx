@@ -8,8 +8,8 @@ description: The `/sys/loggers` endpoint is used modify the verbosity level of l
 
 The `/sys/loggers` endpoint is used modify the verbosity level of logging.
 
-!> **NOTE:** Changes made to the log level using this endpoint are not persisted and will be restored 
-to either the default log level (info) or the level specified using `log_level` in vault.hcl or the `VAULT_LOG_LEVEL` 
+!> **NOTE:** Changes made to the log level using this endpoint are not persisted and will be restored
+to either the default log level (info) or the level specified using `log_level` in vault.hcl or the `VAULT_LOG_LEVEL`
 environment variable once the Vault service is reloaded or restarted.
 
 ## Modify verbosity level of all loggers
@@ -23,7 +23,7 @@ environment variable once the Vault service is reloaded or restarted.
 - `level` `(string: <required>)` – Specifies the log verbosity level to be set for all loggers.
 Supported values (in order of detail) are `"trace"`, `"debug"`, `"info"`, `"warn"`, and `"error"`.
 
-### Sample Payload
+### Sample payload
 
 ```json
 {
@@ -31,7 +31,7 @@ Supported values (in order of detail) are `"trace"`, `"debug"`, `"info"`, `"warn
 }
 ```
 
-### Sample Request
+### Sample request
 
 ```shell-session
 $ curl \
@@ -53,7 +53,7 @@ $ curl \
 - `level` `(string: <required>)` – Specifies the log verbosity level to be set for the provided logger.
 Supported values (in order of detail) are `"trace"`, `"debug"`, `"info"`, `"warn"`, and `"error"`.
 
-### Sample Payload
+### Sample payload
 
 ```json
 {
@@ -61,7 +61,7 @@ Supported values (in order of detail) are `"trace"`, `"debug"`, `"info"`, `"warn
 }
 ```
 
-### Sample Request
+### Sample request
 
 ```shell-session
 $ curl \
@@ -71,13 +71,59 @@ $ curl \
     http://127.0.0.1:8200/v1/sys/loggers/core
 ```
 
+## Read verbosity level of all loggers
+
+| Method | Path           |
+| :----- | :------------- |
+| `GET`  | `/sys/loggers` |
+
+### Sample request
+
+```shell-session
+$ curl \
+    --header "X-Vault-Token: ..." \
+    https://127.0.0.1:8200/v1/sys/loggers
+```
+
+### Sample response
+
+```json
+{
+    "audit": "trace",
+    "core": "info",
+    "policy": "debug"
+}
+```
+
+## Read verbosity level of a single logger
+
+| Method | Path                 |
+| :----- | :------------------- |
+| `GET`  | `/sys/loggers/:name` |
+
+### Sample request
+
+```shell-session
+$ curl \
+    --header "X-Vault-Token: ..." \
+    https://127.0.0.1:8200/v1/sys/loggers/core
+```
+
+### Sample response
+
+```json
+{
+    "core": "info"
+}
+```
+
 ## Revert verbosity of all loggers to configured level
 
 | Method    | Path           |
 | :-------- | :------------- |
 | `DELETE`  | `/sys/loggers` |
 
-### Sample Request
+### Sample request
 
 ```shell-session
 $ curl \
@@ -96,7 +142,7 @@ $ curl \
 
 - `name` `(string: <required>)` – Specifies the logger to be modified (e.g. `audit`, `core`, `expiration`).
 
-### Sample Request
+### Sample request
 
 ```shell-session
 $ curl \

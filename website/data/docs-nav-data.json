@@ -717,6 +717,10 @@
         ]
       },
       {
+        "title": "<code>print</code>",
+        "path": "commands/print"
+      },
+      {
         "title": "<code>read</code>",
         "path": "commands/read"
       },
@@ -2046,6 +2050,10 @@
           {
             "title": "Autoloading",
             "path": "enterprise/license/autoloading"
+          },
+          {
+            "title": "Automated license utilization reporting",
+            "path": "enterprise/license/utilization-reporting"
           },
           {
             "title": "FAQ",

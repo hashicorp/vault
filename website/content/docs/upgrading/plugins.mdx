@@ -4,9 +4,9 @@ page_title: Upgrading Plugins - Guides
 description: These are general upgrade instructions for Vault plugins.
 ---
 
-# Upgrading Vault Plugins
+# Upgrading Vault plugins
 
-## Plugin Upgrade Procedure
+## Plugin upgrade procedure
 
 The following procedures detail steps for upgrading a plugin that has been mounted
 at a path on a running server. The steps are the same whether the plugin being
@@ -132,7 +132,7 @@ Until the last step, the mount will still run the first version of `my-db-plugin
 the reload is triggered, Vault will kill `my-db-plugin`’s process and start the
 new plugin process for `my-db-plugin` version 1.0.1.
 
-### Downgrading Plugins
+### Downgrading plugins
 
 Plugin downgrades follow the same procedure as upgrades. You can use the Vault
 plugin list command to check what plugin versions are available to downgrade to:
@@ -166,7 +166,7 @@ totp                v1.12.0+builtin.vault
 transit             v1.12.0+builtin.vault
 ```
 
-### Additional Upgrade Notes
+### Additional upgrade notes
 
 * As mentioned earlier, disabling existing mounts will wipe the existing data.
 * Overwriting an existing version in the catalog will affect all uses of that

@@ -132,7 +132,7 @@
     {{! TTL Picker }}
     <div class="field">
       {{#let (or (get @model this.valuePath) @attr.options.setDefault) as |initialValue|}}
-        <TtlPicker2
+        <TtlPicker
           data-test-input={{@attr.name}}
           @onChange={{this.setAndBroadcastTtl}}
           @label={{this.labelString}}
