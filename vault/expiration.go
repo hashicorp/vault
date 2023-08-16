@@ -269,7 +269,9 @@ func (r *revocationJob) OnFailure(err error) {
 			return
 		}
 
+		r.m.pendingLock.Lock()
 		r.m.markLeaseIrrevocable(r.nsCtx, le, err)
+		r.m.pendingLock.Unlock()
 		return
 	} else {
 		r.m.logger.Error("failed to revoke lease", "lease_id", r.leaseID, "error", err,
