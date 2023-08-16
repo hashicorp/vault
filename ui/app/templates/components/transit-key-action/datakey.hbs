@@ -70,7 +70,7 @@
             <select
               name="padding_scheme"
               id="padding_scheme"
-              data-test-padding-scheme="true"
+              data-test-padding-scheme-select
               onchange={{action (mut @padding_scheme) value="target.value"}}
             >
               {{#each (array "oaep" "pkcs1v15") as |scheme|}}
