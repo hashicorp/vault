@@ -102,7 +102,7 @@ module('Acceptance | secrets/secret/create, read, delete', function (hooks) {
       'vault.cluster.secrets.backend.show',
       'redirects to the show page'
     );
-    await assertSecretWrap(assert, this, `${path}/data/${secretPath}`);
+    await assertSecretWrap(assert, this.server, `${path}/data/${secretPath}`);
     assert.ok(showPage.editIsPresent, 'shows the edit button');
     await deleteEngine(path, assert);
   });

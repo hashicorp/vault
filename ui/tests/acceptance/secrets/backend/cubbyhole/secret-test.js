@@ -52,6 +52,6 @@ module('Acceptance | secrets/cubbyhole/create', function (hooks) {
     assert.dom('[data-test-created-time]').hasText('', 'it does not render created time if blank');
     assert.ok(showPage.editIsPresent, 'shows the edit button');
 
-    await assertSecretWrap(assert, this, requestPath);
+    await assertSecretWrap(assert, this.server, requestPath);
   });
 });

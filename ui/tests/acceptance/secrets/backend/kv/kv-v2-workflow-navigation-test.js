@@ -747,7 +747,7 @@ module('Acceptance | kv-v2 workflow | navigation', function (hooks) {
       assert.dom(PAGE.secretTab('Configuration')).hasText('Configuration');
       assert.dom(PAGE.secretTab('Configuration')).doesNotHaveClass('active');
       // Toolbar correct
-      assert.dom(PAGE.toolbar).exists({ count: 2 }, 'toolbar renders');
+      assert.dom(PAGE.toolbar).exists({ count: 1 }, 'toolbar only renders create secret action');
       assert.dom(PAGE.list.filter).hasNoValue('List filter input is empty');
       // Page content correct
       assert.dom(PAGE.emptyStateTitle).hasText('No secrets yet');
@@ -977,7 +977,7 @@ module('Acceptance | kv-v2 workflow | navigation', function (hooks) {
       assert.dom(PAGE.secretTab('Configuration')).hasText('Configuration');
       assert.dom(PAGE.secretTab('Configuration')).doesNotHaveClass('active');
       // Toolbar correct
-      assert.dom(PAGE.toolbar).exists({ count: 2 }, 'toolbar renders');
+      assert.dom(PAGE.toolbar).exists({ count: 1 }, 'toolbar only renders create secret action');
       assert.dom(PAGE.list.filter).doesNotExist('List filter input is not rendered');
       // Page content correct
       assert.dom(PAGE.list.overviewCard).exists('Overview card renders');
