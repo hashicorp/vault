@@ -5,6 +5,7 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	"encoding/binary"
+	"encoding/hex"
 	"fmt"
 	"math"
 	"net"
@@ -223,7 +224,11 @@ func (c *Client) RenderUserSearchFilter(cfg *ConfigEntry, username string) (stri
 	}
 	if cfg.UPNDomain != "" {
 		context.UserAttr = "userPrincipalName"
-		context.Username = fmt.Sprintf("%s@%s", EscapeLDAPValue(username), cfg.UPNDomain)
+		// Intentionally, calling EscapeFilter(...) (vs EscapeValue) since the
+		// username is being injected into a search filter.
+		// As an untrusted string, the username must be escaped according to RFC
+		// 4515, in order to prevent attackers from injecting characters that could modify the filter
+		context.Username = fmt.Sprintf("%s@%s", ldap.EscapeFilter(username), cfg.UPNDomain)
 	}
 
 	var renderedFilter bytes.Buffer
@@ -578,42 +583,59 @@ func (c *Client) GetLdapGroups(cfg *ConfigEntry, conn Connection, userDN string,
 }
 
 // EscapeLDAPValue is exported because a plugin uses it outside this package.
+// EscapeLDAPValue will properly escape the input string as an ldap value
+// rfc4514 states the following must be escaped:
+// - leading space or hash
+// - trailing space
+// - special characters '"', '+', ',', ';', '<', '>', '\\'
+// - hex
 func EscapeLDAPValue(input string) string {
 	if input == "" {
 		return ""
 	}
 
-	// RFC4514 forbids un-escaped:
-	// - leading space or hash
-	// - trailing space
-	// - special characters '"', '+', ',', ';', '<', '>', '\\'
-	// - null
-	for i := 0; i < len(input); i++ {
-		escaped := false
-		if input[i] == '\\' && i+1 < len(input)-1 {
-			i++
-			escaped = true
-		}
-		switch input[i] {
-		case '"', '+', ',', ';', '<', '>', '\\':
-			if !escaped {
-				input = input[0:i] + "\\" + input[i:]
-				i++
-			}
+	buf := bytes.Buffer{}
+
+	escFn := func(c byte) {
+		buf.WriteByte('\\')
+		buf.WriteByte(c)
+	}
+
+	inputLen := len(input)
+	for i := 0; i < inputLen; i++ {
+		char := input[i]
+		switch {
+		case i == 0 && char == ' ' || char == '#':
+			// leading space or hash.
+			escFn(char)
 			continue
+		case i == inputLen-1 && char == ' ':
+			// trailing space.
+			escFn(char)
+			continue
+		case specialChar(char):
+			escFn(char)
+			continue
+		case char < ' ' || char > '~':
+			// anything that's not between the ascii space and tilde must be hex
+			buf.WriteByte('\\')
+			buf.WriteString(hex.EncodeToString([]byte{char}))
+			continue
+		default:
+			// everything remaining, doesn't need to be escaped
+			buf.WriteByte(char)
 		}
-		if escaped {
-			input = input[0:i] + "\\" + input[i:]
-			i++
-		}
 	}
-	if input[0] == ' ' || input[0] == '#' {
-		input = "\\" + input
+	return buf.String()
+}
+
+func specialChar(char byte) bool {
+	switch char {
+	case '"', '+', ',', ';', '<', '>', '\\':
+		return true
+	default:
+		return false
 	}
-	if input[len(input)-1] == ' ' {
-		input = input[0:len(input)-1] + "\\ "
-	}
-	return input
 }
 
 /*
