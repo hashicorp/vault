@@ -8,6 +8,8 @@ import { action } from '@ember/object';
 import { tracked } from '@glimmer/tracking';
 import { next } from '@ember/runloop';
 import { inject as service } from '@ember/service';
+import { task } from 'ember-concurrency';
+import { waitFor } from '@ember/test-waiters';
 
 /**
  * @module KvSecretDetails renders the key/value data of a KV secret. 
@@ -26,9 +28,13 @@ import { inject as service } from '@ember/service';
  */
 
 export default class KvSecretDetails extends Component {
-  @tracked showJsonView = false;
   @service flashMessages;
   @service router;
+  @service store;
+
+  @tracked showJsonView = false;
+  @tracked wrappedData = null;
+
 
   @action
   toggleJsonView() {
@@ -36,10 +42,30 @@ export default class KvSecretDetails extends Component {
   }
 
   @action
-  onClose(dropdown) {
+  closeVersionMenu(dropdown) {
     // strange issue where closing dropdown triggers full transition (which redirects to auth screen in production)
     // closing dropdown in next tick of run loop fixes it
     next(() => dropdown.actions.close());
+  }
+
+  @action
+  clearWrappedData() {
+    this.wrappedData = null;
+  }
+
+  @task
+  @waitFor
+  *wrapSecret() {
+    const { backend, path } = this.args.secret;
+    const adapter = this.store.adapterFor('kv/data');
+    try {
+      const { token } = yield adapter.fetchWrapInfo({ backend, path, wrapTTL: 1800 });
+      if (!token) throw 'No token';
+      this.wrappedData = token;
+      this.flashMessages.success('Secret successfully wrapped!');
+    } catch (error) {
+      this.flashMessages.danger('Could not wrap secret.');
+    }
   }
 
   @action

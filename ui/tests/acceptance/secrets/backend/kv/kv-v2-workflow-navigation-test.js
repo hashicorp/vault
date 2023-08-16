@@ -160,7 +160,7 @@ module('Acceptance | kv-v2 workflow | navigation', function (hooks) {
       assertCorrectBreadcrumbs(assert, ['secret', backend, 'app', 'nested', 'secret']);
       assert.dom(PAGE.title).hasText('app/nested/secret', 'title is full secret path');
       assert.dom(PAGE.toolbar).exists('toolbar renders');
-      assert.dom(PAGE.toolbarAction).exists({ count: 4 }, 'correct number of toolbar actions render');
+      assert.dom(PAGE.toolbarAction).exists({ count: 5 }, 'correct number of toolbar actions render');
 
       await click(PAGE.breadcrumbAtIdx(3));
       assert.ok(
@@ -382,7 +382,7 @@ module('Acceptance | kv-v2 workflow | navigation', function (hooks) {
       assertCorrectBreadcrumbs(assert, ['secret', backend, 'app', 'nested', 'secret']);
       assert.dom(PAGE.title).hasText('app/nested/secret', 'title is full secret path');
       assert.dom(PAGE.toolbar).exists('toolbar renders');
-      assert.dom(PAGE.toolbarAction).exists({ count: 4 }, 'correct number of toolbar actions render');
+      assert.dom(PAGE.toolbarAction).exists({ count: 5 }, 'correct number of toolbar actions render');
 
       await click(PAGE.breadcrumbAtIdx(3));
       assert.ok(
@@ -605,7 +605,7 @@ module('Acceptance | kv-v2 workflow | navigation', function (hooks) {
       assertCorrectBreadcrumbs(assert, ['secret', backend, 'app', 'nested', 'secret']);
       assert.dom(PAGE.title).hasText('app/nested/secret', 'title is full secret path');
       assert.dom(PAGE.toolbar).exists('toolbar renders');
-      assert.dom(PAGE.toolbarAction).exists({ count: 4 }, 'correct number of toolbar actions render');
+      assert.dom(PAGE.toolbarAction).exists({ count: 5 }, 'correct number of toolbar actions render');
 
       await click(PAGE.breadcrumbAtIdx(3));
       assert.ok(
@@ -747,7 +747,7 @@ module('Acceptance | kv-v2 workflow | navigation', function (hooks) {
       assert.dom(PAGE.secretTab('Configuration')).hasText('Configuration');
       assert.dom(PAGE.secretTab('Configuration')).doesNotHaveClass('active');
       // Toolbar correct
-      assert.dom(PAGE.toolbar).exists({ count: 1 }, 'toolbar renders');
+      assert.dom(PAGE.toolbar).exists({ count: 1 }, 'toolbar only renders create secret action');
       assert.dom(PAGE.list.filter).hasNoValue('List filter input is empty');
       // Page content correct
       assert.dom(PAGE.emptyStateTitle).hasText('No secrets yet');
@@ -820,7 +820,8 @@ module('Acceptance | kv-v2 workflow | navigation', function (hooks) {
       assert.dom(PAGE.title).hasText('app/nested/secret', 'title is full secret path');
       assert.dom(PAGE.toolbar).exists('toolbar renders');
       // TODO: verify create new shouldn't show
-      assert.dom(PAGE.toolbarAction).exists({ count: 3 }, 'correct number of toolbar actions render');
+      assert.dom(PAGE.toolbarAction).exists({ count: 4 }, 'correct number of toolbar actions render');
+
       // TODO: add version to dropdown when no data
       // assert.dom(PAGE.detail.versionDropdown).hasText('Version 1');
 
@@ -977,7 +978,7 @@ module('Acceptance | kv-v2 workflow | navigation', function (hooks) {
       assert.dom(PAGE.secretTab('Configuration')).hasText('Configuration');
       assert.dom(PAGE.secretTab('Configuration')).doesNotHaveClass('active');
       // Toolbar correct
-      assert.dom(PAGE.toolbar).exists({ count: 1 }, 'toolbar renders');
+      assert.dom(PAGE.toolbar).exists({ count: 1 }, 'toolbar only renders create secret action');
       assert.dom(PAGE.list.filter).doesNotExist('List filter input is not rendered');
       // Page content correct
       assert.dom(PAGE.list.overviewCard).exists('Overview card renders');
@@ -1022,7 +1023,7 @@ module('Acceptance | kv-v2 workflow | navigation', function (hooks) {
       assertCorrectBreadcrumbs(assert, ['secret', backend, 'app', 'nested', 'secret']);
       assert.dom(PAGE.title).hasText('app/nested/secret', 'title is full secret path');
       assert.dom(PAGE.toolbar).exists('toolbar renders');
-      assert.dom(PAGE.toolbarAction).exists({ count: 1 }, 'correct number of toolbar actions render');
+      assert.dom(PAGE.toolbarAction).exists({ count: 2 }, 'correct number of toolbar actions render');
 
       await click(PAGE.breadcrumbAtIdx(3));
       assert.ok(
