@@ -14,7 +14,7 @@ import KVObject from 'vault/lib/kv-object';
  * <KvDataFields
  *  @showJson={{true}}
  *  @secret={{@secret}}
- *  @previousVersion={{3}}
+ *  @isEdit={{true}}
  *  @modelValidations={{this.modelValidations}}
  *  @pathValidations={{this.pathValidations}}
  * />
@@ -23,7 +23,7 @@ import KVObject from 'vault/lib/kv-object';
  * @param {boolean} showJson - boolean passed from parent to hide/shows json editor
  * @param {object} [modelValidations] - object of errors.  If attr.name is in object and has error message display in AlertInline.
  * @param {callback} [pathValidations] - callback function fired for the path input on key up
- * @param {number} [previousVersion] - optional, the version number we're creating a new secret from used to change text for some form labels
+ * @param {boolean} [isEdit=false] - if true, this is a new secret version rather than a new secret. Used to change text for some form labels
  */
 
 export default class KvDataFields extends Component {

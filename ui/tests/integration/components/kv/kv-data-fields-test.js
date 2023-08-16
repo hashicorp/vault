@@ -63,7 +63,7 @@ module('Integration | Component | kv-v2 | KvDataFields', function (hooks) {
       secretData: this.secret.secretData,
     });
 
-    await render(hbs`<KvDataFields @showJson={{false}} @previousVersion={{3}} @secret={{this.secret}} />`, {
+    await render(hbs`<KvDataFields @showJson={{false}} @isEdit={{true}} @secret={{this.secret}} />`, {
       owner: this.engine,
     });
 
