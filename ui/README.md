@@ -78,6 +78,12 @@ long-form version of the npm script:
 
 `ember server --proxy=http://localhost:PORT`
 
+To run yarn with mirage, do:
+
+- `yarn start:mirage handlername`
+
+Where `handlername` is one of the options exported in `mirage/handlers/index`
+
 ### Code Generators
 
 Make use of the many generators for code, try `ember help generate` for more details. If you're using a component that can be widely-used, consider making it an `addon` component instead (see [this PR](https://github.com/hashicorp/vault/pull/6629) for more details)
@@ -111,9 +117,8 @@ To run the tests locally in a browser other than IE11, swap out `launch_in_ci: [
 
 ### Linting
 
-- `yarn lint:hbs`
-- `yarn lint:js`
-- `yarn lint:js -- --fix`
+* `yarn lint`
+* `yarn lint:fix`
 
 ### Building Vault UI into a Vault Binary
 

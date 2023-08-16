@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"reflect"
+	"strings"
 	"sync"
 	"testing"
 	"time"
@@ -148,6 +149,109 @@ func TestCore_Unseal_MultiShare(t *testing.T) {
 	}
 }
 
+// TestCore_UseSSCTokenToggleOn will check that the root SSC
+// token can be used even when disableSSCTokens is toggled on
+func TestCore_UseSSCTokenToggleOn(t *testing.T) {
+	c, _, root := TestCoreUnsealed(t)
+	c.disableSSCTokens = true
+	req := &logical.Request{
+		Operation: logical.UpdateOperation,
+		Path:      "secret/test",
+		Data: map[string]interface{}{
+			"foo":   "bar",
+			"lease": "1h",
+		},
+		ClientToken: root,
+	}
+	ctx := namespace.RootContext(nil)
+	resp, err := c.HandleRequest(ctx, req)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	if resp != nil {
+		t.Fatalf("bad: %#v", resp)
+	}
+
+	// Read the key
+	req.Operation = logical.ReadOperation
+	req.Data = nil
+	err = c.PopulateTokenEntry(ctx, req)
+	if err != nil {
+		t.Fatalf("err: %s", err)
+	}
+	resp, err = c.HandleRequest(ctx, req)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	if resp == nil || resp.Secret == nil || resp.Data == nil {
+		t.Fatalf("bad: %#v", resp)
+	}
+	if resp.Secret.TTL != time.Hour {
+		t.Fatalf("bad: %#v", resp.Secret)
+	}
+	if resp.Secret.LeaseID == "" {
+		t.Fatalf("bad: %#v", resp.Secret)
+	}
+	if resp.Data["foo"] != "bar" {
+		t.Fatalf("bad: %#v", resp.Data)
+	}
+}
+
+// TestCore_UseNonSSCTokenToggleOff will check that the root
+// non-SSC token can be used even when disableSSCTokens is toggled
+// off.
+func TestCore_UseNonSSCTokenToggleOff(t *testing.T) {
+	coreConfig := &CoreConfig{
+		DisableSSCTokens: true,
+	}
+	c, _, root := TestCoreUnsealedWithConfig(t, coreConfig)
+	if len(root) > TokenLength+OldTokenPrefixLength || !strings.HasPrefix(root, consts.LegacyServiceTokenPrefix) {
+		t.Fatalf("token is not an old token type: %s, %d", root, len(root))
+	}
+	c.disableSSCTokens = false
+	req := &logical.Request{
+		Operation: logical.UpdateOperation,
+		Path:      "secret/test",
+		Data: map[string]interface{}{
+			"foo":   "bar",
+			"lease": "1h",
+		},
+		ClientToken: root,
+	}
+	ctx := namespace.RootContext(nil)
+	resp, err := c.HandleRequest(ctx, req)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	if resp != nil {
+		t.Fatalf("bad: %#v", resp)
+	}
+
+	// Read the key
+	req.Operation = logical.ReadOperation
+	req.Data = nil
+	err = c.PopulateTokenEntry(ctx, req)
+	if err != nil {
+		t.Fatalf("err: %s", err)
+	}
+	resp, err = c.HandleRequest(ctx, req)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	if resp == nil || resp.Secret == nil || resp.Data == nil {
+		t.Fatalf("bad: %#v", resp)
+	}
+	if resp.Secret.TTL != time.Hour {
+		t.Fatalf("bad: %#v", resp.Secret)
+	}
+	if resp.Secret.LeaseID == "" {
+		t.Fatalf("bad: %#v", resp.Secret)
+	}
+	if resp.Data["foo"] != "bar" {
+		t.Fatalf("bad: %#v", resp.Data)
+	}
+}
+
 func TestCore_Unseal_Single(t *testing.T) {
 	c := TestCore(t)
 
@@ -266,11 +370,15 @@ func TestCore_Shutdown(t *testing.T) {
 
 // verify the channel returned by ShutdownDone is closed after Finalize
 func TestCore_ShutdownDone(t *testing.T) {
-	c, _, _ := TestCoreUnsealed(t)
+	c := TestCoreWithSealAndUINoCleanup(t, &CoreConfig{})
+	testCoreUnsealed(t, c)
 	doneCh := c.ShutdownDone()
 	go func() {
 		time.Sleep(100 * time.Millisecond)
-		c.Shutdown()
+		err := c.Shutdown()
+		if err != nil {
+			t.Fatal(err)
+		}
 	}()
 
 	select {
@@ -291,6 +399,112 @@ func TestCore_Seal_BadToken(t *testing.T) {
 	}
 	if c.Sealed() {
 		t.Fatal("was sealed")
+	}
+}
+
+func TestCore_PreOneTen_BatchTokens(t *testing.T) {
+	c, _, _ := TestCoreUnsealed(t)
+
+	// load up some versions and ensure that 1.9 is the most recent one by timestamp (even though this isn't realistic)
+	upgradeTimePlusEpsilon := time.Now().UTC()
+
+	versionEntries := []struct {
+		version string
+		ts      time.Time
+	}{
+		{"1.10.1", upgradeTimePlusEpsilon.Add(-4 * time.Hour)},
+		{"1.9.2", upgradeTimePlusEpsilon.Add(2 * time.Hour)},
+	}
+
+	for _, entry := range versionEntries {
+		_, err := c.storeVersionTimestamp(context.Background(), entry.version, entry.ts, false)
+		if err != nil {
+			t.Fatalf("failed to write version entry %#v, err: %s", entry, err.Error())
+		}
+	}
+
+	err := c.loadVersionTimestamps(c.activeContext)
+	if err != nil {
+		t.Fatalf("failed to populate version history cache, err: %s", err.Error())
+	}
+
+	// double check that we're working with 1.9
+	v, _, err := c.FindNewestVersionTimestamp()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if v != "1.9.2" {
+		t.Fatalf("expected 1.9.2, found: %s", v)
+	}
+
+	// generate a batch token
+	te := &logical.TokenEntry{
+		NumUses:     1,
+		Policies:    []string{"root"},
+		NamespaceID: namespace.RootNamespaceID,
+		Type:        logical.TokenTypeBatch,
+	}
+	err = c.tokenStore.create(namespace.RootContext(nil), te)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// verify it uses the legacy prefix
+	if !strings.HasPrefix(te.ID, consts.LegacyBatchTokenPrefix) {
+		t.Fatalf("expected 1.9 batch token IDs to start with b. but it didn't: %s", te.ID)
+	}
+}
+
+func TestCore_OneTenPlus_BatchTokens(t *testing.T) {
+	c, _, _ := TestCoreUnsealed(t)
+
+	// load up some versions and ensure that 1.10 is the most recent version
+	upgradeTimePlusEpsilon := time.Now().UTC()
+
+	versionEntries := []struct {
+		version string
+		ts      time.Time
+	}{
+		{"1.9.2", upgradeTimePlusEpsilon.Add(-4 * time.Hour)},
+		{"1.10.1", upgradeTimePlusEpsilon.Add(2 * time.Hour)},
+	}
+
+	for _, entry := range versionEntries {
+		_, err := c.storeVersionTimestamp(context.Background(), entry.version, entry.ts, false)
+		if err != nil {
+			t.Fatalf("failed to write version entry %#v, err: %s", entry, err.Error())
+		}
+	}
+
+	err := c.loadVersionTimestamps(c.activeContext)
+	if err != nil {
+		t.Fatalf("failed to populate version history cache, err: %s", err.Error())
+	}
+
+	// double check that we're working with 1.10
+	v, _, err := c.FindNewestVersionTimestamp()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if v != "1.10.1" {
+		t.Fatalf("expected 1.10.1, found: %s", v)
+	}
+
+	// generate a batch token
+	te := &logical.TokenEntry{
+		NumUses:     1,
+		Policies:    []string{"root"},
+		NamespaceID: namespace.RootNamespaceID,
+		Type:        logical.TokenTypeBatch,
+	}
+	err = c.tokenStore.create(namespace.RootContext(nil), te)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// verify it uses the legacy prefix
+	if !strings.HasPrefix(te.ID, consts.BatchTokenPrefix) {
+		t.Fatalf("expected 1.10 batch token IDs to start with hvb. but it didn't: %s", te.ID)
 	}
 }
 
@@ -355,7 +569,10 @@ func TestCore_HandleRequest_Lease(t *testing.T) {
 	// Read the key
 	req.Operation = logical.ReadOperation
 	req.Data = nil
-	req.SetTokenEntry(&logical.TokenEntry{ID: root, NamespaceID: "root", Policies: []string{"root"}})
+	err = c.PopulateTokenEntry(ctx, req)
+	if err != nil {
+		t.Fatalf("err: %s", err)
+	}
 	resp, err = c.HandleRequest(ctx, req)
 	if err != nil {
 		t.Fatalf("err: %v", err)
@@ -398,7 +615,10 @@ func TestCore_HandleRequest_Lease_MaxLength(t *testing.T) {
 	// Read the key
 	req.Operation = logical.ReadOperation
 	req.Data = nil
-	req.SetTokenEntry(&logical.TokenEntry{ID: root, NamespaceID: "root", Policies: []string{"root"}})
+	err = c.PopulateTokenEntry(ctx, req)
+	if err != nil {
+		t.Fatalf("err: %s", err)
+	}
 	resp, err = c.HandleRequest(ctx, req)
 	if err != nil {
 		t.Fatalf("err: %v", err)
@@ -441,7 +661,10 @@ func TestCore_HandleRequest_Lease_DefaultLength(t *testing.T) {
 	// Read the key
 	req.Operation = logical.ReadOperation
 	req.Data = nil
-	req.SetTokenEntry(&logical.TokenEntry{ID: root, NamespaceID: "root", Policies: []string{"root"}})
+	err = c.PopulateTokenEntry(ctx, req)
+	if err != nil {
+		t.Fatalf("err: %s", err)
+	}
 	resp, err = c.HandleRequest(ctx, req)
 	if err != nil {
 		t.Fatalf("err: %v", err)
@@ -472,10 +695,10 @@ func TestCore_HandleRequest_MissingToken(t *testing.T) {
 		},
 	}
 	resp, err := c.HandleRequest(namespace.RootContext(nil), req)
-	if err == nil || !errwrap.Contains(err, logical.ErrInvalidRequest.Error()) {
+	if err == nil || !errwrap.Contains(err, logical.ErrPermissionDenied.Error()) {
 		t.Fatalf("err: %v", err)
 	}
-	if resp.Data["error"] != "missing client token" {
+	if resp.Data["error"] != logical.ErrPermissionDenied.Error() {
 		t.Fatalf("bad: %#v", resp)
 	}
 }
@@ -745,12 +968,15 @@ func TestCore_HandleLogin_Token(t *testing.T) {
 	}
 
 	// Check the policy and metadata
-	te, err := c.tokenStore.Lookup(namespace.RootContext(nil), clientToken)
-	if err != nil {
-		t.Fatalf("err: %v", err)
+	innerToken, _ := c.DecodeSSCToken(clientToken)
+	te, err := c.tokenStore.Lookup(namespace.RootContext(nil), innerToken)
+	if err != nil || te == nil {
+		t.Fatalf("tok: %s, err: %v", clientToken, err)
 	}
+
+	expectedID, _ := c.DecodeSSCToken(clientToken)
 	expect := &logical.TokenEntry{
-		ID:       clientToken,
+		ID:       expectedID,
 		Accessor: te.Accessor,
 		Parent:   "",
 		Policies: []string{"bar", "default", "foo"},
@@ -830,7 +1056,7 @@ func TestCore_HandleRequest_AuditTrail(t *testing.T) {
 		t.Fatalf("bad: %#v", noop)
 	}
 	if !reflect.DeepEqual(noop.RespAuth[1], auth) {
-		t.Fatalf("bad: %#v", auth)
+		t.Fatalf("bad: %#v, vs %#v", auth, noop.RespAuth)
 	}
 	if len(noop.RespReq) != 2 || !reflect.DeepEqual(noop.RespReq[1], req) {
 		t.Fatalf("Bad: %#v", noop.RespReq[1])
@@ -929,7 +1155,10 @@ func TestCore_HandleRequest_AuditTrail_noHMACKeys(t *testing.T) {
 		ClientToken: root,
 	}
 	req.ClientToken = root
-	req.SetTokenEntry(&logical.TokenEntry{ID: root, NamespaceID: "root", Policies: []string{"root"}})
+	err = c.PopulateTokenEntry(namespace.RootContext(nil), req)
+	if err != nil {
+		t.Fatalf("err: %s", err)
+	}
 	if _, err := c.HandleRequest(namespace.RootContext(nil), req); err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -1056,10 +1285,14 @@ func TestCore_HandleRequest_CreateToken_Lease(t *testing.T) {
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
+
+	expectedID, _ := c.DecodeSSCToken(clientToken)
+	expectedRootID, _ := c.DecodeSSCToken(root)
+
 	expect := &logical.TokenEntry{
-		ID:           clientToken,
+		ID:           expectedID,
 		Accessor:     te.Accessor,
-		Parent:       root,
+		Parent:       expectedRootID,
 		Policies:     []string{"default", "foo"},
 		Path:         "auth/token/create",
 		DisplayName:  "token",
@@ -1104,10 +1337,14 @@ func TestCore_HandleRequest_CreateToken_NoDefaultPolicy(t *testing.T) {
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
+
+	expectedID, _ := c.DecodeSSCToken(clientToken)
+	expectedRootID, _ := c.DecodeSSCToken(root)
+
 	expect := &logical.TokenEntry{
-		ID:           clientToken,
+		ID:           expectedID,
 		Accessor:     te.Accessor,
-		Parent:       root,
+		Parent:       expectedRootID,
 		Policies:     []string{"foo"},
 		Path:         "auth/token/create",
 		DisplayName:  "token",
@@ -1974,7 +2211,10 @@ func TestCore_RenewSameLease(t *testing.T) {
 	// Read the key
 	req.Operation = logical.ReadOperation
 	req.Data = nil
-	req.SetTokenEntry(&logical.TokenEntry{ID: root, NamespaceID: "root", Policies: []string{"root"}})
+	err = c.PopulateTokenEntry(namespace.RootContext(nil), req)
+	if err != nil {
+		t.Fatalf("err: %s", err)
+	}
 	resp, err = c.HandleRequest(namespace.RootContext(nil), req)
 	if err != nil {
 		t.Fatalf("err: %v", err)
@@ -2061,8 +2301,9 @@ func TestCore_RenewToken_SingleRegister(t *testing.T) {
 	}
 
 	// Verify the token exists
-	if resp.Data["id"] != newClient {
-		t.Fatalf("bad: %#v", resp.Data)
+	if newClient != resp.Data["id"].(string) {
+		t.Fatalf("bad: return IDs: expected %v, got %v",
+			resp.Data["id"], newClient)
 	}
 }
 
@@ -2145,7 +2386,10 @@ path "secret/*" {
 	// Read the key
 	req.Operation = logical.ReadOperation
 	req.Data = nil
-	req.SetTokenEntry(&logical.TokenEntry{ID: root, NamespaceID: "root", Policies: []string{"root"}})
+	err = c.PopulateTokenEntry(namespace.RootContext(nil), req)
+	if err != nil {
+		t.Fatalf("err: %s", err)
+	}
 	resp, err = c.HandleRequest(namespace.RootContext(nil), req)
 	if err != nil {
 		t.Fatalf("err: %v", err)

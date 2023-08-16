@@ -16,7 +16,7 @@
 import Component from '@glimmer/component';
 import layout from '../templates/components/linkable-item';
 import { setComponentTemplate } from '@ember/component';
-
+/* eslint ember/no-empty-glimmer-component-classes: 'warn' */
 class LinkableItemComponent extends Component {}
 
 export default setComponentTemplate(layout, LinkableItemComponent);

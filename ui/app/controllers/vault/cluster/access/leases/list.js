@@ -9,7 +9,7 @@ export default Controller.extend(ListController, {
   store: service(),
   clusterController: controller('vault.cluster'),
 
-  backendCrumb: computed('clusterController.model.name', function() {
+  backendCrumb: computed('clusterController.model.name', function () {
     return {
       label: 'leases',
       text: 'leases',
@@ -20,11 +20,11 @@ export default Controller.extend(ListController, {
 
   isLoading: false,
 
-  filterIsFolder: computed('filter', function() {
+  filterIsFolder: computed('filter', function () {
     return !!utils.keyIsFolder(this.filter);
   }),
 
-  emptyTitle: computed('baseKey.id', 'filter', 'filterIsFolder', function() {
+  emptyTitle: computed('baseKey.id', 'filter', 'filterIsFolder', function () {
     let id = this.baseKey.id;
     let filter = this.filter;
     if (id === '') {
@@ -51,7 +51,7 @@ export default Controller.extend(ListController, {
             this.flashMessages.success(`All of the leases under ${prefix} will be revoked.`);
           });
         })
-        .catch(e => {
+        .catch((e) => {
           const errString = e.errors.join('.');
           this.flashMessages.danger(
             `There was an error attempting to revoke the prefix: ${prefix}. ${errString}.`

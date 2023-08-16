@@ -11,14 +11,14 @@ import { AVAILABLE_PLUGIN_TYPES } from '../../utils/database-helpers';
  * @param {*} key item by which to group the fields. If item has no group it will be under "default"
  * @returns array of objects where the key is default or the name of the option group, and the value is an array of attr names
  */
-const fieldsToGroups = function(arr, key = 'subgroup') {
+const fieldsToGroups = function (arr, key = 'subgroup') {
   const fieldGroups = [];
-  const byGroup = arr.reduce(function(rv, x) {
+  const byGroup = arr.reduce(function (rv, x) {
     (rv[x[key]] = rv[x[key]] || []).push(x);
     return rv;
   }, {});
-  Object.keys(byGroup).forEach(key => {
-    const attrsArray = byGroup[key].map(obj => obj.attr);
+  Object.keys(byGroup).forEach((key) => {
+    const attrsArray = byGroup[key].map((obj) => obj.attr);
     const group = key === 'undefined' ? 'default' : key;
     fieldGroups.push({ [group]: attrsArray });
   });
@@ -144,47 +144,47 @@ export default Model.extend({
     defaultShown: 'Default',
   }),
 
-  isAvailablePlugin: computed('plugin_name', function() {
-    return !!AVAILABLE_PLUGIN_TYPES.find(a => a.value === this.plugin_name);
+  isAvailablePlugin: computed('plugin_name', function () {
+    return !!AVAILABLE_PLUGIN_TYPES.find((a) => a.value === this.plugin_name);
   }),
 
-  showAttrs: computed('plugin_name', function() {
-    const fields = AVAILABLE_PLUGIN_TYPES.find(a => a.value === this.plugin_name)
-      .fields.filter(f => f.show !== false)
-      .map(f => f.attr);
+  showAttrs: computed('plugin_name', function () {
+    const fields = AVAILABLE_PLUGIN_TYPES.find((a) => a.value === this.plugin_name)
+      .fields.filter((f) => f.show !== false)
+      .map((f) => f.attr);
     fields.push('allowed_roles');
     return expandAttributeMeta(this, fields);
   }),
 
-  fieldAttrs: computed('plugin_name', function() {
+  fieldAttrs: computed('plugin_name', function () {
     // for both create and edit fields
     let fields = ['plugin_name', 'name', 'connection_url', 'verify_connection', 'password_policy'];
     if (this.plugin_name) {
-      fields = AVAILABLE_PLUGIN_TYPES.find(a => a.value === this.plugin_name)
-        .fields.filter(f => !f.group)
-        .map(field => field.attr);
+      fields = AVAILABLE_PLUGIN_TYPES.find((a) => a.value === this.plugin_name)
+        .fields.filter((f) => !f.group)
+        .map((field) => field.attr);
     }
     return expandAttributeMeta(this, fields);
   }),
 
-  pluginFieldGroups: computed('plugin_name', function() {
+  pluginFieldGroups: computed('plugin_name', function () {
     if (!this.plugin_name) {
       return null;
     }
-    let pluginFields = AVAILABLE_PLUGIN_TYPES.find(a => a.value === this.plugin_name).fields.filter(
-      f => f.group === 'pluginConfig'
+    let pluginFields = AVAILABLE_PLUGIN_TYPES.find((a) => a.value === this.plugin_name).fields.filter(
+      (f) => f.group === 'pluginConfig'
     );
     let groups = fieldsToGroups(pluginFields, 'subgroup');
     return fieldToAttrs(this, groups);
   }),
 
-  statementFields: computed('plugin_name', function() {
+  statementFields: computed('plugin_name', function () {
     if (!this.plugin_name) {
       return expandAttributeMeta(this, ['root_rotation_statements']);
     }
-    let fields = AVAILABLE_PLUGIN_TYPES.find(a => a.value === this.plugin_name)
-      .fields.filter(f => f.group === 'statements')
-      .map(field => field.attr);
+    let fields = AVAILABLE_PLUGIN_TYPES.find((a) => a.value === this.plugin_name)
+      .fields.filter((f) => f.group === 'statements')
+      .map((field) => field.attr);
     return expandAttributeMeta(this, fields);
   }),
 

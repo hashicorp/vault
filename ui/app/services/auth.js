@@ -3,6 +3,7 @@ import { resolve, reject } from 'rsvp';
 import { assign } from '@ember/polyfills';
 import { isArray } from '@ember/array';
 import { computed, get } from '@ember/object';
+import { capitalize } from '@ember/string';
 
 import fetch from 'fetch';
 import { getOwner } from '@ember/application';
@@ -24,6 +25,8 @@ export default Service.extend({
   IDLE_TIMEOUT: 3 * 60e3,
   expirationCalcTS: null,
   isRenewing: false,
+  mfaErrors: null,
+
   init() {
     this._super(...arguments);
     this.checkForRootToken();
@@ -33,7 +36,7 @@ export default Service.extend({
     return getOwner(this).lookup('adapter:cluster');
   },
 
-  tokens: computed(function() {
+  tokens: computed(function () {
     return this.getTokensFromStorage() || [];
   }),
 
@@ -92,7 +95,7 @@ export default Service.extend({
     return fetch(url, {
       method: opts.method || 'GET',
       headers: opts.headers || {},
-    }).then(response => {
+    }).then((response) => {
       if (response.status === 204) {
         return resolve();
       } else if (response.status >= 200 && response.status < 300) {
@@ -144,7 +147,7 @@ export default Service.extend({
     let currentBackend = BACKENDS.findBy('type', backend);
     let displayName;
     if (isArray(currentBackend.displayNamePath)) {
-      displayName = currentBackend.displayNamePath.map(name => get(resp, name)).join('/');
+      displayName = currentBackend.displayNamePath.map((name) => get(resp, name)).join('/');
     } else {
       displayName = get(resp, currentBackend.displayNamePath);
     }
@@ -217,7 +220,7 @@ export default Service.extend({
     return this.storage(token).removeItem(token);
   },
 
-  tokenExpirationDate: computed('currentTokenName', 'expirationCalcTS', function() {
+  tokenExpirationDate: computed('currentTokenName', 'expirationCalcTS', function () {
     const tokenName = this.currentTokenName;
     if (!tokenName) {
       return;
@@ -232,7 +235,7 @@ export default Service.extend({
     return expiration ? this.now() >= expiration : null;
   },
 
-  renewAfterEpoch: computed('currentTokenName', 'expirationCalcTS', function() {
+  renewAfterEpoch: computed('currentTokenName', 'expirationCalcTS', function () {
     const tokenName = this.currentTokenName;
     let { expirationCalcTS } = this;
     const data = this.getTokenData(tokenName);
@@ -252,18 +255,18 @@ export default Service.extend({
     }
     this.isRenewing = true;
     return this.renewCurrentToken().then(
-      resp => {
+      (resp) => {
         this.isRenewing = false;
         return this.persistAuthData(tokenName, resp.data || resp.auth);
       },
-      e => {
+      (e) => {
         this.isRenewing = false;
         throw e;
       }
     );
   },
 
-  checkShouldRenew: task(function*() {
+  checkShouldRenew: task(function* () {
     while (true) {
       if (Ember.testing) {
         return;
@@ -292,9 +295,10 @@ export default Service.extend({
   },
 
   setLastFetch(timestamp) {
+    const now = this.now();
     this.set('lastFetch', timestamp);
-    // if expiration was allowed we want to go ahead and renew here
-    if (this.allowExpiration) {
+    // if expiration was allowed and we're over half the ttl we want to go ahead and renew here
+    if (this.allowExpiration && now >= this.renewAfterEpoch) {
       this.renew();
     }
     this.set('allowExpiration', false);
@@ -303,7 +307,7 @@ export default Service.extend({
   getTokensFromStorage(filterFn) {
     return this.storage()
       .keys()
-      .reject(key => {
+      .reject((key) => {
         return key.indexOf(TOKEN_PREFIX) !== 0 || (filterFn && filterFn(key));
       });
   },
@@ -313,7 +317,7 @@ export default Service.extend({
       return;
     }
 
-    this.getTokensFromStorage().forEach(key => {
+    this.getTokensFromStorage().forEach((key) => {
       const data = this.getTokenData(key);
       if (data && data.policies && data.policies.includes('root')) {
         this.removeTokenData(key);
@@ -321,19 +325,95 @@ export default Service.extend({
     });
   },
 
-  async authenticate(/*{clusterId, backend, data}*/) {
+  _parseMfaResponse(mfa_requirement) {
+    // mfa_requirement response comes back in a shape that is not easy to work with
+    // convert to array of objects and add necessary properties to satisfy the view
+    if (mfa_requirement) {
+      const { mfa_request_id, mfa_constraints } = mfa_requirement;
+      let requiresAction; // if multiple constraints or methods or passcode input is needed further action will be required
+      const constraints = [];
+      for (let key in mfa_constraints) {
+        const methods = mfa_constraints[key].any;
+        const isMulti = methods.length > 1;
+        if (isMulti || methods.findBy('uses_passcode')) {
+          requiresAction = true;
+        }
+        // friendly label for display in MfaForm
+        methods.forEach((m) => {
+          const typeFormatted = m.type === 'totp' ? m.type.toUpperCase() : capitalize(m.type);
+          m.label = `${typeFormatted} ${m.uses_passcode ? 'passcode' : 'push notification'}`;
+        });
+        constraints.push({
+          name: key,
+          methods,
+          selectedMethod: isMulti ? null : methods[0],
+        });
+      }
+
+      return {
+        mfa_requirement: { mfa_request_id, mfa_constraints: constraints },
+        requiresAction,
+      };
+    }
+    return {};
+  },
+
+  async authenticate(/*{clusterId, backend, data, selectedAuth}*/) {
     const [options] = arguments;
     const adapter = this.clusterAdapter();
 
     let resp = await adapter.authenticate(options);
-    let authData = await this.persistAuthData(options, resp.auth || resp.data, this.namespaceService.path);
+    const { mfa_requirement, requiresAction } = this._parseMfaResponse(resp.auth?.mfa_requirement);
+
+    if (mfa_requirement) {
+      if (requiresAction) {
+        return { mfa_requirement };
+      }
+      // silently make request to validate endpoint when passcode is not required
+      try {
+        resp = await adapter.mfaValidate(mfa_requirement);
+      } catch (e) {
+        // it's not clear in the auth-form component whether mfa validation is taking place for non-totp method
+        // since mfa errors display a screen rather than flash message handle separately
+        this.set('mfaErrors', this.handleError(e));
+        throw e;
+      }
+    }
+
+    return this.authSuccess(options, resp.auth || resp.data);
+  },
+
+  async totpValidate({ mfa_requirement, ...options }) {
+    const resp = await this.clusterAdapter().mfaValidate(mfa_requirement);
+    return this.authSuccess(options, resp.auth || resp.data);
+  },
+
+  async authSuccess(options, response) {
+    // persist selectedAuth to sessionStorage to rehydrate auth form on logout
+    sessionStorage.setItem('selectedAuth', options.selectedAuth);
+    const authData = await this.persistAuthData(options, response, this.namespaceService.path);
     await this.permissions.getPaths.perform();
     return authData;
   },
 
+  handleError(e) {
+    if (e.errors) {
+      return e.errors.map((error) => {
+        if (error.detail) {
+          return error.detail;
+        }
+        return error;
+      });
+    }
+    return [e];
+  },
+
   getAuthType() {
-    if (!this.authData) return;
-    return this.authData.backend.type;
+    // check sessionStorage first
+    const selectedAuth = sessionStorage.getItem('selectedAuth');
+    if (selectedAuth) return selectedAuth;
+    // fallback to authData which discerns backend type from token
+    return this.authData ? this.authData.backend.type : null;
   },
 
   deleteCurrentToken() {
@@ -349,19 +429,19 @@ export default Service.extend({
   },
 
   // returns the key for the token to use
-  currentTokenName: computed('activeCluster', 'tokens', 'tokens.[]', function() {
+  currentTokenName: computed('activeCluster', 'tokens', 'tokens.[]', function () {
     const regex = new RegExp(this.activeCluster);
-    return this.tokens.find(key => regex.test(key));
+    return this.tokens.find((key) => regex.test(key));
   }),
 
-  currentToken: computed('currentTokenName', function() {
+  currentToken: computed('currentTokenName', function () {
     const name = this.currentTokenName;
     const data = name && this.getTokenData(name);
     // data.token is undefined so that's why it returns current token undefined
     return name && data ? data.token : null;
   }),
 
-  authData: computed('currentTokenName', function() {
+  authData: computed('currentTokenName', function () {
     const token = this.currentTokenName;
     if (!token) {
       return;

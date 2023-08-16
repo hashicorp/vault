@@ -2,23 +2,24 @@
   {{#each-in fieldGroup as |group fields|}}
     {{#if (eq group "default")}}
       {{#each fields as |attr|}}
+        {{! template-lint-configure simple-unless "warn"  }}
         {{#unless (and (not-eq @mode "create") (eq attr.name "name"))}}
-          {{form-field data-test-field attr=attr model=@model}}
+          <FormField data-test-field={{true}} @attr={{attr}} @model={{@model}} />
         {{/unless}}
       {{/each}}
     {{else}}
-      <ToggleButton 
+      <ToggleButton
         @class="is-block"
-        @toggleAttr={{concat "show" (camelize group)}}
-        @toggleTarget={{this}}
+        @toggleAttr={{camelize (concat "show" group)}}
+        @toggleTarget={{@model}}
         @openLabel={{concat "Hide " group}}
         @closedLabel={{group}}
-        @data-test-toggle-group={{group}} 
+        @data-test-toggle-group={{group}}
       />
-      {{#if (get this (concat "show" (camelize group)))}}
+      {{#if (get @model (camelize (concat "show" group)))}}
         <div class="box is-marginless">
           {{#each fields as |attr|}}
-            {{form-field data-test-field attr=attr model=@model}}
+            <FormField data-test-field={{true}} @attr={{attr}} @model={{@model}} />
           {{/each}}
         </div>
       {{/if}}

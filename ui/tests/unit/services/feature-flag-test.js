@@ -1,15 +1,15 @@
 import { module, test } from 'qunit';
 import { setupTest } from 'ember-qunit';
 
-module('Unit | Service | feature-flag', function(hooks) {
+module('Unit | Service | feature-flag', function (hooks) {
   setupTest(hooks);
 
-  test('it exists', function(assert) {
+  test('it exists', function (assert) {
     let service = this.owner.lookup('service:feature-flag');
     assert.ok(service);
   });
 
-  test('it returns the namespace root when flag is present', function(assert) {
+  test('it returns the namespace root when flag is present', function (assert) {
     let service = this.owner.lookup('service:feature-flag');
     assert.equal(service.managedNamespaceRoot, null, 'Managed namespace root is null by default');
     service.setFeatureFlags(['VAULT_CLOUD_ADMIN_NAMESPACE']);

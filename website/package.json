@@ -17,7 +17,7 @@
     "@hashicorp/react-button": "^6.0.1",
     "@hashicorp/react-call-to-action": "^4.1.1",
     "@hashicorp/react-consent-manager": "^7.0.1",
-    "@hashicorp/react-docs-page": "^14.12.0",
+    "@hashicorp/react-docs-page": "^14.14.3",
     "@hashicorp/react-featured-slider": "^5.0.1",
     "@hashicorp/react-head": "^3.1.2",
     "@hashicorp/react-hero": "^8.0.2",
@@ -61,7 +61,7 @@
     "directory": "website"
   },
   "scripts": {
-    "build": "next build",
+    "build": "./scripts/website-build.sh",
     "dynamic": "NODE_ENV=production next build && next start",
     "export": "next export",
     "format": "next-hashicorp format",
@@ -70,7 +70,7 @@
     "linkcheck": "linkcheck https://www.vaultproject.io",
     "lint": "next-hashicorp lint",
     "postinstall": "simple-git-hooks",
-    "start": "next-remote-watch './content/**/*.mdx'",
+    "start": "./scripts/website-start.sh",
     "static": "npm run build && npm run export && cp _redirects out/."
   },
   "simple-git-hooks": {

@@ -2,19 +2,14 @@
   <div class="has-text-grey">
     {{#if @glyph}}
       <ToolTip @horizontalPosition="left" as |T|>
-        <T.trigger>
-          <Icon
-            @glyph={{@glyph}}
-            @size="l"
-            class="has-text-grey-light"
-            data-test-linkable-item-glyph
-          />
-        </T.trigger>
-        <T.content @class="tool-tip">
+        <T.Trigger>
+          <Icon @name={{@glyph}} class="has-text-grey-light" data-test-linkable-item-glyph />
+        </T.Trigger>
+        <T.Content @defaultClass="tool-tip">
           <div class="box">
             {{or @glyphText @title}}
           </div>
-        </T.content>
+        </T.Content>
       </ToolTip>
     {{/if}}
 
@@ -25,7 +20,7 @@
           @model={{@link.model}}
           class="has-text-black has-text-weight-semibold"
           data-test-secret-path
-          >
+        >
           {{@title}}
         </LinkTo>
       {{else}}
@@ -42,7 +37,7 @@
   {{#if @description}}
     <ReadMore data-test-linkable-item-description>
       {{@description}}
-    </ReadMore> 
+    </ReadMore>
   {{/if}}
 
   {{yield}}

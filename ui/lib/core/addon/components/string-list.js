@@ -36,7 +36,7 @@ export default Component.extend({
    * Defaults to an empty array.
    *
    */
-  inputValue: computed(function() {
+  inputValue: computed(function () {
     return [];
   }),
 
@@ -65,11 +65,11 @@ export default Component.extend({
    *
    */
   /* eslint-disable ember/no-side-effects */
-  inputList: computed('content', function() {
+  inputList: computed('content', function () {
     return ArrayProxy.create({
       content: [],
       // trim the `value` when accessing objects
-      objectAtContent: function(idx) {
+      objectAtContent: function (idx) {
         const obj = this.content.objectAt(idx);
         if (obj && obj.value) {
           set(obj, 'value', obj.value.trim());
@@ -105,7 +105,7 @@ export default Component.extend({
   },
 
   toVal() {
-    const inputs = this.inputList.filter(x => x.value).mapBy('value');
+    const inputs = this.inputList.filter((x) => x.value).mapBy('value');
     if (this.format === 'string') {
       return inputs.join(',');
     }
@@ -118,14 +118,14 @@ export default Component.extend({
     if (typeof input === 'string') {
       input = input.split(',');
     }
-    inputList.addObjects(input.map(value => ({ value })));
+    inputList.addObjects(input.map((value) => ({ value })));
   },
 
   actions: {
-    inputChanged(idx, val) {
+    inputChanged(idx, event) {
       const inputObj = this.inputList.objectAt(idx);
       const onChange = this.onChange;
-      set(inputObj, 'value', val);
+      set(inputObj, 'value', event.target.value);
       onChange(this.toVal());
     },
 

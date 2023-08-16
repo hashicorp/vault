@@ -1,6 +1,5 @@
 import Component from '@glimmer/component';
-import { set } from '@ember/object';
-import { action } from '@ember/object';
+import { set, action } from '@ember/object';
 import { tracked } from '@glimmer/tracking';
 import { guidFor } from '@ember/object/internals';
 

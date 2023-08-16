@@ -159,7 +159,7 @@ func (c *KVPatchCommand) Run(args []string) int {
 		return 2
 	}
 
-	path = addPrefixToVKVPath(path, mountPath, "data")
+	path = addPrefixToKVPath(path, mountPath, "data")
 	if err != nil {
 		c.UI.Error(err.Error())
 		return 2
@@ -183,6 +183,13 @@ func (c *KVPatchCommand) Run(args []string) int {
 
 	if code != 0 {
 		return code
+	}
+
+	if Format(c.UI) == "table" {
+		outputPath(c.UI, path, "Secret Path")
+		metadata := secret.Data
+		c.UI.Info(getHeaderForMap("Metadata", metadata))
+		return OutputData(c.UI, metadata)
 	}
 
 	return OutputSecret(c.UI, secret)
@@ -281,6 +288,13 @@ func (c *KVPatchCommand) mergePatch(client *api.Client, path string, newData map
 
 	secret, err := client.Logical().JSONMergePatch(context.Background(), path, data)
 	if err != nil {
+		// If it's a 405, that probably means the server is running a pre-1.9
+		// Vault version that doesn't support the HTTP PATCH method.
+		// Fall back to the old way of doing it if the user didn't specify a -method.
+		// If they did, and it was "patch", then just error.
+		if re, ok := err.(*api.ResponseError); ok && re.StatusCode == 405 && rwFallback {
+			return c.readThenWrite(client, path, newData)
+		}
 		// If it's a 403, that probably means they don't have the patch capability in their policy. Fall back to
 		// the old way of doing it if the user didn't specify a -method. If they did, and it was "patch", then just error.
 		if re, ok := err.(*api.ResponseError); ok && re.StatusCode == 403 && rwFallback {

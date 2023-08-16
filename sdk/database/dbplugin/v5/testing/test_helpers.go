@@ -12,7 +12,11 @@ import (
 func getRequestTimeout(t *testing.T) time.Duration {
 	rawDur := os.Getenv("VAULT_TEST_DATABASE_REQUEST_TIMEOUT")
 	if rawDur == "" {
-		return 5 * time.Second
+		// Note: we incremented the default timeout from 5 to 10 seconds in a bid
+		// to fix sporadic failures of mssql_test.go tests TestInitialize() and
+		// TestUpdateUser_password().
+
+		return 10 * time.Second
 	}
 
 	dur, err := time.ParseDuration(rawDur)

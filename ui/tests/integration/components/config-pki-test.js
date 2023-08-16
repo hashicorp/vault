@@ -8,14 +8,14 @@ import configPki from '../../pages/components/config-pki';
 
 const component = create(configPki);
 
-module('Integration | Component | config pki', function(hooks) {
+module('Integration | Component | config pki', function (hooks) {
   setupRenderingTest(hooks);
 
-  hooks.beforeEach(function() {
+  hooks.beforeEach(function () {
     this.owner.lookup('service:flash-messages').registerTypes(['success']);
   });
 
-  const config = function(saveFn) {
+  const config = function (saveFn) {
     return {
       save: saveFn,
       rollbackAttributes: () => {},
@@ -44,13 +44,13 @@ module('Integration | Component | config pki', function(hooks) {
     };
   };
 
-  const setupAndRender = async function(context, section = 'tidy') {
+  const setupAndRender = async function (context, section = 'tidy') {
     context.set('config', config());
     context.set('section', section);
     await context.render(hbs`{{config-pki section=section config=config}}`);
   };
 
-  test('it renders tidy section', async function(assert) {
+  test('it renders tidy section', async function (assert) {
     await setupAndRender(this);
     assert.ok(component.text.startsWith('You can tidy up the backend'));
     assert.notOk(component.hasTitle, 'No title for tidy section');
@@ -59,7 +59,7 @@ module('Integration | Component | config pki', function(hooks) {
     assert.ok(component.fields.objectAt(1).labelText, 'Another attr');
   });
 
-  test('it renders crl section', async function(assert) {
+  test('it renders crl section', async function (assert) {
     await setupAndRender(this, 'crl');
     assert.ok(component.hasTitle, 'renders the title');
     assert.equal(component.title, 'Certificate Revocation List (CRL) config');
@@ -68,14 +68,14 @@ module('Integration | Component | config pki', function(hooks) {
     assert.ok(component.fields.objectAt(0).labelText, 'Crl');
   });
 
-  test('it renders urls section', async function(assert) {
+  test('it renders urls section', async function (assert) {
     await setupAndRender(this, 'urls');
     assert.notOk(component.hasTitle, 'No title for urls section');
     assert.equal(component.fields.length, 1);
     assert.ok(component.fields.objectAt(0).labelText, 'urls');
   });
 
-  test('it calls save with the correct arguments', async function(assert) {
+  test('it calls save with the correct arguments', async function (assert) {
     assert.expect(3);
     const section = 'tidy';
     this.set('onRefresh', () => {
@@ -83,7 +83,7 @@ module('Integration | Component | config pki', function(hooks) {
     });
     this.set(
       'config',
-      config(options => {
+      config((options) => {
         assert.equal(options.adapterOptions.method, section, 'method passed to save');
         assert.deepEqual(
           options.adapterOptions.fields,

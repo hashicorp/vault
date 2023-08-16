@@ -13,10 +13,8 @@ export default Route.extend({
     let queryParams = { source, namespace, path, code, state };
     window.opener.postMessage(queryParams, window.origin);
   },
-  renderTemplate() {
-    this.render(this.templateName, {
-      into: 'application',
-      outlet: 'main',
-    });
+  setupController(controller) {
+    this._super(...arguments);
+    controller.set('pageContainer', document.querySelector('.page-container'));
   },
 });

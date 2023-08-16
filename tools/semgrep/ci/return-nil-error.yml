@@ -1,0 +1,18 @@
+rules:
+  - id: return-nil
+    patterns:
+      - pattern-either:
+          - pattern: |
+              if err == nil {
+                      return err
+              }
+          - pattern: |
+              if err == nil {
+                      return ..., err
+              }
+    message: return nil err instead of nil value
+    languages:
+      - go
+    severity: ERROR
+    metadata:
+      license: MIT

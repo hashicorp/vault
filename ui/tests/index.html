@@ -21,6 +21,13 @@
     {{content-for "body"}}
     {{content-for "test-body"}}
 
+    <div id="qunit"></div>
+    <div id="qunit-fixture">
+      <div id="ember-testing-container">
+        <div id="ember-testing"></div>
+      </div>
+    </div>
+
     <script src="/testem.js" integrity=""></script>
     <script src="{{rootURL}}assets/vendor.js"></script>
     <script src="{{rootURL}}assets/test-support.js"></script>

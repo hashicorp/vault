@@ -140,7 +140,7 @@ func (b *backend) secretCredsRevoke(ctx context.Context, req *logical.Request, d
 			return nil, err
 		}
 
-		if exists == false {
+		if !exists {
 			return resp, nil
 		}
 

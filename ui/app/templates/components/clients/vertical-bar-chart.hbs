@@ -1,0 +1,29 @@
+<svg
+  data-test-vertical-bar-chart
+  class="chart has-grid"
+  {{on "mouseleave" this.removeTooltip}}
+  {{did-insert this.registerListener @dataset}}
+>
+</svg>
+
+{{! TOOLTIP }}
+
+{{#if this.tooltipTarget}}
+  {{! Required to set tag name = div https://github.com/yapplabs/ember-modal-dialog/issues/290 }}
+  {{! Component must be in curly bracket notation }}
+  {{! template-lint-disable no-curly-component-invocation }}
+  {{#modal-dialog
+    tagName="div"
+    tetherTarget=this.tooltipTarget
+    targetAttachment="bottom middle"
+    attachment="bottom middle"
+    offset="40px 0"
+  }}
+    <div class="chart-tooltip vertical-chart">
+      <p>{{this.tooltipTotal}}</p>
+      <p>{{this.uniqueEntities}}</p>
+      <p>{{this.nonEntityTokens}}</p>
+    </div>
+    <div class="chart-tooltip-arrow"></div>
+  {{/modal-dialog}}
+{{/if}}

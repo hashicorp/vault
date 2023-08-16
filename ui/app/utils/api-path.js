@@ -9,7 +9,7 @@ import { assert } from '@ember/debug';
 // output will result in 'foo/bar/an-id';
 
 export default function apiPath(strings, ...keys) {
-  return function(data) {
+  return function (data) {
     let dict = data || {};
     let result = [strings[0]];
     assert(

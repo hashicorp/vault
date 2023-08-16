@@ -24,6 +24,7 @@ func TestPlugin_lifecycle(t *testing.T) {
 
 	vault.TestAddTestPlugin(t, cluster.Cores[0].Core, "mock-v4-database-plugin", consts.PluginTypeDatabase, "TestBackend_PluginMain_MockV4", []string{}, "")
 	vault.TestAddTestPlugin(t, cluster.Cores[0].Core, "mock-v5-database-plugin", consts.PluginTypeDatabase, "TestBackend_PluginMain_MockV5", []string{}, "")
+	vault.TestAddTestPlugin(t, cluster.Cores[0].Core, "mock-v6-database-plugin-muxed", consts.PluginTypeDatabase, "TestBackend_PluginMain_MockV6Multiplexed", []string{}, "")
 
 	config := logical.TestBackendConfig()
 	config.StorageView = &logical.InmemStorage{}
@@ -259,6 +260,14 @@ func TestBackend_PluginMain_MockV5(t *testing.T) {
 	}
 
 	RunV5()
+}
+
+func TestBackend_PluginMain_MockV6Multiplexed(t *testing.T) {
+	if os.Getenv(pluginutil.PluginVaultVersionEnv) == "" {
+		return
+	}
+
+	RunV6Multiplexed()
 }
 
 func assertNoRespData(t *testing.T, resp *logical.Response) {

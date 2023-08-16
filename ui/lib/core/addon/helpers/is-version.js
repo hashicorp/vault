@@ -6,7 +6,7 @@ import { observer } from '@ember/object';
 
 export default Helper.extend({
   version: service(),
-  onFeaturesChange: observer('version.version', function() {
+  onFeaturesChange: observer('version.version', function () {
     this.recompute();
   }),
   compute([sku]) {

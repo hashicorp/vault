@@ -17,9 +17,10 @@ import (
 	"github.com/hashicorp/go-secure-stdlib/gatedwriter"
 	"github.com/hashicorp/go-secure-stdlib/strutil"
 	"github.com/hashicorp/vault/api"
+	"github.com/hashicorp/vault/sdk/helper/jsonutil"
 	"github.com/hashicorp/vault/sdk/helper/logging"
 	"github.com/hashicorp/vault/sdk/version"
-	"github.com/mholt/archiver"
+	"github.com/mholt/archiver/v3"
 	"github.com/mitchellh/cli"
 	"github.com/oklog/run"
 	"github.com/posener/complete"
@@ -106,6 +107,7 @@ type DebugCommand struct {
 	metricsCollection           []map[string]interface{}
 	replicationStatusCollection []map[string]interface{}
 	serverStatusCollection      []map[string]interface{}
+	inFlightReqStatusCollection []map[string]interface{}
 
 	// cachedClient holds the client retrieved during preflight
 	cachedClient *api.Client
@@ -480,7 +482,7 @@ func (c *DebugCommand) preflight(rawArgs []string) (string, error) {
 }
 
 func (c *DebugCommand) defaultTargets() []string {
-	return []string{"config", "host", "metrics", "pprof", "replication-status", "server-status", "log"}
+	return []string{"config", "host", "requests", "metrics", "pprof", "replication-status", "server-status", "log"}
 }
 
 func (c *DebugCommand) captureStaticTargets() error {
@@ -492,6 +494,7 @@ func (c *DebugCommand) captureStaticTargets() error {
 		if err != nil {
 			c.captureError("config", err)
 			c.logger.Error("config: error capturing config state", "error", err)
+			return nil
 		}
 
 		if resp != nil && resp.Data != nil {
@@ -580,6 +583,16 @@ func (c *DebugCommand) capturePollingTargets() error {
 		})
 	}
 
+	// Collect in-flight request status if target is specified
+	if strutil.StrListContains(c.flagTargets, "requests") {
+		g.Add(func() error {
+			c.collectInFlightRequestStatus(ctx)
+			return nil
+		}, func(error) {
+			cancelFunc()
+		})
+	}
+
 	if strutil.StrListContains(c.flagTargets, "log") {
 		g.Add(func() error {
 			c.writeLogs(ctx)
@@ -611,7 +624,9 @@ func (c *DebugCommand) capturePollingTargets() error {
 	if err := c.persistCollection(c.hostInfoCollection, "host_info.json"); err != nil {
 		c.UI.Error(fmt.Sprintf("Error writing data to %s: %v", "host_info.json", err))
 	}
-
+	if err := c.persistCollection(c.inFlightReqStatusCollection, "requests.json"); err != nil {
+		c.UI.Error(fmt.Sprintf("Error writing data to %s: %v", "requests.json", err))
+	}
 	return nil
 }
 
@@ -635,6 +650,7 @@ func (c *DebugCommand) collectHostInfo(ctx context.Context) {
 		resp, err := c.cachedClient.RawRequestWithContext(ctx, r)
 		if err != nil {
 			c.captureError("host", err)
+			return
 		}
 		if resp != nil {
 			defer resp.Body.Close()
@@ -642,6 +658,7 @@ func (c *DebugCommand) collectHostInfo(ctx context.Context) {
 			secret, err := api.ParseSecret(resp.Body)
 			if err != nil {
 				c.captureError("host", err)
+				return
 			}
 			if secret != nil && secret.Data != nil {
 				hostEntry := secret.Data
@@ -829,6 +846,7 @@ func (c *DebugCommand) collectReplicationStatus(ctx context.Context) {
 		resp, err := c.cachedClient.RawRequestWithContext(ctx, r)
 		if err != nil {
 			c.captureError("replication-status", err)
+			return
 		}
 		if resp != nil {
 			defer resp.Body.Close()
@@ -836,6 +854,7 @@ func (c *DebugCommand) collectReplicationStatus(ctx context.Context) {
 			secret, err := api.ParseSecret(resp.Body)
 			if err != nil {
 				c.captureError("replication-status", err)
+				return
 			}
 			if secret != nil && secret.Data != nil {
 				replicationEntry := secret.Data
@@ -877,6 +896,47 @@ func (c *DebugCommand) collectServerStatus(ctx context.Context) {
 			"seal":      sealInfo,
 		}
 		c.serverStatusCollection = append(c.serverStatusCollection, statusEntry)
+	}
+}
+
+func (c *DebugCommand) collectInFlightRequestStatus(ctx context.Context) {
+	idxCount := 0
+	intervalTicker := time.Tick(c.flagInterval)
+
+	for {
+		if idxCount > 0 {
+			select {
+			case <-ctx.Done():
+				return
+			case <-intervalTicker:
+			}
+		}
+
+		c.logger.Info("capturing in-flight request status", "count", idxCount)
+		idxCount++
+
+		req := c.cachedClient.NewRequest("GET", "/v1/sys/in-flight-req")
+		resp, err := c.cachedClient.RawRequestWithContext(ctx, req)
+		if err != nil {
+			c.captureError("requests", err)
+			return
+		}
+
+		var data map[string]interface{}
+		if resp != nil {
+			defer resp.Body.Close()
+			err = jsonutil.DecodeJSONFromReader(resp.Body, &data)
+			if err != nil {
+				c.captureError("requests", err)
+				return
+			}
+
+			statusEntry := map[string]interface{}{
+				"timestamp":          time.Now().UTC(),
+				"in_flight_requests": data,
+			}
+			c.inFlightReqStatusCollection = append(c.inFlightReqStatusCollection, statusEntry)
+		}
 	}
 }
 

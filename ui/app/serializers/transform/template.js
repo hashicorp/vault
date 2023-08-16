@@ -6,6 +6,10 @@ export default ApplicationSerializer.extend({
     if (payload.data.alphabet) {
       payload.data.alphabet = [payload.data.alphabet];
     }
+    // strip out P character from any named capture groups
+    if (payload.data.pattern) {
+      this._formatNamedCaptureGroups(payload.data, '?P', '?');
+    }
     return this._super(store, primaryModelClass, payload, id, requestType);
   },
 
@@ -15,12 +19,29 @@ export default ApplicationSerializer.extend({
       // Templates should only ever have one alphabet
       json.alphabet = json.alphabet[0];
     }
+    // add P character to any named capture groups
+    if (json.pattern) {
+      this._formatNamedCaptureGroups(json, '?', '?P');
+    }
     return json;
+  },
+
+  _formatNamedCaptureGroups(json, replace, replaceWith) {
+    // named capture groups are handled differently between Go and js
+    // first look for named capture groups in pattern string
+    const regex = new RegExp(/\?P?(<(.+?)>)/, 'g');
+    const namedGroups = json.pattern.match(regex);
+    if (namedGroups) {
+      namedGroups.forEach((group) => {
+        // add or remove P depending on destination
+        json.pattern = json.pattern.replace(group, group.replace(replace, replaceWith));
+      });
+    }
   },
 
   extractLazyPaginatedData(payload) {
     let ret;
-    ret = payload.data.keys.map(key => {
+    ret = payload.data.keys.map((key) => {
       let model = {
         id: key,
       };

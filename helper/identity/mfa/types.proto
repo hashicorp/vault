@@ -26,6 +26,8 @@ message Config {
 		DuoConfig duo_config = 8;
 		PingIDConfig pingid_config = 9;
 	}
+	// @inject_tag: sentinel:"-"
+	string namespace_id = 10;
 }
 
 // TOTPConfig represents the configuration information required to generate
@@ -61,6 +63,8 @@ message DuoConfig {
 	string api_hostname = 3;
 	// @inject_tag: sentinel:"-"
 	string push_info = 4;
+	// @inject_tag: sentinel:"-"
+	bool use_passcode = 5;
 }
 
 // OktaConfig contains Okta configuration parameters required to perform Okta
@@ -128,4 +132,17 @@ message TOTPSecret {
 	string account_name = 8;
 	// @inject_tag: sentinel:"-"
 	string key = 9;
+}
+
+// MFAEnforcementConfig is what the user provides to the
+// mfa/login_enforcement endpoint.
+message MFAEnforcementConfig {
+	string name = 1;
+	string namespace_id = 2;
+	repeated string mfa_method_ids = 3;
+	repeated string auth_method_accessors = 4;
+	repeated string auth_method_types = 5;
+	repeated string identity_group_ids = 6;
+	repeated string identity_entity_ids = 7;
+	string id = 8;
 }

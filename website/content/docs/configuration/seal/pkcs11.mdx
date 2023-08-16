@@ -57,10 +57,10 @@ These parameters apply to the `seal` stanza in the Vault configuration file:
 - `lib` `(string: <required>)`: The path to the PKCS#11 library shared object
   file. May also be specified by the `VAULT_HSM_LIB` environment variable.
 
-  ~> **Note:** Depending on your HSM, this may be either a binary or a dynamic
-  library, and its use may require other libraries depending on which system the
-  Vault binary is currently running on (e.g.: a Linux system may require other
-  libraries to interpret Windows .dll files).
+  ~> **Note:** Depending on your HSM, the value of the `lib` parameter may be
+  either a binary or a dynamic library, and its use may require other libraries
+  depending on which system the Vault binary is currently running on (e.g.: a
+  Linux system may require other libraries to interpret Windows .dll files).
 
 - `slot` `(string: <slot or token label required>)`: The slot number to use,
   specified as a string (e.g. `"2305843009213693953"`). May also be specified by
@@ -77,8 +77,7 @@ These parameters apply to the `seal` stanza in the Vault configuration file:
 
 - `pin` `(string: <required>)`: The PIN for login. May also be specified by the
   `VAULT_HSM_PIN` environment variable. _If set via the environment variable,
-  Vault will obfuscate the environment variable after reading it, and it will
-  need to be re-set if Vault is restarted._
+  it will need to be re-set if Vault is restarted._
 
 - `key_label` `(string: <required>)`: The label of the key to use. If the key
   does not exist and generation is enabled, this is the label that will be given
@@ -268,7 +267,7 @@ or deleted and are used to decrypt older data.
 rotation is desired for data that was seal wrapped prior to this version must also set
 `default_key_label` and `hmac_default_key_label` to allow for decryption of older values.
 
-## Learn
+## Tutorial
 
 Refer to the [HSM Integration - Seal Wrap](https://learn.hashicorp.com/vault/operations/ops-seal-wrap)
-guide for a step-by-step tutorial.
+tutorial to learn how to enable the Seal Wrap feature to protect your data.

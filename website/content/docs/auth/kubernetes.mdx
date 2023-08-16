@@ -20,7 +20,7 @@ Kubernetes auth.
 -> **Note:** If you are upgrading to Kubernetes v1.21+, ensure the config option
 `disable_iss_validation` is set to true. Assuming the default mount path, you
 can check with `vault read -field disable_iss_validation auth/kubernetes/config`.
-See [Kubernetes 1.21](#kubernetes-1.21) below for more details.
+See [Kubernetes 1.21](#kubernetes-1-21) below for more details.
 
 ## Authentication
 
@@ -81,7 +81,7 @@ management tool.
 1. Use the `/config` endpoint to configure Vault to talk to Kubernetes. Use
   `kubectl cluster-info` to validate the Kubernetes host address and TCP port.
   For the list of available configuration options, please see the
-  [API documentation](/api/auth/kubernetes).
+  [API documentation](/api-docs/auth/kubernetes).
 
   ```bash
   vault write auth/kubernetes/config \
@@ -112,7 +112,7 @@ management tool.
   namespace and it gives it the default policy.
 
   For the complete list of configuration options, please see the [API
-  documentation](/api/auth/kubernetes).
+  documentation](/api-docs/auth/kubernetes).
 
 ## Kubernetes 1.21
 
@@ -179,7 +179,7 @@ the default mount folder `/var/run/secrets/kubernetes.io/serviceaccount/`.
 
 ```bash
 vault write auth/kubernetes/config \
-    kubernetes_host=https://$KUBERNETES_SERVICE_HOST:$KUBERNETES_PORT
+    kubernetes_host=https://$KUBERNETES_SERVICE_HOST:$KUBERNETES_SERVICE_PORT
 ```
 
 !> **Note:** Requires Vault 1.9.3+. In earlier versions the service account
@@ -290,7 +290,7 @@ This value is then used when configuring Kubernetes auth, e.g.:
 
 ```bash
 vault write auth/kubernetes/config \
-  kubernetes_host="https://$KUBERNETES_PORT_443_TCP_ADDR:443" \
+  kubernetes_host="https://$KUBERNETES_SERVICE_HOST:$KUBERNETES_SERVICE_PORT" \
   issuer="\"test-aks-cluster-dns-d6cbb78e.hcp.uksouth.azmk8s.io\""
 ```
 
@@ -326,7 +326,7 @@ subjects:
 ## API
 
 The Kubernetes Auth Plugin has a full HTTP API. Please see the
-[API docs](/api/auth/kubernetes) for more details.
+[API docs](/api-docs/auth/kubernetes) for more details.
 
 [k8s-tokenreview]: https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.22/#tokenreview-v1-authentication-k8s-io
 
@@ -347,7 +347,7 @@ import (
 	"os"
 
 	vault "github.com/hashicorp/vault/api"
-  auth "github.com/hashicorp/vault/api/auth/kubernetes"
+  auth "github.com/hashicorp/vault/api-docs/auth/kubernetes"
 )
 
 // Fetches a key-value secret (kv-v2) after authenticating to Vault with a Kubernetes service account.

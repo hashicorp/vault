@@ -8,28 +8,28 @@ import config from 'vault/config/environment';
 
 const { DEFAULT_PAGE_SIZE } = config.APP;
 
-module('Unit | Service | store', function(hooks) {
+module('Unit | Service | store', function (hooks) {
   setupTest(hooks);
 
-  test('normalizeModelName', function(assert) {
+  test('normalizeModelName', function (assert) {
     assert.equal(normalizeModelName('oneThing'), 'one-thing', 'dasherizes modelName');
   });
 
-  test('keyForCache', function(assert) {
+  test('keyForCache', function (assert) {
     const query = { id: 1 };
     const queryWithSize = { id: 1, size: 1 };
     assert.deepEqual(keyForCache(query), JSON.stringify(query), 'generated the correct cache key');
     assert.deepEqual(keyForCache(queryWithSize), JSON.stringify(query), 'excludes size from query cache');
   });
 
-  test('clamp', function(assert) {
+  test('clamp', function (assert) {
     assert.equal(clamp('foo', 0, 100), 0, 'returns the min if passed a non-number');
     assert.equal(clamp(0, 1, 100), 1, 'returns the min when passed number is less than the min');
     assert.equal(clamp(200, 1, 100), 100, 'returns the max passed number is greater than the max');
     assert.equal(clamp(50, 1, 100), 50, 'returns the passed number when it is in range');
   });
 
-  test('store.storeDataset', function(assert) {
+  test('store.storeDataset', function (assert) {
     const arr = ['one', 'two'];
     const store = this.owner.lookup('service:store');
     const query = { id: 1 };
@@ -38,16 +38,10 @@ module('Unit | Service | store', function(hooks) {
     assert.deepEqual(store.getDataset('data', query).dataset, arr, 'it stores the array as .dataset');
     assert.deepEqual(store.getDataset('data', query).response, {}, 'it stores the response as .response');
     assert.ok(store.get('lazyCaches').has('data'), 'it stores model map');
-    assert.ok(
-      store
-        .get('lazyCaches')
-        .get('data')
-        .has(keyForCache(query)),
-      'it stores data on the model map'
-    );
+    assert.ok(store.get('lazyCaches').get('data').has(keyForCache(query)), 'it stores data on the model map');
   });
 
-  test('store.clearDataset with a prefix', function(assert) {
+  test('store.clearDataset with a prefix', function (assert) {
     const store = this.owner.lookup('service:store');
     const arr = ['one', 'two'];
     const arr2 = ['one', 'two', 'three', 'four'];
@@ -60,7 +54,7 @@ module('Unit | Service | store', function(hooks) {
     assert.notOk(store.get('lazyCaches').has(), 'cache is no longer stored');
   });
 
-  test('store.clearAllDatasets', function(assert) {
+  test('store.clearAllDatasets', function (assert) {
     const store = this.owner.lookup('service:store');
     const arr = ['one', 'two'];
     const arr2 = ['one', 'two', 'three', 'four'];
@@ -74,7 +68,7 @@ module('Unit | Service | store', function(hooks) {
     assert.notOk(store.get('lazyCaches').has('data'), 'second cache key is no longer stored');
   });
 
-  test('store.getDataset', function(assert) {
+  test('store.getDataset', function (assert) {
     const arr = ['one', 'two'];
     const store = this.owner.lookup('service:store');
     store.storeDataset('data', { id: 1 }, {}, arr);
@@ -82,7 +76,7 @@ module('Unit | Service | store', function(hooks) {
     assert.deepEqual(store.getDataset('data', { id: 1 }), { response: {}, dataset: arr });
   });
 
-  test('store.constructResponse', function(assert) {
+  test('store.constructResponse', function (assert) {
     const arr = ['one', 'two', 'three', 'fifteen', 'twelve'];
     const store = this.owner.lookup('service:store');
     store.storeDataset('data', { id: 1 }, {}, arr);
@@ -97,7 +91,7 @@ module('Unit | Service | store', function(hooks) {
     );
   });
 
-  test('store.fetchPage', function(assert) {
+  test('store.fetchPage', function (assert) {
     let done = assert.async(4);
     const keys = ['zero', 'one', 'two', 'three', 'four', 'five', 'six'];
     const data = {
@@ -116,7 +110,7 @@ module('Unit | Service | store', function(hooks) {
 
     let result;
     run(() => {
-      store.fetchPage('transit-key', query).then(r => {
+      store.fetchPage('transit-key', query).then((r) => {
         result = r;
         done();
       });
@@ -144,7 +138,7 @@ module('Unit | Service | store', function(hooks) {
           page: 3,
           responsePath: 'data.keys',
         })
-        .then(r => {
+        .then((r) => {
           result = r;
           done();
         });
@@ -165,7 +159,7 @@ module('Unit | Service | store', function(hooks) {
           page: 99,
           responsePath: 'data.keys',
         })
-        .then(r => {
+        .then((r) => {
           result = r;
           done();
         });
@@ -184,7 +178,7 @@ module('Unit | Service | store', function(hooks) {
           page: 0,
           responsePath: 'data.keys',
         })
-        .then(r => {
+        .then((r) => {
           result = r;
           done();
         });
@@ -196,7 +190,7 @@ module('Unit | Service | store', function(hooks) {
     );
   });
 
-  test('store.lazyPaginatedQuery', function(assert) {
+  test('store.lazyPaginatedQuery', function (assert) {
     let response = {
       data: ['foo'],
     };
@@ -214,7 +208,7 @@ module('Unit | Service | store', function(hooks) {
     });
 
     const query = { page: 1, size: 1, responsePath: 'data' };
-    run(function() {
+    run(function () {
       store.lazyPaginatedQuery('transit-key', query);
     });
     assert.deepEqual(
@@ -223,7 +217,7 @@ module('Unit | Service | store', function(hooks) {
       'stores returned dataset'
     );
 
-    run(function() {
+    run(function () {
       store.lazyPaginatedQuery('secret', { page: 1, responsePath: 'data' });
     });
     assert.equal(queryArgs.size, DEFAULT_PAGE_SIZE, 'calls query with DEFAULT_PAGE_SIZE');

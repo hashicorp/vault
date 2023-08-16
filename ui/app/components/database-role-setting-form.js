@@ -20,7 +20,7 @@ export default class DatabaseRoleSettingForm extends Component {
   get settingFields() {
     if (!this.args.roleType) return null;
     let dbValidFields = getRoleFields(this.args.roleType);
-    return this.args.attrs.filter(a => {
+    return this.args.attrs.filter((a) => {
       return dbValidFields.includes(a.name);
     });
   }
@@ -30,7 +30,7 @@ export default class DatabaseRoleSettingForm extends Component {
     const plugin = this.args.dbType;
     if (!type) return null;
     let dbValidFields = getStatementFields(type, plugin);
-    return this.args.attrs.filter(a => {
+    return this.args.attrs.filter((a) => {
       return dbValidFields.includes(a.name);
     });
   }

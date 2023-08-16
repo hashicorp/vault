@@ -161,6 +161,23 @@ func TestCoreUI(t testing.T, enableUI bool) *Core {
 }
 
 func TestCoreWithSealAndUI(t testing.T, opts *CoreConfig) *Core {
+	c := TestCoreWithSealAndUINoCleanup(t, opts)
+
+	t.Cleanup(func() {
+		defer func() {
+			if r := recover(); r != nil {
+				t.Log("panic closing core during cleanup", "panic", r)
+			}
+		}()
+		err := c.ShutdownWait()
+		if err != nil {
+			t.Logf("shutdown returned error: %v", err)
+		}
+	})
+	return c
+}
+
+func TestCoreWithSealAndUINoCleanup(t testing.T, opts *CoreConfig) *Core {
 	logger := logging.NewVaultLogger(log.Trace)
 	physicalBackend, err := physInmem.NewInmem(nil, logger)
 	if err != nil {
@@ -183,6 +200,7 @@ func TestCoreWithSealAndUI(t testing.T, opts *CoreConfig) *Core {
 	conf.NumExpirationWorkers = numExpirationWorkersTest
 	conf.RawConfig = opts.RawConfig
 	conf.EnableResponseHeaderHostname = opts.EnableResponseHeaderHostname
+	conf.DisableSSCTokens = opts.DisableSSCTokens
 
 	if opts.Logger != nil {
 		conf.Logger = opts.Logger
@@ -207,15 +225,6 @@ func TestCoreWithSealAndUI(t testing.T, opts *CoreConfig) *Core {
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
-
-	t.Cleanup(func() {
-		defer func() {
-			if r := recover(); r != nil {
-				t.Log("panic closing core during cleanup", "panic", r)
-			}
-		}()
-		c.Shutdown()
-	})
 
 	return c
 }
@@ -327,7 +336,11 @@ func TestCoreInitClusterWrapperSetup(t testing.T, core *Core, handler http.Handl
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
-	return result.SecretShares, result.RecoveryShares, result.RootToken
+	innerToken, err := core.DecodeSSCToken(result.RootToken)
+	if err != nil {
+		t.Fatalf("err: %s", err)
+	}
+	return result.SecretShares, result.RecoveryShares, innerToken
 }
 
 func TestCoreUnseal(core *Core, key []byte) (bool, error) {
@@ -384,10 +397,6 @@ func testCoreUnsealed(t testing.T, core *Core) (*Core, [][]byte, string) {
 	}
 
 	testCoreAddSecretMount(t, core, token)
-
-	t.Cleanup(func() {
-		core.Shutdown()
-	})
 	return core, keys, token
 }
 
@@ -447,7 +456,10 @@ func TestCoreUnsealedBackend(t testing.T, backend physical.Backend) (*Core, [][]
 				t.Log("panic closing core during cleanup", "panic", r)
 			}
 		}()
-		core.Shutdown()
+		err := core.ShutdownWait()
+		if err != nil {
+			t.Logf("shutdown returned error: %v", err)
+		}
 	})
 
 	return core, keys, token
@@ -1441,7 +1453,6 @@ func NewTestCluster(t testing.T, base *CoreConfig, opts *TestClusterOptions) *Te
 			tlsConfig.ClientAuth = tls.RequireAndVerifyClientCert
 			testCluster.ClientAuthRequired = true
 		}
-		tlsConfig.BuildNameToCertificate()
 		tlsConfigs = append(tlsConfigs, tlsConfig)
 		lns := []*TestListener{
 			{
@@ -1683,8 +1694,7 @@ func NewTestCluster(t testing.T, base *CoreConfig, opts *TestClusterOptions) *Te
 
 	// Assign clients
 	for i := 0; i < numCores; i++ {
-		testCluster.Cores[i].Client =
-			testCluster.getAPIClient(t, opts, listeners[i][0].Address.Port, tlsConfigs[i])
+		testCluster.Cores[i].Client = testCluster.getAPIClient(t, opts, listeners[i][0].Address.Port, tlsConfigs[i])
 	}
 
 	// Extra Setup
@@ -2270,4 +2280,19 @@ func (n *NoopAudit) Invalidate(ctx context.Context) {
 	n.saltMutex.Lock()
 	defer n.saltMutex.Unlock()
 	n.salt = nil
+}
+
+// RetryUntil runs f until it returns a nil result or the timeout is reached.
+// If a nil result hasn't been obtained by timeout, calls t.Fatal.
+func RetryUntil(t testing.T, timeout time.Duration, f func() error) {
+	t.Helper()
+	deadline := time.Now().Add(timeout)
+	var err error
+	for time.Now().Before(deadline) {
+		if err = f(); err == nil {
+			return
+		}
+		time.Sleep(100 * time.Millisecond)
+	}
+	t.Fatalf("did not complete before deadline, err: %v", err)
 }

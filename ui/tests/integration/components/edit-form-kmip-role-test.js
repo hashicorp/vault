@@ -1,4 +1,4 @@
-import { later, run } from '@ember/runloop';
+import { later, run, _cancelTimers as cancelTimers } from '@ember/runloop';
 import { resolve } from 'rsvp';
 import EmberObject, { computed } from '@ember/object';
 import Service from '@ember/service';
@@ -16,9 +16,9 @@ const flash = Service.extend({
 });
 const namespace = Service.extend({});
 
-const fieldToCheckbox = field => ({ name: field, type: 'boolean' });
+const fieldToCheckbox = (field) => ({ name: field, type: 'boolean' });
 
-const createModel = options => {
+const createModel = (options) => {
   let model = EmberObject.extend(COMPUTEDS, {
     /* eslint-disable ember/avoid-leaking-state-in-ember-objects */
     newFields: [
@@ -39,7 +39,7 @@ const createModel = options => {
       'tlsClientKeyType',
       'tlsClientTtl',
     ],
-    fields: computed('operationFields', function() {
+    fields: computed('operationFields', function () {
       return this.operationFields.map(fieldToCheckbox);
     }),
     destroyRecord() {
@@ -55,10 +55,10 @@ const createModel = options => {
   });
 };
 
-module('Integration | Component | edit form kmip role', function(hooks) {
+module('Integration | Component | edit form kmip role', function (hooks) {
   setupRenderingTest(hooks, { resolver });
 
-  hooks.beforeEach(function() {
+  hooks.beforeEach(function () {
     run(() => {
       this.owner.unregister('service:flash-messages');
       this.owner.register('service:flash-messages', flash);
@@ -66,7 +66,7 @@ module('Integration | Component | edit form kmip role', function(hooks) {
     });
   });
 
-  test('it renders: new model', async function(assert) {
+  test('it renders: new model', async function (assert) {
     let model = createModel({ isNew: true });
     this.set('model', model);
     await render(hbs`<EditFormKmipRole @model={{model}} />`);
@@ -74,14 +74,14 @@ module('Integration | Component | edit form kmip role', function(hooks) {
     assert.dom('[data-test-input="operationAll"]').isChecked('sets operationAll');
   });
 
-  test('it renders: operationAll', async function(assert) {
+  test('it renders: operationAll', async function (assert) {
     let model = createModel({ operationAll: true });
     this.set('model', model);
     await render(hbs`<EditFormKmipRole @model={{model}} />`);
     assert.dom('[data-test-input="operationAll"]').isChecked('sets operationAll');
   });
 
-  test('it renders: operationNone', async function(assert) {
+  test('it renders: operationNone', async function (assert) {
     let model = createModel({ operationNone: true });
     this.set('model', model);
     await render(hbs`<EditFormKmipRole @model={{model}} />`);
@@ -89,7 +89,7 @@ module('Integration | Component | edit form kmip role', function(hooks) {
     assert.dom('[data-test-input="operationNone"]').isNotChecked('sets operationNone');
   });
 
-  test('it renders: choose operations', async function(assert) {
+  test('it renders: choose operations', async function (assert) {
     let model = createModel({ operationGet: true });
     this.set('model', model);
     await render(hbs`<EditFormKmipRole @model={{model}} />`);
@@ -148,7 +148,7 @@ module('Integration | Component | edit form kmip role', function(hooks) {
   ];
   for (let testCase of savingTests) {
     let [name, initialState, displayClicks, stateBeforeSave, stateAfterSave] = testCase;
-    test(name, async function(assert) {
+    test(name, async function (assert) {
       let model = createModel(initialState);
       this.set('model', model);
       let clickTargets = displayClicks.split(',');
@@ -163,7 +163,7 @@ module('Integration | Component | edit form kmip role', function(hooks) {
 
       click('[data-test-edit-form-submit]');
 
-      later(() => run.cancelTimers(), 50);
+      later(() => cancelTimers(), 50);
       return settled().then(() => {
         for (let afterStateKey of Object.keys(stateAfterSave)) {
           assert.equal(

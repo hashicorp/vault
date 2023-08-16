@@ -36,16 +36,16 @@ by the Vault server on start so that clients can interact with it.
 Once started, the Vault is in a _sealed_ state. Before any operation can be
 performed on the Vault it must be unsealed. This is done by providing the unseal
 keys. When the Vault is initialized it generates an encryption key which is used
-to protect all the data. That key is protected by a master key. By default,
+to protect all the data. That key is protected by a root key. By default,
 Vault uses a technique known as [Shamir's secret sharing
 algorithm](https://en.wikipedia.org/wiki/Shamir's_Secret_Sharing) to split the
-master key into 5 shares, any 3 of which are required to reconstruct the master
+root key into 5 shares, any 3 of which are required to reconstruct the master
 key.
 
 [![Vault Shamir Secret Sharing Algorithm](/img/vault-shamir-secret-sharing.svg)](/img/vault-shamir-secret-sharing.svg)
 
 The number of shares and the minimum threshold required can both be specified.
-Shamir's technique can be disabled, and the master key can be used directly for
+Shamir's technique can be disabled, and the root key can be used directly for
 unsealing. Once Vault retrieves the encryption key, it is able to decrypt the
 data in the storage backend, and enters the _unsealed_ state. Once unsealed,
 Vault loads all of the configured audit devices, auth methods, and secrets

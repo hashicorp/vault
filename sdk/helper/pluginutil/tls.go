@@ -83,8 +83,6 @@ func createClientTLSConfig(certBytes []byte, key *ecdsa.PrivateKey) (*tls.Config
 		MinVersion:   tls.VersionTLS12,
 	}
 
-	tlsConfig.BuildNameToCertificate()
-
 	return tlsConfig, nil
 }
 

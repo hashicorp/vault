@@ -7,11 +7,11 @@ export default Component.extend({
   tagName: 'a',
   role: 'button',
   attributeBindings: ['role', 'download', 'href'],
-  download: computed('filename', 'extension', function() {
+  download: computed('filename', 'extension', function () {
     return `${this.filename}-${new Date().toISOString()}.${this.extension}`;
   }),
 
-  fileLike: computed('data', 'mime', 'stringify', 'download', function() {
+  fileLike: computed('data', 'mime', 'stringify', 'download', function () {
     let file;
     let data = this.data;
     let filename = this.download;
@@ -28,7 +28,7 @@ export default Component.extend({
     return file;
   }),
 
-  href: computed('fileLike', function() {
+  href: computed('fileLike', function () {
     return window.URL.createObjectURL(this.fileLike);
   }),
 

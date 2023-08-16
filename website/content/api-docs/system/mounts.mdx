@@ -1,12 +1,12 @@
 ---
 layout: api
 page_title: /sys/mounts - HTTP API
-description: The `/sys/mounts` endpoint is used manage secrets engines in Vault.
+description: The `/sys/mounts` endpoint is used to manage secrets engines in Vault.
 ---
 
 # `/sys/mounts`
 
-The `/sys/mounts` endpoint is used manage secrets engines in Vault.
+The `/sys/mounts` endpoint is used to manage secrets engines in Vault.
 
 ## List Mounted Secrets Engines
 
@@ -212,6 +212,23 @@ $ curl \
     http://127.0.0.1:8200/v1/sys/mounts/my-mount
 ```
 
+### Force Disable
+
+Because disabling a secrets engine revokes secrets associated with this mount,
+possible errors can prevent the secrets engine from being disabled if the
+revocation fails.
+
+The best way to resolve this is to figure out the underlying issue and then
+disable the secrets engine once the underlying issue is resolved. Often, this can be as
+simple as increasing the timeout (in the event of timeout errors).
+
+For recovery situations where the secret was manually removed from the
+secrets backing service, one can force a secrets engine disable in Vault by
+performing a [force revoke](https://www.vaultproject.io/api/system/leases#revoke-force)
+on the mount prefix, followed by a secrets disable when that completes. 
+If the underlying secrets were not manually cleaned up, this method might result
+in dangling credentials. This is meant for extreme circumstances.
+
 ## Get the configuration of a Secret Engine
 
 This endpoint returns the configuration of a specific secret engine.
@@ -335,6 +352,9 @@ This endpoint tunes configuration parameters for a given mount point.
 
 - `allowed_response_headers` `(array: [])` - List of headers to whitelist,
   allowing a plugin to include them in the response.
+
+- `allowed_managed_keys` `(array: [])` - List of managed key registry entry names
+  that the mount in question is allowed to access.
 
 ### Sample Payload
 

@@ -11,7 +11,7 @@ export default Component.extend({
   //public API
   noun: null,
   mode: 'edit',
-  modeVerb: computed('mode', function() {
+  modeVerb: computed('mode', function () {
     let mode = this.mode;
     if (!mode) {
       return '';

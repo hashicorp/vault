@@ -20,7 +20,7 @@ let secretModel = (store, backend, key) => {
   return secret;
 };
 
-const transformModel = queryParams => {
+const transformModel = (queryParams) => {
   let modelType = 'transform';
   if (!queryParams || !queryParams.itemType) return modelType;
 

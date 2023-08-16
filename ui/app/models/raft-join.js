@@ -31,7 +31,7 @@ export default Model.extend({
     label: 'Leader Client Key',
     editType: 'file',
   }),
-  fields: computed(function() {
+  fields: computed(function () {
     return expandAttributeMeta(this, [
       'leaderApiAddr',
       'leaderCaCert',

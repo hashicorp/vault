@@ -48,6 +48,7 @@ func TestSysConfigState_Sanitized(t *testing.T) {
 		"plugin_directory":                    "",
 		"enable_response_header_hostname":     false,
 		"enable_response_header_raft_node_id": false,
+		"log_requests_level":                  "",
 	}
 
 	expected = map[string]interface{}{

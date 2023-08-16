@@ -29,7 +29,8 @@ _testmain.go
 /pkg/
 
 # Generated Web UI goes here
-/http/web_ui/**
+/http/web_ui/*.*
+/http/web_ui/**/*.*
 
 # Vault-specific
 example.hcl
@@ -50,6 +51,9 @@ Vagrantfile
 
 # Configs
 *.hcl
+!.release/ci.hcl
+!.release/security-scan.hcl
+!.release/linux/package/etc/vault.d/vault.hcl
 !command/agent/config/test-fixtures/*.hcl
 !command/server/test-fixtures/**/*.hcl
 

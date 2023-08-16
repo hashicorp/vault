@@ -2,7 +2,7 @@ import { attr } from '@ember-data/model';
 import { assign } from '@ember/polyfills';
 import { camelize, capitalize } from '@ember/string';
 
-export const expandOpenApiProps = function(props) {
+export const expandOpenApiProps = function (props) {
   let attrs = {};
   // expand all attributes
   for (const propName in props) {
@@ -68,11 +68,11 @@ export const expandOpenApiProps = function(props) {
   return attrs;
 };
 
-export const combineAttributes = function(oldAttrs, newProps) {
+export const combineAttributes = function (oldAttrs, newProps) {
   let newAttrs = {};
   let newFields = [];
   if (oldAttrs) {
-    oldAttrs.forEach(function(value, name) {
+    oldAttrs.forEach(function (value, name) {
       if (newProps[name]) {
         newAttrs[name] = attr(newProps[name].type, assign({}, newProps[name], value.options));
       } else {
@@ -91,8 +91,8 @@ export const combineAttributes = function(oldAttrs, newProps) {
   return { attrs: newAttrs, newFields };
 };
 
-export const combineFields = function(currentFields, newFields, excludedFields) {
-  let otherFields = newFields.filter(field => {
+export const combineFields = function (currentFields, newFields, excludedFields) {
+  let otherFields = newFields.filter((field) => {
     return !currentFields.includes(field) && !excludedFields.includes(field);
   });
   if (otherFields.length) {
@@ -101,13 +101,13 @@ export const combineFields = function(currentFields, newFields, excludedFields) 
   return currentFields;
 };
 
-export const combineFieldGroups = function(currentGroups, newFields, excludedFields) {
+export const combineFieldGroups = function (currentGroups, newFields, excludedFields) {
   let allFields = [];
   for (let group of currentGroups) {
     let fieldName = Object.keys(group)[0];
     allFields = allFields.concat(group[fieldName]);
   }
-  let otherFields = newFields.filter(field => {
+  let otherFields = newFields.filter((field) => {
     return !allFields.includes(field) && !excludedFields.includes(field);
   });
   if (otherFields.length) {

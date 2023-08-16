@@ -644,6 +644,12 @@ func (c *ServerCommand) runRecoveryMode() int {
 	infoKeys = append(infoKeys, "go version")
 	info["go version"] = runtime.Version()
 
+	fipsStatus := getFIPSInfoKey()
+	if fipsStatus != "" {
+		infoKeys = append(infoKeys, "fips")
+		info["fips"] = fipsStatus
+	}
+
 	// Server configuration output
 	padding := 24
 
@@ -724,7 +730,6 @@ func (c *ServerCommand) runRecoveryMode() int {
 			c.logger.Info("goroutine trace", "stack", string(buf[:n]))
 		}
 	}
-
 }
 
 func logProxyEnvironmentVariables(logger hclog.Logger) {
@@ -1158,6 +1163,15 @@ func (c *ServerCommand) Run(args []string) int {
 	if envLicense := os.Getenv(EnvVaultLicense); envLicense != "" {
 		config.License = envLicense
 	}
+	if disableSSC := os.Getenv(DisableSSCTokens); disableSSC != "" {
+		var err error
+		config.DisableSSCTokens, err = strconv.ParseBool(disableSSC)
+		if err != nil {
+			c.UI.Warn(wrapAtLength("WARNING! failed to parse " +
+				"VAULT_DISABLE_SERVER_SIDE_CONSISTENT_TOKENS env var: " +
+				"setting to default value false"))
+		}
+	}
 
 	// If mlockall(2) isn't supported, show a warning. We disable this in dev
 	// because it is quite scary to see when first using Vault. We also disable
@@ -1378,6 +1392,12 @@ func (c *ServerCommand) Run(args []string) int {
 	infoKeys = append(infoKeys, "go version")
 	info["go version"] = runtime.Version()
 
+	fipsStatus := getFIPSInfoKey()
+	if fipsStatus != "" {
+		infoKeys = append(infoKeys, "fips")
+		info["fips"] = fipsStatus
+	}
+
 	sort.Strings(infoKeys)
 	c.UI.Output("==> Vault server configuration:\n")
 
@@ -1547,6 +1567,9 @@ func (c *ServerCommand) Run(args []string) int {
 				c.logger.Error(err.Error())
 			}
 
+			// Setting log request with the new value in the config after reload
+			core.ReloadLogRequestsLevel()
+
 			if config.LogLevel != "" {
 				configLogLevel := strings.ToLower(strings.TrimSpace(config.LogLevel))
 				switch configLogLevel {
@@ -1581,6 +1604,10 @@ func (c *ServerCommand) Run(args []string) int {
 			case c.licenseReloadedCh <- err:
 			default:
 			}
+
+			// Let the managedKeyRegistry react to configuration changes (i.e.
+			// changes in kms_libraries)
+			core.ReloadManagedKeyRegistryConfig()
 
 		case <-c.SigUSR2Ch:
 			logWriter := c.logger.StandardWriter(&hclog.StandardLoggerOptions{})
@@ -1797,6 +1824,12 @@ func (c *ServerCommand) enableThreeNodeDevCluster(base *vault.CoreConfig, info m
 
 	infoKeys = append(infoKeys, "go version")
 	info["go version"] = runtime.Version()
+
+	fipsStatus := getFIPSInfoKey()
+	if fipsStatus != "" {
+		infoKeys = append(infoKeys, "fips")
+		info["fips"] = fipsStatus
+	}
 
 	// Server configuration output
 	padding := 24
@@ -2407,6 +2440,11 @@ CLUSTER_SYNTHESIS_COMPLETE:
 	}
 
 	if coreConfig.ClusterAddr != "" {
+		rendered, err := configutil.ParseSingleIPTemplate(coreConfig.ClusterAddr)
+		if err != nil {
+			return fmt.Errorf("Error parsing cluster address %s: %v", coreConfig.ClusterAddr, err)
+		}
+		coreConfig.ClusterAddr = rendered
 		// Force https as we'll always be TLS-secured
 		u, err := url.ParseRequestURI(coreConfig.ClusterAddr)
 		if err != nil {
@@ -2477,6 +2515,7 @@ func createCoreConfig(c *ServerCommand, config *server.Config, backend physical.
 		EnableResponseHeaderRaftNodeID: config.EnableResponseHeaderRaftNodeID,
 		License:                        config.License,
 		LicensePath:                    config.LicensePath,
+		DisableSSCTokens:               config.DisableSSCTokens,
 	}
 	if c.flagDev {
 		coreConfig.EnableRaw = true

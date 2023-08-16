@@ -3,6 +3,7 @@ package vault
 import (
 	"context"
 	"net/http"
+	"os"
 	"runtime"
 	"sync/atomic"
 	"time"
@@ -71,9 +72,18 @@ func (s *forwardedRequestRPCServer) ForwardRequest(ctx context.Context, freq *fo
 	return resp, nil
 }
 
+type nodeHAConnectionInfo struct {
+	nodeInfo      *NodeInformation
+	lastHeartbeat time.Time
+}
+
 func (s *forwardedRequestRPCServer) Echo(ctx context.Context, in *EchoRequest) (*EchoReply, error) {
+	incomingNodeConnectionInfo := nodeHAConnectionInfo{
+		nodeInfo:      in.NodeInfo,
+		lastHeartbeat: time.Now(),
+	}
 	if in.ClusterAddr != "" {
-		s.core.clusterPeerClusterAddrsCache.Set(in.ClusterAddr, nil, 0)
+		s.core.clusterPeerClusterAddrsCache.Set(in.ClusterAddr, incomingNodeConnectionInfo, 0)
 	}
 
 	if in.RaftAppliedIndex > 0 && len(in.RaftNodeID) > 0 && s.raftFollowerStates != nil {
@@ -106,12 +116,18 @@ type forwardingClient struct {
 // with these requests it's useful to keep this as well
 func (c *forwardingClient) startHeartbeat() {
 	go func() {
+		clusterAddr := c.core.ClusterAddr()
+		hostname, _ := os.Hostname()
+		ni := NodeInformation{
+			ApiAddr:  c.core.redirectAddr,
+			Hostname: hostname,
+			Mode:     "standby",
+		}
 		tick := func() {
-			clusterAddr := c.core.ClusterAddr()
-
 			req := &EchoRequest{
 				Message:     "ping",
 				ClusterAddr: clusterAddr,
+				NodeInfo:    &ni,
 			}
 
 			if raftBackend := c.core.getRaftBackend(); raftBackend != nil {

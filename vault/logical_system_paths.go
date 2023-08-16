@@ -156,7 +156,7 @@ func (b *SystemBackend) configPaths() []*framework.Path {
 			Fields: map[string]*framework.FieldSchema{
 				"key": {
 					Type:        framework.TypeString,
-					Description: "Specifies a single master key share.",
+					Description: "Specifies a single unseal key share.",
 				},
 				"nonce": {
 					Type:        framework.TypeString,
@@ -165,8 +165,8 @@ func (b *SystemBackend) configPaths() []*framework.Path {
 			},
 			Operations: map[logical.Operation]framework.OperationHandler{
 				logical.UpdateOperation: &framework.PathOperation{
-					Summary:     "Enter a single master key share to progress the root generation attempt.",
-					Description: "If the threshold number of master key shares is reached, Vault will complete the root generation and issue the new token. Otherwise, this API must be called multiple times until that threshold is met. The attempt nonce must be provided with each call.",
+					Summary:     "Enter a single unseal key share to progress the root generation attempt.",
+					Description: "If the threshold number of unseal key shares is reached, Vault will complete the root generation and issue the new token. Otherwise, this API must be called multiple times until that threshold is met. The attempt nonce must be provided with each call.",
 				},
 			},
 
@@ -239,11 +239,11 @@ func (b *SystemBackend) configPaths() []*framework.Path {
 				},
 				"secret_shares": {
 					Type:        framework.TypeInt,
-					Description: "Specifies the number of shares to split the master key into.",
+					Description: "Specifies the number of shares to split the unseal key into.",
 				},
 				"secret_threshold": {
 					Type:        framework.TypeInt,
-					Description: "Specifies the number of shares required to reconstruct the master key. This must be less than or equal secret_shares. If using Vault HSM with auto-unsealing, this value must be the same as `secret_shares`.",
+					Description: "Specifies the number of shares required to reconstruct the unseal key. This must be less than or equal secret_shares. If using Vault HSM with auto-unsealing, this value must be the same as `secret_shares`.",
 				},
 				"stored_shares": {
 					Type:        framework.TypeInt,
@@ -299,11 +299,11 @@ func (b *SystemBackend) rekeyPaths() []*framework.Path {
 			Fields: map[string]*framework.FieldSchema{
 				"secret_shares": {
 					Type:        framework.TypeInt,
-					Description: "Specifies the number of shares to split the master key into.",
+					Description: "Specifies the number of shares to split the unseal key into.",
 				},
 				"secret_threshold": {
 					Type:        framework.TypeInt,
-					Description: "Specifies the number of shares required to reconstruct the master key. This must be less than or equal secret_shares. If using Vault HSM with auto-unsealing, this value must be the same as secret_shares.",
+					Description: "Specifies the number of shares required to reconstruct the unseal key. This must be less than or equal secret_shares. If using Vault HSM with auto-unsealing, this value must be the same as secret_shares.",
 				},
 				"pgp_keys": {
 					Type:        framework.TypeCommaStringSlice,
@@ -372,7 +372,7 @@ func (b *SystemBackend) rekeyPaths() []*framework.Path {
 			Fields: map[string]*framework.FieldSchema{
 				"key": {
 					Type:        framework.TypeString,
-					Description: "Specifies a single master key share.",
+					Description: "Specifies a single unseal key share.",
 				},
 				"nonce": {
 					Type:        framework.TypeString,
@@ -382,7 +382,7 @@ func (b *SystemBackend) rekeyPaths() []*framework.Path {
 
 			Operations: map[logical.Operation]framework.OperationHandler{
 				logical.UpdateOperation: &framework.PathOperation{
-					Summary: "Enter a single master key share to progress the rekey of the Vault.",
+					Summary: "Enter a single unseal key share to progress the rekey of the Vault.",
 				},
 			},
 		},
@@ -392,7 +392,7 @@ func (b *SystemBackend) rekeyPaths() []*framework.Path {
 			Fields: map[string]*framework.FieldSchema{
 				"key": {
 					Type:        framework.TypeString,
-					Description: "Specifies a single master share key from the new set of shares.",
+					Description: "Specifies a single unseal share key from the new set of shares.",
 				},
 				"nonce": {
 					Type:        framework.TypeString,
@@ -430,7 +430,7 @@ func (b *SystemBackend) rekeyPaths() []*framework.Path {
 			Fields: map[string]*framework.FieldSchema{
 				"key": {
 					Type:        framework.TypeString,
-					Description: "Specifies a single master key share. This is required unless reset is true.",
+					Description: "Specifies a single unseal key share. This is required unless reset is true.",
 				},
 				"reset": {
 					Type:        framework.TypeBool,
@@ -475,6 +475,31 @@ func (b *SystemBackend) statusPaths() []*framework.Path {
 
 			HelpSynopsis:    strings.TrimSpace(sysHelp["seal-status"][0]),
 			HelpDescription: strings.TrimSpace(sysHelp["seal-status"][1]),
+		},
+		{
+			Pattern: "ha-status$",
+
+			Operations: map[logical.Operation]framework.OperationHandler{
+				logical.ReadOperation: &framework.PathOperation{
+					Callback: b.handleHAStatus,
+					Summary:  "Check the HA status of a Vault cluster",
+				},
+			},
+
+			HelpSynopsis:    strings.TrimSpace(sysHelp["ha-status"][0]),
+			HelpDescription: strings.TrimSpace(sysHelp["ha-status"][1]),
+		},
+		{
+			Pattern: "version-history/$",
+			Operations: map[logical.Operation]framework.OperationHandler{
+				logical.ListOperation: &framework.PathOperation{
+					Callback: b.handleVersionHistoryList,
+					Summary:  "Returns map of historical version change entries",
+				},
+			},
+
+			HelpSynopsis:    strings.TrimSpace(sysHelp["version-history"][0]),
+			HelpDescription: strings.TrimSpace(sysHelp["version-history"][1]),
 		},
 	}
 }
@@ -927,8 +952,8 @@ func (b *SystemBackend) internalPaths() []*framework.Path {
 			Pattern: "internal/ui/namespaces",
 			Operations: map[logical.Operation]framework.OperationHandler{
 				logical.ReadOperation: &framework.PathOperation{
-					Callback:    pathInternalUINamespacesRead(b),
-					Summary: "Backwards compatibility is not guaranteed for this API",
+					Callback: pathInternalUINamespacesRead(b),
+					Summary:  "Backwards compatibility is not guaranteed for this API",
 				},
 			},
 			HelpSynopsis:    strings.TrimSpace(sysHelp["internal-ui-namespaces"][0]),
@@ -938,8 +963,8 @@ func (b *SystemBackend) internalPaths() []*framework.Path {
 			Pattern: "internal/ui/resultant-acl",
 			Operations: map[logical.Operation]framework.OperationHandler{
 				logical.ReadOperation: &framework.PathOperation{
-					Callback:    b.pathInternalUIResultantACL,
-					Summary: "Backwards compatibility is not guaranteed for this API",
+					Callback: b.pathInternalUIResultantACL,
+					Summary:  "Backwards compatibility is not guaranteed for this API",
 				},
 			},
 			HelpSynopsis:    strings.TrimSpace(sysHelp["internal-ui-resultant-acl"][0]),
@@ -949,8 +974,8 @@ func (b *SystemBackend) internalPaths() []*framework.Path {
 			Pattern: "internal/counters/requests",
 			Operations: map[logical.Operation]framework.OperationHandler{
 				logical.ReadOperation: &framework.PathOperation{
-					Callback:    b.pathInternalCountersRequests,
-					Summary: "Backwards compatibility is not guaranteed for this API",
+					Callback: b.pathInternalCountersRequests,
+					Summary:  "Backwards compatibility is not guaranteed for this API",
 				},
 			},
 			HelpSynopsis:    strings.TrimSpace(sysHelp["internal-counters-requests"][0]),
@@ -960,8 +985,8 @@ func (b *SystemBackend) internalPaths() []*framework.Path {
 			Pattern: "internal/counters/tokens",
 			Operations: map[logical.Operation]framework.OperationHandler{
 				logical.ReadOperation: &framework.PathOperation{
-					Callback:    b.pathInternalCountersTokens,
-					Summary: "Backwards compatibility is not guaranteed for this API",
+					Callback: b.pathInternalCountersTokens,
+					Summary:  "Backwards compatibility is not guaranteed for this API",
 				},
 			},
 			HelpSynopsis:    strings.TrimSpace(sysHelp["internal-counters-tokens"][0]),
@@ -971,8 +996,8 @@ func (b *SystemBackend) internalPaths() []*framework.Path {
 			Pattern: "internal/counters/entities",
 			Operations: map[logical.Operation]framework.OperationHandler{
 				logical.ReadOperation: &framework.PathOperation{
-					Callback:    b.pathInternalCountersEntities,
-					Summary: "Backwards compatibility is not guaranteed for this API",
+					Callback: b.pathInternalCountersEntities,
+					Summary:  "Backwards compatibility is not guaranteed for this API",
 				},
 			},
 			HelpSynopsis:    strings.TrimSpace(sysHelp["internal-counters-entities"][0]),
@@ -1283,27 +1308,50 @@ func (b *SystemBackend) leasePaths() []*framework.Path {
 	}
 }
 
-func (b *SystemBackend) remountPath() *framework.Path {
-	return &framework.Path{
-		Pattern: "remount",
+func (b *SystemBackend) remountPaths() []*framework.Path {
+	return []*framework.Path{
+		{
+			Pattern: "remount",
 
-		Fields: map[string]*framework.FieldSchema{
-			"from": {
-				Type:        framework.TypeString,
-				Description: "The previous mount point.",
+			Fields: map[string]*framework.FieldSchema{
+				"from": {
+					Type:        framework.TypeString,
+					Description: "The previous mount point.",
+				},
+				"to": {
+					Type:        framework.TypeString,
+					Description: "The new mount point.",
+				},
 			},
-			"to": {
-				Type:        framework.TypeString,
-				Description: "The new mount point.",
+
+			Operations: map[logical.Operation]framework.OperationHandler{
+				logical.UpdateOperation: &framework.PathOperation{
+					Callback: b.handleRemount,
+					Summary:  "Initiate a mount migration",
+				},
 			},
+			HelpSynopsis:    strings.TrimSpace(sysHelp["remount"][0]),
+			HelpDescription: strings.TrimSpace(sysHelp["remount"][1]),
 		},
+		{
+			Pattern: "remount/status/(?P<migration_id>.+?)$",
 
-		Callbacks: map[logical.Operation]framework.OperationFunc{
-			logical.UpdateOperation: b.handleRemount,
+			Fields: map[string]*framework.FieldSchema{
+				"migration_id": {
+					Type:        framework.TypeString,
+					Description: "The ID of the migration operation",
+				},
+			},
+
+			Operations: map[logical.Operation]framework.OperationHandler{
+				logical.ReadOperation: &framework.PathOperation{
+					Callback: b.handleRemountStatusCheck,
+					Summary:  "Check status of a mount migration",
+				},
+			},
+			HelpSynopsis:    strings.TrimSpace(sysHelp["remount-status"][0]),
+			HelpDescription: strings.TrimSpace(sysHelp["remount-status"][1]),
 		},
-
-		HelpSynopsis:    strings.TrimSpace(sysHelp["remount"][0]),
-		HelpDescription: strings.TrimSpace(sysHelp["remount"][1]),
 	}
 }
 
@@ -1340,6 +1388,19 @@ func (b *SystemBackend) monitorPath() *framework.Path {
 		},
 		HelpSynopsis:    strings.TrimSpace(sysHelp["monitor"][0]),
 		HelpDescription: strings.TrimSpace(sysHelp["monitor"][1]),
+	}
+}
+
+func (b *SystemBackend) inFlightRequestPath() *framework.Path {
+	return &framework.Path{
+		Pattern: "in-flight-req",
+		Operations: map[logical.Operation]framework.OperationHandler{
+			logical.ReadOperation: &framework.PathOperation{
+				Callback:    b.handleInFlightRequestData,
+				Summary:     strings.TrimSpace(sysHelp["in-flight-req"][0]),
+				Description: strings.TrimSpace(sysHelp["in-flight-req"][1]),
+			},
+		},
 	}
 }
 
@@ -1475,6 +1536,10 @@ func (b *SystemBackend) authPaths() []*framework.Path {
 				},
 			},
 			Operations: map[logical.Operation]framework.OperationHandler{
+				logical.ReadOperation: &framework.PathOperation{
+					Callback: b.handleReadAuth,
+					Summary:  "Read the configuration of the auth engine at the given path.",
+				},
 				logical.UpdateOperation: &framework.PathOperation{
 					Callback: b.handleEnableAuth,
 					Summary:  "Enables a new auth method.",
@@ -1587,6 +1652,17 @@ func (b *SystemBackend) policyPaths() []*framework.Path {
 
 			HelpSynopsis:    strings.TrimSpace(sysHelp["policy"][0]),
 			HelpDescription: strings.TrimSpace(sysHelp["policy"][1]),
+		},
+
+		{
+			Pattern: "policies/password/?$",
+
+			Operations: map[logical.Operation]framework.OperationHandler{
+				logical.ListOperation: &framework.PathOperation{
+					Callback: b.handlePoliciesPasswordList,
+					Summary:  "List the existing password policies.",
+				},
+			},
 		},
 
 		{
@@ -1768,6 +1844,10 @@ func (b *SystemBackend) mountPaths() []*framework.Path {
 				"token_type": {
 					Type:        framework.TypeString,
 					Description: strings.TrimSpace(sysHelp["token_type"][0]),
+				},
+				"allowed_managed_keys": {
+					Type:        framework.TypeCommaStringSlice,
+					Description: strings.TrimSpace(sysHelp["tune_allowed_managed_keys"][0]),
 				},
 			},
 

@@ -5,10 +5,10 @@ import page from 'vault/tests/pages/secrets/backend/list';
 import authPage from 'vault/tests/pages/auth';
 import enablePage from 'vault/tests/pages/settings/mount-secret-backend';
 
-module('Acceptance | secrets/pki/list', function(hooks) {
+module('Acceptance | secrets/pki/list', function (hooks) {
   setupApplicationTest(hooks);
 
-  hooks.beforeEach(function() {
+  hooks.beforeEach(function () {
     return authPage.login();
   });
 
@@ -18,7 +18,7 @@ module('Acceptance | secrets/pki/list', function(hooks) {
     await page.visitRoot({ backend: path });
   };
 
-  test('it renders an empty list', async function(assert) {
+  test('it renders an empty list', async function (assert) {
     await mountAndNav(assert);
     assert.equal(currentRouteName(), 'vault.cluster.secrets.backend.list-root', 'redirects from the index');
     assert.ok(page.createIsPresent, 'create button is present');
@@ -28,13 +28,13 @@ module('Acceptance | secrets/pki/list', function(hooks) {
     assert.ok(page.backendIsEmpty);
   });
 
-  test('it navigates to the create page', async function(assert) {
+  test('it navigates to the create page', async function (assert) {
     await mountAndNav(assert);
     await page.create();
     assert.equal(currentRouteName(), 'vault.cluster.secrets.backend.create-root', 'links to the create page');
   });
 
-  test('it navigates to the configure page', async function(assert) {
+  test('it navigates to the configure page', async function (assert) {
     await mountAndNav(assert);
     await click('[data-test-configuration-tab]');
     await page.configure();

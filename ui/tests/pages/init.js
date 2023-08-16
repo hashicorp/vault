@@ -7,10 +7,8 @@ export default create({
   threshold: fillable('[data-test-key-threshold]'),
   keys: collection('[data-test-key-box]'),
   buttonText: text('[data-test-advance-button]'),
-  init: async function(shares, threshold) {
+  init: async function (shares, threshold) {
     await this.visit();
-    return this.shares(shares)
-      .threshold(threshold)
-      .submit();
+    return this.shares(shares).threshold(threshold).submit();
   },
 });

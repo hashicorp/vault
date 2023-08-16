@@ -4,10 +4,10 @@ import { setupRenderingTest } from 'ember-qunit';
 import { render, click } from '@ember/test-helpers';
 import hbs from 'htmlbars-inline-precompile';
 
-module('Integration | Component | transform-list-item', function(hooks) {
+module('Integration | Component | transform-list-item', function (hooks) {
   setupRenderingTest(hooks);
 
-  test('it renders un-clickable item if no read capability', async function(assert) {
+  test('it renders un-clickable item if no read capability', async function (assert) {
     let item = EmberObject.create({
       id: 'foo',
       updatePath: {
@@ -29,7 +29,7 @@ module('Integration | Component | transform-list-item', function(hooks) {
     assert.dom('[data-test-view-only-list-item]').hasText(item.id, 'has correct label');
   });
 
-  test('it is clickable with details menu item if read capability', async function(assert) {
+  test('it is clickable with details menu item if read capability', async function (assert) {
     let item = EmberObject.create({
       id: 'foo',
       updatePath: {
@@ -52,7 +52,7 @@ module('Integration | Component | transform-list-item', function(hooks) {
     assert.dom('.popup-menu-content li').exists({ count: 1 }, 'has one option');
   });
 
-  test('it has details and edit menu item if read & edit capabilities', async function(assert) {
+  test('it has details and edit menu item if read & edit capabilities', async function (assert) {
     let item = EmberObject.create({
       id: 'foo',
       updatePath: {
@@ -75,7 +75,7 @@ module('Integration | Component | transform-list-item', function(hooks) {
     assert.dom('.popup-menu-content li').exists({ count: 2 }, 'has both options');
   });
 
-  test('it is not clickable if built-in template with all capabilities', async function(assert) {
+  test('it is not clickable if built-in template with all capabilities', async function (assert) {
     let item = EmberObject.create({
       id: 'builtin/foo',
       updatePath: {
@@ -97,7 +97,7 @@ module('Integration | Component | transform-list-item', function(hooks) {
     assert.dom('[data-test-view-only-list-item]').hasText(item.id, 'has correct label');
   });
 
-  test('it is not clickable if built-in alphabet', async function(assert) {
+  test('it is not clickable if built-in alphabet', async function (assert) {
     let item = EmberObject.create({
       id: 'builtin/foo',
       updatePath: {

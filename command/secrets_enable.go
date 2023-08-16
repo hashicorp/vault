@@ -37,6 +37,7 @@ type SecretsEnableCommand struct {
 	flagSealWrap                  bool
 	flagExternalEntropyAccess     bool
 	flagVersion                   int
+	flagAllowedManagedKeys        []string
 }
 
 func (c *SecretsEnableCommand) Synopsis() string {
@@ -124,15 +125,15 @@ func (c *SecretsEnableCommand) Flags() *FlagSets {
 	f.StringSliceVar(&StringSliceVar{
 		Name:   flagNameAuditNonHMACRequestKeys,
 		Target: &c.flagAuditNonHMACRequestKeys,
-		Usage: "Comma-separated string or list of keys that will not be HMAC'd by audit " +
-			"devices in the request data object.",
+		Usage: "Key that will not be HMAC'd by audit devices in the request data object. " +
+			"To specify multiple values, specify this flag multiple times.",
 	})
 
 	f.StringSliceVar(&StringSliceVar{
 		Name:   flagNameAuditNonHMACResponseKeys,
 		Target: &c.flagAuditNonHMACResponseKeys,
-		Usage: "Comma-separated string or list of keys that will not be HMAC'd by audit " +
-			"devices in the response data object.",
+		Usage: "Key that will not be HMAC'd by audit devices in the response data object. " +
+			"To specify multiple values, specify this flag multiple times.",
 	})
 
 	f.StringVar(&StringVar{
@@ -144,15 +145,15 @@ func (c *SecretsEnableCommand) Flags() *FlagSets {
 	f.StringSliceVar(&StringSliceVar{
 		Name:   flagNamePassthroughRequestHeaders,
 		Target: &c.flagPassthroughRequestHeaders,
-		Usage: "Comma-separated string or list of request header values that " +
-			"will be sent to the plugins",
+		Usage: "Request header value that will be sent to the plugins. To specify multiple " +
+			"values, specify this flag multiple times.",
 	})
 
 	f.StringSliceVar(&StringSliceVar{
 		Name:   flagNameAllowedResponseHeaders,
 		Target: &c.flagAllowedResponseHeaders,
-		Usage: "Comma-separated string or list of response header values that " +
-			"plugins will be allowed to set",
+		Usage: "Response header value that plugins will be allowed to set. To specify multiple " +
+			"values, specify this flag multiple times.",
 	})
 
 	f.BoolVar(&BoolVar{
@@ -207,6 +208,14 @@ func (c *SecretsEnableCommand) Flags() *FlagSets {
 		Target:  &c.flagVersion,
 		Default: 0,
 		Usage:   "Select the version of the engine to run. Not supported by all engines.",
+	})
+
+	f.StringSliceVar(&StringSliceVar{
+		Name:   flagNameAllowedManagedKeys,
+		Target: &c.flagAllowedManagedKeys,
+		Usage: "Managed key name(s) that the mount in question is allowed to access. " +
+			"Note that multiple keys may be specified by providing this option multiple times, " +
+			"each time with 1 key.",
 	})
 
 	return set
@@ -306,6 +315,10 @@ func (c *SecretsEnableCommand) Run(args []string) int {
 
 		if fl.Name == flagNameAllowedResponseHeaders {
 			mountInput.Config.AllowedResponseHeaders = c.flagAllowedResponseHeaders
+		}
+
+		if fl.Name == flagNameAllowedManagedKeys {
+			mountInput.Config.AllowedManagedKeys = c.flagAllowedManagedKeys
 		}
 	})
 

@@ -88,7 +88,7 @@ performance replication cluster, this must be run against a Vault instance withi
 
 | Method | Path           |
 | :----- | :------------- |
-| `PUT`  | `/sys/license` |
+| `POST` | `/sys/license` |
 
 ### Parameters
 
@@ -121,7 +121,7 @@ capabilities = ["update"]
 ```shell-session
 $ curl \
     --header "X-Vault-Token: ..." \
-    --request PUT \
+    --request POST \
     --data @payload.json \
     http://127.0.0.1:8200/v1/sys/license
 ```
@@ -131,8 +131,8 @@ $ curl \
 ~> This API is deprecated as of Vault 1.8 and will be removed in a future version of Vault.
 Please use [license autoloading](/docs/enterprise/license/autoloading) instead.
 
-This endpoint is used to delete a stored license in Vault.  This will return
-an error unless license autoloading is in use.
+This endpoint is used to delete a license from Vault. Note that this API only works if license autoloading is in use.
+If license autoloading is in use, this API will remove the legacy license from Vault's storage.
 
 | Method | Path           |
 | :----- | :------------- |
@@ -163,7 +163,7 @@ In the response:
 * `persisted_autoload` is the autoloaded license the active node last wrote to
   storage; this is only used to detect inconsistently licensed nodes in the
   cluster. It cannot be used as a license itself.
-* `stored` is the stored license if any, i.e. one written using `PUT sys/license`.
+* `stored` is the stored license if any, i.e. one written using `POST sys/license`.
 
 `autoloaded`, `persisted_autoload`, and `stored` all have the same structure,
 which is also the same structure as the top-level `data` returned by `GET sys/license`.

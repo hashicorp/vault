@@ -6,7 +6,7 @@ import (
 	"strings"
 	"time"
 
-	metrics "github.com/armon/go-metrics"
+	"github.com/armon/go-metrics"
 	"github.com/golang/protobuf/ptypes"
 	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-memdb"
@@ -60,6 +60,7 @@ func NewIdentityStore(ctx context.Context, core *Core, config *logical.BackendCo
 		groupUpdater:  core,
 		tokenStorer:   core,
 		entityCreator: core,
+		mfaBackend:    core.loginMFABackend,
 	}
 
 	// Create a memdb instance, which by default, operates on lower cased
@@ -134,13 +135,353 @@ func (i *IdentityStore) paths() []*framework.Path {
 		upgradePaths(i),
 		oidcPaths(i),
 		oidcProviderPaths(i),
+		mfaPaths(i),
 	)
+}
+
+func mfaPaths(i *IdentityStore) []*framework.Path {
+	return []*framework.Path{
+		{
+			Pattern: "mfa/method/totp" + genericOptionalUUIDRegex("method_id"),
+			Fields: map[string]*framework.FieldSchema{
+				"method_id": {
+					Type:        framework.TypeString,
+					Description: `The unique identifier for this MFA method.`,
+				},
+				"issuer": {
+					Type:        framework.TypeString,
+					Description: `The name of the key's issuing organization.`,
+				},
+				"period": {
+					Type:        framework.TypeDurationSecond,
+					Default:     30,
+					Description: `The length of time used to generate a counter for the TOTP token calculation.`,
+				},
+				"key_size": {
+					Type:        framework.TypeInt,
+					Default:     20,
+					Description: "Determines the size in bytes of the generated key.",
+				},
+				"qr_size": {
+					Type:        framework.TypeInt,
+					Default:     200,
+					Description: `The pixel size of the generated square QR code.`,
+				},
+				"algorithm": {
+					Type:        framework.TypeString,
+					Default:     "SHA1",
+					Description: `The hashing algorithm used to generate the TOTP token. Options include SHA1, SHA256 and SHA512.`,
+				},
+				"digits": {
+					Type:        framework.TypeInt,
+					Default:     6,
+					Description: `The number of digits in the generated TOTP token. This value can either be 6 or 8.`,
+				},
+				"skew": {
+					Type:        framework.TypeInt,
+					Default:     1,
+					Description: `The number of delay periods that are allowed when validating a TOTP token. This value can either be 0 or 1.`,
+				},
+			},
+			Operations: map[logical.Operation]framework.OperationHandler{
+				logical.ReadOperation: &framework.PathOperation{
+					Callback: i.handleMFAMethodRead,
+					Summary:  "Read the current configuration for the given MFA method",
+				},
+				logical.UpdateOperation: &framework.PathOperation{
+					Callback: i.handleMFAMethodTOTPUpdate,
+					Summary:  "Update or create a configuration for the given MFA method",
+				},
+				logical.DeleteOperation: &framework.PathOperation{
+					Callback: i.handleMFAMethodDelete,
+					Summary:  "Delete a configuration for the given MFA method",
+				},
+			},
+		},
+		{
+			Pattern: "mfa/method/totp/?$",
+			Operations: map[logical.Operation]framework.OperationHandler{
+				logical.ListOperation: &framework.PathOperation{
+					Callback: i.handleMFAMethodListTOTP,
+					Summary:  "List MFA method configurations for the given MFA method",
+				},
+			},
+		},
+		{
+			Pattern: "mfa/method/totp/generate$",
+			Fields: map[string]*framework.FieldSchema{
+				"method_id": {
+					Type:        framework.TypeString,
+					Description: `The unique identifier for this MFA method.`,
+					Required:    true,
+				},
+			},
+			Operations: map[logical.Operation]framework.OperationHandler{
+				logical.UpdateOperation: &framework.PathOperation{
+					Callback: i.handleLoginMFAGenerateUpdate,
+					Summary:  "Update or create TOTP secret for the given method ID on the given entity.",
+				},
+			},
+		},
+		{
+			Pattern: "mfa/method/totp/admin-generate$",
+			Fields: map[string]*framework.FieldSchema{
+				"method_id": {
+					Type:        framework.TypeString,
+					Description: `The unique identifier for this MFA method.`,
+					Required:    true,
+				},
+				"entity_id": {
+					Type:        framework.TypeString,
+					Description: "Entity ID on which the generated secret needs to get stored.",
+					Required:    true,
+				},
+			},
+			Operations: map[logical.Operation]framework.OperationHandler{
+				logical.UpdateOperation: &framework.PathOperation{
+					Callback: i.handleLoginMFAAdminGenerateUpdate,
+					Summary:  "Update or create TOTP secret for the given method ID on the given entity.",
+				},
+			},
+		},
+		{
+			Pattern: "mfa/method/totp/admin-destroy$",
+			Fields: map[string]*framework.FieldSchema{
+				"method_id": {
+					Type:        framework.TypeString,
+					Description: "The unique identifier for this MFA method.",
+					Required:    true,
+				},
+				"entity_id": {
+					Type:        framework.TypeString,
+					Description: "Identifier of the entity from which the MFA method secret needs to be removed.",
+					Required:    true,
+				},
+			},
+			Operations: map[logical.Operation]framework.OperationHandler{
+				logical.UpdateOperation: &framework.PathOperation{
+					Callback: i.handleLoginMFAAdminDestroyUpdate,
+					Summary:  "Destroys a TOTP secret for the given MFA method ID on the given entity",
+				},
+			},
+		},
+		{
+			Pattern: "mfa/method/okta" + genericOptionalUUIDRegex("method_id"),
+			Fields: map[string]*framework.FieldSchema{
+				"method_id": {
+					Type:        framework.TypeString,
+					Description: `The unique identifier for this MFA method.`,
+				},
+				"username_template": {
+					Type:        framework.TypeString,
+					Description: `A template string for mapping Identity names to MFA method names. Values to substitute should be placed in {{}}. For example, "{{entity.name}}@example.com". If blank, the Entity's name field will be used as-is.`,
+				},
+				"org_name": {
+					Type:        framework.TypeString,
+					Description: "Name of the organization to be used in the Okta API.",
+				},
+				"api_token": {
+					Type:        framework.TypeString,
+					Description: "Okta API key.",
+				},
+				"base_url": {
+					Type:        framework.TypeString,
+					Description: `The base domain to use for the Okta API. When not specified in the configuration, "okta.com" is used.`,
+				},
+				"primary_email": {
+					Type:        framework.TypeBool,
+					Description: `If true, the username will only match the primary email for the account. Defaults to false.`,
+				},
+				"production": {
+					Type:        framework.TypeBool,
+					Description: "(DEPRECATED) Use base_url instead.",
+				},
+			},
+			Operations: map[logical.Operation]framework.OperationHandler{
+				logical.ReadOperation: &framework.PathOperation{
+					Callback: i.handleMFAMethodRead,
+					Summary:  "Read the current configuration for the given MFA method",
+				},
+				logical.UpdateOperation: &framework.PathOperation{
+					Callback: i.handleMFAMethodOKTAUpdate,
+					Summary:  "Update or create a configuration for the given MFA method",
+				},
+				logical.DeleteOperation: &framework.PathOperation{
+					Callback: i.handleMFAMethodDelete,
+					Summary:  "Delete a configuration for the given MFA method",
+				},
+			},
+		},
+		{
+			Pattern: "mfa/method/okta/?$",
+			Operations: map[logical.Operation]framework.OperationHandler{
+				logical.ListOperation: &framework.PathOperation{
+					Callback: i.handleMFAMethodListOkta,
+					Summary:  "List MFA method configurations for the given MFA method",
+				},
+			},
+		},
+		{
+			Pattern: "mfa/method/duo" + genericOptionalUUIDRegex("method_id"),
+			Fields: map[string]*framework.FieldSchema{
+				"method_id": {
+					Type:        framework.TypeString,
+					Description: `The unique identifier for this MFA method.`,
+				},
+				"username_template": {
+					Type:        framework.TypeString,
+					Description: `A template string for mapping Identity names to MFA method names. Values to subtitute should be placed in {{}}. For example, "{{alias.name}}@example.com". Currently-supported mappings: alias.name: The name returned by the mount configured via the mount_accessor parameter If blank, the Alias's name field will be used as-is. `,
+				},
+				"secret_key": {
+					Type:        framework.TypeString,
+					Description: "Secret key for Duo.",
+				},
+				"integration_key": {
+					Type:        framework.TypeString,
+					Description: "Integration key for Duo.",
+				},
+				"api_hostname": {
+					Type:        framework.TypeString,
+					Description: "API host name for Duo.",
+				},
+				"push_info": {
+					Type:        framework.TypeString,
+					Description: "Push information for Duo.",
+				},
+				"use_passcode": {
+					Type:        framework.TypeBool,
+					Description: `If true, the user is reminded to use the passcode upon MFA validation. This option does not enforce using the passcode. Defaults to false.`,
+				},
+			},
+			Operations: map[logical.Operation]framework.OperationHandler{
+				logical.ReadOperation: &framework.PathOperation{
+					Callback: i.handleMFAMethodRead,
+					Summary:  "Read the current configuration for the given MFA method",
+				},
+				logical.UpdateOperation: &framework.PathOperation{
+					Callback: i.handleMFAMethodDuoUpdate,
+					Summary:  "Update or create a configuration for the given MFA method",
+				},
+				logical.DeleteOperation: &framework.PathOperation{
+					Callback: i.handleMFAMethodDelete,
+					Summary:  "Delete a configuration for the given MFA method",
+				},
+			},
+		},
+		{
+			Pattern: "mfa/method/duo/?$",
+			Operations: map[logical.Operation]framework.OperationHandler{
+				logical.ListOperation: &framework.PathOperation{
+					Callback: i.handleMFAMethodListDuo,
+					Summary:  "List MFA method configurations for the given MFA method",
+				},
+			},
+		},
+		{
+			Pattern: "mfa/method/pingid" + genericOptionalUUIDRegex("method_id"),
+			Fields: map[string]*framework.FieldSchema{
+				"method_id": {
+					Type:        framework.TypeString,
+					Description: `The unique identifier for this MFA method.`,
+				},
+				"username_template": {
+					Type:        framework.TypeString,
+					Description: `A template string for mapping Identity names to MFA method names. Values to subtitute should be placed in {{}}. For example, "{{alias.name}}@example.com". Currently-supported mappings: alias.name: The name returned by the mount configured via the mount_accessor parameter If blank, the Alias's name field will be used as-is. `,
+				},
+				"settings_file_base64": {
+					Type:        framework.TypeString,
+					Description: "The settings file provided by Ping, Base64-encoded. This must be a settings file suitable for third-party clients, not the PingID SDK or PingFederate.",
+				},
+			},
+			Operations: map[logical.Operation]framework.OperationHandler{
+				logical.ReadOperation: &framework.PathOperation{
+					Callback: i.handleMFAMethodRead,
+					Summary:  "Read the current configuration for the given MFA method",
+				},
+				logical.UpdateOperation: &framework.PathOperation{
+					Callback: i.handleMFAMethodPingIDUpdate,
+					Summary:  "Update or create a configuration for the given MFA method",
+				},
+				logical.DeleteOperation: &framework.PathOperation{
+					Callback: i.handleMFAMethodDelete,
+					Summary:  "Delete a configuration for the given MFA method",
+				},
+			},
+		},
+		{
+			Pattern: "mfa/method/pingid/?$",
+			Operations: map[logical.Operation]framework.OperationHandler{
+				logical.ListOperation: &framework.PathOperation{
+					Callback: i.handleMFAMethodListPingID,
+					Summary:  "List MFA method configurations for the given MFA method",
+				},
+			},
+		},
+		{
+			Pattern: "mfa/login-enforcement/" + framework.GenericNameRegex("name"),
+			Fields: map[string]*framework.FieldSchema{
+				"name": {
+					Type:        framework.TypeString,
+					Description: "Name for this login enforcement configuration",
+					Required:    true,
+				},
+				"mfa_method_ids": {
+					Type:        framework.TypeStringSlice,
+					Description: "Array of Method IDs that determine what methods will be enforced",
+					Required:    true,
+				},
+				"auth_method_accessors": {
+					Type:        framework.TypeStringSlice,
+					Description: "Array of auth mount accessor IDs",
+				},
+				"auth_method_types": {
+					Type:        framework.TypeStringSlice,
+					Description: "Array of auth mount types",
+				},
+				"identity_group_ids": {
+					Type:        framework.TypeStringSlice,
+					Description: "Array of identity group IDs",
+				},
+				"identity_entity_ids": {
+					Type:        framework.TypeStringSlice,
+					Description: "Array of identity entity IDs",
+				},
+			},
+			Operations: map[logical.Operation]framework.OperationHandler{
+				logical.ReadOperation: &framework.PathOperation{
+					Callback: i.handleMFALoginEnforcementRead,
+					Summary:  "Read the current login enforcement",
+				},
+				logical.UpdateOperation: &framework.PathOperation{
+					Callback: i.handleMFALoginEnforcementUpdate,
+					Summary:  "Create or update a login enforcement",
+				},
+				logical.DeleteOperation: &framework.PathOperation{
+					Callback: i.handleMFALoginEnforcementDelete,
+					Summary:  "Delete a login enforcement",
+				},
+			},
+		},
+		{
+			Pattern: "mfa/login-enforcement/?$",
+			Operations: map[logical.Operation]framework.OperationHandler{
+				logical.ListOperation: &framework.PathOperation{
+					Callback: i.handleMFALoginEnforcementList,
+					Summary:  "List login enforcements",
+				},
+			},
+		},
+	}
 }
 
 func (i *IdentityStore) initialize(ctx context.Context, req *logical.InitializationRequest) error {
 	// Only primary should write the status
 	if i.System().ReplicationState().HasState(consts.ReplicationPerformanceSecondary | consts.ReplicationPerformanceStandby | consts.ReplicationDRSecondary) {
 		return nil
+	}
+
+	if err := i.storeOIDCDefaultResources(ctx, req.Storage); err != nil {
+		return err
 	}
 
 	entry, err := logical.StorageEntryJSON(caseSensitivityKey, &casesensitivity{
@@ -250,8 +591,9 @@ func (i *IdentityStore) Invalidate(ctx context.Context, key string) {
 		// storage entry is non-nil, its an indication of an update. In this
 		// case, entities in the updated bucket needs to be reinserted into
 		// MemDB.
-		entityIDs := make([]string, 0, len(bucket.Items))
+		var entityIDs []string
 		if bucket != nil {
+			entityIDs = make([]string, 0, len(bucket.Items))
 			for _, item := range bucket.Items {
 				entity, err := i.parseEntityFromBucketItem(ctx, item)
 				if err != nil {
@@ -430,6 +772,10 @@ func (i *IdentityStore) Invalidate(ctx context.Context, key string) {
 			if err != nil {
 				i.logger.Error("failed to fetch entity during local alias invalidation", "entity_id", alias.CanonicalID, "error", err)
 				return
+			}
+			if entity == nil {
+				i.logger.Error("failed to fetch entity during local alias invalidation, missing entity", "entity_id", alias.CanonicalID, "error", err)
+				continue
 			}
 
 			// Delete local aliases from the entity.
@@ -750,7 +1096,7 @@ func (i *IdentityStore) CreateOrFetchEntity(ctx context.Context, alias *logical.
 	}
 
 	// Check if an entity already exists for the given alias
-	entity, err = i.entityByAliasFactors(alias.MountAccessor, alias.Name, false)
+	entity, err = i.entityByAliasFactors(alias.MountAccessor, alias.Name, true)
 	if err != nil {
 		return nil, err
 	}
@@ -837,8 +1183,7 @@ func (i *IdentityStore) CreateOrFetchEntity(ctx context.Context, alias *logical.
 	}
 
 	txn.Commit()
-
-	return entity, nil
+	return entity.Clone()
 }
 
 // changedAliasIndex searches an entity for changed alias metadata.

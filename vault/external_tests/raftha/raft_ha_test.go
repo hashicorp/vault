@@ -170,7 +170,7 @@ func TestRaft_HA_ExistingCluster(t *testing.T) {
 	haStorage, haCleanup := teststorage.MakeReusableRaftHAStorage(t, logger, opts.NumCores, physBundle)
 	defer haCleanup()
 
-	updateCLuster := func(t *testing.T) {
+	updateCluster := func(t *testing.T) {
 		t.Log("simulating cluster update with raft as HABackend")
 
 		opts.SkipInit = true
@@ -240,5 +240,5 @@ func TestRaft_HA_ExistingCluster(t *testing.T) {
 		})
 	}
 
-	updateCLuster(t)
+	updateCluster(t)
 }

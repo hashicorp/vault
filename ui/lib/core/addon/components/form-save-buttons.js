@@ -1,4 +1,5 @@
 import Component from '@ember/component';
+import { computed } from '@ember/object';
 import layout from '../templates/components/form-save-buttons';
 
 /**
@@ -23,4 +24,10 @@ import layout from '../templates/components/form-save-buttons';
 export default Component.extend({
   layout,
   tagName: '',
+
+  cancelLink: computed('cancelLinkParams.[]', function () {
+    if (!Array.isArray(this.cancelLinkParams) || !this.cancelLinkParams.length) return;
+    const [route, ...models] = this.cancelLinkParams;
+    return { route, models };
+  }),
 });

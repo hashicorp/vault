@@ -7,9 +7,9 @@ function getToken() {
   return Namespace.NAMESPACES_BY_ID['vault'].__container__.lookup('service:auth').currentToken;
 }
 
-addSuccessHandler(function(registration) {
+addSuccessHandler(function (registration) {
   // attach the handler for the message event so we can send over the auth token
-  navigator.serviceWorker.addEventListener('message', event => {
+  navigator.serviceWorker.addEventListener('message', (event) => {
     let { action } = event.data;
     let port = event.ports[0];
 
@@ -28,7 +28,7 @@ addSuccessHandler(function(registration) {
   });
 
   // attempt to unregister the service worker on unload because we're not doing any sort of caching
-  window.addEventListener('unload', function() {
+  window.addEventListener('unload', function () {
     registration.unregister();
   });
 });

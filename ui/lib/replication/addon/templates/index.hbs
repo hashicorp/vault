@@ -1,10 +1,10 @@
 <section class="section">
   <div class="container is-widescreen">
-    {{#if model.replicationIsInitializing }}
+    {{#if this.model.replicationIsInitializing}}
       <nav class="navbar"></nav>
       <LayoutLoading />
     {{else}}
-      {{#if (eq model.mode 'unsupported')}}
+      {{#if (eq this.model.mode "unsupported")}}
         <PageHeader as |p|>
           <p.levelLeft>
             <h1 class="title is-3 has-text-grey">
@@ -12,12 +12,10 @@
             </h1>
           </p.levelLeft>
         </PageHeader>
-        <EmptyState
-          @title="The current cluster configuration does not support replication"
-        />
+        <EmptyState @title="The current cluster configuration does not support replication" />
       {{else}}
         <ReplicationSummary
-          @cluster={{model}}
+          @cluster={{this.model}}
           @showModeSummary={{true}}
           @onEnable={{action "onEnable"}}
           @onDisable={{action "onDisable"}}

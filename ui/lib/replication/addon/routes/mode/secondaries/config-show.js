@@ -8,7 +8,7 @@ export default Base.extend({
     const id = params.secondary_id;
     return hash({
       cluster: this.modelFor('application'),
-      config: this.store.findRecord('path-filter-config', id).catch(e => {
+      config: this.store.findRecord('path-filter-config', id).catch((e) => {
         if (e.httpStatus === 404) {
           // return an empty obj to let them nav to create
           return resolve({ id });

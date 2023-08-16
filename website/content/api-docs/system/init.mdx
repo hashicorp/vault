@@ -39,7 +39,7 @@ available when using Auto Unseal.
 
 | Method | Path        |
 | :----- | :---------- |
-| `PUT`  | `/sys/init` |
+| `POST`  | `/sys/init` |
 
 ### Parameters
 
@@ -53,10 +53,10 @@ available when using Auto Unseal.
   original binary representation.
 
 - `secret_shares` `(int: <required>)` – Specifies the number of shares to
-  split the master key into.
+  split the root key into.
 
 - `secret_threshold` `(int: <required>)` – Specifies the number of shares
-  required to reconstruct the master key. This must be less than or equal
+  required to reconstruct the root key. This must be less than or equal
   `secret_shares`. If using Vault HSM with auto-unsealing, this value must be
   the same as `secret_shares`.
 
@@ -91,7 +91,7 @@ Additionally, the following options are only supported using Auto Unseal:
 
 ```shell-session
 $ curl \
-    --request PUT \
+    --request POST \
     --data @payload.json \
     http://127.0.0.1:8200/v1/sys/init
 ```
@@ -99,7 +99,7 @@ $ curl \
 ### Sample Response
 
 A JSON-encoded object including the (possibly encrypted, if `pgp_keys` was
-provided) master keys, base 64 encoded master keys and initial root token:
+provided) root keys, base 64 encoded root keys and initial root token:
 
 ```json
 {

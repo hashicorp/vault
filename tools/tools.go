@@ -1,4 +1,4 @@
-// +build tools
+//go:build tools
 
 // This file ensures tool dependencies are kept in sync.  This is the
 // recommended way of doing this according to

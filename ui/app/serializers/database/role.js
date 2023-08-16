@@ -5,7 +5,7 @@ export default RESTSerializer.extend({
 
   normalizeSecrets(payload) {
     if (payload.data.keys && Array.isArray(payload.data.keys)) {
-      const roles = payload.data.keys.map(secret => {
+      const roles = payload.data.keys.map((secret) => {
         let type = 'dynamic';
         let path = 'roles';
         if (payload.data.staticRoles.includes(secret)) {

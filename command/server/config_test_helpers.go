@@ -687,7 +687,7 @@ func testConfig_Sanitized(t *testing.T) {
 		"cluster_addr":                        "top_level_cluster_addr",
 		"cluster_cipher_suites":               "",
 		"cluster_name":                        "testcluster",
-		"default_lease_ttl":                   10 * time.Hour,
+		"default_lease_ttl":                   (365 * 24 * time.Hour) / time.Second,
 		"default_max_request_duration":        0 * time.Second,
 		"disable_cache":                       true,
 		"disable_clustering":                  false,
@@ -701,6 +701,7 @@ func testConfig_Sanitized(t *testing.T) {
 		"enable_ui":                           true,
 		"enable_response_header_hostname":     false,
 		"enable_response_header_raft_node_id": false,
+		"log_requests_level":                  "basic",
 		"ha_storage": map[string]interface{}{
 			"cluster_addr":       "top_level_cluster_addr",
 			"disable_clustering": true,
@@ -717,7 +718,7 @@ func testConfig_Sanitized(t *testing.T) {
 		},
 		"log_format":       "",
 		"log_level":        "",
-		"max_lease_ttl":    10 * time.Hour,
+		"max_lease_ttl":    (30 * 24 * time.Hour) / time.Second,
 		"pid_file":         "./pidfile",
 		"plugin_directory": "",
 		"seals": []interface{}{
@@ -779,22 +780,25 @@ func testConfig_Sanitized(t *testing.T) {
 func testParseListeners(t *testing.T) {
 	obj, _ := hcl.Parse(strings.TrimSpace(`
 listener "tcp" {
-	address = "127.0.0.1:443"
-	cluster_address = "127.0.0.1:8201"
-	tls_disable = false
-	tls_cert_file = "./certs/server.crt"
-	tls_key_file = "./certs/server.key"
-	tls_client_ca_file = "./certs/rootca.crt"
-	tls_min_version = "tls12"
-	tls_max_version = "tls13"
-	tls_require_and_verify_client_cert = true
-	tls_disable_client_certs = true
-    telemetry {
-      unauthenticated_metrics_access = true
-    }
-    profiling {
-      unauthenticated_pprof_access = true
-    }
+  address = "127.0.0.1:443"
+  cluster_address = "127.0.0.1:8201"
+  tls_disable = false
+  tls_cert_file = "./certs/server.crt"
+  tls_key_file = "./certs/server.key"
+  tls_client_ca_file = "./certs/rootca.crt"
+  tls_min_version = "tls12"
+  tls_max_version = "tls13"
+  tls_require_and_verify_client_cert = true
+  tls_disable_client_certs = true
+  telemetry {
+    unauthenticated_metrics_access = true
+  }
+  profiling {
+    unauthenticated_pprof_access = true
+  }
+  agent_api {
+    enable_quit = true
+  }
 }`))
 
 	config := Config{
@@ -831,6 +835,9 @@ listener "tcp" {
 					},
 					Profiling: configutil.ListenerProfiling{
 						UnauthenticatedPProfAccess: true,
+					},
+					AgentAPI: &configutil.AgentAPI{
+						EnableQuit: true,
 					},
 					CustomResponseHeaders: DefaultCustomHeaders,
 				},

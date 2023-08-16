@@ -17,16 +17,15 @@ import (
 	"net/url"
 	"os"
 	"regexp"
-	"strconv"
 	"strings"
 	"time"
 
 	"github.com/NYTimes/gziphandler"
 	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/go-cleanhttp"
-	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-secure-stdlib/parseutil"
 	"github.com/hashicorp/go-sockaddr"
+	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/internalshared/configutil"
 	"github.com/hashicorp/vault/sdk/helper/consts"
@@ -95,6 +94,7 @@ var (
 		"/v1/sys/capabilities",
 		"/v1/sys/capabilities-accessor",
 		"/v1/sys/capabilities-self",
+		"/v1/sys/ha-status",
 		"/v1/sys/key-status",
 		"/v1/sys/mounts",
 		"/v1/sys/mounts/",
@@ -164,7 +164,7 @@ func Handler(props *vault.HandlerProperties) http.Handler {
 		}
 		mux.Handle("/v1/sys/", handleRequestForwarding(core, handleLogical(core)))
 		mux.Handle("/v1/", handleRequestForwarding(core, handleLogical(core)))
-		if core.UIEnabled() == true {
+		if core.UIEnabled() {
 			if uiBuiltIn {
 				mux.Handle("/ui/", http.StripPrefix("/ui/", gziphandler.GzipHandler(handleUIHeaders(core, handleUI(http.FileServer(&UIAssetWrapper{FileSystem: assetFS()}))))))
 				mux.Handle("/robots.txt", gziphandler.GzipHandler(handleUIHeaders(core, handleUI(http.FileServer(&UIAssetWrapper{FileSystem: assetFS()})))))
@@ -196,6 +196,11 @@ func Handler(props *vault.HandlerProperties) http.Handler {
 			mux.Handle("/v1/sys/pprof/", handleLogicalNoForward(core))
 		}
 
+		if props.ListenerConfig != nil && props.ListenerConfig.InFlightRequestLogging.UnauthenticatedInFlightAccess {
+			mux.Handle("/v1/sys/in-flight-req", handleUnAuthenticatedInFlightRequest(core))
+		} else {
+			mux.Handle("/v1/sys/in-flight-req", handleLogicalNoForward(core))
+		}
 		additionalRoutes(mux, core)
 	}
 
@@ -214,90 +219,6 @@ func Handler(props *vault.HandlerProperties) http.Handler {
 
 	return printablePathCheckHandler
 }
-
-type WrappingResponseWriter interface {
-	http.ResponseWriter
-	Wrapped() http.ResponseWriter
-}
-
-type statusHeaderResponseWriter struct {
-	wrapped     http.ResponseWriter
-	logger      log.Logger
-	wroteHeader bool
-	statusCode  int
-	headers     map[string][]*vault.CustomHeader
-}
-
-func (w *statusHeaderResponseWriter) Wrapped() http.ResponseWriter {
-	return w.wrapped
-}
-
-func (w *statusHeaderResponseWriter) Header() http.Header {
-	return w.wrapped.Header()
-}
-
-func (w *statusHeaderResponseWriter) Write(buf []byte) (int, error) {
-	// It is allowed to only call ResponseWriter.Write and skip
-	// ResponseWriter.WriteHeader. An example of such a situation is
-	// "handleUIStub". The Write function will internally set the status code
-	// 200 for the response for which that call might invoke other
-	// implementations of the WriteHeader function. So, we still need to set
-	// the custom headers. In cases where both WriteHeader and Write of
-	// statusHeaderResponseWriter struct are called the internal call to the
-	// WriterHeader invoked from inside Write method won't change the headers.
-	if !w.wroteHeader {
-		w.setCustomResponseHeaders(w.statusCode)
-	}
-
-	return w.wrapped.Write(buf)
-}
-
-func (w *statusHeaderResponseWriter) WriteHeader(statusCode int) {
-	w.setCustomResponseHeaders(statusCode)
-	w.wrapped.WriteHeader(statusCode)
-	w.statusCode = statusCode
-	// in cases where Write is called after WriteHeader, let's prevent setting
-	// ResponseWriter headers twice
-	w.wroteHeader = true
-}
-
-func (w *statusHeaderResponseWriter) setCustomResponseHeaders(status int) {
-	sch := w.headers
-	if sch == nil {
-		w.logger.Warn("status code header map not configured")
-		return
-	}
-
-	// Checking the validity of the status code
-	if status >= 600 || status < 100 {
-		return
-	}
-
-	// setter function to set the headers
-	setter := func(hvl []*vault.CustomHeader) {
-		for _, hv := range hvl {
-			w.Header().Set(hv.Name, hv.Value)
-		}
-	}
-
-	// Setting the default headers first
-	setter(sch["default"])
-
-	// setting the Xyy pattern first
-	d := fmt.Sprintf("%vxx", status/100)
-	if val, ok := sch[d]; ok {
-		setter(val)
-	}
-
-	// Setting the specific headers
-	if val, ok := sch[strconv.Itoa(status)]; ok {
-		setter(val)
-	}
-
-	return
-}
-
-var _ WrappingResponseWriter = &statusHeaderResponseWriter{}
 
 type copyResponseWriter struct {
 	wrapped    http.ResponseWriter
@@ -391,23 +312,22 @@ func wrapGenericHandler(core *vault.Core, h http.Handler, props *vault.HandlerPr
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		// This block needs to be here so that upon sending SIGHUP, custom response
 		// headers are also reloaded into the handlers.
+		var customHeaders map[string][]*logical.CustomHeader
 		if props.ListenerConfig != nil {
 			la := props.ListenerConfig.Address
 			listenerCustomHeaders := core.GetListenerCustomResponseHeaders(la)
 			if listenerCustomHeaders != nil {
-				w = &statusHeaderResponseWriter{
-					wrapped:     w,
-					logger:      core.Logger(),
-					wroteHeader: false,
-					statusCode:  200,
-					headers:     listenerCustomHeaders.StatusCodeHeaderMap,
-				}
+				customHeaders = listenerCustomHeaders.StatusCodeHeaderMap
 			}
 		}
+		// saving start time for the in-flight requests
+		inFlightReqStartTime := time.Now()
+
+		nw := logical.NewStatusHeaderResponseWriter(w, customHeaders)
 
 		// Set the Cache-Control header for all the responses returned
 		// by Vault
-		w.Header().Set("Cache-Control", "no-store")
+		nw.Header().Set("Cache-Control", "no-store")
 
 		// Start with the request context
 		ctx := r.Context()
@@ -431,19 +351,19 @@ func wrapGenericHandler(core *vault.Core, h http.Handler, props *vault.HandlerPr
 		if core.RaftNodeIDHeaderEnabled() {
 			nodeID := core.GetRaftNodeID()
 			if nodeID != "" {
-				w.Header().Set("X-Vault-Raft-Node-ID", nodeID)
+				nw.Header().Set("X-Vault-Raft-Node-ID", nodeID)
 			}
 		}
 
 		if core.HostnameHeaderEnabled() && hostname != "" {
-			w.Header().Set("X-Vault-Hostname", hostname)
+			nw.Header().Set("X-Vault-Hostname", hostname)
 		}
 
 		switch {
 		case strings.HasPrefix(r.URL.Path, "/v1/"):
 			newR, status := adjustRequest(core, r)
 			if status != 0 {
-				respondError(w, status, nil)
+				respondError(nw, status, nil)
 				cancelFunc()
 				return
 			}
@@ -451,18 +371,55 @@ func wrapGenericHandler(core *vault.Core, h http.Handler, props *vault.HandlerPr
 
 		case strings.HasPrefix(r.URL.Path, "/ui"), r.URL.Path == "/robots.txt", r.URL.Path == "/":
 		default:
-			respondError(w, http.StatusNotFound, nil)
+			respondError(nw, http.StatusNotFound, nil)
 			cancelFunc()
 			return
 		}
 
+		// The uuid for the request is going to be generated when a logical
+		// request is generated. But, here we generate one to be able to track
+		// in-flight requests, and use that to update the req data with clientID
+		inFlightReqID, err := uuid.GenerateUUID()
+		if err != nil {
+			respondError(nw, http.StatusInternalServerError, fmt.Errorf("failed to generate an identifier for the in-flight request"))
+		}
+		// adding an entry to the context to enable updating in-flight
+		// data with ClientID in the logical layer
+		r = r.WithContext(context.WithValue(r.Context(), logical.CtxKeyInFlightRequestID{}, inFlightReqID))
+
+		// extracting the client address to be included in the in-flight request
+		var clientAddr string
+		headers := r.Header[textproto.CanonicalMIMEHeaderKey("X-Forwarded-For")]
+		if len(headers) == 0 {
+			clientAddr = r.RemoteAddr
+		} else {
+			clientAddr = headers[0]
+		}
+
+		// getting the request method
+		requestMethod := r.Method
+
+		// Storing the in-flight requests. Path should include namespace as well
+		core.StoreInFlightReqData(
+			inFlightReqID,
+			vault.InFlightReqData{
+				StartTime:        inFlightReqStartTime,
+				ReqPath:          r.URL.Path,
+				ClientRemoteAddr: clientAddr,
+				Method:           requestMethod,
+			})
+		defer func() {
+			// Not expecting this fail, so skipping the assertion check
+			core.FinalizeInFlightReqData(inFlightReqID, nw.StatusCode)
+		}()
+
 		// Setting the namespace in the header to be included in the error message
 		ns := r.Header.Get(consts.NamespaceHeaderName)
 		if ns != "" {
-			w.Header().Set(consts.NamespaceHeaderName, ns)
+			nw.Header().Set(consts.NamespaceHeaderName, ns)
 		}
 
-		h.ServeHTTP(w, r)
+		h.ServeHTTP(nw, r)
 
 		cancelFunc()
 		return
@@ -742,7 +699,7 @@ func parseJSONRequest(perfStandby bool, r *http.Request, w http.ResponseWriter, 
 			// requestTooLarger.  So we let it have access to the underlying
 			// ResponseWriter.
 			inw := w
-			if myw, ok := inw.(WrappingResponseWriter); ok {
+			if myw, ok := inw.(logical.WrappingResponseWriter); ok {
 				inw = myw.Wrapped()
 			}
 			reader = http.MaxBytesReader(inw, r.Body, max)
@@ -1170,7 +1127,7 @@ func parseMFAHeader(req *logical.Request) error {
 
 		shardSplits := strings.SplitN(mfaHeaderValue, ":", 2)
 		if shardSplits[0] == "" {
-			return fmt.Errorf("invalid data in header %q; missing method name", MFAHeaderName)
+			return fmt.Errorf("invalid data in header %q; missing method name or ID", MFAHeaderName)
 		}
 
 		if shardSplits[1] == "" {

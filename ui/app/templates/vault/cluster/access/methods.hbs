@@ -8,45 +8,44 @@
 
 <Toolbar>
   <ToolbarActions>
-    <ToolbarLink @type="add" @params={{array 'vault.cluster.settings.auth.enable'}} data-test-auth-enable>
+    <ToolbarLink @type="add" @params={{array "vault.cluster.settings.auth.enable"}} data-test-auth-enable>
       Enable new method
     </ToolbarLink>
   </ToolbarActions>
 </Toolbar>
 
-{{#each (sort-by "path" model) as |method|}}
-  <LinkedBlock @params={{array
-    "vault.cluster.access.method"
-    method.id}} class="list-item-row" 
+{{#each (sort-by "path" this.model) as |method|}}
+  <LinkedBlock
+    @params={{array "vault.cluster.access.method" method.id}}
+    class="list-item-row"
     data-test-auth-backend-link={{method.id}}
   >
     <div class="level is-mobile">
       <div class="level-left">
         <div>
           <ToolTip @horizontalPosition="left" as |T|>
-            <T.trigger>
-              <Icon @size="l" class="has-text-grey-light" 
-                @glyph={{if
-                (or
-                  (find-by "type" method.methodType (mountable-auth-methods))
-                  (eq method.methodType "token")
-                )
-                method.methodType
-                "auth"}} 
+            <T.Trigger>
+              <Icon
+                @name={{if
+                  (or (find-by "type" method.methodType (mountable-auth-methods)) (eq method.methodType "token"))
+                  method.methodType
+                  "auth"
+                }}
+                class="has-text-grey-light"
               />
-            </T.trigger>
-            <T.content @class="tool-tip">
+            </T.Trigger>
+            <T.Content @defaultClass="tool-tip">
               <div class="box">
                 {{method.methodType}}
               </div>
-            </T.content>
+            </T.Content>
           </ToolTip>
           <span data-test-path data-test-id={{method.id}} class="has-text-weight-semibold has-text-black">
             {{method.path}}
           </span>
           <br />
           <code class="has-text-grey is-size-8">
-          {{method.accessor}}
+            {{method.accessor}}
           </code>
         </div>
       </div>
@@ -69,15 +68,15 @@
                     </li>
                   {{/if}}
 
-                  {{#if (and (not-eq method.methodType 'token') method.canDisable)}}
+                  {{#if (and (not-eq method.methodType "token") method.canDisable)}}
                     <li class="action">
                       <c.Message
                         @id={{method.id}}
                         @title="Disable method?"
                         @message="This may affect access to Vault data."
                         @triggerText="Disable"
-                        @onConfirm={{perform disableMethod method}}>
-                      </c.Message>
+                        @onConfirm={{perform this.disableMethod method}}
+                      />
                     </li>
                   {{/if}}
                 </ul>

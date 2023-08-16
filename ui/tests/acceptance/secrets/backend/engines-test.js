@@ -5,14 +5,14 @@ import mountSecrets from 'vault/tests/pages/settings/mount-secret-backend';
 import backendsPage from 'vault/tests/pages/secrets/backends';
 import authPage from 'vault/tests/pages/auth';
 
-module('Acceptance | engine/disable', function(hooks) {
+module('Acceptance | engine/disable', function (hooks) {
   setupApplicationTest(hooks);
 
-  hooks.beforeEach(function() {
+  hooks.beforeEach(function () {
     return authPage.login();
   });
 
-  test('disable engine', async function(assert) {
+  test('disable engine', async function (assert) {
     // first mount an engine so we can disable it.
     let enginePath = `alicloud-${new Date().getTime()}`;
     await mountSecrets.enable('alicloud', enginePath);

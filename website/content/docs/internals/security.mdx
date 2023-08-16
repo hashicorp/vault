@@ -60,16 +60,6 @@ The following are not parts of the Vault threat model:
   to inspect the memory state of a running Vault instance then the confidentiality
   of data may be compromised.
 
-- Protecting against flaws in external systems or services used by Vault.
-  Some authentication methods or secrets engines delegate sensitive operations to
-  systems external to Vault. If an attacker can compromise credentials or otherwise
-  exploit a vulnerability in these external systems, then the confidentiality or
-  integrity of data may be compromised.
-
-- Protecting against malicious plugins or code execution on the underlying host.
-  If an attacker can gain code execution or write privileges to the underlying host,
-  then the confidentiality or the integrity of data may be compromised.
-
 # External Threat Overview
 
 Given the architecture of Vault, there are 3 distinct systems we are concerned
@@ -151,17 +141,17 @@ Secret Sharing
 technique](https://en.wikipedia.org/wiki/Shamir's_Secret_Sharing). When Vault
 is started, it starts in a _sealed_ state. This means that the encryption key
 needed to read and write from the storage backend is not yet known. The process
-of unsealing requires providing the master key so that the encryption key can
-be retrieved. The risk of distributing the master key is that a single
+of unsealing requires providing the root key so that the encryption key can
+be retrieved. The risk of distributing the root key is that a single
 malicious actor with access to it can decrypt the entire Vault. Instead,
-Shamir's technique allows us to split the master key into multiple shares or
+Shamir's technique allows us to split the root key into multiple shares or
 parts. The number of shares and the threshold needed is configurable, but by
 default Vault generates 5 shares, any 3 of which must be provided to
-reconstruct the master key.
+reconstruct the root key.
 
 By using a secret sharing technique, we avoid the need to place absolute trust
-in the holder of the master key, and avoid storing the master key at all. The
-master key is only retrievable by reconstructing the shares. The shares are not
+in the holder of the root key, and avoid storing the root key at all. The
+root key is only retrievable by reconstructing the shares. The shares are not
 useful for making any requests to Vault, and can only be used for unsealing.
 Once unsealed the standard ACL mechanisms are used for all requests.
 
@@ -173,6 +163,6 @@ steel and concrete protecting the data. While you could tunnel through the
 concrete or brute force the encryption keys, it would be prohibitively time
 consuming. Opening the bank vault requires two-factors: the key and the
 combination. Similarly, Vault requires multiple shares be provided to
-reconstruct the master key. Once unsealed, each security deposit boxes still
+reconstruct the root key. Once unsealed, each security deposit boxes still
 requires the owner provide a key, and similarly the Vault ACL system protects
 all the secrets stored.

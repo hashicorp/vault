@@ -7,8 +7,10 @@ import (
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
-const targetCacheSize = 12345
-const smallCacheSize = 3
+const (
+	targetCacheSize = 12345
+	smallCacheSize  = 3
+)
 
 func TestTransit_CacheConfig(t *testing.T) {
 	b1, storage := createBackendWithSysView(t)
@@ -83,7 +85,6 @@ func TestTransit_CacheConfig(t *testing.T) {
 		},
 	}
 
-
 	// test steps
 	// b1 should spin up with an unlimited cache
 	validateResponse(doReq(b1, readReq), 0, false)
@@ -116,6 +117,4 @@ func TestTransit_CacheConfig(t *testing.T) {
 	// b4 should spin up with a size less than minimum cache size (10)
 	b4, storage := createBackendWithSysView(t)
 	doErrReq(b4, writeSmallCacheSizeReq)
-
-
 }

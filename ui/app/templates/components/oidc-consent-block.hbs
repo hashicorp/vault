@@ -9,8 +9,11 @@
   <h3 class="title is-3" data-test-consent-title>
     Consent
   </h3>
-  <form class="box" {{on 'submit' this.handleSubmit}} data-test-consent-form>
-    <p class="has-bottom-margin-s">In order to complete the login process, you must consent to Vault sharing your profile, email, address, and phone with the client.</p>
+  <form class="box" {{on "submit" this.handleSubmit}} data-test-consent-form>
+    <p class="has-bottom-margin-s">
+      In order to complete the login process, you must consent to Vault sharing your profile, email, address, and phone with
+      the client.
+    </p>
     <p class="has-bottom-margin-s">Do you want to continue?</p>
     <FormSaveButtons
       @saveButtonText="Yes"

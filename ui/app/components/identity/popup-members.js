@@ -5,11 +5,11 @@ import Base from './_popup-base';
 export default Base.extend({
   model: alias('params.firstObject'),
 
-  groupArray: computed('params', function() {
+  groupArray: computed('params', function () {
     return this.params.objectAt(1);
   }),
 
-  memberId: computed('params', function() {
+  memberId: computed('params', function () {
     return this.params.objectAt(2);
   }),
 

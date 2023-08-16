@@ -11,14 +11,14 @@ import mountSecrets from 'vault/tests/pages/settings/mount-secret-backend';
 
 const consoleComponent = create(consoleClass);
 
-module('Acceptance | settings/mount-secret-backend', function(hooks) {
+module('Acceptance | settings/mount-secret-backend', function (hooks) {
   setupApplicationTest(hooks);
 
-  hooks.beforeEach(function() {
+  hooks.beforeEach(function () {
     return authPage.login();
   });
 
-  test('it sets the ttl correctly when mounting', async function(assert) {
+  test('it sets the ttl correctly when mounting', async function (assert) {
     // always force the new mount to the top of the list
     const path = `kv-${new Date().getTime()}`;
     const defaultTTLHours = 100;
@@ -46,7 +46,7 @@ module('Acceptance | settings/mount-secret-backend', function(hooks) {
     assert.equal(configPage.maxTTL, maxTTLSeconds, 'shows the proper max TTL');
   });
 
-  test('it sets the ttl when enabled then disabled', async function(assert) {
+  test('it sets the ttl when enabled then disabled', async function (assert) {
     // always force the new mount to the top of the list
     const path = `kv-${new Date().getTime()}`;
     const maxTTLHours = 300;
@@ -71,7 +71,7 @@ module('Acceptance | settings/mount-secret-backend', function(hooks) {
     assert.equal(configPage.maxTTL, maxTTLSeconds, 'shows the proper max TTL');
   });
 
-  test('it throws error if setting duplicate path name', async function(assert) {
+  test('it throws error if setting duplicate path name', async function (assert) {
     const path = `kv-duplicate`;
 
     await consoleComponent.runCommands([
@@ -83,19 +83,13 @@ module('Acceptance | settings/mount-secret-backend', function(hooks) {
 
     assert.equal(currentRouteName(), 'vault.cluster.settings.mount-secret-backend');
     await page.selectType('kv');
-    await page
-      .next()
-      .path(path)
-      .submit();
+    await page.next().path(path).submit();
     await page.secretList();
     await settled();
     await page.enableEngine();
     await page.selectType('kv');
-    await page
-      .next()
-      .path(path)
-      .submit();
-    assert.dom('.alert-banner-message-body').hasText('This mount path already exist.');
+    await page.next().path(path).submit();
+    assert.dom('.alert-banner-message-body').containsText(`path is already in use at ${path}`);
     assert.equal(currentRouteName(), 'vault.cluster.settings.mount-secret-backend');
 
     await page.secretList();
@@ -105,7 +99,7 @@ module('Acceptance | settings/mount-secret-backend', function(hooks) {
       .exists({ count: 1 }, 'renders only one instance of the engine');
   });
 
-  test('version 2 with no update to config endpoint still allows mount of secret engine', async function(assert) {
+  test('version 2 with no update to config endpoint still allows mount of secret engine', async function (assert) {
     let enginePath = `kv-noUpdate-${new Date().getTime()}`;
     const V2_POLICY = `
       path "${enginePath}/*" {
@@ -135,11 +129,7 @@ module('Acceptance | settings/mount-secret-backend', function(hooks) {
     // create the engine
     await mountSecrets.visit();
     await mountSecrets.selectType('kv');
-    await mountSecrets
-      .next()
-      .path(enginePath)
-      .setMaxVersion(101)
-      .submit();
+    await mountSecrets.next().path(enginePath).setMaxVersion(101).submit();
     await settled();
     assert.ok(
       find('[data-test-flash-message]').textContent.trim(),

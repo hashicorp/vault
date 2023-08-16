@@ -6,10 +6,10 @@ import sinon from 'sinon';
 
 const redirectBase = 'https://hashicorp.com';
 
-module('Integration | Component | oidc-consent-block', function(hooks) {
+module('Integration | Component | oidc-consent-block', function (hooks) {
   setupRenderingTest(hooks);
 
-  test('it renders', async function(assert) {
+  test('it renders', async function (assert) {
     this.set('redirect', redirectBase);
     await render(hbs`
       <OidcConsentBlock @redirect={{redirect}} @code="1234" />
@@ -26,7 +26,7 @@ module('Integration | Component | oidc-consent-block', function(hooks) {
     assert.dom('[data-test-cancel-button]').hasText('No', 'form button has correct cancel text');
   });
 
-  test('it calls the success callback when user clicks "Yes"', async function(assert) {
+  test('it calls the success callback when user clicks "Yes"', async function (assert) {
     const spy = sinon.spy();
     this.set('successSpy', spy);
     this.set('redirect', redirectBase);
@@ -47,7 +47,7 @@ module('Integration | Component | oidc-consent-block', function(hooks) {
     assert.ok(spy.calledWith(`${redirectBase}/?code=1234`), 'Redirects to correct route');
   });
 
-  test('it shows the termination message when user clicks "No"', async function(assert) {
+  test('it shows the termination message when user clicks "No"', async function (assert) {
     const spy = sinon.spy();
     this.set('successSpy', spy);
     this.set('redirect', redirectBase);
@@ -71,7 +71,7 @@ module('Integration | Component | oidc-consent-block', function(hooks) {
     assert.ok(spy.notCalled, 'Does not call the success method');
   });
 
-  test('it calls the success callback with correct params', async function(assert) {
+  test('it calls the success callback with correct params', async function (assert) {
     const spy = sinon.spy();
     this.set('successSpy', spy);
     this.set('redirect', redirectBase);

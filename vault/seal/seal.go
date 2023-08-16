@@ -15,7 +15,7 @@ const (
 	StoredKeysInvalid StoredKeysSupport = iota
 	StoredKeysNotSupported
 	StoredKeysSupportedGeneric
-	StoredKeysSupportedShamirMaster
+	StoredKeysSupportedShamirRoot
 )
 
 func (s StoredKeysSupport) String() string {
@@ -24,7 +24,7 @@ func (s StoredKeysSupport) String() string {
 		return "Old-style Shamir"
 	case StoredKeysSupportedGeneric:
 		return "AutoUnseal"
-	case StoredKeysSupportedShamirMaster:
+	case StoredKeysSupportedShamirRoot:
 		return "New-style Shamir"
 	default:
 		return "Invalid StoredKeys type"

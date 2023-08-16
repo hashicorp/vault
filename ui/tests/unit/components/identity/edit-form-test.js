@@ -3,7 +3,7 @@ import { module, test } from 'qunit';
 import { setupTest } from 'ember-qunit';
 import sinon from 'sinon';
 
-module('Unit | Component | identity/edit-form', function(hooks) {
+module('Unit | Component | identity/edit-form', function (hooks) {
   setupTest(hooks);
 
   let testCases = [
@@ -53,12 +53,12 @@ module('Unit | Component | identity/edit-form', function(hooks) {
       expected: 'vault.cluster.access.identity.aliases.show',
     },
   ];
-  testCases.forEach(function(testCase) {
+  testCases.forEach(function (testCase) {
     let model = EmberObject.create({
       identityType: testCase.identityType,
       rollbackAttributes: sinon.spy(),
     });
-    test(`it computes cancelLink properly: ${testCase.identityType} ${testCase.mode}`, function(assert) {
+    test(`it computes cancelLink properly: ${testCase.identityType} ${testCase.mode}`, function (assert) {
       let component = this.owner.lookup('component:identity/edit-form');
 
       component.set('mode', testCase.mode);

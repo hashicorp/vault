@@ -34,6 +34,7 @@ func testHTTPServer(
 func init() {
 	os.Setenv("VAULT_TOKEN", "")
 }
+
 func TestLogin(t *testing.T) {
 	secretIDEnvVar := "APPROLE_SECRET_ID"
 	allowedRoleID := "my-role-id"

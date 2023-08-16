@@ -329,6 +329,8 @@ func (b *databaseBackend) connectionWriteHandler() framework.OperationFunc {
 		}
 		config.ConnectionDetails = initResp.Config
 
+		b.Logger().Debug("created database object", "name", name, "plugin_name", config.PluginName)
+
 		b.Lock()
 		defer b.Unlock()
 
@@ -365,6 +367,9 @@ func (b *databaseBackend) connectionWriteHandler() framework.OperationFunc {
 				"Vault (or the sdk if using a custom plugin) to gain password policy support", config.PluginName))
 		}
 
+		if len(resp.Warnings) == 0 {
+			return nil, nil
+		}
 		return resp, nil
 	}
 }

@@ -281,7 +281,8 @@ func parseSignedData(data []byte) (*PKCS7, error) {
 		Certificates: certs,
 		CRLs:         sd.CRLs,
 		Signers:      sd.SignerInfos,
-		raw:          sd}, nil
+		raw:          sd,
+	}, nil
 }
 
 // verifyCertChain takes an end-entity certs, a list of potential intermediates and a

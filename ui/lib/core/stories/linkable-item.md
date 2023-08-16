@@ -21,6 +21,6 @@ LinkableItem components have two contextual components, a Content component used
 **See**
 
 - [Uses of LinkableItem](https://github.com/hashicorp/vault/search?l=Handlebars&q=LinkableItem+OR+linkable-item)
-- [LinkableItem Source Code](https://github.com/hashicorp/vault/blob/master/ui/lib/core/addon/components/linkable-item.js)
+- [LinkableItem Source Code](https://github.com/hashicorp/vault/blob/main/ui/lib/core/addon/components/linkable-item.js)
 
 ---

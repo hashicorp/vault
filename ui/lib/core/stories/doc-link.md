@@ -17,6 +17,6 @@
 **See**
 
 - [Uses of DocLink](https://github.com/hashicorp/vault/search?l=Handlebars&q=DocLink)
-- [DocLink Source Code](https://github.com/hashicorp/vault/blob/master/ui/app/components/doc-link.js)
+- [DocLink Source Code](https://github.com/hashicorp/vault/blob/main/ui/app/components/doc-link.js)
 
 ---

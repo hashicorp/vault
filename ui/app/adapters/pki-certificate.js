@@ -23,7 +23,7 @@ export default Adapter.extend({
 
   fetchByQuery(store, query) {
     const { backend, id } = query;
-    return this.ajax(this.urlFor(backend, id), 'GET', this.optionsForQuery(id)).then(resp => {
+    return this.ajax(this.urlFor(backend, id), 'GET', this.optionsForQuery(id)).then((resp) => {
       const data = {
         backend,
       };
@@ -53,7 +53,7 @@ export default Adapter.extend({
     const data = {
       serial_number: id,
     };
-    return this.ajax(`${this.buildURL()}/${backend}/revoke`, 'POST', { data }).then(resp => {
+    return this.ajax(`${this.buildURL()}/${backend}/revoke`, 'POST', { data }).then((resp) => {
       const data = {
         id,
         serial_number: id,

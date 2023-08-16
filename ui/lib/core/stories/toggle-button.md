@@ -31,6 +31,6 @@
 **See**
 
 - [Uses of ToggleButton](https://github.com/hashicorp/vault/search?l=Handlebars&q=ToggleButton)
-- [ToggleButton Source Code](https://github.com/hashicorp/vault/blob/master/ui/app/components/toggle-button.js)
+- [ToggleButton Source Code](https://github.com/hashicorp/vault/blob/main/ui/app/components/toggle-button.js)
 
 ---

@@ -5,6 +5,7 @@ import (
 	"encoding/base64"
 	"fmt"
 
+	"github.com/hashicorp/vault/helper/constants"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/errutil"
 	"github.com/hashicorp/vault/sdk/helper/keysutil"
@@ -128,6 +129,7 @@ func (b *backend) pathRewrapWrite(ctx context.Context, req *logical.Request, d *
 		p.Lock(false)
 	}
 
+	warnAboutNonceUsage := false
 	for i, item := range batchInputItems {
 		if batchResponseItems[i].Error != "" {
 			continue
@@ -143,6 +145,10 @@ func (b *backend) pathRewrapWrite(ctx context.Context, req *logical.Request, d *
 				p.Unlock()
 				return nil, err
 			}
+		}
+
+		if !warnAboutNonceUsage && shouldWarnAboutNonceUsage(p, item.DecodedNonce) {
+			warnAboutNonceUsage = true
 		}
 
 		ciphertext, err := p.Encrypt(item.KeyVersion, item.DecodedContext, item.DecodedNonce, plaintext)
@@ -188,6 +194,10 @@ func (b *backend) pathRewrapWrite(ctx context.Context, req *logical.Request, d *
 			"ciphertext":  batchResponseItems[0].Ciphertext,
 			"key_version": batchResponseItems[0].KeyVersion,
 		}
+	}
+
+	if constants.IsFIPS() && warnAboutNonceUsage {
+		resp.AddWarning("A provided nonce value was used within FIPS mode, this violates FIPS 140 compliance.")
 	}
 
 	p.Unlock()

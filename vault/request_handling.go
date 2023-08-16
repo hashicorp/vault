@@ -2,17 +2,23 @@ package vault
 
 import (
 	"context"
+	"crypto/hmac"
+	"encoding/base64"
 	"errors"
 	"fmt"
+	"os"
 	"strings"
 	"time"
 
-	metrics "github.com/armon/go-metrics"
+	"github.com/armon/go-metrics"
+	"github.com/golang/protobuf/proto"
 	"github.com/hashicorp/errwrap"
-	multierror "github.com/hashicorp/go-multierror"
+	"github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/go-secure-stdlib/strutil"
-	sockaddr "github.com/hashicorp/go-sockaddr"
+	"github.com/hashicorp/go-sockaddr"
+	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/helper/identity"
+	"github.com/hashicorp/vault/helper/identity/mfa"
 	"github.com/hashicorp/vault/helper/metricsutil"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/internalshared/configutil"
@@ -24,11 +30,13 @@ import (
 	"github.com/hashicorp/vault/sdk/helper/wrapping"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/vault/quotas"
+	"github.com/hashicorp/vault/vault/tokens"
 	uberAtomic "go.uber.org/atomic"
 )
 
 const (
-	replTimeout = 1 * time.Second
+	replTimeout                           = 1 * time.Second
+	EnvVaultDisableLocalAuthMountEntities = "VAULT_DISABLE_LOCAL_AUTH_MOUNT_ENTITIES"
 )
 
 var (
@@ -126,7 +134,7 @@ func (c *Core) fetchACLTokenEntryAndEntity(ctx context.Context, req *logical.Req
 
 	// Ensure there is a client token
 	if req.ClientToken == "" {
-		return nil, nil, nil, nil, &logical.StatusBadRequest{Err: "missing client token"}
+		return nil, nil, nil, nil, logical.ErrPermissionDenied
 	}
 
 	if c.tokenStore == nil {
@@ -327,13 +335,13 @@ func (c *Core) checkToken(ctx context.Context, req *logical.Request, unauth bool
 		}
 
 		switch {
-		case checkExists == false:
+		case !checkExists:
 			// No existence check, so always treat it as an update operation, which is how it is pre 0.5
 			req.Operation = logical.UpdateOperation
-		case resourceExists == true:
+		case resourceExists:
 			// It exists, so force an update operation
 			req.Operation = logical.UpdateOperation
-		case resourceExists == false:
+		case !resourceExists:
 			// It doesn't exist, force a create operation
 			req.Operation = logical.CreateOperation
 		default:
@@ -346,6 +354,8 @@ func (c *Core) checkToken(ctx context.Context, req *logical.Request, unauth bool
 		Accessor:    req.ClientTokenAccessor,
 	}
 
+	var clientID string
+	var isTWE bool
 	if te != nil {
 		auth.IdentityPolicies = identityPolicies[te.NamespaceID]
 		auth.TokenPolicies = te.Policies
@@ -362,6 +372,8 @@ func (c *Core) checkToken(ctx context.Context, req *logical.Request, unauth bool
 		if te.CreationTime > 0 {
 			auth.IssueTime = time.Unix(te.CreationTime, 0)
 		}
+		clientID, isTWE = te.CreateClientID()
+		req.ClientID = clientID
 	}
 
 	// Check the standard non-root ACLs. Return the token entry if it's not
@@ -398,7 +410,7 @@ func (c *Core) checkToken(ctx context.Context, req *logical.Request, unauth bool
 
 	// If it is an authenticated ( i.e with vault token ) request, increment client count
 	if !unauth && c.activityLog != nil {
-		req.ClientID = c.activityLog.HandleTokenUsage(te)
+		c.activityLog.HandleTokenUsage(ctx, te, clientID, isTWE)
 	}
 	return auth, te, nil
 }
@@ -439,8 +451,12 @@ func (c *Core) switchedLockHandleRequest(httpCtx context.Context, req *logical.R
 		return nil, fmt.Errorf("could not parse namespace from http context: %w", err)
 	}
 
-	resp, err = c.handleCancelableRequest(namespace.ContextWithNamespace(ctx, ns), req)
-
+	ctx = namespace.ContextWithNamespace(ctx, ns)
+	inFlightReqID, ok := httpCtx.Value(logical.CtxKeyInFlightRequestID{}).(string)
+	if ok {
+		ctx = context.WithValue(ctx, logical.CtxKeyInFlightRequestID{}, inFlightReqID)
+	}
+	resp, err = c.handleCancelableRequest(ctx, req)
 	req.SetTokenEntry(nil)
 	cancel()
 	return resp, err
@@ -455,7 +471,8 @@ func (c *Core) handleCancelableRequest(ctx context.Context, req *logical.Request
 	// backends. Basically, it's all just terrible, so don't allow it.
 	if strings.HasSuffix(req.Path, "/") &&
 		(req.Operation == logical.UpdateOperation ||
-			req.Operation == logical.CreateOperation) {
+			req.Operation == logical.CreateOperation ||
+			req.Operation == logical.PatchOperation) {
 		return logical.ErrorResponse("cannot write to a path ending in '/'"), nil
 	}
 
@@ -488,6 +505,8 @@ func (c *Core) handleCancelableRequest(ctx context.Context, req *logical.Request
 	if err != nil {
 		return nil, fmt.Errorf("could not parse namespace from http context: %w", err)
 	}
+	var requestBodyToken string
+	var returnRequestAuthToken bool
 
 	// req.Path will be relative by this point. The prefix check is first
 	// to fail faster if we're not in this situation since it's a hot path
@@ -526,6 +545,7 @@ func (c *Core) handleCancelableRequest(ctx context.Context, req *logical.Request
 		// requests for these paths always go to the token NS
 		case "auth/token/lookup-self", "auth/token/renew-self", "auth/token/revoke-self":
 			ctx = newCtx
+			returnRequestAuthToken = true
 
 		// For the following operations, we can set the proper namespace context
 		// using the token's embedded nsID if a relative path was provided.
@@ -542,6 +562,19 @@ func (c *Core) handleCancelableRequest(ctx context.Context, req *logical.Request
 					ctx = newCtx
 				}
 				break
+			}
+			if token == nil {
+				return logical.ErrorResponse("invalid token"), logical.ErrPermissionDenied
+			}
+			// We don't care if the token is an server side consistent token or not. Either way, we're going
+			// to be returning it for these paths instead of the short token stored in vault.
+			requestBodyToken = token.(string)
+			if IsSSCToken(token.(string)) {
+				token, err = c.CheckSSCToken(ctx, token.(string), c.isLoginRequest(ctx, req), c.perfStandby)
+				if err != nil {
+					return nil, fmt.Errorf("server side consistent token check failed: %w", err)
+				}
+				req.Data["token"] = token
 			}
 			_, nsID := namespace.SplitIDFromString(token.(string))
 			if nsID != "" {
@@ -603,10 +636,30 @@ func (c *Core) handleCancelableRequest(ctx context.Context, req *logical.Request
 	walState := &logical.WALState{}
 	ctx = logical.IndexStateContext(ctx, walState)
 	var auth *logical.Auth
-	if c.router.LoginPath(ctx, req.Path) {
+	if c.isLoginRequest(ctx, req) {
 		resp, auth, err = c.handleLoginRequest(ctx, req)
 	} else {
 		resp, auth, err = c.handleRequest(ctx, req)
+	}
+
+	// If we saved the token in the request, we should return it in the response
+	// data.
+	if resp != nil && resp.Data != nil {
+		if _, ok := resp.Data["error"]; !ok {
+			if requestBodyToken != "" {
+				resp.Data["id"] = requestBodyToken
+			} else if returnRequestAuthToken && req.InboundSSCToken != "" {
+				resp.Data["id"] = req.InboundSSCToken
+			}
+		}
+	}
+	if resp != nil && resp.Auth != nil && requestBodyToken != "" {
+		// if a client token has already been set and the request body token's internal token
+		// is equal to that value, then we can return the original request body token
+		tok, _ := c.DecodeSSCToken(requestBodyToken)
+		if resp.Auth.ClientToken == tok {
+			resp.Auth.ClientToken = requestBodyToken
+		}
 	}
 
 	// Ensure we don't leak internal data
@@ -745,6 +798,10 @@ func (c *Core) doRouting(ctx context.Context, req *logical.Request) (*logical.Re
 	return resp, err
 }
 
+func (c *Core) isLoginRequest(ctx context.Context, req *logical.Request) bool {
+	return c.router.LoginPath(ctx, req.Path)
+}
+
 func (c *Core) handleRequest(ctx context.Context, req *logical.Request) (retResp *logical.Response, retAuth *logical.Auth, retErr error) {
 	defer metrics.MeasureSince([]string{"core", "handle_request"}, time.Now())
 
@@ -770,6 +827,12 @@ func (c *Core) handleRequest(ctx context.Context, req *logical.Request) (retResp
 	auth, te, ctErr := c.checkToken(ctx, req, false)
 	if ctErr == logical.ErrPerfStandbyPleaseForward {
 		return nil, nil, ctErr
+	}
+
+	// Updating in-flight request data with client/entity ID
+	inFlightReqID, ok := ctx.Value(logical.CtxKeyInFlightRequestID{}).(string)
+	if ok && req.ClientID != "" {
+		c.UpdateInFlightReqData(inFlightReqID, req.ClientID)
 	}
 
 	// We run this logic first because we want to decrement the use count even
@@ -1089,6 +1152,10 @@ func (c *Core) handleRequest(ctx context.Context, req *logical.Request) (retResp
 			// We build the "policies" list to be returned by starting with
 			// token policies, and add identity policies right after this
 			// conditional
+			tok, _ := c.DecodeSSCToken(req.InboundSSCToken)
+			if resp.Auth.ClientToken == tok {
+				resp.Auth.ClientToken = req.InboundSSCToken
+			}
 			resp.Auth.Policies = policyutil.SanitizePolicies(resp.Auth.TokenPolicies, policyutil.DoNotAddDefaultPolicy)
 		} else {
 			resp.Auth.TokenPolicies = policyutil.SanitizePolicies(resp.Auth.Policies, policyutil.DoNotAddDefaultPolicy)
@@ -1096,12 +1163,13 @@ func (c *Core) handleRequest(ctx context.Context, req *logical.Request) (retResp
 			switch resp.Auth.TokenType {
 			case logical.TokenTypeBatch:
 			case logical.TokenTypeService:
-				if err := c.expiration.RegisterAuth(ctx, &logical.TokenEntry{
+				registeredTokenEntry := &logical.TokenEntry{
 					TTL:         auth.TTL,
 					Policies:    auth.TokenPolicies,
 					Path:        resp.Auth.CreationPath,
 					NamespaceID: ns.ID,
-				}, resp.Auth); err != nil {
+				}
+				if err := c.expiration.RegisterAuth(ctx, registeredTokenEntry, resp.Auth); err != nil {
 					// Best-effort clean up on error, so we log the cleanup error as
 					// a warning but still return as internal error.
 					if err := c.tokenStore.revokeOrphan(ctx, resp.Auth.ClientToken); err != nil {
@@ -1110,6 +1178,9 @@ func (c *Core) handleRequest(ctx context.Context, req *logical.Request) (retResp
 					c.logger.Error("failed to register token lease during auth/token/ request", "request_path", req.Path, "error", err)
 					retErr = multierror.Append(retErr, ErrInternalError)
 					return nil, auth, retErr
+				}
+				if registeredTokenEntry.ExternalID != "" {
+					resp.Auth.ClientToken = registeredTokenEntry.ExternalID
 				}
 				leaseGenerated = true
 			}
@@ -1165,6 +1236,13 @@ func (c *Core) handleLoginRequest(ctx context.Context, req *logical.Request) (re
 	if ctErr == logical.ErrPerfStandbyPleaseForward {
 		return nil, nil, ctErr
 	}
+
+	// Updating in-flight request data with client/entity ID
+	inFlightReqID, ok := ctx.Value(logical.CtxKeyInFlightRequestID{}).(string)
+	if ok && req.ClientID != "" {
+		c.UpdateInFlightReqData(inFlightReqID, req.ClientID)
+	}
+
 	if ctErr != nil {
 		// If it is an internal error we return that, otherwise we
 		// return invalid request so that the status codes can be correct
@@ -1275,7 +1353,7 @@ func (c *Core) handleLoginRequest(ctx context.Context, req *logical.Request) (re
 		return
 	}
 	// If the response generated an authentication, then generate the token
-	if resp != nil && resp.Auth != nil {
+	if resp != nil && resp.Auth != nil && req.Path != "sys/mfa/validate" {
 		leaseGenerated := false
 
 		// by placing this after the authorization check, we don't leak
@@ -1325,6 +1403,11 @@ func (c *Core) handleLoginRequest(ctx context.Context, req *logical.Request) (re
 		if auth.Alias != nil &&
 			mEntry != nil &&
 			c.identityStore != nil {
+
+			if mEntry.Local && os.Getenv(EnvVaultDisableLocalAuthMountEntities) != "" {
+				goto CREATE_TOKEN
+			}
+
 			// Overwrite the mount type and mount path in the alias
 			// information
 			auth.Alias.MountType = req.MountType
@@ -1373,94 +1456,105 @@ func (c *Core) handleLoginRequest(ctx context.Context, req *logical.Request) (re
 	CREATE_TOKEN:
 		// Determine the source of the login
 		source := c.router.MatchingMount(ctx, req.Path)
-		source = strings.TrimPrefix(source, credentialRoutePrefix)
-		source = strings.Replace(source, "/", "-", -1)
 
-		// Prepend the source to the display name
-		auth.DisplayName = strings.TrimSuffix(source+auth.DisplayName, "-")
-
-		sysView := c.router.MatchingSystemView(ctx, req.Path)
-		if sysView == nil {
-			c.logger.Error("unable to look up sys view for login path", "request_path", req.Path)
-			return nil, nil, ErrInternalError
-		}
-
-		tokenTTL, warnings, err := framework.CalculateTTL(sysView, 0, auth.TTL, auth.Period, auth.MaxTTL, auth.ExplicitMaxTTL, time.Time{})
-		if err != nil {
-			return nil, nil, err
-		}
-		for _, warning := range warnings {
-			resp.AddWarning(warning)
-		}
-
-		_, identityPolicies, err := c.fetchEntityAndDerivedPolicies(ctx, ns, auth.EntityID, false)
+		// Login MFA
+		entity, _, err := c.fetchEntityAndDerivedPolicies(ctx, ns, auth.EntityID, false)
 		if err != nil {
 			return nil, nil, ErrInternalError
 		}
+		// finding the MFAEnforcementConfig that matches the ns and either of
+		// entityID, MountAccessor, GroupID, or Auth type.
+		matchedMfaEnforcementList, err := c.buildMFAEnforcementConfigList(ctx, entity, req.Path)
+		if err != nil {
+			return nil, nil, fmt.Errorf("failed to find MFAEnforcement configuration, error: %v", err)
+		}
 
-		auth.TokenPolicies = policyutil.SanitizePolicies(auth.Policies, !auth.NoDefaultPolicy)
-		allPolicies := policyutil.SanitizePolicies(append(auth.TokenPolicies, identityPolicies[ns.ID]...), policyutil.DoNotAddDefaultPolicy)
+		// (for the context, a response warning above says: "primary cluster
+		// doesn't yet issue entities for local auth mounts; falling back
+		// to not issuing entities for local auth mounts")
+		// based on the above, if the entity is nil, check if MFAEnforcementConfig
+		// is configured or not. If not, continue as usual, but if there
+		// is something, then report an error indicating that the user is not
+		// allowed to login because there is no entity associated with it.
+		// This is because an entity is needed to enforce MFA.
+		if entity == nil && len(matchedMfaEnforcementList) > 0 {
+			// this logic means that an MFAEnforcementConfig was configured with
+			// only mount type or mount accessor
+			return nil, nil, logical.ErrPermissionDenied
+		}
 
-		// Prevent internal policies from being assigned to tokens. We check
-		// this on auth.Policies including derived ones from Identity before
-		// actually making the token.
-		for _, policy := range allPolicies {
-			if policy == "root" {
-				return logical.ErrorResponse("auth methods cannot create root tokens"), nil, logical.ErrInvalidRequest
+		// The resp.Auth has been populated with the information that is required for MFA validation
+		// This is why, the MFA check is placed at this point. The resp.Auth is going to be fully cached
+		// in memory so that it would be used to return to the user upon MFA validation is completed.
+		if entity != nil {
+			if len(matchedMfaEnforcementList) == 0 && len(req.MFACreds) > 0 {
+				resp.AddWarning("Found MFA header but failed to find MFA Enforcement Config")
 			}
-			if strutil.StrListContains(nonAssignablePolicies, policy) {
-				return logical.ErrorResponse(fmt.Sprintf("cannot assign policy %q", policy)), nil, logical.ErrInvalidRequest
+
+			// If X-Vault-MFA header is supplied to the login request,
+			// run single-phase login MFA check, else run two-phase login MFA check
+			if len(matchedMfaEnforcementList) > 0 && len(req.MFACreds) > 0 {
+				for _, eConfig := range matchedMfaEnforcementList {
+					err = c.validateLoginMFA(ctx, eConfig, entity, req.Connection.RemoteAddr, req.MFACreds)
+					if err != nil {
+						return nil, nil, logical.ErrPermissionDenied
+					}
+				}
+			} else if len(matchedMfaEnforcementList) > 0 && len(req.MFACreds) == 0 {
+				mfaRequestID, err := uuid.GenerateUUID()
+				if err != nil {
+					return nil, nil, err
+				}
+				// sending back the MFARequirement config
+				mfaRequirement := &logical.MFARequirement{
+					MFARequestID:   mfaRequestID,
+					MFAConstraints: make(map[string]*logical.MFAConstraintAny),
+				}
+				for _, eConfig := range matchedMfaEnforcementList {
+					mfaAny, err := c.buildMfaEnforcementResponse(eConfig)
+					if err != nil {
+						return nil, nil, err
+					}
+					mfaRequirement.MFAConstraints[eConfig.Name] = mfaAny
+				}
+
+				// for two phased MFA enforcement, we should not return the regular auth
+				// response. This flag is indicate to store the auth response for later
+				// and return MFARequirement only
+				respAuth := &MFACachedAuthResponse{
+					CachedAuth:            resp.Auth,
+					RequestPath:           req.Path,
+					RequestNSID:           ns.ID,
+					RequestNSPath:         ns.Path,
+					RequestConnRemoteAddr: req.Connection.RemoteAddr, // this is needed for the DUO method
+					TimeOfStorage:         time.Now(),
+					RequestID:             mfaRequestID,
+				}
+				err = c.SaveMFAResponseAuth(respAuth)
+				if err != nil {
+					return nil, nil, err
+				}
+				auth = nil
+				resp.Auth = &logical.Auth{
+					MFARequirement: mfaRequirement,
+				}
+				resp.AddWarning("A login request was issued that is subject to MFA validation. Please make sure to validate the login by sending another request to mfa/validate endpoint.")
+				// going to return early before generating the token
+				// the user receives the mfaRequirement, and need to use the
+				// login MFA validate endpoint to get the token
+				return resp, auth, nil
 			}
 		}
-
-		var registerFunc RegisterAuthFunc
-		var funcGetErr error
-		// Batch tokens should not be forwarded to perf standby
-		if auth.TokenType == logical.TokenTypeBatch {
-			registerFunc = c.RegisterAuth
-		} else {
-			registerFunc, funcGetErr = getAuthRegisterFunc(c)
-		}
-		if funcGetErr != nil {
-			retErr = multierror.Append(retErr, funcGetErr)
-			return nil, auth, retErr
-		}
-
-		err = registerFunc(ctx, tokenTTL, req.Path, auth)
-		switch {
-		case err == nil:
-			if auth.TokenType != logical.TokenTypeBatch {
-				leaseGenerated = true
-			}
-		case err == ErrInternalError:
-			return nil, auth, err
-		default:
-			return logical.ErrorResponse(err.Error()), auth, logical.ErrInvalidRequest
-		}
-
-		auth.IdentityPolicies = policyutil.SanitizePolicies(identityPolicies[ns.ID], policyutil.DoNotAddDefaultPolicy)
-		delete(identityPolicies, ns.ID)
-		auth.ExternalNamespacePolicies = identityPolicies
-		auth.Policies = allPolicies
 
 		// Attach the display name, might be used by audit backends
 		req.DisplayName = auth.DisplayName
 
-		// Count the successful token creation
-		ttl_label := metricsutil.TTLBucket(tokenTTL)
-		// Do not include namespace path in mount point; already present as separate label.
-		mountPointWithoutNs := ns.TrimmedPath(req.MountPoint)
-		c.metricSink.IncrCounterWithLabels(
-			[]string{"token", "creation"},
-			1,
-			[]metrics.Label{
-				metricsutil.NamespaceLabel(ns),
-				{"auth_method", req.MountType},
-				{"mount_point", mountPointWithoutNs},
-				{"creation_ttl", ttl_label},
-				{"token_type", auth.TokenType.String()},
-			},
-		)
+		leaseGen, respTokenCreate, errCreateToken := c.LoginCreateToken(ctx, ns, req.Path, source, resp)
+		leaseGenerated = leaseGen
+		if errCreateToken != nil {
+			return respTokenCreate, nil, errCreateToken
+		}
+		resp = respTokenCreate
 	}
 
 	// if we were already going to return some error from this login, do that.
@@ -1481,6 +1575,134 @@ func (c *Core) handleLoginRequest(ctx context.Context, req *logical.Request) (re
 	}
 
 	return resp, auth, routeErr
+}
+
+// LoginCreateToken creates a token as a result of a login request.
+// If MFA is enforced, mfa/validate endpoint calls this functions
+// after successful MFA validation to generate the token.
+func (c *Core) LoginCreateToken(ctx context.Context, ns *namespace.Namespace, reqPath, mountPoint string, resp *logical.Response) (bool, *logical.Response, error) {
+	auth := resp.Auth
+
+	source := strings.TrimPrefix(mountPoint, credentialRoutePrefix)
+	source = strings.Replace(source, "/", "-", -1)
+
+	// Prepend the source to the display name
+	auth.DisplayName = strings.TrimSuffix(source+auth.DisplayName, "-")
+
+	// Determine mount type
+	mountEntry := c.router.MatchingMountEntry(ctx, reqPath)
+	if mountEntry == nil {
+		return false, nil, fmt.Errorf("failed to find a matching mount")
+	}
+
+	sysView := c.router.MatchingSystemView(ctx, reqPath)
+	if sysView == nil {
+		c.logger.Error("unable to look up sys view for login path", "request_path", reqPath)
+		return false, nil, ErrInternalError
+	}
+
+	tokenTTL, warnings, err := framework.CalculateTTL(sysView, 0, auth.TTL, auth.Period, auth.MaxTTL, auth.ExplicitMaxTTL, time.Time{})
+	if err != nil {
+		return false, nil, err
+	}
+	for _, warning := range warnings {
+		resp.AddWarning(warning)
+	}
+
+	_, identityPolicies, err := c.fetchEntityAndDerivedPolicies(ctx, ns, auth.EntityID, false)
+	if err != nil {
+		return false, nil, ErrInternalError
+	}
+
+	auth.TokenPolicies = policyutil.SanitizePolicies(auth.Policies, !auth.NoDefaultPolicy)
+	allPolicies := policyutil.SanitizePolicies(append(auth.TokenPolicies, identityPolicies[ns.ID]...), policyutil.DoNotAddDefaultPolicy)
+
+	// Prevent internal policies from being assigned to tokens. We check
+	// this on auth.Policies including derived ones from Identity before
+	// actually making the token.
+	for _, policy := range allPolicies {
+		if policy == "root" {
+			return false, logical.ErrorResponse("auth methods cannot create root tokens"), logical.ErrInvalidRequest
+		}
+		if strutil.StrListContains(nonAssignablePolicies, policy) {
+			return false, logical.ErrorResponse(fmt.Sprintf("cannot assign policy %q", policy)), logical.ErrInvalidRequest
+		}
+	}
+
+	var registerFunc RegisterAuthFunc
+	var funcGetErr error
+	// Batch tokens should not be forwarded to perf standby
+	if auth.TokenType == logical.TokenTypeBatch {
+		registerFunc = c.RegisterAuth
+	} else {
+		registerFunc, funcGetErr = getAuthRegisterFunc(c)
+	}
+	if funcGetErr != nil {
+		return false, nil, funcGetErr
+	}
+
+	leaseGenerated := false
+	err = registerFunc(ctx, tokenTTL, reqPath, auth)
+	switch {
+	case err == nil:
+		if auth.TokenType != logical.TokenTypeBatch {
+			leaseGenerated = true
+		}
+	case err == ErrInternalError:
+		return false, nil, err
+	default:
+		return false, logical.ErrorResponse(err.Error()), logical.ErrInvalidRequest
+	}
+
+	auth.IdentityPolicies = policyutil.SanitizePolicies(identityPolicies[ns.ID], policyutil.DoNotAddDefaultPolicy)
+	delete(identityPolicies, ns.ID)
+	auth.ExternalNamespacePolicies = identityPolicies
+	auth.Policies = allPolicies
+
+	// Count the successful token creation
+	ttl_label := metricsutil.TTLBucket(tokenTTL)
+	// Do not include namespace path in mount point; already present as separate label.
+	mountPointWithoutNs := ns.TrimmedPath(mountPoint)
+	c.metricSink.IncrCounterWithLabels(
+		[]string{"token", "creation"},
+		1,
+		[]metrics.Label{
+			metricsutil.NamespaceLabel(ns),
+			{"auth_method", mountEntry.Type},
+			{"mount_point", mountPointWithoutNs},
+			{"creation_ttl", ttl_label},
+			{"token_type", auth.TokenType.String()},
+		},
+	)
+
+	return leaseGenerated, resp, nil
+}
+
+func (c *Core) buildMfaEnforcementResponse(eConfig *mfa.MFAEnforcementConfig) (*logical.MFAConstraintAny, error) {
+	mfaAny := &logical.MFAConstraintAny{
+		Any: []*logical.MFAMethodID{},
+	}
+	for _, methodID := range eConfig.MFAMethodIDs {
+		mConfig, err := c.loginMFABackend.MemDBMFAConfigByID(methodID)
+		if err != nil {
+			return nil, fmt.Errorf("failed to get methodID %s from MFA config table, error: %v", methodID, err)
+		}
+		var duoUsePasscode bool
+		if mConfig.Type == mfaMethodTypeDuo {
+			duoConf, ok := mConfig.Config.(*mfa.Config_DuoConfig)
+			if !ok {
+				return nil, fmt.Errorf("invalid MFA configuration type")
+			}
+			duoUsePasscode = duoConf.DuoConfig.UsePasscode
+		}
+		mfaMethod := &logical.MFAMethodID{
+			Type:         mConfig.Type,
+			ID:           methodID,
+			UsesPasscode: mConfig.Type == mfaMethodTypeTOTP || duoUsePasscode,
+		}
+		mfaAny.Any = append(mfaAny.Any, mfaMethod)
+	}
+	return mfaAny, nil
 }
 
 func blockRequestIfErrorImpl(_ *Core, _, _ string) error { return nil }
@@ -1544,6 +1766,9 @@ func (c *Core) RegisterAuth(ctx context.Context, tokenTTL time.Duration, path st
 			c.logger.Error("failed to register token lease during login request", "request_path", path, "error", err)
 			return ErrInternalError
 		}
+		if te.ExternalID != "" {
+			auth.ClientToken = te.ExternalID
+		}
 	}
 
 	return nil
@@ -1564,12 +1789,20 @@ func (c *Core) PopulateTokenEntry(ctx context.Context, req *logical.Request) err
 	// a token from a Vault version pre-accessors. We ignore errors for
 	// JWTs.
 	token := req.ClientToken
+	var err error
+	req.InboundSSCToken = token
+	if IsSSCToken(token) {
+		token, err = c.CheckSSCToken(ctx, token, c.isLoginRequest(ctx, req), c.perfStandby)
+		if err != nil {
+			return err
+		}
+	}
+	req.ClientToken = token
 	te, err := c.LookupToken(ctx, token)
 	if err != nil {
-		dotCount := strings.Count(token, ".")
 		// If we have two dots but the second char is a dot it's a vault
 		// token of the form s.SOMETHING.nsid, not a JWT
-		if dotCount != 2 || (dotCount == 2 && token[1] == '.') {
+		if !IsJWT(token) {
 			return fmt.Errorf("error performing token check: %w", err)
 		}
 	}
@@ -1579,4 +1812,130 @@ func (c *Core) PopulateTokenEntry(ctx context.Context, req *logical.Request) err
 		req.SetTokenEntry(te)
 	}
 	return nil
+}
+
+func (c *Core) CheckSSCToken(ctx context.Context, token string, unauth bool, isPerfStandby bool) (string, error) {
+	if unauth && token != "" {
+		// This token shouldn't really be here, but alas it was sent along with the request
+		// Since we're already knee deep in the token checking code pre-existing token checking
+		// code, we have to deal with this token whether we like it or not. So, we'll just try
+		// to get the inner token, and if that fails, return the token as-is. We intentionally
+		// will skip any token checks, because this is an unauthenticated paths and the token
+		// is just a nuisance rather than a means of auth.
+
+		// We cannot return whatever we like here, because if we do then CheckToken, which looks up
+		// the corresponding lease, will not find the token entry and lease. There are unauth'ed
+		// endpoints that use the token entry (such as sys/ui/mounts/internal) to do custom token
+		// checks, which would then fail. Therefore, we must try to get whatever thing is tied to
+		// token entries, but we must explicitly not do any SSC Token checks.
+		tok, err := c.DecodeSSCToken(token)
+		if err != nil || tok == "" {
+			return token, nil
+		}
+		return tok, nil
+	}
+	return c.checkSSCTokenInternal(ctx, token, isPerfStandby)
+}
+
+// DecodeSSCToken returns the random part of an SSCToken without
+// performing any signature or WAL checks.
+func (c *Core) DecodeSSCToken(token string) (string, error) {
+	// Skip batch and old style service tokens. These can have the prefix "b.",
+	// "s." (for old tokens) or "hvb."
+	if !IsSSCToken(token) {
+		return token, nil
+	}
+	tok, err := c.DecodeSSCTokenInternal(token)
+	if err != nil {
+		return "", err
+	}
+	return tok.Random, nil
+}
+
+// DecodeSSCTokenInternal is a helper used to get the inner part of a SSC token without
+// checking the token signature or the WAL index.
+func (c *Core) DecodeSSCTokenInternal(token string) (*tokens.Token, error) {
+	signedToken := &tokens.SignedToken{}
+
+	// Skip batch and old style service tokens. These can have the prefix "b.",
+	// "s." (for old tokens) or "hvb."
+	if !strings.HasPrefix(token, consts.ServiceTokenPrefix) {
+		return nil, fmt.Errorf("not service token")
+	}
+
+	// Consider the suffix of the token only when unmarshalling
+	suffixToken := token[4:]
+
+	tokenBytes, err := base64.RawURLEncoding.DecodeString(suffixToken)
+	if err != nil {
+		return nil, fmt.Errorf("can't decode token")
+	}
+
+	err = proto.Unmarshal(tokenBytes, signedToken)
+	if err != nil {
+		return nil, err
+	}
+	plainToken := &tokens.Token{}
+	err2 := proto.Unmarshal([]byte(signedToken.Token), plainToken)
+	if err2 != nil {
+		return nil, err2
+	}
+	return plainToken, nil
+}
+
+func (c *Core) checkSSCTokenInternal(ctx context.Context, token string, isPerfStandby bool) (string, error) {
+	signedToken := &tokens.SignedToken{}
+
+	// Skip batch and old style service tokens. These can have the prefix "b.",
+	// "s." (for old tokens) or "hvb."
+	if !strings.HasPrefix(token, consts.ServiceTokenPrefix) {
+		return token, nil
+	}
+
+	// Check token length to guess if this is an server side consistent token or not.
+	// Note that even when the DisableSSCTokens flag is set, index
+	// bearing tokens that have already been given out may still be used.
+	if !IsSSCToken(token) {
+		return token, nil
+	}
+
+	// Consider the suffix of the token only when unmarshalling
+	suffixToken := token[4:]
+
+	tokenBytes, err := base64.RawURLEncoding.DecodeString(suffixToken)
+	if err != nil {
+		c.logger.Warn("cannot decode token", "error", err)
+		return token, nil
+	}
+
+	err = proto.Unmarshal(tokenBytes, signedToken)
+	if err != nil {
+		return "", fmt.Errorf("error occurred when unmarshalling ssc token: %w", err)
+	}
+	hm, err := c.tokenStore.CalculateSignedTokenHMAC(signedToken.Token)
+	if !hmac.Equal(hm, signedToken.Hmac) {
+		return "", fmt.Errorf("token mac for %+v is incorrect: err %w", signedToken, err)
+	}
+	plainToken := &tokens.Token{}
+	err = proto.Unmarshal([]byte(signedToken.Token), plainToken)
+	if err != nil {
+		return "", err
+	}
+	ep := int(plainToken.IndexEpoch)
+	if ep < c.tokenStore.GetSSCTokensGenerationCounter() {
+		return plainToken.Random, nil
+	}
+
+	requiredWalState := &logical.WALState{ClusterID: c.clusterID.Load(), LocalIndex: plainToken.LocalIndex, ReplicatedIndex: 0}
+	if c.HasWALState(requiredWalState, isPerfStandby) {
+		return plainToken.Random, nil
+	}
+	// Make sure to forward the request instead of checking the token if the flag
+	// is set and we're on a perf standby
+	if c.ForwardToActive() == ForwardSSCTokenToActive && isPerfStandby {
+		return "", logical.ErrPerfStandbyPleaseForward
+	}
+	// In this case, the server side consistent token cannot be used on this node. We return the appropriate
+	// status code.
+	return "", logical.ErrMissingRequiredState
 }

@@ -114,6 +114,24 @@ func TestTransit_HMAC(t *testing.T) {
 	req.Data["format"] = "base64"
 	doRequest(req, false, "vault:v1:PSXLXvkvKF4CpU65e2bK1tGBZQpcpCEM32fq2iUoiTyQQCfBcGJJItQ+60tMwWXAPQrC290AzTrNJucGrr4GFA==")
 
+	// Test SHA3
+	req.Path = "hmac/foo"
+	req.Data["algorithm"] = "sha3-224"
+	doRequest(req, false, "vault:v1:TGipmKH8LR/BkMolYpDYy0BJCIhTtGPDhV2VkQ==")
+
+	req.Data["algorithm"] = "sha3-256"
+	doRequest(req, false, "vault:v1:+px9V/7QYLfdK808zPESC2T/L33uFf4Blzsn9Jy838o=")
+
+	req.Data["algorithm"] = "sha3-384"
+	doRequest(req, false, "vault:v1:YGoRwN4UdTRYZeOER86jsQOB8piWenzLDzJ2wJQK/Jq59rAsY8lh7SCdqqCyFg70")
+
+	req.Data["algorithm"] = "sha3-512"
+	doRequest(req, false, "vault:v1:GrNA8sU88naMPEQ7UZGj9EJl7YJhl03AFHfxcEURFrtvnobdea9ZlZHePpxAx/oCaC7R2HkrAO+Tu3uXPIl3lg==")
+
+	// Test returning SHA3 as base64
+	req.Data["format"] = "base64"
+	doRequest(req, false, "vault:v1:GrNA8sU88naMPEQ7UZGj9EJl7YJhl03AFHfxcEURFrtvnobdea9ZlZHePpxAx/oCaC7R2HkrAO+Tu3uXPIl3lg==")
+
 	req.Data["algorithm"] = "foobar"
 	doRequest(req, true, "")
 

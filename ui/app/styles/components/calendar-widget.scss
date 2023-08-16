@@ -1,0 +1,124 @@
+$dark-gray: #535f73;
+
+.calendar-content {
+  display: flex;
+  width: 234px;
+
+  &.calendar-open {
+    width: 500px;
+  }
+
+  > .menu {
+    margin-bottom: 0px;
+  }
+}
+.calendar-title {
+  padding: $size-10 $size-8;
+}
+.calendar-widget-dropdown {
+  @extend .button;
+  @extend .is-ghost;
+  @extend .has-icon-right;
+  border: 0;
+  color: $black;
+  transition: background-color $speed;
+  width: 150px;
+
+  &:hover {
+    background-color: $ui-gray-100;
+    border: 0;
+    color: $blue;
+  }
+
+  &.is-active {
+    background-color: $ui-gray-100;
+    border: 0;
+    color: $blue;
+  }
+}
+
+.select-year {
+  grid-area: select-year;
+  margin-left: 24px;
+  margin-top: 10px;
+  font-weight: $font-weight-bold;
+  display: flex;
+  justify-content: space-between;
+  align-items: first baseline;
+
+  // spacing of < year > icons when the tooltip is added or removed from DOM.
+  > .padding-right {
+    // if no tooltip
+    padding-right: 26px;
+  }
+  > .negative-margin {
+    // if tooltip
+    margin-right: -50px;
+  }
+}
+
+.calendar-widget {
+  grid-area: calendar-widget;
+
+  > button {
+    &.is-month-list {
+      background-color: white;
+      color: black;
+      text-align: center;
+      border: 1px solid $ui-gray-200;
+      border-radius: 2px;
+    }
+    &.is-current-month {
+      border: 1px solid $ui-gray-900;
+    }
+    &:hover {
+      background-color: lighten($dark-gray, 30%);
+      color: white;
+      text-align: center;
+      cursor: pointer;
+    }
+    &.is-readOnly {
+      background-color: $ui-gray-100;
+      color: lighten($dark-gray, 30%);
+      pointer-events: none;
+    }
+  }
+}
+
+.border-col {
+  grid-area: border-col;
+  background-color: $ui-gray-200;
+}
+
+.calendar-widget-container {
+  display: grid;
+  grid-template-areas:
+    'select-year'
+    'calendar-widget';
+  grid-template-columns: 1fr;
+  grid-template-rows: 0.7fr 3fr;
+  box-shadow: $box-shadow, $box-shadow-middle;
+  background-color: white;
+  border-radius: 2px;
+}
+
+.calendar-widget-grid {
+  display: grid;
+  grid-template-columns: 110px 110px;
+  grid-template-rows: repeat(2, 1fr);
+  grid-gap: 0.7rem;
+  padding: 7px 28px 28px 28px;
+}
+
+// for modal-dialog tooltips
+.calendar-tooltip {
+  background-color: $ui-gray-700;
+  color: white;
+  font-size: $size-8;
+  padding: $size-9;
+  border-radius: $radius-large;
+  width: 141px;
+}
+.ember-modal-dialog {
+  z-index: 1000;
+}

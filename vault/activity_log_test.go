@@ -2,8 +2,6 @@ package vault
 
 import (
 	"context"
-	"crypto/sha256"
-	"encoding/base64"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -114,13 +112,16 @@ func TestActivityLog_Creation_WrappingTokens(t *testing.T) {
 	a.fragmentLock.Unlock()
 	const namespace_id = "ns123"
 
-	a.HandleTokenUsage(&logical.TokenEntry{
+	te := &logical.TokenEntry{
 		Path:         "test",
 		Policies:     []string{responseWrappingPolicyName},
 		CreationTime: time.Now().Unix(),
 		TTL:          3600,
 		NamespaceID:  namespace_id,
-	})
+	}
+
+	id, isTWE := te.CreateClientID()
+	a.HandleTokenUsage(context.Background(), te, id, isTWE)
 
 	a.fragmentLock.Lock()
 	if a.fragment != nil {
@@ -128,13 +129,16 @@ func TestActivityLog_Creation_WrappingTokens(t *testing.T) {
 	}
 	a.fragmentLock.Unlock()
 
-	a.HandleTokenUsage(&logical.TokenEntry{
+	teNew := &logical.TokenEntry{
 		Path:         "test",
 		Policies:     []string{controlGroupPolicyName},
 		CreationTime: time.Now().Unix(),
 		TTL:          3600,
 		NamespaceID:  namespace_id,
-	})
+	}
+
+	id, isTWE = teNew.CreateClientID()
+	a.HandleTokenUsage(context.Background(), teNew, id, isTWE)
 
 	a.fragmentLock.Lock()
 	if a.fragment != nil {
@@ -359,13 +363,15 @@ func TestActivityLog_SaveTokensToStorageDoesNotUpdateTokenCount(t *testing.T) {
 	tokenEntryOne := logical.TokenEntry{NamespaceID: "ns1_id", Policies: []string{"hi"}}
 	entityEntry := logical.TokenEntry{EntityID: "foo", NamespaceID: "ns1_id", Policies: []string{"hi"}}
 
-	id, _ := a.CreateClientID(&tokenEntryOne)
+	idNonEntity, isTWE := tokenEntryOne.CreateClientID()
 
 	for i := 0; i < 3; i++ {
-		a.HandleTokenUsage(&tokenEntryOne)
+		a.HandleTokenUsage(ctx, &tokenEntryOne, idNonEntity, isTWE)
 	}
+
+	idEntity, isTWE := entityEntry.CreateClientID()
 	for i := 0; i < 2; i++ {
-		a.HandleTokenUsage(&entityEntry)
+		a.HandleTokenUsage(ctx, &entityEntry, idEntity, isTWE)
 	}
 	err := a.saveCurrentSegmentToStorage(ctx, false)
 	if err != nil {
@@ -394,14 +400,14 @@ func TestActivityLog_SaveTokensToStorageDoesNotUpdateTokenCount(t *testing.T) {
 	for _, client := range out.Clients {
 		if client.NonEntity == true {
 			nonEntityTokenFlag = true
-			if client.ClientID != id {
-				t.Fatalf("expected a client ID of %s, but saved instead %s", id, client.ClientID)
+			if client.ClientID != idNonEntity {
+				t.Fatalf("expected a client ID of %s, but saved instead %s", idNonEntity, client.ClientID)
 			}
 		}
 		if client.NonEntity == false {
 			entityTokenFlag = true
-			if client.ClientID != "foo" {
-				t.Fatalf("expected a client ID of %s, but saved instead %s", "foo", client.ClientID)
+			if client.ClientID != idEntity {
+				t.Fatalf("expected a client ID of %s, but saved instead %s", idEntity, client.ClientID)
 			}
 		}
 	}
@@ -579,8 +585,8 @@ func TestActivityLog_MultipleFragmentsAndSegments(t *testing.T) {
 	}
 	ts := time.Now().Unix()
 
-	// First 7000 should fit in one segment
-	for i := 0; i < 7000; i++ {
+	// First 4000 should fit in one segment
+	for i := 0; i < 4000; i++ {
 		a.AddEntityToFragment(genID(i), "root", ts)
 	}
 
@@ -604,12 +610,12 @@ func TestActivityLog_MultipleFragmentsAndSegments(t *testing.T) {
 	if err != nil {
 		t.Fatalf("could not unmarshal protobuf: %v", err)
 	}
-	if len(entityLog0.Clients) != 7000 {
-		t.Fatalf("unexpected entity length. Expected %d, got %d", 7000, len(entityLog0.Clients))
+	if len(entityLog0.Clients) != 4000 {
+		t.Fatalf("unexpected entity length. Expected %d, got %d", 4000, len(entityLog0.Clients))
 	}
 
-	// 7000 more local entities
-	for i := 7000; i < 14000; i++ {
+	// 4000 more local entities
+	for i := 4000; i < 8000; i++ {
 		a.AddEntityToFragment(genID(i), "root", ts)
 	}
 
@@ -624,7 +630,7 @@ func TestActivityLog_MultipleFragmentsAndSegments(t *testing.T) {
 		Clients:         make([]*activity.EntityRecord, 0, 100),
 		NonEntityTokens: tokens1,
 	}
-	for i := 7000; i < 7100; i++ {
+	for i := 4000; i < 4100; i++ {
 		fragment1.Clients = append(fragment1.Clients, &activity.EntityRecord{
 			ClientID:    genID(i),
 			NamespaceID: "root",
@@ -643,7 +649,7 @@ func TestActivityLog_MultipleFragmentsAndSegments(t *testing.T) {
 		Clients:         make([]*activity.EntityRecord, 0, 100),
 		NonEntityTokens: tokens2,
 	}
-	for i := 14000; i < 14100; i++ {
+	for i := 8000; i < 8100; i++ {
 		fragment2.Clients = append(fragment2.Clients, &activity.EntityRecord{
 			ClientID:    genID(i),
 			NamespaceID: "root",
@@ -674,8 +680,8 @@ func TestActivityLog_MultipleFragmentsAndSegments(t *testing.T) {
 	if err != nil {
 		t.Fatalf("could not unmarshal protobuf: %v", err)
 	}
-	if len(entityLog0.Clients) != activitySegmentEntityCapacity {
-		t.Fatalf("unexpected entity length. Expected %d, got %d", activitySegmentEntityCapacity,
+	if len(entityLog0.Clients) != activitySegmentClientCapacity {
+		t.Fatalf("unexpected client length. Expected %d, got %d", activitySegmentClientCapacity,
 			len(entityLog0.Clients))
 	}
 
@@ -685,7 +691,7 @@ func TestActivityLog_MultipleFragmentsAndSegments(t *testing.T) {
 	if err != nil {
 		t.Fatalf("could not unmarshal protobuf: %v", err)
 	}
-	expectedCount := 14100 - activitySegmentEntityCapacity
+	expectedCount := 8100 - activitySegmentClientCapacity
 	if len(entityLog1.Clients) != expectedCount {
 		t.Fatalf("unexpected entity length. Expected %d, got %d", expectedCount,
 			len(entityLog1.Clients))
@@ -698,7 +704,7 @@ func TestActivityLog_MultipleFragmentsAndSegments(t *testing.T) {
 	for _, e := range entityLog1.Clients {
 		entityPresent[e.ClientID] = struct{}{}
 	}
-	for i := 0; i < 14100; i++ {
+	for i := 0; i < 8100; i++ {
 		expectedID := genID(i)
 		if _, present := entityPresent[expectedID]; !present {
 			t.Fatalf("entity ID %v = %v not present", i, expectedID)
@@ -1088,7 +1094,7 @@ func (a *ActivityLog) resetEntitiesInMemory(t *testing.T) {
 		clientSequenceNumber: 0,
 	}
 
-	a.clientTracker.activeClients = make(map[string]struct{})
+	a.partialMonthClientTracker = make(map[string]*activity.EntityRecord)
 }
 
 func TestActivityLog_loadCurrentClientSegment(t *testing.T) {
@@ -1280,7 +1286,7 @@ func TestActivityLog_loadPriorEntitySegment(t *testing.T) {
 		if tc.refresh {
 			a.l.Lock()
 			a.fragmentLock.Lock()
-			a.clientTracker.activeClients = make(map[string]struct{})
+			a.partialMonthClientTracker = make(map[string]*activity.EntityRecord)
 			a.currentSegment.startTimestamp = tc.time
 			a.fragmentLock.Unlock()
 			a.l.Unlock()
@@ -1454,7 +1460,6 @@ func setupActivityRecordsInStorage(t *testing.T, base time.Time, includeEntities
 			} else {
 				WriteToStorage(t, core, ActivityLogPrefix+"entity/"+fmt.Sprint(base.Unix())+"/"+strconv.Itoa(i-1), entityData)
 			}
-
 		}
 	}
 
@@ -1517,65 +1522,6 @@ func TestActivityLog_refreshFromStoredLog(t *testing.T) {
 	if !ActiveEntitiesEqual(activeClients, expectedActive.Clients) {
 		// we expect activeClients to be loaded for the entire month
 		t.Errorf("bad data loaded into active entities. expected only set of EntityID from %v in %v", expectedActive.Clients, activeClients)
-	}
-}
-
-// TestCreateClientID verifies that CreateClientID uses the entity ID for a token
-// entry if one exists, and creates an appropriate client ID otherwise.
-func TestCreateClientID(t *testing.T) {
-	entry := logical.TokenEntry{NamespaceID: "namespaceFoo", Policies: []string{"bar", "baz", "foo", "banana"}}
-	activityLog := ActivityLog{}
-	id, isTWE := activityLog.CreateClientID(&entry)
-	if !isTWE {
-		t.Fatalf("TWE token should return true value in isTWE bool")
-	}
-	expectedIDPlaintext := "banana" + string(sortedPoliciesTWEDelimiter) + "bar" +
-		string(sortedPoliciesTWEDelimiter) + "baz" +
-		string(sortedPoliciesTWEDelimiter) + "foo" + string(clientIDTWEDelimiter) + "namespaceFoo"
-
-	hashed := sha256.Sum256([]byte(expectedIDPlaintext))
-	expectedID := base64.StdEncoding.EncodeToString(hashed[:])
-	if expectedID != id {
-		t.Fatalf("wrong ID: expected %s, found %s", expectedID, id)
-	}
-	// Test with entityID
-	entry = logical.TokenEntry{EntityID: "entityFoo", NamespaceID: "namespaceFoo", Policies: []string{"bar", "baz", "foo", "banana"}}
-	id, isTWE = activityLog.CreateClientID(&entry)
-	if isTWE {
-		t.Fatalf("token with entity should return false value in isTWE bool")
-	}
-	if id != "entityFoo" {
-		t.Fatalf("client ID should be entity ID")
-	}
-
-	// Test without namespace
-	entry = logical.TokenEntry{Policies: []string{"bar", "baz", "foo", "banana"}}
-	id, isTWE = activityLog.CreateClientID(&entry)
-	if !isTWE {
-		t.Fatalf("TWE token should return true value in isTWE bool")
-	}
-	expectedIDPlaintext = "banana" + string(sortedPoliciesTWEDelimiter) + "bar" +
-		string(sortedPoliciesTWEDelimiter) + "baz" +
-		string(sortedPoliciesTWEDelimiter) + "foo" + string(clientIDTWEDelimiter)
-
-	hashed = sha256.Sum256([]byte(expectedIDPlaintext))
-	expectedID = base64.StdEncoding.EncodeToString(hashed[:])
-	if expectedID != id {
-		t.Fatalf("wrong ID: expected %s, found %s", expectedID, id)
-	}
-
-	// Test without policies
-	entry = logical.TokenEntry{NamespaceID: "namespaceFoo"}
-	id, isTWE = activityLog.CreateClientID(&entry)
-	if !isTWE {
-		t.Fatalf("TWE token should return true value in isTWE bool")
-	}
-	expectedIDPlaintext = "namespaceFoo"
-
-	hashed = sha256.Sum256([]byte(expectedIDPlaintext))
-	expectedID = base64.StdEncoding.EncodeToString(hashed[:])
-	if expectedID != id {
-		t.Fatalf("wrong ID: expected %s, found %s", expectedID, id)
 	}
 }
 
@@ -2830,7 +2776,7 @@ func TestActivityLog_Precompute(t *testing.T) {
 	}
 }
 
-//TestActivityLog_PrecomputeNonEntityTokensWithID is the same test as
+// TestActivityLog_PrecomputeNonEntityTokensWithID is the same test as
 // TestActivityLog_Precompute, except all the clients are tokens without
 // entities. This ensures the deduplication logic and separation logic between
 // entities and TWE clients is correct.
@@ -3387,12 +3333,14 @@ func TestActivityLog_partialMonthClientCount(t *testing.T) {
 
 	ctx := namespace.RootContext(nil)
 	now := time.Now().UTC()
-	a, entities, tokenCounts := setupActivityRecordsInStorage(t, timeutil.StartOfMonth(now), true, true)
-	entities = entities[1:]
-	entityCounts := make(map[string]uint64)
+	a, clients, _ := setupActivityRecordsInStorage(t, timeutil.StartOfMonth(now), true, true)
 
-	for _, entity := range entities {
-		entityCounts[entity.NamespaceID] += 1
+	// clients[0] belongs to previous month
+	clients = clients[1:]
+
+	clientCounts := make(map[string]uint64)
+	for _, client := range clients {
+		clientCounts[client.NamespaceID] += 1
 	}
 
 	a.SetEnable(true)
@@ -3402,15 +3350,6 @@ func TestActivityLog_partialMonthClientCount(t *testing.T) {
 		t.Fatalf("error loading clients: %v", err)
 	}
 	wg.Wait()
-
-	// entities[0] is from a previous month
-	partialMonthEntityCount := len(entities)
-	var partialMonthTokenCount int
-	for _, countByNS := range tokenCounts {
-		partialMonthTokenCount += int(countByNS)
-	}
-
-	expectedClientCount := partialMonthEntityCount + partialMonthTokenCount
 
 	results, err := a.partialMonthClientCount(ctx)
 	if err != nil {
@@ -3425,49 +3364,35 @@ func TestActivityLog_partialMonthClientCount(t *testing.T) {
 		t.Fatalf("malformed results. got %v", results)
 	}
 
-	clientCountResponse := make([]*ClientCountInNamespace, 0)
+	clientCountResponse := make([]*ResponseNamespace, 0)
 	err = mapstructure.Decode(byNamespace, &clientCountResponse)
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	for _, clientCount := range clientCountResponse {
-
-		if int(entityCounts[clientCount.NamespaceID]) != clientCount.Counts.DistinctEntities {
-			t.Errorf("bad entity count for namespace %s . expected %d, got %d", clientCount.NamespaceID, int(entityCounts[clientCount.NamespaceID]), clientCount.Counts.DistinctEntities)
-
+		if int(clientCounts[clientCount.NamespaceID]) != clientCount.Counts.DistinctEntities {
+			t.Errorf("bad entity count for namespace %s . expected %d, got %d", clientCount.NamespaceID, int(clientCounts[clientCount.NamespaceID]), clientCount.Counts.DistinctEntities)
 		}
-		if int(tokenCounts[clientCount.NamespaceID]) != clientCount.Counts.NonEntityTokens {
-			t.Errorf("bad token count for namespace %s . expected %d, got %d", clientCount.NamespaceID, int(tokenCounts[clientCount.NamespaceID]), clientCount.Counts.NonEntityTokens)
-		}
-
-		totalCount := int(entityCounts[clientCount.NamespaceID] + tokenCounts[clientCount.NamespaceID])
+		totalCount := int(clientCounts[clientCount.NamespaceID])
 		if totalCount != clientCount.Counts.Clients {
 			t.Errorf("bad client count for namespace %s . expected %d, got %d", clientCount.NamespaceID, totalCount, clientCount.Counts.Clients)
 		}
-
 	}
 
-	entityCount, ok := results["distinct_entities"]
+	distinctEntities, ok := results["distinct_entities"]
 	if !ok {
 		t.Fatalf("malformed results. got %v", results)
 	}
-	if entityCount != partialMonthEntityCount {
-		t.Errorf("bad entity count. expected %d, got %d", partialMonthEntityCount, entityCount)
+	if distinctEntities != len(clients) {
+		t.Errorf("bad entity count. expected %d, got %d", len(clients), distinctEntities)
 	}
 
-	tokenCount, ok := results["non_entity_tokens"]
-	if !ok {
-		t.Fatalf("malformed results. got %v", results)
-	}
-	if tokenCount != partialMonthTokenCount {
-		t.Errorf("bad token count. expected %d, got %d", partialMonthTokenCount, tokenCount)
-	}
 	clientCount, ok := results["clients"]
 	if !ok {
 		t.Fatalf("malformed results. got %v", results)
 	}
-	if clientCount != expectedClientCount {
-		t.Errorf("bad client count. expected %d, got %d", expectedClientCount, clientCount)
+	if clientCount != len(clients) {
+		t.Errorf("bad client count. expected %d, got %d", len(clients), clientCount)
 	}
 }

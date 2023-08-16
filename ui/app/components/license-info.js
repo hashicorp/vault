@@ -23,7 +23,7 @@ import { allFeatures } from 'vault/helpers/all-features';
  */
 export default class LicenseInfoComponent extends Component {
   get featuresInfo() {
-    return allFeatures().map(feature => {
+    return allFeatures().map((feature) => {
       let active = this.args.features.includes(feature);
       if (active && feature === 'Performance Standby') {
         let count = this.args.performanceStandbyCount;

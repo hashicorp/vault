@@ -5,9 +5,9 @@ import (
 	"context"
 	"fmt"
 	"io"
-	"net/http"
 	"net/url"
 	"os"
+	"strings"
 
 	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
@@ -144,9 +144,7 @@ func (c *Logical) Write(path string, data map[string]interface{}) (*Secret, erro
 
 func (c *Logical) JSONMergePatch(ctx context.Context, path string, data map[string]interface{}) (*Secret, error) {
 	r := c.c.NewRequest("PATCH", "/v1/"+path)
-	r.Headers = http.Header{
-		"Content-Type": []string{"application/merge-patch+json"},
-	}
+	r.Headers.Set("Content-Type", "application/merge-patch+json")
 	if err := r.SetJSONBody(data); err != nil {
 		return nil, err
 	}
@@ -235,12 +233,13 @@ func (c *Logical) DeleteWithData(path string, data map[string][]string) (*Secret
 
 func (c *Logical) Unwrap(wrappingToken string) (*Secret, error) {
 	var data map[string]interface{}
+	wt := strings.TrimSpace(wrappingToken)
 	if wrappingToken != "" {
 		if c.c.Token() == "" {
-			c.c.SetToken(wrappingToken)
+			c.c.SetToken(wt)
 		} else if wrappingToken != c.c.Token() {
 			data = map[string]interface{}{
-				"token": wrappingToken,
+				"token": wt,
 			}
 		}
 	}

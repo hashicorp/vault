@@ -80,13 +80,13 @@ const ModelExport = Model.extend({
     subText: 'Search for an existing role, type a new role to create it, or use a wildcard (*).',
     wildcardLabel: 'role',
   }),
-  transformAttrs: computed('type', function() {
+  transformAttrs: computed('type', function () {
     if (this.type === 'masking') {
       return ['name', 'type', 'masking_character', 'template', 'allowed_roles'];
     }
     return ['name', 'type', 'tweak_source', 'template', 'allowed_roles'];
   }),
-  transformFieldAttrs: computed('transformAttrs', function() {
+  transformFieldAttrs: computed('transformAttrs', function () {
     return expandAttributeMeta(this, this.transformAttrs);
   }),
 

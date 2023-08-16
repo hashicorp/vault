@@ -420,6 +420,7 @@ func TestClone(t *testing.T) {
 		name    string
 		config  *Config
 		headers *http.Header
+		token   string
 	}{
 		{
 			name:   "default",
@@ -441,91 +442,119 @@ func TestClone(t *testing.T) {
 				ReadYourWrites: true,
 			},
 		},
+		{
+			name: "cloneToken",
+			config: &Config{
+				CloneToken: true,
+			},
+			token: "cloneToken",
+		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			client1, err := NewClient(tt.config)
+			parent, err := NewClient(tt.config)
 			if err != nil {
 				t.Fatalf("NewClient failed: %v", err)
 			}
 
 			// Set all of the things that we provide setter methods for, which modify config values
-			err = client1.SetAddress("http://example.com:8080")
+			err = parent.SetAddress("http://example.com:8080")
 			if err != nil {
 				t.Fatalf("SetAddress failed: %v", err)
 			}
 
 			clientTimeout := time.Until(time.Now().AddDate(0, 0, 1))
-			client1.SetClientTimeout(clientTimeout)
+			parent.SetClientTimeout(clientTimeout)
 
 			checkRetry := func(ctx context.Context, resp *http.Response, err error) (bool, error) {
 				return true, nil
 			}
-			client1.SetCheckRetry(checkRetry)
+			parent.SetCheckRetry(checkRetry)
 
-			client1.SetLogger(hclog.NewNullLogger())
+			parent.SetLogger(hclog.NewNullLogger())
 
-			client1.SetLimiter(5.0, 10)
-			client1.SetMaxRetries(5)
-			client1.SetOutputCurlString(true)
-			client1.SetSRVLookup(true)
+			parent.SetLimiter(5.0, 10)
+			parent.SetMaxRetries(5)
+			parent.SetOutputCurlString(true)
+			parent.SetSRVLookup(true)
 
 			if tt.headers != nil {
-				client1.SetHeaders(*tt.headers)
+				parent.SetHeaders(*tt.headers)
 			}
 
-			client2, err := client1.Clone()
+			if tt.token != "" {
+				parent.SetToken(tt.token)
+			}
+
+			clone, err := parent.Clone()
 			if err != nil {
 				t.Fatalf("Clone failed: %v", err)
 			}
 
-			if client1.Address() != client2.Address() {
-				t.Fatalf("addresses don't match: %v vs %v", client1.Address(), client2.Address())
+			if parent.Address() != clone.Address() {
+				t.Fatalf("addresses don't match: %v vs %v", parent.Address(), clone.Address())
 			}
-			if client1.ClientTimeout() != client2.ClientTimeout() {
-				t.Fatalf("timeouts don't match: %v vs %v", client1.ClientTimeout(), client2.ClientTimeout())
+			if parent.ClientTimeout() != clone.ClientTimeout() {
+				t.Fatalf("timeouts don't match: %v vs %v", parent.ClientTimeout(), clone.ClientTimeout())
 			}
-			if client1.CheckRetry() != nil && client2.CheckRetry() == nil {
-				t.Fatal("checkRetry functions don't match. client2 is nil.")
+			if parent.CheckRetry() != nil && clone.CheckRetry() == nil {
+				t.Fatal("checkRetry functions don't match. clone is nil.")
 			}
-			if (client1.Limiter() != nil && client2.Limiter() == nil) || (client1.Limiter() == nil && client2.Limiter() != nil) {
-				t.Fatalf("limiters don't match: %v vs %v", client1.Limiter(), client2.Limiter())
+			if (parent.Limiter() != nil && clone.Limiter() == nil) || (parent.Limiter() == nil && clone.Limiter() != nil) {
+				t.Fatalf("limiters don't match: %v vs %v", parent.Limiter(), clone.Limiter())
 			}
-			if client1.Limiter().Limit() != client2.Limiter().Limit() {
-				t.Fatalf("limiter limits don't match: %v vs %v", client1.Limiter().Limit(), client2.Limiter().Limit())
+			if parent.Limiter().Limit() != clone.Limiter().Limit() {
+				t.Fatalf("limiter limits don't match: %v vs %v", parent.Limiter().Limit(), clone.Limiter().Limit())
 			}
-			if client1.Limiter().Burst() != client2.Limiter().Burst() {
-				t.Fatalf("limiter bursts don't match: %v vs %v", client1.Limiter().Burst(), client2.Limiter().Burst())
+			if parent.Limiter().Burst() != clone.Limiter().Burst() {
+				t.Fatalf("limiter bursts don't match: %v vs %v", parent.Limiter().Burst(), clone.Limiter().Burst())
 			}
-			if client1.MaxRetries() != client2.MaxRetries() {
-				t.Fatalf("maxRetries don't match: %v vs %v", client1.MaxRetries(), client2.MaxRetries())
+			if parent.MaxRetries() != clone.MaxRetries() {
+				t.Fatalf("maxRetries don't match: %v vs %v", parent.MaxRetries(), clone.MaxRetries())
 			}
-			if client1.OutputCurlString() != client2.OutputCurlString() {
-				t.Fatalf("outputCurlString doesn't match: %v vs %v", client1.OutputCurlString(), client2.OutputCurlString())
+			if parent.OutputCurlString() != clone.OutputCurlString() {
+				t.Fatalf("outputCurlString doesn't match: %v vs %v", parent.OutputCurlString(), clone.OutputCurlString())
 			}
-			if client1.SRVLookup() != client2.SRVLookup() {
-				t.Fatalf("SRVLookup doesn't match: %v vs %v", client1.SRVLookup(), client2.SRVLookup())
+			if parent.SRVLookup() != clone.SRVLookup() {
+				t.Fatalf("SRVLookup doesn't match: %v vs %v", parent.SRVLookup(), clone.SRVLookup())
 			}
 			if tt.config.CloneHeaders {
-				if !reflect.DeepEqual(client1.Headers(), client2.Headers()) {
-					t.Fatalf("Headers() don't match: %v vs %v", client1.Headers(), client2.Headers())
+				if !reflect.DeepEqual(parent.Headers(), clone.Headers()) {
+					t.Fatalf("Headers() don't match: %v vs %v", parent.Headers(), clone.Headers())
 				}
-				if client1.config.CloneHeaders != client2.config.CloneHeaders {
-					t.Fatalf("config.CloneHeaders doesn't match: %v vs %v", client1.config.CloneHeaders, client2.config.CloneHeaders)
+				if parent.config.CloneHeaders != clone.config.CloneHeaders {
+					t.Fatalf("config.CloneHeaders doesn't match: %v vs %v", parent.config.CloneHeaders, clone.config.CloneHeaders)
 				}
 				if tt.headers != nil {
-					if !reflect.DeepEqual(*tt.headers, client2.Headers()) {
-						t.Fatalf("expected headers %v, actual %v", *tt.headers, client2.Headers())
+					if !reflect.DeepEqual(*tt.headers, clone.Headers()) {
+						t.Fatalf("expected headers %v, actual %v", *tt.headers, clone.Headers())
 					}
 				}
 			}
-			if tt.config.ReadYourWrites && client1.replicationStateStore == nil {
+			if tt.config.ReadYourWrites && parent.replicationStateStore == nil {
 				t.Fatalf("replicationStateStore is nil")
 			}
-			if !reflect.DeepEqual(client1.replicationStateStore, client2.replicationStateStore) {
-				t.Fatalf("expected replicationStateStore %v, actual %v", client1.replicationStateStore,
-					client2.replicationStateStore)
+			if tt.config.CloneToken {
+				if tt.token == "" {
+					t.Fatalf("test requires a non-empty token")
+				}
+				if parent.config.CloneToken != clone.config.CloneToken {
+					t.Fatalf("config.CloneToken doesn't match: %v vs %v", parent.config.CloneToken, clone.config.CloneToken)
+				}
+				if parent.token != clone.token {
+					t.Fatalf("tokens do not match: %v vs %v", parent.token, clone.token)
+				}
+			} else {
+				// assumes `VAULT_TOKEN` is unset or has an empty value.
+				expected := ""
+				if clone.token != expected {
+					t.Fatalf("expected clone's token %q, actual %q", expected, clone.token)
+				}
+			}
+			if !reflect.DeepEqual(parent.replicationStateStore, clone.replicationStateStore) {
+				t.Fatalf("expected replicationStateStore %v, actual %v", parent.replicationStateStore,
+					clone.replicationStateStore)
 			}
 		})
 	}
@@ -982,6 +1011,114 @@ func TestClient_ReadYourWrites(t *testing.T) {
 
 			if !reflect.DeepEqual(tt.wantStates, parent.replicationStateStore.states()) {
 				t.Errorf("expected states %v, actual %v", tt.wantStates, parent.replicationStateStore.states())
+			}
+		})
+	}
+}
+
+func TestClient_SetReadYourWrites(t *testing.T) {
+	tests := []struct {
+		name   string
+		config *Config
+		calls  []bool
+	}{
+		{
+			name:   "false",
+			config: &Config{},
+			calls:  []bool{false},
+		},
+		{
+			name:   "true",
+			config: &Config{},
+			calls:  []bool{true},
+		},
+		{
+			name:   "multi-false",
+			config: &Config{},
+			calls:  []bool{false, false},
+		},
+		{
+			name:   "multi-true",
+			config: &Config{},
+			calls:  []bool{true, true},
+		},
+		{
+			name:   "multi-mix",
+			config: &Config{},
+			calls:  []bool{false, true, false, true},
+		},
+	}
+
+	assertSetReadYourRights := func(t *testing.T, c *Client, v bool, s *replicationStateStore) {
+		t.Helper()
+		c.SetReadYourWrites(v)
+		if c.config.ReadYourWrites != v {
+			t.Fatalf("expected config.ReadYourWrites %#v, actual %#v", v, c.config.ReadYourWrites)
+		}
+		if !reflect.DeepEqual(s, c.replicationStateStore) {
+			t.Fatalf("expected replicationStateStore %#v, actual %#v", s, c.replicationStateStore)
+		}
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			c := &Client{
+				config: tt.config,
+			}
+			for i, v := range tt.calls {
+				var expectStateStore *replicationStateStore
+				if v {
+					if c.replicationStateStore == nil {
+						c.replicationStateStore = &replicationStateStore{
+							store: []string{},
+						}
+					}
+					c.replicationStateStore.store = append(c.replicationStateStore.store,
+						fmt.Sprintf("%s-%d", tt.name, i))
+					expectStateStore = c.replicationStateStore
+				}
+				assertSetReadYourRights(t, c, v, expectStateStore)
+			}
+		})
+	}
+}
+
+func TestClient_SetCloneToken(t *testing.T) {
+	tests := []struct {
+		name  string
+		calls []bool
+	}{
+		{
+			name:  "false",
+			calls: []bool{false},
+		},
+		{
+			name:  "true",
+			calls: []bool{true},
+		},
+		{
+			name:  "multi",
+			calls: []bool{true, false, true},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			c := &Client{
+				config: &Config{},
+			}
+
+			var expected bool
+			for _, v := range tt.calls {
+				actual := c.CloneToken()
+				if expected != actual {
+					t.Fatalf("expected %v, actual %v", expected, actual)
+				}
+
+				expected = v
+				c.SetCloneToken(expected)
+				actual = c.CloneToken()
+				if actual != expected {
+					t.Fatalf("SetCloneToken(): expected %v, actual %v", expected, actual)
+				}
 			}
 		})
 	}

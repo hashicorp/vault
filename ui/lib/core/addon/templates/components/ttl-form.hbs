@@ -1,40 +1,35 @@
-{{yeild}}
+{{this.yeild}}
 <div class="field is-grouped">
   <div class="control">
     <input
       data-test-ttlform-value
-      value={{time}}
+      value={{this.time}}
       id="time-foobar"
       type="text"
       name="time"
       class="input"
       pattern="[0-9]*"
-      oninput={{perform updateTime value="target.value"}}
+      oninput={{perform this.updateTime value="target.value"}}
     />
   </div>
   <div class="control">
     <Select
       data-test-ttlform-unit
-      @name='ttl-unit'
-      @options={{unitOptions}}
-      @onChange={{action 'updateUnit'}}
-      @selectedValue={{unit}}
+      @name="ttl-unit"
+      @options={{this.unitOptions}}
+      @onChange={{action "updateUnit"}}
+      @selectedValue={{this.unit}}
       @isFullwidth={{true}}
     />
   </div>
 </div>
-{{#if errorMessage}}
+{{#if this.errorMessage}}
   <div class="columns is-mobile is-variable is-1 ttl-value-error">
     <div class="is-narrow message-icon">
-      <Icon
-        @size="s"
-        class="has-text-danger"
-        aria-hidden=true
-        @glyph="cancel-square-fill"
-      />
+      <Icon @name="x-square-fill" class="has-text-danger" />
     </div>
     <div class="has-text-danger">
-      {{errorMessage}}
+      {{this.errorMessage}}
     </div>
   </div>
 {{/if}}

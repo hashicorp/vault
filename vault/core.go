@@ -14,6 +14,7 @@ import (
 	"net"
 	"net/http"
 	"net/url"
+	"os"
 	"path/filepath"
 	"strings"
 	"sync"
@@ -74,6 +75,15 @@ const (
 	coreKeyringCanaryPath = "core/canary-keyring"
 
 	indexHeaderHMACKeyPath = "core/index-header-hmac-key"
+
+	// defaultMFAAuthResponseTTL is the default duration that Vault caches the
+	// MfaAuthResponse when the value is not specified in the server config
+	defaultMFAAuthResponseTTL = 300 * time.Second
+
+	// ForwardSSCTokenToActive is the value that must be set in the
+	// forwardToActive to trigger forwarding if a perf standby encounters
+	// an SSC Token that it does not have the WAL state for.
+	ForwardSSCTokenToActive = "new_token"
 )
 
 var (
@@ -306,6 +316,10 @@ type Core struct {
 	// change underneath a calling function
 	mountsLock sync.RWMutex
 
+	// mountMigrationTracker tracks past and ongoing remount operations
+	// against their migration ids
+	mountMigrationTracker *sync.Map
+
 	// auth is loaded after unseal since it is a protected
 	// configuration
 	auth *MountTable
@@ -331,7 +345,8 @@ type Core struct {
 	auditedHeaders *AuditedHeadersConfig
 
 	// systemBackend is the backend which is used to manage internal operations
-	systemBackend *SystemBackend
+	systemBackend   *SystemBackend
+	loginMFABackend *LoginMFABackend
 
 	// cubbyholeBackend is the backend which manages the per-token storage
 	cubbyholeBackend *CubbyholeBackend
@@ -365,6 +380,13 @@ type Core struct {
 	// metrics emission and sealing leading to a nil pointer
 	metricsMutex sync.Mutex
 
+	// inFlightReqMap is used to store info about in-flight requests
+	inFlightReqData *InFlightRequests
+
+	// mfaResponseAuthQueue is used to cache the auth response per request ID
+	mfaResponseAuthQueue     *LoginMFAPriorityQueue
+	mfaResponseAuthQueueLock sync.Mutex
+
 	// metricSink is the destination for all metrics that have
 	// a cluster label.
 	metricSink *metricsutil.ClusterMetricSink
@@ -385,6 +407,9 @@ type Core struct {
 	// Cache stores the actual cache; we always have this but may bypass it if
 	// disabled
 	physicalCache physical.ToggleablePurgemonster
+
+	// logRequestsLevel indicates at which level requests should be logged
+	logRequestsLevel *uberAtomic.Int32
 
 	// reloadFuncs is a map containing reload functions
 	reloadFuncs map[string][]reloadutil.ReloadFunc
@@ -570,6 +595,9 @@ type Core struct {
 	enableResponseHeaderHostname   bool
 	enableResponseHeaderRaftNodeID bool
 
+	// disableSSCTokens is used to disable server side consistent token creation/usage
+	disableSSCTokens bool
+
 	// versionTimestamps is a map of vault versions to timestamps when the version
 	// was first run. Note that because perf standbys should be upgraded first, and
 	// only the active node will actually write the new version timestamp, a perf
@@ -696,6 +724,9 @@ type CoreConfig struct {
 	// Whether to send headers in the HTTP response showing hostname or raft node ID
 	EnableResponseHeaderHostname   bool
 	EnableResponseHeaderRaftNodeID bool
+
+	// DisableSSCTokens is used to disable the use of server side consistent tokens
+	DisableSSCTokens bool
 }
 
 // GetServiceRegistration returns the config's ServiceRegistration, or nil if it does
@@ -838,6 +869,8 @@ func CreateCore(conf *CoreConfig) (*Core, error) {
 		disableAutopilot:               conf.DisableAutopilot,
 		enableResponseHeaderHostname:   conf.EnableResponseHeaderHostname,
 		enableResponseHeaderRaftNodeID: conf.EnableResponseHeaderRaftNodeID,
+		mountMigrationTracker:          &sync.Map{},
+		disableSSCTokens:               conf.DisableSSCTokens,
 	}
 	c.standbyStopCh.Store(make(chan struct{}))
 	atomic.StoreUint32(c.sealed, 1)
@@ -847,6 +880,11 @@ func CreateCore(conf *CoreConfig) (*Core, error) {
 
 	c.router.logger = c.logger.Named("router")
 	c.allLoggers = append(c.allLoggers, c.router.logger)
+
+	c.inFlightReqData = &InFlightRequests{
+		InFlightReqMap:   &sync.Map{},
+		InFlightReqCount: uberAtomic.NewUint64(0),
+	}
 
 	c.SetConfig(conf.RawConfig)
 
@@ -966,6 +1004,8 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 		c.ha = conf.HAPhysical
 	}
 
+	c.loginMFABackend = NewLoginMFABackend(c, conf.Logger)
+
 	logicalBackends := make(map[string]logical.Factory)
 	for k, f := range conf.LogicalBackends {
 		logicalBackends[k] = f
@@ -1027,6 +1067,15 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 		c.customListenerHeader.Store(([]*ListenerCustomHeaders)(nil))
 	}
 
+	logRequestsLevel := conf.RawConfig.LogRequestsLevel
+	c.logRequestsLevel = uberAtomic.NewInt32(0)
+	switch {
+	case log.LevelFromString(logRequestsLevel) > log.NoLevel && log.LevelFromString(logRequestsLevel) < log.Off:
+		c.logRequestsLevel.Store(int32(log.LevelFromString(logRequestsLevel)))
+	case logRequestsLevel != "":
+		c.logger.Warn("invalid log_requests_level", "level", conf.RawConfig.LogRequestsLevel)
+	}
+
 	quotasLogger := conf.Logger.Named("quotas")
 	c.allLoggers = append(c.allLoggers, quotasLogger)
 	c.quotaManager, err = quotas.NewManager(quotasLogger, c.quotaLeaseWalker, c.metricSink)
@@ -1047,11 +1096,11 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 	return c, nil
 }
 
-// HandleVersionTimeStamps stores the current version at the current time to
+// handleVersionTimeStamps stores the current version at the current time to
 // storage, and then loads all versions and upgrade timestamps out from storage.
 func (c *Core) handleVersionTimeStamps(ctx context.Context) error {
-	currentTime := time.Now()
-	isUpdated, err := c.storeVersionTimestamp(ctx, version.Version, currentTime)
+	currentTime := time.Now().UTC()
+	isUpdated, err := c.storeVersionTimestamp(ctx, version.Version, currentTime, false)
 	if err != nil {
 		return fmt.Errorf("error storing vault version: %w", err)
 	}
@@ -1078,6 +1127,11 @@ func (c *Core) RaftNodeIDHeaderEnabled() bool {
 	return c.enableResponseHeaderRaftNodeID
 }
 
+// DisableSSCTokens determines whether to use server side consistent tokens or not.
+func (c *Core) DisableSSCTokens() bool {
+	return c.disableSSCTokens
+}
+
 // Shutdown is invoked when the Vault instance is about to be terminated. It
 // should not be accessible as part of an API call as it will cause an availability
 // problem. It is only used to gracefully quit in the case of HA so that failover
@@ -1093,6 +1147,15 @@ func (c *Core) Shutdown() error {
 		c.shutdownDoneCh = nil
 	}
 
+	return err
+}
+
+func (c *Core) ShutdownWait() error {
+	donech := c.ShutdownDone()
+	err := c.Shutdown()
+	if donech != nil {
+		<-donech
+	}
 	return err
 }
 
@@ -1369,6 +1432,9 @@ func (c *Core) getUnsealKey(ctx context.Context, seal Seal) ([]byte, error) {
 	}
 	if err != nil {
 		return nil, err
+	}
+	if config == nil {
+		return nil, fmt.Errorf("failed to obtain seal/recovery configuration")
 	}
 
 	// Check if we don't have enough keys to unlock, proceed through the rest of
@@ -2023,6 +2089,9 @@ func (s standardUnsealStrategy) unseal(ctx context.Context, logger log.Logger, c
 	if err := c.setupPolicyStore(ctx); err != nil {
 		return err
 	}
+	if err := c.setupManagedKeyRegistry(); err != nil {
+		return err
+	}
 	if err := c.loadCORSConfig(ctx); err != nil {
 		return err
 	}
@@ -2038,6 +2107,12 @@ func (s standardUnsealStrategy) unseal(ctx context.Context, logger log.Logger, c
 	if err := c.setupQuotas(ctx, false); err != nil {
 		return err
 	}
+	c.setupCachedMFAResponseAuth()
+
+	if err := c.setupHeaderHMACKey(ctx, false); err != nil {
+		return err
+	}
+
 	if !c.IsDRSecondary() {
 		if err := c.startRollback(); err != nil {
 			return err
@@ -2167,6 +2242,10 @@ func (c *Core) postUnseal(ctx context.Context, ctxCancelFunc context.CancelFunc,
 		}
 	}
 
+	if os.Getenv(EnvVaultDisableLocalAuthMountEntities) != "" {
+		c.logger.Warn("disabling entities for local auth mounts through env var", "env", EnvVaultDisableLocalAuthMountEntities)
+	}
+	c.loginMFABackend.usedCodes = cache.New(0, 30*time.Second)
 	c.logger.Info("post-unseal setup complete")
 	return nil
 }
@@ -2177,6 +2256,9 @@ func (c *Core) preSeal() error {
 	defer metrics.MeasureSince([]string{"core", "pre_seal"}, time.Now())
 	c.logger.Info("pre-seal teardown starting")
 
+	if seal, ok := c.seal.(*autoSeal); ok {
+		seal.StopHealthCheck()
+	}
 	// Clear any pending funcs
 	c.postUnsealFuncs = nil
 	c.activeTime = time.Time{}
@@ -2208,6 +2290,11 @@ func (c *Core) preSeal() error {
 		result = multierror.Append(result, fmt.Errorf("error stopping expiration: %w", err))
 	}
 	c.stopActivityLog()
+	// Clear any cached auth response
+	c.mfaResponseAuthQueueLock.Lock()
+	c.mfaResponseAuthQueue = nil
+	c.mfaResponseAuthQueueLock.Unlock()
+
 	if err := c.teardownCredentials(context.Background()); err != nil {
 		result = multierror.Append(result, fmt.Errorf("error tearing down credentials: %w", err))
 	}
@@ -2234,6 +2321,7 @@ func (c *Core) preSeal() error {
 		seal.StopHealthCheck()
 	}
 
+	c.loginMFABackend.usedCodes = nil
 	preSealPhysical(c)
 
 	c.logger.Info("pre-seal teardown complete")
@@ -2547,7 +2635,7 @@ func (c *Core) adjustSealConfigDuringMigration(existBarrierSealConfig, existReco
 	}
 }
 
-func (c *Core) unsealKeyToMasterKeyPostUnseal(ctx context.Context, combinedKey []byte) ([]byte, error) {
+func (c *Core) unsealKeyToRootKeyPostUnseal(ctx context.Context, combinedKey []byte) ([]byte, error) {
 	return c.unsealKeyToMasterKey(ctx, c.seal, combinedKey, true, false)
 }
 
@@ -2586,7 +2674,7 @@ func (c *Core) unsealKeyToMasterKey(ctx context.Context, seal Seal, combinedKey 
 		}
 		return storedKeys[0], nil
 
-	case vaultseal.StoredKeysSupportedShamirMaster:
+	case vaultseal.StoredKeysSupportedShamirRoot:
 		if useTestSeal {
 			testseal := NewDefaultSeal(&vaultseal.Access{
 				Wrapper: aeadwrapper.NewShamirWrapper(&wrapping.WrapperOptions{
@@ -2945,4 +3033,171 @@ type LicenseState struct {
 	State      string
 	ExpiryTime time.Time
 	Terminated bool
+}
+
+type MFACachedAuthResponse struct {
+	CachedAuth            *logical.Auth
+	RequestPath           string
+	RequestNSID           string
+	RequestNSPath         string
+	RequestConnRemoteAddr string
+	TimeOfStorage         time.Time
+	RequestID             string
+}
+
+func (c *Core) setupCachedMFAResponseAuth() {
+	c.mfaResponseAuthQueueLock.Lock()
+	c.mfaResponseAuthQueue = NewLoginMFAPriorityQueue()
+	mfaQueue := c.mfaResponseAuthQueue
+	c.mfaResponseAuthQueueLock.Unlock()
+
+	ctx := c.activeContext
+
+	go func() {
+		ticker := time.Tick(5 * time.Second)
+		for {
+			select {
+			case <-ctx.Done():
+				return
+			case <-ticker:
+				err := mfaQueue.RemoveExpiredMfaAuthResponse(defaultMFAAuthResponseTTL, time.Now())
+				if err != nil {
+					c.Logger().Error("failed to remove stale MFA auth response", "error", err)
+				}
+			}
+		}
+	}()
+	return
+}
+
+// PopMFAResponseAuthByID pops an item from the mfaResponseAuthQueue by ID
+// it returns the cached auth response or an error
+func (c *Core) PopMFAResponseAuthByID(reqID string) (*MFACachedAuthResponse, error) {
+	c.mfaResponseAuthQueueLock.Lock()
+	defer c.mfaResponseAuthQueueLock.Unlock()
+	return c.mfaResponseAuthQueue.PopByKey(reqID)
+}
+
+// SaveMFAResponseAuth pushes an MFACachedAuthResponse to the mfaResponseAuthQueue.
+// it returns an error in case of failure
+func (c *Core) SaveMFAResponseAuth(respAuth *MFACachedAuthResponse) error {
+	c.mfaResponseAuthQueueLock.Lock()
+	defer c.mfaResponseAuthQueueLock.Unlock()
+	return c.mfaResponseAuthQueue.Push(respAuth)
+}
+
+type InFlightRequests struct {
+	InFlightReqMap   *sync.Map
+	InFlightReqCount *uberAtomic.Uint64
+}
+
+type InFlightReqData struct {
+	StartTime        time.Time `json:"start_time"`
+	ClientRemoteAddr string    `json:"client_remote_address"`
+	ReqPath          string    `json:"request_path"`
+	Method           string    `json:"request_method"`
+	ClientID         string    `json:"client_id"`
+}
+
+func (c *Core) StoreInFlightReqData(reqID string, data InFlightReqData) {
+	c.inFlightReqData.InFlightReqMap.Store(reqID, data)
+	c.inFlightReqData.InFlightReqCount.Inc()
+}
+
+// FinalizeInFlightReqData is going log the completed request if the
+// corresponding server config option is enabled. It also removes the
+// request from the inFlightReqMap and decrement the number of in-flight
+// requests by one.
+func (c *Core) FinalizeInFlightReqData(reqID string, statusCode int) {
+	if c.logRequestsLevel != nil && c.logRequestsLevel.Load() != 0 {
+		c.LogCompletedRequests(reqID, statusCode)
+	}
+
+	c.inFlightReqData.InFlightReqMap.Delete(reqID)
+	c.inFlightReqData.InFlightReqCount.Dec()
+}
+
+// LoadInFlightReqData creates a snapshot map of the current
+// in-flight requests
+func (c *Core) LoadInFlightReqData() map[string]InFlightReqData {
+	currentInFlightReqMap := make(map[string]InFlightReqData)
+	c.inFlightReqData.InFlightReqMap.Range(func(key, value interface{}) bool {
+		// there is only one writer to this map, so skip checking for errors
+		v := value.(InFlightReqData)
+		currentInFlightReqMap[key.(string)] = v
+		return true
+	})
+
+	return currentInFlightReqMap
+}
+
+// UpdateInFlightReqData updates the data for a specific reqID with
+// the clientID
+func (c *Core) UpdateInFlightReqData(reqID, clientID string) {
+	v, ok := c.inFlightReqData.InFlightReqMap.Load(reqID)
+	if !ok {
+		c.Logger().Trace("failed to retrieve request with ID", "request_id", reqID)
+		return
+	}
+
+	// there is only one writer to this map, so skip checking for errors
+	reqData := v.(InFlightReqData)
+	reqData.ClientID = clientID
+	c.inFlightReqData.InFlightReqMap.Store(reqID, reqData)
+}
+
+// LogCompletedRequests Logs the completed request to the server logs
+func (c *Core) LogCompletedRequests(reqID string, statusCode int) {
+	logLevel := log.Level(c.logRequestsLevel.Load())
+	v, ok := c.inFlightReqData.InFlightReqMap.Load(reqID)
+	if !ok {
+		c.logger.Log(logLevel, fmt.Sprintf("failed to retrieve request with ID %v", reqID))
+		return
+	}
+
+	// there is only one writer to this map, so skip checking for errors
+	reqData := v.(InFlightReqData)
+	c.logger.Log(logLevel, "completed_request",
+		"start_time", reqData.StartTime.Format(time.RFC3339),
+		"duration", fmt.Sprintf("%dms", time.Now().Sub(reqData.StartTime).Milliseconds()),
+		"client_id", reqData.ClientID,
+		"client_address", reqData.ClientRemoteAddr, "status_code", statusCode, "request_path", reqData.ReqPath,
+		"request_method", reqData.Method)
+}
+
+func (c *Core) ReloadLogRequestsLevel() {
+	conf := c.rawConfig.Load()
+	if conf == nil {
+		return
+	}
+
+	infoLevel := conf.(*server.Config).LogRequestsLevel
+	switch {
+	case log.LevelFromString(infoLevel) > log.NoLevel && log.LevelFromString(infoLevel) < log.Off:
+		c.logRequestsLevel.Store(int32(log.LevelFromString(infoLevel)))
+	case infoLevel != "":
+		c.logger.Warn("invalid log_requests_level", "level", infoLevel)
+	}
+}
+
+type PeerNode struct {
+	Hostname       string    `json:"hostname"`
+	APIAddress     string    `json:"api_address"`
+	ClusterAddress string    `json:"cluster_address"`
+	LastEcho       time.Time `json:"last_echo"`
+}
+
+// GetHAPeerNodesCached returns the nodes that've sent us Echo requests recently.
+func (c *Core) GetHAPeerNodesCached() []PeerNode {
+	var nodes []PeerNode
+	for itemClusterAddr, item := range c.clusterPeerClusterAddrsCache.Items() {
+		info := item.Object.(nodeHAConnectionInfo)
+		nodes = append(nodes, PeerNode{
+			Hostname:       info.nodeInfo.Hostname,
+			APIAddress:     info.nodeInfo.ApiAddr,
+			ClusterAddress: itemClusterAddr,
+			LastEcho:       info.lastHeartbeat,
+		})
+	}
+	return nodes
 }

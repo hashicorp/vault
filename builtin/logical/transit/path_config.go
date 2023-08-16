@@ -3,6 +3,7 @@ package transit
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/keysutil"
@@ -46,6 +47,13 @@ the latest version of the key is allowed.`,
 			"allow_plaintext_backup": {
 				Type:        framework.TypeBool,
 				Description: `Enables taking a backup of the named key in plaintext format. Once set, this cannot be disabled.`,
+			},
+
+			"auto_rotate_period": {
+				Type: framework.TypeDurationSecond,
+				Description: `Amount of time the key should live before
+being automatically rotated. A value of 0
+disables automatic rotation for the key.`,
 			},
 		},
 
@@ -181,6 +189,23 @@ func (b *backend) pathConfigWrite(ctx context.Context, req *logical.Request, d *
 		// Don't unset the already set value
 		if allowPlaintextBackup && !p.AllowPlaintextBackup {
 			p.AllowPlaintextBackup = allowPlaintextBackup
+			persistNeeded = true
+		}
+	}
+
+	autoRotatePeriodRaw, ok, err := d.GetOkErr("auto_rotate_period")
+	if err != nil {
+		return nil, err
+	}
+	if ok {
+		autoRotatePeriod := time.Second * time.Duration(autoRotatePeriodRaw.(int))
+		// Provided value must be 0 to disable or at least an hour
+		if autoRotatePeriod != 0 && autoRotatePeriod < time.Hour {
+			return logical.ErrorResponse("auto rotate period must be 0 to disable or at least an hour"), nil
+		}
+
+		if autoRotatePeriod != p.AutoRotatePeriod {
+			p.AutoRotatePeriod = autoRotatePeriod
 			persistNeeded = true
 		}
 	}

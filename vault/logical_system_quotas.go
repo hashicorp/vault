@@ -212,10 +212,10 @@ func (b *SystemBackend) handleRateLimitQuotasUpdate() framework.OperationFunc {
 		case quota == nil:
 			quota = quotas.NewRateLimitQuota(name, ns.Path, mountPath, rate, interval, blockInterval)
 		default:
-			rlq := quota.(*quotas.RateLimitQuota)
 			// Re-inserting the already indexed object in memdb might cause problems.
 			// So, clone the object. See https://github.com/hashicorp/go-memdb/issues/76.
-			rlq = rlq.Clone()
+			clonedQuota := quota.Clone()
+			rlq := clonedQuota.(*quotas.RateLimitQuota)
 			rlq.NamespacePath = ns.Path
 			rlq.MountPath = mountPath
 			rlq.Rate = rate

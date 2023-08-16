@@ -1,328 +1,316 @@
+{{! template-lint-configure simple-unless "warn" }}
 {{#unless
   (or
-    (eq attr.type "boolean")
+    (eq this.attr.type "boolean")
     (contains
-      attr.options.editType
-      (array
-        "boolean"
-        "optionalText"
-        "searchSelect"
-        "mountAccessor"
-        "kv"
-        "file"
-        "ttl"
-        "stringArray"
-        "json"
-        "regex"
-      )
+      this.attr.options.editType
+      (array "boolean" "optionalText" "searchSelect" "mountAccessor" "kv" "file" "ttl" "stringArray" "json" "regex")
     )
   )
 }}
-  {{#unless (eq attr.type "object")}}
-    <label for="{{attr.name}}" class="is-label">
-      {{labelString}}
-      {{#if attr.options.helpText}}
-        {{#info-tooltip}}
-          <span data-test-help-text>
-            {{attr.options.helpText}}
-          </span>
-        {{/info-tooltip}}
-      {{/if}}
-    </label>
-    {{#if attr.options.subText}}
-      <p class="sub-text">{{attr.options.subText}} {{#if attr.options.docLink}}<a href="{{attr.options.docLink}}" target="_blank" rel="noopener noreferrer">See our documentation</a> for help.{{/if}}</p>
-    {{/if}}
+  {{#unless (eq this.attr.type "object")}}
+    <FormFieldLabel
+      for={{this.attr.name}}
+      @label={{this.labelString}}
+      @helpText={{this.attr.options.helpText}}
+      @subText={{this.attr.options.subText}}
+      @docLink={{this.attr.options.docLink}}
+    />
   {{/unless}}
 {{/unless}}
-{{#if attr.options.possibleValues}}
+{{#if this.attr.options.possibleValues}}
   <div class="control is-expanded">
     <div class="select is-fullwidth">
-      <select name="{{attr.name}}" id="{{attr.name}}" onchange={{action
-          (action "setAndBroadcast" valuePath)
-          value="target.value"
-        }} data-test-input={{attr.name}}>
-        {{#if attr.options.noDefault}}
+      <select
+        name={{this.attr.name}}
+        id={{this.attr.name}}
+        onchange={{action (action "setAndBroadcast" this.valuePath) value="target.value"}}
+        data-test-input={{this.attr.name}}
+      >
+        {{#if this.attr.options.noDefault}}
           <option value="">
             Select one
           </option>
         {{/if}}
-        {{#each (path-or-array attr.options.possibleValues model) as |val|}}
-          <option selected={{eq (get model valuePath) (or val.value val)}} value={{or val.value val}}>
+        {{#each (path-or-array this.attr.options.possibleValues this.model) as |val|}}
+          <option selected={{eq (get this.model this.valuePath) (or val.value val)}} value={{or val.value val}}>
             {{or val.displayName val}}
           </option>
         {{/each}}
       </select>
     </div>
   </div>
-{{else if (and (eq attr.type "string") (eq attr.options.editType "boolean"))}}
+{{else if (and (eq this.attr.type "string") (eq this.attr.options.editType "boolean"))}}
   <div class="b-checkbox">
-    <input type="checkbox" id="{{attr.name}}" class="styled" checked={{eq (get model valuePath) attr.options.trueValue}}
+    <input
+      type="checkbox"
+      id={{this.attr.name}}
+      class="styled"
+      checked={{eq (get this.model this.valuePath) this.attr.options.trueValue}}
       onchange={{action
-        (action
-          "setAndBroadcastBool"
-          valuePath
-          attr.options.trueValue
-          attr.options.falseValue
-        )
+        (action "setAndBroadcastBool" this.valuePath this.attr.options.trueValue this.attr.options.falseValue)
         value="target.checked"
-      }} data-test-input={{attr.name}} />
+      }}
+      data-test-input={{this.attr.name}}
+    />
 
-    <label for="{{attr.name}}" class="is-label">
-      {{labelString}}
-      {{#if attr.options.helpText}}
-        {{#info-tooltip}}{{attr.options.helpText}}{{/info-tooltip}}
+    <label for={{this.attr.name}} class="is-label">
+      {{this.labelString}}
+      {{#if this.attr.options.helpText}}
+        <InfoTooltip>{{this.attr.options.helpText}}</InfoTooltip>
       {{/if}}
     </label>
   </div>
-{{else if (eq attr.options.editType "searchSelect")}}
+{{else if (eq this.attr.options.editType "searchSelect")}}
   <div class="form-section">
     <SearchSelect
-      @id={{attr.name}}
-      @models={{attr.options.models}}
-      @onChange={{action (action "setAndBroadcast" valuePath)}}
-      @inputValue={{get model valuePath}}
-      @helpText={{attr.options.helpText}}
-      @subText={{attr.options.subText}}
-      @wildcardLabel={{attr.options.wildcardLabel}}
-      @label={{labelString}}
-      @subLabel={{attr.options.subLabel}}
-      @fallbackComponent={{attr.options.fallbackComponent}}
-      @selectLimit={{attr.options.selectLimit}}
-      @backend={{model.backend}}
-      @disallowNewItems={{attr.options.onlyAllowExisting}}
+      @id={{this.attr.name}}
+      @models={{this.attr.options.models}}
+      @onChange={{action (action "setAndBroadcast" this.valuePath)}}
+      @inputValue={{get this.model this.valuePath}}
+      @helpText={{this.attr.options.helpText}}
+      @subText={{this.attr.options.subText}}
+      @wildcardLabel={{this.attr.options.wildcardLabel}}
+      @label={{this.labelString}}
+      @subLabel={{this.attr.options.subLabel}}
+      @fallbackComponent={{this.attr.options.fallbackComponent}}
+      @selectLimit={{this.attr.options.selectLimit}}
+      @backend={{this.model.backend}}
+      @disallowNewItems={{this.attr.options.onlyAllowExisting}}
     />
   </div>
-{{else if (eq attr.options.editType "mountAccessor")}}
-  {{mount-accessor-select
-    name=attr.name
-    label=labelString
-    warning=attr.options.warning
-    helpText=attr.options.helpText
-    value=(get model valuePath)
-    onChange=(action "setAndBroadcast" valuePath)
-  }}
-{{else if (eq attr.options.editType "kv")}}
-{{!-- KV Object Editor --}}
-  {{kv-object-editor
-    value=(get model valuePath)
-    onChange=(action "setAndBroadcast" valuePath)
-    label=labelString
-    warning=attr.options.warning
-    helpText=attr.options.helpText
-    subText=attr.options.subText
-    small-label=(if (eq mode "create") true false )
-    formSection=(if (eq mode "customMetadata") false true )
-    name=valuePath
-    onKeyUp=onKeyUp
-    validationMessages=validationMessages
-  }}
-{{else if (eq attr.options.editType "file")}}
-{{!-- File Input --}}
-  {{text-file
-    helpText=attr.options.helpText
-    file=file
-    onChange=(action "setFile")
-    label=labelString
-  }}
-{{else if (eq attr.options.editType "ttl")}}
-  {{!-- TTL Picker --}}
+{{else if (eq this.attr.options.editType "mountAccessor")}}
+  <MountAccessorSelect
+    @name={{this.attr.name}}
+    @label={{this.labelString}}
+    @warning={{this.attr.options.warning}}
+    @helpText={{this.attr.options.helpText}}
+    @value={{get this.model this.valuePath}}
+    @onChange={{action "setAndBroadcast" this.valuePath}}
+  />
+{{else if (eq this.attr.options.editType "kv")}}
+  {{! KV Object Editor }}
+  <KvObjectEditor
+    @value={{get this.model this.valuePath}}
+    @onChange={{action "setAndBroadcast" this.valuePath}}
+    @label={{this.labelString}}
+    @labelClass="title {{if (eq this.mode "create") "is-5" "is-4"}}"
+    @helpText={{this.attr.options.helpText}}
+    @subText={{this.attr.options.subText}}
+    @onKeyUp={{action "handleKeyUp" this.valuePath}}
+    @validationError={{get this.validationMessages this.valuePath}}
+    class={{if (not-eq this.mode "customMetadata") "form-section"}}
+  />
+{{else if (eq this.attr.options.editType "file")}}
+  {{! File Input }}
+  <TextFile
+    @helpText={{this.attr.options.helpText}}
+    @file={{this.file}}
+    @onChange={{action "setFile"}}
+    @label={{this.labelString}}
+  />
+{{else if (eq this.attr.options.editType "ttl")}}
+  {{! TTL Picker }}
   <div class="field">
-    {{#let (or (get model valuePath) attr.options.setDefault) as |initialValue|}}
+    {{#let (or (get this.model this.valuePath) this.attr.options.setDefault) as |initialValue|}}
       <TtlPicker2
-        @onChange={{action (action "setAndBroadcastTtl" valuePath)}}
-        @label={{labelString}}
-        @helperTextDisabled={{or attr.options.helperTextDisabled "Vault will use the default lease duration."}}
-        @helperTextEnabled={{or attr.options.helperTextEnabled "Lease will expire after"}}
-        @description={{attr.helpText}}
+        @onChange={{action (action "setAndBroadcastTtl" this.valuePath)}}
+        @label={{this.labelString}}
+        @helperTextDisabled={{or this.attr.options.helperTextDisabled "Vault will use the default lease duration."}}
+        @helperTextEnabled={{or this.attr.options.helperTextEnabled "Lease will expire after"}}
+        @description={{this.attr.helpText}}
         @initialValue={{initialValue}}
         @initialEnabled={{if (eq initialValue "0s") false initialValue}}
       />
     {{/let}}
   </div>
-{{else if (eq attr.options.editType "regex")}}
-  {{!-- Regex Validated Input --}}
+{{else if (eq this.attr.options.editType "regex")}}
+  {{! Regex Validated Input }}
   <RegexValidator
-    @attr={{attr}}
-    @labelString={{labelString}}
-    @value={{or (get model valuePath)
-        attr.options.defaultValue}}
-    @onChange={{action
-          (action "setAndBroadcast" valuePath)
-          value="target.value"
-        }}
+    @attr={{this.attr}}
+    @labelString={{this.labelString}}
+    @value={{or (get this.model this.valuePath) this.attr.options.defaultValue}}
+    @onChange={{action (action "setAndBroadcast" this.valuePath) value="target.value"}}
   />
-{{else if (eq attr.options.editType "optionalText")}}
-  {{!-- Togglable Text Input --}}
+{{else if (eq this.attr.options.editType "optionalText")}}
+  {{! Togglable Text Input }}
   <Toggle
-    @name="show-{{attr.name}}"
+    @name="show-{{this.attr.name}}"
     @status="success"
     @size="small"
-    @onChange={{action 'toggleShow' attr.name}}
-    @checked={{showInput}}
-    data-test-toggle={{attr.name}}
+    @onChange={{action "toggleShow" this.attr.name}}
+    @checked={{this.showInput}}
+    data-test-toggle={{this.attr.name}}
   >
-    <span class="ttl-picker-label is-large">{{labelString}}</span><br/>
+    <span class="ttl-picker-label is-large">{{this.labelString}}</span><br />
     <div class="description has-text-grey">
-      {{#if showInput}}
-        <span>{{attr.options.subText}} {{#if attr.options.docLink}}<a href="{{attr.options.docLink}}" target="_blank" rel="noopener noreferrer">See our documentation</a> for help.{{/if}}</span>
+      {{#if this.showInput}}
+        <span>
+          {{this.attr.options.subText}}
+          {{#if this.attr.options.docLink}}
+            <a href={{this.attr.options.docLink}} target="_blank" rel="noopener noreferrer">
+              See our documentation
+            </a>
+            for help.
+          {{/if}}
+        </span>
       {{else}}
-        <span>{{or attr.options.defaultSubText "Vault will use the engine default."}} {{#if attr.options.docLink}}<a href="{{attr.options.docLink}}" target="_blank" rel="noopener noreferrer">See our documentation</a> for help.{{/if}}</span>
+        <span>
+          {{or this.attr.options.defaultSubText "Vault will use the engine default."}}
+          {{#if this.attr.options.docLink}}
+            <a href={{this.attr.options.docLink}} target="_blank" rel="noopener noreferrer">
+              See our documentation
+            </a>
+            for help.
+          {{/if}}
+        </span>
       {{/if}}
     </div>
-    {{#if showInput}}
+    {{#if this.showInput}}
       <input
-        data-test-input={{attr.name}}
-        id={{attr.name}}
+        data-test-input={{this.attr.name}}
+        id={{this.attr.name}}
         autocomplete="off"
         spellcheck="false"
-        value={{or (get model valuePath)
-        attr.options.defaultValue}}
-        onChange={{action
-          (action "setAndBroadcast" valuePath)
-          value="target.value"
-        }}
+        value={{or (get this.model this.valuePath) this.attr.options.defaultValue}}
+        onChange={{action (action "setAndBroadcast" this.valuePath) value="target.value"}}
         class="input"
-        maxLength={{attr.options.characterLimit}} />
+        maxLength={{this.attr.options.characterLimit}}
+      />
     {{/if}}
   </Toggle>
-{{else if (eq attr.options.editType "stringArray")}}
-  {{string-list
-    data-test-input=attr.name
-    label=labelString
-    warning=attr.options.warning
-    helpText=attr.options.helpText
-    inputValue=(get model valuePath)
-    onChange=(action (action "setAndBroadcast" valuePath))
-  }}
-{{else if (eq attr.options.sensitive true)}}
-{{!-- Masked Input --}}
+{{else if (eq this.attr.options.editType "stringArray")}}
+  <StringList
+    @data-test-input={{this.attr.name}}
+    @label={{this.labelString}}
+    @warning={{this.attr.options.warning}}
+    @helpText={{this.attr.options.helpText}}
+    @inputValue={{get this.model this.valuePath}}
+    @onChange={{action (action "setAndBroadcast" this.valuePath)}}
+  />
+{{else if (eq this.attr.options.sensitive true)}}
+  {{! Masked Input }}
   <MaskedInput
-    @value={{or (get model valuePath) attr.options.defaultValue}}
+    @value={{or (get this.model this.valuePath) this.attr.options.defaultValue}}
     @allowCopy="true"
-    @onChange={{action (action "setAndBroadcast" valuePath)}}
-    @name={{attr.name}}
+    @onChange={{action (action "setAndBroadcast" this.valuePath)}}
+    @name={{this.attr.name}}
     @onKeyUp={{@onKeyUp}}
   />
-  {{#if (get validationMessages attr.name)}}
-    <AlertInline 
-      @type="danger" 
-      @message={{get validationMessages attr.name}} 
-      @paddingTop=true
-    />
+  {{#if (get this.validationMessages this.attr.name)}}
+    <AlertInline @type="danger" @message={{get this.validationMessages this.attr.name}} @paddingTop={{true}} />
   {{/if}}
-{{else if (or (eq attr.type "number") (eq attr.type "string"))}}
+{{else if (or (eq this.attr.type "number") (eq this.attr.type "string"))}}
   <div class="control">
-    {{#if (eq attr.options.editType "textarea")}}
-    {{!-- Text area --}}
-      <textarea data-test-input={{attr.name}} id={{attr.name}}
-        value={{or (get model valuePath) attr.options.defaultValue}} oninput={{action
-          (action "setAndBroadcast" valuePath)
-          value="target.value"
-        }} class="textarea"></textarea>
-    {{else if (eq attr.options.editType "password")}}
+    {{#if (eq this.attr.options.editType "textarea")}}
+      {{! Text area }}
+      <textarea
+        data-test-input={{this.attr.name}}
+        id={{this.attr.name}}
+        value={{or (get this.model this.valuePath) this.attr.options.defaultValue}}
+        oninput={{action (action "setAndBroadcast" this.valuePath) value="target.value"}}
+        class="textarea"
+      ></textarea>
+    {{else if (eq this.attr.options.editType "password")}}
       <Input
-        data-test-input={{attr.name}}
+        data-test-input={{this.attr.name}}
         @type="password"
-        @value={{get model valuePath}}
-        @name={{attr.name}}
+        @value={{get this.model this.valuePath}}
+        name={{this.attr.name}}
         class="input"
-        {{!-- Prevents browsers from auto-filling --}}
-        @autocomplete="new-password"
-        @spellcheck="false" />
-    {{else if (eq attr.options.editType "json")}}
-      {{!-- JSON Editor --}}
+        {{! Prevents browsers from auto-filling }}
+        autocomplete="new-password"
+        spellcheck="false"
+      />
+    {{else if (eq this.attr.options.editType "json")}}
+      {{! JSON Editor }}
       <JsonEditor
-        data-test-input={{attr.name}}
-        @title={{labelString}}
+        data-test-input={{this.attr.name}}
+        @title={{this.labelString}}
         @value={{if
-          (get model valuePath)
-          (stringify (jsonify (get model valuePath)))
-          attr.options.defaultValue
+          (get this.model this.valuePath)
+          (stringify (jsonify (get this.model this.valuePath)))
+          this.attr.options.defaultValue
         }}
-        @valueUpdated={{action "codemirrorUpdated" attr.name "string"}}
-        @options={{hash
-          theme=(or attr.options.theme 'hashi')
-        }}
-        @helpText={{attr.options.helpText}}
+        @valueUpdated={{action "codemirrorUpdated" this.attr.name "string"}}
+        @options={{hash theme=(or this.attr.options.theme "hashi")}}
+        @helpText={{this.attr.options.helpText}}
       >
-        {{#if attr.options.allowReset}}
+        {{#if this.attr.options.allowReset}}
           <button
             type="button"
             class="toolbar-link"
-            disabled={{not (get model valuePath)}}
-            onClick={{action
-              (action "setAndBroadcast" valuePath)
-              null
-            }}
+            disabled={{not (get this.model this.valuePath)}}
+            onClick={{action (action "setAndBroadcast" this.valuePath) null}}
             data-test-json-clear-button
           >
             Clear
-            <Icon @glyph="refresh-default" aria-hidden="true" />
+            <Icon @name="reload" />
           </button>
         {{/if}}
       </JsonEditor>
-      {{#if attr.options.subText}}
-        <p class="sub-text">{{attr.options.subText}} {{#if attr.options.docLink}}<a href="{{attr.options.docLink}}" target="_blank" rel="noopener noreferrer">See our documentation</a> for help.{{/if}}</p>
+      {{#if this.attr.options.subText}}
+        <p class="sub-text">
+          {{this.attr.options.subText}}
+          {{#if this.attr.options.docLink}}
+            <a href={{this.attr.options.docLink}} target="_blank" rel="noopener noreferrer">
+              See our documentation
+            </a>
+            for help.
+          {{/if}}
+        </p>
       {{/if}}
     {{else}}
-      {{!-- Regular Text Input --}}
-      <input 
-        data-test-input={{attr.name}}
-        id={{attr.name}}
-        readonly={{isReadOnly}}
+      {{! Regular Text Input }}
+      <input
+        data-test-input={{this.attr.name}}
+        id={{this.attr.name}}
+        readonly={{this.isReadOnly}}
         autocomplete="off"
         spellcheck="false"
-        value={{or (get model valuePath) attr.options.defaultValue}}
-        onChange={{action
-          (action "setAndBroadcast" valuePath)
-          value="target.value"
-        }}
-        onkeyup={{action
-          (action "handleKeyUp" attr.name)
-          value="target.value"
-        }}
-        class="input {{if (get validationMessages attr.name) "has-error-border"}}"
-        maxLength={{attr.options.characterLimit}} />
-      {{#if attr.options.validationAttr}}
-        {{#if
-          (and
-            (get model valuePath) (not (get model attr.options.validationAttr))
-          )
-        }}
-          <AlertInline @type="danger" @message={{attr.options.invalidMessage}} />
+        value={{or (get this.model this.valuePath) this.attr.options.defaultValue}}
+        onChange={{action (action "setAndBroadcast" this.valuePath) value="target.value"}}
+        onkeyup={{action (action "handleKeyUp" this.attr.name) value="target.value"}}
+        class="input {{if (get this.validationMessages this.attr.name) "has-error-border"}}"
+        maxLength={{this.attr.options.characterLimit}}
+      />
+      {{#if this.attr.options.validationAttr}}
+        {{#if (and (get this.model this.valuePath) (not (get this.model this.attr.options.validationAttr)))}}
+          <AlertInline @type="danger" @message={{this.attr.options.invalidMessage}} />
         {{/if}}
       {{/if}}
-      {{#if (get validationMessages attr.name)}}
-        <AlertInline 
-          @type="danger" 
-          @message={{get validationMessages attr.name}} 
-          @paddingTop=true
-        />
+      {{#if (get this.validationMessages this.attr.name)}}
+        <AlertInline @type="danger" @message={{get this.validationMessages this.attr.name}} @paddingTop={{true}} />
       {{/if}}
     {{/if}}
   </div>
-{{else if (eq attr.type "boolean")}}
+{{else if (eq this.attr.type "boolean")}}
   <div class="b-checkbox">
-    <input disabled={{this.disabled}} type="checkbox" id="{{attr.name}}" class="styled" checked={{get model attr.name}} onchange={{action
-        (action "setAndBroadcast" valuePath)
-        value="target.checked"
-      }} data-test-input={{attr.name}} />
+    <input
+      disabled={{this.disabled}}
+      type="checkbox"
+      id={{this.attr.name}}
+      class="styled"
+      checked={{get this.model this.attr.name}}
+      onchange={{action (action "setAndBroadcast" this.valuePath) value="target.checked"}}
+      data-test-input={{this.attr.name}}
+    />
 
-    <label for="{{attr.name}}" class="is-label">
-      {{labelString}}
-      {{#if (and this.showHelpText attr.options.helpText)}}
-        {{#info-tooltip}}{{attr.options.helpText}}{{/info-tooltip}}
+    <label for={{this.attr.name}} class="is-label">
+      {{this.labelString}}
+      {{#if (and this.showHelpText this.attr.options.helpText)}}
+        <InfoTooltip>{{this.attr.options.helpText}}</InfoTooltip>
       {{/if}}
     </label>
-      {{#if attr.options.subText}}
-        <p class="sub-text">{{attr.options.subText}}</p>
-      {{/if}}
+    {{#if this.attr.options.subText}}
+      <p class="sub-text">{{this.attr.options.subText}}</p>
+    {{/if}}
   </div>
-{{else if (eq attr.type "object")}}
-  {{json-editor
-    title=labelString
-    value=(if (get model valuePath) (stringify (get model valuePath)) emptyData)
-    valueUpdated=(action "codemirrorUpdated" attr.name false)
-    helpText=attr.options.helpText
-  }}
+{{else if (eq this.attr.type "object")}}
+  <JsonEditor
+    @title={{this.labelString}}
+    @value={{if (get this.model this.valuePath) (stringify (get this.model this.valuePath)) this.emptyData}}
+    @valueUpdated={{action "codemirrorUpdated" this.attr.name false}}
+    @helpText={{this.attr.options.helpText}}
+  />
 {{/if}}

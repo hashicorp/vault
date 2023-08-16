@@ -16,35 +16,23 @@ export default create({
   metadataTab: clickable('[data-test-secret-metadata-tab]'),
   hasMetadataFields: isPresent('[data-test-metadata-fields]'),
   maxVersion: fillable('[data-test-input="maxVersions"]'),
-  startCreateSecret: clickable('[data-test-secret-create="true"]'),
+  startCreateSecret: clickable('[data-test-secret-create]'),
   editor: {
     fillIn: codeFillable('[data-test-component="json-editor"]'),
   },
   deleteSecret() {
     return this.deleteBtn().confirmBtn();
   },
-  createSecret: async function(path, key, value) {
-    return this.path(path)
-      .secretKey(key)
-      .secretValue(value)
-      .save();
+  createSecret: async function (path, key, value) {
+    return this.path(path).secretKey(key).secretValue(value).save();
   },
-  createSecretDontSave: async function(path, key, value) {
-    return this.path(path)
-      .secretKey(key)
-      .secretValue(value);
+  createSecretDontSave: async function (path, key, value) {
+    return this.path(path).secretKey(key).secretValue(value);
   },
-  createSecretWithMetadata: async function(path, key, value, maxVersion) {
-    return this.path(path)
-      .secretKey(key)
-      .secretValue(value)
-      .toggleMetadata()
-      .maxVersion(maxVersion)
-      .save();
+  createSecretWithMetadata: async function (path, key, value, maxVersion) {
+    return this.path(path).secretKey(key).secretValue(value).toggleMetadata().maxVersion(maxVersion).save();
   },
-  editSecret: async function(key, value) {
-    return this.secretKey(key)
-      .secretValue(value)
-      .save();
+  editSecret: async function (key, value) {
+    return this.secretKey(key).secretValue(value).save();
   },
 });

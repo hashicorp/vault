@@ -6,7 +6,7 @@
   </p.levelLeft>
 </PageHeader>
 <EditForm
-  @model={{model}}
+  @model={{this.model}}
   @onSave={{transition-to "vault.cluster.secrets.backend.kmip.scopes.index"}}
   @cancelLinkParams={{array "scopes.index"}}
 />

@@ -32,8 +32,8 @@ export default Service.extend({
   keyFromAccessor(accessor) {
     let keys = this.storage().keys() || [];
     let returnKey = keys
-      .filter(k => k.startsWith(CONTROL_GROUP_PREFIX))
-      .find(key => key.replace(CONTROL_GROUP_PREFIX, '').startsWith(accessor));
+      .filter((k) => k.startsWith(CONTROL_GROUP_PREFIX))
+      .find((key) => key.replace(CONTROL_GROUP_PREFIX, '').startsWith(accessor));
     return returnKey ? returnKey : null;
   },
 
@@ -50,7 +50,7 @@ export default Service.extend({
 
   deleteTokens() {
     let keys = this.storage().keys() || [];
-    keys.filter(k => k.startsWith(CONTROL_GROUP_PREFIX)).forEach(key => this.storage().removeItem(key));
+    keys.filter((k) => k.startsWith(CONTROL_GROUP_PREFIX)).forEach((key) => this.storage().removeItem(key));
   },
 
   wrapInfoForAccessor(accessor) {
@@ -99,7 +99,7 @@ export default Service.extend({
   paramsFromTransition(transitionTo, params, queryParams) {
     let returnedParams = params.slice();
     let qps = queryParams;
-    transitionTo.paramNames.map(name => {
+    transitionTo.paramNames.map((name) => {
       let param = transitionTo.params[name];
       if (param.length) {
         // push on to the front of the array since were're started at the end

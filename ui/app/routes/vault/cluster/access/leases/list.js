@@ -25,11 +25,11 @@ export default Route.extend({
             page: params.page,
             pageFilter: params.pageFilter,
           })
-          .then(model => {
+          .then((model) => {
             this.set('has404', false);
             return model;
           })
-          .catch(err => {
+          .catch((err) => {
             if (err.httpStatus === 404 && prefix === '') {
               return [];
             } else {

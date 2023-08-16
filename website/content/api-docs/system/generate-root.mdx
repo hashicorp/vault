@@ -64,7 +64,7 @@ generation attempt can take place at a time.
 
 | Method | Path                         |
 | :----- | :--------------------------- |
-| `PUT`  | `/sys/generate-root/attempt` |
+| `POST` | `/sys/generate-root/attempt` |
 
 ### Parameters
 
@@ -76,7 +76,7 @@ generation attempt can take place at a time.
 
 ```shell-session
 $ curl \
-    --request PUT \
+    --request POST \
     http://127.0.0.1:8200/v1/sys/generate-root/attempt
 ```
 
@@ -114,19 +114,19 @@ $ curl \
 
 ## Provide Key Share to Generate Root
 
-This endpoint is used to enter a single master key share to progress the root
-generation attempt. If the threshold number of master key shares is reached,
+This endpoint is used to enter a single root key share to progress the root
+generation attempt. If the threshold number of root key shares is reached,
 Vault will complete the root generation and issue the new token. Otherwise,
 this API must be called multiple times until that threshold is met. The attempt
 nonce must be provided with each call.
 
 | Method | Path                        |
 | :----- | :-------------------------- |
-| `PUT`  | `/sys/generate-root/update` |
+| `POST` | `/sys/generate-root/update` |
 
 ### Parameters
 
-- `key` `(string: <required>)` – Specifies a single master key share.
+- `key` `(string: <required>)` – Specifies a single root key share.
 
 - `nonce` `(string: <required>)` – Specifies the nonce of the attempt.
 
@@ -143,7 +143,7 @@ nonce must be provided with each call.
 
 ```shell-session
 $ curl \
-    --request PUT \
+    --request POST \
     --data @payload.json \
     http://127.0.0.1:8200/v1/sys/generate-root/update
 ```

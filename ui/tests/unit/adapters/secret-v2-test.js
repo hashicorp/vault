@@ -2,14 +2,14 @@ import { module, test } from 'qunit';
 import { setupTest } from 'ember-qunit';
 import apiStub from 'vault/tests/helpers/noop-all-api-requests';
 
-module('Unit | Adapter | secret-v2', function(hooks) {
+module('Unit | Adapter | secret-v2', function (hooks) {
   setupTest(hooks);
 
-  hooks.beforeEach(function() {
+  hooks.beforeEach(function () {
     this.server = apiStub();
   });
 
-  hooks.afterEach(function() {
+  hooks.afterEach(function () {
     this.server.shutdown();
   });
 
@@ -55,7 +55,7 @@ module('Unit | Adapter | secret-v2', function(hooks) {
       '/v1/secret/metadata/foo',
     ],
   ].forEach(([adapterMethod, store, type, queryOrSnapshot, expectedHttpVerb, expectedURL]) => {
-    test(`secret-v2: ${adapterMethod}`, function(assert) {
+    test(`secret-v2: ${adapterMethod}`, function (assert) {
       let adapter = this.owner.lookup('adapter:secret-v2');
       adapter[adapterMethod](store, type, queryOrSnapshot);
       let { url, method } = this.server.handledRequests[0];

@@ -104,7 +104,7 @@ to specify where the configuration is.
 
   ~> Note: Since each plugin runs as a separate process, you need to do the same
   for each plugin in your [plugins
-  directory](/docs/internals/plugins#plugin-directory).
+  directory](/docs/plugins/plugin-architecture#plugin-directory).
 
   If you use a Linux distribution with a modern version of systemd, you can add
   the following directive to the "[Service]" configuration section:
@@ -182,12 +182,18 @@ The following parameters are used on backends that support [high availability][h
   used for [plugin backends][plugins]. This can also be provided via the
   environment variable `VAULT_API_ADDR`. In general this should be set as a full
   URL that points to the value of the [`listener`](#listener) address.
+  This can be dynamically defined with a
+  [go-sockaddr template](https://pkg.go.dev/github.com/hashicorp/go-sockaddr/template)
+  that is resolved at runtime.
 
 - `cluster_addr` `(string: "")` – Specifies the address to advertise to other
   Vault servers in the cluster for request forwarding. This can also be provided
   via the environment variable `VAULT_CLUSTER_ADDR`. This is a full URL, like
   `api_addr`, but Vault will ignore the scheme (all cluster members always
   use TLS with a private key/certificate).
+  This can be dynamically defined with a
+  [go-sockaddr template](https://pkg.go.dev/github.com/hashicorp/go-sockaddr/template)
+  that is resolved at runtime.
 
 - `disable_clustering` `(bool: false)` – Specifies whether clustering features
   such as request forwarding are enabled. Setting this to true on one Vault node
@@ -199,7 +205,7 @@ The following parameters are used on backends that support [high availability][h
 The following parameters are only used with Vault Enterprise
 
 - `disable_sealwrap` `(bool: false)` – Disables using [seal wrapping][sealwrap]
-  for any value except the master key. If this value is toggled, the new
+  for any value except the root key. If this value is toggled, the new
   behavior will happen lazily (as values are read or written).
 
 - `disable_performance_standby` `(bool: false)` – Specifies whether performance

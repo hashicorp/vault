@@ -29,6 +29,12 @@ type ListenerProfiling struct {
 	UnauthenticatedPProfAccessRaw interface{}  `hcl:"unauthenticated_pprof_access,alias:UnauthenticatedPProfAccessRaw"`
 }
 
+type ListenerInFlightRequestLogging struct {
+	UnusedKeys                       UnusedKeyMap `hcl:",unusedKeyPositions"`
+	UnauthenticatedInFlightAccess    bool         `hcl:"-"`
+	UnauthenticatedInFlightAccessRaw interface{}  `hcl:"unauthenticated_in_flight_requests_access,alias:unauthenticatedInFlightAccessRaw"`
+}
+
 // Listener is the listener configuration for the server.
 type Listener struct {
 	UnusedKeys UnusedKeyMap `hcl:",unusedKeyPositions"`
@@ -87,8 +93,11 @@ type Listener struct {
 	SocketUser  string `hcl:"socket_user"`
 	SocketGroup string `hcl:"socket_group"`
 
-	Telemetry ListenerTelemetry `hcl:"telemetry"`
-	Profiling ListenerProfiling `hcl:"profiling"`
+	AgentAPI *AgentAPI `hcl:"agent_api"`
+
+	Telemetry              ListenerTelemetry              `hcl:"telemetry"`
+	Profiling              ListenerProfiling              `hcl:"profiling"`
+	InFlightRequestLogging ListenerInFlightRequestLogging `hcl:"inflight_requests_logging"`
 
 	// RandomPort is used only for some testing purposes
 	RandomPort bool `hcl:"-"`
@@ -102,6 +111,11 @@ type Listener struct {
 	// Custom Http response headers
 	CustomResponseHeaders    map[string]map[string]string `hcl:"-"`
 	CustomResponseHeadersRaw interface{}                  `hcl:"custom_response_headers"`
+}
+
+// AgentAPI allows users to select which parts of the Agent API they want enabled.
+type AgentAPI struct {
+	EnableQuit bool `hcl:"enable_quit"`
 }
 
 func (l *Listener) GoString() string {
@@ -342,6 +356,17 @@ func ParseListeners(result *SharedConfig, list *ast.ObjectList) error {
 				}
 
 				l.Profiling.UnauthenticatedPProfAccessRaw = nil
+			}
+		}
+
+		// InFlight Request logging
+		{
+			if l.InFlightRequestLogging.UnauthenticatedInFlightAccessRaw != nil {
+				if l.InFlightRequestLogging.UnauthenticatedInFlightAccess, err = parseutil.ParseBool(l.InFlightRequestLogging.UnauthenticatedInFlightAccessRaw); err != nil {
+					return multierror.Prefix(fmt.Errorf("invalid value for inflight_requests_logging.unauthenticated_in_flight_requests_access: %w", err), fmt.Sprintf("listeners.%d", i))
+				}
+
+				l.InFlightRequestLogging.UnauthenticatedInFlightAccessRaw = ""
 			}
 		}
 

@@ -374,6 +374,10 @@ type Policy struct {
 	// policy object.
 	StoragePrefix string `json:"storage_prefix"`
 
+	// AutoRotatePeriod defines how frequently the key should automatically
+	// rotate. Setting this to zero disables automatic rotation for the key.
+	AutoRotatePeriod time.Duration `json:"auto_rotate_period"`
+
 	// versionPrefixCache stores caches of version prefix strings and the split
 	// version template.
 	versionPrefixCache sync.Map
@@ -1140,6 +1144,14 @@ func (p *Policy) Sign(ver int, context, input []byte, hashAlgorithm HashType, si
 			algo = crypto.SHA384
 		case HashTypeSHA2512:
 			algo = crypto.SHA512
+		case HashTypeSHA3224:
+			algo = crypto.SHA3_224
+		case HashTypeSHA3256:
+			algo = crypto.SHA3_256
+		case HashTypeSHA3384:
+			algo = crypto.SHA3_384
+		case HashTypeSHA3512:
+			algo = crypto.SHA3_512
 		default:
 			return nil, errutil.InternalError{Err: "unsupported hash algorithm"}
 		}
@@ -1311,6 +1323,14 @@ func (p *Policy) VerifySignature(context, input []byte, hashAlgorithm HashType, 
 			algo = crypto.SHA384
 		case HashTypeSHA2512:
 			algo = crypto.SHA512
+		case HashTypeSHA3224:
+			algo = crypto.SHA3_224
+		case HashTypeSHA3256:
+			algo = crypto.SHA3_256
+		case HashTypeSHA3384:
+			algo = crypto.SHA3_384
+		case HashTypeSHA3512:
+			algo = crypto.SHA3_512
 		default:
 			return false, errutil.InternalError{Err: "unsupported hash algorithm"}
 		}
@@ -1639,6 +1659,8 @@ func (p *Policy) SymmetricEncryptRaw(ver int, encKey, plaintext []byte, opts Sym
 		if err != nil {
 			return nil, errutil.InternalError{Err: err.Error()}
 		}
+	} else if len(nonce) != aead.NonceSize() {
+		return nil, errutil.UserError{Err: fmt.Sprintf("base64-decoded nonce must be %d bytes long but given %d bytes", aead.NonceSize(), len(nonce))}
 	}
 
 	// Encrypt and tag with AEAD

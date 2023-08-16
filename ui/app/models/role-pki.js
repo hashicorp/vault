@@ -15,7 +15,7 @@ export default Model.extend({
     readOnly: true,
   }),
   useOpenAPI: true,
-  getHelpUrl: function(backend) {
+  getHelpUrl: function (backend) {
     return `/v1/${backend}/roles/example?help=1`;
   },
   updatePath: lazyCapabilities(apiPath`${'backend'}/roles/${'id'}`, 'backend', 'id'),
@@ -32,7 +32,7 @@ export default Model.extend({
   signVerbatimPath: lazyCapabilities(apiPath`${'backend'}/sign-verbatim/${'id'}`, 'backend', 'id'),
   canSignVerbatim: alias('signVerbatimPath.canUpdate'),
 
-  fieldGroups: computed('newFields', function() {
+  fieldGroups: computed('newFields', function () {
     let groups = [
       { default: ['name', 'keyType'] },
       {

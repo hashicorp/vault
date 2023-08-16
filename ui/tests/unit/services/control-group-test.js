@@ -34,20 +34,20 @@ function storage() {
   };
 }
 
-module('Unit | Service | control group', function(hooks) {
+module('Unit | Service | control group', function (hooks) {
   setupTest(hooks);
 
-  hooks.beforeEach(function() {
+  hooks.beforeEach(function () {
     this.owner.register('service:version', versionStub);
     this.version = this.owner.lookup('service:version');
     this.owner.register('service:router', routerStub);
     this.router = this.owner.lookup('service:router');
   });
 
-  hooks.afterEach(function() {});
+  hooks.afterEach(function () {});
 
-  let isOSS = context => set(context, 'version.isOSS', true);
-  let isEnt = context => set(context, 'version.isOSS', false);
+  let isOSS = (context) => set(context, 'version.isOSS', true);
+  let isEnt = (context) => set(context, 'version.isOSS', false);
   let resolvesArgs = (assert, result, expectedArgs) => {
     return result.then((...args) => {
       return assert.deepEqual(args, expectedArgs, 'resolves with the passed args');
@@ -93,15 +93,15 @@ module('Unit | Service | control group', function(hooks) {
 
         return result.then(
           () => {},
-          err => {
+          (err) => {
             assert.equal(err.token, 'secret');
             assert.equal(err.accessor, 'lookup');
           }
         );
       },
     ],
-  ].forEach(function([name, setup, args, expectation]) {
-    test(`checkForControlGroup: ${name}`, function(assert) {
+  ].forEach(function ([name, setup, args, expectation]) {
+    test(`checkForControlGroup: ${name}`, function (assert) {
       if (setup) {
         setup(this);
       }
@@ -111,7 +111,7 @@ module('Unit | Service | control group', function(hooks) {
     });
   });
 
-  test(`handleError: transitions to accessor when there is no transition passed in`, function(assert) {
+  test(`handleError: transitions to accessor when there is no transition passed in`, function (assert) {
     let error = {
       accessor: '12345',
       token: 'token',
@@ -139,7 +139,7 @@ module('Unit | Service | control group', function(hooks) {
     );
   });
 
-  test(`logFromError: returns correct content string`, function(assert) {
+  test(`logFromError: returns correct content string`, function (assert) {
     let error = {
       accessor: '12345',
       token: 'token',
@@ -161,7 +161,7 @@ module('Unit | Service | control group', function(hooks) {
     assert.ok(contentString.content.includes('token'), 'contains token');
   });
 
-  test('urlFromTransition', function(assert) {
+  test('urlFromTransition', function (assert) {
     let transition = {
       to: {
         name: 'vault.cluster.foo',
@@ -186,14 +186,14 @@ module('Unit | Service | control group', function(hooks) {
     assert.ok(this.router.urlFor.calledWith(...expected), 'calls urlFor with expected args');
   });
 
-  test('storageKey', function(assert) {
+  test('storageKey', function (assert) {
     let accessor = '12345';
     let path = 'kv/foo/bar';
     let expectedKey = `${CONTROL_GROUP_PREFIX}${accessor}${TOKEN_SEPARATOR}${path}`;
     assert.equal(storageKey(accessor, path), expectedKey, 'uses expected key');
   });
 
-  test('keyFromAccessor', function(assert) {
+  test('keyFromAccessor', function (assert) {
     let store = storage();
     let accessor = '12345';
     let path = 'kv/foo/bar';
@@ -212,7 +212,7 @@ module('Unit | Service | control group', function(hooks) {
     assert.equal(subject.keyFromAccessor('foo'), null, 'returns null if no key was found');
   });
 
-  test('storeControlGroupToken', function(assert) {
+  test('storeControlGroupToken', function (assert) {
     let store = storage();
     let subject = this.owner.factoryFor('service:control-group').create({
       storage() {
@@ -231,7 +231,7 @@ module('Unit | Service | control group', function(hooks) {
     assert.deepEqual(store.items[key], JSON.stringify(info), 'stores the whole info object');
   });
 
-  test('deleteControlGroupToken', function(assert) {
+  test('deleteControlGroupToken', function (assert) {
     let store = storage();
     let subject = this.owner.factoryFor('service:control-group').create({
       storage() {
@@ -247,7 +247,7 @@ module('Unit | Service | control group', function(hooks) {
     assert.equal(Object.keys(store.items).length, 0, 'there are no keys stored in storage');
   });
 
-  test('deleteTokens', function(assert) {
+  test('deleteTokens', function (assert) {
     let store = storage();
     let subject = this.owner.factoryFor('service:control-group').create({
       storage() {
@@ -266,7 +266,7 @@ module('Unit | Service | control group', function(hooks) {
     assert.equal(store.getItem('value'), 'one', 'keeps the non-prefixed value');
   });
 
-  test('wrapInfoForAccessor', function(assert) {
+  test('wrapInfoForAccessor', function (assert) {
     let store = storage();
     let subject = this.owner.factoryFor('service:control-group').create({
       storage() {

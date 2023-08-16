@@ -3,7 +3,7 @@ import ApplicationSerializer from './application';
 export default ApplicationSerializer.extend({
   normalizeList(payload) {
     const data = payload.data.keys
-      ? payload.data.keys.map(key => ({
+      ? payload.data.keys.map((key) => ({
           path: key,
           // remove the trailing slash from the id
           id: key.replace(/\/$/, ''),

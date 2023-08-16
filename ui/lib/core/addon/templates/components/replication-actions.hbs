@@ -1,19 +1,20 @@
-{{#if loading}}
+{{#if this.loading}}
   <LayoutLoading />
 {{else}}
-  <MessageError @errors={{errors}} />
+  <MessageError @errors={{this.errors}} />
   <div class="replication-actions-grid-layout">
     {{#each
-      (replication-action-for-mode replicationMode model.replicationAttrs.modeForUrl)
-       as |replicationAction|
+      (replication-action-for-mode this.replicationMode this.model.replicationAttrs.modeForUrl)
+      as |replicationAction|
     }}
-        <div class="replication-actions-grid-item">
-          {{component (concat 'replication-action-' replicationAction)
-            onSubmit=(action "onSubmit")
-            replicationMode=replicationMode
-            model=model
-          }}
-        </div>
+      <div class="replication-actions-grid-item">
+        {{component
+          (concat "replication-action-" replicationAction)
+          onSubmit=(action "onSubmit")
+          replicationMode=this.replicationMode
+          model=this.model
+        }}
+      </div>
     {{/each}}
   </div>
 {{/if}}

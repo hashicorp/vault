@@ -73,7 +73,7 @@ export default Component.extend({
    * Computed property used in the label element next to the form element
    *
    */
-  labelString: computed('attr.{name,options.label}', function() {
+  labelString: computed('attr.{name,options.label}', function () {
     const label = this.attr.options ? this.attr.options.label : '';
     const name = this.attr.name;
     if (label) {
@@ -95,7 +95,7 @@ export default Component.extend({
    */
   valuePath: or('attr.options.fieldValue', 'attr.name'),
 
-  isReadOnly: computed('attr.options.readOnly', 'mode', function() {
+  isReadOnly: computed('attr.options.readOnly', 'mode', function () {
     let readonly = this.attr.options?.readOnly || false;
     return readonly && this.mode === 'edit';
   }),
@@ -108,7 +108,7 @@ export default Component.extend({
    *
    * Used by the pgp-file component when an attr is editType of 'file'
    */
-  file: computed(function() {
+  file: computed(function () {
     return { value: '' };
   }),
   emptyData: '{\n}',

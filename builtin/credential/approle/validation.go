@@ -118,6 +118,11 @@ func decodeSecretIDStorageEntry(entry *logical.StorageEntry) (*secretIDStorageEn
 	}
 
 	cleanup := func(in []string) []string {
+		if len(in) == 0 {
+			// Don't change unnecessarily, if it was empty list leave as empty list
+			// instead of making it nil.
+			return in
+		}
 		var out []string
 		for _, s := range in {
 			out = append(out, parseip.TrimLeadingZeroesCIDR(s))

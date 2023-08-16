@@ -10,7 +10,8 @@ const SUPPORTED_BACKENDS = supportedSecretBackends();
 export default Route.extend({
   templateName: 'vault/cluster/secrets/backend/list',
   pathHelp: service('path-help'),
-  noMetadataPermissions: false,
+  // By default assume user doesn't have permissions
+  noMetadataPermissions: true,
   queryParams: {
     page: {
       refreshModel: true,
@@ -104,15 +105,17 @@ export default Route.extend({
           page: params.page || 1,
           pageFilter: params.pageFilter,
         })
-        .then(model => {
+        .then((model) => {
+          this.set('noMetadataPermissions', false);
           this.set('has404', false);
           return model;
         })
-        .catch(err => {
+        .catch((err) => {
           // if we're at the root we don't want to throw
           if (backendModel && err.httpStatus === 404 && secret === '') {
+            this.set('noMetadataPermissions', false);
             return [];
-          } else if (backendModel.engineType === 'kv' && backendModel.isV2KV) {
+          } else if (err.httpStatus === 403 && backendModel.isV2KV) {
             this.set('noMetadataPermissions', true);
             return [];
           } else {
@@ -134,10 +137,10 @@ export default Route.extend({
       // possible that there is no certificate for them in order to know,
       // we fetch them specifically on the list page, and then unload the
       // records if there is no `certificate` attribute on the resultant model
-      ['ca', 'crl', 'ca_chain'].map(id => this.store.queryRecord('pki-certificate', { id, backend }))
+      ['ca', 'crl', 'ca_chain'].map((id) => this.store.queryRecord('pki-certificate', { id, backend }))
     ).then(
-      results => {
-        results.rejectBy('certificate').forEach(record => record.unloadRecord());
+      (results) => {
+        results.rejectBy('certificate').forEach((record) => record.unloadRecord());
         return model;
       },
       () => {

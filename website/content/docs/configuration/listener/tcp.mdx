@@ -25,9 +25,9 @@ advertise the correct address to other nodes.
 As of version 1.9, Vault supports defining custom HTTP response headers for the root path (`/`) and also on API endpoints (`/v1/*`).
 The headers are defined based on the returned status code. For example, a user can define a list of
 custom response headers for the `200` status code, and another list of custom response headers for
-the `307` status code. There is a `"/sys/config/ui"` [API endpoint](/api/system/config-ui) which allows users
+the `307` status code. There is a `"/sys/config/ui"` [API endpoint](/api-docs/system/config-ui) which allows users
 to set `UI` specific custom headers. If a header is configured in a configuration file, it is not allowed
-to be reconfigured through the `"/sys/config/ui"` [API endpoint](/api/system/config-ui). In cases where a
+to be reconfigured through the `"/sys/config/ui"` [API endpoint](/api-docs/system/config-ui). In cases where a
 custom header value needs to be modified or the custom header needs to be removed, the Vault's configuration file
 needs to be modified accordingly, and a `SIGHUP` signal needs to be sent to the Vault process.
 
@@ -37,17 +37,18 @@ the `X-Vault-` prefix will not be accepted. A message will be logged in the Vaul
 upon start up indicating the header with `X-Vault-` prefix is not accepted.
 
 ### Order of precedence
+
 If the same header is configured in both the configuration file and
-in the `"/sys/config/ui"` [API endpoint](/api/system/config-ui), the header in the configuration file takes precedence.
+in the `"/sys/config/ui"` [API endpoint](/api-docs/system/config-ui), the header in the configuration file takes precedence.
 For example, the `"Content-Security-Policy"` header is defined by default in the
-`"/sys/config/ui"` [API endpoint](/api/system/config-ui). If that header is also defined in the configuration file,
+`"/sys/config/ui"` [API endpoint](/api-docs/system/config-ui). If that header is also defined in the configuration file,
 the value in the configuration file is set in the response headers instead of the
-default value in the `"/sys/config/ui"` [API endpoint](/api/system/config-ui).
+default value in the `"/sys/config/ui"` [API endpoint](/api-docs/system/config-ui).
 
 ## `tcp` Listener Parameters
 
 - `address` `(string: "127.0.0.1:8200")` – Specifies the address to bind to for
-  listening.  This can be dynamically defined with a
+  listening. This can be dynamically defined with a
   [go-sockaddr template](https://pkg.go.dev/github.com/hashicorp/go-sockaddr/template)
   that is resolved at runtime.
 
@@ -127,22 +128,27 @@ default value in the `"/sys/config/ui"` [API endpoint](/api/system/config-ui).
 - `tls_min_version` `(string: "tls12")` – Specifies the minimum supported
   version of TLS. Accepted values are "tls10", "tls11", "tls12" or "tls13".
 
-  ~> **Warning**: TLS 1.1 and lower are generally considered insecure.
+  ~> **Warning**: TLS 1.1 and lower (`tls10` and `tls11` values for the
+  `tls_min_version` and `tls_max_version` parameters) are widely considered
+  insecure.
 
 - `tls_cipher_suites` `(string: "")` – Specifies the list of supported
   ciphersuites as a comma-separated-list. The list of all available ciphersuites
   is available in the [Golang TLS documentation][golang-tls].
 
-  ~> **Note**: Go only consults this list for TLSv1.2 and earlier; the order of
-  ciphers is not important. For this parameter to be effective, the
-  `tls_max_version` property must be set to `tls12` to prevent negotiation of
-  TLSv1.3, which is not recommended. See the [Go blog post][go-tls-blog] for
-  more information.
+  ~> **Note**: Go only consults the `tls_cipher_suites` list for TLSv1.2 and
+  earlier; the order of ciphers is not important. For this parameter to be
+  effective, the `tls_max_version` property must be set to `tls12` to prevent
+  negotiation of TLSv1.3, which is not recommended. For more information about
+  this and other TLS related changes, see the [Go TLS blog post][go-tls-blog].
 
 - `tls_prefer_server_cipher_suites` `(string: "false")` – Specifies to prefer the
   server's ciphersuite over the client ciphersuites.
 
-  ~> **Warning**: This parameter is deprecated. Setting it has no effect.
+  ~> **Warning**: The `tls_prefer_server_cipher_suites` parameter is
+  deprecated. Setting it has no effect. See the above
+  [Go blog post][go-tls-blog] for more information about
+  this change.
 
 - `tls_require_and_verify_client_cert` `(string: "false")` – Turns on client
   authentication for this listener; the listener will require a presented
@@ -154,6 +160,8 @@ default value in the `"/sys/config/ui"` [API endpoint](/api/system/config-ui).
 - `tls_disable_client_certs` `(string: "false")` – Turns off client
   authentication for this listener. The default behavior (when this is false)
   is for Vault to request client certificates when available.
+
+  ~> **Warning**: The `tls_disable_client_certs` and `tls_require_and verify_client_cert` fields in the listener stanza of the Vault server configuration are mutually exclusive fields. Please ensure they are not both set to true. TLS client verification remains optional with default settings and is not enforced.
 
 - `x_forwarded_for_authorized_addrs` `(string: <required-to-enable>)` –
   Specifies the list of source IP CIDRs for which an X-Forwarded-For header
@@ -183,24 +191,26 @@ default value in the `"/sys/config/ui"` [API endpoint](/api/system/config-ui).
 
 - `unauthenticated_pprof_access` `(bool: false)` - If set to true, allows
   unauthenticated access to the `/v1/sys/pprof` endpoint.
+- `unauthenticated_in_flight_request_access` `(bool: false)` - If set to true, allows
+  unauthenticated access to the `/v1/sys/in-flight-req` endpoint.
 
 ### `custom_response_headers` Parameters
 
 - `default` `(key-value-map: {})` - A map of string header names to an array of
- string values. The default headers are set on all endpoints regardless of
- the status code value. For an example, please refer to the
- "Configuring custom http response headers" section.
+  string values. The default headers are set on all endpoints regardless of
+  the status code value. For an example, please refer to the
+  "Configuring custom http response headers" section.
 
 - `<specific status code>` `(key-value-map: {})` - A map of string header names
- to an array of string values. These headers are set only when the specific status
- code is returned. For example, `"200" = {"Header-A": ["Value1", "Value2"]}`, `"Header-A"`
- is set when the http response status code is `"200"`.
+  to an array of string values. These headers are set only when the specific status
+  code is returned. For example, `"200" = {"Header-A": ["Value1", "Value2"]}`, `"Header-A"`
+  is set when the http response status code is `"200"`.
 
 - `<collective status code>` `(key-value-map: {})` - A map of string header names
- to an array of string values. These headers are set only when the response status
- code falls under the collective status code.
- For example, `"2xx" = {"Header-A": ["Value1", "Value2"]}`, `"Header-A"`
- is set when the http response status code is `"200"`, `"204"`, etc.
+  to an array of string values. These headers are set only when the response status
+  code falls under the collective status code.
+  For example, `"2xx" = {"Header-A": ["Value1", "Value2"]}`, `"Header-A"`
+  is set when the http response status code is `"200"`, `"204"`, etc.
 
 ## `tcp` Listener Examples
 
@@ -253,14 +263,14 @@ This example shows enabling unauthenticated profiling access.
 listener "tcp" {
   profiling {
     unauthenticated_pprof_access = true
+    unauthenticated_in_flight_request_access = true
   }
 }
 ```
 
-
 ### Configuring custom http response headers
 
-Note: Requires Vault version 1.9 or newer. This example shows configuring custom http response headers. 
+Note: Requires Vault version 1.9 or newer. This example shows configuring custom http response headers.
 Operators can configure `"custom_response_headers"` sub-stanza in the listener stanza to set custom http
 headers appropriate to their applications. Examples of such headers are `"Strict-Transport-Security"`
 and `"Content-Security-Policy"` which are known HTTP headers, and could be configured to harden

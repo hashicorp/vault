@@ -1,28 +1,25 @@
-{{#if label}}
-  <label for="{{name}}" class="is-label">
-    {{label}}
-    {{#if helpText}}
+{{#if this.label}}
+  <label for={{this.name}} class="is-label">
+    {{this.label}}
+    {{#if this.helpText}}
       <InfoTooltip>
-        <span data-test-help-text>{{helpText}}</span>
+        <span data-test-help-text>{{this.helpText}}</span>
       </InfoTooltip>
     {{/if}}
   </label>
 {{/if}}
-{{#if authMethods.isRunning}}
+{{#if this.authMethods.isRunning}}
   <div>
     <span class="loader is-inline-block"></span>
   </div>
-{{else if authMethods.last.value}}
-  <div class="control is-expanded" >
+{{else if this.authMethods.last.value}}
+  <div class="control is-expanded">
     <div class="select is-fullwidth">
-      <select
-        name={{name}}
-        id={{name}}
-        onchange={{action "change" value="target.value"}}
-      >
-        {{#each authMethods.last.value as |method|}}
-          <option selected={{eq value method.accessor}} value={{method.accessor}}>
-          {{method.path}} ({{method.type}})
+      <select name={{this.name}} id={{this.name}} onchange={{action "change" value="target.value"}}>
+        {{#each this.authMethods.last.value as |method|}}
+          <option selected={{eq this.value method.accessor}} value={{method.accessor}}>
+            {{method.path}}
+            ({{method.type}})
           </option>
         {{/each}}
       </select>
@@ -30,12 +27,11 @@
   </div>
 {{else}}
   <input
-    name={{name}}
-    id={{name}}
+    name={{this.name}}
+    id={{this.name}}
     class="input"
-    value={{value}}
+    value={{this.value}}
     placeholder="Mount accessor"
     onchange={{action "change" value="target.value"}}
-    />
+  />
 {{/if}}
-

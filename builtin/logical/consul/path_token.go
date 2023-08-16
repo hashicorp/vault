@@ -20,7 +20,7 @@ func pathToken(b *backend) *framework.Path {
 		Fields: map[string]*framework.FieldSchema{
 			"role": {
 				Type:        framework.TypeString,
-				Description: "Name of the role",
+				Description: "Name of the role.",
 			},
 		},
 
@@ -32,7 +32,6 @@ func pathToken(b *backend) *framework.Path {
 
 func (b *backend) pathTokenRead(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	role := d.Get("role").(string)
-
 	entry, err := req.Storage.Get(ctx, "policy/"+role)
 	if err != nil {
 		return nil, fmt.Errorf("error retrieving role: %w", err)
@@ -41,13 +40,13 @@ func (b *backend) pathTokenRead(ctx context.Context, req *logical.Request, d *fr
 		return logical.ErrorResponse(fmt.Sprintf("role %q not found", role)), nil
 	}
 
-	var result roleConfig
-	if err := entry.DecodeJSON(&result); err != nil {
+	var roleConfigData roleConfig
+	if err := entry.DecodeJSON(&roleConfigData); err != nil {
 		return nil, err
 	}
 
-	if result.TokenType == "" {
-		result.TokenType = "client"
+	if roleConfigData.TokenType == "" {
+		roleConfigData.TokenType = "client"
 	}
 
 	// Get the consul client
@@ -66,12 +65,12 @@ func (b *backend) pathTokenRead(ctx context.Context, req *logical.Request, d *fr
 	writeOpts = writeOpts.WithContext(ctx)
 
 	// Create an ACLEntry for Consul pre 1.4
-	if (result.Policy != "" && result.TokenType == "client") ||
-		(result.Policy == "" && result.TokenType == "management") {
+	if (roleConfigData.Policy != "" && roleConfigData.TokenType == "client") ||
+		(roleConfigData.Policy == "" && roleConfigData.TokenType == "management") {
 		token, _, err := c.ACL().Create(&api.ACLEntry{
 			Name:  tokenName,
-			Type:  result.TokenType,
-			Rules: result.Policy,
+			Type:  roleConfigData.TokenType,
+			Rules: roleConfigData.Policy,
 		}, writeOpts)
 		if err != nil {
 			return logical.ErrorResponse(err.Error()), nil
@@ -84,22 +83,33 @@ func (b *backend) pathTokenRead(ctx context.Context, req *logical.Request, d *fr
 			"token": token,
 			"role":  role,
 		})
-		s.Secret.TTL = result.TTL
-		s.Secret.MaxTTL = result.MaxTTL
+		s.Secret.TTL = roleConfigData.TTL
+		s.Secret.MaxTTL = roleConfigData.MaxTTL
 		return s, nil
 	}
 
 	// Create an ACLToken for Consul 1.4 and above
-	policyLink := []*api.ACLTokenPolicyLink{}
-	for _, policyName := range result.Policies {
-		policyLink = append(policyLink, &api.ACLTokenPolicyLink{
+	policyLinks := []*api.ACLTokenPolicyLink{}
+	for _, policyName := range roleConfigData.Policies {
+		policyLinks = append(policyLinks, &api.ACLTokenPolicyLink{
 			Name: policyName,
 		})
 	}
+
+	roleLinks := []*api.ACLTokenRoleLink{}
+	for _, roleName := range roleConfigData.ConsulRoles {
+		roleLinks = append(roleLinks, &api.ACLTokenRoleLink{
+			Name: roleName,
+		})
+	}
+
 	token, _, err := c.ACL().TokenCreate(&api.ACLToken{
 		Description: tokenName,
-		Policies:    policyLink,
-		Local:       result.Local,
+		Policies:    policyLinks,
+		Roles:       roleLinks,
+		Local:       roleConfigData.Local,
+		Namespace:   roleConfigData.ConsulNamespace,
+		Partition:   roleConfigData.Partition,
 	}, writeOpts)
 	if err != nil {
 		return logical.ErrorResponse(err.Error()), nil
@@ -107,16 +117,18 @@ func (b *backend) pathTokenRead(ctx context.Context, req *logical.Request, d *fr
 
 	// Use the helper to create the secret
 	s := b.Secret(SecretTokenType).Response(map[string]interface{}{
-		"token":    token.SecretID,
-		"accessor": token.AccessorID,
-		"local":    token.Local,
+		"token":            token.SecretID,
+		"accessor":         token.AccessorID,
+		"local":            token.Local,
+		"consul_namespace": token.Namespace,
+		"partition":        token.Partition,
 	}, map[string]interface{}{
 		"token":   token.AccessorID,
 		"role":    role,
 		"version": tokenPolicyType,
 	})
-	s.Secret.TTL = result.TTL
-	s.Secret.MaxTTL = result.MaxTTL
+	s.Secret.TTL = roleConfigData.TTL
+	s.Secret.MaxTTL = roleConfigData.MaxTTL
 
 	return s, nil
 }

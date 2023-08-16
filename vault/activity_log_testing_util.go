@@ -2,10 +2,13 @@ package vault
 
 import (
 	"context"
+	"fmt"
 	"math/rand"
 	"testing"
+	"time"
 
 	"github.com/hashicorp/vault/helper/constants"
+
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/vault/activity"
 )
@@ -13,39 +16,51 @@ import (
 // InjectActivityLogDataThisMonth populates the in-memory client store
 // with some entities and tokens, overriding what was already there
 // It is currently used for API integration tests
-func (c *Core) InjectActivityLogDataThisMonth(t *testing.T) (map[string]uint64, map[string]uint64) {
+func (c *Core) InjectActivityLogDataThisMonth(t *testing.T) map[string]*activity.EntityRecord {
 	t.Helper()
-	tokens := make(map[string]uint64, 0)
-	entitiesByNS := make(map[string]uint64, 0)
-	tokens["root"] = 5
-	entitiesByNS["root"] = 5
-
-	if constants.IsEnterprise {
-		tokens["ns0"] = 5
-		tokens["ns1"] = 1
-		tokens["ns2"] = 1
-		entitiesByNS["ns0"] = 1
-		entitiesByNS["ns1"] = 1
-		entitiesByNS["ns2"] = 1
-	}
 
 	c.activityLog.l.Lock()
 	defer c.activityLog.l.Unlock()
 	c.activityLog.fragmentLock.Lock()
 	defer c.activityLog.fragmentLock.Unlock()
 
-	c.activityLog.clientTracker.nonEntityCountByNamespaceID = tokens
-	c.activityLog.clientTracker.entityCountByNamespaceID = entitiesByNS
-	return entitiesByNS, tokens
+	for i := 0; i < 3; i++ {
+		er := &activity.EntityRecord{
+			ClientID:      fmt.Sprintf("testclientid-%d", i),
+			NamespaceID:   "root",
+			MountAccessor: fmt.Sprintf("testmountaccessor-%d", i),
+			Timestamp:     time.Now().Unix(),
+			NonEntity:     i%2 == 0,
+		}
+		c.activityLog.partialMonthClientTracker[er.ClientID] = er
+	}
+
+	if constants.IsEnterprise {
+		for j := 0; j < 2; j++ {
+			for i := 0; i < 2; i++ {
+				er := &activity.EntityRecord{
+					ClientID:      fmt.Sprintf("ns-%d-testclientid-%d", j, i),
+					NamespaceID:   fmt.Sprintf("ns-%d", j),
+					MountAccessor: fmt.Sprintf("ns-%d-testmountaccessor-%d", j, i),
+					Timestamp:     time.Now().Unix(),
+					NonEntity:     i%2 == 0,
+				}
+				c.activityLog.partialMonthClientTracker[er.ClientID] = er
+			}
+		}
+	}
+
+	return c.activityLog.partialMonthClientTracker
 }
 
-// Return the in-memory activeClients from an activity log
-func (c *Core) GetActiveClients() map[string]struct{} {
-	out := make(map[string]struct{})
+// GetActiveClients returns the in-memory partialMonthClientTracker from an
+// activity log.
+func (c *Core) GetActiveClients() map[string]*activity.EntityRecord {
+	out := make(map[string]*activity.EntityRecord)
 
 	c.stateLock.RLock()
 	c.activityLog.fragmentLock.RLock()
-	for k, v := range c.activityLog.clientTracker.activeClients {
+	for k, v := range c.activityLog.partialMonthClientTracker {
 		out[k] = v
 	}
 	c.activityLog.fragmentLock.RUnlock()
@@ -136,8 +151,8 @@ func (a *ActivityLog) ExpectCurrentSegmentRefreshed(t *testing.T, expectedStart 
 	if a.currentSegment.tokenCount.CountByNamespaceID == nil {
 		t.Errorf("expected non-nil currentSegment.tokenCount.CountByNamespaceID")
 	}
-	if a.clientTracker.activeClients == nil {
-		t.Errorf("expected non-nil activeClients")
+	if a.partialMonthClientTracker == nil {
+		t.Errorf("expected non-nil partialMonthClientTracker")
 	}
 	if len(a.currentSegment.currentClients.Clients) > 0 {
 		t.Errorf("expected no current entity segment to be loaded. got: %v", a.currentSegment.currentClients)
@@ -145,8 +160,8 @@ func (a *ActivityLog) ExpectCurrentSegmentRefreshed(t *testing.T, expectedStart 
 	if len(a.currentSegment.tokenCount.CountByNamespaceID) > 0 {
 		t.Errorf("expected no token counts to be loaded. got: %v", a.currentSegment.tokenCount.CountByNamespaceID)
 	}
-	if len(a.clientTracker.activeClients) > 0 {
-		t.Errorf("expected no active entity segment to be loaded. got: %v", a.clientTracker.activeClients)
+	if len(a.partialMonthClientTracker) > 0 {
+		t.Errorf("expected no active entity segment to be loaded. got: %v", a.partialMonthClientTracker)
 	}
 
 	if verifyTimeNotZero {
@@ -159,7 +174,7 @@ func (a *ActivityLog) ExpectCurrentSegmentRefreshed(t *testing.T, expectedStart 
 }
 
 // ActiveEntitiesEqual checks that only the set of `test` exists in `active`
-func ActiveEntitiesEqual(active map[string]struct{}, test []*activity.EntityRecord) bool {
+func ActiveEntitiesEqual(active map[string]*activity.EntityRecord, test []*activity.EntityRecord) bool {
 	if len(active) != len(test) {
 		return false
 	}

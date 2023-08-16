@@ -1,4 +1,4 @@
-// +build !enterprise
+//go:build !enterprise
 
 package quotas
 
@@ -60,6 +60,10 @@ func (l LeaseCountQuota) close(_ context.Context) error {
 	panic("implement me")
 }
 
-func (l LeaseCountQuota) handleRemount(s string) {
+func (l LeaseCountQuota) Clone() Quota {
+	panic("implement me")
+}
+
+func (l LeaseCountQuota) handleRemount(mountPath, nsPath string) {
 	panic("implement me")
 }

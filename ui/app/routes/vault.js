@@ -23,7 +23,7 @@ export default Route.extend({
       },
     };
     this.store.push(fixture);
-    return new Promise(resolve => {
+    return new Promise((resolve) => {
       later(() => {
         resolve(this.store.peekAll('cluster'));
       }, SPLASH_DELAY);

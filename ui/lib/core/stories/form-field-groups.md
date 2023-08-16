@@ -29,6 +29,6 @@
 **See**
 
 - [Uses of FormFieldGroups](https://github.com/hashicorp/vault/search?l=Handlebars&q=FormFieldGroups)
-- [FormFieldGroups Source Code](https://github.com/hashicorp/vault/blob/master/ui/app/components/form-field-groups.js)
+- [FormFieldGroups Source Code](https://github.com/hashicorp/vault/blob/main/ui/app/components/form-field-groups.js)
 
 ---

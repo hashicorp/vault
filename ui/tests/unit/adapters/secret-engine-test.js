@@ -2,14 +2,14 @@ import { module, test } from 'qunit';
 import { setupTest } from 'ember-qunit';
 import apiStub from 'vault/tests/helpers/noop-all-api-requests';
 
-module('Unit | Adapter | secret engine', function(hooks) {
+module('Unit | Adapter | secret engine', function (hooks) {
   setupTest(hooks);
 
-  hooks.beforeEach(function() {
+  hooks.beforeEach(function () {
     this.server = apiStub();
   });
 
-  hooks.afterEach(function() {
+  hooks.afterEach(function () {
     this.server.shutdown();
   });
 
@@ -48,8 +48,8 @@ module('Unit | Adapter | secret engine', function(hooks) {
       method: 'GET',
     },
   ];
-  cases.forEach(testCase => {
-    test(`secret-engine: ${testCase.description}`, function(assert) {
+  cases.forEach((testCase) => {
+    test(`secret-engine: ${testCase.description}`, function (assert) {
       assert.expect(2);
       let adapter = this.owner.lookup('adapter:secret-engine');
       adapter[testCase.adapterMethod](...testCase.args);

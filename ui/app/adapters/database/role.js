@@ -25,7 +25,7 @@ export default ApplicationAdapter.extend({
   },
 
   staticRoles(backend, id) {
-    return this.ajax(this.urlFor(backend, id, 'static'), 'GET', this.optionsForQuery(id)).then(resp => {
+    return this.ajax(this.urlFor(backend, id, 'static'), 'GET', this.optionsForQuery(id)).then((resp) => {
       if (id) {
         return {
           ...resp,
@@ -39,7 +39,7 @@ export default ApplicationAdapter.extend({
   },
 
   dynamicRoles(backend, id) {
-    return this.ajax(this.urlFor(backend, id), 'GET', this.optionsForQuery(id)).then(resp => {
+    return this.ajax(this.urlFor(backend, id), 'GET', this.optionsForQuery(id)).then((resp) => {
       if (id) {
         return {
           ...resp,

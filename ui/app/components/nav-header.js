@@ -9,7 +9,7 @@ export default Component.extend({
   tagName: 'header',
   navDrawerOpen: false,
   consoleFullscreen: false,
-  hideLinks: computed('router.currentRouteName', function() {
+  hideLinks: computed('router.currentRouteName', function () {
     let currentRoute = this.router.currentRouteName;
     if ('vault.cluster.oidc-provider' === currentRoute) {
       return true;

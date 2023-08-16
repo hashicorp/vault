@@ -3,6 +3,7 @@ import { inject as service } from '@ember/service';
 import Component from '@ember/component';
 import { computed, set } from '@ember/object';
 import { task } from 'ember-concurrency';
+import { waitFor } from '@ember/test-waiters';
 
 /**
  * @module GeneratedItem
@@ -26,32 +27,34 @@ export default Component.extend({
   router: service(),
   validationMessages: null,
   isFormInvalid: false,
-  props: computed('model', function() {
+  props: computed('model', function () {
     return this.model.serialize();
   }),
-  saveModel: task(function*() {
-    try {
-      yield this.model.save();
-    } catch (err) {
-      // AdapterErrors are handled by the error-message component
-      // in the form
-      if (err instanceof AdapterError === false) {
-        throw err;
+  saveModel: task(
+    waitFor(function* () {
+      try {
+        yield this.model.save();
+      } catch (err) {
+        // AdapterErrors are handled by the error-message component
+        // in the form
+        if (err instanceof AdapterError === false) {
+          throw err;
+        }
+        return;
       }
-      return;
-    }
-    this.router.transitionTo('vault.cluster.access.method.item.list').followRedirects();
-    this.flashMessages.success(`Successfully saved ${this.itemType} ${this.model.id}.`);
-  }).withTestWaiter(),
+      this.router.transitionTo('vault.cluster.access.method.item.list').followRedirects();
+      this.flashMessages.success(`Successfully saved ${this.itemType} ${this.model.id}.`);
+    })
+  ),
   init() {
     this._super(...arguments);
     this.set('validationMessages', {});
     if (this.mode === 'edit') {
       // For validation to work in edit mode,
       // reconstruct the model values from field group
-      this.model.fieldGroups.forEach(element => {
+      this.model.fieldGroups.forEach((element) => {
         if (element.default) {
-          element.default.forEach(attr => {
+          element.default.forEach((attr) => {
             let fieldValue = attr.options && attr.options.fieldValue;
             if (fieldValue) {
               this.model[attr.name] = this.model[fieldValue];

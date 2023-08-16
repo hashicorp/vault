@@ -11,9 +11,10 @@ import (
 	"time"
 
 	mssqlhelper "github.com/hashicorp/vault/helper/testhelpers/mssql"
-	dbplugin "github.com/hashicorp/vault/sdk/database/dbplugin/v5"
+	"github.com/hashicorp/vault/sdk/database/dbplugin/v5"
 	dbtesting "github.com/hashicorp/vault/sdk/database/dbplugin/v5/testing"
 	"github.com/hashicorp/vault/sdk/helper/dbtxn"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestInitialize(t *testing.T) {
@@ -43,6 +44,15 @@ func TestInitialize(t *testing.T) {
 			},
 		},
 		"contained_db set": {
+			dbplugin.InitializeRequest{
+				Config: map[string]interface{}{
+					"connection_url": connURL,
+					"contained_db":   true,
+				},
+				VerifyConnection: true,
+			},
+		},
+		"contained_db set string": {
 			dbplugin.InitializeRequest{
 				Config: map[string]interface{}{
 					"connection_url": connURL,
@@ -253,7 +263,10 @@ func TestUpdateUser_password(t *testing.T) {
 			dbtesting.AssertInitializeCircleCiTest(t, db, initReq)
 			defer dbtesting.AssertClose(t, db)
 
-			createTestMSSQLUser(t, connURL, dbUser, initPassword, testMSSQLLogin)
+			err := createTestMSSQLUser(connURL, dbUser, initPassword, testMSSQLLogin)
+			if err != nil {
+				t.Fatalf("Failed to create user: %s", err)
+			}
 
 			assertCredsExist(t, connURL, dbUser, initPassword)
 
@@ -317,7 +330,10 @@ func TestDeleteUser(t *testing.T) {
 	dbtesting.AssertInitializeCircleCiTest(t, db, initReq)
 	defer dbtesting.AssertClose(t, db)
 
-	createTestMSSQLUser(t, connURL, dbUser, initPassword, testMSSQLLogin)
+	err := createTestMSSQLUser(connURL, dbUser, initPassword, testMSSQLLogin)
+	if err != nil {
+		t.Fatalf("Failed to create user: %s", err)
+	}
 
 	assertCredsExist(t, connURL, dbUser, initPassword)
 
@@ -341,6 +357,129 @@ func TestDeleteUser(t *testing.T) {
 	assertCredsDoNotExist(t, connURL, dbUser, initPassword)
 }
 
+func TestDeleteUserContainedDB(t *testing.T) {
+	cleanup, connURL := mssqlhelper.PrepareMSSQLTestContainer(t)
+	defer cleanup()
+
+	dbUser := "vaultuser"
+	initPassword := "p4$sw0rd"
+
+	initReq := dbplugin.InitializeRequest{
+		Config: map[string]interface{}{
+			"connection_url": connURL,
+			"contained_db":   true,
+		},
+		VerifyConnection: true,
+	}
+
+	db := new()
+
+	dbtesting.AssertInitializeCircleCiTest(t, db, initReq)
+	defer dbtesting.AssertClose(t, db)
+
+	err := createTestMSSQLUser(connURL, dbUser, initPassword, testMSSQLContainedLogin)
+	if err != nil {
+		t.Fatalf("Failed to create user: %s", err)
+	}
+
+	assertCredsExist(t, connURL, dbUser, initPassword)
+
+	deleteReq := dbplugin.DeleteUserRequest{
+		Username: dbUser,
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	deleteResp, err := db.DeleteUser(ctx, deleteReq)
+	if err != nil {
+		t.Fatalf("Failed to delete user: %s", err)
+	}
+
+	// Protect against future fields that aren't specified
+	expectedResp := dbplugin.DeleteUserResponse{}
+	if !reflect.DeepEqual(deleteResp, expectedResp) {
+		t.Fatalf("Fields missing from expected response: Actual: %#v", deleteResp)
+	}
+
+	assertContainedDBCredsDoNotExist(t, connURL, dbUser)
+}
+
+func TestContainedDBSQLSanitization(t *testing.T) {
+	cleanup, connURL := mssqlhelper.PrepareMSSQLTestContainer(t)
+	defer cleanup()
+
+	injectionString := "vaultuser]"
+	dbUser := "vaultuser"
+	initPassword := "p4$sw0rd"
+
+	initReq := dbplugin.InitializeRequest{
+		Config: map[string]interface{}{
+			"connection_url": connURL,
+		},
+		VerifyConnection: true,
+	}
+
+	db := new()
+
+	dbtesting.AssertInitializeCircleCiTest(t, db, initReq)
+	defer dbtesting.AssertClose(t, db)
+
+	err := createTestMSSQLUser(connURL, dbUser, initPassword, testMSSQLContainedLogin)
+	if err != nil {
+		t.Fatalf("Failed to create user: %s", err)
+	}
+
+	assertCredsExist(t, connURL, dbUser, initPassword)
+
+	deleteReq := dbplugin.DeleteUserRequest{
+		Username: injectionString,
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	_, err = db.DeleteUser(ctx, deleteReq)
+
+	assert.EqualError(t, err, "mssql: Cannot alter the login 'vaultuser]', because it does not exist or you do not have permission.")
+}
+
+func TestSQLSanitization(t *testing.T) {
+	cleanup, connURL := mssqlhelper.PrepareMSSQLTestContainer(t)
+	defer cleanup()
+
+	injectionString := "vaultuser]"
+	dbUser := "vaultuser"
+	initPassword := "p4$sw0rd"
+
+	initReq := dbplugin.InitializeRequest{
+		Config: map[string]interface{}{
+			"connection_url": connURL,
+		},
+		VerifyConnection: true,
+	}
+
+	db := new()
+
+	dbtesting.AssertInitializeCircleCiTest(t, db, initReq)
+	defer dbtesting.AssertClose(t, db)
+
+	err := createTestMSSQLUser(connURL, dbUser, initPassword, testMSSQLLogin)
+	if err != nil {
+		t.Fatalf("Failed to create user: %s", err)
+	}
+
+	assertCredsExist(t, connURL, dbUser, initPassword)
+
+	deleteReq := dbplugin.DeleteUserRequest{
+		Username: injectionString,
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	_, err = db.DeleteUser(ctx, deleteReq)
+
+	assert.EqualError(t, err, "mssql: Cannot alter the login 'vaultuser]', because it does not exist or you do not have permission.")
+}
+
 func assertCredsExist(t testing.TB, connURL, username, password string) {
 	t.Helper()
 	err := testCredsExist(connURL, username, password)
@@ -357,6 +496,29 @@ func assertCredsDoNotExist(t testing.TB, connURL, username, password string) {
 	}
 }
 
+func assertContainedDBCredsDoNotExist(t testing.TB, connURL, username string) {
+	t.Helper()
+	err := testContainedDBCredsExist(connURL, username)
+	assert.EqualError(t, err, "mssql: Cannot drop the user 'vaultuser', because it does not exist or you do not have permission.")
+}
+
+func testContainedDBCredsExist(connURL, username string) error {
+	ctx := context.Background()
+	// Log in
+	db, err := sql.Open("mssql", connURL)
+	if err != nil {
+		return err
+	}
+	defer db.Close()
+	userStmt, err := db.PrepareContext(ctx, fmt.Sprintf("DROP USER [%s]", username))
+	if err != nil {
+		return err
+	}
+	_, err = userStmt.ExecContext(ctx)
+	defer userStmt.Close()
+	return err
+}
+
 func testCredsExist(connURL, username, password string) error {
 	// Log in with the new creds
 	parts := strings.Split(connURL, "@")
@@ -369,18 +531,18 @@ func testCredsExist(connURL, username, password string) error {
 	return db.Ping()
 }
 
-func createTestMSSQLUser(t *testing.T, connURL string, username, password, query string) {
+func createTestMSSQLUser(connURL string, username, password, query string) error {
 	db, err := sql.Open("mssql", connURL)
 	defer db.Close()
 	if err != nil {
-		t.Fatal(err)
+		return err
 	}
 
 	// Start a transaction
 	ctx := context.Background()
 	tx, err := db.BeginTx(ctx, nil)
 	if err != nil {
-		t.Fatal(err)
+		return err
 	}
 	defer func() {
 		_ = tx.Rollback()
@@ -391,12 +553,13 @@ func createTestMSSQLUser(t *testing.T, connURL string, username, password, query
 		"password": password,
 	}
 	if err := dbtxn.ExecuteTxQuery(ctx, tx, m, query); err != nil {
-		t.Fatal(err)
+		return err
 	}
 	// Commit the transaction
 	if err := tx.Commit(); err != nil {
-		t.Fatal(err)
+		return err
 	}
+	return nil
 }
 
 const testMSSQLRole = `
@@ -404,11 +567,11 @@ CREATE LOGIN [{{name}}] WITH PASSWORD = '{{password}}';
 CREATE USER [{{name}}] FOR LOGIN [{{name}}];
 GRANT SELECT, INSERT, UPDATE, DELETE ON SCHEMA::dbo TO [{{name}}];`
 
-const testMSSQLDrop = `
-DROP USER [{{name}}];
-DROP LOGIN [{{name}}];
-`
-
 const testMSSQLLogin = `
 CREATE LOGIN [{{name}}] WITH PASSWORD = '{{password}}';
+`
+
+const testMSSQLContainedLogin = `
+CREATE LOGIN [{{name}}] WITH PASSWORD = '{{password}}';
+CREATE USER [{{name}}] FOR LOGIN [{{name}}];
 `

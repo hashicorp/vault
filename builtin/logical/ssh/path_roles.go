@@ -9,6 +9,7 @@ import (
 	"github.com/hashicorp/go-secure-stdlib/parseutil"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/cidrutil"
+	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/logical"
 	"golang.org/x/crypto/ssh"
 )
@@ -20,40 +21,50 @@ const (
 	KeyTypeDynamic = "dynamic"
 	// KeyTypeCA is an key of type CA
 	KeyTypeCA = "ca"
+
+	// DefaultAlgorithmSigner is the default RSA signing algorithm
+	DefaultAlgorithmSigner = "default"
+
+	// Present version of the sshRole struct; when adding a new field or are
+	// needing to perform a migration, increment this struct and read the note
+	// in checkUpgrade(...).
+	roleEntryVersion = 2
 )
 
 // Structure that represents a role in SSH backend. This is a common role structure
 // for both OTP and Dynamic roles. Not all the fields are mandatory for both type.
 // Some are applicable for one and not for other. It doesn't matter.
 type sshRole struct {
-	KeyType                   string            `mapstructure:"key_type" json:"key_type"`
-	KeyName                   string            `mapstructure:"key" json:"key"`
-	KeyBits                   int               `mapstructure:"key_bits" json:"key_bits"`
-	AdminUser                 string            `mapstructure:"admin_user" json:"admin_user"`
-	DefaultUser               string            `mapstructure:"default_user" json:"default_user"`
-	CIDRList                  string            `mapstructure:"cidr_list" json:"cidr_list"`
-	ExcludeCIDRList           string            `mapstructure:"exclude_cidr_list" json:"exclude_cidr_list"`
-	Port                      int               `mapstructure:"port" json:"port"`
-	InstallScript             string            `mapstructure:"install_script" json:"install_script"`
-	AllowedUsers              string            `mapstructure:"allowed_users" json:"allowed_users"`
-	AllowedUsersTemplate      bool              `mapstructure:"allowed_users_template" json:"allowed_users_template"`
-	AllowedDomains            string            `mapstructure:"allowed_domains" json:"allowed_domains"`
-	KeyOptionSpecs            string            `mapstructure:"key_option_specs" json:"key_option_specs"`
-	MaxTTL                    string            `mapstructure:"max_ttl" json:"max_ttl"`
-	TTL                       string            `mapstructure:"ttl" json:"ttl"`
-	DefaultCriticalOptions    map[string]string `mapstructure:"default_critical_options" json:"default_critical_options"`
-	DefaultExtensions         map[string]string `mapstructure:"default_extensions" json:"default_extensions"`
-	DefaultExtensionsTemplate bool              `mapstructure:"default_extensions_template" json:"default_extensions_template"`
-	AllowedCriticalOptions    string            `mapstructure:"allowed_critical_options" json:"allowed_critical_options"`
-	AllowedExtensions         string            `mapstructure:"allowed_extensions" json:"allowed_extensions"`
-	AllowUserCertificates     bool              `mapstructure:"allow_user_certificates" json:"allow_user_certificates"`
-	AllowHostCertificates     bool              `mapstructure:"allow_host_certificates" json:"allow_host_certificates"`
-	AllowBareDomains          bool              `mapstructure:"allow_bare_domains" json:"allow_bare_domains"`
-	AllowSubdomains           bool              `mapstructure:"allow_subdomains" json:"allow_subdomains"`
-	AllowUserKeyIDs           bool              `mapstructure:"allow_user_key_ids" json:"allow_user_key_ids"`
-	KeyIDFormat               string            `mapstructure:"key_id_format" json:"key_id_format"`
-	AllowedUserKeyLengths     map[string]int    `mapstructure:"allowed_user_key_lengths" json:"allowed_user_key_lengths"`
-	AlgorithmSigner           string            `mapstructure:"algorithm_signer" json:"algorithm_signer"`
+	KeyType                    string            `mapstructure:"key_type" json:"key_type"`
+	KeyName                    string            `mapstructure:"key" json:"key"`
+	KeyBits                    int               `mapstructure:"key_bits" json:"key_bits"`
+	AdminUser                  string            `mapstructure:"admin_user" json:"admin_user"`
+	DefaultUser                string            `mapstructure:"default_user" json:"default_user"`
+	CIDRList                   string            `mapstructure:"cidr_list" json:"cidr_list"`
+	ExcludeCIDRList            string            `mapstructure:"exclude_cidr_list" json:"exclude_cidr_list"`
+	Port                       int               `mapstructure:"port" json:"port"`
+	InstallScript              string            `mapstructure:"install_script" json:"install_script"`
+	AllowedUsers               string            `mapstructure:"allowed_users" json:"allowed_users"`
+	AllowedUsersTemplate       bool              `mapstructure:"allowed_users_template" json:"allowed_users_template"`
+	AllowedDomains             string            `mapstructure:"allowed_domains" json:"allowed_domains"`
+	KeyOptionSpecs             string            `mapstructure:"key_option_specs" json:"key_option_specs"`
+	MaxTTL                     string            `mapstructure:"max_ttl" json:"max_ttl"`
+	TTL                        string            `mapstructure:"ttl" json:"ttl"`
+	DefaultCriticalOptions     map[string]string `mapstructure:"default_critical_options" json:"default_critical_options"`
+	DefaultExtensions          map[string]string `mapstructure:"default_extensions" json:"default_extensions"`
+	DefaultExtensionsTemplate  bool              `mapstructure:"default_extensions_template" json:"default_extensions_template"`
+	AllowedCriticalOptions     string            `mapstructure:"allowed_critical_options" json:"allowed_critical_options"`
+	AllowedExtensions          string            `mapstructure:"allowed_extensions" json:"allowed_extensions"`
+	AllowUserCertificates      bool              `mapstructure:"allow_user_certificates" json:"allow_user_certificates"`
+	AllowHostCertificates      bool              `mapstructure:"allow_host_certificates" json:"allow_host_certificates"`
+	AllowBareDomains           bool              `mapstructure:"allow_bare_domains" json:"allow_bare_domains"`
+	AllowSubdomains            bool              `mapstructure:"allow_subdomains" json:"allow_subdomains"`
+	AllowUserKeyIDs            bool              `mapstructure:"allow_user_key_ids" json:"allow_user_key_ids"`
+	KeyIDFormat                string            `mapstructure:"key_id_format" json:"key_id_format"`
+	OldAllowedUserKeyLengths   map[string]int    `mapstructure:"allowed_user_key_lengths" json:"allowed_user_key_lengths,omitempty"`
+	AllowedUserKeyTypesLengths map[string][]int  `mapstructure:"allowed_user_key_types_lengths" json:"allowed_user_key_types_lengths"`
+	AlgorithmSigner            string            `mapstructure:"algorithm_signer" json:"algorithm_signer"`
+	Version                    int               `mapstructure:"role_version" json:"role_version"`
 }
 
 func pathListRoles(b *backend) *framework.Path {
@@ -346,7 +357,7 @@ func pathRoles(b *backend) *framework.Path {
 				Type: framework.TypeString,
 				Description: `
 				When supplied, this value specifies a signing algorithm for the key. Possible values:
-				ssh-rsa, rsa-sha2-256, rsa-sha2-512.
+				ssh-rsa, rsa-sha2-256, rsa-sha2-512, default, or the empty string.
 				`,
 				DisplayAttrs: &framework.DisplayAttributes{
 					Name: "Signing Algorithm",
@@ -431,6 +442,7 @@ func (b *backend) pathRoleWrite(ctx context.Context, req *logical.Request, d *fr
 			KeyType:         KeyTypeOTP,
 			Port:            port,
 			AllowedUsers:    allowedUsers,
+			Version:         roleEntryVersion,
 		}
 	} else if keyType == KeyTypeDynamic {
 		defaultUser := d.Get("default_user").(string)
@@ -484,17 +496,20 @@ func (b *backend) pathRoleWrite(ctx context.Context, req *logical.Request, d *fr
 			InstallScript:   installScript,
 			AllowedUsers:    allowedUsers,
 			KeyOptionSpecs:  keyOptionSpecs,
+			Version:         roleEntryVersion,
 		}
 	} else if keyType == KeyTypeCA {
-		algorithmSigner := ""
+		algorithmSigner := DefaultAlgorithmSigner
 		algorithmSignerRaw, ok := d.GetOk("algorithm_signer")
 		if ok {
 			algorithmSigner = algorithmSignerRaw.(string)
 			switch algorithmSigner {
 			case ssh.SigAlgoRSA, ssh.SigAlgoRSASHA2256, ssh.SigAlgoRSASHA2512:
-			case "":
+			case "", DefaultAlgorithmSigner:
 				// This case is valid, and the sign operation will use the signer's
-				// default algorithm.
+				// default algorithm. Explicitly reset the value to the default value
+				// rather than use the more vague implicit empty string.
+				algorithmSigner = DefaultAlgorithmSigner
 			default:
 				return nil, fmt.Errorf("unknown algorithm signer %q", algorithmSigner)
 			}
@@ -539,6 +554,7 @@ func (b *backend) createCARole(allowedUsers, defaultUser, signer string, data *f
 		KeyIDFormat:               data.Get("key_id_format").(string),
 		KeyType:                   KeyTypeCA,
 		AlgorithmSigner:           signer,
+		Version:                   roleEntryVersion,
 	}
 
 	if !role.AllowUserCertificates && !role.AllowHostCertificates {
@@ -547,7 +563,7 @@ func (b *backend) createCARole(allowedUsers, defaultUser, signer string, data *f
 
 	defaultCriticalOptions := convertMapToStringValue(data.Get("default_critical_options").(map[string]interface{}))
 	defaultExtensions := convertMapToStringValue(data.Get("default_extensions").(map[string]interface{}))
-	allowedUserKeyLengths, err := convertMapToIntValue(data.Get("allowed_user_key_lengths").(map[string]interface{}))
+	allowedUserKeyLengths, err := convertMapToIntSlice(data.Get("allowed_user_key_lengths").(map[string]interface{}))
 	if err != nil {
 		return nil, logical.ErrorResponse(fmt.Sprintf("error processing allowed_user_key_lengths: %s", err.Error()))
 	}
@@ -562,7 +578,7 @@ func (b *backend) createCARole(allowedUsers, defaultUser, signer string, data *f
 	role.MaxTTL = maxTTL.String()
 	role.DefaultCriticalOptions = defaultCriticalOptions
 	role.DefaultExtensions = defaultExtensions
-	role.AllowedUserKeyLengths = allowedUserKeyLengths
+	role.AllowedUserKeyTypesLengths = allowedUserKeyLengths
 
 	return role, nil
 }
@@ -581,7 +597,98 @@ func (b *backend) getRole(ctx context.Context, s logical.Storage, n string) (*ss
 		return nil, err
 	}
 
+	if err := b.checkUpgrade(ctx, s, n, &result); err != nil {
+		return nil, err
+	}
+
 	return &result, nil
+}
+
+func (b *backend) checkUpgrade(ctx context.Context, s logical.Storage, n string, result *sshRole) error {
+	modified := false
+
+	// NOTE: When introducing a new migration, increment roleEntryVersion and
+	// check if the version is less than the version this change was introduced
+	// at and perform the change. At the end, set modified and update the
+	// version to the version this migration was introduced at! Additionally,
+	// add new migrations after all existing migrations.
+	//
+	// Otherwise, past or future migrations may not execute!
+	if result.Version == roleEntryVersion {
+		return nil
+	}
+
+	// Role version introduced at version 1, migrating OldAllowedUserKeyLengths
+	// to the newer AllowedUserKeyTypesLengths field.
+	if result.Version < 1 {
+		// Only migrate if we have old data and no new data to avoid clobbering.
+		//
+		// This change introduced the first role version, value of 1.
+		if len(result.OldAllowedUserKeyLengths) > 0 && len(result.AllowedUserKeyTypesLengths) == 0 {
+			result.AllowedUserKeyTypesLengths = make(map[string][]int)
+			for k, v := range result.OldAllowedUserKeyLengths {
+				result.AllowedUserKeyTypesLengths[k] = []int{v}
+			}
+			result.OldAllowedUserKeyLengths = nil
+		}
+
+		result.Version = 1
+		modified = true
+	}
+
+	// Role version 2 migrates an empty AlgorithmSigner to an explicit ssh-rsa
+	// value WHEN the SSH CA key is a RSA key.
+	if result.Version < 2 {
+		// In order to perform the version 2 upgrade, we need knowledge of the
+		// signing key type as we want to make ssh-rsa an explicitly notated
+		// algorithm choice.
+		var publicKey ssh.PublicKey
+		publicKeyEntry, err := caKey(ctx, s, caPublicKey)
+		if err != nil {
+			b.Logger().Debug(fmt.Sprintf("failed to load public key entry while attempting to migrate: %v", err))
+			goto SKIPVERSION2
+		}
+		if publicKeyEntry == nil || publicKeyEntry.Key == "" {
+			b.Logger().Debug(fmt.Sprintf("got empty public key entry while attempting to migrate"))
+			goto SKIPVERSION2
+		}
+
+		publicKey, err = parsePublicSSHKey(publicKeyEntry.Key)
+		if err == nil {
+			// Move an empty signing algorithm to an explicit ssh-rsa (SHA-1)
+			// if this key is of type RSA. This isn't a secure default but
+			// exists for backwards compatibility with existing versions of
+			// Vault. By making it explicit, operators can see that this is
+			// the value and move it to a newer algorithm in the future.
+			if publicKey.Type() == ssh.KeyAlgoRSA && result.AlgorithmSigner == "" {
+				result.AlgorithmSigner = ssh.SigAlgoRSA
+			}
+
+			result.Version = 2
+			modified = true
+		}
+
+	SKIPVERSION2:
+		err = nil
+	}
+
+	// Add new migrations just before here.
+	//
+	// Condition copied from PKI builtin.
+	if modified && (b.System().LocalMount() || !b.System().ReplicationState().HasState(consts.ReplicationPerformanceSecondary)) {
+		jsonEntry, err := logical.StorageEntryJSON("roles/"+n, &result)
+		if err != nil {
+			return err
+		}
+		if err := s.Put(ctx, jsonEntry); err != nil {
+			// Only perform upgrades on replication primary
+			if !strings.Contains(err.Error(), logical.ErrReadOnly.Error()) {
+				return err
+			}
+		}
+	}
+
+	return nil
 }
 
 // parseRole converts a sshRole object into its map[string]interface representation,
@@ -630,7 +737,7 @@ func (b *backend) parseRole(role *sshRole) (map[string]interface{}, error) {
 			"default_critical_options":    role.DefaultCriticalOptions,
 			"default_extensions":          role.DefaultExtensions,
 			"default_extensions_template": role.DefaultExtensionsTemplate,
-			"allowed_user_key_lengths":    role.AllowedUserKeyLengths,
+			"allowed_user_key_lengths":    role.AllowedUserKeyTypesLengths,
 			"algorithm_signer":            role.AlgorithmSigner,
 		}
 	case KeyTypeDynamic:

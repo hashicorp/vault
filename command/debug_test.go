@@ -12,7 +12,7 @@ import (
 	"time"
 
 	"github.com/hashicorp/vault/api"
-	"github.com/mholt/archiver"
+	"github.com/mholt/archiver/v3"
 	"github.com/mitchellh/cli"
 )
 
@@ -234,6 +234,11 @@ func TestDebugCommand_CaptureTargets(t *testing.T) {
 			"server-status",
 			[]string{"server-status"},
 			[]string{"server_status.json"},
+		},
+		{
+			"in-flight-req",
+			[]string{"requests"},
+			[]string{"requests.json"},
 		},
 		{
 			"all-minus-pprof",

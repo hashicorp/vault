@@ -13,13 +13,13 @@ The following documentation describes installing, running, and using
 Vault and **Vault Agent Injector** on OpenShift.
 
 ~> **Note:** We recommend using the Vault agent injector on Openshift
-   instead of the Secrets Store CSI driver. OpenShift
-   [does not recommend](https://docs.openshift.com/container-platform/4.9/storage/persistent_storage/persistent-storage-hostpath.html)
-   using `hostPath` mounting in production or
-   [certify Helm charts](https://github.com/redhat-certification/chart-verifier/blob/dbf89bff2d09142e4709d689a9f4037a739c2244/docs/helm-chart-checks.md#table-2-helm-chart-default-checks)
-   using CSI objects because pods must run as privileged. If you would like to run the Secrets Store
-   CSI driver on a development or testing cluster, refer to
-   [installation instructions for the Vault CSI provider](/docs/platform/k8s/csi/installation).
+instead of the Secrets Store CSI driver. OpenShift
+[does not recommend](https://docs.openshift.com/container-platform/4.9/storage/persistent_storage/persistent-storage-hostpath.html)
+using `hostPath` mounting in production or
+[certify Helm charts](https://github.com/redhat-certification/chart-verifier/blob/dbf89bff2d09142e4709d689a9f4037a739c2244/docs/helm-chart-checks.md#table-2-helm-chart-default-checks)
+using CSI objects because pods must run as privileged. If you would like to run the Secrets Store
+CSI driver on a development or testing cluster, refer to
+[installation instructions for the Vault CSI provider](/docs/platform/k8s/csi/installation).
 
 ## Requirements
 
@@ -199,6 +199,8 @@ $ helm install vault hashicorp/vault \
     --set "injector.externalVaultAddr=http://external-vault:8200"
 ```
 
--> **Step-by-step instructions:** The [Integrate a Kubernetes Cluster with an
+## Tutorial
+
+Refer to the [Integrate a Kubernetes Cluster with an
 External Vault](https://learn.hashicorp.com/vault/getting-started-k8s/external-vault)
-guide demonstrates using an external Vault within a Kubernetes cluster.
+tutorial to learn how to use an external Vault within a Kubernetes cluster.

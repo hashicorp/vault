@@ -1,4 +1,4 @@
-import { later, run } from '@ember/runloop';
+import { later, _cancelTimers as cancelTimers } from '@ember/runloop';
 import EmberObject from '@ember/object';
 import { resolve } from 'rsvp';
 import Service from '@ember/service';
@@ -18,6 +18,7 @@ const authService = Service.extend({
   async authenticate() {
     return fetch('http://localhost:2000');
   },
+  handleError() {},
   setLastFetch() {},
 });
 
@@ -25,6 +26,7 @@ const workingAuthService = Service.extend({
   authenticate() {
     return resolve({});
   },
+  handleError() {},
   setLastFetch() {},
 });
 
@@ -38,39 +40,39 @@ const routerService = Service.extend({
   },
 });
 
-module('Integration | Component | auth form', function(hooks) {
+module('Integration | Component | auth form', function (hooks) {
   setupRenderingTest(hooks);
 
-  hooks.beforeEach(function() {
+  hooks.beforeEach(function () {
     this.owner.lookup('service:csp-event').attach();
     this.owner.register('service:router', routerService);
     this.router = this.owner.lookup('service:router');
   });
 
-  hooks.afterEach(function() {
+  hooks.afterEach(function () {
     this.owner.lookup('service:csp-event').remove();
   });
 
   const CSP_ERR_TEXT = `Error This is a standby Vault node but can't communicate with the active node via request forwarding. Sign in at the active node to use the Vault UI.`;
-  test('it renders error on CSP violation', async function(assert) {
+  test('it renders error on CSP violation', async function (assert) {
     this.owner.unregister('service:auth');
     this.owner.register('service:auth', authService);
     this.auth = this.owner.lookup('service:auth');
     this.set('cluster', EmberObject.create({ standby: true }));
     this.set('selectedAuth', 'token');
     await render(hbs`{{auth-form cluster=cluster selectedAuth=selectedAuth}}`);
-    assert.equal(component.errorText, '');
+    assert.equal(component.errorMessagePresent, false);
     component.login();
     // because this is an ember-concurrency backed service,
     // we have to manually force settling the run queue
-    later(() => run.cancelTimers(), 50);
+    later(() => cancelTimers(), 50);
     return settled().then(() => {
       assert.equal(component.errorText, CSP_ERR_TEXT);
     });
   });
 
-  test('it renders with vault style errors', async function(assert) {
-    let server = new Pretender(function() {
+  test('it renders with vault style errors', async function (assert) {
+    let server = new Pretender(function () {
       this.get('/v1/auth/**', () => {
         return [
           400,
@@ -91,8 +93,8 @@ module('Integration | Component | auth form', function(hooks) {
     });
   });
 
-  test('it renders AdapterError style errors', async function(assert) {
-    let server = new Pretender(function() {
+  test('it renders AdapterError style errors', async function (assert) {
+    let server = new Pretender(function () {
       this.get('/v1/auth/**', () => {
         return [400, { 'Content-Type': 'application/json' }];
       });
@@ -108,25 +110,24 @@ module('Integration | Component | auth form', function(hooks) {
     });
   });
 
-  test('it renders no tabs when no methods are passed', async function(assert) {
+  test('it renders no tabs when no methods are passed', async function (assert) {
     let methods = {
       'approle/': {
         type: 'approle',
       },
     };
-    let server = new Pretender(function() {
+    let server = new Pretender(function () {
       this.get('/v1/sys/internal/ui/mounts', () => {
         return [200, { 'Content-Type': 'application/json' }, JSON.stringify({ data: { auth: methods } })];
       });
     });
     await render(hbs`<AuthForm @cluster={{cluster}} />`);
 
-    await settled();
     assert.equal(component.tabs.length, 0, 'renders a tab for every backend');
     server.shutdown();
   });
 
-  test('it renders all the supported methods and Other tab when methods are present', async function(assert) {
+  test('it renders all the supported methods and Other tab when methods are present', async function (assert) {
     let methods = {
       'foo/': {
         type: 'userpass',
@@ -135,7 +136,7 @@ module('Integration | Component | auth form', function(hooks) {
         type: 'approle',
       },
     };
-    let server = new Pretender(function() {
+    let server = new Pretender(function () {
       this.get('/v1/sys/internal/ui/mounts', () => {
         return [200, { 'Content-Type': 'application/json' }, JSON.stringify({ data: { auth: methods } })];
       });
@@ -143,33 +144,33 @@ module('Integration | Component | auth form', function(hooks) {
 
     this.set('cluster', EmberObject.create({}));
     await render(hbs`{{auth-form cluster=cluster }}`);
-    await settled();
+
     assert.equal(component.tabs.length, 2, 'renders a tab for userpass and Other');
     assert.equal(component.tabs.objectAt(0).name, 'foo', 'uses the path in the label');
     assert.equal(component.tabs.objectAt(1).name, 'Other', 'second tab is the Other tab');
     server.shutdown();
   });
 
-  test('it renders the description', async function(assert) {
+  test('it renders the description', async function (assert) {
     let methods = {
       'approle/': {
         type: 'userpass',
         description: 'app description',
       },
     };
-    let server = new Pretender(function() {
+    let server = new Pretender(function () {
       this.get('/v1/sys/internal/ui/mounts', () => {
         return [200, { 'Content-Type': 'application/json' }, JSON.stringify({ data: { auth: methods } })];
       });
     });
     this.set('cluster', EmberObject.create({}));
     await render(hbs`{{auth-form cluster=cluster }}`);
-    await settled();
+
     assert.equal(component.descriptionText, 'app description', 'renders a description for auth methods');
     server.shutdown();
   });
 
-  test('it calls authenticate with the correct path', async function(assert) {
+  test('it calls authenticate with the correct path', async function (assert) {
     this.owner.unregister('service:auth');
     this.owner.register('service:auth', workingAuthService);
     this.auth = this.owner.lookup('service:auth');
@@ -179,7 +180,7 @@ module('Integration | Component | auth form', function(hooks) {
         type: 'userpass',
       },
     };
-    let server = new Pretender(function() {
+    let server = new Pretender(function () {
       this.get('/v1/sys/internal/ui/mounts', () => {
         return [200, { 'Content-Type': 'application/json' }, JSON.stringify({ data: { auth: methods } })];
       });
@@ -198,29 +199,29 @@ module('Integration | Component | auth form', function(hooks) {
     server.shutdown();
   });
 
-  test('it renders no tabs when no supported methods are present in passed methods', async function(assert) {
+  test('it renders no tabs when no supported methods are present in passed methods', async function (assert) {
     let methods = {
       'approle/': {
         type: 'approle',
       },
     };
-    let server = new Pretender(function() {
+    let server = new Pretender(function () {
       this.get('/v1/sys/internal/ui/mounts', () => {
         return [200, { 'Content-Type': 'application/json' }, JSON.stringify({ data: { auth: methods } })];
       });
     });
     this.set('cluster', EmberObject.create({}));
     await render(hbs`<AuthForm @cluster={{cluster}} />`);
-    await settled();
+
     server.shutdown();
     assert.equal(component.tabs.length, 0, 'renders a tab for every backend');
   });
 
-  test('it makes a request to unwrap if passed a wrappedToken and logs in', async function(assert) {
+  test('it makes a request to unwrap if passed a wrappedToken and logs in', async function (assert) {
     this.owner.register('service:auth', workingAuthService);
     this.auth = this.owner.lookup('service:auth');
     let authSpy = sinon.spy(this.auth, 'authenticate');
-    let server = new Pretender(function() {
+    let server = new Pretender(function () {
       this.post('/v1/sys/wrapping/unwrap', () => {
         return [
           200,
@@ -238,7 +239,7 @@ module('Integration | Component | auth form', function(hooks) {
     this.set('wrappedToken', wrappedToken);
     this.set('cluster', EmberObject.create({}));
     await render(hbs`<AuthForm @cluster={{cluster}} @wrappedToken={{wrappedToken}} />`);
-    later(() => run.cancelTimers(), 50);
+    later(() => cancelTimers(), 50);
     await settled();
     assert.equal(server.handledRequests[0].url, '/v1/sys/wrapping/unwrap', 'makes call to unwrap the token');
     assert.equal(
@@ -251,8 +252,8 @@ module('Integration | Component | auth form', function(hooks) {
     authSpy.restore();
   });
 
-  test('it shows an error if unwrap errors', async function(assert) {
-    let server = new Pretender(function() {
+  test('it shows an error if unwrap errors', async function (assert) {
+    let server = new Pretender(function () {
       this.post('/v1/sys/wrapping/unwrap', () => {
         return [
           400,
@@ -266,7 +267,7 @@ module('Integration | Component | auth form', function(hooks) {
 
     this.set('wrappedToken', '54321');
     await render(hbs`{{auth-form cluster=cluster wrappedToken=wrappedToken}}`);
-    later(() => run.cancelTimers(), 50);
+    later(() => cancelTimers(), 50);
 
     await settled();
     assert.equal(

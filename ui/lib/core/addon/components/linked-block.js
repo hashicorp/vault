@@ -1,6 +1,5 @@
 import { inject as service } from '@ember/service';
 import Component from '@ember/component';
-import hbs from 'htmlbars-inline-precompile';
 import { encodePath } from 'vault/utils/path-encoding-helpers';
 
 /**
@@ -27,8 +26,6 @@ import { encodePath } from 'vault/utils/path-encoding-helpers';
 
 let LinkedBlockComponent = Component.extend({
   router: service(),
-
-  layout: hbs`{{yield}}`,
 
   classNames: 'linked-block',
 

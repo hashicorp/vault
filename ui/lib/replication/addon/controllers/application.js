@@ -44,7 +44,7 @@ export default Controller.extend(copy(DEFAULTS, true), {
       return resolve();
     }
     const configRecord = this.store.createRecord('path-filter-config', config);
-    return configRecord.save().catch(e => this.submitError(e));
+    return configRecord.save().catch((e) => this.submitError(e));
   },
 
   reset() {
@@ -103,7 +103,7 @@ export default Controller.extend(copy(DEFAULTS, true), {
       .adapterFor('cluster')
       .replicationAction(action, replicationMode, clusterMode, data)
       .then(
-        resp => {
+        (resp) => {
           return this.saveFilterConfig().then(() => {
             return this.submitSuccess(resp, action, clusterMode);
           });

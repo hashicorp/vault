@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"reflect"
 	"strings"
-	"sync"
 	"testing"
 	"time"
 
@@ -445,66 +444,9 @@ func testCore_Unmount_Cleanup(t *testing.T, causeFailure bool) {
 	}
 }
 
-func TestCore_RemountConcurrent(t *testing.T) {
-	c2, _, _ := TestCoreUnsealed(t)
-	noop := &NoopBackend{}
-	c2.logicalBackends["noop"] = func(context.Context, *logical.BackendConfig) (logical.Backend, error) {
-		return noop, nil
-	}
-
-	// Mount the noop backend
-	mount1 := &MountEntry{
-		Table: mountTableType,
-		Path:  "test1/",
-		Type:  "noop",
-	}
-
-	if err := c2.mount(namespace.RootContext(nil), mount1); err != nil {
-		t.Fatalf("err: %v", err)
-	}
-
-	mount2 := &MountEntry{
-		Table: mountTableType,
-		Path:  "test2/",
-		Type:  "noop",
-	}
-	if err := c2.mount(namespace.RootContext(nil), mount2); err != nil {
-		t.Fatalf("err: %v", err)
-	}
-
-	wg := &sync.WaitGroup{}
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
-		err := c2.remount(namespace.RootContext(nil), "test1", "foo", true)
-		if err != nil {
-			t.Logf("err: %v", err)
-		}
-	}()
-
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
-		err := c2.remount(namespace.RootContext(nil), "test2", "foo", true)
-		if err != nil {
-			t.Logf("err: %v", err)
-		}
-	}()
-	wg.Wait()
-
-	c2MountMap := map[string]interface{}{}
-	for _, v := range c2.mounts.Entries {
-
-		if _, ok := c2MountMap[v.Path]; ok {
-			t.Fatalf("duplicated mount path found at %s", v.Path)
-		}
-		c2MountMap[v.Path] = v
-	}
-}
-
 func TestCore_Remount(t *testing.T) {
 	c, keys, _ := TestCoreUnsealed(t)
-	err := c.remount(namespace.RootContext(nil), "secret", "foo", true)
+	err := c.remountSecretsEngineCurrentNamespace(namespace.RootContext(nil), "secret", "foo", true)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -514,21 +456,9 @@ func TestCore_Remount(t *testing.T) {
 		t.Fatalf("failed remount")
 	}
 
-	inmemSink := metrics.NewInmemSink(1000000*time.Hour, 2000000*time.Hour)
-	conf := &CoreConfig{
-		Physical:        c.physical,
-		DisableMlock:    true,
-		BuiltinRegistry: NewMockBuiltinRegistry(),
-		MetricSink:      metricsutil.NewClusterMetricSink("test-cluster", inmemSink),
-		MetricsHelper:   metricsutil.NewMetricsHelper(inmemSink, false),
-	}
-	c2, err := NewCore(conf)
-	if err != nil {
-		t.Fatalf("err: %v", err)
-	}
-	defer c2.Shutdown()
+	c.sealInternal()
 	for i, key := range keys {
-		unseal, err := TestCoreUnseal(c2, key)
+		unseal, err := TestCoreUnseal(c, key)
 		if err != nil {
 			t.Fatalf("err: %v", err)
 		}
@@ -537,20 +467,9 @@ func TestCore_Remount(t *testing.T) {
 		}
 	}
 
-	// Verify matching mount tables
-	if c.mounts.Type != c2.mounts.Type {
-		t.Fatal("types don't match")
-	}
-	cMountMap := map[string]interface{}{}
-	for _, v := range c.mounts.Entries {
-		cMountMap[v.Path] = v
-	}
-	c2MountMap := map[string]interface{}{}
-	for _, v := range c2.mounts.Entries {
-		c2MountMap[v.Path] = v
-	}
-	if diff := deep.Equal(cMountMap, c2MountMap); diff != nil {
-		t.Fatal(diff)
+	match = c.router.MatchingMount(namespace.RootContext(nil), "foo/bar")
+	if match != "foo/" {
+		t.Fatalf("failed remount")
 	}
 }
 
@@ -612,7 +531,7 @@ func TestCore_Remount_Cleanup(t *testing.T) {
 	}
 
 	// Remount, this should cleanup
-	if err := c.remount(namespace.RootContext(nil), "test/", "new/", true); err != nil {
+	if err := c.remountSecretsEngineCurrentNamespace(namespace.RootContext(nil), "test/", "new/", true); err != nil {
 		t.Fatalf("err: %v", err)
 	}
 
@@ -641,7 +560,7 @@ func TestCore_Remount_Cleanup(t *testing.T) {
 
 func TestCore_Remount_Protected(t *testing.T) {
 	c, _, _ := TestCoreUnsealed(t)
-	err := c.remount(namespace.RootContext(nil), "sys", "foo", true)
+	err := c.remountSecretsEngineCurrentNamespace(namespace.RootContext(nil), "sys", "foo", true)
 	if err.Error() != `cannot remount "sys/"` {
 		t.Fatalf("err: %v", err)
 	}
@@ -696,8 +615,8 @@ func TestCore_MountTable_UpgradeToTyped(t *testing.T) {
 func testCore_MountTable_UpgradeToTyped_Common(
 	t *testing.T,
 	c *Core,
-	testType string) {
-
+	testType string,
+) {
 	var path string
 	var mt *MountTable
 	switch testType {
@@ -840,6 +759,9 @@ func verifyDefaultTable(t *testing.T, table *MountTable, expected int) {
 		case "sys/":
 			if entry.Type != "system" {
 				t.Fatalf("bad: %v", entry)
+			}
+			if !entry.SealWrap {
+				t.Fatalf("expected SealWrap to be enabled: %v", entry)
 			}
 		case "identity/":
 			if entry.Type != "identity" {

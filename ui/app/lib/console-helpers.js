@@ -1,11 +1,11 @@
 import keys from 'vault/lib/keycodes';
-import argTokenizer from 'yargs-parser/lib/tokenize-arg-string.js';
+import argTokenizer from './arg-tokenizer';
 import { parse } from 'shell-quote';
 
 const supportedCommands = ['read', 'write', 'list', 'delete'];
 const uiCommands = ['api', 'clearall', 'clear', 'fullscreen', 'refresh'];
 
-export function extractDataAndFlags(data, flags) {
+export function extractDataAndFlags(method, data, flags) {
   return data.concat(flags).reduce(
     (accumulator, val) => {
       // will be "key=value" or "-flag=value" or "foo=bar=baz"
@@ -16,6 +16,10 @@ export function extractDataAndFlags(data, flags) {
         let flagName = item.replace(/^-/, '');
         if (flagName === 'wrap-ttl') {
           flagName = 'wrapTTL';
+        } else if (method === 'write') {
+          if (flagName === 'f' || flagName === '-force') {
+            flagName = 'force';
+          }
         }
         accumulator.flags[flagName] = value || true;
         return accumulator;
@@ -56,7 +60,7 @@ export function parseCommand(command, shouldThrow) {
   let flags = [];
   let data = [];
 
-  rest.forEach(arg => {
+  rest.forEach((arg) => {
     if (arg.startsWith('-')) {
       flags.push(arg);
     } else {
@@ -66,7 +70,7 @@ export function parseCommand(command, shouldThrow) {
           .split(/=(.+)/)
           // if there were quotes, there's an empty string as the last member in the array that we don't want,
           // so filter it out
-          .filter(str => str !== '')
+          .filter((str) => str !== '')
           // glue the data back together
           .join('=');
         data.push(strippedArg);

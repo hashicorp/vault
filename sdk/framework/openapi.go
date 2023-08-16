@@ -32,6 +32,9 @@ func NewOASDocument() *OASDocument {
 			},
 		},
 		Paths: make(map[string]*OASPathItem),
+		Components: OASComponents{
+			Schemas: make(map[string]*OASSchema),
+		},
 	}
 }
 
@@ -78,9 +81,14 @@ func NewOASDocumentFromMap(input map[string]interface{}) (*OASDocument, error) {
 }
 
 type OASDocument struct {
-	Version string                  `json:"openapi" mapstructure:"openapi"`
-	Info    OASInfo                 `json:"info"`
-	Paths   map[string]*OASPathItem `json:"paths"`
+	Version    string                  `json:"openapi" mapstructure:"openapi"`
+	Info       OASInfo                 `json:"info"`
+	Paths      map[string]*OASPathItem `json:"paths"`
+	Components OASComponents           `json:"components"`
+}
+
+type OASComponents struct {
+	Schemas map[string]*OASSchema `json:"schemas"`
 }
 
 type OASInfo struct {
@@ -148,6 +156,7 @@ type OASMediaTypeObject struct {
 }
 
 type OASSchema struct {
+	Ref         string                `json:"$ref,omitempty"`
 	Type        string                `json:"type,omitempty"`
 	Description string                `json:"description,omitempty"`
 	Properties  map[string]*OASSchema `json:"properties,omitempty"`
@@ -191,21 +200,22 @@ var OASStdRespNoContent = &OASResponse{
 var optRe = regexp.MustCompile(`(?U)\([^(]*\)\?|\(/\(\?P<[^(]*\)\)\?`)
 
 var (
-	reqdRe           = regexp.MustCompile(`\(?\?P<(\w+)>[^)]*\)?`)   // Capture required parameters, e.g. "(?P<name>regex)"
-	altRe            = regexp.MustCompile(`\((.*)\|(.*)\)`)          // Capture alternation elements, e.g. "(raw/?$|raw/(?P<path>.+))"
-	pathFieldsRe     = regexp.MustCompile(`{(\w+)}`)                 // Capture OpenAPI-style named parameters, e.g. "lookup/{urltoken}",
-	cleanCharsRe     = regexp.MustCompile("[()^$?]")                 // Set of regex characters that will be stripped during cleaning
-	cleanSuffixRe    = regexp.MustCompile(`/\?\$?$`)                 // Path suffix patterns that will be stripped during cleaning
-	wsRe             = regexp.MustCompile(`\s+`)                     // Match whitespace, to be compressed during cleaning
-	altFieldsGroupRe = regexp.MustCompile(`\(\?P<\w+>\w+(\|\w+)+\)`) // Match named groups that limit options, e.g. "(?<foo>a|b|c)"
-	altFieldsRe      = regexp.MustCompile(`\w+(\|\w+)+`)             // Match an options set, e.g. "a|b|c"
-	nonWordRe        = regexp.MustCompile(`[^\w]+`)                  // Match a sequence of non-word characters
+	altFieldsGroupRe = regexp.MustCompile(`\(\?P<\w+>\w+(\|\w+)+\)`)              // Match named groups that limit options, e.g. "(?<foo>a|b|c)"
+	altFieldsRe      = regexp.MustCompile(`\w+(\|\w+)+`)                          // Match an options set, e.g. "a|b|c"
+	altRe            = regexp.MustCompile(`\((.*)\|(.*)\)`)                       // Capture alternation elements, e.g. "(raw/?$|raw/(?P<path>.+))"
+	altRootsRe       = regexp.MustCompile(`^\(([\w\-_]+(?:\|[\w\-_]+)+)\)(/.*)$`) // Pattern starting with alts, e.g. "(root1|root2)/(?P<name>regex)"
+	cleanCharsRe     = regexp.MustCompile("[()^$?]")                              // Set of regex characters that will be stripped during cleaning
+	cleanSuffixRe    = regexp.MustCompile(`/\?\$?$`)                              // Path suffix patterns that will be stripped during cleaning
+	nonWordRe        = regexp.MustCompile(`[^\w]+`)                               // Match a sequence of non-word characters
+	pathFieldsRe     = regexp.MustCompile(`{(\w+)}`)                              // Capture OpenAPI-style named parameters, e.g. "lookup/{urltoken}",
+	reqdRe           = regexp.MustCompile(`\(?\?P<(\w+)>[^)]*\)?`)                // Capture required parameters, e.g. "(?P<name>regex)"
+	wsRe             = regexp.MustCompile(`\s+`)                                  // Match whitespace, to be compressed during cleaning
 )
 
 // documentPaths parses all paths in a framework.Backend into OpenAPI paths.
-func documentPaths(backend *Backend, doc *OASDocument) error {
+func documentPaths(backend *Backend, requestResponsePrefix string, doc *OASDocument) error {
 	for _, p := range backend.Paths {
-		if err := documentPath(p, backend.SpecialPaths(), backend.BackendType, doc); err != nil {
+		if err := documentPath(p, backend.SpecialPaths(), requestResponsePrefix, backend.BackendType, doc); err != nil {
 			return err
 		}
 	}
@@ -214,7 +224,7 @@ func documentPaths(backend *Backend, doc *OASDocument) error {
 }
 
 // documentPath parses a framework.Path into one or more OpenAPI paths.
-func documentPath(p *Path, specialPaths *logical.Paths, backendType logical.BackendType, doc *OASDocument) error {
+func documentPath(p *Path, specialPaths *logical.Paths, requestResponsePrefix string, backendType logical.BackendType, doc *OASDocument) error {
 	var sudoPaths []string
 	var unauthPaths []string
 
@@ -223,7 +233,7 @@ func documentPath(p *Path, specialPaths *logical.Paths, backendType logical.Back
 		unauthPaths = specialPaths.Unauthenticated
 	}
 
-	// Convert optional parameters into distinct patterns to be process independently.
+	// Convert optional parameters into distinct patterns to be processed independently.
 	paths := expandPattern(p.Pattern)
 
 	for _, path := range paths {
@@ -357,18 +367,30 @@ func documentPath(p *Path, specialPaths *logical.Paths, backendType logical.Back
 
 				// Set the final request body. Only JSON request data is supported.
 				if len(s.Properties) > 0 || s.Example != nil {
+					requestName := constructRequestName(requestResponsePrefix, path)
+					doc.Components.Schemas[requestName] = s
 					op.RequestBody = &OASRequestBody{
 						Content: OASContent{
 							"application/json": &OASMediaTypeObject{
-								Schema: s,
+								Schema: &OASSchema{Ref: fmt.Sprintf("#/components/schemas/%s", requestName)},
 							},
 						},
 					}
 				}
 			}
 
-			// LIST is represented as GET with a `list` query parameter
-			if opType == logical.ListOperation || (opType == logical.ReadOperation && operations[logical.ListOperation] != nil) {
+			// LIST is represented as GET with a `list` query parameter.
+			if opType == logical.ListOperation {
+				// Only accepts List (due to the above skipping of ListOperations that also have ReadOperations)
+				op.Parameters = append(op.Parameters, OASParameter{
+					Name:        "list",
+					Description: "Must be set to `true`",
+					Required:    true,
+					In:          "query",
+					Schema:      &OASSchema{Type: "string", Enum: []interface{}{"true"}},
+				})
+			} else if opType == logical.ReadOperation && operations[logical.ListOperation] != nil {
+				// Accepts both Read and List
 				op.Parameters = append(op.Parameters, OASParameter{
 					Name:        "list",
 					Description: "Return a list if `true`",
@@ -448,6 +470,30 @@ func documentPath(p *Path, specialPaths *logical.Paths, backendType logical.Back
 	return nil
 }
 
+// constructRequestName joins the given prefix with the path elements into a
+// CamelCaseRequest string.
+//
+// For example, prefix="kv" & path=/config/lease/{name} => KvConfigLeaseRequest
+func constructRequestName(requestResponsePrefix string, path string) string {
+	var b strings.Builder
+
+	b.WriteString(strings.Title(requestResponsePrefix))
+
+	// split the path by / _ - separators
+	for _, token := range strings.FieldsFunc(path, func(r rune) bool {
+		return r == '/' || r == '_' || r == '-'
+	}) {
+		// exclude request fields
+		if !strings.ContainsAny(token, "{}") {
+			b.WriteString(strings.Title(token))
+		}
+	}
+
+	b.WriteString("Request")
+
+	return b.String()
+}
+
 func specialPathMatch(path string, specialPaths []string) bool {
 	// Test for exact or prefix match of special paths.
 	for _, sp := range specialPaths {
@@ -463,6 +509,17 @@ func specialPathMatch(path string, specialPaths []string) bool {
 // and changing named parameters into their {openapi} equivalents.
 func expandPattern(pattern string) []string {
 	var paths []string
+
+	// Determine if the pattern starts with an alternation for multiple roots
+	// example (root1|root2)/(?P<name>regex) -> match['(root1|root2)/(?P<name>regex)','root1|root2','/(?P<name>regex)']
+	match := altRootsRe.FindStringSubmatch(pattern)
+	if len(match) == 3 {
+		var expandedRoots []string
+		for _, root := range strings.Split(match[1], "|") {
+			expandedRoots = append(expandedRoots, expandPattern(root+match[2])...)
+		}
+		return expandedRoots
+	}
 
 	// GenericNameRegex adds a regex that complicates our parsing. It is much easier to
 	// detect and remove it now than to compensate for in the other regexes.

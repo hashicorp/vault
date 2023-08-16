@@ -2,8 +2,6 @@ package vault
 
 import (
 	"context"
-	"crypto/sha256"
-	"encoding/base64"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -22,7 +20,6 @@ import (
 	"github.com/hashicorp/vault/helper/timeutil"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/vault/activity"
-	"github.com/mitchellh/copystructure"
 )
 
 const (
@@ -51,28 +48,19 @@ const (
 	// Timeout on storage calls.
 	activitySegmentWriteTimeout = 1 * time.Minute
 
-	// Number of entity records to store per segment
-	// Estimated as 512KiB / 64 bytes = 8192, rounded down
-	activitySegmentEntityCapacity = 8000
+	// Number of client records to store per segment. Each ClientRecord may
+	// consume upto 99 bytes; rounding it to 100bytes. Considering the storage
+	// limit of 512KB per storage entry, we can roughly store 512KB/100bytes =
+	// 5241 clients; rounding down to 5000 clients.
+	activitySegmentClientCapacity = 5000
 
-	// Maximum number of segments per month
-	activityLogMaxSegmentPerMonth = 81
-
-	// Number of records (entity or token) to store in a
-	// standby fragment before sending it to the active node.
-	// Estimates as 8KiB / 64 bytes = 128
-	activityFragmentStandbyCapacity = 128
-
-	// Delimiter between the string fields used to generate a client
-	// ID for tokens without entities. This is the 0 character, which
-	// is a non-printable string. Please see unicode.IsPrint for details.
-	clientIDTWEDelimiter = rune('\x00')
-
-	// Delimiter between each policy in the sorted policies used to
-	// generate a client ID for tokens without entities. This is the 127
-	// character, which is a non-printable string. Please see unicode.IsPrint
-	// for details.
-	sortedPoliciesTWEDelimiter = rune('\x7F')
+	// Maximum number of segments per month. This allows for 700K entities per
+	// month; 700K/5K. These limits are geared towards controlling the storage
+	// implications of persisting activity logs. If we hit a scenario where the
+	// storage consequences are less important in comparison to the accuracy of
+	// the client activity, these limits can be further relaxed or even be
+	// removed.
+	activityLogMaxSegmentPerMonth = 140
 
 	// trackedTWESegmentPeriod is a time period of a little over a month, and represents
 	// the amount of time that needs to pass after a 1.9 or later upgrade to result in
@@ -108,7 +96,8 @@ type ActivityLog struct {
 	// Acquire "l" before fragmentLock if both must be held.
 	l sync.RWMutex
 
-	// fragmentLock protects enable, activeClients, fragment, standbyFragmentsReceived
+	// fragmentLock protects enable, partialMonthClientTracker, fragment,
+	// standbyFragmentsReceived.
 	fragmentLock sync.RWMutex
 
 	// enabled indicates if the activity log is enabled for this cluster.
@@ -169,16 +158,8 @@ type ActivityLog struct {
 	// for testing: is config currently being invalidated. protected by l
 	configInvalidationInProgress bool
 
-	// clientTracker tracks active clients this month.  Protected by fragmentLock.
-	clientTracker *ClientTracker
-}
-
-type ClientTracker struct {
-	// All known active clients this month; use fragmentLock read-locked
-	// to check whether it already exists.
-	activeClients               map[string]struct{}
-	entityCountByNamespaceID    map[string]uint64
-	nonEntityCountByNamespaceID map[string]uint64
+	// partialMonthClientTracker tracks active clients this month.  Protected by fragmentLock.
+	partialMonthClientTracker map[string]*activity.EntityRecord
 }
 
 // These non-persistent configuration options allow us to disable
@@ -200,21 +181,18 @@ func NewActivityLog(core *Core, logger log.Logger, view *BarrierView, metrics me
 	}
 
 	a := &ActivityLog{
-		core:            core,
-		configOverrides: &core.activityLogConfig,
-		logger:          logger,
-		view:            view,
-		metrics:         metrics,
-		nodeID:          hostname,
-		newFragmentCh:   make(chan struct{}, 1),
-		sendCh:          make(chan struct{}, 1), // buffered so it can be triggered by fragment size
-		writeCh:         make(chan struct{}, 1), // same for full segment
-		doneCh:          make(chan struct{}, 1),
-		clientTracker: &ClientTracker{
-			activeClients:               make(map[string]struct{}),
-			entityCountByNamespaceID:    make(map[string]uint64),
-			nonEntityCountByNamespaceID: make(map[string]uint64),
-		},
+		core:                      core,
+		configOverrides:           &core.activityLogConfig,
+		logger:                    logger,
+		view:                      view,
+		metrics:                   metrics,
+		nodeID:                    hostname,
+		newFragmentCh:             make(chan struct{}, 1),
+		sendCh:                    make(chan struct{}, 1), // buffered so it can be triggered by fragment size
+		writeCh:                   make(chan struct{}, 1), // same for full segment
+		doneCh:                    make(chan struct{}, 1),
+		partialMonthClientTracker: make(map[string]*activity.EntityRecord),
+
 		currentSegment: segmentInfo{
 			startTimestamp: 0,
 			currentClients: &activity.EntityActivityLog{
@@ -298,13 +276,15 @@ func (a *ActivityLog) saveCurrentSegmentToStorageLocked(ctx context.Context, for
 		if f == nil {
 			continue
 		}
+		if len(f.Clients) != 0 || len(f.NonEntityTokens) != 0 {
+			saveChanges = true
+		}
 		for _, e := range f.Clients {
 			// We could sort by timestamp to see which is first.
 			// We'll ignore that; the order of the append above means
 			// that we choose entries in localFragment over those
 			// from standby nodes.
 			newEntities[e.ClientID] = e
-			saveChanges = true
 		}
 		// As of 1.9, a fragment should no longer have any NonEntityTokens. However
 		// in order to not lose any information about the current segment during the
@@ -313,11 +293,10 @@ func (a *ActivityLog) saveCurrentSegmentToStorageLocked(ctx context.Context, for
 			// We track these pre-1.9 values in the old location, which is
 			// a.currentSegment.tokenCount, as opposed to the counter that stores tokens
 			// without entities that have client IDs, namely
-			// a.clientTracker.nonEntityCountByNamespaceID. This preserves backward
+			// a.partialMonthClientTracker.nonEntityCountByNamespaceID. This preserves backward
 			// compatibility for the precomputedQueryWorkers and the segment storing
 			// logic.
 			a.currentSegment.tokenCount.CountByNamespaceID[ns] += val
-			saveChanges = true
 		}
 	}
 
@@ -326,7 +305,7 @@ func (a *ActivityLog) saveCurrentSegmentToStorageLocked(ctx context.Context, for
 	}
 
 	// Will all new entities fit?  If not, roll over to a new segment.
-	available := activitySegmentEntityCapacity - len(a.currentSegment.currentClients.Clients)
+	available := activitySegmentClientCapacity - len(a.currentSegment.currentClients.Clients)
 	remaining := available - len(newEntities)
 	excess := 0
 	if remaining < 0 {
@@ -364,9 +343,9 @@ func (a *ActivityLog) saveCurrentSegmentToStorageLocked(ctx context.Context, for
 
 		// Rotate to next segment
 		a.currentSegment.clientSequenceNumber += 1
-		if len(excessClients) > activitySegmentEntityCapacity {
-			a.logger.Warn("too many new active entities, dropping tail", "entities", len(excessClients))
-			excessClients = excessClients[:activitySegmentEntityCapacity]
+		if len(excessClients) > activitySegmentClientCapacity {
+			a.logger.Warn("too many new active clients, dropping tail", "clients", len(excessClients))
+			excessClients = excessClients[:activitySegmentClientCapacity]
 		}
 		a.currentSegment.currentClients.Clients = excessClients
 		err := a.saveCurrentSegmentInternal(ctx, force)
@@ -379,9 +358,9 @@ func (a *ActivityLog) saveCurrentSegmentToStorageLocked(ctx context.Context, for
 
 // :force: forces a save of tokens/entities even if the in-memory log is empty
 func (a *ActivityLog) saveCurrentSegmentInternal(ctx context.Context, force bool) error {
-	entityPath := fmt.Sprintf("log/entity/%d/%d", a.currentSegment.startTimestamp, a.currentSegment.clientSequenceNumber)
+	entityPath := fmt.Sprintf("%s%d/%d", activityEntityBasePath, a.currentSegment.startTimestamp, a.currentSegment.clientSequenceNumber)
 	// RFC (VLT-120) defines this as 1-indexed, but it should be 0-indexed
-	tokenPath := fmt.Sprintf("log/directtokens/%d/0", a.currentSegment.startTimestamp)
+	tokenPath := fmt.Sprintf("%s%d/0", activityTokenBasePath, a.currentSegment.startTimestamp)
 
 	for _, client := range a.currentSegment.currentClients.Clients {
 		// Explicitly catch and throw clear error message if client ID creation and storage
@@ -392,7 +371,7 @@ func (a *ActivityLog) saveCurrentSegmentInternal(ctx context.Context, force bool
 	}
 
 	if len(a.currentSegment.currentClients.Clients) > 0 || force {
-		entities, err := proto.Marshal(a.currentSegment.currentClients)
+		clients, err := proto.Marshal(a.currentSegment.currentClients)
 		if err != nil {
 			return err
 		}
@@ -400,7 +379,7 @@ func (a *ActivityLog) saveCurrentSegmentInternal(ctx context.Context, force bool
 		a.logger.Trace("writing segment", "path", entityPath)
 		err = a.view.Put(ctx, &logical.StorageEntry{
 			Key:   entityPath,
-			Value: entities,
+			Value: clients,
 		})
 		if err != nil {
 			return err
@@ -531,7 +510,7 @@ func (a *ActivityLog) getLastEntitySegmentNumber(ctx context.Context, startTime 
 // WalkEntitySegments loads each of the entity segments for a particular start time
 func (a *ActivityLog) WalkEntitySegments(ctx context.Context,
 	startTime time.Time,
-	walkFn func(*activity.EntityActivityLog)) error {
+	walkFn func(*activity.EntityActivityLog, time.Time)) error {
 	basePath := activityEntityBasePath + fmt.Sprint(startTime.Unix()) + "/"
 	pathList, err := a.view.List(ctx, basePath)
 	if err != nil {
@@ -547,12 +526,13 @@ func (a *ActivityLog) WalkEntitySegments(ctx context.Context,
 			a.logger.Warn("expected log segment not found", "startTime", startTime, "segment", path)
 			continue
 		}
+
 		out := &activity.EntityActivityLog{}
 		err = proto.Unmarshal(raw.Value, out)
 		if err != nil {
 			return fmt.Errorf("unable to parse segment %v%v: %w", basePath, path, err)
 		}
-		walkFn(out)
+		walkFn(out, startTime)
 	}
 	return nil
 }
@@ -610,7 +590,7 @@ func (a *ActivityLog) loadPriorEntitySegment(ctx context.Context, startTime time
 	// Or the feature has been disabled.
 	if a.enabled && startTime.Unix() == a.currentSegment.startTimestamp {
 		for _, ent := range out.Clients {
-			a.clientTracker.addClient(ent)
+			a.partialMonthClientTracker[ent.ClientID] = ent
 		}
 	}
 	a.fragmentLock.Unlock()
@@ -619,9 +599,9 @@ func (a *ActivityLog) loadPriorEntitySegment(ctx context.Context, startTime time
 	return nil
 }
 
-// loadCurrentClientSegment loads the most recent segment (for "this month") into memory
-// (to append new entries), and to the activeClients to avoid duplication
-// call with fragmentLock and l held
+// loadCurrentClientSegment loads the most recent segment (for "this month")
+// into memory (to append new entries), and to the partialMonthClientTracker to
+// avoid duplication call with fragmentLock and l held.
 func (a *ActivityLog) loadCurrentClientSegment(ctx context.Context, startTime time.Time, sequenceNum uint64) error {
 	path := activityEntityBasePath + fmt.Sprint(startTime.Unix()) + "/" + strconv.FormatUint(sequenceNum, 10)
 	data, err := a.view.Get(ctx, path)
@@ -652,8 +632,8 @@ func (a *ActivityLog) loadCurrentClientSegment(ctx context.Context, startTime ti
 		a.currentSegment.startTimestamp = startTime.Unix()
 	}
 
-	for _, ent := range out.Clients {
-		a.clientTracker.addClient(ent)
+	for _, client := range out.Clients {
+		a.partialMonthClientTracker[client.ClientID] = client
 	}
 
 	return nil
@@ -776,9 +756,8 @@ func (a *ActivityLog) resetCurrentLog() {
 	a.currentSegment.clientSequenceNumber = 0
 
 	a.fragment = nil
-	a.clientTracker.activeClients = make(map[string]struct{})
-	a.clientTracker.entityCountByNamespaceID = make(map[string]uint64)
-	a.clientTracker.nonEntityCountByNamespaceID = make(map[string]uint64)
+	a.partialMonthClientTracker = make(map[string]*activity.EntityRecord)
+
 	a.standbyFragmentsReceived = make([]*activity.LogFragment, 0)
 }
 
@@ -1183,9 +1162,8 @@ func (a *ActivityLog) perfStandbyFragmentWorker(ctx context.Context) {
 
 			// clear active entity set
 			a.fragmentLock.Lock()
-			a.clientTracker.activeClients = make(map[string]struct{})
-			a.clientTracker.entityCountByNamespaceID = make(map[string]uint64)
-			a.clientTracker.nonEntityCountByNamespaceID = make(map[string]uint64)
+			a.partialMonthClientTracker = make(map[string]*activity.EntityRecord)
+
 			a.fragmentLock.Unlock()
 
 			// Set timer for next month.
@@ -1362,20 +1340,20 @@ func (c *Core) ResetActivityLog() []*activity.LogFragment {
 }
 
 func (a *ActivityLog) AddEntityToFragment(entityID string, namespaceID string, timestamp int64) {
-	a.AddClientToFragment(entityID, namespaceID, timestamp, false)
+	a.AddClientToFragment(entityID, namespaceID, timestamp, false, "")
 }
 
 // AddClientToFragment checks a client ID for uniqueness and
 // if not already present, adds it to the current fragment.
 // The timestamp is a Unix timestamp *without* nanoseconds, as that
 // is what token.CreationTime uses.
-func (a *ActivityLog) AddClientToFragment(clientID string, namespaceID string, timestamp int64, isTWE bool) {
+func (a *ActivityLog) AddClientToFragment(clientID string, namespaceID string, timestamp int64, isTWE bool, mountAccessor string) {
 	// Check whether entity ID already recorded
 	var present bool
 
 	a.fragmentLock.RLock()
 	if a.enabled {
-		_, present = a.clientTracker.activeClients[clientID]
+		_, present = a.partialMonthClientTracker[clientID]
 	} else {
 		present = true
 	}
@@ -1389,7 +1367,7 @@ func (a *ActivityLog) AddClientToFragment(clientID string, namespaceID string, t
 	defer a.fragmentLock.Unlock()
 
 	// Re-check entity ID after re-acquiring lock
-	_, present = a.clientTracker.activeClients[clientID]
+	_, present = a.partialMonthClientTracker[clientID]
 	if present {
 		return
 	}
@@ -1397,9 +1375,10 @@ func (a *ActivityLog) AddClientToFragment(clientID string, namespaceID string, t
 	a.createCurrentFragment()
 
 	clientRecord := &activity.EntityRecord{
-		ClientID:    clientID,
-		NamespaceID: namespaceID,
-		Timestamp:   timestamp,
+		ClientID:      clientID,
+		NamespaceID:   namespaceID,
+		Timestamp:     timestamp,
+		MountAccessor: mountAccessor,
 	}
 
 	// Track whether the clientID corresponds to a token without an entity or not.
@@ -1410,7 +1389,7 @@ func (a *ActivityLog) AddClientToFragment(clientID string, namespaceID string, t
 	}
 
 	a.fragment.Clients = append(a.fragment.Clients, clientRecord)
-	a.clientTracker.addClient(clientRecord)
+	a.partialMonthClientTracker[clientRecord.ClientID] = clientRecord
 }
 
 // Create the current fragment if it doesn't already exist.
@@ -1441,7 +1420,7 @@ func (a *ActivityLog) receivedFragment(fragment *activity.LogFragment) {
 	}
 
 	for _, e := range fragment.Clients {
-		a.clientTracker.addClient(e)
+		a.partialMonthClientTracker[e.ClientID] = e
 	}
 
 	a.standbyFragmentsReceived = append(a.standbyFragmentsReceived, fragment)
@@ -1449,16 +1428,43 @@ func (a *ActivityLog) receivedFragment(fragment *activity.LogFragment) {
 	// TODO: check if current segment is full and should be written
 }
 
-type ClientCountResponse struct {
+type ResponseCounts struct {
 	DistinctEntities int `json:"distinct_entities"`
+	EntityClients    int `json:"entity_clients"`
 	NonEntityTokens  int `json:"non_entity_tokens"`
+	NonEntityClients int `json:"non_entity_clients"`
 	Clients          int `json:"clients"`
 }
 
-type ClientCountInNamespace struct {
-	NamespaceID   string              `json:"namespace_id"`
-	NamespacePath string              `json:"namespace_path"`
-	Counts        ClientCountResponse `json:"counts"`
+type ResponseNamespace struct {
+	NamespaceID   string           `json:"namespace_id"`
+	NamespacePath string           `json:"namespace_path"`
+	Counts        ResponseCounts   `json:"counts"`
+	Mounts        []*ResponseMount `json:"mounts"`
+}
+
+type ResponseMonth struct {
+	Timestamp  string                      `json:"timestamp"`
+	Counts     *ResponseCounts             `json:"counts"`
+	Namespaces []*ResponseMonthlyNamespace `json:"namespaces"`
+	NewClients *ResponseNewClients         `json:"new_clients" mapstructure:"new_clients"`
+}
+
+type ResponseNewClients struct {
+	Counts     *ResponseCounts             `json:"counts"`
+	Namespaces []*ResponseMonthlyNamespace `json:"namespaces"`
+}
+
+type ResponseMonthlyNamespace struct {
+	NamespaceID   string           `json:"namespace_id"`
+	NamespacePath string           `json:"namespace_path"`
+	Counts        *ResponseCounts  `json:"counts"`
+	Mounts        []*ResponseMount `json:"mounts"`
+}
+
+type ResponseMount struct {
+	MountPath string          `json:"mount_path"`
+	Counts    *ResponseCounts `json:"counts"`
 }
 
 // ActivityLogInjectResponse injects a precomputed query into storage for testing.
@@ -1507,7 +1513,7 @@ func (a *ActivityLog) handleQuery(ctx context.Context, startTime, endTime time.T
 	responseData := make(map[string]interface{})
 	responseData["start_time"] = pq.StartTime.Format(time.RFC3339)
 	responseData["end_time"] = pq.EndTime.Format(time.RFC3339)
-	byNamespace := make([]*ClientCountInNamespace, 0)
+	byNamespace := make([]*ResponseNamespace, 0)
 
 	totalEntities := 0
 	totalTokens := 0
@@ -1518,20 +1524,41 @@ func (a *ActivityLog) handleQuery(ctx context.Context, startTime, endTime time.T
 			return nil, err
 		}
 		if a.includeInResponse(queryNS, ns) {
+			mountResponse := make([]*ResponseMount, 0, len(nsRecord.Mounts))
+			for _, mountRecord := range nsRecord.Mounts {
+				mountResponse = append(mountResponse, &ResponseMount{
+					MountPath: mountRecord.MountPath,
+					Counts: &ResponseCounts{
+						DistinctEntities: int(mountRecord.Counts.EntityClients),
+						EntityClients:    int(mountRecord.Counts.EntityClients),
+						NonEntityClients: int(mountRecord.Counts.NonEntityClients),
+						NonEntityTokens:  int(mountRecord.Counts.NonEntityClients),
+						Clients:          int(mountRecord.Counts.EntityClients + mountRecord.Counts.NonEntityClients),
+					},
+				})
+			}
+			// Sort the mounts in descending order of usage
+			sort.Slice(mountResponse, func(i, j int) bool {
+				return mountResponse[i].Counts.Clients > mountResponse[j].Counts.Clients
+			})
+
 			var displayPath string
 			if ns == nil {
 				displayPath = fmt.Sprintf("deleted namespace %q", nsRecord.NamespaceID)
 			} else {
 				displayPath = ns.Path
 			}
-			byNamespace = append(byNamespace, &ClientCountInNamespace{
+			byNamespace = append(byNamespace, &ResponseNamespace{
 				NamespaceID:   nsRecord.NamespaceID,
 				NamespacePath: displayPath,
-				Counts: ClientCountResponse{
+				Counts: ResponseCounts{
 					DistinctEntities: int(nsRecord.Entities),
+					EntityClients:    int(nsRecord.Entities),
 					NonEntityTokens:  int(nsRecord.NonEntityTokens),
+					NonEntityClients: int(nsRecord.NonEntityTokens),
 					Clients:          int(nsRecord.Entities + nsRecord.NonEntityTokens),
 				},
+				Mounts: mountResponse,
 			})
 			totalEntities += int(nsRecord.Entities)
 			totalTokens += int(nsRecord.NonEntityTokens)
@@ -1543,11 +1570,129 @@ func (a *ActivityLog) handleQuery(ctx context.Context, startTime, endTime time.T
 	})
 
 	responseData["by_namespace"] = byNamespace
-	responseData["total"] = &ClientCountResponse{
+	responseData["total"] = &ResponseCounts{
 		DistinctEntities: totalEntities,
+		EntityClients:    totalEntities,
 		NonEntityTokens:  totalTokens,
+		NonEntityClients: totalTokens,
 		Clients:          totalEntities + totalTokens,
 	}
+
+	prepareNSResponse := func(nsRecords []*activity.MonthlyNamespaceRecord) ([]*ResponseMonthlyNamespace, error) {
+		nsResponse := make([]*ResponseMonthlyNamespace, 0, len(nsRecords))
+		for _, nsRecord := range nsRecords {
+			if int(nsRecord.Counts.EntityClients) == 0 && int(nsRecord.Counts.NonEntityClients) == 0 {
+				continue
+			}
+
+			ns, err := NamespaceByID(ctx, nsRecord.NamespaceID, a.core)
+			if err != nil {
+				return nil, err
+			}
+			if a.includeInResponse(queryNS, ns) {
+				mountResponse := make([]*ResponseMount, 0, len(nsRecord.Mounts))
+				for _, mountRecord := range nsRecord.Mounts {
+					if int(mountRecord.Counts.EntityClients) == 0 && int(mountRecord.Counts.NonEntityClients) == 0 {
+						continue
+					}
+
+					mountResponse = append(mountResponse, &ResponseMount{
+						MountPath: mountRecord.MountPath,
+						Counts: &ResponseCounts{
+							EntityClients:    int(mountRecord.Counts.EntityClients),
+							NonEntityClients: int(mountRecord.Counts.NonEntityClients),
+							Clients:          int(mountRecord.Counts.EntityClients + mountRecord.Counts.NonEntityClients),
+						},
+					})
+				}
+
+				var displayPath string
+				if ns == nil {
+					displayPath = fmt.Sprintf("deleted namespace %q", nsRecord.NamespaceID)
+				} else {
+					displayPath = ns.Path
+				}
+				nsResponse = append(nsResponse, &ResponseMonthlyNamespace{
+					NamespaceID:   nsRecord.NamespaceID,
+					NamespacePath: displayPath,
+					Counts: &ResponseCounts{
+						EntityClients:    int(nsRecord.Counts.EntityClients),
+						NonEntityClients: int(nsRecord.Counts.NonEntityClients),
+						Clients:          int(nsRecord.Counts.EntityClients + nsRecord.Counts.NonEntityClients),
+					},
+					Mounts: mountResponse,
+				})
+			}
+		}
+		return nsResponse, nil
+	}
+
+	months := make([]*ResponseMonth, 0, len(pq.Months))
+	for _, monthsRecord := range pq.Months {
+		newClientsResponse := &ResponseNewClients{}
+		if int(monthsRecord.NewClients.Counts.EntityClients+monthsRecord.NewClients.Counts.NonEntityClients) != 0 {
+			newClientsNSResponse, err := prepareNSResponse(monthsRecord.NewClients.Namespaces)
+			if err != nil {
+				return nil, err
+			}
+			newClientsResponse.Counts = &ResponseCounts{
+				EntityClients:    int(monthsRecord.NewClients.Counts.EntityClients),
+				NonEntityClients: int(monthsRecord.NewClients.Counts.NonEntityClients),
+				Clients:          int(monthsRecord.NewClients.Counts.EntityClients + monthsRecord.NewClients.Counts.NonEntityClients),
+			}
+			newClientsResponse.Namespaces = newClientsNSResponse
+		}
+
+		monthResponse := &ResponseMonth{
+			Timestamp: time.Unix(monthsRecord.Timestamp, 0).UTC().Format(time.RFC3339),
+		}
+
+		if int(monthsRecord.Counts.EntityClients+monthsRecord.Counts.NonEntityClients) != 0 {
+			nsResponse, err := prepareNSResponse(monthsRecord.Namespaces)
+			if err != nil {
+				return nil, err
+			}
+			monthResponse.Counts = &ResponseCounts{
+				EntityClients:    int(monthsRecord.Counts.EntityClients),
+				NonEntityClients: int(monthsRecord.Counts.NonEntityClients),
+				Clients:          int(monthsRecord.Counts.EntityClients + monthsRecord.Counts.NonEntityClients),
+			}
+			monthResponse.Namespaces = nsResponse
+			monthResponse.NewClients = newClientsResponse
+			months = append(months, monthResponse)
+		}
+	}
+
+	// Sort the months in the descending order of activity
+	sort.Slice(months, func(i, j int) bool {
+		return months[i].Counts.Clients > months[j].Counts.Clients
+	})
+
+	// Within each month sort everything by descending order of activity
+	for _, month := range months {
+		sort.Slice(month.Namespaces, func(i, j int) bool {
+			return month.Namespaces[i].Counts.Clients > month.Namespaces[j].Counts.Clients
+		})
+
+		for _, ns := range month.Namespaces {
+			sort.Slice(ns.Mounts, func(i, j int) bool {
+				return ns.Mounts[i].Counts.Clients > ns.Mounts[j].Counts.Clients
+			})
+		}
+
+		sort.Slice(month.NewClients.Namespaces, func(i, j int) bool {
+			return month.NewClients.Namespaces[i].Counts.Clients > month.NewClients.Namespaces[j].Counts.Clients
+		})
+
+		for _, ns := range month.NewClients.Namespaces {
+			sort.Slice(ns.Mounts, func(i, j int) bool {
+				return ns.Mounts[i].Counts.Clients > ns.Mounts[j].Counts.Clients
+			})
+		}
+	}
+
+	responseData["months"] = months
+
 	return responseData, nil
 }
 
@@ -1591,74 +1736,35 @@ func (a *ActivityLog) loadConfigOrDefault(ctx context.Context) (activityConfig, 
 }
 
 // HandleTokenUsage adds the TokenEntry to the current fragment of the activity log
-// and returns the corresponding Client ID.
 // This currently occurs on token usage only.
-func (a *ActivityLog) HandleTokenUsage(entry *logical.TokenEntry) string {
+func (a *ActivityLog) HandleTokenUsage(ctx context.Context, entry *logical.TokenEntry, clientID string, isTWE bool) {
 	// First, check if a is enabled, so as to avoid the cost of creating an ID for
 	// tokens without entities in the case where it not.
 	a.fragmentLock.RLock()
 	if !a.enabled {
 		a.fragmentLock.RUnlock()
-		return ""
+		return
 	}
 	a.fragmentLock.RUnlock()
 
 	// Do not count wrapping tokens in client count
 	if IsWrappingToken(entry) {
-		return ""
+		return
 	}
 
 	// Do not count root tokens in client count.
 	if entry.IsRoot() {
-		return ""
+		return
+	}
+
+	mountAccessor := ""
+	mountEntry := a.core.router.MatchingMountEntry(ctx, entry.Path)
+	if mountEntry != nil {
+		mountAccessor = mountEntry.Accessor
 	}
 
 	// Parse an entry's client ID and add it to the activity log
-	clientID, isTWE := a.CreateClientID(entry)
-	a.AddClientToFragment(clientID, entry.NamespaceID, entry.CreationTime, isTWE)
-	return clientID
-}
-
-// CreateClientID returns the client ID, and a boolean which is false if the clientID
-// has an entity, and true otherwise
-func (a *ActivityLog) CreateClientID(entry *logical.TokenEntry) (string, bool) {
-	var clientIDInputBuilder strings.Builder
-
-	// if entry has an associated entity ID, return it
-	if entry.EntityID != "" {
-		return entry.EntityID, false
-	}
-
-	// The entry is associated with a TWE (token without entity). In this case
-	// we must create a client ID by calculating the following formula:
-	// clientID = SHA256(sorted policies + namespace)
-
-	// Step 1: Copy entry policies to a new struct
-	sortedPolicies := make([]string, len(entry.Policies))
-	copy(sortedPolicies, entry.Policies)
-
-	// Step 2: Sort and join copied policies
-	sort.Strings(sortedPolicies)
-	for _, pol := range sortedPolicies {
-		clientIDInputBuilder.WriteRune(sortedPoliciesTWEDelimiter)
-		clientIDInputBuilder.WriteString(pol)
-	}
-
-	// Step 3: Add namespace ID
-	clientIDInputBuilder.WriteRune(clientIDTWEDelimiter)
-	clientIDInputBuilder.WriteString(entry.NamespaceID)
-
-	if clientIDInputBuilder.Len() == 0 {
-		a.logger.Error("vault token with no entity ID, policies, or namespace was recorded " +
-			"in the activity log")
-		return "", true
-	}
-	// Step 4: Remove the first character in the string, as it's an unnecessary delimiter
-	clientIDInput := clientIDInputBuilder.String()[1:]
-
-	// Step 5: Hash the sum
-	hashed := sha256.Sum256([]byte(clientIDInput))
-	return base64.StdEncoding.EncodeToString(hashed[:]), true
+	a.AddClientToFragment(clientID, entry.NamespaceID, entry.CreationTime, isTWE, mountAccessor)
 }
 
 func (a *ActivityLog) namespaceToLabel(ctx context.Context, nsID string) string {
@@ -1670,6 +1776,146 @@ func (a *ActivityLog) namespaceToLabel(ctx context.Context, nsID string) string 
 		return "root"
 	}
 	return ns.Path
+}
+
+type processCounts struct {
+	// entityID -> present
+	Entities map[string]struct{}
+	// count. This exists for backward compatibility
+	Tokens uint64
+	// clientID -> present
+	NonEntities map[string]struct{}
+}
+
+func newProcessCounts() *processCounts {
+	return &processCounts{
+		Entities:    make(map[string]struct{}),
+		Tokens:      0,
+		NonEntities: make(map[string]struct{}),
+	}
+}
+
+type processMount struct {
+	Counts *processCounts
+}
+
+func newProcessMount() *processMount {
+	return &processMount{
+		Counts: newProcessCounts(),
+	}
+}
+
+type processByNamespace struct {
+	Counts *processCounts
+	Mounts map[string]*processMount
+}
+
+func newByNamespace() *processByNamespace {
+	return &processByNamespace{
+		Counts: newProcessCounts(),
+		Mounts: make(map[string]*processMount),
+	}
+}
+
+type processNamespace struct {
+	Counts *processCounts
+	Mounts map[string]*processMount
+}
+
+func newProcessNamespace() *processNamespace {
+	return &processNamespace{
+		Counts: newProcessCounts(),
+		Mounts: make(map[string]*processMount),
+	}
+}
+
+type processNewClients struct {
+	Counts     *processCounts
+	Namespaces map[string]*processNamespace
+}
+
+func newProcessNewClients() *processNewClients {
+	return &processNewClients{
+		Counts:     newProcessCounts(),
+		Namespaces: make(map[string]*processNamespace),
+	}
+}
+
+type processMonth struct {
+	Counts     *processCounts
+	Namespaces map[string]*processNamespace
+	NewClients *processNewClients
+}
+
+func newProcessMonth() *processMonth {
+	return &processMonth{
+		Counts:     newProcessCounts(),
+		Namespaces: make(map[string]*processNamespace),
+		NewClients: newProcessNewClients(),
+	}
+}
+
+// processClientRecord parses the client record e and stores the breakdowns in
+// the maps provided.
+func processClientRecord(e *activity.EntityRecord, byNamespace map[string]*processByNamespace, byMonth map[int64]*processMonth, startTime time.Time) {
+	if _, present := byNamespace[e.NamespaceID]; !present {
+		byNamespace[e.NamespaceID] = newByNamespace()
+	}
+
+	if _, present := byNamespace[e.NamespaceID].Mounts[e.MountAccessor]; !present {
+		byNamespace[e.NamespaceID].Mounts[e.MountAccessor] = newProcessMount()
+	}
+
+	if e.NonEntity {
+		byNamespace[e.NamespaceID].Counts.NonEntities[e.ClientID] = struct{}{}
+		byNamespace[e.NamespaceID].Mounts[e.MountAccessor].Counts.NonEntities[e.ClientID] = struct{}{}
+	} else {
+		byNamespace[e.NamespaceID].Counts.Entities[e.ClientID] = struct{}{}
+		byNamespace[e.NamespaceID].Mounts[e.MountAccessor].Counts.Entities[e.ClientID] = struct{}{}
+	}
+
+	monthTimestamp := timeutil.StartOfMonth(startTime).UTC().Unix()
+	if _, present := byMonth[monthTimestamp]; !present {
+		byMonth[monthTimestamp] = newProcessMonth()
+	}
+
+	if _, present := byMonth[monthTimestamp].Namespaces[e.NamespaceID]; !present {
+		byMonth[monthTimestamp].Namespaces[e.NamespaceID] = newProcessNamespace()
+	}
+
+	if _, present := byMonth[monthTimestamp].Namespaces[e.NamespaceID].Mounts[e.MountAccessor]; !present {
+		byMonth[monthTimestamp].Namespaces[e.NamespaceID].Mounts[e.MountAccessor] = newProcessMount()
+	}
+
+	if _, present := byMonth[monthTimestamp].NewClients.Namespaces[e.NamespaceID]; !present {
+		byMonth[monthTimestamp].NewClients.Namespaces[e.NamespaceID] = newProcessNamespace()
+	}
+
+	if _, present := byMonth[monthTimestamp].NewClients.Namespaces[e.NamespaceID].Mounts[e.MountAccessor]; !present {
+		byMonth[monthTimestamp].NewClients.Namespaces[e.NamespaceID].Mounts[e.MountAccessor] = newProcessMount()
+	}
+
+	// At first assume all the clients in the given month, as new.
+	// Before persisting this information to disk, clients that have
+	// activity in the previous months of a given billing cycle will be
+	// deleted.
+	if e.NonEntity == true {
+		byMonth[monthTimestamp].Counts.NonEntities[e.ClientID] = struct{}{}
+		byMonth[monthTimestamp].Namespaces[e.NamespaceID].Counts.NonEntities[e.ClientID] = struct{}{}
+		byMonth[monthTimestamp].Namespaces[e.NamespaceID].Mounts[e.MountAccessor].Counts.NonEntities[e.ClientID] = struct{}{}
+
+		byMonth[monthTimestamp].NewClients.Counts.NonEntities[e.ClientID] = struct{}{}
+		byMonth[monthTimestamp].NewClients.Namespaces[e.NamespaceID].Counts.NonEntities[e.ClientID] = struct{}{}
+		byMonth[monthTimestamp].NewClients.Namespaces[e.NamespaceID].Mounts[e.MountAccessor].Counts.NonEntities[e.ClientID] = struct{}{}
+	} else {
+		byMonth[monthTimestamp].Counts.Entities[e.ClientID] = struct{}{}
+		byMonth[monthTimestamp].Namespaces[e.NamespaceID].Counts.Entities[e.ClientID] = struct{}{}
+		byMonth[monthTimestamp].Namespaces[e.NamespaceID].Mounts[e.MountAccessor].Counts.Entities[e.ClientID] = struct{}{}
+
+		byMonth[monthTimestamp].NewClients.Counts.Entities[e.ClientID] = struct{}{}
+		byMonth[monthTimestamp].NewClients.Namespaces[e.NamespaceID].Counts.Entities[e.ClientID] = struct{}{}
+		byMonth[monthTimestamp].NewClients.Namespaces[e.NamespaceID].Mounts[e.MountAccessor].Counts.Entities[e.ClientID] = struct{}{}
+	}
 }
 
 // goroutine to process the request in the intent log, creating precomputed queries.
@@ -1751,40 +1997,65 @@ func (a *ActivityLog) precomputedQueryWorker(ctx context.Context) error {
 	// "times" is already in reverse order, start building the per-namespace maps
 	// from the last month backward
 
-	type NamespaceCounts struct {
-		// entityID -> present
-		Entities map[string]struct{}
-		// count. This exists for backward compatibility
-		Tokens uint64
-		// clientID -> present
-		NonEntities map[string]struct{}
-	}
-	byNamespace := make(map[string]*NamespaceCounts)
+	byNamespace := make(map[string]*processByNamespace)
+	byMonth := make(map[int64]*processMonth)
 
-	createNs := func(namespaceID string) {
-		if _, namespacePresent := byNamespace[namespaceID]; !namespacePresent {
-			byNamespace[namespaceID] = &NamespaceCounts{
-				Entities:    make(map[string]struct{}),
-				Tokens:      0,
-				NonEntities: make(map[string]struct{}),
-			}
-		}
-	}
-
-	walkEntities := func(l *activity.EntityActivityLog) {
+	walkEntities := func(l *activity.EntityActivityLog, startTime time.Time) {
 		for _, e := range l.Clients {
-			createNs(e.NamespaceID)
-			if e.NonEntity == true {
-				byNamespace[e.NamespaceID].NonEntities[e.ClientID] = struct{}{}
-			} else {
-				byNamespace[e.NamespaceID].Entities[e.ClientID] = struct{}{}
+			processClientRecord(e, byNamespace, byMonth, startTime)
+
+			// The byMonth map will be filled in the reverse order of time. For
+			// example, if the billing period is from Jan to June, the byMonth
+			// will be filled for June first, May next and so on till Jan. When
+			// processing a client for the current month, it has been added as a
+			// new client above. Now, we check if that client is also used in
+			// the subsequent months (on any given month, byMonth map has
+			// already been processed for all the subsequent months due to the
+			// reverse ordering). If yes, we remove those references. This way a
+			// client is considered new only in the earliest month of its use in
+			// the billing period.
+			for currMonth := timeutil.StartOfMonth(startTime).UTC(); currMonth != timeutil.StartOfMonth(times[0]).UTC(); currMonth = timeutil.StartOfNextMonth(currMonth).UTC() {
+				// Invalidate the client from being a new client in the next month
+				next := timeutil.StartOfNextMonth(currMonth).UTC().Unix()
+				if _, present := byMonth[next]; !present {
+					continue
+				}
+
+				newClients := byMonth[next].NewClients
+
+				// Remove the client from the top level counts within the month.
+				if e.NonEntity {
+					delete(newClients.Counts.NonEntities, e.ClientID)
+				} else {
+					delete(newClients.Counts.Entities, e.ClientID)
+				}
+
+				if _, present := newClients.Namespaces[e.NamespaceID]; present {
+					// Remove the client from the namespace within the month.
+					if e.NonEntity {
+						delete(newClients.Namespaces[e.NamespaceID].Counts.NonEntities, e.ClientID)
+					} else {
+						delete(newClients.Namespaces[e.NamespaceID].Counts.Entities, e.ClientID)
+					}
+					if _, present := newClients.Namespaces[e.NamespaceID].Mounts[e.MountAccessor]; present {
+						// Remove the client from the mount within the namespace within the month.
+						if e.NonEntity {
+							delete(newClients.Namespaces[e.NamespaceID].Mounts[e.MountAccessor].Counts.NonEntities, e.ClientID)
+						} else {
+							delete(newClients.Namespaces[e.NamespaceID].Mounts[e.MountAccessor].Counts.Entities, e.ClientID)
+						}
+					}
+				}
 			}
 		}
 	}
+
 	walkTokens := func(l *activity.TokenCount) {
 		for nsID, v := range l.CountByNamespaceID {
-			createNs(nsID)
-			byNamespace[nsID].Tokens += v
+			if _, present := byNamespace[nsID]; !present {
+				byNamespace[nsID] = newByNamespace()
+			}
+			byNamespace[nsID].Counts.Tokens += v
 		}
 	}
 
@@ -1818,13 +2089,93 @@ func (a *ActivityLog) precomputedQueryWorker(ctx context.Context) error {
 			StartTime:  startTime,
 			EndTime:    endTime,
 			Namespaces: make([]*activity.NamespaceRecord, 0, len(byNamespace)),
+			Months:     make([]*activity.MonthRecord, 0, len(byMonth)),
 		}
 
-		for nsID, counts := range byNamespace {
+		processNamespaces := func(nsMap map[string]*processNamespace) []*activity.MonthlyNamespaceRecord {
+			nsRecord := make([]*activity.MonthlyNamespaceRecord, 0, len(nsMap))
+			for nsID, nsData := range nsMap {
+				// Process mount specific data within a namespace within a given month
+				mountRecord := make([]*activity.MountRecord, 0, len(nsMap[nsID].Mounts))
+				for mountAccessor, mountData := range nsMap[nsID].Mounts {
+					var displayPath string
+					if mountAccessor == "" {
+						displayPath = "no mount accessor (pre-1.10 upgrade?)"
+					} else {
+						valResp := a.core.router.ValidateMountByAccessor(mountAccessor)
+						if valResp == nil {
+							displayPath = fmt.Sprintf("deleted mount; accessor %q", mountAccessor)
+						} else {
+							displayPath = valResp.MountPath
+						}
+					}
+
+					mountRecord = append(mountRecord, &activity.MountRecord{
+						MountPath: displayPath,
+						Counts: &activity.CountsRecord{
+							EntityClients:    len(mountData.Counts.Entities),
+							NonEntityClients: int(mountData.Counts.Tokens) + len(mountData.Counts.NonEntities),
+						},
+					})
+				}
+
+				// Process ns specific data within a given month
+				nsRecord = append(nsRecord, &activity.MonthlyNamespaceRecord{
+					NamespaceID: nsID,
+					Counts: &activity.CountsRecord{
+						EntityClients:    len(nsData.Counts.Entities),
+						NonEntityClients: int(nsData.Counts.Tokens) + len(nsData.Counts.NonEntities),
+					},
+					Mounts: mountRecord,
+				})
+			}
+			return nsRecord
+		}
+
+		for timestamp, monthData := range byMonth {
+			newClientsNSRecord := processNamespaces(monthData.NewClients.Namespaces)
+			newClientRecord := &activity.NewClientRecord{
+				Counts: &activity.CountsRecord{
+					EntityClients:    len(monthData.NewClients.Counts.Entities),
+					NonEntityClients: int(monthData.NewClients.Counts.Tokens) + len(monthData.NewClients.Counts.NonEntities),
+				},
+				Namespaces: newClientsNSRecord,
+			}
+
+			// Process all the months
+			pq.Months = append(pq.Months, &activity.MonthRecord{
+				Timestamp: timestamp,
+				Counts: &activity.CountsRecord{
+					EntityClients:    len(monthData.Counts.Entities),
+					NonEntityClients: int(monthData.Counts.Tokens) + len(monthData.Counts.NonEntities),
+				},
+				Namespaces: processNamespaces(monthData.Namespaces),
+				NewClients: newClientRecord,
+			})
+		}
+
+		for nsID, entry := range byNamespace {
+			mountRecord := make([]*activity.MountRecord, 0, len(entry.Mounts))
+			for mountAccessor, mountData := range entry.Mounts {
+				valResp := a.core.router.ValidateMountByAccessor(mountAccessor)
+				if valResp == nil {
+					// Only persist valid mounts
+					continue
+				}
+				mountRecord = append(mountRecord, &activity.MountRecord{
+					MountPath: valResp.MountPath,
+					Counts: &activity.CountsRecord{
+						EntityClients:    len(mountData.Counts.Entities),
+						NonEntityClients: int(mountData.Counts.Tokens) + len(mountData.Counts.NonEntities),
+					},
+				})
+			}
+
 			pq.Namespaces = append(pq.Namespaces, &activity.NamespaceRecord{
 				NamespaceID:     nsID,
-				Entities:        uint64(len(counts.Entities)),
-				NonEntityTokens: counts.Tokens + uint64(len(counts.NonEntities)),
+				Entities:        uint64(len(entry.Counts.Entities)),
+				NonEntityTokens: entry.Counts.Tokens + uint64(len(entry.Counts.NonEntities)),
+				Mounts:          mountRecord,
 			})
 
 			// If this is the most recent month, or the start of the reporting period, output
@@ -1832,14 +2183,14 @@ func (a *ActivityLog) precomputedQueryWorker(ctx context.Context) error {
 			if startTime == times[0] {
 				a.metrics.SetGaugeWithLabels(
 					[]string{"identity", "entity", "active", "monthly"},
-					float32(len(counts.Entities)),
+					float32(len(entry.Counts.Entities)),
 					[]metricsutil.Label{
 						{Name: "namespace", Value: a.namespaceToLabel(ctx, nsID)},
 					},
 				)
 				a.metrics.SetGaugeWithLabels(
 					[]string{"identity", "nonentity", "active", "monthly"},
-					float32(len(counts.NonEntities))+float32(counts.Tokens),
+					float32(len(entry.Counts.NonEntities))+float32(entry.Counts.Tokens),
 					[]metricsutil.Label{
 						{Name: "namespace", Value: a.namespaceToLabel(ctx, nsID)},
 					},
@@ -1847,14 +2198,14 @@ func (a *ActivityLog) precomputedQueryWorker(ctx context.Context) error {
 			} else if startTime == activePeriodStart {
 				a.metrics.SetGaugeWithLabels(
 					[]string{"identity", "entity", "active", "reporting_period"},
-					float32(len(counts.Entities)),
+					float32(len(entry.Counts.Entities)),
 					[]metricsutil.Label{
 						{Name: "namespace", Value: a.namespaceToLabel(ctx, nsID)},
 					},
 				)
 				a.metrics.SetGaugeWithLabels(
 					[]string{"identity", "nonentity", "active", "reporting_period"},
-					float32(len(counts.NonEntities))+float32(counts.Tokens),
+					float32(len(entry.Counts.NonEntities))+float32(entry.Counts.Tokens),
 					[]metricsutil.Label{
 						{Name: "namespace", Value: a.namespaceToLabel(ctx, nsID)},
 					},
@@ -1935,7 +2286,7 @@ func (a *ActivityLog) PartialMonthMetrics(ctx context.Context) ([]metricsutil.Ga
 		// Empty list
 		return []metricsutil.GaugeLabelValues{}, nil
 	}
-	count := len(a.clientTracker.activeClients)
+	count := len(a.partialMonthClientTracker)
 
 	return []metricsutil.GaugeLabelValues{
 		{
@@ -1965,97 +2316,194 @@ func (a *ActivityLog) partialMonthClientCount(ctx context.Context) (map[string]i
 		// nothing to count
 		return nil, nil
 	}
-	byNamespace := make([]*ClientCountInNamespace, 0)
-	responseData := make(map[string]interface{})
-	totalEntities := 0
-	totalTokens := 0
-	nonEntityTokensMapInterface, err := copystructure.Copy(a.clientTracker.nonEntityCountByNamespaceID)
-	if err != nil {
-		return nil, fmt.Errorf("error making deep copy of nonEntityCounts: %+w", err)
+
+	// Parse the monthly clients and prepare the breakdowns.
+	byNamespace := make(map[string]*processByNamespace)
+	byMonth := make(map[int64]*processMonth)
+	for _, e := range a.partialMonthClientTracker {
+		processClientRecord(e, byNamespace, byMonth, time.Now())
 	}
-	nonEntityTokensMap := nonEntityTokensMapInterface.(map[string]uint64)
-	// Merge the tokenCounts created pre-clientID with the newly counted
-	// clientID tokens, if tokenCounts exist.
-	for nsID, count := range a.currentSegment.tokenCount.CountByNamespaceID {
-		nonEntityTokensMap[nsID] += count
-	}
-	clientCountTable := createClientCountTable(a.clientTracker.entityCountByNamespaceID, nonEntityTokensMap)
+
 	queryNS, err := namespace.FromContext(ctx)
 	if err != nil {
 		return nil, err
 	}
 
-	for nsID, clients := range clientCountTable {
+	// Now populate the response based on breakdowns.
+	responseData := make(map[string]interface{})
+
+	byNamespaceResponse := make([]*ResponseNamespace, 0)
+	totalEntities := 0
+	totalTokens := 0
+
+	for nsID, nsRecord := range byNamespace {
 		ns, err := NamespaceByID(ctx, nsID, a.core)
 		if err != nil {
 			return nil, err
 		}
 
-		// Only include namespaces that are the queryNS or within it.  If queryNS is the
-		// root namespace, include all namespaces, even those which have been deleted.
 		if a.includeInResponse(queryNS, ns) {
+			mountResponse := make([]*ResponseMount, 0, len(nsRecord.Mounts))
+			for mountPath, mountRecord := range nsRecord.Mounts {
+				mountResponse = append(mountResponse, &ResponseMount{
+					MountPath: mountPath,
+					Counts: &ResponseCounts{
+						EntityClients:    len(mountRecord.Counts.Entities),
+						NonEntityClients: len(mountRecord.Counts.NonEntities),
+						Clients:          len(mountRecord.Counts.Entities) + len(mountRecord.Counts.NonEntities),
+					},
+				})
+			}
+			sort.Slice(mountResponse, func(i, j int) bool {
+				return mountResponse[i].Counts.Clients > mountResponse[j].Counts.Clients
+			})
+
 			var displayPath string
 			if ns == nil {
 				displayPath = fmt.Sprintf("deleted namespace %q", nsID)
 			} else {
 				displayPath = ns.Path
 			}
-
-			byNamespace = append(byNamespace, &ClientCountInNamespace{
+			byNamespaceResponse = append(byNamespaceResponse, &ResponseNamespace{
 				NamespaceID:   nsID,
 				NamespacePath: displayPath,
-				Counts: ClientCountResponse{
-					DistinctEntities: int(clients.distinctEntities),
-					NonEntityTokens:  int(clients.distinctNonEntities),
-					Clients:          int(clients.distinctEntities + clients.distinctNonEntities),
+				Counts: ResponseCounts{
+					DistinctEntities: len(nsRecord.Counts.Entities),
+					EntityClients:    len(nsRecord.Counts.Entities),
+					NonEntityTokens:  len(nsRecord.Counts.NonEntities),
+					NonEntityClients: len(nsRecord.Counts.NonEntities),
+					Clients:          len(nsRecord.Counts.Entities) + len(nsRecord.Counts.NonEntities),
 				},
+				Mounts: mountResponse,
 			})
-
-			totalEntities += int(clients.distinctEntities)
-			totalTokens += int(clients.distinctNonEntities)
-
+			totalEntities += len(nsRecord.Counts.Entities)
+			totalTokens += len(nsRecord.Counts.NonEntities)
 		}
 	}
 
-	sort.Slice(byNamespace, func(i, j int) bool {
-		return byNamespace[i].NamespaceID < byNamespace[j].NamespaceID
+	sort.Slice(byNamespaceResponse, func(i, j int) bool {
+		return byNamespaceResponse[i].Counts.Clients > byNamespaceResponse[j].Counts.Clients
 	})
-
-	responseData["by_namespace"] = byNamespace
+	responseData["by_namespace"] = byNamespaceResponse
 	responseData["distinct_entities"] = totalEntities
+	responseData["entity_clients"] = totalEntities
 	responseData["non_entity_tokens"] = totalTokens
+	responseData["non_entity_clients"] = totalTokens
 	responseData["clients"] = totalEntities + totalTokens
 
+	months := make([]*ResponseMonth, 0, len(byMonth))
+	prepareNSResponse := func(processedNamespaces map[string]*processNamespace) ([]*ResponseMonthlyNamespace, error) {
+		nsResponse := make([]*ResponseMonthlyNamespace, 0, len(processedNamespaces))
+		for nsID, nsRecord := range processedNamespaces {
+			if len(nsRecord.Counts.Entities) == 0 && len(nsRecord.Counts.NonEntities) == 0 {
+				continue
+			}
+
+			ns, err := NamespaceByID(ctx, nsID, a.core)
+			if err != nil {
+				return nil, err
+			}
+			if a.includeInResponse(queryNS, ns) {
+				mountResponse := make([]*ResponseMount, 0, len(nsRecord.Mounts))
+				for mountPath, mountRecord := range nsRecord.Mounts {
+					if len(mountRecord.Counts.Entities) == 0 && len(mountRecord.Counts.NonEntities) == 0 {
+						continue
+					}
+
+					mountResponse = append(mountResponse, &ResponseMount{
+						MountPath: mountPath,
+						Counts: &ResponseCounts{
+							EntityClients:    len(mountRecord.Counts.Entities),
+							NonEntityClients: len(mountRecord.Counts.NonEntities),
+							Clients:          len(mountRecord.Counts.Entities) + len(mountRecord.Counts.NonEntities),
+						},
+					})
+				}
+
+				var displayPath string
+				if ns == nil {
+					displayPath = fmt.Sprintf("deleted namespace %q", nsID)
+				} else {
+					displayPath = ns.Path
+				}
+				nsResponse = append(nsResponse, &ResponseMonthlyNamespace{
+					NamespaceID:   nsID,
+					NamespacePath: displayPath,
+					Counts: &ResponseCounts{
+						EntityClients:    len(nsRecord.Counts.Entities),
+						NonEntityClients: len(nsRecord.Counts.NonEntities),
+						Clients:          len(nsRecord.Counts.Entities) + len(nsRecord.Counts.NonEntities),
+					},
+					Mounts: mountResponse,
+				})
+			}
+		}
+		return nsResponse, nil
+	}
+
+	for timestamp, month := range byMonth {
+		newClientsResponse := &ResponseNewClients{}
+		if len(month.NewClients.Counts.Entities) != 0 || len(month.NewClients.Counts.NonEntities) != 0 {
+			newClientsNSResponse, err := prepareNSResponse(month.NewClients.Namespaces)
+			if err != nil {
+				return nil, err
+			}
+			newClientsResponse.Counts = &ResponseCounts{
+				EntityClients:    len(month.NewClients.Counts.Entities),
+				NonEntityClients: len(month.NewClients.Counts.NonEntities),
+				Clients:          len(month.NewClients.Counts.Entities) + len(month.NewClients.Counts.NonEntities),
+			}
+			newClientsResponse.Namespaces = newClientsNSResponse
+		}
+
+		monthResponse := &ResponseMonth{}
+		if len(month.Counts.Entities) != 0 || len(month.Counts.NonEntities) != 0 {
+			nsResponse, err := prepareNSResponse(month.Namespaces)
+			if err != nil {
+				return nil, err
+			}
+
+			monthResponse.Timestamp = time.Unix(timestamp, 0).UTC().Format(time.RFC3339)
+			monthResponse.Counts = &ResponseCounts{
+				EntityClients:    len(month.Counts.Entities),
+				NonEntityClients: len(month.Counts.NonEntities),
+				Clients:          len(month.Counts.Entities) + len(month.Counts.NonEntities),
+			}
+			monthResponse.Namespaces = nsResponse
+			monthResponse.NewClients = newClientsResponse
+
+			months = append(months, monthResponse)
+		}
+	}
+
+	// Sort the months in the descending order of activity
+	sort.Slice(months, func(i, j int) bool {
+		return months[i].Counts.Clients > months[j].Counts.Clients
+	})
+
+	// Within each month sort everything by descending order of activity
+	for _, month := range months {
+		sort.Slice(month.Namespaces, func(i, j int) bool {
+			return month.Namespaces[i].Counts.Clients > month.Namespaces[j].Counts.Clients
+		})
+
+		for _, ns := range month.Namespaces {
+			sort.Slice(ns.Mounts, func(i, j int) bool {
+				return ns.Mounts[i].Counts.Clients > ns.Mounts[j].Counts.Clients
+			})
+		}
+
+		sort.Slice(month.NewClients.Namespaces, func(i, j int) bool {
+			return month.NewClients.Namespaces[i].Counts.Clients > month.NewClients.Namespaces[j].Counts.Clients
+		})
+
+		for _, ns := range month.NewClients.Namespaces {
+			sort.Slice(ns.Mounts, func(i, j int) bool {
+				return ns.Mounts[i].Counts.Clients > ns.Mounts[j].Counts.Clients
+			})
+		}
+	}
+	responseData["months"] = months
+
 	return responseData, nil
-}
-
-// createClientCountTable maps the entitycount and token count to the namespace id.
-func createClientCountTable(entityMap map[string]uint64, nonEntityMap map[string]uint64) map[string]*clients {
-	clientCountTable := make(map[string]*clients)
-	for nsID, count := range entityMap {
-		if _, ok := clientCountTable[nsID]; !ok {
-			clientCountTable[nsID] = &clients{distinctEntities: 0, distinctNonEntities: 0}
-		}
-		clientCountTable[nsID].distinctEntities += count
-
-	}
-
-	for nsID, count := range nonEntityMap {
-		if _, ok := clientCountTable[nsID]; !ok {
-			clientCountTable[nsID] = &clients{distinctEntities: 0, distinctNonEntities: 0}
-		}
-		clientCountTable[nsID].distinctNonEntities += count
-	}
-	return clientCountTable
-}
-
-func (ct *ClientTracker) addClient(e *activity.EntityRecord) {
-	if _, ok := ct.activeClients[e.ClientID]; !ok {
-		ct.activeClients[e.ClientID] = struct{}{}
-		if e.NonEntity == true {
-			ct.nonEntityCountByNamespaceID[e.NamespaceID] += 1
-		} else {
-			ct.entityCountByNamespaceID[e.NamespaceID] += 1
-		}
-	}
 }

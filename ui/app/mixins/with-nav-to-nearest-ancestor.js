@@ -12,7 +12,7 @@ import { task } from 'ember-concurrency';
 // and we're catching any 404s, the loop continues until the transtion succeeds, or exhausts
 // the ancestors array and transitions to the root
 export default Mixin.create({
-  navToNearestAncestor: task(function*(key) {
+  navToNearestAncestor: task(function* (key) {
     let ancestors = utils.ancestorKeysForKey(key);
     let errored = false;
     let nearest = ancestors.pop();

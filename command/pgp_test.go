@@ -96,8 +96,8 @@ func parseDecryptAndTestUnsealKeys(t *testing.T,
 	fingerprints bool,
 	backupKeys map[string][]string,
 	backupKeysB64 map[string][]string,
-	core *vault.Core) {
-
+	core *vault.Core,
+) {
 	decoder := base64.StdEncoding
 	priv1Bytes, err := decoder.DecodeString(pgpkeys.TestPrivKey1)
 	if err != nil {

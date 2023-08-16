@@ -1,5 +1,6 @@
 jobs:
   - pre-flight-checks
+  - fmt
   - install-ui-dependencies:
       requires:
         - pre-flight-checks
@@ -34,21 +35,9 @@ jobs:
   - test-go-race:
       requires:
         - pre-flight-checks
-      filters:
-        branches:
-          # UI and Docs-only branches should skip go tests
-          ignore:
-            - /^docs\/.*/
-            - /^ui\/.*/
   - test-go-race-remote-docker:
       requires:
         - pre-flight-checks
-      filters:
-        branches:
-          # UI and Docs-only branches should skip go tests
-          ignore:
-            - /^docs\/.*/
-            - /^ui\/.*/
   - website-docker-image:
       context: vault-docs
       filters:
@@ -61,3 +50,6 @@ jobs:
         branches:
           only:
             - stable-website
+  - semgrep:
+       requires:
+         - pre-flight-checks

@@ -52,7 +52,9 @@ export default Component.extend({
       this.onChange(value);
     },
     handleKeyUp(name, value) {
-      this.onKeyUp(name, value);
+      if (this.onKeyUp) {
+        this.onKeyUp(name, value);
+      }
     },
   },
 });

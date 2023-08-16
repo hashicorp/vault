@@ -1,6 +1,6 @@
 import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
-import { currentURL, settled, click, visit, fillIn } from '@ember/test-helpers';
+import { currentURL, settled, click, visit, fillIn, typeIn } from '@ember/test-helpers';
 import { create } from 'ember-cli-page-object';
 import { selectChoose, clickTrigger } from 'ember-power-select/test-support/helpers';
 
@@ -233,18 +233,18 @@ const connectionTests = [
   },
 ];
 
-module('Acceptance | secrets/database/*', function(hooks) {
+module('Acceptance | secrets/database/*', function (hooks) {
   setupApplicationTest(hooks);
 
-  hooks.beforeEach(async function() {
+  hooks.beforeEach(async function () {
     this.server = apiStub({ usePassthrough: true });
     return authPage.login();
   });
-  hooks.afterEach(function() {
+  hooks.afterEach(function () {
     this.server.shutdown();
   });
 
-  test('can enable the database secrets engine', async function(assert) {
+  test('can enable the database secrets engine', async function (assert) {
     let backend = `database-${Date.now()}`;
     await mountSecrets.enable('database', backend);
     await settled();
@@ -255,7 +255,7 @@ module('Acceptance | secrets/database/*', function(hooks) {
     );
     assert.dom('[data-test-component="empty-state"]').exists('Empty state exists');
     assert
-      .dom('.is-active[data-test-secret-list-tab="Connections"]')
+      .dom('.active[data-test-secret-list-tab="Connections"]')
       .exists('Has Connections tab which is active');
     await click('[data-test-tab="overview"]');
     assert.equal(currentURL(), `/vault/secrets/${backend}/overview`, 'Tab links to overview page');
@@ -263,13 +263,13 @@ module('Acceptance | secrets/database/*', function(hooks) {
     assert.dom('[data-test-secret-list-tab="Roles"]').exists('Has Roles tab');
   });
 
-  test('Connection create and edit form for each plugin', async function(assert) {
+  test('Connection create and edit form for each plugin', async function (assert) {
     const backend = await mount();
     for (let testCase of connectionTests) {
       await connectionPage.visitCreate({ backend });
       assert.equal(currentURL(), `/vault/secrets/${backend}/create`, 'Correct creation URL');
       assert
-        .dom('[data-test-empty-state-title')
+        .dom('[data-test-empty-state-title]')
         .hasText('No plugin selected', 'No plugin is selected by default and empty state shows');
       await connectionPage.dbPlugin(testCase.plugin);
       assert.dom('[data-test-empty-state]').doesNotExist('Empty state goes away after plugin selected');
@@ -324,7 +324,7 @@ module('Acceptance | secrets/database/*', function(hooks) {
     }
   });
 
-  test('Can create and delete a connection', async function(assert) {
+  test('Can create and delete a connection', async function (assert) {
     const backend = await mount();
     const connectionDetails = {
       plugin: 'mongodb-database-plugin',
@@ -345,7 +345,7 @@ module('Acceptance | secrets/database/*', function(hooks) {
     await connectionPage.createLink();
     assert.equal(currentURL(), `/vault/secrets/${backend}/create`, 'Create link goes to create page');
     assert
-      .dom('[data-test-empty-state-title')
+      .dom('[data-test-empty-state-title]')
       .hasText('No plugin selected', 'No plugin is selected by default and empty state shows');
     await connectionPage.dbPlugin(connectionDetails.plugin);
     assert.dom('[data-test-empty-state]').doesNotExist('Empty state goes away after plugin selected');
@@ -387,15 +387,14 @@ module('Acceptance | secrets/database/*', function(hooks) {
       .hasText('Delete connection?', 'Modal appears asking to confirm delete action');
     await fillIn('[data-test-confirmation-modal-input="delete"]', connectionDetails.id);
     await click('[data-test-confirm-button]');
-    await settled();
 
     assert.equal(currentURL(), `/vault/secrets/${backend}/list`, 'Redirects to connection list page');
     assert
-      .dom('[data-test-empty-state-title')
+      .dom('[data-test-empty-state-title]')
       .hasText('No connections in this backend', 'No connections listed because it was deleted');
   });
 
-  test('buttons show up for managing connection', async function(assert) {
+  test('buttons show up for managing connection', async function (assert) {
     const backend = await mount();
     const connection = await newConnection(backend);
     await connectionPage.visitShow({ backend, id: connection });
@@ -408,15 +407,15 @@ module('Acceptance | secrets/database/*', function(hooks) {
     assert.dom('[data-test-secret-create]').hasText('Add role', 'Add role button exists with correct text');
     assert.dom('[data-test-edit-link]').hasText('Edit configuration', 'Edit button exists with correct text');
     const CONNECTION_VIEW_ONLY = `
-path "${backend}/*" {
-  capabilities = ["deny"]
-}
-path "${backend}/config" {
-  capabilities = ["list"]
-}
-path "${backend}/config/*" {
-  capabilities = ["read"]
-}
+      path "${backend}/*" {
+        capabilities = ["deny"]
+      }
+      path "${backend}/config" {
+        capabilities = ["list"]
+      }
+      path "${backend}/config/*" {
+        capabilities = ["read"]
+      }
     `;
     await consoleComponent.runCommands([
       `write sys/mounts/${backend} type=database`,
@@ -442,9 +441,12 @@ path "${backend}/config/*" {
       .dom('[data-test-selectable-card="Roles"]')
       .doesNotExist('Roles card does not exist on overview w/ policy');
     assert.dom('.title-number').hasText('1', 'Lists the correct number of connections');
+    // confirm get credentials card is an option to select. Regression bug.
+    await typeIn('.ember-text-field', 'blah');
+    assert.dom('[data-test-get-credentials]').isEnabled();
   });
 
-  test('Role create form', async function(assert) {
+  test('Role create form', async function (assert) {
     const backend = await mount();
     // Connection needed for role fields
     await newConnection(backend);
@@ -475,7 +477,7 @@ path "${backend}/config/*" {
     // Real connection (actual running db) required to save role, so we aren't testing that flow yet
   });
 
-  test('root and limited access', async function(assert) {
+  test('root and limited access', async function (assert) {
     this.set('model', MODEL);
     let backend = 'database';
     const NO_ROLES_POLICY = `
@@ -505,7 +507,7 @@ path "${backend}/config/*" {
     // await click('[data-test-secret-backend-row="database"]');
     // skipping the click because occasionally is shows up on the second page and cannot be found
     await visit(`/vault/secrets/database/overview`);
-    await settled();
+
     assert.dom('[data-test-component="empty-state"]').exists('renders empty state');
     assert.dom('[data-test-secret-list-tab="Connections"]').exists('renders connections tab');
     assert.dom('[data-test-secret-list-tab="Roles"]').exists('renders connections tab');
@@ -522,7 +524,7 @@ path "${backend}/config/*" {
     assert.dom('[data-test-tab="overview"]').exists('renders overview tab');
     assert.dom('[data-test-secret-list-tab="Connections"]').exists('renders connections tab');
     assert
-      .dom('[data-test-secret-list-tab="Roles]')
+      .dom('[data-test-secret-list-tab="Roles"]')
       .doesNotExist(`does not show the roles tab because it does not have permissions`);
     assert
       .dom('[data-test-selectable-card="Connections"]')

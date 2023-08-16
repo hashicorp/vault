@@ -22,7 +22,7 @@ steps:
         sudo rm -rf /usr/local/go
         sudo tar -C /usr/local -xzf "go${GO_VERSION}.linux-amd64.tar.gz"
         rm -f "go${GO_VERSION}.linux-amd64.tar.gz"
-        GOPATH="/go"
+        GOPATH="/home/circleci/go"
         mkdir $GOPATH 2>/dev/null || { sudo mkdir $GOPATH && sudo chmod 777 $GOPATH; }
         echo "export GOPATH='$GOPATH'" >> "$BASH_ENV"
         echo "export PATH='$PATH:$GOPATH/bin:/usr/local/go/bin'" >> "$BASH_ENV"

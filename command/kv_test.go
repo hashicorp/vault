@@ -134,6 +134,12 @@ func TestKVPutCommand(t *testing.T) {
 			v2ExpectedFields,
 			0,
 		},
+		{
+			"v2_secret_path",
+			[]string{"kv/write/foo", "foo=bar"},
+			[]string{"== Secret Path ==", "kv/data/write/foo"},
+			0,
+		},
 	}
 
 	for _, tc := range cases {
@@ -557,7 +563,7 @@ func TestKVMetadataGetCommand(t *testing.T) {
 		{
 			"versions_exist",
 			[]string{"kv/foo"},
-			append(expectedTopLevelFields,  expectedVersionFields[:]...),
+			append(expectedTopLevelFields, expectedVersionFields[:]...),
 			0,
 		},
 	}
@@ -872,6 +878,13 @@ func TestKVPatchCommand_RWMethodSucceeds(t *testing.T) {
 		}
 	}
 
+	// Test that full path was output
+	for _, str := range []string{"== Secret Path ==", "kv/data/patch/foo"} {
+		if !strings.Contains(combined, str) {
+			t.Errorf("expected %q to contain %q", combined, str)
+		}
+	}
+
 	// Test multi value
 	args = []string{"-method", "rw", "kv/patch/foo", "foo=aaa", "bar=bbb"}
 	code, combined = kvPatchWithRetry(t, client, args, nil)
@@ -958,6 +971,9 @@ func TestKVPatchCommand_CAS(t *testing.T) {
 			}
 
 			secret, err := kvClient.Logical().Read("kv/data/foo")
+			if err != nil {
+				t.Fatal(err)
+			}
 			bar := secret.Data["data"].(map[string]interface{})["bar"]
 			if bar != tc.expected {
 				t.Fatalf("expected bar to be %q but it was %q", tc.expected, bar)
@@ -1028,6 +1044,9 @@ func TestKVPatchCommand_Methods(t *testing.T) {
 			}
 
 			secret, err := kvClient.Logical().Read("kv/data/foo")
+			if err != nil {
+				t.Fatal(err)
+			}
 			bar := secret.Data["data"].(map[string]interface{})["bar"]
 			if bar != tc.expected {
 				t.Fatalf("expected bar to be %q but it was %q", tc.expected, bar)
@@ -1106,28 +1125,6 @@ func TestKVPatchCommand_403Fallback(t *testing.T) {
 	}
 }
 
-func createTokenForPolicy(t *testing.T, client *api.Client, policy string) (*api.SecretAuth, error) {
-	t.Helper()
-
-	if err := client.Sys().PutPolicy("policy", policy); err != nil {
-		return nil, err
-	}
-
-	secret, err := client.Auth().Token().Create(&api.TokenCreateRequest{
-		Policies: []string{"policy"},
-		TTL:      "30m",
-	})
-	if err != nil {
-		return nil, err
-	}
-
-	if secret == nil || secret.Auth == nil || secret.Auth.ClientToken == "" {
-		return nil, fmt.Errorf("missing auth data: %#v", secret)
-	}
-
-	return secret.Auth, err
-}
-
 func TestKVPatchCommand_RWMethodPolicyVariations(t *testing.T) {
 	cases := []struct {
 		name     string
@@ -1204,4 +1201,74 @@ func TestKVPatchCommand_RWMethodPolicyVariations(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestPadEqualSigns(t *testing.T) {
+	t.Parallel()
+
+	header := "Test Header"
+
+	cases := []struct {
+		name          string
+		totalPathLen  int
+		expectedCount int
+	}{
+		{
+			name:          "path with even length",
+			totalPathLen:  20,
+			expectedCount: 4,
+		},
+		{
+			name:          "path with odd length",
+			totalPathLen:  19,
+			expectedCount: 3,
+		},
+		{
+			name:          "smallest possible path",
+			totalPathLen:  8,
+			expectedCount: 2,
+		},
+	}
+
+	for _, tc := range cases {
+		tc := tc
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			padded := padEqualSigns(header, tc.totalPathLen)
+
+			signs := strings.Split(padded, fmt.Sprintf(" %s ", header))
+			if len(signs[0]) != len(signs[1]) {
+				t.Fatalf("expected an equal number of equal signs on both sides")
+			}
+			for _, sign := range signs {
+				count := strings.Count(sign, "=")
+				if count != tc.expectedCount {
+					t.Fatalf("expected %d equal signs but there were %d", tc.expectedCount, count)
+				}
+			}
+		})
+	}
+}
+
+func createTokenForPolicy(t *testing.T, client *api.Client, policy string) (*api.SecretAuth, error) {
+	t.Helper()
+
+	if err := client.Sys().PutPolicy("policy", policy); err != nil {
+		return nil, err
+	}
+
+	secret, err := client.Auth().Token().Create(&api.TokenCreateRequest{
+		Policies: []string{"policy"},
+		TTL:      "30m",
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	if secret == nil || secret.Auth == nil || secret.Auth.ClientToken == "" {
+		return nil, fmt.Errorf("missing auth data: %#v", secret)
+	}
+
+	return secret.Auth, err
 }

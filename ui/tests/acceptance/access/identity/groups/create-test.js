@@ -5,14 +5,14 @@ import page from 'vault/tests/pages/access/identity/create';
 import { testCRUD, testDeleteFromForm } from '../_shared-tests';
 import authPage from 'vault/tests/pages/auth';
 
-module('Acceptance | /access/identity/groups/create', function(hooks) {
+module('Acceptance | /access/identity/groups/create', function (hooks) {
   setupApplicationTest(hooks);
 
-  hooks.beforeEach(function() {
+  hooks.beforeEach(function () {
     return authPage.login();
   });
 
-  test('it visits the correct page', async function(assert) {
+  test('it visits the correct page', async function (assert) {
     await page.visit({ item_type: 'groups' });
     assert.equal(
       currentRouteName(),
@@ -21,12 +21,12 @@ module('Acceptance | /access/identity/groups/create', function(hooks) {
     );
   });
 
-  test('it allows create, list, delete of an group', async function(assert) {
+  test('it allows create, list, delete of an group', async function (assert) {
     let name = `group-${Date.now()}`;
     await testCRUD(name, 'groups', assert);
   });
 
-  test('it can be deleted from the group edit form', async function(assert) {
+  test('it can be deleted from the group edit form', async function (assert) {
     let name = `group-${Date.now()}`;
     await testDeleteFromForm(name, 'groups', assert);
   });

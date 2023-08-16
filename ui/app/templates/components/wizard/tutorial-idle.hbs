@@ -1,11 +1,6 @@
-<WizardContent
-  @headerText="Welcome to Vault"
-  @glyph="tour"
-  @class="collapsed"
-  @hidePopup={{true}}
->
+<WizardContent @headerText="Welcome to Vault" @glyph="tour" @class="collapsed" @hidePopup={{true}}>
   <button type="button" class="button is-transparent icon dismiss-collapsed" {{action @onDismiss}}>
-    <Icon @glyph="cancel-plain" aria-label="Close" />
+    <Icon @name="x" aria-label="Close" />
   </button>
   <p>Want a tour? Our helpful guide will introduce you to the Vault Web UI.</p>
   <div class="box wizard-divider-box">

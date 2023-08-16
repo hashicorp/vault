@@ -6,7 +6,7 @@ import { task, timeout } from 'ember-concurrency';
 export default Controller.extend({
   rm: service('replication-mode'),
   replicationMode: alias('rm.mode'),
-  waitForNewClusterToInit: task(function*(replicationMode) {
+  waitForNewClusterToInit: task(function* (replicationMode) {
     // waiting for the newly enabled cluster to init
     // this ensures we don't hit a capabilities-self error, called in the model of the mode/index route
     yield timeout(1000);

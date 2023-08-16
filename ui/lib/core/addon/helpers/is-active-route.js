@@ -10,7 +10,7 @@ const startsWith = (a, b) => a.indexOf(b) === 0;
 export default Helper.extend({
   router: service(),
 
-  onRouteChange: observer('router.currentURL', 'router.currentRouteName', function() {
+  onRouteChange: observer('router.currentURL', 'router.currentRouteName', function () {
     this.recompute();
   }),
 
@@ -25,7 +25,7 @@ export default Helper.extend({
       return false;
     }
     if (isArray(routeName)) {
-      return routeName.some(name => comparator(currentRoute, name));
+      return routeName.some((name) => comparator(currentRoute, name));
     } else if (model) {
       // slice off the rootURL from the generated route
       return comparator(currentURL, router.urlFor(routeName, model).slice(router.rootURL.length - 1));

@@ -56,6 +56,10 @@ type SystemView interface {
 	// name. Returns a PluginRunner or an error if a plugin can not be found.
 	LookupPlugin(context.Context, string, consts.PluginType) (*pluginutil.PluginRunner, error)
 
+	// NewPluginClient returns a client for managing the lifecycle of plugin
+	// processes
+	NewPluginClient(ctx context.Context, config pluginutil.PluginClientConfig) (pluginutil.PluginClient, error)
+
 	// MlockEnabled returns the configuration setting for enabling mlock on
 	// plugins.
 	MlockEnabled() bool
@@ -150,6 +154,10 @@ func (d StaticSystemView) LocalMount() bool {
 
 func (d StaticSystemView) ReplicationState() consts.ReplicationState {
 	return d.ReplicationStateVal
+}
+
+func (d StaticSystemView) NewPluginClient(ctx context.Context, config pluginutil.PluginClientConfig) (pluginutil.PluginClient, error) {
+	return nil, errors.New("NewPluginClient is not implemented in StaticSystemView")
 }
 
 func (d StaticSystemView) ResponseWrapData(_ context.Context, data map[string]interface{}, ttl time.Duration, jwt bool) (*wrapping.ResponseWrapInfo, error) {

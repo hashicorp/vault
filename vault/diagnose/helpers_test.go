@@ -85,7 +85,6 @@ func TestDiagnoseOtelResults(t *testing.T) {
 const coffeeLeft = 3
 
 func makeCoffee(ctx context.Context) error {
-
 	if coffeeLeft < 5 {
 		Warn(ctx, "coffee getting low")
 		Advise(ctx, getMoreCoffee)
@@ -139,7 +138,7 @@ func brewCoffee(ctx context.Context) error {
 	ctx, span := StartSpan(ctx, "brew-coffee")
 	defer span.End()
 
-	//Brewing happens here, successfully
+	// Brewing happens here, successfully
 	return nil
 }
 
@@ -148,7 +147,7 @@ func pickScone() error {
 }
 
 func disposeGrounds(_ context.Context) error {
-	//Done!
+	// Done!
 	return nil
 }
 

@@ -7,7 +7,7 @@ const SUPPORTED_BACKENDS = supportedSecretBackends();
 export default Controller.extend({
   wizard: service(),
   actions: {
-    onMountSuccess: function(type, path) {
+    onMountSuccess: function (type, path) {
       let transition;
       if (SUPPORTED_BACKENDS.includes(type)) {
         if (type === 'kmip') {

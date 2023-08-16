@@ -36,7 +36,7 @@
  * @param {object} wrappedData - when copy the data it's the token of the secret returned.
  * @param {object} editActions - actions passed from parent to child
  */
-
+/* eslint ember/no-computed-properties-in-native-classes: 'warn' */
 import Component from '@glimmer/component';
 import { action } from '@ember/object';
 import { not } from '@ember/object/computed';
@@ -75,7 +75,7 @@ export default class SecretEditToolbar extends Component {
       this.store
         .adapterFor('secret-v2-version')
         .queryRecord(this.args.modelForData.id, { wrapTTL: 1800 })
-        .then(resp => {
+        .then((resp) => {
           this.wrappedData = resp.wrap_info.token;
           this.flashMessages.success('Secret Successfully Wrapped!');
         })
@@ -93,7 +93,7 @@ export default class SecretEditToolbar extends Component {
           id: this.args.modelForData.id,
           wrapTTL: 1800,
         })
-        .then(resp => {
+        .then((resp) => {
           this.wrappedData = resp.wrap_info.token;
           this.flashMessages.success('Secret Successfully Wrapped!');
         })

@@ -1,4 +1,4 @@
-export default function(num, min, max) {
+export default function (num, min, max) {
   let inRangeNumber;
   if (typeof num !== 'number') {
     inRangeNumber = min;

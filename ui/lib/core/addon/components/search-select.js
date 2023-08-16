@@ -3,43 +3,48 @@ import { inject as service } from '@ember/service';
 import { task } from 'ember-concurrency';
 import { computed } from '@ember/object';
 import { singularize } from 'ember-inflector';
+import { resolve } from 'rsvp';
+import { filterOptions, defaultMatcher } from 'ember-power-select/utils/group-utils';
 import layout from '../templates/components/search-select';
 
 /**
  * @module SearchSelect
- * The `SearchSelect` is an implementation of the [ember-power-select-with-create](https://github.com/poteto/ember-cli-flash) used for form elements where options come dynamically from the API.
+ * The `SearchSelect` is an implementation of the [ember-power-select](https://github.com/cibernox/ember-power-select) used for form elements where options come dynamically from the API.
  * @example
  * <SearchSelect @id="group-policies" @models={{["policies/acl"]}} @onChange={{onChange}} @selectLimit={{2}} @inputValue={{get model valuePath}} @helpText="Policies associated with this group" @label="Policies" @fallbackComponent="string-list" />
  *
- * @param id {String} - The name of the form field
- * @param models {Array} - An array of model types to fetch from the API.
- * @param onChange {Func} - The onchange action for this form field.
- * @param inputValue {String | Array} -  A comma-separated string or an array of strings.
- * @param label {String} - Label for this form field
- * @param fallbackComponent {String} - name of component to be rendered if the API call 403s
- * @param [backend] {String} - name of the backend if the query for options needs additional information (eg. secret backend)
- * @param [disallowNewItems=false] {Boolean} - Controls whether or not the user can add a new item if none found
- * @param [helpText] {String} - Text to be displayed in the info tooltip for this form field
- * @param [selectLimit] {Number} - A number that sets the limit to how many select options they can choose
- * @param [subText] {String} - Text to be displayed below the label
- * @param [subLabel] {String} - a smaller label below the main Label
- * @param [wildcardLabel] {String} - when you want the searchSelect component to return a count on the model for options returned when using a wildcard you must provide a label of the count e.g. role.  Should be singular.
+ * @param {string} id - The name of the form field
+ * @param {Array} models - An array of model types to fetch from the API.
+ * @param {function} onChange - The onchange action for this form field.
+ * @param {string | Array} inputValue -  A comma-separated string or an array of strings.
+ * @param {string} label - Label for this form field
+ * @param {string} fallbackComponent - name of component to be rendered if the API call 403s
+ * @param {string} [backend] - name of the backend if the query for options needs additional information (eg. secret backend)
+ * @param {boolean} [disallowNewItems=false] - Controls whether or not the user can add a new item if none found
+ * @param {string} [helpText] - Text to be displayed in the info tooltip for this form field
+ * @param {number} [selectLimit] - A number that sets the limit to how many select options they can choose
+ * @param {string} [subText] - Text to be displayed below the label
+ * @param {string} [subLabel] - a smaller label below the main Label
+ * @param {string} [wildcardLabel] - when you want the searchSelect component to return a count on the model for options returned when using a wildcard you must provide a label of the count e.g. role.  Should be singular.
+ * @param {string} [placeholder] - text you wish to replace the default "search" with
+ * @param {boolean} [displayInherit] - if you need the search select component to display inherit instead of box.
  *
- * @param options {Array} - *Advanced usage* - `options` can be passed directly from the outside to the
+ * @param {Array} options - *Advanced usage* - `options` can be passed directly from the outside to the
  * power-select component. If doing this, `models` should not also be passed as that will overwrite the
- * passed value.
- * @param search {Func} - *Advanced usage* - Customizes how the power-select component searches for matches -
+ * passed value. ex: [{ name: 'namespace45', id: 'displayedName' }];
+ * @param {function} search - *Advanced usage* - Customizes how the power-select component searches for matches -
  * see the power-select docs for more information.
  *
  */
 export default Component.extend({
   layout,
   'data-test-component': 'search-select',
+  classNameBindings: ['displayInherit:display-inherit'],
   classNames: ['field', 'search-select'],
   store: service(),
 
   onChange: () => {},
-  inputValue: computed(function() {
+  inputValue: computed(function () {
     return [];
   }),
   allOptions: null, // list of options including matched
@@ -48,6 +53,7 @@ export default Component.extend({
   shouldUseFallback: false,
   shouldRenderName: false,
   disallowNewItems: false,
+
   init() {
     this._super(...arguments);
     this.set('selectedOptions', this.inputValue || []);
@@ -62,16 +68,16 @@ export default Component.extend({
     }
     this.set('oldOptions', options);
   },
-  formatOptions: function(options) {
-    options = options.toArray().map(option => {
+  formatOptions: function (options) {
+    options = options.toArray().map((option) => {
       option.searchText = `${option.name} ${option.id}`;
       return option;
     });
-    let allOptions = options.toArray().map(option => {
+    let allOptions = options.toArray().map((option) => {
       return option.id;
     });
     this.set('allOptions', allOptions); // used by filter-wildcard helper
-    let formattedOptions = this.selectedOptions.map(option => {
+    let formattedOptions = this.selectedOptions.map((option) => {
       let matchingOption = options.findBy('id', option);
       options.removeObject(matchingOption);
       return {
@@ -86,7 +92,7 @@ export default Component.extend({
     }
     this.set('options', options);
   },
-  fetchOptions: task(function*() {
+  fetchOptions: task(function* () {
     if (!this.models) {
       if (this.options) {
         this.formatOptions(this.options);
@@ -125,24 +131,43 @@ export default Component.extend({
   }).on('didInsertElement'),
   handleChange() {
     if (this.selectedOptions.length && typeof this.selectedOptions.firstObject === 'object') {
-      this.onChange(Array.from(this.selectedOptions, option => option.id));
+      this.onChange(Array.from(this.selectedOptions, (option) => option.id));
     } else {
       this.onChange(this.selectedOptions);
     }
   },
+  shouldShowCreate(id, options) {
+    if (options && options.length && options.firstObject.groupName) {
+      return !options.some((group) => group.options.findBy('id', id));
+    }
+    let existingOption = this.options && (this.options.findBy('id', id) || this.options.findBy('name', id));
+    if (this.disallowNewItems && !existingOption) {
+      return false;
+    }
+    return !existingOption;
+  },
+  //----- adapted from ember-power-select-with-create
+  addCreateOption(term, results) {
+    if (this.shouldShowCreate(term, results)) {
+      const name = `Add new ${singularize(this.label)}: ${term}`;
+      const suggestion = {
+        __isSuggestion__: true,
+        __value__: term,
+        name,
+        id: name,
+      };
+      results.unshift(suggestion);
+    }
+  },
+  filter(options, searchText) {
+    const matcher = (option, text) => defaultMatcher(option.searchText, text);
+    return filterOptions(options || [], searchText, matcher);
+  },
+  // -----
+
   actions: {
     onChange(val) {
       this.onChange(val);
-    },
-    createOption(optionId) {
-      let newOption = { name: optionId, id: optionId, new: true };
-      this.selectedOptions.pushObject(newOption);
-      this.handleChange();
-    },
-    selectOption(option) {
-      this.selectedOptions.pushObject(option);
-      this.options.removeObject(option);
-      this.handleChange();
     },
     discardSelection(selected) {
       this.selectedOptions.removeObject(selected);
@@ -152,18 +177,34 @@ export default Component.extend({
       }
       this.handleChange();
     },
-    constructSuggestion(id) {
-      return `Add new ${singularize(this.label)}: ${id}`;
-    },
-    hideCreateOptionOnSameID(id, options) {
-      if (options && options.length && options.firstObject.groupName) {
-        return !options.some(group => group.options.findBy('id', id));
+    // ----- adapted from ember-power-select-with-create
+    searchAndSuggest(term, select) {
+      if (term.length === 0) {
+        return this.options;
       }
-      let existingOption = this.options && (this.options.findBy('id', id) || this.options.findBy('name', id));
-      if (this.disallowNewItems && !existingOption) {
-        return false;
+      if (this.search) {
+        return resolve(this.search(term, select)).then((results) => {
+          if (results.toArray) {
+            results = results.toArray();
+          }
+          this.addCreateOption(term, results);
+          return results;
+        });
       }
-      return !existingOption;
+      const newOptions = this.filter(this.options, term);
+      this.addCreateOption(term, newOptions);
+      return newOptions;
     },
+    selectOrCreate(selection) {
+      if (selection && selection.__isSuggestion__) {
+        const name = selection.__value__;
+        this.selectedOptions.pushObject({ name, id: name, new: true });
+      } else {
+        this.selectedOptions.pushObject(selection);
+        this.options.removeObject(selection);
+      }
+      this.handleChange();
+    },
+    // -----
   },
 });

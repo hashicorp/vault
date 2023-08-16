@@ -53,14 +53,14 @@ const newRole = async (backend, name) => {
   return roleName;
 };
 
-module('Acceptance | Enterprise | Transform secrets', function(hooks) {
+module('Acceptance | Enterprise | Transform secrets', function (hooks) {
   setupApplicationTest(hooks);
 
-  hooks.beforeEach(function() {
+  hooks.beforeEach(function () {
     return authPage.login();
   });
 
-  test('it enables Transform secrets engine and shows tabs', async function(assert) {
+  test('it enables Transform secrets engine and shows tabs', async function (assert) {
     let backend = `transform-${Date.now()}`;
     await mountSecrets.enable('transform', backend);
     await settled();
@@ -71,14 +71,14 @@ module('Acceptance | Enterprise | Transform secrets', function(hooks) {
     );
     assert.ok(transformationsPage.isEmpty, 'renders empty state');
     assert
-      .dom('.is-active[data-test-secret-list-tab="Transformations"]')
+      .dom('.active[data-test-secret-list-tab="Transformations"]')
       .exists('Has Transformations tab which is active');
     assert.dom('[data-test-secret-list-tab="Roles"]').exists('Has Roles tab');
     assert.dom('[data-test-secret-list-tab="Templates"]').exists('Has Templates tab');
     assert.dom('[data-test-secret-list-tab="Alphabets"]').exists('Has Alphabets tab');
   });
 
-  test('it can create a transformation and add itself to the role attached', async function(assert) {
+  test('it can create a transformation and add itself to the role attached', async function (assert) {
     let backend = await mount();
     const transformationName = 'foo';
     const roleName = 'foo-role';
@@ -88,7 +88,7 @@ module('Acceptance | Enterprise | Transform secrets', function(hooks) {
     assert.equal(currentURL(), `/vault/secrets/${backend}/create`, 'redirects to create transformation page');
     await transformationsPage.name(transformationName);
     await settled();
-    assert.dom('[data-test-input="type"').hasValue('fpe', 'Has type FPE by default');
+    assert.dom('[data-test-input="type"]').hasValue('fpe', 'Has type FPE by default');
     assert.dom('[data-test-input="tweak_source"]').exists('Shows tweak source when FPE');
     await transformationsPage.type('masking');
     await settled();
@@ -119,7 +119,7 @@ module('Acceptance | Enterprise | Transform secrets', function(hooks) {
     assert.equal(currentURL(), `/vault/secrets/${backend}/list`, 'Links back to list view from breadcrumb');
   });
 
-  test('it can create a role and add itself to the transformation attached', async function(assert) {
+  test('it can create a role and add itself to the transformation attached', async function (assert) {
     const roleName = 'my-role';
     let backend = await mount();
     // create transformation without role
@@ -154,7 +154,7 @@ module('Acceptance | Enterprise | Transform secrets', function(hooks) {
     );
   });
 
-  test('it adds a role to a transformation when added to a role', async function(assert) {
+  test('it adds a role to a transformation when added to a role', async function (assert) {
     const roleName = 'role-test';
     let backend = await mount();
     let transformation = await newTransformation(backend, 'b-transformation', true);
@@ -163,7 +163,7 @@ module('Acceptance | Enterprise | Transform secrets', function(hooks) {
     assert.dom('[data-test-row-value="Allowed roles"]').hasText(roleName);
   });
 
-  test('it shows a message if an update fails after save', async function(assert) {
+  test('it shows a message if an update fails after save', async function (assert) {
     const roleName = 'role-remove';
     let backend = await mount();
     // Create transformation
@@ -176,6 +176,7 @@ module('Acceptance | Enterprise | Transform secrets', function(hooks) {
     await click('[data-test-edit-link]');
     assert.dom('.modal.is-active').exists('Confirmation modal appears');
     await rolesPage.modalConfirm();
+    await settled();
     assert.equal(
       currentURL(),
       `/vault/secrets/${backend}/edit/${transformation}`,
@@ -184,7 +185,7 @@ module('Acceptance | Enterprise | Transform secrets', function(hooks) {
     // remove role
     await settled();
     await click('#allowed_roles [data-test-selected-list-button="delete"]');
-    await settled();
+
     await transformationsPage.save();
     await settled();
     assert.dom('.flash-message.is-info').exists('Shows info message since role could not be updated');
@@ -198,11 +199,11 @@ module('Acceptance | Enterprise | Transform secrets', function(hooks) {
       .doesNotExist('Allowed roles are no longer on the transformation');
   });
 
-  test('it allows creation and edit of a template', async function(assert) {
+  test('it allows creation and edit of a template', async function (assert) {
     const templateName = 'my-template';
     let backend = await mount();
     await click('[data-test-secret-list-tab="Templates"]');
-    await settled();
+
     assert.equal(currentURL(), `/vault/secrets/${backend}/list?tab=template`, 'links to template list page');
     await settled();
     await templatesPage.createLink();
@@ -236,11 +237,11 @@ module('Acceptance | Enterprise | Transform secrets', function(hooks) {
     assert.dom('[data-test-input="name"]').hasAttribute('readonly');
   });
 
-  test('it allows creation and edit of an alphabet', async function(assert) {
+  test('it allows creation and edit of an alphabet', async function (assert) {
     const alphabetName = 'vowels-only';
     let backend = await mount();
     await click('[data-test-secret-list-tab="Alphabets"]');
-    await settled();
+
     assert.equal(currentURL(), `/vault/secrets/${backend}/list?tab=alphabet`, 'links to alphabet list page');
     await alphabetsPage.createLink();
     await settled();

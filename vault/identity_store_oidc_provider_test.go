@@ -14,7 +14,6 @@ import (
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/stretchr/testify/require"
-	"gopkg.in/square/go-jose.v2"
 )
 
 /*
@@ -35,7 +34,7 @@ func TestOIDC_Path_OIDC_Cross_Provider_Exchange(t *testing.T) {
 	s := new(logical.InmemStorage)
 
 	// Create the common OIDC configuration
-	entityID, _, clientID, clientSecret := setupOIDCCommon(t, c, s)
+	entityID, _, _, clientID, clientSecret := setupOIDCCommon(t, c, s)
 
 	// Create a second provider
 	providerPath := "oidc/provider/test-provider-2"
@@ -76,7 +75,7 @@ func TestOIDC_Path_OIDC_Token(t *testing.T) {
 	ctx := namespace.RootContext(nil)
 	s := new(logical.InmemStorage)
 
-	entityID, groupID, clientID, clientSecret := setupOIDCCommon(t, c, s)
+	entityID, groupID, _, clientID, clientSecret := setupOIDCCommon(t, c, s)
 
 	type args struct {
 		clientReq              *logical.Request
@@ -271,6 +270,138 @@ func TestOIDC_Path_OIDC_Token(t *testing.T) {
 			wantErr: ErrTokenInvalidRequest,
 		},
 		{
+			name: "invalid token request with empty code_verifier",
+			args: args{
+				clientReq:     testClientReq(s),
+				providerReq:   testProviderReq(s, clientID),
+				assignmentReq: testAssignmentReq(s, entityID, groupID),
+				authorizeReq: func() *logical.Request {
+					req := testAuthorizeReq(s, clientID)
+					req.Data["code_challenge_method"] = "plain"
+					req.Data["code_challenge"] = "43_char_min_abcdefghijklmnopqrstuvwxyzabcde"
+					return req
+				}(),
+				tokenReq: func() *logical.Request {
+					req := testTokenReq(s, "", clientID, clientSecret)
+					req.Data["code_verifier"] = ""
+					return req
+				}(),
+			},
+			wantErr: ErrTokenInvalidRequest,
+		},
+		{
+			name: "invalid token request with code_verifier provided for non-PKCE flow",
+			args: args{
+				clientReq:     testClientReq(s),
+				providerReq:   testProviderReq(s, clientID),
+				assignmentReq: testAssignmentReq(s, entityID, groupID),
+				authorizeReq:  testAuthorizeReq(s, clientID),
+				tokenReq: func() *logical.Request {
+					req := testTokenReq(s, "", clientID, clientSecret)
+					req.Data["code_verifier"] = "pkce_not_used_in_authorize_request"
+					return req
+				}(),
+			},
+			wantErr: ErrTokenInvalidRequest,
+		},
+		{
+			name: "invalid token request with incorrect plain code_verifier",
+			args: args{
+				clientReq:     testClientReq(s),
+				providerReq:   testProviderReq(s, clientID),
+				assignmentReq: testAssignmentReq(s, entityID, groupID),
+				authorizeReq: func() *logical.Request {
+					req := testAuthorizeReq(s, clientID)
+					req.Data["code_challenge_method"] = "plain"
+					req.Data["code_challenge"] = "43_char_min_abcdefghijklmnopqrstuvwxyzabcde"
+					return req
+				}(),
+				tokenReq: func() *logical.Request {
+					req := testTokenReq(s, "", clientID, clientSecret)
+					req.Data["code_verifier"] = "wont_match_challenge"
+					return req
+				}(),
+			},
+			wantErr: ErrTokenInvalidGrant,
+		},
+		{
+			name: "invalid token request with incorrect S256 code_verifier",
+			args: args{
+				clientReq:     testClientReq(s),
+				providerReq:   testProviderReq(s, clientID),
+				assignmentReq: testAssignmentReq(s, entityID, groupID),
+				authorizeReq: func() *logical.Request {
+					req := testAuthorizeReq(s, clientID)
+					req.Data["code_challenge_method"] = "S256"
+					req.Data["code_challenge"] = "43_char_min_abcdefghijklmnopqrstuvwxyzabcde"
+					return req
+				}(),
+				tokenReq: func() *logical.Request {
+					req := testTokenReq(s, "", clientID, clientSecret)
+					req.Data["code_verifier"] = "wont_hash_to_challenge"
+					return req
+				}(),
+			},
+			wantErr: ErrTokenInvalidGrant,
+		},
+		{
+			name: "valid token request with plain code_challenge_method",
+			args: args{
+				clientReq:     testClientReq(s),
+				providerReq:   testProviderReq(s, clientID),
+				assignmentReq: testAssignmentReq(s, entityID, groupID),
+				authorizeReq: func() *logical.Request {
+					req := testAuthorizeReq(s, clientID)
+					req.Data["code_challenge_method"] = "plain"
+					req.Data["code_challenge"] = "43_char_min_abcdefghijklmnopqrstuvwxyzabcde"
+					return req
+				}(),
+				tokenReq: func() *logical.Request {
+					req := testTokenReq(s, "", clientID, clientSecret)
+					req.Data["code_verifier"] = "43_char_min_abcdefghijklmnopqrstuvwxyzabcde"
+					return req
+				}(),
+			},
+		},
+		{
+			name: "valid token request with default plain code_challenge_method",
+			args: args{
+				clientReq:     testClientReq(s),
+				providerReq:   testProviderReq(s, clientID),
+				assignmentReq: testAssignmentReq(s, entityID, groupID),
+				authorizeReq: func() *logical.Request {
+					// code_challenge_method intentionally not provided
+					req := testAuthorizeReq(s, clientID)
+					req.Data["code_challenge"] = "43_char_min_abcdefghijklmnopqrstuvwxyzabcde"
+					return req
+				}(),
+				tokenReq: func() *logical.Request {
+					req := testTokenReq(s, "", clientID, clientSecret)
+					req.Data["code_verifier"] = "43_char_min_abcdefghijklmnopqrstuvwxyzabcde"
+					return req
+				}(),
+			},
+		},
+		{
+			name: "valid token request with S256 code_challenge_method",
+			args: args{
+				clientReq:     testClientReq(s),
+				providerReq:   testProviderReq(s, clientID),
+				assignmentReq: testAssignmentReq(s, entityID, groupID),
+				authorizeReq: func() *logical.Request {
+					req := testAuthorizeReq(s, clientID)
+					req.Data["code_challenge_method"] = "S256"
+					req.Data["code_challenge"] = "hMn-5TBH-t3uN00FEaGsQtYPhyC4Otbx-9vDcPTYHmc"
+					return req
+				}(),
+				tokenReq: func() *logical.Request {
+					req := testTokenReq(s, "", clientID, clientSecret)
+					req.Data["code_verifier"] = "43_char_min_abcdefghijklmnopqrstuvwxyzabcde"
+					return req
+				}(),
+			},
+		},
+		{
 			name: "valid token request with max_age and auth_time claim",
 			args: args{
 				clientReq:     testClientReq(s),
@@ -285,6 +416,20 @@ func TestOIDC_Path_OIDC_Token(t *testing.T) {
 				vaultTokenCreationTime: func() time.Time {
 					return time.Now()
 				},
+			},
+		},
+		{
+			name: "valid token request with empty nonce in authorize request",
+			args: args{
+				clientReq:     testClientReq(s),
+				providerReq:   testProviderReq(s, clientID),
+				assignmentReq: testAssignmentReq(s, entityID, groupID),
+				authorizeReq: func() *logical.Request {
+					req := testAuthorizeReq(s, clientID)
+					delete(req.Data, "nonce")
+					return req
+				}(),
+				tokenReq: testTokenReq(s, "", clientID, clientSecret),
 			},
 		},
 		{
@@ -404,9 +549,39 @@ func TestOIDC_Path_OIDC_Token(t *testing.T) {
 			require.Equal(t, "Bearer", tokenRes.TokenType)
 			require.NotEmpty(t, tokenRes.AccessToken)
 			require.NotEmpty(t, tokenRes.IDToken)
-			require.NotEmpty(t, tokenRes.ExpiresIn)
+			require.Equal(t, int64(86400), tokenRes.ExpiresIn)
 			require.Empty(t, tokenRes.Error)
 			require.Empty(t, tokenRes.ErrorDescription)
+
+			// Parse the claims from the ID token payload
+			parts := strings.Split(tokenRes.IDToken, ".")
+			require.Equal(t, 3, len(parts))
+			payload, err := base64.RawURLEncoding.DecodeString(parts[1])
+			require.NoError(t, err)
+			claims := make(map[string]interface{})
+			require.NoError(t, json.Unmarshal(payload, &claims))
+
+			// Assert that reserved claims are present in the ID token.
+			// Optional reserved claims are asserted on conditionally.
+			for _, c := range reservedClaims {
+				switch c {
+				case "nonce":
+					// nonce must equal the nonce provided in the authorize request (including empty)
+					require.EqualValues(t, tt.args.authorizeReq.Data[c], claims[c])
+
+				case "auth_time":
+					// auth_time must exist if max_age provided in the authorize request
+					if _, ok := tt.args.authorizeReq.Data["max_age"]; ok {
+						require.EqualValues(t, creationTime.Unix(), claims[c])
+					} else {
+						require.Empty(t, claims[c])
+					}
+
+				default:
+					// other reserved claims must be present in all cases
+					require.NotEmpty(t, claims[c])
+				}
+			}
 		})
 	}
 }
@@ -416,7 +591,7 @@ func TestOIDC_Path_OIDC_Authorize(t *testing.T) {
 	ctx := namespace.RootContext(nil)
 	s := new(logical.InmemStorage)
 
-	entityID, groupID, clientID, _ := setupOIDCCommon(t, c, s)
+	entityID, groupID, parentGroupID, clientID, _ := setupOIDCCommon(t, c, s)
 
 	type args struct {
 		entityID               string
@@ -580,21 +755,6 @@ func TestOIDC_Path_OIDC_Authorize(t *testing.T) {
 			wantErr: ErrAuthInvalidRequest,
 		},
 		{
-			name: "invalid authorize request with missing nonce",
-			args: args{
-				entityID:      entityID,
-				clientReq:     testClientReq(s),
-				providerReq:   testProviderReq(s, clientID),
-				assignmentReq: testAssignmentReq(s, entityID, groupID),
-				authorizeReq: func() *logical.Request {
-					req := testAuthorizeReq(s, clientID)
-					req.Data["nonce"] = ""
-					return req
-				}(),
-			},
-			wantErr: ErrAuthInvalidRequest,
-		},
-		{
 			name: "invalid authorize request with request parameter provided",
 			args: args{
 				entityID:      entityID,
@@ -684,6 +844,72 @@ func TestOIDC_Path_OIDC_Authorize(t *testing.T) {
 			wantErr: ErrAuthInvalidRequest,
 		},
 		{
+			name: "invalid authorize request with invalid code_challenge_method",
+			args: args{
+				entityID:      entityID,
+				clientReq:     testClientReq(s),
+				providerReq:   testProviderReq(s, clientID),
+				assignmentReq: testAssignmentReq(s, entityID, groupID),
+				authorizeReq: func() *logical.Request {
+					req := testAuthorizeReq(s, clientID)
+					req.Data["code_challenge_method"] = "S512"
+					req.Data["code_challenge"] = "43_char_min_abcdefghijklmnopqrstuvwxyzabcde"
+					return req
+				}(),
+			},
+			wantErr: ErrAuthInvalidRequest,
+		},
+		{
+			name: "invalid authorize request with code_challenge length < 43 characters",
+			args: args{
+				entityID:      entityID,
+				clientReq:     testClientReq(s),
+				providerReq:   testProviderReq(s, clientID),
+				assignmentReq: testAssignmentReq(s, entityID, groupID),
+				authorizeReq: func() *logical.Request {
+					req := testAuthorizeReq(s, clientID)
+					req.Data["code_challenge_method"] = "S256"
+					req.Data["code_challenge"] = ""
+					return req
+				}(),
+			},
+			wantErr: ErrAuthInvalidRequest,
+		},
+		{
+			name: "invalid authorize request with code_challenge length > 128 characters",
+			args: args{
+				entityID:      entityID,
+				clientReq:     testClientReq(s),
+				providerReq:   testProviderReq(s, clientID),
+				assignmentReq: testAssignmentReq(s, entityID, groupID),
+				authorizeReq: func() *logical.Request {
+					req := testAuthorizeReq(s, clientID)
+					req.Data["code_challenge_method"] = "S256"
+					req.Data["code_challenge"] = `
+					129_char_abcdefghijklmnopqrstuvwxyzabcd
+					129_char_abcdefghijklmnopqrstuvwxyzabcd
+					129_char_abcdefghijklmnopqrstuvwxyzabcd
+					`
+					return req
+				}(),
+			},
+			wantErr: ErrAuthInvalidRequest,
+		},
+		{
+			name: "valid authorize request with empty nonce",
+			args: args{
+				entityID:      entityID,
+				clientReq:     testClientReq(s),
+				providerReq:   testProviderReq(s, clientID),
+				assignmentReq: testAssignmentReq(s, entityID, groupID),
+				authorizeReq: func() *logical.Request {
+					req := testAuthorizeReq(s, clientID)
+					delete(req.Data, "nonce")
+					return req
+				}(),
+			},
+		},
+		{
 			name: "active re-authentication required with token creation time exceeding max_age requirement",
 			args: args{
 				entityID:      entityID,
@@ -760,6 +986,88 @@ func TestOIDC_Path_OIDC_Authorize(t *testing.T) {
 				providerReq:   testProviderReq(s, clientID),
 				assignmentReq: testAssignmentReq(s, "", groupID),
 				authorizeReq:  testAuthorizeReq(s, clientID),
+			},
+		},
+		{
+			name: "valid authorize request using client assignment with inherited group membership",
+			args: args{
+				entityID:      entityID,
+				clientReq:     testClientReq(s),
+				providerReq:   testProviderReq(s, clientID),
+				assignmentReq: testAssignmentReq(s, "", parentGroupID),
+				authorizeReq:  testAuthorizeReq(s, clientID),
+			},
+		},
+		{
+			name: "valid authorize request with port-agnostic loopback redirect_uri 127.0.0.1",
+			args: args{
+				entityID: entityID,
+				clientReq: func() *logical.Request {
+					req := testClientReq(s)
+					req.Data["redirect_uris"] = []string{"http://127.0.0.1/callback"}
+					return req
+				}(),
+				providerReq:   testProviderReq(s, clientID),
+				assignmentReq: testAssignmentReq(s, entityID, groupID),
+				authorizeReq: func() *logical.Request {
+					req := testAuthorizeReq(s, clientID)
+					req.Data["redirect_uri"] = "http://127.0.0.1:51004/callback"
+					return req
+				}(),
+			},
+		},
+		{
+			name: "valid authorize request with port-agnostic loopback redirect_uri 127.0.0.1 with port",
+			args: args{
+				entityID: entityID,
+				clientReq: func() *logical.Request {
+					req := testClientReq(s)
+					req.Data["redirect_uris"] = []string{"http://127.0.0.1:8251/callback"}
+					return req
+				}(),
+				providerReq:   testProviderReq(s, clientID),
+				assignmentReq: testAssignmentReq(s, entityID, groupID),
+				authorizeReq: func() *logical.Request {
+					req := testAuthorizeReq(s, clientID)
+					req.Data["redirect_uri"] = "http://127.0.0.1:51005/callback"
+					return req
+				}(),
+			},
+		},
+		{
+			name: "valid authorize request with port-agnostic loopback redirect_uri localhost",
+			args: args{
+				entityID: entityID,
+				clientReq: func() *logical.Request {
+					req := testClientReq(s)
+					req.Data["redirect_uris"] = []string{"http://localhost:8251/callback"}
+					return req
+				}(),
+				providerReq:   testProviderReq(s, clientID),
+				assignmentReq: testAssignmentReq(s, entityID, groupID),
+				authorizeReq: func() *logical.Request {
+					req := testAuthorizeReq(s, clientID)
+					req.Data["redirect_uri"] = "http://localhost:51006/callback"
+					return req
+				}(),
+			},
+		},
+		{
+			name: "valid authorize request with port-agnostic loopback redirect_uri [::1]",
+			args: args{
+				entityID: entityID,
+				clientReq: func() *logical.Request {
+					req := testClientReq(s)
+					req.Data["redirect_uris"] = []string{"http://[::1]:8251/callback"}
+					return req
+				}(),
+				providerReq:   testProviderReq(s, clientID),
+				assignmentReq: testAssignmentReq(s, entityID, groupID),
+				authorizeReq: func() *logical.Request {
+					req := testAuthorizeReq(s, clientID)
+					req.Data["redirect_uri"] = "http://[::1]:51007/callback"
+					return req
+				}(),
 			},
 		},
 	}
@@ -842,8 +1150,8 @@ func TestOIDC_Path_OIDC_Authorize(t *testing.T) {
 }
 
 // setupOIDCCommon creates all of the resources needed to test a Vault OIDC provider.
-// Returns the entity ID, group ID, and client ID to be used in tests.
-func setupOIDCCommon(t *testing.T, c *Core, s logical.Storage) (string, string, string, string) {
+// Returns the entity ID, group ID, client ID, client secret to be used in tests.
+func setupOIDCCommon(t *testing.T, c *Core, s logical.Storage) (string, string, string, string, string) {
 	t.Helper()
 	ctx := namespace.RootContext(nil)
 
@@ -858,10 +1166,18 @@ func setupOIDCCommon(t *testing.T, c *Core, s logical.Storage) (string, string, 
 	entityID := resp.Data["id"].(string)
 
 	// Create a group
-	resp, err = c.identityStore.HandleRequest(ctx, testGroupReq(s, "test-group", []string{entityID}))
+	resp, err = c.identityStore.HandleRequest(ctx, testGroupReq(s, "test-group",
+		[]string{entityID}, nil))
 	expectSuccess(t, resp, err)
 	require.NotNil(t, resp.Data["id"])
 	groupID := resp.Data["id"].(string)
+
+	// Create a parent group
+	resp, err = c.identityStore.HandleRequest(ctx, testGroupReq(s, "test-parent-group",
+		nil, []string{groupID}))
+	expectSuccess(t, resp, err)
+	require.NotNil(t, resp.Data["id"])
+	parentGroupID := resp.Data["id"].(string)
 
 	// Create an assignment
 	resp, err = c.identityStore.HandleRequest(ctx, testAssignmentReq(s, entityID, groupID))
@@ -910,7 +1226,7 @@ func setupOIDCCommon(t *testing.T, c *Core, s logical.Storage) (string, string, 
 	resp, err = c.identityStore.HandleRequest(ctx, testProviderReq(s, clientID))
 	expectSuccess(t, resp, err)
 
-	return entityID, groupID, clientID, clientSecret
+	return entityID, groupID, parentGroupID, clientID, clientSecret
 }
 
 // resetCommonOIDCConfig resets the state of common configuration resources
@@ -1035,7 +1351,7 @@ func testKeyReq(s logical.Storage, allowedClientIDs []string, alg string) *logic
 	}
 }
 
-func testGroupReq(s logical.Storage, name string, entityIDs []string) *logical.Request {
+func testGroupReq(s logical.Storage, name string, entityIDs, groupIDs []string) *logical.Request {
 	return &logical.Request{
 		Storage:   s,
 		Path:      "group",
@@ -1043,6 +1359,7 @@ func testGroupReq(s logical.Storage, name string, entityIDs []string) *logical.R
 		Data: map[string]interface{}{
 			"name":              name,
 			"member_entity_ids": entityIDs,
+			"member_group_ids":  groupIDs,
 		},
 	}
 }
@@ -1112,7 +1429,18 @@ func TestOIDC_Path_OIDC_ProviderReadPublicKey(t *testing.T) {
 		},
 	})
 
-	// get the clientID
+	// Create a test client "test-client-2" that also uses "test-key-1"
+	c.identityStore.HandleRequest(ctx, &logical.Request{
+		Path:      "oidc/client/test-client-2",
+		Operation: logical.CreateOperation,
+		Storage:   storage,
+		Data: map[string]interface{}{
+			"key":          "test-key-1",
+			"id_token_ttl": "1m",
+		},
+	})
+
+	// get the clientID for "test-client-1"
 	resp, _ := c.identityStore.HandleRequest(ctx, &logical.Request{
 		Path:      "oidc/client/test-client-1",
 		Operation: logical.ReadOperation,
@@ -1140,11 +1468,9 @@ func TestOIDC_Path_OIDC_ProviderReadPublicKey(t *testing.T) {
 	})
 	expectSuccess(t, resp, err)
 
-	responseJWKS := &jose.JSONWebKeySet{}
-	json.Unmarshal(resp.Data["http_raw_body"].([]byte), responseJWKS)
-	if len(responseJWKS.Keys) != 2 {
-		t.Fatalf("expected 2 public key but instead got %d", len(responseJWKS.Keys))
-	}
+	// at this point only 2 public keys are expected since both clients use
+	// the same key "test-key-1"
+	assertRespPublicKeyCount(t, resp, 2)
 
 	// Create a test key "test-key-2"
 	c.identityStore.HandleRequest(ctx, &logical.Request{
@@ -1176,11 +1502,7 @@ func TestOIDC_Path_OIDC_ProviderReadPublicKey(t *testing.T) {
 	})
 	expectSuccess(t, resp, err)
 
-	responseJWKS = &jose.JSONWebKeySet{}
-	json.Unmarshal(resp.Data["http_raw_body"].([]byte), responseJWKS)
-	if len(responseJWKS.Keys) != 4 {
-		t.Fatalf("expected 4 public key but instead got %d", len(responseJWKS.Keys))
-	}
+	assertRespPublicKeyCount(t, resp, 4)
 
 	// Update the test provider "test-provider" to only allow test-client-1 -- should succeed
 	resp, err = c.identityStore.HandleRequest(ctx, &logical.Request{
@@ -1201,32 +1523,155 @@ func TestOIDC_Path_OIDC_ProviderReadPublicKey(t *testing.T) {
 	})
 	expectSuccess(t, resp, err)
 
-	responseJWKS = &jose.JSONWebKeySet{}
-	json.Unmarshal(resp.Data["http_raw_body"].([]byte), responseJWKS)
-	if len(responseJWKS.Keys) != 2 {
-		t.Fatalf("expected 2 public key but instead got %d", len(responseJWKS.Keys))
-	}
+	assertRespPublicKeyCount(t, resp, 2)
 }
 
-// TestOIDC_Path_OIDC_ProviderClient_NoKeyParameter tests that a client cannot
-// be created without a key parameter
-func TestOIDC_Path_OIDC_ProviderClient_NoKeyParameter(t *testing.T) {
+func TestOIDC_Path_OIDC_Client_Type(t *testing.T) {
 	c, _, _ := TestCoreUnsealed(t)
 	ctx := namespace.RootContext(nil)
 	storage := &logical.InmemStorage{}
 
-	// Create a test client "test-client1" without a key param -- should fail
 	resp, err := c.identityStore.HandleRequest(ctx, &logical.Request{
-		Path:      "oidc/client/test-client1",
+		Path:      "oidc/key/test-key",
 		Operation: logical.CreateOperation,
 		Storage:   storage,
 	})
-	expectError(t, resp, err)
-	// validate error message
-	expectedStrings := map[string]interface{}{
-		"the key parameter is required": true,
+	expectSuccess(t, resp, err)
+
+	tests := []struct {
+		name             string
+		createClientType clientType
+		updateClientType clientType
+		wantCreateErr    bool
+		wantUpdateErr    bool
+	}{
+		{
+			name:             "create confidential client and update to public client",
+			createClientType: confidential,
+			updateClientType: public,
+			wantUpdateErr:    true,
+		},
+		{
+			name:             "create confidential client and update to confidential client",
+			createClientType: confidential,
+			updateClientType: confidential,
+		},
+		{
+			name:             "create public client and update to confidential client",
+			createClientType: public,
+			updateClientType: confidential,
+			wantUpdateErr:    true,
+		},
+		{
+			name:             "create public client and update to public client",
+			createClientType: public,
+			updateClientType: public,
+		},
+		{
+			name:             "create an invalid client type",
+			createClientType: clientType(300),
+			wantCreateErr:    true,
+		},
 	}
-	expectStrings(t, []string{resp.Data["error"].(string)}, expectedStrings)
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Create a client with the given client type
+			resp, err := c.identityStore.HandleRequest(ctx, &logical.Request{
+				Path:      "oidc/client/test-client",
+				Operation: logical.CreateOperation,
+				Storage:   storage,
+				Data: map[string]interface{}{
+					"key":         "test-key",
+					"client_type": tt.createClientType.String(),
+				},
+			})
+			if tt.wantCreateErr {
+				expectError(t, resp, err)
+				return
+			}
+			expectSuccess(t, resp, err)
+
+			// Read the client
+			resp, err = c.identityStore.HandleRequest(ctx, &logical.Request{
+				Path:      "oidc/client/test-client",
+				Operation: logical.ReadOperation,
+				Storage:   storage,
+			})
+			expectSuccess(t, resp, err)
+
+			// Assert that the client type is properly set
+			clientType := resp.Data["client_type"].(string)
+			require.Equal(t, tt.createClientType.String(), clientType)
+
+			// Assert that all client types have a client ID
+			clientID := resp.Data["client_id"].(string)
+			require.Len(t, clientID, clientIDLength)
+
+			// Assert that confidential clients have a client secret
+			if tt.createClientType == confidential {
+				clientSecret := resp.Data["client_secret"].(string)
+				require.Contains(t, clientSecret, clientSecretPrefix)
+			}
+
+			// Assert that public clients do not have a client secret
+			if tt.createClientType == public {
+				_, ok := resp.Data["client_secret"]
+				require.False(t, ok)
+			}
+
+			// Update the client and expect error if the type is different
+			resp, err = c.identityStore.HandleRequest(ctx, &logical.Request{
+				Path:      "oidc/client/test-client",
+				Operation: logical.UpdateOperation,
+				Storage:   storage,
+				Data: map[string]interface{}{
+					"key":         "test-key",
+					"client_type": tt.updateClientType.String(),
+				},
+			})
+			if tt.wantUpdateErr {
+				expectError(t, resp, err)
+			} else {
+				expectSuccess(t, resp, err)
+			}
+
+			// Delete the client
+			resp, err = c.identityStore.HandleRequest(ctx, &logical.Request{
+				Path:      "oidc/client/test-client",
+				Operation: logical.DeleteOperation,
+				Storage:   storage,
+			})
+			expectSuccess(t, resp, err)
+		})
+	}
+}
+
+// TestOIDC_Path_OIDC_ProviderClient_DefaultKey tests that a
+// client uses the default key if none provided at creation time.
+func TestOIDC_Path_OIDC_ProviderClient_DefaultKey(t *testing.T) {
+	c, _, _ := TestCoreUnsealed(t)
+	ctx := namespace.RootContext(nil)
+	require.NoError(t, c.identityStore.storeOIDCDefaultResources(ctx, c.identityStore.view))
+
+	// Create a test client "test-client" without a key param
+	resp, err := c.identityStore.HandleRequest(ctx, &logical.Request{
+		Path:      "oidc/client/test-client",
+		Operation: logical.CreateOperation,
+		Storage:   c.identityStore.view,
+	})
+	expectSuccess(t, resp, err)
+
+	// Read "test-client" to validate it uses the default key
+	resp, err = c.identityStore.HandleRequest(ctx, &logical.Request{
+		Path:      "oidc/client/test-client",
+		Operation: logical.ReadOperation,
+		Storage:   c.identityStore.view,
+	})
+	expectSuccess(t, resp, err)
+
+	// Assert that the client uses the default key
+	require.Equal(t, defaultKeyName, resp.Data["key"].(string))
 }
 
 // TestOIDC_Path_OIDC_ProviderClient_NilKeyEntry tests that a client cannot be
@@ -1439,6 +1884,7 @@ func TestOIDC_Path_OIDC_ProviderClient(t *testing.T) {
 		"access_token_ttl": int64(86400),
 		"client_id":        resp.Data["client_id"],
 		"client_secret":    resp.Data["client_secret"],
+		"client_type":      confidential.String(),
 	}
 	if diff := deep.Equal(expected, resp.Data); diff != nil {
 		t.Fatal(diff)
@@ -1493,6 +1939,7 @@ func TestOIDC_Path_OIDC_ProviderClient(t *testing.T) {
 		"access_token_ttl": int64(60),
 		"client_id":        resp.Data["client_id"],
 		"client_secret":    resp.Data["client_secret"],
+		"client_type":      confidential.String(),
 	}
 	if diff := deep.Equal(expected, resp.Data); diff != nil {
 		t.Fatal(diff)
@@ -1552,6 +1999,7 @@ func TestOIDC_Path_OIDC_ProviderClient_Deduplication(t *testing.T) {
 			"id_token_ttl":  "1m",
 			"assignments":   []string{"test-assignment1", "test-assignment1"},
 			"redirect_uris": []string{"http://example.com", "http://notduplicate.com", "http://example.com"},
+			"client_type":   public.String(),
 		},
 	})
 	expectSuccess(t, resp, err)
@@ -1570,7 +2018,7 @@ func TestOIDC_Path_OIDC_ProviderClient_Deduplication(t *testing.T) {
 		"id_token_ttl":     int64(60),
 		"access_token_ttl": int64(86400),
 		"client_id":        resp.Data["client_id"],
-		"client_secret":    resp.Data["client_secret"],
+		"client_type":      public.String(),
 	}
 	if diff := deep.Equal(expected, resp.Data); diff != nil {
 		t.Fatal(diff)
@@ -1632,6 +2080,7 @@ func TestOIDC_Path_OIDC_ProviderClient_Update(t *testing.T) {
 		"access_token_ttl": int64(3600),
 		"client_id":        resp.Data["client_id"],
 		"client_secret":    resp.Data["client_secret"],
+		"client_type":      confidential.String(),
 	}
 	if diff := deep.Equal(expected, resp.Data); diff != nil {
 		t.Fatal(diff)
@@ -1665,6 +2114,7 @@ func TestOIDC_Path_OIDC_ProviderClient_Update(t *testing.T) {
 		"access_token_ttl": int64(60),
 		"client_id":        resp.Data["client_id"],
 		"client_secret":    resp.Data["client_secret"],
+		"client_type":      confidential.String(),
 	}
 	if diff := deep.Equal(expected, resp.Data); diff != nil {
 		t.Fatal(diff)
@@ -2950,7 +3400,7 @@ func TestOIDC_Path_OpenIDProviderConfig(t *testing.T) {
 		TokenEndpoint:         basePath + "/token",
 		UserinfoEndpoint:      basePath + "/userinfo",
 		GrantTypes:            []string{"authorization_code"},
-		AuthMethods:           []string{"client_secret_basic"},
+		AuthMethods:           []string{"none", "client_secret_basic"},
 		RequestURIParameter:   false,
 	}
 	discoveryResp := &providerDiscovery{}
@@ -3004,7 +3454,7 @@ func TestOIDC_Path_OpenIDProviderConfig(t *testing.T) {
 		TokenEndpoint:         basePath + "/token",
 		UserinfoEndpoint:      basePath + "/userinfo",
 		GrantTypes:            []string{"authorization_code"},
-		AuthMethods:           []string{"client_secret_basic"},
+		AuthMethods:           []string{"none", "client_secret_basic"},
 		RequestURIParameter:   false,
 	}
 	discoveryResp = &providerDiscovery{}

@@ -6,7 +6,7 @@ import identityCapabilities from 'vault/macros/identity-capabilities';
 
 export default IdentityModel.extend({
   parentType: 'group',
-  formFields: computed(function() {
+  formFields: computed(function () {
     return ['name', 'mountAccessor'];
   }),
   group: belongsTo('identity/group', { readOnly: true, async: false }),

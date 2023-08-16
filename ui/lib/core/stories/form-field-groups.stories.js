@@ -37,9 +37,7 @@ storiesOf('Forms/FormFieldGroups', module)
       context: {
         actions: {
           getModel(modelType) {
-            return getOwner(this)
-              .lookup('service:store')
-              .createRecord(`auth-config/${modelType}`);
+            return getOwner(this).lookup('service:store').createRecord(`auth-config/${modelType}`);
           },
         },
         model: select('model', MODELS, DEFAULT_VALUE),
