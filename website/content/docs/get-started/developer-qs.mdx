@@ -4,7 +4,7 @@ page_title: Developer Quick Start
 description: Learn how to store and retrieve your first secret.
 ---
 
-# Developer Quick Start
+# Developer quick start
 
 This quick start will explore how to use Vault client libraries inside your application code to store and retrieve your first secret value. Vault takes the security burden away from developers by providing a secure, centralized secret store for an application’s sensitive data: credentials, certificates, encryption keys, and more.
 
@@ -25,7 +25,7 @@ For an out-of-the-box runnable demo application showcasing these concepts and mo
 
 -> **Note**: Make sure you are using the [latest version](https://docs.docker.com/engine/release-notes/) of Docker. Older versions may not work. As of 1.12.0, the recommended version of Docker is 20.10.17 or higher.
 
-## Step 1: Start Vault
+## Step 1: start Vault
 
 !> **Warning**: This in-memory “dev” server is useful for practicing with Vault locally for the first time, but is insecure and **should never be used in production**. For developers who need to manage their own production Vault installations, this [page](https://learn.hashicorp.com/tutorials/vault/production-hardening) provides some guidance on how to make your setup more production-friendly.
 
@@ -49,7 +49,7 @@ The `-dev-root-token-id` flag for dev servers tells the Vault server to allow fu
 
 Vault is now listening over HTTP on port **8200**. With all the setup out of the way, it's time to get coding!
 
-## Step 2: Install a client library
+## Step 2: install a client library
 
 To read and write secrets in your application, you need to first configure a client to connect to Vault.
 Let's install the Vault client library for your language of choice.
@@ -172,7 +172,7 @@ import org.springframework.vault.core.VaultTemplate;
 </Tabs>
 
 
-## Step 3: Authenticate to Vault
+## Step 3: authenticate to Vault
 
 A variety of [authentication methods](/docs/auth) can be used to prove your application's identity to the Vault server. To explore more secure authentication methods, such as via Kubernetes or your cloud provider, see the auth code snippets in the [vault-examples](https://github.com/hashicorp/vault-examples) repository.
 
@@ -235,7 +235,7 @@ export VAULT_TOKEN="dev-only-token"
 
 </CodeTabs>
 
-## Step 4: Store a secret
+## Step 4: store a secret
 
 Secrets are sensitive data like API keys and passwords that we shouldn’t be storing in our code or configuration files. Instead, we want to store values like this in Vault.
 
@@ -312,7 +312,7 @@ We also provided the path to our secret in Vault. We will reference this path in
 
 Run the code now, and you should see `Secret written successfully`. If not, check that you've used the correct value for the root token and Vault server address.
 
-## Step 5: Retrieve a secret
+## Step 5: retrieve a secret
 
 Now that we know how to write a secret, let's practice reading one.
 

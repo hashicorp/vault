@@ -1,10 +1,7 @@
-import { inject as service } from '@ember/service';
 import Route from '@ember/routing/route';
 import { toolsActions } from 'vault/helpers/tools-actions';
 
 export default Route.extend({
-  wizard: service(),
-
   beforeModel(transition) {
     const supportedActions = toolsActions();
     const { selected_action: selectedAction } = this.paramsFor(this.routeName);
@@ -26,9 +23,6 @@ export default Route.extend({
   actions: {
     didTransition() {
       const params = this.paramsFor(this.routeName);
-      if (this.wizard.currentMachine === 'tools') {
-        this.wizard.transitionFeatureMachine(this.wizard.featureState, params.selected_action.toUpperCase());
-      }
       /* eslint-disable-next-line ember/no-controller-access-in-routes */
       this.controller.setProperties(params);
       return true;

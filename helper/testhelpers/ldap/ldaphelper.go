@@ -33,6 +33,7 @@ func PrepareTestContainer(t *testing.T, version string) (cleanup func(), cfg *ld
 	cfg.GroupDN = "ou=people,dc=planetexpress,dc=com"
 	cfg.GroupAttr = "cn"
 	cfg.RequestTimeout = 60
+	cfg.MaximumPageSize = 1000
 
 	svc, err := runner.StartService(context.Background(), func(ctx context.Context, host string, port int) (docker.ServiceConfig, error) {
 		connURL := fmt.Sprintf("ldap://%s:%d", host, port)

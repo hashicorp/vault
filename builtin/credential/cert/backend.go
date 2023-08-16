@@ -42,7 +42,7 @@ func Backend() *backend {
 			pathCerts(&b),
 			pathCRLs(&b),
 		},
-		AuthRenew:    b.pathLoginRenew,
+		AuthRenew:    b.loginPathWrapper(b.pathLoginRenew),
 		Invalidate:   b.invalidate,
 		BackendType:  logical.TypeCredential,
 		PeriodicFunc: b.updateCRLs,

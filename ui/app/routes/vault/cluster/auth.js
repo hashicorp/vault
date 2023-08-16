@@ -10,7 +10,6 @@ export default ClusterRouteBase.extend({
   },
   flashMessages: service(),
   version: service(),
-  wizard: service(),
   beforeModel() {
     return this._super().then(() => {
       return this.version.fetchFeatures();
@@ -29,16 +28,5 @@ export default ClusterRouteBase.extend({
     if (config.welcomeMessage) {
       this.flashMessages.stickyInfo(config.welcomeMessage);
     }
-  },
-  activate() {
-    this.wizard.set('initEvent', 'LOGIN');
-    this.wizard.transitionTutorialMachine(this.wizard.currentState, 'TOLOGIN');
-  },
-  actions: {
-    willTransition(transition) {
-      if (transition.targetName !== this.routeName) {
-        this.wizard.transitionTutorialMachine(this.wizard.currentState, 'INITDONE');
-      }
-    },
   },
 });

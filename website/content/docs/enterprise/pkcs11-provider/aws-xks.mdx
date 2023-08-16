@@ -5,7 +5,7 @@ description: |-
   AWS KMS External Key Store can use Vault as a key store via the Vault PKCS#11 Provider.
 ---
 
-# Vault with AWS KMS External Key Store (XKS) via PKCS#11 and XKS Proxy
+# Vault with AWS KMS external key store (XKS) via PKCS#11 and XKS proxy
 
 ~> **Note**: AWS [`xks-proxy`](https://github.com/aws-samples/aws-kms-xks-proxy) is used in this document as a sample implementation.
 
@@ -33,7 +33,7 @@ There are 3 parts to this setup:
 In order to serve requests with this latency, we recommend hosting Vault and the XKS proxy as close as possible
 to the desired KMS region.
 
-## Vault Setup
+## Vault setup
 
 On the Vault server, we need to [setup the KMIP Secrets Engine](/docs/secrets/kmip):
 
@@ -76,7 +76,7 @@ On the Vault server, we need to [setup the KMIP Secrets Engine](/docs/secrets/km
     jq --raw-output --exit-status '.data.certificate' kmip.json > cert.pem
     ```
 
-## XKS Proxy Setup
+## XKS proxy setup
 
 The rest of the steps take place on the XKS Proxy server.
 
@@ -100,7 +100,6 @@ to the XKS proxy. This helps to quickly setup a valid domain and TLS endpoint fo
 
    The important settings to change:
 
-   * `[tls]`: change key and certificate location to point to KMIP certs
    * `[[external_key_stores]]`:
      * change URI path prefix to anything you like
      * choose random access ID
@@ -158,11 +157,11 @@ to the XKS proxy. This helps to quickly setup a valid domain and TLS endpoint fo
    max_aad_in_base64 = 16384
 
    [hsm_capabilities]
-   can_generate_iv = true
-   is_zero_iv_required = true
+   can_generate_iv = false
+   is_zero_iv_required = false
    ```
 
-~> **Note**: This uses an IV of zero until the next release of `vault-pkcs11-provider`.
+~> **Note**: `vault-pkcs11-provider` versions of 0.1.0–0.1.2 require the last two lines to be changed to `can_generate_iv = true` and `is_zero_iv_required = true`.
 
 1. Create a file, `/etc/vault-pkcs11.hcl` with the following contents:
 
