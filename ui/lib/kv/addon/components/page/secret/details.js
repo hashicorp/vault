@@ -35,7 +35,6 @@ export default class KvSecretDetails extends Component {
   @tracked showJsonView = false;
   @tracked wrappedData = null;
 
-
   @action
   toggleJsonView() {
     this.showJsonView = !this.showJsonView;
