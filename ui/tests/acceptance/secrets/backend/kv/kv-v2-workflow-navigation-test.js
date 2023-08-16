@@ -160,8 +160,7 @@ module('Acceptance | kv-v2 workflow | navigation', function (hooks) {
       assertCorrectBreadcrumbs(assert, ['secret', backend, 'app', 'nested', 'secret']);
       assert.dom(PAGE.title).hasText('app/nested/secret', 'title is full secret path');
       assert.dom(PAGE.toolbar).exists('toolbar renders');
-      assert.dom(PAGE.toolbarAction).exists({ count: 4 }, 'correct number of toolbar actions render');
-
+      assert.dom(PAGE.toolbarAction).exists({ count: 5 }, 'correct number of toolbar actions render');
 
       await click(PAGE.breadcrumbAtIdx(3));
       assert.ok(
@@ -383,7 +382,7 @@ module('Acceptance | kv-v2 workflow | navigation', function (hooks) {
       assertCorrectBreadcrumbs(assert, ['secret', backend, 'app', 'nested', 'secret']);
       assert.dom(PAGE.title).hasText('app/nested/secret', 'title is full secret path');
       assert.dom(PAGE.toolbar).exists('toolbar renders');
-      assert.dom(PAGE.toolbarAction).exists({ count: 4 }, 'correct number of toolbar actions render');
+      assert.dom(PAGE.toolbarAction).exists({ count: 5 }, 'correct number of toolbar actions render');
 
       await click(PAGE.breadcrumbAtIdx(3));
       assert.ok(
@@ -606,8 +605,7 @@ module('Acceptance | kv-v2 workflow | navigation', function (hooks) {
       assertCorrectBreadcrumbs(assert, ['secret', backend, 'app', 'nested', 'secret']);
       assert.dom(PAGE.title).hasText('app/nested/secret', 'title is full secret path');
       assert.dom(PAGE.toolbar).exists('toolbar renders');
-      assert.dom(PAGE.toolbarAction).exists({ count: 4 }, 'correct number of toolbar actions render');
-
+      assert.dom(PAGE.toolbarAction).exists({ count: 5 }, 'correct number of toolbar actions render');
 
       await click(PAGE.breadcrumbAtIdx(3));
       assert.ok(
@@ -822,7 +820,7 @@ module('Acceptance | kv-v2 workflow | navigation', function (hooks) {
       assert.dom(PAGE.title).hasText('app/nested/secret', 'title is full secret path');
       assert.dom(PAGE.toolbar).exists('toolbar renders');
       // TODO: verify create new shouldn't show
-      assert.dom(PAGE.toolbarAction).exists({ count: 3 }, 'correct number of toolbar actions render');
+      assert.dom(PAGE.toolbarAction).exists({ count: 4 }, 'correct number of toolbar actions render');
 
       // TODO: add version to dropdown when no data
       // assert.dom(PAGE.detail.versionDropdown).hasText('Version 1');
