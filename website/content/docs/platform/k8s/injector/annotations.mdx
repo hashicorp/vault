@@ -27,7 +27,7 @@ them, optional commands to run, etc.
   Agent configuration file and templates can be found.
 
 - `vault.hashicorp.com/agent-image` - name of the Vault docker image to use. This
-  value overrides the default image configured in the controller and is usually
+  value overrides the default image configured in the injector and is usually
   not needed. Defaults to `hashicorp/vault:1.9.2`.
 
 - `vault.hashicorp.com/agent-init-first` - configures the pod to run the Vault Agent
@@ -222,7 +222,9 @@ etc.
   with Vault via mTLS.
 
 - `vault.hashicorp.com/client-max-retries` - configures number of Vault Agent retry
-  attempts when 5xx errors are encountered. Defaults to 2.
+  attempts when certain errors are encountered. Defaults to 2, for 3 total attempts.
+  Set this to `0` or less to disable retrying. Error codes that are retried are 412
+  (client consistency requirement not satisfied) and all 5xx except for 501 (not implemented).
 
 - `vault.hashicorp.com/client-timeout` - configures the request timeout threshold,
   in seconds, of the Vault Agent when communicating with Vault. Defaults to `60s`
@@ -243,9 +245,10 @@ etc.
 - `vault.hashicorp.com/role` - configures the Vault role used by the Vault Agent
   auto-auth method. Required when `vault.hashicorp.com/agent-configmap` is not set.
 
-- `vault.hashicorp.com/service` - name of the Vault service to use. This value
-  overrides the default service configured in the controller and is usually not
-  needed.
+- `vault.hashicorp.com/service` - configures the Vault address for the injected
+  Vault Agent to use. This value overrides the default Vault address configured
+  in the injector, and may either be the address of a Vault service within the
+  same Kubernetes cluster as the injector, or an external Vault URL.
 
 - `vault.hashicorp.com/tls-secret` - name of the Kubernetes secret containing TLS
   Client and CA certificates and keys. This is mounted to `/vault/tls`.

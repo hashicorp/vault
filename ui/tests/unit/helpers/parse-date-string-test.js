@@ -4,13 +4,13 @@ import { compareAsc } from 'date-fns';
 
 module('Unit | Helpers | parse-date-string', function() {
   test('it returns the first of the month when date like MM-yyyy passed in', function(assert) {
-    let expected = new Date(2020, 3, 1);
+    let expected = new Date(2020, 3, 10);
     let result = parseDateString('04-2020');
     assert.equal(compareAsc(expected, result), 0);
   });
 
   test('it can handle a date format like MM/yyyy', function(assert) {
-    let expected = new Date(2020, 11, 1);
+    let expected = new Date(2020, 11, 10);
     let result = parseDateString('12/2020', '/');
     assert.equal(compareAsc(expected, result), 0);
   });
