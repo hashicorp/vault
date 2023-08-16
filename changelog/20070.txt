@@ -1,0 +1,3 @@
+```release-note:bug
+ui: fixes remaining doc links to include /vault in path
+```

@@ -1,3 +1,8 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
 <PageHeader as |p|>
   <p.top>
     <KeyValueHeader
@@ -11,11 +16,11 @@
   <p.levelLeft>
     <h1 class="title is-3">
       {{#if (eq this.mode "create")}}
-        Create encryption key
+        Create Encryption Key
       {{else if (eq this.mode "edit")}}
-        Edit encryption key
+        Edit Encryption Key
       {{else}}
-        Encryption key
+        Encryption Key
         <code>{{this.key.id}}</code>
       {{/if}}
     </h1>

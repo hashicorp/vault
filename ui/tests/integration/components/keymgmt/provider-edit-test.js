@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import { module, test } from 'qunit';
 import { setupRenderingTest } from 'ember-qunit';
 import { render } from '@ember/test-helpers';
@@ -65,8 +70,8 @@ module('Integration | Component | keymgmt/provider-edit', function (hooks) {
     });
     this.owner.lookup('service:router').reopen({
       transitionTo(path, model, { queryParams: { tab } }) {
-        assert.equal(path, root.path, 'Root path sent in transitionTo on delete');
-        assert.equal(model, root.model, 'Root model sent in transitionTo on delete');
+        assert.strictEqual(path, root.path, 'Root path sent in transitionTo on delete');
+        assert.strictEqual(model, root.model, 'Root model sent in transitionTo on delete');
         assert.deepEqual(tab, 'provider', 'Correct query params sent in transitionTo on delete');
       },
     });
@@ -130,8 +135,12 @@ module('Integration | Component | keymgmt/provider-edit', function (hooks) {
     });
     this.owner.lookup('service:router').reopen({
       transitionTo(path, model, { queryParams: { itemType } }) {
-        assert.equal(path, 'vault.cluster.secrets.backend.show', 'Show route sent in transitionTo on save');
-        assert.equal(model, 'foo', 'Model id sent in transitionTo on save');
+        assert.strictEqual(
+          path,
+          'vault.cluster.secrets.backend.show',
+          'Show route sent in transitionTo on save'
+        );
+        assert.strictEqual(model, 'foo', 'Model id sent in transitionTo on save');
         assert.deepEqual(itemType, 'provider', 'Correct query params sent in transitionTo on save');
       },
     });
@@ -144,7 +153,7 @@ module('Integration | Component | keymgmt/provider-edit', function (hooks) {
         @mode="create"
       />`);
 
-    assert.dom(`[${ts}-header]`).hasText('Create provider', 'Page header renders');
+    assert.dom(`[${ts}-header]`).hasText('Create Provider', 'Page header renders');
     assert.dom(`[${ts}-config-title]`).exists('Config header shown in create mode');
     assert.dom(`[${ts}-creds-title]`).doesNotExist('New credentials header hidden in create mode');
 
@@ -190,8 +199,12 @@ module('Integration | Component | keymgmt/provider-edit', function (hooks) {
     });
     this.owner.lookup('service:router').reopen({
       transitionTo(path, model, { queryParams: { itemType } }) {
-        assert.equal(path, 'vault.cluster.secrets.backend.show', 'Show route sent in transitionTo on save');
-        assert.equal(model, 'foo', 'Model id sent in transitionTo on save');
+        assert.strictEqual(
+          path,
+          'vault.cluster.secrets.backend.show',
+          'Show route sent in transitionTo on save'
+        );
+        assert.strictEqual(model, 'foo', 'Model id sent in transitionTo on save');
         assert.deepEqual(itemType, 'provider', 'Correct query params sent in transitionTo on save');
       },
     });
@@ -202,7 +215,7 @@ module('Integration | Component | keymgmt/provider-edit', function (hooks) {
         @mode="edit"
       />`);
 
-    assert.dom(`[${ts}-header]`).hasText('Update credentials', 'Page header renders');
+    assert.dom(`[${ts}-header]`).hasText('Update Credentials', 'Page header renders');
     assert.dom(`[${ts}-config-title]`).doesNotExist('Config header hidden in edit mode');
     assert.dom(`[${ts}-creds-title]`).exists('New credentials header shown in edit mode');
 

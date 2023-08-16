@@ -1,0 +1,141 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
+// This file defines the styles for .field, .field-body, .form-fieldset
+
+.field {
+  // cannot use :read-only selector because tag used for other purposes
+  &.is-readOnly {
+    background-color: $ui-gray-100;
+    cursor: not-allowed;
+  }
+
+  &:not(:last-child) {
+    margin-bottom: $size-4;
+  }
+}
+// must come after field due to overriding the margin-bottom of not last-child
+.field-body .field {
+  margin-bottom: 0;
+}
+
+.field.has-addons {
+  flex-wrap: wrap;
+  .control {
+    .button,
+    .checkbox,
+    .input,
+    .select select {
+      border-radius: 0;
+      &:hover {
+        z-index: 2;
+      }
+      &:focus,
+      &:active,
+      &.is-active {
+        z-index: 3;
+        &:hover {
+          z-index: 4;
+        }
+      }
+    }
+    &:first-of-type {
+      flex-grow: 1;
+      .button,
+      .checkbox,
+      .input,
+      .select select {
+        border-bottom-left-radius: $radius;
+        border-top-left-radius: $radius;
+      }
+    }
+    &:last-child {
+      .button,
+      .checkbox,
+      .input,
+      .select select {
+        border-bottom-right-radius: $radius;
+        border-top-right-radius: $radius;
+      }
+    }
+  }
+  & > .label {
+    flex-grow: 1;
+    flex-shrink: 0;
+    width: 100%;
+  }
+}
+
+fieldset.form-fieldset {
+  border: none;
+}
+
+// field.is-grouped styles
+.field.is-grouped {
+  display: flex;
+  justify-content: flex-start;
+
+  > .control.is-expanded {
+    flex-grow: 1;
+    flex-shrink: 1;
+  }
+
+  > .control {
+    flex-shrink: 0;
+  }
+
+  > .control:not(:last-child) {
+    margin-bottom: 0;
+    margin-right: 0.75rem;
+  }
+
+  > .control.is-expanded {
+    flex-grow: 1;
+    flex-shrink: 1;
+  }
+}
+
+// responsive css
+@media screen and (min-width: 769px), print {
+  .field.is-horizontal {
+    display: flex;
+  }
+
+  .field-body {
+    display: flex;
+    flex-basis: 0;
+    flex-grow: 5;
+    flex-shrink: 1;
+
+    > .field:not(:last-child) {
+      margin-right: $size-9;
+    }
+    .field:not(.is-narrow) {
+      flex-grow: 1;
+    }
+  }
+
+  .field-label {
+    flex-basis: 0;
+    flex-grow: 1;
+    flex-shrink: 0;
+    margin-right: 1.5rem;
+    text-align: right;
+
+    &.is-normal {
+      padding-top: 0.375em;
+    }
+
+    &.is-medium {
+      font-size: 1.25rem;
+      padding-top: 0.375em;
+    }
+
+    &.is-large {
+      font-size: 1.5rem;
+      padding-top: 0.375em;
+    }
+  }
+}

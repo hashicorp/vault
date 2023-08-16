@@ -1,6 +1,11 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import Mixin from '@ember/object/mixin';
-import utils from 'vault/lib/key-utils';
 import { task } from 'ember-concurrency';
+import { ancestorKeysForKey } from 'core/utils/key-utils';
 
 // This mixin is currently used in a controller and a component, but we
 // don't see cancellation of the task as the while loop runs in either
@@ -13,12 +18,12 @@ import { task } from 'ember-concurrency';
 // the ancestors array and transitions to the root
 export default Mixin.create({
   navToNearestAncestor: task(function* (key) {
-    let ancestors = utils.ancestorKeysForKey(key);
+    const ancestors = ancestorKeysForKey(key);
     let errored = false;
     let nearest = ancestors.pop();
     while (nearest) {
       try {
-        let transition = this.transitionToRoute('vault.cluster.secrets.backend.list', nearest);
+        const transition = this.transitionToRoute('vault.cluster.secrets.backend.list', nearest);
         transition.data.isDeletion = true;
         yield transition.promise;
       } catch (e) {

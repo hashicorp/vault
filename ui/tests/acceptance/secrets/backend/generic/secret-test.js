@@ -1,6 +1,13 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import { currentRouteName } from '@ember/test-helpers';
 import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
+import { v4 as uuidv4 } from 'uuid';
+
 import editPage from 'vault/tests/pages/secrets/backend/kv/edit-secret';
 import showPage from 'vault/tests/pages/secrets/backend/kv/show';
 import listPage from 'vault/tests/pages/secrets/backend/list';
@@ -17,6 +24,7 @@ module('Acceptance | secrets/generic/create', function (hooks) {
   setupApplicationTest(hooks);
 
   hooks.beforeEach(function () {
+    this.uid = uuidv4();
     this.server = apiStub({ usePassthrough: true });
     return authPage.login();
   });
@@ -26,22 +34,30 @@ module('Acceptance | secrets/generic/create', function (hooks) {
   });
 
   test('it creates and can view a secret with the generic backend', async function (assert) {
-    const path = `generic-${new Date().getTime()}`;
-    const kvPath = `generic-kv-${new Date().getTime()}`;
+    const path = `generic-${this.uid}`;
+    const kvPath = `generic-kv-${this.uid}`;
     await cli.runCommands([`write sys/mounts/${path} type=generic`, `write ${path}/foo bar=baz`]);
     await listPage.visitRoot({ backend: path });
-    assert.equal(currentRouteName(), 'vault.cluster.secrets.backend.list-root', 'navigates to the list page');
-    assert.equal(listPage.secrets.length, 1, 'lists one secret in the backend');
+    assert.strictEqual(
+      currentRouteName(),
+      'vault.cluster.secrets.backend.list-root',
+      'navigates to the list page'
+    );
+    assert.strictEqual(listPage.secrets.length, 1, 'lists one secret in the backend');
 
     await listPage.create();
     await editPage.createSecret(kvPath, 'foo', 'bar');
-    assert.equal(currentRouteName(), 'vault.cluster.secrets.backend.show', 'redirects to the show page');
+    assert.strictEqual(
+      currentRouteName(),
+      'vault.cluster.secrets.backend.show',
+      'redirects to the show page'
+    );
     assert.ok(showPage.editIsPresent, 'shows the edit button');
   });
 
   test('upgrading generic to version 2 lists all existing secrets, and CRUD continues to work', async function (assert) {
-    const path = `generic-${new Date().getTime()}`;
-    const kvPath = `generic-kv-${new Date().getTime()}`;
+    const path = `generic-${this.uid}`;
+    const kvPath = `generic-kv-${this.uid}`;
     await cli.runCommands([
       `write sys/mounts/${path} type=generic`,
       `write ${path}/foo bar=baz`,
@@ -49,12 +65,16 @@ module('Acceptance | secrets/generic/create', function (hooks) {
       `write sys/mounts/${path}/tune options=version=2`,
     ]);
     await listPage.visitRoot({ backend: path });
-    assert.equal(currentRouteName(), 'vault.cluster.secrets.backend.list-root', 'navigates to the list page');
-    assert.equal(listPage.secrets.length, 1, 'lists the old secret in the backend');
+    assert.strictEqual(
+      currentRouteName(),
+      'vault.cluster.secrets.backend.list-root',
+      'navigates to the list page'
+    );
+    assert.strictEqual(listPage.secrets.length, 1, 'lists the old secret in the backend');
 
     await listPage.create();
     await editPage.createSecret(kvPath, 'foo', 'bar');
     await listPage.visitRoot({ backend: path });
-    assert.equal(listPage.secrets.length, 2, 'lists two secrets in the backend');
+    assert.strictEqual(listPage.secrets.length, 2, 'lists two secrets in the backend');
   });
 });

@@ -6,12 +6,12 @@ description: >-
   cryptographic modules.
 ---
 
-# `Entropy Augmentation` Seal
+# `Entropy augmentation` seal
 
 Entropy augmentation enables Vault to sample entropy from external cryptographic modules.
-Sourcing external entropy is done by configuring a supported [Seal](/docs/configuration/seal) type which
-include: [PKCS11 seal](/docs/configuration/seal/pkcs11), [AWS KMS](/docs/configuration/seal/awskms), and
-[Vault Transit](/docs/configuration/seal/transit).
+Sourcing external entropy is done by configuring a supported [Seal](/vault/docs/configuration/seal) type which
+include: [PKCS11 seal](/vault/docs/configuration/seal/pkcs11), [AWS KMS](/vault/docs/configuration/seal/awskms), and
+[Vault Transit](/vault/docs/configuration/seal/transit).
 Vault Enterprises's external entropy support is activated by the presence of an `entropy "seal"`
 block in Vault's configuration file.
 
@@ -22,7 +22,7 @@ A valid Vault Enterprise license is required for Entropy Augmentation.
 ~> **Warning** This feature is not available with FIPS 140-2 Inside variants of Vault.
 
 Additionally, the following software packages and enterprise modules are required for sourcing entropy
-via the [PKCS11 seal](/docs/configuration/seal/pkcs11):
+via the [PKCS11 seal](/vault/docs/configuration/seal/pkcs11):
 
 - Vault Enterprise with the Plus package
 - PKCS#11 compatible HSM integration library. Vault targets version 2.2 or
@@ -31,7 +31,7 @@ via the [PKCS11 seal](/docs/configuration/seal/pkcs11):
 - The [GNU libltdl library](https://www.gnu.org/software/libtool/manual/html_node/Using-libltdl)
   — ensure that it is installed for the correct architecture of your servers
 
-## `entropy` Example
+## `entropy` example
 
 This example shows configuring entropy augmentation through a PKCS11 HSM seal from Vault's configuration
 file:
@@ -46,13 +46,13 @@ entropy "seal" {
 }
 ```
 
-For a more detailed tutorial, visit the [HSM Entropy Challenge](https://learn.hashicorp.com/vault/operations/hsm-entropy)
+For a more detailed tutorial, visit the [HSM Entropy Challenge](/vault/tutorials/enterprise/hsm-entropy)
 on HashiCorp's Learn website.
 
-## `entropy augmentation` Parameters
+## `entropy augmentation` parameters
 
 These parameters apply to the `entropy` stanza in the Vault configuration file:
 
 - `mode` `(string: <required>)`: The mode determines which Vault operations requiring
   entropy will sample entropy from the external source. Currently, the only mode supported
-  is `augmentation` which sources entropy for [Critical Security Parameters (CSPs)](/docs/enterprise/entropy-augmentation#critical-security-parameters-csps).
+  is `augmentation` which sources entropy for [Critical Security Parameters (CSPs)](/vault/docs/enterprise/entropy-augmentation#critical-security-parameters-csps).

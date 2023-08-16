@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package pki
 
 import (
@@ -13,7 +16,8 @@ import (
 
 func TestPki_FetchCertBySerial(t *testing.T) {
 	t.Parallel()
-	b, storage := createBackendWithStorage(t)
+	b, storage := CreateBackendWithStorage(t)
+	sc := b.makeStorageContext(ctx, storage)
 
 	cases := map[string]struct {
 		Req    *logical.Request
@@ -47,7 +51,7 @@ func TestPki_FetchCertBySerial(t *testing.T) {
 			t.Fatalf("error writing to storage on %s colon-based storage path: %s", name, err)
 		}
 
-		certEntry, err := fetchCertBySerial(context.Background(), b, tc.Req, tc.Prefix, tc.Serial)
+		certEntry, err := fetchCertBySerial(sc, tc.Prefix, tc.Serial)
 		if err != nil {
 			t.Fatalf("error on %s for colon-based storage path: %s", name, err)
 		}
@@ -82,7 +86,7 @@ func TestPki_FetchCertBySerial(t *testing.T) {
 			t.Fatalf("error writing to storage on %s hyphen-based storage path: %s", name, err)
 		}
 
-		certEntry, err := fetchCertBySerial(context.Background(), b, tc.Req, tc.Prefix, tc.Serial)
+		certEntry, err := fetchCertBySerial(sc, tc.Prefix, tc.Serial)
 		if err != nil || certEntry == nil {
 			t.Fatalf("error on %s for hyphen-based storage path: err: %v, entry: %v", name, err, certEntry)
 		}
@@ -110,7 +114,7 @@ func TestPki_MultipleOUs(t *testing.T) {
 			OU:     []string{"Z", "E", "V"},
 		},
 	}
-	cb, err := generateCreationBundle(&b, input, nil, nil)
+	cb, _, err := generateCreationBundle(&b, input, nil, nil)
 	if err != nil {
 		t.Fatalf("Error: %v", err)
 	}
@@ -170,6 +174,24 @@ func TestPki_PermitFQDNs(t *testing.T) {
 			expectedDnsNames: []string{"Example.Net", "eXaMPLe.COM"},
 			expectedEmails:   []string{},
 		},
+		"case insensitivity subdomain validation": {
+			input: &inputBundle{
+				apiData: &framework.FieldData{
+					Schema: fields,
+					Raw: map[string]interface{}{
+						"common_name": "SUB.EXAMPLE.COM",
+						"ttl":         3600,
+					},
+				},
+				role: &roleEntry{
+					AllowedDomains:   []string{"example.com", "*.Example.com"},
+					AllowGlobDomains: true,
+					MaxTTL:           3600,
+				},
+			},
+			expectedDnsNames: []string{"SUB.EXAMPLE.COM"},
+			expectedEmails:   []string{},
+		},
 		"case email as AllowedDomain with bare domains": {
 			input: &inputBundle{
 				apiData: &framework.FieldData{
@@ -212,7 +234,7 @@ func TestPki_PermitFQDNs(t *testing.T) {
 		name := name
 		testCase := testCase
 		t.Run(name, func(t *testing.T) {
-			cb, err := generateCreationBundle(&b, testCase.input, nil, nil)
+			cb, _, err := generateCreationBundle(&b, testCase.input, nil, nil)
 			if err != nil {
 				t.Fatalf("Error: %v", err)
 			}

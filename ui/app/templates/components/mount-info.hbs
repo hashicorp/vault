@@ -1,10 +1,15 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
 <PageHeader as |p|>
   <p.top>
     <KeyValueHeader @baseKey={{this.model}} @path="vault.cluster.access.method" @root={{this.root}} @showCurrent={{true}} />
   </p.top>
   <p.levelLeft>
     <h1 class="title is-3">
-      {{capitalize this.model.methodType}}
+      {{titleize this.model.methodType}}
     </h1>
   </p.levelLeft>
   <p.levelRight>

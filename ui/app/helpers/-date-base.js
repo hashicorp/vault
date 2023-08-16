@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import { run } from '@ember/runloop';
 import Helper from '@ember/component/helper';
 import Ember from 'ember';

@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package sealmigration
 
 import (
@@ -6,15 +9,15 @@ import (
 
 	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/helper/testhelpers"
+	"github.com/hashicorp/vault/helper/testhelpers/corehelpers"
 	"github.com/hashicorp/vault/helper/testhelpers/teststorage"
-	"github.com/hashicorp/vault/sdk/helper/logging"
 	"github.com/hashicorp/vault/vault"
 )
 
 type testFunc func(t *testing.T, logger hclog.Logger, storage teststorage.ReusableStorage, basePort int)
 
 func testVariousBackends(t *testing.T, tf testFunc, basePort int, includeRaft bool) {
-	logger := logging.NewVaultLogger(hclog.Trace).Named(t.Name())
+	logger := corehelpers.NewTestLogger(t)
 
 	t.Run("inmem", func(t *testing.T) {
 		t.Parallel()

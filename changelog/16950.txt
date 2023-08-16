@@ -1,0 +1,3 @@
+```release-note:improvement
+website/docs: Add documentation around the expensiveness of making lots of lease count quotas in a short period
+```
