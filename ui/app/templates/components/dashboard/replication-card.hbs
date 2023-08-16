@@ -12,16 +12,20 @@
   {{! check if user has access to both perf replication and dr replication }}
   {{#if (and @version.hasPerfReplication @version.hasDRReplication)}}
     <hr class="has-background-gray-100" />
-    <div class="is-grid grid-2-columns grid-gap-2 has-top-margin-m has-bottom-margin-m grid-align-items-start">
+    <div
+      class="is-grid grid-2-columns grid-gap-2 has-top-margin-m has-bottom-margin-m grid-align-items-start"
+      data-test-dr-perf-replication
+    >
       <div>
         <div class="has-bottom-margin-s">
           <Hds::Link::Inline
             class="title is-5 has-text-weight-semibold"
             @route="vault.cluster.replication.mode.index"
             @model="dr"
-          >DR Primary</Hds::Link::Inline>
+            data-test-dr-title
+          >DR primary</Hds::Link::Inline>
         </div>
-        <div class="title is-4 has-text-weight-semibold has-top-margin-xs">
+        <div class="title is-4 has-text-weight-semibold has-top-margin-xs" data-test-dr-state>
           {{@replication.dr.state}}
           <Hds::TooltipButton @text="The cluster's current operating state">
             <FlightIcon @name={{get (cluster-states @replication.dr.state) "glyph"}} class="has-text-success" />
@@ -34,17 +38,18 @@
             class="title is-5 has-text-weight-semibold"
             @route="vault.cluster.replication.mode.index"
             @model="performance"
+            data-test-performance-title
           >Perf primary</Hds::Link::Inline>
         </div>
         {{#if @replication.performance.clusterId}}
-          <div class="title is-4 has-text-weight-semibold has-top-margin-xs">
+          <div class="title is-4 has-text-weight-semibold has-top-margin-xs" data-test-performance-state>
             {{@replication.performance.state}}
             <Hds::TooltipButton @text="The cluster’s current operating state">
               <FlightIcon @name={{get (cluster-states @replication.performance.state) "glyph"}} class="has-text-success" />
             </Hds::TooltipButton>
           </div>
         {{else}}
-          <div class="title is-4 has-text-weight-semibold has-top-margin-xs">
+          <div class="title is-4 has-text-weight-semibold has-top-margin-xs" data-test-performance-state>
             not set up
             <Hds::TooltipButton @text="The cluster’s current operating state">
               <FlightIcon @name="x-circle-fill" class="has-text-danger" />
@@ -64,15 +69,18 @@
       >DR Primary</Hds::Link::Inline>
     </div>
 
-    <div class="is-grid grid-2-columns grid-gap-2 has-top-margin-m has-bottom-margin-m grid-align-items-start">
+    <div
+      class="is-grid grid-2-columns grid-gap-2 has-top-margin-m has-bottom-margin-m grid-align-items-start"
+      data-test-dr-replication
+    >
       <div>
-        <div class="has-bottom-margin-xxs title is-5 has-text-weight-semibold">
+        <div class="has-bottom-margin-xxs title is-5 has-text-weight-semibold" data-test-dr-state-title>
           state
         </div>
-        <div class="has-text-grey-dark title is-8 has-font-weight-normal">
+        <div class="has-text-grey-dark title is-8 has-font-weight-normal" data-test-dr-state-description>
           The current operating state of the cluster. The value should be 'running'.
         </div>
-        <div class="title is-4 has-text-weight-semibold has-top-margin-xs">
+        <div class="title is-4 has-text-weight-semibold has-top-margin-xs" data-test-dr-state>
           {{@replication.dr.state}}
           <Hds::TooltipButton @text="The cluster's current operating state">
             <FlightIcon @name={{get (cluster-states @replication.dr.state) "glyph"}} class="has-text-success" />
@@ -80,17 +88,18 @@
         </div>
       </div>
       <div>
-        <div class="has-bottom-margin-xs title is-5 has-text-weight-semibold">
+        <div class="has-bottom-margin-xs title is-5 has-text-weight-semibold" data-test-dr-known-secondaries-title>
           known secondaries
         </div>
-        <div class="has-text-grey-dark title is-8 has-font-weight-normal">Number of secondaries connected to this primary.</div>
-        <div class="title is-4 has-text-weight-semibold has-top-margin-xs">
+        <div class="has-text-grey-dark title is-8 has-font-weight-normal" data-test-dr-known-secondaries-description>Number
+          of secondaries connected to this primary.</div>
+        <div class="title is-4 has-text-weight-semibold has-top-margin-xs" data-test-dr-known-secondaries>
           {{or @replication.dr.knownSecondaries.length 0}}
         </div>
       </div>
     </div>
   {{/if}}
-  <div class="has-top-margin-l is-flex-center">
+  <div class="has-top-margin-s is-flex-center">
     <Hds::Button
       @text="Refresh"
       @isIconOnly={{true}}
