@@ -1,3 +1,6 @@
+# Copyright (c) HashiCorp, Inc.
+# SPDX-License-Identifier: BUSL-1.1
+
 terraform {
   required_providers {
     # We need to specify the provider source in each module until we publish it
@@ -129,6 +132,7 @@ resource "enos_consul_start" "consul" {
     log_level        = var.consul_log_level
     log_file         = var.consul_log_file
   }
+  license   = var.consul_license
   unit_name = "consul"
   username  = "consul"
 

@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 package identity
 
@@ -61,7 +61,7 @@ func TestLoginMfaGenerateTOTPTestAuditIncluded(t *testing.T) {
 			"totp": totp.Factory,
 		},
 		AuditBackends: map[string]audit.Factory{
-			"noop": func(ctx context.Context, config *audit.BackendConfig, _ bool) (audit.Backend, error) {
+			"noop": func(ctx context.Context, config *audit.BackendConfig, _ bool, _ audit.HeaderFormatter) (audit.Backend, error) {
 				return noop, nil
 			},
 		},

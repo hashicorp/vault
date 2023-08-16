@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 package vault
 
@@ -1692,8 +1692,14 @@ func (ts *TokenStore) lookupInternal(ctx context.Context, id string, salted, tai
 	// If we are still restoring the expiration manager, we want to ensure the
 	// token is not expired
 	if ts.expiration == nil {
-		return nil, errors.New("expiration manager is nil on tokenstore")
+		switch ts.core.IsDRSecondary() {
+		case true: // Bail if on DR secondary as expiration manager is nil
+			return nil, nil
+		default:
+			return nil, errors.New("expiration manager is nil on tokenstore")
+		}
 	}
+
 	le, err := ts.expiration.FetchLeaseTimesByToken(ctx, entry)
 	if err != nil {
 		return nil, fmt.Errorf("failed to fetch lease times: %w", err)
@@ -3294,16 +3300,6 @@ func (ts *TokenStore) handleRevokeOrphan(ctx context.Context, req *logical.Reque
 	id := data.Get("token").(string)
 	if id == "" {
 		return logical.ErrorResponse("missing token ID"), logical.ErrInvalidRequest
-	}
-
-	// TODO #21772 makes the sudo check below redundant, by correcting the TokenStore's PathsSpecial.Root to match this endpoint
-
-	// Check if the client token has sudo/root privileges for the requested path
-	isSudo := ts.System().(extendedSystemView).SudoPrivilege(ctx, req.MountPoint+req.Path, req.ClientToken)
-
-	if !isSudo {
-		return logical.ErrorResponse("root or sudo privileges required to revoke and orphan"),
-			logical.ErrInvalidRequest
 	}
 
 	// Do a lookup. Among other things, that will ensure that this is either

@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 package socket
 
@@ -12,14 +12,16 @@ import (
 	"sync"
 	"time"
 
+	"github.com/hashicorp/eventlogger"
 	"github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/go-secure-stdlib/parseutil"
 	"github.com/hashicorp/vault/audit"
+	"github.com/hashicorp/vault/internal/observability/event"
 	"github.com/hashicorp/vault/sdk/helper/salt"
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
-func Factory(ctx context.Context, conf *audit.BackendConfig, useEventLogger bool) (audit.Backend, error) {
+func Factory(ctx context.Context, conf *audit.BackendConfig, useEventLogger bool, headersConfig audit.HeaderFormatter) (audit.Backend, error) {
 	if conf.SaltConfig == nil {
 		return nil, fmt.Errorf("nil salt config")
 	}
@@ -48,10 +50,10 @@ func Factory(ctx context.Context, conf *audit.BackendConfig, useEventLogger bool
 
 	format, ok := conf.Config["format"]
 	if !ok {
-		format = "json"
+		format = audit.JSONFormat.String()
 	}
 	switch format {
-	case "json", "jsonx":
+	case audit.JSONFormat.String(), audit.JSONxFormat.String():
 	default:
 		return nil, fmt.Errorf("unknown format type %q", format)
 	}
@@ -106,15 +108,15 @@ func Factory(ctx context.Context, conf *audit.BackendConfig, useEventLogger bool
 	}
 
 	// Configure the formatter for either case.
-	f, err := audit.NewEntryFormatter(b.formatConfig, b)
+	f, err := audit.NewEntryFormatter(b.formatConfig, b, audit.WithHeaderFormatter(headersConfig))
 	if err != nil {
 		return nil, fmt.Errorf("error creating formatter: %w", err)
 	}
 	var w audit.Writer
 	switch format {
-	case "json":
+	case audit.JSONFormat.String():
 		w = &audit.JSONWriter{Prefix: conf.Config["prefix"]}
-	case "jsonx":
+	case audit.JSONxFormat.String():
 		w = &audit.JSONxWriter{Prefix: conf.Config["prefix"]}
 	}
 
@@ -124,6 +126,30 @@ func Factory(ctx context.Context, conf *audit.BackendConfig, useEventLogger bool
 	}
 
 	b.formatter = fw
+
+	if useEventLogger {
+		b.nodeIDList = make([]eventlogger.NodeID, 2)
+		b.nodeMap = make(map[eventlogger.NodeID]eventlogger.Node)
+
+		formatterNodeID, err := event.GenerateNodeID()
+		if err != nil {
+			return nil, fmt.Errorf("error generating random NodeID for formatter node: %w", err)
+		}
+		b.nodeIDList[0] = formatterNodeID
+		b.nodeMap[formatterNodeID] = f
+
+		n, err := event.NewSocketSink(format, address, event.WithSocketType(socketType), event.WithMaxDuration(writeDuration.String()))
+		if err != nil {
+			return nil, fmt.Errorf("error creating socket sink node: %w", err)
+		}
+		sinkNode := &audit.SinkWrapper{Name: conf.MountPath, Sink: n}
+		sinkNodeID, err := event.GenerateNodeID()
+		if err != nil {
+			return nil, fmt.Errorf("error generating random NodeID for sink node: %w", err)
+		}
+		b.nodeIDList[1] = sinkNodeID
+		b.nodeMap[sinkNodeID] = sinkNode
+	}
 
 	return b, nil
 }
@@ -145,17 +171,12 @@ type Backend struct {
 	salt       *salt.Salt
 	saltConfig *salt.Config
 	saltView   logical.Storage
+
+	nodeIDList []eventlogger.NodeID
+	nodeMap    map[eventlogger.NodeID]eventlogger.Node
 }
 
 var _ audit.Backend = (*Backend)(nil)
-
-func (b *Backend) GetHash(ctx context.Context, data string) (string, error) {
-	salt, err := b.Salt(ctx)
-	if err != nil {
-		return "", err
-	}
-	return audit.HashString(salt, data), nil
-}
 
 func (b *Backend) LogRequest(ctx context.Context, in *logical.LogInput) error {
 	var buf bytes.Buffer
@@ -204,6 +225,12 @@ func (b *Backend) LogResponse(ctx context.Context, in *logical.LogInput) error {
 }
 
 func (b *Backend) LogTestMessage(ctx context.Context, in *logical.LogInput, config map[string]string) error {
+	// Event logger behavior - manually Process each node
+	if len(b.nodeIDList) > 0 {
+		return audit.ProcessManual(ctx, in, b.nodeIDList, b.nodeMap)
+	}
+
+	// Old behavior
 	var buf bytes.Buffer
 
 	temporaryFormatter, err := audit.NewTemporaryFormatter(config["format"], config["prefix"])
@@ -305,4 +332,22 @@ func (b *Backend) Invalidate(_ context.Context) {
 	b.saltMutex.Lock()
 	defer b.saltMutex.Unlock()
 	b.salt = nil
+}
+
+// RegisterNodesAndPipeline registers the nodes and a pipeline as required by
+// the audit.Backend interface.
+func (b *Backend) RegisterNodesAndPipeline(broker *eventlogger.Broker, name string) error {
+	for id, node := range b.nodeMap {
+		if err := broker.RegisterNode(id, node); err != nil {
+			return err
+		}
+	}
+
+	pipeline := eventlogger.Pipeline{
+		PipelineID: eventlogger.PipelineID(name),
+		EventType:  eventlogger.EventType("audit"),
+		NodeIDs:    b.nodeIDList,
+	}
+
+	return broker.RegisterPipeline(pipeline)
 }

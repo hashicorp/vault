@@ -1,6 +1,6 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 import { module, test } from 'qunit';
@@ -34,7 +34,6 @@ module('Acceptance | pki configuration test', function (hooks) {
     await authPage.login();
     // Cleanup engine
     await runCommands([`delete sys/mounts/${this.mountPath}`]);
-    await logout.visit();
   });
 
   module('delete all issuers modal and empty states', function (hooks) {

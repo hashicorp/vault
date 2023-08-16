@@ -1,4 +1,7 @@
 #!/bin/bash
+# Copyright (c) HashiCorp, Inc.
+# SPDX-License-Identifier: BUSL-1.1
+
 
 set -e
 
@@ -16,7 +19,8 @@ function update_or_create_comment {
                  -H "Accept: application/vnd.github+json" \
                  -H "X-GitHub-Api-Version: 2022-11-28" \
                  --paginate \
-                 /repos/hashicorp/"$REPO"/issues/"$PR_NUMBER"/comments | jq -r --arg SEARCH_KEY "$SEARCH_KEY" '.[] | select (.body | contains($SEARCH_KEY)) | .id')
+                 /repos/hashicorp/"$REPO"/issues/"$PR_NUMBER"/comments |
+                 jq -r --arg SEARCH_KEY "$SEARCH_KEY" '.[] | select (.body | startswith($SEARCH_KEY)) | .id')
 
   if [[ "$comment_id" != "" ]]; then
     # update the comment with the new body

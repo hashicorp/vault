@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 package audit
 
@@ -189,9 +189,10 @@ func TestEntryFormatter_FormatRequest(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
+			ss := newStaticSalt(t)
 			cfg, err := NewFormatterConfig()
 			require.NoError(t, err)
-			f, err := NewEntryFormatter(cfg, newStaticSalt(t))
+			f, err := NewEntryFormatter(cfg, ss)
 			require.NoError(t, err)
 
 			var ctx context.Context
@@ -255,9 +256,10 @@ func TestEntryFormatter_FormatResponse(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
+			ss := newStaticSalt(t)
 			cfg, err := NewFormatterConfig()
 			require.NoError(t, err)
-			f, err := NewEntryFormatter(cfg, newStaticSalt(t))
+			f, err := NewEntryFormatter(cfg, ss)
 			require.NoError(t, err)
 
 			var ctx context.Context
