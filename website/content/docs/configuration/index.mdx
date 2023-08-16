@@ -4,7 +4,7 @@ page_title: Server Configuration
 description: Vault server configuration reference.
 ---
 
-# Vault Configuration
+# Vault configuration
 
 Outside of development mode, Vault servers are configured using a file.
 The format of this file is [HCL](https://github.com/hashicorp/hcl) or JSON.
@@ -190,7 +190,7 @@ to specify where the configuration is.
   participating in a Raft cluster, this header will be omitted, whether this configuration
   option is enabled or not.
 
-### High Availability Parameters
+### High availability parameters
 
 The following parameters are used on backends that support [high availability][high-availability].
 
@@ -217,7 +217,7 @@ The following parameters are used on backends that support [high availability][h
   will disable these features _only when that node is the active node_. This
   parameter cannot be set to `true` if `raft` is the storage type.
 
-### Vault Enterprise Parameters
+### Vault enterprise parameters
 
 The following parameters are only used with Vault Enterprise
 
@@ -241,4 +241,4 @@ The following parameters are only used with Vault Enterprise
 [telemetry]: /docs/configuration/telemetry
 [sentinel]: /docs/configuration/sentinel
 [high-availability]: /docs/concepts/ha
-[plugins]: /docs/plugin
+[plugins]: /docs/plugins

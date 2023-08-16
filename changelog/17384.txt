@@ -1,0 +1,3 @@
+```release-note:bug
+secrets/pki: Do not read revoked certificates from backend when CRL is disabled
+```

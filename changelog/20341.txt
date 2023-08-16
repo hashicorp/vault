@@ -1,0 +1,3 @@
+```release-note:bug
+secrets/pki: Fix patching of leaf_not_after_behavior on issuers.
+```
