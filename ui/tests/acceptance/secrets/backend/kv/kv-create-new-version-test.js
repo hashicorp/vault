@@ -63,6 +63,6 @@ module('Acceptance | kv | creates a secret and a new version', function (hooks) 
       `/vault/secrets/${this.mountPath}/kv/${secretPath}/details?version=2`,
       'list view navigates to latest version'
     );
-    assert.dom(PAGE.detail.versionCreated).hasTextContaining('Version 2');
+    assert.dom(PAGE.detail.versionTimestamp).hasTextContaining('Version 2');
   });
 });

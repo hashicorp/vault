@@ -94,7 +94,7 @@ module('Acceptance | kv-v2 workflow | secret and version create', function (hook
         `/vault/secrets/${backend}/kv/${encodeURIComponent(secretPath)}/details?version=1`,
         'Goes to details page after save'
       );
-      assert.dom(PAGE.detail.versionCreated).includesText('Version 1 created');
+      assert.dom(PAGE.detail.versionTimestamp).includesText('Version 1 created');
       assert.dom(PAGE.secretRow).exists({ count: 1 }, '1 row of data shows');
       assert.dom(PAGE.infoRowValue('api_key')).hasText('***********');
       await click(PAGE.infoRowToggleMasked('api_key'));
@@ -131,7 +131,7 @@ module('Acceptance | kv-v2 workflow | secret and version create', function (hook
         currentURL(),
         `/vault/secrets/${backend}/kv/${encodeURIComponent(secretPath)}/details?version=2`
       );
-      assert.dom(PAGE.detail.versionCreated).includesText('Version 2 created');
+      assert.dom(PAGE.detail.versionTimestamp).includesText('Version 2 created');
       assert.dom(PAGE.secretRow).exists({ count: 2 }, '2 rows of data shows');
       assert.dom(PAGE.infoRowValue('api_key')).hasText('***********');
       assert.dom(PAGE.infoRowValue('api_url')).hasText('***********');
@@ -184,7 +184,7 @@ module('Acceptance | kv-v2 workflow | secret and version create', function (hook
         currentURL(),
         `/vault/secrets/${backend}/kv/${encodeURIComponent('my/secret')}/details?version=1`
       );
-      assert.dom(PAGE.detail.versionCreated).includesText('Version 1 created');
+      assert.dom(PAGE.detail.versionTimestamp).includesText('Version 1 created');
       assert.dom(PAGE.secretRow).exists({ count: 1 }, '1 row of data shows');
       assert.dom(PAGE.infoRowValue('password')).hasText('***********');
       await click(PAGE.infoRowToggleMasked('password'));
@@ -245,7 +245,7 @@ module('Acceptance | kv-v2 workflow | secret and version create', function (hook
         `/vault/secrets/${backend}/kv/app%2Ffirst/details?version=1`,
         'goes to version 1'
       );
-      assert.dom(PAGE.detail.versionCreated).includesText('Version 1 created');
+      assert.dom(PAGE.detail.versionTimestamp).includesText('Version 1 created');
       await click(PAGE.detail.createNewVersion);
       assert.strictEqual(
         currentURL(),
@@ -332,7 +332,7 @@ module('Acceptance | kv-v2 workflow | secret and version create', function (hook
 
       // Since this persona can't create a new secret, test update with existing:
       await visit(`/vault/secrets/${backend}/kv/app%2Ffirst/details`);
-      assert.dom(PAGE.detail.versionCreated).includesText('Version 2 created');
+      assert.dom(PAGE.detail.versionTimestamp).includesText('Version 2 created');
       assert.dom(PAGE.secretRow).exists({ count: 1 }, '1 row of data shows');
       assert.dom(PAGE.infoRowValue('foo')).hasText('***********');
       await click(PAGE.infoRowToggleMasked('foo'));
@@ -427,7 +427,7 @@ module('Acceptance | kv-v2 workflow | secret and version create', function (hook
       await visit(`/vault/secrets/${backend}/kv/app%2Ffirst/details?version=1`);
       // TODO: Should hide dropdown for no metadata access
       // assert.dom(PAGE.detail.versionDropdown).doesNotExist('version dropdown does not show');
-      assert.dom(PAGE.detail.versionCreated).includesText('Version 1 created');
+      assert.dom(PAGE.detail.versionTimestamp).includesText('Version 1 created');
       await click(PAGE.detail.createNewVersion);
       assert.strictEqual(
         currentURL(),
@@ -515,7 +515,7 @@ module('Acceptance | kv-v2 workflow | secret and version create', function (hook
 
       // Since this persona can't create a new secret, test update with existing:
       await visit(`/vault/secrets/${backend}/kv/app%2Ffirst/details`);
-      assert.dom(PAGE.detail.versionCreated).includesText('Version 2 created');
+      assert.dom(PAGE.detail.versionTimestamp).includesText('Version 2 created');
       assert.dom(PAGE.secretRow).exists({ count: 1 }, '1 row of data shows');
       assert.dom(PAGE.infoRowValue('foo')).hasText('***********');
       await click(PAGE.infoRowToggleMasked('foo'));
@@ -610,7 +610,7 @@ module('Acceptance | kv-v2 workflow | secret and version create', function (hook
       await visit(`/vault/secrets/${backend}/kv/app%2Ffirst/details?version=1`);
       // TODO: Should hide dropdown for no metadata access
       // assert.dom(PAGE.detail.versionDropdown).doesNotExist('version dropdown does not show');
-      assert.dom(PAGE.detail.versionCreated).includesText('Version 1 created');
+      assert.dom(PAGE.detail.versionTimestamp).includesText('Version 1 created');
       await click(PAGE.detail.createNewVersion);
       assert.strictEqual(
         currentURL(),
@@ -693,7 +693,7 @@ module('Acceptance | kv-v2 workflow | secret and version create', function (hook
 
       // Since this persona can't create a new secret, test update with existing:
       await visit(`/vault/secrets/${backend}/kv/app%2Ffirst/details`);
-      assert.dom(PAGE.detail.versionCreated).doesNotExist('Version created tooltip does not show');
+      assert.dom(PAGE.detail.versionTimestamp).doesNotExist('Version created tooltip does not show');
       assert.dom(PAGE.secretRow).doesNotExist('secret data not shown');
       assert.dom(PAGE.emptyStateTitle).hasText('You do not have permission to read this secret');
 
@@ -806,7 +806,7 @@ module('Acceptance | kv-v2 workflow | secret and version create', function (hook
         'goes to version 1'
       );
       // TODO: version created info should exist
-      // assert.dom(PAGE.detail.versionCreated).includesText('Version 1 created');
+      // assert.dom(PAGE.detail.versionTimestamp).includesText('Version 1 created');
       assert.dom(PAGE.detail.createNewVersion).doesNotExist('create new version button not rendered');
       await visit(`/vault/secrets/${backend}/kv/app%2Ffirst/details/edit?version=1`);
       assert
@@ -905,7 +905,7 @@ module('Acceptance | kv-v2 workflow | secret and version create', function (hook
         `/vault/secrets/${backend}/kv/${encodeURIComponent(secretPath)}/details`,
         'Goes to details page after save'
       );
-      assert.dom(PAGE.detail.versionCreated).doesNotExist('Version created not shown');
+      assert.dom(PAGE.detail.versionTimestamp).doesNotExist('Version created not shown');
       assert.dom(PAGE.secretRow).doesNotExist('does not show data contents');
       assert
         .dom(PAGE.emptyStateTitle)
@@ -941,7 +941,7 @@ module('Acceptance | kv-v2 workflow | secret and version create', function (hook
         `/vault/secrets/${backend}/kv/${encodeURIComponent(secretPath)}/details`,
         'goes back to details page'
       );
-      assert.dom(PAGE.detail.versionCreated).doesNotExist('Version created does not show');
+      assert.dom(PAGE.detail.versionTimestamp).doesNotExist('Version created does not show');
       assert.dom(PAGE.secretRow).doesNotExist('does not show data contents');
       assert
         .dom(PAGE.emptyStateTitle)
@@ -992,7 +992,7 @@ module('Acceptance | kv-v2 workflow | secret and version create', function (hook
         `/vault/secrets/${backend}/kv/${encodeURIComponent('my/secret')}/details`,
         'goes back to details page'
       );
-      assert.dom(PAGE.detail.versionCreated).doesNotExist('version created not shown');
+      assert.dom(PAGE.detail.versionTimestamp).doesNotExist('version created not shown');
       assert.dom(PAGE.secretRow).doesNotExist('does not show data contents');
       assert
         .dom(PAGE.emptyStateTitle)
@@ -1043,7 +1043,7 @@ module('Acceptance | kv-v2 workflow | secret and version create', function (hook
       await visit(`/vault/secrets/${backend}/kv/app%2Ffirst/details?version=1`);
       // TODO: Should hide dropdown for no metadata access
       // assert.dom(PAGE.detail.versionDropdown).doesNotExist('version dropdown does not show');
-      assert.dom(PAGE.detail.versionCreated).doesNotExist('Version created not shown');
+      assert.dom(PAGE.detail.versionTimestamp).doesNotExist('Version created not shown');
       await click(PAGE.detail.createNewVersion);
       assert.strictEqual(
         currentURL(),
