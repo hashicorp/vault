@@ -125,6 +125,8 @@ func NewFSM(path string, localID string, logger log.Logger) (*FSM, error) {
 	})
 
 	dbPath := filepath.Join(path, databaseFilename)
+	f.l.Lock()
+	defer f.l.Unlock()
 	if err := f.openDBFile(dbPath); err != nil {
 		return nil, fmt.Errorf("failed to open bolt file: %w", err)
 	}
