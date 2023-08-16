@@ -38,7 +38,10 @@
           </:titleLink>
           <:statIcon>
             <Hds::TooltipButton @text="The cluster's current operating state">
-              <FlightIcon @name={{get (cluster-states @replication.dr.state) "glyph"}} class="has-text-success" />
+              <FlightIcon
+                @name={{get (cluster-states @replication.dr.state) "glyph"}}
+                class={{if (get (cluster-states @replication.dr.state) "isOk") "has-text-success" "has-text-danger"}}
+              />
             </Hds::TooltipButton>
           </:statIcon>
         </StatText>
@@ -47,7 +50,7 @@
         {{#if @replication.performance.clusterId}}
           <StatText
             @label="state"
-            @value={{@replication.dr.state}}
+            @value={{@replication.performance.state}}
             @size="l"
             @subText="The current operating state of the cluster."
             data-test-stat-text="performance state"
@@ -65,7 +68,10 @@
             </:titleLink>
             <:statIcon>
               <Hds::TooltipButton @text="The cluster's current operating state">
-                <FlightIcon @name={{get (cluster-states @replication.dr.state) "glyph"}} class="has-text-success" />
+                <FlightIcon
+                  @name={{get (cluster-states @replication.dr.state) "glyph"}}
+                  class={{if (get (cluster-states @replication.dr.state) "isOk") "has-text-success" "has-text-danger"}}
+                />
               </Hds::TooltipButton>
             </:statIcon>
           </StatText>
@@ -90,7 +96,7 @@
             </:titleLink>
             <:statIcon>
               <Hds::TooltipButton @text="The cluster's current operating state">
-                <FlightIcon @name="x-circle-fill" class="has-text-danger" />
+                <FlightIcon @name="x-square" class="has-text-danger" />
               </Hds::TooltipButton>
             </:statIcon>
           </StatText>
@@ -124,7 +130,10 @@
         >
           <:statIcon>
             <Hds::TooltipButton @text="The cluster's current operating state">
-              <FlightIcon @name={{get (cluster-states @replication.dr.state) "glyph"}} class="has-text-success" />
+              <FlightIcon
+                @name={{get (cluster-states @replication.dr.state) "glyph"}}
+                class={{if (get (cluster-states @replication.dr.state) "isOk") "has-text-success" "has-text-danger"}}
+              />
             </Hds::TooltipButton>
           </:statIcon>
         </StatText>

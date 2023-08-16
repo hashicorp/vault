@@ -86,6 +86,9 @@ module('Integration | Component | dashboard/replication-card', function (hooks) 
     assert
       .dom('[data-test-dr-perf-replication] [data-test-stat-text="dr state"] [data-test-icon="check-circle"]')
       .exists();
+    assert
+      .dom('[data-test-dr-perf-replication] [data-test-stat-text="dr state"] [data-test-icon="check-circle"]')
+      .hasClass('has-text-success');
 
     assert.dom('[data-test-dr-perf-replication] [data-test-performance-title]').hasText('Perf primary');
 
@@ -94,9 +97,14 @@ module('Integration | Component | dashboard/replication-card', function (hooks) 
       .hasText('not set up');
     assert
       .dom(
-        '[data-test-dr-perf-replication] [data-test-stat-text="performance state"] [data-test-icon="x-circle-fill"]'
+        '[data-test-dr-perf-replication] [data-test-stat-text="performance state"] [data-test-icon="x-square"]'
       )
       .exists();
+    assert
+      .dom(
+        '[data-test-dr-perf-replication] [data-test-stat-text="performance state"] [data-test-icon="x-square"]'
+      )
+      .hasClass('has-text-danger');
   });
   test('it should display only dr replication information if vault version only has hasDRReplication', async function (assert) {
     this.version = {
@@ -125,11 +133,62 @@ module('Integration | Component | dashboard/replication-card', function (hooks) 
       .hasText('The current operating state of the cluster.');
     assert.dom('[data-test-stat-text="dr state"] .stat-value').hasText('running');
     assert.dom('[data-test-stat-text="dr state"] .stat-value [data-test-icon="check-circle"]').exists();
+    assert
+      .dom('[data-test-stat-text="dr state"] .stat-value [data-test-icon="check-circle"]')
+      .hasClass('has-text-success');
     assert.dom('[data-test-stat-text="known secondaries"] .stat-label').hasText('known secondaries');
     assert
       .dom('[data-test-stat-text="known secondaries"] .stat-text')
       .hasText('Number of secondaries connected to this primary.');
     assert.dom('[data-test-stat-text="known secondaries"] .stat-value').hasText('1');
+  });
+
+  test('it should show correct icons if dr and performance replication is idle or shutdown states', async function (assert) {
+    this.replication = {
+      dr: {
+        clusterId: 'abc',
+        state: 'idle',
+      },
+      performance: {
+        clusterId: 'def',
+        state: 'shutdown',
+      },
+    };
+    await render(
+      hbs`
+        <Dashboard::ReplicationCard 
+          @replication={{this.replication}} 
+          @version={{this.version}} 
+          @updatedAt={{this.updatedAt}} 
+          @refresh={{this.refresh}} />
+          `
+    );
+    assert.dom('[data-test-dr-perf-replication] [data-test-dr-title]').hasText('DR primary');
+    assert
+      .dom('[data-test-dr-perf-replication] [data-test-stat-text="dr state"] .stat-value')
+      .hasText('idle');
+    assert
+      .dom('[data-test-dr-perf-replication] [data-test-stat-text="dr state"] [data-test-icon="x-square"]')
+      .exists();
+    assert
+      .dom('[data-test-dr-perf-replication] [data-test-stat-text="dr state"] [data-test-icon="x-square"]')
+      .hasClass('has-text-danger');
+
+    assert.dom('[data-test-dr-perf-replication] [data-test-performance-title]').hasText('Perf primary');
+
+    assert
+      .dom('[data-test-dr-perf-replication] [data-test-stat-text="performance state"] .stat-value')
+      .hasText('shutdown');
+    assert
+      .dom(
+        '[data-test-dr-perf-replication] [data-test-stat-text="performance state"] [data-test-icon="x-square"]'
+      )
+      .exists();
+    assert
+      .dom(
+        '[data-test-dr-perf-replication] [data-test-stat-text="performance state"] [data-test-icon="x-square"]'
+      )
+      .hasClass('has-text-danger');
   });
 
   test('it should show empty state', async function (assert) {
