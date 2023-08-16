@@ -195,6 +195,35 @@
           {
             "title": "OIDC Provider",
             "path": "secret/identity/oidc-provider"
+          },
+          {
+            "title": "MFA",
+            "routes": [
+              {
+                "title": "Overview",
+                "path": "secret/identity/mfa"
+              },
+              {
+                "title": "Duo",
+                "path": "secret/identity/mfa/duo"
+              },
+              {
+                "title": "Okta",
+                "path": "secret/identity/mfa/okta"
+              },
+              {
+                "title": "PingID",
+                "path": "secret/identity/mfa/pingid"
+              },
+              {
+                "title": "TOTP",
+                "path": "secret/identity/mfa/totp"
+              },
+              {
+                "title": "Login Enforcement",
+                "path": "secret/identity/mfa/login-enforcement"
+              }
+            ]
           }
         ]
       },
@@ -450,6 +479,10 @@
         "path": "system/license"
       },
       {
+        "title": "<code>/sys/loggers</code>",
+        "path": "system/loggers"
+      },
+      {
         "title": "<code>/sys/managed-keys <sup>ENT</sup></code>",
         "path": "system/managed-keys"
       },
@@ -479,6 +512,10 @@
           {
             "title": "<code>/sys/mfa/method/totp</code>",
             "path": "system/mfa/totp"
+          },
+          {
+            "title": "<code>/sys/mfa/validate</code>",
+            "path": "system/mfa/validate"
           }
         ]
       },

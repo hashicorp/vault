@@ -2,7 +2,6 @@ import Ember from 'ember';
 import { next } from '@ember/runloop';
 import { inject as service } from '@ember/service';
 import { match, alias, or } from '@ember/object/computed';
-import { assign } from '@ember/polyfills';
 import { dasherize } from '@ember/string';
 import Component from '@ember/component';
 import { computed } from '@ember/object';
@@ -116,7 +115,8 @@ export default Component.extend(DEFAULTS, {
     if (!methods && !wrappedToken) {
       return {};
     }
-    if (keyIsPath) {
+    // if type is provided we can ignore path since we are attempting to lookup a specific backend by type
+    if (keyIsPath && !type) {
       return methods.findBy('path', selected);
     }
     return BACKENDS.findBy('type', selected);
@@ -226,7 +226,7 @@ export default Component.extend(DEFAULTS, {
         });
         this.onSuccess(authResponse, backendType, data);
       } catch (e) {
-        this.set('loading', false);
+        this.set('isLoading', false);
         if (!this.auth.mfaError) {
           this.set('error', `Authentication failed: ${this.auth.handleError(e)}`);
         }
@@ -244,32 +244,24 @@ export default Component.extend(DEFAULTS, {
   }),
 
   actions: {
-    doSubmit() {
-      let passedData, e;
-      if (arguments.length > 1) {
-        [passedData, e] = arguments;
-      } else {
-        [e] = arguments;
+    doSubmit(passedData, event, token) {
+      if (event) {
+        event.preventDefault();
       }
-      if (e) {
-        e.preventDefault();
+      if (token) {
+        this.set('token', token);
       }
-      let data = {};
-      this.setProperties({
-        error: null,
-      });
+      this.set('error', null);
       // if callback from oidc or jwt we have a token at this point
-      let backend = ['oidc', 'jwt'].includes(this.selectedAuth)
-        ? this.getAuthBackend('token')
-        : this.selectedAuthBackend || {};
-      let backendMeta = BACKENDS.find(
+      const backend = token ? this.getAuthBackend('token') : this.selectedAuthBackend || {};
+      const backendMeta = BACKENDS.find(
         (b) => (b.type || '').toLowerCase() === (backend.type || '').toLowerCase()
       );
-      let attributes = (backendMeta || {}).formAttributes || [];
+      const attributes = (backendMeta || {}).formAttributes || [];
+      const data = this.getProperties(...attributes);
 
-      data = assign(data, this.getProperties(...attributes));
       if (passedData) {
-        data = assign(data, passedData);
+        Object.assign(data, passedData);
       }
       if (this.customPath || backend.id) {
         data.path = this.customPath || backend.id;
@@ -278,7 +270,7 @@ export default Component.extend(DEFAULTS, {
     },
     handleError(e) {
       this.setProperties({
-        loading: false,
+        isLoading: false,
         error: e ? this.auth.handleError(e) : null,
       });
     },

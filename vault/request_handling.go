@@ -204,7 +204,7 @@ func (c *Core) fetchACLTokenEntryAndEntity(ctx context.Context, req *logical.Req
 		return nil, nil, nil, nil, ErrInternalError
 	}
 	for nsID, nsPolicies := range identityPolicies {
-		policyNames[nsID] = append(policyNames[nsID], nsPolicies...)
+		policyNames[nsID] = policyutil.SanitizePolicies(append(policyNames[nsID], nsPolicies...), false)
 	}
 
 	// Attach token's namespace information to the context. Wrapping tokens by
@@ -320,6 +320,8 @@ func (c *Core) checkToken(ctx context.Context, req *logical.Request, unauth bool
 		case logical.ErrUnsupportedPath:
 			// fail later via bad path to avoid confusing items in the log
 			checkExists = false
+		case logical.ErrRelativePath:
+			return nil, te, errutil.UserError{Err: err.Error()}
 		case nil:
 			if existsResp != nil && existsResp.IsError() {
 				return nil, te, existsResp.Error()
@@ -359,7 +361,7 @@ func (c *Core) checkToken(ctx context.Context, req *logical.Request, unauth bool
 	if te != nil {
 		auth.IdentityPolicies = identityPolicies[te.NamespaceID]
 		auth.TokenPolicies = te.Policies
-		auth.Policies = append(te.Policies, identityPolicies[te.NamespaceID]...)
+		auth.Policies = policyutil.SanitizePolicies(append(te.Policies, identityPolicies[te.NamespaceID]...), false)
 		auth.Metadata = te.Meta
 		auth.DisplayName = te.DisplayName
 		auth.EntityID = te.EntityID
@@ -566,13 +568,20 @@ func (c *Core) handleCancelableRequest(ctx context.Context, req *logical.Request
 			if token == nil {
 				return logical.ErrorResponse("invalid token"), logical.ErrPermissionDenied
 			}
-			// We don't care if the token is an server side consistent token or not. Either way, we're going
+			// We don't care if the token is a server side consistent token or not. Either way, we're going
 			// to be returning it for these paths instead of the short token stored in vault.
 			requestBodyToken = token.(string)
 			if IsSSCToken(token.(string)) {
 				token, err = c.CheckSSCToken(ctx, token.(string), c.isLoginRequest(ctx, req), c.perfStandby)
+
+				// If we receive an error from CheckSSCToken, we can assume the token is bad somehow, and the client
+				// should receive a 403 bad token error like they do for all other invalid tokens, unless the error
+				// specifies that we should forward the request or retry the request.
 				if err != nil {
-					return nil, fmt.Errorf("server side consistent token check failed: %w", err)
+					if errors.Is(err, logical.ErrPerfStandbyPleaseForward) || errors.Is(err, logical.ErrMissingRequiredState) {
+						return nil, err
+					}
+					return logical.ErrorResponse("bad token"), logical.ErrPermissionDenied
 				}
 				req.Data["token"] = token
 			}
@@ -599,7 +608,7 @@ func (c *Core) handleCancelableRequest(ctx context.Context, req *logical.Request
 		case "sys/leases/lookup", "sys/leases/renew", "sys/leases/revoke", "sys/leases/revoke-force":
 			leaseID, ok := req.Data["lease_id"]
 			// If lease ID is not present, break out and let the backend handle the error
-			if !ok {
+			if !ok || leaseID == nil {
 				break
 			}
 			_, nsID := namespace.SplitIDFromString(leaseID.(string))
@@ -825,6 +834,9 @@ func (c *Core) handleRequest(ctx context.Context, req *logical.Request) (retResp
 
 	// Validate the token
 	auth, te, ctErr := c.checkToken(ctx, req, false)
+	if ctErr == logical.ErrRelativePath {
+		return logical.ErrorResponse(ctErr.Error()), nil, ctErr
+	}
 	if ctErr == logical.ErrPerfStandbyPleaseForward {
 		return nil, nil, ctErr
 	}
@@ -1530,7 +1542,7 @@ func (c *Core) handleLoginRequest(ctx context.Context, req *logical.Request) (re
 					TimeOfStorage:         time.Now(),
 					RequestID:             mfaRequestID,
 				}
-				err = c.SaveMFAResponseAuth(respAuth)
+				err = possiblyForwardSaveCachedAuthResponse(ctx, c, respAuth)
 				if err != nil {
 					return nil, nil, err
 				}
@@ -1793,8 +1805,14 @@ func (c *Core) PopulateTokenEntry(ctx context.Context, req *logical.Request) err
 	req.InboundSSCToken = token
 	if IsSSCToken(token) {
 		token, err = c.CheckSSCToken(ctx, token, c.isLoginRequest(ctx, req), c.perfStandby)
+		// If we receive an error from CheckSSCToken, we can assume the token is bad somehow, and the client
+		// should receive a 403 bad token error like they do for all other invalid tokens, unless the error
+		// specifies that we should forward the request or retry the request.
 		if err != nil {
-			return err
+			if errors.Is(err, logical.ErrPerfStandbyPleaseForward) || errors.Is(err, logical.ErrMissingRequiredState) {
+				return err
+			}
+			return logical.ErrPermissionDenied
 		}
 	}
 	req.ClientToken = token
@@ -1921,6 +1939,12 @@ func (c *Core) checkSSCTokenInternal(ctx context.Context, token string, isPerfSt
 	if err != nil {
 		return "", err
 	}
+
+	// Disregard SSCT on perf-standbys for non-raft storage
+	if c.perfStandby && c.getRaftBackend() == nil {
+		return plainToken.Random, nil
+	}
+
 	ep := int(plainToken.IndexEpoch)
 	if ep < c.tokenStore.GetSSCTokensGenerationCounter() {
 		return plainToken.Random, nil

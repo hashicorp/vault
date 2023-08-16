@@ -1,56 +1,38 @@
+.DEFAULT_GOAL := website
+
+PWD=$$(pwd)
+DOCKER_IMAGE="hashicorp/dev-portal"
+DOCKER_IMAGE_LOCAL="dev-portal-local"
+DOCKER_RUN_FLAGS=-it \
+		--publish "3000:3000" \
+		--rm \
+		--tty \
+		--volume "$(PWD)/content:/app/content" \
+		--volume "$(PWD)/public:/app/public" \
+		--volume "$(PWD)/data:/app/data" \
+		--volume "$(PWD)/redirects.js:/app/redirects.js" \
+		--volume "next-dir:/app/website-preview/.next" \
+		--volume "$(PWD)/.env:/app/.env" \
+		-e "REPO=vault"
+
 # Default: run this if working on the website locally to run in watch mode.
+.PHONY: website
 website:
 	@echo "==> Downloading latest Docker image..."
-	@docker pull hashicorp/vault-website
-	@echo "==> Starting website in Docker..."
-	@docker run \
-		--interactive \
-		--rm \
-		--tty \
-		--workdir "/website" \
-		--volume "$(shell pwd):/website" \
-		--volume "/website/node_modules" \
-		--publish "3000:3000" \
-		hashicorp/vault-website \
-		npm start
+	@docker pull $(DOCKER_IMAGE)
+	@echo "==> Starting website..."
+	@docker run $(DOCKER_RUN_FLAGS) $(DOCKER_IMAGE)
 
-# This command will generate a static version of the website to the "out" folder.
-build:
-	@echo "==> Downloading latest Docker image..."
-	@docker pull hashicorp/vault-website
-	@echo "==> Starting build in Docker..."
-	@docker run \
-		--interactive \
-		--rm \
-		--tty \
-		--workdir "/website" \
-		--volume "$(shell pwd):/website" \
-		--volume "/website/node_modules" \
-		hashicorp/vault-website \
-		npm run static
+# Use this if you have run `website/build-local` to use the locally built image.
+.PHONY: website/local
+website/local:
+	@echo "==> Starting website from local image..."
+	@docker run $(DOCKER_RUN_FLAGS) $(DOCKER_IMAGE_LOCAL)
 
-# If you are changing node dependencies locally, run this to generate a new
-# local Docker image with the dependency changes included.
-build-image:
-	@echo "==> Building Docker image..."
-	@docker build -t hashicorp-vault-website-local .
+# Run this to generate a new local Docker image.
+.PHONY: website/build-local
+website/build-local:
+	@echo "==> Building local Docker image"
+	@docker build https://github.com/hashicorp/dev-portal.git\#main \
+		-t $(DOCKER_IMAGE_LOCAL)
 
-# Use this if you have run `build-image` to use the locally built image
-# rather than our CI-generated image to test dependency changes.
-website-local:
-	@echo "==> Downloading latest Docker image..."
-	@docker pull hashicorp/vault-website
-	@echo "==> Starting website in Docker..."
-	@docker run \
-		--interactive \
-		--rm \
-		--tty \
-		--workdir "/website" \
-		--volume "$(shell pwd):/website" \
-		--volume "/website/node_modules" \
-		--publish "3000:3000" \
-		hashicorp-vault-website-local \
-		npm start
-
-.DEFAULT_GOAL := website
-.PHONY: build build-image website website-local

@@ -45,7 +45,6 @@ export default class JsonEditorComponent extends Component {
       delete this.options.autoHeight;
     }
     if (this.options.readOnly) {
-      this.options.readOnly = 'nocursor';
       this.options.lineNumbers = false;
       delete this.options.gutters;
     }

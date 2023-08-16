@@ -2,19 +2,21 @@ import Application from '../application';
 import { formatRFC3339 } from 'date-fns';
 
 export default Application.extend({
+  // Since backend converts the timezone to UTC, sending the first (1) as start or end date can cause the month to change.
+  // To mitigate this impact of timezone conversion, hard coding the dates to avoid month change.
   formatTimeParams(query) {
     let { start_time, end_time } = query;
     // check if it's an array, if it is, it's coming from an action like selecting a new startTime or new EndTime
     if (Array.isArray(start_time)) {
       let startYear = Number(start_time[0]);
       let startMonth = Number(start_time[1]);
-      start_time = formatRFC3339(new Date(startYear, startMonth));
+      start_time = formatRFC3339(new Date(startYear, startMonth, 10));
     }
     if (end_time) {
       if (Array.isArray(end_time)) {
         let endYear = Number(end_time[0]);
         let endMonth = Number(end_time[1]);
-        end_time = formatRFC3339(new Date(endYear, endMonth));
+        end_time = formatRFC3339(new Date(endYear, endMonth, 20));
       }
 
       return { start_time, end_time };

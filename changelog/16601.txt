@@ -1,0 +1,4 @@
+```release-note:bug
+identity/oidc: Detect invalid `redirect_uri` values sooner in validation of the 
+Authorization Endpoint.
+```
