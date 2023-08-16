@@ -162,7 +162,7 @@ default value in the `"/sys/config/ui"` [API endpoint](/api-docs/system/config-u
   authentication for this listener. The default behavior (when this is false)
   is for Vault to request client certificates when available.
 
-  ~> **Warning**: The `tls_disable_client_certs` and `tls_require_and verify_client_cert` fields in the listener stanza of the Vault server configuration are mutually exclusive fields. Please ensure they are not both set to true. TLS client verification remains optional with default settings and is not enforced.
+  ~> **Warning**: The `tls_disable_client_certs` and `tls_require_and_verify_client_cert` fields in the listener stanza of the Vault server configuration are mutually exclusive fields. Please ensure they are not both set to true. TLS client verification remains optional with default settings and is not enforced.
 
 - `x_forwarded_for_authorized_addrs` `(string: <required-to-enable>)` –
   Specifies the list of source IP CIDRs for which an X-Forwarded-For header
