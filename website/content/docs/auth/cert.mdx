@@ -6,12 +6,14 @@ description: >-
   client certificates.
 ---
 
-# TLS Certificates Auth Method
+# TLS certificates auth method
 
 @include 'x509-sha1-deprecation.mdx'
 
 The `cert` auth method allows authentication using SSL/TLS client certificates
-which are either signed by a CA or self-signed.
+which are either signed by a CA or self-signed. SSL/TLS client certificates
+are defined as having an `ExtKeyUsage` extension with the usage set to either
+`ClientAuth` or `Any`.
 
 The trusted certificates and CAs are configured directly to the auth method
 using the `certs/` path. This method cannot read trusted certificates from an
@@ -20,10 +22,10 @@ external source.
 CA certificates are associated with a role; role names and CRL names are normalized to
 lower-case.
 
-Please note that to use this auth method, `tls_disable` must be false in the Vault
+Please note that to use this auth method, `tls_disable` and `tls_disable_client_certs` must be false in the Vault
 configuration. This is because the certificates are sent through TLS communication itself.
 
-## Revocation Checking
+## Revocation checking
 
 Since Vault 0.4, the method supports revocation checking.
 

@@ -6,7 +6,7 @@ description: >-
   in Vault Enterprise.
 ---
 
-## Configure PingID MFA Method
+## Configure PingID MFA method
 
 This endpoint defines a MFA method of type PingID.
 
@@ -29,7 +29,7 @@ This endpoint defines a MFA method of type PingID.
 
 - `settings_file_base64` `(string)` - A base64-encoded third-party settings file retrieved from PingID's configuration page.
 
-### Sample Payload
+### Sample payload
 
 ```json
 {
@@ -38,7 +38,7 @@ This endpoint defines a MFA method of type PingID.
 }
 ```
 
-### Sample Request
+### Sample request
 
 ```shell-session
 $ curl \
@@ -48,7 +48,7 @@ $ curl \
     http://127.0.0.1:8200/v1/sys/mfa/method/pingid/ping
 ```
 
-## Read PingiD MFA Method
+## Read PingiD MFA method
 
 This endpoint queries the MFA configuration of PingID type for a given method
 name.
@@ -61,7 +61,7 @@ name.
 
 - `name` `(string: <required>)` – Name of the MFA method.
 
-### Sample Request
+### Sample request
 
 ```shell-session
 $ curl \
@@ -71,7 +71,7 @@ $ curl \
 
 ```
 
-### Sample Response
+### Sample response
 
 ```json
 {
@@ -89,7 +89,7 @@ $ curl \
 }
 ```
 
-## Delete PingID MFA Method
+## Delete PingID MFA method
 
 This endpoint deletes a PingID MFA method.
 
@@ -101,7 +101,7 @@ This endpoint deletes a PingID MFA method.
 
 - `name` `(string: <required>)` - Name of the MFA method.
 
-### Sample Request
+### Sample request
 
 ```shell-session
 $ curl \

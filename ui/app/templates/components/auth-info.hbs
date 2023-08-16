@@ -24,11 +24,6 @@
             </li>
           {{/if}}
           <li class="action">
-            <button type="button" class="link" onclick={{action "restartGuide"}}>
-              Restart guide
-            </button>
-          </li>
-          <li class="action">
             <CopyButton
               @clipboardText={{this.auth.currentToken}}
               class="link"

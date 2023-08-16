@@ -4,7 +4,7 @@ import { singularize } from 'ember-inflector';
 import ListRoute from 'vault/mixins/list-route';
 
 export default Route.extend(ListRoute, {
-  wizard: service(),
+  store: service(),
   pathHelp: service('path-help'),
 
   getMethodAndModelInfo() {
