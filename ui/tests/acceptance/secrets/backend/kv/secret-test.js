@@ -1,3 +1,4 @@
+/* eslint-disable ember/no-settled-after-test-helper */
 import {
   click,
   visit,
@@ -27,6 +28,18 @@ let writeSecret = async function(backend, path, key, val) {
   await listPage.visitRoot({ backend });
   await listPage.create();
   return editPage.createSecret(path, key, val);
+};
+
+let deleteEngine = async function(enginePath, assert) {
+  await logout.visit();
+  await authPage.login();
+  await consoleComponent.runCommands([`delete sys/mounts/${enginePath}`]);
+  const response = consoleComponent.lastLogOutput;
+  assert.equal(
+    response,
+    `Success! Data deleted (if it existed) at: sys/mounts/${enginePath}`,
+    'Engine successfully deleted'
+  );
 };
 
 module('Acceptance | secrets/secret/create', function(hooks) {
@@ -250,8 +263,7 @@ module('Acceptance | secrets/secret/create', function(hooks) {
     assert.dom('[data-test-list-item-content]').exists({ count: 1 }, 'renders a single version');
 
     await click('.linked-block');
-    await settled();
-    await settled();
+    await click('button.button.masked-input-toggle');
     assert.dom('[data-test-masked-input]').hasText('bar', 'renders secret on the secret version show page');
     assert.equal(
       currentURL(),
@@ -543,18 +555,17 @@ module('Acceptance | secrets/secret/create', function(hooks) {
   });
 
   test('version 2 with no access to data but access to metadata shows metadata tab', async function(assert) {
+    assert.expect(5);
     let enginePath = 'kv-metadata-access-only';
-    let secretPath = 'kv-metadata-access-only-secret-name';
+    let secretPath = 'nested/kv-metadata-access-only-secret-name';
     const V2_POLICY = `
-      path "${enginePath}/metadata/*" {
-        capabilities = ["read", "update", "list"]
+      path "${enginePath}/metadata/nested/*" {
+        capabilities = ["read", "update"]
       }
     `;
     await consoleComponent.runCommands([
       `write sys/mounts/${enginePath} type=kv options=version=2`,
       `write sys/policies/acl/kv-v2-degrade policy=${btoa(V2_POLICY)}`,
-      // delete any kv previously written here so that tests can be re-run
-      `delete ${enginePath}/metadata/${secretPath}`,
       'write -field=client_token auth/token/create policies=kv-v2-degrade',
     ]);
 
@@ -563,15 +574,15 @@ module('Acceptance | secrets/secret/create', function(hooks) {
     await logout.visit();
     await authPage.login(userToken);
     await settled();
-    await click(`[data-test-auth-backend-link=${enginePath}]`);
-    await settled();
-    await click(`[data-test-secret-link=${secretPath}]`);
-    await settled();
+    await visit(`/vault/secrets/${enginePath}/show/${secretPath}`);
     assert.dom('[data-test-empty-state-title]').hasText('You do not have permission to read this secret.');
+    assert.dom('[data-test-secret-metadata-tab]').exists('Metadata tab exists');
     await editPage.metadataTab();
     await settled();
     assert.dom('[data-test-empty-state-title]').hasText('No custom metadata');
     assert.dom('[data-test-add-custom-metadata]').exists('it shows link to edit metadata');
+
+    await deleteEngine(enginePath, assert);
   });
 
   test('version 2: with metadata no read or list but with delete access and full access to the data endpoint', async function(assert) {
@@ -599,6 +610,8 @@ module('Acceptance | secrets/secret/create', function(hooks) {
     let userToken2 = consoleComponent.lastLogOutput;
     await settled();
     await listPage.visitRoot({ backend: enginePath });
+    // confirm they see an empty state and not the get-credentials card
+    await assert.dom('[data-test-empty-state-title]').hasText('No secrets in this backend');
     await settled();
     await listPage.create();
     await settled();
@@ -611,17 +624,33 @@ module('Acceptance | secrets/secret/create', function(hooks) {
     // test if metadata tab there with no read access message and no ability to edit.
     await click(`[data-test-auth-backend-link=${enginePath}]`);
     await settled();
+    await assert
+      .dom('[data-test-get-credentials]')
+      .exists(
+        'They do not have list access so when logged in under the restricted policy they see the get-credentials-card'
+      );
     // this fails in IE11 on browserstack so going directly to URL
     await visit(`/vault/secrets/${enginePath}/show/${secretPath}`);
     await settled();
     await assert
       .dom('[data-test-value-div="secret-key"]')
       .exists('secret view page and info table row with secret-key value');
-    // create new version should be disabled with no metadata read access
-    assert.dom('[data-test-secret-edit]').hasClass('disabled', 'Create new version action is disabled');
-    assert
-      .dom('[data-test-popup-menu-trigger="version"]')
-      .doesNotExist('the version drop down menu does not show');
+
+    // Create new version
+    assert.dom('[data-test-secret-edit]').doesNotHaveClass('disabled', 'Create new version is not disabled');
+    await click('[data-test-secret-edit]');
+
+    // create new version should not include version in the URL
+    assert.equal(
+      currentURL(),
+      `/vault/secrets/${enginePath}/edit/${secretPath}`,
+      'edit route does not include version query param'
+    );
+    // Update key
+    await editPage.secretKey('newKey');
+    await editPage.secretValue('some-value');
+    await editPage.save();
+    assert.dom('[data-test-value-div="newKey"]').exists('Info row table exists at newKey');
 
     // check metadata tab
     await click('[data-test-secret-metadata-tab]');
@@ -693,8 +722,9 @@ module('Acceptance | secrets/secret/create', function(hooks) {
     await settled();
     await click('[data-test-secret-tab]');
     await settled();
-    let text = document.querySelector('[data-test-empty-state-title]').innerText.trim();
-    assert.equal(text, 'Version 1 of this secret has been permanently destroyed');
+    assert
+      .dom('[data-test-empty-state-title]')
+      .includesText('Version 1 of this secret has been permanently destroyed');
   });
 
   test('version 2 with policy with only delete option does not show modal and undelete is an option', async function(assert) {

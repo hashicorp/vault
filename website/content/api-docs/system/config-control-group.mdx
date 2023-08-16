@@ -41,7 +41,7 @@ This endpoint allows configuring control groups.
 
 | Method | Path                        |
 | :----- | :-------------------------- |
-| `PUT`  | `/sys/config/control-group` |
+| `POST` | `/sys/config/control-group` |
 
 ### Parameters
 
@@ -60,7 +60,7 @@ This endpoint allows configuring control groups.
 ```shell-session
 $ curl \
     --header "X-Vault-Token: ..." \
-    --request PUT \
+    --request POST \
     --data @payload.json \
     http://127.0.0.1:8200/v1/sys/config/control-group
 ```

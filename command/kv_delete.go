@@ -138,7 +138,7 @@ func (c *KVDeleteCommand) deleteV2(path, mountPath string, client *api.Client) (
 	var secret *api.Secret
 	switch {
 	case len(c.flagVersions) > 0:
-		path = addPrefixToVKVPath(path, mountPath, "delete")
+		path = addPrefixToKVPath(path, mountPath, "delete")
 		if err != nil {
 			return nil, err
 		}
@@ -150,7 +150,7 @@ func (c *KVDeleteCommand) deleteV2(path, mountPath string, client *api.Client) (
 		secret, err = client.Logical().Write(path, data)
 	default:
 
-		path = addPrefixToVKVPath(path, mountPath, "data")
+		path = addPrefixToKVPath(path, mountPath, "data")
 		if err != nil {
 			return nil, err
 		}

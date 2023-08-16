@@ -39,7 +39,7 @@ available when using Auto Unseal.
 
 | Method | Path        |
 | :----- | :---------- |
-| `PUT`  | `/sys/init` |
+| `POST`  | `/sys/init` |
 
 ### Parameters
 
@@ -91,7 +91,7 @@ Additionally, the following options are only supported using Auto Unseal:
 
 ```shell-session
 $ curl \
-    --request PUT \
+    --request POST \
     --data @payload.json \
     http://127.0.0.1:8200/v1/sys/init
 ```

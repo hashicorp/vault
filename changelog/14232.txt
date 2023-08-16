@@ -1,0 +1,3 @@
+```release-note:improvement
+core: Bump Go version to 1.17.7.
+```

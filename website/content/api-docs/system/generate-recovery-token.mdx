@@ -65,7 +65,7 @@ recovery token generation attempt can take place at a time.
 
 | Method | Path                                   |
 | :----- | :------------------------------------- |
-| `PUT`  | `/sys/generate-recovery-token/attempt` |
+| `POST` | `/sys/generate-recovery-token/attempt` |
 
 ### Parameters
 
@@ -77,7 +77,7 @@ recovery token generation attempt can take place at a time.
 
 ```shell-session
 $ curl \
-    --request PUT \
+    --request POST \
     http://127.0.0.1:8200/v1/sys/generate-recovery-token/attempt
 ```
 
@@ -127,7 +127,7 @@ only in memory and thus will only be valid until the next restart.
 
 | Method | Path                                  |
 | :----- | :------------------------------------ |
-| `PUT`  | `/sys/generate-recovery-token/update` |
+| `POST` | `/sys/generate-recovery-token/update` |
 
 ### Parameters
 
@@ -148,7 +148,7 @@ only in memory and thus will only be valid until the next restart.
 
 ```shell-session
 $ curl \
-    --request PUT \
+    --request POST \
     --data @payload.json \
     http://127.0.0.1:8200/v1/sys/generate-recovery-token/update
 ```

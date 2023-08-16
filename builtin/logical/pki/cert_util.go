@@ -38,11 +38,32 @@ type inputBundle struct {
 }
 
 var (
+	// labelRegex is a single label from a valid domain name and was extracted
+	// from hostnameRegex below for use in leftWildLabelRegex, without any
+	// label separators (`.`).
+	labelRegex = `([a-zA-Z0-9]|[a-zA-Z0-9][a-zA-Z0-9\-]*[a-zA-Z0-9])`
+
 	// A note on hostnameRegex: although we set the StrictDomainName option
 	// when doing the idna conversion, this appears to only affect output, not
 	// input, so it will allow e.g. host^123.example.com straight through. So
 	// we still need to use this to check the output.
-	hostnameRegex                = regexp.MustCompile(`^(\*\.)?(([a-zA-Z0-9]|[a-zA-Z0-9][a-zA-Z0-9\-]*[a-zA-Z0-9])\.)*([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9\-]*[A-Za-z0-9])\.?$`)
+	hostnameRegex = regexp.MustCompile(`^(\*\.)?(` + labelRegex + `\.)*` + labelRegex + `\.?$`)
+
+	// Left Wildcard Label Regex is equivalent to a single domain label
+	// component from hostnameRegex above, but with additional wildcard
+	// characters added. There are four possibilities here:
+	//
+	//  1. Entire label is a wildcard,
+	//  2. Wildcard exists at the start,
+	//  3. Wildcard exists at the end,
+	//  4. Wildcard exists in the middle.
+	allWildRegex       = `\*`
+	startWildRegex     = `\*` + labelRegex
+	endWildRegex       = labelRegex + `\*`
+	middleWildRegex    = labelRegex + `\*` + labelRegex
+	leftWildLabelRegex = regexp.MustCompile(`^(` + allWildRegex + `|` + startWildRegex + `|` + endWildRegex + `|` + middleWildRegex + `)$`)
+
+	// OIDs for X.509 certificate extensions used below.
 	oidExtensionBasicConstraints = []int{2, 5, 29, 19}
 	oidExtensionSubjectAltName   = []int{2, 5, 29, 17}
 )
@@ -181,8 +202,16 @@ func fetchCertBySerial(ctx context.Context, req *logical.Request, prefix, serial
 // If one does not pass, it is returned in the string argument.
 func validateNames(b *backend, data *inputBundle, names []string) string {
 	for _, name := range names {
-		sanitizedName := name
-		emailDomain := sanitizedName
+		// Previously, reducedName was called sanitizedName but this made
+		// little sense under the previous interpretation of wildcards,
+		// leading to two bugs in this implementation. We presently call it
+		// "reduced" to indicate that it is still untrusted input (potentially
+		// different from the bare Common Name entry we're validating), it
+		// might have been modified such as by the removal of wildcard labels
+		// or the email prefix.
+		reducedName := name
+		emailDomain := reducedName
+		wildcardLabel := ""
 		isEmail := false
 		isWildcard := false
 
@@ -192,48 +221,119 @@ func validateNames(b *backend, data *inputBundle, names []string) string {
 		// ends up being problematic for users, I guess that could be separated
 		// into dns_names and email_names in the future to be explicit, but I
 		// don't think this is likely.
-		if strings.Contains(sanitizedName, "@") {
-			splitEmail := strings.Split(sanitizedName, "@")
+		if strings.Contains(reducedName, "@") {
+			splitEmail := strings.Split(reducedName, "@")
 			if len(splitEmail) != 2 {
 				return name
 			}
-			sanitizedName = splitEmail[1]
+			reducedName = splitEmail[1]
 			emailDomain = splitEmail[1]
 			isEmail = true
 		}
 
-		// If we have an asterisk as the first part of the domain name, mark it
-		// as wildcard and set the sanitized name to the remainder of the
-		// domain
-		if strings.HasPrefix(sanitizedName, "*.") {
-			sanitizedName = sanitizedName[2:]
+		// Per RFC 6125 Section 6.4.3, and explicitly contradicting the earlier
+		// RFC 2818 which no modern client will validate against, there are two
+		// main types of wildcards, each with a single wildcard specifier (`*`,
+		// functionally different from the `*` used as a glob from the
+		// AllowGlobDomains parsing path) in the left-most label:
+		//
+		//  1. Entire label is a single wildcard character (most common and
+		//     well-supported),
+		//  2. Part of the label contains a single wildcard character (e.g. per
+		///    RFC 6125: baz*.example.net, *baz.example.net, or b*z.example.net).
+		//
+		// We permit issuance of both but not the older RFC 2818 style under
+		// the new AllowWildcardCertificates option. However, anything with a
+		// glob character is technically a wildcard.
+		if strings.Contains(reducedName, "*") {
+			// Regardless of later rejections below, this common name contains
+			// a wildcard character and is thus technically a wildcard name.
 			isWildcard = true
+
+			// Additionally, if AllowWildcardCertificates is explicitly
+			// forbidden, it takes precedence over AllowAnyName, thus we should
+			// reject the name now.
+			//
+			// We expect the role to have been correctly migrated but guard for
+			// safety.
+			if data.role.AllowWildcardCertificates != nil && !*data.role.AllowWildcardCertificates {
+				return name
+			}
+
+			if strings.Count(reducedName, "*") > 1 {
+				// As mentioned above, only one wildcard character is permitted
+				// under RFC 6125 semantics.
+				return name
+			}
+
+			// Split the Common Name into two parts: a left-most label and the
+			// remaining segments (if present).
+			splitLabels := strings.SplitN(reducedName, ".", 2)
+			if len(splitLabels) != 2 {
+				// We've been given a single-part domain name that consists
+				// entirely of a wildcard. This is a little tricky to handle,
+				// but EnforceHostnames validates both the wildcard-containing
+				// label and the reduced name, but _only_ the latter if it is
+				// non-empty. This allows us to still validate the only label
+				// component matches hostname expectations still.
+				wildcardLabel = splitLabels[0]
+				reducedName = ""
+			} else {
+				// We have a (at least) two label domain name. But before we can
+				// update our names, we need to validate the wildcard ended up
+				// in the segment we expected it to. While this is (kinda)
+				// validated under EnforceHostnames's leftWildLabelRegex, we
+				// still need to validate it in the non-enforced mode.
+				//
+				// By validated assumption above, we know there's strictly one
+				// wildcard in this domain so we only need to check the wildcard
+				// label or the reduced name (as one is equivalent to the other).
+				// Because we later assume reducedName _lacks_ wildcard segments,
+				// we validate that.
+				wildcardLabel = splitLabels[0]
+				reducedName = splitLabels[1]
+				if strings.Contains(reducedName, "*") {
+					return name
+				}
+			}
 		}
 
 		// Email addresses using wildcard domain names do not make sense
+		// in a Common Name field.
 		if isEmail && isWildcard {
 			return name
 		}
 
 		// AllowAnyName is checked after this because EnforceHostnames still
-		// applies when allowing any name. Also, we check the sanitized name to
+		// applies when allowing any name. Also, we check the reduced name to
 		// ensure that we are not either checking a full email address or a
 		// wildcard prefix.
 		if data.role.EnforceHostnames {
-			p := idna.New(
-				idna.StrictDomainName(true),
-				idna.VerifyDNSLength(true),
-			)
-			converted, err := p.ToASCII(sanitizedName)
-			if err != nil {
-				return name
+			if reducedName != "" {
+				// See note above about splitLabels having only one segment
+				// and setting reducedName to the empty string.
+				p := idna.New(
+					idna.StrictDomainName(true),
+					idna.VerifyDNSLength(true),
+				)
+				converted, err := p.ToASCII(reducedName)
+				if err != nil {
+					return name
+				}
+				if !hostnameRegex.MatchString(converted) {
+					return name
+				}
 			}
-			if !hostnameRegex.MatchString(converted) {
+
+			// When a wildcard is specified, we additionally need to validate
+			// the label with the wildcard is correctly formed.
+			if isWildcard && !leftWildLabelRegex.MatchString(wildcardLabel) {
 				return name
 			}
 		}
 
-		// Self-explanatory
+		// Self-explanatory, but validations from EnforceHostnames and
+		// AllowWildcardCertificates take precedence.
 		if data.role.AllowAnyName {
 			continue
 		}
@@ -255,8 +355,8 @@ func validateNames(b *backend, data *inputBundle, names []string) string {
 		// Variances are noted in-line
 
 		if data.role.AllowLocalhost {
-			if sanitizedName == "localhost" ||
-				sanitizedName == "localdomain" ||
+			if reducedName == "localhost" ||
+				reducedName == "localdomain" ||
 				(isEmail && emailDomain == "localhost") ||
 				(isEmail && emailDomain == "localdomain") {
 				continue
@@ -264,14 +364,14 @@ func validateNames(b *backend, data *inputBundle, names []string) string {
 
 			if data.role.AllowSubdomains {
 				// It is possible, if unlikely, to have a subdomain of "localhost"
-				if strings.HasSuffix(sanitizedName, ".localhost") ||
-					(isWildcard && sanitizedName == "localhost") {
+				if strings.HasSuffix(reducedName, ".localhost") ||
+					(isWildcard && reducedName == "localhost") {
 					continue
 				}
 
 				// A subdomain of "localdomain" is also not entirely uncommon
-				if strings.HasSuffix(sanitizedName, ".localdomain") ||
-					(isWildcard && sanitizedName == "localdomain") {
+				if strings.HasSuffix(reducedName, ".localdomain") ||
+					(isWildcard && reducedName == "localdomain") {
 					continue
 				}
 			}
@@ -293,15 +393,15 @@ func validateNames(b *backend, data *inputBundle, names []string) string {
 							// Compare the sanitized name against the hostname
 							// portion of the email address in the broken
 							// display name
-							if strings.HasSuffix(sanitizedName, "."+splitDisplay[1]) {
+							if strings.HasSuffix(reducedName, "."+splitDisplay[1]) {
 								continue
 							}
 						}
 					}
 				}
 
-				if strings.HasSuffix(sanitizedName, "."+data.req.DisplayName) ||
-					(isWildcard && sanitizedName == data.req.DisplayName) {
+				if strings.HasSuffix(reducedName, "."+data.req.DisplayName) ||
+					(isWildcard && reducedName == data.req.DisplayName) {
 					continue
 				}
 			}
@@ -330,17 +430,15 @@ func validateNames(b *backend, data *inputBundle, names []string) string {
 				// First, allow an exact match of the base domain if that role flag
 				// is enabled
 				if data.role.AllowBareDomains &&
-					(strings.EqualFold(sanitizedName, currDomain) ||
-						(isEmail && strings.EqualFold(emailDomain, currDomain)) ||
-							// Handle the use case of AllowedDomain being an email address
-							(isEmail && strings.EqualFold(name, currDomain))) {
+					(strings.EqualFold(name, currDomain) ||
+						(isEmail && strings.EqualFold(emailDomain, currDomain))) {
 					valid = true
 					break
 				}
 
 				if data.role.AllowSubdomains {
-					if strings.HasSuffix(sanitizedName, "."+currDomain) ||
-						(isWildcard && strings.EqualFold(sanitizedName, currDomain)) {
+					if strings.HasSuffix(reducedName, "."+currDomain) ||
+						(isWildcard && strings.EqualFold(reducedName, currDomain)) {
 						valid = true
 						break
 					}
@@ -348,7 +446,7 @@ func validateNames(b *backend, data *inputBundle, names []string) string {
 
 				if data.role.AllowGlobDomains &&
 					strings.Contains(currDomain, "*") &&
-					glob.Glob(currDomain, sanitizedName) {
+					glob.Glob(currDomain, name) {
 					valid = true
 					break
 				}

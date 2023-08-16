@@ -15,7 +15,7 @@ description: >-
 This endpoint prints information about the status of replication (mode,
 sync progress, etc).
 
-This is an authenticated endpoint.
+This is an unauthenticated endpoint.
 
 | Method | Path                         |
 | :----- | :--------------------------- |
@@ -327,7 +327,7 @@ secondaries, and there should never be more than one primary at a time.
 If the DR secondary's primary cluster is also in a performance replication set,
 the DR secondary will be promoted into that replication set. Care should be
 taken when promoting to ensure multiple performance primary clusters are not
-activate at the same time.
+active at the same time.
 
 If the DR secondary's primary cluster is a performance secondary, the promoted
 cluster will attempt to connect to the performance primary cluster using the
@@ -530,7 +530,7 @@ generation attempt can take place at a time.
 
 | Method | Path                                                             |
 | :----- | :--------------------------------------------------------------- |
-| `PUT`  | `/sys/replication/dr/secondary/generate-operation-token/attempt` |
+| `POST` | `/sys/replication/dr/secondary/generate-operation-token/attempt` |
 
 ### Parameters
 
@@ -542,7 +542,7 @@ generation attempt can take place at a time.
 
 ```shell-session
 $ curl \
-    --request PUT \
+    --request POST \
     http://127.0.0.1:8200/v1/sys/replication/dr/secondary/generate-operation-token/attempt
 ```
 
@@ -588,7 +588,7 @@ nonce must be provided with each call.
 
 | Method | Path                                                            |
 | :----- | :-------------------------------------------------------------- |
-| `PUT`  | `/sys/replication/dr/secondary/generate-operation-token/update` |
+| `POST` | `/sys/replication/dr/secondary/generate-operation-token/update` |
 
 ### Parameters
 
@@ -609,7 +609,7 @@ nonce must be provided with each call.
 
 ```shell-session
 $ curl \
-    --request PUT \
+    --request POST \
     --data @payload.json \
     http://127.0.0.1:8200/v1/sys/replication/dr/secondary/generate-operation-token/update
 ```

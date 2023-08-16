@@ -154,20 +154,22 @@ func (b *backend) pathSignVerbatim(ctx context.Context, req *logical.Request, da
 	}
 
 	entry := &roleEntry{
-		AllowLocalhost:       true,
-		AllowAnyName:         true,
-		AllowIPSANs:          true,
-		EnforceHostnames:     false,
-		KeyType:              "any",
-		UseCSRCommonName:     true,
-		UseCSRSANs:           true,
-		AllowedURISANs:       []string{"*"},
-		AllowedSerialNumbers: []string{"*"},
-		GenerateLease:        new(bool),
-		KeyUsage:             data.Get("key_usage").([]string),
-		ExtKeyUsage:          data.Get("ext_key_usage").([]string),
-		ExtKeyUsageOIDs:      data.Get("ext_key_usage_oids").([]string),
+		AllowLocalhost:            true,
+		AllowAnyName:              true,
+		AllowIPSANs:               true,
+		AllowWildcardCertificates: new(bool),
+		EnforceHostnames:          false,
+		KeyType:                   "any",
+		UseCSRCommonName:          true,
+		UseCSRSANs:                true,
+		AllowedURISANs:            []string{"*"},
+		AllowedSerialNumbers:      []string{"*"},
+		GenerateLease:             new(bool),
+		KeyUsage:                  data.Get("key_usage").([]string),
+		ExtKeyUsage:               data.Get("ext_key_usage").([]string),
+		ExtKeyUsageOIDs:           data.Get("ext_key_usage_oids").([]string),
 	}
+	*entry.AllowWildcardCertificates = true
 
 	*entry.GenerateLease = false
 

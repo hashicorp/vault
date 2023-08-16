@@ -112,6 +112,12 @@ Default: ({{.UserAttr}}={{.Username}})`,
 			},
 		},
 
+		"username_as_alias": {
+			Type:        framework.TypeBool,
+			Default:     false,
+			Description: "If true, sets the alias name to the username",
+		},
+
 		"userattr": {
 			Type:        framework.TypeString,
 			Default:     "cn",
@@ -240,6 +246,10 @@ func NewConfigEntry(existing *ConfigEntry, d *framework.FieldData) (*ConfigEntry
 
 	if _, ok := d.Raw["anonymous_group_search"]; ok || !hadExisting {
 		cfg.AnonymousGroupSearch = d.Get("anonymous_group_search").(bool)
+	}
+
+	if _, ok := d.Raw["username_as_alias"]; ok || !hadExisting {
+		cfg.UsernameAsAlias = d.Get("username_as_alias").(bool)
 	}
 
 	if _, ok := d.Raw["url"]; ok || !hadExisting {
@@ -393,6 +403,7 @@ type ConfigEntry struct {
 	GroupFilter              string `json:"groupfilter"`
 	GroupAttr                string `json:"groupattr"`
 	UPNDomain                string `json:"upndomain"`
+	UsernameAsAlias          bool   `json:"username_as_alias"`
 	UserFilter               string `json:"userfilter"`
 	UserAttr                 string `json:"userattr"`
 	Certificate              string `json:"certificate"`
@@ -444,6 +455,7 @@ func (c *ConfigEntry) PasswordlessMap() map[string]interface{} {
 		"use_token_groups":       c.UseTokenGroups,
 		"anonymous_group_search": c.AnonymousGroupSearch,
 		"request_timeout":        c.RequestTimeout,
+		"username_as_alias":      c.UsernameAsAlias,
 	}
 	if c.CaseSensitiveNames != nil {
 		m["case_sensitive_names"] = *c.CaseSensitiveNames

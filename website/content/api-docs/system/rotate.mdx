@@ -19,13 +19,13 @@ This path requires `sudo` capability in addition to `update`.
 
 | Method | Path          |
 | :----- | :------------ |
-| `PUT`  | `/sys/rotate` |
+| `POST` | `/sys/rotate` |
 
 ### Sample Request
 
 ```shell-session
 $ curl \
     --header "X-Vault-Token: ..." \
-    --request PUT \
+    --request POST \
     http://127.0.0.1:8200/v1/sys/rotate
 ```
