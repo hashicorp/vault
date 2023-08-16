@@ -74,7 +74,7 @@
               onchange={{action (mut @padding_scheme) value="target.value"}}
             >
               {{#each (array "oaep" "pkcs1v15") as |scheme|}}
-                <option selected={{if @padding_scheme (eq @padding_scheme scheme) (eq scheme "oaep")}} value={{scheme}}>
+                <option selected={{eq @padding_scheme scheme}} value={{scheme}}>
                   {{scheme}}
                 </option>
               {{/each}}
