@@ -798,10 +798,6 @@ func (c *Core) setupCredentials(ctx context.Context) error {
 		view.setReadOnlyErr(logical.ErrSetupReadOnly)
 		if strutil.StrListContains(singletonMounts, entry.Type) {
 			defer view.setReadOnlyErr(origViewReadOnlyErr)
-		} else {
-			c.postUnsealFuncs = append(c.postUnsealFuncs, func() {
-				view.setReadOnlyErr(origViewReadOnlyErr)
-			})
 		}
 
 		// Initialize the backend
@@ -913,6 +909,9 @@ func (c *Core) setupCredentials(ctx context.Context) error {
 				if backend == nil {
 					postUnsealLogger.Error("skipping initialization for nil auth backend")
 					return
+				}
+				if !strutil.StrListContains(singletonMounts, entry.Type) {
+					view.setReadOnlyErr(origViewReadOnlyErr)
 				}
 
 				err := backend.Initialize(ctx, &logical.InitializationRequest{Storage: view})
