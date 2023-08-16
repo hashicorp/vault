@@ -7,66 +7,107 @@
     <Hds::Link::Inline @route="vault.cluster.replication.index" class="is-no-underline">Details</Hds::Link::Inline>
   </div>
 </div>
+
 {{! check if dr replication and performance replication exists }}
 {{#if (or @replication.dr.clusterId @replication.performance.clusterId)}}
+  <hr class="has-background-gray-100" />
   {{! check if user has access to both perf replication and dr replication }}
   {{#if (and @version.hasPerfReplication @version.hasDRReplication)}}
-    <hr class="has-background-gray-100" />
     <div
       class="is-grid grid-2-columns grid-gap-2 has-top-margin-m has-bottom-margin-m grid-align-items-start"
       data-test-dr-perf-replication
     >
       <div>
-        <div class="has-bottom-margin-s">
-          <Hds::Link::Inline
-            class="title is-5 has-text-weight-semibold"
-            @route="vault.cluster.replication.mode.index"
-            @model="dr"
-            data-test-dr-title
-          >DR primary</Hds::Link::Inline>
-        </div>
-        <div class="title is-4 has-text-weight-semibold has-top-margin-xs" data-test-dr-state>
-          {{@replication.dr.state}}
-          <Hds::TooltipButton @text="The cluster's current operating state">
-            <FlightIcon @name={{get (cluster-states @replication.dr.state) "glyph"}} class="has-text-success" />
-          </Hds::TooltipButton>
-        </div>
+        <StatText
+          @label="state"
+          @value={{@replication.dr.state}}
+          @size="l"
+          @subText="The current operating state of the cluster."
+          data-test-stat-text="dr state"
+        >
+          <:titleLink>
+            <Hds::Link::Inline
+              class="stat-label has-bottom-margin-xs"
+              @color="secondary"
+              @route="vault.cluster.replication.mode.index"
+              @model="dr"
+              data-test-dr-title
+            >
+              DR primary
+            </Hds::Link::Inline>
+          </:titleLink>
+          <:statIcon>
+            <Hds::TooltipButton @text="The cluster's current operating state">
+              <FlightIcon @name={{get (cluster-states @replication.dr.state) "glyph"}} class="has-text-success" />
+            </Hds::TooltipButton>
+          </:statIcon>
+        </StatText>
       </div>
       <div>
-        <div class="has-bottom-margin-s">
-          <Hds::Link::Inline
-            class="title is-5 has-text-weight-semibold"
-            @route="vault.cluster.replication.mode.index"
-            @model="performance"
-            data-test-performance-title
-          >Perf primary</Hds::Link::Inline>
-        </div>
         {{#if @replication.performance.clusterId}}
-          <div class="title is-4 has-text-weight-semibold has-top-margin-xs" data-test-performance-state>
-            {{@replication.performance.state}}
-            <Hds::TooltipButton @text="The cluster’s current operating state">
-              <FlightIcon @name={{get (cluster-states @replication.performance.state) "glyph"}} class="has-text-success" />
-            </Hds::TooltipButton>
-          </div>
+          <StatText
+            @label="state"
+            @value={{@replication.dr.state}}
+            @size="l"
+            @subText="The current operating state of the cluster."
+            data-test-stat-text="dr state"
+          >
+            <:titleLink>
+              <Hds::Link::Inline
+                class="stat-label has-bottom-margin-xs"
+                @color="secondary"
+                @route="vault.cluster.replication.mode.index"
+                @model="performance"
+                data-test-dr-title
+              >
+                Perf primary
+              </Hds::Link::Inline>
+            </:titleLink>
+            <:statIcon>
+              <Hds::TooltipButton @text="The cluster's current operating state">
+                <FlightIcon @name={{get (cluster-states @replication.dr.state) "glyph"}} class="has-text-success" />
+              </Hds::TooltipButton>
+            </:statIcon>
+          </StatText>
         {{else}}
-          <div class="title is-4 has-text-weight-semibold has-top-margin-xs" data-test-performance-state>
-            not set up
-            <Hds::TooltipButton @text="The cluster’s current operating state">
-              <FlightIcon @name="x-circle-fill" class="has-text-danger" />
-            </Hds::TooltipButton>
-          </div>
+          <StatText
+            @label="state"
+            @value="not set up"
+            @size="l"
+            @subText="The current operating state of the cluster."
+            data-test-stat-text="dr state"
+          >
+            <:titleLink>
+              <Hds::Link::Inline
+                class="stat-label has-bottom-margin-xs"
+                @color="secondary"
+                @route="vault.cluster.replication.mode.index"
+                @model="performance"
+                data-test-dr-title
+              >
+                Perf primary
+              </Hds::Link::Inline>
+            </:titleLink>
+            <:statIcon>
+              <Hds::TooltipButton @text="The cluster's current operating state">
+                <FlightIcon @name="x-circle-fill" class="has-text-danger" />
+              </Hds::TooltipButton>
+            </:statIcon>
+          </StatText>
         {{/if}}
       </div>
     </div>
     {{! if user only has access to dr replication }}
   {{else if @version.hasDRReplication}}
-    <hr class="has-background-gray-100" />
     <div class="is-marginless">
       <Hds::Link::Inline
         class="title is-5 has-text-weight-semibold"
+        @color="secondary"
         @route="vault.cluster.replication.mode.index"
         @model="dr"
-      >DR Primary</Hds::Link::Inline>
+      >
+        DR Primary
+      </Hds::Link::Inline>
     </div>
 
     <div
@@ -74,28 +115,28 @@
       data-test-dr-replication
     >
       <div>
-        <div class="has-bottom-margin-xxs title is-5 has-text-weight-semibold" data-test-dr-state-title>
-          state
-        </div>
-        <div class="has-text-grey-dark title is-8 has-font-weight-normal" data-test-dr-state-description>
-          The current operating state of the cluster. The value should be 'running'.
-        </div>
-        <div class="title is-4 has-text-weight-semibold has-top-margin-xs" data-test-dr-state>
-          {{@replication.dr.state}}
-          <Hds::TooltipButton @text="The cluster's current operating state">
-            <FlightIcon @name={{get (cluster-states @replication.dr.state) "glyph"}} class="has-text-success" />
-          </Hds::TooltipButton>
-        </div>
+        <StatText
+          @label="state"
+          @value={{@replication.dr.state}}
+          @size="l"
+          @subText="The current operating state of the cluster."
+          data-test-stat-text="dr state"
+        >
+          <:statIcon>
+            <Hds::TooltipButton @text="The cluster's current operating state">
+              <FlightIcon @name={{get (cluster-states @replication.dr.state) "glyph"}} class="has-text-success" />
+            </Hds::TooltipButton>
+          </:statIcon>
+        </StatText>
       </div>
       <div>
-        <div class="has-bottom-margin-xs title is-5 has-text-weight-semibold" data-test-dr-known-secondaries-title>
-          known secondaries
-        </div>
-        <div class="has-text-grey-dark title is-8 has-font-weight-normal" data-test-dr-known-secondaries-description>Number
-          of secondaries connected to this primary.</div>
-        <div class="title is-4 has-text-weight-semibold has-top-margin-xs" data-test-dr-known-secondaries>
-          {{or @replication.dr.knownSecondaries.length 0}}
-        </div>
+        <StatText
+          @label="known secondaries"
+          @value={{@replication.dr.knownSecondaries.length}}
+          @size="l"
+          @subText="Number of secondaries connected to this primary."
+          data-test-stat-text="known secondaries"
+        />
       </div>
     </div>
   {{/if}}
