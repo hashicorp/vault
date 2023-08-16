@@ -44,14 +44,20 @@ module('Integration | Component | dashboard/replication-card', function (hooks) 
           `
     );
     assert.dom('[data-test-dr-perf-replication] [data-test-dr-title]').hasText('DR primary');
-    assert.dom('[data-test-dr-perf-replication] [data-test-dr-state]').hasText('running');
     assert
-      .dom('[data-test-dr-perf-replication] [data-test-dr-state] [data-test-icon="check-circle"]')
+      .dom('[data-test-dr-perf-replication] [data-test-stat-text="dr state"] .stat-value')
+      .hasText('running');
+    assert
+      .dom('[data-test-dr-perf-replication] [data-test-stat-text="dr state"] [data-test-icon="check-circle"]')
       .exists();
     assert.dom('[data-test-dr-perf-replication] [data-test-performance-title]').hasText('Perf primary');
-    assert.dom('[data-test-dr-perf-replication] [data-test-performance-state]').hasText('running');
     assert
-      .dom('[data-test-dr-perf-replication] [data-test-performance-state] [data-test-icon="check-circle"]')
+      .dom('[data-test-dr-perf-replication] [data-test-stat-text="performance state"] .stat-value')
+      .hasText('running');
+    assert
+      .dom(
+        '[data-test-dr-perf-replication] [data-test-stat-text="performance state"] [data-test-icon="check-circle"]'
+      )
       .exists();
   });
   test('it should display replication information if both dr and performance replication are enabled as features and only dr is setup', async function (assert) {
@@ -74,14 +80,22 @@ module('Integration | Component | dashboard/replication-card', function (hooks) 
           `
     );
     assert.dom('[data-test-dr-perf-replication] [data-test-dr-title]').hasText('DR primary');
-    assert.dom('[data-test-dr-perf-replication] [data-test-dr-state]').hasText('running');
     assert
-      .dom('[data-test-dr-perf-replication] [data-test-dr-state] [data-test-icon="check-circle"]')
+      .dom('[data-test-dr-perf-replication] [data-test-stat-text="dr state"] .stat-value')
+      .hasText('running');
+    assert
+      .dom('[data-test-dr-perf-replication] [data-test-stat-text="dr state"] [data-test-icon="check-circle"]')
       .exists();
+
     assert.dom('[data-test-dr-perf-replication] [data-test-performance-title]').hasText('Perf primary');
-    assert.dom('[data-test-dr-perf-replication] [data-test-performance-state]').hasText('not set up');
+
     assert
-      .dom('[data-test-dr-perf-replication] [data-test-performance-state] [data-test-icon="x-circle-fill"]')
+      .dom('[data-test-dr-perf-replication] [data-test-stat-text="performance state"] .stat-value')
+      .hasText('not set up');
+    assert
+      .dom(
+        '[data-test-dr-perf-replication] [data-test-stat-text="performance state"] [data-test-icon="x-circle-fill"]'
+      )
       .exists();
   });
   test('it should display only dr replication information if vault version only has hasDRReplication', async function (assert) {
@@ -105,19 +119,17 @@ module('Integration | Component | dashboard/replication-card', function (hooks) 
           @refresh={{this.refresh}} />
           `
     );
-    assert.dom('[data-test-dr-replication] [data-test-dr-state-title]').hasText('state');
+    assert.dom('[data-test-stat-text="dr state"] .stat-label').hasText('state');
     assert
-      .dom('[data-test-dr-replication] [data-test-dr-state-description]')
-      .hasText("The current operating state of the cluster. The value should be 'running'.");
-    assert.dom('[data-test-dr-replication] [data-test-dr-state]').hasText('running');
-    assert.dom('[data-test-dr-replication] [data-test-dr-state] [data-test-icon="check-circle"]').exists();
+      .dom('[data-test-stat-text="dr state"] .stat-text')
+      .hasText('The current operating state of the cluster.');
+    assert.dom('[data-test-stat-text="dr state"] .stat-value').hasText('running');
+    assert.dom('[data-test-stat-text="dr state"] .stat-value [data-test-icon="check-circle"]').exists();
+    assert.dom('[data-test-stat-text="known secondaries"] .stat-label').hasText('known secondaries');
     assert
-      .dom('[data-test-dr-replication] [data-test-dr-known-secondaries-title]')
-      .hasText('known secondaries');
-    assert
-      .dom('[data-test-dr-replication] [data-test-dr-known-secondaries-description]')
+      .dom('[data-test-stat-text="known secondaries"] .stat-text')
       .hasText('Number of secondaries connected to this primary.');
-    assert.dom('[data-test-dr-replication] [data-test-dr-known-secondaries]').hasText('1');
+    assert.dom('[data-test-stat-text="known secondaries"] .stat-value').hasText('1');
   });
 
   test('it should show empty state', async function (assert) {

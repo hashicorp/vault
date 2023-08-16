@@ -50,7 +50,7 @@
             @value={{@replication.dr.state}}
             @size="l"
             @subText="The current operating state of the cluster."
-            data-test-stat-text="dr state"
+            data-test-stat-text="performance state"
           >
             <:titleLink>
               <Hds::Link::Inline
@@ -58,7 +58,7 @@
                 @color="secondary"
                 @route="vault.cluster.replication.mode.index"
                 @model="performance"
-                data-test-dr-title
+                data-test-performance-title
               >
                 Perf primary
               </Hds::Link::Inline>
@@ -75,7 +75,7 @@
             @value="not set up"
             @size="l"
             @subText="The current operating state of the cluster."
-            data-test-stat-text="dr state"
+            data-test-stat-text="performance state"
           >
             <:titleLink>
               <Hds::Link::Inline
@@ -83,7 +83,7 @@
                 @color="secondary"
                 @route="vault.cluster.replication.mode.index"
                 @model="performance"
-                data-test-dr-title
+                data-test-performance-title
               >
                 Perf primary
               </Hds::Link::Inline>
