@@ -149,6 +149,17 @@ type ControlGroup struct {
 	Factors []*ControlGroupFactor
 }
 
+func (c *ControlGroup) Clone() (*ControlGroup, error) {
+	clonedControlGroup, err := copystructure.Copy(c)
+	if err != nil {
+		return nil, err
+	}
+
+	cg := clonedControlGroup.(*ControlGroup)
+
+	return cg, nil
+}
+
 type ControlGroupFactor struct {
 	Name                   string
 	Identity               *IdentityFactor `hcl:"identity"`
@@ -438,15 +449,15 @@ func parsePaths(result *Policy, list *ast.ObjectList, performTemplating bool, en
 
 		if pc.AllowedParametersHCL != nil {
 			pc.Permissions.AllowedParameters = make(map[string][]interface{}, len(pc.AllowedParametersHCL))
-			for key, val := range pc.AllowedParametersHCL {
-				pc.Permissions.AllowedParameters[strings.ToLower(key)] = val
+			for k, v := range pc.AllowedParametersHCL {
+				pc.Permissions.AllowedParameters[strings.ToLower(k)] = v
 			}
 		}
 		if pc.DeniedParametersHCL != nil {
 			pc.Permissions.DeniedParameters = make(map[string][]interface{}, len(pc.DeniedParametersHCL))
 
-			for key, val := range pc.DeniedParametersHCL {
-				pc.Permissions.DeniedParameters[strings.ToLower(key)] = val
+			for k, v := range pc.DeniedParametersHCL {
+				pc.Permissions.DeniedParameters[strings.ToLower(k)] = v
 			}
 		}
 		if pc.MinWrappingTTLHCL != nil {
@@ -465,9 +476,7 @@ func parsePaths(result *Policy, list *ast.ObjectList, performTemplating bool, en
 		}
 		if pc.MFAMethodsHCL != nil {
 			pc.Permissions.MFAMethods = make([]string, len(pc.MFAMethodsHCL))
-			for idx, item := range pc.MFAMethodsHCL {
-				pc.Permissions.MFAMethods[idx] = item
-			}
+			copy(pc.Permissions.MFAMethods, pc.MFAMethodsHCL)
 		}
 		if pc.ControlGroupHCL != nil {
 			pc.Permissions.ControlGroup = new(ControlGroup)

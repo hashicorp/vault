@@ -456,6 +456,21 @@ func TestBackend_PermittedDNSDomainsIntermediateCA(t *testing.T) {
 	if secret.Auth == nil || secret.Auth.ClientToken == "" {
 		t.Fatalf("expected a successful authentication")
 	}
+
+	// testing pathLoginRenew for cert auth
+	oldAccessor := secret.Auth.Accessor
+	newClient.SetToken(client.Token())
+	secret, err = newClient.Logical().Write("auth/token/renew-accessor", map[string]interface{}{
+		"accessor":  secret.Auth.Accessor,
+		"increment": 3600,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if secret.Auth == nil || secret.Auth.ClientToken != "" || secret.Auth.LeaseDuration != 3600 || secret.Auth.Accessor != oldAccessor {
+		t.Fatalf("unexpected accessor renewal")
+	}
 }
 
 func TestBackend_NonCAExpiry(t *testing.T) {
@@ -1618,7 +1633,8 @@ func testAccStepLoginWithNameInvalid(t *testing.T, connState tls.ConnectionState
 }
 
 func testAccStepListCerts(
-	t *testing.T, certs []string) []logicaltest.TestStep {
+	t *testing.T, certs []string,
+) []logicaltest.TestStep {
 	return []logicaltest.TestStep{
 		{
 			Operation: logical.ListOperation,
@@ -1675,7 +1691,8 @@ type allowed struct {
 }
 
 func testAccStepCert(
-	t *testing.T, name string, cert []byte, policies string, testData allowed, expectError bool) logicaltest.TestStep {
+	t *testing.T, name string, cert []byte, policies string, testData allowed, expectError bool,
+) logicaltest.TestStep {
 	return logicaltest.TestStep{
 		Operation: logical.UpdateOperation,
 		Path:      "certs/" + name,
@@ -1704,7 +1721,8 @@ func testAccStepCert(
 }
 
 func testAccStepCertLease(
-	t *testing.T, name string, cert []byte, policies string) logicaltest.TestStep {
+	t *testing.T, name string, cert []byte, policies string,
+) logicaltest.TestStep {
 	return logicaltest.TestStep{
 		Operation: logical.UpdateOperation,
 		Path:      "certs/" + name,
@@ -1718,7 +1736,8 @@ func testAccStepCertLease(
 }
 
 func testAccStepCertTTL(
-	t *testing.T, name string, cert []byte, policies string) logicaltest.TestStep {
+	t *testing.T, name string, cert []byte, policies string,
+) logicaltest.TestStep {
 	return logicaltest.TestStep{
 		Operation: logical.UpdateOperation,
 		Path:      "certs/" + name,
@@ -1732,7 +1751,8 @@ func testAccStepCertTTL(
 }
 
 func testAccStepCertMaxTTL(
-	t *testing.T, name string, cert []byte, policies string) logicaltest.TestStep {
+	t *testing.T, name string, cert []byte, policies string,
+) logicaltest.TestStep {
 	return logicaltest.TestStep{
 		Operation: logical.UpdateOperation,
 		Path:      "certs/" + name,
@@ -1747,7 +1767,8 @@ func testAccStepCertMaxTTL(
 }
 
 func testAccStepCertNoLease(
-	t *testing.T, name string, cert []byte, policies string) logicaltest.TestStep {
+	t *testing.T, name string, cert []byte, policies string,
+) logicaltest.TestStep {
 	return logicaltest.TestStep{
 		Operation: logical.UpdateOperation,
 		Path:      "certs/" + name,

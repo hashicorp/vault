@@ -6,7 +6,7 @@ description: |-
   Cassandra cluster.
 ---
 
-# Cassandra Storage Backend
+# Cassandra storage backend
 
 The Cassandra storage backend is used to persist Vault's data in an [Apache
 Cassandra][cassandra] cluster.
@@ -46,7 +46,7 @@ CREATE TABLE "vault"."entries" (
 ) WITH CLUSTERING ORDER BY (key ASC);
 ```
 
-## `cassandra` Parameters
+## `cassandra` parameters
 
 - `hosts` `(string: "127.0.0.1")` – Comma-separated list of Cassandra hosts to
   connect to.

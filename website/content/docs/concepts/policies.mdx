@@ -15,7 +15,7 @@ operations in Vault. This section discusses policy workflows and syntaxes.
 Policies are **deny by default**, so an empty policy grants no permission in the
 system.
 
-## Policy-Authorization Workflow
+## Policy-Authorization workflow
 
 Before a human or machine can gain access, an administrator must configure Vault
 with an [auth method](/docs/concepts/auth). Authentication is
@@ -77,7 +77,7 @@ the authentication steps again, they will get a _new_ token. The token will have
 the same permissions, but the actual token will be different. Authenticating a
 second time does not invalidate the original token.
 
-## Policy Syntax
+## Policy syntax
 
 Policies are written in [HCL][hcl] or JSON and describe which paths in Vault a
 user or machine is allowed to access.
@@ -101,19 +101,19 @@ token would have no other access in Vault.
 Here is a more detailed policy, and it is documented inline:
 
 ```ruby
-# This section grants all access on "secret/*". Further restrictions can be
+# This section grants all access on "secret/*". further restrictions can be
 # applied to this broad policy, as shown below.
 path "secret/*" {
   capabilities = ["create", "read", "update", "patch", "delete", "list"]
 }
 
 # Even though we allowed secret/*, this line explicitly denies
-# secret/super-secret. This takes precedence.
+# secret/super-secret. this takes precedence.
 path "secret/super-secret" {
   capabilities = ["deny"]
 }
 
-# Policies can also specify allowed, disallowed, and required parameters. Here
+# Policies can also specify allowed, disallowed, and required parameters. here
 # the key "secret/restricted" can only contain "foo" (any value) and "bar" (one
 # of "zip" or "zap").
 path "secret/restricted" {
@@ -130,19 +130,19 @@ request. A policy `path` may specify an exact path to match, or it could specify
 a glob pattern which instructs Vault to use a prefix match:
 
 ```ruby
-# Permit reading only "secret/foo". An attached token cannot read "secret/food"
+# Permit reading only "secret/foo". an attached token cannot read "secret/food"
 # or "secret/foo/bar".
 path "secret/foo" {
   capabilities = ["read"]
 }
 
-# Permit reading everything under "secret/bar". An attached token could read
+# Permit reading everything under "secret/bar". an attached token could read
 # "secret/bar/zip", "secret/bar/zip/zap", but not "secret/bars/zip".
 path "secret/bar/*" {
   capabilities = ["read"]
 }
 
-# Permit reading everything prefixed with "zip-". An attached token could read
+# Permit reading everything prefixed with "zip-". an attached token could read
 # "secret/zip-zap" or "secret/zip-zap/zong", but not "secret/zip/zap
 path "secret/zip-*" {
   capabilities = ["read"]
@@ -181,10 +181,10 @@ also match `"secret/foobar"`. Specifically, when there are potentially multiple
 matching policy paths, `P1` and `P2`, the following matching criteria is applied:
 
 1. If the first wildcard (`+`) or glob (`*`) occurs earlier in `P1`, `P1` is lower priority
-2. If `P1` ends in `*` and `P2` doesn't, `P1` is lower priority
-3. If `P1` has more `+` (wildcard) segments, `P1` is lower priority
-4. If `P1` is shorter, it is lower priority
-5. If `P1` is smaller lexicographically, it is lower priority
+1. If `P1` ends in `*` and `P2` doesn't, `P1` is lower priority
+1. If `P1` has more `+` (wildcard) segments, `P1` is lower priority
+1. If `P1` is shorter, it is lower priority
+1. If `P1` is smaller lexicographically, it is lower priority
 
 For example, given the two paths, `"secret/*"` and `"secret/+/+/foo/*"`, the first
 wildcard appears in the same place, both end in `*` and the latter has two wildcard
@@ -255,7 +255,7 @@ credentials _creates_ database credentials, but the HTTP request is a GET which
 corresponds to a `read` capability. Thus, to grant access to generate database
 credentials, the policy would grant `read` access on the appropriate path.
 
-## Templated Policies
+## Templated policies
 
 The policy syntax allows for doing variable replacement in some policy strings
 with values available to the token. Currently `identity` information can be
@@ -263,19 +263,19 @@ injected, and currently the `path` keys in policies allow injection.
 
 ### Parameters
 
-| Name                                                                             | Description                                                                            |
-| :------------------------------------------------------------------------------- | :------------------------------------------------------------------------------------- |
-| `identity.entity.id`                                                             | The entity's ID                                                                        |
-| `identity.entity.name`                                                           | The entity's name                                                                      |
-| `identity.entity.metadata.<metadata key>`                                        | Metadata associated with the entity for the given key                                  |
-| `identity.entity.aliases.<mount accessor>.id`                                    | Entity alias ID for the given mount                                                    |
-| `identity.entity.aliases.<mount accessor>.name`                                  | Entity alias name for the given mount                                                  |
-| `identity.entity.aliases.<mount accessor>.metadata.<metadata key>`               | Metadata associated with the alias for the given mount and metadata key                |
-| `identity.entity.aliases.<mount accessor>.custom_metadata.<custom_metadata key>` | Custom metadata associated with the alias for the given mount and custom metadata key  |
-| `identity.groups.ids.<group id>.name`                                            | The group name for the given group ID                                                  |
-| `identity.groups.names.<group name>.id`                                          | The group ID for the given group name                                                  |
-| `identity.groups.ids.<group id>.metadata.<metadata key>`                         | Metadata associated with the group for the given key                                   |
-| `identity.groups.names.<group name>.metadata.<metadata key>`                     | Metadata associated with the group for the given key                                   |
+| Name                                                                             | Description                                                                           |
+| :------------------------------------------------------------------------------- | :------------------------------------------------------------------------------------ |
+| `identity.entity.id`                                                             | The entity's ID                                                                       |
+| `identity.entity.name`                                                           | The entity's name                                                                     |
+| `identity.entity.metadata.<metadata key>`                                        | Metadata associated with the entity for the given key                                 |
+| `identity.entity.aliases.<mount accessor>.id`                                    | Entity alias ID for the given mount                                                   |
+| `identity.entity.aliases.<mount accessor>.name`                                  | Entity alias name for the given mount                                                 |
+| `identity.entity.aliases.<mount accessor>.metadata.<metadata key>`               | Metadata associated with the alias for the given mount and metadata key               |
+| `identity.entity.aliases.<mount accessor>.custom_metadata.<custom_metadata key>` | Custom metadata associated with the alias for the given mount and custom metadata key |
+| `identity.groups.ids.<group id>.name`                                            | The group name for the given group ID                                                 |
+| `identity.groups.names.<group name>.id`                                          | The group ID for the given group name                                                 |
+| `identity.groups.ids.<group id>.metadata.<metadata key>`                         | Metadata associated with the group for the given key                                  |
+| `identity.groups.names.<group name>.metadata.<metadata key>`                     | Metadata associated with the group for the given key                                  |
 
 ### Examples
 
@@ -333,13 +333,13 @@ path "secret/data/{{identity.entity.aliases.auth_kubernetes_xxxx.metadata.servic
 }
 ```
 
-## Fine-Grained Control
+## Fine-Grained control
 
 In addition to the standard set of capabilities, Vault offers finer-grained
 control over permissions at a given path. The capabilities associated with a
 path take precedence over permissions on parameters.
 
-### Parameter Constraints
+### Parameter constraints
 
 ~> **Note:** The `allowed_parameters`, `denied_parameters`, and `required_parameters` fields are not supported for policies used with the [version 2 kv secrets engine](/docs/secrets/kv/kv-v2).
 
@@ -508,7 +508,7 @@ path "secret/foo" {
 
 ~> **Note:** the only value that can be used with the `*` parameter is `[]`.
 
-### Required Response Wrapping TTLs
+### Required response wrapping TTLs
 
 These parameters can be used to set minimums/maximums on TTLs set by clients
 when requesting that a response be
@@ -543,12 +543,12 @@ addition, if paths are merged from different stanzas, the lowest value
 specified for each is the value that will result, in line with the idea of
 keeping token lifetimes as short as possible.
 
-## Built-in Policies
+## Built-in policies
 
 Vault has two built-in policies: `default` and `root`. This section describes
 the two built-in policies.
 
-### Default Policy
+### Default policy
 
 The `default` policy is a built-in Vault policy that cannot be removed. By
 default, it is attached to all tokens, but may be explicitly excluded at token
@@ -585,7 +585,7 @@ $ curl \
   https://vault.hashicorp.rocks/v1/auth/token/create
 ```
 
-### Root Policy
+### Root policy
 
 The `root` policy is a built-in Vault policy that cannot be modified or removed.
 Any user associated with this policy becomes a root user. A root user can do
@@ -615,16 +615,16 @@ $ curl \
 
 For more information, please read:
 
-- [Production Hardening](/guides/operations/production)
-- [Generating a Root Token](/guides/operations/generate-root)
+- [Production Hardening](https://learn.hashicorp.com/tutorials/vault/production-hardening)
+- [Generating a Root Token](https://learn.hashicorp.com/tutorials/vault/generate-root)
 
-## Managing Policies
+## Managing policies
 
 Policies are authored (written) in your editor of choice. They can be authored
 in HCL or JSON, and the syntax is described in detail above. Once saved,
 policies must be uploaded to Vault before they can be used.
 
-### Listing Policies
+### Listing policies
 
 To list all registered policies in Vault:
 
@@ -644,7 +644,7 @@ $ curl \
 wrapper around reading the sys endpoint directly. It provides the same
 functionality but formats the output in a special manner.
 
-### Creating Policies
+### Creating policies
 
 Policies may be created (uploaded) via the CLI or via the API. To create a new
 policy in Vault:
@@ -667,7 +667,7 @@ In both examples, the name of the policy is "policy-name". You can think of this
 name as a pointer or symlink to the policy ACLs. Tokens are attached policies by
 name, which are then mapped to the set of rules corresponding to that name.
 
-### Updating Policies
+### Updating policies
 
 Existing policies may be updated to change permissions via the CLI or via the
 API. To update an existing policy in Vault, follow the same steps as creating a
@@ -687,7 +687,7 @@ $ curl \
   https://vault.hashicorp.rocks/v1/sys/policy/my-existing-policy
 ```
 
-### Deleting Policies
+### Deleting policies
 
 Existing policies may be deleted via the CLI or API. To delete a policy:
 
@@ -707,7 +707,7 @@ $ curl \
 This is an idempotent operation. Vault will not return an error when deleting a
 policy that does not exist.
 
-## Associating Policies
+## Associating policies
 
 Vault can automatically associate a set of policies to a token based on an
 authorization. This configuration varies significantly between authentication
