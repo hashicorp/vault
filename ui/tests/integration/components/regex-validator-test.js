@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import EmberObject from '@ember/object';
 import sinon from 'sinon';
 import { module, test } from 'qunit';
@@ -9,10 +14,10 @@ module('Integration | Component | regex-validator', function (hooks) {
   setupRenderingTest(hooks);
 
   test('it renders input and validation messages', async function (assert) {
-    let attr = EmberObject.create({
+    const attr = EmberObject.create({
       name: 'example',
     });
-    let spy = sinon.spy();
+    const spy = sinon.spy();
     this.set('onChange', spy);
     this.set('attr', attr);
     this.set('value', '(\\d{4})');

@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import { module, test } from 'qunit';
 import { setupRenderingTest } from 'ember-qunit';
 import { click, render } from '@ember/test-helpers';
@@ -26,7 +31,7 @@ module('Integration | Component | raft-join', function (hooks) {
   });
 
   test('it calls onDismiss when a user chooses to init', async function (assert) {
-    let spy = sinon.spy();
+    const spy = sinon.spy();
     this.set('onDismiss', spy);
     await render(hbs`<RaftJoin @onDismiss={{this.onDismiss}} />`);
 

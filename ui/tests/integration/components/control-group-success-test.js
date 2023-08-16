@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import { later, run, _cancelTimers as cancelTimers } from '@ember/runloop';
 import { resolve } from 'rsvp';
 import Service from '@ember/service';
@@ -51,7 +56,7 @@ module('Integration | Component | control group success', function (hooks) {
   };
   test('render with saved token', async function (assert) {
     assert.expect(3);
-    let response = {
+    const response = {
       uiParams: { url: '/foo' },
       token: 'token',
     };

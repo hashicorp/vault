@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 @mixin stacked-grid {
   grid-template-columns: 1fr;
   grid-row: 1/1;
@@ -48,7 +53,7 @@
   display: flex;
   flex-wrap: wrap;
   margin: $spacing-m 0;
-  @include until($tablet) {
+  @include until($mobile) {
     display: block;
   }
 }
@@ -62,7 +67,7 @@
 
 .replication-actions-grid-item .action-block {
   width: 100%;
-  @include until($tablet) {
+  @include until($mobile) {
     height: inherit;
   }
 }

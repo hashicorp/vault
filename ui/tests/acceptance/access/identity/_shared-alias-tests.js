@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import { currentRouteName, settled } from '@ember/test-helpers';
 import page from 'vault/tests/pages/access/identity/aliases/add';
 import aliasIndexPage from 'vault/tests/pages/access/identity/aliases/index';
@@ -6,9 +11,6 @@ import createItemPage from 'vault/tests/pages/access/identity/create';
 import showItemPage from 'vault/tests/pages/access/identity/show';
 
 export const testAliasCRUD = async function (name, itemType, assert) {
-  let itemID;
-  let aliasID;
-  let idRow;
   if (itemType === 'groups') {
     await createItemPage.createItem(itemType, 'external');
     await settled();
@@ -16,8 +18,8 @@ export const testAliasCRUD = async function (name, itemType, assert) {
     await createItemPage.createItem(itemType);
     await settled();
   }
-  idRow = showItemPage.rows.filterBy('hasLabel').filterBy('rowLabel', 'ID')[0];
-  itemID = idRow.rowValue;
+  let idRow = showItemPage.rows.filterBy('hasLabel').filterBy('rowLabel', 'ID')[0];
+  const itemID = idRow.rowValue;
   await page.visit({ item_type: itemType, id: itemID });
   await settled();
   await page.editForm.name(name).submit();
@@ -28,7 +30,7 @@ export const testAliasCRUD = async function (name, itemType, assert) {
   );
 
   idRow = aliasShowPage.rows.filterBy('hasLabel').filterBy('rowLabel', 'ID')[0];
-  aliasID = idRow.rowValue;
+  const aliasID = idRow.rowValue;
   assert.strictEqual(
     currentRouteName(),
     'vault.cluster.access.identity.aliases.show',
@@ -44,7 +46,7 @@ export const testAliasCRUD = async function (name, itemType, assert) {
     `${itemType}: lists the entity in the entity list`
   );
 
-  let item = aliasIndexPage.items.filterBy('name', name)[0];
+  const item = aliasIndexPage.items.filterBy('name', name)[0];
   await item.menu();
   await settled();
   await aliasIndexPage.delete();
@@ -64,9 +66,6 @@ export const testAliasCRUD = async function (name, itemType, assert) {
 };
 
 export const testAliasDeleteFromForm = async function (name, itemType, assert) {
-  let itemID;
-  let aliasID;
-  let idRow;
   if (itemType === 'groups') {
     await createItemPage.createItem(itemType, 'external');
     await settled();
@@ -74,14 +73,14 @@ export const testAliasDeleteFromForm = async function (name, itemType, assert) {
     await createItemPage.createItem(itemType);
     await settled();
   }
-  idRow = showItemPage.rows.filterBy('hasLabel').filterBy('rowLabel', 'ID')[0];
-  itemID = idRow.rowValue;
+  let idRow = showItemPage.rows.filterBy('hasLabel').filterBy('rowLabel', 'ID')[0];
+  const itemID = idRow.rowValue;
   await page.visit({ item_type: itemType, id: itemID });
   await settled();
   await page.editForm.name(name).submit();
   await settled();
   idRow = aliasShowPage.rows.filterBy('hasLabel').filterBy('rowLabel', 'ID')[0];
-  aliasID = idRow.rowValue;
+  const aliasID = idRow.rowValue;
   await aliasShowPage.edit();
   await settled();
   assert.strictEqual(

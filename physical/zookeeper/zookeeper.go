@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package zookeeper
 
 import (
@@ -13,13 +16,12 @@ import (
 	"sync"
 	"time"
 
+	metrics "github.com/armon/go-metrics"
+	"github.com/go-zookeeper/zk"
 	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-secure-stdlib/parseutil"
-	"github.com/hashicorp/vault/sdk/physical"
-
-	metrics "github.com/armon/go-metrics"
 	"github.com/hashicorp/go-secure-stdlib/tlsutil"
-	"github.com/samuel/go-zookeeper/zk"
+	"github.com/hashicorp/vault/sdk/physical"
 )
 
 const (
@@ -642,8 +644,9 @@ func (i *ZooKeeperHALock) Unlock() error {
 					return
 				}
 
+				timer := time.NewTimer(time.Second)
 				select {
-				case <-time.After(time.Second):
+				case <-timer.C:
 					attempts := attempts + 1
 					if attempts >= 10 {
 						i.logger.Error("release lock max attempts reached. Lock may not be released", "error", err)
@@ -651,6 +654,7 @@ func (i *ZooKeeperHALock) Unlock() error {
 					}
 					continue
 				case <-i.stopCh:
+					timer.Stop()
 					return
 				}
 			}

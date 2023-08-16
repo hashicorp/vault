@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package api
 
 import (
@@ -9,12 +12,22 @@ import (
 	"flag"
 	"net/url"
 	"os"
-	"regexp"
 
-	squarejwt "gopkg.in/square/go-jose.v2/jwt"
+	"github.com/go-jose/go-jose/v3/jwt"
 
 	"github.com/hashicorp/errwrap"
 )
+
+// This file contains helper code used when writing Vault auth method or secrets engine plugins.
+//
+// As such, it would be better located in the sdk module with the rest of the code which is only to support plugins,
+// rather than api, but is here for historical reasons. (The api module used to depend on the sdk module, this code
+// calls NewClient within the api package, so placing it in the sdk would have created a dependency cycle. This reason
+// is now historical, as the dependency between sdk and api has since been reversed in direction.)
+// Moving this code to the sdk would be appropriate if an api v2.0.0 release is ever planned.
+//
+// This helper code is used when a plugin is hosted by Vault 1.11 and earlier. Vault 1.12 and sdk v0.6.0 introduced
+// version 5 of the backend plugin interface, which uses go-plugin's AutoMTLS feature instead of this code.
 
 const (
 	// PluginAutoMTLSEnv is used to ensure AutoMTLS is used. This will override
@@ -29,49 +42,6 @@ const (
 	// plugin.
 	PluginUnwrapTokenEnv = "VAULT_UNWRAP_TOKEN"
 )
-
-// sudoPaths is a map containing the paths that require a token's policy
-// to have the "sudo" capability. The keys are the paths as strings, in
-// the same format as they are returned by the OpenAPI spec. The values
-// are the regular expressions that can be used to test whether a given
-// path matches that path or not (useful specifically for the paths that
-// contain templated fields.)
-var sudoPaths = map[string]*regexp.Regexp{
-	"/auth/token/accessors/":                        regexp.MustCompile(`^/auth/token/accessors/$`),
-	"/pki/root":                                     regexp.MustCompile(`^/pki/root$`),
-	"/pki/root/sign-self-issued":                    regexp.MustCompile(`^/pki/root/sign-self-issued$`),
-	"/sys/audit":                                    regexp.MustCompile(`^/sys/audit$`),
-	"/sys/audit/{path}":                             regexp.MustCompile(`^/sys/audit/.+$`),
-	"/sys/auth/{path}":                              regexp.MustCompile(`^/sys/auth/.+$`),
-	"/sys/auth/{path}/tune":                         regexp.MustCompile(`^/sys/auth/.+/tune$`),
-	"/sys/config/auditing/request-headers":          regexp.MustCompile(`^/sys/config/auditing/request-headers$`),
-	"/sys/config/auditing/request-headers/{header}": regexp.MustCompile(`^/sys/config/auditing/request-headers/.+$`),
-	"/sys/config/cors":                              regexp.MustCompile(`^/sys/config/cors$`),
-	"/sys/config/ui/headers/":                       regexp.MustCompile(`^/sys/config/ui/headers/$`),
-	"/sys/config/ui/headers/{header}":               regexp.MustCompile(`^/sys/config/ui/headers/.+$`),
-	"/sys/leases":                                   regexp.MustCompile(`^/sys/leases$`),
-	"/sys/leases/lookup/":                           regexp.MustCompile(`^/sys/leases/lookup/$`),
-	"/sys/leases/lookup/{prefix}":                   regexp.MustCompile(`^/sys/leases/lookup/.+$`),
-	"/sys/leases/revoke-force/{prefix}":             regexp.MustCompile(`^/sys/leases/revoke-force/.+$`),
-	"/sys/leases/revoke-prefix/{prefix}":            regexp.MustCompile(`^/sys/leases/revoke-prefix/.+$`),
-	"/sys/plugins/catalog/{name}":                   regexp.MustCompile(`^/sys/plugins/catalog/[^/]+$`),
-	"/sys/plugins/catalog/{type}":                   regexp.MustCompile(`^/sys/plugins/catalog/[\w-]+$`),
-	"/sys/plugins/catalog/{type}/{name}":            regexp.MustCompile(`^/sys/plugins/catalog/[\w-]+/[^/]+$`),
-	"/sys/raw":                                      regexp.MustCompile(`^/sys/raw$`),
-	"/sys/raw/{path}":                               regexp.MustCompile(`^/sys/raw/.+$`),
-	"/sys/remount":                                  regexp.MustCompile(`^/sys/remount$`),
-	"/sys/revoke-force/{prefix}":                    regexp.MustCompile(`^/sys/revoke-force/.+$`),
-	"/sys/revoke-prefix/{prefix}":                   regexp.MustCompile(`^/sys/revoke-prefix/.+$`),
-	"/sys/rotate":                                   regexp.MustCompile(`^/sys/rotate$`),
-
-	// enterprise-only paths
-	"/sys/replication/dr/primary/secondary-token":          regexp.MustCompile(`^/sys/replication/dr/primary/secondary-token$`),
-	"/sys/replication/performance/primary/secondary-token": regexp.MustCompile(`^/sys/replication/performance/primary/secondary-token$`),
-	"/sys/replication/primary/secondary-token":             regexp.MustCompile(`^/sys/replication/primary/secondary-token$`),
-	"/sys/replication/reindex":                             regexp.MustCompile(`^/sys/replication/reindex$`),
-	"/sys/storage/raft/snapshot-auto/config/":              regexp.MustCompile(`^/sys/storage/raft/snapshot-auto/config/$`),
-	"/sys/storage/raft/snapshot-auto/config/{name}":        regexp.MustCompile(`^/sys/storage/raft/snapshot-auto/config/[^/]+$`),
-}
 
 // PluginAPIClientMeta is a helper that plugins can use to configure TLS connections
 // back to Vault.
@@ -131,7 +101,7 @@ func VaultPluginTLSProviderContext(ctx context.Context, apiTLSConfig *TLSConfig)
 	return func() (*tls.Config, error) {
 		unwrapToken := os.Getenv(PluginUnwrapTokenEnv)
 
-		parsedJWT, err := squarejwt.ParseSigned(unwrapToken)
+		parsedJWT, err := jwt.ParseSigned(unwrapToken)
 		if err != nil {
 			return nil, errwrap.Wrapf("error parsing wrapping token: {{err}}", err)
 		}
@@ -239,29 +209,4 @@ func VaultPluginTLSProviderContext(ctx context.Context, apiTLSConfig *TLSConfig)
 
 		return tlsConfig, nil
 	}
-}
-
-func SudoPaths() map[string]*regexp.Regexp {
-	return sudoPaths
-}
-
-// Determine whether the given path requires the sudo capability
-func IsSudoPath(path string) bool {
-	// Return early if the path is any of the non-templated sudo paths.
-	if _, ok := sudoPaths[path]; ok {
-		return true
-	}
-
-	// Some sudo paths have templated fields in them.
-	// (e.g. /sys/revoke-prefix/{prefix})
-	// The values in the sudoPaths map are actually regular expressions,
-	// so we can check if our path matches against them.
-	for _, sudoPathRegexp := range sudoPaths {
-		match := sudoPathRegexp.MatchString(path)
-		if match {
-			return true
-		}
-	}
-
-	return false
 }

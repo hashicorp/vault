@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import { resolve } from 'rsvp';
 import { module, test } from 'qunit';
 import { setupTest } from 'ember-qunit';
@@ -7,7 +12,7 @@ module('Unit | Adapter | capabilities', function (hooks) {
 
   test('calls the correct url', function (assert) {
     let url, method, options;
-    let adapter = this.owner.factoryFor('adapter:capabilities').create({
+    const adapter = this.owner.factoryFor('adapter:capabilities').create({
       ajax: (...args) => {
         [url, method, options] = args;
         return resolve();

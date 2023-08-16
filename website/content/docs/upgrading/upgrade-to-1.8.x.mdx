@@ -11,18 +11,18 @@ description: |-
 This page contains the list of deprecations and important or breaking changes
 for Vault 1.8.x compared to 1.7. Please read it carefully.
 
-## License Enhancements
+## License enhancements
 
 Licenses and EULA enhancements have been introduced in the Vault 1.8 release.
 These changes are important for Enterprise customers to review. They do not affect
-OSS users. Please see the [License](/docs/enterprise/license) documentation for more details.
+Vault Community Edition users. Please see the [License](/vault/docs/enterprise/license) documentation for more details.
 
 ## Deprecations
 
 The following API endpoints have been deprecated and will be removed in a future release:
 
 * `sys/license` to manage licenses in storage; it is recommended to use
-   [License Autoloading](/docs/enterprise/license/autoloading) instead.
+   [License Autoloading](/vault/docs/enterprise/license/autoloading) instead.
 
 * `/gcp/token/:roleset` and `/gcp/key/:roleset` paths for generating secrets for rolesets
   in GCP Secrets. Use `/gcp/roleset/:roleset/token` and `/gcp/roleset/:roleset/key` instead.
@@ -30,7 +30,7 @@ The following API endpoints have been deprecated and will be removed in a future
 -> **Note:** Policies containing globs should be avoided when giving users read access
 to `/gcp/roleset` to avoid giving users permissions to generate tokens.
 
-## Go Version
+## Go version
 
 Vault 1.8.0 is built with Go 1.16. Please review the [Go Release
 Notes](https://golang.org/doc/go1.16) for full details. Of particular note:
@@ -44,7 +44,7 @@ Notes](https://golang.org/doc/go1.16) for full details. Of particular note:
 
 @include 'pki-forwarding-bug.mdx'
 
-## Known Issues
+## Known issues
 
 @include 'raft-panic-old-tls-key.mdx'
 
@@ -53,13 +53,13 @@ Notes](https://golang.org/doc/go1.16) for full details. Of particular note:
 MSSQL integrations (storage and secrets engine) will crash with a "panic: not implemented" error ([#12830](https://github.com/hashicorp/vault/issues/12830)). This affects Vault versions
   1.8.0 and up. It will be fixed in the next minor update.
 
-### Vault Enterprise binaries
+### Vault enterprise binaries
 
 Vault Enterprise binaries for `arm64` architectures will crash immediately when using production-ready storage backends.  This issue is addressed in Vault 1.8.1.
 
 ### AWS auth
 
-AWS Auth using the [EC2 method](https://www.vaultproject.io/docs/auth/aws#ec2-auth-method) fails with the error `failed to verify the signature`. This effects 1.8.0 and 1.8.1 and there is not a workaround. The issue was fixed in Vault 1.8.2.
+AWS Auth using the [EC2 method](/vault/docs/auth/aws#ec2-auth-method) fails with the error `failed to verify the signature`. This effects 1.8.0 and 1.8.1 and there is not a workaround. The issue was fixed in Vault 1.8.2.
 
 ### Configuration files in RedHat packages
 
@@ -68,4 +68,4 @@ the defaults when a new package was installed. This [issue](https://github.com/h
 
 ### Introduction of rolesets
 
-The introduction of `/gcp/roleset/:roleset/token` and `/gcp/roleset/:roleset/key` could inadvertently give users the ability to generate tokens and key if globs are used in policies. To avoid issues like this, globs should be avoided in policies to help adhere to the principle of least privilege. See the [roleset documentation](/docs/secrets/gcp#rolesets) for more information.
+The introduction of `/gcp/roleset/:roleset/token` and `/gcp/roleset/:roleset/key` could inadvertently give users the ability to generate tokens and key if globs are used in policies. To avoid issues like this, globs should be avoided in policies to help adhere to the principle of least privilege. See the [roleset documentation](/vault/docs/secrets/gcp#rolesets) for more information.

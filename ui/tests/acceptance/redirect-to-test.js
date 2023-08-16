@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import { currentURL, visit as _visit, settled } from '@ember/test-helpers';
 import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
@@ -23,7 +28,7 @@ const wrappedAuth = async () => {
   await consoleComponent.runCommands(`write -field=token auth/token/create policies=default -wrap-ttl=5m`);
   await settled();
   // because of flaky test, trying to capture the token using a dom selector instead of the page object
-  let token = document.querySelector('[data-test-component="console/log-text"] pre').textContent;
+  const token = document.querySelector('[data-test-component="console/log-text"] pre').textContent;
   if (token.includes('Error')) {
     throw new Error(`Error mounting secrets engine: ${token}`);
   }
@@ -37,7 +42,7 @@ const setupWrapping = async () => {
   await settled();
   await auth.tokenInput('root').submit();
   await settled();
-  let wrappedToken = await wrappedAuth();
+  const wrappedToken = await wrappedAuth();
   return wrappedToken;
 };
 module('Acceptance | redirect_to query param functionality', function (hooks) {
@@ -50,7 +55,7 @@ module('Acceptance | redirect_to query param functionality', function (hooks) {
     localStorage.clear();
   });
   test('redirect to a route after authentication', async function (assert) {
-    let url = '/vault/secrets/secret/create';
+    const url = '/vault/secrets/secret/create';
     await visit(url);
     assert.ok(
       currentURL().includes(`redirect_to=${encodeURIComponent(url)}`),
@@ -63,13 +68,13 @@ module('Acceptance | redirect_to query param functionality', function (hooks) {
   });
 
   test('redirect from root does not include redirect_to', async function (assert) {
-    let url = '/';
+    const url = '/';
     await visit(url);
     assert.ok(currentURL().indexOf('redirect_to') < 0, 'there is no redirect_to query param');
   });
 
   test('redirect to a route after authentication with a query param', async function (assert) {
-    let url = '/vault/secrets/secret/create?initialKey=hello';
+    const url = '/vault/secrets/secret/create?initialKey=hello';
     await visit(url);
     assert.ok(
       currentURL().includes(`?redirect_to=${encodeURIComponent(url)}`),
@@ -81,8 +86,8 @@ module('Acceptance | redirect_to query param functionality', function (hooks) {
   });
 
   test('redirect to logout with wrapped token authenticates you', async function (assert) {
-    let wrappedToken = await setupWrapping();
-    let url = '/vault/secrets/cubbyhole/create';
+    const wrappedToken = await setupWrapping();
+    const url = '/vault/secrets/cubbyhole/create';
 
     await auth.logout({
       redirect_to: url,

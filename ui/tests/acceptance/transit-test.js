@@ -1,11 +1,21 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import { click, fillIn, find, currentURL, settled, visit, waitUntil, findAll } from '@ember/test-helpers';
 import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
+import { create } from 'ember-cli-page-object';
+import { v4 as uuidv4 } from 'uuid';
+
 import { encodeString } from 'vault/utils/b64';
 import authPage from 'vault/tests/pages/auth';
-import enablePage from 'vault/tests/pages/settings/mount-secret-backend';
 import secretListPage from 'vault/tests/pages/secrets/backend/list';
+import consoleClass from 'vault/tests/pages/components/console/ui-panel';
+import { deleteEngineCmd, mountEngineCmd } from '../helpers/commands';
 
+const consoleComponent = create(consoleClass);
 const keyTypes = [
   {
     name: (ts) => `aes-${ts}`,
@@ -89,8 +99,8 @@ const keyTypes = [
   },
 ];
 
-let generateTransitKey = async function (key, now) {
-  let name = key.name(now);
+const generateTransitKey = async function (key, now) {
+  const name = key.name(now);
   await click('[data-test-secret-create]');
 
   await fillIn('[data-test-transit-key-name]', name);
@@ -236,7 +246,7 @@ const testConvergentEncryption = async function (assert, keyName) {
     },
   ];
 
-  for (let testCase of tests) {
+  for (const testCase of tests) {
     await click('[data-test-transit-action-link="encrypt"]');
 
     find('#plaintext-control .CodeMirror').CodeMirror.setValue(testCase.plaintext);
@@ -282,30 +292,34 @@ const testConvergentEncryption = async function (assert, keyName) {
 };
 module('Acceptance | transit', function (hooks) {
   setupApplicationTest(hooks);
-  let path;
-  let now;
 
   hooks.beforeEach(async function () {
+    const uid = uuidv4();
     await authPage.login();
     await settled();
-    now = new Date().getTime();
-    path = `transit-${now}`;
+    this.uid = uid;
+    this.path = `transit-${uid}`;
 
-    await enablePage.enable('transit', path);
-    await settled();
+    await consoleComponent.runCommands(mountEngineCmd('transit', this.path));
+    // Start test on backend main page
+    return visit(`/vault/secrets/${this.path}/list`);
+  });
+
+  hooks.afterEach(function () {
+    return consoleComponent.runCommands(deleteEngineCmd(this.path));
   });
 
   test(`transit backend: list menu`, async function (assert) {
-    await generateTransitKey(keyTypes[0], now);
+    await generateTransitKey(keyTypes[0], this.uid);
     await secretListPage.secrets.objectAt(0).menuToggle();
     await settled();
     assert.strictEqual(secretListPage.menuItems.length, 2, 'shows 2 items in the menu');
   });
-  for (let key of keyTypes) {
+  for (const key of keyTypes) {
     test(`transit backend: ${key.type}`, async function (assert) {
       assert.expect(key.convergent ? 43 : 7);
-      let name = await generateTransitKey(key, now);
-      await visit(`vault/secrets/${path}/show/${name}`);
+      const name = await generateTransitKey(key, this.uid);
+      await visit(`vault/secrets/${this.path}/show/${name}`);
 
       const expectedRotateValue = key.autoRotate ? '30 days' : 'Key will not be automatically rotated';
       assert
@@ -326,9 +340,8 @@ module('Acceptance | transit', function (hooks) {
         .dom('[data-test-transit-key-version-row]')
         .exists({ count: 2 }, `${name}: two key versions after rotate`);
       await click('[data-test-transit-key-actions-link]');
-
       assert.ok(
-        currentURL().startsWith(`/vault/secrets/${path}/show/${name}?tab=actions`),
+        currentURL().startsWith(`/vault/secrets/${this.path}/show/${name}?tab=actions`),
         `${name}: navigates to transit actions`
       );
 

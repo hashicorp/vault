@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package mongodb
 
 import (
@@ -7,7 +10,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/hashicorp/vault/helper/testhelpers/docker"
+	"github.com/hashicorp/vault/sdk/helper/docker"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 	"go.mongodb.org/mongo-driver/mongo/readpref"
@@ -27,9 +30,10 @@ func PrepareTestContainerWithDatabase(t *testing.T, version, dbName string) (fun
 	}
 
 	runner, err := docker.NewServiceRunner(docker.RunOptions{
-		ImageRepo: "mongo",
-		ImageTag:  version,
-		Ports:     []string{"27017/tcp"},
+		ContainerName: "mongo",
+		ImageRepo:     "docker.mirror.hashicorp.services/library/mongo",
+		ImageTag:      version,
+		Ports:         []string{"27017/tcp"},
 	})
 	if err != nil {
 		t.Fatalf("could not start docker mongo: %s", err)

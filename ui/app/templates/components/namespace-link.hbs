@@ -1,4 +1,14 @@
-<a href={{this.namespaceLink}} class={{concat "is-block " this.class}} data-test-namespace-link={{this.normalizedNamespace}}>
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
+<ExternalLink
+  @href={{this.namespaceLink}}
+  @sameTab={{true}}
+  class={{concat "is-block " this.class}}
+  data-test-namespace-link={{this.normalizedNamespace}}
+>
   {{#if (has-block)}}
     {{yield}}
   {{else}}
@@ -9,4 +19,4 @@
       </span>
     </div>
   {{/if}}
-</a>
+</ExternalLink>

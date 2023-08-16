@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import { module, test } from 'qunit';
 import { setupRenderingTest } from 'ember-qunit';
 import { render, fillIn, click } from '@ember/test-helpers';
@@ -63,7 +68,7 @@ module('Integration | Component | mfa-method-form', function (hooks) {
     assert.expect(3);
 
     this.model.issuer = 'Vault';
-    this.model.period = '30';
+    this.model.period = '30s';
     this.model.algorithm = 'SHA512';
 
     await render(hbs`
@@ -75,7 +80,7 @@ module('Integration | Component | mfa-method-form', function (hooks) {
     `);
     assert.dom('[data-test-input="issuer"]').hasValue('Vault', 'Issuer input is populated');
     assert.dom('[data-test-ttl-value="Period"]').hasValue('30', 'Period input ttl is populated');
-    let checkedAlgorithm = this.element.querySelector('input[name=algorithm]:checked');
+    const checkedAlgorithm = this.element.querySelector('input[name=algorithm]:checked');
     assert.dom(checkedAlgorithm).hasValue('SHA512', 'SHA512 radio input is selected');
   });
 });

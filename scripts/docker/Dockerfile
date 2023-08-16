@@ -1,6 +1,9 @@
+# Copyright (c) HashiCorp, Inc.
+# SPDX-License-Identifier: BUSL-1.1
+
 # Multi-stage builder to avoid polluting users environment with wrong
 # architecture binaries.
-ARG VERSION=1.19.2
+ARG VERSION
 
 FROM golang:${VERSION} AS builder
 

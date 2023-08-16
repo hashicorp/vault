@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package vault
 
 import (
@@ -38,7 +41,7 @@ const (
 
 	// undoLogSafeVersion is the minimum version Vault must be at in order
 	// for undo logs to be turned on.
-	undoLogSafeVersion = "1.12.0-rc1"
+	undoLogSafeVersion = "1.12.0"
 )
 
 var (
@@ -199,6 +202,13 @@ func (c *Core) monitorUndoLogs() error {
 		return nil
 	}
 
+	// If undo logs have been explicitly enabled, likely via VAULT_REPLICATION_USE_UNDO_LOGS, then exit, as presumably
+	// we don't want to be checking for safety if we already know it's safe.
+	if c.UndoLogsEnabled() {
+		logger.Debug("undo logs have been explicitly enabled. exiting monitor.")
+		return nil
+	}
+
 	minimumVersion, err := goversion.NewSemver(undoLogSafeVersion)
 	if err != nil {
 		return fmt.Errorf("minimum undo log version (%q) won't parse: %w", undoLogSafeVersion, err)
@@ -282,7 +292,7 @@ func (c *Core) monitorUndoLogs() error {
 					continue
 				}
 
-				logger.Debug("undo logs have been enabled and this has been persisted to storage. shutting down the checker loop.")
+				logger.Debug("undo logs have been enabled and this has been persisted to storage. shutting down the checker.")
 				return
 			}
 		}
@@ -315,10 +325,10 @@ func (c *Core) setupRaftActiveNode(ctx context.Context) error {
 		return err
 	}
 
-	if c.UndoLogsEnabled() {
-		if err := c.monitorUndoLogs(); err != nil {
-			return err
-		}
+	// We always want to start this watcher - if undo logs are safe to be enabled, it will exit quickly. If not, it
+	// will monitor for safety until they are enabled.
+	if err := c.monitorUndoLogs(); err != nil {
+		return err
 	}
 	return c.startPeriodicRaftTLSRotate(ctx)
 }
@@ -349,7 +359,6 @@ func (c *Core) startPeriodicRaftTLSRotate(ctx context.Context) error {
 
 	c.raftTLSRotationStopCh = make(chan struct{})
 	logger := c.logger.Named("raft")
-	c.AddLogger(logger)
 
 	if c.isRaftHAOnly() {
 		return c.raftTLSRotateDirect(ctx, logger, c.raftTLSRotationStopCh)
@@ -426,8 +435,9 @@ func (c *Core) raftTLSRotateDirect(ctx context.Context, logger hclog.Logger, sto
 				backoff = false
 			}
 
+			timer := time.NewTimer(time.Until(nextRotationTime))
 			select {
-			case <-time.After(time.Until(nextRotationTime)):
+			case <-timer.C:
 				// It's time to rotate the keys
 				next, err := rotateKeyring()
 				if err != nil {
@@ -439,6 +449,7 @@ func (c *Core) raftTLSRotateDirect(ctx context.Context, logger hclog.Logger, sto
 				nextRotationTime = next
 
 			case <-stopCh:
+				timer.Stop()
 				return
 			}
 		}
@@ -853,7 +864,7 @@ func (c *Core) InitiateRetryJoin(ctx context.Context) error {
 
 	c.logger.Info("raft retry join initiated")
 
-	if _, err = c.JoinRaftCluster(ctx, leaderInfos, false); err != nil {
+	if _, err = c.JoinRaftCluster(ctx, leaderInfos, raftBackend.NonVoter()); err != nil {
 		return err
 	}
 
@@ -1227,6 +1238,11 @@ func (c *Core) raftLeaderInfo(leaderInfo *raft.LeaderJoinInfo, disco *discover.D
 	return ret, nil
 }
 
+// NewDelegateForCore creates a raft.Delegate for the specified core using its backend.
+func NewDelegateForCore(c *Core) *raft.Delegate {
+	return raft.NewDelegate(c.getRaftBackend())
+}
+
 // getRaftBackend returns the RaftBackend from the HA or physical backend,
 // in that order of preference, or nil if not of type RaftBackend.
 func (c *Core) getRaftBackend() *raft.RaftBackend {
@@ -1251,7 +1267,7 @@ func (c *Core) isRaftHAOnly() bool {
 	return isRaftHA && !isRaftStorage
 }
 
-func (c *Core) joinRaftSendAnswer(ctx context.Context, sealAccess *seal.Access, raftInfo *raftInformation) error {
+func (c *Core) joinRaftSendAnswer(ctx context.Context, sealAccess seal.Access, raftInfo *raftInformation) error {
 	if raftInfo.challenge == nil {
 		return errors.New("raft challenge is nil")
 	}

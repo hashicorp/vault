@@ -1,10 +1,14 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import { module, test } from 'qunit';
 import { visit, currentURL, click, fillIn, findAll, currentRouteName } from '@ember/test-helpers';
 import { setupApplicationTest } from 'ember-qunit';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 import ENV from 'vault/config/environment';
 import authPage from 'vault/tests/pages/auth';
-import logout from 'vault/tests/pages/logout';
 import { create } from 'ember-cli-page-object';
 import { clickTrigger } from 'ember-power-select/test-support/helpers';
 import ss from 'vault/tests/pages/components/search-select';
@@ -29,13 +33,9 @@ module('Acceptance | oidc-config clients and assignments', function (hooks) {
     ENV['ember-cli-mirage'].handler = 'oidcConfig';
   });
 
-  hooks.beforeEach(async function () {
-    this.store = await this.owner.lookup('service:store');
+  hooks.beforeEach(function () {
+    this.store = this.owner.lookup('service:store');
     return authPage.login();
-  });
-
-  hooks.afterEach(function () {
-    return logout.visit();
   });
 
   hooks.after(function () {
@@ -135,7 +135,7 @@ module('Acceptance | oidc-config clients and assignments', function (hooks) {
     await fillIn('[data-test-input="redirectUris"] [data-test-string-list-input="0"]', 'some-url.com');
 
     // limit access & create new assignment inline
-    await click('label[for=limited]');
+    await click('[data-test-oidc-radio="limited"]');
     await clickTrigger();
     await fillIn('.ember-power-select-search input', 'assignment-inline');
     await searchSelect.options.objectAt(0).click();
@@ -168,7 +168,7 @@ module('Acceptance | oidc-config clients and assignments', function (hooks) {
     // edit back to allow_all
     await click(SELECTORS.clientEditButton);
     assert.dom(SELECTORS.clientSaveButton).hasText('Update', 'form button renders correct text');
-    await click('label[for=allow-all]');
+    await click('[data-test-oidc-radio="allow-all"]');
     await click(SELECTORS.clientSaveButton);
     assert
       .dom('[data-test-value-div="Assignment"]')
@@ -207,7 +207,7 @@ module('Acceptance | oidc-config clients and assignments', function (hooks) {
   });
 
   test('it creates, updates, and deletes an assignment', async function (assert) {
-    assert.expect(12);
+    assert.expect(14);
     await visit(OIDC_BASE_URL + '/assignments');
 
     //* ensure clean test state
@@ -220,6 +220,7 @@ module('Acceptance | oidc-config clients and assignments', function (hooks) {
       'vault.cluster.access.oidc.assignments.create',
       'navigates to create form'
     );
+    assert.dom('[data-test-oidc-assignment-title]').hasText('Create Assignment', 'Form title renders');
     await fillIn('[data-test-input="name"]', 'test-assignment');
     await click('[data-test-component="search-select"]#entities .ember-basic-dropdown-trigger');
     await click('.ember-power-select-option');
@@ -246,6 +247,7 @@ module('Acceptance | oidc-config clients and assignments', function (hooks) {
       'vault.cluster.access.oidc.assignments.assignment.edit',
       'navigates to the assignment edit page from details'
     );
+    assert.dom('[data-test-oidc-assignment-title]').hasText('Edit Assignment', 'Form title renders');
     await click('[data-test-component="search-select"]#groups .ember-basic-dropdown-trigger');
     await click('.ember-power-select-option');
     assert.dom('[data-test-oidc-assignment-save]').hasText('Update');

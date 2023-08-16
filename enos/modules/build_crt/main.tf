@@ -1,3 +1,6 @@
+# Copyright (c) HashiCorp, Inc.
+# SPDX-License-Identifier: BUSL-1.1
+
 # Shim module since CRT provided things will use the crt_bundle_path variable
 variable "bundle_path" {
   default = "/tmp/vault.zip"
@@ -38,12 +41,9 @@ variable "distro" {
 variable "edition" {
   default = null
 }
-variable "instance_type" {
-  default = null
-}
 variable "revision" {
   default = null
 }
-variable "vault_product_version" {
+variable "product_version" {
   default = null
 }
