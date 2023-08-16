@@ -1,0 +1,3 @@
+```release-note:bug
+ui: Fixes client count timezone bug
+```

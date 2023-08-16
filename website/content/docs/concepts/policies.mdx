@@ -104,7 +104,7 @@ Here is a more detailed policy, and it is documented inline:
 # This section grants all access on "secret/*". Further restrictions can be
 # applied to this broad policy, as shown below.
 path "secret/*" {
-  capabilities = ["create", "read", "update", "delete", "list"]
+  capabilities = ["create", "read", "update", "patch", "delete", "list"]
 }
 
 # Even though we allowed secret/*, this line explicitly denies
@@ -222,6 +222,8 @@ similarly matched.
   parts of Vault, this implicitly includes the ability to create the initial
   value at the path.
 
+- `patch` (`PATCH`) -  Allows partial updates to the data at a given path.
+
 - `delete` (`DELETE`) - Allows deleting the data at the given path.
 
 - `list` (`LIST`) - Allows listing values at the given path. Note that the
@@ -276,7 +278,7 @@ The following policy creates a section of the KVv2 Secret Engine to a specific u
 
 ```ruby
 path "secret/data/{{identity.entity.id}}/*" {
-  capabilities = ["create", "update", "read", "delete"]
+  capabilities = ["create", "update", "patch", "read", "delete"]
 }
 
 path "secret/metadata/{{identity.entity.id}}/*" {
@@ -290,7 +292,7 @@ group.
 ```ruby
 # In the example below, the group ID maps a group and the path
 path "secret/data/groups/{{identity.groups.ids.fb036ebc-2f62-4124-9503-42aa7A869741.name}}/*" {
-  capabilities = ["create", "update", "read", "delete"]
+  capabilities = ["create", "update", "patch", "read", "delete"]
 }
 
 path "secret/metadata/groups/{{identity.groups.ids.fb036ebc-2f62-4124-9503-42aa7A869741.name}}/*" {
@@ -404,7 +406,7 @@ options are:
   - It's important to note that the use of globbing may result in surprising
     or unexpected behavior.
     ```ruby
-    # This allows the user to create or update "secret/foo" with a parameter
+    # This allows the user to create, update, or patch "secret/foo" with a parameter
     # named "bar". The values passed to parameter "bar" must start with "baz/"
     # so values like "baz/quux" are fine. However, values like
     # "baz/quux,wibble,wobble,wubble" would also be accepted. The API that
@@ -415,7 +417,7 @@ options are:
     # "secret/foo" might surprise someone that expected the allowed_parameters
     # constraint to only allow values starting with "baz/".
     path "secret/foo" {
-      capabilities = ["create", "update"]
+      capabilities = ["create", "update", "patch"]
       allowed_parameters = {
         "bar" = ["baz/*"]
       }

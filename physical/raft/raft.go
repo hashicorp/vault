@@ -274,7 +274,7 @@ func EnsurePath(path string, dir bool) error {
 	if !dir {
 		path = filepath.Dir(path)
 	}
-	return os.MkdirAll(path, 0o755)
+	return os.MkdirAll(path, 0o700)
 }
 
 // NewRaftBackend constructs a RaftBackend using the given directory
@@ -864,11 +864,16 @@ func (b *RaftBackend) SetupCluster(ctx context.Context, opts SetupOpts) error {
 	// StartAsLeader is only set during init, recovery mode, storage migration,
 	// and tests.
 	if opts.StartAsLeader {
+		// ticker is used to prevent memory leak of using time.After in
+		// for - select pattern.
+		ticker := time.NewTicker(10 * time.Millisecond)
+		defer ticker.Stop()
 		for {
 			if raftObj.State() == raft.Leader {
 				break
 			}
 
+			ticker.Reset(10 * time.Millisecond)
 			select {
 			case <-ctx.Done():
 				future := raftObj.Shutdown()
@@ -877,7 +882,7 @@ func (b *RaftBackend) SetupCluster(ctx context.Context, opts SetupOpts) error {
 				}
 
 				return errors.New("shutdown while waiting for leadership")
-			case <-time.After(10 * time.Millisecond):
+			case <-ticker.C:
 			}
 		}
 	}

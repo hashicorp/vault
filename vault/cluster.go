@@ -218,13 +218,12 @@ func (c *Core) setupCluster(ctx context.Context) error {
 
 		// Create a certificate
 		if c.localClusterCert.Load().([]byte) == nil {
-			c.logger.Debug("generating local cluster certificate")
-
 			host, err := uuid.GenerateUUID()
 			if err != nil {
 				return err
 			}
 			host = fmt.Sprintf("fw-%s", host)
+			c.logger.Debug("generating local cluster certificate", "host", host)
 			template := &x509.Certificate{
 				Subject: pkix.Name{
 					CommonName: host,
