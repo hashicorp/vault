@@ -385,6 +385,10 @@ func (c *Core) SetClusterListenerAddrs(addrs []*net.TCPAddr) {
 	}
 }
 
+func (c *Core) ClusterID() string {
+	return c.clusterID.Load()
+}
+
 func (c *Core) SetClusterHandler(handler http.Handler) {
 	c.clusterHandler = handler
 }
