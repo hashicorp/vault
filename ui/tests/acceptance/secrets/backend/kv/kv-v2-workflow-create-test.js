@@ -713,10 +713,14 @@ module('Acceptance | kv-v2 workflow | secret and version create', function (hook
       await click(PAGE.secretTab('Secret'));
       assert.dom(PAGE.detail.createNewVersion).doesNotExist('create new version button not rendered');
       await visit(`/vault/secrets/${backend}/kv/app%2Ffirst/details/edit?version=1`);
-      // TODO: Should show warning when previous secret is unable to be read
+      assert
+        .dom(FORM.noReadAlert)
+        .hasText(
+          'You do not have read permissions for this secret data. Saving will overwrite the existing secret.',
+          'shows alert for no read permissions'
+        );
 
-      // TODO: path input should be disabled
-      // assert.dom(FORM.inputByAttr('path')).isDisabled('path input is disabled');
+      assert.dom(FORM.inputByAttr('path')).isDisabled('path input is disabled');
       assert.dom(FORM.inputByAttr('path')).hasValue('app/first');
       assert.dom(FORM.toggleMetadata).doesNotExist('Does not show metadata toggle when creating new version');
       assert.dom(FORM.keyInput()).hasValue('', 'first row has no key');
@@ -803,10 +807,14 @@ module('Acceptance | kv-v2 workflow | secret and version create', function (hook
       // assert.dom(PAGE.detail.versionCreated).includesText('Version 1 created');
       assert.dom(PAGE.detail.createNewVersion).doesNotExist('create new version button not rendered');
       await visit(`/vault/secrets/${backend}/kv/app%2Ffirst/details/edit?version=1`);
-      // TODO: Should show warning when previous secret is unable to be read
+      assert
+        .dom(FORM.noReadAlert)
+        .hasText(
+          'You do not have read permissions for this secret data. Saving will overwrite the existing secret.',
+          'shows alert for no read permissions'
+        );
 
-      // TODO: path input should be disabled
-      // assert.dom(FORM.inputByAttr('path')).isDisabled('path input is disabled');
+      assert.dom(FORM.inputByAttr('path')).isDisabled('path input is disabled');
       assert.dom(FORM.inputByAttr('path')).hasValue('app/first');
       assert.dom(FORM.toggleMetadata).doesNotExist('Does not show metadata toggle when creating new version');
       assert.dom(FORM.keyInput()).hasValue('', 'first row has no key');
@@ -822,12 +830,254 @@ module('Acceptance | kv-v2 workflow | secret and version create', function (hook
 
   module('secret-creator persona', function (hooks) {
     hooks.beforeEach(async function () {
-      const token = await runCmd([
-        tokenWithPolicyCmd('secret-creator', personas.secretCreator(this.backend)),
-      ]);
-      await authPage.login(token);
+      const token = await runCmd(tokenWithPolicyCmd('secret-creator', personas.secretCreator(this.backend)));
+      return authPage.login(token);
     });
-    // Copy test outline from admin persona
+    test('cancel on create clears model (sc)', async function (assert) {
+      const backend = this.backend;
+      await visit(`/vault/secrets/${backend}/kv/list`);
+      assert.dom(PAGE.list.item()).doesNotExist('list view has no items');
+      await click(PAGE.list.createSecret);
+      await fillIn(FORM.inputByAttr('path'), 'jk');
+      await click(FORM.cancelBtn);
+      assert.dom(PAGE.list.item()).doesNotExist('list view still has no items');
+      await click(PAGE.list.createSecret);
+      await fillIn(FORM.inputByAttr('path'), 'psych');
+      await click(PAGE.breadcrumbAtIdx(1));
+      assert.dom(PAGE.list.item()).doesNotExist('list view still has no items');
+    });
+    test('cancel on new version rolls back model (sc)', async function (assert) {
+      const backend = this.backend;
+      await visit(`/vault/secrets/${backend}/kv/${encodeURIComponent('app/first')}/details`);
+      assert
+        .dom(PAGE.emptyStateTitle)
+        .hasText('You do not have permission to read this secret', 'no permissions state shows');
+      await click(PAGE.detail.createNewVersion);
+      await fillIn(FORM.keyInput(), 'bar');
+      await click(FORM.cancelBtn);
+      assert.strictEqual(
+        currentURL(),
+        `/vault/secrets/${backend}/kv/${encodeURIComponent('app/first')}/details`,
+        'cancel goes to correct url'
+      );
+      assert.dom(PAGE.list.item()).doesNotExist('list view has no items');
+      await click(PAGE.detail.createNewVersion);
+      await fillIn(FORM.keyInput(), 'bar');
+      await click(PAGE.breadcrumbAtIdx(2));
+      assert.strictEqual(
+        currentURL(),
+        `/vault/secrets/${backend}/kv/${encodeURIComponent('app/first')}/details`,
+        'cancel goes to correct url'
+      );
+      assert.dom(PAGE.list.item()).doesNotExist('list view has no items');
+    });
+    test('create & update root secret with default metadata (sc)', async function (assert) {
+      const backend = this.backend;
+      const secretPath = 'some secret';
+      await visit(`/vault/secrets/${backend}/kv/list`);
+      await click(PAGE.list.createSecret);
+
+      // Create secret form -- validations
+      await click(FORM.saveBtn);
+      assert.dom(FORM.invalidFormAlert).hasText('There is an error with this form.');
+      assert.dom(FORM.validation('path')).hasText("Path can't be blank.");
+      await typeIn(FORM.inputByAttr('path'), secretPath);
+      assert
+        .dom(FORM.validationWarning)
+        .hasText(
+          "Path contains whitespace. If this is desired, you'll need to encode it with %20 in API requests."
+        );
+      assert.dom(PAGE.create.metadataSection).doesNotExist('Hides metadata section by default');
+
+      // Submit with API errors
+      await click(FORM.saveBtn);
+      assert.dom(FORM.messageError).hasText('Error no data provided', 'API error shows on form');
+
+      await fillIn(FORM.keyInput(), 'api_key');
+      await fillIn(FORM.maskedValueInput(), 'partyparty');
+      await click(FORM.saveBtn);
+
+      // Details page
+      assert.strictEqual(
+        currentURL(),
+        `/vault/secrets/${backend}/kv/${encodeURIComponent(secretPath)}/details`,
+        'Goes to details page after save'
+      );
+      assert.dom(PAGE.detail.versionCreated).doesNotExist('Version created not shown');
+      assert.dom(PAGE.secretRow).doesNotExist('does not show data contents');
+      assert
+        .dom(PAGE.emptyStateTitle)
+        .hasText('You do not have permission to read this secret', 'shows permissions empty state');
+
+      // Metadata page
+      await click(PAGE.secretTab('Metadata'));
+      assert
+        .dom(`${PAGE.metadata.customMetadataSection} ${PAGE.emptyStateTitle}`)
+        .hasText(
+          'You do not have access to read custom metadata',
+          'permissions empty state for custom metadata'
+        );
+      assert
+        .dom(`${PAGE.metadata.secretMetadataSection} ${PAGE.emptyStateTitle}`)
+        .hasText('You do not have access to secret metadata', 'permissions empty state for secret metadata');
+
+      // Add new version
+      await click(PAGE.secretTab('Secret'));
+      await click(PAGE.detail.createNewVersion);
+      assert.dom(FORM.inputByAttr('path')).isDisabled('path input is disabled');
+      assert.dom(FORM.inputByAttr('path')).hasValue(secretPath);
+      assert.dom(FORM.toggleMetadata).doesNotExist('Does not show metadata toggle when creating new version');
+      assert.dom(FORM.keyInput()).hasValue('', 'row 1 is empty key');
+      assert.dom(FORM.maskedValueInput()).hasValue('', 'row 1 has empty value');
+      await fillIn(FORM.keyInput(), 'api_url');
+      await fillIn(FORM.maskedValueInput(), 'hashicorp.com');
+      await click(FORM.saveBtn);
+
+      // Back to details page
+      assert.strictEqual(
+        currentURL(),
+        `/vault/secrets/${backend}/kv/${encodeURIComponent(secretPath)}/details`,
+        'goes back to details page'
+      );
+      assert.dom(PAGE.detail.versionCreated).doesNotExist('Version created does not show');
+      assert.dom(PAGE.secretRow).doesNotExist('does not show data contents');
+      assert
+        .dom(PAGE.emptyStateTitle)
+        .hasText('You do not have permission to read this secret', 'shows permissions empty state');
+    });
+    test('create nested secret with metadata (sc)', async function (assert) {
+      const backend = this.backend;
+      await visit(`/vault/secrets/${backend}/kv/list`);
+      await click(PAGE.list.createSecret);
+
+      // Create secret
+      await typeIn(FORM.inputByAttr('path'), 'my/');
+      assert.dom(FORM.validation('path')).hasText("Path can't end in forward slash '/'.");
+      await typeIn(FORM.inputByAttr('path'), 'secret');
+      assert.dom(FORM.validation('path')).doesNotExist('form validation goes away');
+      await fillIn(FORM.keyInput(), 'password');
+      await fillIn(FORM.maskedValueInput(), 'kittens1234');
+
+      await click(FORM.toggleMetadata);
+      assert.dom(PAGE.create.metadataSection).exists('Shows metadata section after toggled');
+      // Check initial values
+      assert.dom(FORM.inputByAttr('maxVersions')).hasValue('0');
+      assert.dom(FORM.inputByAttr('casRequired')).isNotChecked();
+      assert.dom(FORM.toggleByLabel('Automate secret deletion')).isNotChecked();
+      // MaxVersions validation
+      await fillIn(FORM.inputByAttr('maxVersions'), 'seven');
+      await click(FORM.saveBtn);
+      assert.dom(FORM.validation('maxVersions')).hasText('Maximum versions must be a number.');
+      await fillIn(FORM.inputByAttr('maxVersions'), '99999999999999999');
+      await click(FORM.saveBtn);
+      assert.dom(FORM.validation('maxVersions')).hasText('You cannot go over 16 characters.');
+      await fillIn(FORM.inputByAttr('maxVersions'), '7');
+
+      // Fill in other metadata
+      await click(FORM.inputByAttr('casRequired'));
+      await click(FORM.toggleByLabel('Automate secret deletion'));
+      await fillIn(FORM.ttlValue('Automate secret deletion'), '1000');
+
+      // Fill in custom metadata
+      await fillIn(`${PAGE.create.metadataSection} ${FORM.keyInput()}`, 'team');
+      await fillIn(`${PAGE.create.metadataSection} ${FORM.valueInput()}`, 'UI');
+      // Fill in metadata
+      await click(FORM.saveBtn);
+
+      // Details
+      assert.strictEqual(
+        currentURL(),
+        `/vault/secrets/${backend}/kv/${encodeURIComponent('my/secret')}/details`,
+        'goes back to details page'
+      );
+      assert.dom(PAGE.detail.versionCreated).doesNotExist('version created not shown');
+      assert.dom(PAGE.secretRow).doesNotExist('does not show data contents');
+      assert
+        .dom(PAGE.emptyStateTitle)
+        .hasText('You do not have permission to read this secret', 'shows permissions empty state');
+
+      // Metadata
+      await click(PAGE.secretTab('Metadata'));
+      assert
+        .dom(`${PAGE.metadata.customMetadataSection} ${PAGE.emptyStateTitle}`)
+        .hasText(
+          'You do not have access to read custom metadata',
+          'permissions empty state for custom metadata'
+        );
+      assert
+        .dom(`${PAGE.metadata.secretMetadataSection} ${PAGE.emptyStateTitle}`)
+        .hasText('You do not have access to secret metadata', 'permissions empty state for secret metadata');
+    });
+    test('creates a secret at a sub-directory (sc)', async function (assert) {
+      const backend = this.backend;
+      await visit(`/vault/secrets/${backend}/kv/app%2F/directory`);
+      assert.dom(PAGE.list.item()).doesNotExist('Does not list any secrets');
+      await click(PAGE.list.createSecret);
+      assert.strictEqual(
+        currentURL(),
+        `/vault/secrets/${backend}/kv/create?initialKey=app%2F`,
+        'Goes to create page with initialKey'
+      );
+      await typeIn(FORM.inputByAttr('path'), 'new');
+      await fillIn(FORM.keyInput(), 'api_key');
+      await fillIn(FORM.maskedValueInput(), 'partyparty');
+      await click(FORM.saveBtn);
+      assert.strictEqual(
+        currentURL(),
+        `/vault/secrets/${backend}/kv/${encodeURIComponent('app/new')}/details`,
+        'Redirects to detail after save'
+      );
+      await click(PAGE.breadcrumbAtIdx(2));
+      // TODO: Pagefilter should not be present if empty
+      assert.strictEqual(
+        currentURL(),
+        `/vault/secrets/${backend}/kv/app%2F/directory?pageFilter=`,
+        'sub-dir page'
+      );
+      assert.dom(PAGE.list.item()).doesNotExist('Does not list any secrets');
+    });
+    test('create new version of secret from older version (sc)', async function (assert) {
+      const backend = this.backend;
+      await visit(`/vault/secrets/${backend}/kv/app%2Ffirst/details?version=1`);
+      // TODO: Should hide dropdown for no metadata access
+      // assert.dom(PAGE.detail.versionDropdown).doesNotExist('version dropdown does not show');
+      assert.dom(PAGE.detail.versionCreated).doesNotExist('Version created not shown');
+      await click(PAGE.detail.createNewVersion);
+      assert.strictEqual(
+        currentURL(),
+        `/vault/secrets/${backend}/kv/app%2Ffirst/details/edit`,
+        'Goes to new version page'
+      );
+      // TODO: should show version alert?
+      // assert
+      //   .dom(FORM.versionAlert)
+      //   .hasText(
+      //     'Warning You are creating a new version based on data from Version 1. The current version for app/first is Version 2.',
+      //     'Shows version warning'
+      //   );
+      assert
+        .dom(FORM.noReadAlert)
+        .hasText(
+          'Warning You do not have read permissions for this secret data. Saving will overwrite the existing secret.',
+          'shows alert for no read permissions'
+        );
+      assert.dom(FORM.keyInput()).hasValue('', 'Key input has empty value');
+      assert.dom(FORM.maskedValueInput()).hasValue('', 'Val input has empty value');
+
+      await fillIn(FORM.keyInput(), 'my-key');
+      await fillIn(FORM.maskedValueInput(), 'my-value');
+      await click(FORM.saveBtn);
+
+      assert.strictEqual(
+        currentURL(),
+        `/vault/secrets/${backend}/kv/app%2Ffirst/details`,
+        'redirects to details page'
+      );
+      assert.dom(PAGE.secretRow).doesNotExist('does not show data contents');
+      assert
+        .dom(PAGE.emptyStateTitle)
+        .hasText('You do not have permission to read this secret', 'shows permissions empty state');
+    });
   });
 
   module('enterprise controlled access persona', function (hooks) {
