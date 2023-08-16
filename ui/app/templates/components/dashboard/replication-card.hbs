@@ -8,43 +8,84 @@
   </div>
 </div>
 
-{{#if (or @replication.dr.clusterId @replication.performance.clusterId)}}
+{{! if replication and performance is allowed from license }}
+{{! (or @replication.dr.clusterId @replication.performance.clusterId) }}
+{{#if (and @version.hasPerfReplication @version.hasDRReplication)}}
   <hr class="has-background-gray-100" />
   <div class="is-grid grid-2-columns grid-gap-2 has-top-margin-m has-bottom-margin-m grid-align-items-start">
     <div>
       <div class="has-bottom-margin-s">
         <Hds::Link::Inline
-          class="title is-5 is-no-underline has-text-weight-semibold"
+          class="title is-5 has-text-weight-semibold"
           @route="vault.cluster.replication.mode.index"
           @model="dr"
         >DR Primary</Hds::Link::Inline>
       </div>
-      <div>
-        <Hds::TooltipButton @text="The cluster’s current operating state" @offset={{array 50 30}}>
-          {{@replication.dr.state}}
-          <Icon @name="check-circle-fill" class="has-text-success" />
+      <div class="title is-4 has-text-weight-semibold has-top-margin-xs">
+        {{@replication.dr.state}}
+        <Hds::TooltipButton @text="The cluster’s current operating state">
+          <FlightIcon @name="check-circle-fill" class="has-text-success" />
         </Hds::TooltipButton>
       </div>
     </div>
     <div>
       <div class="has-bottom-margin-s">
         <Hds::Link::Inline
-          class="title is-5 is-no-underline has-text-weight-semibold"
+          class="title is-5 has-text-weight-semibold"
           @route="vault.cluster.replication.mode.index"
           @model="performance"
         >Perf primary</Hds::Link::Inline>
       </div>
       {{#if @replication.performance.clusterId}}
-        <Hds::TooltipButton @text="The cluster’s current operating state" @offset={{array 50 30}}>
+        <div class="title is-4 has-text-weight-semibold has-top-margin-xs">
           {{@replication.performance.state}}
-          <Icon @name="check-circle-fill" class="has-text-success" />
-        </Hds::TooltipButton>
+          <Hds::TooltipButton @text="The cluster’s current operating state">
+            <FlightIcon @name="check-circle-fill" class="has-text-success" />
+          </Hds::TooltipButton>
+        </div>
       {{else}}
-        <Hds::TooltipButton @text="The cluster’s current operating state" @offset={{array 50 30}}>
+        <div class="title is-4 has-text-weight-semibold has-top-margin-xs">
           not set up
-          <Icon @name="x-circle-fill" class="has-text-danger" />
-        </Hds::TooltipButton>
+          <Hds::TooltipButton @text="The cluster’s current operating state">
+            <FlightIcon @name="x-circle-fill" class="has-text-danger" />
+          </Hds::TooltipButton>
+        </div>
       {{/if}}
+    </div>
+  </div>
+{{else if @version.hasDRReplication}}
+  <hr class="has-background-gray-100" />
+  <div class="is-marginless">
+    <Hds::Link::Inline
+      class="title is-5 has-text-weight-semibold"
+      @route="vault.cluster.replication.mode.index"
+      @model="dr"
+    >DR Primary</Hds::Link::Inline>
+  </div>
+
+  <div class="is-grid grid-2-columns grid-gap-2 has-top-margin-m has-bottom-margin-m grid-align-items-start">
+    <div>
+      <div class="has-bottom-margin-xxs title is-5 has-text-weight-semibold">
+        state
+      </div>
+      <div class="has-text-grey-dark title is-8 has-font-weight-normal">
+        The current operating state of the cluster. The value should be 'running'.
+      </div>
+      <div class="title is-4 has-text-weight-semibold has-top-margin-xs">
+        {{@replication.dr.state}}
+        <Hds::TooltipButton @text="The cluster's current operating state">
+          <FlightIcon @name="check-circle-fill" class="has-text-success" />
+        </Hds::TooltipButton>
+      </div>
+    </div>
+    <div>
+      <div class="has-bottom-margin-xs title is-5 has-text-weight-semibold">
+        known secondaries
+      </div>
+      <div class="has-text-grey-dark title is-8 has-font-weight-normal">Number of secondaries connected to this primary.</div>
+      <div class="title is-4 has-text-weight-semibold has-top-margin-xs">
+        {{or @replication.dr.knownSecondaries.length 0}}
+      </div>
     </div>
   </div>
 {{else}}
