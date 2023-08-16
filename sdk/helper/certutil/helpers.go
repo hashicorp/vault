@@ -84,10 +84,10 @@ func GetSubjKeyID(privateKey crypto.Signer) ([]byte, error) {
 	if privateKey == nil {
 		return nil, errutil.InternalError{Err: "passed-in private key is nil"}
 	}
-	return getSubjectKeyID(privateKey.Public())
+	return GetSubjectKeyID(privateKey.Public())
 }
 
-func getSubjectKeyID(pub interface{}) ([]byte, error) {
+func GetSubjectKeyID(pub interface{}) ([]byte, error) {
 	var publicKeyBytes []byte
 	switch pub := pub.(type) {
 	case *rsa.PublicKey:
@@ -1066,7 +1066,7 @@ func signCertificate(data *CreationBundle, randReader io.Reader) (*ParsedCertBun
 		return nil, err
 	}
 
-	subjKeyID, err := getSubjectKeyID(data.CSR.PublicKey)
+	subjKeyID, err := GetSubjectKeyID(data.CSR.PublicKey)
 	if err != nil {
 		return nil, err
 	}
@@ -1085,7 +1085,12 @@ func signCertificate(data *CreationBundle, randReader io.Reader) (*ParsedCertBun
 		certTemplate.NotBefore = time.Now().Add(-1 * data.Params.NotBeforeDuration)
 	}
 
-	switch data.SigningBundle.PrivateKeyType {
+	privateKeyType := data.SigningBundle.PrivateKeyType
+	if privateKeyType == ManagedPrivateKey {
+		privateKeyType = GetPrivateKeyTypeFromSigner(data.SigningBundle.PrivateKey)
+	}
+
+	switch privateKeyType {
 	case RSAPrivateKey:
 		switch data.Params.SignatureBits {
 		case 256:

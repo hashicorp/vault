@@ -1,0 +1,3 @@
+```release-note:bug
+ui: use URLSearchParams interface to capture namespace param from SSOs (ex. ADFS) with decoded state param in callback url
+```

@@ -4,9 +4,9 @@ page_title: Upgrading Plugins - Guides
 description: These are general upgrade instructions for Vault plugins.
 ---
 
-# Upgrading Vault Plugins
+# Upgrading Vault plugins
 
-## External Plugin Upgrade Procedure
+## External plugin upgrade procedure
 
 The following procedure details steps for upgrading an external plugin that has
 been registered to the catalog on a running server. This procedure is
@@ -65,7 +65,7 @@ instance or through a load balancer can result in mismatched
 plugin binaries within a cluster. On a replicated cluster this may be accomplished
 by setting the 'scope' parameter of the reload to 'global'.
 
-## Overriding Built-in Plugins
+## Overriding built-in plugins
 
 ### Background
 
@@ -131,7 +131,7 @@ current one.
 data you're interested in; that would erase storage. For the in-place update,
 register a new plugin atop the built-in one and leave any mounts alone.
 
-### Procedure for Overriding Built-in Plugins
+### Procedure for overriding built-in plugins
 
 The syntax is the same as an external plugin, with the difference being you
 name it the same as a built-in:
@@ -166,7 +166,7 @@ handling requests. For that we run:
 $ vault plugin reload -plugin=azure
 ```
 
-### Procedure for Reverting After Overriding A Built-in Plugin
+### Procedure for reverting after overriding a built-in plugin
 
 To revert the override, first deregister the plugin:
 
@@ -194,7 +194,7 @@ Finally, reload the plugin:
 $ vault plugin reload -plugin=azure
 ```
 
-### Caveats to Overriding Built-in Plugins
+### Caveats to overriding built-in plugins
 
 * As mentioned earlier, disabling existing mounts will wipe the existing data.
 * This type of upgrade affects all uses of the plugin. So if you have 5
