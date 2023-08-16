@@ -1,5 +1,5 @@
 # Copyright (c) HashiCorp, Inc.
-# SPDX-License-Identifier: MPL-2.0
+# SPDX-License-Identifier: BUSL-1.1
 
 scenario "agent" {
   matrix {
@@ -25,7 +25,7 @@ scenario "agent" {
       "ent.hsm"          = ["ui", "enterprise", "cgo", "hsm", "venthsm"]
       "ent.hsm.fips1402" = ["ui", "enterprise", "cgo", "hsm", "fips", "fips_140_2", "ent.hsm.fips1402"]
     }
-    bundle_path = matrix.artifact_source != "artifactory" ? abspath(var.vault_bundle_path) : null
+    bundle_path = matrix.artifact_source != "artifactory" ? abspath(var.vault_artifact_path) : null
     distro_version = {
       "rhel"   = var.rhel_distro_version
       "ubuntu" = var.ubuntu_distro_version
@@ -124,6 +124,7 @@ scenario "agent" {
       artifactory_release      = matrix.artifact_source == "artifactory" ? step.build_vault.vault_artifactory_release : null
       awskms_unseal_key_arn    = step.create_vpc.kms_key_arn
       cluster_name             = step.create_vault_cluster_targets.cluster_name
+      enable_file_audit_device = var.vault_enable_file_audit_device
       install_dir              = var.vault_install_dir
       license                  = matrix.edition != "oss" ? step.read_license.license : null
       local_artifact_path      = local.bundle_path
@@ -131,7 +132,6 @@ scenario "agent" {
       storage_backend          = "raft"
       target_hosts             = step.create_vault_cluster_targets.hosts
       unseal_method            = "shamir"
-      enable_file_audit_device = var.vault_enable_file_audit_device
     }
   }
 

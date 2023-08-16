@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 package pki
 
@@ -274,9 +274,10 @@ existing CRL and OCSP paths will return the unified CRL instead of a response ba
 
 func (b *backend) pathCRLRead(ctx context.Context, req *logical.Request, _ *framework.FieldData) (*logical.Response, error) {
 	sc := b.makeStorageContext(ctx, req.Storage)
-	config, err := sc.getRevocationConfig()
+
+	config, err := b.crlBuilder.getConfigWithForcedUpdate(sc)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed fetching CRL config: %w", err)
 	}
 
 	return genResponseFromCrlConfig(config), nil
@@ -284,7 +285,7 @@ func (b *backend) pathCRLRead(ctx context.Context, req *logical.Request, _ *fram
 
 func (b *backend) pathCRLWrite(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	sc := b.makeStorageContext(ctx, req.Storage)
-	config, err := sc.getRevocationConfig()
+	config, err := b.crlBuilder.getConfigWithForcedUpdate(sc)
 	if err != nil {
 		return nil, err
 	}
@@ -409,17 +410,9 @@ func (b *backend) pathCRLWrite(ctx context.Context, req *logical.Request, d *fra
 		return logical.ErrorResponse("unified_crl=true requires auto_rebuild=true, as unified CRLs cannot be rebuilt on every revocation."), nil
 	}
 
-	entry, err := logical.StorageEntryJSON("config/crl", config)
-	if err != nil {
-		return nil, err
+	if _, err := b.crlBuilder.writeConfig(sc, config); err != nil {
+		return nil, fmt.Errorf("failed persisting CRL config: %w", err)
 	}
-	err = req.Storage.Put(ctx, entry)
-	if err != nil {
-		return nil, err
-	}
-
-	b.crlBuilder.markConfigDirty()
-	b.crlBuilder.reloadConfigIfRequired(sc)
 
 	resp := genResponseFromCrlConfig(config)
 

@@ -1,6 +1,6 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 import { create } from 'ember-cli-page-object';
@@ -29,7 +29,6 @@ module('Acceptance | cluster', function (hooks) {
   setupApplicationTest(hooks);
 
   hooks.beforeEach(async function () {
-    await logout.visit();
     return authPage.login();
   });
 
@@ -46,7 +45,6 @@ module('Acceptance | cluster', function (hooks) {
     await visit('/vault/access');
 
     assert.dom('[data-test-sidebar-nav-link="Policies"]').doesNotExist();
-    await logout.visit();
   });
 
   test('it hides mfa setup if user has not entityId (ex: is a root user)', async function (assert) {
@@ -83,6 +81,5 @@ module('Acceptance | cluster', function (hooks) {
     await visit('/vault/access');
 
     assert.dom('[data-test-sidebar-nav-link="Policies"]').hasAttribute('href', '/ui/vault/policies/rgp');
-    await logout.visit();
   });
 });

@@ -26,23 +26,23 @@ This FAQ section contains frequently asked questions about the Login MFA feature
 
 Vault supports Step-up Enterprise MFA as part of our Enterprise edition. The Step-up Enterprise MFA provides MFA on login, or for step-up access to sensitive resources in Vault using ACL and Sentinel policies, and is configurable through the CLI/API.
 
-Starting with Vault version 1.10, Vault OSS provides [MFA on login](/vault/docs/auth/login-mfa) only. This is also available with Vault Enterprise and configurable through the CLI/API.
+Starting with Vault version 1.10, Vault Community Edition provides [MFA on login](/vault/docs/auth/login-mfa) only. This is also available with Vault Enterprise and configurable through the CLI/API.
 
 The Step-up Enterprise MFA will co-exist with the newly introduced Login MFA starting with Vault version 1.10.
 
 ### Q: what are the various MFA workflows that are available to me as a Vault user as of Vault version 1.10, and how are they different?
 
-| MFA workflow                                   | What does it do?                                                                                                                                                                                                                                                                                    | Who manages the MFA?              | OSS vs. Enterprise Support    |
+| MFA workflow                                   | What does it do?                                                                                                                                                                                                                                                                                    | Who manages the MFA?              | Community vs. Enterprise Support    |
 | ---------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------- | ----------------------------- |
-| [Login MFA](/vault/docs/auth/login-mfa)              | MFA in Vault OSS provides MFA on login. CLI, API, and UI-based login are supported.                                                                                                                                                                                                                 | MFA is managed by Vault           | Supported in Vault OSS        |
-| [Okta Auth MFA](/vault/docs/auth/okta#mfa)           | This is MFA as part of [Okta Auth method](/vault/docs/auth/okta) in Vault OSS, where MFA is enforced by Okta on login. MFA must be satisfied for authentication to be successful. This is different from the Okta MFA method used with Login MFA and Step-up Enterprise MFA. CLI/API login are supported. | MFA is managed externally by Okta | Supported in Vault OSS        |
+| [Login MFA](/vault/docs/auth/login-mfa)              | MFA in Vault Community Edition provides MFA on login. CLI, API, and UI-based login are supported.                                                                                                                                                                                                                 | MFA is managed by Vault           | Supported in Vault Community Edition        |
+| [Okta Auth MFA](/vault/docs/auth/okta#mfa)           | This is MFA as part of [Okta Auth method](/vault/docs/auth/okta) in Vault Community Edition, where MFA is enforced by Okta on login. MFA must be satisfied for authentication to be successful. This is different from the Okta MFA method used with Login MFA and Step-up Enterprise MFA. CLI/API login are supported. | MFA is managed externally by Okta | Supported in Vault Community Edition        |
 | [Step-up Enterprise MFA](/vault/docs/enterprise/mfa) | MFA in Vault Enterprise provides MFA for login and for step-up access to sensitive resources in Vault. Supports CLI/API based login, and ACL/Sentinel policies.                                                                                                                                     | MFA is managed by Vault           | Supported in Vault Enterprise |
 
-~> **Note**: [The Legacy MFA](/vault/docs/v1.10.x/auth/mfa) is a **deprecated** MFA workflow in Vault OSS. Refer [here](#q-what-is-the-legacy-mfa-feature) for more details.
+~> **Note**: [The Legacy MFA](/vault/docs/v1.10.x/auth/mfa) is a **deprecated** MFA workflow in Vault Community Edition. Refer [here](#q-what-is-the-legacy-mfa-feature) for more details.
 
 ### Q: what is the legacy MFA feature?
 
-[Legacy MFA](/vault/docs/v1.10.x/auth/mfa) is functionality that was available in Vault OSS, prior to introducing MFA in the Enterprise version. This is now a deprecated feature. Please see the [Vault Feature Deprecation Notice and Plans](/vault/docs/deprecation) for detailed product plans around deprecated features. We plan to remove Legacy MFA in 1.11.
+[Legacy MFA](/vault/docs/v1.10.x/auth/mfa) is functionality that was available in Vault Community Edition, prior to introducing MFA in the Enterprise version. This is now a deprecated feature. Please see the [Vault Feature Deprecation Notice and Plans](/vault/docs/deprecation) for detailed product plans around deprecated features. We plan to remove Legacy MFA in 1.11.
 
 ### Q: will HCP Vault support MFA?
 
@@ -93,7 +93,7 @@ The Step-up Enterprise MFA uses the combination of mount accessors plus a `usern
 ### Q: are namespaces supported with the MFA workflows that Vault has as of Vault version 1.10?
 
 The Step-up Enterprise MFA configurations can only be configured in the root [namespace](/vault/docs/enterprise/mfa#namespaces), although they can be referenced in other namespaces via the policies.
-The Login MFA supports namespaces awareness. Users will need a Vault Enterprise license to user or configure Login MFA with namespaces. MFA method configurations can be defined per namespace with Login MFA, and used in enforcements defined in that namespace and its children. Everything operates in the root namespace in Vault OSS. MFA login enforcements can also be defined per namespace, and applied to that namespace and its children.
+The Login MFA supports namespaces awareness. Users will need a Vault Enterprise license to user or configure Login MFA with namespaces. MFA method configurations can be defined per namespace with Login MFA, and used in enforcements defined in that namespace and its children. Everything operates in the root namespace in Vault Community Edition. MFA login enforcements can also be defined per namespace, and applied to that namespace and its children.
 
 ### Q: i use the Vault agent. does MFA pose any challenges for me?
 

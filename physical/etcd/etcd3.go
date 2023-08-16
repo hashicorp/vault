@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 package etcd
 
@@ -120,6 +120,15 @@ func newEtcd3Backend(conf map[string]string, logger log.Logger) (physical.Backen
 			return nil, fmt.Errorf("value of 'max_receive_size' (%v) could not be understood: %w", maxReceive, err)
 		}
 		cfg.MaxCallRecvMsgSize = int(val)
+	}
+
+	if maxSend, ok := conf["max_send_size"]; ok {
+		// grpc converts this to uint32 internally, so parse as that to avoid passing invalid values
+		val, err := strconv.ParseUint(maxSend, 10, 32)
+		if err != nil {
+			return nil, fmt.Errorf("value of 'max_send_size' (%v) could not be understood: %w", maxSend, err)
+		}
+		cfg.MaxCallSendMsgSize = int(val)
 	}
 
 	etcd, err := clientv3.New(cfg)
