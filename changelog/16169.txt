@@ -1,0 +1,3 @@
+```release-note:bug
+ui: Revert using localStorage in favor of sessionStorage
+```

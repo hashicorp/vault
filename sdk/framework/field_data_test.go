@@ -593,6 +593,19 @@ func TestFieldDataGet(t *testing.T) {
 			[]int{},
 			false,
 		},
+
+		"comma int slice type, json number": {
+			map[string]*FieldSchema{
+				"foo": {Type: TypeCommaIntSlice},
+			},
+			map[string]interface{}{
+				"foo": json.Number("1"),
+			},
+			"foo",
+			[]int{1},
+			false,
+		},
+
 		"name string type, valid string": {
 			map[string]*FieldSchema{
 				"foo": {Type: TypeNameString},
