@@ -16,6 +16,7 @@ import (
 	"sync"
 	"time"
 
+	systemd "github.com/coreos/go-systemd/daemon"
 	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-secure-stdlib/gatedwriter"
 	"github.com/hashicorp/vault/api"
@@ -802,6 +803,8 @@ func (c *AgentCommand) Run(args []string) int {
 			select {
 			case <-c.ShutdownCh:
 				c.UI.Output("==> Vault agent shutdown triggered")
+				// Notify systemd that the server is shutting down
+				c.notifySystemd(systemd.SdNotifyStopping)
 				// Let the lease cache know this is a shutdown; no need to evict
 				// everything
 				if leaseCache != nil {
@@ -809,6 +812,7 @@ func (c *AgentCommand) Run(args []string) int {
 				}
 				return nil
 			case <-ctx.Done():
+				c.notifySystemd(systemd.SdNotifyStopping)
 				return nil
 			case <-winsvc.ShutdownChannel():
 				return nil
@@ -845,6 +849,7 @@ func (c *AgentCommand) Run(args []string) int {
 			EnableReauthOnNewCredentials: config.AutoAuth.EnableReauthOnNewCredentials,
 			EnableTemplateTokenCh:        enableTokenCh,
 			Token:                        previousToken,
+			ExitOnError:                  config.AutoAuth.Method.ExitOnError,
 		})
 
 		ss := sink.NewSinkServer(&sink.SinkServerConfig{
@@ -940,6 +945,9 @@ func (c *AgentCommand) Run(args []string) int {
 		return 1
 	}
 
+	// Notify systemd that the server is ready (if applicable)
+	c.notifySystemd(systemd.SdNotifyReady)
+
 	defer func() {
 		if err := c.removePidFile(config.PidFile); err != nil {
 			c.UI.Error(fmt.Sprintf("Error deleting the PID file: %s", err))
@@ -968,6 +976,19 @@ func verifyRequestHeader(handler http.Handler) http.Handler {
 
 		handler.ServeHTTP(w, r)
 	})
+}
+
+func (c *AgentCommand) notifySystemd(status string) {
+	sent, err := systemd.SdNotify(false, status)
+	if err != nil {
+		c.logger.Error("error notifying systemd", "error", err)
+	} else {
+		if sent {
+			c.logger.Debug("sent systemd notification", "notification", status)
+		} else {
+			c.logger.Debug("would have sent systemd notification (systemd not present)", "notification", status)
+		}
+	}
 }
 
 func (c *AgentCommand) setStringFlag(f *FlagSets, configVal string, fVar *StringVar) {

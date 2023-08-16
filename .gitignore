@@ -56,7 +56,16 @@ Vagrantfile
 !.release/linux/package/etc/vault.d/vault.hcl
 !command/agent/config/test-fixtures/*.hcl
 !command/server/test-fixtures/**/*.hcl
+!enos/**/*.hcl
 
+# Enos
+.enos
+enos-local.vars.hcl
+enos/**/support
+enos/**/kubeconfig
+.terraform
+.terraform.lock.hcl
+.tfstate.*
 
 .DS_Store
 .idea
@@ -115,3 +124,6 @@ website/components/node_modules
 
 .buildcache/
 .releaser/
+*.log
+
+tools/godoctests/.bin

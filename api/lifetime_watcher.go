@@ -50,25 +50,24 @@ const (
 
 // LifetimeWatcher is a process for watching lifetime of a secret.
 //
-// 	watcher, err := client.NewLifetimeWatcher(&LifetimeWatcherInput{
-// 		Secret: mySecret,
-// 	})
-// 	go watcher.Start()
-// 	defer watcher.Stop()
+//	watcher, err := client.NewLifetimeWatcher(&LifetimeWatcherInput{
+//		Secret: mySecret,
+//	})
+//	go watcher.Start()
+//	defer watcher.Stop()
 //
-// 	for {
-// 		select {
-// 		case err := <-watcher.DoneCh():
-// 			if err != nil {
-// 				log.Fatal(err)
-// 			}
+//	for {
+//		select {
+//		case err := <-watcher.DoneCh():
+//			if err != nil {
+//				log.Fatal(err)
+//			}
 //
-// 			// Renewal is now over
-// 		case renewal := <-watcher.RenewCh():
-// 			log.Printf("Successfully renewed: %#v", renewal)
-// 		}
-// 	}
-//
+//			// Renewal is now over
+//		case renewal := <-watcher.RenewCh():
+//			log.Printf("Successfully renewed: %#v", renewal)
+//		}
+//	}
 //
 // `DoneCh` will return if renewal fails, or if the remaining lease duration is
 // under a built-in threshold and either renewing is not extending it or
@@ -251,7 +250,8 @@ func (r *LifetimeWatcher) doRenew() error {
 }
 
 func (r *LifetimeWatcher) doRenewWithOptions(tokenMode bool, nonRenewable bool, initLeaseDuration int, credString string,
-	renew renewFunc, initialRetryInterval time.Duration) error {
+	renew renewFunc, initialRetryInterval time.Duration,
+) error {
 	if credString == "" ||
 		(nonRenewable && r.renewBehavior == RenewBehaviorErrorOnErrors) {
 		return r.errLifetimeWatcherNotRenewable
