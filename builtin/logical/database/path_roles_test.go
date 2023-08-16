@@ -922,6 +922,22 @@ func createRole(t *testing.T, b *databaseBackend, storage logical.Storage, mockD
 	}
 }
 
+func createRoleWithData(t *testing.T, b *databaseBackend, s logical.Storage, mockDB *mockNewDatabase, roleName string, data map[string]interface{}) {
+	t.Helper()
+	mockDB.On("UpdateUser", mock.Anything, mock.Anything).
+		Return(v5.UpdateUserResponse{}, nil).
+		Once()
+	resp, err := b.HandleRequest(context.Background(), &logical.Request{
+		Operation: logical.CreateOperation,
+		Path:      "static-roles/" + roleName,
+		Storage:   s,
+		Data:      data,
+	})
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatal(resp, err)
+	}
+}
+
 const testRoleStaticCreate = `
 CREATE ROLE "{{name}}" WITH
   LOGIN

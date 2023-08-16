@@ -36,7 +36,7 @@ const (
 	dbUserDefaultPassword = "password"
 )
 
-func TestBackend_StaticRole_Rotate_basic(t *testing.T) {
+func TestBackend_StaticRole_Rotation_basic(t *testing.T) {
 	cluster, sys := getCluster(t)
 	defer cluster.Cleanup()
 
@@ -184,7 +184,7 @@ func TestBackend_StaticRole_Rotate_basic(t *testing.T) {
 // Sanity check to make sure we don't allow an attempt of rotating credentials
 // for non-static accounts, which doesn't make sense anyway, but doesn't hurt to
 // verify we return an error
-func TestBackend_StaticRole_Rotate_NonStaticError(t *testing.T) {
+func TestBackend_StaticRole_Rotation_NonStaticError(t *testing.T) {
 	cluster, sys := getCluster(t)
 	defer cluster.Cleanup()
 
@@ -288,7 +288,7 @@ func TestBackend_StaticRole_Rotate_NonStaticError(t *testing.T) {
 	}
 }
 
-func TestBackend_StaticRole_Revoke_user(t *testing.T) {
+func TestBackend_StaticRole_Rotation_Revoke_user(t *testing.T) {
 	cluster, sys := getCluster(t)
 	defer cluster.Cleanup()
 
@@ -466,7 +466,7 @@ func verifyPgConn(t *testing.T, username, password, connURL string) {
 // WAL testing
 //
 // First scenario, WAL contains a role name that does not exist.
-func TestBackend_Static_QueueWAL_discard_role_not_found(t *testing.T) {
+func TestBackend_StaticRole_Rotation_QueueWAL_discard_role_not_found(t *testing.T) {
 	cluster, sys := getCluster(t)
 	defer cluster.Cleanup()
 
@@ -507,7 +507,7 @@ func TestBackend_Static_QueueWAL_discard_role_not_found(t *testing.T) {
 
 // Second scenario, WAL contains a role name that does exist, but the role's
 // LastVaultRotation is greater than the WAL has
-func TestBackend_Static_QueueWAL_discard_role_newer_rotation_date(t *testing.T) {
+func TestBackend_StaticRole_Rotation_QueueWAL_discard_role_newer_rotation_date(t *testing.T) {
 	cluster, sys := getCluster(t)
 	defer cluster.Cleanup()
 
@@ -695,7 +695,7 @@ func assertWALCount(t *testing.T, s logical.Storage, expected int, key string) {
 
 type userCreator func(t *testing.T, username, password string)
 
-func TestBackend_StaticRole_Rotations_PostgreSQL(t *testing.T) {
+func TestBackend_StaticRole_Rotation_PostgreSQL(t *testing.T) {
 	cleanup, connURL := postgreshelper.PrepareTestContainer(t, "13.4-buster")
 	defer cleanup()
 	uc := userCreator(func(t *testing.T, username, password string) {
@@ -707,7 +707,7 @@ func TestBackend_StaticRole_Rotations_PostgreSQL(t *testing.T) {
 	})
 }
 
-func TestBackend_StaticRole_Rotations_MongoDB(t *testing.T) {
+func TestBackend_StaticRole_Rotation_MongoDB(t *testing.T) {
 	cleanup, connURL := mongodb.PrepareTestContainerWithDatabase(t, "5.0.10", "vaulttestdb")
 	defer cleanup()
 
@@ -720,7 +720,7 @@ func TestBackend_StaticRole_Rotations_MongoDB(t *testing.T) {
 	})
 }
 
-func TestBackend_StaticRole_Rotations_MongoDBAtlas(t *testing.T) {
+func TestBackend_StaticRole_Rotation_MongoDBAtlas(t *testing.T) {
 	// To get the project ID, connect to cloud.mongodb.com, go to the vault-test project and
 	// look at Project Settings.
 	projID := os.Getenv("VAULT_MONGODBATLAS_PROJECT_ID")
@@ -944,7 +944,7 @@ type createUserCommand struct {
 }
 
 // Demonstrates a bug fix for the credential rotation not releasing locks
-func TestBackend_StaticRole_LockRegression(t *testing.T) {
+func TestBackend_StaticRole_Rotation_LockRegression(t *testing.T) {
 	cluster, sys := getCluster(t)
 	defer cluster.Cleanup()
 
@@ -1023,7 +1023,7 @@ func TestBackend_StaticRole_LockRegression(t *testing.T) {
 	}
 }
 
-func TestBackend_StaticRole_Rotate_Invalid_Role(t *testing.T) {
+func TestBackend_StaticRole_Rotation_Invalid_Role(t *testing.T) {
 	cluster, sys := getCluster(t)
 	defer cluster.Cleanup()
 
@@ -1160,10 +1160,18 @@ func TestRollsPasswordForwardsUsingWAL(t *testing.T) {
 
 func TestStoredWALsCorrectlyProcessed(t *testing.T) {
 	const walNewPassword = "new-password-from-wal"
+
+	rotationPeriodData := map[string]interface{}{
+		"username":        "hashicorp",
+		"db_name":         "mockv5",
+		"rotation_period": "86400s",
+	}
+
 	for _, tc := range []struct {
 		name         string
 		shouldRotate bool
 		wal          *setCredentialsWAL
+		data         map[string]interface{}
 	}{
 		{
 			"WAL is kept and used for roll forward",
@@ -1174,6 +1182,7 @@ func TestStoredWALsCorrectlyProcessed(t *testing.T) {
 				NewPassword:       walNewPassword,
 				LastVaultRotation: time.Now().Add(time.Hour),
 			},
+			rotationPeriodData,
 		},
 		{
 			"zero-time WAL is discarded on load",
@@ -1184,15 +1193,32 @@ func TestStoredWALsCorrectlyProcessed(t *testing.T) {
 				NewPassword:       walNewPassword,
 				LastVaultRotation: time.Time{},
 			},
+			rotationPeriodData,
 		},
 		{
-			"empty-password WAL is kept but a new password is generated",
+			"rotation_period empty-password WAL is kept but a new password is generated",
 			true,
 			&setCredentialsWAL{
 				RoleName:          "hashicorp",
 				Username:          "hashicorp",
 				NewPassword:       "",
 				LastVaultRotation: time.Now().Add(time.Hour),
+			},
+			rotationPeriodData,
+		},
+		{
+			"rotation_schedule empty-password WAL is kept but a new password is generated",
+			true,
+			&setCredentialsWAL{
+				RoleName:          "hashicorp",
+				Username:          "hashicorp",
+				NewPassword:       "",
+				LastVaultRotation: time.Now().Add(time.Hour),
+			},
+			map[string]interface{}{
+				"username":          "hashicorp",
+				"db_name":           "mockv5",
+				"rotation_schedule": "*/10 * * * * *",
 			},
 		},
 	} {
@@ -1209,7 +1235,7 @@ func TestStoredWALsCorrectlyProcessed(t *testing.T) {
 			}
 			b.credRotationQueue = queue.New()
 			configureDBMount(t, config.StorageView)
-			createRole(t, b, config.StorageView, mockDB, "hashicorp")
+			createRoleWithData(t, b, config.StorageView, mockDB, tc.wal.RoleName, tc.data)
 			role, err := b.StaticRole(ctx, config.StorageView, "hashicorp")
 			if err != nil {
 				t.Fatal(err)
@@ -1247,6 +1273,7 @@ func TestStoredWALsCorrectlyProcessed(t *testing.T) {
 				t.Fatal(err)
 			}
 
+			nextRotationTime := role.StaticAccount.NextRotationTime()
 			if tc.shouldRotate {
 				if tc.wal.NewPassword != "" {
 					// Should use WAL's new_password field
@@ -1262,11 +1289,11 @@ func TestStoredWALsCorrectlyProcessed(t *testing.T) {
 						t.Fatal()
 					}
 				}
+				// Ensure the role was not promoted for early rotation
+				assertPriorityUnchanged(t, item.Priority, nextRotationTime)
 			} else {
 				// Ensure the role was not promoted for early rotation
-				if item.Priority < time.Now().Add(time.Hour).Unix() {
-					t.Fatal("priority should be for about a week away, but was", item.Priority)
-				}
+				assertPriorityUnchanged(t, item.Priority, nextRotationTime)
 				if role.StaticAccount.Password != initialPassword {
 					t.Fatal("password should not have been rotated yet")
 				}
@@ -1446,4 +1473,13 @@ func capturePasswords(t *testing.T, b logical.Backend, config *logical.BackendCo
 func newBoolPtr(b bool) *bool {
 	v := b
 	return &v
+}
+
+// assertPriorityUnchanged is a helper to verify that the priority is the
+// expected value for a given rotation time
+func assertPriorityUnchanged(t *testing.T, priority int64, nextRotationTime time.Time) {
+	t.Helper()
+	if priority != nextRotationTime.Unix() {
+		t.Fatalf("expected next rotation at %s, but got %s", nextRotationTime, time.Unix(priority, 0).String())
+	}
 }
