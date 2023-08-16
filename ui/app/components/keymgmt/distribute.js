@@ -194,6 +194,10 @@ export default class KeymgmtDistribute extends Component {
       .distribute(backend, provider, key, { purpose, protection })
       .then(() => {
         this.flashMessages.success(`Successfully distributed key ${key} to ${provider}`);
+        // update keys on provider model
+        this.store.clearDataset('keymgmt/key');
+        const providerModel = this.store.peekRecord('keymgmt/provider', provider);
+        providerModel.fetchKeys(providerModel.keys?.meta?.currentPage || 1);
         // move wizard forward if tutorial is in progress
         this.updateWizard('featureState');
         this.args.onClose();

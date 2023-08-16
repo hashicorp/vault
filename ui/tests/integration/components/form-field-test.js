@@ -121,6 +121,27 @@ module('Integration | Component | form field', function (hooks) {
     assert.ok(spy.calledWith('foo', expectedSeconds), 'onChange called with correct args');
   });
 
+  test('it renders: editType ttl without toggle', async function (assert) {
+    let [model, spy] = await setup.call(this, createAttr('foo', null, { editType: 'ttl', hideToggle: true }));
+    await component.fields.objectAt(0).select('h').change();
+    await component.fields.objectAt(0).ttlTime('3');
+    const expectedSeconds = `${3 * 3600}s`;
+    assert.equal(model.get('foo'), expectedSeconds);
+    assert.ok(spy.calledWith('foo', expectedSeconds), 'onChange called with correct args');
+  });
+
+  test('it renders: radio buttons for possible values', async function (assert) {
+    let [model, spy] = await setup.call(
+      this,
+      createAttr('foo', null, { editType: 'radio', possibleValues: ['SHA1', 'SHA256'] })
+    );
+    assert.ok(component.hasRadio, 'renders radio buttons');
+    const selectedValue = 'SHA256';
+    await component.selectRadioInput(selectedValue);
+    assert.equal(model.get('foo'), selectedValue);
+    assert.ok(spy.calledWith('foo', selectedValue), 'onChange called with correct args');
+  });
+
   test('it renders: editType stringArray', async function (assert) {
     let [model, spy] = await setup.call(this, createAttr('foo', 'string', { editType: 'stringArray' }));
     assert.ok(component.hasStringList, 'renders the string-list component');

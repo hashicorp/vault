@@ -4,7 +4,9 @@ page_title: Kerberos - Auth Methods
 description: The Kerberos auth method allows automated authentication of Kerberos entities.
 ---
 
-# Kerberos Auth Method
+# Kerberos auth method
+
+@include 'x509-sha1-deprecation.mdx'
 
 The `kerberos` auth method provides an automated mechanism to retrieve
 a Vault token for Kerberos entities.
@@ -59,7 +61,7 @@ $ vault auth enable \
     kerberos
 ```
 
-- Create a `keytab` for the Kerberos plugin:
+- Create a `keytab` for the Kerberos plugin (this keytab is used by the Vault server itself, another keytab should be generated for login purposes):
 
 ```shell-session
 $ ktutil
@@ -162,10 +164,14 @@ $ vault login -method=kerberos \
   It includes a mechanism for tunneling pre-authentication exchanges using armoured
   KDC messages. FAST provides increased resistance to passive password guessing attacks.
   Some common Kerberos implementations do not support FAST negotiation.
+- `remove_instance_name` removes any instance names from a Kerberos service 
+  principal name when parsing the keytab file. For example when this is set to true, 
+  if a keytab has the service principal name `foo/localhost@example.com`, the CLI 
+  will strip the service principal name to just be `foo@example.com`.
 
 ## Troubleshooting
 
-### Identify the Malfunctioning Piece
+### Identify the malfunctioning piece
 
 Once the malfunctioning piece of the journey is identified, you can focus
 your debugging efforts in the most useful direction.
@@ -178,7 +184,7 @@ your debugging efforts in the most useful direction.
 3. While logged into your client machine, verify you can reach Vault
    through the following command: `$ curl $VAULT_ADDR/v1/sys/health`.
 
-### Build Clear Steps to Reproduce the Problem
+### Build clear steps to reproduce the problem
 
 If possible, make it easy for someone else to reproduce the problem who
 is outside of your company. For instance, if you expect that you should
@@ -203,7 +209,7 @@ by posting your reproduction to the [Vault Forum](https://discuss.hashicorp.com/
 or by providing it to [HashiCorp Support](https://www.hashicorp.com/support)
 (if applicable.)
 
-### Additional Troubleshooting Resources
+### Additional troubleshooting resources
 
 - [Troubleshooting Vault](https://learn.hashicorp.com/vault/operations/troubleshooting-vault)
 - [The plugin's code](https://github.com/hashicorp/vault-plugin-auth-kerberos)

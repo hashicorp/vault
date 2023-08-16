@@ -10,7 +10,6 @@ import (
 
 	"github.com/armon/go-metrics"
 	"github.com/hashicorp/vault/sdk/framework"
-	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
@@ -243,17 +242,16 @@ func (b *backend) pathTidyWrite(ctx context.Context, req *logical.Request, d *fr
 	}()
 
 	resp := &logical.Response{}
-	resp.AddWarning("Tidy operation successfully started. Any information from the operation will be printed to Vault's server logs.")
+	if !tidyCertStore && !tidyRevokedCerts && !tidyRevocationList {
+		resp.AddWarning("No targets to tidy; specify tidy_cert_store=true or tidy_revoked_certs=true to start a tidy operation.")
+	} else {
+		resp.AddWarning("Tidy operation successfully started. Any information from the operation will be printed to Vault's server logs.")
+	}
+
 	return logical.RespondWithStatusCode(resp, req, http.StatusAccepted)
 }
 
 func (b *backend) pathTidyStatusRead(_ context.Context, _ *logical.Request, _ *framework.FieldData) (*logical.Response, error) {
-	// If this node is a performance secondary return an ErrReadOnly so that the request gets forwarded,
-	// but only if the PKI backend is not a local mount.
-	if b.System().ReplicationState().HasState(consts.ReplicationPerformanceSecondary) && !b.System().LocalMount() {
-		return nil, logical.ErrReadOnly
-	}
-
 	b.tidyStatusLock.RLock()
 	defer b.tidyStatusLock.RUnlock()
 

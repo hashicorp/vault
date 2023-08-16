@@ -3,6 +3,7 @@ package teststorage
 import (
 	"fmt"
 	"io/ioutil"
+	"math/rand"
 	"os"
 	"time"
 
@@ -31,6 +32,17 @@ func MakeInmemBackend(t testing.T, logger hclog.Logger) *vault.PhysicalBackendBu
 		Backend:   inm,
 		HABackend: inmha.(physical.HABackend),
 	}
+}
+
+func MakeLatentInmemBackend(t testing.T, logger hclog.Logger) *vault.PhysicalBackendBundle {
+	r := rand.New(rand.NewSource(time.Now().UnixNano()))
+	jitter := r.Intn(20)
+	latency := time.Duration(r.Intn(15)) * time.Millisecond
+
+	pbb := MakeInmemBackend(t, logger)
+	latencyInjector := physical.NewTransactionalLatencyInjector(pbb.Backend, latency, jitter, logger)
+	pbb.Backend = latencyInjector
+	return pbb
 }
 
 func MakeInmemNonTransactionalBackend(t testing.T, logger hclog.Logger) *vault.PhysicalBackendBundle {
@@ -137,9 +149,11 @@ func RaftHAFactory(f PhysicalBackendBundler) func(t testing.T, coreIdx int, logg
 
 		nodeID := fmt.Sprintf("core-%d", coreIdx)
 		backendConf := map[string]string{
-			"path":                   raftDir,
-			"node_id":                nodeID,
-			"performance_multiplier": "8",
+			"path":                         raftDir,
+			"node_id":                      nodeID,
+			"performance_multiplier":       "8",
+			"autopilot_reconcile_interval": "300ms",
+			"autopilot_update_interval":    "100ms",
 		}
 
 		// Create and set the HA Backend
@@ -178,6 +192,10 @@ type ClusterSetupMutator func(conf *vault.CoreConfig, opts *vault.TestClusterOpt
 
 func InmemBackendSetup(conf *vault.CoreConfig, opts *vault.TestClusterOptions) {
 	opts.PhysicalFactory = SharedPhysicalFactory(MakeInmemBackend)
+}
+
+func InmemLatentBackendSetup(conf *vault.CoreConfig, opts *vault.TestClusterOptions) {
+	opts.PhysicalFactory = SharedPhysicalFactory(MakeLatentInmemBackend)
 }
 
 func InmemNonTransactionalBackendSetup(conf *vault.CoreConfig, opts *vault.TestClusterOptions) {

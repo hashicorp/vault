@@ -190,7 +190,7 @@ func (c *Core) Leader() (isLeader bool, leaderAddr, clusterAddr string, err erro
 	// to ourself, there's no point in paying any attention to it.  And by
 	// disregarding it, we can avoid a panic in raft tests using the Inmem network
 	// layer when we try to connect back to ourself.
-	if adv.ClusterAddr == c.ClusterAddr() && adv.RedirectAddr == c.redirectAddr {
+	if adv.ClusterAddr == c.ClusterAddr() && adv.RedirectAddr == c.redirectAddr && c.getRaftBackend() != nil {
 		return false, "", "", nil
 	}
 
@@ -387,6 +387,17 @@ func (c *Core) runStandby(doneCh, manualStepDownCh, stopCh chan struct{}) {
 		}, func(error) {
 			close(checkLeaderStop)
 			c.logger.Debug("shutting down periodic leader refresh")
+		})
+	}
+	{
+		metricsStop := make(chan struct{})
+
+		g.Add(func() error {
+			c.metricsLoop(metricsStop)
+			return nil
+		}, func(error) {
+			close(metricsStop)
+			c.logger.Debug("shutting down periodic metrics")
 		})
 	}
 	{
@@ -779,7 +790,8 @@ func (c *Core) periodicCheckKeyUpgrades(ctx context.Context, stopCh chan struct{
 				// keys (e.g. from replication being activated) and we need to seal to
 				// be unsealed again.
 				entry, _ := c.barrier.Get(ctx, poisonPillPath)
-				if entry != nil && len(entry.Value) > 0 {
+				entryDR, _ := c.barrier.Get(ctx, poisonPillDRPath)
+				if (entry != nil && len(entry.Value) > 0) || (entryDR != nil && len(entryDR.Value) > 0) {
 					c.logger.Warn("encryption keys have changed out from underneath us (possibly due to replication enabling), must be unsealed again")
 					// If we are using raft storage we do not want to shut down
 					// raft during replication secondary enablement. This will

@@ -40,7 +40,7 @@
         @title="Data tracking is disabled"
         @message="Tracking is disabled, and no data is being collected. To turn it on, edit the configuration."
       >
-        {{#if @model.config.configPath.canUpdate}}
+        {{#if @model.config.canEdit}}
           <p>
             <LinkTo @route="vault.cluster.clients.config">
               Go to configuration
@@ -190,7 +190,7 @@
       <div class="modal-radio-button">
         <BasicDropdown @class="popup-menu" @horizontalPosition="auto-right" @verticalPosition="below" as |D|>
           <D.Trigger
-            data-test-popup-menu-trigger="true"
+            data-test-popup-menu-trigger="month"
             class={{concat "toolbar-link" (if D.isOpen " is-active")}}
             @htmlTag="button"
           >
@@ -204,6 +204,7 @@
                   <button
                     type="button"
                     class="button link"
+                    data-test-date-modal-month={{month}}
                     disabled={{if (lt index this.allowedMonthMax) false true}}
                     {{on "click" (fn this.selectStartMonth month D.actions)}}
                   >
@@ -216,7 +217,7 @@
         </BasicDropdown>
         <BasicDropdown @class="popup-menu" @horizontalPosition="auto-right" @verticalPosition="below" as |D|>
           <D.Trigger
-            data-test-popup-menu-trigger="true"
+            data-test-popup-menu-trigger="year"
             class={{concat "toolbar-link" (if D.isOpen " is-active")}}
             @htmlTag="button"
           >
@@ -230,6 +231,7 @@
                   <button
                     type="button"
                     class="button link"
+                    data-test-date-modal-year={{year}}
                     disabled={{if (eq year this.disabledYear) true false}}
                     {{on "click" (fn this.selectStartYear year D.actions)}}
                   >
@@ -244,6 +246,7 @@
     </section>
     <footer class="modal-card-foot modal-card-foot-outlined">
       <button
+        data-test-modal-save
         type="button"
         class="button is-primary"
         disabled={{or (if (and this.startMonth this.startYear) false true)}}

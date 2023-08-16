@@ -628,8 +628,20 @@ func assertMember(t *testing.T, client *api.Client, entityID, groupName, groupID
 		t.Fatal(err)
 	}
 	groupMap := secret.Data
+
+	groupEntityMembers, ok := groupMap["member_entity_ids"].([]interface{})
+	if !ok && expectFound {
+		t.Fatalf("expected member_entity_ids not to be nil")
+	}
+
+	// if type assertion fails and expectFound is false, groupEntityMembers
+	// is nil, then let's just return, nothing to be done!
+	if !ok && !expectFound {
+		return
+	}
+
 	found := false
-	for _, entityIDRaw := range groupMap["member_entity_ids"].([]interface{}) {
+	for _, entityIDRaw := range groupEntityMembers {
 		if entityIDRaw.(string) == entityID {
 			found = true
 		}

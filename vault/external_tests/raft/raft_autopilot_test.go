@@ -16,6 +16,7 @@ import (
 	"github.com/hashicorp/vault/helper/testhelpers"
 	"github.com/hashicorp/vault/helper/testhelpers/teststorage"
 	"github.com/hashicorp/vault/physical/raft"
+	"github.com/hashicorp/vault/sdk/version"
 	"github.com/hashicorp/vault/vault"
 	"github.com/kr/pretty"
 	testingintf "github.com/mitchellh/go-testing-interface"
@@ -23,7 +24,7 @@ import (
 )
 
 func TestRaft_Autopilot_Disable(t *testing.T) {
-	cluster := raftCluster(t, &RaftClusterOpts{
+	cluster, _ := raftCluster(t, &RaftClusterOpts{
 		DisableFollowerJoins: true,
 		InmemCluster:         true,
 		// Not setting EnableAutopilot here.
@@ -37,7 +38,7 @@ func TestRaft_Autopilot_Disable(t *testing.T) {
 }
 
 func TestRaft_Autopilot_Stabilization_And_State(t *testing.T) {
-	cluster := raftCluster(t, &RaftClusterOpts{
+	cluster, _ := raftCluster(t, &RaftClusterOpts{
 		DisableFollowerJoins: true,
 		InmemCluster:         true,
 		EnableAutopilot:      true,
@@ -108,7 +109,7 @@ func TestRaft_Autopilot_Stabilization_And_State(t *testing.T) {
 }
 
 func TestRaft_Autopilot_Configuration(t *testing.T) {
-	cluster := raftCluster(t, &RaftClusterOpts{
+	cluster, _ := raftCluster(t, &RaftClusterOpts{
 		DisableFollowerJoins: true,
 		InmemCluster:         true,
 		EnableAutopilot:      true,
@@ -300,7 +301,7 @@ func TestRaft_Autopilot_Stabilization_Delay(t *testing.T) {
 }
 
 func TestRaft_AutoPilot_Peersets_Equivalent(t *testing.T) {
-	cluster := raftCluster(t, &RaftClusterOpts{
+	cluster, _ := raftCluster(t, &RaftClusterOpts{
 		InmemCluster:         true,
 		EnableAutopilot:      true,
 		DisableFollowerJoins: true,
@@ -411,4 +412,54 @@ func join(t *testing.T, core *vault.TestClusterCore, client *api.Client, cluster
 	require.NoError(t, err)
 	time.Sleep(1 * time.Second)
 	cluster.UnsealCore(t, core)
+}
+
+// TestRaft_VotersStayVoters ensures that autopilot doesn't demote a node just
+// because it hasn't been heard from in some time.
+func TestRaft_VotersStayVoters(t *testing.T) {
+	cluster, _ := raftCluster(t, &RaftClusterOpts{
+		DisableFollowerJoins: true,
+		InmemCluster:         true,
+		EnableAutopilot:      true,
+		PhysicalFactoryConfig: map[string]interface{}{
+			"performance_multiplier": "5",
+		},
+		VersionMap: map[int]string{
+			0: version.Version,
+			1: version.Version,
+			2: version.Version,
+		},
+	})
+	defer cluster.Cleanup()
+	testhelpers.WaitForActiveNode(t, cluster)
+
+	client := cluster.Cores[0].Client
+
+	config, err := client.Sys().RaftAutopilotConfiguration()
+	require.NoError(t, err)
+	joinAndStabilizeAndPromote(t, cluster.Cores[1], client, cluster, config, "core-1", 2)
+	joinAndStabilizeAndPromote(t, cluster.Cores[2], client, cluster, config, "core-2", 3)
+
+	errIfNonVotersExist := func() error {
+		t.Helper()
+		resp, err := client.Sys().RaftAutopilotState()
+		if err != nil {
+			t.Fatal(err)
+		}
+		for k, v := range resp.Servers {
+			if v.Status == "non-voter" {
+				return fmt.Errorf("node %q is a non-voter", k)
+			}
+		}
+		return nil
+	}
+	testhelpers.RetryUntil(t, 10*time.Second, errIfNonVotersExist)
+
+	// Core0 is the leader, sealing it will both cause an election - and the
+	// new leader won't have seen any heartbeats initially - and create a "down"
+	// node that won't be sending heartbeats.
+	testhelpers.EnsureCoreSealed(t, cluster.Cores[0])
+	time.Sleep(30 * time.Second)
+	client = cluster.Cores[1].Client
+	errIfNonVotersExist()
 }

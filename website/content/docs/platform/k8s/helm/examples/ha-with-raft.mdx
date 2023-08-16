@@ -6,9 +6,9 @@ description: |-
   Describes how to set up a highly available Vault cluster with Integrated Storage (Raft)
 ---
 
-# Highly Available Vault Cluster with Integrated Storage (Raft)
+# Highly available Vault cluster with integrated storage (Raft)
 
-~> **Important Note:** This chart is not compatible with Helm 2. Please use Helm 3.6+ with this chart.
+@include 'helm/version.mdx'
 
 Integrated storage (raft) can be enabled using the `server.ha.raft.enabled` value:
 
@@ -48,7 +48,7 @@ kubectl exec -ti vault-0 -- vault login
 Next, list all the raft peers:
 
 ```shell
-kubectl exec -ti vault-0 -- vault operator raft list-peers
+$ kubectl exec -ti vault-0 -- vault operator raft list-peers
 
 Node                                    Address                        State       Voter
 ----                                    -------                        -----       -----

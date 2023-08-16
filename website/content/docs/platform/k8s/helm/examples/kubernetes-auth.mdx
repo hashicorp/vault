@@ -6,9 +6,9 @@ description: |-
   Describes how to set up Kubernetes Auth method
 ---
 
-# Bootstrapping Kubernetes Auth Method
+# Bootstrapping kubernetes auth method
 
-~> **Important Note:** This chart is not compatible with Helm 2. Please use Helm 3.6+ with this chart.
+@include 'helm/version.mdx'
 
 In this example, we will walk through how to set up the [Kubernetes Auth Method](/docs/auth/kubernetes).
 
@@ -17,11 +17,11 @@ This assumes the following commands will be run inside a Vault pod running in Ku
 You will optionally need the following variables:
 
 ```bash
-# JWT is a service account token that has access to the Kubernetes TokenReview API
+# JWT is a service account token that has access to the kubernetes TokenReview API
 # You can retrieve this from inside a pod at: /var/run/secrets/kubernetes.io/serviceaccount/token
 JWT=$(cat /var/run/secrets/kubernetes.io/serviceaccount/token)
 
-# Address of Kubernetes itself as viewed from inside a running pod
+# Address of kubernetes itself as viewed from inside a running pod
 KUBERNETES_HOST=https://${KUBERNETES_PORT_443_TCP_ADDR}:443
 
 # Kubernetes internal CA

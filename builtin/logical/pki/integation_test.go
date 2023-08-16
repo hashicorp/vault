@@ -196,6 +196,205 @@ func TestIntegration_ReplaceRootBadIssuer(t *testing.T) {
 	require.True(t, resp.IsError(), "did not get an error from replacing root: %#v", resp)
 }
 
+func TestIntegration_SetSignedWithBackwardsPemBundles(t *testing.T) {
+	rootBackend, rootStorage := createBackendWithStorage(t)
+	intBackend, intStorage := createBackendWithStorage(t)
+
+	// generate root
+	resp, err := rootBackend.HandleRequest(context.Background(), &logical.Request{
+		Operation: logical.UpdateOperation,
+		Path:      "issuers/generate/root/internal",
+		Storage:   rootStorage,
+		Data: map[string]interface{}{
+			"common_name": "test.com",
+		},
+		MountPoint: "pki/",
+	})
+	require.NoError(t, err, "failed generating root ca")
+	require.NotNil(t, resp, "got nil response from generating root ca")
+	require.False(t, resp.IsError(), "got an error from generating root ca: %#v", resp)
+	rootCert := resp.Data["certificate"].(string)
+
+	// generate intermediate
+	resp, err = intBackend.HandleRequest(context.Background(), &logical.Request{
+		Operation: logical.UpdateOperation,
+		Path:      "issuers/generate/intermediate/internal",
+		Storage:   intStorage,
+		Data: map[string]interface{}{
+			"common_name": "test.com",
+		},
+		MountPoint: "pki-int/",
+	})
+	require.NoError(t, err, "failed generating int ca")
+	require.NotNil(t, resp, "got nil response from generating int ca")
+	require.False(t, resp.IsError(), "got an error from generating int ca: %#v", resp)
+	intCsr := resp.Data["csr"].(string)
+
+	// sign csr
+	resp, err = rootBackend.HandleRequest(context.Background(), &logical.Request{
+		Operation: logical.UpdateOperation,
+		Path:      "root/sign-intermediate",
+		Storage:   rootStorage,
+		Data: map[string]interface{}{
+			"csr":    intCsr,
+			"format": "pem_bundle",
+		},
+		MountPoint: "pki/",
+	})
+	require.NoError(t, err, "failed generating root ca")
+	require.NotNil(t, resp, "got nil response from generating root ca")
+	require.False(t, resp.IsError(), "got an error from generating root ca: %#v", resp)
+
+	intCert := resp.Data["certificate"].(string)
+
+	// Send in the chain backwards now and make sure we link intCert as default.
+	resp, err = intBackend.HandleRequest(context.Background(), &logical.Request{
+		Operation: logical.UpdateOperation,
+		Path:      "intermediate/set-signed",
+		Storage:   intStorage,
+		Data: map[string]interface{}{
+			"certificate": rootCert + "\n" + intCert + "\n",
+		},
+		MountPoint: "pki-int/",
+	})
+	require.NoError(t, err, "failed generating root ca")
+	require.NotNil(t, resp, "got nil response from generating root ca")
+	require.False(t, resp.IsError(), "got an error from generating root ca: %#v", resp)
+
+	// setup role
+	resp, err = intBackend.HandleRequest(context.Background(), &logical.Request{
+		Operation: logical.UpdateOperation,
+		Path:      "roles/example",
+		Storage:   intStorage,
+		Data: map[string]interface{}{
+			"allowed_domains":  "example.com",
+			"allow_subdomains": "true",
+			"max_ttl":          "1h",
+		},
+		MountPoint: "pki-int/",
+	})
+	require.NoError(t, err, "failed setting up role example")
+	require.Nil(t, resp, "got non-nil response from setting up role example: %#v", resp)
+
+	// Issue cert
+	resp, err = intBackend.HandleRequest(context.Background(), &logical.Request{
+		Operation: logical.UpdateOperation,
+		Path:      "issue/example",
+		Storage:   intStorage,
+		Data: map[string]interface{}{
+			"common_name": "test.example.com",
+			"ttl":         "5m",
+		},
+		MountPoint: "pki-int/",
+	})
+	require.NoError(t, err, "failed issuing a leaf cert from int ca")
+	require.NotNil(t, resp, "got nil response issuing a leaf cert from int ca")
+	require.False(t, resp.IsError(), "got an error issuing a leaf cert from int ca: %#v", resp)
+}
+
+func TestIntegration_AutoIssuer(t *testing.T) {
+	t.Parallel()
+	b, s := createBackendWithStorage(t)
+
+	// Generate two roots. The first should become default under the existing
+	// behavior; when we update the config and generate a second, it should
+	// take over as default. Deleting the first and re-importing it will make
+	// it default again, and then disabling the option and removing and
+	// reimporting the second and creating a new root won't affect it again.
+	resp, err := CBWrite(b, s, "root/generate/internal", map[string]interface{}{
+		"common_name": "Root X1",
+		"issuer_name": "root-1",
+		"key_type":    "ec",
+	})
+	requireSuccessNonNilResponse(t, resp, err)
+	issuerIdOne := resp.Data["issuer_id"]
+	require.NotEmpty(t, issuerIdOne)
+	certOne := resp.Data["certificate"]
+	require.NotEmpty(t, certOne)
+
+	resp, err = CBRead(b, s, "config/issuers")
+	requireSuccessNonNilResponse(t, resp, err)
+	require.Equal(t, issuerIdOne, resp.Data["default"])
+
+	// Enable the new config option.
+	_, err = CBWrite(b, s, "config/issuers", map[string]interface{}{
+		"default":                       issuerIdOne,
+		"default_follows_latest_issuer": true,
+	})
+	require.NoError(t, err)
+
+	// Now generate the second root; it should become default.
+	resp, err = CBWrite(b, s, "root/generate/internal", map[string]interface{}{
+		"common_name": "Root X2",
+		"issuer_name": "root-2",
+		"key_type":    "ec",
+	})
+	requireSuccessNonNilResponse(t, resp, err)
+	issuerIdTwo := resp.Data["issuer_id"]
+	require.NotEmpty(t, issuerIdTwo)
+	certTwo := resp.Data["certificate"]
+	require.NotEmpty(t, certTwo)
+
+	resp, err = CBRead(b, s, "config/issuers")
+	requireSuccessNonNilResponse(t, resp, err)
+	require.Equal(t, issuerIdTwo, resp.Data["default"])
+
+	// Deleting the first shouldn't affect the default issuer.
+	_, err = CBDelete(b, s, "issuer/root-1")
+	require.NoError(t, err)
+	resp, err = CBRead(b, s, "config/issuers")
+	requireSuccessNonNilResponse(t, resp, err)
+	require.Equal(t, issuerIdTwo, resp.Data["default"])
+
+	// But reimporting it should update it to the new issuer's value.
+	resp, err = CBWrite(b, s, "issuers/import/bundle", map[string]interface{}{
+		"pem_bundle": certOne,
+	})
+	requireSuccessNonNilResponse(t, resp, err)
+	issuerIdOneReimported := issuerID(resp.Data["imported_issuers"].([]string)[0])
+
+	resp, err = CBRead(b, s, "config/issuers")
+	requireSuccessNonNilResponse(t, resp, err)
+	require.Equal(t, issuerIdOneReimported, resp.Data["default"])
+
+	// Now update the config to disable this option again.
+	_, err = CBWrite(b, s, "config/issuers", map[string]interface{}{
+		"default":                       issuerIdOneReimported,
+		"default_follows_latest_issuer": false,
+	})
+	require.NoError(t, err)
+
+	// Generating a new root shouldn't update the default.
+	resp, err = CBWrite(b, s, "root/generate/internal", map[string]interface{}{
+		"common_name": "Root X3",
+		"issuer_name": "root-3",
+		"key_type":    "ec",
+	})
+	requireSuccessNonNilResponse(t, resp, err)
+	issuerIdThree := resp.Data["issuer_id"]
+	require.NotEmpty(t, issuerIdThree)
+
+	resp, err = CBRead(b, s, "config/issuers")
+	requireSuccessNonNilResponse(t, resp, err)
+	require.Equal(t, issuerIdOneReimported, resp.Data["default"])
+
+	// Deleting and re-importing root 2 should also not affect it.
+	_, err = CBDelete(b, s, "issuer/root-2")
+	require.NoError(t, err)
+	resp, err = CBRead(b, s, "config/issuers")
+	requireSuccessNonNilResponse(t, resp, err)
+	require.Equal(t, issuerIdOneReimported, resp.Data["default"])
+
+	resp, err = CBWrite(b, s, "issuers/import/bundle", map[string]interface{}{
+		"pem_bundle": certTwo,
+	})
+	requireSuccessNonNilResponse(t, resp, err)
+	require.Equal(t, 1, len(resp.Data["imported_issuers"].([]string)))
+	resp, err = CBRead(b, s, "config/issuers")
+	requireSuccessNonNilResponse(t, resp, err)
+	require.Equal(t, issuerIdOneReimported, resp.Data["default"])
+}
+
 func genTestRootCa(t *testing.T, b *backend, s logical.Storage) (issuerID, keyID) {
 	return genTestRootCaWithIssuerName(t, b, s, "")
 }

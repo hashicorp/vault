@@ -179,7 +179,7 @@ func TestCoreWithSealAndUI(t testing.T, opts *CoreConfig) *Core {
 }
 
 func TestCoreWithSealAndUINoCleanup(t testing.T, opts *CoreConfig) *Core {
-	logger := logging.NewVaultLogger(log.Trace)
+	logger := logging.NewVaultLogger(log.Trace).Named(t.Name())
 	physicalBackend, err := physInmem.NewInmem(nil, logger)
 	if err != nil {
 		t.Fatal(err)
@@ -203,6 +203,7 @@ func TestCoreWithSealAndUINoCleanup(t testing.T, opts *CoreConfig) *Core {
 	conf.EnableResponseHeaderHostname = opts.EnableResponseHeaderHostname
 	conf.DisableSSCTokens = opts.DisableSSCTokens
 	conf.PluginDirectory = opts.PluginDirectory
+	conf.CensusAgent = opts.CensusAgent
 
 	if opts.Logger != nil {
 		conf.Logger = opts.Logger
@@ -222,6 +223,9 @@ func TestCoreWithSealAndUINoCleanup(t testing.T, opts *CoreConfig) *Core {
 	for k, v := range opts.AuditBackends {
 		conf.AuditBackends[k] = v
 	}
+
+	conf.ActivityLogConfig = opts.ActivityLogConfig
+	testApplyEntBaseConfig(conf, opts)
 
 	c, err := NewCore(conf)
 	if err != nil {
@@ -357,16 +361,21 @@ func TestCoreUnsealed(t testing.T) (*Core, [][]byte, string) {
 	return testCoreUnsealed(t, core)
 }
 
+func SetupMetrics(conf *CoreConfig) *metrics.InmemSink {
+	inmemSink := metrics.NewInmemSink(1000000*time.Hour, 2000000*time.Hour)
+	conf.MetricSink = metricsutil.NewClusterMetricSink("test-cluster", inmemSink)
+	conf.MetricsHelper = metricsutil.NewMetricsHelper(inmemSink, false)
+	return inmemSink
+}
+
 func TestCoreUnsealedWithMetrics(t testing.T) (*Core, [][]byte, string, *metrics.InmemSink) {
 	t.Helper()
-	inmemSink := metrics.NewInmemSink(1000000*time.Hour, 2000000*time.Hour)
 	conf := &CoreConfig{
 		BuiltinRegistry: NewMockBuiltinRegistry(),
-		MetricSink:      metricsutil.NewClusterMetricSink("test-cluster", inmemSink),
-		MetricsHelper:   metricsutil.NewMetricsHelper(inmemSink, false),
 	}
+	sink := SetupMetrics(conf)
 	core, keys, root := testCoreUnsealed(t, TestCoreWithSealAndUI(t, conf))
-	return core, keys, root, inmemSink
+	return core, keys, root, sink
 }
 
 // TestCoreUnsealedRaw returns a pure in-memory core that is already
@@ -1154,6 +1163,9 @@ type TestClusterOptions struct {
 	// this stores the vault version that should be used for each core config
 	VersionMap        map[int]string
 	RedundancyZoneMap map[int]string
+
+	// ABCDLoggerNames names the loggers according to our ABCD convention when generating 4 clusters
+	ABCDLoggerNames bool
 }
 
 var DefaultNumCores = 3
@@ -1197,11 +1209,13 @@ func NewTestLogger(t testing.T) *TestLogger {
 	// We send nothing on the regular logger, that way we can later deregister
 	// the sink to stop logging during cluster cleanup.
 	logger := log.NewInterceptLogger(&log.LoggerOptions{
-		Output: ioutil.Discard,
+		Output:            ioutil.Discard,
+		IndependentLevels: true,
 	})
 	sink := log.NewSinkAdapter(&log.LoggerOptions{
-		Output: output,
-		Level:  log.Trace,
+		Output:            output,
+		Level:             log.Trace,
+		IndependentLevels: true,
 	})
 	logger.RegisterSink(sink)
 	return &TestLogger{
@@ -2165,6 +2179,7 @@ func NewMockBuiltinRegistry() *mockBuiltinRegistry {
 			"mysql-database-plugin":      consts.PluginTypeDatabase,
 			"postgresql-database-plugin": consts.PluginTypeDatabase,
 			"approle":                    consts.PluginTypeCredential,
+			"aws":                        consts.PluginTypeCredential,
 		},
 	}
 }
@@ -2185,6 +2200,15 @@ func (m *mockBuiltinRegistry) Get(name string, pluginType consts.PluginType) (fu
 
 	if name == "approle" {
 		return toFunc(approle.Factory), true
+	}
+
+	if name == "aws" {
+		return toFunc(func(ctx context.Context, config *logical.BackendConfig) (logical.Backend, error) {
+			b := new(framework.Backend)
+			b.Setup(ctx, config)
+			b.BackendType = logical.TypeCredential
+			return b, nil
+		}), true
 	}
 
 	if name == "postgresql-database-plugin" {

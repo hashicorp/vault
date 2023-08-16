@@ -3,6 +3,7 @@ package pki
 import (
 	"context"
 	"crypto/x509"
+	"encoding/json"
 	"fmt"
 	"strings"
 	"time"
@@ -384,8 +385,10 @@ for "generate_lease".`,
 			},
 
 			"policy_identifiers": {
-				Type:        framework.TypeCommaStringSlice,
-				Description: `A comma-separated string or list of policy OIDs.`,
+				Type: framework.TypeCommaStringSlice,
+				Description: `A comma-separated string or list of policy OIDs, or a JSON list of qualified policy
+information, which must include an oid, and may include a notice and/or cps url, using the form 
+[{"oid"="1.3.6.1.4.1.7.8","notice"="I am a user Notice"}, {"oid"="1.3.6.1.4.1.44947.1.2.4 ","cps"="https://example.com"}].`,
 			},
 
 			"basic_constraints_valid_for_non_ca": {
@@ -658,7 +661,7 @@ func (b *backend) pathRoleCreate(ctx context.Context, req *logical.Request, data
 		NoStore:                       data.Get("no_store").(bool),
 		RequireCN:                     data.Get("require_cn").(bool),
 		AllowedSerialNumbers:          data.Get("allowed_serial_numbers").([]string),
-		PolicyIdentifiers:             data.Get("policy_identifiers").([]string),
+		PolicyIdentifiers:             getPolicyIdentifier(data, nil),
 		BasicConstraintsValidForNonCA: data.Get("basic_constraints_valid_for_non_ca").(bool),
 		NotBeforeDuration:             time.Duration(data.Get("not_before_duration").(int)) * time.Second,
 		NotAfter:                      data.Get("not_after").(string),
@@ -747,11 +750,9 @@ func validateRole(b *backend, entry *roleEntry, ctx context.Context, s logical.S
 	}
 
 	if len(entry.PolicyIdentifiers) > 0 {
-		for _, oidstr := range entry.PolicyIdentifiers {
-			_, err := certutil.StringToOid(oidstr)
-			if err != nil {
-				return logical.ErrorResponse(fmt.Sprintf("%q could not be parsed as a valid oid for a policy identifier", oidstr)), nil
-			}
+		_, err := certutil.CreatePolicyInformationExtensionFromStorageStrings(entry.PolicyIdentifiers)
+		if err != nil {
+			return nil, err
 		}
 	}
 
@@ -848,7 +849,7 @@ func (b *backend) pathRolePatch(ctx context.Context, req *logical.Request, data 
 		NoStore:                       getWithExplicitDefault(data, "no_store", oldEntry.NoStore).(bool),
 		RequireCN:                     getWithExplicitDefault(data, "require_cn", oldEntry.RequireCN).(bool),
 		AllowedSerialNumbers:          getWithExplicitDefault(data, "allowed_serial_numbers", oldEntry.AllowedSerialNumbers).([]string),
-		PolicyIdentifiers:             getWithExplicitDefault(data, "policy_identifiers", oldEntry.PolicyIdentifiers).([]string),
+		PolicyIdentifiers:             getPolicyIdentifier(data, &oldEntry.PolicyIdentifiers),
 		BasicConstraintsValidForNonCA: getWithExplicitDefault(data, "basic_constraints_valid_for_non_ca", oldEntry.BasicConstraintsValidForNonCA).(bool),
 		NotBeforeDuration:             getTimeWithExplicitDefault(data, "not_before_duration", oldEntry.NotBeforeDuration),
 		NotAfter:                      getWithExplicitDefault(data, "not_after", oldEntry.NotAfter).(string),
@@ -1116,3 +1117,45 @@ const pathListRolesHelpDesc = `Roles will be listed by the role name.`
 const pathRoleHelpSyn = `Manage the roles that can be created with this backend.`
 
 const pathRoleHelpDesc = `This path lets you manage the roles that can be created with this backend.`
+
+const policyIdentifiersParam = "policy_identifiers"
+
+func getPolicyIdentifier(data *framework.FieldData, defaultIdentifiers *[]string) []string {
+	policyIdentifierEntry, ok := data.GetOk(policyIdentifiersParam)
+	if !ok {
+		// No Entry for policy_identifiers
+		if defaultIdentifiers != nil {
+			return *defaultIdentifiers
+		}
+		return data.Get(policyIdentifiersParam).([]string)
+	}
+	// Could Be A JSON Entry
+	policyIdentifierJsonEntry := data.Raw[policyIdentifiersParam]
+	policyIdentifierJsonString, ok := policyIdentifierJsonEntry.(string)
+	if ok {
+		policyIdentifiers, err := parsePolicyIdentifiersFromJson(policyIdentifierJsonString)
+		if err == nil {
+			return policyIdentifiers
+		}
+	}
+	// Else could Just Be A List of OIDs
+	return policyIdentifierEntry.([]string)
+}
+
+func parsePolicyIdentifiersFromJson(policyIdentifiers string) ([]string, error) {
+	var entries []certutil.PolicyIdentifierWithQualifierEntry
+	var policyIdentifierList []string
+	err := json.Unmarshal([]byte(policyIdentifiers), &entries)
+	if err != nil {
+		return policyIdentifierList, err
+	}
+	policyIdentifierList = make([]string, 0, len(entries))
+	for _, entry := range entries {
+		policyString, err := json.Marshal(entry)
+		if err != nil {
+			return policyIdentifierList, err
+		}
+		policyIdentifierList = append(policyIdentifierList, string(policyString))
+	}
+	return policyIdentifierList, nil
+}

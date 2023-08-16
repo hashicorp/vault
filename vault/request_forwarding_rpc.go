@@ -8,6 +8,7 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/armon/go-metrics"
 	"github.com/hashicorp/vault/helper/forwarding"
 	"github.com/hashicorp/vault/physical/raft"
 	"github.com/hashicorp/vault/sdk/helper/consts"
@@ -98,6 +99,7 @@ func (s *forwardedRequestRPCServer) Echo(ctx context.Context, in *EchoRequest) (
 			AppliedIndex:    in.RaftAppliedIndex,
 			Term:            in.RaftTerm,
 			DesiredSuffrage: in.RaftDesiredSuffrage,
+			SDKVersion:      in.SdkVersion,
 			UpgradeVersion:  in.RaftUpgradeVersion,
 			RedundancyZone:  in.RaftRedundancyZone,
 		})
@@ -135,6 +137,9 @@ func (c *forwardingClient) startHeartbeat() {
 			Mode:     "standby",
 		}
 		tick := func() {
+			labels := make([]metrics.Label, 0, 1)
+			defer metrics.MeasureSinceWithLabels([]string{"ha", "rpc", "client", "echo"}, time.Now(), labels)
+
 			req := &EchoRequest{
 				Message:     "ping",
 				ClusterAddr: clusterAddr,
@@ -149,12 +154,14 @@ func (c *forwardingClient) startHeartbeat() {
 				req.RaftDesiredSuffrage = raftBackend.DesiredSuffrage()
 				req.RaftRedundancyZone = raftBackend.RedundancyZone()
 				req.RaftUpgradeVersion = raftBackend.EffectiveVersion()
+				labels = append(labels, metrics.Label{Name: "peer_id", Value: raftBackend.NodeID()})
 			}
 
 			ctx, cancel := context.WithTimeout(c.echoContext, 2*time.Second)
 			resp, err := c.RequestForwardingClient.Echo(ctx, req)
 			cancel()
 			if err != nil {
+				metrics.IncrCounter([]string{"ha", "rpc", "client", "echo", "errors"}, 1)
 				c.core.logger.Debug("forwarding: error sending echo request to active node", "error", err)
 				return
 			}

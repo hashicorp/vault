@@ -260,8 +260,9 @@ type Core struct {
 	postUnsealStarted *uint32
 
 	// raftInfo will contain information required for this node to join as a
-	// peer to an existing raft cluster
-	raftInfo *raftInformation
+	// peer to an existing raft cluster. This is marked atomic to prevent data
+	// races and casted to raftInformation wherever it is used.
+	raftInfo *atomic.Value
 
 	// migrationInfo is used during (and possibly after) a seal migration.
 	// This contains information about the seal we are migrating *from*.  Even
@@ -381,6 +382,8 @@ type Core struct {
 
 	// activityLog is used to track active client count
 	activityLog *ActivityLog
+	// activityLogLock protects the activityLog and activityLogConfig
+	activityLogLock sync.RWMutex
 
 	// metricsCh is used to stop the metrics streaming
 	metricsCh chan struct{}
@@ -407,6 +410,9 @@ type Core struct {
 	// e.g. testing
 	baseLogger log.Logger
 	logger     log.Logger
+
+	// log level provided by config, CLI flag, or env
+	logLevel string
 
 	// Disables the trace display for Sentinel checks
 	sentinelTraceDisabled bool
@@ -586,7 +592,11 @@ type Core struct {
 
 	clusterHeartbeatInterval time.Duration
 
+	// activityLogConfig contains override values for the activity log
+	// it is protected by activityLogLock
 	activityLogConfig ActivityLogCoreConfig
+
+	censusConfig atomic.Value
 
 	// activeTime is set on active nodes indicating the time at which this node
 	// became active.
@@ -665,6 +675,8 @@ type CoreConfig struct {
 
 	SecureRandomReader io.Reader
 
+	LogLevel string
+
 	Logger log.Logger
 
 	// Disables the trace display for Sentinel checks
@@ -715,6 +727,9 @@ type CoreConfig struct {
 	License         string
 	LicensePath     string
 	LicensingConfig *LicensingConfig
+
+	// Configured Census Agent
+	CensusAgent CensusReporter
 
 	DisablePerformanceStandby bool
 	DisableIndexing           bool
@@ -848,6 +863,7 @@ func CreateCore(conf *CoreConfig) (*Core, error) {
 		standbyStopCh:        new(atomic.Value),
 		baseLogger:           conf.Logger,
 		logger:               conf.Logger.Named("core"),
+		logLevel:             conf.LogLevel,
 
 		defaultLeaseTTL:                conf.DefaultLeaseTTL,
 		maxLeaseTTL:                    conf.MaxLeaseTTL,
@@ -880,6 +896,7 @@ func CreateCore(conf *CoreConfig) (*Core, error) {
 		rawConfig:                      new(atomic.Value),
 		recoveryMode:                   conf.RecoveryMode,
 		postUnsealStarted:              new(uint32),
+		raftInfo:                       new(atomic.Value),
 		raftJoinDoneCh:                 make(chan struct{}),
 		clusterHeartbeatInterval:       clusterHeartbeatInterval,
 		activityLogConfig:              conf.ActivityLogConfig,
@@ -918,6 +935,8 @@ func CreateCore(conf *CoreConfig) (*Core, error) {
 	c.clusterAddr.Store(conf.ClusterAddr)
 	c.activeContextCancelFunc.Store((context.CancelFunc)(nil))
 	atomic.StoreInt64(c.keyRotateGracePeriod, int64(2*time.Minute))
+
+	c.raftInfo.Store((*raftInformation)(nil))
 
 	switch conf.ClusterCipherSuites {
 	case "tls13", "tls12":
@@ -1033,6 +1052,10 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 	}
 
 	c.loginMFABackend = NewLoginMFABackend(c, conf.Logger)
+
+	if c.loginMFABackend.mfaLogger != nil {
+		c.AddLogger(c.loginMFABackend.mfaLogger)
+	}
 
 	logicalBackends := make(map[string]logical.Factory)
 	for k, f := range conf.LogicalBackends {
@@ -1363,7 +1386,9 @@ func (c *Core) unsealWithRaft(combinedKey []byte) error {
 		}
 	}
 
-	switch c.raftInfo.joinInProgress {
+	raftInfo := c.raftInfo.Load().(*raftInformation)
+
+	switch raftInfo.joinInProgress {
 	case true:
 		// JoinRaftCluster is already trying to perform a join based on retry_join configuration.
 		// Inform that routine that unseal key validation is complete so that it can continue to
@@ -1377,11 +1402,11 @@ func (c *Core) unsealWithRaft(combinedKey []byte) error {
 	default:
 		// This is the case for manual raft join. Send the answer to the leader node and
 		// wait for data to start streaming in.
-		if err := c.joinRaftSendAnswer(ctx, c.seal.GetAccess(), c.raftInfo); err != nil {
+		if err := c.joinRaftSendAnswer(ctx, c.seal.GetAccess(), raftInfo); err != nil {
 			return err
 		}
 		// Reset the state
-		c.raftInfo = nil
+		c.raftInfo.Store((*raftInformation)(nil))
 	}
 
 	go func() {
@@ -1455,13 +1480,15 @@ func (c *Core) getUnsealKey(ctx context.Context, seal Seal) ([]byte, error) {
 	var config *SealConfig
 	var err error
 
+	raftInfo := c.raftInfo.Load().(*raftInformation)
+
 	switch {
 	case seal.RecoveryKeySupported():
 		config, err = seal.RecoveryConfig(ctx)
 	case c.isRaftUnseal():
 		// Ignore follower's seal config and refer to leader's barrier
 		// configuration.
-		config = c.raftInfo.leaderBarrierConfig
+		config = raftInfo.leaderBarrierConfig
 	default:
 		config, err = seal.BarrierConfig(ctx)
 	}
@@ -2174,6 +2201,11 @@ func (s standardUnsealStrategy) unseal(ctx context.Context, logger log.Logger, c
 		if err := c.setupAuditedHeadersConfig(ctx); err != nil {
 			return err
 		}
+
+		if err := c.setupCensusAgent(); err != nil {
+			c.logger.Error("skipping reporting for nil agent", "error", err)
+		}
+
 		// not waiting on wg to avoid changing existing behavior
 		var wg sync.WaitGroup
 		if err := c.setupActivityLog(ctx, &wg); err != nil {
@@ -2206,6 +2238,9 @@ func (s standardUnsealStrategy) unseal(ctx context.Context, logger log.Logger, c
 	if err := startReplication(c); err != nil {
 		return err
 	}
+
+	c.metricsCh = make(chan struct{})
+	go c.emitMetricsActiveNode(c.metricsCh)
 
 	return nil
 }
@@ -2264,9 +2299,6 @@ func (c *Core) postUnseal(ctx context.Context, ctxCancelFunc context.CancelFunc,
 		// surprised by this at the next need to unseal.
 		seal.StartHealthCheck()
 	}
-
-	c.metricsCh = make(chan struct{})
-	go c.emitMetrics(c.metricsCh)
 
 	// This is intentionally the last block in this function. We want to allow
 	// writes just before allowing client requests, to ensure everything has
@@ -2332,6 +2364,10 @@ func (c *Core) preSeal() error {
 		result = multierror.Append(result, fmt.Errorf("error stopping expiration: %w", err))
 	}
 	c.stopActivityLog()
+	// Clean up the censusAgent on seal
+	if err := c.teardownCensusAgent(); err != nil {
+		result = multierror.Append(result, fmt.Errorf("error tearing down reporting agent: %w", err))
+	}
 
 	if err := c.teardownCredentials(context.Background()); err != nil {
 		result = multierror.Append(result, fmt.Errorf("error tearing down credentials: %w", err))
@@ -2814,6 +2850,19 @@ func (c *Core) SetLogLevel(level log.Level) {
 	for _, logger := range c.allLoggers {
 		logger.SetLevel(level)
 	}
+}
+
+func (c *Core) SetLogLevelByName(name string, level log.Level) error {
+	c.allLoggersLock.RLock()
+	defer c.allLoggersLock.RUnlock()
+	for _, logger := range c.allLoggers {
+		if logger.Name() == name {
+			logger.SetLevel(level)
+			return nil
+		}
+	}
+
+	return fmt.Errorf("logger %q does not exist", name)
 }
 
 // SetConfig sets core's config object to the newly provided config.
@@ -3299,4 +3348,23 @@ func (c *Core) CheckPluginPerms(pluginName string) (err error) {
 		}
 	}
 	return err
+}
+
+// ListMounts will provide a slice containing a deep copy each mount entry
+func (c *Core) ListMounts() ([]*MountEntry, error) {
+	c.mountsLock.RLock()
+	defer c.mountsLock.RUnlock()
+
+	var entries []*MountEntry
+
+	for _, entry := range c.mounts.Entries {
+		clone, err := entry.Clone()
+		if err != nil {
+			return nil, err
+		}
+
+		entries = append(entries, clone)
+	}
+
+	return entries, nil
 }

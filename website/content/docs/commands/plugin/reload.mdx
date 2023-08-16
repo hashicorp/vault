@@ -9,7 +9,7 @@ description: |-
 
 The `plugin reload` command is used to reload mounted plugin backends. Either
 the plugin name (`plugin`) or the desired plugin backend mounts (`mounts`)
-must be provided, but not both.
+must be provided, but not both. In the case that the plugin name is provided, all mounted paths that use that plugin backend will be reloaded.
 
 ## Examples
 
@@ -43,7 +43,7 @@ Success! Reloaded mounts: [my-custom-plugin-1/ my-custom-plugin-2/]
 The following flags are available in addition to the [standard set of
 flags](/docs/commands) included on all commands.
 
-### Command Options
+### Command options
 
 - `-plugin` `(string: "")` - The name of the plugin to reload, as registered in
   the plugin catalog.

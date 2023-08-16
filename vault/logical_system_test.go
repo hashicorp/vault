@@ -28,6 +28,7 @@ import (
 	"github.com/hashicorp/vault/sdk/helper/compressutil"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
+	"github.com/hashicorp/vault/sdk/helper/logging"
 	"github.com/hashicorp/vault/sdk/helper/salt"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/sdk/version"
@@ -995,34 +996,38 @@ func TestSystemBackend_remount_nonPrintable(t *testing.T) {
 	}
 }
 
-func TestSystemBackend_remount_spacesInFromPath(t *testing.T) {
+// TestSystemBackend_remount_trailingSpacesInFromPath ensures we error when
+// there are trailing spaces in the 'from' path during a remount.
+func TestSystemBackend_remount_trailingSpacesInFromPath(t *testing.T) {
 	b := testSystemBackend(t)
 
 	req := logical.TestRequest(t, logical.UpdateOperation, "remount")
-	req.Data["from"] = " foo / "
+	req.Data["from"] = " foo/ "
 	req.Data["to"] = "bar"
 	req.Data["config"] = structs.Map(MountConfig{})
 	resp, err := b.HandleRequest(namespace.RootContext(nil), req)
 	if err != logical.ErrInvalidRequest {
 		t.Fatalf("err: %v", err)
 	}
-	if resp.Data["error"] != `'from' path cannot contain whitespace` {
+	if resp.Data["error"] != `'from' path cannot contain trailing whitespace` {
 		t.Fatalf("bad: %v", resp)
 	}
 }
 
-func TestSystemBackend_remount_spacesInToPath(t *testing.T) {
+// TestSystemBackend_remount_trailingSpacesInToPath ensures we error when
+// there are trailing spaces in the 'to' path during a remount.
+func TestSystemBackend_remount_trailingSpacesInToPath(t *testing.T) {
 	b := testSystemBackend(t)
 
 	req := logical.TestRequest(t, logical.UpdateOperation, "remount")
 	req.Data["from"] = "foo"
-	req.Data["to"] = " bar / "
+	req.Data["to"] = " bar/ "
 	req.Data["config"] = structs.Map(MountConfig{})
 	resp, err := b.HandleRequest(namespace.RootContext(nil), req)
 	if err != logical.ErrInvalidRequest {
 		t.Fatalf("err: %v", err)
 	}
-	if resp.Data["error"] != `'to' path cannot contain whitespace` {
+	if resp.Data["error"] != `'to' path cannot contain trailing whitespace` {
 		t.Fatalf("bad: %v", resp)
 	}
 }
@@ -3410,103 +3415,128 @@ func TestSystemBackend_InternalUIMount(t *testing.T) {
 
 func TestSystemBackend_OpenAPI(t *testing.T) {
 	_, b, rootToken := testCoreSystemBackend(t)
-	var oapi map[string]interface{}
 
 	// Ensure no paths are reported if there is no token
-	req := logical.TestRequest(t, logical.ReadOperation, "internal/specs/openapi")
-	resp, err := b.HandleRequest(namespace.RootContext(nil), req)
-	if err != nil {
-		t.Fatalf("err: %v", err)
-	}
+	{
+		req := logical.TestRequest(t, logical.ReadOperation, "internal/specs/openapi")
+		resp, err := b.HandleRequest(namespace.RootContext(nil), req)
+		if err != nil {
+			t.Fatalf("err: %v", err)
+		}
 
-	body := resp.Data["http_raw_body"].([]byte)
-	err = jsonutil.DecodeJSON(body, &oapi)
-	if err != nil {
-		t.Fatalf("err: %v", err)
-	}
-	exp := map[string]interface{}{
-		"openapi": framework.OASVersion,
-		"info": map[string]interface{}{
-			"title":       "HashiCorp Vault API",
-			"description": "HTTP API that gives you full access to Vault. All API routes are prefixed with `/v1/`.",
-			"version":     version.GetVersion().Version,
-			"license": map[string]interface{}{
-				"name": "Mozilla Public License 2.0",
-				"url":  "https://www.mozilla.org/en-US/MPL/2.0",
+		body := resp.Data["http_raw_body"].([]byte)
+		var oapi map[string]interface{}
+		err = jsonutil.DecodeJSON(body, &oapi)
+		if err != nil {
+			t.Fatalf("err: %v", err)
+		}
+		exp := map[string]interface{}{
+			"openapi": framework.OASVersion,
+			"info": map[string]interface{}{
+				"title":       "HashiCorp Vault API",
+				"description": "HTTP API that gives you full access to Vault. All API routes are prefixed with `/v1/`.",
+				"version":     version.GetVersion().Version,
+				"license": map[string]interface{}{
+					"name": "Mozilla Public License 2.0",
+					"url":  "https://www.mozilla.org/en-US/MPL/2.0",
+				},
 			},
-		},
-		"paths": map[string]interface{}{},
-		"components": map[string]interface{}{
-			"schemas": map[string]interface{}{},
-		},
-	}
-
-	if diff := deep.Equal(oapi, exp); diff != nil {
-		t.Fatal(diff)
-	}
-
-	// Check that default paths are present with a root token
-	req = logical.TestRequest(t, logical.ReadOperation, "internal/specs/openapi")
-	req.ClientToken = rootToken
-	resp, err = b.HandleRequest(namespace.RootContext(nil), req)
-	if err != nil {
-		t.Fatalf("err: %v", err)
-	}
-
-	body = resp.Data["http_raw_body"].([]byte)
-	err = jsonutil.DecodeJSON(body, &oapi)
-	if err != nil {
-		t.Fatalf("err: %v", err)
-	}
-
-	doc, err := framework.NewOASDocumentFromMap(oapi)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	pathSamples := []struct {
-		path string
-		tag  string
-	}{
-		{"/auth/token/lookup", "auth"},
-		{"/cubbyhole/{path}", "secrets"},
-		{"/identity/group/id", "identity"},
-		{"/secret/.*", "secrets"}, // TODO update after kv repo update
-		{"/sys/policy", "system"},
-	}
-
-	for _, path := range pathSamples {
-		if doc.Paths[path.path] == nil {
-			t.Fatalf("didn't find expected path '%s'.", path)
+			"paths": map[string]interface{}{},
+			"components": map[string]interface{}{
+				"schemas": map[string]interface{}{},
+			},
 		}
-		tag := doc.Paths[path.path].Get.Tags[0]
-		if tag != path.tag {
-			t.Fatalf("path: %s; expected tag: %s, actual: %s", path.path, tag, path.tag)
+
+		if diff := deep.Equal(oapi, exp); diff != nil {
+			t.Fatal(diff)
 		}
 	}
 
-	// Simple sanity check of response size (which is much larger than most
-	// Vault responses), mainly to catch mass omission of expected path data.
-	minLen := 70000
-	if len(body) < minLen {
-		t.Fatalf("response size too small; expected: min %d, actual: %d", minLen, len(body))
+	// Check that default paths are present with a root token (without generic_mount_paths)
+	for _, genericMountPaths := range []bool{false /* ,true */} {
+		req := logical.TestRequest(t, logical.ReadOperation, "internal/specs/openapi")
+		if genericMountPaths {
+			req.Data["generic_mount_paths"] = true
+		}
+		req.ClientToken = rootToken
+		resp, err := b.HandleRequest(namespace.RootContext(nil), req)
+		if err != nil {
+			t.Fatalf("err: %v", err)
+		}
+
+		body := resp.Data["http_raw_body"].([]byte)
+		var oapi map[string]interface{}
+		err = jsonutil.DecodeJSON(body, &oapi)
+		if err != nil {
+			t.Fatalf("err: %v", err)
+		}
+
+		doc, err := framework.NewOASDocumentFromMap(oapi)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		expectedSecretPrefix := "/secret/"
+		if genericMountPaths {
+			expectedSecretPrefix = "/{secret_mount_path}/"
+		}
+
+		pathSamples := []struct {
+			path        string
+			tag         string
+			unpublished bool
+		}{
+			{path: "/auth/token/lookup", tag: "auth"},
+			{path: "/cubbyhole/{path}", tag: "secrets"},
+			{path: "/identity/group/id", tag: "identity"},
+			{path: expectedSecretPrefix + "^.*$", unpublished: true},
+			{path: "/sys/policy", tag: "system"},
+		}
+
+		for _, path := range pathSamples {
+			if doc.Paths[path.path] == nil {
+				t.Fatalf("didn't find expected path %q.", path.path)
+			}
+			getOperation := doc.Paths[path.path].Get
+			if getOperation == nil && !path.unpublished {
+				t.Fatalf("path: %s; expected a get operation, but it was absent", path.path)
+			}
+			if getOperation != nil && path.unpublished {
+				t.Fatalf("path: %s; expected absent get operation, but it was present", path.path)
+			}
+			if !path.unpublished {
+				tag := getOperation.Tags[0]
+				if tag != path.tag {
+					t.Fatalf("path: %s; expected tag: %s, actual: %s", path.path, tag, path.tag)
+				}
+			}
+		}
+
+		// Simple check of response size (which is much larger than most
+		// Vault responses), mainly to catch mass omission of expected path data.
+		const minLen = 70000
+		if len(body) < minLen {
+			t.Fatalf("response size too small; expected: min %d, actual: %d", minLen, len(body))
+		}
 	}
 
 	// Test path-help response
-	req = logical.TestRequest(t, logical.HelpOperation, "rotate")
-	req.ClientToken = rootToken
-	resp, err = b.HandleRequest(namespace.RootContext(nil), req)
-	if err != nil {
-		t.Fatalf("err: %v", err)
-	}
+	{
+		req := logical.TestRequest(t, logical.HelpOperation, "rotate")
+		req.ClientToken = rootToken
+		resp, err := b.HandleRequest(namespace.RootContext(nil), req)
+		if err != nil {
+			t.Fatalf("err: %v", err)
+		}
 
-	doc = resp.Data["openapi"].(*framework.OASDocument)
-	if len(doc.Paths) != 1 {
-		t.Fatalf("expected 1 path, actual: %d", len(doc.Paths))
-	}
+		doc := resp.Data["openapi"].(*framework.OASDocument)
+		if len(doc.Paths) != 1 {
+			t.Fatalf("expected 1 path, actual: %d", len(doc.Paths))
+		}
 
-	if doc.Paths["/rotate"] == nil {
-		t.Fatalf("expected to find path '/rotate'")
+		if doc.Paths["/rotate"] == nil {
+			t.Fatalf("expected to find path '/rotate'")
+		}
 	}
 }
 
@@ -4554,5 +4584,277 @@ func TestProcessLimit(t *testing.T) {
 				t.Errorf("error was: %v", err)
 			}
 		}
+	}
+}
+
+func validateLevel(level string, logger hclog.Logger) bool {
+	switch level {
+	case "trace":
+		return logger.IsTrace()
+	case "debug":
+		return logger.IsDebug()
+	case "notice", "info", "":
+		return logger.IsInfo()
+	case "warn", "warning":
+		return logger.IsWarn()
+	case "err", "error":
+		return logger.IsError()
+	}
+
+	return false
+}
+
+func TestSystemBackend_Loggers(t *testing.T) {
+	testCases := []struct {
+		level       string
+		expectError bool
+	}{
+		{
+			"trace",
+			false,
+		},
+		{
+			"debug",
+			false,
+		},
+		{
+			"notice",
+			false,
+		},
+		{
+			"info",
+			false,
+		},
+		{
+			"warn",
+			false,
+		},
+		{
+			"warning",
+			false,
+		},
+		{
+			"err",
+			false,
+		},
+		{
+			"error",
+			false,
+		},
+		{
+			"",
+			true,
+		},
+		{
+			"invalid",
+			true,
+		},
+	}
+
+	for _, tc := range testCases {
+		tc := tc
+
+		t.Run(fmt.Sprintf("all-loggers-%s", tc.level), func(t *testing.T) {
+			t.Parallel()
+
+			core, b, _ := testCoreSystemBackend(t)
+
+			req := &logical.Request{
+				Path:      "loggers",
+				Operation: logical.UpdateOperation,
+				Data: map[string]interface{}{
+					"level": tc.level,
+				},
+			}
+
+			resp, err := b.HandleRequest(namespace.RootContext(nil), req)
+			respIsError := resp != nil && resp.IsError()
+
+			if err != nil || (!tc.expectError && respIsError) {
+				t.Fatalf("unexpected error, err: %v, resp: %#v", err, resp)
+			}
+
+			if tc.expectError && !respIsError {
+				t.Fatalf("expected response error, resp: %#v", resp)
+			}
+
+			if !tc.expectError {
+				for _, logger := range core.allLoggers {
+					if !validateLevel(tc.level, logger) {
+						t.Fatalf("expected logger %q to be %q", logger.Name(), tc.level)
+					}
+				}
+			}
+
+			req = &logical.Request{
+				Path:      fmt.Sprintf("loggers"),
+				Operation: logical.DeleteOperation,
+			}
+
+			resp, err = b.HandleRequest(namespace.RootContext(nil), req)
+			if err != nil || (resp != nil && resp.IsError()) {
+				t.Fatalf("unexpected error, err: %v, resp: %#v", err, resp)
+			}
+
+			for _, logger := range core.allLoggers {
+				if !validateLevel(core.logLevel, logger) {
+					t.Errorf("expected level of logger %q to match original config", logger.Name())
+				}
+			}
+		})
+	}
+}
+
+func TestSystemBackend_LoggersByName(t *testing.T) {
+	testCases := []struct {
+		logger            string
+		level             string
+		expectWriteError  bool
+		expectDeleteError bool
+	}{
+		{
+			"core",
+			"trace",
+			false,
+			false,
+		},
+		{
+			"token",
+			"debug",
+			false,
+			false,
+		},
+		{
+			"audit",
+			"notice",
+			false,
+			false,
+		},
+		{
+			"expiration",
+			"info",
+			false,
+			false,
+		},
+		{
+			"policy",
+			"warn",
+			false,
+			false,
+		},
+		{
+			"activity",
+			"warning",
+			false,
+			false,
+		},
+		{
+			"identity",
+			"err",
+			false,
+			false,
+		},
+		{
+			"rollback",
+			"error",
+			false,
+			false,
+		},
+		{
+			"system",
+			"",
+			true,
+			false,
+		},
+		{
+			"quotas",
+			"invalid",
+			true,
+			false,
+		},
+		{
+			"",
+			"info",
+			true,
+			true,
+		},
+		{
+			"does_not_exist",
+			"error",
+			true,
+			true,
+		},
+	}
+
+	for _, tc := range testCases {
+		tc := tc
+
+		t.Run(fmt.Sprintf("loggers-by-name-%s", tc.logger), func(t *testing.T) {
+			t.Parallel()
+
+			core, _, _ := TestCoreUnsealedWithConfig(t, &CoreConfig{
+				Logger: logging.NewVaultLogger(hclog.Trace),
+			})
+			b := core.systemBackend
+
+			req := &logical.Request{
+				Path:      fmt.Sprintf("loggers/%s", tc.logger),
+				Operation: logical.UpdateOperation,
+				Data: map[string]interface{}{
+					"name":  tc.logger,
+					"level": tc.level,
+				},
+			}
+
+			resp, err := b.HandleRequest(namespace.RootContext(nil), req)
+			respIsError := resp != nil && resp.IsError()
+
+			if err != nil || (!tc.expectWriteError && respIsError) {
+				t.Fatalf("unexpected error, err: %v, resp: %#v", err, resp)
+			}
+
+			if tc.expectWriteError && !respIsError {
+				t.Fatalf("expected response error, resp: %#v", resp)
+			}
+
+			if !tc.expectWriteError {
+				for _, logger := range core.allLoggers {
+					if logger.Name() != tc.logger && !validateLevel(core.logLevel, logger) {
+						t.Errorf("expected level of logger %q to be unchanged", logger.Name())
+					}
+
+					if !validateLevel(tc.level, logger) {
+						t.Fatalf("expected logger %q to be %q", logger.Name(), tc.level)
+					}
+				}
+			}
+
+			req = &logical.Request{
+				Path:      fmt.Sprintf("loggers/%s", tc.logger),
+				Operation: logical.DeleteOperation,
+				Data: map[string]interface{}{
+					"name": tc.logger,
+				},
+			}
+
+			resp, err = b.HandleRequest(namespace.RootContext(nil), req)
+			respIsError = resp != nil && resp.IsError()
+
+			if err != nil || (!tc.expectDeleteError && respIsError) {
+				t.Fatalf("unexpected error, err: %v, resp: %#v", err, resp)
+			}
+
+			if tc.expectDeleteError && !respIsError {
+				t.Fatalf("expected response error, resp: %#v", resp)
+			}
+
+			if !tc.expectDeleteError {
+				for _, logger := range core.allLoggers {
+					if !validateLevel(core.logLevel, logger) {
+						t.Errorf("expected level of logger %q to match original config", logger.Name())
+					}
+				}
+			}
+		})
 	}
 }

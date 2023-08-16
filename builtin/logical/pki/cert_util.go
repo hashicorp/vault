@@ -783,22 +783,24 @@ func signCert(b *backend,
 		// We update the value of KeyBits and SignatureBits here (from the
 		// role), using the specified key type. This allows us to convert
 		// the default value (0) for SignatureBits and KeyBits to a
-		// meaningful value. In the event KeyBits takes a zero value, we also
-		// update that to a new value.
+		// meaningful value.
 		//
-		// This is mandatory because on some roles, with KeyType any, we'll
-		// set a default SignatureBits to 0, but this will need to be updated
-		// in order to behave correctly during signing.
-		roleBitsWasZero := data.role.KeyBits == 0
-		if data.role.KeyBits, data.role.SignatureBits, err = certutil.ValidateDefaultOrValueKeyTypeSignatureLength(actualKeyType, data.role.KeyBits, data.role.SignatureBits); err != nil {
+		// We ignore the role's original KeyBits value if the KeyType is any
+		// as legacy (pre-1.10) roles had default values that made sense only
+		// for RSA keys (key_bits=2048) and the older code paths ignored the role value
+		// set for KeyBits when KeyType was set to any. This also enforces the
+		// docs saying when key_type=any, we only enforce our specified minimums
+		// for signing operations
+		if data.role.KeyBits, data.role.SignatureBits, err = certutil.ValidateDefaultOrValueKeyTypeSignatureLength(
+			actualKeyType, 0, data.role.SignatureBits); err != nil {
 			return nil, errutil.InternalError{Err: fmt.Sprintf("unknown internal error updating default values: %v", err)}
 		}
 
-		// We're using the KeyBits field as a minimum value, and P-224 is safe
+		// We're using the KeyBits field as a minimum value below, and P-224 is safe
 		// and a previously allowed value. However, the above call defaults
-		// to P-256 as that's a saner default than P-224 (w.r.t. generation).
-		// So, override our fake Role value if it was previously zero.
-		if actualKeyType == "ec" && roleBitsWasZero {
+		// to P-256 as that's a saner default than P-224 (w.r.t. generation), so
+		// override it here to allow 224 as the smallest size we permit.
+		if actualKeyType == "ec" {
 			data.role.KeyBits = 224
 		}
 	}
@@ -857,9 +859,10 @@ func signCert(b *backend,
 
 // otherNameRaw describes a name related to a certificate which is not in one
 // of the standard name formats. RFC 5280, 4.2.1.6:
-// OtherName ::= SEQUENCE {
-//      type-id    OBJECT IDENTIFIER,
-//      value      [0] EXPLICIT ANY DEFINED BY type-id }
+//
+//	OtherName ::= SEQUENCE {
+//	     type-id    OBJECT IDENTIFIER,
+//	     value      [0] EXPLICIT ANY DEFINED BY type-id }
 type otherNameRaw struct {
 	TypeID asn1.ObjectIdentifier
 	Value  asn1.RawValue

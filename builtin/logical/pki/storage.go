@@ -157,7 +157,12 @@ type keyConfigEntry struct {
 }
 
 type issuerConfigEntry struct {
-	DefaultIssuerId issuerID `json:"default" structs:"default" mapstructure:"default"`
+	// This new fetchedDefault field allows us to detect if the default
+	// issuer was modified, in turn dispatching the timestamp updater
+	// if necessary.
+	fetchedDefault             issuerID `json:"-"`
+	DefaultIssuerId            issuerID `json:"default"`
+	DefaultFollowsLatestIssuer bool     `json:"default_follows_latest_issuer"`
 }
 
 func listKeys(ctx context.Context, s logical.Storage) ([]keyID, error) {
@@ -313,6 +318,11 @@ func importKey(ctx context.Context, b *backend, s logical.Storage, keyValue stri
 		return nil, false, err
 	}
 
+	issuerDefaultSet, err := isDefaultIssuerSet(ctx, s)
+	if err != nil {
+		return nil, false, err
+	}
+
 	// Now, for each issuer, try and compute the issuer<->key link if missing.
 	for _, identifier := range knownIssuers {
 		existingIssuer, err := fetchIssuerById(ctx, s, identifier)
@@ -345,6 +355,16 @@ func importKey(ctx context.Context, b *backend, s logical.Storage, keyValue stri
 			existingIssuer.KeyID = result.ID
 			if err := writeIssuer(ctx, s, existingIssuer); err != nil {
 				return nil, false, err
+			}
+
+			// If there was no prior default value set and/or we had no known
+			// issuers when we started, set this issuer as default.
+			if !issuerDefaultSet {
+				err = updateDefaultIssuerId(ctx, s, existingIssuer.ID)
+				if err != nil {
+					return nil, false, err
+				}
+				issuerDefaultSet = true
 			}
 		}
 	}
@@ -500,6 +520,9 @@ func deleteIssuer(ctx context.Context, s logical.Storage, id issuerID) (bool, er
 	wasDefault := false
 	if config.DefaultIssuerId == id {
 		wasDefault = true
+		// Overwrite the fetched default issuer as we're going to remove this
+		// entry.
+		config.fetchedDefault = issuerID("")
 		config.DefaultIssuerId = issuerID("")
 		if err := setIssuersConfig(ctx, s, config); err != nil {
 			return wasDefault, err
@@ -641,7 +664,7 @@ func importIssuer(ctx context.Context, b *backend, s logical.Storage, certValue 
 	if err != nil {
 		return nil, false, err
 	}
-	if len(knownIssuers) == 0 || !issuerDefaultSet {
+	if (len(knownIssuers) == 0 || !issuerDefaultSet) && len(result.KeyID) != 0 {
 		if err = updateDefaultIssuerId(ctx, s, result.ID); err != nil {
 			return nil, false, err
 		}
@@ -719,7 +742,16 @@ func setIssuersConfig(ctx context.Context, s logical.Storage, config *issuerConf
 		return err
 	}
 
-	return s.Put(ctx, json)
+	if err := s.Put(ctx, json); err != nil {
+		return err
+	}
+
+	// n.b.: on 1.12+ we have If-Modified-Since support which requires
+	// comparing fetchedDefault and DefaultIssuerId. As this is on 1.11,
+	// we don't have that but for compatibility, we've left the field and
+	// rest of the logic.
+
+	return nil
 }
 
 func getIssuersConfig(ctx context.Context, s logical.Storage) (*issuerConfigEntry, error) {
@@ -734,6 +766,7 @@ func getIssuersConfig(ctx context.Context, s logical.Storage) (*issuerConfigEntr
 			return nil, errutil.InternalError{Err: fmt.Sprintf("unable to decode issuer configuration: %v", err)}
 		}
 	}
+	issuerConfig.fetchedDefault = issuerConfig.DefaultIssuerId
 
 	return issuerConfig, nil
 }
@@ -856,6 +889,12 @@ func writeCaBundle(ctx context.Context, b *backend, s logical.Storage, caBundle 
 	myKey, _, err := importKey(ctx, b, s, caBundle.PrivateKey, keyName, caBundle.PrivateKeyType)
 	if err != nil {
 		return nil, nil, err
+	}
+
+	// We may have existing mounts that only contained a key with no certificate yet as a signed CSR
+	// was never setup within the mount.
+	if caBundle.Certificate == "" {
+		return &issuerEntry{}, myKey, nil
 	}
 
 	myIssuer, _, err := importIssuer(ctx, b, s, caBundle.Certificate, issuerName)

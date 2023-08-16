@@ -2,48 +2,93 @@ package pki
 
 import (
 	"context"
+	"strings"
 	"testing"
 	"time"
 
-	"github.com/hashicorp/vault/api"
-	vaulthttp "github.com/hashicorp/vault/http"
 	"github.com/hashicorp/vault/sdk/logical"
-	"github.com/hashicorp/vault/vault"
 	"github.com/stretchr/testify/require"
 )
 
-func TestBackend_CRL_EnableDisable(t *testing.T) {
-	coreConfig := &vault.CoreConfig{
-		LogicalBackends: map[string]logical.Factory{
-			"pki": Factory,
-		},
-	}
-	cluster := vault.NewTestCluster(t, coreConfig, &vault.TestClusterOptions{
-		HandlerFunc: vaulthttp.Handler,
-	})
-	cluster.Start()
-	defer cluster.Cleanup()
+func TestBackend_CRL_EnableDisableRoot(t *testing.T) {
+	b, s := createBackendWithStorage(t)
 
-	client := cluster.Cores[0].Client
-	var err error
-	err = client.Sys().Mount("pki", &api.MountInput{
-		Type: "pki",
-		Config: api.MountConfigInput{
-			DefaultLeaseTTL: "16h",
-			MaxLeaseTTL:     "60h",
-		},
-	})
-
-	resp, err := client.Logical().Write("pki/root/generate/internal", map[string]interface{}{
+	resp, err := CBWrite(b, s, "root/generate/internal", map[string]interface{}{
 		"ttl":         "40h",
 		"common_name": "myvault.com",
 	})
 	if err != nil {
 		t.Fatal(err)
 	}
-	caSerial := resp.Data["serial_number"]
+	caSerial := resp.Data["serial_number"].(string)
 
-	_, err = client.Logical().Write("pki/roles/test", map[string]interface{}{
+	crlEnableDisableTestForBackend(t, b, s, []string{caSerial})
+}
+
+func TestBackend_CRL_EnableDisableIntermediateWithRoot(t *testing.T) {
+	crlEnableDisableIntermediateTestForBackend(t, true)
+}
+
+func TestBackend_CRL_EnableDisableIntermediateWithoutRoot(t *testing.T) {
+	crlEnableDisableIntermediateTestForBackend(t, false)
+}
+
+func crlEnableDisableIntermediateTestForBackend(t *testing.T, withRoot bool) {
+	b_root, s_root := createBackendWithStorage(t)
+
+	resp, err := CBWrite(b_root, s_root, "root/generate/internal", map[string]interface{}{
+		"ttl":         "40h",
+		"common_name": "myvault.com",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	rootSerial := resp.Data["serial_number"].(string)
+
+	b_int, s_int := createBackendWithStorage(t)
+
+	resp, err = CBWrite(b_int, s_int, "intermediate/generate/internal", map[string]interface{}{
+		"common_name": "intermediate myvault.com",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if resp == nil {
+		t.Fatal("expected intermediate CSR info")
+	}
+	intermediateData := resp.Data
+
+	resp, err = CBWrite(b_root, s_root, "root/sign-intermediate", map[string]interface{}{
+		"ttl": "30h",
+		"csr": intermediateData["csr"],
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if resp == nil {
+		t.Fatal("expected signed intermediate info")
+	}
+	intermediateSignedData := resp.Data
+	var certs string = intermediateSignedData["certificate"].(string)
+	caSerial := intermediateSignedData["serial_number"].(string)
+	caSerials := []string{caSerial}
+	if withRoot {
+		intermediateAndRootCert := intermediateSignedData["ca_chain"].([]string)
+		certs = strings.Join(intermediateAndRootCert, "\n")
+		caSerials = append(caSerials, rootSerial)
+	}
+
+	resp, err = CBWrite(b_int, s_int, "intermediate/set-signed", map[string]interface{}{
+		"certificate": certs,
+	})
+
+	crlEnableDisableTestForBackend(t, b_int, s_int, caSerials)
+}
+
+func crlEnableDisableTestForBackend(t *testing.T, b *backend, s logical.Storage, caSerials []string) {
+	var err error
+
+	_, err = CBWrite(b, s, "roles/test", map[string]interface{}{
 		"allow_bare_domains": true,
 		"allow_subdomains":   true,
 		"allowed_domains":    "foobar.com",
@@ -55,7 +100,7 @@ func TestBackend_CRL_EnableDisable(t *testing.T) {
 
 	serials := make(map[int]string)
 	for i := 0; i < 6; i++ {
-		resp, err := client.Logical().Write("pki/issue/test", map[string]interface{}{
+		resp, err := CBWrite(b, s, "issue/test", map[string]interface{}{
 			"common_name": "test.foobar.com",
 		})
 		if err != nil {
@@ -65,7 +110,7 @@ func TestBackend_CRL_EnableDisable(t *testing.T) {
 	}
 
 	test := func(numRevokedExpected int, expectedSerials ...string) {
-		certList := getCrlCertificateList(t, client, "pki")
+		certList := getParsedCrlFromBackend(t, b, s, "crl").TBSCertList
 		lenList := len(certList.RevokedCertificates)
 		if lenList != numRevokedExpected {
 			t.Fatalf("expected %d revoked certificates, found %d", numRevokedExpected, lenList)
@@ -77,23 +122,25 @@ func TestBackend_CRL_EnableDisable(t *testing.T) {
 	}
 
 	revoke := func(serialIndex int) {
-		resp, err = client.Logical().Write("pki/revoke", map[string]interface{}{
+		_, err = CBWrite(b, s, "revoke", map[string]interface{}{
 			"serial_number": serials[serialIndex],
 		})
 		if err != nil {
 			t.Fatal(err)
 		}
 
-		resp, err = client.Logical().Write("pki/revoke", map[string]interface{}{
-			"serial_number": caSerial,
-		})
-		if err == nil {
-			t.Fatal("expected error")
+		for _, caSerial := range caSerials {
+			_, err = CBWrite(b, s, "revoke", map[string]interface{}{
+				"serial_number": caSerial,
+			})
+			if err == nil {
+				t.Fatal("expected error")
+			}
 		}
 	}
 
 	toggle := func(disabled bool) {
-		_, err = client.Logical().Write("pki/config/crl", map[string]interface{}{
+		_, err = CBWrite(b, s, "config/crl", map[string]interface{}{
 			"disable": disabled,
 		})
 		if err != nil {
@@ -121,12 +168,12 @@ func TestBackend_CRL_EnableDisable(t *testing.T) {
 	test(6)
 
 	// The rotate command should reset the update time of the CRL.
-	crlCreationTime1 := getCrlCertificateList(t, client, "pki").ThisUpdate
+	crlCreationTime1 := getParsedCrlFromBackend(t, b, s, "crl").TBSCertList.ThisUpdate
 	time.Sleep(1 * time.Second)
-	_, err = client.Logical().Read("pki/crl/rotate")
+	_, err = CBRead(b, s, "crl/rotate")
 	require.NoError(t, err)
 
-	crlCreationTime2 := getCrlCertificateList(t, client, "pki").ThisUpdate
+	crlCreationTime2 := getParsedCrlFromBackend(t, b, s, "crl").TBSCertList.ThisUpdate
 	require.NotEqual(t, crlCreationTime1, crlCreationTime2)
 }
 

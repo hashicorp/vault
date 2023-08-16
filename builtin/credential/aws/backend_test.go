@@ -1021,29 +1021,33 @@ func TestBackend_PathBlacklistRoleTag(t *testing.T) {
 	}
 }
 
-/* This is an acceptance test.
-   Requires the following env vars:
-   TEST_AWS_EC2_PKCS7
-   TEST_AWS_EC2_IDENTITY_DOCUMENT
-   TEST_AWS_EC2_IDENTITY_DOCUMENT_SIG
-   TEST_AWS_EC2_AMI_ID
-   TEST_AWS_EC2_ACCOUNT_ID
-   TEST_AWS_EC2_IAM_ROLE_ARN
+/*
+This is an acceptance test.
 
-   If this is being run on an EC2 instance, you can set the environment vars using this bash snippet:
+	Requires the following env vars:
+	TEST_AWS_EC2_RSA2048
+	TEST_AWS_EC2_PKCS7
+	TEST_AWS_EC2_IDENTITY_DOCUMENT
+	TEST_AWS_EC2_IDENTITY_DOCUMENT_SIG
+	TEST_AWS_EC2_AMI_ID
+	TEST_AWS_EC2_ACCOUNT_ID
+	TEST_AWS_EC2_IAM_ROLE_ARN
 
-   export TEST_AWS_EC2_PKCS7=$(curl -s http://169.254.169.254/latest/dynamic/instance-identity/pkcs7)
-   export TEST_AWS_EC2_IDENTITY_DOCUMENT=$(curl -s http://169.254.169.254/latest/dynamic/instance-identity/document | base64 -w 0)
-   export TEST_AWS_EC2_IDENTITY_DOCUMENT_SIG=$(curl -s http://169.254.169.254/latest/dynamic/instance-identity/signature | tr -d '\n')
-   export TEST_AWS_EC2_AMI_ID=$(curl -s http://169.254.169.254/latest/meta-data/ami-id)
-   export TEST_AWS_EC2_IAM_ROLE_ARN=$(aws iam get-role --role-name $(curl -q http://169.254.169.254/latest/meta-data/iam/security-credentials/ -S -s) --query Role.Arn --output text)
-   export TEST_AWS_EC2_ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
+	If this is being run on an EC2 instance, you can set the environment vars using this bash snippet:
 
-   If the test is not being run on an EC2 instance that has access to
-   credentials using EC2RoleProvider, on top of the above vars, following
-   needs to be set:
-   TEST_AWS_SECRET_KEY
-   TEST_AWS_ACCESS_KEY
+	export TEST_AWS_EC2_RSA2048=$(curl -s http://169.254.169.254/latest/dynamic/instance-identity/rsa2048)
+	export TEST_AWS_EC2_PKCS7=$(curl -s http://169.254.169.254/latest/dynamic/instance-identity/pkcs7)
+	export TEST_AWS_EC2_IDENTITY_DOCUMENT=$(curl -s http://169.254.169.254/latest/dynamic/instance-identity/document | base64 -w 0)
+	export TEST_AWS_EC2_IDENTITY_DOCUMENT_SIG=$(curl -s http://169.254.169.254/latest/dynamic/instance-identity/signature | tr -d '\n')
+	export TEST_AWS_EC2_AMI_ID=$(curl -s http://169.254.169.254/latest/meta-data/ami-id)
+	export TEST_AWS_EC2_IAM_ROLE_ARN=$(aws iam get-role --role-name $(curl -q http://169.254.169.254/latest/meta-data/iam/security-credentials/ -S -s) --query Role.Arn --output text)
+	export TEST_AWS_EC2_ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
+
+	If the test is not being run on an EC2 instance that has access to
+	credentials using EC2RoleProvider, on top of the above vars, following
+	needs to be set:
+	TEST_AWS_SECRET_KEY
+	TEST_AWS_ACCESS_KEY
 */
 func TestBackendAcc_LoginWithInstanceIdentityDocAndAccessListIdentity(t *testing.T) {
 	for _, path := range []string{"identity-whitelist/", "identity-accesslist/"} {
@@ -1052,6 +1056,11 @@ func TestBackendAcc_LoginWithInstanceIdentityDocAndAccessListIdentity(t *testing
 		if os.Getenv(logicaltest.TestEnvVar) == "" {
 			t.Skip(fmt.Sprintf("Acceptance tests skipped unless env '%s' set", logicaltest.TestEnvVar))
 			return
+		}
+
+		rsa2048 := os.Getenv("TEST_AWS_EC2_RSA2048")
+		if rsa2048 == "" {
+			t.Skipf("env var TEST_AWS_EC2_RSA2048 not set, skipping test")
 		}
 
 		pkcs7 := os.Getenv("TEST_AWS_EC2_PKCS7")
@@ -1290,7 +1299,7 @@ func TestBackendAcc_LoginWithInstanceIdentityDocAndAccessListIdentity(t *testing
 			t.Fatalf("login attempt should have failed due to client nonce mismatch")
 		}
 
-		// Check if a access list identity entry is created after the login.
+		// Check if an access list identity entry is created after the login.
 		wlRequest := &logical.Request{
 			Operation: logical.ReadOperation,
 			Path:      path + instanceID,
@@ -1328,6 +1337,36 @@ func TestBackendAcc_LoginWithInstanceIdentityDocAndAccessListIdentity(t *testing
 		_, ok = resp.Auth.Metadata["nonce"]
 		if !ok {
 			t.Fatalf("expected nonce to be returned")
+		}
+
+		// Attempt to re-login with the rsa2048 signature as a pkcs7 signature
+		wlRequest.Operation = logical.DeleteOperation
+		resp, err = b.HandleRequest(context.Background(), wlRequest)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if resp.IsError() {
+			t.Fatalf("failed to delete access list identity")
+		}
+		delete(loginInput, "identity")
+		delete(loginInput, "signature")
+		loginInput["pkcs7"] = rsa2048
+
+		resp, err = b.HandleRequest(context.Background(), loginRequest)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if resp == nil || resp.Auth == nil || resp.IsError() {
+			t.Fatalf("bad: failed to login: resp:%#v\nerr:%v", resp, err)
+		}
+
+		// verify the presence of instance_id in the response object.
+		instanceID = resp.Auth.Metadata["instance_id"]
+		if instanceID == "" {
+			t.Fatalf("instance ID not present in the response object")
+		}
+		if instanceID != parsedIdentityDoc.InstanceID {
+			t.Fatalf("instance ID in response (%q) did not match instance ID from identity document (%q)", instanceID, parsedIdentityDoc.InstanceID)
 		}
 	}
 }

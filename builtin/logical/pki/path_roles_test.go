@@ -2,13 +2,19 @@ package pki
 
 import (
 	"context"
+	"crypto/x509"
+	"encoding/asn1"
+	"encoding/base64"
+	"encoding/pem"
 	"fmt"
 	"testing"
 	"time"
 
+	"github.com/go-errors/errors"
 	"github.com/hashicorp/go-secure-stdlib/strutil"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/mitchellh/mapstructure"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
@@ -928,8 +934,8 @@ func TestPki_RolePatch(t *testing.T) {
 		},
 		{
 			Field:   "policy_identifiers",
-			Before:  []string{"1.2.3.4.5"},
-			Patched: []string{"5.4.3.2.1"},
+			Before:  []string{"1.3.6.1.4.1.1.1"},
+			Patched: []string{"1.3.6.1.4.1.1.2"},
 		},
 		{
 			Field:   "basic_constraints_valid_for_non_ca",
@@ -1018,4 +1024,142 @@ func TestPki_RolePatch(t *testing.T) {
 			}
 		}
 	}
+}
+
+func TestPKI_RolePolicyInformation_Flat(t *testing.T) {
+	type TestCase struct {
+		Input   interface{}
+		ASN     interface{}
+		OidList []string
+	}
+
+	expectedSimpleAsnExtension := "MBYwCQYHKwYBBAEBATAJBgcrBgEEAQEC"
+	expectedSimpleOidList := append(*new([]string), "1.3.6.1.4.1.1.1", "1.3.6.1.4.1.1.2")
+
+	testCases := []TestCase{
+		{
+			Input:   "1.3.6.1.4.1.1.1,1.3.6.1.4.1.1.2",
+			ASN:     expectedSimpleAsnExtension,
+			OidList: expectedSimpleOidList,
+		},
+		{
+			Input:   "[{\"oid\":\"1.3.6.1.4.1.1.1\"},{\"oid\":\"1.3.6.1.4.1.1.2\"}]",
+			ASN:     expectedSimpleAsnExtension,
+			OidList: expectedSimpleOidList,
+		},
+		{
+			Input:   "[{\"oid\":\"1.3.6.1.4.1.7.8\",\"notice\":\"I am a user Notice\"},{\"oid\":\"1.3.6.1.44947.1.2.4\",\"cps\":\"https://example.com\"}]",
+			ASN:     "MF8wLQYHKwYBBAEHCDAiMCAGCCsGAQUFBwICMBQMEkkgYW0gYSB1c2VyIE5vdGljZTAuBgkrBgGC3xMBAgQwITAfBggrBgEFBQcCARYTaHR0cHM6Ly9leGFtcGxlLmNvbQ==",
+			OidList: append(*new([]string), "1.3.6.1.4.1.7.8", "1.3.6.1.44947.1.2.4"),
+		},
+	}
+
+	b, storage := createBackendWithStorage(t)
+
+	caData := map[string]interface{}{
+		"common_name": "myvault.com",
+		"ttl":         "5h",
+		"ip_sans":     "127.0.0.1",
+	}
+	caReq := &logical.Request{
+		Operation: logical.UpdateOperation,
+		Path:      "root/generate/internal",
+		Storage:   storage,
+		Data:      caData,
+	}
+	caResp, err := b.HandleRequest(context.Background(), caReq)
+	if err != nil || (caResp != nil && caResp.IsError()) {
+		t.Fatalf("bad: err: %v resp: %#v", err, caResp)
+	}
+
+	for index, testCase := range testCases {
+		var roleResp *logical.Response
+		var issueResp *logical.Response
+		var err error
+
+		// Create/update the role
+		roleData := map[string]interface{}{}
+		roleData[policyIdentifiersParam] = testCase.Input
+
+		roleReq := &logical.Request{
+			Operation: logical.UpdateOperation,
+			Path:      "roles/testrole",
+			Storage:   storage,
+			Data:      roleData,
+		}
+
+		roleResp, err = b.HandleRequest(context.Background(), roleReq)
+		if err != nil || (roleResp != nil && roleResp.IsError()) {
+			t.Fatalf("bad [%d], setting policy identifier %v err: %v resp: %#v", index, testCase.Input, err, roleResp)
+		}
+
+		// Issue Using this role
+		issueData := map[string]interface{}{}
+		issueData["common_name"] = "localhost"
+		issueData["ttl"] = "2s"
+
+		issueReq := &logical.Request{
+			Operation: logical.UpdateOperation,
+			Path:      "issue/testrole",
+			Storage:   storage,
+			Data:      issueData,
+		}
+
+		issueResp, err = b.HandleRequest(context.Background(), issueReq)
+		if err != nil || (issueResp != nil && issueResp.IsError()) {
+			t.Fatalf("bad [%d], setting policy identifier %v err: %v resp: %#v", index, testCase.Input, err, issueResp)
+		}
+
+		// Validate the OIDs
+		policyIdentifiers, err := getPolicyIdentifiersOffCertificate(*issueResp)
+		if err != nil {
+			t.Fatalf("bad [%d], getting policy identifier from %v err: %v resp: %#v", index, testCase.Input, err, issueResp)
+		}
+		if len(policyIdentifiers) != len(testCase.OidList) {
+			t.Fatalf("bad [%d], wrong certificate policy identifier from %v len expected: %d got %d", index, testCase.Input, len(testCase.OidList), len(policyIdentifiers))
+		}
+		for i, identifier := range policyIdentifiers {
+			if identifier != testCase.OidList[i] {
+				t.Fatalf("bad [%d], wrong certificate policy identifier from %v expected: %v got %v", index, testCase.Input, testCase.OidList[i], policyIdentifiers[i])
+			}
+		}
+		// Validate the ASN
+		certificateAsn, err := getPolicyInformationExtensionOffCertificate(*issueResp)
+		if err != nil {
+			t.Fatalf("bad [%d], getting extension from %v err: %v resp: %#v", index, testCase.Input, err, issueResp)
+		}
+		certificateB64 := make([]byte, len(certificateAsn)*2)
+		base64.StdEncoding.Encode(certificateB64, certificateAsn)
+		certificateString := string(certificateB64[:])
+		assert.Contains(t, certificateString, testCase.ASN)
+	}
+}
+
+func getPolicyIdentifiersOffCertificate(resp logical.Response) ([]string, error) {
+	stringCertificate := resp.Data["certificate"].(string)
+	block, _ := pem.Decode([]byte(stringCertificate))
+	certificate, err := x509.ParseCertificate(block.Bytes)
+	if err != nil {
+		return nil, err
+	}
+	policyIdentifierStrings := make([]string, len(certificate.PolicyIdentifiers))
+	for index, asnOid := range certificate.PolicyIdentifiers {
+		policyIdentifierStrings[index] = asnOid.String()
+	}
+	return policyIdentifierStrings, nil
+}
+
+func getPolicyInformationExtensionOffCertificate(resp logical.Response) ([]byte, error) {
+	stringCertificate := resp.Data["certificate"].(string)
+	block, _ := pem.Decode([]byte(stringCertificate))
+	certificate, err := x509.ParseCertificate(block.Bytes)
+	if err != nil {
+		return nil, err
+	}
+	for _, extension := range certificate.Extensions {
+		if extension.Id.Equal(asn1.ObjectIdentifier{2, 5, 29, 32}) {
+			return extension.Value, nil
+		}
+	}
+	return *new([]byte), errors.New("No Policy Information Extension Found")
 }

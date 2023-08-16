@@ -100,7 +100,14 @@
       <p class="sub-text">The types of operations this key can perform in the provider.</p>
       {{#each this.operations as |op|}}
         <div class="b-checkbox">
-          <Input @type="checkbox" id={{op}} class="styled" @checked={{false}} {{on "input" this.handleOperation}} />
+          <Input
+            @type="checkbox"
+            id={{op}}
+            class="styled"
+            @checked={{false}}
+            {{on "input" this.handleOperation}}
+            data-test-operation={{op}}
+          />
           <label for={{op}}>{{capitalize op}}</label>
         </div>
       {{/each}}
@@ -114,6 +121,7 @@
           id="protection-hsm"
           name="hsm"
           class="radio"
+          data-test-protection="hsm"
           @value="hsm"
           @groupValue={{this.formData.protection}}
           @onChange={{fn (mut this.formData.protection)}}
@@ -125,6 +133,7 @@
           id="protection-software"
           name="software"
           class="radio"
+          data-test-protection="software"
           @value="software"
           @groupValue={{this.formData.protection}}
           @onChange={{fn (mut this.formData.protection)}}

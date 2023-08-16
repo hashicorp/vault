@@ -1480,6 +1480,8 @@ func TestBackend_DefExtTemplatingEnabled(t *testing.T) {
 		"default_extensions_template": true,
 		"default_extensions": map[string]interface{}{
 			"login@foobar.com": "{{identity.entity.aliases." + userpassAccessor + ".name}}",
+			"login@foobar2.com": "{{identity.entity.aliases." + userpassAccessor + ".name}}, " +
+				"{{identity.entity.aliases." + userpassAccessor + ".name}}_foobar",
 		},
 	})
 	if err != nil {
@@ -1505,7 +1507,8 @@ func TestBackend_DefExtTemplatingEnabled(t *testing.T) {
 	}
 
 	defaultExtensionPermissions := map[string]string{
-		"login@foobar.com": testUserName,
+		"login@foobar.com":  testUserName,
+		"login@foobar2.com": fmt.Sprintf("%s, %s_foobar", testUserName, testUserName),
 	}
 
 	err = validateSSHCertificate(parsedKey.(*ssh.Certificate), sshKeyID, ssh.UserCert, []string{"tuber"}, map[string]string{}, defaultExtensionPermissions, 16*time.Hour)
@@ -1847,7 +1850,8 @@ func getSshCaTestCluster(t *testing.T, userIdentity string) (*vault.TestCluster,
 }
 
 func testAllowedUsersTemplate(t *testing.T, testAllowedUsersTemplate string,
-	expectedValidPrincipal string, testEntityMetadata map[string]string) {
+	expectedValidPrincipal string, testEntityMetadata map[string]string,
+) {
 	cluster, userpassToken := getSshCaTestCluster(t, testUserName)
 	defer cluster.Cleanup()
 	client := cluster.Cores[0].Client
@@ -1926,7 +1930,8 @@ func signCertificateStep(
 	role, keyID string, certType int, validPrincipals []string,
 	criticalOptionPermissions, extensionPermissions map[string]string,
 	ttl time.Duration,
-	requestParameters map[string]interface{}) logicaltest.TestStep {
+	requestParameters map[string]interface{},
+) logicaltest.TestStep {
 	return logicaltest.TestStep{
 		Operation: logical.UpdateOperation,
 		Path:      "sign/" + role,

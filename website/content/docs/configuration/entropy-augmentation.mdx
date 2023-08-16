@@ -6,7 +6,7 @@ description: >-
   cryptographic modules.
 ---
 
-# `Entropy Augmentation` Seal
+# `Entropy augmentation` seal
 
 Entropy augmentation enables Vault to sample entropy from external cryptographic modules.
 Sourcing external entropy is done by configuring a supported [Seal](/docs/configuration/seal) type which
@@ -17,7 +17,9 @@ block in Vault's configuration file.
 
 ## Requirements
 
-A valid Vault Enterprise license is required for Entropy Augmentation
+A valid Vault Enterprise license is required for Entropy Augmentation.
+
+~> **Warning** This feature is not available with FIPS 140-2 Inside variants of Vault.
 
 Additionally, the following software packages and enterprise modules are required for sourcing entropy
 via the [PKCS11 seal](/docs/configuration/seal/pkcs11):
@@ -29,7 +31,7 @@ via the [PKCS11 seal](/docs/configuration/seal/pkcs11):
 - The [GNU libltdl library](https://www.gnu.org/software/libtool/manual/html_node/Using-libltdl)
   — ensure that it is installed for the correct architecture of your servers
 
-## `entropy` Example
+## `entropy` example
 
 This example shows configuring entropy augmentation through a PKCS11 HSM seal from Vault's configuration
 file:
@@ -47,7 +49,7 @@ entropy "seal" {
 For a more detailed tutorial, visit the [HSM Entropy Challenge](https://learn.hashicorp.com/vault/operations/hsm-entropy)
 on HashiCorp's Learn website.
 
-## `entropy augmentation` Parameters
+## `entropy augmentation` parameters
 
 These parameters apply to the `entropy` stanza in the Vault configuration file:
 
