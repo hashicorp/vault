@@ -28,11 +28,13 @@ import { waitFor } from '@ember/test-waiters';
  */
 
 export default class KvSecretDetails extends Component {
-  @service store;
   @service flashMessages;
+  @service router;
+  @service store;
 
   @tracked showJsonView = false;
   @tracked wrappedData = null;
+
 
   @action
   toggleJsonView() {
@@ -64,6 +66,47 @@ export default class KvSecretDetails extends Component {
     } catch (error) {
       this.flashMessages.danger('Could not wrap secret.');
     }
+  }
+
+  @action
+  async undelete() {
+    const { secret } = this.args;
+    try {
+      await secret.destroyRecord({
+        adapterOptions: { deleteType: 'undelete', deleteVersions: secret.version },
+      });
+      this.flashMessages.success(`Successfully undeleted ${secret.path}.`);
+      this.router.transitionTo('vault.cluster.secrets.backend.kv.secret', {
+        queryParams: { version: secret.version },
+      });
+    } catch (err) {
+      this.flashMessages.danger(
+        `There was a problem undeleting ${secret.path}. Error: ${err.errors.join(' ')}.`
+      );
+    }
+  }
+
+  @action
+  async handleDestruction(type) {
+    const { secret } = this.args;
+    try {
+      await secret.destroyRecord({ adapterOptions: { deleteType: type, deleteVersions: secret.version } });
+      this.flashMessages.success(`Successfully ${secret.state} Version ${secret.version} of ${secret.path}.`);
+      this.router.transitionTo('vault.cluster.secrets.backend.kv.secret', {
+        queryParams: { version: secret.version },
+      });
+    } catch (err) {
+      const verb = type.includes('delete') ? 'deleting' : 'destroying';
+      this.flashMessages.danger(
+        `There was a problem ${verb} Version ${secret.version} of ${secret.path}. Error: ${err.errors.join(
+          ' '
+        )}.`
+      );
+    }
+  }
+
+  get isDeactivated() {
+    return this.args.secret.state === 'created' ? false : true;
   }
 
   get hideHeaders() {

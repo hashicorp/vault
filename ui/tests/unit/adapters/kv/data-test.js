@@ -99,12 +99,12 @@ module('Unit | Adapter | kv/data', function (hooks) {
       path: this.path,
       version: 2,
     };
-    this.endpoint = `${encodePath(this.backend)}/data/${encodePath(this.path)}`;
+    this.endpoint = (noun) => `${encodePath(this.backend)}/${noun}/${encodePath(this.path)}`;
   });
 
   test('it should make request to correct endpoint on createRecord', async function (assert) {
     assert.expect(8);
-    this.server.post(this.endpoint, (schema, req) => {
+    this.server.post(this.endpoint('data'), (schema, req) => {
       assert.ok('POST request made to correct endpoint when creating new record');
       const body = JSON.parse(req.requestBody);
       assert.deepEqual(body, {
@@ -137,7 +137,7 @@ module('Unit | Adapter | kv/data', function (hooks) {
 
   test('it should make request to correct endpoint on queryRecord', async function (assert) {
     assert.expect(8);
-    this.server.get(this.endpoint, (schema, req) => {
+    this.server.get(this.endpoint('data'), (schema, req) => {
       assert.ok(true, 'request is made to correct url on queryRecord.');
       assert.strictEqual(
         req.queryParams.version,
@@ -162,7 +162,7 @@ module('Unit | Adapter | kv/data', function (hooks) {
 
   test('it should handle a 404 not found response properly', async function (assert) {
     assert.expect(1);
-    this.server.get(this.endpoint, () => {
+    this.server.get(this.endpoint('data'), () => {
       // This is what the API currently returns for not found
       return new Response(404, {}, { errors: [] });
     });
@@ -176,7 +176,7 @@ module('Unit | Adapter | kv/data', function (hooks) {
 
   test('it should handle a 403 permission denied properly', async function (assert) {
     assert.expect(8);
-    this.server.get(this.endpoint, (schema, req) => {
+    this.server.get(this.endpoint('data'), (schema, req) => {
       assert.ok(true, 'request is made to correct url on queryRecord.');
       assert.strictEqual(
         req.queryParams.version,
@@ -200,7 +200,7 @@ module('Unit | Adapter | kv/data', function (hooks) {
   });
 
   test('it should handle a soft-deleted version properly', async function (assert) {
-    this.server.get(this.endpoint, () => {
+    this.server.get(this.endpoint('data'), () => {
       return new Response(404, {}, EXAMPLE_KV_DATA_DELETED);
     });
 
@@ -218,7 +218,7 @@ module('Unit | Adapter | kv/data', function (hooks) {
   });
 
   test('it should handle a destroyed version properly', async function (assert) {
-    this.server.get(this.endpoint, () => {
+    this.server.get(this.endpoint('data'), () => {
       return new Response(404, {}, EXAMPLE_KV_DATA_DESTROYED);
     });
 
@@ -237,7 +237,7 @@ module('Unit | Adapter | kv/data', function (hooks) {
 
   test('it should handle a control group response properly', async function (assert) {
     assert.expect(1);
-    this.server.get(this.endpoint, () => {
+    this.server.get(this.endpoint('data'), () => {
       return EXAMPLE_CONTROL_GROUP_RESPONSE;
     });
 
@@ -250,7 +250,7 @@ module('Unit | Adapter | kv/data', function (hooks) {
 
   test('it should make request to correct endpoint on delete latest version', async function (assert) {
     assert.expect(3);
-    this.server.delete(this.endpoint, () => {
+    this.server.delete(this.endpoint('data'), () => {
       assert.ok(true, 'request made to correct endpoint on delete latest version.');
       return new Response(204);
     });
@@ -269,7 +269,7 @@ module('Unit | Adapter | kv/data', function (hooks) {
 
   test('it should make request to correct endpoint on delete specific versions', async function (assert) {
     assert.expect(4);
-    this.server.post(this.endpoint, (schema, req) => {
+    this.server.post(this.endpoint('delete'), (schema, req) => {
       const { versions } = JSON.parse(req.requestBody);
       assert.strictEqual(versions, 2, 'version array is sent in the payload.');
       assert.ok(true, 'request made to correct endpoint on delete specific version.');
@@ -282,7 +282,7 @@ module('Unit | Adapter | kv/data', function (hooks) {
     });
     let record = await this.store.peekRecord('kv/data', this.id);
     await record.destroyRecord({
-      adapterOptions: { deleteType: 'delete-specific-version', deleteVersions: 2 },
+      adapterOptions: { deleteType: 'delete-version', deleteVersions: 2 },
     });
     assert.true(record.isDeleted, 'record is deleted');
     record = await this.store.peekRecord('kv/data', this.id);
@@ -305,7 +305,7 @@ module('Unit | Adapter | kv/data', function (hooks) {
     let record = await this.store.peekRecord('kv/data', this.id);
 
     await record.destroyRecord({
-      adapterOptions: { deleteType: 'undelete-specific-version', deleteVersions: 2 },
+      adapterOptions: { deleteType: 'undelete', deleteVersions: 2 },
     });
     assert.true(record.isDeleted, 'record is deleted');
     record = await this.store.peekRecord('kv/data', this.id);
@@ -327,27 +327,7 @@ module('Unit | Adapter | kv/data', function (hooks) {
     });
     let record = await this.store.peekRecord('kv/data', this.id);
     await record.destroyRecord({
-      adapterOptions: { deleteType: 'destroy-specific-version', deleteVersions: 2 },
-    });
-    assert.true(record.isDeleted, 'record is deleted');
-    record = await this.store.peekRecord('kv/data', this.id);
-    assert.strictEqual(record, null, 'record is no longer in store');
-  });
-
-  test('it should make request to correct endpoint on destroy everything', async function (assert) {
-    assert.expect(3);
-    this.server.delete(`${encodePath(this.backend)}/metadata/${encodePath(this.path)}`, () => {
-      assert.ok(true, 'request made to correct endpoint on destroy everything.');
-    });
-
-    this.store.pushPayload('kv/data', {
-      modelName: 'kv/data',
-      id: this.id,
-      ...this.payload,
-    });
-    let record = await this.store.peekRecord('kv/data', this.id);
-    await record.destroyRecord({
-      adapterOptions: { deleteType: 'destroy-everything' },
+      adapterOptions: { deleteType: 'destroy', deleteVersions: 2 },
     });
     assert.true(record.isDeleted, 'record is deleted');
     record = await this.store.peekRecord('kv/data', this.id);

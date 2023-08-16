@@ -18,6 +18,9 @@ function buildKvPath(backend: string, path: string, type: string, version?: numb
 export function kvDataPath(backend: string, path: string, version?: number | string) {
   return buildKvPath(backend, path, 'data', version);
 }
+export function kvDeletePath(backend: string, path: string, version?: number | string) {
+  return buildKvPath(backend, path, 'delete', version);
+}
 export function kvMetadataPath(backend: string, path: string) {
   return buildKvPath(backend, path, 'metadata');
 }

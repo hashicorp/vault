@@ -138,4 +138,26 @@ module('Unit | Adapter | kv/metadata', function (hooks) {
       'record has correct versions data'
     );
   });
+
+  test('it should make request to correct endpoint on delete metadata', async function (assert) {
+    assert.expect(3);
+    const data = this.server.create('kv-metadatum');
+    data.id = kvMetadataPath('kv-engine', 'my-secret');
+    this.store.pushPayload('kv/metadata', {
+      modelName: 'kv/metadata',
+      ...data,
+    });
+    this.server.delete(kvMetadataPath('kv-engine', 'my-secret'), () => {
+      assert.ok(true, 'request made to correct endpoint on delete metadata.');
+    });
+
+    let record = await this.store.peekRecord('kv/metadata', data.id);
+
+    await record.destroyRecord({
+      adapterOptions: { deleteType: 'delete-metadata' },
+    });
+    assert.true(record.isDestroyed, 'record is destroyed');
+    record = await this.store.peekRecord('kv/metadata', this.id);
+    assert.strictEqual(record, null, 'record is no longer in store');
+  });
 });
