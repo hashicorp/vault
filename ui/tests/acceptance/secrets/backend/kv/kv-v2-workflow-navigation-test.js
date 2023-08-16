@@ -1228,7 +1228,7 @@ path "${this.backend}/*" {
       assertCorrectBreadcrumbs(assert, ['secret', backend, 'app', 'nested', 'secret']);
       assert.dom(PAGE.title).hasText('app/nested/secret', 'title is full secret path');
       assert.dom(PAGE.toolbar).exists('toolbar renders');
-      assert.dom(PAGE.toolbarAction).exists({ count: 4 }, 'correct number of toolbar actions render');
+      assert.dom(PAGE.toolbarAction).exists({ count: 5 }, 'correct number of toolbar actions render');
 
       await click(PAGE.breadcrumbAtIdx(3));
       assert.ok(
