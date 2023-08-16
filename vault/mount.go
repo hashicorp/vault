@@ -1599,7 +1599,7 @@ func (c *Core) setupMounts(ctx context.Context) error {
 					postUnsealLogger.Error("skipping initialization for nil backend", "path", localEntry.Path)
 					return
 				}
-				if !strutil.StrListContains(singletonMounts, entry.Type) {
+				if !strutil.StrListContains(singletonMounts, localEntry.Type) {
 					view.setReadOnlyErr(origReadOnlyErr)
 				}
 

@@ -910,7 +910,7 @@ func (c *Core) setupCredentials(ctx context.Context) error {
 					postUnsealLogger.Error("skipping initialization for nil auth backend")
 					return
 				}
-				if !strutil.StrListContains(singletonMounts, entry.Type) {
+				if !strutil.StrListContains(singletonMounts, localEntry.Type) {
 					view.setReadOnlyErr(origViewReadOnlyErr)
 				}
 
