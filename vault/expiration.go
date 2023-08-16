@@ -241,11 +241,11 @@ func (r *revocationJob) OnFailure(err error) {
 
 	r.m.pendingLock.Lock()
 	pendingRaw, ok := r.m.pending.Load(r.leaseID)
+	r.m.pendingLock.Unlock()
 	if !ok {
 		r.m.logger.Warn("failed to find lease in pending map for revocation retry", "lease_id", r.leaseID)
 		return
 	}
-	r.m.pendingLock.Unlock()
 
 	pending := pendingRaw.(pendingInfo)
 	pending.revokesAttempted++
