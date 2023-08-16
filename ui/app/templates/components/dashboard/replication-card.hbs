@@ -7,87 +7,89 @@
     <Hds::Link::Inline @route="vault.cluster.replication.index" class="is-no-underline">Details</Hds::Link::Inline>
   </div>
 </div>
-
-{{! if replication and performance is allowed from license }}
-{{! (or @replication.dr.clusterId @replication.performance.clusterId) }}
-{{#if (and @version.hasPerfReplication @version.hasDRReplication)}}
-  <hr class="has-background-gray-100" />
-  <div class="is-grid grid-2-columns grid-gap-2 has-top-margin-m has-bottom-margin-m grid-align-items-start">
-    <div>
-      <div class="has-bottom-margin-s">
-        <Hds::Link::Inline
-          class="title is-5 has-text-weight-semibold"
-          @route="vault.cluster.replication.mode.index"
-          @model="dr"
-        >DR Primary</Hds::Link::Inline>
-      </div>
-      <div class="title is-4 has-text-weight-semibold has-top-margin-xs">
-        {{@replication.dr.state}}
-        <Hds::TooltipButton @text="The cluster’s current operating state">
-          <FlightIcon @name="check-circle-fill" class="has-text-success" />
-        </Hds::TooltipButton>
-      </div>
-    </div>
-    <div>
-      <div class="has-bottom-margin-s">
-        <Hds::Link::Inline
-          class="title is-5 has-text-weight-semibold"
-          @route="vault.cluster.replication.mode.index"
-          @model="performance"
-        >Perf primary</Hds::Link::Inline>
-      </div>
-      {{#if @replication.performance.clusterId}}
+{{! check if dr replication and performance replication exists }}
+{{#if (or @replication.dr.clusterId @replication.performance.clusterId)}}
+  {{! check if user has access to both perf replication and dr replication }}
+  {{#if (and @version.hasPerfReplication @version.hasDRReplication)}}
+    <hr class="has-background-gray-100" />
+    <div class="is-grid grid-2-columns grid-gap-2 has-top-margin-m has-bottom-margin-m grid-align-items-start">
+      <div>
+        <div class="has-bottom-margin-s">
+          <Hds::Link::Inline
+            class="title is-5 has-text-weight-semibold"
+            @route="vault.cluster.replication.mode.index"
+            @model="dr"
+          >DR Primary</Hds::Link::Inline>
+        </div>
         <div class="title is-4 has-text-weight-semibold has-top-margin-xs">
-          {{@replication.performance.state}}
+          {{@replication.dr.state}}
           <Hds::TooltipButton @text="The cluster’s current operating state">
-            <FlightIcon @name="check-circle-fill" class="has-text-success" />
+            <FlightIcon @name={{get (cluster-states @replication.dr.state) "glyph"}} class="has-text-success" />
           </Hds::TooltipButton>
         </div>
-      {{else}}
+      </div>
+      <div>
+        <div class="has-bottom-margin-s">
+          <Hds::Link::Inline
+            class="title is-5 has-text-weight-semibold"
+            @route="vault.cluster.replication.mode.index"
+            @model="performance"
+          >Perf primary</Hds::Link::Inline>
+        </div>
+        {{#if @replication.performance.clusterId}}
+          <div class="title is-4 has-text-weight-semibold has-top-margin-xs">
+            {{@replication.performance.state}}
+            <Hds::TooltipButton @text="The cluster’s current operating state">
+              <FlightIcon @name={{get (cluster-states @replication.performance.state) "glyph"}} class="has-text-success" />
+            </Hds::TooltipButton>
+          </div>
+        {{else}}
+          <div class="title is-4 has-text-weight-semibold has-top-margin-xs">
+            not set up
+            <Hds::TooltipButton @text="The cluster’s current operating state">
+              <FlightIcon @name="x-circle-fill" class="has-text-danger" />
+            </Hds::TooltipButton>
+          </div>
+        {{/if}}
+      </div>
+    </div>
+    {{! if user only has access to dr replication }}
+  {{else if @version.hasDRReplication}}
+    <hr class="has-background-gray-100" />
+    <div class="is-marginless">
+      <Hds::Link::Inline
+        class="title is-5 has-text-weight-semibold"
+        @route="vault.cluster.replication.mode.index"
+        @model="dr"
+      >DR Primary</Hds::Link::Inline>
+    </div>
+
+    <div class="is-grid grid-2-columns grid-gap-2 has-top-margin-m has-bottom-margin-m grid-align-items-start">
+      <div>
+        <div class="has-bottom-margin-xxs title is-5 has-text-weight-semibold">
+          state
+        </div>
+        <div class="has-text-grey-dark title is-8 has-font-weight-normal">
+          The current operating state of the cluster. The value should be 'running'.
+        </div>
         <div class="title is-4 has-text-weight-semibold has-top-margin-xs">
-          not set up
-          <Hds::TooltipButton @text="The cluster’s current operating state">
-            <FlightIcon @name="x-circle-fill" class="has-text-danger" />
+          {{@replication.dr.state}}
+          <Hds::TooltipButton @text="The cluster's current operating state">
+            <FlightIcon @name={{get (cluster-states @replication.dr.state) "glyph"}} class="has-text-success" />
           </Hds::TooltipButton>
         </div>
-      {{/if}}
-    </div>
-  </div>
-{{else if @version.hasDRReplication}}
-  <hr class="has-background-gray-100" />
-  <div class="is-marginless">
-    <Hds::Link::Inline
-      class="title is-5 has-text-weight-semibold"
-      @route="vault.cluster.replication.mode.index"
-      @model="dr"
-    >DR Primary</Hds::Link::Inline>
-  </div>
-
-  <div class="is-grid grid-2-columns grid-gap-2 has-top-margin-m has-bottom-margin-m grid-align-items-start">
-    <div>
-      <div class="has-bottom-margin-xxs title is-5 has-text-weight-semibold">
-        state
       </div>
-      <div class="has-text-grey-dark title is-8 has-font-weight-normal">
-        The current operating state of the cluster. The value should be 'running'.
-      </div>
-      <div class="title is-4 has-text-weight-semibold has-top-margin-xs">
-        {{@replication.dr.state}}
-        <Hds::TooltipButton @text="The cluster's current operating state">
-          <FlightIcon @name="check-circle-fill" class="has-text-success" />
-        </Hds::TooltipButton>
+      <div>
+        <div class="has-bottom-margin-xs title is-5 has-text-weight-semibold">
+          known secondaries
+        </div>
+        <div class="has-text-grey-dark title is-8 has-font-weight-normal">Number of secondaries connected to this primary.</div>
+        <div class="title is-4 has-text-weight-semibold has-top-margin-xs">
+          {{or @replication.dr.knownSecondaries.length 0}}
+        </div>
       </div>
     </div>
-    <div>
-      <div class="has-bottom-margin-xs title is-5 has-text-weight-semibold">
-        known secondaries
-      </div>
-      <div class="has-text-grey-dark title is-8 has-font-weight-normal">Number of secondaries connected to this primary.</div>
-      <div class="title is-4 has-text-weight-semibold has-top-margin-xs">
-        {{or @replication.dr.knownSecondaries.length 0}}
-      </div>
-    </div>
-  </div>
+  {{/if}}
 {{else}}
   <EmptyState
     @title="Replication not set up"

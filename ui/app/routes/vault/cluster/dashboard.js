@@ -34,11 +34,10 @@ export default class VaultClusterDashboardRoute extends Route.extend(ClusterRout
 
   model() {
     const vaultConfiguration = this.getVaultConfiguration();
-    const dr = this.modelFor('vault.cluster').dr;
-    const performance = this.modelFor('vault.cluster').performance;
+    const clusterModel = this.modelFor('vault.cluster');
     const replication = {
-      dr,
-      performance,
+      dr: clusterModel.dr,
+      performance: clusterModel.performance,
     };
 
     return hash({
