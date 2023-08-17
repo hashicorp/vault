@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package aws
 
 import (
@@ -12,9 +15,11 @@ import (
 	"testing"
 	"time"
 
+	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/aws/aws-sdk-go/aws/credentials"
+	"github.com/aws/aws-sdk-go/aws/request"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/dynamodb"
 	"github.com/aws/aws-sdk-go/service/ec2"
@@ -35,7 +40,7 @@ type mockIAMClient struct {
 	iamiface.IAMAPI
 }
 
-func (m *mockIAMClient) CreateUser(input *iam.CreateUserInput) (*iam.CreateUserOutput, error) {
+func (m *mockIAMClient) CreateUserWithContext(_ aws.Context, input *iam.CreateUserInput, _ ...request.Option) (*iam.CreateUserOutput, error) {
 	return nil, awserr.New("Throttling", "", nil)
 }
 
@@ -143,7 +148,7 @@ func TestBackend_throttled(t *testing.T) {
 	config := logical.TestBackendConfig()
 	config.StorageView = &logical.InmemStorage{}
 
-	b := Backend()
+	b := Backend(config)
 	if err := b.Setup(context.Background(), config); err != nil {
 		t.Fatal(err)
 	}
@@ -195,12 +200,33 @@ func TestBackend_throttled(t *testing.T) {
 }
 
 func testAccPreCheck(t *testing.T) {
+	if !hasAWSCredentials() {
+		t.Skip("Skipping because AWS credentials could not be resolved. See https://docs.aws.amazon.com/sdk-for-go/v1/developer-guide/configuring-sdk.html#specifying-credentials for information on how to set up AWS credentials.")
+	}
+
 	initSetup.Do(func() {
 		if v := os.Getenv("AWS_DEFAULT_REGION"); v == "" {
 			log.Println("[INFO] Test: Using us-west-2 as test region")
 			os.Setenv("AWS_DEFAULT_REGION", "us-west-2")
 		}
 	})
+}
+
+func hasAWSCredentials() bool {
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	cfg, err := config.LoadDefaultConfig(ctx)
+	if err != nil {
+		return false
+	}
+
+	creds, err := cfg.Credentials.Retrieve(ctx)
+	if err != nil {
+		return false
+	}
+
+	return creds.HasKeys()
 }
 
 func getAccountID() (string, error) {
@@ -658,26 +684,19 @@ func testAccStepRead(t *testing.T, path, name string, credentialTests []credenti
 	}
 }
 
-func testAccStepReadSTSResponse(name string, maximumTTL uint64) logicaltest.TestStep {
+func testAccStepReadSTSResponse(name string, maximumTTL time.Duration) logicaltest.TestStep {
 	return logicaltest.TestStep{
 		Operation: logical.ReadOperation,
 		Path:      "creds/" + name,
 		Check: func(resp *logical.Response) error {
-			if resp.Secret != nil {
-				return fmt.Errorf("bad: STS tokens should return a nil secret, received: %+v", resp.Secret)
+			if resp.Secret == nil {
+				return fmt.Errorf("bad: nil Secret returned")
 			}
-
-			if ttl, exists := resp.Data["ttl"]; exists {
-				ttlVal := ttl.(uint64)
-
-				if ttlVal > maximumTTL {
-					return fmt.Errorf("bad: ttl of %d greater than maximum of %d", ttl, maximumTTL)
-				}
-
-				return nil
+			ttl := resp.Secret.TTL
+			if ttl > maximumTTL {
+				return fmt.Errorf("bad: ttl of %d greater than maximum of %d", ttl/time.Second, maximumTTL/time.Second)
 			}
-
-			return fmt.Errorf("response data missing ttl, received: %+v", resp.Data)
+			return nil
 		},
 	}
 }
@@ -1326,7 +1345,7 @@ func TestAcceptanceBackend_RoleDefaultSTSTTL(t *testing.T) {
 		Steps: []logicaltest.TestStep{
 			testAccStepConfig(t),
 			testAccStepWriteRole(t, "test", roleData),
-			testAccStepReadSTSResponse("test", uint64(minAwsAssumeRoleDuration)), // allow a little slack
+			testAccStepReadSTSResponse("test", time.Duration(minAwsAssumeRoleDuration)*time.Second), // allow a little slack
 		},
 		Teardown: func() error {
 			return deleteTestRole(roleName)

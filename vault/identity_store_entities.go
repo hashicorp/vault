@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package vault
 
 import (
@@ -58,7 +61,13 @@ func entityPaths(i *IdentityStore) []*framework.Path {
 	return []*framework.Path{
 		{
 			Pattern: "entity$",
-			Fields:  entityPathFields(),
+
+			DisplayAttrs: &framework.DisplayAttributes{
+				OperationPrefix: "entity",
+				OperationVerb:   "create",
+			},
+
+			Fields: entityPathFields(),
 			Callbacks: map[logical.Operation]framework.OperationFunc{
 				logical.UpdateOperation: i.handleEntityUpdateCommon(),
 			},
@@ -68,11 +77,33 @@ func entityPaths(i *IdentityStore) []*framework.Path {
 		},
 		{
 			Pattern: "entity/name/(?P<name>.+)",
-			Fields:  entityPathFields(),
-			Callbacks: map[logical.Operation]framework.OperationFunc{
-				logical.UpdateOperation: i.handleEntityUpdateCommon(),
-				logical.ReadOperation:   i.pathEntityNameRead(),
-				logical.DeleteOperation: i.pathEntityNameDelete(),
+
+			DisplayAttrs: &framework.DisplayAttributes{
+				OperationPrefix: "entity",
+				OperationSuffix: "by-name",
+			},
+
+			Fields: entityPathFields(),
+
+			Operations: map[logical.Operation]framework.OperationHandler{
+				logical.UpdateOperation: &framework.PathOperation{
+					Callback: i.handleEntityUpdateCommon(),
+					DisplayAttrs: &framework.DisplayAttributes{
+						OperationVerb: "update",
+					},
+				},
+				logical.ReadOperation: &framework.PathOperation{
+					Callback: i.pathEntityNameRead(),
+					DisplayAttrs: &framework.DisplayAttributes{
+						OperationVerb: "read",
+					},
+				},
+				logical.DeleteOperation: &framework.PathOperation{
+					Callback: i.pathEntityNameDelete(),
+					DisplayAttrs: &framework.DisplayAttributes{
+						OperationVerb: "delete",
+					},
+				},
 			},
 
 			HelpSynopsis:    strings.TrimSpace(entityHelp["entity-name"][0]),
@@ -80,11 +111,33 @@ func entityPaths(i *IdentityStore) []*framework.Path {
 		},
 		{
 			Pattern: "entity/id/" + framework.GenericNameRegex("id"),
-			Fields:  entityPathFields(),
-			Callbacks: map[logical.Operation]framework.OperationFunc{
-				logical.UpdateOperation: i.handleEntityUpdateCommon(),
-				logical.ReadOperation:   i.pathEntityIDRead(),
-				logical.DeleteOperation: i.pathEntityIDDelete(),
+
+			DisplayAttrs: &framework.DisplayAttributes{
+				OperationPrefix: "entity",
+				OperationSuffix: "by-id",
+			},
+
+			Fields: entityPathFields(),
+
+			Operations: map[logical.Operation]framework.OperationHandler{
+				logical.UpdateOperation: &framework.PathOperation{
+					Callback: i.handleEntityUpdateCommon(),
+					DisplayAttrs: &framework.DisplayAttributes{
+						OperationVerb: "update",
+					},
+				},
+				logical.ReadOperation: &framework.PathOperation{
+					Callback: i.pathEntityIDRead(),
+					DisplayAttrs: &framework.DisplayAttributes{
+						OperationVerb: "read",
+					},
+				},
+				logical.DeleteOperation: &framework.PathOperation{
+					Callback: i.pathEntityIDDelete(),
+					DisplayAttrs: &framework.DisplayAttributes{
+						OperationVerb: "delete",
+					},
+				},
 			},
 
 			HelpSynopsis:    strings.TrimSpace(entityHelp["entity-id"][0]),
@@ -92,12 +145,19 @@ func entityPaths(i *IdentityStore) []*framework.Path {
 		},
 		{
 			Pattern: "entity/batch-delete",
+
+			DisplayAttrs: &framework.DisplayAttributes{
+				OperationPrefix: "entity",
+				OperationVerb:   "batch-delete",
+			},
+
 			Fields: map[string]*framework.FieldSchema{
 				"entity_ids": {
 					Type:        framework.TypeCommaStringSlice,
 					Description: "Entity IDs to delete",
 				},
 			},
+
 			Callbacks: map[logical.Operation]framework.OperationFunc{
 				logical.UpdateOperation: i.handleEntityBatchDelete(),
 			},
@@ -107,6 +167,12 @@ func entityPaths(i *IdentityStore) []*framework.Path {
 		},
 		{
 			Pattern: "entity/name/?$",
+
+			DisplayAttrs: &framework.DisplayAttributes{
+				OperationPrefix: "entity",
+				OperationSuffix: "by-name",
+			},
+
 			Callbacks: map[logical.Operation]framework.OperationFunc{
 				logical.ListOperation: i.pathEntityNameList(),
 			},
@@ -116,6 +182,12 @@ func entityPaths(i *IdentityStore) []*framework.Path {
 		},
 		{
 			Pattern: "entity/id/?$",
+
+			DisplayAttrs: &framework.DisplayAttributes{
+				OperationPrefix: "entity",
+				OperationSuffix: "by-id",
+			},
+
 			Callbacks: map[logical.Operation]framework.OperationFunc{
 				logical.ListOperation: i.pathEntityIDList(),
 			},
@@ -125,6 +197,12 @@ func entityPaths(i *IdentityStore) []*framework.Path {
 		},
 		{
 			Pattern: "entity/merge/?$",
+
+			DisplayAttrs: &framework.DisplayAttributes{
+				OperationPrefix: "entity",
+				OperationVerb:   "merge",
+			},
+
 			Fields: map[string]*framework.FieldSchema{
 				"from_entity_ids": {
 					Type:        framework.TypeCommaStringSlice,

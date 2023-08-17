@@ -1,9 +1,15 @@
-import Service from '@ember/service';
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
 
-export default Service.extend({
-  cluster: null,
+import Service from '@ember/service';
+import { tracked } from '@glimmer/tracking';
+
+export default class CurrentClusterService extends Service {
+  @tracked cluster = null;
 
   setCluster(cluster) {
-    this.set('cluster', cluster);
-  },
-});
+    this.cluster = cluster;
+  }
+}

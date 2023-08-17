@@ -1,141 +1,119 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import Component from '@glimmer/component';
-import layout from '../templates/components/calendar-widget';
-import { setComponentTemplate } from '@ember/component';
 import { action } from '@ember/object';
 import { tracked } from '@glimmer/tracking';
-
+import { ARRAY_OF_MONTHS, parseAPITimestamp } from 'core/utils/date-formatters';
+import { addYears, isSameYear, subYears } from 'date-fns';
+import timestamp from 'core/utils/timestamp';
 /**
  * @module CalendarWidget
- * CalendarWidget components are used in the client counts metrics. It helps users understand the ranges they can select.
+ * CalendarWidget component is used in the client counts dashboard to select a month/year to query the /activity endpoint.
+ * The component returns an object with selected date info, example: { dateType: 'endDate', monthIdx: 0, monthName: 'January', year: 2022 }
  *
  * @example
  * ```js
- * <CalendarWidget
- * @param {array} arrayOfMonths - An array of all the months that the calendar widget iterates through.
- * @param {string} endTimeDisplay - The formatted display value of the endTime. Ex: January 2022.
- * @param {array} endTimeFromResponse - The value returned on the counters/activity endpoint, which shows the true endTime not the selected one, which can be different. Ex: ['2022', 0]
- * @param {function} handleClientActivityQuery - a function passed from parent. This component sends the month and year to the parent via this method which then calculates the new data.
- * @param {function} handleCurrentBillingPeriod - a function passed from parent. This component makes the parent aware that the user selected Current billing period and it handles resetting the data.
- * @param {string} startTimeDisplay - The formatted display value of the endTime. Ex: January 2022. This component is only responsible for modifying the endTime which is sends to the parent to make the network request.
- * />
+ * <CalendarWidget @startTimestamp={{this.startTime}} @endTimestamp={{this.endTime}} @selectMonth={{this.handleSelection}} />
  *
+ *    @param {string} startTimestamp - ISO timestamp string of the calendar widget's start time, displays in dropdown trigger
+ *    @param {string} endTimestamp - ISO timestamp string for the calendar widget's end time, displays in dropdown trigger
+ *    @param {function} selectMonth - callback function from parent - fires when selecting a month or clicking "Current billing period"
+ *  />
  * ```
  */
-class CalendarWidget extends Component {
-  currentDate = new Date();
-  currentYear = this.currentDate.getFullYear(); // integer
-  currentMonth = parseInt(this.currentDate.getMonth()); // integer and zero index
-
-  @tracked allMonthsNodeList = [];
-  @tracked displayYear = this.currentYear; // init to currentYear and then changes as a user clicks on the chevrons
+export default class CalendarWidget extends Component {
+  currentDate = timestamp.now();
+  @tracked calendarDisplayDate = this.currentDate; // init to current date, updates when user clicks on calendar chevrons
   @tracked showCalendar = false;
   @tracked tooltipTarget = null;
   @tracked tooltipText = null;
 
-  get selectedMonthId() {
-    if (!this.args.endTimeFromResponse) return '';
-    const [year, monthIndex] = this.args.endTimeFromResponse;
-    return `${monthIndex}-${year}`;
+  // both date getters return a date object
+  get startDate() {
+    return parseAPITimestamp(this.args.startTimestamp);
+  }
+  get endDate() {
+    return parseAPITimestamp(this.args.endTimestamp);
+  }
+  get displayYear() {
+    return this.calendarDisplayDate.getFullYear();
   }
   get disableFutureYear() {
-    return this.displayYear === this.currentYear;
+    return isSameYear(this.calendarDisplayDate, this.currentDate);
   }
   get disablePastYear() {
-    const startYear = parseInt(this.args.startTimeDisplay.split(' ')[1]);
-    return this.displayYear === startYear; // if on startYear then don't let them click back to the year prior
+    // calendar widget should only go as far back as the passed in start time
+    return isSameYear(this.calendarDisplayDate, this.startDate);
   }
   get widgetMonths() {
-    const displayYear = this.displayYear;
-    const currentYear = this.currentYear;
-    const currentMonthIdx = this.currentMonth;
-    const [startMonth, startYear] = this.args.startTimeDisplay.split(' ');
-    const startMonthIdx = this.args.arrayOfMonths.indexOf(startMonth);
-    return this.args.arrayOfMonths.map((month, idx) => {
-      const monthId = `${idx}-${displayYear}`;
+    const startYear = this.startDate.getFullYear();
+    const startMonthIdx = this.startDate.getMonth();
+    return ARRAY_OF_MONTHS.map((month, index) => {
       let readonly = false;
 
-      // if widget is showing billing start year, disable if month is before start month
-      if (parseInt(startYear) === displayYear && idx < startMonthIdx) {
+      // if widget is showing same year as @startTimestamp year, disable if month is before start month
+      if (startYear === this.displayYear && index < startMonthIdx) {
         readonly = true;
       }
 
-      // if widget showing current year, disable if month is current or later
-      if (displayYear === currentYear && idx >= currentMonthIdx) {
+      // if widget showing current year, disable if month is later than current month
+      if (this.displayYear === this.currentDate.getFullYear() && index > this.currentDate.getMonth()) {
         readonly = true;
       }
       return {
-        id: monthId,
-        month,
+        index,
+        year: this.displayYear,
+        name: month,
         readonly,
-        current: monthId === `${currentMonthIdx}-${currentYear}`,
       };
     });
   }
 
-  // HELPER FUNCTIONS (alphabetically) //
-  addClass(element, classString) {
-    element.classList.add(classString);
-  }
-
-  removeClass(element, classString) {
-    element.classList.remove(classString);
-  }
-
-  resetDisplayYear() {
-    let setYear = this.currentYear;
-    if (this.args.endTimeDisplay) {
-      try {
-        const year = this.args.endTimeDisplay.split(' ')[1];
-        setYear = parseInt(year);
-      } catch (e) {
-        console.debug('Error resetting display year', e); // eslint-disable-line
-      }
-    }
-    this.displayYear = setYear;
-  }
-
-  // ACTIONS (alphabetically) //
   @action
   addTooltip() {
     if (this.disablePastYear) {
-      const previousYear = Number(this.displayYear) - 1;
-      this.tooltipText = `${previousYear} is unavailable because it is before your billing start month. Change your billing start month to a date in ${previousYear} to see data for this year.`; // set tooltip text
+      const previousYear = this.displayYear - 1;
+      this.tooltipText = `${previousYear} is unavailable because it is before your start date. Change your start month to a date in ${previousYear} to see data for this year.`;
       this.tooltipTarget = '#previous-year';
     }
   }
 
   @action
-  addYear() {
-    this.displayYear = this.displayYear + 1;
-  }
-
-  @action removeTooltip() {
+  removeTooltip() {
     this.tooltipTarget = null;
   }
 
   @action
-  selectCurrentBillingPeriod(D) {
-    this.args.handleCurrentBillingPeriod(); // resets the billing startTime and endTime to what it is on init via the parent.
-    this.showCalendar = false;
-    D.actions.close(); // close the dropdown.
-  }
-  @action
-  selectEndMonth(monthId, D) {
-    const [monthIdx, year] = monthId.split('-');
-    this.toggleShowCalendar();
-    this.args.handleClientActivityQuery(parseInt(monthIdx), parseInt(year), 'endTime');
-    D.actions.close(); // close the dropdown.
+  addYear() {
+    this.calendarDisplayDate = addYears(this.calendarDisplayDate, 1);
   }
 
   @action
   subYear() {
-    this.displayYear = this.displayYear - 1;
+    this.calendarDisplayDate = subYears(this.calendarDisplayDate, 1);
   }
 
   @action
   toggleShowCalendar() {
     this.showCalendar = !this.showCalendar;
-    this.resetDisplayYear();
+    this.calendarDisplayDate = this.endDate;
+  }
+
+  @action
+  handleDateShortcut(dropdown, { target }) {
+    this.args.selectMonth({ dateType: target.name }); // send clicked shortcut to parent callback
+    this.showCalendar = false;
+    dropdown.close();
+  }
+
+  @action
+  selectMonth(month, dropdown) {
+    const { index, year, name } = month;
+    this.toggleShowCalendar();
+    this.args.selectMonth({ monthIdx: index, monthName: name, year, dateType: 'endDate' });
+    dropdown.close();
   }
 }
-export default setComponentTemplate(layout, CalendarWidget);

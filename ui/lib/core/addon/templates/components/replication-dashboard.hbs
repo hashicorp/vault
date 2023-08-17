@@ -1,13 +1,25 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
 <div class="replication-dashboard box is-sideless is-fullwidth is-marginless" data-test-replication-dashboard>
   {{#if this.isReindexing}}
     <div class="reindexing-alert">
-      <AlertBanner
-        @title={{concat "Re-indexing in progress" this.reindexingStage}}
-        @type="info"
-        @progressBar={{this.progressBar}}
-        @message={{this.reindexMessage}}
-        data-test-isReindexing
-      />
+      <Hds::Alert data-test-isReindexing @type="inline" @color="highlight" as |A|>
+        <A.Title data-test-reindexing-title>
+          {{concat "Re-indexing in progress" this.reindexingStage}}
+          {{#if this.progressBar}}
+            <progress
+              data-test-reindexing-progress
+              value={{this.progressBar.value}}
+              max={{this.progressBar.max}}
+              class="progress is-success is-medium is-inline-block"
+            ></progress>
+          {{/if}}
+        </A.Title>
+        <A.Description>{{sanitized-html this.reindexMessage}}</A.Description>
+      </Hds::Alert>
     </div>
   {{/if}}
   {{#if this.isSummaryDashboard}}
@@ -50,17 +62,24 @@
   {{/if}}
   {{#if this.isSyncing}}
     <div class="syncing-alert">
-      <AlertBanner
-        @title="Syncing in progress"
-        @type="info"
-        @secondIconType="loading"
-        @message="The cluster is syncing. This happens when the secondary is too far behind the primary to use the normal stream-wals state for catching up."
-        data-test-isSyncing
-      />
+      <Hds::Alert data-test-isSyncing @type="inline" @color="highlight" @icon="loading" as |A|>
+        <A.Title>Syncing in progress</A.Title>
+        <A.Description>
+          The cluster is syncing. This happens when the secondary is too far behind the primary to use the normal stream-wals
+          state for catching up.
+        </A.Description>
+      </Hds::Alert>
     </div>
   {{/if}}
   {{#unless this.isSummaryDashboard}}
     <ReplicationTableRows @replicationDetails={{this.replicationDetails}} @clusterMode={{this.clusterMode}} />
-    <ReplicationDocLink data-test-replication-doc-link />
+    <div class="replication helper-text float-right" data-test-replication-doc-link>
+      <p class="has-text-grey">
+        We have additional time series telemetry that can be found
+        <DocLink @path="/vault/tutorials/monitoring/monitor-replication#key-monitoring-metrics">
+          in our documentation.
+        </DocLink>
+      </p>
+    </div>
   {{/unless}}
 </div>

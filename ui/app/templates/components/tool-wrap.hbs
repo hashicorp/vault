@@ -1,7 +1,12 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
 <PageHeader as |p|>
   <p.levelLeft>
     <h1 class="title is-3">
-      Wrap data
+      Wrap Data
     </h1>
   </p.levelLeft>
 </PageHeader>
@@ -53,7 +58,7 @@
         />
       </div>
     </div>
-    <TtlPicker2
+    <TtlPicker
       @label="Wrap TTL"
       @initialValue="30m"
       @onChange={{action "updateTtl"}}

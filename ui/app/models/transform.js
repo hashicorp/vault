@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import Model, { attr } from '@ember-data/model';
 import { computed } from '@ember/object';
 import { apiPath } from 'vault/macros/lazy-capabilities';
@@ -6,7 +11,7 @@ import attachCapabilities from 'vault/lib/attach-capabilities';
 
 // these arrays define the order in which the fields will be displayed
 // see
-//https://www.vaultproject.io/api-docs/secret/transform#create-update-transformation
+// https://developer.hashicorp.com/vault/api-docs/secret/transform#create-update-transformation-deprecated-1-6
 const TYPES = [
   {
     value: 'fpe',
@@ -34,11 +39,9 @@ const TWEAK_SOURCE = [
 ];
 
 const ModelExport = Model.extend({
-  useOpenAPI: false,
   name: attr('string', {
     // CBS TODO: make this required for making a transformation
     label: 'Name',
-    fieldValue: 'id',
     readOnly: true,
     subText: 'The name for your transformation. This cannot be edited later.',
   }),

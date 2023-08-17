@@ -1,8 +1,12 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package api
 
 import (
 	"bytes"
 	"context"
+	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
@@ -11,7 +15,6 @@ import (
 	"strings"
 
 	"github.com/hashicorp/errwrap"
-	"github.com/hashicorp/vault/sdk/helper/jsonutil"
 )
 
 const (
@@ -66,6 +69,53 @@ func (c *Logical) ReadWithDataWithContext(ctx context.Context, path string, data
 	defer cancelFunc()
 
 	resp, err := c.readRawWithDataWithContext(ctx, path, data)
+	return c.ParseRawResponseAndCloseBody(resp, err)
+}
+
+// ReadRaw attempts to read the value stored at the given Vault path
+// (without '/v1/' prefix) and returns a raw *http.Response.
+//
+// Note: the raw-response functions do not respect the client-configured
+// request timeout; if a timeout is desired, please use ReadRawWithContext
+// instead and set the timeout through context.WithTimeout or context.WithDeadline.
+func (c *Logical) ReadRaw(path string) (*Response, error) {
+	return c.ReadRawWithDataWithContext(context.Background(), path, nil)
+}
+
+// ReadRawWithContext attempts to read the value stored at the give Vault path
+// (without '/v1/' prefix) and returns a raw *http.Response.
+//
+// Note: the raw-response functions do not respect the client-configured
+// request timeout; if a timeout is desired, please set it through
+// context.WithTimeout or context.WithDeadline.
+func (c *Logical) ReadRawWithContext(ctx context.Context, path string) (*Response, error) {
+	return c.ReadRawWithDataWithContext(ctx, path, nil)
+}
+
+// ReadRawWithData attempts to read the value stored at the given Vault
+// path (without '/v1/' prefix) and returns a raw *http.Response. The 'data' map
+// is added as query parameters to the request.
+//
+// Note: the raw-response functions do not respect the client-configured
+// request timeout; if a timeout is desired, please use
+// ReadRawWithDataWithContext instead and set the timeout through
+// context.WithTimeout or context.WithDeadline.
+func (c *Logical) ReadRawWithData(path string, data map[string][]string) (*Response, error) {
+	return c.ReadRawWithDataWithContext(context.Background(), path, data)
+}
+
+// ReadRawWithDataWithContext attempts to read the value stored at the given
+// Vault path (without '/v1/' prefix) and returns a raw *http.Response. The 'data'
+// map is added as query parameters to the request.
+//
+// Note: the raw-response functions do not respect the client-configured
+// request timeout; if a timeout is desired, please set it through
+// context.WithTimeout or context.WithDeadline.
+func (c *Logical) ReadRawWithDataWithContext(ctx context.Context, path string, data map[string][]string) (*Response, error) {
+	return c.readRawWithDataWithContext(ctx, path, data)
+}
+
+func (c *Logical) ParseRawResponseAndCloseBody(resp *Response, err error) (*Secret, error) {
 	if resp != nil {
 		defer resp.Body.Close()
 	}
@@ -88,21 +138,6 @@ func (c *Logical) ReadWithDataWithContext(ctx context.Context, path string, data
 	}
 
 	return ParseSecret(resp.Body)
-}
-
-func (c *Logical) ReadRaw(path string) (*Response, error) {
-	return c.ReadRawWithData(path, nil)
-}
-
-func (c *Logical) ReadRawWithData(path string, data map[string][]string) (*Response, error) {
-	return c.ReadRawWithDataWithContext(context.Background(), path, data)
-}
-
-func (c *Logical) ReadRawWithDataWithContext(ctx context.Context, path string, data map[string][]string) (*Response, error) {
-	ctx, cancelFunc := c.c.withConfiguredTimeout(ctx)
-	defer cancelFunc()
-
-	return c.readRawWithDataWithContext(ctx, path, data)
 }
 
 func (c *Logical) readRawWithDataWithContext(ctx context.Context, path string, data map[string][]string) (*Response, error) {
@@ -358,7 +393,9 @@ func (c *Logical) UnwrapWithContext(ctx context.Context, wrappingToken string) (
 
 	wrappedSecret := new(Secret)
 	buf := bytes.NewBufferString(secret.Data["response"].(string))
-	if err := jsonutil.DecodeJSONFromReader(buf, wrappedSecret); err != nil {
+	dec := json.NewDecoder(buf)
+	dec.UseNumber()
+	if err := dec.Decode(wrappedSecret); err != nil {
 		return nil, errwrap.Wrapf("error unmarshalling wrapped secret: {{err}}", err)
 	}
 

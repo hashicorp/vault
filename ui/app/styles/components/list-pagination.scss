@@ -1,3 +1,55 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
+// This file combines Bulma CSS with our own CSS that previously overrode Bulma. In the future we should adopt the HDS pagination.
+
+.pagination-previous[disabled],
+.pagination-next[disabled],
+.pagination-link[disabled],
+.pagination-ellipsis[disabled] {
+  cursor: not-allowed;
+}
+
+.pagination-previous,
+.pagination-next,
+.pagination-link,
+.pagination-ellipsis,
+.tabs {
+  user-select: none;
+}
+
+.pagination-previous,
+.pagination-next,
+.pagination-link,
+.pagination-ellipsis {
+  align-items: center;
+  box-shadow: none;
+  display: inline-flex;
+  font-size: $size-6;
+  justify-content: flex-start;
+  line-height: 1.5;
+  margin: $size-11;
+  padding-bottom: calc(0.5em - 1px);
+  padding-left: calc(0.75em - 1px);
+  padding-right: calc(0.75em - 1px);
+  padding-top: calc(0.5em - 1px);
+  position: relative;
+  vertical-align: top;
+}
+
+.pagination-link.is-current {
+  color: $white;
+}
+
+.pagination-list {
+  flex-grow: 1;
+  flex-shrink: 1;
+  justify-content: flex-start;
+  order: 1;
+}
+
 .list-pagination {
   @extend .has-slim-padding;
   position: relative;
@@ -24,8 +76,21 @@
   .pagination {
     justify-content: center;
   }
+
   .pagination-list {
     flex-grow: 0;
+    flex-wrap: wrap;
+
+    li {
+      list-style: none;
+    }
+  }
+  .pagination,
+  .pagination-list {
+    align-items: center;
+    display: flex;
+    justify-content: center;
+    text-align: center;
   }
   .pagination-ellipsis {
     margin: 0;
@@ -33,6 +98,7 @@
     padding-right: 0;
   }
 }
+
 .list-pagination .pagination-previous,
 .list-pagination .pagination-next {
   @extend .button;
@@ -40,9 +106,11 @@
   @extend .is-outlined;
   @extend .is-compact;
   background: $white;
+  border-color: $blue-500;
+  color: $blue-500;
   max-width: 8rem;
 
-  @include until($tablet) {
+  @include until($mobile) {
     max-width: 2rem;
     padding-left: 0;
     padding-right: 0;
@@ -50,7 +118,7 @@
 
   .pagination-next-label,
   .pagination-previous-label {
-    @include until($tablet) {
+    @include until($mobile) {
       display: none;
     }
   }
@@ -71,8 +139,62 @@
   }
 }
 
+.pagination-previous {
+  order: 1;
+}
+
+.pagination-next {
+  order: 3;
+}
+
+.pagination.is-centered {
+  &.pagination-previous {
+    order: 1;
+  }
+
+  &.pagination-list {
+    justify-content: center;
+    order: 2;
+  }
+
+  &.pagination-next {
+    order: 3;
+  }
+}
+
+.pagination.is-right {
+  &.pagination-previous {
+    order: 1;
+  }
+
+  &.pagination-next {
+    order: 2;
+  }
+
+  &.pagination-list {
+    justify-content: flex-end;
+    order: 3;
+  }
+}
+
+// responsive css
+@media screen and (max-width: 768px) {
+  .pagination {
+    flex-wrap: wrap;
+  }
+  .pagination-previous,
+  .pagination-next {
+    flex-grow: 1;
+    flex-shrink: 1;
+  }
+  .pagination-list li {
+    flex-grow: 1;
+    flex-shrink: 1;
+  }
+}
+
 .list-pagination .pagination-next {
-  @include until($tablet) {
+  @include until($mobile) {
     order: 3;
   }
 }

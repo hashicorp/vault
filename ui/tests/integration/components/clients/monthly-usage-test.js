@@ -1,4 +1,10 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import { module, test } from 'qunit';
+import sinon from 'sinon';
 import { setupRenderingTest } from 'ember-qunit';
 import { render } from '@ember/test-helpers';
 import { hbs } from 'ember-cli-htmlbars';
@@ -6,6 +12,7 @@ import { formatRFC3339 } from 'date-fns';
 import { findAll } from '@ember/test-helpers';
 import { calculateAverage } from 'vault/utils/chart-helpers';
 import { formatNumber } from 'core/helpers/format-number';
+import timestamp from 'core/utils/timestamp';
 
 module('Integration | Component | clients/monthly-usage', function (hooks) {
   setupRenderingTest(hooks);
@@ -1408,8 +1415,11 @@ module('Integration | Component | clients/monthly-usage', function (hooks) {
       },
     },
   ];
+  hooks.before(function () {
+    sinon.stub(timestamp, 'now').callsFake(() => new Date('2018-04-03T14:15:30'));
+  });
   hooks.beforeEach(function () {
-    this.set('timestamp', formatRFC3339(new Date()));
+    this.set('timestamp', formatRFC3339(timestamp.now()));
     this.set('isDateRange', true);
     this.set('chartLegend', [
       { label: 'entity clients', key: 'entity_clients' },
@@ -1417,11 +1427,14 @@ module('Integration | Component | clients/monthly-usage', function (hooks) {
     ]);
     this.set('byMonthActivityData', DATASET);
   });
+  hooks.after(function () {
+    timestamp.now.restore();
+  });
 
   test('it renders empty state with no data', async function (assert) {
     await render(hbs`
       <div id="modal-wormhole"></div>
-      <Clients::MonthlyUsage @chartLegend={{this.chartLegend}} @timestamp={{this.timestamp}}/>
+      <Clients::MonthlyUsage @chartLegend={{this.chartLegend}} @responseTimestamp={{this.timestamp}}/>
     `);
     assert.dom('[data-test-monthly-usage]').exists('monthly usage component renders');
     assert.dom('[data-test-component="empty-state"]').exists();
@@ -1443,10 +1456,10 @@ module('Integration | Component | clients/monthly-usage', function (hooks) {
     ]);
     await render(hbs`
     <div id="modal-wormhole"></div>
-    <Clients::MonthlyUsage 
+    <Clients::MonthlyUsage
     @chartLegend={{this.chartLegend}}
-    @verticalBarChartData={{this.byMonthActivityData}} 
-    @timestamp={{this.timestamp}}
+    @verticalBarChartData={{this.byMonthActivityData}}
+    @responseTimestamp={{this.timestamp}}
     />
     `);
     assert.dom('[data-test-monthly-usage]').exists('monthly usage component renders');

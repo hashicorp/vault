@@ -1,5 +1,55 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
+.level {
+  align-items: center;
+  justify-content: space-between;
+}
+
+.level code {
+  border-radius: $radius;
+}
+
 .level:not(:last-child) {
   @include vault-block;
+}
+
+.level-left,
+.level-right {
+  flex-basis: auto;
+  flex-grow: 0;
+  flex-shrink: 0;
+}
+
+.level-right {
+  align-items: center;
+  justify-content: flex-end;
+}
+
+.level-left {
+  align-items: center;
+  justify-content: flex-start;
+}
+
+.level.is-mobile,
+.level.is-mobile .level-left,
+.level.is-mobile .level-right {
+  display: flex;
+}
+
+.level.is-mobile .level-left + .level-right {
+  margin-top: 0;
+}
+
+.level.is-mobile .level-item:not(:last-child) {
+  margin-bottom: 0;
+  margin-right: $size-9;
+}
+
+.level.is-mobile .level-item:not(.is-narrow) {
+  flex-grow: 1;
 }
 
 .level.has-padded-items {
@@ -11,5 +61,37 @@
   }
   .level-item.is-fixed-25 {
     flex-basis: 25%;
+  }
+}
+
+.level-item {
+  align-items: center;
+  display: flex;
+  flex-basis: auto;
+  flex-grow: 0;
+  flex-shrink: 0;
+  justify-content: center;
+}
+
+// responsive css
+@media screen and (min-width: 769px), print {
+  .level {
+    display: flex;
+  }
+  .level > .level-item:not(.is-narrow) {
+    flex-grow: 1;
+  }
+  .level-left {
+    display: flex;
+  }
+
+  .level-right {
+    display: flex;
+  }
+}
+
+@media screen and (max-width: 768px) {
+  .level-item:not(:last-child) {
+    margin-bottom: $size-9;
   }
 }

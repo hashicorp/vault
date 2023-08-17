@@ -1,0 +1,3 @@
+```release-note:improvement
+core: remove unnecessary *BarrierView field from backendEntry struct
+```

@@ -1,7 +1,17 @@
-<form onsubmit={{action @doSubmit (hash input=@input algorithm=@algorithm key_version=@key_version)}}>
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
+<form
+  onsubmit={{action
+    @doSubmit
+    (hash input=@input algorithm=@algorithm key_version=@key_version encodedBase64=@encodedBase64)
+  }}
+>
   <div class="box is-sideless is-fullwidth is-marginless">
     <NamespaceReminder @mode="perform" @noun="HMAC creation" />
-    <div class="content">
+    <div class="content has-bottom-margin-l">
       <p>
         Generate the digest of given data using the specified hash algorithm and
         <code>{{@key.name}}</code>

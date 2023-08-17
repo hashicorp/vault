@@ -1,4 +1,9 @@
 /**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
+/**
  * @module SecretEditToolbar
  * SecretEditToolbar component is the toolbar component displaying the JSON toggle and the actions like delete in the show mode.
  *
@@ -21,7 +26,7 @@
   }}
  * />
  * ```
- 
+
  * @param {string} mode - show, create, edit. The view.
  * @param {object} model - the model passed from the parent secret-edit
  * @param {boolean} isV2 - KV type

@@ -1,0 +1,3 @@
+```release-note:improvement
+auth/ldap: allow providing the LDAP password via an env var when authenticating via the CLI
+```

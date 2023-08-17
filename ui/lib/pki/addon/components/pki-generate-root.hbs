@@ -1,0 +1,124 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
+{{! Show results if model has an ID, which is only generated after save }}
+{{#if @model.id}}
+  <main class="box is-fullwidth is-sideless is-paddingless is-marginless">
+    {{#each this.returnedFields as |field|}}
+      {{#let (find-by "name" field @model.allFields) as |attr|}}
+        {{#if attr.options.detailLinkTo}}
+          <InfoTableRow
+            @label={{capitalize (or attr.options.detailsLabel attr.options.label (humanize (dasherize attr.name)))}}
+            @value={{get @model attr.name}}
+            @addCopyButton={{or (eq attr.name "issuerId") (eq attr.name "keyId")}}
+          >
+            <LinkTo @route={{attr.options.detailLinkTo}} @model={{get @model attr.name}}>{{get @model attr.name}}</LinkTo>
+          </InfoTableRow>
+        {{else if attr.options.isCertificate}}
+          <InfoTableRow
+            @label={{capitalize (or attr.options.detailsLabel attr.options.label (humanize (dasherize attr.name)))}}
+          >
+            <CertificateCard @data={{get @model attr.name}} />
+          </InfoTableRow>
+        {{else}}
+          <InfoTableRow
+            @label={{capitalize (or attr.options.detailsLabel attr.options.label (humanize (dasherize attr.name)))}}
+            @value={{get @model attr.name}}
+          />
+        {{/if}}
+      {{/let}}
+    {{/each}}
+    <InfoTableRow @label="Private key">
+      {{#if @model.privateKey}}
+        <CertificateCard @data={{@model.privateKey}} />
+      {{else}}
+        <span class="tag">internal</span>
+      {{/if}}
+    </InfoTableRow>
+    <InfoTableRow @label="Private key type" @value={{@model.privateKeyType}}>
+      <span class="{{unless @model.privateKeyType 'tag'}}">{{or @model.privateKeyType "internal"}}</span>
+    </InfoTableRow>
+    <ParsedCertificateInfoRows @model={{@model.parsedCertificate}} />
+  </main>
+  <footer>
+    <div class="field is-grouped is-fullwidth has-top-margin-l">
+      <div class="control">
+        <button type="button" class="button is-primary" {{on "click" @onComplete}} data-test-done>
+          Done
+        </button>
+      </div>
+    </div>
+  </footer>
+{{else}}
+  <form {{on "submit" (perform this.save)}} data-test-pki-config-generate-root-form>
+    <MessageError @errorMessage={{this.errorBanner}} class="has-top-margin-s" />
+    <h2 class="title is-size-5 has-border-bottom-light page-header" data-test-generate-root-title="Root parameters">
+      Root parameters
+    </h2>
+    {{#each this.defaultFields as |field|}}
+      {{#let (find-by "name" field @model.allFields) as |attr|}}
+        <FormField @attr={{attr}} @model={{@model}} @modelValidations={{this.modelValidations}} data-test-field>
+          {{#if (eq field "customTtl")}}
+            {{! customTtl attr has editType yield, which will render this }}
+            <PkiNotValidAfterForm @attr={{attr}} @model={{@model}} />
+          {{/if}}
+        </FormField>
+      {{/let}}
+    {{/each}}
+
+    <PkiGenerateToggleGroups @model={{@model}} @modelValidations={{this.modelValidations}} />
+
+    {{#if @urls}}
+      <fieldset class="box is-shadowless is-marginless is-borderless is-fullwidth" data-test-urls-section>
+        <h2
+          class="title is-size-5 page-header {{if @urls.canCreate 'has-border-bottom-light' 'is-borderless'}}"
+          data-test-generate-root-title="Issuer URLs"
+        >
+          Issuer URLs
+        </h2>
+        {{#if @urls.canSet}}
+          {{#each @urls.allFields as |attr|}}
+            {{#if (not-eq attr.name "mountPath")}}
+              <FormField
+                @attr={{attr}}
+                @mode="create"
+                @model={{@urls}}
+                @showHelpText={{attr.options.showHelpText}}
+                data-test-urls-field
+              />
+            {{/if}}
+          {{/each}}
+        {{else}}
+          <EmptyState
+            @title="You do not have permissions to set URLs."
+            @message="These are not required but will need to be configured later. You can do this via the CLI or by changing your permissions and returning to this form."
+          />
+        {{/if}}
+      </fieldset>
+    {{/if}}
+
+    <div class="field is-grouped box is-fullwidth is-bottomless">
+      <div class="control">
+        <button type="submit" class="button is-primary" data-test-pki-generate-root-save>
+          Done
+        </button>
+        <button {{on "click" @onCancel}} type="button" class="button has-left-margin-s" data-test-pki-generate-root-cancel>
+          Cancel
+        </button>
+      </div>
+      {{#if this.invalidFormAlert}}
+        <div class="control">
+          <AlertInline
+            @type="danger"
+            @paddingTop={{true}}
+            @message={{this.invalidFormAlert}}
+            @mimicRefresh={{true}}
+            data-test-pki-generate-root-validation-error
+          />
+        </div>
+      {{/if}}
+    </div>
+  </form>
+{{/if}}

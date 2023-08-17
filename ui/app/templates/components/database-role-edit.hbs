@@ -1,3 +1,8 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
 <PageHeader as |p|>
   <p.top>
     <KeyValueHeader @path="vault.cluster.secrets.backend.show" @mode={{this.mode}} @root={{@root}} @showCurrent={{true}} />
@@ -36,12 +41,17 @@
           Rotate credentials
         </button>
       {{/if}}
-      {{#if @model.canGenerateCredentials}}
+      {{#if
+        (or
+          (and (eq @model.type "static") @model.canGetCredentials)
+          (and (eq @model.type "dynamic") @model.canGenerateCredentials)
+        )
+      }}
         <button
           type="button"
           class="toolbar-link"
           {{on "click" (fn this.generateCreds @model.id @model.type)}}
-          data-test-database-role-generate-creds
+          data-test-database-role-creds={{@model.type}}
         >
           {{if (eq @model.type "static") "Get credentials" "Generate credentials"}}
         </button>
@@ -98,7 +108,10 @@
           <FormField data-test-field={{true}} @attr={{attr}} @model={{@model}} />
           {{! TODO: If database && !updateDB show warning }}
           {{#if (get this.warningMessages attr.name)}}
-            <AlertBanner @type="warning" @message={{get this.warningMessages attr.name}} />
+            <Hds::Alert @type="inline" @color="warning" class="has-top-margin-negative-s has-bottom-margin-s" as |A|>
+              <A.Title>Warning</A.Title>
+              <A.Description>{{get this.warningMessages attr.name}}</A.Description>
+            </Hds::Alert>
           {{/if}}
         {{/if}}
       {{/each}}
@@ -145,7 +158,7 @@
             {{/if}}
           </div>
           <div class="control">
-            <SecretLink @mode="list" class="button">
+            <SecretLink @mode="list" class="button" data-test-database-role-cancel>
               Cancel
             </SecretLink>
           </div>
