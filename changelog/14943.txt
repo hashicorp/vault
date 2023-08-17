@@ -1,0 +1,3 @@
+```release-note:bug
+secrets/pki: Fixed bug where larger SHA-2 hashes were truncated with shorter ECDSA CA certificates
+```

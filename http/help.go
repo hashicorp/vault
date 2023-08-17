@@ -1,7 +1,9 @@
 package http
 
 import (
+	"errors"
 	"net/http"
+	"strings"
 
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/sdk/logical"
@@ -29,6 +31,10 @@ func handleHelp(core *vault.Core, w http.ResponseWriter, r *http.Request) {
 	ns, err := namespace.FromContext(r.Context())
 	if err != nil {
 		respondError(w, http.StatusBadRequest, nil)
+		return
+	}
+	if !strings.HasPrefix(r.URL.Path, "/v1/") {
+		respondError(w, http.StatusNotFound, errors.New("Missing /v1/ prefix in path. Use vault path-help command to retrieve API help for paths"))
 		return
 	}
 	path := ns.TrimmedPath(r.URL.Path[len("/v1/"):])

@@ -9,22 +9,24 @@ description: |-
 
 There are several approaches to installing Vault:
 
-1. Install a [Linux package](#linux-package)
+1. Install from a [Package Manager](#package-manager)
 
 1. Use a [precompiled binary](#precompiled-binaries)
 
 1. Install [from source](#compiling-from-source)
+
+1. [Helm for Kubernetes](https://www.vaultproject.io/docs/platform/k8s/helm)
 
 Installing a Linux package is the easiest. If you develop or deploy on another
 platform, the precompiled binary will be easiest. We provide downloads over TLS
 along with SHA256 sums to verify the binary. We also distribute a PGP signature
 with the SHA256 sums that can be verified.
 
-## Linux Package
+## Package Manager
 
 We build and sign official packages for Ubuntu, Debian, Fedora, RHEL, Amazon
 Linux, and other distributions. Follow the instructions at [HashiCorp
-Learn][learn-vault-install] to add our PGP key, add our repository, and
+Tutorials][learn-vault-install] to add our PGP key, add our repository, and
 install.
 
 ## Precompiled Binaries
@@ -39,7 +41,7 @@ additional files are required to run Vault.
 Copy the binary to anywhere on your system. If you intend to access it from the
 command-line, make sure to place it somewhere on your `PATH`.
 
-Continue on to [HashiCorp Learn][learn-vault-dev-server] to start a server, `put`
+Continue on to [HashiCorp Tutorials][learn-vault-dev-server] to start a server, `put`
 your first secret, and use other features of Vault.
 
 ## Compiling from Source

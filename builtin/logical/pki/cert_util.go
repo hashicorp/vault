@@ -673,6 +673,11 @@ func signCert(b *backend,
 		return nil, errutil.UserError{Err: fmt.Sprintf("certificate request could not be parsed: %v", err)}
 	}
 
+	// This switch validates that the CSR key type matches the role and sets
+	// the value in the actualKeyType/actualKeyBits values.
+	actualKeyType := ""
+	actualKeyBits := 0
+
 	switch data.role.KeyType {
 	case "rsa":
 		// Verify that the key matches the role type
@@ -681,24 +686,14 @@ func signCert(b *backend,
 				"role requires keys of type %s",
 				data.role.KeyType)}
 		}
+
 		pubKey, ok := csr.PublicKey.(*rsa.PublicKey)
 		if !ok {
 			return nil, errutil.UserError{Err: "could not parse CSR's public key"}
 		}
 
-		// Verify that the key is at least 2048 bits
-		if pubKey.N.BitLen() < 2048 {
-			return nil, errutil.UserError{Err: "RSA keys < 2048 bits are unsafe and not supported"}
-		}
-
-		// Verify that the bit size is at least the size specified in the role
-		if pubKey.N.BitLen() < data.role.KeyBits {
-			return nil, errutil.UserError{Err: fmt.Sprintf(
-				"role requires a minimum of a %d-bit key, but CSR's key is %d bits",
-				data.role.KeyBits,
-				pubKey.N.BitLen())}
-		}
-
+		actualKeyType = "rsa"
+		actualKeyBits = pubKey.N.BitLen()
 	case "ec":
 		// Verify that the key matches the role type
 		if csr.PublicKeyAlgorithm != x509.ECDSA {
@@ -711,14 +706,8 @@ func signCert(b *backend,
 			return nil, errutil.UserError{Err: "could not parse CSR's public key"}
 		}
 
-		// Verify that the bit size is at least the size specified in the role
-		if pubKey.Params().BitSize < data.role.KeyBits {
-			return nil, errutil.UserError{Err: fmt.Sprintf(
-				"role requires a minimum of a %d-bit key, but CSR's key is %d bits",
-				data.role.KeyBits,
-				pubKey.Params().BitSize)}
-		}
-
+		actualKeyType = "ec"
+		actualKeyBits = pubKey.Params().BitSize
 	case "ed25519":
 		// Verify that the key matches the role type
 		if csr.PublicKeyAlgorithm != x509.PublicKeyAlgorithm(x509.Ed25519) {
@@ -726,27 +715,107 @@ func signCert(b *backend,
 				"role requires keys of type %s",
 				data.role.KeyType)}
 		}
+
 		_, ok := csr.PublicKey.(ed25519.PublicKey)
 		if !ok {
 			return nil, errutil.UserError{Err: "could not parse CSR's public key"}
 		}
 
+		actualKeyType = "ed25519"
+		actualKeyBits = 0
 	case "any":
-		// We only care about running RSA < 2048 bit checks, so if not RSA
-		// break out
-		if csr.PublicKeyAlgorithm != x509.RSA {
-			break
+		// We need to compute the actual key type and key bits, to correctly
+		// validate minimums and SignatureBits below.
+		switch csr.PublicKeyAlgorithm {
+		case x509.RSA:
+			pubKey, ok := csr.PublicKey.(*rsa.PublicKey)
+			if !ok {
+				return nil, errutil.UserError{Err: "could not parse CSR's public key"}
+			}
+			if pubKey.N.BitLen() < 2048 {
+				return nil, errutil.UserError{Err: "RSA keys < 2048 bits are unsafe and not supported"}
+			}
+
+			actualKeyType = "rsa"
+			actualKeyBits = pubKey.N.BitLen()
+		case x509.ECDSA:
+			pubKey, ok := csr.PublicKey.(*ecdsa.PublicKey)
+			if !ok {
+				return nil, errutil.UserError{Err: "could not parse CSR's public key"}
+			}
+
+			actualKeyType = "ec"
+			actualKeyBits = pubKey.Params().BitSize
+		case x509.Ed25519:
+			_, ok := csr.PublicKey.(ed25519.PublicKey)
+			if !ok {
+				return nil, errutil.UserError{Err: "could not parse CSR's public key"}
+			}
+
+			actualKeyType = "ed25519"
+			actualKeyBits = 0
+		default:
+			return nil, errutil.UserError{Err: "Unknown key type in CSR: " + csr.PublicKeyAlgorithm.String()}
+		}
+	default:
+		return nil, errutil.InternalError{Err: fmt.Sprintf("unsupported key type value: %s", data.role.KeyType)}
+	}
+
+	// Before validating key lengths, update our KeyBits/SignatureBits based
+	// on the actual CSR key type.
+	if data.role.KeyType == "any" {
+		// We update the value of KeyBits and SignatureBits here (from the
+		// role), using the specified key type. This allows us to convert
+		// the default value (0) for SignatureBits and KeyBits to a
+		// meaningful value.
+		//
+		// We ignore the role's original KeyBits value if the KeyType is any
+		// as legacy (pre-1.10) roles had default values that made sense only
+		// for RSA keys (key_bits=2048) and the older code paths ignored the role value
+		// set for KeyBits when KeyType was set to any. This also enforces the
+		// docs saying when key_type=any, we only enforce our specified minimums
+		// for signing operations
+		if data.role.KeyBits, data.role.SignatureBits, err = certutil.ValidateDefaultOrValueKeyTypeSignatureLength(
+			actualKeyType, 0, data.role.SignatureBits); err != nil {
+			return nil, errutil.InternalError{Err: fmt.Sprintf("unknown internal error updating default values: %v", err)}
 		}
 
-		// Run RSA < 2048 bit checks
-		pubKey, ok := csr.PublicKey.(*rsa.PublicKey)
-		if !ok {
-			return nil, errutil.UserError{Err: "could not parse CSR's public key"}
+		// We're using the KeyBits field as a minimum value below, and P-224 is safe
+		// and a previously allowed value. However, the above call defaults
+		// to P-256 as that's a saner default than P-224 (w.r.t. generation), so
+		// override it here to allow 224 as the smallest size we permit.
+		if actualKeyType == "ec" {
+			data.role.KeyBits = 224
 		}
-		if pubKey.N.BitLen() < 2048 {
-			return nil, errutil.UserError{Err: "RSA keys < 2048 bits are unsafe and not supported"}
+	}
+
+	// At this point, data.role.KeyBits and data.role.SignatureBits should both
+	// be non-zero, for RSA and ECDSA keys. Validate the actualKeyBits based on
+	// the role's values. If the KeyType was any, and KeyBits was set to 0,
+	// KeyBits should be updated to 2048 unless some other value was chosen
+	// explicitly.
+	//
+	// This validation needs to occur regardless of the role's key type, so
+	// that we always validate both RSA and ECDSA key sizes.
+	if actualKeyType == "rsa" {
+		if actualKeyBits < data.role.KeyBits {
+			return nil, errutil.UserError{Err: fmt.Sprintf(
+				"role requires a minimum of a %d-bit key, but CSR's key is %d bits",
+				data.role.KeyBits, actualKeyBits)}
 		}
 
+		if actualKeyBits < 2048 {
+			return nil, errutil.UserError{Err: fmt.Sprintf(
+				"Vault requires a minimum of a 2048-bit key, but CSR's key is %d bits",
+				actualKeyBits)}
+		}
+	} else if actualKeyType == "ec" {
+		if actualKeyBits < data.role.KeyBits {
+			return nil, errutil.UserError{Err: fmt.Sprintf(
+				"role requires a minimum of a %d-bit key, but CSR's key is %d bits",
+				data.role.KeyBits,
+				actualKeyBits)}
+		}
 	}
 
 	creation, err := generateCreationBundle(b, data, caSign, csr)
@@ -774,9 +843,10 @@ func signCert(b *backend,
 
 // otherNameRaw describes a name related to a certificate which is not in one
 // of the standard name formats. RFC 5280, 4.2.1.6:
-// OtherName ::= SEQUENCE {
-//      type-id    OBJECT IDENTIFIER,
-//      value      [0] EXPLICIT ANY DEFINED BY type-id }
+//
+//	OtherName ::= SEQUENCE {
+//	     type-id    OBJECT IDENTIFIER,
+//	     value      [0] EXPLICIT ANY DEFINED BY type-id }
 type otherNameRaw struct {
 	TypeID asn1.ObjectIdentifier
 	Value  asn1.RawValue

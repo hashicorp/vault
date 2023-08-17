@@ -6,9 +6,11 @@ import (
 	"crypto/x509"
 	"errors"
 	"fmt"
+	"math"
 	"net"
 	"net/url"
 	"os"
+	"strconv"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -73,6 +75,17 @@ type Listener struct {
 }
 
 func NewListener(networkLayer NetworkLayer, cipherSuites []uint16, logger log.Logger, idleTimeout time.Duration) *Listener {
+	var maxStreams uint32 = math.MaxUint32
+	if override := os.Getenv("VAULT_GRPC_MAX_STREAMS"); override != "" {
+		i, err := strconv.ParseUint(override, 10, 32)
+		if err != nil {
+			logger.Warn("vault grpc max streams override must be an uint32 integer", "value", override)
+		} else {
+			maxStreams = uint32(i)
+			logger.Info("overriding grpc max streams", "value", i)
+		}
+	}
+
 	// Create the HTTP/2 server that will be shared by both RPC and regular
 	// duties. Doing it this way instead of listening via the server and gRPC
 	// allows us to re-use the same port via ALPN. We can just tell the server
@@ -81,6 +94,10 @@ func NewListener(networkLayer NetworkLayer, cipherSuites []uint16, logger log.Lo
 		// Our forwarding connections heartbeat regularly so anything else we
 		// want to go away/get cleaned up pretty rapidly
 		IdleTimeout: idleTimeout,
+
+		// By default this is 250 which can be too small on high traffic
+		// clusters with many forwarded or replication gRPC connections.
+		MaxConcurrentStreams: maxStreams,
 	}
 
 	return &Listener{

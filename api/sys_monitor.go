@@ -4,17 +4,26 @@ import (
 	"bufio"
 	"context"
 	"fmt"
+	"net/http"
+
+	"github.com/hashicorp/vault/sdk/helper/logging"
 )
 
 // Monitor returns a channel that outputs strings containing the log messages
 // coming from the server.
-func (c *Sys) Monitor(ctx context.Context, logLevel string) (chan string, error) {
-	r := c.c.NewRequest("GET", "/v1/sys/monitor")
+func (c *Sys) Monitor(ctx context.Context, logLevel string, logFormat string) (chan string, error) {
+	r := c.c.NewRequest(http.MethodGet, "/v1/sys/monitor")
 
 	if logLevel == "" {
 		r.Params.Add("log_level", "info")
 	} else {
 		r.Params.Add("log_level", logLevel)
+	}
+
+	if logFormat == "" || logFormat == logging.UnspecifiedFormat.String() {
+		r.Params.Add("log_format", "standard")
+	} else {
+		r.Params.Add("log_format", logFormat)
 	}
 
 	resp, err := c.c.RawRequestWithContext(ctx, r)

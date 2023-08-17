@@ -2,7 +2,7 @@
 layout: docs
 page_title: 'Identity'
 description: >-
-  Vault provides an identify management solution to maintain clients who are recognized by Vault.
+  Vault provides an identity management solution to maintain clients who are recognized by Vault.
 ---
 
 # Identity
@@ -11,8 +11,8 @@ This document contains conceptual information about **Identity** along with an
 overview of the various terminologies and their concepts. The idea of Identity
 is to maintain the clients who are recognized by Vault. As such, Vault provides
 an identity management solution through the **Identity secrets engine**. For
-more information about the Identify secrets engine and how it is used, refer to
-the [Identify Secrets Engine](/docs/secrets/identity) documentation.
+more information about the Identity secrets engine and how it is used, refer to
+the [Identity Secrets Engine](/docs/secrets/identity) documentation.
 
 ## Entities and Aliases
 
@@ -31,11 +31,11 @@ LDAP.
 
 However, if both aliases are created on the same auth mount, such as
 a Github mount, both aliases cannot be mapped to the same entity. The aliases can
-have the same auth type, as long as the auth mounts are different, and 
+have the same auth type, as long as the auth mounts are different, and
 still be associated to the same entity. The diagrams below illustrate both valid
 and invalid scenarios.
 
-![Valid Alias Mapping](/img/vault-identity-doc-4.png) 
+![Valid Alias Mapping](/img/vault-identity-doc-4.png)
 ![Invalid Alias Mapping](/img/vault-identity-doc-5.png)
 
 When a client authenticates via any credential backend (except the Token
@@ -46,7 +46,7 @@ are audit logged, marking a trail of actions performed by specific users.
 
 ~> Vault Entity is used to count the number of Vault clients. To learn more
 about client count, refer to the [Client Count](/docs/concepts/client-count)
-documentation. 
+documentation.
 
 ## Entity Management
 
@@ -81,10 +81,9 @@ identifier, the policies on the token should be taken into account.
 
 ~> **NOTE:** Be careful in granting permissions to non-readonly identity endpoints.
 If a user can modify an entity, they can grant it additional privileges through
-policies.  If a user can modify an alias they can login with, they can bind it to
-an entity with higher privileges.  If a user can modify group membership, they
+policies. If a user can modify an alias they can login with, they can bind it to
+an entity with higher privileges. If a user can modify group membership, they
 can add their entity to a group with higher privileges.
-
 
 ## Mount Bound Aliases
 
@@ -125,13 +124,13 @@ a particular auth mount point.
 
 ## Local Auth Methods
 
-**Vault Enterprise:** All the auth methods will generate an entity by default 
-when a token is being issued, with the exception of token store. This is applicable 
-for both mounts that are shared between clusters and cluster local auth mounts (using `local=true`) 
+**Vault Enterprise:** All the auth methods will generate an entity by default
+when a token is being issued, with the exception of token store. This is applicable
+for both mounts that are shared between clusters and cluster local auth mounts (using `local=true`)
 when Vault replication is in use.
-If the goal of marking an auth method as `local` was to comply to GDPR guidelines, 
-then care must be taken to not set the data pertaining to local auth mount or local auth 
-mount aliases in the metadata of the associated entity. 
+If the goal of marking an auth method as `local` was to comply to GDPR guidelines,
+then care must be taken to not set the data pertaining to local auth mount or local auth
+mount aliases in the metadata of the associated entity.
 
 ## Implicit Entities
 
@@ -189,9 +188,7 @@ subsequent login or renewal operation.
 
 For information about Identity Secrets Engine, refer to [Identity Secrets Engine](/docs/secrets/identity).
 
-
-## Learn
+## Tutorial
 
 Refer to the [Identity: Entities and
-Groups](https://learn.hashicorp.com/tutorials/vault/identity) tutorial for a
-step-by-step tutorial.
+Groups](https://learn.hashicorp.com/tutorials/vault/identity) tutorial to learn how Vault supports mutliple authentication methods and enables the same authentication method to be used with different mount paths.

@@ -4,7 +4,7 @@ page_title: FAQ
 description: An FAQ page to answer the most commonly asked questions about client count.
 ---
 
-# Frequently Asked Questions (FAQ)
+# Client Count FAQ
 
 ~> **Note**: Note: Starting in Vault 1.9, Vault changed the non-entity token computation logic to deduplicate non-entity tokens. For non-entity tokens (where there is no entity to which tokens map) Vault uses the contents of the token to generate a unique client identifier, based on the namespace ID and policies. The clientID will prevent the same token from being duplicated in the overall client count. Non-entity token tracking is done on access instead of creation. Since the change was made, Vault 1.10 (via the UI, API, documentation, etc.) refers to these non-entity tokens as non-entity clients, and unique entities as entity clients. To summarize, starting in Vault 1.9, the terms used are: total clients = entity clients + non entity clients. Previously, the terms used were: total clients = unique entities + non-entity tokens.
 
@@ -14,7 +14,7 @@ This FAQ section contains frequently asked questions about the client count feat
 - [Q: Where can I learn more about Vault clients?](#q-where-can-i-learn-more-about-vault-clients)
 - [Q: What is the difference between a direct entity (entity client) and a non-entity token (non-entity client)?](#q-what-is-the-difference-between-a-direct-entity-entity-client-and-a-non-entity-token-non-entity-client)
 - [Q: Which Vault version reflects the most accurate client counts?](#q-which-vault-version-reflects-the-most-accurate-client-counts)
-- [Q: For customers using versions of Vault older than 1.6, what’s the best way to compute clients](#q-for-customers-using-versions-of-vault-older-than-1-6-what-s-the-best-way-to-compute-clients)
+- [Q: For customers using versions of Vault older than Vault 1.6, what’s the best way to compute clients](#q-for-customers-using-versions-of-vault-older-than-1-6-what-s-the-best-way-to-compute-clients)
 - [Q: For customers using newer versions than Vault 1.6, what's the best way to compute clients?](#q-for-customers-using-newer-versions-than-vault-1-6-what-s-the-best-way-to-compute-clients)
 - [Q: Why do we have two different tools (auditor tool and UI/API) to compute clients? Do we plan to deprecate one in the future?](#q-why-do-we-have-two-different-tools-auditor-tool-and-ui-api-to-compute-clients-do-we-plan-to-deprecate-one-in-the-future)
 - [Q: How can I compute KMIP clients for Vault?](#q-how-can-i-compute-kmip-clients-for-vault)
@@ -25,7 +25,7 @@ This FAQ section contains frequently asked questions about the client count feat
 - [Q: What happens if audit logs are unreadable for use by the Vault auditor tool?](#q-what-happens-if-audit-logs-are-unreadable-for-use-by-the-vault-auditor-tool)
 - [Q: What does the usage metrics UI look like for Vault 1.9?](#q-what-does-the-usage-metrics-ui-look-like-for-vault-1-9)
 - [Q: What does the usage metrics look like for Vault 1.10?](#q-what-does-the-usage-metrics-look-like-for-vault-1-10)
-- [Q: In versions prior to Vault 1.10, how do I compute changes to clients month to month from the UI?](#q-in-versions-prior-to-vault-1-10-how-do-i-compute-changes-to-clients-month-to-month-from-the-ui)
+- [Q: In older Vault versions including Vault 1.10, how do I compute changes to clients month to month from the UI?](#q-in-older-vault-versions-including-vault-1-10-how-do-i-compute-changes-to-clients-month-to-month-from-the-ui)
 - [Q: What if I selected an inaccurate billing period via the UI/API?](#q-what-if-i-selected-an-inaccurate-billing-period-via-the-ui-api)
 - [Q: What if I want to skip computation of clients for a period of time during the billing period?](#q-what-if-i-want-to-skip-computation-of-clients-for-a-period-of-time-during-the-billing-period)
 - [Q: What are the known client count issues in the auditor tool as well as in the UI/API?](#q-what-are-the-known-client-count-issues-in-the-auditor-tool-as-well-as-in-the-ui-api)
@@ -35,7 +35,7 @@ This FAQ section contains frequently asked questions about the client count feat
 - [Q: How can I configure the activity for log retention?](#q-how-can-i-configure-the-activity-for-log-retention)
 - [Q: Do child namespaces create duplicate tokens?](#q-do-child-namespaces-create-duplicate-tokens)
 - [Q: How does the Nomad Vault integration affect client counts?](#q-how-does-the-nomad-vault-integration-affect-client-counts)
-- [Q: Starting in Vault 1.9, Vault does not allow creating two aliases from the same auth mount under a single entity. What changed and how does this impact client counting?](#q-starting-in-vault-1-9-vault-does-not-allow-creating-two-aliases-from-the-same-auth-mount-under-a-single-entity-what-changed-and-how-does-this-impact-client-counting)
+- [Q: Starting in Vault 1.7, Vault does not allow creating two aliases from the same auth mount under a single entity. What changed and how does this impact client counting?](#q-starting-in-vault-1-7-vault-does-not-allow-creating-two-aliases-from-the-same-auth-mount-under-a-single-entity-what-changed-and-how-does-this-impact-client-counting)
 - [Q: How does mount migration impact the client count metric?](#q-how-does-mount-migration-impact-the-client-count-metric)
 - [Q: Vault 1.9 added support for providing custom user filters through the userfilter parameter. How does this affect client counts?](#q-vault-1-9-added-support-for-providing-custom-user-filters-through-the-userfilter-parameter-how-does-this-affect-client-counts)
 
@@ -159,13 +159,13 @@ In Vault 1.9, the client count dashboard provides two separate tabs: the **Curre
 
 ### Q: What does the usage metrics look like for Vault 1.10?
 
-In Vault 1.10, the client count dashboard is broken down into tabs, similar to Vault 1.19- the current month and the monthly history. On top of the namespace attribution provided in Vault 1.9 (see [What does the usage metrics UI look like for Vault 1.9?](#q-what-does-the-usage-metrics-ui-look-like-for-vault-1-9) for further information), the UI also contains attribution of clients per auth mount.
+In Vault 1.10, the client count dashboard is broken down into tabs, similar to Vault 1.9- the current month and the monthly history. On top of the namespace attribution provided in Vault 1.9 (see [What does the usage metrics UI look like for Vault 1.9?](#q-what-does-the-usage-metrics-ui-look-like-for-vault-1-9) for further information), the UI also contains attribution of clients per auth mount.
 
 ![Vault Client Count](/img/vault-usage-metrics-1-10.png)
 
-The Vault 1.10 UI does not include montly attribution of clients, although the API for Vault 1.10 supports the same.
+The Vault 1.10 UI does not include monthly attribution of clients, although the API for Vault 1.10 supports the same.
 
-### Q: In versions prior to Vault 1.10, how do I compute changes to clients month to month from the UI?
+### Q: In older Vault versions including Vault 1.10, how do I compute changes to clients month to month from the UI?
 
 To perform this calculation, you must know the billing period. For the sake of this example, assume your billing period starts on January 1st and ends on December 31st:
 
@@ -241,7 +241,7 @@ However, creating a new token across a parent/child namespace boundary could res
 The [Nomad Vault integration](https://www.nomadproject.io/docs/integrations/vault-integration#token-role-based-integration) uses [token roles](https://www.nomadproject.io/docs/integrations/vault-integration#vault-token-role-configuration). A single token role creates tokens for many Nomad jobs. If no [explicit identity aliases](/api-docs/auth/token#entity_alias) are provided (which is not currently supported in the integration), this would create a non-entity token for every running instance of a Nomad job.
 Prior to Vault 1.9, the Nomad Vault integration caused duplicate clients, resulting in an elevated client count. Post Vault 1.9, with the introduction of the deduplication logic, the number of clients created by the integration is reduced. For more information on improvements made to client count in Vault 1.9, refer to the question [Which version of Vault reflects the most accurate count of clients with Vault?](#q-which-vault-version-reflects-the-most-accurate-client-counts).
 
-### Q: Starting in Vault 1.9, Vault does not allow creating two aliases from the same auth mount under a single entity. What changed and how does this impact client counting?
+### Q: Starting in Vault 1.7, Vault does not allow creating two aliases from the same auth mount under a single entity. What changed and how does this impact client counting?
 
 Prior to 1.9, customers could create more than one alias from the same auth mount under a single entity. However, we made a fix in Vault 1.9 to prevent this from occuring as a remediation for a security issue.
 
