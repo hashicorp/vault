@@ -264,6 +264,11 @@ func (c *Core) setupPolicyStore(ctx context.Context) error {
 		return nil
 	}
 
+	if c.perfStandby {
+		// Policies will sync from the active
+		return nil
+	}
+
 	// Ensure that the default policy exists, and if not, create it
 	if err := c.policyStore.loadACLPolicy(ctx, defaultPolicyName, defaultPolicy); err != nil {
 		return err

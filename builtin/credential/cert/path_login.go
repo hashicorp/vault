@@ -59,6 +59,12 @@ func (b *backend) pathLoginAliasLookahead(ctx context.Context, req *logical.Requ
 }
 
 func (b *backend) pathLogin(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	if b.crls == nil {
+		if err := b.populateCRLs(ctx, req.Storage); err != nil {
+			return nil, err
+		}
+	}
+
 	var matched *ParsedCert
 	if verifyResp, resp, err := b.verifyCredentials(ctx, req, data); err != nil {
 		return nil, err
@@ -127,6 +133,12 @@ func (b *backend) pathLoginRenew(ctx context.Context, req *logical.Request, d *f
 		return nil, err
 	}
 
+	if b.crls == nil {
+		if err := b.populateCRLs(ctx, req.Storage); err != nil {
+			return nil, err
+		}
+	}
+
 	if !config.DisableBinding {
 		var matched *ParsedCert
 		if verifyResp, resp, err := b.verifyCredentials(ctx, req, d); err != nil {
@@ -192,7 +204,7 @@ func (b *backend) verifyCredentials(ctx context.Context, req *logical.Request, d
 	var certName string
 	if req.Auth != nil { // It's a renewal, use the saved certName
 		certName = req.Auth.Metadata["cert_name"]
-	} else {
+	} else if d != nil { // d is nil if handleAuthRenew call the authRenew
 		certName = d.Get("name").(string)
 	}
 

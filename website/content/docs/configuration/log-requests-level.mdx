@@ -5,11 +5,11 @@ description: |-
   Vault can be configured to log completed requests.
 ---
 
-# Log Completed Requests
+# Log completed requests
 
 Vault can be configured to log completed requests using the `log_requests_level` configuration parameter.
 
-## Activating the Log Completed Requests
+## Activating the log completed requests
 
 By default, logging completed requests is disabled. To activate the requests logging, set the `log_requests_level`
 configuration option in the Vault server configuration to the desired logging level. The acceptable logging levels are
@@ -25,7 +25,7 @@ listener "tcp" {
 }
 ```
 
-## Deactivating the Log Completed Requests
+## Deactivating the log completed requests
 
 To deactivate logging completed requests, simply remove the `log_requests_level`
 configuration parameter from the vault server configuration, and send a `SIGHUP` signal to the vault process.

@@ -4,12 +4,52 @@ import (
 	"os"
 	"testing"
 
+	_ "github.com/denisenkom/go-mssqldb"
 	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/sdk/helper/logging"
 	"github.com/hashicorp/vault/sdk/physical"
-
-	_ "github.com/denisenkom/go-mssqldb"
 )
+
+// TestInvalidIdentifier checks validity of an identifier
+func TestInvalidIdentifier(t *testing.T) {
+	testcases := map[string]bool{
+		"name":             true,
+		"_name":            true,
+		"Name":             true,
+		"#name":            false,
+		"?Name":            false,
+		"9name":            false,
+		"@name":            false,
+		"$name":            false,
+		" name":            false,
+		"n ame":            false,
+		"n4444444":         true,
+		"_4321098765":      true,
+		"_##$$@@__":        true,
+		"_123name#@":       true,
+		"name!":            false,
+		"name%":            false,
+		"name^":            false,
+		"name&":            false,
+		"name*":            false,
+		"name(":            false,
+		"name)":            false,
+		"nåame":            true,
+		"åname":            true,
+		"name'":            false,
+		"nam`e":            false,
+		"пример":           true,
+		"_#Āā@#$_ĂĄąćĈĉĊċ": true,
+		"ÛÜÝÞßàáâ":         true,
+		"豈更滑a23$#@":        true,
+	}
+
+	for i, expected := range testcases {
+		if !isInvalidIdentifier(i) != expected {
+			t.Fatalf("unexpected identifier %s: expected validity %v", i, expected)
+		}
+	}
+}
 
 func TestMSSQLBackend(t *testing.T) {
 	server := os.Getenv("MSSQL_SERVER")
