@@ -224,7 +224,7 @@ func (b *databaseBackend) pathRotateRoleCredentialsUpdate() framework.OperationF
 				item.Value = resp.WALID
 			}
 		} else {
-			item.Priority = role.StaticAccount.NextRotationTimeFromLast(resp.RotationTime).Unix()
+			item.Priority = role.StaticAccount.NextRotationTimeFromInput(resp.RotationTime).Unix()
 			// Clear any stored WAL ID as we must have successfully deleted our WAL to get here.
 			item.Value = ""
 		}
