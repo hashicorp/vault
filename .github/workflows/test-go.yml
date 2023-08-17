@@ -269,8 +269,14 @@ jobs:
           # Build the dynamically generated source files.
           make prep
           
+          echo
           echo "${{ needs.test-matrix.outputs.matrix }}"
+          echo
+          echo "${{ toJSON(needs.test-matrix.outputs.matrix) }}"
+          echo
           echo "${{ needs.test-matrix.outputs.matrix_ids }}"
+          echo
+          echo "${{ matrix.id }}"
 
           packages=$(echo "${{ toJSON(needs.test-matrix.outputs.matrix) }}" | jq -c -r --arg id "${{ matrix.id }}" '.[$id] | .packages')
 
