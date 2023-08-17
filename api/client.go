@@ -1040,7 +1040,7 @@ func (c *Client) Headers() http.Header {
 	return c.headersInternal()
 }
 
-// headers is a gets the current set of headers used for requests. Must be called
+// headersInternal gets the current set of headers used for requests. Must be called
 // with the read modifyLock held.
 func (c *Client) headersInternal() http.Header {
 	if c.headers == nil {
