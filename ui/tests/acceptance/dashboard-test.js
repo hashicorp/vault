@@ -114,7 +114,7 @@ module('Acceptance | landing page dashboard', function (hooks) {
 
   test('display the version number for the title', async function (assert) {
     await visit('/vault/dashboard');
-    assert.dom('[data-test-dashboard-version-header]').hasText('Vault v1.9.0');
+    assert.dom('[data-test-dashboard-version-header]').hasText('Vault v1.9.0 root');
   });
 
   module('secrets engines card', function () {
