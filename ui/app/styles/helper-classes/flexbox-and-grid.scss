@@ -76,15 +76,15 @@
   flex-basis: 100%;
 }
 
-.is-flex-half-column {
-  flex: 1;
-}
-
-.is-flex-1 {
+.is-flex-grow-1 {
   flex-grow: 1;
   &.basis-0 {
     flex-basis: 0;
   }
+}
+
+.is-flex-1 {
+  flex: 1;
 }
 
 .is-no-flex-grow {
