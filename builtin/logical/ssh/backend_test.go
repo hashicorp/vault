@@ -1361,6 +1361,8 @@ func TestBackend_DefExtTemplatingEnabled(t *testing.T) {
 		"default_extensions_template": true,
 		"default_extensions": map[string]interface{}{
 			"login@foobar.com": "{{identity.entity.aliases." + userpassAccessor + ".name}}",
+			"login@foobar2.com": "{{identity.entity.aliases." + userpassAccessor + ".name}}, " +
+				"{{identity.entity.aliases." + userpassAccessor + ".name}}_foobar",
 		},
 	})
 	if err != nil {
@@ -1386,7 +1388,8 @@ func TestBackend_DefExtTemplatingEnabled(t *testing.T) {
 	}
 
 	defaultExtensionPermissions := map[string]string{
-		"login@foobar.com": testUserName,
+		"login@foobar.com":  testUserName,
+		"login@foobar2.com": fmt.Sprintf("%s, %s_foobar", testUserName, testUserName),
 	}
 
 	err = validateSSHCertificate(parsedKey.(*ssh.Certificate), sshKeyID, ssh.UserCert, []string{"tuber"}, map[string]string{}, defaultExtensionPermissions, 16*time.Hour)

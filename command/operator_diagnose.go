@@ -14,7 +14,6 @@ import (
 	"golang.org/x/term"
 
 	wrapping "github.com/hashicorp/go-kms-wrapping"
-	"github.com/hashicorp/vault/helper/constants"
 
 	"github.com/docker/docker/pkg/ioutils"
 	"github.com/hashicorp/consul/api"
@@ -22,6 +21,7 @@ import (
 	"github.com/hashicorp/go-secure-stdlib/reloadutil"
 	uuid "github.com/hashicorp/go-uuid"
 	cserver "github.com/hashicorp/vault/command/server"
+	"github.com/hashicorp/vault/helper/constants"
 	"github.com/hashicorp/vault/helper/metricsutil"
 	"github.com/hashicorp/vault/internalshared/configutil"
 	"github.com/hashicorp/vault/internalshared/listenerutil"

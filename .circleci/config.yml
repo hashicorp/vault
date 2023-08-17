@@ -147,7 +147,7 @@ jobs:
     environment:
     - CIRCLECI_CLI_VERSION: 0.1.5546
     - GO_TAGS: ''
-    - GO_VERSION: 1.17.9
+    - GO_VERSION: 1.17.13
     - GOTESTSUM_VERSION: 0.5.2
   algolia-index:
     docker:
@@ -166,7 +166,7 @@ jobs:
         name: Push content to Algolia Index
   test-go-remote-docker:
     docker:
-    - image: docker.mirror.hashicorp.services/cimg/go:1.17.9
+    - image: docker.mirror.hashicorp.services/cimg/go:1.17.13
     resource_class: medium
     working_directory: /home/circleci/go/src/github.com/hashicorp/vault
     parallelism: 8
@@ -260,7 +260,9 @@ jobs:
           # has its own remote docker VM.
 
           make prep
-          mkdir -p test-results/go-test
+
+          # Permissions have changed inside docker containers; see hack note below.
+          mkdir --mode=777 -p test-results/go-test
 
           # We don't want VAULT_LICENSE set when running Go tests, because that's
           # not what developers have in their environments and it could break some
@@ -281,6 +283,19 @@ jobs:
             # reasons unclear.
             export DOCKER_API_VERSION=1.39
 
+            # Hack: Docker permissions appear to have changed; let's explicitly
+            # chmod the docker certificate path to give other grouped users
+            # access.
+            #
+            # Notably, in this shell pipeline we see:
+            # uid=1001(circleci) gid=1002(circleci) groups=1002(circleci)
+            #
+            # but inside the docker image below, we see:
+            # uid=3434(circleci) gid=3434(circleci) groups=3434(circleci)
+            #
+            # See also: https://github.com/CircleCI-Public/cimg-base/issues/122
+            chmod o+rx -R $DOCKER_CERT_PATH
+
             export TEST_DOCKER_NETWORK_ID=$(docker network list -q -f 'name=vaulttest')
             if [ -z $TEST_DOCKER_NETWORK_ID ]; then
               TEST_DOCKER_NETWORK_ID=$(docker network create vaulttest)
@@ -299,7 +314,7 @@ jobs:
               -e NO_PROXY \
               -e VAULT_TEST_LOG_DIR=/tmp/testlogs \
               --network vaulttest --name \
-              testcontainer docker.mirror.hashicorp.services/cimg/go:1.17.9 \
+              testcontainer docker.mirror.hashicorp.services/cimg/go:1.17.13 \
               tail -f /dev/null
 
             # Run tests
@@ -363,7 +378,7 @@ jobs:
     - GO_TAGS: ''
   test-go-race:
     docker:
-    - image: docker.mirror.hashicorp.services/cimg/go:1.17.9
+    - image: docker.mirror.hashicorp.services/cimg/go:1.17.13
     resource_class: xlarge
     working_directory: /home/circleci/go/src/github.com/hashicorp/vault
     parallelism: 8
@@ -453,7 +468,9 @@ jobs:
           # has its own remote docker VM.
 
           make prep
-          mkdir -p test-results/go-test
+
+          # Permissions have changed inside docker containers; see hack note below.
+          mkdir --mode=777 -p test-results/go-test
 
           # We don't want VAULT_LICENSE set when running Go tests, because that's
           # not what developers have in their environments and it could break some
@@ -474,6 +491,19 @@ jobs:
             # reasons unclear.
             export DOCKER_API_VERSION=1.39
 
+            # Hack: Docker permissions appear to have changed; let's explicitly
+            # chmod the docker certificate path to give other grouped users
+            # access.
+            #
+            # Notably, in this shell pipeline we see:
+            # uid=1001(circleci) gid=1002(circleci) groups=1002(circleci)
+            #
+            # but inside the docker image below, we see:
+            # uid=3434(circleci) gid=3434(circleci) groups=3434(circleci)
+            #
+            # See also: https://github.com/CircleCI-Public/cimg-base/issues/122
+            chmod o+rx -R $DOCKER_CERT_PATH
+
             export TEST_DOCKER_NETWORK_ID=$(docker network list -q -f 'name=vaulttest')
             if [ -z $TEST_DOCKER_NETWORK_ID ]; then
               TEST_DOCKER_NETWORK_ID=$(docker network create vaulttest)
@@ -492,7 +522,7 @@ jobs:
               -e NO_PROXY \
               -e VAULT_TEST_LOG_DIR=/tmp/testlogs \
               --network vaulttest --name \
-              testcontainer docker.mirror.hashicorp.services/cimg/go:1.17.9 \
+              testcontainer docker.mirror.hashicorp.services/cimg/go:1.17.13 \
               tail -f /dev/null
 
             # Run tests
@@ -573,7 +603,7 @@ jobs:
         name: Build Docker Image if Necessary
   test-go:
     docker:
-    - image: docker.mirror.hashicorp.services/cimg/go:1.17.9
+    - image: docker.mirror.hashicorp.services/cimg/go:1.17.13
     resource_class: large
     working_directory: /home/circleci/go/src/github.com/hashicorp/vault
     parallelism: 8
@@ -663,7 +693,9 @@ jobs:
           # has its own remote docker VM.
 
           make prep
-          mkdir -p test-results/go-test
+
+          # Permissions have changed inside docker containers; see hack note below.
+          mkdir --mode=777 -p test-results/go-test
 
           # We don't want VAULT_LICENSE set when running Go tests, because that's
           # not what developers have in their environments and it could break some
@@ -684,6 +716,19 @@ jobs:
             # reasons unclear.
             export DOCKER_API_VERSION=1.39
 
+            # Hack: Docker permissions appear to have changed; let's explicitly
+            # chmod the docker certificate path to give other grouped users
+            # access.
+            #
+            # Notably, in this shell pipeline we see:
+            # uid=1001(circleci) gid=1002(circleci) groups=1002(circleci)
+            #
+            # but inside the docker image below, we see:
+            # uid=3434(circleci) gid=3434(circleci) groups=3434(circleci)
+            #
+            # See also: https://github.com/CircleCI-Public/cimg-base/issues/122
+            chmod o+rx -R $DOCKER_CERT_PATH
+
             export TEST_DOCKER_NETWORK_ID=$(docker network list -q -f 'name=vaulttest')
             if [ -z $TEST_DOCKER_NETWORK_ID ]; then
               TEST_DOCKER_NETWORK_ID=$(docker network create vaulttest)
@@ -702,7 +747,7 @@ jobs:
               -e NO_PROXY \
               -e VAULT_TEST_LOG_DIR=/tmp/testlogs \
               --network vaulttest --name \
-              testcontainer docker.mirror.hashicorp.services/cimg/go:1.17.9 \
+              testcontainer docker.mirror.hashicorp.services/cimg/go:1.17.13 \
               tail -f /dev/null
 
             # Run tests
@@ -849,11 +894,11 @@ jobs:
     environment:
     - CIRCLECI_CLI_VERSION: 0.1.5546
     - GO_TAGS: ''
-    - GO_VERSION: 1.17.9
+    - GO_VERSION: 1.17.13
     - GOTESTSUM_VERSION: 0.5.2
   test-go-race-remote-docker:
     docker:
-    - image: docker.mirror.hashicorp.services/cimg/go:1.17.9
+    - image: docker.mirror.hashicorp.services/cimg/go:1.17.13
     resource_class: medium
     working_directory: /home/circleci/go/src/github.com/hashicorp/vault
     parallelism: 8
@@ -947,7 +992,9 @@ jobs:
           # has its own remote docker VM.
 
           make prep
-          mkdir -p test-results/go-test
+
+          # Permissions have changed inside docker containers; see hack note below.
+          mkdir --mode=777 -p test-results/go-test
 
           # We don't want VAULT_LICENSE set when running Go tests, because that's
           # not what developers have in their environments and it could break some
@@ -968,6 +1015,19 @@ jobs:
             # reasons unclear.
             export DOCKER_API_VERSION=1.39
 
+            # Hack: Docker permissions appear to have changed; let's explicitly
+            # chmod the docker certificate path to give other grouped users
+            # access.
+            #
+            # Notably, in this shell pipeline we see:
+            # uid=1001(circleci) gid=1002(circleci) groups=1002(circleci)
+            #
+            # but inside the docker image below, we see:
+            # uid=3434(circleci) gid=3434(circleci) groups=3434(circleci)
+            #
+            # See also: https://github.com/CircleCI-Public/cimg-base/issues/122
+            chmod o+rx -R $DOCKER_CERT_PATH
+
             export TEST_DOCKER_NETWORK_ID=$(docker network list -q -f 'name=vaulttest')
             if [ -z $TEST_DOCKER_NETWORK_ID ]; then
               TEST_DOCKER_NETWORK_ID=$(docker network create vaulttest)
@@ -986,7 +1046,7 @@ jobs:
               -e NO_PROXY \
               -e VAULT_TEST_LOG_DIR=/tmp/testlogs \
               --network vaulttest --name \
-              testcontainer docker.mirror.hashicorp.services/cimg/go:1.17.9 \
+              testcontainer docker.mirror.hashicorp.services/cimg/go:1.17.13 \
               tail -f /dev/null
 
             # Run tests

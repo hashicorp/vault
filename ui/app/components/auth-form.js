@@ -115,7 +115,7 @@ export default Component.extend(DEFAULTS, {
     if (!methods && !wrappedToken) {
       return {};
     }
-    if (keyIsPath) {
+    if (keyIsPath && !type) {
       return methods.findBy('path', selected);
     }
     return BACKENDS.findBy('type', selected);
@@ -287,10 +287,9 @@ export default Component.extend(DEFAULTS, {
       this.setProperties({
         error: null,
       });
-      // if callback from oidc or jwt we have a token at this point
-      let backend = ['oidc', 'jwt'].includes(this.selectedAuth)
-        ? this.getAuthBackend('token')
-        : this.selectedAuthBackend || {};
+      // if callback from oidc we have a token at this point
+      let backend =
+        this.providerName === 'oidc' ? this.getAuthBackend('token') : this.selectedAuthBackend || {};
       let backendMeta = BACKENDS.find(
         (b) => (b.type || '').toLowerCase() === (backend.type || '').toLowerCase()
       );

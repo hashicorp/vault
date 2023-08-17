@@ -56,7 +56,7 @@ require (
 	github.com/google/go-github v17.0.0+incompatible
 	github.com/google/go-metrics-stackdriver v0.2.0
 	github.com/hashicorp/cap v0.1.1
-	github.com/hashicorp/consul-template v0.27.2-0.20211014231529-4ff55381f1c4
+	github.com/hashicorp/consul-template v0.27.3
 	github.com/hashicorp/consul/api v1.11.0
 	github.com/hashicorp/errwrap v1.1.0
 	github.com/hashicorp/go-cleanhttp v0.5.2
@@ -116,7 +116,7 @@ require (
 	github.com/hashicorp/vault/api v1.3.1
 	github.com/hashicorp/vault/api/auth/approle v0.1.0
 	github.com/hashicorp/vault/api/auth/userpass v0.1.0
-	github.com/hashicorp/vault/sdk v0.3.1-0.20220429214233-6c22ad6d78d8
+	github.com/hashicorp/vault/sdk v0.3.1-0.20221004190045-a5c84cc86760
 	github.com/influxdata/influxdb v0.0.0-20190411212539-d24b7ba8c4c4
 	github.com/jcmturner/gokrb5/v8 v8.4.2
 	github.com/jefferai/isbadcipher v0.0.0-20190226160619-51d2077c035f
@@ -128,7 +128,7 @@ require (
 	github.com/lib/pq v1.10.3
 	github.com/mattn/go-colorable v0.1.12
 	github.com/mholt/archiver v3.1.1+incompatible
-	github.com/michaelklishin/rabbit-hole/v2 v2.11.0
+	github.com/michaelklishin/rabbit-hole/v2 v2.12.0
 	github.com/mitchellh/cli v1.1.2
 	github.com/mitchellh/copystructure v1.2.0
 	github.com/mitchellh/go-homedir v1.1.0

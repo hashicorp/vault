@@ -1,11 +1,6 @@
 name: build
 
-on:
-  push:
-    # Sequence of patterns matched against refs/heads
-    branches:    
-      # Push events on release/1.9.x branch
-      - release/1.9.x
+on: [ workflow_dispatch, push ]
 
 env:
   PKG_NAME: "vault"
@@ -51,7 +46,7 @@ jobs:
       matrix:
         goos: [ freebsd, windows, netbsd, openbsd, solaris ]
         goarch: [ "386", "amd64", "arm" ]
-        go: [ "1.17.9" ]
+        go: [ "1.17.13" ]
         exclude:
           - goos: solaris
             goarch: 386
@@ -103,7 +98,7 @@ jobs:
       matrix:
         goos: [linux]
         goarch: ["arm", "arm64", "386", "amd64"]
-        go: ["1.17.9"]
+        go: ["1.17.13"]
       fail-fast: true
 
     name: Go ${{ matrix.go }} ${{ matrix.goos }} ${{ matrix.goarch }} build
@@ -180,7 +175,7 @@ jobs:
       matrix:
         goos: [ darwin ]
         goarch: [ "amd64", "arm64" ]
-        go: [ "1.17.9" ]
+        go: [ "1.17.13" ]
       fail-fast: true
     name: Go ${{ matrix.go }} ${{ matrix.goos }} ${{ matrix.goarch }} build
     steps:
@@ -242,3 +237,26 @@ jobs:
           tags: |
             docker.io/hashicorp/${{env.repo}}:${{env.version}}
             public.ecr.aws/hashicorp/${{env.repo}}:${{env.version}}
+
+  build-ubi:
+    name: Red Hat UBI ${{ matrix.arch }} build
+    needs:
+      - get-product-version
+      - build-linux
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        arch: ["amd64"]
+    env:
+      repo: ${{github.event.repository.name}}
+      version: ${{needs.get-product-version.outputs.product-version}}
+    steps:
+      - uses: actions/checkout@v2
+      - name: Docker Build (Action)
+        uses: hashicorp/actions-docker-build@v1
+        with:
+          version: ${{env.version}}
+          target: ubi
+          arch: ${{matrix.arch}}
+          zip_artifact_name: ${{ env.PKG_NAME }}_${{ needs.get-product-version.outputs.product-version }}_linux_${{ matrix.arch }}.zip
+          redhat_tag: scan.connect.redhat.com/ospid-f0a92725-d8c6-4023-9a87-ba785b94c3fd/${{env.repo}}:${{env.version}}-ubi
