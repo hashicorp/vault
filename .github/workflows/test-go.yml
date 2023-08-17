@@ -141,18 +141,18 @@ jobs:
            # in the external tests. However, it would be also good to run the vault package with
            # to validate the tag and also validate the vault package tests that are tagged with
            # test only. There is only going to be two tests runners for testonly job.
-          if [ "${{ inputs.enterprise }}" == "true" ]; then
-            export VAULT_TEST_PACKAGE="github.com/hashicorp/vault-enterprise/vault"
-          else
-            export VAULT_TEST_PACKAGE="github.com/hashicorp/vault/vault"
-          fi
-          jq --arg VAULT_PKG "${VAULT_TEST_PACKAGE}" \
-            '.include[1] = {
-              "id": 1,
-              "estimatedRuntime": "N/A",
-              "packages": $VAULT_PKG,
-              "description": "partition 1 - vault test packages"
-          }' testonly_matrix.json > matrix.json
+           if [ "${{ inputs.enterprise }}" == "true" ]; then
+             export VAULT_TEST_PACKAGE="github.com/hashicorp/vault-enterprise/vault"
+           else
+             export VAULT_TEST_PACKAGE="github.com/hashicorp/vault/vault"
+           fi
+           jq --arg VAULT_PKG "${VAULT_TEST_PACKAGE}" \
+             '.include[1] = {
+               "id": 1,
+               "estimatedRuntime": "N/A",
+               "packages": $VAULT_PKG,
+               "description": "partition 1 - vault test packages"
+           }' testonly_matrix.json > matrix.json
 
       - name: Capture list of binary tests
         if: inputs.binary-tests
