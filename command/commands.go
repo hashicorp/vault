@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package command
 
 import (
@@ -93,10 +96,6 @@ const (
 	// logged at startup _per node_. This was initially introduced for the events
 	// system being developed over multiple release cycles.
 	EnvVaultExperiments = "VAULT_EXPERIMENTS"
-
-	// DisableSSCTokens is an env var used to disable index bearing
-	// token functionality
-	DisableSSCTokens = "VAULT_DISABLE_SERVER_SIDE_CONSISTENT_TOKENS"
 
 	// flagNameAddress is the flag used in the base command to read in the
 	// address of the Vault server.
@@ -219,13 +218,10 @@ var (
 		"kubernetes": ksr.NewServiceRegistration,
 	}
 
-	initCommandsEnt = func(ui, serverCmdUi cli.Ui, runOpts *RunOptions) {}
+	initCommandsEnt = func(ui, serverCmdUi cli.Ui, runOpts *RunOptions, commands map[string]cli.CommandFactory) {}
 )
 
-// Commands is the mapping of all the available commands.
-var Commands map[string]cli.CommandFactory
-
-func initCommands(ui, serverCmdUi cli.Ui, runOpts *RunOptions) {
+func initCommands(ui, serverCmdUi cli.Ui, runOpts *RunOptions) map[string]cli.CommandFactory {
 	loginHandlers := map[string]LoginHandler{
 		"alicloud": &credAliCloud.CLIHandler{},
 		"aws":      &credAws.CLIHandler{},
@@ -258,7 +254,7 @@ func initCommands(ui, serverCmdUi cli.Ui, runOpts *RunOptions) {
 		}
 	}
 
-	Commands = map[string]cli.CommandFactory{
+	commands := map[string]cli.CommandFactory{
 		"agent": func() (cli.Command, error) {
 			return &AgentCommand{
 				BaseCommand: &BaseCommand{
@@ -266,6 +262,11 @@ func initCommands(ui, serverCmdUi cli.Ui, runOpts *RunOptions) {
 				},
 				ShutdownCh: MakeShutdownCh(),
 				SighupCh:   MakeSighupCh(),
+			}, nil
+		},
+		"agent generate-config": func() (cli.Command, error) {
+			return &AgentGenerateConfigCommand{
+				BaseCommand: getBaseCommand(),
 			}, nil
 		},
 		"audit": func() (cli.Command, error) {
@@ -332,6 +333,11 @@ func initCommands(ui, serverCmdUi cli.Ui, runOpts *RunOptions) {
 		},
 		"delete": func() (cli.Command, error) {
 			return &DeleteCommand{
+				BaseCommand: getBaseCommand(),
+			}, nil
+		},
+		"events subscribe": func() (cli.Command, error) {
+			return &EventsSubscribeCommands{
 				BaseCommand: getBaseCommand(),
 			}, nil
 		},
@@ -543,6 +549,26 @@ func initCommands(ui, serverCmdUi cli.Ui, runOpts *RunOptions) {
 				BaseCommand: getBaseCommand(),
 			}, nil
 		},
+		"pki issue": func() (cli.Command, error) {
+			return &PKIIssueCACommand{
+				BaseCommand: getBaseCommand(),
+			}, nil
+		},
+		"pki list-intermediates": func() (cli.Command, error) {
+			return &PKIListIntermediateCommand{
+				BaseCommand: getBaseCommand(),
+			}, nil
+		},
+		"pki reissue": func() (cli.Command, error) {
+			return &PKIReIssueCACommand{
+				BaseCommand: getBaseCommand(),
+			}, nil
+		},
+		"pki verify-sign": func() (cli.Command, error) {
+			return &PKIVerifySignCommand{
+				BaseCommand: getBaseCommand(),
+			}, nil
+		},
 		"plugin": func() (cli.Command, error) {
 			return &PluginCommand{
 				BaseCommand: getBaseCommand(),
@@ -576,6 +602,15 @@ func initCommands(ui, serverCmdUi cli.Ui, runOpts *RunOptions) {
 		"plugin reload-status": func() (cli.Command, error) {
 			return &PluginReloadStatusCommand{
 				BaseCommand: getBaseCommand(),
+			}, nil
+		},
+		"proxy": func() (cli.Command, error) {
+			return &ProxyCommand{
+				BaseCommand: &BaseCommand{
+					UI: serverCmdUi,
+				},
+				ShutdownCh: MakeShutdownCh(),
+				SighupCh:   MakeSighupCh(),
 			}, nil
 		},
 		"policy": func() (cli.Command, error) {
@@ -679,6 +714,36 @@ func initCommands(ui, serverCmdUi cli.Ui, runOpts *RunOptions) {
 		},
 		"status": func() (cli.Command, error) {
 			return &StatusCommand{
+				BaseCommand: getBaseCommand(),
+			}, nil
+		},
+		"transform": func() (cli.Command, error) {
+			return &TransformCommand{
+				BaseCommand: getBaseCommand(),
+			}, nil
+		},
+		"transform import": func() (cli.Command, error) {
+			return &TransformImportCommand{
+				BaseCommand: getBaseCommand(),
+			}, nil
+		},
+		"transform import-version": func() (cli.Command, error) {
+			return &TransformImportVersionCommand{
+				BaseCommand: getBaseCommand(),
+			}, nil
+		},
+		"transit": func() (cli.Command, error) {
+			return &TransitCommand{
+				BaseCommand: getBaseCommand(),
+			}, nil
+		},
+		"transit import": func() (cli.Command, error) {
+			return &TransitImportCommand{
+				BaseCommand: getBaseCommand(),
+			}, nil
+		},
+		"transit import-version": func() (cli.Command, error) {
+			return &TransitImportVersionCommand{
 				BaseCommand: getBaseCommand(),
 			}, nil
 		},
@@ -816,7 +881,8 @@ func initCommands(ui, serverCmdUi cli.Ui, runOpts *RunOptions) {
 		},
 	}
 
-	initCommandsEnt(ui, serverCmdUi, runOpts)
+	initCommandsEnt(ui, serverCmdUi, runOpts, commands)
+	return commands
 }
 
 // MakeShutdownCh returns a channel that can be used for shutdown

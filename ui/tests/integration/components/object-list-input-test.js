@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import { module, test } from 'qunit';
 import { setupRenderingTest } from 'vault/tests/helpers';
 import { click, fillIn, render } from '@ember/test-helpers';
@@ -15,11 +20,11 @@ module('Integration | Component | object-list-input', function (hooks) {
 
   hooks.beforeEach(function () {
     this.keys = [
-      { label: 'Input A', key: 'inputA', type: 'string', placeholder: 'Input something here' },
-      { label: 'Input B', key: 'inputB', type: 'string', placeholder: 'Input another thing' },
-      { label: 'Input C', key: 'inputC', type: 'string' },
-      { label: 'Input D', key: 'inputD', type: 'string' },
-      { label: 'Input E', key: 'inputE', type: 'string' },
+      { label: 'Input A', key: 'inputA', placeholder: 'Input something here' },
+      { label: 'Input B', key: 'inputB', placeholder: 'Input another thing' },
+      { label: 'Input C', key: 'inputC' },
+      { label: 'Input D', key: 'inputD' },
+      { label: 'Input E', key: 'inputE' },
     ];
     this.inputValue = [
       { inputA: 'foo', inputB: 'bar' },
@@ -123,8 +128,8 @@ module('Integration | Component | object-list-input', function (hooks) {
     await render(hbs`
       <ObjectListInput
         @objectKeys={{this.keys}}
-        @onChange={{this.onChange}} 
-        @inputValue={{this.inputValue}} 
+        @onChange={{this.onChange}}
+        @inputValue={{this.inputValue}}
       />`);
 
     assert.dom(SELECTORS.listInput(firstColumn.key, 0)).hasValue('foo', 'input exists in first row');

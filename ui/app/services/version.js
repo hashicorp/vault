@@ -1,78 +1,73 @@
-import { readOnly, match, not } from '@ember/object/computed';
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import Service, { inject as service } from '@ember/service';
-import { computed } from '@ember/object';
-import { task } from 'ember-concurrency';
+import { keepLatestTask, task } from 'ember-concurrency';
+import { tracked } from '@glimmer/tracking';
 
-const hasFeatureMethod = (context, featureKey) => {
-  const features = context.get('features');
-  if (!features) {
-    return false;
+export default class VersionService extends Service {
+  @service store;
+  @tracked features = [];
+  @tracked version = null;
+
+  get hasPerfReplication() {
+    return this.features.includes('Performance Replication');
   }
-  return features.includes(featureKey);
-};
-const hasFeature = (featureKey) => {
-  return computed('features', 'features.[]', function () {
-    return hasFeatureMethod(this, featureKey);
-  });
-};
-export default Service.extend({
-  _features: null,
-  features: readOnly('_features'),
-  version: null,
-  store: service(),
 
-  hasPerfReplication: hasFeature('Performance Replication'),
+  get hasDRReplication() {
+    return this.features.includes('DR Replication');
+  }
 
-  hasDRReplication: hasFeature('DR Replication'),
+  get hasSentinel() {
+    return this.features.includes('Sentinel');
+  }
 
-  hasSentinel: hasFeature('Sentinel'),
-  hasNamespaces: hasFeature('Namespaces'),
+  get hasNamespaces() {
+    return this.features.includes('Namespaces');
+  }
 
-  isEnterprise: match('version', /\+.+$/),
+  get hasControlGroups() {
+    return this.features.includes('Control Groups');
+  }
 
-  isOSS: not('isEnterprise'),
+  get isEnterprise() {
+    if (!this.version) return false;
+    return this.version.includes('+');
+  }
 
-  setVersion(resp) {
-    this.set('version', resp.version);
-  },
+  get isOSS() {
+    return !this.isEnterprise;
+  }
 
-  hasFeature(feature) {
-    return hasFeatureMethod(this, feature);
-  },
-
-  setFeatures(resp) {
-    if (!resp.features) {
-      return;
-    }
-    this.set('_features', resp.features);
-  },
-
-  getVersion: task(function* () {
-    if (this.version) {
-      return;
-    }
+  @task
+  *getVersion() {
+    if (this.version) return;
     const response = yield this.store.adapterFor('cluster').health();
-    this.setVersion(response);
+    this.version = response.version;
     return;
-  }),
+  }
 
-  getFeatures: task(function* () {
+  @keepLatestTask
+  *getFeatures() {
     if (this.features?.length || this.isOSS) {
       return;
     }
     try {
       const response = yield this.store.adapterFor('cluster').features();
-      this.setFeatures(response);
+      this.features = response.features;
       return;
     } catch (err) {
       // if we fail here, we're likely in DR Secondary mode and don't need to worry about it
     }
-  }).keepLatest(),
+  }
 
-  fetchVersion: function () {
+  fetchVersion() {
     return this.getVersion.perform();
-  },
-  fetchFeatures: function () {
+  }
+
+  fetchFeatures() {
     return this.getFeatures.perform();
-  },
-});
+  }
+}

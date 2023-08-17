@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package logical
 
 import (
@@ -7,8 +10,8 @@ import (
 )
 
 // ID is an alias to GetId() for CloudEvents compatibility.
-func (x *EventData) ID() string {
-	return x.GetId()
+func (x *EventReceived) ID() string {
+	return x.Event.GetId()
 }
 
 // NewEvent returns an event with a new, random EID.

@@ -15,10 +15,10 @@ operations in Vault. This section discusses policy workflows and syntaxes.
 Policies are **deny by default**, so an empty policy grants no permission in the
 system.
 
-## Policy-Authorization Workflow
+## Policy-authorization workflow
 
 Before a human or machine can gain access, an administrator must configure Vault
-with an [auth method](/docs/concepts/auth). Authentication is
+with an [auth method](/vault/docs/concepts/auth). Authentication is
 the process by which human or machine-supplied information is verified against
 an internal or external system.
 
@@ -77,14 +77,14 @@ the authentication steps again, they will get a _new_ token. The token will have
 the same permissions, but the actual token will be different. Authenticating a
 second time does not invalidate the original token.
 
-## Policy Syntax
+## Policy syntax
 
 Policies are written in [HCL][hcl] or JSON and describe which paths in Vault a
 user or machine is allowed to access.
 
 [hcl]: https://github.com/hashicorp/hcl
 
-Here is a very simple policy which grants read capabilities to the [KVv1](/api-docs/secret/kv/kv-v1) path
+Here is a very simple policy which grants read capabilities to the [KVv1](/vault/api-docs/secret/kv/kv-v1) path
 `"secret/foo"`:
 
 ```ruby
@@ -101,19 +101,19 @@ token would have no other access in Vault.
 Here is a more detailed policy, and it is documented inline:
 
 ```ruby
-# This section grants all access on "secret/*". Further restrictions can be
+# This section grants all access on "secret/*". further restrictions can be
 # applied to this broad policy, as shown below.
 path "secret/*" {
   capabilities = ["create", "read", "update", "patch", "delete", "list"]
 }
 
 # Even though we allowed secret/*, this line explicitly denies
-# secret/super-secret. This takes precedence.
+# secret/super-secret. this takes precedence.
 path "secret/super-secret" {
   capabilities = ["deny"]
 }
 
-# Policies can also specify allowed, disallowed, and required parameters. Here
+# Policies can also specify allowed, disallowed, and required parameters. here
 # the key "secret/restricted" can only contain "foo" (any value) and "bar" (one
 # of "zip" or "zap").
 path "secret/restricted" {
@@ -130,19 +130,19 @@ request. A policy `path` may specify an exact path to match, or it could specify
 a glob pattern which instructs Vault to use a prefix match:
 
 ```ruby
-# Permit reading only "secret/foo". An attached token cannot read "secret/food"
+# Permit reading only "secret/foo". an attached token cannot read "secret/food"
 # or "secret/foo/bar".
 path "secret/foo" {
   capabilities = ["read"]
 }
 
-# Permit reading everything under "secret/bar". An attached token could read
+# Permit reading everything under "secret/bar". an attached token could read
 # "secret/bar/zip", "secret/bar/zip/zap", but not "secret/bars/zip".
 path "secret/bar/*" {
   capabilities = ["read"]
 }
 
-# Permit reading everything prefixed with "zip-". An attached token could read
+# Permit reading everything prefixed with "zip-". an attached token could read
 # "secret/zip-zap" or "secret/zip-zap/zong", but not "secret/zip/zap
 path "secret/zip-*" {
   capabilities = ["read"]
@@ -205,7 +205,7 @@ control over permitted (or denied) operations. As shown in the examples above,
 capabilities are always specified as a list of strings, even if there is only
 one capability.
 
-To determine the capabilities needed to perform a specific operation, the `-output-policy` flag can be added to the CLI subcommand. For an example, refer to the [Print Policy Requirements](/docs/commands#print-policy-requirements) document section.
+To determine the capabilities needed to perform a specific operation, the `-output-policy` flag can be added to the CLI subcommand. For an example, refer to the [Print Policy Requirements](/vault/docs/commands#print-policy-requirements) document section.
 
 
 The list of capabilities include the following:
@@ -255,7 +255,7 @@ credentials _creates_ database credentials, but the HTTP request is a GET which
 corresponds to a `read` capability. Thus, to grant access to generate database
 credentials, the policy would grant `read` access on the appropriate path.
 
-## Templated Policies
+## Templated policies
 
 The policy syntax allows for doing variable replacement in some policy strings
 with values available to the token. Currently `identity` information can be
@@ -333,19 +333,19 @@ path "secret/data/{{identity.entity.aliases.auth_kubernetes_xxxx.metadata.servic
 }
 ```
 
-## Fine-Grained Control
+## Fine-grained control
 
 In addition to the standard set of capabilities, Vault offers finer-grained
 control over permissions at a given path. The capabilities associated with a
 path take precedence over permissions on parameters.
 
-### Parameter Constraints
+### Parameter constraints
 
-!> **Note:** The use of [globs](docs/concepts/policies#policy-syntax) (`*`) may result in [surprising or unexpected behavior](#parameter-constraints-limitations).
+!> **Note:** The use of [globs](/vault/docs/concepts/policies#policy-syntax) (`*`) may result in [surprising or unexpected behavior](#parameter-constraints-limitations).
 
-~> **Note:** The `allowed_parameters`, `denied_parameters`, and `required_parameters` fields are not supported for policies used with the [version 2 kv secrets engine](/docs/secrets/kv/kv-v2).
+~> **Note:** The `allowed_parameters`, `denied_parameters`, and `required_parameters` fields are not supported for policies used with the [version 2 kv secrets engine](/vault/docs/secrets/kv/kv-v2).
 
-See the [API Specification](/api-docs/secret/kv/kv-v2) for more information.
+See the [API Specification](/vault/api-docs/secret/kv/kv-v2) for more information.
 
 Policies can take into account HTTP request parameters to further
 constrain requests, using the following options:
@@ -354,13 +354,13 @@ constrain requests, using the following options:
 
   ```ruby
   # This requires the user to create "secret/profile" with a parameter/key named
-  # "name" and "id" where kv v1 is enabled at "secret/". 
+  # "name" and "id" where kv v1 is enabled at "secret/".
   path "secret/profile" {
     capabilities = ["create"]
     required_parameters = ["name", "id"]
   }
   ```
-  
+
 - `allowed_parameters` - A list of keys and values that are
   permitted on the given path.
 
@@ -371,7 +371,7 @@ constrain requests, using the following options:
     # This allows the user to update the password parameter value set on any
     # users configured for userpass auth method. The password value can be
     # anything. However, the user cannot update other parameter values such as
-    # token_ttl. 
+    # token_ttl.
     path "auth/userpass/users/*" {
       capabilities = ["update"]
       allowed_parameters = {
@@ -381,10 +381,10 @@ constrain requests, using the following options:
     ```
 
     -> **Usage example:** The [ACL Policy Path
-     Templating](https://learn.hashicorp.com/tutorials/vault/policy-templating)
+     Templating](/vault/tutorials/policies/policy-templating)
      tutorial demonstrates the use of `allowed_parameters` to permit a user to
      update the user's password when using the [userpass auth
-     method](/docs/auth/userpass) to log in with Vault. 
+     method](/vault/docs/auth/userpass) to log in with Vault.
 
   - Setting a parameter with a value of a populated list allows the parameter
     to contain only those values.
@@ -422,7 +422,7 @@ constrain requests, using the following options:
     }
     ```
 
-- `denied_parameters` - A list of keys and values that are not permitted on the given 
+- `denied_parameters` - A list of keys and values that are not permitted on the given
   path. Any values specified here take precedence over `allowed_parameters`.
 
   - Setting a parameter with a value of the empty list denies any changes to
@@ -447,7 +447,7 @@ constrain requests, using the following options:
     ```ruby
     # This allows the user to create or update token roles. However, the
     # "allowed_policies" parameter value cannot be "admin", but the user can
-    # assign any other policies to the parameter.   
+    # assign any other policies to the parameter.
     path "auth/token/roles/*" {
       capabilities = ["create", "update"]
       denied_parameters = {
@@ -489,20 +489,75 @@ path "secret/foo" {
 
 ~> **Note:** the only value that can be used with the `*` parameter is `[]`.
 
-#### Parameter Constraints Limitations
+#### Parameter constraints limitations
 
-It's important to note that the use of globbing may result in surprising
+##### Default values
+Evaluation of policies with `allowed_parameters`, `denied_parameters`, and `required_parameters` happens
+without consideration of parameters' default values.
+
+Given the following policy:
+
+```ruby
+# The "no_store" parameter cannot be false
+path "secret/foo" {
+  capabilities = ["create"]
+  denied_parameters = {
+    "no_store" = [false, "false"]
+  }
+}
+```
+
+The following operation will error, because "no_store" is set to false:
+
+```shell-session
+$ vault write secret/foo no_store=false value=bar
+```
+
+Whereas the following operation will succeed, even if the "no_store"
+parameter must be a boolean, and it defaults to false:
+
+```shell-session
+# Succeeds because "no_store=false" isn't present in the parameters
+$ vault write secret/foo value=bar
+```
+
+This is because the policy evaluator does not know what the default value is for
+the "no_store" parameter. All it sees is that the denied parameter isn't present
+in the command.
+
+This can be resolved by requiring the "no_store" parameter in your policy:
+
+```ruby
+path "secret/foo" {
+  capabilities = ["create"]
+  required_parameters = ["no_store"]
+  denied_parameters = {
+    "no_store" = [false, "false"]
+  }
+}
+```
+
+The following command, which previously succeeded, will now fail under the new policy
+because there is no "no_store" parameter:
+
+```shell-session
+$ vault write secret/foo value=bar
+```
+
+##### Globbing
+
+It's also important to note that the use of globbing may result in surprising
 or unexpected behavior:
 
 ```ruby
 # This allows the user to create, update, or patch "secret/foo" with a parameter
-# named "bar". The values passed to parameter "bar" must start with "baz/"
-# so values like "baz/quux" are fine. However, values like
-# "baz/quux,wibble,wobble,wubble" would also be accepted. The API that
+# named "bar". the values passed to parameter "bar" must start with "baz/"
+# so values like "baz/quux" are fine. however, values like
+# "baz/quux,wibble,wobble,wubble" would also be accepted. the API that
 # underlies "secret/foo" might allow comma delimited values for the "bar"
 # parameter, and if it did, specifying a value like
 # "baz/quux,wibble,wobble,wubble" would result in 4 different values getting
-# passed along. Seeing values like "wibble" or "wobble" getting passed to
+# passed along. seeing values like "wibble" or "wobble" getting passed to
 # "secret/foo" might surprise someone that expected the allowed_parameters
 # constraint to only allow values starting with "baz/".
 path "secret/foo" {
@@ -512,12 +567,12 @@ path "secret/foo" {
   }
 }
 ```
-### Required Response Wrapping TTLs
+### Required response wrapping TTLs
 
 These parameters can be used to set minimums/maximums on TTLs set by clients
 when requesting that a response be
-[wrapped](/docs/concepts/response-wrapping), with a granularity of a
-second. These use [duration format strings](/docs/concepts/duration-format).
+[wrapped](/vault/docs/concepts/response-wrapping), with a granularity of a
+second. These use [duration format strings](/vault/docs/concepts/duration-format).
 
 In practice, setting a minimum TTL of one second effectively makes response
 wrapping mandatory for a particular path.
@@ -546,12 +601,12 @@ addition, if paths are merged from different stanzas, the lowest value
 specified for each is the value that will result, in line with the idea of
 keeping token lifetimes as short as possible.
 
-## Built-in Policies
+## Built-in policies
 
 Vault has two built-in policies: `default` and `root`. This section describes
 the two built-in policies.
 
-### Default Policy
+### Default policy
 
 The `default` policy is a built-in Vault policy that cannot be removed. By
 default, it is attached to all tokens, but may be explicitly excluded at token
@@ -588,7 +643,7 @@ $ curl \
   https://vault.hashicorp.rocks/v1/auth/token/create
 ```
 
-### Root Policy
+### Root policy
 
 The `root` policy is a built-in Vault policy that cannot be modified or removed.
 Any user associated with this policy becomes a root user. A root user can do
@@ -618,16 +673,16 @@ $ curl \
 
 For more information, please read:
 
-- [Production Hardening](https://learn.hashicorp.com/tutorials/vault/production-hardening)
-- [Generating a Root Token](https://learn.hashicorp.com/tutorials/vault/generate-root)
+- [Production Hardening](/vault/tutorials/operations/production-hardening)
+- [Generating a Root Token](/vault/tutorials/operations/generate-root)
 
-## Managing Policies
+## Managing policies
 
 Policies are authored (written) in your editor of choice. They can be authored
 in HCL or JSON, and the syntax is described in detail above. Once saved,
 policies must be uploaded to Vault before they can be used.
 
-### Listing Policies
+### Listing policies
 
 To list all registered policies in Vault:
 
@@ -647,7 +702,7 @@ $ curl \
 wrapper around reading the sys endpoint directly. It provides the same
 functionality but formats the output in a special manner.
 
-### Creating Policies
+### Creating policies
 
 Policies may be created (uploaded) via the CLI or via the API. To create a new
 policy in Vault:
@@ -670,7 +725,7 @@ In both examples, the name of the policy is "policy-name". You can think of this
 name as a pointer or symlink to the policy ACLs. Tokens are attached policies by
 name, which are then mapped to the set of rules corresponding to that name.
 
-### Updating Policies
+### Updating policies
 
 Existing policies may be updated to change permissions via the CLI or via the
 API. To update an existing policy in Vault, follow the same steps as creating a
@@ -690,7 +745,7 @@ $ curl \
   https://vault.hashicorp.rocks/v1/sys/policy/my-existing-policy
 ```
 
-### Deleting Policies
+### Deleting policies
 
 Existing policies may be deleted via the CLI or API. To delete a policy:
 
@@ -710,7 +765,7 @@ $ curl \
 This is an idempotent operation. Vault will not return an error when deleting a
 policy that does not exist.
 
-## Associating Policies
+## Associating policies
 
 Vault can automatically associate a set of policies to a token based on an
 authorization. This configuration varies significantly between authentication
@@ -740,6 +795,49 @@ Password (will be hidden): ...
 If the provided information is correct, Vault will generate a token, assign the
 list of configured policies to the token, and return that token to the
 authenticated user.
+
+## Root protected API endpoints
+
+~> **Note:** Vault treats the HTTP POST and PUT verbs as equivalent, so for each mention
+   of POST in the table below, PUT may also be used. Vault uses the non-standard LIST HTTP
+   verb, but also allows list requests to be made using the GET verb along with `?list=true`
+   as a query parameter, so for each mention of LIST in the table above, GET with `?list=true`
+   may also be used.
+
+The following paths requires a root token or `sudo` capability in the policy:
+
+| Path                                                                                                                                                   | HTTP verb         | Description                                                                                                         |
+|--------------------------------------------------------------------------------------------------------------------------------------------------------|-------------------|---------------------------------------------------------------------------------------------------------------------|
+| [auth/token/accessors](/vault/api-docs/auth/token#list-accessors)                                                                                      | LIST              | List token accessors for all current Vault service tokens                                                           |
+| [auth/token/create](/vault/api-docs/auth/token#create-token)                                                                                           | POST              | Create a periodic or an orphan token (`period` or `no_parent`) option                                               |
+| [auth/token/revoke-orphan](/vault/api-docs/auth/token#revoke-token-and-orphan-children)                                                                | POST              | Revoke a token but not its child tokens, which will be orphaned                                                     |
+| [pki/root](/vault/api-docs/secret/pki#delete-all-issuers-and-keys)                                                                                     | DELETE            | Delete the current CA key ([pki secrets engine](/vault/docs/secrets/pki))                                           |
+| [pki/root/sign-self-issued](/vault/api-docs/secret/pki#sign-self-issued)                                                                               | POST              | Use the configured CA certificate to sign a self-issued certificate ([pki secrets engine](/vault/docs/secrets/pki)) |
+| [sys/audit](/vault/api-docs/system/audit)                                                                                                              | GET               | List enabled audit devices                                                                                          |
+| [sys/audit/:path](/vault/api-docs/system/audit)                                                                                                        | POST, DELETE      | Enable or remove an audit device                                                                                    |
+| [sys/auth/:path](/vault/api-docs/system/auth)                                                                                                          | GET, POST, DELETE | Manage the auth methods (enable, read, and delete)                                                                  |
+| [sys/auth/:path/tune](/vault/api-docs/system/auth#tune-auth-method)                                                                                    | GET, POST         | Manage the auth methods (enable, read, delete, and tune)                                                            |
+| [sys/config/auditing/request-headers](/vault/api-docs/system/config-auditing)                                                                          | GET               | List the request headers that are configured to be audited                                                          |
+| [sys/config/auditing/request-headers/:name](/vault/api-docs/system/config-auditing)                                                                    | GET, POST, DELETE | Manage the auditing headers (create, update, read and delete)                                                       |
+| [sys/config/cors](/vault/api-docs/system/config-cors)                                                                                                  | GET, POST, DELETE | Configure CORS setting                                                                                              |
+| [sys/config/ui/headers](/vault/api-docs/system/config-ui)                                                                                              | GET, LIST         | Configure the UI settings                                                                                           |
+| [sys/config/ui/headers/:name](/vault/api-docs/system/config-ui#name)                                                                                   | POST, DELETE      | Configure custom HTTP headers to be served with the UI                                                              |
+| [sys/internal/inspect/router/:tag](/vault/api-docs/system/inspect/router)                                                                              | GET               | Inspect the internal components of Vault's router. `tag` must be one of root, uuid, accessor, or storage            |
+| [sys/leases/lookup/:prefix](/vault/api-docs/system/leases#list-leases)                                                                                 | LIST              | List lease IDs                                                                                                      |
+| [sys/leases/revoke-force/:prefix](/vault/api-docs/system/leases#revoke-force)                                                                          | POST              | Revoke all secrets or tokens ignoring backend errors                                                                |
+| [sys/leases/revoke-prefix/:prefix](/vault/api-docs/system/leases#revoke-prefix)                                                                        | POST              | Revoke all secrets generated under a given prefix                                                                   |
+| [sys/plugins/catalog/:type/:name](/vault/api-docs/system/plugins-catalog#register-plugin)                                                              | GET, POST, DELETE | Register a new plugin, or read/remove an existing plugin                                                            |
+| [sys/raw:path](/vault/api-docs/system/raw)                                                                                                             | GET, POST, DELETE | Used to access the raw underlying store in Vault                                                                    |
+| [sys/raw:prefix](/vault/api-docs/system/raw#list-raw)                                                                                                  | GET, LIST         | Returns a list keys for a given path prefix                                                                         |
+| [sys/remount](/vault/api-docs/system/remount)                                                                                                          | POST              | Moves an already-mounted backend to a new mount point                                                               |
+| [sys/replication/reindex](/vault/api-docs/system/replication#reindex-replication)                                                                      | POST              | Reindex the local data storage                                                                                      |
+| [sys/replication/performance/primary/secondary-token](/vault/api-docs/system/replication/replication-performance#generate-performance-secondary-token) | POST              | Generate a performance secondary activation token                                                                   |
+| [sys/replication/dr/primary/secondary-token](/vault/api-docs/system/replication/replication-dr#generate-dr-secondary-token)                            | POST              | Generate a DR secondary activation token                                                                            |
+| [sys/rotate](/vault/api-docs/system/rotate)                                                                                                            | POST              | Trigger a rotation of the backend encryption key                                                                    |
+| [sys/seal](/vault/api-docs/system/seal)                                                                                                                | POST              | Seals the Vault                                                                                                     |
+| [sys/step-down](/vault/api-docs/system/step-down)                                                                                                      | POST              | Forces a node to give up active status                                                                              |
+| [sys/storage/raft/snapshot-auto/config](/vault/api-docs/system/storage/raftautosnapshots#list-automated-snapshots-configs)                             | LIST              | Lists named configurations                                                                                          |
+| [sys/storage/raft/snapshot-auto/config/:name](/vault/api-docs/system/storage/raftautosnapshots)                                                        | GET, POST, DELETE | Creates or updates a named configuration                                                                            |
 
 ### Tokens
 
@@ -772,5 +870,5 @@ next time a token, with that policy attached, is used to make a call to Vault.
 
 Refer to the following tutorials for further learning:
 
-- [Vault Policies](https://learn.hashicorp.com/vault/identity-access-management/iam-policies)
-- [ACL Policy Path Templating](https://learn.hashicorp.com/vault/identity-access-management/policy-templating)
+- [Vault Policies](/vault/tutorials/policies/policies)
+- [ACL Policy Path Templating](/vault/tutorials/policies/policy-templating)

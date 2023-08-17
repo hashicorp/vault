@@ -79,7 +79,7 @@ The following flags are available for the `operator raft join` command.
   server not participate in the Raft quorum, and have it only receive the data
   replication stream. This can be used to add read scalability to a cluster in
   cases where a high volume of reads to servers are needed. The default is false.
-  See [`retry_join_as_non_voter`](/docs/configuration/storage/raft#retry_join_as_non_voter)
+  See [`retry_join_as_non_voter`](/vault/docs/configuration/storage/raft#retry_join_as_non_voter)
   for the equivalent config option when using `retry_join` stanzas instead.
 
 - `-retry` `(bool: false)` - Continuously retry joining the Raft cluster upon
@@ -99,7 +99,7 @@ Usage: vault operator raft list-peers
 	  $ vault operator raft list-peers
 ```
 
-### Example Output
+### Example output
 
 ```json
 {
@@ -143,6 +143,10 @@ Usage: vault operator raft remove-peer <server_id>
 
 	  $ vault operator raft remove-peer node1
 ```
+
+<Note>
+  Once a node is removed, its Raft data needs to be deleted before it may be joined back into an existing cluster. This requires shutting down the Vault process, deleting the data, then restarting the Vault process on the removed node.
+</Note>
 
 ## snapshot
 
@@ -194,7 +198,7 @@ This command groups subcommands for operators interacting with the autopilot
 functionality of the integrated Raft storage backend. There are 3 subcommands
 supported: `get-config`, `set-config` and `state`.
 
-For a more detailed overview of autopilot features, see the [concepts page](/docs/concepts/integrated-storage/autopilot).
+For a more detailed overview of autopilot features, see the [concepts page](/vault/docs/concepts/integrated-storage/autopilot).
 
 ```text
 Usage: vault operator raft autopilot <subcommand> [options] [args]
@@ -218,7 +222,7 @@ State includes a list of all servers by nodeID and IP address. Last Index
 indicates how close the state on each node is to the leader's.
 
 A node can have a status of "leader", "voter", and
-"[non-voter](/docs/concepts/integrated-storage#non-voting-nodes-enterprise-only)".
+"[non-voter](/vault/docs/concepts/integrated-storage#non-voting-nodes-enterprise-only)".
 
 ```text
 Usage: vault operator raft autopilot state
@@ -228,7 +232,7 @@ Usage: vault operator raft autopilot state
     $ vault operator raft autopilot state
 ```
 
-#### Example Output
+#### Example output
 
 ```text
 Healthy:                      true
@@ -260,7 +264,7 @@ Servers:
 ```
 Vault Enterprise will include additional output related to automated upgrades and redundancy zones.
 
-#### Example Vault Enterprise Output
+#### Example Vault enterprise output
 
 ```text
 Redundancy Zones:

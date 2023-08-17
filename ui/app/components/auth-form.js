@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import Ember from 'ember';
 import { next } from '@ember/runloop';
 import { inject as service } from '@ember/service';
@@ -8,6 +13,7 @@ import { computed } from '@ember/object';
 import { supportedAuthBackends } from 'vault/helpers/supported-auth-backends';
 import { task, timeout } from 'ember-concurrency';
 import { waitFor } from '@ember/test-waiters';
+import { v4 as uuidv4 } from 'uuid';
 
 const BACKENDS = supportedAuthBackends();
 
@@ -213,6 +219,8 @@ export default Component.extend(DEFAULTS, {
             };
           })
         );
+        // without unloading the records there will be an issue where all methods set to list when unauthenticated will appear for all namespaces
+        // if possible, it would be more reliable to add a namespace attr to the model so we could filter against the current namespace rather than unloading all
         next(() => {
           store.unloadAll('auth-method');
         });
@@ -259,7 +267,7 @@ export default Component.extend(DEFAULTS, {
       return;
     }
     let response = null;
-    this.setOktaNumberChallenge(true);
+    this.args.setOktaNumberChallenge(true);
     this.setCancellingAuth(false);
     // keep polling /auth/okta/verify/:nonce API every 1s until a response is given with the correct number for the Okta Number Challenge
     while (response === null) {
@@ -307,7 +315,7 @@ export default Component.extend(DEFAULTS, {
       }
       // add nonce field for okta backend
       if (backend.type === 'okta') {
-        data.nonce = crypto.randomUUID();
+        data.nonce = uuidv4();
         // add a default path of okta if it doesn't exist to be used for Okta Number Challenge
         if (!data.path) {
           data.path = 'okta';
@@ -322,7 +330,7 @@ export default Component.extend(DEFAULTS, {
       });
     },
     returnToLoginFromOktaNumberChallenge() {
-      this.setOktaNumberChallenge(false);
+      this.args.setOktaNumberChallenge(false);
       this.set('oktaNumberChallengeAnswer', null);
     },
   },

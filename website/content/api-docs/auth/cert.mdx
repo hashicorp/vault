@@ -6,19 +6,19 @@ description: |-
   method.
 ---
 
-# TLS Certificate Auth Method (API)
+# TLS certificate auth method (API)
 
 @include 'x509-sha1-deprecation.mdx'
 
 This is the API documentation for the Vault TLS Certificate authentication
 method. For general information about the usage and operation of the TLS
-Certificate method, please see the [Vault TLS Certificate method documentation](/docs/auth/cert).
+Certificate method, please see the [Vault TLS Certificate method documentation](/vault/docs/auth/cert).
 
 This documentation assumes the TLS Certificate method is mounted at the
 `/auth/cert` path in Vault. Since it is possible to enable auth methods at any
 location, please update your API calls accordingly.
 
-## Create CA Certificate Role
+## Create CA certificate role
 
 Sets a CA cert and associated parameters in a role name.
 
@@ -59,20 +59,39 @@ Sets a CA cert and associated parameters in a role name.
 - `required_extensions` `(string: "" or array: [])` - Require specific Custom
   Extension OIDs to exist and match the pattern. Value is a comma separated
   string or array of `oid:value`. Expects the extension value to be some type
-  of ASN1 encoded string. All conditions _must_ be met. Supports globbing on
-  `value`.
+  of ASN1 encoded string. All conditions _must_ be met. To match on the hex-encoded
+  value of the extension, including non-string extensions, use the format
+  `hex:<oid>:<value>`.Supports globbing on `value`.
 - `allowed_metadata_extensions` `(array:[])` - A comma separated string or
   array of oid extensions. Upon successful authentication, these extensions
   will be added as metadata if they are present in the certificate. The
   metadata key will be the string consisting of the oid numbers separated
   by a dash (-) instead of a dot (.) to allow usage in ACL templates.
+- `ocsp_enabled` `(bool: false)` - If enabled, validate certificates' revocation
+  status using OCSP.
+- `ocsp_ca_certificates` `(string: "")` Any additional CA certificates needed to
+  verify OCSP responses.  Provided as base64 encoded PEM data.
+- `ocsp_servers_override` `(array: [])`: A comma-separated list of OCSP server
+  addresses.  If unset, the OCSP server is determined from the AuthorityInformationAccess
+  extension on the certificate being inspected.
+- `ocsp_fail_open` `(bool: false)` - If true and an OCSP response cannot be fetched
+  or is of an unknown status, the login will proceed as if the certificate has not
+  been revoked.
+- `ocsp_query_all_servers` `(bool: false)` - If set to true, rather than accepting
+  the first successful OCSP response, query all servers and consider the certificate
+  valid only if all servers agree.
+
+  ~> **Note**: When using Vault's PKI engine with Performance Replication clusters
+     as the OCSP provider, and without `unified_crls=true` set on the source mount
+     or when using cluster-local OCSP resolvers, we recommend enabling this option.
+
 - `display_name` `(string: "")` - The `display_name` to set on tokens issued
   when authenticating against this CA certificate. If not set, defaults to the
   name of the role.
 
 @include 'tokenfields.mdx'
 
-### Sample Payload
+### Sample payload
 
 ```json
 {
@@ -82,7 +101,7 @@ Sets a CA cert and associated parameters in a role name.
 }
 ```
 
-### Sample Request
+### Sample request
 
 ```shell-session
 $ curl \
@@ -93,7 +112,7 @@ $ curl \
     https://127.0.0.1:8200/v1/auth/cert/certs/test-ca
 ```
 
-## Read CA Certificate Role
+## Read CA certificate role
 
 Gets information associated with the named role.
 
@@ -105,7 +124,7 @@ Gets information associated with the named role.
 
 - `name` `(string: <required>)` - The name of the certificate role.
 
-### Sample Request
+### Sample request
 
 ```shell-session
 $ curl \
@@ -114,7 +133,7 @@ $ curl \
     https://127.0.0.1:8200/v1/auth/cert/certs/test-ca
 ```
 
-### Sample Response
+### Sample response
 
 ```json
 {
@@ -136,7 +155,7 @@ $ curl \
 }
 ```
 
-## List Certificate Roles
+## List certificate roles
 
 Lists configured certificate names.
 
@@ -144,7 +163,7 @@ Lists configured certificate names.
 | :----- | :----------------- |
 | `LIST` | `/auth/cert/certs` |
 
-### Sample Request
+### Sample request
 
 ```shell-session
 $ curl \
@@ -154,7 +173,7 @@ $ curl \
     https://127.0.0.1:8200/v1/auth/cert/certs
 ```
 
-### Sample Response
+### Sample response
 
 ```json
 {
@@ -170,7 +189,7 @@ $ curl \
 }
 ```
 
-## Delete Certificate Role
+## Delete certificate role
 
 Deletes the named role and CA cert from the method mount.
 
@@ -182,7 +201,7 @@ Deletes the named role and CA cert from the method mount.
 
 - `name` `(string: <required>)` - The name of the certificate role.
 
-### Sample Request
+### Sample request
 
 ```shell-session
 $ curl \
@@ -200,7 +219,7 @@ Lists configured certificate revocation lists.
 | :----- | :---------------- |
 | `LIST` | `/auth/cert/crls` |
 
-### Sample Request
+### Sample request
 
 ```shell-session
 $ curl \
@@ -210,7 +229,7 @@ $ curl \
     https://127.0.0.1:8200/v1/auth/cert/crls
 ```
 
-### Sample Response
+### Sample response
 
 ```json
 {
@@ -237,9 +256,12 @@ Sets a named CRL.
 ### Parameters
 
 - `name` `(string: <required>)` - The name of the CRL.
-- `crl` `(string: <required>)` - The PEM format CRL.
+- `crl` `(string: "")` - The PEM format CRL.
+- `url` `(string: "")` - The URL of a CRL distribution point.
 
-### Sample Payload
+**Note**: Either 'crl' or 'url' parameters must be provided, if both are provided, 'crl' is used.
+
+### Sample payload
 
 ```json
 {
@@ -247,7 +269,7 @@ Sets a named CRL.
 }
 ```
 
-### Sample Request
+### Sample request
 
 ```shell-session
 $ curl \
@@ -272,7 +294,7 @@ arbitrary size, these are returned as strings.
 
 - `name` `(string: <required>)` - The name of the CRL.
 
-### Sample Request
+### Sample request
 
 ```shell-session
 $ curl \
@@ -281,7 +303,7 @@ $ curl \
     https://127.0.0.1:8200/v1/auth/cert/crls/custom-crl
 ```
 
-### Sample Response
+### Sample response
 
 ```json
 {
@@ -310,7 +332,7 @@ Deletes the named CRL from the auth method mount.
 
 - `name` `(string: <required>)` - The name of the CRL.
 
-### Sample Request
+### Sample request
 
 ```shell-session
 $ curl \
@@ -320,7 +342,7 @@ $ curl \
     https://127.0.0.1:8200/v1/auth/cert/crls/cert1
 ```
 
-## Configure TLS Certificate Method
+## Configure TLS certificate method
 
 Configuration options for the method.
 
@@ -336,8 +358,10 @@ Configuration options for the method.
 - `enable_identity_alias_metadata` `(boolean: false)` - If set, metadata of
   the certificate including the metadata corresponding to
   `allowed_metadata_extensions` will be stored in the alias
+- `ocsp_cache_size` `(int: 100)` - The size of the OCSP response LRU cache.  Note
+  that this cache is used for all configured certificates.
 
-### Sample Payload
+### Sample payload
 
 ```json
 {
@@ -345,7 +369,7 @@ Configuration options for the method.
 }
 ```
 
-### Sample Request
+### Sample request
 
 ```shell-session
 $ curl \
@@ -356,7 +380,7 @@ $ curl \
     https://127.0.0.1:8200/v1/auth/cert/certs/cert1
 ```
 
-## Login with TLS Certificate Method
+## Login with TLS certificate method
 
 Log in and fetch a token. If there is a valid chain to a CA configured in the
 method and all role constraints are matched, a token will be issued. If the
@@ -375,7 +399,7 @@ https://tools.ietf.org/html/rfc6125#section-2.3)
   returning its policy list if successful. If not set, defaults to trying all
   certificate roles and returning any one that matches.
 
-### Sample Payload
+### Sample payload
 
 ```json
 {
@@ -383,7 +407,7 @@ https://tools.ietf.org/html/rfc6125#section-2.3)
 }
 ```
 
-### Sample Request
+### Sample request
 
 ~> **NOTE** The `--cacert` value used here is for the Vault TLS Listener CA
 certificate, not the CA that issued the client authentication certificate. This
@@ -400,7 +424,7 @@ $ curl \
     https://127.0.0.1:8200/v1/auth/cert/login
 ```
 
-### Sample Response
+### Sample response
 
 ```json
 {

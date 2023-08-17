@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import Component from '@glimmer/component';
 import { inject as service } from '@ember/service';
 import { tracked } from '@glimmer/tracking';
@@ -18,6 +23,7 @@ export default class ConfigurePageComponent extends Component {
 
   @tracked inferredState;
   @tracked modelValidations;
+  @tracked alert;
   @tracked error;
   @tracked showConfirm;
 
@@ -64,6 +70,14 @@ export default class ConfigurePageComponent extends Component {
       return;
     }
     this.showConfirm = false;
+
+    const { isValid, state, invalidFormMessage } = yield this.args.model.validate();
+    if (!isValid) {
+      this.modelValidations = state;
+      this.alert = invalidFormMessage;
+      return;
+    }
+
     try {
       yield this.args.model.save();
       this.leave('configuration');

@@ -8,26 +8,26 @@ description: The `/sys/experiments` endpoint returns information about experimen
 
 The `/sys/experiments` endpoint returns information about experiments on the Vault node.
 
-## Read Experiments
+## Read experiments
 
 This endpoint returns the experiments available and enabled on the Vault node.
 Experiments are per-node and cannot be changed while the node is running. See
-the [`-experiment`](/docs/commands/server#experiment) flag and the
-[`experiments`](/docs/configuration#experiments) config key documentation for
+the [`-experiment`](/vault/docs/commands/server#experiment) flag and the
+[`experiments`](/vault/docs/configuration#experiments) config key documentation for
 details on enabling experiments.
 
 | Method | Path               |
 | :----- | :----------------- |
 | `GET`  | `/sys/experiments` |
 
-### Sample Request
+### Sample request
 
 ```shell-session
 $ curl \
     http://127.0.0.1:8200/v1/sys/experiments
 ```
 
-### Sample Response
+### Sample response
 
 ```json
 {

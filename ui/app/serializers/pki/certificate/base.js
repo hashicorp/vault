@@ -1,4 +1,9 @@
-import { parseCertificate } from 'vault/helpers/parse-pki-cert';
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
+import { parseCertificate } from 'vault/utils/parse-pki-cert';
 import ApplicationSerializer from '../../application';
 
 export default class PkiCertificateBaseSerializer extends ApplicationSerializer {
@@ -12,19 +17,13 @@ export default class PkiCertificateBaseSerializer extends ApplicationSerializer 
     if (payload.data.certificate) {
       // Parse certificate back from the API and add to payload
       const parsedCert = parseCertificate(payload.data.certificate);
-      // convert issueDate to same format as other date values
-      // this can be moved into the parseCertificate helper once the old pki implementation is removed
-      if (parsedCert.issue_date) {
-        parsedCert.issue_date = parsedCert.issue_date.valueOf();
-      }
-      const json = super.normalizeResponse(
+      return super.normalizeResponse(
         store,
         primaryModelClass,
-        { ...payload, ...parsedCert },
+        { ...payload, parsed_certificate: parsedCert, common_name: parsedCert.common_name },
         id,
         requestType
       );
-      return json;
     }
     return super.normalizeResponse(...arguments);
   }

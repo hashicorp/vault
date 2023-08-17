@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package identity
 
 import (
@@ -8,13 +11,13 @@ import (
 	"testing"
 	"time"
 
-	upAuth "github.com/hashicorp/vault/api/auth/userpass"
-	"github.com/hashicorp/vault/helper/testhelpers"
-
 	"github.com/hashicorp/vault/api"
+	upAuth "github.com/hashicorp/vault/api/auth/userpass"
 	"github.com/hashicorp/vault/audit"
 	"github.com/hashicorp/vault/builtin/credential/userpass"
 	"github.com/hashicorp/vault/builtin/logical/totp"
+	"github.com/hashicorp/vault/helper/testhelpers"
+	"github.com/hashicorp/vault/helper/testhelpers/corehelpers"
 	vaulthttp "github.com/hashicorp/vault/http"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/vault"
@@ -48,7 +51,7 @@ func doTwoPhaseLogin(t *testing.T, client *api.Client, totpCodePath, methodID, u
 }
 
 func TestLoginMfaGenerateTOTPTestAuditIncluded(t *testing.T) {
-	var noop *vault.NoopAudit
+	noop := corehelpers.TestNoopAudit(t, nil)
 
 	cluster := vault.NewTestCluster(t, &vault.CoreConfig{
 		CredentialBackends: map[string]logical.Factory{
@@ -58,10 +61,7 @@ func TestLoginMfaGenerateTOTPTestAuditIncluded(t *testing.T) {
 			"totp": totp.Factory,
 		},
 		AuditBackends: map[string]audit.Factory{
-			"noop": func(ctx context.Context, config *audit.BackendConfig) (audit.Backend, error) {
-				noop = &vault.NoopAudit{
-					Config: config,
-				}
+			"noop": func(ctx context.Context, config *audit.BackendConfig, _ bool, _ audit.HeaderFormatter) (audit.Backend, error) {
 				return noop, nil
 			},
 		},

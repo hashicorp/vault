@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package command
 
 import (
@@ -499,7 +502,7 @@ func TestLoginMFASinglePhase(t *testing.T) {
 		if storedToken == "" {
 			t.Fatal("expected non-empty stored token")
 		}
-		output = ui.OutputWriter.String()
+		output := ui.OutputWriter.String()
 		if !strings.Contains(output, storedToken) {
 			t.Fatalf("expected stored token: %q, got: %q", storedToken, output)
 		}
@@ -534,7 +537,7 @@ func TestLoginMFATwoPhase(t *testing.T) {
 	}
 
 	expected := methodID
-	output = ui.OutputWriter.String()
+	output := ui.OutputWriter.String()
 	if !strings.Contains(output, expected) {
 		t.Fatalf("expected stored token: %q, got: %q", expected, output)
 	}
@@ -580,7 +583,7 @@ func TestLoginMFATwoPhaseNonInteractiveMethodName(t *testing.T) {
 		t.Errorf("expected %d to be %d", code, exp)
 	}
 
-	output = ui.OutputWriter.String()
+	output := ui.OutputWriter.String()
 
 	reqIdReg := regexp.MustCompile(`mfa_request_id\s+([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})\s+mfa_constraint`)
 	reqIDRaw := reqIdReg.FindAllStringSubmatch(output, -1)

@@ -1,11 +1,14 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package node_status
 
 import (
 	"context"
-	"fmt"
 
 	"github.com/hashicorp/hcp-link/pkg/nodestatus"
 	"github.com/hashicorp/vault/helper/logging"
+	"github.com/hashicorp/vault/vault"
 	"github.com/hashicorp/vault/vault/hcp_link/internal"
 	"github.com/hashicorp/vault/vault/hcp_link/proto/node_status"
 	"github.com/shirou/gopsutil/v3/host"
@@ -24,7 +27,7 @@ type NodeStatusReporter struct {
 func (c *NodeStatusReporter) GetNodeStatus(ctx context.Context) (retStatus nodestatus.NodeStatus, retErr error) {
 	defer func() {
 		if r := recover(); r != nil {
-			retErr = fmt.Errorf("internal server error")
+			retErr = vault.ErrInternalError
 		}
 	}()
 
@@ -74,7 +77,7 @@ func (c *NodeStatusReporter) GetNodeStatus(ctx context.Context) (retStatus nodes
 		ReplicationState:       replState.StateStrings(),
 		Hostname:               hostInfo.Hostname,
 		ListenerAddresses:      listenerAddresses,
-		OperatingSystem:        hostInfo.OS,
+		OperatingSystem:        hostInfo.Platform,
 		OperatingSystemVersion: hostInfo.PlatformVersion,
 		LogLevel:               node_status.LogLevel(logLevel),
 		ActiveTime:             timestamppb.New(c.NodeStatusGetter.ActiveTime()),

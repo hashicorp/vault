@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package agent
 
 import (
@@ -6,14 +9,14 @@ import (
 	"crypto/x509"
 	"encoding/json"
 	"encoding/pem"
-	"io/ioutil"
 	"os"
 	"testing"
 	"time"
 
+	"github.com/go-jose/go-jose/v3"
+	"github.com/go-jose/go-jose/v3/jwt"
+
 	"github.com/hashicorp/vault/sdk/logical"
-	jose "gopkg.in/square/go-jose.v2"
-	"gopkg.in/square/go-jose.v2/jwt"
 )
 
 const envVarRunAccTests = "VAULT_ACC"
@@ -61,7 +64,7 @@ func GetTestJWT(t *testing.T) (string, *ecdsa.PrivateKey) {
 }
 
 func readToken(fileName string) (*logical.HTTPWrapInfo, error) {
-	b, err := ioutil.ReadFile(fileName)
+	b, err := os.ReadFile(fileName)
 	if err != nil {
 		return nil, err
 	}

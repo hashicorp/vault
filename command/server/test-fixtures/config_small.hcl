@@ -1,3 +1,6 @@
+# Copyright (c) HashiCorp, Inc.
+# SPDX-License-Identifier: BUSL-1.1
+
 storage "raft" {
   path = "/path/to/raft"
   node_id = "raft_node_1"

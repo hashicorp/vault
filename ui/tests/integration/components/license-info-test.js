@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import { addMinutes } from 'date-fns';
 import { module, test } from 'qunit';
 import { setupRenderingTest } from 'ember-qunit';

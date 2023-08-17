@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import AdapterError from '@ember-data/adapter/error';
 import { inject as service } from '@ember/service';
 import Component from '@ember/component';
@@ -48,16 +53,6 @@ export default Component.extend({
   ),
   init() {
     this._super(...arguments);
-    this.model.fieldGroups.forEach((element) => {
-      // overwriting the helpText for Token Polices.
-      // HelpText from the backend says add a comma separated list, which works on the CLI but not here on the UI.
-      // This effects TLS Certificates, Userpass, and Kubernetes. https://github.com/hashicorp/vault/issues/10346
-      if (element.Tokens) {
-        element.Tokens.find((attr) => attr.name === 'tokenPolicies').options.helpText =
-          'Add policies that will apply to the generated token for this user. One policy per row.';
-      }
-    });
-
     if (this.mode === 'edit') {
       // For validation to work in edit mode,
       // reconstruct the model values from field group

@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import Component from '@glimmer/component';
 import { action } from '@ember/object';
 import { encodePath } from 'vault/utils/path-encoding-helpers';

@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import { inject as service } from '@ember/service';
 import { computed } from '@ember/object';
 import { reject } from 'rsvp';
@@ -5,6 +10,7 @@ import Route from '@ember/routing/route';
 import { task, timeout } from 'ember-concurrency';
 import Ember from 'ember';
 import getStorage from '../../lib/token-storage';
+import localStorage from 'vault/lib/local-storage';
 import ClusterRoute from 'vault/mixins/cluster-route';
 import ModelBoundaryRoute from 'vault/mixins/model-boundary-route';
 
@@ -82,6 +88,9 @@ export default Route.extend(ModelBoundaryRoute, ClusterRoute, {
   },
 
   model(params) {
+    // if a user's browser settings block localStorage they will be unable to use Vault. The method will throw the error and the rest of the application will not load.
+    localStorage.isLocalStorageSupported();
+
     const id = this.getClusterId(params);
     return this.store.findRecord('cluster', id);
   },
@@ -129,19 +138,6 @@ export default Route.extend(ModelBoundaryRoute, ClusterRoute, {
         this.refresh();
       }
       return true;
-    },
-    loading(transition) {
-      const isSameRoute = transition.from?.name === transition.to?.name;
-      if (isSameRoute || Ember.testing) {
-        return;
-      }
-      // eslint-disable-next-line ember/no-controller-access-in-routes
-      const controller = this.controllerFor('vault.cluster');
-      controller.set('currentlyLoading', true);
-
-      transition.finally(function () {
-        controller.set('currentlyLoading', false);
-      });
     },
   },
 });

@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import { assert } from '@ember/debug';
 import { encodePath } from 'vault/utils/path-encoding-helpers';
 import ApplicationAdapter from '../application';
@@ -6,8 +11,10 @@ export default class PkiActionAdapter extends ApplicationAdapter {
   namespace = 'v1';
 
   urlForCreateRecord(modelName, snapshot) {
-    const { backend, type } = snapshot.record;
-    const { actionType, useIssuer } = snapshot.adapterOptions;
+    const { type } = snapshot.record;
+    const { actionType, useIssuer, issuerRef, mount } = snapshot.adapterOptions;
+    // if the backend mount is passed, we want that to override the URL's mount path
+    const backend = mount || snapshot.record.backend;
     if (!backend || !actionType) {
       throw new Error('URL for create record is missing required attributes');
     }
@@ -21,8 +28,12 @@ export default class PkiActionAdapter extends ApplicationAdapter {
         return useIssuer
           ? `${baseUrl}/issuers/generate/intermediate/${type}`
           : `${baseUrl}/intermediate/generate/${type}`;
+      case 'sign-intermediate':
+        return `${baseUrl}/issuer/${encodePath(issuerRef)}/sign-intermediate`;
+      case 'rotate-root':
+        return `${baseUrl}/root/rotate/${type}`;
       default:
-        assert('actionType must be one of import, generate-root, or generate-csr');
+        assert('actionType must be one of import, generate-root, generate-csr or sign-intermediate');
     }
   }
 
