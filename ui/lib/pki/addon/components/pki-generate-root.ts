@@ -9,7 +9,7 @@ import { service } from '@ember/service';
 import { waitFor } from '@ember/test-waiters';
 import { tracked } from '@glimmer/tracking';
 import { task } from 'ember-concurrency';
-import errorMessage from 'vault/utils/error-message';
+import errorMessage from 'core/utils/error-message';
 import type PkiActionModel from 'vault/models/pki/action';
 import type PkiConfigUrlsModel from 'vault/models/pki/config/urls';
 import type FlashMessageService from 'vault/services/flash-messages';

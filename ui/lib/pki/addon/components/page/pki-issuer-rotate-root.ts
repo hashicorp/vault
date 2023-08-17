@@ -4,7 +4,7 @@ import { tracked } from '@glimmer/tracking';
 import { action } from '@ember/object';
 import { waitFor } from '@ember/test-waiters';
 import { task } from 'ember-concurrency';
-import errorMessage from 'vault/utils/error-message';
+import errorMessage from 'core/utils/error-message';
 import type Store from '@ember-data/store';
 import type Router from '@ember/routing/router';
 import type FlashMessageService from 'vault/services/flash-messages';

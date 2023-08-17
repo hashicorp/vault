@@ -4,7 +4,7 @@
  */
 
 import Component from '@glimmer/component';
-import errorMessage from 'vault/utils/error-message';
+import errorMessage from 'core/utils/error-message';
 import { action } from '@ember/object';
 import { inject as service } from '@ember/service';
 import { task } from 'ember-concurrency';

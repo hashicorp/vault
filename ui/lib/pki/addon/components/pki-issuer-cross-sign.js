@@ -8,7 +8,7 @@ import { action } from '@ember/object';
 import { task } from 'ember-concurrency';
 import { inject as service } from '@ember/service';
 import { tracked } from '@glimmer/tracking';
-import errorMessage from 'vault/utils/error-message';
+import errorMessage from 'core/utils/error-message';
 import { waitFor } from '@ember/test-waiters';
 import { parseCertificate } from 'vault/utils/parse-pki-cert';
 /**

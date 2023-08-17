@@ -10,7 +10,7 @@ import { action } from '@ember/object';
 import { task } from 'ember-concurrency';
 import { waitFor } from '@ember/test-waiters';
 import { getRules } from '../../../utils/generated-role-rules';
-import errorMessage from 'vault/utils/error-message';
+import errorMessage from 'core/utils/error-message';
 
 /**
  * @module CreateAndEditRolePage

@@ -10,7 +10,7 @@ import { action } from '@ember/object';
 import { task } from 'ember-concurrency';
 import { waitFor } from '@ember/test-waiters';
 import { add } from 'date-fns';
-import errorMessage from 'vault/utils/error-message';
+import errorMessage from 'core/utils/error-message';
 import timestamp from 'vault/utils/timestamp';
 /**
  * @module Credentials

@@ -7,7 +7,7 @@ import Component from '@glimmer/component';
 import { inject as service } from '@ember/service';
 import { action } from '@ember/object';
 import { getOwner } from '@ember/application';
-import errorMessage from 'vault/utils/error-message';
+import errorMessage from 'core/utils/error-message';
 
 /**
  * @module Roles

@@ -9,7 +9,7 @@ import { tracked } from '@glimmer/tracking';
 import { task } from 'ember-concurrency';
 import { inject as service } from '@ember/service';
 import { pathIsFromDirectory } from 'kv/utils/kv-breadcrumbs';
-import errorMessage from 'vault/utils/error-message';
+import errorMessage from 'core/utils/error-message';
 
 /**
  * @module KvSecretCreate is used for creating the initial version of a secret

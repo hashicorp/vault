@@ -10,7 +10,7 @@ import { tracked } from '@glimmer/tracking';
 import { waitFor } from '@ember/test-waiters';
 import { inject as service } from '@ember/service';
 import trimRight from 'vault/utils/trim-right';
-import errorMessage from 'vault/utils/error-message';
+import errorMessage from 'core/utils/error-message';
 import type PkiKeyModel from 'vault/models/pki/key';
 import type FlashMessageService from 'vault/services/flash-messages';
 

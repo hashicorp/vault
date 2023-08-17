@@ -9,7 +9,7 @@ import { tracked } from '@glimmer/tracking';
 import { action } from '@ember/object';
 import { task } from 'ember-concurrency';
 import { waitFor } from '@ember/test-waiters';
-import errorMessage from 'vault/utils/error-message';
+import errorMessage from 'core/utils/error-message';
 
 /**
  * @module Configure

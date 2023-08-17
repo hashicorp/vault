@@ -8,7 +8,7 @@ import { inject as service } from '@ember/service';
 import { task } from 'ember-concurrency';
 import { tracked } from '@glimmer/tracking';
 import { waitFor } from '@ember/test-waiters';
-import errorMessage from 'vault/utils/error-message';
+import errorMessage from 'core/utils/error-message';
 import type FlashMessageService from 'vault/services/flash-messages';
 import type PkiKeyModel from 'vault/models/pki/key';
 import type { ValidationMap } from 'vault/app-types';

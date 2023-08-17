@@ -8,7 +8,7 @@ import { action } from '@ember/object';
 import { task } from 'ember-concurrency';
 import { service } from '@ember/service';
 import { tracked } from '@glimmer/tracking';
-import errorMessage from 'vault/utils/error-message';
+import errorMessage from 'core/utils/error-message';
 import type Router from '@ember/routing/router';
 import type Store from '@ember-data/store';
 import type FlashMessageService from 'vault/services/flash-messages';

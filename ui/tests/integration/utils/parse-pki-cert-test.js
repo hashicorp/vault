@@ -10,7 +10,7 @@ import * as asn1js from 'asn1js';
 import { fromBase64, stringToArrayBuffer } from 'pvutils';
 import { Certificate } from 'pkijs';
 import { addHours, fromUnixTime, isSameDay } from 'date-fns';
-import errorMessage from 'vault/utils/error-message';
+import errorMessage from 'core/utils/error-message';
 import { OTHER_OIDs, SAN_TYPES } from 'vault/utils/parse-pki-cert-oids';
 import {
   certWithoutCN,

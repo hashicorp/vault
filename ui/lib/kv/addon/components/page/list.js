@@ -9,7 +9,7 @@ import { action } from '@ember/object';
 import { tracked } from '@glimmer/tracking';
 import { getOwner } from '@ember/application';
 import { ancestorKeysForKey } from 'core/utils/key-utils';
-import errorMessage from 'vault/utils/error-message';
+import errorMessage from 'core/utils/error-message';
 
 /**
  * @module List
