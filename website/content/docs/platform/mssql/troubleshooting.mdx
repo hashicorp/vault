@@ -4,9 +4,9 @@ page_title: Troubleshoot the Vault EKM Provider
 description: Troubleshooting steps for the Vault EKM Provider for Microsoft SQL Server.
 ---
 
-# Troubleshooting the Vault EKM Provider
+# Troubleshooting the Vault EKM provider
 
-## Check Windows Event Logs
+## Check windows event logs
 
 Logs from the Vault EKM provider will appear in Windows Event Viewer under
 "Windows Logs" > "Application" with source "Transit Vault EKM Provider".
@@ -19,11 +19,37 @@ your issue, you can [enable trace logging](/vault/docs/platform/mssql/configurat
 Restart SQL Server for the config change to take effect, and you should see more
 detailed logs in the same section of Windows Event Viewer.
 
-## Error Codes
+## Check SQL server error logs
+
+If the Vault EKM provider is not generating event logs, you may find some
+information in the SQL Server's error logs. Check for an event with ID
+17111 from "MSSQLSERVER" which details the file location of the error logs,
+for example "Logging SQL Server messages in file
+'C:\Program Files\Microsoft SQL Server\MSSQL15.MSSQLSERVER\MSSQL\Log\ERRORLOG'."
+
+## Authenticode error
+
+When running the `CREATE CRYPTOGRAPHIC PROVIDER` SQL query, if you get an error
+"Cannot load library", you may see "Failed to verify Authenticode signature on
+DLL" in the error logs. This can normally be remediated by updating the CA trust
+store to include the latest Digicert certificates. Run the following to import
+the required certificates into the Root trust store:
+
+```powershell
+New-Item -ItemType Directory -Path certs
+certutil -syncwithWU .\certs\
+extrac32 -L .\certs\ .\certs\authrootstl.cab
+certutil -f -ent -AddStore Root .\certs\authroot.stl
+certutil -f -ent -AddStore Root .\certs\0563b8630d62d75abbc8ab1e4bdfb5a899b24d43.crt
+certutil -f -ent -AddStore Root .\certs\ddfb16cd4931c973a2037d3fc83a4d7d775d05e4.crt
+Remove-Item -Recurse .\certs\
+```
+
+## Error codes
 
 During installation, the EKM provider registers a manifest of coded event logs to aid debugging. You may see the following error codes during operation.
 
-### 2050 License Error
+### 2050 license error
 
 The EKM provider was unable to verify that Vault has the correct license features. This
 could be due to:

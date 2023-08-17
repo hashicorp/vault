@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package vault
 
 import (
@@ -298,6 +301,12 @@ func (c *Core) emitMetricsActiveNode(stopCh chan struct{}) {
 			c.activeEntityGaugeCollector,
 			"",
 		},
+		{
+			[]string{"policy", "configured", "count"},
+			[]metrics.Label{{"gauge", "number_policies_by_type"}},
+			c.configuredPoliciesGaugeCollector,
+			"",
+		},
 	}
 
 	// Disable collection if configured, or if we're a performance standby
@@ -561,4 +570,42 @@ func (c *Core) inFlightReqGaugeMetric() {
 	totalInFlightReq := c.inFlightReqData.InFlightReqCount.Load()
 	// Adding a gauge metric to capture total number of inflight requests
 	c.metricSink.SetGaugeWithLabels([]string{"core", "in_flight_requests"}, float32(totalInFlightReq), nil)
+}
+
+// configuredPoliciesGaugeCollector is used to collect gauge label values for the `vault.policy.configured.count` metric
+func (c *Core) configuredPoliciesGaugeCollector(ctx context.Context) ([]metricsutil.GaugeLabelValues, error) {
+	if c.policyStore == nil {
+		return []metricsutil.GaugeLabelValues{}, nil
+	}
+
+	c.stateLock.RLock()
+	policyStore := c.policyStore
+	c.stateLock.RUnlock()
+
+	ctx = namespace.RootContext(ctx)
+	namespaces := c.collectNamespaces()
+
+	policyTypes := []PolicyType{
+		PolicyTypeACL,
+		PolicyTypeRGP,
+		PolicyTypeEGP,
+	}
+	var values []metricsutil.GaugeLabelValues
+
+	for _, pt := range policyTypes {
+		policies, err := policyStore.policiesByNamespaces(ctx, pt, namespaces)
+		if err != nil {
+			return []metricsutil.GaugeLabelValues{}, err
+		}
+
+		v := metricsutil.GaugeLabelValues{}
+		v.Labels = []metricsutil.Label{{
+			"policy_type",
+			pt.String(),
+		}}
+		v.Value = float32(len(policies))
+		values = append(values, v)
+	}
+
+	return values, nil
 }

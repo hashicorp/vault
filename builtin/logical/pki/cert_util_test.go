@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package pki
 
 import (
@@ -169,6 +172,24 @@ func TestPki_PermitFQDNs(t *testing.T) {
 				},
 			},
 			expectedDnsNames: []string{"Example.Net", "eXaMPLe.COM"},
+			expectedEmails:   []string{},
+		},
+		"case insensitivity subdomain validation": {
+			input: &inputBundle{
+				apiData: &framework.FieldData{
+					Schema: fields,
+					Raw: map[string]interface{}{
+						"common_name": "SUB.EXAMPLE.COM",
+						"ttl":         3600,
+					},
+				},
+				role: &roleEntry{
+					AllowedDomains:   []string{"example.com", "*.Example.com"},
+					AllowGlobDomains: true,
+					MaxTTL:           3600,
+				},
+			},
+			expectedDnsNames: []string{"SUB.EXAMPLE.COM"},
 			expectedEmails:   []string{},
 		},
 		"case email as AllowedDomain with bare domains": {

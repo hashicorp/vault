@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 $dark-gray: #535f73;
 
 .calendar-content {
@@ -14,27 +19,6 @@ $dark-gray: #535f73;
 }
 .calendar-title {
   padding: $size-10 $size-8;
-}
-.calendar-widget-dropdown {
-  @extend .button;
-  @extend .is-ghost;
-  @extend .has-icon-right;
-  border: 0;
-  color: $black;
-  transition: background-color $speed;
-  width: 150px;
-
-  &:hover {
-    background-color: $ui-gray-100;
-    border: 0;
-    color: $blue;
-  }
-
-  &.is-active {
-    background-color: $ui-gray-100;
-    border: 0;
-    color: $blue;
-  }
 }
 
 .select-year {
@@ -62,18 +46,18 @@ $dark-gray: #535f73;
 
   > button {
     &.is-month-list {
-      background-color: white;
+      background-color: $white;
       color: black;
       text-align: center;
-      border: 1px solid $ui-gray-200;
-      border-radius: 2px;
+      border: $light-border;
+      border-radius: $radius;
     }
     &.is-current-month {
       border: 1px solid $ui-gray-900;
     }
     &:hover {
       background-color: lighten($dark-gray, 30%);
-      color: white;
+      color: $white;
       text-align: center;
       cursor: pointer;
     }
@@ -99,7 +83,7 @@ $dark-gray: #535f73;
   grid-template-rows: 0.7fr 3fr;
   box-shadow: $box-shadow, $box-shadow-middle;
   background-color: white;
-  border-radius: 2px;
+  border-radius: $radius;
 }
 
 .calendar-widget-grid {
@@ -113,12 +97,13 @@ $dark-gray: #535f73;
 // for modal-dialog tooltips
 .calendar-tooltip {
   background-color: $ui-gray-700;
-  color: white;
+  color: $white;
   font-size: $size-8;
   padding: $size-9;
   border-radius: $radius-large;
   width: 141px;
 }
+
 .ember-modal-dialog {
   z-index: 1000;
 }

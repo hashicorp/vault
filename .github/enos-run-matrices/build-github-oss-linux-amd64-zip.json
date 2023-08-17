@@ -2,7 +2,7 @@
   "include": [
     {
       "scenario": "smoke backend:raft consul_version:1.14.2 distro:ubuntu seal:shamir arch:amd64 artifact_source:crt edition:oss artifact_type:bundle",
-      "aws_region": "us-west-1",
+      "aws_region": "us-east-1",
       "test_group": 3
     },
     {
@@ -12,7 +12,7 @@
     },
     {
       "scenario": "smoke backend:consul consul_version:1.14.2 distro:ubuntu seal:shamir arch:amd64 artifact_source:crt edition:oss artifact_type:bundle",
-      "aws_region": "us-west-1",
+      "aws_region": "us-east-1",
       "test_group": 1
     },
     {
@@ -22,7 +22,7 @@
     },
     {
       "scenario": "smoke backend:consul consul_version:1.12.7 distro:ubuntu seal:shamir arch:amd64 artifact_source:crt edition:oss artifact_type:bundle",
-      "aws_region": "us-west-1",
+      "aws_region": "us-east-1",
       "test_group": 2
     },
     {
@@ -32,7 +32,7 @@
     },
     {
       "scenario": "upgrade backend:raft consul_version:1.14.2 distro:ubuntu seal:shamir arch:amd64 artifact_source:crt edition:oss artifact_type:bundle",
-      "aws_region": "us-west-1",
+      "aws_region": "us-east-1",
       "test_group": 5
     },
     {
@@ -42,7 +42,7 @@
     },
     {
       "scenario": "upgrade backend:consul consul_version:1.13.4 distro:ubuntu seal:shamir arch:amd64 artifact_source:crt edition:oss artifact_type:bundle",
-      "aws_region": "us-west-1",
+      "aws_region": "us-east-1",
       "test_group": 2
     },
     {

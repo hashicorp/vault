@@ -1,13 +1,13 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import Route from '@ember/routing/route';
 import { inject as service } from '@ember/service';
 
 export default class VaultClusterSettingsMountSecretBackendRoute extends Route {
   @service store;
-
-  beforeModel() {
-    // Unload to prevent naming collisions when we mount a new engine
-    this.store.unloadAll('secret-engine');
-  }
 
   model() {
     const secretEngine = this.store.createRecord('secret-engine');

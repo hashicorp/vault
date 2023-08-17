@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package vault
 
 import (
@@ -5,12 +8,15 @@ import (
 	"time"
 
 	"github.com/hashicorp/go-uuid"
+	"github.com/hashicorp/vault/helper/experiments"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
 func TestCanSendEventsFromBuiltinPlugin(t *testing.T) {
-	c, _, _ := TestCoreUnsealed(t)
+	c, _, _ := TestCoreUnsealedWithConfig(t, &CoreConfig{
+		Experiments: []string{experiments.VaultExperimentEventsAlpha1},
+	})
 
 	ctx := namespace.RootContext(nil)
 
@@ -19,7 +25,7 @@ func TestCanSendEventsFromBuiltinPlugin(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	ch, cancel, err := c.events.Subscribe(ctx, namespace.RootNamespace, logical.EventType(eventType))
+	ch, cancel, err := c.events.Subscribe(ctx, namespace.RootNamespace, eventType)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -37,7 +43,8 @@ func TestCanSendEventsFromBuiltinPlugin(t *testing.T) {
 
 	// check that the event is routed to the subscription
 	select {
-	case received := <-ch:
+	case receivedEvent := <-ch:
+		received := receivedEvent.Payload.(*logical.EventReceived)
 		if event.Id != received.Event.Id {
 			t.Errorf("Got wrong event: %+v, expected %+v", received, event)
 		}

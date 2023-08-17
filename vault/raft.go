@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package vault
 
 import (
@@ -356,7 +359,6 @@ func (c *Core) startPeriodicRaftTLSRotate(ctx context.Context) error {
 
 	c.raftTLSRotationStopCh = make(chan struct{})
 	logger := c.logger.Named("raft")
-	c.AddLogger(logger)
 
 	if c.isRaftHAOnly() {
 		return c.raftTLSRotateDirect(ctx, logger, c.raftTLSRotationStopCh)
@@ -1236,6 +1238,11 @@ func (c *Core) raftLeaderInfo(leaderInfo *raft.LeaderJoinInfo, disco *discover.D
 	return ret, nil
 }
 
+// NewDelegateForCore creates a raft.Delegate for the specified core using its backend.
+func NewDelegateForCore(c *Core) *raft.Delegate {
+	return raft.NewDelegate(c.getRaftBackend())
+}
+
 // getRaftBackend returns the RaftBackend from the HA or physical backend,
 // in that order of preference, or nil if not of type RaftBackend.
 func (c *Core) getRaftBackend() *raft.RaftBackend {
@@ -1260,7 +1267,7 @@ func (c *Core) isRaftHAOnly() bool {
 	return isRaftHA && !isRaftStorage
 }
 
-func (c *Core) joinRaftSendAnswer(ctx context.Context, sealAccess *seal.Access, raftInfo *raftInformation) error {
+func (c *Core) joinRaftSendAnswer(ctx context.Context, sealAccess seal.Access, raftInfo *raftInformation) error {
 	if raftInfo.challenge == nil {
 		return errors.New("raft challenge is nil")
 	}

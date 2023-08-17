@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package pki
 
 import (
@@ -13,6 +16,7 @@ const (
 	keyIdParam     = "key_id"
 	keyTypeParam   = "key_type"
 	keyBitsParam   = "key_bits"
+	skidParam      = "subject_key_id"
 )
 
 // addIssueAndSignCommonFields adds fields common to both CA and non-CA issuing
@@ -488,6 +492,23 @@ this removes ALL issuers within the mount (and is thus not desirable
 in most operational scenarios).`,
 	}
 
+	fields["tidy_acme"] = &framework.FieldSchema{
+		Type: framework.TypeBool,
+		Description: `Set to true to enable tidying ACME accounts,
+orders and authorizations.  ACME orders are tidied (deleted) 
+safety_buffer after the certificate associated with them expires,
+or after the order and relevant authorizations have expired if no 
+certificate was produced.  Authorizations are tidied with the 
+corresponding order.
+
+When a valid ACME Account is at least acme_account_safety_buffer
+old, and has no remaining orders associated with it, the account is
+marked as revoked.  After another acme_account_safety_buffer has 
+passed from the revocation or deactivation date, a revoked or 
+deactivated ACME account is deleted.`,
+		Default: false,
+	}
+
 	fields["safety_buffer"] = &framework.FieldSchema{
 		Type: framework.TypeDurationSecond,
 		Description: `The amount of extra time that must have passed
@@ -506,6 +527,14 @@ Defaults to 8760 hours (1 year).`,
 		Default: int(defaultTidyConfig.IssuerSafetyBuffer / time.Second), // TypeDurationSecond currently requires defaults to be int
 	}
 
+	fields["acme_account_safety_buffer"] = &framework.FieldSchema{
+		Type: framework.TypeDurationSecond,
+		Description: `The amount of time that must pass after creation
+that an account with no orders is marked revoked, and the amount of time
+after being marked revoked or deactivated.`,
+		Default: int(defaultTidyConfig.AcmeAccountSafetyBuffer / time.Second), // TypeDurationSecond currently requires defaults to be int
+	}
+
 	fields["pause_duration"] = &framework.FieldSchema{
 		Type: framework.TypeString,
 		Description: `The amount of time to wait between processing
@@ -516,23 +545,6 @@ stored in memory during the entire tidy operation, but resources to
 read/process/update existing entries will be spread out over a
 greater period of time. By default this is zero seconds.`,
 		Default: "0s",
-	}
-
-	fields["maintain_stored_certificate_counts"] = &framework.FieldSchema{
-		Type: framework.TypeBool,
-		Description: `This configures whether stored certificates 
-are counted upon initialization of the backend, and whether during 
-normal operation, a running count of certificates stored is maintained.`,
-		Default: false,
-	}
-
-	fields["publish_stored_certificate_count_metrics"] = &framework.FieldSchema{
-		Type: framework.TypeBool,
-		Description: `This configures whether the stored certificate 
-count is published to the metrics consumer.  It does not affect if the
-stored certificate count is maintained, and if maintained, it will be
-available on the tidy-status endpoint.`,
-		Default: false,
 	}
 
 	fields["tidy_revocation_queue"] = &framework.FieldSchema{
@@ -558,6 +570,75 @@ especially if the cluster is offline.`,
 		Description: `Set to true to enable tidying up
 the cross-cluster revoked certificate store. Only runs on the active
 primary node.`,
+	}
+
+	return fields
+}
+
+// generate the entire list of schema fields we need for CSR sign verbatim, this is also
+// leveraged by ACME internally.
+func getCsrSignVerbatimSchemaFields() map[string]*framework.FieldSchema {
+	fields := map[string]*framework.FieldSchema{}
+	fields = addNonCACommonFields(fields)
+	fields = addSignVerbatimRoleFields(fields)
+
+	fields["csr"] = &framework.FieldSchema{
+		Type:    framework.TypeString,
+		Default: "",
+		Description: `PEM-format CSR to be signed. Values will be
+taken verbatim from the CSR, except for
+basic constraints.`,
+	}
+
+	return fields
+}
+
+// addSignVerbatimRoleFields provides the fields and defaults to be used by anything that is building up the fields
+// and their corresponding default values when generating/using a sign-verbatim type role such as buildSignVerbatimRole.
+func addSignVerbatimRoleFields(fields map[string]*framework.FieldSchema) map[string]*framework.FieldSchema {
+	fields["key_usage"] = &framework.FieldSchema{
+		Type:    framework.TypeCommaStringSlice,
+		Default: []string{"DigitalSignature", "KeyAgreement", "KeyEncipherment"},
+		Description: `A comma-separated string or list of key usages (not extended
+key usages). Valid values can be found at
+https://golang.org/pkg/crypto/x509/#KeyUsage
+-- simply drop the "KeyUsage" part of the name.
+To remove all key usages from being set, set
+this value to an empty list.`,
+	}
+
+	fields["ext_key_usage"] = &framework.FieldSchema{
+		Type:    framework.TypeCommaStringSlice,
+		Default: []string{},
+		Description: `A comma-separated string or list of extended key usages. Valid values can be found at
+https://golang.org/pkg/crypto/x509/#ExtKeyUsage
+-- simply drop the "ExtKeyUsage" part of the name.
+To remove all key usages from being set, set
+this value to an empty list.`,
+	}
+
+	fields["ext_key_usage_oids"] = &framework.FieldSchema{
+		Type:        framework.TypeCommaStringSlice,
+		Description: `A comma-separated string or list of extended key usage oids.`,
+	}
+
+	fields["signature_bits"] = &framework.FieldSchema{
+		Type:    framework.TypeInt,
+		Default: 0,
+		Description: `The number of bits to use in the signature
+algorithm; accepts 256 for SHA-2-256, 384 for SHA-2-384, and 512 for
+SHA-2-512. Defaults to 0 to automatically detect based on key length
+(SHA-2-256 for RSA keys, and matching the curve size for NIST P-Curves).`,
+		DisplayAttrs: &framework.DisplayAttributes{
+			Value: 0,
+		},
+	}
+
+	fields["use_pss"] = &framework.FieldSchema{
+		Type:    framework.TypeBool,
+		Default: false,
+		Description: `Whether or not to use PSS signatures when using a
+RSA key-type issuer. Defaults to false.`,
 	}
 
 	return fields

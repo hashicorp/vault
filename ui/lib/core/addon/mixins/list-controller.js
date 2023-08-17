@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import { computed } from '@ember/object';
 import Mixin from '@ember/object/mixin';
 import escapeStringRegexp from 'escape-string-regexp';

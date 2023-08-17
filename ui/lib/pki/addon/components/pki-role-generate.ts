@@ -1,18 +1,24 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import Component from '@glimmer/component';
 import { action } from '@ember/object';
 import { task } from 'ember-concurrency';
 import { service } from '@ember/service';
-import Router from '@ember/routing/router';
-import Store from '@ember-data/store';
 import { tracked } from '@glimmer/tracking';
 import errorMessage from 'vault/utils/error-message';
-import FlashMessageService from 'vault/services/flash-messages';
-import DownloadService from 'vault/services/download';
-import PkiCertificateGenerateModel from 'vault/models/pki/certificate/generate';
+import type Router from '@ember/routing/router';
+import type Store from '@ember-data/store';
+import type FlashMessageService from 'vault/services/flash-messages';
+import type DownloadService from 'vault/services/download';
+import type PkiCertificateGenerateModel from 'vault/models/pki/certificate/generate';
+import type PkiCertificateSignModel from 'vault/models/pki/certificate/sign';
 
 interface Args {
   onSuccess: CallableFunction;
-  model: PkiCertificateGenerateModel;
+  model: PkiCertificateGenerateModel | PkiCertificateSignModel;
   type: string;
 }
 
@@ -24,7 +30,6 @@ export default class PkiRoleGenerate extends Component<Args> {
 
   @tracked errorBanner = '';
   @tracked invalidFormAlert = '';
-  @tracked modelValidations = null;
 
   get verb() {
     return this.args.type === 'sign' ? 'sign' : 'generate';
@@ -35,18 +40,12 @@ export default class PkiRoleGenerate extends Component<Args> {
     evt.preventDefault();
     this.errorBanner = '';
     const { model, onSuccess } = this.args;
-    const { isValid, state, invalidFormMessage } = model.validate();
-
-    this.modelValidations = isValid ? null : state;
-    this.invalidFormAlert = invalidFormMessage;
-
-    if (!isValid) return;
-
     try {
       yield model.save();
       onSuccess();
     } catch (err) {
       this.errorBanner = errorMessage(err, `Could not ${this.verb} certificate. See Vault logs for details.`);
+      this.invalidFormAlert = 'There was an error submitting this form.';
     }
   }
 

@@ -39,6 +39,10 @@ $ vault audit disable file/
 Success! Disabled audit device (if it was enabled) at: file/
 ```
 
+~> Note: Once an audit device is disabled, you will no longer be able to HMAC values
+for comparison with entries in the audit logs. This is true even if you re-enable
+the audit device at the same path, as a new salt will be created for hashing.
+
 ## Usage
 
 ```text

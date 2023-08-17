@@ -6,7 +6,7 @@ description: |-
   metrics to upstream systems.
 ---
 
-# `telemetry` Stanza
+# `telemetry` stanza
 
 The `telemetry` stanza specifies various configurations for Vault to publish
 metrics to upstream systems. Available Vault metrics can be found in the
@@ -18,7 +18,7 @@ telemetry {
 }
 ```
 
-## `telemetry` Parameters
+## `telemetry` parameters
 
 Due to the number of configurable parameters to the `telemetry` stanza,
 parameters on this page are grouped by the telemetry provider.
@@ -36,6 +36,7 @@ The following options are available on all telemetry configurations.
 - `enable_hostname_label` `(bool: false)` - Specifies if all metric values should
   contain the `host` label with the local hostname. It is recommended to enable
   `disable_hostname` if this option is used.
+- `metrics_prefix` `(string: "vault")` - Specifies the prefix used for metric vaules. By default, metrics are prefixed with "vault".
 - `lease_metrics_epsilon` `(string: "1h")` - Specifies the size of the bucket used to measure future
   lease expiration. For example, for the default value of 1 hour, the `vault.expire.leases.by_expiration`
   metric will aggregate the total number of expiring leases for 1 hour buckets, starting from the current time.

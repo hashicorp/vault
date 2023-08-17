@@ -6,7 +6,7 @@ description: |-
   method.
 ---
 
-# Google Cloud Auth Method (API)
+# Google Cloud auth method (API)
 
 This is the API documentation for the Vault Google Cloud auth method. To learn
 more about the usage and operation, see the
@@ -81,7 +81,7 @@ to confirm signed JWTs passed in during login.
   The endpoint value provided for a given key has the form of `scheme://host:port`.
   The `scheme://` and `:port` portions of the endpoint value are optional.
 
-### Sample Payload
+### Sample payload
 
 ```json
 {
@@ -89,7 +89,7 @@ to confirm signed JWTs passed in during login.
 }
 ```
 
-### Sample Request
+### Sample request
 
 ```shell-session
 $ curl \
@@ -99,7 +99,7 @@ $ curl \
     http://127.0.0.1:8200/v1/auth/gcp/config
 ```
 
-## Read Config
+## Read config
 
 Returns the configuration, if any, including credentials.
 
@@ -107,7 +107,7 @@ Returns the configuration, if any, including credentials.
 | :----- | :----------------- |
 | `GET`  | `/auth/gcp/config` |
 
-### Sample Request
+### Sample request
 
 ```shell-session
 $ curl \
@@ -115,7 +115,7 @@ $ curl \
     http://127.0.0.1:8200/v1/auth/gcp/config
 ```
 
-### Sample Response
+### Sample response
 
 ```json
 {
@@ -128,7 +128,7 @@ $ curl \
 }
 ```
 
-## Create Role
+## Create/Update role
 
 Registers a role in the method. Role types have specific entities
 that can perform login operations against this endpoint. Constraints specific
@@ -164,7 +164,7 @@ entities attempting to login.
 
 @include 'tokenfields.mdx'
 
-#### `iam`-only Parameters
+#### `iam`-only parameters
 
 The following parameters are only valid when the role is of type `"iam"`:
 
@@ -179,7 +179,7 @@ The following parameters are only valid when the role is of type `"iam"`:
   allow GCE instances to authenticate by inferring service accounts from the
   GCE identity metadata token.
 
-#### `gce`-only Parameters
+#### `gce`-only parameters
 
 The following parameters are only valid when the role is of type `"gce"`:
 
@@ -201,7 +201,7 @@ The following parameters are only valid when the role is of type `"gce"`:
   GCP labels are not currently ACL'd, we recommend that this be used in
   conjunction with other restrictions.
 
-### Sample Payload
+### Sample payload
 
 Example `iam` role:
 
@@ -231,7 +231,7 @@ Example `gce` role:
 }
 ```
 
-### Sample Request
+### Sample request
 
 ```shell-session
 $ curl \
@@ -241,7 +241,7 @@ $ curl \
     http://127.0.0.1:8200/v1/auth/gcp/role/my-role
 ```
 
-## Edit Service Accounts on IAM Role
+## Edit service accounts on IAM role
 
 Edit service accounts for an existing IAM role in the method.
 This allows you to add or remove service accounts from the list of
@@ -262,7 +262,7 @@ service accounts on the role.
 - `remove` `(array: [])` - The list of service accounts to remove from the
   role's service accounts.
 
-### Sample Payload
+### Sample payload
 
 ```json
 {
@@ -271,7 +271,7 @@ service accounts on the role.
 }
 ```
 
-### Sample Request
+### Sample request
 
 ```shell-session
 $ curl \
@@ -281,7 +281,7 @@ $ curl \
     http://127.0.0.1:8200/v1/auth/gcp/role/my-role
 ```
 
-## Edit Labels on GCE Role
+## Edit labels on GCE role
 
 Edit labels for an existing GCE role in the backend. This allows you to add or
 remove labels (keys, values, or both) from the list of keys on the role.
@@ -302,7 +302,7 @@ remove labels (keys, values, or both) from the list of keys on the role.
   bound labels. If any of the specified keys do not exist, no error is returned
   (idempotent).
 
-### Sample Payload
+### Sample payload
 
 ```json
 {
@@ -311,7 +311,7 @@ remove labels (keys, values, or both) from the list of keys on the role.
 }
 ```
 
-### Sample Request
+### Sample request
 
 ```shell-session
 $ curl \
@@ -321,7 +321,7 @@ $ curl \
     http://127.0.0.1:8200/v1/auth/gcp/role/my-role
 ```
 
-## Read Role
+## Read role
 
 Returns the previously registered role configuration.
 
@@ -333,7 +333,7 @@ Returns the previously registered role configuration.
 
 - `name` `(string: <required>)` - The name of the role to read.
 
-### Sample Request
+### Sample request
 
 ```shell-session
 $ curl \
@@ -341,7 +341,7 @@ $ curl \
     http://127.0.0.1:8200/v1/auth/gcp/role/my-role
 ```
 
-### Sample Response
+### Sample response
 
 ```json
 {
@@ -364,7 +364,7 @@ $ curl \
 }
 ```
 
-## List Roles
+## List roles
 
 Lists all the roles that are registered with the plugin.
 
@@ -372,7 +372,7 @@ Lists all the roles that are registered with the plugin.
 | :----- | :---------------- |
 | `LIST` | `/auth/gcp/roles` |
 
-### Sample Request
+### Sample request
 
 ```shell-session
 $ curl \
@@ -381,7 +381,7 @@ $ curl \
     http://127.0.0.1:8200/v1/auth/gcp/roles
 ```
 
-### Sample Response
+### Sample response
 
 ```json
 {
@@ -391,7 +391,7 @@ $ curl \
 }
 ```
 
-## Delete Role
+## Delete role
 
 Deletes the previously registered role.
 
@@ -403,7 +403,7 @@ Deletes the previously registered role.
 
 - `role` `(string: <required>)` - The name of the role to delete.
 
-### Sample Request
+### Sample request
 
 ```shell-session
 $ curl \
@@ -423,7 +423,7 @@ role.
 | :----- | :---------------- |
 | `POST` | `/auth/gcp/login` |
 
-### Sample Payload
+### Sample payload
 
 - `role` `(string: <required>)` - The name of the role against which the login
   is being attempted.
@@ -435,7 +435,7 @@ role.
 
   - For `gce` type roles, this is an [identity metadata token][instance-token].
 
-### Sample Payload
+### Sample payload
 
 ```json
 {
@@ -444,7 +444,7 @@ role.
 }
 ```
 
-### Sample Request
+### Sample request
 
 ```shell-session
 $ curl \
@@ -453,7 +453,7 @@ $ curl \
     http://127.0.0.1:8200/v1/auth/gcp/login
 ```
 
-### Sample Response
+### Sample response
 
 ```json
 {

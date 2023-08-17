@@ -10,6 +10,9 @@ description: OIDC provider configuration for Keycloak
 1. Client Protocol: openid-connect
 1. Access Type: confidential
 1. Standard Flow Enabled: On
-1. Configure Valid Redirect URIs.
+1. Configure Root URL such as `http://vault.example.com`
+1. Configure Valid Redirect URIs such as
+    - `http://vault.example.com/ui/vault/auth/oidc/oidc/callback`
+    - `http://vault.example.com/oidc/oidc/callback`
 1. Save.
 1. Visit Credentials. Select Client ID and Secret and note the generated secret.

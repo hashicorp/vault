@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import apiPath from 'vault/utils/api-path';
 import { module, test } from 'qunit';
 

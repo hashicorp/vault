@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package approle
 
 import (
@@ -6,8 +9,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/hashicorp/vault/sdk/framework"
-	"github.com/hashicorp/vault/sdk/helper/testhelpers/schema"
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
@@ -16,11 +17,9 @@ func TestAppRole_BoundCIDRLogin(t *testing.T) {
 	var err error
 	b, s := createBackendWithStorage(t)
 
-	paths := []*framework.Path{pathLogin(b)}
-
 	// Create a role with secret ID binding disabled and only bound cidr list
 	// enabled
-	resp, err = b.HandleRequest(context.Background(), &logical.Request{
+	resp = b.requestNoErr(t, &logical.Request{
 		Path:      "role/testrole",
 		Operation: logical.CreateOperation,
 		Data: map[string]interface{}{
@@ -30,24 +29,18 @@ func TestAppRole_BoundCIDRLogin(t *testing.T) {
 		},
 		Storage: s,
 	})
-	if err != nil || (resp != nil && resp.IsError()) {
-		t.Fatalf("err:%v resp:%#v", err, resp)
-	}
 
 	// Read the role ID
-	resp, err = b.HandleRequest(context.Background(), &logical.Request{
+	resp = b.requestNoErr(t, &logical.Request{
 		Path:      "role/testrole/role-id",
 		Operation: logical.ReadOperation,
 		Storage:   s,
 	})
-	if err != nil || (resp != nil && resp.IsError()) {
-		t.Fatalf("err:%v resp:%#v", err, resp)
-	}
 
 	roleID := resp.Data["role_id"]
 
 	// Fill in the connection information and login with just the role ID
-	resp, err = b.HandleRequest(context.Background(), &logical.Request{
+	resp = b.requestNoErr(t, &logical.Request{
 		Path:      "login",
 		Operation: logical.UpdateOperation,
 		Data: map[string]interface{}{
@@ -56,9 +49,7 @@ func TestAppRole_BoundCIDRLogin(t *testing.T) {
 		Storage:    s,
 		Connection: &logical.Connection{RemoteAddr: "127.0.0.1"},
 	})
-	if err != nil || (resp != nil && resp.IsError()) {
-		t.Fatalf("err:%v resp:%#v", err, resp)
-	}
+
 	if resp.Auth == nil {
 		t.Fatal("expected login to succeed")
 	}
@@ -68,15 +59,9 @@ func TestAppRole_BoundCIDRLogin(t *testing.T) {
 	if resp.Auth.BoundCIDRs[0].String() != "10.0.0.0/8" {
 		t.Fatalf("bad: %s", resp.Auth.BoundCIDRs[0].String())
 	}
-	schema.ValidateResponse(
-		t,
-		schema.FindResponseSchema(t, paths, 0, logical.UpdateOperation),
-		resp,
-		true,
-	)
 
 	// Override with a secret-id value, verify it doesn't pass
-	resp, err = b.HandleRequest(context.Background(), &logical.Request{
+	resp = b.requestNoErr(t, &logical.Request{
 		Path:      "role/testrole",
 		Operation: logical.UpdateOperation,
 		Data: map[string]interface{}{
@@ -84,9 +69,6 @@ func TestAppRole_BoundCIDRLogin(t *testing.T) {
 		},
 		Storage: s,
 	})
-	if err != nil || (resp != nil && resp.IsError()) {
-		t.Fatalf("err:%v resp:%#v", err, resp)
-	}
 
 	roleSecretIDReq := &logical.Request{
 		Operation: logical.UpdateOperation,
@@ -102,13 +84,11 @@ func TestAppRole_BoundCIDRLogin(t *testing.T) {
 	}
 
 	roleSecretIDReq.Data["token_bound_cidrs"] = "10.0.0.0/24"
-	resp, err = b.HandleRequest(context.Background(), roleSecretIDReq)
-	if err != nil || (resp != nil && resp.IsError()) {
-		t.Fatalf("err:%v resp:%#v", err, resp)
-	}
+	resp = b.requestNoErr(t, roleSecretIDReq)
+
 	secretID := resp.Data["secret_id"]
 
-	resp, err = b.HandleRequest(context.Background(), &logical.Request{
+	resp = b.requestNoErr(t, &logical.Request{
 		Path:      "login",
 		Operation: logical.UpdateOperation,
 		Data: map[string]interface{}{
@@ -118,9 +98,7 @@ func TestAppRole_BoundCIDRLogin(t *testing.T) {
 		Storage:    s,
 		Connection: &logical.Connection{RemoteAddr: "127.0.0.1"},
 	})
-	if err != nil || (resp != nil && resp.IsError()) {
-		t.Fatalf("err:%v resp:%#v", err, resp)
-	}
+
 	if resp.Auth == nil {
 		t.Fatal("expected login to succeed")
 	}
@@ -130,12 +108,6 @@ func TestAppRole_BoundCIDRLogin(t *testing.T) {
 	if resp.Auth.BoundCIDRs[0].String() != "10.0.0.0/24" {
 		t.Fatalf("bad: %s", resp.Auth.BoundCIDRs[0].String())
 	}
-	schema.ValidateResponse(
-		t,
-		schema.FindResponseSchema(t, paths, 0, logical.UpdateOperation),
-		resp,
-		true,
-	)
 }
 
 func TestAppRole_RoleLogin(t *testing.T) {
@@ -143,18 +115,14 @@ func TestAppRole_RoleLogin(t *testing.T) {
 	var err error
 	b, storage := createBackendWithStorage(t)
 
-	paths := []*framework.Path{pathLogin(b)}
-
 	createRole(t, b, storage, "role1", "a,b,c")
 	roleRoleIDReq := &logical.Request{
 		Operation: logical.ReadOperation,
 		Path:      "role/role1/role-id",
 		Storage:   storage,
 	}
-	resp, err = b.HandleRequest(context.Background(), roleRoleIDReq)
-	if err != nil || (resp != nil && resp.IsError()) {
-		t.Fatalf("err:%v resp:%#v", err, resp)
-	}
+	resp = b.requestNoErr(t, roleRoleIDReq)
+
 	roleID := resp.Data["role_id"]
 
 	roleSecretIDReq := &logical.Request{
@@ -162,10 +130,8 @@ func TestAppRole_RoleLogin(t *testing.T) {
 		Path:      "role/role1/secret-id",
 		Storage:   storage,
 	}
-	resp, err = b.HandleRequest(context.Background(), roleSecretIDReq)
-	if err != nil || (resp != nil && resp.IsError()) {
-		t.Fatalf("err:%v resp:%#v", err, resp)
-	}
+	resp = b.requestNoErr(t, roleSecretIDReq)
+
 	secretID := resp.Data["secret_id"]
 
 	loginData := map[string]interface{}{
@@ -206,13 +172,6 @@ func TestAppRole_RoleLogin(t *testing.T) {
 		t.Fatalf("expected metadata.alias.role_name to equal 'role1', got: %v", val)
 	}
 
-	schema.ValidateResponse(
-		t,
-		schema.FindResponseSchema(t, paths, 0, loginReq.Operation),
-		resp,
-		true,
-	)
-
 	// Test renewal
 	renewReq := generateRenewRequest(storage, loginResp.Auth)
 
@@ -241,20 +200,15 @@ func TestAppRole_RoleLogin(t *testing.T) {
 		Storage:   storage,
 		Data:      roleData,
 	}
-	resp, err = b.HandleRequest(context.Background(), roleReq)
-	if err != nil || (resp != nil && resp.IsError()) {
-		t.Fatalf("err:%v resp:%#v", err, resp)
-	}
+	resp = b.requestNoErr(t, roleReq)
 
 	roleRoleIDReq = &logical.Request{
 		Operation: logical.ReadOperation,
 		Path:      "role/role-period/role-id",
 		Storage:   storage,
 	}
-	resp, err = b.HandleRequest(context.Background(), roleRoleIDReq)
-	if err != nil || (resp != nil && resp.IsError()) {
-		t.Fatalf("err:%v resp:%#v", err, resp)
-	}
+	resp = b.requestNoErr(t, roleRoleIDReq)
+
 	roleID = resp.Data["role_id"]
 
 	roleSecretIDReq = &logical.Request{
@@ -262,10 +216,8 @@ func TestAppRole_RoleLogin(t *testing.T) {
 		Path:      "role/role-period/secret-id",
 		Storage:   storage,
 	}
-	resp, err = b.HandleRequest(context.Background(), roleSecretIDReq)
-	if err != nil || (resp != nil && resp.IsError()) {
-		t.Fatalf("err:%v resp:%#v", err, resp)
-	}
+	resp = b.requestNoErr(t, roleSecretIDReq)
+
 	secretID = resp.Data["secret_id"]
 
 	loginData["role_id"] = roleID
@@ -328,11 +280,7 @@ func generateRenewRequest(s logical.Storage, auth *logical.Auth) *logical.Reques
 }
 
 func TestAppRole_RoleResolve(t *testing.T) {
-	var resp *logical.Response
-	var err error
 	b, storage := createBackendWithStorage(t)
-
-	paths := []*framework.Path{pathLogin(b)}
 
 	role := "role1"
 	createRole(t, b, storage, role, "a,b,c")
@@ -341,10 +289,8 @@ func TestAppRole_RoleResolve(t *testing.T) {
 		Path:      "role/role1/role-id",
 		Storage:   storage,
 	}
-	resp, err = b.HandleRequest(context.Background(), roleRoleIDReq)
-	if err != nil || (resp != nil && resp.IsError()) {
-		t.Fatalf("err:%v resp:%#v", err, resp)
-	}
+	resp := b.requestNoErr(t, roleRoleIDReq)
+
 	roleID := resp.Data["role_id"]
 
 	roleSecretIDReq := &logical.Request{
@@ -352,10 +298,8 @@ func TestAppRole_RoleResolve(t *testing.T) {
 		Path:      "role/role1/secret-id",
 		Storage:   storage,
 	}
-	resp, err = b.HandleRequest(context.Background(), roleSecretIDReq)
-	if err != nil || (resp != nil && resp.IsError()) {
-		t.Fatalf("err:%v resp:%#v", err, resp)
-	}
+	resp = b.requestNoErr(t, roleSecretIDReq)
+
 	secretID := resp.Data["secret_id"]
 
 	loginData := map[string]interface{}{
@@ -372,21 +316,11 @@ func TestAppRole_RoleResolve(t *testing.T) {
 		},
 	}
 
-	resp, err = b.HandleRequest(context.Background(), loginReq)
-	if err != nil || (resp != nil && resp.IsError()) {
-		t.Fatalf("err:%v resp:%#v", err, resp)
-	}
+	resp = b.requestNoErr(t, loginReq)
 
 	if resp.Data["role"] != role {
 		t.Fatalf("Role was not as expected. Expected %s, received %s", role, resp.Data["role"])
 	}
-
-	schema.ValidateResponse(
-		t,
-		schema.FindResponseSchema(t, paths, 0, loginReq.Operation),
-		resp,
-		true,
-	)
 }
 
 func TestAppRole_RoleDoesNotExist(t *testing.T) {

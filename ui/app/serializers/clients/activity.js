@@ -1,12 +1,18 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import ApplicationSerializer from '../application';
 import { formatISO } from 'date-fns';
 import { formatByMonths, formatByNamespace, homogenizeClientNaming } from 'core/utils/client-count-utils';
+import timestamp from 'core/utils/timestamp';
 export default class ActivitySerializer extends ApplicationSerializer {
   normalizeResponse(store, primaryModelClass, payload, id, requestType) {
     if (payload.id === 'no-data') {
       return super.normalizeResponse(store, primaryModelClass, payload, id, requestType);
     }
-    const response_timestamp = formatISO(new Date());
+    const response_timestamp = formatISO(timestamp.now());
     const transformedPayload = {
       ...payload,
       response_timestamp,
@@ -20,7 +26,7 @@ export default class ActivitySerializer extends ApplicationSerializer {
     return super.normalizeResponse(store, primaryModelClass, transformedPayload, id, requestType);
   }
 }
-/* 
+/*
 SAMPLE PAYLOAD BEFORE/AFTER:
 
 payload.data.by_namespace = [

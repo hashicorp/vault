@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package configutil
 
 import (
@@ -16,6 +19,7 @@ import (
 	"github.com/hashicorp/go-sockaddr/template"
 	"github.com/hashicorp/hcl"
 	"github.com/hashicorp/hcl/hcl/ast"
+	"github.com/hashicorp/vault/helper/namespace"
 )
 
 type ListenerTelemetry struct {
@@ -97,6 +101,8 @@ type Listener struct {
 
 	AgentAPI *AgentAPI `hcl:"agent_api"`
 
+	ProxyAPI *ProxyAPI `hcl:"proxy_api"`
+
 	Telemetry              ListenerTelemetry              `hcl:"telemetry"`
 	Profiling              ListenerProfiling              `hcl:"profiling"`
 	InFlightRequestLogging ListenerInFlightRequestLogging `hcl:"inflight_requests_logging"`
@@ -113,10 +119,19 @@ type Listener struct {
 	// Custom Http response headers
 	CustomResponseHeaders    map[string]map[string]string `hcl:"-"`
 	CustomResponseHeadersRaw interface{}                  `hcl:"custom_response_headers"`
+
+	// ChrootNamespace will prepend the specified namespace to requests
+	ChrootNamespaceRaw interface{} `hcl:"chroot_namespace"`
+	ChrootNamespace    string      `hcl:"-"`
 }
 
 // AgentAPI allows users to select which parts of the Agent API they want enabled.
 type AgentAPI struct {
+	EnableQuit bool `hcl:"enable_quit"`
+}
+
+// ProxyAPI allows users to select which parts of the Vault Proxy API they want enabled.
+type ProxyAPI struct {
 	EnableQuit bool `hcl:"enable_quit"`
 }
 
@@ -191,7 +206,6 @@ func ParseListeners(result *SharedConfig, list *ast.ObjectList) error {
 				return multierror.Prefix(fmt.Errorf("unsupported listener role %q", l.Role), fmt.Sprintf("listeners.%d:", i))
 			}
 		}
-
 		// Request Parameters
 		{
 			if l.MaxRequestSizeRaw != nil {
@@ -413,6 +427,20 @@ func ParseListeners(result *SharedConfig, list *ast.ObjectList) error {
 		}
 
 		result.Listeners = append(result.Listeners, &l)
+
+		// Chroot Namespace
+		{
+			// If a valid ChrootNamespace value exists, then canonicalize the namespace value
+			if l.ChrootNamespaceRaw != nil {
+				if l.ChrootNamespace, err = parseutil.ParseString(l.ChrootNamespaceRaw); err != nil {
+					return multierror.Prefix(fmt.Errorf("invalid value for chroot_namespace: %w", err), fmt.Sprintf("listeners.%d", i))
+				} else {
+					l.ChrootNamespace = namespace.Canonicalize(l.ChrootNamespace)
+				}
+
+				l.ChrootNamespaceRaw = nil
+			}
+		}
 	}
 
 	return nil

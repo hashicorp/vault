@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import { singularize } from 'ember-inflector';
 
 export const adminPolicy = (mountPath) => {
@@ -35,7 +40,7 @@ export const updatePolicy = (mountPath, resource) => {
     },
     path "${mountPath}/${singularize(resource)}/*" {
       capabilities = ["read", "update"]
-    },    
+    },
     path "${mountPath}/issue/*" {
       capabilities = ["update"]
     },

@@ -6,7 +6,7 @@ description: |-
   Service Accounts.
 ---
 
-# Kubernetes Auth Method
+# Kubernetes auth method
 
 @include 'x509-sha1-deprecation.mdx'
 
@@ -148,7 +148,7 @@ below for guidance if you wish to enable issuer validation in Vault.
 [k8s-1.21-changelog]: https://github.com/kubernetes/kubernetes/blob/master/CHANGELOG/CHANGELOG-1.21.md#api-change-2
 [short-lived-tokens]: #how-to-work-with-short-lived-kubernetes-tokens
 
-### How to work with short-lived Kubernetes tokens
+### How to work with short-lived kubernetes tokens
 
 There are a few different ways to configure auth for Kubernetes pods when
 default mounted pod tokens are short-lived, each with their own tradeoffs. This
@@ -286,7 +286,7 @@ vault write auth/kubernetes/config \
   issuer="\"test-aks-cluster-dns-d6cbb78e.hcp.uksouth.azmk8s.io\""
 ```
 
-## Configuring Kubernetes
+## Configuring kubernetes
 
 This auth method accesses the [Kubernetes TokenReview API][k8s-tokenreview] to
 validate the provided JWT is still valid. Kubernetes should be running with
@@ -322,7 +322,7 @@ The Kubernetes Auth Plugin has a full HTTP API. Please see the
 
 [k8s-tokenreview]: https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.22/#tokenreview-v1-authentication-k8s-io
 
-## Code Example
+## Code example
 
 The following example demonstrates the Kubernetes auth method to authenticate
 with Vault.
@@ -339,7 +339,7 @@ import (
 	"os"
 
 	vault "github.com/hashicorp/vault/api"
-  auth "github.com/hashicorp/vault/api/auth/kubernetes"
+	auth "github.com/hashicorp/vault/api/auth/kubernetes"
 )
 
 // Fetches a key-value secret (kv-v2) after authenticating to Vault with a Kubernetes service account.

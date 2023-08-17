@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package radius
 
 import (
@@ -5,13 +8,14 @@ import (
 	"fmt"
 	"os"
 	"reflect"
+	"runtime"
 	"strconv"
 	"strings"
 	"testing"
 	"time"
 
-	"github.com/hashicorp/vault/helper/testhelpers/docker"
 	logicaltest "github.com/hashicorp/vault/helper/testhelpers/logical"
+	"github.com/hashicorp/vault/sdk/helper/docker"
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
@@ -27,6 +31,10 @@ const (
 )
 
 func prepareRadiusTestContainer(t *testing.T) (func(), string, int) {
+	if strings.Contains(runtime.GOARCH, "arm") {
+		t.Skip("Skipping, as this image is not supported on ARM architectures")
+	}
+
 	if os.Getenv(envRadiusRadiusHost) != "" {
 		port, _ := strconv.Atoi(os.Getenv(envRadiusPort))
 		return func() {}, os.Getenv(envRadiusRadiusHost), port

@@ -4,7 +4,7 @@ page_title: OCI - Auth Methods - HTTP API
 description: This is the API documentation for the Vault OCI auth method plugin.
 ---
 
-# OCI Auth Method (API)
+# OCI auth method (API)
 
 This is the API documentation for the Vault OCI auth method plugin. To
 learn more about the usage and operation, see the
@@ -14,7 +14,7 @@ This documentation assumes the OCI method is mounted at the
 `/auth/oci` path in Vault. Since it is possible to enable auth methods at
 any location, please update your API calls accordingly.
 
-## Configure Home Tenancy Method
+## Configure home tenancy method
 
 Configure your home tenancy in the Vault, so that only users or instances from your tenancy will be allowed to log into Vault, through the OCI Auth method.
 
@@ -26,7 +26,7 @@ Configure your home tenancy in the Vault, so that only users or instances from y
 
 - `home_tenancy_id` `(string: <required>)` - The Tenancy OCID of your OCI account.
 
-### Sample Payload
+### Sample payload
 
 ```json
 {
@@ -34,7 +34,7 @@ Configure your home tenancy in the Vault, so that only users or instances from y
 }
 ```
 
-### Sample Request
+### Sample request
 
 ```shell-session
 $ curl \
@@ -44,7 +44,7 @@ $ curl \
     http://127.0.0.1:8200/v1/auth/oci/config
 ```
 
-## Read Config
+## Read config
 
 Returns the previously configured config.
 
@@ -52,7 +52,7 @@ Returns the previously configured config.
 | :----- | :----------------- |
 | `GET`  | `/auth/oci/config` |
 
-### Sample Request
+### Sample request
 
 ```shell-session
 $ curl \
@@ -60,7 +60,7 @@ $ curl \
     http://127.0.0.1:8200/v1/auth/oci/config
 ```
 
-### Sample Response
+### Sample response
 
 ```json
 {
@@ -70,7 +70,7 @@ $ curl \
 }
 ```
 
-## Create Role
+## Create/Update role
 
 Create a Vault administrator role in the OCI Auth method.
 
@@ -85,7 +85,7 @@ Create a Vault administrator role in the OCI Auth method.
 
 @include 'tokenfields.mdx'
 
-### Sample Payload
+### Sample payload
 
 ```json
 {
@@ -95,7 +95,7 @@ Create a Vault administrator role in the OCI Auth method.
 }
 ```
 
-### Sample Request
+### Sample request
 
 ```shell-session
 $ curl \
@@ -105,7 +105,7 @@ $ curl \
     http://127.0.0.1:8200/v1/auth/oci/role/devrole
 ```
 
-## Read Role
+## Read role
 
 Returns the previously registered role configuration.
 
@@ -117,7 +117,7 @@ Returns the previously registered role configuration.
 
 - `name` `(string: <required>)` - Name of the role.
 
-### Sample Request
+### Sample request
 
 ```shell-session
 $ curl \
@@ -125,7 +125,7 @@ $ curl \
     http://127.0.0.1:8200/v1/auth/oci/role/devrole
 ```
 
-### Sample Response
+### Sample response
 
 ```json
 {
@@ -140,7 +140,7 @@ $ curl \
 }
 ```
 
-## List Roles
+## List roles
 
 Lists all the roles that are registered with the auth method.
 
@@ -149,7 +149,7 @@ Lists all the roles that are registered with the auth method.
 | `LIST` | `/auth/oci/role`           |
 | `GET`  | `/auth/oci/role?list=true` |
 
-### Sample Request
+### Sample request
 
 ```shell-session
 $ curl \
@@ -158,7 +158,7 @@ $ curl \
     http://127.0.0.1:8200/v1/auth/oci/role
 ```
 
-### Sample Response
+### Sample response
 
 ```json
 {
@@ -168,7 +168,7 @@ $ curl \
 }
 ```
 
-## Delete Role
+## Delete role
 
 Deletes the previously registered role.
 
@@ -180,7 +180,7 @@ Deletes the previously registered role.
 
 - `role` `(string: <required>)` - Name of the role.
 
-### Sample Request
+### Sample request
 
 ```shell-session
 $ curl \
@@ -204,7 +204,7 @@ entity and then authorizes the entity for the given role.
 - `role` `(string: <required>)` - Name of the role against which the login is being attempted.
 - `request_headers` `(list: [])` - Signed request headers for authenticating. For details on signing, see [signing the request](https://docs.cloud.oracle.com/iaas/Content/API/Concepts/signingrequests.htm)
 
-### Sample Payload
+### Sample payload
 
 ```json
 {
@@ -220,7 +220,7 @@ entity and then authorizes the entity for the given role.
 }
 ```
 
-### Sample Request
+### Sample request
 
 ```shell-session
 $ curl \
@@ -229,7 +229,7 @@ $ curl \
     http://127.0.0.1:8200/v1/auth/oci/login/devrole
 ```
 
-### Sample Response
+### Sample response
 
 ```json
 {

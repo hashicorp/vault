@@ -1,10 +1,21 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import ApplicationSerializer from '../application';
 
-export default ApplicationSerializer.extend({
+export default class ClientsConfigSerializer extends ApplicationSerializer {
+  // these attrs are readOnly
+  attrs = {
+    billingStartTimestamp: { serialize: false },
+    minimumRetentionMonths: { serialize: false },
+    reportingEnabled: { serialize: false },
+  };
+
   normalizeResponse(store, primaryModelClass, payload, id, requestType) {
     if (!payload.data) {
-      // CBS TODO: Remove this if block once API is published
-      return this._super(store, primaryModelClass, payload, id, requestType);
+      return super.normalizeResponse(...arguments);
     }
     const normalizedPayload = {
       id: payload.id,
@@ -13,11 +24,11 @@ export default ApplicationSerializer.extend({
         enabled: payload.data.enabled?.includes('enable') ? 'On' : 'Off',
       },
     };
-    return this._super(store, primaryModelClass, normalizedPayload, id, requestType);
-  },
+    return super.normalizeResponse(store, primaryModelClass, normalizedPayload, id, requestType);
+  }
 
   serialize() {
-    const json = this._super(...arguments);
+    const json = super.serialize(...arguments);
     if (json.enabled === 'On' || json.enabled === 'Off') {
       const oldEnabled = json.enabled;
       json.enabled = oldEnabled === 'On' ? 'enable' : 'disable';
@@ -28,5 +39,5 @@ export default ApplicationSerializer.extend({
     }
     delete json.queries_available;
     return json;
-  },
-});
+  }
+}

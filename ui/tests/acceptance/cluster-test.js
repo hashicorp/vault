@@ -1,7 +1,14 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import { create } from 'ember-cli-page-object';
-import { settled, click } from '@ember/test-helpers';
+import { settled, click, visit } from '@ember/test-helpers';
 import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
+import { v4 as uuidv4 } from 'uuid';
+
 import authPage from 'vault/tests/pages/auth';
 import logout from 'vault/tests/pages/logout';
 import enablePage from 'vault/tests/pages/settings/auth/enable';
@@ -18,24 +25,10 @@ const tokenWithPolicy = async function (name, policy) {
   return consoleComponent.lastLogOutput;
 };
 
-const USER = 'end-user';
-const PASSWORD = 'mypassword';
-
-const authAccessor = async function (path) {
-  await enablePage.enable('userpass', path);
-  await consoleComponent.runCommands([`write auth/${path}/users/end-user password="${PASSWORD}"`]);
-};
-
-const setupUser = async function () {
-  const authMethodPath = `userpass-${new Date().getTime()}`;
-  await authAccessor(authMethodPath);
-};
-
 module('Acceptance | cluster', function (hooks) {
   setupApplicationTest(hooks);
 
   hooks.beforeEach(async function () {
-    await logout.visit();
     return authPage.login();
   });
 
@@ -49,25 +42,30 @@ module('Acceptance | cluster', function (hooks) {
     const userToken = await tokenWithPolicy('hide-policies-nav', deny_policies_policy);
     await logout.visit();
     await authPage.login(userToken);
+    await visit('/vault/access');
 
-    assert.dom('[data-test-navbar-item="policies"]').doesNotExist();
-    await logout.visit();
+    assert.dom('[data-test-sidebar-nav-link="Policies"]').doesNotExist();
   });
 
   test('it hides mfa setup if user has not entityId (ex: is a root user)', async function (assert) {
-    await setupUser();
+    const user = 'end-user';
+    const password = 'mypassword';
+    const path = `cluster-userpass-${uuidv4()}`;
+
+    await enablePage.enable('userpass', path);
+    await consoleComponent.runCommands([`write auth/${path}/users/end-user password="${password}"`]);
 
     await logout.visit();
     await settled();
-    await authPage.loginUsername(USER, PASSWORD);
-    await click('.nav-user-button button');
-    assert.dom('[data-test-status-link="mfa"]').exists();
+    await authPage.loginUsername(user, password, path);
+    await click('[data-test-user-menu-trigger]');
+    assert.dom('[data-test-user-menu-item="mfa"]').exists();
     await logout.visit();
 
     await authPage.login('root');
     await settled();
-    await click('.nav-user-button button');
-    assert.dom('[data-test-status-link="mfa"]').doesNotExist();
+    await click('[data-test-user-menu-trigger]');
+    assert.dom('[data-test-user-menu-item="mfa"]').doesNotExist();
   });
 
   test('enterprise nav item links to first route that user has access to', async function (assert) {
@@ -80,8 +78,8 @@ module('Acceptance | cluster', function (hooks) {
     const userToken = await tokenWithPolicy('show-policies-nav', read_rgp_policy);
     await logout.visit();
     await authPage.login(userToken);
-    await settled();
-    assert.dom('[data-test-navbar-item="policies"]').hasAttribute('href', '/ui/vault/policies/rgp');
-    await logout.visit();
+    await visit('/vault/access');
+
+    assert.dom('[data-test-sidebar-nav-link="Policies"]').hasAttribute('href', '/ui/vault/policies/rgp');
   });
 });
