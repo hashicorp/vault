@@ -131,7 +131,7 @@ jobs:
           GOPRIVATE: github.com/hashicorp/*
         run: |
            set -exo pipefail
-
+           rm -f testonly_matrix.json matrix.json
            # testonly tagged tests need an additional tag
            # go list -tags=testonly ./... | grep "testonly" | gotestsum tool ci-matrix --debug \
            #  --partitions "${{ inputs.total-runners }}" \
@@ -155,6 +155,7 @@ jobs:
                "packages": $VAULT_PKG,
                "description": "partition 1 - vault test packages"
            }' testonly_matrix.json > matrix.json
+          cat matrix.json
 
       - name: Capture list of binary tests
         if: inputs.binary-tests
