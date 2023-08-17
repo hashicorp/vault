@@ -1383,6 +1383,11 @@
             "path": "secrets/pki/considerations"
           },
           {
+            "title": "Troubleshooting ACME integration",
+            "path": "secrets/pki/troubleshooting-acme"
+          },
+
+          {
             "title": "Rotation Primitives",
             "path": "secrets/pki/rotation-primitives"
           },
