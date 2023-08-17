@@ -28,18 +28,12 @@
         @state={{@replication.dr.state}}
         @clusterStates={{cluster-states @replication.dr.state}}
       />
-      <div>
-        {{#if @replication.performance.clusterId}}
-          <Dashboard::ReplicationStateText
-            @title="Perf primary"
-            @name="performance"
-            @state={{@replication.performance.state}}
-            @clusterStates={{cluster-states @replication.performance.state}}
-          />
-        {{else}}
-          <Dashboard::ReplicationStateText @title="Perf primary" @name="performance" />
-        {{/if}}
-      </div>
+      <Dashboard::ReplicationStateText
+        @title="Perf primary"
+        @name="performance"
+        @state={{if @replication.performance.clusterId @replication.performance.state "not set up"}}
+        @clusterStates={{if @replication.performance.clusterId (cluster-states @replication.performance.state)}}
+      />
     </div>
     {{! if user only has access to dr replication }}
   {{else if @version.hasDRReplication}}
