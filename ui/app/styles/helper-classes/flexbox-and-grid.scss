@@ -99,10 +99,6 @@
   flex: 50%;
 }
 
-.is-flex-column-wrap {
-  flex-flow: column wrap;
-}
-
 /* Flex Responsive */
 @media screen and (min-width: 769px), print {
   .is-flex-v-centered-tablet {
