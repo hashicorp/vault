@@ -1,5 +1,13 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
 {{#if this.displayErrors}}
   {{#each this.displayErrors as |error|}}
-    <AlertBanner @type="danger" @message={{error}} data-test-error ...attributes />
+    <Hds::Alert data-test-message-error @type="inline" @color="critical" class="has-top-margin-s has-bottom-margin-s" as |A|>
+      <A.Title>Error</A.Title>
+      <A.Description data-test-message-error-description>{{error}}</A.Description>
+    </Hds::Alert>
   {{/each}}
 {{/if}}

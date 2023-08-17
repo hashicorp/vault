@@ -1,0 +1,72 @@
+---
+layout: docs
+page_title: pki issue - Command
+description: |-
+  The "pki issue" command issues a new intermediate ("issuer") certificate,
+  using a parent certificate in vault.
+---
+
+# pki issue
+
+This command creates a intermediate certificate authority certificate signed by
+the `<parent>` in the `<child_mount>`, using the options to determine the fields
+on that certificate.
+
+## Usage
+
+Usage: `vault pki issue [flags] <parent> <child_mount> [options]`
+
+- `[flags]` are optional arguments described below
+
+- `<parent>` is the fully qualified path of the Certificate Authority in vault
+  which will issue the new intermediate certificate.
+
+- `<child_mount>` is the path of the mount in vault where the new issuer is saved.
+
+- `[options]` are the superset of the k=v options passed to generate-intermediate-csr
+  and sign-intermediate commands.  At least one option must be set.
+  See [below](/vault/docs/commands/pki/issue#options).
+
+### Flags
+
+- `-type` `(string: "internal")` - This determines the type of key use for the
+   newly created certificate.  Valid types are `"existing"` - where we link to
+   a key already present in the vault-backend to be used (and expect option
+   arguments `"key_ref"`) - `"internal"` - to generate a new key for this
+   certificate - or `"kms"` - to link to an external key.  Exported keys are not
+   available through this API.
+
+- `-issuer_name` `(string: "")` - If present, the newly created issuer will be
+   given this name.
+
+### Options
+
+Other than `type` (which is passed as a flag, see above), this command accepts
+all options provided to the
+[Generate CSR](/vault/api-docs/secret/pki#generate-intermediate-csr) and
+[Sign Intermediate](/vault/api-docs/secret/pki#sign-intermediate) endpoints.
+
+### Accessed APIs
+
+Note that the vault user running this command will need to have access to the
+following API endpoints, each representing a step in the process:
+
+ - `READ /:parent` - used to check validity
+ - `WRITE /:child_mount/intermediate/generate/:type` - used to generate the csr
+ - `WRITE /:parent/sign-intermediate` - used to sign the csr
+ - `WRITE /:child_mount/issuers/import/cert` - used to import the new issuer,
+ and the issuer chain
+ - `UPDATE /:child_mount/issuer/:issuer_refs` - used to both name the new
+ issuer, and also set the name of the parent in the issuer chain
+ - `READ /:child_mount/issuer/:new_issuer_ref` - used to verify completion,
+ generate the output
+
+## Examples
+
+```shell-session
+$ vault pki issue -issuer_name="FirstDepartment" /pki_root/issuer/default /pki_int/ common_name="first-department.example.com"
+Key                               Value
+---                               -----
+ca_chain                          [-----BEGIN CERTIFICATE-----
+MIIDsDCCApigAwIBAgIULEPuHTW7UDtAQg+qcc18osNWgZIwDQYJKoZIhvcNAQEL...
+```

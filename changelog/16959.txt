@@ -1,3 +1,0 @@
-```release-note:feature
-ui: adds HCP link status banner
-```

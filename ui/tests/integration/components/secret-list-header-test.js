@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import { module, test } from 'qunit';
 import { setupRenderingTest } from 'ember-qunit';
 import { render } from '@ember/test-helpers';
@@ -16,7 +21,7 @@ module('Integration | Component | secret-list-header', function (hooks) {
 
     this.server.post('/sys/capabilities-self', () => {});
 
-    for (let type of backends) {
+    for (const type of backends) {
       const data = this.server.create('secret-engine', 2, { type });
       this.model = mirageToModels(data);
       await render(hbs`
@@ -25,11 +30,12 @@ module('Integration | Component | secret-list-header', function (hooks) {
         />
       `);
       const selector = '[data-test-kv-version-badge]';
+
       if (['kv', 'generic'].includes(type)) {
         assert
           .dom(selector)
           .hasText(
-            `Version ${this.model.options.version}`,
+            `Version ${this.model.version || 1}`,
             `Badge renders with correct version for ${type} engine type`
           );
       } else {

@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import { module, test } from 'qunit';
 import { setupTest } from 'ember-qunit';
 import { setupMirage } from 'ember-cli-mirage/test-support';
@@ -25,7 +30,7 @@ module('Unit | Adapter | oidc/key', function (hooks) {
 
     this.server.post(`${this.path}/rotate`, (schema, req) => {
       const json = JSON.parse(req.requestBody);
-      assert.equal(json.verification_ttl, '30m', 'request made to correct endpoint on rotate');
+      assert.strictEqual(json.verification_ttl, '30m', 'request made to correct endpoint on rotate');
     });
 
     await this.store.adapterFor('oidc/key').rotate(this.data.name, '30m');

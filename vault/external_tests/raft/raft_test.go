@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package rafttests
 
 import (
@@ -23,6 +26,7 @@ import (
 	"github.com/hashicorp/vault/helper/constants"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/helper/testhelpers"
+	"github.com/hashicorp/vault/helper/testhelpers/corehelpers"
 	"github.com/hashicorp/vault/helper/testhelpers/teststorage"
 	vaulthttp "github.com/hashicorp/vault/http"
 	"github.com/hashicorp/vault/internalshared/configutil"
@@ -45,9 +49,10 @@ type RaftClusterOpts struct {
 	Seal                           vault.Seal
 	VersionMap                     map[int]string
 	RedundancyZoneMap              map[int]string
+	EffectiveSDKVersionMap         map[int]string
 }
 
-func raftCluster(t testing.TB, ropts *RaftClusterOpts) *vault.TestCluster {
+func raftCluster(t testing.TB, ropts *RaftClusterOpts) (*vault.TestCluster, *vault.TestClusterOptions) {
 	if ropts == nil {
 		ropts = &RaftClusterOpts{}
 	}
@@ -70,6 +75,7 @@ func raftCluster(t testing.TB, ropts *RaftClusterOpts) *vault.TestCluster {
 	opts.NumCores = ropts.NumCores
 	opts.VersionMap = ropts.VersionMap
 	opts.RedundancyZoneMap = ropts.RedundancyZoneMap
+	opts.EffectiveSDKVersionMap = ropts.EffectiveSDKVersionMap
 
 	teststorage.RaftBackendSetup(conf, &opts)
 
@@ -80,7 +86,7 @@ func raftCluster(t testing.TB, ropts *RaftClusterOpts) *vault.TestCluster {
 	cluster := vault.NewTestCluster(benchhelpers.TBtoT(t), conf, &opts)
 	cluster.Start()
 	vault.TestWaitActive(benchhelpers.TBtoT(t), cluster.Cores[0].Core)
-	return cluster
+	return cluster, &opts
 }
 
 func TestRaft_BoltDBMetrics(t *testing.T) {
@@ -170,7 +176,7 @@ func TestRaft_RetryAutoJoin(t *testing.T) {
 	leaderInfos := []*raft.LeaderJoinInfo{
 		{
 			AutoJoin:  "provider=aws region=eu-west-1 tag_key=consul tag_value=tag access_key_id=a secret_access_key=a",
-			TLSConfig: leaderCore.TLSConfig,
+			TLSConfig: leaderCore.TLSConfig(),
 			Retry:     true,
 		},
 	}
@@ -216,7 +222,7 @@ func TestRaft_Retry_Join(t *testing.T) {
 	leaderInfos := []*raft.LeaderJoinInfo{
 		{
 			LeaderAPIAddr: leaderAPI,
-			TLSConfig:     leaderCore.TLSConfig,
+			TLSConfig:     leaderCore.TLSConfig(),
 			Retry:         true,
 		},
 	}
@@ -234,7 +240,7 @@ func TestRaft_Retry_Join(t *testing.T) {
 			}
 
 			// Handle potential racy behavior with unseals. Retry the unseal until it succeeds.
-			vault.RetryUntil(t, 10*time.Second, func() error {
+			corehelpers.RetryUntil(t, 10*time.Second, func() error {
 				return cluster.AttemptUnsealCore(core)
 			})
 		}(t, clusterCore)
@@ -246,7 +252,7 @@ func TestRaft_Retry_Join(t *testing.T) {
 
 	vault.TestWaitActive(t, leaderCore.Core)
 
-	vault.RetryUntil(t, 10*time.Second, func() error {
+	corehelpers.RetryUntil(t, 10*time.Second, func() error {
 		return testhelpers.VerifyRaftPeers(t, cluster.Cores[0].Client, map[string]bool{
 			"core-0": true,
 			"core-1": true,
@@ -320,7 +326,7 @@ func TestRaft_Join(t *testing.T) {
 
 func TestRaft_RemovePeer(t *testing.T) {
 	t.Parallel()
-	cluster := raftCluster(t, nil)
+	cluster, _ := raftCluster(t, nil)
 	defer cluster.Cleanup()
 
 	for i, c := range cluster.Cores {
@@ -393,7 +399,7 @@ func TestRaft_NodeIDHeader(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.description, func(t *testing.T) {
-			cluster := raftCluster(t, tc.ropts)
+			cluster, _ := raftCluster(t, tc.ropts)
 			defer cluster.Cleanup()
 
 			for i, c := range cluster.Cores {
@@ -430,54 +436,14 @@ func TestRaft_NodeIDHeader(t *testing.T) {
 
 func TestRaft_Configuration(t *testing.T) {
 	t.Parallel()
-	cluster := raftCluster(t, nil)
+	cluster, _ := raftCluster(t, nil)
 	defer cluster.Cleanup()
-
-	for i, c := range cluster.Cores {
-		if c.Core.Sealed() {
-			t.Fatalf("failed to unseal core %d", i)
-		}
-	}
-
-	client := cluster.Cores[0].Client
-	secret, err := client.Logical().Read("sys/storage/raft/configuration")
-	if err != nil {
-		t.Fatal(err)
-	}
-	servers := secret.Data["config"].(map[string]interface{})["servers"].([]interface{})
-	expected := map[string]bool{
-		"core-0": true,
-		"core-1": true,
-		"core-2": true,
-	}
-	if len(servers) != 3 {
-		t.Fatalf("incorrect number of servers in the configuration")
-	}
-	for _, s := range servers {
-		server := s.(map[string]interface{})
-		nodeID := server["node_id"].(string)
-		leader := server["leader"].(bool)
-		switch nodeID {
-		case "core-0":
-			if !leader {
-				t.Fatalf("expected server to be leader: %#v", server)
-			}
-		default:
-			if leader {
-				t.Fatalf("expected server to not be leader: %#v", server)
-			}
-		}
-
-		delete(expected, nodeID)
-	}
-	if len(expected) != 0 {
-		t.Fatalf("failed to read configuration successfully")
-	}
+	Raft_Configuration_Test(t, cluster)
 }
 
 func TestRaft_ShamirUnseal(t *testing.T) {
 	t.Parallel()
-	cluster := raftCluster(t, nil)
+	cluster, _ := raftCluster(t, nil)
 	defer cluster.Cleanup()
 
 	for i, c := range cluster.Cores {
@@ -489,7 +455,7 @@ func TestRaft_ShamirUnseal(t *testing.T) {
 
 func TestRaft_SnapshotAPI(t *testing.T) {
 	t.Parallel()
-	cluster := raftCluster(t, nil)
+	cluster, _ := raftCluster(t, nil)
 	defer cluster.Cleanup()
 
 	leaderClient := cluster.Cores[0].Client
@@ -553,7 +519,7 @@ func TestRaft_SnapshotAPI_MidstreamFailure(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	cluster := raftCluster(t, &RaftClusterOpts{
+	cluster, _ := raftCluster(t, &RaftClusterOpts{
 		NumCores: 1,
 		Seal:     autoSeal,
 	})
@@ -601,6 +567,7 @@ func TestRaft_SnapshotAPI_MidstreamFailure(t *testing.T) {
 }
 
 func TestRaft_SnapshotAPI_RekeyRotate_Backward(t *testing.T) {
+	t.Parallel()
 	type testCase struct {
 		Name               string
 		Rekey              bool
@@ -658,7 +625,7 @@ func TestRaft_SnapshotAPI_RekeyRotate_Backward(t *testing.T) {
 			tCaseLocal := tCase
 			t.Parallel()
 
-			cluster := raftCluster(t, &RaftClusterOpts{DisablePerfStandby: tCaseLocal.DisablePerfStandby})
+			cluster, _ := raftCluster(t, &RaftClusterOpts{DisablePerfStandby: tCaseLocal.DisablePerfStandby})
 			defer cluster.Cleanup()
 
 			leaderClient := cluster.Cores[0].Client
@@ -674,7 +641,7 @@ func TestRaft_SnapshotAPI_RekeyRotate_Backward(t *testing.T) {
 			}
 
 			transport := cleanhttp.DefaultPooledTransport()
-			transport.TLSClientConfig = cluster.Cores[0].TLSConfig.Clone()
+			transport.TLSClientConfig = cluster.Cores[0].TLSConfig()
 			if err := http2.ConfigureTransport(transport); err != nil {
 				t.Fatal(err)
 			}
@@ -787,6 +754,7 @@ func TestRaft_SnapshotAPI_RekeyRotate_Backward(t *testing.T) {
 }
 
 func TestRaft_SnapshotAPI_RekeyRotate_Forward(t *testing.T) {
+	t.Parallel()
 	type testCase struct {
 		Name               string
 		Rekey              bool
@@ -859,7 +827,7 @@ func TestRaft_SnapshotAPI_RekeyRotate_Forward(t *testing.T) {
 			tCaseLocal := tCase
 			t.Parallel()
 
-			cluster := raftCluster(t, &RaftClusterOpts{DisablePerfStandby: tCaseLocal.DisablePerfStandby})
+			cluster, _ := raftCluster(t, &RaftClusterOpts{DisablePerfStandby: tCaseLocal.DisablePerfStandby})
 			defer cluster.Cleanup()
 
 			leaderClient := cluster.Cores[0].Client
@@ -875,7 +843,7 @@ func TestRaft_SnapshotAPI_RekeyRotate_Forward(t *testing.T) {
 			}
 
 			transport := cleanhttp.DefaultPooledTransport()
-			transport.TLSClientConfig = cluster.Cores[0].TLSConfig.Clone()
+			transport.TLSClientConfig = cluster.Cores[0].TLSConfig()
 			if err := http2.ConfigureTransport(transport); err != nil {
 				t.Fatal(err)
 			}
@@ -1046,7 +1014,7 @@ func TestRaft_SnapshotAPI_RekeyRotate_Forward(t *testing.T) {
 
 func TestRaft_SnapshotAPI_DifferentCluster(t *testing.T) {
 	t.Parallel()
-	cluster := raftCluster(t, nil)
+	cluster, _ := raftCluster(t, nil)
 	defer cluster.Cleanup()
 
 	leaderClient := cluster.Cores[0].Client
@@ -1062,7 +1030,7 @@ func TestRaft_SnapshotAPI_DifferentCluster(t *testing.T) {
 	}
 
 	transport := cleanhttp.DefaultPooledTransport()
-	transport.TLSClientConfig = cluster.Cores[0].TLSConfig.Clone()
+	transport.TLSClientConfig = cluster.Cores[0].TLSConfig()
 	if err := http2.ConfigureTransport(transport); err != nil {
 		t.Fatal(err)
 	}
@@ -1092,13 +1060,13 @@ func TestRaft_SnapshotAPI_DifferentCluster(t *testing.T) {
 
 	// Cluster 2
 	{
-		cluster2 := raftCluster(t, nil)
+		cluster2, _ := raftCluster(t, nil)
 		defer cluster2.Cleanup()
 
 		leaderClient := cluster2.Cores[0].Client
 
 		transport := cleanhttp.DefaultPooledTransport()
-		transport.TLSClientConfig = cluster2.Cores[0].TLSConfig.Clone()
+		transport.TLSClientConfig = cluster2.Cores[0].TLSConfig()
 		if err := http2.ConfigureTransport(transport); err != nil {
 			t.Fatal(err)
 		}
@@ -1139,7 +1107,7 @@ func TestRaft_SnapshotAPI_DifferentCluster(t *testing.T) {
 }
 
 func BenchmarkRaft_SingleNode(b *testing.B) {
-	cluster := raftCluster(b, nil)
+	cluster, _ := raftCluster(b, nil)
 	defer cluster.Cleanup()
 
 	leaderClient := cluster.Cores[0].Client

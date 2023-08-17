@@ -1,9 +1,13 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package transit
 
 import (
 	"context"
 	"crypto/rsa"
 	"encoding/base64"
+	"errors"
 	"fmt"
 	"strconv"
 	"strings"
@@ -25,12 +29,12 @@ type batchResponseSignItem struct {
 	// request item
 	Signature string `json:"signature,omitempty" mapstructure:"signature"`
 
-	// The key version to be used for encryption
+	// The key version to be used for signing
 	KeyVersion int `json:"key_version" mapstructure:"key_version"`
 
 	PublicKey []byte `json:"publickey,omitempty" mapstructure:"publickey"`
 
-	// Error, if set represents a failure encountered while encrypting a
+	// Error, if set represents a failure encountered while signing a
 	// corresponding batch request item
 	Error string `json:"error,omitempty" mapstructure:"error"`
 
@@ -39,6 +43,10 @@ type batchResponseSignItem struct {
 	// For batch processing to successfully mimic previous handling for simple 'input',
 	// both output values are needed - though 'err' should never be serialized.
 	err error
+
+	// Reference is an arbitrary caller supplied string value that will be placed on the
+	// batch response to ease correlation between inputs and outputs
+	Reference string `json:"reference" mapstructure:"reference"`
 }
 
 // BatchRequestVerifyItem represents a request item for batch processing.
@@ -50,7 +58,7 @@ type batchResponseVerifyItem struct {
 	// Valid indicates whether signature matches the signature derived from the input string
 	Valid bool `json:"valid" mapstructure:"valid"`
 
-	// Error, if set represents a failure encountered while encrypting a
+	// Error, if set represents a failure encountered while verifying a
 	// corresponding batch request item
 	Error string `json:"error,omitempty" mapstructure:"error"`
 
@@ -59,11 +67,24 @@ type batchResponseVerifyItem struct {
 	// For batch processing to successfully mimic previous handling for simple 'input',
 	// both output values are needed - though 'err' should never be serialized.
 	err error
+
+	// Reference is an arbitrary caller supplied string value that will be placed on the
+	// batch response to ease correlation between inputs and outputs
+	Reference string `json:"reference" mapstructure:"reference"`
 }
+
+const defaultHashAlgorithm = "sha2-256"
 
 func (b *backend) pathSign() *framework.Path {
 	return &framework.Path{
 		Pattern: "sign/" + framework.GenericNameRegex("name") + framework.OptionalParamRegex("urlalgorithm"),
+
+		DisplayAttrs: &framework.DisplayAttributes{
+			OperationPrefix: operationPrefixTransit,
+			OperationVerb:   "sign",
+			OperationSuffix: "|with-algorithm",
+		},
+
 		Fields: map[string]*framework.FieldSchema{
 			"name": {
 				Type:        framework.TypeString,
@@ -83,7 +104,7 @@ derivation is enabled; currently only available with ed25519 keys.`,
 
 			"hash_algorithm": {
 				Type:    framework.TypeString,
-				Default: "sha2-256",
+				Default: defaultHashAlgorithm,
 				Description: `Hash algorithm to use (POST body parameter). Valid values are:
 
 * sha1
@@ -95,14 +116,17 @@ derivation is enabled; currently only available with ed25519 keys.`,
 * sha3-256
 * sha3-384
 * sha3-512
+* none
 
 Defaults to "sha2-256". Not valid for all key types,
-including ed25519.`,
+including ed25519. Using none requires setting prehashed=true and
+signature_algorithm=pkcs1v15, yielding a PKCSv1_5_NoOID instead of
+the usual PKCSv1_5_DERnull signature.`,
 			},
 
 			"algorithm": {
 				Type:        framework.TypeString,
-				Default:     "sha2-256",
+				Default:     defaultHashAlgorithm,
 				Description: `Deprecated: use "hash_algorithm" instead.`,
 			},
 
@@ -141,6 +165,14 @@ Options are 'pss' or 'pkcs1v15'. Defaults to 'pss'`,
 				Description: `The salt length used to sign. Currently only applies to the RSA PSS signature scheme.
 Options are 'auto' (the default used by Golang, causing the salt to be as large as possible when signing), 'hash' (causes the salt length to equal the length of the hash used in the signature), or an integer between the minimum and the maximum permissible salt lengths for the given RSA key size. Defaults to 'auto'.`,
 			},
+
+			"batch_input": {
+				Type: framework.TypeSlice,
+				Description: `Specifies a list of items for processing. When this parameter is set,
+any supplied 'input' or 'context' parameters will be ignored. Responses are returned in the
+'batch_results' array component of the 'data' element of the response. Any batch output will
+preserve the order of the batch input`,
+			},
 		},
 
 		Callbacks: map[logical.Operation]framework.OperationFunc{
@@ -155,6 +187,13 @@ Options are 'auto' (the default used by Golang, causing the salt to be as large 
 func (b *backend) pathVerify() *framework.Path {
 	return &framework.Path{
 		Pattern: "verify/" + framework.GenericNameRegex("name") + framework.OptionalParamRegex("urlalgorithm"),
+
+		DisplayAttrs: &framework.DisplayAttributes{
+			OperationPrefix: operationPrefixTransit,
+			OperationVerb:   "verify",
+			OperationSuffix: "|with-algorithm",
+		},
+
 		Fields: map[string]*framework.FieldSchema{
 			"name": {
 				Type:        framework.TypeString,
@@ -189,7 +228,7 @@ derivation is enabled; currently only available with ed25519 keys.`,
 
 			"hash_algorithm": {
 				Type:    framework.TypeString,
-				Default: "sha2-256",
+				Default: defaultHashAlgorithm,
 				Description: `Hash algorithm to use (POST body parameter). Valid values are:
 
 * sha1
@@ -201,13 +240,15 @@ derivation is enabled; currently only available with ed25519 keys.`,
 * sha3-256
 * sha3-384
 * sha3-512
+* none
 
-Defaults to "sha2-256". Not valid for all key types.`,
+Defaults to "sha2-256". Not valid for all key types. See note about
+none on signing path.`,
 			},
 
 			"algorithm": {
 				Type:        framework.TypeString,
-				Default:     "sha2-256",
+				Default:     defaultHashAlgorithm,
 				Description: `Deprecated: use "hash_algorithm" instead.`,
 			},
 
@@ -218,7 +259,7 @@ Defaults to "sha2-256". Not valid for all key types.`,
 
 			"signature_algorithm": {
 				Type: framework.TypeString,
-				Description: `The signature algorithm to use for signature verification. Currently only applies to RSA key types. 
+				Description: `The signature algorithm to use for signature verification. Currently only applies to RSA key types.
 Options are 'pss' or 'pkcs1v15'. Defaults to 'pss'`,
 			},
 
@@ -233,6 +274,14 @@ Options are 'pss' or 'pkcs1v15'. Defaults to 'pss'`,
 				Default: "auto",
 				Description: `The salt length used to sign. Currently only applies to the RSA PSS signature scheme.
 Options are 'auto' (the default used by Golang, causing the salt to be as large as possible when signing), 'hash' (causes the salt length to equal the length of the hash used in the signature), or an integer between the minimum and the maximum permissible salt lengths for the given RSA key size. Defaults to 'auto'.`,
+			},
+
+			"batch_input": {
+				Type: framework.TypeSlice,
+				Description: `Specifies a list of items for processing. When this parameter is set,
+any supplied  'input', 'hmac' or 'signature' parameters will be ignored. Responses are returned in the
+'batch_results' array component of the 'data' element of the response. Any batch output will
+preserve the order of the batch input`,
 			},
 		},
 
@@ -280,6 +329,9 @@ func (b *backend) pathSignWrite(ctx context.Context, req *logical.Request, d *fr
 		hashAlgorithmStr = d.Get("hash_algorithm").(string)
 		if hashAlgorithmStr == "" {
 			hashAlgorithmStr = d.Get("algorithm").(string)
+			if hashAlgorithmStr == "" {
+				hashAlgorithmStr = defaultHashAlgorithm
+			}
 		}
 	}
 
@@ -301,6 +353,10 @@ func (b *backend) pathSignWrite(ctx context.Context, req *logical.Request, d *fr
 		return logical.ErrorResponse(err.Error()), logical.ErrInvalidRequest
 	}
 
+	if hashAlgorithm == keysutil.HashTypeNone && (!prehashed || sigAlgorithm != "pkcs1v15") {
+		return logical.ErrorResponse("hash_algorithm=none requires both prehashed=true and signature_algorithm=pkcs1v15"), logical.ErrInvalidRequest
+	}
+
 	// Get the policy
 	p, _, err := b.GetPolicy(ctx, keysutil.PolicyRequest{
 		Storage: req.Storage,
@@ -310,7 +366,7 @@ func (b *backend) pathSignWrite(ctx context.Context, req *logical.Request, d *fr
 		return nil, err
 	}
 	if p == nil {
-		return logical.ErrorResponse("encryption key not found"), logical.ErrInvalidRequest
+		return logical.ErrorResponse("signing key not found"), logical.ErrInvalidRequest
 	}
 	if !b.System().CachingDisabled() {
 		p.Lock(false)
@@ -378,11 +434,26 @@ func (b *backend) pathSignWrite(ctx context.Context, req *logical.Request, d *fr
 			}
 		}
 
+		var managedKeyParameters keysutil.ManagedKeyParameters
+		if p.Type == keysutil.KeyType_MANAGED_KEY {
+			managedKeySystemView, ok := b.System().(logical.ManagedKeySystemView)
+			if !ok {
+				return nil, errors.New("unsupported system view")
+			}
+
+			managedKeyParameters = keysutil.ManagedKeyParameters{
+				ManagedKeySystemView: managedKeySystemView,
+				BackendUUID:          b.backendUUID,
+				Context:              ctx,
+			}
+		}
+
 		sig, err := p.SignWithOptions(ver, context, input, &keysutil.SigningOptions{
-			HashAlgorithm: hashAlgorithm,
-			Marshaling:    marshaling,
-			SaltLength:    saltLength,
-			SigAlgorithm:  sigAlgorithm,
+			HashAlgorithm:    hashAlgorithm,
+			Marshaling:       marshaling,
+			SaltLength:       saltLength,
+			SigAlgorithm:     sigAlgorithm,
+			ManagedKeyParams: managedKeyParameters,
 		})
 		if err != nil {
 			if batchInputRaw != nil {
@@ -406,6 +477,10 @@ func (b *backend) pathSignWrite(ctx context.Context, req *logical.Request, d *fr
 	// Generate the response
 	resp := &logical.Response{}
 	if batchInputRaw != nil {
+		// Copy the references
+		for i := range batchInputItems {
+			response[i].Reference = batchInputItems[i]["reference"]
+		}
 		resp.Data = map[string]interface{}{
 			"batch_results": response,
 		}
@@ -507,6 +582,9 @@ func (b *backend) pathVerifyWrite(ctx context.Context, req *logical.Request, d *
 		hashAlgorithmStr = d.Get("hash_algorithm").(string)
 		if hashAlgorithmStr == "" {
 			hashAlgorithmStr = d.Get("algorithm").(string)
+			if hashAlgorithmStr == "" {
+				hashAlgorithmStr = defaultHashAlgorithm
+			}
 		}
 	}
 
@@ -528,6 +606,10 @@ func (b *backend) pathVerifyWrite(ctx context.Context, req *logical.Request, d *
 		return logical.ErrorResponse(err.Error()), logical.ErrInvalidRequest
 	}
 
+	if hashAlgorithm == keysutil.HashTypeNone && (!prehashed || sigAlgorithm != "pkcs1v15") {
+		return logical.ErrorResponse("hash_algorithm=none requires both prehashed=true and signature_algorithm=pkcs1v15"), logical.ErrInvalidRequest
+	}
+
 	// Get the policy
 	p, _, err := b.GetPolicy(ctx, keysutil.PolicyRequest{
 		Storage: req.Storage,
@@ -537,7 +619,7 @@ func (b *backend) pathVerifyWrite(ctx context.Context, req *logical.Request, d *
 		return nil, err
 	}
 	if p == nil {
-		return logical.ErrorResponse("encryption key not found"), logical.ErrInvalidRequest
+		return logical.ErrorResponse("signature verification key not found"), logical.ErrInvalidRequest
 	}
 	if !b.System().CachingDisabled() {
 		p.Lock(false)
@@ -589,13 +671,29 @@ func (b *backend) pathVerifyWrite(ctx context.Context, req *logical.Request, d *
 				continue
 			}
 		}
+		var managedKeyParameters keysutil.ManagedKeyParameters
+		if p.Type == keysutil.KeyType_MANAGED_KEY {
+			managedKeySystemView, ok := b.System().(logical.ManagedKeySystemView)
+			if !ok {
+				return nil, errors.New("unsupported system view")
+			}
 
-		valid, err := p.VerifySignatureWithOptions(context, input, sig, &keysutil.SigningOptions{
-			HashAlgorithm: hashAlgorithm,
-			Marshaling:    marshaling,
-			SaltLength:    saltLength,
-			SigAlgorithm:  sigAlgorithm,
-		})
+			managedKeyParameters = keysutil.ManagedKeyParameters{
+				ManagedKeySystemView: managedKeySystemView,
+				BackendUUID:          b.backendUUID,
+				Context:              ctx,
+			}
+		}
+
+		signingOptions := &keysutil.SigningOptions{
+			HashAlgorithm:    hashAlgorithm,
+			Marshaling:       marshaling,
+			SaltLength:       saltLength,
+			SigAlgorithm:     sigAlgorithm,
+			ManagedKeyParams: managedKeyParameters,
+		}
+
+		valid, err := p.VerifySignatureWithOptions(context, input, sig, signingOptions)
 		if err != nil {
 			switch err.(type) {
 			case errutil.UserError:
@@ -615,6 +713,10 @@ func (b *backend) pathVerifyWrite(ctx context.Context, req *logical.Request, d *
 	// Generate the response
 	resp := &logical.Response{}
 	if batchInputRaw != nil {
+		// Copy the references
+		for i := range batchInputItems {
+			response[i].Reference = batchInputItems[i]["reference"]
+		}
 		resp.Data = map[string]interface{}{
 			"batch_results": response,
 		}

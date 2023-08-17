@@ -4,14 +4,14 @@ page_title: Duration String Format
 description: A description of Vault's duration string format used throughout Vault.
 ---
 
-# Duration String Format
+# Duration string format
 
 Vault uses a unique duration string format as part of its configuration and APIs.
 This format is used throughout Vault wherever durations are provided. For
 example, telemetry configuration contains various options using this format, such as
 `usage_gauge_period`, which is the interval of collection for high-cardinality usage data.
 
-## How It Works
+## How it works
 
 A duration string is a possibly signed sequence of decimal numbers, each with an optional fraction and
 an optional unit suffix. If no unit is given, we interpret the numbers as seconds.

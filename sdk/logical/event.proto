@@ -1,0 +1,54 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
+syntax = "proto3";
+
+package logical;
+
+import "google/protobuf/struct.proto";
+
+option go_package = "github.com/hashicorp/vault/sdk/logical";
+
+// EventPluginInfo contains data related to the plugin that generated an event.
+message EventPluginInfo {
+  // The type of plugin this event originated from, i.e., "auth" or "secrets.
+  string mount_class = 1;
+  // Unique ID of the mount entry, e.g., "kv_957bb7d8"
+  string mount_accessor = 2;
+  // Mount path of the plugin this event originated from, e.g., "secret/"
+  string mount_path = 3;
+  // Plugin name that this event originated from, e.g., "kv"
+  string plugin = 4;
+  // Plugin version of the plugin this event originated from, e.g., "v0.13.3+builtin"
+  string plugin_version = 5;
+  // Mount version that this event originated from, i.e., if KVv2, then "2". Usually empty.
+  string version = 6;
+}
+
+// EventData contains event data in a CloudEvents container.
+message EventData {
+  // ID identifies the event. It is required. The combination of
+  // CloudEvents Source (i.e., Vault cluster) + ID must be unique.
+  // Events with the same Source + ID can be assumed to be duplicates
+  // by consumers.
+  // Be careful when setting this manually that the ID contains enough
+  // entropy to be unique, or possibly that it is idempotent, such
+  // as a hash of other fields with sufficient uniqueness.
+  string id = 1;
+  // Arbitrary non-secret data. Optional.
+  google.protobuf.Struct metadata = 2;
+  // Any IDs that the event relates to, i.e., UUIDs, paths.
+  repeated string entity_ids = 3;
+  // Human-readable note.
+  string note = 4;
+}
+
+// EventReceived is used to consume events and includes additional metadata regarding
+// the event type and plugin information.
+message EventReceived {
+  EventData event = 1;
+  // namespace path
+  string namespace = 2;
+  string event_type = 3;
+  EventPluginInfo plugin_info = 4;
+}

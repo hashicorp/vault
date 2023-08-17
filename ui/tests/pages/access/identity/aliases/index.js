@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import { create, clickable, text, visitable, collection } from 'ember-cli-page-object';
 import flashMessage from 'vault/tests/pages/components/flash-message';
 

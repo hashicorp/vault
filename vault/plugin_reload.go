@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package vault
 
 import (
@@ -62,7 +65,7 @@ func (c *Core) reloadMatchingPluginMounts(ctx context.Context, mounts []string) 
 			errors = multierror.Append(errors, fmt.Errorf("cannot reload plugin on %q: %w", mount, err))
 			continue
 		}
-		c.logger.Info("successfully reloaded plugin", "plugin", entry.Accessor, "path", entry.Path)
+		c.logger.Info("successfully reloaded plugin", "plugin", entry.Accessor, "path", entry.Path, "version", entry.Version)
 	}
 	return errors
 }
@@ -92,7 +95,7 @@ func (c *Core) reloadMatchingPlugin(ctx context.Context, pluginName string) erro
 			if err != nil {
 				return err
 			}
-			c.logger.Info("successfully reloaded plugin", "plugin", pluginName, "path", entry.Path)
+			c.logger.Info("successfully reloaded plugin", "plugin", pluginName, "path", entry.Path, "version", entry.Version)
 		}
 	}
 
@@ -108,7 +111,7 @@ func (c *Core) reloadMatchingPlugin(ctx context.Context, pluginName string) erro
 			if err != nil {
 				return err
 			}
-			c.logger.Info("successfully reloaded plugin", "plugin", entry.Accessor, "path", entry.Path)
+			c.logger.Info("successfully reloaded plugin", "plugin", entry.Accessor, "path", entry.Path, "version", entry.Version)
 		}
 	}
 
@@ -194,7 +197,7 @@ func (c *Core) reloadBackendCommon(ctx context.Context, entry *MountEntry, isAut
 	entry.RunningVersion = entry.Version
 	if entry.RunningVersion == "" {
 		// don't set the running version to a builtin if it is running as an external plugin
-		if externaler, ok := backend.(logical.Externaler); !ok || !externaler.IsExternal() {
+		if entry.RunningSha256 == "" {
 			if isAuth {
 				entry.RunningVersion = versions.GetBuiltinVersion(consts.PluginTypeCredential, entry.Type)
 			} else {

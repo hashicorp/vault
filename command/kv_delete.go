@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package command
 
 import (
@@ -117,7 +120,7 @@ func (c *KVDeleteCommand) Run(args []string) int {
 
 	// If true, we're working with "-mount=secret foo" syntax.
 	// If false, we're using "secret/foo" syntax.
-	mountFlagSyntax := (c.flagMount != "")
+	mountFlagSyntax := c.flagMount != ""
 
 	var (
 		mountPath   string
@@ -129,11 +132,14 @@ func (c *KVDeleteCommand) Run(args []string) int {
 	if mountFlagSyntax {
 		// In this case, this arg is the secret path (e.g. "foo").
 		partialPath = sanitizePath(args[0])
-		mountPath = sanitizePath(c.flagMount)
-		_, v2, err = isKVv2(mountPath, client)
+		mountPath, v2, err = isKVv2(sanitizePath(c.flagMount), client)
 		if err != nil {
 			c.UI.Error(err.Error())
 			return 2
+		}
+
+		if v2 {
+			partialPath = path.Join(mountPath, partialPath)
 		}
 	} else {
 		// In this case, this arg is a path-like combination of mountPath/secretPath.
@@ -150,7 +156,7 @@ func (c *KVDeleteCommand) Run(args []string) int {
 	var fullPath string
 	if v2 {
 		secret, err = c.deleteV2(partialPath, mountPath, client)
-		fullPath = addPrefixToKVPath(partialPath, mountPath, "data")
+		fullPath = addPrefixToKVPath(partialPath, mountPath, "data", false)
 	} else {
 		// v1
 		if mountFlagSyntax {
@@ -189,13 +195,13 @@ func (c *KVDeleteCommand) deleteV2(path, mountPath string, client *api.Client) (
 	var secret *api.Secret
 	switch {
 	case len(c.flagVersions) > 0:
-		path = addPrefixToKVPath(path, mountPath, "delete")
+		path = addPrefixToKVPath(path, mountPath, "delete", false)
 		data := map[string]interface{}{
 			"versions": kvParseVersionsFlags(c.flagVersions),
 		}
 		secret, err = client.Logical().Write(path, data)
 	default:
-		path = addPrefixToKVPath(path, mountPath, "data")
+		path = addPrefixToKVPath(path, mountPath, "data", false)
 		secret, err = client.Logical().Delete(path)
 	}
 

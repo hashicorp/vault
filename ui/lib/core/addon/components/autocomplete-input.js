@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import Component from '@glimmer/component';
 import { action } from '@ember/object';
 
@@ -26,6 +31,10 @@ export default class AutocompleteInput extends Component {
   @action
   setElement(element) {
     this.inputElement = element.querySelector('.input');
+  }
+  @action
+  setDropdownAPI(dropdownAPI) {
+    this.dropdownAPI = dropdownAPI;
   }
   @action
   onInput(event) {

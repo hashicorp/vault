@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 export default (test) => {
   test('it should make request to correct endpoint on save', async function (assert) {
     assert.expect(1);
@@ -35,7 +40,7 @@ export default (test) => {
     const key_info = { [name]: { ...otherAttrs } };
 
     this.server.get(`/identity/${this.modelName}`, (schema, req) => {
-      assert.equal(req.queryParams.list, 'true', 'request is made to correct endpoint on query');
+      assert.strictEqual(req.queryParams.list, 'true', 'request is made to correct endpoint on query');
       if (keyInfoModels.some((model) => this.modelName.includes(model))) {
         return { data: { keys: [name], key_info } };
       } else {
@@ -83,24 +88,24 @@ export default (test) => {
       let testQuery = ['*', 'a123'];
       await this.store
         .query(this.modelName, { paramKey: 'model_id', filterFor: testQuery })
-        .then((resp) => assert.equal(resp.content.length, 3, 'returns all models when ids include glob (*)'));
+        .then((resp) => assert.strictEqual(resp.length, 3, 'returns all models when ids include glob (*)'));
 
       testQuery = ['*'];
       await this.store
         .query(this.modelName, { paramKey: 'model_id', filterFor: testQuery })
-        .then((resp) => assert.equal(resp.content.length, 3, 'returns all models when glob (*) is only id'));
+        .then((resp) => assert.strictEqual(resp.length, 3, 'returns all models when glob (*) is only id'));
 
       testQuery = ['b123'];
       await this.store.query(this.modelName, { paramKey: 'model_id', filterFor: testQuery }).then((resp) => {
-        assert.equal(resp.content.length, 1, 'filters response and returns only matching id');
+        assert.strictEqual(resp.length, 1, 'filters response and returns only matching id');
 
-        assert.equal(resp.firstObject.name, 'model-2', 'response contains correct model');
+        assert.strictEqual(resp[0].name, 'model-2', 'response contains correct model');
       });
 
       testQuery = ['b123', 'c123'];
       await this.store.query(this.modelName, { paramKey: 'model_id', filterFor: testQuery }).then((resp) => {
-        assert.equal(resp.content.length, 2, 'filters response when passed multiple ids');
-        resp.content.forEach((m) =>
+        assert.strictEqual(resp.length, 2, 'filters response when passed multiple ids');
+        resp.forEach((m) =>
           assert.ok(['model-2', 'model-3'].includes(m.id), `it filters correctly and included: ${m.id}`)
         );
       });
@@ -114,7 +119,7 @@ export default (test) => {
         'throws assertion when filterFor is not an array'
       );
     } else {
-      let testQuery = ['b123', 'c123'];
+      const testQuery = ['b123', 'c123'];
       await this.store
         .query(this.modelName, { paramKey: 'model_id', filterFor: testQuery })
         .then((resp) => assert.ok(resp.isLoaded, 'does not error when key_info does not exist'));

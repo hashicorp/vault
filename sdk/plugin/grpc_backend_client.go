@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package plugin
 
 import (
@@ -42,10 +45,7 @@ type backendGRPCPluginClient struct {
 	// server is the grpc server used for serving storage and sysview requests.
 	server *atomic.Value
 
-	// clientConn is the underlying grpc connection to the server, we store it
-	// so it can be cleaned up.
-	clientConn *grpc.ClientConn
-	doneCtx    context.Context
+	doneCtx context.Context
 }
 
 func (b *backendGRPCPluginClient) Initialize(ctx context.Context, _ *logical.InitializationRequest) error {
@@ -127,10 +127,11 @@ func (b *backendGRPCPluginClient) SpecialPaths() *logical.Paths {
 	}
 
 	return &logical.Paths{
-		Root:            reply.Paths.Root,
-		Unauthenticated: reply.Paths.Unauthenticated,
-		LocalStorage:    reply.Paths.LocalStorage,
-		SealWrapStorage: reply.Paths.SealWrapStorage,
+		Root:                  reply.Paths.Root,
+		Unauthenticated:       reply.Paths.Unauthenticated,
+		LocalStorage:          reply.Paths.LocalStorage,
+		SealWrapStorage:       reply.Paths.SealWrapStorage,
+		WriteForwardedStorage: reply.Paths.WriteForwardedStorage,
 	}
 }
 
@@ -194,7 +195,6 @@ func (b *backendGRPCPluginClient) Cleanup(ctx context.Context) {
 	if server != nil {
 		server.(*grpc.Server).GracefulStop()
 	}
-	b.clientConn.Close()
 }
 
 func (b *backendGRPCPluginClient) InvalidateKey(ctx context.Context, key string) {
@@ -231,6 +231,10 @@ func (b *backendGRPCPluginClient) Setup(ctx context.Context, config *logical.Bac
 		impl: sysViewImpl,
 	}
 
+	events := &GRPCEventsServer{
+		impl: config.EventsSender,
+	}
+
 	// Register the server in this closure.
 	serverFunc := func(opts []grpc.ServerOption) *grpc.Server {
 		opts = append(opts, grpc.MaxRecvMsgSize(math.MaxInt32))
@@ -239,6 +243,7 @@ func (b *backendGRPCPluginClient) Setup(ctx context.Context, config *logical.Bac
 		s := grpc.NewServer(opts...)
 		pb.RegisterSystemViewServer(s, sysView)
 		pb.RegisterStorageServer(s, storage)
+		pb.RegisterEventsServer(s, events)
 		b.server.Store(s)
 		close(b.cleanupCh)
 		return s

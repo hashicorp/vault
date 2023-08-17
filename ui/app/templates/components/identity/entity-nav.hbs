@@ -1,7 +1,12 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
 <PageHeader as |p|>
   <p.levelLeft>
     <h1 class="title is-3">
-      {{capitalize (pluralize this.identityType)}}
+      {{titleize (pluralize this.identityType)}}
     </h1>
   </p.levelLeft>
 </PageHeader>
@@ -26,7 +31,8 @@
   <ToolbarActions>
     {{#if (eq this.identityType "entity")}}
       <ToolbarLink
-        @params={{array "vault.cluster.access.identity.merge" (pluralize this.identityType)}}
+        @route={{"vault.cluster.access.identity.merge"}}
+        @model={{pluralize this.identityType}}
         data-test-entity-merge-link={{true}}
       >
         Merge
@@ -34,8 +40,9 @@
       </ToolbarLink>
     {{/if}}
     <ToolbarLink
+      @route="vault.cluster.access.identity.create"
+      @model={{pluralize this.identityType}}
       @type="add"
-      @params={{array "vault.cluster.access.identity.create" (pluralize this.identityType)}}
       data-test-entity-create-link={{true}}
     >
       Create

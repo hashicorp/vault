@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package vault
 
 import (
@@ -19,9 +22,7 @@ func NewTestSeal(t testing.T, opts *seal.TestSealOpts) Seal {
 
 	switch opts.StoredKeys {
 	case seal.StoredKeysSupportedShamirRoot:
-		newSeal := NewDefaultSeal(&seal.Access{
-			Wrapper: aeadwrapper.NewShamirWrapper(),
-		})
+		newSeal := NewDefaultSeal(seal.NewAccess(aeadwrapper.NewShamirWrapper()))
 		// Need StoredShares set or this will look like a legacy shamir seal.
 		newSeal.SetCachedBarrierConfig(&SealConfig{
 			StoredShares:    1,
@@ -30,9 +31,7 @@ func NewTestSeal(t testing.T, opts *seal.TestSealOpts) Seal {
 		})
 		return newSeal
 	case seal.StoredKeysNotSupported:
-		newSeal := NewDefaultSeal(&seal.Access{
-			Wrapper: aeadwrapper.NewShamirWrapper(),
-		})
+		newSeal := NewDefaultSeal(seal.NewAccess(aeadwrapper.NewShamirWrapper()))
 		newSeal.SetCachedBarrierConfig(&SealConfig{
 			StoredShares:    0,
 			SecretThreshold: 1,
@@ -40,7 +39,8 @@ func NewTestSeal(t testing.T, opts *seal.TestSealOpts) Seal {
 		})
 		return newSeal
 	default:
-		seal, err := NewAutoSeal(seal.NewTestSeal(opts))
+		access, _ := seal.NewTestSeal(opts)
+		seal, err := NewAutoSeal(access)
 		if err != nil {
 			t.Fatal(err)
 		}

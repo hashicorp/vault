@@ -1,3 +1,8 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
 {{#if (or (eq this.policyType "acl") (has-feature "Sentinel"))}}
   <PageHeader as |p|>
     <p.levelLeft>
@@ -16,7 +21,7 @@
     {{#if this.model.meta.total}}
       <ToolbarFilters>
         <NavigateInput
-          filterFocusDidChange={{action "setFilterFocus"}}
+          @filterFocusDidChange={{action "setFilterFocus"}}
           @filterDidChange={{action "setFilter"}}
           @filter={{this.filter}}
           @filterMatchesKey={{this.filterMatchesKey}}
@@ -44,7 +49,7 @@
       </ToolbarFilters>
     {{/if}}
     <ToolbarActions>
-      <ToolbarLink @type="add" @params={{array "vault.cluster.policies.create"}} data-test-policy-create-link={{true}}>
+      <ToolbarLink @route="vault.cluster.policies.create" @type="add" data-test-policy-create-link>
         Create
         {{uppercase this.policyType}}
         policy
@@ -166,10 +171,10 @@
         policy
         <Chevron />
       </LinkTo>
-      <LearnLink @path="/vault/getting-started/policies">
+      <DocLink @path="/vault/tutorials/getting-started/getting-started-policies">
         Learn more
         <Chevron />
-      </LearnLink>
+      </DocLink>
     </EmptyState>
   {{/if}}
 {{else}}

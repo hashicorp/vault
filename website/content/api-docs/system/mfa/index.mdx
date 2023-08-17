@@ -13,17 +13,17 @@ behaviors in Vault Enterprise MFA.
 
 ## Supported MFA types
 
-- [TOTP](/api-docs/system/mfa/totp)
+- [TOTP](/vault/api-docs/system/mfa/totp)
 
-- [Okta](/api-docs/system/mfa/okta)
+- [Okta](/vault/api-docs/system/mfa/okta)
 
-- [Duo](/api-docs/system/mfa/duo)
+- [Duo](/vault/api-docs/system/mfa/duo)
 
-- [PingID](/api-docs/system/mfa/pingid)
+- [PingID](/vault/api-docs/system/mfa/pingid)
 
-## Step-up Enterprise MFA
+## Step-up enterprise MFA
 
-[Vault Enterprise](/docs/enterprise/mfa) allows MFA for login and access to
+[Vault Enterprise](/vault/docs/enterprise/mfa) allows MFA for login and access to
 sensitive resources in Vault.  The Step-up Enterprise MFA expects the method
 creator to specify a name for the method; Login MFA does not, and instead
 returns an ID when a method is created. Although MFA methods supported with Step-up Enterprise MFA are supported with the Login MFA, they use different API endpoints.
@@ -31,8 +31,8 @@ returns an ID when a method is created. Although MFA methods supported with Step
 - Step-up Enterprise MFA: `sys/mfa/method/:type/:/name`
 - Login MFA: `identity/mfa/method/:type`
 
-~> **Note:** While the `sys/mfa` endpoint is supported for both OSS and Vault Enterprise, `sys/mfa/method/:type/:/name` is only supported for Vault Enterprise.
+~> **Note:** While the `sys/mfa` endpoint is supported for both Vault Community and Enterprise editions, `sys/mfa/method/:type/:/name` is only supported for Vault Enterprise.
 
 Refer to the [Login MFA
-FAQ](/docs/auth/login-mfa/faq#q-are-there-new-mfa-api-endpoints-introduced-as-part-of-the-new-vault-version-1-10-mfa-for-login-functionality) document
+FAQ](/vault/docs/auth/login-mfa/faq#q-are-there-new-mfa-api-endpoints-introduced-as-part-of-the-new-vault-version-1-10-mfa-for-login-functionality) document
 for more details.

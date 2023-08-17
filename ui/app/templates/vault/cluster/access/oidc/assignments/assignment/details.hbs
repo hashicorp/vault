@@ -1,3 +1,8 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
 <PageHeader as |p|>
   <p.top>
     <nav class="breadcrumb" aria-label="breadcrumbs">
@@ -49,7 +54,8 @@
     {{/if}}
     {{#if @model.canEdit}}
       <ToolbarLink
-        @params={{array "vault.cluster.access.oidc.assignments.assignment.edit" @model.name}}
+        @route="vault.cluster.access.oidc.assignments.assignment.edit"
+        @model={{@model.name}}
         data-test-oidc-assignment-edit
       >
         Edit assignment

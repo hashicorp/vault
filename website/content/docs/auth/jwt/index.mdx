@@ -6,7 +6,7 @@ description: >-
   JWTs
 ---
 
-# JWT/OIDC Auth Method
+# JWT/OIDC auth method
 
 @include 'x509-sha1-deprecation.mdx'
 
@@ -25,10 +25,10 @@ Both methods allow additional processing of the claims data in the JWT. Some of
 the concepts common to both methods will be covered first, followed by specific
 examples of OIDC and JWT usage.
 
-## OIDC Authentication
+## OIDC authentication
 
 This section covers the setup and use of OIDC roles. If a JWT is to be provided directly,
-refer to the [JWT Authentication](/docs/auth/jwt#jwt-authentication) section below. Basic
+refer to the [JWT Authentication](/vault/docs/auth/jwt#jwt-authentication) section below. Basic
 familiarity with [OIDC concepts](https://developer.okta.com/blog/2017/07/25/oidc-primer-part-1)
 is assumed. The Authorization Code flow makes use of the Proof Key for Code
 Exchange (PKCE) extension.
@@ -60,28 +60,28 @@ Logging in via the Vault UI requires a redirect URI of the form:
 The "host:port" must be correct for the Vault server, and "path" must match the path the JWT
 backend is mounted at (e.g. "oidc" or "jwt").
 
-If the [oidc_response_mode](/api-docs/auth/jwt#oidc_response_mode) is set to `form_post`, then
+If the [oidc_response_mode](/vault/api-docs/auth/jwt#oidc_response_mode) is set to `form_post`, then
 logging in via the Vault UI requires a redirect URI of the form:
 
 `https://{host:port}/v1/auth/{path}/oidc/callback`
 
-Prior to Vault 1.6, if [namespaces](/docs/enterprise/namespaces) are in use,
+Prior to Vault 1.6, if [namespaces](/vault/docs/enterprise/namespaces) are in use,
 they must be added as query parameters, for example:
 
 `https://vault.example.com:8200/ui/vault/auth/oidc/oidc/callback?namespace=my_ns`
 
 For Vault 1.6+, it is no longer necessary to add the namespace as a query
 parameter in the redirect URI, if
-[`namespace_in_state`](/api-docs/auth/jwt#namespace_in_state) is set to `true`,
+[`namespace_in_state`](/vault/api-docs/auth/jwt#namespace_in_state) is set to `true`,
 which is the default for new configs.
 
-### OIDC Login (Vault UI)
+### OIDC login (Vault UI)
 
 1. Select the "OIDC" login method.
 1. Enter a role name if necessary.
 1. Press "Sign In" and complete the authentication with the configured provider.
 
-### OIDC Login (CLI)
+### OIDC login (CLI)
 
 The CLI login defaults to path of `/oidc`. If this auth method was enabled at a
 different path, specify `-path=/my-path` in the CLI.
@@ -110,14 +110,14 @@ not required to be set:
 - `callbackport` (default: value set for `port`). This value is used in the `redirect_uri`, whereas
   `port` is the localhost port that the listener is using. These two may be different in advanced setups.
 
-### OIDC Provider Configuration
+### OIDC provider configuration
 
 The OIDC authentication flow has been successfully tested with a number of providers. A full
 guide to configuring OAuth/OIDC applications is beyond the scope of Vault documentation, but a
 collection of provider configuration steps has been collected to help get started:
-[OIDC Provider Setup](/docs/auth/jwt/oidc-providers)
+[OIDC Provider Setup](/vault/docs/auth/jwt/oidc-providers)
 
-### OIDC Configuration Troubleshooting
+### OIDC configuration troubleshooting
 
 This amount of configuration required for OIDC is relatively small, but it can be tricky to debug
 why things aren't working. Some tips for setting up OIDC:
@@ -161,7 +161,7 @@ EOF
 
   `cat jwt.json | jq -r .access_token | cut -d. -f2 | base64 -D`
 
-- As of Vault 1.2, the [`verbose_oidc_logging`](/api-docs/auth/jwt#verbose_oidc_logging) role
+- As of Vault 1.2, the [`verbose_oidc_logging`](/vault/api-docs/auth/jwt#verbose_oidc_logging) role
   option is available which will log the received OIDC token to the _server_ logs if debug-level logging is enabled. This can
   be helpful when debugging provider setup and verifying that the received claims are what you expect.
   Since claims data is logged verbatim and may contain sensitive information, this option should not be
@@ -169,14 +169,14 @@ EOF
 
 - Azure requires some additional configuration when a user is a member of more
   than 200 groups, described in [Azure-specific handling
-  configuration](/docs/auth/jwt/oidc-providers/azuread#optional-azure-specific-configuration)
+  configuration](/vault/docs/auth/jwt/oidc-providers/azuread#optional-azure-specific-configuration)
 
-## JWT Authentication
+## JWT authentication
 
 The authentication flow for roles of type "jwt" is simpler than OIDC since Vault
 only needs to validate the provided JWT.
 
-### JWT Verification
+### JWT verification
 
 JWT signatures will be verified against public keys from the issuer. This process can be done in
 three different ways, though only one method may be configured for a single backend:
@@ -195,12 +195,17 @@ at a different path.
 
 ### Via the CLI
 
-The default path is `/jwt`. If this auth method was enabled at a
-different path, specify `-path=/my-path` in the CLI.
+```shell-session
+$ vault write auth/<path-to-jwt-backend>/login role=demo jwt=...
+```
+
+The default path for the JWT authentication backend is `/jwt`, so if you're using the default backend, the command would be:
 
 ```shell-session
 $ vault write auth/jwt/login role=demo jwt=...
 ```
+
+If your JWT auth backend is using a different path, use that path.
 
 ### Via the API
 
@@ -248,7 +253,7 @@ management tool.
 
 1. Use the `/config` endpoint to configure Vault. To support JWT roles, either local keys, a JWKS URL, or an OIDC
    Discovery URL must be present. For OIDC roles, OIDC Discovery URL, OIDC Client ID and OIDC Client Secret are required. For the
-   list of available configuration options, please see the [API documentation](/api-docs/auth/jwt).
+   list of available configuration options, please see the [API documentation](/vault/api-docs/auth/jwt).
 
    ```text
    $ vault write auth/jwt/config \
@@ -257,6 +262,15 @@ management tool.
        oidc_client_secret="f4ubv72nfiu23hnsj" \
        default_role="demo"
    ```
+
+   If you need to perform JWT verification with JWT token validation, then leave the `oidc_client_id` and `oidc_client_secret` blank. 
+
+   ```text
+   $ vault write auth/jwt/config \
+      oidc_discovery_url="https://MYDOMAIN.eu.auth0.com/" \
+      oidc_client_id="" \
+      oidc_client_secret="" \
+  ```
 
 1. Create a named role:
 
@@ -278,7 +292,7 @@ management tool.
    For the complete list of configuration options, please see the API
    documentation.
 
-### Bound Claims
+### Bound claims
 
 Once a JWT has been validated as being properly signed and not expired, the
 authorization flow will validate that any configured "bound" parameters match.
@@ -306,9 +320,9 @@ To limit authorization to a set of email addresses:
 }
 ```
 
-Bound claims can optionally be configured with globs. See the [API documentation](/api-docs/auth/jwt#bound_claims_type) for more details.
+Bound claims can optionally be configured with globs. See the [API documentation](/vault/api-docs/auth/jwt#bound_claims_type) for more details.
 
-### Claims as Metadata
+### Claims as metadata
 
 Data from claims can be copied into the resulting auth token and alias metadata by configuring `claim_mappings`. This role
 parameter is a map of items to copy. The map elements are of the form: `"<JWT claim>":"<metadata key>"`. Assume
@@ -327,7 +341,7 @@ it must existing in the JWT or else the authentication will fail.
 
 Note: the metadata key name "role" is reserved and may not be used for claim mappings.
 
-### Claim Specifications and JSON Pointer
+### Claim specifications and JSON pointer
 
 Some parameters (e.g. `bound_claims`, `groups_claim`, `claim_mappings`, `user_claim`) are
 used to point to data within the JWT. If the desired key is at the top of level of the JWT,
@@ -351,7 +365,17 @@ A parameter of `"division"` will reference "North America", as this is a top lev
 JSON Pointer can be used as a selector. Refer to the
 [JSON Pointer RFC](https://tools.ietf.org/html/rfc6901) for a full description of the syntax.
 
+## Tutorial
+
+Refer to the following tutorials for OIDC auth method usage examples:
+
+- [OIDC Auth Method](/vault/tutorials/auth-methods/oidc-auth)
+- [Azure Active Directory with OIDC Auth Method and External
+  Groups](/vault/tutorials/auth-methods/oidc-auth-azure)
+- [OIDC Authentication with Okta](/vault/tutorials/auth-methods/vault-oidc-okta)
+- [OIDC Authentication with Google Workspace](/vault/tutorials/auth-methods/google-workspace-oauth)
+
 ## API
 
 The JWT Auth Plugin has a full HTTP API. Please see the
-[API docs](/api-docs/auth/jwt) for more details.
+[API docs](/vault/api-docs/auth/jwt) for more details.

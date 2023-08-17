@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import { Response } from 'miragejs';
 
 export default function (server) {
@@ -139,7 +144,7 @@ export default function (server) {
       'identity_entity_ids',
     ];
     let hasRequired = false;
-    for (let key of required) {
+    for (const key of required) {
       if (data[key]?.length) {
         hasRequired = true;
         break;

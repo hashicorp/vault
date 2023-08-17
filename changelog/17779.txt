@@ -1,0 +1,3 @@
+```release-note:improvement
+secrets/pki: Add a new API that returns the serial numbers of revoked certificates on the local cluster
+```

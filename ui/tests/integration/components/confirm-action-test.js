@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import { module, test } from 'qunit';
 import { setupRenderingTest } from 'ember-qunit';
 import { render, click } from '@ember/test-helpers';
@@ -8,11 +13,11 @@ module('Integration | Component | confirm-action', function (hooks) {
   setupRenderingTest(hooks);
 
   test('it renders and on click shows the correct icon', async function (assert) {
-    let confirmAction = sinon.spy();
+    const confirmAction = sinon.spy();
     this.set('onConfirm', confirmAction);
     await render(hbs`
       <ConfirmAction
-        @onConfirmAction={{onConfirm}}
+        @onConfirmAction={{this.onConfirm}}
         @buttonClasses="toolbar-link"
       >
         DELETE
@@ -25,11 +30,11 @@ module('Integration | Component | confirm-action', function (hooks) {
   });
 
   test('it closes the confirmation modal on successful delete', async function (assert) {
-    let confirmAction = sinon.spy();
+    const confirmAction = sinon.spy();
     this.set('onConfirm', confirmAction);
     await render(hbs`
       <ConfirmAction
-        @onConfirmAction={{onConfirm}}
+        @onConfirmAction={{this.onConfirm}}
         @buttonClasses="toolbar-link"
       >
         DELETE

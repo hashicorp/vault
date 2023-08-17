@@ -4,6 +4,3 @@ plugins: `GET /sys/plugins/catalog` endpoint now returns an additional `detailed
 ```release-note:change
 plugins: `GET /sys/plugins/catalog/:type/:name` endpoint now returns an additional `version` field in the response data.
 ```
-```release-note:improvement
-plugins: Plugin catalog supports registering and managing plugins with semantic version information.
-```

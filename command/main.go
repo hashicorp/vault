@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package command
 
 import (
@@ -217,18 +220,19 @@ func RunCustom(args []string, runOpts *RunOptions) int {
 		return 1
 	}
 
-	initCommands(ui, serverCmdUi, runOpts)
+	commands := initCommands(ui, serverCmdUi, runOpts)
 
 	hiddenCommands := []string{"version"}
 
 	cli := &cli.CLI{
 		Name:     "vault",
 		Args:     args,
-		Commands: Commands,
+		Commands: commands,
 		HelpFunc: groupedHelpFunc(
 			cli.BasicHelpFunc("vault"),
 		),
-		HelpWriter:                 runOpts.Stderr,
+		HelpWriter:                 runOpts.Stdout,
+		ErrorWriter:                runOpts.Stderr,
 		HiddenCommands:             hiddenCommands,
 		Autocomplete:               true,
 		AutocompleteNoDefaultFlags: true,
