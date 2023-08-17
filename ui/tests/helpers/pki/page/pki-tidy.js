@@ -1,13 +1,13 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 import { SELECTORS as TIDY_FORM } from './pki-tidy-form';
 
 export const SELECTORS = {
-  hdsAlertTitle: '[data-test-hds-alert-title]',
-  hdsAlertDescription: '[data-test-hds-alert-description]',
-  alertUpdatedAt: '[data-test-hds-alert-updated-at]',
+  hdsAlertTitle: '[data-test-tidy-status-alert-title]',
+  hdsAlertDescription: '[data-test-tidy-status-alert-description]',
+  alertUpdatedAt: '[data-test-tidy-status-alert-updated-at]',
   cancelTidyAction: '[data-test-cancel-tidy-action]',
   hdsAlertButtonText: '[data-test-cancel-tidy-action] .hds-button__text',
   timeStartedRow: '[data-test-value-div="Time started"]',

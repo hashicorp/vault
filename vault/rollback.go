@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 package vault
 
@@ -323,7 +323,6 @@ func (c *Core) startRollback() error {
 		return ret
 	}
 	rollbackLogger := c.baseLogger.Named("rollback")
-	c.AddLogger(rollbackLogger)
 	c.rollback = NewRollbackManager(c.activeContext, rollbackLogger, backendsFunc, c.router, c)
 	c.rollback.Start()
 	return nil

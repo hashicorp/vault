@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 package awsauth
 
@@ -21,14 +21,18 @@ import (
 
 	"github.com/aws/aws-sdk-go/aws"
 	awsClient "github.com/aws/aws-sdk-go/aws/client"
+	"github.com/aws/aws-sdk-go/aws/endpoints"
 	"github.com/aws/aws-sdk-go/service/ec2"
 	"github.com/aws/aws-sdk-go/service/iam"
+	"github.com/aws/aws-sdk-go/service/sts"
 	"github.com/hashicorp/errwrap"
 	cleanhttp "github.com/hashicorp/go-cleanhttp"
 	"github.com/hashicorp/go-retryablehttp"
 	"github.com/hashicorp/go-secure-stdlib/awsutil"
+	"github.com/hashicorp/go-secure-stdlib/parseutil"
 	"github.com/hashicorp/go-secure-stdlib/strutil"
 	uuid "github.com/hashicorp/go-uuid"
+
 	"github.com/hashicorp/vault/builtin/credential/aws/pkcs7"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/cidrutil"
@@ -93,7 +97,7 @@ significance.`,
 				Type: framework.TypeString,
 				Description: `HTTP method to use for the AWS request when auth_type is
 iam. This must match what has been signed in the
-presigned request. Currently, POST is the only supported value`,
+presigned request.`,
 			},
 
 			"iam_request_url": {
@@ -249,9 +253,8 @@ func (b *backend) pathLoginIamGetRoleNameCallerIdAndEntity(ctx context.Context, 
 		return "", nil, nil, logical.ErrorResponse("missing iam_http_request_method"), nil
 	}
 
-	// In the future, might consider supporting GET
-	if method != "POST" {
-		return "", nil, nil, logical.ErrorResponse("invalid iam_http_request_method; currently only 'POST' is supported"), nil
+	if method != http.MethodGet && method != http.MethodPost {
+		return "", nil, nil, logical.ErrorResponse("invalid iam_http_request_method; currently only 'GET' and 'POST' are supported"), nil
 	}
 
 	rawUrlB64 := data.Get("iam_request_url").(string)
@@ -266,16 +269,12 @@ func (b *backend) pathLoginIamGetRoleNameCallerIdAndEntity(ctx context.Context, 
 	if err != nil {
 		return "", nil, nil, logical.ErrorResponse("error parsing iam_request_url"), nil
 	}
-	if parsedUrl.RawQuery != "" {
-		// Should be no query parameters
-		return "", nil, nil, logical.ErrorResponse(logical.ErrInvalidRequest.Error()), nil
+	if err = validateLoginIamRequestUrl(method, parsedUrl); err != nil {
+		return "", nil, nil, logical.ErrorResponse(err.Error()), nil
 	}
-	// TODO: There are two potentially valid cases we're not yet supporting that would
-	// necessitate this check being changed. First, if we support GET requests.
-	// Second if we support presigned POST requests
 	bodyB64 := data.Get("iam_request_body").(string)
-	if bodyB64 == "" {
-		return "", nil, nil, logical.ErrorResponse("missing iam_request_body"), nil
+	if bodyB64 == "" && method != http.MethodGet {
+		return "", nil, nil, logical.ErrorResponse("missing iam_request_body which is required for POST requests"), nil
 	}
 	bodyRaw, err := base64.StdEncoding.DecodeString(bodyB64)
 	if err != nil {
@@ -301,13 +300,18 @@ func (b *backend) pathLoginIamGetRoleNameCallerIdAndEntity(ctx context.Context, 
 	maxRetries := awsClient.DefaultRetryerMaxNumRetries
 	if config != nil {
 		if config.IAMServerIdHeaderValue != "" {
-			err = validateVaultHeaderValue(headers, parsedUrl, config.IAMServerIdHeaderValue)
+			err = validateVaultHeaderValue(method, headers, parsedUrl, config.IAMServerIdHeaderValue)
 			if err != nil {
 				return "", nil, nil, logical.ErrorResponse(fmt.Sprintf("error validating %s header: %v", iamServerIdHeader, err)), nil
 			}
 		}
 		if err = config.validateAllowedSTSHeaderValues(headers); err != nil {
 			return "", nil, nil, logical.ErrorResponse(err.Error()), nil
+		}
+		if method == http.MethodGet {
+			if err = config.validateAllowedSTSQueryValues(parsedUrl.Query()); err != nil {
+				return "", nil, nil, logical.ErrorResponse(err.Error()), nil
+			}
 		}
 		if config.STSEndpoint != "" {
 			endpoint = config.STSEndpoint
@@ -317,6 +321,24 @@ func (b *backend) pathLoginIamGetRoleNameCallerIdAndEntity(ctx context.Context, 
 		}
 	}
 
+	// Extract and use a regional STS endpoint
+	// based on the region set in the Authorization header.
+	if config.UseSTSRegionFromClient {
+		clientSpecifiedRegion, err := awsRegionFromHeader(headers.Get("Authorization"))
+		if err != nil {
+			return "", nil, nil, logical.ErrorResponse("region missing from Authorization header"), nil
+		}
+
+		url, err := stsRegionalEndpoint(clientSpecifiedRegion)
+		if err != nil {
+			return "", nil, nil, logical.ErrorResponse(err.Error()), nil
+		}
+
+		b.Logger().Debug("use_sts_region_from_client set; using region specified from header", "region", clientSpecifiedRegion)
+		endpoint = url
+	}
+
+	b.Logger().Debug("submitting caller identity request", "endpoint", endpoint)
 	callerID, err := submitCallerIdentityRequest(ctx, maxRetries, method, endpoint, parsedUrl, body, headers)
 	if err != nil {
 		return "", nil, nil, logical.ErrorResponse(fmt.Sprintf("error making upstream request: %v", err)), nil
@@ -1291,7 +1313,7 @@ func (b *backend) pathLoginRenewEc2(ctx context.Context, req *logical.Request, _
 	// If the login was made using the role tag, then max_ttl from tag
 	// is cached in internal data during login and used here to cap the
 	// max_ttl of renewal.
-	rTagMaxTTL, err := time.ParseDuration(req.Auth.Metadata["role_tag_max_ttl"])
+	rTagMaxTTL, err := parseutil.ParseDurationSecond(req.Auth.Metadata["role_tag_max_ttl"])
 	if err != nil {
 		return nil, err
 	}
@@ -1512,6 +1534,31 @@ func hasWildcardBind(boundIamPrincipalARNs []string) bool {
 	return false
 }
 
+// Validate that the iam_request_url passed is valid for the STS request
+func validateLoginIamRequestUrl(method string, parsedUrl *url.URL) error {
+	switch method {
+	case http.MethodGet:
+		actions := map[string][]string(parsedUrl.Query())["Action"]
+		if len(actions) == 0 {
+			return fmt.Errorf("no action found in request")
+		}
+		if len(actions) != 1 {
+			return fmt.Errorf("found multiple actions")
+		}
+		if actions[0] != "GetCallerIdentity" {
+			return fmt.Errorf("unexpected action parameter, %s", actions[0])
+		}
+		return nil
+	case http.MethodPost:
+		if parsedUrl.RawQuery != "" {
+			return logical.ErrInvalidRequest
+		}
+		return nil
+	default:
+		return fmt.Errorf("unsupported method, %s", method)
+	}
+}
+
 // Validate that the iam_request_body passed is valid for the STS request
 func validateLoginIamRequestBody(body string) error {
 	qs, err := url.ParseQuery(body)
@@ -1548,11 +1595,11 @@ func hasValuesForEc2Auth(data *framework.FieldData) (bool, bool) {
 }
 
 func hasValuesForIamAuth(data *framework.FieldData) (bool, bool) {
-	_, hasRequestMethod := data.GetOk("iam_http_request_method")
+	method, hasRequestMethod := data.GetOk("iam_http_request_method")
 	_, hasRequestURL := data.GetOk("iam_request_url")
 	_, hasRequestBody := data.GetOk("iam_request_body")
 	_, hasRequestHeaders := data.GetOk("iam_request_headers")
-	return (hasRequestMethod && hasRequestURL && hasRequestBody && hasRequestHeaders),
+	return (hasRequestMethod && hasRequestURL && (method == http.MethodGet || hasRequestBody) && hasRequestHeaders),
 		(hasRequestMethod || hasRequestURL || hasRequestBody || hasRequestHeaders)
 }
 
@@ -1606,7 +1653,7 @@ func parseIamArn(iamArn string) (*iamEntity, error) {
 	return &entity, nil
 }
 
-func validateVaultHeaderValue(headers http.Header, _ *url.URL, requiredHeaderValue string) error {
+func validateVaultHeaderValue(method string, headers http.Header, parsedUrl *url.URL, requiredHeaderValue string) error {
 	providedValue := ""
 	for k, v := range headers {
 		if strings.EqualFold(iamServerIdHeader, k) {
@@ -1622,25 +1669,29 @@ func validateVaultHeaderValue(headers http.Header, _ *url.URL, requiredHeaderVal
 	if providedValue != requiredHeaderValue {
 		return fmt.Errorf("expected %q but got %q", requiredHeaderValue, providedValue)
 	}
-
-	if authzHeaders, ok := headers["Authorization"]; ok {
-		// authzHeader looks like AWS4-HMAC-SHA256 Credential=AKI..., SignedHeaders=host;x-amz-date;x-vault-awsiam-id, Signature=...
-		// We need to extract out the SignedHeaders
-		re := regexp.MustCompile(".*SignedHeaders=([^,]+)")
-		authzHeader := strings.Join(authzHeaders, ",")
-		matches := re.FindSubmatch([]byte(authzHeader))
-		if len(matches) < 1 {
-			return fmt.Errorf("vault header wasn't signed")
+	switch method {
+	case http.MethodPost:
+		if authzHeaders, ok := headers["Authorization"]; ok {
+			// authzHeader looks like AWS4-HMAC-SHA256 Credential=AKI..., SignedHeaders=host;x-amz-date;x-vault-awsiam-id, Signature=...
+			// We need to extract out the SignedHeaders
+			re := regexp.MustCompile(".*SignedHeaders=([^,]+)")
+			authzHeader := strings.Join(authzHeaders, ",")
+			matches := re.FindSubmatch([]byte(authzHeader))
+			if len(matches) < 1 {
+				return fmt.Errorf("vault header wasn't signed")
+			}
+			if len(matches) > 2 {
+				return fmt.Errorf("found multiple SignedHeaders components")
+			}
+			signedHeaders := string(matches[1])
+			return ensureHeaderIsSigned(signedHeaders, iamServerIdHeader)
 		}
-		if len(matches) > 2 {
-			return fmt.Errorf("found multiple SignedHeaders components")
-		}
-		signedHeaders := string(matches[1])
-		return ensureHeaderIsSigned(signedHeaders, iamServerIdHeader)
+		return fmt.Errorf("missing Authorization header")
+	case http.MethodGet:
+		return ensureHeaderIsSigned(parsedUrl.Query().Get(amzSignedHeaders), iamServerIdHeader)
+	default:
+		return fmt.Errorf("unsupported method, %s", method)
 	}
-	// TODO: If we support GET requests, then we need to parse the X-Amz-SignedHeaders
-	// argument out of the query string and search in there for the header value
-	return fmt.Errorf("missing Authorization header")
 }
 
 func buildHttpRequest(method, endpoint string, parsedUrl *url.URL, body string, headers http.Header) *http.Request {
@@ -1881,6 +1932,43 @@ func getMetadataValue(fromAuth *logical.Auth, forKey string) (string, error) {
 		return val, nil
 	}
 	return "", fmt.Errorf("%q not found in auth metadata", forKey)
+}
+
+func awsRegionFromHeader(authorizationHeader string) (string, error) {
+	// https://docs.aws.amazon.com/AmazonS3/latest/API/sigv4-auth-using-authorization-header.html
+	// The Authorization header takes the following form.
+	//  Authorization: AWS4-HMAC-SHA256
+	//	Credential=AKIAIOSFODNN7EXAMPLE/20230719/us-east-1/sts/aws4_request,
+	// 	SignedHeaders=content-length;content-type;host;x-amz-date,
+	//	Signature=fe5f80f77d5fa3beca038a248ff027d0445342fe2855ddc963176630326f1024
+	//
+	// The credential is in the form of "<your-access-key-id>/<date>/<aws-region>/<aws-service>/aws4_request"
+	fields := strings.Split(authorizationHeader, " ")
+	for _, field := range fields {
+		if strings.HasPrefix(field, "Credential=") {
+			fields := strings.Split(field, "/")
+			if len(fields) < 3 {
+				return "", fmt.Errorf("invalid header format")
+			}
+
+			region := fields[2]
+			return region, nil
+		}
+	}
+
+	return "", fmt.Errorf("invalid header format")
+}
+
+func stsRegionalEndpoint(region string) (string, error) {
+	stsService := sts.EndpointsID
+	resolver := endpoints.DefaultResolver()
+	resolvedEndpoint, err := resolver.EndpointFor(stsService, region,
+		endpoints.STSRegionalEndpointOption,
+		endpoints.StrictMatchingOption)
+	if err != nil {
+		return "", fmt.Errorf("unable to get regional STS endpoint for region: %v", region)
+	}
+	return resolvedEndpoint.URL, nil
 }
 
 const iamServerIdHeader = "X-Vault-AWS-IAM-Server-ID"

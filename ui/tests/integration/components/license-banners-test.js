@@ -1,6 +1,6 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 import { module, test } from 'qunit';
@@ -34,9 +34,10 @@ module('Integration | Component | license-banners', function (hooks) {
   });
 
   test('it does not render if no expiry', async function (assert) {
-    assert.expect(1);
+    assert.expect(2);
     await render(hbs`<LicenseBanners />`);
-    assert.dom('[data-test-license-banner]').doesNotExist('License banner does not render');
+    assert.dom('[data-test-license-banner-expired]').doesNotExist();
+    assert.dom('[data-test-license-banner-warning]').doesNotExist();
   });
 
   test('it renders an error if expiry is before now', async function (assert) {
@@ -44,7 +45,9 @@ module('Integration | Component | license-banners', function (hooks) {
     this.set('expiry', formatRFC3339(this.yesterday));
     await render(hbs`<LicenseBanners @expiry={{this.expiry}} />`);
     assert.dom('[data-test-license-banner-expired]').exists('Expired license banner renders');
-    assert.dom('.message-title').hasText('License expired', 'Shows correct title on alert');
+    assert
+      .dom('[data-test-license-banner-expired] .hds-alert__title')
+      .hasText('License expired', 'Shows correct title on alert');
   });
 
   test('it renders a warning if expiry is within 30 days', async function (assert) {
@@ -52,14 +55,17 @@ module('Integration | Component | license-banners', function (hooks) {
     this.set('expiry', formatRFC3339(this.nextMonth));
     await render(hbs`<LicenseBanners @expiry={{this.expiry}} />`);
     assert.dom('[data-test-license-banner-warning]').exists('Warning license banner renders');
-    assert.dom('.message-title').hasText('Vault license expiring', 'Shows correct title on alert');
+    assert
+      .dom('[data-test-license-banner-warning] .hds-alert__title')
+      .hasText('Vault license expiring', 'Shows correct title on alert');
   });
 
   test('it does not render a banner if expiry is outside 30 days', async function (assert) {
-    assert.expect(1);
+    assert.expect(2);
     this.set('expiry', formatRFC3339(this.outside30));
     await render(hbs`<LicenseBanners @expiry={{this.expiry}} />`);
-    assert.dom('[data-test-license-banner]').doesNotExist('License banner does not render');
+    assert.dom('[data-test-license-banner-expired]').doesNotExist();
+    assert.dom('[data-test-license-banner-warning]').doesNotExist();
   });
 
   test('it does not render the expired banner if it has been dismissed', async function (assert) {
@@ -67,7 +73,7 @@ module('Integration | Component | license-banners', function (hooks) {
     this.set('expiry', formatRFC3339(this.yesterday));
     const key = `dismiss-license-banner-${this.version.version}-${this.expiry}`;
     await render(hbs`<LicenseBanners @expiry={{this.expiry}} />`);
-    await click('[data-test-dismiss-expired]');
+    await click('[data-test-license-banner-expired] [data-test-icon="x"]');
     assert.dom('[data-test-license-banner-expired]').doesNotExist('Expired license banner does not render');
 
     await render(hbs`<LicenseBanners @expiry={{this.expiry}} />`);
@@ -84,7 +90,7 @@ module('Integration | Component | license-banners', function (hooks) {
     this.set('expiry', formatRFC3339(this.nextMonth));
     const key = `dismiss-license-banner-${this.version.version}-${this.expiry}`;
     await render(hbs`<LicenseBanners @expiry={{this.expiry}} />`);
-    await click('[data-test-dismiss-warning]');
+    await click('[data-test-license-banner-warning] [data-test-icon="x"]');
     assert.dom('[data-test-license-banner-warning]').doesNotExist('Warning license banner does not render');
 
     await render(hbs`<LicenseBanners @expiry={{this.expiry}} />`);
@@ -102,7 +108,7 @@ module('Integration | Component | license-banners', function (hooks) {
     this.set('expiry', formatRFC3339(this.nextMonth));
     const keyOldVersion = `dismiss-license-banner-${this.version.version}-${this.expiry}`;
     await render(hbs`<LicenseBanners @expiry={{this.expiry}} />`);
-    await click('[data-test-dismiss-warning]');
+    await click('[data-test-license-banner-warning] [data-test-icon="x"]');
     this.version.version = '1.13.1+ent';
     const keyNewVersion = `dismiss-license-banner-${this.version.version}-${this.expiry}`;
     await render(hbs`<LicenseBanners @expiry={{this.expiry}} />`);
@@ -110,7 +116,7 @@ module('Integration | Component | license-banners', function (hooks) {
       .dom('[data-test-license-banner-warning]')
       .exists('The warning banner shows even though we have dismissed it earlier.');
 
-    await click('[data-test-dismiss-warning]');
+    await click('[data-test-license-banner-warning] [data-test-icon="x"]');
     const localStorageResultNewVersion = JSON.parse(localStorage.getItem(keyNewVersion));
     const localStorageResultOldVersion = JSON.parse(localStorage.getItem(keyOldVersion));
     // Check that localStorage was cleaned and no longer contains the old version storage key.
@@ -129,7 +135,7 @@ module('Integration | Component | license-banners', function (hooks) {
     this.set('expiry', formatRFC3339(this.tomorrow));
     const keyOldExpiry = `dismiss-license-banner-${this.version.version}-${this.expiry}`;
     await render(hbs`<LicenseBanners @expiry={{this.expiry}} />`);
-    await click('[data-test-dismiss-warning]');
+    await click('[data-test-license-banner-warning] [data-test-icon="x"]');
     this.set('expiry', formatRFC3339(this.nextMonth));
     const keyNewExpiry = `dismiss-license-banner-${this.version.version}-${this.expiry}`;
     await render(hbs`<LicenseBanners @expiry={{this.expiry}} />`);
@@ -137,7 +143,7 @@ module('Integration | Component | license-banners', function (hooks) {
       .dom('[data-test-license-banner-warning]')
       .exists('The warning banner shows even though we have dismissed it earlier.');
 
-    await click('[data-test-dismiss-warning]');
+    await click('[data-test-license-banner-warning] [data-test-icon="x"]');
     const localStorageResultNewExpiry = JSON.parse(localStorage.getItem(keyNewExpiry));
     const localStorageResultOldExpiry = JSON.parse(localStorage.getItem(keyOldExpiry));
     // Check that localStorage was cleaned and no longer contains the old version storage key.

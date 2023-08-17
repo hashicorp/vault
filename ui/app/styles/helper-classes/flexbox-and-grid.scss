@@ -1,6 +1,6 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 /* Helpers that define anything with the CSS flexbox or CSS grid. */
@@ -100,6 +100,18 @@
 /* CSS GRID */
 .is-grid {
   display: grid;
+}
+
+.grid-2-columns {
+  grid-template-columns: 2fr 2fr;
+
+  @include until($mobile) {
+    grid-template-columns: 1fr;
+  }
+}
+
+.grid-gap-2 {
+  grid-gap: 2rem;
 }
 
 .is-grid-3-columns {

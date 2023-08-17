@@ -1,3 +1,8 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
 <Toolbar>
   <ToolbarActions>
     <div class="toolbar-separator"></div>
@@ -28,11 +33,11 @@
     @color={{this.tidyStateAlertBanner.color}}
     @icon={{this.tidyStateAlertBanner.icon}}
     class="has-top-margin-m"
-    data-test-hds-alert
+    data-test-tidy-status-alert
     as |A|
   >
-    <A.Title data-test-hds-alert-title>{{this.tidyStateAlertBanner.title}}</A.Title>
-    <A.Description data-test-hds-alert-description>{{this.tidyStateAlertBanner.message}}</A.Description>
+    <A.Title data-test-tidy-status-alert-title>{{this.tidyStateAlertBanner.title}}</A.Title>
+    <A.Description data-test-tidy-status-alert-description>{{this.tidyStateAlertBanner.message}}</A.Description>
     {{#if this.tidyStateAlertBanner.shouldShowCancelTidy}}
       <A.Button
         @text="Cancel tidy"
@@ -43,7 +48,7 @@
       />
     {{/if}}
     {{#if @tidyStatus.responseTimestamp}}
-      <A.Description class="has-top-margin-xs" data-test-hds-alert-updated-at>
+      <A.Description class="has-top-margin-xs" data-test-tidy-status-alert-updated-at>
         Updated
         {{date-format @tidyStatus.responseTimestamp "MMM d yyyy, h:mm:ss aaa" withTimeZone=true}}
       </A.Description>

@@ -1,5 +1,5 @@
 # Copyright (c) HashiCorp, Inc.
-# SPDX-License-Identifier: MPL-2.0
+# SPDX-License-Identifier: BUSL-1.1
 
 terraform {
   required_providers {
@@ -99,6 +99,7 @@ data "aws_iam_policy_document" "enos_scenario" {
       "ec2:CancelSpotInstanceRequests",
       "ec2:CreateInternetGateway",
       "ec2:CreateKeyPair",
+      "ec2:CreateFleet",
       "ec2:CreateLaunchTemplate",
       "ec2:CreateLaunchTemplateVersion",
       "ec2:CreateRoute",
@@ -109,10 +110,12 @@ data "aws_iam_policy_document" "enos_scenario" {
       "ec2:CreateTags",
       "ec2:CreateVolume",
       "ec2:CreateVPC",
+      "ec2:DeleteFleets",
       "ec2:DeleteInternetGateway",
       "ec2:DeleteLaunchTemplate",
       "ec2:DeleteLaunchTemplateVersions",
       "ec2:DeleteKeyPair",
+      "ec2:DeleteRoute",
       "ec2:DeleteRouteTable",
       "ec2:DeleteSecurityGroup",
       "ec2:DeleteSpotDatafeedSubscription",
@@ -122,6 +125,9 @@ data "aws_iam_policy_document" "enos_scenario" {
       "ec2:DeleteVPC",
       "ec2:DescribeAccountAttributes",
       "ec2:DescribeAvailabilityZones",
+      "ec2:DescribeFleets",
+      "ec2:DescribeFleetHistory",
+      "ec2:DescribeFleetInstances",
       "ec2:DescribeImages",
       "ec2:DescribeInstanceAttribute",
       "ec2:DescribeInstanceCreditSpecifications",
@@ -158,6 +164,7 @@ data "aws_iam_policy_document" "enos_scenario" {
       "ec2:GetLaunchTemplateData",
       "ec2:GetSpotPlacementScores",
       "ec2:ImportKeyPair",
+      "ec2:ModifyFleet",
       "ec2:ModifyInstanceAttribute",
       "ec2:ModifyLaunchTemplate",
       "ec2:ModifySpotFleetRequest",

@@ -77,7 +77,7 @@ the authentication steps again, they will get a _new_ token. The token will have
 the same permissions, but the actual token will be different. Authenticating a
 second time does not invalidate the original token.
 
-## Policy Syntax
+## Policy syntax
 
 Policies are written in [HCL][hcl] or JSON and describe which paths in Vault a
 user or machine is allowed to access.
@@ -101,19 +101,19 @@ token would have no other access in Vault.
 Here is a more detailed policy, and it is documented inline:
 
 ```ruby
-# This section grants all access on "secret/*". Further restrictions can be
+# This section grants all access on "secret/*". further restrictions can be
 # applied to this broad policy, as shown below.
 path "secret/*" {
   capabilities = ["create", "read", "update", "patch", "delete", "list"]
 }
 
 # Even though we allowed secret/*, this line explicitly denies
-# secret/super-secret. This takes precedence.
+# secret/super-secret. this takes precedence.
 path "secret/super-secret" {
   capabilities = ["deny"]
 }
 
-# Policies can also specify allowed, disallowed, and required parameters. Here
+# Policies can also specify allowed, disallowed, and required parameters. here
 # the key "secret/restricted" can only contain "foo" (any value) and "bar" (one
 # of "zip" or "zap").
 path "secret/restricted" {
@@ -130,19 +130,19 @@ request. A policy `path` may specify an exact path to match, or it could specify
 a glob pattern which instructs Vault to use a prefix match:
 
 ```ruby
-# Permit reading only "secret/foo". An attached token cannot read "secret/food"
+# Permit reading only "secret/foo". an attached token cannot read "secret/food"
 # or "secret/foo/bar".
 path "secret/foo" {
   capabilities = ["read"]
 }
 
-# Permit reading everything under "secret/bar". An attached token could read
+# Permit reading everything under "secret/bar". an attached token could read
 # "secret/bar/zip", "secret/bar/zip/zap", but not "secret/bars/zip".
 path "secret/bar/*" {
   capabilities = ["read"]
 }
 
-# Permit reading everything prefixed with "zip-". An attached token could read
+# Permit reading everything prefixed with "zip-". an attached token could read
 # "secret/zip-zap" or "secret/zip-zap/zong", but not "secret/zip/zap
 path "secret/zip-*" {
   capabilities = ["read"]
@@ -489,9 +489,9 @@ path "secret/foo" {
 
 ~> **Note:** the only value that can be used with the `*` parameter is `[]`.
 
-#### Parameter Constraints Limitations
+#### Parameter constraints limitations
 
-##### Default Values
+##### Default values
 Evaluation of policies with `allowed_parameters`, `denied_parameters`, and `required_parameters` happens
 without consideration of parameters' default values.
 
@@ -551,13 +551,13 @@ or unexpected behavior:
 
 ```ruby
 # This allows the user to create, update, or patch "secret/foo" with a parameter
-# named "bar". The values passed to parameter "bar" must start with "baz/"
-# so values like "baz/quux" are fine. However, values like
-# "baz/quux,wibble,wobble,wubble" would also be accepted. The API that
+# named "bar". the values passed to parameter "bar" must start with "baz/"
+# so values like "baz/quux" are fine. however, values like
+# "baz/quux,wibble,wobble,wubble" would also be accepted. the API that
 # underlies "secret/foo" might allow comma delimited values for the "bar"
 # parameter, and if it did, specifying a value like
 # "baz/quux,wibble,wobble,wubble" would result in 4 different values getting
-# passed along. Seeing values like "wibble" or "wobble" getting passed to
+# passed along. seeing values like "wibble" or "wobble" getting passed to
 # "secret/foo" might surprise someone that expected the allowed_parameters
 # constraint to only allow values starting with "baz/".
 path "secret/foo" {
@@ -601,12 +601,12 @@ addition, if paths are merged from different stanzas, the lowest value
 specified for each is the value that will result, in line with the idea of
 keeping token lifetimes as short as possible.
 
-## Built-in Policies
+## Built-in policies
 
 Vault has two built-in policies: `default` and `root`. This section describes
 the two built-in policies.
 
-### Default Policy
+### Default policy
 
 The `default` policy is a built-in Vault policy that cannot be removed. By
 default, it is attached to all tokens, but may be explicitly excluded at token
@@ -799,44 +799,45 @@ authenticated user.
 ## Root protected API endpoints
 
 ~> **Note:** Vault treats the HTTP POST and PUT verbs as equivalent, so for each mention
-   of POST in the table above, PUT may also be used. Vault uses the non-standard LIST HTTP
+   of POST in the table below, PUT may also be used. Vault uses the non-standard LIST HTTP
    verb, but also allows list requests to be made using the GET verb along with `?list=true`
    as a query parameter, so for each mention of LIST in the table above, GET with `?list=true`
    may also be used.
 
 The following paths requires a root token or `sudo` capability in the policy:
 
-| Path                                                                                                                                                   | HTTP verb         | Description                                                                                                                                         |
-| -------------------------------------------------------------------------------------------------------------------------------------------------------| ----------------- | --------------------------------------------------------------------------------------------------------------------------------------------------- |
-| [auth/token/accessors](/vault/api-docs/auth/token#list-accessors)                                                                                      | LIST              | List token accessors for all current Vault service tokens                                                                                           |
-| [auth/token/create](/vault/api-docs/auth/token#create-token)                                                                                           | POST              | Create a periodic or an orphan token (`period` or `no_parent`) option                                                                               |
-| [pki/root](/vault/api-docs/secret/pki#delete-all-issuers-and-keys)                                                                                     | DELETE            | Delete the current CA key ([pki secrets engine](/vault/docs/secrets/pki))                                                                           |
-| [pki/root/sign-self-issued](/vault/api-docs/secret/pki#sign-self-issued)                                                                               | POST              | Use the configured CA certificate to sign a self-issued certificate ([pki secrets engine](/vault/docs/secrets/pki))                                 |
-| [sys/audit](/vault/api-docs/system/audit)                                                                                                              | GET               | List enabled audit devices                                                                                                                          |
-| [sys/audit/:path](/vault/api-docs/system/audit)                                                                                                        | POST, DELETE      | Enable or remove an audit device                                                                                                                    |
-| [sys/auth/:path](/vault/api-docs/system/auth)                                                                                                          | GET, POST, DELETE | Manage the auth methods (enable, read, and delete)                                                                                                  |
-| [sys/auth/:path/tune](/vault/api-docs/system/auth#tune-auth-method)                                                                                    | GET, POST         | Manage the auth methods (enable, read, delete, and tune)                                                                                            |
-| [sys/config/auditing/request-headers](/vault/api-docs/system/config-auditing)                                                                          | GET               | List the request headers that are configured to be audited                                                                                          |
-| [sys/config/auditing/request-headers/:name](/vault/api-docs/system/config-auditing)                                                                    | GET, POST, DELETE | Manage the auditing headers (create, update, read and delete)                                                                                       |
-| [sys/config/cors](/vault/api-docs/system/config-cors)                                                                                                  | GET, POST, DELETE | Configure CORS setting                                                                                                                              |
-| [sys/config/ui/headers](/vault/api-docs/system/config-ui)                                                                                              | GET, LIST         | Configure the UI settings                                                                                                                           |
-| [sys/config/ui/headers/:name](/vault/api-docs/system/config-ui#name)                                                                                   | POST, DELETE      | Configure custom HTTP headers to be served with the UI                                                                                              |
-| [sys/internal/inspect/router/:tag](/vault/api-docs/system/inspect/router)                                                                              | GET               | Inspect the internal components of Vault's router. `tag` must be one of root, uuid, accessor, or storage                                            |
-| [sys/leases/lookup/:prefix](/vault/api-docs/system/leases#list-leases)                                                                                 | LIST              | List lease IDs                                                                                                                                      |
-| [sys/leases/revoke-force/:prefix](/vault/api-docs/system/leases#revoke-force)                                                                          | POST              | Revoke all secrets or tokens ignoring backend errors                                                                                                |
-| [sys/leases/revoke-prefix/:prefix](/vault/api-docs/system/leases#revoke-prefix)                                                                        | POST              | Revoke all secrets generated under a given prefix                                                                                                   |
-| [sys/plugins/catalog/:type/:name](/vault/api-docs/system/plugins-catalog#register-plugin)                                                              | GET, POST, DELETE | Register a new plugin, or read/remove an existing plugin                                                                                            |
-| [sys/raw:path](/vault/api-docs/system/raw)                                                                                                             | GET, POST, DELETE | Used to access the raw underlying store in Vault                                                                                                    |
-| [sys/raw:prefix](/vault/api-docs/system/raw#list-raw)                                                                                                  | GET, LIST         | Returns a list keys for a given path prefix                                                                                                         |
-| [sys/remount](/vault/api-docs/system/remount)                                                                                                          | POST              | Moves an already-mounted backend to a new mount point                                                                                               |
-| [sys/replication/reindex](/vault/api-docs/system/replication#reindex-replication)                                                                      | POST              | Reindex the local data storage                                                                                                                      |
-| [sys/replication/performance/primary/secondary-token](/vault/api-docs/system/replication/replication-performance#generate-performance-secondary-token) | POST              | Generate a performance secondary activation token                                                                                                   |
-| [sys/replication/dr/primary/secondary-token](/vault/api-docs/system/replication/replication-dr#generate-dr-secondary-token)                            | POST              | Generate a DR secondary activation token                                                                                                            |
-| [sys/rotate](/vault/api-docs/system/rotate)                                                                                                            | POST              | Trigger a rotation of the backend encryption key                                                                                                    |
-| [sys/seal](/vault/api-docs/system/seal)                                                                                                                | POST              | Seals the Vault                                                                                                                                     |
-| [sys/step-down](/vault/api-docs/system/step-down)                                                                                                      | POST              | Forces a node to give up active status                                                                                                              |
-| [sys/storage/raft/snapshot-auto/config](/vault/api-docs/system/storage/raftautosnapshots#list-automated-snapshots-configs)                             | LIST              | Lists named configurations                                                                                                                          |
-| [sys/storage/raft/snapshot-auto/config/:name](/vault/api-docs/system/storage/raftautosnapshots)                                                        | GET, POST, DELETE | Creates or updates a named configuration                                                                                                            |
+| Path                                                                                                                                                   | HTTP verb         | Description                                                                                                         |
+|--------------------------------------------------------------------------------------------------------------------------------------------------------|-------------------|---------------------------------------------------------------------------------------------------------------------|
+| [auth/token/accessors](/vault/api-docs/auth/token#list-accessors)                                                                                      | LIST              | List token accessors for all current Vault service tokens                                                           |
+| [auth/token/create](/vault/api-docs/auth/token#create-token)                                                                                           | POST              | Create a periodic or an orphan token (`period` or `no_parent`) option                                               |
+| [auth/token/revoke-orphan](/vault/api-docs/auth/token#revoke-token-and-orphan-children)                                                                | POST              | Revoke a token but not its child tokens, which will be orphaned                                                     |
+| [pki/root](/vault/api-docs/secret/pki#delete-all-issuers-and-keys)                                                                                     | DELETE            | Delete the current CA key ([pki secrets engine](/vault/docs/secrets/pki))                                           |
+| [pki/root/sign-self-issued](/vault/api-docs/secret/pki#sign-self-issued)                                                                               | POST              | Use the configured CA certificate to sign a self-issued certificate ([pki secrets engine](/vault/docs/secrets/pki)) |
+| [sys/audit](/vault/api-docs/system/audit)                                                                                                              | GET               | List enabled audit devices                                                                                          |
+| [sys/audit/:path](/vault/api-docs/system/audit)                                                                                                        | POST, DELETE      | Enable or remove an audit device                                                                                    |
+| [sys/auth/:path](/vault/api-docs/system/auth)                                                                                                          | GET, POST, DELETE | Manage the auth methods (enable, read, and delete)                                                                  |
+| [sys/auth/:path/tune](/vault/api-docs/system/auth#tune-auth-method)                                                                                    | GET, POST         | Manage the auth methods (enable, read, delete, and tune)                                                            |
+| [sys/config/auditing/request-headers](/vault/api-docs/system/config-auditing)                                                                          | GET               | List the request headers that are configured to be audited                                                          |
+| [sys/config/auditing/request-headers/:name](/vault/api-docs/system/config-auditing)                                                                    | GET, POST, DELETE | Manage the auditing headers (create, update, read and delete)                                                       |
+| [sys/config/cors](/vault/api-docs/system/config-cors)                                                                                                  | GET, POST, DELETE | Configure CORS setting                                                                                              |
+| [sys/config/ui/headers](/vault/api-docs/system/config-ui)                                                                                              | GET, LIST         | Configure the UI settings                                                                                           |
+| [sys/config/ui/headers/:name](/vault/api-docs/system/config-ui#name)                                                                                   | POST, DELETE      | Configure custom HTTP headers to be served with the UI                                                              |
+| [sys/internal/inspect/router/:tag](/vault/api-docs/system/inspect/router)                                                                              | GET               | Inspect the internal components of Vault's router. `tag` must be one of root, uuid, accessor, or storage            |
+| [sys/leases/lookup/:prefix](/vault/api-docs/system/leases#list-leases)                                                                                 | LIST              | List lease IDs                                                                                                      |
+| [sys/leases/revoke-force/:prefix](/vault/api-docs/system/leases#revoke-force)                                                                          | POST              | Revoke all secrets or tokens ignoring backend errors                                                                |
+| [sys/leases/revoke-prefix/:prefix](/vault/api-docs/system/leases#revoke-prefix)                                                                        | POST              | Revoke all secrets generated under a given prefix                                                                   |
+| [sys/plugins/catalog/:type/:name](/vault/api-docs/system/plugins-catalog#register-plugin)                                                              | GET, POST, DELETE | Register a new plugin, or read/remove an existing plugin                                                            |
+| [sys/raw:path](/vault/api-docs/system/raw)                                                                                                             | GET, POST, DELETE | Used to access the raw underlying store in Vault                                                                    |
+| [sys/raw:prefix](/vault/api-docs/system/raw#list-raw)                                                                                                  | GET, LIST         | Returns a list keys for a given path prefix                                                                         |
+| [sys/remount](/vault/api-docs/system/remount)                                                                                                          | POST              | Moves an already-mounted backend to a new mount point                                                               |
+| [sys/replication/reindex](/vault/api-docs/system/replication#reindex-replication)                                                                      | POST              | Reindex the local data storage                                                                                      |
+| [sys/replication/performance/primary/secondary-token](/vault/api-docs/system/replication/replication-performance#generate-performance-secondary-token) | POST              | Generate a performance secondary activation token                                                                   |
+| [sys/replication/dr/primary/secondary-token](/vault/api-docs/system/replication/replication-dr#generate-dr-secondary-token)                            | POST              | Generate a DR secondary activation token                                                                            |
+| [sys/rotate](/vault/api-docs/system/rotate)                                                                                                            | POST              | Trigger a rotation of the backend encryption key                                                                    |
+| [sys/seal](/vault/api-docs/system/seal)                                                                                                                | POST              | Seals the Vault                                                                                                     |
+| [sys/step-down](/vault/api-docs/system/step-down)                                                                                                      | POST              | Forces a node to give up active status                                                                              |
+| [sys/storage/raft/snapshot-auto/config](/vault/api-docs/system/storage/raftautosnapshots#list-automated-snapshots-configs)                             | LIST              | Lists named configurations                                                                                          |
+| [sys/storage/raft/snapshot-auto/config/:name](/vault/api-docs/system/storage/raftautosnapshots)                                                        | GET, POST, DELETE | Creates or updates a named configuration                                                                            |
 
 ### Tokens
 

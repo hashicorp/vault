@@ -1,5 +1,5 @@
 # Copyright (c) HashiCorp, Inc.
-# SPDX-License-Identifier: MPL-2.0
+# SPDX-License-Identifier: BUSL-1.1
 
 terraform {
   required_providers {
@@ -48,9 +48,6 @@ variable "distro" {
   default = null
 }
 variable "edition" {
-  default = null
-}
-variable "instance_type" {
   default = null
 }
 variable "revision" {

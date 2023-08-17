@@ -8,7 +8,7 @@ description: The `/sys/wrapping/unwrap` endpoint unwraps a wrapped response.
 
 The `/sys/wrapping/unwrap` endpoint unwraps a wrapped response.
 
-## Wrapping Unwrap
+## Wrapping unwrap
 
 This endpoint returns the original response inside the given wrapping token.
 Unlike simply reading `cubbyhole/response` (which is deprecated), this endpoint
@@ -33,7 +33,7 @@ unable to be looked up, as it will basically be a double-use of the token!
   the client token is not the wrapping token. Do not use the wrapping token in
   both locations.
 
-### Sample Payload
+### Sample payload
 
 ```json
 {
@@ -41,7 +41,7 @@ unable to be looked up, as it will basically be a double-use of the token!
 }
 ```
 
-### Sample Request
+### Sample request
 
 ```shell-session
 $ curl \
@@ -60,7 +60,7 @@ $ curl \
     http://127.0.0.1:8200/v1/sys/wrapping/unwrap
 ```
 
-### Sample Response
+### Sample response
 
 ```json
 {

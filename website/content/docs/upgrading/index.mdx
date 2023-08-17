@@ -25,7 +25,7 @@ supported. The upgrade notes for each intervening version must be reviewed. The
 upgrade notes may describe additional steps or configuration to update before,
 during, or after the upgrade.
 
-## Integrated Storage Autopilot
+## Integrated storage autopilot
 
 Vault 1.11 introduced [automated
 upgrades](/vault/docs/concepts/integrated-storage/autopilot#automated-upgrades) as
@@ -46,7 +46,7 @@ period. The Vault Agent version can lag behind the Vault Server version, though
 we recommend keeping all Vault instances up to date with the most recent minor Vault version
 to the extent possible.
 
-## Testing the Upgrade
+## Testing the upgrade
 
 It's always a good idea to try to ensure that the upgrade will be successful in
 your environment. The ideal way to do this is to take a snapshot of your data
@@ -56,11 +56,11 @@ do not allow external network connectivity during testing, in case credentials
 expire. This prevents the test cluster from trying to revoke these resources
 along with the non-test cluster.
 
-## OSS to Enterprise Installations
+## Upgrading from Community to Enterprise editions
 
-Upgrading to Vault Enterprise installations follow the same steps as OSS upgrades except that the Vault Enterprise binary is to be used and the license file [applied](/vault/api-docs/system/license#install-license), when applicable. The Enterprise binary and license file can be obtained through your HashiCorp sales team.
+Upgrading to Vault Enterprise installations follow the same steps as Community edition upgrades except that the Vault Enterprise binary is to be used and the license file [applied](/vault/api-docs/system/license#install-license), when applicable. The Enterprise binary and license file can be obtained through your HashiCorp sales team.
 
-## Non-HA Installations
+## Non-HA installations
 
 Upgrading non-HA installations of Vault is as simple as replacing the Vault
 binary with the new version and restarting Vault. Any upgrade tasks that can be
@@ -71,7 +71,7 @@ Always use `SIGINT` or `SIGTERM` to properly shut down Vault.
 Be sure to also read and follow any instructions in the version-specific
 upgrade notes.
 
-## HA Installations
+## HA installations
 
 The recommended upgrade procedure depends on the version of Vault you're currently on and the storage backend of Vault. If you're currently running on Vault 1.11 or later with Integrated Storage and you have Autopilot enabled, you should let Autopilot do the upgrade for you, as that's easier and
 less prone to human error. Please refer to our [automated
@@ -82,5 +82,45 @@ tutorial for more details.
 
 If you're currently on a version of Vault before 1.11, or you've chosen to opt-out the Autopilot automated upgrade features when running Vault after 1.11 with Integrated Storage, or if you are running Vault with other storage backend such as Consul. Please refer to our [Vault HA upgrades Pre 1.11/Without Autopilot Upgrade Automation](/vault/docs/upgrading/vault-ha-upgrade) documentation for more details. Please note that this upgrade procedure also applies if you are upgrading Vault from pre 1.11 to post 1.11.
 
+## Enterprise replication installations
 
+<Note>
 
+Prior to any upgrade, be sure to also read and follow any instructions in the
+version-specific upgrade notes which are found in the navigation menu for this
+documentation.
+
+</Note>
+
+Upgrading Vault Enterprise clusters which participate in [Enterprise
+Replication](/vault/docs/enterprise/replication) requires the following basic
+order of operations:
+
+- **Upgrade the replication secondary instances first** using appropriate
+  guidance from the previous sections
+- Verify functionality of each secondary instance after upgrading
+- When satisfied with functionality of upgraded secondary instances, upgrade
+  the primary instance
+
+<Note>
+
+It is not safe to replicate from a newer version of Vault to an older version.
+When upgrading replicated clusters, ensure that upstream clusters are always on
+older versions of Vault than downstream clusters.
+
+</Note>
+
+Here is an example of upgrading four Vault replicated Vault clusters:
+
+![Upgrading multiple replicated clusters](/img/vault-replication-upgrade.png)
+
+In the above scenario, the ideal upgrade procedure would be as follows,
+verifying functionality after each cluster upgrade.
+
+1. Upgrade Clusters B and D. These clusters have no downstream clusters, so they
+   should be upgraded first, but the ordering of B vs D does not matter.
+2. Upgrade Cluster C, which now has an upgraded downstream cluster (Cluster D).
+   Because Cluster C is a cluster, it should also use the HA upgrade process.
+3. Finally, upgrade Cluster A. All clusters downstream of A will already be
+   upgraded. It should be upgraded last, as it is a Performance Primary and a DR
+   Primary.

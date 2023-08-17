@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 package command
 
@@ -61,8 +61,8 @@ Usage: vault agent generate-config [options] [path/to/config.hcl]
   In addition to env_template entries, the command generates an 'auto_auth'
   section with 'token_file' authentication method. While this method is very
   convenient for local testing, it should NOT be used in production. Please
-  see https://developer.hashicorp.com/vault/docs/agentandproxy/autoauth for
-  a list of production-ready auto_auth methods that you can use instead.
+  see https://developer.hashicorp.com/vault/docs/agent-and-proxy/autoauth/methods
+  for a list of production-ready auto_auth methods that you can use instead.
 
   By default, the file will be generated in the local directory as 'agent.hcl'
   unless a path is specified as an argument.
@@ -87,7 +87,8 @@ Usage: vault agent generate-config [options] [path/to/config.hcl]
 }
 
 func (c *AgentGenerateConfigCommand) Flags() *FlagSets {
-	set := NewFlagSets(c.UI)
+	// Include client-modifying flags (-address, -namespace, etc.)
+	set := c.flagSet(FlagSetHTTP)
 
 	// Common Options
 	f := set.NewFlagSet("Command Options")

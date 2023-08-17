@@ -1,6 +1,6 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 import {
@@ -74,7 +74,6 @@ module('Acceptance | secrets/secret/create, read, delete', function (hooks) {
 
   hooks.afterEach(async function () {
     this.server.shutdown();
-    await logout.visit();
   });
 
   test('it creates a secret and redirects', async function (assert) {
@@ -182,7 +181,7 @@ module('Acceptance | secrets/secret/create, read, delete', function (hooks) {
     assert.dom('[data-test-inline-error-message]').doesNotExist('inline error goes away');
     await click('[data-test-secret-save]');
     assert
-      .dom('[data-test-error]')
+      .dom('[data-test-message-error]')
       .includesText(
         'custom_metadata validation failed: length of key',
         'shows API error that is not captured by validation'
@@ -682,7 +681,8 @@ module('Acceptance | secrets/secret/create, read, delete', function (hooks) {
     await deleteEngine(enginePath, assert);
   });
 
-  test('version 2: with metadata no read or list but with delete access and full access to the data endpoint', async function (assert) {
+  // TODO VAULT-16258: revisit when KV-V2 is engine
+  test.skip('version 2: with metadata no read or list but with delete access and full access to the data endpoint', async function (assert) {
     assert.expect(12);
     const enginePath = 'no-metadata-read';
     const secretPath = 'no-metadata-read-secret-name';
@@ -1049,7 +1049,9 @@ module('Acceptance | secrets/secret/create, read, delete', function (hooks) {
     await editPage.visitEdit({ backend, id: 'secret' });
     assert
       .dom('[data-test-warning-no-read-permissions]')
-      .exists('shows custom warning instead of default API warning about permissions');
+      .hasText(
+        'You do not have read permissions. If a secret exists here creating a new secret will overwrite it.'
+      );
 
     await editPage.editSecret('bar', 'baz');
     assert.strictEqual(

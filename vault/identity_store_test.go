@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 package vault
 
@@ -855,5 +855,61 @@ func TestIdentityStore_UpdateAliasMetadataPerAccessor(t *testing.T) {
 
 	if i := changedAliasIndex(entity, login2); i != 1 {
 		t.Fatalf("wrong alias index changed. Expected 1, got %d", i)
+	}
+}
+
+// TestIdentityStore_DeleteCaseSensitivityKey tests that
+// casesensitivity key gets removed from storage if it exists upon
+// initializing identity store.
+func TestIdentityStore_DeleteCaseSensitivityKey(t *testing.T) {
+	c, unsealKey, root := TestCoreUnsealed(t)
+	ctx := context.Background()
+
+	// add caseSensitivityKey to storage
+	entry, err := logical.StorageEntryJSON(caseSensitivityKey, &casesensitivity{
+		DisableLowerCasedNames: true,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	err = c.identityStore.view.Put(ctx, entry)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// check if the value is stored in storage
+	storageEntry, err := c.identityStore.view.Get(ctx, caseSensitivityKey)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if storageEntry == nil {
+		t.Fatalf("bad: expected a non-nil entry for casesensitivity key")
+	}
+
+	// Seal and unseal to trigger identityStore initialize
+	if err = c.Seal(root); err != nil {
+		t.Fatal(err)
+	}
+
+	var unsealed bool
+	for i := 0; i < len(unsealKey); i++ {
+		unsealed, err = c.Unseal(unsealKey[i])
+		if err != nil {
+			t.Fatal(err)
+		}
+	}
+	if !unsealed {
+		t.Fatal("still sealed")
+	}
+
+	// check if caseSensitivityKey exists after initialize
+	storageEntry, err = c.identityStore.view.Get(ctx, caseSensitivityKey)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if storageEntry != nil {
+		t.Fatalf("bad: expected no entry for casesensitivity key")
 	}
 }
