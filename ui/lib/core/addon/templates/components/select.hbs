@@ -1,3 +1,8 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
 {{#if this.label}}
   <label for="select-{{this.elementId}}" class="is-label" data-test-select-label>
     {{this.label}}
@@ -18,6 +23,7 @@
       {{/if}}
       {{#each this.options as |op|}}
         <option
+          disabled={{or op.isDisabled false}}
           value={{or (get op this.valueAttribute) op}}
           selected={{eq this.selectedValue (or (get op this.valueAttribute) op)}}
         >

@@ -1,0 +1,201 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
+// This file defines the styles for columns and column
+
+// Columns (plural)
+.columns {
+  margin-left: -$size-9;
+  margin-right: -$size-9;
+  margin-top: -$size-9;
+
+  &:last-child {
+    margin-bottom: -$size-9;
+  }
+
+  &.is-centered {
+    justify-content: center;
+  }
+
+  &.is-gapless {
+    margin-left: 0;
+    margin-right: 0;
+    margin-top: 0;
+  }
+
+  &.is-gapless > .column {
+    margin: 0;
+    padding: 0 !important;
+  }
+
+  &.is-gapless:not(:last-child) {
+    margin-bottom: $size-4;
+  }
+
+  &.is-gapless:last-child {
+    margin-bottom: 0;
+  }
+
+  &.is-mobile {
+    display: flex;
+
+    > .column.is-1 {
+      flex: none;
+      width: 8.33333%;
+    }
+
+    > .column.is-3 {
+      flex: none;
+      width: 25%;
+    }
+
+    > .column.is-10 {
+      flex: none;
+      width: 83.33333%;
+    }
+
+    > .column.is-12 {
+      flex: none;
+      width: 100%;
+    }
+  }
+
+  &.is-multiline {
+    flex-wrap: wrap;
+  }
+
+  // columnGap does not take vars
+  &.is-variable.is-1 {
+    --columnGap: $i * 0.25rem;
+  }
+
+  &.is-variable {
+    --columnGap: 0.75rem;
+    margin-left: calc(-1 * var(--columnGap));
+    margin-right: calc(-1 * var(--columnGap));
+  }
+
+  &.is-variable > .column {
+    padding-left: var(--columnGap);
+    padding-right: var(--columnGap);
+  }
+}
+
+// responsive css columns
+@media screen and (min-width: 769px), print {
+  .columns:not(.is-desktop) {
+    display: flex;
+  }
+  .columns.is-variable.is-7-tablet {
+    --columnGap: 1.75rem;
+  }
+}
+
+@media screen and (min-width: 1024px) {
+  .columns.is-desktop {
+    display: flex;
+  }
+}
+
+// Column (singular)
+.column {
+  display: block;
+  flex-basis: 0;
+  flex-grow: 1;
+  flex-shrink: 1;
+  padding: 0.75rem;
+
+  &.is-narrow {
+    flex: none;
+    width: unset;
+  }
+
+  &.is-1 {
+    flex: none;
+    width: 8.33333%;
+  }
+
+  &.is-3 {
+    flex: none;
+    width: 25%;
+  }
+
+  &.is-5,
+  .is-5-tablet {
+    flex: none;
+    width: 41.66667%;
+  }
+}
+
+// responsive css column (order matters here because some columns have several of these classes and they need to override in the correct order).
+@media screen and (min-width: 769px), print {
+  .column {
+    &.is-one-quarter {
+      flex: none;
+      width: 25%;
+    }
+
+    &.is-half {
+      flex: none;
+      width: 50%;
+    }
+
+    &.is-two-thirds {
+      flex: none;
+      width: 66.6666%;
+    }
+
+    &.is-one-third {
+      flex: none;
+      width: 33.3333%;
+    }
+
+    &.is-5 {
+      flex: none;
+      width: 41.66667%;
+    }
+
+    &.is-6,
+    &.is-6-tablet {
+      flex: none;
+      width: 50%;
+    }
+    &.is-9 {
+      flex: none;
+      width: 75%;
+    }
+
+    &.is-7,
+    &.is-7-tablet {
+      flex: none;
+      width: 58.33333%;
+    }
+
+    &.is-12 {
+      flex: none;
+      width: 100%;
+    }
+
+    &.is-full,
+    &.is-full-tablet {
+      flex: none;
+      width: 100%;
+    }
+  }
+}
+
+@media screen and (max-width: 768px) {
+  .column.is-10-mobile {
+    flex: none;
+    width: 83.33333%;
+  }
+}
+
+@media screen and (min-width: 1024px) {
+  .column.is-4-desktop {
+    flex: none;
+    width: 33.33333%;
+  }
+}

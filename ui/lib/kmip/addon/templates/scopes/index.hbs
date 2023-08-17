@@ -1,3 +1,8 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
 <HeaderScope />
 <Toolbar>
   {{#if this.model.meta.total}}
@@ -34,7 +39,7 @@
     </ToolbarFilters>
   {{/if}}
   <ToolbarActions>
-    <ToolbarLink @type="add" @params={{array "scopes.create"}} data-test-scope-create>
+    <ToolbarLink @route="scopes.create" @type="add" data-test-scope-create>
       Create scope
     </ToolbarLink>
   </ToolbarActions>

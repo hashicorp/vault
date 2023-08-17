@@ -1,0 +1,3 @@
+```release-note:bug
+ui: fixes bug in kmip role form that caused `operation_all` to persist after deselecting all operation checkboxes
+```

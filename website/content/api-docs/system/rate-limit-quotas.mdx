@@ -8,7 +8,7 @@ description: The `/sys/quotas/rate-limit` endpoint is used to create, edit and d
 
 The `/sys/quotas/rate-limit` endpoint is used to create, edit and delete rate limit quotas.
 
-## Create or Update a Rate Limit Quota
+## Create or update a rate limit quota
 
 This endpoint is used to create a rate limit quota with an identifier, `name`.
 A rate limit quota must include a `rate` value with an optional `path` that can
@@ -45,7 +45,7 @@ the mount to restrict more specific API paths.
   requests to that mount that are made with the specified role. The request will fail if
   the auth mount does not have a concept of roles, or `path` is not an auth mount.
 
-### Sample Payload
+### Sample payload
 
 ```json
 {
@@ -56,7 +56,7 @@ the mount to restrict more specific API paths.
 }
 ```
 
-### Sample Request
+### Sample request
 
 ```shell-session
 $ curl \
@@ -66,7 +66,7 @@ $ curl \
     http://127.0.0.1:8200/v1/sys/quotas/rate-limit/global-rate-limiter
 ```
 
-## Delete a Rate Limit Quota
+## Delete a rate limit quota
 
 A rate limit quota can be deleted by `name`.
 
@@ -74,7 +74,7 @@ A rate limit quota can be deleted by `name`.
 | :------- | :----------------------------- |
 | `DELETE` | `/sys/quotas/rate-limit/:name` |
 
-### Sample Request
+### Sample request
 
 ```shell-session
 $ curl \
@@ -83,7 +83,7 @@ $ curl \
     http://127.0.0.1:8200/v1/sys/quotas/rate-limit/global-rate-limiter
 ```
 
-## Get a Rate Limit Quota
+## Get a rate limit quota
 
 A rate limit quota can be retrieved by `name`.
 
@@ -91,7 +91,7 @@ A rate limit quota can be retrieved by `name`.
 | :----- | :----------------------------- |
 | `GET`  | `/sys/quotas/rate-limit/:name` |
 
-### Sample Request
+### Sample request
 
 ```shell-session
 $ curl \
@@ -100,7 +100,7 @@ $ curl \
     http://127.0.0.1:8200/v1/sys/quotas/rate-limit/global-rate-limiter
 ```
 
-### Sample Response
+### Sample response
 
 ```json
 {
@@ -121,7 +121,7 @@ $ curl \
 }
 ```
 
-## List Rate Limit Quotas
+## List rate limit quotas
 
 This endpoint returns a list of all the rate limit quotas.
 
@@ -129,7 +129,7 @@ This endpoint returns a list of all the rate limit quotas.
 | :----- | :----------------------- |
 | `LIST` | `/sys/quotas/rate-limit` |
 
-### Sample Request
+### Sample request
 
 ```shell-session
 $ curl \
@@ -138,7 +138,7 @@ $ curl \
     http://127.0.0.1:8200/v1/sys/quotas/rate-limit
 ```
 
-### Sample Response
+### Sample response
 
 ```json
 {

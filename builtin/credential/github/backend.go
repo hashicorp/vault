@@ -1,14 +1,20 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package github
 
 import (
 	"context"
+	"net/url"
 
 	"github.com/google/go-github/github"
-	cleanhttp "github.com/hashicorp/go-cleanhttp"
+	"github.com/hashicorp/go-cleanhttp"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/logical"
 	"golang.org/x/oauth2"
 )
+
+const operationPrefixGithub = "github"
 
 func Factory(ctx context.Context, conf *logical.BackendConfig) (logical.Backend, error) {
 	b := Backend()
@@ -27,6 +33,32 @@ func Backend() *backend {
 		DefaultKey: "default",
 	}
 
+	teamMapPaths := b.TeamMap.Paths()
+
+	teamMapPaths[0].DisplayAttrs = &framework.DisplayAttributes{
+		OperationPrefix: operationPrefixGithub,
+		OperationSuffix: "teams",
+	}
+	teamMapPaths[1].DisplayAttrs = &framework.DisplayAttributes{
+		OperationPrefix: operationPrefixGithub,
+		OperationSuffix: "team-mapping",
+	}
+	teamMapPaths[0].Operations = map[logical.Operation]framework.OperationHandler{
+		logical.ListOperation: &framework.PathOperation{
+			Callback: teamMapPaths[0].Callbacks[logical.ListOperation],
+			Summary:  teamMapPaths[0].HelpSynopsis,
+		},
+		logical.ReadOperation: &framework.PathOperation{
+			Callback: teamMapPaths[0].Callbacks[logical.ReadOperation],
+			Summary:  teamMapPaths[0].HelpSynopsis,
+			DisplayAttrs: &framework.DisplayAttributes{
+				OperationVerb:   "list",
+				OperationSuffix: "teams2", // The ReadOperation is redundant with the ListOperation
+			},
+		},
+	}
+	teamMapPaths[0].Callbacks = nil
+
 	b.UserMap = &framework.PolicyMap{
 		PathMap: framework.PathMap{
 			Name: "users",
@@ -34,7 +66,33 @@ func Backend() *backend {
 		DefaultKey: "default",
 	}
 
-	allPaths := append(b.TeamMap.Paths(), b.UserMap.Paths()...)
+	userMapPaths := b.UserMap.Paths()
+
+	userMapPaths[0].DisplayAttrs = &framework.DisplayAttributes{
+		OperationPrefix: operationPrefixGithub,
+		OperationSuffix: "users",
+	}
+	userMapPaths[1].DisplayAttrs = &framework.DisplayAttributes{
+		OperationPrefix: operationPrefixGithub,
+		OperationSuffix: "user-mapping",
+	}
+	userMapPaths[0].Operations = map[logical.Operation]framework.OperationHandler{
+		logical.ListOperation: &framework.PathOperation{
+			Callback: userMapPaths[0].Callbacks[logical.ListOperation],
+			Summary:  userMapPaths[0].HelpSynopsis,
+		},
+		logical.ReadOperation: &framework.PathOperation{
+			Callback: userMapPaths[0].Callbacks[logical.ReadOperation],
+			Summary:  userMapPaths[0].HelpSynopsis,
+			DisplayAttrs: &framework.DisplayAttributes{
+				OperationVerb:   "list",
+				OperationSuffix: "users2", // The ReadOperation is redundant with the ListOperation
+			},
+		},
+	}
+	userMapPaths[0].Callbacks = nil
+
+	allPaths := append(teamMapPaths, userMapPaths...)
 	b.Backend = &framework.Backend{
 		Help: backendHelp,
 
@@ -69,7 +127,14 @@ func (b *backend) Client(token string) (*github.Client, error) {
 		tc = oauth2.NewClient(ctx, &tokenSource{Value: token})
 	}
 
-	return github.NewClient(tc), nil
+	client := github.NewClient(tc)
+	emptyUrl, err := url.Parse("")
+	if err != nil {
+		return nil, err
+	}
+	client.UploadURL = emptyUrl
+
+	return client, nil
 }
 
 // tokenSource is an oauth2.TokenSource implementation.

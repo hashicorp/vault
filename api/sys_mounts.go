@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package api
 
 import (
@@ -254,19 +257,20 @@ type MountInput struct {
 }
 
 type MountConfigInput struct {
-	Options                   map[string]string `json:"options" mapstructure:"options"`
-	DefaultLeaseTTL           string            `json:"default_lease_ttl" mapstructure:"default_lease_ttl"`
-	Description               *string           `json:"description,omitempty" mapstructure:"description"`
-	MaxLeaseTTL               string            `json:"max_lease_ttl" mapstructure:"max_lease_ttl"`
-	ForceNoCache              bool              `json:"force_no_cache" mapstructure:"force_no_cache"`
-	AuditNonHMACRequestKeys   []string          `json:"audit_non_hmac_request_keys,omitempty" mapstructure:"audit_non_hmac_request_keys"`
-	AuditNonHMACResponseKeys  []string          `json:"audit_non_hmac_response_keys,omitempty" mapstructure:"audit_non_hmac_response_keys"`
-	ListingVisibility         string            `json:"listing_visibility,omitempty" mapstructure:"listing_visibility"`
-	PassthroughRequestHeaders []string          `json:"passthrough_request_headers,omitempty" mapstructure:"passthrough_request_headers"`
-	AllowedResponseHeaders    []string          `json:"allowed_response_headers,omitempty" mapstructure:"allowed_response_headers"`
-	TokenType                 string            `json:"token_type,omitempty" mapstructure:"token_type"`
-	AllowedManagedKeys        []string          `json:"allowed_managed_keys,omitempty" mapstructure:"allowed_managed_keys"`
-
+	Options                   map[string]string       `json:"options" mapstructure:"options"`
+	DefaultLeaseTTL           string                  `json:"default_lease_ttl" mapstructure:"default_lease_ttl"`
+	Description               *string                 `json:"description,omitempty" mapstructure:"description"`
+	MaxLeaseTTL               string                  `json:"max_lease_ttl" mapstructure:"max_lease_ttl"`
+	ForceNoCache              bool                    `json:"force_no_cache" mapstructure:"force_no_cache"`
+	AuditNonHMACRequestKeys   []string                `json:"audit_non_hmac_request_keys,omitempty" mapstructure:"audit_non_hmac_request_keys"`
+	AuditNonHMACResponseKeys  []string                `json:"audit_non_hmac_response_keys,omitempty" mapstructure:"audit_non_hmac_response_keys"`
+	ListingVisibility         string                  `json:"listing_visibility,omitempty" mapstructure:"listing_visibility"`
+	PassthroughRequestHeaders []string                `json:"passthrough_request_headers,omitempty" mapstructure:"passthrough_request_headers"`
+	AllowedResponseHeaders    []string                `json:"allowed_response_headers,omitempty" mapstructure:"allowed_response_headers"`
+	TokenType                 string                  `json:"token_type,omitempty" mapstructure:"token_type"`
+	AllowedManagedKeys        []string                `json:"allowed_managed_keys,omitempty" mapstructure:"allowed_managed_keys"`
+	PluginVersion             string                  `json:"plugin_version,omitempty"`
+	UserLockoutConfig         *UserLockoutConfigInput `json:"user_lockout_config,omitempty"`
 	// Deprecated: This field will always be blank for newer server responses.
 	PluginName string `json:"plugin_name,omitempty" mapstructure:"plugin_name"`
 }
@@ -281,22 +285,40 @@ type MountOutput struct {
 	Local                 bool              `json:"local"`
 	SealWrap              bool              `json:"seal_wrap" mapstructure:"seal_wrap"`
 	ExternalEntropyAccess bool              `json:"external_entropy_access" mapstructure:"external_entropy_access"`
+	PluginVersion         string            `json:"plugin_version" mapstructure:"plugin_version"`
+	RunningVersion        string            `json:"running_plugin_version" mapstructure:"running_plugin_version"`
+	RunningSha256         string            `json:"running_sha256" mapstructure:"running_sha256"`
+	DeprecationStatus     string            `json:"deprecation_status" mapstructure:"deprecation_status"`
 }
 
 type MountConfigOutput struct {
-	DefaultLeaseTTL           int      `json:"default_lease_ttl" mapstructure:"default_lease_ttl"`
-	MaxLeaseTTL               int      `json:"max_lease_ttl" mapstructure:"max_lease_ttl"`
-	ForceNoCache              bool     `json:"force_no_cache" mapstructure:"force_no_cache"`
-	AuditNonHMACRequestKeys   []string `json:"audit_non_hmac_request_keys,omitempty" mapstructure:"audit_non_hmac_request_keys"`
-	AuditNonHMACResponseKeys  []string `json:"audit_non_hmac_response_keys,omitempty" mapstructure:"audit_non_hmac_response_keys"`
-	ListingVisibility         string   `json:"listing_visibility,omitempty" mapstructure:"listing_visibility"`
-	PassthroughRequestHeaders []string `json:"passthrough_request_headers,omitempty" mapstructure:"passthrough_request_headers"`
-	AllowedResponseHeaders    []string `json:"allowed_response_headers,omitempty" mapstructure:"allowed_response_headers"`
-	TokenType                 string   `json:"token_type,omitempty" mapstructure:"token_type"`
-	AllowedManagedKeys        []string `json:"allowed_managed_keys,omitempty" mapstructure:"allowed_managed_keys"`
-
+	DefaultLeaseTTL           int                      `json:"default_lease_ttl" mapstructure:"default_lease_ttl"`
+	MaxLeaseTTL               int                      `json:"max_lease_ttl" mapstructure:"max_lease_ttl"`
+	ForceNoCache              bool                     `json:"force_no_cache" mapstructure:"force_no_cache"`
+	AuditNonHMACRequestKeys   []string                 `json:"audit_non_hmac_request_keys,omitempty" mapstructure:"audit_non_hmac_request_keys"`
+	AuditNonHMACResponseKeys  []string                 `json:"audit_non_hmac_response_keys,omitempty" mapstructure:"audit_non_hmac_response_keys"`
+	ListingVisibility         string                   `json:"listing_visibility,omitempty" mapstructure:"listing_visibility"`
+	PassthroughRequestHeaders []string                 `json:"passthrough_request_headers,omitempty" mapstructure:"passthrough_request_headers"`
+	AllowedResponseHeaders    []string                 `json:"allowed_response_headers,omitempty" mapstructure:"allowed_response_headers"`
+	TokenType                 string                   `json:"token_type,omitempty" mapstructure:"token_type"`
+	AllowedManagedKeys        []string                 `json:"allowed_managed_keys,omitempty" mapstructure:"allowed_managed_keys"`
+	UserLockoutConfig         *UserLockoutConfigOutput `json:"user_lockout_config,omitempty"`
 	// Deprecated: This field will always be blank for newer server responses.
 	PluginName string `json:"plugin_name,omitempty" mapstructure:"plugin_name"`
+}
+
+type UserLockoutConfigInput struct {
+	LockoutThreshold            string `json:"lockout_threshold,omitempty" structs:"lockout_threshold" mapstructure:"lockout_threshold"`
+	LockoutDuration             string `json:"lockout_duration,omitempty" structs:"lockout_duration" mapstructure:"lockout_duration"`
+	LockoutCounterResetDuration string `json:"lockout_counter_reset_duration,omitempty" structs:"lockout_counter_reset_duration" mapstructure:"lockout_counter_reset_duration"`
+	DisableLockout              *bool  `json:"lockout_disable,omitempty" structs:"lockout_disable" mapstructure:"lockout_disable"`
+}
+
+type UserLockoutConfigOutput struct {
+	LockoutThreshold    uint  `json:"lockout_threshold,omitempty" structs:"lockout_threshold" mapstructure:"lockout_threshold"`
+	LockoutDuration     int   `json:"lockout_duration,omitempty" structs:"lockout_duration" mapstructure:"lockout_duration"`
+	LockoutCounterReset int   `json:"lockout_counter_reset,omitempty" structs:"lockout_counter_reset" mapstructure:"lockout_counter_reset"`
+	DisableLockout      *bool `json:"disable_lockout,omitempty" structs:"disable_lockout" mapstructure:"disable_lockout"`
 }
 
 type MountMigrationOutput struct {

@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import { module, test } from 'qunit';
 import { setupRenderingTest } from 'ember-qunit';
 import { render, click, fillIn } from '@ember/test-helpers';
@@ -124,11 +129,11 @@ module('Integration | Component | mfa-login-enforcement-form', function (hooks) 
     await click('[data-test-mlef-add-target]');
     await click('[data-test-mlef-save]');
     assert.true(this.didSave, 'onSave callback triggered');
-    assert.equal(this.model.name, 'bar', 'Name property set on model');
-    assert.equal(this.model.mfa_methods.firstObject.id, '123456', 'Mfa method added to model');
-    assert.equal(
-      this.model.auth_method_accessors.firstObject,
-      'auth_userpass_1234',
+    assert.strictEqual(this.model.name, 'bar', 'Name property set on model');
+    assert.strictEqual(this.model.mfa_methods.firstObject.id, '123456', 'Mfa method added to model');
+    assert.deepEqual(
+      this.model.auth_method_accessors,
+      ['auth_userpass_1234'],
       'Target saved to correct model property'
     );
   });

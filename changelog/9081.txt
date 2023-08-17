@@ -1,0 +1,4 @@
+
+```release-note:improvement
+website/docs: changed to echo for all string examples instead of (<<<) here-string.
+```

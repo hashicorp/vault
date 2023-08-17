@@ -1,7 +1,12 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package custommetadata
 
 import (
 	"fmt"
+
+	"github.com/mitchellh/mapstructure"
 
 	"github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/go-secure-stdlib/strutil"
@@ -15,6 +20,31 @@ const (
 	maxValueLength        = 512
 	validationErrorPrefix = "custom_metadata validation failed"
 )
+
+// Parse is used to effectively convert the TypeMap
+// (map[string]interface{}) into a TypeKVPairs (map[string]string)
+// which is how custom_metadata is stored. Defining custom_metadata
+// as a TypeKVPairs will convert nulls into empty strings. A null,
+// however, is essential for a PATCH operation in that it signals
+// the handler to remove the field. The filterNils flag should
+// only be used during a patch operation.
+func Parse(raw map[string]interface{}, filterNils bool) (map[string]string, error) {
+	customMetadata := map[string]string{}
+	for k, v := range raw {
+		if filterNils && v == nil {
+			continue
+		}
+
+		var s string
+		if err := mapstructure.WeakDecode(v, &s); err != nil {
+			return nil, err
+		}
+
+		customMetadata[k] = s
+	}
+
+	return customMetadata, nil
+}
 
 // Validate will perform input validation for custom metadata.
 // CustomMetadata should be arbitrary user-provided key-value pairs meant to

@@ -1,0 +1,72 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
+// This file defines the style for .tag
+
+.tag:not(body) {
+  align-items: center;
+  background-color: $ui-gray-100;
+  border-radius: $radius;
+  color: $grey;
+  display: inline-flex;
+  font-size: $size-8;
+  font-weight: $font-weight-normal;
+  height: auto;
+  justify-content: center;
+  line-height: 1.5;
+  margin-right: $size-10;
+  padding: 0 $size-10;
+  white-space: nowrap;
+  vertical-align: middle;
+
+  code {
+    color: $grey;
+  }
+
+  .icon {
+    height: 12px;
+    margin-left: -0.25em;
+    margin-right: 0.25em;
+    min-width: 0;
+    width: 12px;
+  }
+
+  &.has-extra-padding {
+    padding: $size-11 $spacing-xxs;
+  }
+}
+
+.tag {
+  &.is-bold {
+    font-weight: bold;
+  }
+
+  &.is-light {
+    background-color: whitesmoke;
+    color: rgba(0, 0, 0, 0.7);
+  }
+
+  &.is-outlined {
+    background-color: transparent;
+    border: 1px solid $grey-light;
+  }
+
+  &.is-transparent {
+    background-color: transparent;
+  }
+
+  &.is-small {
+    height: auto;
+  }
+
+  &.is-medium {
+    font-size: $size-6;
+  }
+
+  &.is-success {
+    background-color: $green-500;
+    color: $white;
+  }
+}

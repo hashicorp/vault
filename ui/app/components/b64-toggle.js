@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import { equal } from '@ember/object/computed';
 import { isBlank } from '@ember/utils';
 import Component from '@ember/component';
@@ -116,12 +121,12 @@ export default Component.extend({
   },
 
   click() {
-    let val = this.value;
+    const val = this.value;
     const isUTF8 = this.currentEncoding === UTF8;
     if (!val) {
       return;
     }
-    let newVal = isUTF8 ? encodeString(val) : decodeString(val);
+    const newVal = isUTF8 ? encodeString(val) : decodeString(val);
     const encoding = isUTF8 ? B64 : UTF8;
     set(this, 'value', newVal);
     set(this, '_value', newVal);

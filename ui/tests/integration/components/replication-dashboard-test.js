@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import { module, test } from 'qunit';
 import { setupRenderingTest } from 'ember-qunit';
 import { render } from '@ember/test-helpers';
@@ -35,9 +40,9 @@ module('Integration | Component | replication-dashboard', function (hooks) {
 
   test('it renders', async function (assert) {
     await render(hbs`<ReplicationDashboard
-      @replicationDetails={{replicationDetails}}
-      @clusterMode={{clusterMode}}
-      @isSecondary={{isSecondary}}
+      @replicationDetails={{this.replicationDetails}}
+      @clusterMode={{this.clusterMode}}
+      @isSecondary={{this.isSecondary}}
     />`);
 
     assert.dom('[data-test-replication-dashboard]').exists();
@@ -49,9 +54,9 @@ module('Integration | Component | replication-dashboard', function (hooks) {
 
   test('it updates the dashboard when the replication mode has changed', async function (assert) {
     await render(hbs`<ReplicationDashboard
-      @replicationDetails={{replicationDetails}}
-      @clusterMode={{clusterMode}}
-      @isSecondary={{isSecondary}}
+      @replicationDetails={{this.replicationDetails}}
+      @clusterMode={{this.clusterMode}}
+      @isSecondary={{this.isSecondary}}
     />`);
 
     assert.dom('[data-test-selectable-card-container="secondary"]').exists();
@@ -68,9 +73,9 @@ module('Integration | Component | replication-dashboard', function (hooks) {
     this.set('isSecondary', false);
 
     await render(hbs`<ReplicationDashboard
-      @replicationDetails={{replicationDetails}}
-      @clusterMode={{clusterMode}}
-      @isSecondary={{isSecondary}}
+      @replicationDetails={{this.replicationDetails}}
+      @clusterMode={{this.clusterMode}}
+      @isSecondary={{this.isSecondary}}
     />`);
 
     assert.dom('[data-test-selectable-card-container="primary"]').exists();
@@ -81,12 +86,11 @@ module('Integration | Component | replication-dashboard', function (hooks) {
     this.set('replicationDetails', IS_SYNCING);
 
     await render(hbs`<ReplicationDashboard
-      @replicationDetails={{replicationDetails}}
-      @clusterMode={{clusterMode}}
-      @isSecondary={{isSecondary}}
+      @replicationDetails={{this.replicationDetails}}
+      @clusterMode={{this.clusterMode}}
+      @isSecondary={{this.isSecondary}}
       @componentToRender='replication-secondary-card'
     />`);
-
     assert.dom('[data-test-isSyncing]').exists();
     assert
       .dom('[data-test-isReindexing]')
@@ -97,26 +101,25 @@ module('Integration | Component | replication-dashboard', function (hooks) {
     this.set('replicationDetails', IS_REINDEXING);
 
     await render(hbs`<ReplicationDashboard
-      @replicationDetails={{replicationDetails}}
-      @clusterMode={{clusterMode}}
-      @isSecondary={{isSecondary}}
+      @replicationDetails={{this.replicationDetails}}
+      @clusterMode={{this.clusterMode}}
+      @isSecondary={{this.isSecondary}}
       @componentToRender='replication-secondary-card'
     />`);
-
     assert.dom('[data-test-isReindexing]').exists();
-    assert.dom('.message-title').includesText('Building', 'shows reindexing stage if there is one');
     assert
-      .dom('.message-title>.progress')
+      .dom('[data-test-reindexing-title]')
+      .includesText('Building', 'shows reindexing stage if there is one');
+    assert
+      .dom('[data-test-reindexing-progress]')
       .hasValue(
         IS_REINDEXING.reindex_building_progress,
         'shows the reindexing progress inside the alert banner'
       );
-
-    const reindexingInProgress = assign({}, IS_REINDEXING, { reindex_building_progress: 27000 });
+    const reindexingInProgress = assign({}, IS_REINDEXING, { reindex_building_progress: 152721 });
     this.set('replicationDetails', reindexingInProgress);
-
     assert
-      .dom('.message-title>.progress')
+      .dom('[data-test-reindexing-progress]')
       .hasValue(reindexingInProgress.reindex_building_progress, 'updates the reindexing progress');
   });
 
@@ -140,11 +143,11 @@ module('Integration | Component | replication-dashboard', function (hooks) {
     this.set('isSecondary', false);
 
     await render(hbs`<ReplicationDashboard
-      @replicationDetails={{replicationDetails}}
-      @replicationDetailsSummary={{replicationDetailsSummary}}
-      @isSummaryDashboard={{isSummaryDashboard}}
-      @clusterMode={{clusterMode}}
-      @isSecondary={{isSecondary}}
+      @replicationDetails={{this.replicationDetails}}
+      @replicationDetailsSummary={{this.replicationDetailsSummary}}
+      @isSummaryDashboard={{this.isSummaryDashboard}}
+      @clusterMode={{this.clusterMode}}
+      @isSecondary={{this.isSecondary}}
       @componentToRender='replication-summary-card'
     />`);
 
@@ -179,11 +182,11 @@ module('Integration | Component | replication-dashboard', function (hooks) {
     this.set('isSecondary', false);
 
     await render(hbs`<ReplicationDashboard
-      @replicationDetails={{replicationDetails}}
-      @replicationDetailsSummary={{replicationDetailsSummary}}
-      @isSummaryDashboard={{isSummaryDashboard}}
-      @clusterMode={{clusterMode}}
-      @isSecondary={{isSecondary}}
+      @replicationDetails={{this.replicationDetails}}
+      @replicationDetailsSummary={{this.replicationDetailsSummary}}
+      @isSummaryDashboard={{this.isSummaryDashboard}}
+      @clusterMode={{this.clusterMode}}
+      @isSecondary={{this.isSecondary}}
       @componentToRender='replication-summary-card'
     />`);
 

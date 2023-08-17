@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package pki
 
 import (
@@ -309,6 +312,8 @@ func (c CBValidateChain) PrettyChain(t testing.TB, chain []string, knownCerts ma
 }
 
 func ToCertificate(t testing.TB, cert string) *x509.Certificate {
+	t.Helper()
+
 	block, _ := pem.Decode([]byte(cert))
 	if block == nil {
 		t.Fatalf("Unable to parse certificate: nil PEM block\n[%v]\n", cert)
@@ -323,6 +328,8 @@ func ToCertificate(t testing.TB, cert string) *x509.Certificate {
 }
 
 func ToCRL(t testing.TB, crl string, issuer *x509.Certificate) *pkix.CertificateList {
+	t.Helper()
+
 	block, _ := pem.Decode([]byte(crl))
 	if block == nil {
 		t.Fatalf("Unable to parse CRL: nil PEM block\n[%v]\n", crl)
@@ -535,7 +542,7 @@ func (c CBIssueLeaf) RevokeLeaf(t testing.TB, b *backend, s logical.Storage, kno
 		t.Fatalf("failed to revoke issued certificate (%v) under role %v / issuer %v: expected response parameter revocation_time was missing from response:\n%v", api_serial, c.Role, c.Issuer, resp.Data)
 	}
 
-	if !hasCRL && isDefault {
+	if !hasCRL {
 		// Nothing further we can test here. We could re-enable CRL building
 		// and check that it works, but that seems like a stretch. Other
 		// issuers might be functionally the same as this issuer (and thus
@@ -614,7 +621,7 @@ func (c CBIssueLeaf) RevokeLeaf(t testing.TB, b *backend, s logical.Storage, kno
 			}
 		}
 
-		t.Fatalf("expected to find certificate with serial [%v] on issuer %v's CRL but was missing: %v revoked certs\n\nCRL:\n[%v]\n\nLeaf:\n[%v]\n\nIssuer:\n[%v]\n", api_serial, c.Issuer, len(crl.TBSCertList.RevokedCertificates), raw_crl, raw_cert, raw_issuer)
+		t.Fatalf("expected to find certificate with serial [%v] on issuer %v's CRL but was missing: %v revoked certs\n\nCRL:\n[%v]\n\nLeaf:\n[%v]\n\nIssuer (hasCRL: %v):\n[%v]\n", api_serial, c.Issuer, len(crl.TBSCertList.RevokedCertificates), raw_crl, raw_cert, hasCRL, raw_issuer)
 	}
 }
 
@@ -1598,7 +1605,7 @@ var chainBuildingTestCases = []CBTestScenario{
 func Test_CAChainBuilding(t *testing.T) {
 	t.Parallel()
 	for testIndex, testCase := range chainBuildingTestCases {
-		b, s := createBackendWithStorage(t)
+		b, s := CreateBackendWithStorage(t)
 
 		knownKeys := make(map[string]string)
 		knownCerts := make(map[string]string)
@@ -1620,7 +1627,7 @@ func BenchmarkChainBuilding(benchies *testing.B) {
 			bench.StopTimer()
 			bench.ResetTimer()
 
-			b, s := createBackendWithStorage(bench)
+			b, s := CreateBackendWithStorage(bench)
 
 			knownKeys := make(map[string]string)
 			knownCerts := make(map[string]string)

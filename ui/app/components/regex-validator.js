@@ -1,4 +1,9 @@
 /**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
+/**
  * @module RegexValidator
  * RegexValidator components are used to provide input forms for regex values, along with a toggle-able validation input which does not get saved to the model.
  *

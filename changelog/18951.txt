@@ -1,0 +1,3 @@
+```release-note:bug
+core: Prevent panics in `sys/leases/lookup`, `sys/leases/revoke`, and `sys/leases/renew` endpoints if provided `lease_id` is null
+```

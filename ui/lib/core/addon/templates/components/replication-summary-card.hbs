@@ -1,12 +1,17 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
 <div
-  class="selectable-card is-rounded card-container summary {{if this.hasErrorClass 'has-border-danger'}}"
+  class="selectable-card is-rounded card-container summary {{if this.hasErrorClass 'has-error-border'}}"
   data-test-replication-summary-card
 >
   {{! Check if DR or Performance Card }}
   {{#if (eq this.title "Disaster Recovery")}}
     <h3 class="title is-5 grid-item-top-left card-title">{{this.title}}</h3>
     <div class="grid-item-top-right">
-      <ToolbarLink @params={{array "mode.index" "dr"}} data-test-manage-link={{this.title}}>
+      <ToolbarLink @route="mode.index" @model="dr" data-test-manage-link={{this.title}}>
         Details
       </ToolbarLink>
     </div>
@@ -30,7 +35,7 @@
   {{else}}
     <h3 class="title is-5 grid-item-top-left card-title">{{this.title}}</h3>
     <div class="grid-item-top-right">
-      <ToolbarLink @params={{array "mode.index" "performance"}} data-test-manage-link={{this.title}}>
+      <ToolbarLink @route="mode.index" @model="performance" data-test-manage-link={{this.title}}>
         Details
       </ToolbarLink>
     </div>
