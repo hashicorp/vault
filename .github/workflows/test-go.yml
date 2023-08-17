@@ -52,6 +52,11 @@ on:
         required: false
         default: 60
         type: number
+      testonly:
+        description: Whether to run the tests tagged with testonly.
+        required: false
+        default: false
+        type: boolean
 
 env: ${{ fromJSON(inputs.env-vars) }}
 
@@ -108,16 +113,42 @@ jobs:
       - name: List cached results
         id: list-cached-results
         run: ls -lhR test-results/go-test
-      - name: Build matrix excluding binary and integration tests
+      - name: Build matrix excluding binary, integration, and testonly tests
         id: build-non-binary
+        if: ${{ !inputs.testonly }}
         env:
           GOPRIVATE: github.com/hashicorp/*
         run: |
+          # testonly tests need additional build tag though let's exclude them anyway for clarity
           (
-            go list ./... | grep -v "_binary" | grep -v "vault/integ" | gotestsum tool ci-matrix --debug \
+            go list ./... | grep -v "_binary" | grep -v "vault/integ" | grep -v "testonly" | gotestsum tool ci-matrix --debug \
               --partitions "${{ inputs.total-runners }}" \
               --timing-files 'test-results/go-test/*.json' > matrix.json
           )
+      - name: Build matrix for tests tagged with testonly
+        if: ${{ inputs.testonly }}
+        env:
+          GOPRIVATE: github.com/hashicorp/*
+          run: |
+              set -exo pipefail
+
+              # testonly tagged tests need an additional tag
+              go list -tags=testonly ./... | grep "testonly" | gotestsum tool ci-matrix --debug \
+                --partitions "${{ inputs.total-runners }}" \
+                --timing-files 'test-results/go-test/*.json' > matrix.json
+
+              # hardcoding vault package index as there is only one test package tagged with testonly
+              # in the external tests. However, it would be also good to run the vault package with
+              # to validate the tag and also validate the vault package tests that are tagged with
+              # test only. There is only going to be two tests runners for testonly job.
+              jq --arg PKG "github.com/hashicorp/vault/vault" \
+                '.include[1] = {
+                  "id": 1,
+                  "estimatedRuntime": "N/A",
+                  "packages": $PKG,
+                  "description": "partition 1 - vault test packages"
+              }' matrix.json > new-matrix.json
+              mv new-matrix.json matrix.json
       - name: Capture list of binary tests
         if: inputs.binary-tests
         id: list-binary-tests
