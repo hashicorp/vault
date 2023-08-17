@@ -5,18 +5,11 @@ module "autopilot_upgrade_storageconfig" {
   source = "./modules/autopilot_upgrade_storageconfig"
 }
 
-module "az_finder" {
-  source = "./modules/az_finder"
-}
-
 module "backend_consul" {
-  source = "app.terraform.io/hashicorp-qti/aws-consul/enos"
+  source = "./modules/backend_consul"
 
-  project_name    = var.project_name
-  environment     = "ci"
-  common_tags     = var.tags
-  ssh_aws_keypair = var.aws_ssh_keypair_name
-  consul_license  = var.backend_license_path == null ? null : file(abspath(var.backend_license_path))
+  license   = var.backend_license_path == null ? null : file(abspath(var.backend_license_path))
+  log_level = var.backend_log_level
 }
 
 module "backend_raft" {
@@ -36,12 +29,14 @@ module "build_artifactory" {
 }
 
 module "create_vpc" {
-  source = "app.terraform.io/hashicorp-qti/aws-infra/enos"
+  source = "./modules/create_vpc"
 
-  project_name      = var.project_name
-  environment       = "ci"
-  common_tags       = var.tags
-  ami_architectures = ["amd64", "arm64"]
+  environment = "ci"
+  common_tags = var.tags
+}
+
+module "ec2_info" {
+  source = "./modules/ec2_info"
 }
 
 module "get_local_metadata" {
@@ -66,29 +61,51 @@ module "shutdown_multiple_nodes" {
   source = "./modules/shutdown_multiple_nodes"
 }
 
+# create target instances using ec2:CreateFleet
+module "target_ec2_fleet" {
+  source = "./modules/target_ec2_fleet"
+
+  common_tags  = var.tags
+  project_name = var.project_name
+  ssh_keypair  = var.aws_ssh_keypair_name
+}
+
+# create target instances using ec2:RunInstances
 module "target_ec2_instances" {
   source = "./modules/target_ec2_instances"
 
-  common_tags    = var.tags
-  instance_count = var.vault_instance_count
-  project_name   = var.project_name
-  ssh_keypair    = var.aws_ssh_keypair_name
+  common_tags  = var.tags
+  project_name = var.project_name
+  ssh_keypair  = var.aws_ssh_keypair_name
 }
 
+# don't create instances but satisfy the module interface
+module "target_ec2_shim" {
+  source = "./modules/target_ec2_shim"
+
+  common_tags  = var.tags
+  project_name = var.project_name
+  ssh_keypair  = var.aws_ssh_keypair_name
+}
+
+# create target instances using ec2:RequestSpotFleet
 module "target_ec2_spot_fleet" {
   source = "./modules/target_ec2_spot_fleet"
 
-  common_tags      = var.tags
-  instance_mem_min = 4096
-  instance_cpu_min = 2
-  project_name     = var.project_name
-  // Current on-demand cost of t3.medium in us-east.
-  spot_price_max = "0.0416"
-  ssh_keypair    = var.aws_ssh_keypair_name
+  common_tags  = var.tags
+  project_name = var.project_name
+  ssh_keypair  = var.aws_ssh_keypair_name
 }
 
 module "vault_agent" {
   source = "./modules/vault_agent"
+
+  vault_install_dir    = var.vault_install_dir
+  vault_instance_count = var.vault_instance_count
+}
+
+module "vault_proxy" {
+  source = "./modules/vault_proxy"
 
   vault_install_dir    = var.vault_install_dir
   vault_instance_count = var.vault_instance_count

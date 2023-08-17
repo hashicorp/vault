@@ -12,23 +12,36 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	"crypto/x509/pkix"
+	_ "embed"
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"html/template"
 	"net"
 	"net/http"
 	"path"
+	"strings"
 	"testing"
 	"time"
 
 	"golang.org/x/crypto/acme"
 
+	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/builtin/logical/pkiext"
 	"github.com/hashicorp/vault/helper/testhelpers"
 	"github.com/hashicorp/vault/sdk/helper/certutil"
 	hDocker "github.com/hashicorp/vault/sdk/helper/docker"
 	"github.com/stretchr/testify/require"
 )
+
+//go:embed testdata/caddy_http.json
+var caddyConfigTemplateHTTP string
+
+//go:embed testdata/caddy_http_eab.json
+var caddyConfigTemplateHTTPEAB string
+
+//go:embed testdata/caddy_tls_alpn.json
+var caddyConfigTemplateTLSALPN string
 
 // Test_ACME will start a Vault cluster using the docker based binary, and execute
 // a bunch of sub-tests against that cluster. It is up to each sub-test to run/configure
@@ -38,6 +51,9 @@ func Test_ACME(t *testing.T) {
 	defer cluster.Cleanup()
 
 	tc := map[string]func(t *testing.T, cluster *VaultPkiCluster){
+		"caddy http":        SubtestACMECaddy(caddyConfigTemplateHTTP, false),
+		"caddy http eab":    SubtestACMECaddy(caddyConfigTemplateHTTPEAB, true),
+		"caddy tls-alpn":    SubtestACMECaddy(caddyConfigTemplateTLSALPN, false),
 		"certbot":           SubtestACMECertbot,
 		"certbot eab":       SubtestACMECertbotEab,
 		"acme ip sans":      SubtestACMEIPAndDNS,
@@ -63,6 +79,155 @@ func Test_ACME(t *testing.T) {
 
 	// Do not run these tests in parallel.
 	t.Run("step down", func(gt *testing.T) { SubtestACMEStepDownNode(gt, cluster) })
+}
+
+// caddyConfig contains information used to render a Caddy configuration file from a template.
+type caddyConfig struct {
+	Hostname  string
+	Directory string
+	CACert    string
+	EABID     string
+	EABKey    string
+}
+
+// SubtestACMECaddy returns an ACME test for Caddy using the provided template.
+func SubtestACMECaddy(configTemplate string, enableEAB bool) func(*testing.T, *VaultPkiCluster) {
+	return func(t *testing.T, cluster *VaultPkiCluster) {
+		ctx := context.Background()
+
+		// Roll a random run ID for mount and hostname uniqueness.
+		runID, err := uuid.GenerateUUID()
+		require.NoError(t, err, "failed to generate a unique ID for test run")
+		runID = strings.Split(runID, "-")[0]
+
+		// Create the PKI mount with ACME enabled
+		pki, err := cluster.CreateAcmeMount(runID)
+		require.NoError(t, err, "failed to set up ACME mount")
+
+		// Conditionally enable EAB and retrieve the key.
+		var eabID, eabKey string
+		if enableEAB {
+			err = pki.UpdateAcmeConfig(true, map[string]interface{}{
+				"eab_policy": "new-account-required",
+			})
+			require.NoError(t, err, "failed to configure EAB policy in PKI mount")
+
+			eabID, eabKey, err = pki.GetEabKey("acme/")
+			require.NoError(t, err, "failed to retrieve EAB key from PKI mount")
+		}
+
+		directory := fmt.Sprintf("https://%s:8200/v1/%s/acme/directory", pki.GetActiveContainerIP(), runID)
+		vaultNetwork := pki.GetContainerNetworkName()
+		t.Logf("dir: %s", directory)
+
+		logConsumer, logStdout, logStderr := getDockerLog(t)
+
+		sleepTimer := "45"
+
+		// Kick off Caddy container.
+		t.Logf("creating on network: %v", vaultNetwork)
+		caddyRunner, err := hDocker.NewServiceRunner(hDocker.RunOptions{
+			ImageRepo:     "docker.mirror.hashicorp.services/library/caddy",
+			ImageTag:      "2.6.4",
+			ContainerName: fmt.Sprintf("caddy_test_%s", runID),
+			NetworkName:   vaultNetwork,
+			Ports:         []string{"80/tcp", "443/tcp", "443/udp"},
+			Entrypoint:    []string{"sleep", sleepTimer},
+			LogConsumer:   logConsumer,
+			LogStdout:     logStdout,
+			LogStderr:     logStderr,
+		})
+		require.NoError(t, err, "failed creating caddy service runner")
+
+		caddyResult, err := caddyRunner.Start(ctx, true, false)
+		require.NoError(t, err, "could not start Caddy container")
+		require.NotNil(t, caddyResult, "could not start Caddy container")
+
+		defer caddyRunner.Stop(ctx, caddyResult.Container.ID)
+
+		networks, err := caddyRunner.GetNetworkAndAddresses(caddyResult.Container.ID)
+		require.NoError(t, err, "could not read caddy container's IP address")
+		require.Contains(t, networks, vaultNetwork, "expected to contain vault network")
+
+		ipAddr := networks[vaultNetwork]
+		hostname := fmt.Sprintf("%s.dadgarcorp.com", runID)
+
+		err = pki.AddHostname(hostname, ipAddr)
+		require.NoError(t, err, "failed to update vault host files")
+
+		// Render the Caddy configuration from the specified template.
+		tmpl, err := template.New("config").Parse(configTemplate)
+		require.NoError(t, err, "failed to parse Caddy config template")
+		var b strings.Builder
+		err = tmpl.Execute(
+			&b,
+			caddyConfig{
+				Hostname:  hostname,
+				Directory: directory,
+				CACert:    "/tmp/vault_ca_cert.crt",
+				EABID:     eabID,
+				EABKey:    eabKey,
+			},
+		)
+		require.NoError(t, err, "failed to render Caddy config template")
+
+		// Push the Caddy config and the cluster listener's CA certificate over to the docker container.
+		cpCtx := hDocker.NewBuildContext()
+		cpCtx["caddy_config.json"] = hDocker.PathContentsFromString(b.String())
+		cpCtx["vault_ca_cert.crt"] = hDocker.PathContentsFromString(string(cluster.GetListenerCACertPEM()))
+		err = caddyRunner.CopyTo(caddyResult.Container.ID, "/tmp/", cpCtx)
+		require.NoError(t, err, "failed to copy Caddy config and Vault listener CA certificate to container")
+
+		// Start the Caddy server.
+		caddyCmd := []string{
+			"caddy",
+			"start",
+			"--config", "/tmp/caddy_config.json",
+		}
+		stdout, stderr, retcode, err := caddyRunner.RunCmdWithOutput(ctx, caddyResult.Container.ID, caddyCmd)
+		t.Logf("Caddy Start Command: %v\nstdout: %v\nstderr: %v\n", caddyCmd, string(stdout), string(stderr))
+		require.NoError(t, err, "got error running Caddy start command")
+		require.Equal(t, 0, retcode, "expected zero retcode Caddy start command result")
+
+		// Start a cURL container.
+		curlRunner, err := hDocker.NewServiceRunner(hDocker.RunOptions{
+			ImageRepo:     "docker.mirror.hashicorp.services/curlimages/curl",
+			ImageTag:      "latest",
+			ContainerName: fmt.Sprintf("curl_test_%s", runID),
+			NetworkName:   vaultNetwork,
+			Entrypoint:    []string{"sleep", sleepTimer},
+			LogConsumer:   logConsumer,
+			LogStdout:     logStdout,
+			LogStderr:     logStderr,
+		})
+		require.NoError(t, err, "failed creating cURL service runner")
+
+		curlResult, err := curlRunner.Start(ctx, true, false)
+		require.NoError(t, err, "could not start cURL container")
+		require.NotNil(t, curlResult, "could not start cURL container")
+
+		// Retrieve the PKI mount CA cert and copy it over to the cURL container.
+		mountCACert, err := pki.GetCACertPEM()
+		require.NoError(t, err, "failed to retrieve PKI mount CA certificate")
+
+		mountCACertCtx := hDocker.NewBuildContext()
+		mountCACertCtx["ca_cert.crt"] = hDocker.PathContentsFromString(mountCACert)
+		err = curlRunner.CopyTo(curlResult.Container.ID, "/tmp/", mountCACertCtx)
+		require.NoError(t, err, "failed to copy PKI mount CA certificate to cURL container")
+
+		// Use cURL to hit the Caddy server and validate that a certificate was retrieved successfully.
+		curlCmd := []string{
+			"curl",
+			"-L",
+			"--cacert", "/tmp/ca_cert.crt",
+			"--resolve", hostname + ":443:" + ipAddr,
+			"https://" + hostname + "/",
+		}
+		stdout, stderr, retcode, err = curlRunner.RunCmdWithOutput(ctx, curlResult.Container.ID, curlCmd)
+		t.Logf("cURL Command: %v\nstdout: %v\nstderr: %v\n", curlCmd, string(stdout), string(stderr))
+		require.NoError(t, err, "got error running cURL command")
+		require.Equal(t, 0, retcode, "expected zero retcode cURL command result")
+	}
 }
 
 func SubtestACMECertbot(t *testing.T, cluster *VaultPkiCluster) {

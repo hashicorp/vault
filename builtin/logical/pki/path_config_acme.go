@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package pki
 
 import (
@@ -24,6 +27,7 @@ type acmeConfigEntry struct {
 	Enabled                bool          `json:"enabled"`
 	AllowedIssuers         []string      `json:"allowed_issuers="`
 	AllowedRoles           []string      `json:"allowed_roles"`
+	AllowRoleExtKeyUsage   bool          `json:"allow_role_ext_key_usage"`
 	DefaultDirectoryPolicy string        `json:"default_directory_policy"`
 	DNSResolver            string        `json:"dns_resolver"`
 	EabPolicyName          EabPolicyName `json:"eab_policy_name"`
@@ -33,6 +37,7 @@ var defaultAcmeConfig = acmeConfigEntry{
 	Enabled:                false,
 	AllowedIssuers:         []string{"*"},
 	AllowedRoles:           []string{"*"},
+	AllowRoleExtKeyUsage:   false,
 	DefaultDirectoryPolicy: "sign-verbatim",
 	DNSResolver:            "",
 	EabPolicyName:          eabPolicyNotRequired,
@@ -94,6 +99,11 @@ func pathAcmeConfig(b *backend) *framework.Path {
 				Type:        framework.TypeCommaStringSlice,
 				Description: `which roles are allowed for use with ACME; by default via '*', these will be all roles including sign-verbatim; when concrete role names are specified, any default_directory_policy role must be included to allow usage of the default acme directories under /pki/acme/directory and /pki/issuer/:issuer_id/acme/directory.`,
 				Default:     []string{"*"},
+			},
+			"allow_role_ext_key_usage": {
+				Type:        framework.TypeBool,
+				Description: `whether the ExtKeyUsage field from a role is used, defaults to false meaning that certificate will be signed with ServerAuth.`,
+				Default:     false,
 			},
 			"default_directory_policy": {
 				Type:        framework.TypeString,
@@ -158,6 +168,7 @@ func genResponseFromAcmeConfig(config *acmeConfigEntry, warnings []string) *logi
 	response := &logical.Response{
 		Data: map[string]interface{}{
 			"allowed_roles":            config.AllowedRoles,
+			"allow_role_ext_key_usage": config.AllowRoleExtKeyUsage,
 			"allowed_issuers":          config.AllowedIssuers,
 			"default_directory_policy": config.DefaultDirectoryPolicy,
 			"enabled":                  config.Enabled,
@@ -189,6 +200,10 @@ func (b *backend) pathAcmeWrite(ctx context.Context, req *logical.Request, d *fr
 		if len(config.AllowedRoles) == 0 {
 			return nil, fmt.Errorf("allowed_roles must take a non-zero length value; specify '*' as the value to allow anything or specify enabled=false to disable ACME entirely")
 		}
+	}
+
+	if allowRoleExtKeyUsageRaw, ok := d.GetOk("allow_role_ext_key_usage"); ok {
+		config.AllowRoleExtKeyUsage = allowRoleExtKeyUsageRaw.(bool)
 	}
 
 	if defaultDirectoryPolicyRaw, ok := d.GetOk("default_directory_policy"); ok {

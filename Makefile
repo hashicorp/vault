@@ -9,7 +9,9 @@ INTEG_TEST_TIMEOUT=120m
 VETARGS?=-asmdecl -atomic -bool -buildtags -copylocks -methods -nilfunc -printf -rangeloops -shift -structtags -unsafeptr
 EXTERNAL_TOOLS_CI=\
 	golang.org/x/tools/cmd/goimports \
-	github.com/golangci/revgrep/cmd/revgrep
+	github.com/golangci/revgrep/cmd/revgrep \
+	mvdan.cc/gofumpt \
+	honnef.co/go/tools/cmd/staticcheck
 EXTERNAL_TOOLS=\
 	github.com/client9/misspell/cmd/misspell
 GOFMT_FILES?=$$(find . -name '*.go' | grep -v pb.go | grep -v vendor)
@@ -111,33 +113,30 @@ vet:
 			echo "and fix them if necessary before submitting the code for reviewal."; \
 		fi
 
-# deprecations runs staticcheck tool to look for deprecations. Checks entire code to see if it 
+# deprecations runs staticcheck tool to look for deprecations. Checks entire code to see if it
 # has deprecated function, variable, constant or field
-deprecations:
-	make bootstrap
-	repositoryName=$(basename `git rev-parse --show-toplevel`)
-	./scripts/deprecations-checker.sh "" repositoryName
+deprecations: bootstrap prep
+	@BUILD_TAGS='$(BUILD_TAGS)' ./scripts/deprecations-checker.sh ""
 
 # ci-deprecations runs staticcheck tool to look for deprecations. All output gets piped to revgrep
 # which will only return an error if changes that is not on main has deprecated function, variable, constant or field
-ci-deprecations:
-	make bootstrap
-	repositoryName=$(basename `git rev-parse --show-toplevel`)
-	./scripts/deprecations-checker.sh main repositoryName
+ci-deprecations: ci-bootstrap prep
+	@BUILD_TAGS='$(BUILD_TAGS)' ./scripts/deprecations-checker.sh main
 
-# tools/godoctests/.bin/godoctests builds the custom analyzer to check for godocs for tests
-tools/godoctests/.bin/godoctests:
-	@cd tools/godoctests && $(GO_CMD) build -o .bin/godoctests .
+tools/codechecker/.bin/codechecker:
+	@cd tools/codechecker && $(GO_CMD) build -o .bin/codechecker .
 
-# vet-godoctests runs godoctests on the test functions. All output gets piped to revgrep
-# which will only return an error if a new function is missing a godoc
-vet-godoctests: bootstrap tools/godoctests/.bin/godoctests
-	@$(GO_CMD) vet -vettool=./tools/godoctests/.bin/godoctests $(TEST) 2>&1 | revgrep
+# vet-codechecker runs our custom linters on the test functions. All output gets
+# piped to revgrep which will only return an error if new piece of code violates
+# the check
+vet-codechecker: bootstrap tools/codechecker/.bin/codechecker prep
+	@$(GO_CMD) vet -vettool=./tools/codechecker/.bin/codechecker -tags=$(BUILD_TAGS) ./... 2>&1 | revgrep
 
-# ci-vet-godoctests runs godoctests on the test functions. All output gets piped to revgrep
-# which will only return an error if a new function that is not on main is missing a godoc
-ci-vet-godoctests: ci-bootstrap tools/godoctests/.bin/godoctests
-	@$(GO_CMD) vet -vettool=./tools/godoctests/.bin/godoctests $(TEST) 2>&1 | revgrep origin/main
+# vet-codechecker runs our custom linters on the test functions. All output gets
+# piped to revgrep which will only return an error if new piece of code that is
+# not on main violates the check
+ci-vet-codechecker: ci-bootstrap tools/codechecker/.bin/codechecker prep
+	@$(GO_CMD) vet -vettool=./tools/codechecker/.bin/codechecker -tags=$(BUILD_TAGS) ./... 2>&1 | revgrep origin/main
 
 # lint runs vet plus a number of other checkers, it is more comprehensive, but louder
 lint:
@@ -153,17 +152,24 @@ ci-lint:
 
 # prep runs `go generate` to build the dynamically generated
 # source files.
-prep: fmtcheck
+#
+# n.b.: prep used to depend on fmtcheck, but since fmtcheck is
+# now run as a pre-commit hook (and there's little value in
+# making every build run the formatter), we've removed that
+# dependency.
+prep:
 	@sh -c "'$(CURDIR)/scripts/goversioncheck.sh' '$(GO_VERSION_MIN)'"
-	@$(GO_CMD) generate $($(GO_CMD) list ./... | grep -v /vendor/)
+	@$(GO_CMD) generate $$($(GO_CMD) list ./... | grep -v /vendor/)
 	@if [ -d .git/hooks ]; then cp .hooks/* .git/hooks/; fi
 
 # bootstrap the build by downloading additional tools needed to build
-ci-bootstrap:
+ci-bootstrap: .ci-bootstrap
+.ci-bootstrap:
 	@for tool in  $(EXTERNAL_TOOLS_CI) ; do \
 		echo "Installing/Updating $$tool" ; \
 		GO111MODULE=off $(GO_CMD) get -u $$tool; \
 	done
+	@touch .ci-bootstrap
 
 # bootstrap the build by downloading additional tools that may be used by devs
 bootstrap: ci-bootstrap
@@ -237,10 +243,9 @@ proto: bootstrap
 	protoc-go-inject-tag -input=./helper/identity/mfa/types.pb.go
 
 fmtcheck:
-	@true
-#@sh -c "'$(CURDIR)/scripts/gofmtcheck.sh'"
+	@sh -c "'$(CURDIR)/scripts/gofmtcheck.sh'"
 
-fmt:
+fmt: ci-bootstrap
 	find . -name '*.go' | grep -v pb.go | grep -v vendor | xargs go run mvdan.cc/gofumpt -w
 
 semgrep:
