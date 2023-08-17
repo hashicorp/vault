@@ -21,6 +21,7 @@ export default class KvSecretsCreateRoute extends Route {
     return hash({
       backend,
       path,
+      // see serializer for logic behind setting casVersion
       secret: this.store.createRecord('kv/data', { backend, path, casVersion: 0 }),
       metadata: this.store.createRecord('kv/metadata', { backend, path }),
     });
