@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 package vault
 
@@ -1486,48 +1486,52 @@ func (b *SystemBackend) statusPaths() []*framework.Path {
 	}
 }
 
+func (b *SystemBackend) auditHashPath() *framework.Path {
+	return &framework.Path{
+		Pattern: "audit-hash/(?P<path>.+)",
+
+		DisplayAttrs: &framework.DisplayAttributes{
+			OperationPrefix: "auditing",
+			OperationVerb:   "calculate",
+			OperationSuffix: "hash",
+		},
+
+		Fields: map[string]*framework.FieldSchema{
+			"path": {
+				Type:        framework.TypeString,
+				Description: strings.TrimSpace(sysHelp["audit_path"][0]),
+			},
+
+			"input": {
+				Type: framework.TypeString,
+			},
+		},
+
+		Operations: map[logical.Operation]framework.OperationHandler{
+			logical.UpdateOperation: &framework.PathOperation{
+				Callback: b.handleAuditHash,
+				Responses: map[int][]framework.Response{
+					http.StatusOK: {{
+						Description: "OK",
+						Fields: map[string]*framework.FieldSchema{
+							"hash": {
+								Type:     framework.TypeString,
+								Required: true,
+							},
+						},
+					}},
+				},
+			},
+		},
+
+		HelpSynopsis:    strings.TrimSpace(sysHelp["audit-hash"][0]),
+		HelpDescription: strings.TrimSpace(sysHelp["audit-hash"][1]),
+	}
+}
+
 func (b *SystemBackend) auditPaths() []*framework.Path {
 	return []*framework.Path{
-		{
-			Pattern: "audit-hash/(?P<path>.+)",
-
-			DisplayAttrs: &framework.DisplayAttributes{
-				OperationPrefix: "auditing",
-				OperationVerb:   "calculate",
-				OperationSuffix: "hash",
-			},
-
-			Fields: map[string]*framework.FieldSchema{
-				"path": {
-					Type:        framework.TypeString,
-					Description: strings.TrimSpace(sysHelp["audit_path"][0]),
-				},
-
-				"input": {
-					Type: framework.TypeString,
-				},
-			},
-
-			Operations: map[logical.Operation]framework.OperationHandler{
-				logical.UpdateOperation: &framework.PathOperation{
-					Callback: b.handleAuditHash,
-					Responses: map[int][]framework.Response{
-						http.StatusOK: {{
-							Description: "OK",
-							Fields: map[string]*framework.FieldSchema{
-								"hash": {
-									Type:     framework.TypeString,
-									Required: true,
-								},
-							},
-						}},
-					},
-				},
-			},
-
-			HelpSynopsis:    strings.TrimSpace(sysHelp["audit-hash"][0]),
-			HelpDescription: strings.TrimSpace(sysHelp["audit-hash"][1]),
-		},
+		b.auditHashPath(),
 
 		{
 			Pattern: "audit$",
@@ -2221,6 +2225,7 @@ func (b *SystemBackend) internalPaths() []*framework.Path {
 				"context": {
 					Type:        framework.TypeString,
 					Description: "Context string appended to every operationId",
+					Query:       true,
 				},
 				"generic_mount_paths": {
 					Type:        framework.TypeBool,
@@ -2692,12 +2697,11 @@ func (b *SystemBackend) capabilitiesPaths() []*framework.Path {
 func (b *SystemBackend) leasePaths() []*framework.Path {
 	return []*framework.Path{
 		{
-			Pattern: "leases/lookup/(?P<prefix>.+?)?",
+			Pattern: "leases/lookup/" + framework.MatchAllRegex("prefix"),
 
 			DisplayAttrs: &framework.DisplayAttributes{
 				OperationPrefix: "leases",
 				OperationVerb:   "look-up",
-				OperationSuffix: "|with-prefix",
 			},
 
 			Fields: map[string]*framework.FieldSchema{
@@ -3674,6 +3678,9 @@ func (b *SystemBackend) policyPaths() []*framework.Path {
 							},
 						}},
 					},
+					DisplayAttrs: &framework.DisplayAttributes{
+						OperationSuffix: "acl-policies2", // this endpoint duplicates sys/policies/acl
+					},
 				},
 				logical.ListOperation: &framework.PathOperation{
 					Callback: b.handlePoliciesList(PolicyTypeACL),
@@ -3690,6 +3697,9 @@ func (b *SystemBackend) policyPaths() []*framework.Path {
 								},
 							},
 						}},
+					},
+					DisplayAttrs: &framework.DisplayAttributes{
+						OperationSuffix: "acl-policies3", // this endpoint duplicates sys/policies/acl
 					},
 				},
 			},
@@ -3884,18 +3894,7 @@ func (b *SystemBackend) policyPaths() []*framework.Path {
 			Operations: map[logical.Operation]framework.OperationHandler{
 				logical.ListOperation: &framework.PathOperation{
 					Callback: b.handlePoliciesPasswordList,
-					Responses: map[int][]framework.Response{
-						http.StatusOK: {{
-							Description: "OK",
-							Fields: map[string]*framework.FieldSchema{
-								"keys": {
-									Type:     framework.TypeStringSlice,
-									Required: false,
-								},
-							},
-						}},
-					},
-					Summary: "List the existing password policies.",
+					Summary:  "List the existing password policies.",
 				},
 			},
 		},
@@ -4072,7 +4071,8 @@ func (b *SystemBackend) wrappingPaths() []*framework.Path {
 
 			Fields: map[string]*framework.FieldSchema{
 				"token": {
-					Type: framework.TypeString,
+					Type:  framework.TypeString,
+					Query: true,
 				},
 			},
 

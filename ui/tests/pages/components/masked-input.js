@@ -1,6 +1,6 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 import { clickable, isPresent } from 'ember-cli-page-object';
@@ -10,4 +10,5 @@ export default {
   copyButtonIsPresent: isPresent('[data-test-copy-button]'),
   downloadButtonIsPresent: isPresent('[data-test-download-button]'),
   toggleMasked: clickable('[data-test-button="toggle-masked"]'),
+  copyValue: clickable('[data-test-copy-button]'),
 };

@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 package pki
 
@@ -1546,18 +1546,8 @@ func (b *backend) doTidyAcme(ctx context.Context, req *logical.Request, logger h
 	b.tidyStatus.acmeAccountsCount = uint(len(thumbprints))
 	b.tidyStatusLock.Unlock()
 
-	baseUrl, _, err := getAcmeBaseUrl(sc, req)
-	if err != nil {
-		return err
-	}
-
-	acmeCtx := &acmeContext{
-		baseUrl: baseUrl,
-		sc:      sc,
-	}
-
 	for _, thumbprint := range thumbprints {
-		err := b.tidyAcmeAccountByThumbprint(b.acmeState, acmeCtx, thumbprint, config.SafetyBuffer, config.AcmeAccountSafetyBuffer)
+		err := b.tidyAcmeAccountByThumbprint(b.acmeState, sc, thumbprint, config.SafetyBuffer, config.AcmeAccountSafetyBuffer)
 		if err != nil {
 			logger.Warn("error tidying account %v: %v", thumbprint, err.Error())
 		}
@@ -1836,6 +1826,13 @@ func (b *backend) pathConfigAutoTidyWrite(ctx context.Context, req *logical.Requ
 
 	if tidyAcmeRaw, ok := d.GetOk("tidy_acme"); ok {
 		config.TidyAcme = tidyAcmeRaw.(bool)
+	}
+
+	if acmeAccountSafetyBufferRaw, ok := d.GetOk("acme_account_safety_buffer"); ok {
+		config.AcmeAccountSafetyBuffer = time.Duration(acmeAccountSafetyBufferRaw.(int)) * time.Second
+		if config.AcmeAccountSafetyBuffer < 1*time.Second {
+			return logical.ErrorResponse(fmt.Sprintf("given acme_account_safety_buffer must be at least one second; got: %v", acmeAccountSafetyBufferRaw)), nil
+		}
 	}
 
 	if config.Enabled && !config.IsAnyTidyEnabled() {

@@ -1,5 +1,5 @@
 # Copyright (c) HashiCorp, Inc.
-# SPDX-License-Identifier: MPL-2.0
+# SPDX-License-Identifier: BUSL-1.1
 
 scenario "autopilot" {
   matrix {
@@ -38,7 +38,7 @@ scenario "autopilot" {
       "ent.hsm"          = ["ui", "enterprise", "cgo", "hsm", "venthsm"]
       "ent.hsm.fips1402" = ["ui", "enterprise", "cgo", "hsm", "fips", "fips_140_2", "ent.hsm.fips1402"]
     }
-    bundle_path = matrix.artifact_source != "artifactory" ? abspath(var.vault_bundle_path) : null
+    bundle_path = matrix.artifact_source != "artifactory" ? abspath(var.vault_artifact_path) : null
     distro_version = {
       "rhel"   = var.rhel_distro_version
       "ubuntu" = var.ubuntu_distro_version

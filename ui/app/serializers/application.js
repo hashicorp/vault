@@ -1,6 +1,6 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 import JSONSerializer from '@ember-data/serializer/json';
@@ -64,9 +64,6 @@ export default JSONSerializer.extend({
     const valHasNotChanged = isNone(snapshot.changedAttributes()[key]);
     const valIsBlank = isBlank(val);
     if (attributes.options.readOnly) {
-      return;
-    }
-    if (attributes.type === 'object' && val && Object.keys(val).length > 0 && valHasNotChanged) {
       return;
     }
     if (valIsBlank && valHasNotChanged) {

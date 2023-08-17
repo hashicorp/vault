@@ -17,9 +17,7 @@ Currently, it only supports reloading license information from files on disk.
 
 - `subsystem` `(string: <required>)` - Specifies the subsystem for Vault to reload. This is part of the request URL.
 
-## Reload license file
-
-~> **Enterprise Only** – This endpoint requires Vault Enterprise.
+## Reload license file <EnterpriseAlert product="vault" inline />
 
 When the `:subsystem` URL parameter is specified as `license`, Vault re-reads
 the license file if the license was provided using the `license_path` configuration
