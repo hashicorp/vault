@@ -23,7 +23,7 @@ import (
 )
 
 const (
-	authTypeIAM      = "iam"
+	authTypeIAM      = "gcp_iam"
 	dbTypePostgres   = "pgx"
 	dbTypeMSSQL      = "mssql"
 	cloudSQLPostgres = "cloudsql-postgres"
@@ -48,6 +48,7 @@ type SQLConnectionProducer struct {
 	Username                 string      `json:"username" mapstructure:"username" structs:"username"`
 	Password                 string      `json:"password" mapstructure:"password" structs:"password"`
 	AuthType                 string      `json:"auth_type" mapstructure:"auth_type" structs:"auth_type"`
+	Credentials              string      `json:"credentials" mapstructure:"credentials" structs:"credentials"`
 	DisableEscaping          bool        `json:"disable_escaping" mapstructure:"disable_escaping" structs:"disable_escaping"`
 
 	// cloud options here - cloudDriverName is globally unique, but only needs to be retained for the lifetime
@@ -183,10 +184,9 @@ func (c *SQLConnectionProducer) Connection(ctx context.Context) (interface{}, er
 		}
 		// ignore the string, yeah i know
 		driverName = c.cloudDriverName
-		credentials := c.RawConfig["credentials"]
-		credentialsJSON := c.RawConfig["credentials_json"]
+		credentials := c.Credentials
 
-		cleanup, err := c.registerDrivers(driverName, credentials, credentialsJSON)
+		cleanup, err := c.registerDrivers(driverName, credentials)
 		if err != nil {
 			return nil, err
 		}

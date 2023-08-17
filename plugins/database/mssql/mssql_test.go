@@ -7,17 +7,19 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"os"
 	"reflect"
 	"regexp"
 	"strings"
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/assert"
+
 	mssqlhelper "github.com/hashicorp/vault/helper/testhelpers/mssql"
 	"github.com/hashicorp/vault/sdk/database/dbplugin/v5"
 	dbtesting "github.com/hashicorp/vault/sdk/database/dbplugin/v5/testing"
 	"github.com/hashicorp/vault/sdk/helper/dbtxn"
-	"github.com/stretchr/testify/assert"
 )
 
 func TestInitialize(t *testing.T) {
@@ -60,6 +62,38 @@ func TestInitialize(t *testing.T) {
 				Config: map[string]interface{}{
 					"connection_url": connURL,
 					"contained_db":   "true",
+				},
+				VerifyConnection: true,
+			},
+		},
+	}
+
+	for name, test := range tests {
+		t.Run(name, func(t *testing.T) {
+			db := new()
+			dbtesting.AssertInitializeCircleCiTest(t, db, test.req)
+			defer dbtesting.AssertClose(t, db)
+
+			if !db.Initialized {
+				t.Fatal("Database should be initialized")
+			}
+		})
+	}
+}
+
+func TestInitializeCloudSQL(t *testing.T) {
+	connURL := os.Getenv("CONNECTION_URL")
+
+	type testCase struct {
+		req dbplugin.InitializeRequest
+	}
+
+	tests := map[string]testCase{
+		"happy path": {
+			req: dbplugin.InitializeRequest{
+				Config: map[string]interface{}{
+					"connection_url": connURL,
+					"auth_type":      "iam",
 				},
 				VerifyConnection: true,
 			},

@@ -177,7 +177,6 @@ func (c *mySQLConnectionProducer) Connection(ctx context.Context) (interface{}, 
 
 		//@TODO - move these to init?
 		credentials := c.RawConfig["credentials"]
-		credentialsJSON := c.RawConfig["credentials_json"]
 
 		// for _most_ sql databases, the driver itself contains no state. In the case of google's cloudsql drivers,
 		// however, the driver might store a credentials file, in which case the state stored by the driver is in
@@ -189,7 +188,7 @@ func (c *mySQLConnectionProducer) Connection(ctx context.Context) (interface{}, 
 		// is registered. This means that either we can't hid the name of the dialer from the user OR we have to rewrite
 		// the DSN after the user provides it. We already do this, KIND OF for the TLS config, but this modification
 		// is much more dramatic.
-		_, err := registerDriverMySQL(driverName, credentials, credentialsJSON)
+		_, err := registerDriverMySQL(driverName, credentials.(string))
 		if err != nil {
 			return nil, err
 		}
@@ -317,11 +316,11 @@ func (c *mySQLConnectionProducer) rewriteProtocolForGCP(inDSN string) (string, e
 	return config.FormatDSN(), nil
 }
 
-func registerDriverMySQL(driverName string, credentials, credentialsJSON interface{}) (func() error, error) {
+func registerDriverMySQL(driverName, credentials string) (func() error, error) {
 	// @TODO implement driver cleanup cache
 	// if driver is already registered, return
 
-	opts, err := connutil.GetCloudSQLAuthOptions(credentials, credentials)
+	opts, err := connutil.GetCloudSQLAuthOptions(credentials)
 	if err != nil {
 		return nil, err
 	}

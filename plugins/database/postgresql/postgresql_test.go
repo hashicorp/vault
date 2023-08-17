@@ -12,14 +12,16 @@ import (
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+
 	"github.com/hashicorp/vault/helper/testhelpers/postgresql"
 	"github.com/hashicorp/vault/sdk/database/dbplugin/v5"
 	dbtesting "github.com/hashicorp/vault/sdk/database/dbplugin/v5/testing"
 	"github.com/hashicorp/vault/sdk/database/helper/dbutil"
 	"github.com/hashicorp/vault/sdk/helper/docker"
+	"github.com/hashicorp/vault/sdk/helper/jsonutil"
 	"github.com/hashicorp/vault/sdk/helper/template"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 )
 
 func getPostgreSQL(t *testing.T, options map[string]interface{}) (*PostgreSQL, func()) {
@@ -91,6 +93,60 @@ func TestPostgreSQL_Initialize_ConnURLWithDSNFormat(t *testing.T) {
 
 	if !db.Initialized {
 		t.Fatal("Database should be initialized")
+	}
+}
+
+func TestPostgreSQL_Initialize_CloudSQL(t *testing.T) {
+	// Move to separate function
+	connURL := os.Getenv("CONNECTION_URL")
+	email := os.Getenv("CLIENT_EMAIL")
+	clientID := os.Getenv("CLIENT_ID")
+	pkID := os.Getenv("PRIVATE_KEY_ID")
+	pk := os.Getenv("PRIVATE_KEY")
+	pid := os.Getenv("PROJECT_ID")
+
+	type testCase struct {
+		req dbplugin.InitializeRequest
+	}
+
+	creds := map[string]interface{}{
+		"client_email":         email,
+		"client_id":            clientID,
+		"private_key_id":       pkID,
+		"private_key":          pk,
+		"project_id":           pid,
+		"type":                 "service_account",
+		"client_x509_cert_url": "https://www.googleapis.com/robot/v1/metadata/x509/cloudsql-test%40hc-8b4a7584067449d88b2510bfdc2.iam.gserviceaccount.com",
+	}
+
+	credJson, err := jsonutil.EncodeJSON(creds)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	tests := map[string]testCase{
+		"basic": {
+			req: dbplugin.InitializeRequest{
+				Config: map[string]interface{}{
+					"connection_url": connURL,
+					"auth_type":      "iam",
+					"credentials":    credJson,
+				},
+				VerifyConnection: true,
+			},
+		},
+	}
+
+	for name, test := range tests {
+		t.Run(name, func(t *testing.T) {
+			db := new()
+			dbtesting.AssertInitializeCircleCiTest(t, db, test.req)
+			defer dbtesting.AssertClose(t, db)
+
+			if !db.Initialized {
+				t.Fatal("Database should be initialized")
+			}
+		})
 	}
 }
 

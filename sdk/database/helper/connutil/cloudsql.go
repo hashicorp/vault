@@ -25,28 +25,22 @@ func (c *SQLConnectionProducer) getCloudSQLDriverName() (string, error) {
 	return driverName, nil
 }
 
-func (c *SQLConnectionProducer) registerDrivers(driverName string, credentials, credentialsJSON interface{}) (func() error, error) {
+func (c *SQLConnectionProducer) registerDrivers(driverName string, credentials string) (func() error, error) {
 	typ, err := c.getCloudSQLDriverName()
 	if err != nil {
 		return nil, err
 	}
 
-	if isDriverRegistered(typ) {
-		// driver already registered
-		fmt.Printf("drivers have already been registered, returning\n")
-		return nil, nil
-	}
-
-	opts, err := GetCloudSQLAuthOptions(credentials, credentialsJSON)
+	opts, err := GetCloudSQLAuthOptions(credentials)
 	if err != nil {
 		return nil, err
 	}
 
 	switch typ {
 	case cloudSQLMSSQL:
-		return pgxv4.RegisterDriver(driverName, opts...)
-	case cloudSQLPostgres:
 		return mssql.RegisterDriver(driverName, opts...)
+	case cloudSQLPostgres:
+		return pgxv4.RegisterDriver(driverName, opts...)
 	}
 
 	return nil, fmt.Errorf("unrecognized cloudsql type encountered: %s", typ)
@@ -54,28 +48,13 @@ func (c *SQLConnectionProducer) registerDrivers(driverName string, credentials, 
 
 // GetCloudSQLAuthOptions takes a credentials (file) or a credentialsJSON (the actual data) and returns
 // a set of GCP CloudSQL options - always WithIAMAUthN, and then the appropriate file/JSON option.
-func GetCloudSQLAuthOptions(credentials, credentialsJSON interface{}) ([]cloudsqlconn.Option, error) {
+
+func GetCloudSQLAuthOptions(credentials string) ([]cloudsqlconn.Option, error) {
 	opts := []cloudsqlconn.Option{cloudsqlconn.WithIAMAuthN()}
-	if credentials != nil {
-		v, ok := credentials.(string)
-		if !ok {
-			return nil, fmt.Errorf("error converting file name to string")
-		}
 
-		fmt.Printf("registering driver with credential file\n")
-		opts = append(opts, cloudsqlconn.WithCredentialsFile(v))
-	}
-
-	if credentialsJSON != nil {
+	if credentials != "" {
 		fmt.Printf("registering driver with credential json\n")
-		switch v := credentialsJSON.(type) {
-		case string:
-			opts = append(opts, cloudsqlconn.WithCredentialsJSON([]byte(v)))
-		case []byte:
-			opts = append(opts, cloudsqlconn.WithCredentialsJSON(v))
-		default:
-			return nil, fmt.Errorf("error converting credentials of type %T to []byte", credentials)
-		}
+		opts = append(opts, cloudsqlconn.WithCredentialsJSON([]byte(credentials)))
 	}
 
 	return opts, nil
