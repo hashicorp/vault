@@ -13,37 +13,41 @@ export function pathIsFromDirectory(path) {
   return path ? !!path.match(/\//) : false;
 }
 
-function finalCrumb(segment, isLast, modelPath) {
-  const model = modelPath || segment;
-  if (isLast) {
-    return { label: segment };
-  }
-  return { label: segment, route: 'secret.details', model };
+function splitSegments(secretPath) {
+  const segments = secretPath.split('/').filter((path) => path);
+  segments.map((_, index) => {
+    return segments.slice(0, index + 1).join('/');
+  });
+  return segments.map((segment, idx) => {
+    return {
+      label: segment,
+      model: segments.slice(0, idx + 1).join('/'),
+    };
+  });
 }
 
 /**
- *
+ * breadcrumbsForSecret is for generating page breadcrumbs for a secret path
  * @param {string} secretPath is the full path to secret (like 'my-secret' or 'beep/boop')
  * @param {boolean} lastItemCurrent
- * @param {*} options
- * @returns
+ * @returns array of breadcrumbs specific to KV engine
  */
 export function breadcrumbsForSecret(secretPath, lastItemCurrent = false) {
-  const pathAsArray = secretPath.split('/');
-  const modelIdArray = pathAsArray.map((_, index) => {
-    return pathAsArray.slice(0, index + 1).join('/');
-  });
+  if (!secretPath) return [];
+  const isDir = pathIsDirectory(secretPath);
+  const segments = splitSegments(secretPath);
 
-  return pathAsArray
-    .map((key, index) => {
-      if (!key) {
-        // path segment is empty which means path is a directory, return null so it can be filtered out
-        return null;
+  return segments.map((segment, index) => {
+    if (index === segments.length - 1) {
+      if (lastItemCurrent) {
+        return {
+          label: segment.label,
+        };
       }
-      if (pathAsArray.length - 1 === index) {
-        return finalCrumb(key, lastItemCurrent, modelIdArray[index]);
+      if (!isDir) {
+        return { label: segment.label, route: 'secret.details', model: segment.model };
       }
-      return { label: key, route: 'list-directory', model: `${modelIdArray[index]}/` };
-    })
-    .filter((segment) => segment);
+    }
+    return { label: segment.label, route: 'list-directory', model: `${segment.model}/` };
+  });
 }

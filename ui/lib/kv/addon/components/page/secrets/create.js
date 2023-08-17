@@ -8,7 +8,7 @@ import { action } from '@ember/object';
 import { tracked } from '@glimmer/tracking';
 import { task } from 'ember-concurrency';
 import { inject as service } from '@ember/service';
-import { pathIsFromDirectory } from 'vault/lib/kv-breadcrumbs';
+import { pathIsFromDirectory } from 'kv/utils/kv-breadcrumbs';
 import errorMessage from 'vault/utils/error-message';
 
 /**
