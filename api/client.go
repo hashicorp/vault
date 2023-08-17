@@ -1035,7 +1035,14 @@ func (c *Client) ClearToken() {
 func (c *Client) Headers() http.Header {
 	c.modifyLock.RLock()
 	defer c.modifyLock.RUnlock()
+	return c.headersNoLock()
+}
 
+// headersNoLock is the non-locking version of `Headers`.  This function must
+// be used if called from another function in this file where a read or write
+// lock on `c.modifyLock` has been acquired.  See
+// https://github.com/hashicorp/vault/issues/22393 for more information.
+func (c *Client) headersNoLock() http.Header {
 	if c.headers == nil {
 		return nil
 	}
@@ -1230,7 +1237,11 @@ func (c *Client) clone(cloneHeaders bool) (*Client, error) {
 	}
 
 	if cloneHeaders {
-		client.SetHeaders(c.Headers().Clone())
+		// `headers` is called instead of `Headers` because this function has
+		// called c.modifyLock.RLock() to acquired a read lock.  We cannot
+		// re-acquire a read lock, which can cause deadlocks.  See
+		// https://github.com/hashicorp/vault/issues/22393 for details.
+		client.SetHeaders(c.headersNoLock().Clone())
 	}
 
 	if config.CloneToken {

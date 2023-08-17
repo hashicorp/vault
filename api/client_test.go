@@ -15,6 +15,7 @@ import (
 	"net/url"
 	"os"
 	"reflect"
+	"runtime"
 	"sort"
 	"strings"
 	"sync"
@@ -1469,5 +1470,57 @@ func TestParseAddressWithUnixSocket(t *testing.T) {
 	}
 	if config.HttpClient.Transport.(*http.Transport).DialContext == nil {
 		t.Fatal("DialContext function not set in config.HttpClient.Transport")
+	}
+}
+
+// This test uses two threads to perform a write operation and a read operation
+// repeatedly respectively.  If the read operation tries to acquire the read
+// lock in Client (RWMutex) more than once, when the write operation tries to
+// acquire the write lock from another goroutine in between the read lock
+// acquisition, a deadlock will occur.  This test was used to reproduce
+// https://github.com/hashicorp/vault/issues/22393.
+//
+// I was able to reproduce the deadlock with 10 iterations in both goroutines.
+// With 300, it's pretty much guaranteed to happen.  At least the test never
+// passed without deadlocking with 300 iterations for me.
+func TestDeadlocking(t *testing.T) {
+	c, err := NewClient(nil)
+	if err != nil {
+		t.Fatalf("Error not expected: %v", err)
+	}
+	var wg sync.WaitGroup
+	// Increment the counter by 2 for the 2 goroutines below.
+	wg.Add(2)
+	go func() {
+		defer wg.Done()
+		for i := 1; i <= 300; i++ {
+			c.SetCloneToken(true)
+		}
+	}()
+	go func() {
+		defer wg.Done()
+		for i := 1; i <= 300; i++ {
+			_, err = c.CloneWithHeaders()
+			if err != nil {
+				t.Fatalf("Error not expected: %v", err)
+			}
+		}
+	}()
+	ch := make(chan struct{})
+	go func() {
+		defer close(ch)
+		wg.Wait()
+	}()
+	// Wait for at most 3 seconds.
+	select {
+	case <-ch:
+		// The goroutines finished successfully.
+		return
+	case <-time.After(3 * time.Second):
+		// Print the stack traces before exiting.
+		buf := make([]byte, 1<<16)
+		runtime.Stack(buf, true)
+		t.Log(string(buf))
+		t.Fatal("Deadlock most likely occurred")
 	}
 }
