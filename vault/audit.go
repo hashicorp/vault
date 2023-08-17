@@ -8,11 +8,13 @@ import (
 	"crypto/sha256"
 	"errors"
 	"fmt"
+	"os"
 	"strings"
+
+	"github.com/hashicorp/go-secure-stdlib/parseutil"
 
 	uuid "github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/audit"
-	"github.com/hashicorp/vault/helper/experiments"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
@@ -37,6 +39,12 @@ const (
 	// auditTableType is the value we expect to find for the audit table and
 	// corresponding entries
 	auditTableType = "audit"
+
+	// featureFlagDisableEventLogger contains the feature flag name which can be
+	// used to disable internal eventlogger behavior for the audit system.
+	// NOTE: this is an undocumented and temporary feature flag, it should not
+	// be relied on to remain part of Vault for any subsequent releases.
+	featureFlagDisableEventLogger = "VAULT_AUDIT_DISABLE_EVENTLOGGER"
 )
 
 // loadAuditFailed if loading audit tables encounters an error
@@ -383,7 +391,13 @@ func (c *Core) persistAudit(ctx context.Context, table *MountTable, localOnly bo
 // initialize the audit backends
 func (c *Core) setupAudits(ctx context.Context) error {
 	brokerLogger := c.baseLogger.Named("audit")
-	broker, err := NewAuditBroker(brokerLogger, c.IsExperimentEnabled(experiments.VaultExperimentCoreAuditEventsAlpha1))
+
+	disableEventLogger, err := parseutil.ParseBool(os.Getenv(featureFlagDisableEventLogger))
+	if err != nil {
+		return fmt.Errorf("unable to parse feature flag: %q: %w", featureFlagDisableEventLogger, err)
+	}
+
+	broker, err := NewAuditBroker(brokerLogger, !disableEventLogger)
 	if err != nil {
 		return err
 	}
@@ -481,12 +495,20 @@ func (c *Core) newAuditBackend(ctx context.Context, entry *MountEntry, view logi
 		Location: salt.DefaultLocation,
 	}
 
-	be, err := f(ctx, &audit.BackendConfig{
-		SaltView:   view,
-		SaltConfig: saltConfig,
-		Config:     conf,
-		MountPath:  entry.Path,
-	}, c.IsExperimentEnabled(experiments.VaultExperimentCoreAuditEventsAlpha1), c.auditedHeaders)
+	disableEventLogger, err := parseutil.ParseBool(os.Getenv(featureFlagDisableEventLogger))
+	if err != nil {
+		return nil, fmt.Errorf("unable to parse feature flag: %q: %w", featureFlagDisableEventLogger, err)
+	}
+
+	be, err := f(
+		ctx, &audit.BackendConfig{
+			SaltView:   view,
+			SaltConfig: saltConfig,
+			Config:     conf,
+			MountPath:  entry.Path,
+		},
+		!disableEventLogger,
+		c.auditedHeaders)
 	if err != nil {
 		return nil, err
 	}

@@ -80,7 +80,7 @@ type Formatter interface {
 // Formatters write their output to an io.Writer.
 type Writer interface {
 	// WriteRequest writes the request entry to the writer or returns an error.
-	WriteRequest(io.Writer, *RequestEntry) error // TODO: PW: Should we supply ctx in this interface
+	WriteRequest(io.Writer, *RequestEntry) error
 	// WriteResponse writes the response entry to the writer or returns an error.
 	WriteResponse(io.Writer, *ResponseEntry) error
 }
