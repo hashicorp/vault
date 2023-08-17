@@ -56,6 +56,7 @@ import (
 	"github.com/mitchellh/go-testing-interface"
 	"github.com/pkg/errors"
 	"github.com/posener/complete"
+	"github.com/sasha-s/go-deadlock"
 	"go.uber.org/atomic"
 	"golang.org/x/net/http/httpproxy"
 	"google.golang.org/grpc/grpclog"
@@ -1042,6 +1043,9 @@ func (c *ServerCommand) Run(args []string) int {
 		return 1
 	}
 
+	// Don't exit just because we saw a potential deadlock.
+	deadlock.Opts.OnPotentialDeadlock = func() {}
+
 	if c.flagRecovery {
 		return c.runRecoveryMode()
 	}
@@ -1266,16 +1270,6 @@ func (c *ServerCommand) Run(args []string) int {
 		}
 	}
 
-	if allowPendingRemoval := os.Getenv(consts.VaultAllowPendingRemovalMountsEnv); allowPendingRemoval != "" {
-		var err error
-		vault.PendingRemovalMountsAllowed, err = strconv.ParseBool(allowPendingRemoval)
-		if err != nil {
-			c.UI.Warn(wrapAtLength("WARNING! failed to parse " +
-				consts.VaultAllowPendingRemovalMountsEnv + " env var: " +
-				"defaulting to false."))
-		}
-	}
-
 	// If mlockall(2) isn't supported, show a warning. We disable this in dev
 	// because it is quite scary to see when first using Vault. We also disable
 	// this if the user has explicitly disabled mlock in configuration.
@@ -1329,6 +1323,21 @@ func (c *ServerCommand) Run(args []string) int {
 	info := make(map[string]string)
 	info["log level"] = logLevelString
 	infoKeys = append(infoKeys, "log level")
+
+	// returns a slice of env vars formatted as "key=value"
+	envVars := os.Environ()
+	var envVarKeys []string
+	for _, v := range envVars {
+		splitEnvVars := strings.Split(v, "=")
+		envVarKeys = append(envVarKeys, splitEnvVars[0])
+	}
+
+	sort.Strings(envVarKeys)
+
+	key := "environment variables"
+	info[key] = strings.Join(envVarKeys, ", ")
+	infoKeys = append(infoKeys, key)
+
 	barrierSeal, barrierWrapper, unwrapSeal, seals, sealConfigError, err := setSeal(c, config, infoKeys, info)
 	// Check error here
 	if err != nil {
@@ -1367,6 +1376,16 @@ func (c *ServerCommand) Run(args []string) int {
 
 	if c.flagDevFourCluster {
 		return enableFourClusterDev(c, &coreConfig, info, infoKeys, c.flagDevListenAddr, os.Getenv("VAULT_DEV_TEMP_DIR"))
+	}
+
+	if allowPendingRemoval := os.Getenv(consts.EnvVaultAllowPendingRemovalMounts); allowPendingRemoval != "" {
+		var err error
+		coreConfig.PendingRemovalMountsAllowed, err = strconv.ParseBool(allowPendingRemoval)
+		if err != nil {
+			c.UI.Warn(wrapAtLength("WARNING! failed to parse " +
+				consts.EnvVaultAllowPendingRemovalMounts + " env var: " +
+				"defaulting to false."))
+		}
 	}
 
 	// Initialize the separate HA storage backend, if it exists
@@ -1743,6 +1762,9 @@ func (c *ServerCommand) Run(args []string) int {
 				c.UI.Error(err.Error())
 			}
 
+			if err := core.ReloadCensus(); err != nil {
+				c.UI.Error(err.Error())
+			}
 			select {
 			case c.licenseReloadedCh <- err:
 			default:
@@ -1758,6 +1780,79 @@ func (c *ServerCommand) Run(args []string) int {
 		case <-c.SigUSR2Ch:
 			logWriter := c.logger.StandardWriter(&hclog.StandardLoggerOptions{})
 			pprof.Lookup("goroutine").WriteTo(logWriter, 2)
+
+			if os.Getenv("VAULT_STACKTRACE_WRITE_TO_FILE") != "" {
+				c.logger.Info("Writing stacktrace to file")
+
+				dir := ""
+				path := os.Getenv("VAULT_STACKTRACE_FILE_PATH")
+				if path != "" {
+					if _, err := os.Stat(path); err != nil {
+						c.logger.Error("Checking stacktrace path failed", "error", err)
+						continue
+					}
+					dir = path
+				} else {
+					dir, err = os.MkdirTemp("", "vault-stacktrace")
+					if err != nil {
+						c.logger.Error("Could not create temporary directory for stacktrace", "error", err)
+						continue
+					}
+				}
+
+				f, err := os.CreateTemp(dir, "stacktrace")
+				if err != nil {
+					c.logger.Error("Could not create stacktrace file", "error", err)
+					continue
+				}
+
+				if err := pprof.Lookup("goroutine").WriteTo(f, 2); err != nil {
+					f.Close()
+					c.logger.Error("Could not write stacktrace to file", "error", err)
+					continue
+				}
+
+				c.logger.Info(fmt.Sprintf("Wrote stacktrace to: %s", f.Name()))
+				f.Close()
+			}
+
+			// We can only get pprof outputs via the API but sometimes Vault can get
+			// into a state where it cannot process requests so we can get pprof outputs
+			// via SIGUSR2.
+			if os.Getenv("VAULT_PPROF_WRITE_TO_FILE") != "" {
+				dir := ""
+				path := os.Getenv("VAULT_PPROF_FILE_PATH")
+				if path != "" {
+					if _, err := os.Stat(path); err != nil {
+						c.logger.Error("Checking pprof path failed", "error", err)
+						continue
+					}
+					dir = path
+				} else {
+					dir, err = os.MkdirTemp("", "vault-pprof")
+					if err != nil {
+						c.logger.Error("Could not create temporary directory for pprof", "error", err)
+						continue
+					}
+				}
+
+				dumps := []string{"goroutine", "heap", "allocs", "threadcreate"}
+				for _, dump := range dumps {
+					pFile, err := os.Create(filepath.Join(dir, dump))
+					if err != nil {
+						c.logger.Error("error creating pprof file", "name", dump, "error", err)
+						break
+					}
+
+					err = pprof.Lookup(dump).WriteTo(pFile, 0)
+					if err != nil {
+						c.logger.Error("error generating pprof data", "name", dump, "error", err)
+						break
+					}
+				}
+
+				c.logger.Info(fmt.Sprintf("Wrote pprof files to: %s", dir))
+			}
 		}
 	}
 	// Notify systemd that the server is shutting down

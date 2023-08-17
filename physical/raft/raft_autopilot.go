@@ -212,13 +212,15 @@ func NewFollowerStates() *FollowerStates {
 	}
 }
 
-// Update the peer information in the follower states. Note that this function runs on the active node.
-func (s *FollowerStates) Update(req *EchoRequestUpdate) {
+// Update the peer information in the follower states. Note that this function
+// runs on the active node. Returns true if a new entry was added, as opposed
+// to modifying one already present.
+func (s *FollowerStates) Update(req *EchoRequestUpdate) bool {
 	s.l.Lock()
 	defer s.l.Unlock()
 
-	state, ok := s.followers[req.NodeID]
-	if !ok {
+	state, present := s.followers[req.NodeID]
+	if !present {
 		state = &FollowerState{
 			IsDead: atomic.NewBool(false),
 		}
@@ -233,6 +235,8 @@ func (s *FollowerStates) Update(req *EchoRequestUpdate) {
 	state.Version = req.SDKVersion
 	state.UpgradeVersion = req.UpgradeVersion
 	state.RedundancyZone = req.RedundancyZone
+
+	return !present
 }
 
 // Clear wipes all the information regarding peers in the follower states.
@@ -540,11 +544,25 @@ func (b *RaftBackend) startFollowerHeartbeatTracker() {
 	tickerCh := b.followerHeartbeatTicker.C
 	b.l.RUnlock()
 
+	followerGauge := func(peerID string, suffix string, value float32) {
+		labels := []metrics.Label{
+			{
+				Name:  "peer_id",
+				Value: peerID,
+			},
+		}
+		metrics.SetGaugeWithLabels([]string{"raft_storage", "follower", suffix}, value, labels)
+	}
 	for range tickerCh {
 		b.l.RLock()
-		if b.autopilotConfig.CleanupDeadServers && b.autopilotConfig.DeadServerLastContactThreshold != 0 {
-			b.followerStates.l.RLock()
-			for _, state := range b.followerStates.followers {
+		b.followerStates.l.RLock()
+		myAppliedIndex := b.raft.AppliedIndex()
+		for peerID, state := range b.followerStates.followers {
+			timeSinceLastHeartbeat := time.Now().Sub(state.LastHeartbeat) / time.Millisecond
+			followerGauge(peerID, "last_heartbeat_ms", float32(timeSinceLastHeartbeat))
+			followerGauge(peerID, "applied_index_delta", float32(myAppliedIndex-state.AppliedIndex))
+
+			if b.autopilotConfig.CleanupDeadServers && b.autopilotConfig.DeadServerLastContactThreshold != 0 {
 				if state.LastHeartbeat.IsZero() || state.IsDead.Load() {
 					continue
 				}
@@ -553,8 +571,8 @@ func (b *RaftBackend) startFollowerHeartbeatTracker() {
 					state.IsDead.Store(true)
 				}
 			}
-			b.followerStates.l.RUnlock()
 		}
+		b.followerStates.l.RUnlock()
 		b.l.RUnlock()
 	}
 }

@@ -52,13 +52,13 @@ func PrepareTestContainer(t *testing.T, version string, isEnterprise bool, doBoo
 	}
 
 	name := "consul"
-	repo := "consul"
+	repo := "docker.mirror.hashicorp.services/library/consul"
 	var envVars []string
 	// If running the enterprise container, set the appropriate values below.
 	if isEnterprise {
 		version += "-ent"
 		name = "consul-enterprise"
-		repo = "hashicorp/consul-enterprise"
+		repo = "docker.mirror.hashicorp.services/hashicorp/consul-enterprise"
 		license, hasLicense := os.LookupEnv("CONSUL_LICENSE")
 		envVars = append(envVars, "CONSUL_LICENSE="+license)
 

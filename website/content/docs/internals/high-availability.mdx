@@ -4,12 +4,12 @@ page_title: High Availability
 description: Learn about the high availability design of Vault.
 ---
 
-# High Availability
+# High availability
 
 Vault can run in a high availability (HA) mode to protect against outages by running multiple Vault servers.
 
 
-# Design Overview
+# Design overview
 
 The primary design goal for making Vault Highly Available (HA) is to
 minimize downtime without affecting horizontal scalability. Vault is
@@ -35,10 +35,9 @@ Please note that only _unsealed_ Vault servers may act as a standby.
 If a server is in a sealed state, it cannot act as a standby. Servers in a sealed state cannot
  serve any requests if the active server fails.
 
-# Performance Standby Nodes (Enterprise)
+# Performance standby nodes (Enterprise)
 
-Performance Standby Nodes, like traditional High Availability standby
-nodes, service read-only requests from users or applications.
+Performance Standby Nodes service read-only requests from users or applications.
 Read-only requests are requests that do not modify Vault's storage. Vault quickly scales its ability to service these operations,
 providing a near-linear request-per-second scaling for most scenarios and secrets engines like K/V and Transit. Traffic is distributed across performance standby nodes, allowing clients to scale these IOPS horizontally, and control high traffic workloads.
 

@@ -59,8 +59,13 @@ Vagrantfile
 !enos/**/*.hcl
 
 # Enos
-enos/.enos
-enos/support
+.enos
+enos-local.vars.hcl
+enos/**/support
+enos/**/kubeconfig
+.terraform
+.terraform.lock.hcl
+.tfstate.*
 
 .DS_Store
 .idea
@@ -119,3 +124,9 @@ website/components/node_modules
 
 .buildcache/
 .releaser/
+*.log
+
+tools/godoctests/.bin
+tools/gonilnilfunctions/.bin
+tools/codechecker/.bin
+.ci-bootstrap

@@ -21,6 +21,7 @@ import (
 	"github.com/hashicorp/vault/sdk/physical"
 	physInmem "github.com/hashicorp/vault/sdk/physical/inmem"
 	"github.com/mitchellh/cli"
+	"github.com/stretchr/testify/require"
 )
 
 func init() {
@@ -203,63 +204,70 @@ func TestServer(t *testing.T) {
 		contents string
 		exp      string
 		code     int
-		flag     string
+		args     []string
 	}{
 		{
 			"common_ha",
 			testBaseHCL(t, "") + inmemHCL,
 			"(HA available)",
 			0,
-			"-test-verify-only",
+			[]string{"-test-verify-only"},
 		},
 		{
 			"separate_ha",
 			testBaseHCL(t, "") + inmemHCL + haInmemHCL,
 			"HA Storage:",
 			0,
-			"-test-verify-only",
+			[]string{"-test-verify-only"},
 		},
 		{
 			"bad_separate_ha",
 			testBaseHCL(t, "") + inmemHCL + badHAInmemHCL,
 			"Specified HA storage does not support HA",
 			1,
-			"-test-verify-only",
+			[]string{"-test-verify-only"},
 		},
 		{
 			"good_listener_timeout_config",
 			testBaseHCL(t, goodListenerTimeouts) + inmemHCL,
 			"",
 			0,
-			"-test-server-config",
+			[]string{"-test-server-config"},
 		},
 		{
 			"bad_listener_read_header_timeout_config",
 			testBaseHCL(t, badListenerReadHeaderTimeout) + inmemHCL,
 			"unknown unit \"km\" in duration \"12km\"",
 			1,
-			"-test-server-config",
+			[]string{"-test-server-config"},
 		},
 		{
 			"bad_listener_read_timeout_config",
 			testBaseHCL(t, badListenerReadTimeout) + inmemHCL,
 			"unknown unit \"\\xe6\\x97\\xa5\" in duration",
 			1,
-			"-test-server-config",
+			[]string{"-test-server-config"},
 		},
 		{
 			"bad_listener_write_timeout_config",
 			testBaseHCL(t, badListenerWriteTimeout) + inmemHCL,
 			"unknown unit \"lbs\" in duration \"56lbs\"",
 			1,
-			"-test-server-config",
+			[]string{"-test-server-config"},
 		},
 		{
 			"bad_listener_idle_timeout_config",
 			testBaseHCL(t, badListenerIdleTimeout) + inmemHCL,
 			"unknown unit \"gophers\" in duration \"78gophers\"",
 			1,
-			"-test-server-config",
+			[]string{"-test-server-config"},
+		},
+		{
+			"environment_variables_logged",
+			testBaseHCL(t, "") + inmemHCL,
+			"Environment Variables",
+			0,
+			[]string{"-test-verify-only"},
 		},
 	}
 
@@ -278,11 +286,11 @@ func TestServer(t *testing.T) {
 			f.Close()
 			defer os.Remove(f.Name())
 
-			code := cmd.Run([]string{
-				"-config", f.Name(),
-				tc.flag,
-			})
+			args := append(tc.args, "-config", f.Name())
+
+			code := cmd.Run(args)
 			output := ui.ErrorWriter.String() + ui.OutputWriter.String()
+
 			if code != tc.code {
 				t.Errorf("expected %d to be %d: %s", code, tc.code, output)
 			}
@@ -292,4 +300,14 @@ func TestServer(t *testing.T) {
 			}
 		})
 	}
+}
+
+// TestServer_DevTLS verifies that a vault server starts up correctly with the -dev-tls flag
+func TestServer_DevTLS(t *testing.T) {
+	ui, cmd := testServerCommand(t)
+	args := []string{"-dev-tls", "-dev-listen-address=127.0.0.1:0", "-test-server-config"}
+	retCode := cmd.Run(args)
+	output := ui.ErrorWriter.String() + ui.OutputWriter.String()
+	require.Equal(t, 0, retCode, output)
+	require.Contains(t, output, `tls: "enabled"`)
 }

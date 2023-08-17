@@ -117,7 +117,7 @@ All values much match. Supports globbing on "value".`,
 			"allowed_metadata_extensions": {
 				Type: framework.TypeCommaStringSlice,
 				Description: `A comma-separated string or array of oid extensions.
-Upon successfull authentication, these extensions will be added as metadata if they are present
+Upon successful authentication, these extensions will be added as metadata if they are present
 in the certificate. The metadata key will be the string consisting of the oid numbers
 separated by a dash (-) instead of a dot (.) to allow usage in ACL templates.`,
 			},

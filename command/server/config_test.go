@@ -1,7 +1,10 @@
 package server
 
 import (
+	"fmt"
 	"testing"
+
+	"github.com/stretchr/testify/require"
 )
 
 func TestLoadConfigFile(t *testing.T) {
@@ -66,4 +69,30 @@ func TestUnknownFieldValidationHcl(t *testing.T) {
 
 func TestUnknownFieldValidationListenerAndStorage(t *testing.T) {
 	testUnknownFieldValidationStorageAndListener(t)
+}
+
+// Test_parseDevTLSConfig verifies that both Windows and Unix directories are correctly escaped when creating a dev TLS
+// configuration in HCL
+func Test_parseDevTLSConfig(t *testing.T) {
+	tests := []struct {
+		name          string
+		certDirectory string
+	}{
+		{
+			name:          "windows path",
+			certDirectory: `C:\Users\ADMINI~1\AppData\Local\Temp\2\vault-tls4169358130`,
+		},
+		{
+			name:          "unix path",
+			certDirectory: "/tmp/vault-tls4169358130",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			cfg, err := parseDevTLSConfig("file", tt.certDirectory)
+			require.NoError(t, err)
+			require.Equal(t, fmt.Sprintf("%s/%s", tt.certDirectory, VaultDevCertFilename), cfg.Listeners[0].TLSCertFile)
+			require.Equal(t, fmt.Sprintf("%s/%s", tt.certDirectory, VaultDevKeyFilename), cfg.Listeners[0].TLSKeyFile)
+		})
+	}
 }
