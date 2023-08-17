@@ -10,6 +10,7 @@ import { tracked } from '@glimmer/tracking';
 import { getOwner } from '@ember/application';
 import { ancestorKeysForKey } from 'core/utils/key-utils';
 import errorMessage from 'vault/utils/error-message';
+import config from 'vault/config/environment';
 
 /**
  * @module List
@@ -20,7 +21,10 @@ import errorMessage from 'vault/utils/error-message';
  * @param {boolean} noMetadataListPermissions - true if the return to query metadata LIST is 403, indicating the user does not have permissions to that endpoint.
  */
 
+const { DEFAULT_PAGE_SIZE } = config.APP;
+
 export default class KvListPageComponent extends Component {
+  currentPageSize = DEFAULT_PAGE_SIZE;
   @service flashMessages;
   @service router;
 
@@ -57,5 +61,14 @@ export default class KvListPageComponent extends Component {
   @action
   transitionToSecretDetail() {
     this.router.transitionTo(`${this.mountPoint}.secret.details`, this.secretPath);
+  }
+
+  get queryFunctionNumbered() {
+    return (page, pageSize) => {
+      return {
+        currentPage: page,
+        currentPageSize: pageSize,
+      };
+    };
   }
 }

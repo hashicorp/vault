@@ -25,9 +25,6 @@ export default class KvListFilterComponent extends Component {
   @service router;
   @tracked filterIsFocused = false;
 
-  kvRoute(route) {
-    return `${this.args.mountPoint}.${route}`;
-  }
   /*
   -partialMatch returns the secret that most closely matches the pageFilter queryParam.
   -We're focused on pageFilter and not filterValue because if we're inside a directory we only care about the secrets listed there and not the directory. 
@@ -59,17 +56,31 @@ export default class KvListFilterComponent extends Component {
     const parentDirectory = parentKeyForKey(input);
     const secretWithinDirectory = keyWithoutParentKey(input);
     // TODO kv engine cleanup: ideally when it's not a directory we could filter through the current models and remove pageFilter refresh on the list route.
+
     if (isDirectory) {
-      this.router.transitionTo(this.kvRoute('list-directory'), input);
+      this.navigate(input);
     } else if (parentDirectory) {
-      this.router.transitionTo(this.kvRoute('list-directory'), parentDirectory, {
-        queryParams: { pageFilter: secretWithinDirectory },
-      });
+      this.navigate(parentDirectory, secretWithinDirectory);
     } else {
-      this.router.transitionTo(this.kvRoute('list'), {
-        queryParams: { pageFilter: input },
-      });
+      this.navigate(null, input);
     }
+  }
+  // ARG TODO better way I'm sure
+  navigate(pathToSecret = null, pageFilter = null) {
+    // if pathToSecret, always list-directory.
+    const route = pathToSecret ? `${this.args.mountPoint}.list-directory` : `${this.args.mountPoint}.list`;
+    const args = [route];
+    if (pathToSecret) {
+      // includes directories beep/ and filter within directory beep/?pageFilter=boop
+      args.push(pathToSecret);
+    }
+    args.push({
+      queryParams: {
+        pageFilter,
+      },
+    });
+
+    this.router.transitionTo(...args);
   }
   /*
   -handleKeyDown handles: tab, enter, backspace and escape. Ignores everything else.
@@ -104,11 +115,7 @@ export default class KvListFilterComponent extends Component {
     const isInputDirectory = keyIsFolder(input);
     const inputWithoutParentKey = keyWithoutParentKey(input);
     const pageFilter = isInputDirectory ? '' : inputWithoutParentKey.slice(0, -1);
-    this.router.transitionTo(this.kvRoute('list-directory'), parentDirectory, {
-      queryParams: {
-        pageFilter,
-      },
-    });
+    this.navigate(parentDirectory, pageFilter);
   }
   handleTab() {
     const matchParentDirectory = parentKeyForKey(this.partialMatch);
@@ -117,40 +124,30 @@ export default class KvListFilterComponent extends Component {
 
     if (isMatchDirectory) {
       // ex: beep/boop/
-      this.router.transitionTo(this.kvRoute('list-directory'), this.partialMatch);
+      this.navigate(this.partialMatch);
     } else if (!isMatchDirectory && matchParentDirectory) {
       // ex: beep/boop/my-
-      this.router.transitionTo(this.kvRoute('list-directory'), matchParentDirectory, {
-        queryParams: { pageFilter: matchWithoutParentDirectory },
-      });
+      this.navigate(matchParentDirectory, matchWithoutParentDirectory);
     } else {
       // ex: my-
-      this.router.transitionTo(this.kvRoute('list'), {
-        queryParams: { pageFilter: this.partialMatch },
-      });
+      this.navigate(undefined, this.partialMatch);
     }
   }
   handleEnter(input) {
     // TODO input queryParam on details and create pages.
     if (this.filterMatchesASecretPath) {
       // if secret exists send to details
-      this.router.transitionTo(this.kvRoute('secret.details'), input);
+      this.router.transitionTo(`${this.args.mountPoint}.secret.details`, input);
     } else {
       // if secret does not exists send to create with the path prefilled with input value.
-      this.router.transitionTo(this.kvRoute('create'), {
+      this.router.transitionTo(`${this.args.mountPoint}.create`, {
         queryParams: { initialKey: input },
       });
     }
   }
   handleEscape(parentDirectory) {
     // transition to the nearest parentDirectory. If no parentDirectory, then to the list route.
-    !parentDirectory
-      ? this.router.transitionTo(this.kvRoute('list'), {
-          queryParams: { pageFilter: '' },
-        })
-      : this.router.transitionTo(this.kvRoute('list-directory'), parentDirectory, {
-          queryParams: { pageFilter: '' },
-        });
+    !parentDirectory ? this.navigate() : this.navigate(parentDirectory);
   }
 
   @action

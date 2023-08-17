@@ -121,6 +121,19 @@
         </div>
       </LinkedBlock>
     {{/each}}
+    {{! Pagination }}
+    {{#if (gt @model.secrets.meta.lastPage 1)}}
+      <Hds::Pagination::Numbered
+        @showSizeSelector={{false}}
+        @totalItems={{@model.secrets.meta.total}}
+        @currentPage={{@currentPage}}
+        @pageSizes={{this.currentPageSize}}
+        @currentPageSize={{this.currentPageSize}}
+        @route="list"
+        @onPageChange={{this.handlePageChange}}
+        @queryFunction={{this.queryFunctionNumbered}}
+      />
+    {{/if}}
   {{else}}
     {{#if @filterValue}}
       <EmptyState @title="There are no secrets matching &quot;{{@filterValue}}&quot;." />
