@@ -24,6 +24,10 @@
   gap: $spacing-m;
 }
 
+.has-gap-l {
+  gap: $spacing-l;
+}
+
 // Alignment of the items
 .is-flex-v-centered {
   display: flex;
@@ -72,6 +76,10 @@
   flex-basis: 100%;
 }
 
+.is-flex-half-column {
+  flex: 1;
+}
+
 .is-flex-1 {
   flex-grow: 1;
   &.basis-0 {
@@ -89,6 +97,10 @@
 
 .is-flex-half {
   flex: 50%;
+}
+
+.is-flex-column-wrap {
+  flex-flow: column wrap;
 }
 
 /* Flex Responsive */
