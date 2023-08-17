@@ -42,6 +42,8 @@ const (
 
 	// featureFlagDisableEventLogger contains the feature flag name which can be
 	// used to disable internal eventlogger behavior for the audit system.
+	// NOTE: this is an undocumented and temporary feature flag, it should not
+	// be relied on to remain part of Vault for any subsequent releases.
 	featureFlagDisableEventLogger = "VAULT_AUDIT_DISABLE_EVENTLOGGER"
 )
 
