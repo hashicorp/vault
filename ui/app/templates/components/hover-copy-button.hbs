@@ -1,3 +1,8 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
 <div class={{if this.alwaysShow "hover-copy-button-static" "hover-copy-button"}} data-test-hover-copy>
   <ToolTip @onClose={{action (mut this.tooltipText) "Copy"}} as |T|>
     <T.Trigger data-test-tooltip-trigger tabindex="-1">

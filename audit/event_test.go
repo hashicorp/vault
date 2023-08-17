@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 package audit
 
@@ -82,7 +82,7 @@ func TestAuditEvent_new(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			audit, err := newEvent(tc.Subtype, tc.Format, tc.Options...)
+			audit, err := NewEvent(tc.Subtype, tc.Options...)
 			switch {
 			case tc.IsErrorExpected:
 				require.Error(t, err)
@@ -93,7 +93,6 @@ func TestAuditEvent_new(t *testing.T) {
 				require.NotNil(t, audit)
 				require.Equal(t, tc.ExpectedID, audit.ID)
 				require.Equal(t, tc.ExpectedSubtype, audit.Subtype)
-				require.Equal(t, tc.ExpectedFormat, audit.RequiredFormat)
 				switch {
 				case tc.IsNowExpected:
 					require.True(t, time.Now().After(audit.Timestamp))
@@ -125,72 +124,55 @@ func TestAuditEvent_Validate(t *testing.T) {
 		},
 		"id-empty": {
 			Value: &auditEvent{
-				ID:             "",
-				Version:        version,
-				Subtype:        RequestType,
-				Timestamp:      time.Now(),
-				Data:           nil,
-				RequiredFormat: JSONFormat,
+				ID:        "",
+				Version:   version,
+				Subtype:   RequestType,
+				Timestamp: time.Now(),
+				Data:      nil,
 			},
 			IsErrorExpected:      true,
 			ExpectedErrorMessage: "audit.(auditEvent).validate: missing ID: invalid parameter",
 		},
 		"version-fiddled": {
 			Value: &auditEvent{
-				ID:             "audit_123",
-				Version:        "magic-v2",
-				Subtype:        RequestType,
-				Timestamp:      time.Now(),
-				Data:           nil,
-				RequiredFormat: JSONFormat,
+				ID:        "audit_123",
+				Version:   "magic-v2",
+				Subtype:   RequestType,
+				Timestamp: time.Now(),
+				Data:      nil,
 			},
 			IsErrorExpected:      true,
 			ExpectedErrorMessage: "audit.(auditEvent).validate: event version unsupported: invalid parameter",
 		},
 		"subtype-fiddled": {
 			Value: &auditEvent{
-				ID:             "audit_123",
-				Version:        version,
-				Subtype:        subtype("moon"),
-				Timestamp:      time.Now(),
-				Data:           nil,
-				RequiredFormat: JSONFormat,
+				ID:        "audit_123",
+				Version:   version,
+				Subtype:   subtype("moon"),
+				Timestamp: time.Now(),
+				Data:      nil,
 			},
 			IsErrorExpected:      true,
 			ExpectedErrorMessage: "audit.(auditEvent).validate: audit.(subtype).validate: 'moon' is not a valid event subtype: invalid parameter",
 		},
-		"format-fiddled": {
-			Value: &auditEvent{
-				ID:             "audit_123",
-				Version:        version,
-				Subtype:        ResponseType,
-				Timestamp:      time.Now(),
-				Data:           nil,
-				RequiredFormat: format("blah"),
-			},
-			IsErrorExpected:      true,
-			ExpectedErrorMessage: "audit.(auditEvent).validate: audit.(format).validate: 'blah' is not a valid format: invalid parameter",
-		},
 		"default-time": {
 			Value: &auditEvent{
-				ID:             "audit_123",
-				Version:        version,
-				Subtype:        ResponseType,
-				Timestamp:      time.Time{},
-				Data:           nil,
-				RequiredFormat: JSONFormat,
+				ID:        "audit_123",
+				Version:   version,
+				Subtype:   ResponseType,
+				Timestamp: time.Time{},
+				Data:      nil,
 			},
 			IsErrorExpected:      true,
 			ExpectedErrorMessage: "audit.(auditEvent).validate: event timestamp cannot be the zero time instant: invalid parameter",
 		},
 		"valid": {
 			Value: &auditEvent{
-				ID:             "audit_123",
-				Version:        version,
-				Subtype:        ResponseType,
-				Timestamp:      time.Now(),
-				Data:           nil,
-				RequiredFormat: JSONFormat,
+				ID:        "audit_123",
+				Version:   version,
+				Subtype:   ResponseType,
+				Timestamp: time.Now(),
+				Data:      nil,
 			},
 			IsErrorExpected: false,
 		},

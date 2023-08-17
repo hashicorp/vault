@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 package audit
 
@@ -48,19 +48,20 @@ func NewEntryFormatter(config FormatterConfig, salter Salter, opt ...Option) (*E
 	}
 
 	return &EntryFormatter{
-		salter: salter,
-		config: config,
-		prefix: opts.withPrefix,
+		salter:          salter,
+		config:          config,
+		headerFormatter: opts.withHeaderFormatter,
+		prefix:          opts.withPrefix,
 	}, nil
 }
 
 // Reopen is a no-op for the formatter node.
-func (_ *EntryFormatter) Reopen() error {
+func (*EntryFormatter) Reopen() error {
 	return nil
 }
 
 // Type describes the type of this node (formatter).
-func (_ *EntryFormatter) Type() eventlogger.NodeType {
+func (*EntryFormatter) Type() eventlogger.NodeType {
 	return eventlogger.NodeTypeFormatter
 }
 
@@ -85,10 +86,28 @@ func (f *EntryFormatter) Process(ctx context.Context, e *eventlogger.Event) (*ev
 	}
 
 	var result []byte
+	data := new(logical.LogInput)
+	headers := make(map[string][]string)
+
+	if a.Data != nil {
+		*data = *a.Data
+		if a.Data.Request != nil && a.Data.Request.Headers != nil {
+			headers = a.Data.Request.Headers
+		}
+	}
+
+	if f.headerFormatter != nil {
+		adjustedHeaders, err := f.headerFormatter.ApplyConfig(ctx, headers, f.salter)
+		if err != nil {
+			return nil, fmt.Errorf("%s: unable to transform headers for auditing: %w", op, err)
+		}
+
+		data.Request.Headers = adjustedHeaders
+	}
 
 	switch a.Subtype {
 	case RequestType:
-		entry, err := f.FormatRequest(ctx, a.Data)
+		entry, err := f.FormatRequest(ctx, data)
 		if err != nil {
 			return nil, fmt.Errorf("%s: unable to parse request from audit event: %w", op, err)
 		}
@@ -98,7 +117,7 @@ func (f *EntryFormatter) Process(ctx context.Context, e *eventlogger.Event) (*ev
 			return nil, fmt.Errorf("%s: unable to format request: %w", op, err)
 		}
 	case ResponseType:
-		entry, err := f.FormatResponse(ctx, a.Data)
+		entry, err := f.FormatResponse(ctx, data)
 		if err != nil {
 			return nil, fmt.Errorf("%s: unable to parse response from audit event: %w", op, err)
 		}
@@ -145,11 +164,6 @@ func (f *EntryFormatter) FormatRequest(ctx context.Context, in *logical.LogInput
 		return nil, errors.New("salt func not configured")
 	}
 
-	s, err := f.salter.Salt(ctx)
-	if err != nil {
-		return nil, fmt.Errorf("error fetching salt: %w", err)
-	}
-
 	// Set these to the input values at first
 	auth := in.Auth
 	req := in.Request
@@ -163,12 +177,13 @@ func (f *EntryFormatter) FormatRequest(ctx context.Context, in *logical.LogInput
 	}
 
 	if !f.config.Raw {
-		auth, err = HashAuth(s, auth, f.config.HMACAccessor)
+		var err error
+		auth, err = HashAuth(ctx, f.salter, auth, f.config.HMACAccessor)
 		if err != nil {
 			return nil, err
 		}
 
-		req, err = HashRequest(s, req, f.config.HMACAccessor, in.NonHMACReqDataKeys)
+		req, err = HashRequest(ctx, f.salter, req, f.config.HMACAccessor, in.NonHMACReqDataKeys)
 		if err != nil {
 			return nil, err
 		}
@@ -277,11 +292,6 @@ func (f *EntryFormatter) FormatResponse(ctx context.Context, in *logical.LogInpu
 		return nil, errors.New("salt func not configured")
 	}
 
-	s, err := f.salter.Salt(ctx)
-	if err != nil {
-		return nil, fmt.Errorf("error fetching salt: %w", err)
-	}
-
 	// Set these to the input values at first
 	auth, req, resp := in.Auth, in.Request, in.Response
 	if auth == nil {
@@ -314,17 +324,18 @@ func (f *EntryFormatter) FormatResponse(ctx context.Context, in *logical.LogInpu
 			respData = resp.Data
 		}
 	} else {
-		auth, err = HashAuth(s, auth, f.config.HMACAccessor)
+		var err error
+		auth, err = HashAuth(ctx, f.salter, auth, f.config.HMACAccessor)
 		if err != nil {
 			return nil, err
 		}
 
-		req, err = HashRequest(s, req, f.config.HMACAccessor, in.NonHMACReqDataKeys)
+		req, err = HashRequest(ctx, f.salter, req, f.config.HMACAccessor, in.NonHMACReqDataKeys)
 		if err != nil {
 			return nil, err
 		}
 
-		resp, err = HashResponse(s, resp, f.config.HMACAccessor, in.NonHMACRespDataKeys, elideListResponseData)
+		resp, err = HashResponse(ctx, f.salter, resp, f.config.HMACAccessor, in.NonHMACRespDataKeys, elideListResponseData)
 		if err != nil {
 			return nil, err
 		}
@@ -567,5 +578,15 @@ func doElideListResponseData(data map[string]interface{}) {
 				data[k] = len(vMap)
 			}
 		}
+	}
+}
+
+// newTemporaryEntryFormatter creates a cloned EntryFormatter instance with a non-persistent Salter.
+func newTemporaryEntryFormatter(n *EntryFormatter) *EntryFormatter {
+	return &EntryFormatter{
+		salter:          &nonPersistentSalt{},
+		headerFormatter: n.headerFormatter,
+		config:          n.config,
+		prefix:          n.prefix,
 	}
 }

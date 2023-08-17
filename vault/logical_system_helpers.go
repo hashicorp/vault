@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 package vault
 
@@ -74,6 +74,13 @@ var (
 					Pattern:    pattern,
 					Operations: make(map[logical.Operation]framework.OperationHandler),
 					Fields:     make(map[string]*framework.FieldSchema),
+					DisplayAttrs: &framework.DisplayAttributes{
+						// Since we lack full information for Fields, and all information for Responses, the generated
+						// OpenAPI won't be good for much other than identifying the endpoint exists at all. Thus, it
+						// is useful to make it clear that this is only a stub. Code generation will use this to ignore
+						// these operations.
+						OperationPrefix: "enterprise-stub",
+					},
 				}
 
 				for _, parameter := range pathSpec.parameters {
@@ -172,14 +179,20 @@ var (
 		// This path, though an enterprise path, has always been handled in OSS.
 		paths = append(paths, &framework.Path{
 			Pattern: "replication/status",
-			Callbacks: map[logical.Operation]framework.OperationFunc{
-				logical.ReadOperation: func(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-					resp := &logical.Response{
-						Data: map[string]interface{}{
-							"mode": "disabled",
-						},
-					}
-					return resp, nil
+			Operations: map[logical.Operation]framework.OperationHandler{
+				logical.ReadOperation: &framework.PathOperation{
+					Callback: func(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+						resp := &logical.Response{
+							Data: map[string]interface{}{
+								"mode": "disabled",
+							},
+						}
+						return resp, nil
+					},
+					DisplayAttrs: &framework.DisplayAttributes{
+						OperationVerb:   "read",
+						OperationSuffix: "replication-status",
+					},
 				},
 			},
 		})
