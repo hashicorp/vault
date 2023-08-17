@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package awsauth
 
 import (
@@ -20,6 +23,12 @@ var currentRoleStorageVersion = 3
 func (b *backend) pathRole() *framework.Path {
 	p := &framework.Path{
 		Pattern: "role/" + framework.GenericNameRegex("role"),
+
+		DisplayAttrs: &framework.DisplayAttributes{
+			OperationPrefix: operationPrefixAWS,
+			OperationSuffix: "auth-role",
+		},
+
 		Fields: map[string]*framework.FieldSchema{
 			"role": {
 				Type:        framework.TypeString,
@@ -78,6 +87,9 @@ auth_type is ec2 or inferred_entity_type is ec2_instance.`,
 given instance IDs. Can be a list or comma-separated string of EC2 instance
 IDs. This is only applicable when auth_type is ec2 or inferred_entity_type is
 ec2_instance.`,
+				DisplayAttrs: &framework.DisplayAttributes{
+					Description: "If set, defines a constraint on the EC2 instances to have one of the given instance IDs. A list of EC2 instance IDs. This is only applicable when auth_type is ec2 or inferred_entity_type is ec2_instance.",
+				},
 			},
 			"resolve_aws_unique_ids": {
 				Type:    framework.TypeBool,
@@ -199,6 +211,11 @@ func (b *backend) pathListRole() *framework.Path {
 	return &framework.Path{
 		Pattern: "role/?",
 
+		DisplayAttrs: &framework.DisplayAttributes{
+			OperationPrefix: operationPrefixAWS,
+			OperationSuffix: "auth-roles",
+		},
+
 		Operations: map[logical.Operation]framework.OperationHandler{
 			logical.ListOperation: &framework.PathOperation{
 				Callback: b.pathRoleList,
@@ -213,6 +230,11 @@ func (b *backend) pathListRole() *framework.Path {
 func (b *backend) pathListRoles() *framework.Path {
 	return &framework.Path{
 		Pattern: "roles/?",
+
+		DisplayAttrs: &framework.DisplayAttributes{
+			OperationPrefix: operationPrefixAWS,
+			OperationSuffix: "auth-roles2",
+		},
 
 		Operations: map[logical.Operation]framework.OperationHandler{
 			logical.ListOperation: &framework.PathOperation{
@@ -305,7 +327,8 @@ func (b *backend) roleInternal(ctx context.Context, s logical.Storage, roleName 
 // setRole creates or updates a role in the storage. The caller must hold
 // the write lock.
 func (b *backend) setRole(ctx context.Context, s logical.Storage, roleName string,
-	roleEntry *awsRoleEntry) error {
+	roleEntry *awsRoleEntry,
+) error {
 	if roleName == "" {
 		return fmt.Errorf("missing role name")
 	}
@@ -897,7 +920,7 @@ func (b *backend) pathRoleCreateUpdate(ctx context.Context, req *logical.Request
 		return logical.ErrorResponse("ttl should be shorter than max ttl"), nil
 	}
 	if roleEntry.TokenPeriod > b.System().MaxLeaseTTL() {
-		return logical.ErrorResponse(fmt.Sprintf("period of '%s' is greater than the backend's maximum lease TTL of '%s'", roleEntry.TokenPeriod.String(), b.System().MaxLeaseTTL().String())), nil
+		return logical.ErrorResponse(fmt.Sprintf("period of %q is greater than the backend's maximum lease TTL of %q", roleEntry.TokenPeriod.String(), b.System().MaxLeaseTTL().String())), nil
 	}
 
 	roleTagStr, ok := data.GetOk("role_tag")

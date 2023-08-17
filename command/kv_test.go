@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package command
 
 import (
@@ -130,6 +133,12 @@ func TestKVPutCommand(t *testing.T) {
 			0,
 		},
 		{
+			"v1_mount_flag_syntax_key_same_as_mount",
+			[]string{"-mount", "secret", "secret", "foo=bar"},
+			[]string{"Success!"},
+			0,
+		},
+		{
 			"v2_single_value",
 			[]string{"kv/write/foo", "foo=bar"},
 			v2ExpectedFields,
@@ -150,6 +159,12 @@ func TestKVPutCommand(t *testing.T) {
 		{
 			"v2_mount_flag_syntax",
 			[]string{"-mount", "kv", "write/foo", "foo=bar"},
+			v2ExpectedFields,
+			0,
+		},
+		{
+			"v2_mount_flag_syntax_key_same_as_mount",
+			[]string{"-mount", "kv", "kv", "foo=bar"},
 			v2ExpectedFields,
 			0,
 		},
@@ -459,6 +474,24 @@ func TestKVGetCommand(t *testing.T) {
 			0,
 		},
 		{
+			"v2_mount_flag_syntax_leading_slash",
+			[]string{"-mount", "kv", "/read/foo"},
+			append(baseV2ExpectedFields, "foo"),
+			0,
+		},
+		{
+			"v1_mount_flag_syntax_key_same_as_mount",
+			[]string{"-mount", "kv", "kv"},
+			append(baseV2ExpectedFields, "foo"),
+			0,
+		},
+		{
+			"v2_mount_flag_syntax_key_same_as_mount",
+			[]string{"-mount", "kv", "kv"},
+			append(baseV2ExpectedFields, "foo"),
+			0,
+		},
+		{
 			"v2_not_found",
 			[]string{"kv/nope/not/once/never"},
 			[]string{"No value found at kv/data/nope/not/once/never"},
@@ -467,6 +500,12 @@ func TestKVGetCommand(t *testing.T) {
 		{
 			"v2_read",
 			[]string{"kv/read/foo"},
+			append(baseV2ExpectedFields, "foo"),
+			0,
+		},
+		{
+			"v2_read_leading_slash",
+			[]string{"/kv/read/foo"},
 			append(baseV2ExpectedFields, "foo"),
 			0,
 		},
@@ -512,6 +551,21 @@ func TestKVGetCommand(t *testing.T) {
 					t.Fatal(err)
 				}
 
+				// create KV entries to test -mount flag where secret key is same as mount path
+				if _, err := client.Logical().Write("secret/secret", map[string]interface{}{
+					"foo": "bar",
+				}); err != nil {
+					t.Fatal(err)
+				}
+
+				if _, err := client.Logical().Write("kv/data/kv", map[string]interface{}{
+					"data": map[string]interface{}{
+						"foo": "bar",
+					},
+				}); err != nil {
+					t.Fatal(err)
+				}
+
 				ui, cmd := testKVGetCommand(t)
 				cmd.client = client
 
@@ -536,6 +590,131 @@ func TestKVGetCommand(t *testing.T) {
 
 		_, cmd := testKVGetCommand(t)
 		assertNoTabs(t, cmd)
+	})
+}
+
+func testKVListCommand(tb testing.TB) (*cli.MockUi, *KVListCommand) {
+	tb.Helper()
+	ui := cli.NewMockUi()
+	cmd := &KVListCommand{
+		BaseCommand: &BaseCommand{
+			UI: ui,
+		},
+	}
+
+	return ui, cmd
+}
+
+// TestKVListCommand runs tests for `vault kv list`
+func TestKVListCommand(t *testing.T) {
+	testCases := []struct {
+		name       string
+		args       []string
+		outStrings []string
+		code       int
+	}{
+		{
+			name:       "default",
+			args:       []string{"kv/my-prefix"},
+			outStrings: []string{"secret-0", "secret-1", "secret-2"},
+			code:       0,
+		},
+		{
+			name:       "not_enough_args",
+			args:       []string{},
+			outStrings: []string{"Not enough arguments"},
+			code:       1,
+		},
+		{
+			name:       "v2_default_with_mount",
+			args:       []string{"-mount", "kv", "my-prefix"},
+			outStrings: []string{"secret-0", "secret-1", "secret-2"},
+			code:       0,
+		},
+		{
+			name:       "v1_default_with_mount",
+			args:       []string{"kv/my-prefix"},
+			outStrings: []string{"secret-0", "secret-1", "secret-2"},
+			code:       0,
+		},
+		{
+			name:       "v2_not_found",
+			args:       []string{"kv/nope/not/once/never"},
+			outStrings: []string{"No value found at kv/metadata/nope/not/once/never"},
+			code:       2,
+		},
+		{
+			name:       "v1_mount_only",
+			args:       []string{"kv"},
+			outStrings: []string{"my-prefix"},
+			code:       0,
+		},
+		{
+			name:       "v2_mount_only",
+			args:       []string{"-mount", "kv"},
+			outStrings: []string{"my-prefix"},
+			code:       0,
+		},
+		{
+			// this is behavior that should be tested
+			// `kv` here is an explicit mount
+			// `my-prefix` is not
+			// the current kv code will ignore `my-prefix`
+			name:       "ignore_multi_part_mounts",
+			args:       []string{"-mount", "kv/my-prefix"},
+			outStrings: []string{"my-prefix"},
+			code:       0,
+		},
+	}
+
+	t.Run("validations", func(t *testing.T) {
+		t.Parallel()
+
+		for _, testCase := range testCases {
+			testCase := testCase
+
+			t.Run(testCase.name, func(t *testing.T) {
+				t.Parallel()
+
+				// test setup
+				client, closer := testVaultServer(t)
+				defer closer()
+
+				// enable kv-v2 backend
+				if err := client.Sys().Mount("kv/", &api.MountInput{
+					Type: "kv-v2",
+				}); err != nil {
+					t.Fatal(err)
+				}
+				time.Sleep(time.Second)
+
+				ctx := context.Background()
+				for i := 0; i < 3; i++ {
+					path := fmt.Sprintf("my-prefix/secret-%d", i)
+					_, err := client.KVv2("kv/").Put(ctx, path, map[string]interface{}{
+						"foo": "bar",
+					})
+					if err != nil {
+						t.Fatal(err)
+					}
+				}
+
+				ui, cmd := testKVListCommand(t)
+				cmd.client = client
+
+				code := cmd.Run(testCase.args)
+				if code != testCase.code {
+					t.Errorf("expected %d to be %d", code, testCase.code)
+				}
+
+				combined := ui.OutputWriter.String() + ui.ErrorWriter.String()
+				for _, str := range testCase.outStrings {
+					if !strings.Contains(combined, str) {
+						t.Errorf("expected %q to contain %q", combined, str)
+					}
+				}
+			})
+		}
 	})
 }
 
@@ -601,6 +780,12 @@ func TestKVMetadataGetCommand(t *testing.T) {
 			expectedTopLevelFields,
 			0,
 		},
+		{
+			"mount_flag_syntax_key_same_as_mount",
+			[]string{"-mount", "kv", "kv"},
+			expectedTopLevelFields,
+			0,
+		},
 	}
 
 	t.Run("validations", func(t *testing.T) {
@@ -624,6 +809,15 @@ func TestKVMetadataGetCommand(t *testing.T) {
 				time.Sleep(time.Second)
 
 				if _, err := client.Logical().Write("kv/data/foo", map[string]interface{}{
+					"data": map[string]interface{}{
+						"foo": "bar",
+					},
+				}); err != nil {
+					t.Fatal(err)
+				}
+
+				// create KV entry to test -mount flag where secret key is same as mount path
+				if _, err := client.Logical().Write("kv/data/kv", map[string]interface{}{
 					"data": map[string]interface{}{
 						"foo": "bar",
 					},
@@ -704,6 +898,7 @@ func TestKVPatchCommand_ArgValidation(t *testing.T) {
 	}
 
 	for _, tc := range cases {
+		tc := tc // capture range variable
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
@@ -960,6 +1155,7 @@ func TestKVPatchCommand_RWMethodSucceeds(t *testing.T) {
 func TestKVPatchCommand_CAS(t *testing.T) {
 	cases := []struct {
 		name       string
+		key        string
 		args       []string
 		expected   string
 		outStrings []string
@@ -967,6 +1163,7 @@ func TestKVPatchCommand_CAS(t *testing.T) {
 	}{
 		{
 			"right version",
+			"foo",
 			[]string{"-cas", "1", "kv/foo", "bar=quux"},
 			"quux",
 			expectedPatchFields(),
@@ -974,6 +1171,7 @@ func TestKVPatchCommand_CAS(t *testing.T) {
 		},
 		{
 			"wrong version",
+			"foo",
 			[]string{"-cas", "2", "kv/foo", "bar=wibble"},
 			"baz",
 			[]string{"check-and-set parameter did not match the current version"},
@@ -981,7 +1179,16 @@ func TestKVPatchCommand_CAS(t *testing.T) {
 		},
 		{
 			"mount_flag_syntax",
+			"foo",
 			[]string{"-mount", "kv", "-cas", "1", "foo", "bar=quux"},
+			"quux",
+			expectedPatchFields(),
+			0,
+		},
+		{
+			"v2_mount_flag_syntax_key_same_as_mount",
+			"kv",
+			[]string{"-mount", "kv", "-cas", "1", "kv", "bar=quux"},
 			"quux",
 			expectedPatchFields(),
 			0,
@@ -1017,7 +1224,11 @@ func TestKVPatchCommand_CAS(t *testing.T) {
 
 			kvClient.SetToken(secretAuth.ClientToken)
 
-			_, err = kvClient.Logical().Write("kv/data/foo", map[string]interface{}{"data": map[string]interface{}{"bar": "baz"}})
+			data := map[string]interface{}{
+				"bar": "baz",
+			}
+
+			_, err = kvClient.Logical().Write("kv/data/"+tc.key, map[string]interface{}{"data": data})
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -1034,7 +1245,7 @@ func TestKVPatchCommand_CAS(t *testing.T) {
 				}
 			}
 
-			secret, err := kvClient.Logical().ReadWithContext(context.Background(), "kv/data/foo")
+			secret, err := kvClient.Logical().ReadWithContext(context.Background(), "kv/data/"+tc.key)
 			if err != nil {
 				t.Fatal(err)
 			}

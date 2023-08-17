@@ -1,0 +1,17 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
+<div
+  class={{concat "stat-text-container " @size (unless @subText "-no-subText")}}
+  data-test-stat-text-container={{(or @label "true")}}
+  ...attributes
+>
+  <div class="stat-label has-bottom-margin-xs">{{@label}}</div>
+  {{#if @subText}}
+    <div class="stat-text">{{@subText}}</div>
+  {{/if}}
+  {{! Ember reads 0 as falsy, so only render a dash if the value is truly undefined}}
+  <div class="stat-value">{{if (or @value (eq @value 0)) (format-number @value) "-"}}</div>
+</div>

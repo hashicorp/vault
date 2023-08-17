@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package command
 
 import (
@@ -5,6 +8,7 @@ import (
 	"io"
 	"io/ioutil"
 	"os"
+	"strings"
 	"testing"
 	"time"
 )
@@ -57,7 +61,7 @@ func TestParseArgsData(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		f.Write([]byte(`{"foo":"bar"}`))
+		f.WriteString(`{"foo":"bar"}`)
 		f.Close()
 		defer os.Remove(f.Name())
 
@@ -78,7 +82,7 @@ func TestParseArgsData(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		f.Write([]byte(`bar`))
+		f.WriteString(`bar`)
 		f.Close()
 		defer os.Remove(f.Name())
 
@@ -205,6 +209,75 @@ func TestParseFlagFile(t *testing.T) {
 
 			if content != tc.exp {
 				t.Fatalf("expected %s to be %s", content, tc.exp)
+			}
+		})
+	}
+}
+
+func TestArgWarnings(t *testing.T) {
+	t.Parallel()
+
+	cases := []struct {
+		args     []string
+		expected string
+	}{
+		{
+			[]string{"a", "b", "c"},
+			"",
+		},
+		{
+			[]string{"a", "-b"},
+			"-b",
+		},
+		{
+			[]string{"a", "--b"},
+			"--b",
+		},
+		{
+			[]string{"a-b", "-c"},
+			"-c",
+		},
+		{
+			[]string{"a", "-b-c"},
+			"-b-c",
+		},
+		{
+			[]string{"-a", "b"},
+			"-a",
+		},
+		{
+			[]string{globalFlagDetailed},
+			"",
+		},
+		{
+			[]string{"-" + globalFlagOutputCurlString + "=true"},
+			"",
+		},
+		{
+			[]string{"--" + globalFlagFormat + "=false"},
+			"",
+		},
+		{
+			[]string{"-x" + globalFlagDetailed},
+			"-x" + globalFlagDetailed,
+		},
+		{
+			[]string{"--x=" + globalFlagDetailed},
+			"--x=" + globalFlagDetailed,
+		},
+		{
+			[]string{"policy", "write", "my-policy", "-"},
+			"",
+		},
+	}
+
+	for _, tc := range cases {
+		tc := tc
+
+		t.Run(tc.expected, func(t *testing.T) {
+			warnings := generateFlagWarnings(tc.args)
+			if !strings.Contains(warnings, tc.expected) {
+				t.Fatalf("expected %s to contain %s", warnings, tc.expected)
 			}
 		})
 	}

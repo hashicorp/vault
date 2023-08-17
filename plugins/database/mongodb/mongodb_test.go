@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package mongodb
 
 import (
@@ -5,6 +8,7 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	"fmt"
+	"net/http"
 	"reflect"
 	"strings"
 	"sync"
@@ -13,7 +17,6 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
-
 	"github.com/hashicorp/vault/helper/testhelpers/certhelpers"
 	"github.com/hashicorp/vault/helper/testhelpers/mongodb"
 	dbplugin "github.com/hashicorp/vault/sdk/database/dbplugin/v5"
@@ -383,6 +386,8 @@ func appendToCertPool(t *testing.T, pool *x509.CertPool, caPem []byte) *x509.Cer
 }
 
 var cmpClientOptionsOpts = cmp.Options{
+	cmpopts.IgnoreTypes(http.Transport{}),
+
 	cmp.AllowUnexported(options.ClientOptions{}),
 
 	cmp.AllowUnexported(tls.Config{}),

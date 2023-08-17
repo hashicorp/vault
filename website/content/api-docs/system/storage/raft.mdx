@@ -7,7 +7,12 @@ description: |-
   backend.
 ---
 
-## Join a Raft cluster
+# `/sys/storage/raft`
+
+The `/sys/storage/raft` endpoints are used to manage Vault's Raft storage
+backend.
+
+## Join a raft cluster
 
 This endpoint joins a new server node to the Raft cluster. When using Shamir
 seal, as soon as the Vault server is brought up, this API should be invoked
@@ -61,7 +66,7 @@ relevant functionality is only supported in Vault Enterprise:
   which results in Vault's data being replicated to it, but does not contribute
   to the quorum count.
 
-### Sample Payload
+### Sample payload
 
 ```json
 {
@@ -72,11 +77,10 @@ relevant functionality is only supported in Vault Enterprise:
 }
 ```
 
-### Sample Request
+### Sample request
 
 ```shell-session
 $ curl \
-    --header "X-Vault-Token: ..." \
     --request POST \
     --data @payload.json \
     http://127.0.0.1:8200/v1/sys/storage/raft/join
@@ -84,7 +88,7 @@ $ curl \
 
 **Note:** Unseal the joining node immediately after this API is invoked.
 
-## Read Raft Configuration
+## Read raft configuration
 
 This endpoint returns the details of all the nodes in the raft cluster.
 
@@ -92,7 +96,7 @@ This endpoint returns the details of all the nodes in the raft cluster.
 | :----- | :-------------------------------- |
 | `GET`  | `/sys/storage/raft/configuration` |
 
-### Sample Request
+### Sample request
 
 ```shell-session
 $ curl \
@@ -100,7 +104,7 @@ $ curl \
     http://127.0.0.1:8200/v1/sys/storage/raft/configuration
 ```
 
-### Sample Response
+### Sample response
 
 ```json
 {
@@ -133,7 +137,7 @@ $ curl \
 }
 ```
 
-## Remove a node from Raft cluster
+## Remove a node from raft cluster
 
 This endpoint removes a node from the raft cluster. An optional `dr_operation_token`
 may be provided if the node is in a DR secondary cluster.
@@ -142,7 +146,7 @@ may be provided if the node is in a DR secondary cluster.
 | :----- | :------------------------------ |
 | `POST` | `/sys/storage/raft/remove-peer` |
 
-### Sample Payload
+### Sample payload
 
 ```json
 {
@@ -151,7 +155,7 @@ may be provided if the node is in a DR secondary cluster.
 }
 ```
 
-### Sample Request
+### Sample request
 
 ```shell-session
 $ curl \
@@ -161,7 +165,7 @@ $ curl \
     http://127.0.0.1:8200/v1/sys/storage/raft/remove-peer
 ```
 
-## Take a snapshot of the Raft cluster
+## Take a snapshot of the raft cluster
 
 This endpoint returns a snapshot of the current state of the raft cluster. The
 snapshot is returned as binary data and should be redirected to a file.
@@ -173,7 +177,7 @@ Unavailable if Raft is used exclusively for `ha_storage`.
 
 @include 'raft-large-snapshots.mdx'
 
-### Sample Request
+### Sample request
 
 ```shell-session
 $ curl \
@@ -182,7 +186,7 @@ $ curl \
     http://127.0.0.1:8200/v1/sys/storage/raft/snapshot > raft.snap
 ```
 
-## Restore Raft using a snapshot
+## Restore raft using a snapshot
 
 Installs the provided snapshot, returning the cluster to the state defined in
 it. Unavailable if Raft is used exclusively for `ha_storage`.
@@ -193,7 +197,7 @@ it. Unavailable if Raft is used exclusively for `ha_storage`.
 
 @include 'raft-large-snapshots.mdx'
 
-### Sample Request
+### Sample request
 
 ```shell-session
 $ curl \
@@ -203,7 +207,7 @@ $ curl \
     http://127.0.0.1:8200/v1/sys/storage/raft/snapshot
 ```
 
-## Force Restore Raft using a snapshot
+## Force restore raft using a snapshot
 
 Installs the provided snapshot, returning the cluster to the state defined in
 it. This is same as writing to `/sys/storage/raft/snapshot` except that this
@@ -214,7 +218,7 @@ snapshot data. Unavailable if Raft is used exclusively for `ha_storage`.
 | :----- | :--------------------------------- |
 | `POST` | `/sys/storage/raft/snapshot-force` |
 
-### Sample Request
+### Sample request
 
 ```shell-session
 $ curl \
@@ -235,7 +239,7 @@ is used to add more nodes to the Raft cluster.
 | :----- | :--------------------------- |
 | `POST` | `/sys/storage/raft/bootstrap` |
 
-### Sample Request
+### Sample request
 
 ```shell-session
 $ curl \

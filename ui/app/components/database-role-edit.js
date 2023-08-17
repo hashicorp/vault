@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import Component from '@glimmer/component';
 import { inject as service } from '@ember/service';
 import { action } from '@ember/object';
@@ -9,17 +14,10 @@ const SHOW_ROUTE = 'vault.cluster.secrets.backend.show';
 export default class DatabaseRoleEdit extends Component {
   @service router;
   @service flashMessages;
-  @service wizard;
   @service store;
 
   constructor() {
     super(...arguments);
-    if (
-      this.wizard.featureState === 'displayConnection' ||
-      this.wizard.featureState === 'displayRoleDatabase'
-    ) {
-      this.wizard.transitionFeatureMachine(this.wizard.featureState, 'CONTINUE', 'database');
-    }
     if (this.args.initialKey) {
       this.args.model.database = [this.args.initialKey];
     }
@@ -28,7 +26,7 @@ export default class DatabaseRoleEdit extends Component {
   @tracked loading = false;
 
   get warningMessages() {
-    let warnings = {};
+    const warnings = {};
     if (this.args.model.canUpdateDb === false) {
       warnings.database = `You don’t have permissions to update this database connection, so this role cannot be created.`;
     }
@@ -64,13 +62,13 @@ export default class DatabaseRoleEdit extends Component {
   delete() {
     const secret = this.args.model;
     const backend = secret.backend;
-    secret
+    return secret
       .destroyRecord()
       .then(() => {
         try {
           this.router.transitionTo(LIST_ROOT_ROUTE, backend, { queryParams: { tab: 'role' } });
         } catch (e) {
-          console.debug(e);
+          console.debug(e); // eslint-disable-line
         }
       })
       .catch((e) => {
@@ -84,20 +82,20 @@ export default class DatabaseRoleEdit extends Component {
     this.loading = true;
 
     const mode = this.args.mode;
-    let roleSecret = this.args.model;
-    let secretId = roleSecret.name;
+    const roleSecret = this.args.model;
+    const secretId = roleSecret.name;
     if (mode === 'create') {
       roleSecret.set('id', secretId);
-      let path = roleSecret.type === 'static' ? 'static-roles' : 'roles';
+      const path = roleSecret.type === 'static' ? 'static-roles' : 'roles';
       roleSecret.set('path', path);
     }
-    roleSecret
+    return roleSecret
       .save()
       .then(() => {
         try {
           this.router.transitionTo(SHOW_ROUTE, `role/${secretId}`);
         } catch (e) {
-          console.debug(e);
+          console.debug(e); // eslint-disable-line
         }
       })
       .catch((e) => {
@@ -111,8 +109,8 @@ export default class DatabaseRoleEdit extends Component {
   @action
   rotateRoleCred(id) {
     const backend = this.args.model?.backend;
-    let adapter = this.store.adapterFor('database/credential');
-    adapter
+    const adapter = this.store.adapterFor('database/credential');
+    return adapter
       .rotateRoleCredentials(backend, id)
       .then(() => {
         this.flashMessages.success(`Success: Credentials for ${id} role were rotated`);

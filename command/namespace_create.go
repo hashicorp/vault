@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package command
 
 import (
@@ -15,6 +18,8 @@ var (
 
 type NamespaceCreateCommand struct {
 	*BaseCommand
+
+	flagCustomMetadata map[string]string
 }
 
 func (c *NamespaceCreateCommand) Synopsis() string {
@@ -43,7 +48,18 @@ Usage: vault namespace create [options] PATH
 }
 
 func (c *NamespaceCreateCommand) Flags() *FlagSets {
-	return c.flagSet(FlagSetHTTP | FlagSetOutputField | FlagSetOutputFormat)
+	set := c.flagSet(FlagSetHTTP | FlagSetOutputField | FlagSetOutputFormat)
+
+	f := set.NewFlagSet("Command Options")
+	f.StringMapVar(&StringMapVar{
+		Name:    "custom-metadata",
+		Target:  &c.flagCustomMetadata,
+		Default: map[string]string{},
+		Usage: "Specifies arbitrary key=value metadata meant to describe a namespace." +
+			"This can be specified multiple times to add multiple pieces of metadata.",
+	})
+
+	return set
 }
 
 func (c *NamespaceCreateCommand) AutocompleteArgs() complete.Predictor {
@@ -80,7 +96,11 @@ func (c *NamespaceCreateCommand) Run(args []string) int {
 		return 2
 	}
 
-	secret, err := client.Logical().Write("sys/namespaces/"+namespacePath, nil)
+	data := map[string]interface{}{
+		"custom_metadata": c.flagCustomMetadata,
+	}
+
+	secret, err := client.Logical().Write("sys/namespaces/"+namespacePath, data)
 	if err != nil {
 		c.UI.Error(fmt.Sprintf("Error creating namespace: %s", err))
 		return 2

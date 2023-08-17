@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package vault
 
 import (
@@ -744,6 +747,8 @@ func benchmarkExpirationBackend(b *testing.B, physicalBackend physical.Backend, 
 	if err != nil {
 		b.Fatalf("err: %v", err)
 	}
+	// Avoid panic due to calling exp.Stop multiple times
+	c.expiration = nil
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {

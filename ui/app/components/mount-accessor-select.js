@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import Component from '@glimmer/component';
 import { inject as service } from '@ember/service';
 import { task } from 'ember-concurrency';
@@ -38,7 +43,7 @@ export default class MountAccessorSelect extends Component {
   }
 
   @task *authMethods() {
-    let methods = yield this.store.findAll('auth-method');
+    const methods = yield this.store.findAll('auth-method');
     if (!this.args.value && !this.args.noDefault) {
       const getValue = methods.get('firstObject.accessor');
       this.args.onChange(getValue);

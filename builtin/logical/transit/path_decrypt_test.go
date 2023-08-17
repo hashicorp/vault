@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package transit
 
 import (
@@ -19,9 +22,9 @@ func TestTransit_BatchDecryption(t *testing.T) {
 	b, s := createBackendWithStorage(t)
 
 	batchEncryptionInput := []interface{}{
-		map[string]interface{}{"plaintext": ""},     // empty string
-		map[string]interface{}{"plaintext": "Cg=="}, // newline
-		map[string]interface{}{"plaintext": "dGhlIHF1aWNrIGJyb3duIGZveA=="},
+		map[string]interface{}{"plaintext": "", "reference": "foo"},     // empty string
+		map[string]interface{}{"plaintext": "Cg==", "reference": "bar"}, // newline
+		map[string]interface{}{"plaintext": "dGhlIHF1aWNrIGJyb3duIGZveA==", "reference": "baz"},
 	}
 	batchEncryptionData := map[string]interface{}{
 		"batch_input": batchEncryptionInput,
@@ -41,7 +44,7 @@ func TestTransit_BatchDecryption(t *testing.T) {
 	batchResponseItems := resp.Data["batch_results"].([]EncryptBatchResponseItem)
 	batchDecryptionInput := make([]interface{}, len(batchResponseItems))
 	for i, item := range batchResponseItems {
-		batchDecryptionInput[i] = map[string]interface{}{"ciphertext": item.Ciphertext}
+		batchDecryptionInput[i] = map[string]interface{}{"ciphertext": item.Ciphertext, "reference": item.Reference}
 	}
 	batchDecryptionData := map[string]interface{}{
 		"batch_input": batchDecryptionInput,
@@ -59,7 +62,8 @@ func TestTransit_BatchDecryption(t *testing.T) {
 	}
 
 	batchDecryptionResponseItems := resp.Data["batch_results"].([]DecryptBatchResponseItem)
-	expectedResult := "[{\"plaintext\":\"\"},{\"plaintext\":\"Cg==\"},{\"plaintext\":\"dGhlIHF1aWNrIGJyb3duIGZveA==\"}]"
+	// This seems fragile
+	expectedResult := "[{\"plaintext\":\"\",\"reference\":\"foo\"},{\"plaintext\":\"Cg==\",\"reference\":\"bar\"},{\"plaintext\":\"dGhlIHF1aWNrIGJyb3duIGZveA==\",\"reference\":\"baz\"}]"
 
 	jsonResponse, err := json.Marshal(batchDecryptionResponseItems)
 	if err != nil || err == nil && string(jsonResponse) != expectedResult {
@@ -119,6 +123,7 @@ func TestTransit_BatchDecryption_DerivedKey(t *testing.T) {
 		want           []DecryptBatchResponseItem
 		shouldErr      bool
 		wantHTTPStatus int
+		params         map[string]interface{}
 	}{
 		{
 			name:      "nil-input",
@@ -183,6 +188,19 @@ func TestTransit_BatchDecryption_DerivedKey(t *testing.T) {
 			wantHTTPStatus: http.StatusBadRequest,
 		},
 		{
+			name: "batch-partial-success-overridden-response",
+			in: []interface{}{
+				map[string]interface{}{"ciphertext": encryptedItems[0].Ciphertext, "context": plaintextItems[1].context},
+				map[string]interface{}{"ciphertext": encryptedItems[1].Ciphertext, "context": plaintextItems[1].context},
+			},
+			want: []DecryptBatchResponseItem{
+				{Error: "cipher: message authentication failed"},
+				{Plaintext: plaintextItems[1].plaintext},
+			},
+			params:         map[string]interface{}{"partial_failure_response_code": http.StatusAccepted},
+			wantHTTPStatus: http.StatusAccepted,
+		},
+		{
 			name: "batch-full-failure",
 			in: []interface{}{
 				map[string]interface{}{"ciphertext": encryptedItems[0].Ciphertext, "context": plaintextItems[1].context},
@@ -192,6 +210,20 @@ func TestTransit_BatchDecryption_DerivedKey(t *testing.T) {
 				{Error: "cipher: message authentication failed"},
 				{Error: "cipher: message authentication failed"},
 			},
+			wantHTTPStatus: http.StatusBadRequest,
+		},
+		{
+			name: "batch-full-failure-overridden-response",
+			in: []interface{}{
+				map[string]interface{}{"ciphertext": encryptedItems[0].Ciphertext, "context": plaintextItems[1].context},
+				map[string]interface{}{"ciphertext": encryptedItems[1].Ciphertext, "context": plaintextItems[0].context},
+			},
+			want: []DecryptBatchResponseItem{
+				{Error: "cipher: message authentication failed"},
+				{Error: "cipher: message authentication failed"},
+			},
+			params: map[string]interface{}{"partial_failure_response_code": http.StatusAccepted},
+			// Full failure, shouldn't affect status code
 			wantHTTPStatus: http.StatusBadRequest,
 		},
 	}
@@ -205,6 +237,9 @@ func TestTransit_BatchDecryption_DerivedKey(t *testing.T) {
 				Data: map[string]interface{}{
 					"batch_input": tt.in,
 				},
+			}
+			for k, v := range tt.params {
+				req.Data[k] = v
 			}
 			resp, err = b.HandleRequest(context.Background(), req)
 

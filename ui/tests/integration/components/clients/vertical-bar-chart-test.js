@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import { module, test } from 'qunit';
 import { setupRenderingTest } from 'ember-qunit';
 import { render, findAll, find, triggerEvent } from '@ember/test-helpers';
@@ -19,11 +24,11 @@ module('Integration | Component | clients/vertical-bar-chart', function (hooks) 
     ];
     this.set('barChartData', barChartData);
 
-    await render(hbs`   
+    await render(hbs`
     <div class="chart-container-wide">
-      <Clients::VerticalBarChart 
-        @dataset={{barChartData}} 
-        @chartLegend={{chartLegend}} 
+      <Clients::VerticalBarChart
+        @dataset={{this.barChartData}}
+        @chartLegend={{this.chartLegend}}
       />
     </div>
     `);
@@ -38,9 +43,9 @@ module('Integration | Component | clients/vertical-bar-chart', function (hooks) 
       assert.dom(e).hasText(`${barChartData[i].month}`, `renders x-axis label: ${barChartData[i].month}`);
     });
 
-    for (let [i, bar] of tooltipHoverBars.entries()) {
+    for (const [i, bar] of tooltipHoverBars.entries()) {
       await triggerEvent(bar, 'mouseover');
-      let tooltip = document.querySelector('.ember-modal-dialog');
+      const tooltip = document.querySelector('.ember-modal-dialog');
       assert
         .dom(tooltip)
         .includesText(
@@ -57,11 +62,11 @@ module('Integration | Component | clients/vertical-bar-chart', function (hooks) 
     ];
     this.set('barChartData', barChartData);
 
-    await render(hbs`   
+    await render(hbs`
     <div class="chart-container-wide">
-      <Clients::VerticalBarChart 
-        @dataset={{barChartData}} 
-        @chartLegend={{chartLegend}} 
+      <Clients::VerticalBarChart
+        @dataset={{this.barChartData}}
+        @chartLegend={{this.chartLegend}}
       />
     </div>
     `);
@@ -77,9 +82,9 @@ module('Integration | Component | clients/vertical-bar-chart', function (hooks) 
       assert.dom(e).hasText(`${barChartData[i].month}`, `renders x-axis label: ${barChartData[i].month}`);
     });
 
-    for (let [i, bar] of tooltipHoverBars.entries()) {
+    for (const [i, bar] of tooltipHoverBars.entries()) {
       await triggerEvent(bar, 'mouseover');
-      let tooltip = document.querySelector('.ember-modal-dialog');
+      const tooltip = document.querySelector('.ember-modal-dialog');
       assert
         .dom(tooltip)
         .includesText(

@@ -1,4 +1,10 @@
-/* COPIED FROM BULMA/SWITCH */
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
+/* COPIED FROM BULMA SWITCH */
+
 .toggle[type='checkbox'] {
   outline: 0;
   user-select: none;
@@ -49,8 +55,8 @@
   height: 1rem;
   transform: translate3d(0, 0, 0);
   border-radius: 50%;
-  background: white;
-  transition: all 0.25s ease-out;
+  background: $white;
+  transition: all 0.25s $easing;
   content: '';
 }
 .toggle[type='checkbox']:checked + label::before {
@@ -68,7 +74,7 @@
       padding-left: $size-8 * 2.5;
       margin: 0 0.25rem;
       &::before {
-        top: $size-8 / 5;
+        top: calc($size-8 / 5);
         height: $size-8;
         width: $size-8 * 2;
       }
@@ -77,7 +83,7 @@
         height: $size-8 * 0.8;
         transform: translateX(0.15rem);
         left: 0;
-        top: $size-8/ 4;
+        top: calc($size-8 / 4);
       }
     }
     &:checked + label::after {
