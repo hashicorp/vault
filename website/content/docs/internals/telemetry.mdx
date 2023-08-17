@@ -57,7 +57,7 @@ The following sections describe the available Vault metrics. The metrics interva
 
 Some Vault metrics come with additional [labels](#metric-labels) describing the measurement in more detail, such as the namespace in which an operation takes place or the auth method used to create a token. This additional information is incorporated into the metrics name in the in-memory telemetry or other telemetry engines that do not support labels. The metric name in the table below is followed by a list of labels supported, in the order in which they appear, if flattened.
 
-## Audit Metrics
+## Audit metrics
 
 These metrics relate to auditing.
 
@@ -70,7 +70,7 @@ These metrics relate to auditing.
 
 **NOTE:** In addition, there are audit metrics for each enabled audit device represented as `vault.audit.<type>.log_request`. For example, if a file audit device is enabled, its metrics would be `vault.audit.file.log_request` and `vault.audit.file.log_response` .
 
-## Core Metrics
+## Core metrics
 
 These metrics represent operational aspects of the running Vault instance.
 
@@ -116,7 +116,7 @@ These metrics represent operational aspects of the running Vault instance.
 | `vault.route.read.<mountpoint>`                     | Time taken to dispatch a read operation to a backend, and for that backend to process it.                                                                                                                                                                                                                                                                                                                                                   | ms           | summary |
 | `vault.route.rollback.<mountpoint>`                 | Time taken to dispatch a rollback operation to a backend, and for that backend to process it. Rollback operations are automatically scheduled to clean up partial errors.                                                                                                                                                                                                                                                                   | ms           | summary |
 
-## Runtime Metrics
+## Runtime metrics
 
 These metrics collect information from Vault's Go runtime, such as memory usage information.
 
@@ -132,7 +132,7 @@ These metrics collect information from Vault's Go runtime, such as memory usage 
 | `vault.runtime.gc_pause_ns`       | Total duration of the last garbage collection run                                                                                                            | ns         | summary |
 | `vault.runtime.total_gc_runs`     | Total number of garbage collection runs since Vault was last started                                                                                         | operations | gauge   |
 
-## Policy Metrics
+## Policy metrics
 
 These metrics report measurements of the time spent performing policy operations.
 
@@ -143,7 +143,7 @@ These metrics report measurements of the time spent performing policy operations
 | `vault.policy.delete_policy` | Time taken to delete a policy | ms   | summary |
 | `vault.policy.set_policy`    | Time taken to set a policy    | ms   | summary |
 
-## Token, Identity, and Lease Metrics
+## Token, identity, and lease metrics
 
 These metrics cover the measurement of token, identity, and lease operations, and counts of the number of such objects managed by Vault.
 
@@ -189,7 +189,7 @@ These metrics cover the measurement of token, identity, and lease operations, an
 | `vault.token.revoke-tree`                                                                       | Time taken to revoke a token tree                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   | ms       | summary |
 | `vault.token.store`                                                                             | Time taken to store an updated token entry without writing to the secondary index                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   | ms       | summary |
 
-## Resource Quota Metrics
+## Resource quota metrics
 
 These metrics relate to rate limit and lease count quotas. Each metric comes with a label "name" identifying the specific quota.
 
@@ -200,7 +200,7 @@ These metrics relate to rate limit and lease count quotas. Each metric comes wit
 | `vault.quota.lease_count.max`       | Total maximum number of leases allowed by the lease count quota   | lease | gauge   |
 | `vault.quota.lease_count.counter`   | Total current number of leases generated by the lease count quota | lease | gauge   |
 
-## Merkle Tree and Write Ahead Log Metrics
+## Merkle tree and write ahead log metrics
 
 These metrics relate to internal operations on Merkle Trees and Write Ahead Logs (WAL)
 
@@ -219,7 +219,7 @@ These metrics relate to internal operations on Merkle Trees and Write Ahead Logs
 | `vault.wal.flushReady`                      | Time taken to flush a ready Write Ahead Log (WAL) to storage                | ms    | summary |
 | `vault.wal.flushReady.queue_len`            | Size of the write queue in the WAL system                                   | WAL   | summary |
 
-## HA Metrics
+## HA metrics
 
 These metrics are emitted on standbys when talking to the active node, and in some cases by performance standbys as well.
 
@@ -230,7 +230,7 @@ These metrics are emitted on standbys when talking to the active node, and in so
 | `vault.ha.rpc.client.echo`           | Time taken to send an echo request from a standby to the active node | ms     | summary |
 | `vault.ha.rpc.client.echo.errors`    | Number of standby echo request failures                              | errors | counter |
 
-## Replication Metrics
+## Replication metrics
 
 These metrics relate to [Vault Enterprise Replication](/vault/docs/enterprise/replication). The following metrics are not available in telemetry unless replication is in an unhealthy state: `replication.fetchRemoteKeys`, `replication.merkleDiff`, and `replication.merkleSync`.
 
@@ -290,8 +290,10 @@ These metrics relate to [Vault Enterprise Replication](/vault/docs/enterprise/re
 | `vault.replication.rpc.standby.server.register_auth_request`  | Duration of time taken by standby register auth request                                                                                    | ms              | summary |
 | `vault.replication.rpc.standby.server.register_lease_request` | Duration of time taken by standby register lease request                                                                                   | ms              | summary |
 | `vault.replication.rpc.standby.server.wrap_token_request`     | Duration of time taken by standby wrap token request                                                                                       | ms              | summary |
+| `vault.replication.rpc.client.create_token_register_auth_lease`                           | Duration of time taken by client create token request                                                                                      | ms              | summary |
+| `vault.replication.rpc.standby.server.create_token_register_auth_lease_request`           | Duration of time taken by standby create token request                                                                                     | ms              | summary |
 
-## Secrets Engines Metrics
+## Secrets engines metrics
 
 These metrics relate to the supported [secrets engines][secrets-engines].
 
@@ -334,7 +336,7 @@ These metrics relate to the supported [secrets engines][secrets-engines].
 | `vault.secret.kv.count` (cluster, namespace, mount_point)                                    | Number of entries in each key-value secret engine.                                                                                                                         | paths       | gauge   |
 | `vault.secret.lease.creation` (cluster, namespace, secret_engine, mount_point, creation_ttl) | Counts the number of leases created by secret engines.                                                                                                                     | leases      | counter |
 
-## Storage Backend Metrics
+## Storage backend metrics
 
 These metrics relate to the supported [storage backends][storage-backends].
 
@@ -408,7 +410,7 @@ These metrics relate to the supported [storage backends][storage-backends].
 | `vault.zookeeper.delete`    | Duration of a DELETE operation against the [ZooKeeper storage backend][zookeeper-storage-backend]                      | ms   | summary |
 | `vault.zookeeper.list`      | Duration of a LIST operation against the [ZooKeeper storage backend][zookeeper-storage-backend]                        | ms   | summary |
 
-## Integrated Storage (Raft)
+## Integrated storage (Raft)
 
 These metrics relate to raft based [integrated storage][integrated-storage].
 
@@ -484,7 +486,7 @@ These metrics relate to raft based [integrated storage][integrated-storage].
 | `vault.raft_storage.follower.applied_index_delta`                             | Delta between leader applied index and each follower's applied index reported by echoes.                                                                                                                          | logs                              | gauge   |
 | `vault.raft_storage.follower.last_heartbeat_ms`                               | Time since last echo request received by each follower.                                                                                                                                                           | ms                                | gauge   |
 
-## Integrated Storage (Raft) Autopilot
+## Integrated storage (Raft) autopilot
 
 | Metric                              | Description                                                                                           | Unit  | Type  |
 | :---------------------------------- | :---------------------------------------------------------------------------------------------------- | :---- | :---- |
@@ -494,7 +496,7 @@ These metrics relate to raft based [integrated storage][integrated-storage].
 
 Since Autopilot runs only on the active node, these metrics are emitted by the active node only.
 
-## Integrated Storage (Raft) Leadership Changes
+## Integrated storage (Raft) leadership changes
 
 | Metric                          | Description                                                                                                   | Unit      | Type    |
 | :------------------------------ | :------------------------------------------------------------------------------------------------------------ | :-------- | :------ |
@@ -508,7 +510,7 @@ Since Autopilot runs only on the active node, these metrics are emitted by the a
 lower than 200ms, leader > 0 and candidate == 0. Deviations from this might
 indicate flapping leadership.
 
-## Integrated Storage (Raft) Automated Snapshots
+## Integrated storage (Raft) automated snapshots
 
 These metrics related to the Enterprise feature [Raft Automated Snapshots](/vault/docs/enterprise/automated-integrated-storage-snapshots).
 
@@ -523,7 +525,7 @@ These metrics related to the Enterprise feature [Raft Automated Snapshots](/vaul
 | `vault.autosnapshots.rotate.duration`       | Measures the time taken to rotate (i.e. delete) old snapshots to satisfy configured retention | ms         | summary |
 | `vault.autosnapshots.snapshots.in.storage`  | Number of snapshots in storage                                                                | n/a        | gauge   |
 
-## Metric Labels
+## Metric labels
 
 | Metric                 | Description                                                                                                                                                                                                                                           | Example                 |
 | :--------------------- | :---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | :---------------------- |

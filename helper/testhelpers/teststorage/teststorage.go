@@ -8,9 +8,18 @@ import (
 	"time"
 
 	"github.com/hashicorp/go-hclog"
+	logicalKv "github.com/hashicorp/vault-plugin-secrets-kv"
+	"github.com/hashicorp/vault/audit"
+	auditFile "github.com/hashicorp/vault/builtin/audit/file"
+	auditSocket "github.com/hashicorp/vault/builtin/audit/socket"
+	auditSyslog "github.com/hashicorp/vault/builtin/audit/syslog"
+	logicalDb "github.com/hashicorp/vault/builtin/logical/database"
+	"github.com/hashicorp/vault/builtin/plugin"
 	"github.com/hashicorp/vault/helper/testhelpers"
+	"github.com/hashicorp/vault/helper/testhelpers/corehelpers"
 	vaulthttp "github.com/hashicorp/vault/http"
 	"github.com/hashicorp/vault/physical/raft"
+	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/sdk/physical"
 	physFile "github.com/hashicorp/vault/sdk/physical/file"
 	"github.com/hashicorp/vault/sdk/physical/inmem"
@@ -238,5 +247,28 @@ func ClusterSetup(conf *vault.CoreConfig, opts *vault.TestClusterOptions, setup 
 		setup = InmemBackendSetup
 	}
 	setup(&localConf, &localOpts)
+	if localConf.CredentialBackends == nil {
+		localConf.CredentialBackends = map[string]logical.Factory{
+			"plugin": plugin.Factory,
+		}
+	}
+	if localConf.LogicalBackends == nil {
+		localConf.LogicalBackends = map[string]logical.Factory{
+			"plugin":   plugin.Factory,
+			"database": logicalDb.Factory,
+			// This is also available in the plugin catalog, but is here due to the need to
+			// automatically mount it.
+			"kv": logicalKv.Factory,
+		}
+	}
+	if localConf.AuditBackends == nil {
+		localConf.AuditBackends = map[string]audit.Factory{
+			"file":   auditFile.Factory,
+			"socket": auditSocket.Factory,
+			"syslog": auditSyslog.Factory,
+			"noop":   corehelpers.NoopAuditFactory(nil),
+		}
+	}
+
 	return &localConf, &localOpts
 }

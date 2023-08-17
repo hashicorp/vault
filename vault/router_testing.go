@@ -26,15 +26,25 @@ type NoopBackend struct {
 	DefaultLeaseTTL time.Duration
 	MaxLeaseTTL     time.Duration
 	BackendType     logical.BackendType
+
+	RollbackErrs bool
 }
 
 func NoopBackendFactory(_ context.Context, _ *logical.BackendConfig) (logical.Backend, error) {
 	return &NoopBackend{}, nil
 }
 
+func NoopBackendRollbackErrFactory(_ context.Context, _ *logical.BackendConfig) (logical.Backend, error) {
+	return &NoopBackend{RollbackErrs: true}, nil
+}
+
 func (n *NoopBackend) HandleRequest(ctx context.Context, req *logical.Request) (*logical.Response, error) {
 	if req.TokenEntry() != nil {
 		panic("got a non-nil TokenEntry")
+	}
+
+	if n.RollbackErrs && req.Operation == "rollback" {
+		return nil, fmt.Errorf("no-op backend rollback has erred out")
 	}
 
 	var err error

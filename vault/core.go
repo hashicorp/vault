@@ -416,6 +416,8 @@ type Core struct {
 
 	// activityLog is used to track active client count
 	activityLog *ActivityLog
+	// activityLogLock protects the activityLog and activityLogConfig
+	activityLogLock sync.RWMutex
 
 	// metricsCh is used to stop the metrics streaming
 	metricsCh chan struct{}
@@ -588,10 +590,6 @@ type Core struct {
 	// active, or give up active as soon as it gets it
 	neverBecomeActive *uint32
 
-	// loadCaseSensitiveIdentityStore enforces the loading of identity store
-	// artifacts in a case sensitive manner. To be used only in testing.
-	loadCaseSensitiveIdentityStore bool
-
 	// clusterListener starts up and manages connections on the cluster ports
 	clusterListener *atomic.Value
 
@@ -630,7 +628,11 @@ type Core struct {
 
 	clusterHeartbeatInterval time.Duration
 
+	// activityLogConfig contains override values for the activity log
+	// it is protected by activityLogLock
 	activityLogConfig ActivityLogCoreConfig
+
+	censusConfig atomic.Value
 
 	// activeTime is set on active nodes indicating the time at which this node
 	// became active.
@@ -795,6 +797,9 @@ type CoreConfig struct {
 	LicensePath     string
 	LicensingConfig *LicensingConfig
 
+	// Configured Census Agent
+	CensusAgent CensusReporter
+
 	DisablePerformanceStandby bool
 	DisableIndexing           bool
 	DisableKeyEncodingChecks  bool
@@ -836,6 +841,10 @@ type CoreConfig struct {
 	PendingRemovalMountsAllowed bool
 
 	ExpirationRevokeRetryBase time.Duration
+
+	// AdministrativeNamespacePath is used to configure the administrative namespace, which has access to some sys endpoints that are
+	// only accessible in the root namespace, currently sys/audit-hash and sys/monitor.
+	AdministrativeNamespacePath string
 }
 
 // GetServiceRegistration returns the config's ServiceRegistration, or nil if it does
@@ -1190,7 +1199,7 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 		c.AddLogger(identityLogger)
 		return NewIdentityStore(ctx, c, config, identityLogger)
 	}
-	addExtraLogicalBackends(c, logicalBackends)
+	addExtraLogicalBackends(c, logicalBackends, conf.AdministrativeNamespacePath)
 	c.logicalBackends = logicalBackends
 
 	credentialBackends := make(map[string]logical.Factory)
@@ -2333,6 +2342,11 @@ func (s standardUnsealStrategy) unseal(ctx context.Context, logger log.Logger, c
 		if err := c.setupAuditedHeadersConfig(ctx); err != nil {
 			return err
 		}
+
+		if err := c.setupCensusAgent(); err != nil {
+			c.logger.Error("skipping reporting for nil agent", "error", err)
+		}
+
 		// not waiting on wg to avoid changing existing behavior
 		var wg sync.WaitGroup
 		if err := c.setupActivityLog(ctx, &wg); err != nil {
@@ -2533,6 +2547,10 @@ func (c *Core) preSeal() error {
 		result = multierror.Append(result, fmt.Errorf("error stopping expiration: %w", err))
 	}
 	c.stopActivityLog()
+	// Clean up the censusAgent on seal
+	if err := c.teardownCensusAgent(); err != nil {
+		result = multierror.Append(result, fmt.Errorf("error tearing down reporting agent: %w", err))
+	}
 
 	if err := c.teardownCredentials(context.Background()); err != nil {
 		result = multierror.Append(result, fmt.Errorf("error tearing down credentials: %w", err))
@@ -3147,6 +3165,7 @@ type BuiltinRegistry interface {
 	Get(name string, pluginType consts.PluginType) (func() (interface{}, error), bool)
 	Keys(pluginType consts.PluginType) []string
 	DeprecationStatus(name string, pluginType consts.PluginType) (consts.DeprecationStatus, bool)
+	IsBuiltinEntPlugin(name string, pluginType consts.PluginType) bool
 }
 
 func (c *Core) AuditLogger() AuditLogger {
@@ -3836,8 +3855,8 @@ func (c *Core) ListAuths() ([]*MountEntry, error) {
 		return nil, fmt.Errorf("vault is sealed")
 	}
 
-	c.mountsLock.RLock()
-	defer c.mountsLock.RUnlock()
+	c.authLock.RLock()
+	defer c.authLock.RUnlock()
 
 	var entries []*MountEntry
 

@@ -419,7 +419,7 @@ func (b *backend) pathIssueSignCert(ctx context.Context, req *logical.Request, d
 		if err != nil {
 			return nil, fmt.Errorf("unable to store certificate locally: %w", err)
 		}
-		b.incrementTotalCertificatesCount(certsCounted, key)
+		b.ifCountEnabledIncrementTotalCertificatesCount(certsCounted, key)
 	}
 
 	if useCSR {

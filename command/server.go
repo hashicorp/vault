@@ -58,6 +58,7 @@ import (
 	"github.com/mitchellh/go-testing-interface"
 	"github.com/pkg/errors"
 	"github.com/posener/complete"
+	"github.com/sasha-s/go-deadlock"
 	"go.uber.org/atomic"
 	"golang.org/x/net/http/httpproxy"
 	"google.golang.org/grpc/grpclog"
@@ -930,6 +931,9 @@ func (c *ServerCommand) Run(args []string) int {
 		return 1
 	}
 
+	// Don't exit just because we saw a potential deadlock.
+	deadlock.Opts.OnPotentialDeadlock = func() {}
+
 	c.logGate = gatedwriter.NewWriter(os.Stderr)
 	c.logWriter = c.logGate
 
@@ -1418,6 +1422,9 @@ func (c *ServerCommand) Run(args []string) int {
 		info["HCP resource ID"] = config.HCPLinkConf.Resource.ID
 	}
 
+	infoKeys = append(infoKeys, "administrative namespace")
+	info["administrative namespace"] = config.AdministrativeNamespacePath
+
 	sort.Strings(infoKeys)
 	c.UI.Output("==> Vault server configuration:\n")
 
@@ -1631,6 +1638,9 @@ func (c *ServerCommand) Run(args []string) int {
 				c.UI.Error(err.Error())
 			}
 
+			if err := core.ReloadCensus(); err != nil {
+				c.UI.Error(err.Error())
+			}
 			select {
 			case c.licenseReloadedCh <- err:
 			default:
@@ -2709,6 +2719,7 @@ func createCoreConfig(c *ServerCommand, config *server.Config, backend physical.
 		LicensePath:                    config.LicensePath,
 		DisableSSCTokens:               config.DisableSSCTokens,
 		Experiments:                    config.Experiments,
+		AdministrativeNamespacePath:    config.AdministrativeNamespacePath,
 	}
 
 	if c.flagDev {

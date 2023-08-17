@@ -18,6 +18,8 @@ import (
 	"github.com/hashicorp/go-secure-stdlib/strutil"
 	"github.com/hashicorp/go-sockaddr"
 	"github.com/hashicorp/go-uuid"
+	uberAtomic "go.uber.org/atomic"
+
 	"github.com/hashicorp/vault/command/server"
 	"github.com/hashicorp/vault/helper/identity"
 	"github.com/hashicorp/vault/helper/identity/mfa"
@@ -33,7 +35,6 @@ import (
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/vault/quotas"
 	"github.com/hashicorp/vault/vault/tokens"
-	uberAtomic "go.uber.org/atomic"
 )
 
 const (
@@ -431,9 +432,12 @@ func (c *Core) CheckToken(ctx context.Context, req *logical.Request, unauth bool
 		auth.PolicyResults.GrantingPolicies = append(auth.PolicyResults.GrantingPolicies, authResults.SentinelResults.GrantingPolicies...)
 	}
 
+	c.activityLogLock.RLock()
+	activityLog := c.activityLog
+	c.activityLogLock.RUnlock()
 	// If it is an authenticated ( i.e with vault token ) request, increment client count
-	if !unauth && c.activityLog != nil {
-		c.activityLog.HandleTokenUsage(ctx, te, clientID, isTWE)
+	if !unauth && activityLog != nil {
+		activityLog.HandleTokenUsage(ctx, te, clientID, isTWE)
 	}
 	return auth, te, nil
 }
@@ -1386,7 +1390,7 @@ func (c *Core) handleLoginRequest(ctx context.Context, req *logical.Request) (re
 				return nil, nil, err
 			}
 		}
-		return nil, nil, resp.Error()
+		return resp, nil, routeErr
 	}
 
 	if resp != nil {
