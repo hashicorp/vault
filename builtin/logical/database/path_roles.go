@@ -839,6 +839,15 @@ func (s *staticAccount) NextRotationTime() time.Time {
 	return s.Schedule.Next(s.LastVaultRotation)
 }
 
+// NextRotationTimeFromInput calculates the next rotation time for period and
+// schedule-based roles based on the input.
+func (s *staticAccount) NextRotationTimeFromInput(input time.Time) time.Time {
+	if s.UsesRotationPeriod() {
+		return input.Add(s.RotationPeriod)
+	}
+	return s.Schedule.Next(input)
+}
+
 // UsesRotationSchedule returns true if the given static account has been
 // configured to rotate credentials on a schedule (i.e. NOT on a rotation period).
 func (s *staticAccount) UsesRotationSchedule() bool {
