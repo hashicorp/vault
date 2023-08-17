@@ -34,7 +34,7 @@ export default class LdapConfigurationRoute extends Route {
   declare configModel: LdapConfigModel;
   declare configError: AdapterError;
 
-  async model() {
+  model() {
     return {
       backendModel: this.modelFor('application'),
       configModel: this.configModel,

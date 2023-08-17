@@ -25,7 +25,7 @@ export default class LdapConfigureRoute extends Route {
 
   declare configModel: LdapConfigModel;
 
-  async model() {
+  model() {
     const backend = this.secretMountPath.currentPath;
     return this.configModel || this.store.createRecord('ldap/config', { backend });
   }

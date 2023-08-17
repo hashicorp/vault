@@ -33,7 +33,7 @@ export default class LdapRolesRoute extends Route {
 
   declare promptConfig: boolean;
 
-  async model() {
+  model() {
     const backendModel = this.modelFor('application') as SecretEngineModel;
     return hash({
       backendModel,
