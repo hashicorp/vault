@@ -1,13 +1,12 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
 import { click, currentRouteName, currentURL, fillIn, visit } from '@ember/test-helpers';
 import authPage from 'vault/tests/pages/auth';
-import logout from 'vault/tests/pages/logout';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 import ENV from 'vault/config/environment';
 import { Response } from 'miragejs';
@@ -27,7 +26,6 @@ module('Acceptance | mfa-method', function (hooks) {
         methods.addObjects(this.server.db[`mfa${type}Methods`].where({}));
         return methods;
       }, []);
-    await logout.visit();
     return authPage.login();
   });
   hooks.after(function () {

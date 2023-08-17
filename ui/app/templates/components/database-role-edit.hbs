@@ -1,3 +1,8 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
 <PageHeader as |p|>
   <p.top>
     <KeyValueHeader @path="vault.cluster.secrets.backend.show" @mode={{this.mode}} @root={{@root}} @showCurrent={{true}} />
@@ -153,7 +158,7 @@
             {{/if}}
           </div>
           <div class="control">
-            <SecretLink @mode="list" class="button">
+            <SecretLink @mode="list" class="button" data-test-database-role-cancel>
               Cancel
             </SecretLink>
           </div>

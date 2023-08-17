@@ -1,15 +1,16 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package builtinplugins
 
 import (
 	"testing"
 
-	"github.com/hashicorp/go-hclog"
 	logicalKv "github.com/hashicorp/vault-plugin-secrets-kv"
 	"github.com/hashicorp/vault/api"
 	logicalDb "github.com/hashicorp/vault/builtin/logical/database"
 	vaulthttp "github.com/hashicorp/vault/http"
 	"github.com/hashicorp/vault/sdk/helper/consts"
-	"github.com/hashicorp/vault/sdk/helper/logging"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/vault"
 )
@@ -41,7 +42,6 @@ func TestBuiltinPluginsWork(t *testing.T) {
 				// builtinplugins.Registry, so we need to add it here to be able to test it!
 				"database": logicalDb.Factory,
 			},
-			Logger:                      logging.NewVaultLogger(hclog.Trace),
 			PendingRemovalMountsAllowed: true,
 		},
 		&vault.TestClusterOptions{
