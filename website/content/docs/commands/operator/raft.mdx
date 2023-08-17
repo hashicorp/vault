@@ -331,8 +331,10 @@ Flags applicable to this command are the following:
   go without leader contact before being considered unhealthy. Defaults to `10s`.
 
 - `dead-server-last-contact-threshold` `(string)` - Limit on the amount of time
-  a server can go without leader contact before being considered failed. This
-  takes effect only when `cleanup_dead_servers` is set. Defaults to `24h`.
+  a server can go without leader contact before being considered failed.
+  This takes effect only when `cleanup_dead_servers` is set as `true`. Defaults to `24h`.
+  
+  -> **Note:** A failed server that autopilot has removed from the raft configuration cannot rejoin the cluster without being reinitialized.  
 
 - `max-trailing-logs` `(int)` - Amount of entries in the Raft Log that a server
   can be behind before being considered unhealthy. Defaults to `1000`.
