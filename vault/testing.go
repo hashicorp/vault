@@ -244,6 +244,9 @@ func TestCoreWithSealAndUINoCleanup(t testing.T, opts *CoreConfig) *Core {
 	for k, v := range opts.AuditBackends {
 		conf.AuditBackends[k] = v
 	}
+	if opts.RollbackPeriod != time.Duration(0) {
+		conf.RollbackPeriod = opts.RollbackPeriod
+	}
 
 	conf.ActivityLogConfig = opts.ActivityLogConfig
 	testApplyEntBaseConfig(conf, opts)

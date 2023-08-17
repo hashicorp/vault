@@ -673,7 +673,8 @@ type Core struct {
 	// heartbeating with the active node. Default to the current SDK version.
 	effectiveSDKVersion string
 
-	rollbackPeriod time.Duration
+	rollbackPeriod           time.Duration
+	rollbackMountPathMetrics bool
 
 	experiments []string
 
@@ -1023,6 +1024,7 @@ func CreateCore(conf *CoreConfig) (*Core, error) {
 		experiments:                    conf.Experiments,
 		pendingRemovalMountsAllowed:    conf.PendingRemovalMountsAllowed,
 		expirationRevokeRetryBase:      conf.ExpirationRevokeRetryBase,
+		rollbackMountPathMetrics:       conf.MetricSink.TelemetryConsts.RollbackMetricsIncludeMountPoint,
 	}
 
 	c.standbyStopCh.Store(make(chan struct{}))
@@ -1032,6 +1034,7 @@ func CreateCore(conf *CoreConfig) (*Core, error) {
 	c.shutdownDoneCh.Store(make(chan struct{}))
 
 	c.router.logger = c.logger.Named("router")
+	c.router.rollbackMetricsMountName = c.rollbackMountPathMetrics
 
 	c.inFlightReqData = &InFlightRequests{
 		InFlightReqMap:   &sync.Map{},
