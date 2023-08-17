@@ -7,7 +7,7 @@
       @title="Tracking is disabled"
       @message="Tracking is disabled and data is not being collected. To turn it on edit the configuration."
     >
-      {{#if @model.config.configPath.canUpdate}}
+      {{#if @model.config.canEdit}}
         <LinkTo @route="vault.cluster.clients.config">
           Go to configuration
         </LinkTo>

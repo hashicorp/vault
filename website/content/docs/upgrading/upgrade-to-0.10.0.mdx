@@ -11,9 +11,9 @@ description: |-
 This page contains the list of deprecations and important or breaking changes
 for Vault 0.10.0 compared to 0.9.0. Please read it carefully.
 
-## Changes Since 0.9.6
+## Changes since 0.9.6
 
-### Database Plugin Compatibility
+### Database plugin compatibility
 
 The database plugin interface was enhanced to support some additional
 functionality related to root credential rotation and supporting templated
@@ -24,7 +24,7 @@ root rotation. Additionally, the Initialize method was deprecated in favor
 of a new Init method that supports configuration modifications that occur in
 the plugin back to the primary data store.
 
-### Removal of Returned Secret Information
+### Removal of returned secret information
 
 For a long time Vault has returned configuration given to various secret
 engines and auth methods with secret values (such as secret API keys or
@@ -39,42 +39,42 @@ accommodate this as best as possible, and users of other tools may have to make
 adjustments, but in the end we felt that the ends did not justify the means and
 we needed to prioritize security over operational convenience.
 
-### LDAP Auth Method Case Sensitivity
+### LDAP auth method case sensitivity
 
 We now treat usernames and groups configured locally for policy assignment in a
 case insensitive fashion by default. Existing configurations will continue to
 work as they do now; however, the next time a configuration is written
 `case_sensitive_names` will need to be explicitly set to `true`.
 
-### TTL Handling Moved to Core
+### TTL handling moved to core
 
 All lease TTL handling has been centralized within the core of Vault to ensure
 consistency across all backends. Since this was previously delegated to
 individual backends, there may be some slight differences in TTLs generated
 from some backends.
 
-### Default `secret/` Mount is Deprecated
+### Default `secret/` mount is deprecated
 
 In 0.12 we will stop mounting `secret/` by default at initialization time (it
 will still be available in `dev` mode).
 
-## Full List Since 0.9.0
+## Full list since 0.9.0
 
-### Change to AWS Role Output
+### Change to AWS role output
 
 The AWS authentication backend now allows binds for inputs as either a
 comma-delimited string or a string array. However, to keep consistency with
 input and output, when reading a role the binds will now be returned as string
 arrays rather than strings.
 
-### Change to AWS IAM Auth ARN Prefix Matching
+### Change to AWS IAM auth ARN prefix matching
 
 In order to prefix-match IAM role and instance profile ARNs in AWS auth
 backend, you now must explicitly opt-in by adding a `*` to the end of the ARN.
 Existing configurations will be upgraded automatically, but when writing a new
 role configuration the updated behavior will be used.
 
-### Backwards Compatible CLI Changes
+### Backwards compatible CLI changes
 
 This upgrade guide is typically reserved for breaking changes, however it
 is worth calling out that the CLI interface to Vault has been completely
@@ -89,7 +89,7 @@ Documentation for previous versions of Vault can be accessed using
 the GitHub interface by browsing tags (eg [0.9.1 website tree](https://github.com/hashicorp/vault/tree/v0.9.1/website)) or by
 [building the Vault website locally](https://github.com/hashicorp/vault/tree/v0.9.1/website#running-the-site-locally).
 
-### `sys/health` DR Secondary Reporting
+### `sys/health` DR secondary reporting
 
 The `replication_dr_secondary` bool returned by `sys/health` could be
 misleading since it would be `false` both when a cluster was not a DR secondary
@@ -104,20 +104,20 @@ replication is disabled or the state is still being discovered. As a result, an
 LB check can positively verify that the node is both not `disabled` and is not
 a DR secondary, and avoid sending traffic to it if either is true.
 
-### PKI Secret Backend Roles Parameter Types
+### PKI secret backend roles parameter types
 
 For `ou` and `organization` in role definitions in the PKI secret backend,
 input can now be a comma-separated string or an array of strings. Reading a
 role will now return arrays for these parameters.
 
-### Plugin API Changes
+### Plugin API changes
 
 The plugin API has been updated to utilize golang's context.Context package.
 Many function signatures now accept a context object as the first parameter.
 Existing plugins will need to pull in the latest Vault code and update their
 function signatures to begin using context and the new gRPC transport.
 
-### AppRole Case Sensitivity
+### AppRole case sensitivity
 
 In prior versions of Vault, `list` operations against AppRole roles would
 require preserving case in the role name, even though most other operations
@@ -125,36 +125,36 @@ within AppRole are case-insensitive with respect to the role name. This has
 been fixed; existing roles will behave as they have in the past, but new roles
 will act case-insensitively in these cases.
 
-### Token Auth Backend Roles Parameter Types
+### Token auth backend roles parameter types
 
 For `allowed_policies` and `disallowed_policies` in role definitions in the
 token auth backend, input can now be a comma-separated string or an array of
 strings. Reading a role will now return arrays for these parameters.
 
-### Transit Key Exporting
+### Transit key exporting
 
 You can now mark a key in the `transit` backend as `exportable` at any time,
 rather than just at creation time; however, once this value is set, it still
 cannot be unset.
 
-### PKI Secret Backend Roles Parameter Types
+### PKI secret backend roles parameter types
 
 For `allowed_domains` and `key_usage` in role definitions in the PKI secret
 backend, input can now be a comma-separated string or an array of strings.
 Reading a role will now return arrays for these parameters.
 
-### SSH Dynamic Keys Method Defaults to 2048-bit Keys
+### SSH dynamic keys method defaults to 2048-bit keys
 
 When using the dynamic key method in the SSH backend, the default is now to use
 2048-bit keys if no specific key bit size is specified.
 
-### Consul Secret Backend Lease Handling
+### Consul secret backend lease handling
 
 The `consul` secret backend can now accept both strings and integer numbers of
 seconds for its lease value. The value returned on a role read will be an
 integer number of seconds instead of a human-friendly string.
 
-### Unprintable Characters Not Allowed in API Paths
+### Unprintable characters not allowed in API paths
 
 Unprintable characters are no longer allowed in names in the API (paths and
 path parameters), with an extra restriction on whitespace characters. Allowed

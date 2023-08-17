@@ -6,7 +6,7 @@ description: |-
   authentication to Vault in a variety of environments.
 ---
 
-# Vault Agent Auto-Auth
+# Vault agent Auto-Auth
 
 The Auto-Auth functionality of Vault Agent allows for easy authentication in a
 wide variety of environments.
@@ -27,7 +27,7 @@ allowed or fails, at which point it will attempt to reauthenticate.
 Every time an authentication is successful, the token is written to the
 configured Sinks, subject to their configuration.
 
-## Advanced Functionality
+## Advanced functionality
 
 Sinks support some advanced features, including the ability for the written
 values to be encrypted or
@@ -36,7 +36,7 @@ values to be encrypted or
 Both mechanisms can be used concurrently; in this case, the value will be
 response-wrapped, then encrypted.
 
-### Response-Wrapping Tokens
+### Response-Wrapping tokens
 
 There are two ways that tokens can be response-wrapped by the agent:
 
@@ -56,7 +56,7 @@ There are two ways that tokens can be response-wrapped by the agent:
    the token renewed for the end client and automatically reauthenticate when
    it expires.
 
-### Encrypting Tokens
+### Encrypting tokens
 
 ~> Support for encrypted tokens is experimental; if input/output formats
 change, we will make every effort to provide backwards compatibility.
@@ -152,6 +152,11 @@ These are common configuration values that live within the `method` block:
   duration between retries, and **not** the duration that retries will be
   performed before giving up.
 
+- `exit_on_err` `(bool: false)` - When set to true, Vault Agent will exit if any 
+  errors occur during authentication. This configurable only affects login attempts 
+  for new tokens (either intial or expired tokens) and will not exit for errors on 
+  valid token renewals.
+
 - `config` `(object: required)` - Configuration of the method itself. See the
   sidebar for information about each method.
 
@@ -194,10 +199,10 @@ These configuration values are common to all Sinks:
 - `config` `(object: required)` - Configuration of the sink itself. See the
   sidebar for information about each sink.
 
-### Auto Auth Example
+### Auto auth example
 
 ```hcl
-# Other Vault Agent configuration blocks
+# Other Vault agent configuration blocks
 # ...
 
 auto_auth {
