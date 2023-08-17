@@ -1385,6 +1385,15 @@
           {
             "title": "Rotation Primitives",
             "path": "secrets/pki/rotation-primitives"
+          },
+          {
+            "title": "Certificate Issuance External Policy Service (CIEPS)",
+            "badge": {
+              "text": "ENTERPRISE",
+              "type": "outlined",
+              "color": "neutral"
+            },
+            "path": "secrets/pki/cieps"
           }
         ]
       },
