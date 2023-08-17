@@ -802,6 +802,10 @@ type staticAccount struct {
 	// LastVaultRotation represents the last time Vault rotated the password
 	LastVaultRotation time.Time `json:"last_vault_rotation"`
 
+	// NextVaultRotation represents the next time Vault is expected to rotate
+	// the password
+	NextVaultRotation time.Time `json:"next_vault_rotation"`
+
 	// RotationPeriod is number in seconds between each rotation, effectively a
 	// "time to live". This value is compared to the LastVaultRotation to
 	// determine if a password needs to be rotated
@@ -858,6 +862,39 @@ func (s *staticAccount) UsesRotationSchedule() bool {
 // configured to rotate credentials on a period (i.e. NOT on a rotation schedule).
 func (s *staticAccount) UsesRotationPeriod() bool {
 	return s.RotationPeriod != 0 && s.RotationSchedule == ""
+}
+
+// IsInsideRotationWindow returns true if the current time t is within a given
+// static account's rotation window.
+//
+// Returns true if the rotation window is not set. In this case, the rotation
+// window is effectively the span of time between two consecutive rotation
+// schedules and we should not prevent rotation.
+func (s *staticAccount) IsInsideRotationWindow(t time.Time) bool {
+	if s.UsesRotationSchedule() && s.RotationWindow != 0 {
+		return t.Before(s.NextVaultRotation.Add(s.RotationWindow))
+	}
+	return true
+}
+
+// ShouldRotate returns true if a given static account should have its
+// credentials rotated.
+//
+// This will return true when the priority is less than the current Unix time.
+// If this static account is schedule-based with a rotation window, this method
+// will return false if now is outside the rotation window.
+func (s *staticAccount) ShouldRotate(priority int64) bool {
+	now := time.Now()
+	return priority < now.Unix() && s.IsInsideRotationWindow(now)
+}
+
+// SetNextVaultRotation
+func (s *staticAccount) SetNextVaultRotation(t time.Time) {
+	if s.UsesRotationPeriod() {
+		s.NextVaultRotation = t.Add(s.RotationPeriod)
+	} else {
+		s.NextVaultRotation = s.Schedule.Next(t)
+	}
 }
 
 // CredentialTTL calculates the approximate time remaining until the credential is

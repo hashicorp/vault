@@ -223,11 +223,8 @@ func (b *databaseBackend) rotateCredential(ctx context.Context, s logical.Storag
 
 	logger = logger.With("database", role.DBName)
 
-	// If "now" is less than the Item priority, then this item does not need to
-	// be rotated
-	// TODO(JM): ensure we don't process schedule-based rotations
-	// outside the rotation_window
-	if time.Now().Unix() < item.Priority {
+	if !role.StaticAccount.ShouldRotate(item.Priority) {
+		// do not rotate now, push item back onto queue to be rotated later
 		if err := b.pushItem(item); err != nil {
 			logger.Error("unable to push item on to queue", "error", err)
 		}
@@ -272,6 +269,10 @@ func (b *databaseBackend) rotateCredential(ctx context.Context, s logical.Storag
 	if lvr.IsZero() {
 		lvr = time.Now()
 	}
+	role.StaticAccount.SetNextVaultRotation(lvr)
+	logger.Debug("update NextVaultRotation", "next", role.StaticAccount.NextVaultRotation)
+
+	// TODO(JM): use helper method to set Priority instead of if/else?
 
 	// Update priority and push updated Item to the queue
 	if role.StaticAccount.UsesRotationSchedule() {
@@ -509,6 +510,7 @@ func (b *databaseBackend) setStaticAccount(ctx context.Context, s logical.Storag
 	// lvr is the known LastVaultRotation
 	lvr := time.Now()
 	input.Role.StaticAccount.LastVaultRotation = lvr
+	input.Role.StaticAccount.SetNextVaultRotation(lvr)
 	output.RotationTime = lvr
 
 	entry, err := logical.StorageEntryJSON(databaseStaticRolePath+input.RoleName, input.Role)

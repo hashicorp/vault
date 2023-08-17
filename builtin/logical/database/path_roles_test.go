@@ -902,6 +902,25 @@ func TestWALsDeletedOnRoleDeletion(t *testing.T) {
 	requireWALs(t, storage, 1)
 }
 
+func TestIsInsideRotationWindow(t *testing.T) {
+	ctx := context.Background()
+	b, storage, mockDB := getBackend(t)
+	defer b.Cleanup(ctx)
+	configureDBMount(t, storage)
+
+	data := map[string]interface{}{
+		"username":          "hashicorp",
+		"db_name":           "mockv5",
+		"rotation_schedule": "0 0 */2 * * *",
+		"rotation_window":   "1h",
+	}
+	createRoleWithData(t, b, storage, mockDB, "hashicorp", data)
+	role, err := b.StaticRole(ctx, storage, "hashicorp")
+	if err != nil {
+		t.Fatal(err)
+	}
+}
+
 func createRole(t *testing.T, b *databaseBackend, storage logical.Storage, mockDB *mockNewDatabase, roleName string) {
 	t.Helper()
 	mockDB.On("UpdateUser", mock.Anything, mock.Anything).
