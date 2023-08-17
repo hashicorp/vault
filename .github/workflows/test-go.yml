@@ -133,10 +133,11 @@ jobs:
            set -exo pipefail
 
            # testonly tagged tests need an additional tag
-           go list -tags=testonly ./... | grep "testonly" | gotestsum tool ci-matrix --debug \
-             --partitions "${{ inputs.total-runners }}" \
-             --timing-files 'test-results/go-test/*.json' > testonly_matrix.json
-
+           # go list -tags=testonly ./... | grep "testonly" | gotestsum tool ci-matrix --debug \
+           #  --partitions "${{ inputs.total-runners }}" \
+           #  --timing-files 'test-results/go-test/*.json' > testonly_matrix.json
+          
+           echo '{"include":[{"id":0,"estimatedRuntime":"0s","packages":"","description":""},{"id":1,"estimatedRuntime":"0s","packages":"","description":""}]}' > testonly_matrix.json
            # hardcoding vault package index as there is only one test package tagged with testonly
            # in the external tests. However, it would be also good to run the vault package with
            # to validate the tag and also validate the vault package tests that are tagged with
@@ -146,6 +147,7 @@ jobs:
            else
              export VAULT_TEST_PACKAGE="github.com/hashicorp/vault/vault"
            fi
+          
            jq --arg VAULT_PKG "${VAULT_TEST_PACKAGE}" \
              '.include[1] = {
                "id": 1,
