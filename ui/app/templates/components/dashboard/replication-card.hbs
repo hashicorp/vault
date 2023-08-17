@@ -55,15 +55,13 @@
         @clusterStates={{cluster-states @replication.dr.state}}
         @subText="The current operating state of the cluster."
       />
-      <div>
-        <StatText
-          @label="known secondaries"
-          @value={{@replication.dr.knownSecondaries.length}}
-          @size="l"
-          @subText="Number of secondaries connected to this primary."
-          data-test-stat-text="known secondaries"
-        />
-      </div>
+      <StatText
+        @label="known secondaries"
+        @value={{@replication.dr.knownSecondaries.length}}
+        @size="l"
+        @subText="Number of secondaries connected to this primary."
+        data-test-stat-text="known secondaries"
+      />
     </div>
   {{/if}}
   <div class="has-top-margin-s is-flex-center">
