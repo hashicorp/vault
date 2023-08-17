@@ -280,4 +280,49 @@ module('Integration | Component | auth form', function (hooks) {
     );
     server.shutdown();
   });
+
+  test('it should retain oidc role when mount path is changed', async function (assert) {
+    assert.expect(1);
+
+    const auth_url = 'http://dev-foo-bar.com';
+    const server = new Pretender(function () {
+      this.post('/v1/auth/:path/oidc/auth_url', (req) => {
+        const { role, redirect_uri } = JSON.parse(req.requestBody);
+        const goodRequest =
+          req.params.path === 'foo-oidc' &&
+          role === 'foo' &&
+          redirect_uri.includes('/auth/foo-oidc/oidc/callback');
+
+        return [
+          goodRequest ? 200 : 400,
+          { 'Content-Type': 'application/json' },
+          JSON.stringify(
+            goodRequest ? { data: { auth_url } } : { errors: [`role "${role}" could not be found`] }
+          ),
+        ];
+      });
+      this.get('/v1/sys/internal/ui/mounts', this.passthrough);
+    });
+
+    window.open = (url) => {
+      assert.strictEqual(url, auth_url, 'auth_url is returned when required params are passed');
+    };
+
+    this.owner.lookup('service:router').reopen({
+      urlFor(route, { auth_path }) {
+        return `/auth/${auth_path}/oidc/callback`;
+      },
+    });
+
+    this.set('cluster', EmberObject.create({}));
+    await render(hbs`<AuthForm @cluster={{this.cluster}} />`);
+
+    await component.selectMethod('oidc');
+    await component.oidcRole('foo');
+    await component.oidcMoreOptions();
+    await component.oidcMountPath('foo-oidc');
+    await component.login();
+
+    server.shutdown();
+  });
 });

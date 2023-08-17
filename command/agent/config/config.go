@@ -130,6 +130,7 @@ type Method struct {
 	MaxBackoffRaw interface{}   `hcl:"max_backoff"`
 	MaxBackoff    time.Duration `hcl:"-"`
 	Namespace     string        `hcl:"namespace"`
+	ExitOnError   bool          `hcl:"exit_on_err"`
 	Config        map[string]interface{}
 }
 

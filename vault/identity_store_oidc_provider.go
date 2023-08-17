@@ -159,6 +159,7 @@ type providerDiscovery struct {
 	IDTokenAlgs           []string `json:"id_token_signing_alg_values_supported"`
 	ResponseTypes         []string `json:"response_types_supported"`
 	Scopes                []string `json:"scopes_supported"`
+	Claims                []string `json:"claims_supported"`
 	Subjects              []string `json:"subject_types_supported"`
 	GrantTypes            []string `json:"grant_types_supported"`
 	AuthMethods           []string `json:"token_endpoint_auth_methods_supported"`
@@ -379,7 +380,7 @@ func oidcProviderPaths(i *IdentityStore) []*framework.Path {
 			HelpDescription: "List all configured OIDC providers in the identity backend.",
 		},
 		{
-			Pattern: "oidc/provider/" + framework.GenericNameRegex("name") + "/.well-known/openid-configuration",
+			Pattern: "oidc/provider/" + framework.GenericNameRegex("name") + "/\\.well-known/openid-configuration",
 			Fields: map[string]*framework.FieldSchema{
 				"name": {
 					Type:        framework.TypeString,
@@ -395,7 +396,7 @@ func oidcProviderPaths(i *IdentityStore) []*framework.Path {
 			HelpDescription: "Query this path to retrieve the configured OIDC Issuer and Keys endpoints, response types, subject types, and signing algorithms used by the OIDC backend.",
 		},
 		{
-			Pattern: "oidc/provider/" + framework.GenericNameRegex("name") + "/.well-known/keys",
+			Pattern: "oidc/provider/" + framework.GenericNameRegex("name") + "/\\.well-known/keys",
 			Fields: map[string]*framework.FieldSchema{
 				"name": {
 					Type:        framework.TypeString,
@@ -1416,6 +1417,7 @@ func (i *IdentityStore) pathOIDCProviderDiscovery(ctx context.Context, req *logi
 		UserinfoEndpoint:      p.effectiveIssuer + "/userinfo",
 		IDTokenAlgs:           supportedAlgs,
 		Scopes:                scopes,
+		Claims:                []string{},
 		RequestParameter:      false,
 		RequestURIParameter:   false,
 		ResponseTypes:         []string{"code"},

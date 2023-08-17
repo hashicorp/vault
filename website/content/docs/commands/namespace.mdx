@@ -16,7 +16,13 @@ List all namespaces:
 $ vault namespace list
 ```
 
-Create a namespace at the path `ns1/`:
+List all namespaces with additional details such as namespace ID and custom metadata:
+
+```shell-session
+$ vault namespace list -detailed
+```
+
+Create a namespace at the path `ns1/` with no custom metadata:
 
 ```shell-session
 $ vault namespace create ns1/

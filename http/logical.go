@@ -276,9 +276,9 @@ func buildLogicalRequest(core *vault.Core, w http.ResponseWriter, r *http.Reques
 // handleLogical returns a handler for processing logical requests. These requests
 // may or may not end up getting forwarded under certain scenarios if the node
 // is a performance standby. Some of these cases include:
-//     - Perf standby and token with limited use count.
-//     - Perf standby and token re-validation needed (e.g. due to invalid token).
-//     - Perf standby and control group error.
+//   - Perf standby and token with limited use count.
+//   - Perf standby and token re-validation needed (e.g. due to invalid token).
+//   - Perf standby and control group error.
 func handleLogical(core *vault.Core) http.Handler {
 	return handleLogicalInternal(core, false, false)
 }
