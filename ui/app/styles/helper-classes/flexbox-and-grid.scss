@@ -113,6 +113,12 @@
   }
 }
 
+@include until($mobile) {
+  .is-flex-row {
+    flex-flow: column wrap;
+  }
+}
+
 /* CSS GRID */
 .is-grid {
   display: grid;
