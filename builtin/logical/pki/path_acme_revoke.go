@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 package pki
 
@@ -15,11 +15,11 @@ import (
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
-func pathAcmeRevoke(b *backend) []*framework.Path {
-	return buildAcmeFrameworkPaths(b, patternAcmeRevoke, "/revoke-cert")
+func pathAcmeRevoke(b *backend, baseUrl string, opts acmeWrapperOpts) *framework.Path {
+	return patternAcmeRevoke(b, baseUrl+"/revoke-cert", opts)
 }
 
-func patternAcmeRevoke(b *backend, pattern string) *framework.Path {
+func patternAcmeRevoke(b *backend, pattern string, opts acmeWrapperOpts) *framework.Path {
 	fields := map[string]*framework.FieldSchema{}
 	addFieldsForACMEPath(fields, pattern)
 	addFieldsForACMERequest(fields)
@@ -29,7 +29,7 @@ func patternAcmeRevoke(b *backend, pattern string) *framework.Path {
 		Fields:  fields,
 		Operations: map[logical.Operation]framework.OperationHandler{
 			logical.UpdateOperation: &framework.PathOperation{
-				Callback:                    b.acmeParsedWrapper(b.acmeRevocationHandler),
+				Callback:                    b.acmeParsedWrapper(opts, b.acmeRevocationHandler),
 				ForwardPerformanceSecondary: false,
 				ForwardPerformanceStandby:   true,
 			},

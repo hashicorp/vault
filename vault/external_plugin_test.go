@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 package vault
 
@@ -14,7 +14,6 @@ import (
 	"strings"
 	"testing"
 
-	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/helper/testhelpers/corehelpers"
 	"github.com/hashicorp/vault/helper/testhelpers/pluginhelpers"
@@ -67,9 +66,6 @@ func TestCore_EnableExternalPlugin(t *testing.T) {
 	} {
 		t.Run(name, func(t *testing.T) {
 			coreConfig := &CoreConfig{
-				DisableMlock:       true,
-				DisableCache:       true,
-				Logger:             log.NewNullLogger(),
 				CredentialBackends: map[string]logical.Factory{},
 			}
 
