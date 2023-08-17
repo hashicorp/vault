@@ -1,8 +1,9 @@
 <Dashboard::VaultVersionTitle />
 
-{{#if @model.version.isEnterprise}}
-  <div class="has-bottom-margin-xl">
-    <div class="is-flex-row has-gap-l">
+<div class="has-bottom-margin-xl">
+  <div class="is-flex-row has-gap-l">
+    {{#if @model.version.isEnterprise}}
+
       <div class="is-flex-column is-flex-1 has-gap-l">
         {{#if @model.license}}
           <Dashboard::ClientCountCard @license={{@model.license}} />
@@ -28,11 +29,8 @@
           <Dashboard::SurveyLinkText />
         </div>
       </div>
-    </div>
-  </div>
-{{else}}
-  <div class="has-bottom-margin-xl">
-    <div class="is-flex-row has-gap-l">
+
+    {{else}}
       <div class="is-flex-column is-flex-1 has-gap-l">
         <Dashboard::SecretsEnginesCard @secretsEngines={{@model.secretsEngines}} />
         <div>
@@ -46,6 +44,6 @@
           <Dashboard::VaultConfigurationDetailsCard @vaultConfiguration={{@model.vaultConfiguration}} />
         {{/if}}
       </div>
-    </div>
+    {{/if}}
   </div>
-{{/if}}
+</div>
