@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"net/url"
+	"os"
 	"strings"
 	"time"
 
@@ -94,7 +95,8 @@ func (b *backend) pathConfigWrite(ctx context.Context, req *logical.Request, dat
 	}
 
 	if c.OrganizationID == 0 {
-		client, err := b.Client("")
+		githubToken := os.Getenv("VAULT_AUTH_CONFIG_GITHUB_TOKEN")
+		client, err := b.Client(githubToken)
 		if err != nil {
 			return nil, err
 		}

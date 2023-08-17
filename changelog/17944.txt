@@ -1,0 +1,3 @@
+```release-note:bug
+core: Fix potential deadlock if barrier ciphertext is less than 4 bytes.
+```

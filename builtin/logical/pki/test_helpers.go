@@ -292,6 +292,10 @@ func CBDelete(b *backend, s logical.Storage, path string) (*logical.Response, er
 	return CBReq(b, s, logical.DeleteOperation, path, make(map[string]interface{}))
 }
 
+func CBPatch(b *backend, s logical.Storage, path string, data map[string]interface{}) (*logical.Response, error) {
+	return CBReq(b, s, logical.PatchOperation, path, data)
+}
+
 func requireSuccessNonNilResponse(t *testing.T, resp *logical.Response, err error, msgAndArgs ...interface{}) {
 	require.NoError(t, err, msgAndArgs...)
 	require.False(t, resp.IsError(), msgAndArgs...)

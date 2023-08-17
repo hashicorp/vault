@@ -1,3 +1,6 @@
+# Copyright (c) HashiCorp, Inc.
+# SPDX-License-Identifier: MPL-2.0
+
 variable "artifact_path" {
   type        = string
   description = "The local path for dev artifact to test"
@@ -6,14 +9,14 @@ variable "artifact_path" {
 
 variable "artifactory_username" {
   type        = string
-  description = "The username to use when connecting to artifactory"
+  description = "The username to use when testing an artifact from artifactory"
   default     = null
   sensitive   = true
 }
 
 variable "artifactory_token" {
   type        = string
-  description = "The token to use when connecting to artifactory"
+  description = "The token to use when authenticating to artifactory"
   default     = null
   sensitive   = true
 }
@@ -33,7 +36,7 @@ variable "artifactory_repo" {
 variable "aws_region" {
   description = "The AWS region where we'll create infrastructure"
   type        = string
-  default     = "us-west-1"
+  default     = "us-east-1"
 }
 
 variable "aws_ssh_keypair_name" {
@@ -55,9 +58,9 @@ variable "backend_edition" {
 }
 
 variable "backend_instance_type" {
-  description = "The instance type to use for the Vault backend"
+  description = "The instance type to use for the Vault backend. Must be arm64/nitro compatible"
   type        = string
-  default     = "t3.small"
+  default     = "t4g.small"
 }
 
 variable "backend_license_path" {
@@ -66,10 +69,22 @@ variable "backend_license_path" {
   default     = null
 }
 
+variable "backend_log_level" {
+  description = "The server log level for the backend. Supported values include 'trace', 'debug', 'info', 'warn', 'error'"
+  type        = string
+  default     = "trace"
+}
+
 variable "project_name" {
   description = "The description of the project"
   type        = string
   default     = "vault-enos-integration"
+}
+
+variable "rhel_distro_version" {
+  description = "The version of RHEL to use"
+  type        = string
+  default     = "9.1" // or "8.8"
 }
 
 variable "tags" {
@@ -85,13 +100,31 @@ variable "terraform_plugin_cache_dir" {
 }
 
 variable "tfc_api_token" {
-  description = "The Terraform Cloud QTI Organization API token."
+  description = "The Terraform Cloud QTI Organization API token. This is used to download the enos Terraform provider."
   type        = string
   sensitive   = true
 }
 
+variable "ubuntu_distro_version" {
+  description = "The version of ubuntu to use"
+  type        = string
+  default     = "22.04" // or "20.04", "18.04"
+}
+
+variable "ui_test_filter" {
+  type        = string
+  description = "A test filter to limit the ui tests to execute. Will be appended to the ember test command as '-f=\"<filter>\"'"
+  default     = null
+}
+
+variable "ui_run_tests" {
+  type        = bool
+  description = "Whether to run the UI tests or not. If set to false a cluster will be created but no tests will be run"
+  default     = true
+}
+
 variable "vault_artifact_type" {
-  description = "The Vault artifact type package or bundle"
+  description = "The type of Vault artifact to use when installing Vault from artifactory. It should be 'package' for .deb or # .rpm package and 'bundle' for .zip bundles"
   default     = "bundle"
 }
 
@@ -103,22 +136,28 @@ variable "vault_autopilot_initial_release" {
   }
 }
 
-variable "vault_bundle_path" {
+variable "vault_artifact_path" {
   description = "Path to CRT generated or local vault.zip bundle"
   type        = string
   default     = "/tmp/vault.zip"
+}
+
+variable "vault_build_date" {
+  description = "The build date for Vault artifact"
+  type        = string
+  default     = ""
+}
+
+variable "vault_enable_file_audit_device" {
+  description = "If true the file audit device will be enabled at the path /var/log/vault_audit.log"
+  type        = bool
+  default     = true
 }
 
 variable "vault_install_dir" {
   type        = string
   description = "The directory where the Vault binary will be installed"
   default     = "/opt/vault/bin"
-}
-
-variable "vault_instance_type" {
-  description = "The instance type to use for the Vault backend"
-  type        = string
-  default     = null
 }
 
 variable "vault_instance_count" {
@@ -139,10 +178,10 @@ variable "vault_local_build_tags" {
   default     = null
 }
 
-variable "vault_build_date" {
-  description = "The build date for Vault artifact"
+variable "vault_log_level" {
+  description = "The server log level for Vault logs. Supported values (in order of detail) are trace, debug, info, warn, and err."
   type        = string
-  default     = ""
+  default     = "trace"
 }
 
 variable "vault_product_version" {

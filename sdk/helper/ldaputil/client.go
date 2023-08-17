@@ -28,6 +28,7 @@ func (c *Client) DialLDAP(cfg *ConfigEntry) (Connection, error) {
 	var retErr *multierror.Error
 	var conn Connection
 	urls := strings.Split(cfg.Url, ",")
+
 	for _, uut := range urls {
 		u, err := url.Parse(uut)
 		if err != nil {
@@ -40,12 +41,20 @@ func (c *Client) DialLDAP(cfg *ConfigEntry) (Connection, error) {
 		}
 
 		var tlsConfig *tls.Config
+		dialer := net.Dialer{
+			Timeout: time.Duration(cfg.ConnectionTimeout) * time.Second,
+		}
+
 		switch u.Scheme {
 		case "ldap":
 			if port == "" {
 				port = "389"
 			}
-			conn, err = c.LDAP.Dial("tcp", net.JoinHostPort(host, port))
+
+			fullAddr := fmt.Sprintf("%s://%s", u.Scheme, net.JoinHostPort(host, port))
+			opt := ldap.DialWithDialer(&dialer)
+
+			conn, err = c.LDAP.DialURL(fullAddr, opt)
 			if err != nil {
 				break
 			}
@@ -68,7 +77,15 @@ func (c *Client) DialLDAP(cfg *ConfigEntry) (Connection, error) {
 			if err != nil {
 				break
 			}
-			conn, err = c.LDAP.DialTLS("tcp", net.JoinHostPort(host, port), tlsConfig)
+
+			fullAddr := fmt.Sprintf("%s://%s", u.Scheme, net.JoinHostPort(host, port))
+			opt := ldap.DialWithDialer(&dialer)
+			tls := ldap.DialWithTLSConfig(tlsConfig)
+
+			conn, err = c.LDAP.DialURL(fullAddr, opt, tls)
+			if err != nil {
+				break
+			}
 		default:
 			retErr = multierror.Append(retErr, fmt.Errorf("invalid LDAP scheme in url %q", net.JoinHostPort(host, port)))
 			continue
@@ -400,7 +417,7 @@ func (c *Client) performLdapFilterGroupsSearchPaging(cfg *ConfigEntry, conn Pagi
 			cfg.GroupAttr,
 		},
 		SizeLimit: math.MaxInt32,
-	}, math.MaxInt32)
+	}, uint32(cfg.MaximumPageSize))
 	if err != nil {
 		return nil, fmt.Errorf("LDAP search failed: %w", err)
 	}
@@ -519,7 +536,7 @@ func (c *Client) GetLdapGroups(cfg *ConfigEntry, conn Connection, userDN string,
 	if cfg.UseTokenGroups {
 		entries, err = c.performLdapTokenGroupsSearch(cfg, conn, userDN)
 	} else {
-		if paging, ok := conn.(PagingConnection); ok {
+		if paging, ok := conn.(PagingConnection); ok && cfg.MaximumPageSize > 0 {
 			entries, err = c.performLdapFilterGroupsSearchPaging(cfg, paging, userDN, username)
 		} else {
 			entries, err = c.performLdapFilterGroupsSearch(cfg, conn, userDN, username)

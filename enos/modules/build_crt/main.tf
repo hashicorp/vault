@@ -38,12 +38,9 @@ variable "distro" {
 variable "edition" {
   default = null
 }
-variable "instance_type" {
-  default = null
-}
 variable "revision" {
   default = null
 }
-variable "vault_product_version" {
+variable "product_version" {
   default = null
 }
