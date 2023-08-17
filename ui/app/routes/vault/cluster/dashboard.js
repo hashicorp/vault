@@ -8,9 +8,11 @@ import { inject as service } from '@ember/service';
 import { hash } from 'rsvp';
 // eslint-disable-next-line ember/no-mixins
 import ClusterRoute from 'vault/mixins/cluster-route';
+import { action } from '@ember/object';
 
 export default class VaultClusterDashboardRoute extends Route.extend(ClusterRoute) {
   @service store;
+  @service namespace;
   @service version;
 
   async getVaultConfiguration() {
@@ -33,12 +35,24 @@ export default class VaultClusterDashboardRoute extends Route.extend(ClusterRout
 
   model() {
     const vaultConfiguration = this.getVaultConfiguration();
+    const clusterModel = this.modelFor('vault.cluster');
+    const replication = {
+      dr: clusterModel.dr,
+      performance: clusterModel.performance,
+    };
 
     return hash({
       vaultConfiguration,
+      replication,
       secretsEngines: this.store.query('secret-engine', {}),
+      isRootNamespace: this.namespace.inRootNamespace,
       version: this.version,
       license: this.getLicense(),
     });
+  }
+
+  @action
+  refreshRoute() {
+    this.refresh();
   }
 }

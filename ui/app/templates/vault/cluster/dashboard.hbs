@@ -6,6 +6,18 @@
       <Dashboard::ClientCountCard @license={{@model.license}} />
     </Hds::Card::Container>
   {{/if}}
+
+  {{#if (and @model.version.isEnterprise @model.isRootNamespace)}}
+    <Hds::Card::Container @hasBorder={{true}} class="has-padding-l has-bottom-padding-m is-flex-column is-flex-half">
+      <Dashboard::ReplicationCard
+        @replication={{@model.replication}}
+        @version={{@model.version}}
+        @refresh={{this.refreshModel}}
+        @updatedAt={{this.replicationUpdatedAt}}
+      />
+    </Hds::Card::Container>
+  {{/if}}
+
   <Hds::Card::Container @hasBorder={{true}} class="has-padding-l is-flex-column is-flex-half">
     <Dashboard::SecretsEnginesCard @secretsEngines={{@model.secretsEngines}} />
   </Hds::Card::Container>
