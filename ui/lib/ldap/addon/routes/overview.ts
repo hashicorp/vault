@@ -30,7 +30,7 @@ interface LdapOverviewRouteModel {
 }
 
 @withConfig('ldap/config')
-export default class LdapConfigureRoute extends Route {
+export default class LdapOverviewRoute extends Route {
   @service declare readonly store: Store;
   @service declare readonly secretMountPath: SecretMountPath;
 
