@@ -33,6 +33,11 @@ Please audit your Consul storage stanza to ensure that you either:
 ## Rollback metrics
 
 The metrics `vault.rollback.attempts.{MOUNTPOINT}` and `vault.route.rollback.{MOUNTPOINT}`
-have been removed in Vault 1.15. They have been replaced by `vault.rollback.attempts`
+are no longer measured by default. They have been replaced by `vault.rollback.attempts`
 and `vault.route.rollback` metrics, which **do not** contain the mount point in
 the metric name.
+
+If you would like to continue measuring `vault.rollback.attempts.{MOUNTPOINT}`
+and `vault.route.rollback.{MOUNTPOINT}`, you can enable these metrics using the
+[`add_mount_point_rollback_metrics`](/vault/docs/configuration/telemetry#add_mount_point_rollback_metrics)
+configuration option in the telemetry stanza.

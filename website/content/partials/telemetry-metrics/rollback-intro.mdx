@@ -3,5 +3,7 @@ Metric names convert forward slashes (`/`) in mount names to dashes (`-`). For
 example, if you have the `auth/token` backend configured, the corresponding mount
 point metric string is `auth-token`
 
-Starting in Vault 1.15, rollback metrics do not have the mount point in their
-metric name or in their labels.
+Starting in Vault 1.15, rollback metrics default to not having the mount point
+in their metric name or in their labels. Rollback metrics with the mount point
+can be enabled by setting the [`add_mount_point_rollback_metrics`](/vault/docs/configuration/telemetry#add_mount_point_rollback_metrics)
+configuration option in the telemetry stanza.
