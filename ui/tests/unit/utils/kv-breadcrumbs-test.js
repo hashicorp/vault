@@ -85,11 +85,11 @@ module('Unit | Utility | kv-breadcrumbs', function () {
     results = breadcrumbsForSecret('beep/bop/', true);
     assert.deepEqual(
       results,
-      [
-        { label: 'beep', route: 'list-directory', model: 'beep/' },
-        { label: 'bop', route: 'list-directory', model: 'beep/bop/' },
-      ],
+      [{ label: 'beep', route: 'list-directory', model: 'beep/' }, { label: 'bop' }],
       'correct when path is directory and last item current'
     );
+
+    results = breadcrumbsForSecret();
+    assert.deepEqual(results, [], 'fails gracefully if secretPath is undefined');
   });
 });
