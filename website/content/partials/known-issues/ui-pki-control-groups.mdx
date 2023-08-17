@@ -1,0 +1,17 @@
+### Users limited by control groups can only access issuer detail from PKI overview page ((#ui-pki-control-groups))
+
+#### Affected versions
+
+- Vault 1.14.x
+
+#### Issue
+
+Vault UI users who require control group approval to read issuer details are
+directed to the Control Group Access page when they try to view issuer details
+from links on the Issuer list page.
+
+#### Workaround
+
+Vault UI users constrained by control groups should select issuers from the
+**PKI overview** page to view detailed information instead of the
+**Issuers list** page.

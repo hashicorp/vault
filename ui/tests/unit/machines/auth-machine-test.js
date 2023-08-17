@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import { module, test } from 'qunit';
 import { Machine } from 'xstate';
 import AuthMachineConfig from 'vault/machines/auth-machine';
@@ -77,8 +82,8 @@ module('Unit | Machine | auth-machine', function () {
 
   testCases.forEach((testCase) => {
     test(`transition: ${testCase.event} for currentState ${testCase.currentState} and componentState ${testCase.params}`, function (assert) {
-      let result = authMachine.transition(testCase.currentState, testCase.event, testCase.params);
-      assert.equal(result.value, testCase.expectedResults.value);
+      const result = authMachine.transition(testCase.currentState, testCase.event, testCase.params);
+      assert.strictEqual(result.value, testCase.expectedResults.value);
       assert.deepEqual(result.actions, testCase.expectedResults.actions);
     });
   });

@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package plugin
 
 import (
@@ -157,7 +160,7 @@ func TestGRPCBackendPlugin_Version(t *testing.T) {
 	}
 
 	version := versioner.PluginVersion().Version
-	if version != "mock" {
+	if version != "v0.0.0+mock" {
 		t.Fatalf("Got version %s, expected 'mock'", version)
 	}
 }

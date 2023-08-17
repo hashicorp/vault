@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import AdapterError from '@ember-data/adapter/error';
 import { inject as service } from '@ember/service';
 import { set } from '@ember/object';
@@ -8,6 +13,7 @@ import UnloadModelRoute from 'vault/mixins/unload-model-route';
 export default Route.extend(UnloadModelRoute, {
   modelPath: 'model.model',
   pathHelp: service('path-help'),
+  store: service(),
 
   modelType(backendType, section) {
     const MODELS = {

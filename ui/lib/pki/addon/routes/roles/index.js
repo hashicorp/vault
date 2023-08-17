@@ -1,23 +1,43 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import Route from '@ember/routing/route';
 import { inject as service } from '@ember/service';
-
-export default class RolesIndexRoute extends Route {
+import { withConfig } from 'pki/decorators/check-issuers';
+import { hash } from 'rsvp';
+import { getCliMessage } from 'pki/routes/overview';
+@withConfig()
+export default class PkiRolesIndexRoute extends Route {
   @service store;
   @service secretMountPath;
-  @service pathHelp;
+
+  async fetchRoles() {
+    try {
+      return await this.store.query('pki/role', { backend: this.secretMountPath.currentPath });
+    } catch (e) {
+      if (e.httpStatus === 404) {
+        return { parentModel: this.modelFor('roles') };
+      } else {
+        throw e;
+      }
+    }
+  }
 
   model() {
-    // the pathHelp service is needed for adding openAPI to the model
-    this.pathHelp.getNewModel('pki/pki-role-engine', 'pki');
+    return hash({
+      hasConfig: this.shouldPromptConfig,
+      roles: this.fetchRoles(),
+      parentModel: this.modelFor('roles'),
+    });
+  }
 
-    return this.store
-      .query('pki/pki-role-engine', { backend: this.secretMountPath.currentPath })
-      .catch((err) => {
-        if (err.httpStatus === 404) {
-          return [];
-        } else {
-          throw err;
-        }
-      });
+  setupController(controller, resolvedModel) {
+    super.setupController(controller, resolvedModel);
+    const roles = resolvedModel.roles;
+
+    if (roles?.length) controller.notConfiguredMessage = getCliMessage('roles');
+    else controller.notConfiguredMessage = getCliMessage();
   }
 }

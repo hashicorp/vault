@@ -1,8 +1,12 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package vault
 
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"path"
 	"reflect"
@@ -50,8 +54,22 @@ func TestTokenStore_CreateOrphanResponse(t *testing.T) {
 	}
 }
 
+// TestTokenStore_CubbyholeDeletion tests that a token's cubbyhole
+// can be used and that the cubbyhole is removed after the token is revoked.
 func TestTokenStore_CubbyholeDeletion(t *testing.T) {
 	c, _, root := TestCoreUnsealed(t)
+	testTokenStore_CubbyholeDeletion(t, c, root)
+}
+
+// TestTokenStore_CubbyholeDeletionSSCTokensDisabled tests that a legacy token's
+// cubbyhole can be used, and that the cubbyhole is removed after the token is revoked.
+func TestTokenStore_CubbyholeDeletionSSCTokensDisabled(t *testing.T) {
+	c, _, root := TestCoreUnsealed(t)
+	c.disableSSCTokens = true
+	testTokenStore_CubbyholeDeletion(t, c, root)
+}
+
+func testTokenStore_CubbyholeDeletion(t *testing.T, c *Core, root string) {
 	ts := c.tokenStore
 
 	for i := 0; i < 10; i++ {
@@ -2308,12 +2326,12 @@ func TestTokenStore_HandleRequest_RevokeOrphan(t *testing.T) {
 	testMakeServiceTokenViaBackend(t, ts, root, "child", "60s", []string{"root", "foo"})
 	testMakeServiceTokenViaBackend(t, ts, "child", "sub-child", "50s", []string{"foo"})
 
-	req := logical.TestRequest(t, logical.UpdateOperation, "revoke-orphan")
+	req := logical.TestRequest(t, logical.UpdateOperation, "auth/token/revoke-orphan")
 	req.Data = map[string]interface{}{
 		"token": "child",
 	}
 	req.ClientToken = root
-	resp, err := ts.HandleRequest(namespace.RootContext(nil), req)
+	resp, err := c.HandleRequest(namespace.RootContext(nil), req)
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("err: %v\nresp: %#v", err, resp)
 	}
@@ -2367,14 +2385,14 @@ func TestTokenStore_HandleRequest_RevokeOrphan_NonRoot(t *testing.T) {
 		t.Fatalf("bad: %v", out)
 	}
 
-	req := logical.TestRequest(t, logical.UpdateOperation, "revoke-orphan")
+	req := logical.TestRequest(t, logical.UpdateOperation, "auth/token/revoke-orphan")
 	req.Data = map[string]interface{}{
 		"token": "child",
 	}
 	req.ClientToken = "child"
-	resp, err := ts.HandleRequest(namespace.RootContext(nil), req)
-	if err != logical.ErrInvalidRequest {
-		t.Fatalf("did not get error when non-root revoking itself with orphan flag; resp is %#v", resp)
+	resp, err := c.HandleRequest(namespace.RootContext(nil), req)
+	if !errors.Is(err, logical.ErrPermissionDenied) {
+		t.Fatalf("did not get expected error when non-root revoking itself with orphan flag; resp is %#v; err is %#v", resp, err)
 	}
 
 	time.Sleep(200 * time.Millisecond)

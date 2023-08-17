@@ -1,0 +1,3 @@
+```release-note:improvement
+eventbus: updated go-eventlogger library to allow removal of nodes referenced by pipelines (used for subscriptions)
+```

@@ -1,9 +1,15 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package pki
 
 import (
 	"context"
+	"crypto"
 	"fmt"
+	"net/http"
 
+	"github.com/hashicorp/vault/sdk/helper/certutil"
 	"github.com/hashicorp/vault/sdk/helper/errutil"
 
 	"github.com/hashicorp/vault/sdk/framework"
@@ -14,9 +20,31 @@ func pathListKeys(b *backend) *framework.Path {
 	return &framework.Path{
 		Pattern: "keys/?$",
 
+		DisplayAttrs: &framework.DisplayAttributes{
+			OperationPrefix: operationPrefixPKI,
+			OperationSuffix: "keys",
+		},
+
 		Operations: map[logical.Operation]framework.OperationHandler{
 			logical.ListOperation: &framework.PathOperation{
-				Callback:                    b.pathListKeysHandler,
+				Callback: b.pathListKeysHandler,
+				Responses: map[int][]framework.Response{
+					http.StatusOK: {{
+						Description: "OK",
+						Fields: map[string]*framework.FieldSchema{
+							"keys": {
+								Type:        framework.TypeStringSlice,
+								Description: `A list of keys`,
+								Required:    true,
+							},
+							"key_info": {
+								Type:        framework.TypeMap,
+								Description: `Key info with issuer name`,
+								Required:    false,
+							},
+						},
+					}},
+				},
 				ForwardPerformanceStandby:   false,
 				ForwardPerformanceSecondary: false,
 			},
@@ -70,12 +98,19 @@ func (b *backend) pathListKeysHandler(ctx context.Context, req *logical.Request,
 
 func pathKey(b *backend) *framework.Path {
 	pattern := "key/" + framework.GenericNameRegex(keyRefParam)
-	return buildPathKey(b, pattern)
+
+	displayAttrs := &framework.DisplayAttributes{
+		OperationPrefix: operationPrefixPKI,
+		OperationSuffix: "key",
+	}
+
+	return buildPathKey(b, pattern, displayAttrs)
 }
 
-func buildPathKey(b *backend, pattern string) *framework.Path {
+func buildPathKey(b *backend, pattern string, displayAttrs *framework.DisplayAttributes) *framework.Path {
 	return &framework.Path{
-		Pattern: pattern,
+		Pattern:      pattern,
+		DisplayAttrs: displayAttrs,
 
 		Fields: map[string]*framework.FieldSchema{
 			keyRefParam: {
@@ -91,17 +126,81 @@ func buildPathKey(b *backend, pattern string) *framework.Path {
 
 		Operations: map[logical.Operation]framework.OperationHandler{
 			logical.ReadOperation: &framework.PathOperation{
-				Callback:                    b.pathGetKeyHandler,
+				Callback: b.pathGetKeyHandler,
+				Responses: map[int][]framework.Response{
+					http.StatusOK: {{
+						Description: "OK",
+						Fields: map[string]*framework.FieldSchema{
+							"key_id": {
+								Type:        framework.TypeString,
+								Description: `Key Id`,
+								Required:    true,
+							},
+							"key_name": {
+								Type:        framework.TypeString,
+								Description: `Key Name`,
+								Required:    true,
+							},
+							"key_type": {
+								Type:        framework.TypeString,
+								Description: `Key Type`,
+								Required:    true,
+							},
+							"subject_key_id": {
+								Type:        framework.TypeString,
+								Description: `RFC 5280 Subject Key Identifier of the public counterpart`,
+								Required:    false,
+							},
+							"managed_key_id": {
+								Type:        framework.TypeString,
+								Description: `Managed Key Id`,
+								Required:    false,
+							},
+							"managed_key_name": {
+								Type:        framework.TypeString,
+								Description: `Managed Key Name`,
+								Required:    false,
+							},
+						},
+					}},
+				},
 				ForwardPerformanceStandby:   false,
 				ForwardPerformanceSecondary: false,
 			},
 			logical.UpdateOperation: &framework.PathOperation{
-				Callback:                    b.pathUpdateKeyHandler,
+				Callback: b.pathUpdateKeyHandler,
+				Responses: map[int][]framework.Response{
+					http.StatusNoContent: {{
+						Description: "OK",
+						Fields: map[string]*framework.FieldSchema{
+							"key_id": {
+								Type:        framework.TypeString,
+								Description: `Key Id`,
+								Required:    true,
+							},
+							"key_name": {
+								Type:        framework.TypeString,
+								Description: `Key Name`,
+								Required:    true,
+							},
+							"key_type": {
+								Type:        framework.TypeString,
+								Description: `Key Type`,
+								Required:    true,
+							},
+						},
+					}},
+				},
 				ForwardPerformanceStandby:   true,
 				ForwardPerformanceSecondary: true,
 			},
 			logical.DeleteOperation: &framework.PathOperation{
-				Callback:                    b.pathDeleteKeyHandler,
+				Callback: b.pathDeleteKeyHandler,
+				Responses: map[int][]framework.Response{
+					http.StatusNoContent: {{
+						Description: "No Content",
+					}},
+				},
 				ForwardPerformanceStandby:   true,
 				ForwardPerformanceSecondary: true,
 			},
@@ -155,6 +254,7 @@ func (b *backend) pathGetKeyHandler(ctx context.Context, req *logical.Request, d
 		keyTypeParam: string(key.PrivateKeyType),
 	}
 
+	var pkForSkid crypto.PublicKey
 	if key.isManagedPrivateKey() {
 		managedKeyUUID, err := key.getManagedKeyUUID()
 		if err != nil {
@@ -166,12 +266,28 @@ func (b *backend) pathGetKeyHandler(ctx context.Context, req *logical.Request, d
 			return nil, errutil.InternalError{Err: fmt.Sprintf("failed fetching managed key info from key id %s (%s): %v", key.ID, key.Name, err)}
 		}
 
+		pkForSkid, err = getManagedKeyPublicKey(sc.Context, sc.Backend, managedKeyUUID)
+		if err != nil {
+			return nil, err
+		}
+
 		// To remain consistent across the api responses (mainly generate root/intermediate calls), return the actual
 		// type of key, not that it is a managed key.
 		respData[keyTypeParam] = string(keyInfo.keyType)
 		respData[managedKeyIdArg] = string(keyInfo.uuid)
 		respData[managedKeyNameArg] = string(keyInfo.name)
+	} else {
+		pkForSkid, err = getPublicKeyFromBytes([]byte(key.PrivateKey))
+		if err != nil {
+			return nil, err
+		}
 	}
+
+	skid, err := certutil.GetSubjectKeyID(pkForSkid)
+	if err != nil {
+		return nil, err
+	}
+	respData[skidParam] = certutil.GetHexFormatted([]byte(skid), ":")
 
 	return &logical.Response{Data: respData}, nil
 }

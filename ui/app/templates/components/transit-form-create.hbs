@@ -1,4 +1,9 @@
-<form onsubmit={{@createOrUpdateKey}}>
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
+<form data-test-transit-create-form onsubmit={{@createOrUpdateKey}}>
   <div class="box is-sideless is-fullwidth is-marginless">
     <MessageError @model={{@key}} />
     <NamespaceReminder @mode="create" @noun="transit key" />
@@ -7,7 +12,7 @@
       <Input id="key-name" @value={{@key.name}} class="input" data-test-transit-key-name={{true}} />
     </div>
     <div class="field">
-      <TtlPicker2
+      <TtlPicker
         @initialValue="30d"
         @initialEnabled={{false}}
         @label="Auto-rotation period"

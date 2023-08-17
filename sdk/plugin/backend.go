@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package plugin
 
 import (
@@ -59,7 +62,6 @@ func (b *GRPCBackendPlugin) GRPCClient(ctx context.Context, broker *plugin.GRPCB
 	ret := &backendGRPCPluginClient{
 		client:        pb.NewBackendClient(c),
 		versionClient: logical.NewPluginVersionClient(c),
-		clientConn:    c,
 		broker:        broker,
 		cleanupCh:     make(chan struct{}),
 		doneCtx:       ctx,

@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package http
 
 import (
@@ -8,6 +11,7 @@ import (
 	"time"
 
 	"github.com/go-test/deep"
+	"github.com/hashicorp/vault/helper/testhelpers/corehelpers"
 	"github.com/hashicorp/vault/helper/versions"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/vault"
@@ -45,7 +49,7 @@ func TestSysAuth(t *testing.T) {
 				"options":                interface{}(nil),
 				"plugin_version":         "",
 				"running_sha256":         "",
-				"running_plugin_version": "",
+				"running_plugin_version": versions.GetBuiltinVersion(consts.PluginTypeCredential, "token"),
 			},
 		},
 		"token/": map[string]interface{}{
@@ -63,7 +67,7 @@ func TestSysAuth(t *testing.T) {
 			"options":                interface{}(nil),
 			"plugin_version":         "",
 			"running_sha256":         "",
-			"running_plugin_version": "",
+			"running_plugin_version": versions.GetBuiltinVersion(consts.PluginTypeCredential, "token"),
 		},
 	}
 	testResponseStatus(t, resp, 200)
@@ -145,7 +149,7 @@ func TestSysEnableAuth(t *testing.T) {
 				"options":                interface{}(nil),
 				"plugin_version":         "",
 				"running_sha256":         "",
-				"running_plugin_version": "",
+				"running_plugin_version": versions.GetBuiltinVersion(consts.PluginTypeCredential, "token"),
 			},
 		},
 		"foo/": map[string]interface{}{
@@ -181,7 +185,7 @@ func TestSysEnableAuth(t *testing.T) {
 			"options":                interface{}(nil),
 			"plugin_version":         "",
 			"running_sha256":         "",
-			"running_plugin_version": "",
+			"running_plugin_version": versions.GetBuiltinVersion(consts.PluginTypeCredential, "token"),
 		},
 	}
 	testResponseStatus(t, resp, 200)
@@ -248,7 +252,7 @@ func TestSysDisableAuth(t *testing.T) {
 				"options":                 interface{}(nil),
 				"plugin_version":          "",
 				"running_sha256":          "",
-				"running_plugin_version":  "",
+				"running_plugin_version":  versions.GetBuiltinVersion(consts.PluginTypeCredential, "token"),
 			},
 		},
 		"token/": map[string]interface{}{
@@ -266,7 +270,7 @@ func TestSysDisableAuth(t *testing.T) {
 			"options":                 interface{}(nil),
 			"plugin_version":          "",
 			"running_sha256":          "",
-			"running_plugin_version":  "",
+			"running_plugin_version":  versions.GetBuiltinVersion(consts.PluginTypeCredential, "token"),
 		},
 	}
 	testResponseStatus(t, resp, 200)
@@ -485,7 +489,7 @@ func TestSysRemountAuth(t *testing.T) {
 	// Poll until the remount succeeds
 	var remountResp map[string]interface{}
 	testResponseBody(t, resp, &remountResp)
-	vault.RetryUntil(t, 5*time.Second, func() error {
+	corehelpers.RetryUntil(t, 5*time.Second, func() error {
 		resp = testHttpGet(t, token, addr+"/v1/sys/remount/status/"+remountResp["migration_id"].(string))
 		testResponseStatus(t, resp, 200)
 
@@ -542,7 +546,7 @@ func TestSysRemountAuth(t *testing.T) {
 				"options":                interface{}(nil),
 				"plugin_version":         "",
 				"running_sha256":         "",
-				"running_plugin_version": "",
+				"running_plugin_version": versions.GetBuiltinVersion(consts.PluginTypeCredential, "token"),
 			},
 		},
 		"bar/": map[string]interface{}{
@@ -577,7 +581,7 @@ func TestSysRemountAuth(t *testing.T) {
 			"options":                interface{}(nil),
 			"plugin_version":         "",
 			"running_sha256":         "",
-			"running_plugin_version": "",
+			"running_plugin_version": versions.GetBuiltinVersion(consts.PluginTypeCredential, "token"),
 		},
 	}
 	testResponseStatus(t, resp, 200)

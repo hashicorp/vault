@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import { module, test } from 'qunit';
 import { setupRenderingTest } from 'ember-qunit';
 import { render, fillIn, click, findAll } from '@ember/test-helpers';
@@ -33,14 +38,14 @@ module('Integration | Component | oidc/scope-form', function (hooks) {
       <div id="modal-wormhole"></div>
     `);
 
-    assert.dom('[data-test-oidc-scope-title]').hasText('Create scope', 'Form title renders');
+    assert.dom('[data-test-oidc-scope-title]').hasText('Create Scope', 'Form title renders');
     assert.dom(SELECTORS.scopeSaveButton).hasText('Create', 'Save button has correct label');
     await click(SELECTORS.scopeSaveButton);
 
     // check validation errors
     await click(SELECTORS.scopeSaveButton);
 
-    let validationErrors = findAll(SELECTORS.inlineAlert);
+    const validationErrors = findAll(SELECTORS.inlineAlert);
     assert.dom(validationErrors[0]).hasText('Name is required.', 'Validation messages are shown for name');
     assert.dom(validationErrors[1]).hasText('There is an error with this form.', 'Renders form error count');
 
@@ -85,7 +90,7 @@ module('Integration | Component | oidc/scope-form', function (hooks) {
       <div id="modal-wormhole"></div>
     `);
 
-    assert.dom('[data-test-oidc-scope-title]').hasText('Edit scope', 'Form title renders');
+    assert.dom('[data-test-oidc-scope-title]').hasText('Edit Scope', 'Form title renders');
     assert.dom(SELECTORS.scopeSaveButton).hasText('Update', 'Save button has correct label');
     assert.dom('[data-test-input="name"]').isDisabled('Name input is disabled when editing');
     assert.dom('[data-test-input="name"]').hasValue('test', 'Name input is populated with model value');
@@ -141,7 +146,11 @@ module('Integration | Component | oidc/scope-form', function (hooks) {
 
     await fillIn('[data-test-input="description"]', 'changed description attribute');
     await click(SELECTORS.scopeCancelButton);
-    assert.equal(this.model.description, 'this is a test', 'Model attributes are rolled back on cancel');
+    assert.strictEqual(
+      this.model.description,
+      'this is a test',
+      'Model attributes are rolled back on cancel'
+    );
   });
 
   test('it should show example template modal', async function (assert) {
@@ -187,6 +196,6 @@ module('Integration | Component | oidc/scope-form', function (hooks) {
     assert
       .dom(SELECTORS.inlineAlert)
       .hasText('There was an error submitting this form.', 'form error alert renders ');
-    assert.dom('[data-test-alert-banner="alert"]').exists('alert banner renders');
+    assert.dom('[data-test-message-error]').exists('alert banner renders');
   });
 });

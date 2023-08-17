@@ -1,13 +1,18 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package dbplugin
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"sync"
 	"time"
 
 	"github.com/golang/protobuf/ptypes"
 	"github.com/hashicorp/vault/sdk/database/dbplugin/v5/proto"
+	"github.com/hashicorp/vault/sdk/helper/base62"
 	"github.com/hashicorp/vault/sdk/helper/pluginutil"
 	"github.com/hashicorp/vault/sdk/logical"
 	"google.golang.org/grpc/codes"
@@ -43,11 +48,14 @@ func (g *gRPCServer) getOrCreateDatabase(ctx context.Context) (Database, error) 
 	if err != nil {
 		return nil, err
 	}
-
 	if db, ok := g.instances[id]; ok {
 		return db, nil
 	}
+	return g.createDatabase(id)
+}
 
+// must hold the g.Lock() to call this function
+func (g *gRPCServer) createDatabase(id string) (Database, error) {
 	db, err := g.factoryFunc()
 	if err != nil {
 		return nil, err
@@ -144,6 +152,7 @@ func (g *gRPCServer) NewUser(ctx context.Context, req *proto.NewUserRequest) (*p
 		CredentialType:     CredentialType(req.GetCredentialType()),
 		Password:           req.GetPassword(),
 		PublicKey:          req.GetPublicKey(),
+		Subject:            req.GetSubject(),
 		Expiration:         expiration,
 		Statements:         getStatementsFromProto(req.GetStatements()),
 		RollbackStatements: getStatementsFromProto(req.GetRollbackStatements()),
@@ -304,12 +313,36 @@ func (g *gRPCServer) Close(ctx context.Context, _ *proto.Empty) (*proto.Empty, e
 	return &proto.Empty{}, nil
 }
 
+// getOrForceCreateDatabase will create a database even if the multiplexing ID is not present
+func (g *gRPCServer) getOrForceCreateDatabase(ctx context.Context) (Database, error) {
+	impl, err := g.getOrCreateDatabase(ctx)
+	if errors.Is(err, pluginutil.ErrNoMultiplexingIDFound) {
+		// if this is called without a multiplexing context, like from the plugin catalog directly,
+		// then we won't have a database ID, so let's generate a new database instance
+		id, err := base62.Random(10)
+		if err != nil {
+			return nil, err
+		}
+
+		g.Lock()
+		defer g.Unlock()
+		impl, err = g.createDatabase(id)
+		if err != nil {
+			return nil, err
+		}
+	} else if err != nil {
+		return nil, err
+	}
+	return impl, nil
+}
+
 // Version forwards the version request to the underlying Database implementation.
 func (g *gRPCServer) Version(ctx context.Context, _ *logical.Empty) (*logical.VersionReply, error) {
-	impl, err := g.getDatabaseInternal(ctx)
+	impl, err := g.getOrForceCreateDatabase(ctx)
 	if err != nil {
 		return nil, err
 	}
+
 	if versioner, ok := impl.(logical.PluginVersioner); ok {
 		return &logical.VersionReply{PluginVersion: versioner.PluginVersion().Version}, nil
 	}

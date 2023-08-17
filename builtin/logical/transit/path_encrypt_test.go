@@ -1,14 +1,19 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package transit
 
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"reflect"
 	"strings"
 	"testing"
 
 	"github.com/hashicorp/vault/sdk/helper/keysutil"
 
+	uuid "github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/mitchellh/mapstructure"
 )
@@ -225,7 +230,7 @@ func TestTransit_BatchEncryptionCase3(t *testing.T) {
 	}
 }
 
-// Case4: Test batch encryption with an existing key
+// Case4: Test batch encryption with an existing key (and test references)
 func TestTransit_BatchEncryptionCase4(t *testing.T) {
 	var resp *logical.Response
 	var err error
@@ -243,8 +248,8 @@ func TestTransit_BatchEncryptionCase4(t *testing.T) {
 	}
 
 	batchInput := []interface{}{
-		map[string]interface{}{"plaintext": "dGhlIHF1aWNrIGJyb3duIGZveA=="},
-		map[string]interface{}{"plaintext": "dGhlIHF1aWNrIGJyb3duIGZveA=="},
+		map[string]interface{}{"plaintext": "dGhlIHF1aWNrIGJyb3duIGZveA==", "reference": "b"},
+		map[string]interface{}{"plaintext": "dGhlIHF1aWNrIGJyb3duIGZveA==", "reference": "a"},
 	}
 
 	batchData := map[string]interface{}{
@@ -271,7 +276,7 @@ func TestTransit_BatchEncryptionCase4(t *testing.T) {
 
 	plaintext := "dGhlIHF1aWNrIGJyb3duIGZveA=="
 
-	for _, item := range batchResponseItems {
+	for i, item := range batchResponseItems {
 		if item.KeyVersion != 1 {
 			t.Fatalf("unexpected key version; got: %d, expected: %d", item.KeyVersion, 1)
 		}
@@ -286,6 +291,10 @@ func TestTransit_BatchEncryptionCase4(t *testing.T) {
 
 		if resp.Data["plaintext"] != plaintext {
 			t.Fatalf("bad: plaintext. Expected: %q, Actual: %q", plaintext, resp.Data["plaintext"])
+		}
+		inputItem := batchInput[i].(map[string]interface{})
+		if item.Reference != inputItem["reference"] {
+			t.Fatalf("reference mismatch.  Expected %s, Actual: %s", inputItem["reference"], item.Reference)
 		}
 	}
 }
@@ -935,5 +944,50 @@ func TestShouldWarnAboutNonceUsage(t *testing.T) {
 				}
 			})
 		}
+	}
+}
+
+func TestTransit_EncryptWithRSAPublicKey(t *testing.T) {
+	generateKeys(t)
+	b, s := createBackendWithStorage(t)
+	keyType := "rsa-2048"
+	keyID, err := uuid.GenerateUUID()
+	if err != nil {
+		t.Fatalf("failed to generate key ID: %s", err)
+	}
+
+	// Get key
+	privateKey := getKey(t, keyType)
+	publicKeyBytes, err := getPublicKey(privateKey, keyType)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Import key
+	req := &logical.Request{
+		Storage:   s,
+		Operation: logical.UpdateOperation,
+		Path:      fmt.Sprintf("keys/%s/import", keyID),
+		Data: map[string]interface{}{
+			"public_key": publicKeyBytes,
+			"type":       keyType,
+		},
+	}
+	_, err = b.HandleRequest(context.Background(), req)
+	if err != nil {
+		t.Fatalf("failed to import public key: %s", err)
+	}
+
+	req = &logical.Request{
+		Operation: logical.CreateOperation,
+		Path:      fmt.Sprintf("encrypt/%s", keyID),
+		Storage:   s,
+		Data: map[string]interface{}{
+			"plaintext": "bXkgc2VjcmV0IGRhdGE=",
+		},
+	}
+	_, err = b.HandleRequest(context.Background(), req)
+	if err != nil {
+		t.Fatal(err)
 	}
 }

@@ -1,3 +1,8 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
 <form {{action (queue (action "preSave" this.model) (perform this.save this.model)) on="submit"}}>
   <MessageError @model={{this.model}} data-test-edit-form-error />
   <div class="box is-sideless is-fullwidth is-marginless">
@@ -20,7 +25,7 @@
     </div>
     {{#unless this.model.operationNone}}
       <Toolbar>
-        <h3 class="kmip-allowed-operations-header">
+        <h3 class="title is-6 has-left-padding-s">
           Allowed Operations
         </h3>
       </Toolbar>

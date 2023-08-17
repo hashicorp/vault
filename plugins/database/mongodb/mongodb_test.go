@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package mongodb
 
 import (
@@ -5,6 +8,7 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	"fmt"
+	"net/http"
 	"reflect"
 	"strings"
 	"sync"
@@ -13,7 +17,6 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
-
 	"github.com/hashicorp/vault/helper/testhelpers/certhelpers"
 	"github.com/hashicorp/vault/helper/testhelpers/mongodb"
 	dbplugin "github.com/hashicorp/vault/sdk/database/dbplugin/v5"
@@ -27,7 +30,7 @@ import (
 const mongoAdminRole = `{ "db": "admin", "roles": [ { "role": "readWrite" } ] }`
 
 func TestMongoDB_Initialize(t *testing.T) {
-	cleanup, connURL := mongodb.PrepareTestContainer(t, "5.0.10")
+	cleanup, connURL := mongodb.PrepareTestContainer(t, "latest")
 	defer cleanup()
 
 	db := new()
@@ -120,7 +123,7 @@ func TestNewUser_usernameTemplate(t *testing.T) {
 
 	for name, test := range tests {
 		t.Run(name, func(t *testing.T) {
-			cleanup, connURL := mongodb.PrepareTestContainer(t, "5.0.10")
+			cleanup, connURL := mongodb.PrepareTestContainer(t, "latest")
 			defer cleanup()
 
 			db := new()
@@ -146,7 +149,7 @@ func TestNewUser_usernameTemplate(t *testing.T) {
 }
 
 func TestMongoDB_CreateUser(t *testing.T) {
-	cleanup, connURL := mongodb.PrepareTestContainer(t, "5.0.10")
+	cleanup, connURL := mongodb.PrepareTestContainer(t, "latest")
 	defer cleanup()
 
 	db := new()
@@ -178,7 +181,7 @@ func TestMongoDB_CreateUser(t *testing.T) {
 }
 
 func TestMongoDB_CreateUser_writeConcern(t *testing.T) {
-	cleanup, connURL := mongodb.PrepareTestContainer(t, "5.0.10")
+	cleanup, connURL := mongodb.PrepareTestContainer(t, "latest")
 	defer cleanup()
 
 	initReq := dbplugin.InitializeRequest{
@@ -212,7 +215,7 @@ func TestMongoDB_CreateUser_writeConcern(t *testing.T) {
 }
 
 func TestMongoDB_DeleteUser(t *testing.T) {
-	cleanup, connURL := mongodb.PrepareTestContainer(t, "5.0.10")
+	cleanup, connURL := mongodb.PrepareTestContainer(t, "latest")
 	defer cleanup()
 
 	db := new()
@@ -252,7 +255,7 @@ func TestMongoDB_DeleteUser(t *testing.T) {
 }
 
 func TestMongoDB_UpdateUser_Password(t *testing.T) {
-	cleanup, connURL := mongodb.PrepareTestContainer(t, "5.0.10")
+	cleanup, connURL := mongodb.PrepareTestContainer(t, "latest")
 	defer cleanup()
 
 	// The docker test method PrepareTestContainer defaults to a database "test"
@@ -383,6 +386,8 @@ func appendToCertPool(t *testing.T, pool *x509.CertPool, caPem []byte) *x509.Cer
 }
 
 var cmpClientOptionsOpts = cmp.Options{
+	cmpopts.IgnoreTypes(http.Transport{}),
+
 	cmp.AllowUnexported(options.ClientOptions{}),
 
 	cmp.AllowUnexported(tls.Config{}),
