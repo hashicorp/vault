@@ -87,6 +87,10 @@ These parameters apply to the `seal` stanza in the Vault configuration file:
   transmissions to and from the Vault server. This may also be specified using the
   `VAULT_SKIP_VERIFY` environment variable.
 
+- `disabled` `(string: "")`: Set this to `true` if Vault is migrating from an auto seal configuration. Otherwise, set to `false`.
+
+Refer to the [Seal Migration](/docs/concepts/seal#seal-migration) documentation for more information about the seal migration process.
+
 ## Authentication
 
 Authentication-related values must be provided, either as environment

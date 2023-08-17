@@ -382,19 +382,19 @@ func TestLdapAuthBackend_UserPolicies(t *testing.T) {
 }
 
 /*
- * Acceptance test for LDAP Auth Method
- *
- * The tests here rely on a docker LDAP server:
- * [https://github.com/rroemhild/docker-test-openldap]
- *
- * ...as well as existence of a person object, `cn=Hermes Conrad,dc=example,dc=com`,
- *    which is a member of a group, `cn=admin_staff,ou=people,dc=example,dc=com`
- *
- * Querying the server from the command line:
- *   $ docker run --privileged -d -p 389:389 --name ldap --rm rroemhild/test-openldap
- *   $ ldapsearch -x -H ldap://localhost -b dc=planetexpress,dc=com -s sub uid=hermes
- *   $ ldapsearch -x -H ldap://localhost -b dc=planetexpress,dc=com -s sub \
-         'member=cn=Hermes Conrad,ou=people,dc=planetexpress,dc=com'
+* Acceptance test for LDAP Auth Method
+*
+* The tests here rely on a docker LDAP server:
+* [https://github.com/rroemhild/docker-test-openldap]
+*
+* ...as well as existence of a person object, `cn=Hermes Conrad,dc=example,dc=com`,
+*    which is a member of a group, `cn=admin_staff,ou=people,dc=example,dc=com`
+*
+  - Querying the server from the command line:
+  - $ docker run --privileged -d -p 389:389 --name ldap --rm rroemhild/test-openldap
+  - $ ldapsearch -x -H ldap://localhost -b dc=planetexpress,dc=com -s sub uid=hermes
+  - $ ldapsearch -x -H ldap://localhost -b dc=planetexpress,dc=com -s sub \
+    'member=cn=Hermes Conrad,ou=people,dc=planetexpress,dc=com'
 */
 func factory(t *testing.T) logical.Backend {
 	defaultLeaseTTLVal := time.Hour * 24
@@ -618,6 +618,30 @@ func TestBackend_basic_authbind_userfilter(t *testing.T) {
 			testAccStepLoginFailure(t, "hermes conrad", "hermes"),
 		},
 	})
+
+	// If UserAttr returns multiple attributes that can be used as alias then
+	// we return an error...
+	cfg.UserAttr = "employeeType"
+	cfg.UserFilter = "(cn={{.Username}})"
+	cfg.UsernameAsAlias = false
+	logicaltest.Test(t, logicaltest.TestCase{
+		CredentialBackend: b,
+		Steps: []logicaltest.TestStep{
+			testAccStepConfigUrl(t, cfg),
+			testAccStepLoginFailure(t, "hermes conrad", "hermes"),
+		},
+	})
+
+	// ...unless username_as_alias has been set in which case we don't care
+	// about the alias returned by the LDAP server and always use the username
+	cfg.UsernameAsAlias = true
+	logicaltest.Test(t, logicaltest.TestCase{
+		CredentialBackend: b,
+		Steps: []logicaltest.TestStep{
+			testAccStepConfigUrl(t, cfg),
+			testAccStepLoginNoAttachedPolicies(t, "hermes conrad", "hermes"),
+		},
+	})
 }
 
 func TestBackend_basic_authbind_metadata_name(t *testing.T) {
@@ -805,6 +829,7 @@ func testAccStepConfigUrl(t *testing.T, cfg *ldaputil.ConfigEntry) logicaltest.T
 			"case_sensitive_names": true,
 			"token_policies":       "abc,xyz",
 			"request_timeout":      cfg.RequestTimeout,
+			"username_as_alias":    cfg.UsernameAsAlias,
 		},
 	}
 }

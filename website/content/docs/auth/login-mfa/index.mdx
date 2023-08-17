@@ -43,7 +43,7 @@ MFA in Vault includes the following login types:
 TOTP passcodes by default. We recommend that per-client [rate limits](/docs/concepts/resource-quotas)
 are applied to the relevant login and/or mfa paths (e.g. `/sys/mfa/validate`). External MFA
 methods (`Duo`, `Ping` and `Okta`) may already provide configurable rate limiting. Rate limiting of
-Login MFA paths will be enforced by default in a future release.
+Login MFA paths are enforced by default in Vault 1.10.1 and above.
 
 Login MFA can be configured to secure further authenticating to an auth method. To enable login
 MFA, an MFA method needs to be configured. Please see [Login MFA API](/api-docs/secret/identity/mfa) for details
@@ -190,3 +190,12 @@ $ vault write -non-interactive sys/mfa/validate -format=json @payload.json
 ```
 
 To get started with Login MFA, refer to the [Login MFA](https://learn.hashicorp.com/tutorials/vault/multi-factor-authentication) tutorial.
+
+
+### TOTP Passcode Validation Rate Limit
+
+Rate limiting of Login MFA paths are enforced by default in Vault 1.10.1 and above.
+By default, Vault allows for 5 consecutive failed TOTP passcode validation.
+This value can also be configured by adding `max_validation_attempts` to the TOTP configuration.
+If the number of consecutive failed TOTP passcode validation exceeds the configured value, the user
+needs to wait until a fresh TOTP passcode is available.

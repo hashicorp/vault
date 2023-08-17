@@ -14,14 +14,6 @@ jobs:
         # Only main, UI, release and merge branches need to run UI tests.
         # We don't filter here however because test-ui is configured in github as
         # required so it must run, instead we short-circuit within test-ui.
-  - test-ui-browserstack:
-      requires:
-        - install-ui-dependencies
-        - build-go-dev
-      filters:
-        branches:
-          # Forked pull requests have CIRCLE_BRANCH set to pull/XXX
-          ignore: /pull\/[0-9]+/
   - test-go:
       requires:
         - pre-flight-checks

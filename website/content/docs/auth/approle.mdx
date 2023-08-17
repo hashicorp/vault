@@ -245,12 +245,12 @@ details.
 
 ## Code Example
 
-The following code snippet demonstrates AppRole authentication with response
+The following example demonstrates AppRole authentication with response
 wrapping.
 
-<CodeTabs heading="AppRole auth with response wrap">
+<CodeTabs>
 
-<CodeBlockConfig lineNumbers>
+<CodeBlockConfig>
 
 ```go
 package main
@@ -261,7 +261,7 @@ import (
 	"os"
 
 	vault "github.com/hashicorp/vault/api"
-	auth "github.com/hashicorp/vault/api-docs/auth/approle"
+	auth "github.com/hashicorp/vault/api/auth/approle"
 )
 
 // Fetches a key-value secret (kv-v2) after authenticating via AppRole.
@@ -329,7 +329,7 @@ func getSecretWithAppRole() (string, error) {
 
 </CodeBlockConfig>
 
-<CodeBlockConfig lineNumbers>
+<CodeBlockConfig>
 
 ```cs
 using System;

@@ -14,7 +14,7 @@ import (
 type testFunc func(t *testing.T, logger hclog.Logger, storage teststorage.ReusableStorage, basePort int)
 
 func testVariousBackends(t *testing.T, tf testFunc, basePort int, includeRaft bool) {
-	logger := logging.NewVaultLogger(hclog.Debug).Named(t.Name())
+	logger := logging.NewVaultLogger(hclog.Trace).Named(t.Name())
 
 	t.Run("inmem", func(t *testing.T) {
 		t.Parallel()

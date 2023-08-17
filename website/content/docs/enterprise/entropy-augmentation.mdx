@@ -10,6 +10,8 @@ description: |-
 
 -> **Note**: This feature requires [Vault Enterprise Plus](https://www.hashicorp.com/products/vault/).
 
+~> **Warning** This feature is not available with FIPS 140-2 Inside variants of Vault.
+
 Vault Enterprise features a mechanism to sample entropy (or randomness for
 cryptographic operations) from external cryptographic modules via the [seals](/docs/configuration/seal)
 interface. While the system entropy used by Vault is more than capable of
@@ -41,7 +43,12 @@ and include the following:
 - JWT token wrapping keys
 - Root tokens
 - DR operation tokens
-- [Transit](/docs/secrets/transit) backend key generation
+- [Transit](/docs/secrets/transit) backend key generation and `/random` endpoint (`/random` only on Vault 1.11+)
+- [PKI](/docs/secrets/pki) issuer key generation, but not for leaf certificate private keys
+- [`/sys/tools/random`](/api-docs/system/tools#generate-random-bytes) endpoint (Vault 1.11+)
+- [SSH](/docs/secrets/ssh) CA key generation, but not for key pair generation
+- [KMIP](/docs/secrets/kmip) uses EA for its TLS CA, server, and client
+  certificates.
 
 ## Enabling/Disabling
 
