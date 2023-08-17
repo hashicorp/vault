@@ -25,7 +25,7 @@ reference a [kms library stanza](../configuration/kms-library) which points
 to a PKCS#11 access library on the host machine.
 
 Note that a configured, named managed key corresponds to a single key within
-a backend.  More than one managed key can be configured targetting a single
+a backend.  More than one managed key can be configured targeting a single
 backend by creating multiple managed keys with the API.
 
 ## Namespace support
@@ -36,13 +36,13 @@ as the Managed Key for which it intends to use.
 
 ## Backend Support
 
-Managed Keys were developed to support different types of external backends.
-Currently, supported backends are PKCS#11 and AWS KMS.
+Managed Keys were developed to support different types of external backends. At
+this time supported backends are PKCS#11, AWS KMS and Azure Key Vault.
 Support for additional integrations may be added in the future.
 
 ## Secret and Auth Engine Support
 
-The [PKI Secrets Engine](/api/secret/pki#managed-keys) has been integrated
+The [PKI Secrets Engine](/api-docs/secret/pki#managed-keys) has been integrated
 with Managed Keys to offer certificate generation, both root and intermediary
 PKI paths, leveraging private keys from an external trusted KMS.
 
@@ -54,4 +54,4 @@ Managed Keys can be managed over the HTTP API. Please see
 [Managed Keys API](/api-docs/system/managed-keys) for more details.
 
 To configure PKI secrets engine with Managed Keys please see
-[PKI Secret API](/api/secret/pki#managed-keys)
+[PKI Secret API](/api-docs/secret/pki#managed-keys)

@@ -510,7 +510,8 @@ func (a *ActivityLog) getLastEntitySegmentNumber(ctx context.Context, startTime 
 // WalkEntitySegments loads each of the entity segments for a particular start time
 func (a *ActivityLog) WalkEntitySegments(ctx context.Context,
 	startTime time.Time,
-	walkFn func(*activity.EntityActivityLog, time.Time)) error {
+	walkFn func(*activity.EntityActivityLog, time.Time),
+) error {
 	basePath := activityEntityBasePath + fmt.Sprint(startTime.Unix()) + "/"
 	pathList, err := a.view.List(ctx, basePath)
 	if err != nil {
@@ -540,7 +541,8 @@ func (a *ActivityLog) WalkEntitySegments(ctx context.Context,
 // WalkTokenSegments loads each of the token segments (expected 1) for a particular start time
 func (a *ActivityLog) WalkTokenSegments(ctx context.Context,
 	startTime time.Time,
-	walkFn func(*activity.TokenCount)) error {
+	walkFn func(*activity.TokenCount),
+) error {
 	basePath := activityTokenBasePath + fmt.Sprint(startTime.Unix()) + "/"
 	pathList, err := a.view.List(ctx, basePath)
 	if err != nil {

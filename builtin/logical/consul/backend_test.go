@@ -557,7 +557,8 @@ func TestBackend_role_lease(t *testing.T) {
 }
 
 func testAccStepConfig(
-	t *testing.T, config map[string]interface{}) logicaltest.TestStep {
+	t *testing.T, config map[string]interface{},
+) logicaltest.TestStep {
 	return logicaltest.TestStep{
 		Operation: logical.UpdateOperation,
 		Path:      "config/access",
@@ -566,7 +567,8 @@ func testAccStepConfig(
 }
 
 func testAccStepReadToken(
-	t *testing.T, name string, conf map[string]interface{}) logicaltest.TestStep {
+	t *testing.T, name string, conf map[string]interface{},
+) logicaltest.TestStep {
 	return logicaltest.TestStep{
 		Operation: logical.ReadOperation,
 		Path:      "creds/" + name,
@@ -603,7 +605,8 @@ func testAccStepReadToken(
 }
 
 func testAccStepReadManagementToken(
-	t *testing.T, name string, conf map[string]interface{}) logicaltest.TestStep {
+	t *testing.T, name string, conf map[string]interface{},
+) logicaltest.TestStep {
 	return logicaltest.TestStep{
 		Operation: logical.ReadOperation,
 		Path:      "creds/" + name,
