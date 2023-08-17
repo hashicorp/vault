@@ -51,7 +51,7 @@ export default class KvSecretsListRoute extends Route {
     const backend = this.secretMountPath.currentPath;
     const filter = pathToSecret ? pathToSecret + pageFilter : pageFilter;
     return hash({
-      secrets: this.fetchMetadata(backend, pathToSecret, filter, params),
+      secrets: this.fetchMetadata(backend, pathToSecret, params),
       backend,
       pathToSecret,
       filterValue: filter,
