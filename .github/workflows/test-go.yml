@@ -135,7 +135,7 @@ jobs:
            # testonly tagged tests need an additional tag
            go list -tags=testonly ./... | grep "testonly" | gotestsum tool ci-matrix --debug \
              --partitions "${{ inputs.total-runners }}" \
-             --timing-files 'test-results/go-test/*.json' > matrix.json
+             --timing-files 'test-results/go-test/*.json' > testonly_matrix.json
 
            # hardcoding vault package index as there is only one test package tagged with testonly
            # in the external tests. However, it would be also good to run the vault package with
@@ -147,8 +147,8 @@ jobs:
                "estimatedRuntime": "N/A",
                "packages": $PKG,
                "description": "partition 1 - vault test packages"
-           }' matrix.json > new-matrix.json
-           mv new-matrix.json matrix.json
+           }' testonly_matrix.json > matrix.json
+
       - name: Capture list of binary tests
         if: inputs.binary-tests
         id: list-binary-tests
