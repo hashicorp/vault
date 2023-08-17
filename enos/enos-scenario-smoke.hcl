@@ -9,7 +9,7 @@ scenario "smoke" {
     artifact_type   = ["bundle", "package"]
     consul_edition  = ["oss", "ent"]
     consul_version  = ["1.14.2", "1.13.4", "1.12.7"]
-    distro          = ["ubuntu", "rhel"]
+    distro          = ["ubuntu", "rhel", "amazon_linux", "leap", "sles"]
     edition         = ["oss", "ent", "ent.fips1402", "ent.hsm", "ent.hsm.fips1402"]
     seal            = ["awskms", "shamir"]
 
@@ -24,14 +24,20 @@ scenario "smoke" {
       artifact_source = ["local"]
       artifact_type   = ["package"]
     }
+
+    # non-SAP, non-BYOS SLES AMIs in the versions we use are only offered for amd64
+    exclude {
+      distro = ["sles"]
+      arch   = ["arm64"]
+    }
   }
 
   terraform_cli = terraform_cli.default
   terraform     = terraform.default
   providers = [
     provider.aws.default,
-    provider.enos.ubuntu,
-    provider.enos.rhel
+    provider.enos.ec2_user,
+    provider.enos.ubuntu
   ]
 
   locals {
@@ -46,12 +52,15 @@ scenario "smoke" {
     }
     bundle_path = matrix.artifact_source != "artifactory" ? abspath(var.vault_artifact_path) : null
     distro_version = {
-      "rhel"   = var.rhel_distro_version
-      "ubuntu" = var.ubuntu_distro_version
+      "rhel"   = var.distro_version_rhel
+      "ubuntu" = var.distro_version_ubuntu
     }
     enos_provider = {
-      rhel   = provider.enos.rhel
-      ubuntu = provider.enos.ubuntu
+      amazon_linux = provider.ec2_user
+      leap         = provider.ec2_user
+      rhel         = provider.ec2_user
+      sles         = provider.ec2_user
+      ubuntu       = provider.enos.ubuntu
     }
     packages = ["jq"]
     tags = merge({
@@ -61,8 +70,11 @@ scenario "smoke" {
     }, var.tags)
     vault_license_path = abspath(var.vault_license_path != null ? var.vault_license_path : joinpath(path.root, "./support/vault.hclic"))
     vault_install_dir_packages = {
-      rhel   = "/bin"
-      ubuntu = "/usr/bin"
+      amazon_linux = "/bin" // TO DO: verify
+      leap         = "/bin" // TO DO: verify
+      rhel         = "/bin"
+      sles         = "/bin" // TO DO: verify
+      ubuntu       = "/usr/bin"
     }
     vault_install_dir = matrix.artifact_type == "bundle" ? var.vault_install_dir : local.vault_install_dir_packages[matrix.distro]
     vault_tag_key     = "Type" // enos_vault_start expects Type as the tag key

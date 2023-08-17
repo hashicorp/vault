@@ -40,8 +40,8 @@ scenario "autopilot" {
     }
     bundle_path = matrix.artifact_source != "artifactory" ? abspath(var.vault_artifact_path) : null
     distro_version = {
-      "rhel"   = var.rhel_distro_version
-      "ubuntu" = var.ubuntu_distro_version
+      "rhel"   = var.distro_version_rhel
+      "ubuntu" = var.distro_version_ubuntu
     }
     enos_provider = {
       rhel   = provider.enos.rhel

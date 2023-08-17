@@ -50,8 +50,8 @@ scenario "replication" {
       "ent.hsm.fips1402" = ["ui", "enterprise", "cgo", "hsm", "fips", "fips_140_2", "ent.hsm.fips1402"]
     }
     distro_version = {
-      "rhel"   = var.rhel_distro_version
-      "ubuntu" = var.ubuntu_distro_version
+      "rhel"   = var.distro_version_rhel
+      "ubuntu" = var.distro_version_ubuntu
     }
     bundle_path = matrix.artifact_source != "artifactory" ? abspath(var.vault_artifact_path) : null
     enos_provider = {
