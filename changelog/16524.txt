@@ -1,0 +1,3 @@
+```release-note:bug
+auth/gcp: Fixes the ability to reset the configuration's credentials to use application default credentials.
+```

@@ -51,12 +51,12 @@ relationships.
 
 The following table shows a capability comparison between Disaster Recovery and Performance Replication.
 
-| Capability                                                                                                           | Disaster Recovery | Performance Replication                                                                                                                                                                        |
+| Capability                                                                                                           | Disaster Recovery | Performance Replication                                                                                                                                                            |
 | -------------------------------------------------------------------------------------------------------------------- | ----------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Mirrors the configuration of a primary cluster                                                                       | Yes               | Yes                                                                                                                                                                                |
 | Mirrors the configuration of a primary cluster’s backends (i.e., auth methods, secrets engines, audit devices, etc.) | Yes               | Yes                                                                                                                                                                                |
 | Mirrors the tokens and leases for applications and users interacting with the primary cluster                        | Yes               | No. Secondaries keep track of their own tokens and leases. When the secondary is promoted, applications must reauthenticate and obtain new leases from the newly-promoted primary. |
-| Allows the secondary cluster to handle client requests                                                               | No                | Yes                                            |
+| Allows the secondary cluster to handle client requests                                                               | No                | Yes                                                                                                                                                                                |
 
 ## Performance Replication
 
@@ -82,7 +82,7 @@ identifiable data not be physically transferred to locations outside the
 European Union unless the region or country has an equal rigor of data
 protection regulation as the EU.
 
-To comply with GDPR, leverage Vault's **paths filter**  feature to abide by
+To comply with GDPR, leverage Vault's **paths filter** feature to abide by
 data movements and sovereignty regulations while ensuring performance access
 across geographically distributed regions.
 
@@ -110,7 +110,6 @@ $ vault secrets enable -local -path=us_west_data kv-v2
 Filter](https://learn.hashicorp.com/tutorials/vault/paths-filter) tutorial for
 step-by-step instructions.
 
-
 ## Disaster Recovery (DR) Replication
 
 In disaster recovery (or DR) replication, secondaries share the same underlying configuration,
@@ -121,7 +120,6 @@ original primary on the election of the DR secondary.
 
 DR is designed to be a mechanism to protect against catastrophic failure of entire clusters.
 They do not forward service read or write requests until they are elected and become a new primary.
-
 
 For more information on the capabilities of performance and disaster recovery replication, see the Vault Replication [API Documentation](/api-docs/system/replication).
 
@@ -144,12 +142,12 @@ keys will be replaced. Here seal/recovery configuration means the number of
 seal/recovery key fragments and the required threshold of those
 fragments.
 
-| Primary Seal | Secondary Seal (before) | Secondary Seal (after)                 | Secondary Recovery Key (after) | Impact on Secondary of Enabling Replication                                 |
-|--------------|-------------------------|----------------------------------------|--------------------------------|-----------------------------------------------------------------------------|
-| Shamir       | Shamir                  | Primary's shamir config & unseal keys  | N/A                            | Seal config and unseal keys replaced with primary's                         |
-| Shamir       | Auto                    | Unchanged                              | Receives primary seal          | Seal recovery config and keys replaced with primary's seal config and keys  |
-| Auto         | Auto                    | Unchanged                              | Receives primary recovery      | Seal recovery config and recovery keys replaced with primary's              |
-| Auto         | Shamir                  | Receives primary recovery              | N/A                            | Seal config and keys replaced with primary's recovery seal config and keys  |
+| Primary Seal | Secondary Seal (before) | Secondary Seal (after)                | Secondary Recovery Key (after) | Impact on Secondary of Enabling Replication                                |
+| ------------ | ----------------------- | ------------------------------------- | ------------------------------ | -------------------------------------------------------------------------- |
+| Shamir       | Shamir                  | Primary's shamir config & unseal keys | N/A                            | Seal config and unseal keys replaced with primary's                        |
+| Shamir       | Auto                    | Unchanged                             | Receives primary seal          | Seal recovery config and keys replaced with primary's seal config and keys |
+| Auto         | Auto                    | Unchanged                             | Receives primary recovery      | Seal recovery config and recovery keys replaced with primary's             |
+| Auto         | Shamir                  | Receives primary recovery             | N/A                            | Seal config and keys replaced with primary's recovery seal config and keys |
 
 Note: Clusters with Shamir seal config do not have separate recovery keys. Auto includes HSM, Cloud KMS, and Transit auto-unseal.
 
@@ -218,7 +216,14 @@ generation until it is used.
 Once a secondary is activated, its cluster information is stored safely behind
 its encrypted barrier.
 
-## Learn
+## Mutual TLS and Load Balancers
+
+Vault generates its own certificates for cluster members. All replication traffic 
+uses the cluster port using these Vault-generated certificates after initial 
+bootstrapping. Because of this, the cluster traffic can NOT be terminated at the 
+cluster port at a load balancer level.
+
+## Tutorial
 
 Refer to the following tutorials replication setup and best practices:
 

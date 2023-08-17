@@ -9,7 +9,7 @@ export default ApplicationAdapter.extend({
   },
 
   forceRevokePrefix(prefix) {
-    let url = this.buildURL() + '/leases/revoke-prefix/' + encodePath(prefix);
+    let url = this.buildURL() + '/leases/revoke-force/' + encodePath(prefix);
     url = url.replace(/\/$/, '');
     return this.ajax(url, 'PUT');
   },

@@ -72,7 +72,7 @@ All MFA methods supported with the Step-up Enterprise MFA are supported with the
 
 There are also two differences in how methods are defined in the two systems.
 The Step-up Enterprise MFA expects the method creator to specify a name for the method; Login MFA does not, and instead returns an ID when a method is created.
-The Step-up Enterprise MFA uses the combination of mount accessors plus a `username_format` template string, whereas in Login MFA, these are combined into a single field `username_template`, which uses the same identity [templating format](/docs/concepts/policies#templated-policies) as used in policies.
+The Step-up Enterprise MFA uses the combination of mount accessors plus a `username_format` template string, whereas in Login MFA, these are combined into a single field `username_format`, which uses the same identity [templating format](/docs/concepts/policies#templated-policies) as used in policies.
 
 ### Q: What are the ways to configure the various MFA workflows?
 
@@ -118,6 +118,6 @@ If you wish to migrate to Login MFA, follow these steps and guidelines to migrat
 
    -the new endpoints yield an ID instead of allowing you to define a name
 
-   -the new non-TOTP endpoints have a user_name field instead of username_format+mount_accessor fields; see [Templated Policies](/docs/concepts/policies#templated-policies) for the username_template format.
+   -the new non-TOTP endpoints have a username_format field instead of username_format+mount_accessor fields; see [Templated Policies](/docs/concepts/policies#templated-policies) for the username_format format.
 
 1. Instead of writing sentinel EGP rules to require that logins use MFA, use the `identity/mfa/login_enforcement` endpoint to specify the MFA methods.

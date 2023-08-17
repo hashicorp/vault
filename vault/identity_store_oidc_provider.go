@@ -135,16 +135,31 @@ type provider struct {
 	effectiveIssuer string
 }
 
+// allowedClientID returns true if the given client ID is in
+// the provider's set of allowed client IDs or its allowed client
+// IDs contains the wildcard "*" char.
+func (p *provider) allowedClientID(clientID string) bool {
+	for _, allowedID := range p.AllowedClientIDs {
+		switch allowedID {
+		case "*", clientID:
+			return true
+		}
+	}
+	return false
+}
+
 type providerDiscovery struct {
 	Issuer                string   `json:"issuer"`
 	Keys                  string   `json:"jwks_uri"`
 	AuthorizationEndpoint string   `json:"authorization_endpoint"`
 	TokenEndpoint         string   `json:"token_endpoint"`
 	UserinfoEndpoint      string   `json:"userinfo_endpoint"`
+	RequestParameter      bool     `json:"request_parameter_supported"`
 	RequestURIParameter   bool     `json:"request_uri_parameter_supported"`
 	IDTokenAlgs           []string `json:"id_token_signing_alg_values_supported"`
 	ResponseTypes         []string `json:"response_types_supported"`
 	Scopes                []string `json:"scopes_supported"`
+	Claims                []string `json:"claims_supported"`
 	Subjects              []string `json:"subject_types_supported"`
 	GrantTypes            []string `json:"grant_types_supported"`
 	AuthMethods           []string `json:"token_endpoint_auth_methods_supported"`
@@ -426,7 +441,6 @@ func oidcProviderPaths(i *IdentityStore) []*framework.Path {
 				"state": {
 					Type:        framework.TypeString,
 					Description: "The value used to maintain state between the authentication request and client.",
-					Required:    true,
 				},
 				"nonce": {
 					Type:        framework.TypeString,
@@ -488,8 +502,8 @@ func oidcProviderPaths(i *IdentityStore) []*framework.Path {
 					Description: "The code verifier associated with the authorization code.",
 				},
 				// For confidential clients, the client_id and client_secret are provided to
-				// the token endpoint via the 'client_secret_basic' authentication method, which
-				// uses the HTTP Basic authentication scheme. See the OIDC spec for details at:
+				// the token endpoint via the 'client_secret_basic' or 'client_secret_post'
+				// authentication methods. See the OIDC spec for details at:
 				// https://openid.net/specs/openid-connect-core-1_0.html#ClientAuthentication
 
 				// For public clients, the client_id is required and a client_secret does
@@ -499,6 +513,10 @@ func oidcProviderPaths(i *IdentityStore) []*framework.Path {
 				"client_id": {
 					Type:        framework.TypeString,
 					Description: "The ID of the requesting client.",
+				},
+				"client_secret": {
+					Type:        framework.TypeString,
+					Description: "The secret of the requesting client.",
 				},
 			},
 			Operations: map[logical.Operation]framework.OperationHandler{
@@ -1399,6 +1417,8 @@ func (i *IdentityStore) pathOIDCProviderDiscovery(ctx context.Context, req *logi
 		UserinfoEndpoint:      p.effectiveIssuer + "/userinfo",
 		IDTokenAlgs:           supportedAlgs,
 		Scopes:                scopes,
+		Claims:                []string{},
+		RequestParameter:      false,
 		RequestURIParameter:   false,
 		ResponseTypes:         []string{"code"},
 		Subjects:              []string{"public"},
@@ -1407,6 +1427,7 @@ func (i *IdentityStore) pathOIDCProviderDiscovery(ctx context.Context, req *logi
 			// PKCE is required for auth method "none"
 			"none",
 			"client_secret_basic",
+			"client_secret_post",
 		},
 	}
 
@@ -1534,16 +1555,28 @@ func (i *IdentityStore) keyIDsReferencedByTargetClientIDs(ctx context.Context, s
 }
 
 func (i *IdentityStore) pathOIDCAuthorize(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-	// Validate the state
 	state := d.Get("state").(string)
-	if state == "" {
-		return authResponse("", "", ErrAuthInvalidRequest, "state parameter is required")
-	}
 
-	// Get the namespace
-	ns, err := namespace.FromContext(ctx)
+	// Validate the client ID
+	clientID := d.Get("client_id").(string)
+	if clientID == "" {
+		return authResponse("", state, ErrAuthInvalidClientID, "client_id parameter is required")
+	}
+	client, err := i.clientByID(ctx, req.Storage, clientID)
 	if err != nil {
 		return authResponse("", state, ErrAuthServerError, err.Error())
+	}
+	if client == nil {
+		return authResponse("", state, ErrAuthInvalidClientID, "client with client_id not found")
+	}
+
+	// Validate the redirect URI
+	redirectURI := d.Get("redirect_uri").(string)
+	if redirectURI == "" {
+		return authResponse("", state, ErrAuthInvalidRequest, "redirect_uri parameter is required")
+	}
+	if !validRedirect(redirectURI, client.RedirectURIs) {
+		return authResponse("", state, ErrAuthInvalidRedirectURI, "redirect_uri is not allowed for the client")
 	}
 
 	// Get the OIDC provider
@@ -1554,6 +1587,20 @@ func (i *IdentityStore) pathOIDCAuthorize(ctx context.Context, req *logical.Requ
 	}
 	if provider == nil {
 		return authResponse("", state, ErrAuthInvalidRequest, "provider not found")
+	}
+	if !provider.allowedClientID(clientID) {
+		return authResponse("", state, ErrAuthUnauthorizedClient, "client is not authorized to use the provider")
+	}
+
+	// We don't support the request or request_uri parameters. If they're provided,
+	// the appropriate errors must be returned. For details, see the spec at:
+	// https://openid.net/specs/openid-connect-core-1_0.html#RequestObject
+	// https://openid.net/specs/openid-connect-core-1_0.html#RequestUriParameter
+	if _, ok := d.Raw["request"]; ok {
+		return authResponse("", "", ErrAuthRequestNotSupported, "request parameter is not supported")
+	}
+	if _, ok := d.Raw["request_uri"]; ok {
+		return authResponse("", "", ErrAuthRequestURINotSupported, "request_uri parameter is not supported")
 	}
 
 	// Validate that a scope parameter is present and contains the openid scope value
@@ -1578,44 +1625,6 @@ func (i *IdentityStore) pathOIDCAuthorize(ctx context.Context, req *logical.Requ
 	}
 	if responseType != "code" {
 		return authResponse("", state, ErrAuthUnsupportedResponseType, "unsupported response_type value")
-	}
-
-	// Validate the client ID
-	clientID := d.Get("client_id").(string)
-	if clientID == "" {
-		return authResponse("", state, ErrAuthInvalidClientID, "client_id parameter is required")
-	}
-	client, err := i.clientByID(ctx, req.Storage, clientID)
-	if err != nil {
-		return authResponse("", state, ErrAuthServerError, err.Error())
-	}
-	if client == nil {
-		return authResponse("", state, ErrAuthInvalidClientID, "client with client_id not found")
-	}
-	if !strutil.StrListContains(provider.AllowedClientIDs, "*") &&
-		!strutil.StrListContains(provider.AllowedClientIDs, clientID) {
-		return authResponse("", state, ErrAuthUnauthorizedClient, "client is not authorized to use the provider")
-	}
-
-	// Validate the redirect URI
-	redirectURI := d.Get("redirect_uri").(string)
-	if redirectURI == "" {
-		return authResponse("", state, ErrAuthInvalidRequest, "redirect_uri parameter is required")
-	}
-
-	if !validRedirect(redirectURI, client.RedirectURIs) {
-		return authResponse("", state, ErrAuthInvalidRedirectURI, "redirect_uri is not allowed for the client")
-	}
-
-	// We don't support the request or request_uri parameters. If they're provided,
-	// the appropriate errors must be returned. For details, see the spec at:
-	// https://openid.net/specs/openid-connect-core-1_0.html#RequestObject
-	// https://openid.net/specs/openid-connect-core-1_0.html#RequestUriParameter
-	if _, ok := d.Raw["request"]; ok {
-		return authResponse("", state, ErrAuthRequestNotSupported, "request parameter is not supported")
-	}
-	if _, ok := d.Raw["request_uri"]; ok {
-		return authResponse("", state, ErrAuthRequestURINotSupported, "request_uri parameter is not supported")
 	}
 
 	// Validate that there is an identity entity associated with the request
@@ -1721,6 +1730,12 @@ func (i *IdentityStore) pathOIDCAuthorize(ctx context.Context, req *logical.Requ
 		return authResponse("", state, ErrAuthServerError, err.Error())
 	}
 
+	// Get the namespace
+	ns, err := namespace.FromContext(ctx)
+	if err != nil {
+		return authResponse("", state, ErrAuthServerError, err.Error())
+	}
+
 	// Cache the authorization code for a subsequent token exchange
 	if err := i.oidcAuthCodeCache.SetDefault(ns, code, authCodeEntry); err != nil {
 		return authResponse("", state, ErrAuthServerError, err.Error())
@@ -1785,13 +1800,15 @@ func (i *IdentityStore) pathOIDCToken(ctx context.Context, req *logical.Request,
 		return tokenResponse(nil, ErrTokenInvalidRequest, "provider not found")
 	}
 
-	// Get the client ID
+	// client_secret_basic - Check for client credentials in the Authorization header
 	clientID, clientSecret, okBasicAuth := basicAuth(req)
 	if !okBasicAuth {
+		// client_secret_post - Check for client credentials in the request body
 		clientID = d.Get("client_id").(string)
 		if clientID == "" {
 			return tokenResponse(nil, ErrTokenInvalidRequest, "client_id parameter is required")
 		}
+		clientSecret = d.Get("client_secret").(string)
 	}
 	client, err := i.clientByID(ctx, req.Storage, clientID)
 	if err != nil {
@@ -1802,8 +1819,7 @@ func (i *IdentityStore) pathOIDCToken(ctx context.Context, req *logical.Request,
 		return tokenResponse(nil, ErrTokenInvalidClient, "client failed to authenticate")
 	}
 
-	// Authenticate the client using the client_secret_basic authentication method if it's a
-	// confidential client. The authentication method uses the HTTP Basic authentication scheme.
+	// Authenticate the client if it's a confidential client type.
 	// Details at https://openid.net/specs/openid-connect-core-1_0.html#ClientAuthentication
 	if client.Type == confidential &&
 		subtle.ConstantTimeCompare([]byte(client.ClientSecret), []byte(clientSecret)) == 0 {
@@ -1812,8 +1828,7 @@ func (i *IdentityStore) pathOIDCToken(ctx context.Context, req *logical.Request,
 	}
 
 	// Validate that the client is authorized to use the provider
-	if !strutil.StrListContains(provider.AllowedClientIDs, "*") &&
-		!strutil.StrListContains(provider.AllowedClientIDs, clientID) {
+	if !provider.allowedClientID(clientID) {
 		return tokenResponse(nil, ErrTokenInvalidClient, "client is not authorized to use the provider")
 	}
 
@@ -2133,8 +2148,7 @@ func (i *IdentityStore) pathOIDCUserInfo(ctx context.Context, req *logical.Reque
 	}
 
 	// Validate that the client is authorized to use the provider
-	if !strutil.StrListContains(provider.AllowedClientIDs, "*") &&
-		!strutil.StrListContains(provider.AllowedClientIDs, clientID) {
+	if !provider.allowedClientID(clientID) {
 		return userInfoResponse(nil, ErrUserInfoAccessDenied, "client is not authorized to use the provider")
 	}
 

@@ -182,6 +182,15 @@ func (i *IdentityStore) handleMFAMethodListPingID(ctx context.Context, req *logi
 	return i.handleMFAMethodList(ctx, req, d, mfaMethodTypePingID)
 }
 
+func (i *IdentityStore) handleMFAMethodListGlobal(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	keys, configInfo, err := i.mfaBackend.mfaMethodList(ctx, "")
+	if err != nil {
+		return nil, err
+	}
+
+	return logical.ListResponseWithInfo(keys, configInfo), nil
+}
+
 func (i *IdentityStore) handleMFAMethodList(ctx context.Context, req *logical.Request, d *framework.FieldData, methodType string) (*logical.Response, error) {
 	keys, configInfo, err := i.mfaBackend.mfaMethodList(ctx, methodType)
 	if err != nil {
@@ -191,7 +200,27 @@ func (i *IdentityStore) handleMFAMethodList(ctx context.Context, req *logical.Re
 	return logical.ListResponseWithInfo(keys, configInfo), nil
 }
 
-func (i *IdentityStore) handleMFAMethodRead(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+func (i *IdentityStore) handleMFAMethodTOTPRead(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	return i.handleMFAMethodReadCommon(ctx, req, d, mfaMethodTypeTOTP)
+}
+
+func (i *IdentityStore) handleMFAMethodOKTARead(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	return i.handleMFAMethodReadCommon(ctx, req, d, mfaMethodTypeOkta)
+}
+
+func (i *IdentityStore) handleMFAMethodDuoRead(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	return i.handleMFAMethodReadCommon(ctx, req, d, mfaMethodTypeDuo)
+}
+
+func (i *IdentityStore) handleMFAMethodPingIDRead(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	return i.handleMFAMethodReadCommon(ctx, req, d, mfaMethodTypePingID)
+}
+
+func (i *IdentityStore) handleMFAMethodReadGlobal(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	return i.handleMFAMethodReadCommon(ctx, req, d, "")
+}
+
+func (i *IdentityStore) handleMFAMethodReadCommon(ctx context.Context, req *logical.Request, d *framework.FieldData, methodType string) (*logical.Response, error) {
 	methodID := d.Get("method_id").(string)
 	if methodID == "" {
 		return logical.ErrorResponse("missing method ID"), nil
@@ -220,6 +249,11 @@ func (i *IdentityStore) handleMFAMethodRead(ctx context.Context, req *logical.Re
 	if !(ns.ID == mfaNs.ID || mfaNs.HasParent(ns) || ns.HasParent(mfaNs)) {
 		return logical.ErrorResponse("request namespace does not match method namespace"), logical.ErrPermissionDenied
 	}
+
+	if methodType != "" && respData["type"] != methodType {
+		return logical.ErrorResponse("failed to find the method ID under MFA type %s.", methodType), nil
+	}
+
 	return &logical.Response{
 		Data: respData,
 	}, nil
@@ -349,12 +383,28 @@ func (i *IdentityStore) handleMFAMethodPingIDUpdate(ctx context.Context, req *lo
 	return i.handleMFAMethodUpdateCommon(ctx, req, d, mfaMethodTypePingID)
 }
 
-func (i *IdentityStore) handleMFAMethodDelete(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+func (i *IdentityStore) handleMFAMethodTOTPDelete(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	return i.handleMFAMethodDeleteCommon(ctx, req, d, mfaMethodTypeTOTP)
+}
+
+func (i *IdentityStore) handleMFAMethodOKTADelete(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	return i.handleMFAMethodDeleteCommon(ctx, req, d, mfaMethodTypeOkta)
+}
+
+func (i *IdentityStore) handleMFAMethodDUODelete(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	return i.handleMFAMethodDeleteCommon(ctx, req, d, mfaMethodTypeDuo)
+}
+
+func (i *IdentityStore) handleMFAMethodPingIDDelete(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	return i.handleMFAMethodDeleteCommon(ctx, req, d, mfaMethodTypePingID)
+}
+
+func (i *IdentityStore) handleMFAMethodDeleteCommon(ctx context.Context, req *logical.Request, d *framework.FieldData, methodType string) (*logical.Response, error) {
 	methodID := d.Get("method_id").(string)
 	if methodID == "" {
 		return logical.ErrorResponse("missing method ID"), nil
 	}
-	return nil, i.mfaBackend.deleteMFAConfigByMethodID(ctx, methodID, memDBLoginMFAConfigsTable, loginMFAConfigPrefix)
+	return nil, i.mfaBackend.deleteMFAConfigByMethodID(ctx, methodID, methodType, memDBLoginMFAConfigsTable, loginMFAConfigPrefix)
 }
 
 func (i *IdentityStore) handleLoginMFAGenerateUpdate(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
@@ -458,6 +508,10 @@ func (i *IdentityStore) handleLoginMFAAdminDestroyUpdate(ctx context.Context, re
 
 	if mConfig.ID == "" {
 		return nil, fmt.Errorf("configuration for method ID %q does not contain an identifier", methodID)
+	}
+
+	if mConfig.Type != mfaMethodTypeTOTP {
+		return nil, fmt.Errorf("method ID does not match TOTP type")
 	}
 
 	ns, err := namespace.FromContext(ctx)
@@ -1188,10 +1242,20 @@ func (b *LoginMFABackend) mfaMethodList(ctx context.Context, methodType string) 
 	ws := memdb.NewWatchSet()
 	txn := b.db.Txn(false)
 
-	// get all the configs for the given type
-	iter, err := txn.Get(b.methodTable, "type", methodType)
-	if err != nil {
-		return nil, nil, fmt.Errorf("failed to fetch iterator for login mfa method configs in memdb: %w", err)
+	var iter memdb.ResultIterator
+	switch {
+	case methodType == "":
+		// get all the configs
+		iter, err = txn.Get(b.methodTable, "id")
+		if err != nil {
+			return nil, nil, fmt.Errorf("failed to fetch iterator for login mfa method configs in memdb: %w", err)
+		}
+	default:
+		// get all the configs for the given type
+		iter, err = txn.Get(b.methodTable, "type", methodType)
+		if err != nil {
+			return nil, nil, fmt.Errorf("failed to fetch iterator for login mfa method configs in memdb: %w", err)
+		}
 	}
 
 	ws.Add(iter.WatchCh())
@@ -1613,7 +1677,7 @@ ECONFIG_LOOP:
 		if err != nil {
 			return nil, fmt.Errorf("failed to find the MFAEnforcementConfig namespace")
 		}
-		if eConfigNS.ID != ns.ID && !ns.HasParent(eConfigNS) {
+		if eConfig == nil || (eConfigNS.ID != ns.ID && !ns.HasParent(eConfigNS)) {
 			continue
 		}
 
@@ -2455,6 +2519,10 @@ func (b *LoginMFABackend) deleteMFALoginEnforcementConfigByNameAndNamespace(ctx 
 		return err
 	}
 
+	if eConfig == nil {
+		return nil
+	}
+
 	entryIndex := mfaLoginEnforcementPrefix + eConfig.ID
 	barrierView, err := b.Core.barrierViewForNamespace(eConfig.NamespaceID)
 	if err != nil {
@@ -2504,7 +2572,7 @@ func (b *LoginMFABackend) MemDBDeleteMFALoginEnforcementConfigByNameAndNamespace
 	return nil
 }
 
-func (b *LoginMFABackend) deleteMFAConfigByMethodID(ctx context.Context, configID, tableName, prefix string) error {
+func (b *LoginMFABackend) deleteMFAConfigByMethodID(ctx context.Context, configID, methodType, tableName, prefix string) error {
 	var err error
 
 	if configID == "" {
@@ -2544,6 +2612,10 @@ func (b *LoginMFABackend) deleteMFAConfigByMethodID(ctx context.Context, configI
 
 	if mConfig == nil {
 		return nil
+	}
+
+	if mConfig.Type != methodType {
+		return fmt.Errorf("method type does not match the MFA config type")
 	}
 
 	mfaNs, err := b.Core.NamespaceByID(ctx, mConfig.NamespaceID)

@@ -19,11 +19,13 @@ To use the extension, include one of the following ARNs as a layer in your
 Lambda function, depending on your desired architecture.
 
 amd64 (x86_64):
+
 ```text
 arn:aws:lambda:<your-region>:634166935893:layer:vault-lambda-extension:13
 ```
 
 arm64:
+
 ```text
 arn:aws:lambda:<your-region>:634166935893:layer:vault-lambda-extension-arm64:1
 ```
@@ -241,7 +243,7 @@ Currently, the cache key is a hash of the request URL path, headers, body, and
 token.
 
 Caching may also be enabled for all requests by setting the environment variable
-`VAULT_DEFAULT_CACHE_ENABLE` to `true`. Then all requests will be fetched and/or
+`VAULT_DEFAULT_CACHE_ENABLED` to `true`. Then all requests will be fetched and/or
 cached as though the header `X-Vault-Cache-Control: cache` was present. Setting
 the header to `nocache` on a request will opt-out of caching entirely in this
 configuration. Setting the header to `recache` will skip the cache lookup and
@@ -307,6 +309,6 @@ $ aws lambda publish-layer-version \
      --region "${REGION}"
 ```
 
-## Learn
+## Tutorial
 
 For step-by-step instructions, refer to the [Vault AWS Lambda Extension](https://learn.hashicorp.com/tutorials/vault/aws-lambda) tutorial for details on how to create an AWS Lambda function and use the Vault Lambda Extension to authenticate with Vault.
