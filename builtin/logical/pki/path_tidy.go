@@ -19,23 +19,27 @@ import (
 var tidyCancelledError = errors.New("tidy operation cancelled")
 
 type tidyConfig struct {
-	Enabled       bool          `json:"enabled"`
-	Interval      time.Duration `json:"interval_duration"`
-	CertStore     bool          `json:"tidy_cert_store"`
-	RevokedCerts  bool          `json:"tidy_revoked_certs"`
-	IssuerAssocs  bool          `json:"tidy_revoked_cert_issuer_associations"`
-	SafetyBuffer  time.Duration `json:"safety_buffer"`
-	PauseDuration time.Duration `json:"pause_duration"`
+	Enabled        bool          `json:"enabled"`
+	Interval       time.Duration `json:"interval_duration"`
+	CertStore      bool          `json:"tidy_cert_store"`
+	RevokedCerts   bool          `json:"tidy_revoked_certs"`
+	IssuerAssocs   bool          `json:"tidy_revoked_cert_issuer_associations"`
+	SafetyBuffer   time.Duration `json:"safety_buffer"`
+	PauseDuration  time.Duration `json:"pause_duration"`
+	MaintainCount  bool          `json:"maintain_stored_certificate_counts"`
+	PublishMetrics bool          `json:"publish_stored_certificate_count_metrics"`
 }
 
 var defaultTidyConfig = tidyConfig{
-	Enabled:       false,
-	Interval:      12 * time.Hour,
-	CertStore:     false,
-	RevokedCerts:  false,
-	IssuerAssocs:  false,
-	SafetyBuffer:  72 * time.Hour,
-	PauseDuration: 0 * time.Second,
+	Enabled:        false,
+	Interval:       12 * time.Hour,
+	CertStore:      false,
+	RevokedCerts:   false,
+	IssuerAssocs:   false,
+	SafetyBuffer:   72 * time.Hour,
+	PauseDuration:  0 * time.Second,
+	MaintainCount:  false,
+	PublishMetrics: false,
 }
 
 func pathTidy(b *backend) *framework.Path {
@@ -93,6 +97,21 @@ func pathConfigAutoTidy(b *backend) *framework.Path {
 				Type:        framework.TypeDurationSecond,
 				Description: `Interval at which to run an auto-tidy operation. This is the time between tidy invocations (after one finishes to the start of the next). Running a manual tidy will reset this duration.`,
 				Default:     int(defaultTidyConfig.Interval / time.Second), // TypeDurationSecond currently requires the default to be an int.
+			},
+			"maintain_stored_certificate_counts": {
+				Type: framework.TypeBool,
+				Description: `This configures whether stored certificates
+are counted upon initialization of the backend, and whether during
+normal operation, a running count of certificates stored is maintained.`,
+				Default: false,
+			},
+			"publish_stored_certificate_count_metrics": {
+				Type: framework.TypeBool,
+				Description: `This configures whether the stored certificate
+count is published to the metrics consumer.  It does not affect if the
+stored certificate count is maintained, and if maintained, it will be
+available on the tidy-status endpoint.`,
+				Default: false,
 			},
 		}),
 		Operations: map[logical.Operation]framework.OperationHandler{
@@ -484,7 +503,22 @@ func (b *backend) pathTidyStatusRead(_ context.Context, _ *logical.Request, _ *f
 			"missing_issuer_cert_count":             nil,
 			"current_cert_store_count":              nil,
 			"current_revoked_cert_count":            nil,
+			"internal_backend_uuid":                 nil,
 		},
+	}
+
+	resp.Data["internal_backend_uuid"] = b.backendUUID
+
+	if b.certCountEnabled.Load() {
+		resp.Data["current_cert_store_count"] = b.certCount.Load()
+		resp.Data["current_revoked_cert_count"] = b.revokedCertCount.Load()
+		if !b.certsCounted.Load() {
+			resp.AddWarning("Certificates in storage are still being counted, current counts provided may be " +
+				"inaccurate")
+		}
+		if b.certCountError != "" {
+			resp.Data["certificate_counting_error"] = b.certCountError
+		}
 	}
 
 	if b.tidyStatus.state == tidyStatusInactive {
@@ -522,14 +556,6 @@ func (b *backend) pathTidyStatusRead(_ context.Context, _ *logical.Request, _ *f
 		resp.Data["time_finished"] = b.tidyStatus.timeFinished
 	}
 
-	resp.Data["current_cert_store_count"] = atomic.LoadUint32(b.certCount)
-	resp.Data["current_revoked_cert_count"] = atomic.LoadUint32(b.revokedCertCount)
-
-	if !b.certsCounted.Load() {
-		resp.AddWarning("Certificates in storage are still being counted, current counts provided may be " +
-			"inaccurate")
-	}
-
 	return resp, nil
 }
 
@@ -542,13 +568,15 @@ func (b *backend) pathConfigAutoTidyRead(ctx context.Context, req *logical.Reque
 
 	return &logical.Response{
 		Data: map[string]interface{}{
-			"enabled":                               config.Enabled,
-			"interval_duration":                     int(config.Interval / time.Second),
-			"tidy_cert_store":                       config.CertStore,
-			"tidy_revoked_certs":                    config.RevokedCerts,
-			"tidy_revoked_cert_issuer_associations": config.IssuerAssocs,
-			"safety_buffer":                         int(config.SafetyBuffer / time.Second),
-			"pause_duration":                        config.PauseDuration.String(),
+			"enabled":                                  config.Enabled,
+			"interval_duration":                        int(config.Interval / time.Second),
+			"tidy_cert_store":                          config.CertStore,
+			"tidy_revoked_certs":                       config.RevokedCerts,
+			"tidy_revoked_cert_issuer_associations":    config.IssuerAssocs,
+			"safety_buffer":                            int(config.SafetyBuffer / time.Second),
+			"pause_duration":                           config.PauseDuration.String(),
+			"publish_stored_certificate_count_metrics": config.PublishMetrics,
+			"maintain_stored_certificate_counts":       config.MaintainCount,
 		},
 	}, nil
 }
@@ -605,7 +633,23 @@ func (b *backend) pathConfigAutoTidyWrite(ctx context.Context, req *logical.Requ
 		return logical.ErrorResponse("Auto-tidy enabled but no tidy operations were requested. Enable at least one tidy operation to be run (tidy_cert_store / tidy_revoked_certs / tidy_revoked_cert_issuer_associations)."), nil
 	}
 
-	return nil, sc.writeAutoTidyConfig(config)
+	if maintainCountEnabledRaw, ok := d.GetOk("maintain_stored_certificate_counts"); ok {
+		config.MaintainCount = maintainCountEnabledRaw.(bool)
+	}
+
+	if runningStorageMetricsEnabledRaw, ok := d.GetOk("publish_stored_certificate_count_metrics"); ok {
+		config.PublishMetrics = runningStorageMetricsEnabledRaw.(bool)
+	}
+
+	if config.PublishMetrics && !config.MaintainCount {
+		return logical.ErrorResponse("Can not publish a running storage metrics count to metrics without first maintaining that count.  Enable `maintain_stored_certificate_counts` to enable `publish_stored_certificate_count_metrics`."), nil
+	}
+
+	if err := sc.writeAutoTidyConfig(config); err != nil {
+		return nil, err
+	}
+
+	return nil, nil
 }
 
 func (b *backend) tidyStatusStart(config *tidyConfig) {
@@ -665,7 +709,7 @@ func (b *backend) tidyStatusIncCertStoreCount() {
 
 	b.tidyStatus.certStoreDeletedCount++
 
-	b.decrementTotalCertificatesCountReport()
+	b.ifCountEnabledDecrementTotalCertificatesCountReport()
 }
 
 func (b *backend) tidyStatusIncRevokedCertCount() {
@@ -674,7 +718,7 @@ func (b *backend) tidyStatusIncRevokedCertCount() {
 
 	b.tidyStatus.revokedCertDeletedCount++
 
-	b.decrementTotalRevokedCertificatesCountReport()
+	b.ifCountEnabledDecrementTotalRevokedCertificatesCountReport()
 }
 
 func (b *backend) tidyStatusIncMissingIssuerCertCount() {
