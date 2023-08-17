@@ -613,7 +613,6 @@ module('Acceptance | secrets/secret/create', function (hooks) {
         'They do not have list access so when logged in under the restricted policy they see the get-credentials-card'
       );
 
-    // this fails in IE11 on browserstack so going directly to URL
     await visit(`/vault/secrets/${enginePath}/show/${secretPath}`);
 
     await assert

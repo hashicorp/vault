@@ -223,6 +223,13 @@ func (f *FSM) openDBFile(dbPath string) error {
 	return nil
 }
 
+func (f *FSM) Stats() bolt.Stats {
+	f.l.RLock()
+	defer f.l.RUnlock()
+
+	return f.db.Stats()
+}
+
 func (f *FSM) Close() error {
 	f.l.RLock()
 	defer f.l.RUnlock()

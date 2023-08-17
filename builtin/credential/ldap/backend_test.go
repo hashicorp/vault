@@ -382,19 +382,19 @@ func TestLdapAuthBackend_UserPolicies(t *testing.T) {
 }
 
 /*
- * Acceptance test for LDAP Auth Method
- *
- * The tests here rely on a docker LDAP server:
- * [https://github.com/rroemhild/docker-test-openldap]
- *
- * ...as well as existence of a person object, `cn=Hermes Conrad,dc=example,dc=com`,
- *    which is a member of a group, `cn=admin_staff,ou=people,dc=example,dc=com`
- *
- * Querying the server from the command line:
- *   $ docker run --privileged -d -p 389:389 --name ldap --rm rroemhild/test-openldap
- *   $ ldapsearch -x -H ldap://localhost -b dc=planetexpress,dc=com -s sub uid=hermes
- *   $ ldapsearch -x -H ldap://localhost -b dc=planetexpress,dc=com -s sub \
-         'member=cn=Hermes Conrad,ou=people,dc=planetexpress,dc=com'
+* Acceptance test for LDAP Auth Method
+*
+* The tests here rely on a docker LDAP server:
+* [https://github.com/rroemhild/docker-test-openldap]
+*
+* ...as well as existence of a person object, `cn=Hermes Conrad,dc=example,dc=com`,
+*    which is a member of a group, `cn=admin_staff,ou=people,dc=example,dc=com`
+*
+  - Querying the server from the command line:
+  - $ docker run --privileged -d -p 389:389 --name ldap --rm rroemhild/test-openldap
+  - $ ldapsearch -x -H ldap://localhost -b dc=planetexpress,dc=com -s sub uid=hermes
+  - $ ldapsearch -x -H ldap://localhost -b dc=planetexpress,dc=com -s sub \
+    'member=cn=Hermes Conrad,ou=people,dc=planetexpress,dc=com'
 */
 func factory(t *testing.T) logical.Backend {
 	defaultLeaseTTLVal := time.Hour * 24

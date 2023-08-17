@@ -56,7 +56,11 @@ Vagrantfile
 !.release/linux/package/etc/vault.d/vault.hcl
 !command/agent/config/test-fixtures/*.hcl
 !command/server/test-fixtures/**/*.hcl
+!enos/**/*.hcl
 
+# Enos
+enos/.enos
+enos/support
 
 .DS_Store
 .idea
