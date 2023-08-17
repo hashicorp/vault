@@ -6,18 +6,17 @@ description: Learn about the internal architecture of Vault.
 
 # Architecture
 
-Vault is an intricate system with numerous distinct components. This page details the system architecture and hopes to assist Vault users and developers to build a mental model while understanding the theory of operaton.
+Vault is an intricate system with numerous distinct components. This page details the system architecture and hopes to assist Vault users and developers to build a mental model while understanding the theory of operation.
 
 ~> **Note:** This page covers the technical details of Vault. The descriptions and elements contained within are for users that wish to learn about Vault without having to reference the source code. Although not required, we encourage all users and operators to review the provided information before using Vault due to its significance in an environment.
 
-# High-Level Overview
+# High-Level overview
 
 The diagram below illustrates the intricacies and distinct components of Vault.
 
 [![Architecture Overview](/img/layers.png)](/img/layers.png)
 
-
-Vault’s encryption layer, referred to as the _barrier_, is responsible for encrypting and decrypting Vault data. When the Vault server starts, it writes data to its storage backend. Since the storage backend resides outside the barrier, it’s considered untrusted so Vault will encrypt the data before it sends them to the storage backend. This mechanism ensures that if an unauthorized attacker attempts to access the storage backend, the data cannot be compromised since it remains encrypted, until Vault decrypts the data. The storage backend provides a durable data persistent layer where data is secured and available across server restarts.
+Vault’s encryption layer, referred to as the _barrier_, is responsible for encrypting and decrypting Vault data. When the Vault server starts, it writes data to its storage backend. Since the storage backend resides outside the barrier, it’s considered untrusted so Vault will encrypt the data before it sends them to the storage backend. This mechanism ensures that if a malicious attacker attempts to gain access to the storage backend, the data cannot be compromised since it remains encrypted, until Vault decrypts the data. The storage backend provides a durable data persistent layer where data is secured and available across server restarts.
 
 When a Vault server is started, it begins in a _sealed_ state. Before any
 operation can be performed on Vault, it must be _unsealed_. This is done by
@@ -30,7 +29,6 @@ Sharing](https://en.wikipedia.org/wiki/Shamir%27s_Secret_Sharing) to split the
 unseal key into a configured number of shards (key shares or unseal
 keys). A precise number of shards are required to reconstruct the unseal key,
 which is then used to decrypt the Vault's root key.
-
 
 ![Unseal keys](/img/vault-shamir-seal.png)
 
@@ -45,10 +43,10 @@ Vault loads the configured audit devices, auth methods, and secrets
 engines.
 
 ~> **Note:** The default Vault configuration uses a Shamir seal; however, Vault can be [auto
-unseal](/docs/concepts/seal#auto-unseal) by a trusted cloud key management
+unsealed](/docs/concepts/seal#auto-unseal) by a trusted cloud key management
 system (KMS) or hardware security module (HSM) to increase security.
 
-The configuration of the audit devices, auth methods, and secrets engines are security sensitive that they are stored in Vault. Users with permissions can modify them and cannot be specified outside of the barrier. By storing them in Vault, changes are protected by the ACL system and tracked by audit logs.
+The configuration of the audit devices, auth methods, and secrets engines are security sensitive and are stored in Vault. Users with permissions can modify them and cannot be specified outside of the barrier. By storing them in Vault, changes are protected by the ACL system and tracked by audit logs.
 
 Requests may be processed from the HTTP API to the core once Vault is unsealed.
 The core manages the flow of requests through the system,
@@ -80,7 +78,7 @@ policies are used to authorize the client request. The request is then routed to
 secret. The expiration manager automatically revokes the secret if a client allows the lease to expire.
 
 The core logs requests and responses to the audit broker, distributing the requests to all configured audit devices. Outside of the request
-flow, the core performs specific background activities. Lease management is critical, allowig expired client tokens or secrets to be revoked automatically. Additionally, Vault handles specific partial-failure cases by using write-ahead logging with a rollback manager. This is managed transparently within the core and is not user-visible.
+flow, the core performs specific background activities. Lease management is critical, allowing expired client tokens or secrets to be revoked automatically. Additionally, Vault handles specific partial-failure cases by using write-ahead logging with a rollback manager. This is managed transparently within the core and is not user-visible.
 
 # Resources
 

@@ -85,11 +85,10 @@ func (c *SSHHelperConfig) SetTLSParameters(clientConfig *Config, certPool *x509.
 }
 
 // Returns true if any of the following conditions are true:
-//   * CA cert is configured
-//   * CA path is configured
-//   * configured to skip certificate verification
-//   * TLS server name is configured
-//
+//   - CA cert is configured
+//   - CA path is configured
+//   - configured to skip certificate verification
+//   - TLS server name is configured
 func (c *SSHHelperConfig) shouldSetTLSParameters() bool {
 	return c.CACert != "" || c.CAPath != "" || c.TLSServerName != "" || c.TLSSkipVerify
 }

@@ -6,7 +6,7 @@ description: >-
   client certificates.
 ---
 
-# TLS Certificates Auth Method
+# TLS certificates auth method
 
 @include 'x509-sha1-deprecation.mdx'
 
@@ -23,11 +23,11 @@ lower-case.
 Please note that to use this auth method, `tls_disable` must be false in the Vault
 configuration. This is because the certificates are sent through TLS communication itself.
 
-## Revocation Checking
+## Revocation checking
 
 Since Vault 0.4, the method supports revocation checking.
 
-An authorised user can submit PEM-formatted CRLs identified by a given name;
+An authorized user can submit PEM-formatted CRLs identified by a given name;
 these can be updated or deleted at will. (Note: Vault **does not** fetch CRLs;
 the CRLs themselves and any updates must be pushed into Vault when desired,
 such as via a `cron` job that fetches them from the source and pushes them into

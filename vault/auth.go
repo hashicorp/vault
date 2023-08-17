@@ -58,16 +58,6 @@ func (c *Core) enableCredential(ctx context.Context, entry *MountEntry) error {
 		return err
 	}
 
-	// Re-evaluate filtered paths
-	if err := runFilteredPathsEvaluation(ctx, c); err != nil {
-		c.logger.Error("failed to evaluate filtered paths", "error", err)
-
-		// We failed to evaluate filtered paths so we are undoing the mount operation
-		if disableCredentialErr := c.disableCredentialInternal(ctx, entry.Path, MountTableUpdateStorage); disableCredentialErr != nil {
-			c.logger.Error("failed to disable credential", "error", disableCredentialErr)
-		}
-		return err
-	}
 	return nil
 }
 
@@ -83,8 +73,17 @@ func (c *Core) enableCredentialInternal(ctx context.Context, entry *MountEntry, 
 		return fmt.Errorf("backend path must be specified")
 	}
 
+	c.mountsLock.Lock()
 	c.authLock.Lock()
-	defer c.authLock.Unlock()
+	locked := true
+	unlock := func() {
+		if locked {
+			c.authLock.Unlock()
+			c.mountsLock.Unlock()
+			locked = false
+		}
+	}
+	defer unlock()
 
 	ns, err := namespace.FromContext(ctx)
 	if err != nil {
@@ -211,6 +210,18 @@ func (c *Core) enableCredentialInternal(ctx context.Context, entry *MountEntry, 
 		return err
 	}
 
+	// Re-evaluate filtered paths
+	if err := runFilteredPathsEvaluation(ctx, c, false); err != nil {
+		c.logger.Error("failed to evaluate filtered paths", "error", err)
+
+		unlock()
+		// We failed to evaluate filtered paths so we are undoing the mount operation
+		if disableCredentialErr := c.disableCredentialInternal(ctx, entry.Path, MountTableUpdateStorage); disableCredentialErr != nil {
+			c.logger.Error("failed to disable credential", "error", disableCredentialErr)
+		}
+		return err
+	}
+
 	if !nilMount {
 		// restore the original readOnlyErr, so we can write to the view in
 		// Initialize() if necessary
@@ -246,7 +257,7 @@ func (c *Core) disableCredential(ctx context.Context, path string) error {
 	}
 
 	// Re-evaluate filtered paths
-	if err := runFilteredPathsEvaluation(ctx, c); err != nil {
+	if err := runFilteredPathsEvaluation(ctx, c, true); err != nil {
 		// Even we failed to evaluate filtered paths, the unmount operation was still successful
 		c.logger.Error("failed to evaluate filtered paths", "error", err)
 	}
@@ -513,11 +524,6 @@ func (c *Core) remountCredEntryForceInternal(ctx context.Context, path string, u
 		return err
 	}
 
-	// Re-evaluate filtered paths
-	if err := runFilteredPathsEvaluation(ctx, c); err != nil {
-		c.logger.Error("failed to evaluate filtered paths", "error", err)
-		return err
-	}
 	return nil
 }
 
@@ -911,12 +917,12 @@ func (c *Core) newCredentialBackend(ctx context.Context, entry *MountEntry, sysV
 
 	f, ok := c.credentialBackends[t]
 	if !ok {
-		plug, err := c.pluginCatalog.Get(ctx, entry.Type, consts.PluginTypeCredential)
+		plug, err := c.pluginCatalog.Get(ctx, t, consts.PluginTypeCredential)
 		if err != nil {
 			return nil, err
 		}
 		if plug == nil {
-			return nil, fmt.Errorf("%w: %s", ErrPluginNotFound, entry.Type)
+			return nil, fmt.Errorf("%w: %s", ErrPluginNotFound, t)
 		}
 
 		f = plugin.Factory
