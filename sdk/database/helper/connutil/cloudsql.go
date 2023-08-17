@@ -25,7 +25,7 @@ func (c *SQLConnectionProducer) getCloudSQLDriverName() (string, error) {
 	return driverName, nil
 }
 
-func (c *SQLConnectionProducer) registerDrivers(credentials, credentialsJSON interface{}) (func() error, error) {
+func (c *SQLConnectionProducer) registerDrivers(driverName string, credentials, credentialsJSON interface{}) (func() error, error) {
 	typ, err := c.getCloudSQLDriverName()
 	if err != nil {
 		return nil, err
@@ -44,22 +44,16 @@ func (c *SQLConnectionProducer) registerDrivers(credentials, credentialsJSON int
 
 	switch typ {
 	case cloudSQLMSSQL:
-		return registerDriverMSSQL(opts...)
+		return pgxv4.RegisterDriver(driverName, opts...)
 	case cloudSQLPostgres:
-		return registerDriverPostgres(opts...)
+		return mssql.RegisterDriver(driverName, opts...)
 	}
 
 	return nil, fmt.Errorf("unrecognized cloudsql type encountered: %s", typ)
 }
 
-func registerDriverPostgres(opts ...cloudsqlconn.Option) (func() error, error) {
-	return pgxv4.RegisterDriver(cloudSQLPostgres, opts...)
-}
-
-func registerDriverMSSQL(opts ...cloudsqlconn.Option) (func() error, error) {
-	return mssql.RegisterDriver(cloudSQLMSSQL, opts...)
-}
-
+// GetCloudSQLAuthOptions takes a credentials (file) or a credentialsJSON (the actual data) and returns
+// a set of GCP CloudSQL options - always WithIAMAUthN, and then the appropriate file/JSON option.
 func GetCloudSQLAuthOptions(credentials, credentialsJSON interface{}) ([]cloudsqlconn.Option, error) {
 	opts := []cloudsqlconn.Option{cloudsqlconn.WithIAMAuthN()}
 	if credentials != nil {

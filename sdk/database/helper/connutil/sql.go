@@ -50,6 +50,8 @@ type SQLConnectionProducer struct {
 	AuthType                 string      `json:"auth_type" mapstructure:"auth_type" structs:"auth_type"`
 	DisableEscaping          bool        `json:"disable_escaping" mapstructure:"disable_escaping" structs:"disable_escaping"`
 
+	// cloud options here - cloudDriverName is globally unique, but only needs to be retained for the lifetime
+	// of driver registration, not from run to run.
 	cloudDriverName string
 	isCloud         bool
 
@@ -175,15 +177,16 @@ func (c *SQLConnectionProducer) Connection(ctx context.Context) (interface{}, er
 	driverName := c.Type
 
 	if c.AuthType == authTypeIAM {
-		typ, err := c.getCloudSQLDriverName()
+		_, err := c.getCloudSQLDriverName()
 		if err != nil {
 			return nil, err
 		}
-		driverName = typ
+		// ignore the string, yeah i know
+		driverName = c.cloudDriverName
 		credentials := c.RawConfig["credentials"]
 		credentialsJSON := c.RawConfig["credentials_json"]
 
-		cleanup, err := c.registerDrivers(credentials, credentialsJSON)
+		cleanup, err := c.registerDrivers(driverName, credentials, credentialsJSON)
 		if err != nil {
 			return nil, err
 		}
