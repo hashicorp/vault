@@ -1,8 +1,9 @@
-<div class="has-top-margin-l has-bottom-margin-l is-flex-center">
-  <h1 class="title is-v-centered is-marginless" data-test-dashboard-version-header>
-    {{this.versionHeader}}
-  </h1>
-  <span class="has-left-margin-xxs">
-    <Hds::Badge @text={{this.namespaceDisplay}} @icon="org" data-test-badge-namespace />
-  </span>
-</div>
+<PageHeader as |p|>
+  <p.levelLeft>
+    <h1 class="title is-3">
+      {{this.versionHeader}}
+      <Hds::Badge @text={{this.namespaceDisplay}} @icon="org" data-test-badge-namespace />
+    </h1>
+  </p.levelLeft>
+</PageHeader>
+<hr class="has-top-margin-xxs has-bottom-margin-l has-background-gray-200" />
