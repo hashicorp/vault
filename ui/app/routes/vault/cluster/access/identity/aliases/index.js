@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import Route from '@ember/routing/route';
 import ListRoute from 'core/mixins/list-route';
 import { inject as service } from '@ember/service';
@@ -6,8 +11,8 @@ export default Route.extend(ListRoute, {
   store: service(),
 
   model(params) {
-    let itemType = this.modelFor('vault.cluster.access.identity');
-    let modelType = `identity/${itemType}-alias`;
+    const itemType = this.modelFor('vault.cluster.access.identity');
+    const modelType = `identity/${itemType}-alias`;
     return this.store
       .lazyPaginatedQuery(modelType, {
         responsePath: 'data.keys',

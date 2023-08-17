@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import { module, test } from 'qunit';
 import { setupRenderingTest } from 'ember-qunit';
 import { render, click, fillIn } from '@ember/test-helpers';
@@ -28,14 +33,14 @@ module('Integration | Component | mount-accessor-select', function (hooks) {
   test('it filters token', async function (assert) {
     await render(hbs`<MountAccessorSelect @onChange={{this.onChange}} @filterToken={{true}}/>`);
     await click('[data-test-mount-accessor-select]');
-    let options = document.querySelector('[data-test-mount-accessor-select]').options;
+    const options = document.querySelector('[data-test-mount-accessor-select]').options;
     assert.strictEqual(options.length, 1, 'only the auth option, no token');
   });
 
   test('it shows token', async function (assert) {
     await render(hbs`<MountAccessorSelect @onChange={{this.onChange}}/>`);
     await click('[data-test-mount-accessor-select]');
-    let options = document.querySelector('[data-test-mount-accessor-select]').options;
+    const options = document.querySelector('[data-test-mount-accessor-select]').options;
     assert.strictEqual(options.length, 2, 'both auth and token show');
   });
 
@@ -50,14 +55,14 @@ module('Integration | Component | mount-accessor-select', function (hooks) {
 
   test('it selects the first option if no default', async function (assert) {
     await render(hbs`<MountAccessorSelect @onChange={{this.onChange}} />`);
-    let defaultSelection = document.querySelector('[data-test-mount-accessor-select]').options[0].innerHTML;
+    const defaultSelection = document.querySelector('[data-test-mount-accessor-select]').options[0].innerHTML;
     // remove all non letters
     assert.strictEqual(defaultSelection.replace(/\W/g, ''), 'userpassuserpass');
   });
 
   test('it shows Select one if yes default', async function (assert) {
     await render(hbs`<MountAccessorSelect @onChange={{this.onChange}} @noDefault={{true}} />`);
-    let defaultSelection = document.querySelector('[data-test-mount-accessor-select]').options[0].innerHTML;
+    const defaultSelection = document.querySelector('[data-test-mount-accessor-select]').options[0].innerHTML;
     // remove all non letters
     assert.strictEqual(defaultSelection.replace(/\W/g, ''), 'Selectone');
   });

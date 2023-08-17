@@ -1,11 +1,11 @@
-<AlertBanner @type="warning" @message="Vault is sealed" @yieldWithoutColumn={{true}} class="is-marginless">
-  <div class="is-flex is-flex-v-centered">
-    <div>
-      <span class="message-title">Warning</span>
-      Vault is sealed
-    </div>
-  </div>
-</AlertBanner>
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
+<Hds::Alert @type="inline" @color="warning" as |A|>
+  <A.Title class="alert-title">Vault is sealed</A.Title>
+</Hds::Alert>
 {{#if this.showJoinForm}}
   <div class="box is-marginless is-shadowless">
     <h2 class="title is-5" data-test-join-header>
@@ -30,7 +30,7 @@
         <br />
         How do you want to get started?
       </h2>
-      <div class="vlt-radio is-block">
+      <div class="has-bottom-margin-s">
         <RadioButton
           id="join"
           name="setup-pref"
@@ -38,10 +38,9 @@
           @groupValue={{this.preference}}
           @onChange={{fn (mut this.preference)}}
         />
-        <label for="join"></label>
-        Join an existing Raft cluster
+        <label for="join">Join an existing Raft cluster</label>
       </div>
-      <div class="vlt-radio is-block">
+      <div>
         <RadioButton
           id="init"
           name="setup-pref"
@@ -49,8 +48,7 @@
           @groupValue={{this.preference}}
           @onChange={{fn (mut this.preference)}}
         />
-        <label for="init" data-test-join-init></label>
-        Create a new Raft cluster
+        <label for="init" data-test-join-init>Create a new Raft cluster</label>
       </div>
     </div>
     <div class="box is-marginless is-shadowless">

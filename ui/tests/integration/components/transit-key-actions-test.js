@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import { run } from '@ember/runloop';
 import { resolve } from 'rsvp';
 import { assign } from '@ember/polyfills';
@@ -44,12 +49,12 @@ module('Integration | Component | transit key actions', function (hooks) {
   });
 
   test('it requires `key`', async function (assert) {
-    let promise = waitForError();
+    const promise = waitForError();
     render(hbs`
       {{transit-key-actions}}
       <div id="modal-wormhole"></div>
     `);
-    let err = await promise;
+    const err = await promise;
     assert.ok(err.message.includes('`key` is required for'), 'asserts without key');
   });
 
@@ -115,7 +120,7 @@ module('Integration | Component | transit key actions', function (hooks) {
   });
 
   async function doEncrypt(assert, actions = [], keyattrs = {}) {
-    let keyDefaults = { backend: 'transit', id: 'akey', supportedActions: ['encrypt'].concat(actions) };
+    const keyDefaults = { backend: 'transit', id: 'akey', supportedActions: ['encrypt'].concat(actions) };
 
     const key = assign({}, keyDefaults, keyattrs);
     this.set('key', key);
@@ -168,8 +173,8 @@ module('Integration | Component | transit key actions', function (hooks) {
   test('it encrypts', doEncrypt);
 
   test('it shows key version selection', async function (assert) {
-    let keyDefaults = { backend: 'transit', id: 'akey', supportedActions: ['encrypt'].concat([]) };
-    let keyattrs = { keysForEncryption: [3, 2, 1], latestVersion: 3 };
+    const keyDefaults = { backend: 'transit', id: 'akey', supportedActions: ['encrypt'].concat([]) };
+    const keyattrs = { keysForEncryption: [3, 2, 1], latestVersion: 3 };
     const key = assign({}, keyDefaults, keyattrs);
     this.set('key', key);
     this.set('storeService.keyActionReturnVal', { ciphertext: 'secret' });
@@ -199,8 +204,8 @@ module('Integration | Component | transit key actions', function (hooks) {
   });
 
   test('it hides key version selection', async function (assert) {
-    let keyDefaults = { backend: 'transit', id: 'akey', supportedActions: ['encrypt'].concat([]) };
-    let keyattrs = { keysForEncryption: [1] };
+    const keyDefaults = { backend: 'transit', id: 'akey', supportedActions: ['encrypt'].concat([]) };
+    const keyattrs = { keysForEncryption: [1] };
     const key = assign({}, keyDefaults, keyattrs);
     this.set('key', key);
     this.set('storeService.keyActionReturnVal', { ciphertext: 'secret' });
@@ -322,6 +327,8 @@ module('Integration | Component | transit key actions', function (hooks) {
     `);
     await fillIn('#algorithm', 'sha2-384');
     await blur('#algorithm');
+    await fillIn('[data-test-component="code-mirror-modifier"] textarea', 'plaintext');
+    await click('input[data-test-transit-input="encodedBase64"]');
     await click('button[type="submit"]');
     assert.deepEqual(
       this.storeService.callArgs,
@@ -331,6 +338,7 @@ module('Integration | Component | transit key actions', function (hooks) {
         id: 'akey',
         payload: {
           algorithm: 'sha2-384',
+          input: 'plaintext',
         },
       },
       'passes expected args to the adapter'

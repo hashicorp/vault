@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import Service from '@ember/service';
 import { module, test } from 'qunit';
 import { setupRenderingTest } from 'ember-qunit';
@@ -32,14 +37,14 @@ module('Integration | Component | control group', function (hooks) {
   });
 
   const setup = (modelData = {}, authData = {}) => {
-    let modelDefaults = {
+    const modelDefaults = {
       approved: false,
       requestPath: 'foo/bar',
       id: 'accessor',
       requestEntity: { id: 'requestor', name: 'entity8509' },
       reload: sinon.stub(),
     };
-    let authDataDefaults = { entity_id: 'requestor' };
+    const authDataDefaults = { entity_id: 'requestor' };
 
     return {
       model: {
@@ -54,7 +59,7 @@ module('Integration | Component | control group', function (hooks) {
   };
 
   test('requestor rendering', async function (assert) {
-    let { model, authData } = setup();
+    const { model, authData } = setup();
     this.set('model', model);
     this.set('auth.authData', authData);
     await render(hbs`{{control-group model=this.model}}`);
@@ -68,7 +73,7 @@ module('Integration | Component | control group', function (hooks) {
   });
 
   test('requestor rendering: with token', async function (assert) {
-    let { model, authData } = setup();
+    const { model, authData } = setup();
     this.set('model', model);
     this.set('auth.authData', authData);
     this.set('controlGroup.wrapInfo', { token: 'token' });
@@ -78,7 +83,7 @@ module('Integration | Component | control group', function (hooks) {
   });
 
   test('requestor rendering: some approvals', async function (assert) {
-    let { model, authData } = setup({ authorizations: [{ name: 'manager 1' }, { name: 'manager 2' }] });
+    const { model, authData } = setup({ authorizations: [{ name: 'manager 1' }, { name: 'manager 2' }] });
     this.set('model', model);
     this.set('auth.authData', authData);
     await render(hbs`{{control-group model=this.model}}`);
@@ -86,7 +91,7 @@ module('Integration | Component | control group', function (hooks) {
   });
 
   test('requestor rendering: approved with no token', async function (assert) {
-    let { model, authData } = setup({ approved: true });
+    const { model, authData } = setup({ approved: true });
     this.set('model', model);
     this.set('auth.authData', authData);
     await render(hbs`{{control-group model=this.model}}`);
@@ -99,7 +104,7 @@ module('Integration | Component | control group', function (hooks) {
   });
 
   test('requestor rendering: approved with token', async function (assert) {
-    let { model, authData } = setup({ approved: true });
+    const { model, authData } = setup({ approved: true });
     this.set('model', model);
     this.set('auth.authData', authData);
     this.set('controlGroup.wrapInfo', { token: 'token' });
@@ -110,7 +115,7 @@ module('Integration | Component | control group', function (hooks) {
   });
 
   test('authorizer rendering', async function (assert) {
-    let { model, authData } = setup({ canAuthorize: true }, { entity_id: 'manager' });
+    const { model, authData } = setup({ canAuthorize: true }, { entity_id: 'manager' });
 
     this.set('model', model);
     this.set('auth.authData', authData);
@@ -131,7 +136,7 @@ module('Integration | Component | control group', function (hooks) {
   });
 
   test('authorizer rendering:authorized', async function (assert) {
-    let { model, authData } = setup(
+    const { model, authData } = setup(
       { canAuthorize: true, authorizations: [{ id: 'manager', name: 'manager' }] },
       { entity_id: 'manager' }
     );
@@ -146,7 +151,7 @@ module('Integration | Component | control group', function (hooks) {
   });
 
   test('authorizer rendering: authorized and success', async function (assert) {
-    let { model, authData } = setup(
+    const { model, authData } = setup(
       { approved: true, canAuthorize: true, authorizations: [{ id: 'manager', name: 'manager' }] },
       { entity_id: 'manager' }
     );
@@ -166,7 +171,7 @@ module('Integration | Component | control group', function (hooks) {
   });
 
   test('third-party: success', async function (assert) {
-    let { model, authData } = setup(
+    const { model, authData } = setup(
       { approved: true, canAuthorize: true, authorizations: [{ id: 'foo', name: 'foo' }] },
       { entity_id: 'manager' }
     );

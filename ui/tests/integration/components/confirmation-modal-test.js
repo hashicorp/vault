@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import { module, test } from 'qunit';
 import { setupRenderingTest } from 'ember-qunit';
 import sinon from 'sinon';
@@ -8,8 +13,8 @@ module('Integration | Component | confirmation-modal', function (hooks) {
   setupRenderingTest(hooks);
 
   test('it renders with disabled confirmation button until input matches', async function (assert) {
-    let confirmAction = sinon.spy();
-    let closeAction = sinon.spy();
+    const confirmAction = sinon.spy();
+    const closeAction = sinon.spy();
     this.set('onConfirm', confirmAction);
     this.set('onClose', closeAction);
     await render(hbs`

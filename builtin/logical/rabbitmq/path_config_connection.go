@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package rabbitmq
 
 import (
@@ -17,6 +20,13 @@ const (
 func pathConfigConnection(b *backend) *framework.Path {
 	return &framework.Path{
 		Pattern: "config/connection",
+
+		DisplayAttrs: &framework.DisplayAttributes{
+			OperationPrefix: operationPrefixRabbitMQ,
+			OperationVerb:   "configure",
+			OperationSuffix: "connection",
+		},
+
 		Fields: map[string]*framework.FieldSchema{
 			"connection_uri": {
 				Type:        framework.TypeString,

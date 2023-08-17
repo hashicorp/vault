@@ -1,15 +1,19 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package api
 
 import (
 	"bytes"
+	"encoding/json"
 	"fmt"
 	"io"
+	"reflect"
+	"strings"
 	"time"
 
 	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/go-secure-stdlib/parseutil"
-	"github.com/hashicorp/vault/sdk/helper/jsonutil"
-	"github.com/hashicorp/vault/sdk/logical"
 )
 
 // Secret is the structure returned for every secret within Vault.
@@ -146,8 +150,8 @@ TOKEN_DONE:
 
 	// Identity policies
 	{
-		_, ok := s.Data["identity_policies"]
-		if !ok {
+		v, ok := s.Data["identity_policies"]
+		if !ok || v == nil {
 			goto DONE
 		}
 
@@ -280,6 +284,22 @@ type SecretWrapInfo struct {
 	WrappedAccessor string    `json:"wrapped_accessor"`
 }
 
+type MFAMethodID struct {
+	Type         string `json:"type,omitempty"`
+	ID           string `json:"id,omitempty"`
+	UsesPasscode bool   `json:"uses_passcode,omitempty"`
+	Name         string `json:"name,omitempty"`
+}
+
+type MFAConstraintAny struct {
+	Any []*MFAMethodID `json:"any,omitempty"`
+}
+
+type MFARequirement struct {
+	MFARequestID   string                       `json:"mfa_request_id,omitempty"`
+	MFAConstraints map[string]*MFAConstraintAny `json:"mfa_constraints,omitempty"`
+}
+
 // SecretAuth is the structure containing auth information if we have it.
 type SecretAuth struct {
 	ClientToken      string            `json:"client_token"`
@@ -294,7 +314,7 @@ type SecretAuth struct {
 	LeaseDuration int  `json:"lease_duration"`
 	Renewable     bool `json:"renewable"`
 
-	MFARequirement *logical.MFARequirement `json:"mfa_requirement"`
+	MFARequirement *MFARequirement `json:"mfa_requirement"`
 }
 
 // ParseSecret is used to parse a secret value from JSON from an io.Reader.
@@ -302,7 +322,15 @@ func ParseSecret(r io.Reader) (*Secret, error) {
 	// First read the data into a buffer. Not super efficient but we want to
 	// know if we actually have a body or not.
 	var buf bytes.Buffer
-	_, err := buf.ReadFrom(r)
+
+	// io.Reader is treated like a stream and cannot be read
+	// multiple times. Duplicating this stream using TeeReader
+	// to use this data in case there is no top-level data from
+	// api response
+	var teebuf bytes.Buffer
+	tee := io.TeeReader(r, &teebuf)
+
+	_, err := buf.ReadFrom(tee)
 	if err != nil {
 		return nil, err
 	}
@@ -312,8 +340,45 @@ func ParseSecret(r io.Reader) (*Secret, error) {
 
 	// First decode the JSON into a map[string]interface{}
 	var secret Secret
-	if err := jsonutil.DecodeJSONFromReader(&buf, &secret); err != nil {
+	dec := json.NewDecoder(&buf)
+	dec.UseNumber()
+	if err := dec.Decode(&secret); err != nil {
 		return nil, err
+	}
+
+	// If the secret is null, add raw data to secret data if present
+	if reflect.DeepEqual(secret, Secret{}) {
+		data := make(map[string]interface{})
+		dec := json.NewDecoder(&teebuf)
+		dec.UseNumber()
+		if err := dec.Decode(&data); err != nil {
+			return nil, err
+		}
+		errRaw, errPresent := data["errors"]
+
+		// if only errors are present in the resp.Body return nil
+		// to return value not found as it does not have any raw data
+		if len(data) == 1 && errPresent {
+			return nil, nil
+		}
+
+		// if errors are present along with raw data return the error
+		if errPresent {
+			var errStrArray []string
+			errBytes, err := json.Marshal(errRaw)
+			if err != nil {
+				return nil, err
+			}
+			if err := json.Unmarshal(errBytes, &errStrArray); err != nil {
+				return nil, err
+			}
+			return nil, fmt.Errorf(strings.Join(errStrArray, " "))
+		}
+
+		// if any raw data is present in resp.Body, add it to secret
+		if len(data) > 0 {
+			secret.Data = data
+		}
 	}
 
 	return &secret, nil

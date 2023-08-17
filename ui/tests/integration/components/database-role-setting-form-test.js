@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import EmberObject from '@ember/object';
 import { module, test } from 'qunit';
 import { setupRenderingTest } from 'ember-qunit';
@@ -112,9 +117,9 @@ module('Integration | Component | database-role-setting-form', function (hooks) 
       />
     `);
     assert.dom('[data-test-component="empty-state"]').doesNotExist('Does not show empty states');
-    for (let testCase of testCases) {
-      let staticFields = getFields(testCase.staticRoleFields);
-      let dynamicFields = getFields(testCase.dynamicRoleFields);
+    for (const testCase of testCases) {
+      const staticFields = getFields(testCase.staticRoleFields);
+      const dynamicFields = getFields(testCase.dynamicRoleFields);
       this.set('dbType', testCase.pluginType);
       this.set('roleType', 'static');
       staticFields.show.forEach((attr) => {

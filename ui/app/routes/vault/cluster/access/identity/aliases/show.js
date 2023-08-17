@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import AdapterError from '@ember-data/adapter/error';
 import { hash } from 'rsvp';
 import { set } from '@ember/object';
@@ -9,10 +14,10 @@ export default Route.extend({
   store: service(),
 
   model(params) {
-    let { section } = params;
-    let itemType = this.modelFor('vault.cluster.access.identity') + '-alias';
-    let tabs = TABS[itemType];
-    let modelType = `identity/${itemType}`;
+    const { section } = params;
+    const itemType = this.modelFor('vault.cluster.access.identity') + '-alias';
+    const tabs = TABS[itemType];
+    const modelType = `identity/${itemType}`;
     if (!tabs.includes(section)) {
       const error = new AdapterError();
       set(error, 'httpStatus', 404);
@@ -26,7 +31,7 @@ export default Route.extend({
   },
 
   setupController(controller, resolvedModel) {
-    let { model, section } = resolvedModel;
+    const { model, section } = resolvedModel;
     controller.setProperties({
       model,
       section,

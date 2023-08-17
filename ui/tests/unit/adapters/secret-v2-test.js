@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import { module, test } from 'qunit';
 import { setupTest } from 'ember-qunit';
 import apiStub from 'vault/tests/helpers/noop-all-api-requests';
@@ -56,9 +61,9 @@ module('Unit | Adapter | secret-v2', function (hooks) {
     ],
   ].forEach(([adapterMethod, store, type, queryOrSnapshot, expectedHttpVerb, expectedURL]) => {
     test(`secret-v2: ${adapterMethod}`, function (assert) {
-      let adapter = this.owner.lookup('adapter:secret-v2');
+      const adapter = this.owner.lookup('adapter:secret-v2');
       adapter[adapterMethod](store, type, queryOrSnapshot);
-      let { url, method } = this.server.handledRequests[0];
+      const { url, method } = this.server.handledRequests[0];
       assert.strictEqual(url, expectedURL, `${adapterMethod} calls the correct url: ${expectedURL}`);
       assert.strictEqual(
         method,

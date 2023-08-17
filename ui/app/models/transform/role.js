@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import Model, { attr } from '@ember-data/model';
 import { computed } from '@ember/object';
 import { apiPath } from 'vault/macros/lazy-capabilities';
@@ -9,14 +14,13 @@ const ModelExport = Model.extend({
   idPrefix: 'role/',
   // the id prefixed with `role/` so we can use it as the *secret param for the secret show route
   idForNav: computed('id', 'idPrefix', function () {
-    let modelId = this.id || '';
+    const modelId = this.id || '';
     return `${this.idPrefix}${modelId}`;
   }),
 
   name: attr('string', {
     // TODO: make this required for making a transformation
     label: 'Name',
-    fieldValue: 'id',
     readOnly: true,
     subText: 'The name for your role. This cannot be edited later.',
   }),
@@ -31,7 +35,7 @@ const ModelExport = Model.extend({
   }),
 
   attrs: computed('transformations', function () {
-    let keys = ['name', 'transformations'];
+    const keys = ['name', 'transformations'];
     return expandAttributeMeta(this, keys);
   }),
 

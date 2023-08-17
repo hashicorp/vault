@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import { assign } from '@ember/polyfills';
 import ApplicationAdapter from './application';
 import { task } from 'ember-concurrency';
@@ -11,14 +16,14 @@ export default ApplicationAdapter.extend({
 
   getDynamicApiPath: task(function* (id) {
     // TODO: remove yield at some point.
-    let result = yield this.store.peekRecord('auth-method', id);
+    const result = yield this.store.peekRecord('auth-method', id);
     this.dynamicApiPath = result.apiPath;
     return;
   }),
 
   fetchByQuery: task(function* (store, query, isList) {
     const { id } = query;
-    let data = {};
+    const data = {};
     if (isList) {
       data.list = true;
       yield this.getDynamicApiPath.perform(id);

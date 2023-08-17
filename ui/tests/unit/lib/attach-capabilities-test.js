@@ -1,12 +1,17 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import Model from '@ember-data/model';
 import { module, test } from 'qunit';
 import { setupTest } from 'ember-qunit';
 import attachCapabilities from 'vault/lib/attach-capabilities';
 import apiPath from 'vault/utils/api-path';
 
-let MODEL_TYPE = 'test-form-model';
+const MODEL_TYPE = 'test-form-model';
 
-let makeModelClass = () => {
+const makeModelClass = () => {
   return Model.extend();
 };
 
@@ -47,7 +52,7 @@ module('Unit | lib | attach capabilities', function (hooks) {
       updatePath: apiPath`update/${'id'}`,
       deletePath: apiPath`delete/${'id'}`,
     });
-    let jsonAPIDocSingle = {
+    const jsonAPIDocSingle = {
       data: {
         id: 'test',
         type: MODEL_TYPE,
@@ -57,7 +62,7 @@ module('Unit | lib | attach capabilities', function (hooks) {
       included: [],
     };
 
-    let expected = {
+    const expected = {
       data: {
         id: 'test',
         type: MODEL_TYPE,
@@ -96,7 +101,7 @@ module('Unit | lib | attach capabilities', function (hooks) {
       updatePath: apiPath`update/${'id'}`,
       deletePath: apiPath`delete/${'id'}`,
     });
-    let jsonAPIDocSingle = {
+    const jsonAPIDocSingle = {
       data: [
         {
           id: 'test',
@@ -114,7 +119,7 @@ module('Unit | lib | attach capabilities', function (hooks) {
       included: [],
     };
 
-    let expected = {
+    const expected = {
       data: [
         {
           id: 'test',

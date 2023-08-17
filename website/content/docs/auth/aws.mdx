@@ -4,7 +4,7 @@ page_title: AWS - Auth Methods
 description: The aws auth method allows automated authentication of AWS entities.
 ---
 
-# AWS Auth Method
+# AWS auth method
 
 @include 'x509-sha1-deprecation.mdx'
 
@@ -16,7 +16,7 @@ method does not require manual first-deploying, or provisioning
 security-sensitive credentials (tokens, username/password, client certificates,
 etc), by operators under many circumstances.
 
-## Authentication Workflow
+## Authentication workflow
 
 There are two authentication types present in the aws auth method: `iam` and
 `ec2`.
@@ -112,7 +112,7 @@ is also represented in the graphic below) is as follows:
 There are various modifications to this workflow that provide more or less
 security, as detailed later in this documentation.
 
-## Authorization Workflow
+## Authorization workflow
 
 The basic mechanism of operation is per-role. Roles are registered in the
 method and associated with a specific authentication type that cannot be
@@ -162,7 +162,7 @@ the method to verify the authenticity of a found role tag and ensure that it has
 not been tampered with. There is also a mechanism to deny list role tags if one
 has been found to be distributed outside of its intended set of machines.
 
-## IAM Authentication Inferences
+## IAM authentication inferences
 
 With the iam auth method, normally Vault will see the IAM principal that
 authenticated, either the IAM user or role. However, when you have an EC2
@@ -211,12 +211,12 @@ that Vault cannot offer an iron-clad guarantee about the inference and it is up
 to operators to determine, based on their own AWS controls and use cases,
 whether or not it's appropriate to configure inferencing.
 
-## Mixing Authentication Types
+## Mixing authentication types
 
 Vault allows you to configure using either the ec2 auth method or the iam auth
-method, but not both auth methods. Further, Vault will prevent you from
-enforcing restrictions that it cannot enforce given the chosen auth type for a
-role. Some examples of how this works in practice:
+method, but not both auth methods. Further, **assumed roles are not supported**
+and Vault prevents you from enforcing restrictions that it cannot enforce given
+the chosen auth type for a role. Some examples of how this works in practice:
 
 1. You configure a role with the ec2 auth type, with a bound AMI ID. A
    client would not be able to login using the iam auth type.
@@ -227,7 +227,7 @@ role. Some examples of how this works in practice:
    must login using the iam method; the RoleSessionName must be a valid instance
    ID viewable by Vault, and the instance must have come from the bound AMI ID.
 
-## Comparison of the IAM and EC2 Methods
+## Comparison of the IAM and EC2 methods
 
 The iam and ec2 auth methods serve similar and somewhat overlapping
 functionality, in that both authenticate some type of AWS entity to Vault.
@@ -282,7 +282,7 @@ Here are some comparisons that illustrate why `iam` method is preferred over
     to, or make use of inferencing. If you need to make use of role tags, then
     you will need to use the ec2 auth method.
 
-## Recommended Vault IAM Policy
+## Recommended Vault IAM policy
 
 This specifies the recommended IAM policy needed by the AWS auth method. Note
 that if you are using the same credentials for the AWS auth and secret methods
@@ -348,10 +348,10 @@ are needed.
   `sts:AssumeRole` statement).
 - The `ManageOwnAccessKeys` stanza is necessary when you have configured Vault
   with static credentials, and wish to rotate these credentials with the
-  [Rotate Root Credentials](https://www.vaultproject.io/api-docs/auth/aws#rotate-root-credentials)
+  [Rotate Root Credentials](/vault/api-docs/auth/aws#rotate-root-credentials)
   API call.
 
-## Client Nonce
+## Client nonce
 
 Note: this only applies to the ec2 auth method.
 
@@ -412,9 +412,9 @@ along with the authentication response, will be audit logged in plaintext. If
 this is undesired, clients can supply a custom nonce to the login endpoint
 which will not be returned and hence will not be audit logged.
 
-## Advanced Options and Caveats
+## Advanced options and caveats
 
-### Dynamic Management of Policies Via Role Tags
+### Dynamic management of policies via role tags
 
 Note: This only applies to the ec2 auth method or the iam auth method when
 inferencing is used.
@@ -442,12 +442,12 @@ not specify the policy component, the client will inherit the allowed policies s
 on the role. If the role tag creation specifies the policy component but it contains
 no policies, the token will contain only the `default` policy; by default, this policy
 allows only manipulation (revocation, renewal, lookup) of the existing token, plus
-access to its [cubbyhole](/docs/secrets/cubbyhole).
+access to its [cubbyhole](/vault/docs/secrets/cubbyhole).
 This can be useful to allow instances access to a secure "scratch space" for
 storing data (via the token's cubbyhole) but without granting any access to
 other resources provided by or resident in Vault.
 
-### Handling Lost Client Nonces
+### Handling lost client nonces
 
 Note: This only applies to the ec2 auth method.
 
@@ -486,7 +486,7 @@ option is set to `false` on the role, a value of `true` in the role tag takes
 effect; however, if the option is set to `true` on the role, a value set in the
 role tag has no effect.
 
-### Disabling Reauthentication
+### Disabling reauthentication
 
 Note: this only applies to the ec2 auth method.
 
@@ -509,7 +509,7 @@ option is set to `false` on the role, a value of `true` in the role tag takes
 effect; however, if the option is set to `true` on the role, a value set in the
 role tag has no effect.
 
-### Deny listing Role Tags
+### Deny listing role tags
 
 Note: this only applies to the ec2 auth method or the iam auth method
 when inferencing is used.
@@ -524,7 +524,7 @@ further effect, the role tag can be placed on a `deny list` via the endpoint
 tokens that were already issued; this only blocks any further login requests from
 those instances that have the deny listed tag attached to them.
 
-### Expiration Times and Tidying of `denylist` and `accesslist` Entries
+### Expiration times and tidying of `denylist` and `accesslist` entries
 
 The expired entries in both identity `accesslist` and role tag `denylist` are
 deleted automatically. The entries in both of these lists contain an expiration
@@ -547,7 +547,7 @@ were expired before 72 hours from when the tidy operation is being performed.
 This can be configured via `config/tidy/roletag-denylist` and `config/tidy/identity-accesslist`
 endpoints.
 
-### Varying Public Certificates
+### Varying public certificates
 
 Note: this only applies to the ec2 auth method.
 
@@ -559,7 +559,7 @@ verified by the default public certificate included in Vault can register a
 different public certificate which can be found [here](http://docs.aws.amazon.com/AWSEC2/latest/UserGuide/instance-identity-documents.html),
 via the `auth/aws/config/certificate/<cert_name>` endpoint.
 
-### Dangling Tokens
+### Dangling tokens
 
 An EC2 instance, after authenticating itself with the method, gets a Vault token.
 After that, if the instance terminates or goes down for any reason, the method
@@ -567,7 +567,7 @@ will not be aware of such events. The token issued will still be valid, until
 it expires. The token will likely be expired sooner than its lifetime when the
 instance fails to renew the token on time.
 
-### Cross Account Access
+### Cross account access
 
 To allow Vault to authenticate IAM principals and EC2 instances in other
 accounts, Vault supports using AWS STS (Security Token Service) to assume AWS
@@ -585,7 +585,7 @@ Policy](#recommended-vault-iam-policy) except it doesn't need any further
 Furthermore, in the master account, Vault must be granted the action `sts:AssumeRole`
 for the IAM Role to be assumed.
 
-### AWS Instance Metadata Timeout
+### AWS instance metadata timeout
 
 @include 'aws-imds-timeout.mdx'
 
@@ -622,7 +622,7 @@ $ vault write auth/aws/role/dev-role-iam auth_type=iam \
               bound_iam_principal_arn=arn:aws:iam::123456789012:role/MyRole policies=prod,dev max_ttl=500h
 ```
 
-#### Configure a required X-Vault-AWS-IAM-Server-ID Header (recommended)
+#### Configure a required X-Vault-AWS-IAM-Server-ID header (recommended)
 
 ```shell-session
 $ vault write auth/aws/config/client iam_server_id_header_value=vault.example.com
@@ -758,10 +758,10 @@ The response will be in JSON. For example:
 ## API
 
 The AWS auth method has a full HTTP API. Please see the
-[AWS Auth API](/api-docs/auth/aws) for more
+[AWS Auth API](/vault/api-docs/auth/aws) for more
 details.
 
-## Code Example
+## Code example
 
 The following example demonstrates the AWS (IAM) auth method to authenticate with Vault.
 

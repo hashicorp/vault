@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import { helper as buildHelper } from '@ember/component/helper';
 
 const REPLICATION_MODE_DESCRIPTIONS = {

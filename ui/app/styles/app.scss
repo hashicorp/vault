@@ -1,5 +1,12 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
+@import './reset';
 @import 'ember-basic-dropdown';
 @import 'ember-power-select';
+@import '@hashicorp/design-system-components';
 @import './core';
 
 @mixin font-face($name) {
