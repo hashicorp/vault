@@ -193,7 +193,10 @@ func DevTLSConfig(storageType, certDir string) (*Config, error) {
 	if err := os.WriteFile(fmt.Sprintf("%s/%s", certDir, VaultDevKeyFilename), []byte(key), 0o400); err != nil {
 		return nil, err
 	}
+	return parseDevTLSConfig(storageType, certDir)
+}
 
+func parseDevTLSConfig(storageType, certDir string) (*Config, error) {
 	hclStr := `
 disable_mlock = true
 
@@ -216,8 +219,8 @@ storage "%s" {
 
 ui = true
 `
-
-	hclStr = fmt.Sprintf(hclStr, certDir, certDir, storageType)
+	certDirEscaped := strings.Replace(certDir, "\\", "\\\\", -1)
+	hclStr = fmt.Sprintf(hclStr, certDirEscaped, certDirEscaped, storageType)
 	parsed, err := ParseConfig(hclStr, "")
 	if err != nil {
 		return nil, err
@@ -437,6 +440,11 @@ func (c *Config) Merge(c2 *Config) *Config {
 		if result.DisableClusteringRaw != nil {
 			haStorage.DisableClustering = result.DisableClustering
 		}
+	}
+
+	result.AdministrativeNamespacePath = c.AdministrativeNamespacePath
+	if c2.AdministrativeNamespacePath != "" {
+		result.AdministrativeNamespacePath = c2.AdministrativeNamespacePath
 	}
 
 	result.entConfig = c.entConfig.Merge(c2.entConfig)
@@ -1130,23 +1138,39 @@ func (c *Config) Sanitized() map[string]interface{} {
 
 	// Sanitize storage stanza
 	if c.Storage != nil {
+		storageType := c.Storage.Type
 		sanitizedStorage := map[string]interface{}{
-			"type":               c.Storage.Type,
+			"type":               storageType,
 			"redirect_addr":      c.Storage.RedirectAddr,
 			"cluster_addr":       c.Storage.ClusterAddr,
 			"disable_clustering": c.Storage.DisableClustering,
 		}
+
+		if storageType == "raft" {
+			sanitizedStorage["raft"] = map[string]interface{}{
+				"max_entry_size": c.Storage.Config["max_entry_size"],
+			}
+		}
+
 		result["storage"] = sanitizedStorage
 	}
 
 	// Sanitize HA storage stanza
 	if c.HAStorage != nil {
+		haStorageType := c.HAStorage.Type
 		sanitizedHAStorage := map[string]interface{}{
-			"type":               c.HAStorage.Type,
+			"type":               haStorageType,
 			"redirect_addr":      c.HAStorage.RedirectAddr,
 			"cluster_addr":       c.HAStorage.ClusterAddr,
 			"disable_clustering": c.HAStorage.DisableClustering,
 		}
+
+		if haStorageType == "raft" {
+			sanitizedHAStorage["raft"] = map[string]interface{}{
+				"max_entry_size": c.HAStorage.Config["max_entry_size"],
+			}
+		}
+
 		result["ha_storage"] = sanitizedHAStorage
 	}
 

@@ -1,6 +1,6 @@
 import { module, test } from 'qunit';
 import { setupRenderingTest } from 'ember-qunit';
-import { render } from '@ember/test-helpers';
+import { find, render, settled } from '@ember/test-helpers';
 import { format } from 'date-fns';
 import hbs from 'htmlbars-inline-precompile';
 
@@ -50,10 +50,17 @@ module('Integration | Helper | date-format', function (hooks) {
 
   test('displays time zone if withTimeZone=true', async function (assert) {
     const timestampDate = '2022-12-06T11:29:15-08:00';
-    const zone = new Date().toLocaleTimeString(undefined, { timeZoneName: 'short' }).split(' ')[2];
+    this.set('withTimezone', false);
     this.set('timestampDate', timestampDate);
 
-    await render(hbs`{{date-format this.timestampDate 'MMM d yyyy, h:mm:ss aaa' withTimeZone=true}}`);
-    assert.dom(this.element).hasTextContaining(`${zone}`);
+    await render(
+      hbs`<span data-test-formatted>{{date-format this.timestampDate 'MMM d yyyy, h:mm:ss aaa' withTimeZone=this.withTimezone}}</span>`
+    );
+    const result = find('[data-test-formatted]');
+    assert.strictEqual(result.innerText.length, 22);
+    // Compare to with timezone, which should add 4 characters
+    this.set('withTimezone', true);
+    await settled();
+    assert.strictEqual(result.innerText.length, 26);
   });
 });

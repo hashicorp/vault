@@ -175,6 +175,29 @@ func (b *SystemBackend) configPaths() []*framework.Path {
 			HelpDescription: strings.TrimSpace(sysHelp["generate-root"][1]),
 		},
 		{
+			Pattern: "decode-token$",
+			Fields: map[string]*framework.FieldSchema{
+				"encoded_token": {
+					Type:        framework.TypeString,
+					Description: "Specifies the encoded token (result from generate-root).",
+				},
+				"otp": {
+					Type:        framework.TypeString,
+					Description: "Specifies the otp code for decode.",
+				},
+			},
+			Operations: map[logical.Operation]framework.OperationHandler{
+				logical.UpdateOperation: &framework.PathOperation{
+					Callback: b.handleGenerateRootDecodeTokenUpdate,
+					Summary:  "Decodes the encoded token with the otp.",
+					Responses: map[int][]framework.Response{
+						http.StatusOK: {{Description: "OK"}},
+					},
+				},
+			},
+		},
+
+		{
 			Pattern: "health$",
 			Fields: map[string]*framework.FieldSchema{
 				"standbyok": {
@@ -557,42 +580,45 @@ func (b *SystemBackend) statusPaths() []*framework.Path {
 	}
 }
 
-func (b *SystemBackend) auditPaths() []*framework.Path {
-	return []*framework.Path{
-		{
-			Pattern: "audit-hash/(?P<path>.+)",
+func (b *SystemBackend) auditHashPath() *framework.Path {
+	return &framework.Path{
+		Pattern: "audit-hash/(?P<path>.+)",
 
-			Fields: map[string]*framework.FieldSchema{
-				"path": {
-					Type:        framework.TypeString,
-					Description: strings.TrimSpace(sysHelp["audit_path"][0]),
-				},
-
-				"input": {
-					Type: framework.TypeString,
-				},
+		Fields: map[string]*framework.FieldSchema{
+			"path": {
+				Type:        framework.TypeString,
+				Description: strings.TrimSpace(sysHelp["audit_path"][0]),
 			},
-			Operations: map[logical.Operation]framework.OperationHandler{
-				logical.UpdateOperation: &framework.PathOperation{
-					Callback: b.handleAuditHash,
-					Responses: map[int][]framework.Response{
-						http.StatusOK: {{
-							Description: "OK",
-							Fields: map[string]*framework.FieldSchema{
-								"hash": {
-									Type:     framework.TypeString,
-									Required: true,
-								},
+
+			"input": {
+				Type: framework.TypeString,
+			},
+		},
+		Operations: map[logical.Operation]framework.OperationHandler{
+			logical.UpdateOperation: &framework.PathOperation{
+				Callback: b.handleAuditHash,
+				Responses: map[int][]framework.Response{
+					http.StatusOK: {{
+						Description: "OK",
+						Fields: map[string]*framework.FieldSchema{
+							"hash": {
+								Type:     framework.TypeString,
+								Required: true,
 							},
-						}},
-					},
+						},
+					}},
 				},
 			},
-
-			HelpSynopsis:    strings.TrimSpace(sysHelp["audit-hash"][0]),
-			HelpDescription: strings.TrimSpace(sysHelp["audit-hash"][1]),
 		},
 
+		HelpSynopsis:    strings.TrimSpace(sysHelp["audit-hash"][0]),
+		HelpDescription: strings.TrimSpace(sysHelp["audit-hash"][1]),
+	}
+}
+
+func (b *SystemBackend) auditPaths() []*framework.Path {
+	return []*framework.Path{
+		b.auditHashPath(),
 		{
 			Pattern: "audit$",
 

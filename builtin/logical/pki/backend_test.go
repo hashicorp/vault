@@ -27,7 +27,6 @@ import (
 	"strconv"
 	"strings"
 	"sync"
-	"sync/atomic"
 	"testing"
 	"time"
 
@@ -2382,6 +2381,14 @@ func TestBackend_Root_Idempotency(t *testing.T) {
 	require.NotNil(t, resp, "expected ca info")
 	keyId1 := resp.Data["key_id"]
 	issuerId1 := resp.Data["issuer_id"]
+	cert := parseCert(t, resp.Data["certificate"].(string))
+	certSkid := certutil.GetHexFormatted(cert.SubjectKeyId, ":")
+
+	//  -> Validate the SKID matches between the root cert and the key
+	resp, err = CBRead(b, s, "key/"+keyId1.(keyID).String())
+	require.NoError(t, err)
+	require.NotNil(t, resp, "expected a response")
+	require.Equal(t, resp.Data["subject_key_id"], certSkid)
 
 	resp, err = CBRead(b, s, "cert/ca_chain")
 	require.NoError(t, err, "error reading ca_chain: %v", err)
@@ -2396,6 +2403,14 @@ func TestBackend_Root_Idempotency(t *testing.T) {
 	require.NotNil(t, resp, "expected ca info")
 	keyId2 := resp.Data["key_id"]
 	issuerId2 := resp.Data["issuer_id"]
+	cert = parseCert(t, resp.Data["certificate"].(string))
+	certSkid = certutil.GetHexFormatted(cert.SubjectKeyId, ":")
+
+	//  -> Validate the SKID matches between the root cert and the key
+	resp, err = CBRead(b, s, "key/"+keyId2.(keyID).String())
+	require.NoError(t, err)
+	require.NotNil(t, resp, "expected a response")
+	require.Equal(t, resp.Data["subject_key_id"], certSkid)
 
 	// Make sure that we actually generated different issuer and key values
 	require.NotEqual(t, keyId1, keyId2)
@@ -2501,11 +2516,18 @@ func TestBackend_SignIntermediate_AllowedPastCA(t *testing.T) {
 	resp, err := CBWrite(b_int, s_int, "intermediate/generate/internal", map[string]interface{}{
 		"common_name": "myint.com",
 	})
+	require.Contains(t, resp.Data, "key_id")
+	intKeyId := resp.Data["key_id"].(keyID)
+	csr := resp.Data["csr"]
+
+	resp, err = CBRead(b_int, s_int, "key/"+intKeyId.String())
+	require.NoError(t, err)
+	require.NotNil(t, resp, "expected a response")
+	intSkid := resp.Data["subject_key_id"].(string)
+
 	if err != nil {
 		t.Fatal(err)
 	}
-
-	csr := resp.Data["csr"]
 
 	_, err = CBWrite(b_root, s_root, "sign/test", map[string]interface{}{
 		"common_name": "myint.com",
@@ -2541,6 +2563,10 @@ func TestBackend_SignIntermediate_AllowedPastCA(t *testing.T) {
 	if len(resp.Warnings) == 0 {
 		t.Fatalf("expected warnings, got %#v", *resp)
 	}
+
+	cert := parseCert(t, resp.Data["certificate"].(string))
+	certSkid := certutil.GetHexFormatted(cert.SubjectKeyId, ":")
+	require.Equal(t, intSkid, certSkid)
 }
 
 func TestBackend_ConsulSignLeafWithLegacyRole(t *testing.T) {
@@ -3801,6 +3827,15 @@ func TestBackend_RevokePlusTidy_Intermediate(t *testing.T) {
 		t.Fatal(err)
 	}
 
+	// Set up Metric Configuration, then restart to enable it
+	_, err = client.Logical().Write("pki/config/auto-tidy", map[string]interface{}{
+		"maintain_stored_certificate_counts":       true,
+		"publish_stored_certificate_count_metrics": true,
+	})
+	_, err = client.Logical().Write("/sys/plugins/reload/backend", map[string]interface{}{
+		"mounts": "pki/",
+	})
+
 	// Check the metrics initialized in order to calculate backendUUID for /pki
 	// BackendUUID not consistent during tests with UUID from /sys/mounts/pki
 	metricsSuffix := "total_certificates_stored"
@@ -3837,6 +3872,14 @@ func TestBackend_RevokePlusTidy_Intermediate(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	// Set up Metric Configuration, then restart to enable it
+	_, err = client.Logical().Write("pki2/config/auto-tidy", map[string]interface{}{
+		"maintain_stored_certificate_counts":       true,
+		"publish_stored_certificate_count_metrics": true,
+	})
+	_, err = client.Logical().Write("/sys/plugins/reload/backend", map[string]interface{}{
+		"mounts": "pki2/",
+	})
 
 	// Create a CSR for the intermediate CA
 	secret, err := client.Logical().Write("pki2/intermediate/generate/internal", nil)
@@ -3965,6 +4008,7 @@ func TestBackend_RevokePlusTidy_Intermediate(t *testing.T) {
 			"current_revoked_cert_count":            json.Number("0"),
 			"revocation_queue_deleted_count":        json.Number("0"),
 			"cross_revoked_cert_deleted_count":      json.Number("0"),
+			"internal_backend_uuid":                 backendUUID,
 		}
 		// Let's copy the times from the response so that we can use deep.Equal()
 		timeStarted, ok := tidyStatus.Data["time_started"]
@@ -4939,12 +4983,13 @@ func TestIssuanceTTLs(t *testing.T) {
 	})
 	require.Error(t, err, "expected issuance to fail due to longer default ttl than cert ttl")
 
-	resp, err = CBWrite(b, s, "issuer/root", map[string]interface{}{
-		"issuer_name":             "root",
+	resp, err = CBPatch(b, s, "issuer/root", map[string]interface{}{
 		"leaf_not_after_behavior": "permit",
 	})
 	require.NoError(t, err)
 	require.NotNil(t, resp)
+	require.NotNil(t, resp.Data)
+	require.Equal(t, resp.Data["leaf_not_after_behavior"], "permit")
 
 	_, err = CBWrite(b, s, "issue/local-testing", map[string]interface{}{
 		"common_name": "testing",
@@ -4957,6 +5002,8 @@ func TestIssuanceTTLs(t *testing.T) {
 	})
 	require.NoError(t, err)
 	require.NotNil(t, resp)
+	require.NotNil(t, resp.Data)
+	require.Equal(t, resp.Data["leaf_not_after_behavior"], "truncate")
 
 	_, err = CBWrite(b, s, "issue/local-testing", map[string]interface{}{
 		"common_name": "testing",
@@ -5594,6 +5641,14 @@ func TestBackend_InitializeCertificateCounts(t *testing.T) {
 		serials[i] = resp.Data["serial_number"].(string)
 	}
 
+	// Turn on certificate counting:
+	CBWrite(b, s, "config/auto-tidy", map[string]interface{}{
+		"maintain_stored_certificate_counts":       true,
+		"publish_stored_certificate_count_metrics": false,
+	})
+	// Assert initialize from clean is correct:
+	b.initializeStoredCertificateCounts(ctx)
+
 	// Revoke certificates A + B
 	revocations := serials[0:2]
 	for _, key := range revocations {
@@ -5605,18 +5660,16 @@ func TestBackend_InitializeCertificateCounts(t *testing.T) {
 		}
 	}
 
-	// Assert initialize from clean is correct:
-	b.initializeStoredCertificateCounts(ctx)
-	if atomic.LoadUint32(b.certCount) != 6 {
-		t.Fatalf("Failed to count six certificates root,A,B,C,D,E, instead counted %d certs", atomic.LoadUint32(b.certCount))
+	if b.certCount.Load() != 6 {
+		t.Fatalf("Failed to count six certificates root,A,B,C,D,E, instead counted %d certs", b.certCount.Load())
 	}
-	if atomic.LoadUint32(b.revokedCertCount) != 2 {
-		t.Fatalf("Failed to count two revoked certificates A+B, instead counted %d certs", atomic.LoadUint32(b.revokedCertCount))
+	if b.revokedCertCount.Load() != 2 {
+		t.Fatalf("Failed to count two revoked certificates A+B, instead counted %d certs", b.revokedCertCount.Load())
 	}
 
 	// Simulates listing while initialize in progress, by "restarting it"
-	atomic.StoreUint32(b.certCount, 0)
-	atomic.StoreUint32(b.revokedCertCount, 0)
+	b.certCount.Store(0)
+	b.revokedCertCount.Store(0)
 	b.certsCounted.Store(false)
 
 	// Revoke certificates C, D
@@ -5645,12 +5698,12 @@ func TestBackend_InitializeCertificateCounts(t *testing.T) {
 	b.initializeStoredCertificateCounts(ctx)
 
 	// Test certificate count
-	if atomic.LoadUint32(b.certCount) != 8 {
-		t.Fatalf("Failed to initialize count of certificates root, A,B,C,D,E,F,G counted %d certs", *(b.certCount))
+	if b.certCount.Load() != 8 {
+		t.Fatalf("Failed to initialize count of certificates root, A,B,C,D,E,F,G counted %d certs", b.certCount.Load())
 	}
 
-	if atomic.LoadUint32(b.revokedCertCount) != 4 {
-		t.Fatalf("Failed to count revoked certificates A,B,C,D counted %d certs", *(b.revokedCertCount))
+	if b.revokedCertCount.Load() != 4 {
+		t.Fatalf("Failed to count revoked certificates A,B,C,D counted %d certs", b.revokedCertCount.Load())
 	}
 
 	return
@@ -6651,7 +6704,9 @@ func TestProperAuthing(t *testing.T) {
 		"certs":                                  shouldBeAuthed,
 		"certs/revoked":                          shouldBeAuthed,
 		"certs/revocation-queue":                 shouldBeAuthed,
+		"certs/revocation-queue/":                shouldBeAuthed,
 		"certs/unified-revoked":                  shouldBeAuthed,
+		"certs/unified-revoked/":                 shouldBeAuthed,
 		"config/auto-tidy":                       shouldBeAuthed,
 		"config/ca":                              shouldBeAuthed,
 		"config/cluster":                         shouldBeAuthed,
@@ -6823,6 +6878,123 @@ func TestProperAuthing(t *testing.T) {
 
 	if !validatedPath {
 		t.Fatalf("Expected to have validated at least one path.")
+	}
+}
+
+func TestPatchIssuer(t *testing.T) {
+	t.Parallel()
+
+	type TestCase struct {
+		Field   string
+		Before  interface{}
+		Patched interface{}
+	}
+	testCases := []TestCase{
+		{
+			Field:   "issuer_name",
+			Before:  "root",
+			Patched: "root-new",
+		},
+		{
+			Field:   "leaf_not_after_behavior",
+			Before:  "err",
+			Patched: "permit",
+		},
+		{
+			Field:   "usage",
+			Before:  "crl-signing,issuing-certificates,ocsp-signing,read-only",
+			Patched: "issuing-certificates,read-only",
+		},
+		{
+			Field:   "revocation_signature_algorithm",
+			Before:  "ECDSAWithSHA256",
+			Patched: "ECDSAWithSHA384",
+		},
+		{
+			Field:   "issuing_certificates",
+			Before:  []string{"http://localhost/v1/pki-1/ca"},
+			Patched: []string{"http://localhost/v1/pki/ca"},
+		},
+		{
+			Field:   "crl_distribution_points",
+			Before:  []string{"http://localhost/v1/pki-1/crl"},
+			Patched: []string{"http://localhost/v1/pki/crl"},
+		},
+		{
+			Field:   "ocsp_servers",
+			Before:  []string{"http://localhost/v1/pki-1/ocsp"},
+			Patched: []string{"http://localhost/v1/pki/ocsp"},
+		},
+		{
+			Field:   "enable_aia_url_templating",
+			Before:  false,
+			Patched: true,
+		},
+		{
+			Field:   "manual_chain",
+			Before:  []string(nil),
+			Patched: []string{"self"},
+		},
+	}
+
+	for index, testCase := range testCases {
+		t.Logf("index: %v / tc: %v", index, testCase)
+
+		b, s := CreateBackendWithStorage(t)
+
+		// 1. Setup root issuer.
+		resp, err := CBWrite(b, s, "root/generate/internal", map[string]interface{}{
+			"common_name": "Vault Root CA",
+			"key_type":    "ec",
+			"ttl":         "7200h",
+			"issuer_name": "root",
+		})
+		requireSuccessNonNilResponse(t, resp, err, "failed generating root issuer")
+		id := string(resp.Data["issuer_id"].(issuerID))
+
+		// 2. Enable Cluster paths
+		resp, err = CBWrite(b, s, "config/urls", map[string]interface{}{
+			"path":     "https://localhost/v1/pki",
+			"aia_path": "http://localhost/v1/pki",
+		})
+		requireSuccessNonNilResponse(t, resp, err, "failed updating AIA config")
+
+		// 3. Add AIA information
+		resp, err = CBPatch(b, s, "issuer/default", map[string]interface{}{
+			"issuing_certificates":    "http://localhost/v1/pki-1/ca",
+			"crl_distribution_points": "http://localhost/v1/pki-1/crl",
+			"ocsp_servers":            "http://localhost/v1/pki-1/ocsp",
+		})
+		requireSuccessNonNilResponse(t, resp, err, "failed setting up issuer")
+
+		// 4. Read the issuer before.
+		resp, err = CBRead(b, s, "issuer/default")
+		requireSuccessNonNilResponse(t, resp, err, "failed reading root issuer before")
+		require.Equal(t, testCase.Before, resp.Data[testCase.Field], "bad expectations")
+
+		// 5. Perform modification.
+		resp, err = CBPatch(b, s, "issuer/default", map[string]interface{}{
+			testCase.Field: testCase.Patched,
+		})
+		requireSuccessNonNilResponse(t, resp, err, "failed patching root issuer")
+
+		if testCase.Field != "manual_chain" {
+			require.Equal(t, testCase.Patched, resp.Data[testCase.Field], "failed persisting value")
+		} else {
+			// self->id
+			require.Equal(t, []string{id}, resp.Data[testCase.Field], "failed persisting value")
+		}
+
+		// 6. Ensure it stuck
+		resp, err = CBRead(b, s, "issuer/default")
+		requireSuccessNonNilResponse(t, resp, err, "failed reading root issuer after")
+
+		if testCase.Field != "manual_chain" {
+			require.Equal(t, testCase.Patched, resp.Data[testCase.Field])
+		} else {
+			// self->id
+			require.Equal(t, []string{id}, resp.Data[testCase.Field], "failed persisting value")
+		}
 	}
 }
 

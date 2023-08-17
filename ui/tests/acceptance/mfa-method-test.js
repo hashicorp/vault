@@ -289,4 +289,16 @@ module('Acceptance | mfa-method', function (hooks) {
       .dom('[data-test-row-value="Max validation attempts"]')
       .hasText('10', 'Max validation attempts field is updated');
   });
+
+  test('it should navigate to enforcements create route from method enforcement tab', async function (assert) {
+    await visit('/vault/access/mfa/methods');
+    await click('[data-test-mfa-method-list-item]');
+    await click('[data-test-tab="enforcements"]');
+    await click('[data-test-enforcement-create]');
+    assert.strictEqual(
+      currentRouteName(),
+      'vault.cluster.access.mfa.enforcements.create',
+      'Navigates to enforcements create route from toolbar action'
+    );
+  });
 });

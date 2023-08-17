@@ -172,8 +172,9 @@ func (i *IdentityStore) handleAliasCreateUpdate() framework.OperationFunc {
 				}
 				switch {
 				case mountAccessor == "" && name == "":
-					// Just a canonical ID update, maybe
-					if canonicalID == "" {
+					// Check if the canonicalID or the customMetadata are being
+					// updated
+					if canonicalID == "" && !customMetadataExists {
 						// Nothing to do, so be idempotent
 						return nil, nil
 					}

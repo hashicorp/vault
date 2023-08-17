@@ -139,4 +139,68 @@ module('Integration | Component | pki-role-form', function (hooks) {
     await click(SELECTORS.roleCreateButton);
     assert.strictEqual(this.model.issuerRef, 'not-default', 'Issuer Ref correctly saved on create');
   });
+
+  test('it should edit a role', async function (assert) {
+    assert.expect(8);
+    this.server.post(`/pki-test/roles/test-role`, (schema, req) => {
+      assert.ok(true, 'Request made to correct endpoint to update role');
+      const request = JSON.parse(req.requestBody);
+      assert.propEqual(
+        request,
+        {
+          allow_ip_sans: true,
+          issuer_ref: 'default',
+          key_bits: '224',
+          key_type: 'ec',
+          key_usage: ['DigitalSignature', 'KeyAgreement', 'KeyEncipherment'],
+          not_before_duration: '30s',
+          require_cn: true,
+          signature_bits: '384',
+          use_csr_common_name: true,
+          use_csr_sans: true,
+        },
+        'sends role params in correct type'
+      );
+      return {};
+    });
+
+    this.store.pushPayload('pki/role', {
+      modelName: 'pki/role',
+      name: 'test-role',
+      backend: 'pki-test',
+      id: 'role-id',
+      key_type: 'rsa',
+    });
+    this.model = this.store.peekRecord('pki/role', 'role-id');
+
+    // setting these params manually because ember transforms to whatever type is defined on the model
+    // but in the 'real' app the model uses openApi and the API returns both attrs as numbers types
+    this.model.keyBits = 3072;
+    this.model.signatureBits = 512;
+
+    await render(
+      hbs`
+      <PkiRoleForm
+        @model={{this.model}}
+        @onCancel={{this.onCancel}}
+        @onSave={{this.onSave}}
+      />
+      `,
+      { owner: this.engine }
+    );
+
+    await click(SELECTORS.keyParams);
+    assert.dom(SELECTORS.keyType).hasValue('rsa');
+    assert.dom(SELECTORS.keyBits).hasValue('3072', 'dropdown has model value, not default value (2048)');
+    assert.dom(SELECTORS.signatureBits).hasValue('512', 'dropdown has model value, not default value (0)');
+
+    await fillIn(SELECTORS.keyType, 'ec');
+    await fillIn(SELECTORS.keyBits, '224');
+    assert.dom(SELECTORS.keyBits).hasValue('224', 'dropdown has selected value, not default value (256)');
+    await fillIn(SELECTORS.signatureBits, '384');
+    assert.dom(SELECTORS.signatureBits).hasValue('384', 'dropdown has selected value, not default value (0)');
+
+    await click(SELECTORS.roleCreateButton);
+    assert.strictEqual(this.model.issuerRef, 'default', 'Issuer Ref correctly saved on create');
+  });
 });

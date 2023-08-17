@@ -570,7 +570,23 @@
           {
             "title": "<code>health-check</code>",
             "path": "commands/pki/health-check"
-          }
+          },
+	  {
+	    "title": "<code>verify-sign</code>",
+	    "path": "commands/pki/verify-sign"
+	  },
+	  {
+	    "title": "<code>list-intermediates</code>",
+	    "path": "commands/pki/list-intermediates"
+	  },
+	  {
+	    "title": "<code>issue</code>",
+	    "path": "commands/pki/issue"
+	  },
+	  {
+	    "title": "<code>reissue</code>",
+	    "path": "commands/pki/reissue"
+	  }
         ]
       },
       {
@@ -753,6 +769,10 @@
             "path": "commands/policy/write"
           }
         ]
+      },
+      {
+        "title": "<code>print</code>",
+        "path": "commands/print"
       },
       {
         "title": "<code>read</code>",
@@ -978,6 +998,10 @@
       {
         "title": "Windows service",
         "path": "agent/winsvc"
+      },
+      {
+        "title": "Version compatibility",
+        "path": "agent/versions"
       }
     ]
   },
@@ -1692,6 +1716,35 @@
                 "path": "platform/k8s/csi/examples"
               }
             ]
+          },
+          {
+            "title": "Vault Secrets Operator",
+            "routes": [
+              {
+                "title": "Overview",
+                "path": "platform/k8s/vso"
+              },
+              {
+                "title": "Installation",
+                "path": "platform/k8s/vso/installation"
+              },
+              {
+                "title": "Examples",
+                "path": "platform/k8s/vso/examples"
+              },
+              {
+                "title": "Helm Chart",
+                "path": "platform/k8s/vso/helm"
+              },
+              {
+                "title": "Telemetry",
+                "path": "platform/k8s/vso/telemetry"
+              },
+              {
+                "title": "API Reference",
+                "path": "platform/k8s/vso/api-reference"
+              }
+            ]
           }
         ]
       },
@@ -1756,6 +1809,10 @@
       {
         "title": "Overview",
         "path": "upgrading"
+      },
+      {
+         "title": "Upgrade Vault HA installations",
+         "path": "upgrading/vault-ha-upgrade"
       },
       {
         "title": "Upgrade Plugins",
@@ -2118,6 +2175,10 @@
           {
             "title": "Autoloading",
             "path": "enterprise/license/autoloading"
+          },
+          {
+            "title": "Automated license utilization reporting",
+            "path": "enterprise/license/utilization-reporting"
           },
           {
             "title": "FAQ",

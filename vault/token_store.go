@@ -1687,8 +1687,14 @@ func (ts *TokenStore) lookupInternal(ctx context.Context, id string, salted, tai
 	// If we are still restoring the expiration manager, we want to ensure the
 	// token is not expired
 	if ts.expiration == nil {
-		return nil, errors.New("expiration manager is nil on tokenstore")
+		switch ts.core.IsDRSecondary() {
+		case true: // Bail if on DR secondary as expiration manager is nil
+			return nil, nil
+		default:
+			return nil, errors.New("expiration manager is nil on tokenstore")
+		}
 	}
+
 	le, err := ts.expiration.FetchLeaseTimesByToken(ctx, entry)
 	if err != nil {
 		return nil, fmt.Errorf("failed to fetch lease times: %w", err)
@@ -2756,10 +2762,20 @@ func (ts *TokenStore) handleCreateCommon(ctx context.Context, req *logical.Reque
 			MountType:     mountValidationResp.Type,
 		}
 
-		// Create or fetch entity from entity alias
+		// Create or fetch entity from entity alias. Note that we might be on a perf
+		// standby so a create would return a ReadOnly error which would cause an
+		// RPC-based redirect. That path doesn't register leases since the code that
+		// calls RegisterAuth is in the http layer... So be careful to catch and
+		// handle readonly ourselves.
 		entity, _, err := ts.core.identityStore.CreateOrFetchEntity(ctx, alias)
 		if err != nil {
-			return nil, err
+			auth := &logical.Auth{
+				Alias: alias,
+			}
+			entity, _, err = possiblyForwardAliasCreation(ctx, ts.core, err, auth, entity)
+			if err != nil {
+				return nil, err
+			}
 		}
 		if entity == nil {
 			return nil, errors.New("failed to create or fetch entity from given entity alias")

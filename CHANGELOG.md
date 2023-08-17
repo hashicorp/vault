@@ -25,6 +25,7 @@ Plugins using sdk/useragent.String must instead use sdk/useragent.PluginString. 
 
 FEATURES:
 
+* **User lockout**: Ignore repeated bad credentials from the same user for a configured period of time. Enabled by default.
 * **New PKI UI**: Add beta support for new and improved PKI UI [[GH-18842](https://github.com/hashicorp/vault/pull/18842)]
 * **Server UDS Listener**: Adding listener to Vault server to serve http request via unix domain socket [[GH-18227](https://github.com/hashicorp/vault/pull/18227)]
 * **Transit managed keys**: The transit secrets engine now supports configuring and using managed keys

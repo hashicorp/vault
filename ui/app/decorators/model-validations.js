@@ -108,9 +108,11 @@ export function withModelValidations(validations) {
               : validator(get(this, key), options); // dot notation may be used to define key for nested property
 
             if (!passedValidation) {
+              // message can also be a function
+              const validationMessage = typeof message === 'function' ? message(this) : message;
               // consider setting a prop like validationErrors directly on the model
               // for now return an errors object
-              state[key].errors.push(message);
+              state[key].errors.push(validationMessage);
               if (isValid) {
                 isValid = false;
               }

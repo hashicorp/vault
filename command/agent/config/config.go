@@ -485,7 +485,7 @@ func LoadConfigFile(path string) (*Config, error) {
 		return nil, fmt.Errorf("error parsing 'template': %w", err)
 	}
 
-	if result.Cache != nil && result.APIProxy == nil {
+	if result.Cache != nil && result.APIProxy == nil && (result.Cache.UseAutoAuthToken || result.Cache.ForceAutoAuthToken) {
 		result.APIProxy = &APIProxy{
 			UseAutoAuthToken:   result.Cache.UseAutoAuthToken,
 			ForceAutoAuthToken: result.Cache.ForceAutoAuthToken,

@@ -117,6 +117,7 @@
     "date-fns-tz": "^1.2.2",
     "deepmerge": "^4.0.0",
     "doctoc": "^2.2.0",
+    "dompurify": "^3.0.2",
     "ember-auto-import": "2.4.2",
     "ember-basic-dropdown": "6.0.1",
     "ember-cli": "~4.4.0",

@@ -4,7 +4,7 @@ page_title: Install the Vault EKM Provider
 description: Installation steps for the Vault EKM Provider for Microsoft SQL Server.
 ---
 
-# Installing the Vault EKM Provider
+# Installing the Vault EKM provider
 
 This guide assumes you are installing the Vault EKM Provider for the first time.
 For upgrade instructions, see [upgrading](/vault/docs/platform/mssql/upgrading).
@@ -50,8 +50,8 @@ EKM provider to use it.
 1. Retrieve the AppRole ID and secret ID for use later when configuring SQL Server:
 
     ```bash
-    vault read auth/approle/role/tde-role/role-id
-    vault write -f auth/approle/role/tde-role/secret-id
+    vault read auth/approle/role/ekm-encryption-key-role/role-id
+    vault write -f auth/approle/role/ekm-encryption-key-role/secret-id
     ```
 
 1. Enable the transit secret engine and create a key:
@@ -88,7 +88,7 @@ EKM provider to use it.
     EOF
     ```
 
-## Configuring SQL Server
+## Configuring SQL server
 
 The remaining steps are all run on the database server.
 
@@ -137,8 +137,8 @@ installation.
     ```sql
     -- Replace <approle-role-id> and <approle-secret-id> with the values from
     -- the earlier vault commands:
-    -- vault read auth/approle/role/tde-role/role-id
-    -- vault write -f auth/approle/role/tde-role/secret-id
+    -- vault read auth/approle/role/ekm-encryption-key/role-id
+    -- vault write -f auth/approle/role/ekm-encryption-key/secret-id
     CREATE CREDENTIAL TransitVaultCredentials
         WITH IDENTITY = '<approle-role-id>',
         SECRET = '<approle-secret-id>'
@@ -213,7 +213,7 @@ installation.
 
     ```
 
-## Key Rotation
+## Key rotation
 
 Both the database encryption key and Vault Transit's asymmetric key can be rotated independently.
 

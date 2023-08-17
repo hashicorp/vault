@@ -12,8 +12,11 @@
       <LinkTo @route="vault.cluster.clients.dashboard" data-test-dashboard>
         Dashboard
       </LinkTo>
-      {{#if (or @model.config.configPath.canRead @model.configPath.canRead)}}
-        <LinkTo @route="vault.cluster.clients.config">
+      {{#if (or @model.config.canRead @model.canRead)}}
+        <LinkTo
+          @route="vault.cluster.clients.config"
+          @current-when="vault.cluster.clients.config vault.cluster.clients.edit"
+        >
           Configuration
         </LinkTo>
       {{/if}}
