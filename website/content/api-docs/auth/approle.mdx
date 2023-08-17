@@ -398,7 +398,34 @@ $ curl \
     http://127.0.0.1:8200/v1/auth/approle/role/application1/secret-id/lookup
 ```
 
-## Destroy AppRole secret ID
+### Sample Response
+
+```json
+{
+  "request_id": "74752925-f309-6859-3d2d-0fcded95150e",
+  "lease_id": "",
+  "renewable": false,
+  "lease_duration": 0,
+  "data": {
+    "cidr_list": [],
+    "creation_time": "2023-02-10T18:17:27.089757383Z",
+    "expiration_time": "0001-01-01T00:00:00Z",
+    "last_updated_time": "2023-02-10T18:17:27.089757383Z",
+    "metadata": {
+      "tag1": "production"
+    },
+    "secret_id_accessor": "2be760a4-86bb-2fa9-1637-1b7fa9ba2896",
+    "secret_id_num_uses": 0,
+    "secret_id_ttl": 0,
+    "token_bound_cidrs": []
+  },
+  "wrap_info": null,
+  "warnings": null,
+  "auth": null
+}
+```
+
+## Destroy AppRole Secret ID
 
 Destroy an AppRole secret ID.
 
@@ -460,7 +487,34 @@ $ curl \
     http://127.0.0.1:8200/v1/auth/approle/role/application1/secret-id-accessor/lookup
 ```
 
-## Destroy AppRole secret ID accessor
+### Sample Response
+
+```json
+{
+  "request_id": "72836cd1-139c-fe66-1402-8bb5ca4044b8",
+  "lease_id": "",
+  "renewable": false,
+  "lease_duration": 0,
+  "data": {
+    "cidr_list": [],
+    "creation_time": "2023-02-10T18:17:27.089757383Z",
+    "expiration_time": "0001-01-01T00:00:00Z",
+    "last_updated_time": "2023-02-10T18:17:27.089757383Z",
+    "metadata": {
+      "tag1": "production"
+    },
+    "secret_id_accessor": "2be760a4-86bb-2fa9-1637-1b7fa9ba2896",
+    "secret_id_num_uses": 0,
+    "secret_id_ttl": 0,
+    "token_bound_cidrs": []
+  },
+  "wrap_info": null,
+  "warnings": null,
+  "auth": null
+}
+```
+
+## Destroy AppRole Secret ID Accessor
 
 Destroy an AppRole secret ID by its accessor.
 
