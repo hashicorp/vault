@@ -1,5 +1,5 @@
 {{#each @model.policies as |policyName|}}
-  <LinkedBlock @params={{array "vault.cluster.policy.show" "acl" this.item}} class="list-item-row">
+  <LinkedBlock @params={{array "vault.cluster.policy.show" "acl" policyName}} class="list-item-row">
     <div class="columns is-mobile">
       <div class="column is-10">
         <LinkTo

@@ -14,4 +14,7 @@ export default {
   errorMessagePresent: isPresent('[data-test-auth-error]'),
   descriptionText: text('[data-test-description]'),
   login: clickable('[data-test-auth-submit]'),
+  oidcRole: fillable('[data-test-role]'),
+  oidcMoreOptions: clickable('[data-test-yield-content] button'),
+  oidcMountPath: fillable('#custom-path'),
 };

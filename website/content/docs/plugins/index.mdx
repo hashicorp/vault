@@ -5,7 +5,7 @@ description: Learn about Vault's plugin system.
 ---
 
 
-# Plugin System
+# Plugin system
 
 All Vault auth methods and secrets engines are considered plugins. This simple concept
 allows both built-in and external plugins to be treated like Legos. Any plugin
@@ -14,7 +14,7 @@ be at each location, with each version differing from Vault's version.
 
 @include 'plugin-file-permissions-check.mdx'
 
-## Built-In Plugins
+## Built-In plugins
 
 Built-in plugins are shipped with Vault, often for commonly used implementations,
 and require no additional operator intervention to run. Built-in plugins are
@@ -24,7 +24,7 @@ To use a different or edited version of a built-in plugin, the plugin must be
 run as an external plugin. See [Overriding Built-in Plugins](/docs/upgrading/plugins#overriding-built-in-plugins)
 for details on how to override a built-in plugin in-place.
 
-## External Plugins
+## External plugins
 
 External plugins are not shipped with Vault and require additional operator
 intervention to run.

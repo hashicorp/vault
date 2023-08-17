@@ -24,6 +24,7 @@ export default class KeymgmtKeyModel extends Model {
   @attr('string', {
     subText: 'The type of cryptographic key that will be created.',
     possibleValues: KEY_TYPES,
+    defaultValue: 'rsa-2048',
   })
   type;
 

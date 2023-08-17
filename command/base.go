@@ -15,7 +15,6 @@ import (
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/command/token"
 	"github.com/hashicorp/vault/helper/namespace"
-	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/mattn/go-isatty"
 	"github.com/mitchellh/cli"
 	"github.com/pkg/errors"
@@ -219,44 +218,55 @@ func (c *BaseCommand) DefaultWrappingLookupFunc(operation, path string) string {
 	return api.DefaultWrappingLookupFunc(operation, path)
 }
 
-func (c *BaseCommand) isInteractiveEnabled(mfaConstraintLen int) bool {
-	if mfaConstraintLen != 1 || !isatty.IsTerminal(os.Stdin.Fd()) {
-		return false
-	}
-
-	if !c.flagNonInteractive {
-		return true
+// getValidationRequired checks to see if the secret exists and has an MFA
+// requirement. If MFA is required and the number of constraints is greater than
+// 1, we can assert that interactive validation is not required.
+func (c *BaseCommand) getMFAValidationRequired(secret *api.Secret) bool {
+	if secret != nil && secret.Auth != nil && secret.Auth.MFARequirement != nil {
+		if c.flagMFA == nil && len(secret.Auth.MFARequirement.MFAConstraints) == 1 {
+			return true
+		} else if len(secret.Auth.MFARequirement.MFAConstraints) > 1 {
+			return true
+		}
 	}
 
 	return false
 }
 
-// getMFAMethodInfo returns MFA method information only if one MFA method is
-// configured.
-func (c *BaseCommand) getMFAMethodInfo(mfaConstraintAny map[string]*logical.MFAConstraintAny) MFAMethodInfo {
-	for _, mfaConstraint := range mfaConstraintAny {
+// getInteractiveMFAMethodInfo returns MFA method information only if operating
+// in interactive mode and one MFA method is configured.
+func (c *BaseCommand) getInteractiveMFAMethodInfo(secret *api.Secret) *MFAMethodInfo {
+	if secret == nil || secret.Auth == nil || secret.Auth.MFARequirement == nil {
+		return nil
+	}
+
+	mfaConstraints := secret.Auth.MFARequirement.MFAConstraints
+	if c.flagNonInteractive || len(mfaConstraints) != 1 || !isatty.IsTerminal(os.Stdin.Fd()) {
+		return nil
+	}
+
+	for _, mfaConstraint := range mfaConstraints {
 		if len(mfaConstraint.Any) != 1 {
-			return MFAMethodInfo{}
+			return nil
 		}
 
-		return MFAMethodInfo{
+		return &MFAMethodInfo{
 			methodType:  mfaConstraint.Any[0].Type,
 			methodID:    mfaConstraint.Any[0].ID,
 			usePasscode: mfaConstraint.Any[0].UsesPasscode,
 		}
 	}
 
-	return MFAMethodInfo{}
+	return nil
 }
 
-func (c *BaseCommand) validateMFA(reqID string, methodInfo MFAMethodInfo) int {
+func (c *BaseCommand) validateMFA(reqID string, methodInfo MFAMethodInfo) (*api.Secret, error) {
 	var passcode string
 	var err error
 	if methodInfo.usePasscode {
 		passcode, err = c.UI.AskSecret(fmt.Sprintf("Enter the passphrase for methodID %q of type %q:", methodInfo.methodID, methodInfo.methodType))
 		if err != nil {
-			c.UI.Error(fmt.Sprintf("failed to read the passphrase with error %q. please validate the login by sending a request to sys/mfa/validate", err.Error()))
-			return 2
+			return nil, fmt.Errorf("failed to read passphrase: %w. please validate the login by sending a request to sys/mfa/validate", err)
 		}
 	} else {
 		c.UI.Warn("Asking Vault to perform MFA validation with upstream service. " +
@@ -270,32 +280,10 @@ func (c *BaseCommand) validateMFA(reqID string, methodInfo MFAMethodInfo) int {
 
 	client, err := c.Client()
 	if err != nil {
-		c.UI.Error(err.Error())
-		return 2
+		return nil, err
 	}
 
-	secret, err := client.Sys().MFAValidate(reqID, mfaPayload)
-	if err != nil {
-		c.UI.Error(err.Error())
-		if secret != nil {
-			OutputSecret(c.UI, secret)
-		}
-		return 2
-	}
-	if secret == nil {
-		// Don't output anything unless using the "table" format
-		if Format(c.UI) == "table" {
-			c.UI.Info("Success! Data written to: sys/mfa/validate")
-		}
-		return 0
-	}
-
-	// Handle single field output
-	if c.flagField != "" {
-		return PrintRawField(c.UI, secret, c.flagField)
-	}
-
-	return OutputSecret(c.UI, secret)
+	return client.Sys().MFAValidate(reqID, mfaPayload)
 }
 
 type FlagSetBit uint
