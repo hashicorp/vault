@@ -1,0 +1,19 @@
+# Copyright (c) HashiCorp, Inc.
+# SPDX-License-Identifier: BUSL-1.1
+
+rules:
+  - id: maybe-wrong-err
+    patterns:
+        - pattern-either:
+              - pattern: |
+                      if $F.Err() != nil {
+                              return ..., <... err ...>
+                      }
+              - pattern: |
+                      if $F.Err() != nil {
+                              return <... err ...>
+                      }
+
+    message: "maybe returning wrong error"
+    languages: [go]
+    severity: WARNING

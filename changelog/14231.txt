@@ -1,0 +1,3 @@
+```release-note:bug
+ physical/mysql: Create table with wider `vault_key` column when initializing database tables.
+```

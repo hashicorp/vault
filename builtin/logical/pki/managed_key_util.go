@@ -1,33 +1,45 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 //go:build !enterprise
 
 package pki
 
 import (
 	"context"
+	"crypto"
 	"errors"
 	"io"
 
 	"github.com/hashicorp/vault/sdk/helper/certutil"
-	"github.com/hashicorp/vault/sdk/logical"
 )
 
 var errEntOnly = errors.New("managed keys are supported within enterprise edition only")
 
-func generateCABundle(_ context.Context, _ *backend, input *inputBundle, data *certutil.CreationBundle, randomSource io.Reader) (*certutil.ParsedCertBundle, error) {
-	if kmsRequested(input) {
-		return nil, errEntOnly
-	}
-	return certutil.CreateCertificateWithRandomSource(data, randomSource)
+func generateManagedKeyCABundle(ctx context.Context, b *backend, keyId managedKeyId, data *certutil.CreationBundle, randomSource io.Reader) (bundle *certutil.ParsedCertBundle, err error) {
+	return nil, errEntOnly
 }
 
-func generateCSRBundle(_ context.Context, _ *backend, input *inputBundle, data *certutil.CreationBundle, addBasicConstraints bool, randomSource io.Reader) (*certutil.ParsedCSRBundle, error) {
-	if kmsRequested(input) {
-		return nil, errEntOnly
-	}
-
-	return certutil.CreateCSRWithRandomSource(data, addBasicConstraints, randomSource)
+func generateManagedKeyCSRBundle(ctx context.Context, b *backend, keyId managedKeyId, data *certutil.CreationBundle, addBasicConstraints bool, randomSource io.Reader) (bundle *certutil.ParsedCSRBundle, err error) {
+	return nil, errEntOnly
 }
 
-func parseCABundle(_ context.Context, _ *backend, _ *logical.Request, bundle *certutil.CertBundle) (*certutil.ParsedCertBundle, error) {
-	return bundle.ToParsedCertBundle()
+func getManagedKeyPublicKey(ctx context.Context, b *backend, keyId managedKeyId) (crypto.PublicKey, error) {
+	return nil, errEntOnly
+}
+
+func parseManagedKeyCABundle(ctx context.Context, b *backend, bundle *certutil.CertBundle) (*certutil.ParsedCertBundle, error) {
+	return nil, errEntOnly
+}
+
+func extractManagedKeyId(privateKeyBytes []byte) (UUIDKey, error) {
+	return "", errEntOnly
+}
+
+func createKmsKeyBundle(ctx context.Context, b *backend, keyId managedKeyId) (certutil.KeyBundle, certutil.PrivateKeyType, error) {
+	return certutil.KeyBundle{}, certutil.UnknownPrivateKey, errEntOnly
+}
+
+func getManagedKeyInfo(ctx context.Context, b *backend, keyId managedKeyId) (*managedKeyInfo, error) {
+	return nil, errEntOnly
 }

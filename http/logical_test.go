@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package http
 
 import (
@@ -8,6 +11,7 @@ import (
 	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"reflect"
 	"strconv"
 	"strings"
@@ -17,6 +21,8 @@ import (
 	kv "github.com/hashicorp/vault-plugin-secrets-kv"
 	"github.com/hashicorp/vault/api"
 	auditFile "github.com/hashicorp/vault/builtin/audit/file"
+	credUserpass "github.com/hashicorp/vault/builtin/credential/userpass"
+	"github.com/hashicorp/vault/helper/testhelpers/corehelpers"
 	"github.com/hashicorp/vault/internalshared/configutil"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/logging"
@@ -211,7 +217,6 @@ func TestLogical_CreateToken(t *testing.T) {
 	})
 
 	var actual map[string]interface{}
-	var nilWarnings interface{}
 	expected := map[string]interface{}{
 		"lease_id":       "",
 		"renewable":      false,
@@ -219,22 +224,23 @@ func TestLogical_CreateToken(t *testing.T) {
 		"data":           nil,
 		"wrap_info":      nil,
 		"auth": map[string]interface{}{
-			"policies":       []interface{}{"root"},
-			"token_policies": []interface{}{"root"},
-			"metadata":       nil,
-			"lease_duration": json.Number("0"),
-			"renewable":      false,
-			"entity_id":      "",
-			"token_type":     "service",
-			"orphan":         false,
-			"num_uses":       json.Number("0"),
+			"policies":        []interface{}{"root"},
+			"token_policies":  []interface{}{"root"},
+			"metadata":        nil,
+			"lease_duration":  json.Number("0"),
+			"renewable":       false,
+			"entity_id":       "",
+			"token_type":      "service",
+			"orphan":          false,
+			"mfa_requirement": nil,
+			"num_uses":        json.Number("0"),
 		},
-		"warnings": nilWarnings,
 	}
 	testResponseStatus(t, resp, 200)
 	testResponseBody(t, resp, &actual)
 	delete(actual["auth"].(map[string]interface{}), "client_token")
 	delete(actual["auth"].(map[string]interface{}), "accessor")
+	delete(actual, "warnings")
 	expected["request_id"] = actual["request_id"]
 	if !reflect.DeepEqual(actual, expected) {
 		t.Fatalf("bad:\nexpected:\n%#v\nactual:\n%#v", expected, actual)
@@ -361,6 +367,85 @@ func TestLogical_ListSuffix(t *testing.T) {
 	}
 }
 
+func TestLogical_ListWithQueryParameters(t *testing.T) {
+	core, _, rootToken := vault.TestCoreUnsealed(t)
+
+	tests := []struct {
+		name          string
+		requestMethod string
+		url           string
+		expectedData  map[string]interface{}
+	}{
+		{
+			name:          "LIST request method parses query parameter",
+			requestMethod: "LIST",
+			url:           "http://127.0.0.1:8200/v1/secret/foo?key1=value1",
+			expectedData: map[string]interface{}{
+				"key1": "value1",
+			},
+		},
+		{
+			name:          "LIST request method parses query multiple parameters",
+			requestMethod: "LIST",
+			url:           "http://127.0.0.1:8200/v1/secret/foo?key1=value1&key2=value2",
+			expectedData: map[string]interface{}{
+				"key1": "value1",
+				"key2": "value2",
+			},
+		},
+		{
+			name:          "GET request method with list=true parses query parameter",
+			requestMethod: "GET",
+			url:           "http://127.0.0.1:8200/v1/secret/foo?list=true&key1=value1",
+			expectedData: map[string]interface{}{
+				"key1": "value1",
+			},
+		},
+		{
+			name:          "GET request method with list=true parses multiple query parameters",
+			requestMethod: "GET",
+			url:           "http://127.0.0.1:8200/v1/secret/foo?list=true&key1=value1&key2=value2",
+			expectedData: map[string]interface{}{
+				"key1": "value1",
+				"key2": "value2",
+			},
+		},
+		{
+			name:          "GET request method with alternate order list=true parses multiple query parameters",
+			requestMethod: "GET",
+			url:           "http://127.0.0.1:8200/v1/secret/foo?key1=value1&list=true&key2=value2",
+			expectedData: map[string]interface{}{
+				"key1": "value1",
+				"key2": "value2",
+			},
+		},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			req, _ := http.NewRequest(tc.requestMethod, tc.url, nil)
+			req = req.WithContext(namespace.RootContext(nil))
+			req.Header.Add(consts.AuthHeaderName, rootToken)
+
+			lreq, _, status, err := buildLogicalRequest(core, nil, req)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if status != 0 {
+				t.Fatalf("got status %d", status)
+			}
+			if !strings.HasSuffix(lreq.Path, "/") {
+				t.Fatal("trailing slash not found on path")
+			}
+			if lreq.Operation != logical.ListOperation {
+				t.Fatalf("expected logical.ListOperation, got %v", lreq.Operation)
+			}
+			if !reflect.DeepEqual(tc.expectedData, lreq.Data) {
+				t.Fatalf("expected query parameter data %v, got %v", tc.expectedData, lreq.Data)
+			}
+		})
+	}
+}
+
 func TestLogical_RespondWithStatusCode(t *testing.T) {
 	resp := &logical.Response{
 		Data: map[string]interface{}{
@@ -393,14 +478,13 @@ func TestLogical_RespondWithStatusCode(t *testing.T) {
 }
 
 func TestLogical_Audit_invalidWrappingToken(t *testing.T) {
+	t.Setenv("VAULT_AUDIT_DISABLE_EVENTLOGGER", "true")
+
 	// Create a noop audit backend
-	var noop *vault.NoopAudit
+	noop := corehelpers.TestNoopAudit(t, nil)
 	c, _, root := vault.TestCoreUnsealedWithConfig(t, &vault.CoreConfig{
 		AuditBackends: map[string]audit.Factory{
-			"noop": func(ctx context.Context, config *audit.BackendConfig) (audit.Backend, error) {
-				noop = &vault.NoopAudit{
-					Config: config,
-				}
+			"noop": func(ctx context.Context, config *audit.BackendConfig, _ bool, _ audit.HeaderFormatter) (audit.Backend, error) {
 				return noop, nil
 			},
 		},
@@ -554,10 +638,23 @@ func TestLogical_AuditPort(t *testing.T) {
 		},
 	}
 
-	resp, err := c.Logical().Write("kv/data/foo", writeData)
-	if err != nil {
-		t.Fatalf("write request failed, err: %#v, resp: %#v\n", err, resp)
-	}
+	// workaround kv-v2 initialization upgrade errors
+	numFailures := 0
+	corehelpers.RetryUntil(t, 10*time.Second, func() error {
+		resp, err := c.Logical().Write("kv/data/foo", writeData)
+		if err != nil {
+			if strings.Contains(err.Error(), "Upgrading from non-versioned to versioned data") {
+				t.Logf("Retrying fetch KV data due to upgrade error")
+				time.Sleep(100 * time.Millisecond)
+				numFailures += 1
+				return err
+			}
+
+			t.Fatalf("write request failed, err: %#v, resp: %#v\n", err, resp)
+		}
+
+		return nil
+	})
 
 	decoder := json.NewDecoder(auditLogFile)
 
@@ -578,7 +675,7 @@ func TestLogical_AuditPort(t *testing.T) {
 		}
 
 		if _, ok := auditRequest["remote_address"].(string); !ok {
-			t.Fatalf("remote_port should be a number, not %T", auditRequest["remote_address"])
+			t.Fatalf("remote_address should be a string, not %T", auditRequest["remote_address"])
 		}
 
 		if _, ok := auditRequest["remote_port"].(float64); !ok {
@@ -586,7 +683,260 @@ func TestLogical_AuditPort(t *testing.T) {
 		}
 	}
 
-	if count != 4 {
-		t.Fatalf("wrong number of audit entries: %d", count)
+	// We expect the following items in the audit log:
+	// audit log header + an entry for updating sys/audit/file
+	// + request/response per failure (if any) + request/response for creating kv
+	numExpectedEntries := (numFailures * 2) + 4
+	if count != numExpectedEntries {
+		t.Fatalf("wrong number of audit entries expected: %d got: %d", numExpectedEntries, count)
+	}
+}
+
+func TestLogical_ErrRelativePath(t *testing.T) {
+	coreConfig := &vault.CoreConfig{
+		CredentialBackends: map[string]logical.Factory{
+			"userpass": credUserpass.Factory,
+		},
+	}
+
+	cluster := vault.NewTestCluster(t, coreConfig, &vault.TestClusterOptions{
+		HandlerFunc: Handler,
+	})
+
+	cluster.Start()
+	defer cluster.Cleanup()
+
+	cores := cluster.Cores
+
+	core := cores[0].Core
+	c := cluster.Cores[0].Client
+	vault.TestWaitActive(t, core)
+
+	err := c.Sys().EnableAuthWithOptions("userpass", &api.EnableAuthOptions{
+		Type: "userpass",
+	})
+	if err != nil {
+		t.Fatalf("failed to enable userpass, err: %v", err)
+	}
+
+	resp, err := c.Logical().Read("auth/userpass/users/user..aaa")
+
+	if err == nil || resp != nil {
+		t.Fatalf("expected read request to fail, resp: %#v, err: %v", resp, err)
+	}
+
+	respErr, ok := err.(*api.ResponseError)
+
+	if !ok {
+		t.Fatalf("unexpected error type, err: %#v", err)
+	}
+
+	if respErr.StatusCode != 400 {
+		t.Errorf("expected 400 response for read, actual: %d", respErr.StatusCode)
+	}
+
+	if !strings.Contains(respErr.Error(), logical.ErrRelativePath.Error()) {
+		t.Errorf("expected response for read to include %q", logical.ErrRelativePath.Error())
+	}
+
+	data := map[string]interface{}{
+		"password": "abc123",
+	}
+
+	resp, err = c.Logical().Write("auth/userpass/users/user..aaa", data)
+
+	if err == nil || resp != nil {
+		t.Fatalf("expected write request to fail, resp: %#v, err: %v", resp, err)
+	}
+
+	respErr, ok = err.(*api.ResponseError)
+
+	if !ok {
+		t.Fatalf("unexpected error type, err: %#v", err)
+	}
+
+	if respErr.StatusCode != 400 {
+		t.Errorf("expected 400 response for write, actual: %d", respErr.StatusCode)
+	}
+
+	if !strings.Contains(respErr.Error(), logical.ErrRelativePath.Error()) {
+		t.Errorf("expected response for write to include %q", logical.ErrRelativePath.Error())
+	}
+}
+
+func testBuiltinPluginMetadataAuditLog(t *testing.T, log map[string]interface{}, expectedMountClass string) {
+	if mountClass, ok := log["mount_class"].(string); !ok {
+		t.Fatalf("mount_class should be a string, not %T", log["mount_class"])
+	} else if mountClass != expectedMountClass {
+		t.Fatalf("bad: mount_class should be %s, not %s", expectedMountClass, mountClass)
+	}
+
+	if _, ok := log["mount_running_version"].(string); !ok {
+		t.Fatalf("mount_running_version should be a string, not %T", log["mount_running_version"])
+	}
+
+	if _, ok := log["mount_running_sha256"].(string); ok {
+		t.Fatalf("mount_running_sha256 should be nil, not %T", log["mount_running_sha256"])
+	}
+
+	if mountIsExternalPlugin, ok := log["mount_is_external_plugin"].(bool); ok && mountIsExternalPlugin {
+		t.Fatalf("mount_is_external_plugin should be nil or false, not %T", log["mount_is_external_plugin"])
+	}
+}
+
+// TestLogical_AuditEnabled_ShouldLogPluginMetadata_Auth tests that we have plugin metadata of a builtin auth plugin
+// in audit log when it is enabled
+func TestLogical_AuditEnabled_ShouldLogPluginMetadata_Auth(t *testing.T) {
+	coreConfig := &vault.CoreConfig{
+		AuditBackends: map[string]audit.Factory{
+			"file": auditFile.Factory,
+		},
+	}
+
+	cluster := vault.NewTestCluster(t, coreConfig, &vault.TestClusterOptions{
+		HandlerFunc: Handler,
+	})
+
+	cluster.Start()
+	defer cluster.Cleanup()
+
+	cores := cluster.Cores
+
+	core := cores[0].Core
+	c := cluster.Cores[0].Client
+	vault.TestWaitActive(t, core)
+
+	// Enable the audit backend
+	tempDir := t.TempDir()
+	auditLogFile, err := os.CreateTemp(tempDir, "")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	err = c.Sys().EnableAuditWithOptions("file", &api.EnableAuditOptions{
+		Type: "file",
+		Options: map[string]string{
+			"file_path": auditLogFile.Name(),
+		},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	_, err = c.Logical().Write("auth/token/create", map[string]interface{}{
+		"ttl": "10s",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Check the audit trail on request and response
+	decoder := json.NewDecoder(auditLogFile)
+	var auditRecord map[string]interface{}
+	for decoder.Decode(&auditRecord) == nil {
+		auditRequest := map[string]interface{}{}
+		if req, ok := auditRecord["request"]; ok {
+			auditRequest = req.(map[string]interface{})
+			if auditRequest["path"] != "auth/token/create" {
+				continue
+			}
+		}
+		testBuiltinPluginMetadataAuditLog(t, auditRequest, consts.PluginTypeCredential.String())
+
+		auditResponse := map[string]interface{}{}
+		if req, ok := auditRecord["response"]; ok {
+			auditRequest = req.(map[string]interface{})
+			if auditResponse["path"] != "auth/token/create" {
+				continue
+			}
+		}
+		testBuiltinPluginMetadataAuditLog(t, auditResponse, consts.PluginTypeCredential.String())
+	}
+}
+
+// TestLogical_AuditEnabled_ShouldLogPluginMetadata_Secret tests that we have plugin metadata of a builtin secret plugin
+// in audit log when it is enabled
+func TestLogical_AuditEnabled_ShouldLogPluginMetadata_Secret(t *testing.T) {
+	coreConfig := &vault.CoreConfig{
+		LogicalBackends: map[string]logical.Factory{
+			"kv": kv.VersionedKVFactory,
+		},
+		AuditBackends: map[string]audit.Factory{
+			"file": auditFile.Factory,
+		},
+	}
+
+	cluster := vault.NewTestCluster(t, coreConfig, &vault.TestClusterOptions{
+		HandlerFunc: Handler,
+	})
+
+	cluster.Start()
+	defer cluster.Cleanup()
+
+	cores := cluster.Cores
+
+	core := cores[0].Core
+	c := cluster.Cores[0].Client
+	vault.TestWaitActive(t, core)
+
+	if err := c.Sys().Mount("kv/", &api.MountInput{
+		Type: "kv-v2",
+	}); err != nil {
+		t.Fatalf("kv-v2 mount attempt failed - err: %#v\n", err)
+	}
+
+	// Enable the audit backend
+	tempDir := t.TempDir()
+	auditLogFile, err := os.CreateTemp(tempDir, "")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	err = c.Sys().EnableAuditWithOptions("file", &api.EnableAuditOptions{
+		Type: "file",
+		Options: map[string]string{
+			"file_path": auditLogFile.Name(),
+		},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	{
+		writeData := map[string]interface{}{
+			"data": map[string]interface{}{
+				"bar": "a",
+			},
+		}
+		corehelpers.RetryUntil(t, 10*time.Second, func() error {
+			resp, err := c.Logical().Write("kv/data/foo", writeData)
+			if err != nil {
+				t.Fatalf("write request failed, err: %#v, resp: %#v\n", err, resp)
+			}
+			return nil
+		})
+	}
+
+	// Check the audit trail on request and response
+	decoder := json.NewDecoder(auditLogFile)
+	var auditRecord map[string]interface{}
+	for decoder.Decode(&auditRecord) == nil {
+		auditRequest := map[string]interface{}{}
+		if req, ok := auditRecord["request"]; ok {
+			auditRequest = req.(map[string]interface{})
+			if auditRequest["path"] != "kv/data/foo" {
+				continue
+			}
+		}
+		testBuiltinPluginMetadataAuditLog(t, auditRequest, consts.PluginTypeSecrets.String())
+
+		auditResponse := map[string]interface{}{}
+		if req, ok := auditRecord["response"]; ok {
+			auditRequest = req.(map[string]interface{})
+			if auditResponse["path"] != "kv/data/foo" {
+				continue
+			}
+		}
+		testBuiltinPluginMetadataAuditLog(t, auditResponse, consts.PluginTypeSecrets.String())
 	}
 }

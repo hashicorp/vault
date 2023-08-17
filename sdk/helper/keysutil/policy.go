@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package keysutil
 
 import (
@@ -19,6 +22,7 @@ import (
 	"encoding/pem"
 	"errors"
 	"fmt"
+	"hash"
 	"io"
 	"math/big"
 	"path"
@@ -38,6 +42,8 @@ import (
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
 	"github.com/hashicorp/vault/sdk/helper/kdf"
 	"github.com/hashicorp/vault/sdk/logical"
+
+	"github.com/google/tink/go/kwp/subtle"
 )
 
 // Careful with iota; don't put anything before it in this const block because
@@ -45,6 +51,9 @@ import (
 const (
 	Kdf_hmac_sha256_counter = iota // built-in helper
 	Kdf_hkdf_sha256                // golang.org/x/crypto/hkdf
+
+	HmacMinKeySize = 256 / 8
+	HmacMaxKeySize = 4096 / 8
 )
 
 // Or this one...we need the default of zero to be the original AES256-GCM96
@@ -59,6 +68,8 @@ const (
 	KeyType_ECDSA_P521
 	KeyType_AES128_GCM96
 	KeyType_RSA3072
+	KeyType_MANAGED_KEY
+	KeyType_HMAC
 )
 
 const (
@@ -70,6 +81,18 @@ const (
 	DefaultVersionTemplate = "vault:v{{version}}:"
 )
 
+type AEADFactory interface {
+	GetAEAD(iv []byte) (cipher.AEAD, error)
+}
+
+type AssociatedDataFactory interface {
+	GetAssociatedData() ([]byte, error)
+}
+
+type ManagedKeyFactory interface {
+	GetManagedKeyParameters() ManagedKeyParameters
+}
+
 type RestoreInfo struct {
 	Time    time.Time `json:"time"`
 	Version int       `json:"version"`
@@ -78,6 +101,14 @@ type RestoreInfo struct {
 type BackupInfo struct {
 	Time    time.Time `json:"time"`
 	Version int       `json:"version"`
+}
+
+type SigningOptions struct {
+	HashAlgorithm    HashType
+	Marshaling       MarshalingType
+	SaltLength       int
+	SigAlgorithm     string
+	ManagedKeyParams ManagedKeyParameters
 }
 
 type SigningResult struct {
@@ -93,7 +124,7 @@ type KeyType int
 
 func (kt KeyType) EncryptionSupported() bool {
 	switch kt {
-	case KeyType_AES128_GCM96, KeyType_AES256_GCM96, KeyType_ChaCha20_Poly1305, KeyType_RSA2048, KeyType_RSA3072, KeyType_RSA4096:
+	case KeyType_AES128_GCM96, KeyType_AES256_GCM96, KeyType_ChaCha20_Poly1305, KeyType_RSA2048, KeyType_RSA3072, KeyType_RSA4096, KeyType_MANAGED_KEY:
 		return true
 	}
 	return false
@@ -101,7 +132,7 @@ func (kt KeyType) EncryptionSupported() bool {
 
 func (kt KeyType) DecryptionSupported() bool {
 	switch kt {
-	case KeyType_AES128_GCM96, KeyType_AES256_GCM96, KeyType_ChaCha20_Poly1305, KeyType_RSA2048, KeyType_RSA3072, KeyType_RSA4096:
+	case KeyType_AES128_GCM96, KeyType_AES256_GCM96, KeyType_ChaCha20_Poly1305, KeyType_RSA2048, KeyType_RSA3072, KeyType_RSA4096, KeyType_MANAGED_KEY:
 		return true
 	}
 	return false
@@ -109,7 +140,7 @@ func (kt KeyType) DecryptionSupported() bool {
 
 func (kt KeyType) SigningSupported() bool {
 	switch kt {
-	case KeyType_ECDSA_P256, KeyType_ECDSA_P384, KeyType_ECDSA_P521, KeyType_ED25519, KeyType_RSA2048, KeyType_RSA3072, KeyType_RSA4096:
+	case KeyType_ECDSA_P256, KeyType_ECDSA_P384, KeyType_ECDSA_P521, KeyType_ED25519, KeyType_RSA2048, KeyType_RSA3072, KeyType_RSA4096, KeyType_MANAGED_KEY:
 		return true
 	}
 	return false
@@ -126,6 +157,22 @@ func (kt KeyType) HashSignatureInput() bool {
 func (kt KeyType) DerivationSupported() bool {
 	switch kt {
 	case KeyType_AES128_GCM96, KeyType_AES256_GCM96, KeyType_ChaCha20_Poly1305, KeyType_ED25519:
+		return true
+	}
+	return false
+}
+
+func (kt KeyType) AssociatedDataSupported() bool {
+	switch kt {
+	case KeyType_AES128_GCM96, KeyType_AES256_GCM96, KeyType_ChaCha20_Poly1305, KeyType_MANAGED_KEY:
+		return true
+	}
+	return false
+}
+
+func (kt KeyType) ImportPublicKeySupported() bool {
+	switch kt {
+	case KeyType_RSA2048, KeyType_RSA3072, KeyType_RSA4096, KeyType_ECDSA_P256, KeyType_ECDSA_P384, KeyType_ECDSA_P521, KeyType_ED25519:
 		return true
 	}
 	return false
@@ -153,6 +200,10 @@ func (kt KeyType) String() string {
 		return "rsa-3072"
 	case KeyType_RSA4096:
 		return "rsa-4096"
+	case KeyType_HMAC:
+		return "hmac"
+	case KeyType_MANAGED_KEY:
+		return "managed_key"
 	}
 
 	return "[unknown]"
@@ -178,7 +229,8 @@ type KeyEntry struct {
 	EC_Y *big.Int `json:"ec_y"`
 	EC_D *big.Int `json:"ec_d"`
 
-	RSAKey *rsa.PrivateKey `json:"rsa_key"`
+	RSAKey       *rsa.PrivateKey `json:"rsa_key"`
+	RSAPublicKey *rsa.PublicKey  `json:"rsa_public_key"`
 
 	// The public key in an appropriate format for the type of key
 	FormattedPublicKey string `json:"public_key"`
@@ -190,6 +242,16 @@ type KeyEntry struct {
 	// This is deprecated (but still filled) in favor of the value above which
 	// is more precise
 	DeprecatedCreationTime int64 `json:"creation_time"`
+
+	ManagedKeyUUID string `json:"managed_key_id,omitempty"`
+}
+
+func (ke *KeyEntry) IsPrivateKeyMissing() bool {
+	if ke.RSAKey != nil || ke.EC_D != nil || len(ke.Key) != 0 {
+		return false
+	}
+
+	return true
 }
 
 // deprecatedKeyEntryMap is used to allow JSON marshal/unmarshal
@@ -293,6 +355,19 @@ func LoadPolicy(ctx context.Context, s logical.Storage, path string) (*Policy, e
 		return nil, err
 	}
 
+	// Migrate RSA private keys to include their private counterpart. This lets
+	// us reference RSAPublicKey whenever we need to, without necessarily
+	// needing the private key handy, synchronizing the behavior with EC and
+	// Ed25519 key pairs.
+	switch policy.Type {
+	case KeyType_RSA2048, KeyType_RSA3072, KeyType_RSA4096:
+		for _, entry := range policy.Keys {
+			if entry.RSAPublicKey == nil && entry.RSAKey != nil {
+				entry.RSAPublicKey = entry.RSAKey.Public().(*rsa.PublicKey)
+			}
+		}
+	}
+
 	policy.l = new(sync.RWMutex)
 
 	return &policy, nil
@@ -311,9 +386,10 @@ type Policy struct {
 	// served after a delete.
 	deleted uint32
 
-	Name string      `json:"name"`
-	Key  []byte      `json:"key,omitempty"` // DEPRECATED
-	Keys keyEntryMap `json:"keys"`
+	Name    string      `json:"name"`
+	Key     []byte      `json:"key,omitempty"`      // DEPRECATED
+	KeySize int         `json:"key_size,omitempty"` // For algorithms with variable key sizes
+	Keys    keyEntryMap `json:"keys"`
 
 	// Derived keys MUST provide a context and the master underlying key is
 	// never used. If convergent encryption is true, the context will be used
@@ -374,13 +450,20 @@ type Policy struct {
 	// policy object.
 	StoragePrefix string `json:"storage_prefix"`
 
-	// AutoRotateInterval defines how frequently the key should automatically
+	// AutoRotatePeriod defines how frequently the key should automatically
 	// rotate. Setting this to zero disables automatic rotation for the key.
-	AutoRotateInterval time.Duration `json:"auto_rotate_interval"`
+	AutoRotatePeriod time.Duration `json:"auto_rotate_period"`
 
 	// versionPrefixCache stores caches of version prefix strings and the split
 	// version template.
 	versionPrefixCache sync.Map
+
+	// Imported indicates whether the key was generated by Vault or imported
+	// from an external source
+	Imported bool
+
+	// AllowImportedKeyRotation indicates whether an imported key may be rotated by Vault
+	AllowImportedKeyRotation bool
 }
 
 func (p *Policy) Lock(exclusive bool) {
@@ -684,6 +767,10 @@ func (p *Policy) Upgrade(ctx context.Context, storage logical.Storage, randReade
 		entry.HMACKey = hmacKey
 		p.Keys[strconv.Itoa(p.LatestVersion)] = entry
 		persistNeeded = true
+
+		if p.Type == KeyType_HMAC {
+			entry.HMACKey = entry.Key
+		}
 	}
 
 	if persistNeeded {
@@ -812,101 +899,14 @@ func (p *Policy) convergentVersion(ver int) int {
 }
 
 func (p *Policy) Encrypt(ver int, context, nonce []byte, value string) (string, error) {
-	if !p.Type.EncryptionSupported() {
-		return "", errutil.UserError{Err: fmt.Sprintf("message encryption not supported for key type %v", p.Type)}
-	}
-
-	// Decode the plaintext value
-	plaintext, err := base64.StdEncoding.DecodeString(value)
-	if err != nil {
-		return "", errutil.UserError{Err: err.Error()}
-	}
-
-	switch {
-	case ver == 0:
-		ver = p.LatestVersion
-	case ver < 0:
-		return "", errutil.UserError{Err: "requested version for encryption is negative"}
-	case ver > p.LatestVersion:
-		return "", errutil.UserError{Err: "requested version for encryption is higher than the latest key version"}
-	case ver < p.MinEncryptionVersion:
-		return "", errutil.UserError{Err: "requested version for encryption is less than the minimum encryption key version"}
-	}
-
-	var ciphertext []byte
-
-	switch p.Type {
-	case KeyType_AES128_GCM96, KeyType_AES256_GCM96, KeyType_ChaCha20_Poly1305:
-		hmacKey := context
-
-		var encKey []byte
-		var deriveHMAC bool
-
-		encBytes := 32
-		hmacBytes := 0
-		if p.convergentVersion(ver) > 2 {
-			deriveHMAC = true
-			hmacBytes = 32
-		}
-		if p.Type == KeyType_AES128_GCM96 {
-			encBytes = 16
-		}
-
-		key, err := p.GetKey(context, ver, encBytes+hmacBytes)
-		if err != nil {
-			return "", err
-		}
-
-		if len(key) < encBytes+hmacBytes {
-			return "", errutil.InternalError{Err: "could not derive key, length too small"}
-		}
-
-		encKey = key[:encBytes]
-		if len(encKey) != encBytes {
-			return "", errutil.InternalError{Err: "could not derive enc key, length not correct"}
-		}
-		if deriveHMAC {
-			hmacKey = key[encBytes:]
-			if len(hmacKey) != hmacBytes {
-				return "", errutil.InternalError{Err: "could not derive hmac key, length not correct"}
-			}
-		}
-
-		ciphertext, err = p.SymmetricEncryptRaw(ver, encKey, plaintext,
-			SymmetricOpts{
-				Convergent: p.ConvergentEncryption,
-				HMACKey:    hmacKey,
-				Nonce:      nonce,
-			})
-
-		if err != nil {
-			return "", err
-		}
-	case KeyType_RSA2048, KeyType_RSA3072, KeyType_RSA4096:
-		keyEntry, err := p.safeGetKeyEntry(ver)
-		if err != nil {
-			return "", err
-		}
-		key := keyEntry.RSAKey
-		ciphertext, err = rsa.EncryptOAEP(sha256.New(), rand.Reader, &key.PublicKey, plaintext, nil)
-		if err != nil {
-			return "", errutil.InternalError{Err: fmt.Sprintf("failed to RSA encrypt the plaintext: %v", err)}
-		}
-
-	default:
-		return "", errutil.InternalError{Err: fmt.Sprintf("unsupported key type %v", p.Type)}
-	}
-
-	// Convert to base64
-	encoded := base64.StdEncoding.EncodeToString(ciphertext)
-
-	// Prepend some information
-	encoded = p.getVersionPrefix(ver) + encoded
-
-	return encoded, nil
+	return p.EncryptWithFactory(ver, context, nonce, value, nil)
 }
 
 func (p *Policy) Decrypt(context, nonce []byte, value string) (string, error) {
+	return p.DecryptWithFactory(context, nonce, value, nil)
+}
+
+func (p *Policy) DecryptWithFactory(context, nonce []byte, value string, factories ...interface{}) (string, error) {
 	if !p.Type.DecryptionSupported() {
 		return "", errutil.UserError{Err: fmt.Sprintf("message decryption not supported for key type %v", p.Type)}
 	}
@@ -974,11 +974,29 @@ func (p *Policy) Decrypt(context, nonce []byte, value string) (string, error) {
 			return "", errutil.InternalError{Err: "could not derive enc key, length not correct"}
 		}
 
-		plain, err = p.SymmetricDecryptRaw(encKey, decoded,
-			SymmetricOpts{
-				Convergent:        p.ConvergentEncryption,
-				ConvergentVersion: p.ConvergentVersion,
-			})
+		symopts := SymmetricOpts{
+			Convergent:        p.ConvergentEncryption,
+			ConvergentVersion: p.ConvergentVersion,
+		}
+		for index, rawFactory := range factories {
+			if rawFactory == nil {
+				continue
+			}
+			switch factory := rawFactory.(type) {
+			case AEADFactory:
+				symopts.AEADFactory = factory
+			case AssociatedDataFactory:
+				symopts.AdditionalData, err = factory.GetAssociatedData()
+				if err != nil {
+					return "", errutil.InternalError{Err: fmt.Sprintf("unable to get associated_data/additional_data from factory[%d]: %v", index, err)}
+				}
+			case ManagedKeyFactory:
+			default:
+				return "", errutil.InternalError{Err: fmt.Sprintf("unknown type of factory[%d]: %T", index, rawFactory)}
+			}
+		}
+
+		plain, err = p.SymmetricDecryptRaw(encKey, decoded, symopts)
 		if err != nil {
 			return "", err
 		}
@@ -988,9 +1006,39 @@ func (p *Policy) Decrypt(context, nonce []byte, value string) (string, error) {
 			return "", err
 		}
 		key := keyEntry.RSAKey
+		if key == nil {
+			return "", errutil.InternalError{Err: fmt.Sprintf("cannot decrypt ciphertext, key version does not have a private counterpart")}
+		}
 		plain, err = rsa.DecryptOAEP(sha256.New(), rand.Reader, key, decoded, nil)
 		if err != nil {
 			return "", errutil.InternalError{Err: fmt.Sprintf("failed to RSA decrypt the ciphertext: %v", err)}
+		}
+	case KeyType_MANAGED_KEY:
+		keyEntry, err := p.safeGetKeyEntry(ver)
+		if err != nil {
+			return "", err
+		}
+		var aad []byte
+		var managedKeyFactory ManagedKeyFactory
+		for _, f := range factories {
+			switch factory := f.(type) {
+			case AssociatedDataFactory:
+				aad, err = factory.GetAssociatedData()
+				if err != nil {
+					return "", err
+				}
+			case ManagedKeyFactory:
+				managedKeyFactory = factory
+			}
+		}
+
+		if managedKeyFactory == nil {
+			return "", errors.New("key type is managed_key, but managed key parameters were not provided")
+		}
+
+		plain, err = p.decryptWithManagedKey(managedKeyFactory.GetManagedKeyParameters(), keyEntry, decoded, nonce, aad)
+		if err != nil {
+			return "", err
 		}
 
 	default:
@@ -1011,14 +1059,40 @@ func (p *Policy) HMACKey(version int) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
+
+	if p.Type == KeyType_HMAC {
+		return keyEntry.Key, nil
+	}
 	if keyEntry.HMACKey == nil {
 		return nil, fmt.Errorf("no HMAC key exists for that key version")
 	}
-
 	return keyEntry.HMACKey, nil
 }
 
 func (p *Policy) Sign(ver int, context, input []byte, hashAlgorithm HashType, sigAlgorithm string, marshaling MarshalingType) (*SigningResult, error) {
+	return p.SignWithOptions(ver, context, input, &SigningOptions{
+		HashAlgorithm: hashAlgorithm,
+		Marshaling:    marshaling,
+		SaltLength:    rsa.PSSSaltLengthAuto,
+		SigAlgorithm:  sigAlgorithm,
+	})
+}
+
+func (p *Policy) minRSAPSSSaltLength() int {
+	// https://cs.opensource.google/go/go/+/refs/tags/go1.19:src/crypto/rsa/pss.go;l=247
+	return rsa.PSSSaltLengthEqualsHash
+}
+
+func (p *Policy) maxRSAPSSSaltLength(keyBitLen int, hash crypto.Hash) int {
+	// https://cs.opensource.google/go/go/+/refs/tags/go1.19:src/crypto/rsa/pss.go;l=288
+	return (keyBitLen-1+7)/8 - 2 - hash.Size()
+}
+
+func (p *Policy) validRSAPSSSaltLength(keyBitLen int, hash crypto.Hash, saltLength int) bool {
+	return p.minRSAPSSSaltLength() <= saltLength && saltLength <= p.maxRSAPSSSaltLength(keyBitLen, hash)
+}
+
+func (p *Policy) SignWithOptions(ver int, context, input []byte, options *SigningOptions) (*SigningResult, error) {
 	if !p.Type.SigningSupported() {
 		return nil, fmt.Errorf("message signing not supported for key type %v", p.Type)
 	}
@@ -1041,6 +1115,16 @@ func (p *Policy) Sign(ver int, context, input []byte, hashAlgorithm HashType, si
 	if err != nil {
 		return nil, err
 	}
+
+	// Before signing, check if key has its private part, if not return error
+	if keyParams.IsPrivateKeyMissing() {
+		return nil, errutil.UserError{Err: "requested version for signing does not contain a private part"}
+	}
+
+	hashAlgorithm := options.HashAlgorithm
+	marshaling := options.Marshaling
+	saltLength := options.SaltLength
+	sigAlgorithm := options.SigAlgorithm
 
 	switch p.Type {
 	case KeyType_ECDSA_P256, KeyType_ECDSA_P384, KeyType_ECDSA_P521:
@@ -1132,27 +1216,8 @@ func (p *Policy) Sign(ver int, context, input []byte, hashAlgorithm HashType, si
 	case KeyType_RSA2048, KeyType_RSA3072, KeyType_RSA4096:
 		key := keyParams.RSAKey
 
-		var algo crypto.Hash
-		switch hashAlgorithm {
-		case HashTypeSHA1:
-			algo = crypto.SHA1
-		case HashTypeSHA2224:
-			algo = crypto.SHA224
-		case HashTypeSHA2256:
-			algo = crypto.SHA256
-		case HashTypeSHA2384:
-			algo = crypto.SHA384
-		case HashTypeSHA2512:
-			algo = crypto.SHA512
-		case HashTypeSHA3224:
-			algo = crypto.SHA3_224
-		case HashTypeSHA3256:
-			algo = crypto.SHA3_256
-		case HashTypeSHA3384:
-			algo = crypto.SHA3_384
-		case HashTypeSHA3512:
-			algo = crypto.SHA3_512
-		default:
+		algo, ok := CryptoHashMap[hashAlgorithm]
+		if !ok {
 			return nil, errutil.InternalError{Err: "unsupported hash algorithm"}
 		}
 
@@ -1162,7 +1227,10 @@ func (p *Policy) Sign(ver int, context, input []byte, hashAlgorithm HashType, si
 
 		switch sigAlgorithm {
 		case "pss":
-			sig, err = rsa.SignPSS(rand.Reader, key, algo, input, nil)
+			if !p.validRSAPSSSaltLength(key.N.BitLen(), algo, saltLength) {
+				return nil, errutil.UserError{Err: fmt.Sprintf("requested salt length %d is invalid", saltLength)}
+			}
+			sig, err = rsa.SignPSS(rand.Reader, key, algo, input, &rsa.PSSOptions{SaltLength: saltLength})
 			if err != nil {
 				return nil, err
 			}
@@ -1173,6 +1241,17 @@ func (p *Policy) Sign(ver int, context, input []byte, hashAlgorithm HashType, si
 			}
 		default:
 			return nil, errutil.InternalError{Err: fmt.Sprintf("unsupported rsa signature algorithm %s", sigAlgorithm)}
+		}
+
+	case KeyType_MANAGED_KEY:
+		keyEntry, err := p.safeGetKeyEntry(ver)
+		if err != nil {
+			return nil, err
+		}
+
+		sig, err = p.signWithManagedKey(options, keyEntry, input)
+		if err != nil {
+			return nil, err
 		}
 
 	default:
@@ -1196,6 +1275,15 @@ func (p *Policy) Sign(ver int, context, input []byte, hashAlgorithm HashType, si
 }
 
 func (p *Policy) VerifySignature(context, input []byte, hashAlgorithm HashType, sigAlgorithm string, marshaling MarshalingType, sig string) (bool, error) {
+	return p.VerifySignatureWithOptions(context, input, sig, &SigningOptions{
+		HashAlgorithm: hashAlgorithm,
+		Marshaling:    marshaling,
+		SaltLength:    rsa.PSSSaltLengthAuto,
+		SigAlgorithm:  sigAlgorithm,
+	})
+}
+
+func (p *Policy) VerifySignatureWithOptions(context, input []byte, sig string, options *SigningOptions) (bool, error) {
 	if !p.Type.SigningSupported() {
 		return false, errutil.UserError{Err: fmt.Sprintf("message verification not supported for key type %v", p.Type)}
 	}
@@ -1227,6 +1315,11 @@ func (p *Policy) VerifySignature(context, input []byte, hashAlgorithm HashType, 
 	if p.MinDecryptionVersion > 0 && ver < p.MinDecryptionVersion {
 		return false, errutil.UserError{Err: ErrTooOld}
 	}
+
+	hashAlgorithm := options.HashAlgorithm
+	marshaling := options.Marshaling
+	saltLength := options.SaltLength
+	sigAlgorithm := options.SigAlgorithm
 
 	var sigBytes []byte
 	switch marshaling {
@@ -1288,20 +1381,30 @@ func (p *Policy) VerifySignature(context, input []byte, hashAlgorithm HashType, 
 		return ecdsa.Verify(key, input, ecdsaSig.R, ecdsaSig.S), nil
 
 	case KeyType_ED25519:
-		var key ed25519.PrivateKey
+		var pub ed25519.PublicKey
 
 		if p.Derived {
 			// Derive the key that should be used
-			var err error
-			key, err = p.GetKey(context, ver, 32)
+			key, err := p.GetKey(context, ver, 32)
 			if err != nil {
 				return false, errutil.InternalError{Err: fmt.Sprintf("error deriving key: %v", err)}
 			}
+			pub = ed25519.PrivateKey(key).Public().(ed25519.PublicKey)
 		} else {
-			key = ed25519.PrivateKey(p.Keys[strconv.Itoa(ver)].Key)
+			keyEntry, err := p.safeGetKeyEntry(ver)
+			if err != nil {
+				return false, err
+			}
+
+			raw, err := base64.StdEncoding.DecodeString(keyEntry.FormattedPublicKey)
+			if err != nil {
+				return false, err
+			}
+
+			pub = ed25519.PublicKey(raw)
 		}
 
-		return ed25519.Verify(key.Public().(ed25519.PublicKey), input, sigBytes), nil
+		return ed25519.Verify(pub, input, sigBytes), nil
 
 	case KeyType_RSA2048, KeyType_RSA3072, KeyType_RSA4096:
 		keyEntry, err := p.safeGetKeyEntry(ver)
@@ -1309,29 +1412,8 @@ func (p *Policy) VerifySignature(context, input []byte, hashAlgorithm HashType, 
 			return false, err
 		}
 
-		key := keyEntry.RSAKey
-
-		var algo crypto.Hash
-		switch hashAlgorithm {
-		case HashTypeSHA1:
-			algo = crypto.SHA1
-		case HashTypeSHA2224:
-			algo = crypto.SHA224
-		case HashTypeSHA2256:
-			algo = crypto.SHA256
-		case HashTypeSHA2384:
-			algo = crypto.SHA384
-		case HashTypeSHA2512:
-			algo = crypto.SHA512
-		case HashTypeSHA3224:
-			algo = crypto.SHA3_224
-		case HashTypeSHA3256:
-			algo = crypto.SHA3_256
-		case HashTypeSHA3384:
-			algo = crypto.SHA3_384
-		case HashTypeSHA3512:
-			algo = crypto.SHA3_512
-		default:
+		algo, ok := CryptoHashMap[hashAlgorithm]
+		if !ok {
 			return false, errutil.InternalError{Err: "unsupported hash algorithm"}
 		}
 
@@ -1341,18 +1423,144 @@ func (p *Policy) VerifySignature(context, input []byte, hashAlgorithm HashType, 
 
 		switch sigAlgorithm {
 		case "pss":
-			err = rsa.VerifyPSS(&key.PublicKey, algo, input, sigBytes, nil)
+			publicKey := keyEntry.RSAPublicKey
+			if !keyEntry.IsPrivateKeyMissing() {
+				publicKey = &keyEntry.RSAKey.PublicKey
+			}
+			if !p.validRSAPSSSaltLength(publicKey.N.BitLen(), algo, saltLength) {
+				return false, errutil.UserError{Err: fmt.Sprintf("requested salt length %d is invalid", saltLength)}
+			}
+			err = rsa.VerifyPSS(publicKey, algo, input, sigBytes, &rsa.PSSOptions{SaltLength: saltLength})
 		case "pkcs1v15":
-			err = rsa.VerifyPKCS1v15(&key.PublicKey, algo, input, sigBytes)
+			publicKey := keyEntry.RSAPublicKey
+			if !keyEntry.IsPrivateKeyMissing() {
+				publicKey = &keyEntry.RSAKey.PublicKey
+			}
+			err = rsa.VerifyPKCS1v15(publicKey, algo, input, sigBytes)
 		default:
 			return false, errutil.InternalError{Err: fmt.Sprintf("unsupported rsa signature algorithm %s", sigAlgorithm)}
 		}
 
 		return err == nil, nil
 
+	case KeyType_MANAGED_KEY:
+		keyEntry, err := p.safeGetKeyEntry(ver)
+		if err != nil {
+			return false, err
+		}
+
+		return p.verifyWithManagedKey(options, keyEntry, input, sigBytes)
+
 	default:
 		return false, errutil.InternalError{Err: fmt.Sprintf("unsupported key type %v", p.Type)}
 	}
+}
+
+func (p *Policy) Import(ctx context.Context, storage logical.Storage, key []byte, randReader io.Reader) error {
+	return p.ImportPublicOrPrivate(ctx, storage, key, true, randReader)
+}
+
+func (p *Policy) ImportPublicOrPrivate(ctx context.Context, storage logical.Storage, key []byte, isPrivateKey bool, randReader io.Reader) error {
+	now := time.Now()
+	entry := KeyEntry{
+		CreationTime:           now,
+		DeprecatedCreationTime: now.Unix(),
+	}
+
+	// Before we insert this entry, check if the latest version is incomplete
+	// and this entry matches the current version; if so, return without
+	// updating to the next version.
+	if p.LatestVersion > 0 {
+		latestKey := p.Keys[strconv.Itoa(p.LatestVersion)]
+		if latestKey.IsPrivateKeyMissing() && isPrivateKey {
+			if err := p.ImportPrivateKeyForVersion(ctx, storage, p.LatestVersion, key); err == nil {
+				return nil
+			}
+		}
+	}
+
+	if p.Type != KeyType_HMAC {
+		hmacKey, err := uuid.GenerateRandomBytesWithReader(32, randReader)
+		if err != nil {
+			return err
+		}
+		entry.HMACKey = hmacKey
+	}
+
+	if p.Type == KeyType_ED25519 && p.Derived && !isPrivateKey {
+		return fmt.Errorf("unable to import only public key for derived Ed25519 key: imported key should not be an Ed25519 key pair but is instead an HKDF key")
+	}
+
+	if (p.Type == KeyType_AES128_GCM96 && len(key) != 16) ||
+		((p.Type == KeyType_AES256_GCM96 || p.Type == KeyType_ChaCha20_Poly1305) && len(key) != 32) ||
+		(p.Type == KeyType_HMAC && (len(key) < HmacMinKeySize || len(key) > HmacMaxKeySize)) {
+		return fmt.Errorf("invalid key size %d bytes for key type %s", len(key), p.Type)
+	}
+
+	if p.Type == KeyType_AES128_GCM96 || p.Type == KeyType_AES256_GCM96 || p.Type == KeyType_ChaCha20_Poly1305 || p.Type == KeyType_HMAC {
+		entry.Key = key
+		if p.Type == KeyType_HMAC {
+			p.KeySize = len(key)
+			entry.HMACKey = key
+		}
+	} else {
+		var parsedKey any
+		var err error
+		if isPrivateKey {
+			parsedKey, err = x509.ParsePKCS8PrivateKey(key)
+			if err != nil {
+				if strings.Contains(err.Error(), "unknown elliptic curve") {
+					var edErr error
+					parsedKey, edErr = ParsePKCS8Ed25519PrivateKey(key)
+					if edErr != nil {
+						return fmt.Errorf("error parsing asymmetric key:\n - assuming contents are an ed25519 private key: %s\n - original error: %v", edErr, err)
+					}
+
+					// Parsing as Ed25519-in-PKCS8-ECPrivateKey succeeded!
+				} else if strings.Contains(err.Error(), oidSignatureRSAPSS.String()) {
+					var rsaErr error
+					parsedKey, rsaErr = ParsePKCS8RSAPSSPrivateKey(key)
+					if rsaErr != nil {
+						return fmt.Errorf("error parsing asymmetric key:\n - assuming contents are an RSA/PSS private key: %v\n - original error: %w", rsaErr, err)
+					}
+
+					// Parsing as RSA-PSS in PKCS8 succeeded!
+				} else {
+					return fmt.Errorf("error parsing asymmetric key: %s", err)
+				}
+			}
+		} else {
+			pemBlock, _ := pem.Decode(key)
+			parsedKey, err = x509.ParsePKIXPublicKey(pemBlock.Bytes)
+			if err != nil {
+				return fmt.Errorf("error parsing public key: %s", err)
+			}
+		}
+
+		err = entry.parseFromKey(p.Type, parsedKey)
+		if err != nil {
+			return err
+		}
+	}
+
+	p.LatestVersion += 1
+
+	if p.Keys == nil {
+		// This is an initial key rotation when generating a new policy. We
+		// don't need to call migrate here because if we've called getPolicy to
+		// get the policy in the first place it will have been run.
+		p.Keys = keyEntryMap{}
+	}
+	p.Keys[strconv.Itoa(p.LatestVersion)] = entry
+
+	// This ensures that with new key creations min decryption version is set
+	// to 1 rather than the int default of 0, since keys start at 1 (either
+	// fresh or after migration to the key map)
+	if p.MinDecryptionVersion == 0 {
+		p.MinDecryptionVersion = 1
+	}
+
+	return p.Persist(ctx, storage)
 }
 
 // Rotate rotates the policy and persists it to storage.
@@ -1361,6 +1569,10 @@ func (p *Policy) Rotate(ctx context.Context, storage logical.Storage, randReader
 	priorLatestVersion := p.LatestVersion
 	priorMinDecryptionVersion := p.MinDecryptionVersion
 	var priorKeys keyEntryMap
+
+	if p.Imported && !p.AllowImportedKeyRotation {
+		return fmt.Errorf("imported key %s does not allow rotation within Vault", p.Name)
+	}
 
 	if p.Keys != nil {
 		priorKeys = keyEntryMap{}
@@ -1381,6 +1593,7 @@ func (p *Policy) Rotate(ctx context.Context, storage logical.Storage, randReader
 		return err
 	}
 
+	p.Imported = false
 	return p.Persist(ctx, storage)
 }
 
@@ -1399,17 +1612,27 @@ func (p *Policy) RotateInMemory(randReader io.Reader) (retErr error) {
 	entry.HMACKey = hmacKey
 
 	switch p.Type {
-	case KeyType_AES128_GCM96, KeyType_AES256_GCM96, KeyType_ChaCha20_Poly1305:
+	case KeyType_AES128_GCM96, KeyType_AES256_GCM96, KeyType_ChaCha20_Poly1305, KeyType_HMAC:
 		// Default to 256 bit key
 		numBytes := 32
 		if p.Type == KeyType_AES128_GCM96 {
 			numBytes = 16
+		} else if p.Type == KeyType_HMAC {
+			numBytes = p.KeySize
+			if numBytes < HmacMinKeySize || numBytes > HmacMaxKeySize {
+				return fmt.Errorf("invalid key size for HMAC key, must be between %d and %d bytes", HmacMinKeySize, HmacMaxKeySize)
+			}
 		}
 		newKey, err := uuid.GenerateRandomBytesWithReader(numBytes, randReader)
 		if err != nil {
 			return err
 		}
 		entry.Key = newKey
+
+		if p.Type == KeyType_HMAC {
+			// To avoid causing problems, ensure HMACKey = Key.
+			entry.HMACKey = newKey
+		}
 
 	case KeyType_ECDSA_P256, KeyType_ECDSA_P384, KeyType_ECDSA_P521:
 		var curve elliptic.Curve
@@ -1444,13 +1667,19 @@ func (p *Policy) RotateInMemory(randReader io.Reader) (retErr error) {
 		entry.FormattedPublicKey = string(pemBytes)
 
 	case KeyType_ED25519:
+		// Go uses a 64-byte private key for Ed25519 keys (private+public, each
+		// 32-bytes long). When we do Key derivation, we still generate a 32-byte
+		// random value (and compute the corresponding Ed25519 public key), but
+		// use this entire 64-byte key as if it was an HKDF key. The corresponding
+		// underlying public key is never returned (which is probably good, because
+		// doing so would leak half of our HKDF key...), but means we cannot import
+		// derived-enabled Ed25519 public key components.
 		pub, pri, err := ed25519.GenerateKey(randReader)
 		if err != nil {
 			return err
 		}
 		entry.Key = pri
 		entry.FormattedPublicKey = base64.StdEncoding.EncodeToString(pub)
-
 	case KeyType_RSA2048, KeyType_RSA3072, KeyType_RSA4096:
 		bitSize := 2048
 		if p.Type == KeyType_RSA3072 {
@@ -1583,7 +1812,7 @@ func (p *Policy) getVersionPrefix(ver int) string {
 		template = DefaultVersionTemplate
 	}
 
-	prefix := strings.Replace(template, "{{version}}", strconv.Itoa(ver), -1)
+	prefix := strings.ReplaceAll(template, "{{version}}", strconv.Itoa(ver))
 	p.versionPrefixCache.Store(ver, prefix)
 
 	return prefix
@@ -1602,6 +1831,8 @@ type SymmetricOpts struct {
 	AdditionalData []byte
 	// The HMAC key, for generating IVs in convergent encryption
 	HMACKey []byte
+	// Allows an external provider of the AEAD, for e.g. managed keys
+	AEADFactory AEADFactory
 }
 
 // Symmetrically encrypt a plaintext given the convergence configuration and appropriate keys
@@ -1633,6 +1864,17 @@ func (p *Policy) SymmetricEncryptRaw(ver int, encKey, plaintext []byte, opts Sym
 		}
 
 		aead = cha
+	case KeyType_MANAGED_KEY:
+		if opts.Convergent || len(opts.Nonce) != 0 {
+			return nil, errutil.UserError{Err: "cannot use convergent encryption or provide a nonce to managed-key backed encryption"}
+		}
+		if opts.AEADFactory == nil {
+			return nil, errors.New("expected AEAD factory from managed key, none provided")
+		}
+		aead, err = opts.AEADFactory.GetAEAD(nonce)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	if opts.Convergent {
@@ -1676,6 +1918,7 @@ func (p *Policy) SymmetricEncryptRaw(ver int, encKey, plaintext []byte, opts Sym
 // Symmetrically decrypt a ciphertext given the convergence configuration and appropriate keys
 func (p *Policy) SymmetricDecryptRaw(encKey, ciphertext []byte, opts SymmetricOpts) ([]byte, error) {
 	var aead cipher.AEAD
+	var err error
 	var nonce []byte
 
 	switch p.Type {
@@ -1701,6 +1944,11 @@ func (p *Policy) SymmetricDecryptRaw(encKey, ciphertext []byte, opts SymmetricOp
 		}
 
 		aead = cha
+	case KeyType_MANAGED_KEY:
+		aead, err = opts.AEADFactory.GetAEAD(nonce)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	if len(ciphertext) < aead.NonceSize() {
@@ -1722,4 +1970,426 @@ func (p *Policy) SymmetricDecryptRaw(encKey, ciphertext []byte, opts SymmetricOp
 		return nil, errutil.UserError{Err: err.Error()}
 	}
 	return plain, nil
+}
+
+func (p *Policy) EncryptWithFactory(ver int, context []byte, nonce []byte, value string, factories ...interface{}) (string, error) {
+	if !p.Type.EncryptionSupported() {
+		return "", errutil.UserError{Err: fmt.Sprintf("message encryption not supported for key type %v", p.Type)}
+	}
+
+	// Decode the plaintext value
+	plaintext, err := base64.StdEncoding.DecodeString(value)
+	if err != nil {
+		return "", errutil.UserError{Err: err.Error()}
+	}
+
+	switch {
+	case ver == 0:
+		ver = p.LatestVersion
+	case ver < 0:
+		return "", errutil.UserError{Err: "requested version for encryption is negative"}
+	case ver > p.LatestVersion:
+		return "", errutil.UserError{Err: "requested version for encryption is higher than the latest key version"}
+	case ver < p.MinEncryptionVersion:
+		return "", errutil.UserError{Err: "requested version for encryption is less than the minimum encryption key version"}
+	}
+
+	var ciphertext []byte
+
+	switch p.Type {
+	case KeyType_AES128_GCM96, KeyType_AES256_GCM96, KeyType_ChaCha20_Poly1305:
+		hmacKey := context
+
+		var encKey []byte
+		var deriveHMAC bool
+
+		encBytes := 32
+		hmacBytes := 0
+		if p.convergentVersion(ver) > 2 {
+			deriveHMAC = true
+			hmacBytes = 32
+		}
+		if p.Type == KeyType_AES128_GCM96 {
+			encBytes = 16
+		}
+
+		key, err := p.GetKey(context, ver, encBytes+hmacBytes)
+		if err != nil {
+			return "", err
+		}
+
+		if len(key) < encBytes+hmacBytes {
+			return "", errutil.InternalError{Err: "could not derive key, length too small"}
+		}
+
+		encKey = key[:encBytes]
+		if len(encKey) != encBytes {
+			return "", errutil.InternalError{Err: "could not derive enc key, length not correct"}
+		}
+		if deriveHMAC {
+			hmacKey = key[encBytes:]
+			if len(hmacKey) != hmacBytes {
+				return "", errutil.InternalError{Err: "could not derive hmac key, length not correct"}
+			}
+		}
+
+		symopts := SymmetricOpts{
+			Convergent: p.ConvergentEncryption,
+			HMACKey:    hmacKey,
+			Nonce:      nonce,
+		}
+		for index, rawFactory := range factories {
+			if rawFactory == nil {
+				continue
+			}
+			switch factory := rawFactory.(type) {
+			case AEADFactory:
+				symopts.AEADFactory = factory
+			case AssociatedDataFactory:
+				symopts.AdditionalData, err = factory.GetAssociatedData()
+				if err != nil {
+					return "", errutil.InternalError{Err: fmt.Sprintf("unable to get associated_data/additional_data from factory[%d]: %v", index, err)}
+				}
+			case ManagedKeyFactory:
+			default:
+				return "", errutil.InternalError{Err: fmt.Sprintf("unknown type of factory[%d]: %T", index, rawFactory)}
+			}
+		}
+
+		ciphertext, err = p.SymmetricEncryptRaw(ver, encKey, plaintext, symopts)
+		if err != nil {
+			return "", err
+		}
+	case KeyType_RSA2048, KeyType_RSA3072, KeyType_RSA4096:
+		keyEntry, err := p.safeGetKeyEntry(ver)
+		if err != nil {
+			return "", err
+		}
+		var publicKey *rsa.PublicKey
+		if keyEntry.RSAKey != nil {
+			publicKey = &keyEntry.RSAKey.PublicKey
+		} else {
+			publicKey = keyEntry.RSAPublicKey
+		}
+		ciphertext, err = rsa.EncryptOAEP(sha256.New(), rand.Reader, publicKey, plaintext, nil)
+		if err != nil {
+			return "", errutil.InternalError{Err: fmt.Sprintf("failed to RSA encrypt the plaintext: %v", err)}
+		}
+	case KeyType_MANAGED_KEY:
+		keyEntry, err := p.safeGetKeyEntry(ver)
+		if err != nil {
+			return "", err
+		}
+
+		var aad []byte
+		var managedKeyFactory ManagedKeyFactory
+		for _, f := range factories {
+			switch factory := f.(type) {
+			case AssociatedDataFactory:
+				aad, err = factory.GetAssociatedData()
+				if err != nil {
+					return "", nil
+				}
+			case ManagedKeyFactory:
+				managedKeyFactory = factory
+			}
+		}
+
+		if managedKeyFactory == nil {
+			return "", errors.New("key type is managed_key, but managed key parameters were not provided")
+		}
+
+		ciphertext, err = p.encryptWithManagedKey(managedKeyFactory.GetManagedKeyParameters(), keyEntry, plaintext, nonce, aad)
+		if err != nil {
+			return "", err
+		}
+
+	default:
+		return "", errutil.InternalError{Err: fmt.Sprintf("unsupported key type %v", p.Type)}
+	}
+
+	// Convert to base64
+	encoded := base64.StdEncoding.EncodeToString(ciphertext)
+
+	// Prepend some information
+	encoded = p.getVersionPrefix(ver) + encoded
+
+	return encoded, nil
+}
+
+func (p *Policy) KeyVersionCanBeUpdated(keyVersion int, isPrivateKey bool) error {
+	keyEntry, err := p.safeGetKeyEntry(keyVersion)
+	if err != nil {
+		return err
+	}
+
+	if !p.Type.ImportPublicKeySupported() {
+		return errors.New("provided type does not support importing key versions")
+	}
+
+	isPrivateKeyMissing := keyEntry.IsPrivateKeyMissing()
+	if isPrivateKeyMissing && !isPrivateKey {
+		return errors.New("cannot add a public key to a key version that already has a public key set")
+	}
+
+	if !isPrivateKeyMissing {
+		return errors.New("private key imported, key version cannot be updated")
+	}
+
+	return nil
+}
+
+func (p *Policy) ImportPrivateKeyForVersion(ctx context.Context, storage logical.Storage, keyVersion int, key []byte) error {
+	keyEntry, err := p.safeGetKeyEntry(keyVersion)
+	if err != nil {
+		return err
+	}
+
+	// Parse key
+	parsedPrivateKey, err := x509.ParsePKCS8PrivateKey(key)
+	if err != nil {
+		if strings.Contains(err.Error(), "unknown elliptic curve") {
+			var edErr error
+			parsedPrivateKey, edErr = ParsePKCS8Ed25519PrivateKey(key)
+			if edErr != nil {
+				return fmt.Errorf("error parsing asymmetric key:\n - assuming contents are an ed25519 private key: %s\n - original error: %v", edErr, err)
+			}
+
+			// Parsing as Ed25519-in-PKCS8-ECPrivateKey succeeded!
+		} else if strings.Contains(err.Error(), oidSignatureRSAPSS.String()) {
+			var rsaErr error
+			parsedPrivateKey, rsaErr = ParsePKCS8RSAPSSPrivateKey(key)
+			if rsaErr != nil {
+				return fmt.Errorf("error parsing asymmetric key:\n - assuming contents are an RSA/PSS private key: %v\n - original error: %w", rsaErr, err)
+			}
+
+			// Parsing as RSA-PSS in PKCS8 succeeded!
+		} else {
+			return fmt.Errorf("error parsing asymmetric key: %s", err)
+		}
+	}
+
+	switch parsedPrivateKey.(type) {
+	case *ecdsa.PrivateKey:
+		ecdsaKey := parsedPrivateKey.(*ecdsa.PrivateKey)
+		pemBlock, _ := pem.Decode([]byte(keyEntry.FormattedPublicKey))
+		publicKey, err := x509.ParsePKIXPublicKey(pemBlock.Bytes)
+		if err != nil || publicKey == nil {
+			return fmt.Errorf("failed to parse key entry public key: %v", err)
+		}
+		if !publicKey.(*ecdsa.PublicKey).Equal(&ecdsaKey.PublicKey) {
+			return fmt.Errorf("cannot import key, key pair does not match")
+		}
+	case *rsa.PrivateKey:
+		rsaKey := parsedPrivateKey.(*rsa.PrivateKey)
+		if !rsaKey.PublicKey.Equal(keyEntry.RSAPublicKey) {
+			return fmt.Errorf("cannot import key, key pair does not match")
+		}
+	case ed25519.PrivateKey:
+		ed25519Key := parsedPrivateKey.(ed25519.PrivateKey)
+		publicKey, err := base64.StdEncoding.DecodeString(keyEntry.FormattedPublicKey)
+		if err != nil {
+			return fmt.Errorf("failed to parse key entry public key: %v", err)
+		}
+		if !ed25519.PublicKey(publicKey).Equal(ed25519Key.Public()) {
+			return fmt.Errorf("cannot import key, key pair does not match")
+		}
+	}
+
+	err = keyEntry.parseFromKey(p.Type, parsedPrivateKey)
+	if err != nil {
+		return err
+	}
+
+	p.Keys[strconv.Itoa(keyVersion)] = keyEntry
+
+	return p.Persist(ctx, storage)
+}
+
+func (ke *KeyEntry) parseFromKey(PolKeyType KeyType, parsedKey any) error {
+	switch parsedKey.(type) {
+	case *ecdsa.PrivateKey, *ecdsa.PublicKey:
+		if PolKeyType != KeyType_ECDSA_P256 && PolKeyType != KeyType_ECDSA_P384 && PolKeyType != KeyType_ECDSA_P521 {
+			return fmt.Errorf("invalid key type: expected %s, got %T", PolKeyType, parsedKey)
+		}
+
+		curve := elliptic.P256()
+		if PolKeyType == KeyType_ECDSA_P384 {
+			curve = elliptic.P384()
+		} else if PolKeyType == KeyType_ECDSA_P521 {
+			curve = elliptic.P521()
+		}
+
+		var derBytes []byte
+		var err error
+		ecdsaKey, ok := parsedKey.(*ecdsa.PrivateKey)
+		if ok {
+
+			if ecdsaKey.Curve != curve {
+				return fmt.Errorf("invalid curve: expected %s, got %s", curve.Params().Name, ecdsaKey.Curve.Params().Name)
+			}
+
+			ke.EC_D = ecdsaKey.D
+			ke.EC_X = ecdsaKey.X
+			ke.EC_Y = ecdsaKey.Y
+
+			derBytes, err = x509.MarshalPKIXPublicKey(ecdsaKey.Public())
+			if err != nil {
+				return errwrap.Wrapf("error marshaling public key: {{err}}", err)
+			}
+		} else {
+			ecdsaKey := parsedKey.(*ecdsa.PublicKey)
+
+			if ecdsaKey.Curve != curve {
+				return fmt.Errorf("invalid curve: expected %s, got %s", curve.Params().Name, ecdsaKey.Curve.Params().Name)
+			}
+
+			ke.EC_X = ecdsaKey.X
+			ke.EC_Y = ecdsaKey.Y
+
+			derBytes, err = x509.MarshalPKIXPublicKey(ecdsaKey)
+			if err != nil {
+				return errwrap.Wrapf("error marshaling public key: {{err}}", err)
+			}
+		}
+
+		pemBlock := &pem.Block{
+			Type:  "PUBLIC KEY",
+			Bytes: derBytes,
+		}
+		pemBytes := pem.EncodeToMemory(pemBlock)
+		if pemBytes == nil || len(pemBytes) == 0 {
+			return fmt.Errorf("error PEM-encoding public key")
+		}
+		ke.FormattedPublicKey = string(pemBytes)
+	case ed25519.PrivateKey, ed25519.PublicKey:
+		if PolKeyType != KeyType_ED25519 {
+			return fmt.Errorf("invalid key type: expected %s, got %T", PolKeyType, parsedKey)
+		}
+
+		privateKey, ok := parsedKey.(ed25519.PrivateKey)
+		if ok {
+			ke.Key = privateKey
+			publicKey := privateKey.Public().(ed25519.PublicKey)
+			ke.FormattedPublicKey = base64.StdEncoding.EncodeToString(publicKey)
+		} else {
+			publicKey := parsedKey.(ed25519.PublicKey)
+			ke.FormattedPublicKey = base64.StdEncoding.EncodeToString(publicKey)
+		}
+	case *rsa.PrivateKey, *rsa.PublicKey:
+		if PolKeyType != KeyType_RSA2048 && PolKeyType != KeyType_RSA3072 && PolKeyType != KeyType_RSA4096 {
+			return fmt.Errorf("invalid key type: expected %s, got %T", PolKeyType, parsedKey)
+		}
+
+		keyBytes := 256
+		if PolKeyType == KeyType_RSA3072 {
+			keyBytes = 384
+		} else if PolKeyType == KeyType_RSA4096 {
+			keyBytes = 512
+		}
+
+		rsaKey, ok := parsedKey.(*rsa.PrivateKey)
+		if ok {
+			if rsaKey.Size() != keyBytes {
+				return fmt.Errorf("invalid key size: expected %d bytes, got %d bytes", keyBytes, rsaKey.Size())
+			}
+			ke.RSAKey = rsaKey
+			ke.RSAPublicKey = rsaKey.Public().(*rsa.PublicKey)
+		} else {
+			rsaKey := parsedKey.(*rsa.PublicKey)
+			if rsaKey.Size() != keyBytes {
+				return fmt.Errorf("invalid key size: expected %d bytes, got %d bytes", keyBytes, rsaKey.Size())
+			}
+			ke.RSAPublicKey = rsaKey
+		}
+	default:
+		return fmt.Errorf("invalid key type: expected %s, got %T", PolKeyType, parsedKey)
+	}
+
+	return nil
+}
+
+func (p *Policy) WrapKey(ver int, targetKey interface{}, targetKeyType KeyType, hash hash.Hash) (string, error) {
+	if !p.Type.SigningSupported() {
+		return "", fmt.Errorf("message signing not supported for key type %v", p.Type)
+	}
+
+	switch {
+	case ver == 0:
+		ver = p.LatestVersion
+	case ver < 0:
+		return "", errutil.UserError{Err: "requested version for key wrapping is negative"}
+	case ver > p.LatestVersion:
+		return "", errutil.UserError{Err: "requested version for key wrapping is higher than the latest key version"}
+	case p.MinEncryptionVersion > 0 && ver < p.MinEncryptionVersion:
+		return "", errutil.UserError{Err: "requested version for key wrapping is less than the minimum encryption key version"}
+	}
+
+	keyEntry, err := p.safeGetKeyEntry(ver)
+	if err != nil {
+		return "", err
+	}
+
+	return keyEntry.WrapKey(targetKey, targetKeyType, hash)
+}
+
+func (ke *KeyEntry) WrapKey(targetKey interface{}, targetKeyType KeyType, hash hash.Hash) (string, error) {
+	// Presently this method implements a CKM_RSA_AES_KEY_WRAP-compatible
+	// wrapping interface and only works on RSA keyEntries as a result.
+	if ke.RSAPublicKey == nil {
+		return "", fmt.Errorf("unsupported key type in use; must be a rsa key")
+	}
+
+	var preppedTargetKey []byte
+	switch targetKeyType {
+	case KeyType_AES128_GCM96, KeyType_AES256_GCM96, KeyType_ChaCha20_Poly1305, KeyType_HMAC:
+		var ok bool
+		preppedTargetKey, ok = targetKey.([]byte)
+		if !ok {
+			return "", fmt.Errorf("failed to wrap target key for import: symmetric key not provided in byte format (%T)", targetKey)
+		}
+	default:
+		var err error
+		preppedTargetKey, err = x509.MarshalPKCS8PrivateKey(targetKey)
+		if err != nil {
+			return "", fmt.Errorf("failed to wrap target key for import: %w", err)
+		}
+	}
+
+	result, err := wrapTargetPKCS8ForImport(ke.RSAPublicKey, preppedTargetKey, hash)
+	if err != nil {
+		return result, fmt.Errorf("failed to wrap target key for import: %w", err)
+	}
+
+	return result, nil
+}
+
+func wrapTargetPKCS8ForImport(wrappingKey *rsa.PublicKey, preppedTargetKey []byte, hash hash.Hash) (string, error) {
+	// Generate an ephemeral AES-256 key
+	ephKey, err := uuid.GenerateRandomBytes(32)
+	if err != nil {
+		return "", fmt.Errorf("failed to generate an ephemeral AES wrapping key: %w", err)
+	}
+
+	// Wrap ephemeral AES key with public wrapping key
+	ephKeyWrapped, err := rsa.EncryptOAEP(hash, rand.Reader, wrappingKey, ephKey, []byte{} /* label */)
+	if err != nil {
+		return "", fmt.Errorf("failed to encrypt ephemeral wrapping key with public key: %w", err)
+	}
+
+	// Create KWP instance for wrapping target key
+	kwp, err := subtle.NewKWP(ephKey)
+	if err != nil {
+		return "", fmt.Errorf("failed to generate new KWP from AES key: %w", err)
+	}
+
+	// Wrap target key with KWP
+	targetKeyWrapped, err := kwp.Wrap(preppedTargetKey)
+	if err != nil {
+		return "", fmt.Errorf("failed to wrap target key with KWP: %w", err)
+	}
+
+	// Combined wrapped keys into a single blob and base64 encode
+	wrappedKeys := append(ephKeyWrapped, targetKeyWrapped...)
+	return base64.StdEncoding.EncodeToString(wrappedKeys), nil
 }

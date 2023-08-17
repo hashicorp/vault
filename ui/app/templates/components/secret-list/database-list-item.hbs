@@ -1,9 +1,14 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
 <LinkedBlock
   @params={{array "vault.cluster.secrets.backend.show" (if this.keyTypeValue (concat "role/" @item.id) @item.id)}}
   class="list-item-row"
   data-test-secret-link={{@item.id}}
-  encode={{true}}
-  queryParams={{secret-query-params @backendType @item.type}}
+  @encode={{true}}
+  @queryParams={{secret-query-params @backendType @item.type}}
 >
   <div class="columns is-mobile">
     <div class="column is-10">
@@ -26,18 +31,14 @@
           <ul class="menu-list">
             {{#if @item.canEdit}}
               <li class="action">
-                <SecretLink @mode="show" @secret={{@item.id}} @class="has-text-black has-text-weight-semibold">
+                <SecretLink @mode="show" @secret={{@item.id}} class="has-text-black has-text-weight-semibold">
                   Edit connection
                 </SecretLink>
               </li>
             {{/if}}
             {{#if @item.canEditRole}}
               <li class="action">
-                <SecretLink
-                  @mode="edit"
-                  @secret={{concat "role/" @item.id}}
-                  @class="has-text-black has-text-weight-semibold"
-                >
+                <SecretLink @mode="edit" @secret={{concat "role/" @item.id}} class="has-text-black has-text-weight-semibold">
                   Edit Role
                 </SecretLink>
               </li>
@@ -68,6 +69,13 @@
                 >
                   Get credentials
                 </LinkTo>
+              </li>
+            {{/if}}
+            {{#if (and @item.canRotateRoleCredentials (eq this.keyTypeValue "static"))}}
+              <li class="action">
+                <button type="button" class="link" {{on "click" (fn this.rotateRoleCred @item.id)}}>
+                  Rotate credentials
+                </button>
               </li>
             {{/if}}
             {{#if @item.canRotateRoot}}

@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import { allSettled } from 'rsvp';
 import ApplicationAdapter from '../application';
 import ControlGroupError from 'vault/lib/control-group-error';
@@ -46,5 +51,12 @@ export default ApplicationAdapter.extend({
 
   queryRecord(store, type, query) {
     return this.fetchByQuery(store, query);
+  },
+
+  rotateRoleCredentials(backend, id) {
+    return this.ajax(
+      `${this.buildURL()}/${encodeURIComponent(backend)}/rotate-role/${encodeURIComponent(id)}`,
+      'POST'
+    );
   },
 });

@@ -37,10 +37,74 @@
         }
       ],
       "get": {
-        "operationId": "getFooId",
-        "tags": ["secrets"],
+        "operationId": "kv-read-foo-id",
+        "tags": [
+          "secrets"
+        ],
         "summary": "My Summary",
         "description": "My Description",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      },
+      "post": {
+        "operationId": "kv-write-foo-id",
+        "tags": [
+          "secrets"
+        ],
+        "summary": "Update Summary",
+        "description": "Update Description",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/KvWriteFooIdRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/foo/{id}/": {
+      "description": "Synopsis",
+      "x-vault-sudo": true,
+      "x-vault-displayAttrs": {
+        "navigation": true
+      },
+      "parameters": [
+        {
+          "name": "format",
+          "description": "a query param",
+          "in": "query",
+          "schema": {
+            "type": "string"
+          }
+        },
+        {
+          "name": "id",
+          "description": "id path parameter",
+          "in": "path",
+          "schema": {
+            "type": "string"
+          },
+          "required": true
+        }
+      ],
+      "get": {
+        "operationId": "kv-list-foo-id",
+        "tags": [
+          "secrets"
+        ],
+        "summary": "List Summary",
+        "description": "List Description",
         "responses": {
           "200": {
             "description": "OK"
@@ -49,63 +113,69 @@
         "parameters": [
           {
             "name": "list",
-            "description": "Return a list if `true`",
+            "description": "Must be set to `true`",
+            "required": true,
             "in": "query",
             "schema": {
-              "type": "string"
+              "type": "string",
+              "enum": [
+                "true"
+              ]
             }
           }
         ]
-      },
-      "post": {
-        "operationId": "postFooId",
-        "tags": ["secrets"],
-        "summary": "Update Summary",
-        "description": "Update Description",
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "type": "object",
-                "required": ["age"],
-                "properties": {
-                  "flavors": {
-                    "type": "array",
-                    "description": "the flavors",
-                    "items": {
-                      "type": "string"
-                    }
-                  },
-                  "age": {
-                    "type": "integer",
-                    "description": "the age",
-                    "enum": [1, 2, 3],
-                    "x-vault-displayAttrs": {
-                      "name": "Age",
-                      "sensitive": true,
-                      "group": "Some Group",
-                      "value": 7
-                    }
-                  },
-                  "name": {
-                    "type": "string",
-                    "description": "the name",
-                    "default": "Larry",
-                    "pattern": "\\w([\\w-.]*\\w)?"
-                  },
-                  "x-abc-token": {
-                    "type": "string",
-                    "description": "a header value",
-                    "enum": ["a", "b", "c"]
-                  }
-                }
-              }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "KvWriteFooIdRequest": {
+        "type": "object",
+        "required": [
+          "age"
+        ],
+        "properties": {
+          "flavors": {
+            "type": "array",
+            "description": "the flavors",
+            "items": {
+              "type": "string"
             }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "OK"
+          },
+          "age": {
+            "type": "integer",
+            "description": "the age",
+            "enum": [
+              1,
+              2,
+              3
+            ],
+            "x-vault-displayAttrs": {
+              "name": "Age",
+              "sensitive": true,
+              "group": "Some Group",
+              "value": 7
+            }
+          },
+          "name": {
+            "type": "string",
+            "description": "the name",
+            "default": "Larry",
+            "pattern": "\\w([\\w-.]*\\w)?"
+          },
+          "x-abc-token": {
+            "type": "string",
+            "description": "a header value",
+            "enum": [
+              "a",
+              "b",
+              "c"
+            ]
+          },
+          "maximum": {
+            "type": "integer",
+            "description": "a maximum value",
+            "format": "int64"
           }
         }
       }

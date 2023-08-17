@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import RESTSerializer from '@ember-data/serializer/rest';
 import { assign } from '@ember/polyfills';
 import { decamelize } from '@ember/string';
@@ -22,7 +27,7 @@ export default RESTSerializer.extend({
       payload.type === 'chacha20-poly1305' ||
       payload.type === 'aes128-gcm96'
     ) {
-      for (let version in payload.keys) {
+      for (const version in payload.keys) {
         payload.keys[version] = payload.keys[version] * 1000;
       }
     }
@@ -50,12 +55,12 @@ export default RESTSerializer.extend({
       const min_decryption_version = snapshot.attr('minDecryptionVersion');
       const min_encryption_version = snapshot.attr('minEncryptionVersion');
       const deletion_allowed = snapshot.attr('deletionAllowed');
-      const auto_rotate_interval = snapshot.attr('autoRotateInterval');
+      const auto_rotate_period = snapshot.attr('autoRotatePeriod');
       return {
         min_decryption_version,
         min_encryption_version,
         deletion_allowed,
-        auto_rotate_interval,
+        auto_rotate_period,
       };
     } else {
       snapshot.id = snapshot.attr('name');

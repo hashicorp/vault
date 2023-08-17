@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import { currentRouteName } from '@ember/test-helpers';
 import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
@@ -14,7 +19,7 @@ module('Acceptance | /access/identity/groups/create', function (hooks) {
 
   test('it visits the correct page', async function (assert) {
     await page.visit({ item_type: 'groups' });
-    assert.equal(
+    assert.strictEqual(
       currentRouteName(),
       'vault.cluster.access.identity.create',
       'navigates to the correct route'
@@ -22,12 +27,14 @@ module('Acceptance | /access/identity/groups/create', function (hooks) {
   });
 
   test('it allows create, list, delete of an group', async function (assert) {
-    let name = `group-${Date.now()}`;
+    assert.expect(6);
+    const name = `group-${Date.now()}`;
     await testCRUD(name, 'groups', assert);
   });
 
   test('it can be deleted from the group edit form', async function (assert) {
-    let name = `group-${Date.now()}`;
+    assert.expect(6);
+    const name = `group-${Date.now()}`;
     await testDeleteFromForm(name, 'groups', assert);
   });
 });

@@ -1,3 +1,8 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
 <form
   onsubmit={{action
     @doSubmit
@@ -14,7 +19,7 @@
   }}
 >
   <div class="box is-sideless is-fullwidth is-marginless">
-    <div class="content">
+    <div class="content has-bottom-margin-l">
       <p>Check whether the provided signature is valid for the given data.</p>
     </div>
     <div class="field">
@@ -23,7 +28,7 @@
           @title="Input"
           @value={{@input}}
           @valueUpdated={{action (mut @input)}}
-          @options={{hash mode="ruby"}}
+          @mode="ruby"
           @data-test-transit-input="input"
         />
       </div>
@@ -140,12 +145,7 @@
           {{#if (or (and @verification (eq @verification "HMAC")) @hmac)}}
             <div class="field is-flex-column is-flex-1">
               <div class="control is-flex-column is-flex-1">
-                <JsonEditor
-                  @title="HMAC"
-                  @value={{@hmac}}
-                  @valueUpdated={{action (mut @hmac)}}
-                  @options={{hash mode="ruby"}}
-                />
+                <JsonEditor @title="HMAC" @value={{@hmac}} @valueUpdated={{action (mut @hmac)}} @mode="ruby" />
               </div>
             </div>
           {{else}}
@@ -155,7 +155,7 @@
                   @title="Signature"
                   @value={{@signature}}
                   @valueUpdated={{action (mut @signature)}}
-                  @options={{hash mode="ruby"}}
+                  @mode="ruby"
                 />
               </div>
             </div>
@@ -165,7 +165,7 @@
     {{else}}
       <div class="field">
         <div class="control">
-          <JsonEditor @title="HMAC" @value={{@hmac}} @valueUpdated={{action (mut @hmac)}} @options={{hash mode="ruby"}} />
+          <JsonEditor @title="HMAC" @value={{@hmac}} @valueUpdated={{action (mut @hmac)}} @mode="ruby" />
         </div>
       </div>
       <div class="field">
@@ -186,7 +186,7 @@
   </div>
   <div class="field is-grouped box is-fullwidth is-bottomless">
     <div class="control">
-      <button type="submit" disabled={{@loading}} class="button is-primary {{if @loading "is-loading"}}">
+      <button type="submit" disabled={{@loading}} class="button is-primary {{if @loading 'is-loading'}}">
         Verify
       </button>
     </div>
@@ -194,11 +194,14 @@
 </form>
 <Modal @title="Results" @onClose={{action (mut @isModalActive) false}} @isActive={{@isModalActive}}>
   <section class="modal-card-body">
-    <AlertBanner
-      @type={{if @valid "success" "danger"}}
-      @title={{if @valid "Valid" "Not Valid"}}
-      @message="The input is {{if @valid "valid" "not valid"}} for the given {{if @signature "signature" "HMAC"}}"
-      data-test-transit-verify="true"
-    />
+    <Hds::Alert @type="inline" @color={{if @valid "success" "critical"}} as |A|>
+      <A.Title>{{if @valid "Valid" "Not Valid"}}</A.Title>
+      <A.Description>
+        The input is
+        {{if @valid "valid" "not valid"}}
+        for the given
+        {{if @signature "signature." "HMAC."}}
+      </A.Description>
+    </Hds::Alert>
   </section>
 </Modal>

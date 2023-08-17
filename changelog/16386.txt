@@ -1,0 +1,3 @@
+```release-note:bug
+core/quotas: Added globbing functionality on the end of path suffix quota paths
+```

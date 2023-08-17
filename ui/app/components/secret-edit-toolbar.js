@@ -1,4 +1,9 @@
 /**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
+/**
  * @module SecretEditToolbar
  * SecretEditToolbar component is the toolbar component displaying the JSON toggle and the actions like delete in the show mode.
  *
@@ -12,7 +17,6 @@
  * @secretDataIsAdvanced={{secretDataIsAdvanced}}
  * @showAdvancedMode={{showAdvancedMode}}
  * @modelForData={{this.modelForData}}
- * @navToNearestAncestor={{this.navToNearestAncestor}}
  * @canUpdateSecretData={{canUpdateSecretData}}
  * @codemirrorString={{codemirrorString}}
  * @wrappedData={{wrappedData}}
@@ -22,7 +26,7 @@
   }}
  * />
  * ```
- 
+
  * @param {string} mode - show, create, edit. The view.
  * @param {object} model - the model passed from the parent secret-edit
  * @param {boolean} isV2 - KV type
@@ -30,7 +34,6 @@
  * @param {boolean} secretDataIsAdvanced - used to determine if show JSON toggle
  * @param {boolean} showAdvacnedMode - used for JSON toggle
  * @param {object} modelForData - a modified version of the model with secret data
- * @param {string} navToNearestAncestor - route to nav to if press cancel
  * @param {boolean} canUpdateSecretData - permissions that show the create new version button or not.
  * @param {string} codemirrorString - used to copy the JSON
  * @param {object} wrappedData - when copy the data it's the token of the secret returned.

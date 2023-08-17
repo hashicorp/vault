@@ -1,3 +1,8 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
 <PageHeader as |p|>
   <p.top>
     <nav class="breadcrumb">
@@ -44,8 +49,9 @@
       </ConfirmAction>
       <div class="toolbar-separator"></div>
       <ToolbarLink
-        @params={{array "vault.cluster.access.method.item.edit" this.itemType this.model.id}}
-        @data-test-configure-link="true"
+        @route="vault.cluster.access.method.item.edit"
+        @models={{array this.itemType this.model.id}}
+        data-test-configure-link="true"
       >
         Edit
         {{singularize this.itemType}}
@@ -64,7 +70,7 @@
         @model={{this.model}}
         @mode={{this.mode}}
         @onKeyUp={{action "onKeyUp"}}
-        @validationMessages={{this.validationMessages}}
+        @modelValidations={{this.modelValidations}}
       />
     </div>
     <div class="field is-grouped-split box is-fullwidth is-bottomless">
@@ -72,7 +78,7 @@
         <button
           type="submit"
           data-test-save-config="true"
-          class="button is-primary {{if this.saveModel.isRunning "loading"}}"
+          class="button is-primary {{if this.saveModel.isRunning 'loading'}}"
           disabled={{or this.saveModel.isRunning this.isFormInvalid}}
         >
           Save

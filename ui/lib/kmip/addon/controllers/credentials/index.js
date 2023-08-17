@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import ListController from 'core/mixins/list-controller';
 import Controller from '@ember/controller';
 import { computed } from '@ember/object';

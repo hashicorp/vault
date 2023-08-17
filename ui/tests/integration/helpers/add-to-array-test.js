@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import { module, test } from 'qunit';
 import { setupRenderingTest } from 'ember-qunit';
 import { addToArray } from '../../../helpers/add-to-array';
@@ -19,7 +24,7 @@ module('Integration | Helper | add-to-array', function (hooks) {
     } catch (e) {
       result = e.message;
     }
-    assert.equal('Assertion Failed: Value provided is not an array', result);
+    assert.strictEqual(result, 'Assertion Failed: Value provided is not an array');
   });
 
   test('it works with non-string arrays', function (assert) {

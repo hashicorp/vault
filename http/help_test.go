@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package http
 
 import (
@@ -13,7 +16,11 @@ func TestHelp(t *testing.T) {
 	defer ln.Close()
 	TestServerAuth(t, addr, token)
 
-	resp := testHttpGet(t, "", addr+"/v1/sys/mounts?help=1")
+	// request without /v1/ prefix
+	resp := testHttpGet(t, token, addr+"/?help=1")
+	testResponseStatus(t, resp, 404)
+
+	resp = testHttpGet(t, "", addr+"/v1/sys/mounts?help=1")
 	if resp.StatusCode != http.StatusForbidden {
 		t.Fatal("expected permission denied with no token")
 	}

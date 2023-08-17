@@ -1,0 +1,3 @@
+```release-note:improvement
+auth/gcp: Add support for GCE regional instance groups
+```

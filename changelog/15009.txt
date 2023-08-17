@@ -1,0 +1,3 @@
+```release-note:bug
+auth: forward requests subject to login MFA from perfStandby to Active node
+```

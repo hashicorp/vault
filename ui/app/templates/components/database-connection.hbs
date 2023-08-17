@@ -1,3 +1,8 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
 <PageHeader as |p|>
   <p.top>
     <KeyValueHeader @path="vault.cluster.secrets.backend.show" @mode={{this.mode}} @root={{@root}} @showCurrent={{true}} />
@@ -63,14 +68,14 @@
             @secret=""
             @mode="create"
             @type="add"
-            @queryParams={{query-params initialKey=@model.name itemType="role"}}
-            @data-test-secret-create={{true}}
+            @queryParams={{hash initialKey=@model.name itemType="role"}}
+            data-test-secret-create={{true}}
           >
             Add role
           </ToolbarSecretLink>
         {{/if}}
         {{#if @model.canEdit}}
-          <ToolbarSecretLink @secret={{@model.id}} @mode="edit" @data-test-edit-link={{true}} @replace={{true}}>
+          <ToolbarSecretLink @secret={{@model.id}} @mode="edit" data-test-edit-link={{true}} @replace={{true}}>
             Edit configuration
           </ToolbarSecretLink>
         {{/if}}
@@ -82,14 +87,17 @@
 {{#if (eq @mode "create")}}
 
   {{#if (eq @model.plugin_name "vault-plugin-database-oracle")}}
-    <AlertBanner @type="warning">
-      Please ensure that your Oracle plugin has the default name of
-      <b>vault-plugin-database-oracle</b>. Custom naming is not supported in the UI at this time. If the plugin is already
-      named vault-plugin-database-oracle, disregard this warning.
-    </AlertBanner>
+    <Hds::Alert @type="inline" @color="warning" class="has-bottom-margin-s" data-test-database-oracle-alert as |A|>
+      <A.Title>Warning</A.Title>
+      <A.Description>
+        Please ensure that your Oracle plugin has the default name of
+        <strong>vault-plugin-database-oracle</strong>. Custom naming is not supported in the UI at this time. If the plugin
+        is already named vault-plugin-database-oracle, disregard this warning.
+      </A.Description>
+    </Hds::Alert>
   {{/if}}
 
-  <form {{on "submit" this.handleCreateConnection}}>
+  <form {{on "submit" this.handleCreateConnection}} aria-label="create connection form">
     {{#each @model.fieldAttrs as |attr|}}
       {{#if (not-eq attr.options.readOnly true)}}
         <FormField data-test-field={{true}} @attr={{attr}} @model={{@model}} />
@@ -107,7 +115,7 @@
                 <div class="columns is-desktop is-multiline">
                   {{#each fields as |attr|}}
                     {{#if
-                      (contains attr.name (array "max_open_connections" "max_idle_connections" "max_connection_lifetime"))
+                      (includes attr.name (array "max_open_connections" "max_idle_connections" "max_connection_lifetime"))
                     }}
                       <div class="column is-one-third">
                         <FormField data-test-field={{true}} @attr={{attr}} @model={{@model}} />
@@ -120,21 +128,23 @@
                   {{/each}}
                 </div>
               {{else}}
-                <ToggleButton
-                  @class="is-block"
-                  @toggleAttr={{camelize (concat "show" group)}}
-                  @toggleTarget={{this}}
-                  @openLabel={{concat "Hide " group}}
-                  @closedLabel={{group}}
-                  @data-test-toggle-group={{group}}
-                />
-                {{#if (get this (camelize (concat "show" group)))}}
-                  <div class="box is-marginless">
-                    {{#each fields as |attr|}}
-                      <FormField data-test-field={{true}} @attr={{attr}} @model={{@model}} />
-                    {{/each}}
-                  </div>
-                {{/if}}
+                {{#let (camelize (concat "show" group)) as |prop|}}
+                  <ToggleButton
+                    @isOpen={{get this prop}}
+                    @openLabel={{concat "Hide " group}}
+                    @closedLabel={{group}}
+                    @onClick={{fn (mut (get this prop))}}
+                    class="is-block"
+                    data-test-toggle-group={{group}}
+                  />
+                  {{#if (get this prop)}}
+                    <div class="box is-marginless">
+                      {{#each fields as |attr|}}
+                        <FormField data-test-field={{true}} @attr={{attr}} @model={{@model}} />
+                      {{/each}}
+                    </div>
+                  {{/if}}
+                {{/let}}
               {{/if}}
             {{/each-in}}
           {{/each}}
@@ -167,7 +177,7 @@
           </button>
         </div>
         <div class="control">
-          <SecretLink @mode="list" @class="button">
+          <SecretLink @mode="list" class="button">
             Cancel
           </SecretLink>
         </div>
@@ -175,7 +185,7 @@
     </div>
   </form>
 {{else if (and (eq @mode "edit") @model.isAvailablePlugin)}}
-  <form {{on "submit" this.handleUpdateConnection}}>
+  <form {{on "submit" this.handleUpdateConnection}} aria-label="plugin config form">
     {{#each @model.fieldAttrs as |attr|}}
       {{#if (or (eq attr.name "name") (eq attr.name "plugin_name"))}}
         <ReadonlyFormField @attr={{attr}} @value={{get @model attr.name}} />
@@ -194,7 +204,7 @@
               <div class="columns is-desktop is-multiline">
                 {{#each fields as |attr|}}
                   {{#if
-                    (contains attr.name (array "max_open_connections" "max_idle_connections" "max_connection_lifetime"))
+                    (includes attr.name (array "max_open_connections" "max_idle_connections" "max_connection_lifetime"))
                   }}
                     <div class="column is-one-third">
                       <FormField data-test-field={{true}} @attr={{attr}} @model={{@model}} />
@@ -246,21 +256,23 @@
                 {{/each}}
               </div>
             {{else}}
-              <ToggleButton
-                @class="is-block"
-                @toggleAttr={{camelize (concat "show" group)}}
-                @toggleTarget={{this}}
-                @openLabel={{concat "Hide " group}}
-                @closedLabel={{group}}
-                @data-test-toggle-group={{group}}
-              />
-              {{#if (get this (camelize (concat "show" group)))}}
-                <div class="box is-marginless">
-                  {{#each fields as |attr|}}
-                    <FormField data-test-field={{true}} @attr={{attr}} @model={{@model}} />
-                  {{/each}}
-                </div>
-              {{/if}}
+              {{#let (camelize (concat "show" group)) as |prop|}}
+                <ToggleButton
+                  @isOpen={{get this prop}}
+                  @openLabel={{concat "Hide " group}}
+                  @closedLabel={{group}}
+                  @onClick={{fn (mut (get this prop))}}
+                  class="is-block"
+                  data-test-toggle-group={{group}}
+                />
+                {{#if (get this prop)}}
+                  <div class="box is-marginless">
+                    {{#each fields as |attr|}}
+                      <FormField data-test-field={{true}} @attr={{attr}} @model={{@model}} />
+                    {{/each}}
+                  </div>
+                {{/if}}
+              {{/let}}
             {{/if}}
           {{/each-in}}
         {{/each}}
@@ -268,7 +280,7 @@
     </div>
 
     {{! Statements Edit Section }}
-    {{#unless (and @model.plugin_name (not @model.statementFields))}}
+    {{#if (not (and @model.plugin_name (not @model.statementFields)))}}
       <div class="form-section box is-shadowless is-fullwidth">
         <fieldset class="form-fieldset">
           <legend class="title is-5">Statements</legend>
@@ -277,7 +289,7 @@
           {{/each}}
         </fieldset>
       </div>
-    {{/unless}}
+    {{/if}}
 
     <div class="field is-grouped is-grouped-split is-fullwidth box is-bottomless">
       <div class="field is-grouped">
@@ -287,7 +299,7 @@
           </button>
         </div>
         <div class="control">
-          <SecretLink @mode="list" @class="button">
+          <SecretLink @mode="list" class="button">
             Cancel
           </SecretLink>
         </div>
@@ -306,7 +318,7 @@
       <Chevron @direction="left" />
       Go back
     </LinkTo>
-    <a href="https://www.vaultproject.io/api/secret/databases" target="_blank" rel="noreferrer noopener">Documentation</a>
+    <DocLink @path="/api/secret/databases">Documentation</DocLink>
   </EmptyState>
 {{else}}
   {{#each @model.showAttrs as |attr|}}
@@ -342,7 +354,7 @@
 
 <Modal
   @title="Rotate your root credentials?"
-  @onClose={{action "continueWithoutRotate"}}
+  @onClose={{this.continueWithoutRotate}}
   @isActive={{this.showSaveModal}}
   @type="info"
   @showCloseButton={{false}}
@@ -377,7 +389,6 @@
   @confirmText={{@model.name}}
   @toConfirmMsg="deleting the connection"
   @onConfirm={{action "delete"}}
-  @testSelector="delete"
 >
   <p>
     Deleting the connection means that any associated roles won't be able to generate credentials until the connection is

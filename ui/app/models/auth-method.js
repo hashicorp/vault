@@ -1,22 +1,37 @@
-import Model, { hasMany, attr } from '@ember-data/model';
-import { alias } from '@ember/object/computed';
-import { computed } from '@ember/object';
-import { fragment } from 'ember-data-model-fragments/attributes';
-import fieldToAttrs, { expandAttributeMeta } from 'vault/utils/field-to-attrs';
-import { memberAction } from 'ember-api-actions';
-import { validator, buildValidations } from 'ember-cp-validations';
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
 
+import Model, { belongsTo, hasMany, attr } from '@ember-data/model';
+import { alias } from '@ember/object/computed'; // eslint-disable-line
+import { computed } from '@ember/object'; // eslint-disable-line
+import { inject as service } from '@ember/service';
+import fieldToAttrs, { expandAttributeMeta } from 'vault/utils/field-to-attrs';
 import apiPath from 'vault/utils/api-path';
 import attachCapabilities from 'vault/lib/attach-capabilities';
+import { withModelValidations } from 'vault/decorators/model-validations';
 
-const Validations = buildValidations({
-  path: validator('presence', {
-    presence: true,
-    message: "Path can't be blank.",
-  }),
-});
+const validations = {
+  path: [
+    { type: 'presence', message: "Path can't be blank." },
+    {
+      type: 'containsWhiteSpace',
+      message:
+        "Path contains whitespace. If this is desired, you'll need to encode it with %20 in API requests.",
+      level: 'warn',
+    },
+  ],
+};
 
-let ModelExport = Model.extend(Validations, {
+// unsure if ember-api-actions will work on native JS class model
+// for now create class to use validations and then use classic extend pattern
+@withModelValidations(validations)
+class AuthMethodModel extends Model {}
+const ModelExport = AuthMethodModel.extend({
+  store: service(),
+
+  config: belongsTo('mount-config', { async: false, inverse: null }), // one-to-none that replaces former fragment
   authConfigs: hasMany('auth-config', { polymorphic: true, inverse: 'backend', async: false }),
   path: attr('string'),
   accessor: attr('string'),
@@ -30,7 +45,6 @@ let ModelExport = Model.extend(Validations, {
   description: attr('string', {
     editType: 'textarea',
   }),
-  config: fragment('mount-config', { defaultValue: {} }),
   local: attr('boolean', {
     helpText:
       'When Replication is enabled, a local mount will not be replicated across clusters. This can only be specified at mount time.',
@@ -50,7 +64,7 @@ let ModelExport = Model.extend(Validations, {
   }),
 
   tuneAttrs: computed('path', function () {
-    let { methodType } = this;
+    const { methodType } = this;
     let tuneAttrs;
     // token_type should not be tuneable for the token auth method
     if (methodType === 'token') {
@@ -65,13 +79,6 @@ let ModelExport = Model.extend(Validations, {
       ];
     }
     return expandAttributeMeta(this, tuneAttrs);
-  }),
-
-  // sys/mounts/auth/[auth-path]/tune.
-  tune: memberAction({
-    path: 'tune',
-    type: 'post',
-    urlType: 'updateRecord',
   }),
 
   formFields: computed(function () {
@@ -110,15 +117,19 @@ let ModelExport = Model.extend(Validations, {
   }),
   canDisable: alias('deletePath.canDelete'),
   canEdit: alias('configPath.canUpdate'),
+
+  tune(data) {
+    return this.store.adapterFor('auth-method').tune(this.path, data);
+  },
 });
 
 export default attachCapabilities(ModelExport, {
   deletePath: apiPath`sys/auth/${'id'}`,
   configPath: function (context) {
     if (context.type === 'aws') {
-      return apiPath`auth/${'id'}/config/client`;
+      return apiPath`auth/${'id'}/config/client`.call(this, context);
     } else {
-      return apiPath`auth/${'id'}/config`;
+      return apiPath`auth/${'id'}/config`.call(this, context);
     }
   },
 });

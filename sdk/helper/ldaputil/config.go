@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package ldaputil
 
 import (
@@ -13,7 +16,16 @@ import (
 	"github.com/hashicorp/vault/sdk/framework"
 
 	"github.com/hashicorp/errwrap"
+
+	"github.com/go-ldap/ldap/v3"
 )
+
+var ldapDerefAliasMap = map[string]int{
+	"never":     ldap.NeverDerefAliases,
+	"finding":   ldap.DerefFindingBaseObj,
+	"searching": ldap.DerefInSearching,
+	"always":    ldap.DerefAlways,
+}
 
 // ConfigFields returns all the config fields that can potentially be used by the LDAP client.
 // Not all fields will be used by every integration.
@@ -110,6 +122,12 @@ Default: ({{.UserAttr}}={{.Username}})`,
 			DisplayAttrs: &framework.DisplayAttributes{
 				Name: "User Principal (UPN) Domain",
 			},
+		},
+
+		"username_as_alias": {
+			Type:        framework.TypeBool,
+			Default:     false,
+			Description: "If true, sets the alias name to the username",
 		},
 
 		"userattr": {
@@ -220,6 +238,25 @@ Default: ({{.UserAttr}}={{.Username}})`,
 			Description: "Timeout, in seconds, for the connection when making requests against the server before returning back an error.",
 			Default:     "90s",
 		},
+
+		"connection_timeout": {
+			Type:        framework.TypeDurationSecond,
+			Description: "Timeout, in seconds, when attempting to connect to the LDAP server before trying the next URL in the configuration.",
+			Default:     "30s",
+		},
+
+		"dereference_aliases": {
+			Type:          framework.TypeString,
+			Description:   "When aliases should be dereferenced on search operations. Accepted values are 'never', 'finding', 'searching', 'always'. Defaults to 'never'.",
+			Default:       "never",
+			AllowedValues: []interface{}{"never", "finding", "searching", "always"},
+		},
+
+		"max_page_size": {
+			Type:        framework.TypeInt,
+			Description: "If set to a value greater than 0, the LDAP backend will use the LDAP server's paged search control to request pages of up to the given size. This can be used to avoid hitting the LDAP server's maximum result size limit. Otherwise, the LDAP backend will not use the paged search control.",
+			Default:     0,
+		},
 	}
 }
 
@@ -240,6 +277,10 @@ func NewConfigEntry(existing *ConfigEntry, d *framework.FieldData) (*ConfigEntry
 
 	if _, ok := d.Raw["anonymous_group_search"]; ok || !hadExisting {
 		cfg.AnonymousGroupSearch = d.Get("anonymous_group_search").(bool)
+	}
+
+	if _, ok := d.Raw["username_as_alias"]; ok || !hadExisting {
+		cfg.UsernameAsAlias = d.Get("username_as_alias").(bool)
 	}
 
 	if _, ok := d.Raw["url"]; ok || !hadExisting {
@@ -382,6 +423,18 @@ func NewConfigEntry(existing *ConfigEntry, d *framework.FieldData) (*ConfigEntry
 		cfg.RequestTimeout = d.Get("request_timeout").(int)
 	}
 
+	if _, ok := d.Raw["connection_timeout"]; ok || !hadExisting {
+		cfg.ConnectionTimeout = d.Get("connection_timeout").(int)
+	}
+
+	if _, ok := d.Raw["dereference_aliases"]; ok || !hadExisting {
+		cfg.DerefAliases = d.Get("dereference_aliases").(string)
+	}
+
+	if _, ok := d.Raw["max_page_size"]; ok || !hadExisting {
+		cfg.MaximumPageSize = d.Get("max_page_size").(int)
+	}
+
 	return cfg, nil
 }
 
@@ -393,6 +446,7 @@ type ConfigEntry struct {
 	GroupFilter              string `json:"groupfilter"`
 	GroupAttr                string `json:"groupattr"`
 	UPNDomain                string `json:"upndomain"`
+	UsernameAsAlias          bool   `json:"username_as_alias"`
 	UserFilter               string `json:"userfilter"`
 	UserAttr                 string `json:"userattr"`
 	Certificate              string `json:"certificate"`
@@ -407,6 +461,9 @@ type ConfigEntry struct {
 	UseTokenGroups           bool   `json:"use_token_groups"`
 	UsePre111GroupCNBehavior *bool  `json:"use_pre111_group_cn_behavior"`
 	RequestTimeout           int    `json:"request_timeout"`
+	ConnectionTimeout        int    `json:"connection_timeout"`
+	DerefAliases             string `json:"dereference_aliases"`
+	MaximumPageSize          int    `json:"max_page_size"`
 
 	// These json tags deviate from snake case because there was a past issue
 	// where the tag was being ignored, causing it to be jsonified as "CaseSensitiveNames", etc.
@@ -444,6 +501,10 @@ func (c *ConfigEntry) PasswordlessMap() map[string]interface{} {
 		"use_token_groups":       c.UseTokenGroups,
 		"anonymous_group_search": c.AnonymousGroupSearch,
 		"request_timeout":        c.RequestTimeout,
+		"connection_timeout":     c.ConnectionTimeout,
+		"username_as_alias":      c.UsernameAsAlias,
+		"dereference_aliases":    c.DerefAliases,
+		"max_page_size":          c.MaximumPageSize,
 	}
 	if c.CaseSensitiveNames != nil {
 		m["case_sensitive_names"] = *c.CaseSensitiveNames

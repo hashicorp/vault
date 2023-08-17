@@ -1,5 +1,9 @@
-{{! template-lint-configure simple-unless "warn" }}
-{{#unless (has-feature "DR Replication")}}
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
+{{#if (not (has-feature "DR Replication"))}}
   <UpgradePage @title="Replication" />
 {{else if (or this.cluster.allReplicationDisabled this.cluster.replicationAttrs.replicationDisabled)}}
   <PageHeader as |p|>
@@ -49,15 +53,15 @@
             <Icon @size="24" @name="replication-perf" />
             Performance Replication
           </h3>
-          {{#unless (has-feature "Performance Replication")}}
-            <p class="help has-text-grey-dark">
-              Performance Replication is a feature of Vault Enterprise Premium
-            </p>
-          {{else}}
+          {{#if (has-feature "Performance Replication")}}
             <p class="help has-text-grey-dark">
               {{replication-mode-description "performance"}}
             </p>
-          {{/unless}}
+          {{else}}
+            <p class="help has-text-grey-dark">
+              Performance Replication is a feature of Vault Enterprise Premium
+            </p>
+          {{/if}}
         {{/if}}
       {{else}}
         <p class="has-text-grey-dark box is-shadowless is-fullwidth has-slim-padding">
@@ -69,7 +73,7 @@
         </p>
         <div class="columns">
           <div class="column is-flex">
-            <label for="dr" class="box-label is-column {{if (eq this.replicationMode "dr") "is-selected"}}">
+            <label for="dr" class="box-label is-column {{if (eq this.replicationMode 'dr') 'is-selected'}}">
               <div>
                 <h3 class="box-label-header title is-6">
                   <Icon @size="24" @name="replication-direct" />
@@ -80,7 +84,13 @@
                 </p>
               </div>
               <div>
-                <RadioButton @value="dr" @groupValue={{this.replicationMode}} @name="replication-mode" @radioId="dr" />
+                <RadioButton
+                  id="dr"
+                  name="replication-mode"
+                  @value="dr"
+                  @groupValue={{this.replicationMode}}
+                  @onChange={{fn (mut this.replicationMode)}}
+                />
                 <label for="dr" data-test-replication-type-select="dr"></label>
               </div>
             </label>
@@ -88,7 +98,7 @@
           <div class="column is-flex">
             <label
               for="performance"
-              class="box-label is-column {{if (eq this.replicationMode "performance") "is-selected"}}"
+              class="box-label is-column {{if (eq this.replicationMode 'performance') 'is-selected'}}"
             >
               <div>
                 <h3 class="box-label-header title is-6">
@@ -108,11 +118,11 @@
               <div>
                 {{#if (has-feature "Performance Replication")}}
                   <RadioButton
+                    id="performance"
+                    name="replication-mode"
                     @value="performance"
                     @groupValue={{this.replicationMode}}
-                    @name="replication-mode"
-                    @classNames="box columns is-centered"
-                    @radioId="performance"
+                    @onChange={{fn (mut this.replicationMode)}}
                   />
                   <label for="performance" data-test-replication-type-select="performance"></label>
                 {{/if}}
@@ -178,13 +188,13 @@
               (has-feature "Performance Replication")
             )
           }}
-            <div class="has-text-danger">
+            <div>
               <ToggleButton
-                @toggleTarget={{this}}
-                @toggleAttr="showExplanation"
+                @isOpen={{this.showExplanation}}
                 @openLabel="Disable Performance Replication in order to enable this cluster as a DR secondary."
                 @closedLabel="Disable Performance Replication in order to enable this cluster as a DR secondary."
-                @class="has-text-danger"
+                @onClick={{fn (mut this.showExplanation)}}
+                class="has-text-danger"
               />
               {{#if this.showExplanation}}
                 <p>
@@ -206,14 +216,14 @@
             <div class="field">
               <label for="primary_api_addr" class="is-label">
                 Primary API address
-                {{#unless (and this.token (not this.tokenIncludesAPIAddr))}}
+                {{#if (not (and this.token (not this.tokenIncludesAPIAddr)))}}
                   <em class="is-optional">(optional)</em>
-                {{/unless}}
+                {{/if}}
               </label>
               <div class="control">
                 <Input @value={{this.primary_api_addr}} id="primary_api_addr" name="primary_api_addr" class="input" />
               </div>
-              <p class="help {{if (and this.token (not this.tokenIncludesAPIAddr)) "is-danger" "has-text-grey"}}">
+              <p class="help {{if (and this.token (not this.tokenIncludesAPIAddr)) 'is-danger' 'has-text-grey'}}">
                 {{#if (and this.token (not this.tokenIncludesAPIAddr))}}
                   The supplied token does not contain an embedded address for the primary cluster. Please enter the primary
                   cluster's API address (normal Vault address).
@@ -269,12 +279,7 @@
     }}
       <div class="field is-grouped box is-fullwidth is-bottomless">
         <div class="control">
-          <button
-            type="submit"
-            class="button is-primary"
-            disabled={{this.disallowEnable}}
-            data-test-replication-enable={{true}}
-          >
+          <button type="submit" class="button is-primary" disabled={{this.disallowEnable}} data-test-replication-enable>
             Enable Replication
           </button>
         </div>
@@ -282,7 +287,7 @@
     {{/if}}
   </form>
 {{else if this.showModeSummary}}
-  {{#unless (and this.cluster.dr.replicationEnabled this.cluster.performance.replicationEnabled)}}
+  {{#if (not (and this.cluster.dr.replicationEnabled this.cluster.performance.replicationEnabled))}}
     <PageHeader as |p|>
       <p.levelLeft>
         <h1 class="title is-3">
@@ -290,7 +295,7 @@
         </h1>
       </p.levelLeft>
     </PageHeader>
-  {{/unless}}
+  {{/if}}
 
   {{#if (and (eq this.cluster.dr.mode "primary") (eq this.cluster.performance.mode "primary"))}}
     <ReplicationPage @model={{this.cluster}} as |Page|>
@@ -318,7 +323,7 @@
         <ReplicationModeSummary @mode="dr" @cluster={{this.cluster}} @tagName="div" />
       {{/if}}
     </div>
-    {{#unless (and this.submit.isRunning (eq this.cluster.dr.mode "bootstrapping"))}}
+    {{#if (not (and this.submit.isRunning (eq this.cluster.dr.mode "bootstrapping")))}}
       <div class="box is-bottomless is-fullwidth is-marginless">
         <h3 class="title is-flex-center is-5 is-marginless">
           <Icon @size="24" @name="replication-perf" />
@@ -328,7 +333,7 @@
           <ReplicationModeSummary @mode="performance" @cluster={{this.cluster}} @tagName="span" />
         </LinkTo>
       </div>
-    {{/unless}}
+    {{/if}}
   {{/if}}
 {{else}}
   {{#if (eq this.replicationAttrs.mode "initializing")}}
@@ -367,4 +372,4 @@
       </ReplicationPage>
     </div>
   {{/if}}
-{{/unless}}
+{{/if}}

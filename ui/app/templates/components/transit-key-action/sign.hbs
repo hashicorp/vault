@@ -1,3 +1,8 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
 <form
   onsubmit={{action
     @doSubmit
@@ -28,7 +33,7 @@
           @title="Input"
           @value={{@input}}
           @valueUpdated={{action (mut @input)}}
-          @options={{hash mode="ruby"}}
+          @mode="ruby"
           @data-test-transit-input="input"
         />
       </div>
@@ -109,7 +114,7 @@
   </div>
   <div class="field is-grouped box is-fullwidth is-bottomless">
     <div class="control">
-      <button type="submit" disabled={{@loading}} class="button is-primary {{if @loading "is-loading"}}">
+      <button type="submit" disabled={{@loading}} class="button is-primary {{if @loading 'is-loading'}}">
         Sign
       </button>
     </div>

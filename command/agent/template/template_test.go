@@ -1,19 +1,24 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package template
 
 import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
 	"os"
+	"strings"
 	"testing"
 	"time"
 
 	ctconfig "github.com/hashicorp/consul-template/config"
 	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/command/agent/config"
+	"github.com/hashicorp/vault/command/agent/internal/ctmanager"
+	"github.com/hashicorp/vault/command/agentproxyshared"
 	"github.com/hashicorp/vault/internalshared/configutil"
 	"github.com/hashicorp/vault/internalshared/listenerutil"
 	"github.com/hashicorp/vault/sdk/helper/logging"
@@ -22,6 +27,14 @@ import (
 	"github.com/stretchr/testify/require"
 	"google.golang.org/grpc/test/bufconn"
 )
+
+func newRunnerConfig(s *ServerConfig, configs ctconfig.TemplateConfigs) (*ctconfig.Config, error) {
+	managerCfg := ctmanager.ManagerConfig{
+		AgentConfig: s.AgentConfig,
+	}
+	cfg, err := ctmanager.NewConfig(managerCfg, configs)
+	return cfg, err
+}
 
 // TestNewServer is a simple test to make sure NewServer returns a Server and
 // channel
@@ -75,7 +88,7 @@ func newAgentConfig(listeners []*configutil.Listener, enableCache, enablePersise
 	}
 
 	if enablePersisentCache {
-		agentConfig.Cache.Persist = &config.Persist{Type: "kubernetes"}
+		agentConfig.Cache.Persist = &agentproxyshared.PersistConfig{Type: "kubernetes"}
 	}
 
 	return agentConfig
@@ -188,7 +201,7 @@ func TestCacheConfigNoListener(t *testing.T) {
 	assert.NotNil(t, ctConfig.Vault.Transport.CustomDialer)
 }
 
-func TestServerRun(t *testing.T) {
+func createHttpTestServer() *httptest.Server {
 	// create http test server
 	mux := http.NewServeMux()
 	mux.HandleFunc("/v1/kv/myapp/config", func(w http.ResponseWriter, r *http.Request) {
@@ -203,9 +216,14 @@ func TestServerRun(t *testing.T) {
 		fmt.Fprintln(w, `{"errors":["1 error occurred:\n\t* permission denied\n\n"]}`)
 	})
 
-	ts := httptest.NewServer(mux)
+	return httptest.NewServer(mux)
+}
+
+func TestServerRun(t *testing.T) {
+	ts := createHttpTestServer()
 	defer ts.Close()
-	tmpDir, err := ioutil.TempDir("", "agent-tests")
+
+	tmpDir, err := os.MkdirTemp("", "agent-tests")
 	defer os.RemoveAll(tmpDir)
 	if err != nil {
 		t.Fatal(err)
@@ -225,6 +243,7 @@ func TestServerRun(t *testing.T) {
 
 	testCases := map[string]struct {
 		templateMap        map[string]*templateTest
+		expectedValues     *secretRender
 		expectError        bool
 		exitOnRetryFailure bool
 	}{
@@ -314,6 +333,22 @@ func TestServerRun(t *testing.T) {
 			expectError:        true,
 			exitOnRetryFailure: true,
 		},
+		"with sprig functions": {
+			templateMap: map[string]*templateTest{
+				"render_01": {
+					template: &ctconfig.TemplateConfig{
+						Contents: pointerutil.StringPtr(templateContentsWithSprigFunctions),
+					},
+				},
+			},
+			expectedValues: &secretRender{
+				Username: "APPUSER",
+				Password: "passphrase",
+				Version:  "3",
+			},
+			expectError:        false,
+			exitOnRetryFailure: true,
+		},
 	}
 
 	for name, tc := range testCases {
@@ -375,13 +410,15 @@ func TestServerRun(t *testing.T) {
 
 			// verify test file exists and has the content we're looking for
 			var fileCount int
+			var errs []string
 			for _, template := range templatesToRender {
 				if template.Destination == nil {
 					t.Fatal("nil template destination")
 				}
-				content, err := ioutil.ReadFile(*template.Destination)
+				content, err := os.ReadFile(*template.Destination)
 				if err != nil {
-					t.Fatal(err)
+					errs = append(errs, err.Error())
+					continue
 				}
 				fileCount++
 
@@ -389,12 +426,86 @@ func TestServerRun(t *testing.T) {
 				if err := json.Unmarshal(content, &secret); err != nil {
 					t.Fatal(err)
 				}
-				if secret.Username != "appuser" || secret.Password != "password" || secret.Version != "3" {
-					t.Fatalf("secret didn't match: %#v", secret)
+				var expectedValues secretRender
+				if tc.expectedValues != nil {
+					expectedValues = *tc.expectedValues
+				} else {
+					expectedValues = secretRender{
+						Username: "appuser",
+						Password: "password",
+						Version:  "3",
+					}
+				}
+				if secret != expectedValues {
+					t.Fatalf("secret didn't match, expected: %#v, got: %#v", expectedValues, secret)
 				}
 			}
-			if fileCount != len(templatesToRender) {
-				t.Fatalf("mismatch file to template: (%d) / (%d)", fileCount, len(templatesToRender))
+			if len(errs) != 0 {
+				t.Fatalf("Failed to find the expected files. Expected %d, got %d\n\t%s", len(templatesToRender), fileCount, strings.Join(errs, "\n\t"))
+			}
+		})
+	}
+}
+
+// TestNewServerLogLevels tests that the server can be started with any log
+// level.
+func TestNewServerLogLevels(t *testing.T) {
+	ts := createHttpTestServer()
+	defer ts.Close()
+
+	tmpDir, err := os.MkdirTemp("", "agent-tests")
+	defer os.RemoveAll(tmpDir)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	levels := []hclog.Level{hclog.NoLevel, hclog.Trace, hclog.Debug, hclog.Info, hclog.Warn, hclog.Error}
+	for _, level := range levels {
+		name := fmt.Sprintf("log_%s", level)
+		t.Run(name, func(t *testing.T) {
+			server := NewServer(&ServerConfig{
+				Logger:        logging.NewVaultLogger(level),
+				LogWriter:     hclog.DefaultOutput,
+				LogLevel:      level,
+				ExitAfterAuth: true,
+				AgentConfig: &config.Config{
+					Vault: &config.Vault{
+						Address: ts.URL,
+					},
+				},
+			})
+			if server == nil {
+				t.Fatal("nil server returned")
+			}
+			defer server.Stop()
+
+			templateTokenCh := make(chan string, 1)
+
+			templateTest := &ctconfig.TemplateConfig{
+				Contents: pointerutil.StringPtr(templateContents),
+			}
+			dstFile := fmt.Sprintf("%s/%s", tmpDir, name)
+			templateTest.Destination = pointerutil.StringPtr(dstFile)
+			templatesToRender := []*ctconfig.TemplateConfig{templateTest}
+
+			ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
+			defer cancel()
+
+			errCh := make(chan error)
+			go func() {
+				errCh <- server.Run(ctx, templateTokenCh, templatesToRender)
+			}()
+
+			// send a dummy value to trigger auth so the server will exit
+			templateTokenCh <- "test"
+
+			select {
+			case <-ctx.Done():
+				t.Fatal("timeout reached before templates were rendered")
+			case err := <-errCh:
+				if err != nil {
+					t.Fatalf("did not expect error, got: %v", err)
+				}
 			}
 		})
 	}
@@ -457,6 +568,16 @@ var templateContentsPermDenied = `
 {
 {{ if .Data.data.username}}"username":"{{ .Data.data.username}}",{{ end }}
 {{ if .Data.data.password }}"password":"{{ .Data.data.password }}",{{ end }}
+{{ if .Data.metadata.version}}"version":"{{ .Data.metadata.version }}"{{ end }}
+}
+{{ end }}
+`
+
+var templateContentsWithSprigFunctions = `
+{{ with secret "kv/myapp/config"}}
+{
+{{ if .Data.data.username}}"username":"{{ .Data.data.username | sprig_upper }}",{{ end }}
+{{ if .Data.data.password }}"password":"{{ .Data.data.password | sprig_replace "word" "phrase" }}",{{ end }}
 {{ if .Data.metadata.version}}"version":"{{ .Data.metadata.version }}"{{ end }}
 }
 {{ end }}

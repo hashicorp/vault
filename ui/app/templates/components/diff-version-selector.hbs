@@ -1,3 +1,8 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
 <Toolbar>
   <div class="version-diff-toolbar" data-test-version-diff-toolbar>
     {{! Left side version }}
@@ -11,8 +16,8 @@
         {{or this.leftSideVersionSelected @model.currentVersion}}
         <Chevron @direction="down" @isButton={{true}} />
       </D.Trigger>
-      <D.Content class="popup-menu-content">
-        <nav class="box menu">
+      <D.Content @defaultClass="popup-menu-content">
+        <nav class="box menu" aria-label="version">
           <ul class="menu-list">
             {{#each (reverse @model.versions) as |leftSideSecretVersion|}}
               <li class="action" data-test-leftSide-version={{leftSideSecretVersion.version}}>
@@ -25,7 +30,7 @@
                   {{leftSideSecretVersion.version}}
                   {{#if
                     (and
-                      (eq leftSideSecretVersion.version (or this.leftSideVersionSelected @args.model.currentVersion))
+                      (eq leftSideSecretVersion.version (or this.leftSideVersionSelected @model.currentVersion))
                       (not leftSideSecretVersion.destroyed)
                       (not leftSideSecretVersion.deleted)
                     )
@@ -54,8 +59,8 @@
         {{or this.rightSideVersionSelected this.rightSideVersionInit}}
         <Chevron @direction="down" @isButton={{true}} />
       </D.Trigger>
-      <D.Content class="popup-menu-content">
-        <nav class="box menu">
+      <D.Content @defaultClass="popup-menu-content">
+        <nav class="box menu" aria-label="versions to diff">
           <ul class="menu-list">
             {{#each (reverse @model.versions) as |rightSideSecretVersion|}}
               <li class="action">
@@ -98,6 +103,5 @@
 </Toolbar>
 
 <div class="form-section visual-diff">
-  {{! template-lint-configure no-triple-curlies "warn" }}
-  <pre>{{{this.visualDiff}}}</pre>
+  <pre>{{sanitized-html this.visualDiff}}</pre>
 </div>

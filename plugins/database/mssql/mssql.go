@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package mssql
 
 import (
@@ -154,7 +157,7 @@ func (m *MSSQL) NewUser(ctx context.Context, req dbplugin.NewUserRequest) (dbplu
 				"expiration": expirationStr,
 			}
 
-			if err := dbtxn.ExecuteTxQuery(ctx, tx, m, query); err != nil {
+			if err := dbtxn.ExecuteTxQueryDirect(ctx, tx, m, query); err != nil {
 				return dbplugin.NewUserResponse{}, err
 			}
 		}
@@ -198,7 +201,7 @@ func (m *MSSQL) DeleteUser(ctx context.Context, req dbplugin.DeleteUserRequest) 
 			m := map[string]string{
 				"name": req.Username,
 			}
-			if err := dbtxn.ExecuteDBQuery(ctx, db, m, query); err != nil {
+			if err := dbtxn.ExecuteDBQueryDirect(ctx, db, m, query); err != nil {
 				merr = multierror.Append(merr, err)
 			}
 		}
@@ -303,7 +306,7 @@ func (m *MSSQL) revokeUserDefault(ctx context.Context, username string) error {
 	// many permissions as possible right now
 	var lastStmtError error
 	for _, query := range revokeStmts {
-		if err := dbtxn.ExecuteDBQuery(ctx, db, nil, query); err != nil {
+		if err := dbtxn.ExecuteDBQueryDirect(ctx, db, nil, query); err != nil {
 			lastStmtError = err
 		}
 	}
@@ -394,7 +397,7 @@ func (m *MSSQL) updateUserPass(ctx context.Context, username string, changePass 
 				"username": username,
 				"password": password,
 			}
-			if err := dbtxn.ExecuteTxQuery(ctx, tx, m, query); err != nil {
+			if err := dbtxn.ExecuteTxQueryDirect(ctx, tx, m, query); err != nil {
 				return fmt.Errorf("failed to execute query: %w", err)
 			}
 		}
@@ -427,5 +430,5 @@ SET @stmt = 'IF EXISTS (SELECT name FROM [master].[sys].[server_principals] WHER
 EXEC (@stmt)`
 
 const alterLoginSQL = `
-ALTER LOGIN [{{username}}] WITH PASSWORD = '{{password}}' 
+ALTER LOGIN [{{username}}] WITH PASSWORD = '{{password}}'
 `

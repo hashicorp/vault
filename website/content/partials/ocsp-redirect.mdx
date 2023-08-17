@@ -1,0 +1,11 @@
+### PKI OCSP GET requests can return HTTP redirect responses
+
+If a base64 encoded OCSP request contains consecutive '/' characters, the GET request
+will return a 301 permanent redirect response. If the redirection is followed, the
+request will not decode as it will not be a properly base64 encoded request.
+
+As a workaround, OCSP POST requests can be used which are unaffected.
+
+#### Impacted versions
+
+Affects all current versions of 1.12.x and 1.13.x

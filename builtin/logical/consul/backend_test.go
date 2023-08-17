@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package consul
 
 import (
@@ -7,6 +10,7 @@ import (
 	"log"
 	"os"
 	"reflect"
+	"strings"
 	"testing"
 	"time"
 
@@ -22,16 +26,24 @@ func TestBackend_Config_Access(t *testing.T) {
 		t.Parallel()
 		t.Run("pre-1.4.0", func(t *testing.T) {
 			t.Parallel()
-			testBackendConfigAccess(t, "1.3.0")
+			testBackendConfigAccess(t, "1.3.1", true)
 		})
 		t.Run("post-1.4.0", func(t *testing.T) {
 			t.Parallel()
-			testBackendConfigAccess(t, "")
+			testBackendConfigAccess(t, "", true)
+		})
+		t.Run("pre-1.4.0 automatic-bootstrap", func(t *testing.T) {
+			t.Parallel()
+			testBackendConfigAccess(t, "1.3.1", false)
+		})
+		t.Run("post-1.4.0 automatic-bootstrap", func(t *testing.T) {
+			t.Parallel()
+			testBackendConfigAccess(t, "", false)
 		})
 	})
 }
 
-func testBackendConfigAccess(t *testing.T, version string) {
+func testBackendConfigAccess(t *testing.T, version string, autoBootstrap bool) {
 	config := logical.TestBackendConfig()
 	config.StorageView = &logical.InmemStorage{}
 	b, err := Factory(context.Background(), config)
@@ -39,12 +51,14 @@ func testBackendConfigAccess(t *testing.T, version string) {
 		t.Fatal(err)
 	}
 
-	cleanup, consulConfig := consul.PrepareTestContainer(t, version, false)
+	cleanup, consulConfig := consul.PrepareTestContainer(t, version, false, autoBootstrap)
 	defer cleanup()
 
 	connData := map[string]interface{}{
 		"address": consulConfig.Address(),
-		"token":   consulConfig.Token,
+	}
+	if autoBootstrap || strings.HasPrefix(version, "1.3") {
+		connData["token"] = consulConfig.Token
 	}
 
 	confReq := &logical.Request{
@@ -82,7 +96,7 @@ func TestBackend_Renew_Revoke(t *testing.T) {
 		t.Parallel()
 		t.Run("pre-1.4.0", func(t *testing.T) {
 			t.Parallel()
-			testBackendRenewRevoke(t, "1.3.0")
+			testBackendRenewRevoke(t, "1.3.1")
 		})
 		t.Run("post-1.4.0", func(t *testing.T) {
 			t.Parallel()
@@ -91,7 +105,18 @@ func TestBackend_Renew_Revoke(t *testing.T) {
 				testBackendRenewRevoke(t, "1.4.4")
 			})
 
-			testBackendRenewRevoke14(t, "")
+			t.Run("param-policies", func(t *testing.T) {
+				t.Parallel()
+				testBackendRenewRevoke14(t, "", "policies")
+			})
+			t.Run("param-consul_policies", func(t *testing.T) {
+				t.Parallel()
+				testBackendRenewRevoke14(t, "", "consul_policies")
+			})
+			t.Run("both-params", func(t *testing.T) {
+				t.Parallel()
+				testBackendRenewRevoke14(t, "", "both")
+			})
 		})
 	})
 }
@@ -104,7 +129,7 @@ func testBackendRenewRevoke(t *testing.T, version string) {
 		t.Fatal(err)
 	}
 
-	cleanup, consulConfig := consul.PrepareTestContainer(t, version, false)
+	cleanup, consulConfig := consul.PrepareTestContainer(t, version, false, true)
 	defer cleanup()
 
 	connData := map[string]interface{}{
@@ -118,7 +143,7 @@ func testBackendRenewRevoke(t *testing.T, version string) {
 		Path:      "config/access",
 		Data:      connData,
 	}
-	resp, err := b.HandleRequest(context.Background(), req)
+	_, err = b.HandleRequest(context.Background(), req)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -128,14 +153,14 @@ func testBackendRenewRevoke(t *testing.T, version string) {
 		"policy": base64.StdEncoding.EncodeToString([]byte(testPolicy)),
 		"lease":  "6h",
 	}
-	resp, err = b.HandleRequest(context.Background(), req)
+	_, err = b.HandleRequest(context.Background(), req)
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	req.Operation = logical.ReadOperation
 	req.Path = "creds/test"
-	resp, err = b.HandleRequest(context.Background(), req)
+	resp, err := b.HandleRequest(context.Background(), req)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -155,7 +180,6 @@ func testBackendRenewRevoke(t *testing.T, version string) {
 	if err := mapstructure.Decode(resp.Data, &d); err != nil {
 		t.Fatal(err)
 	}
-	t.Logf("Generated token: %s", d.Token)
 
 	// Build a client and verify that the credentials work
 	consulapiConfig := consulapi.DefaultConfig()
@@ -166,7 +190,6 @@ func testBackendRenewRevoke(t *testing.T, version string) {
 		t.Fatal(err)
 	}
 
-	t.Logf("Verifying that the generated token works...")
 	_, err = client.KV().Put(&consulapi.KVPair{
 		Key:   "foo",
 		Value: []byte("bar"),
@@ -186,12 +209,11 @@ func testBackendRenewRevoke(t *testing.T, version string) {
 	}
 
 	req.Operation = logical.RevokeOperation
-	resp, err = b.HandleRequest(context.Background(), req)
+	_, err = b.HandleRequest(context.Background(), req)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	t.Logf("Verifying that the generated token does not work...")
 	_, err = client.KV().Put(&consulapi.KVPair{
 		Key:   "foo",
 		Value: []byte("bar"),
@@ -201,7 +223,7 @@ func testBackendRenewRevoke(t *testing.T, version string) {
 	}
 }
 
-func testBackendRenewRevoke14(t *testing.T, version string) {
+func testBackendRenewRevoke14(t *testing.T, version string, policiesParam string) {
 	config := logical.TestBackendConfig()
 	config.StorageView = &logical.InmemStorage{}
 	b, err := Factory(context.Background(), config)
@@ -209,7 +231,7 @@ func testBackendRenewRevoke14(t *testing.T, version string) {
 		t.Fatal(err)
 	}
 
-	cleanup, consulConfig := consul.PrepareTestContainer(t, version, false)
+	cleanup, consulConfig := consul.PrepareTestContainer(t, version, false, true)
 	defer cleanup()
 
 	connData := map[string]interface{}{
@@ -223,24 +245,46 @@ func testBackendRenewRevoke14(t *testing.T, version string) {
 		Path:      "config/access",
 		Data:      connData,
 	}
-	resp, err := b.HandleRequest(context.Background(), req)
+	_, err = b.HandleRequest(context.Background(), req)
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	req.Path = "roles/test"
 	req.Data = map[string]interface{}{
-		"policies": []string{"test"},
-		"lease":    "6h",
+		"lease": "6h",
 	}
-	resp, err = b.HandleRequest(context.Background(), req)
+	if policiesParam == "both" {
+		req.Data["policies"] = []string{"wrong-name"}
+		req.Data["consul_policies"] = []string{"test"}
+	} else {
+		req.Data[policiesParam] = []string{"test"}
+	}
+
+	_, err = b.HandleRequest(context.Background(), req)
 	if err != nil {
 		t.Fatal(err)
 	}
 
+	read := &logical.Request{
+		Storage:   config.StorageView,
+		Operation: logical.ReadOperation,
+		Path:      "roles/test",
+		Data:      connData,
+	}
+	roleResp, err := b.HandleRequest(context.Background(), read)
+
+	expectExtract := roleResp.Data["consul_policies"]
+	respExtract := roleResp.Data[policiesParam]
+	if respExtract != nil {
+		if expectExtract.([]string)[0] != respExtract.([]string)[0] {
+			t.Errorf("mismatch: response consul_policies '%s' does not match '[test]'", roleResp.Data["consul_policies"])
+		}
+	}
+
 	req.Operation = logical.ReadOperation
 	req.Path = "creds/test"
-	resp, err = b.HandleRequest(context.Background(), req)
+	resp, err := b.HandleRequest(context.Background(), req)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -261,7 +305,6 @@ func testBackendRenewRevoke14(t *testing.T, version string) {
 	if err := mapstructure.Decode(resp.Data, &d); err != nil {
 		t.Fatal(err)
 	}
-	t.Logf("Generated token: %s with accessor %s", d.Token, d.Accessor)
 
 	// Build a client and verify that the credentials work
 	consulapiConfig := consulapi.DefaultNonPooledConfig()
@@ -272,7 +315,6 @@ func testBackendRenewRevoke14(t *testing.T, version string) {
 		t.Fatal(err)
 	}
 
-	t.Log("Verifying that the generated token works...")
 	_, err = client.Catalog(), nil
 	if err != nil {
 		t.Fatal(err)
@@ -289,7 +331,7 @@ func testBackendRenewRevoke14(t *testing.T, version string) {
 	}
 
 	req.Operation = logical.RevokeOperation
-	resp, err = b.HandleRequest(context.Background(), req)
+	_, err = b.HandleRequest(context.Background(), req)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -306,7 +348,6 @@ func testBackendRenewRevoke14(t *testing.T, version string) {
 		Datacenter: "DC1",
 	}
 
-	t.Log("Verifying that the generated token does not exist...")
 	_, _, err = mgmtclient.ACL().TokenRead(d.Accessor, q)
 	if err == nil {
 		t.Fatal("err: expected error")
@@ -321,7 +362,7 @@ func TestBackend_LocalToken(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	cleanup, consulConfig := consul.PrepareTestContainer(t, "", false)
+	cleanup, consulConfig := consul.PrepareTestContainer(t, "", false, true)
 	defer cleanup()
 
 	connData := map[string]interface{}{
@@ -335,36 +376,36 @@ func TestBackend_LocalToken(t *testing.T) {
 		Path:      "config/access",
 		Data:      connData,
 	}
-	resp, err := b.HandleRequest(context.Background(), req)
+	_, err = b.HandleRequest(context.Background(), req)
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	req.Path = "roles/test"
 	req.Data = map[string]interface{}{
-		"policies": []string{"test"},
-		"ttl":      "6h",
-		"local":    false,
+		"consul_policies": []string{"test"},
+		"ttl":             "6h",
+		"local":           false,
 	}
-	resp, err = b.HandleRequest(context.Background(), req)
+	_, err = b.HandleRequest(context.Background(), req)
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	req.Path = "roles/test_local"
 	req.Data = map[string]interface{}{
-		"policies": []string{"test"},
-		"ttl":      "6h",
-		"local":    true,
+		"consul_policies": []string{"test"},
+		"ttl":             "6h",
+		"local":           true,
 	}
-	resp, err = b.HandleRequest(context.Background(), req)
+	_, err = b.HandleRequest(context.Background(), req)
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	req.Operation = logical.ReadOperation
 	req.Path = "creds/test"
-	resp, err = b.HandleRequest(context.Background(), req)
+	resp, err := b.HandleRequest(context.Background(), req)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -383,7 +424,6 @@ func TestBackend_LocalToken(t *testing.T) {
 	if err := mapstructure.Decode(resp.Data, &d); err != nil {
 		t.Fatal(err)
 	}
-	t.Logf("Generated token: %s with accessor %s", d.Token, d.Accessor)
 
 	if d.Local {
 		t.Fatalf("requested global token, got local one")
@@ -398,7 +438,6 @@ func TestBackend_LocalToken(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	t.Log("Verifying that the generated token works...")
 	_, err = client.Catalog(), nil
 	if err != nil {
 		t.Fatal(err)
@@ -420,7 +459,6 @@ func TestBackend_LocalToken(t *testing.T) {
 	if err := mapstructure.Decode(resp.Data, &d); err != nil {
 		t.Fatal(err)
 	}
-	t.Logf("Generated token: %s with accessor %s", d.Token, d.Accessor)
 
 	if !d.Local {
 		t.Fatalf("requested local token, got global one")
@@ -435,7 +473,6 @@ func TestBackend_LocalToken(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	t.Log("Verifying that the generated token works...")
 	_, err = client.Catalog(), nil
 	if err != nil {
 		t.Fatal(err)
@@ -447,12 +484,14 @@ func TestBackend_Management(t *testing.T) {
 		t.Parallel()
 		t.Run("pre-1.4.0", func(t *testing.T) {
 			t.Parallel()
-			testBackendManagement(t, "1.3.0")
+			testBackendManagement(t, "1.3.1")
 		})
 		t.Run("post-1.4.0", func(t *testing.T) {
 			t.Parallel()
 			testBackendManagement(t, "1.4.4")
 		})
+
+		testBackendManagement(t, "1.10.8")
 	})
 }
 
@@ -464,7 +503,7 @@ func testBackendManagement(t *testing.T, version string) {
 		t.Fatal(err)
 	}
 
-	cleanup, consulConfig := consul.PrepareTestContainer(t, version, false)
+	cleanup, consulConfig := consul.PrepareTestContainer(t, version, false, true)
 	defer cleanup()
 
 	connData := map[string]interface{}{
@@ -487,15 +526,16 @@ func TestBackend_Basic(t *testing.T) {
 		t.Parallel()
 		t.Run("pre-1.4.0", func(t *testing.T) {
 			t.Parallel()
-			testBackendBasic(t, "1.3.0")
+			testBackendBasic(t, "1.3.1")
 		})
 		t.Run("post-1.4.0", func(t *testing.T) {
 			t.Parallel()
 			t.Run("legacy", func(t *testing.T) {
 				t.Parallel()
-				testBackendRenewRevoke(t, "1.4.4")
+				testBackendBasic(t, "1.4.4")
 			})
-			testBackendBasic(t, "1.4.4")
+
+			testBackendBasic(t, "1.10.8")
 		})
 	})
 }
@@ -508,7 +548,7 @@ func testBackendBasic(t *testing.T, version string) {
 		t.Fatal(err)
 	}
 
-	cleanup, consulConfig := consul.PrepareTestContainer(t, version, false)
+	cleanup, consulConfig := consul.PrepareTestContainer(t, version, false, true)
 	defer cleanup()
 
 	connData := map[string]interface{}{
@@ -553,8 +593,7 @@ func TestBackend_role_lease(t *testing.T) {
 	})
 }
 
-func testAccStepConfig(
-	t *testing.T, config map[string]interface{}) logicaltest.TestStep {
+func testAccStepConfig(t *testing.T, config map[string]interface{}) logicaltest.TestStep {
 	return logicaltest.TestStep{
 		Operation: logical.UpdateOperation,
 		Path:      "config/access",
@@ -562,8 +601,7 @@ func testAccStepConfig(
 	}
 }
 
-func testAccStepReadToken(
-	t *testing.T, name string, conf map[string]interface{}) logicaltest.TestStep {
+func testAccStepReadToken(t *testing.T, name string, conf map[string]interface{}) logicaltest.TestStep {
 	return logicaltest.TestStep{
 		Operation: logical.ReadOperation,
 		Path:      "creds/" + name,
@@ -599,8 +637,7 @@ func testAccStepReadToken(
 	}
 }
 
-func testAccStepReadManagementToken(
-	t *testing.T, name string, conf map[string]interface{}) logicaltest.TestStep {
+func testAccStepReadManagementToken(t *testing.T, name string, conf map[string]interface{}) logicaltest.TestStep {
 	return logicaltest.TestStep{
 		Operation: logical.ReadOperation,
 		Path:      "creds/" + name,
@@ -702,6 +739,116 @@ func testAccStepDeletePolicy(t *testing.T, name string) logicaltest.TestStep {
 	}
 }
 
+func TestBackend_Roles(t *testing.T) {
+	config := logical.TestBackendConfig()
+	config.StorageView = &logical.InmemStorage{}
+	b, err := Factory(context.Background(), config)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	cleanup, consulConfig := consul.PrepareTestContainer(t, "", false, true)
+	defer cleanup()
+
+	connData := map[string]interface{}{
+		"address": consulConfig.Address(),
+		"token":   consulConfig.Token,
+	}
+
+	req := &logical.Request{
+		Storage:   config.StorageView,
+		Operation: logical.UpdateOperation,
+		Path:      "config/access",
+		Data:      connData,
+	}
+	_, err = b.HandleRequest(context.Background(), req)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Create the consul_roles role
+	req.Path = "roles/test-consul-roles"
+	req.Data = map[string]interface{}{
+		"consul_roles": []string{"role-test"},
+		"lease":        "6h",
+	}
+	_, err = b.HandleRequest(context.Background(), req)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	req.Operation = logical.ReadOperation
+	req.Path = "creds/test-consul-roles"
+	resp, err := b.HandleRequest(context.Background(), req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if resp == nil {
+		t.Fatal("resp nil")
+	}
+	if resp.IsError() {
+		t.Fatalf("resp is error: %v", resp.Error())
+	}
+
+	generatedSecret := resp.Secret
+	generatedSecret.TTL = 6 * time.Hour
+
+	var d struct {
+		Token    string `mapstructure:"token"`
+		Accessor string `mapstructure:"accessor"`
+	}
+	if err := mapstructure.Decode(resp.Data, &d); err != nil {
+		t.Fatal(err)
+	}
+
+	// Build a client and verify that the credentials work
+	consulapiConfig := consulapi.DefaultNonPooledConfig()
+	consulapiConfig.Address = connData["address"].(string)
+	consulapiConfig.Token = d.Token
+	client, err := consulapi.NewClient(consulapiConfig)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	_, err = client.Catalog(), nil
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	req.Operation = logical.RenewOperation
+	req.Secret = generatedSecret
+	resp, err = b.HandleRequest(context.Background(), req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if resp == nil {
+		t.Fatal("got nil response from renew")
+	}
+
+	req.Operation = logical.RevokeOperation
+	_, err = b.HandleRequest(context.Background(), req)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Build a management client and verify that the token does not exist anymore
+	consulmgmtConfig := consulapi.DefaultNonPooledConfig()
+	consulmgmtConfig.Address = connData["address"].(string)
+	consulmgmtConfig.Token = connData["token"].(string)
+	mgmtclient, err := consulapi.NewClient(consulmgmtConfig)
+	if err != nil {
+		t.Fatal(err)
+	}
+	q := &consulapi.QueryOptions{
+		Datacenter: "DC1",
+	}
+
+	_, _, err = mgmtclient.ACL().TokenRead(d.Accessor, q)
+	if err == nil {
+		t.Fatal("err: expected error")
+	}
+}
+
 func TestBackend_Enterprise_Namespace(t *testing.T) {
 	if _, hasLicense := os.LookupEnv("CONSUL_LICENSE"); !hasLicense {
 		t.Skip("Skipping: No enterprise license found")
@@ -726,7 +873,7 @@ func testBackendEntNamespace(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	cleanup, consulConfig := consul.PrepareTestContainer(t, "", true)
+	cleanup, consulConfig := consul.PrepareTestContainer(t, "", true, true)
 	defer cleanup()
 
 	connData := map[string]interface{}{
@@ -740,7 +887,7 @@ func testBackendEntNamespace(t *testing.T) {
 		Path:      "config/access",
 		Data:      connData,
 	}
-	resp, err := b.HandleRequest(context.Background(), req)
+	_, err = b.HandleRequest(context.Background(), req)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -748,18 +895,18 @@ func testBackendEntNamespace(t *testing.T) {
 	// Create the role in namespace "ns1"
 	req.Path = "roles/test-ns"
 	req.Data = map[string]interface{}{
-		"policies":         []string{"ns-test"},
+		"consul_policies":  []string{"ns-test"},
 		"lease":            "6h",
 		"consul_namespace": "ns1",
 	}
-	resp, err = b.HandleRequest(context.Background(), req)
+	_, err = b.HandleRequest(context.Background(), req)
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	req.Operation = logical.ReadOperation
 	req.Path = "creds/test-ns"
-	resp, err = b.HandleRequest(context.Background(), req)
+	resp, err := b.HandleRequest(context.Background(), req)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -781,7 +928,6 @@ func testBackendEntNamespace(t *testing.T) {
 	if err := mapstructure.Decode(resp.Data, &d); err != nil {
 		t.Fatal(err)
 	}
-	t.Logf("Generated namespace '%s' token: %s with accessor %s", d.ConsulNamespace, d.Token, d.Accessor)
 
 	if d.ConsulNamespace != "ns1" {
 		t.Fatalf("Failed to access namespace")
@@ -796,7 +942,6 @@ func testBackendEntNamespace(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	t.Log("Verifying that the generated token works...")
 	_, err = client.Catalog(), nil
 	if err != nil {
 		t.Fatal(err)
@@ -813,7 +958,7 @@ func testBackendEntNamespace(t *testing.T) {
 	}
 
 	req.Operation = logical.RevokeOperation
-	resp, err = b.HandleRequest(context.Background(), req)
+	_, err = b.HandleRequest(context.Background(), req)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -831,7 +976,6 @@ func testBackendEntNamespace(t *testing.T) {
 		Namespace:  "ns1",
 	}
 
-	t.Log("Verifying that the generated token does not exist...")
 	_, _, err = mgmtclient.ACL().TokenRead(d.Accessor, q)
 	if err == nil {
 		t.Fatal("err: expected error")
@@ -846,7 +990,7 @@ func testBackendEntPartition(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	cleanup, consulConfig := consul.PrepareTestContainer(t, "", true)
+	cleanup, consulConfig := consul.PrepareTestContainer(t, "", true, true)
 	defer cleanup()
 
 	connData := map[string]interface{}{
@@ -860,7 +1004,7 @@ func testBackendEntPartition(t *testing.T) {
 		Path:      "config/access",
 		Data:      connData,
 	}
-	resp, err := b.HandleRequest(context.Background(), req)
+	_, err = b.HandleRequest(context.Background(), req)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -868,18 +1012,18 @@ func testBackendEntPartition(t *testing.T) {
 	// Create the role in partition "part1"
 	req.Path = "roles/test-part"
 	req.Data = map[string]interface{}{
-		"policies":  []string{"part-test"},
-		"lease":     "6h",
-		"partition": "part1",
+		"consul_policies": []string{"part-test"},
+		"lease":           "6h",
+		"partition":       "part1",
 	}
-	resp, err = b.HandleRequest(context.Background(), req)
+	_, err = b.HandleRequest(context.Background(), req)
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	req.Operation = logical.ReadOperation
 	req.Path = "creds/test-part"
-	resp, err = b.HandleRequest(context.Background(), req)
+	resp, err := b.HandleRequest(context.Background(), req)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -901,7 +1045,6 @@ func testBackendEntPartition(t *testing.T) {
 	if err := mapstructure.Decode(resp.Data, &d); err != nil {
 		t.Fatal(err)
 	}
-	t.Logf("Generated partition '%s' token: %s with accessor %s", d.Partition, d.Token, d.Accessor)
 
 	if d.Partition != "part1" {
 		t.Fatalf("Failed to access partition")
@@ -916,7 +1059,6 @@ func testBackendEntPartition(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	t.Log("Verifying that the generated token works...")
 	_, err = client.Catalog(), nil
 	if err != nil {
 		t.Fatal(err)
@@ -933,7 +1075,7 @@ func testBackendEntPartition(t *testing.T) {
 	}
 
 	req.Operation = logical.RevokeOperation
-	resp, err = b.HandleRequest(context.Background(), req)
+	_, err = b.HandleRequest(context.Background(), req)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -951,15 +1093,243 @@ func testBackendEntPartition(t *testing.T) {
 		Partition:  "test1",
 	}
 
-	t.Log("Verifying that the generated token does not exist...")
 	_, _, err = mgmtclient.ACL().TokenRead(d.Accessor, q)
 	if err == nil {
 		t.Fatal("err: expected error")
 	}
 }
 
+func TestBackendRenewRevokeRolesAndIdentities(t *testing.T) {
+	config := logical.TestBackendConfig()
+	config.StorageView = &logical.InmemStorage{}
+	b, err := Factory(context.Background(), config)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	cleanup, consulConfig := consul.PrepareTestContainer(t, "", false, true)
+	defer cleanup()
+
+	connData := map[string]interface{}{
+		"address": consulConfig.Address(),
+		"token":   consulConfig.Token,
+	}
+
+	req := &logical.Request{
+		Storage:   config.StorageView,
+		Operation: logical.UpdateOperation,
+		Path:      "config/access",
+		Data:      connData,
+	}
+	resp, err := b.HandleRequest(context.Background(), req)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	cases := map[string]struct {
+		RoleName string
+		RoleData map[string]interface{}
+	}{
+		"just role": {
+			"r",
+			map[string]interface{}{
+				"consul_roles": []string{"role-test"},
+				"lease":        "6h",
+			},
+		},
+		"role and policies": {
+			"rp",
+			map[string]interface{}{
+				"consul_policies": []string{"test"},
+				"consul_roles":    []string{"role-test"},
+				"lease":           "6h",
+			},
+		},
+		"service identity": {
+			"si",
+			map[string]interface{}{
+				"service_identities": "service1",
+				"lease":              "6h",
+			},
+		},
+		"service identity and policies": {
+			"sip",
+			map[string]interface{}{
+				"consul_policies":    []string{"test"},
+				"service_identities": "service1",
+				"lease":              "6h",
+			},
+		},
+		"service identity and role": {
+			"sir",
+			map[string]interface{}{
+				"consul_roles":       []string{"role-test"},
+				"service_identities": "service1",
+				"lease":              "6h",
+			},
+		},
+		"service identity and role and policies": {
+			"sirp",
+			map[string]interface{}{
+				"consul_policies":    []string{"test"},
+				"consul_roles":       []string{"role-test"},
+				"service_identities": "service1",
+				"lease":              "6h",
+			},
+		},
+		"node identity": {
+			"ni",
+			map[string]interface{}{
+				"node_identities": []string{"node1:dc1"},
+				"lease":           "6h",
+			},
+		},
+		"node identity and policies": {
+			"nip",
+			map[string]interface{}{
+				"consul_policies": []string{"test"},
+				"node_identities": []string{"node1:dc1"},
+				"lease":           "6h",
+			},
+		},
+		"node identity and role": {
+			"nir",
+			map[string]interface{}{
+				"consul_roles":    []string{"role-test"},
+				"node_identities": []string{"node1:dc1"},
+				"lease":           "6h",
+			},
+		},
+		"node identity and role and policies": {
+			"nirp",
+			map[string]interface{}{
+				"consul_policies": []string{"test"},
+				"consul_roles":    []string{"role-test"},
+				"node_identities": []string{"node1:dc1"},
+				"lease":           "6h",
+			},
+		},
+		"node identity and service identity": {
+			"nisi",
+			map[string]interface{}{
+				"service_identities": "service1",
+				"node_identities":    []string{"node1:dc1"},
+				"lease":              "6h",
+			},
+		},
+		"node identity and service identity and policies": {
+			"nisip",
+			map[string]interface{}{
+				"consul_policies":    []string{"test"},
+				"service_identities": "service1",
+				"node_identities":    []string{"node1:dc1"},
+				"lease":              "6h",
+			},
+		},
+		"node identity and service identity and role": {
+			"nisir",
+			map[string]interface{}{
+				"consul_roles":       []string{"role-test"},
+				"service_identities": "service1",
+				"node_identities":    []string{"node1:dc1"},
+				"lease":              "6h",
+			},
+		},
+		"node identity and service identity and role and policies": {
+			"nisirp",
+			map[string]interface{}{
+				"consul_policies":    []string{"test"},
+				"consul_roles":       []string{"role-test"},
+				"service_identities": "service1",
+				"node_identities":    []string{"node1:dc1"},
+				"lease":              "6h",
+			},
+		},
+	}
+
+	for description, tc := range cases {
+		t.Logf("Testing: %s", description)
+
+		req.Operation = logical.UpdateOperation
+		req.Path = fmt.Sprintf("roles/%s", tc.RoleName)
+		req.Data = tc.RoleData
+		resp, err = b.HandleRequest(context.Background(), req)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		req.Operation = logical.ReadOperation
+		req.Path = fmt.Sprintf("creds/%s", tc.RoleName)
+		resp, err = b.HandleRequest(context.Background(), req)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if resp == nil {
+			t.Fatal("resp nil")
+		}
+		if resp.IsError() {
+			t.Fatalf("resp is error: %v", resp.Error())
+		}
+
+		generatedSecret := resp.Secret
+		generatedSecret.TTL = 6 * time.Hour
+
+		var d struct {
+			Token    string `mapstructure:"token"`
+			Accessor string `mapstructure:"accessor"`
+		}
+		if err := mapstructure.Decode(resp.Data, &d); err != nil {
+			t.Fatal(err)
+		}
+
+		// Build a client and verify that the credentials work
+		consulapiConfig := consulapi.DefaultNonPooledConfig()
+		consulapiConfig.Address = connData["address"].(string)
+		consulapiConfig.Token = d.Token
+		client, err := consulapi.NewClient(consulapiConfig)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		_, err = client.Catalog(), nil
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		req.Operation = logical.RenewOperation
+		req.Secret = generatedSecret
+		resp, err = b.HandleRequest(context.Background(), req)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if resp == nil {
+			t.Fatal("got nil response from renew")
+		}
+
+		req.Operation = logical.RevokeOperation
+		resp, err = b.HandleRequest(context.Background(), req)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		// Build a management client and verify that the token does not exist anymore
+		consulmgmtConfig := consulapi.DefaultNonPooledConfig()
+		consulmgmtConfig.Address = connData["address"].(string)
+		consulmgmtConfig.Token = connData["token"].(string)
+		mgmtclient, err := consulapi.NewClient(consulmgmtConfig)
+
+		q := &consulapi.QueryOptions{
+			Datacenter: "DC1",
+		}
+
+		_, _, err = mgmtclient.ACL().TokenRead(d.Accessor, q)
+		if err == nil {
+			t.Fatal("err: expected error")
+		}
+	}
+}
+
 const testPolicy = `
 key "" {
 	policy = "write"
-}
-`
+}`

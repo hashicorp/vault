@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package azure
 
 import (
@@ -90,6 +93,10 @@ func NewAzureAuth(roleName string, opts ...LoginOption) (*AzureAuth, error) {
 // Login sets up the required request body for the Azure auth method's /login
 // endpoint, and performs a write to it.
 func (a *AzureAuth) Login(ctx context.Context, client *api.Client) (*api.Secret, error) {
+	if ctx == nil {
+		ctx = context.Background()
+	}
+
 	jwtResp, err := a.getJWT()
 	if err != nil {
 		return nil, fmt.Errorf("unable to get access token: %w", err)
@@ -110,7 +117,7 @@ func (a *AzureAuth) Login(ctx context.Context, client *api.Client) (*api.Secret,
 	}
 
 	path := fmt.Sprintf("auth/%s/login", a.mountPath)
-	resp, err := client.Logical().Write(path, loginData)
+	resp, err := client.Logical().WriteWithContext(ctx, path, loginData)
 	if err != nil {
 		return nil, fmt.Errorf("unable to log in with Azure auth: %w", err)
 	}
@@ -194,7 +201,6 @@ func (a *AzureAuth) getJWT() (string, error) {
 func getMetadata() (metadataJSON, error) {
 	metadataEndpoint, err := url.Parse(fmt.Sprintf("%s/metadata/instance", metadataEndpoint))
 	if err != nil {
-		fmt.Println("Error creating URL: ", err)
 		return metadataJSON{}, err
 	}
 

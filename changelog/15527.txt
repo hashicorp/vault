@@ -1,0 +1,3 @@
+```release-note:improvement
+website/docs: Add usage documentation for Kubernetes Secrets Engine
+```

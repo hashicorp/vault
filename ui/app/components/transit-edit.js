@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import { inject as service } from '@ember/service';
 import { or } from '@ember/object/computed';
 import { isBlank } from '@ember/utils';
@@ -13,7 +18,6 @@ const SHOW_ROUTE = 'vault.cluster.secrets.backend.show';
 
 export default Component.extend(FocusOnInsertMixin, {
   router: service(),
-  wizard: service(),
   mode: null,
   onDataChange() {},
   onRefresh() {},
@@ -22,15 +26,15 @@ export default Component.extend(FocusOnInsertMixin, {
   requestInFlight: or('key.isLoading', 'key.isReloading', 'key.isSaving'),
 
   willDestroyElement() {
-    this._super(...arguments);
-    if (this.key && this.key.isError) {
+    if (this.key && this.key.isError && !this.key.isDestroyed && !this.key.isDestroying) {
       this.key.rollbackAttributes();
     }
+    this._super(...arguments);
   },
 
   waitForKeyUp: task(function* () {
     while (true) {
-      let event = yield waitForEvent(document.body, 'keyup');
+      const event = yield waitForEvent(document.body, 'keyup');
       this.onEscape(event);
     }
   })
@@ -56,13 +60,6 @@ export default Component.extend(FocusOnInsertMixin, {
     const key = this.key;
     return key[method]().then(() => {
       if (!key.isError) {
-        if (this.wizard.featureState === 'secret') {
-          this.wizard.transitionFeatureMachine('secret', 'CONTINUE');
-        } else {
-          if (this.wizard.featureState === 'encryption') {
-            this.wizard.transitionFeatureMachine('encryption', 'CONTINUE', 'transit');
-          }
-        }
         successCallback(key);
       }
     });
@@ -95,10 +92,10 @@ export default Component.extend(FocusOnInsertMixin, {
 
     handleAutoRotateChange(ttlObj) {
       if (ttlObj.enabled) {
-        set(this.key, 'autoRotateInterval', ttlObj.goSafeTimeString);
+        set(this.key, 'autoRotatePeriod', ttlObj.goSafeTimeString);
         this.set('autoRotateInvalid', ttlObj.seconds < 3600);
       } else {
-        set(this.key, 'autoRotateInterval', 0);
+        set(this.key, 'autoRotatePeriod', 0);
       }
     },
 

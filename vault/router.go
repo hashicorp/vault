@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package vault
 
 import (
@@ -9,9 +12,9 @@ import (
 	"sync/atomic"
 	"time"
 
-	metrics "github.com/armon/go-metrics"
-	radix "github.com/armon/go-radix"
-	hclog "github.com/hashicorp/go-hclog"
+	"github.com/armon/go-metrics"
+	"github.com/armon/go-radix"
+	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-secure-stdlib/strutil"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/sdk/helper/consts"
@@ -47,13 +50,15 @@ func NewRouter() *Router {
 		storagePrefix:      radix.New(),
 		mountUUIDCache:     radix.New(),
 		mountAccessorCache: radix.New(),
+		// this will get replaced in production with a real logger but it's useful to have a default in place for tests
+		logger: hclog.NewNullLogger(),
 	}
 	return r
 }
 
 // routeEntry is used to represent a mount point in the router
 type routeEntry struct {
-	tainted       bool
+	tainted       atomic.Bool
 	backend       logical.Backend
 	mountEntry    *MountEntry
 	storageView   logical.Storage
@@ -90,6 +95,43 @@ func (r *Router) reset() {
 	r.storagePrefix = radix.New()
 	r.mountUUIDCache = radix.New()
 	r.mountAccessorCache = radix.New()
+}
+
+func (r *Router) GetRecords(tag string) ([]map[string]interface{}, error) {
+	r.l.RLock()
+	defer r.l.RUnlock()
+	var data []map[string]interface{}
+	var tree *radix.Tree
+	switch tag {
+	case "root":
+		tree = r.root
+	case "uuid":
+		tree = r.mountUUIDCache
+	case "accessor":
+		tree = r.mountAccessorCache
+	case "storage":
+		tree = r.storagePrefix
+	default:
+		return nil, logical.ErrUnsupportedPath
+	}
+	for _, v := range tree.ToMap() {
+		info := v.(Deserializable).Deserialize()
+		data = append(data, info)
+	}
+	return data, nil
+}
+
+func (entry *routeEntry) Deserialize() map[string]interface{} {
+	entry.l.RLock()
+	defer entry.l.RUnlock()
+	ret := map[string]interface{}{
+		"tainted":        entry.tainted.Load(),
+		"storage_prefix": entry.storagePrefix,
+	}
+	for k, v := range entry.mountEntry.Deserialize() {
+		ret[k] = v
+	}
+	return ret
 }
 
 // ValidateMountByAccessor returns the mount type and ID for a given mount
@@ -147,12 +189,12 @@ func (r *Router) Mount(backend logical.Backend, prefix string, mountEntry *Mount
 
 	// Create a mount entry
 	re := &routeEntry{
-		tainted:       mountEntry.Tainted,
 		backend:       backend,
 		mountEntry:    mountEntry,
 		storagePrefix: storageView.Prefix(),
 		storageView:   storageView,
 	}
+	re.tainted.Store(mountEntry.Tainted)
 	re.rootPaths.Store(pathsToRadix(paths.Root))
 	loginPathsEntry, err := parseUnauthenticatedPaths(paths.Unauthenticated)
 	if err != nil {
@@ -248,7 +290,7 @@ func (r *Router) Taint(ctx context.Context, path string) error {
 	defer r.l.Unlock()
 	_, raw, ok := r.root.LongestPrefix(path)
 	if ok {
-		raw.(*routeEntry).tainted = true
+		raw.(*routeEntry).tainted.Store(true)
 	}
 	return nil
 }
@@ -265,7 +307,7 @@ func (r *Router) Untaint(ctx context.Context, path string) error {
 	defer r.l.Unlock()
 	_, raw, ok := r.root.LongestPrefix(path)
 	if ok {
-		raw.(*routeEntry).tainted = false
+		raw.(*routeEntry).tainted.Store(false)
 	}
 	return nil
 }
@@ -423,7 +465,12 @@ func (r *Router) MatchingBackend(ctx context.Context, path string) logical.Backe
 	if !ok {
 		return nil
 	}
-	return raw.(*routeEntry).backend
+
+	re := raw.(*routeEntry)
+	re.l.RLock()
+	defer re.l.RUnlock()
+
+	return re.backend
 }
 
 // MatchingSystemView returns the SystemView used for a path
@@ -530,13 +577,15 @@ func (r *Router) routeCommon(ctx context.Context, req *logical.Request, existenc
 	}
 	r.l.RUnlock()
 	if !ok {
-		return logical.ErrorResponse(fmt.Sprintf("no handler for route '%s'", req.Path)), false, false, logical.ErrUnsupportedPath
+		return logical.ErrorResponse(fmt.Sprintf("no handler for route %q. route entry not found.", req.Path)), false, false, logical.ErrUnsupportedPath
 	}
 	req.Path = adjustedPath
-	defer metrics.MeasureSince([]string{
-		"route", string(req.Operation),
-		strings.Replace(mount, "/", "-", -1),
-	}, time.Now())
+	if !existenceCheck {
+		defer metrics.MeasureSince([]string{
+			"route", string(req.Operation),
+			strings.ReplaceAll(mount, "/", "-"),
+		}, time.Now())
+	}
 	re := raw.(*routeEntry)
 
 	// Grab a read lock on the route entry, this protects against the backend
@@ -551,16 +600,16 @@ func (r *Router) routeCommon(ctx context.Context, req *logical.Request, existenc
 
 	// Filtered mounts will have a nil backend
 	if re.backend == nil {
-		return logical.ErrorResponse(fmt.Sprintf("no handler for route '%s'", req.Path)), false, false, logical.ErrUnsupportedPath
+		return logical.ErrorResponse(fmt.Sprintf("no handler for route %q. route entry found, but backend is nil.", req.Path)), false, false, logical.ErrUnsupportedPath
 	}
 
 	// If the path is tainted, we reject any operation except for
 	// Rollback and Revoke
-	if re.tainted {
+	if re.tainted.Load() {
 		switch req.Operation {
 		case logical.RevokeOperation, logical.RollbackOperation:
 		default:
-			return logical.ErrorResponse(fmt.Sprintf("no handler for route '%s'", req.Path)), false, false, logical.ErrUnsupportedPath
+			return logical.ErrorResponse(fmt.Sprintf("no handler for route %q. route entry is tainted.", req.Path)), false, false, logical.ErrUnsupportedPath
 		}
 	}
 
@@ -569,6 +618,11 @@ func (r *Router) routeCommon(ctx context.Context, req *logical.Request, existenc
 	req.Path = strings.TrimPrefix(ns.Path+req.Path, mount)
 	req.MountPoint = mount
 	req.MountType = re.mountEntry.Type
+	req.SetMountRunningSha256(re.mountEntry.RunningSha256)
+	req.SetMountRunningVersion(re.mountEntry.RunningVersion)
+	req.SetMountIsExternalPlugin(re.mountEntry.IsExternalPlugin())
+	req.SetMountClass(re.mountEntry.MountClass())
+
 	if req.Path == "/" {
 		req.Path = ""
 	}
@@ -603,7 +657,8 @@ func (r *Router) routeCommon(ctx context.Context, req *logical.Request, existenc
 		}
 
 		switch {
-		case te.NamespaceID == namespace.RootNamespaceID && !strings.HasPrefix(req.ClientToken, "s."):
+		case te.NamespaceID == namespace.RootNamespaceID && !strings.HasPrefix(req.ClientToken, consts.LegacyServiceTokenPrefix) &&
+			!strings.HasPrefix(req.ClientToken, consts.ServiceTokenPrefix):
 			// In order for the token store to revoke later, we need to have the same
 			// salted ID, so we double-salt what's going to the cubbyhole backend
 			salt, err := r.tokenStoreSaltFunc(ctx)
@@ -643,6 +698,13 @@ func (r *Router) routeCommon(ctx context.Context, req *logical.Request, existenc
 	headers := req.Headers
 	req.Headers = nil
 
+	// Cache the saved request SSC token
+	inboundToken := req.InboundSSCToken
+
+	// Ensure that the inbound token we cache in the
+	// request during token creation isn't sent to backends
+	req.InboundSSCToken = ""
+
 	// Filter and add passthrough headers to the backend
 	var passthroughRequestHeaders []string
 	if rawVal, ok := re.mountEntry.synthesizedConfigCache.Load("passthrough_request_headers"); ok {
@@ -676,6 +738,11 @@ func (r *Router) routeCommon(ctx context.Context, req *logical.Request, existenc
 		req.Path = originalPath
 		req.MountPoint = mount
 		req.MountType = re.mountEntry.Type
+		req.SetMountRunningSha256(re.mountEntry.RunningSha256)
+		req.SetMountRunningVersion(re.mountEntry.RunningVersion)
+		req.SetMountIsExternalPlugin(re.mountEntry.IsExternalPlugin())
+		req.SetMountClass(re.mountEntry.MountClass())
+
 		req.Connection = originalConn
 		req.ID = originalReqID
 		req.Storage = nil
@@ -695,6 +762,13 @@ func (r *Router) routeCommon(ctx context.Context, req *logical.Request, existenc
 		req.EntityID = originalEntityID
 
 		req.MFACreds = originalMFACreds
+
+		req.InboundSSCToken = inboundToken
+
+		// Before resetting the tokenEntry, see if an ExternalID was added
+		if req.TokenEntry() != nil && req.TokenEntry().ExternalID != "" {
+			reqTokenEntry.ExternalID = req.TokenEntry().ExternalID
+		}
 
 		req.SetTokenEntry(reqTokenEntry)
 		req.ControlGroup = originalControlGroup

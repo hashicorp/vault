@@ -1,19 +1,20 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
 {{#if this.model.replicationAttrs.isPrimary}}
   <Toolbar>
     <ToolbarActions>
       {{#if this.model.replicationAttrs.knownSecondaries.length}}
         {{#if this.model.canRevokeSecondary}}
-          <ToolbarLink @params={{array "mode.secondaries.revoke" this.replicationMode}}>
+          <ToolbarLink @route="mode.secondaries.revoke" @model={{this.replicationMode}}>
             Revoke secondary
           </ToolbarLink>
         {{/if}}
       {{/if}}
       {{#if this.model.canAddSecondary}}
-        <ToolbarLink
-          @type="add"
-          @params={{array "mode.secondaries.add" this.replicationMode}}
-          @data-test-secondary-add={{true}}
-        >
+        <ToolbarLink @route="mode.secondaries.add" @model={{this.replicationMode}} @type="add" data-test-secondary-add>
           Add secondary
         </ToolbarLink>
       {{/if}}
@@ -36,9 +37,9 @@
                         <LinkTo
                           @route="mode.secondaries.config-show"
                           @models={{array this.replicationMode secondary}}
-                          data-test-replication-mount-filter-link={{true}}
+                          data-test-replication-path-filter-link={{true}}
                         >
-                          Mount filter config
+                          Path filter config
                         </LinkTo>
                       </li>
                     {{/if}}
@@ -75,7 +76,7 @@
           Add secondary
         </LinkTo>
       {{/if}}
-      <DocLink @path="/docs/internals/replication.html">
+      <DocLink @path="/vault/docs/internals/replication">
         Learn more
       </DocLink>
     </EmptyState>

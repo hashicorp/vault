@@ -1,3 +1,8 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
 <PageHeader as |p|>
   <p.top>
     <KeyValueHeader
@@ -11,11 +16,11 @@
   <p.levelLeft>
     <h1 class="title is-3" data-test-secret-header="true">
       {{#if (eq this.mode "create")}}
-        Create an SSH role
+        Create an SSH Role
       {{else if (eq this.mode "edit")}}
-        Edit SSH role
+        Edit SSH Role
       {{else}}
-        SSH role
+        SSH Role
         <code>{{this.model.id}}</code>
       {{/if}}
     </h1>
@@ -35,18 +40,18 @@
         <ToolbarSecretLink
           @secret={{this.model.id}}
           @mode="credentials"
-          @data-test-backend-credentials={{true}}
+          data-test-backend-credentials={{true}}
           @replace={{true}}
         >
           Generate Credential
         </ToolbarSecretLink>
       {{else}}
-        <ToolbarSecretLink @secret={{this.model.id}} @mode="sign" @data-test-backend-credentials={{true}} @replace={{true}}>
+        <ToolbarSecretLink @secret={{this.model.id}} @mode="sign" data-test-backend-credentials={{true}} @replace={{true}}>
           Sign Keys
         </ToolbarSecretLink>
       {{/if}}
       {{#if (or this.model.canUpdate this.model.canDelete)}}
-        <ToolbarSecretLink @secret={{this.model.id}} @mode="edit" @data-test-edit-link={{true}} @replace={{true}}>
+        <ToolbarSecretLink @secret={{this.model.id}} @mode="edit" data-test-edit-link={{true}} @replace={{true}}>
           Edit role
         </ToolbarSecretLink>
       {{/if}}
@@ -70,7 +75,7 @@
             Save
           {{/if}}
         </button>
-        <SecretLink @mode={{if (eq this.mode "create") "list" "show"}} @class="button" @secret={{this.model.id}}>
+        <SecretLink @mode={{if (eq this.mode "create") "list" "show"}} class="button" @secret={{this.model.id}}>
           Cancel
         </SecretLink>
       </div>

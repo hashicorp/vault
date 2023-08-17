@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import { module, test } from 'qunit';
 import { setupRenderingTest } from 'ember-qunit';
 import { render } from '@ember/test-helpers';
@@ -14,7 +19,7 @@ module('Integration | Component | console/log object', function (hooks) {
     const expectedText = 'Key Value one two three four seven {"five":"six"} eight [5,6]';
     this.set('content', objectContent);
 
-    await render(hbs`{{console/log-object content=content}}`);
+    await render(hbs`{{console/log-object content=this.content}}`);
     assert.dom('pre').includesText(expectedText);
   });
 });

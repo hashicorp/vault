@@ -1,3 +1,8 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
 <PageHeader as |p|>
   <p.top>
     <KeyValueHeader
@@ -35,7 +40,7 @@
         <ToolbarSecretLink
           @secret={{concat this.model.idPrefix this.model.id}}
           @mode="edit"
-          @data-test-edit-link={{true}}
+          data-test-edit-link={{true}}
           @replace={{true}}
         >
           Edit alphabet
@@ -89,7 +94,7 @@
         </button>
         <SecretLink
           @mode={{if (eq this.mode "create") "list" "show"}}
-          @class="button"
+          class="button"
           @secret={{concat this.model.idPrefix this.model.id}}
         >
           Cancel
@@ -116,7 +121,6 @@
           @value={{get this.model attr.name}}
           @type={{attr.type}}
           @isLink={{eq attr.name "transformations"}}
-          @viewAll="transformations"
         />
       {{else}}
         <InfoTableRow

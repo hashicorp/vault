@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package command
 
 import (
@@ -6,7 +9,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/hashicorp/vault/sdk/version"
+	"github.com/hashicorp/vault/version"
 	"github.com/mitchellh/cli"
 )
 
@@ -57,7 +60,7 @@ func TestVersionHistoryCommand_JsonOutput(t *testing.T) {
 		Client: client,
 	}
 
-	args, format, _ := setupEnv([]string{"version-history", "-format", "json"})
+	args, format, _, _, _ := setupEnv([]string{"version-history", "-format", "json"})
 	if format != "json" {
 		t.Fatalf("expected format to be %q, actual %q", "json", format)
 	}

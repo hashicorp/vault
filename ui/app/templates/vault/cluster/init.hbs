@@ -1,3 +1,8 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
 <SplashPage as |Page|>
   {{#if (and this.model.usingRaft (not this.prefersInit))}}
     <Page.header>
@@ -35,7 +40,7 @@
               Please securely distribute the keys below. When the Vault is re-sealed, restarted, or stopped, you must provide
               at least
               <strong class="has-text-danger">{{this.secret_threshold}}</strong>
-              of these keys to unseal it again. Vault does not store the master key. Without at least
+              of these keys to unseal it again. Vault does not store the root key. Without at least
               <strong class="has-text-danger">{{this.secret_threshold}}</strong>
               keys, your Vault will remain permanently sealed.
             {{/if}}
@@ -82,19 +87,18 @@
               <LinkTo
                 @route="vault.cluster.auth"
                 @model={{this.model.name}}
+                @disabled={{this.model.sealed}}
                 class={{concat (if this.model.sealed "is-loading " "") "button is-primary"}}
-                disabled={{this.model.sealed}}
               >
                 Continue to Authenticate
               </LinkTo>
             </div>
           {{/if}}
           <DownloadButton
-            @data={{this.keyData}}
+            class="button is-ghost"
             @filename={{this.keyFilename}}
-            @mime="application/json"
+            @data={{this.keyData}}
             @extension="json"
-            @class="button is-ghost"
             @stringify={{true}}
           >
             <Icon @name="download" />
@@ -106,7 +110,7 @@
   {{else}}
     <Page.header>
       <h1 class="title h5">
-        Let's set up the initial set of master keys that you’ll need in case of an emergency
+        Let's set up the initial set of root keys that you’ll need in case of an emergency
       </h1>
     </Page.header>
     <Page.content>
@@ -146,7 +150,7 @@
               />
             </div>
             <p class="help has-text-grey">
-              The number of key shares to split the master key into
+              The number of key shares to split the root key into
             </p>
           </div>
           <div class="field">
@@ -168,15 +172,15 @@
               />
             </div>
             <p class="help has-text-grey">
-              The number of key shares required to reconstruct the master key
+              The number of key shares required to reconstruct the root key
             </p>
           </div>
           <ToggleButton
+            @isOpen={{this.use_pgp}}
             @openLabel="Encrypt output with PGP"
             @closedLabel="Encrypt output with PGP"
-            @toggleTarget={{this}}
-            @toggleAttr="use_pgp"
-            @class="is-block"
+            @onClick={{fn (mut this.use_pgp)}}
+            class="is-block"
           />
           {{#if this.use_pgp}}
             <div class="box init-box">
@@ -187,11 +191,11 @@
             </div>
           {{/if}}
           <ToggleButton
+            @isOpen={{this.use_pgp_for_root}}
             @openLabel="Encrypt root token with PGP"
             @closedLabel="Encrypt root token with PGP"
-            @toggleTarget={{this}}
-            @toggleAttr="use_pgp_for_root"
-            @class="is-block"
+            @onClick={{fn (mut this.use_pgp_for_root)}}
+            class="is-block"
           />
           {{#if this.use_pgp_for_root}}
             <div class="box init-box">
@@ -206,7 +210,7 @@
           <button
             data-test-init-submit
             type="submit"
-            class="button is-primary {{if this.loading "is-loading"}}"
+            class="button is-primary {{if this.loading 'is-loading'}}"
             disabled={{this.loading}}
           >
             Initialize

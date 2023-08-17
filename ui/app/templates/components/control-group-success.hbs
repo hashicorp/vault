@@ -1,3 +1,8 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
 {{#if (and this.controlGroupResponse.token this.controlGroupResponse.uiParams.url)}}
   <div class="control-group-success" data-test-navigate-message>
     You have been granted access to
@@ -11,13 +16,16 @@
   </div>
 {{else}}
   {{#if this.unwrapData}}
-    <div class="control-group-success {{if this.unwrapData "is-editor"}}">
+    <div class="control-group-success {{if this.unwrapData 'is-editor'}}">
       <div class="has-copy-button">
         <JsonEditor
           data-test-json-viewer
           @showToolbar={{false}}
           @value={{stringify this.unwrapData}}
-          @options={{hash readOnly=true lineNumbers=false autoHeight=true gutters=false theme="hashi-read-only auto-height"}}
+          @readOnly={{true}}
+          @viewportMargin="Infinity"
+          @gutters={{false}}
+          @theme="hashi-read-only auto-height"
         />
         <HoverCopyButton @copyValue={{stringify this.unwrapData}} />
       </div>

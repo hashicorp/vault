@@ -1,8 +1,12 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package consul
 
 import (
 	"context"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/hashicorp/consul/api"
@@ -17,25 +21,17 @@ const (
 func pathToken(b *backend) *framework.Path {
 	return &framework.Path{
 		Pattern: "creds/" + framework.GenericNameRegex("role"),
+
+		DisplayAttrs: &framework.DisplayAttributes{
+			OperationPrefix: operationPrefixConsul,
+			OperationVerb:   "generate",
+			OperationSuffix: "credentials",
+		},
+
 		Fields: map[string]*framework.FieldSchema{
 			"role": {
 				Type:        framework.TypeString,
 				Description: "Name of the role.",
-			},
-
-			"policies": {
-				Type:        framework.TypeCommaStringSlice,
-				Description: `List of policies to attach to the token.`,
-			},
-
-			"consul_namespace": {
-				Type:        framework.TypeString,
-				Description: "Namespace to create the token in.",
-			},
-
-			"partition": {
-				Type:        framework.TypeString,
-				Description: "Admin partition to create the token in.",
 			},
 		},
 
@@ -105,19 +101,31 @@ func (b *backend) pathTokenRead(ctx context.Context, req *logical.Request, d *fr
 
 	// Create an ACLToken for Consul 1.4 and above
 	policyLinks := []*api.ACLTokenPolicyLink{}
-
 	for _, policyName := range roleConfigData.Policies {
 		policyLinks = append(policyLinks, &api.ACLTokenPolicyLink{
 			Name: policyName,
 		})
 	}
 
+	roleLinks := []*api.ACLTokenRoleLink{}
+	for _, roleName := range roleConfigData.ConsulRoles {
+		roleLinks = append(roleLinks, &api.ACLTokenRoleLink{
+			Name: roleName,
+		})
+	}
+
+	aclServiceIdentities := parseServiceIdentities(roleConfigData.ServiceIdentities)
+	aclNodeIdentities := parseNodeIdentities(roleConfigData.NodeIdentities)
+
 	token, _, err := c.ACL().TokenCreate(&api.ACLToken{
-		Description: tokenName,
-		Policies:    policyLinks,
-		Local:       roleConfigData.Local,
-		Namespace:   roleConfigData.ConsulNamespace,
-		Partition:   roleConfigData.Partition,
+		Description:       tokenName,
+		Policies:          policyLinks,
+		Roles:             roleLinks,
+		ServiceIdentities: aclServiceIdentities,
+		NodeIdentities:    aclNodeIdentities,
+		Local:             roleConfigData.Local,
+		Namespace:         roleConfigData.ConsulNamespace,
+		Partition:         roleConfigData.Partition,
 	}, writeOpts)
 	if err != nil {
 		return logical.ErrorResponse(err.Error()), nil
@@ -139,4 +147,36 @@ func (b *backend) pathTokenRead(ctx context.Context, req *logical.Request, d *fr
 	s.Secret.MaxTTL = roleConfigData.MaxTTL
 
 	return s, nil
+}
+
+func parseServiceIdentities(data []string) []*api.ACLServiceIdentity {
+	aclServiceIdentities := []*api.ACLServiceIdentity{}
+
+	for _, serviceIdentity := range data {
+		entry := &api.ACLServiceIdentity{}
+		components := strings.Split(serviceIdentity, ":")
+		entry.ServiceName = components[0]
+		if len(components) == 2 {
+			entry.Datacenters = strings.Split(components[1], ",")
+		}
+		aclServiceIdentities = append(aclServiceIdentities, entry)
+	}
+
+	return aclServiceIdentities
+}
+
+func parseNodeIdentities(data []string) []*api.ACLNodeIdentity {
+	aclNodeIdentities := []*api.ACLNodeIdentity{}
+
+	for _, nodeIdentity := range data {
+		entry := &api.ACLNodeIdentity{}
+		components := strings.Split(nodeIdentity, ":")
+		entry.NodeName = components[0]
+		if len(components) > 1 {
+			entry.Datacenter = components[1]
+		}
+		aclNodeIdentities = append(aclNodeIdentities, entry)
+	}
+
+	return aclNodeIdentities
 }

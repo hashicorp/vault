@@ -1,10 +1,14 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import Model, { attr } from '@ember-data/model';
 export default class Activity extends Model {
-  @attr('string') responseTimestamp;
+  @attr('array') byMonth;
   @attr('array') byNamespace;
-  @attr('array') formattedEndTime;
-  @attr('array') formattedStartTime;
+  @attr('object') total;
   @attr('string') startTime;
   @attr('string') endTime;
-  @attr('object') total;
+  @attr('string') responseTimestamp;
 }

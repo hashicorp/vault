@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import EmberRouter from '@ember/routing/router';
 import config from 'vault/config/environment';
 
@@ -13,13 +18,13 @@ Router.map(function () {
       this.route('oidc-provider', { path: '/identity/oidc/provider/:provider_name/authorize' });
       this.route('oidc-callback', { path: '/auth/*auth_path/oidc/callback' });
       this.route('auth');
+      this.route('redirect');
       this.route('init');
       this.route('logout');
-      this.mount('open-api-explorer', { path: '/api-explorer' });
       this.route('license');
+      this.route('mfa-setup');
       this.route('clients', function () {
-        this.route('current');
-        this.route('history');
+        this.route('dashboard');
         this.route('config');
         this.route('edit');
       });
@@ -45,6 +50,7 @@ Router.map(function () {
       this.route('unseal');
       this.route('tools', function () {
         this.route('tool', { path: '/:selected_action' });
+        this.mount('open-api-explorer', { path: '/api-explorer' });
       });
       this.route('access', function () {
         this.route('methods', { path: '/' });
@@ -57,6 +63,24 @@ Router.map(function () {
             this.route('show', { path: '/show/:item_id' });
           });
           this.route('section', { path: '/:section_name' });
+        });
+        this.route('mfa', function () {
+          this.route('index', { path: '/' });
+          this.route('methods', function () {
+            this.route('index', { path: '/' });
+            this.route('create');
+            this.route('method', { path: '/:id' }, function () {
+              this.route('edit');
+              this.route('enforcements');
+            });
+          });
+          this.route('enforcements', function () {
+            this.route('index', { path: '/' });
+            this.route('create');
+            this.route('enforcement', { path: '/:name' }, function () {
+              this.route('edit');
+            });
+          });
         });
         this.route('leases', function () {
           // lookup
@@ -89,11 +113,53 @@ Router.map(function () {
           this.route('index', { path: '/' });
           this.route('create');
         });
+        this.route('oidc', function () {
+          this.route('clients', function () {
+            this.route('create');
+            this.route('client', { path: '/:name' }, function () {
+              this.route('details');
+              this.route('providers');
+              this.route('edit');
+            });
+          });
+          this.route('keys', function () {
+            this.route('create');
+            this.route('key', { path: '/:name' }, function () {
+              this.route('details');
+              this.route('clients');
+              this.route('edit');
+            });
+          });
+          this.route('assignments', function () {
+            this.route('create');
+            this.route('assignment', { path: '/:name' }, function () {
+              this.route('details');
+              this.route('edit');
+            });
+          });
+          this.route('providers', function () {
+            this.route('create');
+            this.route('provider', { path: '/:name' }, function () {
+              this.route('details');
+              this.route('clients');
+              this.route('edit');
+            });
+          });
+          this.route('scopes', function () {
+            this.route('create');
+            this.route('scope', { path: '/:name' }, function () {
+              this.route('details');
+              this.route('edit');
+            });
+          });
+        });
       });
       this.route('secrets', function () {
         this.route('backends', { path: '/' });
         this.route('backend', { path: '/:backend' }, function () {
           this.mount('kmip');
+          this.mount('kubernetes');
+          this.mount('pki');
           this.route('index', { path: '/' });
           this.route('configuration');
           // because globs / params can't be empty,

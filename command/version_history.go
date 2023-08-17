@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package command
 
 import (
@@ -100,7 +103,7 @@ func (c *VersionHistoryCommand) Run(args []string) int {
 		return 2
 	}
 
-	table := []string{"Version | Installation Time"}
+	table := []string{"Version | Installation Time | Build Date"}
 	columnConfig := columnize.DefaultConfig()
 
 	for _, versionRaw := range keys {
@@ -119,7 +122,7 @@ func (c *VersionHistoryCommand) Run(args []string) int {
 			return 2
 		}
 
-		table = append(table, fmt.Sprintf("%s | %s", version, versionInfo["timestamp_installed"]))
+		table = append(table, fmt.Sprintf("%s | %s | %s", version, versionInfo["timestamp_installed"], versionInfo["build_date"]))
 	}
 
 	c.UI.Warn("")

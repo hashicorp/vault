@@ -1,6 +1,11 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
 <div class="box is-fullwidth is-bottomless is-sideless">
   <MessageError @model={{this.model}} />
-  <div class="control-group-header {{if this.isSuccess "is-success"}}">
+  <div class="control-group-header {{if this.isSuccess 'is-success'}}">
     <p>
       <Icon @name={{if this.isSuccess "check-circle-fill" "lock-fill"}} />
       <strong data-test-banner-prefix>{{this.bannerPrefix}}</strong>
@@ -98,7 +103,7 @@
         {{else}}
           <button
             type="button"
-            class="button is-primary {{if this.authorize.isRunning "is-loading"}}"
+            class="button is-primary {{if this.authorize.isRunning 'is-loading'}}"
             {{action (perform this.authorize)}}
             data-test-authorize-button
           >
@@ -108,7 +113,7 @@
       {{else}}
         <button
           type="button"
-          class="button is-primary {{if this.refresh.isRunning "is-loading"}}"
+          class="button is-primary {{if this.refresh.isRunning 'is-loading'}}"
           {{action (perform this.refresh)}}
           data-test-refresh-button
         >

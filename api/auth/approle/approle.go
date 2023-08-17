@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package approle
 
 import (
@@ -100,6 +103,10 @@ func NewAppRoleAuth(roleID string, secretID *SecretID, opts ...LoginOption) (*Ap
 }
 
 func (a *AppRoleAuth) Login(ctx context.Context, client *api.Client) (*api.Secret, error) {
+	if ctx == nil {
+		ctx = context.Background()
+	}
+
 	loginData := map[string]interface{}{
 		"role_id": a.roleID,
 	}
@@ -125,7 +132,7 @@ func (a *AppRoleAuth) Login(ctx context.Context, client *api.Client) (*api.Secre
 
 	// if the caller indicated that the value was actually a wrapping token, unwrap it first
 	if a.unwrap {
-		unwrappedToken, err := client.Logical().Unwrap(secretIDValue)
+		unwrappedToken, err := client.Logical().UnwrapWithContext(ctx, secretIDValue)
 		if err != nil {
 			return nil, fmt.Errorf("unable to unwrap response wrapping token: %w", err)
 		}
@@ -135,7 +142,7 @@ func (a *AppRoleAuth) Login(ctx context.Context, client *api.Client) (*api.Secre
 	}
 
 	path := fmt.Sprintf("auth/%s/login", a.mountPath)
-	resp, err := client.Logical().Write(path, loginData)
+	resp, err := client.Logical().WriteWithContext(ctx, path, loginData)
 	if err != nil {
 		return nil, fmt.Errorf("unable to log in with app role auth: %w", err)
 	}

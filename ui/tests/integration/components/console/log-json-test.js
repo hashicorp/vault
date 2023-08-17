@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import { module, test } from 'qunit';
 import { setupRenderingTest } from 'ember-qunit';
 import { render, find } from '@ember/test-helpers';
@@ -18,9 +23,8 @@ module('Integration | Component | console/log json', function (hooks) {
 
     this.set('content', objectContent);
 
-    await render(hbs`{{console/log-json content=content}}`);
-    const instance = this.codeMirror.instanceFor(find('[data-test-component=json-editor]').id);
-
-    assert.equal(instance.getValue(), expectedText);
+    await render(hbs`{{console/log-json content=this.content}}`);
+    const instance = find('[data-test-component=code-mirror-modifier]').innerText;
+    assert.strictEqual(instance, expectedText);
   });
 });

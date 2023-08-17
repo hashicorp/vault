@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 //go:build !enterprise
 
 package vault
@@ -8,5 +11,10 @@ package vault
 const managedKeyRegistrySubPath = "managed-key-registry/"
 
 func (c *Core) setupManagedKeyRegistry() error {
+	// Nothing to do, the registry is only used by enterprise features
 	return nil
+}
+
+func (c *Core) ReloadManagedKeyRegistryConfig() {
+	// Nothing to do, the registry is only used by enterprise features
 }

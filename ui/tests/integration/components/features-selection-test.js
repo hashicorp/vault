@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import { module, test } from 'qunit';
 import { setupRenderingTest } from 'ember-qunit';
 import { render } from '@ember/test-helpers';
@@ -27,11 +32,12 @@ module('Integration | Component | features-selection', function (hooks) {
   });
 
   test('it disables and enables wizard items according to user permissions', async function (assert) {
+    assert.expect(4);
     const enabled = { Secrets: true, Authentication: true, Policies: false, Tools: false };
     await render(hbs`<Wizard::FeaturesSelection/>`);
 
     component.wizardItems.forEach((i) => {
-      assert.equal(
+      assert.strictEqual(
         i.hasDisabledTooltip,
         !enabled[i.text],
         'shows a tooltip only when the wizard item is not enabled'
@@ -41,13 +47,12 @@ module('Integration | Component | features-selection', function (hooks) {
 
   test('it disables the start button if no wizard items are checked', async function (assert) {
     await render(hbs`<Wizard::FeaturesSelection/>`);
-    assert.equal(component.hasDisabledStartButton, true);
+    assert.true(component.hasDisabledStartButton);
   });
 
   test('it enables the start button when user has permission and wizard items are checked', async function (assert) {
     await render(hbs`<Wizard::FeaturesSelection/>`);
     await component.selectSecrets();
-
-    assert.equal(component.hasDisabledStartButton, false);
+    assert.false(component.hasDisabledStartButton);
   });
 });

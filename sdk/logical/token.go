@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package logical
 
 import (
@@ -92,6 +95,10 @@ type TokenEntry struct {
 
 	// ID of this entry, generally a random UUID
 	ID string `json:"id" mapstructure:"id" structs:"id" sentinel:""`
+
+	// ExternalID is the ID of a newly created service
+	// token that will be returned to a user
+	ExternalID string `json:"-"`
 
 	// Accessor for this token, a random UUID
 	Accessor string `json:"accessor" mapstructure:"accessor" structs:"accessor" sentinel:""`

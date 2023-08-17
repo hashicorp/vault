@@ -1,3 +1,8 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
 <div class="wizard-header">
   {{#unless this.hidePopup}}
     <PopupMenu @class="wizard-dismiss-menu">
@@ -21,7 +26,7 @@
       <T.Trigger @tabindex="-1">
         <WizardProgress @currentFeatureProgress={{this.currentFeatureProgress}} @progressBar={{this.progressBar}} />
       </T.Trigger>
-      <T.Content class="tool-tip">
+      <T.Content @defaultClass="tool-tip">
         <div class="box">
           {{#if this.currentTutorialProgress}}
             {{this.currentTutorialProgress.text}}
