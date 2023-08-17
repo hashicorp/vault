@@ -14,12 +14,14 @@ type RootIssuedLeaves struct {
 
 	CertsToFetch int
 
+	FetchIssues map[string]*PathFetch
 	RootCertMap map[string]*x509.Certificate
 	LeafCertMap map[string]*x509.Certificate
 }
 
 func NewRootIssuedLeavesCheck() Check {
 	return &RootIssuedLeaves{
+		FetchIssues: make(map[string]*PathFetch),
 		RootCertMap: make(map[string]*x509.Certificate),
 		LeafCertMap: make(map[string]*x509.Certificate),
 	}
@@ -64,9 +66,10 @@ func (h *RootIssuedLeaves) FetchResources(e *Executor) error {
 	}
 
 	for _, issuer := range issuers {
-		skip, _, cert, err := pkiFetchIssuer(e, issuer, func() {
+		skip, pathFetch, cert, err := pkiFetchIssuer(e, issuer, func() {
 			h.UnsupportedVersion = true
 		})
+		h.FetchIssues[issuer] = pathFetch
 		if skip || err != nil {
 			if err != nil {
 				return err
@@ -85,10 +88,15 @@ func (h *RootIssuedLeaves) FetchResources(e *Executor) error {
 		h.RootCertMap[issuer] = cert
 	}
 
-	exit, _, leaves, err := pkiFetchLeavesList(e, func() {
+	exit, f, leaves, err := pkiFetchLeavesList(e, func() {
 		h.UnsupportedVersion = true
 	})
 	if exit || err != nil {
+		if f != nil && f.IsSecretPermissionsError() {
+			for _, issuer := range issuers {
+				h.FetchIssues[issuer] = f
+			}
+		}
 		return err
 	}
 
@@ -128,6 +136,25 @@ func (h *RootIssuedLeaves) Evaluate(e *Executor) (results []*Result, err error) 
 			Message:  "This health check requires Vault 1.11+ but an earlier version of Vault Server was contacted, preventing this health check from running.",
 		}
 		return []*Result{&ret}, nil
+	}
+
+	for issuer, fetchPath := range h.FetchIssues {
+		if fetchPath != nil && fetchPath.IsSecretPermissionsError() {
+			delete(h.RootCertMap, issuer)
+			ret := Result{
+				Status:   ResultInsufficientPermissions,
+				Endpoint: fetchPath.Path,
+				Message:  "Without this information, this health check is unable to function.",
+			}
+
+			if e.Client.Token() == "" {
+				ret.Message = "No token available so unable for the endpoint for this mount. " + ret.Message
+			} else {
+				ret.Message = "This token lacks permission for the endpoint for this mount. " + ret.Message
+			}
+
+			results = append(results, &ret)
+		}
 	}
 
 	issuerHasLeaf := make(map[string]bool)

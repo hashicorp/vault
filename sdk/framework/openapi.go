@@ -373,6 +373,10 @@ func documentPath(p *Path, specialPaths *logical.Paths, requestResponsePrefix st
 					s.Properties[name] = &p
 				}
 
+				// Make the ordering deterministic, so that the generated OpenAPI spec document, observed over several
+				// versions, doesn't contain spurious non-semantic changes.
+				sort.Strings(s.Required)
+
 				// If examples were given, use the first one as the sample
 				// of this schema.
 				if len(props.Examples) > 0 {
@@ -547,14 +551,55 @@ func constructRequestResponseName(path, prefix, suffix string) string {
 	return b.String()
 }
 
+// specialPathMatch checks whether the given path matches one of the special
+// paths, taking into account * and + wildcards (e.g. foo/+/bar/*)
 func specialPathMatch(path string, specialPaths []string) bool {
-	// Test for exact or prefix match of special paths.
+	// pathMatchesByParts determines if the path matches the special path's
+	// pattern, accounting for the '+' and '*' wildcards
+	pathMatchesByParts := func(pathParts []string, specialPathParts []string) bool {
+		if len(pathParts) < len(specialPathParts) {
+			return false
+		}
+		for i := 0; i < len(specialPathParts); i++ {
+			var (
+				part    = pathParts[i]
+				pattern = specialPathParts[i]
+			)
+			if pattern == "+" {
+				continue
+			}
+			if pattern == "*" {
+				return true
+			}
+			if strings.HasSuffix(pattern, "*") && strings.HasPrefix(part, pattern[0:len(pattern)-1]) {
+				return true
+			}
+			if pattern != part {
+				return false
+			}
+		}
+		return len(pathParts) == len(specialPathParts)
+	}
+
+	pathParts := strings.Split(path, "/")
+
 	for _, sp := range specialPaths {
-		if sp == path ||
-			(strings.HasSuffix(sp, "*") && strings.HasPrefix(path, sp[0:len(sp)-1])) {
+		// exact match
+		if sp == path {
+			return true
+		}
+
+		// match *
+		if strings.HasSuffix(sp, "*") && strings.HasPrefix(path, sp[0:len(sp)-1]) {
+			return true
+		}
+
+		// match +
+		if strings.Contains(sp, "+") && pathMatchesByParts(pathParts, strings.Split(sp, "/")) {
 			return true
 		}
 	}
+
 	return false
 }
 
@@ -783,8 +828,8 @@ func convertType(t FieldType) schemaType {
 		ret.baseType = "integer"
 		ret.format = "int64"
 	case TypeDurationSecond, TypeSignedDurationSecond:
-		ret.baseType = "integer"
-		ret.format = "seconds"
+		ret.baseType = "string"
+		ret.format = "duration"
 	case TypeBool:
 		ret.baseType = "boolean"
 	case TypeMap:

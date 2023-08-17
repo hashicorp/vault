@@ -1,13 +1,14 @@
 import ApplicationSerializer from '../application';
 
 export default ApplicationSerializer.extend({
+  primaryKey: 'name',
+
   normalizeResponse(store, primaryModelClass, payload, id, requestType) {
-    payload.data.name = payload.id;
-    if (payload.data.alphabet) {
+    if (payload.data?.alphabet) {
       payload.data.alphabet = [payload.data.alphabet];
     }
     // strip out P character from any named capture groups
-    if (payload.data.pattern) {
+    if (payload.data?.pattern) {
       this._formatNamedCaptureGroups(payload.data, '?P', '?');
     }
     return this._super(store, primaryModelClass, payload, id, requestType);
@@ -43,6 +44,7 @@ export default ApplicationSerializer.extend({
     return payload.data.keys.map((key) => {
       const model = {
         id: key,
+        name: key,
       };
       if (payload.backend) {
         model.backend = payload.backend;

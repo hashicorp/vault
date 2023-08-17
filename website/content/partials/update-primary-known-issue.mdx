@@ -1,0 +1,84 @@
+### update-primary can lead to data loss
+
+It's possible to lose data from a Vault cluster given a particular configuration
+and sequence of steps.  This page describes two paths to data loss, both
+associated with the use of
+[update-primary](/vault/api-docs/system/replication/replication-performance#update-performance-secondary-s-primary).
+
+Normally update-primary does not need to be used.  However, there are a few cases
+where it's needed, e.g. when the known primary cluster addresses of a secondary
+don't contain any of the correct addresses.  But update-primary does more than
+you might think: it does almost everything that enabling a secondary does,
+except that it doesn't wipe storage.  One of the steps that it takes is to
+temporarily remove most of the mount table records: it removes all mount entries
+except for those that are managed automatically by vault, e.g. identity mounts.
+
+This update-primary behaviour is unintended and we'll be reworking it in an upcoming release.
+Once it lands the changelog entry will be "Fix a race condition with update-primary that could
+result in data loss after a DR failover."
+
+#### update-primary with local data in shared mounts
+
+If update-primary is done on a PR secondary with shared mounts containing
+[local data](/vault/docs/enterprise/replication#replicated-data) (e.g. pki certs,
+approle secretids), the merkle tree on the PR secondary may get corrupted due to
+a timing race.
+
+When this happens, the PR secondary still contains all the stored data, e.g. listing
+local certs from PKI mounts will return the correct results.  However, because the
+merkle tree has been corrupted, a downstream DR secondary will not receive the local
+data, and will delete it if it already had it.  If the PR secondary's DR secondary is promoted before
+the PR secondary is repaired, the newly promoted PR secondary will not contain the local
+data it ought to.  If the former PR secondary is lost or destroyed, the missing data
+will not be recoverable other than via a snapshot restore.
+
+#### Detection and remediation
+
+If the TRACE level log line `"cleaning key in merkle tree"` appears immediately subsequent
+to an update-primary on a PR secondary, that's an indicator that the timing race was lost
+and that the merkle tree may be corrupt.
+
+Repairing the corrupt merkle tree is done by issuing a
+[replication reindex request](/vault/api-docs/system/replication#reindex-replication)
+to the PR secondary.
+
+If logs are no longer present (the update-primary was done some time in the past), it's
+probably best to reindex the PR secondary pre-emptively as a precaution.
+
+#### update-primary with "Allow" path filters
+
+There is a further path to data loss associated update-primary.
+This issue requires that the PR secondary receiving an update-primary request has an
+associated `Allow` path filter defined for it. Like the first issue, this one too has
+a timing aspect: the problem may or may not manifest, depending on how
+quickly the mount tables truncated by update-primary get repaired by replication.
+
+At startup/unseal (and after an update-primary), Vault runs a background job that looks
+at the mount data it has stored and tries to delete any that doesn't belong there, based
+on path filters.  This behaviour was introduced in 1.0.3.1 to recover from a regression
+that allowed for inappropriate filtering of data: we needed to ensure that any previously
+unfiltered data got cleaned up on secondaries that ought not have it.
+
+If a performance secondary has an associated Allow path filter, this cleanup code can
+misfire during the interval between when the truncated mount tables are written by
+update-primary and the time when they get rewritten by replication.  The cleanup code
+will delete the data associated with the missing mount entries.  The cleanup code
+doesn't modify the merkle tree, and as a result this deleted data won't be discovered
+as missing and repaired by replication.
+
+#### Detection and remediation
+
+When the cleanup code fires it logs the INFO level message `"deleted mistakenly stored
+mount entry from backend"`.  This is a reliable indicator that the bug was hit.
+
+If logs aren't available, the other indicator that this problem has manifested is to
+query the shared mount in question. The secondary won't have any of the data that
+the primary does, e.g. roles and configuration will be absent.
+
+Reindexing the performance secondary will update the merkle tree to reflect the missing
+storage entries and allow missing shared data to be replaced by replication.  **However,
+any local data on shared mounts (such as PKI certs) will not be recoverable.**
+
+#### Impacted versions
+
+Affects all current versions of Vault.

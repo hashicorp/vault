@@ -2,13 +2,9 @@ import { inject as service } from '@ember/service';
 import Route from '@ember/routing/route';
 
 export default Route.extend({
-  wizard: service(),
   store: service(),
   async model() {
     const backend = this.modelFor('vault.cluster.secrets.backend');
-    if (this.wizard.featureState === 'list') {
-      this.wizard.transitionFeatureMachine(this.wizard.featureState, 'CONTINUE', backend.get('type'));
-    }
     if (backend.isV2KV) {
       const canRead = await this.store
         .findRecord('capabilities', `${backend.id}/config`)

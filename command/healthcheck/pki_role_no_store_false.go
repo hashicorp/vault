@@ -11,19 +11,20 @@ import (
 type RoleNoStoreFalse struct {
 	Enabled            bool
 	UnsupportedVersion bool
-	NoPerms            bool
 
 	AllowedRoles map[string]bool
 
-	CertCounts   int
-	RoleEntryMap map[string]map[string]interface{}
-	CRLConfig    *PathFetch
+	RoleListFetchIssue *PathFetch
+	RoleFetchIssues    map[string]*PathFetch
+	RoleEntryMap       map[string]map[string]interface{}
+	CRLConfig          *PathFetch
 }
 
 func NewRoleNoStoreFalseCheck() Check {
 	return &RoleNoStoreFalse{
-		AllowedRoles: make(map[string]bool),
-		RoleEntryMap: make(map[string]map[string]interface{}),
+		RoleFetchIssues: make(map[string]*PathFetch),
+		AllowedRoles:    make(map[string]bool),
+		RoleEntryMap:    make(map[string]map[string]interface{}),
 	}
 }
 
@@ -64,7 +65,7 @@ func (h *RoleNoStoreFalse) FetchResources(e *Executor) error {
 	})
 	if exit || err != nil {
 		if f != nil && f.IsSecretPermissionsError() {
-			h.NoPerms = true
+			h.RoleListFetchIssue = f
 		}
 		return err
 	}
@@ -75,7 +76,7 @@ func (h *RoleNoStoreFalse) FetchResources(e *Executor) error {
 		})
 		if skip || err != nil || entry == nil {
 			if f != nil && f.IsSecretPermissionsError() {
-				h.NoPerms = true
+				h.RoleFetchIssues[role] = f
 			}
 			if err != nil {
 				return err
@@ -85,14 +86,6 @@ func (h *RoleNoStoreFalse) FetchResources(e *Executor) error {
 
 		h.RoleEntryMap[role] = entry
 	}
-
-	exit, _, leaves, err := pkiFetchLeavesList(e, func() {
-		h.UnsupportedVersion = true
-	})
-	if exit || err != nil {
-		return err
-	}
-	h.CertCounts = len(leaves)
 
 	// Check if the issuer is fetched yet.
 	configRet, err := e.FetchIfNotFetched(logical.ReadOperation, "/{{mount}}/config/crl")
@@ -116,18 +109,37 @@ func (h *RoleNoStoreFalse) Evaluate(e *Executor) (results []*Result, err error) 
 		return []*Result{&ret}, nil
 	}
 
-	if h.NoPerms {
+	if h.RoleListFetchIssue != nil && h.RoleListFetchIssue.IsSecretPermissionsError() {
 		ret := Result{
 			Status:   ResultInsufficientPermissions,
-			Endpoint: "/{{mount}}/roles",
-			Message:  "lacks permission either to list the roles or to read a specific role. This may restrict the ability to fully execute this health check",
+			Endpoint: h.RoleListFetchIssue.Path,
+			Message:  "lacks permission either to list the roles. This restricts the ability to fully execute this health check.",
 		}
 		if e.Client.Token() == "" {
 			ret.Message = "No token available and so this health check " + ret.Message
 		} else {
 			ret.Message = "This token " + ret.Message
 		}
-		results = append(results, &ret)
+		return []*Result{&ret}, nil
+	}
+
+	for role, fetchPath := range h.RoleFetchIssues {
+		if fetchPath != nil && fetchPath.IsSecretPermissionsError() {
+			delete(h.RoleEntryMap, role)
+			ret := Result{
+				Status:   ResultInsufficientPermissions,
+				Endpoint: fetchPath.Path,
+				Message:  "Without this information, this health check is unable to function.",
+			}
+
+			if e.Client.Token() == "" {
+				ret.Message = "No token available so unable for the endpoint for this mount. " + ret.Message
+			} else {
+				ret.Message = "This token lacks permission the endpoint for this mount. " + ret.Message
+			}
+
+			results = append(results, &ret)
+		}
 	}
 
 	crlAutoRebuild := false
@@ -159,7 +171,7 @@ func (h *RoleNoStoreFalse) Evaluate(e *Executor) (results []*Result, err error) 
 
 		ret := Result{
 			Status:   ResultWarning,
-			Endpoint: "/{{mount}}/role/" + role,
+			Endpoint: "/{{mount}}/roles/" + role,
 			Message:  "Role currently stores every issued certificate (no_store=false). Too many issued and/or revoked certificates can exceed Vault's storage limits and make operations slow. It is encouraged to enable auto-rebuild of CRLs to prevent every revocation from creating a new CRL, and to limit the number of certificates issued under roles with no_store=false: use shorter lifetimes and/or BYOC revocation instead.",
 		}
 

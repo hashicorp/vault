@@ -704,6 +704,26 @@ func initCommands(ui, serverCmdUi cli.Ui, runOpts *RunOptions) map[string]cli.Co
 				BaseCommand: getBaseCommand(),
 			}, nil
 		},
+		"transform": func() (cli.Command, error) {
+			return &TransformCommand{
+				BaseCommand: getBaseCommand(),
+			}, nil
+		},
+		"transform import": func() (cli.Command, error) {
+			return &TransformImportCommand{
+				BaseCommand: getBaseCommand(),
+			}, nil
+		},
+		"transform import-version": func() (cli.Command, error) {
+			return &TransformImportVersionCommand{
+				BaseCommand: getBaseCommand(),
+			}, nil
+		},
+		"transit": func() (cli.Command, error) {
+			return &TransitCommand{
+				BaseCommand: getBaseCommand(),
+			}, nil
+		},
 		"transit import": func() (cli.Command, error) {
 			return &TransitImportCommand{
 				BaseCommand: getBaseCommand(),

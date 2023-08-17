@@ -4,7 +4,7 @@ page_title: Client Count
 description: Counting the number of clients accessing Vault.
 ---
 
-# What is a Client?
+# What is a client?
 
 Before we dive into understanding the approach used to [count the number of clients](#client-count) accessing Vault, we need to first understand what clients represent.
 Clients basically represent anything that has authenticated to Vault to do _something_. **Users** are people who log into the cluster to manage policies, set up dynamic secret rotation, and more. So every user that logs into the Vault is considered a **client**. Whereas every application, service, or any other machine-based system that authenticates to Vault is also considered a **client**.
@@ -29,7 +29,7 @@ There can be many different types of clients that authenticate and communicate w
 6. **Tokens**: which are not tied to any identities at all. **_These should be used sparingly._**
    Hashicorp recommends always associating tokens to an entity alias and token role.
 
-## How do Clients work in Vault?
+## How do clients work in Vault?
 
 When anything authenticates to Vault, be it a user, application, machine, etc., it is associated with a unique **entity** within the [Vault identity system](/vault/docs/secrets/identity). The name reported to the identity systems by the different types of authentication methods varies ([list below](#authentication-methods-and-how-they-re-counted-in-vault)), each entity is created or verified during authorization. There are scenarios where tokens can be created outside of the identity system, without an associated entity. In this scenario, these tokens are considered **clients** (for production usage, it should be rare to have any tokens created outside any identity systems).
 
@@ -39,11 +39,11 @@ Want to take full advantage of the Vault identity system and how clients are cou
 
 ![Vault Identity Entities and Aliases](https://www.datocms-assets.com/2885/1617325026-vault-clients-identity-entity-aliases.png)
 
-### Entity Aliases
+### Entity aliases
 
 Entity Aliases enable users or services to authenticate with more than one method and are associated with the same policy to share resources and count as unique entities.
 
-### Identity Groups
+### Identity groups
 
 Identity Groups within Vault leverage entities, in that Vault enables teams to create and manage logical groupings of entities. **Identity Groups** that can be based on organizations or teams within companies and can be used to assign policies and metadata, making user management dramatically simpler, especially for automating workflows by using Identity Groups to quickly and easily grant access to secrets and functionality within Vault.
 
@@ -53,7 +53,7 @@ For more on managing access with identity, entities, and more, check out [Identi
 
 Using the identity system allows for Vault to make sure that entities aren’t counted more than once. Once you determine the identity and authentication method to be used for each, human, application, platform, and CI/CD pipeline, upon authentication for the first time in a billing period, Vault instantiates a unique entity. For example, say you have an application “AppX” that needs to get a secret from Vault using the AppRole method. Since AppX has an associated entity within Vault with associated policies, Vault knows every time that AppX is authenticating and authorizing, so AppX is only counted once.
 
-## Non-entity Tokens
+## Non-entity tokens
 
 If you choose to use the [Token Auth Method](/vault/docs/auth/token) without an identity, this will create a non-entity token. Starting with Vault 1.9, any number of non-entity tokens having the same namespace and set of policies assigned, count as one client. In earlier versions, every non-entity token counted as a separate client, which could rapidly drive up client count to unrealistic values. If you are using Vault 1.8 or earlier, and need to address this without upgrading, one option is to create a [Token Role](/vault/api-docs/auth/token#create-update-token-role) first, with allowable entity aliases and create your token with the appropriate [role and entity alias name](/vault/api-docs/auth/token#create-token). All tokens issued with the same entity alias name count as one client.
 
@@ -68,7 +68,7 @@ One thing to note is that Vault clients are a combination of active identities a
 - In a scenario where tokens are created outside of the identity system, these tokens are considered clients. Note that it should be rare for production usage to have any tokens created outside any identity systems.
 - There are a few ways of creating tokens without entities: _Token Roles_, _Token Create APIs_, _Wrapping Tokens_, and _Control Groups_. For more information, refer to the [What is a Client?](/vault/docs/concepts/client-count/#what-is-a-client) documentation.
 
-## Considerations for Namespaces
+## Considerations for namespaces
 
 Since namespaces represent logical isolations within a single Vault cluster for administrative purposes, consideration must be made on how Vault clients are determined in this context.
 
@@ -79,7 +79,7 @@ Since namespaces represent logical isolations within a single Vault cluster for 
 
 See also the guide [Secure Multi-Tenancy with Namespaces | Vault](/vault/tutorials/enterprise/namespaces).
 
-## Authentication Methods and how they’re counted in Vault
+## Authentication methods and how they’re counted in Vault
 
 Below is a list of supported authentication methods within Vault. You can also set up custom auth methods with secure plugins.
 
@@ -124,11 +124,11 @@ If someone goes wrong in **_option 1_** and you revoke access, all pipelines are
 
 From a Vault client perspective, **_option 1_** is one client, the Master CI/CD identity; **_option 2_** is one client for the Master CI/CD identity, and one client for each pipeline; **_option 3_** is one client for the Master CI/CD identity, one client for each pipeline, and one for each app, service deployed.
 
-### Onboarding Clients - Putting it all together
+### Onboarding clients - putting it all together
 
 The guide: [“Onboarding Applications to Vault Using Terraform: A Practical Guide“](https://www.hashicorp.com/blog/onboarding-applications-to-vault-using-terraform-a-practical-guide) is an example on how to build an automated HashiCorp Vault onboarding system with Terraform to accommodate Vault client using naming standards, ACL policy templates, namespaces, pre-created application entities, and workflows driven by VCS and CI/CD.
 
-## Client Count
+## Client count
 
 The number of active clients using a Vault cluster is the total of:
 
@@ -244,7 +244,7 @@ generated from the use of a non-entity token.
 An empty `client_id` field in a request means that Vault did not track a client for that
 request; this can happen if the request is unauthenticated, or made with a root token or wrapped token.
 
-## API and Permissions
+## API and permissions
 
 Please see [Client Count API](/vault/api-docs/system/internal-counters#client-count) for more details. Note that this API is marked as
 "internal" so its behavior or format may change without warning. The UI is the preferred means of interacting with the
@@ -258,24 +258,24 @@ For the UI to be able to use the client count feature, it needs `read` permissio
 For the UI to be able to modify the configuration settings, it additionally needs `update` permission to
 `sys/internal/counters/config`.
 
-## New Clients For Current Month
+## New clients for current month
 
 The billing period for the activity log API can be specified to include the current month 
 for the end date. For more information, please refer to the 
-[the internal counters API docs](/vault/api-docs/system/internal-counters.mdx) documentation.
+[the internal counters API docs](/vault/api-docs/system/internal-counters) documentation.
 
 When the end date is the current month, the `new_clients` counts will be an approximation of the  
 number of new clients for the month, and not an exact value. Note that the `new_clients` counts for the rest 
 of the months will be accurate. 
 
-### Why An Approximation?
+### Why an approximation?
 
 The `new_clients` counts for the current month is an approximation to improve API 
 performance and make the UI usable. To give an exact value for the current month's
 new clients, client IDs need to be de-duplicated with the previous months' client IDs, 
 which is a time and i/o intensive process. 
 
-### Approximation Details And Accuracy Testing Results
+### Approximation details and accuracy testing results
 
 The `new_clients` approximation is calculated by using a [hyperloglog algorithm](https://en.wikipedia.org/wiki/HyperLogLog)
 to approximate the cardinality of the total number of clients within the billing period, and the cardinality 

@@ -35,7 +35,7 @@
           {{#let (concat this.currentNamespace (if this.currentNamespace "/") list.item.id) as |targetNamespace|}}
             {{#if (includes targetNamespace this.accessibleNamespaces)}}
               <li class="action">
-                <NamespaceLink @targetNamespace={{targetNamespace}} @class="is-block">
+                <NamespaceLink @targetNamespace={{targetNamespace}} @unparsed={{true}} @class="is-block">
                   Switch to Namespace
                 </NamespaceLink>
               </li>

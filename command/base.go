@@ -585,6 +585,7 @@ func (f *FlagSets) Completions() complete.Flags {
 type (
 	ParseOptions              interface{}
 	ParseOptionAllowRawFormat bool
+	DisableDisplayFlagWarning bool
 )
 
 // Parse parses the given flags, returning any errors.
@@ -592,9 +593,17 @@ type (
 func (f *FlagSets) Parse(args []string, opts ...ParseOptions) error {
 	err := f.mainSet.Parse(args)
 
-	warnings := generateFlagWarnings(f.Args())
-	if warnings != "" && Format(f.ui) == "table" {
-		f.ui.Warn(warnings)
+	displayFlagWarningsDisabled := false
+	for _, opt := range opts {
+		if value, ok := opt.(DisableDisplayFlagWarning); ok {
+			displayFlagWarningsDisabled = bool(value)
+		}
+	}
+	if !displayFlagWarningsDisabled {
+		warnings := generateFlagWarnings(f.Args())
+		if warnings != "" && Format(f.ui) == "table" {
+			f.ui.Warn(warnings)
+		}
 	}
 
 	if err != nil {

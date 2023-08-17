@@ -591,7 +591,7 @@ type DurationVar struct {
 func (f *FlagSet) DurationVar(i *DurationVar) {
 	initial := i.Default
 	if v, exist := os.LookupEnv(i.EnvVar); exist {
-		if d, err := time.ParseDuration(appendDurationSuffix(v)); err == nil {
+		if d, err := parseutil.ParseDurationSecond(v); err == nil {
 			initial = d
 		}
 	}
@@ -631,7 +631,7 @@ func (d *durationValue) Set(s string) error {
 		s = "-1"
 	}
 
-	v, err := time.ParseDuration(appendDurationSuffix(s))
+	v, err := parseutil.ParseDurationSecond(s)
 	if err != nil {
 		return err
 	}

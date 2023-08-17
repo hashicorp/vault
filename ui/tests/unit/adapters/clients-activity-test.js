@@ -9,10 +9,11 @@ module('Unit | Adapter | clients activity', function (hooks) {
   setupMirage(hooks);
 
   hooks.beforeEach(function () {
+    const date = new Date();
     this.store = this.owner.lookup('service:store');
     this.modelName = 'clients/activity';
-    this.startDate = subMonths(new Date(), 6);
-    this.endDate = new Date();
+    this.startDate = subMonths(date, 6);
+    this.endDate = date;
     this.readableUnix = (unix) => parseAPITimestamp(fromUnixTime(unix).toISOString(), 'MMMM dd yyyy');
   });
 
@@ -63,9 +64,9 @@ module('Unit | Adapter | clients activity', function (hooks) {
 
   test('it formats end_time only if only start_time is a timestamp string', async function (assert) {
     assert.expect(2);
-    const twoMothsAgo = subMonths(this.endDate, 2);
-    const month = twoMothsAgo.getMonth() - 2;
-    const year = twoMothsAgo.getFullYear();
+    const twoMonthsAgo = subMonths(this.endDate, 2);
+    const month = twoMonthsAgo.getMonth();
+    const year = twoMonthsAgo.getFullYear();
     const dayOfMonth = format(lastDayOfMonth(new Date(year, month, 10)), 'dd');
     const queryParams = {
       start_time: {
@@ -95,9 +96,9 @@ module('Unit | Adapter | clients activity', function (hooks) {
     assert.expect(2);
     const startDate = subMonths(this.startDate, 2);
     const endDate = addMonths(this.endDate, 2);
-    const startMonth = startDate.getMonth() + 2;
+    const startMonth = startDate.getMonth();
     const startYear = startDate.getFullYear();
-    const endMonth = endDate.getMonth() - 2;
+    const endMonth = endDate.getMonth();
     const endYear = endDate.getFullYear();
     const endDay = format(lastDayOfMonth(new Date(endYear, endMonth, 10)), 'dd');
     const queryParams = {

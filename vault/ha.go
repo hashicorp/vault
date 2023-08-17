@@ -235,7 +235,7 @@ func (c *Core) Leader() (isLeader bool, leaderAddr, clusterAddr string, err erro
 	// to ourself, there's no point in paying any attention to it.  And by
 	// disregarding it, we can avoid a panic in raft tests using the Inmem network
 	// layer when we try to connect back to ourself.
-	if adv.ClusterAddr == c.ClusterAddr() && adv.RedirectAddr == c.redirectAddr {
+	if adv.ClusterAddr == c.ClusterAddr() && adv.RedirectAddr == c.redirectAddr && c.getRaftBackend() != nil {
 		return false, "", "", nil
 	}
 
@@ -705,6 +705,13 @@ func (c *Core) waitForLeadership(newLeaderCh chan func(), manualStepDownCh, stop
 				c.heldHALock = nil
 			}
 
+			// Advertise ourselves as a standby.
+			if c.serviceRegistration != nil {
+				if err := c.serviceRegistration.NotifyActiveStateChange(false); err != nil {
+					c.logger.Warn("failed to notify standby status", "error", err)
+				}
+			}
+
 			// If we are stopped return, otherwise unlock the statelock
 			if stopped {
 				return
@@ -1124,18 +1131,7 @@ func (c *Core) cleanLeaderPrefix(ctx context.Context, uuid string, leaderLostCh 
 // clearLeader is used to clear our leadership entry
 func (c *Core) clearLeader(uuid string) error {
 	key := coreLeaderPrefix + uuid
-	err := c.barrier.Delete(context.Background(), key)
-
-	// Advertise ourselves as a standby
-	if c.serviceRegistration != nil {
-		if err := c.serviceRegistration.NotifyActiveStateChange(false); err != nil {
-			if c.logger.IsWarn() {
-				c.logger.Warn("failed to notify standby status", "error", err)
-			}
-		}
-	}
-
-	return err
+	return c.barrier.Delete(context.Background(), key)
 }
 
 func (c *Core) SetNeverBecomeActive(on bool) {

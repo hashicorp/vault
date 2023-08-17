@@ -50,7 +50,6 @@
       </div>
       <ShamirFlow
         @action="unseal"
-        @onUpdate={{action "setUnsealState"}}
         @onLicenseError={{action "handleLicenseError"}}
         @onShamirSuccess={{action "transitionToCluster"}}
         @buttonText="Unseal"

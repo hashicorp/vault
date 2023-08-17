@@ -2,6 +2,7 @@ package aerospike
 
 import (
 	"context"
+	"math/bits"
 	"testing"
 	"time"
 
@@ -13,6 +14,9 @@ import (
 )
 
 func TestAerospikeBackend(t *testing.T) {
+	if bits.UintSize == 32 {
+		t.Skip("Aerospike storage is only supported on 64-bit architectures")
+	}
 	cleanup, config := prepareAerospikeContainer(t)
 	defer cleanup()
 

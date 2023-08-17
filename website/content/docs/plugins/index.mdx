@@ -5,7 +5,7 @@ description: Learn about Vault's plugin system.
 ---
 
 
-# Plugin System
+# Plugin system
 
 Vault supports 3 types of plugins; auth methods, secret engines, and database
 plugins. This concept allows both built-in and external plugins to be treated
@@ -21,12 +21,12 @@ be registered.
 See [Plugin Upgrade Procedure](/vault/docs/upgrading/plugins#plugin-upgrade-procedure)
 for details on how to upgrade a built-in plugin in-place.
 
-## Built-In Plugins
+## Built-In plugins
 
 Built-in plugins are shipped with Vault, often for commonly used integrations,
 and can be used without any prerequisite steps.
 
-## External Plugins
+## External plugins
 
 External plugins are not shipped with Vault and require additional operator
 intervention to run.
@@ -45,7 +45,7 @@ reused across all mounts of a given type.
 -> **NOTE:** See the [Vault Integrations](/vault/integrations) page to find a
 curated collection of official, partner, and community Vault plugins. 
 
-## Plugin Versioning
+## Plugin versioning
 
 Vault supports managing, running and upgrading plugins using semantic version
 information.
@@ -62,7 +62,7 @@ for any available plugins whose type and name match:
 * The plugin with the most recent semantic version among any registered versions
 * The plugin built into Vault
 
-### Built-In Versions
+### Built-In versions
 
 Vault will report a version for built-in plugins to indicate what version of the
 plugin code got built into Vault as a dependency. For example:

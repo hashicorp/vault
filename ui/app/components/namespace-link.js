@@ -11,10 +11,13 @@ export default Component.extend({
   //public api
   targetNamespace: null,
   showLastSegment: false,
+  // set to true if targetNamespace is passed in unmodified
+  // otherwise, this assumes it is parsed as in namespace-picker
+  unparsed: false,
 
-  normalizedNamespace: computed('targetNamespace', function () {
-    const ns = this.targetNamespace;
-    return (ns || '').replace(/\.+/g, '/').replace(/☃/g, '.');
+  normalizedNamespace: computed('targetNamespace', 'unparsed', function () {
+    const ns = this.targetNamespace || '';
+    return this.unparsed ? ns : ns.replace(/\.+/g, '/').replace(/☃/g, '.');
   }),
 
   namespaceDisplay: computed('normalizedNamespace', 'showLastSegment', function () {
