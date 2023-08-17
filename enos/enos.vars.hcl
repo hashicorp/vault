@@ -23,9 +23,6 @@
 # aws_ssh_private_key_path is the path to the AWS keypair private key
 # aws_ssh_private_key_path = "./support/private_key.pem"
 
-# backend_edition is the backend (consul) release edition if applicable to the scenario.
-# backend_edition = "oss"
-
 # backend_license_path is the license for the backend if applicable (Consul Enterprise)".
 # backend_license_path = "./support/consul.hclic"
 
