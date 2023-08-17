@@ -27,7 +27,7 @@ import { inject as service } from '@ember/service';
 import Component from '@glimmer/component';
 import { action } from '@ember/object';
 import { tracked } from '@glimmer/tracking';
-import KVObject from 'vault/lib/kv-object';
+import KVObject from 'core/utils/kv-object';
 import { maybeQueryRecord } from 'vault/macros/maybe-query-record';
 import { alias, or } from '@ember/object/computed';
 

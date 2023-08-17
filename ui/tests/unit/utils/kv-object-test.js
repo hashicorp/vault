@@ -1,11 +1,5 @@
-/**
- * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
- */
-
-// TODO kv engine cleanup: Remove file along with lib/kv-object
+import KVObject from 'core/utils/kv-object';
 import { module, test } from 'qunit';
-import KVObject from 'vault/lib/kv-object';
 
 module('Unit | Lib | kv object', function () {
   const fromJSONTests = [

@@ -3,7 +3,6 @@
  * SPDX-License-Identifier: MPL-2.0
  */
 
-// TODO kv engine cleanup: Remove in favor of core/utils/kv-object
 import ArrayProxy from '@ember/array/proxy';
 import { typeOf } from '@ember/utils';
 import { guidFor } from '@ember/object/internals';
