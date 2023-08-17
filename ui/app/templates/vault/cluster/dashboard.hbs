@@ -4,11 +4,9 @@
   <div class="has-bottom-margin-xl">
     <div class="is-flex-row has-gap-l">
       <div class="is-flex-column is-flex-1 has-gap-l">
-        {{! Client count card }}
         {{#if @model.license}}
           <Dashboard::ClientCountCard @license={{@model.license}} />
         {{/if}}
-        {{! Replication card }}
         {{#if @model.isRootNamespace}}
           <Dashboard::ReplicationCard
             @replication={{@model.replication}}
@@ -17,18 +15,14 @@
             @updatedAt={{this.replicationUpdatedAt}}
           />
         {{/if}}
-        {{! Secrets engines card }}
         <Dashboard::SecretsEnginesCard @secretsEngines={{@model.secretsEngines}} />
       </div>
 
       <div class="is-flex-column is-flex-1 has-gap-l">
-        {{! Quick actions card }}
         <Dashboard::QuickActionsCard @secretsEngines={{@model.secretsEngines}} />
-        {{! Vault configuration card }}
         {{#if @model.vaultConfiguration}}
           <Dashboard::VaultConfigurationDetailsCard @vaultConfiguration={{@model.vaultConfiguration}} />
         {{/if}}
-        {{! Learn more card w/ survey link }}
         <div>
           <Dashboard::LearnMoreCard />
           <Dashboard::SurveyLinkText />
@@ -40,18 +34,14 @@
   <div class="has-bottom-margin-xl">
     <div class="is-flex-row has-gap-l">
       <div class="is-flex-column is-flex-1 has-gap-l">
-        {{! Secrets engines card }}
         <Dashboard::SecretsEnginesCard @secretsEngines={{@model.secretsEngines}} />
-        {{! Learn more card w/ survey link }}
         <div>
           <Dashboard::LearnMoreCard />
           <Dashboard::SurveyLinkText />
         </div>
       </div>
       <div class="is-flex-column is-flex-1 has-gap-l">
-        {{! Quick actions card }}
         <Dashboard::QuickActionsCard @secretsEngines={{@model.secretsEngines}} />
-        {{! Vault configuration card }}
         {{#if @model.vaultConfiguration}}
           <Dashboard::VaultConfigurationDetailsCard @vaultConfiguration={{@model.vaultConfiguration}} />
         {{/if}}
