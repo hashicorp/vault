@@ -9,21 +9,7 @@ import { render } from '@ember/test-helpers';
 import { hbs } from 'ember-cli-htmlbars';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 import timestamp from 'core/utils/timestamp';
-
-const SELECTORS = {
-  getReplicationTitle: (type, name) => `[data-test-${type}-replication] [data-test-title="${name}"]`,
-  getStateTooltipTitle: (type, name) => `[data-test-${type}-replication] [data-test-tooltip-title="${name}"]`,
-  getStateTooltipIcon: (type, name, icon) =>
-    `[data-test-${type}-replication] [data-test-tooltip-title="${name}"] [data-test-icon="${icon}"]`,
-  drOnlyStateSubText: '[data-test-dr-replication] [data-test-subtext="state"]',
-  knownSecondariesLabel: '[data-test-stat-text="known secondaries"] .stat-label',
-  knownSecondariesSubtext: '[data-test-stat-text="known secondaries"] .stat-text',
-  knownSecondariesValue: '[data-test-stat-text="known secondaries"] .stat-value',
-  replicationEmptyState: '[data-test-component="empty-state"]',
-  replicationEmptyStateTitle: '[data-test-component="empty-state"] .empty-state-title',
-  replicationEmptyStateMessage: '[data-test-component="empty-state"] .empty-state-message',
-  replicationEmptyStateActions: '[data-test-component="empty-state"] .empty-state-actions',
-};
+import SELECTORS from 'vault/tests/helpers/components/dashboard/replication-card';
 
 module('Integration | Component | dashboard/replication-card', function (hooks) {
   setupRenderingTest(hooks);
