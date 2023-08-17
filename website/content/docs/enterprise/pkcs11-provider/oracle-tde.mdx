@@ -116,7 +116,11 @@ TDE is complex, but an example way to enable it is:
 
 1. Set WALLET_ROOT and TDE_CONFIGURATION parameters on the Oracle database.
 
-   ~> **Note**: The directory is a root wallet directory and is only required for the purposes of setting `TDE_CONFIGURATION`. More on these parameters in the [Oracle databse Documentation](https://docs.oracle.com/en/database/oracle/oracle-database/19/refrn/TDE_CONFIGURATION.html).
+<Note>
+  The wallet root directory is only used to set the TDE configuration parameter.
+  To learn more about the wallet parameters refer to the
+  <a href="https://docs.oracle.com/en/database/oracle/oracle-database/19/refrn/TDE_CONFIGURATION.html">Oracle TDE documentation</a>.
+</Note>
 
     ```sql
     SQL> alter system set wallet_root='/opt/oracle/admin/ORCLCDB/wallet' scope=spfile;
