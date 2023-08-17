@@ -107,7 +107,7 @@ module('Acceptance | kv-v2 workflow | secret and version create', function (hook
         .hasText('No custom metadata', 'No custom metadata empty state');
       assert
         .dom(`${PAGE.metadata.secretMetadataSection} ${PAGE.secretRow}`)
-        .exists({ count: 3 }, '3 metadata rows show');
+        .exists({ count: 4 }, '4 metadata rows show');
       assert.dom(PAGE.infoRowValue('Maximum versions')).hasText('0', 'max versions shows 0');
       assert.dom(PAGE.infoRowValue('Check-and-Set required')).hasText('No', 'cas not enforced');
       assert
@@ -199,7 +199,7 @@ module('Acceptance | kv-v2 workflow | secret and version create', function (hook
 
       assert
         .dom(`${PAGE.metadata.secretMetadataSection} ${PAGE.secretRow}`)
-        .exists({ count: 3 }, '3 metadata rows show');
+        .exists({ count: 4 }, '4 metadata rows show');
       assert.dom(PAGE.infoRowValue('Maximum versions')).hasText('7', 'max versions shows 0');
       assert.dom(PAGE.infoRowValue('Check-and-Set required')).hasText('Yes', 'cas enforced');
       assert
@@ -704,7 +704,7 @@ module('Acceptance | kv-v2 workflow | secret and version create', function (hook
         .hasText('No custom metadata', 'No custom metadata empty state');
       assert
         .dom(`${PAGE.metadata.secretMetadataSection} ${PAGE.secretRow}`)
-        .exists({ count: 3 }, '3 metadata rows show');
+        .exists({ count: 4 }, '4 metadata rows show');
       assert.dom(PAGE.infoRowValue('Maximum versions')).hasText('0', 'max versions shows 0');
       assert.dom(PAGE.infoRowValue('Check-and-Set required')).hasText('No', 'cas not enforced');
       assert
