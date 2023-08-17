@@ -685,6 +685,10 @@ func TestLoadConfigFile_Template(t *testing.T) {
 					Perms:          pointerutil.FileModePtr(0o655),
 					RightDelim:     pointerutil.StringPtr(">>"),
 					SandboxPath:    pointerutil.StringPtr("/path/on/disk/where"),
+					Exec: &ctconfig.ExecConfig{
+						Command: []string{"foo"},
+						Timeout: pointerutil.TimeDurationPtr("10s"),
+					},
 
 					Wait: &ctconfig.WaitConfig{
 						Min: pointerutil.TimeDurationPtr("10s"),

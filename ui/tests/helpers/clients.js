@@ -27,15 +27,6 @@ export const SELECTORS = {
   dateDropdownSubmit: '[data-test-date-dropdown-submit]',
 };
 
-export const CHART_ELEMENTS = {
-  entityClientDataBars: '[data-test-group="entity_clients"]',
-  nonEntityDataBars: '[data-test-group="non_entity_clients"]',
-  yLabels: '[data-test-group="y-labels"]',
-  actionBars: '[data-test-group="action-bars"]',
-  labelActionBars: '[data-test-group="label-action-bars"]',
-  totalValues: '[data-test-group="total-values"]',
-};
-
 export function sendResponse(data, httpStatus = 200) {
   if (httpStatus === 403) {
     return [

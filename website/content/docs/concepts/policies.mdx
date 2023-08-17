@@ -84,7 +84,7 @@ user or machine is allowed to access.
 
 [hcl]: https://github.com/hashicorp/hcl
 
-Here is a very simple policy which grants read capabilities to the path
+Here is a very simple policy which grants read capabilities to the [KVv1](/api-docs/secret/kv/kv-v1) path
 `"secret/foo"`:
 
 ```ruby
@@ -104,7 +104,7 @@ Here is a more detailed policy, and it is documented inline:
 # This section grants all access on "secret/*". Further restrictions can be
 # applied to this broad policy, as shown below.
 path "secret/*" {
-  capabilities = ["create", "read", "update", "delete", "list"]
+  capabilities = ["create", "read", "update", "patch", "delete", "list"]
 }
 
 # Even though we allowed secret/*, this line explicitly denies
@@ -222,6 +222,8 @@ similarly matched.
   parts of Vault, this implicitly includes the ability to create the initial
   value at the path.
 
+- `patch` (`PATCH`) -  Allows partial updates to the data at a given path.
+
 - `delete` (`DELETE`) - Allows deleting the data at the given path.
 
 - `list` (`LIST`) - Allows listing values at the given path. Note that the
@@ -256,19 +258,19 @@ injected, and currently the `path` keys in policies allow injection.
 
 ### Parameters
 
-| Name                                                                             | Description                                                                            |
-| :------------------------------------------------------------------------------- | :------------------------------------------------------------------------------------- |
-| `identity.entity.id`                                                             | The entity's ID                                                                        |
-| `identity.entity.name`                                                           | The entity's name                                                                      |
-| `identity.entity.metadata.<metadata key>`                                        | Metadata associated with the entity for the given key                                  |
-| `identity.entity.aliases.<mount accessor>.id`                                    | Entity alias ID for the given mount                                                    |
-| `identity.entity.aliases.<mount accessor>.name`                                  | Entity alias name for the given mount                                                  |
-| `identity.entity.aliases.<mount accessor>.metadata.<metadata key>`               | Metadata associated with the alias for the given mount and metadata key                |
-| `identity.entity.aliases.<mount accessor>.custom_metadata.<custom_metadata key>` | Custom metadata associated with the alias for the given mount and custom metadata key  |
-| `identity.groups.ids.<group id>.name`                                            | The group name for the given group ID                                                  |
-| `identity.groups.names.<group name>.id`                                          | The group ID for the given group name                                                  |
-| `identity.groups.ids.<group id>.metadata.<metadata key>`                         | Metadata associated with the group for the given key                                   |
-| `identity.groups.names.<group name>.metadata.<metadata key>`                     | Metadata associated with the group for the given key                                   |
+| Name                                                                             | Description                                                                           |
+| :------------------------------------------------------------------------------- | :------------------------------------------------------------------------------------ |
+| `identity.entity.id`                                                             | The entity's ID                                                                       |
+| `identity.entity.name`                                                           | The entity's name                                                                     |
+| `identity.entity.metadata.<metadata key>`                                        | Metadata associated with the entity for the given key                                 |
+| `identity.entity.aliases.<mount accessor>.id`                                    | Entity alias ID for the given mount                                                   |
+| `identity.entity.aliases.<mount accessor>.name`                                  | Entity alias name for the given mount                                                 |
+| `identity.entity.aliases.<mount accessor>.metadata.<metadata key>`               | Metadata associated with the alias for the given mount and metadata key               |
+| `identity.entity.aliases.<mount accessor>.custom_metadata.<custom_metadata key>` | Custom metadata associated with the alias for the given mount and custom metadata key |
+| `identity.groups.ids.<group id>.name`                                            | The group name for the given group ID                                                 |
+| `identity.groups.names.<group name>.id`                                          | The group ID for the given group name                                                 |
+| `identity.groups.ids.<group id>.metadata.<metadata key>`                         | Metadata associated with the group for the given key                                  |
+| `identity.groups.names.<group name>.metadata.<metadata key>`                     | Metadata associated with the group for the given key                                  |
 
 ### Examples
 
@@ -276,7 +278,7 @@ The following policy creates a section of the KVv2 Secret Engine to a specific u
 
 ```ruby
 path "secret/data/{{identity.entity.id}}/*" {
-  capabilities = ["create", "update", "read", "delete"]
+  capabilities = ["create", "update", "patch", "read", "delete"]
 }
 
 path "secret/metadata/{{identity.entity.id}}/*" {
@@ -290,7 +292,7 @@ group.
 ```ruby
 # In the example below, the group ID maps a group and the path
 path "secret/data/groups/{{identity.groups.ids.fb036ebc-2f62-4124-9503-42aa7A869741.name}}/*" {
-  capabilities = ["create", "update", "read", "delete"]
+  capabilities = ["create", "update", "patch", "read", "delete"]
 }
 
 path "secret/metadata/groups/{{identity.groups.ids.fb036ebc-2f62-4124-9503-42aa7A869741.name}}/*" {
@@ -408,7 +410,7 @@ options are:
   - It's important to note that the use of globbing may result in surprising
     or unexpected behavior.
     ```ruby
-    # This allows the user to create or update "secret/foo" with a parameter
+    # This allows the user to create, update, or patch "secret/foo" with a parameter
     # named "bar". The values passed to parameter "bar" must start with "baz/"
     # so values like "baz/quux" are fine. However, values like
     # "baz/quux,wibble,wobble,wubble" would also be accepted. The API that
@@ -419,7 +421,7 @@ options are:
     # "secret/foo" might surprise someone that expected the allowed_parameters
     # constraint to only allow values starting with "baz/".
     path "secret/foo" {
-      capabilities = ["create", "update"]
+      capabilities = ["create", "update", "patch"]
       allowed_parameters = {
         "bar" = ["baz/*"]
       }
@@ -724,7 +726,7 @@ authenticated user.
 Tokens have two sets of policies: identity policies, which are computed
 based on the entity and its groups, and token policies, which are either defined
 based on the login method or, in the case of explicit token creates via the API,
-are an input to the token creation.  What follows concerns token policies
+are an input to the token creation. What follows concerns token policies
 exclusively: a token's identity policies cannot be controlled except by modifying
 the underlying entities, groups, and group memberships.
 
@@ -746,7 +748,7 @@ However, the _contents_ of policies are parsed in real-time whenever the token i
 As a result, if a policy is modified, the modified rules will be in force the
 next time a token, with that policy attached, is used to make a call to Vault.
 
-## Learn
+## Tutorial
 
 Refer to the following tutorials for further learning:
 
