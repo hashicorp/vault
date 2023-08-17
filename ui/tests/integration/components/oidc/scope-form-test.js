@@ -154,7 +154,7 @@ module('Integration | Component | oidc/scope-form', function (hooks) {
   });
 
   test('it should show example template modal', async function (assert) {
-    assert.expect(6);
+    assert.expect(7);
 
     this.model = this.store.createRecord('oidc/scope');
 
@@ -172,8 +172,9 @@ module('Integration | Component | oidc/scope-form', function (hooks) {
     assert.dom('[data-test-modal-div]').hasClass('is-active', 'Modal is shown');
     assert.dom('[data-test-modal-title]').hasText('Scope template', 'Modal title renders');
     assert
-      .dom('[data-test-modal-copy]')
-      .hasText('Example of a JSON template for scopes:', 'Modal copy renders');
+      .dom('[data-test-modal-text]')
+      .hasText('Example of a JSON template for scopes:', 'Modal text renders');
+    assert.dom('[data-test-copy-button]').exists('Modal copy button renders');
     assert.dom('.cm-string').hasText('"username"', 'Example template json renders');
     await click('[data-test-close-modal]');
     assert.dom('[data-test-modal-div]').doesNotHaveClass('is-active', 'Modal is hidden');
