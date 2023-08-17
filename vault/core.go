@@ -2364,7 +2364,11 @@ func (s standardUnsealStrategy) unseal(ctx context.Context, logger log.Logger, c
 		}
 	} else {
 		var err error
-		c.auditBroker, err = NewAuditBroker(c.logger, c.IsExperimentEnabled(experiments.VaultExperimentCoreAuditEventsAlpha1))
+		disableEventLogger, err := strconv.ParseBool(os.Getenv(featureFlagDisableEventLogger))
+		if err != nil {
+			return fmt.Errorf("unable to parse feature flag: %q: %w", featureFlagDisableEventLogger, err)
+		}
+		c.auditBroker, err = NewAuditBroker(c.logger, !disableEventLogger)
 		if err != nil {
 			return err
 		}
