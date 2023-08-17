@@ -1,6 +1,6 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 import { run } from '@ember/runloop';
@@ -183,31 +183,35 @@ module('Integration | Service | auth', function (hooks) {
       },
     });
     run(() => {
-      service.authenticate({ clusterId: '1', backend: 'token', data: { token: 'test' } }).then(() => {
-        const clusterTokenName = service.get('currentTokenName');
-        const clusterToken = service.get('currentToken');
-        const authData = service.get('authData');
+      service
+        .authenticate({ clusterId: '1', backend: 'token', data: { token: 'test' } })
+        .then(() => {
+          const clusterTokenName = service.get('currentTokenName');
+          const clusterToken = service.get('currentToken');
+          const authData = service.get('authData');
 
-        const expectedTokenName = `${TOKEN_PREFIX}${ROOT_PREFIX}${TOKEN_SEPARATOR}1`;
-        assert.strictEqual(clusterToken, 'test', 'token is saved properly');
-        assert.strictEqual(
-          `${TOKEN_PREFIX}${ROOT_PREFIX}${TOKEN_SEPARATOR}1`,
-          clusterTokenName,
-          'token name is saved properly'
-        );
-        assert.strictEqual(authData.backend.type, 'token', 'backend is saved properly');
-        assert.strictEqual(
-          ROOT_TOKEN_RESPONSE.data.display_name,
-          authData.displayName,
-          'displayName is saved properly'
-        );
-        assert.ok(
-          this.memStore.keys().includes(expectedTokenName),
-          'root token is stored in the memory store'
-        );
-        assert.strictEqual(this.store.keys().length, 0, 'normal storage is empty');
-        done();
-      });
+          const expectedTokenName = `${TOKEN_PREFIX}${ROOT_PREFIX}${TOKEN_SEPARATOR}1`;
+          assert.strictEqual(clusterToken, 'test', 'token is saved properly');
+          assert.strictEqual(
+            `${TOKEN_PREFIX}${ROOT_PREFIX}${TOKEN_SEPARATOR}1`,
+            clusterTokenName,
+            'token name is saved properly'
+          );
+          assert.strictEqual(authData.backend.type, 'token', 'backend is saved properly');
+          assert.strictEqual(
+            ROOT_TOKEN_RESPONSE.data.display_name,
+            authData.displayName,
+            'displayName is saved properly'
+          );
+          assert.ok(
+            this.memStore.keys().includes(expectedTokenName),
+            'root token is stored in the memory store'
+          );
+          assert.strictEqual(this.store.keys().length, 0, 'normal storage is empty');
+        })
+        .finally(() => {
+          done();
+        });
     });
   });
 

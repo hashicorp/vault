@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Copyright (c) HashiCorp, Inc.
-# SPDX-License-Identifier: MPL-2.0
+# SPDX-License-Identifier: BUSL-1.1
 
 
 # The ci-helper is used to determine build metadata, build Vault binaries,
@@ -132,9 +132,9 @@ function build_ui() {
   mkdir -p http/web_ui
   popd
   pushd "$repo_root/ui"
-  yarn install --ignore-optional
+  yarn install
   npm rebuild node-sass
-  yarn --verbose run build
+  yarn run build
   popd
 }
 
@@ -154,16 +154,18 @@ function build() {
   prerelease=$(version_pre)
   build_date=$(build_date)
   : "${GO_TAGS:=""}"
-  : "${KEEP_SYMBOLS:=""}"
+  : "${REMOVE_SYMBOLS:=""}"
+
+  GOOS= GOARCH= go generate ./...
 
   # Build our ldflags
   msg="--> Building Vault v$version, revision $revision, built $build_date"
 
-  # Strip the symbol and dwarf information by default
-  if [ -n "$KEEP_SYMBOLS" ]; then
-    ldflags=""
-  else
+  # Keep the symbol and dwarf information by default
+  if [ -n "$REMOVE_SYMBOLS" ]; then
     ldflags="-s -w "
+  else
+    ldflags=""
   fi
 
   ldflags="${ldflags}-X github.com/hashicorp/vault/version.Version=$version -X github.com/hashicorp/vault/version.GitCommit=$revision -X github.com/hashicorp/vault/version.BuildDate=$build_date"

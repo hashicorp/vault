@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 package pki
 
@@ -17,6 +17,11 @@ import (
 func pathConfigURLs(b *backend) *framework.Path {
 	return &framework.Path{
 		Pattern: "config/urls",
+
+		DisplayAttrs: &framework.DisplayAttributes{
+			OperationPrefix: operationPrefixPKI,
+		},
+
 		Fields: map[string]*framework.FieldSchema{
 			"issuing_certificates": {
 				Type: framework.TypeCommaStringSlice,
@@ -51,6 +56,10 @@ to be set on all PR secondary clusters.`,
 
 		Operations: map[logical.Operation]framework.OperationHandler{
 			logical.UpdateOperation: &framework.PathOperation{
+				DisplayAttrs: &framework.DisplayAttributes{
+					OperationVerb:   "configure",
+					OperationSuffix: "urls",
+				},
 				Callback: b.pathWriteURL,
 				Responses: map[int][]framework.Response{
 					http.StatusOK: {{
@@ -86,6 +95,9 @@ set on all PR Secondary clusters.`,
 			},
 			logical.ReadOperation: &framework.PathOperation{
 				Callback: b.pathReadURL,
+				DisplayAttrs: &framework.DisplayAttributes{
+					OperationSuffix: "urls-configuration",
+				},
 				Responses: map[int][]framework.Response{
 					http.StatusOK: {{
 						Description: "OK",

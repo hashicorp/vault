@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 package http
 
@@ -62,80 +62,6 @@ func TestSysSealStatus(t *testing.T) {
 	} else {
 		expected["cluster_id"] = actual["cluster_id"]
 	}
-	if diff := deep.Equal(actual, expected); diff != nil {
-		t.Fatal(diff)
-	}
-}
-
-func TestSysSealStatus_Warnings(t *testing.T) {
-	core := vault.TestCore(t)
-	vault.TestCoreInit(t, core)
-	ln, addr := TestServer(t, core)
-	defer ln.Close()
-
-	// Manually configure DisableSSCTokens to be true
-	core.GetCoreConfigInternal().DisableSSCTokens = true
-
-	resp, err := http.Get(addr + "/v1/sys/seal-status")
-	if err != nil {
-		t.Fatalf("err: %s", err)
-	}
-
-	var actual map[string]interface{}
-	expected := map[string]interface{}{
-		"sealed":        true,
-		"t":             json.Number("3"),
-		"n":             json.Number("3"),
-		"progress":      json.Number("0"),
-		"nonce":         "",
-		"type":          "shamir",
-		"recovery_seal": false,
-		"initialized":   true,
-		"migration":     false,
-		"build_date":    version.BuildDate,
-	}
-	testResponseStatus(t, resp, 200)
-	testResponseBody(t, resp, &actual)
-	if actual["version"] == nil {
-		t.Fatalf("expected version information")
-	}
-	expected["version"] = actual["version"]
-	if actual["cluster_name"] == nil {
-		delete(expected, "cluster_name")
-	} else {
-		expected["cluster_name"] = actual["cluster_name"]
-	}
-	if actual["cluster_id"] == nil {
-		delete(expected, "cluster_id")
-	} else {
-		expected["cluster_id"] = actual["cluster_id"]
-	}
-	actualWarnings := actual["warnings"]
-	if actualWarnings == nil {
-		t.Fatalf("expected warnings about SSCToken disabling")
-	}
-
-	actualWarningsArray, ok := actualWarnings.([]interface{})
-	if !ok {
-		t.Fatalf("expected warnings about SSCToken disabling were not in the right format")
-	}
-	if len(actualWarningsArray) != 1 {
-		t.Fatalf("too many warnings were given")
-	}
-	actualWarning, ok := actualWarningsArray[0].(string)
-	if !ok {
-		t.Fatalf("expected warning about SSCToken disabling was not in the right format")
-	}
-
-	expectedWarning := "Server Side Consistent Tokens are disabled, due to the " +
-		"VAULT_DISABLE_SERVER_SIDE_CONSISTENT_TOKENS environment variable being set. " +
-		"It is not recommended to run Vault for an extended period of time with this configuration."
-	if actualWarning != expectedWarning {
-		t.Fatalf("actual warning was not as expected. Expected %s, but got %s", expectedWarning, actualWarning)
-	}
-
-	expected["warnings"] = actual["warnings"]
-
 	if diff := deep.Equal(actual, expected); diff != nil {
 		t.Fatal(diff)
 	}

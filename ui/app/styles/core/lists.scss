@@ -1,14 +1,16 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
+
+// This file defines styles for list type items, like: .sep, .list-header and ul.bullet.
 
 .sep {
   display: inline-flex;
   align-items: center;
   &:before {
     font-size: $size-5;
-    color: $white-ter;
+    color: $blue-500;
     content: '|';
     position: relative;
   }
@@ -20,4 +22,9 @@
   font-size: $size-8;
   font-weight: $font-weight-semibold;
   text-transform: uppercase;
+}
+
+ul.bullet {
+  list-style: disc;
+  padding-left: $spacing-m;
 }

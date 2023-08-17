@@ -1,33 +1,17 @@
-<SecretListHeader
-  @model={{this.model.engine}}
-  @backendCrumb={{hash
-    label=this.model.engine.id
-    text=this.model.engine.id
-    path="vault.cluster.secrets.backend.list-root"
-    model=this.model.engine.id
-  }}
-  @isEngine={{true}}
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
+<PkiPageHeader @backend={{this.model.engine}} />
+
+<Page::PkiConfigurationDetails
+  @acme={{this.model.acme}}
+  @cluster={{this.model.cluster}}
+  @urls={{this.model.urls}}
+  @crl={{this.model.crl}}
+  @mountConfig={{this.model.mountConfig}}
+  @backend={{this.model.engine.id}}
+  @canDeleteAllIssuers={{this.model.issuerModel.canDeleteAllIssuers}}
+  @hasConfig={{this.model.hasConfig}}
 />
-
-{{#if this.model.hasConfig}}
-  <Toolbar>
-    <ToolbarActions>
-      <ToolbarLink @route="configuration.tidy">
-        Tidy
-      </ToolbarLink>
-      <ToolbarLink @route="configuration.edit">
-        Edit configuration
-      </ToolbarLink>
-    </ToolbarActions>
-  </Toolbar>
-
-  <Page::PkiConfigurationDetails @urls={{this.model.urls}} @crl={{this.model.crl}} @mountConfig={{this.model.mountConfig}} />
-{{else}}
-  <Toolbar />
-
-  <EmptyState @title="PKI not configured" @message="This PKI mount hasn't yet been configured with a certificate issuer.">
-    <LinkTo @route="configuration.create">
-      Configure PKI
-    </LinkTo>
-  </EmptyState>
-{{/if}}

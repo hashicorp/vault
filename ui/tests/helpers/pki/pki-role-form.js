@@ -1,6 +1,6 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 export const PKI_BASE_URL = `/vault/cluster/secrets/backend/pki/roles`;
@@ -8,6 +8,8 @@ export const PKI_BASE_URL = `/vault/cluster/secrets/backend/pki/roles`;
 export const SELECTORS = {
   roleName: '[data-test-input="name"]',
   issuerRef: '[data-test-input="issuerRef"]',
+  issuerRefSelect: '[data-test-select="issuerRef"]',
+  issuerRefToggle: '[data-test-toggle-label="issuerRef-toggle"]',
   customTtl: '[data-test-field="customTtl"]',
   backdateValidity: '[data-test-ttl-value="Backdate validity"]',
   maxTtl: '[data-test-toggle-label="Max TTL"]',

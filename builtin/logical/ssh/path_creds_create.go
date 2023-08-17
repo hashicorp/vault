@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 package ssh
 
@@ -23,6 +23,13 @@ type sshOTP struct {
 func pathCredsCreate(b *backend) *framework.Path {
 	return &framework.Path{
 		Pattern: "creds/" + framework.GenericNameWithAtRegex("role"),
+
+		DisplayAttrs: &framework.DisplayAttributes{
+			OperationPrefix: operationPrefixSSH,
+			OperationVerb:   "generate",
+			OperationSuffix: "credentials",
+		},
+
 		Fields: map[string]*framework.FieldSchema{
 			"role": {
 				Type:        framework.TypeString,
@@ -37,9 +44,11 @@ func pathCredsCreate(b *backend) *framework.Path {
 				Description: "[Required] IP of the remote host",
 			},
 		},
+
 		Callbacks: map[logical.Operation]framework.OperationFunc{
 			logical.UpdateOperation: b.pathCredsCreateWrite,
 		},
+
 		HelpSynopsis:    pathCredsCreateHelpSyn,
 		HelpDescription: pathCredsCreateHelpDesc,
 	}

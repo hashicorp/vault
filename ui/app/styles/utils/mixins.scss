@@ -1,7 +1,9 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
+
+// This file defines the following mixins: css-arrow, css-top-arrow, css-bottom-arrow, from, until, and vault-block
 
 @mixin css-arrow(
   $vertical-direction,
@@ -68,8 +70,20 @@
   @include css-arrow('bottom', $size, $color, $border-width, $border-color, $left, $left-offset);
 }
 
+@mixin from($breakpoint) {
+  @media (min-width: $breakpoint) {
+    @content;
+  }
+}
+
+@mixin until($breakpoint) {
+  @media (max-width: $breakpoint) {
+    @content;
+  }
+}
+
 @mixin vault-block {
   &:not(:last-child) {
-    margin-bottom: (5/14) + 0rem;
+    margin-bottom: calc(5 / 14) + 0rem;
   }
 }

@@ -1,11 +1,14 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 //go:build !enterprise
 
 package vault
 
-import "context"
+import (
+	"context"
+	"time"
+)
 
 // sendCurrentFragment is a no-op on OSS
 func (a *ActivityLog) sendCurrentFragment(ctx context.Context) error {
@@ -13,4 +16,4 @@ func (a *ActivityLog) sendCurrentFragment(ctx context.Context) error {
 }
 
 // CensusReport is a no-op on OSS
-func (a *ActivityLog) CensusReport(_ctx context.Context, _ca *CensusAgent) {}
+func (a *ActivityLog) CensusReport(context.Context, CensusReporter, time.Time) {}

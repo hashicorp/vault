@@ -1,6 +1,6 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 import { parseCertificate } from 'vault/utils/parse-pki-cert';
@@ -9,37 +9,28 @@ import ApplicationSerializer from '../application';
 export default class PkiIssuerSerializer extends ApplicationSerializer {
   primaryKey = 'issuer_id';
 
-  constructor() {
-    super(...arguments);
-    // remove following attrs from serialization
-    const attrs = [
-      'altNames',
-      'caChain',
-      'certificate',
-      'commonName',
-      'ipSans',
-      'issuerId',
-      'keyId',
-      'otherSans',
-      'notValidAfter',
-      'notValidBefore',
-      'serialNumber',
-      'signatureBits',
-      'uriSans',
-    ];
-    this.attrs = attrs.reduce((attrObj, attr) => {
-      attrObj[attr] = { serialize: false };
-      return attrObj;
-    }, {});
-  }
+  attrs = {
+    caChain: { serialize: false },
+    certificate: { serialize: false },
+    commonName: { serialize: false },
+    isDefault: { serialize: false },
+    isRoot: { serialize: false },
+    issuerId: { serialize: false },
+    keyId: { serialize: false },
+    parsedCertificate: { serialize: false },
+    serialNumber: { serialize: false },
+  };
 
   normalizeResponse(store, primaryModelClass, payload, id, requestType) {
     if (payload.data.certificate) {
       // Parse certificate back from the API and add to payload
       const parsedCert = parseCertificate(payload.data.certificate);
-      const data = { issuer_ref: payload.issuer_id, ...payload.data, ...parsedCert };
-      const json = super.normalizeResponse(store, primaryModelClass, { ...payload, data }, id, requestType);
-      return json;
+      const data = {
+        ...payload.data,
+        parsed_certificate: parsedCert,
+        common_name: parsedCert.common_name,
+      };
+      return super.normalizeResponse(store, primaryModelClass, { ...payload, data }, id, requestType);
     }
     return super.normalizeResponse(...arguments);
   }
@@ -48,10 +39,12 @@ export default class PkiIssuerSerializer extends ApplicationSerializer {
   normalizeItems(payload) {
     if (payload.data) {
       if (payload.data?.keys && Array.isArray(payload.data.keys)) {
-        return payload.data.keys.map((issuer_id) => ({
-          issuer_id,
-          ...payload.data.key_info[issuer_id],
-        }));
+        return payload.data.keys.map((key) => {
+          return {
+            issuer_id: key,
+            ...payload.data.key_info[key],
+          };
+        });
       }
       Object.assign(payload, payload.data);
       delete payload.data;

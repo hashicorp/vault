@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 package transit
 
@@ -20,6 +20,10 @@ const WrappingKeyName = "wrapping-key"
 func (b *backend) pathWrappingKey() *framework.Path {
 	return &framework.Path{
 		Pattern: "wrapping_key",
+		DisplayAttrs: &framework.DisplayAttributes{
+			OperationPrefix: operationPrefixTransit,
+			OperationSuffix: "wrapping-key",
+		},
 		Callbacks: map[logical.Operation]framework.OperationFunc{
 			logical.ReadOperation: b.pathWrappingKeyRead,
 		},

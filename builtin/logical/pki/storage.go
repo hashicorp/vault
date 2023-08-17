@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 package pki
 
@@ -8,6 +8,7 @@ import (
 	"context"
 	"crypto"
 	"crypto/x509"
+	"errors"
 	"fmt"
 	"sort"
 	"strings"
@@ -19,6 +20,8 @@ import (
 	"github.com/hashicorp/vault/sdk/helper/errutil"
 	"github.com/hashicorp/vault/sdk/logical"
 )
+
+var ErrStorageItemNotFound = errors.New("storage item not found")
 
 const (
 	storageKeyConfig        = "config/keys"
@@ -282,6 +285,15 @@ func (b *backend) makeStorageContext(ctx context.Context, s logical.Storage) *st
 		Storage: s,
 		Backend: b,
 	}
+}
+
+func (sc *storageContext) WithFreshTimeout(timeout time.Duration) (*storageContext, context.CancelFunc) {
+	ctx, cancel := context.WithTimeout(context.Background(), timeout)
+	return &storageContext{
+		Context: ctx,
+		Storage: sc.Storage,
+		Backend: sc.Backend,
+	}, cancel
 }
 
 func (sc *storageContext) listKeys() ([]keyID, error) {
@@ -709,7 +721,7 @@ func (sc *storageContext) upgradeIssuerIfRequired(issuer *issuerEntry) *issuerEn
 		// Remove CRL signing usage if it exists on the issuer but doesn't
 		// exist in the KU of the x509 certificate.
 		if hadCRL && (cert.KeyUsage&x509.KeyUsageCRLSign) == 0 {
-			issuer.Usage.ToggleUsage(OCSPSigningUsage)
+			issuer.Usage.ToggleUsage(CRLSigningUsage)
 		}
 
 		// Handle our new OCSPSigning usage flag for earlier versions. If we
@@ -1313,9 +1325,10 @@ func (sc *storageContext) getRevocationConfig() (*crlConfig, error) {
 		result.Expiry = defaultCrlConfig.Expiry
 	}
 
-	if !constants.IsEnterprise && (result.UnifiedCRLOnExistingPaths || result.UnifiedCRL || result.UseGlobalQueue) {
+	isLocalMount := sc.Backend.System().LocalMount()
+	if (!constants.IsEnterprise || isLocalMount) && (result.UnifiedCRLOnExistingPaths || result.UnifiedCRL || result.UseGlobalQueue) {
 		// An end user must have had Enterprise, enabled the unified config args and then downgraded to OSS.
-		sc.Backend.Logger().Warn("Not running Vault Enterprise, " +
+		sc.Backend.Logger().Warn("Not running Vault Enterprise or using a local mount, " +
 			"disabling unified_crl, unified_crl_on_existing_paths and cross_cluster_revocation config flags.")
 		result.UnifiedCRLOnExistingPaths = false
 		result.UnifiedCRL = false
@@ -1323,6 +1336,20 @@ func (sc *storageContext) getRevocationConfig() (*crlConfig, error) {
 	}
 
 	return &result, nil
+}
+
+func (sc *storageContext) setRevocationConfig(config *crlConfig) error {
+	entry, err := logical.StorageEntryJSON("config/crl", config)
+	if err != nil {
+		return fmt.Errorf("failed building storage entry JSON: %w", err)
+	}
+
+	err = sc.Storage.Put(sc.Context, entry)
+	if err != nil {
+		return fmt.Errorf("failed writing storage entry: %w", err)
+	}
+
+	return nil
 }
 
 func (sc *storageContext) getAutoTidyConfig() (*tidyConfig, error) {

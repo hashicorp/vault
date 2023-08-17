@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 package fairshare
 
@@ -125,7 +125,7 @@ func (j *JobManager) AddJob(job Job, queueID string) {
 	}
 }
 
-// GetCurrentJobCount returns the total number of pending jobs in the job manager
+// GetPendingJobCount returns the total number of pending jobs in the job manager
 func (j *JobManager) GetPendingJobCount() int {
 	j.l.RLock()
 	defer j.l.RUnlock()

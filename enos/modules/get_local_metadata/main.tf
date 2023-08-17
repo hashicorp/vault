@@ -1,5 +1,5 @@
 # Copyright (c) HashiCorp, Inc.
-# SPDX-License-Identifier: MPL-2.0
+# SPDX-License-Identifier: BUSL-1.1
 
 terraform {
   required_providers {
@@ -10,7 +10,7 @@ terraform {
 }
 
 resource "enos_local_exec" "get_build_date" {
-  scripts = ["${path.module}/scripts/build_date.sh"]
+  scripts = [abspath("${path.module}/scripts/build_date.sh")]
 }
 
 output "build_date" {
@@ -18,7 +18,7 @@ output "build_date" {
 }
 
 resource "enos_local_exec" "get_version" {
-  scripts = ["${path.module}/scripts/version.sh"]
+  scripts = [abspath("${path.module}/scripts/version.sh")]
 }
 
 output "version" {

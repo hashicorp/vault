@@ -1,6 +1,6 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 import Route from '@ember/routing/route';
@@ -11,13 +11,6 @@ withConfirmLeave();
 export default class PkiRoleGenerateRoute extends Route {
   @service store;
   @service secretMountPath;
-  @service pathHelp;
-
-  beforeModel() {
-    // Must call this promise before the model hook otherwise
-    // the model doesn't hydrate from OpenAPI correctly.
-    return this.pathHelp.getNewModel('pki/certificate/generate', this.secretMountPath.currentPath);
-  }
 
   async model() {
     const { role } = this.paramsFor('roles/role');

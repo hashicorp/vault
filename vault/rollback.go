@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 package vault
 
@@ -43,12 +43,13 @@ type RollbackManager struct {
 	inflight     map[string]*rollbackState
 	inflightLock sync.RWMutex
 
-	doneCh       chan struct{}
-	shutdown     bool
-	shutdownCh   chan struct{}
-	shutdownLock sync.Mutex
-	stopTicker   chan struct{}
-	quitContext  context.Context
+	doneCh          chan struct{}
+	shutdown        bool
+	shutdownCh      chan struct{}
+	shutdownLock    sync.Mutex
+	stopTicker      chan struct{}
+	tickerIsStopped bool
+	quitContext     context.Context
 
 	core *Core
 }
@@ -96,14 +97,24 @@ func (m *RollbackManager) Stop() {
 	m.inflightAll.Wait()
 }
 
+// StopTicker stops the automatic Rollback manager's ticker, causing us
+// to not do automatic rollbacks. This is useful for testing plugin's
+// periodic function's behavior, without trying to race against the
+// rollback manager proper.
+//
+// THIS SHOULD ONLY BE CALLED FROM TEST HELPERS.
 func (m *RollbackManager) StopTicker() {
-	close(m.stopTicker)
+	if !m.tickerIsStopped {
+		close(m.stopTicker)
+		m.tickerIsStopped = true
+	}
 }
 
 // run is a long running routine to periodically invoke rollback
 func (m *RollbackManager) run() {
 	m.logger.Info("starting rollback manager")
 	tick := time.NewTicker(m.period)
+	logTestStopOnce := false
 	defer tick.Stop()
 	defer close(m.doneCh)
 	for {
@@ -116,7 +127,10 @@ func (m *RollbackManager) run() {
 			return
 
 		case <-m.stopTicker:
-			m.logger.Info("stopping rollback manager ticker for tests")
+			if !logTestStopOnce {
+				m.logger.Info("stopping rollback manager ticker for tests")
+				logTestStopOnce = true
+			}
 			tick.Stop()
 		}
 	}
@@ -309,7 +323,6 @@ func (c *Core) startRollback() error {
 		return ret
 	}
 	rollbackLogger := c.baseLogger.Named("rollback")
-	c.AddLogger(rollbackLogger)
 	c.rollback = NewRollbackManager(c.activeContext, rollbackLogger, backendsFunc, c.router, c)
 	c.rollback.Start()
 	return nil

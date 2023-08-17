@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 package ldap
 
@@ -9,12 +9,16 @@ import (
 	"strings"
 
 	"github.com/hashicorp/go-secure-stdlib/strutil"
+
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/ldaputil"
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
-const errUserBindFailed = `ldap operation failed: failed to bind as user`
+const (
+	operationPrefixLDAP = "ldap"
+	errUserBindFailed   = "ldap operation failed: failed to bind as user"
+)
 
 func Factory(ctx context.Context, conf *logical.BackendConfig) (logical.Backend, error) {
 	b := Backend()
@@ -93,7 +97,7 @@ func (b *backend) Login(ctx context.Context, req *logical.Request, username stri
 		if b.Logger().IsDebug() {
 			b.Logger().Debug("error getting user bind DN", "error", err)
 		}
-		return "", nil, logical.ErrorResponse(errUserBindFailed), nil, nil
+		return "", nil, logical.ErrorResponse(errUserBindFailed), nil, logical.ErrInvalidCredentials
 	}
 
 	if b.Logger().IsDebug() {

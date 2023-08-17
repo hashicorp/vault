@@ -1,6 +1,6 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 import { alias, reads } from '@ember/object/computed';
@@ -8,7 +8,6 @@ import { inject as service } from '@ember/service';
 import Component from '@ember/component';
 import { computed } from '@ember/object';
 import { FEATURE_MACHINE_STEPS, INIT_STEPS } from 'vault/helpers/wizard-constants';
-import { htmlSafe } from '@ember/template';
 
 export default Component.extend({
   wizard: service(),
@@ -89,25 +88,25 @@ export default Component.extend({
       const bar = [];
       if (this.currentTutorialProgress) {
         bar.push({
-          style: htmlSafe(`width:${this.currentTutorialProgress.percentage}%;`),
+          style: `width:${this.currentTutorialProgress.percentage}%;`,
           completed: false,
           showIcon: true,
         });
       } else {
         if (this.currentFeatureProgress) {
           this.completedFeatures.forEach((feature) => {
-            bar.push({ style: htmlSafe('width:100%;'), completed: true, feature: feature, showIcon: true });
+            bar.push({ style: 'width:100%;', completed: true, feature: feature, showIcon: true });
           });
           this.wizard.featureList.forEach((feature) => {
             if (feature === this.currentMachine) {
               bar.push({
-                style: htmlSafe(`width:${this.currentFeatureProgress.percentage}%;`),
+                style: `width:${this.currentFeatureProgress.percentage}%;`,
                 completed: this.currentFeatureProgress.percentage == 100 ? true : false,
                 feature: feature,
                 showIcon: true,
               });
             } else {
-              bar.push({ style: htmlSafe('width:0%;'), completed: false, feature: feature, showIcon: true });
+              bar.push({ style: 'width:0%;', completed: false, feature: feature, showIcon: true });
             }
           });
         }

@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 package transit
 
@@ -28,6 +28,7 @@ func TestTransit_Export_KeyVersion_ExportsCorrectVersion(t *testing.T) {
 	verifyExportsCorrectVersion(t, "hmac-key", "ecdsa-p384")
 	verifyExportsCorrectVersion(t, "hmac-key", "ecdsa-p521")
 	verifyExportsCorrectVersion(t, "hmac-key", "ed25519")
+	verifyExportsCorrectVersion(t, "hmac-key", "hmac")
 }
 
 func verifyExportsCorrectVersion(t *testing.T, exportType, keyType string) {
@@ -42,6 +43,9 @@ func verifyExportsCorrectVersion(t *testing.T, exportType, keyType string) {
 	req.Data = map[string]interface{}{
 		"exportable": true,
 		"type":       keyType,
+	}
+	if keyType == "hmac" {
+		req.Data["key_size"] = 32
 	}
 	_, err := b.HandleRequest(context.Background(), req)
 	if err != nil {

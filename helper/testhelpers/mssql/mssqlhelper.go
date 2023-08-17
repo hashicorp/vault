@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 package mssqlhelper
 
@@ -9,9 +9,11 @@ import (
 	"fmt"
 	"net/url"
 	"os"
+	"runtime"
+	"strings"
 	"testing"
 
-	"github.com/hashicorp/vault/helper/testhelpers/docker"
+	"github.com/hashicorp/vault/sdk/helper/docker"
 )
 
 const mssqlPassword = "yourStrong(!)Password"
@@ -22,6 +24,10 @@ const mssqlPassword = "yourStrong(!)Password"
 const numRetries = 3
 
 func PrepareMSSQLTestContainer(t *testing.T) (cleanup func(), retURL string) {
+	if strings.Contains(runtime.GOARCH, "arm") {
+		t.Skip("Skipping, as this image is not supported on ARM architectures")
+	}
+
 	if os.Getenv("MSSQL_URL") != "" {
 		return func() {}, os.Getenv("MSSQL_URL")
 	}

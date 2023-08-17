@@ -1,6 +1,6 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 import { gt } from '@ember/object/computed';
@@ -9,6 +9,8 @@ import { computed } from '@ember/object';
 import { range } from 'ember-composable-helpers/helpers/range';
 import { A } from '@ember/array';
 import layout from '../templates/components/list-pagination';
+
+// In non-dev mode, the pagination defaults to the config/environment variable. Set to 100.
 
 export default Component.extend({
   layout,

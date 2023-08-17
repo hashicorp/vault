@@ -1,3 +1,8 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
 <PageHeader as |p|>
   <p.top>
     <Page::Breadcrumbs @breadcrumbs={{@breadcrumbs}} />
@@ -9,6 +14,9 @@
   </p.levelLeft>
 </PageHeader>
 
+{{#if @model.id}}
+  <Toolbar />
+{{/if}}
 <PkiImportPemBundle
   @model={{@model}}
   @onCancel={{transition-to "vault.cluster.secrets.backend.pki.issuers.index"}}

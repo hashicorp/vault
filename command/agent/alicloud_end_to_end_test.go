@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 package agent
 
@@ -15,17 +15,15 @@ import (
 	"github.com/aliyun/alibaba-cloud-sdk-go/sdk/auth/credentials"
 	"github.com/aliyun/alibaba-cloud-sdk-go/sdk/auth/credentials/providers"
 	"github.com/aliyun/alibaba-cloud-sdk-go/services/sts"
-	hclog "github.com/hashicorp/go-hclog"
 	uuid "github.com/hashicorp/go-uuid"
 	vaultalicloud "github.com/hashicorp/vault-plugin-auth-alicloud"
 	"github.com/hashicorp/vault/api"
-	"github.com/hashicorp/vault/command/agent/auth"
-	agentalicloud "github.com/hashicorp/vault/command/agent/auth/alicloud"
-	"github.com/hashicorp/vault/command/agent/sink"
-	"github.com/hashicorp/vault/command/agent/sink/file"
+	"github.com/hashicorp/vault/command/agentproxyshared/auth"
+	agentalicloud "github.com/hashicorp/vault/command/agentproxyshared/auth/alicloud"
+	"github.com/hashicorp/vault/command/agentproxyshared/sink"
+	"github.com/hashicorp/vault/command/agentproxyshared/sink/file"
 	"github.com/hashicorp/vault/helper/testhelpers"
 	vaulthttp "github.com/hashicorp/vault/http"
-	"github.com/hashicorp/vault/sdk/helper/logging"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/vault"
 )
@@ -49,9 +47,7 @@ func TestAliCloudEndToEnd(t *testing.T) {
 	}
 	testhelpers.SkipUnlessEnvVarsSet(t, credNames)
 
-	logger := logging.NewVaultLogger(hclog.Trace)
 	coreConfig := &vault.CoreConfig{
-		Logger: logger,
 		CredentialBackends: map[string]logical.Factory{
 			"alicloud": vaultalicloud.Factory,
 		},
@@ -91,7 +87,7 @@ func TestAliCloudEndToEnd(t *testing.T) {
 	}()
 
 	am, err := agentalicloud.NewAliCloudAuthMethod(&auth.AuthConfig{
-		Logger:    logger.Named("auth.alicloud"),
+		Logger:    cluster.Logger.Named("auth.alicloud"),
 		MountPath: "auth/alicloud",
 		Config: map[string]interface{}{
 			"role":                     "test",
@@ -104,7 +100,7 @@ func TestAliCloudEndToEnd(t *testing.T) {
 	}
 
 	ahConfig := &auth.AuthHandlerConfig{
-		Logger: logger.Named("auth.handler"),
+		Logger: cluster.Logger.Named("auth.handler"),
 		Client: client,
 	}
 
@@ -133,7 +129,7 @@ func TestAliCloudEndToEnd(t *testing.T) {
 	t.Logf("output: %s", tokenSinkFileName)
 
 	config := &sink.SinkConfig{
-		Logger: logger.Named("sink.file"),
+		Logger: cluster.Logger.Named("sink.file"),
 		Config: map[string]interface{}{
 			"path": tokenSinkFileName,
 		},
@@ -147,7 +143,7 @@ func TestAliCloudEndToEnd(t *testing.T) {
 	config.Sink = fs
 
 	ss := sink.NewSinkServer(&sink.SinkServerConfig{
-		Logger: logger.Named("sink.server"),
+		Logger: cluster.Logger.Named("sink.server"),
 		Client: client,
 	})
 	go func() {

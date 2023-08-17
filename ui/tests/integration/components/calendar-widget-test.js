@@ -1,6 +1,6 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 import { module, test } from 'qunit';
@@ -41,9 +41,8 @@ module('Integration | Component | calendar-widget', function (hooks) {
         @selectMonth={{this.handleClientActivityQuery}}
       />
     `);
-
     assert
-      .dom(calendarDropdown.dateRangeTrigger)
+      .dom('[data-test-calendar-widget-trigger]')
       .hasText(`Apr 2017 - Apr 2018`, 'renders and formats start and end dates');
     await calendarDropdown.openCalendar();
     assert.ok(calendarDropdown.showsCalendar, 'renders the calendar component');

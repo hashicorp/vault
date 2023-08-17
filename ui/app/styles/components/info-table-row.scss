@@ -1,6 +1,6 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 .info-table-row {
@@ -11,7 +11,7 @@
     box-shadow: none;
   }
 
-  @include from($tablet) {
+  @include from($mobile) {
     display: flex;
   }
 
@@ -48,11 +48,13 @@
   }
 
   .hs-icon {
-    margin-right: 0.25rem;
+    margin-right: $size-11;
   }
+
   .icon-true {
     color: $green-500;
   }
+
   .icon-false {
     color: $ui-gray-300;
   }
@@ -63,14 +65,14 @@
 }
 
 .info-table-row:not(.is-mobile) .column {
-  @include until($tablet) {
+  @include until($mobile) {
     padding: 0;
   }
 
   &:first-child {
     padding-left: 0;
 
-    @include until($tablet) {
+    @include until($mobile) {
       padding: $size-8 0 0;
     }
   }
@@ -78,7 +80,7 @@
   &:last-child {
     padding-right: 0;
 
-    @include until($tablet) {
+    @include until($mobile) {
       padding: 0 0 $size-8;
     }
   }
@@ -86,8 +88,11 @@
 
 .info-table-row-header {
   margin: 0;
+  font-size: $size-8;
+  color: $grey;
+  font-weight: $font-weight-semibold;
 
-  @include until($tablet) {
+  @include until($mobile) {
     display: none;
   }
   .info-table-row:not(.is-mobile) .column:last-child {

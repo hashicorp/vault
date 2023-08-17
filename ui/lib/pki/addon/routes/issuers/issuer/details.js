@@ -1,19 +1,35 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
-import PkiIssuerIndexRoute from './index';
+import Route from '@ember/routing/route';
+import { inject as service } from '@ember/service';
+import { verifyCertificates } from 'vault/utils/parse-pki-cert';
+import { hash } from 'rsvp';
 
-export default class PkiIssuerDetailsRoute extends PkiIssuerIndexRoute {
-  // Details route gets issuer data from PkiIssuerIndexRoute
-  async setupController(controller, resolvedModel) {
+export default class PkiIssuerDetailsRoute extends Route {
+  @service store;
+  @service secretMountPath;
+
+  model() {
+    const issuer = this.modelFor('issuers.issuer');
+    return hash({
+      issuer,
+      pem: this.fetchCertByFormat(issuer.id, 'pem'),
+      der: this.fetchCertByFormat(issuer.id, 'der'),
+      isRotatable: this.isRoot(issuer),
+    });
+  }
+
+  setupController(controller, resolvedModel) {
     super.setupController(controller, resolvedModel);
-    controller.breadcrumbs.push({ label: resolvedModel.id });
-    const pem = await this.fetchCertByFormat(resolvedModel.id, 'pem');
-    const der = await this.fetchCertByFormat(resolvedModel.id, 'der');
-    controller.pem = pem;
-    controller.der = der;
+    controller.breadcrumbs = [
+      { label: 'secrets', route: 'secrets', linkExternal: true },
+      { label: this.secretMountPath.currentPath, route: 'overview' },
+      { label: 'issuers', route: 'issuers.index' },
+      { label: resolvedModel.issuer.id },
+    ];
   }
 
   /**
@@ -32,5 +48,10 @@ export default class PkiIssuerDetailsRoute extends PkiIssuerIndexRoute {
     } catch (e) {
       return null;
     }
+  }
+
+  async isRoot({ certificate, keyId }) {
+    const isSelfSigned = await verifyCertificates(certificate, certificate);
+    return isSelfSigned && !!keyId;
   }
 }

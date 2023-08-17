@@ -96,7 +96,7 @@ For example, the GitHub login endpoint is located at `auth/github/login`.
 And to determine the arguments needed, `vault path-help auth/github/login` can
 be used.
 
-## Auth Leases
+## Auth leases
 
 Just like secrets, identities have
 [leases](/vault/docs/concepts/lease) associated with them. This means that
@@ -111,7 +111,7 @@ And just like secrets, identities can be renewed without having to
 completely reauthenticate. Just use `vault token renew <token>` with the
 leased token associated with your identity to renew it.
 
-## Code Example
+## Code example
 
 The following code snippet demonstrates how to renew auth tokens.
 
@@ -142,7 +142,7 @@ import (
 // Additionally, enterprise Vault users should be aware that due to eventual
 // consistency, the API may return unexpected errors when running Vault with
 // performance standbys or performance replication, despite the client having
-// a freshly renewed token. See https://www.vaultproject.io/docs/enterprise/consistency#vault-1-7-mitigations
+// a freshly renewed token. See https://developer.hashicorp.com/vault/docs/enterprise/consistency#vault-1-7-mitigations
 // for several ways to mitigate this which are outside the scope of this code sample.
 func renewToken(client *vault.Client) {
 	for {
@@ -168,7 +168,7 @@ func manageTokenLifecycle(client *vault.Client, token *vault.Secret) error {
 
 	watcher, err := client.NewLifetimeWatcher(&vault.LifetimeWatcherInput{
 		Secret:    token,
-		Increment: 3600, // Learn more about this optional value in https://www.vaultproject.io/docs/concepts/lease#lease-durations-and-renewal
+		Increment: 3600, // Learn more about this optional value in https://developer.hashicorp.com/vault/docs/concepts/lease#lease-durations-and-renewal
 	})
 	if err != nil {
 		return fmt.Errorf("unable to initialize new lifetime watcher for renewing auth token: %w", err)

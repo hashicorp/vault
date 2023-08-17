@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 package command
 
@@ -140,7 +140,7 @@ func (c *KVMetadataGetCommand) Run(args []string) int {
 		return 1
 	}
 
-	fullPath := addPrefixToKVPath(partialPath, mountPath, "metadata")
+	fullPath := addPrefixToKVPath(partialPath, mountPath, "metadata", false)
 	secret, err := client.Logical().Read(fullPath)
 	if err != nil {
 		c.UI.Error(fmt.Sprintf("Error reading %s: %s", fullPath, err))

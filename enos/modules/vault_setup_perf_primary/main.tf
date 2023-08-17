@@ -1,5 +1,5 @@
 # Copyright (c) HashiCorp, Inc.
-# SPDX-License-Identifier: MPL-2.0
+# SPDX-License-Identifier: BUSL-1.1
 
 terraform {
   required_providers {
@@ -42,7 +42,7 @@ resource "enos_remote_exec" "configure_pr_primary" {
     vault_install_dir = var.vault_install_dir
   }
 
-  scripts = ["${path.module}/scripts/configure-vault-pr-primary.sh"]
+  scripts = [abspath("${path.module}/scripts/configure-vault-pr-primary.sh")]
 
   transport = {
     ssh = {

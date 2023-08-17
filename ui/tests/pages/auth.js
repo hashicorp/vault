@@ -1,6 +1,6 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 import { create, visitable, fillable, clickable } from 'ember-cli-page-object';
@@ -17,7 +17,10 @@ export default create({
   usernameInput: fillable('[data-test-username]'),
   passwordInput: fillable('[data-test-password]'),
   namespaceInput: fillable('[data-test-auth-form-ns-input]'),
-  login: async function (token) {
+  optionsToggle: clickable('[data-test-auth-form-options-toggle]'),
+  mountPath: fillable('[data-test-auth-form-mount-path]'),
+
+  login: async function (token = rootToken) {
     // make sure we're always logged out and logged back in
     await this.logout();
     await settled();
@@ -25,25 +28,22 @@ export default create({
     window.localStorage.clear();
     await this.visit({ with: 'token' });
     await settled();
-    if (token) {
-      await this.tokenInput(token).submit();
-      return;
-    }
-
-    await this.tokenInput(rootToken).submit();
-    return;
+    return this.tokenInput(token).submit();
   },
-  loginUsername: async function (username, password) {
+  loginUsername: async function (username, password, path) {
     // make sure we're always logged out and logged back in
     await this.logout();
     await settled();
     // clear local storage to ensure we have a clean state
     window.localStorage.clear();
-    await this.visit({ with: 'username' });
+    await this.visit({ with: 'userpass' });
     await settled();
+    if (path) {
+      await this.optionsToggle();
+      await this.mountPath(path);
+    }
     await this.usernameInput(username);
-    await this.passwordInput(password).submit();
-    return;
+    return this.passwordInput(password).submit();
   },
   loginNs: async function (ns) {
     // make sure we're always logged out and logged back in

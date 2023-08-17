@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 package aws
 
@@ -21,7 +21,7 @@ func TestBackend_PathListRoles(t *testing.T) {
 	config := logical.TestBackendConfig()
 	config.StorageView = &logical.InmemStorage{}
 
-	b := Backend()
+	b := Backend(config)
 	if err := b.Setup(context.Background(), config); err != nil {
 		t.Fatal(err)
 	}
@@ -224,7 +224,7 @@ func TestRoleCRUDWithPermissionsBoundary(t *testing.T) {
 	config := logical.TestBackendConfig()
 	config.StorageView = &logical.InmemStorage{}
 
-	b := Backend()
+	b := Backend(config)
 	if err := b.Setup(context.Background(), config); err != nil {
 		t.Fatal(err)
 	}
@@ -268,7 +268,7 @@ func TestRoleWithPermissionsBoundaryValidation(t *testing.T) {
 	config := logical.TestBackendConfig()
 	config.StorageView = &logical.InmemStorage{}
 
-	b := Backend()
+	b := Backend(config)
 	if err := b.Setup(context.Background(), config); err != nil {
 		t.Fatal(err)
 	}

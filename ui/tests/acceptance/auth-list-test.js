@@ -1,25 +1,15 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 /* eslint qunit/no-conditional-assertions: "warn" */
-import {
-  click,
-  fillIn,
-  settled,
-  visit,
-  triggerEvent,
-  triggerKeyEvent,
-  find,
-  waitUntil,
-} from '@ember/test-helpers';
+import { click, fillIn, settled, visit, triggerKeyEvent, find, waitUntil } from '@ember/test-helpers';
 import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
 import { v4 as uuidv4 } from 'uuid';
 
 import authPage from 'vault/tests/pages/auth';
-import logout from 'vault/tests/pages/logout';
 import enablePage from 'vault/tests/pages/settings/auth/enable';
 import { supportedAuthBackends } from 'vault/helpers/supported-auth-backends';
 import { supportedManagedAuthBackends } from 'vault/helpers/supported-managed-auth-backends';
@@ -33,10 +23,6 @@ module('Acceptance | auth backend list', function (hooks) {
 
   hooks.beforeEach(function () {
     return authPage.login();
-  });
-
-  hooks.afterEach(function () {
-    return logout.visit();
   });
 
   test('userpass secret backend', async function (assert) {
@@ -80,17 +66,6 @@ module('Acceptance | auth backend list', function (hooks) {
     await triggerKeyEvent('[data-test-input="username"]', 'keyup', 65);
     await fillIn('[data-test-textarea]', user2);
     await triggerKeyEvent('[data-test-textarea]', 'keyup', 65);
-    // test for modified helpText on generated token policies
-    await click('[data-test-toggle-group="Tokens"]');
-    const policyFormField = document.querySelector('[data-test-input="tokenPolicies"]');
-    const tooltipTrigger = policyFormField.querySelector('[data-test-tool-tip-trigger]');
-    await triggerEvent(tooltipTrigger, 'mouseenter');
-    assert
-      .dom('[data-test-info-tooltip-content]')
-      .hasText(
-        'Add policies that will apply to the generated token for this user. One policy per row.',
-        'Overwritten tooltip text displays in token form field.'
-      );
 
     await click('[data-test-save-config="true"]');
 

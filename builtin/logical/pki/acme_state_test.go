@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package pki
 
 import (
@@ -10,6 +13,7 @@ func TestAcmeNonces(t *testing.T) {
 	t.Parallel()
 
 	a := NewACMEState()
+	a.nonces.Initialize()
 
 	// Simple operation should succeed.
 	nonce, _, err := a.GetNonce()

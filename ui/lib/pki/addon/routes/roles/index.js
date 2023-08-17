@@ -1,13 +1,13 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 import Route from '@ember/routing/route';
 import { inject as service } from '@ember/service';
-import { withConfig } from 'pki/decorators/check-config';
+import { withConfig } from 'pki/decorators/check-issuers';
 import { hash } from 'rsvp';
-
+import { getCliMessage } from 'pki/routes/overview';
 @withConfig()
 export default class PkiRolesIndexRoute extends Route {
   @service store;
@@ -31,5 +31,13 @@ export default class PkiRolesIndexRoute extends Route {
       roles: this.fetchRoles(),
       parentModel: this.modelFor('roles'),
     });
+  }
+
+  setupController(controller, resolvedModel) {
+    super.setupController(controller, resolvedModel);
+    const roles = resolvedModel.roles;
+
+    if (roles?.length) controller.notConfiguredMessage = getCliMessage('roles');
+    else controller.notConfiguredMessage = getCliMessage();
   }
 }

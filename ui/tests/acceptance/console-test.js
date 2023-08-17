@@ -1,10 +1,10 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 import { module, test } from 'qunit';
-import { settled, waitUntil } from '@ember/test-helpers';
+import { settled, waitUntil, click } from '@ember/test-helpers';
 import { create } from 'ember-cli-page-object';
 import { setupApplicationTest } from 'ember-qunit';
 import enginesPage from 'vault/tests/pages/secrets/backends';
@@ -58,7 +58,6 @@ module('Acceptance | console', function (hooks) {
       window.innerHeight,
       'fullscreen is the same height as the window'
     );
-    assert.strictEqual(consoleEle.offsetTop, 0, 'fullscreen is aligned to the top of window');
   });
 
   test('array output is correctly formatted', async function (assert) {
@@ -93,5 +92,19 @@ module('Acceptance | console', function (hooks) {
     // have to wrap in a later so that we can wait for the CSS transition to finish
     await waitUntil(() => consoleOut.innerText);
     assert.strictEqual(consoleOut.innerText.match(/^(true|false)$/g).length, 1);
+  });
+
+  test('it should open and close console panel', async function (assert) {
+    await click('[data-test-console-toggle]');
+    assert.dom('[data-test-console-panel]').hasClass('panel-open', 'Sidebar button opens console panel');
+    await click('[data-test-console-toggle]');
+    assert
+      .dom('[data-test-console-panel]')
+      .doesNotHaveClass('panel-open', 'Sidebar button closes console panel');
+    await click('[data-test-console-toggle]');
+    await click('[data-test-console-panel-close]');
+    assert
+      .dom('[data-test-console-panel]')
+      .doesNotHaveClass('panel-open', 'Console panel close button closes console panel');
   });
 });

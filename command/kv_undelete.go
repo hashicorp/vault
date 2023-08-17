@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 package command
 
@@ -150,7 +150,7 @@ func (c *KVUndeleteCommand) Run(args []string) int {
 		return 1
 	}
 
-	undeletePath := addPrefixToKVPath(partialPath, mountPath, "undelete")
+	undeletePath := addPrefixToKVPath(partialPath, mountPath, "undelete", false)
 	data := map[string]interface{}{
 		"versions": kvParseVersionsFlags(c.flagVersions),
 	}

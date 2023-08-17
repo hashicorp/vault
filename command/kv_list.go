@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 package command
 
@@ -136,7 +136,7 @@ func (c *KVListCommand) Run(args []string) int {
 	// Add /metadata to v2 paths only
 	var fullPath string
 	if v2 {
-		fullPath = addPrefixToKVPath(partialPath, mountPath, "metadata")
+		fullPath = addPrefixToKVPath(partialPath, mountPath, "metadata", false)
 	} else {
 		// v1
 		if mountFlagSyntax {

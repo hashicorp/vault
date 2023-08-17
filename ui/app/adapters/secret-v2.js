@@ -1,6 +1,6 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 /* eslint-disable */
@@ -22,7 +22,7 @@ export default ApplicationAdapter.extend({
   // concerns and we only want to send "list" to the server
   query(store, type, query) {
     let { backend, id } = query;
-    return this.ajax(this._url(backend, id), 'GET', { data: { list: true } }).then(resp => {
+    return this.ajax(this._url(backend, id), 'GET', { data: { list: true } }).then((resp) => {
       resp.id = id;
       resp.backend = backend;
       return resp;
@@ -36,7 +36,7 @@ export default ApplicationAdapter.extend({
 
   queryRecord(store, type, query) {
     let { backend, id } = query;
-    return this.ajax(this._url(backend, id), 'GET').then(resp => {
+    return this.ajax(this._url(backend, id), 'GET').then((resp) => {
       resp.id = id;
       resp.backend = backend;
       return resp;

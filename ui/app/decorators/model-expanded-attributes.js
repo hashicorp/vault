@@ -1,6 +1,6 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 import { expandAttributeMeta } from 'vault/utils/field-to-attrs';
@@ -73,7 +73,14 @@ export function withExpandedAttributes() {
             });
             const expanded = expandAttributeMeta(rModel, rAttrNames);
             expanded.forEach((attr) => {
-              byKey[`${name}.${attr.name}`] = attr;
+              byKey[`${name}.${attr.name}`] = {
+                ...attr,
+                options: {
+                  ...attr.options,
+                  // This ensures the correct path is updated in FormField
+                  fieldValue: `${name}.${attr.fieldValue || attr.name}`,
+                },
+              };
             });
           }, this);
           this._allByKey = byKey;

@@ -1,3 +1,8 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
 <PageHeader as |p|>
   <p.top>
     <KeyValueHeader @path="vault.cluster.secrets.backend.show" @mode={{this.mode}} @root={{@root}} @showCurrent={{true}} />
@@ -82,11 +87,14 @@
 {{#if (eq @mode "create")}}
 
   {{#if (eq @model.plugin_name "vault-plugin-database-oracle")}}
-    <AlertBanner @type="warning">
-      Please ensure that your Oracle plugin has the default name of
-      <b>vault-plugin-database-oracle</b>. Custom naming is not supported in the UI at this time. If the plugin is already
-      named vault-plugin-database-oracle, disregard this warning.
-    </AlertBanner>
+    <Hds::Alert @type="inline" @color="warning" class="has-bottom-margin-s" data-test-database-oracle-alert as |A|>
+      <A.Title>Warning</A.Title>
+      <A.Description>
+        Please ensure that your Oracle plugin has the default name of
+        <strong>vault-plugin-database-oracle</strong>. Custom naming is not supported in the UI at this time. If the plugin
+        is already named vault-plugin-database-oracle, disregard this warning.
+      </A.Description>
+    </Hds::Alert>
   {{/if}}
 
   <form {{on "submit" this.handleCreateConnection}} aria-label="create connection form">

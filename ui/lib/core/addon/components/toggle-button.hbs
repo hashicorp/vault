@@ -1,3 +1,8 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
 <button type="button" class="button is-transparent has-text-info" {{on "click" (fn @onClick (not @isOpen))}} ...attributes>
   {{#if @isOpen}}
     <Icon @name="chevron-up" />{{this.openLabel}}

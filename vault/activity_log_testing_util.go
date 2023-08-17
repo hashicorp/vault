@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 package vault
 
@@ -8,10 +8,8 @@ import (
 	"fmt"
 	"math/rand"
 	"testing"
-	"time"
 
 	"github.com/hashicorp/vault/helper/constants"
-
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/vault/activity"
 )
@@ -32,7 +30,7 @@ func (c *Core) InjectActivityLogDataThisMonth(t *testing.T) map[string]*activity
 			ClientID:      fmt.Sprintf("testclientid-%d", i),
 			NamespaceID:   "root",
 			MountAccessor: fmt.Sprintf("testmountaccessor-%d", i),
-			Timestamp:     time.Now().Unix(),
+			Timestamp:     c.activityLog.clock.Now().Unix(),
 			NonEntity:     i%2 == 0,
 		}
 		c.activityLog.partialMonthClientTracker[er.ClientID] = er
@@ -45,7 +43,7 @@ func (c *Core) InjectActivityLogDataThisMonth(t *testing.T) map[string]*activity
 					ClientID:      fmt.Sprintf("ns-%d-testclientid-%d", j, i),
 					NamespaceID:   fmt.Sprintf("ns-%d", j),
 					MountAccessor: fmt.Sprintf("ns-%d-testmountaccessor-%d", j, i),
-					Timestamp:     time.Now().Unix(),
+					Timestamp:     c.activityLog.clock.Now().Unix(),
 					NonEntity:     i%2 == 0,
 				}
 				c.activityLog.partialMonthClientTracker[er.ClientID] = er

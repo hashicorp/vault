@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 package rabbitmq
 
@@ -13,6 +13,8 @@ import (
 	"github.com/hashicorp/vault/sdk/logical"
 	rabbithole "github.com/michaelklishin/rabbit-hole/v2"
 )
+
+const operationPrefixRabbitMQ = "rabbit-mq"
 
 // Factory creates and configures the backend
 func Factory(ctx context.Context, conf *logical.BackendConfig) (logical.Backend, error) {

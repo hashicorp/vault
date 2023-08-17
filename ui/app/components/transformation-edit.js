@@ -1,6 +1,6 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 import TransformBase, { addToList, removeFromList } from './transform-edit-base';
@@ -82,7 +82,10 @@ export default TransformBase.extend({
           // eg. trying to update a role with empty array as transformations
           message = `You've edited the allowed_roles for this transformation. However, the corresponding edits to some roles' transformations were not made`;
         }
-        this.flashMessages.stickyInfo(message);
+        this.flashMessages.info(message, {
+          sticky: true,
+          priority: 300,
+        });
       }
     });
   },

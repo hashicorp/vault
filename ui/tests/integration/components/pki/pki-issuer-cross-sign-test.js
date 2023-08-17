@@ -1,6 +1,6 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 import { module, test } from 'qunit';
@@ -18,16 +18,8 @@ import {
   parentIssuerCert,
   unsupportedOids,
 } from 'vault/tests/helpers/pki/values';
+import { SELECTORS } from 'vault/tests/helpers/pki/pki-issuer-cross-sign';
 
-const SELECTORS = {
-  input: (key, row = 0) => `[data-test-object-list-input="${key}-${row}"]`,
-  addRow: '[data-test-object-list-add-button',
-  submitButton: '[data-test-cross-sign-submit]',
-  cancelButton: '[data-test-cross-sign-cancel]',
-  statusCount: '[data-test-cross-sign-status-count]',
-  signedIssuerRow: (row = 0) => `[data-test-info-table-row="${row}"]`,
-  signedIssuerCol: (attr) => `[data-test-info-table-column="${attr}"]`,
-};
 const FIELDS = [
   {
     label: 'Mount path',
@@ -190,7 +182,7 @@ module('Integration | Component | pki issuer cross sign', function (hooks) {
     });
     // fill out form and submit
     for (const field of FIELDS) {
-      await fillIn(SELECTORS.input(field.key), this.testInputs[field.key]);
+      await fillIn(SELECTORS.objectListInput(field.key), this.testInputs[field.key]);
     }
     await click(SELECTORS.submitButton);
 
@@ -248,15 +240,15 @@ module('Integration | Component | pki issuer cross sign', function (hooks) {
 
     // fill out form and submit
     for (const field of FIELDS) {
-      await fillIn(SELECTORS.input(field.key), this.testInputs[field.key]);
+      await fillIn(SELECTORS.objectListInput(field.key), this.testInputs[field.key]);
     }
     await click(SELECTORS.addRow);
     for (const field of FIELDS) {
-      await fillIn(SELECTORS.input(field.key, 1), nonexistentIssuer[field.key]);
+      await fillIn(SELECTORS.objectListInput(field.key, 1), nonexistentIssuer[field.key]);
     }
     await click(SELECTORS.addRow);
     for (const field of FIELDS) {
-      await fillIn(SELECTORS.input(field.key, 2), unsupportedCert[field.key]);
+      await fillIn(SELECTORS.objectListInput(field.key, 2), unsupportedCert[field.key]);
     }
     await click(SELECTORS.submitButton);
 
@@ -296,7 +288,7 @@ module('Integration | Component | pki issuer cross sign', function (hooks) {
 
     // fill out form and submit
     for (const field of FIELDS) {
-      await fillIn(SELECTORS.input(field.key), this.testInputs[field.key]);
+      await fillIn(SELECTORS.objectListInput(field.key), this.testInputs[field.key]);
     }
     await click(SELECTORS.submitButton);
 
@@ -305,9 +297,9 @@ module('Integration | Component | pki issuer cross sign', function (hooks) {
       .dom(`${SELECTORS.signedIssuerRow()} [data-test-icon="alert-circle-fill"]`)
       .exists('row has failure icon');
 
-    assert.dom('[data-test-alert-banner="alert"] .message-title').hasText('Cross-sign failed');
+    assert.dom('[data-test-cross-sign-alert-title]').hasText('Cross-sign failed');
     assert
-      .dom('[data-test-alert-banner="alert"] .alert-banner-message-body')
+      .dom('[data-test-cross-sign-alert-message]')
       .hasText('1 error occurred: * unable to find PKI issuer for reference: nonexistent-mount');
 
     for (const field of FIELDS) {
@@ -329,7 +321,7 @@ module('Integration | Component | pki issuer cross sign', function (hooks) {
     });
     // fill out form and submit
     for (const field of FIELDS) {
-      await fillIn(SELECTORS.input(field.key), this.testInputs[field.key]);
+      await fillIn(SELECTORS.objectListInput(field.key), this.testInputs[field.key]);
     }
     await click(SELECTORS.submitButton);
     assert.dom(SELECTORS.statusCount).hasText('Cross-signing complete (0 successful, 1 error)');
@@ -337,13 +329,48 @@ module('Integration | Component | pki issuer cross sign', function (hooks) {
       .dom(`${SELECTORS.signedIssuerRow()} [data-test-icon="alert-circle-fill"]`)
       .exists('row has failure icon');
     assert
-      .dom('[data-test-alert-banner="alert"] .message-title')
+      .dom('[data-test-cross-sign-alert-title]')
       .hasText('Certificate must be manually cross-signed using the CLI.');
     assert
-      .dom('[data-test-alert-banner="alert"] .alert-banner-message-body')
+      .dom('[data-test-cross-sign-alert-message]')
       .hasText(
         'certificate contains unsupported subject OIDs: 1.2.840.113549.1.9.1, certificate contains unsupported extension OIDs: 2.5.29.37'
       );
+
+    for (const field of FIELDS) {
+      assert
+        .dom(`${SELECTORS.signedIssuerCol(field.key)}`)
+        .hasText(this.testInputs[field.key], `${field.key} displays correct value`);
+    }
+  });
+
+  test('it returns an error when attempting to self-cross-sign', async function (assert) {
+    assert.expect(7);
+    this.testInputs = {
+      intermediateMount: this.backend,
+      intermediateIssuer: this.parentIssuerData.issuer_name,
+      newCrossSignedIssuer: this.newIssuerData.issuer_name,
+    };
+    this.server.get(`/${this.backend}/issuer/${this.parentIssuerData.issuer_name}`, () => {
+      return { data: this.parentIssuerData };
+    });
+
+    await render(hbs`<PkiIssuerCrossSign @parentIssuer={{this.parentIssuerModel}} /> `, {
+      owner: this.engine,
+    });
+    // fill out form and submit
+    for (const field of FIELDS) {
+      await fillIn(SELECTORS.objectListInput(field.key), this.testInputs[field.key]);
+    }
+    await click(SELECTORS.submitButton);
+    assert.dom(SELECTORS.statusCount).hasText('Cross-signing complete (0 successful, 1 error)');
+    assert
+      .dom(`${SELECTORS.signedIssuerRow()} [data-test-icon="alert-circle-fill"]`)
+      .exists('row has failure icon');
+    assert.dom('[data-test-cross-sign-alert-title]').hasText('Cross-sign failed');
+    assert
+      .dom('[data-test-cross-sign-alert-message]')
+      .hasText('Cross-signing a root issuer with itself must be performed manually using the CLI.');
 
     for (const field of FIELDS) {
       assert

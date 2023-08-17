@@ -4,7 +4,7 @@ page_title: Limits and Maximums
 description: Learn about the maximum number of objects within Vault.
 ---
 
-# Vault Limits and Maximums
+# Vault limits and maximums
 
 Vault imposes fixed upper limits on the size of certain fields and
 objects, and configurable limits on others. Vault also has upper
@@ -62,6 +62,12 @@ The number of mount points can be monitored by reading the
 [`sys/mounts`](/vault/api-docs/system/mounts) endpoints from the root namespace and
 similar sub-paths for namespaces respectively, like: `namespace1/sys/auth`,
 `namespace1/sys/mounts`, etc.
+
+Alternatively, use the
+[`vault.core.mount_table.num_entries`](/vault/docs/internals/telemetry/metrics/core-system#vault-core-mount_table-num_entries)
+and
+[`vault.core.mount_table.size`](/vault/docs/internals/telemetry/metrics/core-system#vault-core-mount_table-size)
+telemetry metrics to monitor the number of mount points and size of each mount table.
 
 ### Namespace limits
 

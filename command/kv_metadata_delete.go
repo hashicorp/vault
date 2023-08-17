@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 package command
 
@@ -138,7 +138,7 @@ func (c *KVMetadataDeleteCommand) Run(args []string) int {
 		return 1
 	}
 
-	fullPath := addPrefixToKVPath(partialPath, mountPath, "metadata")
+	fullPath := addPrefixToKVPath(partialPath, mountPath, "metadata", false)
 	if secret, err := client.Logical().Delete(fullPath); err != nil {
 		c.UI.Error(fmt.Sprintf("Error deleting %s: %s", fullPath, err))
 		if secret != nil {

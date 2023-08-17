@@ -1,6 +1,6 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 import { assign } from '@ember/polyfills';
@@ -42,7 +42,7 @@ export default ApplicationAdapter.extend({
       }
     } catch (error) {
       // no path means this was an error on listing
-      if (!query.path) {
+      if (!query.path || !mountModel) {
         throw error;
       }
       // control groups will throw a 403 permission denied error. If this happens return the mountModel

@@ -1,22 +1,19 @@
-<SecretListHeader
-  @model={{this.model.parentModel}}
-  @backendCrumb={{hash
-    label=this.model.parentModel.id
-    text=this.model.parentModel.id
-    path="vault.cluster.secrets.backend.list-root"
-    model=this.model.parentModel.id
-  }}
-  @isEngine={{true}}
-/>
-<Toolbar>
-  <ToolbarActions>
-    <ToolbarLink @type="add" @route="roles.create" data-test-pki-role-create-link>
-      Create role
-    </ToolbarLink>
-  </ToolbarActions>
-</Toolbar>
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
+<PkiPageHeader @backend={{this.model.parentModel}} />
 
 {{#if this.model.hasConfig}}
+  <Toolbar>
+    <ToolbarActions>
+      <ToolbarLink @type="add" @route="roles.create" data-test-pki-role-create-link>
+        Create role
+      </ToolbarLink>
+    </ToolbarActions>
+  </Toolbar>
+
   {{#if this.model.roles.length}}
     {{#each this.model.roles as |pkiRole|}}
       <LinkedBlock class="list-item-row" @params={{array "roles.role.details" pkiRole.id}} @linkPrefix={{this.mountPoint}}>
@@ -65,7 +62,8 @@
     </EmptyState>
   {{/if}}
 {{else}}
-  <EmptyState @title="PKI not configured" @message="This PKI mount hasn't yet been configured with a certificate issuer.">
+  <Toolbar />
+  <EmptyState @title="PKI not configured" @message={{this.notConfiguredMessage}}>
     <LinkTo @route="configuration.create">
       Configure PKI
     </LinkTo>

@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 package server
 
@@ -8,6 +8,8 @@ import (
 	"reflect"
 	"strings"
 	"testing"
+
+	"github.com/stretchr/testify/require"
 )
 
 func TestLoadConfigFile(t *testing.T) {
@@ -60,6 +62,12 @@ func TestParseSeals(t *testing.T) {
 
 func TestParseStorage(t *testing.T) {
 	testParseStorageTemplate(t)
+}
+
+// TestConfigWithAdministrativeNamespace tests that .hcl and .json configurations are correctly parsed when the administrative_namespace_path is present.
+func TestConfigWithAdministrativeNamespace(t *testing.T) {
+	testConfigWithAdministrativeNamespaceHcl(t)
+	testConfigWithAdministrativeNamespaceJson(t)
 }
 
 func TestUnknownFieldValidation(t *testing.T) {
@@ -183,6 +191,32 @@ func TestMerge(t *testing.T) {
 			if !reflect.DeepEqual(tc.expected, result) {
 				t.Fatalf("Expected %v but got %v", tc.expected, result)
 			}
+		})
+	}
+}
+
+// Test_parseDevTLSConfig verifies that both Windows and Unix directories are correctly escaped when creating a dev TLS
+// configuration in HCL
+func Test_parseDevTLSConfig(t *testing.T) {
+	tests := []struct {
+		name          string
+		certDirectory string
+	}{
+		{
+			name:          "windows path",
+			certDirectory: `C:\Users\ADMINI~1\AppData\Local\Temp\2\vault-tls4169358130`,
+		},
+		{
+			name:          "unix path",
+			certDirectory: "/tmp/vault-tls4169358130",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			cfg, err := parseDevTLSConfig("file", tt.certDirectory)
+			require.NoError(t, err)
+			require.Equal(t, fmt.Sprintf("%s/%s", tt.certDirectory, VaultDevCertFilename), cfg.Listeners[0].TLSCertFile)
+			require.Equal(t, fmt.Sprintf("%s/%s", tt.certDirectory, VaultDevKeyFilename), cfg.Listeners[0].TLSKeyFile)
 		})
 	}
 }

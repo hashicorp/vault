@@ -1,6 +1,6 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 import { module, test } from 'qunit';
@@ -69,7 +69,7 @@ module('Integration | Component | oidc/provider-form', function (hooks) {
 
     assert
       .dom('[data-test-oidc-provider-title]')
-      .hasText('Create provider', 'Form title renders correct text');
+      .hasText('Create Provider', 'Form title renders correct text');
     assert.dom(SELECTORS.providerSaveButton).hasText('Create', 'Save button has correct text');
     assert
       .dom('[data-test-input="issuer"]')
@@ -132,7 +132,7 @@ module('Integration | Component | oidc/provider-form', function (hooks) {
       />
     `);
 
-    assert.dom('[data-test-oidc-provider-title]').hasText('Edit provider', 'Title renders correct text');
+    assert.dom('[data-test-oidc-provider-title]').hasText('Edit Provider', 'Title renders correct text');
     assert.dom(SELECTORS.providerSaveButton).hasText('Update', 'Save button has correct text');
     assert.dom('[data-test-input="name"]').isDisabled('Name input is disabled when editing');
     assert
@@ -224,6 +224,6 @@ module('Integration | Component | oidc/provider-form', function (hooks) {
     assert
       .dom(SELECTORS.inlineAlert)
       .hasText('There was an error submitting this form.', 'form error alert renders ');
-    assert.dom('[data-test-alert-banner="alert"]').exists('alert banner renders');
+    assert.dom('[data-test-message-error]').exists('alert banner renders');
   });
 });

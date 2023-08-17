@@ -1,0 +1,74 @@
+# Copyright (c) HashiCorp, Inc.
+# SPDX-License-Identifier: BUSL-1.1
+
+---
+name: Set up Go with a shared module cache
+description: Set up Go with a shared module cache
+
+inputs:
+  github-token:
+    description: "An elevated Github token to access private modules if necessary"
+    type: string
+  no-restore:
+    description: "Whether or not to restore the Go module cache on a cache hit"
+    type: boolean
+    default: false
+
+outputs:
+  cache-key:
+    description: "The Go modules cache key"
+    value: ${{ steps.metadata.outputs.cache-key }}
+  cache-path:
+    description: "The GOMODCACHE path"
+    value: ${{ steps.metadata.outputs.cache-path }}
+  go-version:
+    description: "The version of Go in the .go-version file"
+    value: ${{ steps.go-version.outputs.go-version }}
+
+runs:
+  using: composite
+  steps:
+    - id: go-version
+      shell: bash
+      run: echo "go-version=$(cat ./.go-version)" >> "$GITHUB_OUTPUT"
+    - uses: actions/setup-go@fac708d6674e30b6ba41289acaab6d4b75aa0753 # v4.0.1
+      with:
+        go-version: ${{ steps.go-version.outputs.go-version }}
+        cache: false # We use our own caching strategy
+    - id: metadata
+      shell: bash
+      run: |
+        echo "cache-path=$(go env GOMODCACHE)" >> "$GITHUB_OUTPUT"
+        echo "cache-key=go-modules-${{ hashFiles('**/go.sum') }}" >> "$GITHUB_OUTPUT"
+    - id: cache-modules
+      uses: actions/cache@88522ab9f39a2ea568f7027eddc7d8d8bc9d59c8 # v3.3.1
+      with:
+        enableCrossOsArchive: true
+        lookup-only: ${{ inputs.no-restore }}
+        # We need to be very considerate of our caching strategy because Github only allows 10gb
+        # of caches per repository before it starts to evict older caches. This is usually fine
+        # if you only use the actions cache for cache, but we also use it for Go test time results.
+        # These results are used to balance our Go test groups, without which we could have
+        # painfully unbalanced Go test execution times. We have to ensure current caches for all
+        # active release branches and main do not exceed 10gb. Ideally we'd cache Go modules
+        # and Go build cache on a per version/platform/architecture/tag/module basis, but that
+        # would result in several hungred gb over all of our build workflows and release branches.
+        # Instead, we've chosen a middle ground approach where were share Go modules between build
+        # workflows but lose the Go build cache.
+        # We intentionally do not use partial restore keys. If we get dont get an exact cache hit
+        # we only want to download the latest modules, not append them to a prior cache. This
+        # keeps cache upload time, download time, and storage size to a minimum.
+        path: ${{ steps.metadata.outputs.cache-path }}
+        key: ${{ steps.metadata.outputs.cache-key }}
+    - if: steps.cache-modules.outputs.cache-hit != 'true'
+      name: Download go modules
+      shell: bash
+      run: |
+        git config --global url."https://${{ inputs.github-token }}@github.com".insteadOf https://github.com
+        for mod in $(find . -type f -name go.mod); do
+          pushd "$(dirname $mod)"
+            go list ./...
+            go list -test ./...
+            go mod download
+          popd
+        done

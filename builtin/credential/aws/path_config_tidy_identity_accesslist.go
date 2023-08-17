@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 package awsauth
 
@@ -18,6 +18,11 @@ const (
 func (b *backend) pathConfigTidyIdentityAccessList() *framework.Path {
 	return &framework.Path{
 		Pattern: fmt.Sprintf("%s$", "config/tidy/identity-accesslist"),
+
+		DisplayAttrs: &framework.DisplayAttributes{
+			OperationPrefix: operationPrefixAWS,
+		},
+
 		Fields: map[string]*framework.FieldSchema{
 			"safety_buffer": {
 				Type:    framework.TypeDurationSecond,
@@ -37,15 +42,29 @@ expiration, before it is removed from the backend storage.`,
 		Operations: map[logical.Operation]framework.OperationHandler{
 			logical.CreateOperation: &framework.PathOperation{
 				Callback: b.pathConfigTidyIdentityAccessListCreateUpdate,
+				DisplayAttrs: &framework.DisplayAttributes{
+					OperationVerb:   "configure",
+					OperationSuffix: "identity-access-list-tidy-operation",
+				},
 			},
 			logical.UpdateOperation: &framework.PathOperation{
 				Callback: b.pathConfigTidyIdentityAccessListCreateUpdate,
+				DisplayAttrs: &framework.DisplayAttributes{
+					OperationVerb:   "configure",
+					OperationSuffix: "identity-access-list-tidy-operation",
+				},
 			},
 			logical.ReadOperation: &framework.PathOperation{
 				Callback: b.pathConfigTidyIdentityAccessListRead,
+				DisplayAttrs: &framework.DisplayAttributes{
+					OperationSuffix: "identity-access-list-tidy-settings",
+				},
 			},
 			logical.DeleteOperation: &framework.PathOperation{
 				Callback: b.pathConfigTidyIdentityAccessListDelete,
+				DisplayAttrs: &framework.DisplayAttributes{
+					OperationSuffix: "identity-access-list-tidy-settings",
+				},
 			},
 		},
 

@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 package okta
 
@@ -18,8 +18,9 @@ import (
 )
 
 const (
-	mfaPushMethod = "push"
-	mfaTOTPMethod = "token:software:totp"
+	operationPrefixOkta = "okta"
+	mfaPushMethod       = "push"
+	mfaTOTPMethod       = "token:software:totp"
 )
 
 func Factory(ctx context.Context, conf *logical.BackendConfig) (logical.Backend, error) {

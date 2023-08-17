@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 package pki
 
@@ -28,7 +28,7 @@ var pathFetchReadSchema = map[int][]framework.Response{
 				Required:    false,
 			},
 			"revocation_time": {
-				Type:        framework.TypeString,
+				Type:        framework.TypeInt64,
 				Description: `Revocation time`,
 				Required:    false,
 			},
@@ -43,7 +43,7 @@ var pathFetchReadSchema = map[int][]framework.Response{
 				Required:    false,
 			},
 			"ca_chain": {
-				Type:        framework.TypeStringSlice,
+				Type:        framework.TypeString,
 				Description: `Issuing CA Chain`,
 				Required:    false,
 			},
@@ -55,6 +55,11 @@ var pathFetchReadSchema = map[int][]framework.Response{
 func pathFetchCA(b *backend) *framework.Path {
 	return &framework.Path{
 		Pattern: `ca(/pem)?`,
+
+		DisplayAttrs: &framework.DisplayAttributes{
+			OperationPrefix: operationPrefixPKI,
+			OperationSuffix: "ca-der|ca-pem",
+		},
 
 		Operations: map[logical.Operation]framework.OperationHandler{
 			logical.ReadOperation: &framework.PathOperation{
@@ -73,6 +78,11 @@ func pathFetchCAChain(b *backend) *framework.Path {
 	return &framework.Path{
 		Pattern: `(cert/)?ca_chain`,
 
+		DisplayAttrs: &framework.DisplayAttributes{
+			OperationPrefix: operationPrefixPKI,
+			OperationSuffix: "ca-chain-pem|cert-ca-chain",
+		},
+
 		Operations: map[logical.Operation]framework.OperationHandler{
 			logical.ReadOperation: &framework.PathOperation{
 				Callback:  b.pathFetchRead,
@@ -89,6 +99,11 @@ func pathFetchCAChain(b *backend) *framework.Path {
 func pathFetchCRL(b *backend) *framework.Path {
 	return &framework.Path{
 		Pattern: `crl(/pem|/delta(/pem)?)?`,
+
+		DisplayAttrs: &framework.DisplayAttributes{
+			OperationPrefix: operationPrefixPKI,
+			OperationSuffix: "crl-der|crl-pem|crl-delta|crl-delta-pem",
+		},
 
 		Operations: map[logical.Operation]framework.OperationHandler{
 			logical.ReadOperation: &framework.PathOperation{
@@ -107,6 +122,11 @@ func pathFetchUnifiedCRL(b *backend) *framework.Path {
 	return &framework.Path{
 		Pattern: `unified-crl(/pem|/delta(/pem)?)?`,
 
+		DisplayAttrs: &framework.DisplayAttributes{
+			OperationPrefix: operationPrefixPKI,
+			OperationSuffix: "unified-crl-der|unified-crl-pem|unified-crl-delta|unified-crl-delta-pem",
+		},
+
 		Operations: map[logical.Operation]framework.OperationHandler{
 			logical.ReadOperation: &framework.PathOperation{
 				Callback: b.pathFetchRead,
@@ -122,6 +142,12 @@ func pathFetchUnifiedCRL(b *backend) *framework.Path {
 func pathFetchValidRaw(b *backend) *framework.Path {
 	return &framework.Path{
 		Pattern: `cert/(?P<serial>[0-9A-Fa-f-:]+)/raw(/pem)?`,
+
+		DisplayAttrs: &framework.DisplayAttributes{
+			OperationPrefix: operationPrefixPKI,
+			OperationSuffix: "cert-raw-der|cert-raw-pem",
+		},
+
 		Fields: map[string]*framework.FieldSchema{
 			"serial": {
 				Type: framework.TypeString,
@@ -147,6 +173,12 @@ hyphen-separated octal`,
 func pathFetchValid(b *backend) *framework.Path {
 	return &framework.Path{
 		Pattern: `cert/(?P<serial>[0-9A-Fa-f-:]+)`,
+
+		DisplayAttrs: &framework.DisplayAttributes{
+			OperationPrefix: operationPrefixPKI,
+			OperationSuffix: "cert",
+		},
+
 		Fields: map[string]*framework.FieldSchema{
 			"serial": {
 				Type: framework.TypeString,
@@ -177,6 +209,11 @@ func pathFetchCRLViaCertPath(b *backend) *framework.Path {
 	return &framework.Path{
 		Pattern: pattern,
 
+		DisplayAttrs: &framework.DisplayAttributes{
+			OperationPrefix: operationPrefixPKI,
+			OperationSuffix: "cert-crl|cert-delta-crl|cert-unified-crl|cert-unified-delta-crl",
+		},
+
 		Operations: map[logical.Operation]framework.OperationHandler{
 			logical.ReadOperation: &framework.PathOperation{
 				Callback:  b.pathFetchRead,
@@ -194,21 +231,14 @@ func pathFetchListCerts(b *backend) *framework.Path {
 	return &framework.Path{
 		Pattern: "certs/?$",
 
+		DisplayAttrs: &framework.DisplayAttributes{
+			OperationPrefix: operationPrefixPKI,
+			OperationSuffix: "certs",
+		},
+
 		Operations: map[logical.Operation]framework.OperationHandler{
 			logical.ListOperation: &framework.PathOperation{
 				Callback: b.pathFetchCertList,
-				Responses: map[int][]framework.Response{
-					http.StatusOK: {{
-						Description: "OK",
-						Fields: map[string]*framework.FieldSchema{
-							"keys": {
-								Type:        framework.TypeStringSlice,
-								Description: `A list of keys`,
-								Required:    true,
-							},
-						},
-					}},
-				},
 			},
 		},
 

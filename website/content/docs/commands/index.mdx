@@ -8,7 +8,7 @@ description: |-
   maps directly to the HTTP API internally.
 ---
 
-# Vault Commands (CLI)
+# Vault commands (CLI)
 
 ~> **Note:** The Vault command-line interface (CLI) changed substantially in
 0.9.2+ and may cause confusion while using older versions of Vault with this
@@ -21,7 +21,7 @@ interface (CLI) that wraps common functionality and formats output. The Vault
 CLI is a single static binary. It is a thin wrapper around the HTTP API. Every
 CLI command maps directly to the HTTP API internally.
 
-## CLI Command Structure
+## CLI command structure
 
 Each command is represented as a command or subcommand, and there are a number
 of command and subcommand options available: HTTP options, output options, and
@@ -74,7 +74,7 @@ The four most common operations in Vault are [read](/vault/docs/commands/read),
 paths will contain secrets while other paths may contain configuration. Whatever it
 is, the primary interface for reading and writing data to Vault is similar.
 
-### Print cURL Command
+### Print cURL command
 
 To see the equivalent API call to perform the same operation, use the
 `-output-curl-string` flag after the subcommand.
@@ -85,7 +85,7 @@ $ vault write -output-curl-string  auth/userpass/users/bob password="long-passwo
 curl -X PUT -H "X-Vault-Request: true" -H "X-Vault-Token: $(vault print token)" -d '{"password":"long-password"}' http://127.0.0.1:8200/v1/auth/userpass/users/bob
 ```
 
-#### Print Policy Requirements
+#### Print policy requirements
 
 To view the policy requirements to perform an operation, use the `-output-policy` flag after the subcommand.
 
@@ -97,12 +97,12 @@ path "kv/data/secret" {
 }
 ```
 
-## Command Help
+## Command help
 
 There are two primary ways to get help in Vault: [CLI help (`help`)](#cli-help)
 and [API help (`path-help`)](#api-help).
 
-### CLI Help
+### CLI help
 
 Use `help` (or `-h` for shorthand) to see the CLI help output which corresponds
 to your Vault version.
@@ -121,7 +121,7 @@ $ vault kv help
 
 The help output displays available subcommands, parameters, and command flags.
 
-### API Help
+### API help
 
 To invoke the Vault API paths, you can use the [read](/vault/docs/commands/read) (for
 HTTP GET), [write](/vault/docs/commands/write) (for HTTP PUT or POST),
@@ -170,7 +170,7 @@ This path responds to the following HTTP methods.
 The help output displays supported child-paths and available parameters if there
 are any.
 
-## Command Input
+## Command input
 
 To write data to Vault, the input can be a part of the command in key-value
 format.
@@ -225,7 +225,7 @@ instead of `$ vault kv get secret/password`. The mount flag syntax was created t
 their full path (used in policies and raw API calls) actually contains a nested `/data/` element (e.g. `secret/data/password`) which can be easily overlooked when using
 the above KV v1-like syntax `secret/password`. To avoid this confusion, all KV-specific docs pages will use the `-mount` flag.
 
-## Exit Codes
+## Exit codes
 
 The Vault CLI aims to be consistent and well-behaved unless documented
 otherwise.
@@ -258,7 +258,7 @@ list of available completions. Type `-<tab>` to show available flag completions.
 If the `VAULT_*` environment variables are set, the autocompletion will
 automatically query the Vault server and return helpful argument suggestions.
 
-## Token Helper
+## Token helper
 
 By default, the Vault CLI uses a "token helper" to cache the token after
 authentication. This is conceptually similar to how a website securely stores
@@ -268,7 +268,7 @@ customizable, and you can even build your own.
 The default token helper stores the token in `~/.vault-token`. You can delete
 this file at any time to "logout" of Vault.
 
-## Environment Variables
+## Environment variables
 
 The CLI reads the following environment variables to set behavioral defaults.
 This can alleviate the need to repetitively type a flag. Flags always take

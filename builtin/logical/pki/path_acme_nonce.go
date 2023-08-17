@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package pki
 
 import (
@@ -8,25 +11,11 @@ import (
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
-func pathAcmeRootNonce(b *backend) *framework.Path {
-	return patternAcmeNonce(b, "acme/new-nonce")
+func pathAcmeNonce(b *backend, baseUrl string, opts acmeWrapperOpts) *framework.Path {
+	return patternAcmeNonce(b, baseUrl+"/new-nonce", opts)
 }
 
-func pathAcmeRoleNonce(b *backend) *framework.Path {
-	return patternAcmeNonce(b, "roles/"+framework.GenericNameRegex("role")+"/acme/new-nonce")
-}
-
-func pathAcmeIssuerNonce(b *backend) *framework.Path {
-	return patternAcmeNonce(b, "issuer/"+framework.GenericNameRegex(issuerRefParam)+"/acme/new-nonce")
-}
-
-func pathAcmeIssuerAndRoleNonce(b *backend) *framework.Path {
-	return patternAcmeNonce(b,
-		"issuer/"+framework.GenericNameRegex(issuerRefParam)+
-			"/roles/"+framework.GenericNameRegex("role")+"/acme/new-nonce")
-}
-
-func patternAcmeNonce(b *backend, pattern string) *framework.Path {
+func patternAcmeNonce(b *backend, pattern string, opts acmeWrapperOpts) *framework.Path {
 	fields := map[string]*framework.FieldSchema{}
 	addFieldsForACMEPath(fields, pattern)
 
@@ -35,23 +24,23 @@ func patternAcmeNonce(b *backend, pattern string) *framework.Path {
 		Fields:  fields,
 		Operations: map[logical.Operation]framework.OperationHandler{
 			logical.HeaderOperation: &framework.PathOperation{
-				Callback:                    b.acmeWrapper(b.acmeNonceHandler),
+				Callback:                    b.acmeWrapper(opts, b.acmeNonceHandler),
 				ForwardPerformanceSecondary: false,
 				ForwardPerformanceStandby:   true,
 			},
 			logical.ReadOperation: &framework.PathOperation{
-				Callback:                    b.acmeWrapper(b.acmeNonceHandler),
+				Callback:                    b.acmeWrapper(opts, b.acmeNonceHandler),
 				ForwardPerformanceSecondary: false,
 				ForwardPerformanceStandby:   true,
 			},
 		},
 
-		HelpSynopsis:    pathAcmeDirectoryHelpSync,
-		HelpDescription: pathAcmeDirectoryHelpDesc,
+		HelpSynopsis:    pathAcmeHelpSync,
+		HelpDescription: pathAcmeHelpDesc,
 	}
 }
 
-func (b *backend) acmeNonceHandler(ctx acmeContext, r *logical.Request, _ *framework.FieldData) (*logical.Response, error) {
+func (b *backend) acmeNonceHandler(ctx *acmeContext, r *logical.Request, _ *framework.FieldData) (*logical.Response, error) {
 	nonce, _, err := b.acmeState.GetNonce()
 	if err != nil {
 		return nil, err
@@ -71,11 +60,14 @@ func (b *backend) acmeNonceHandler(ctx acmeContext, r *logical.Request, _ *frame
 		},
 		Data: map[string]interface{}{
 			logical.HTTPStatusCode: httpStatus,
+			// Get around Vault limitation of requiring a body set if the status is not http.StatusNoContent
+			// for our HEAD request responses.
+			logical.HTTPContentType: "",
 		},
 	}, nil
 }
 
-func genAcmeLinkHeader(ctx acmeContext) []string {
-	path := fmt.Sprintf("<%s>;rel=\"index\"", ctx.baseUrl.JoinPath("/acme/directory").String())
+func genAcmeLinkHeader(ctx *acmeContext) []string {
+	path := fmt.Sprintf("<%s>;rel=\"index\"", ctx.baseUrl.JoinPath("directory").String())
 	return []string{path}
 }

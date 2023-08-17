@@ -1,5 +1,5 @@
 # Copyright (c) HashiCorp, Inc.
-# SPDX-License-Identifier: MPL-2.0
+# SPDX-License-Identifier: BUSL-1.1
 
 terraform {
   required_providers {
@@ -50,9 +50,6 @@ variable "distro" {
 variable "edition" {
   default = null
 }
-variable "instance_type" {
-  default = null
-}
 variable "revision" {
   default = null
 }
@@ -61,7 +58,7 @@ variable "product_version" {
 }
 
 resource "enos_local_exec" "build" {
-  scripts = ["${path.module}/scripts/build.sh"]
+  scripts = [abspath("${path.module}/scripts/build.sh")]
 
   environment = {
     BUNDLE_PATH = var.bundle_path,

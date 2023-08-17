@@ -1,29 +1,26 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
 {{! Show results if model has an ID, which is only generated after save }}
 {{#if @model.id}}
-  <Toolbar />
-  {{#if @model.privateKey}}
-    <div class="has-top-margin-m">
-      <AlertBanner
-        @title="Next steps"
-        @type="warning"
-        @message="The private_key is only available once. Make sure you copy and save it now."
-      />
-    </div>
-  {{/if}}
   <main class="box is-fullwidth is-sideless is-paddingless is-marginless">
     {{#each this.returnedFields as |field|}}
       {{#let (find-by "name" field @model.allFields) as |attr|}}
         {{#if attr.options.detailLinkTo}}
           <InfoTableRow
             @label={{capitalize (or attr.options.detailsLabel attr.options.label (humanize (dasherize attr.name)))}}
+            @value={{get @model attr.name}}
+            @addCopyButton={{or (eq attr.name "issuerId") (eq attr.name "keyId")}}
           >
             <LinkTo @route={{attr.options.detailLinkTo}} @model={{get @model attr.name}}>{{get @model attr.name}}</LinkTo>
           </InfoTableRow>
-        {{else if attr.options.masked}}
+        {{else if attr.options.isCertificate}}
           <InfoTableRow
             @label={{capitalize (or attr.options.detailsLabel attr.options.label (humanize (dasherize attr.name)))}}
           >
-            <MaskedInput @value={{get @model attr.name}} @displayOnly={{true}} @allowCopy={{true}} />
+            <CertificateCard @data={{get @model attr.name}} />
           </InfoTableRow>
         {{else}}
           <InfoTableRow
@@ -35,7 +32,7 @@
     {{/each}}
     <InfoTableRow @label="Private key">
       {{#if @model.privateKey}}
-        <MaskedInput @value={{@model.privateKey}} @displayOnly={{true}} @allowCopy={{true}} />
+        <CertificateCard @data={{@model.privateKey}} />
       {{else}}
         <span class="tag">internal</span>
       {{/if}}
@@ -43,6 +40,7 @@
     <InfoTableRow @label="Private key type" @value={{@model.privateKeyType}}>
       <span class="{{unless @model.privateKeyType 'tag'}}">{{or @model.privateKeyType "internal"}}</span>
     </InfoTableRow>
+    <ParsedCertificateInfoRows @model={{@model.parsedCertificate}} />
   </main>
   <footer>
     <div class="field is-grouped is-fullwidth has-top-margin-l">
@@ -70,7 +68,7 @@
       {{/let}}
     {{/each}}
 
-    <PkiGenerateToggleGroups @model={{@model}} />
+    <PkiGenerateToggleGroups @model={{@model}} @modelValidations={{this.modelValidations}} />
 
     {{#if @urls}}
       <fieldset class="box is-shadowless is-marginless is-borderless is-fullwidth" data-test-urls-section>
@@ -82,7 +80,7 @@
         </h2>
         {{#if @urls.canSet}}
           {{#each @urls.allFields as |attr|}}
-            {{#if (not (eq attr.name "mountPath"))}}
+            {{#if (not-eq attr.name "mountPath")}}
               <FormField
                 @attr={{attr}}
                 @mode="create"

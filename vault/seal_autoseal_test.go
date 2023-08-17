@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 package vault
 
@@ -69,12 +69,12 @@ func (p *phy) Len() int {
 
 func TestAutoSeal_UpgradeKeys(t *testing.T) {
 	core, _, _ := TestCoreUnsealed(t)
-	testSeal := seal.NewTestSeal(nil)
+	testSeal, toggleableWrapper := seal.NewTestSeal(nil)
 
 	var encKeys []string
 	changeKey := func(key string) {
 		encKeys = append(encKeys, key)
-		testSeal.Wrapper.(*wrapping.TestWrapper).SetKeyId(key)
+		toggleableWrapper.Wrapper.(*wrapping.TestWrapper).SetKeyId(key)
 	}
 
 	// Set initial encryption key.

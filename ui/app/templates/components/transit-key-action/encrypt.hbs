@@ -1,3 +1,8 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
 <form
   onsubmit={{action
     @doSubmit
@@ -6,7 +11,7 @@
 >
   <div class="box is-sideless is-fullwidth is-marginless">
     <NamespaceReminder @mode="perform" @noun="encryption" />
-    <div class="content">
+    <div class="content has-bottom-margin-l">
       <p>You can encrypt plaintext data using <code>{{@key.name}}</code> as the encryption key.</p>
     </div>
     <KeyVersionSelect @key={{@key}} @onVersionChange={{action (mut @key_version)}} @key_version={{@key_version}} />

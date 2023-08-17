@@ -24,9 +24,11 @@
         }
       ],
       "get": {
-        "operationId": "getLookupId",
+        "operationId": "kv-read-lookup-id",
         "summary": "Synopsis",
-        "tags": ["secrets"],
+        "tags": [
+          "secrets"
+        ],
         "responses": {
           "200": {
             "description": "OK"
@@ -34,15 +36,17 @@
         }
       },
       "post": {
-        "operationId": "postLookupId",
+        "operationId": "kv-write-lookup-id",
         "summary": "Synopsis",
-        "tags": ["secrets"],
+        "tags": [
+          "secrets"
+        ],
         "requestBody": {
           "required": true,
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/KvLookupRequest"
+                "$ref": "#/components/schemas/KvWriteLookupIdRequest"
               }
             }
           }
@@ -57,7 +61,7 @@
   },
   "components": {
     "schemas": {
-      "KvLookupRequest": {
+      "KvWriteLookupIdRequest": {
         "type": "object",
         "properties": {
           "token": {
@@ -69,4 +73,3 @@
     }
   }
 }
-

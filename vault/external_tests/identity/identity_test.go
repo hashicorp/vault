@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 package identity
 
@@ -7,38 +7,21 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/hashicorp/go-secure-stdlib/strutil"
-	"github.com/hashicorp/vault/api"
-	"github.com/hashicorp/vault/sdk/helper/ldaputil"
-	"github.com/hashicorp/vault/sdk/logical"
-
-	"github.com/stretchr/testify/require"
-
-	"github.com/hashicorp/vault/helper/testhelpers/teststorage"
-
 	"github.com/go-ldap/ldap/v3"
 	log "github.com/hashicorp/go-hclog"
-	ldapcred "github.com/hashicorp/vault/builtin/credential/ldap"
+	"github.com/hashicorp/go-secure-stdlib/strutil"
+	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/helper/namespace"
 	ldaphelper "github.com/hashicorp/vault/helper/testhelpers/ldap"
-	vaulthttp "github.com/hashicorp/vault/http"
-	"github.com/hashicorp/vault/vault"
+	"github.com/hashicorp/vault/helper/testhelpers/minimal"
+	"github.com/hashicorp/vault/sdk/helper/ldaputil"
+	"github.com/stretchr/testify/require"
 )
 
 func TestIdentityStore_ExternalGroupMemberships_DifferentMounts(t *testing.T) {
-	coreConfig := &vault.CoreConfig{
-		CredentialBackends: map[string]logical.Factory{
-			"ldap": ldapcred.Factory,
-		},
-	}
-	conf, opts := teststorage.ClusterSetup(coreConfig, nil, nil)
-	cluster := vault.NewTestCluster(t, conf, opts)
-	cluster.Start()
-	defer cluster.Cleanup()
-
-	core := cluster.Cores[0].Core
+	t.Parallel()
+	cluster := minimal.NewTestSoloCluster(t, nil)
 	client := cluster.Cores[0].Client
-	vault.TestWaitActive(t, core)
 
 	// Create a entity
 	secret, err := client.Logical().Write("identity/entity", map[string]interface{}{
@@ -146,31 +129,10 @@ func TestIdentityStore_ExternalGroupMemberships_DifferentMounts(t *testing.T) {
 
 func TestIdentityStore_Integ_GroupAliases(t *testing.T) {
 	t.Parallel()
+	cluster := minimal.NewTestSoloCluster(t, nil)
+	client := cluster.Cores[0].Client
 
-	var err error
-	coreConfig := &vault.CoreConfig{
-		DisableMlock: true,
-		DisableCache: true,
-		Logger:       log.NewNullLogger(),
-		CredentialBackends: map[string]logical.Factory{
-			"ldap": ldapcred.Factory,
-		},
-	}
-
-	cluster := vault.NewTestCluster(t, coreConfig, &vault.TestClusterOptions{
-		HandlerFunc: vaulthttp.Handler,
-	})
-
-	cluster.Start()
-	defer cluster.Cleanup()
-
-	cores := cluster.Cores
-
-	vault.TestWaitActive(t, cores[0].Core)
-
-	client := cores[0].Client
-
-	err = client.Sys().EnableAuthWithOptions("ldap", &api.EnableAuthOptions{
+	err := client.Sys().EnableAuthWithOptions("ldap", &api.EnableAuthOptions{
 		Type: "ldap",
 	})
 	if err != nil {
@@ -342,7 +304,7 @@ func TestIdentityStore_Integ_GroupAliases(t *testing.T) {
 	assertMember(t, client, entityID, "devops", devopsGroupID, true)
 	assertMember(t, client, entityID, "engineer", devopsGroupID, true)
 
-	identityStore := cores[0].IdentityStore()
+	identityStore := cluster.Cores[0].IdentityStore()
 
 	group, err := identityStore.MemDBGroupByID(shipCrewGroupID, true)
 	if err != nil {
@@ -446,27 +408,10 @@ func TestIdentityStore_Integ_GroupAliases(t *testing.T) {
 
 func TestIdentityStore_Integ_RemoveFromExternalGroup(t *testing.T) {
 	t.Parallel()
-	var err error
-	coreConfig := &vault.CoreConfig{
-		DisableMlock: true,
-		DisableCache: true,
-		Logger:       log.NewNullLogger(),
-		CredentialBackends: map[string]logical.Factory{
-			"ldap": ldapcred.Factory,
-		},
-	}
+	cluster := minimal.NewTestSoloCluster(t, nil)
+	client := cluster.Cores[0].Client
 
-	cluster := vault.NewTestCluster(t, coreConfig, &vault.TestClusterOptions{
-		HandlerFunc: vaulthttp.Handler,
-	})
-
-	cluster.Start()
-	defer cluster.Cleanup()
-
-	cores := cluster.Cores
-	client := cores[0].Client
-
-	err = client.Sys().EnableAuthWithOptions("ldap", &api.EnableAuthOptions{
+	err := client.Sys().EnableAuthWithOptions("ldap", &api.EnableAuthOptions{
 		Type: "ldap",
 	})
 	if err != nil {

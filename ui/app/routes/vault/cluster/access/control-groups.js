@@ -1,6 +1,6 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 import { inject as service } from '@ember/service';
@@ -18,6 +18,6 @@ export default Route.extend(UnloadModel, {
   },
 
   model() {
-    return this.version.hasFeature('Control Groups') ? this.store.createRecord('control-group') : null;
+    return this.version.hasControlGroups ? this.store.createRecord('control-group') : null;
   },
 });

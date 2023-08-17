@@ -1,19 +1,19 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 import Model from '@ember-data/model';
-import { FormField, ModelValidations } from 'vault/app-types';
+import { FormField, ModelValidations, StringMap } from 'vault/app-types';
 import CapabilitiesModel from '../capabilities';
 
 export default class PkiActionModel extends Model {
   secretMountPath: unknown;
   actionType: string | null;
   pemBundle: string;
-  importedIssuers: unknown;
-  importedKeys: unknown;
-  mapping: unknown;
+  importedIssuers: string[];
+  importedKeys: string[];
+  mapping: StringMap;
   type: string;
   issuerName: string;
   keyName: string;

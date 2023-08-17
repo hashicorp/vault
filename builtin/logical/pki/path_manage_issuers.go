@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 package pki
 
@@ -19,16 +19,33 @@ import (
 )
 
 func pathIssuerGenerateRoot(b *backend) *framework.Path {
-	return buildPathGenerateRoot(b, "issuers/generate/root/"+framework.GenericNameRegex("exported"))
+	pattern := "issuers/generate/root/" + framework.GenericNameRegex("exported")
+
+	displayAttrs := &framework.DisplayAttributes{
+		OperationPrefix: operationPrefixPKIIssuers,
+		OperationVerb:   "generate",
+		OperationSuffix: "root",
+	}
+
+	return buildPathGenerateRoot(b, pattern, displayAttrs)
 }
 
 func pathRotateRoot(b *backend) *framework.Path {
-	return buildPathGenerateRoot(b, "root/rotate/"+framework.GenericNameRegex("exported"))
+	pattern := "root/rotate/" + framework.GenericNameRegex("exported")
+
+	displayAttrs := &framework.DisplayAttributes{
+		OperationPrefix: operationPrefixPKI,
+		OperationVerb:   "rotate",
+		OperationSuffix: "root",
+	}
+
+	return buildPathGenerateRoot(b, pattern, displayAttrs)
 }
 
-func buildPathGenerateRoot(b *backend, pattern string) *framework.Path {
+func buildPathGenerateRoot(b *backend, pattern string, displayAttrs *framework.DisplayAttributes) *framework.Path {
 	ret := &framework.Path{
-		Pattern: pattern,
+		Pattern:      pattern,
+		DisplayAttrs: displayAttrs,
 
 		Operations: map[logical.Operation]framework.OperationHandler{
 			logical.UpdateOperation: &framework.PathOperation{
@@ -38,8 +55,8 @@ func buildPathGenerateRoot(b *backend, pattern string) *framework.Path {
 						Description: "OK",
 						Fields: map[string]*framework.FieldSchema{
 							"expiration": {
-								Type:        framework.TypeString,
-								Description: `The expiration of the given.`,
+								Type:        framework.TypeInt64,
+								Description: `The expiration of the given issuer.`,
 								Required:    true,
 							},
 							"serial_number": {
@@ -102,17 +119,33 @@ func buildPathGenerateRoot(b *backend, pattern string) *framework.Path {
 }
 
 func pathIssuerGenerateIntermediate(b *backend) *framework.Path {
-	return buildPathGenerateIntermediate(b,
-		"issuers/generate/intermediate/"+framework.GenericNameRegex("exported"))
+	pattern := "issuers/generate/intermediate/" + framework.GenericNameRegex("exported")
+
+	displayAttrs := &framework.DisplayAttributes{
+		OperationPrefix: operationPrefixPKIIssuers,
+		OperationVerb:   "generate",
+		OperationSuffix: "intermediate",
+	}
+
+	return buildPathGenerateIntermediate(b, pattern, displayAttrs)
 }
 
 func pathCrossSignIntermediate(b *backend) *framework.Path {
-	return buildPathGenerateIntermediate(b, "intermediate/cross-sign")
+	pattern := "intermediate/cross-sign"
+
+	displayAttrs := &framework.DisplayAttributes{
+		OperationPrefix: operationPrefixPKI,
+		OperationVerb:   "cross-sign",
+		OperationSuffix: "intermediate",
+	}
+
+	return buildPathGenerateIntermediate(b, pattern, displayAttrs)
 }
 
-func buildPathGenerateIntermediate(b *backend, pattern string) *framework.Path {
+func buildPathGenerateIntermediate(b *backend, pattern string, displayAttrs *framework.DisplayAttributes) *framework.Path {
 	ret := &framework.Path{
-		Pattern: pattern,
+		Pattern:      pattern,
+		DisplayAttrs: displayAttrs,
 		Operations: map[logical.Operation]framework.OperationHandler{
 			logical.UpdateOperation: &framework.PathOperation{
 				Callback: b.pathGenerateIntermediate,
@@ -173,6 +206,13 @@ with Active Directory Certificate Services.`,
 func pathImportIssuer(b *backend) *framework.Path {
 	return &framework.Path{
 		Pattern: "issuers/import/(cert|bundle)",
+
+		DisplayAttrs: &framework.DisplayAttributes{
+			OperationPrefix: operationPrefixPKIIssuers,
+			OperationVerb:   "import",
+			OperationSuffix: "cert|bundle",
+		},
+
 		Fields: map[string]*framework.FieldSchema{
 			"pem_bundle": {
 				Type: framework.TypeString,
@@ -201,6 +241,16 @@ secret-key (optional) and certificates.`,
 							"imported_issuers": {
 								Type:        framework.TypeCommaStringSlice,
 								Description: "Net-new issuers imported as a part of this request",
+								Required:    true,
+							},
+							"existing_keys": {
+								Type:        framework.TypeCommaStringSlice,
+								Description: "Existing keys specified as part of the import bundle of this request",
+								Required:    true,
+							},
+							"existing_issuers": {
+								Type:        framework.TypeCommaStringSlice,
+								Description: "Existing issuers specified as part of the import bundle of this request",
 								Required:    true,
 							},
 						},
@@ -268,6 +318,8 @@ func (b *backend) pathImportIssuers(ctx context.Context, req *logical.Request, d
 
 	var createdKeys []string
 	var createdIssuers []string
+	var existingKeys []string
+	var existingIssuers []string
 	issuerKeyMap := make(map[string]string)
 
 	// Rather than using certutil.ParsePEMBundle (which restricts the
@@ -324,6 +376,8 @@ func (b *backend) pathImportIssuers(ctx context.Context, req *logical.Request, d
 
 		if !existing {
 			createdKeys = append(createdKeys, key.ID.String())
+		} else {
+			existingKeys = append(existingKeys, key.ID.String())
 		}
 	}
 
@@ -336,6 +390,8 @@ func (b *backend) pathImportIssuers(ctx context.Context, req *logical.Request, d
 		issuerKeyMap[cert.ID.String()] = cert.KeyID.String()
 		if !existing {
 			createdIssuers = append(createdIssuers, cert.ID.String())
+		} else {
+			existingIssuers = append(existingIssuers, cert.ID.String())
 		}
 	}
 
@@ -344,11 +400,13 @@ func (b *backend) pathImportIssuers(ctx context.Context, req *logical.Request, d
 			"mapping":          issuerKeyMap,
 			"imported_keys":    createdKeys,
 			"imported_issuers": createdIssuers,
+			"existing_keys":    existingKeys,
+			"existing_issuers": existingIssuers,
 		},
 	}
 
 	if len(createdIssuers) > 0 {
-		err := b.crlBuilder.rebuild(sc, true)
+		warnings, err := b.crlBuilder.rebuild(sc, true)
 		if err != nil {
 			// Before returning, check if the error message includes the
 			// string "PSS". If so, it indicates we might've wanted to modify
@@ -362,6 +420,9 @@ func (b *backend) pathImportIssuers(ctx context.Context, req *logical.Request, d
 			}
 
 			return nil, err
+		}
+		for index, warning := range warnings {
+			response.AddWarning(fmt.Sprintf("Warning %d during CRL rebuild: %v", index+1, warning))
 		}
 
 		var issuersWithKeys []string
@@ -454,7 +515,14 @@ func pathRevokeIssuer(b *backend) *framework.Path {
 
 	return &framework.Path{
 		Pattern: "issuer/" + framework.GenericNameRegex(issuerRefParam) + "/revoke",
-		Fields:  fields,
+
+		DisplayAttrs: &framework.DisplayAttributes{
+			OperationPrefix: operationPrefixPKI,
+			OperationVerb:   "revoke",
+			OperationSuffix: "issuer",
+		},
+
+		Fields: fields,
 
 		Operations: map[logical.Operation]framework.OperationHandler{
 			logical.UpdateOperation: &framework.PathOperation{
@@ -662,7 +730,7 @@ func (b *backend) pathRevokeIssuer(ctx context.Context, req *logical.Request, da
 	}
 
 	// Rebuild the CRL to include the newly revoked issuer.
-	crlErr := b.crlBuilder.rebuild(sc, false)
+	warnings, crlErr := b.crlBuilder.rebuild(sc, false)
 	if crlErr != nil {
 		switch crlErr.(type) {
 		case errutil.UserError:
@@ -677,6 +745,9 @@ func (b *backend) pathRevokeIssuer(ctx context.Context, req *logical.Request, da
 	if err != nil {
 		// Impossible.
 		return nil, err
+	}
+	for index, warning := range warnings {
+		response.AddWarning(fmt.Sprintf("Warning %d during CRL rebuild: %v", index+1, warning))
 	}
 
 	// For sanity, we'll add a warning message here if there's no other

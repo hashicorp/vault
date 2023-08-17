@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 package aws
 
@@ -21,6 +21,12 @@ import (
 func pathUser(b *backend) *framework.Path {
 	return &framework.Path{
 		Pattern: "(creds|sts)/" + framework.GenericNameWithAtRegex("name"),
+
+		DisplayAttrs: &framework.DisplayAttributes{
+			OperationPrefix: operationPrefixAWS,
+			OperationVerb:   "generate",
+		},
+
 		Fields: map[string]*framework.FieldSchema{
 			"name": {
 				Type:        framework.TypeString,
@@ -29,21 +35,34 @@ func pathUser(b *backend) *framework.Path {
 			"role_arn": {
 				Type:        framework.TypeString,
 				Description: "ARN of role to assume when credential_type is " + assumedRoleCred,
+				Query:       true,
 			},
 			"ttl": {
 				Type:        framework.TypeDurationSecond,
 				Description: "Lifetime of the returned credentials in seconds",
 				Default:     3600,
+				Query:       true,
 			},
 			"role_session_name": {
 				Type:        framework.TypeString,
 				Description: "Session name to use when assuming role. Max chars: 64",
+				Query:       true,
 			},
 		},
 
-		Callbacks: map[logical.Operation]framework.OperationFunc{
-			logical.ReadOperation:   b.pathCredsRead,
-			logical.UpdateOperation: b.pathCredsRead,
+		Operations: map[logical.Operation]framework.OperationHandler{
+			logical.ReadOperation: &framework.PathOperation{
+				Callback: b.pathCredsRead,
+				DisplayAttrs: &framework.DisplayAttributes{
+					OperationSuffix: "credentials|sts-credentials",
+				},
+			},
+			logical.UpdateOperation: &framework.PathOperation{
+				Callback: b.pathCredsRead,
+				DisplayAttrs: &framework.DisplayAttributes{
+					OperationSuffix: "credentials-with-parameters|sts-credentials-with-parameters",
+				},
+			},
 		},
 
 		HelpSynopsis:    pathUserHelpSyn,

@@ -1,10 +1,11 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 package transit
 
 import (
 	"context"
+	"crypto"
 	"crypto/elliptic"
 	"crypto/x509"
 	"encoding/base64"
@@ -25,6 +26,11 @@ func (b *backend) pathListKeys() *framework.Path {
 	return &framework.Path{
 		Pattern: "keys/?$",
 
+		DisplayAttrs: &framework.DisplayAttributes{
+			OperationPrefix: operationPrefixTransit,
+			OperationSuffix: "keys",
+		},
+
 		Callbacks: map[logical.Operation]framework.OperationFunc{
 			logical.ListOperation: b.pathKeysList,
 		},
@@ -37,6 +43,12 @@ func (b *backend) pathListKeys() *framework.Path {
 func (b *backend) pathKeys() *framework.Path {
 	return &framework.Path{
 		Pattern: "keys/" + framework.GenericNameRegex("name"),
+
+		DisplayAttrs: &framework.DisplayAttributes{
+			OperationPrefix: operationPrefixTransit,
+			OperationSuffix: "key",
+		},
+
 		Fields: map[string]*framework.FieldSchema{
 			"name": {
 				Type:        framework.TypeString,
@@ -121,10 +133,25 @@ key.`,
 			},
 		},
 
-		Callbacks: map[logical.Operation]framework.OperationFunc{
-			logical.UpdateOperation: b.pathPolicyWrite,
-			logical.DeleteOperation: b.pathPolicyDelete,
-			logical.ReadOperation:   b.pathPolicyRead,
+		Operations: map[logical.Operation]framework.OperationHandler{
+			logical.UpdateOperation: &framework.PathOperation{
+				Callback: b.pathPolicyWrite,
+				DisplayAttrs: &framework.DisplayAttributes{
+					OperationVerb: "create",
+				},
+			},
+			logical.DeleteOperation: &framework.PathOperation{
+				Callback: b.pathPolicyDelete,
+				DisplayAttrs: &framework.DisplayAttributes{
+					OperationVerb: "delete",
+				},
+			},
+			logical.ReadOperation: &framework.PathOperation{
+				Callback: b.pathPolicyRead,
+				DisplayAttrs: &framework.DisplayAttributes{
+					OperationVerb: "read",
+				},
+			},
 		},
 
 		HelpSynopsis:    pathPolicyHelpSyn,
@@ -230,12 +257,14 @@ func (b *backend) pathPolicyWrite(ctx context.Context, req *logical.Request, d *
 		p.Unlock()
 	}
 
-	resp := &logical.Response{}
+	resp, err := b.formatKeyPolicy(p, nil)
+	if err != nil {
+		return nil, err
+	}
 	if !upserted {
 		resp.AddWarning(fmt.Sprintf("key %s already existed", name))
 	}
-
-	return nil, nil
+	return resp, nil
 }
 
 // Built-in helper type for returning asymmetric keys
@@ -263,6 +292,19 @@ func (b *backend) pathPolicyRead(ctx context.Context, req *logical.Request, d *f
 	}
 	defer p.Unlock()
 
+	contextRaw := d.Get("context").(string)
+	var context []byte
+	if len(contextRaw) != 0 {
+		context, err = base64.StdEncoding.DecodeString(contextRaw)
+		if err != nil {
+			return logical.ErrorResponse("failed to base64-decode context"), logical.ErrInvalidRequest
+		}
+	}
+
+	return b.formatKeyPolicy(p, context)
+}
+
+func (b *backend) formatKeyPolicy(p *keysutil.Policy, context []byte) (*logical.Response, error) {
 	// Return the response
 	resp := &logical.Response{
 		Data: map[string]interface{}{
@@ -316,15 +358,6 @@ func (b *backend) pathPolicyRead(ctx context.Context, req *logical.Request, d *f
 		resp.Data["convergent_encryption"] = p.ConvergentEncryption
 		if p.ConvergentEncryption {
 			resp.Data["convergent_encryption_version"] = p.ConvergentVersion
-		}
-	}
-
-	contextRaw := d.Get("context").(string)
-	var context []byte
-	if len(contextRaw) != 0 {
-		context, err = base64.StdEncoding.DecodeString(contextRaw)
-		if err != nil {
-			return logical.ErrorResponse("failed to base64-decode context"), logical.ErrInvalidRequest
 		}
 	}
 
@@ -382,9 +415,15 @@ func (b *backend) pathPolicyRead(ctx context.Context, req *logical.Request, d *f
 					key.Name = "rsa-4096"
 				}
 
+				var publicKey crypto.PublicKey
+				publicKey = v.RSAPublicKey
+				if !v.IsPrivateKeyMissing() {
+					publicKey = v.RSAKey.Public()
+				}
+
 				// Encode the RSA public key in PEM format to return over the
 				// API
-				derBytes, err := x509.MarshalPKIXPublicKey(v.RSAKey.Public())
+				derBytes, err := x509.MarshalPKIXPublicKey(publicKey)
 				if err != nil {
 					return nil, fmt.Errorf("error marshaling RSA public key: %w", err)
 				}
