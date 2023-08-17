@@ -13,6 +13,7 @@ export default Factory.extend({
     dn: 'cn=hashicorp,ou=Users,dc=hashicorp,dc=com',
     rotation_period: 10,
     username: 'hashicorp',
+    type: 'static',
   }),
 
   // dynamic props
@@ -34,5 +35,6 @@ export default Factory.extend({
     username_template: '{{.DisplayName}}_{{.RoleName}}',
     default_ttl: 3600,
     max_ttl: 86400,
+    type: 'dynamic',
   }),
 });
