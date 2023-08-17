@@ -118,6 +118,8 @@ export default class KvSecretCreate extends Component {
 
   resetErrors() {
     this.flashMessages.clearMessages();
-    this.errors = '';
+    this.errorMessage = null;
+    this.modelValidations = null;
+    this.invalidFormAlert = null;
   }
 }

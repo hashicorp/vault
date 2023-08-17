@@ -1,5 +1,5 @@
 {{#let (find-by "name" "path" @secret.allFields) as |attr|}}
-  {{#if @previousVersion}}
+  {{#if @isEdit}}
     <ReadonlyFormField @attr={{attr}} @value={{get @secret attr.name}} />
   {{else}}
     <FormField @attr={{attr}} @model={{@secret}} @modelValidations={{@modelValidations}} @onKeyUp={{@pathValidations}} />
@@ -9,7 +9,7 @@
 <hr class="is-marginless has-background-gray-200" />
 {{#if @showJson}}
   <JsonEditor
-    @title="{{if @previousVersion 'Version' 'Secret'}} data"
+    @title="{{if @isEdit 'Version' 'Secret'}} data"
     @value={{or (stringify @secret.secretData) this.emptyJson}}
     @valueUpdated={{this.handleJson}}
   />
@@ -25,7 +25,7 @@
 {{else}}
   <KvObjectEditor
     class="has-top-margin-m"
-    @label="{{if @previousVersion 'Version' 'Secret'}} data"
+    @label="{{if @isEdit 'Version' 'Secret'}} data"
     @value={{@secret.secretData}}
     @onChange={{fn (mut @secret.secretData)}}
     @isMasked={{true}}

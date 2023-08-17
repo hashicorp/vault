@@ -26,7 +26,7 @@ module('Integration | Component | kv-v2 | Page::Secrets::Create', function (hook
     this.backend = 'my-kv-engine';
     this.path = 'my-secret';
     this.maxVersions = 10;
-    this.secret = this.store.createRecord('kv/data', { backend: this.backend });
+    this.secret = this.store.createRecord('kv/data', { backend: this.backend, casVersion: 0 });
     this.metadata = this.store.createRecord('kv/metadata', { backend: this.backend });
     this.breadcrumbs = [
       { label: 'secrets', route: 'secrets', linkExternal: true },
@@ -119,7 +119,7 @@ module('Integration | Component | kv-v2 | Page::Secrets::Create', function (hook
 
     this.server.post(`${this.backend}/metadata/${this.path}`, () => {
       // this assertion should not be hit!!
-      assert.ok(true, 'Request made to save metadata');
+      assert.notOk(true, 'Request should not be made to save metadata');
       return new Response(403, {}, { errors: ['This request should not have been made'] });
     });
 
