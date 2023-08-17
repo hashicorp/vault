@@ -285,6 +285,20 @@ func buildCRLs(ctx context.Context, b *backend, req *logical.Request, forceNew b
 	var err error
 	var issuers []issuerID
 	var wasLegacy bool
+
+	crlInfo, err := b.CRL(ctx, req.Storage)
+	if err != nil {
+		return errutil.InternalError{Err: fmt.Sprintf("error fetching CRL config information: %s", err)}
+	}
+
+	if crlInfo.Disable && !forceNew {
+		// We build a single long-lived empty CRL in the event that we disable
+		// the CRL, but we don't keep updating it with newer, more-valid empty
+		// CRLs in the event that we later re-enable it. This is a historical
+		// behavior.
+		return nil
+	}
+
 	if !b.useLegacyBundleCaStorage() {
 		issuers, err = listIssuers(ctx, req.Storage)
 		if err != nil {
@@ -356,9 +370,15 @@ func buildCRLs(ctx context.Context, b *backend, req *logical.Request, forceNew b
 	// these certificates to an issuer. Some certificates will not be
 	// assignable (if they were issued by a since-deleted issuer), so we need
 	// a separate pool for those.
-	unassignedCerts, revokedCertsMap, err := getRevokedCertEntries(ctx, req, issuerIDCertMap)
-	if err != nil {
-		return fmt.Errorf("error building CRLs: unable to get revoked certificate entries: %v", err)
+	var unassignedCerts []pkix.RevokedCertificate
+	var revokedCertsMap map[issuerID][]pkix.RevokedCertificate
+
+	// If the CRL is disabled do not bother reading in all the revoked certificates.
+	if !crlInfo.Disable {
+		unassignedCerts, revokedCertsMap, err = getRevokedCertEntries(ctx, req, issuerIDCertMap)
+		if err != nil {
+			return fmt.Errorf("error building CRLs: unable to get revoked certificate entries: %v", err)
+		}
 	}
 
 	// Now we can call buildCRL once, on an arbitrary/representative issuer
@@ -413,7 +433,7 @@ func buildCRLs(ctx context.Context, b *backend, req *logical.Request, forceNew b
 			crlConfig.CRLNumberMap[crlIdentifier] += 1
 
 			// Lastly, build the CRL.
-			if err := buildCRL(ctx, b, req, forceNew, representative, revokedCerts, crlIdentifier, crlNumber); err != nil {
+			if err := buildCRL(ctx, b, req, forceNew, representative, revokedCerts, crlIdentifier, crlNumber, crlInfo); err != nil {
 				return fmt.Errorf("error building CRLs: unable to build CRL for issuer (%v): %v", representative, err)
 			}
 		}
@@ -474,7 +494,6 @@ func buildCRLs(ctx context.Context, b *backend, req *logical.Request, forceNew b
 func getRevokedCertEntries(ctx context.Context, req *logical.Request, issuerIDCertMap map[issuerID]*x509.Certificate) ([]pkix.RevokedCertificate, map[issuerID][]pkix.RevokedCertificate, error) {
 	var unassignedCerts []pkix.RevokedCertificate
 	revokedCertsMap := make(map[issuerID][]pkix.RevokedCertificate)
-
 	revokedSerials, err := req.Storage.List(ctx, revokedPath)
 	if err != nil {
 		return nil, nil, errutil.InternalError{Err: fmt.Sprintf("error fetching list of revoked certs: %s", err)}
@@ -569,12 +588,7 @@ func getRevokedCertEntries(ctx context.Context, req *logical.Request, issuerIDCe
 
 // Builds a CRL by going through the list of revoked certificates and building
 // a new CRL with the stored revocation times and serial numbers.
-func buildCRL(ctx context.Context, b *backend, req *logical.Request, forceNew bool, thisIssuerId issuerID, revoked []pkix.RevokedCertificate, identifier crlID, crlNumber int64) error {
-	crlInfo, err := b.CRL(ctx, req.Storage)
-	if err != nil {
-		return errutil.InternalError{Err: fmt.Sprintf("error fetching CRL config information: %s", err)}
-	}
-
+func buildCRL(ctx context.Context, b *backend, req *logical.Request, forceNew bool, thisIssuerId issuerID, revoked []pkix.RevokedCertificate, identifier crlID, crlNumber int64, crlInfo *crlConfig) error {
 	crlLifetime := b.crlLifetime
 	var revokedCerts []pkix.RevokedCertificate
 
