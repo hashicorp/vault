@@ -126,7 +126,7 @@ module('Integration | Component | dashboard/quick-actions-card', function (hooks
     await selectChoose('.search-select', 'secrets-1-test');
     assert.dom('[data-test-component="empty-state"]').doesNotExist();
     await fillIn('[data-test-select="action-select"]', 'Find KV secrets');
-    assert.dom('[data-test-search-select-params-title]').hasText('Secret Path');
+    assert.dom('[data-test-search-select-params-title]').hasText('Secret path');
     assert.dom('[data-test-button="Read secrets"]').exists({ count: 1 });
   });
 });
