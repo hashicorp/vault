@@ -14,14 +14,18 @@ Use the `jwt` authN method to authenticate to Vault with JSON Web Tokens
 is commonly used in Workload Identity Federation (WIF) workflows for
 machine-to-machine authentication.
 
-The auth method is configured to trust a JWT issuer. For example, this could be a
+To use JWT, you must configure Vault to trust a JWT issuer. For example, a
 cloud service provider that makes workload identity available in a virtual machine
-or CI provider that provides identity to jobs. It must be [configured](#jwt-verification)
-with public keys from the JWT issuer by either OIDC Discovery, a JSON Web Key Set (JWKS) URL,
-or locally-provided keys. A signed JWT from the configured issuer is required as the form
-of authentication. The auth method will cryptographically verify the signature using the
-issuer's public key. The verified JWT claims can be used to provide [further validation](#bound-claims)
-to gate authentication to Vault.
+or CI provider that provides identities to jobs.
+
+Vault will require a signed JWT from the configured issuer as the form of
+authentication and the authN method will cryptographically verify the client
+signature using the issuer's public key. You can use verified JWT claims to
+gate authentication to Vault by requiring [additional validation](#bound-claims).
+
+You must [configure](#jwt-verification) the authN method with public keys from
+the JWT issuer with OIDC Discovery, a JSON Web Key Set (JWKS) URL, or
+locally-provided keys. 
 
 ## Authentication
 
