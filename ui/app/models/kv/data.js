@@ -66,10 +66,10 @@ export default class KvSecretDataModel extends Model {
   // Set in adapter if read failed
   @attr('number') failReadErrorCode;
 
-  // the default value of 0 is only set when initially creating a secret
   // if creating a new version this value is set in the edit route's
   // model hook from metadata or secret version, pending permissions
-  @attr('number', { defaultValue: 0 })
+  // if the value is not a number, don't send options.cas on payload
+  @attr('number')
   casVersion;
 
   get state() {

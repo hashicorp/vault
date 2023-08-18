@@ -121,6 +121,37 @@ module('Unit | Adapter | kv/data', function (hooks) {
       backend: this.backend,
       path: this.path,
       secretData: { foo: 'bar' },
+      casVersion: 0,
+    });
+    await record.save();
+    assert.strictEqual(record.path, this.path, 'record has correct path');
+    assert.strictEqual(record.backend, this.backend, 'record has correct backend');
+    assert.strictEqual(record.version, 1, 'record has correct version');
+    assert.deepEqual(record.secretData, { foo: 'bar' }, 'record has correct data');
+    assert.strictEqual(record.createdTime, '2023-06-21T16:18:31.479993Z', 'record has correct createdTime');
+    assert.strictEqual(
+      record.id,
+      `${encodePath(this.backend)}/data/${encodePath(this.path)}?version=1`,
+      'record has correct id'
+    );
+  });
+
+  test('it should not send cas if casVersion is not a number', async function (assert) {
+    assert.expect(8);
+    this.server.post(this.endpoint('data'), (schema, req) => {
+      assert.ok('POST request made to correct endpoint when creating new record');
+      const body = JSON.parse(req.requestBody);
+      assert.deepEqual(body, {
+        data: {
+          foo: 'bar',
+        },
+      });
+      return EXAMPLE_KV_DATA_CREATE_RESPONSE;
+    });
+    const record = this.store.createRecord('kv/data', {
+      backend: this.backend,
+      path: this.path,
+      secretData: { foo: 'bar' },
     });
     await record.save();
     assert.strictEqual(record.path, this.path, 'record has correct path');

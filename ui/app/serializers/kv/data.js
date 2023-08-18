@@ -11,7 +11,7 @@ export default class KvDataSerializer extends ApplicationSerializer {
     if (typeof casVersion === 'number') {
       /* if this is a number it is set by one of the following:
         A) user is creating initial version of a secret
-         -> 0 : default value set by model
+         -> 0 : default value set in route
         B) user is creating a new version of a secret:
          -> metadata.current_version : has metadata read permissions (data permissions are irrelevant)
          -> secret.version : has data read permissions. without metadata read access a user is unable to navigate,

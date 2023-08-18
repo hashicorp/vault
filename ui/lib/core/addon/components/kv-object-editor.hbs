@@ -49,7 +49,7 @@
         </div>
         <div class="column is-narrow">
           {{#if (eq this.kvData.length (inc index))}}
-            <button type="button" {{action "addRow"}} class="button is-outlined is-primary" data-test-kv-add-row={{true}}>
+            <button type="button" {{action "addRow"}} class="button is-outlined is-primary" data-test-kv-add-row={{index}}>
               Add
             </button>
           {{else}}
