@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 package pki
 
@@ -8,9 +8,11 @@ import (
 	"fmt"
 	"net"
 	"os"
+	"regexp"
 	"strconv"
 	"strings"
 
+	"github.com/hashicorp/vault/helper/constants"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/errutil"
 	"github.com/hashicorp/vault/sdk/logical"
@@ -42,6 +44,14 @@ var defaultAcmeConfig = acmeConfigEntry{
 	DNSResolver:            "",
 	EabPolicyName:          eabPolicyNotRequired,
 }
+
+var (
+	extPolicyPrefix       = "external-policy"
+	extPolicyPrefixLength = len(extPolicyPrefix)
+	extPolicyRegex        = regexp.MustCompile(framework.GenericNameRegex("policy"))
+	rolePrefix            = "role:"
+	rolePrefixLength      = len(rolePrefix)
+)
 
 func (sc *storageContext) getAcmeConfig() (*acmeConfigEntry, error) {
 	entry, err := sc.Storage.Get(sc.Context, storageAcmeConfig)
@@ -242,7 +252,7 @@ func (b *backend) pathAcmeWrite(ctx context.Context, req *logical.Request, d *fr
 	}
 
 	// Validate Default Directory Behavior:
-	defaultDirectoryPolicyType, err := getDefaultDirectoryPolicyType(config.DefaultDirectoryPolicy)
+	defaultDirectoryPolicyType, extraInfo, err := getDefaultDirectoryPolicyType(config.DefaultDirectoryPolicy)
 	if err != nil {
 		return nil, fmt.Errorf("invalid default_directory_policy: %w", err)
 	}
@@ -250,11 +260,12 @@ func (b *backend) pathAcmeWrite(ctx context.Context, req *logical.Request, d *fr
 	switch defaultDirectoryPolicyType {
 	case Forbid:
 	case SignVerbatim:
-	case Role:
-		defaultDirectoryRoleName, err = getDefaultDirectoryPolicyRole(config.DefaultDirectoryPolicy)
-		if err != nil {
-			return nil, fmt.Errorf("failed extracting role name from default directory policy %w", err)
+	case ExternalPolicy:
+		if !constants.IsEnterprise {
+			return nil, fmt.Errorf("external-policy is only available in enterprise versions of Vault")
 		}
+	case Role:
+		defaultDirectoryRoleName = extraInfo
 
 		_, err := getAndValidateAcmeRole(sc, defaultDirectoryRoleName)
 		if err != nil {
@@ -349,31 +360,38 @@ func isPublicACMEDisabledByEnv() (bool, error) {
 	return disableAcme, nil
 }
 
-func getDefaultDirectoryPolicyType(defaultDirectoryPolicy string) (DefaultDirectoryPolicyType, error) {
+func getDefaultDirectoryPolicyType(defaultDirectoryPolicy string) (DefaultDirectoryPolicyType, string, error) {
 	switch {
 	case defaultDirectoryPolicy == "forbid":
-		return Forbid, nil
+		return Forbid, "", nil
 	case defaultDirectoryPolicy == "sign-verbatim":
-		return SignVerbatim, nil
-	case strings.HasPrefix(defaultDirectoryPolicy, "role:"):
-		if len(defaultDirectoryPolicy) == 5 {
-			return Forbid, fmt.Errorf("no role specified by policy %v", defaultDirectoryPolicy)
+		return SignVerbatim, "", nil
+	case strings.HasPrefix(defaultDirectoryPolicy, rolePrefix):
+		if len(defaultDirectoryPolicy) == rolePrefixLength {
+			return Forbid, "", fmt.Errorf("no role specified by policy %v", defaultDirectoryPolicy)
 		}
-		return Role, nil
-	default:
-		return Forbid, fmt.Errorf("string %v not a valid Default Directory Policy", defaultDirectoryPolicy)
-	}
-}
+		roleName := defaultDirectoryPolicy[rolePrefixLength:]
+		return Role, roleName, nil
+	case strings.HasPrefix(defaultDirectoryPolicy, extPolicyPrefix):
+		if len(defaultDirectoryPolicy) == extPolicyPrefixLength {
+			// default external-policy case without a specified policy
+			return ExternalPolicy, "", nil
+		}
 
-func getDefaultDirectoryPolicyRole(defaultDirectoryPolicy string) (string, error) {
-	policyType, err := getDefaultDirectoryPolicyType(defaultDirectoryPolicy)
-	if err != nil {
-		return "", err
+		if strings.HasPrefix(defaultDirectoryPolicy, extPolicyPrefix+":") &&
+			len(defaultDirectoryPolicy) == extPolicyPrefixLength+1 {
+			// end user set 'external-policy:', so no policy which is acceptable
+			return ExternalPolicy, "", nil
+		}
+
+		policyName := defaultDirectoryPolicy[extPolicyPrefixLength+1:]
+		if ok := extPolicyRegex.MatchString(policyName); !ok {
+			return Forbid, "", fmt.Errorf("invalid characters within external-policy name: %s", defaultDirectoryPolicy)
+		}
+		return ExternalPolicy, policyName, nil
+	default:
+		return Forbid, "", fmt.Errorf("string %v not a valid Default Directory Policy", defaultDirectoryPolicy)
 	}
-	if policyType != Role {
-		return "", fmt.Errorf("default directory policy %v is not a role-based-policy", defaultDirectoryPolicy)
-	}
-	return defaultDirectoryPolicy[5:], nil
 }
 
 type DefaultDirectoryPolicyType int
@@ -382,4 +400,5 @@ const (
 	Forbid DefaultDirectoryPolicyType = iota
 	SignVerbatim
 	Role
+	ExternalPolicy
 )

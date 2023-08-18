@@ -1,6 +1,11 @@
 import consoleClass from 'vault/tests/pages/components/console/ui-panel';
 import { create } from 'ember-cli-page-object';
 /**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
+/**
  * Helper functions to run common commands in the consoleComponent during tests.
  * Please note that a user must be logged in during the test context for the commands to run.
  * By default runCmd throws an error if the last log includes "Error". To override this,

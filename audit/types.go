@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 package audit
 
@@ -37,12 +37,11 @@ type format string
 
 // auditEvent is the audit event.
 type auditEvent struct {
-	ID             string            `json:"id"`
-	Version        string            `json:"version"`
-	Subtype        subtype           `json:"subtype"` // the subtype of the audit event.
-	Timestamp      time.Time         `json:"timestamp"`
-	Data           *logical.LogInput `json:"data"`
-	RequiredFormat format            `json:"format"`
+	ID        string            `json:"id"`
+	Version   string            `json:"version"`
+	Subtype   subtype           `json:"subtype"` // the subtype of the audit event.
+	Timestamp time.Time         `json:"timestamp"`
+	Data      *logical.LogInput `json:"data"`
 }
 
 // Option is how options are passed as arguments.
@@ -311,6 +310,9 @@ type BackendConfig struct {
 
 	// Config is the opaque user configuration provided when mounting
 	Config map[string]string
+
+	// MountPath is the path where this Backend is mounted
+	MountPath string
 }
 
 // Factory is the factory function to create an audit backend.
