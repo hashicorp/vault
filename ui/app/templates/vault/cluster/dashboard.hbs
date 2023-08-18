@@ -1,49 +1,49 @@
 <Dashboard::VaultVersionTitle />
 
-<div class="is-grid grid-2-columns grid-gap-2 has-bottom-margin-m grid-align-items-start">
-  {{#if (and @model.version.isEnterprise @model.license)}}
-    <Hds::Card::Container @hasBorder={{true}} class="has-padding-l has-bottom-padding-m is-flex-column is-flex-half">
-      <Dashboard::ClientCountCard @license={{@model.license}} />
-    </Hds::Card::Container>
-  {{/if}}
+<div class="has-bottom-margin-xl">
+  <div class="is-flex-row has-gap-l">
+    {{#if @model.version.isEnterprise}}
 
-  {{#if (and @model.version.isEnterprise @model.isRootNamespace)}}
-    <Hds::Card::Container @hasBorder={{true}} class="has-padding-l has-bottom-padding-m is-flex-column is-flex-half">
-      <Dashboard::ReplicationCard
-        @replication={{@model.replication}}
-        @version={{@model.version}}
-        @refresh={{this.refreshModel}}
-        @updatedAt={{this.replicationUpdatedAt}}
-      />
-    </Hds::Card::Container>
-  {{/if}}
+      <div class="is-flex-column is-flex-1 has-gap-l">
+        {{#if @model.license}}
+          <Dashboard::ClientCountCard @license={{@model.license}} />
+        {{/if}}
+        {{#if @model.isRootNamespace}}
+          <Dashboard::ReplicationCard
+            @replication={{@model.replication}}
+            @version={{@model.version}}
+            @refresh={{this.refreshModel}}
+            @updatedAt={{this.replicationUpdatedAt}}
+          />
+        {{/if}}
+        <Dashboard::SecretsEnginesCard @secretsEngines={{@model.secretsEngines}} />
+      </div>
 
-  <Hds::Card::Container @hasBorder={{true}} class="has-padding-l is-flex-column is-flex-half">
-    <Dashboard::SecretsEnginesCard @secretsEngines={{@model.secretsEngines}} />
-  </Hds::Card::Container>
+      <div class="is-flex-column is-flex-1 has-gap-l">
+        <Dashboard::QuickActionsCard @secretsEngines={{@model.secretsEngines}} />
+        {{#if @model.vaultConfiguration}}
+          <Dashboard::VaultConfigurationDetailsCard @vaultConfiguration={{@model.vaultConfiguration}} />
+        {{/if}}
+        <div>
+          <Dashboard::LearnMoreCard />
+          <Dashboard::SurveyLinkText />
+        </div>
+      </div>
 
-  <Hds::Card::Container @hasBorder={{true}} class="has-padding-l is-flex-column is-flex-half">
-    <Dashboard::QuickActionsCard @secretsEngines={{@model.secretsEngines}} />
-  </Hds::Card::Container>
-
-  <div>
-    <Hds::Card::Container @hasBorder={{true}} class="has-padding-l is-flex-column is-flex-half">
-      <Dashboard::LearnMoreCard />
-    </Hds::Card::Container>
-
-    <div class="has-padding-s has-top-margin-m" data-test-feedback-form>
-      <small>
-        Don't see what you're looking for on this page? Let us know via our
-        <Hds::Link::Inline @icon="external-link" @href="https://hashicorp.sjc1.qualtrics.com/jfe/form/SV_1SNUsZLdWHpfw0e">
-          feedback form
-        </Hds::Link::Inline>
-      </small>
-    </div>
+    {{else}}
+      <div class="is-flex-column is-flex-1 has-gap-l">
+        <Dashboard::SecretsEnginesCard @secretsEngines={{@model.secretsEngines}} />
+        <div>
+          <Dashboard::LearnMoreCard />
+          <Dashboard::SurveyLinkText />
+        </div>
+      </div>
+      <div class="is-flex-column is-flex-1 has-gap-l">
+        <Dashboard::QuickActionsCard @secretsEngines={{@model.secretsEngines}} />
+        {{#if @model.vaultConfiguration}}
+          <Dashboard::VaultConfigurationDetailsCard @vaultConfiguration={{@model.vaultConfiguration}} />
+        {{/if}}
+      </div>
+    {{/if}}
   </div>
-
-  {{#if @model.vaultConfiguration}}
-    <Hds::Card::Container @hasBorder={{true}} class="has-padding-l is-flex-column is-flex-half">
-      <Dashboard::VaultConfigurationDetailsCard @vaultConfiguration={{@model.vaultConfiguration}} />
-    </Hds::Card::Container>
-  {{/if}}
 </div>

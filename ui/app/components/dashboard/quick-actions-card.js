@@ -46,7 +46,7 @@ export default class DashboardQuickActionsCard extends Component {
     switch (this.selectedAction) {
       case 'Find KV secrets':
         return {
-          title: 'Secret Path',
+          title: 'Secret path',
           subText: 'Path of the secret you want to read, including the mount. E.g., secret/data/foo.',
           buttonText: 'Read secrets',
           model: 'secret-v2',

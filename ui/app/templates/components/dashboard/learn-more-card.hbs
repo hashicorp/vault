@@ -1,15 +1,17 @@
-<h3 class="title is-4 has-bottom-margin-xxs" data-test-learn-more-title>Learn more</h3>
-<div class="sub-text" data-test-learn-more-subtext>
-  Explore the features of Vault and learn advance practices with the following tutorials and documentation.
-</div>
-<div class="has-top-margin-xs" data-test-learn-more-links>
-  {{#each this.learnMoreLinks as |learnMoreLink|}}
-    <Hds::Link::Standalone
-      @icon={{learnMoreLink.icon}}
-      @text={{learnMoreLink.title}}
-      @href={{learnMoreLink.link}}
-      class="has-bottom-margin-xs"
-      data-test-learn-more-link={{learnMoreLink.title}}
-    />
-  {{/each}}
-</div>
+<Hds::Card::Container @hasBorder={{true}} class="has-padding-l">
+  <h3 class="title is-4 has-bottom-margin-xxs" data-test-learn-more-title>Learn more</h3>
+  <div class="sub-text" data-test-learn-more-subtext>
+    Explore the features of Vault and learn advance practices with the following tutorials and documentation.
+  </div>
+  <div class="has-top-margin-xs" data-test-learn-more-links>
+    {{#each this.learnMoreLinks as |learnMoreLink|}}
+      <Hds::Link::Standalone
+        @icon={{learnMoreLink.icon}}
+        @text={{learnMoreLink.title}}
+        @href={{learnMoreLink.link}}
+        class="has-bottom-margin-xs"
+        data-test-learn-more-link={{learnMoreLink.title}}
+      />
+    {{/each}}
+  </div>
+</Hds::Card::Container>

@@ -24,6 +24,10 @@
   gap: $spacing-m;
 }
 
+.has-gap-l {
+  gap: $spacing-l;
+}
+
 // Alignment of the items
 .is-flex-v-centered {
   display: flex;
@@ -72,11 +76,15 @@
   flex-basis: 100%;
 }
 
-.is-flex-1 {
+.is-flex-grow-1 {
   flex-grow: 1;
   &.basis-0 {
     flex-basis: 0;
   }
+}
+
+.is-flex-1 {
+  flex: 1;
 }
 
 .is-no-flex-grow {
@@ -98,6 +106,12 @@
     align-items: center;
     align-self: center;
     justify-content: center;
+  }
+}
+
+@include until($mobile) {
+  .is-flex-row {
+    flex-flow: column wrap;
   }
 }
 
