@@ -292,7 +292,7 @@ jobs:
       - test-go
       - test-ui
     if: always()
-    runs-on: ${{ fromJSON(needs.setup.outputs.compute-small) }}
+    runs-on: ${{ fromJSON(needs.setup.outputs.compute-large) }}
     steps:
       - run: |
           tr -d '\n' <<< '${{ toJSON(needs.*.result) }}' | grep -q -v -E '(failure|cancelled)'
