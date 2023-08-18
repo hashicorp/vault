@@ -7,7 +7,7 @@ import Route from '@ember/routing/route';
 import { inject as service } from '@ember/service';
 import { hash } from 'rsvp';
 import { normalizePath } from 'vault/utils/path-encoding-helpers';
-import { breadcrumbsForDirectory } from 'vault/lib/kv-breadcrumbs';
+import { breadcrumbsForSecret } from 'kv/utils/kv-breadcrumbs';
 
 export default class KvSecretsListRoute extends Route {
   @service store;
@@ -66,11 +66,11 @@ export default class KvSecretsListRoute extends Route {
     if (this.routeName === 'list') {
       breadcrumbsArray.push({ label: resolvedModel.backend });
     } else {
-      breadcrumbsArray.push({ label: resolvedModel.backend, route: 'list' });
-    }
-    // these breadcrumbs handle directories: beep/boop/
-    if (resolvedModel.pathToSecret) {
-      breadcrumbsArray = [...breadcrumbsArray, ...breadcrumbsForDirectory(resolvedModel.pathToSecret, true)];
+      breadcrumbsArray = [
+        ...breadcrumbsArray,
+        { label: resolvedModel.backend, route: 'list' },
+        ...breadcrumbsForSecret(resolvedModel.pathToSecret, true),
+      ];
     }
     controller.set('breadcrumbs', breadcrumbsArray);
     controller.set('routeName', this.routeName);

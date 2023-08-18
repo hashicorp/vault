@@ -4,7 +4,7 @@
  */
 
 import Route from '@ember/routing/route';
-import { pathIsFromDirectory, breadcrumbsForDirectory } from 'vault/lib/kv-breadcrumbs';
+import { breadcrumbsForSecret } from 'kv/utils/kv-breadcrumbs';
 
 export default class KvSecretMetadataEditRoute extends Route {
   // model passed from 'secret' route, if we need to access or intercept
@@ -12,26 +12,14 @@ export default class KvSecretMetadataEditRoute extends Route {
 
   setupController(controller, resolvedModel) {
     super.setupController(controller, resolvedModel);
-    let breadcrumbsArray = [
+    const breadcrumbsArray = [
       { label: 'secrets', route: 'secrets', linkExternal: true },
       { label: resolvedModel.backend, route: 'list' },
-    ];
-
-    if (pathIsFromDirectory(resolvedModel.path)) {
-      breadcrumbsArray = [...breadcrumbsArray, ...breadcrumbsForDirectory(resolvedModel.path)];
-    } else {
-      breadcrumbsArray.push({
-        label: resolvedModel.path,
-        route: 'secret.details',
-        model: resolvedModel.path,
-      });
-    }
-
-    breadcrumbsArray = [
-      ...breadcrumbsArray,
-      { label: 'metadata', route: 'secret.details', model: resolvedModel.path },
+      ...breadcrumbsForSecret(resolvedModel.path),
+      { label: 'metadata', route: 'secret.metadata' },
       { label: 'edit' },
     ];
+
     controller.set('breadcrumbs', breadcrumbsArray);
   }
 }

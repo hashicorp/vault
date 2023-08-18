@@ -7,7 +7,7 @@ import Model, { attr } from '@ember-data/model';
 import lazyCapabilities, { apiPath } from 'vault/macros/lazy-capabilities';
 import { withModelValidations } from 'vault/decorators/model-validations';
 import { withFormFields } from 'vault/decorators/model-form-fields';
-import { pathIsDirectory } from 'vault/lib/kv-breadcrumbs';
+import { keyIsFolder } from 'core/utils/key-utils';
 
 const validations = {
   maxVersions: [
@@ -64,7 +64,7 @@ export default class KvSecretMetadataModel extends Model {
   // used for KV list and list-directory view
   get pathIsDirectory() {
     // ex: beep/
-    return pathIsDirectory(this.path);
+    return keyIsFolder(this.path);
   }
 
   // turns version object into an array for version dropdown menu

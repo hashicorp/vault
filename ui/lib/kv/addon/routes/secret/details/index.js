@@ -4,22 +4,17 @@
  */
 
 import Route from '@ember/routing/route';
-import { pathIsFromDirectory, breadcrumbsForDirectory } from 'vault/lib/kv-breadcrumbs';
+import { breadcrumbsForSecret } from 'kv/utils/kv-breadcrumbs';
 
 export default class KvSecretDetailsIndexRoute extends Route {
   setupController(controller, resolvedModel) {
     super.setupController(controller, resolvedModel);
 
-    let breadcrumbsArray = [
+    const breadcrumbsArray = [
       { label: 'secrets', route: 'secrets', linkExternal: true },
       { label: resolvedModel.backend, route: 'list' },
+      ...breadcrumbsForSecret(resolvedModel.path, true),
     ];
-
-    if (pathIsFromDirectory(resolvedModel.path)) {
-      breadcrumbsArray = [...breadcrumbsArray, ...breadcrumbsForDirectory(resolvedModel.path, true)];
-    } else {
-      breadcrumbsArray.push({ label: resolvedModel.path });
-    }
 
     controller.breadcrumbs = breadcrumbsArray;
   }
