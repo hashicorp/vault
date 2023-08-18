@@ -5,8 +5,6 @@ package vault
 
 import (
 	"context"
-	"encoding/json"
-	"fmt"
 	"strings"
 	"sync"
 	"testing"
@@ -189,9 +187,6 @@ func TestRollbackMetrics(t *testing.T) {
 			noMountPointRoutes := samplesWith(intervals, func(s string) bool {
 				return s == "vault.route.rollback"
 			})
-			o, err := json.Marshal(intervals)
-			require.NoError(t, err)
-			fmt.Println(string(o))
 			if tc.addMountPoint {
 				require.NotEmpty(t, mountPointAttempts)
 				require.NotEmpty(t, mountPointRoutes)
