@@ -7,6 +7,7 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"os"
 	"strings"
 	"testing"
 	"time"
@@ -40,6 +41,40 @@ func TestMySQL_Initialize(t *testing.T) {
 	for name, test := range tests {
 		t.Run(name, func(t *testing.T) {
 			testInitialize(t, test.rootPassword)
+		})
+	}
+}
+
+// TestMySQL_Initialize_CloudGCP validates the proper initialization of a MySQL backend pointing
+// to a GCP CloudSQL MySQL instance. This expects some external setup (exact TBD)
+func TestMySQL_Initialize_CloudGCP(t *testing.T) {
+	// hardcode data for now
+	url := os.Getenv("CONN_URL")
+	creds := os.Getenv("CREDS")
+
+	tests := map[string]struct {
+		req dbplugin.InitializeRequest
+	}{
+		"normal": {
+			req: dbplugin.InitializeRequest{
+				Config: map[string]interface{}{
+					"connection_url": url,
+					"auth_type":      "iam", // authTypeIAM,
+					"credentials":    creds,
+				},
+				VerifyConnection: true,
+			},
+		},
+	}
+
+	for n, tc := range tests {
+		t.Run(n, func(t *testing.T) {
+			db := newMySQL(DefaultUserNameTemplate)
+			defer dbtesting.AssertClose(t, db)
+			_, err := db.Initialize(context.Background(), tc.req)
+			if err != nil {
+				t.Fatalf("err: %s", err)
+			}
 		})
 	}
 }
