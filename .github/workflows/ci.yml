@@ -119,6 +119,25 @@ jobs:
       enterprise: ${{ needs.setup.outputs.enterprise }}
     secrets: inherit
 
+  test-go-testonly:
+    name: Run Go tests tagged with testonly
+    needs:
+      - setup
+      - verify-changes
+    # Don't run this job for docs/ui only PRs
+    if: |
+      needs.verify-changes.outputs.is_docs_change == 'false' &&
+      needs.verify-changes.outputs.is_ui_change == 'false'
+    uses: ./.github/workflows/test-go.yml
+    with:
+      testonly: true
+      total-runners: 2 # test runners cannot be less than 2
+      go-arch: amd64
+      go-tags: '${{ needs.setup.outputs.go-tags }},deadlock,testonly'
+      runs-on: ${{ needs.setup.outputs.compute-large }}
+      enterprise: ${{ needs.setup.outputs.enterprise }}
+    secrets: inherit
+
   test-go-race:
     name: Run Go tests with data race detection
     needs:
