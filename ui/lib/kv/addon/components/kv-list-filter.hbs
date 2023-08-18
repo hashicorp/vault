@@ -5,7 +5,7 @@
         id="secret-filter"
         class="filter input"
         placeholder="Filter secrets"
-        @value={{@model.filterValue}}
+        @value={{@filterValue}}
         @type="text"
         data-test-component="kv-list-filter"
         {{on "input" this.handleInput}}

@@ -1,4 +1,4 @@
-<KvPageHeader @breadcrumbs={{@breadcrumbs}} @model={{@model}} @isEngineView={{true}} @pageTitle={{@model.backend}}>
+<KvPageHeader @breadcrumbs={{@breadcrumbs}} @isEngineView={{true}} @pageTitle={{@backend}}>
   <:tabLinks>
     <LinkTo @route={{@routeName}} data-test-secrets-tab={{@routeName}}>Secrets</LinkTo>
     <LinkTo @route="configuration" data-test-secrets-tab="Configuration">Configuration</LinkTo>
@@ -7,7 +7,7 @@
   <:toolbarFilters>
     {{#unless @noMetadataListPermissions}}
       <KvListFilter
-        @model={{@model}}
+        @secrets={{@secrets}}
         @mountPoint={{this.mountPoint}}
         @filterValue={{@filterValue}}
         @pageFilter={{@pageFilter}}
@@ -16,12 +16,8 @@
   </:toolbarFilters>
 
   <:toolbarActions>
-    <ToolbarLink
-      data-test-toolbar-create-secret
-      @route="create"
-      @query={{hash initialKey=@model.pathToSecret}}
-      @type="add"
-    >Create secret</ToolbarLink>
+    <ToolbarLink data-test-toolbar-create-secret @route="create" @query={{hash initialKey=@pathToSecret}} @type="add">Create
+      secret</ToolbarLink>
   </:toolbarActions>
 </KvPageHeader>
 
@@ -50,8 +46,8 @@
     </div>
   </div>
 {{else}}
-  {{#if @model.secrets}}
-    {{#each @model.secrets as |secret|}}
+  {{#if @secrets}}
+    {{#each @secrets as |secret|}}
       <LinkedBlock
         data-test-list-item={{secret.path}}
         class="list-item-row"
@@ -122,10 +118,10 @@
       </LinkedBlock>
     {{/each}}
     {{! Pagination }}
-    {{#if (gt @model.secrets.meta.lastPage 1)}}
+    {{#if (gt @secrets.meta.lastPage 1)}}
       <Hds::Pagination::Numbered
         @showSizeSelector={{false}}
-        @totalItems={{@model.secrets.meta.total}}
+        @totalItems={{@secrets.meta.total}}
         @currentPage={{@currentPage}}
         @pageSizes={{this.currentPageSize}}
         @currentPageSize={{this.currentPageSize}}

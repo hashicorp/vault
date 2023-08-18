@@ -1,9 +1,11 @@
 <Page::List
-  @model={{this.model}}
-  @breadcrumbs={{this.breadcrumbs}}
-  @routeName={{this.routeName}}
+  @secrets={{this.model.secrets}}
+  @backend={{this.model.backend}}
+  @pathToSecret={{this.model.pathToSecret}}
   @pageFilter={{this.model.pageFilter}}
   @filterValue={{this.model.filterValue}}
   @noMetadataListPermissions={{this.model.noMetadataListPermissions}}
+  @breadcrumbs={{this.breadcrumbs}}
+  @routeName={{this.routeName}}
   @currentPage={{this.currentPage}}
 />
