@@ -5,9 +5,8 @@
 
 import Component from '@glimmer/component';
 import { action } from '@ember/object';
-import { tracked } from '@glimmer/tracking';
 
-export default class inputSelect extends Component {
+export default class InputSearch extends Component {
   /*
    * @public
    * @param Function
@@ -15,9 +14,8 @@ export default class inputSelect extends Component {
    * Function called when any of the inputs change
    *
    */
-  @tracked searchInput = '';
   @action
-  inputChanged() {
-    this.args.onChange(this.searchInput);
+  inputChanged(e) {
+    this.args.onChange(e.target.value);
   }
 }

@@ -35,6 +35,7 @@
         <div class="has-top-margin-m is-flex">
           <InputSearch
             @id="search-input-kv-secret"
+            @value={{this.secretPath}}
             @onChange={{this.handleSecretPathInput}}
             @placeholder="secret/"
             data-test-search-roles
