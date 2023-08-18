@@ -59,18 +59,29 @@ jobs:
           path: http/web_ui
           key: ${{ inputs.web-ui-cache-key }}
       - name: Build Vault
-        uses: hashicorp/actions-go-build@v0
         env:
           GO_TAGS: ${{ inputs.go-tags }}
           CGO_ENABLED: ${{ inputs.cgo-enabled }}
-        with:
-          product_name: ${{ inputs.package-name }}
-          product_version: ${{ inputs.vault-version }}
-          os: ${{ inputs.goos }}
-          arch: ${{ inputs.goarch }}
-          reproducible: nope
-          instructions: |-
+          GOARCH: ${{ inputs.goarch }}
+          GOOS: ${{ inputs.goos }}
+          VERSION: ${{ inputs.vault-version }}
+        run:
             make ci-build
+      - name: Determine artifact basename
+        env:
+          GOARCH: ${{ inputs.goarch }}
+          GOOS: ${{ inputs.goos }}
+          VERSION: ${{ inputs.vault-version }}
+        run: echo "ARTIFACT_BASENAME=$(make ci-get-artifact-basename)" >> "$GITHUB_ENV"
+      - name: Bundle Vault
+        env:
+          BUNDLE_PATH: out/${{ env.ARTIFACT_BASENAME }}.zip
+        run: make ci-bundle
+      - uses: actions/upload-artifact@0b7f8abb1508181956e8e162db84b466c27e18ce # v3.1.2
+        with:
+          name: ${{ env.ARTIFACT_BASENAME }}.zip
+          path: out/${{ env.ARTIFACT_BASENAME }}.zip
+          if-no-files-found: error
       - if: ${{ inputs.create-packages }}
         uses: hashicorp/actions-packaging-linux@v1
         with:

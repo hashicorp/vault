@@ -29,6 +29,28 @@ function repo() {
   basename -s .git "$(git config --get remote.origin.url)"
 }
 
+# Determine the artifact basename based on metadata
+function artifact_basename() {
+  : "${PKG_NAME:="vault"}"
+  : "${GOOS:=$(go env GOOS)}"
+  : "${GOARCH:=$(go env GOARCH)}"
+
+  : "${VERSION:=""}"
+  if [ -z "$VERSION" ]; then
+    echo "You must specify the VERSION variable for this command" >&2
+    exit 1
+  fi
+
+  echo "${PKG_NAME}_${VERSION}_${GOOS}_${GOARCH}"
+}
+
+# Bundle the dist directory into a zip
+function bundle() {
+  : "${BUNDLE_PATH:=$(repo_root)/vault.zip}"
+  echo "--> Bundling dist/* to $BUNDLE_PATH"
+  zip -r -j "$BUNDLE_PATH" dist/
+}
+
 # Determine the root directory of the repository
 function repo_root() {
   git rev-parse --show-toplevel
@@ -84,16 +106,21 @@ function build() {
 
   # Build vault
   echo "$msg"
-  go build -o "$BIN_PATH" -tags "$GO_TAGS" -ldflags "$ldflags" -buildvcs=false
+  pushd "$(repo_root)"
+  mkdir -p dist
+  mkdir -p out
+  set -x
+  go build -v -tags "$GO_TAGS" -ldflags "$ldflags" -o dist/
+  set +x
+  popd
 }
 
 # Prepare legal requirements for packaging
 function prepare_legal() {
-  local repo_root
-  repo_root=$(repo_root)
-
-  pushd "$repo_root"
   : "${PKG_NAME:="vault"}"
+
+  pushd "$(repo_root)"
+  mkdir -p dist
   curl -o dist/EULA.txt https://eula.hashicorp.com/EULA.txt
   curl -o dist/TermsOfEvaluation.txt https://eula.hashicorp.com/TermsOfEvaluation.txt
   mkdir -p ".release/linux/package/usr/share/doc/$PKG_NAME"
@@ -154,11 +181,17 @@ function matrix_filter_file() {
 # Run the CI Helper
 function main() {
   case $1 in
+  artifact-basename)
+    artifact_basename
+  ;;
   build)
     build
   ;;
   build-ui)
     build_ui
+  ;;
+  bundle)
+    bundle
   ;;
   date)
     build_date

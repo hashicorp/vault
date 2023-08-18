@@ -316,4 +316,11 @@ ci-prepare-legal:
 ci-get-version-package:
 	@$(CURDIR)/scripts/ci-helper.sh version-package
 
+.PHONY: ci-get-artifact-basename
+ci-get-artifact-basename:
+	@$(CURDIR)/scripts/ci-helper.sh artifact-basename
+
+.PHONY: ci-bundle
+ci-bundle:
+	@$(CURDIR)/scripts/ci-helper.sh bundle
 

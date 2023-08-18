@@ -106,12 +106,7 @@ jobs:
           cache-dependency-path: ui/yarn.lock
       - if: steps.cache-ui-assets.outputs.cache-hit != 'true'
         name: Build UI
-        run: |
-          make ci-build-ui
-          # Remove the .gitignore from minipass-sized. This .gitignore file
-          # tells git to unignore some generated paths, and makes the repo look
-          # dirty to actions-go-build when it shouldn't.
-          rm ui/node_modules/minipass-sized/.gitignore
+        run: make ci-build-ui
 
   build-other:
     name: Other
