@@ -18,10 +18,8 @@ import (
 func TestSign(t *testing.T) {
 	content := []byte("Hello World")
 	sigalgs := []x509.SignatureAlgorithm{
-		x509.SHA1WithRSA,
 		x509.SHA256WithRSA,
 		x509.SHA512WithRSA,
-		x509.ECDSAWithSHA1,
 		x509.ECDSAWithSHA256,
 		x509.ECDSAWithSHA384,
 		x509.ECDSAWithSHA512,
@@ -99,7 +97,7 @@ func TestDSASignAndVerifyWithOpenSSL(t *testing.T) {
 	}
 	ioutil.WriteFile(tmpContentFile.Name(), content, 0o755)
 
-	block, _ := pem.Decode([]byte(dsaPublicCert))
+	block, _ := pem.Decode(dsaPublicCert)
 	if block == nil {
 		t.Fatal("failed to parse certificate PEM")
 	}
@@ -129,6 +127,8 @@ func TestDSASignAndVerifyWithOpenSSL(t *testing.T) {
 	if err != nil {
 		t.Fatalf("test case: cannot initialize signed data: %s", err)
 	}
+	// openssl DSA only supports SHA1 for our 1024-bit DSA key, since that is all the standard officially supports
+	toBeSigned.digestOid = OIDDigestAlgorithmSHA1
 	if err := toBeSigned.SignWithoutAttr(signerCert, &priv, SignerInfoConfig{}); err != nil {
 		t.Fatalf("Cannot add signer: %s", err)
 	}
@@ -151,6 +151,7 @@ func TestDSASignAndVerifyWithOpenSSL(t *testing.T) {
 		"-content", tmpContentFile.Name())
 	out, err := opensslCMD.CombinedOutput()
 	if err != nil {
+		t.Errorf("Command: %s", opensslCMD.Args)
 		t.Fatalf("test case: openssl command failed with %s: %s", err, out)
 	}
 	os.Remove(tmpSignatureFile.Name())  // clean up
@@ -224,7 +225,7 @@ func TestUnmarshalSignedAttribute(t *testing.T) {
 }
 
 func TestDegenerateCertificate(t *testing.T) {
-	cert, err := createTestCertificate(x509.SHA1WithRSA)
+	cert, err := createTestCertificate(x509.SHA256WithRSA)
 	if err != nil {
 		t.Fatal(err)
 	}

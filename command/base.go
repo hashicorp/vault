@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package command
 
 import (
@@ -15,7 +18,6 @@ import (
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/command/token"
 	"github.com/hashicorp/vault/helper/namespace"
-	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/mattn/go-isatty"
 	"github.com/mitchellh/cli"
 	"github.com/pkg/errors"
@@ -40,22 +42,24 @@ type BaseCommand struct {
 	flags     *FlagSets
 	flagsOnce sync.Once
 
-	flagAddress        string
-	flagAgentAddress   string
-	flagCACert         string
-	flagCAPath         string
-	flagClientCert     string
-	flagClientKey      string
-	flagNamespace      string
-	flagNS             string
-	flagPolicyOverride bool
-	flagTLSServerName  string
-	flagTLSSkipVerify  bool
-	flagWrapTTL        time.Duration
-	flagUnlockKey      string
+	flagAddress           string
+	flagAgentProxyAddress string
+	flagCACert            string
+	flagCAPath            string
+	flagClientCert        string
+	flagClientKey         string
+	flagNamespace         string
+	flagNS                string
+	flagPolicyOverride    bool
+	flagTLSServerName     string
+	flagTLSSkipVerify     bool
+	flagDisableRedirects  bool
+	flagWrapTTL           time.Duration
+	flagUnlockKey         string
 
 	flagFormat           string
 	flagField            string
+	flagDetailed         bool
 	flagOutputCurlString bool
 	flagOutputPolicy     bool
 	flagNonInteractive   bool
@@ -86,8 +90,8 @@ func (c *BaseCommand) Client() (*api.Client, error) {
 	if c.flagAddress != "" {
 		config.Address = c.flagAddress
 	}
-	if c.flagAgentAddress != "" {
-		config.Address = c.flagAgentAddress
+	if c.flagAgentProxyAddress != "" {
+		config.Address = c.flagAgentProxyAddress
 	}
 
 	if c.flagOutputCurlString {
@@ -218,44 +222,55 @@ func (c *BaseCommand) DefaultWrappingLookupFunc(operation, path string) string {
 	return api.DefaultWrappingLookupFunc(operation, path)
 }
 
-func (c *BaseCommand) isInteractiveEnabled(mfaConstraintLen int) bool {
-	if mfaConstraintLen != 1 || !isatty.IsTerminal(os.Stdin.Fd()) {
-		return false
-	}
-
-	if !c.flagNonInteractive {
-		return true
+// getMFAValidationRequired checks to see if the secret exists and has an MFA
+// requirement. If MFA is required and the number of constraints is greater than
+// 1, we can assert that interactive validation is not required.
+func (c *BaseCommand) getMFAValidationRequired(secret *api.Secret) bool {
+	if secret != nil && secret.Auth != nil && secret.Auth.MFARequirement != nil {
+		if c.flagMFA == nil && len(secret.Auth.MFARequirement.MFAConstraints) == 1 {
+			return true
+		} else if len(secret.Auth.MFARequirement.MFAConstraints) > 1 {
+			return true
+		}
 	}
 
 	return false
 }
 
-// getMFAMethodInfo returns MFA method information only if one MFA method is
-// configured.
-func (c *BaseCommand) getMFAMethodInfo(mfaConstraintAny map[string]*logical.MFAConstraintAny) MFAMethodInfo {
-	for _, mfaConstraint := range mfaConstraintAny {
+// getInteractiveMFAMethodInfo returns MFA method information only if operating
+// in interactive mode and one MFA method is configured.
+func (c *BaseCommand) getInteractiveMFAMethodInfo(secret *api.Secret) *MFAMethodInfo {
+	if secret == nil || secret.Auth == nil || secret.Auth.MFARequirement == nil {
+		return nil
+	}
+
+	mfaConstraints := secret.Auth.MFARequirement.MFAConstraints
+	if c.flagNonInteractive || len(mfaConstraints) != 1 || !isatty.IsTerminal(os.Stdin.Fd()) {
+		return nil
+	}
+
+	for _, mfaConstraint := range mfaConstraints {
 		if len(mfaConstraint.Any) != 1 {
-			return MFAMethodInfo{}
+			return nil
 		}
 
-		return MFAMethodInfo{
+		return &MFAMethodInfo{
 			methodType:  mfaConstraint.Any[0].Type,
 			methodID:    mfaConstraint.Any[0].ID,
 			usePasscode: mfaConstraint.Any[0].UsesPasscode,
 		}
 	}
 
-	return MFAMethodInfo{}
+	return nil
 }
 
-func (c *BaseCommand) validateMFA(reqID string, methodInfo MFAMethodInfo) int {
+func (c *BaseCommand) validateMFA(reqID string, methodInfo MFAMethodInfo) (*api.Secret, error) {
 	var passcode string
 	var err error
 	if methodInfo.usePasscode {
 		passcode, err = c.UI.AskSecret(fmt.Sprintf("Enter the passphrase for methodID %q of type %q:", methodInfo.methodID, methodInfo.methodType))
 		if err != nil {
-			c.UI.Error(fmt.Sprintf("failed to read the passphrase with error %q. please validate the login by sending a request to sys/mfa/validate", err.Error()))
-			return 2
+			return nil, fmt.Errorf("failed to read passphrase: %w. please validate the login by sending a request to sys/mfa/validate", err)
 		}
 	} else {
 		c.UI.Warn("Asking Vault to perform MFA validation with upstream service. " +
@@ -269,32 +284,10 @@ func (c *BaseCommand) validateMFA(reqID string, methodInfo MFAMethodInfo) int {
 
 	client, err := c.Client()
 	if err != nil {
-		c.UI.Error(err.Error())
-		return 2
+		return nil, err
 	}
 
-	secret, err := client.Sys().MFAValidate(reqID, mfaPayload)
-	if err != nil {
-		c.UI.Error(err.Error())
-		if secret != nil {
-			OutputSecret(c.UI, secret)
-		}
-		return 2
-	}
-	if secret == nil {
-		// Don't output anything unless using the "table" format
-		if Format(c.UI) == "table" {
-			c.UI.Info("Success! Data written to: sys/mfa/validate")
-		}
-		return 0
-	}
-
-	// Handle single field output
-	if c.flagField != "" {
-		return PrintRawField(c.UI, secret, c.flagField)
-	}
-
-	return OutputSecret(c.UI, secret)
+	return client.Sys().MFAValidate(reqID, mfaPayload)
 }
 
 type FlagSetBit uint
@@ -304,6 +297,7 @@ const (
 	FlagSetHTTP
 	FlagSetOutputField
 	FlagSetOutputFormat
+	FlagSetOutputDetailed
 )
 
 // flagSet creates the flags for this command. The result is cached on the
@@ -336,7 +330,7 @@ func (c *BaseCommand) flagSet(bit FlagSetBit) *FlagSets {
 
 			agentAddrStringVar := &StringVar{
 				Name:       "agent-address",
-				Target:     &c.flagAgentAddress,
+				Target:     &c.flagAgentProxyAddress,
 				EnvVar:     api.EnvVaultAgentAddr,
 				Completion: complete.PredictAnything,
 				Usage:      "Address of the Agent.",
@@ -426,6 +420,15 @@ func (c *BaseCommand) flagSet(bit FlagSetBit) *FlagSets {
 			})
 
 			f.BoolVar(&BoolVar{
+				Name:    flagNameDisableRedirects,
+				Target:  &c.flagDisableRedirects,
+				Default: false,
+				EnvVar:  api.EnvVaultDisableRedirects,
+				Usage: "Disable the default client behavior, which honors a single " +
+					"redirect response from a request",
+			})
+
+			f.BoolVar(&BoolVar{
 				Name:    "policy-override",
 				Target:  &c.flagPolicyOverride,
 				Default: false,
@@ -496,11 +499,11 @@ func (c *BaseCommand) flagSet(bit FlagSetBit) *FlagSets {
 
 		}
 
-		if bit&(FlagSetOutputField|FlagSetOutputFormat) != 0 {
-			f := set.NewFlagSet("Output Options")
+		if bit&(FlagSetOutputField|FlagSetOutputFormat|FlagSetOutputDetailed) != 0 {
+			outputSet := set.NewFlagSet("Output Options")
 
 			if bit&FlagSetOutputField != 0 {
-				f.StringVar(&StringVar{
+				outputSet.StringVar(&StringVar{
 					Name:       "field",
 					Target:     &c.flagField,
 					Default:    "",
@@ -513,14 +516,25 @@ func (c *BaseCommand) flagSet(bit FlagSetBit) *FlagSets {
 			}
 
 			if bit&FlagSetOutputFormat != 0 {
-				f.StringVar(&StringVar{
+				outputSet.StringVar(&StringVar{
 					Name:       "format",
 					Target:     &c.flagFormat,
 					Default:    "table",
 					EnvVar:     EnvVaultFormat,
-					Completion: complete.PredictSet("table", "json", "yaml", "pretty"),
+					Completion: complete.PredictSet("table", "json", "yaml", "pretty", "raw"),
 					Usage: `Print the output in the given format. Valid formats
-						are "table", "json", "yaml", or "pretty".`,
+						are "table", "json", "yaml", or "pretty". "raw" is allowed
+						for 'vault read' operations only.`,
+				})
+			}
+
+			if bit&FlagSetOutputDetailed != 0 {
+				outputSet.BoolVar(&BoolVar{
+					Name:    "detailed",
+					Target:  &c.flagDetailed,
+					Default: false,
+					EnvVar:  EnvVaultDetailed,
+					Usage:   "Enables additional metadata during some operations",
 				})
 			}
 		}
@@ -537,6 +551,7 @@ type FlagSets struct {
 	mainSet     *flag.FlagSet
 	hiddens     map[string]struct{}
 	completions complete.Flags
+	ui          cli.Ui
 }
 
 // NewFlagSets creates a new flag sets.
@@ -552,6 +567,7 @@ func NewFlagSets(ui cli.Ui) *FlagSets {
 		mainSet:     mainSet,
 		hiddens:     make(map[string]struct{}),
 		completions: complete.Flags{},
+		ui:          ui,
 	}
 }
 
@@ -569,9 +585,36 @@ func (f *FlagSets) Completions() complete.Flags {
 	return f.completions
 }
 
+type (
+	ParseOptions              interface{}
+	ParseOptionAllowRawFormat bool
+	DisableDisplayFlagWarning bool
+)
+
 // Parse parses the given flags, returning any errors.
-func (f *FlagSets) Parse(args []string) error {
-	return f.mainSet.Parse(args)
+// Warnings, if any, regarding the arguments format are sent to stdout
+func (f *FlagSets) Parse(args []string, opts ...ParseOptions) error {
+	err := f.mainSet.Parse(args)
+
+	displayFlagWarningsDisabled := false
+	for _, opt := range opts {
+		if value, ok := opt.(DisableDisplayFlagWarning); ok {
+			displayFlagWarningsDisabled = bool(value)
+		}
+	}
+	if !displayFlagWarningsDisabled {
+		warnings := generateFlagWarnings(f.Args())
+		if warnings != "" && Format(f.ui) == "table" {
+			f.ui.Warn(warnings)
+		}
+	}
+
+	if err != nil {
+		return err
+	}
+
+	// Now surface any other errors.
+	return generateFlagErrors(f, opts...)
 }
 
 // Parsed reports whether the command-line flags have been parsed.
@@ -591,10 +634,10 @@ func (f *FlagSets) Visit(fn func(*flag.Flag)) {
 }
 
 // Help builds custom help for this command, grouping by flag set.
-func (fs *FlagSets) Help() string {
+func (f *FlagSets) Help() string {
 	var out bytes.Buffer
 
-	for _, set := range fs.flagSets {
+	for _, set := range f.flagSets {
 		printFlagTitle(&out, set.name+":")
 		set.VisitAll(func(f *flag.Flag) {
 			// Skip any hidden flags

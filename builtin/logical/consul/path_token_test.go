@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package consul
 
 import (
@@ -7,7 +10,7 @@ import (
 	"github.com/hashicorp/consul/api"
 )
 
-func Test_parseServiceIdentities(t *testing.T) {
+func TestToken_parseServiceIdentities(t *testing.T) {
 	tests := []struct {
 		name string
 		args []string
@@ -58,7 +61,7 @@ func Test_parseServiceIdentities(t *testing.T) {
 	}
 }
 
-func Test_parseNodeIdentities(t *testing.T) {
+func TestToken_parseNodeIdentities(t *testing.T) {
 	tests := []struct {
 		name string
 		args []string

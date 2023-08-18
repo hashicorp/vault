@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import RESTSerializer from '@ember-data/serializer/rest';
 import { assign } from '@ember/polyfills';
 import { decamelize } from '@ember/string';
@@ -22,7 +27,7 @@ export default RESTSerializer.extend({
       payload.type === 'chacha20-poly1305' ||
       payload.type === 'aes128-gcm96'
     ) {
-      for (let version in payload.keys) {
+      for (const version in payload.keys) {
         payload.keys[version] = payload.keys[version] * 1000;
       }
     }

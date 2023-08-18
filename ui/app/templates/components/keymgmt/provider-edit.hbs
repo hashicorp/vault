@@ -1,3 +1,8 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
 <PageHeader as |p|>
   <p.top>
     <KeyValueHeader @path="vault.cluster.secrets.backend.show" @mode={{@mode}} @root={{@root}} @showCurrent={{true}} />
@@ -5,12 +10,12 @@
   <p.levelLeft>
     <h1 class="title is-3" data-test-kms-provider-header>
       {{#if this.isDistributing}}
-        Destribute key to provider
+        Distribute Key to Provider
       {{else if this.isShowing}}
         Provider
         <span class="has-font-weight-normal">{{@model.id}}</span>
       {{else}}
-        {{if this.isCreating "Create provider" "Update credentials"}}
+        {{if this.isCreating "Create Provider" "Update Credentials"}}
       {{/if}}
     </h1>
   </p.levelLeft>
@@ -23,13 +28,13 @@
     <div class="tabs-container box is-sideless is-fullwidth is-paddingless is-marginless">
       <nav class="tabs">
         <ul>
-          <li class={{unless this.viewingKeys "is-active"}} data-test-kms-provider-tab="details">
+          <li class={{unless this.viewingKeys "active"}} data-test-kms-provider-tab="details">
             <LinkTo @route="vault.cluster.secrets.backend.show" @model={{@model.id}} @query={{hash tab=""}}>
               Details
             </LinkTo>
           </li>
           {{#if @model.canListKeys}}
-            <li class={{if this.viewingKeys "is-active"}} data-test-kms-provider-tab="keys">
+            <li class={{if this.viewingKeys "active"}} data-test-kms-provider-tab="keys">
               <LinkTo @route="vault.cluster.secrets.backend.show" @model={{@model.id}} @query={{hash tab="keys"}}>
                 Keys
               </LinkTo>
@@ -68,7 +73,12 @@
             <div class="toolbar-separator"></div>
           {{/if}}
           {{#if (or @model.canListKeys @model.canCreateKeys)}}
-            <button type="button" class="toolbar-link" {{on "click" (fn (mut this.isDistributing) true)}}>
+            <button
+              type="button"
+              class="toolbar-link"
+              {{on "click" (fn (mut this.isDistributing) true)}}
+              data-test-distribute-key
+            >
               Distribute key
               <Icon @name="chevron-right" />
             </button>
@@ -78,7 +88,7 @@
               @secret={{@model.id}}
               @mode="edit"
               @replace={{true}}
-              @queryParams={{query-params itemType="provider"}}
+              @queryParams={{hash itemType="provider"}}
               disabled={{(not @model.canEdit)}}
             >
               Update credentials
@@ -98,8 +108,15 @@
                   Provider configuration
                 </h2>
               </div>
+              {{#if @model.provider}}
+                {{! Only show last field if provider selected }}
+                <FormField @attr={{attr}} @model={{@model}} @modelValidations={{this.modelValidations}} />
+              {{else}}
+                <EmptyState @title="No provider selected" @message="Select a provider in order to configure it." />
+              {{/if}}
+            {{else}}
+              <FormField @attr={{attr}} @model={{@model}} @modelValidations={{this.modelValidations}} />
             {{/if}}
-            <FormField @attr={{attr}} @model={{@model}} @modelValidations={{this.modelValidations}} />
           {{/each}}
         {{/if}}
         {{#unless this.isCreating}}
@@ -170,7 +187,7 @@
               @title="No keys for this provider"
               @message="Keys for this provider will be listed here. Add a key to get started."
             >
-              <SecretLink @mode="create" @secret="" @queryParams={{query-params itemType="key"}} class="link">
+              <SecretLink @mode="create" @secret="" @queryParams={{hash itemType="key"}} class="link">
                 Create key
               </SecretLink>
             </EmptyState>

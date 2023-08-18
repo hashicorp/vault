@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package rabbitmq
 
 import (
@@ -18,6 +21,13 @@ const (
 func pathCreds(b *backend) *framework.Path {
 	return &framework.Path{
 		Pattern: "creds/" + framework.GenericNameRegex("name"),
+
+		DisplayAttrs: &framework.DisplayAttributes{
+			OperationPrefix: operationPrefixRabbitMQ,
+			OperationVerb:   "request",
+			OperationSuffix: "credentials",
+		},
+
 		Fields: map[string]*framework.FieldSchema{
 			"name": {
 				Type:        framework.TypeString,
@@ -74,7 +84,6 @@ func (b *backend) pathCredsRead(ctx context.Context, req *logical.Request, d *fr
 	if err != nil {
 		return nil, fmt.Errorf("failed to generate username: %w", err)
 	}
-	fmt.Printf("username: %s\n", username)
 
 	password, err := b.generatePassword(ctx, config.PasswordPolicy)
 	if err != nil {

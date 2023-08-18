@@ -1,11 +1,20 @@
-<svg
-  data-test-line-chart
-  class="chart has-grid"
-  {{on "mouseleave" this.removeTooltip}}
-  {{did-insert this.renderChart @dataset}}
-  {{did-update this.renderChart @dataset}}
->
-</svg>
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
+{{#if @dataset}}
+  <svg
+    data-test-line-chart
+    class="chart has-grid"
+    {{on "mouseleave" this.removeTooltip}}
+    {{did-insert this.renderChart @dataset}}
+    {{did-update this.renderChart @dataset}}
+  >
+  </svg>
+{{else}}
+  <EmptyState @subTitle={{or @noDataMessage "No data to display"}} @bottomBorder={{true}} />
+{{/if}}
 
 {{! TOOLTIP }}
 
@@ -14,11 +23,7 @@
   {{! Component must be in curly bracket notation }}
   {{! template-lint-disable no-curly-component-invocation }}
   {{#modal-dialog
-    tagName="div"
-    tetherTarget=this.tooltipTarget
-    targetAttachment="bottom middle"
-    attachment="bottom middle"
-    offset="35px 0"
+    tagName="div" tetherTarget=this.tooltipTarget targetAttachment="bottom middle" attachment="bottom middle" offset="35px 0"
   }}
     <div class="chart-tooltip line-chart">
       <p class="bold">{{this.tooltipMonth}}</p>

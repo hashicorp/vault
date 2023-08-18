@@ -1,8 +1,15 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import Component from '@glimmer/component';
 import { action } from '@ember/object';
 import { inject as service } from '@ember/service';
 import { tracked } from '@glimmer/tracking';
 import { KEY_TYPES } from '../../models/keymgmt/key';
+import { task } from 'ember-concurrency';
+import { waitFor } from '@ember/test-waiters';
 
 /**
  * @module KeymgmtDistribute
@@ -33,12 +40,12 @@ export default class KeymgmtDistribute extends Component {
   @service store;
   @service flashMessages;
   @service router;
-  @service wizard;
 
   @tracked keyModel;
   @tracked isNewKey = false;
   @tracked providerType;
   @tracked formData;
+  @tracked formErrors;
 
   constructor() {
     super(...arguments);
@@ -54,14 +61,6 @@ export default class KeymgmtDistribute extends Component {
       this.getKeyInfo(this.args.key);
     }
     this.formData.operations = [];
-    this.updateWizard('nextStep');
-  }
-
-  updateWizard(key) {
-    // wizard will pause unless we manually continue it -- verify that keymgmt tutorial is in progress
-    if (this.wizard[key] === 'distribute') {
-      this.wizard.transitionFeatureMachine(this.wizard.featureState, 'CONTINUE', 'keymgmt');
-    }
   }
 
   get keyTypes() {
@@ -191,20 +190,27 @@ export default class KeymgmtDistribute extends Component {
       .distribute(backend, provider, key, { purpose, protection })
       .then(() => {
         this.flashMessages.success(`Successfully distributed key ${key} to ${provider}`);
-        // move wizard forward if tutorial is in progress
-        this.updateWizard('featureState');
+        // update keys on provider model
+        this.store.clearDataset('keymgmt/key');
+        const providerModel = this.store.peekRecord('keymgmt/provider', provider);
+        providerModel.fetchKeys(providerModel.keys?.meta?.currentPage || 1);
         this.args.onClose();
       })
       .catch((e) => {
-        this.flashMessages.danger(`Error distributing key: ${e.errors}`);
+        this.formErrors = `${e.errors}`;
       });
   }
 
   @action
-  handleProvider(evt) {
-    this.formData.provider = evt.target.value;
-    if (evt.target.value) {
-      this.getProviderType(evt.target.value);
+  handleProvider(selection) {
+    let providerName = selection[0];
+    if (typeof selection === 'string') {
+      // Handles case if no list permissions and fallback component is used
+      providerName = selection;
+    }
+    this.formData.provider = providerName;
+    if (providerName) {
+      this.getProviderType(providerName);
     }
   }
   @action
@@ -235,8 +241,9 @@ export default class KeymgmtDistribute extends Component {
     return this.getKeyInfo(selectedKey.id, selectedKey.isNew);
   }
 
-  @action
-  async createDistribution(evt) {
+  @task
+  @waitFor
+  *createDistribution(evt) {
     evt.preventDefault();
     const { backend } = this.args;
     const data = this.formatData(this.formData);
@@ -246,12 +253,18 @@ export default class KeymgmtDistribute extends Component {
     }
     if (this.isNewKey) {
       try {
-        await this.keyModel.save();
+        yield this.keyModel.save();
         this.flashMessages.success(`Successfully created key ${this.keyModel.name}`);
       } catch (e) {
         this.flashMessages.danger(`Error creating new key ${this.keyModel.name}: ${e.errors}`);
+        return;
       }
     }
-    this.distributeKey(backend, data);
+    yield this.distributeKey(backend, data);
+    // Reload key to get dist info
+    yield this.store.queryRecord(`keymgmt/key`, {
+      backend: this.args.backend,
+      id: this.keyModel.name,
+    });
   }
 }

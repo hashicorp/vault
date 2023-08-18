@@ -10,7 +10,7 @@ description: |-
   Consensus Algorithm.
 ---
 
-# Integrated Storage (Raft) Backend
+# Integrated storage (Raft) backend
 
 The Integrated Storage backend is used to persist Vault's data. Unlike other storage
 backends, Integrated Storage does not operate from a single source of data. Instead
@@ -32,17 +32,17 @@ cluster_addr = "http://127.0.0.1:8201"
 ```
 
 ~> **Note:** When using the Integrated Storage backend, it is required to provide
-[`cluster_addr`](/docs/concepts/ha#per-node-cluster-address) to indicate the address and port to be used for communication
+[`cluster_addr`](/vault/docs/concepts/ha#per-node-cluster-address) to indicate the address and port to be used for communication
 between the nodes in the Raft cluster.
 
 ~> **Note:** When using the Integrated Storage backend, a separate
-[`ha_storage`](/docs/configuration#ha_storage)
+[`ha_storage`](/vault/docs/configuration#ha_storage)
 backend cannot be declared.
 
 ~> **Note:** When using the Integrated Storage backend, it is strongly recommended to
-set [`disable_mlock`](/docs/configuration#disable_mlock) to `true`, and to disable memory swapping on the system.
+set [`disable_mlock`](/vault/docs/configuration#disable_mlock) to `true`, and to disable memory swapping on the system.
 
-## `raft` Parameters
+## `raft` parameters
 
 - `path` `(string: "")` – The file system path where all the Vault data gets
   stored.
@@ -51,20 +51,22 @@ set [`disable_mlock`](/docs/configuration#disable_mlock) to `true`, and to disab
 - `node_id` `(string: "")` - The identifier for the node in the Raft cluster.
   This value can be overridden by setting the `VAULT_RAFT_NODE_ID` environment variable.
 
-- `performance_multiplier` `(integer: 0)` - An integer multiplier used by
-  servers to scale key Raft timing parameters. Tuning this affects the time it
+- `performance_multiplier` `(integer: 0)` - An integer multiplier used by 
+  servers to scale key Raft timing parameters, where each increment translates to approximately 1 – 2 seconds of delay. For example, setting the multiplier to "3" translates to 3 – 6 seconds of total delay.  Tuning  the multiplier affects the time it
   takes Vault to detect leader failures and to perform leader elections, at the
   expense of requiring more network and CPU resources for better performance.
-  Omitting this value or setting it to 0 uses default timing described below.
-  Lower values are used to tighten timing and increase sensitivity while higher
+  Omitting this value or setting it to 0 uses default timing described below. 
+  Lower values are used to tighten timing and increase sensitivity while higher 
   values relax timings and reduce sensitivity.
 
-  By default, Vault will use a lower-performance timing that's suitable for
-  minimal Vault servers, currently equivalent to setting this to a value of 5
-  (this default may be changed in future versions of Vault, depending if the
-  target minimum server profile changes). Setting this to a value of 1 will
-  configure Raft to its highest-performance mode and is recommended for
-  production Vault servers. The maximum allowed value is 10.
+
+By default, Vault uses a balanced timing value of 5, which is suitable for most
+platforms and scenarios. You should only adjust the timing value when platform
+telemetry indicators that a change is needed or different timing is required due
+to the overall reliability your platform (network, etc.).
+
+Setting the timing value to 1 configures Raft to its highest performance (lowest
+delay) mode. The maximum allowed value is 10. 
 
 - `trailing_logs` `(integer: 10000)` - This controls how many log entries are
   left in the log store on disk after a snapshot is made. This should only be
@@ -95,6 +97,16 @@ set [`disable_mlock`](/docs/configuration#disable_mlock) to `true`, and to disab
   See [the section below](#retry_join-stanza) that describes the parameters
   accepted by the [`retry_join`](#retry_join-stanza) stanza.
 
+- `retry_join_as_non_voter` `(boolean: false)` - If set, causes any `retry_join`
+  config to join the Raft cluster as a non-voter. The node will not participate
+  in the Raft quorum but will still receive the data replication stream, adding
+  read scalability to a cluster. This option has the same effect as the
+  [`-non-voter`](/vault/docs/commands/operator/raft#non-voter) flag for the
+  `vault operator raft join` command, but only affects voting status when joining
+  via `retry_join` config. This setting can be overridden to true by setting the
+  `VAULT_RAFT_RETRY_JOIN_AS_NON_VOTER` environment variable to any non-empty value.
+  Only valid if there is at least one `retry_join` stanza.
+
 - `max_entry_size` `(integer: 1048576)` - This configures the maximum number of
   bytes for a Raft entry. It applies to both Put operations and transactions.
   Any put or transaction operation exceeding this configuration value will cause
@@ -112,6 +124,24 @@ set [`disable_mlock`](/docs/configuration#disable_mlock) to `true`, and to disab
   period thereby qualifying for being promoted as a voter, a node that has become
   unhealthy and needs to be shown as such in the state API, a node has been marked
   as dead needing eviction from Raft configuration, etc.
+
+- `autopilot_update_interval` `(string: "2s")` - This is the interval after which
+  autopilot will poll Vault for any updates to the information it cares about. This
+  includes things like the autopilot configuration, current autopilot state, raft
+  configuration, known servers, latest raft index, and stats for all the known servers.
+  The information that autopilot receives will be used to calculate its next state.
+
+- `autopilot_upgrade_version` `(string: "")` - This is an optional string that, if
+  provided, will be used reported to autopilot as Vault's version. This is then used
+  by autopilot when it makes decisions regarding
+  [automated upgrades](/vault/docs/enterprise/automated-upgrades). If omitted, the
+  version of Vault currently in use will be used. Note that this string must conform
+  to [Semantic Versioning](https://semver.org). Use of this feature requires Vault
+  Enterprise.
+
+- `autopilot_redundancy_zone` `(string: "")` - This is an optional string that specifies
+  Vault's [redundancy zone](/vault/docs/enterprise/redundancy-zones). This is reported to autopilot
+  and is used to enhance scaling and resiliency. Use of this feature requires Vault Enterprise.
 
 ### `retry_join` stanza
 
@@ -131,7 +161,7 @@ set [`disable_mlock`](/docs/configuration#disable_mlock) to `true`, and to disab
   Should match one of the names in the [DNS
   SANs](https://en.wikipedia.org/wiki/Subject_Alternative_Name) of the remote
   server certificate.
-  See also [Integrated Storage and TLS](https://www.vaultproject.io/docs/concepts/integrated-storage#autojoin-with-tls-servername)
+  See also [Integrated Storage and TLS](/vault/docs/concepts/integrated-storage#autojoin-with-tls-servername)
 
 - `leader_ca_cert_file` `(string: "")` - File path to the CA cert of the
   possible leader node.
@@ -199,7 +229,7 @@ storage "raft" {
 
 ## Tutorial
 
-Refer to [Integrated
-Storage](https://learn.hashicorp.com/collections/vault/raft) for tutorials on Integrated Storage.
+Refer to the [Integrated
+Storage](/vault/tutorials/raft) series of tutorials to learn more about implementing Vault using Integrated Storage.
 
 [raft]: https://raft.github.io/ 'The Raft Consensus Algorithm'

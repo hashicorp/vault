@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package cockroachdb
 
 import (
@@ -6,14 +9,14 @@ import (
 	"fmt"
 	"net/url"
 	"os"
+	"runtime"
+	"strings"
 	"testing"
 
 	log "github.com/hashicorp/go-hclog"
-	"github.com/hashicorp/vault/helper/testhelpers/docker"
+	"github.com/hashicorp/vault/sdk/helper/docker"
 	"github.com/hashicorp/vault/sdk/helper/logging"
 	"github.com/hashicorp/vault/sdk/physical"
-
-	_ "github.com/lib/pq"
 )
 
 type Config struct {
@@ -25,6 +28,11 @@ type Config struct {
 var _ docker.ServiceConfig = &Config{}
 
 func prepareCockroachDBTestContainer(t *testing.T) (func(), *Config) {
+	// Skipping, as this image can't run on arm architecture
+	if strings.Contains(runtime.GOARCH, "arm") {
+		t.Skip("Skipping, as CockroachDB 1.0 is not supported on ARM architectures")
+	}
+
 	if retURL := os.Getenv("CR_URL"); retURL != "" {
 		s, err := docker.NewServiceURLParse(retURL)
 		if err != nil {
@@ -38,7 +46,7 @@ func prepareCockroachDBTestContainer(t *testing.T) (func(), *Config) {
 	}
 
 	runner, err := docker.NewServiceRunner(docker.RunOptions{
-		ImageRepo:     "cockroachdb/cockroach",
+		ImageRepo:     "docker.mirror.hashicorp.services/cockroachdb/cockroach",
 		ImageTag:      "release-1.0",
 		ContainerName: "cockroachdb",
 		Cmd:           []string{"start", "--insecure"},
@@ -63,7 +71,7 @@ func connectCockroachDB(ctx context.Context, host string, port int) (docker.Serv
 		RawQuery: "sslmode=disable",
 	}
 
-	db, err := sql.Open("postgres", u.String())
+	db, err := sql.Open("pgx", u.String())
 	if err != nil {
 		return nil, err
 	}

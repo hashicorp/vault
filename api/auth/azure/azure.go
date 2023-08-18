@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package azure
 
 import (
@@ -198,7 +201,6 @@ func (a *AzureAuth) getJWT() (string, error) {
 func getMetadata() (metadataJSON, error) {
 	metadataEndpoint, err := url.Parse(fmt.Sprintf("%s/metadata/instance", metadataEndpoint))
 	if err != nil {
-		fmt.Println("Error creating URL: ", err)
 		return metadataJSON{}, err
 	}
 

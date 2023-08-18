@@ -1,7 +1,11 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package command
 
 import (
 	"fmt"
+	"path"
 	"strings"
 
 	"github.com/mitchellh/cli"
@@ -97,7 +101,7 @@ func (c *KVMetadataDeleteCommand) Run(args []string) int {
 
 	// If true, we're working with "-mount=secret foo" syntax.
 	// If false, we're using "secret/foo" syntax.
-	mountFlagSyntax := (c.flagMount != "")
+	mountFlagSyntax := c.flagMount != ""
 
 	var (
 		mountPath   string
@@ -109,11 +113,14 @@ func (c *KVMetadataDeleteCommand) Run(args []string) int {
 	if mountFlagSyntax {
 		// In this case, this arg is the secret path (e.g. "foo").
 		partialPath = sanitizePath(args[0])
-		mountPath = sanitizePath(c.flagMount)
-		_, v2, err = isKVv2(mountPath, client)
+		mountPath, v2, err = isKVv2(sanitizePath(c.flagMount), client)
 		if err != nil {
 			c.UI.Error(err.Error())
 			return 2
+		}
+
+		if v2 {
+			partialPath = path.Join(mountPath, partialPath)
 		}
 	} else {
 		// In this case, this arg is a path-like combination of mountPath/secretPath.
@@ -131,7 +138,7 @@ func (c *KVMetadataDeleteCommand) Run(args []string) int {
 		return 1
 	}
 
-	fullPath := addPrefixToKVPath(partialPath, mountPath, "metadata")
+	fullPath := addPrefixToKVPath(partialPath, mountPath, "metadata", false)
 	if secret, err := client.Logical().Delete(fullPath); err != nil {
 		c.UI.Error(fmt.Sprintf("Error deleting %s: %s", fullPath, err))
 		if secret != nil {

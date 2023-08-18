@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package random
 
 import (
@@ -71,10 +74,10 @@ func HandleRandomAPI(d *framework.FieldData, additionalSource io.Reader) (*logic
 		}
 		randBytes, err = uuid.GenerateRandomBytesWithReader(bytes, additionalSource)
 	case "all":
-		var sealBytes []byte
-		sealBytes, err = uuid.GenerateRandomBytesWithReader(bytes, additionalSource)
-		if err == nil {
-			randBytes, err = uuid.GenerateRandomBytes(bytes)
+		randBytes, err = uuid.GenerateRandomBytes(bytes)
+		if err == nil && rand.Reader != additionalSource {
+			var sealBytes []byte
+			sealBytes, err = uuid.GenerateRandomBytesWithReader(bytes, additionalSource)
 			if err == nil {
 				randBytes, err = xor.XORBytes(sealBytes, randBytes)
 			}

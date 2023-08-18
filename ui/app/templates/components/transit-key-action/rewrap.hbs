@@ -1,7 +1,12 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
 <form onsubmit={{action @doSubmit (hash ciphertext=@ciphertext context=@context nonce=@nonce key_version=@key_version)}}>
   <div class="box is-sideless is-fullwidth is-marginless">
     <NamespaceReminder @mode="perform" @noun="rewrap" />
-    <div class="content">
+    <div class="content has-bottom-margin-l">
       <p>
         You can rewrap the provided ciphertext using the latest version of
         <code>{{@key.name}}</code>
@@ -44,7 +49,7 @@
     {{/if}}
   </div>
   <div class="field box is-fullwidth is-bottomless">
-    <div class="content">
+    <div class="content has-bottom-margin-l">
       <p class="help">
         Submitting this form will update the
         <code>ciphertext</code>

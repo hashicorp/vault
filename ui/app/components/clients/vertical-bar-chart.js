@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import Component from '@glimmer/component';
 import { action } from '@ember/object';
 import { tracked } from '@glimmer/tracking';
@@ -5,7 +10,7 @@ import { max } from 'd3-array';
 // eslint-disable-next-line no-unused-vars
 import { select, selectAll, node } from 'd3-selection';
 import { axisLeft, axisBottom } from 'd3-axis';
-import { scaleLinear, scaleBand } from 'd3-scale';
+import { scaleLinear, scalePoint } from 'd3-scale';
 import { stack } from 'd3-shape';
 import {
   GREY,
@@ -14,6 +19,7 @@ import {
   TRANSLATE,
   formatNumbers,
 } from 'vault/utils/chart-helpers';
+import { formatNumber } from 'core/helpers/format-number';
 
 /**
  * @module VerticalBarChart
@@ -27,8 +33,10 @@ import {
  * @param {array} chartLegend - array of objects with key names 'key' and 'label' so data can be stacked
  * @param {string} xKey - string denoting key for x-axis data (data[xKey]) of dataset
  * @param {string} yKey - string denoting key for y-axis data (data[yKey]) of dataset
+ * @param {string} [noDataMessage] - custom empty state message that displays when no dataset is passed to the chart
  */
 
+const BAR_WIDTH = 7; // data bar width is 7 pixels
 export default class VerticalBarChart extends Component {
   @tracked tooltipTarget = '';
   @tracked tooltipTotal = '';
@@ -54,22 +62,20 @@ export default class VerticalBarChart extends Component {
     const stackFunction = stack().keys(this.chartLegend.map((l) => l.key));
     const stackedData = stackFunction(filteredData);
     const chartSvg = select(element);
-    const dataMax = max(filteredData.map((d) => d[this.yKey]));
-    const domainMax = Math.ceil(dataMax / 10) * 10; // we want to round UP to the nearest tens place ex. dataMax = 102, domainMax = 110
+    const domainMax = max(filteredData.map((d) => d[this.yKey]));
 
     chartSvg.attr('viewBox', `-50 20 600 ${SVG_DIMENSIONS.height}`); // set svg dimensions
 
     // DEFINE DATA BAR SCALES
     const yScale = scaleLinear().domain([0, domainMax]).range([0, 100]).nice();
 
-    const xScale = scaleBand()
+    const xScale = scalePoint()
       .domain(dataset.map((d) => d[this.xKey]))
       .range([0, SVG_DIMENSIONS.width]) // set width to fix number of pixels
-      .paddingInner(0.85);
+      .padding(0.2);
 
     // clear out DOM before appending anything
     chartSvg.selectAll('g').remove().exit().data(stackedData).enter();
-
     const dataBars = chartSvg
       .selectAll('g')
       .data(stackedData)
@@ -82,11 +88,25 @@ export default class VerticalBarChart extends Component {
       .data((stackedData) => stackedData)
       .enter()
       .append('rect')
-      .attr('width', '7px')
+      .attr('width', `${BAR_WIDTH}px`)
       .attr('class', 'data-bar')
+      .attr('data-test-vertical-chart', 'data-bar')
       .attr('height', (stackedData) => `${yScale(stackedData[1] - stackedData[0])}%`)
       .attr('x', ({ data }) => xScale(data[this.xKey])) // uses destructuring because was data.data.month
       .attr('y', (data) => `${100 - yScale(data[1])}%`); // subtract higher than 100% to give space for x axis ticks
+
+    const tooltipTether = chartSvg
+      .append('g')
+      .attr('transform', `translate(${BAR_WIDTH / 2})`)
+      .attr('data-test-vertical-chart', 'tooltip-tethers')
+      .selectAll('circle')
+      .data(filteredData)
+      .enter()
+      .append('circle')
+      .style('opacity', '0')
+      .attr('cy', (d) => `${100 - yScale(d[this.yKey])}%`)
+      .attr('cx', (d) => xScale(d[this.xKey]))
+      .attr('r', 1);
 
     // MAKE AXES //
     const yAxisScale = scaleLinear()
@@ -102,8 +122,13 @@ export default class VerticalBarChart extends Component {
 
     const xAxis = axisBottom(xScale).tickSize(0);
 
-    yAxis(chartSvg.append('g'));
-    xAxis(chartSvg.append('g').attr('transform', `translate(0, ${SVG_DIMENSIONS.height + 10})`));
+    yAxis(chartSvg.append('g').attr('data-test-vertical-chart', 'y-axis-labels'));
+    xAxis(
+      chartSvg
+        .append('g')
+        .attr('transform', `translate(0, ${SVG_DIMENSIONS.height + 10})`)
+        .attr('data-test-vertical-chart', 'x-axis-labels')
+    );
 
     chartSvg.selectAll('.domain').remove(); // remove domain lines
 
@@ -129,16 +154,13 @@ export default class VerticalBarChart extends Component {
 
     // MOUSE EVENT FOR TOOLTIP
     tooltipRect.on('mouseover', (data) => {
-      let hoveredMonth = data[this.xKey];
-      this.tooltipTotal = `${data[this.yKey]} ${data.new_clients ? 'total' : 'new'} clients`;
-      this.entityClients = `${data.entity_clients} entity clients`;
-      this.nonEntityClients = `${data.non_entity_clients} non-entity clients`;
-      let node = chartSvg
-        .selectAll('rect.data-bar')
-        // filter for the top data bar (so y-coord !== 0) with matching month
-        .filter((data) => data[0] !== 0 && data.data.month === hoveredMonth)
-        .node();
-      this.tooltipTarget = node; // grab the node from the list of rects
+      const hoveredMonth = data[this.xKey];
+      this.tooltipTotal = `${formatNumber([data[this.yKey]])} ${data.new_clients ? 'total' : 'new'} clients`;
+      this.entityClients = `${formatNumber([data.entity_clients])} entity clients`;
+      this.nonEntityClients = `${formatNumber([data.non_entity_clients])} non-entity clients`;
+      // filter for the tether point that matches the hoveredMonth
+      const hoveredElement = tooltipTether.filter((data) => data.month === hoveredMonth).node();
+      this.tooltipTarget = hoveredElement; // grab the node from the list of rects
     });
   }
 

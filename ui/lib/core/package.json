@@ -8,15 +8,18 @@
     "date-fns": "*",
     "@icholy/duration": "*",
     "base64-js": "*",
+    "dompurify": "*",
     "ember-auto-import": "*",
     "ember-basic-dropdown": "*",
     "ember-cli-babel": "*",
     "ember-cli-clipboard": "*",
     "ember-cli-htmlbars": "*",
     "ember-cli-string-helpers": "*",
+    "ember-cli-typescript": "*",
     "ember-composable-helpers": "*",
     "ember-concurrency": "*",
     "ember-maybe-in-element": "*",
+    "ember/render-modifiers": "*",
     "ember-power-select": "*",
     "ember-router-helpers": "*",
     "ember-svg-jar": "*",
@@ -24,6 +27,9 @@
     "ember-wormhole": "*",
     "escape-string-regexp": "*",
     "@hashicorp/ember-flight-icons": "*",
-    "@hashicorp/flight-icons": "*"
+    "@hashicorp/flight-icons": "*",
+    "@hashicorp/design-system-components": "*",
+    "codemirror": "*",
+    "ember-modifier": "*"
   }
 }

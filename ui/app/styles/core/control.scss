@@ -1,0 +1,64 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
+// This file defines the style for .control
+
+.control.has-icons-left .icon,
+.control.has-icons-right .icon {
+  height: 2.5rem;
+}
+
+.control.has-icons-right .input {
+  padding-right: 2.25em;
+}
+
+.control {
+  font-size: 1rem;
+  max-width: 100%;
+  position: relative;
+  text-align: left;
+
+  // Modifiers
+  &.has-icons-left,
+  &.has-icons-right {
+    .input,
+    .select select {
+      padding-left: 2rem;
+
+      &:focus,
+      &:active,
+      &.is-active {
+        & ~ .icon {
+          color: currentColor;
+        }
+      }
+    }
+  }
+  &.has-checkbox-right {
+    label.checkbox {
+      display: inline-flex;
+      height: 2.5em;
+      position: absolute;
+      top: 0;
+      right: 0;
+      justify-content: flex-end;
+      margin-left: auto;
+    }
+    .input,
+    .select select {
+      padding-right: 10em;
+    }
+  }
+
+  &.is-align-end {
+    display: flex;
+    align-self: end;
+  }
+}
+
+.control.is-expanded {
+  flex-grow: 1;
+  flex-shrink: 1;
+}

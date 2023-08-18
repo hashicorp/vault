@@ -1,3 +1,8 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
 <LinkedBlock
   @params={{array
     (concat "vault.cluster.secrets.backend." (if @item.isFolder "list" "show") (unless @item.id "-root"))
@@ -43,7 +48,12 @@
                 {{else}}
                   {{#if (or @item.canReadSecretData @item.canRead)}}
                     <li class="action">
-                      <SecretLink @mode="show" @secret={{@item.id}} class="has-text-black has-text-weight-semibold">
+                      <SecretLink
+                        @mode="show"
+                        @secret={{@item.id}}
+                        @queryParams={{secret-query-params @backendModel.type @item.type asQueryParams=true}}
+                        class="has-text-black has-text-weight-semibold"
+                      >
                         Details
                       </SecretLink>
                     </li>
@@ -57,7 +67,12 @@
                   {{/if}}
                   {{#if (or @item.canEditSecretData @item.canEdit)}}
                     <li class="action">
-                      <SecretLink @mode="edit" @secret={{@item.id}} class="has-text-black has-text-weight-semibold">
+                      <SecretLink
+                        @mode="edit"
+                        @secret={{@item.id}}
+                        @queryParams={{secret-query-params @backendModel.type @item.type asQueryParams=true}}
+                        class="has-text-black has-text-weight-semibold"
+                      >
                         {{if @backendModel.isV2KV "Create new version" "Edit"}}
                       </SecretLink>
                     </li>

@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package cockroachdb
 
 import (
@@ -185,7 +188,7 @@ func (l *CockroachDBLock) writeItem() (bool, error) {
 	c.permitPool.Acquire()
 	defer c.permitPool.Release()
 
-	sqlResult, err := c.haStatements["upsert"].Exec(l.identity, l.key, l.value, l.ttlSeconds)
+	sqlResult, err := c.haStatements["upsert"].Exec(l.identity, l.key, l.value, fmt.Sprintf("%d seconds", l.ttlSeconds))
 	if err != nil {
 		return false, err
 	}

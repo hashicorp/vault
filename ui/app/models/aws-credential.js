@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import Model, { attr } from '@ember-data/model';
 import { computed } from '@ember/object';
 import { expandAttributeMeta } from 'vault/utils/field-to-attrs';
@@ -52,8 +57,8 @@ export default Model.extend({
   securityToken: attr('string'),
 
   attrs: computed('credentialType', 'accessKey', 'securityToken', function () {
-    let type = this.credentialType;
-    let fieldsForType = {
+    const type = this.credentialType;
+    const fieldsForType = {
       iam_user: ['credentialType'],
       assumed_role: ['credentialType', 'ttl', 'roleArn'],
       federation_token: ['credentialType', 'ttl'],
@@ -69,7 +74,7 @@ export default Model.extend({
       accessKey: this.accessKey,
       secretKey: this.secretKey,
       securityToken: this.securityToken,
-      leasId: this.leaseId,
+      leaseId: this.leaseId,
     };
     const propsWithVals = Object.keys(props).reduce((ret, prop) => {
       if (props[prop]) {

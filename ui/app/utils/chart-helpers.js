@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import { format } from 'd3-format';
 import { mean } from 'd3-array';
 
@@ -27,9 +32,14 @@ export function formatTooltipNumber(value) {
   return new Intl.NumberFormat().format(value);
 }
 
-export function calculateAverageClients(dataset, objectKey) {
-  // dataset is an array of objects (consumed by the chart components)
-  // objectKey is the key of the integer we want to calculate, ex: 'entity_clients', 'non_entity_clients', 'clients'
-  let getIntegers = dataset.map((d) => (d[objectKey] ? d[objectKey] : 0)); // if undefined no data, so return 0
-  return getIntegers.length !== 0 ? Math.round(mean(getIntegers)) : null;
+export function calculateAverage(dataset, objectKey) {
+  // before mapping for values, check that the objectKey exists at least once in the dataset because
+  // map returns 0 when dataset[objectKey] is undefined in order to calculate average
+  if (!Array.isArray(dataset) || !objectKey || !dataset.some((d) => Object.keys(d).includes(objectKey))) {
+    return null;
+  }
+
+  const integers = dataset.map((d) => (d[objectKey] ? d[objectKey] : 0));
+  const checkIntegers = integers.every((n) => Number.isInteger(n)); // decimals will be false
+  return checkIntegers ? Math.round(mean(integers)) : null;
 }

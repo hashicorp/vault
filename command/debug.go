@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package command
 
 import (
@@ -21,7 +24,7 @@ import (
 	"github.com/hashicorp/vault/helper/osutil"
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
 	"github.com/hashicorp/vault/sdk/helper/logging"
-	"github.com/hashicorp/vault/sdk/version"
+	"github.com/hashicorp/vault/version"
 	"github.com/mholt/archiver/v3"
 	"github.com/mitchellh/cli"
 	"github.com/oklog/run"
@@ -92,6 +95,9 @@ type DebugCommand struct {
 	flagMetricsInterval time.Duration
 	flagOutput          string
 	flagTargets         []string
+
+	// logFormat defines the output format for Monitor
+	logFormat string
 
 	// debugIndex is used to keep track of the index state, which gets written
 	// to a file at the end.
@@ -178,6 +184,14 @@ func (c *DebugCommand) Flags() *FlagSets {
 			"This can be specified multiple times to capture multiple targets. " +
 			"Available targets are: config, host, metrics, pprof, " +
 			"replication-status, server-status, log.",
+	})
+
+	f.StringVar(&StringVar{
+		Name:    "log-format",
+		Target:  &c.logFormat,
+		Default: "standard",
+		Usage: "Log format to be captured if \"log\" target specified. " +
+			"Supported values are \"standard\" and \"json\". The default is \"standard\".",
 	})
 
 	return set
@@ -338,7 +352,7 @@ func (c *DebugCommand) generateIndex() error {
 
 		dir, file := filepath.Split(relPath)
 		if len(dir) != 0 {
-			dir = strings.TrimSuffix(dir, "/")
+			dir = filepath.Clean(dir)
 			filesArr := outputLayout[dir].(map[string]interface{})["files"]
 			outputLayout[dir].(map[string]interface{})["files"] = append(filesArr.([]string), file)
 		} else {
@@ -437,7 +451,7 @@ func (c *DebugCommand) preflight(rawArgs []string) (string, error) {
 	}
 
 	// Strip trailing slash before proceeding
-	c.flagOutput = strings.TrimSuffix(c.flagOutput, "/")
+	c.flagOutput = filepath.Clean(c.flagOutput)
 
 	// If compression is enabled, trim the extension so that the files are
 	// written to a directory even if compression somehow fails. We ensure the
@@ -1053,14 +1067,25 @@ func (c *DebugCommand) captureError(target string, err error) {
 }
 
 func (c *DebugCommand) writeLogs(ctx context.Context) {
-	out, err := os.OpenFile(filepath.Join(c.flagOutput, "vault.log"), os.O_CREATE, 0o600)
+	out, err := os.OpenFile(filepath.Join(c.flagOutput, "vault.log"), os.O_CREATE|os.O_WRONLY, 0o600)
 	if err != nil {
 		c.captureError("log", err)
 		return
 	}
 	defer out.Close()
 
-	logCh, err := c.cachedClient.Sys().Monitor(ctx, "trace")
+	// Create Monitor specific client based on the cached client
+	mClient, err := c.cachedClient.Clone()
+	if err != nil {
+		c.captureError("log", err)
+		return
+	}
+	mClient.SetToken(c.cachedClient.Token())
+
+	// Set timeout to match the context explicitly
+	mClient.SetClientTimeout(c.flagDuration + debugDurationGrace)
+
+	logCh, err := mClient.Sys().Monitor(ctx, "trace", c.logFormat)
 	if err != nil {
 		c.captureError("log", err)
 		return
@@ -1069,13 +1094,15 @@ func (c *DebugCommand) writeLogs(ctx context.Context) {
 	for {
 		select {
 		case log := <-logCh:
-			if !strings.HasSuffix(log, "\n") {
-				log += "\n"
-			}
-			_, err = out.WriteString(log)
-			if err != nil {
-				c.captureError("log", err)
-				return
+			if len(log) > 0 {
+				if !strings.HasSuffix(log, "\n") {
+					log += "\n"
+				}
+				_, err = out.WriteString(log)
+				if err != nil {
+					c.captureError("log", err)
+					return
+				}
 			}
 		case <-ctx.Done():
 			return

@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 // icons that exist in the public folder which are not part of the Structure set
 // values represent match to icon in Flight set with null representing no match
 export const localIconMap = {
@@ -21,6 +26,8 @@ export const localIconMap = {
   radius: 'user',
   ssh: 'terminal-screen',
   totp: 'history',
+  duo: null,
+  pingid: null,
   transit: 'swap-horizontal',
   userpass: 'identity-user',
   stopwatch: 'clock',

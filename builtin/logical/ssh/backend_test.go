@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package ssh
 
 import (
@@ -13,29 +16,28 @@ import (
 	"time"
 
 	"github.com/hashicorp/vault/api"
-	"github.com/hashicorp/vault/sdk/logical"
-
-	"golang.org/x/crypto/ssh"
-
 	"github.com/hashicorp/vault/builtin/credential/userpass"
-	"github.com/hashicorp/vault/helper/testhelpers/docker"
+	"github.com/hashicorp/vault/helper/testhelpers/corehelpers"
 	logicaltest "github.com/hashicorp/vault/helper/testhelpers/logical"
 	vaulthttp "github.com/hashicorp/vault/http"
+	"github.com/hashicorp/vault/sdk/helper/docker"
+	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/vault"
 	"github.com/mitchellh/mapstructure"
+	"github.com/stretchr/testify/require"
+	"golang.org/x/crypto/ssh"
 )
 
 const (
-	testIP              = "127.0.0.1"
-	testUserName        = "vaultssh"
-	testAdminUser       = "vaultssh"
-	testCaKeyType       = "ca"
-	testOTPKeyType      = "otp"
-	testDynamicKeyType  = "dynamic"
-	testCIDRList        = "127.0.0.1/32"
-	testAtRoleName      = "test@RoleName"
-	testDynamicRoleName = "testDynamicRoleName"
-	testOTPRoleName     = "testOTPRoleName"
+	testIP            = "127.0.0.1"
+	testUserName      = "vaultssh"
+	testMultiUserName = "vaultssh,otherssh"
+	testAdminUser     = "vaultssh"
+	testCaKeyType     = "ca"
+	testOTPKeyType    = "otp"
+	testCIDRList      = "127.0.0.1/32"
+	testAtRoleName    = "test@RoleName"
+	testOTPRoleName   = "testOTPRoleName"
 	// testKeyName is the name of the entry that will be written to SSHMOUNTPOINT/ssh/keys
 	testKeyName = "testKeyName"
 	// testSharedPrivateKey is the value of the entry that will be written to SSHMOUNTPOINT/ssh/keys
@@ -130,13 +132,15 @@ SjOQL/GkH1nkRcDS9++aAAAAAmNhAQID
 	dockerImageTagSupportsNoRSA1 = "8.4_p1-r3-ls48"
 )
 
+var ctx = context.Background()
+
 func prepareTestContainer(t *testing.T, tag, caPublicKeyPEM string) (func(), string) {
 	if tag == "" {
 		tag = dockerImageTagSupportsNoRSA1
 	}
 	runner, err := docker.NewServiceRunner(docker.RunOptions{
 		ContainerName: "openssh",
-		ImageRepo:     "linuxserver/openssh-server",
+		ImageRepo:     "docker.mirror.hashicorp.services/linuxserver/openssh-server",
 		ImageTag:      tag,
 		Env: []string{
 			"DOCKER_MODS=linuxserver/mods:openssh-server-openssh-client",
@@ -322,11 +326,45 @@ func TestBackend_AllowedUsers(t *testing.T) {
 	}
 }
 
+func TestBackend_AllowedDomainsTemplate(t *testing.T) {
+	testAllowedDomainsTemplate := "{{ identity.entity.metadata.ssh_username }}.example.com"
+	expectedValidPrincipal := "foo." + testUserName + ".example.com"
+	testAllowedPrincipalsTemplate(
+		t, testAllowedDomainsTemplate,
+		expectedValidPrincipal,
+		map[string]string{
+			"ssh_username": testUserName,
+		},
+		map[string]interface{}{
+			"key_type":                 testCaKeyType,
+			"algorithm_signer":         "rsa-sha2-256",
+			"allow_host_certificates":  true,
+			"allow_subdomains":         true,
+			"allowed_domains":          testAllowedDomainsTemplate,
+			"allowed_domains_template": true,
+		},
+		map[string]interface{}{
+			"cert_type":        "host",
+			"public_key":       testCAPublicKey,
+			"valid_principals": expectedValidPrincipal,
+		},
+	)
+}
+
 func TestBackend_AllowedUsersTemplate(t *testing.T) {
 	testAllowedUsersTemplate(t,
 		"{{ identity.entity.metadata.ssh_username }}",
 		testUserName, map[string]string{
 			"ssh_username": testUserName,
+		},
+	)
+}
+
+func TestBackend_MultipleAllowedUsersTemplate(t *testing.T) {
+	testAllowedUsersTemplate(t,
+		"{{ identity.entity.metadata.ssh_username }}",
+		testUserName, map[string]string{
+			"ssh_username": testMultiUserName,
 		},
 	)
 }
@@ -340,12 +378,153 @@ func TestBackend_AllowedUsersTemplate_WithStaticPrefix(t *testing.T) {
 	)
 }
 
+func TestBackend_DefaultUserTemplate(t *testing.T) {
+	testDefaultUserTemplate(t,
+		"{{ identity.entity.metadata.ssh_username }}",
+		testUserName,
+		map[string]string{
+			"ssh_username": testUserName,
+		},
+	)
+}
+
+func TestBackend_DefaultUserTemplate_WithStaticPrefix(t *testing.T) {
+	testDefaultUserTemplate(t,
+		"user-{{ identity.entity.metadata.ssh_username }}",
+		"user-"+testUserName,
+		map[string]string{
+			"ssh_username": testUserName,
+		},
+	)
+}
+
+func TestBackend_DefaultUserTemplateFalse_AllowedUsersTemplateTrue(t *testing.T) {
+	cluster, userpassToken := getSshCaTestCluster(t, testUserName)
+	defer cluster.Cleanup()
+	client := cluster.Cores[0].Client
+
+	// set metadata "ssh_username" to userpass username
+	tokenLookupResponse, err := client.Logical().Write("/auth/token/lookup", map[string]interface{}{
+		"token": userpassToken,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	entityID := tokenLookupResponse.Data["entity_id"].(string)
+	_, err = client.Logical().Write("/identity/entity/id/"+entityID, map[string]interface{}{
+		"metadata": map[string]string{
+			"ssh_username": testUserName,
+		},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	_, err = client.Logical().Write("ssh/roles/my-role", map[string]interface{}{
+		"key_type":                testCaKeyType,
+		"allow_user_certificates": true,
+		"default_user":            "{{identity.entity.metadata.ssh_username}}",
+		// disable user templating but not allowed_user_template and the request should fail
+		"default_user_template":  false,
+		"allowed_users":          "{{identity.entity.metadata.ssh_username}}",
+		"allowed_users_template": true,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// sign SSH key as userpass user
+	client.SetToken(userpassToken)
+	_, err = client.Logical().Write("ssh/sign/my-role", map[string]interface{}{
+		"public_key": testCAPublicKey,
+	})
+	if err == nil {
+		t.Errorf("signing request should fail when default_user is not in the allowed_users list, because allowed_users_template is true and default_user_template is not")
+	}
+
+	expectedErrStr := "{{identity.entity.metadata.ssh_username}} is not a valid value for valid_principals"
+	if !strings.Contains(err.Error(), expectedErrStr) {
+		t.Errorf("expected error to include %q but it was: %q", expectedErrStr, err.Error())
+	}
+}
+
+func TestBackend_DefaultUserTemplateFalse_AllowedUsersTemplateFalse(t *testing.T) {
+	cluster, userpassToken := getSshCaTestCluster(t, testUserName)
+	defer cluster.Cleanup()
+	client := cluster.Cores[0].Client
+
+	// set metadata "ssh_username" to userpass username
+	tokenLookupResponse, err := client.Logical().Write("/auth/token/lookup", map[string]interface{}{
+		"token": userpassToken,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	entityID := tokenLookupResponse.Data["entity_id"].(string)
+	_, err = client.Logical().Write("/identity/entity/id/"+entityID, map[string]interface{}{
+		"metadata": map[string]string{
+			"ssh_username": testUserName,
+		},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	_, err = client.Logical().Write("ssh/roles/my-role", map[string]interface{}{
+		"key_type":                testCaKeyType,
+		"allow_user_certificates": true,
+		"default_user":            "{{identity.entity.metadata.ssh_username}}",
+		"default_user_template":   false,
+		"allowed_users":           "{{identity.entity.metadata.ssh_username}}",
+		"allowed_users_template":  false,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// sign SSH key as userpass user
+	client.SetToken(userpassToken)
+	signResponse, err := client.Logical().Write("ssh/sign/my-role", map[string]interface{}{
+		"public_key": testCAPublicKey,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// check for the expected valid principals of certificate
+	signedKey := signResponse.Data["signed_key"].(string)
+	key, _ := base64.StdEncoding.DecodeString(strings.Split(signedKey, " ")[1])
+	parsedKey, err := ssh.ParsePublicKey(key)
+	if err != nil {
+		t.Fatal(err)
+	}
+	actualPrincipals := parsedKey.(*ssh.Certificate).ValidPrincipals
+	if len(actualPrincipals) < 1 {
+		t.Fatal(
+			fmt.Sprintf("No ValidPrincipals returned: should have been %v",
+				[]string{"{{identity.entity.metadata.ssh_username}}"}),
+		)
+	}
+	if len(actualPrincipals) > 1 {
+		t.Error(
+			fmt.Sprintf("incorrect number ValidPrincipals, expected only 1: %v should be %v",
+				actualPrincipals, []string{"{{identity.entity.metadata.ssh_username}}"}),
+		)
+	}
+	if actualPrincipals[0] != "{{identity.entity.metadata.ssh_username}}" {
+		t.Fatal(
+			fmt.Sprintf("incorrect ValidPrincipals: %v should be %v",
+				actualPrincipals, []string{"{{identity.entity.metadata.ssh_username}}"}),
+		)
+	}
+}
+
 func newTestingFactory(t *testing.T) func(ctx context.Context, conf *logical.BackendConfig) (logical.Backend, error) {
 	return func(ctx context.Context, conf *logical.BackendConfig) (logical.Backend, error) {
 		defaultLeaseTTLVal := 2 * time.Minute
 		maxLeaseTTLVal := 10 * time.Minute
 		return Factory(context.Background(), &logical.BackendConfig{
-			Logger:      vault.NewTestLogger(t),
+			Logger:      corehelpers.NewTestLogger(t),
 			StorageView: &logical.InmemStorage{},
 			System: &logical.StaticSystemView{
 				DefaultLeaseTTLVal: defaultLeaseTTLVal,
@@ -361,36 +540,22 @@ func TestSSHBackend_Lookup(t *testing.T) {
 		"default_user": testUserName,
 		"cidr_list":    testCIDRList,
 	}
-	testDynamicRoleData := map[string]interface{}{
-		"key_type":     testDynamicKeyType,
-		"key":          testKeyName,
-		"admin_user":   testAdminUser,
-		"default_user": testAdminUser,
-		"cidr_list":    testCIDRList,
-	}
 	data := map[string]interface{}{
 		"ip": testIP,
 	}
 	resp1 := []string(nil)
 	resp2 := []string{testOTPRoleName}
-	resp3 := []string{testDynamicRoleName, testOTPRoleName}
-	resp4 := []string{testDynamicRoleName}
-	resp5 := []string{testAtRoleName}
+	resp3 := []string{testAtRoleName}
 	logicaltest.Test(t, logicaltest.TestCase{
 		LogicalFactory: newTestingFactory(t),
 		Steps: []logicaltest.TestStep{
 			testLookupRead(t, data, resp1),
 			testRoleWrite(t, testOTPRoleName, testOTPRoleData),
 			testLookupRead(t, data, resp2),
-			testNamedKeysWrite(t, testKeyName, testSharedPrivateKey),
-			testRoleWrite(t, testDynamicRoleName, testDynamicRoleData),
-			testLookupRead(t, data, resp3),
 			testRoleDelete(t, testOTPRoleName),
-			testLookupRead(t, data, resp4),
-			testRoleDelete(t, testDynamicRoleName),
 			testLookupRead(t, data, resp1),
-			testRoleWrite(t, testAtRoleName, testDynamicRoleData),
-			testLookupRead(t, data, resp5),
+			testRoleWrite(t, testAtRoleName, testOTPRoleData),
+			testLookupRead(t, data, resp3),
 			testRoleDelete(t, testAtRoleName),
 			testLookupRead(t, data, resp1),
 		},
@@ -439,39 +604,6 @@ func TestSSHBackend_RoleList(t *testing.T) {
 	})
 }
 
-func TestSSHBackend_DynamicKeyCreate(t *testing.T) {
-	cleanup, sshAddress := prepareTestContainer(t, "", "")
-	defer cleanup()
-
-	host, port, err := net.SplitHostPort(sshAddress)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	testDynamicRoleData := map[string]interface{}{
-		"key_type":     testDynamicKeyType,
-		"key":          testKeyName,
-		"admin_user":   testAdminUser,
-		"default_user": testAdminUser,
-		"cidr_list":    host + "/32",
-		"port":         port,
-	}
-	data := map[string]interface{}{
-		"username": testUserName,
-		"ip":       host,
-	}
-	logicaltest.Test(t, logicaltest.TestCase{
-		LogicalFactory: newTestingFactory(t),
-		Steps: []logicaltest.TestStep{
-			testNamedKeysWrite(t, testKeyName, testSharedPrivateKey),
-			testRoleWrite(t, testDynamicRoleName, testDynamicRoleData),
-			testCredsWrite(t, testDynamicRoleName, data, false, sshAddress),
-			testRoleWrite(t, testAtRoleName, testDynamicRoleData),
-			testCredsWrite(t, testAtRoleName, data, false, sshAddress),
-		},
-	})
-}
-
 func TestSSHBackend_OTPRoleCrud(t *testing.T) {
 	testOTPRoleData := map[string]interface{}{
 		"key_type":     testOTPKeyType,
@@ -495,50 +627,6 @@ func TestSSHBackend_OTPRoleCrud(t *testing.T) {
 			testRoleRead(t, testAtRoleName, respOTPRoleData),
 			testRoleDelete(t, testAtRoleName),
 			testRoleRead(t, testAtRoleName, nil),
-		},
-	})
-}
-
-func TestSSHBackend_DynamicRoleCrud(t *testing.T) {
-	testDynamicRoleData := map[string]interface{}{
-		"key_type":     testDynamicKeyType,
-		"key":          testKeyName,
-		"admin_user":   testAdminUser,
-		"default_user": testAdminUser,
-		"cidr_list":    testCIDRList,
-	}
-	respDynamicRoleData := map[string]interface{}{
-		"cidr_list":      testCIDRList,
-		"port":           22,
-		"install_script": DefaultPublicKeyInstallScript,
-		"key_bits":       1024,
-		"key":            testKeyName,
-		"admin_user":     testUserName,
-		"default_user":   testUserName,
-		"key_type":       testDynamicKeyType,
-	}
-	logicaltest.Test(t, logicaltest.TestCase{
-		LogicalFactory: newTestingFactory(t),
-		Steps: []logicaltest.TestStep{
-			testNamedKeysWrite(t, testKeyName, testSharedPrivateKey),
-			testRoleWrite(t, testDynamicRoleName, testDynamicRoleData),
-			testRoleRead(t, testDynamicRoleName, respDynamicRoleData),
-			testRoleDelete(t, testDynamicRoleName),
-			testRoleRead(t, testDynamicRoleName, nil),
-			testRoleWrite(t, testAtRoleName, testDynamicRoleData),
-			testRoleRead(t, testAtRoleName, respDynamicRoleData),
-			testRoleDelete(t, testAtRoleName),
-			testRoleRead(t, testAtRoleName, nil),
-		},
-	})
-}
-
-func TestSSHBackend_NamedKeysCrud(t *testing.T) {
-	logicaltest.Test(t, logicaltest.TestCase{
-		LogicalFactory: newTestingFactory(t),
-		Steps: []logicaltest.TestStep{
-			testNamedKeysWrite(t, testKeyName, testSharedPrivateKey),
-			testNamedKeysDelete(t),
 		},
 	})
 }
@@ -596,24 +684,14 @@ func TestSSHBackend_ConfigZeroAddressCRUD(t *testing.T) {
 		"default_user": testUserName,
 		"cidr_list":    testCIDRList,
 	}
-	testDynamicRoleData := map[string]interface{}{
-		"key_type":     testDynamicKeyType,
-		"key":          testKeyName,
-		"admin_user":   testAdminUser,
-		"default_user": testAdminUser,
-		"cidr_list":    testCIDRList,
-	}
 	req1 := map[string]interface{}{
 		"roles": testOTPRoleName,
 	}
 	resp1 := map[string]interface{}{
 		"roles": []string{testOTPRoleName},
 	}
-	req2 := map[string]interface{}{
-		"roles": fmt.Sprintf("%s,%s", testOTPRoleName, testDynamicRoleName),
-	}
 	resp2 := map[string]interface{}{
-		"roles": []string{testOTPRoleName, testDynamicRoleName},
+		"roles": []string{testOTPRoleName},
 	}
 	resp3 := map[string]interface{}{
 		"roles": []string{},
@@ -625,11 +703,7 @@ func TestSSHBackend_ConfigZeroAddressCRUD(t *testing.T) {
 			testRoleWrite(t, testOTPRoleName, testOTPRoleData),
 			testConfigZeroAddressWrite(t, req1),
 			testConfigZeroAddressRead(t, resp1),
-			testNamedKeysWrite(t, testKeyName, testSharedPrivateKey),
-			testRoleWrite(t, testDynamicRoleName, testDynamicRoleData),
-			testConfigZeroAddressWrite(t, req2),
 			testConfigZeroAddressRead(t, resp2),
-			testRoleDelete(t, testDynamicRoleName),
 			testConfigZeroAddressRead(t, resp1),
 			testRoleDelete(t, testOTPRoleName),
 			testConfigZeroAddressRead(t, resp3),
@@ -659,43 +733,6 @@ func TestSSHBackend_CredsForZeroAddressRoles_otp(t *testing.T) {
 			testCredsWrite(t, testOTPRoleName, data, false, ""),
 			testConfigZeroAddressDelete(t),
 			testCredsWrite(t, testOTPRoleName, data, true, ""),
-		},
-	})
-}
-
-func TestSSHBackend_CredsForZeroAddressRoles_dynamic(t *testing.T) {
-	cleanup, sshAddress := prepareTestContainer(t, "", "")
-	defer cleanup()
-
-	host, port, err := net.SplitHostPort(sshAddress)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	dynamicRoleData := map[string]interface{}{
-		"key_type":     testDynamicKeyType,
-		"key":          testKeyName,
-		"admin_user":   testAdminUser,
-		"default_user": testAdminUser,
-		"port":         port,
-	}
-	data := map[string]interface{}{
-		"username": testUserName,
-		"ip":       host,
-	}
-	req2 := map[string]interface{}{
-		"roles": testDynamicRoleName,
-	}
-	logicaltest.Test(t, logicaltest.TestCase{
-		LogicalFactory: newTestingFactory(t),
-		Steps: []logicaltest.TestStep{
-			testNamedKeysWrite(t, testKeyName, testSharedPrivateKey),
-			testRoleWrite(t, testDynamicRoleName, dynamicRoleData),
-			testCredsWrite(t, testDynamicRoleName, data, true, sshAddress),
-			testConfigZeroAddressWrite(t, req2),
-			testCredsWrite(t, testDynamicRoleName, data, false, sshAddress),
-			testConfigZeroAddressDelete(t),
-			testCredsWrite(t, testDynamicRoleName, data, true, sshAddress),
 		},
 	})
 }
@@ -911,10 +948,61 @@ cKumubUxOfFdy1ZvAAAAEm5jY0BtYnAudWJudC5sb2NhbA==
 					return nil
 				},
 			},
+			testIssueCert("testcarole", "ec", testUserName, sshAddress, expectError),
+			testIssueCert("testcarole", "ed25519", testUserName, sshAddress, expectError),
+			testIssueCert("testcarole", "rsa", testUserName, sshAddress, expectError),
 		},
 	}
 
 	logicaltest.Test(t, testCase)
+}
+
+func testIssueCert(role string, keyType string, testUserName string, sshAddress string, expectError bool) logicaltest.TestStep {
+	return logicaltest.TestStep{
+		Operation: logical.UpdateOperation,
+		Path:      "issue/" + role,
+		ErrorOk:   expectError,
+		Data: map[string]interface{}{
+			"key_type":         keyType,
+			"valid_principals": testUserName,
+		},
+
+		Check: func(resp *logical.Response) error {
+			// Tolerate nil response if an error was expected
+			if expectError && resp == nil {
+				return nil
+			}
+
+			signedKey := strings.TrimSpace(resp.Data["signed_key"].(string))
+			if signedKey == "" {
+				return errors.New("no signed key in response")
+			}
+
+			privKey, err := ssh.ParsePrivateKey([]byte(resp.Data["private_key"].(string)))
+			if err != nil {
+				return fmt.Errorf("error parsing private key: %v", err)
+			}
+
+			parsedKey, _, _, _, err := ssh.ParseAuthorizedKey([]byte(signedKey))
+			if err != nil {
+				return fmt.Errorf("error parsing signed key: %v", err)
+			}
+			certSigner, err := ssh.NewCertSigner(parsedKey.(*ssh.Certificate), privKey)
+			if err != nil {
+				return err
+			}
+
+			err = testSSH(testUserName, sshAddress, ssh.PublicKeys(certSigner), "date")
+			if expectError && err == nil {
+				return fmt.Errorf("expected error but got none")
+			}
+			if !expectError && err != nil {
+				return err
+			}
+
+			return nil
+		},
+	}
 }
 
 func TestSSHBackend_CAUpgradeAlgorithmSigner(t *testing.T) {
@@ -1480,6 +1568,8 @@ func TestBackend_DefExtTemplatingEnabled(t *testing.T) {
 		"default_extensions_template": true,
 		"default_extensions": map[string]interface{}{
 			"login@foobar.com": "{{identity.entity.aliases." + userpassAccessor + ".name}}",
+			"login@foobar2.com": "{{identity.entity.aliases." + userpassAccessor + ".name}}, " +
+				"{{identity.entity.aliases." + userpassAccessor + ".name}}_foobar",
 		},
 	})
 	if err != nil {
@@ -1505,7 +1595,8 @@ func TestBackend_DefExtTemplatingEnabled(t *testing.T) {
 	}
 
 	defaultExtensionPermissions := map[string]string{
-		"login@foobar.com": testUserName,
+		"login@foobar.com":  testUserName,
+		"login@foobar2.com": fmt.Sprintf("%s, %s_foobar", testUserName, testUserName),
 	}
 
 	err = validateSSHCertificate(parsedKey.(*ssh.Certificate), sshKeyID, ssh.UserCert, []string{"tuber"}, map[string]string{}, defaultExtensionPermissions, 16*time.Hour)
@@ -1682,6 +1773,144 @@ func TestBackend_DefExtTemplatingDisabled(t *testing.T) {
 	}
 }
 
+func TestSSHBackend_ValidateNotBeforeDuration(t *testing.T) {
+	config := logical.TestBackendConfig()
+
+	b, err := Factory(context.Background(), config)
+	if err != nil {
+		t.Fatalf("Cannot create backend: %s", err)
+	}
+	testCase := logicaltest.TestCase{
+		LogicalBackend: b,
+		Steps: []logicaltest.TestStep{
+			configCaStep(testCAPublicKey, testCAPrivateKey),
+
+			createRoleStep("testing", map[string]interface{}{
+				"key_type":                "ca",
+				"allow_host_certificates": true,
+				"allowed_domains":         "example.com,example.org",
+				"allow_subdomains":        true,
+				"default_critical_options": map[string]interface{}{
+					"option": "value",
+				},
+				"default_extensions": map[string]interface{}{
+					"extension": "extended",
+				},
+				"not_before_duration": "300s",
+			}),
+
+			signCertificateStep("testing", "vault-root-22608f5ef173aabf700797cb95c5641e792698ec6380e8e1eb55523e39aa5e51", ssh.HostCert, []string{"dummy.example.org", "second.example.com"}, map[string]string{
+				"option": "value",
+			}, map[string]string{
+				"extension": "extended",
+			},
+				2*time.Hour+5*time.Minute-30*time.Second, map[string]interface{}{
+					"public_key":       publicKey2,
+					"ttl":              "2h",
+					"cert_type":        "host",
+					"valid_principals": "dummy.example.org,second.example.com",
+				}),
+
+			createRoleStep("testing", map[string]interface{}{
+				"key_type":                "ca",
+				"allow_host_certificates": true,
+				"allowed_domains":         "example.com,example.org",
+				"allow_subdomains":        true,
+				"default_critical_options": map[string]interface{}{
+					"option": "value",
+				},
+				"default_extensions": map[string]interface{}{
+					"extension": "extended",
+				},
+				"not_before_duration": "2h",
+			}),
+
+			signCertificateStep("testing", "vault-root-22608f5ef173aabf700797cb95c5641e792698ec6380e8e1eb55523e39aa5e51", ssh.HostCert, []string{"dummy.example.org", "second.example.com"}, map[string]string{
+				"option": "value",
+			}, map[string]string{
+				"extension": "extended",
+			},
+				4*time.Hour-30*time.Second, map[string]interface{}{
+					"public_key":       publicKey2,
+					"ttl":              "2h",
+					"cert_type":        "host",
+					"valid_principals": "dummy.example.org,second.example.com",
+				}),
+			createRoleStep("testing", map[string]interface{}{
+				"key_type":                "ca",
+				"allow_host_certificates": true,
+				"allowed_domains":         "example.com,example.org",
+				"allow_subdomains":        true,
+				"default_critical_options": map[string]interface{}{
+					"option": "value",
+				},
+				"default_extensions": map[string]interface{}{
+					"extension": "extended",
+				},
+				"not_before_duration": "30s",
+			}),
+
+			signCertificateStep("testing", "vault-root-22608f5ef173aabf700797cb95c5641e792698ec6380e8e1eb55523e39aa5e51", ssh.HostCert, []string{"dummy.example.org", "second.example.com"}, map[string]string{
+				"option": "value",
+			}, map[string]string{
+				"extension": "extended",
+			},
+				2*time.Hour, map[string]interface{}{
+					"public_key":       publicKey2,
+					"ttl":              "2h",
+					"cert_type":        "host",
+					"valid_principals": "dummy.example.org,second.example.com",
+				}),
+		},
+	}
+
+	logicaltest.Test(t, testCase)
+}
+
+func TestSSHBackend_IssueSign(t *testing.T) {
+	config := logical.TestBackendConfig()
+
+	b, err := Factory(context.Background(), config)
+	if err != nil {
+		t.Fatalf("Cannot create backend: %s", err)
+	}
+
+	testCase := logicaltest.TestCase{
+		LogicalBackend: b,
+		Steps: []logicaltest.TestStep{
+			configCaStep(testCAPublicKey, testCAPrivateKey),
+
+			createRoleStep("testing", map[string]interface{}{
+				"key_type":     "otp",
+				"default_user": "user",
+			}),
+			// Key pair not issued with invalid role key type
+			issueSSHKeyPairStep("testing", "rsa", 0, true, "role key type 'otp' not allowed to issue key pairs"),
+
+			createRoleStep("testing", map[string]interface{}{
+				"key_type":                "ca",
+				"allow_user_key_ids":      false,
+				"allow_user_certificates": true,
+				"allowed_user_key_lengths": map[string]interface{}{
+					"ssh-rsa":             []int{2048, 3072, 4096},
+					"ecdsa-sha2-nistp521": 0,
+					"ed25519":             0,
+				},
+			}),
+			// Key_type not in allowed_user_key_types_lengths
+			issueSSHKeyPairStep("testing", "ec", 256, true, "provided key_type value not in allowed_user_key_types"),
+			// Key_bits not in allowed_user_key_types_lengths for provided key_type
+			issueSSHKeyPairStep("testing", "rsa", 2560, true, "provided key_bits value not in list of role's allowed_user_key_types"),
+			// key_type `rsa` and key_bits `2048` successfully created
+			issueSSHKeyPairStep("testing", "rsa", 2048, false, ""),
+			// key_type `ed22519` and key_bits `0` successfully created
+			issueSSHKeyPairStep("testing", "ed25519", 0, false, ""),
+		},
+	}
+
+	logicaltest.Test(t, testCase)
+}
+
 func getSshCaTestCluster(t *testing.T, userIdentity string) (*vault.TestCluster, string) {
 	coreConfig := &vault.CoreConfig{
 		CredentialBackends: map[string]logical.Factory{
@@ -1752,8 +1981,9 @@ func getSshCaTestCluster(t *testing.T, userIdentity string) (*vault.TestCluster,
 	return cluster, userpassToken
 }
 
-func testAllowedUsersTemplate(t *testing.T, testAllowedUsersTemplate string,
-	expectedValidPrincipal string, testEntityMetadata map[string]string) {
+func testDefaultUserTemplate(t *testing.T, testDefaultUserTemplate string,
+	expectedValidPrincipal string, testEntityMetadata map[string]string,
+) {
 	cluster, userpassToken := getSshCaTestCluster(t, testUserName)
 	defer cluster.Cleanup()
 	client := cluster.Cores[0].Client
@@ -1776,7 +2006,9 @@ func testAllowedUsersTemplate(t *testing.T, testAllowedUsersTemplate string,
 	_, err = client.Logical().Write("ssh/roles/my-role", map[string]interface{}{
 		"key_type":                testCaKeyType,
 		"allow_user_certificates": true,
-		"allowed_users":           testAllowedUsersTemplate,
+		"default_user":            testDefaultUserTemplate,
+		"default_user_template":   true,
+		"allowed_users":           testDefaultUserTemplate,
 		"allowed_users_template":  true,
 	})
 	if err != nil {
@@ -1786,8 +2018,7 @@ func testAllowedUsersTemplate(t *testing.T, testAllowedUsersTemplate string,
 	// sign SSH key as userpass user
 	client.SetToken(userpassToken)
 	signResponse, err := client.Logical().Write("ssh/sign/my-role", map[string]interface{}{
-		"public_key":       testCAPublicKey,
-		"valid_principals": expectedValidPrincipal,
+		"public_key": testCAPublicKey,
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -1807,6 +2038,76 @@ func testAllowedUsersTemplate(t *testing.T, testAllowedUsersTemplate string,
 				actualPrincipals, []string{expectedValidPrincipal}),
 		)
 	}
+}
+
+func testAllowedPrincipalsTemplate(t *testing.T, testAllowedDomainsTemplate string,
+	expectedValidPrincipal string, testEntityMetadata map[string]string,
+	roleConfigPayload map[string]interface{}, signingPayload map[string]interface{},
+) {
+	cluster, userpassToken := getSshCaTestCluster(t, testUserName)
+	defer cluster.Cleanup()
+	client := cluster.Cores[0].Client
+
+	// set metadata "ssh_username" to userpass username
+	tokenLookupResponse, err := client.Logical().Write("/auth/token/lookup", map[string]interface{}{
+		"token": userpassToken,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	entityID := tokenLookupResponse.Data["entity_id"].(string)
+	_, err = client.Logical().Write("/identity/entity/id/"+entityID, map[string]interface{}{
+		"metadata": testEntityMetadata,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	_, err = client.Logical().Write("ssh/roles/my-role", roleConfigPayload)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// sign SSH key as userpass user
+	client.SetToken(userpassToken)
+	signResponse, err := client.Logical().Write("ssh/sign/my-role", signingPayload)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// check for the expected valid principals of certificate
+	signedKey := signResponse.Data["signed_key"].(string)
+	key, _ := base64.StdEncoding.DecodeString(strings.Split(signedKey, " ")[1])
+	parsedKey, err := ssh.ParsePublicKey(key)
+	if err != nil {
+		t.Fatal(err)
+	}
+	actualPrincipals := parsedKey.(*ssh.Certificate).ValidPrincipals
+	if actualPrincipals[0] != expectedValidPrincipal {
+		t.Fatal(
+			fmt.Sprintf("incorrect ValidPrincipals: %v should be %v",
+				actualPrincipals, []string{expectedValidPrincipal}),
+		)
+	}
+}
+
+func testAllowedUsersTemplate(t *testing.T, testAllowedUsersTemplate string,
+	expectedValidPrincipal string, testEntityMetadata map[string]string,
+) {
+	testAllowedPrincipalsTemplate(
+		t, testAllowedUsersTemplate,
+		expectedValidPrincipal, testEntityMetadata,
+		map[string]interface{}{
+			"key_type":                testCaKeyType,
+			"allow_user_certificates": true,
+			"allowed_users":           testAllowedUsersTemplate,
+			"allowed_users_template":  true,
+		},
+		map[string]interface{}{
+			"public_key":       testCAPublicKey,
+			"valid_principals": expectedValidPrincipal,
+		},
+	)
 }
 
 func configCaStep(caPublicKey, caPrivateKey string) logicaltest.TestStep {
@@ -1832,7 +2133,8 @@ func signCertificateStep(
 	role, keyID string, certType int, validPrincipals []string,
 	criticalOptionPermissions, extensionPermissions map[string]string,
 	ttl time.Duration,
-	requestParameters map[string]interface{}) logicaltest.TestStep {
+	requestParameters map[string]interface{},
+) logicaltest.TestStep {
 	return logicaltest.TestStep{
 		Operation: logical.UpdateOperation,
 		Path:      "sign/" + role,
@@ -1857,6 +2159,42 @@ func signCertificateStep(
 			}
 
 			return validateSSHCertificate(parsedKey.(*ssh.Certificate), keyID, certType, validPrincipals, criticalOptionPermissions, extensionPermissions, ttl)
+		},
+	}
+}
+
+func issueSSHKeyPairStep(role, keyType string, keyBits int, expectError bool, errorMsg string) logicaltest.TestStep {
+	return logicaltest.TestStep{
+		Operation: logical.UpdateOperation,
+		Path:      "issue/" + role,
+		Data: map[string]interface{}{
+			"key_type": keyType,
+			"key_bits": keyBits,
+		},
+		ErrorOk: true,
+		Check: func(resp *logical.Response) error {
+			if expectError {
+				var err error
+				if resp.Data["error"] != errorMsg {
+					err = fmt.Errorf("actual error message \"%s\" different from expected error message \"%s\"", resp.Data["error"], errorMsg)
+				}
+
+				return err
+			}
+
+			if resp.IsError() {
+				return fmt.Errorf("unexpected error response returned: %v", resp.Error())
+			}
+
+			if resp.Data["private_key_type"] != keyType {
+				return fmt.Errorf("response private_key_type (%s) does not match the provided key_type (%s)", resp.Data["private_key_type"], keyType)
+			}
+
+			if resp.Data["signed_key"] == "" {
+				return errors.New("certificate/signed_key should not be empty")
+			}
+
+			return nil
 		},
 	}
 }
@@ -1988,23 +2326,6 @@ func testVerifyWrite(t *testing.T, data map[string]interface{}, expected map[str
 	}
 }
 
-func testNamedKeysWrite(t *testing.T, name, key string) logicaltest.TestStep {
-	return logicaltest.TestStep{
-		Operation: logical.UpdateOperation,
-		Path:      fmt.Sprintf("keys/%s", name),
-		Data: map[string]interface{}{
-			"key": key,
-		},
-	}
-}
-
-func testNamedKeysDelete(t *testing.T) logicaltest.TestStep {
-	return logicaltest.TestStep{
-		Operation: logical.DeleteOperation,
-		Path:      fmt.Sprintf("keys/%s", testKeyName),
-	}
-}
-
 func testLookupRead(t *testing.T, data map[string]interface{}, expected []string) logicaltest.TestStep {
 	return logicaltest.TestStep{
 		Operation: logical.UpdateOperation,
@@ -2069,10 +2390,6 @@ func testRoleRead(t *testing.T, roleName string, expected map[string]interface{}
 				if d.KeyType != expected["key_type"] || d.DefaultUser != expected["default_user"] || d.CIDRList != expected["cidr_list"] {
 					return fmt.Errorf("data mismatch. bad: %#v", resp)
 				}
-			case "dynamic":
-				if d.AdminUser != expected["admin_user"] || d.CIDRList != expected["cidr_list"] || d.KeyName != expected["key"] || d.KeyType != expected["key_type"] {
-					return fmt.Errorf("data mismatch. bad: %#v", resp)
-				}
 			default:
 				return fmt.Errorf("unknown key type. bad: %#v", resp)
 			}
@@ -2113,7 +2430,7 @@ func testCredsWrite(t *testing.T, roleName string, data map[string]interface{}, 
 				}
 				return nil
 			}
-			if roleName == testDynamicRoleName || roleName == testAtRoleName {
+			if roleName == testAtRoleName {
 				var d struct {
 					Key string `mapstructure:"key"`
 				}
@@ -2141,5 +2458,385 @@ func testCredsWrite(t *testing.T, roleName string, data map[string]interface{}, 
 			}
 			return nil
 		},
+	}
+}
+
+func TestBackend_CleanupDynamicHostKeys(t *testing.T) {
+	config := logical.TestBackendConfig()
+	config.StorageView = &logical.InmemStorage{}
+
+	b, err := Backend(config)
+	if err != nil {
+		t.Fatal(err)
+	}
+	err = b.Setup(context.Background(), config)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Running on a clean mount shouldn't do anything.
+	cleanRequest := &logical.Request{
+		Operation: logical.DeleteOperation,
+		Path:      "tidy/dynamic-keys",
+		Storage:   config.StorageView,
+	}
+
+	resp, err := b.HandleRequest(context.Background(), cleanRequest)
+	require.NoError(t, err)
+	require.NotNil(t, resp)
+	require.NotNil(t, resp.Data)
+	require.NotNil(t, resp.Data["message"])
+	require.Contains(t, resp.Data["message"], "0 of 0")
+
+	// Write a bunch of bogus entries.
+	for i := 0; i < 15; i++ {
+		data := map[string]interface{}{
+			"host": "localhost",
+			"key":  "nothing-to-see-here",
+		}
+		entry, err := logical.StorageEntryJSON(fmt.Sprintf("%vexample-%v", keysStoragePrefix, i), &data)
+		require.NoError(t, err)
+		err = config.StorageView.Put(context.Background(), entry)
+		require.NoError(t, err)
+	}
+
+	// Should now have 15
+	resp, err = b.HandleRequest(context.Background(), cleanRequest)
+	require.NoError(t, err)
+	require.NotNil(t, resp)
+	require.NotNil(t, resp.Data)
+	require.NotNil(t, resp.Data["message"])
+	require.Contains(t, resp.Data["message"], "15 of 15")
+
+	// Should have none left.
+	resp, err = b.HandleRequest(context.Background(), cleanRequest)
+	require.NoError(t, err)
+	require.NotNil(t, resp)
+	require.NotNil(t, resp.Data)
+	require.NotNil(t, resp.Data["message"])
+	require.Contains(t, resp.Data["message"], "0 of 0")
+}
+
+type pathAuthCheckerFunc func(t *testing.T, client *api.Client, path string, token string)
+
+func isPermDenied(err error) bool {
+	return strings.Contains(err.Error(), "permission denied")
+}
+
+func isUnsupportedPathOperation(err error) bool {
+	return strings.Contains(err.Error(), "unsupported path") || strings.Contains(err.Error(), "unsupported operation")
+}
+
+func isDeniedOp(err error) bool {
+	return isPermDenied(err) || isUnsupportedPathOperation(err)
+}
+
+func pathShouldBeAuthed(t *testing.T, client *api.Client, path string, token string) {
+	client.SetToken("")
+	resp, err := client.Logical().ReadWithContext(ctx, path)
+	if err == nil || !isPermDenied(err) {
+		t.Fatalf("expected failure to read %v while unauthed: %v / %v", path, err, resp)
+	}
+	resp, err = client.Logical().ListWithContext(ctx, path)
+	if err == nil || !isPermDenied(err) {
+		t.Fatalf("expected failure to list %v while unauthed: %v / %v", path, err, resp)
+	}
+	resp, err = client.Logical().WriteWithContext(ctx, path, map[string]interface{}{})
+	if err == nil || !isPermDenied(err) {
+		t.Fatalf("expected failure to write %v while unauthed: %v / %v", path, err, resp)
+	}
+	resp, err = client.Logical().DeleteWithContext(ctx, path)
+	if err == nil || !isPermDenied(err) {
+		t.Fatalf("expected failure to delete %v while unauthed: %v / %v", path, err, resp)
+	}
+	resp, err = client.Logical().JSONMergePatch(ctx, path, map[string]interface{}{})
+	if err == nil || !isPermDenied(err) {
+		t.Fatalf("expected failure to patch %v while unauthed: %v / %v", path, err, resp)
+	}
+}
+
+func pathShouldBeUnauthedReadList(t *testing.T, client *api.Client, path string, token string) {
+	// Should be able to read both with and without a token.
+	client.SetToken("")
+	resp, err := client.Logical().ReadWithContext(ctx, path)
+	if err != nil && isPermDenied(err) {
+		// Read will sometimes return permission denied, when the handler
+		// does not support the given operation. Retry with the token.
+		client.SetToken(token)
+		resp2, err2 := client.Logical().ReadWithContext(ctx, path)
+		if err2 != nil && !isUnsupportedPathOperation(err2) {
+			t.Fatalf("unexpected failure to read %v while unauthed: %v / %v\nWhile authed: %v / %v", path, err, resp, err2, resp2)
+		}
+		client.SetToken("")
+	}
+	resp, err = client.Logical().ListWithContext(ctx, path)
+	if err != nil && isPermDenied(err) {
+		// List will sometimes return permission denied, when the handler
+		// does not support the given operation. Retry with the token.
+		client.SetToken(token)
+		resp2, err2 := client.Logical().ListWithContext(ctx, path)
+		if err2 != nil && !isUnsupportedPathOperation(err2) {
+			t.Fatalf("unexpected failure to list %v while unauthed: %v / %v\nWhile authed: %v / %v", path, err, resp, err2, resp2)
+		}
+		client.SetToken("")
+	}
+
+	// These should all be denied.
+	resp, err = client.Logical().WriteWithContext(ctx, path, map[string]interface{}{})
+	if err == nil || !isDeniedOp(err) {
+		t.Fatalf("unexpected failure during write on read-only path %v while unauthed: %v / %v", path, err, resp)
+	}
+	resp, err = client.Logical().DeleteWithContext(ctx, path)
+	if err == nil || !isDeniedOp(err) {
+		t.Fatalf("unexpected failure during delete on read-only path %v while unauthed: %v / %v", path, err, resp)
+	}
+	resp, err = client.Logical().JSONMergePatch(ctx, path, map[string]interface{}{})
+	if err == nil || !isDeniedOp(err) {
+		t.Fatalf("unexpected failure during patch on read-only path %v while unauthed: %v / %v", path, err, resp)
+	}
+
+	// Retrying with token should allow read/list, but not modification still.
+	client.SetToken(token)
+	resp, err = client.Logical().ReadWithContext(ctx, path)
+	if err != nil && isPermDenied(err) {
+		t.Fatalf("unexpected failure to read %v while authed: %v / %v", path, err, resp)
+	}
+	resp, err = client.Logical().ListWithContext(ctx, path)
+	if err != nil && isPermDenied(err) {
+		t.Fatalf("unexpected failure to list %v while authed: %v / %v", path, err, resp)
+	}
+
+	// Should all be denied.
+	resp, err = client.Logical().WriteWithContext(ctx, path, map[string]interface{}{})
+	if err == nil || !isDeniedOp(err) {
+		t.Fatalf("unexpected failure during write on read-only path %v while authed: %v / %v", path, err, resp)
+	}
+	resp, err = client.Logical().DeleteWithContext(ctx, path)
+	if err == nil || !isDeniedOp(err) {
+		t.Fatalf("unexpected failure during delete on read-only path %v while authed: %v / %v", path, err, resp)
+	}
+	resp, err = client.Logical().JSONMergePatch(ctx, path, map[string]interface{}{})
+	if err == nil || !isDeniedOp(err) {
+		t.Fatalf("unexpected failure during patch on read-only path %v while authed: %v / %v", path, err, resp)
+	}
+}
+
+func pathShouldBeUnauthedWriteOnly(t *testing.T, client *api.Client, path string, token string) {
+	client.SetToken("")
+	resp, err := client.Logical().WriteWithContext(ctx, path, map[string]interface{}{})
+	if err != nil && isPermDenied(err) {
+		t.Fatalf("unexpected failure to write %v while unauthed: %v / %v", path, err, resp)
+	}
+
+	// These should all be denied.
+	resp, err = client.Logical().ReadWithContext(ctx, path)
+	if err == nil || !isDeniedOp(err) {
+		t.Fatalf("unexpected failure during read on write-only path %v while unauthed: %v / %v", path, err, resp)
+	}
+	resp, err = client.Logical().ListWithContext(ctx, path)
+	if err == nil || !isDeniedOp(err) {
+		t.Fatalf("unexpected failure during list on write-only path %v while unauthed: %v / %v", path, err, resp)
+	}
+	resp, err = client.Logical().DeleteWithContext(ctx, path)
+	if err == nil || !isDeniedOp(err) {
+		t.Fatalf("unexpected failure during delete on write-only path %v while unauthed: %v / %v", path, err, resp)
+	}
+	resp, err = client.Logical().JSONMergePatch(ctx, path, map[string]interface{}{})
+	if err == nil || !isDeniedOp(err) {
+		t.Fatalf("unexpected failure during patch on write-only path %v while unauthed: %v / %v", path, err, resp)
+	}
+
+	// Retrying with token should allow writing, but nothing else.
+	client.SetToken(token)
+	resp, err = client.Logical().WriteWithContext(ctx, path, map[string]interface{}{})
+	if err != nil && isPermDenied(err) {
+		t.Fatalf("unexpected failure to write %v while unauthed: %v / %v", path, err, resp)
+	}
+
+	// These should all be denied.
+	resp, err = client.Logical().ReadWithContext(ctx, path)
+	if err == nil || !isDeniedOp(err) {
+		t.Fatalf("unexpected failure during read on write-only path %v while authed: %v / %v", path, err, resp)
+	}
+	resp, err = client.Logical().ListWithContext(ctx, path)
+	if err == nil || !isDeniedOp(err) {
+		if resp != nil || err != nil {
+			t.Fatalf("unexpected failure during list on write-only path %v while authed: %v / %v", path, err, resp)
+		}
+	}
+	resp, err = client.Logical().DeleteWithContext(ctx, path)
+	if err == nil || !isDeniedOp(err) {
+		t.Fatalf("unexpected failure during delete on write-only path %v while authed: %v / %v", path, err, resp)
+	}
+	resp, err = client.Logical().JSONMergePatch(ctx, path, map[string]interface{}{})
+	if err == nil || !isDeniedOp(err) {
+		t.Fatalf("unexpected failure during patch on write-only path %v while authed: %v / %v", path, err, resp)
+	}
+}
+
+type pathAuthChecker int
+
+const (
+	shouldBeAuthed pathAuthChecker = iota
+	shouldBeUnauthedReadList
+	shouldBeUnauthedWriteOnly
+)
+
+var pathAuthChckerMap = map[pathAuthChecker]pathAuthCheckerFunc{
+	shouldBeAuthed:            pathShouldBeAuthed,
+	shouldBeUnauthedReadList:  pathShouldBeUnauthedReadList,
+	shouldBeUnauthedWriteOnly: pathShouldBeUnauthedWriteOnly,
+}
+
+func TestProperAuthing(t *testing.T) {
+	t.Parallel()
+	coreConfig := &vault.CoreConfig{
+		LogicalBackends: map[string]logical.Factory{
+			"ssh": Factory,
+		},
+	}
+	cluster := vault.NewTestCluster(t, coreConfig, &vault.TestClusterOptions{
+		HandlerFunc: vaulthttp.Handler,
+	})
+	cluster.Start()
+	defer cluster.Cleanup()
+	client := cluster.Cores[0].Client
+	token := client.Token()
+
+	// Mount SSH.
+	err := client.Sys().MountWithContext(ctx, "ssh", &api.MountInput{
+		Type: "ssh",
+		Config: api.MountConfigInput{
+			DefaultLeaseTTL: "16h",
+			MaxLeaseTTL:     "60h",
+		},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Setup basic configuration.
+	_, err = client.Logical().WriteWithContext(ctx, "ssh/config/ca", map[string]interface{}{
+		"generate_signing_key": true,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	_, err = client.Logical().WriteWithContext(ctx, "ssh/roles/test-ca", map[string]interface{}{
+		"key_type":                "ca",
+		"allow_user_certificates": true,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	_, err = client.Logical().WriteWithContext(ctx, "ssh/issue/test-ca", map[string]interface{}{
+		"username": "toor",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	_, err = client.Logical().WriteWithContext(ctx, "ssh/roles/test-otp", map[string]interface{}{
+		"key_type":     "otp",
+		"default_user": "toor",
+		"cidr_list":    "127.0.0.0/24",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	resp, err := client.Logical().WriteWithContext(ctx, "ssh/creds/test-otp", map[string]interface{}{
+		"username": "toor",
+		"ip":       "127.0.0.1",
+	})
+	if err != nil || resp == nil {
+		t.Fatal(err)
+	}
+	// key := resp.Data["key"].(string)
+
+	paths := map[string]pathAuthChecker{
+		"config/ca":          shouldBeAuthed,
+		"config/zeroaddress": shouldBeAuthed,
+		"creds/test-otp":     shouldBeAuthed,
+		"issue/test-ca":      shouldBeAuthed,
+		"lookup":             shouldBeAuthed,
+		"public_key":         shouldBeUnauthedReadList,
+		"roles/test-ca":      shouldBeAuthed,
+		"roles/test-otp":     shouldBeAuthed,
+		"roles/":             shouldBeAuthed,
+		"sign/test-ca":       shouldBeAuthed,
+		"tidy/dynamic-keys":  shouldBeAuthed,
+		"verify":             shouldBeUnauthedWriteOnly,
+	}
+	for path, checkerType := range paths {
+		checker := pathAuthChckerMap[checkerType]
+		checker(t, client, "ssh/"+path, token)
+	}
+
+	client.SetToken(token)
+	openAPIResp, err := client.Logical().ReadWithContext(ctx, "sys/internal/specs/openapi")
+	if err != nil {
+		t.Fatalf("failed to get openapi data: %v", err)
+	}
+
+	if len(openAPIResp.Data["paths"].(map[string]interface{})) == 0 {
+		t.Fatalf("expected to get response from OpenAPI; got empty path list")
+	}
+
+	validatedPath := false
+	for openapi_path, raw_data := range openAPIResp.Data["paths"].(map[string]interface{}) {
+		if !strings.HasPrefix(openapi_path, "/ssh/") {
+			t.Logf("Skipping path: %v", openapi_path)
+			continue
+		}
+
+		t.Logf("Validating path: %v", openapi_path)
+		validatedPath = true
+
+		// Substitute values in from our testing map.
+		raw_path := openapi_path[5:]
+		if strings.Contains(raw_path, "{role}") && strings.Contains(raw_path, "roles/") {
+			raw_path = strings.ReplaceAll(raw_path, "{role}", "test-ca")
+		}
+		if strings.Contains(raw_path, "{role}") && (strings.Contains(raw_path, "sign/") || strings.Contains(raw_path, "issue/")) {
+			raw_path = strings.ReplaceAll(raw_path, "{role}", "test-ca")
+		}
+		if strings.Contains(raw_path, "{role}") && strings.Contains(raw_path, "creds") {
+			raw_path = strings.ReplaceAll(raw_path, "{role}", "test-otp")
+		}
+
+		handler, present := paths[raw_path]
+		if !present {
+			t.Fatalf("OpenAPI reports SSH mount contains %v -> %v but was not tested to be authed or not authed.",
+				openapi_path, raw_path)
+		}
+
+		openapi_data := raw_data.(map[string]interface{})
+		hasList := false
+		rawGetData, hasGet := openapi_data["get"]
+		if hasGet {
+			getData := rawGetData.(map[string]interface{})
+			getParams, paramsPresent := getData["parameters"].(map[string]interface{})
+			if getParams != nil && paramsPresent {
+				if _, hasList = getParams["list"]; hasList {
+					// LIST is exclusive from GET on the same endpoint usually.
+					hasGet = false
+				}
+			}
+		}
+		_, hasPost := openapi_data["post"]
+		_, hasDelete := openapi_data["delete"]
+
+		if handler == shouldBeUnauthedReadList {
+			if hasPost || hasDelete {
+				t.Fatalf("Unauthed read-only endpoints should not have POST/DELETE capabilities")
+			}
+		}
+	}
+
+	if !validatedPath {
+		t.Fatalf("Expected to have validated at least one path.")
 	}
 }

@@ -1,8 +1,13 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
 <PageHeader as |p|>
   <p.levelLeft>
     <h1 class="title is-3">
       <Icon @name="code" class="has-text-grey-light" />
-      Vault API explorer
+      Vault API Explorer
     </h1>
   </p.levelLeft>
 </PageHeader>
@@ -10,8 +15,11 @@
   <ToolbarFilters>
     <div class="field is-marginless">
       <p class="control has-icons-left">
+        <label for="swagger-result-filter" class="sr-only">Filter operations by path</label>
         <input
-          oninput={{queue (action "updateFilter") (action "proxyEvent")}}
+          id="swagger-result-filter"
+          {{on "input" (action "proxyEvent")}}
+          {{on "change" (action "updateFilter")}}
           value={{@initialFilter}}
           disabled={{this.swaggerLoading}}
           class="filter input"
@@ -31,7 +39,7 @@
     <code>X-Vault-Namespace: {{R.namespace.path}}</code>. You can also use
     <code>{{R.namespace.path}}</code>
     as an API prefix. See
-    <DocLink @path="/api-docs#namespaces">docs</DocLink>
+    <DocLink @path="/vault/api-docs#namespaces">docs</DocLink>
     for examples.
   </NamespaceReminder>
   <div id="{{this.elementId}}-swagger" class="swagger-ember"></div>

@@ -1,0 +1,38 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
+<PageHeader as |p|>
+  <p.top>
+    <Page::Breadcrumbs @breadcrumbs={{@breadcrumbs}} />
+  </p.top>
+  <p.levelLeft>
+    <h1 class="title is-3" data-test-pki-page-title>
+      {{this.title}}
+    </h1>
+  </p.levelLeft>
+</PageHeader>
+
+{{#if @model.id}}
+  <Toolbar />
+{{/if}}
+{{#if @model.privateKey}}
+  <div class="has-top-margin-m">
+    <Hds::Alert @type="inline" @color="highlight" class="has-bottom-margin-s" as |A|>
+      <A.Title>Next steps</A.Title>
+      <A.Description>
+        The
+        <code>private_key</code>
+        is only available once. Make sure you copy and save it now.
+      </A.Description>
+    </Hds::Alert>
+  </div>
+{{/if}}
+<PkiGenerateRoot
+  @model={{@model}}
+  @onCancel={{transition-to "vault.cluster.secrets.backend.pki.issuers.index"}}
+  @onComplete={{transition-to "vault.cluster.secrets.backend.pki.issuers.index"}}
+  @onSave={{fn (mut this.title) "View generated root"}}
+  @adapterOptions={{hash actionType="generate-root" useIssuer=@model.canGenerateIssuerRoot}}
+/>

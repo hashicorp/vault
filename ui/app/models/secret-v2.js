@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import Model, { belongsTo, hasMany, attr } from '@ember-data/model';
 import { computed } from '@ember/object'; // eslint-disable-line
 import { alias } from '@ember/object/computed'; // eslint-disable-line
@@ -8,7 +13,7 @@ import { withModelValidations } from 'vault/decorators/model-validations';
 
 const validations = {
   maxVersions: [
-    { type: 'number', options: { asString: true }, message: 'Maximum versions must be a number.' },
+    { type: 'number', message: 'Maximum versions must be a number.' },
     { type: 'length', options: { min: 1, max: 16 }, message: 'You cannot go over 16 characters.' },
   ],
 };
@@ -30,7 +35,7 @@ export default SecretV2Model.extend(KeyMixin, {
     subText: 'An optional set of informational key-value pairs that will be stored with all secret versions.',
   }),
   maxVersions: attr('number', {
-    defaultValue: 10,
+    defaultValue: 0,
     label: 'Maximum number of versions',
     subText:
       'The number of versions to keep per key. Once the number of keys exceeds the maximum number set here, the oldest version will be permanently deleted.',

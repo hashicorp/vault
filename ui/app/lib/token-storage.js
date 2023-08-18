@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import localStorageWrapper from './local-storage';
 import memoryStorage from './memory-storage';
 
@@ -7,7 +12,7 @@ export default function (type) {
   }
   let storage;
   try {
-    localStorageWrapper.getItem('test');
+    window.localStorage.getItem('test');
     storage = localStorageWrapper;
   } catch (e) {
     storage = memoryStorage;

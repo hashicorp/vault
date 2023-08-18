@@ -1,19 +1,20 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package pluginutil
 
 import (
 	"context"
 	"fmt"
 	"os/exec"
-	"reflect"
 	"testing"
 	"time"
-
-	"github.com/hashicorp/vault/sdk/version"
 
 	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-plugin"
 	"github.com/hashicorp/vault/sdk/helper/wrapping"
 	"github.com/stretchr/testify/mock"
+	"github.com/stretchr/testify/require"
 )
 
 func TestMakeConfig(t *testing.T) {
@@ -76,8 +77,9 @@ func TestMakeConfig(t *testing.T) {
 					[]string{"foo", "bar"},
 					[]string{
 						"initial=true",
-						fmt.Sprintf("%s=%s", PluginVaultVersionEnv, version.GetVersion().Version),
+						fmt.Sprintf("%s=%s", PluginVaultVersionEnv, "dummyversion"),
 						fmt.Sprintf("%s=%t", PluginMetadataModeEnv, true),
+						fmt.Sprintf("%s=%t", PluginAutoMTLSEnv, false),
 					},
 				),
 				SecureConfig: &plugin.SecureConfig{
@@ -141,8 +143,9 @@ func TestMakeConfig(t *testing.T) {
 					[]string{
 						"initial=true",
 						fmt.Sprintf("%s=%t", PluginMlockEnabled, true),
-						fmt.Sprintf("%s=%s", PluginVaultVersionEnv, version.GetVersion().Version),
+						fmt.Sprintf("%s=%s", PluginVaultVersionEnv, "dummyversion"),
 						fmt.Sprintf("%s=%t", PluginMetadataModeEnv, false),
+						fmt.Sprintf("%s=%t", PluginAutoMTLSEnv, false),
 						fmt.Sprintf("%s=%s", PluginUnwrapTokenEnv, "testtoken"),
 					},
 				),
@@ -203,8 +206,9 @@ func TestMakeConfig(t *testing.T) {
 					[]string{"foo", "bar"},
 					[]string{
 						"initial=true",
-						fmt.Sprintf("%s=%s", PluginVaultVersionEnv, version.GetVersion().Version),
+						fmt.Sprintf("%s=%s", PluginVaultVersionEnv, "dummyversion"),
 						fmt.Sprintf("%s=%t", PluginMetadataModeEnv, true),
+						fmt.Sprintf("%s=%t", PluginAutoMTLSEnv, true),
 					},
 				),
 				SecureConfig: &plugin.SecureConfig{
@@ -264,8 +268,9 @@ func TestMakeConfig(t *testing.T) {
 					[]string{"foo", "bar"},
 					[]string{
 						"initial=true",
-						fmt.Sprintf("%s=%s", PluginVaultVersionEnv, version.GetVersion().Version),
+						fmt.Sprintf("%s=%s", PluginVaultVersionEnv, "dummyversion"),
 						fmt.Sprintf("%s=%t", PluginMetadataModeEnv, false),
+						fmt.Sprintf("%s=%t", PluginAutoMTLSEnv, true),
 					},
 				),
 				SecureConfig: &plugin.SecureConfig{
@@ -290,7 +295,7 @@ func TestMakeConfig(t *testing.T) {
 				Return(test.responseWrapInfo, test.responseWrapInfoErr)
 			mockWrapper.On("MlockEnabled").
 				Return(test.mlockEnabled)
-			test.rc.wrapper = mockWrapper
+			test.rc.Wrapper = mockWrapper
 			defer mockWrapper.AssertNumberOfCalls(t, "ResponseWrapData", test.responseWrapInfoTimes)
 			defer mockWrapper.AssertNumberOfCalls(t, "MlockEnabled", test.mlockEnabledTimes)
 
@@ -318,9 +323,7 @@ func TestMakeConfig(t *testing.T) {
 			}
 			config.TLSConfig = nil
 
-			if !reflect.DeepEqual(config, test.expectedConfig) {
-				t.Fatalf("Actual config: %#v\nExpected config: %#v", config, test.expectedConfig)
-			}
+			require.Equal(t, test.expectedConfig, config)
 		})
 	}
 }
@@ -335,6 +338,10 @@ var _ RunnerUtil = &mockRunnerUtil{}
 
 type mockRunnerUtil struct {
 	mock.Mock
+}
+
+func (m *mockRunnerUtil) VaultVersion(ctx context.Context) (string, error) {
+	return "dummyversion", nil
 }
 
 func (m *mockRunnerUtil) NewPluginClient(ctx context.Context, config PluginClientConfig) (PluginClient, error) {

@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package vault
 
 import (
@@ -6,21 +9,13 @@ import (
 	"strings"
 
 	"github.com/golang/protobuf/ptypes"
-	"github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/go-secure-stdlib/strutil"
-
 	"github.com/hashicorp/vault/helper/identity"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/helper/storagepacker"
 	"github.com/hashicorp/vault/sdk/framework"
+	"github.com/hashicorp/vault/sdk/helper/custommetadata"
 	"github.com/hashicorp/vault/sdk/logical"
-)
-
-const (
-	maxCustomMetadataKeys               = 64
-	maxCustomMetadataKeyLength          = 128
-	maxCustomMetadataValueLength        = 512
-	customMetadataValidationErrorPrefix = "custom_metadata validation failed"
 )
 
 // aliasPaths returns the API endpoints to operate on aliases.
@@ -31,6 +26,13 @@ func aliasPaths(i *IdentityStore) []*framework.Path {
 	return []*framework.Path{
 		{
 			Pattern: "entity-alias$",
+
+			DisplayAttrs: &framework.DisplayAttributes{
+				OperationPrefix: "entity",
+				OperationVerb:   "create",
+				OperationSuffix: "alias",
+			},
+
 			Fields: map[string]*framework.FieldSchema{
 				"id": {
 					Type:        framework.TypeString,
@@ -68,6 +70,12 @@ This field is deprecated, use canonical_id.`,
 		},
 		{
 			Pattern: "entity-alias/id/" + framework.GenericNameRegex("id"),
+
+			DisplayAttrs: &framework.DisplayAttributes{
+				OperationPrefix: "entity",
+				OperationSuffix: "alias-by-id",
+			},
+
 			Fields: map[string]*framework.FieldSchema{
 				"id": {
 					Type:        framework.TypeString,
@@ -96,10 +104,26 @@ This field is deprecated, use canonical_id.`,
 					Description: "User provided key-value pairs",
 				},
 			},
-			Callbacks: map[logical.Operation]framework.OperationFunc{
-				logical.UpdateOperation: i.handleAliasCreateUpdate(),
-				logical.ReadOperation:   i.pathAliasIDRead(),
-				logical.DeleteOperation: i.pathAliasIDDelete(),
+
+			Operations: map[logical.Operation]framework.OperationHandler{
+				logical.UpdateOperation: &framework.PathOperation{
+					Callback: i.handleAliasCreateUpdate(),
+					DisplayAttrs: &framework.DisplayAttributes{
+						OperationVerb: "update",
+					},
+				},
+				logical.ReadOperation: &framework.PathOperation{
+					Callback: i.pathAliasIDRead(),
+					DisplayAttrs: &framework.DisplayAttributes{
+						OperationVerb: "read",
+					},
+				},
+				logical.DeleteOperation: &framework.PathOperation{
+					Callback: i.pathAliasIDDelete(),
+					DisplayAttrs: &framework.DisplayAttributes{
+						OperationVerb: "delete",
+					},
+				},
 			},
 
 			HelpSynopsis:    strings.TrimSpace(aliasHelp["alias-id"][0]),
@@ -107,6 +131,13 @@ This field is deprecated, use canonical_id.`,
 		},
 		{
 			Pattern: "entity-alias/id/?$",
+
+			DisplayAttrs: &framework.DisplayAttributes{
+				OperationPrefix: "entity",
+				OperationVerb:   "list",
+				OperationSuffix: "aliases-by-id",
+			},
+
 			Callbacks: map[logical.Operation]framework.OperationFunc{
 				logical.ListOperation: i.pathAliasIDList(),
 			},
@@ -152,7 +183,7 @@ func (i *IdentityStore) handleAliasCreateUpdate() framework.OperationFunc {
 
 		// validate customMetadata if provided
 		if len(customMetadata) != 0 {
-			if err := validateCustomMetadata(customMetadata); err != nil {
+			if err := custommetadata.Validate(customMetadata); err != nil {
 				return nil, err
 			}
 		}
@@ -180,8 +211,9 @@ func (i *IdentityStore) handleAliasCreateUpdate() framework.OperationFunc {
 				}
 				switch {
 				case mountAccessor == "" && name == "":
-					// Just a canonical ID update, maybe
-					if canonicalID == "" {
+					// Check if the canonicalID or the customMetadata are being
+					// updated
+					if canonicalID == "" && !customMetadataExists {
 						// Nothing to do, so be idempotent
 						return nil, nil
 					}
@@ -466,55 +498,6 @@ func (i *IdentityStore) handleAliasUpdate(ctx context.Context, canonicalID, name
 			"canonical_id": newEntity.ID,
 		},
 	}, nil
-}
-
-func validateCustomMetadata(customMetadata map[string]string) error {
-	var errs *multierror.Error
-
-	if keyCount := len(customMetadata); keyCount > maxCustomMetadataKeys {
-		errs = multierror.Append(errs, fmt.Errorf("%s: payload must contain at most %d keys, provided %d",
-			customMetadataValidationErrorPrefix,
-			maxCustomMetadataKeys,
-			keyCount))
-
-		return errs.ErrorOrNil()
-	}
-
-	// Perform validation on each key and value and return ALL errors
-	for key, value := range customMetadata {
-		if keyLen := len(key); 0 == keyLen || keyLen > maxCustomMetadataKeyLength {
-			errs = multierror.Append(errs, fmt.Errorf("%s: length of key %q is %d but must be 0 < len(key) <= %d",
-				customMetadataValidationErrorPrefix,
-				key,
-				keyLen,
-				maxCustomMetadataKeyLength))
-		}
-
-		if valueLen := len(value); 0 == valueLen || valueLen > maxCustomMetadataValueLength {
-			errs = multierror.Append(errs, fmt.Errorf("%s: length of value for key %q is %d but must be 0 < len(value) <= %d",
-				customMetadataValidationErrorPrefix,
-				key,
-				valueLen,
-				maxCustomMetadataValueLength))
-		}
-
-		if !strutil.Printable(key) {
-			// Include unquoted format (%s) to also include the string without the unprintable
-			//  characters visible to allow for easier debug and key identification
-			errs = multierror.Append(errs, fmt.Errorf("%s: key %q (%s) contains unprintable characters",
-				customMetadataValidationErrorPrefix,
-				key,
-				key))
-		}
-
-		if !strutil.Printable(value) {
-			errs = multierror.Append(errs, fmt.Errorf("%s: value for key %q contains unprintable characters",
-				customMetadataValidationErrorPrefix,
-				key))
-		}
-	}
-
-	return errs.ErrorOrNil()
 }
 
 // pathAliasIDRead returns the properties of an alias for a given

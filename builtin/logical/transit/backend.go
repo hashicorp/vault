@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package transit
 
 import (
@@ -16,8 +19,12 @@ import (
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
-// Minimum cache size for transit backend
-const minCacheSize = 10
+const (
+	operationPrefixTransit = "transit"
+
+	// Minimum cache size for transit backend
+	minCacheSize = 10
+)
 
 func Factory(ctx context.Context, conf *logical.BackendConfig) (logical.Backend, error) {
 	b, err := Backend(ctx, conf)
@@ -43,12 +50,16 @@ func Backend(ctx context.Context, conf *logical.BackendConfig) (*backend, error)
 		Paths: []*framework.Path{
 			// Rotate/Config needs to come before Keys
 			// as the handler is greedy
-			b.pathConfig(),
 			b.pathRotate(),
 			b.pathRewrap(),
+			b.pathWrappingKey(),
+			b.pathImport(),
+			b.pathImportVersion(),
 			b.pathKeys(),
 			b.pathListKeys(),
+			b.pathBYOKExportKeys(),
 			b.pathExportKeys(),
+			b.pathKeysConfig(),
 			b.pathEncrypt(),
 			b.pathDecrypt(),
 			b.pathDatakey(),
@@ -61,6 +72,7 @@ func Backend(ctx context.Context, conf *logical.BackendConfig) (*backend, error)
 			b.pathRestore(),
 			b.pathTrim(),
 			b.pathCacheConfig(),
+			b.pathConfigKeys(),
 		},
 
 		Secrets:      []*framework.Secret{},
@@ -68,6 +80,8 @@ func Backend(ctx context.Context, conf *logical.BackendConfig) (*backend, error)
 		BackendType:  logical.TypeLogical,
 		PeriodicFunc: b.periodicFunc,
 	}
+
+	b.backendUUID = conf.BackendUUID
 
 	// determine cacheSize to use. Defaults to 0 which means unlimited
 	cacheSize := 0
@@ -102,6 +116,7 @@ type backend struct {
 	cacheSizeChanged     bool
 	checkAutoRotateAfter time.Time
 	autoRotateOnce       sync.Once
+	backendUUID          string
 }
 
 func GetCacheSizeFromStorage(ctx context.Context, s logical.Storage) (int, error) {
@@ -246,6 +261,11 @@ func (b *backend) rotateIfRequired(ctx context.Context, req *logical.Request, ke
 		p.Lock(true)
 	}
 	defer p.Unlock()
+
+	// If the key is imported, it can only be rotated from within Vault if allowed.
+	if p.Imported && !p.AllowImportedKeyRotation {
+		return nil
+	}
 
 	// If the policy's automatic rotation period is 0, it should not
 	// automatically rotate.

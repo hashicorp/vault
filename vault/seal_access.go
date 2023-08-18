@@ -1,7 +1,12 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package vault
 
 import (
 	"context"
+
+	wrapping "github.com/hashicorp/go-kms-wrapping/v2"
 
 	"github.com/hashicorp/vault/vault/seal"
 )
@@ -21,7 +26,7 @@ func (s *SealAccess) StoredKeysSupported() seal.StoredKeysSupport {
 	return s.seal.StoredKeysSupported()
 }
 
-func (s *SealAccess) BarrierType() string {
+func (s *SealAccess) BarrierType() wrapping.WrapperType {
 	return s.seal.BarrierType()
 }
 
@@ -41,6 +46,7 @@ func (s *SealAccess) VerifyRecoveryKey(ctx context.Context, key []byte) error {
 	return s.seal.VerifyRecoveryKey(ctx, key)
 }
 
+// TODO(SEALHA): This looks like it belongs in Seal instead, it only has two callers
 func (s *SealAccess) ClearCaches(ctx context.Context) {
 	s.seal.SetBarrierConfig(ctx, nil)
 	if s.RecoveryKeySupported() {
@@ -48,6 +54,6 @@ func (s *SealAccess) ClearCaches(ctx context.Context) {
 	}
 }
 
-func (s *SealAccess) GetAccess() *seal.Access {
+func (s *SealAccess) GetAccess() seal.Access {
 	return s.seal.GetAccess()
 }

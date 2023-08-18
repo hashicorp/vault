@@ -1,7 +1,12 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 /* eslint-env node */
 /* eslint-disable no-console */
 /* eslint-disable no-process-exit */
-/* eslint-disable node/no-extraneous-require */
+/* eslint-disable n/no-extraneous-require */
 
 var readline = require('readline');
 const testHelper = require('./test-helper');
@@ -21,7 +26,7 @@ async function processLines(input, eachLine = () => {}) {
 
 (async function () {
   try {
-    let vault = testHelper.run(
+    const vault = testHelper.run(
       'vault',
       [
         'server',
@@ -64,22 +69,7 @@ async function processLines(input, eachLine = () => {}) {
       }
     });
     try {
-      if (process.argv[2] === '--browserstack') {
-        await testHelper.run('ember', ['browserstack:connect']);
-        try {
-          await testHelper.run('ember', ['test', '-f=secrets/secret/create', '-c', 'testem.browserstack.js']);
-
-          console.log('success');
-          process.exit(0);
-        } finally {
-          if (process.env.CI === 'true') {
-            await testHelper.run('ember', ['browserstack:results']);
-          }
-          await testHelper.run('ember', ['browserstack:disconnect']);
-        }
-      } else {
-        await testHelper.run('ember', ['test', ...process.argv.slice(2)]);
-      }
+      await testHelper.run('ember', ['test', ...process.argv.slice(2)]);
     } catch (error) {
       console.log(error);
       process.exit(1);

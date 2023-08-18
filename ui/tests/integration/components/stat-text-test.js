@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import { module, test } from 'qunit';
 import { setupRenderingTest } from 'ember-qunit';
 import { render, settled } from '@ember/test-helpers';
@@ -28,7 +33,7 @@ module('Integration | Component | StatText', function (hooks) {
     this.set('value', 604099);
     await settled();
 
-    let formattedNumber = '604,099';
+    const formattedNumber = '604,099';
     assert.dom('.stat-value').hasText(formattedNumber, 'renders correctly formatted integer value');
   });
 });

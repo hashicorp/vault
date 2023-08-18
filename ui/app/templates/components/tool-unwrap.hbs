@@ -1,20 +1,22 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
 <PageHeader as |p|>
   <p.levelLeft>
     <h1 class="title is-3">
-      Unwrap data
+      Unwrap Data
     </h1>
   </p.levelLeft>
 </PageHeader>
 
 {{#if @unwrap_data}}
   <div class="box is-sideless is-fullwidth is-marginless">
-    <nav class="tabs">
+    <nav class="tabs has-bottom-margin-l">
       <ul>
         {{! template-lint-configure no-nested-interactive "warn" }}
-        <li
-          aria-selected={{if (eq @unwrapActiveTab "data") "true" "false"}}
-          class={{if (eq @unwrapActiveTab "data") "is-active"}}
-        >
+        <li class={{if (eq @unwrapActiveTab "data") "is-active"}}>
           <button
             type="button"
             class="link link-plain tab has-text-weight-semibold"
@@ -24,10 +26,7 @@
             Data
           </button>
         </li>
-        <li
-          aria-selected={{if (eq @unwrapActiveTab "data") "true" "false"}}
-          class={{if (eq @unwrapActiveTab "details") "is-active"}}
-        >
+        <li class={{if (eq @unwrapActiveTab "details") "is-active"}}>
           <button
             type="button"
             class="link link-plain tab has-text-weight-semibold"
@@ -86,7 +85,10 @@
     <NamespaceReminder @mode="perform" @noun={{@selectedAction}} />
     <MessageError @errors={{@errors}} />
     <div class="field">
-      <label for="token" class="is-label">Wrapping token</label>
+      <label for="token" class="is-label">Wrapped token</label>
+      <div class="has-text-grey is-size-8 has-bottom-margin-xs">
+        Enter your wrapped token here to unwrap it and return its original value.
+      </div>
       <div class="control">
         <Input
           @value={{@token}}

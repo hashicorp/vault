@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 //go:build !enterprise
 
 package vault
@@ -7,7 +10,6 @@ import (
 	"fmt"
 
 	"github.com/hashicorp/go-hclog"
-	"github.com/hashicorp/vault/command/server"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/sdk/helper/license"
 	"github.com/hashicorp/vault/sdk/logical"
@@ -38,11 +40,9 @@ func coreInit(c *Core, conf *CoreConfig) error {
 	phys := conf.Physical
 	_, txnOK := phys.(physical.Transactional)
 	sealUnwrapperLogger := conf.Logger.Named("storage.sealunwrapper")
-	c.allLoggers = append(c.allLoggers, sealUnwrapperLogger)
 	c.sealUnwrapper = NewSealUnwrapper(phys, sealUnwrapperLogger)
 	// Wrap the physical backend in a cache layer if enabled
 	cacheLogger := c.baseLogger.Named("storage.cache")
-	c.allLoggers = append(c.allLoggers, cacheLogger)
 	if txnOK {
 		c.physical = physical.NewTransactionalCache(c.sealUnwrapper, conf.CacheSize, cacheLogger, c.MetricSink().Sink)
 	} else {
@@ -54,6 +54,7 @@ func coreInit(c *Core, conf *CoreConfig) error {
 	if !conf.DisableKeyEncodingChecks {
 		c.physical = physical.NewStorageEncoding(c.physical)
 	}
+
 	return nil
 }
 
@@ -71,20 +72,14 @@ func (c *Core) barrierViewForNamespace(namespaceId string) (*BarrierView, error)
 	return c.systemBarrierView, nil
 }
 
-// GetCoreConfigInternal returns the server configuration
-// in struct format.
-func (c *Core) GetCoreConfigInternal() *server.Config {
-	conf := c.rawConfig.Load()
-	if conf == nil {
-		return nil
-	}
-	return conf.(*server.Config)
-}
+func (c *Core) UndoLogsEnabled() bool            { return false }
+func (c *Core) UndoLogsPersisted() (bool, error) { return false, nil }
+func (c *Core) PersistUndoLogs() error           { return nil }
 
 func (c *Core) teardownReplicationResolverHandler() {}
 func createSecondaries(*Core, *CoreConfig)          {}
 
-func addExtraLogicalBackends(*Core, map[string]logical.Factory) {}
+func addExtraLogicalBackends(*Core, map[string]logical.Factory, string) {}
 
 func addExtraCredentialBackends(*Core, map[string]logical.Factory) {}
 
@@ -177,7 +172,7 @@ func (c *Core) quotaLeaseWalker(ctx context.Context, callback func(request *quot
 	return nil
 }
 
-func (c *Core) quotasHandleLeases(ctx context.Context, action quotas.LeaseAction, leaseIDs []string) error {
+func (c *Core) quotasHandleLeases(ctx context.Context, action quotas.LeaseAction, leases []*quotas.QuotaLeaseInformation) error {
 	return nil
 }
 

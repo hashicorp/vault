@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import ApplicationAdapter from '../application';
 import { all } from 'rsvp';
 
@@ -35,6 +40,7 @@ export default class KeymgmtKeyAdapter extends ApplicationAdapter {
     });
   }
   async query(store, type, query) {
+    const { backend } = query;
     const url = this.buildURL(type.modelName, null, null, 'query', query);
     return this.ajax(url, 'GET', this.listPayload).then(async (resp) => {
       // additional data is needed to fullfil the list view requirements
@@ -43,6 +49,7 @@ export default class KeymgmtKeyAdapter extends ApplicationAdapter {
         resp.data.keys.map((name) => this.findRecord(store, type, name, this._mockSnapshot(query.backend)))
       );
       resp.data.keys = records.map((record) => record.data);
+      resp.backend = backend;
       return resp;
     });
   }

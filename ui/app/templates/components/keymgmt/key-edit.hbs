@@ -1,3 +1,8 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
 <PageHeader as |p|>
   <p.top>
     <KeyValueHeader @path="vault.cluster.secrets.backend.show" @mode={{this.mode}} @root={{@root}} @showCurrent={{true}} />
@@ -5,11 +10,11 @@
   <p.levelLeft>
     <h1 class="title is-3" data-test-secret-header="true">
       {{#if this.isDistributing}}
-        Distribute key
+        Distribute Key
       {{else if (eq @mode "create")}}
-        Create key
+        Create Key
       {{else if (eq @mode "edit")}}
-        Edit key
+        Edit Key
       {{else}}
         {{@model.id}}
       {{/if}}
@@ -24,7 +29,7 @@
     <div class="tabs-container box is-sideless is-fullwidth is-paddingless is-marginless" data-test-keymgmt-key-toolbar>
       <nav class="tabs">
         <ul>
-          <li class={{if (not-eq @tab "versions") "is-active"}}>
+          <li class={{if (not-eq @tab "versions") "active"}}>
             <LinkTo
               @route="vault.cluster.secrets.backend.show"
               @model={{@model.id}}
@@ -34,7 +39,7 @@
               Details
             </LinkTo>
           </li>
-          <li class={{if (eq @tab "versions") "is-active"}}>
+          <li class={{if (eq @tab "versions") "active"}}>
             <LinkTo
               @route="vault.cluster.secrets.backend.show"
               @model={{@model.id}}
@@ -49,6 +54,16 @@
     </div>
     <Toolbar>
       <ToolbarActions>
+        {{#unless @model.distribution}}
+          <button
+            type="button"
+            class="toolbar-link"
+            {{on "click" (fn (mut this.isDistributing) true)}}
+            data-test-keymgmt-key-distribute
+          >
+            Distribute key
+          </button>
+        {{/unless}}
         {{#if @model.canDelete}}
           <button
             type="button"
@@ -63,10 +78,11 @@
         {{#if @model.provider}}
           <ConfirmAction
             @buttonClasses="toolbar-link"
-            @onConfirmAction={{this.removeKey}}
+            @onConfirmAction={{perform this.removeKey}}
             @confirmTitle="Remove this key?"
             @confirmMessage="This will remove all versions of the key from the KMS provider. The key will stay in Vault."
             @confirmButtonText="Remove"
+            @isRunning={{this.removeKey.isRunning}}
             data-test-keymgmt-key-remove
           >
             Remove key
@@ -77,10 +93,11 @@
         {{/if}}
         <ConfirmAction
           @buttonClasses="toolbar-link"
-          @onConfirmAction={{fn this.rotateKey @model.id}}
+          @onConfirmAction={{perform this.rotateKey}}
           @confirmTitle="Rotate this key?"
           @confirmMessage="After rotation, all key actions will default to using the newest version of the key."
           @confirmButtonText="Rotate"
+          @isRunning={{this.rotateKey.isRunning}}
           data-test-keymgmt-key-rotate
         >
           Rotate key
@@ -90,7 +107,7 @@
             @secret={{@model.id}}
             @mode="edit"
             @replace={{true}}
-            @queryParams={{query-params itemType="key"}}
+            @queryParams={{hash itemType="key"}}
             @data-test-edit-link={{true}}
           >
             Edit key
@@ -122,7 +139,7 @@
               <LinkTo
                 @route={{if this.isCreating @root.path "vault.cluster.secrets.backend.show"}}
                 @model={{if this.isCreating @root.model @model.id}}
-                @query={{unless this.isCreating (hash itemType="key")}}
+                @query={{unless this.isCreating (hash itemType="key") (hash itemType="")}}
                 @disabled={{this.savekey.isRunning}}
                 class="button"
                 data-test-keymgmt-key-cancel
@@ -156,7 +173,7 @@
     {{/each}}
   {{else}}
     <div class="has-top-margin-xl has-bottom-margin-s">
-      <h2 class="title has-border-bottom-light is-5">Key Details</h2>
+      <h2 class="title is-5 has-border-bottom-light has-bottom-padding-s">Key details</h2>
       {{#each @model.showFields as |attr|}}
         <InfoTableRow
           @alwaysRender={{true}}
@@ -168,23 +185,10 @@
       {{/each}}
     </div>
     <div class="has-top-margin-xl has-bottom-margin-s">
-      <h2 class="title has-border-bottom-light is-5 {{unless @model.provider.canListKeys 'is-borderless is-marginless'}}">
-        Distribution Details
+      <h2 class="title is-5 {{if @model.distribution 'has-border-bottom-light' 'is-borderless'}}">
+        Distribution details
       </h2>
-      {{#if (not @model.provider)}}
-        <EmptyState
-          @title="Key not distributed"
-          @message="When this key is distributed to a destination, those details will appear here."
-          data-test-keymgmt-dist-empty-state
-        >
-          {{#if @model.canListProviders}}
-            <button type="button" class="link" {{on "click" (fn (mut this.isDistributing) true)}}>
-              Distribute key
-              <Icon @name="chevron-right" />
-            </button>
-          {{/if}}
-        </EmptyState>
-      {{else if (not @model.provider.canListKeys)}}
+      {{#if @model.provider.permissionsError}}
         <EmptyState
           @title="You are not authorized"
           @subTitle="Error 403"
@@ -197,9 +201,22 @@
           }}
           @icon="minus-circle"
         />
+      {{else if (is-empty-value @model.provider)}}
+        <EmptyState
+          @title="Key not distributed"
+          @message="When this key is distributed to a destination, those details will appear here."
+          data-test-keymgmt-dist-empty-state
+        >
+          {{#if @model.canListProviders}}
+            <button type="button" class="link" {{on "click" (fn (mut this.isDistributing) true)}}>
+              Distribute key
+              <Icon @name="chevron-right" />
+            </button>
+          {{/if}}
+        </EmptyState>
       {{else}}
         <InfoTableRow @label="Distributed" @value={{@model.provider}}>
-          <LinkTo @route="vault.cluster.secrets.backend.show" @model={{concat "kms/" @model.provider}}>
+          <LinkTo @route="vault.cluster.secrets.backend.show" @model={{@model.provider}} @query={{hash itemType="provider"}}>
             <Icon @name="check-circle-fill" class="has-text-success" />{{@model.provider}}
           </LinkTo>
         </InfoTableRow>
@@ -222,7 +239,13 @@
           <EmptyState
             @title="You are not authorized"
             @subTitle="Error 403"
-            @message="You must be granted permissions to view distribution details for this key. Ask your administrator if you think you should have access to GET /keymgmt/keymgmt/key/example."
+            @message={{concat
+              "You must be granted permissions to view distribution details for this key. Ask your administrator if you think you should have access to GET /"
+              @model.backend
+              "/key/"
+              @model.name
+              "/kms."
+            }}
             @icon="minus-circle"
           />
         {{/if}}
@@ -238,7 +261,6 @@
   @confirmText={{@model.name}}
   @toConfirmMsg="deleting the key"
   @onConfirm={{fn this.deleteKey @model.id}}
-  @testSelector="delete"
 >
   <p>
     Destroying the

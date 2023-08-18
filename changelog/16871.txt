@@ -1,0 +1,3 @@
+```release-note:improvement
+secrets/pki: Allow tidy to associate revoked certs with their issuers for OCSP performance
+```

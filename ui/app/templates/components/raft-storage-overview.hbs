@@ -1,3 +1,8 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
 <PageHeader as |p|>
   <p.levelLeft>
     <h1 class="title is-3">
@@ -17,16 +22,17 @@
         <Chevron @direction="down" @isButton={{true}} />
       </D.Trigger>
       <D.Content @defaultClass="popup-menu-content">
-        <nav class="box menu">
+        <nav class="box menu" aria-label="snapshots actions">
           <ul class="menu-list">
             <li class="action">
               {{#if this.useServiceWorker}}
-                <a
-                  href="/v1/sys/storage/raft/snapshot"
+                <ExternalLink
+                  @href="/v1/sys/storage/raft/snapshot"
+                  @sameTab={{true}}
                   onclick={{queue (action "downloadViaServiceWorker") (action D.actions.close)}}
                 >
                   Download
-                </a>
+                </ExternalLink>
               {{else}}
                 <button
                   type="button"
@@ -78,7 +84,7 @@
         <td class="middle no-padding has-text-right">
           <PopupMenu>
             <Confirm as |c|>
-              <nav>
+              <nav aria-label="remove peer">
                 <ul>
                   <li class="action">
                     <c.Message

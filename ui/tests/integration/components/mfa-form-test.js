@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import { module, test } from 'qunit';
 import { setupRenderingTest } from 'ember-qunit';
 import { render } from '@ember/test-helpers';
@@ -5,7 +10,7 @@ import { hbs } from 'ember-cli-htmlbars';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 import { fillIn, click, waitUntil } from '@ember/test-helpers';
 import { _cancelTimers as cancelTimers, later } from '@ember/runloop';
-import { VALIDATION_ERROR } from 'vault/components/mfa-form';
+import { TOTP_VALIDATION_ERROR } from 'vault/components/mfa/mfa-form';
 
 module('Integration | Component | mfa-form', function (hooks) {
   setupRenderingTest(hooks);
@@ -38,7 +43,9 @@ module('Integration | Component | mfa-form', function (hooks) {
       mfa_constraints: { test_mfa_1: { any: [totpConstraint] } },
     }).mfa_requirement;
 
-    await render(hbs`<MfaForm @clusterId={{this.clusterId}} @authData={{this.mfaAuthData}} />`);
+    await render(
+      hbs`<Mfa::MfaForm @clusterId={{this.clusterId}} @authData={{this.mfaAuthData}} @onError={{fn (mut this.error)}} />`
+    );
     assert
       .dom('[data-test-mfa-description]')
       .includesText(
@@ -51,7 +58,9 @@ module('Integration | Component | mfa-form', function (hooks) {
       mfa_constraints: { test_mfa_1: { any: [duoConstraint, oktaConstraint] } },
     }).mfa_requirement;
 
-    await render(hbs`<MfaForm @clusterId={{this.clusterId}} @authData={{this.mfaAuthData}} />`);
+    await render(
+      hbs`<Mfa::MfaForm @clusterId={{this.clusterId}} @authData={{this.mfaAuthData}} @onError={{fn (mut this.error)}} />`
+    );
     assert
       .dom('[data-test-mfa-description]')
       .includesText(
@@ -64,7 +73,9 @@ module('Integration | Component | mfa-form', function (hooks) {
       mfa_constraints: { test_mfa_1: { any: [oktaConstraint] }, test_mfa_2: { any: [duoConstraint] } },
     }).mfa_requirement;
 
-    await render(hbs`<MfaForm @clusterId={{this.clusterId}} @authData={{this.mfaAuthData}} />`);
+    await render(
+      hbs`<Mfa::MfaForm @clusterId={{this.clusterId}} @authData={{this.mfaAuthData}} @onError={{fn (mut this.error)}} />`
+    );
     assert
       .dom('[data-test-mfa-description]')
       .includesText(
@@ -95,7 +106,7 @@ module('Integration | Component | mfa-form', function (hooks) {
       const json = JSON.parse(req.requestBody);
       const payload = {
         mfa_request_id: 'test-mfa-id',
-        mfa_payload: { [oktaConstraint.id]: [], [duoConstraint.id]: ['test-code'] },
+        mfa_payload: { [oktaConstraint.id]: [], [duoConstraint.id]: ['passcode=test-code'] },
       };
       assert.deepEqual(json, payload, 'Correct mfa payload passed to validate endpoint');
       return {};
@@ -110,15 +121,11 @@ module('Integration | Component | mfa-form', function (hooks) {
     });
 
     this.onSuccess = (resp) =>
-      assert.equal(resp, 'test response', 'Response is returned in onSuccess callback');
+      assert.strictEqual(resp, 'test response', 'Response is returned in onSuccess callback');
 
-    await render(hbs`
-      <MfaForm
-        @clusterId={{this.clusterId}}
-        @authData={{this.mfaAuthData}}
-        @onSuccess={{this.onSuccess}}
-      />
-    `);
+    await render(
+      hbs`<Mfa::MfaForm @clusterId={{this.clusterId}} @authData={{this.mfaAuthData}} @onSuccess={{this.onSuccess}} />`
+    );
     await fillIn('[data-test-mfa-select="0"] select', oktaConstraint.id);
     await fillIn('[data-test-mfa-passcode="1"]', 'test-code');
     await click('[data-test-mfa-validate]');
@@ -151,41 +158,43 @@ module('Integration | Component | mfa-form', function (hooks) {
     });
 
     this.onSuccess = (resp) =>
-      assert.equal(resp, 'test response', 'Response is returned in onSuccess callback');
+      assert.strictEqual(resp, 'test response', 'Response is returned in onSuccess callback');
 
-    await render(hbs`
-      <MfaForm
-        @clusterId={{this.clusterId}}
-        @authData={{this.mfaAuthData}}
-        @onSuccess={{this.onSuccess}}
-      />
-    `);
+    await render(
+      hbs`<Mfa::MfaForm @clusterId={{this.clusterId}} @authData={{this.mfaAuthData}} @onSuccess={{this.onSuccess}} />`
+    );
+
     await fillIn('[data-test-mfa-passcode]', 'test-code');
     await click('[data-test-mfa-validate]');
   });
 
-  test('it should show countdown on passcode already used error', async function (assert) {
-    this.owner.lookup('service:auth').reopen({
-      totpValidate() {
-        throw { errors: ['code already used; new code is available in 45 seconds'] };
-      },
-    });
-    await render(hbs`
-      <MfaForm
-        @clusterId={{this.clusterId}}
-        @authData={{this.mfaAuthData}}
-      />
-    `);
+  // TODO JLR: It doesn't appear that cancelTimers is working and tests wait for the full countdown
+  test('it should show countdown on passcode already used and rate limit errors', async function (assert) {
+    const messages = {
+      used: 'code already used; new code is available in 45 seconds',
+      limit:
+        'maximum TOTP validation attempts 4 exceeded the allowed attempts 3. Please try again in 15 seconds',
+    };
+    const codes = ['used', 'limit'];
+    for (const code of codes) {
+      this.owner.lookup('service:auth').reopen({
+        totpValidate() {
+          throw { errors: [messages[code]] };
+        },
+      });
+      await render(hbs`<Mfa::MfaForm @clusterId={{this.clusterId}} @authData={{this.mfaAuthData}} />`);
 
-    await fillIn('[data-test-mfa-passcode]', 'test-code');
-    later(() => cancelTimers(), 50);
-    await click('[data-test-mfa-validate]');
-    assert
-      .dom('[data-test-mfa-countdown]')
-      .hasText('45', 'countdown renders with correct initial value from error response');
-    assert.dom('[data-test-mfa-validate]').isDisabled('Button is disabled during countdown');
-    assert.dom('[data-test-mfa-passcode]').isDisabled('Input is disabled during countdown');
-    assert.dom('[data-test-inline-error-message]').exists('Alert message renders');
+      await fillIn('[data-test-mfa-passcode]', code);
+      later(() => cancelTimers(), 50);
+      await click('[data-test-mfa-validate]');
+      const expectedTime = code === 'used' ? '45' : '15';
+      assert
+        .dom('[data-test-mfa-countdown]')
+        .includesText(expectedTime, 'countdown renders with correct initial value from error response');
+      assert.dom('[data-test-mfa-validate]').isDisabled('Button is disabled during countdown');
+      assert.dom('[data-test-mfa-passcode]').isDisabled('Input is disabled during countdown');
+      assert.dom('[data-test-inline-error-message]').exists('Alert message renders');
+    }
   });
 
   test('it should show error message for passcode invalid error', async function (assert) {
@@ -194,18 +203,13 @@ module('Integration | Component | mfa-form', function (hooks) {
         throw { errors: ['failed to validate'] };
       },
     });
-    await render(hbs`
-      <MfaForm
-        @clusterId={{this.clusterId}}
-        @authData={{this.mfaAuthData}}
-      />
-    `);
+    await render(hbs`<Mfa::MfaForm @clusterId={{this.clusterId}} @authData={{this.mfaAuthData}} />`);
 
     await fillIn('[data-test-mfa-passcode]', 'test-code');
     later(() => cancelTimers(), 50);
     await click('[data-test-mfa-validate]');
     assert
-      .dom('[data-test-error]')
-      .includesText(VALIDATION_ERROR, 'Generic error message renders for passcode validation error');
+      .dom('[data-test-message-error]')
+      .includesText(TOTP_VALIDATION_ERROR, 'Generic error message renders for passcode validation error');
   });
 });

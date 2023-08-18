@@ -1,10 +1,14 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import { module, test } from 'qunit';
 import { setupRenderingTest } from 'ember-qunit';
 import { render } from '@ember/test-helpers';
 import { hbs } from 'ember-cli-htmlbars';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 import { click, triggerEvent, settled, fillIn } from '@ember/test-helpers';
-import { format } from 'date-fns';
 
 const ts = 'data-test-kms-provider';
 const root = {
@@ -28,12 +32,11 @@ module('Integration | Component | keymgmt/provider-edit', function (hooks) {
           name: 'foo-bar',
           provider: 'azurekeyvault',
           keyCollection: 'keyvault-1',
-          created: new Date(),
+          backend: 'keymgmt',
         },
       },
     });
     this.model = this.store.peekRecord('keymgmt/provider', 'foo-bar');
-    this.created = format(this.model.created, 'MMM d yyyy, h:mm:ss aaa');
     this.root = root;
     this.owner.lookup('service:router').reopen({
       currentURL: '/ui/vault/secrets/keymgmt/show/foo-bar',
@@ -45,7 +48,7 @@ module('Integration | Component | keymgmt/provider-edit', function (hooks) {
   });
 
   test('it should render show view', async function (assert) {
-    assert.expect(13);
+    assert.expect(16);
 
     // override capability getters
     Object.defineProperties(this.model, {
@@ -53,6 +56,7 @@ module('Integration | Component | keymgmt/provider-edit', function (hooks) {
       canListKeys: { value: true },
     });
 
+    this.server.post('/sys/capabilities-self', () => ({}));
     this.server.get('/keymgmt/kms/foo-bar/key', () => {
       return {
         data: {
@@ -66,8 +70,8 @@ module('Integration | Component | keymgmt/provider-edit', function (hooks) {
     });
     this.owner.lookup('service:router').reopen({
       transitionTo(path, model, { queryParams: { tab } }) {
-        assert.equal(path, root.path, 'Root path sent in transitionTo on delete');
-        assert.equal(model, root.model, 'Root model sent in transitionTo on delete');
+        assert.strictEqual(path, root.path, 'Root path sent in transitionTo on delete');
+        assert.strictEqual(model, root.model, 'Root model sent in transitionTo on delete');
         assert.deepEqual(tab, 'provider', 'Correct query params sent in transitionTo on delete');
       },
     });
@@ -86,15 +90,14 @@ module('Integration | Component | keymgmt/provider-edit', function (hooks) {
       />`);
 
     assert.dom(`[${ts}-header]`).hasText('Provider foo-bar', 'Page header renders');
-    assert.dom(`[${ts}-tab="details"]`).hasClass('is-active', 'Details tab is active');
+    assert.dom(`[${ts}-tab="details"]`).hasClass('active', 'Details tab is active');
 
     const infoRows = this.element.querySelectorAll('[data-test-component="info-table-row"]');
     assert.dom(infoRows[0]).hasText('Provider name foo-bar', 'Provider name field renders');
     assert.dom(infoRows[1]).hasText('Type Azure Key Vault', 'Type field renders');
     assert.dom('svg', infoRows[1]).hasAttribute('data-test-icon', 'azure-color', 'Icon renders for type');
-    assert.dom(infoRows[2]).hasText(`Created ${this.created}`, 'Created field renders');
-    assert.dom(infoRows[3]).hasText('Key Vault instance name keyvault-1', 'Key collection field renders');
-    assert.dom(infoRows[4]).hasText('Keys 2 keys', 'Keys field renders');
+    assert.dom(infoRows[2]).hasText('Key Vault instance name keyvault-1', 'Key collection field renders');
+    assert.dom(infoRows[3]).hasText('Keys 2 keys', 'Keys field renders');
 
     await changeTab('keys');
     assert.dom(`[${ts}-details-actions]`).doesNotExist('Toolbar is hidden on keys tab');
@@ -115,11 +118,12 @@ module('Integration | Component | keymgmt/provider-edit', function (hooks) {
   });
 
   test('it should render create view', async function (assert) {
-    assert.expect(10);
+    assert.expect(14);
 
     this.server.put('/keymgmt/kms/foo', (schema, req) => {
       const params = {
         name: 'foo',
+        backend: 'keymgmt',
         provider: 'gcpckms',
         key_collection: 'keyvault-1',
         credentials: {
@@ -131,12 +135,16 @@ module('Integration | Component | keymgmt/provider-edit', function (hooks) {
     });
     this.owner.lookup('service:router').reopen({
       transitionTo(path, model, { queryParams: { itemType } }) {
-        assert.equal(path, 'vault.cluster.secrets.backend.show', 'Show route sent in transitionTo on save');
-        assert.equal(model, 'foo', 'Model id sent in transitionTo on save');
+        assert.strictEqual(
+          path,
+          'vault.cluster.secrets.backend.show',
+          'Show route sent in transitionTo on save'
+        );
+        assert.strictEqual(model, 'foo', 'Model id sent in transitionTo on save');
         assert.deepEqual(itemType, 'provider', 'Correct query params sent in transitionTo on save');
       },
     });
-    this.model = this.store.createRecord('keymgmt/provider');
+    this.model = this.store.createRecord('keymgmt/provider', { backend: 'keymgmt' });
 
     await render(hbs`
       <Keymgmt::ProviderEdit
@@ -145,26 +153,25 @@ module('Integration | Component | keymgmt/provider-edit', function (hooks) {
         @mode="create"
       />`);
 
-    assert.dom(`[${ts}-header]`).hasText('Create provider', 'Page header renders');
+    assert.dom(`[${ts}-header]`).hasText('Create Provider', 'Page header renders');
     assert.dom(`[${ts}-config-title]`).exists('Config header shown in create mode');
     assert.dom(`[${ts}-creds-title]`).doesNotExist('New credentials header hidden in create mode');
 
     await click(`[${ts}-submit]`);
-    assert
-      .dom('[data-test-inline-error-message]')
-      .exists({ count: 5 }, 'Required fields are shown on validation');
+    assert.dom('[data-test-inline-error-message]').exists('Validation error messages shown');
 
+    await fillIn('[data-test-input="provider"]', 'azurekeyvault');
     ['client_id', 'client_secret', 'tenant_id'].forEach((prop) => {
-      assert.dom(`[data-test-input="credentials.${prop}"]`).exists(`Azure ${prop} field renders`);
+      assert.dom(`[data-test-input="credentials.${prop}"]`).exists(`Azure - ${prop} field renders`);
     });
 
     await fillIn('[data-test-input="provider"]', 'awskms');
     ['access_key', 'secret_key'].forEach((prop) => {
-      assert.dom(`[data-test-input="credentials.${prop}"]`).exists(`AWS ${prop} field renders`);
+      assert.dom(`[data-test-input="credentials.${prop}"]`).exists(`AWS - ${prop} field renders`);
     });
 
     await fillIn('[data-test-input="provider"]', 'gcpckms');
-    assert.dom(`[data-test-input="credentials.service_account_file"]`).exists(`GCP cred field renders`);
+    assert.dom(`[data-test-input="credentials.service_account_file"]`).exists(`GCP - cred field renders`);
 
     await fillIn('[data-test-input="name"]', 'foo');
     await fillIn('[data-test-input="keyCollection"]', 'keyvault-1');
@@ -178,6 +185,7 @@ module('Integration | Component | keymgmt/provider-edit', function (hooks) {
     this.server.put('/keymgmt/kms/foo', (schema, req) => {
       const params = {
         name: 'foo-bar',
+        backend: 'keymgmt',
         provider: 'azurekeyvault',
         key_collection: 'keyvault-1',
         credentials: {
@@ -191,8 +199,12 @@ module('Integration | Component | keymgmt/provider-edit', function (hooks) {
     });
     this.owner.lookup('service:router').reopen({
       transitionTo(path, model, { queryParams: { itemType } }) {
-        assert.equal(path, 'vault.cluster.secrets.backend.show', 'Show route sent in transitionTo on save');
-        assert.equal(model, 'foo', 'Model id sent in transitionTo on save');
+        assert.strictEqual(
+          path,
+          'vault.cluster.secrets.backend.show',
+          'Show route sent in transitionTo on save'
+        );
+        assert.strictEqual(model, 'foo', 'Model id sent in transitionTo on save');
         assert.deepEqual(itemType, 'provider', 'Correct query params sent in transitionTo on save');
       },
     });
@@ -203,7 +215,7 @@ module('Integration | Component | keymgmt/provider-edit', function (hooks) {
         @mode="edit"
       />`);
 
-    assert.dom(`[${ts}-header]`).hasText('Update credentials', 'Page header renders');
+    assert.dom(`[${ts}-header]`).hasText('Update Credentials', 'Page header renders');
     assert.dom(`[${ts}-config-title]`).doesNotExist('Config header hidden in edit mode');
     assert.dom(`[${ts}-creds-title]`).exists('New credentials header shown in edit mode');
 

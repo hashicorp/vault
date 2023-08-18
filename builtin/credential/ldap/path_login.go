@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package ldap
 
 import (
@@ -13,6 +16,12 @@ import (
 func pathLogin(b *backend) *framework.Path {
 	return &framework.Path{
 		Pattern: `login/(?P<username>.+)`,
+
+		DisplayAttrs: &framework.DisplayAttributes{
+			OperationPrefix: operationPrefixLDAP,
+			OperationVerb:   "login",
+		},
+
 		Fields: map[string]*framework.FieldSchema{
 			"username": {
 				Type:        framework.TypeString,
@@ -73,18 +82,9 @@ func (b *backend) pathLogin(ctx context.Context, req *logical.Request, d *framew
 	username := d.Get("username").(string)
 	password := d.Get("password").(string)
 
-	effectiveUsername, policies, resp, groupNames, err := b.Login(ctx, req, username, password)
-	// Handle an internal error
-	if err != nil {
-		return nil, err
-	}
-	if resp != nil {
-		// Handle a logical error
-		if resp.IsError() {
-			return resp, nil
-		}
-	} else {
-		resp = &logical.Response{}
+	effectiveUsername, policies, resp, groupNames, err := b.Login(ctx, req, username, password, cfg.UsernameAsAlias)
+	if err != nil || (resp != nil && resp.IsError()) {
+		return resp, err
 	}
 
 	auth := &logical.Auth{
@@ -101,10 +101,6 @@ func (b *backend) pathLogin(ctx context.Context, req *logical.Request, d *framew
 				"name": username,
 			},
 		},
-	}
-
-	if cfg.UsernameAsAlias {
-		auth.Alias.Name = username
 	}
 
 	cfg.PopulateTokenAuth(auth)
@@ -139,7 +135,7 @@ func (b *backend) pathLoginRenew(ctx context.Context, req *logical.Request, d *f
 	username := req.Auth.Metadata["username"]
 	password := req.Auth.InternalData["password"].(string)
 
-	_, loginPolicies, resp, groupNames, err := b.Login(ctx, req, username, password)
+	_, loginPolicies, resp, groupNames, err := b.Login(ctx, req, username, password, cfg.UsernameAsAlias)
 	if err != nil || (resp != nil && resp.IsError()) {
 		return resp, err
 	}

@@ -1,0 +1,9 @@
+```release-note:bug
+auth: Fixed erroneous success message when using vault login in case of two-phase MFA
+```
+```release-note:bug
+auth: Fixed erroneous token information being displayed when using vault login in case of two-phase MFA
+```
+```release-note:bug
+auth: Fixed two-phase MFA information missing from table format when using vault login
+```

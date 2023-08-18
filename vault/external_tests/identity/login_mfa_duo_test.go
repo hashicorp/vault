@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package identity
 
 import (
@@ -8,17 +11,8 @@ import (
 	"testing"
 
 	"github.com/hashicorp/vault/api"
-	"github.com/hashicorp/vault/builtin/credential/userpass"
-	vaulthttp "github.com/hashicorp/vault/http"
-	"github.com/hashicorp/vault/sdk/logical"
-	"github.com/hashicorp/vault/vault"
+	"github.com/hashicorp/vault/helper/testhelpers/minimal"
 )
-
-var identityMFACoreConfigDUO = &vault.CoreConfig{
-	CredentialBackends: map[string]logical.Factory{
-		"userpass": userpass.Factory,
-	},
-}
 
 var (
 	secret_key      = "<secret key for DUO>"
@@ -28,12 +22,7 @@ var (
 
 func TestInteg_PolicyMFADUO(t *testing.T) {
 	t.Skip("This test requires manual intervention and DUO verify on cellphone is needed")
-	cluster := vault.NewTestCluster(t, identityMFACoreConfigDUO, &vault.TestClusterOptions{
-		HandlerFunc: vaulthttp.Handler,
-	})
-	cluster.Start()
-	defer cluster.Cleanup()
-
+	cluster := minimal.NewTestSoloCluster(t, nil)
 	client := cluster.Cores[0].Client
 
 	// Enable Userpass authentication
@@ -155,12 +144,7 @@ path "secret/foo" {
 
 func TestInteg_LoginMFADUO(t *testing.T) {
 	t.Skip("This test requires manual intervention and DUO verify on cellphone is needed")
-	cluster := vault.NewTestCluster(t, identityMFACoreConfigDUO, &vault.TestClusterOptions{
-		HandlerFunc: vaulthttp.Handler,
-	})
-	cluster.Start()
-	defer cluster.Cleanup()
-
+	cluster := minimal.NewTestSoloCluster(t, nil)
 	client := cluster.Cores[0].Client
 
 	// Enable Userpass authentication
@@ -214,10 +198,10 @@ func mfaGenerateLoginDUOTest(client *api.Client) error {
 	{
 		// create a config
 		mfaConfigData := map[string]interface{}{
-			"username_template": fmt.Sprintf("{{identity.entity.aliases.%s.name}}", mountAccessor),
-			"secret_key":        secret_key,
-			"integration_key":   integration_key,
-			"api_hostname":      api_hostname,
+			"username_format": fmt.Sprintf("{{identity.entity.aliases.%s.name}}", mountAccessor),
+			"secret_key":      secret_key,
+			"integration_key": integration_key,
+			"api_hostname":    api_hostname,
 		}
 		resp, err := client.Logical().Write("identity/mfa/method/duo", mfaConfigData)
 

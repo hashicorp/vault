@@ -1,9 +1,14 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import Model, { attr } from '@ember-data/model';
 import { computed } from '@ember/object';
 import { alias } from '@ember/object/computed';
 import lazyCapabilities, { apiPath } from 'vault/macros/lazy-capabilities';
 import { expandAttributeMeta } from 'vault/utils/field-to-attrs';
-import { getRoleFields } from '../../utils/database-helpers';
+import { getRoleFields } from 'vault/utils/database-helpers';
 
 export default Model.extend({
   idPrefix: 'role/',
@@ -12,14 +17,13 @@ export default Model.extend({
     label: 'Role name',
   }),
   database: attr('array', {
-    label: '',
+    label: 'Connection name',
     editType: 'searchSelect',
     fallbackComponent: 'string-list',
     models: ['database/connection'],
     selectLimit: 1,
     onlyAllowExisting: true,
-    subLabel: 'Database name',
-    subText: 'The database for which credentials will be generated.',
+    subText: 'The database connection for which credentials will be generated.',
   }),
   type: attr('string', {
     label: 'Type of role',
@@ -85,19 +89,23 @@ export default Model.extend({
   /* FIELD ATTRIBUTES */
   get fieldAttrs() {
     // Main fields on edit/create form
-    let fields = ['name', 'database', 'type'];
+    const fields = ['name', 'database', 'type'];
     return expandAttributeMeta(this, fields);
   },
 
   get showFields() {
     let fields = ['name', 'database', 'type'];
-    fields = fields.concat(getRoleFields(this.type)).concat(['creation_statements', 'revocation_statements']);
+    fields = fields.concat(getRoleFields(this.type)).concat(['creation_statements']);
+    // elasticsearch does not support revocation statements: https://developer.hashicorp.com/vault/api-docs/secret/databases/elasticdb#parameters-1
+    if (this.database[0] !== 'elasticsearch') {
+      fields = fields.concat(['revocation_statements']);
+    }
     return expandAttributeMeta(this, fields);
   },
 
   roleSettingAttrs: computed(function () {
     // logic for which get displayed is on DatabaseRoleSettingForm
-    let allRoleSettingFields = [
+    const allRoleSettingFields = [
       'default_ttl',
       'max_ttl',
       'username',

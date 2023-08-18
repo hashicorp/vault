@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package identity
 
 import (
@@ -7,11 +10,7 @@ import (
 	"testing"
 
 	"github.com/hashicorp/vault/api"
-	"github.com/hashicorp/vault/builtin/credential/okta"
-	"github.com/hashicorp/vault/builtin/credential/userpass"
-	vaulthttp "github.com/hashicorp/vault/http"
-	"github.com/hashicorp/vault/sdk/logical"
-	"github.com/hashicorp/vault/vault"
+	"github.com/hashicorp/vault/helper/testhelpers/minimal"
 )
 
 var (
@@ -19,21 +18,9 @@ var (
 	api_token = "<okta api token>"
 )
 
-var identityOktaMFACoreConfig = &vault.CoreConfig{
-	CredentialBackends: map[string]logical.Factory{
-		"userpass": userpass.Factory,
-		"okta":     okta.Factory,
-	},
-}
-
 func TestOktaEngineMFA(t *testing.T) {
 	t.Skip("This test requires manual intervention and OKTA verify on cellphone is needed")
-	cluster := vault.NewTestCluster(t, identityOktaMFACoreConfig, &vault.TestClusterOptions{
-		HandlerFunc: vaulthttp.Handler,
-	})
-	cluster.Start()
-	defer cluster.Cleanup()
-
+	cluster := minimal.NewTestSoloCluster(t, nil)
 	client := cluster.Cores[0].Client
 
 	// Enable Okta engine
@@ -70,12 +57,7 @@ func TestOktaEngineMFA(t *testing.T) {
 
 func TestInteg_PolicyMFAOkta(t *testing.T) {
 	t.Skip("This test requires manual intervention and OKTA verify on cellphone is needed")
-	cluster := vault.NewTestCluster(t, identityOktaMFACoreConfig, &vault.TestClusterOptions{
-		HandlerFunc: vaulthttp.Handler,
-	})
-	cluster.Start()
-	defer cluster.Cleanup()
-
+	cluster := minimal.NewTestSoloCluster(t, nil)
 	client := cluster.Cores[0].Client
 
 	// Enable Userpass authentication
@@ -200,12 +182,7 @@ path "secret/foo" {
 
 func TestInteg_LoginMFAOkta(t *testing.T) {
 	t.Skip("This test requires manual intervention and OKTA verify on cellphone is needed")
-	cluster := vault.NewTestCluster(t, identityOktaMFACoreConfig, &vault.TestClusterOptions{
-		HandlerFunc: vaulthttp.Handler,
-	})
-	cluster.Start()
-	defer cluster.Cleanup()
-
+	cluster := minimal.NewTestSoloCluster(t, nil)
 	client := cluster.Cores[0].Client
 
 	// Enable Userpass authentication
@@ -268,9 +245,9 @@ func mfaGenerateOktaLoginMFATest(client *api.Client) error {
 			"org_name":        org_name,
 			"api_token":       api_token,
 			"primary_email":   true,
-			"username_format": "{{entity.metadata.email}}",
+			"username_format": "{{identity.entity.metadata.email}}",
 		}
-		resp, err := client.Logical().Write("identity/mfa/method-id/okta", mfaConfigData)
+		resp, err := client.Logical().Write("identity/mfa/method/okta", mfaConfigData)
 
 		if err != nil || (resp == nil) {
 			return fmt.Errorf("bad: resp: %#v\n err: %v", resp, err)
