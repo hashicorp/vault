@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package command
 
 import (
@@ -217,6 +220,8 @@ func (c *PKIHealthCheckCommand) Run(args []string) int {
 	executor.AddCheck(healthcheck.NewEnableAutoTidyCheck())
 	executor.AddCheck(healthcheck.NewTidyLastRunCheck())
 	executor.AddCheck(healthcheck.NewTooManyCertsCheck())
+	executor.AddCheck(healthcheck.NewEnableAcmeIssuance())
+	executor.AddCheck(healthcheck.NewAllowAcmeHeaders())
 	if c.flagDefaultDisabled {
 		executor.DefaultEnabled = false
 	}

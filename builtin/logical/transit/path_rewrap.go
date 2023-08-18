@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package transit
 
 import (
@@ -16,6 +19,12 @@ import (
 func (b *backend) pathRewrap() *framework.Path {
 	return &framework.Path{
 		Pattern: "rewrap/" + framework.GenericNameRegex("name"),
+
+		DisplayAttrs: &framework.DisplayAttributes{
+			OperationPrefix: operationPrefixTransit,
+			OperationVerb:   "rewrap",
+		},
+
 		Fields: map[string]*framework.FieldSchema{
 			"name": {
 				Type:        framework.TypeString,

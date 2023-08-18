@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import { later } from '@ember/runloop';
 import { Promise } from 'rsvp';
 import { inject as service } from '@ember/service';

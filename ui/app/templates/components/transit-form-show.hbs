@@ -1,3 +1,8 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
 <div class="tabs-container box is-sideless is-fullwidth is-paddingless is-marginless">
   <nav class="tabs" aria-label="tabs">
     <ul>
@@ -171,7 +176,7 @@
   <InfoTableRow @label="Type" @value={{@key.type}} />
   <InfoTableRow
     @label="Auto-rotation period"
-    @value={{or (format-duration @key.autoRotatePeriod nullable=true) "Key will not be automatically rotated"}}
+    @value={{or (format-duration @key.autoRotatePeriod) "Key will not be automatically rotated"}}
   />
   <InfoTableRow @label="Deletion allowed" @value={{stringify @key.deletionAllowed}} />
 

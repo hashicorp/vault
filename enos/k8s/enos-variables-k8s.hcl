@@ -1,3 +1,6 @@
+# Copyright (c) HashiCorp, Inc.
+# SPDX-License-Identifier: BUSL-1.1
+
 variable "vault_image_repository" {
   description = "The repository for the docker image to load, i.e. hashicorp/vault"
   type        = string

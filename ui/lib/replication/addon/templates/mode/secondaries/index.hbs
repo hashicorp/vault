@@ -1,3 +1,8 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
 {{#if this.model.replicationAttrs.isPrimary}}
   <Toolbar>
     <ToolbarActions>
@@ -71,7 +76,7 @@
           Add secondary
         </LinkTo>
       {{/if}}
-      <DocLink @path="/docs/internals/replication.html">
+      <DocLink @path="/vault/docs/internals/replication">
         Learn more
       </DocLink>
     </EmptyState>

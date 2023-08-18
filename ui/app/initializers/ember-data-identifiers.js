@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import { setIdentifierGenerationMethod } from '@ember-data/store';
 import { dasherize } from '@ember/string';
 import { v4 as uuidv4 } from 'uuid';

@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import { run } from '@ember/runloop';
 import { resolve } from 'rsvp';
 import Service from '@ember/service';
@@ -176,7 +181,7 @@ module('Integration | Component | replication actions', function (hooks) {
         `
       );
 
-      const selector = oldVersion ? 'h4' : `[data-test-${action}-replication] h4`;
+      const selector = oldVersion ? 'h3' : `[data-test-${action}-replication] h3`;
       assert
         .dom(selector)
         .hasText(headerText, `${testKey}: renders the correct component header (${oldVersion})`);

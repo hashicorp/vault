@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package pki
 
 import (
@@ -772,6 +775,98 @@ func TestBackupBundle(t *testing.T) {
 	keyIds, err = sc.listKeys()
 	require.NoError(t, err)
 	require.NotEmpty(t, keyIds)
+}
+
+func TestDeletedIssuersPostMigration(t *testing.T) {
+	// We want to simulate the following scenario:
+	//
+	// 1.10.x: -> Create a CA.
+	// 1.11.0: -> Migrate to new issuer layout but version 1.
+	//         -> Delete existing issuers, create new ones.
+	// (now):  -> Migrate to version 2 layout, make sure we don't see
+	//            re-migration.
+
+	t.Parallel()
+	ctx := context.Background()
+	b, s := CreateBackendWithStorage(t)
+	sc := b.makeStorageContext(ctx, s)
+
+	// Reset the version the helper above set to 1.
+	b.pkiStorageVersion.Store(0)
+	require.True(t, b.useLegacyBundleCaStorage(), "pre migration we should have been told to use legacy storage.")
+
+	// Create a legacy CA bundle and write it out.
+	bundle := genCertBundle(t, b, s)
+	json, err := logical.StorageEntryJSON(legacyCertBundlePath, bundle)
+	require.NoError(t, err)
+	err = s.Put(ctx, json)
+	require.NoError(t, err)
+	legacyContents := requireFileExists(t, sc, legacyCertBundlePath, nil)
+
+	// Do a migration; this should provision an issuer and key.
+	initReq := &logical.InitializationRequest{Storage: s}
+	err = b.initialize(ctx, initReq)
+	require.NoError(t, err)
+	requireFileExists(t, sc, legacyCertBundlePath, legacyContents)
+	issuerIds, err := sc.listIssuers()
+	require.NoError(t, err)
+	require.NotEmpty(t, issuerIds)
+	keyIds, err := sc.listKeys()
+	require.NoError(t, err)
+	require.NotEmpty(t, keyIds)
+
+	// Hack: reset the version to 1, to simulate a pre-version-2 migration
+	// log.
+	info, err := getMigrationInfo(sc.Context, sc.Storage)
+	require.NoError(t, err, "failed to read migration info")
+	info.migrationLog.MigrationVersion = 1
+	err = setLegacyBundleMigrationLog(sc.Context, sc.Storage, info.migrationLog)
+	require.NoError(t, err, "failed to write migration info")
+
+	// Now delete all issuers and keys and create some new ones.
+	for _, issuerId := range issuerIds {
+		deleted, err := sc.deleteIssuer(issuerId)
+		require.True(t, deleted, "expected it to be deleted")
+		require.NoError(t, err, "error removing issuer")
+	}
+	for _, keyId := range keyIds {
+		deleted, err := sc.deleteKey(keyId)
+		require.True(t, deleted, "expected it to be deleted")
+		require.NoError(t, err, "error removing key")
+	}
+	emptyIssuers, err := sc.listIssuers()
+	require.NoError(t, err)
+	require.Empty(t, emptyIssuers)
+	emptyKeys, err := sc.listKeys()
+	require.NoError(t, err)
+	require.Empty(t, emptyKeys)
+
+	// Create a new issuer + key.
+	bundle = genCertBundle(t, b, s)
+	_, _, err = sc.writeCaBundle(bundle, "", "")
+	require.NoError(t, err)
+
+	// List which issuers + keys we currently have.
+	postDeletionIssuers, err := sc.listIssuers()
+	require.NoError(t, err)
+	require.NotEmpty(t, postDeletionIssuers)
+	postDeletionKeys, err := sc.listKeys()
+	require.NoError(t, err)
+	require.NotEmpty(t, postDeletionKeys)
+
+	// Now do another migration from 1->2. This should retain the newly
+	// created issuers+keys, but not revive any deleted ones.
+	err = b.initialize(ctx, initReq)
+	require.NoError(t, err)
+	requireFileExists(t, sc, legacyCertBundlePath, legacyContents)
+	postMigrationIssuers, err := sc.listIssuers()
+	require.NoError(t, err)
+	require.NotEmpty(t, postMigrationIssuers)
+	require.Equal(t, postMigrationIssuers, postDeletionIssuers, "regression failed: expected second migration from v1->v2 to not introduce new issuers")
+	postMigrationKeys, err := sc.listKeys()
+	require.NoError(t, err)
+	require.NotEmpty(t, postMigrationKeys)
+	require.Equal(t, postMigrationKeys, postDeletionKeys, "regression failed: expected second migration from v1->v2 to not introduce new keys")
 }
 
 // requireFailInMigration validate that we fail the operation with the appropriate error message to the end-user

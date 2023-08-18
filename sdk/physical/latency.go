@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package physical
 
 import (
@@ -56,6 +59,9 @@ func NewLatencyInjector(b Backend, latency time.Duration, jitter int, logger log
 }
 
 // NewTransactionalLatencyInjector creates a new transactional LatencyInjector
+// jitter is the random percent that latency will vary between.
+// For example, if you specify latency = 50ms and jitter = 20, then for any
+// given operation, the latency will be 50ms +- 10ms (20% of 50), or between 40 and 60ms.
 func NewTransactionalLatencyInjector(b Backend, latency time.Duration, jitter int, logger log.Logger) *TransactionalLatencyInjector {
 	return &TransactionalLatencyInjector{
 		LatencyInjector: NewLatencyInjector(b, latency, jitter, logger),

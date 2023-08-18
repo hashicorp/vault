@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package api
 
 import (
@@ -147,8 +150,8 @@ TOKEN_DONE:
 
 	// Identity policies
 	{
-		_, ok := s.Data["identity_policies"]
-		if !ok {
+		v, ok := s.Data["identity_policies"]
+		if !ok || v == nil {
 			goto DONE
 		}
 

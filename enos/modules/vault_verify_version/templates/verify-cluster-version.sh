@@ -1,4 +1,7 @@
 #!/usr/bin/env bash
+# Copyright (c) HashiCorp, Inc.
+# SPDX-License-Identifier: BUSL-1.1
+
 
 # Verify the Vault "version" includes the correct base version, build date,
 # revision SHA, and edition metadata.

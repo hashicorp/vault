@@ -1,4 +1,9 @@
 #!/usr/bin/env node
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 /* eslint-env node */
 /**
  * Codemod to transform Icon component to new API to accomodate FlightIcon

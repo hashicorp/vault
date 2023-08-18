@@ -1,3 +1,8 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
 <PageHeader as |p|>
   <p.top>
     <nav class="breadcrumb">
@@ -20,14 +25,14 @@
   <p.levelLeft>
     <h1 class="title is-3" data-test-oidc-provider-title>
       {{if @model.isNew "Create" "Edit"}}
-      provider
+      Provider
     </h1>
   </p.levelLeft>
 </PageHeader>
 
 <form {{on "submit" (perform this.save)}} {{did-insert this.setIssuer @model}}>
   <div class="box is-sideless is-fullwidth is-bottomless">
-    <MessageError @errorMessage={{this.errorBanner}} class="has-top-margin-s" />
+    <MessageError @errorMessage={{this.errorBanner}} />
     {{! name field }}
     <FormField
       data-test-field={{true}}

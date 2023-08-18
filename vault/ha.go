@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package vault
 
 import (
@@ -15,7 +18,6 @@ import (
 
 	"github.com/armon/go-metrics"
 	"github.com/hashicorp/errwrap"
-	aeadwrapper "github.com/hashicorp/go-kms-wrapping/wrappers/aead/v2"
 	"github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/helper/namespace"
@@ -133,7 +135,10 @@ func (c *Core) getHAMembers() ([]HAStatusNode, error) {
 	return nodes, nil
 }
 
-// Leader is used to get the current active leader
+// Leader is used to get information about the current active leader in relation to the current node (core).
+// It utilizes a state lock on the Core by attempting to acquire a read lock. Care should be taken not to
+// call this method if a read lock on this Core's state lock is currently held, as this can cause deadlock.
+// e.g. if called from within request handling.
 func (c *Core) Leader() (isLeader bool, leaderAddr, clusterAddr string, err error) {
 	// Check if HA enabled. We don't need the lock for this check as it's set
 	// on startup and never modified
@@ -235,7 +240,7 @@ func (c *Core) Leader() (isLeader bool, leaderAddr, clusterAddr string, err erro
 	// to ourself, there's no point in paying any attention to it.  And by
 	// disregarding it, we can avoid a panic in raft tests using the Inmem network
 	// layer when we try to connect back to ourself.
-	if adv.ClusterAddr == c.ClusterAddr() && adv.RedirectAddr == c.redirectAddr {
+	if adv.ClusterAddr == c.ClusterAddr() && adv.RedirectAddr == c.redirectAddr && c.getRaftBackend() != nil {
 		return false, "", "", nil
 	}
 
@@ -705,6 +710,13 @@ func (c *Core) waitForLeadership(newLeaderCh chan func(), manualStepDownCh, stop
 				c.heldHALock = nil
 			}
 
+			// Advertise ourselves as a standby.
+			if c.serviceRegistration != nil {
+				if err := c.serviceRegistration.NotifyActiveStateChange(false); err != nil {
+					c.logger.Warn("failed to notify standby status", "error", err)
+				}
+			}
+
 			// If we are stopped return, otherwise unlock the statelock
 			if stopped {
 				return
@@ -963,7 +975,11 @@ func (c *Core) reloadShamirKey(ctx context.Context) error {
 		}
 		shamirKey = keyring.rootKey
 	}
-	return c.seal.GetAccess().Wrapper.(*aeadwrapper.ShamirWrapper).SetAesGcmKeyBytes(shamirKey)
+	shamirWrapper, err := c.seal.GetShamirWrapper()
+	if err != nil {
+		return err
+	}
+	return shamirWrapper.SetAesGcmKeyBytes(shamirKey)
 }
 
 func (c *Core) performKeyUpgrades(ctx context.Context) error {
@@ -1124,18 +1140,7 @@ func (c *Core) cleanLeaderPrefix(ctx context.Context, uuid string, leaderLostCh 
 // clearLeader is used to clear our leadership entry
 func (c *Core) clearLeader(uuid string) error {
 	key := coreLeaderPrefix + uuid
-	err := c.barrier.Delete(context.Background(), key)
-
-	// Advertise ourselves as a standby
-	if c.serviceRegistration != nil {
-		if err := c.serviceRegistration.NotifyActiveStateChange(false); err != nil {
-			if c.logger.IsWarn() {
-				c.logger.Warn("failed to notify standby status", "error", err)
-			}
-		}
-	}
-
-	return err
+	return c.barrier.Delete(context.Background(), key)
 }
 
 func (c *Core) SetNeverBecomeActive(on bool) {

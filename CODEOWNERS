@@ -25,12 +25,12 @@
 /plugins/                     @hashicorp/vault-ecosystem
 /vault/plugin_catalog.go      @hashicorp/vault-ecosystem
 
-/website/content/ @yhyakuna
-/website/content/docs/plugin-portal.mdx   @acahn @yhyakuna
+/website/content/ @hashicorp/vault-education-approvers
+/website/content/docs/plugin-portal.mdx   @acahn @hashicorp/vault-education-approvers
 
 # Plugin docs
-/website/content/docs/plugins/              @fairclothjm @yhyakuna
-/website/content/docs/upgrading/plugins.mdx @fairclothjm @yhyakuna
+/website/content/docs/plugins/              @fairclothjm @hashicorp/vault-education-approvers
+/website/content/docs/upgrading/plugins.mdx @fairclothjm @hashicorp/vault-education-approvers
 
 # UI code related to Vault's JWT/OIDC auth method and OIDC provider.
 # Changes to these files often require coordination with backend code,
@@ -48,6 +48,7 @@
 
 # Cryptosec
 /builtin/logical/pki/                                @hashicorp/vault-crypto
+/builtin/logical/pkiext/                             @hashicorp/vault-crypto
 /website/content/docs/secrets/pki/                   @hashicorp/vault-crypto
 /website/content/api-docs/secret/pki.mdx             @hashicorp/vault-crypto
 /builtin/credential/cert/                            @hashicorp/vault-crypto

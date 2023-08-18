@@ -1,4 +1,9 @@
 /**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
+/**
  * @module SplashPage
  * SplashPage component is used as a landing page with a box horizontally and center aligned on the page. It's used as the login landing page.
  *
@@ -25,9 +30,5 @@ export default class SplashPage extends Component {
   get showTruncatedNavBar() {
     // default is true unless showTruncatedNavBar is defined as false
     return this.args.showTruncatedNavBar === false ? false : true;
-  }
-
-  get activeCluster() {
-    return this.store.peekRecord('cluster', this.auth.activeCluster);
   }
 }

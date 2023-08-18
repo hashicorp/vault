@@ -6,7 +6,7 @@ description: >-
   JWTs
 ---
 
-# JWT/OIDC Auth Method
+# JWT/OIDC auth method
 
 @include 'x509-sha1-deprecation.mdx'
 
@@ -25,7 +25,7 @@ Both methods allow additional processing of the claims data in the JWT. Some of
 the concepts common to both methods will be covered first, followed by specific
 examples of OIDC and JWT usage.
 
-## OIDC Authentication
+## OIDC authentication
 
 This section covers the setup and use of OIDC roles. If a JWT is to be provided directly,
 refer to the [JWT Authentication](/vault/docs/auth/jwt#jwt-authentication) section below. Basic
@@ -75,13 +75,13 @@ parameter in the redirect URI, if
 [`namespace_in_state`](/vault/api-docs/auth/jwt#namespace_in_state) is set to `true`,
 which is the default for new configs.
 
-### OIDC Login (Vault UI)
+### OIDC login (Vault UI)
 
 1. Select the "OIDC" login method.
 1. Enter a role name if necessary.
 1. Press "Sign In" and complete the authentication with the configured provider.
 
-### OIDC Login (CLI)
+### OIDC login (CLI)
 
 The CLI login defaults to path of `/oidc`. If this auth method was enabled at a
 different path, specify `-path=/my-path` in the CLI.
@@ -110,14 +110,14 @@ not required to be set:
 - `callbackport` (default: value set for `port`). This value is used in the `redirect_uri`, whereas
   `port` is the localhost port that the listener is using. These two may be different in advanced setups.
 
-### OIDC Provider Configuration
+### OIDC provider configuration
 
 The OIDC authentication flow has been successfully tested with a number of providers. A full
 guide to configuring OAuth/OIDC applications is beyond the scope of Vault documentation, but a
 collection of provider configuration steps has been collected to help get started:
 [OIDC Provider Setup](/vault/docs/auth/jwt/oidc-providers)
 
-### OIDC Configuration Troubleshooting
+### OIDC configuration troubleshooting
 
 This amount of configuration required for OIDC is relatively small, but it can be tricky to debug
 why things aren't working. Some tips for setting up OIDC:
@@ -171,12 +171,12 @@ EOF
   than 200 groups, described in [Azure-specific handling
   configuration](/vault/docs/auth/jwt/oidc-providers/azuread#optional-azure-specific-configuration)
 
-## JWT Authentication
+## JWT authentication
 
 The authentication flow for roles of type "jwt" is simpler than OIDC since Vault
 only needs to validate the provided JWT.
 
-### JWT Verification
+### JWT verification
 
 JWT signatures will be verified against public keys from the issuer. This process can be done in
 three different ways, though only one method may be configured for a single backend:
@@ -195,12 +195,17 @@ at a different path.
 
 ### Via the CLI
 
-The default path is `/jwt`. If this auth method was enabled at a
-different path, specify `-path=/my-path` in the CLI.
+```shell-session
+$ vault write auth/<path-to-jwt-backend>/login role=demo jwt=...
+```
+
+The default path for the JWT authentication backend is `/jwt`, so if you're using the default backend, the command would be:
 
 ```shell-session
 $ vault write auth/jwt/login role=demo jwt=...
 ```
+
+If your JWT auth backend is using a different path, use that path.
 
 ### Via the API
 
@@ -287,7 +292,7 @@ management tool.
    For the complete list of configuration options, please see the API
    documentation.
 
-### Bound Claims
+### Bound claims
 
 Once a JWT has been validated as being properly signed and not expired, the
 authorization flow will validate that any configured "bound" parameters match.
@@ -317,7 +322,7 @@ To limit authorization to a set of email addresses:
 
 Bound claims can optionally be configured with globs. See the [API documentation](/vault/api-docs/auth/jwt#bound_claims_type) for more details.
 
-### Claims as Metadata
+### Claims as metadata
 
 Data from claims can be copied into the resulting auth token and alias metadata by configuring `claim_mappings`. This role
 parameter is a map of items to copy. The map elements are of the form: `"<JWT claim>":"<metadata key>"`. Assume
@@ -336,7 +341,7 @@ it must existing in the JWT or else the authentication will fail.
 
 Note: the metadata key name "role" is reserved and may not be used for claim mappings.
 
-### Claim Specifications and JSON Pointer
+### Claim specifications and JSON pointer
 
 Some parameters (e.g. `bound_claims`, `groups_claim`, `claim_mappings`, `user_claim`) are
 used to point to data within the JWT. If the desired key is at the top of level of the JWT,
@@ -359,6 +364,16 @@ A parameter of `"division"` will reference "North America", as this is a top lev
 `"/groups/primary"` uses JSON Pointer syntax to reference "Engineering" at a lower level. Any valid
 JSON Pointer can be used as a selector. Refer to the
 [JSON Pointer RFC](https://tools.ietf.org/html/rfc6901) for a full description of the syntax.
+
+## Tutorial
+
+Refer to the following tutorials for OIDC auth method usage examples:
+
+- [OIDC Auth Method](/vault/tutorials/auth-methods/oidc-auth)
+- [Azure Active Directory with OIDC Auth Method and External
+  Groups](/vault/tutorials/auth-methods/oidc-auth-azure)
+- [OIDC Authentication with Okta](/vault/tutorials/auth-methods/vault-oidc-okta)
+- [OIDC Authentication with Google Workspace](/vault/tutorials/auth-methods/google-workspace-oauth)
 
 ## API
 

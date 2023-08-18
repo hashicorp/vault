@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package plugin
 
 import (
@@ -34,6 +37,10 @@ type GRPCEventsServer struct {
 }
 
 func (s *GRPCEventsServer) SendEvent(ctx context.Context, req *pb.SendEventRequest) (*pb.Empty, error) {
+	if s.impl == nil {
+		return &pb.Empty{}, nil
+	}
+
 	err := s.impl.Send(ctx, logical.EventType(req.EventType), req.Event)
 	if err != nil {
 		return nil, err

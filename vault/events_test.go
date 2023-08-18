@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package vault
 
 import (
@@ -5,12 +8,15 @@ import (
 	"time"
 
 	"github.com/hashicorp/go-uuid"
+	"github.com/hashicorp/vault/helper/experiments"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
 func TestCanSendEventsFromBuiltinPlugin(t *testing.T) {
-	c, _, _ := TestCoreUnsealed(t)
+	c, _, _ := TestCoreUnsealedWithConfig(t, &CoreConfig{
+		Experiments: []string{experiments.VaultExperimentEventsAlpha1},
+	})
 
 	ctx := namespace.RootContext(nil)
 

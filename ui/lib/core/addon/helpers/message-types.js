@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import { helper as buildHelper } from '@ember/component/helper';
 import { assert } from '@ember/debug';
 
@@ -31,6 +36,11 @@ export const MESSAGE_TYPES = {
     glyphClass: 'has-text-success',
     glyph: 'loading',
     text: 'Loading',
+  },
+  rotation: {
+    class: 'is-info',
+    glyphClass: 'has-text-grey',
+    glyph: 'rotate-cw',
   },
 };
 

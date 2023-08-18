@@ -21,7 +21,7 @@ This endpoint lists all the Managed Keys of a certain type within the namespace.
 - `type` `(string: <required>)` – The backend type of keys to be listed.
 Supported options are `pkcs11`, `awskms` and `azurekeyvault`.
 
-### Sample Request
+### Sample request
 
 ```shell-session
 $ curl \
@@ -30,7 +30,7 @@ $ curl \
     http://127.0.0.1:8200/v1/sys/managed-keys/pkcs11
 ```
 
-### Sample Response
+### Sample response
 
 ```json
 {
@@ -51,7 +51,7 @@ the namespace.
 |:-------|:--------------------------------|
 | `POST` | `/sys/managed-keys/:type/:name` |
 
-### Sample Payload
+### Sample payload
 
 ```json
 {
@@ -63,7 +63,7 @@ the namespace.
 }
 ```
 
-### Sample Request
+### Sample request
 
 ```shell-session
 $ curl \
@@ -73,7 +73,7 @@ $ curl \
     http://127.0.0.1:8200/v1/sys/managed-keys/pkcs11/hsm-key1
 ```
 
-### Generic Parameters
+### Generic parameters
 - `name` `(string: <required>)` - A unique lowercase name that serves as identifying the key. Must be
   unique throughout all types in the namespace.
 
@@ -87,8 +87,8 @@ $ curl \
   a key into the configured backend even if a key is present, if set to false those operations are forbidden
   if a key exists.
 
-- `allow_store_key` `(string: "false")` - Controls the ability for Vault to import a key
-  to the configured backend, if "false" those operations will be forbidden.
+- `allow_store_key` `(string: "false")` - Controls the ability for Vault to export a Vault private key
+  to the configured HSM, if "false" those operations will be forbidden.
 
 - `any_mount` `(string: "false")` - Allow usage from any mount point within the namespace if "true". If "false"
   specific mount points will need their `allowed_managed_keys` parameter to be updated with the key name to
@@ -97,9 +97,11 @@ $ curl \
 - `usages` `(comma-delimited string: "sign,verify")` - A comma-delimited list of the allowed usages of this key. Valid values
   are encrypt, decrypt, sign, verify, wrap, unwrap, mac, and random.
 
-#### PKCS#11 backend Parameters
+#### PKCS#11 backend parameters
 
-~> NOTE: The `pkcs11` backend is only available with Vault Enterprise Plus (HSMs) edition
+<Note>
+  The <code>pkcs11</code> backend is only available with Vault Enterprise plus HSMs
+</Note>
 
 - `type` `(string: "pkcs11")` - To select a PKCS#11 backend, the type parameter must be set to `pkcs11`.
 
@@ -120,6 +122,10 @@ $ curl \
     - `0x000D` `CKM_RSA_PKCS_PSS`
     - `0x0009` `CKM_RSA_PKCS_OAEP`
     - `0x0001` `CKM_RSA_PKCS`
+
+  ~> **Note**: It is possible to use unsupported mechanisms with a managed key, however automatic key generation is only
+  possible with the above supported mechanisms. Automatic key generation is also currently a best effort operation and may
+  not function correctly on all HSMs.
 
 - `pin` `(string: <required>)`: The PIN for login.
 
@@ -156,7 +162,7 @@ $ curl \
 - `max_parallel` `(int: 1)` - The number of concurrent requests that may be in
   flight to the HSM at any given time.
 
-#### AWS KMS Parameters
+#### AWS KMS parameters
 - `type` `(string: "awskms")` - To select an AWS KMS backend, the type parameter must be set to `awskms`.
 
 - `access_key` `(string: <required>)`: The AWS access key to use. This may also be provided in
@@ -194,7 +200,7 @@ $ curl \
   the `AWS_SECRET_ACCESS_KEY` environment variable or as part of the AWS profile from the AWS CLI
   or instance profile.
 
-#### Azure Key Vault Parameters
+#### Azure key Vault parameters
 - `type` `(string: "azurekeyvault")` - To select an Azure Key Vault backend, the type parameter must be set to `azurekeyvault`.
 
 - `tenant_id` `(string: <required>)`: The tenant id for the Azure Active Directory organization.
@@ -219,7 +225,7 @@ $ curl \
 
 - `key_type` `(string: <required>)`: The type of key to use. At this time only supported value is `RSA-HSM`.
 
-#### GCP Cloud KMS Parameters
+#### GCP Cloud KMS parameters
 - `type` `(string: "gcpckms")` - To select an GCP Cloud KMS backend, the type parameter must be set to `gcpckms`.
 
 - `credentials` `(string: <required>)`: The path of the credential file to use for authenticating to GCP.
@@ -267,7 +273,7 @@ This endpoint returns the managed key configuration at the given path.
 
 - `type` `(string: <required>)` – The backend type for the managed key. Supported options are `pkcs11`, `awskms` and `azurekeyvault`.
 
-### Sample Request
+### Sample request
 
 ```shell-session
 $ curl \
@@ -275,7 +281,7 @@ $ curl \
     http://127.0.0.1:8200/v1/sys/managed-keys/pkcs11/hsm-key1
 ```
 
-### Sample Response
+### Sample response
 
 ```json
 {
@@ -298,7 +304,7 @@ $ curl \
 }
 ```
 
-## Test Sign with a managed key
+## Test sign with a managed key
 
 This endpoint allows an operator to validate that a managed key configuration works
 by signing and verifying some randomly generated data. If the call returns a successful HTTP
@@ -329,7 +335,7 @@ status code, the configuration can be considered valid.
    - sha3-384
    - sha3-512
 
-### Sample Request
+### Sample request
 
 ```shell-session
 $ curl \
@@ -353,7 +359,7 @@ listed within any mount point's `allowed_managed_keys`.
 
 - `type` `(string: <required>)` – The backend type for the managed key. Supported options are `pkcs11`, `awskms` and `azurekeyvault`.
 
-### Sample Request
+### Sample request
 
 ```shell-session
 $ curl \

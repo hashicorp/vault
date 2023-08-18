@@ -1,9 +1,10 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
 <BasicDropdown @class="popup-menu" @horizontalPosition="auto-right" @verticalPosition="below" as |D|>
-  <D.Trigger
-    data-test-popup-menu-trigger="true"
-    class={{concat "toolbar-link" (if D.isOpen " is-active")}}
-    @htmlTag="button"
-  >
+  <D.Trigger data-test-calendar-widget-trigger class={{concat "toolbar-link" (if D.isOpen " is-active")}} @htmlTag="button">
     {{date-format this.startDate "MMM yyyy"}}
     -
     {{date-format this.endDate "MMM yyyy"}}
