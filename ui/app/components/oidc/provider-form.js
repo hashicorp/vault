@@ -31,7 +31,7 @@ export default class OidcProviderForm extends Component {
   @tracked errorBanner;
   @tracked invalidFormAlert;
   @tracked radioCardGroupValue =
-    // If "*" is provided, all clients are allowed: https://www.vaultproject.io/api-docs/secret/identity/oidc-provider#parameters
+    // If "*" is provided, all clients are allowed: https://developer.hashicorp.com/vault/api-docs/secret/identity/oidc-provider#parameters
     !this.args.model.allowedClientIds || this.args.model.allowedClientIds.includes('*')
       ? 'allow_all'
       : 'limited';
