@@ -135,12 +135,10 @@ jobs:
            # testonly tagged tests need an additional tag to be included
            # also running some extra tests for sanity checking
            (
-             go list -tags=testonly ./... | grep -E -i 'external_tests/kv|external_tests/token|testonly|^github.com/hashicorp/vault/vault$' | gotestsum tool ci-matrix --debug \
+             go list -tags=testonly ./... | grep -E -i 'external_tests/kv|external_tests/token|testonly|external_tests/replication-perf|^github.com/hashicorp/vault/vault$' | gotestsum tool ci-matrix --debug \
                --partitions "2" \
                --timing-files 'test-results/go-test/*.json' > matrix.json
            )
-           cat matrix.json
-
       - name: Capture list of binary tests
         if: inputs.binary-tests
         id: list-binary-tests
@@ -163,9 +161,6 @@ jobs:
               }]' matrix.json > new-matrix.json
               matrix_file="new-matrix.json"
             fi
-          
-            cat matrix.json
-          
             # convert the json to a map keyed by id
             (
               echo -n "matrix="
@@ -249,15 +244,6 @@ jobs:
 
           # Build the dynamically generated source files.
           make prep
-          
-          echo
-          echo "${{ needs.test-matrix.outputs.matrix }}"
-          echo
-          echo "${{ toJSON(needs.test-matrix.outputs.matrix) }}"
-          echo
-          echo "${{ needs.test-matrix.outputs.matrix_ids }}"
-          echo
-          echo "${{ matrix.id }}"
 
           packages=$(echo "${{ toJSON(needs.test-matrix.outputs.matrix) }}" | jq -c -r --arg id "${{ matrix.id }}" '.[$id] | .packages')
 
