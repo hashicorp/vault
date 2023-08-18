@@ -149,12 +149,12 @@ jobs:
            else
              export VAULT_TEST_PACKAGE="github.com/hashicorp/vault/vault"
            fi
-          
-           jq --arg VAULT_PKG "${VAULT_TEST_PACKAGE}" \
+           kv_test="$VAULT_TEST_PACKAGE/external_tests/kv"
+           jq --arg VAULT_PKG "${kv_test}" \
              '.include[0] = {
                "id": 0,
                "estimatedRuntime": "N/A",
-               "packages": $VAULT_PKG"/external_tests/kv",
+               "packages": $VAULT_PKG,
                "description": "vaultPackage"
            }' testonly_matrix.json > kv_matrix.json
           
