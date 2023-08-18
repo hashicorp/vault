@@ -98,7 +98,12 @@
 .has-top-margin-xxs {
   margin: $spacing-xxs 0;
 }
-
+.has-right-margin-xxs {
+  margin-right: $spacing-xxs;
+}
+.has-left-margin-xxs {
+  margin-left: $spacing-xxs;
+}
 .has-bottom-margin-xxs {
   margin-bottom: $spacing-xxs !important;
 }
