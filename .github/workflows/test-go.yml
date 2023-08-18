@@ -135,7 +135,7 @@ jobs:
           # testonly tagged tests need an additional tag to be included
           # also running some extra tests for sanity checking with the testonly build tag
           (
-            go list -tags=testonly ./... | grep -E -i 'external_tests/kv|external_tests/token|testonly|external_tests/replication-perf|^github.com/hashicorp/vault/vault$' | gotestsum tool ci-matrix --debug \
+            go list -tags=testonly ./vault/external_tests/{kv,token,*replication-perf*,*testonly*} ./vault/ | gotestsum tool ci-matrix --debug \
               --partitions "${{ inputs.total-runners }}" \
               --timing-files 'test-results/go-test/*.json' > matrix.json
           )
