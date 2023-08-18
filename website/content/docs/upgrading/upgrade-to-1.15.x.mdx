@@ -32,10 +32,8 @@ Please audit your Consul storage stanza to ensure that you either:
 
 ## Rollback metrics
 
-The metrics `vault.rollback.attempts.{MOUNTPOINT}` and `vault.route.rollback.{MOUNTPOINT}`
-are no longer measured by default. They have been replaced by `vault.rollback.attempts`
-and `vault.route.rollback` metrics, which **do not** contain the mount point in
-the metric name.
+Vault no longer measures and reports the metrics `vault.rollback.attempts.{MOUNTPOINT}` and `vault.route.rollback.{MOUNTPOINT}` by default. The new default metrics are `vault.rollback.attempts`
+and `vault.route.rollback`, which **do not** contain the mount point in the metric name.
 
 If you would like to continue measuring `vault.rollback.attempts.{MOUNTPOINT}`
 and `vault.route.rollback.{MOUNTPOINT}`, you can enable these metrics using the
