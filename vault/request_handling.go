@@ -443,7 +443,7 @@ func (c *Core) CheckToken(ctx context.Context, req *logical.Request, unauth bool
 		err := c.activityLog.HandleTokenUsage(ctx, te, clientID, isTWE)
 		if err != nil {
 			return auth, te, err
-    }
+		}
 	}
 	return auth, te, nil
 }
