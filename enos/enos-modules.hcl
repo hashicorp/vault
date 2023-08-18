@@ -1,5 +1,5 @@
 # Copyright (c) HashiCorp, Inc.
-# SPDX-License-Identifier: MPL-2.0
+# SPDX-License-Identifier: BUSL-1.1
 
 module "autopilot_upgrade_storageconfig" {
   source = "./modules/autopilot_upgrade_storageconfig"
@@ -99,6 +99,13 @@ module "target_ec2_spot_fleet" {
 
 module "vault_agent" {
   source = "./modules/vault_agent"
+
+  vault_install_dir    = var.vault_install_dir
+  vault_instance_count = var.vault_instance_count
+}
+
+module "vault_proxy" {
+  source = "./modules/vault_proxy"
 
   vault_install_dir    = var.vault_install_dir
   vault_instance_count = var.vault_instance_count

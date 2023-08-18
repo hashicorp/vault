@@ -1,0 +1,9 @@
+### vault.core.leadership_lost ((#vault-core-leadership_lost))
+
+Metric type | Value | Description
+----------- | ----- | -----------
+summary     | ms    | Total time that a high-availability cluster node last maintained leadership
+
+Leadership time updates occur whenever leadership changes. Frequent updates to
+`vault.core.leadership_lost` with low leadership times indicates flapping as
+leader status rotates between nodes.

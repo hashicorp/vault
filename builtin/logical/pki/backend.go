@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 package pki
 
@@ -233,41 +233,33 @@ func Backend(conf *logical.BackendConfig) *backend {
 	}
 
 	// Add ACME paths to backend
-	var acmePaths []*framework.Path
-	acmePaths = append(acmePaths, pathAcmeDirectory(&b)...)
-	acmePaths = append(acmePaths, pathAcmeNonce(&b)...)
-	acmePaths = append(acmePaths, pathAcmeNewAccount(&b)...)
-	acmePaths = append(acmePaths, pathAcmeUpdateAccount(&b)...)
-	acmePaths = append(acmePaths, pathAcmeGetOrder(&b)...)
-	acmePaths = append(acmePaths, pathAcmeListOrders(&b)...)
-	acmePaths = append(acmePaths, pathAcmeNewOrder(&b)...)
-	acmePaths = append(acmePaths, pathAcmeFinalizeOrder(&b)...)
-	acmePaths = append(acmePaths, pathAcmeFetchOrderCert(&b)...)
-	acmePaths = append(acmePaths, pathAcmeChallenge(&b)...)
-	acmePaths = append(acmePaths, pathAcmeAuthorization(&b)...)
-	acmePaths = append(acmePaths, pathAcmeRevoke(&b)...)
-	acmePaths = append(acmePaths, pathAcmeNewEab(&b)...) // auth'd API that lives underneath the various /acme paths
-
-	for _, acmePath := range acmePaths {
-		b.Backend.Paths = append(b.Backend.Paths, acmePath)
-	}
-
-	// Add specific un-auth'd paths for ACME APIs
-	for _, acmePrefix := range []string{"", "issuer/+/", "roles/+/", "issuer/+/roles/+/"} {
-		b.PathsSpecial.Unauthenticated = append(b.PathsSpecial.Unauthenticated, acmePrefix+"acme/directory")
-		b.PathsSpecial.Unauthenticated = append(b.PathsSpecial.Unauthenticated, acmePrefix+"acme/new-nonce")
-		b.PathsSpecial.Unauthenticated = append(b.PathsSpecial.Unauthenticated, acmePrefix+"acme/new-account")
-		b.PathsSpecial.Unauthenticated = append(b.PathsSpecial.Unauthenticated, acmePrefix+"acme/new-order")
-		b.PathsSpecial.Unauthenticated = append(b.PathsSpecial.Unauthenticated, acmePrefix+"acme/revoke-cert")
-		b.PathsSpecial.Unauthenticated = append(b.PathsSpecial.Unauthenticated, acmePrefix+"acme/key-change")
-		b.PathsSpecial.Unauthenticated = append(b.PathsSpecial.Unauthenticated, acmePrefix+"acme/account/+")
-		b.PathsSpecial.Unauthenticated = append(b.PathsSpecial.Unauthenticated, acmePrefix+"acme/authorization/+")
-		b.PathsSpecial.Unauthenticated = append(b.PathsSpecial.Unauthenticated, acmePrefix+"acme/challenge/+/+")
-		b.PathsSpecial.Unauthenticated = append(b.PathsSpecial.Unauthenticated, acmePrefix+"acme/orders")
-		b.PathsSpecial.Unauthenticated = append(b.PathsSpecial.Unauthenticated, acmePrefix+"acme/order/+")
-		b.PathsSpecial.Unauthenticated = append(b.PathsSpecial.Unauthenticated, acmePrefix+"acme/order/+/finalize")
-		b.PathsSpecial.Unauthenticated = append(b.PathsSpecial.Unauthenticated, acmePrefix+"acme/order/+/cert")
-		// We specifically do NOT add acme/new-eab to this as it should be auth'd
+	for _, prefix := range []struct {
+		acmePrefix   string
+		unauthPrefix string
+		opts         acmeWrapperOpts
+	}{
+		{
+			"acme",
+			"acme",
+			acmeWrapperOpts{true, false},
+		},
+		{
+			"roles/" + framework.GenericNameRegex("role") + "/acme",
+			"roles/+/acme",
+			acmeWrapperOpts{},
+		},
+		{
+			"issuer/" + framework.GenericNameRegex(issuerRefParam) + "/acme",
+			"issuer/+/acme",
+			acmeWrapperOpts{},
+		},
+		{
+			"issuer/" + framework.GenericNameRegex(issuerRefParam) + "/roles/" + framework.GenericNameRegex("role") + "/acme",
+			"issuer/+/roles/+/acme",
+			acmeWrapperOpts{},
+		},
+	} {
+		setupAcmeDirectory(&b, prefix.acmePrefix, prefix.unauthPrefix, prefix.opts)
 	}
 
 	b.tidyCASGuard = new(uint32)

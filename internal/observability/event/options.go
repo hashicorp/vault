@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 package event
 
@@ -19,21 +19,18 @@ import (
 // Option is how Options are passed as arguments.
 type Option func(*options) error
 
-// options are used to represent configuration for an Event.
+// Options are used to represent configuration for an Event.
 type options struct {
 	withID          string
 	withNow         time.Time
-	withSubtype     auditSubtype
-	withFormat      auditFormat
-	withFileMode    *os.FileMode
-	withPrefix      string
 	withFacility    string
 	withTag         string
 	withSocketType  string
 	withMaxDuration time.Duration
+	withFileMode    *os.FileMode
 }
 
-// getDefaultOptions returns options with their default values.
+// getDefaultOptions returns Options with their default values.
 func getDefaultOptions() options {
 	return options{
 		withNow:         time.Now(),
@@ -44,7 +41,7 @@ func getDefaultOptions() options {
 	}
 }
 
-// getOpts applies all the supplied Option and returns configured options.
+// getOpts applies all the supplied Option and returns configured Options.
 // Each Option is applied in the order it appears in the argument list, so it is
 // possible to supply the same Option numerous times and the 'last write wins'.
 func getOpts(opt ...Option) (options, error) {
@@ -110,51 +107,72 @@ func WithNow(now time.Time) Option {
 	}
 }
 
-// WithSubtype provides an option to represent the subtype.
-func WithSubtype(subtype string) Option {
+// WithFacility provides an Option to represent a 'facility' for a syslog sink.
+func WithFacility(facility string) Option {
 	return func(o *options) error {
-		s := strings.TrimSpace(subtype)
-		if s == "" {
-			return errors.New("subtype cannot be empty")
+		facility = strings.TrimSpace(facility)
+
+		if facility != "" {
+			o.withFacility = facility
 		}
 
-		parsed := auditSubtype(s)
-		err := parsed.validate()
-		if err != nil {
-			return err
-		}
-
-		o.withSubtype = parsed
 		return nil
 	}
 }
 
-// WithFormat provides an option to represent event format.
-func WithFormat(format string) Option {
+// WithTag provides an Option to represent a 'tag' for a syslog sink.
+func WithTag(tag string) Option {
 	return func(o *options) error {
-		f := strings.TrimSpace(format)
-		if f == "" {
-			return errors.New("format cannot be empty")
+		tag = strings.TrimSpace(tag)
+
+		if tag != "" {
+			o.withTag = tag
 		}
 
-		parsed := auditFormat(f)
-		err := parsed.validate()
-		if err != nil {
-			return err
-		}
-
-		o.withFormat = parsed
 		return nil
 	}
 }
 
-// WithFileMode provides an option to represent a file mode for a file sink.
-// Supplying an empty string or whitespace will prevent this option from being
+// WithSocketType provides an Option to represent the socket type for a socket sink.
+func WithSocketType(socketType string) Option {
+	return func(o *options) error {
+		socketType = strings.TrimSpace(socketType)
+
+		if socketType != "" {
+			o.withSocketType = socketType
+		}
+
+		return nil
+	}
+}
+
+// WithMaxDuration provides an Option to represent the max duration for writing to a socket.
+func WithMaxDuration(duration string) Option {
+	return func(o *options) error {
+		duration = strings.TrimSpace(duration)
+
+		if duration == "" {
+			return nil
+		}
+
+		parsed, err := parseutil.ParseDurationSecond(duration)
+		if err != nil {
+			return err
+		}
+
+		o.withMaxDuration = parsed
+
+		return nil
+	}
+}
+
+// WithFileMode provides an Option to represent a file mode for a file sink.
+// Supplying an empty string or whitespace will prevent this Option from being
 // applied, but it will not return an error in those circumstances.
 func WithFileMode(mode string) Option {
 	return func(o *options) error {
 		// If supplied file mode is empty, just return early without setting anything.
-		// We can assume that this option was called by something that didn't
+		// We can assume that this Option was called by something that didn't
 		// parse the incoming value, perhaps from a config map etc.
 		mode = strings.TrimSpace(mode)
 		if mode == "" {
@@ -172,73 +190,6 @@ func WithFileMode(mode string) Option {
 			m := os.FileMode(raw)
 			o.withFileMode = &m
 		}
-
-		return nil
-	}
-}
-
-// WithPrefix provides an option to represent a prefix for a file sink.
-func WithPrefix(prefix string) Option {
-	return func(o *options) error {
-		o.withPrefix = prefix
-		return nil
-	}
-}
-
-// WithFacility provides an option to represent a 'facility' for a syslog sink.
-func WithFacility(facility string) Option {
-	return func(o *options) error {
-		facility = strings.TrimSpace(facility)
-
-		if facility != "" {
-			o.withFacility = facility
-		}
-
-		return nil
-	}
-}
-
-// WithTag provides an option to represent a 'tag' for a syslog sink.
-func WithTag(tag string) Option {
-	return func(o *options) error {
-		tag = strings.TrimSpace(tag)
-
-		if tag != "" {
-			o.withTag = tag
-		}
-
-		return nil
-	}
-}
-
-// WithSocketType provides an option to represent the socket type for a socket sink.
-func WithSocketType(socketType string) Option {
-	return func(o *options) error {
-		socketType = strings.TrimSpace(socketType)
-
-		if socketType != "" {
-			o.withSocketType = socketType
-		}
-
-		return nil
-	}
-}
-
-// WithMaxDuration provides an option to represent the max duration for writing to a socket sink.
-func WithMaxDuration(duration string) Option {
-	return func(o *options) error {
-		duration = strings.TrimSpace(duration)
-
-		if duration == "" {
-			return nil
-		}
-
-		parsed, err := parseutil.ParseDurationSecond(duration)
-		if err != nil {
-			return err
-		}
-
-		o.withMaxDuration = parsed
 
 		return nil
 	}

@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 //go:build !enterprise
 
@@ -40,11 +40,9 @@ func coreInit(c *Core, conf *CoreConfig) error {
 	phys := conf.Physical
 	_, txnOK := phys.(physical.Transactional)
 	sealUnwrapperLogger := conf.Logger.Named("storage.sealunwrapper")
-	c.allLoggers = append(c.allLoggers, sealUnwrapperLogger)
 	c.sealUnwrapper = NewSealUnwrapper(phys, sealUnwrapperLogger)
 	// Wrap the physical backend in a cache layer if enabled
 	cacheLogger := c.baseLogger.Named("storage.cache")
-	c.allLoggers = append(c.allLoggers, cacheLogger)
 	if txnOK {
 		c.physical = physical.NewTransactionalCache(c.sealUnwrapper, conf.CacheSize, cacheLogger, c.MetricSink().Sink)
 	} else {

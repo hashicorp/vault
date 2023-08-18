@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 package router
 
@@ -8,6 +8,8 @@ import (
 
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/helper/testhelpers/minimal"
+	"github.com/hashicorp/vault/sdk/logical"
+	"github.com/hashicorp/vault/vault"
 )
 
 func TestRouter_MountSubpath_Checks(t *testing.T) {
@@ -49,4 +51,35 @@ func testRouter_MountSubpath(t *testing.T, mountPoints []string) {
 	cluster.EnsureCoresSealed(t)
 	cluster.UnsealCores(t)
 	t.Logf("Done: %#v", mountPoints)
+}
+
+func TestRouter_UnmountRollbackIsntFatal(t *testing.T) {
+	cluster := minimal.NewTestSoloCluster(t, &vault.CoreConfig{
+		LogicalBackends: map[string]logical.Factory{
+			"noop": vault.NoopBackendRollbackErrFactory,
+		},
+	})
+	client := cluster.Cores[0].Client
+
+	if err := client.Sys().Mount("noop", &api.MountInput{
+		Type: "noop",
+	}); err != nil {
+		t.Fatalf("failed to mount PKI: %v", err)
+	}
+
+	if _, err := client.Logical().Write("sys/plugins/reload/backend", map[string]interface{}{
+		"mounts": "noop",
+	}); err != nil {
+		t.Fatalf("expected reload of noop with broken periodic func to succeed; got err=%v", err)
+	}
+
+	if _, err := client.Logical().Write("sys/remount", map[string]interface{}{
+		"from": "noop",
+		"to":   "noop-to",
+	}); err != nil {
+		t.Fatalf("expected remount of noop with broken periodic func to succeed; got err=%v", err)
+	}
+
+	cluster.EnsureCoresSealed(t)
+	cluster.UnsealCores(t)
 }

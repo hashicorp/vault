@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 package mssql
 
@@ -226,13 +226,13 @@ func TestUpdateUser_password(t *testing.T) {
 		expectedPassword string
 	}
 
-	dbUser := "vaultuser"
+	cleanup, connURL := mssqlhelper.PrepareMSSQLTestContainer(t)
+	defer cleanup()
 	initPassword := "p4$sw0rd"
 
 	tests := map[string]testCase{
 		"missing password": {
 			req: dbplugin.UpdateUserRequest{
-				Username: dbUser,
 				Password: &dbplugin.ChangePassword{
 					NewPassword: "",
 					Statements:  dbplugin.Statements{},
@@ -243,7 +243,6 @@ func TestUpdateUser_password(t *testing.T) {
 		},
 		"empty rotation statements": {
 			req: dbplugin.UpdateUserRequest{
-				Username: dbUser,
 				Password: &dbplugin.ChangePassword{
 					NewPassword: "N90gkKLy8$angf",
 					Statements:  dbplugin.Statements{},
@@ -254,7 +253,6 @@ func TestUpdateUser_password(t *testing.T) {
 		},
 		"username rotation": {
 			req: dbplugin.UpdateUserRequest{
-				Username: dbUser,
 				Password: &dbplugin.ChangePassword{
 					NewPassword: "N90gkKLy8$angf",
 					Statements: dbplugin.Statements{
@@ -269,7 +267,6 @@ func TestUpdateUser_password(t *testing.T) {
 		},
 		"bad statements": {
 			req: dbplugin.UpdateUserRequest{
-				Username: dbUser,
 				Password: &dbplugin.ChangePassword{
 					NewPassword: "N90gkKLy8$angf",
 					Statements: dbplugin.Statements{
@@ -284,11 +281,9 @@ func TestUpdateUser_password(t *testing.T) {
 		},
 	}
 
+	i := 0
 	for name, test := range tests {
 		t.Run(name, func(t *testing.T) {
-			cleanup, connURL := mssqlhelper.PrepareMSSQLTestContainer(t)
-			defer cleanup()
-
 			initReq := dbplugin.InitializeRequest{
 				Config: map[string]interface{}{
 					"connection_url": connURL,
@@ -300,6 +295,9 @@ func TestUpdateUser_password(t *testing.T) {
 			dbtesting.AssertInitializeCircleCiTest(t, db, initReq)
 			defer dbtesting.AssertClose(t, db)
 
+			dbUser := fmt.Sprintf("vaultuser%d", i)
+			test.req.Username = dbUser
+			i++
 			err := createTestMSSQLUser(connURL, dbUser, initPassword, testMSSQLLogin)
 			if err != nil {
 				t.Fatalf("Failed to create user: %s", err)

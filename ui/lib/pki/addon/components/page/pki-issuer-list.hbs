@@ -1,8 +1,13 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
 {{#each @issuers as |pkiIssuer idx|}}
   <LinkedBlock class="list-item-row" @params={{array "issuers.issuer.details" pkiIssuer.id}} @linkPrefix={{@mountPoint}}>
     <div class="level is-mobile">
       <div class="level-left">
-        <div>
+        <div data-test-issuer-list={{pkiIssuer.id}}>
           <Icon @name="certificate" class="has-text-grey-light" />
           <span class="has-text-weight-semibold is-underline">
             {{pkiIssuer.issuerRef}}
@@ -14,7 +19,7 @@
             {{#if pkiIssuer.isDefault}}
               <span class="tag has-text-grey-dark" data-test-is-default={{idx}}>default issuer</span>
             {{/if}}
-            {{#if (not (eq pkiIssuer.isRoot undefined))}}
+            {{#if (not-eq pkiIssuer.isRoot undefined)}}
               <span class="tag has-text-grey-dark" data-test-is-root-tag={{idx}}>{{if
                   pkiIssuer.isRoot
                   "root"

@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 package vault
 
@@ -195,6 +195,10 @@ func (b *SystemBackend) raftStoragePaths() []*framework.Path {
 				"disable_upgrade_migration": {
 					Type:        framework.TypeBool,
 					Description: "Whether or not to perform automated version upgrades.",
+				},
+				"dr_operation_token": {
+					Type:        framework.TypeString,
+					Description: "DR operation token used to authorize this request (if a DR secondary node).",
 				},
 			},
 
@@ -531,6 +535,10 @@ func (b *SystemBackend) handleStorageRaftAutopilotConfigUpdate() framework.Opera
 
 		if effectiveConf.CleanupDeadServers && effectiveConf.MinQuorum < 3 {
 			return logical.ErrorResponse(fmt.Sprintf("min_quorum must be set when cleanup_dead_servers is set and it should at least be 3; cleanup_dead_servers: %#v, min_quorum: %#v", effectiveConf.CleanupDeadServers, effectiveConf.MinQuorum)), logical.ErrInvalidRequest
+		}
+
+		if effectiveConf.CleanupDeadServers && effectiveConf.DeadServerLastContactThreshold.Seconds() < 60 {
+			return logical.ErrorResponse(fmt.Sprintf("dead_server_last_contact_threshold should not be set to less than 1m; received: %v", deadServerLastContactThreshold)), logical.ErrInvalidRequest
 		}
 
 		// Persist only the user supplied fields
