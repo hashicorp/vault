@@ -82,103 +82,162 @@ func TestBackend_StaticRole_Rotation_basic(t *testing.T) {
 		t.Fatalf("err:%s resp:%#v\n", err, resp)
 	}
 
-	data = map[string]interface{}{
-		"name":                "plugin-role-test",
-		"db_name":             "plugin-test",
-		"rotation_statements": testRoleStaticUpdate,
-		"username":            dbUser,
-		"rotation_period":     "5400s",
+	testCases := map[string]struct {
+		account  map[string]interface{}
+		path     string
+		expected map[string]interface{}
+		waitTime time.Duration
+	}{
+		"basic with rotation_period": {
+			account: map[string]interface{}{
+				"username":        dbUser,
+				"rotation_period": "5400s",
+			},
+			path: "plugin-role-test-1",
+			expected: map[string]interface{}{
+				"username":        dbUser,
+				"rotation_period": float64(5400),
+			},
+		},
+		"rotation_schedule is set and expires": {
+			account: map[string]interface{}{
+				"username":          dbUser,
+				"rotation_schedule": "*/10 * * * * *",
+			},
+			path: "plugin-role-test-2",
+			expected: map[string]interface{}{
+				"username":          dbUser,
+				"rotation_schedule": "*/10 * * * * *",
+			},
+			waitTime: 20 * time.Second,
+		},
 	}
 
-	req = &logical.Request{
-		Operation: logical.CreateOperation,
-		Path:      "static-roles/plugin-role-test",
-		Storage:   config.StorageView,
-		Data:      data,
-	}
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			data = map[string]interface{}{
+				"name":                "plugin-role-test",
+				"db_name":             "plugin-test",
+				"rotation_statements": testRoleStaticUpdate,
+				"username":            dbUser,
+			}
 
-	resp, err = b.HandleRequest(namespace.RootContext(nil), req)
-	if err != nil || (resp != nil && resp.IsError()) {
-		t.Fatalf("err:%s resp:%#v\n", err, resp)
-	}
+			for k, v := range tc.account {
+				data[k] = v
+			}
 
-	// Read the creds
-	data = map[string]interface{}{}
-	req = &logical.Request{
-		Operation: logical.ReadOperation,
-		Path:      "static-creds/plugin-role-test",
-		Storage:   config.StorageView,
-		Data:      data,
-	}
+			req = &logical.Request{
+				Operation: logical.CreateOperation,
+				Path:      "static-roles/" + tc.path,
+				Storage:   config.StorageView,
+				Data:      data,
+			}
 
-	resp, err = b.HandleRequest(namespace.RootContext(nil), req)
-	if err != nil || (resp != nil && resp.IsError()) {
-		t.Fatalf("err:%s resp:%#v\n", err, resp)
-	}
+			resp, err = b.HandleRequest(namespace.RootContext(nil), req)
+			if err != nil || (resp != nil && resp.IsError()) {
+				t.Fatalf("err:%s resp:%#v\n", err, resp)
+			}
 
-	username := resp.Data["username"].(string)
-	password := resp.Data["password"].(string)
-	if username == "" || password == "" {
-		t.Fatalf("empty username (%s) or password (%s)", username, password)
-	}
+			// Read the creds
+			data = map[string]interface{}{}
+			req = &logical.Request{
+				Operation: logical.ReadOperation,
+				Path:      "static-creds/" + tc.path,
+				Storage:   config.StorageView,
+				Data:      data,
+			}
 
-	// Verify username/password
-	verifyPgConn(t, dbUser, password, connURL)
+			resp, err = b.HandleRequest(namespace.RootContext(nil), req)
+			if err != nil || (resp != nil && resp.IsError()) {
+				t.Fatalf("err:%s resp:%#v\n", err, resp)
+			}
 
-	// Re-read the creds, verifying they aren't changing on read
-	data = map[string]interface{}{}
-	req = &logical.Request{
-		Operation: logical.ReadOperation,
-		Path:      "static-creds/plugin-role-test",
-		Storage:   config.StorageView,
-		Data:      data,
-	}
-	resp, err = b.HandleRequest(namespace.RootContext(nil), req)
-	if err != nil || (resp != nil && resp.IsError()) {
-		t.Fatalf("err:%s resp:%#v\n", err, resp)
-	}
+			username := resp.Data["username"].(string)
+			password := resp.Data["password"].(string)
+			if username == "" || password == "" {
+				t.Fatalf("empty username (%s) or password (%s)", username, password)
+			}
 
-	if username != resp.Data["username"].(string) || password != resp.Data["password"].(string) {
-		t.Fatal("expected re-read username/password to match, but didn't")
-	}
+			// Verify username/password
+			verifyPgConn(t, dbUser, password, connURL)
 
-	// Trigger rotation
-	data = map[string]interface{}{"name": "plugin-role-test"}
-	req = &logical.Request{
-		Operation: logical.UpdateOperation,
-		Path:      "rotate-role/plugin-role-test",
-		Storage:   config.StorageView,
-		Data:      data,
-	}
-	resp, err = b.HandleRequest(namespace.RootContext(nil), req)
-	if err != nil || (resp != nil && resp.IsError()) {
-		t.Fatalf("err:%s resp:%#v\n", err, resp)
-	}
+			// Re-read the creds, verifying they aren't changing on read
+			data = map[string]interface{}{}
+			req = &logical.Request{
+				Operation: logical.ReadOperation,
+				Path:      "static-creds/" + tc.path,
+				Storage:   config.StorageView,
+				Data:      data,
+			}
+			resp, err = b.HandleRequest(namespace.RootContext(nil), req)
+			if err != nil || (resp != nil && resp.IsError()) {
+				t.Fatalf("err:%s resp:%#v\n", err, resp)
+			}
 
-	if resp != nil {
-		t.Fatalf("Expected empty response from rotate-role: (%#v)", resp)
-	}
+			if username != resp.Data["username"].(string) || password != resp.Data["password"].(string) {
+				t.Fatal("expected re-read username/password to match, but didn't")
+			}
 
-	// Re-Read the creds
-	data = map[string]interface{}{}
-	req = &logical.Request{
-		Operation: logical.ReadOperation,
-		Path:      "static-creds/plugin-role-test",
-		Storage:   config.StorageView,
-		Data:      data,
-	}
-	resp, err = b.HandleRequest(namespace.RootContext(nil), req)
-	if err != nil || (resp != nil && resp.IsError()) {
-		t.Fatalf("err:%s resp:%#v\n", err, resp)
-	}
+			// Trigger rotation
+			data = map[string]interface{}{"name": "plugin-role-test"}
+			req = &logical.Request{
+				Operation: logical.UpdateOperation,
+				Path:      "rotate-role/" + tc.path,
+				Storage:   config.StorageView,
+				Data:      data,
+			}
+			resp, err = b.HandleRequest(namespace.RootContext(nil), req)
+			if err != nil || (resp != nil && resp.IsError()) {
+				t.Fatalf("err:%s resp:%#v\n", err, resp)
+			}
 
-	newPassword := resp.Data["password"].(string)
-	if password == newPassword {
-		t.Fatalf("expected passwords to differ, got (%s)", newPassword)
-	}
+			if resp != nil {
+				t.Fatalf("Expected empty response from rotate-role: (%#v)", resp)
+			}
 
-	// Verify new username/password
-	verifyPgConn(t, username, newPassword, connURL)
+			// Re-Read the creds
+			data = map[string]interface{}{}
+			req = &logical.Request{
+				Operation: logical.ReadOperation,
+				Path:      "static-creds/" + tc.path,
+				Storage:   config.StorageView,
+				Data:      data,
+			}
+			resp, err = b.HandleRequest(namespace.RootContext(nil), req)
+			if err != nil || (resp != nil && resp.IsError()) {
+				t.Fatalf("err:%s resp:%#v\n", err, resp)
+			}
+
+			newPassword := resp.Data["password"].(string)
+			if password == newPassword {
+				t.Fatalf("expected passwords to differ, got (%s)", newPassword)
+			}
+
+			// Verify new username/password
+			verifyPgConn(t, username, newPassword, connURL)
+
+			if tc.waitTime > 0 {
+				time.Sleep(tc.waitTime)
+				// Re-Read the creds after schedule expiration
+				data = map[string]interface{}{}
+				req = &logical.Request{
+					Operation: logical.ReadOperation,
+					Path:      "static-creds/" + tc.path,
+					Storage:   config.StorageView,
+					Data:      data,
+				}
+				resp, err = b.HandleRequest(namespace.RootContext(nil), req)
+				if err != nil || (resp != nil && resp.IsError()) {
+					t.Fatalf("err:%s resp:%#v\n", err, resp)
+				}
+
+				checkPassword := resp.Data["password"].(string)
+				if newPassword == checkPassword {
+					t.Fatalf("expected passwords to differ, got (%s)", checkPassword)
+				}
+			}
+		})
+	}
 }
 
 // Sanity check to make sure we don't allow an attempt of rotating credentials
