@@ -96,9 +96,6 @@ func (b *databaseBackend) populateQueue(ctx context.Context, s logical.Storage) 
 			} else {
 				// previous rotation attempt was interrupted, so we set the
 				// Priority as highest to be processed immediately
-
-				// TODO(JM): ensure we don't process schedule-based rotations
-				// outside the rotation_window
 				log.Info("found WAL for role", "role", item.Key, "WAL ID", walEntry.walID)
 				item.Value = walEntry.walID
 				item.Priority = time.Now().Unix()
@@ -270,6 +267,7 @@ func (b *databaseBackend) rotateCredential(ctx context.Context, s logical.Storag
 		lvr = time.Now()
 	}
 
+	// Update priority and push updated Item to the queue
 	item.Priority = role.StaticAccount.NextRotationTimeFromInput(lvr).Unix()
 
 	if err := b.pushItem(item); err != nil {
