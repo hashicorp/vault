@@ -1,7 +1,7 @@
 # Copyright (c) HashiCorp, Inc.
 # SPDX-License-Identifier: BUSL-1.1
-  
-  # Note: in order to use the openSUSE Leap AMIs, the AWS account in use must "subscribe"
+
+# Note: in order to use the openSUSE Leap AMIs, the AWS account in use must "subscribe"
 # and accept SUSE's terms of use. You can do this at the links below. If the AWS account
 # you are using is already subscribed, this confirmation will be displayed on each page.
 # openSUSE Leap arm64 subscription: https://aws.amazon.com/marketplace/server/procurement?productId=a516e959-df54-4035-bb1a-63599b7a6df9
@@ -220,7 +220,7 @@ data "aws_ami" "sles_12_sp5_standard" {
   }
 
   filter {
-    name   = "architecture"
+    name = "architecture"
     # arm64 only available for BYOS images for SLES 12 SP5
     values = ["x86_64"]
   }
