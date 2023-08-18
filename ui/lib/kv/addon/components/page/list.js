@@ -10,7 +10,7 @@ import { tracked } from '@glimmer/tracking';
 import { getOwner } from '@ember/application';
 import { ancestorKeysForKey } from 'core/utils/key-utils';
 import errorMessage from 'vault/utils/error-message';
-import { pathIsDirectory } from 'vault/lib/kv-breadcrumbs';
+import { pathIsDirectory } from 'kv/utils/kv-breadcrumbs';
 
 /**
  * @module List
