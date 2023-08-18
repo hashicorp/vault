@@ -144,7 +144,7 @@ module('Acceptance | landing page dashboard', function (hooks) {
       assert.dom('[data-test-learn-more-links] a').exists({ count: 4 });
       assert
         .dom('[data-test-feedback-form]')
-        .hasText("Don't see what you're looking for on this page? Let us know via our feedback form ");
+        .hasText("Don't see what you're looking for on this page? Let us know via our feedback form. ");
     });
   });
 
