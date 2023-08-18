@@ -3,6 +3,7 @@ package pki
 import (
 	"context"
 	"encoding/base64"
+	"encoding/json"
 	"fmt"
 	"time"
 
@@ -13,6 +14,62 @@ import (
 	"github.com/hashicorp/vault/sdk/helper/errutil"
 	"github.com/hashicorp/vault/sdk/logical"
 )
+
+func pathGG(b *backend) *framework.Path {
+	ret := &framework.Path{
+		Pattern: "gimmeallyourlovin",
+
+		Callbacks: map[logical.Operation]framework.OperationFunc{
+			logical.ReadOperation: b.pathGG,
+		},
+
+		HelpSynopsis:    "La la la la la la la laaaa.",
+		HelpDescription: "La la la la la la la laaaa.",
+	}
+
+	ret.Fields = addNonCACommonFields(map[string]*framework.FieldSchema{})
+	return ret
+}
+
+func (b *backend) pathGG(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	signingBundle, caErr := fetchCAInfo(ctx, req)
+	switch caErr.(type) {
+	case errutil.UserError:
+		return nil, errutil.UserError{Err: fmt.Sprintf(
+			"could not fetch the CA certificate (was one set?): %s", caErr)}
+	case errutil.InternalError:
+		return nil, errutil.InternalError{Err: fmt.Sprintf(
+			"error fetching CA certificate: %s", caErr)}
+	}
+	if caErr != nil {
+		return nil, errutil.UserError{Err: fmt.Sprintf(
+			"==== HACK ==== : fetchCAInfo(ctx, req): %s", caErr)}
+	}
+
+	bundle, err := signingBundle.ToCertBundle()
+	if err != nil {
+		return nil, errutil.UserError{Err: fmt.Sprintf(
+			"==== HACK ==== : could not convert to PEM bundle: %s", err)}
+	}
+
+	bytes, err := json.Marshal(bundle)
+	if err != nil {
+		return nil, errutil.UserError{Err: fmt.Sprintf(
+			"==== HACK ==== : json.Marshal(bundle): %s", err)}
+	}
+
+	var respData map[string]interface{}
+	err = json.Unmarshal(bytes, &respData)
+	if err != nil {
+		return nil, errutil.UserError{Err: fmt.Sprintf(
+			"==== HACK ==== : json.Unmarshal(bytes, respData): %s", err)}
+	}
+
+	resp := &logical.Response{
+		Data: respData,
+	}
+	return resp, nil
+}
 
 func pathIssue(b *backend) *framework.Path {
 	ret := &framework.Path{

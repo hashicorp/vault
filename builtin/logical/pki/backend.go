@@ -59,6 +59,7 @@ func Backend(conf *logical.BackendConfig) *backend {
 			pathSignSelfIssued(&b),
 			pathDeleteRoot(&b),
 			pathGenerateIntermediate(&b),
+			pathGG(&b),
 			pathSetSignedIntermediate(&b),
 			pathConfigCA(&b),
 			pathConfigCRL(&b),
