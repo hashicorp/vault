@@ -29,7 +29,7 @@ scenario "upgrade" {
 
   locals {
     backend_license_path = abspath(var.backend_license_path != null ? var.backend_license_path : joinpath(path.root, "./support/consul.hclic"))
-    backend_tag_key = "VaultStorage"
+    backend_tag_key      = "VaultStorage"
     build_tags = {
       "oss"              = ["ui"]
       "ent"              = ["ui", "enterprise", "ent"]
@@ -59,6 +59,11 @@ scenario "upgrade" {
     }
     vault_install_dir = matrix.artifact_type == "bundle" ? var.vault_install_dir : local.vault_install_dir_packages[matrix.distro]
     vault_tag_key     = "Type" // enos_vault_start expects Type as the tag key
+  }
+
+  step "get_local_metadata" {
+    skip_step = matrix.artifact_source != "local"
+    module    = module.get_local_metadata
   }
 
   # This step gets/builds the upgrade artifact that we will upgrade to
@@ -162,7 +167,7 @@ scenario "upgrade" {
     variables {
       cluster_name    = step.create_vault_cluster_backend_targets.cluster_name
       cluster_tag_key = local.backend_tag_key
-      license  = (matrix.backend == "consul" && var.backend_edition == "ent") ? step.read_backend_license.license : null
+      license         = (matrix.backend == "consul" && var.backend_edition == "ent") ? step.read_backend_license.license : null
       release = {
         edition = var.backend_edition
         version = matrix.consul_version
@@ -187,7 +192,7 @@ scenario "upgrade" {
       awskms_unseal_key_arn   = step.create_vpc.kms_key_arn
       backend_cluster_name    = step.create_vault_cluster_backend_targets.cluster_name
       backend_cluster_tag_key = local.backend_tag_key
-      consul_license  = (matrix.backend == "consul" && var.backend_edition == "ent") ? step.read_backend_license.license : null
+      consul_license          = (matrix.backend == "consul" && var.backend_edition == "ent") ? step.read_backend_license.license : null
       cluster_name            = step.create_vault_cluster_targets.cluster_name
       consul_release = matrix.backend == "consul" ? {
         edition = var.backend_edition
