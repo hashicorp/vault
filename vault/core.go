@@ -361,7 +361,7 @@ type Core struct {
 
 	// mountsLock is used to ensure that the mounts table does not
 	// change underneath a calling function
-	mountsLock sync.RWMutex
+	mountsLock locking.DeadlockRWMutex
 
 	// mountMigrationTracker tracks past and ongoing remount operations
 	// against their migration ids
@@ -373,7 +373,7 @@ type Core struct {
 
 	// authLock is used to ensure that the auth table does not
 	// change underneath a calling function
-	authLock sync.RWMutex
+	authLock locking.DeadlockRWMutex
 
 	// audit is loaded after unseal since it is a protected
 	// configuration
