@@ -131,7 +131,7 @@ jobs:
           GOPRIVATE: github.com/hashicorp/*
         run: |
           set -exo pipefail
-          
+          shopt -s nullglob
           # testonly tagged tests need an additional tag to be included
           # also running some extra tests for sanity checking with the testonly build tag
           (
