@@ -27,11 +27,6 @@ export default class KvListPageComponent extends Component {
 
   @tracked secretPath;
 
-  constructor() {
-    super(...arguments);
-    this.secretPath = this.args.model?.pathToSecret;
-  }
-
   get mountPoint() {
     // mountPoint tells the LinkedBlock component where to start the transition. In this case, mountPoint will always be vault.cluster.secrets.backend.kv.
     return getOwner(this).mountPoint;

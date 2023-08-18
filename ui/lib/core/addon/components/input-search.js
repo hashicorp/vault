@@ -5,6 +5,26 @@
 
 import Component from '@glimmer/component';
 import { action } from '@ember/object';
+import { tracked } from '@glimmer/tracking';
+
+/**
+ * @module InputSearch
+ * This component renders an input that fires a callback on "keyup" containing the input's value
+ *
+ * @example
+ * <InputSearch
+ * @initialValue="secret/path/"
+ * @onChange={{this.handleSearch}}
+ * @placeholder="search..."
+ * />
+ * @param {string} [id] - unique id for the input
+ * @param {string} [initialValue] - initial search value, i.e. a secret path prefix, that pre-fills the input field
+ * @param {string} [placeholder] - placeholder text for the input
+ * @param {string} [label] - label for the input 
+ * @param {string} [subtext] - displays below the label
+ * @param {number} [selectLimit] - Sets select limit
+
+ */
 
 export default class InputSearch extends Component {
   /*
@@ -14,8 +34,16 @@ export default class InputSearch extends Component {
    * Function called when any of the inputs change
    *
    */
+
+  @tracked searchInput;
+
+  constructor() {
+    super(...arguments);
+    this.searchInput = this.args?.initialValue;
+  }
+
   @action
-  inputChanged(e) {
-    this.args.onChange(e.target.value);
+  inputChanged() {
+    this.args.onChange(this.searchInput);
   }
 }
