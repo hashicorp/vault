@@ -269,22 +269,8 @@ func (b *databaseBackend) rotateCredential(ctx context.Context, s logical.Storag
 	if lvr.IsZero() {
 		lvr = time.Now()
 	}
-	role.StaticAccount.SetNextVaultRotation(lvr)
-	logger.Debug("update NextVaultRotation", "next", role.StaticAccount.NextVaultRotation)
 
-	// TODO(JM): use helper method to set Priority instead of if/else?
-
-	// Update priority and push updated Item to the queue
-	if role.StaticAccount.UsesRotationSchedule() {
-		next := role.StaticAccount.Schedule.Next(lvr)
-		logger.Debug("update priority for Schedule", "next", next)
-		item.Priority = role.StaticAccount.Schedule.Next(lvr).Unix()
-	} else if role.StaticAccount.UsesRotationPeriod() {
-		logger.Debug("update priority for RotationPeriod", "lvr", lvr, "next", lvr.Add(role.StaticAccount.RotationPeriod))
-		item.Priority = lvr.Add(role.StaticAccount.RotationPeriod).Unix()
-	} else {
-		logger.Error("rotation has not been properly configured")
-	}
+	item.Priority = role.StaticAccount.NextRotationTimeFromInput(lvr).Unix()
 
 	if err := b.pushItem(item); err != nil {
 		logger.Warn("unable to push item on to queue", "error", err)
