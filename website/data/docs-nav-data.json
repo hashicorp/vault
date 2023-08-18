@@ -1513,58 +1513,62 @@
         "path": "auth/gcp"
       },
       {
-        "title": "JWT/OIDC",
+        "title": "JWT",
+        "path": "auth/jwt"
+      },
+      {
+        "title": "OIDC",
         "routes": [
           {
             "title": "Overview",
-            "path": "auth/jwt"
+            "path": "auth/oidc"
           },
           {
             "title": "OIDC Providers",
             "routes": [
               {
                 "title": "Overview",
-                "path": "auth/jwt/oidc-providers"
+                "path": "auth/oidc/oidc-providers"
               },
               {
                 "title": "Auth0",
-                "path": "auth/jwt/oidc-providers/auth0"
+                "path": "auth/oidc/oidc-providers/auth0"
               },
               {
                 "title": "Azure AD",
-                "path": "auth/jwt/oidc-providers/azuread"
+                "path": "auth/oidc/oidc-providers/azuread"
               },
               {
                 "title": "Forgerock",
-                "path": "auth/jwt/oidc-providers/forgerock"
+                "path": "auth/oidc/oidc-providers/forgerock"
               },
               {
                 "title": "Gitlab",
-                "path": "auth/jwt/oidc-providers/gitlab"
+                "path": "auth/oidc/oidc-providers/gitlab"
               },
               {
                 "title": "Google",
-                "path": "auth/jwt/oidc-providers/google"
+                "path": "auth/oidc/oidc-providers/google"
               },
               {
                 "title": "Keycloak",
-                "path": "auth/jwt/oidc-providers/keycloak"
+                "path": "auth/oidc/oidc-providers/keycloak"
               },
               {
                 "title": "Kubernetes",
-                "path": "auth/jwt/oidc-providers/kubernetes"
+                "path": "auth/oidc/oidc-providers/kubernetes"
               },
               {
                 "title": "Okta",
-                "path": "auth/jwt/oidc-providers/okta"
+                "path": "auth/oidc/oidc-providers/okta"
               },
               {
                 "title": "SecureAuth",
-                "path": "auth/jwt/oidc-providers/secureauth"
+                "path": "auth/oidc/oidc-providers/secureauth"
               },
               {
                 "title": "IBM ISAM",
-                "path": "auth/jwt/oidc-providers/ibmisam"
+                "path": "auth/oidc/oidc-providers/ibmisam"
               }
             ]
           }
