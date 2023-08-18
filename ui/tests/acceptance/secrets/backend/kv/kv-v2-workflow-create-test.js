@@ -56,11 +56,11 @@ module('Acceptance | kv-v2 workflow | secret and version create', function (hook
       await click(PAGE.detail.createNewVersion);
       await fillIn(FORM.keyInput(), 'bar');
       await click(FORM.cancelBtn);
-      assert.dom(PAGE.infoRowValue('foo')).exists('key rolls back to previous value');
+      assert.dom(PAGE.infoRowValue('foo')).exists('secret is previous value');
       await click(PAGE.detail.createNewVersion);
       await fillIn(FORM.keyInput(), 'bar');
-      await click(PAGE.breadcrumbAtIdx(2));
-      assert.dom(PAGE.infoRowValue('foo')).exists('key rolls back to previous value');
+      await click(PAGE.breadcrumbAtIdx(3));
+      assert.dom(PAGE.infoRowValue('foo')).exists('secret is previous value');
     });
     test('create & update root secret with default metadata (a)', async function (assert) {
       const backend = this.backend;
@@ -107,7 +107,7 @@ module('Acceptance | kv-v2 workflow | secret and version create', function (hook
         .hasText('No custom metadata', 'No custom metadata empty state');
       assert
         .dom(`${PAGE.metadata.secretMetadataSection} ${PAGE.secretRow}`)
-        .exists({ count: 3 }, '3 metadata rows show');
+        .exists({ count: 4 }, '4 metadata rows show');
       assert.dom(PAGE.infoRowValue('Maximum versions')).hasText('0', 'max versions shows 0');
       assert.dom(PAGE.infoRowValue('Check-and-Set required')).hasText('No', 'cas not enforced');
       assert
@@ -199,7 +199,7 @@ module('Acceptance | kv-v2 workflow | secret and version create', function (hook
 
       assert
         .dom(`${PAGE.metadata.secretMetadataSection} ${PAGE.secretRow}`)
-        .exists({ count: 3 }, '3 metadata rows show');
+        .exists({ count: 4 }, '4 metadata rows show');
       assert.dom(PAGE.infoRowValue('Maximum versions')).hasText('7', 'max versions shows 0');
       assert.dom(PAGE.infoRowValue('Check-and-Set required')).hasText('Yes', 'cas enforced');
       assert
@@ -300,11 +300,11 @@ module('Acceptance | kv-v2 workflow | secret and version create', function (hook
       await click(PAGE.detail.createNewVersion);
       await fillIn(FORM.keyInput(), 'bar');
       await click(FORM.cancelBtn);
-      assert.dom(PAGE.infoRowValue('foo')).exists('key rolls back to previous value');
+      assert.dom(PAGE.infoRowValue('foo')).exists('secret is previous value');
       await click(PAGE.detail.createNewVersion);
       await fillIn(FORM.keyInput(), 'bar');
-      await click(PAGE.breadcrumbAtIdx(2));
-      assert.dom(PAGE.infoRowValue('foo')).exists('key rolls back to previous value');
+      await click(PAGE.breadcrumbAtIdx(3));
+      assert.dom(PAGE.infoRowValue('foo')).exists('secret is previous value');
     });
     test('create & update root secret with default metadata (dr)', async function (assert) {
       const backend = this.backend;
@@ -483,11 +483,11 @@ module('Acceptance | kv-v2 workflow | secret and version create', function (hook
       await click(PAGE.detail.createNewVersion);
       await fillIn(FORM.keyInput(), 'bar');
       await click(FORM.cancelBtn);
-      assert.dom(PAGE.infoRowValue('foo')).exists('key rolls back to previous value');
+      assert.dom(PAGE.infoRowValue('foo')).exists('secret is previous value');
       await click(PAGE.detail.createNewVersion);
       await fillIn(FORM.keyInput(), 'bar');
-      await click(PAGE.breadcrumbAtIdx(2));
-      assert.dom(PAGE.infoRowValue('foo')).exists('key rolls back to previous value');
+      await click(PAGE.breadcrumbAtIdx(3));
+      assert.dom(PAGE.infoRowValue('foo')).exists('secret is previous value');
     });
     test('create & update root secret with default metadata (dlr)', async function (assert) {
       const backend = this.backend;
@@ -704,7 +704,7 @@ module('Acceptance | kv-v2 workflow | secret and version create', function (hook
         .hasText('No custom metadata', 'No custom metadata empty state');
       assert
         .dom(`${PAGE.metadata.secretMetadataSection} ${PAGE.secretRow}`)
-        .exists({ count: 3 }, '3 metadata rows show');
+        .exists({ count: 4 }, '4 metadata rows show');
       assert.dom(PAGE.infoRowValue('Maximum versions')).hasText('0', 'max versions shows 0');
       assert.dom(PAGE.infoRowValue('Check-and-Set required')).hasText('No', 'cas not enforced');
       assert
@@ -865,11 +865,11 @@ module('Acceptance | kv-v2 workflow | secret and version create', function (hook
       assert.dom(PAGE.list.item()).doesNotExist('list view has no items');
       await click(PAGE.detail.createNewVersion);
       await fillIn(FORM.keyInput(), 'bar');
-      await click(PAGE.breadcrumbAtIdx(2));
+      await click(PAGE.breadcrumbAtIdx(3));
       assert.strictEqual(
         currentURL(),
         `/vault/secrets/${backend}/kv/${encodeURIComponent('app/first')}/details`,
-        'cancel goes to correct url'
+        'breadcrumb goes to correct url'
       );
       assert.dom(PAGE.list.item()).doesNotExist('list view has no items');
     });
