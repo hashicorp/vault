@@ -134,7 +134,7 @@ jobs:
       total-runners: 2 # test runners cannot be less than 2
       go-arch: amd64
       go-tags: '${{ needs.setup.outputs.go-tags }},deadlock,testonly'
-      runs-on: ${{ needs.setup.outputs.compute-large }}
+      runs-on: ${{ needs.setup.outputs.compute-small }}
       enterprise: ${{ needs.setup.outputs.enterprise }}
     secrets: inherit
 
