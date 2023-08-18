@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 package audit
 
@@ -25,7 +25,7 @@ func fakeEvent(tb testing.TB, subtype subtype, format format, input *logical.Log
 
 	date := time.Date(2023, time.July, 11, 15, 49, 10, 0o0, time.Local)
 
-	auditEvent, err := newEvent(subtype, format,
+	auditEvent, err := NewEvent(subtype,
 		WithID("123"),
 		WithNow(date),
 	)
@@ -33,7 +33,6 @@ func fakeEvent(tb testing.TB, subtype subtype, format format, input *logical.Log
 	require.NotNil(tb, auditEvent)
 	require.Equal(tb, "123", auditEvent.ID)
 	require.Equal(tb, "v0.1", auditEvent.Version)
-	require.Equal(tb, format, auditEvent.RequiredFormat)
 	require.Equal(tb, subtype, auditEvent.Subtype)
 	require.Equal(tb, date, auditEvent.Timestamp)
 

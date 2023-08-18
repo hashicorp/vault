@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 package quotas
 
@@ -219,6 +219,9 @@ func (rlq *RateLimitQuota) initialize(logger log.Logger, ms *metricsutil.Cluster
 // in which we stop the ticker and return.
 func (rlq *RateLimitQuota) purgeBlockedClients() {
 	rlq.lock.RLock()
+	if rlq.purgeInterval <= 0 {
+		rlq.purgeInterval = DefaultRateLimitPurgeInterval
+	}
 	ticker := time.NewTicker(rlq.purgeInterval)
 	rlq.lock.RUnlock()
 

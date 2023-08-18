@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 // passthrough request and modify response from server
 // pass object as second arg of properties in response to override
 export default function (req, props = {}) {
