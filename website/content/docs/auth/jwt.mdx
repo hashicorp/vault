@@ -9,10 +9,10 @@ description: >-
 
 @include 'x509-sha1-deprecation.mdx'
 
-The `jwt` auth method can be used to authenticate with Vault using JSON Web Tokens
-([JWT](https://en.wikipedia.org/wiki/JSON_Web_Token)). This form of authentication
-is commonly used in Workload Identity Federation (WIF) workflows for machine-to-machine
-authentication.
+Use the `jwt` authN method to authenticate to Vault with JSON Web Tokens
+([JWT](https://en.wikipedia.org/wiki/JSON_Web_Token)). JWT authentication
+is commonly used in Workload Identity Federation (WIF) workflows for
+machine-to-machine authentication.
 
 The auth method is configured to trust a JWT issuer. For example, this could be a
 cloud service provider that makes workload identity available in a virtual machine
