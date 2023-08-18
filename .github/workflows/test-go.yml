@@ -131,6 +131,7 @@ jobs:
           GOPRIVATE: github.com/hashicorp/*
         run: |
           set -exo pipefail
+          # enable glob expansion
           shopt -s nullglob
           # testonly tagged tests need an additional tag to be included
           # also running some extra tests for sanity checking with the testonly build tag
@@ -139,6 +140,8 @@ jobs:
               --partitions "${{ inputs.total-runners }}" \
               --timing-files 'test-results/go-test/*.json' > matrix.json
           )
+          # disable glob expansion
+          shopt -u nullglob
       - name: Capture list of binary tests
         if: inputs.binary-tests
         id: list-binary-tests
