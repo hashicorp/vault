@@ -44,7 +44,6 @@ func (*entManager) Reset() error {
 type LeaseCountQuota struct{}
 
 func (l LeaseCountQuota) IsInheritable() bool {
-	//TODO implement me
 	panic("implement me")
 }
 
