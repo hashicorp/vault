@@ -16,11 +16,11 @@
     <p class="has-text-weight-bold" data-test-certificate-label>
       {{this.format}}
     </p>
-    <code class="is-size-8 truncate-second-line has-text-grey" id="clipboardTarget" data-test-certificate-value>
+    <code class="is-size-8 truncate-second-line has-text-grey" data-test-certificate-value>
       {{@data}}
     </code>
   </div>
   <div class="is-flex has-left-padding-s has-top-bottom-margin-negative-m">
-    <Hds::Copy::Button @text="Copy" @isIconOnly={{true}} @targetToCopy="#clipboardTarget" data-test-copy-button />
+    <Hds::Copy::Button @text="Copy" @isIconOnly={{true}} @targetToCopy={{@data}} data-test-copy-button />
   </div>
 </Hds::Card::Container>
