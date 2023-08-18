@@ -45,16 +45,15 @@ export default class KvSecretsListRoute extends Route {
   }
 
   model(params) {
-    let { pageFilter, path_to_secret } = params;
-    pageFilter = pageFilter || '';
+    const { pageFilter, path_to_secret } = params;
     const pathToSecret = path_to_secret ? normalizePath(path_to_secret) : '';
     const backend = this.secretMountPath.currentPath;
-    const filter = pathToSecret ? pathToSecret + pageFilter : pageFilter;
+    const filterValue = pathToSecret ? (pageFilter ? pathToSecret + pageFilter : pathToSecret) : pageFilter;
     return hash({
       secrets: this.fetchMetadata(backend, pathToSecret, params),
       backend,
       pathToSecret,
-      filterValue: filter,
+      filterValue,
       pageFilter,
     });
   }

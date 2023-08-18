@@ -8,6 +8,6 @@ import { tracked } from '@glimmer/tracking';
 
 export default class KvListController extends Controller {
   queryParams = ['pageFilter', 'currentPage'];
-
+  // ARG TODO does this need to be tracked?
   @tracked currentPage = 1;
 }

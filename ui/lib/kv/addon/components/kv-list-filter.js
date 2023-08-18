@@ -61,7 +61,6 @@ export default class KvListFilterComponent extends Component {
     const isDirectory = keyIsFolder(input);
     const parentDirectory = parentKeyForKey(input);
     const secretWithinDirectory = keyWithoutParentKey(input);
-
     if (isDirectory) {
       this.navigate(input);
     } else if (parentDirectory) {
@@ -79,10 +78,9 @@ export default class KvListFilterComponent extends Component {
     }
     args.push({
       queryParams: {
-        pageFilter,
+        pageFilter: pageFilter ? pageFilter : null,
       },
     });
-
     this.router.transitionTo(...args);
   }
   /*
@@ -92,8 +90,7 @@ export default class KvListFilterComponent extends Component {
   handleKeyDown(event) {
     const input = event.target.value;
     const parentDirectory = parentKeyForKey(input);
-
-    if (event.keyCode === keys.BACKSPACE && parentDirectory) {
+    if (event.keyCode === keys.BACKSPACE) {
       this.handleBackspace(input, parentDirectory);
     }
 
@@ -121,19 +118,18 @@ export default class KvListFilterComponent extends Component {
     this.navigate(parentDirectory, pageFilter);
   }
   handleTab() {
-    const matchParentDirectory = parentKeyForKey(this.partialMatch);
     const isMatchDirectory = keyIsFolder(this.partialMatch);
-    const matchWithoutParentDirectory = keyWithoutParentKey(this.partialMatch);
-
+    const matchParentDirectory = parentKeyForKey(this.partialMatch);
+    const matchWithinDirectory = keyWithoutParentKey(this.partialMatch);
     if (isMatchDirectory) {
       // ex: beep/boop/
       this.navigate(this.partialMatch);
     } else if (!isMatchDirectory && matchParentDirectory) {
       // ex: beep/boop/my-
-      this.navigate(matchParentDirectory, matchWithoutParentDirectory);
+      this.navigate(matchParentDirectory, matchWithinDirectory);
     } else {
       // ex: my-
-      this.navigate(undefined, this.partialMatch);
+      this.navigate(null, this.partialMatch);
     }
   }
   handleEnter(input) {
