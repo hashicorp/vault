@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 package vault
 
@@ -25,6 +25,8 @@ import (
 	"sync"
 	"sync/atomic"
 	"time"
+
+	"github.com/hashicorp/go-secure-stdlib/parseutil"
 
 	"github.com/armon/go-metrics"
 	"github.com/hashicorp/errwrap"
@@ -646,6 +648,8 @@ type Core struct {
 	keyRotateGracePeriod *int64
 
 	autoRotateCancel context.CancelFunc
+
+	updateLockedUserEntriesCancel context.CancelFunc
 
 	// number of workers to use for lease revocation in the expiration manager
 	numExpirationWorkers int
@@ -2320,12 +2324,9 @@ func (s standardUnsealStrategy) unseal(ctx context.Context, logger log.Logger, c
 	if err := c.setupHeaderHMACKey(ctx, false); err != nil {
 		return err
 	}
-	if err := c.runLockedUserEntryUpdates(ctx); err != nil {
-		return err
-	}
-	c.updateLockedUserEntries()
-
 	if !c.IsDRSecondary() {
+		c.updateLockedUserEntries()
+
 		if err := c.startRollback(); err != nil {
 			return err
 		}
@@ -2335,6 +2336,10 @@ func (s standardUnsealStrategy) unseal(ctx context.Context, logger log.Logger, c
 		if err := c.loadAudits(ctx); err != nil {
 			return err
 		}
+		if err := c.setupAuditedHeadersConfig(ctx); err != nil {
+			return err
+		}
+
 		if err := c.setupAudits(ctx); err != nil {
 			return err
 		}
@@ -2349,10 +2354,6 @@ func (s standardUnsealStrategy) unseal(ctx context.Context, logger log.Logger, c
 			return err
 		}
 
-		if err := c.setupAuditedHeadersConfig(ctx); err != nil {
-			return err
-		}
-
 		if err := c.setupCensusAgent(); err != nil {
 			c.logger.Error("skipping reporting for nil agent", "error", err)
 		}
@@ -2364,7 +2365,11 @@ func (s standardUnsealStrategy) unseal(ctx context.Context, logger log.Logger, c
 		}
 	} else {
 		var err error
-		c.auditBroker, err = NewAuditBroker(c.logger, c.IsExperimentEnabled(experiments.VaultExperimentCoreAuditEventsAlpha1))
+		disableEventLogger, err := parseutil.ParseBool(os.Getenv(featureFlagDisableEventLogger))
+		if err != nil {
+			return fmt.Errorf("unable to parse feature flag: %q: %w", featureFlagDisableEventLogger, err)
+		}
+		c.auditBroker, err = NewAuditBroker(c.logger, !disableEventLogger)
 		if err != nil {
 			return err
 		}
@@ -2586,6 +2591,11 @@ func (c *Core) preSeal() error {
 	if c.autoRotateCancel != nil {
 		c.autoRotateCancel()
 		c.autoRotateCancel = nil
+	}
+
+	if c.updateLockedUserEntriesCancel != nil {
+		c.updateLockedUserEntriesCancel()
+		c.updateLockedUserEntriesCancel = nil
 	}
 
 	if seal, ok := c.seal.(*autoSeal); ok {
@@ -3444,16 +3454,26 @@ func (c *Core) setupCachedMFAResponseAuth() {
 // updateLockedUserEntries runs every 15 mins to remove stale user entries from storage
 // it also updates the userFailedLoginInfo map with correct information for locked users if incorrect
 func (c *Core) updateLockedUserEntries() {
-	ctx := c.activeContext
+	if c.updateLockedUserEntriesCancel != nil {
+		return
+	}
+
+	var updateLockedUserEntriesCtx context.Context
+	updateLockedUserEntriesCtx, c.updateLockedUserEntriesCancel = context.WithCancel(c.activeContext)
+
+	if err := c.runLockedUserEntryUpdates(updateLockedUserEntriesCtx); err != nil {
+		c.Logger().Error("failed to run locked user entry updates", "error", err)
+	}
+
 	go func() {
 		ticker := time.NewTicker(15 * time.Minute)
 		for {
 			select {
-			case <-ctx.Done():
+			case <-updateLockedUserEntriesCtx.Done():
 				ticker.Stop()
 				return
 			case <-ticker.C:
-				if err := c.runLockedUserEntryUpdates(ctx); err != nil {
+				if err := c.runLockedUserEntryUpdates(updateLockedUserEntriesCtx); err != nil {
 					c.Logger().Error("failed to run locked user entry updates", "error", err)
 				}
 			}
