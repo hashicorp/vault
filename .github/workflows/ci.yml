@@ -134,7 +134,7 @@ jobs:
       total-runners: 2 # test runners cannot be less than 2
       go-arch: amd64
       go-tags: '${{ needs.setup.outputs.go-tags }},deadlock,testonly'
-      runs-on: ${{ needs.setup.outputs.compute-small }}
+      runs-on: ${{ needs.setup.outputs.compute-large }}
       enterprise: ${{ needs.setup.outputs.enterprise }}
     secrets: inherit
 
@@ -292,7 +292,7 @@ jobs:
       - test-go
       - test-ui
     if: always()
-    runs-on: ${{ fromJSON(needs.setup.outputs.compute-large) }}
+    runs-on: ${{ fromJSON(needs.setup.outputs.compute-small) }}
     steps:
       - run: |
           tr -d '\n' <<< '${{ toJSON(needs.*.result) }}' | grep -q -v -E '(failure|cancelled)'
