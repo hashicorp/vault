@@ -53,8 +53,8 @@ variable "backend_edition" {
 
 variable "backend_instance_type" {
   description = "The instance type to use for the Vault backend. Must be arm64/nitro compatible"
-  type                  = string
-  default               = "t4g.small"
+  type        = string
+  default     = "t4g.small"
 }
 
 variable "backend_license_path" {
