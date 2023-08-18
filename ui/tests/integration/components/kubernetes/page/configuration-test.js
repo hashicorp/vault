@@ -1,6 +1,6 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 import { module, test } from 'qunit';
@@ -87,14 +87,18 @@ module('Integration | Component | kubernetes | Page::Configuration', function (h
     assert
       .dom('[data-test-row-value="Kubernetes host"]')
       .hasText(this.config.kubernetesHost, 'Kubernetes host value renders');
+
     assert.dom('[data-test-row-label="Certificate"]').exists('Certificate label renders');
+    assert.dom('[data-test-certificate-card]').exists('Certificate card component renders');
     assert
       .dom('[data-test-certificate-icon]')
-      .hasClass('flight-icon-certificate', 'Certificate card icon renders');
-    assert.dom('[data-test-certificate-label]').hasText('PEM Format', 'Certificate card label renders');
+      .hasClass('flight-icon-certificate', 'Certificate icon renders');
+    assert
+      .dom('[data-test-certificate-card] [data-test-copy-button]')
+      .exists('Certificate copy button renders');
+    assert.dom('[data-test-certificate-label]').hasText('PEM Format', 'Certificate label renders');
     assert
       .dom('[data-test-certificate-value]')
-      .hasText(this.config.kubernetesCaCert, 'Certificate card value renders');
-    assert.dom('[data-test-certificate-copy]').exists('Certificate copy button renders');
+      .hasText(this.config.kubernetesCaCert, 'Certificate value renders');
   });
 });
