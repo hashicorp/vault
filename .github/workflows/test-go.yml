@@ -286,7 +286,7 @@ jobs:
           echo
           echo "${{ matrix.id }}"
 
-          packages=$(echo "${{ fromJSON(needs.test-matrix.outputs.matrix) }}" | jq -c -r --arg id "${{ matrix.id }}" '.[$id] | .packages')
+          packages=$(echo "${{ needs.test-matrix.outputs.matrix }}" | jq -c -r --arg id "${{ matrix.id }}" '.[$id] | .packages')
 
           if [ -z "$packages" ]; then
             echo "no test packages to run"
