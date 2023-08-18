@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package server
 
 import (
@@ -5,7 +8,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"math"
 	"os"
 	"path/filepath"
@@ -17,14 +19,29 @@ import (
 	"github.com/hashicorp/go-secure-stdlib/parseutil"
 	"github.com/hashicorp/hcl"
 	"github.com/hashicorp/hcl/hcl/ast"
+	"github.com/hashicorp/vault/helper/experiments"
 	"github.com/hashicorp/vault/helper/osutil"
 	"github.com/hashicorp/vault/internalshared/configutil"
 	"github.com/hashicorp/vault/sdk/helper/consts"
+	"github.com/hashicorp/vault/sdk/helper/strutil"
+	"github.com/hashicorp/vault/sdk/helper/testcluster"
+	"github.com/mitchellh/mapstructure"
 )
 
-var entConfigValidate = func(_ *Config, _ string) []configutil.ConfigError {
-	return nil
-}
+const (
+	VaultDevCAFilename   = "vault-ca.pem"
+	VaultDevCertFilename = "vault-cert.pem"
+	VaultDevKeyFilename  = "vault-key.pem"
+)
+
+var (
+	entConfigValidate = func(_ *Config, _ string) []configutil.ConfigError {
+		return nil
+	}
+
+	// Modified internally for testing.
+	validExperiments = experiments.ValidExperiments()
+)
 
 // Config is the configuration for the vault server.
 type Config struct {
@@ -38,6 +55,8 @@ type Config struct {
 	HAStorage *Storage `hcl:"-"`
 
 	ServiceRegistration *ServiceRegistration `hcl:"-"`
+
+	Experiments []string `hcl:"experiments"`
 
 	CacheSize                int         `hcl:"cache_size"`
 	DisableCache             bool        `hcl:"-"`
@@ -61,6 +80,9 @@ type Config struct {
 
 	PluginFilePermissions    int         `hcl:"-"`
 	PluginFilePermissionsRaw interface{} `hcl:"plugin_file_permissions,alias:PluginFilePermissions"`
+
+	EnableIntrospectionEndpoint    bool        `hcl:"-"`
+	EnableIntrospectionEndpointRaw interface{} `hcl:"introspection_endpoint,alias:EnableIntrospectionEndpoint"`
 
 	EnableRawEndpoint    bool        `hcl:"-"`
 	EnableRawEndpointRaw interface{} `hcl:"raw_storage_endpoint,alias:EnableRawEndpoint"`
@@ -87,6 +109,8 @@ type Config struct {
 
 	LogRequestsLevel    string      `hcl:"-"`
 	LogRequestsLevelRaw interface{} `hcl:"log_requests_level"`
+
+	DetectDeadlocks string `hcl:"detect_deadlocks"`
 
 	EnableResponseHeaderRaftNodeID    bool        `hcl:"-"`
 	EnableResponseHeaderRaftNodeIDRaw interface{} `hcl:"enable_response_header_raft_node_id"`
@@ -148,6 +172,65 @@ ui = true
 	if err != nil {
 		return nil, fmt.Errorf("error parsing dev config: %w", err)
 	}
+	return parsed, nil
+}
+
+// DevTLSConfig is a Config that is used for dev tls mode of Vault.
+func DevTLSConfig(storageType, certDir string) (*Config, error) {
+	ca, err := GenerateCA()
+	if err != nil {
+		return nil, err
+	}
+
+	cert, key, err := GenerateCert(ca.Template, ca.Signer)
+	if err != nil {
+		return nil, err
+	}
+
+	if err := os.WriteFile(fmt.Sprintf("%s/%s", certDir, VaultDevCAFilename), []byte(ca.PEM), 0o444); err != nil {
+		return nil, err
+	}
+
+	if err := os.WriteFile(fmt.Sprintf("%s/%s", certDir, VaultDevCertFilename), []byte(cert), 0o400); err != nil {
+		return nil, err
+	}
+
+	if err := os.WriteFile(fmt.Sprintf("%s/%s", certDir, VaultDevKeyFilename), []byte(key), 0o400); err != nil {
+		return nil, err
+	}
+	return parseDevTLSConfig(storageType, certDir)
+}
+
+func parseDevTLSConfig(storageType, certDir string) (*Config, error) {
+	hclStr := `
+disable_mlock = true
+
+listener "tcp" {
+	address = "[::]:8200"
+	tls_cert_file = "%s/vault-cert.pem"
+	tls_key_file = "%s/vault-key.pem"
+	proxy_protocol_behavior = "allow_authorized"
+	proxy_protocol_authorized_addrs = "[::]:8200"
+}
+
+telemetry {
+	prometheus_retention_time = "24h"
+	disable_hostname = true
+}
+enable_raw_endpoint = true
+
+storage "%s" {
+}
+
+ui = true
+`
+	certDirEscaped := strings.Replace(certDir, "\\", "\\\\", -1)
+	hclStr = fmt.Sprintf(hclStr, certDirEscaped, certDirEscaped, storageType)
+	parsed, err := ParseConfig(hclStr, "")
+	if err != nil {
+		return nil, err
+	}
+
 	return parsed, nil
 }
 
@@ -260,6 +343,11 @@ func (c *Config) Merge(c2 *Config) *Config {
 		result.EnableRawEndpoint = c2.EnableRawEndpoint
 	}
 
+	result.EnableIntrospectionEndpoint = c.EnableIntrospectionEndpoint
+	if c2.EnableIntrospectionEndpoint {
+		result.EnableIntrospectionEndpoint = c2.EnableIntrospectionEndpoint
+	}
+
 	result.APIAddr = c.APIAddr
 	if c2.APIAddr != "" {
 		result.APIAddr = c2.APIAddr
@@ -319,6 +407,11 @@ func (c *Config) Merge(c2 *Config) *Config {
 		result.LogRequestsLevel = c2.LogRequestsLevel
 	}
 
+	result.DetectDeadlocks = c.DetectDeadlocks
+	if c2.DetectDeadlocks != "" {
+		result.DetectDeadlocks = c2.DetectDeadlocks
+	}
+
 	result.EnableResponseHeaderRaftNodeID = c.EnableResponseHeaderRaftNodeID
 	if c2.EnableResponseHeaderRaftNodeID {
 		result.EnableResponseHeaderRaftNodeID = c2.EnableResponseHeaderRaftNodeID
@@ -354,7 +447,14 @@ func (c *Config) Merge(c2 *Config) *Config {
 		}
 	}
 
+	result.AdministrativeNamespacePath = c.AdministrativeNamespacePath
+	if c2.AdministrativeNamespacePath != "" {
+		result.AdministrativeNamespacePath = c2.AdministrativeNamespacePath
+	}
+
 	result.entConfig = c.entConfig.Merge(c2.entConfig)
+
+	result.Experiments = mergeExperiments(c.Experiments, c2.Experiments)
 
 	return result
 }
@@ -377,9 +477,14 @@ func LoadConfig(path string) (*Config, error) {
 				return nil, errors.New("Error parsing the environment variable VAULT_ENABLE_FILE_PERMISSIONS_CHECK")
 			}
 		}
+		f, err := os.Open(path)
+		if err != nil {
+			return nil, err
+		}
+		defer f.Close()
 
 		if enableFilePermissionsCheck {
-			err = osutil.OwnerPermissionsMatch(path, 0, 0)
+			err = osutil.OwnerPermissionsMatchFile(f, 0, 0)
 			if err != nil {
 				return nil, err
 			}
@@ -394,13 +499,17 @@ func CheckConfig(c *Config, e error) (*Config, error) {
 		return c, e
 	}
 
-	if len(c.Seals) == 2 {
-		switch {
-		case c.Seals[0].Disabled && c.Seals[1].Disabled:
-			return nil, errors.New("seals: two seals provided but both are disabled")
-		case !c.Seals[0].Disabled && !c.Seals[1].Disabled:
-			return nil, errors.New("seals: two seals provided but neither is disabled")
+	if err := c.checkSealConfig(); err != nil {
+		return nil, err
+	}
+
+	sealMap := make(map[string]*configutil.KMS)
+	for _, seal := range c.Seals {
+		if _, ok := sealMap[seal.Name]; ok {
+			return nil, errors.New("seals: seal names must be unique")
 		}
+
+		sealMap[seal.Name] = seal
 	}
 
 	return c, nil
@@ -408,8 +517,14 @@ func CheckConfig(c *Config, e error) (*Config, error) {
 
 // LoadConfigFile loads the configuration from the given file.
 func LoadConfigFile(path string) (*Config, error) {
+	// Open the file
+	f, err := os.Open(path)
+	if err != nil {
+		return nil, err
+	}
+	defer f.Close()
 	// Read the file
-	d, err := ioutil.ReadFile(path)
+	d, err := io.ReadAll(f)
 	if err != nil {
 		return nil, err
 	}
@@ -430,7 +545,7 @@ func LoadConfigFile(path string) (*Config, error) {
 
 	if enableFilePermissionsCheck {
 		// check permissions of the config file
-		err = osutil.OwnerPermissionsMatch(path, 0, 0)
+		err = osutil.OwnerPermissionsMatchFile(f, 0, 0)
 		if err != nil {
 			return nil, err
 		}
@@ -507,6 +622,12 @@ func ParseConfig(d, source string) (*Config, error) {
 
 	if result.EnableRawEndpointRaw != nil {
 		if result.EnableRawEndpoint, err = parseutil.ParseBool(result.EnableRawEndpointRaw); err != nil {
+			return nil, err
+		}
+	}
+
+	if result.EnableIntrospectionEndpointRaw != nil {
+		if result.EnableIntrospectionEndpoint, err = parseutil.ParseBool(result.EnableIntrospectionEndpointRaw); err != nil {
 			return nil, err
 		}
 	}
@@ -616,6 +737,10 @@ func ParseConfig(d, source string) (*Config, error) {
 		}
 	}
 
+	if err := validateExperiments(result.Experiments); err != nil {
+		return nil, fmt.Errorf("error validating experiment(s) from config: %w", err)
+	}
+
 	if err := result.parseConfig(list); err != nil {
 		return nil, fmt.Errorf("error parsing enterprise config: %w", err)
 	}
@@ -630,6 +755,69 @@ func ParseConfig(d, source string) (*Config, error) {
 	}
 
 	return result, nil
+}
+
+func ExperimentsFromEnvAndCLI(config *Config, envKey string, flagExperiments []string) error {
+	if envExperimentsRaw := os.Getenv(envKey); envExperimentsRaw != "" {
+		envExperiments := strings.Split(envExperimentsRaw, ",")
+		err := validateExperiments(envExperiments)
+		if err != nil {
+			return fmt.Errorf("error validating experiment(s) from environment variable %q: %w", envKey, err)
+		}
+
+		config.Experiments = mergeExperiments(config.Experiments, envExperiments)
+	}
+
+	if len(flagExperiments) != 0 {
+		err := validateExperiments(flagExperiments)
+		if err != nil {
+			return fmt.Errorf("error validating experiment(s) from command line flag: %w", err)
+		}
+
+		config.Experiments = mergeExperiments(config.Experiments, flagExperiments)
+	}
+
+	return nil
+}
+
+// Validate checks each experiment is a known experiment.
+func validateExperiments(experiments []string) error {
+	var invalid []string
+
+	for _, experiment := range experiments {
+		if !strutil.StrListContains(validExperiments, experiment) {
+			invalid = append(invalid, experiment)
+		}
+	}
+
+	if len(invalid) != 0 {
+		return fmt.Errorf("valid experiment(s) are %s, but received the following invalid experiment(s): %s",
+			strings.Join(validExperiments, ", "),
+			strings.Join(invalid, ", "))
+	}
+
+	return nil
+}
+
+// mergeExperiments returns the logical OR of the two sets.
+func mergeExperiments(left, right []string) []string {
+	processed := map[string]struct{}{}
+	var result []string
+	for _, l := range left {
+		if _, seen := processed[l]; !seen {
+			result = append(result, l)
+		}
+		processed[l] = struct{}{}
+	}
+
+	for _, r := range right {
+		if _, seen := processed[r]; !seen {
+			result = append(result, r)
+			processed[r] = struct{}{}
+		}
+	}
+
+	return result
 }
 
 // LoadConfigDir loads all the configurations in the given directory
@@ -932,6 +1120,8 @@ func (c *Config) Sanitized() map[string]interface{} {
 
 		"raw_storage_endpoint": c.EnableRawEndpoint,
 
+		"introspection_endpoint": c.EnableIntrospectionEndpoint,
+
 		"api_addr":           c.APIAddr,
 		"cluster_addr":       c.ClusterAddr,
 		"disable_clustering": c.DisableClustering,
@@ -947,6 +1137,9 @@ func (c *Config) Sanitized() map[string]interface{} {
 		"enable_response_header_raft_node_id": c.EnableResponseHeaderRaftNodeID,
 
 		"log_requests_level": c.LogRequestsLevel,
+		"experiments":        c.Experiments,
+
+		"detect_deadlocks": c.DetectDeadlocks,
 	}
 	for k, v := range sharedResult {
 		result[k] = v
@@ -954,23 +1147,39 @@ func (c *Config) Sanitized() map[string]interface{} {
 
 	// Sanitize storage stanza
 	if c.Storage != nil {
+		storageType := c.Storage.Type
 		sanitizedStorage := map[string]interface{}{
-			"type":               c.Storage.Type,
+			"type":               storageType,
 			"redirect_addr":      c.Storage.RedirectAddr,
 			"cluster_addr":       c.Storage.ClusterAddr,
 			"disable_clustering": c.Storage.DisableClustering,
 		}
+
+		if storageType == "raft" {
+			sanitizedStorage["raft"] = map[string]interface{}{
+				"max_entry_size": c.Storage.Config["max_entry_size"],
+			}
+		}
+
 		result["storage"] = sanitizedStorage
 	}
 
 	// Sanitize HA storage stanza
 	if c.HAStorage != nil {
+		haStorageType := c.HAStorage.Type
 		sanitizedHAStorage := map[string]interface{}{
-			"type":               c.HAStorage.Type,
+			"type":               haStorageType,
 			"redirect_addr":      c.HAStorage.RedirectAddr,
 			"cluster_addr":       c.HAStorage.ClusterAddr,
 			"disable_clustering": c.HAStorage.DisableClustering,
 		}
+
+		if haStorageType == "raft" {
+			sanitizedHAStorage["raft"] = map[string]interface{}{
+				"max_entry_size": c.HAStorage.Config["max_entry_size"],
+			}
+		}
+
 		result["ha_storage"] = sanitizedHAStorage
 	}
 
@@ -1008,4 +1217,13 @@ func (c *Config) Prune() {
 func (c *Config) found(s, k string) {
 	delete(c.UnusedKeys, s)
 	c.FoundKeys = append(c.FoundKeys, k)
+}
+
+func (c *Config) ToVaultNodeConfig() (*testcluster.VaultNodeConfig, error) {
+	var vnc testcluster.VaultNodeConfig
+	err := mapstructure.Decode(c, &vnc)
+	if err != nil {
+		return nil, err
+	}
+	return &vnc, nil
 }

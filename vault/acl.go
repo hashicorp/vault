@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package vault
 
 import (
@@ -250,9 +253,7 @@ func NewACL(ctx context.Context, policies []*Policy) (*ACL, error) {
 				if existingPerms.MFAMethods == nil {
 					existingPerms.MFAMethods = pc.Permissions.MFAMethods
 				} else {
-					for _, method := range pc.Permissions.MFAMethods {
-						existingPerms.MFAMethods = append(existingPerms.MFAMethods, method)
-					}
+					existingPerms.MFAMethods = append(existingPerms.MFAMethods, pc.Permissions.MFAMethods...)
 				}
 				existingPerms.MFAMethods = strutil.RemoveDuplicates(existingPerms.MFAMethods, false)
 			}
@@ -262,11 +263,13 @@ func NewACL(ctx context.Context, policies []*Policy) (*ACL, error) {
 			if pc.Permissions.ControlGroup != nil {
 				if len(pc.Permissions.ControlGroup.Factors) > 0 {
 					if existingPerms.ControlGroup == nil {
-						existingPerms.ControlGroup = pc.Permissions.ControlGroup
-					} else {
-						for _, authz := range pc.Permissions.ControlGroup.Factors {
-							existingPerms.ControlGroup.Factors = append(existingPerms.ControlGroup.Factors, authz)
+						cg, err := pc.Permissions.ControlGroup.Clone()
+						if err != nil {
+							return nil, err
 						}
+						existingPerms.ControlGroup = cg
+					} else {
+						existingPerms.ControlGroup.Factors = append(existingPerms.ControlGroup.Factors, pc.Permissions.ControlGroup.Factors...)
 					}
 				}
 			}
@@ -338,9 +341,10 @@ func (a *ACL) AllowOperation(ctx context.Context, req *logical.Request, capCheck
 		ret.RootPrivs = true
 		ret.IsRoot = true
 		ret.GrantingPolicies = []logical.PolicyInfo{{
-			Name:        "root",
-			NamespaceId: "root",
-			Type:        "acl",
+			Name:          "root",
+			NamespaceId:   "root",
+			NamespacePath: "",
+			Type:          "acl",
 		}}
 		return
 	}
@@ -719,7 +723,9 @@ func (c *Core) performPolicyChecks(ctx context.Context, acl *ACL, te *logical.To
 		if !ret.ACLResults.Allowed {
 			return ret
 		}
-		if !ret.RootPrivs && opts.RootPrivsRequired {
+		// Since HelpOperation was fast-pathed inside AllowOperation, RootPrivs will not have been populated in this
+		// case, so we need to special-case that here as well, or we'll block HelpOperation on all sudo-protected paths.
+		if !ret.RootPrivs && opts.RootPrivsRequired && req.Operation != logical.HelpOperation {
 			return ret
 		}
 	}

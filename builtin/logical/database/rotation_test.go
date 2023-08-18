@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package database
 
 import (
@@ -17,7 +20,6 @@ import (
 	postgreshelper "github.com/hashicorp/vault/helper/testhelpers/postgresql"
 	v5 "github.com/hashicorp/vault/sdk/database/dbplugin/v5"
 	"github.com/hashicorp/vault/sdk/framework"
-	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/dbtxn"
 	"github.com/hashicorp/vault/sdk/helper/pluginutil"
 	"github.com/hashicorp/vault/sdk/logical"
@@ -506,8 +508,6 @@ func TestBackend_Static_QueueWAL_discard_role_not_found(t *testing.T) {
 // Second scenario, WAL contains a role name that does exist, but the role's
 // LastVaultRotation is greater than the WAL has
 func TestBackend_Static_QueueWAL_discard_role_newer_rotation_date(t *testing.T) {
-	t.Skip("temporarily disabled due to intermittent failures")
-
 	cluster, sys := getCluster(t)
 	defer cluster.Cleanup()
 
@@ -708,7 +708,7 @@ func TestBackend_StaticRole_Rotations_PostgreSQL(t *testing.T) {
 }
 
 func TestBackend_StaticRole_Rotations_MongoDB(t *testing.T) {
-	cleanup, connURL := mongodb.PrepareTestContainerWithDatabase(t, "latest", "vaulttestdb")
+	cleanup, connURL := mongodb.PrepareTestContainerWithDatabase(t, "5.0.10", "vaulttestdb")
 	defer cleanup()
 
 	uc := userCreator(func(t *testing.T, username, password string) {
@@ -1223,7 +1223,7 @@ func TestStoredWALsCorrectlyProcessed(t *testing.T) {
 			b.credRotationQueue = queue.New()
 
 			// Now finish the startup process by populating the queue, which should discard the WAL
-			b.initQueue(ctx, config, consts.ReplicationUnknown)
+			b.initQueue(ctx, config)
 
 			if tc.shouldRotate {
 				requireWALs(t, storage, 1)
@@ -1389,7 +1389,7 @@ func setupMockDB(b *databaseBackend) *mockNewDatabase {
 		id:       "foo-id",
 		name:     "mockV5",
 	}
-	b.connections["mockv5"] = dbi
+	b.connections.Put("mockv5", dbi)
 
 	return mockDB
 }

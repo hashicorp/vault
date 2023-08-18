@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package pluginutil
 
 import (
@@ -7,10 +10,10 @@ import (
 	version "github.com/hashicorp/go-version"
 )
 
-var (
+const (
 	// PluginAutoMTLSEnv is used to ensure AutoMTLS is used. This will override
 	// setting a TLSProviderFunc for a plugin.
-	PluginAutoMTLSEnv = "VAULT_PLUGIN_AUTOMTLS"
+	PluginAutoMTLSEnv = "VAULT_PLUGIN_AUTOMTLS_ENABLED"
 
 	// PluginMlockEnabled is the ENV name used to pass the configuration for
 	// enabling mlock
@@ -31,6 +34,10 @@ var (
 	// PluginCACertPEMEnv is an ENV name used for holding a CA PEM-encoded
 	// string. Used for testing.
 	PluginCACertPEMEnv = "VAULT_TESTING_PLUGIN_CA_PEM"
+
+	// PluginMultiplexingOptOut is an ENV name used to define a comma separated list of plugin names
+	// opted-out of the multiplexing feature; for emergencies if multiplexing ever causes issues
+	PluginMultiplexingOptOut = "VAULT_PLUGIN_MULTIPLEXING_OPT_OUT"
 )
 
 // OptionallyEnableMlock determines if mlock should be called, and if so enables

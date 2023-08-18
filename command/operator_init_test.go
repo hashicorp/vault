@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 //go:build !race
 
 package command
@@ -355,7 +358,7 @@ func TestOperatorInitCommand_Run(t *testing.T) {
 			t.Errorf("expected %d to be %d", code, exp)
 		}
 
-		expected := "Error initializing: "
+		expected := "Error making API request"
 		combined := ui.OutputWriter.String() + ui.ErrorWriter.String()
 		if !strings.Contains(combined, expected) {
 			t.Errorf("expected %q to contain %q", combined, expected)

@@ -1,28 +1,80 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package pki
 
 import (
+	"net/http"
+
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
 func pathIssuerSignIntermediate(b *backend) *framework.Path {
 	pattern := "issuer/" + framework.GenericNameRegex(issuerRefParam) + "/sign-intermediate"
-	return pathIssuerSignIntermediateRaw(b, pattern)
+
+	displayAttrs := &framework.DisplayAttributes{
+		OperationPrefix: operationPrefixPKIIssuer,
+		OperationVerb:   "sign",
+		OperationSuffix: "intermediate",
+	}
+
+	return buildPathIssuerSignIntermediateRaw(b, pattern, displayAttrs)
 }
 
 func pathSignIntermediate(b *backend) *framework.Path {
 	pattern := "root/sign-intermediate"
-	return pathIssuerSignIntermediateRaw(b, pattern)
+
+	displayAttrs := &framework.DisplayAttributes{
+		OperationPrefix: operationPrefixPKIRoot,
+		OperationVerb:   "sign",
+		OperationSuffix: "intermediate",
+	}
+
+	return buildPathIssuerSignIntermediateRaw(b, pattern, displayAttrs)
 }
 
-func pathIssuerSignIntermediateRaw(b *backend, pattern string) *framework.Path {
+func buildPathIssuerSignIntermediateRaw(b *backend, pattern string, displayAttrs *framework.DisplayAttributes) *framework.Path {
 	fields := addIssuerRefField(map[string]*framework.FieldSchema{})
 	path := &framework.Path{
-		Pattern: pattern,
-		Fields:  fields,
+		Pattern:      pattern,
+		DisplayAttrs: displayAttrs,
+		Fields:       fields,
 		Operations: map[logical.Operation]framework.OperationHandler{
 			logical.UpdateOperation: &framework.PathOperation{
 				Callback: b.pathIssuerSignIntermediate,
+				Responses: map[int][]framework.Response{
+					http.StatusOK: {{
+						Description: "OK",
+						Fields: map[string]*framework.FieldSchema{
+							"expiration": {
+								Type:        framework.TypeInt64,
+								Description: `Expiration Time`,
+								Required:    true,
+							},
+							"serial_number": {
+								Type:        framework.TypeString,
+								Description: `Serial Number`,
+								Required:    true,
+							},
+							"certificate": {
+								Type:        framework.TypeString,
+								Description: `Certificate`,
+								Required:    true,
+							},
+							"issuing_ca": {
+								Type:        framework.TypeString,
+								Description: `Issuing CA`,
+								Required:    true,
+							},
+							"ca_chain": {
+								Type:        framework.TypeStringSlice,
+								Description: `CA Chain`,
+								Required:    true,
+							},
+						},
+					}},
+				},
 			},
 		},
 
@@ -67,6 +119,31 @@ SHA-2-512. Defaults to 0 to automatically detect based on key length
 		},
 	}
 
+	fields["skid"] = &framework.FieldSchema{
+		Type:    framework.TypeString,
+		Default: "",
+		Description: `Value for the Subject Key Identifier field
+(RFC 5280 Section 4.2.1.2). This value should ONLY be used when
+cross-signing to mimic the existing certificate's SKID value; this
+is necessary to allow certain TLS implementations (such as OpenSSL)
+which use SKID/AKID matches in chain building to restrict possible
+valid chains.
+
+Specified as a string in hex format. Default is empty, allowing
+Vault to automatically calculate the SKID according to method one
+in the above RFC section.`,
+		DisplayAttrs: &framework.DisplayAttributes{
+			Value: "",
+		},
+	}
+
+	fields["use_pss"] = &framework.FieldSchema{
+		Type:    framework.TypeBool,
+		Default: false,
+		Description: `Whether or not to use PSS signatures when using a
+RSA key-type issuer. Defaults to false.`,
+	}
+
 	return path
 }
 
@@ -88,15 +165,29 @@ See the API documentation for more information about required parameters.
 
 func pathIssuerSignSelfIssued(b *backend) *framework.Path {
 	pattern := "issuer/" + framework.GenericNameRegex(issuerRefParam) + "/sign-self-issued"
-	return buildPathIssuerSignSelfIssued(b, pattern)
+
+	displayAttrs := &framework.DisplayAttributes{
+		OperationPrefix: operationPrefixPKIIssuer,
+		OperationVerb:   "sign",
+		OperationSuffix: "self-issued",
+	}
+
+	return buildPathIssuerSignSelfIssued(b, pattern, displayAttrs)
 }
 
 func pathSignSelfIssued(b *backend) *framework.Path {
 	pattern := "root/sign-self-issued"
-	return buildPathIssuerSignSelfIssued(b, pattern)
+
+	displayAttrs := &framework.DisplayAttributes{
+		OperationPrefix: operationPrefixPKIRoot,
+		OperationVerb:   "sign",
+		OperationSuffix: "self-issued",
+	}
+
+	return buildPathIssuerSignSelfIssued(b, pattern, displayAttrs)
 }
 
-func buildPathIssuerSignSelfIssued(b *backend, pattern string) *framework.Path {
+func buildPathIssuerSignSelfIssued(b *backend, pattern string, displayAttrs *framework.DisplayAttributes) *framework.Path {
 	fields := map[string]*framework.FieldSchema{
 		"certificate": {
 			Type:        framework.TypeString,
@@ -110,11 +201,29 @@ func buildPathIssuerSignSelfIssued(b *backend, pattern string) *framework.Path {
 	}
 	fields = addIssuerRefField(fields)
 	path := &framework.Path{
-		Pattern: pattern,
-		Fields:  fields,
+		Pattern:      pattern,
+		DisplayAttrs: displayAttrs,
+		Fields:       fields,
 		Operations: map[logical.Operation]framework.OperationHandler{
 			logical.UpdateOperation: &framework.PathOperation{
 				Callback: b.pathIssuerSignSelfIssued,
+				Responses: map[int][]framework.Response{
+					http.StatusOK: {{
+						Description: "OK",
+						Fields: map[string]*framework.FieldSchema{
+							"certificate": {
+								Type:        framework.TypeString,
+								Description: `Certificate`,
+								Required:    true,
+							},
+							"issuing_ca": {
+								Type:        framework.TypeString,
+								Description: `Issuing CA`,
+								Required:    true,
+							},
+						},
+					}},
+				},
 			},
 		},
 

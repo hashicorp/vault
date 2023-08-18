@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package command
 
 import (
@@ -21,7 +24,7 @@ import (
 	"github.com/hashicorp/vault/helper/osutil"
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
 	"github.com/hashicorp/vault/sdk/helper/logging"
-	"github.com/hashicorp/vault/sdk/version"
+	"github.com/hashicorp/vault/version"
 	"github.com/mholt/archiver/v3"
 	"github.com/mitchellh/cli"
 	"github.com/oklog/run"
@@ -1071,7 +1074,18 @@ func (c *DebugCommand) writeLogs(ctx context.Context) {
 	}
 	defer out.Close()
 
-	logCh, err := c.cachedClient.Sys().Monitor(ctx, "trace", c.logFormat)
+	// Create Monitor specific client based on the cached client
+	mClient, err := c.cachedClient.Clone()
+	if err != nil {
+		c.captureError("log", err)
+		return
+	}
+	mClient.SetToken(c.cachedClient.Token())
+
+	// Set timeout to match the context explicitly
+	mClient.SetClientTimeout(c.flagDuration + debugDurationGrace)
+
+	logCh, err := mClient.Sys().Monitor(ctx, "trace", c.logFormat)
 	if err != nil {
 		c.captureError("log", err)
 		return
@@ -1080,13 +1094,15 @@ func (c *DebugCommand) writeLogs(ctx context.Context) {
 	for {
 		select {
 		case log := <-logCh:
-			if !strings.HasSuffix(log, "\n") {
-				log += "\n"
-			}
-			_, err = out.WriteString(log)
-			if err != nil {
-				c.captureError("log", err)
-				return
+			if len(log) > 0 {
+				if !strings.HasSuffix(log, "\n") {
+					log += "\n"
+				}
+				_, err = out.WriteString(log)
+				if err != nil {
+					c.captureError("log", err)
+					return
+				}
 			}
 		case <-ctx.Done():
 			return

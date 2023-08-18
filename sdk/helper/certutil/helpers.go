@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package certutil
 
 import (
@@ -10,6 +13,7 @@ import (
 	"crypto/rand"
 	"crypto/rsa"
 	"crypto/sha1"
+	"crypto/tls"
 	"crypto/x509"
 	"crypto/x509/pkix"
 	"encoding/asn1"
@@ -49,6 +53,45 @@ var expectedNISTPCurveHashBits = map[int]int{
 	521: 512,
 }
 
+// Mapping of constant names<->constant values for SignatureAlgorithm
+var SignatureAlgorithmNames = map[string]x509.SignatureAlgorithm{
+	"sha256withrsa":    x509.SHA256WithRSA,
+	"sha384withrsa":    x509.SHA384WithRSA,
+	"sha512withrsa":    x509.SHA512WithRSA,
+	"ecdsawithsha256":  x509.ECDSAWithSHA256,
+	"ecdsawithsha384":  x509.ECDSAWithSHA384,
+	"ecdsawithsha512":  x509.ECDSAWithSHA512,
+	"sha256withrsapss": x509.SHA256WithRSAPSS,
+	"sha384withrsapss": x509.SHA384WithRSAPSS,
+	"sha512withrsapss": x509.SHA512WithRSAPSS,
+	"pureed25519":      x509.PureEd25519,
+	"ed25519":          x509.PureEd25519, // Duplicated for clarity; most won't expect the "Pure" prefix.
+}
+
+// Mapping of constant values<->constant names for SignatureAlgorithm
+var InvSignatureAlgorithmNames = map[x509.SignatureAlgorithm]string{
+	x509.SHA256WithRSA:    "SHA256WithRSA",
+	x509.SHA384WithRSA:    "SHA384WithRSA",
+	x509.SHA512WithRSA:    "SHA512WithRSA",
+	x509.ECDSAWithSHA256:  "ECDSAWithSHA256",
+	x509.ECDSAWithSHA384:  "ECDSAWithSHA384",
+	x509.ECDSAWithSHA512:  "ECDSAWithSHA512",
+	x509.SHA256WithRSAPSS: "SHA256WithRSAPSS",
+	x509.SHA384WithRSAPSS: "SHA384WithRSAPSS",
+	x509.SHA512WithRSAPSS: "SHA512WithRSAPSS",
+	x509.PureEd25519:      "Ed25519",
+}
+
+// OID for RFC 5280 CRL Number extension.
+//
+// > id-ce-cRLNumber OBJECT IDENTIFIER ::= { id-ce 20 }
+var CRLNumberOID = asn1.ObjectIdentifier([]int{2, 5, 29, 20})
+
+// OID for RFC 5280 Delta CRL Indicator CRL extension.
+//
+// > id-ce-deltaCRLIndicator OBJECT IDENTIFIER ::= { id-ce 27 }
+var DeltaCRLIndicatorOID = asn1.ObjectIdentifier([]int{2, 5, 29, 27})
+
 // GetHexFormatted returns the byte buffer formatted in hex with
 // the specified separator between bytes.
 func GetHexFormatted(buf []byte, sep string) string {
@@ -66,13 +109,13 @@ func GetHexFormatted(buf []byte, sep string) string {
 func ParseHexFormatted(in, sep string) []byte {
 	var ret bytes.Buffer
 	var err error
-	var inBits int64
+	var inBits uint64
 	inBytes := strings.Split(in, sep)
 	for _, inByte := range inBytes {
-		if inBits, err = strconv.ParseInt(inByte, 16, 8); err != nil {
+		if inBits, err = strconv.ParseUint(inByte, 16, 8); err != nil {
 			return nil
 		}
-		ret.WriteByte(byte(inBits))
+		ret.WriteByte(uint8(inBits))
 	}
 	return ret.Bytes()
 }
@@ -84,10 +127,20 @@ func GetSubjKeyID(privateKey crypto.Signer) ([]byte, error) {
 	if privateKey == nil {
 		return nil, errutil.InternalError{Err: "passed-in private key is nil"}
 	}
-	return getSubjectKeyID(privateKey.Public())
+	return GetSubjectKeyID(privateKey.Public())
 }
 
-func getSubjectKeyID(pub interface{}) ([]byte, error) {
+// Returns the explicit SKID when used for cross-signing, else computes a new
+// SKID from the key itself.
+func getSubjectKeyIDFromBundle(data *CreationBundle) ([]byte, error) {
+	if len(data.Params.SKID) > 0 {
+		return data.Params.SKID, nil
+	}
+
+	return GetSubjectKeyID(data.CSR.PublicKey)
+}
+
+func GetSubjectKeyID(pub interface{}) ([]byte, error) {
 	var publicKeyBytes []byte
 	switch pub := pub.(type) {
 	case *rsa.PublicKey:
@@ -151,18 +204,21 @@ func ParsePKIJSON(input []byte) (*ParsedCertBundle, error) {
 }
 
 func ParseDERKey(privateKeyBytes []byte) (signer crypto.Signer, format BlockType, err error) {
-	if signer, err = x509.ParseECPrivateKey(privateKeyBytes); err == nil {
+	var firstError error
+	if signer, firstError = x509.ParseECPrivateKey(privateKeyBytes); firstError == nil {
 		format = ECBlock
 		return
 	}
 
-	if signer, err = x509.ParsePKCS1PrivateKey(privateKeyBytes); err == nil {
+	var secondError error
+	if signer, secondError = x509.ParsePKCS1PrivateKey(privateKeyBytes); secondError == nil {
 		format = PKCS1Block
 		return
 	}
 
+	var thirdError error
 	var rawKey interface{}
-	if rawKey, err = x509.ParsePKCS8PrivateKey(privateKeyBytes); err == nil {
+	if rawKey, thirdError = x509.ParsePKCS8PrivateKey(privateKeyBytes); thirdError == nil {
 		switch rawSigner := rawKey.(type) {
 		case *rsa.PrivateKey:
 			signer = rawSigner
@@ -178,7 +234,7 @@ func ParseDERKey(privateKeyBytes []byte) (signer crypto.Signer, format BlockType
 		return
 	}
 
-	return nil, UnknownBlock, err
+	return nil, UnknownBlock, fmt.Errorf("got errors attempting to parse DER private key:\n1. %v\n2. %v\n3. %v", firstError, secondError, thirdError)
 }
 
 func ParsePEMKey(keyPem string) (crypto.Signer, BlockType, error) {
@@ -247,6 +303,18 @@ func ParsePEMBundle(pemBundle string) (*ParsedCertBundle, error) {
 	}
 
 	return parsedBundle, nil
+}
+
+func (p *ParsedCertBundle) ToTLSCertificate() tls.Certificate {
+	var cert tls.Certificate
+	cert.Certificate = append(cert.Certificate, p.CertificateBytes)
+	cert.Leaf = p.Certificate
+	cert.PrivateKey = p.PrivateKey
+	for _, ca := range p.CAChain {
+		cert.Certificate = append(cert.Certificate, ca.Bytes)
+	}
+
+	return cert
 }
 
 // GeneratePrivateKey generates a private key with the specified type and key bits.
@@ -756,6 +824,58 @@ func CreateCertificateWithKeyGenerator(data *CreationBundle, randReader io.Reade
 	return createCertificate(data, randReader, keyGenerator)
 }
 
+// Set correct RSA sig algo
+func certTemplateSetSigAlgo(certTemplate *x509.Certificate, data *CreationBundle) {
+	if data.Params.UsePSS {
+		switch data.Params.SignatureBits {
+		case 256:
+			certTemplate.SignatureAlgorithm = x509.SHA256WithRSAPSS
+		case 384:
+			certTemplate.SignatureAlgorithm = x509.SHA384WithRSAPSS
+		case 512:
+			certTemplate.SignatureAlgorithm = x509.SHA512WithRSAPSS
+		}
+	} else {
+		switch data.Params.SignatureBits {
+		case 256:
+			certTemplate.SignatureAlgorithm = x509.SHA256WithRSA
+		case 384:
+			certTemplate.SignatureAlgorithm = x509.SHA384WithRSA
+		case 512:
+			certTemplate.SignatureAlgorithm = x509.SHA512WithRSA
+		}
+	}
+}
+
+// selectSignatureAlgorithmForRSA returns the proper x509.SignatureAlgorithm based on various properties set in the
+// Creation Bundle parameter. This method will default to a SHA256 signature algorithm if the requested signature
+// bits is not set/unknown.
+func selectSignatureAlgorithmForRSA(data *CreationBundle) x509.SignatureAlgorithm {
+	if data.Params.UsePSS {
+		switch data.Params.SignatureBits {
+		case 256:
+			return x509.SHA256WithRSAPSS
+		case 384:
+			return x509.SHA384WithRSAPSS
+		case 512:
+			return x509.SHA512WithRSAPSS
+		default:
+			return x509.SHA256WithRSAPSS
+		}
+	}
+
+	switch data.Params.SignatureBits {
+	case 256:
+		return x509.SHA256WithRSA
+	case 384:
+		return x509.SHA384WithRSA
+	case 512:
+		return x509.SHA512WithRSA
+	default:
+		return x509.SHA256WithRSA
+	}
+}
+
 func createCertificate(data *CreationBundle, randReader io.Reader, privateKeyGenerator KeyGenerator) (*ParsedCertBundle, error) {
 	var err error
 	result := &ParsedCertBundle{}
@@ -822,16 +942,13 @@ func createCertificate(data *CreationBundle, randReader io.Reader, privateKeyGen
 
 	var certBytes []byte
 	if data.SigningBundle != nil {
-		switch data.SigningBundle.PrivateKeyType {
+		privateKeyType := data.SigningBundle.PrivateKeyType
+		if privateKeyType == ManagedPrivateKey {
+			privateKeyType = GetPrivateKeyTypeFromSigner(data.SigningBundle.PrivateKey)
+		}
+		switch privateKeyType {
 		case RSAPrivateKey:
-			switch data.Params.SignatureBits {
-			case 256:
-				certTemplate.SignatureAlgorithm = x509.SHA256WithRSA
-			case 384:
-				certTemplate.SignatureAlgorithm = x509.SHA384WithRSA
-			case 512:
-				certTemplate.SignatureAlgorithm = x509.SHA512WithRSA
-			}
+			certTemplateSetSigAlgo(certTemplate, data)
 		case Ed25519PrivateKey:
 			certTemplate.SignatureAlgorithm = x509.PureEd25519
 		case ECPrivateKey:
@@ -853,14 +970,7 @@ func createCertificate(data *CreationBundle, randReader io.Reader, privateKeyGen
 
 		switch data.Params.KeyType {
 		case "rsa":
-			switch data.Params.SignatureBits {
-			case 256:
-				certTemplate.SignatureAlgorithm = x509.SHA256WithRSA
-			case 384:
-				certTemplate.SignatureAlgorithm = x509.SHA384WithRSA
-			case 512:
-				certTemplate.SignatureAlgorithm = x509.SHA512WithRSA
-			}
+			certTemplateSetSigAlgo(certTemplate, data)
 		case "ed25519":
 			certTemplate.SignatureAlgorithm = x509.PureEd25519
 		case "ec":
@@ -944,7 +1054,10 @@ func selectSignatureAlgorithmForECDSA(pub crypto.PublicKey, signatureBits int) x
 	}
 }
 
-var oidExtensionBasicConstraints = []int{2, 5, 29, 19}
+var (
+	ExtensionBasicConstraintsOID = []int{2, 5, 29, 19}
+	ExtensionSubjectAltNameOID   = []int{2, 5, 29, 17}
+)
 
 // CreateCSR creates a CSR with the default rand.Reader to
 // generate a cert/keypair. This is currently only meant
@@ -998,7 +1111,7 @@ func createCSR(data *CreationBundle, addBasicConstraints bool, randReader io.Rea
 			return nil, errutil.InternalError{Err: errwrap.Wrapf("error marshaling basic constraints: {{err}}", err).Error()}
 		}
 		ext := pkix.Extension{
-			Id:       oidExtensionBasicConstraints,
+			Id:       ExtensionBasicConstraintsOID,
 			Value:    val,
 			Critical: true,
 		}
@@ -1007,9 +1120,10 @@ func createCSR(data *CreationBundle, addBasicConstraints bool, randReader io.Rea
 
 	switch data.Params.KeyType {
 	case "rsa":
-		csrTemplate.SignatureAlgorithm = x509.SHA256WithRSA
+		// use specified RSA algorithm defaulting to the appropriate SHA256 RSA signature type
+		csrTemplate.SignatureAlgorithm = selectSignatureAlgorithmForRSA(data)
 	case "ec":
-		csrTemplate.SignatureAlgorithm = x509.ECDSAWithSHA256
+		csrTemplate.SignatureAlgorithm = selectSignatureAlgorithmForECDSA(result.PrivateKey.Public(), data.Params.SignatureBits)
 	case "ed25519":
 		csrTemplate.SignatureAlgorithm = x509.PureEd25519
 	}
@@ -1023,6 +1137,10 @@ func createCSR(data *CreationBundle, addBasicConstraints bool, randReader io.Rea
 	result.CSR, err = x509.ParseCertificateRequest(csr)
 	if err != nil {
 		return nil, errutil.InternalError{Err: fmt.Sprintf("unable to parse created certificate: %v", err)}
+	}
+
+	if err = result.CSR.CheckSignature(); err != nil {
+		return nil, errors.New("failed signature validation for CSR")
 	}
 
 	return result, nil
@@ -1066,7 +1184,7 @@ func signCertificate(data *CreationBundle, randReader io.Reader) (*ParsedCertBun
 		return nil, err
 	}
 
-	subjKeyID, err := getSubjectKeyID(data.CSR.PublicKey)
+	subjKeyID, err := getSubjectKeyIDFromBundle(data)
 	if err != nil {
 		return nil, err
 	}
@@ -1085,16 +1203,14 @@ func signCertificate(data *CreationBundle, randReader io.Reader) (*ParsedCertBun
 		certTemplate.NotBefore = time.Now().Add(-1 * data.Params.NotBeforeDuration)
 	}
 
-	switch data.SigningBundle.PrivateKeyType {
+	privateKeyType := data.SigningBundle.PrivateKeyType
+	if privateKeyType == ManagedPrivateKey {
+		privateKeyType = GetPrivateKeyTypeFromSigner(data.SigningBundle.PrivateKey)
+	}
+
+	switch privateKeyType {
 	case RSAPrivateKey:
-		switch data.Params.SignatureBits {
-		case 256:
-			certTemplate.SignatureAlgorithm = x509.SHA256WithRSA
-		case 384:
-			certTemplate.SignatureAlgorithm = x509.SHA384WithRSA
-		case 512:
-			certTemplate.SignatureAlgorithm = x509.SHA512WithRSA
-		}
+		certTemplateSetSigAlgo(certTemplate, data)
 	case ECPrivateKey:
 		switch data.Params.SignatureBits {
 		case 256:
@@ -1116,7 +1232,7 @@ func signCertificate(data *CreationBundle, randReader io.Reader) (*ParsedCertBun
 		certTemplate.URIs = data.CSR.URIs
 
 		for _, name := range data.CSR.Extensions {
-			if !name.Id.Equal(oidExtensionBasicConstraints) {
+			if !name.Id.Equal(ExtensionBasicConstraintsOID) && !(len(data.Params.OtherSANs) > 0 && name.Id.Equal(ExtensionSubjectAltNameOID)) {
 				certTemplate.ExtraExtensions = append(certTemplate.ExtraExtensions, name)
 			}
 		}
@@ -1189,7 +1305,7 @@ func NewCertPool(reader io.Reader) (*x509.CertPool, error) {
 	if err != nil {
 		return nil, err
 	}
-	certs, err := parseCertsPEM(pemBlock)
+	certs, err := ParseCertsPEM(pemBlock)
 	if err != nil {
 		return nil, fmt.Errorf("error reading certs: %s", err)
 	}
@@ -1200,9 +1316,9 @@ func NewCertPool(reader io.Reader) (*x509.CertPool, error) {
 	return pool, nil
 }
 
-// parseCertsPEM returns the x509.Certificates contained in the given PEM-encoded byte array
+// ParseCertsPEM returns the x509.Certificates contained in the given PEM-encoded byte array
 // Returns an error if a certificate could not be parsed, or if the data does not contain any certificates
-func parseCertsPEM(pemCerts []byte) ([]*x509.Certificate, error) {
+func ParseCertsPEM(pemCerts []byte) ([]*x509.Certificate, error) {
 	ok := false
 	certs := []*x509.Certificate{}
 	for len(pemCerts) > 0 {
@@ -1265,4 +1381,92 @@ func CreateKeyBundleWithKeyGenerator(keyType string, keyBits int, randReader io.
 		return result, err
 	}
 	return result, nil
+}
+
+// CreateDeltaCRLIndicatorExt allows creating correctly formed delta CRLs
+// that point back to the last complete CRL that they're based on.
+func CreateDeltaCRLIndicatorExt(completeCRLNumber int64) (pkix.Extension, error) {
+	bigNum := big.NewInt(completeCRLNumber)
+	bigNumValue, err := asn1.Marshal(bigNum)
+	if err != nil {
+		return pkix.Extension{}, fmt.Errorf("unable to marshal complete CRL number (%v): %v", completeCRLNumber, err)
+	}
+	return pkix.Extension{
+		Id: DeltaCRLIndicatorOID,
+		// > When a conforming CRL issuer generates a delta CRL, the delta
+		// > CRL MUST include a critical delta CRL indicator extension.
+		Critical: true,
+		// This extension only includes the complete CRL number:
+		//
+		// > BaseCRLNumber ::= CRLNumber
+		//
+		// But, this needs to be encoded as a big number for encoding/asn1
+		// to work properly.
+		Value: bigNumValue,
+	}, nil
+}
+
+// ParseBasicConstraintExtension parses a basic constraint pkix.Extension, useful if attempting to validate
+// CSRs are requesting CA privileges as Go does not expose its implementation. Values returned are
+// IsCA, MaxPathLen or error. If MaxPathLen was not set, a value of -1 will be returned.
+func ParseBasicConstraintExtension(ext pkix.Extension) (bool, int, error) {
+	if !ext.Id.Equal(ExtensionBasicConstraintsOID) {
+		return false, -1, fmt.Errorf("passed in extension was not a basic constraint extension")
+	}
+
+	// All elements are set to optional here, as it is possible that we receive a CSR with the extension
+	// containing an empty sequence by spec.
+	type basicConstraints struct {
+		IsCA       bool `asn1:"optional"`
+		MaxPathLen int  `asn1:"optional,default:-1"`
+	}
+	bc := &basicConstraints{}
+	leftOver, err := asn1.Unmarshal(ext.Value, bc)
+	if err != nil {
+		return false, -1, fmt.Errorf("failed unmarshalling extension value: %w", err)
+	}
+
+	numLeftOver := len(bytes.TrimSpace(leftOver))
+	if numLeftOver > 0 {
+		return false, -1, fmt.Errorf("%d extra bytes within basic constraints value extension", numLeftOver)
+	}
+
+	return bc.IsCA, bc.MaxPathLen, nil
+}
+
+// CreateBasicConstraintExtension create a basic constraint extension based on inputs,
+// if isCa is false, an empty value sequence will be returned with maxPath being
+// ignored. If isCa is true maxPath can be set to -1 to not set a maxPath value.
+func CreateBasicConstraintExtension(isCa bool, maxPath int) (pkix.Extension, error) {
+	var asn1Bytes []byte
+	var err error
+
+	switch {
+	case isCa && maxPath >= 0:
+		CaAndMaxPathLen := struct {
+			IsCa       bool `asn1:""`
+			MaxPathLen int  `asn1:""`
+		}{
+			IsCa:       isCa,
+			MaxPathLen: maxPath,
+		}
+		asn1Bytes, err = asn1.Marshal(CaAndMaxPathLen)
+	case isCa && maxPath < 0:
+		justCa := struct {
+			IsCa bool `asn1:""`
+		}{IsCa: isCa}
+		asn1Bytes, err = asn1.Marshal(justCa)
+	default:
+		asn1Bytes, err = asn1.Marshal(struct{}{})
+	}
+
+	if err != nil {
+		return pkix.Extension{}, err
+	}
+
+	return pkix.Extension{
+		Id:       ExtensionBasicConstraintsOID,
+		Critical: true,
+		Value:    asn1Bytes,
+	}, nil
 }

@@ -1,0 +1,75 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
+<Toolbar>
+  <ToolbarActions>
+    <button type="button" class="toolbar-link" {{on "click" this.downloadCert}} data-test-pki-cert-download-button>
+      Download
+      <Chevron @direction="down" @isButton={{true}} />
+    </button>
+    {{#if @model.canRevoke}}
+      <ConfirmAction
+        @buttonClasses="toolbar-link"
+        @onConfirmAction={{fn (perform this.revoke)}}
+        @confirmTitle="Revoke certificate?"
+        @confirmButtonText="Revoke"
+        data-test-pki-cert-revoke-button
+      >
+        Revoke certificate
+      </ConfirmAction>
+    {{/if}}
+  </ToolbarActions>
+</Toolbar>
+
+{{#if @model.privateKey}}
+  <div class="has-top-margin-m">
+    <Hds::Alert data-test-cert-detail-next-steps @type="inline" @color="highlight" class="has-bottom-margin-s" as |A|>
+      <A.Title>Next steps</A.Title>
+      <A.Description>
+        The
+        <code>private_key</code>
+        is only available once. Make sure you copy and save it now.
+      </A.Description>
+    </Hds::Alert>
+  </div>
+{{/if}}
+
+{{#each @model.formFields as |field|}}
+  {{#if field.options.isCertificate}}
+    <InfoTableRow @label={{or field.options.label (capitalize (humanize (dasherize field.name)))}}>
+      <CertificateCard @data={{get @model field.name}} />
+    </InfoTableRow>
+  {{else if (eq field.name "serialNumber")}}
+    <InfoTableRow @label="Serial number">
+      <code class="has-text-black">{{@model.serialNumber}}</code>
+    </InfoTableRow>
+  {{else}}
+    <InfoTableRow
+      @label={{capitalize (humanize (dasherize field.name))}}
+      {{! formatDate fields can be 0 which will cause them to always render -- pass null instead }}
+      @value={{or (get @model field.name) null}}
+      @formatDate={{if field.options.formatDate "MMM dd yyyy hh:mm:ss a"}}
+      @alwaysRender={{false}}
+    />
+  {{/if}}
+{{/each}}
+
+<ParsedCertificateInfoRows @model={{@model.parsedCertificate}} />
+
+{{#if @onBack}}
+  <div class="field is-grouped box is-fullwidth is-bottomless">
+    <div class="control">
+      <button
+        type="button"
+        class="button"
+        disabled={{this.revoke.isRunning}}
+        {{on "click" @onBack}}
+        data-test-pki-cert-details-back
+      >
+        Back
+      </button>
+    </div>
+  </div>
+{{/if}}

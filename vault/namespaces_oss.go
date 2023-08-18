@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 //go:build !enterprise
 
 package vault
@@ -12,6 +15,6 @@ func (c *Core) NamespaceByID(ctx context.Context, nsID string) (*namespace.Names
 	return namespaceByID(ctx, nsID, c)
 }
 
-func (c *Core) ListNamespaces() []*namespace.Namespace {
+func (c *Core) ListNamespaces(includePath bool) []*namespace.Namespace {
 	return []*namespace.Namespace{namespace.RootNamespace}
 }

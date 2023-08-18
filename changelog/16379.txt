@@ -1,0 +1,3 @@
+```release-note:change 
+core: Validate input parameters for vault operator init command. Vault 1.12 CLI version is needed to run operator init now.   
+```

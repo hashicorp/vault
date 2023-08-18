@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package approle
 
 import (
@@ -174,7 +177,7 @@ func TestAppRole_RoleNameCaseSensitivity(t *testing.T) {
 			},
 			Storage: s,
 		})
-		if err != nil {
+		if err != nil && err != logical.ErrInvalidCredentials {
 			t.Fatal(err)
 		}
 		if resp == nil || !resp.IsError() {
@@ -233,7 +236,7 @@ func TestAppRole_RoleNameCaseSensitivity(t *testing.T) {
 			},
 			Storage: s,
 		})
-		if err != nil {
+		if err != nil && err != logical.ErrInvalidCredentials {
 			t.Fatal(err)
 		}
 		if resp == nil || !resp.IsError() {
@@ -292,7 +295,7 @@ func TestAppRole_RoleNameCaseSensitivity(t *testing.T) {
 			},
 			Storage: s,
 		})
-		if err != nil {
+		if err != nil && err != logical.ErrInvalidCredentials {
 			t.Fatal(err)
 		}
 		if resp == nil || !resp.IsError() {
@@ -351,7 +354,7 @@ func TestAppRole_RoleNameCaseSensitivity(t *testing.T) {
 			},
 			Storage: s,
 		})
-		if err != nil {
+		if err != nil && err != logical.ErrInvalidCredentials {
 			t.Fatal(err)
 		}
 		if resp == nil || !resp.IsError() {
@@ -410,7 +413,7 @@ func TestAppRole_RoleNameCaseSensitivity(t *testing.T) {
 			},
 			Storage: s,
 		})
-		if err != nil {
+		if err != nil && err != logical.ErrInvalidCredentials {
 			t.Fatal(err)
 		}
 		if resp == nil || !resp.IsError() {

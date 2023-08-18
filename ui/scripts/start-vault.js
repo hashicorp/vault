@@ -1,7 +1,12 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 /* eslint-env node */
 /* eslint-disable no-console */
 /* eslint-disable no-process-exit */
-/* eslint-disable node/no-extraneous-require */
+/* eslint-disable n/no-extraneous-require */
 
 var readline = require('readline');
 const testHelper = require('./test-helper');
@@ -21,7 +26,7 @@ async function processLines(input, eachLine = () => {}) {
 
 (async function () {
   try {
-    let vault = testHelper.run(
+    const vault = testHelper.run(
       'vault',
       [
         'server',

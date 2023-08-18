@@ -1,7 +1,12 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
 <PageHeader as |p|>
   <p.levelLeft>
     <h1 class="title is-3">
-      Wrap data
+      Wrap Data
     </h1>
   </p.levelLeft>
 </PageHeader>
@@ -9,7 +14,7 @@
 {{#if @token}}
   <div class="box is-sideless is-fullwidth is-marginless">
     <div class="field">
-      <label for="wrap-info" class="is-label">Wrapping token</label>
+      <label for="wrap-info" class="is-label">Wrapped token</label>
       <div class="control">
         <Textarea
           @value={{@token}}
@@ -53,7 +58,7 @@
         />
       </div>
     </div>
-    <TtlPicker2
+    <TtlPicker
       @label="Wrap TTL"
       @initialValue="30m"
       @onChange={{action "updateTtl"}}

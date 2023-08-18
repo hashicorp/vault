@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package approle
 
 import (
@@ -12,11 +15,15 @@ import (
 )
 
 const (
+	operationPrefixAppRole      = "app-role"
 	secretIDPrefix              = "secret_id/"
 	secretIDLocalPrefix         = "secret_id_local/"
 	secretIDAccessorPrefix      = "accessor/"
 	secretIDAccessorLocalPrefix = "accessor_local/"
 )
+
+// ReportedVersion is used to report a specific version to Vault.
+var ReportedVersion = ""
 
 type backend struct {
 	*framework.Backend
@@ -111,8 +118,9 @@ func Backend(conf *logical.BackendConfig) (*backend, error) {
 				pathTidySecretID(b),
 			},
 		),
-		Invalidate:  b.invalidate,
-		BackendType: logical.TypeCredential,
+		Invalidate:     b.invalidate,
+		BackendType:    logical.TypeCredential,
+		RunningVersion: ReportedVersion,
 	}
 	return b, nil
 }

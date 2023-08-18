@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import { inject as service } from '@ember/service';
 import Component from '@ember/component';
 import { task } from 'ember-concurrency';
@@ -27,14 +32,14 @@ export default Component.extend({
   },
 
   adapter() {
-    let type = this.type;
-    let store = this.store;
+    const type = this.type;
+    const store = this.store;
     return store.adapterFor(`identity/${type}`);
   },
 
   data() {
-    let { param, paramValue, aliasMountAccessor } = this;
-    let data = {};
+    const { param, paramValue, aliasMountAccessor } = this;
+    const data = {};
 
     data[underscore([param])] = paramValue;
     if (param === 'alias name') {
@@ -44,10 +49,10 @@ export default Component.extend({
   },
 
   lookup: task(function* () {
-    let flash = this.flashMessages;
-    let type = this.type;
-    let store = this.store;
-    let { param, paramValue } = this;
+    const flash = this.flashMessages;
+    const type = this.type;
+    const store = this.store;
+    const { param, paramValue } = this;
     let response;
     try {
       response = yield this.adapter().lookup(store, this.data());

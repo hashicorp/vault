@@ -1,0 +1,3 @@
+```release-note:improvement
+secrets/pki: Add a warning to any successful response when the requested TTL is overwritten by MaxTTL
+```

@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package quotas
 
 import (
@@ -87,7 +90,19 @@ func TestQuotas_Precedence(t *testing.T) {
 
 	// Define a namespace mount specific quota and expect that to be returned.
 	rateLimitNSMountQuota := setQuotaFunc(t, "rateLimitNSMountQuota", "testns/", "testmount/", "", "")
-	checkQuotaFunc(t, "testns/", "testmount/", "", "", rateLimitNSMountQuota)
+	checkQuotaFunc(t, "testns/", "testmount/", "testpath", "", rateLimitNSMountQuota)
+
+	// Define a namespace mount + glob and expect that to be returned.
+	rateLimitNSMountGlob := setQuotaFunc(t, "rateLimitNSMountGlob", "testns/", "testmount/", "*", "")
+	checkQuotaFunc(t, "testns/", "testmount/", "testpath", "", rateLimitNSMountGlob)
+
+	// Define a namespace mount + path specific quota with a glob and expect that to be returned.
+	rateLimitNSMountPathSuffixGlob := setQuotaFunc(t, "rateLimitNSMountPathSuffixGlob", "testns/", "testmount/", "test*", "")
+	checkQuotaFunc(t, "testns/", "testmount/", "testpath", "", rateLimitNSMountPathSuffixGlob)
+
+	// Define a namespace mount + path specific quota with a glob at the end of the path and expect that to be returned.
+	rateLimitNSMountPathSuffixGlobAfterPath := setQuotaFunc(t, "rateLimitNSMountPathSuffixGlobAfterPath", "testns/", "testmount/", "testpath*", "")
+	checkQuotaFunc(t, "testns/", "testmount/", "testpath", "", rateLimitNSMountPathSuffixGlobAfterPath)
 
 	// Define a namespace mount + path specific quota and expect that to be returned.
 	rateLimitNSMountPathQuota := setQuotaFunc(t, "rateLimitNSMountPathQuota", "testns/", "testmount/", "testpath", "")

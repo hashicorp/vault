@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import Model, { attr } from '@ember-data/model';
 import { expandAttributeMeta } from 'vault/utils/field-to-attrs';
 import lazyCapabilities, { apiPath } from 'vault/macros/lazy-capabilities';
@@ -24,6 +29,7 @@ export default class KeymgmtKeyModel extends Model {
   @attr('string', {
     subText: 'The type of cryptographic key that will be created.',
     possibleValues: KEY_TYPES,
+    defaultValue: 'rsa-2048',
   })
   type;
 

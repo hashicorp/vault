@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package dbplugin
 
 import (
@@ -8,6 +11,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/hashicorp/vault/sdk/logical"
 	"google.golang.org/protobuf/types/known/structpb"
 
 	"github.com/golang/protobuf/ptypes"
@@ -581,51 +585,49 @@ func TestGRPCServer_Close(t *testing.T) {
 	}
 }
 
-func TestGetMultiplexIDFromContext(t *testing.T) {
+func TestGRPCServer_Version(t *testing.T) {
 	type testCase struct {
-		ctx          context.Context
+		db           Database
 		expectedResp string
-		expectedErr  error
+		expectErr    bool
+		expectCode   codes.Code
 	}
 
 	tests := map[string]testCase{
-		"missing plugin multiplexing metadata": {
-			ctx:          context.Background(),
+		"backend that does not implement version": {
+			db:           fakeDatabase{},
 			expectedResp: "",
-			expectedErr:  fmt.Errorf("missing plugin multiplexing metadata"),
+			expectErr:    false,
+			expectCode:   codes.OK,
 		},
-		"unexpected number of IDs in metadata": {
-			ctx:          idCtx(t, "12345", "67891"),
-			expectedResp: "",
-			expectedErr:  fmt.Errorf("unexpected number of IDs in metadata: (2)"),
-		},
-		"empty multiplex ID in metadata": {
-			ctx:          idCtx(t, ""),
-			expectedResp: "",
-			expectedErr:  fmt.Errorf("empty multiplex ID in metadata"),
-		},
-		"happy path, id is returned from metadata": {
-			ctx:          idCtx(t, "12345"),
-			expectedResp: "12345",
-			expectedErr:  nil,
+		"backend with version": {
+			db: fakeDatabaseWithVersion{
+				version: "v123",
+			},
+			expectedResp: "v123",
+			expectErr:    false,
+			expectCode:   codes.OK,
 		},
 	}
 
 	for name, test := range tests {
 		t.Run(name, func(t *testing.T) {
-			resp, err := getMultiplexIDFromContext(test.ctx)
+			idCtx, g := testGrpcServer(t, test.db)
+			resp, err := g.Version(idCtx, &logical.Empty{})
 
-			if test.expectedErr != nil && test.expectedErr.Error() != "" && err == nil {
+			if test.expectErr && err == nil {
 				t.Fatalf("err expected, got nil")
-			} else if !reflect.DeepEqual(err, test.expectedErr) {
-				t.Fatalf("Actual error: %#v\nExpected error: %#v", err, test.expectedErr)
 			}
-
-			if test.expectedErr != nil && test.expectedErr.Error() == "" && err != nil {
+			if !test.expectErr && err != nil {
 				t.Fatalf("no error expected, got: %s", err)
 			}
 
-			if !reflect.DeepEqual(resp, test.expectedResp) {
+			actualCode := status.Code(err)
+			if actualCode != test.expectCode {
+				t.Fatalf("Actual code: %s Expected code: %s", actualCode, test.expectCode)
+			}
+
+			if !reflect.DeepEqual(resp.PluginVersion, test.expectedResp) {
 				t.Fatalf("Actual response: %#v\nExpected response: %#v", resp, test.expectedResp)
 			}
 		})
@@ -798,3 +800,40 @@ func (f *recordingDatabase) Close() error {
 	}
 	return f.next.Close()
 }
+
+type fakeDatabaseWithVersion struct {
+	version string
+}
+
+func (e fakeDatabaseWithVersion) PluginVersion() logical.PluginVersion {
+	return logical.PluginVersion{Version: e.version}
+}
+
+func (e fakeDatabaseWithVersion) Initialize(_ context.Context, _ InitializeRequest) (InitializeResponse, error) {
+	return InitializeResponse{}, nil
+}
+
+func (e fakeDatabaseWithVersion) NewUser(_ context.Context, _ NewUserRequest) (NewUserResponse, error) {
+	return NewUserResponse{}, nil
+}
+
+func (e fakeDatabaseWithVersion) UpdateUser(_ context.Context, _ UpdateUserRequest) (UpdateUserResponse, error) {
+	return UpdateUserResponse{}, nil
+}
+
+func (e fakeDatabaseWithVersion) DeleteUser(_ context.Context, _ DeleteUserRequest) (DeleteUserResponse, error) {
+	return DeleteUserResponse{}, nil
+}
+
+func (e fakeDatabaseWithVersion) Type() (string, error) {
+	return "", nil
+}
+
+func (e fakeDatabaseWithVersion) Close() error {
+	return nil
+}
+
+var (
+	_ Database                = (*fakeDatabaseWithVersion)(nil)
+	_ logical.PluginVersioner = (*fakeDatabaseWithVersion)(nil)
+)

@@ -1,13 +1,15 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package plugin
 
 import (
 	"context"
 	"errors"
 	"fmt"
-	"sync"
 
-	"github.com/hashicorp/errwrap"
-	plugin "github.com/hashicorp/go-plugin"
+	log "github.com/hashicorp/go-hclog"
+	"github.com/hashicorp/go-plugin"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/pluginutil"
 	"github.com/hashicorp/vault/sdk/logical"
@@ -18,7 +20,6 @@ import (
 // used to cleanly kill the client on Cleanup()
 type BackendPluginClient struct {
 	client *plugin.Client
-	sync.Mutex
 
 	logical.Backend
 }
@@ -30,13 +31,13 @@ func (b *BackendPluginClient) Cleanup(ctx context.Context) {
 	b.client.Kill()
 }
 
-// NewBackend will return an instance of an RPC-based client implementation of the backend for
+// NewBackendWithVersion will return an instance of an RPC-based client implementation of the backend for
 // external plugins, or a concrete implementation of the backend if it is a builtin backend.
 // The backend is returned as a logical.Backend interface. The isMetadataMode param determines whether
 // the plugin should run in metadata mode.
-func NewBackend(ctx context.Context, pluginName string, pluginType consts.PluginType, sys pluginutil.LookRunnerUtil, conf *logical.BackendConfig, isMetadataMode bool, autoMTLS bool) (logical.Backend, error) {
+func NewBackendWithVersion(ctx context.Context, pluginName string, pluginType consts.PluginType, sys pluginutil.LookRunnerUtil, conf *logical.BackendConfig, isMetadataMode bool, version string) (logical.Backend, error) {
 	// Look for plugin in the plugin catalog
-	pluginRunner, err := sys.LookupPlugin(ctx, pluginName, pluginType)
+	pluginRunner, err := sys.LookupPluginVersion(ctx, pluginName, pluginType, version)
 	if err != nil {
 		return nil, err
 	}
@@ -47,7 +48,7 @@ func NewBackend(ctx context.Context, pluginName string, pluginType consts.Plugin
 		// from the pluginRunner. Then cast it to logical.Factory.
 		rawFactory, err := pluginRunner.BuiltinFactory()
 		if err != nil {
-			return nil, errwrap.Wrapf("error getting plugin type: {{err}}", err)
+			return nil, fmt.Errorf("error getting plugin type: %q", err)
 		}
 
 		if factory, ok := rawFactory.(logical.Factory); !ok {
@@ -58,16 +59,8 @@ func NewBackend(ctx context.Context, pluginName string, pluginType consts.Plugin
 			}
 		}
 	} else {
-		config := pluginutil.PluginClientConfig{
-			Name:           pluginName,
-			PluginType:     pluginType,
-			Logger:         conf.Logger.Named(pluginName),
-			IsMetadataMode: isMetadataMode,
-			AutoMTLS:       autoMTLS,
-			Wrapper:        sys,
-		}
 		// create a backendPluginClient instance
-		backend, err = NewPluginClient(ctx, pluginRunner, config)
+		backend, err = NewPluginClient(ctx, sys, pluginRunner, conf.Logger, isMetadataMode)
 		if err != nil {
 			return nil, err
 		}
@@ -76,49 +69,42 @@ func NewBackend(ctx context.Context, pluginName string, pluginType consts.Plugin
 	return backend, nil
 }
 
-// pluginSet returns the go-plugin PluginSet that we can dispense. This ensures
-// that plugins that don't support AutoMTLS are run on the appropriate version.
-func pluginSet(autoMTLS, metadataMode bool) map[int]plugin.PluginSet {
-	if autoMTLS {
-		return map[int]plugin.PluginSet{
-			5: {
-				"backend": &GRPCBackendPlugin{
-					MetadataMode:      false,
-					AutoMTLSSupported: true,
-				},
-			},
-		}
-	}
-	return map[int]plugin.PluginSet{
+// NewBackend will return an instance of an RPC-based client implementation of the backend for
+// external plugins, or a concrete implementation of the backend if it is a builtin backend.
+// The backend is returned as a logical.Backend interface. The isMetadataMode param determines whether
+// the plugin should run in metadata mode.
+func NewBackend(ctx context.Context, pluginName string, pluginType consts.PluginType, sys pluginutil.LookRunnerUtil, conf *logical.BackendConfig, isMetadataMode bool) (logical.Backend, error) {
+	return NewBackendWithVersion(ctx, pluginName, pluginType, sys, conf, isMetadataMode, "")
+}
+
+func NewPluginClient(ctx context.Context, sys pluginutil.RunnerUtil, pluginRunner *pluginutil.PluginRunner, logger log.Logger, isMetadataMode bool) (logical.Backend, error) {
+	// pluginMap is the map of plugins we can dispense.
+	pluginSet := map[int]plugin.PluginSet{
 		// Version 3 used to supports both protocols. We want to keep it around
 		// since it's possible old plugins built against this version will still
 		// work with gRPC. There is currently no difference between version 3
 		// and version 4.
 		3: {
 			"backend": &GRPCBackendPlugin{
-				MetadataMode: metadataMode,
+				MetadataMode: isMetadataMode,
 			},
 		},
 		4: {
 			"backend": &GRPCBackendPlugin{
-				MetadataMode: metadataMode,
+				MetadataMode: isMetadataMode,
 			},
 		},
 	}
-}
 
-func NewPluginClient(ctx context.Context, pluginRunner *pluginutil.PluginRunner, config pluginutil.PluginClientConfig) (logical.Backend, error) {
-	ps := pluginSet(config.AutoMTLS, config.IsMetadataMode)
+	namedLogger := logger.Named(pluginRunner.Name)
 
-	client, err := pluginRunner.RunConfig(ctx,
-		pluginutil.Runner(config.Wrapper),
-		pluginutil.PluginSets(ps),
-		pluginutil.HandshakeConfig(handshakeConfig),
-		pluginutil.Env(),
-		pluginutil.Logger(config.Logger),
-		pluginutil.MetadataMode(config.IsMetadataMode),
-		pluginutil.AutoMTLS(config.AutoMTLS),
-	)
+	var client *plugin.Client
+	var err error
+	if isMetadataMode {
+		client, err = pluginRunner.RunMetadataMode(ctx, sys, pluginSet, HandshakeConfig, []string{}, namedLogger)
+	} else {
+		client, err = pluginRunner.Run(ctx, sys, pluginSet, HandshakeConfig, []string{}, namedLogger)
+	}
 	if err != nil {
 		return nil, err
 	}
@@ -139,18 +125,18 @@ func NewPluginClient(ctx context.Context, pluginRunner *pluginutil.PluginRunner,
 	var transport string
 	// We should have a logical backend type now. This feels like a normal interface
 	// implementation but is in fact over an RPC connection.
-	switch raw.(type) {
+	switch b := raw.(type) {
 	case *backendGRPCPluginClient:
-		backend = raw.(*backendGRPCPluginClient)
+		backend = b
 		transport = "gRPC"
 	default:
 		return nil, errors.New("unsupported plugin client type")
 	}
 
 	// Wrap the backend in a tracing middleware
-	if config.Logger.IsTrace() {
-		backend = &backendTracingMiddleware{
-			logger: config.Logger.With("transport", transport),
+	if namedLogger.IsTrace() {
+		backend = &BackendTracingMiddleware{
+			logger: namedLogger.With("transport", transport),
 			next:   backend,
 		}
 	}
@@ -161,21 +147,11 @@ func NewPluginClient(ctx context.Context, pluginRunner *pluginutil.PluginRunner,
 	}, nil
 }
 
-// wrapError takes a generic error type and makes it usable with the plugin
-// interface. Only errors which have exported fields and have been registered
-// with gob can be unwrapped and transported. This checks error types and, if
-// none match, wrap the error in a plugin.BasicError.
-func wrapError(err error) error {
-	if err == nil {
-		return nil
+func (b *BackendPluginClient) PluginVersion() logical.PluginVersion {
+	if versioner, ok := b.Backend.(logical.PluginVersioner); ok {
+		return versioner.PluginVersion()
 	}
-
-	switch err.(type) {
-	case *plugin.BasicError,
-		logical.HTTPCodedError,
-		*logical.StatusBadRequest:
-		return err
-	}
-
-	return plugin.NewBasicError(err)
+	return logical.EmptyPluginVersion
 }
+
+var _ logical.PluginVersioner = (*BackendPluginClient)(nil)

@@ -1,0 +1,3 @@
+```release-note:bug
+ui: Fix styling for username input when editing a user
+```

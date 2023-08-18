@@ -1,4 +1,9 @@
 /**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
+/**
  * @module Toggle
  * Toggle components are used to indicate boolean values which can be toggled on or off.
  * They are a stylistic alternative to checkboxes, but still use the input[type="checkbox"] under the hood.
@@ -36,8 +41,8 @@ export default class ToggleComponent extends Component {
     return `toggle-${this.name.replace(/\W/g, '')}`;
   }
   get inputClasses() {
-    let size = this.args.size || 'normal';
-    let status = this.args.status || 'normal';
+    const size = this.args.size || 'normal';
+    const status = this.args.status || 'normal';
     const sizeClass = `is-${size}`;
     const statusClass = `is-${status}`;
     return `toggle ${statusClass} ${sizeClass}`;

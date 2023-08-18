@@ -1,0 +1,3 @@
+```release-note:bug
+debug: Remove extra empty lines from vault.log when debug command is run
+```

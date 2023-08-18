@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package command
 
 import (
@@ -14,6 +17,7 @@ import (
 )
 
 // DefaultTokenHelper returns the token helper that is configured for Vault.
+// This helper should only be used for non-server CLI commands.
 func DefaultTokenHelper() (token.TokenHelper, error) {
 	return config.DefaultTokenHelper()
 }
@@ -103,7 +107,7 @@ func PrintRawField(ui cli.Ui, data interface{}, field string) int {
 	}
 
 	format := Format(ui)
-	if format == "" || format == "table" {
+	if format == "" || format == "table" || format == "raw" {
 		return PrintRaw(ui, fmt.Sprintf("%v", val))
 	}
 

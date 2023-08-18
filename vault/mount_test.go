@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package vault
 
 import (
@@ -8,11 +11,14 @@ import (
 	"testing"
 	"time"
 
-	metrics "github.com/armon/go-metrics"
+	"github.com/hashicorp/vault/helper/testhelpers/corehelpers"
+
+	"github.com/armon/go-metrics"
 	"github.com/go-test/deep"
 	"github.com/hashicorp/vault/audit"
 	"github.com/hashicorp/vault/helper/metricsutil"
 	"github.com/hashicorp/vault/helper/namespace"
+	"github.com/hashicorp/vault/helper/versions"
 	"github.com/hashicorp/vault/sdk/helper/compressutil"
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
 	"github.com/hashicorp/vault/sdk/logical"
@@ -117,7 +123,7 @@ func TestCore_DefaultMountTable(t *testing.T) {
 	conf := &CoreConfig{
 		Physical:        c.physical,
 		DisableMlock:    true,
-		BuiltinRegistry: NewMockBuiltinRegistry(),
+		BuiltinRegistry: corehelpers.NewMockBuiltinRegistry(),
 		MetricSink:      metricsutil.NewClusterMetricSink("test-cluster", inmemSink),
 		MetricsHelper:   metricsutil.NewMetricsHelper(inmemSink, false),
 	}
@@ -162,7 +168,79 @@ func TestCore_Mount(t *testing.T) {
 	conf := &CoreConfig{
 		Physical:        c.physical,
 		DisableMlock:    true,
-		BuiltinRegistry: NewMockBuiltinRegistry(),
+		BuiltinRegistry: corehelpers.NewMockBuiltinRegistry(),
+		MetricSink:      metricsutil.NewClusterMetricSink("test-cluster", inmemSink),
+		MetricsHelper:   metricsutil.NewMetricsHelper(inmemSink, false),
+	}
+	c2, err := NewCore(conf)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	defer c2.Shutdown()
+	for i, key := range keys {
+		unseal, err := TestCoreUnseal(c2, key)
+		if err != nil {
+			t.Fatalf("err: %v", err)
+		}
+		if i+1 == len(keys) && !unseal {
+			t.Fatalf("should be unsealed")
+		}
+	}
+
+	// Verify matching mount tables
+	if diff := deep.Equal(c.mounts.sortEntriesByPath(), c2.mounts.sortEntriesByPath()); len(diff) > 0 {
+		t.Fatalf("mismatch: %v", diff)
+	}
+}
+
+func TestCore_Mount_secrets_builtin_RunningVersion(t *testing.T) {
+	c, _, _ := TestCoreUnsealed(t)
+	me := &MountEntry{
+		Table: mountTableType,
+		Path:  "foo",
+		Type:  "generic",
+	}
+	err := c.mount(namespace.RootContext(nil), me)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	match := c.router.MatchingMount(namespace.RootContext(nil), "foo/bar")
+	if match != "foo/" {
+		t.Fatalf("missing mount")
+	}
+
+	raw, _ := c.router.root.Get(match)
+	// we override the running version of builtins
+	if !versions.IsBuiltinVersion(raw.(*routeEntry).mountEntry.RunningVersion) {
+		t.Errorf("Expected mount to have builtin version but got %s", raw.(*routeEntry).mountEntry.RunningVersion)
+	}
+}
+
+// TestCore_Mount_kv_generic tests that we can successfully mount kv using the
+// kv alias "generic"
+func TestCore_Mount_kv_generic(t *testing.T) {
+	c, keys, _ := TestCoreUnsealed(t)
+	me := &MountEntry{
+		Table: mountTableType,
+		Path:  "foo",
+		Type:  "generic",
+	}
+	err := c.mount(namespace.RootContext(nil), me)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	match := c.router.MatchingMount(namespace.RootContext(nil), "foo/bar")
+	if match != "foo/" {
+		t.Fatalf("missing mount")
+	}
+
+	inmemSink := metrics.NewInmemSink(1000000*time.Hour, 2000000*time.Hour)
+	conf := &CoreConfig{
+		Physical:        c.physical,
+		DisableMlock:    true,
+		BuiltinRegistry: corehelpers.NewMockBuiltinRegistry(),
 		MetricSink:      metricsutil.NewClusterMetricSink("test-cluster", inmemSink),
 		MetricsHelper:   metricsutil.NewMetricsHelper(inmemSink, false),
 	}
@@ -376,7 +454,7 @@ func TestCore_Unmount(t *testing.T) {
 	conf := &CoreConfig{
 		Physical:        c.physical,
 		DisableMlock:    true,
-		BuiltinRegistry: NewMockBuiltinRegistry(),
+		BuiltinRegistry: corehelpers.NewMockBuiltinRegistry(),
 		MetricSink:      metricsutil.NewClusterMetricSink("test-cluster", inmemSink),
 		MetricsHelper:   metricsutil.NewMetricsHelper(inmemSink, false),
 	}
@@ -646,8 +724,8 @@ func TestDefaultMountTable(t *testing.T) {
 func TestCore_MountTable_UpgradeToTyped(t *testing.T) {
 	c, _, _ := TestCoreUnsealed(t)
 
-	c.auditBackends["noop"] = func(ctx context.Context, config *audit.BackendConfig) (audit.Backend, error) {
-		return &NoopAudit{
+	c.auditBackends["noop"] = func(ctx context.Context, config *audit.BackendConfig, _ bool, _ audit.HeaderFormatter) (audit.Backend, error) {
+		return &corehelpers.NoopAudit{
 			Config: config,
 		}, nil
 	}

@@ -4,13 +4,13 @@ page_title: Kerberos - Auth Methods - HTTP API
 description: This is the API documentation for the Vault Kerberos auth method plugin.
 ---
 
-# Kerberos Auth Method (API)
+# Kerberos auth method (API)
 
 @include 'x509-sha1-deprecation.mdx'
 
 This is the API documentation for the Vault Kerberos auth method plugin. To
 learn more about the usage and operation, see the
-[Vault Kerberos auth method](/docs/auth/kerberos).
+[Vault Kerberos auth method](/vault/docs/auth/kerberos).
 
 This documentation assumes the Kerberos auth method is mounted at the
 `auth/kerberos` path in Vault. Since it is possible to enable auth methods at
@@ -35,8 +35,14 @@ for verifying inbound SPNEGO tokens.
 - `service_account` `(string: <required>)` – The service account associated
   with both the keytab entry and an LDAP service account created for Vault. Ex.:
   `"vault_svc"`.
+- `remove_instance_name` - Removes any instance names from a Kerberos service
+  principal name when parsing the keytab file. For example when this is set to true,
+  if a keytab has the service principal name `foo/localhost@example.com`, Vault
+  will strip the service principal name to just be `foo@example.com`. 
+- `add_group_aliases` - When set to true, Vault will add any LDAP groups found for 
+  the user as group aliases.
 
-### Sample Request
+### Sample request
 
 ```shell-session
 $ curl \
@@ -46,11 +52,13 @@ $ curl \
     http://127.0.0.1:8200/v1/auth/kerberos/config
 ```
 
-### Sample Payload
+### Sample payload
 
 ```json
 {
+  "add_group_aliases": false,
   "keytab": "BQIAAAA6AAEACk1BVFJJWC5MQU4ACXZhdWx0X3N2YwAAAAFdzZSjAgAXABDwhEyRR9nRqkpP8KTn2A83AAAAAg==",
+  "remove_instance_name": false,
   "service_account": "vault_svc"
 }
 ```
@@ -64,7 +72,7 @@ The keytab is not returned because it is sensitive information.
 | :----- | :---------------------- |
 | `GET`  | `/auth/kerberos/config` |
 
-### Sample Request
+### Sample request
 
 ```shell-session
 $ curl \
@@ -72,7 +80,7 @@ $ curl \
     http://127.0.0.1:8200/v1/auth/kerberos/config
 ```
 
-### Sample Response
+### Sample response
 
 ```json
 {
@@ -80,6 +88,8 @@ $ curl \
   "warnings": null,
   "wrap_info": null,
   "data": {
+    "add_group_aliases": false,
+    "remove_instance_name": false,
     "service_account": "vault_svc"
   },
   "lease_duration": 0,
@@ -150,7 +160,7 @@ This endpoint configures LDAP in the Kerberos auth method.
 
 @include 'tokenfields.mdx'
 
-### Sample Request
+### Sample request
 
 ```shell-session
 $ curl \
@@ -160,7 +170,7 @@ $ curl \
     http://127.0.0.1:8200/v1/auth/kerberos/config/ldap
 ```
 
-### Sample Payload
+### Sample payload
 
 ```json
 {
@@ -180,7 +190,7 @@ $ curl \
 }
 ```
 
-## Read Kerberos LDAP Configuration
+## Read Kerberos LDAP configuration
 
 This endpoint retrieves the LDAP configuration for the Kerberos auth method.
 
@@ -188,7 +198,7 @@ This endpoint retrieves the LDAP configuration for the Kerberos auth method.
 | :----- | :--------------------------- |
 | `GET`  | `/auth/kerberos/config/ldap` |
 
-### Sample Request
+### Sample request
 
 ```shell-session
 $ curl \
@@ -196,7 +206,7 @@ $ curl \
     http://127.0.0.1:8200/v1/auth/kerberos/config/ldap
 ```
 
-### Sample Response
+### Sample response
 
 ```json
 {
@@ -227,7 +237,7 @@ $ curl \
 }
 ```
 
-## List Kerberos LDAP Groups
+## List Kerberos LDAP groups
 
 This endpoint returns a list of existing LDAP groups in the Kerberos auth method.
 
@@ -235,7 +245,7 @@ This endpoint returns a list of existing LDAP groups in the Kerberos auth method
 | :----- | :---------------------- |
 | `LIST` | `/auth/kerberos/groups` |
 
-### Sample Request
+### Sample request
 
 ```shell-session
 $ curl \
@@ -244,7 +254,7 @@ $ curl \
     http://127.0.0.1:8200/v1/auth/kerberos/groups
 ```
 
-### Sample Response
+### Sample response
 
 ```json
 {
@@ -260,7 +270,7 @@ $ curl \
 }
 ```
 
-## Read Kerberos LDAP Group
+## Read Kerberos LDAP group
 
 This endpoint returns the policies associated with a Kerberos LDAP group.
 
@@ -272,7 +282,7 @@ This endpoint returns the policies associated with a Kerberos LDAP group.
 
 - `name` `(string: <required>)` – The name of the LDAP group.
 
-### Sample Request
+### Sample request
 
 ```shell-session
 $ curl \
@@ -280,7 +290,7 @@ $ curl \
     http://127.0.0.1:8200/v1/auth/kerberos/groups/admins
 ```
 
-### Sample Response
+### Sample response
 
 ```json
 {
@@ -294,7 +304,7 @@ $ curl \
 }
 ```
 
-## Create/Update Kerberos LDAP Group
+## Create/Update Kerberos LDAP group
 
 This endpoint creates or updates LDAP group policies.
 
@@ -308,7 +318,7 @@ This endpoint creates or updates LDAP group policies.
 - `policies` `(string: "")` – Comma-separated list of policies associated to the
   group.
 
-### Sample Payload
+### Sample payload
 
 ```json
 {
@@ -316,7 +326,7 @@ This endpoint creates or updates LDAP group policies.
 }
 ```
 
-### Sample Request
+### Sample request
 
 ```shell-session
 $ curl \
@@ -326,7 +336,7 @@ $ curl \
     http://127.0.0.1:8200/v1/auth/kerberos/groups/admins
 ```
 
-## Delete Kerberos LDAP Group
+## Delete Kerberos LDAP group
 
 This endpoint deletes the LDAP group and policy association.
 
@@ -338,7 +348,7 @@ This endpoint deletes the LDAP group and policy association.
 
 - `name` `(string: <required>)` – The name of the LDAP group.
 
-### Sample Request
+### Sample request
 
 ```shell-session
 $ curl \
@@ -390,7 +400,7 @@ sWw
 | :----- | :--------------------- |
 | `POST` | `/auth/kerberos/login` |
 
-### Sample Request
+### Sample request
 
 ```shell-session
 $ curl \

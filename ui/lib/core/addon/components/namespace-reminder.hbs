@@ -1,0 +1,21 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
+{{#if this.showMessage}}
+  {{#if (has-block)}}
+    <p class="namespace-reminder">
+      {{yield (hash namespace=this.namespace)}}
+    </p>
+  {{else}}
+    <p class="namespace-reminder">
+      This
+      {{@noun}}
+      will be
+      {{this.modeVerb}}
+      in the
+      <span class="tag">{{this.namespace.path}}/</span>namespace.
+    </p>
+  {{/if}}
+{{/if}}
