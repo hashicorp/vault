@@ -163,7 +163,7 @@ jobs:
                "id": 1,
                "estimatedRuntime": "N/A",
                "packages": $VAULT_PKG,
-               "description": "partition 1 - vault test packages"
+               "description": "partition"
            }' kv_matrix.json > matrix.json
            
            cat matrix.json
@@ -286,7 +286,7 @@ jobs:
           echo
           echo "${{ matrix.id }}"
 
-          packages=$(echo "${{ needs.test-matrix.outputs.matrix }}" | jq -c -r --arg id "${{ matrix.id }}" '.[$id] | .packages')
+          packages=$(echo "${{ toJSON(needs.test-matrix.outputs.matrix) }}" | jq -c -r --arg id "${{ matrix.id }}" '.[$id] | .packages')
 
           if [ -z "$packages" ]; then
             echo "no test packages to run"
