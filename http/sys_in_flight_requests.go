@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package http
 
 import (
@@ -18,6 +21,5 @@ func handleUnAuthenticatedInFlightRequest(core *vault.Core) http.Handler {
 		currentInFlightReqMap := core.LoadInFlightReqData()
 
 		respondOk(w, currentInFlightReqMap)
-
 	})
 }

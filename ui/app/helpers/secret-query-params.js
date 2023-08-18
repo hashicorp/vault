@@ -1,13 +1,24 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import { helper } from '@ember/component/helper';
 
-export function secretQueryParams([backendType, type = '']) {
-  if (backendType === 'transit') {
-    return { tab: 'actions' };
+export function secretQueryParams([backendType, type = ''], { asQueryParams }) {
+  const values = {
+    transit: { tab: 'actions' },
+    database: { type },
+    keymgmt: { itemType: type === 'provider' ? 'provider' : 'key' },
+  }[backendType];
+  // format required when using LinkTo with positional params
+  if (values && asQueryParams) {
+    return {
+      isQueryParams: true,
+      values,
+    };
   }
-  if (backendType === 'database') {
-    return { type: type };
-  }
-  return;
+  return values;
 }
 
 export default helper(secretQueryParams);

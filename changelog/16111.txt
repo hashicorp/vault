@@ -1,0 +1,3 @@
+```release-note:improvement
+core: Add `sys/loggers` and `sys/loggers/:name` endpoints to provide ability to modify logging verbosity
+```

@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package ldaputil
 
 import (
@@ -5,6 +8,7 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	"encoding/binary"
+	"encoding/hex"
 	"fmt"
 	"math"
 	"net"
@@ -14,7 +18,6 @@ import (
 	"time"
 
 	"github.com/go-ldap/ldap/v3"
-	"github.com/hashicorp/errwrap"
 	hclog "github.com/hashicorp/go-hclog"
 	multierror "github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/go-secure-stdlib/tlsutil"
@@ -29,10 +32,11 @@ func (c *Client) DialLDAP(cfg *ConfigEntry) (Connection, error) {
 	var retErr *multierror.Error
 	var conn Connection
 	urls := strings.Split(cfg.Url, ",")
+
 	for _, uut := range urls {
 		u, err := url.Parse(uut)
 		if err != nil {
-			retErr = multierror.Append(retErr, errwrap.Wrapf(fmt.Sprintf("error parsing url %q: {{err}}", uut), err))
+			retErr = multierror.Append(retErr, fmt.Errorf(fmt.Sprintf("error parsing url %q: {{err}}", uut), err))
 			continue
 		}
 		host, port, err := net.SplitHostPort(u.Host)
@@ -41,12 +45,20 @@ func (c *Client) DialLDAP(cfg *ConfigEntry) (Connection, error) {
 		}
 
 		var tlsConfig *tls.Config
+		dialer := net.Dialer{
+			Timeout: time.Duration(cfg.ConnectionTimeout) * time.Second,
+		}
+
 		switch u.Scheme {
 		case "ldap":
 			if port == "" {
 				port = "389"
 			}
-			conn, err = c.LDAP.Dial("tcp", net.JoinHostPort(host, port))
+
+			fullAddr := fmt.Sprintf("%s://%s", u.Scheme, net.JoinHostPort(host, port))
+			opt := ldap.DialWithDialer(&dialer)
+
+			conn, err = c.LDAP.DialURL(fullAddr, opt)
 			if err != nil {
 				break
 			}
@@ -69,7 +81,15 @@ func (c *Client) DialLDAP(cfg *ConfigEntry) (Connection, error) {
 			if err != nil {
 				break
 			}
-			conn, err = c.LDAP.DialTLS("tcp", net.JoinHostPort(host, port), tlsConfig)
+
+			fullAddr := fmt.Sprintf("%s://%s", u.Scheme, net.JoinHostPort(host, port))
+			opt := ldap.DialWithDialer(&dialer)
+			tls := ldap.DialWithTLSConfig(tlsConfig)
+
+			conn, err = c.LDAP.DialURL(fullAddr, opt, tls)
+			if err != nil {
+				break
+			}
 		default:
 			retErr = multierror.Append(retErr, fmt.Errorf("invalid LDAP scheme in url %q", net.JoinHostPort(host, port)))
 			continue
@@ -83,7 +103,7 @@ func (c *Client) DialLDAP(cfg *ConfigEntry) (Connection, error) {
 			retErr = nil
 			break
 		}
-		retErr = multierror.Append(retErr, errwrap.Wrapf(fmt.Sprintf("error connecting to host %q: {{err}}", uut), err))
+		retErr = multierror.Append(retErr, fmt.Errorf(fmt.Sprintf("error connecting to host %q: {{err}}", uut), err))
 	}
 	if retErr != nil {
 		return nil, retErr
@@ -120,10 +140,11 @@ func (c *Client) makeLdapSearchRequest(cfg *ConfigEntry, conn Connection, userna
 		c.Logger.Debug("discovering user", "userdn", cfg.UserDN, "filter", renderedFilter)
 	}
 	ldapRequest := &ldap.SearchRequest{
-		BaseDN:    cfg.UserDN,
-		Scope:     ldap.ScopeWholeSubtree,
-		Filter:    renderedFilter,
-		SizeLimit: 2, // Should be only 1 result. Any number larger (2 or more) means access denied.
+		BaseDN:       cfg.UserDN,
+		DerefAliases: ldapDerefAliasMap[cfg.DerefAliases],
+		Scope:        ldap.ScopeWholeSubtree,
+		Filter:       renderedFilter,
+		SizeLimit:    2, // Should be only 1 result. Any number larger (2 or more) means access denied.
 		Attributes: []string{
 			cfg.UserAttr, // Return only needed attributes
 		},
@@ -158,7 +179,7 @@ func (c *Client) GetUserBindDN(cfg *ConfigEntry, conn Connection, username strin
 
 		result, err := c.makeLdapSearchRequest(cfg, conn, username)
 		if err != nil {
-			return bindDN, errwrap.Wrapf("LDAP search for binddn failed: {{err}}", err)
+			return bindDN, fmt.Errorf("LDAP search for binddn failed %w", err)
 		}
 		if len(result.Entries) != 1 {
 			return bindDN, fmt.Errorf("LDAP search for binddn 0 or not unique")
@@ -194,7 +215,7 @@ func (c *Client) RenderUserSearchFilter(cfg *ConfigEntry, username string) (stri
 	// Example template "({{.UserAttr}}={{.Username}})"
 	t, err := template.New("queryTemplate").Parse(cfg.UserFilter)
 	if err != nil {
-		return "", errwrap.Wrapf("LDAP search failed due to template compilation error: {{err}}", err)
+		return "", fmt.Errorf("LDAP search failed due to template compilation error: %w", err)
 	}
 
 	// Build context to pass to template - we will be exposing UserDn and Username.
@@ -207,12 +228,20 @@ func (c *Client) RenderUserSearchFilter(cfg *ConfigEntry, username string) (stri
 	}
 	if cfg.UPNDomain != "" {
 		context.UserAttr = "userPrincipalName"
-		context.Username = fmt.Sprintf("%s@%s", EscapeLDAPValue(username), cfg.UPNDomain)
+		// Intentionally, calling EscapeFilter(...) (vs EscapeValue) since the
+		// username is being injected into a search filter.
+		// As an untrusted string, the username must be escaped according to RFC
+		// 4515, in order to prevent attackers from injecting characters that could modify the filter
+		context.Username = fmt.Sprintf("%s@%s", ldap.EscapeFilter(username), cfg.UPNDomain)
 	}
 
+	// Execute the template. Note that the template context contains escaped input and does
+	// not provide behavior via functions. Additionally, no function map has been provided
+	// during template initialization. The only template functions available during execution
+	// are the predefined global functions: https://pkg.go.dev/text/template#hdr-Functions
 	var renderedFilter bytes.Buffer
 	if err := t.Execute(&renderedFilter, context); err != nil {
-		return "", errwrap.Wrapf("LDAP search failed due to template parsing error: {{err}}", err)
+		return "", fmt.Errorf("LDAP search failed due to template parsing error: %w", err)
 	}
 
 	return renderedFilter.String(), nil
@@ -237,14 +266,14 @@ func (c *Client) GetUserAliasAttributeValue(cfg *ConfigEntry, conn Connection, u
 
 		result, err := c.makeLdapSearchRequest(cfg, conn, username)
 		if err != nil {
-			return aliasAttributeValue, errwrap.Wrapf("LDAP search for entity alias attribute failed: {{err}}", err)
+			return aliasAttributeValue, fmt.Errorf("LDAP search for entity alias attribute failed: %w", err)
 		}
 		if len(result.Entries) != 1 {
 			return aliasAttributeValue, fmt.Errorf("LDAP search for entity alias attribute 0 or not unique")
 		}
 
 		if len(result.Entries[0].Attributes) != 1 {
-			return aliasAttributeValue, errwrap.Wrapf("LDAP attribute missing for entity alias mapping{{err}}", err)
+			return aliasAttributeValue, fmt.Errorf("LDAP attribute missing for entity alias mapping")
 		}
 
 		if len(result.Entries[0].Attributes[0].Values) != 1 {
@@ -275,13 +304,14 @@ func (c *Client) GetUserDN(cfg *ConfigEntry, conn Connection, bindDN, username s
 			c.Logger.Debug("searching upn", "userdn", cfg.UserDN, "filter", filter)
 		}
 		result, err := conn.Search(&ldap.SearchRequest{
-			BaseDN:    cfg.UserDN,
-			Scope:     ldap.ScopeWholeSubtree,
-			Filter:    filter,
-			SizeLimit: math.MaxInt32,
+			BaseDN:       cfg.UserDN,
+			Scope:        ldap.ScopeWholeSubtree,
+			DerefAliases: ldapDerefAliasMap[cfg.DerefAliases],
+			Filter:       filter,
+			SizeLimit:    math.MaxInt32,
 		})
 		if err != nil {
-			return userDN, errwrap.Wrapf("LDAP search failed for detecting user: {{err}}", err)
+			return userDN, fmt.Errorf("LDAP search failed for detecting user: %w", err)
 		}
 		for _, e := range result.Entries {
 			userDN = e.DN
@@ -314,7 +344,7 @@ func (c *Client) performLdapFilterGroupsSearch(cfg *ConfigEntry, conn Connection
 	// Example template "(&(objectClass=group)(member:1.2.840.113556.1.4.1941:={{.UserDN}}))"
 	t, err := template.New("queryTemplate").Parse(cfg.GroupFilter)
 	if err != nil {
-		return nil, errwrap.Wrapf("LDAP search failed due to template compilation error: {{err}}", err)
+		return nil, fmt.Errorf("LDAP search failed due to template compilation error: %w", err)
 	}
 
 	// Build context to pass to template - we will be exposing UserDn and Username.
@@ -328,7 +358,7 @@ func (c *Client) performLdapFilterGroupsSearch(cfg *ConfigEntry, conn Connection
 
 	var renderedQuery bytes.Buffer
 	if err := t.Execute(&renderedQuery, context); err != nil {
-		return nil, errwrap.Wrapf("LDAP search failed due to template parsing error: {{err}}", err)
+		return nil, fmt.Errorf("LDAP search failed due to template parsing error: %w", err)
 	}
 
 	if c.Logger.IsDebug() {
@@ -336,16 +366,80 @@ func (c *Client) performLdapFilterGroupsSearch(cfg *ConfigEntry, conn Connection
 	}
 
 	result, err := conn.Search(&ldap.SearchRequest{
-		BaseDN: cfg.GroupDN,
-		Scope:  ldap.ScopeWholeSubtree,
-		Filter: renderedQuery.String(),
+		BaseDN:       cfg.GroupDN,
+		Scope:        ldap.ScopeWholeSubtree,
+		DerefAliases: ldapDerefAliasMap[cfg.DerefAliases],
+		Filter:       renderedQuery.String(),
 		Attributes: []string{
 			cfg.GroupAttr,
 		},
 		SizeLimit: math.MaxInt32,
 	})
 	if err != nil {
-		return nil, errwrap.Wrapf("LDAP search failed: {{err}}", err)
+		return nil, fmt.Errorf("LDAP search failed: %w", err)
+	}
+
+	return result.Entries, nil
+}
+
+func (c *Client) performLdapFilterGroupsSearchPaging(cfg *ConfigEntry, conn PagingConnection, userDN string, username string) ([]*ldap.Entry, error) {
+	if cfg.GroupFilter == "" {
+		c.Logger.Warn("groupfilter is empty, will not query server")
+		return make([]*ldap.Entry, 0), nil
+	}
+
+	if cfg.GroupDN == "" {
+		c.Logger.Warn("groupdn is empty, will not query server")
+		return make([]*ldap.Entry, 0), nil
+	}
+
+	// If groupfilter was defined, resolve it as a Go template and use the query for
+	// returning the user's groups
+	if c.Logger.IsDebug() {
+		c.Logger.Debug("compiling group filter", "group_filter", cfg.GroupFilter)
+	}
+
+	// Parse the configuration as a template.
+	// Example template "(&(objectClass=group)(member:1.2.840.113556.1.4.1941:={{.UserDN}}))"
+	t, err := template.New("queryTemplate").Parse(cfg.GroupFilter)
+	if err != nil {
+		return nil, fmt.Errorf("LDAP search failed due to template compilation error: %w", err)
+	}
+
+	// Build context to pass to template - we will be exposing UserDn and Username.
+	context := struct {
+		UserDN   string
+		Username string
+	}{
+		ldap.EscapeFilter(userDN),
+		ldap.EscapeFilter(username),
+	}
+
+	// Execute the template. Note that the template context contains escaped input and does
+	// not provide behavior via functions. Additionally, no function map has been provided
+	// during template initialization. The only template functions available during execution
+	// are the predefined global functions: https://pkg.go.dev/text/template#hdr-Functions
+	var renderedQuery bytes.Buffer
+	if err := t.Execute(&renderedQuery, context); err != nil {
+		return nil, fmt.Errorf("LDAP search failed due to template parsing error: %w", err)
+	}
+
+	if c.Logger.IsDebug() {
+		c.Logger.Debug("searching", "groupdn", cfg.GroupDN, "rendered_query", renderedQuery.String())
+	}
+
+	result, err := conn.SearchWithPaging(&ldap.SearchRequest{
+		BaseDN:       cfg.GroupDN,
+		Scope:        ldap.ScopeWholeSubtree,
+		DerefAliases: ldapDerefAliasMap[cfg.DerefAliases],
+		Filter:       renderedQuery.String(),
+		Attributes: []string{
+			cfg.GroupAttr,
+		},
+		SizeLimit: math.MaxInt32,
+	}, uint32(cfg.MaximumPageSize))
+	if err != nil {
+		return nil, fmt.Errorf("LDAP search failed: %w", err)
 	}
 
 	return result.Entries, nil
@@ -358,21 +452,21 @@ func sidBytesToString(b []byte) (string, error) {
 	var identifierAuthorityParts [3]uint16
 
 	if err := binary.Read(reader, binary.LittleEndian, &revision); err != nil {
-		return "", errwrap.Wrapf(fmt.Sprintf("SID %#v convert failed reading Revision: {{err}}", b), err)
+		return "", fmt.Errorf(fmt.Sprintf("SID %#v convert failed reading Revision: {{err}}", b), err)
 	}
 
 	if err := binary.Read(reader, binary.LittleEndian, &subAuthorityCount); err != nil {
-		return "", errwrap.Wrapf(fmt.Sprintf("SID %#v convert failed reading SubAuthorityCount: {{err}}", b), err)
+		return "", fmt.Errorf(fmt.Sprintf("SID %#v convert failed reading SubAuthorityCount: {{err}}", b), err)
 	}
 
 	if err := binary.Read(reader, binary.BigEndian, &identifierAuthorityParts); err != nil {
-		return "", errwrap.Wrapf(fmt.Sprintf("SID %#v convert failed reading IdentifierAuthority: {{err}}", b), err)
+		return "", fmt.Errorf(fmt.Sprintf("SID %#v convert failed reading IdentifierAuthority: {{err}}", b), err)
 	}
 	identifierAuthority := (uint64(identifierAuthorityParts[0]) << 32) + (uint64(identifierAuthorityParts[1]) << 16) + uint64(identifierAuthorityParts[2])
 
 	subAuthority := make([]uint32, subAuthorityCount)
 	if err := binary.Read(reader, binary.LittleEndian, &subAuthority); err != nil {
-		return "", errwrap.Wrapf(fmt.Sprintf("SID %#v convert failed reading SubAuthority: {{err}}", b), err)
+		return "", fmt.Errorf(fmt.Sprintf("SID %#v convert failed reading SubAuthority: {{err}}", b), err)
 	}
 
 	result := fmt.Sprintf("S-%d-%d", revision, identifierAuthority)
@@ -385,16 +479,17 @@ func sidBytesToString(b []byte) (string, error) {
 
 func (c *Client) performLdapTokenGroupsSearch(cfg *ConfigEntry, conn Connection, userDN string) ([]*ldap.Entry, error) {
 	result, err := conn.Search(&ldap.SearchRequest{
-		BaseDN: userDN,
-		Scope:  ldap.ScopeBaseObject,
-		Filter: "(objectClass=*)",
+		BaseDN:       userDN,
+		Scope:        ldap.ScopeBaseObject,
+		DerefAliases: ldapDerefAliasMap[cfg.DerefAliases],
+		Filter:       "(objectClass=*)",
 		Attributes: []string{
 			"tokenGroups",
 		},
 		SizeLimit: 1,
 	})
 	if err != nil {
-		return nil, errwrap.Wrapf("LDAP search failed: {{err}}", err)
+		return nil, fmt.Errorf("LDAP search failed: %w", err)
 	}
 	if len(result.Entries) == 0 {
 		c.Logger.Warn("unable to read object for group attributes", "userdn", userDN, "groupattr", cfg.GroupAttr)
@@ -413,9 +508,10 @@ func (c *Client) performLdapTokenGroupsSearch(cfg *ConfigEntry, conn Connection,
 		}
 
 		groupResult, err := conn.Search(&ldap.SearchRequest{
-			BaseDN: fmt.Sprintf("<SID=%s>", sidString),
-			Scope:  ldap.ScopeBaseObject,
-			Filter: "(objectClass=*)",
+			BaseDN:       fmt.Sprintf("<SID=%s>", sidString),
+			Scope:        ldap.ScopeBaseObject,
+			DerefAliases: ldapDerefAliasMap[cfg.DerefAliases],
+			Filter:       "(objectClass=*)",
 			Attributes: []string{
 				"1.1", // RFC no attributes
 			},
@@ -462,7 +558,11 @@ func (c *Client) GetLdapGroups(cfg *ConfigEntry, conn Connection, userDN string,
 	if cfg.UseTokenGroups {
 		entries, err = c.performLdapTokenGroupsSearch(cfg, conn, userDN)
 	} else {
-		entries, err = c.performLdapFilterGroupsSearch(cfg, conn, userDN, username)
+		if paging, ok := conn.(PagingConnection); ok && cfg.MaximumPageSize > 0 {
+			entries, err = c.performLdapFilterGroupsSearchPaging(cfg, paging, userDN, username)
+		} else {
+			entries, err = c.performLdapFilterGroupsSearch(cfg, conn, userDN, username)
+		}
 	}
 	if err != nil {
 		return nil, err
@@ -500,42 +600,59 @@ func (c *Client) GetLdapGroups(cfg *ConfigEntry, conn Connection, userDN string,
 }
 
 // EscapeLDAPValue is exported because a plugin uses it outside this package.
+// EscapeLDAPValue will properly escape the input string as an ldap value
+// rfc4514 states the following must be escaped:
+// - leading space or hash
+// - trailing space
+// - special characters '"', '+', ',', ';', '<', '>', '\\'
+// - hex
 func EscapeLDAPValue(input string) string {
 	if input == "" {
 		return ""
 	}
 
-	// RFC4514 forbids un-escaped:
-	// - leading space or hash
-	// - trailing space
-	// - special characters '"', '+', ',', ';', '<', '>', '\\'
-	// - null
-	for i := 0; i < len(input); i++ {
-		escaped := false
-		if input[i] == '\\' && i+1 < len(input)-1 {
-			i++
-			escaped = true
-		}
-		switch input[i] {
-		case '"', '+', ',', ';', '<', '>', '\\':
-			if !escaped {
-				input = input[0:i] + "\\" + input[i:]
-				i++
-			}
+	buf := bytes.Buffer{}
+
+	escFn := func(c byte) {
+		buf.WriteByte('\\')
+		buf.WriteByte(c)
+	}
+
+	inputLen := len(input)
+	for i := 0; i < inputLen; i++ {
+		char := input[i]
+		switch {
+		case i == 0 && char == ' ' || char == '#':
+			// leading space or hash.
+			escFn(char)
 			continue
+		case i == inputLen-1 && char == ' ':
+			// trailing space.
+			escFn(char)
+			continue
+		case specialChar(char):
+			escFn(char)
+			continue
+		case char < ' ' || char > '~':
+			// anything that's not between the ascii space and tilde must be hex
+			buf.WriteByte('\\')
+			buf.WriteString(hex.EncodeToString([]byte{char}))
+			continue
+		default:
+			// everything remaining, doesn't need to be escaped
+			buf.WriteByte(char)
 		}
-		if escaped {
-			input = input[0:i] + "\\" + input[i:]
-			i++
-		}
 	}
-	if input[0] == ' ' || input[0] == '#' {
-		input = "\\" + input
+	return buf.String()
+}
+
+func specialChar(char byte) bool {
+	switch char {
+	case '"', '+', ',', ';', '<', '>', '\\':
+		return true
+	default:
+		return false
 	}
-	if input[len(input)-1] == ' ' {
-		input = input[0:len(input)-1] + "\\ "
-	}
-	return input
 }
 
 /*
@@ -603,7 +720,7 @@ func getTLSConfig(cfg *ConfigEntry, host string) (*tls.Config, error) {
 	if cfg.ClientTLSCert != "" && cfg.ClientTLSKey != "" {
 		certificate, err := tls.X509KeyPair([]byte(cfg.ClientTLSCert), []byte(cfg.ClientTLSKey))
 		if err != nil {
-			return nil, errwrap.Wrapf("failed to parse client X509 key pair: {{err}}", err)
+			return nil, fmt.Errorf("failed to parse client X509 key pair: %w", err)
 		}
 		tlsConfig.Certificates = append(tlsConfig.Certificates, certificate)
 	} else if cfg.ClientTLSCert != "" || cfg.ClientTLSKey != "" {

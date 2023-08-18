@@ -1,16 +1,42 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 .chart-wrapper {
   border: $light-border;
   border-radius: $radius-large;
-  padding: $spacing-l $spacing-l $spacing-s $spacing-l;
+  padding: $spacing-s $spacing-l;
   margin-bottom: $spacing-m;
 }
 
 // GRID LAYOUT //
+.single-month-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 2em;
+  width: 100%;
+}
+.single-month-stats {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 2em;
+  width: 100%;
+  margin-bottom: 1rem;
+}
+.single-month-section-title {
+  grid-column-start: 1;
+  grid-column-end: span col3-end;
+}
+.single-month-breakdown-entity {
+  grid-column-start: 1;
+}
+.single-month-breakdown-nonentity {
+  grid-column-start: 2;
+}
 .stacked-charts {
   display: grid;
   width: 100%;
-  // grid-template-columns: 1fr;
-  // grid-template-rows: 1fr;
 }
 
 .single-chart-grid {
@@ -31,20 +57,21 @@
   grid-column-start: 1;
   grid-column-end: span col4-end;
   grid-row-start: 1;
-  box-shadow: inset 0 -1px 0 $vault-gray-200;
-  margin-bottom: $spacing-xl;
+  box-shadow: inset 0 -1px 0 $ui-gray-200;
 }
 
-.has-export {
+.has-header-link {
   display: grid;
   grid-template-columns: 4fr 1fr;
 
   .header-right {
     text-align: right;
     > button {
-      font-size: $size-8;
-      &:hover {
-        text-decoration: underline;
+      &:hover,
+      &:focus {
+        background-color: transparent;
+        background-color: darken($ui-gray-050, 5%);
+        border-color: darken($ui-gray-300, 5%);
       }
     }
   }
@@ -56,8 +83,8 @@
   grid-row-start: 2;
   grid-row-end: span 3;
   justify-self: center;
-  height: 341px;
-  max-width: 730px;
+  height: 300px;
+  max-width: 700px;
 
   svg.chart {
     width: 100%;
@@ -72,7 +99,7 @@
   grid-row-end: 5;
   padding-bottom: $spacing-xl;
   margin-bottom: $spacing-s;
-  box-shadow: inset 0 -1px 0 $vault-gray-200;
+  box-shadow: inset 0 -1px 0 $ui-gray-200;
 
   > h2 {
     padding-left: 18px;
@@ -89,13 +116,33 @@
   grid-row-end: 5;
   padding-bottom: $spacing-xl;
   margin-bottom: $spacing-s;
-  box-shadow: inset 0 -1px 0 $vault-gray-200;
+  box-shadow: inset 0 -1px 0 $ui-gray-200;
 
   > h2 {
     padding-left: 18px;
   }
   > p {
     padding-left: 18px;
+  }
+}
+
+.chart-empty-state {
+  place-self: center stretch;
+  grid-row-end: span 3;
+  grid-column-end: span 3;
+  max-width: none;
+  padding-right: 20px;
+  padding-left: 20px;
+  display: flex;
+
+  > div {
+    box-shadow: none !important;
+  }
+
+  > div.empty-state {
+    white-space: nowrap;
+    align-self: stretch;
+    width: 100%;
   }
 }
 
@@ -150,26 +197,27 @@ h2.chart-title {
   font-weight: $font-weight-bold;
   font-size: $size-5;
   line-height: $spacing-l;
+  margin-bottom: $spacing-xxs;
 }
 
 p.chart-description {
   color: $ui-gray-700;
-  font-size: $body-size;
+  font-size: 14px;
   line-height: 18px;
   margin-bottom: $spacing-xs;
 }
 
 p.chart-subtext {
   color: $ui-gray-500;
-  font-size: $size-9;
-  line-height: $body-size;
+  font-size: $size-8;
+  line-height: 16px;
   margin-top: $spacing-xs;
 }
 
 h3.data-details {
   font-weight: $font-weight-bold;
-  font-size: $size-9;
-  line-height: $body-size;
+  font-size: $size-8;
+  line-height: 14px;
   margin-bottom: $spacing-xs;
 }
 
@@ -181,7 +229,7 @@ p.data-details {
 // MISC STYLES
 
 .light-dot {
-  background-color: #bfd4ff;
+  background-color: $blue-100;
   height: 10px;
   width: 10px;
   border-radius: 50%;
@@ -189,7 +237,7 @@ p.data-details {
 }
 
 .dark-dot {
-  background-color: #1563ff;
+  background-color: $blue-500;
   height: 10px;
   width: 10px;
   border-radius: 50%;
@@ -207,25 +255,26 @@ p.data-details {
   font-size: $size-9;
   padding: 6px;
   border-radius: $radius-large;
+  width: 140px;
 
   .bold {
     font-weight: $font-weight-bold;
   }
-
   .line-chart {
     width: 117px;
   }
-
   .vertical-chart {
     text-align: center;
     flex-wrap: nowrap;
     width: fit-content;
   }
-
   .horizontal-chart {
-    width: 200px;
     padding: $spacing-s;
   }
+}
+
+.is-label-fit-content {
+  max-width: fit-content !important;
 }
 
 .chart-tooltip-arrow {

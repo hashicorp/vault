@@ -1,7 +1,13 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package http
 
 import (
+	"bytes"
+	"errors"
 	"fmt"
+	"io/ioutil"
 	"net"
 	"net/http"
 	"strings"
@@ -14,10 +20,6 @@ import (
 )
 
 var (
-	adjustRequest = func(c *vault.Core, r *http.Request) (*http.Request, int) {
-		return r, 0
-	}
-
 	genericWrapping = func(core *vault.Core, in http.Handler, props *vault.HandlerProperties) http.Handler {
 		// Wrap the help wrapped handler with another layer with a generic
 		// handler
@@ -47,11 +49,21 @@ func rateLimitQuotaWrapping(handler http.Handler, core *vault.Core) http.Handler
 			respondError(w, status, err)
 			return
 		}
+		mountPath := strings.TrimPrefix(core.MatchingMount(r.Context(), path), ns.Path)
+
+		// Clone body, so we do not close the request body reader
+		bodyBytes, err := ioutil.ReadAll(r.Body)
+		if err != nil {
+			respondError(w, http.StatusInternalServerError, errors.New("failed to read request body"))
+			return
+		}
+		r.Body = ioutil.NopCloser(bytes.NewBuffer(bodyBytes))
 
 		quotaResp, err := core.ApplyRateLimitQuota(r.Context(), &quotas.Request{
 			Type:          quotas.TypeRateLimit,
 			Path:          path,
-			MountPath:     strings.TrimPrefix(core.MatchingMount(r.Context(), path), ns.Path),
+			MountPath:     mountPath,
+			Role:          core.DetermineRoleFromLoginRequestFromBytes(mountPath, bodyBytes, r.Context()),
 			NamespacePath: ns.Path,
 			ClientAddress: parseRemoteIPAddress(r),
 		})

@@ -1,13 +1,18 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
 <div class="tabs-container box is-sideless is-fullwidth is-paddingless is-marginless">
-  <nav class="tabs">
+  <nav class="tabs" aria-label="tabs">
     <ul>
       <li class={{if (eq @tab "actions") "is-active"}}>
         <SecretLink
           @secret={{@key.id}}
           @mode="show"
           @replace={{true}}
-          @queryParams={{query-params tab="actions"}}
-          @data-test-transit-key-actions-link={{true}}
+          @queryParams={{hash tab="actions"}}
+          data-test-transit-key-actions-link={{true}}
         >
           Key Actions
         </SecretLink>
@@ -18,8 +23,8 @@
           @secret={{@key.id}}
           @mode="show"
           @replace={{true}}
-          @queryParams={{query-params tab="details"}}
-          @data-test-transit-link="details"
+          @queryParams={{hash tab="details"}}
+          data-test-transit-link="details"
         >
           Details
         </SecretLink>
@@ -30,8 +35,8 @@
           @secret={{@key.id}}
           @mode="show"
           @replace={{true}}
-          @queryParams={{query-params tab="versions"}}
-          @data-test-transit-link="versions"
+          @queryParams={{hash tab="versions"}}
+          data-test-transit-link="versions"
         >
           Versions
         </SecretLink>
@@ -59,13 +64,12 @@
 {{#if (eq @tab "actions")}}
   <div class="transit-card-container">
     {{#each @model.supportedActions as |supportedAction|}}
-      {{#linked-block
-        "vault.cluster.secrets.backend.actions"
-        @model.id
-        queryParams=(hash action=supportedAction.name)
+      <LinkedBlock
+        @params={{array "vault.cluster.secrets.backend.actions" @model.id}}
+        @queryParams={{hash action=supportedAction.name}}
         class="transit-card"
-        data-test-transit-card=supportedAction.name
-      }}
+        data-test-transit-card={{supportedAction.name}}
+      >
         <div class="transit-icon">
           <Icon
             @name={{supportedAction.glyph}}
@@ -85,7 +89,7 @@
           </h2>
           <p class="transit-action-description">{{supportedAction.description}}</p>
         </div>
-      {{/linked-block}}
+      </LinkedBlock>
     {{/each}}
   </div>
 {{else if (eq @tab "versions")}}
@@ -148,7 +152,7 @@
           </div>
           <div class="column is-1 is-flex-end">
             <PopupMenu name="secret-menu">
-              <nav class="menu">
+              <nav class="menu" aria-label="copy public key">
                 <ul class="menu-list">
                   <li class="action">
                     <CopyButton
@@ -170,6 +174,10 @@
   {{/if}}
 {{else}}
   <InfoTableRow @label="Type" @value={{@key.type}} />
+  <InfoTableRow
+    @label="Auto-rotation period"
+    @value={{or (format-duration @key.autoRotatePeriod) "Key will not be automatically rotated"}}
+  />
   <InfoTableRow @label="Deletion allowed" @value={{stringify @key.deletionAllowed}} />
 
   {{#if @key.derived}}

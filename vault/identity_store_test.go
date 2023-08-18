@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package vault
 
 import (
@@ -182,7 +185,7 @@ func TestIdentityStore_EntityIDPassthrough(t *testing.T) {
 	}
 
 	// Create an entity with GitHub alias
-	entity, err := is.CreateOrFetchEntity(ctx, alias)
+	entity, _, err := is.CreateOrFetchEntity(ctx, alias)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -258,7 +261,7 @@ func TestIdentityStore_CreateOrFetchEntity(t *testing.T) {
 		},
 	}
 
-	entity, err := is.CreateOrFetchEntity(ctx, alias)
+	entity, _, err := is.CreateOrFetchEntity(ctx, alias)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -274,7 +277,7 @@ func TestIdentityStore_CreateOrFetchEntity(t *testing.T) {
 		t.Fatalf("bad: alias name; expected: %q, actual: %q", alias.Name, entity.Aliases[0].Name)
 	}
 
-	entity, err = is.CreateOrFetchEntity(ctx, alias)
+	entity, _, err = is.CreateOrFetchEntity(ctx, alias)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -309,7 +312,7 @@ func TestIdentityStore_CreateOrFetchEntity(t *testing.T) {
 		t.Fatalf("err:%v resp:%#v", err, resp)
 	}
 
-	entity, err = is.CreateOrFetchEntity(ctx, alias)
+	entity, _, err = is.CreateOrFetchEntity(ctx, alias)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -335,7 +338,7 @@ func TestIdentityStore_CreateOrFetchEntity(t *testing.T) {
 		"foo": "zzzz",
 	}
 
-	entity, err = is.CreateOrFetchEntity(ctx, alias)
+	entity, _, err = is.CreateOrFetchEntity(ctx, alias)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -537,7 +540,6 @@ func TestIdentityStore_MergeConflictingAliases(t *testing.T) {
 	if err != nil {
 		t.Fatalf("err: %s", err)
 	}
-
 	c, _, _ := TestCoreUnsealed(t)
 
 	meGH := &MountEntry{
@@ -599,7 +601,7 @@ func TestIdentityStore_MergeConflictingAliases(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	newEntity, err := c.identityStore.CreateOrFetchEntity(namespace.RootContext(nil), &logical.Alias{
+	newEntity, _, err := c.identityStore.CreateOrFetchEntity(namespace.RootContext(nil), &logical.Alias{
 		MountAccessor: meGH.Accessor,
 		MountType:     "github",
 		Name:          "githubuser",
@@ -713,7 +715,6 @@ func testIdentityStoreWithGithubUserpassAuth(ctx context.Context, t *testing.T) 
 	}
 
 	return c.identityStore, githubMe.Accessor, userpassMe.Accessor, c
-
 }
 
 func TestIdentityStore_MetadataKeyRegex(t *testing.T) {
@@ -793,17 +794,122 @@ func TestIdentityStore_NewEntityCounter(t *testing.T) {
 		},
 	}
 
-	_, err = is.CreateOrFetchEntity(ctx, alias)
+	_, _, err = is.CreateOrFetchEntity(ctx, alias)
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	expectSingleCount(t, sink, "identity.entity.creation")
 
-	_, err = is.CreateOrFetchEntity(ctx, alias)
+	_, _, err = is.CreateOrFetchEntity(ctx, alias)
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	expectSingleCount(t, sink, "identity.entity.creation")
+}
+
+func TestIdentityStore_UpdateAliasMetadataPerAccessor(t *testing.T) {
+	entity := &identity.Entity{
+		ID:       "testEntityID",
+		Name:     "testEntityName",
+		Policies: []string{"foo", "bar"},
+		Aliases: []*identity.Alias{
+			{
+				ID:            "testAliasID1",
+				CanonicalID:   "testEntityID",
+				MountType:     "testMountType",
+				MountAccessor: "testMountAccessor",
+				Name:          "sameAliasName",
+			},
+			{
+				ID:            "testAliasID2",
+				CanonicalID:   "testEntityID",
+				MountType:     "testMountType",
+				MountAccessor: "testMountAccessor2",
+				Name:          "sameAliasName",
+			},
+		},
+		NamespaceID: namespace.RootNamespaceID,
+	}
+
+	login := &logical.Alias{
+		MountType:     "testMountType",
+		MountAccessor: "testMountAccessor",
+		Name:          "sameAliasName",
+		ID:            "testAliasID",
+		Metadata:      map[string]string{"foo": "bar"},
+	}
+
+	if i := changedAliasIndex(entity, login); i != 0 {
+		t.Fatalf("wrong alias index changed. Expected 0, got %d", i)
+	}
+
+	login2 := &logical.Alias{
+		MountType:     "testMountType",
+		MountAccessor: "testMountAccessor2",
+		Name:          "sameAliasName",
+		ID:            "testAliasID2",
+		Metadata:      map[string]string{"bar": "foo"},
+	}
+
+	if i := changedAliasIndex(entity, login2); i != 1 {
+		t.Fatalf("wrong alias index changed. Expected 1, got %d", i)
+	}
+}
+
+// TestIdentityStore_DeleteCaseSensitivityKey tests that
+// casesensitivity key gets removed from storage if it exists upon
+// initializing identity store.
+func TestIdentityStore_DeleteCaseSensitivityKey(t *testing.T) {
+	c, unsealKey, root := TestCoreUnsealed(t)
+	ctx := context.Background()
+
+	// add caseSensitivityKey to storage
+	entry, err := logical.StorageEntryJSON(caseSensitivityKey, &casesensitivity{
+		DisableLowerCasedNames: true,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	err = c.identityStore.view.Put(ctx, entry)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// check if the value is stored in storage
+	storageEntry, err := c.identityStore.view.Get(ctx, caseSensitivityKey)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if storageEntry == nil {
+		t.Fatalf("bad: expected a non-nil entry for casesensitivity key")
+	}
+
+	// Seal and unseal to trigger identityStore initialize
+	if err = c.Seal(root); err != nil {
+		t.Fatal(err)
+	}
+
+	var unsealed bool
+	for i := 0; i < len(unsealKey); i++ {
+		unsealed, err = c.Unseal(unsealKey[i])
+		if err != nil {
+			t.Fatal(err)
+		}
+	}
+	if !unsealed {
+		t.Fatal("still sealed")
+	}
+
+	// check if caseSensitivityKey exists after initialize
+	storageEntry, err = c.identityStore.view.Get(ctx, caseSensitivityKey)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if storageEntry != nil {
+		t.Fatalf("bad: expected no entry for casesensitivity key")
+	}
 }

@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 .tabs-container + .toolbar {
   border-top: 0;
 }
@@ -109,6 +114,15 @@
     &:hover {
       background: transparent;
     }
+  }
+}
+a.disabled.toolbar-link {
+  color: $black;
+  background-color: $white;
+  cursor: not-allowed;
+  &:hover {
+    background-color: $ui-gray-100;
+    color: $blue;
   }
 }
 

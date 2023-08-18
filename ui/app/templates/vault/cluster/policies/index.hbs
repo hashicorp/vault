@@ -1,3 +1,8 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
 {{#if (or (eq this.policyType "acl") (has-feature "Sentinel"))}}
   <PageHeader as |p|>
     <p.levelLeft>
@@ -16,7 +21,7 @@
     {{#if this.model.meta.total}}
       <ToolbarFilters>
         <NavigateInput
-          filterFocusDidChange={{action "setFilterFocus"}}
+          @filterFocusDidChange={{action "setFilterFocus"}}
           @filterDidChange={{action "setFilter"}}
           @filter={{this.filter}}
           @filterMatchesKey={{this.filterMatchesKey}}
@@ -44,7 +49,7 @@
       </ToolbarFilters>
     {{/if}}
     <ToolbarActions>
-      <ToolbarLink @type="add" @params={{array "vault.cluster.policies.create"}} @data-test-policy-create-link={{true}}>
+      <ToolbarLink @route="vault.cluster.policies.create" @type="add" data-test-policy-create-link>
         Create
         {{uppercase this.policyType}}
         policy
@@ -68,13 +73,11 @@
           </div>
         </div>
       {{else}}
-        {{#linked-block
-          "vault.cluster.policy.show"
-          this.policyType
-          item.id
+        <LinkedBlock
+          @params={{array "vault.cluster.policy.show" this.policyType item.id}}
           class="list-item-row"
-          data-test-policy-link=item.id
-        }}
+          data-test-policy-link={{item.id}}
+        >
           <div class="columns is-mobile">
             <div class="column is-10">
               <LinkTo
@@ -143,7 +146,7 @@
               </PopupMenu>
             </div>
           </div>
-        {{/linked-block}}
+        </LinkedBlock>
       {{/if}}
     {{else}}
       <EmptyState @title="No policies matching &quot;{{this.pageFilter}}&quot;" />
@@ -168,10 +171,10 @@
         policy
         <Chevron />
       </LinkTo>
-      <LearnLink @path="/vault/getting-started/policies">
+      <DocLink @path="/vault/tutorials/getting-started/getting-started-policies">
         Learn more
         <Chevron />
-      </LearnLink>
+      </DocLink>
     </EmptyState>
   {{/if}}
 {{else}}

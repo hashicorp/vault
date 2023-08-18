@@ -1,4 +1,9 @@
 /**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
+/**
  * @module SecretCreateOrUpdate
  * SecretCreateOrUpdate component displays either the form for creating a new secret or creating a new version of the secret
  *
@@ -27,11 +32,9 @@ import Component from '@glimmer/component';
 import ControlGroupError from 'vault/lib/control-group-error';
 import Ember from 'ember';
 import keys from 'vault/lib/keycodes';
-
 import { action, set } from '@ember/object';
 import { inject as service } from '@ember/service';
 import { tracked } from '@glimmer/tracking';
-
 import { isBlank, isNone } from '@ember/utils';
 import { task, waitForEvent } from 'ember-concurrency';
 
@@ -50,11 +53,10 @@ export default class SecretCreateOrUpdate extends Component {
   @service controlGroup;
   @service router;
   @service store;
-  @service wizard;
 
-  constructor() {
-    super(...arguments);
-    this.codemirrorString = this.args.secretData.toJSONString();
+  @action
+  setup(elem, [secretData, model, mode]) {
+    this.codemirrorString = secretData.toJSONString();
     this.validationMessages = {
       path: '',
     };
@@ -62,16 +64,16 @@ export default class SecretCreateOrUpdate extends Component {
     if (Ember.testing) {
       this.secretPaths = ['beep', 'bop', 'boop'];
     } else {
-      let adapter = this.store.adapterFor('secret-v2');
-      let type = { modelName: 'secret-v2' };
-      let query = { backend: this.args.model.backend };
+      const adapter = this.store.adapterFor('secret-v2');
+      const type = { modelName: 'secret-v2' };
+      const query = { backend: model.backend };
       adapter.query(this.store, type, query).then((result) => {
         this.secretPaths = result.data.keys;
       });
     }
     this.checkRows();
 
-    if (this.args.mode === 'edit') {
+    if (mode === 'edit') {
       this.addRow();
     }
   }
@@ -94,7 +96,7 @@ export default class SecretCreateOrUpdate extends Component {
         ? set(this.validationMessages, name, `A secret with this ${name} already exists.`)
         : set(this.validationMessages, name, '');
     }
-    let values = Object.values(this.validationMessages);
+    const values = Object.values(this.validationMessages);
     this.validationErrorCount = values.filter(Boolean).length;
   }
   onEscape(e) {
@@ -109,26 +111,29 @@ export default class SecretCreateOrUpdate extends Component {
     }
   }
   pathHasWhiteSpace(value) {
-    let validation = new RegExp('\\s', 'g'); // search for whitespace
+    const validation = new RegExp('\\s', 'g'); // search for whitespace
     this.pathWhiteSpaceWarning = validation.test(value);
   }
   // successCallback is called in the context of the component
   persistKey(successCallback) {
-    let secret = this.args.model;
-    let secretData = this.args.modelForData;
-    let isV2 = this.args.isV2;
+    const secret = this.args.model;
+    const secretData = this.args.modelForData;
+    const isV2 = this.args.isV2;
     let key = secretData.get('path') || secret.id;
 
     if (key.startsWith('/')) {
       key = key.replace(/^\/+/g, '');
       secretData.set(secretData.pathAttr, key);
     }
-    let changed = secret.changedAttributes();
-    let changedKeys = Object.keys(changed);
+    const changed = secret.changedAttributes();
+    const changedKeys = Object.keys(changed);
 
     return secretData
       .save()
       .then(() => {
+        if (!this.args.canReadSecretData && secret.selectedVersion) {
+          delete secret.selectedVersion.secretData;
+        }
         if (!secretData.isError) {
           if (isV2) {
             secret.set('id', key);
@@ -156,16 +161,13 @@ export default class SecretCreateOrUpdate extends Component {
       })
       .catch((error) => {
         if (error instanceof ControlGroupError) {
-          let errorMessage = this.controlGroup.logFromError(error);
+          const errorMessage = this.controlGroup.logFromError(error);
           this.error = errorMessage.content;
         }
         throw error;
       });
   }
   saveComplete(callback, key) {
-    if (this.wizard.featureState === 'secret') {
-      this.wizard.transitionFeatureMachine('secret', 'CONTINUE');
-    }
     callback(key);
   }
   transitionToRoute() {
@@ -173,7 +175,7 @@ export default class SecretCreateOrUpdate extends Component {
   }
 
   get isCreateNewVersionFromOldVersion() {
-    let model = this.args.model;
+    const model = this.args.model;
     if (!model) {
       return false;
     }
@@ -190,7 +192,7 @@ export default class SecretCreateOrUpdate extends Component {
   @(task(function* (name, value) {
     this.checkValidation(name, value);
     while (true) {
-      let event = yield waitForEvent(document.body, 'keyup');
+      const event = yield waitForEvent(document.body, 'keyup');
       this.onEscape(event);
     }
   })
@@ -251,21 +253,15 @@ export default class SecretCreateOrUpdate extends Component {
     this.codemirrorString = this.args.secretData.toJSONString(true);
   }
   @action
+  handleMaskedInputChange(secret, index, value) {
+    const row = { ...secret, value };
+    set(this.args.secretData, index, row);
+    this.handleChange();
+  }
+  @action
   handleChange() {
     this.codemirrorString = this.args.secretData.toJSONString(true);
     set(this.args.modelForData, 'secretData', this.args.secretData.toJSON());
-  }
-  //submit on shift + enter
-  @action
-  handleKeyDown(e) {
-    e.stopPropagation();
-    if (!(e.keyCode === keys.ENTER && e.metaKey)) {
-      return;
-    }
-    let $form = this.element.querySelector('form');
-    if ($form.length) {
-      $form.submit();
-    }
   }
   @action
   updateValidationErrorCount(errorCount) {

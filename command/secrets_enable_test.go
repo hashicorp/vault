@@ -1,7 +1,12 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package command
 
 import (
+	"errors"
 	"io/ioutil"
+	"os"
 	"strings"
 	"testing"
 
@@ -11,9 +16,10 @@ import (
 	"github.com/mitchellh/cli"
 )
 
-// logicalBackendAdjustmentFactor is set to 1 for the database backend
-// which is a plugin but not found in go.mod files
-var logicalBackendAdjustmentFactor = 1
+// logicalBackendAdjustmentFactor is set to plus 1 for the database backend
+// which is a plugin but not found in go.mod files, and minus 1 for the ldap
+// and openldap secret backends which have the same underlying plugin.
+var logicalBackendAdjustmentFactor = 1 - 1
 
 func testSecretsEnableCommand(tb testing.TB) (*cli.MockUi, *SecretsEnableCommand) {
 	tb.Helper()
@@ -166,7 +172,6 @@ func TestSecretsEnableCommand_Run(t *testing.T) {
 		if diff := deep.Equal([]string{"key1,key2"}, mountInfo.Config.AllowedManagedKeys); len(diff) > 0 {
 			t.Errorf("Failed to find expected values in AllowedManagedKeys. Difference is: %v", diff)
 		}
-
 	})
 
 	t.Run("communication_failure", func(t *testing.T) {
@@ -216,6 +221,10 @@ func TestSecretsEnableCommand_Run(t *testing.T) {
 				if f.Name() == "plugin" {
 					continue
 				}
+				if _, err := os.Stat("../builtin/logical/" + f.Name() + "/backend.go"); errors.Is(err, os.ErrNotExist) {
+					// Skip ext test packages (fake plugins without backends).
+					continue
+				}
 				backends = append(backends, f.Name())
 			}
 		}
@@ -243,14 +252,23 @@ func TestSecretsEnableCommand_Run(t *testing.T) {
 		}
 
 		for _, b := range backends {
+			expectedResult := 0
+
 			ui, cmd := testSecretsEnableCommand(t)
 			cmd.client = client
 
-			code := cmd.Run([]string{
+			actualResult := cmd.Run([]string{
 				b,
 			})
-			if exp := 0; code != exp {
-				t.Errorf("type %s, expected %d to be %d - %s", b, code, exp, ui.OutputWriter.String()+ui.ErrorWriter.String())
+
+			// Need to handle deprecated builtins specially
+			status, _ := builtinplugins.Registry.DeprecationStatus(b, consts.PluginTypeSecrets)
+			if status == consts.PendingRemoval || status == consts.Removed {
+				expectedResult = 2
+			}
+
+			if actualResult != expectedResult {
+				t.Errorf("type: %s - got: %d, expected: %d - %s", b, actualResult, expectedResult, ui.OutputWriter.String()+ui.ErrorWriter.String())
 			}
 		}
 	})

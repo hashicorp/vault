@@ -1,3 +1,8 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
 <PageHeader as |p|>
   <p.top>
     <KeyValueHeader @baseKey={{this.model}} @path="vault.cluster.access.method" @root={{this.root}} @showCurrent={{true}} />
@@ -14,7 +19,7 @@
 
 <Toolbar>
   <ToolbarActions>
-    <ToolbarLink @params={{array "vault.cluster.access.method" this.model.id}} @data-test-backend-view-link={{true}}>
+    <ToolbarLink @route="vault.cluster.access.method" @model={{this.model.id}} data-test-backend-view-link>
       View method
     </ToolbarLink>
   </ToolbarActions>

@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package aws
 
 import (
@@ -24,6 +27,11 @@ func pathListRoles(b *backend) *framework.Path {
 	return &framework.Path{
 		Pattern: "roles/?$",
 
+		DisplayAttrs: &framework.DisplayAttributes{
+			OperationPrefix: operationPrefixAWS,
+			OperationSuffix: "roles",
+		},
+
 		Callbacks: map[logical.Operation]framework.OperationFunc{
 			logical.ListOperation: b.pathRoleList,
 		},
@@ -36,12 +44,18 @@ func pathListRoles(b *backend) *framework.Path {
 func pathRoles(b *backend) *framework.Path {
 	return &framework.Path{
 		Pattern: "roles/" + framework.GenericNameWithAtRegex("name"),
+
+		DisplayAttrs: &framework.DisplayAttributes{
+			OperationPrefix: operationPrefixAWS,
+			OperationSuffix: "role",
+		},
+
 		Fields: map[string]*framework.FieldSchema{
 			"name": {
 				Type:        framework.TypeString,
-				Description: "Name of the policy",
+				Description: "Name of the role",
 				DisplayAttrs: &framework.DisplayAttributes{
-					Name: "Policy Name",
+					Name: "Role Name",
 				},
 			},
 
@@ -562,7 +576,7 @@ func (r *awsRoleEntry) validate() error {
 			errors = multierror.Append(errors, fmt.Errorf("user_path parameter only valid for %s credential type", iamUserCred))
 		}
 		if !userPathRegex.MatchString(r.UserPath) {
-			errors = multierror.Append(errors, fmt.Errorf("The specified value for user_path is invalid. It must match '%s' regexp", userPathRegex.String()))
+			errors = multierror.Append(errors, fmt.Errorf("The specified value for user_path is invalid. It must match %q regexp", userPathRegex.String()))
 		}
 	}
 

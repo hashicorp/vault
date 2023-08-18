@@ -1,6 +1,10 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package command
 
 import (
+	"context"
 	"fmt"
 	"io"
 	"strings"
@@ -123,6 +127,18 @@ func TestKVPutCommand(t *testing.T) {
 			0,
 		},
 		{
+			"v1_mount_flag_syntax",
+			[]string{"-mount", "secret", "write/foo", "foo=bar"},
+			[]string{"Success!"},
+			0,
+		},
+		{
+			"v1_mount_flag_syntax_key_same_as_mount",
+			[]string{"-mount", "secret", "secret", "foo=bar"},
+			[]string{"Success!"},
+			0,
+		},
+		{
 			"v2_single_value",
 			[]string{"kv/write/foo", "foo=bar"},
 			v2ExpectedFields,
@@ -132,6 +148,30 @@ func TestKVPutCommand(t *testing.T) {
 			"v2_multi_value",
 			[]string{"kv/write/foo", "foo=bar", "zip=zap"},
 			v2ExpectedFields,
+			0,
+		},
+		{
+			"v2_secret_path",
+			[]string{"kv/write/foo", "foo=bar"},
+			[]string{"== Secret Path ==", "kv/data/write/foo"},
+			0,
+		},
+		{
+			"v2_mount_flag_syntax",
+			[]string{"-mount", "kv", "write/foo", "foo=bar"},
+			v2ExpectedFields,
+			0,
+		},
+		{
+			"v2_mount_flag_syntax_key_same_as_mount",
+			[]string{"-mount", "kv", "kv", "foo=bar"},
+			v2ExpectedFields,
+			0,
+		},
+		{
+			"v2_single_value_backslash",
+			[]string{"kv/write/foo", "foo=\\"},
+			[]string{"== Secret Path ==", "kv/data/write/foo"},
 			0,
 		},
 	}
@@ -416,22 +456,56 @@ func TestKVGetCommand(t *testing.T) {
 			0,
 		},
 		{
+			"v1_mount_flag_syntax",
+			[]string{"-mount", "secret", "read/foo"},
+			[]string{"foo"},
+			0,
+		},
+		{
 			"v2_field",
 			[]string{"-field", "foo", "kv/read/foo"},
 			[]string{"bar"},
 			0,
 		},
-
+		{
+			"v2_mount_flag_syntax",
+			[]string{"-mount", "kv", "read/foo"},
+			append(baseV2ExpectedFields, "foo"),
+			0,
+		},
+		{
+			"v2_mount_flag_syntax_leading_slash",
+			[]string{"-mount", "kv", "/read/foo"},
+			append(baseV2ExpectedFields, "foo"),
+			0,
+		},
+		{
+			"v1_mount_flag_syntax_key_same_as_mount",
+			[]string{"-mount", "kv", "kv"},
+			append(baseV2ExpectedFields, "foo"),
+			0,
+		},
+		{
+			"v2_mount_flag_syntax_key_same_as_mount",
+			[]string{"-mount", "kv", "kv"},
+			append(baseV2ExpectedFields, "foo"),
+			0,
+		},
 		{
 			"v2_not_found",
 			[]string{"kv/nope/not/once/never"},
 			[]string{"No value found at kv/data/nope/not/once/never"},
 			2,
 		},
-
 		{
 			"v2_read",
 			[]string{"kv/read/foo"},
+			append(baseV2ExpectedFields, "foo"),
+			0,
+		},
+		{
+			"v2_read_leading_slash",
+			[]string{"/kv/read/foo"},
 			append(baseV2ExpectedFields, "foo"),
 			0,
 		},
@@ -477,6 +551,21 @@ func TestKVGetCommand(t *testing.T) {
 					t.Fatal(err)
 				}
 
+				// create KV entries to test -mount flag where secret key is same as mount path
+				if _, err := client.Logical().Write("secret/secret", map[string]interface{}{
+					"foo": "bar",
+				}); err != nil {
+					t.Fatal(err)
+				}
+
+				if _, err := client.Logical().Write("kv/data/kv", map[string]interface{}{
+					"data": map[string]interface{}{
+						"foo": "bar",
+					},
+				}); err != nil {
+					t.Fatal(err)
+				}
+
 				ui, cmd := testKVGetCommand(t)
 				cmd.client = client
 
@@ -501,6 +590,131 @@ func TestKVGetCommand(t *testing.T) {
 
 		_, cmd := testKVGetCommand(t)
 		assertNoTabs(t, cmd)
+	})
+}
+
+func testKVListCommand(tb testing.TB) (*cli.MockUi, *KVListCommand) {
+	tb.Helper()
+	ui := cli.NewMockUi()
+	cmd := &KVListCommand{
+		BaseCommand: &BaseCommand{
+			UI: ui,
+		},
+	}
+
+	return ui, cmd
+}
+
+// TestKVListCommand runs tests for `vault kv list`
+func TestKVListCommand(t *testing.T) {
+	testCases := []struct {
+		name       string
+		args       []string
+		outStrings []string
+		code       int
+	}{
+		{
+			name:       "default",
+			args:       []string{"kv/my-prefix"},
+			outStrings: []string{"secret-0", "secret-1", "secret-2"},
+			code:       0,
+		},
+		{
+			name:       "not_enough_args",
+			args:       []string{},
+			outStrings: []string{"Not enough arguments"},
+			code:       1,
+		},
+		{
+			name:       "v2_default_with_mount",
+			args:       []string{"-mount", "kv", "my-prefix"},
+			outStrings: []string{"secret-0", "secret-1", "secret-2"},
+			code:       0,
+		},
+		{
+			name:       "v1_default_with_mount",
+			args:       []string{"kv/my-prefix"},
+			outStrings: []string{"secret-0", "secret-1", "secret-2"},
+			code:       0,
+		},
+		{
+			name:       "v2_not_found",
+			args:       []string{"kv/nope/not/once/never"},
+			outStrings: []string{"No value found at kv/metadata/nope/not/once/never"},
+			code:       2,
+		},
+		{
+			name:       "v1_mount_only",
+			args:       []string{"kv"},
+			outStrings: []string{"my-prefix"},
+			code:       0,
+		},
+		{
+			name:       "v2_mount_only",
+			args:       []string{"-mount", "kv"},
+			outStrings: []string{"my-prefix"},
+			code:       0,
+		},
+		{
+			// this is behavior that should be tested
+			// `kv` here is an explicit mount
+			// `my-prefix` is not
+			// the current kv code will ignore `my-prefix`
+			name:       "ignore_multi_part_mounts",
+			args:       []string{"-mount", "kv/my-prefix"},
+			outStrings: []string{"my-prefix"},
+			code:       0,
+		},
+	}
+
+	t.Run("validations", func(t *testing.T) {
+		t.Parallel()
+
+		for _, testCase := range testCases {
+			testCase := testCase
+
+			t.Run(testCase.name, func(t *testing.T) {
+				t.Parallel()
+
+				// test setup
+				client, closer := testVaultServer(t)
+				defer closer()
+
+				// enable kv-v2 backend
+				if err := client.Sys().Mount("kv/", &api.MountInput{
+					Type: "kv-v2",
+				}); err != nil {
+					t.Fatal(err)
+				}
+				time.Sleep(time.Second)
+
+				ctx := context.Background()
+				for i := 0; i < 3; i++ {
+					path := fmt.Sprintf("my-prefix/secret-%d", i)
+					_, err := client.KVv2("kv/").Put(ctx, path, map[string]interface{}{
+						"foo": "bar",
+					})
+					if err != nil {
+						t.Fatal(err)
+					}
+				}
+
+				ui, cmd := testKVListCommand(t)
+				cmd.client = client
+
+				code := cmd.Run(testCase.args)
+				if code != testCase.code {
+					t.Errorf("expected %d to be %d", code, testCase.code)
+				}
+
+				combined := ui.OutputWriter.String() + ui.ErrorWriter.String()
+				for _, str := range testCase.outStrings {
+					if !strings.Contains(combined, str) {
+						t.Errorf("expected %q to contain %q", combined, str)
+					}
+				}
+			})
+		}
 	})
 }
 
@@ -557,7 +771,19 @@ func TestKVMetadataGetCommand(t *testing.T) {
 		{
 			"versions_exist",
 			[]string{"kv/foo"},
-			append(expectedTopLevelFields,  expectedVersionFields[:]...),
+			append(expectedTopLevelFields, expectedVersionFields[:]...),
+			0,
+		},
+		{
+			"mount_flag_syntax",
+			[]string{"-mount", "kv", "foo"},
+			expectedTopLevelFields,
+			0,
+		},
+		{
+			"mount_flag_syntax_key_same_as_mount",
+			[]string{"-mount", "kv", "kv"},
+			expectedTopLevelFields,
 			0,
 		},
 	}
@@ -583,6 +809,15 @@ func TestKVMetadataGetCommand(t *testing.T) {
 				time.Sleep(time.Second)
 
 				if _, err := client.Logical().Write("kv/data/foo", map[string]interface{}{
+					"data": map[string]interface{}{
+						"foo": "bar",
+					},
+				}); err != nil {
+					t.Fatal(err)
+				}
+
+				// create KV entry to test -mount flag where secret key is same as mount path
+				if _, err := client.Logical().Write("kv/data/kv", map[string]interface{}{
 					"data": map[string]interface{}{
 						"foo": "bar",
 					},
@@ -654,9 +889,16 @@ func TestKVPatchCommand_ArgValidation(t *testing.T) {
 			"Failed to parse K=V data",
 			1,
 		},
+		{
+			"mount_flag_syntax",
+			[]string{"-mount", "kv"},
+			"Not enough arguments",
+			1,
+		},
 	}
 
 	for _, tc := range cases {
+		tc := tc // capture range variable
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
@@ -695,7 +937,7 @@ func expectedPatchFields() []string {
 	}
 }
 
-func TestKvPatchCommand_StdinFull(t *testing.T) {
+func TestKVPatchCommand_StdinFull(t *testing.T) {
 	client, closer := testVaultServer(t)
 	defer closer()
 
@@ -713,52 +955,56 @@ func TestKvPatchCommand_StdinFull(t *testing.T) {
 		t.Fatalf("write failed, err: %#v\n", err)
 	}
 
-	stdinR, stdinW := io.Pipe()
-	go func() {
-		stdinW.Write([]byte(`{"foo":"bar"}`))
-		stdinW.Close()
-	}()
+	cases := [][]string{
+		{"kv/patch/foo", "-"},
+		{"-mount", "kv", "patch/foo", "-"},
+	}
+	for i, args := range cases {
+		stdinR, stdinW := io.Pipe()
+		go func() {
+			stdinW.Write([]byte(fmt.Sprintf(`{"foo%d":"bar%d"}`, i, i)))
+			stdinW.Close()
+		}()
+		code, combined := kvPatchWithRetry(t, client, args, stdinR)
 
-	args := []string{"kv/patch/foo", "-"}
-	code, combined := kvPatchWithRetry(t, client, args, stdinR)
-
-	for _, str := range expectedPatchFields() {
-		if !strings.Contains(combined, str) {
-			t.Errorf("expected %q to contain %q", combined, str)
+		for _, str := range expectedPatchFields() {
+			if !strings.Contains(combined, str) {
+				t.Errorf("expected %q to contain %q", combined, str)
+			}
 		}
-	}
 
-	if code != 0 {
-		t.Fatalf("expected code to be 0 but was %d for patch cmd with args %#v\n", code, args)
-	}
+		if code != 0 {
+			t.Fatalf("expected code to be 0 but was %d for patch cmd with args %#v\n", code, args)
+		}
 
-	secret, err := client.Logical().Read("kv/data/patch/foo")
-	if err != nil {
-		t.Fatalf("read failed, err: %#v\n", err)
-	}
+		secret, err := client.Logical().ReadWithContext(context.Background(), "kv/data/patch/foo")
+		if err != nil {
+			t.Fatalf("read failed, err: %#v\n", err)
+		}
 
-	if secret == nil || secret.Data == nil {
-		t.Fatal("expected secret to have data")
-	}
+		if secret == nil || secret.Data == nil {
+			t.Fatal("expected secret to have data")
+		}
 
-	secretDataRaw, ok := secret.Data["data"]
+		secretDataRaw, ok := secret.Data["data"]
 
-	if !ok {
-		t.Fatalf("expected secret to have nested data key, data: %#v", secret.Data)
-	}
+		if !ok {
+			t.Fatalf("expected secret to have nested data key, data: %#v", secret.Data)
+		}
 
-	secretData := secretDataRaw.(map[string]interface{})
-	foo, ok := secretData["foo"].(string)
-	if !ok {
-		t.Fatal("expected foo to be a string but it wasn't")
-	}
+		secretData := secretDataRaw.(map[string]interface{})
+		foo, ok := secretData[fmt.Sprintf("foo%d", i)].(string)
+		if !ok {
+			t.Fatal("expected foo to be a string but it wasn't")
+		}
 
-	if exp, act := "bar", foo; exp != act {
-		t.Fatalf("expected %q to be %q, data: %#v\n", act, exp, secret.Data)
+		if exp, act := fmt.Sprintf("bar%d", i), foo; exp != act {
+			t.Fatalf("expected %q to be %q, data: %#v\n", act, exp, secret.Data)
+		}
 	}
 }
 
-func TestKvPatchCommand_StdinValue(t *testing.T) {
+func TestKVPatchCommand_StdinValue(t *testing.T) {
 	client, closer := testVaultServer(t)
 	defer closer()
 
@@ -776,43 +1022,49 @@ func TestKvPatchCommand_StdinValue(t *testing.T) {
 		t.Fatalf("write failed, err: %#v\n", err)
 	}
 
-	stdinR, stdinW := io.Pipe()
-	go func() {
-		stdinW.Write([]byte("bar"))
-		stdinW.Close()
-	}()
-
-	args := []string{"kv/patch/foo", "foo=-"}
-	code, combined := kvPatchWithRetry(t, client, args, stdinR)
-	if code != 0 {
-		t.Fatalf("expected code to be 0 but was %d for patch cmd with args %#v\n", code, args)
+	cases := [][]string{
+		{"kv/patch/foo", "foo=-"},
+		{"-mount", "kv", "patch/foo", "foo=-"},
 	}
 
-	for _, str := range expectedPatchFields() {
-		if !strings.Contains(combined, str) {
-			t.Errorf("expected %q to contain %q", combined, str)
+	for i, args := range cases {
+		stdinR, stdinW := io.Pipe()
+		go func() {
+			stdinW.Write([]byte(fmt.Sprintf("bar%d", i)))
+			stdinW.Close()
+		}()
+
+		code, combined := kvPatchWithRetry(t, client, args, stdinR)
+		if code != 0 {
+			t.Fatalf("expected code to be 0 but was %d for patch cmd with args %#v\n", code, args)
 		}
-	}
 
-	secret, err := client.Logical().Read("kv/data/patch/foo")
-	if err != nil {
-		t.Fatalf("read failed, err: %#v\n", err)
-	}
+		for _, str := range expectedPatchFields() {
+			if !strings.Contains(combined, str) {
+				t.Errorf("expected %q to contain %q", combined, str)
+			}
+		}
 
-	if secret == nil || secret.Data == nil {
-		t.Fatal("expected secret to have data")
-	}
+		secret, err := client.Logical().ReadWithContext(context.Background(), "kv/data/patch/foo")
+		if err != nil {
+			t.Fatalf("read failed, err: %#v\n", err)
+		}
 
-	secretDataRaw, ok := secret.Data["data"]
+		if secret == nil || secret.Data == nil {
+			t.Fatal("expected secret to have data")
+		}
 
-	if !ok {
-		t.Fatalf("expected secret to have nested data key, data: %#v\n", secret.Data)
-	}
+		secretDataRaw, ok := secret.Data["data"]
 
-	secretData := secretDataRaw.(map[string]interface{})
+		if !ok {
+			t.Fatalf("expected secret to have nested data key, data: %#v\n", secret.Data)
+		}
 
-	if exp, act := "bar", secretData["foo"].(string); exp != act {
-		t.Fatalf("expected %q to be %q, data: %#v\n", act, exp, secret.Data)
+		secretData := secretDataRaw.(map[string]interface{})
+
+		if exp, act := fmt.Sprintf("bar%d", i), secretData["foo"].(string); exp != act {
+			t.Fatalf("expected %q to be %q, data: %#v\n", act, exp, secret.Data)
+		}
 	}
 }
 
@@ -826,16 +1078,22 @@ func TestKVPatchCommand_RWMethodNotExists(t *testing.T) {
 		t.Fatalf("kv-v2 mount attempt failed - err: %#v\n", err)
 	}
 
-	args := []string{"-method", "rw", "kv/patch/foo", "foo=a"}
-	code, combined := kvPatchWithRetry(t, client, args, nil)
-
-	if code != 2 {
-		t.Fatalf("expected code to be 2 but was %d for patch cmd with args %#v\n", code, args)
+	cases := [][]string{
+		{"-method", "rw", "kv/patch/foo", "foo=a"},
+		{"-method", "rw", "-mount", "kv", "patch/foo", "foo=a"},
 	}
 
-	expectedOutputSubstr := "No value found"
-	if !strings.Contains(combined, expectedOutputSubstr) {
-		t.Fatalf("expected output %q to contain %q for patch cmd with args %#v\n", combined, expectedOutputSubstr, args)
+	for _, args := range cases {
+		code, combined := kvPatchWithRetry(t, client, args, nil)
+
+		if code != 2 {
+			t.Fatalf("expected code to be 2 but was %d for patch cmd with args %#v\n", code, args)
+		}
+
+		expectedOutputSubstr := "No value found"
+		if !strings.Contains(combined, expectedOutputSubstr) {
+			t.Fatalf("expected output %q to contain %q for patch cmd with args %#v\n", combined, expectedOutputSubstr, args)
+		}
 	}
 }
 
@@ -872,6 +1130,13 @@ func TestKVPatchCommand_RWMethodSucceeds(t *testing.T) {
 		}
 	}
 
+	// Test that full path was output
+	for _, str := range []string{"== Secret Path ==", "kv/data/patch/foo"} {
+		if !strings.Contains(combined, str) {
+			t.Errorf("expected %q to contain %q", combined, str)
+		}
+	}
+
 	// Test multi value
 	args = []string{"-method", "rw", "kv/patch/foo", "foo=aaa", "bar=bbb"}
 	code, combined = kvPatchWithRetry(t, client, args, nil)
@@ -890,6 +1155,7 @@ func TestKVPatchCommand_RWMethodSucceeds(t *testing.T) {
 func TestKVPatchCommand_CAS(t *testing.T) {
 	cases := []struct {
 		name       string
+		key        string
 		args       []string
 		expected   string
 		outStrings []string
@@ -897,6 +1163,7 @@ func TestKVPatchCommand_CAS(t *testing.T) {
 	}{
 		{
 			"right version",
+			"foo",
 			[]string{"-cas", "1", "kv/foo", "bar=quux"},
 			"quux",
 			expectedPatchFields(),
@@ -904,10 +1171,27 @@ func TestKVPatchCommand_CAS(t *testing.T) {
 		},
 		{
 			"wrong version",
+			"foo",
 			[]string{"-cas", "2", "kv/foo", "bar=wibble"},
 			"baz",
 			[]string{"check-and-set parameter did not match the current version"},
 			2,
+		},
+		{
+			"mount_flag_syntax",
+			"foo",
+			[]string{"-mount", "kv", "-cas", "1", "foo", "bar=quux"},
+			"quux",
+			expectedPatchFields(),
+			0,
+		},
+		{
+			"v2_mount_flag_syntax_key_same_as_mount",
+			"kv",
+			[]string{"-mount", "kv", "-cas", "1", "kv", "bar=quux"},
+			"quux",
+			expectedPatchFields(),
+			0,
 		},
 	}
 
@@ -940,7 +1224,11 @@ func TestKVPatchCommand_CAS(t *testing.T) {
 
 			kvClient.SetToken(secretAuth.ClientToken)
 
-			_, err = kvClient.Logical().Write("kv/data/foo", map[string]interface{}{"data": map[string]interface{}{"bar": "baz"}})
+			data := map[string]interface{}{
+				"bar": "baz",
+			}
+
+			_, err = kvClient.Logical().Write("kv/data/"+tc.key, map[string]interface{}{"data": data})
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -957,7 +1245,10 @@ func TestKVPatchCommand_CAS(t *testing.T) {
 				}
 			}
 
-			secret, err := kvClient.Logical().Read("kv/data/foo")
+			secret, err := kvClient.Logical().ReadWithContext(context.Background(), "kv/data/"+tc.key)
+			if err != nil {
+				t.Fatal(err)
+			}
 			bar := secret.Data["data"].(map[string]interface{})["bar"]
 			if bar != tc.expected {
 				t.Fatalf("expected bar to be %q but it was %q", tc.expected, bar)
@@ -1027,7 +1318,10 @@ func TestKVPatchCommand_Methods(t *testing.T) {
 				t.Fatalf("expected code to be %d but was %d", tc.code, code)
 			}
 
-			secret, err := kvClient.Logical().Read("kv/data/foo")
+			secret, err := kvClient.Logical().ReadWithContext(context.Background(), "kv/data/foo")
+			if err != nil {
+				t.Fatal(err)
+			}
 			bar := secret.Data["data"].(map[string]interface{})["bar"]
 			if bar != tc.expected {
 				t.Fatalf("expected bar to be %q but it was %q", tc.expected, bar)
@@ -1106,28 +1400,6 @@ func TestKVPatchCommand_403Fallback(t *testing.T) {
 	}
 }
 
-func createTokenForPolicy(t *testing.T, client *api.Client, policy string) (*api.SecretAuth, error) {
-	t.Helper()
-
-	if err := client.Sys().PutPolicy("policy", policy); err != nil {
-		return nil, err
-	}
-
-	secret, err := client.Auth().Token().Create(&api.TokenCreateRequest{
-		Policies: []string{"policy"},
-		TTL:      "30m",
-	})
-	if err != nil {
-		return nil, err
-	}
-
-	if secret == nil || secret.Auth == nil || secret.Auth.ClientToken == "" {
-		return nil, fmt.Errorf("missing auth data: %#v", secret)
-	}
-
-	return secret.Auth, err
-}
-
 func TestKVPatchCommand_RWMethodPolicyVariations(t *testing.T) {
 	cases := []struct {
 		name     string
@@ -1183,16 +1455,13 @@ func TestKVPatchCommand_RWMethodPolicyVariations(t *testing.T) {
 
 			client.SetToken(secretAuth.ClientToken)
 
-			if _, err := client.Logical().Write("kv/data/foo", map[string]interface{}{
-				"data": map[string]interface{}{
-					"foo": "bar",
-					"bar": "baz",
-				},
-			}); err != nil {
-				t.Fatalf("write failed, err: %#v\n", err)
+			putArgs := []string{"kv/foo", "foo=bar", "bar=baz"}
+			code, combined := kvPutWithRetry(t, client, putArgs)
+			if code != 0 {
+				t.Errorf("write failed, expected %d to be 0, output: %s", code, combined)
 			}
 
-			code, combined := kvPatchWithRetry(t, client, tc.args, nil)
+			code, combined = kvPatchWithRetry(t, client, tc.args, nil)
 			if code != tc.code {
 				t.Fatalf("expected code to be %d but was %d for patch cmd with args %#v\n", tc.code, code, tc.args)
 			}
@@ -1204,4 +1473,74 @@ func TestKVPatchCommand_RWMethodPolicyVariations(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestPadEqualSigns(t *testing.T) {
+	t.Parallel()
+
+	header := "Test Header"
+
+	cases := []struct {
+		name          string
+		totalPathLen  int
+		expectedCount int
+	}{
+		{
+			name:          "path with even length",
+			totalPathLen:  20,
+			expectedCount: 4,
+		},
+		{
+			name:          "path with odd length",
+			totalPathLen:  19,
+			expectedCount: 3,
+		},
+		{
+			name:          "smallest possible path",
+			totalPathLen:  8,
+			expectedCount: 2,
+		},
+	}
+
+	for _, tc := range cases {
+		tc := tc
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			padded := padEqualSigns(header, tc.totalPathLen)
+
+			signs := strings.Split(padded, fmt.Sprintf(" %s ", header))
+			if len(signs[0]) != len(signs[1]) {
+				t.Fatalf("expected an equal number of equal signs on both sides")
+			}
+			for _, sign := range signs {
+				count := strings.Count(sign, "=")
+				if count != tc.expectedCount {
+					t.Fatalf("expected %d equal signs but there were %d", tc.expectedCount, count)
+				}
+			}
+		})
+	}
+}
+
+func createTokenForPolicy(t *testing.T, client *api.Client, policy string) (*api.SecretAuth, error) {
+	t.Helper()
+
+	if err := client.Sys().PutPolicy("policy", policy); err != nil {
+		return nil, err
+	}
+
+	secret, err := client.Auth().Token().Create(&api.TokenCreateRequest{
+		Policies: []string{"policy"},
+		TTL:      "30m",
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	if secret == nil || secret.Auth == nil || secret.Auth.ClientToken == "" {
+		return nil, fmt.Errorf("missing auth data: %#v", secret)
+	}
+
+	return secret.Auth, err
 }

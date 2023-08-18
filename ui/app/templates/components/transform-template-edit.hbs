@@ -1,3 +1,8 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
 <PageHeader as |p|>
   <p.top>
     <KeyValueHeader
@@ -35,7 +40,7 @@
         <ToolbarSecretLink
           @secret={{concat this.model.idPrefix this.model.id}}
           @mode="edit"
-          @data-test-edit-link={{true}}
+          data-test-edit-link={{true}}
           @replace={{true}}
         >
           Edit template
@@ -50,7 +55,7 @@
     <div class="box is-sideless is-fullwidth is-marginless">
       <MessageError @model={{this.model}} />
       <NamespaceReminder @mode={{this.mode}} @noun="transform template" />
-      {{#each this.model.attrs as |attr|}}
+      {{#each this.model.writeAttrs as |attr|}}
         {{#if (and (eq attr.name "name") (eq this.mode "edit"))}}
           <label for={{attr.name}} class="is-label">
             {{attr.options.label}}
@@ -69,6 +74,9 @@
             type={{attr.type}}
           />
         {{else}}
+          {{#if (eq attr.name "alphabet")}}
+            <TransformAdvancedTemplating @model={{this.model}} />
+          {{/if}}
           <FormField data-test-field @attr={{attr}} @model={{this.model}} />
         {{/if}}
       {{/each}}
@@ -89,7 +97,7 @@
         </button>
         <SecretLink
           @mode={{if (eq this.mode "create") "list" "show"}}
-          @class="button"
+          class="button"
           @secret={{concat this.model.idPrefix this.model.id}}
         >
           Cancel
@@ -104,25 +112,29 @@
     </div>
   {{/if}}
   <div class="box is-fullwidth is-sideless is-paddingless is-marginless">
-    {{#each this.model.attrs as |attr|}}
-      {{#if (eq attr.type "object")}}
-        <InfoTableRow
-          @label={{capitalize (or attr.options.label (humanize (dasherize attr.name)))}}
-          @value={{stringify (get this.model attr.name)}}
-        />
-      {{else if (eq attr.type "array")}}
-        <InfoTableRow
-          @label={{capitalize (or attr.options.label (humanize (dasherize attr.name)))}}
-          @value={{get this.model attr.name}}
-          @type={{attr.type}}
-          @viewAll={{attr.name}}
-        />
-      {{else}}
-        <InfoTableRow
-          @label={{capitalize (or attr.options.label (humanize (dasherize attr.name)))}}
-          @value={{get this.model attr.name}}
-        />
-      {{/if}}
+    {{#each this.model.readAttrs as |attr|}}
+      {{#let (capitalize (or attr.options.label (humanize (dasherize attr.name)))) as |label|}}
+        {{#if (eq attr.name "decodeFormats")}}
+          {{#if (not (is-empty-value this.model.decodeFormats))}}
+            <InfoTableRow @label={{label}}>
+              <div>
+                {{#each-in this.model.decodeFormats as |key value|}}
+                  <div class="transform-decode-formats">
+                    <p class="is-label has-text-grey-400">{{key}}</p>
+                    <p>{{value}}</p>
+                  </div>
+                {{/each-in}}
+              </div>
+            </InfoTableRow>
+          {{/if}}
+        {{else}}
+          <InfoTableRow
+            @label={{label}}
+            @value={{get this.model attr.name}}
+            class={{if (eq attr.name "pattern") "transform-pattern-text"}}
+          />
+        {{/if}}
+      {{/let}}
     {{/each}}
   </div>
 {{/if}}

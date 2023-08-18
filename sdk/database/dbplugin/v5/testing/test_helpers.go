@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package dbtesting
 
 import (
@@ -6,16 +9,21 @@ import (
 	"testing"
 	"time"
 
+	"github.com/hashicorp/go-secure-stdlib/parseutil"
 	"github.com/hashicorp/vault/sdk/database/dbplugin/v5"
 )
 
 func getRequestTimeout(t *testing.T) time.Duration {
 	rawDur := os.Getenv("VAULT_TEST_DATABASE_REQUEST_TIMEOUT")
 	if rawDur == "" {
-		return 5 * time.Second
+		// Note: we incremented the default timeout from 5 to 10 seconds in a bid
+		// to fix sporadic failures of mssql_test.go tests TestInitialize() and
+		// TestUpdateUser_password().
+
+		return 10 * time.Second
 	}
 
-	dur, err := time.ParseDuration(rawDur)
+	dur, err := parseutil.ParseDurationSecond(rawDur)
 	if err != nil {
 		t.Fatalf("Failed to parse custom request timeout %q: %s", rawDur, err)
 	}

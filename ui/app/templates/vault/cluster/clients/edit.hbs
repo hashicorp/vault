@@ -1,9 +1,6 @@
-<PageHeader as |p|>
-  <p.levelLeft>
-    <h1 class="title is-3">
-      Configure usage tracking
-    </h1>
-  </p.levelLeft>
-</PageHeader>
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
 
-<Clients::Config @model={{this.model}} @mode="edit" />
+<Clients::Config @model={{@model}} @mode="edit" />

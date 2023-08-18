@@ -1,7 +1,11 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package framework
 
 import (
 	"context"
+	"fmt"
 	"net/http"
 	"reflect"
 	"strings"
@@ -9,8 +13,11 @@ import (
 	"testing"
 	"time"
 
+	"github.com/hashicorp/go-secure-stdlib/strutil"
+
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/logical"
+	"github.com/stretchr/testify/require"
 )
 
 func BenchmarkBackendRoute(b *testing.B) {
@@ -43,6 +50,52 @@ func BenchmarkBackendRoute(b *testing.B) {
 
 func TestBackend_impl(t *testing.T) {
 	var _ logical.Backend = new(Backend)
+}
+
+func TestBackendHandleRequestFieldWarnings(t *testing.T) {
+	handler := func(ctx context.Context, req *logical.Request, data *FieldData) (*logical.Response, error) {
+		return &logical.Response{
+			Data: map[string]interface{}{
+				"an_int":   data.Get("an_int"),
+				"a_string": data.Get("a_string"),
+				"name":     data.Get("name"),
+			},
+		}, nil
+	}
+
+	backend := &Backend{
+		Paths: []*Path{
+			{
+				Pattern: "foo/bar/(?P<name>.+)",
+				Fields: map[string]*FieldSchema{
+					"an_int":   {Type: TypeInt},
+					"a_string": {Type: TypeString},
+					"name":     {Type: TypeString},
+				},
+				Operations: map[logical.Operation]OperationHandler{
+					logical.UpdateOperation: &PathOperation{Callback: handler},
+				},
+			},
+		},
+	}
+	ctx := context.Background()
+	resp, err := backend.HandleRequest(ctx, &logical.Request{
+		Operation: logical.UpdateOperation,
+		Path:      "foo/bar/baz",
+		Data: map[string]interface{}{
+			"an_int":        10,
+			"a_string":      "accepted",
+			"unrecognized1": "unrecognized",
+			"unrecognized2": 20.2,
+			"name":          "noop",
+		},
+	})
+	require.NoError(t, err)
+	require.NotNil(t, resp)
+	t.Log(resp.Warnings)
+	require.Len(t, resp.Warnings, 2)
+	require.True(t, strutil.StrListContains(resp.Warnings, "Endpoint ignored these unrecognized parameters: [unrecognized1 unrecognized2]"))
+	require.True(t, strutil.StrListContains(resp.Warnings, "Endpoint replaced the value of these parameters with the values captured from the endpoint's path: [name]"))
 }
 
 func TestBackendHandleRequest(t *testing.T) {
@@ -760,5 +813,25 @@ func TestInitializeBackend(t *testing.T) {
 
 	if !inited {
 		t.Fatal("backend should be open")
+	}
+}
+
+// TestFieldTypeMethods tries to ensure our switch-case statements for the
+// FieldType "enum" are complete.
+func TestFieldTypeMethods(t *testing.T) {
+	unknownFormat := convertType(TypeInvalid).format
+
+	for i := TypeInvalid + 1; i < typeInvalidMax; i++ {
+		t.Run(fmt.Sprintf("%d", i), func(t *testing.T) {
+			if i.String() == TypeInvalid.String() {
+				t.Errorf("unknown type string for %d", i)
+			}
+
+			if convertType(i).format == unknownFormat {
+				t.Errorf("unknown schema for %d", i)
+			}
+
+			_ = i.Zero()
+		})
 	}
 }

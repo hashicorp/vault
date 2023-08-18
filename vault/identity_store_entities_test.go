@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package vault
 
 import (
@@ -8,7 +11,7 @@ import (
 	"strings"
 	"testing"
 
-	uuid "github.com/hashicorp/go-uuid"
+	"github.com/hashicorp/go-uuid"
 	credGithub "github.com/hashicorp/vault/builtin/credential/github"
 	"github.com/hashicorp/vault/helper/identity"
 	"github.com/hashicorp/vault/helper/namespace"
@@ -688,7 +691,7 @@ func TestIdentityStore_LoadingEntities(t *testing.T) {
 	ghSysview := c.mountEntrySysView(meGH)
 
 	// Create new github auth credential backend
-	ghAuth, err := c.newCredentialBackend(context.Background(), meGH, ghSysview, ghView)
+	ghAuth, _, err := c.newCredentialBackend(context.Background(), meGH, ghSysview, ghView)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1008,12 +1011,6 @@ func TestIdentityStore_MergeEntitiesByID(t *testing.T) {
 
 	aliasRegisterData2 := map[string]interface{}{
 		"name":           "testaliasname2",
-		"mount_accessor": githubAccessor,
-		"metadata":       []string{"organization=hashicorp", "team=vault"},
-	}
-
-	aliasRegisterData3 := map[string]interface{}{
-		"name":           "testaliasname3",
 		"mount_accessor": upAccessor,
 		"metadata":       []string{"organization=hashicorp", "team=vault"},
 	}
@@ -1079,24 +1076,10 @@ func TestIdentityStore_MergeEntitiesByID(t *testing.T) {
 	}
 
 	entityID2 := resp.Data["id"].(string)
-	// Set entity ID in alias registration data and register alias
+
 	aliasRegisterData2["entity_id"] = entityID2
 
-	aliasReq = &logical.Request{
-		Operation: logical.UpdateOperation,
-		Path:      "alias",
-		Data:      aliasRegisterData2,
-	}
-
-	// Register the alias
-	resp, err = is.HandleRequest(ctx, aliasReq)
-	if err != nil || (resp != nil && resp.IsError()) {
-		t.Fatalf("err:%v resp:%#v", err, resp)
-	}
-
-	aliasRegisterData3["entity_id"] = entityID2
-
-	aliasReq.Data = aliasRegisterData3
+	aliasReq.Data = aliasRegisterData2
 
 	// Register the alias
 	resp, err = is.HandleRequest(ctx, aliasReq)
@@ -1111,8 +1094,8 @@ func TestIdentityStore_MergeEntitiesByID(t *testing.T) {
 		t.Fatalf("failed to create entity: %v", err)
 	}
 
-	if len(entity2.Aliases) != 2 {
-		t.Fatalf("bad: number of aliases in entity; expected: 2, actual: %d", len(entity2.Aliases))
+	if len(entity2.Aliases) != 1 {
+		t.Fatalf("bad: number of aliases in entity; expected: 1, actual: %d", len(entity2.Aliases))
 	}
 
 	entity2GroupReq := &logical.Request{
@@ -1259,7 +1242,7 @@ func TestIdentityStore_MergeEntitiesByID_DuplicateFromEntityIDs(t *testing.T) {
 			"mount_accessor": githubAccessor,
 			"metadata":       []string{"organization=hashicorp", "team=vault"},
 			"entity_id":      entityID2,
-			"policies": []string{"testPolicy1", "testPolicy1", "testPolicy2"},
+			"policies":       []string{"testPolicy1", "testPolicy1", "testPolicy2"},
 		},
 	}
 

@@ -1,9 +1,13 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package command
 
 import (
 	"context"
 	"fmt"
 	"io"
+	"path"
 	"strings"
 	"time"
 
@@ -19,11 +23,13 @@ var (
 type KVMetadataPatchCommand struct {
 	*BaseCommand
 
-	flagMaxVersions        int
-	flagCASRequired        BoolPtr
-	flagDeleteVersionAfter time.Duration
-	flagCustomMetadata     map[string]string
-	testStdin              io.Reader // for tests
+	flagMaxVersions          int
+	flagCASRequired          BoolPtr
+	flagDeleteVersionAfter   time.Duration
+	flagCustomMetadata       map[string]string
+	flagRemoveCustomMetadata []string
+	flagMount                string
+	testStdin                io.Reader // for tests
 }
 
 func (c *KVMetadataPatchCommand) Synopsis() string {
@@ -32,30 +38,40 @@ func (c *KVMetadataPatchCommand) Synopsis() string {
 
 func (c *KVMetadataPatchCommand) Help() string {
 	helpText := `
-Usage: vault metadata kv patch [options] KEY
+Usage: vault kv metadata patch [options] KEY
 
   This command can be used to create a blank key in the key-value store or to
   update key configuration for a specified key.
 
   Create a key in the key-value store with no data:
 
+      $ vault kv metadata patch -mount=secret foo
+
+  The deprecated path-like syntax can also be used, but this should be avoided 
+  for KV v2, as the fact that it is not actually the full API path to 
+  the secret (secret/metadata/foo) can cause confusion: 
+  
       $ vault kv metadata patch secret/foo
 
   Set a max versions setting on the key:
 
-      $ vault kv metadata patch -max-versions=5 secret/foo
+      $ vault kv metadata patch -mount=secret -max-versions=5 foo
 
   Set delete-version-after on the key:
 
-      $ vault kv metadata patch -delete-version-after=3h25m19s secret/foo
+      $ vault kv metadata patch -mount=secret -delete-version-after=3h25m19s foo
 
   Require Check-and-Set for this key:
 
-      $ vault kv metadata patch -cas-required secret/foo
+      $ vault kv metadata patch -mount=secret -cas-required foo
 
   Set custom metadata on the key:
 
-      $ vault kv metadata patch -custom-metadata=foo=abc -custom-metadata=bar=123 secret/foo
+      $ vault kv metadata patch -mount=secret -custom-metadata=foo=abc -custom-metadata=bar=123 foo
+
+  To remove custom meta data from the corresponding path in the key-value store, kv metadata patch can be used.
+
+      $ vault kv metadata patch -mount=secret -remove-custom-metadata=bar foo
 
   Additional flags and more advanced use cases are detailed below.
 
@@ -103,6 +119,24 @@ func (c *KVMetadataPatchCommand) Flags() *FlagSets {
 		This can be specified multiple times to add multiple pieces of metadata.`,
 	})
 
+	f.StringSliceVar(&StringSliceVar{
+		Name:    "remove-custom-metadata",
+		Target:  &c.flagRemoveCustomMetadata,
+		Default: []string{},
+		Usage:   "Key to remove from custom metadata. To specify multiple values, specify this flag multiple times.",
+	})
+
+	f.StringVar(&StringVar{
+		Name:    "mount",
+		Target:  &c.flagMount,
+		Default: "", // no default, because the handling of the next arg is determined by whether this flag has a value
+		Usage: `Specifies the path where the KV backend is mounted. If specified, 
+		the next argument will be interpreted as the secret path. If this flag is 
+		not specified, the next argument will be interpreted as the combined mount 
+		path and secret path, with /metadata/ automatically appended between KV 
+		v2 secrets.`,
+	})
+
 	return set
 }
 
@@ -139,21 +173,47 @@ func (c *KVMetadataPatchCommand) Run(args []string) int {
 		return 2
 	}
 
-	path := sanitizePath(args[0])
+	// If true, we're working with "-mount=secret foo" syntax.
+	// If false, we're using "secret/foo" syntax.
+	mountFlagSyntax := c.flagMount != ""
 
-	mountPath, v2, err := isKVv2(path, client)
-	if err != nil {
-		c.UI.Error(err.Error())
-		return 2
+	var (
+		mountPath   string
+		partialPath string
+		v2          bool
+	)
+
+	// Parse the paths and grab the KV version
+	if mountFlagSyntax {
+		// In this case, this arg is the secret path (e.g. "foo").
+		partialPath = sanitizePath(args[0])
+		mountPath, v2, err = isKVv2(sanitizePath(c.flagMount), client)
+		if err != nil {
+			c.UI.Error(err.Error())
+			return 2
+		}
+
+		if v2 {
+			partialPath = path.Join(mountPath, partialPath)
+		}
+	} else {
+		// In this case, this arg is a path-like combination of mountPath/secretPath.
+		// (e.g. "secret/foo")
+		partialPath = sanitizePath(args[0])
+		mountPath, v2, err = isKVv2(partialPath, client)
+		if err != nil {
+			c.UI.Error(err.Error())
+			return 2
+		}
 	}
 	if !v2 {
 		c.UI.Error("Metadata not supported on KV Version 1")
 		return 1
 	}
 
-	path = addPrefixToVKVPath(path, mountPath, "metadata")
+	fullPath := addPrefixToKVPath(partialPath, mountPath, "metadata", false)
 
-	data := map[string]interface{}{}
+	data := make(map[string]interface{}, 0)
 
 	if c.flagMaxVersions >= 0 {
 		data["max_versions"] = c.flagMaxVersions
@@ -167,13 +227,22 @@ func (c *KVMetadataPatchCommand) Run(args []string) int {
 		data["delete_version_after"] = c.flagDeleteVersionAfter.String()
 	}
 
-	if len(c.flagCustomMetadata) > 0 {
-		data["custom_metadata"] = c.flagCustomMetadata
+	customMetadata := make(map[string]interface{})
+
+	for key, value := range c.flagCustomMetadata {
+		customMetadata[key] = value
 	}
 
-	secret, err := client.Logical().JSONMergePatch(context.Background(), path, data)
+	for _, key := range c.flagRemoveCustomMetadata {
+		// A null in a JSON merge patch payload will remove the associated key
+		customMetadata[key] = nil
+	}
+
+	data["custom_metadata"] = customMetadata
+
+	secret, err := client.Logical().JSONMergePatch(context.Background(), fullPath, data)
 	if err != nil {
-		c.UI.Error(fmt.Sprintf("Error writing data to %s: %s", path, err))
+		c.UI.Error(fmt.Sprintf("Error writing data to %s: %s", fullPath, err))
 
 		if secret != nil {
 			OutputSecret(c.UI, secret)
@@ -184,7 +253,7 @@ func (c *KVMetadataPatchCommand) Run(args []string) int {
 	if secret == nil {
 		// Don't output anything unless using the "table" format
 		if Format(c.UI) == "table" {
-			c.UI.Info(fmt.Sprintf("Success! Data written to: %s", path))
+			c.UI.Info(fmt.Sprintf("Success! Data written to: %s", fullPath))
 		}
 		return 0
 	}

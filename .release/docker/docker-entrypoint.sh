@@ -1,4 +1,7 @@
 #!/usr/bin/dumb-init /bin/sh
+# Copyright (c) HashiCorp, Inc.
+# SPDX-License-Identifier: BUSL-1.1
+
 set -e
 
 # Note above that we run dumb-init as PID 1 in order to reap zombie processes
@@ -91,7 +94,7 @@ if [ "$1" = 'vault' ]; then
 
         # In the case vault has been started in a container without IPC_LOCK privileges
         if ! vault -version 1>/dev/null 2>/dev/null; then
-            >&2 echo "Couldn't start vault with IPC_LOCK. Disabling IPC_LOCK, please use --privileged or --cap-add IPC_LOCK"
+            >&2 echo "Couldn't start vault with IPC_LOCK. Disabling IPC_LOCK, please use --cap-add IPC_LOCK"
             setcap cap_ipc_lock=-ep $(readlink -f $(which vault))
         fi
     fi

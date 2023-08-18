@@ -1,0 +1,3 @@
+```release-note:bug
+secrets/pki: Fix handling of "any" key type with default zero signature bits value.
+```

@@ -1,13 +1,17 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import { Factory, trait } from 'ember-cli-mirage';
-import faker from 'faker';
 
 export default Factory.extend({
   auth: null,
   data: null, // populated via traits
   lease_duration: 0,
   lease_id: '',
-  renewable: () => faker.datatype.boolean(),
-  request_id: () => faker.datatype.uuid(),
+  renewable: true,
+  request_id: '22068a49-a504-41ad-b5b0-1eac71659190',
   warnings: null,
   wrap_info: null,
 

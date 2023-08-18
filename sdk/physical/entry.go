@@ -1,4 +1,12 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package physical
+
+import (
+	"encoding/hex"
+	"fmt"
+)
 
 // Entry is used to represent data stored by the physical backend
 type Entry struct {
@@ -8,4 +16,8 @@ type Entry struct {
 
 	// Only used in replication
 	ValueHash []byte
+}
+
+func (e *Entry) String() string {
+	return fmt.Sprintf("Key: %s. SealWrap: %t. Value: %s. ValueHash: %s", e.Key, e.SealWrap, hex.EncodeToString(e.Value), hex.EncodeToString(e.ValueHash))
 }

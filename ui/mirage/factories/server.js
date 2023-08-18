@@ -1,10 +1,14 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import { Factory } from 'ember-cli-mirage';
-import faker from 'faker';
 
 export default Factory.extend({
-  address: () => faker.internet.ip(),
+  address: '127.0.0.1',
   node_id: (i) => `raft_node_${i}`,
   protocol_version: '3',
-  voter: () => faker.datatype.boolean(),
-  leader: () => faker.datatype.boolean(),
+  voter: true,
+  leader: true,
 });

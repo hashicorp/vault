@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package http
 
 import (
@@ -13,7 +16,8 @@ import (
 	"strings"
 	"time"
 
-	uuid "github.com/hashicorp/go-uuid"
+	"github.com/hashicorp/go-uuid"
+	"github.com/hashicorp/vault/helper/experiments"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/logical"
@@ -71,6 +75,7 @@ func buildLogicalRequestNoAuth(perfStandby bool, w http.ResponseWriter, r *http.
 				return nil, nil, http.StatusBadRequest, nil
 			}
 			if list {
+				queryVals.Del("list")
 				op = logical.ListOperation
 				if !strings.HasSuffix(path, "/") {
 					path += "/"
@@ -78,15 +83,15 @@ func buildLogicalRequestNoAuth(perfStandby bool, w http.ResponseWriter, r *http.
 			}
 		}
 
-		if !list {
-			data = parseQuery(queryVals)
-		}
+		data = parseQuery(queryVals)
 
 		switch {
 		case strings.HasPrefix(path, "sys/pprof/"):
 			passHTTPReq = true
 			responseWriter = w
 		case path == "sys/storage/raft/snapshot":
+			responseWriter = w
+		case path == "sys/internal/counters/activity/export":
 			responseWriter = w
 		case path == "sys/monitor":
 			passHTTPReq = true
@@ -101,10 +106,11 @@ func buildLogicalRequestNoAuth(perfStandby bool, w http.ResponseWriter, r *http.
 		bufferedBody := newBufferedReader(r.Body)
 		r.Body = bufferedBody
 
-		// If we are uploading a snapshot we don't want to parse it. Instead
-		// we will simply add the HTTP request to the logical request object
-		// for later consumption.
-		if path == "sys/storage/raft/snapshot" || path == "sys/storage/raft/snapshot-force" {
+		// If we are uploading a snapshot or receiving an ocsp-request (which
+		// is der encoded) we don't want to parse it. Instead, we will simply
+		// add the HTTP request to the logical request object for later consumption.
+		contentType := r.Header.Get("Content-Type")
+		if path == "sys/storage/raft/snapshot" || path == "sys/storage/raft/snapshot-force" || isOcspRequest(contentType) {
 			passHTTPReq = true
 			origBody = r.Body
 		} else {
@@ -119,7 +125,7 @@ func buildLogicalRequestNoAuth(perfStandby bool, w http.ResponseWriter, r *http.
 				return nil, nil, status, fmt.Errorf("error reading data")
 			}
 
-			if isForm(head, r.Header.Get("Content-Type")) {
+			if isForm(head, contentType) {
 				formData, err := parseFormRequest(r)
 				if err != nil {
 					status := http.StatusBadRequest
@@ -176,7 +182,11 @@ func buildLogicalRequestNoAuth(perfStandby bool, w http.ResponseWriter, r *http.
 			path += "/"
 		}
 
-	case "OPTIONS", "HEAD":
+		data = parseQuery(r.URL.Query())
+	case "HEAD":
+		op = logical.HeaderOperation
+		data = parseQuery(r.URL.Query())
+	case "OPTIONS":
 	default:
 		return nil, nil, http.StatusMethodNotAllowed, nil
 	}
@@ -203,6 +213,15 @@ func buildLogicalRequestNoAuth(perfStandby bool, w http.ResponseWriter, r *http.
 	}
 
 	return req, origBody, 0, nil
+}
+
+func isOcspRequest(contentType string) bool {
+	contentType, _, err := mime.ParseMediaType(contentType)
+	if err != nil {
+		return false
+	}
+
+	return contentType == "application/ocsp-request"
 }
 
 func buildLogicalPath(r *http.Request) (string, int, error) {
@@ -274,9 +293,9 @@ func buildLogicalRequest(core *vault.Core, w http.ResponseWriter, r *http.Reques
 // handleLogical returns a handler for processing logical requests. These requests
 // may or may not end up getting forwarded under certain scenarios if the node
 // is a performance standby. Some of these cases include:
-//     - Perf standby and token with limited use count.
-//     - Perf standby and token re-validation needed (e.g. due to invalid token).
-//     - Perf standby and control group error.
+//   - Perf standby and token with limited use count.
+//   - Perf standby and token re-validation needed (e.g. due to invalid token).
+//   - Perf standby and control group error.
 func handleLogical(core *vault.Core) http.Handler {
 	return handleLogicalInternal(core, false, false)
 }
@@ -331,6 +350,24 @@ func handleLogicalInternal(core *vault.Core, injectDataIntoTopLevel bool, noForw
 		if err != nil || statusCode != 0 {
 			respondError(w, statusCode, err)
 			return
+		}
+
+		// Websockets need to be handled at HTTP layer instead of logical requests.
+		if core.IsExperimentEnabled(experiments.VaultExperimentEventsAlpha1) {
+			ns, err := namespace.FromContext(r.Context())
+			if err != nil {
+				respondError(w, http.StatusInternalServerError, err)
+				return
+			}
+			nsPath := ns.Path
+			if ns.ID == namespace.RootNamespaceID {
+				nsPath = ""
+			}
+			if strings.HasPrefix(r.URL.Path, fmt.Sprintf("/v1/%ssys/events/subscribe/", nsPath)) {
+				handler := handleEventsSubscribe(core, req)
+				handler.ServeHTTP(w, r)
+				return
+			}
 		}
 
 		// Make the internal request. We attach the connection info
@@ -530,14 +567,21 @@ WRITE_RESPONSE:
 // attaching to a logical request
 func getConnection(r *http.Request) (connection *logical.Connection) {
 	var remoteAddr string
+	var remotePort int
 
-	remoteAddr, _, err := net.SplitHostPort(r.RemoteAddr)
+	remoteAddr, port, err := net.SplitHostPort(r.RemoteAddr)
 	if err != nil {
 		remoteAddr = ""
+	} else {
+		remotePort, err = strconv.Atoi(port)
+		if err != nil {
+			remotePort = 0
+		}
 	}
 
 	connection = &logical.Connection{
 		RemoteAddr: remoteAddr,
+		RemotePort: remotePort,
 		ConnState:  r.TLS,
 	}
 	return

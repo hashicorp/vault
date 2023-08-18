@@ -1,0 +1,3 @@
+```release-note:improvement
+auth/jwt: Adds ability to use JSON pointer syntax for the `user_claim` value.
+```

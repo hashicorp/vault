@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import { alias } from '@ember/object/computed';
 import { inject as service } from '@ember/service';
 import Controller from '@ember/controller';
@@ -20,7 +25,7 @@ export default Controller.extend({
 
     saveConfig(config) {
       // if the mode is null, we want no filtering, so we should delete any existing config
-      let isDelete = config.mode === null;
+      const isDelete = config.mode === null;
       const flash = this.flashMessages;
       const id = config.id;
       const redirectArgs = isDelete

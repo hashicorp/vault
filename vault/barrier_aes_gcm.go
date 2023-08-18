@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package vault
 
 import (
@@ -10,6 +13,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"math"
 	"strconv"
 	"strings"
 	"sync"
@@ -959,10 +963,13 @@ func (b *AESGCMBarrier) aeadFromKey(key []byte) (cipher.AEAD, error) {
 func (b *AESGCMBarrier) encrypt(path string, term uint32, gcm cipher.AEAD, plain []byte) ([]byte, error) {
 	// Allocate the output buffer with room for tern, version byte,
 	// nonce, GCM tag and the plaintext
-	capacity := termSize + 1 + gcm.NonceSize() + gcm.Overhead() + len(plain)
-	if capacity < 0 {
+
+	extra := termSize + 1 + gcm.NonceSize() + gcm.Overhead()
+	if len(plain) > math.MaxInt-extra {
 		return nil, ErrPlaintextTooLarge
 	}
+
+	capacity := len(plain) + extra
 	size := termSize + 1 + gcm.NonceSize()
 	out := make([]byte, size, capacity)
 
@@ -1010,6 +1017,9 @@ func termLabel(term uint32) []metrics.Label {
 
 // decrypt is used to decrypt a value using the keyring
 func (b *AESGCMBarrier) decrypt(path string, gcm cipher.AEAD, cipher []byte) ([]byte, error) {
+	if len(cipher) < 5+gcm.NonceSize() {
+		return nil, fmt.Errorf("invalid cipher length")
+	}
 	// Capture the parts
 	nonce := cipher[5 : 5+gcm.NonceSize()]
 	raw := cipher[5+gcm.NonceSize():]
@@ -1061,7 +1071,16 @@ func (b *AESGCMBarrier) Decrypt(_ context.Context, key string, ciphertext []byte
 		return nil, ErrBarrierSealed
 	}
 
+	if len(ciphertext) == 0 {
+		b.l.RUnlock()
+		return nil, fmt.Errorf("empty ciphertext")
+	}
+
 	// Verify the term
+	if len(ciphertext) < 4 {
+		b.l.RUnlock()
+		return nil, fmt.Errorf("invalid ciphertext term")
+	}
 	term := binary.BigEndian.Uint32(ciphertext[:4])
 
 	// Get the GCM by term

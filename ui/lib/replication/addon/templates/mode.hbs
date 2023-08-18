@@ -1,13 +1,17 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
 <section class="section">
   <div class="container is-widescreen">
     {{#if (and (eq this.model.drMode "secondary") (eq this.model.drModeInit "primary"))}}
-      <nav class="navbar"></nav>
       <LayoutLoading />
     {{else}}
       {{#if this.model.replicationAttrs.replicationEnabled}}
         <PageHeader as |p|>
           <p.top>
-            <nav class="key-value-header breadcrumb">
+            <nav class="key-value-header breadcrumb" aria-label="breadcrumbs">
               <ul>
                 <li>
                   <LinkTo @route="index">
@@ -32,24 +36,18 @@
           </p.levelLeft>
         </PageHeader>
         <div class="tabs-container box is-bottomless is-fullwidth is-paddingless is-marginless">
-          <nav class="tabs sub-nav">
+          <nav class="tabs sub-nav" aria-label="tab navigation">
             <ul>
-              <li class={{if (is-active-route "vault.cluster.replication.mode.index") "is-active" ""}}>
-                <LinkTo @route="mode" @model={{this.replicationMode}} data-test-replication-link="details">
-                  Details
-                </LinkTo>
-              </li>
-              <li class={{if (is-active-route "vault.cluster.replication.mode.manage") "is-active" ""}}>
-                <LinkTo @route="mode.manage" @model={{this.replicationMode}} data-test-replication-link="manage">
-                  Manage
-                </LinkTo>
-              </li>
+              <LinkTo @route="mode.index" @model={{this.replicationMode}} data-test-replication-link="details">
+                Details
+              </LinkTo>
+              <LinkTo @route="mode.manage" @model={{this.replicationMode}} data-test-replication-link="manage">
+                Manage
+              </LinkTo>
               {{#if this.model.replicationAttrs.isPrimary}}
-                <li class={{if (is-active-route "vault.cluster.replication.mode.secondaries") "is-active" ""}}>
-                  <LinkTo @route="mode.secondaries" @model={{this.replicationMode}} data-test-replication-link="secondaries">
-                    Secondaries
-                  </LinkTo>
-                </li>
+                <LinkTo @route="mode.secondaries" @model={{this.replicationMode}} data-test-replication-link="secondaries">
+                  Secondaries
+                </LinkTo>
               {{/if}}
             </ul>
           </nav>

@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 /*
   This service is used to pull an OpenAPI document describing the
   shape of data at a specific path to hydrate a model with attrs it
@@ -13,8 +18,9 @@ import fieldToAttrs from 'vault/utils/field-to-attrs';
 import { resolve, reject } from 'rsvp';
 import { debug } from '@ember/debug';
 import { dasherize, capitalize } from '@ember/string';
+import { computed } from '@ember/object'; // eslint-disable-line
 import { singularize } from 'ember-inflector';
-import buildValidations from 'vault/utils/build-api-validators';
+import { withModelValidations } from 'vault/decorators/model-validations';
 
 import generatedItemAdapter from 'vault/adapters/generated-item-list';
 export function sanitizePath(path) {
@@ -26,16 +32,17 @@ export default Service.extend({
   attrs: null,
   dynamicApiPath: '',
   ajax(url, options = {}) {
-    let appAdapter = getOwner(this).lookup(`adapter:application`);
-    let { data } = options;
+    const appAdapter = getOwner(this).lookup(`adapter:application`);
+    const { data } = options;
     return appAdapter.ajax(url, 'GET', {
       data,
     });
   },
 
   getNewModel(modelType, backend, apiPath, itemType) {
-    let owner = getOwner(this);
+    const owner = getOwner(this);
     const modelName = `model:${modelType}`;
+
     const modelFactory = owner.factoryFor(modelName);
     let newModel, helpUrl;
     // if we have a factory, we need to take the existing model into account
@@ -72,9 +79,9 @@ export default Service.extend({
           const adapter = this.getNewAdapter(pathInfo, itemType);
           owner.register(`adapter:${modelType}`, adapter);
         }
-        let path, paths;
+        let path;
         // if we have an item we want the create info for that itemType
-        paths = itemType ? this.filterPathsByItemType(pathInfo, itemType) : pathInfo.paths;
+        const paths = itemType ? this.filterPathsByItemType(pathInfo, itemType) : pathInfo.paths;
         const createPath = paths.find((path) => path.operations.includes('post') && path.action !== 'Delete');
         path = createPath.path;
         path = path.includes('{') ? path.slice(0, path.indexOf('{') - 1) + '/example' : path;
@@ -91,7 +98,7 @@ export default Service.extend({
       })
       .catch((err) => {
         // TODO: we should handle the error better here
-        console.error(err);
+        console.error(err); // eslint-disable-line
       });
   },
 
@@ -154,14 +161,14 @@ export default Service.extend({
   },
 
   getPaths(apiPath, backend, itemType, itemID) {
-    let debugString =
+    const debugString =
       itemID && itemType
         ? `Fetching relevant paths for ${backend} ${itemType} ${itemID} from ${apiPath}`
         : `Fetching relevant paths for ${backend} ${itemType} from ${apiPath}`;
     debug(debugString);
     return this.ajax(`/v1/${apiPath}?help=1`, backend).then((help) => {
       const pathInfo = help.openapi.paths;
-      let paths = Object.entries(pathInfo);
+      const paths = Object.entries(pathInfo);
 
       return paths.reduce(this.reducePathsByPathName, {
         apiPath,
@@ -186,12 +193,12 @@ export default Service.extend({
       const path = Object.keys(help.openapi.paths)[0]; // do this or look at name
       const pathInfo = help.openapi.paths[path];
       const params = pathInfo.parameters;
-      let paramProp = {};
+      const paramProp = {};
 
       // include url params
       if (params) {
         const { name, schema, description } = params[0];
-        let label = capitalize(name.split('_').join(' '));
+        const label = capitalize(name.split('_').join(' '));
 
         paramProp[name] = {
           'x-vault-displayAttrs': {
@@ -204,10 +211,18 @@ export default Service.extend({
         };
       }
 
-      // TODO: handle post endpoints without requestBody
-      const props = pathInfo.post
-        ? pathInfo.post.requestBody.content['application/json'].schema.properties
-        : {};
+      let props = {};
+      const schema = pathInfo?.post?.requestBody?.content['application/json'].schema;
+      if (schema.$ref) {
+        // $ref will be shaped like `#/components/schemas/MyResponseType
+        // which maps to the location of the item within the openApi response
+        const loc = schema.$ref.replace('#/', '').split('/');
+        props = loc.reduce((prev, curr) => {
+          return prev[curr] || {};
+        }, help.openapi).properties;
+      } else if (schema.properties) {
+        props = schema.properties;
+      }
       // put url params (e.g. {name}, {role})
       // at the front of the props list
       const newProps = assign({}, paramProp, props);
@@ -217,7 +232,7 @@ export default Service.extend({
 
   getNewAdapter(pathInfo, itemType) {
     // we need list and create paths to set the correct urls for actions
-    let paths = this.filterPathsByItemType(pathInfo, itemType);
+    const paths = this.filterPathsByItemType(pathInfo, itemType);
     let { apiPath } = pathInfo;
     const getPath = paths.find((path) => path.operations.includes('get'));
 
@@ -261,7 +276,7 @@ export default Service.extend({
       },
 
       urlForCreateRecord(modelType, snapshot) {
-        const { id } = snapshot;
+        const id = snapshot.record.mutableId; // computed property that returns either id or private settable _id value
         const path = createPath.path.slice(1, createPath.path.indexOf('{') - 1);
         return `${this.buildURL()}/${apiPath}${path}/${id}`;
       },
@@ -270,13 +285,24 @@ export default Service.extend({
         const path = deletePath.path.slice(1, deletePath.path.indexOf('{') - 1);
         return `${this.buildURL()}/${apiPath}${path}/${id}`;
       },
+
+      createRecord(store, type, snapshot) {
+        return this._super(...arguments).then((response) => {
+          // if the server does not return an id and one has not been set on the model we need to set it manually from the mutableId value
+          if (!response?.id && !snapshot.record.id) {
+            snapshot.record.id = snapshot.record.mutableId;
+            snapshot.id = snapshot.record.id;
+          }
+          return response;
+        });
+      },
     });
   },
 
   registerNewModelWithProps(helpUrl, backend, newModel, modelName) {
     return this.getProps(helpUrl, backend).then((props) => {
       const { attrs, newFields } = combineAttributes(newModel.attributes, props);
-      let owner = getOwner(this);
+      const owner = getOwner(this);
       newModel = newModel.extend(attrs, { newFields });
       // if our newModel doesn't have fieldGroups already
       // we need to create them
@@ -290,23 +316,45 @@ export default Service.extend({
           // Build and add validations on model
           // NOTE: For initial phase, initialize validations only for user pass auth
           if (backend === 'userpass') {
-            let validations = buildValidations(fieldGroups);
-            newModel = newModel.extend(validations);
+            const validations = fieldGroups.reduce((obj, element) => {
+              if (element.default) {
+                element.default.forEach((v) => {
+                  const key = v.options.fieldValue || v.name;
+                  obj[key] = [{ type: 'presence', message: `${v.name} can't be blank` }];
+                });
+              }
+              return obj;
+            }, {});
+            @withModelValidations(validations)
+            class GeneratedItemModel extends newModel {}
+            newModel = GeneratedItemModel;
           }
         }
       } catch (err) {
         // eat the error, fieldGroups is computed in the model definition
       }
+      // attempting to set the id prop on a model will trigger an error
+      // this computed will be used in place of the the id fieldValue -- see openapi-to-attrs
+      newModel.reopen({
+        mutableId: computed('id', '_id', {
+          get() {
+            return this._id || this.id;
+          },
+          set(key, value) {
+            return (this._id = value);
+          },
+        }),
+      });
       newModel.reopenClass({ merged: true });
       owner.unregister(modelName);
       owner.register(modelName, newModel);
     });
   },
   getFieldGroups(newModel) {
-    let groups = {
+    const groups = {
       default: [],
     };
-    let fieldGroups = [];
+    const fieldGroups = [];
     newModel.attributes.forEach((attr) => {
       // if the attr comes in with a fieldGroup from OpenAPI,
       // add it to that group
@@ -321,7 +369,7 @@ export default Service.extend({
         groups.default.push(attr.name);
       }
     });
-    for (let group in groups) {
+    for (const group in groups) {
       fieldGroups.push({ [group]: groups[group] });
     }
     return fieldToAttrs(newModel, fieldGroups);

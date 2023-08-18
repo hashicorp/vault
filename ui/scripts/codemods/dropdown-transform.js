@@ -1,4 +1,9 @@
 #!/usr/bin/env node
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 /* eslint-env node */
 
 /**
@@ -8,37 +13,31 @@
  */
 
 module.exports = () => {
-  const evalTag = (tag, prefix) => {
-    switch (tag) {
-      case `${prefix}.trigger`:
-        return `${prefix}.Trigger`;
-      case `${prefix}.content`:
-        return `${prefix}.Content`;
-    }
-  };
-  // remove @ symbol from class and change @tagName to @htmlTag
-  const transformAttrs = (attrs) => {
-    attrs.forEach((attr) => {
-      if (attr.name === '@class') {
-        attr.name = 'class';
-      } else if (attr.name.includes('tagName')) {
-        attr.name = '@htmlTag';
-      }
-    });
-  };
-
   return {
     ElementNode(node) {
-      // BasicDropdown and Tooltip components yield variable is either d, dd, or T
-      const prefixes = ['d', 'D', 'dd', 'T'];
-      // capitalize trigger and content and transform attributes
-      for (let i = 0; i < prefixes.length; i++) {
-        const newTag = evalTag(node.tag, prefixes[i]);
-        if (newTag) {
-          node.tag = newTag;
-          transformAttrs(node.attributes);
-          break;
-        }
+      // ensure we have the right parent node by first looking for BasicDropdown or ToolTip nodes
+      if (['BasicDropdown', 'ToolTip'].includes(node.tag)) {
+        node.children.forEach((child) => {
+          // capitalize trigger and content and transform attributes
+          if (child.type === 'ElementNode' && child.tag.match(/\.(content|trigger)/gi)) {
+            const { tag } = child;
+            const char = tag.charAt(tag.indexOf('.') + 1);
+            child.tag = tag.replace(char, char.toUpperCase());
+            // remove @ symbol from class and change @tagName to @htmlTag
+            // Content component does not use splattributes -- apply class with @defaultClass arg
+            child.attributes.forEach((attr) => {
+              if (attr.name.includes('class')) {
+                if (child.tag.includes('Content')) {
+                  attr.name = '@defaultClass';
+                } else if (attr.name === '@class') {
+                  attr.name = 'class';
+                }
+              } else if (attr.name.includes('tagName')) {
+                attr.name = '@htmlTag';
+              }
+            });
+          }
+        });
       }
     },
   };

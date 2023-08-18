@@ -1,4 +1,7 @@
-//go:build !386 && !arm
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
+//go:build !386 && !arm && !windows
 
 package raft
 

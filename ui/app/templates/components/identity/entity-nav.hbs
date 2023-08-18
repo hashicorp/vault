@@ -1,25 +1,24 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
 <PageHeader as |p|>
   <p.levelLeft>
     <h1 class="title is-3">
-      {{capitalize (pluralize this.identityType)}}
+      {{titleize (pluralize this.identityType)}}
     </h1>
   </p.levelLeft>
 </PageHeader>
 <div class="tabs-container box is-sideless is-fullwidth is-paddingless is-marginless">
   <nav class="tabs">
     <ul>
-      {{! template-lint-configure no-unknown-arguments-for-builtin-components "warn" }}
-      <LinkTo @route="vault.cluster.access.identity.index" @model={{pluralize this.identityType}} @tagName="li">
-        <LinkTo @route="vault.cluster.access.identity.index" @model={{pluralize this.identityType}}>
-          {{capitalize (pluralize this.identityType)}}
-        </LinkTo>
+      <LinkTo @route="vault.cluster.access.identity.index" @model={{pluralize this.identityType}}>
+        {{capitalize (pluralize this.identityType)}}
       </LinkTo>
-      <LinkTo @route="vault.cluster.access.identity.aliases.index" @model={{pluralize this.identityType}} @tagName="li">
-        <LinkTo @route="vault.cluster.access.identity.aliases.index" @model={{pluralize this.identityType}}>
-          Aliases
-        </LinkTo>
+      <LinkTo @route="vault.cluster.access.identity.aliases.index" @model={{pluralize this.identityType}}>
+        Aliases
       </LinkTo>
-      {{! template-lint-configure no-unknown-arguments-for-builtin-components "on" }}
     </ul>
   </nav>
 </div>
@@ -32,17 +31,19 @@
   <ToolbarActions>
     {{#if (eq this.identityType "entity")}}
       <ToolbarLink
-        @params={{array "vault.cluster.access.identity.merge" (pluralize this.identityType)}}
-        @data-test-entity-merge-link={{true}}
+        @route={{"vault.cluster.access.identity.merge"}}
+        @model={{pluralize this.identityType}}
+        data-test-entity-merge-link={{true}}
       >
         Merge
         {{pluralize this.identityType}}
       </ToolbarLink>
     {{/if}}
     <ToolbarLink
+      @route="vault.cluster.access.identity.create"
+      @model={{pluralize this.identityType}}
       @type="add"
-      @params={{array "vault.cluster.access.identity.create" (pluralize this.identityType)}}
-      @data-test-entity-create-link={{true}}
+      data-test-entity-create-link={{true}}
     >
       Create
       {{this.identityType}}

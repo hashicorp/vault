@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package http
 
 import (
@@ -11,6 +14,7 @@ import (
 
 	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/builtin/logical/transit"
+	"github.com/hashicorp/vault/helper/benchhelpers"
 	"github.com/hashicorp/vault/helper/forwarding"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/logging"
@@ -28,7 +32,7 @@ func BenchmarkHTTP_Forwarding_Stress(b *testing.B) {
 		},
 	}
 
-	cluster := vault.NewTestCluster(b, coreConfig, &vault.TestClusterOptions{
+	cluster := vault.NewTestCluster(benchhelpers.TBtoT(b), coreConfig, &vault.TestClusterOptions{
 		HandlerFunc: Handler,
 		Logger:      logging.NewVaultLoggerWithWriter(ioutil.Discard, log.Error),
 	})
@@ -38,13 +42,13 @@ func BenchmarkHTTP_Forwarding_Stress(b *testing.B) {
 
 	// make it easy to get access to the active
 	core := cores[0].Core
-	vault.TestWaitActive(b, core)
+	vault.TestWaitActive(benchhelpers.TBtoT(b), core)
 
 	handler := cores[0].Handler
 	host := fmt.Sprintf("https://127.0.0.1:%d/v1/transit/", cores[0].Listeners[0].Address.Port)
 
 	transport := &http.Transport{
-		TLSClientConfig: cores[0].TLSConfig,
+		TLSClientConfig: cores[0].TLSConfig(),
 	}
 	if err := http2.ConfigureTransport(transport); err != nil {
 		b.Fatal(err)
@@ -55,7 +59,7 @@ func BenchmarkHTTP_Forwarding_Stress(b *testing.B) {
 	}
 
 	req, err := http.NewRequest("POST", fmt.Sprintf("https://127.0.0.1:%d/v1/sys/mounts/transit", cores[0].Listeners[0].Address.Port),
-		bytes.NewBuffer([]byte("{\"type\": \"transit\"}")))
+		bytes.NewBufferString("{\"type\": \"transit\"}"))
 	if err != nil {
 		b.Fatal(err)
 	}
@@ -88,7 +92,7 @@ func BenchmarkHTTP_Forwarding_Stress(b *testing.B) {
 		numOps++
 	}
 
-	doReq(b, "POST", host+"keys/test1", bytes.NewBuffer([]byte("{}")))
+	doReq(b, "POST", host+"keys/test1", bytes.NewBufferString("{}"))
 	keyUrl := host + "encrypt/test1"
 	reqBuf := []byte(fmt.Sprintf("{\"plaintext\": \"%s\"}", testPlaintextB64))
 

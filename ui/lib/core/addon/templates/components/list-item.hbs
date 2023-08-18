@@ -1,3 +1,8 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
 {{#if this.componentName}}
   {{component this.componentName item=this.item}}
 {{else if this.linkParams}}
@@ -5,19 +10,18 @@
     @params={{this.linkParams}}
     @queryParams={{@queryParams}}
     @linkPrefix={{@linkPrefix}}
-    @class="list-item-row"
+    class="list-item-row"
     data-test-list-item-link
   >
     <div class="level is-mobile">
       <div class="level-left is-flex-1" data-test-list-item-content>
-        {{! refactor to use @route and @model args and convert to angle brackets }}
-        {{! template-lint-configure no-curly-component-invocation "warn" }}
-        {{#link-to
-          params=this.linkParams
+        <LinkTo
+          @route={{this.link.route}}
+          @models={{this.link.models}}
           class="has-text-weight-semibold has-text-black is-display-flex is-flex-1 is-no-underline"
-        }}
+        >
           {{yield (hash content=(component "list-item/content"))}}
-        {{/link-to}}
+        </LinkTo>
       </div>
       <div class="level-right">
         <div class="level-item" data-test-list-item-popup>

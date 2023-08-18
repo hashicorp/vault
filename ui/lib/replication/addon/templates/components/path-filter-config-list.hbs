@@ -1,8 +1,13 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
 <h4 class="title is-5">
   Filtered paths
 </h4>
 <div class="radio-card-selector">
-  <label for="no-filtering" class="radio-card {{unless this.config.mode " is-selected"}}">
+  <label for="no-filtering" class="radio-card {{unless this.config.mode ' is-selected'}}">
     <div class="radio-card-row">
       <Icon @name="file-text" @size="24" class="radio-card-icon" />
       <div class="radio-card-message">
@@ -16,17 +21,17 @@
     </div>
     <div class="radio-card-radio-row">
       <RadioButton
+        id="no-filtering"
+        name="config-mode"
+        class="radio"
         @value={{null}}
-        @radioClass="radio"
         @groupValue={{this.config.mode}}
-        @changed={{queue (action (mut this.config.mode))}}
-        @name="config-mode"
-        @radioId="no-filtering"
+        @onChange={{fn (mut this.config.mode)}}
       />
       <label for="no-filtering"></label>
     </div>
   </label>
-  <label for="allow" class="radio-card {{if (eq this.config.mode "allow") " is-selected"}}">
+  <label for="allow" class="radio-card {{if (eq this.config.mode 'allow') ' is-selected'}}">
     <div class="radio-card-row">
       <Icon @name="file-check" @size="24" class="radio-card-icon" />
       <div class="radio-card-message">
@@ -40,17 +45,17 @@
     </div>
     <div class="radio-card-radio-row">
       <RadioButton
+        id="allow"
+        name="config-mode"
+        class="radio"
         @value="allow"
-        @radioClass="radio"
         @groupValue={{this.config.mode}}
-        @changed={{queue (action (mut this.config.mode))}}
-        @name="config-mode"
-        @radioId="allow"
+        @onChange={{fn (mut this.config.mode)}}
       />
       <label for="allow"></label>
     </div>
   </label>
-  <label for="deny" class="radio-card {{if (eq this.config.mode "deny") " is-selected"}}">
+  <label for="deny" class="radio-card {{if (eq this.config.mode 'deny') ' is-selected'}}">
     <div class="radio-card-row">
       <Icon @name="file-x" @size="24" class="radio-card-icon" />
       <div class="radio-card-message">
@@ -64,12 +69,12 @@
     </div>
     <div class="radio-card-radio-row">
       <RadioButton
+        id="deny"
+        name="config-mode"
+        class="radio"
         @value="deny"
-        @radioClass="radio"
         @groupValue={{this.config.mode}}
-        @changed={{queue (action (mut this.config.mode))}}
-        @name="config-mode"
-        @radioId="deny"
+        @onChange={{fn (mut this.config.mode)}}
       />
       <label for="deny"></label>
     </div>

@@ -1,5 +1,11 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
+import Component from '@glimmer/component';
 import { inject as service } from '@ember/service';
-import Component from '@ember/component';
+import { action } from '@ember/object';
 import { encodePath } from 'vault/utils/path-encoding-helpers';
 
 /**
@@ -20,53 +26,44 @@ import { encodePath } from 'vault/utils/path-encoding-helpers';
  *
  * @param {Array} params=null - These are values sent to the router's transitionTo method.  First item is route, second is the optional path.
  * @param {Object} [queryParams=null] - queryParams can be passed via this property. It needs to be an object.
- * @param {String} [linkPrefix=null] - Overwrite the params with custom route.  See KMIP.
+ * @param {String} [linkPrefix=null] - Overwrite the params with custom route.  Needed for use in engines (KMIP and PKI). ex: vault.cluster.secrets.backend.kmip
  * @param {Boolean} [encode=false] - Encode the path.
+ * @param {boolean} [disabled] - disable the link -- prevents on click and removes linked-block hover styling
  */
 
-let LinkedBlockComponent = Component.extend({
-  router: service(),
+export default class LinkedBlockComponent extends Component {
+  @service router;
 
-  classNames: 'linked-block',
-
-  queryParams: null,
-  linkPrefix: null,
-
-  encode: false,
-
-  click(event) {
-    const $target = event.target;
-    const isAnchorOrButton =
-      $target.tagName === 'A' ||
-      $target.tagName === 'BUTTON' ||
-      $target.closest('button') ||
-      $target.closest('a');
-    if (!isAnchorOrButton) {
-      let params = this.params;
-      if (this.encode) {
-        params = params.map((param, index) => {
-          if (index === 0 || typeof param !== 'string') {
-            return param;
-          }
-          return encodePath(param);
-        });
+  @action
+  onClick(event) {
+    if (!this.args.disabled) {
+      const $target = event.target;
+      const isAnchorOrButton =
+        $target.tagName === 'A' ||
+        $target.tagName === 'BUTTON' ||
+        $target.closest('button') ||
+        $target.closest('a');
+      if (!isAnchorOrButton) {
+        let params = this.args.params;
+        if (this.args.encode) {
+          params = params.map((param, index) => {
+            if (index === 0 || typeof param !== 'string') {
+              return param;
+            }
+            return encodePath(param);
+          });
+        }
+        const queryParams = this.args.queryParams;
+        if (queryParams) {
+          params.push({ queryParams });
+        }
+        if (this.args.linkPrefix) {
+          let targetRoute = this.args.params[0];
+          targetRoute = `${this.args.linkPrefix}.${targetRoute}`;
+          this.args.params[0] = targetRoute;
+        }
+        this.router.transitionTo(...params);
       }
-      const queryParams = this.queryParams;
-      if (queryParams) {
-        params.push({ queryParams });
-      }
-      if (this.linkPrefix) {
-        let targetRoute = this.params[0];
-        targetRoute = `${this.linkPrefix}.${targetRoute}`;
-        this.params[0] = targetRoute;
-      }
-      this.router.transitionTo(...params);
     }
-  },
-});
-
-LinkedBlockComponent.reopenClass({
-  positionalParams: 'params',
-});
-
-export default LinkedBlockComponent;
+  }
+}

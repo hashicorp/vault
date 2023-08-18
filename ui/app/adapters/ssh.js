@@ -1,10 +1,13 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import { assert } from '@ember/debug';
 import ApplicationAdapter from './application';
 
 export default ApplicationAdapter.extend({
   namespace: 'v1',
-
-  defaultSerializer: 'ssh',
 
   url(/*role*/) {
     assert('Override the `url` method to extend the SSH adapter', false);

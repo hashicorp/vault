@@ -1,3 +1,8 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
 <PageHeader as |p|>
   <p.top>
     <KeyValueHeader
@@ -11,9 +16,9 @@
   <p.levelLeft>
     <h1 class="title is-3" data-test-secret-header="true">
       {{#if (eq this.mode "create")}}
-        Create transformation
+        Create Transformation
       {{else if (eq this.mode "edit")}}
-        Edit transformation
+        Edit Transformation
       {{else}}
         Transformation
         <code>{{this.model.id}}</code>
@@ -33,7 +38,7 @@
                 Delete transformation
               </button>
             </T.Trigger>
-            <T.Content class="tool-tip">
+            <T.Content @defaultClass="tool-tip">
               <div class="box">
                 This transformation is in use by a role and can’t be deleted.
               </div>
@@ -57,7 +62,7 @@
             Edit transformation
           </button>
         {{else}}
-          <ToolbarSecretLink @secret={{this.model.id}} @mode="edit" @data-test-edit-link={{true}} @replace={{true}}>
+          <ToolbarSecretLink @secret={{this.model.id}} @mode="edit" data-test-edit-link={{true}} @replace={{true}}>
             Edit transformation
           </ToolbarSecretLink>
         {{/if}}
@@ -105,17 +110,14 @@
     </p>
   </section>
   <footer class="modal-card-foot modal-card-foot-outlined">
-    {{! template-lint-configure no-unknown-arguments-for-builtin-components "warn" }}
     <LinkTo
       @route="vault.cluster.secrets.backend.edit"
       @model={{this.model.id}}
-      @tagName="button"
       class="button is-primary"
       data-test-edit-confirm-button={{true}}
     >
       Confirm
     </LinkTo>
-    {{! template-lint-configure no-unknown-arguments-for-builtin-components "on" }}
     <button type="button" class="button is-secondary" onclick={{action (mut this.isEditModalActive) false}}>
       Cancel
     </button>

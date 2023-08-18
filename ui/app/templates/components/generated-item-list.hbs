@@ -1,3 +1,8 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
 <PageHeader as |p|>
   <p.top>
     <KeyValueHeader @path="vault.cluster.access.methods">
@@ -13,35 +18,34 @@
   </p.top>
   <p.levelLeft>
     <h1 class="title is-3">
-      {{this.methodModel.id}}
+      {{@methodModel.id}}
     </h1>
   </p.levelLeft>
 </PageHeader>
-{{#with (tabs-for-auth-section this.methodModel "authConfig" this.paths) as |tabs|}}
+{{#let (tabs-for-auth-section @methodModel "authConfig" @paths) as |tabs|}}
   {{#if tabs.length}}
     <div class="tabs-container box is-sideless is-fullwidth is-paddingless is-marginless">
       <nav class="tabs">
         <ul>
           {{#each tabs as |tab|}}
-            {{! template-lint-configure no-curly-component-invocation "warn" }}
-            {{#link-to params=tab.routeParams tagName="li" data-test-auth-section-tab=true}}
-              {{#link-to params=tab.routeParams}}
+            <li>
+              <LinkTo @route={{get tab.routeParams 0}} @model={{get tab.routeParams 1}} data-test-auth-section-tab={{true}}>
                 {{tab.label}}
-              {{/link-to}}
-            {{/link-to}}
-            {{! template-lint-configure no-curly-component-invocation "on" }}
+              </LinkTo>
+            </li>
           {{/each}}
         </ul>
       </nav>
     </div>
   {{/if}}
-{{/with}}
+{{/let}}
 <Toolbar>
   <ToolbarActions>
     <ToolbarLink
-      @data-test-entity-create-link={{this.itemType}}
+      @route="vault.cluster.access.method.item.create"
+      @model={{this.itemType}}
       @type="add"
-      @params={{array "vault.cluster.access.method.item.create" this.itemType}}
+      data-test-entity-create-link={{this.itemType}}
     >
       Create
       {{singularize this.itemType}}
@@ -61,14 +65,10 @@
         this.itemType
       }} will be listed here. Create your first {{this.itemType}} to get started."
     >
-      {{! template-lint-configure no-curly-component-invocation "warn" }}
-      {{! template-lint-configure no-link-to-positional-params "warn" }}
-      {{#link-to "vault.cluster.access.method.item.create" this.itemType class="link"}}
+      <LinkTo @route="vault.cluster.access.method.item.create" @model={{this.itemType}} class="link">
         Create
         {{singularize this.itemType}}
-      {{/link-to}}
-      {{! template-lint-configure no-curly-component-invocation "on" }}
-      {{! template-lint-configure no-link-to-positional-params "on" }}
+      </LinkTo>
     </list.empty>
   {{else if list.item}}
     <ListItem @linkParams={{array "vault.cluster.access.method.item.show" this.itemType list.item.id}} as |Item|>
@@ -77,20 +77,16 @@
       </Item.content>
       <Item.menu as |Menu|>
         <li class="action">
-          {{! template-lint-configure no-curly-component-invocation "warn" }}
-          {{! template-lint-configure no-link-to-positional-params "warn" }}
-          {{#link-to "vault.cluster.access.method.item.show" list.item.id class="is-block"}}
+          <LinkTo @route="vault.cluster.access.method.item.show" @model={{list.item.id}} class="is-block">
             View
             {{singularize this.itemType}}
-          {{/link-to}}
+          </LinkTo>
         </li>
         <li class="action">
-          {{#link-to "vault.cluster.access.method.item.edit" list.item.id class="is-block"}}
+          <LinkTo @route="vault.cluster.access.method.item.edit" @model={{list.item.id}} class="is-block">
             Edit
             {{singularize this.itemType}}
-          {{/link-to}}
-          {{! template-lint-configure no-curly-component-invocation "on" }}
-          {{! template-lint-configure no-link-to-positional-params "on" }}
+          </LinkTo>
         </li>
         <li>
           <Menu.Message

@@ -1,3 +1,8 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
 <WizardContent @headerText="Initialization" @glyph="tour">
   <WizardSection
     @headerText="Unsealing your vault"
@@ -10,13 +15,13 @@
       that you copied or downloaded to unseal the vault so that we can get started using it. You'll need
       {{pluralize this.componentState.threshold "key"}}
       total, and
-      {{#with (pluralize this.componentState.progress "key" without-count=true) as |word|}}
+      {{#let (pluralize this.componentState.progress "key" without-count=true) as |word|}}
         {{if
           (eq word "key")
           (concat this.componentState.progress " " word " has ")
           (concat this.componentState.progress " " word " have ")
         }}
-      {{/with}}
+      {{/let}}
       already been provided. Please provide
       {{pluralize (dec this.componentState.progress this.componentState.threshold) "more key"}}
       to unseal.

@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import { currentRouteName } from '@ember/test-helpers';
 import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
@@ -14,7 +19,7 @@ module('Acceptance | /access/identity/entities/create', function (hooks) {
 
   test('it visits the correct page', async function (assert) {
     await page.visit({ item_type: 'entities' });
-    assert.equal(
+    assert.strictEqual(
       currentRouteName(),
       'vault.cluster.access.identity.create',
       'navigates to the correct route'
@@ -22,12 +27,14 @@ module('Acceptance | /access/identity/entities/create', function (hooks) {
   });
 
   test('it allows create, list, delete of an entity', async function (assert) {
-    let name = `entity-${Date.now()}`;
+    assert.expect(6);
+    const name = `entity-${Date.now()}`;
     await testCRUD(name, 'entities', assert);
   });
 
   test('it can be deleted from the edit form', async function (assert) {
-    let name = `entity-${Date.now()}`;
+    assert.expect(6);
+    const name = `entity-${Date.now()}`;
     await testDeleteFromForm(name, 'entities', assert);
   });
 });

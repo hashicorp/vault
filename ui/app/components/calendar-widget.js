@@ -1,174 +1,119 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import Component from '@glimmer/component';
-import layout from '../templates/components/calendar-widget';
-import { setComponentTemplate } from '@ember/component';
-import { format, formatRFC3339 } from 'date-fns';
 import { action } from '@ember/object';
 import { tracked } from '@glimmer/tracking';
-
-// ARG TODO documentation takes start and end for handQuery
+import { ARRAY_OF_MONTHS, parseAPITimestamp } from 'core/utils/date-formatters';
+import { addYears, isSameYear, subYears } from 'date-fns';
+import timestamp from 'core/utils/timestamp';
 /**
  * @module CalendarWidget
- * CalendarWidget components are used in the client counts metrics. It helps users understand the ranges they can select.
+ * CalendarWidget component is used in the client counts dashboard to select a month/year to query the /activity endpoint.
+ * The component returns an object with selected date info, example: { dateType: 'endDate', monthIdx: 0, monthName: 'January', year: 2022 }
  *
  * @example
  * ```js
- * <CalendarWidget
- * @param {function} handleQuery - calls the parent pricing-metrics-dates handleQueryFromCalendar method which sends the data for the network request.
- * @param {object} startDate - The start date is calculated from the parent. This component is only responsible for modifying the end Date. ANd effecting single month.
- * />
+ * <CalendarWidget @startTimestamp={{this.startTime}} @endTimestamp={{this.endTime}} @selectMonth={{this.handleSelection}} />
  *
+ *    @param {string} startTimestamp - ISO timestamp string of the calendar widget's start time, displays in dropdown trigger
+ *    @param {string} endTimestamp - ISO timestamp string for the calendar widget's end time, displays in dropdown trigger
+ *    @param {function} selectMonth - callback function from parent - fires when selecting a month or clicking "Current billing period"
+ *  />
  * ```
  */
-class CalendarWidget extends Component {
-  arrayOfMonths = [
-    'January',
-    'February',
-    'March',
-    'April',
-    'May',
-    'June',
-    'July',
-    'August',
-    'September',
-    'October',
-    'November',
-    'December',
-  ];
-  currentDate = new Date();
-  currentYear = this.currentDate.getFullYear(); // integer
-  currentMonth = parseInt(this.currentDate.getMonth()); // integer and zero index
-
-  @tracked allMonthsNodeList = [];
-  @tracked displayYear = this.currentYear; // init to currentYear and then changes as a user clicks on the chevrons
-  @tracked disablePastYear = this.isObsoleteYear(); // if obsolete year, disable left chevron
-  @tracked disableFutureYear = this.isCurrentYear(); // if current year, disable right chevron
-  @tracked endDateDisplay;
+export default class CalendarWidget extends Component {
+  currentDate = timestamp.now();
+  @tracked calendarDisplayDate = this.currentDate; // init to current date, updates when user clicks on calendar chevrons
   @tracked showCalendar = false;
-  @tracked showSingleMonth = false;
+  @tracked tooltipTarget = null;
+  @tracked tooltipText = null;
 
-  constructor() {
-    super(...arguments);
-    // ARG TODO we need to return the config's duration if not default to 12 months to calculate, now it's 12 months
-    let date = new Date();
-    date.setMonth(date.getMonth() - 1); // by default you calculate the end month as the month prior to the current month.
-    this.endDateDisplay = format(date, 'MMMM yyyy');
+  // both date getters return a date object
+  get startDate() {
+    return parseAPITimestamp(this.args.startTimestamp);
+  }
+  get endDate() {
+    return parseAPITimestamp(this.args.endTimestamp);
+  }
+  get displayYear() {
+    return this.calendarDisplayDate.getFullYear();
+  }
+  get disableFutureYear() {
+    return isSameYear(this.calendarDisplayDate, this.currentDate);
+  }
+  get disablePastYear() {
+    // calendar widget should only go as far back as the passed in start time
+    return isSameYear(this.calendarDisplayDate, this.startDate);
+  }
+  get widgetMonths() {
+    const startYear = this.startDate.getFullYear();
+    const startMonthIdx = this.startDate.getMonth();
+    return ARRAY_OF_MONTHS.map((month, index) => {
+      let readonly = false;
+
+      // if widget is showing same year as @startTimestamp year, disable if month is before start month
+      if (startYear === this.displayYear && index < startMonthIdx) {
+        readonly = true;
+      }
+
+      // if widget showing current year, disable if month is later than current month
+      if (this.displayYear === this.currentDate.getFullYear() && index > this.currentDate.getMonth()) {
+        readonly = true;
+      }
+      return {
+        index,
+        year: this.displayYear,
+        name: month,
+        readonly,
+      };
+    });
   }
 
-  // HELPER FUNCTIONS (alphabetically) //
-  addClass(element, classString) {
-    element.classList.add(classString);
+  @action
+  addTooltip() {
+    if (this.disablePastYear) {
+      const previousYear = this.displayYear - 1;
+      this.tooltipText = `${previousYear} is unavailable because it is before your start date. Change your start month to a date in ${previousYear} to see data for this year.`;
+      this.tooltipTarget = '#previous-year';
+    }
   }
 
-  isCurrentYear() {
-    return this.currentYear === this.displayYear;
+  @action
+  removeTooltip() {
+    this.tooltipTarget = null;
   }
 
-  isObsoleteYear() {
-    // do not allow them to choose a end year before the this.args.startDate
-    let startYear = this.args.startDate.split(' ')[1];
-    return this.displayYear.toString() === startYear; // if on startYear then don't let them click back to the year prior
-  }
-
-  removeClass(element, classString) {
-    element.classList.remove(classString);
-  }
-
-  // ACTIONS (alphabetically) //
   @action
   addYear() {
-    this.displayYear = this.displayYear + 1;
-    this.disableMonths();
-    this.disableFutureYear = this.isCurrentYear();
-    this.disablePastYear = this.isObsoleteYear();
-  }
-
-  @action
-  disableMonths() {
-    this.allMonthsNodeList = document.querySelectorAll('.is-month-list');
-    this.allMonthsNodeList.forEach((e) => {
-      // clear all is-readOnly classes and start over.
-      this.removeClass(e, 'is-readOnly');
-
-      let elementMonthId = parseInt(e.id.split('-')[0]); // dependent on the shape of the element id
-      // for current year
-      if (this.currentMonth <= elementMonthId) {
-        // only disable months when current year is selected
-        if (this.isCurrentYear()) {
-          e.classList.add('is-readOnly');
-        }
-      }
-      // compare for startYear view
-      if (this.displayYear.toString() === this.args.startDate.split(' ')[1]) {
-        // if they are on the view where the start year equals the display year, check which months should not show.
-        let startMonth = this.args.startDate.split(' ')[0]; // returns month name e.g. January
-        // return the index of the startMonth
-        let startMonthIndex = this.arrayOfMonths.indexOf(startMonth);
-        // then add readOnly class to any month less than the startMonth index.
-        if (startMonthIndex > elementMonthId) {
-          e.classList.add('is-readOnly');
-        }
-      }
-    });
-  }
-
-  @action
-  selectCurrentBillingPeriod() {
-    // ARG TOOD send to dashboard the select current billing period. The parent may know this it's just a boolean.
-    // Turn the calendars off if they are showing.
-    this.showCalendar = false;
-    this.showSingleMonth = false;
-  }
-  @action
-  selectEndMonth(month, year, element) {
-    // select month
-    this.addClass(element.target, 'is-selected');
-    // API requires start and end time as EPOCH or RFC3339 timestamp
-    let endMonthSelected = formatRFC3339(new Date(year, month));
-    this.args.handleEndMonth(endMonthSelected);
-    let monthName = this.arrayOfMonths.find((element, index) => {
-      if (index === month) {
-        return element;
-      }
-    });
-    this.endDateDisplay = `${monthName} ${year}`;
-    this.toggleShowCalendar();
-  }
-
-  @action
-  selectSingleMonth(month, year, element) {
-    // select month
-    this.addClass(element.target, 'is-selected');
-    // API requires start and end time as EPOCH or RFC3339 timestamp
-    // let singleMonthSelected = formatRFC3339(new Date(year, month));
-    // ARG TODO unsure on what we're going to do yet with date. Depends on API.
-    // this.args.handleEndMonth(singleMonthSelected);
-    // let monthName = this.arrayOfMonths.find((e, index) => {
-    //   if (index === month) {
-    //     return e;
-    //   }
-    // });
-    // this.endDateDisplay = `${monthName} ${year}`;
-    this.toggleSingleMonth();
+    this.calendarDisplayDate = addYears(this.calendarDisplayDate, 1);
   }
 
   @action
   subYear() {
-    this.displayYear = this.displayYear - 1;
-    this.disableMonths();
-    this.disableFutureYear = this.isCurrentYear();
-    this.disablePastYear = this.isObsoleteYear();
+    this.calendarDisplayDate = subYears(this.calendarDisplayDate, 1);
   }
 
   @action
   toggleShowCalendar() {
     this.showCalendar = !this.showCalendar;
-    this.showSingleMonth = false;
+    this.calendarDisplayDate = this.endDate;
   }
 
   @action
-  toggleSingleMonth() {
-    this.showSingleMonth = !this.showSingleMonth;
+  handleDateShortcut(dropdown, { target }) {
+    this.args.selectMonth({ dateType: target.name }); // send clicked shortcut to parent callback
     this.showCalendar = false;
+    dropdown.close();
+  }
+
+  @action
+  selectMonth(month, dropdown) {
+    const { index, year, name } = month;
+    this.toggleShowCalendar();
+    this.args.selectMonth({ monthIdx: index, monthName: name, year, dateType: 'endDate' });
+    dropdown.close();
   }
 }
-export default setComponentTemplate(layout, CalendarWidget);

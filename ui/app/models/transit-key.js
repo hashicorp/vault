@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import Model, { attr } from '@ember-data/model';
 import { alias } from '@ember/object/computed';
 import { set, get, computed } from '@ember/object';
@@ -53,8 +58,13 @@ export default Model.extend({
   }),
   name: attr('string', {
     label: 'Name',
-    fieldValue: 'id',
     readOnly: true,
+  }),
+  autoRotatePeriod: attr({
+    defaultValue: '0',
+    defaultShown: 'Key is not automatically rotated',
+    editType: 'ttl',
+    label: 'Auto-rotation period',
   }),
   deletionAllowed: attr('boolean'),
   derived: attr('boolean'),
@@ -108,7 +118,7 @@ export default Model.extend({
 
   keyVersions: computed('validKeyVersions', function () {
     let maxVersion = Math.max(...this.validKeyVersions);
-    let versions = [];
+    const versions = [];
     while (maxVersion > 0) {
       versions.unshift(maxVersion);
       maxVersion--;
@@ -134,8 +144,8 @@ export default Model.extend({
 
   keysForEncryption: computed('minEncryptionVersion', 'latestVersion', function () {
     let { minEncryptionVersion, latestVersion } = this;
-    let minVersion = clamp(minEncryptionVersion - 1, 0, latestVersion);
-    let versions = [];
+    const minVersion = clamp(minEncryptionVersion - 1, 0, latestVersion);
+    const versions = [];
     while (latestVersion > minVersion) {
       versions.push(latestVersion);
       latestVersion--;
@@ -148,7 +158,7 @@ export default Model.extend({
   }),
 
   exportKeyTypes: computed('exportable', 'supportsEncryption', 'supportsSigning', 'type', function () {
-    let types = ['hmac'];
+    const types = ['hmac'];
     if (this.supportsSigning) {
       types.unshift('signing');
     }

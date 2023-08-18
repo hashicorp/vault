@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package redshift
 
 import (
@@ -14,7 +17,7 @@ import (
 	"github.com/hashicorp/vault/sdk/database/helper/dbutil"
 	"github.com/hashicorp/vault/sdk/helper/dbtxn"
 	"github.com/hashicorp/vault/sdk/helper/template"
-	"github.com/lib/pq"
+	_ "github.com/jackc/pgx/v4/stdlib"
 )
 
 const (
@@ -23,7 +26,7 @@ const (
 	middlewareTypeName = "redshift"
 
 	// This allows us to use the postgres database driver.
-	sqlTypeName = "postgres"
+	sqlTypeName = "pgx"
 
 	defaultRenewSQL = `
 ALTER USER "{{name}}" VALID UNTIL '{{expiration}}';
@@ -164,7 +167,7 @@ func (r *RedShift) NewUser(ctx context.Context, req dbplugin.NewUserRequest) (db
 				"password":   password,
 				"expiration": expirationStr,
 			}
-			if err := dbtxn.ExecuteTxQuery(ctx, tx, m, query); err != nil {
+			if err := dbtxn.ExecuteTxQueryDirect(ctx, tx, m, query); err != nil {
 				return dbplugin.NewUserResponse{}, err
 			}
 		}
@@ -246,7 +249,7 @@ func updateUserExpiration(ctx context.Context, req dbplugin.UpdateUserRequest, t
 				"username":   req.Username,
 				"expiration": expirationStr,
 			}
-			if err := dbtxn.ExecuteTxQuery(ctx, tx, m, query); err != nil {
+			if err := dbtxn.ExecuteTxQueryDirect(ctx, tx, m, query); err != nil {
 				return err
 			}
 		}
@@ -293,7 +296,7 @@ func updateUserPassword(ctx context.Context, req dbplugin.UpdateUserRequest, tx 
 				"username": username,
 				"password": password,
 			}
-			if err := dbtxn.ExecuteTxQuery(ctx, tx, m, query); err != nil {
+			if err := dbtxn.ExecuteTxQueryDirect(ctx, tx, m, query); err != nil {
 				return err
 			}
 		}
@@ -341,7 +344,7 @@ func (r *RedShift) customDeleteUser(ctx context.Context, req dbplugin.DeleteUser
 				"name":     req.Username,
 				"username": req.Username,
 			}
-			if err := dbtxn.ExecuteTxQuery(ctx, tx, m, query); err != nil {
+			if err := dbtxn.ExecuteTxQueryDirect(ctx, tx, m, query); err != nil {
 				return dbplugin.DeleteUserResponse{}, err
 			}
 		}
@@ -398,23 +401,23 @@ func (r *RedShift) defaultDeleteUser(ctx context.Context, req dbplugin.DeleteUse
 		}
 		revocationStmts = append(revocationStmts, fmt.Sprintf(
 			`REVOKE ALL PRIVILEGES ON ALL TABLES IN SCHEMA %s FROM %s;`,
-			pq.QuoteIdentifier(schema),
-			pq.QuoteIdentifier(username)))
+			dbutil.QuoteIdentifier(schema),
+			dbutil.QuoteIdentifier(username)))
 
 		revocationStmts = append(revocationStmts, fmt.Sprintf(
 			`REVOKE USAGE ON SCHEMA %s FROM %s;`,
-			pq.QuoteIdentifier(schema),
-			pq.QuoteIdentifier(username)))
+			dbutil.QuoteIdentifier(schema),
+			dbutil.QuoteIdentifier(username)))
 	}
 
 	// for good measure, revoke all privileges and usage on schema public
 	revocationStmts = append(revocationStmts, fmt.Sprintf(
 		`REVOKE ALL PRIVILEGES ON ALL TABLES IN SCHEMA public FROM %s;`,
-		pq.QuoteIdentifier(username)))
+		dbutil.QuoteIdentifier(username)))
 
 	revocationStmts = append(revocationStmts, fmt.Sprintf(
 		"REVOKE USAGE ON SCHEMA public FROM %s;",
-		pq.QuoteIdentifier(username)))
+		dbutil.QuoteIdentifier(username)))
 
 	// get the current database name so we can issue a REVOKE CONNECT for
 	// this username
@@ -452,7 +455,7 @@ $$;`)
 	// many permissions as possible right now
 	var lastStmtError *multierror.Error // error
 	for _, query := range revocationStmts {
-		if err := dbtxn.ExecuteDBQuery(ctx, db, nil, query); err != nil {
+		if err := dbtxn.ExecuteDBQueryDirect(ctx, db, nil, query); err != nil {
 			lastStmtError = multierror.Append(lastStmtError, err)
 		}
 	}
@@ -467,7 +470,7 @@ $$;`)
 
 	// Drop this user
 	stmt, err = db.PrepareContext(ctx, fmt.Sprintf(
-		`DROP USER IF EXISTS %s;`, pq.QuoteIdentifier(username)))
+		`DROP USER IF EXISTS %s;`, dbutil.QuoteIdentifier(username)))
 	if err != nil {
 		return dbplugin.DeleteUserResponse{}, err
 	}

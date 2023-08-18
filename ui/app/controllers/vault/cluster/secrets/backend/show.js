@@ -1,16 +1,23 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import Controller, { inject as controller } from '@ember/controller';
 import BackendCrumbMixin from 'vault/mixins/backend-crumb';
 
 export default Controller.extend(BackendCrumbMixin, {
   backendController: controller('vault.cluster.secrets.backend'),
-  queryParams: ['tab', 'version', 'type'],
+  queryParams: ['tab', 'version', 'type', 'itemType', 'page'],
   version: '',
   tab: '',
   type: '',
+  itemType: '',
   reset() {
     this.set('tab', '');
     this.set('version', '');
     this.set('type', '');
+    this.set('itemType', '');
   },
   actions: {
     refresh: function () {

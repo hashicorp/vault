@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package command
 
 import (
@@ -5,6 +8,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"path"
 	"strings"
 
 	"github.com/hashicorp/vault/api"
@@ -20,9 +24,11 @@ var (
 type KVPatchCommand struct {
 	*BaseCommand
 
-	flagCAS    int
-	flagMethod string
-	testStdin  io.Reader // for tests
+	flagCAS        int
+	flagMethod     string
+	flagMount      string
+	testStdin      io.Reader // for tests
+	flagRemoveData []string
 }
 
 func (c *KVPatchCommand) Synopsis() string {
@@ -35,25 +41,31 @@ Usage: vault kv patch [options] KEY [DATA]
 
   *NOTE*: This is only supported for KV v2 engine mounts.
 
-  Writes the data to the given path in the key-value store. The data can be of
+  Writes the data to the corresponding path in the key-value store. The data can be of
   any type.
 
+      $ vault kv patch -mount=secret foo bar=baz
+
+  The deprecated path-like syntax can also be used, but this should be avoided, 
+  as the fact that it is not actually the full API path to 
+  the secret (secret/data/foo) can cause confusion: 
+  
       $ vault kv patch secret/foo bar=baz
 
   The data can also be consumed from a file on disk by prefixing with the "@"
   symbol. For example:
 
-      $ vault kv patch secret/foo @data.json
+      $ vault kv patch -mount=secret foo @data.json
 
   Or it can be read from stdin using the "-" symbol:
 
-      $ echo "abcd1234" | vault kv patch secret/foo bar=-
+      $ echo "abcd1234" | vault kv patch -mount=secret foo bar=-
 
   To perform a Check-And-Set operation, specify the -cas flag with the
   appropriate version number corresponding to the key you want to perform
   the CAS operation on:
 
-      $ vault kv patch -cas=1 secret/foo bar=baz
+      $ vault kv patch -mount=secret -cas=1 foo bar=baz
 
   By default, this operation will attempt an HTTP PATCH operation. If your
   policy does not allow that, it will fall back to a read/local update/write approach.
@@ -61,12 +73,16 @@ Usage: vault kv patch [options] KEY [DATA]
   with the -method flag. When -method=patch is specified, only an HTTP PATCH
   operation will be tried. If it fails, the entire command will fail.
 
-      $ vault kv patch -method=patch secret/foo bar=baz
+      $ vault kv patch -mount=secret -method=patch foo bar=baz
 
   When -method=rw is specified, only a read/local update/write approach will be tried.
   This was the default behavior previous to Vault 1.9.
 
-      $ vault kv patch -method=rw secret/foo bar=baz
+      $ vault kv patch -mount=secret -method=rw foo bar=baz
+
+  To remove data from the corresponding path in the key-value store, kv patch can be used.
+
+      $ vault kv patch -mount=secret -remove-data=bar foo
 
   Additional flags and more advanced use cases are detailed below.
 
@@ -98,11 +114,29 @@ func (c *KVPatchCommand) Flags() *FlagSets {
 		performed, then a local update, followed by a remote update.`,
 	})
 
+	f.StringVar(&StringVar{
+		Name:    "mount",
+		Target:  &c.flagMount,
+		Default: "", // no default, because the handling of the next arg is determined by whether this flag has a value
+		Usage: `Specifies the path where the KV backend is mounted. If specified, 
+		the next argument will be interpreted as the secret path. If this flag is 
+		not specified, the next argument will be interpreted as the combined mount 
+		path and secret path, with /data/ automatically appended between KV 
+		v2 secrets.`,
+	})
+
+	f.StringSliceVar(&StringSliceVar{
+		Name:    "remove-data",
+		Target:  &c.flagRemoveData,
+		Default: []string{},
+		Usage:   "Key to remove from data. To specify multiple values, specify this flag multiple times.",
+	})
+
 	return set
 }
 
 func (c *KVPatchCommand) AutocompleteArgs() complete.Predictor {
-	return nil
+	return c.PredictVaultFiles()
 }
 
 func (c *KVPatchCommand) AutocompleteFlags() complete.Flags {
@@ -128,13 +162,12 @@ func (c *KVPatchCommand) Run(args []string) int {
 	case len(args) < 1:
 		c.UI.Error(fmt.Sprintf("Not enough arguments (expected >1, got %d)", len(args)))
 		return 1
-	case len(args) == 1:
+	case len(c.flagRemoveData) == 0 && len(args) == 1:
 		c.UI.Error("Must supply data")
 		return 1
 	}
 
 	var err error
-	path := sanitizePath(args[0])
 
 	client, err := c.Client()
 	if err != nil {
@@ -148,10 +181,38 @@ func (c *KVPatchCommand) Run(args []string) int {
 		return 1
 	}
 
-	mountPath, v2, err := isKVv2(path, client)
-	if err != nil {
-		c.UI.Error(err.Error())
-		return 2
+	// If true, we're working with "-mount=secret foo" syntax.
+	// If false, we're using "secret/foo" syntax.
+	mountFlagSyntax := c.flagMount != ""
+
+	var (
+		mountPath   string
+		partialPath string
+		v2          bool
+	)
+
+	// Parse the paths and grab the KV version
+	if mountFlagSyntax {
+		// In this case, this arg is the secret path (e.g. "foo").
+		partialPath = sanitizePath(args[0])
+		mountPath, v2, err = isKVv2(sanitizePath(c.flagMount), client)
+		if err != nil {
+			c.UI.Error(err.Error())
+			return 2
+		}
+
+		if v2 {
+			partialPath = path.Join(mountPath, partialPath)
+		}
+	} else {
+		// In this case, this arg is a path-like combination of mountPath/secretPath.
+		// (e.g. "secret/foo")
+		partialPath = sanitizePath(args[0])
+		mountPath, v2, err = isKVv2(partialPath, client)
+		if err != nil {
+			c.UI.Error(err.Error())
+			return 2
+		}
 	}
 
 	if !v2 {
@@ -159,10 +220,20 @@ func (c *KVPatchCommand) Run(args []string) int {
 		return 2
 	}
 
-	path = addPrefixToVKVPath(path, mountPath, "data")
+	fullPath := addPrefixToKVPath(partialPath, mountPath, "data", false)
 	if err != nil {
 		c.UI.Error(err.Error())
 		return 2
+	}
+
+	// collecting data to be removed
+	if newData == nil {
+		newData = make(map[string]interface{})
+	}
+
+	for _, key := range c.flagRemoveData {
+		// A null in a JSON merge patch payload will remove the associated key
+		newData[key] = nil
 	}
 
 	// Check the method and behave accordingly
@@ -171,11 +242,11 @@ func (c *KVPatchCommand) Run(args []string) int {
 
 	switch c.flagMethod {
 	case "rw":
-		secret, code = c.readThenWrite(client, path, newData)
+		secret, code = c.readThenWrite(client, fullPath, newData)
 	case "patch":
-		secret, code = c.mergePatch(client, path, newData, false)
+		secret, code = c.mergePatch(client, fullPath, newData, false)
 	case "":
-		secret, code = c.mergePatch(client, path, newData, true)
+		secret, code = c.mergePatch(client, fullPath, newData, true)
 	default:
 		c.UI.Error(fmt.Sprintf("Unsupported method provided to -method flag: %s", c.flagMethod))
 		return 2
@@ -183,6 +254,21 @@ func (c *KVPatchCommand) Run(args []string) int {
 
 	if code != 0 {
 		return code
+	}
+	if secret == nil {
+		// Don't output anything if there's no secret
+		return 0
+	}
+
+	if c.flagField != "" {
+		return PrintRawField(c.UI, secret, c.flagField)
+	}
+
+	if Format(c.UI) == "table" {
+		outputPath(c.UI, fullPath, "Secret Path")
+		metadata := secret.Data
+		c.UI.Info(getHeaderForMap("Metadata", metadata))
+		return OutputData(c.UI, metadata)
 	}
 
 	return OutputSecret(c.UI, secret)
@@ -193,12 +279,15 @@ func (c *KVPatchCommand) readThenWrite(client *api.Client, path string, newData 
 	// Note that we don't want to see curl output for the read request.
 	curOutputCurl := client.OutputCurlString()
 	client.SetOutputCurlString(false)
+	outputPolicy := client.OutputPolicy()
+	client.SetOutputPolicy(false)
 	secret, err := kvReadRequest(client, path, nil)
-	client.SetOutputCurlString(curOutputCurl)
 	if err != nil {
 		c.UI.Error(fmt.Sprintf("Error doing pre-read at %s: %s", path, err))
 		return nil, 2
 	}
+	client.SetOutputCurlString(curOutputCurl)
+	client.SetOutputPolicy(outputPolicy)
 
 	// Make sure a value already exists
 	if secret == nil || secret.Data == nil {

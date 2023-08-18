@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package ssh
 
 import (
@@ -11,6 +14,11 @@ import (
 func pathVerify(b *backend) *framework.Path {
 	return &framework.Path{
 		Pattern: "verify",
+		DisplayAttrs: &framework.DisplayAttributes{
+			OperationPrefix: operationPrefixSSH,
+			OperationVerb:   "verify",
+			OperationSuffix: "otp",
+		},
 		Fields: map[string]*framework.FieldSchema{
 			"otp": {
 				Type:        framework.TypeString,

@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package vault
 
 import (
@@ -42,7 +45,7 @@ func NewListenerCustomHeader(ln []*configutil.Listener, logger log.Logger, uiHea
 				if uiHeaders != nil {
 					exist := uiHeaders.Get(headerName)
 					if exist != "" {
-						logger.Warn(fmt.Sprintf("found a duplicate header in UI: header=%s. Headers defined in the server configuration take precedence.",  headerName))
+						logger.Warn(fmt.Sprintf("found a duplicate header in UI: header=%s. Headers defined in the server configuration take precedence.", headerName))
 					}
 				}
 

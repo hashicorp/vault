@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package vault
 
 import (
@@ -35,7 +38,7 @@ var (
 // when a new key is added to the keyring, we can encrypt with the root key
 // and write out the new keyring.
 type Keyring struct {
-	rootKey      []byte
+	rootKey        []byte
 	keys           map[uint32]*Key
 	activeTerm     uint32
 	rotationConfig KeyRotationConfig
@@ -188,7 +191,7 @@ func (k *Keyring) RootKey() []byte {
 func (k *Keyring) Serialize() ([]byte, error) {
 	// Create the encoded entry
 	enc := EncodedKeyring{
-		MasterKey: k.rootKey,
+		MasterKey:      k.rootKey,
 		RotationConfig: k.rotationConfig,
 	}
 	for _, key := range k.keys {

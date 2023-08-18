@@ -1,0 +1,93 @@
+---
+layout: api
+page_title: /sys/mfa/validate - HTTP API
+description: >-
+  The '/sys/mfa/validate' endpoint focuses on validating login MFA requests.
+  If validation succeeds, it returns an auth response which includes a client token.
+---
+
+## Validate login MFA request
+
+This endpoint validates a login request which is subject to MFA validation.
+
+| Method | Path                |
+| :----- | :------------------ |
+| `POST`  | `/sys/mfa/validate` |
+
+### Parameters
+
+- `mfa_request_id` `(string: <required>)` – A unique identification of an MFA restricted login request.
+ This can be found in the MFA requirement included in the auth response of the login request.
+
+- `mfa_payload` `(map<string|[]string>: <required>)` - A map of login MFA methodIDs to passcode credentials.
+MFA methodIDs are UUID strings which are used as keys of the map. The values of the map are
+string slices. In cases where an MFA method is configured not to use passcodes, the passcode remains an empty string.
+
+
+### Sample payload
+
+```json
+{
+  "mfa_request_id": "5879c74a-1418-1948-7be9-97b209d693a7",
+  "mfa_payload": {
+      "d16fd3c2-50de-0b9b-eed3-0301dadeca10": ["910201"]
+  }
+}
+```
+
+As of Vault 1.13.0, it is also possible to use an MFA method name as the key to the `mfa_payload`.
+In versions 1.12.x and below,`passcode=` was used for Duo MFA only. Starting in version 1.13.x, `passcode=` is optional for all supported MFA methods.
+
+```json
+{
+  "mfa_request_id": "5879c74a-1418-1948-7be9-97b209d693a7",
+  "mfa_payload": {
+      "sample_mfa_method_name": ["passcode=910201"]
+  }
+}
+
+### Sample request
+
+```shell-session
+$ curl \
+    --request POST \
+    --data @payload.json \
+    http://127.0.0.1:8200/v1/sys/mfa/validate
+```
+
+### Sample response
+
+In cases where MFA validation fails, a 403 status code is returned with
+the details about the error.
+If MFA validation succeeds, the response is identical to a successful
+login request which contains a client token and its accessor.
+
+```json
+{
+  "request_id": "7e7dec1d-311a-ecbd-4dd0-ff12a5e38959",
+  "lease_id": "",
+  "lease_duration": 0,
+  "renewable": false,
+  "data": null,
+  "warnings": null,
+  "auth": {
+    "client_token": "hvs.CAESIKZJNqQbG9E9cQGPXh68NWxi3xp7yPa1Z1RWv1P9UyHVGh4KHGh2cy5GUmYzTzdJOWhIZGFNSm5jdTBsSVNFSTk",
+    "accessor": "3fBgbEmHyA5IWABmVEjqManI",
+    "policies": [
+      "default"
+    ],
+    "token_policies": [
+      "default"
+    ],
+    "identity_policies": null,
+    "metadata": {
+      "username": "alice"
+    },
+    "orphan": true,
+    "entity_id": "caeac75b-dbfe-58be-e3fc-957549b7292e",
+    "lease_duration": 2764800,
+    "renewable": true,
+    "mfa_requirement": null
+  }
+}
+```

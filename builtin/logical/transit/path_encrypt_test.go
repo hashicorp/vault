@@ -1,16 +1,87 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package transit
 
 import (
 	"context"
 	"encoding/json"
-	"github.com/hashicorp/vault/sdk/helper/keysutil"
+	"fmt"
 	"reflect"
 	"strings"
 	"testing"
 
+	"github.com/hashicorp/vault/sdk/helper/keysutil"
+
+	uuid "github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/mitchellh/mapstructure"
 )
+
+func TestTransit_MissingPlaintext(t *testing.T) {
+	var resp *logical.Response
+	var err error
+
+	b, s := createBackendWithStorage(t)
+
+	// Create the policy
+	policyReq := &logical.Request{
+		Operation: logical.UpdateOperation,
+		Path:      "keys/existing_key",
+		Storage:   s,
+	}
+	resp, err = b.HandleRequest(context.Background(), policyReq)
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("err:%v resp:%#v", err, resp)
+	}
+
+	encReq := &logical.Request{
+		Operation: logical.UpdateOperation,
+		Path:      "encrypt/existing_key",
+		Storage:   s,
+		Data:      map[string]interface{}{},
+	}
+	resp, err = b.HandleRequest(context.Background(), encReq)
+	if resp == nil || !resp.IsError() {
+		t.Fatalf("expected error due to missing plaintext in request, err:%v resp:%#v", err, resp)
+	}
+}
+
+func TestTransit_MissingPlaintextInBatchInput(t *testing.T) {
+	var resp *logical.Response
+	var err error
+
+	b, s := createBackendWithStorage(t)
+
+	// Create the policy
+	policyReq := &logical.Request{
+		Operation: logical.UpdateOperation,
+		Path:      "keys/existing_key",
+		Storage:   s,
+	}
+	resp, err = b.HandleRequest(context.Background(), policyReq)
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("err:%v resp:%#v", err, resp)
+	}
+
+	batchInput := []interface{}{
+		map[string]interface{}{}, // Note that there is no map entry for plaintext
+	}
+
+	batchData := map[string]interface{}{
+		"batch_input": batchInput,
+	}
+	batchReq := &logical.Request{
+		Operation: logical.CreateOperation,
+		Path:      "encrypt/upserted_key",
+		Storage:   s,
+		Data:      batchData,
+	}
+	resp, err = b.HandleRequest(context.Background(), batchReq)
+	if err == nil {
+		t.Fatalf("expected error due to missing plaintext in request, err:%v resp:%#v", err, resp)
+	}
+}
 
 // Case1: Ensure that batch encryption did not affect the normal flow of
 // encrypting the plaintext with a pre-existing key.
@@ -159,7 +230,7 @@ func TestTransit_BatchEncryptionCase3(t *testing.T) {
 	}
 }
 
-// Case4: Test batch encryption with an existing key
+// Case4: Test batch encryption with an existing key (and test references)
 func TestTransit_BatchEncryptionCase4(t *testing.T) {
 	var resp *logical.Response
 	var err error
@@ -177,8 +248,8 @@ func TestTransit_BatchEncryptionCase4(t *testing.T) {
 	}
 
 	batchInput := []interface{}{
-		map[string]interface{}{"plaintext": "dGhlIHF1aWNrIGJyb3duIGZveA=="},
-		map[string]interface{}{"plaintext": "dGhlIHF1aWNrIGJyb3duIGZveA=="},
+		map[string]interface{}{"plaintext": "dGhlIHF1aWNrIGJyb3duIGZveA==", "reference": "b"},
+		map[string]interface{}{"plaintext": "dGhlIHF1aWNrIGJyb3duIGZveA==", "reference": "a"},
 	}
 
 	batchData := map[string]interface{}{
@@ -205,7 +276,7 @@ func TestTransit_BatchEncryptionCase4(t *testing.T) {
 
 	plaintext := "dGhlIHF1aWNrIGJyb3duIGZveA=="
 
-	for _, item := range batchResponseItems {
+	for i, item := range batchResponseItems {
 		if item.KeyVersion != 1 {
 			t.Fatalf("unexpected key version; got: %d, expected: %d", item.KeyVersion, 1)
 		}
@@ -220,6 +291,10 @@ func TestTransit_BatchEncryptionCase4(t *testing.T) {
 
 		if resp.Data["plaintext"] != plaintext {
 			t.Fatalf("bad: plaintext. Expected: %q, Actual: %q", plaintext, resp.Data["plaintext"])
+		}
+		inputItem := batchInput[i].(map[string]interface{})
+		if item.Reference != inputItem["reference"] {
+			t.Fatalf("reference mismatch.  Expected %s, Actual: %s", inputItem["reference"], item.Reference)
 		}
 	}
 }
@@ -578,13 +653,40 @@ func TestTransit_BatchEncryptionCase12(t *testing.T) {
 	}
 }
 
+// Case13: Incorrect input for nonce when we aren't in convergent encryption should fail the operation
+func TestTransit_BatchEncryptionCase13(t *testing.T) {
+	var err error
+
+	b, s := createBackendWithStorage(t)
+
+	batchInput := []interface{}{
+		map[string]interface{}{"plaintext": "bXkgc2VjcmV0IGRhdGE=", "nonce": "YmFkbm9uY2U="},
+	}
+
+	batchData := map[string]interface{}{
+		"batch_input": batchInput,
+	}
+	batchReq := &logical.Request{
+		Operation: logical.CreateOperation,
+		Path:      "encrypt/my-key",
+		Storage:   s,
+		Data:      batchData,
+	}
+	_, err = b.HandleRequest(context.Background(), batchReq)
+	if err != nil {
+		t.Fatal(err)
+	}
+}
+
 // Test that the fast path function decodeBatchRequestItems behave like mapstructure.Decode() to decode []BatchRequestItem.
 func TestTransit_decodeBatchRequestItems(t *testing.T) {
 	tests := []struct {
-		name            string
-		src             interface{}
-		dest            []BatchRequestItem
-		wantErrContains string
+		name              string
+		src               interface{}
+		requirePlaintext  bool
+		requireCiphertext bool
+		dest              []BatchRequestItem
+		wantErrContains   string
 	}{
 		// basic edge cases of nil values
 		{name: "nil-nil", src: nil, dest: nil},
@@ -703,16 +805,51 @@ func TestTransit_decodeBatchRequestItems(t *testing.T) {
 			src:  []interface{}{map[string]interface{}{"plaintext": "dGhlIHF1aWNrIGJyb3duIGZveA==", "nonce": "null"}},
 			dest: []BatchRequestItem{},
 		},
+		// required fields
+		{
+			name:             "required_plaintext_present",
+			src:              []interface{}{map[string]interface{}{"plaintext": ""}},
+			requirePlaintext: true,
+			dest:             []BatchRequestItem{},
+		},
+		{
+			name:             "required_plaintext_missing",
+			src:              []interface{}{map[string]interface{}{}},
+			requirePlaintext: true,
+			dest:             []BatchRequestItem{},
+			wantErrContains:  "missing plaintext",
+		},
+		{
+			name:              "required_ciphertext_present",
+			src:               []interface{}{map[string]interface{}{"ciphertext": "dGhlIHF1aWNrIGJyb3duIGZveA=="}},
+			requireCiphertext: true,
+			dest:              []BatchRequestItem{},
+		},
+		{
+			name:              "required_ciphertext_missing",
+			src:               []interface{}{map[string]interface{}{}},
+			requireCiphertext: true,
+			dest:              []BatchRequestItem{},
+			wantErrContains:   "missing ciphertext",
+		},
+		{
+			name:              "required_plaintext_and_ciphertext_missing",
+			src:               []interface{}{map[string]interface{}{}},
+			requirePlaintext:  true,
+			requireCiphertext: true,
+			dest:              []BatchRequestItem{},
+			wantErrContains:   "missing ciphertext",
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			expectedDest := append(tt.dest[:0:0], tt.dest...) // copy of the dest state
-			expectedErr := mapstructure.Decode(tt.src, &expectedDest)
+			expectedErr := mapstructure.Decode(tt.src, &expectedDest) != nil || tt.wantErrContains != ""
 
-			gotErr := decodeBatchRequestItems(tt.src, &tt.dest)
+			gotErr := decodeBatchRequestItems(tt.src, tt.requirePlaintext, tt.requireCiphertext, &tt.dest)
 			gotDest := tt.dest
 
-			if expectedErr != nil {
+			if expectedErr {
 				if gotErr == nil {
 					t.Fatal("decodeBatchRequestItems unexpected error value; expected error but got none")
 				}
@@ -807,5 +944,50 @@ func TestShouldWarnAboutNonceUsage(t *testing.T) {
 				}
 			})
 		}
+	}
+}
+
+func TestTransit_EncryptWithRSAPublicKey(t *testing.T) {
+	generateKeys(t)
+	b, s := createBackendWithStorage(t)
+	keyType := "rsa-2048"
+	keyID, err := uuid.GenerateUUID()
+	if err != nil {
+		t.Fatalf("failed to generate key ID: %s", err)
+	}
+
+	// Get key
+	privateKey := getKey(t, keyType)
+	publicKeyBytes, err := getPublicKey(privateKey, keyType)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Import key
+	req := &logical.Request{
+		Storage:   s,
+		Operation: logical.UpdateOperation,
+		Path:      fmt.Sprintf("keys/%s/import", keyID),
+		Data: map[string]interface{}{
+			"public_key": publicKeyBytes,
+			"type":       keyType,
+		},
+	}
+	_, err = b.HandleRequest(context.Background(), req)
+	if err != nil {
+		t.Fatalf("failed to import public key: %s", err)
+	}
+
+	req = &logical.Request{
+		Operation: logical.CreateOperation,
+		Path:      fmt.Sprintf("encrypt/%s", keyID),
+		Storage:   s,
+		Data: map[string]interface{}{
+			"plaintext": "bXkgc2VjcmV0IGRhdGE=",
+		},
+	}
+	_, err = b.HandleRequest(context.Background(), req)
+	if err != nil {
+		t.Fatal(err)
 	}
 }

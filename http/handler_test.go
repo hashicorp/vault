@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package http
 
 import (
@@ -17,6 +20,7 @@ import (
 	"github.com/go-test/deep"
 	"github.com/hashicorp/go-cleanhttp"
 	"github.com/hashicorp/vault/helper/namespace"
+	"github.com/hashicorp/vault/helper/versions"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/vault"
@@ -410,9 +414,12 @@ func TestSysMounts_headerAuth(t *testing.T) {
 					"max_lease_ttl":     json.Number("0"),
 					"force_no_cache":    false,
 				},
-				"local":     false,
-				"seal_wrap": false,
-				"options":   map[string]interface{}{"version": "1"},
+				"local":                  false,
+				"seal_wrap":              false,
+				"options":                map[string]interface{}{"version": "1"},
+				"plugin_version":         "",
+				"running_sha256":         "",
+				"running_plugin_version": versions.GetBuiltinVersion(consts.PluginTypeSecrets, "kv"),
 			},
 			"sys/": map[string]interface{}{
 				"description":             "system endpoints used for control, policy and debugging",
@@ -424,9 +431,12 @@ func TestSysMounts_headerAuth(t *testing.T) {
 					"force_no_cache":              false,
 					"passthrough_request_headers": []interface{}{"Accept"},
 				},
-				"local":     false,
-				"seal_wrap": false,
-				"options":   interface{}(nil),
+				"local":                  false,
+				"seal_wrap":              true,
+				"options":                interface{}(nil),
+				"plugin_version":         "",
+				"running_sha256":         "",
+				"running_plugin_version": versions.DefaultBuiltinVersion,
 			},
 			"cubbyhole/": map[string]interface{}{
 				"description":             "per-token private secret storage",
@@ -437,9 +447,12 @@ func TestSysMounts_headerAuth(t *testing.T) {
 					"max_lease_ttl":     json.Number("0"),
 					"force_no_cache":    false,
 				},
-				"local":     true,
-				"seal_wrap": false,
-				"options":   interface{}(nil),
+				"local":                  true,
+				"seal_wrap":              false,
+				"options":                interface{}(nil),
+				"plugin_version":         "",
+				"running_sha256":         "",
+				"running_plugin_version": versions.GetBuiltinVersion(consts.PluginTypeSecrets, "cubbyhole"),
 			},
 			"identity/": map[string]interface{}{
 				"description":             "identity store",
@@ -451,9 +464,12 @@ func TestSysMounts_headerAuth(t *testing.T) {
 					"force_no_cache":              false,
 					"passthrough_request_headers": []interface{}{"Authorization"},
 				},
-				"local":     false,
-				"seal_wrap": false,
-				"options":   interface{}(nil),
+				"local":                  false,
+				"seal_wrap":              false,
+				"options":                interface{}(nil),
+				"plugin_version":         "",
+				"running_sha256":         "",
+				"running_plugin_version": versions.GetBuiltinVersion(consts.PluginTypeSecrets, "identity"),
 			},
 		},
 		"secret/": map[string]interface{}{
@@ -465,9 +481,12 @@ func TestSysMounts_headerAuth(t *testing.T) {
 				"max_lease_ttl":     json.Number("0"),
 				"force_no_cache":    false,
 			},
-			"local":     false,
-			"seal_wrap": false,
-			"options":   map[string]interface{}{"version": "1"},
+			"local":                  false,
+			"seal_wrap":              false,
+			"options":                map[string]interface{}{"version": "1"},
+			"plugin_version":         "",
+			"running_sha256":         "",
+			"running_plugin_version": versions.GetBuiltinVersion(consts.PluginTypeSecrets, "kv"),
 		},
 		"sys/": map[string]interface{}{
 			"description":             "system endpoints used for control, policy and debugging",
@@ -479,9 +498,12 @@ func TestSysMounts_headerAuth(t *testing.T) {
 				"force_no_cache":              false,
 				"passthrough_request_headers": []interface{}{"Accept"},
 			},
-			"local":     false,
-			"seal_wrap": false,
-			"options":   interface{}(nil),
+			"local":                  false,
+			"seal_wrap":              true,
+			"options":                interface{}(nil),
+			"plugin_version":         "",
+			"running_sha256":         "",
+			"running_plugin_version": versions.DefaultBuiltinVersion,
 		},
 		"cubbyhole/": map[string]interface{}{
 			"description":             "per-token private secret storage",
@@ -492,9 +514,12 @@ func TestSysMounts_headerAuth(t *testing.T) {
 				"max_lease_ttl":     json.Number("0"),
 				"force_no_cache":    false,
 			},
-			"local":     true,
-			"seal_wrap": false,
-			"options":   interface{}(nil),
+			"local":                  true,
+			"seal_wrap":              false,
+			"options":                interface{}(nil),
+			"plugin_version":         "",
+			"running_sha256":         "",
+			"running_plugin_version": versions.GetBuiltinVersion(consts.PluginTypeSecrets, "cubbyhole"),
 		},
 		"identity/": map[string]interface{}{
 			"description":             "identity store",
@@ -506,9 +531,12 @@ func TestSysMounts_headerAuth(t *testing.T) {
 				"force_no_cache":              false,
 				"passthrough_request_headers": []interface{}{"Authorization"},
 			},
-			"local":     false,
-			"seal_wrap": false,
-			"options":   interface{}(nil),
+			"local":                  false,
+			"seal_wrap":              false,
+			"options":                interface{}(nil),
+			"plugin_version":         "",
+			"running_sha256":         "",
+			"running_plugin_version": versions.GetBuiltinVersion(consts.PluginTypeSecrets, "identity"),
 		},
 	}
 	testResponseStatus(t, resp, 200)

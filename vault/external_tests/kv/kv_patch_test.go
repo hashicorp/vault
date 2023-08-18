@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package kv
 
 import (
@@ -9,34 +12,14 @@ import (
 	"testing"
 	"time"
 
-	logicalKv "github.com/hashicorp/vault-plugin-secrets-kv"
 	"github.com/hashicorp/vault/api"
-	"github.com/hashicorp/vault/audit"
-	auditFile "github.com/hashicorp/vault/builtin/audit/file"
-	vaulthttp "github.com/hashicorp/vault/http"
-	"github.com/hashicorp/vault/sdk/logical"
-	"github.com/hashicorp/vault/vault"
+	"github.com/hashicorp/vault/helper/testhelpers/minimal"
 )
 
 func TestKV_Patch_BadContentTypeHeader(t *testing.T) {
-	coreConfig := &vault.CoreConfig{
-		LogicalBackends: map[string]logical.Factory{
-			"kv": logicalKv.VersionedKVFactory,
-		},
-	}
-
-	cluster := vault.NewTestCluster(t, coreConfig, &vault.TestClusterOptions{
-		HandlerFunc: vaulthttp.Handler,
-	})
-
-	cluster.Start()
-	defer cluster.Cleanup()
-
-	cores := cluster.Cores
-
-	core := cores[0].Core
+	t.Parallel()
+	cluster := minimal.NewTestSoloCluster(t, nil)
 	c := cluster.Cores[0].Client
-	vault.TestWaitActive(t, core)
 
 	// Mount a KVv2 backend
 	err := c.Sys().Mount("kv", &api.MountInput{
@@ -52,36 +35,48 @@ func TestKV_Patch_BadContentTypeHeader(t *testing.T) {
 		},
 	}
 
-	resp, err := c.Logical().Write("kv/data/foo", kvData)
+	secretRaw, err := kvRequestWithRetry(t, func() (interface{}, error) {
+		return c.Logical().Write("kv/data/foo", kvData)
+	})
 	if err != nil {
-		t.Fatalf("write failed - err :%#v, resp: %#v\n", err, resp)
+		t.Fatalf("write failed - err :%#v, resp: %#v\n", err, secretRaw)
 	}
 
-	resp, err = c.Logical().Read("kv/data/foo")
+	secretRaw, err = kvRequestWithRetry(t, func() (interface{}, error) {
+		return c.Logical().Read("kv/data/foo")
+	})
 	if err != nil {
-		t.Fatalf("read failed - err :%#v, resp: %#v\n", err, resp)
+		t.Fatalf("read failed - err :%#v, resp: %#v\n", err, secretRaw)
 	}
 
-	req := c.NewRequest("PATCH", "/v1/kv/data/foo")
-	req.Headers = http.Header{
-		"Content-Type": []string{"application/json"},
+	apiRespRaw, err := kvRequestWithRetry(t, func() (interface{}, error) {
+		req := c.NewRequest("PATCH", "/v1/kv/data/foo")
+		req.Headers = http.Header{
+			"Content-Type": []string{"application/json"},
+		}
+
+		if err := req.SetJSONBody(kvData); err != nil {
+			t.Fatal(err)
+		}
+
+		return c.RawRequestWithContext(context.Background(), req)
+	})
+
+	apiResp, ok := apiRespRaw.(*api.Response)
+	if !ok {
+		t.Fatalf("response not an api.Response, actual: %#v", apiRespRaw)
 	}
 
-	if err := req.SetJSONBody(kvData); err != nil {
-		t.Fatal(err)
-	}
-
-	apiResp, err := c.RawRequestWithContext(context.Background(), req)
 	if err == nil || apiResp.StatusCode != http.StatusUnsupportedMediaType {
 		t.Fatalf("expected PATCH request to fail with %d status code - err :%#v, resp: %#v\n", http.StatusUnsupportedMediaType, err, apiResp)
 	}
 }
 
-func kvRequestWithRetry(t *testing.T, req func() (*api.Secret, error)) (*api.Secret, error) {
+func kvRequestWithRetry(t *testing.T, req func() (interface{}, error)) (interface{}, error) {
 	t.Helper()
 
 	var err error
-	var resp *api.Secret
+	var resp interface{}
 
 	// Loop until return message does not indicate upgrade, or timeout.
 	timeout := time.After(20 * time.Second)
@@ -107,27 +102,9 @@ func kvRequestWithRetry(t *testing.T, req func() (*api.Secret, error)) (*api.Sec
 }
 
 func TestKV_Patch_Audit(t *testing.T) {
-	coreConfig := &vault.CoreConfig{
-		LogicalBackends: map[string]logical.Factory{
-			"kv": logicalKv.VersionedKVFactory,
-		},
-		AuditBackends: map[string]audit.Factory{
-			"file": auditFile.Factory,
-		},
-	}
-
-	cluster := vault.NewTestCluster(t, coreConfig, &vault.TestClusterOptions{
-		HandlerFunc: vaulthttp.Handler,
-	})
-
-	cluster.Start()
-	defer cluster.Cleanup()
-
-	cores := cluster.Cores
-
-	core := cores[0].Core
+	t.Parallel()
+	cluster := minimal.NewTestSoloCluster(t, nil)
 	c := cluster.Cores[0].Client
-	vault.TestWaitActive(t, core)
 
 	if err := c.Sys().Mount("kv/", &api.MountInput{
 		Type: "kv-v2",
@@ -156,10 +133,9 @@ func TestKV_Patch_Audit(t *testing.T) {
 		},
 	}
 
-	resp, err := kvRequestWithRetry(t, func() (*api.Secret, error) {
+	resp, err := kvRequestWithRetry(t, func() (interface{}, error) {
 		return c.Logical().Write("kv/data/foo", writeData)
 	})
-
 	if err != nil {
 		t.Fatalf("write request failed, err: %#v, resp: %#v\n", err, resp)
 	}
@@ -170,7 +146,7 @@ func TestKV_Patch_Audit(t *testing.T) {
 		},
 	}
 
-	resp, err = kvRequestWithRetry(t, func() (*api.Secret, error) {
+	resp, err = kvRequestWithRetry(t, func() (interface{}, error) {
 		return c.Logical().JSONMergePatch(context.Background(), "kv/data/foo", patchData)
 	})
 
@@ -208,19 +184,9 @@ func TestKV_Patch_Audit(t *testing.T) {
 
 // Verifies that patching works by default with the root token
 func TestKV_Patch_RootToken(t *testing.T) {
-	coreConfig := &vault.CoreConfig{
-		LogicalBackends: map[string]logical.Factory{
-			"kv": logicalKv.Factory,
-		},
-	}
-	cluster := vault.NewTestCluster(t, coreConfig, &vault.TestClusterOptions{
-		HandlerFunc: vaulthttp.Handler,
-	})
-	cluster.Start()
-	defer cluster.Cleanup()
-
-	core := cluster.Cores[0]
-	client := core.Client
+	t.Parallel()
+	cluster := minimal.NewTestSoloCluster(t, nil)
+	client := cluster.Cores[0].Client
 
 	// make sure this client is using the root token
 	client.SetToken(cluster.RootToken)
@@ -234,10 +200,11 @@ func TestKV_Patch_RootToken(t *testing.T) {
 	}
 
 	// Write a kv value and patch it
-	_, err = kvRequestWithRetry(t, func() (*api.Secret, error) {
+	_, err = kvRequestWithRetry(t, func() (interface{}, error) {
 		data := map[string]interface{}{
 			"data": map[string]interface{}{
 				"bar": "baz",
+				"foo": "qux",
 			},
 		}
 
@@ -248,10 +215,11 @@ func TestKV_Patch_RootToken(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	_, err = kvRequestWithRetry(t, func() (*api.Secret, error) {
+	_, err = kvRequestWithRetry(t, func() (interface{}, error) {
 		data := map[string]interface{}{
 			"data": map[string]interface{}{
 				"bar": "quux",
+				"foo": nil,
 			},
 		}
 		return client.Logical().JSONMergePatch(context.Background(), "kv/data/foo", data)
@@ -261,16 +229,24 @@ func TestKV_Patch_RootToken(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	secret, err := kvRequestWithRetry(t, func() (*api.Secret, error) {
+	secretRaw, err := kvRequestWithRetry(t, func() (interface{}, error) {
 		return client.Logical().Read("kv/data/foo")
 	})
-
 	if err != nil {
 		t.Fatal(err)
+	}
+
+	secret, ok := secretRaw.(*api.Secret)
+	if !ok {
+		t.Fatalf("response not an api.Secret, actual: %#v", secretRaw)
 	}
 
 	bar := secret.Data["data"].(map[string]interface{})["bar"]
 	if bar != "quux" {
 		t.Fatalf("expected bar to be quux but it was %q", bar)
+	}
+
+	if _, ok := secret.Data["data"].(map[string]interface{})["foo"]; ok {
+		t.Fatalf("expected data not to include foo")
 	}
 }

@@ -1,3 +1,8 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
 <WizardContent @headerText={{capitalize this.currentMachine}} @glyph="tour">
   {{component
     this.stepComponent
@@ -6,6 +11,7 @@
     actionText=this.actionText
     nextFeature=this.nextFeature
     nextStep=this.nextStep
+    featureState=this.wizard.featureState
     needsConnection=this.needsConnection
     needsEncryption=this.needsEncryption
     isSupported=this.isSupported

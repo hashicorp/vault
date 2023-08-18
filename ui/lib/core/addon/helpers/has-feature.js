@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 /* eslint-disable ember/no-observers */
 import { inject as service } from '@ember/service';
 import { assert } from '@ember/debug';
@@ -15,6 +20,7 @@ const POSSIBLE_FEATURES = [
   'Namespaces',
   'KMIP',
   'Transform Secrets Engine',
+  'Key Management Secrets Engine',
 ];
 
 export function hasFeature(featureName, features) {

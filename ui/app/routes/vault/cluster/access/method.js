@@ -1,10 +1,17 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import AdapterError from '@ember-data/adapter/error';
 import { set } from '@ember/object';
 import Route from '@ember/routing/route';
 import { inject as service } from '@ember/service';
 
 export default Route.extend({
+  store: service(),
   pathHelp: service('path-help'),
+
   model(params) {
     const { path } = params;
     return this.store.findAll('auth-method').then((modelArray) => {

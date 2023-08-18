@@ -1,4 +1,9 @@
-<form onsubmit={{@createOrUpdateKey}}>
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
+<form data-test-transit-edit-form onsubmit={{@createOrUpdateKey}}>
   <div class="box is-sideless is-fullwidth is-marginless">
     <MessageError @model={{@key}} />
     <NamespaceReminder @mode="edit" @noun="transit key" />
@@ -15,6 +20,17 @@
           Allow deletion
         </label>
       </div>
+    </div>
+    <div class="field">
+      <TtlPicker
+        @initialValue={{or @key.autoRotatePeriod "30d"}}
+        @initialEnabled={{not (eq @key.autoRotatePeriod 0)}}
+        @label="Auto-rotation period"
+        @helperTextDisabled="Key will never be automatically rotated"
+        @helperTextEnabled="Key will be automatically rotated every"
+        @onChange={{@handleAutoRotateChange}}
+        @errorMessage={{if @autoRotateInvalid "Duration must be longer than 1 hour"}}
+      />
     </div>
     <div class="field">
       <label for="key-min-decrypt-version" class="is-label">Minimum decryption version</label>
@@ -75,13 +91,13 @@
     <div class="field is-grouped">
       {{#if @capabilities.canUpdate}}
         <div class="control">
-          <button type="submit" disabled={{@requestInFlight}} class="button is-primary {{if @requestInFlight "is-loading"}}">
+          <button type="submit" disabled={{@requestInFlight}} class="button is-primary {{if @requestInFlight 'is-loading'}}">
             Update transit key
           </button>
         </div>
       {{/if}}
       <div class="control">
-        <SecretLink @mode="show" @secret={{@key.id}} @class="button">
+        <SecretLink @mode="show" @secret={{@key.id}} class="button">
           Cancel
         </SecretLink>
       </div>

@@ -4,7 +4,11 @@ page_title: AWS - Auth Methods
 description: The aws auth method allows automated authentication of AWS entities.
 ---
 
-# AWS Auth Method
+# AWS auth method
+
+@include 'x509-sha1-deprecation.mdx'
+
+@include 'aws-sha1-deprecation.mdx'
 
 The `aws` auth method provides an automated mechanism to retrieve a Vault token
 for IAM principals and AWS EC2 instances. Unlike most Vault auth methods, this
@@ -12,7 +16,7 @@ method does not require manual first-deploying, or provisioning
 security-sensitive credentials (tokens, username/password, client certificates,
 etc), by operators under many circumstances.
 
-## Authentication Workflow
+## Authentication workflow
 
 There are two authentication types present in the aws auth method: `iam` and
 `ec2`.
@@ -108,7 +112,7 @@ is also represented in the graphic below) is as follows:
 There are various modifications to this workflow that provide more or less
 security, as detailed later in this documentation.
 
-## Authorization Workflow
+## Authorization workflow
 
 The basic mechanism of operation is per-role. Roles are registered in the
 method and associated with a specific authentication type that cannot be
@@ -158,7 +162,7 @@ the method to verify the authenticity of a found role tag and ensure that it has
 not been tampered with. There is also a mechanism to deny list role tags if one
 has been found to be distributed outside of its intended set of machines.
 
-## IAM Authentication Inferences
+## IAM authentication inferences
 
 With the iam auth method, normally Vault will see the IAM principal that
 authenticated, either the IAM user or role. However, when you have an EC2
@@ -207,12 +211,12 @@ that Vault cannot offer an iron-clad guarantee about the inference and it is up
 to operators to determine, based on their own AWS controls and use cases,
 whether or not it's appropriate to configure inferencing.
 
-## Mixing Authentication Types
+## Mixing authentication types
 
 Vault allows you to configure using either the ec2 auth method or the iam auth
-method, but not both auth methods. Further, Vault will prevent you from
-enforcing restrictions that it cannot enforce given the chosen auth type for a
-role. Some examples of how this works in practice:
+method, but not both auth methods. Further, **assumed roles are not supported**
+and Vault prevents you from enforcing restrictions that it cannot enforce given
+the chosen auth type for a role. Some examples of how this works in practice:
 
 1. You configure a role with the ec2 auth type, with a bound AMI ID. A
    client would not be able to login using the iam auth type.
@@ -223,7 +227,7 @@ role. Some examples of how this works in practice:
    must login using the iam method; the RoleSessionName must be a valid instance
    ID viewable by Vault, and the instance must have come from the bound AMI ID.
 
-## Comparison of the IAM and EC2 Methods
+## Comparison of the IAM and EC2 methods
 
 The iam and ec2 auth methods serve similar and somewhat overlapping
 functionality, in that both authenticate some type of AWS entity to Vault.
@@ -278,7 +282,7 @@ Here are some comparisons that illustrate why `iam` method is preferred over
     to, or make use of inferencing. If you need to make use of role tags, then
     you will need to use the ec2 auth method.
 
-## Recommended Vault IAM Policy
+## Recommended Vault IAM policy
 
 This specifies the recommended IAM policy needed by the AWS auth method. Note
 that if you are using the same credentials for the AWS auth and secret methods
@@ -344,10 +348,10 @@ are needed.
   `sts:AssumeRole` statement).
 - The `ManageOwnAccessKeys` stanza is necessary when you have configured Vault
   with static credentials, and wish to rotate these credentials with the
-  [Rotate Root Credentials](https://www.vaultproject.io/api-docs/auth/aws#rotate-root-credentials)
+  [Rotate Root Credentials](/vault/api-docs/auth/aws#rotate-root-credentials)
   API call.
 
-## Client Nonce
+## Client nonce
 
 Note: this only applies to the ec2 auth method.
 
@@ -408,9 +412,9 @@ along with the authentication response, will be audit logged in plaintext. If
 this is undesired, clients can supply a custom nonce to the login endpoint
 which will not be returned and hence will not be audit logged.
 
-## Advanced Options and Caveats
+## Advanced options and caveats
 
-### Dynamic Management of Policies Via Role Tags
+### Dynamic management of policies via role tags
 
 Note: This only applies to the ec2 auth method or the iam auth method when
 inferencing is used.
@@ -438,12 +442,12 @@ not specify the policy component, the client will inherit the allowed policies s
 on the role. If the role tag creation specifies the policy component but it contains
 no policies, the token will contain only the `default` policy; by default, this policy
 allows only manipulation (revocation, renewal, lookup) of the existing token, plus
-access to its [cubbyhole](/docs/secrets/cubbyhole).
+access to its [cubbyhole](/vault/docs/secrets/cubbyhole).
 This can be useful to allow instances access to a secure "scratch space" for
 storing data (via the token's cubbyhole) but without granting any access to
 other resources provided by or resident in Vault.
 
-### Handling Lost Client Nonces
+### Handling lost client nonces
 
 Note: This only applies to the ec2 auth method.
 
@@ -482,7 +486,7 @@ option is set to `false` on the role, a value of `true` in the role tag takes
 effect; however, if the option is set to `true` on the role, a value set in the
 role tag has no effect.
 
-### Disabling Reauthentication
+### Disabling reauthentication
 
 Note: this only applies to the ec2 auth method.
 
@@ -505,7 +509,7 @@ option is set to `false` on the role, a value of `true` in the role tag takes
 effect; however, if the option is set to `true` on the role, a value set in the
 role tag has no effect.
 
-### Deny listing Role Tags
+### Deny listing role tags
 
 Note: this only applies to the ec2 auth method or the iam auth method
 when inferencing is used.
@@ -520,7 +524,7 @@ further effect, the role tag can be placed on a `deny list` via the endpoint
 tokens that were already issued; this only blocks any further login requests from
 those instances that have the deny listed tag attached to them.
 
-### Expiration Times and Tidying of `denylist` and `accesslist` Entries
+### Expiration times and tidying of `denylist` and `accesslist` entries
 
 The expired entries in both identity `accesslist` and role tag `denylist` are
 deleted automatically. The entries in both of these lists contain an expiration
@@ -543,7 +547,7 @@ were expired before 72 hours from when the tidy operation is being performed.
 This can be configured via `config/tidy/roletag-denylist` and `config/tidy/identity-accesslist`
 endpoints.
 
-### Varying Public Certificates
+### Varying public certificates
 
 Note: this only applies to the ec2 auth method.
 
@@ -555,7 +559,7 @@ verified by the default public certificate included in Vault can register a
 different public certificate which can be found [here](http://docs.aws.amazon.com/AWSEC2/latest/UserGuide/instance-identity-documents.html),
 via the `auth/aws/config/certificate/<cert_name>` endpoint.
 
-### Dangling Tokens
+### Dangling tokens
 
 An EC2 instance, after authenticating itself with the method, gets a Vault token.
 After that, if the instance terminates or goes down for any reason, the method
@@ -563,7 +567,7 @@ will not be aware of such events. The token issued will still be valid, until
 it expires. The token will likely be expired sooner than its lifetime when the
 instance fails to renew the token on time.
 
-### Cross Account Access
+### Cross account access
 
 To allow Vault to authenticate IAM principals and EC2 instances in other
 accounts, Vault supports using AWS STS (Security Token Service) to assume AWS
@@ -581,7 +585,7 @@ Policy](#recommended-vault-iam-policy) except it doesn't need any further
 Furthermore, in the master account, Vault must be granted the action `sts:AssumeRole`
 for the IAM Role to be assumed.
 
-### AWS Instance Metadata Timeout
+### AWS instance metadata timeout
 
 @include 'aws-imds-timeout.mdx'
 
@@ -618,7 +622,7 @@ $ vault write auth/aws/role/dev-role-iam auth_type=iam \
               bound_iam_principal_arn=arn:aws:iam::123456789012:role/MyRole policies=prod,dev max_ttl=500h
 ```
 
-#### Configure a required X-Vault-AWS-IAM-Server-ID Header (recommended)
+#### Configure a required X-Vault-AWS-IAM-Server-ID header (recommended)
 
 ```shell-session
 $ vault write auth/aws/config/client iam_server_id_header_value=vault.example.com
@@ -626,9 +630,17 @@ $ vault write auth/aws/config/client iam_server_id_header_value=vault.example.co
 
 #### Perform the login operation
 
+For the ec2 auth method, first fetch the PKCS#7 signature on the AWS instance:
+
+```shell-session
+$ SIGNATURE=$(curl -s http://169.254.169.254/latest/dynamic/instance-identity/rsa2048 | tr -d '\n')
+```
+
+then set the signature on the login endpoint:
+
 ```shell-session
 $ vault write auth/aws/login role=dev-role \
-pkcs7=MIAGCSqGSIb3DQEHAqCAMIACAQExCzAJBgUrDgMCGgUAMIAGCSqGSIb3DQEHAaCAJIAEggGmewogICJkZXZwYXlQcm9kdWN0Q29kZXMiIDogbnVsbCwKICAicHJpdmF0ZUlwIiA6ICIxNzIuMzEuNjMuNjAiLAogICJhdmFpbGFiaWxpdHlab25lIiA6ICJ1cy1lYXN0LTFjIiwKICAidmVyc2lvbiIgOiAiMjAxMC0wOC0zMSIsCiAgImluc3RhbmNlSWQiIDogImktZGUwZjEzNDQiLAogICJiaWxsaW5nUHJvZHVjdHMiIDogbnVsbCwKICAiaW5zdGFuY2VUeXBlIiA6ICJ0Mi5taWNybyIsCiAgImFjY291bnRJZCIgOiAiMjQxNjU2NjE1ODU5IiwKICAiaW1hZ2VJZCIgOiAiYW1pLWZjZTNjNjk2IiwKICAicGVuZGluZ1RpbWUiIDogIjIwMTYtMDQtMDVUMTY6MjY6NTVaIiwKICAiYXJjaGl0ZWN0dXJlIiA6ICJ4ODZfNjQiLAogICJrZXJuZWxJZCIgOiBudWxsLAogICJyYW1kaXNrSWQiIDogbnVsbCwKICAicmVnaW9uIiA6ICJ1cy1lYXN0LTEiCn0AAAAAAAAxggEXMIIBEwIBATBpMFwxCzAJBgNVBAYTAlVTMRkwFwYDVQQIExBXYXNoaW5ndG9uIFN0YXRlMRAwDgYDVQQHEwdTZWF0dGxlMSAwHgYDVQQKExdBbWF6b24gV2ViIFNlcnZpY2VzIExMQwIJAJa6SNnlXhpnMAkGBSsOAwIaBQCgXTAYBgkqhkiG9w0BCQMxCwYJKoZIhvcNAQcBMBwGCSqGSIb3DQEJBTEPFw0xNjA0MDUxNjI3MDBaMCMGCSqGSIb3DQEJBDEWBBRtiynzMTNfTw1TV/d8NvfgVw+XfTAJBgcqhkjOOAQDBC4wLAIUVfpVcNYoOKzN1c+h1Vsm/c5U0tQCFAK/K72idWrONIqMOVJ8Uen0wYg4AAAAAAAA nonce=5defbf9e-a8f9-3063-bdfc-54b7a42a1f95
+  pkcs7=$SIGNATURE
 ```
 
 For the iam auth method, generating the signed request is a non-standard
@@ -658,12 +670,17 @@ The region used defaults to `us-east-1`, but you can specify a custom region lik
 $ vault login -method=aws region=us-west-2 role=dev-role-iam
 ```
 
-When using a custom region, be sure the designated region corresponds to that of the
-STS endpoint you're using.
+If the region is specified as `auto`, the Vault CLI will determine the region based
+on standard AWS credentials precedence as described earlier. Whichever method is used,
+be sure the designated region corresponds to that of the STS endpoint you're using.
+
+~> **Note:** If you are making use of AWS GovCloud and setting the `sts_endpoint`
+and `sts_region` role parameters to `us-gov-west-1` / `us-gov-east-1` then you must include
+the `region` argument in your login request with a matching value, i.e. `region=us-gov-west-1`.
 
 An example of how to generate the required request values for the `login` method
 can be found found in the [vault cli
-source code](https://github.com/hashicorp/vault/blob/master/builtin/credential/aws/cli.go).
+source code](https://github.com/hashicorp/vault/blob/main/builtin/credential/aws/cli.go).
 Using an approach such as this, the request parameters can be generated and
 passed to the `login` method:
 
@@ -700,7 +717,7 @@ curl -X POST -H "X-Vault-Token:123" "http://127.0.0.1:8200/v1/auth/aws/role/dev-
 #### Perform the login operation
 
 ```
-curl -X POST "http://127.0.0.1:8200/v1/auth/aws/login" -d '{"role":"dev-role","pkcs7":"'$(curl -s http://169.254.169.254/latest/dynamic/instance-identity/pkcs7 | tr -d '\n')'","nonce":"5defbf9e-a8f9-3063-bdfc-54b7a42a1f95"}'
+curl -X POST "http://127.0.0.1:8200/v1/auth/aws/login" -d '{"role":"dev-role","pkcs7":"'$(curl -s http://169.254.169.254/latest/dynamic/instance-identity/rsa2048 | tr -d '\n')'","nonce":"5defbf9e-a8f9-3063-bdfc-54b7a42a1f95"}'
 
 curl -X POST "http://127.0.0.1:8200/v1/auth/aws/login" -d '{"role":"dev", "iam_http_request_method": "POST", "iam_request_url": "aHR0cHM6Ly9zdHMuYW1hem9uYXdzLmNvbS8=", "iam_request_body": "QWN0aW9uPUdldENhbGxlcklkZW50aXR5JlZlcnNpb249MjAxMS0wNi0xNQ==", "iam_request_headers": "eyJDb250ZW50LUxlbmd0aCI6IFsiNDMiXSwgIlVzZXItQWdlbnQiOiBbImF3cy1zZGstZ28vMS40LjEyIChnbzEuNy4xOyBsaW51eDsgYW1kNjQpIl0sICJYLVZhdWx0LUFXU0lBTS1TZXJ2ZXItSWQiOiBbInZhdWx0LmV4YW1wbGUuY29tIl0sICJYLUFtei1EYXRlIjogWyIyMDE2MDkzMFQwNDMxMjFaIl0sICJDb250ZW50LVR5cGUiOiBbImFwcGxpY2F0aW9uL3gtd3d3LWZvcm0tdXJsZW5jb2RlZDsgY2hhcnNldD11dGYtOCJdLCAiQXV0aG9yaXphdGlvbiI6IFsiQVdTNC1ITUFDLVNIQTI1NiBDcmVkZW50aWFsPWZvby8yMDE2MDkzMC91cy1lYXN0LTEvc3RzL2F3czRfcmVxdWVzdCwgU2lnbmVkSGVhZGVycz1jb250ZW50LWxlbmd0aDtjb250ZW50LXR5cGU7aG9zdDt4LWFtei1kYXRlO3gtdmF1bHQtc2VydmVyLCBTaWduYXR1cmU9YTY5ZmQ3NTBhMzQ0NWM0ZTU1M2UxYjNlNzlkM2RhOTBlZWY1NDA0N2YxZWI0ZWZlOGZmYmM5YzQyOGMyNjU1YiJdfQ==" }'
 ```
@@ -741,16 +758,16 @@ The response will be in JSON. For example:
 ## API
 
 The AWS auth method has a full HTTP API. Please see the
-[AWS Auth API](/api/auth/aws) for more
+[AWS Auth API](/vault/api-docs/auth/aws) for more
 details.
 
-## Code Example
+## Code example
 
-The following code snippet uses the AWS (IAM) auth method to authenticate with Vault.
+The following example demonstrates the AWS (IAM) auth method to authenticate with Vault.
 
-<CodeTabs heading="AWS auth example">
+<CodeTabs>
 
-<CodeBlockConfig lineNumbers>
+<CodeBlockConfig>
 
 ```go
 package main
@@ -780,7 +797,7 @@ func getSecretWithAWSAuthIAM() (string, error) {
 		return "", fmt.Errorf("unable to initialize AWS auth method: %w", err)
 	}
 
-	authInfo, err := client.Auth().Login(context.TODO(), awsAuth)
+	authInfo, err := client.Auth().Login(context.Background(), awsAuth)
 	if err != nil {
 		return "", fmt.Errorf("unable to login to AWS auth method: %w", err)
 	}
@@ -788,23 +805,17 @@ func getSecretWithAWSAuthIAM() (string, error) {
 		return "", fmt.Errorf("no auth info was returned after login")
 	}
 
-	// get secret
-	secret, err := client.Logical().Read("kv-v2/data/creds")
+	// get secret from the default mount path for KV v2 in dev mode, "secret"
+	secret, err := client.KVv2("secret").Get(context.Background(), "creds")
 	if err != nil {
 		return "", fmt.Errorf("unable to read secret: %w", err)
 	}
 
-	data, ok := secret.Data["data"].(map[string]interface{})
-	if !ok {
-		return "", fmt.Errorf("data type assertion failed: %T %#v", secret.Data["data"], secret.Data["data"])
-	}
-
 	// data map can contain more than one key-value pair,
 	// in this case we're just grabbing one of them
-	key := "password"
-	value, ok := data[key].(string)
+	value, ok := secret.Data["password"].(string)
 	if !ok {
-		return "", fmt.Errorf("value type assertion failed: %T %#v", data[key], data[key])
+		return "", fmt.Errorf("value type assertion failed: %T %#v", secret.Data["password"], secret.Data["password"])
 	}
 
 	return value, nil
@@ -812,7 +823,7 @@ func getSecretWithAWSAuthIAM() (string, error) {
 ```
 </CodeBlockConfig>
 
-<CodeBlockConfig lineNumbers>
+<CodeBlockConfig>
 
 ```cs
 using System;
@@ -833,9 +844,9 @@ using VaultSharp.V1.SecretsEngines.AWS;
 
 namespace Examples
 {
-    public class AwsAuthExample 
+    public class AwsAuthExample
     {
-        /// <summary> 
+        /// <summary>
         /// Fetches a key-value secret (kv-v2) after authenticating to Vault via AWS IAM,
         /// one of two auth methods used to authenticate with AWS (the other is EC2 auth).
         /// </summary>
@@ -856,12 +867,12 @@ namespace Examples
             var amazonSecurityTokenServiceConfig = new AmazonSecurityTokenServiceConfig();
 
             // Initialize BasicAWS Credentials w/ an accessKey and secretKey
-            Amazon.Runtime.AWSCredentials awsCredentials = new BasicAWSCredentials(accessKey: Environment.GetEnvironmentVariable("AWS_ACCESS_KEY_ID"), 
+            Amazon.Runtime.AWSCredentials awsCredentials = new BasicAWSCredentials(accessKey: Environment.GetEnvironmentVariable("AWS_ACCESS_KEY_ID"),
                                                                 secretKey: Environment.GetEnvironmentVariable("AWS_SECRET_ACCESS_KEY"));
-            
+
             // Construct the IAM Request and add necessary headers
             var iamRequest = GetCallerIdentityRequestMarshaller.Instance.Marshall(new GetCallerIdentityRequest());
-            
+
             iamRequest.Endpoint = new Uri(amazonSecurityTokenServiceConfig.DetermineServiceURL());
             iamRequest.ResourcePath = "/";
 
@@ -883,9 +894,9 @@ namespace Examples
             // We can retrieve the secret from the VaultClient object
             Secret<SecretData> kv2Secret = null;
             kv2Secret = vaultClient.V1.Secrets.KeyValue.V2.ReadSecretAsync(path: "/creds").Result;
-            
+
             var password = kv2Secret.Data.Data["password"];
-            
+
             return password.ToString();
         }
     }

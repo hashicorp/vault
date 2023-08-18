@@ -1,6 +1,11 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
 <PageHeader as |p|>
   <p.top>
-    <nav class="breadcrumb">
+    <nav class="breadcrumb" aria-label="breadcrumbs">
       <ul>
         <li>
           <span class="sep">&#x0002f;</span>
@@ -18,26 +23,19 @@
   </p.levelLeft>
 </PageHeader>
 <div class="tabs-container box is-sideless is-fullwidth is-paddingless is-marginless">
-  <nav class="tabs sub-nav">
+  <nav class="tabs sub-nav" aria-label="tabs">
     <ul>
       {{#each (tabs-for-identity-show this.model.identityType) as |tab|}}
-        {{! template-lint-configure no-unknown-arguments-for-builtin-components "warn" }}
-        <LinkTo @route="vault.cluster.access.identity.aliases.show" @models={{array this.model.id tab}} @tagName="li">
-          <LinkTo @route="vault.cluster.access.identity.aliases.show" @models={{array this.model.id tab}}>
-            {{capitalize tab}}
-          </LinkTo>
+        <LinkTo @route="vault.cluster.access.identity.aliases.show" @models={{array this.model.id tab}}>
+          {{capitalize tab}}
         </LinkTo>
-        {{! template-lint-configure no-unknown-arguments-for-builtin-components "on" }}
       {{/each}}
     </ul>
   </nav>
 </div>
 <Toolbar>
   <ToolbarActions>
-    <ToolbarLink
-      @params={{array "vault.cluster.access.identity.aliases.edit" this.model.id}}
-      @data-test-alias-edit-link={{true}}
-    >
+    <ToolbarLink @route="vault.cluster.access.identity.aliases.edit" @model={{this.model.id}} data-test-alias-edit-link>
       Edit
       {{lowercase (humanize this.model.identityType)}}
     </ToolbarLink>

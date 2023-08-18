@@ -1,10 +1,26 @@
-<form onsubmit={{@createOrUpdateKey}}>
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
+<form data-test-transit-create-form onsubmit={{@createOrUpdateKey}}>
   <div class="box is-sideless is-fullwidth is-marginless">
     <MessageError @model={{@key}} />
     <NamespaceReminder @mode="create" @noun="transit key" />
     <div class="field">
       <label for="key-name" class="is-label">Name</label>
       <Input id="key-name" @value={{@key.name}} class="input" data-test-transit-key-name={{true}} />
+    </div>
+    <div class="field">
+      <TtlPicker
+        @initialValue="30d"
+        @initialEnabled={{false}}
+        @label="Auto-rotation period"
+        @helperTextDisabled="Key will never be automatically rotated"
+        @helperTextEnabled="Key will be automatically rotated every"
+        @onChange={{@handleAutoRotateChange}}
+        @errorMessage={{if @autoRotateInvalid "Duration must be longer than 1 hour"}}
+      />
     </div>
     <div class="field">
       <label for="key-type" class="is-label">Type</label>
@@ -113,13 +129,13 @@
         data-test-transit-key-create
         type="submit"
         disabled={{@requestInFlight}}
-        class="button is-primary {{if @requestInFlight "is-loading"}}"
+        class="button is-primary {{if @requestInFlight 'is-loading'}}"
       >
         Create encryption key
       </button>
     </div>
     <div class="control">
-      <SecretLink @mode="list" @class="button">
+      <SecretLink @mode="list" class="button">
         Cancel
       </SecretLink>
     </div>

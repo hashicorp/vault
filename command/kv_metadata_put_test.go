@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package command
 
 import (
@@ -111,7 +114,6 @@ func TestKvMetadataPutCommand_CustomMetadata(t *testing.T) {
 	}
 
 	metadata, err := client.Logical().Read(metaFullPath)
-
 	if err != nil {
 		t.Fatalf("Metadata read error: %#v", err)
 	}

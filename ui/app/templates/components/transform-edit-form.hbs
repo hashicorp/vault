@@ -1,3 +1,8 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
 <form onsubmit={{action "createOrUpdate" "create"}}>
   <div class="box is-sideless is-fullwidth is-marginless">
     <MessageError @model={{this.model}} />
@@ -51,7 +56,7 @@
           Save
         {{/if}}
       </button>
-      <SecretLink @mode={{if (eq this.mode "create") "list" "show"}} @class="button" @secret={{this.model.id}}>
+      <SecretLink @mode={{if (eq this.mode "create") "list" "show"}} class="button" @secret={{this.model.id}}>
         Cancel
       </SecretLink>
     </div>
