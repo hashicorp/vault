@@ -27,6 +27,7 @@ export default class KvListPageComponent extends Component {
   currentPageSize = DEFAULT_PAGE_SIZE;
   @service flashMessages;
   @service router;
+  @service store;
 
   @tracked secretPath = '';
 
@@ -38,14 +39,18 @@ export default class KvListPageComponent extends Component {
   @action
   async onDelete(model) {
     try {
-      const message = `Successfully deleted the metadata and all version data of the secret ${model.fullSecretPath}.`;
       await model.destroyRecord();
+      this.store.clearDataset('kv/metadata'); // Clear out the store cache so that the metadata/list view is updated.
+      const message = `Successfully deleted the metadata and all version data of the secret ${model.fullSecretPath}.`;
       this.flashMessages.success(message);
       // if you've deleted a secret from within a directory, transition to its parent directory.
       if (this.args.routeName === 'list-directory') {
         const ancestors = ancestorKeysForKey(model.fullSecretPath);
         const nearest = ancestors.pop();
         this.router.transitionTo(`${this.mountPoint}.list-directory`, nearest);
+      } else {
+        // still need to fire off a transition to refresh the model
+        this.router.transitionTo(`${this.mountPoint}.list`);
       }
     } catch (error) {
       const message = errorMessage(error, 'Error deleting secret. Please try again or contact support.');

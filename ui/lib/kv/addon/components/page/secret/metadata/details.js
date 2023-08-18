@@ -35,6 +35,7 @@ export default class KvSecretMetadataDetails extends Component {
       await this.args.metadata.destroyRecord({
         adapterOptions: { deleteType: 'delete-metadata' },
       });
+      this.store.clearDataset('kv/metadata'); // Clear out the store cache so that the metadata/list view is updated.
       this.flashMessages.success(
         `Successfully deleted the metadata and all version data for the secret ${this.args.metadata.path}.`
       );
