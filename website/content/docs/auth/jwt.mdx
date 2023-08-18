@@ -35,8 +35,7 @@ locally-provided keys.
 $ vault write auth/jwt/login role=demo jwt=...
 ```
 
-The default path for the JWT authentication backend is `/jwt`, so if you're using the
-default backend, the command would be:
+The default path for the JWT authentication backend is `/jwt`. To use the default backend, set the path parameter to `auth/jwt/login` in your `vault write` command:
 
 ```shell-session
 $ vault write auth/jwt/login role=demo jwt=...
