@@ -26,6 +26,8 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/hashicorp/go-secure-stdlib/parseutil"
+
 	"github.com/armon/go-metrics"
 	"github.com/hashicorp/errwrap"
 	log "github.com/hashicorp/go-hclog"
@@ -2363,7 +2365,7 @@ func (s standardUnsealStrategy) unseal(ctx context.Context, logger log.Logger, c
 		}
 	} else {
 		var err error
-		disableEventLogger, err := strconv.ParseBool(os.Getenv(featureFlagDisableEventLogger))
+		disableEventLogger, err := parseutil.ParseBool(os.Getenv(featureFlagDisableEventLogger))
 		if err != nil {
 			return fmt.Errorf("unable to parse feature flag: %q: %w", featureFlagDisableEventLogger, err)
 		}
