@@ -1397,6 +1397,8 @@ func (b *backend) pathLoginUpdateIam(ctx context.Context, req *logical.Request, 
 		identityAlias = callerUniqueId
 	case identityAliasIAMFullArn:
 		identityAlias = callerID.Arn
+	case identityAliasIAMCanonicalArn:
+		identityAlias = entity.canonicalArn()
 	}
 
 	// If we're just looking up for MFA, return the Alias info
