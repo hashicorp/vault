@@ -509,7 +509,7 @@ func Test_handleActivityWriteData(t *testing.T) {
 			Write: []generation.WriteOptions{generation.WriteOptions_WRITE_ENTITIES},
 		})
 		require.NoError(t, err)
-		req := logical.TestRequest(t, logical.CreateOperation, "internal/counters/activity/write")
+		req := logical.TestRequest(t, logical.UpdateOperation, "internal/counters/activity/write")
 		req.Data = map[string]interface{}{"input": string(marshaled)}
 		resp, err := core.systemBackend.HandleRequest(namespace.RootContext(nil), req)
 		require.NoError(t, err)
@@ -590,7 +590,7 @@ func Test_handleActivityWriteData(t *testing.T) {
 			Write: []generation.WriteOptions{generation.WriteOptions_WRITE_PRECOMPUTED_QUERIES},
 		})
 		require.NoError(t, err)
-		req := logical.TestRequest(t, logical.CreateOperation, "internal/counters/activity/write")
+		req := logical.TestRequest(t, logical.UpdateOperation, "internal/counters/activity/write")
 		req.Data = map[string]interface{}{"input": string(marshaled)}
 		_, err = core.systemBackend.HandleRequest(namespace.RootContext(nil), req)
 		require.NoError(t, err)
@@ -619,7 +619,7 @@ func Test_handleActivityWriteData(t *testing.T) {
 		})
 		require.NoError(t, err)
 		now := time.Now().UTC()
-		req := logical.TestRequest(t, logical.CreateOperation, "internal/counters/activity/write")
+		req := logical.TestRequest(t, logical.UpdateOperation, "internal/counters/activity/write")
 		req.Data = map[string]interface{}{"input": string(marshaled)}
 		_, err = core.systemBackend.HandleRequest(namespace.RootContext(nil), req)
 		require.NoError(t, err)
