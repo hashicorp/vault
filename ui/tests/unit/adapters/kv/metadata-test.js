@@ -152,10 +152,7 @@ module('Unit | Adapter | kv/metadata', function (hooks) {
     });
 
     let record = await this.store.peekRecord('kv/metadata', data.id);
-
-    await record.destroyRecord({
-      adapterOptions: { deleteType: 'delete-metadata' },
-    });
+    await record.destroyRecord();
     assert.true(record.isDestroyed, 'record is destroyed');
     record = await this.store.peekRecord('kv/metadata', this.id);
     assert.strictEqual(record, null, 'record is no longer in store');

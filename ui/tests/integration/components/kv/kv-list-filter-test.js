@@ -129,7 +129,7 @@ module('Integration | Component | kv | kv-list-filter', function (hooks) {
       transitionTo(route, pathToSecret, { queryParams: { pageFilter } }) {
         assert.strictEqual(route, `${MOUNT_POINT}.list-directory`, 'Still on a directory route.');
         assert.strictEqual(pathToSecret, 'beep/', 'Parent directory still shown.');
-        assert.deepEqual(pageFilter, undefined, 'Clears pageFilter on escape.');
+        assert.deepEqual(pageFilter, null, 'Clears pageFilter on escape.');
       },
     });
     // trigger escape

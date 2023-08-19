@@ -39,6 +39,7 @@ export default class KvListPageComponent extends Component {
   @action
   async onDelete(model) {
     try {
+      // The model passed in is a kv/metadata model
       await model.destroyRecord();
       this.store.clearDataset('kv/metadata'); // Clear out the store cache so that the metadata/list view is updated.
       const message = `Successfully deleted the metadata and all version data of the secret ${model.fullSecretPath}.`;
