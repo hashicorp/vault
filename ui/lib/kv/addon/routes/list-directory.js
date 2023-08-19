@@ -21,6 +21,9 @@ export default class KvSecretsListRoute extends Route {
     currentPage: {
       refreshModel: true,
     },
+    currentPageSize: {
+      refreshModel: true,
+    },
   };
 
   async fetchMetadata(backend, pathToSecret, params) {
@@ -28,7 +31,8 @@ export default class KvSecretsListRoute extends Route {
       .lazyPaginatedQuery('kv/metadata', {
         backend,
         responsePath: 'data.keys',
-        page: params.currentPage || 1,
+        page: Number(params.currentPage) || 1,
+        size: Number(params.currentPageSize),
         pageFilter: params.pageFilter,
         pathToSecret,
       })
@@ -84,6 +88,7 @@ export default class KvSecretsListRoute extends Route {
     if (isExiting) {
       controller.set('pageFilter', null);
       controller.set('currentPage', null);
+      controller.set('currentPageSize', null);
     }
   }
 }

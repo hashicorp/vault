@@ -10,21 +10,23 @@ import { tracked } from '@glimmer/tracking';
 import { getOwner } from '@ember/application';
 import { ancestorKeysForKey } from 'core/utils/key-utils';
 import errorMessage from 'vault/utils/error-message';
-import config from 'vault/config/environment';
 
 /**
  * @module List
  * ListPage component is a component to show a list of kv/metadata secrets.
  *
- * @param {array} model - An array of models generated form kv/metadata query.
- * @param {array} breadcrumbs - Breadcrumbs as an array of objects that contain label, route, and modelId. They are updated via the util kv-breadcrumbs to handle dynamic *pathToSecret on the list-directory route.
+ * @param {array} secrets - An array of models generated form kv/metadata query.
+ * @param {string} backend - The name of the kv secret engine.
+ * @param {string} pathToSecret - The directory name that the secret belongs to ex: beep/boop/
+ * @param {string} pageFilter - The input on the kv-list-filter. Does not include a directory name.
+ * @param {string} filterValue - The concatenation of the pathToSecret and pageFilter ex: beep/boop/my-
  * @param {boolean} noMetadataListPermissions - true if the return to query metadata LIST is 403, indicating the user does not have permissions to that endpoint.
+ * @param {array} breadcrumbs - Breadcrumbs as an array of objects that contain label, route, and modelId. They are updated via the util kv-breadcrumbs to handle dynamic *pathToSecret on the list-directory route.
+ * @param {string} routeName - Either list or list-directory.
+ * @param {object} meta - Object with values needed for pagination, created by LazyPaginatedQuery on the store service.
  */
 
-const { DEFAULT_PAGE_SIZE } = config.APP;
-
 export default class KvListPageComponent extends Component {
-  currentPageSize = DEFAULT_PAGE_SIZE;
   @service flashMessages;
   @service router;
   @service store;
@@ -34,6 +36,31 @@ export default class KvListPageComponent extends Component {
   get mountPoint() {
     // mountPoint tells the any transition method/component where to start the transition. In this case, mountPoint will always be vault.cluster.secrets.backend.kv.
     return getOwner(this).mountPoint;
+  }
+
+  get pageSizes() {
+    const { total } = this.args.secrets.meta;
+    const increments = [15, 30, 50, 100];
+    increments.filter((num) => {
+      num < total;
+    });
+    return increments;
+  }
+
+  get showPagination() {
+    // right now showing pagination if > 15 which is the minimum pageSize selector
+    return this.args.meta.total >= 15 ? true : false;
+  }
+
+  // callback from HDS pagination to set queryParams currentPage and currentPageSize
+  get paginationQueryParams() {
+    // used to set page and pageSize to the queryParams from HDS::Pagination component
+    return (page, pageSize) => {
+      return {
+        currentPage: page,
+        currentPageSize: pageSize,
+      };
+    };
   }
 
   @action
@@ -67,14 +94,5 @@ export default class KvListPageComponent extends Component {
   @action
   transitionToSecretDetail() {
     this.router.transitionTo(`${this.mountPoint}.secret.details`, this.secretPath);
-  }
-
-  get queryFunctionNumbered() {
-    return (page, pageSize) => {
-      return {
-        currentPage: page,
-        currentPageSize: pageSize,
-      };
-    };
   }
 }

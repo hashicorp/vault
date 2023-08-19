@@ -118,16 +118,15 @@
       </LinkedBlock>
     {{/each}}
     {{! Pagination }}
-    {{#if (gt @secrets.meta.lastPage 1)}}
+    {{#if this.showPagination}}
       <Hds::Pagination::Numbered
-        @showSizeSelector={{false}}
         @totalItems={{@secrets.meta.total}}
-        @currentPage={{@currentPage}}
-        @pageSizes={{this.currentPageSize}}
-        @currentPageSize={{this.currentPageSize}}
-        @route="list"
+        @currentPage={{@meta.currentPage}}
+        @pageSizes={{this.pageSizes}}
+        @currentPageSize={{@meta.pageSize}}
+        @route={{@routeName}}
         @onPageChange={{this.handlePageChange}}
-        @queryFunction={{this.queryFunctionNumbered}}
+        @queryFunction={{this.paginationQueryParams}}
       />
     {{/if}}
   {{else}}
