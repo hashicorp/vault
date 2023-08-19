@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 package quotas
 
@@ -210,6 +210,9 @@ type Quota interface {
 
 	// Clone creates a clone of the calling quota
 	Clone() Quota
+
+	// Inheritable indicates if this quota can be applied to child namespaces
+	IsInheritable() bool
 
 	// handleRemount updates the mount and namesapce paths of the quota
 	handleRemount(string, string)
@@ -580,10 +583,24 @@ func (m *Manager) queryQuota(txn *memdb.Txn, req *Request) (Quota, error) {
 		return quota, nil
 	}
 
+	// Fetch parent ns quotas
+	curNsSplitPath := strings.SplitAfter(namespace.Canonicalize(req.NamespacePath), "/")
+	for len(curNsSplitPath) > 2 {
+		parentNs := strings.Join(curNsSplitPath[0:len(curNsSplitPath)-2], "")
+		parentQuota, err := quotaFetchFunc(indexNamespace, parentNs, false, false, false)
+		if err != nil {
+			return nil, err
+		}
+		if parentQuota != nil && parentQuota.IsInheritable() {
+			return parentQuota, nil
+		}
+		curNsSplitPath = strings.SplitAfter(parentNs, "/")
+	}
+
 	// If the request belongs to "root" namespace, then we have already looked at
 	// global quotas when fetching namespace specific quota rule. When the request
 	// belongs to a non-root namespace, and when there are no namespace specific
-	// quota rules present, we fallback on the global quotas.
+	// quota rules present, we fall back on the global quotas.
 	if req.NamespacePath == "root" {
 		return nil, nil
 	}

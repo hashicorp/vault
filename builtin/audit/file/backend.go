@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 package file
 
@@ -22,7 +22,7 @@ import (
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
-func Factory(ctx context.Context, conf *audit.BackendConfig, useEventLogger bool) (audit.Backend, error) {
+func Factory(ctx context.Context, conf *audit.BackendConfig, useEventLogger bool, headersConfig audit.HeaderFormatter) (audit.Backend, error) {
 	if conf.SaltConfig == nil {
 		return nil, fmt.Errorf("nil salt config")
 	}
@@ -131,7 +131,7 @@ func Factory(ctx context.Context, conf *audit.BackendConfig, useEventLogger bool
 	b.salt.Store((*salt.Salt)(nil))
 
 	// Configure the formatter for either case.
-	f, err := audit.NewEntryFormatter(b.formatConfig, b, audit.WithPrefix(conf.Config["prefix"]))
+	f, err := audit.NewEntryFormatter(b.formatConfig, b, audit.WithHeaderFormatter(headersConfig), audit.WithPrefix(conf.Config["prefix"]))
 	if err != nil {
 		return nil, fmt.Errorf("error creating formatter: %w", err)
 	}
@@ -165,18 +165,19 @@ func Factory(ctx context.Context, conf *audit.BackendConfig, useEventLogger bool
 
 		switch path {
 		case "stdout":
-			sinkNode = event.NewStdoutSinkNode(format)
+			sinkNode = &audit.SinkWrapper{Name: path, Sink: event.NewStdoutSinkNode(format)}
 		case "discard":
-			sinkNode = event.NewNoopSink()
+			sinkNode = &audit.SinkWrapper{Name: path, Sink: event.NewNoopSink()}
 		default:
 			var err error
 
 			// The NewFileSink function attempts to open the file and will
 			// return an error if it can't.
-			sinkNode, err = event.NewFileSink(b.path, format, event.WithFileMode(strconv.FormatUint(uint64(mode), 8)))
+			n, err := event.NewFileSink(b.path, format, event.WithFileMode(strconv.FormatUint(uint64(mode), 8)))
 			if err != nil {
 				return nil, fmt.Errorf("file sink creation failed for path %q: %w", path, err)
 			}
+			sinkNode = &audit.SinkWrapper{Name: conf.MountPath, Sink: n}
 		}
 
 		sinkNodeID, err := event.GenerateNodeID()
@@ -251,15 +252,6 @@ func (b *Backend) Salt(ctx context.Context) (*salt.Salt, error) {
 
 	b.salt.Store(newSalt)
 	return newSalt, nil
-}
-
-func (b *Backend) GetHash(ctx context.Context, data string) (string, error) {
-	salt, err := b.Salt(ctx)
-	if err != nil {
-		return "", err
-	}
-
-	return audit.HashString(salt, data), nil
 }
 
 func (b *Backend) LogRequest(ctx context.Context, in *logical.LogInput) error {
@@ -337,6 +329,12 @@ func (b *Backend) LogResponse(ctx context.Context, in *logical.LogInput) error {
 }
 
 func (b *Backend) LogTestMessage(ctx context.Context, in *logical.LogInput, config map[string]string) error {
+	// Event logger behavior - manually Process each node
+	if len(b.nodeIDList) > 0 {
+		return audit.ProcessManual(ctx, in, b.nodeIDList, b.nodeMap)
+	}
+
+	// Old behavior
 	var writer io.Writer
 	switch b.path {
 	case "stdout":

@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 package file
 
@@ -35,7 +35,7 @@ func TestAuditFile_fileModeNew(t *testing.T) {
 		SaltConfig: &salt.Config{},
 		SaltView:   &logical.InmemStorage{},
 		Config:     config,
-	}, false)
+	}, false, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -74,7 +74,7 @@ func TestAuditFile_fileModeExisting(t *testing.T) {
 		Config:     config,
 		SaltConfig: &salt.Config{},
 		SaltView:   &logical.InmemStorage{},
-	}, false)
+	}, false, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -114,7 +114,7 @@ func TestAuditFile_fileMode0000(t *testing.T) {
 		Config:     config,
 		SaltConfig: &salt.Config{},
 		SaltView:   &logical.InmemStorage{},
-	}, false)
+	}, false, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -148,7 +148,7 @@ func TestAuditFile_EventLogger_fileModeNew(t *testing.T) {
 		SaltConfig: &salt.Config{},
 		SaltView:   &logical.InmemStorage{},
 		Config:     config,
-	}, true)
+	}, true, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -170,7 +170,7 @@ func BenchmarkAuditFile_request(b *testing.B) {
 		Config:     config,
 		SaltConfig: &salt.Config{},
 		SaltView:   &logical.InmemStorage{},
-	}, false)
+	}, false, nil)
 	if err != nil {
 		b.Fatal(err)
 	}

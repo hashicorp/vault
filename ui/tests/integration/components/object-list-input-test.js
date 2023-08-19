@@ -1,6 +1,6 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 import { module, test } from 'qunit';
@@ -128,8 +128,8 @@ module('Integration | Component | object-list-input', function (hooks) {
     await render(hbs`
       <ObjectListInput
         @objectKeys={{this.keys}}
-        @onChange={{this.onChange}} 
-        @inputValue={{this.inputValue}} 
+        @onChange={{this.onChange}}
+        @inputValue={{this.inputValue}}
       />`);
 
     assert.dom(SELECTORS.listInput(firstColumn.key, 0)).hasValue('foo', 'input exists in first row');

@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package main
 
 import (
@@ -62,6 +65,9 @@ func main() {
 	}
 
 	inputLines, err := readLines(bytes.NewBuffer(b))
+	if err != nil {
+		fatal(err)
+	}
 	funcs := getFuncs(inputLines)
 	if needed, err := isStubNeeded(funcs); err != nil {
 		fatal(err)

@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 package audit
 
@@ -37,12 +37,11 @@ type format string
 
 // auditEvent is the audit event.
 type auditEvent struct {
-	ID             string            `json:"id"`
-	Version        string            `json:"version"`
-	Subtype        subtype           `json:"subtype"` // the subtype of the audit event.
-	Timestamp      time.Time         `json:"timestamp"`
-	Data           *logical.LogInput `json:"data"`
-	RequiredFormat format            `json:"format"`
+	ID        string            `json:"id"`
+	Version   string            `json:"version"`
+	Subtype   subtype           `json:"subtype"` // the subtype of the audit event.
+	Timestamp time.Time         `json:"timestamp"`
+	Data      *logical.LogInput `json:"data"`
 }
 
 // Option is how options are passed as arguments.
@@ -50,15 +49,16 @@ type Option func(*options) error
 
 // options are used to represent configuration for a audit related nodes.
 type options struct {
-	withID           string
-	withNow          time.Time
-	withSubtype      subtype
-	withFormat       format
-	withPrefix       string
-	withRaw          bool
-	withElision      bool
-	withOmitTime     bool
-	withHMACAccessor bool
+	withID              string
+	withNow             time.Time
+	withSubtype         subtype
+	withFormat          format
+	withPrefix          string
+	withRaw             bool
+	withElision         bool
+	withOmitTime        bool
+	withHMACAccessor    bool
+	withHeaderFormatter HeaderFormatter
 }
 
 // Salter is an interface that provides a way to obtain a Salt for hashing.
@@ -80,16 +80,26 @@ type Formatter interface {
 // Formatters write their output to an io.Writer.
 type Writer interface {
 	// WriteRequest writes the request entry to the writer or returns an error.
-	WriteRequest(io.Writer, *RequestEntry) error // TODO: PW: Should we supply ctx in this interface
+	WriteRequest(io.Writer, *RequestEntry) error
 	// WriteResponse writes the response entry to the writer or returns an error.
 	WriteResponse(io.Writer, *ResponseEntry) error
 }
 
+// HeaderFormatter is an interface defining the methods of the
+// vault.AuditedHeadersConfig structure needed in this package.
+type HeaderFormatter interface {
+	// ApplyConfig returns a map of header values that consists of the
+	// intersection of the provided set of header values with a configured
+	// set of headers and will hash headers that have been configured as such.
+	ApplyConfig(context.Context, map[string][]string, Salter) (map[string][]string, error)
+}
+
 // EntryFormatter should be used to format audit requests and responses.
 type EntryFormatter struct {
-	salter Salter
-	config FormatterConfig
-	prefix string
+	salter          Salter
+	headerFormatter HeaderFormatter
+	config          FormatterConfig
+	prefix          string
 }
 
 // EntryFormatterWriter should be used to format and write out audit requests and responses.
@@ -247,7 +257,7 @@ type Namespace struct {
 	Path string `json:"path,omitempty"`
 }
 
-// nonPersistentSalt is used for obtaining a salt that is
+// nonPersistentSalt is used for obtaining a salt that is not persisted.
 type nonPersistentSalt struct{}
 
 // Backend interface must be implemented for an audit
@@ -255,6 +265,9 @@ type nonPersistentSalt struct{}
 // sink information to different backends such as logs, file, databases,
 // or other external services.
 type Backend interface {
+	// Salter interface must be implemented by anything implementing Backend.
+	Salter
+
 	// LogRequest is used to synchronously log a request. This is done after the
 	// request is authorized but before the request is executed. The arguments
 	// MUST not be modified in any way. They should be deep copied if this is
@@ -272,11 +285,6 @@ type Backend interface {
 	// message, WITHOUT using the normal Salt (which would require a storage
 	// operation on creation, which is currently disallowed.)
 	LogTestMessage(context.Context, *logical.LogInput, map[string]string) error
-
-	// GetHash is used to return the given data with the backend's hash,
-	// so that a caller can determine if a value in the audit log matches
-	// an expected plaintext value
-	GetHash(context.Context, string) (string, error)
 
 	// Reload is called on SIGHUP for supporting backends.
 	Reload(context.Context) error
@@ -302,7 +310,10 @@ type BackendConfig struct {
 
 	// Config is the opaque user configuration provided when mounting
 	Config map[string]string
+
+	// MountPath is the path where this Backend is mounted
+	MountPath string
 }
 
 // Factory is the factory function to create an audit backend.
-type Factory func(context.Context, *BackendConfig, bool) (Backend, error)
+type Factory func(context.Context, *BackendConfig, bool, HeaderFormatter) (Backend, error)

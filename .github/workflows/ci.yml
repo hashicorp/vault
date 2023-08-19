@@ -119,6 +119,25 @@ jobs:
       enterprise: ${{ needs.setup.outputs.enterprise }}
     secrets: inherit
 
+  test-go-testonly:
+    name: Run Go tests tagged with testonly
+    needs:
+      - setup
+      - verify-changes
+    # Don't run this job for docs/ui only PRs
+    if: |
+      needs.verify-changes.outputs.is_docs_change == 'false' &&
+      needs.verify-changes.outputs.is_ui_change == 'false'
+    uses: ./.github/workflows/test-go.yml
+    with:
+      testonly: true
+      total-runners: 2 # test runners cannot be less than 2
+      go-arch: amd64
+      go-tags: '${{ needs.setup.outputs.go-tags }},deadlock,testonly'
+      runs-on: ${{ needs.setup.outputs.compute-large }}
+      enterprise: ${{ needs.setup.outputs.enterprise }}
+    secrets: inherit
+
   test-go-race:
     name: Run Go tests with data race detection
     needs:
@@ -279,7 +298,13 @@ jobs:
           tr -d '\n' <<< '${{ toJSON(needs.*.result) }}' | grep -q -v -E '(failure|cancelled)'
 
   notify-tests-completed-failures-oss:
-    if: ${{ always() && github.repository == 'hashicorp/vault' && needs.tests-completed.result == 'failure' && (github.ref_name == 'main' || startsWith(github.ref_name, 'release/')) }}
+    if:  |
+      always() &&
+      github.repository == 'hashicorp/vault' &&
+      (needs.test-go.result == 'failure' ||
+      needs.test-go-fips.result == 'failure' ||
+      needs.test-go-race.result == 'failure') &&
+      (github.ref_name == 'main' || startsWith(github.ref_name, 'release/'))
     runs-on: ubuntu-latest
     permissions:
       id-token: write
@@ -287,7 +312,9 @@ jobs:
     strategy:
       fail-fast: false
     needs:
-      - tests-completed
+      - test-go
+      - test-go-fips
+      - test-go-race
     steps:
       - name: send-notification
         uses: slackapi/slack-github-action@e28cf165c92ffef168d23c5c9000cffc8a25e117 # v1.24.0
@@ -301,7 +328,13 @@ jobs:
             {"text":"OSS test failures on ${{ github.ref_name }}","blocks":[{"type":"header","text":{"type":"plain_text","text":":rotating_light: OSS test failures :rotating_light:","emoji":true}},{"type":"divider"},{"type":"section","text":{"type":"mrkdwn","text":"test(s) failed on ${{ github.ref_name }}"},"accessory":{"type":"button","text":{"type":"plain_text","text":"View Failing Workflow","emoji":true},"url":"${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"}}]}
 
   notify-tests-completed-failures-ent:
-    if: ${{ always() && github.repository == 'hashicorp/vault-enterprise' && needs.tests-completed.result == 'failure' && (github.ref_name == 'main' || startsWith(github.ref_name, 'release/')) }}
+    if: |
+      always() &&
+      github.repository == 'hashicorp/vault-enterprise' &&
+      (needs.test-go.result == 'failure' ||
+      needs.test-go-fips.result == 'failure' ||
+      needs.test-go-race.result == 'failure') &&
+      (github.ref_name == 'main' || startsWith(github.ref_name, 'release/'))
     runs-on: ['self-hosted', 'linux', 'small']
     permissions:
       id-token: write
@@ -309,7 +342,9 @@ jobs:
     strategy:
       fail-fast: false
     needs:
-      - tests-completed
+      - test-go
+      - test-go-fips
+      - test-go-race
     steps:
       - id: vault-auth
         name: Vault Authenticate
@@ -341,7 +376,11 @@ jobs:
       needs.test-go-fips.result == 'success' ||
       needs.test-go-fips.result == 'failure' ||
       needs.test-go-race.result == 'success' ||
-      needs.test-go-race.result == 'failure')
+      needs.test-go-race.result == 'failure') &&
+      (github.repository == 'hashicorp/vault' &&
+      (github.event.pull_request.head.repo.full_name == github.event.pull_request.base.repo.full_name))
+    # The last check ensures this doesn't run on community-contributed PRs, who
+    # won't have the permissions to run this job.
     needs:
       - test-go
       - test-go-fips

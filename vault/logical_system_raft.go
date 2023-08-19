@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 package vault
 
@@ -195,6 +195,10 @@ func (b *SystemBackend) raftStoragePaths() []*framework.Path {
 				"disable_upgrade_migration": {
 					Type:        framework.TypeBool,
 					Description: "Whether or not to perform automated version upgrades.",
+				},
+				"dr_operation_token": {
+					Type:        framework.TypeString,
+					Description: "DR operation token used to authorize this request (if a DR secondary node).",
 				},
 			},
 

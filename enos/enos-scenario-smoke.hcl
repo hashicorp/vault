@@ -1,5 +1,5 @@
 # Copyright (c) HashiCorp, Inc.
-# SPDX-License-Identifier: MPL-2.0
+# SPDX-License-Identifier: BUSL-1.1
 
 scenario "smoke" {
   matrix {
@@ -34,7 +34,8 @@ scenario "smoke" {
   ]
 
   locals {
-    backend_tag_key = "VaultStorage"
+    backend_license_path = abspath(var.backend_license_path != null ? var.backend_license_path : joinpath(path.root, "./support/consul.hclic"))
+    backend_tag_key      = "VaultStorage"
     build_tags = {
       "oss"              = ["ui"]
       "ent"              = ["ui", "enterprise", "ent"]
@@ -104,7 +105,18 @@ scenario "smoke" {
     }
   }
 
-  step "read_license" {
+  // This step reads the contents of the backend license if we're using a Consul backend and
+  // the edition is "ent".
+  step "read_backend_license" {
+    skip_step = matrix.backend == "raft" || var.backend_edition == "oss"
+    module    = module.read_license
+
+    variables {
+      file_name = local.backend_license_path
+    }
+  }
+
+  step "read_vault_license" {
     skip_step = matrix.edition == "oss"
     module    = module.read_license
 
@@ -150,7 +162,7 @@ scenario "smoke" {
   step "create_backend_cluster" {
     module = "backend_${matrix.backend}"
     depends_on = [
-      step.create_vault_cluster_backend_targets,
+      step.create_vault_cluster_backend_targets
     ]
 
     providers = {
@@ -160,6 +172,7 @@ scenario "smoke" {
     variables {
       cluster_name    = step.create_vault_cluster_backend_targets.cluster_name
       cluster_tag_key = local.backend_tag_key
+      license         = (matrix.backend == "consul" && var.backend_edition == "ent") ? step.read_backend_license.license : null
       release = {
         edition = var.backend_edition
         version = matrix.consul_version
@@ -186,13 +199,14 @@ scenario "smoke" {
       backend_cluster_name    = step.create_vault_cluster_backend_targets.cluster_name
       backend_cluster_tag_key = local.backend_tag_key
       cluster_name            = step.create_vault_cluster_targets.cluster_name
+      consul_license          = (matrix.backend == "consul" && var.backend_edition == "ent") ? step.read_backend_license.license : null
       consul_release = matrix.backend == "consul" ? {
         edition = var.backend_edition
         version = matrix.consul_version
       } : null
       enable_file_audit_device = var.vault_enable_file_audit_device
       install_dir              = local.vault_install_dir
-      license                  = matrix.edition != "oss" ? step.read_license.license : null
+      license                  = matrix.edition != "oss" ? step.read_vault_license.license : null
       local_artifact_path      = local.bundle_path
       packages                 = local.packages
       storage_backend          = matrix.backend

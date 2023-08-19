@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 package socket
 
@@ -21,7 +21,7 @@ import (
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
-func Factory(ctx context.Context, conf *audit.BackendConfig, useEventLogger bool) (audit.Backend, error) {
+func Factory(ctx context.Context, conf *audit.BackendConfig, useEventLogger bool, headersConfig audit.HeaderFormatter) (audit.Backend, error) {
 	if conf.SaltConfig == nil {
 		return nil, fmt.Errorf("nil salt config")
 	}
@@ -108,7 +108,7 @@ func Factory(ctx context.Context, conf *audit.BackendConfig, useEventLogger bool
 	}
 
 	// Configure the formatter for either case.
-	f, err := audit.NewEntryFormatter(b.formatConfig, b)
+	f, err := audit.NewEntryFormatter(b.formatConfig, b, audit.WithHeaderFormatter(headersConfig))
 	if err != nil {
 		return nil, fmt.Errorf("error creating formatter: %w", err)
 	}
@@ -138,10 +138,11 @@ func Factory(ctx context.Context, conf *audit.BackendConfig, useEventLogger bool
 		b.nodeIDList[0] = formatterNodeID
 		b.nodeMap[formatterNodeID] = f
 
-		sinkNode, err := event.NewSocketSink(format, address, event.WithSocketType(socketType), event.WithMaxDuration(writeDuration.String()))
+		n, err := event.NewSocketSink(format, address, event.WithSocketType(socketType), event.WithMaxDuration(writeDuration.String()))
 		if err != nil {
 			return nil, fmt.Errorf("error creating socket sink node: %w", err)
 		}
+		sinkNode := &audit.SinkWrapper{Name: conf.MountPath, Sink: n}
 		sinkNodeID, err := event.GenerateNodeID()
 		if err != nil {
 			return nil, fmt.Errorf("error generating random NodeID for sink node: %w", err)
@@ -176,14 +177,6 @@ type Backend struct {
 }
 
 var _ audit.Backend = (*Backend)(nil)
-
-func (b *Backend) GetHash(ctx context.Context, data string) (string, error) {
-	salt, err := b.Salt(ctx)
-	if err != nil {
-		return "", err
-	}
-	return audit.HashString(salt, data), nil
-}
 
 func (b *Backend) LogRequest(ctx context.Context, in *logical.LogInput) error {
 	var buf bytes.Buffer
@@ -232,6 +225,12 @@ func (b *Backend) LogResponse(ctx context.Context, in *logical.LogInput) error {
 }
 
 func (b *Backend) LogTestMessage(ctx context.Context, in *logical.LogInput, config map[string]string) error {
+	// Event logger behavior - manually Process each node
+	if len(b.nodeIDList) > 0 {
+		return audit.ProcessManual(ctx, in, b.nodeIDList, b.nodeMap)
+	}
+
+	// Old behavior
 	var buf bytes.Buffer
 
 	temporaryFormatter, err := audit.NewTemporaryFormatter(config["format"], config["prefix"])
