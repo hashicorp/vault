@@ -25,7 +25,7 @@ import { tracked } from '@glimmer/tracking';
  * @param {array} secrets - An array of secret models.
  * @param {string} mountPoint - Where in the router files we're located. For this component it will always be vault.cluster.secrets.backend.kv
  * @param {string} filterValue - A concatenation between the list-directory's dynamic path "path-to-secret" and the queryParam "pageFilter". For example, if we're inside the beep/ directory searching for any secret that starts with "my-" this value will equal "beep/my-".
- * @param {string} pageFilter - The queryParam value.
+ * @param {string} pageFilter - The queryParam value, does not include pathToSecret ex: my-.
  */
 
 export default class KvListFilterComponent extends Component {

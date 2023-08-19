@@ -34,22 +34,24 @@ export default class KvListPageComponent extends Component {
   @tracked secretPath = '';
 
   get mountPoint() {
-    // mountPoint tells the any transition method/component where to start the transition. In this case, mountPoint will always be vault.cluster.secrets.backend.kv.
+    // mountPoint tells transition where to start. In this case, mountPoint will always be vault.cluster.secrets.backend.kv.
     return getOwner(this).mountPoint;
   }
 
   get pageSizes() {
-    const { total } = this.args.secrets.meta;
-    const increments = [15, 30, 50, 100];
-    increments.filter((num) => {
-      num < total;
-    });
-    return increments;
+    const { total, pageSize } = this.args.meta;
+    const increments = [1, 15, 30, 50, 100];
+    const truncated = increments.filter((num) => num > pageSize && num < total);
+    // The pageSize value must be apart of the array of options to choose from. Add it back in and sort.
+    truncated.push(pageSize);
+    truncated.sort((a, b) => a - b);
+    return truncated;
   }
 
   get showPagination() {
-    // right now showing pagination if > 15 which is the minimum pageSize selector
-    return this.args.meta.total >= 15 ? true : false;
+    // only show pagination if total # of secrets are larger than the smaller of: a custom pageSize; if set || 15
+    const { total, pageSize } = this.args.meta;
+    return total >= Math.min(15, pageSize) ? true : false;
   }
 
   // callback from HDS pagination to set queryParams currentPage and currentPageSize
