@@ -6,8 +6,8 @@
 import Route from '@ember/routing/route';
 import { inject as service } from '@ember/service';
 import { hash } from 'rsvp';
-import { pathIsFromDirectory, breadcrumbsForDirectory } from 'vault/lib/kv-breadcrumbs';
 import { withConfirmLeave } from 'core/decorators/confirm-leave';
+import { breadcrumbsForSecret } from 'kv/utils/kv-breadcrumbs';
 
 @withConfirmLeave('model.secret', ['model.metadata'])
 export default class KvSecretsCreateRoute extends Route {
@@ -30,15 +30,12 @@ export default class KvSecretsCreateRoute extends Route {
   setupController(controller, resolvedModel) {
     super.setupController(controller, resolvedModel);
 
-    let crumbs = [
+    const crumbs = [
       { label: 'secrets', route: 'secrets', linkExternal: true },
       { label: resolvedModel.backend, route: 'list' },
+      ...breadcrumbsForSecret(resolvedModel.path),
+      { label: 'create' },
     ];
-
-    if (pathIsFromDirectory(resolvedModel.path)) {
-      crumbs = [...crumbs, ...breadcrumbsForDirectory(resolvedModel.path)];
-    }
-    crumbs.push({ label: 'create' });
     controller.breadcrumbs = crumbs;
   }
 }

@@ -2,6 +2,7 @@ import Route from '@ember/routing/route';
 import { inject as service } from '@ember/service';
 import { hash } from 'rsvp';
 import { withConfirmLeave } from 'core/decorators/confirm-leave';
+import { breadcrumbsForSecret } from 'kv/utils/kv-breadcrumbs';
 
 @withConfirmLeave('model.newVersion')
 export default class KvSecretEditRoute extends Route {
@@ -31,7 +32,7 @@ export default class KvSecretEditRoute extends Route {
     controller.breadcrumbs = [
       { label: 'secrets', route: 'secrets', linkExternal: true },
       { label: resolvedModel.backend, route: 'list' },
-      { label: resolvedModel.path, route: 'secret.details', model: resolvedModel.path },
+      ...breadcrumbsForSecret(resolvedModel.path),
       { label: 'edit' },
     ];
   }

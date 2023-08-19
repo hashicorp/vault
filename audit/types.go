@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 package audit
 
@@ -37,12 +37,11 @@ type format string
 
 // auditEvent is the audit event.
 type auditEvent struct {
-	ID             string            `json:"id"`
-	Version        string            `json:"version"`
-	Subtype        subtype           `json:"subtype"` // the subtype of the audit event.
-	Timestamp      time.Time         `json:"timestamp"`
-	Data           *logical.LogInput `json:"data"`
-	RequiredFormat format            `json:"format"`
+	ID        string            `json:"id"`
+	Version   string            `json:"version"`
+	Subtype   subtype           `json:"subtype"` // the subtype of the audit event.
+	Timestamp time.Time         `json:"timestamp"`
+	Data      *logical.LogInput `json:"data"`
 }
 
 // Option is how options are passed as arguments.
@@ -81,7 +80,7 @@ type Formatter interface {
 // Formatters write their output to an io.Writer.
 type Writer interface {
 	// WriteRequest writes the request entry to the writer or returns an error.
-	WriteRequest(io.Writer, *RequestEntry) error // TODO: PW: Should we supply ctx in this interface
+	WriteRequest(io.Writer, *RequestEntry) error
 	// WriteResponse writes the response entry to the writer or returns an error.
 	WriteResponse(io.Writer, *ResponseEntry) error
 }
@@ -258,7 +257,7 @@ type Namespace struct {
 	Path string `json:"path,omitempty"`
 }
 
-// nonPersistentSalt is used for obtaining a salt that is
+// nonPersistentSalt is used for obtaining a salt that is not persisted.
 type nonPersistentSalt struct{}
 
 // Backend interface must be implemented for an audit
@@ -311,6 +310,9 @@ type BackendConfig struct {
 
 	// Config is the opaque user configuration provided when mounting
 	Config map[string]string
+
+	// MountPath is the path where this Backend is mounted
+	MountPath string
 }
 
 // Factory is the factory function to create an audit backend.

@@ -1,6 +1,6 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 /**
@@ -24,7 +24,7 @@
   }}
  * />
  * ```
- 
+
  * @param {string} mode - show, create, edit. The view.
  * @param {object} model - the model passed from the parent secret-edit
  * @param {boolean} isV2 - KV type

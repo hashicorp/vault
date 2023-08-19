@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 package event
 
@@ -14,6 +14,8 @@ import (
 
 	"github.com/hashicorp/eventlogger"
 )
+
+var _ eventlogger.Node = (*SocketSink)(nil)
 
 // SocketSink is a sink node which handles writing events to socket.
 type SocketSink struct {

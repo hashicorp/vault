@@ -474,7 +474,7 @@ module('Acceptance | kv-v2 workflow | navigation', function (hooks) {
         .hasText('You do not have access to secret metadata');
     });
     test('breadcrumbs & page titles are correct (dr)', async function (assert) {
-      assert.expect(30);
+      assert.expect(32);
       const backend = this.backend;
       await navToBackend(backend);
       await click(PAGE.secretTab('Configuration'));
@@ -491,10 +491,10 @@ module('Acceptance | kv-v2 workflow | navigation', function (hooks) {
       assert.dom(PAGE.title).hasText('app/nested/secret', 'title correct on secret detail');
 
       await click(PAGE.detail.createNewVersion);
-      assertCorrectBreadcrumbs(assert, ['secrets', backend, 'app/nested/secret', 'edit']);
+      assertCorrectBreadcrumbs(assert, ['secrets', backend, 'app', 'nested', 'secret', 'edit']);
       assert.dom(PAGE.title).hasText('Create New Version', 'title correct on create new version');
 
-      await click(PAGE.breadcrumbAtIdx(2));
+      await click(PAGE.breadcrumbAtIdx(4));
       await click(PAGE.secretTab('Metadata'));
       assertCorrectBreadcrumbs(assert, ['secrets', backend, 'app', 'nested', 'secret', 'metadata']);
       assert.dom(PAGE.title).hasText('app/nested/secret', 'title correct on metadata');
