@@ -339,10 +339,9 @@ module('Acceptance | kv-v2 workflow | navigation', function (hooks) {
 
       // click toolbar CTA
       await click(PAGE.list.createSecret);
-      // TODO: initialKey should not show on query params if empty
       assert.strictEqual(
         currentURL(),
-        `/vault/secrets/${backend}/kv/create?initialKey=`,
+        `/vault/secrets/${backend}/kv/create`,
         `url includes /vault/secrets/${backend}/kv/create`
       );
 
@@ -981,10 +980,9 @@ module('Acceptance | kv-v2 workflow | navigation', function (hooks) {
 
       // click toolbar CTA
       await click(PAGE.list.createSecret);
-      // TODO: qp should not be present if empty
       assert.strictEqual(
         currentURL(),
-        `/vault/secrets/${backend}/kv/create?initialKey=`,
+        `/vault/secrets/${backend}/kv/create`,
         `goes to /vault/secrets/${backend}/kv/create`
       );
 
