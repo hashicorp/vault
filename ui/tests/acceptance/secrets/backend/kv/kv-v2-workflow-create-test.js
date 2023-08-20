@@ -227,12 +227,7 @@ module('Acceptance | kv-v2 workflow | secret and version create', function (hook
         'Redirects to detail after save'
       );
       await click(PAGE.breadcrumbAtIdx(2));
-      // TODO: Pagefilter should not be present if empty
-      assert.strictEqual(
-        currentURL(),
-        `/vault/secrets/${backend}/kv/app%2F/directory?pageFilter=`,
-        'sub-dir page'
-      );
+      assert.strictEqual(currentURL(), `/vault/secrets/${backend}/kv/app%2F/directory`, 'sub-dir page');
       assert.dom(PAGE.list.item('new')).exists('Lists new secret in sub-dir');
     });
     test('create new version of secret from older version (a)', async function (assert) {
@@ -1030,12 +1025,7 @@ module('Acceptance | kv-v2 workflow | secret and version create', function (hook
         'Redirects to detail after save'
       );
       await click(PAGE.breadcrumbAtIdx(2));
-      // TODO: Pagefilter should not be present if empty
-      assert.strictEqual(
-        currentURL(),
-        `/vault/secrets/${backend}/kv/app%2F/directory?pageFilter=`,
-        'sub-dir page'
-      );
+      assert.strictEqual(currentURL(), `/vault/secrets/${backend}/kv/app%2F/directory?`, 'sub-dir page');
       assert.dom(PAGE.list.item()).doesNotExist('Does not list any secrets');
     });
     test('create new version of secret from older version (sc)', async function (assert) {
