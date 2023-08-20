@@ -303,8 +303,9 @@
           disabled={{and @attr.options.editDisabled (not @model.isNew)}}
           autocomplete="off"
           spellcheck="false"
-          value={{or (get @model this.valuePath) @attr.options.defaultValue}}
+          value={{get @model this.valuePath}}
           {{on "change" this.onChangeWithEvent}}
+          {{on "input" this.onChangeWithEvent}}
           {{on "keyup" this.handleKeyUp}}
           class="input {{if this.validationError 'has-error-border'}}"
           maxLength={{@attr.options.characterLimit}}
