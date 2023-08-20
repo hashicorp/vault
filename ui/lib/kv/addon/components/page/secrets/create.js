@@ -43,7 +43,7 @@ export default class KvSecretCreate extends Component {
   pathValidations() {
     // check path attribute warnings on key up
     const { state } = this.args.secret.validate();
-    if (state?.path?.warnings) {
+    if (state?.path?.warnings.length) {
       // only set model validations if warnings exist
       this.modelValidations = state;
     }
