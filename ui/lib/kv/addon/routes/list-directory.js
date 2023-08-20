@@ -78,7 +78,7 @@ export default class KvSecretsListRoute extends Route {
 
   resetController(controller, isExiting) {
     if (isExiting) {
-      controller.set('pageFilter', '');
+      controller.set('pageFilter', null);
     }
   }
 }

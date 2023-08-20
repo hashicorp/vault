@@ -13,42 +13,59 @@ import { tracked } from '@glimmer/tracking';
 
 /**
  * @module KvListFilter
- * `KvListFilter` component is used to filter through the KV metadata LIST response. It allows users to search through the current list, navigate into directories, and use keyboard functions to: autocomplete, view a secret, create a new secret, or clear the input field.
- *
- * @param {object} model - The adapter model object which contains an array of secret models.
+ * `KvListFilter` filters through the KV metadata LIST response. It allows users to search through the current list, navigate into directories, and use keyboard functions to: autocomplete, view a secret, create a new secret, or clear the input field.
+ *  *
+ * <KvListFilter
+ *  @secrets={{this.model.secrets}}
+ *  @mountPoint={{this.model.mountPoint}}
+ *  @filterValue="beep/my-"
+ *  @pageFilter="my-"
+ * />
+ * @param {array} secrets - An array of secret models.
  * @param {string} mountPoint - Where in the router files we're located. For this component it will always be vault.cluster.secrets.backend.kv
  * @param {string} filterValue - A concatenation between the list-directory's dynamic path "path-to-secret" and the queryParam "pageFilter". For example, if we're inside the beep/ directory searching for any secret that starts with "my-" this value will equal "beep/my-".
- * @param {string} pageFilter - The queryParam value.
+ * @param {string} pageFilter - The queryParam value, does not include pathToSecret ex: my-.
  */
 
 export default class KvListFilterComponent extends Component {
   @service router;
   @tracked filterIsFocused = false;
 
-  kvRoute(route) {
-    return `${this.args.mountPoint}.${route}`;
+  navigate(pathToSecret, pageFilter) {
+    const route = pathToSecret ? `${this.args.mountPoint}.list-directory` : `${this.args.mountPoint}.list`;
+    const args = [route];
+    if (pathToSecret) {
+      args.push(pathToSecret);
+    }
+    args.push({
+      queryParams: {
+        pageFilter: pageFilter ? pageFilter : null,
+      },
+    });
+    this.router.transitionTo(...args);
   }
+
   /*
-  -partialMatch returns the secret that most closely matches the pageFilter queryParam.
-  -We're focused on pageFilter and not filterValue because if we're inside a directory we only care about the secrets listed there and not the directory. 
-  -If pageFilter is empty this returns the first secret model in the list.
+  - partialMatch returns the secret that most closely matches the pageFilter queryParam.
+  - Searches pageFilter and not filterValue because if we're inside a directory we only care about the secrets listed there and not the directory. 
+  - If pageFilter is empty this returns the first secret model in the list.
 **/
   get partialMatch() {
-    // you can't pass undefined to RegExp so if pageFilter is empty we replace it with an empty string.
+    // If pageFilter is empty we replace it with an empty string because you cannot pass 'undefined' to RegEx.
     const value = !this.args.pageFilter ? '' : this.args.pageFilter;
     const reg = new RegExp('^' + escapeStringRegexp(value));
-    const match = this.args.model.secrets.filter((path) => reg.test(path.fullSecretPath))[0];
-    if (this.filterMatchesASecretPath || !match) return null;
+    const match = this.args.secrets.filter((path) => reg.test(path.fullSecretPath))[0];
+    if (this.isFilterMatch || !match) return null;
 
     return match.fullSecretPath;
   }
   /*
-  -filterMatchesASecretPath returns true if the filterValue matches a fullSecretPath
-  within the list of models.
+  - isFilterMatch returns true if the filterValue matches a fullSecretPath.
 **/
-  get filterMatchesASecretPath() {
-    return !!this.args.model.secrets?.findBy('fullSecretPath', this.args.filterValue);
+  get isFilterMatch() {
+    return !!this.args.secrets?.findBy('fullSecretPath', this.args.filterValue);
   }
+
   /*
   -handleInput is triggered after the value of the input has changed. It is not triggered when input looses focus.
 **/
@@ -58,17 +75,13 @@ export default class KvListFilterComponent extends Component {
     const isDirectory = keyIsFolder(input);
     const parentDirectory = parentKeyForKey(input);
     const secretWithinDirectory = keyWithoutParentKey(input);
-    // TODO kv engine cleanup: ideally when it's not a directory we could filter through the current models and remove pageFilter refresh on the list route.
+
     if (isDirectory) {
-      this.router.transitionTo(this.kvRoute('list-directory'), input);
+      this.navigate(input);
     } else if (parentDirectory) {
-      this.router.transitionTo(this.kvRoute('list-directory'), parentDirectory, {
-        queryParams: { pageFilter: secretWithinDirectory },
-      });
+      this.navigate(parentDirectory, secretWithinDirectory);
     } else {
-      this.router.transitionTo(this.kvRoute('list'), {
-        queryParams: { pageFilter: input },
-      });
+      this.navigate(null, input);
     }
   }
   /*
@@ -79,7 +92,7 @@ export default class KvListFilterComponent extends Component {
     const input = event.target.value;
     const parentDirectory = parentKeyForKey(input);
 
-    if (event.keyCode === keys.BACKSPACE && parentDirectory) {
+    if (event.keyCode === keys.BACKSPACE) {
       this.handleBackspace(input, parentDirectory);
     }
 
@@ -104,53 +117,38 @@ export default class KvListFilterComponent extends Component {
     const isInputDirectory = keyIsFolder(input);
     const inputWithoutParentKey = keyWithoutParentKey(input);
     const pageFilter = isInputDirectory ? '' : inputWithoutParentKey.slice(0, -1);
-    this.router.transitionTo(this.kvRoute('list-directory'), parentDirectory, {
-      queryParams: {
-        pageFilter,
-      },
-    });
+    this.navigate(parentDirectory, pageFilter);
   }
   handleTab() {
-    const matchParentDirectory = parentKeyForKey(this.partialMatch);
     const isMatchDirectory = keyIsFolder(this.partialMatch);
-    const matchWithoutParentDirectory = keyWithoutParentKey(this.partialMatch);
+    const matchParentDirectory = parentKeyForKey(this.partialMatch);
+    const matchWithinDirectory = keyWithoutParentKey(this.partialMatch);
 
     if (isMatchDirectory) {
       // ex: beep/boop/
-      this.router.transitionTo(this.kvRoute('list-directory'), this.partialMatch);
+      this.navigate(this.partialMatch);
     } else if (!isMatchDirectory && matchParentDirectory) {
       // ex: beep/boop/my-
-      this.router.transitionTo(this.kvRoute('list-directory'), matchParentDirectory, {
-        queryParams: { pageFilter: matchWithoutParentDirectory },
-      });
+      this.navigate(matchParentDirectory, matchWithinDirectory);
     } else {
       // ex: my-
-      this.router.transitionTo(this.kvRoute('list'), {
-        queryParams: { pageFilter: this.partialMatch },
-      });
+      this.navigate(null, this.partialMatch);
     }
   }
   handleEnter(input) {
-    // TODO input queryParam on details and create pages.
-    if (this.filterMatchesASecretPath) {
+    if (this.isFilterMatch) {
       // if secret exists send to details
-      this.router.transitionTo(this.kvRoute('secret.details'), input);
+      this.router.transitionTo(`${this.args.mountPoint}.secret.details`, input);
     } else {
       // if secret does not exists send to create with the path prefilled with input value.
-      this.router.transitionTo(this.kvRoute('create'), {
+      this.router.transitionTo(`${this.args.mountPoint}.create`, {
         queryParams: { initialKey: input },
       });
     }
   }
   handleEscape(parentDirectory) {
     // transition to the nearest parentDirectory. If no parentDirectory, then to the list route.
-    !parentDirectory
-      ? this.router.transitionTo(this.kvRoute('list'), {
-          queryParams: { pageFilter: '' },
-        })
-      : this.router.transitionTo(this.kvRoute('list-directory'), parentDirectory, {
-          queryParams: { pageFilter: '' },
-        });
+    !parentDirectory ? this.navigate() : this.navigate(parentDirectory);
   }
 
   @action
