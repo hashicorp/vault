@@ -73,7 +73,6 @@ module('Acceptance | kv-v2 workflow | secret and version create', function (hook
       assert.dom(FORM.invalidFormAlert).hasText('There is an error with this form.');
       assert.dom(FORM.validation('path')).hasText("Path can't be blank.");
       await typeIn(FORM.inputByAttr('path'), secretPath);
-
       assert
         .dom(FORM.validationWarning)
         .hasText(
@@ -148,11 +147,9 @@ module('Acceptance | kv-v2 workflow | secret and version create', function (hook
 
       // Create secret
       await typeIn(FORM.inputByAttr('path'), 'my/');
-      // TODO bug with the validation path
-      // assert.dom(FORM.validation('path')).hasText("Path can't end in forward slash '/'.");
+      assert.dom(FORM.validation('path')).hasText("Path can't end in forward slash '/'.");
       await typeIn(FORM.inputByAttr('path'), 'secret');
-      // TODO bug with the validation path
-      // assert.dom(FORM.validation('path')).doesNotExist('form validation goes away');
+      assert.dom(FORM.validation('path')).doesNotExist('form validation goes away');
       await fillIn(FORM.keyInput(), 'password');
       await fillIn(FORM.maskedValueInput(), 'kittens1234');
 
@@ -315,12 +312,11 @@ module('Acceptance | kv-v2 workflow | secret and version create', function (hook
       assert.dom(FORM.invalidFormAlert).hasText('There is an error with this form.');
       assert.dom(FORM.validation('path')).hasText("Path can't be blank.");
       await typeIn(FORM.inputByAttr('path'), secretPath);
-      // TODO validation bug
-      // assert
-      //   .dom(FORM.validationWarning)
-      //   .hasText(
-      //     "Path contains whitespace. If this is desired, you'll need to encode it with %20 in API requests."
-      //   );
+      assert
+        .dom(FORM.validationWarning)
+        .hasText(
+          "Path contains whitespace. If this is desired, you'll need to encode it with %20 in API requests."
+        );
       assert.dom(PAGE.create.metadataSection).doesNotExist('Hides metadata section by default');
 
       // Submit with API errors

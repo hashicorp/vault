@@ -350,7 +350,7 @@ module('Acceptance | kv-v2 workflow | navigation', function (hooks) {
       await click(FORM.cancelBtn);
       assert.strictEqual(
         currentURL(),
-        `/vault/secrets/${backend}/kv/list?`,
+        `/vault/secrets/${backend}/kv/list`,
         `url includes /vault/secrets/${backend}/kv/list`
       );
     });
