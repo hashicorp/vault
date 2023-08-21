@@ -87,5 +87,6 @@ export default class KvDeleteModal extends Component {
   onDelete() {
     const type = this.args.mode === 'delete' ? this.deleteType : this.args.mode;
     this.args.onDelete(type);
+    this.modalOpen = false;
   }
 }

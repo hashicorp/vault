@@ -70,8 +70,7 @@ export default class KvMetadataAdapter extends ApplicationAdapter {
 
   deleteRecord(store, type, snapshot) {
     const { backend, path, fullSecretPath } = snapshot.record;
-    // fullSecretPath is used when deleting from the LIST view.
-    // fullSecretPath is only defined from the LIST view via the serializer.
+    // fullSecretPath is used when deleting from the LIST view and is defined via the serializer
     // path is used when deleting from the metadata details view.
     return this.ajax(this._url(kvMetadataPath(backend, fullSecretPath || path)), 'DELETE');
   }
