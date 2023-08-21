@@ -136,7 +136,7 @@ module('Acceptance | kv-v2 workflow | edge cases', function (hooks) {
     });
 
     test('it handles errors when attempting to view details of a secret that is a directory', async function (assert) {
-      assert.expect(3);
+      assert.expect(7);
       const backend = this.backend;
       const [root, subdirectory] = this.fullSecretPath.split('/');
       setupOnerror((error) => assert.strictEqual(error.httpStatus, 404), '404 error is thrown'); // catches error so qunit test doesn't fail
@@ -148,6 +148,11 @@ module('Acceptance | kv-v2 workflow | edge cases', function (hooks) {
       assert
         .dom(PAGE.error.message)
         .hasText(`Sorry, we were unable to find any content at /v1/${backend}/data/${root}/${subdirectory}.`);
+
+      assert.dom(PAGE.breadcrumbAtIdx(0)).hasText('secrets');
+      assert.dom(PAGE.breadcrumbAtIdx(1)).hasText(backend);
+      assert.dom(PAGE.secretTab('Secrets')).doesNotHaveClass('is-active');
+      assert.dom(PAGE.secretTab('Configuration')).doesNotHaveClass('is-active');
     });
   });
 });
