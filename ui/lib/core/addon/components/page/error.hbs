@@ -20,7 +20,7 @@
     </h1>
     <p>
       {{#if @error.message}}
-        <p>{{@error.message}}</p>
+        <p data-test-page-error-message>{{@error.message}}</p>
       {{/if}}
       {{#each @error.errors as |error index|}}
         <p data-test-page-error-details={{index}}>{{error}}</p>

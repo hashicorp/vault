@@ -1,6 +1,6 @@
 import { module, test } from 'qunit';
 import { v4 as uuidv4 } from 'uuid';
-import { click, currentURL, findAll, typeIn, visit } from '@ember/test-helpers';
+import { click, currentURL, findAll, setupOnerror, typeIn, visit } from '@ember/test-helpers';
 import { setupApplicationTest } from 'vault/tests/helpers';
 import authPage from 'vault/tests/pages/auth';
 import {
@@ -135,15 +135,15 @@ module('Acceptance | kv-v2 workflow | edge cases', function (hooks) {
       );
     });
 
-    test('it handles errors when secrets are not found', async function (assert) {
-      assert.expect(2);
+    test('it handles errors when attempting to view details of a secret that is a directory', async function (assert) {
+      assert.expect(3);
       const backend = this.backend;
       const [root, subdirectory] = this.fullSecretPath.split('/');
+      setupOnerror((error) => assert.strictEqual(error.httpStatus, 404), '404 error is thrown'); // catches error so qunit test doesn't fail
 
       await visit(`/vault/secrets/${backend}/kv/list`);
       await typeIn(PAGE.list.overviewInput, `${root}/${subdirectory}`); // intentionally leave out trailing slash
       await click(PAGE.list.overviewButton);
-
       assert.dom(PAGE.error.title).hasText('404 Not Found');
       assert
         .dom(PAGE.error.message)
