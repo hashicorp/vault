@@ -1,0 +1,3 @@
+```release-note:change
+events: `secret_path` will include full path of secret, including name.
+```
