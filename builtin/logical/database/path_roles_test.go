@@ -17,6 +17,7 @@ import (
 	postgreshelper "github.com/hashicorp/vault/helper/testhelpers/postgresql"
 	v5 "github.com/hashicorp/vault/sdk/database/dbplugin/v5"
 	"github.com/hashicorp/vault/sdk/logical"
+	"github.com/robfig/cron/v3"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 )
@@ -900,6 +901,106 @@ func TestWALsDeletedOnRoleDeletion(t *testing.T) {
 
 	// 1 WAL should be cleared by the delete
 	requireWALs(t, storage, 1)
+}
+
+func TestIsInsideRotationWindow(t *testing.T) {
+	rotationPeriodData := map[string]interface{}{
+		"username":        "hashicorp",
+		"db_name":         "mockv5",
+		"rotation_period": "86400s",
+	}
+
+	for _, tc := range []struct {
+		name         string
+		expected     bool
+		data         map[string]interface{}
+		now          time.Time
+		timeModifier func(t time.Time) time.Time
+	}{
+		{
+			"always returns true for rotation_period type",
+			true,
+			rotationPeriodData,
+			time.Now(),
+			nil,
+		},
+		{
+			"always returns true for rotation_schedule when no rotation_window set",
+			true,
+			map[string]interface{}{
+				"username":          "hashicorp",
+				"db_name":           "mockv5",
+				"rotation_schedule": "0 0 */2 * * *",
+			},
+			time.Now(),
+			nil,
+		},
+		{
+			"returns true for rotation_schedule when inside rotation_window",
+			true,
+			map[string]interface{}{
+				"username":          "hashicorp",
+				"db_name":           "mockv5",
+				"rotation_schedule": "0 0 */2 * * *",
+				"rotation_window":   "3600s",
+			},
+			time.Now(),
+			func(t time.Time) time.Time {
+				// set current time just inside window
+				return t.Add(-3640 * time.Second)
+			},
+		},
+		{
+			"returns false for rotation_schedule when outside rotation_window",
+			false,
+			map[string]interface{}{
+				"username":          "hashicorp",
+				"db_name":           "mockv5",
+				"rotation_schedule": "0 0 */2 * * *",
+				"rotation_window":   "3600s",
+			},
+			time.Now(),
+			func(t time.Time) time.Time {
+				// set current time just outside window
+				return t.Add(-3560 * time.Second)
+			},
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			ctx := context.Background()
+			b, s, mockDB := getBackend(t)
+			defer b.Cleanup(ctx)
+			configureDBMount(t, s)
+
+			testTime := tc.now
+			if tc.data["rotation_schedule"] != nil && tc.timeModifier != nil {
+				rotationSchedule := tc.data["rotation_schedule"].(string)
+				schedule, err := b.scheduleParser.Parse(rotationSchedule)
+				if err != nil {
+					t.Fatalf("could not parse rotation_schedule: %s", err)
+				}
+				sched, ok := schedule.(*cron.SpecSchedule)
+				if !ok {
+					t.Fatalf("could not parse rotation_schedule")
+				}
+				next1 := sched.Next(tc.now) // the next rotation time we expect
+				next2 := sched.Next(next1)  // the next rotation time after that
+				testTime = tc.timeModifier(next2)
+			}
+
+			createRoleWithData(t, b, s, mockDB, "test-role", tc.data)
+			role, err := b.StaticRole(ctx, s, "test-role")
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			// testTime := sched.Next(time.Now()).tc.timeModifier()
+			isInsideWindow := role.StaticAccount.IsInsideRotationWindow(testTime)
+			if tc.expected != isInsideWindow {
+				t.Fatalf("expected %t, got %t", tc.expected, isInsideWindow)
+			}
+		})
+	}
 }
 
 func createRole(t *testing.T, b *databaseBackend, storage logical.Storage, mockDB *mockNewDatabase, roleName string) {
