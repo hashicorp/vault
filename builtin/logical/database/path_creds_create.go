@@ -256,10 +256,9 @@ func (b *databaseBackend) pathStaticCredsRead() framework.OperationFunc {
 			respData["rotation_period"] = role.StaticAccount.RotationPeriod.Seconds()
 		} else if role.StaticAccount.UsesRotationSchedule() {
 			respData["rotation_schedule"] = role.StaticAccount.RotationSchedule
-		}
-
-		if role.StaticAccount.RotationWindow.Seconds() != 0 {
-			respData["rotation_window"] = role.StaticAccount.RotationWindow.Seconds()
+			if role.StaticAccount.RotationWindow.Seconds() != 0 {
+				respData["rotation_window"] = role.StaticAccount.RotationWindow.Seconds()
+			}
 		}
 
 		switch role.CredentialType {
