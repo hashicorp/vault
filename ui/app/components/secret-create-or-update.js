@@ -17,6 +17,7 @@
  *  @isV2=true
  *  @secretData={{@secretData}}
  *  @canCreateSecretMetadata=false
+ *  @buttonDisabled={{this.saving}}
  * />
  * ```
  * @param {string} mode - create, edit, show determines what view to display
@@ -26,6 +27,7 @@
  * @param {boolean} isV2 - whether or not KV1 or KV2
  * @param {object} secretData - class that is created in secret-edit
  * @param {boolean} canUpdateSecretMetadata - based on permissions to the /metadata/ endpoint. If user has secret update. create is not enough for metadata.
+ * @param {boolean} buttonDisabled - if true, disables the submit button on the create/update form
  */
 
 import Component from '@glimmer/component';

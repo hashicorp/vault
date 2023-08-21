@@ -113,7 +113,6 @@ export default Service.extend({
   saveTokenFromError(error) {
     const { accessor, token, creation_path, creation_time, ttl } = error;
     const data = { accessor, token, creation_path, creation_time, ttl };
-    // data.uiParams = { url: this.router.currentURL };
     this.storeControlGroupToken(data);
     // In the read flow the accessor is marked once the user clicks "Visit" from the control group page
     // On a POST/UPDATE flow we don't redirect, so we need to mark automatically so that on the next try
