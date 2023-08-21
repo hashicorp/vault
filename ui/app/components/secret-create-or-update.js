@@ -51,6 +51,7 @@ export default class SecretCreateOrUpdate extends Component {
   @tracked validationMessages = null;
 
   @service controlGroup;
+  @service flashMessages;
   @service router;
   @service store;
 
@@ -163,6 +164,7 @@ export default class SecretCreateOrUpdate extends Component {
         if (error instanceof ControlGroupError) {
           const errorMessage = this.controlGroup.logFromError(error);
           this.error = errorMessage.content;
+          this.controlGroup.saveTokenFromError(error);
         }
         throw error;
       });
@@ -233,8 +235,13 @@ export default class SecretCreateOrUpdate extends Component {
       return;
     }
 
+    const secretPath = type === 'create' ? this.args.modelForData.path : this.args.model.id;
     this.persistKey(() => {
-      this.transitionToRoute(SHOW_ROUTE, this.args.model.path || this.args.model.id);
+      // Show flash message in case there's a control group on read
+      this.flashMessages.success(
+        `Secret ${secretPath} ${type === 'create' ? 'created' : 'updated'} successfully.`
+      );
+      this.transitionToRoute(SHOW_ROUTE, secretPath);
     });
   }
   @action
