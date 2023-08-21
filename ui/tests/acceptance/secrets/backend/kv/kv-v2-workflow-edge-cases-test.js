@@ -38,7 +38,7 @@ module('Acceptance | kv-v2 workflow | edge cases', function (hooks) {
   });
 
   module('persona with read and list access on the secret level', function (hooks) {
-    // see github request for use case https://github.com/hashicorp/vault/issues/5362
+    // see github issue for more details https://github.com/hashicorp/vault/issues/5362
     hooks.beforeEach(async function () {
       const secretPath = `${this.rootSecret}/*`; // user has LIST and READ access within this root secret directory
       const capabilities = ['list', 'read'];
