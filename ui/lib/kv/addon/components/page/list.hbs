@@ -7,7 +7,7 @@
   <:toolbarFilters>
     {{#unless @noMetadataListPermissions}}
       <KvListFilter
-        @secrets={{@model.secrets}}
+        @secrets={{@secrets}}
         @mountPoint={{this.mountPoint}}
         @filterValue={{@filterValue}}
         @pageFilter={{@pageFilter}}
@@ -16,7 +16,7 @@
   </:toolbarFilters>
 
   <:toolbarActions>
-    <ToolbarLink data-test-toolbar-create-secret @route="create" @query={{hash initialKey=@pathToSecret}} @type="add">Create
+    <ToolbarLink data-test-toolbar-create-secret @route="create" @query={{hash initialKey=@filterValue}} @type="add">Create
       secret</ToolbarLink>
   </:toolbarActions>
 </KvPageHeader>
