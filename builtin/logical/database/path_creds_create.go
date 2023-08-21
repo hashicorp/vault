@@ -258,6 +258,10 @@ func (b *databaseBackend) pathStaticCredsRead() framework.OperationFunc {
 			respData["rotation_schedule"] = role.StaticAccount.RotationSchedule
 		}
 
+		if role.StaticAccount.RotationWindow.Seconds() != 0 {
+			respData["rotation_window"] = role.StaticAccount.RotationWindow.Seconds()
+		}
+
 		switch role.CredentialType {
 		case v5.CredentialTypePassword:
 			respData["password"] = role.StaticAccount.Password
