@@ -15,6 +15,10 @@ export const PAGE = {
   emptyStateTitle: '[data-test-empty-state-title]',
   emptyStateMessage: '[data-test-empty-state-message]',
   emptyStateActions: '[data-test-empty-state-actions]',
+  error: {
+    title: '[data-test-page-error] h1',
+    message: '[data-test-page-error] p',
+  },
   toolbar: 'nav.toolbar',
   toolbarAction: 'nav.toolbar-actions .toolbar-link',
   secretRow: '[data-test-component="info-table-row"]',

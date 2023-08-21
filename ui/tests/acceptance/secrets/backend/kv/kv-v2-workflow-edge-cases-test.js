@@ -1,6 +1,6 @@
-import { module, skip, test } from 'qunit';
+import { module, test } from 'qunit';
 import { v4 as uuidv4 } from 'uuid';
-import { click, currentURL, findAll, typeIn, visit } from '@ember/test-helpers';
+import { click, currentURL, findAll, setupOnerror, typeIn, visit } from '@ember/test-helpers';
 import { setupApplicationTest } from 'vault/tests/helpers';
 import authPage from 'vault/tests/pages/auth';
 import {
@@ -38,7 +38,7 @@ module('Acceptance | kv-v2 workflow | edge cases', function (hooks) {
   });
 
   module('persona with read and list access on the secret level', function (hooks) {
-    // see github request for use case https://github.com/hashicorp/vault/issues/5362
+    // see github issue for more details https://github.com/hashicorp/vault/issues/5362
     hooks.beforeEach(async function () {
       const secretPath = `${this.rootSecret}/*`; // user has LIST and READ access within this root secret directory
       const capabilities = ['list', 'read'];
@@ -135,9 +135,24 @@ module('Acceptance | kv-v2 workflow | edge cases', function (hooks) {
       );
     });
 
-    // TODO after error sub-states are added
-    skip('it handles errors when secrets are not found', async function () {
-      // TODO: assert `[data-test-page-error]` renders `404` if secret directory is typed incorrectly (without slash)
+    test('it handles errors when attempting to view details of a secret that is a directory', async function (assert) {
+      assert.expect(7);
+      const backend = this.backend;
+      const [root, subdirectory] = this.fullSecretPath.split('/');
+      setupOnerror((error) => assert.strictEqual(error.httpStatus, 404), '404 error is thrown'); // catches error so qunit test doesn't fail
+
+      await visit(`/vault/secrets/${backend}/kv/list`);
+      await typeIn(PAGE.list.overviewInput, `${root}/${subdirectory}`); // intentionally leave out trailing slash
+      await click(PAGE.list.overviewButton);
+      assert.dom(PAGE.error.title).hasText('404 Not Found');
+      assert
+        .dom(PAGE.error.message)
+        .hasText(`Sorry, we were unable to find any content at /v1/${backend}/data/${root}/${subdirectory}.`);
+
+      assert.dom(PAGE.breadcrumbAtIdx(0)).hasText('secrets');
+      assert.dom(PAGE.breadcrumbAtIdx(1)).hasText(backend);
+      assert.dom(PAGE.secretTab('Secrets')).doesNotHaveClass('is-active');
+      assert.dom(PAGE.secretTab('Configuration')).doesNotHaveClass('is-active');
     });
   });
 });
