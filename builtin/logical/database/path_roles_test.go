@@ -904,12 +904,6 @@ func TestWALsDeletedOnRoleDeletion(t *testing.T) {
 }
 
 func TestIsInsideRotationWindow(t *testing.T) {
-	rotationPeriodData := map[string]interface{}{
-		"username":        "hashicorp",
-		"db_name":         "mockv5",
-		"rotation_period": "86400s",
-	}
-
 	for _, tc := range []struct {
 		name         string
 		expected     bool
@@ -920,7 +914,9 @@ func TestIsInsideRotationWindow(t *testing.T) {
 		{
 			"always returns true for rotation_period type",
 			true,
-			rotationPeriodData,
+			map[string]interface{}{
+				"rotation_period": "86400s",
+			},
 			time.Now(),
 			nil,
 		},
@@ -928,8 +924,6 @@ func TestIsInsideRotationWindow(t *testing.T) {
 			"always returns true for rotation_schedule when no rotation_window set",
 			true,
 			map[string]interface{}{
-				"username":          "hashicorp",
-				"db_name":           "mockv5",
 				"rotation_schedule": "0 0 */2 * * *",
 			},
 			time.Now(),
@@ -939,8 +933,6 @@ func TestIsInsideRotationWindow(t *testing.T) {
 			"returns true for rotation_schedule when inside rotation_window",
 			true,
 			map[string]interface{}{
-				"username":          "hashicorp",
-				"db_name":           "mockv5",
 				"rotation_schedule": "0 0 */2 * * *",
 				"rotation_window":   "3600s",
 			},
@@ -954,8 +946,6 @@ func TestIsInsideRotationWindow(t *testing.T) {
 			"returns false for rotation_schedule when outside rotation_window",
 			false,
 			map[string]interface{}{
-				"username":          "hashicorp",
-				"db_name":           "mockv5",
 				"rotation_schedule": "0 0 */2 * * *",
 				"rotation_window":   "3600s",
 			},
@@ -988,13 +978,14 @@ func TestIsInsideRotationWindow(t *testing.T) {
 				testTime = tc.timeModifier(next2)
 			}
 
+			tc.data["username"] = "hashicorp"
+			tc.data["db_name"] = "mockv5"
 			createRoleWithData(t, b, s, mockDB, "test-role", tc.data)
 			role, err := b.StaticRole(ctx, s, "test-role")
 			if err != nil {
 				t.Fatal(err)
 			}
 
-			// testTime := sched.Next(time.Now()).tc.timeModifier()
 			isInsideWindow := role.StaticAccount.IsInsideRotationWindow(testTime)
 			if tc.expected != isInsideWindow {
 				t.Fatalf("expected %t, got %t", tc.expected, isInsideWindow)
