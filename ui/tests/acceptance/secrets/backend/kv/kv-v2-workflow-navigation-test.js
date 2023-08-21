@@ -979,16 +979,14 @@ module('Acceptance | kv-v2 workflow | navigation', function (hooks) {
 
       // click toolbar CTA
       await click(PAGE.list.createSecret);
-      // TODO: qp should not be present if empty
       assert.strictEqual(
         currentURL(),
-        `/vault/secrets/${backend}/kv/create?initialKey=`,
+        `/vault/secrets/${backend}/kv/create`,
         `goes to /vault/secrets/${backend}/kv/create`
       );
 
       // Click cancel btn
       await click(FORM.cancelBtn);
-      // TODO: qp should not be present if empty
       assert.strictEqual(
         currentURL(),
         `/vault/secrets/${backend}/kv/list`,

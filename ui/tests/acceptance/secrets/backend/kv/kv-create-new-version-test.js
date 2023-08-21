@@ -32,7 +32,7 @@ module('Acceptance | kv | creates a secret and a new version', function (hooks) 
       .dom(`${PAGE.emptyStateActions} a`)
       .hasAttribute('href', `/ui/vault/secrets/${this.mountPath}/kv/create`);
     await click(PAGE.list.createSecret);
-    assert.strictEqual(currentURL(), `/vault/secrets/${this.mountPath}/kv/create?`, 'url is correct');
+    assert.strictEqual(currentURL(), `/vault/secrets/${this.mountPath}/kv/create`, 'url is correct');
 
     await fillIn(FORM.inputByAttr('path'), secretPath);
     await fillIn(FORM.keyInput(), 'foo-1');
