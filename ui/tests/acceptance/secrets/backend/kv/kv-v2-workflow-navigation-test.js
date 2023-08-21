@@ -989,7 +989,6 @@ module('Acceptance | kv-v2 workflow | navigation', function (hooks) {
 
       // Click cancel btn
       await click(FORM.cancelBtn);
-      // TODO: qp should not be present if empty
       assert.strictEqual(
         currentURL(),
         `/vault/secrets/${backend}/kv/list`,
