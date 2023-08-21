@@ -10,13 +10,11 @@ export default class KvSecretMetadataDiffRoute extends Route {
   setupController(controller, resolvedModel) {
     super.setupController(controller, resolvedModel);
 
-    const breadcrumbsArray = [
+    controller.breadcrumbs = [
       { label: 'secrets', route: 'secrets', linkExternal: true },
       { label: resolvedModel.backend, route: 'list' },
-      ...breadcrumbsForSecret(resolvedModel.name),
+      ...breadcrumbsForSecret(resolvedModel.path),
       { label: 'version diff' },
     ];
-
-    controller.set('breadcrumbs', breadcrumbsArray);
   }
 }
