@@ -37,9 +37,10 @@ type ClusterMetricSink struct {
 }
 
 type TelemetryConstConfig struct {
-	LeaseMetricsEpsilon         time.Duration
-	NumLeaseMetricsTimeBuckets  int
-	LeaseMetricsNameSpaceLabels bool
+	LeaseMetricsEpsilon              time.Duration
+	NumLeaseMetricsTimeBuckets       int
+	LeaseMetricsNameSpaceLabels      bool
+	RollbackMetricsIncludeMountPoint bool
 }
 
 type Metrics interface {
