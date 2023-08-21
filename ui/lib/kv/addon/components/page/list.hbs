@@ -16,8 +16,12 @@
   </:toolbarFilters>
 
   <:toolbarActions>
-    <ToolbarLink data-test-toolbar-create-secret @route="create" @query={{hash initialKey=@pathToSecret}} @type="add">Create
-      secret</ToolbarLink>
+    <ToolbarLink
+      data-test-toolbar-create-secret
+      @route="create"
+      @query={{if @model.pathToSecret (hash initialKey=@model.pathToSecret)}}
+      @type="add"
+    >Create secret</ToolbarLink>
   </:toolbarActions>
 </KvPageHeader>
 
