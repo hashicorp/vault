@@ -124,7 +124,7 @@ func (c *EventsSubscribeCommands) subscribeRequest(client *api.Client, path stri
 			}
 			return err
 		}
-	break
+		break
 	}
 	if conn == nil {
 		return fmt.Errorf("too many redirects")
