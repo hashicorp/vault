@@ -280,4 +280,25 @@ func TestCanForwardEventConnections(t *testing.T) {
 	if !strings.HasPrefix(header.Get("Location"), "wss://") {
 		t.Fatalf("bad location: %s", header.Get("Location"))
 	}
+
+	// test forwarding requests to each core
+	handled := 0
+	forwarded := 0
+	for _, c := range cores {
+		resp := httptest.NewRecorder()
+		fakeHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			handled++
+		})
+		handleRequestForwarding(c.Core, fakeHandler).ServeHTTP(resp, req)
+		header := resp.Header()
+		if header == nil {
+			continue
+		}
+		if strings.HasPrefix(header.Get("Location"), "wss://") {
+			forwarded++
+		}
+	}
+	if handled != 1 && forwarded != 2 {
+		t.Fatalf("Expected 1 core to handle the request and 2 to forward")
+	}
 }
