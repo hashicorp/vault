@@ -51,11 +51,11 @@
   </div>
 {{else}}
   {{#if @secrets}}
-    {{#each @secrets as |secret|}}
+    {{#each @secrets as |metadata|}}
       <LinkedBlock
-        data-test-list-item={{secret.path}}
+        data-test-list-item={{metadata.path}}
         class="list-item-row"
-        @params={{array (if secret.pathIsDirectory "list-directory" "secret.details") secret.fullSecretPath}}
+        @params={{array (if metadata.pathIsDirectory "list-directory" "secret.details") metadata.fullSecretPath}}
         @linkPrefix={{this.mountPoint}}
       >
         <div class="level is-mobile">
@@ -63,7 +63,7 @@
             <div>
               <Icon @name="user" class="has-text-grey-light" />
               <span class="has-text-weight-semibold is-underline">
-                {{secret.path}}
+                {{metadata.path}}
               </span>
             </div>
           </div>
@@ -72,38 +72,37 @@
               <PopupMenu>
                 <nav class="menu">
                   <ul class="menu-list">
-                    {{#if secret.pathIsDirectory}}
+                    {{#if metadata.pathIsDirectory}}
                       <li>
-                        <LinkTo @route="list-directory" @model={{secret.fullSecretPath}}>
+                        <LinkTo @route="list-directory" @model={{metadata.fullSecretPath}}>
                           Content
                         </LinkTo>
                       </li>
                     {{else}}
                       <li>
-                        <LinkTo @route="secret.details" @model={{secret.fullSecretPath}}>
+                        <LinkTo @route="secret.details" @model={{metadata.fullSecretPath}}>
                           Details
                         </LinkTo>
                       </li>
-                      {{#if secret.canReadMetadata}}
+                      {{#if metadata.canReadMetadata}}
                         <li>
-                          <LinkTo @route="secret.metadata.versions" @model={{secret.fullSecretPath}}>
+                          <LinkTo @route="secret.metadata.versions" @model={{metadata.fullSecretPath}}>
                             View version history
                           </LinkTo>
                         </li>
                       {{/if}}
-                      {{! ARG TODO check that you don't also need create (this checks for update) }}
-                      {{#if secret.canEditData}}
+                      {{#if metadata.canEditData}}
                         <li>
-                          <LinkTo @route="secret.details.edit" @model={{secret.fullSecretPath}}>
+                          <LinkTo @route="secret.details.edit" @model={{metadata.fullSecretPath}}>
                             Create new version
                           </LinkTo>
                         </li>
                       {{/if}}
-                      {{#if secret.canDeleteMetadata}}
+                      {{#if metadata.canDeleteMetadata}}
                         <li>
                           <ConfirmAction
                             @buttonClasses="link is-destroy"
-                            @onConfirmAction={{fn this.onDelete secret}}
+                            @onConfirmAction={{fn this.onDelete metadata}}
                             @confirmMessage="This will permanently delete this secret and all its versions."
                             @cancelButtonText="Cancel"
                             data-test-secret-delete="true"
