@@ -22,7 +22,6 @@ import { tracked } from '@glimmer/tracking';
  * @param {string} [placeholder] - placeholder text for the input
  * @param {string} [label] - label for the input 
  * @param {string} [subtext] - displays below the label
- * @param {number} [selectLimit] - Sets select limit
 
  */
 
