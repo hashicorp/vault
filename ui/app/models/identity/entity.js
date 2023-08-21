@@ -10,7 +10,7 @@ import IdentityModel from './_base';
 import apiPath from 'vault/utils/api-path';
 import lazyCapabilities from 'vault/macros/lazy-capabilities';
 
-const Model = IdentityModel.extend({
+export default IdentityModel.extend({
   formFields: computed(function () {
     return ['name', 'disabled', 'policies', 'metadata'];
   }),
@@ -53,5 +53,3 @@ const Model = IdentityModel.extend({
   policyPath: lazyCapabilities(apiPath`sys/policies`),
   canCreatePolicies: alias('policyPath.canCreate'),
 });
-
-export default Model;
