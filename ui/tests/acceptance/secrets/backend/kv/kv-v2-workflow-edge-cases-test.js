@@ -22,7 +22,7 @@ module('Acceptance | kv-v2 workflow | edge cases', function (hooks) {
 
   hooks.beforeEach(async function () {
     const uid = uuidv4();
-    this.backend = `kv-nav-${uid}`;
+    this.backend = `kv-edge-${uid}`;
     this.rootSecret = 'root-directory';
     this.fullSecretPath = `${this.rootSecret}/nested/child-secret`;
     await authPage.login();

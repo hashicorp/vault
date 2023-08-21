@@ -20,9 +20,8 @@ import { tracked } from '@glimmer/tracking';
  * @param {string} [id] - unique id for the input
  * @param {string} [initialValue] - initial search value, i.e. a secret path prefix, that pre-fills the input field
  * @param {string} [placeholder] - placeholder text for the input
- * @param {string} [label] - label for the input 
+ * @param {string} [label] - label for the input
  * @param {string} [subtext] - displays below the label
-
  */
 
 export default class InputSearch extends Component {
