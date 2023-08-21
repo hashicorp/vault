@@ -124,6 +124,10 @@ func parseKMS(result *[]*KMS, list *ast.ObjectList, blockName string, maxKMS int
 		}
 
 		name := strings.ToLower(key)
+		// ensure that seals of the same type will have unique names for seal migration
+		if disabled {
+			name += "-disabled"
+		}
 		if v, ok := m["name"]; ok {
 			name, ok = v.(string)
 			if !ok {
