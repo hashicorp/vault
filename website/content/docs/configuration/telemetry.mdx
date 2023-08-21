@@ -52,6 +52,11 @@ The following options are available on all telemetry configurations.
 - `add_lease_metrics_namespace_labels` `(bool: false)` - If this value is set to true, then `vault.expire.leases.by_expiration`
   will break down expiring leases by both time and namespace. This parameter is disabled by default because enabling it can lead
   to a large-cardinality metric.
+- `add_mount_point_rollback_metrics` `(bool: false)` - If this value is set to true, then `vault.rollback.attempt.{MOUNT_POINT}`
+  and `vault.route.rollback.{MOUNT_POINT}` metrics will be reported for every mount point. If this parameter is false, then
+  `vault.rollback.attempt` and `vault.route.rollback` metrics (which do not have the mount point in the metric name)
+  will be reported instead. This parameter is disabled by default starting in Vault 1.15 due to the high cardinality of
+  these metrics.
 - `filter_default` `(bool: true)` - This controls whether to allow metrics that have not been specified by the filter.
   Defaults to `true`, which will allow all metrics when no filters are provided.
   When set to `false` with no filters, no metrics will be sent.
