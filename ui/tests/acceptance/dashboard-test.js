@@ -47,7 +47,7 @@ module('Acceptance | landing page dashboard', function (hooks) {
       await visit('/vault/dashboard');
       assert.dom(SECRETS_ENGINE_SELECTORS.cardTitle).hasText('Secrets engines');
       assert.dom(SECRETS_ENGINE_SELECTORS.getSecretEngineAccessor('pki')).exists();
-      // cleanup engine
+      // cleanup engine mount
       await consoleComponent.runCommands(deleteEngineCmd('pki'));
     });
 
@@ -56,7 +56,7 @@ module('Acceptance | landing page dashboard', function (hooks) {
       await settled();
       await visit('/vault/dashboard');
       assert.dom('[data-test-secrets-engines-row="nomad"] [data-test-view]').doesNotExist();
-      // cleanup engine
+      // cleanup engine mount
       await consoleComponent.runCommands(deleteEngineCmd('nomad'));
     });
   });
@@ -236,10 +236,11 @@ module('Acceptance | landing page dashboard', function (hooks) {
       // generate role, issuer
       await runCommands([`write pki/root/generate/internal common_name="Hashicorp Test"`]);
       await settled();
+      await visit('/vault/dashboard');
       await selectChoose(QUICK_ACTION_SELECTORS.secretsEnginesSelect, 'pki');
       await fillIn(QUICK_ACTION_SELECTORS.actionSelect, 'Issue certificate');
       assert.dom(QUICK_ACTION_SELECTORS.emptyState).doesNotExist();
-      await fillIn(QUICK_ACTION_SELECTORS.paramsTitle, 'Role to use');
+      assert.dom(QUICK_ACTION_SELECTORS.paramsTitle).hasText('Role to use');
       assert.dom(QUICK_ACTION_SELECTORS.getActionButton('Issue leaf certificate')).exists({ count: 1 });
       // select param input, click action, check route (issue cert)
       // await selectChoose(assert.dom(QUICK_ACTION_SELECTORS.paramSelect), 'pki');
@@ -257,7 +258,7 @@ module('Acceptance | landing page dashboard', function (hooks) {
       assert.dom(QUICK_ACTION_SELECTORS.getActionButton('View issuer')).exists({ count: 1 });
       // select param input, click action, check route (view issuer)
 
-      // cleanup engine
+      // cleanup engine mount
       await consoleComponent.runCommands(deleteEngineCmd('pki'));
     });
 
@@ -265,13 +266,14 @@ module('Acceptance | landing page dashboard', function (hooks) {
       await mountSecrets.enable('database', 'database');
       // create a role
       await settled();
+      await visit('/vault/dashboard');
       await selectChoose(QUICK_ACTION_SELECTORS.secretsEnginesSelect, 'database');
       await fillIn(QUICK_ACTION_SELECTORS.actionSelect, 'Generate credentials for database');
       assert.dom(QUICK_ACTION_SELECTORS.emptyState).doesNotExist();
-      await fillIn(QUICK_ACTION_SELECTORS.paramsTitle, 'Role to use');
+      assert.dom(QUICK_ACTION_SELECTORS.paramsTitle).hasText('Role to use');
       assert.dom(QUICK_ACTION_SELECTORS.getActionButton('Generate credentials')).exists({ count: 1 });
       // select param input, click action, check route
-      // cleanup engine
+      // cleanup engine mount
       await consoleComponent.runCommands(deleteEngineCmd('database'));
     });
 
@@ -279,13 +281,14 @@ module('Acceptance | landing page dashboard', function (hooks) {
       await mountSecrets.enable('kv', 'kv');
       // create a secret
       await settled();
+      await visit('/vault/dashboard');
       await selectChoose(QUICK_ACTION_SELECTORS.secretsEnginesSelect, 'kv');
       await fillIn(QUICK_ACTION_SELECTORS.actionSelect, 'Find KV secrets');
       assert.dom(QUICK_ACTION_SELECTORS.emptyState).doesNotExist();
-      await fillIn(QUICK_ACTION_SELECTORS.paramsTitle, 'Secret path');
+      assert.dom(QUICK_ACTION_SELECTORS.paramsTitle).hasText('Secret path');
       assert.dom(QUICK_ACTION_SELECTORS.getActionButton('Read secrets')).exists({ count: 1 });
       // select param input, click action, check route
-      // cleanup engine
+      // cleanup engine mount
       await consoleComponent.runCommands(deleteEngineCmd('database'));
     });
   });
