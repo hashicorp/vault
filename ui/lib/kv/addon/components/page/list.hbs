@@ -24,22 +24,26 @@
 {{#if @noMetadataListPermissions}}
   <div class="box is-fullwidth is-shadowless has-tall-padding">
     <div class="selectable-card-container one-card">
-      <OverviewCard @cardTitle="View secret" @subText="Type the path of the secret you want to read.">
+      <OverviewCard
+        @cardTitle="View secret"
+        @subText="Type the path of the secret you want to view. Include a trailing slash to navigate to the list view."
+      >
         <div class="has-top-margin-m is-flex">
           <InputSearch
             @id="search-input-kv-secret"
+            @initialValue={{@model.pathToSecret}}
             @onChange={{this.handleSecretPathInput}}
             @placeholder="secret/"
-            data-test-search-roles
+            data-test-view-secret
           />
           <button
             type="button"
             class="button is-secondary"
-            disabled={{(not this.secretPath)}}
+            disabled={{not this.secretPath}}
             {{on "click" this.transitionToSecretDetail}}
             data-test-get-secret-detail
           >
-            View secret
+            {{this.buttonText}}
           </button>
         </div>
       </OverviewCard>

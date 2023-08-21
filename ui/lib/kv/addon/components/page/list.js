@@ -10,6 +10,7 @@ import { tracked } from '@glimmer/tracking';
 import { getOwner } from '@ember/application';
 import { ancestorKeysForKey } from 'core/utils/key-utils';
 import errorMessage from 'vault/utils/error-message';
+import { pathIsDirectory } from 'kv/utils/kv-breadcrumbs';
 
 /**
  * @module List
@@ -31,7 +32,7 @@ export default class KvListPageComponent extends Component {
   @service router;
   @service store;
 
-  @tracked secretPath = '';
+  @tracked secretPath;
 
   get mountPoint() {
     // mountPoint tells transition where to start. In this case, mountPoint will always be vault.cluster.secrets.backend.kv.
@@ -65,6 +66,10 @@ export default class KvListPageComponent extends Component {
     };
   }
 
+  get buttonText() {
+    return pathIsDirectory(this.secretPath) ? 'View directory' : 'View secret';
+  }
+
   @action
   async onDelete(model) {
     try {
@@ -95,6 +100,8 @@ export default class KvListPageComponent extends Component {
 
   @action
   transitionToSecretDetail() {
-    this.router.transitionTo(`${this.mountPoint}.secret.details`, this.secretPath);
+    pathIsDirectory(this.secretPath)
+      ? this.router.transitionTo('vault.cluster.secrets.backend.kv.list-directory', this.secretPath)
+      : this.router.transitionTo('vault.cluster.secrets.backend.kv.secret.details', this.secretPath);
   }
 }
