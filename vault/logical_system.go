@@ -43,6 +43,7 @@ import (
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
+	"github.com/hashicorp/vault/sdk/helper/pluginruntimeutil"
 	"github.com/hashicorp/vault/sdk/helper/pluginutil"
 	"github.com/hashicorp/vault/sdk/helper/roottoken"
 	"github.com/hashicorp/vault/sdk/helper/wrapping"
@@ -113,6 +114,7 @@ func NewSystemBackend(core *Core, logger log.Logger) *SystemBackend {
 				"config/auditing/*",
 				"config/ui/headers/*",
 				"plugins/catalog/*",
+				"plugins/runtimes/catalog/*",
 				"revoke-prefix/*",
 				"revoke-force/*",
 				"leases/revoke-prefix/*",
@@ -186,6 +188,9 @@ func NewSystemBackend(core *Core, logger log.Logger) *SystemBackend {
 	b.Backend.Paths = append(b.Backend.Paths, b.pluginsCatalogListPaths()...)
 	b.Backend.Paths = append(b.Backend.Paths, b.pluginsCatalogCRUDPath())
 	b.Backend.Paths = append(b.Backend.Paths, b.pluginsReloadPath())
+	b.Backend.Paths = append(b.Backend.Paths, b.pluginsRuntimesCatalogCRUDPath())
+	// TODO thy
+	// b.Backend.Paths = append(b.Backend.Paths, b.pluginsRuntimesCatalogListPaths()...)
 	b.Backend.Paths = append(b.Backend.Paths, b.auditPaths()...)
 	b.Backend.Paths = append(b.Backend.Paths, b.mountPaths()...)
 	b.Backend.Paths = append(b.Backend.Paths, b.authPaths()...)
@@ -722,6 +727,104 @@ func (b *SystemBackend) handlePluginReloadUpdate(ctx context.Context, req *logic
 		return logical.RespondWithStatusCode(&r, req, http.StatusAccepted)
 	}
 	return &r, nil
+}
+
+func (b *SystemBackend) handlePluginRuntimeCatalogUpdate(ctx context.Context, _ *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	runtimeName := d.Get("name").(string)
+	if runtimeName == "" {
+		return logical.ErrorResponse("missing plugin runtime name"), nil
+	}
+
+	// TODO validate name
+
+	runtimeTypeStr := d.Get("type").(string)
+	if runtimeTypeStr == "" {
+		return logical.ErrorResponse("missing plugin runtime type"), nil
+	}
+
+	runtimeType, err := consts.ParsePluginRuntimeType(runtimeTypeStr)
+	if err != nil {
+		return logical.ErrorResponse(err.Error()), nil
+	}
+
+	switch runtimeType {
+	case consts.PluginRuntimeTypeContainer:
+		ociRuntime := d.Get("oci_runtime").(string)
+		if ociRuntime == "" {
+			ociRuntime = pluginruntimeutil.DefaultOCIRuntime
+		}
+		parentCGroup := d.Get("parent_cgroup").(string)
+		cpu := d.Get("cpu").(float32)
+		if cpu == 0 {
+			cpu = pluginruntimeutil.DefaultCPU
+		}
+		memory := d.Get("memory").(uint64)
+		if memory == 0 {
+			memory = pluginruntimeutil.DefaultMemory
+		}
+		err := b.Core.pluginRuntimeCatalog.Set(ctx, runtimeName, runtimeType, ociRuntime, parentCGroup, cpu, memory)
+		if err != nil {
+			return logical.ErrorResponse(err.Error()), nil
+		}
+	}
+	return nil, nil
+}
+
+func (b *SystemBackend) handlePluginRuntimeCatalogDelete(ctx context.Context, _ *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	runtimeName := d.Get("name").(string)
+	if runtimeName == "" {
+		return logical.ErrorResponse("missing plugin runtime name"), nil
+	}
+
+	// TODO validate name
+
+	runtimeTypeStr := d.Get("type").(string)
+	if runtimeTypeStr == "" {
+		return logical.ErrorResponse("missing plugin runtime type"), nil
+	}
+
+	runtimeType, err := consts.ParsePluginRuntimeType(runtimeTypeStr)
+	if err != nil {
+		return logical.ErrorResponse(err.Error()), nil
+	}
+
+	err = b.Core.pluginRuntimeCatalog.Delete(ctx, runtimeName, runtimeType)
+	if err != nil {
+		return logical.ErrorResponse(err.Error()), nil
+	}
+	return nil, nil
+}
+
+func (b *SystemBackend) handlePluginRuntimeCatalogRead(ctx context.Context, _ *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	runtimeName := d.Get("name").(string)
+	if runtimeName == "" {
+		return logical.ErrorResponse("missing plugin runtime name"), nil
+	}
+
+	// TODO validate name
+
+	runtimeTypeStr := d.Get("type").(string)
+	if runtimeTypeStr == "" {
+		return logical.ErrorResponse("missing plugin runtime type"), nil
+	}
+
+	runtimeType, err := consts.ParsePluginRuntimeType(runtimeTypeStr)
+	if err != nil {
+		return logical.ErrorResponse(err.Error()), nil
+	}
+
+	runner, err := b.Core.pluginRuntimeCatalog.Get(ctx, runtimeName, runtimeType)
+	if err != nil {
+		return logical.ErrorResponse(err.Error()), nil
+	}
+	return &logical.Response{Data: map[string]interface{}{
+		"name":          runner.Name,
+		"type":          runner.Type,
+		"oci_runtime":   runner.OCIRuntime,
+		"parent_cgroup": runner.ParentCGroup,
+		"cpu":           runner.CPU,
+		"memory":        runner.Memory,
+	}}, nil
 }
 
 // handleAuditedHeaderUpdate creates or overwrites a header entry
@@ -5894,6 +5997,34 @@ Each entry is of the form "key=value".`,
 	},
 	"plugin-catalog_version": {
 		"The semantic version of the plugin to use.",
+		"",
+	},
+	"plugin-runtime-catalog": {
+		"", // TODO thy def.
+		"", // TODO thy def.
+	},
+	"plugin-runtime-catalog_name": {
+		"", // TODO thy def.
+		"",
+	},
+	"plugin-runtime-catalog_type": {
+		"", // TODO thy def.
+		"",
+	},
+	"plugin-runtime-catalog_oci-runtime": {
+		"", // TODO thy def.
+		"",
+	},
+	"plugin-runtime-catalog_parent-cgroup": {
+		"", // TODO thy def.
+		"",
+	},
+	"plugin-runtime-catalog_cpu": {
+		"", // TODO thy def.
+		"",
+	},
+	"plugin-runtime-catalog_memory": {
+		"", // TODO thy def.
 		"",
 	},
 	"leases": {

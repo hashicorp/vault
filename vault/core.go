@@ -548,6 +548,9 @@ type Core struct {
 	// pluginCatalog is used to manage plugin configurations
 	pluginCatalog *PluginCatalog
 
+	// pluginRuntimeCatalog is used to manage plugin runtime configurations
+	pluginRuntimeCatalog *PluginRuntimeCatalog
+
 	// The userFailedLoginInfo map has user failed login information.
 	// It has user information (alias-name and mount accessor) as a key
 	// and login counter, last failed login time as value
@@ -2287,6 +2290,9 @@ func (s standardUnsealStrategy) unseal(ctx context.Context, logger log.Logger, c
 		if err := c.ensureWrappingKey(ctx); err != nil {
 			return err
 		}
+	}
+	if err := c.setupPluginRuntimeCatalog(ctx); err != nil {
+		return err
 	}
 	if err := c.setupPluginCatalog(ctx); err != nil {
 		return err
