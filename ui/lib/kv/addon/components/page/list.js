@@ -10,6 +10,7 @@ import { tracked } from '@glimmer/tracking';
 import { getOwner } from '@ember/application';
 import { ancestorKeysForKey } from 'core/utils/key-utils';
 import errorMessage from 'vault/utils/error-message';
+import { pathIsDirectory } from 'kv/utils/kv-breadcrumbs';
 
 /**
  * @module List
@@ -24,11 +25,15 @@ export default class KvListPageComponent extends Component {
   @service flashMessages;
   @service router;
 
-  @tracked secretPath = '';
+  @tracked secretPath;
 
   get mountPoint() {
     // mountPoint tells the LinkedBlock component where to start the transition. In this case, mountPoint will always be vault.cluster.secrets.backend.kv.
     return getOwner(this).mountPoint;
+  }
+
+  get buttonText() {
+    return pathIsDirectory(this.secretPath) ? 'View directory' : 'View secret';
   }
 
   @action
@@ -56,6 +61,8 @@ export default class KvListPageComponent extends Component {
 
   @action
   transitionToSecretDetail() {
-    this.router.transitionTo(`${this.mountPoint}.secret.details`, this.secretPath);
+    pathIsDirectory(this.secretPath)
+      ? this.router.transitionTo('vault.cluster.secrets.backend.kv.list-directory', this.secretPath)
+      : this.router.transitionTo('vault.cluster.secrets.backend.kv.secret.details', this.secretPath);
   }
 }
