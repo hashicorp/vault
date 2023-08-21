@@ -9,7 +9,7 @@ import { setupApplicationTest } from 'vault/tests/helpers';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 import authPage from 'vault/tests/pages/auth';
 import SECRETS_ENGINE_SELECTORS from 'vault/tests/helpers/components/dashboard/secrets-engines-card';
-// import VAULT_CONFIGURATION_SELECTORS from 'vault/tests/helpers/components/dashboard/vault-configuration-details-card';
+import VAULT_CONFIGURATION_SELECTORS from 'vault/tests/helpers/components/dashboard/vault-configuration-details-card';
 import mountSecrets from 'vault/tests/pages/settings/mount-secret-backend';
 import { deleteEngineCmd } from 'vault/tests/helpers/commands';
 import { create } from 'ember-cli-page-object';
@@ -74,6 +74,56 @@ module('Acceptance | landing page dashboard', function (hooks) {
       assert
         .dom('[data-test-feedback-form]')
         .hasText("Don't see what you're looking for on this page? Let us know via our feedback form. ");
+    });
+  });
+
+  module('configuration details card', function () {
+    test('shows the configuration details card', async function (assert) {
+      this.server.get('sys/config/state/sanitized', () => ({
+        data: this.data,
+        wrap_info: null,
+        warnings: null,
+        auth: null,
+      }));
+      await authPage.login();
+      await visit('/vault/dashboard');
+      assert.dom(VAULT_CONFIGURATION_SELECTORS.cardTitle).hasText('Configuration details');
+      assert.dom(VAULT_CONFIGURATION_SELECTORS.apiAddr).hasText('http://127.0.0.1:8200');
+      assert.dom(VAULT_CONFIGURATION_SELECTORS.defaultLeaseTtl).hasText('0');
+      assert.dom(VAULT_CONFIGURATION_SELECTORS.maxLeaseTtl).hasText('2 days');
+      assert.dom(VAULT_CONFIGURATION_SELECTORS.tlsDisable).hasText('Enabled');
+      assert.dom(VAULT_CONFIGURATION_SELECTORS.logFormat).hasText('None');
+      assert.dom(VAULT_CONFIGURATION_SELECTORS.logLevel).hasText('debug');
+      assert.dom(VAULT_CONFIGURATION_SELECTORS.storageType).hasText('raft');
+    });
+    test('shows the tls disabled if it is disabled', async function (assert) {
+      this.server.get('sys/config/state/sanitized', () => {
+        this.data.listeners[0].config.tls_disable = false;
+        return {
+          data: this.data,
+          wrap_info: null,
+          warnings: null,
+          auth: null,
+        };
+      });
+      await authPage.login();
+      await visit('/vault/dashboard');
+      assert.dom(VAULT_CONFIGURATION_SELECTORS.tlsDisable).hasText('Disabled');
+    });
+    test('shows the tls disabled if there is no tlsDisabled returned from server', async function (assert) {
+      this.server.get('sys/config/state/sanitized', () => {
+        this.data.listeners = [];
+
+        return {
+          data: this.data,
+          wrap_info: null,
+          warnings: null,
+          auth: null,
+        };
+      });
+      await authPage.login();
+      await visit('/vault/dashboard');
+      assert.dom(VAULT_CONFIGURATION_SELECTORS.tlsDisable).hasText('Disabled');
     });
   });
 
