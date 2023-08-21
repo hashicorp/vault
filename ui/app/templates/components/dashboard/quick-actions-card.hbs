@@ -60,6 +60,10 @@
       </div>
     {{/if}}
   {{else}}
-    <EmptyState @title="No mount selected" @message="Select a mount above to get started." />
+    <EmptyState
+      @title="No mount selected"
+      @message="Select a mount above to get started."
+      data-test-no-mount-selected-empty
+    />
   {{/if}}
 </Hds::Card::Container>

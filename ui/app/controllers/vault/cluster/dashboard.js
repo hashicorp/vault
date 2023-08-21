@@ -12,7 +12,8 @@ export default class DashboardController extends Controller {
   @tracked replicationUpdatedAt = timestamp.now().toISOString();
 
   @action
-  refreshModel() {
+  refreshModel(e) {
+    if (e) e.preventDefault();
     this.replicationUpdatedAt = timestamp.now().toISOString();
     this.send('refreshRoute');
   }
