@@ -19,7 +19,7 @@
     <ToolbarLink
       data-test-toolbar-create-secret
       @route="create"
-      @query={{if @model.pathToSecret (hash initialKey=@model.pathToSecret)}}
+      @query={{hash initialKey=@model.pathToSecret}}
       @type="add"
     >Create secret</ToolbarLink>
   </:toolbarActions>
