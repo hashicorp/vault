@@ -54,7 +54,7 @@ export default class KvListFilterComponent extends Component {
     // If pageFilter is empty we replace it with an empty string because you cannot pass 'undefined' to RegEx.
     const value = !this.args.pageFilter ? '' : this.args.pageFilter;
     const reg = new RegExp('^' + escapeStringRegexp(value));
-    const match = this.args.secrets.filter((path) => reg.test(path.fullSecretPath))[0];
+    const match = this.args.secrets?.filter((path) => reg.test(path.fullSecretPath))[0];
     if (this.isFilterMatch || !match) return null;
 
     return match.fullSecretPath;
