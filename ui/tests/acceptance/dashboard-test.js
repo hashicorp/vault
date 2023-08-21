@@ -4,17 +4,20 @@
  */
 
 import { module, test } from 'qunit';
-import { visit, currentURL, settled } from '@ember/test-helpers';
+import { visit, currentURL, settled /* currentRouteName */ } from '@ember/test-helpers';
 import { setupApplicationTest } from 'vault/tests/helpers';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 import authPage from 'vault/tests/pages/auth';
 import SECRETS_ENGINE_SELECTORS from 'vault/tests/helpers/components/dashboard/secrets-engines-card';
 import VAULT_CONFIGURATION_SELECTORS from 'vault/tests/helpers/components/dashboard/vault-configuration-details-card';
+import QUICK_ACTION_SELECTORS from 'vault/tests/helpers/components/dashboard/quick-actions-card';
 import mountSecrets from 'vault/tests/pages/settings/mount-secret-backend';
 import { deleteEngineCmd } from 'vault/tests/helpers/commands';
 import { create } from 'ember-cli-page-object';
 import consoleClass from 'vault/tests/pages/components/console/ui-panel';
 import { selectChoose } from 'ember-power-select/test-support/helpers';
+import { fillIn } from '@ember/test-helpers';
+import { runCommands } from 'vault/tests/helpers/pki/pki-run-commands';
 
 const consoleComponent = create(consoleClass);
 
@@ -77,7 +80,99 @@ module('Acceptance | landing page dashboard', function (hooks) {
     });
   });
 
-  module('configuration details card', function () {
+  module('configuration details card', function (hooks) {
+    hooks.beforeEach(function () {
+      this.data = {
+        api_addr: 'http://127.0.0.1:8200',
+        cache_size: 0,
+        cluster_addr: 'https://127.0.0.1:8201',
+        cluster_cipher_suites: '',
+        cluster_name: '',
+        default_lease_ttl: 0,
+        default_max_request_duration: 0,
+        detect_deadlocks: '',
+        disable_cache: false,
+        disable_clustering: false,
+        disable_indexing: false,
+        disable_mlock: true,
+        disable_performance_standby: false,
+        disable_printable_check: false,
+        disable_sealwrap: false,
+        disable_sentinel_trace: false,
+        enable_response_header_hostname: false,
+        enable_response_header_raft_node_id: false,
+        enable_ui: true,
+        experiments: null,
+        introspection_endpoint: false,
+        listeners: [
+          {
+            config: {
+              address: '0.0.0.0:8200',
+              cluster_address: '0.0.0.0:8201',
+              tls_disable: true,
+            },
+            type: 'tcp',
+          },
+        ],
+        log_format: '',
+        log_level: 'debug',
+        log_requests_level: '',
+        max_lease_ttl: '48h',
+        pid_file: '',
+        plugin_directory: '',
+        plugin_file_permissions: 0,
+        plugin_file_uid: 0,
+        raw_storage_endpoint: true,
+        seals: [
+          {
+            disabled: false,
+            type: 'shamir',
+          },
+        ],
+        storage: {
+          cluster_addr: 'https://127.0.0.1:8201',
+          disable_clustering: false,
+          raft: {
+            max_entry_size: '',
+          },
+          redirect_addr: 'http://127.0.0.1:8200',
+          type: 'raft',
+        },
+        telemetry: {
+          add_lease_metrics_namespace_labels: false,
+          circonus_api_app: '',
+          circonus_api_token: '',
+          circonus_api_url: '',
+          circonus_broker_id: '',
+          circonus_broker_select_tag: '',
+          circonus_check_display_name: '',
+          circonus_check_force_metric_activation: '',
+          circonus_check_id: '',
+          circonus_check_instance_id: '',
+          circonus_check_search_tag: '',
+          circonus_check_tags: '',
+          circonus_submission_interval: '',
+          circonus_submission_url: '',
+          disable_hostname: true,
+          dogstatsd_addr: '',
+          dogstatsd_tags: null,
+          lease_metrics_epsilon: 3600000000000,
+          maximum_gauge_cardinality: 500,
+          metrics_prefix: '',
+          num_lease_metrics_buckets: 168,
+          prometheus_retention_time: 86400000000000,
+          stackdriver_debug_logs: false,
+          stackdriver_location: '',
+          stackdriver_namespace: '',
+          stackdriver_project_id: '',
+          statsd_address: '',
+          statsite_address: '',
+          usage_gauge_period: 5000000000,
+        },
+      };
+      return authPage.login();
+    });
+
     test('shows the configuration details card', async function (assert) {
       this.server.get('sys/config/state/sanitized', () => ({
         data: this.data,
@@ -133,13 +228,65 @@ module('Acceptance | landing page dashboard', function (hooks) {
     });
 
     test('shows the default state of the quick actions card', async function (assert) {
+      assert.dom(QUICK_ACTION_SELECTORS.emptyState).exists();
+    });
+
+    test('shows the correct actions and links associated with pki', async function (assert) {
       await mountSecrets.enable('pki', 'pki');
+      // generate role, issuer
+      await runCommands([`write pki/root/generate/internal common_name="Hashicorp Test"`]);
+      await settled();
+      await selectChoose(QUICK_ACTION_SELECTORS.secretsEnginesSelect, 'pki');
+      await fillIn(QUICK_ACTION_SELECTORS.actionSelect, 'Issue certificate');
+      assert.dom(QUICK_ACTION_SELECTORS.emptyState).doesNotExist();
+      await fillIn(QUICK_ACTION_SELECTORS.paramsTitle, 'Role to use');
+      assert.dom(QUICK_ACTION_SELECTORS.getActionButton('Issue leaf certificate')).exists({ count: 1 });
+      // select param input, click action, check route (issue cert)
+      // await selectChoose(assert.dom(QUICK_ACTION_SELECTORS.paramSelect), 'pki');
+      // await click(QUICK_ACTION_SELECTORS.getActionButton('Issue leaf certificate'));
+
+      await fillIn(QUICK_ACTION_SELECTORS.actionSelect, 'View certificate');
+      assert.dom(QUICK_ACTION_SELECTORS.emptyState).doesNotExist();
+      assert.dom(QUICK_ACTION_SELECTORS.paramsTitle).hasText('Certificate serial number');
+      assert.dom(QUICK_ACTION_SELECTORS.getActionButton('View certificate')).exists({ count: 1 });
+      // select param input, click action, check route (view cert)
+
+      await fillIn(QUICK_ACTION_SELECTORS.actionSelect, 'View issuer');
+      assert.dom(QUICK_ACTION_SELECTORS.emptyState).doesNotExist();
+      assert.dom(QUICK_ACTION_SELECTORS.paramsTitle).hasText('Issuer');
+      assert.dom(QUICK_ACTION_SELECTORS.getActionButton('View issuer')).exists({ count: 1 });
+      // select param input, click action, check route (view issuer)
+
+      // cleanup engine
+      await consoleComponent.runCommands(deleteEngineCmd('pki'));
+    });
+
+    test('shows the correct actions and links associated with database', async function (assert) {
       await mountSecrets.enable('database', 'database');
+      // create a role
+      await settled();
+      await selectChoose(QUICK_ACTION_SELECTORS.secretsEnginesSelect, 'database');
+      await fillIn(QUICK_ACTION_SELECTORS.actionSelect, 'Generate credentials for database');
+      assert.dom(QUICK_ACTION_SELECTORS.emptyState).doesNotExist();
+      await fillIn(QUICK_ACTION_SELECTORS.paramsTitle, 'Role to use');
+      assert.dom(QUICK_ACTION_SELECTORS.getActionButton('Generate credentials')).exists({ count: 1 });
+      // select param input, click action, check route
+      // cleanup engine
+      await consoleComponent.runCommands(deleteEngineCmd('database'));
+    });
+
+    test('shows the correct actions and links associated with kv', async function (assert) {
       await mountSecrets.enable('kv', 'kv');
-      await visit('/vault/dashboard');
-      assert.dom('[data-test-no-mount-selected-empty]').exists();
-      await selectChoose('.search-select', 'pki-0-test');
-      // await this.pauseTest();
+      // create a secret
+      await settled();
+      await selectChoose(QUICK_ACTION_SELECTORS.secretsEnginesSelect, 'kv');
+      await fillIn(QUICK_ACTION_SELECTORS.actionSelect, 'Find KV secrets');
+      assert.dom(QUICK_ACTION_SELECTORS.emptyState).doesNotExist();
+      await fillIn(QUICK_ACTION_SELECTORS.paramsTitle, 'Secret path');
+      assert.dom(QUICK_ACTION_SELECTORS.getActionButton('Read secrets')).exists({ count: 1 });
+      // select param input, click action, check route
+      // cleanup engine
+      await consoleComponent.runCommands(deleteEngineCmd('database'));
     });
   });
 });

@@ -8,10 +8,9 @@ import { setupRenderingTest } from 'vault/tests/helpers';
 import { render } from '@ember/test-helpers';
 import { hbs } from 'ember-cli-htmlbars';
 import { fillIn } from '@ember/test-helpers';
-
 import { selectChoose } from 'ember-power-select/test-support/helpers';
 
-// TODO LANDING PAGE: create SELECTORS for the data-test attributes
+import SELECTORS from 'vault/tests/helpers/components/dashboard/quick-actions-card';
 
 module('Integration | Component | dashboard/quick-actions-card', function (hooks) {
   setupRenderingTest(hooks);
@@ -94,39 +93,39 @@ module('Integration | Component | dashboard/quick-actions-card', function (hooks
   test('it should show quick action empty state if no engine is selected', async function (assert) {
     await this.renderComponent();
     assert.dom('.title').hasText('Quick actions');
-    assert.dom('[data-test-secrets-engines-select]').exists({ count: 1 });
-    assert.dom('[data-test-component="empty-state"]').exists({ count: 1 });
+    assert.dom(SELECTORS.secretsEnginesSelect).exists({ count: 1 });
+    assert.dom(SELECTORS.emptyState).exists({ count: 1 });
   });
 
   test('it should show correct actions for pki', async function (assert) {
     await this.renderComponent();
-    await selectChoose('.search-select', 'pki-0-test');
-    await fillIn('[data-test-select="action-select"]', 'Issue certificate');
-    assert.dom('[data-test-component="empty-state"]').doesNotExist();
-    await fillIn('[data-test-select="action-select"]', 'Issue certificate');
-    assert.dom('[data-test-button="Issue leaf certificate"]').exists({ count: 1 });
-    assert.dom('[data-test-search-select-params-title]').hasText('Role to use');
-    await fillIn('[data-test-select="action-select"]', 'View certificate');
-    assert.dom('[data-test-search-select-params-title]').hasText('Certificate serial number');
-    assert.dom('[data-test-button="View certificate"]').exists({ count: 1 });
-    await fillIn('[data-test-select="action-select"]', 'View issuer');
-    assert.dom('[data-test-search-select-params-title]').hasText('Issuer');
-    assert.dom('[data-test-button="View issuer"]').exists({ count: 1 });
+    await selectChoose(SELECTORS.secretsEnginesSelect, 'pki-0-test');
+    await fillIn(SELECTORS.actionSelect, 'Issue certificate');
+    assert.dom(SELECTORS.emptyState).doesNotExist();
+    await fillIn(SELECTORS.actionSelect, 'Issue certificate');
+    assert.dom(SELECTORS.getActionButton('Issue leaf certificate')).exists({ count: 1 });
+    assert.dom(SELECTORS.paramsTitle).hasText('Role to use');
+    await fillIn(SELECTORS.actionSelect, 'View certificate');
+    assert.dom(SELECTORS.paramsTitle).hasText('Certificate serial number');
+    assert.dom(SELECTORS.getActionButton('View certificate')).exists({ count: 1 });
+    await fillIn(SELECTORS.actionSelect, 'View issuer');
+    assert.dom(SELECTORS.paramsTitle).hasText('Issuer');
+    assert.dom(SELECTORS.getActionButton('View issuer')).exists({ count: 1 });
   });
   test('it should show correct actions for database', async function (assert) {
     await this.renderComponent();
-    await selectChoose('.search-select', 'database-test');
-    assert.dom('[data-test-component="empty-state"]').doesNotExist();
-    await fillIn('[data-test-select="action-select"]', 'Generate credentials for database');
-    assert.dom('[data-test-search-select-params-title]').hasText('Role to use');
-    assert.dom('[data-test-button="Generate credentials"]').exists({ count: 1 });
+    await selectChoose(SELECTORS.secretsEnginesSelect, 'database-test');
+    assert.dom(SELECTORS.emptyState).doesNotExist();
+    await fillIn(SELECTORS.actionSelect, 'Generate credentials for database');
+    assert.dom(SELECTORS.paramsTitle).hasText('Role to use');
+    assert.dom(SELECTORS.getActionButton('Generate credentials')).exists({ count: 1 });
   });
   test('it should show correct actions for kv', async function (assert) {
     await this.renderComponent();
-    await selectChoose('.search-select', 'secrets-1-test');
-    assert.dom('[data-test-component="empty-state"]').doesNotExist();
-    await fillIn('[data-test-select="action-select"]', 'Find KV secrets');
-    assert.dom('[data-test-search-select-params-title]').hasText('Secret path');
-    assert.dom('[data-test-button="Read secrets"]').exists({ count: 1 });
+    await selectChoose(SELECTORS.secretsEnginesSelect, 'secrets-1-test');
+    assert.dom(SELECTORS.emptyState).doesNotExist();
+    await fillIn(SELECTORS.actionSelect, 'Find KV secrets');
+    assert.dom(SELECTORS.paramsTitle).hasText('Secret path');
+    assert.dom(SELECTORS.getActionButton('Read secrets')).exists({ count: 1 });
   });
 });
