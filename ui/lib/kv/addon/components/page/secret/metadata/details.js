@@ -5,7 +5,6 @@
 
 import Component from '@glimmer/component';
 import { action } from '@ember/object';
-import { tracked } from '@glimmer/tracking';
 import { inject as service } from '@ember/service';
 
 /**
@@ -25,22 +24,23 @@ import { inject as service } from '@ember/service';
  */
 
 export default class KvSecretMetadataDetails extends Component {
-  @tracked deleteModalOpen = false;
   @service flashMessages;
   @service router;
+  @service store;
 
-  @action async handleDelete() {
-    // the only delete option from this view is delete on metadata.
+  @action
+  async onDelete() {
+    // The only delete option from this view is delete on metadata.
+    const { metadata } = this.args;
     try {
-      await this.args.metadata.destroyRecord({
-        adapterOptions: { deleteType: 'delete-metadata' },
-      });
+      await metadata.destroyRecord();
+      this.store.clearDataset('kv/metadata'); // Clear out the store cache so that the metadata/list view is updated.
       this.flashMessages.success(
-        `Successfully deleted the metadata and all version data for the secret ${this.args.metadata.path}.`
+        `Successfully deleted the metadata and all version data for the secret ${metadata.path}.`
       );
-      return this.router.transitionTo('vault.cluster.secrets.backend.kv.list');
+      this.router.transitionTo('vault.cluster.secrets.backend.kv.list');
     } catch (err) {
-      this.flashMessages.danger(`There was an issue deleting ${this.args.metadata.path} metadata.`);
+      this.flashMessages.danger(`There was an issue deleting ${metadata.path} metadata.`);
     }
   }
 }

@@ -348,10 +348,9 @@ module('Acceptance | kv-v2 workflow | navigation', function (hooks) {
 
       // Click cancel btn
       await click(FORM.cancelBtn);
-      // TODO: pageFilter should not show on query params if empty
       assert.strictEqual(
         currentURL(),
-        `/vault/secrets/${backend}/kv/list?pageFilter=`,
+        `/vault/secrets/${backend}/kv/list`,
         `url includes /vault/secrets/${backend}/kv/list`
       );
     });
@@ -988,10 +987,9 @@ module('Acceptance | kv-v2 workflow | navigation', function (hooks) {
 
       // Click cancel btn
       await click(FORM.cancelBtn);
-      // TODO: qp should not be present if empty
       assert.strictEqual(
         currentURL(),
-        `/vault/secrets/${backend}/kv/list?pageFilter=`,
+        `/vault/secrets/${backend}/kv/list`,
         `url includes /vault/secrets/${backend}/kv/list`
       );
     });

@@ -74,6 +74,7 @@ export default class KvSecretDetails extends Component {
       await secret.destroyRecord({
         adapterOptions: { deleteType: 'undelete', deleteVersions: secret.version },
       });
+      this.store.clearDataset('kv/metadata'); // Clear out the store cache so that the metadata/list view is updated.
       this.flashMessages.success(`Successfully undeleted ${secret.path}.`);
       this.router.transitionTo('vault.cluster.secrets.backend.kv.secret', {
         queryParams: { version: secret.version },
@@ -90,6 +91,7 @@ export default class KvSecretDetails extends Component {
     const { secret } = this.args;
     try {
       await secret.destroyRecord({ adapterOptions: { deleteType: type, deleteVersions: secret.version } });
+      this.store.clearDataset('kv/metadata'); // Clear out the store cache so that the metadata/list view is updated.
       this.flashMessages.success(`Successfully ${secret.state} Version ${secret.version} of ${secret.path}.`);
       this.router.transitionTo('vault.cluster.secrets.backend.kv.secret', {
         queryParams: { version: secret.version },

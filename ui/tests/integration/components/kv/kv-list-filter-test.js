@@ -57,7 +57,7 @@ module('Integration | Component | kv | kv-list-filter', function (hooks) {
       },
     });
 
-    await render(hbs`<KvListFilter @model={{this.model}} @mountPoint={{this.mountPoint}} />`, {
+    await render(hbs`<KvListFilter @secrets={{this.model.secrets}} @mountPoint={{this.mountPoint}} />`, {
       owner: this.engine,
     });
 
@@ -82,7 +82,7 @@ module('Integration | Component | kv | kv-list-filter', function (hooks) {
     });
 
     await render(
-      hbs`<KvListFilter @model={{this.model}} @mountPoint={{this.mountPoint}} @pageFilter="my-" />`,
+      hbs`<KvListFilter @secrets={{this.model.secrets}} @mountPoint={{this.mountPoint}} @pageFilter="my-" />`,
       {
         owner: this.engine,
       }
@@ -102,7 +102,7 @@ module('Integration | Component | kv | kv-list-filter', function (hooks) {
     });
 
     await render(
-      hbs`<KvListFilter @model={{this.model}} @mountPoint={{this.mountPoint}} @filterValue="beep/" @pageFilter=""/>`,
+      hbs`<KvListFilter @secrets={{this.model.secrets}} @mountPoint={{this.mountPoint}} @filterValue="beep/" @pageFilter=""/>`,
       {
         owner: this.engine,
       }
@@ -129,7 +129,7 @@ module('Integration | Component | kv | kv-list-filter', function (hooks) {
       transitionTo(route, pathToSecret, { queryParams: { pageFilter } }) {
         assert.strictEqual(route, `${MOUNT_POINT}.list-directory`, 'Still on a directory route.');
         assert.strictEqual(pathToSecret, 'beep/', 'Parent directory still shown.');
-        assert.deepEqual(pageFilter, '', 'Clears pageFilter on escape.');
+        assert.deepEqual(pageFilter, null, 'Clears pageFilter on escape.');
       },
     });
     // trigger escape
@@ -148,7 +148,7 @@ module('Integration | Component | kv | kv-list-filter', function (hooks) {
     });
 
     await render(
-      hbs`<KvListFilter @model={{this.model}} @mountPoint={{this.mountPoint}} @filterValue="beep/boop/"/>`,
+      hbs`<KvListFilter @secrets={{this.model.secrets}} @mountPoint={{this.mountPoint}} @filterValue="beep/boop/"/>`,
       {
         owner: this.engine,
       }
@@ -185,7 +185,7 @@ module('Integration | Component | kv | kv-list-filter', function (hooks) {
     });
 
     await render(
-      hbs`<KvListFilter @model={{this.model}} @mountPoint={{this.mountPoint}} @filterValue="beep/boop/bop"/>`,
+      hbs`<KvListFilter @secrets={{this.model.secrets}} @mountPoint={{this.mountPoint}} @filterValue="beep/boop/bop"/>`,
       {
         owner: this.engine,
       }
