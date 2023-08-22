@@ -1875,6 +1875,10 @@
               {
                 "title": "API Reference",
                 "path": "platform/k8s/vso/api-reference"
+              },
+              {
+                "title": "OpenShift",
+                "path": "platform/k8s/vso/openshift"
               }
             ]
           }
