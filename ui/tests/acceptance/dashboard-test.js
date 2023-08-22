@@ -94,7 +94,7 @@ module('Acceptance | landing page dashboard', function (hooks) {
       assert.dom('[data-test-learn-more-links] a').exists({ count: 4 });
       assert
         .dom('[data-test-feedback-form]')
-        .hasText("Don't see what you're looking for on this page? Let us know via our feedback form. ");
+        .hasText("Don't see what you're looking for on this page? Let us know via our feedback form .");
     });
   });
 
@@ -315,14 +315,18 @@ module('Acceptance | landing page dashboard', function (hooks) {
       sinon.stub(timestamp, 'now').callsFake(() => STATIC_NOW);
       ENV['ember-cli-mirage'].handler = 'clients';
     });
+
     hooks.beforeEach(async function () {
       this.store = this.owner.lookup('service:store');
-
-      await authPage.login();
     });
+
     hooks.after(function () {
       timestamp.now.restore();
       ENV['ember-cli-mirage'].handler = null;
+    });
+
+    hooks.beforeEach(async function () {
+      await authPage.login();
     });
 
     skip('hides the client count card', async function (assert) {
