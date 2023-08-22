@@ -1,5 +1,5 @@
 ```release-note:change
-events: `secret_path` will include full path of secret, including name.
+events: `api_path` will include full API path of secret, including name.
 ```
 ```release-note:change
 sdk/logical/events: `EventSender` interface method is now `SendEvent` instead of `Send`.
