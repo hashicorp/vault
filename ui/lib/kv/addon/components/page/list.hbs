@@ -1,6 +1,6 @@
 <KvPageHeader @breadcrumbs={{@breadcrumbs}} @isEngineView={{true}} @pageTitle={{@backend}}>
   <:tabLinks>
-    <LinkTo @route={{@routeName}} data-test-secrets-tab="Secrets">Secrets</LinkTo>
+    <LinkTo @route={{this.router.currentRoute.localName}} data-test-secrets-tab="Secrets">Secrets</LinkTo>
     <LinkTo @route="configuration" data-test-secrets-tab="Configuration">Configuration</LinkTo>
   </:tabLinks>
   {{! TODO checks for if list >0 show filter }}
@@ -16,8 +16,9 @@
   </:toolbarFilters>
 
   <:toolbarActions>
-    <ToolbarLink data-test-toolbar-create-secret @route="create" @query={{hash initialKey=@filterValue}} @type="add">Create
-      secret</ToolbarLink>
+    <ToolbarLink data-test-toolbar-create-secret @route="create" @query={{hash initialKey=@filterValue}} @type="add">
+      Create secret
+    </ToolbarLink>
   </:toolbarActions>
 </KvPageHeader>
 
