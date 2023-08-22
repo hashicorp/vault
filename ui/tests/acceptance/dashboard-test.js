@@ -25,6 +25,9 @@ import VAULT_CONFIGURATION_SELECTORS from 'vault/tests/helpers/components/dashbo
 import QUICK_ACTION_SELECTORS from 'vault/tests/helpers/components/dashboard/quick-actions-card';
 import REPLICATION_CARD_SELECTORS from 'vault/tests/helpers/components/dashboard/replication-card';
 
+const STATIC_NOW = new Date('2023-01-13T14:15:00');
+import { addMonths, formatRFC3339 } from 'date-fns';
+
 const consoleComponent = create(consoleClass);
 
 module('Acceptance | landing page dashboard', function (hooks) {
@@ -305,6 +308,19 @@ module('Acceptance | landing page dashboard', function (hooks) {
 
     hooks.beforeEach(async function () {
       this.store = this.owner.lookup('service:store');
+      this.version = this.owner.lookup('service:version');
+      this.server.get('sys/license/status', function () {
+        return {
+          request_id: 'my-license-request-id',
+          data: {
+            autoloaded: {
+              license_id: 'my-license-id',
+              start_time: formatRFC3339(STATIC_NOW),
+              expiration_time: formatRFC3339(addMonths(STATIC_NOW, 12)),
+            },
+          },
+        };
+      });
       await authPage.login();
     });
 
@@ -313,6 +329,7 @@ module('Acceptance | landing page dashboard', function (hooks) {
     });
 
     test('shows the client count card', async function (assert) {
+      assert.true(this.version.isEnterprise);
       assert.strictEqual(currentURL(), '/vault/dashboard');
       assert.dom('[data-test-client-count-card]').exists();
       const response = await this.store.peekRecord('clients/activity', 'some-activity-id');
