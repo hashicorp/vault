@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"reflect"
 	"sort"
+	"sync"
 	"sync/atomic"
 	"time"
 
@@ -45,6 +46,7 @@ type SealInfo struct {
 	Priority int
 	Name     string
 
+	HcLock          sync.RWMutex
 	LastHealthCheck time.Time
 	LastSeenHealthy time.Time
 	Healthy         bool
@@ -237,6 +239,7 @@ func (a *access) Encrypt(ctx context.Context, plaintext []byte, options ...wrapp
 		if encryptErr != nil {
 			// TODO (multiseal): logic for failures and setting the sentinel for retrying
 			errs[sealInfo.Name] = encryptErr
+			sealInfo.Healthy = false
 		} else {
 			slots = append(slots, ciphertext)
 		}

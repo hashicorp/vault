@@ -45,7 +45,7 @@ type autoSeal struct {
 	logger         log.Logger
 
 	allSealsHealthy bool
-	hcLock          sync.Mutex
+	hcLock          sync.RWMutex
 	healthCheckStop chan struct{}
 }
 
@@ -71,6 +71,8 @@ func NewAutoSeal(lowLevel seal.Access) (*autoSeal, error) {
 }
 
 func (d *autoSeal) Healthy() bool {
+	d.hcLock.RLock()
+	defer d.hcLock.RUnlock()
 	return d.allSealsHealthy
 }
 
@@ -531,6 +533,8 @@ func (d *autoSeal) StartHealthCheck() {
 			testVal := fmt.Sprintf("Heartbeat %d", mathrand.Intn(1000))
 			anyUnhealthy := false
 			for _, w := range d.Access.GetSealInfoByPriority() {
+				w.HcLock.Lock()
+				defer w.HcLock.Unlock()
 				mLabels := []metrics.Label{{Name: "seal_name", Value: w.Name}}
 				fail := func(msg string, args ...interface{}) {
 					d.logger.Warn(msg, args...)
@@ -563,6 +567,7 @@ func (d *autoSeal) StartHealthCheck() {
 								d.logger.Info("seal backend is now healthy again", "downtime", t.Sub(w.LastSeenHealthy).String(), "seal_name", w.Name)
 								healthCheck.Reset(sealHealthTestIntervalNominal)
 							}
+
 							w.Healthy = true
 							w.LastSeenHealthy = checkTime
 							d.core.MetricSink().SetGaugeWithLabels(autoSealUnavailableDuration, 0, mLabels)
@@ -570,6 +575,8 @@ func (d *autoSeal) StartHealthCheck() {
 					}()
 				}
 			}
+			d.hcLock.Lock()
+			defer d.hcLock.Unlock()
 			d.allSealsHealthy = !anyUnhealthy
 		}
 
