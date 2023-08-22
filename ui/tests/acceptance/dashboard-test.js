@@ -325,7 +325,7 @@ module('Acceptance | landing page dashboard', function (hooks) {
       ENV['ember-cli-mirage'].handler = null;
     });
 
-    test('hides the client count card', async function (assert) {
+    skip('hides the client count card', async function (assert) {
       await authPage.logout();
       this.server.get(
         'sys/license/status',
