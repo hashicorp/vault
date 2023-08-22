@@ -53,7 +53,7 @@ func NewTestSeal(opts *TestSealOpts) (Access, []*ToggleableWrapper) {
 		}
 	}
 
-	sealAccess, err := NewAccessFromSealInfo(opts.Generation, true, sealInfos)
+	sealAccess, err := NewAccessFromSealInfo(nil, opts.Generation, true, sealInfos)
 	if err != nil {
 		panic(err)
 	}
@@ -77,7 +77,7 @@ func NewToggleableTestSeal(opts *TestSealOpts) (Access, []func(error)) {
 		funcs[i] = w.SetError
 	}
 
-	sealAccess, err := NewAccessFromSealInfo(opts.Generation, true, sealInfos)
+	sealAccess, err := NewAccessFromSealInfo(nil, opts.Generation, true, sealInfos)
 	if err != nil {
 		panic(err)
 	}

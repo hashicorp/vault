@@ -566,7 +566,7 @@ func (c *ServerCommand) runRecoveryMode() int {
 		return 1
 	}
 
-	setSealResponse, err := setSeal(c, config, infoKeys, info, existingSealGenenrationInfo)
+	setSealResponse, err := setSeal(c, config, infoKeys, info, existingSealGenenrationInfo, c.logger)
 	if err != nil {
 		c.UI.Error(err.Error())
 		return 1
@@ -1229,7 +1229,7 @@ func (c *ServerCommand) Run(args []string) int {
 		return 1
 	}
 
-	setSealResponse, err := setSeal(c, config, infoKeys, info, existingSealGenenrationInfo)
+	setSealResponse, err := setSeal(c, config, infoKeys, info, existingSealGenenrationInfo, c.logger)
 	if err != nil {
 		c.UI.Error(err.Error())
 		return 1
@@ -2532,7 +2532,7 @@ func (r *SetSealResponse) getCreatedSeals() []*vault.Seal {
 
 // setSeal return barrierSeal, barrierWrapper, unwrapSeal, all the created seals, and all the provided seals from the configs so we can close them in Run
 // The two errors are the sealConfigError and the regular error
-func setSeal(c *ServerCommand, config *server.Config, infoKeys []string, info map[string]string, existingSealGenerationInfo *vaultseal.SealGenerationInfo) (*SetSealResponse, error) {
+func setSeal(c *ServerCommand, config *server.Config, infoKeys []string, info map[string]string, existingSealGenerationInfo *vaultseal.SealGenerationInfo, sealLogger hclog.Logger) (*SetSealResponse, error) {
 	if c.flagDevAutoSeal {
 		access, _ := vaultseal.NewTestSeal(nil)
 		barrierSeal, err := vault.NewAutoSeal(access)
@@ -2681,7 +2681,7 @@ func setSeal(c *ServerCommand, config *server.Config, infoKeys []string, info ma
 	var err error
 	if enabledSealType == "shamir" {
 		// We should only have one enabled SealInfo here
-		barrierSeal = vault.NewDefaultSeal(vaultseal.NewAccess(sealGenerationInfo, enabledSealInfos))
+		barrierSeal = vault.NewDefaultSeal(vaultseal.NewAccess(sealLogger, sealGenerationInfo, enabledSealInfos))
 	} else {
 		if len(enabledSealInfos) == 0 {
 			return nil, errors.New("no enabled Seals in configuration")
@@ -2696,7 +2696,7 @@ func setSeal(c *ServerCommand, config *server.Config, infoKeys []string, info ma
 		if !working {
 			return nil, errors.New("error creating autoseal: no Seals were configured successfully")
 		}
-		barrierSeal, err = vault.NewAutoSeal(vaultseal.NewAccess(sealGenerationInfo, enabledSealInfos))
+		barrierSeal, err = vault.NewAutoSeal(vaultseal.NewAccess(sealLogger, sealGenerationInfo, enabledSealInfos))
 		if err != nil {
 			addSealConfigError(err)
 		}
@@ -2706,7 +2706,7 @@ func setSeal(c *ServerCommand, config *server.Config, infoKeys []string, info ma
 		// Making a SealGenerationInfo for the unwrap seal is a bit funky. None of its fields should
 		// really matter, since the unwrap seal should only be used for decryption. If we switch seal
 		// migration to use multiseals, the unwrap seal should be going away making this unnecessary.
-		unwrapAccess, err := vaultseal.NewAccessFromSealInfo(sealGenerationInfo.Generation-1, true, disabledSealInfos)
+		unwrapAccess, err := vaultseal.NewAccessFromSealInfo(sealLogger, sealGenerationInfo.Generation-1, true, disabledSealInfos)
 		switch {
 		case err != nil:
 			addSealConfigError(err)

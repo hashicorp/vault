@@ -13,6 +13,8 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/hashicorp/go-hclog"
+
 	"github.com/hashicorp/vault/internalshared/configutil"
 
 	metrics "github.com/armon/go-metrics"
@@ -107,11 +109,15 @@ type access struct {
 	sealGenerationInfo *SealGenerationInfo
 	wrappersByPriority []*SealInfo
 	keyIdSet           keyIdSet
+	logger             hclog.Logger
 }
 
 var _ Access = (*access)(nil)
 
-func NewAccess(sealGenerationInfo *SealGenerationInfo, sealInfos []SealInfo) Access {
+func NewAccess(logger hclog.Logger, sealGenerationInfo *SealGenerationInfo, sealInfos []SealInfo) Access {
+	if logger == nil {
+		logger = hclog.NewNullLogger()
+	}
 	if sealGenerationInfo == nil {
 		panic("cannot create a seal.Access without a SealGenerationInfo")
 	}
@@ -120,6 +126,7 @@ func NewAccess(sealGenerationInfo *SealGenerationInfo, sealInfos []SealInfo) Acc
 	}
 	a := &access{
 		sealGenerationInfo: sealGenerationInfo,
+		logger:             logger,
 	}
 	a.wrappersByPriority = make([]*SealInfo, len(sealInfos))
 	for i, x := range sealInfos {
@@ -134,7 +141,7 @@ func NewAccess(sealGenerationInfo *SealGenerationInfo, sealInfos []SealInfo) Acc
 	return a
 }
 
-func NewAccessFromSealInfo(generation uint64, rewrapped bool, sealInfos []SealInfo) (Access, error) {
+func NewAccessFromSealInfo(logger hclog.Logger, generation uint64, rewrapped bool, sealInfos []SealInfo) (Access, error) {
 	sealGenerationInfo := &SealGenerationInfo{
 		Generation: generation,
 		Rewrapped:  rewrapped,
@@ -151,7 +158,7 @@ func NewAccessFromSealInfo(generation uint64, rewrapped bool, sealInfos []SealIn
 			Name:     sealInfo.Name,
 		})
 	}
-	return NewAccess(sealGenerationInfo, sealInfos), nil
+	return NewAccess(logger, sealGenerationInfo, sealInfos), nil
 }
 
 func (a *access) GetSealInfoByPriority() []*SealInfo {
@@ -197,6 +204,7 @@ func (a *access) Init(ctx context.Context, options ...wrapping.Option) error {
 			}
 			keyId, err := sealInfo.Wrapper.KeyId(ctx)
 			if err != nil {
+				a.logger.Warn("cannot determine key ID for seal", "seal", sealInfo.Name, "err", err)
 				return fmt.Errorf("cannod determine key ID for seal %s: %w", sealInfo.Name, err)
 			}
 			keyIds = append(keyIds, keyId)
@@ -239,9 +247,15 @@ func (a *access) IsUpToDate(ctx context.Context, value *MultiWrapValue, forceKey
 	if forceKeyIdRefresh {
 		test, errs := a.Encrypt(ctx, []byte{0})
 		if test == nil {
+			a.logger.Error("error refreshing seal key IDs")
 			return false, JoinSealWrapErrors("cannot determine key IDs of Access wrappers", errs)
 		}
 		// TODO(SEALHA): What to do if there are partial failures?
+		if len(errs) > 0 {
+			msg := "could not determine key IDs of some Access wrappers"
+			a.logger.Warn(msg)
+			a.logger.Trace("partial failure refreshing seal key IDs", "err", JoinSealWrapErrors(msg, errs))
+		}
 		a.keyIdSet.set(test)
 	}
 
@@ -270,17 +284,24 @@ func (a *access) Encrypt(ctx context.Context, plaintext []byte, options ...wrapp
 
 		ciphertext, encryptErr := sealInfo.Wrapper.Encrypt(ctx, plaintext, options...)
 		if encryptErr != nil {
+			a.logger.Warn("error encrypting with seal", "seal", sealInfo.Name)
+			a.logger.Trace("error encrypting with seal", "seal", sealInfo.Name, "err", encryptErr)
+
 			errs[sealInfo.Name] = encryptErr
 			sealInfo.Healthy = false
 		} else {
+			a.logger.Trace("encrypted value using seal", "seal", sealInfo.Name, "keyId", ciphertext.KeyInfo.KeyId)
+
 			slots = append(slots, ciphertext)
 		}
 	}
 
 	if len(slots) == 0 {
+		a.logger.Error("all seals failed to encrypt value")
 		return nil, errs
 	}
 
+	a.logger.Trace("successfully encrypted value", "encrypting seals", len(slots), "total seals", len(a.wrappersByPriority))
 	ret := &MultiWrapValue{
 		Generation: a.Generation(),
 		Slots:      slots,
@@ -311,12 +332,15 @@ func (a *access) Decrypt(ctx context.Context, ciphertext *MultiWrapValue, option
 			if blobInfo, ok := blobInfoMap[keyId]; ok {
 				pt, oldKey, err := a.tryDecrypt(ctx, sealInfo, blobInfo, options)
 				if oldKey {
+					a.logger.Trace("decrypted using OldKey", "seal", sealInfo.Name)
 					return pt, false, err
 				}
 				if err == nil {
+					a.logger.Trace("decrypted value using seal", "seal", sealInfo.Name)
 					return pt, isUpToDate, nil
 				}
 				// If there is an error, keep trying with the other wrappers
+				a.logger.Trace("error decrypting with seal, will try other seals", "seal", sealInfo.Name, "keyId", keyId, "err", err)
 			}
 		}
 	}
@@ -327,15 +351,18 @@ func (a *access) Decrypt(ctx context.Context, ciphertext *MultiWrapValue, option
 		for _, blobInfo := range ciphertext.Slots {
 			pt, oldKey, err := a.tryDecrypt(ctx, sealInfo, blobInfo, options)
 			if oldKey {
+				a.logger.Trace("decrypted using OldKey", "seal", sealInfo.Name)
 				return pt, false, err
 			}
 			if err == nil {
+				a.logger.Trace("decrypted value using seal", "seal", sealInfo.Name)
 				return pt, isUpToDate, nil
 			}
 			errs[sealInfo.Name] = err
 		}
 	}
 
+	a.logger.Error("all seals failed to decrypt value")
 	return nil, false, JoinSealWrapErrors("error decrypting seal wrapped value", errs)
 }
 

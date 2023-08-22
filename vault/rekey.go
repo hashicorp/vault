@@ -400,7 +400,7 @@ func (c *Core) BarrierRekeyUpdate(ctx context.Context, key []byte, nonce string)
 		}
 	case c.seal.BarrierType() == seal.SealTypeShamir:
 		if c.seal.StoredKeysSupported() == seal.StoredKeysSupportedShamirRoot {
-			access, err := seal.NewAccessFromSealInfo(c.seal.GetAccess().Generation(), true, []seal.SealInfo{
+			access, err := seal.NewAccessFromSealInfo(c.logger, c.seal.GetAccess().Generation(), true, []seal.SealInfo{
 				{
 					Wrapper:  aeadwrapper.NewShamirWrapper(),
 					Priority: 1,

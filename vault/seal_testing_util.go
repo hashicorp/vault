@@ -5,6 +5,7 @@ package vault
 
 import (
 	aeadwrapper "github.com/hashicorp/go-kms-wrapping/wrappers/aead/v2"
+	"github.com/hashicorp/vault/helper/testhelpers/corehelpers"
 	"github.com/hashicorp/vault/vault/seal"
 	testing "github.com/mitchellh/go-testing-interface"
 )
@@ -12,11 +13,12 @@ import (
 func NewTestSeal(t testing.T, opts *seal.TestSealOpts) Seal {
 	t.Helper()
 	opts = seal.NewTestSealOpts(opts)
+	logger := corehelpers.NewTestLogger(t).Named("sealAccess")
 
 	switch opts.StoredKeys {
 	case seal.StoredKeysSupportedShamirRoot:
 		w := aeadwrapper.NewShamirWrapper()
-		sealAccess, err := seal.NewAccessFromSealInfo(opts.Generation, true, []seal.SealInfo{
+		sealAccess, err := seal.NewAccessFromSealInfo(logger, opts.Generation, true, []seal.SealInfo{
 			{
 				Wrapper:  w,
 				Priority: 1,
@@ -36,7 +38,7 @@ func NewTestSeal(t testing.T, opts *seal.TestSealOpts) Seal {
 		return newSeal
 	case seal.StoredKeysNotSupported:
 		w := aeadwrapper.NewShamirWrapper()
-		sealAccess, err := seal.NewAccessFromSealInfo(opts.Generation, true, []seal.SealInfo{
+		sealAccess, err := seal.NewAccessFromSealInfo(logger, opts.Generation, true, []seal.SealInfo{
 			{
 				Wrapper:  w,
 				Priority: 1,
