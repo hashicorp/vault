@@ -1,4 +1,4 @@
-<KvPageHeader @breadcrumbs={{@breadcrumbs}} @isEngineView={{true}} @pageTitle={{@backend}}>
+<KvPageHeader @breadcrumbs={{@breadcrumbs}} @mountName={{@backend}}>
   <:tabLinks>
     <LinkTo @route={{this.router.currentRoute.localName}} data-test-secrets-tab="Secrets">Secrets</LinkTo>
     <LinkTo @route="configuration" data-test-secrets-tab="Configuration">Configuration</LinkTo>

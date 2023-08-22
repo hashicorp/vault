@@ -15,6 +15,6 @@ export default class KvErrorRoute extends Route {
       { label: 'secrets', route: 'secrets', linkExternal: true },
       { label: this.secretMountPath.currentPath, route: 'list' },
     ];
-    controller.title = this.secretMountPath.currentPath;
+    controller.mountName = this.secretMountPath.currentPath;
   }
 }
