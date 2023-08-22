@@ -54,8 +54,8 @@ module('Acceptance | landing page dashboard', function (hooks) {
   });
 
   module('secrets engines card', function (hooks) {
-    hooks.beforeEach(function () {
-      return authPage.login();
+    hooks.beforeEach(async function () {
+      await authPage.login();
     });
 
     test('shows a secrets engine card', async function (assert) {
@@ -98,7 +98,7 @@ module('Acceptance | landing page dashboard', function (hooks) {
   });
 
   module('configuration details card', function (hooks) {
-    hooks.beforeEach(function () {
+    hooks.beforeEach(async function () {
       this.data = {
         api_addr: 'http://127.0.0.1:8200',
         cache_size: 0,
@@ -187,7 +187,7 @@ module('Acceptance | landing page dashboard', function (hooks) {
           usage_gauge_period: 5000000000,
         },
       };
-      return authPage.login();
+      await authPage.login();
     });
 
     test('shows the configuration details card', async function (assert) {
@@ -240,8 +240,8 @@ module('Acceptance | landing page dashboard', function (hooks) {
   });
 
   module('quick actions card', function (hooks) {
-    hooks.beforeEach(function () {
-      return authPage.login();
+    hooks.beforeEach(async function () {
+      await authPage.login();
     });
 
     test('shows the default state of the quick actions card', async function (assert) {
@@ -314,10 +314,10 @@ module('Acceptance | landing page dashboard', function (hooks) {
       sinon.stub(timestamp, 'now').callsFake(() => STATIC_NOW);
       ENV['ember-cli-mirage'].handler = 'clients';
     });
-    hooks.beforeEach(function () {
+    hooks.beforeEach(async function () {
       this.store = this.owner.lookup('service:store');
 
-      return authPage.login();
+      await authPage.login();
     });
     hooks.after(function () {
       timestamp.now.restore();
