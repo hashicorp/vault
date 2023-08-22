@@ -335,6 +335,7 @@ module('Acceptance | landing page dashboard', function (hooks) {
     });
 
     test('shows the client count card', async function (assert) {
+      await authPage.login();
       assert.dom('[data-test-client-count-title]').exists();
       const response = await this.store.peekRecord('clients/activity', 'some-activity-id');
       assert.dom('[data-test-client-count-title]').hasText('Client count');
@@ -372,6 +373,7 @@ module('Acceptance | landing page dashboard', function (hooks) {
     });
 
     test('it should show replication status if both dr and performance replication are enabled as features in version', async function (assert) {
+      await authPage.login();
       await click(REPLICATION_CARD_SELECTORS.replicationEmptyStateActionsLink);
       await click('[data-test-replication-type-select="dr"]');
       await fillIn('[data-test-replication-cluster-mode-select]', 'primary');
