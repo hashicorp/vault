@@ -6,8 +6,6 @@ package vault
 import (
 	"context"
 
-	wrapping "github.com/hashicorp/go-kms-wrapping/v2"
-
 	"github.com/hashicorp/vault/vault/seal"
 )
 
@@ -26,7 +24,7 @@ func (s *SealAccess) StoredKeysSupported() seal.StoredKeysSupport {
 	return s.seal.StoredKeysSupported()
 }
 
-func (s *SealAccess) BarrierType() wrapping.WrapperType {
+func (s *SealAccess) BarrierType() seal.SealType {
 	return s.seal.BarrierType()
 }
 

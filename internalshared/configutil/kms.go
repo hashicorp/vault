@@ -6,9 +6,11 @@ package configutil
 import (
 	"context"
 	"crypto/rand"
+	"errors"
 	"fmt"
 	"io"
 	"os"
+	"regexp"
 	"strings"
 
 	"github.com/hashicorp/errwrap"
@@ -127,6 +129,10 @@ func parseKMS(result *[]*KMS, list *ast.ObjectList, blockName string, maxKMS int
 				return multierror.Prefix(fmt.Errorf("unable to parse 'name' in kms type %q: unexpected type %T", key, v), fmt.Sprintf("%s.%s", blockName, key))
 			}
 			delete(m, "name")
+
+			if !regexp.MustCompile("^[a-zA-Z0-9-_]+$").MatchString(name) {
+				return multierror.Prefix(errors.New("'name' field can only include alphanumeric characters, hyphens, and underscores"), fmt.Sprintf("%s.%s", blockName, key))
+			}
 		}
 
 		strMap := make(map[string]string, len(m))

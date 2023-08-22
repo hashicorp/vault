@@ -12,14 +12,11 @@ import (
 	"fmt"
 	"sync/atomic"
 
-	aeadwrapper "github.com/hashicorp/go-kms-wrapping/wrappers/aead/v2"
-
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
 	"github.com/hashicorp/vault/sdk/physical"
 
 	"github.com/ProtonMail/go-crypto/openpgp"
 	"github.com/ProtonMail/go-crypto/openpgp/packet"
-	wrapping "github.com/hashicorp/go-kms-wrapping/v2"
 	"github.com/hashicorp/vault/vault/seal"
 )
 
@@ -63,7 +60,7 @@ type Seal interface {
 	SealWrapable() bool
 	SetStoredKeys(context.Context, [][]byte) error
 	GetStoredKeys(context.Context) ([][]byte, error)
-	BarrierType() wrapping.WrapperType                  // SealAccess
+	BarrierType() seal.SealType                         // SealAccess
 	BarrierConfig(context.Context) (*SealConfig, error) // SealAccess
 	SetBarrierConfig(context.Context, *SealConfig) error
 	SetCachedBarrierConfig(*SealConfig)
@@ -76,7 +73,6 @@ type Seal interface {
 	SetRecoveryKey(context.Context, []byte) error
 	VerifyRecoveryKey(context.Context, []byte) error // SealAccess
 	GetAccess() seal.Access                          // SealAccess
-	GetShamirWrapper() (*aeadwrapper.ShamirWrapper, error)
 }
 
 type defaultSeal struct {
@@ -126,8 +122,8 @@ func (d *defaultSeal) Finalize(ctx context.Context) error {
 	return nil
 }
 
-func (d *defaultSeal) BarrierType() wrapping.WrapperType {
-	return wrapping.WrapperTypeShamir
+func (d *defaultSeal) BarrierType() seal.SealType {
+	return seal.SealTypeShamir
 }
 
 func (d *defaultSeal) StoredKeysSupported() seal.StoredKeysSupport {
@@ -291,16 +287,6 @@ func (d *defaultSeal) SetRecoveryKey(ctx context.Context, key []byte) error {
 	return fmt.Errorf("recovery not supported")
 }
 
-func (d *defaultSeal) GetShamirWrapper() (*aeadwrapper.ShamirWrapper, error) {
-	// defaultSeal is meant to be for Shamir seals, so it should always have a ShamirWrapper.
-	// Nonetheless, NewDefaultSeal does not check, so let's play it safe.
-	w, ok := d.GetAccess().GetWrapper().(*aeadwrapper.ShamirWrapper)
-	if !ok {
-		return nil, fmt.Errorf("expected defaultSeal to have a ShamirWrapper, but found a %T instead", d.GetAccess().GetWrapper())
-	}
-	return w, nil
-}
-
 // SealConfig is used to describe the seal configuration
 type SealConfig struct {
 	// The type, for sanity checking
@@ -350,6 +336,9 @@ type SealConfig struct {
 
 	// Stores the progress of the verification operation (key shares)
 	VerificationProgress [][]byte `json:"-"`
+
+	// Name is the name provided in the seal configuration to identify the seal
+	Name string `json:"name" mapstructure:"name"`
 }
 
 // Validate is used to sanity check the seal configuration
@@ -403,6 +392,7 @@ func (s *SealConfig) Clone() *SealConfig {
 		StoredShares:         s.StoredShares,
 		VerificationRequired: s.VerificationRequired,
 		VerificationNonce:    s.VerificationNonce,
+		Name:                 s.Name,
 	}
 	if len(s.PGPKeys) > 0 {
 		ret.PGPKeys = make([]string, len(s.PGPKeys))

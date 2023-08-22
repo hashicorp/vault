@@ -14,10 +14,7 @@ import (
 	"sync/atomic"
 	"time"
 
-	aeadwrapper "github.com/hashicorp/go-kms-wrapping/wrappers/aead/v2"
-
 	log "github.com/hashicorp/go-hclog"
-	wrapping "github.com/hashicorp/go-kms-wrapping/v2"
 	"github.com/hashicorp/vault/sdk/physical"
 	"github.com/hashicorp/vault/vault/seal"
 )
@@ -25,7 +22,7 @@ import (
 // barrierTypeUpgradeCheck checks for backwards compat on barrier type, not
 // applicable in the OSS side
 var (
-	barrierTypeUpgradeCheck     = func(_ wrapping.WrapperType, _ *SealConfig) {}
+	barrierTypeUpgradeCheck     = func(_ seal.SealType, _ *SealConfig) {}
 	autoSealUnavailableDuration = []string{"seal", "unreachable", "time"}
 	// vars for unit testings
 	sealHealthTestIntervalNominal   = 10 * time.Minute
@@ -39,7 +36,7 @@ var (
 type autoSeal struct {
 	seal.Access
 
-	barrierType    wrapping.WrapperType
+	barrierType    seal.SealType
 	barrierConfig  atomic.Value
 	recoveryConfig atomic.Value
 	core           *Core
@@ -62,7 +59,7 @@ func NewAutoSeal(lowLevel seal.Access) (*autoSeal, error) {
 	// Having the wrapper type in a field is just a convenience since Seal.BarrierType()
 	// does not return an error.
 	var err error
-	ret.barrierType, err = ret.Type(context.Background())
+	ret.barrierType, err = ret.SealType(context.Background())
 	if err != nil {
 		return nil, err
 	}
@@ -100,12 +97,8 @@ func (d *autoSeal) Finalize(ctx context.Context) error {
 	return d.Access.Finalize(ctx)
 }
 
-func (d *autoSeal) BarrierType() wrapping.WrapperType {
+func (d *autoSeal) BarrierType() seal.SealType {
 	return d.barrierType
-}
-
-func (d *autoSeal) GetShamirWrapper() (*aeadwrapper.ShamirWrapper, error) {
-	return nil, fmt.Errorf("autoSeal does not use a ShamirWrapper")
 }
 
 func (d *autoSeal) StoredKeysSupported() seal.StoredKeysSupport {
@@ -173,10 +166,10 @@ func (d *autoSeal) UpgradeKeys(ctx context.Context) error {
 		return err
 	}
 
-	if err := d.upgradeRecoveryKey(ctx); err != nil {
+	if err := d.upgradeRecoveryKey(ctx); err != nil { // re-encrypts the recovery key
 		return err
 	}
-	if err := d.upgradeStoredKeys(ctx); err != nil {
+	if err := d.upgradeStoredKeys(ctx); err != nil { // re-encrypts the root key
 		return err
 	}
 	return nil

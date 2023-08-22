@@ -952,9 +952,12 @@ func (c *Core) reloadRootKey(ctx context.Context) error {
 
 func (c *Core) reloadShamirKey(ctx context.Context) error {
 	_ = c.seal.SetBarrierConfig(ctx, nil)
-	if cfg, _ := c.seal.BarrierConfig(ctx); cfg == nil {
+
+	cfg, _ := c.seal.BarrierConfig(ctx)
+	if cfg == nil {
 		return nil
 	}
+
 	var shamirKey []byte
 	switch c.seal.StoredKeysSupported() {
 	case seal.StoredKeysSupportedGeneric:
@@ -975,11 +978,7 @@ func (c *Core) reloadShamirKey(ctx context.Context) error {
 		}
 		shamirKey = keyring.rootKey
 	}
-	shamirWrapper, err := c.seal.GetShamirWrapper()
-	if err != nil {
-		return err
-	}
-	return shamirWrapper.SetAesGcmKeyBytes(shamirKey)
+	return c.seal.GetAccess().SetShamirSealKey(shamirKey)
 }
 
 func (c *Core) performKeyUpgrades(ctx context.Context) error {

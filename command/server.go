@@ -559,7 +559,7 @@ func (c *ServerCommand) runRecoveryMode() int {
 	}
 
 	configSeal := config.Seals[0]
-	sealType := wrapping.WrapperTypeShamir.String()
+	sealType := vaultseal.SealTypeShamir.String()
 	if !configSeal.Disabled && os.Getenv("VAULT_SEAL_TYPE") != "" {
 		sealType = os.Getenv("VAULT_SEAL_TYPE")
 		configSeal.Type = sealType
@@ -571,7 +571,7 @@ func (c *ServerCommand) runRecoveryMode() int {
 	info["Seal Type"] = sealType
 
 	var seal vault.Seal
-	defaultSeal := vault.NewDefaultSeal(vaultseal.NewAccess(aeadwrapper.NewShamirWrapper()))
+	defaultSealWrapper := aeadwrapper.NewShamirWrapper()
 	sealLogger := c.logger.ResetNamed(fmt.Sprintf("seal.%s", sealType))
 	wrapper, sealConfigError = configutil.ConfigureWrapper(configSeal, &infoKeys, &info, sealLogger)
 	if sealConfigError != nil {
@@ -581,10 +581,23 @@ func (c *ServerCommand) runRecoveryMode() int {
 			return 1
 		}
 	}
+
 	if wrapper == nil {
-		seal = defaultSeal
+		seal = vault.NewDefaultSeal(vaultseal.NewAccess([]vaultseal.SealInfo{
+			{
+				Wrapper:  defaultSealWrapper,
+				Priority: 1,
+				Name:     configSeal.Name,
+			},
+		}))
 	} else {
-		seal, err = vault.NewAutoSeal(vaultseal.NewAccess(wrapper))
+		seal, err = vault.NewAutoSeal(vaultseal.NewAccess([]vaultseal.SealInfo{
+			{
+				Wrapper:  wrapper,
+				Priority: 1,
+				Name:     configSeal.Name,
+			},
+		}))
 		if err != nil {
 			c.UI.Error(fmt.Sprintf("error creating auto seal: %v", err))
 		}
@@ -1237,27 +1250,29 @@ func (c *ServerCommand) Run(args []string) int {
 		infoKeys = append(infoKeys, expKey)
 	}
 
-	barrierSeal, barrierWrapper, unwrapSeal, seals, sealConfigError, err := setSeal(c, config, infoKeys, info)
+	barrierSeal, barrierWrapper, unwrapSeal, _, sealConfigError, err := setSeal(c, config, infoKeys, info)
 	// Check error here
 	if err != nil {
 		c.UI.Error(err.Error())
 		return 1
 	}
 
-	for _, seal := range seals {
-		// There is always one nil seal. We need to skip it so we don't start an empty Finalize-Seal-Shamir
-		// section.
-		if seal == nil {
-			continue
-		}
-		seal := seal // capture range variable
-		// Ensure that the seal finalizer is called, even if using verify-only
+	if barrierSeal != nil {
 		defer func(seal *vault.Seal) {
 			err = (*seal).Finalize(context.Background())
 			if err != nil {
 				c.UI.Error(fmt.Sprintf("Error finalizing seals: %v", err))
 			}
-		}(&seal)
+		}(&barrierSeal)
+	}
+
+	if unwrapSeal != nil {
+		defer func(seal *vault.Seal) {
+			err = (*seal).Finalize(context.Background())
+			if err != nil {
+				c.UI.Error(fmt.Sprintf("Error finalizing seals: %v", err))
+			}
+		}(&unwrapSeal)
 	}
 
 	if barrierSeal == nil {
@@ -1899,6 +1914,7 @@ func (c *ServerCommand) enableDev(core *vault.Core, coreConfig *vault.CoreConfig
 	barrierConfig := &vault.SealConfig{
 		SecretShares:    1,
 		SecretThreshold: 1,
+		Name:            "shamir",
 	}
 
 	if core.SealAccess().RecoveryKeySupported() {
@@ -2536,27 +2552,47 @@ func setSeal(c *ServerCommand, config *server.Config, infoKeys []string, info ma
 	// Handle the case where no seal is provided
 	switch len(config.Seals) {
 	case 0:
-		config.Seals = append(config.Seals, &configutil.KMS{Type: wrapping.WrapperTypeShamir.String()})
+		config.Seals = append(config.Seals, &configutil.KMS{
+			Type:     vaultseal.SealTypeShamir.String(),
+			Priority: 1,
+			Name:     "shamir",
+		})
 	case 1:
 		// If there's only one seal and it's disabled assume they want to
 		// migrate to a shamir seal and simply didn't provide it
 		if config.Seals[0].Disabled {
-			config.Seals = append(config.Seals, &configutil.KMS{Type: wrapping.WrapperTypeShamir.String()})
+			config.Seals = append(config.Seals, &configutil.KMS{
+				Type:     vaultseal.SealTypeShamir.String(),
+				Priority: 1,
+				Name:     "shamir",
+			})
 		}
 	}
-	var createdSeals []vault.Seal = make([]vault.Seal, len(config.Seals))
+
+	var createdSeals []vault.Seal = make([]vault.Seal, 0)
+	enabledSeals := make([]vaultseal.SealInfo, 0)
+	disabledSeals := make([]vaultseal.SealInfo, 0)
+
+	var enabledSealType string
+	var disabledSealType string
+
 	for _, configSeal := range config.Seals {
-		sealType := wrapping.WrapperTypeShamir.String()
-		if !configSeal.Disabled && os.Getenv("VAULT_SEAL_TYPE") != "" {
-			sealType = os.Getenv("VAULT_SEAL_TYPE")
+		sealType := vaultseal.SealTypeShamir.String()
+
+		sealTypeEnvVarName := "VAULT_SEAL_TYPE"
+		if configSeal.Priority > 1 {
+			sealTypeEnvVarName = sealTypeEnvVarName + "_" + configSeal.Name
+		}
+
+		if !configSeal.Disabled && os.Getenv(sealTypeEnvVarName) != "" {
+			sealType = os.Getenv(sealTypeEnvVarName)
 			configSeal.Type = sealType
 		} else {
 			sealType = configSeal.Type
 		}
 
-		var seal vault.Seal
 		sealLogger := c.logger.ResetNamed(fmt.Sprintf("seal.%s", sealType))
-		defaultSeal := vault.NewDefaultSeal(vaultseal.NewAccess(aeadwrapper.NewShamirWrapper()))
+		defaultSealWrapper := aeadwrapper.NewShamirWrapper()
 		var sealInfoKeys []string
 		sealInfoMap := map[string]string{}
 		wrapper, sealConfigError = configutil.ConfigureWrapper(configSeal, &sealInfoKeys, &sealInfoMap, sealLogger)
@@ -2567,28 +2603,58 @@ func setSeal(c *ServerCommand, config *server.Config, infoKeys []string, info ma
 			}
 		}
 		if wrapper == nil {
-			seal = defaultSeal
-		} else {
-			var err error
-			seal, err = vault.NewAutoSeal(vaultseal.NewAccess(wrapper))
-			if err != nil {
-				return nil, nil, nil, nil, nil, err
-			}
+			wrapper = defaultSealWrapper
 		}
+
+		sealInfo := vaultseal.SealInfo{
+			Wrapper:  wrapper,
+			Priority: configSeal.Priority,
+			Name:     configSeal.Name,
+		}
+
 		infoPrefix := ""
 		if configSeal.Disabled {
-			unwrapSeal = seal
 			infoPrefix = "Old "
+
+			disabledSeals = append(disabledSeals, sealInfo)
+
+			disabledSealType = configSeal.Type
 		} else {
-			barrierSeal = seal
-			barrierWrapper = wrapper
+			enabledSeals = append(enabledSeals, sealInfo)
+
+			if configSeal.Priority == 1 {
+				barrierWrapper = wrapper
+			}
+
+			enabledSealType = configSeal.Type
 		}
+
 		for _, k := range sealInfoKeys {
 			infoKeys = append(infoKeys, infoPrefix+k)
 			info[infoPrefix+k] = sealInfoMap[k]
 		}
-		createdSeals = append(createdSeals, seal)
 	}
+
+	var err error
+	if enabledSealType == "shamir" {
+		barrierSeal = vault.NewDefaultSeal(vaultseal.NewAccess(enabledSeals))
+	} else {
+		barrierSeal, err = vault.NewAutoSeal(vaultseal.NewAccess(enabledSeals))
+		if err != nil {
+			return nil, nil, nil, nil, nil, err
+		}
+	}
+
+	if disabledSealType == "shamir" {
+		unwrapSeal = vault.NewDefaultSeal(vaultseal.NewAccess(disabledSeals))
+	} else if disabledSealType != "" {
+		unwrapSeal, err = vault.NewAutoSeal(vaultseal.NewAccess(disabledSeals))
+		if err != nil {
+			return nil, nil, nil, nil, nil, err
+		}
+	}
+	createdSeals = append(createdSeals, barrierSeal)
+
 	return barrierSeal, barrierWrapper, unwrapSeal, createdSeals, sealConfigError, nil
 }
 

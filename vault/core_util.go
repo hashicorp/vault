@@ -195,3 +195,103 @@ func (c *Core) MissingRequiredState(raw []string, perfStandby bool) bool {
 func DiagnoseCheckLicense(ctx context.Context, vaultCore *Core, coreConfig CoreConfig, generate bool) (bool, []string) {
 	return false, nil
 }
+
+func (c *Core) initializeBarrier(ctx context.Context, barrierConfig *SealConfig) (*InitResult, error) {
+	rootKey, rootKeyShares, err := c.generateShares(barrierConfig)
+	if err != nil {
+		c.logger.Error("error generating shares", "error", err)
+		return nil, err
+	}
+
+	var sealKey []byte
+	var sealKeyShares [][]byte
+
+	if barrierConfig.StoredShares == 1 && c.seal.BarrierType() == wrapping.WrapperTypeShamir {
+		sealKey, sealKeyShares, err = c.generateShares(barrierConfig)
+		if err != nil {
+			c.logger.Error("error generating shares", "error", err)
+			return nil, err
+		}
+	}
+
+	// Initialize the barrier
+	if err := c.barrier.Initialize(ctx, rootKey, sealKey, c.secureRandomReader); err != nil {
+		c.logger.Error("failed to initialize barrier", "error", err)
+		return nil, fmt.Errorf("failed to initialize barrier: %w", err)
+	}
+	if c.logger.IsInfo() {
+		c.logger.Info("security barrier initialized", "stored", barrierConfig.StoredShares, "shares", barrierConfig.SecretShares, "threshold", barrierConfig.SecretThreshold)
+	}
+
+	// Unseal the barrier
+	if err := c.barrier.Unseal(ctx, rootKey); err != nil {
+		c.logger.Error("failed to unseal barrier", "error", err)
+		return nil, fmt.Errorf("failed to unseal barrier: %w", err)
+	}
+
+	err := c.seal.SetBarrierConfig(ctx, barrierConfig)
+	if err != nil {
+		c.logger.Error("failed to save barrier configuration", "error", err)
+		return fmt.Errorf("barrier configuration saving failed: %w", err)
+	}
+
+	results := &InitResult{
+		SecretShares: [][]byte{},
+	}
+
+	// If we are storing shares, pop them out of the returned results and push
+	// them through the seal
+	switch c.seal.StoredKeysSupported() {
+	case seal.StoredKeysSupportedShamirRoot:
+		keysToStore := [][]byte{barrierKey}
+		if err := c.seal.GetAccess().SetShamirSealKey(sealKey); err != nil {
+			c.logger.Error("failed to set seal key", "error", err)
+			return nil, fmt.Errorf("failed to set seal key: %w", err)
+		}
+		if err := c.seal.SetStoredKeys(ctx, keysToStore); err != nil {
+			c.logger.Error("failed to store keys", "error", err)
+			return nil, fmt.Errorf("failed to store keys: %w", err)
+		}
+		results.SecretShares = sealKeyShares
+	case seal.StoredKeysSupportedGeneric:
+		keysToStore := [][]byte{barrierKey}
+		if err := c.seal.SetStoredKeys(ctx, keysToStore); err != nil {
+			c.logger.Error("failed to store keys", "error", err)
+			return nil, fmt.Errorf("failed to store keys: %w", err)
+		}
+	default:
+		// We don't support initializing an old-style Shamir seal anymore, so
+		// this case is only reachable by tests.
+		results.SecretShares = barrierKeyShares
+	}
+
+	results := &InitResult{}
+
+	// Save the configuration regardless, but only generate a key if it's not
+	// disabled. When using recovery keys they are stored in the barrier, so
+	// this must happen post-unseal.
+	if c.seal.RecoveryKeySupported() {
+		err = c.seal.SetRecoveryConfig(ctx, recoveryConfig)
+		if err != nil {
+			c.logger.Error("failed to save recovery configuration", "error", err)
+			return nil, fmt.Errorf("recovery configuration saving failed: %w", err)
+		}
+
+		if recoveryConfig.SecretShares > 0 {
+			recoveryKey, recoveryUnsealKeys, err := c.generateShares(recoveryConfig)
+			if err != nil {
+				c.logger.Error("failed to generate recovery shares", "error", err)
+				return nil, err
+			}
+
+			err = c.seal.SetRecoveryKey(ctx, recoveryKey)
+			if err != nil {
+				return nil, err
+			}
+
+			results.RecoveryShares[recoveryConfig.Name] = recoveryUnsealKeys
+		}
+	}
+
+	return results, nil
+}

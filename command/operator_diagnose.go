@@ -16,8 +16,6 @@ import (
 
 	"golang.org/x/term"
 
-	wrapping "github.com/hashicorp/go-kms-wrapping/v2"
-
 	"github.com/hashicorp/consul/api"
 	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-secure-stdlib/reloadutil"
@@ -35,6 +33,7 @@ import (
 	"github.com/hashicorp/vault/vault"
 	"github.com/hashicorp/vault/vault/diagnose"
 	"github.com/hashicorp/vault/vault/hcp_link"
+	"github.com/hashicorp/vault/vault/seal"
 	"github.com/hashicorp/vault/version"
 	"github.com/mitchellh/cli"
 	"github.com/posener/complete"
@@ -675,7 +674,7 @@ SEALFAIL:
 		if barrierSeal == nil {
 			return fmt.Errorf("Diagnose could not create a barrier seal object.")
 		}
-		if barrierSeal.BarrierType() == wrapping.WrapperTypeShamir {
+		if barrierSeal.BarrierType() == seal.SealTypeShamir {
 			diagnose.Skipped(ctx, "Skipping barrier encryption test. Only supported for auto-unseal.")
 			return nil
 		}

@@ -24,10 +24,14 @@ func NewTestSeal(opts *TestSealOpts) (Access, *ToggleableWrapper) {
 	}
 
 	w := &ToggleableWrapper{Wrapper: wrapping.NewTestWrapper(opts.Secret)}
-	if opts.Name != "" {
-		w.wrapperType = &opts.Name
-	}
-	return NewAccess(w), w
+
+	sealAccess := NewAccess([]SealInfo{{
+		Wrapper:  w,
+		Priority: 1,
+		Name:     opts.Name.String(),
+	}})
+
+	return sealAccess, w
 }
 
 func NewToggleableTestSeal(opts *TestSealOpts) (Access, func(error)) {
@@ -36,7 +40,14 @@ func NewToggleableTestSeal(opts *TestSealOpts) (Access, func(error)) {
 	}
 
 	w := &ToggleableWrapper{Wrapper: wrapping.NewTestWrapper(opts.Secret)}
-	return NewAccess(w), w.SetError
+	sealAccess := NewAccess([]SealInfo{
+		{
+			Wrapper:  w,
+			Priority: 1,
+			Name:     "shamir",
+		},
+	})
+	return sealAccess, w.SetError
 }
 
 type ToggleableWrapper struct {

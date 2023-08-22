@@ -1103,7 +1103,13 @@ func CreateCore(conf *CoreConfig) (*Core, error) {
 		wrapper := aeadwrapper.NewShamirWrapper()
 		wrapper.SetConfig(context.Background(), awskms.WithLogger(c.logger.Named("shamir")))
 
-		c.seal = NewDefaultSeal(vaultseal.NewAccess(wrapper))
+		c.seal = NewDefaultSeal(vaultseal.NewAccess([]vaultseal.SealInfo{
+			{
+				Wrapper:  wrapper,
+				Priority: 1,
+				Name:     "shamir",
+			},
+		}))
 	}
 	c.seal.SetCore(c)
 	return c, nil
@@ -1528,13 +1534,10 @@ func (c *Core) unsealFragment(key []byte, migrate bool) error {
 func (c *Core) unsealWithRaft(combinedKey []byte) error {
 	ctx := context.Background()
 
-	if c.seal.BarrierType() == wrapping.WrapperTypeShamir {
+	if c.seal.BarrierType() == vaultseal.SealTypeShamir {
 		// If this is a legacy shamir seal this serves no purpose but it
 		// doesn't hurt.
-		shamirWrapper, err := c.seal.GetShamirWrapper()
-		if err == nil {
-			err = shamirWrapper.SetAesGcmKeyBytes(combinedKey)
-		}
+		err := c.seal.GetAccess().SetShamirSealKey(combinedKey)
 		if err != nil {
 			return err
 		}
@@ -1785,11 +1788,7 @@ func (c *Core) migrateSeal(ctx context.Context) error {
 		}
 
 		// We have recovery keys; we're going to use them as the new shamir KeK.
-		shamirWrapper, err := c.seal.GetShamirWrapper()
-		if err != nil {
-			return err
-		}
-		err = shamirWrapper.SetAesGcmKeyBytes(recoveryKey)
+		err = c.seal.GetAccess().SetShamirSealKey(recoveryKey)
 		if err != nil {
 			return fmt.Errorf("failed to set master key in seal: %w", err)
 		}
@@ -2724,7 +2723,7 @@ func (c *Core) PhysicalSealConfigs(ctx context.Context) (*SealConfig, *SealConfi
 	// In older versions of vault the default seal would not store a type. This
 	// is here to offer backwards compatibility for older seal configs.
 	if barrierConf.Type == "" {
-		barrierConf.Type = wrapping.WrapperTypeShamir.String()
+		barrierConf.Type = vaultseal.SealTypeShamir.String()
 	}
 
 	var recoveryConf *SealConfig
@@ -2744,7 +2743,7 @@ func (c *Core) PhysicalSealConfigs(ctx context.Context) (*SealConfig, *SealConfi
 		// In older versions of vault the default seal would not store a type. This
 		// is here to offer backwards compatibility for older seal configs.
 		if recoveryConf.Type == "" {
-			recoveryConf.Type = wrapping.WrapperTypeShamir.String()
+			recoveryConf.Type = vaultseal.SealTypeShamir.String()
 		}
 	}
 
@@ -2792,16 +2791,23 @@ func (c *Core) adjustForSealMigration(unwrapSeal Seal) error {
 			// We have the same barrier type and the unwrap seal is nil so we're not
 			// migrating from same to same, IOW we assume it's not a migration.
 			return nil
-		case c.seal.BarrierType() == wrapping.WrapperTypeShamir:
+		case c.seal.BarrierType() == vaultseal.SealTypeShamir:
 			// The stored barrier config is not shamir, there is no disabled seal
 			// in config, and either no configured seal (which equates to Shamir)
 			// or an explicitly configured Shamir seal.
 			return fmt.Errorf("cannot seal migrate from %q to Shamir, no disabled seal in configuration",
 				existBarrierSealConfig.Type)
-		case existBarrierSealConfig.Type == wrapping.WrapperTypeShamir.String():
+		case existBarrierSealConfig.Type == vaultseal.SealTypeShamir.String():
 			// The configured seal is not Shamir, the stored seal config is Shamir.
 			// This is a migration away from Shamir.
-			unwrapSeal = NewDefaultSeal(vaultseal.NewAccess(aeadwrapper.NewShamirWrapper()))
+			sealAccess := vaultseal.NewAccess([]vaultseal.SealInfo{
+				{
+					Wrapper:  aeadwrapper.NewShamirWrapper(),
+					Priority: 1,
+					Name:     "shamir",
+				},
+			})
+			unwrapSeal = NewDefaultSeal(sealAccess)
 		default:
 			// We know at this point that there is a configured non-Shamir seal,
 			// that it does not match the stored non-Shamir seal config, and that
@@ -2813,7 +2819,7 @@ func (c *Core) adjustForSealMigration(unwrapSeal Seal) error {
 		// If we're not coming from Shamir we expect the previous seal to be
 		// in the config and disabled.
 
-		if unwrapSeal.BarrierType() == wrapping.WrapperTypeShamir {
+		if unwrapSeal.BarrierType() == vaultseal.SealTypeShamir {
 			return errors.New("Shamir seals cannot be set disabled (they should simply not be set)")
 		}
 	}
@@ -2823,7 +2829,7 @@ func (c *Core) adjustForSealMigration(unwrapSeal Seal) error {
 	unwrapSeal.SetCore(c)
 
 	// No stored recovery seal config found, what about the legacy recovery config?
-	if existBarrierSealConfig.Type != wrapping.WrapperTypeShamir.String() && existRecoverySealConfig == nil {
+	if existBarrierSealConfig.Type != vaultseal.SealTypeShamir.String() && existRecoverySealConfig == nil {
 		entry, err := c.physical.Get(ctx, recoverySealConfigPath)
 		if err != nil {
 			return fmt.Errorf("failed to read %q recovery seal configuration: %w", existBarrierSealConfig.Type, err)
@@ -2924,14 +2930,14 @@ func (c *Core) adjustSealConfigDuringMigration(existBarrierSealConfig, existReco
 }
 
 func (c *Core) unsealKeyToRootKeyPostUnseal(ctx context.Context, combinedKey []byte) ([]byte, error) {
-	return c.unsealKeyToMasterKey(ctx, c.seal, combinedKey, true, false)
+	return c.unsealKeyToRootKey(ctx, c.seal, combinedKey, true, false)
 }
 
 func (c *Core) unsealKeyToMasterKeyPreUnseal(ctx context.Context, seal Seal, combinedKey []byte) ([]byte, error) {
-	return c.unsealKeyToMasterKey(ctx, seal, combinedKey, false, true)
+	return c.unsealKeyToRootKey(ctx, seal, combinedKey, false, true)
 }
 
-// unsealKeyToMasterKey takes a key provided by the user, either a recovery key
+// unsealKeyToRootKey takes a key provided by the user, either a recovery key
 // if using an autoseal or an unseal key with Shamir.  It returns a nil error
 // if the key is valid and an error otherwise. It also returns the master key
 // that can be used to unseal the barrier.
@@ -2942,7 +2948,7 @@ func (c *Core) unsealKeyToMasterKeyPreUnseal(ctx context.Context, seal Seal, com
 // valid.
 // If allowMissing is true, a failure to find the master key in storage results
 // in a nil error and a nil master key being returned.
-func (c *Core) unsealKeyToMasterKey(ctx context.Context, seal Seal, combinedKey []byte, useTestSeal bool, allowMissing bool) ([]byte, error) {
+func (c *Core) unsealKeyToRootKey(ctx context.Context, seal Seal, combinedKey []byte, useTestSeal bool, allowMissing bool) ([]byte, error) {
 	switch seal.StoredKeysSupported() {
 	case vaultseal.StoredKeysSupportedGeneric:
 		if err := seal.VerifyRecoveryKey(ctx, combinedKey); err != nil {
@@ -2964,7 +2970,14 @@ func (c *Core) unsealKeyToMasterKey(ctx context.Context, seal Seal, combinedKey 
 
 	case vaultseal.StoredKeysSupportedShamirRoot:
 		if useTestSeal {
-			testseal := NewDefaultSeal(vaultseal.NewAccess(aeadwrapper.NewShamirWrapper()))
+			sealAccess := vaultseal.NewAccess([]vaultseal.SealInfo{
+				{
+					Wrapper:  aeadwrapper.NewShamirWrapper(),
+					Priority: 1,
+					Name:     "shamir",
+				},
+			})
+			testseal := NewDefaultSeal(sealAccess)
 			testseal.SetCore(c)
 			cfg, err := seal.BarrierConfig(ctx)
 			if err != nil {
@@ -2974,11 +2987,7 @@ func (c *Core) unsealKeyToMasterKey(ctx context.Context, seal Seal, combinedKey 
 			seal = testseal
 		}
 
-		shamirWrapper, err := seal.GetShamirWrapper()
-		if err != nil {
-			return nil, err
-		}
-		err = shamirWrapper.SetAesGcmKeyBytes(combinedKey)
+		err := seal.GetAccess().SetShamirSealKey(combinedKey)
 		if err != nil {
 			return nil, &ErrInvalidKey{fmt.Sprintf("failed to setup unseal key: %v", err)}
 		}

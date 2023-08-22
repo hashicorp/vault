@@ -2,10 +2,11 @@ package vault
 
 import (
 	"fmt"
+	"testing"
+
 	"github.com/golang/protobuf/proto"
 	wrapping "github.com/hashicorp/go-kms-wrapping/v2"
 	"github.com/stretchr/testify/assert"
-	"testing"
 )
 
 func TestSealWrappedValue_marshal_unmarshal(t *testing.T) {
