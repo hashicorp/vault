@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/hashicorp/vault/vault/seal"
+
 	"github.com/golang/protobuf/proto"
 	wrapping "github.com/hashicorp/go-kms-wrapping/v2"
 	"github.com/stretchr/testify/assert"
@@ -25,7 +27,7 @@ func TestSealWrappedValue_marshal_unmarshal(t *testing.T) {
 		{
 			name: "a BlobInfo generation 0",
 			value: &SealWrappedValue{
-				value: wrapping.MultiWrapValue{
+				value: seal.MultiWrapValue{
 					Generation: 0,
 					Slots:      oneBlobInfo,
 				},
@@ -35,7 +37,7 @@ func TestSealWrappedValue_marshal_unmarshal(t *testing.T) {
 		{
 			name: "two BlobInfos generation 7",
 			value: &SealWrappedValue{
-				value: wrapping.MultiWrapValue{
+				value: seal.MultiWrapValue{
 					Generation: 7,
 					Slots:      twoBlobInfos,
 				},
@@ -45,7 +47,7 @@ func TestSealWrappedValue_marshal_unmarshal(t *testing.T) {
 		{
 			name: "two BlobInfos generation 42",
 			value: &SealWrappedValue{
-				value: wrapping.MultiWrapValue{
+				value: seal.MultiWrapValue{
 					Generation: 42,
 					Slots:      twoBlobInfos,
 				},
@@ -73,7 +75,7 @@ func TestSealWrappedValue_unmarshalMultiWrapError_error_conditions(t *testing.T)
 	assert.EqualError(t, unmarshal([]byte{1, 2, 3}), "error unmarshalling SealWrappedValue, not enough bytes")
 
 	swv := &SealWrappedValue{
-		value: wrapping.MultiWrapValue{
+		value: seal.MultiWrapValue{
 			Generation: 0,
 			Slots: []*wrapping.BlobInfo{
 				{

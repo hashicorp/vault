@@ -8,7 +8,7 @@ import (
 
 func Test_keyIdSet(t *testing.T) {
 	type args struct {
-		value *wrapping.MultiWrapValue
+		value *MultiWrapValue
 	}
 	tests := []struct {
 		name      string
@@ -58,7 +58,7 @@ func Test_keyIdSet(t *testing.T) {
 			s.setIds(tt.idsToSet)
 		}
 		useSet := func(s *keyIdSet) {
-			mwv := &wrapping.MultiWrapValue{Generation: 6}
+			mwv := &MultiWrapValue{Generation: 6}
 			for _, id := range tt.idsToSet {
 				mwv.Slots = append(mwv.Slots, &wrapping.BlobInfo{
 					KeyInfo: &wrapping.KeyInfo{
@@ -74,7 +74,7 @@ func Test_keyIdSet(t *testing.T) {
 				s := &keyIdSet{}
 				setter(s)
 
-				mwv := &wrapping.MultiWrapValue{Generation: 6}
+				mwv := &MultiWrapValue{Generation: 6}
 				for _, id := range tt.idsToTest {
 					mwv.Slots = append(mwv.Slots, &wrapping.BlobInfo{
 						KeyInfo: &wrapping.KeyInfo{

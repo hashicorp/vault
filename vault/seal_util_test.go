@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/hashicorp/vault/vault/seal"
+
 	"github.com/golang/protobuf/proto"
 	wrapping "github.com/hashicorp/go-kms-wrapping/v2"
 	"github.com/stretchr/testify/assert"
@@ -42,7 +44,7 @@ func TestMarshalSealWrappedValue(t *testing.T) {
 		{
 			name: "a BlobInfo generation 0",
 			value: &SealWrappedValue{
-				value: wrapping.MultiWrapValue{
+				value: seal.MultiWrapValue{
 					Generation: 0,
 					Slots:      oneBlobInfo,
 				},
@@ -53,7 +55,7 @@ func TestMarshalSealWrappedValue(t *testing.T) {
 		{
 			name: "two BlobInfos generation 0",
 			value: &SealWrappedValue{
-				value: wrapping.MultiWrapValue{
+				value: seal.MultiWrapValue{
 					Generation: 0,
 					Slots:      twoBlobInfos,
 				},
@@ -64,7 +66,7 @@ func TestMarshalSealWrappedValue(t *testing.T) {
 		{
 			name: "two BlobInfos generation 42",
 			value: &SealWrappedValue{
-				value: wrapping.MultiWrapValue{
+				value: seal.MultiWrapValue{
 					Generation: 42,
 					Slots:      twoBlobInfos,
 				},

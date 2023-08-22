@@ -1281,7 +1281,7 @@ func (c *Core) joinRaftSendAnswer(ctx context.Context, sealAccess seal.Access, r
 		return errors.New("raft is already initialized")
 	}
 
-	multiWrapValue := &wrapping.MultiWrapValue{
+	multiWrapValue := &seal.MultiWrapValue{
 		Generation: sealAccess.Generation(),
 		Slots:      []*wrapping.BlobInfo{raftInfo.challenge},
 	}

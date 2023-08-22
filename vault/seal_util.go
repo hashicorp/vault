@@ -66,7 +66,7 @@ func SealWrapValue(ctx context.Context, access seal.Access, encrypt bool, entryV
 		})
 	}
 
-	return NewSealWrappedValue(&wrapping.MultiWrapValue{
+	return NewSealWrappedValue(&seal.MultiWrapValue{
 		Generation: multiWrapValue.Generation,
 		Slots:      ret,
 	}), nil
@@ -162,7 +162,7 @@ func UnsealWrapStoredBarrierKeys(ctx context.Context, access seal.Access, pe *ph
 	return decodeBarrierKeys(ctx, access, &wrappedEntryValue.value)
 }
 
-func decodeBarrierKeys(ctx context.Context, access seal.Access, multiWrapValue *wrapping.MultiWrapValue) ([][]byte, error) {
+func decodeBarrierKeys(ctx context.Context, access seal.Access, multiWrapValue *seal.MultiWrapValue) ([][]byte, error) {
 	pt, _, err := access.Decrypt(ctx, multiWrapValue, nil)
 	if err != nil {
 		if strings.Contains(err.Error(), "message authentication failed") {

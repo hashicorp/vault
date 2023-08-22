@@ -6,6 +6,8 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/hashicorp/vault/vault/seal"
+
 	"github.com/golang/protobuf/proto"
 	wrapping "github.com/hashicorp/go-kms-wrapping/v2"
 )
@@ -16,13 +18,13 @@ import (
 const transitoryGeneration = uint64(0)
 
 type SealWrappedValue struct {
-	value wrapping.MultiWrapValue
+	value seal.MultiWrapValue
 }
 
 // NewSealWrappedValue creates a new seal wrapped value. Note that this
 // method will change to accept a slice of BlobInfos when multi-seal wrapping
 // is added.
-func NewSealWrappedValue(multiWrapValue *wrapping.MultiWrapValue) *SealWrappedValue {
+func NewSealWrappedValue(multiWrapValue *seal.MultiWrapValue) *SealWrappedValue {
 	if len(multiWrapValue.Slots) == 0 {
 		panic("cannot create a SealWrappedValue without a BlobInfo")
 	}
@@ -32,7 +34,7 @@ func NewSealWrappedValue(multiWrapValue *wrapping.MultiWrapValue) *SealWrappedVa
 
 func NewPlaintextSealWrappedValue(generation uint64, plaintext []byte) *SealWrappedValue {
 	// TODO(victorr): see if we can use plaintext instead of blobInfo.Wrapped = false
-	return NewSealWrappedValue(&wrapping.MultiWrapValue{
+	return NewSealWrappedValue(&seal.MultiWrapValue{
 		Generation: generation,
 		Slots: []*wrapping.BlobInfo{
 			{
@@ -44,7 +46,7 @@ func NewPlaintextSealWrappedValue(generation uint64, plaintext []byte) *SealWrap
 }
 
 func newTransitorySealWrappedValue(blobInfo *wrapping.BlobInfo) *SealWrappedValue {
-	return NewSealWrappedValue(&wrapping.MultiWrapValue{
+	return NewSealWrappedValue(&seal.MultiWrapValue{
 		Generation: transitoryGeneration,
 		Slots:      []*wrapping.BlobInfo{blobInfo},
 	})
@@ -156,6 +158,6 @@ func (swv *SealWrappedValue) unmarshal(value []byte) error {
 	return nil
 }
 
-func (swv *SealWrappedValue) getValue() *wrapping.MultiWrapValue {
+func (swv *SealWrappedValue) getValue() *seal.MultiWrapValue {
 	return &swv.value
 }

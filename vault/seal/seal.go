@@ -79,20 +79,20 @@ type Access interface {
 	// the underlying wrapper. Supported options: WithAad.
 	// Returns a MultiWrapValue as long as at least one seal Access wrapper encrypted the data successfully, and
 	// if this is the case errors may still be returned if any wrapper failed. The error map is keyed by seal name.
-	Encrypt(ctx context.Context, plaintext []byte, options ...wrapping.Option) (*wrapping.MultiWrapValue, map[string]error)
+	Encrypt(ctx context.Context, plaintext []byte, options ...wrapping.Option) (*MultiWrapValue, map[string]error)
 
 	// Decrypt decrypts the given byte slice and stores the resulting information in the
 	// returned byte slice. Which options are used depends on the underlying wrapper.
 	// Supported options: WithAad.
 	// Returns the plaintext, a flag indicating whether the ciphertext is up-to-date
 	// (according to IsUpToDate), and an error.
-	Decrypt(ctx context.Context, ciphertext *wrapping.MultiWrapValue, options ...wrapping.Option) ([]byte, bool, error)
+	Decrypt(ctx context.Context, ciphertext *MultiWrapValue, options ...wrapping.Option) ([]byte, bool, error)
 
 	// IsUpToDate returns true if a MultiWrapValue is up-to-date. An MultiWrapValue is
 	// considered to be up-to-date if its generation matches the Access generation, and if
 	// it has a slot with a key ID that match the current key ID of each of the Access
 	// wrappers.
-	IsUpToDate(ctx context.Context, value *wrapping.MultiWrapValue, forceKeyIdRefresh bool) (bool, error)
+	IsUpToDate(ctx context.Context, value *MultiWrapValue, forceKeyIdRefresh bool) (bool, error)
 
 	GetWrappers() []wrapping.Wrapper
 	SetShamirSealKey([]byte) error
@@ -230,7 +230,7 @@ func (a *access) SealType(ctx context.Context) (SealType, error) {
 	return SealType(wrapperType), nil
 }
 
-func (a *access) IsUpToDate(ctx context.Context, value *wrapping.MultiWrapValue, forceKeyIdRefresh bool) (bool, error) {
+func (a *access) IsUpToDate(ctx context.Context, value *MultiWrapValue, forceKeyIdRefresh bool) (bool, error) {
 	// TODO(SEALHA): Enable Generation checking
 	//if a.Generation() != value.Generation {
 	//	return false, nil
@@ -248,7 +248,7 @@ func (a *access) IsUpToDate(ctx context.Context, value *wrapping.MultiWrapValue,
 }
 
 // Encrypt uses the underlying seal to encrypt the plaintext and returns it.
-func (a *access) Encrypt(ctx context.Context, plaintext []byte, options ...wrapping.Option) (*wrapping.MultiWrapValue, map[string]error) {
+func (a *access) Encrypt(ctx context.Context, plaintext []byte, options ...wrapping.Option) (*MultiWrapValue, map[string]error) {
 	var slots []*wrapping.BlobInfo
 	errs := make(map[string]error)
 
@@ -280,7 +280,7 @@ func (a *access) Encrypt(ctx context.Context, plaintext []byte, options ...wrapp
 		return nil, errs
 	}
 
-	ret := &wrapping.MultiWrapValue{
+	ret := &MultiWrapValue{
 		Generation: a.Generation(),
 		Slots:      slots,
 	}
@@ -296,7 +296,7 @@ func (a *access) Encrypt(ctx context.Context, plaintext []byte, options ...wrapp
 // are populated.
 // Returns the plaintext, a flag indicating whether the ciphertext is up-to-date
 // (according to IsUpToDate), and an error.
-func (a *access) Decrypt(ctx context.Context, ciphertext *wrapping.MultiWrapValue, options ...wrapping.Option) ([]byte, bool, error) {
+func (a *access) Decrypt(ctx context.Context, ciphertext *MultiWrapValue, options ...wrapping.Option) ([]byte, bool, error) {
 	blobInfoMap := slotsByKeyId(ciphertext)
 
 	isUpToDate, err := a.IsUpToDate(ctx, ciphertext, false)
@@ -419,7 +419,7 @@ func (a *access) GetShamirKeyBytes(ctx context.Context) ([]byte, error) {
 	return shamirWrapper.KeyBytes(ctx)
 }
 
-func slotsByKeyId(value *wrapping.MultiWrapValue) map[string]*wrapping.BlobInfo {
+func slotsByKeyId(value *MultiWrapValue) map[string]*wrapping.BlobInfo {
 	ret := make(map[string]*wrapping.BlobInfo)
 	for _, blobInfo := range value.Slots {
 		keyId := ""
@@ -435,7 +435,7 @@ type keyIdSet struct {
 	keyIds atomic.Pointer[[]string]
 }
 
-func (s *keyIdSet) set(value *wrapping.MultiWrapValue) {
+func (s *keyIdSet) set(value *MultiWrapValue) {
 	keyIds := s.collect(value)
 	s.setIds(keyIds)
 }
@@ -453,13 +453,13 @@ func (s *keyIdSet) get() []string {
 	return *pids
 }
 
-func (s *keyIdSet) equal(value *wrapping.MultiWrapValue) bool {
+func (s *keyIdSet) equal(value *MultiWrapValue) bool {
 	keyIds := s.collect(value)
 	expected := s.get()
 	return reflect.DeepEqual(keyIds, expected)
 }
 
-func (s *keyIdSet) collect(value *wrapping.MultiWrapValue) []string {
+func (s *keyIdSet) collect(value *MultiWrapValue) []string {
 	var keyIds []string
 	for _, blobInfo := range value.Slots {
 		if blobInfo.KeyInfo != nil {
