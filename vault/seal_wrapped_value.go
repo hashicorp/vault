@@ -77,7 +77,6 @@ func (swv *SealWrappedValue) GetGeneration() uint64 {
 	return swv.value.Generation
 }
 
-// TODO(SEALHA): This is only being used by tests, find a way to remove it
 func (swv *SealWrappedValue) GetSlots() []*wrapping.BlobInfo {
 	return swv.value.Slots
 }

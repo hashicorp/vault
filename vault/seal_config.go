@@ -150,7 +150,6 @@ const (
 	SealConfigTypeRecovery = SealConfigTypeShamir
 
 	// SealConfigTypeRecoveryUnsupported is for convenience.
-	// TODO(SEALHA): See if we can make SealConfigTypeRecoveryUnsupported unnecessary.
 	SealConfigTypeRecoveryUnsupported = SealConfigType("unsupported")
 )
 

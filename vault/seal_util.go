@@ -189,12 +189,6 @@ func SealWrapRecoveryKey(ctx context.Context, access seal.Access, key []byte) (*
 		return nil, &ErrEncrypt{Err: fmt.Errorf("failed to encrypt recovery key for storage: %w", err)}
 	}
 
-	// FIXME(SEALHA): if no tests fail remove this commented out code
-	// Not that we set Wrapped to false since it used to be that the BlobInfo returned by access.Encrypt()
-	// was marshalled directly. It probably would not matter if the value was true, it doesn't seem to
-	// break any tests.
-	// wrappedEntryValue.GetUniqueBlobInfo().Wrapped = false
-
 	wrappedValue, err := MarshalSealWrappedValue(wrappedEntryValue)
 	if err != nil {
 		return nil, fmt.Errorf("failed to marshal value for storage: %w", err)

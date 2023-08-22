@@ -114,7 +114,6 @@ type Access interface {
 	IsUpToDate(ctx context.Context, value *MultiWrapValue, forceKeyIdRefresh bool) (bool, error)
 
 	// GetEnabledWrappers returns all the enabled seal Wrappers, in order of priority.
-	// TODO(SEALHA): Try to remove this method.
 	GetEnabledWrappers() []wrapping.Wrapper
 
 	SetShamirSealKey([]byte) error
@@ -129,7 +128,6 @@ type Access interface {
 	// AllSealsHealthy returns whether all enabled SealInfos are currently healthy.
 	AllSealsHealthy() bool
 
-	// TODO(SEALHA): Remove this method. Avoid exposing SealGenerationInfo.
 	GetSealGenerationInfo() *SealGenerationInfo
 }
 

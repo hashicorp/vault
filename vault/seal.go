@@ -55,28 +55,28 @@ type Seal interface {
 	SetCore(*Core)
 	Init(context.Context) error
 	Finalize(context.Context) error
-	StoredKeysSupported() seal.StoredKeysSupport // SealAccess
+	StoredKeysSupported() seal.StoredKeysSupport
 	SealWrapable() bool
 	SetStoredKeys(context.Context, [][]byte) error
 	GetStoredKeys(context.Context) ([][]byte, error)
-	BarrierSealConfigType() SealConfigType              // SealAccess
-	BarrierConfig(context.Context) (*SealConfig, error) // SealAccess
+	BarrierSealConfigType() SealConfigType
+	BarrierConfig(context.Context) (*SealConfig, error)
 	ClearBarrierConfig(context.Context) error
 	SetBarrierConfig(context.Context, *SealConfig) error
 	SetCachedBarrierConfig(*SealConfig)
 
-	RecoveryKeySupported() bool // SealAccess
+	RecoveryKeySupported() bool
 	// RecoveryType returns the SealConfigType for the recovery seal. We only ever
 	// expect this to be one of SealConfigTypeRecovery or SealConfigTypeRecoveryUnsupported
 	RecoverySealConfigType() SealConfigType
-	RecoveryConfig(context.Context) (*SealConfig, error) // SealAccess
+	RecoveryConfig(context.Context) (*SealConfig, error)
 	RecoveryKey(context.Context) ([]byte, error)
 	ClearRecoveryConfig(context.Context) error
 	SetRecoveryConfig(context.Context, *SealConfig) error
 	SetCachedRecoveryConfig(*SealConfig)
 	SetRecoveryKey(context.Context, []byte) error
-	VerifyRecoveryKey(context.Context, []byte) error // SealAccess
-	GetAccess() seal.Access                          // SealAccess
+	VerifyRecoveryKey(context.Context, []byte) error
+	GetAccess() seal.Access
 	Healthy() bool
 }
 
