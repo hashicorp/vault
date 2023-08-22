@@ -40,13 +40,6 @@ will be used as a basis for the CSR with the key in transit. If not set, an empt
 			},
 		},
 		Operations: map[logical.Operation]framework.OperationHandler{
-			// NOTE: Create and Update?
-			logical.CreateOperation: &framework.PathOperation{
-				Callback: b.pathCreateCsrWrite,
-				DisplayAttrs: &framework.DisplayAttributes{
-					OperationVerb: "create",
-				},
-			},
 			logical.UpdateOperation: &framework.PathOperation{
 				Callback: b.pathCreateCsrWrite,
 				DisplayAttrs: &framework.DisplayAttributes{
@@ -83,13 +76,6 @@ by one or more concatenated PEM blocks and ordered starting from the end-entity 
 			},
 		},
 		Operations: map[logical.Operation]framework.OperationHandler{
-			// NOTE: Create and Update?
-			logical.CreateOperation: &framework.PathOperation{
-				Callback: b.pathImportCertChainWrite,
-				DisplayAttrs: &framework.DisplayAttributes{
-					OperationVerb: "create",
-				},
-			},
 			logical.UpdateOperation: &framework.PathOperation{
 				Callback: b.pathImportCertChainWrite,
 				DisplayAttrs: &framework.DisplayAttributes{

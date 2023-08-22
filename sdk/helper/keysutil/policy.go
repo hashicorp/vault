@@ -2511,11 +2511,6 @@ func (p *Policy) ValidateLeafCertKeyMatch(keyVersion int, certPublicKeyAlgorithm
 			Y:     keyEntry.EC_Y,
 		}
 
-		// NOTE: Is it worth having this check?
-		if publicKey.Curve != certPublicKey.Curve {
-			return false, nil
-		}
-
 		return publicKey.Equal(certPublicKey), nil
 
 	case x509.Ed25519:
