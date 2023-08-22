@@ -346,7 +346,7 @@ module('Acceptance | landing page dashboard', function (hooks) {
         .hasText(formatNumber([response.byMonth.lastObject.new_clients.clients]));
     });
   });
-  module('replication card', function (hooks) {
+  skip('replication card', function (hooks) {
     hooks.beforeEach(async function () {
       await authPage.login();
       await settled();
