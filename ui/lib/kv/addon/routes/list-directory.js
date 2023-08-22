@@ -64,7 +64,6 @@ export default class KvSecretsListRoute extends Route {
     if (resolvedModel.secrets === 403) {
       resolvedModel.noMetadataListPermissions = true;
     }
-    controller.routeName = this.routeName;
 
     let breadcrumbsArray = [{ label: 'secrets', route: 'secrets', linkExternal: true }];
     // if on top level don't link the engine breadcrumb label, but if within a directory, do link back to top level.
@@ -77,8 +76,8 @@ export default class KvSecretsListRoute extends Route {
         ...breadcrumbsForSecret(resolvedModel.pathToSecret, true),
       ];
     }
+
     controller.set('breadcrumbs', breadcrumbsArray);
-    controller.set('routeName', this.routeName);
   }
 
   resetController(controller, isExiting) {

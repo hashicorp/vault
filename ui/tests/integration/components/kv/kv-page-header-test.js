@@ -38,12 +38,9 @@ module('Integration | Component | kv | kv-page-header', function (hooks) {
 
   test('it renders breadcrumbs', async function (assert) {
     assert.expect(4);
-    await render(
-      hbs`<KvPageHeader @breadcrumbs={{this.breadcrumbs}} @model={{this.model}} @pageTitle="Create new version"/>`,
-      {
-        owner: this.engine,
-      }
-    );
+    await render(hbs`<KvPageHeader @breadcrumbs={{this.breadcrumbs}} @pageTitle="Create new version"/>`, {
+      owner: this.engine,
+    });
     assert.dom('[data-test-breadcrumbs] li:nth-child(1) a').hasText('secrets', 'Secrets breadcrumb renders');
     assert.dom('[data-test-breadcrumbs] li:nth-child(2) a').hasText(this.backend, 'engine name renders');
     assert.dom('[data-test-breadcrumbs] li:nth-child(3) a').hasText(this.path, 'secret path renders');
@@ -54,24 +51,18 @@ module('Integration | Component | kv | kv-page-header', function (hooks) {
 
   test('it renders a custom title for a non engine view', async function (assert) {
     assert.expect(2);
-    await render(
-      hbs`<KvPageHeader @breadcrumbs={{this.breadcrumbs}} @model={{this.model}} @pageTitle="Create new version"/>`,
-      {
-        owner: this.engine,
-      }
-    );
+    await render(hbs`<KvPageHeader @breadcrumbs={{this.breadcrumbs}} @pageTitle="Create new version"/>`, {
+      owner: this.engine,
+    });
     assert.dom('[data-test-header-title]').hasText('Create new version', 'displays custom title.');
     assert.dom('[data-test-header-title] svg').doesNotExist('Does not show icon if not at engine level.');
   });
 
   test('it renders a title, icon and tag if engine view', async function (assert) {
     assert.expect(2);
-    await render(
-      hbs`<KvPageHeader @breadcrumbs={{this.breadcrumbs}} @model={{this.model}} @isEngineView="true" @pageTitle={{this.backend}}/>`,
-      {
-        owner: this.engine,
-      }
-    );
+    await render(hbs`<KvPageHeader @breadcrumbs={{this.breadcrumbs}} @mountName={{this.backend}} />`, {
+      owner: this.engine,
+    });
     assert
       .dom('[data-test-header-title]')
       .hasText(`${this.backend} Version 2`, 'Mount path and Version tag render for title.');
@@ -81,10 +72,10 @@ module('Integration | Component | kv | kv-page-header', function (hooks) {
   test('it renders tabs', async function (assert) {
     assert.expect(2);
     await render(
-      hbs`<KvPageHeader @model={{this.model}} @breadcrumbs={{this.breadcrumbs}} @isEngineView={{true}} >
-    <:tabLinks>
-          <LinkTo @route="list" data-test-secrets-tab="Secrets">Secrets</LinkTo>
-          <LinkTo @route="configuration" data-test-secrets-tab="Configuration">Configuration</LinkTo>
+      hbs`<KvPageHeader @breadcrumbs={{this.breadcrumbs}} @mountName="my-engine">
+  <:tabLinks>
+    <LinkTo @route="list" data-test-secrets-tab="Secrets">Secrets</LinkTo>
+    <LinkTo @route="configuration" data-test-secrets-tab="Configuration">Configuration</LinkTo>
   </:tabLinks>
   </KvPageHeader>
     `,
@@ -101,7 +92,7 @@ module('Integration | Component | kv | kv-page-header', function (hooks) {
   test('it should yield block for toolbar actions', async function (assert) {
     assert.expect(1);
     await render(
-      hbs`<KvPageHeader @model={{this.model}} @breadcrumbs={{this.breadcrumbs}} @isEngineView={{true}} >
+      hbs`<KvPageHeader @breadcrumbs={{this.breadcrumbs}} @mountName="my-engine">
       <:toolbarActions>
       <ToolbarLink @route="secrets.create" @type="add">Create secret</ToolbarLink>
     </:toolbarActions>
@@ -115,7 +106,7 @@ module('Integration | Component | kv | kv-page-header', function (hooks) {
   test('it should yield block for toolbar filters', async function (assert) {
     assert.expect(1);
     await render(
-      hbs`<KvPageHeader @model={{this.model}} @breadcrumbs={{this.breadcrumbs}} @isEngineView={{true}} >
+      hbs`<KvPageHeader @breadcrumbs={{this.breadcrumbs}} @mountName="my-engine">
       <:toolbarFilters>
       <p>stuff here</p>
     </:toolbarFilters>
