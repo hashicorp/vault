@@ -14,6 +14,8 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/armon/go-metrics"
+
 	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/sdk/physical"
 	"github.com/hashicorp/vault/vault/seal"
@@ -42,6 +44,7 @@ type autoSeal struct {
 	core           *Core
 	logger         log.Logger
 
+	allSealsHealthy bool
 	hcLock          sync.Mutex
 	healthCheckStop chan struct{}
 }
@@ -65,6 +68,10 @@ func NewAutoSeal(lowLevel seal.Access) (*autoSeal, error) {
 	}
 
 	return ret, nil
+}
+
+func (d *autoSeal) Healthy() bool {
+	return d.allSealsHealthy
 }
 
 func (d *autoSeal) SealWrapable() bool {
@@ -517,17 +524,55 @@ func (d *autoSeal) StartHealthCheck() {
 	ctx := d.core.activeContext
 
 	go func() {
-		lastTestOk := true
-		lastSeenOk := time.Now()
+		check := func(t time.Time) {
+			ctx, cancel := context.WithTimeout(ctx, sealHealthTestTimeout)
+			defer cancel()
 
-		fail := func(msg string, args ...interface{}) {
-			d.logger.Warn(msg, args...)
-			if lastTestOk {
-				healthCheck.Reset(sealHealthTestIntervalUnhealthy)
+			testVal := fmt.Sprintf("Heartbeat %d", mathrand.Intn(1000))
+			anyUnhealthy := false
+			for _, w := range d.Access.GetSealInfoByPriority() {
+				mLabels := []metrics.Label{{Name: "seal_name", Value: w.Name}}
+				fail := func(msg string, args ...interface{}) {
+					d.logger.Warn(msg, args...)
+					if w.Healthy {
+						healthCheck.Reset(sealHealthTestIntervalUnhealthy)
+					}
+					w.Healthy = false
+					d.core.MetricSink().SetGaugeWithLabels(autoSealUnavailableDuration, float32(time.Since(w.LastSeenHealthy).Milliseconds()), mLabels)
+				}
+				ciphertext, err := w.Encrypt(ctx, []byte(testVal), nil)
+				checkTime := time.Now()
+				w.LastHealthCheck = checkTime
+
+				if err != nil {
+					fail("failed to encrypt seal health test value, seal backend may be unreachable", "error", err, "seal_name", w.Name)
+					anyUnhealthy = true
+				} else {
+					func() {
+						ctx, cancel := context.WithTimeout(ctx, sealHealthTestTimeout)
+						defer cancel()
+						plaintext, err := w.Decrypt(ctx, ciphertext, nil)
+						if err != nil {
+							fail("failed to decrypt seal health test value, seal backend may be unreachable", "error", err, "seal_name", w.Name)
+						}
+						if !bytes.Equal([]byte(testVal), plaintext) {
+							fail("seal health test value failed to decrypt to expected value", "seal_name", w.Name)
+						} else {
+							d.logger.Debug("seal health test passed", "seal_name", w.Name)
+							if !w.Healthy {
+								d.logger.Info("seal backend is now healthy again", "downtime", t.Sub(w.LastSeenHealthy).String(), "seal_name", w.Name)
+								healthCheck.Reset(sealHealthTestIntervalNominal)
+							}
+							w.Healthy = true
+							w.LastSeenHealthy = checkTime
+							d.core.MetricSink().SetGaugeWithLabels(autoSealUnavailableDuration, 0, mLabels)
+						}
+					}()
+				}
 			}
-			lastTestOk = false
-			d.core.MetricSink().SetGauge(autoSealUnavailableDuration, float32(time.Since(lastSeenOk).Milliseconds()))
+			d.allSealsHealthy = !anyUnhealthy
 		}
+
 		for {
 			select {
 			case <-healthCheckStop:
@@ -537,38 +582,7 @@ func (d *autoSeal) StartHealthCheck() {
 				healthCheckStop = nil
 				return
 			case t := <-healthCheck.C:
-				func() {
-					ctx, cancel := context.WithTimeout(ctx, sealHealthTestTimeout)
-					defer cancel()
-
-					testVal := fmt.Sprintf("Heartbeat %d", mathrand.Intn(1000))
-					ciphertext, err := SealWrapValue(ctx, d.Access, true, []byte(testVal))
-
-					if err != nil {
-						fail("failed to encrypt seal health test value, seal backend may be unreachable", "error", err)
-					} else {
-						func() {
-							ctx, cancel := context.WithTimeout(ctx, sealHealthTestTimeout)
-							defer cancel()
-							plaintext, _, err := UnsealWrapValue(ctx, d.Access, "", ciphertext)
-							if err != nil {
-								fail("failed to decrypt seal health test value, seal backend may be unreachable", "error", err)
-							}
-							if !bytes.Equal([]byte(testVal), plaintext) {
-								fail("seal health test value failed to decrypt to expected value")
-							} else {
-								d.logger.Debug("seal health test passed")
-								if !lastTestOk {
-									d.logger.Info("seal backend is now healthy again", "downtime", t.Sub(lastSeenOk).String())
-									healthCheck.Reset(sealHealthTestIntervalNominal)
-								}
-								lastTestOk = true
-								lastSeenOk = t
-								d.core.MetricSink().SetGauge(autoSealUnavailableDuration, 0)
-							}
-						}()
-					}
-				}()
+				check(t)
 			}
 		}
 	}()

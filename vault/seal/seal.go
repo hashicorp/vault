@@ -44,7 +44,10 @@ type SealInfo struct {
 	wrapping.Wrapper
 	Priority int
 	Name     string
-	Healthy  bool
+
+	LastHealthCheck time.Time
+	LastSeenHealthy time.Time
+	Healthy         bool
 }
 
 func (si *SealInfo) keyId(ctx context.Context) string {
@@ -86,12 +89,12 @@ type Access interface {
 	GetShamirKeyBytes(ctx context.Context) ([]byte, error)
 	SealType(ctx context.Context) (SealType, error)
 	// GetSealInfoByPriority the returned slice should be sorted in priority.
-	GetSealInfoByPriority() []SealInfo
+	GetSealInfoByPriority() []*SealInfo
 }
 
 type access struct {
 	generation         uint64
-	wrappersByPriority []SealInfo
+	wrappersByPriority []*SealInfo
 	keyIdSet           keyIdSet
 }
 
@@ -102,8 +105,14 @@ func NewAccess(sealInfos []SealInfo) Access {
 		panic("cannot create a seal.Access without any seal info")
 	}
 	a := &access{
-		generation:         1, // FIXME: Introduce Generation argument
-		wrappersByPriority: sealInfos,
+		generation: 1, // FIXME: Introduce Generation argument
+	}
+	a.wrappersByPriority = make([]*SealInfo, len(sealInfos))
+	for i, x := range sealInfos {
+		v := x
+		a.wrappersByPriority[i] = &v
+		v.Healthy = true
+		v.LastSeenHealthy = time.Now()
 	}
 
 	sort.Slice(a.wrappersByPriority, func(i int, j int) bool { return a.wrappersByPriority[i].Priority < a.wrappersByPriority[j].Priority })
@@ -111,8 +120,13 @@ func NewAccess(sealInfos []SealInfo) Access {
 	return a
 }
 
-func (a *access) GetSealInfoByPriority() []SealInfo {
-	return a.wrappersByPriority
+func (a *access) GetSealInfoByPriority() []*SealInfo {
+	// Return a copy, to prevent modification
+	l := make([]*SealInfo, len(a.wrappersByPriority))
+	for i, w := range a.wrappersByPriority {
+		l[i] = w
+	}
+	return l
 }
 
 func (a *access) Generation() uint64 {
@@ -290,7 +304,7 @@ func (a *access) Decrypt(ctx context.Context, ciphertext *wrapping.MultiWrapValu
 	return nil, false, JoinSealWrapErrors("error decrypting seal wrapped value", errs)
 }
 
-func (a *access) tryDecrypt(ctx context.Context, sealInfo SealInfo, ciphertext *wrapping.BlobInfo, options []wrapping.Option) ([]byte, bool, error) {
+func (a *access) tryDecrypt(ctx context.Context, sealInfo *SealInfo, ciphertext *wrapping.BlobInfo, options []wrapping.Option) ([]byte, bool, error) {
 	var decryptErr error
 	defer func(now time.Time) {
 		metrics.MeasureSince([]string{"seal", "decrypt", "time"}, now)
@@ -300,6 +314,7 @@ func (a *access) tryDecrypt(ctx context.Context, sealInfo SealInfo, ciphertext *
 			metrics.IncrCounter([]string{"seal", "decrypt", "error"}, 1)
 			metrics.IncrCounter([]string{"seal", sealInfo.Name, "decrypt", "error"}, 1)
 		}
+		// TODO (multiseal): log an error?
 	}(time.Now())
 
 	metrics.IncrCounter([]string{"seal", "decrypt"}, 1)

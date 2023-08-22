@@ -390,7 +390,7 @@ var GetTransitKMSFunc = func(kms *KMS, opts ...wrapping.Option) (wrapping.Wrappe
 	return wrapper, info, nil
 }
 
-func createSecureRandomReader(config *SharedConfig, sealList []seal.SealInfo, logger hclog.Logger) (io.Reader, error) {
+func createSecureRandomReader(config *SharedConfig, sealList []*seal.SealInfo, logger hclog.Logger) (io.Reader, error) {
 	return rand.Reader, nil
 }
 

@@ -530,7 +530,7 @@ SEALFAIL:
 		var secureRandomReader io.Reader
 		// prepare a secure random reader for core
 		randReaderTestName := "Initialize Randomness for Core"
-		var sealInfos []seal.SealInfo
+		var sealInfos []*seal.SealInfo
 		if barrierSeal != nil {
 			sealInfos = barrierSeal.GetAccess().GetSealInfoByPriority()
 		}

@@ -4727,6 +4727,18 @@ type SealStatusResponse struct {
 	Warnings          []string `json:"warnings,omitempty"`
 }
 
+type SealBackendStatus struct {
+	Name           string `json:"name"`
+	Healthy        bool   `json:"healthy"`
+	UnhealthySince string `json:"unhealthy_since,omitempty"`
+}
+
+type SealBackendStatusResponse struct {
+	Healthy        bool                `json:"healthy"`
+	UnhealthySince string              `json:"unhealthy_since,omitempty"`
+	Backends       []SealBackendStatus `json:"backends"`
+}
+
 func (core *Core) GetSealStatus(ctx context.Context) (*SealStatusResponse, error) {
 	sealed := core.Sealed()
 
@@ -4805,6 +4817,40 @@ func (core *Core) GetSealStatus(ctx context.Context) (*SealStatusResponse, error
 	}
 
 	return s, nil
+}
+
+func (c *Core) GetSealBackendStatus(ctx context.Context) (*SealBackendStatusResponse, error) {
+	var r SealBackendStatusResponse
+	if a, ok := c.seal.(*autoSeal); ok {
+		r.Healthy = c.seal.Healthy()
+		var uhMin time.Time
+		for _, s := range a.GetSealInfoByPriority() {
+			b := SealBackendStatus{
+				Name:    s.Name,
+				Healthy: s.Healthy,
+			}
+			if !s.Healthy {
+				if !s.LastSeenHealthy.IsZero() {
+					b.UnhealthySince = s.LastSeenHealthy.String()
+				}
+				if uhMin.IsZero() || uhMin.After(s.LastSeenHealthy) {
+					uhMin = s.LastSeenHealthy
+				}
+			}
+			r.Backends = append(r.Backends, b)
+		}
+		if !uhMin.IsZero() {
+			r.UnhealthySince = uhMin.String()
+		}
+	} else {
+		r.Backends = []SealBackendStatus{
+			{
+				Name:    "shamir", // "default?"
+				Healthy: true,
+			},
+		}
+	}
+	return &r, nil
 }
 
 type LeaderResponse struct {

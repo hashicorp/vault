@@ -73,6 +73,7 @@ type Seal interface {
 	SetRecoveryKey(context.Context, []byte) error
 	VerifyRecoveryKey(context.Context, []byte) error // SealAccess
 	GetAccess() seal.Access                          // SealAccess
+	Healthy() bool
 }
 
 type defaultSeal struct {
@@ -285,6 +286,10 @@ func (d *defaultSeal) VerifyRecoveryKey(ctx context.Context, key []byte) error {
 
 func (d *defaultSeal) SetRecoveryKey(ctx context.Context, key []byte) error {
 	return fmt.Errorf("recovery not supported")
+}
+
+func (d *defaultSeal) Healthy() bool {
+	return true
 }
 
 // SealConfig is used to describe the seal configuration

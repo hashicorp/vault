@@ -8,7 +8,6 @@ import (
 	"context"
 	"errors"
 	"reflect"
-	"strings"
 	"testing"
 	"time"
 
@@ -203,36 +202,20 @@ func TestAutoSeal_HealthCheck(t *testing.T) {
 	defer autoSeal.StopHealthCheck()
 	setErr(errors.New("disconnected"))
 
-	asu := strings.Join(autoSealUnavailableDuration, ".") + ";cluster=" + core.clusterName
 	tries := 10
 	for tries = 10; tries > 0; tries-- {
-		intervals := inmemSink.Data()
-		if len(intervals) == 1 {
-			interval := inmemSink.Data()[0]
-
-			if _, ok := interval.Gauges[asu]; ok {
-				if interval.Gauges[asu].Value > 0 {
-					break
-				}
-			}
+		if !autoSeal.Healthy() {
+			break
 		}
 		time.Sleep(100 * time.Millisecond)
 	}
 	if tries == 0 {
-		t.Fatalf("Expected value metric %s to be non-zero", asu)
+		t.Fatalf("Expected to detect unhealthy seals")
 	}
 
 	setErr(nil)
 	time.Sleep(50 * time.Millisecond)
-	intervals := inmemSink.Data()
-	if len(intervals) == 1 {
-		interval := inmemSink.Data()[0]
-
-		if _, ok := interval.Gauges[asu]; !ok {
-			t.Fatalf("Expected metrics to include a value for gauge %s", asu)
-		}
-		if interval.Gauges[asu].Value != 0 {
-			t.Fatalf("Expected value metric %s to be zero", asu)
-		}
+	if !autoSeal.Healthy() {
+		t.Fatal("Expected seals to be healthy")
 	}
 }
