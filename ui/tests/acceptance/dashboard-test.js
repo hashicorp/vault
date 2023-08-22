@@ -367,8 +367,8 @@ module('Acceptance | landing page dashboard', function (hooks) {
     });
 
     test('it should show replication status if both dr and performance replication are enabled as features in version', async function (assert) {
-      await visit('/vault/dashboard');
-      await click(REPLICATION_CARD_SELECTORS.replicationEmptyStateActionsLink);
+      // await visit('/vault/dashboard');
+      // await click(REPLICATION_CARD_SELECTORS.replicationEmptyStateActionsLink);
       await click('[data-test-replication-enable]');
       await visit('/vault/dashboard');
       assert
