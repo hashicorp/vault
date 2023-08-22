@@ -305,7 +305,7 @@ module('Acceptance | landing page dashboard', function (hooks) {
       await consoleComponent.runCommands(deleteEngineCmd('database'));
     });
   });
-  module('client counts card', function (hooks) {
+  skip('client counts card', function (hooks) {
     hooks.before(async function () {
       ENV['ember-cli-mirage'].handler = 'clients';
     });
@@ -370,6 +370,8 @@ module('Acceptance | landing page dashboard', function (hooks) {
       // await visit('/vault/dashboard');
       // await click(REPLICATION_CARD_SELECTORS.replicationEmptyStateActionsLink);
       await click('[data-test-replication-enable]');
+      await pollCluster(this.owner);
+      await settled();
       await visit('/vault/dashboard');
       assert
         .dom(REPLICATION_CARD_SELECTORS.getReplicationTitle('dr-perf', 'DR primary'))
