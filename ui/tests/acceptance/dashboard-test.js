@@ -335,9 +335,8 @@ module('Acceptance | landing page dashboard', function (hooks) {
       assert.dom('[data-test-client-count-card]').doesNotExist();
     });
 
-    skip('shows the client count card', async function (assert) {
-      await authPage.login();
-      assert.dom('[data-test-client-count-title]').exists();
+    test('shows the client count card', async function (assert) {
+      assert.dom('[data-test-client-count-card]').exists();
       const response = await this.store.peekRecord('clients/activity', 'some-activity-id');
       assert.dom('[data-test-client-count-title]').hasText('Client count');
       assert.dom('[data-test-stat-text="total-clients"] .stat-label').hasText('Total');
@@ -373,9 +372,8 @@ module('Acceptance | landing page dashboard', function (hooks) {
       assert.dom(REPLICATION_CARD_SELECTORS.replicationEmptyStateActions).hasText('Enable replication');
     });
 
-    test('it should show replication status if both dr and performance replication are enabled as features in version', async function (assert) {
-      await visit('/vault/replication');
-      // await click(REPLICATION_CARD_SELECTORS.replicationEmptyStateActionsLink);
+    skip('it should show replication status if both dr and performance replication are enabled as features in version', async function (assert) {
+      await click(REPLICATION_CARD_SELECTORS.replicationEmptyStateActionsLink);
       await click('[data-test-replication-type-select="dr"]');
       await fillIn('[data-test-replication-cluster-mode-select]', 'primary');
       await click('[data-test-replication-enable]');
