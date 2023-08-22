@@ -16,6 +16,7 @@ const SELECTORS = {
   replicationEmptyStateTitle: '[data-test-component="empty-state"] .empty-state-title',
   replicationEmptyStateMessage: '[data-test-component="empty-state"] .empty-state-message',
   replicationEmptyStateActions: '[data-test-component="empty-state"] .empty-state-actions',
+  replicationEmptyStateActionsLink: '[data-test-component="empty-state"] .empty-state-actions a',
 };
 
 export default SELECTORS;

@@ -4,7 +4,14 @@
  */
 
 import { module, test } from 'qunit';
-import { visit, currentURL, settled, fillIn /* currentRouteName */ } from '@ember/test-helpers';
+import {
+  visit,
+  currentURL,
+  settled,
+  fillIn,
+  click,
+  /* currentRouteName */
+} from '@ember/test-helpers';
 import { setupApplicationTest } from 'vault/tests/helpers';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 import { create } from 'ember-cli-page-object';
@@ -18,20 +25,17 @@ import consoleClass from 'vault/tests/pages/components/console/ui-panel';
 import SECRETS_ENGINE_SELECTORS from 'vault/tests/helpers/components/dashboard/secrets-engines-card';
 import VAULT_CONFIGURATION_SELECTORS from 'vault/tests/helpers/components/dashboard/vault-configuration-details-card';
 import QUICK_ACTION_SELECTORS from 'vault/tests/helpers/components/dashboard/quick-actions-card';
+import REPLICATION_CARD_SELECTORS from 'vault/tests/helpers/components/dashboard/replication-card';
+
 // client count card test
 import sinon from 'sinon';
 import timestamp from 'core/utils/timestamp';
 import ENV from 'vault/config/environment';
 import { formatNumber } from 'core/helpers/format-number';
 const STATIC_NOW = new Date('2023-01-13T14:15:00');
-// replication card test
-const REPLICATION_DETAILS = {
-  state: 'running',
-  primaryClusterAddr: 'https://127.0.0.1:8201',
-  merkleRoot: '352f6e58ba2e8ec3935e05da1d142653dc76fe17',
-  clusterId: '68999e13-a09d-b5e4-d66c-b35da566a177',
-};
 
+import { pollCluster } from 'vault/tests/helpers/poll-cluster';
+import { disableReplication } from 'vault/tests/helpers/replication';
 const consoleComponent = create(consoleClass);
 
 module('Acceptance | landing page dashboard', function (hooks) {
@@ -319,7 +323,17 @@ module('Acceptance | landing page dashboard', function (hooks) {
       timestamp.now.restore();
       ENV['ember-cli-mirage'].handler = null;
     });
-    // version and enterprise - hide cc card
+
+    test('hides the client count card', async function (assert) {
+      await authPage.logout();
+      this.server.get(
+        'sys/license/status',
+        () => new Response(403, {}, { errors: ['API returns this error'] })
+      );
+      await authPage.login();
+      assert.dom('[data-test-client-count-card]').doesNotExist();
+    });
+
     test('shows the client count card', async function (assert) {
       assert.dom('[data-test-client-count-title]').exists();
       const response = await this.store.peekRecord('clients/activity', 'some-activity-id');
@@ -338,28 +352,48 @@ module('Acceptance | landing page dashboard', function (hooks) {
     });
   });
   module('replication card', function (hooks) {
-    hooks.beforeEach(function () {
-      this.set('replicationDetails', REPLICATION_DETAILS);
-      this.set('clusterMode', 'secondary');
-      this.set('isSecondary', true);
-      return authPage.login();
+    hooks.beforeEach(async function () {
+      await authPage.login();
+      await settled();
+      await disableReplication('dr');
+      await settled();
+      await disableReplication('performance');
+      await settled();
+      await visit('/vault/dashboard');
     });
 
-    test('shows the client count card', async function (assert) {
-      assert.dom('[data-test-client-count-title]').exists();
-      const response = await this.store.peekRecord('clients/activity', 'some-activity-id');
-      assert.dom('[data-test-client-count-title]').hasText('Client count');
-      assert.dom('[data-test-stat-text="total-clients"] .stat-label').hasText('Total');
+    test('shows the replication card empty state', async function (assert) {
+      assert.dom(REPLICATION_CARD_SELECTORS.replicationEmptyState).exists();
+      assert.dom(REPLICATION_CARD_SELECTORS.replicationEmptyStateTitle).hasText('Replication not set up');
       assert
-        .dom('[data-test-stat-text="total-clients"] .stat-value')
-        .hasText(formatNumber([response.total.clients]));
-      assert.dom('[data-test-stat-text="new-clients"] .stat-label').hasText('New');
+        .dom(REPLICATION_CARD_SELECTORS.replicationEmptyStateMessage)
+        .hasText('Data will be listed here. Enable a primary replication cluster to get started.');
+      assert.dom(REPLICATION_CARD_SELECTORS.replicationEmptyStateActions).hasText('Enable replication');
+    });
+
+    test('it should show replication status if both dr and performance replication are enabled as features in version', async function (assert) {
+      await click(REPLICATION_CARD_SELECTORS.replicationEmptyStateActionsLink);
+      await click('[data-test-replication-type-select="dr"]');
+      await fillIn('[data-test-replication-cluster-mode-select]', 'primary');
+      await click('[data-test-replication-enable]');
+      await pollCluster(this.owner);
+      await visit('/vault/dashboard');
       assert
-        .dom('[data-test-stat-text="new-clients"] .stat-text')
-        .hasText('The number of clients new to Vault in the current month.');
+        .dom(REPLICATION_CARD_SELECTORS.getReplicationTitle('dr-perf', 'DR primary'))
+        .hasText('DR primary');
+      assert.dom(REPLICATION_CARD_SELECTORS.getStateTooltipTitle('dr-perf', 'DR primary')).hasText('running');
       assert
-        .dom('[data-test-stat-text="new-clients"] .stat-value')
-        .hasText(formatNumber([response.byMonth.lastObject.new_clients.clients]));
+        .dom(REPLICATION_CARD_SELECTORS.getStateTooltipIcon('dr-perf', 'DR primary', 'check-circle'))
+        .exists();
+      assert
+        .dom(REPLICATION_CARD_SELECTORS.getReplicationTitle('dr-perf', 'Perf primary'))
+        .hasText('Perf primary');
+      assert
+        .dom(REPLICATION_CARD_SELECTORS.getStateTooltipTitle('dr-perf', 'Perf primary'))
+        .hasText('not set up');
+      assert
+        .dom(REPLICATION_CARD_SELECTORS.getStateTooltipIcon('dr-perf', 'Perf primary', 'x-circle'))
+        .exists();
     });
   });
 });
