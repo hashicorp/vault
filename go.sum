@@ -1741,8 +1741,8 @@ github.com/hashicorp/go-immutable-radix v1.3.1/go.mod h1:0y9vanUI8NX6FsYoO3zeMjh
 github.com/hashicorp/go-kms-wrapping/entropy/v2 v2.0.0 h1:pSjQfW3vPtrOTcasTUKgCTQT7OGPPTTMVRrOfU6FJD8=
 github.com/hashicorp/go-kms-wrapping/entropy/v2 v2.0.0/go.mod h1:xvb32K2keAc+R8DSFG2IwDcydK9DBQE+fGA5fsw6hSk=
 github.com/hashicorp/go-kms-wrapping/v2 v2.0.8/go.mod h1:qTCjxGig/kjuj3hk1z8pOUrzbse/GxB1tGfbrq8tGJg=
-github.com/hashicorp/go-kms-wrapping/v2 v2.0.10 h1:A51EguZ576URdtcQ0l8mT/tOD948oAtmP1soqIHIFfI=
-github.com/hashicorp/go-kms-wrapping/v2 v2.0.10/go.mod h1:NtMaPhqSlfQ72XWDD2g80o8HI8RKkowIB8/WZHMyPY4=
+github.com/hashicorp/go-kms-wrapping/v2 v2.0.13-0.20230717151808-b250786d28c4 h1:QP8KFWppsMrcLhWvD88S/aPR1YJBmhw3AfdeaxxSgHQ=
+github.com/hashicorp/go-kms-wrapping/v2 v2.0.13-0.20230717151808-b250786d28c4/go.mod h1:NtMaPhqSlfQ72XWDD2g80o8HI8RKkowIB8/WZHMyPY4=
 github.com/hashicorp/go-kms-wrapping/wrappers/aead/v2 v2.0.7-1 h1:ZV26VJYcITBom0QqYSUOIj4HOHCVPEFjLqjxyXV/AbA=
 github.com/hashicorp/go-kms-wrapping/wrappers/aead/v2 v2.0.7-1/go.mod h1:b99cDSA+OzcyRoBZroSf174/ss/e6gUuS45wue9ZQfc=
 github.com/hashicorp/go-kms-wrapping/wrappers/alicloudkms/v2 v2.0.1 h1:ydUCtmr8f9F+mHZ1iCsvzqFTXqNVpewX3s9zcYipMKI=

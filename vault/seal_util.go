@@ -7,81 +7,98 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/golang/protobuf/proto"
 	"strings"
 
 	wrapping "github.com/hashicorp/go-kms-wrapping/v2"
 	"github.com/hashicorp/vault/sdk/physical"
 	"github.com/hashicorp/vault/vault/seal"
-	"google.golang.org/protobuf/proto"
 )
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Seal Wrapping
 
-// SealWrapValue creates a BlobInfo wrapper with the entryValue being optionally encrypted with the give seal Access.
-func SealWrapValue(ctx context.Context, access seal.Access, encrypt bool, entryValue []byte) (*wrapping.BlobInfo, error) {
-	wrappedEntryValue := &wrapping.BlobInfo{
+// SealWrapValue creates a SealWrappedValue wrapper with the entryValue being optionally encrypted with the give seal Access.
+func SealWrapValue(ctx context.Context, access seal.Access, encrypt bool, entryValue []byte) (*SealWrappedValue, error) {
+	blobInfo := &wrapping.BlobInfo{
 		Wrapped:    false,
 		Ciphertext: entryValue,
 	}
-
 	if access != nil && encrypt {
 		swi, err := access.Encrypt(ctx, entryValue, nil)
 		if err != nil {
 			return nil, err
 		}
-		wrappedEntryValue.Wrapped = true
-		wrappedEntryValue.Ciphertext = swi.Ciphertext
-		wrappedEntryValue.Iv = swi.Iv
-		wrappedEntryValue.Hmac = swi.Hmac
-		wrappedEntryValue.KeyInfo = swi.KeyInfo
+		blobInfo = &wrapping.BlobInfo{
+			Wrapped:    true,
+			Ciphertext: swi.Ciphertext,
+			Iv:         swi.Iv,
+			Hmac:       swi.Hmac,
+			KeyInfo:    swi.KeyInfo,
+		}
 	}
 
-	return wrappedEntryValue, nil
+	return NewSealWrappedValue(blobInfo), nil
 }
 
-// MarshalSealWrappedValue marshals a BlobInfo into a byte slice.
-func MarshalSealWrappedValue(wrappedEntryValue *wrapping.BlobInfo) ([]byte, error) {
-	return proto.Marshal(wrappedEntryValue)
-}
-
-// UnmarshalSealWrappedValue attempts to unmarshal a BlobInfo.
-func UnmarshalSealWrappedValue(value []byte) (*wrapping.BlobInfo, error) {
-	wrappedEntryValue := &wrapping.BlobInfo{}
-	err := proto.Unmarshal(value, wrappedEntryValue)
-	if err != nil {
-		return nil, err
+// MarshalSealWrappedValue marshals a SealWrappedValue into a byte slice. If the seal wrapped value contains
+// a single wrapping.BlobInfo, the BlobInfo will be marshalled directly; otherwise the SealWrappedValue
+// will be.
+func MarshalSealWrappedValue(wrappedEntryValue *SealWrappedValue) ([]byte, error) {
+	if len(wrappedEntryValue.value.Slots) > 1 {
+		return wrappedEntryValue.marshal()
 	}
-	return wrappedEntryValue, nil
+
+	return proto.Marshal(wrappedEntryValue.GetUniqueBlobInfo())
 }
 
-// UnmarshalSealWrappedValueWithCanary unmarshalls a byte array into a BlobInfo, taking care of
-// removing the 's' canary value. Note that if the value does not end with the canary value,
-// or a BlobInfo cannot be unmarshalled, nil is returned.
-func UnmarshalSealWrappedValueWithCanary(value []byte) *wrapping.BlobInfo {
+// UnmarshalSealWrappedValue attempts to unmarshal a SealWrappedValue. This method can unmarshal marshalled
+// SealWrappedValues as well as wrapping.BlobInfos. When a BlobInfo is encountered, a "transitory"
+// SealWrappedValue will be returned.
+func UnmarshalSealWrappedValue(value []byte) (*SealWrappedValue, error) {
+	swv := &SealWrappedValue{}
+	swvErr := swv.unmarshal(value)
+	if swvErr == nil {
+		return swv, nil
+	}
+
+	blobInfo := &wrapping.BlobInfo{}
+	blobInfoErr := proto.Unmarshal(value, blobInfo)
+	if blobInfoErr == nil {
+		return newTransitorySealWrappedValue(blobInfo), nil
+	}
+
+	return nil, fmt.Errorf("error unmarshalling seal wrapped value: %w, %w", swvErr, blobInfoErr)
+}
+
+// UnmarshalSealWrappedValueWithCanary unmarshalls a byte array into a SealWrappedValue, taking care of
+// removing the 's' canary value.
+// This method returns true if a SealWrappedValue was successfully unmarshaled.
+func UnmarshalSealWrappedValueWithCanary(value []byte) (*SealWrappedValue, bool) {
 	eLen := len(value)
 	if eLen > 0 && value[eLen-1] == 's' {
 		if wrappedEntryValue, err := UnmarshalSealWrappedValue(value[:eLen-1]); err == nil {
-			return wrappedEntryValue
+			return wrappedEntryValue, true
 		}
 		// Else, note that having the canary value present is not a guarantee that
 		// the value is wrapped, so if there is an error we will simply return a nil BlobInfo.
 	}
-	return nil
+	return nil, false
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Stored Barrier Keys (a.k.a. Root Key)
 
-// SealWrapStoredBarrierKeys takes the json-marshalled barriers (root) keys, encrypts them using the seal access,
+// SealWrapStoredBarrierKeys takes the barrier (root) keys, encrypts them using the seal access,
 // and returns a physical.Entry for storage.
 func SealWrapStoredBarrierKeys(ctx context.Context, access seal.Access, keys [][]byte) (*physical.Entry, error) {
+	// Note that even though keys is a slice, it seems to always contain a single key.
 	buf, err := json.Marshal(keys)
 	if err != nil {
 		return nil, fmt.Errorf("failed to encode keys for storage: %w", err)
 	}
 
-	blobInfo, err := SealWrapValue(ctx, access, true, buf)
+	wrappedEntryValue, err := SealWrapValue(ctx, access, true, buf)
 	if err != nil {
 		return nil, &ErrEncrypt{Err: fmt.Errorf("failed to encrypt keys for storage: %w", err)}
 	}
@@ -90,9 +107,9 @@ func SealWrapStoredBarrierKeys(ctx context.Context, access seal.Access, keys [][
 	// returned by access.Encrypt() was marshalled directly. It probably would not matter if the value
 	// was true, but setting if to false here makes TestSealWrapBackend_StorageBarrierKeyUpgrade_FromIVEntry
 	// pass (maybe other tests as well?).
-	blobInfo.Wrapped = false
+	wrappedEntryValue.GetUniqueBlobInfo().Wrapped = false
 
-	wrappedValue, err := MarshalSealWrappedValue(blobInfo)
+	wrappedValue, err := MarshalSealWrappedValue(wrappedEntryValue)
 	if err != nil {
 		return nil, fmt.Errorf("failed to marshal value for storage: %w", err)
 	}
@@ -104,11 +121,15 @@ func SealWrapStoredBarrierKeys(ctx context.Context, access seal.Access, keys [][
 
 // UnsealWrapStoredBarrierKeys is the counterpart to SealWrapStoredBarrierKeys.
 func UnsealWrapStoredBarrierKeys(ctx context.Context, access seal.Access, pe *physical.Entry) ([][]byte, error) {
-	blobInfo, err := UnmarshalSealWrappedValue(pe.Value)
+	wrappedEntryValue, err := UnmarshalSealWrappedValue(pe.Value)
 	if err != nil {
 		return nil, fmt.Errorf("failed to proto decode stored keys: %w", err)
 	}
 
+	return decodeBarrierKeys(ctx, access, wrappedEntryValue.GetUniqueBlobInfo())
+}
+
+func decodeBarrierKeys(ctx context.Context, access seal.Access, blobInfo *wrapping.BlobInfo) ([][]byte, error) {
 	pt, err := access.Decrypt(ctx, blobInfo, nil)
 	if err != nil {
 		if strings.Contains(err.Error(), "message authentication failed") {
@@ -130,17 +151,17 @@ func UnsealWrapStoredBarrierKeys(ctx context.Context, access seal.Access, pe *ph
 
 // SealWrapRecoveryKey encrypts the recovery key using the given seal access and returns a physical.Entry for storage.
 func SealWrapRecoveryKey(ctx context.Context, access seal.Access, key []byte) (*physical.Entry, error) {
-	blobInfo, err := SealWrapValue(ctx, access, true, key)
+	wrappedEntryValue, err := SealWrapValue(ctx, access, true, key)
 	if err != nil {
-		return nil, &ErrEncrypt{Err: fmt.Errorf("failed to encrypt keys for storage: %w", err)}
+		return nil, &ErrEncrypt{Err: fmt.Errorf("failed to encrypt recovery key for storage: %w", err)}
 	}
 
 	// Not that we set Wrapped to false since it used to be that the BlobInfo returned by access.Encrypt()
 	// was marshalled directly. It probably would not matter if the value was true, it doesn't seem to
 	// break any tests.
-	blobInfo.Wrapped = false
+	wrappedEntryValue.GetUniqueBlobInfo().Wrapped = false
 
-	wrappedValue, err := MarshalSealWrappedValue(blobInfo)
+	wrappedValue, err := MarshalSealWrappedValue(wrappedEntryValue)
 	if err != nil {
 		return nil, fmt.Errorf("failed to marshal value for storage: %w", err)
 	}
@@ -152,11 +173,12 @@ func SealWrapRecoveryKey(ctx context.Context, access seal.Access, key []byte) (*
 
 // UnsealWrapRecoveryKey is the counterpart to SealWrapRecoveryKey.
 func UnsealWrapRecoveryKey(ctx context.Context, access seal.Access, pe *physical.Entry) ([]byte, *wrapping.BlobInfo, error) {
-	blobInfo, err := UnmarshalSealWrappedValue(pe.Value)
+	wrappedEntryValue, err := UnmarshalSealWrappedValue(pe.Value)
 	if err != nil {
 		return nil, nil, fmt.Errorf("failed to proto decode recevory key: %w", err)
 	}
 
+	blobInfo := wrappedEntryValue.GetUniqueBlobInfo()
 	pt, err := access.Decrypt(ctx, blobInfo, nil)
 	if err != nil {
 		return nil, nil, fmt.Errorf("failed to decrypt recovery key from storage: %w", err)

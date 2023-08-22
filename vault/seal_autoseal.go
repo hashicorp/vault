@@ -137,11 +137,12 @@ func (d *autoSeal) upgradeStoredKeys(ctx context.Context) error {
 		return fmt.Errorf("no stored keys found")
 	}
 
-	blobInfo, err := UnmarshalSealWrappedValue(pe.Value)
+	wrappedEntryValue, err := UnmarshalSealWrappedValue(pe.Value)
 	if err != nil {
 		return fmt.Errorf("failed to unmarshal stored keys: %w", err)
 	}
 
+	blobInfo := wrappedEntryValue.GetUniqueBlobInfo()
 	keyId, err := d.Access.KeyId(ctx)
 	if err != nil {
 		return err
