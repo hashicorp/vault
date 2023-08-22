@@ -45,10 +45,9 @@ export default class KvListPageComponent extends Component {
 
   // callback from HDS pagination to set the queryParams currentPage
   get paginationQueryParams() {
-    return (page, pageSize) => {
+    return (page) => {
       return {
         currentPage: page,
-        currentPageSize: pageSize,
       };
     };
   }
