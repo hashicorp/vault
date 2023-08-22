@@ -115,7 +115,6 @@ func testTransit_CreateCsr(t *testing.T, keyType, pemTemplateCsr string) {
 	}
 }
 
-// NOTE: Tests are using two 'different' methods of checking for errors, which one sould we prefer?
 func TestTransit_Certs_ImportCertChain(t *testing.T) {
 	// Create Cluster
 	coreConfig := &vault.CoreConfig{
@@ -244,6 +243,7 @@ func testTransit_ImportCertChain(t *testing.T, apiClient *api.Client, keyType st
 	require.NotNil(t, resp)
 
 	resp, err = apiClient.Logical().Read(fmt.Sprintf("transit/keys/%s", keyName))
+	require.NoError(t, err)
 	require.NotNil(t, resp)
 	keys, ok := resp.Data["keys"].(map[string]interface{})
 	if !ok {
@@ -257,4 +257,123 @@ func testTransit_ImportCertChain(t *testing.T, apiClient *api.Client, keyType st
 	if !present {
 		t.Fatalf("certificate chain not present in key version 1")
 	}
+}
+
+func TestTransit_Certs_ImportInvalidCertChain(t *testing.T) {
+	// Create Cluster
+	coreConfig := &vault.CoreConfig{
+		LogicalBackends: map[string]logical.Factory{
+			"transit": Factory,
+			"pki":     pki.Factory,
+		},
+	}
+
+	cluster := vault.NewTestCluster(t, coreConfig, &vault.TestClusterOptions{
+		HandlerFunc: vaulthttp.Handler,
+	})
+
+	cluster.Start()
+	defer cluster.Cleanup()
+
+	cores := cluster.Cores
+	vault.TestWaitActive(t, cores[0].Core)
+	client := cores[0].Client
+
+	// Mount transit backend
+	err := client.Sys().Mount("transit", &api.MountInput{
+		Type: "transit",
+	})
+	require.NoError(t, err)
+
+	// Mount PKI backend
+	err = client.Sys().Mount("pki", &api.MountInput{
+		Type: "pki",
+	})
+	require.NoError(t, err)
+
+	testTransit_ImportInvalidCertChain(t, client, "rsa-2048")
+	testTransit_ImportInvalidCertChain(t, client, "rsa-3072")
+	testTransit_ImportInvalidCertChain(t, client, "rsa-4096")
+	testTransit_ImportInvalidCertChain(t, client, "ecdsa-p256")
+	testTransit_ImportInvalidCertChain(t, client, "ecdsa-p384")
+	testTransit_ImportInvalidCertChain(t, client, "ecdsa-p521")
+	testTransit_ImportInvalidCertChain(t, client, "ed25519")
+}
+
+func testTransit_ImportInvalidCertChain(t *testing.T, apiClient *api.Client, keyType string) {
+	keyName := fmt.Sprintf("%s", keyType)
+	issuerName := fmt.Sprintf("%s-issuer", keyType)
+
+	// Create transit key
+	_, err := apiClient.Logical().Write(fmt.Sprintf("transit/keys/%s", keyName), map[string]interface{}{
+		"type": keyType,
+	})
+	require.NoError(t, err)
+
+	// Generate PKI root
+	resp, err := apiClient.Logical().Write("pki/root/generate/internal", map[string]interface{}{
+		"issuer_name": issuerName,
+		"common_name": "PKI Root X1",
+	})
+	require.NoError(t, err)
+	require.NotNil(t, resp)
+
+	rootCertPEM := resp.Data["certificate"].(string)
+	pemBlock, _ := pem.Decode([]byte(rootCertPEM))
+	require.NotNil(t, pemBlock)
+
+	rootCert, err := x509.ParseCertificate(pemBlock.Bytes)
+	require.NoError(t, err)
+
+	pkiKeyType := "rsa"
+	pkiKeyBits := "0"
+	if strings.HasPrefix(keyType, "rsa") {
+		pkiKeyBits = keyType[4:]
+	} else if strings.HasPrefix(keyType, "ecdas") {
+		pkiKeyType = "ec"
+		pkiKeyBits = keyType[7:]
+	} else if keyType == "ed25519" {
+		pkiKeyType = "ed25519"
+		pkiKeyBits = "0"
+	}
+
+	// Create role to be used in the certificate issuing
+	resp, err = apiClient.Logical().Write("pki/roles/example-dot-com", map[string]interface{}{
+		"issuer_ref":                         issuerName,
+		"allowed_domains":                    "example.com",
+		"allow_bare_domains":                 true,
+		"basic_constraints_valid_for_non_ca": true,
+		"key_type":                           pkiKeyType,
+		"key_bits":                           pkiKeyBits,
+	})
+	require.NoError(t, err)
+
+	// XXX -- Note subtle error: we issue a certificate with a new key,
+	// not using a CSR from Transit.
+	resp, err = apiClient.Logical().Write("pki/issue/example-dot-com", map[string]interface{}{
+		"common_name": "example.com",
+		"issuer_ref":  issuerName,
+		"ttl":         "10m",
+	})
+	require.NoError(t, err)
+	require.NotNil(t, resp)
+
+	leafCertPEM := resp.Data["certificate"].(string)
+	pemBlock, _ = pem.Decode([]byte(leafCertPEM))
+	require.NotNil(t, pemBlock)
+
+	leafCert, err := x509.ParseCertificate(pemBlock.Bytes)
+	require.NoError(t, err)
+
+	require.NoError(t, leafCert.CheckSignatureFrom(rootCert))
+	t.Logf("root: %v", rootCertPEM)
+	t.Logf("leaf: %v", leafCertPEM)
+
+	certificateChain := strings.Join([]string{leafCertPEM, rootCertPEM}, "\n")
+
+	// Import certificate chain to transit key version
+	resp, err = apiClient.Logical().Write(fmt.Sprintf("transit/keys/%s/set-certificate", keyName), map[string]interface{}{
+		"certificate_chain": certificateChain,
+	})
+	require.Error(t, err)
 }
