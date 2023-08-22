@@ -83,5 +83,5 @@ func (tss *TransitSealServer) MakeSeal(t testing.T, key string) (vault.Seal, err
 	if err != nil {
 		return nil, err
 	}
-	return vault.NewAutoSeal(access)
+	return vault.NewAutoSeal(access), nil
 }

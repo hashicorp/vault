@@ -8,8 +8,6 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/hashicorp/vault/vault/seal"
-
 	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/sdk/helper/logging"
 	"github.com/hashicorp/vault/sdk/logical"
@@ -93,7 +91,7 @@ func testCore_Init_Common(t *testing.T, c *Core, conf *CoreConfig, barrierConf, 
 		t.Fatalf("err: %v", err)
 	}
 
-	if c.seal.BarrierType() == seal.SealTypeShamir && len(res.SecretShares) != barrierConf.SecretShares {
+	if c.seal.BarrierSealConfigType() == SealConfigTypeShamir && len(res.SecretShares) != barrierConf.SecretShares {
 		t.Fatalf("Bad: got\n%#v\nexpected conf matching\n%#v\n", *res, *barrierConf)
 	}
 	if recoveryConf != nil {

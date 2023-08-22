@@ -206,7 +206,7 @@ func (c *Core) initializeBarrier(ctx context.Context, barrierConfig *SealConfig)
 	var sealKey []byte
 	var sealKeyShares [][]byte
 
-	if barrierConfig.StoredShares == 1 && c.seal.BarrierType() == wrapping.WrapperTypeShamir {
+	if barrierConfig.StoredShares == 1 && c.seal.BarrierSealConfigType() == wrapping.WrapperTypeShamir {
 		sealKey, sealKeyShares, err = c.generateShares(barrierConfig)
 		if err != nil {
 			c.logger.Error("error generating shares", "error", err)

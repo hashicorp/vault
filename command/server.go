@@ -2535,10 +2535,8 @@ func (r *SetSealResponse) getCreatedSeals() []*vault.Seal {
 func setSeal(c *ServerCommand, config *server.Config, infoKeys []string, info map[string]string, existingSealGenerationInfo *vaultseal.SealGenerationInfo, sealLogger hclog.Logger) (*SetSealResponse, error) {
 	if c.flagDevAutoSeal {
 		access, _ := vaultseal.NewTestSeal(nil)
-		barrierSeal, err := vault.NewAutoSeal(access)
-		if err != nil {
-			return nil, err
-		}
+		barrierSeal := vault.NewAutoSeal(access)
+
 		return &SetSealResponse{barrierSeal: barrierSeal}, nil
 	}
 
@@ -2546,7 +2544,7 @@ func setSeal(c *ServerCommand, config *server.Config, infoKeys []string, info ma
 	switch len(config.Seals) {
 	case 0:
 		config.Seals = append(config.Seals, &configutil.KMS{
-			Type:     vaultseal.SealTypeShamir.String(),
+			Type:     vault.SealConfigTypeShamir.String(),
 			Priority: 1,
 			Name:     "shamir",
 		})
@@ -2555,7 +2553,7 @@ func setSeal(c *ServerCommand, config *server.Config, infoKeys []string, info ma
 		// migrate to a shamir seal and simply didn't provide it
 		if config.Seals[0].Disabled {
 			config.Seals = append(config.Seals, &configutil.KMS{
-				Type:     vaultseal.SealTypeShamir.String(),
+				Type:     vault.SealConfigTypeShamir.String(),
 				Priority: 1,
 				Name:     "shamir",
 			})
@@ -2578,21 +2576,17 @@ func setSeal(c *ServerCommand, config *server.Config, infoKeys []string, info ma
 	var disabledSealType string
 
 	for _, configSeal := range config.Seals {
-		sealType := vaultseal.SealTypeShamir.String()
-
 		sealTypeEnvVarName := "VAULT_SEAL_TYPE"
 		if configSeal.Priority > 1 {
 			sealTypeEnvVarName = sealTypeEnvVarName + "_" + configSeal.Name
 		}
 
 		if !configSeal.Disabled && os.Getenv(sealTypeEnvVarName) != "" {
-			sealType = os.Getenv(sealTypeEnvVarName)
+			sealType := os.Getenv(sealTypeEnvVarName)
 			configSeal.Type = sealType
-		} else {
-			sealType = configSeal.Type
 		}
 
-		sealLogger := c.logger.ResetNamed(fmt.Sprintf("seal.%s", sealType))
+		sealLogger := c.logger.ResetNamed(fmt.Sprintf("seal.%s", configSeal.Type))
 
 		var wrapperInfoKeys []string
 		wrapperInfoMap := map[string]string{}
@@ -2669,16 +2663,7 @@ func setSeal(c *ServerCommand, config *server.Config, infoKeys []string, info ma
 
 	var barrierSeal vault.Seal
 	var unwrapSeal vault.Seal
-	var sealConfigError error
-	addSealConfigError := func(e error) {
-		if sealConfigError == nil {
-			sealConfigError = e
-		} else {
-			sealConfigError = errors.Join(sealConfigError, e)
-		}
-	}
 
-	var err error
 	if enabledSealType == "shamir" {
 		// We should only have one enabled SealInfo here
 		barrierSeal = vault.NewDefaultSeal(vaultseal.NewAccess(sealLogger, sealGenerationInfo, enabledSealInfos))
@@ -2696,12 +2681,10 @@ func setSeal(c *ServerCommand, config *server.Config, infoKeys []string, info ma
 		if !working {
 			return nil, errors.New("error creating autoseal: no Seals were configured successfully")
 		}
-		barrierSeal, err = vault.NewAutoSeal(vaultseal.NewAccess(sealLogger, sealGenerationInfo, enabledSealInfos))
-		if err != nil {
-			addSealConfigError(err)
-		}
+		barrierSeal = vault.NewAutoSeal(vaultseal.NewAccess(sealLogger, sealGenerationInfo, enabledSealInfos))
 	}
 
+	var sealConfigError error
 	if disabledSealType != "" {
 		// Making a SealGenerationInfo for the unwrap seal is a bit funky. None of its fields should
 		// really matter, since the unwrap seal should only be used for decryption. If we switch seal
@@ -2709,14 +2692,11 @@ func setSeal(c *ServerCommand, config *server.Config, infoKeys []string, info ma
 		unwrapAccess, err := vaultseal.NewAccessFromSealInfo(sealLogger, sealGenerationInfo.Generation-1, true, disabledSealInfos)
 		switch {
 		case err != nil:
-			addSealConfigError(err)
+			sealConfigError = err
 		case disabledSealType == "shamir":
 			unwrapSeal = vault.NewDefaultSeal(unwrapAccess)
 		default:
-			unwrapSeal, err = vault.NewAutoSeal(unwrapAccess)
-			if err != nil {
-				addSealConfigError(err)
-			}
+			unwrapSeal = vault.NewAutoSeal(unwrapAccess)
 		}
 	}
 

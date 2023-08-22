@@ -79,11 +79,7 @@ func TestAutoSeal_UpgradeKeys(t *testing.T) {
 	// Set initial encryption key.
 	changeKey("kaz")
 
-	autoSeal, err := NewAutoSeal(testSeal)
-	if err != nil {
-		t.Fatal(err)
-	}
-
+	autoSeal := NewAutoSeal(testSeal)
 	autoSeal.SetCore(core)
 	pBackend := newTestBackend(t)
 	core.physical = pBackend
@@ -192,11 +188,7 @@ func TestAutoSeal_HealthCheck(t *testing.T) {
 	})
 	sealHealthTestIntervalNominal = 10 * time.Millisecond
 	sealHealthTestIntervalUnhealthy = 10 * time.Millisecond
-	autoSeal, err := NewAutoSeal(testSealAccess)
-	if err != nil {
-		t.Fatal(err)
-	}
-
+	autoSeal := NewAutoSeal(testSealAccess)
 	autoSeal.SetCore(core)
 	core.seal = autoSeal
 	autoSeal.StartHealthCheck()

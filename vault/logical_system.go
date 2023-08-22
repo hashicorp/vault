@@ -4761,7 +4761,7 @@ func (core *Core) GetSealStatus(ctx context.Context) (*SealStatusResponse, error
 
 	if sealConfig == nil {
 		s := &SealStatusResponse{
-			Type:         core.SealAccess().BarrierType().String(),
+			Type:         core.SealAccess().BarrierSealConfigType().String(),
 			Initialized:  initialized,
 			Sealed:       true,
 			RecoverySeal: core.SealAccess().RecoveryKeySupported(),

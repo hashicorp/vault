@@ -35,7 +35,6 @@ import (
 	"github.com/hashicorp/vault/vault"
 	"github.com/hashicorp/vault/vault/diagnose"
 	"github.com/hashicorp/vault/vault/hcp_link"
-	"github.com/hashicorp/vault/vault/seal"
 	"github.com/hashicorp/vault/version"
 	"github.com/mitchellh/cli"
 	"github.com/posener/complete"
@@ -452,7 +451,7 @@ func (c *OperatorDiagnoseCommand) offlineDiagnostics(ctx context.Context) error 
 		seal := seal // capture range variable
 		// Ensure that the seal finalizer is called, even if using verify-only
 		defer func(seal *vault.Seal) {
-			sealType := diagnose.CapitalizeFirstLetter((*seal).BarrierType().String())
+			sealType := diagnose.CapitalizeFirstLetter((*seal).BarrierSealConfigType().String())
 			finalizeSealContext, finalizeSealSpan := diagnose.StartSpan(ctx, "Finalize "+sealType+" Seal")
 			err = (*seal).Finalize(finalizeSealContext)
 			if err != nil {
@@ -692,7 +691,7 @@ SEALFAIL:
 		if barrierSeal == nil {
 			return fmt.Errorf("Diagnose could not create a barrier seal object.")
 		}
-		if barrierSeal.BarrierType() == seal.SealTypeShamir {
+		if barrierSeal.BarrierSealConfigType() == vault.SealConfigTypeShamir {
 			diagnose.Skipped(ctx, "Skipping barrier encryption test. Only supported for auto-unseal.")
 			return nil
 		}

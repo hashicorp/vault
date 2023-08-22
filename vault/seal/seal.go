@@ -99,7 +99,6 @@ type Access interface {
 	GetWrappers() []wrapping.Wrapper
 	SetShamirSealKey([]byte) error
 	GetShamirKeyBytes(ctx context.Context) ([]byte, error)
-	SealType(ctx context.Context) (SealType, error)
 	// GetSealInfoByPriority the returned slice should be sorted in priority.
 	GetSealInfoByPriority() []*SealInfo
 	GetSealGenerationInfo() *SealGenerationInfo
@@ -129,8 +128,8 @@ func NewAccess(logger hclog.Logger, sealGenerationInfo *SealGenerationInfo, seal
 		logger:             logger,
 	}
 	a.wrappersByPriority = make([]*SealInfo, len(sealInfos))
-	for i, x := range sealInfos {
-		v := x
+	for i, sealInfo := range sealInfos {
+		v := sealInfo
 		a.wrappersByPriority[i] = &v
 		v.Healthy = true
 		v.LastSeenHealthy = time.Now()
@@ -214,6 +213,7 @@ func (a *access) Init(ctx context.Context, options ...wrapping.Option) error {
 	return nil
 }
 
+// FIXME(SEALHA): We need to remove all methods that assume that there is a single wrapper.
 func (a *access) getDefaultWrapper() wrapping.Wrapper {
 	if len(a.wrappersByPriority) > 0 {
 		return a.wrappersByPriority[0].Wrapper
@@ -223,19 +223,6 @@ func (a *access) getDefaultWrapper() wrapping.Wrapper {
 
 func (a *access) Type(ctx context.Context) (wrapping.WrapperType, error) {
 	return a.getDefaultWrapper().Type(ctx)
-}
-
-func (a *access) SealType(ctx context.Context) (SealType, error) {
-	if len(a.wrappersByPriority) > 1 {
-		return SealTypeMultiSeal, nil
-	}
-
-	wrapperType, err := a.getDefaultWrapper().Type(ctx)
-	if err != nil {
-		return "", err
-	}
-
-	return SealType(wrapperType), nil
 }
 
 func (a *access) IsUpToDate(ctx context.Context, value *MultiWrapValue, forceKeyIdRefresh bool) (bool, error) {
@@ -511,23 +498,4 @@ func (s *keyIdSet) deduplicate(ids []string) []string {
 	}
 	sort.Strings(deduplicated)
 	return deduplicated
-}
-
-type SealType string
-
-const (
-	SealTypeMultiSeal         SealType = "multiseal"
-	SealTypeAliCloudKms                = SealType(wrapping.WrapperTypeAliCloudKms)
-	SealTypeAwsKms                     = SealType(wrapping.WrapperTypeAwsKms)
-	SealTypeAzureKeyVault              = SealType(wrapping.WrapperTypeAzureKeyVault)
-	SealTypeGcpCkms                    = SealType(wrapping.WrapperTypeGcpCkms)
-	SealTypePkcs11                     = SealType(wrapping.WrapperTypePkcs11)
-	SealTypeOciKms                     = SealType(wrapping.WrapperTypeOciKms)
-	SealTypeShamir                     = SealType(wrapping.WrapperTypeShamir)
-	SealTypeTransit                    = SealType(wrapping.WrapperTypeTransit)
-	SealTypeHsmAutoDeprecated          = SealType(wrapping.WrapperTypeHsmAuto)
-)
-
-func (s SealType) String() string {
-	return string(s)
 }

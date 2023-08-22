@@ -515,10 +515,7 @@ func TestRaft_SnapshotAPI_MidstreamFailure(t *testing.T) {
 	t.Parallel()
 
 	seal, setErr := vaultseal.NewToggleableTestSeal(nil)
-	autoSeal, err := vault.NewAutoSeal(seal)
-	if err != nil {
-		t.Fatal(err)
-	}
+	autoSeal := vault.NewAutoSeal(seal)
 	cluster, _ := raftCluster(t, &RaftClusterOpts{
 		NumCores: 1,
 		Seal:     autoSeal,
@@ -552,7 +549,7 @@ func TestRaft_SnapshotAPI_MidstreamFailure(t *testing.T) {
 
 	setErr[0](errors.New("seal failure"))
 	// Take a snapshot
-	err = leaderClient.Sys().RaftSnapshot(w)
+	err := leaderClient.Sys().RaftSnapshot(w)
 	w.Close()
 	if err == nil || err != api.ErrIncompleteSnapshot {
 		t.Fatalf("expected err=%v, got: %v", api.ErrIncompleteSnapshot, err)

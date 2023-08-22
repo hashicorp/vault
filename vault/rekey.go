@@ -170,8 +170,8 @@ func (c *Core) RekeyInit(config *SealConfig, recovery bool) logical.HTTPCodedErr
 
 // BarrierRekeyInit is used to initialize the rekey settings for the barrier key
 func (c *Core) BarrierRekeyInit(config *SealConfig) logical.HTTPCodedError {
-	switch c.seal.BarrierType() {
-	case seal.SealTypeShamir:
+	switch c.seal.BarrierSealConfigType() {
+	case SealConfigTypeShamir:
 		// As of Vault 1.3 all seals use StoredShares==1.  The one exception is
 		// legacy shamir seals, which we can read but not write (by design).
 		// So if someone does a rekey, regardless of their intention, we're going
@@ -398,7 +398,7 @@ func (c *Core) BarrierRekeyUpdate(ctx context.Context, key []byte, nonce string)
 			c.logger.Error("rekey recovery key verification failed", "error", err)
 			return nil, logical.CodedError(http.StatusBadRequest, fmt.Errorf("recovery key verification failed: %w", err).Error())
 		}
-	case c.seal.BarrierType() == seal.SealTypeShamir:
+	case c.seal.BarrierSealConfigType() == SealConfigTypeShamir:
 		if c.seal.StoredKeysSupported() == seal.StoredKeysSupportedShamirRoot {
 			access, err := seal.NewAccessFromSealInfo(c.logger, c.seal.GetAccess().Generation(), true, []seal.SealInfo{
 				{

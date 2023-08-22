@@ -587,8 +587,8 @@ func (b *SystemBackend) handleStorageRaftSnapshotWrite(force bool, makeSealer fu
 		switch {
 		case err == nil:
 		case strings.Contains(err.Error(), "failed to open the sealed hashes"):
-			switch b.Core.seal.BarrierType() {
-			case seal.SealTypeShamir:
+			switch b.Core.seal.BarrierSealConfigType() {
+			case SealConfigTypeShamir:
 				return logical.ErrorResponse("could not verify hash file, possibly the snapshot is using a different set of unseal keys; use the snapshot-force API to bypass this check"), logical.ErrInvalidRequest
 			default:
 				return logical.ErrorResponse("could not verify hash file, possibly the snapshot is using a different autoseal key; use the snapshot-force API to bypass this check"), logical.ErrInvalidRequest

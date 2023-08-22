@@ -278,7 +278,7 @@ func (c *Core) Initialize(ctx context.Context, initParams *InitParams) (*InitRes
 	var sealKey []byte
 	var sealKeyShares [][]byte
 
-	if barrierConfig.StoredShares == 1 && c.seal.BarrierType() == seal.SealTypeShamir {
+	if barrierConfig.StoredShares == 1 && c.seal.BarrierSealConfigType() == SealConfigTypeShamir {
 		sealKey, sealKeyShares, err = c.generateShares(barrierConfig)
 		if err != nil {
 			c.logger.Error("error generating shares", "error", err)
@@ -441,7 +441,7 @@ func (c *Core) UnsealWithStoredKeys(ctx context.Context) error {
 	c.unsealWithStoredKeysLock.Lock()
 	defer c.unsealWithStoredKeysLock.Unlock()
 
-	if c.seal.BarrierType() == seal.SealTypeShamir {
+	if c.seal.BarrierSealConfigType() == SealConfigTypeShamir {
 		return nil
 	}
 
