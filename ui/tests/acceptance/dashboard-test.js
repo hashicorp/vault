@@ -16,7 +16,7 @@ import mountSecrets from 'vault/tests/pages/settings/mount-secret-backend';
 import consoleClass from 'vault/tests/pages/components/console/ui-panel';
 import ENV from 'vault/config/environment';
 import { formatNumber } from 'core/helpers/format-number';
-// import { pollCluster } from 'vault/tests/helpers/poll-cluster';
+import { pollCluster } from 'vault/tests/helpers/poll-cluster';
 import { disableReplication } from 'vault/tests/helpers/replication';
 
 // selectors
@@ -323,7 +323,6 @@ module('Acceptance | landing page dashboard', function (hooks) {
           storage_type: 'inmem_transactional_ha',
         };
       });
-      this.version = this.owner.lookup('service:version');
       await authPage.login();
     });
 
@@ -332,7 +331,9 @@ module('Acceptance | landing page dashboard', function (hooks) {
     });
 
     test('shows the client count card', async function (assert) {
-      assert.true(this.version.isEnterprise, 'version is enterprise');
+      const version = this.owner.lookup('service:version');
+      assert.true(version.isEnterprise);
+      assert.strictEqual(version.version, '1.14.0+ent');
       assert.strictEqual(currentURL(), '/vault/dashboard');
       assert.dom('[data-test-client-count-card]').exists();
       const response = await this.store.peekRecord('clients/activity', 'some-activity-id');
@@ -361,25 +362,6 @@ module('Acceptance | landing page dashboard', function (hooks) {
   });
   module('replication card', function (hooks) {
     hooks.beforeEach(async function () {
-      this.server.get('sys/seal-status', function () {
-        return {
-          type: 'shamir',
-          initialized: true,
-          sealed: false,
-          t: 1,
-          n: 1,
-          progress: 0,
-          nonce: '',
-          version: '1.14.0+ent',
-          build_date: '2023-06-19T16:20:54Z',
-          migration: false,
-          cluster_name: 'vault-cluster-107c3b64',
-          cluster_id: '7883553f-51ea-bea4-6135-2deb4f147fd1',
-          recovery_seal: false,
-          storage_type: 'inmem_transactional_ha',
-        };
-      });
-      this.version = this.owner.lookup('service:version');
       await authPage.login();
       await settled();
       await disableReplication('dr');
@@ -389,8 +371,9 @@ module('Acceptance | landing page dashboard', function (hooks) {
     });
 
     test('shows the replication card empty state', async function (assert) {
-      assert.true(this.version.isEnterprise);
       await visit('/vault/dashboard');
+      const version = this.owner.lookup('service:version');
+      assert.true(version.isEnterprise);
       assert.dom(REPLICATION_CARD_SELECTORS.replicationEmptyState).exists();
       assert.dom(REPLICATION_CARD_SELECTORS.replicationEmptyStateTitle).hasText('Replication not set up');
       assert
@@ -400,9 +383,10 @@ module('Acceptance | landing page dashboard', function (hooks) {
     });
 
     test('it should show replication status if both dr and performance replication are enabled as features in version', async function (assert) {
-      assert.true(this.version.isEnterprise);
+      const version = this.owner.lookup('service:version');
+      assert.true(version.isEnterprise);
       await visit('/vault/dashboard');
-      assert.strictEqual(currentURL(), '/vault/clients/dashboard');
+      assert.strictEqual(currentURL(), '/vault/dashboard');
       await click(REPLICATION_CARD_SELECTORS.replicationEmptyStateActionsLink);
 
       await click('[data-test-replication-enable]');
