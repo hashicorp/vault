@@ -72,7 +72,7 @@ export default class KvSecretsListRoute extends Route {
       ];
     }
 
-    controller.breadcrumbs = breadcrumbsArray;
+    controller.set('breadcrumbs', breadcrumbsArray);
   }
 
   resetController(controller, isExiting) {
