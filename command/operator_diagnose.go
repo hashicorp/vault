@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/hashicorp/go-kms-wrapping/entropy/v2"
 	"io"
 	"os"
 	"strings"
@@ -539,7 +540,16 @@ SEALFAIL:
 		var secureRandomReader io.Reader
 		// prepare a secure random reader for core
 		randReaderTestName := "Initialize Randomness for Core"
-		secureRandomReader, err = configutil.CreateSecureRandomReaderFunc(config.SharedConfig, sealInfos, server.logger)
+		var sources []*configutil.EntropySourcerInfo
+		for _, sealInfo := range sealInfos {
+			if s, ok := sealInfo.Wrapper.(entropy.Sourcer); ok {
+				sources = append(sources, &configutil.EntropySourcerInfo{
+					Sourcer: s,
+					Name:    sealInfo.Name,
+				})
+			}
+		}
+		secureRandomReader, err = configutil.CreateSecureRandomReaderFunc(config.SharedConfig, sources, server.logger)
 		if err != nil {
 			return diagnose.SpotError(ctx, randReaderTestName, fmt.Errorf("Could not initialize randomness for core: %w.", err))
 		}

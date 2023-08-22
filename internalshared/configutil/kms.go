@@ -13,8 +13,6 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/hashicorp/vault/vault/seal"
-
 	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/go-hclog"
 	wrapping "github.com/hashicorp/go-kms-wrapping/v2"
@@ -390,7 +388,7 @@ var GetTransitKMSFunc = func(kms *KMS, opts ...wrapping.Option) (wrapping.Wrappe
 	return wrapper, info, nil
 }
 
-func createSecureRandomReader(config *SharedConfig, sealList []*seal.SealInfo, logger hclog.Logger) (io.Reader, error) {
+func createSecureRandomReader(_ *SharedConfig, _ []*EntropySourcerInfo, _ hclog.Logger) (io.Reader, error) {
 	return rand.Reader, nil
 }
 

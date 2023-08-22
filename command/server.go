@@ -10,6 +10,7 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"github.com/hashicorp/go-kms-wrapping/entropy/v2"
 	"io"
 	"io/ioutil"
 	"net"
@@ -1277,7 +1278,16 @@ func (c *ServerCommand) Run(args []string) int {
 
 	// prepare a secure random reader for core
 	entropyAugLogger := c.logger.Named("entropy-augmentation")
-	secureRandomReader, err := configutil.CreateSecureRandomReaderFunc(config.SharedConfig, setSealResponse.barrierSeal.GetAccess().GetSealInfoByPriority(), entropyAugLogger)
+	var entropySources []*configutil.EntropySourcerInfo
+	for _, sealInfo := range setSealResponse.barrierSeal.GetAccess().GetSealInfoByPriority() {
+		if s, ok := sealInfo.Wrapper.(entropy.Sourcer); ok {
+			entropySources = append(entropySources, &configutil.EntropySourcerInfo{
+				Sourcer: s,
+				Name:    sealInfo.Name,
+			})
+		}
+	}
+	secureRandomReader, err := configutil.CreateSecureRandomReaderFunc(config.SharedConfig, entropySources, entropyAugLogger)
 	if err != nil {
 		c.UI.Error(err.Error())
 		return 1
