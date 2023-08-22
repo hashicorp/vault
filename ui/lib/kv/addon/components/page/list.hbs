@@ -124,7 +124,6 @@
       </LinkedBlock>
     {{/each}}
     {{! Pagination }}
-    {{!-- {{#if (gt @meta.lastPage 1)}} --}}
     <Hds::Pagination::Numbered
       @currentPage={{@meta.currentPage}}
       @currentPageSize={{@meta.pageSize}}
@@ -134,7 +133,6 @@
       @queryFunction={{this.paginationQueryParams}}
       data-test-pagination
     />
-    {{!-- {{/if}} --}}
   {{else}}
     {{#if @filterValue}}
       <EmptyState @title="There are no secrets matching &quot;{{@filterValue}}&quot;." />
