@@ -381,9 +381,9 @@ func TestBusWildcardSubscriptions(t *testing.T) {
 	}
 }
 
-// TestSecretPathIsPrependedWithMount tests that "secret_path", if present in the
+// TestApiPathIsPrependedWithMount tests that "api_path", if present in the
 // metadata, is prepended with the plugin's mount.
-func TestSecretPathIsPrependedWithMount(t *testing.T) {
+func TestApiPathIsPrependedWithMount(t *testing.T) {
 	bus, err := NewEventBus(nil)
 	if err != nil {
 		t.Fatal(err)
@@ -404,8 +404,8 @@ func TestSecretPathIsPrependedWithMount(t *testing.T) {
 		t.Fatal(err)
 	}
 	metadata := map[string]string{
-		logical.EventMetadataSecretPath: "my/secret/path",
-		"not_touched":                   "xyz",
+		logical.EventMetadataApiPath: "my/secret/path",
+		"not_touched":                "xyz",
 	}
 	metadataBytes, err := json.Marshal(metadata)
 	if err != nil {
@@ -428,13 +428,13 @@ func TestSecretPathIsPrependedWithMount(t *testing.T) {
 		metadata := message.Payload.(*logical.EventReceived).Event.Metadata.AsMap()
 		assert.Contains(t, metadata, "not_touched")
 		assert.Equal(t, "xyz", metadata["not_touched"])
-		assert.Contains(t, metadata, "secret_path")
-		assert.Equal(t, "my/secret/path", metadata["secret_path"])
+		assert.Contains(t, metadata, "api_path")
+		assert.Equal(t, "my/secret/path", metadata["api_path"])
 	case <-timeout:
 		t.Error("Timeout waiting for event")
 	}
 
-	// send with a plugin mounted
+	// send with a secrets plugin mounted
 	pluginInfo := logical.EventPluginInfo{
 		MountClass:    "secrets",
 		MountAccessor: "kv_abc",
@@ -454,8 +454,49 @@ func TestSecretPathIsPrependedWithMount(t *testing.T) {
 		metadata := message.Payload.(*logical.EventReceived).Event.Metadata.AsMap()
 		assert.Contains(t, metadata, "not_touched")
 		assert.Equal(t, "xyz", metadata["not_touched"])
-		assert.Contains(t, metadata, "secret_path")
-		assert.Equal(t, "secret/my/secret/path", metadata["secret_path"])
+		assert.Contains(t, metadata, "api_path")
+		assert.Equal(t, "secret/my/secret/path", metadata["api_path"])
+	case <-timeout:
+		t.Error("Timeout waiting for event")
+	}
+
+	// send with an auth plugin mounted
+	pluginInfo = logical.EventPluginInfo{
+		MountClass:    "auth",
+		MountAccessor: "kubernetes_abc",
+		MountPath:     "kubernetes/",
+		Plugin:        "vault-plugin-auth-kubernetes",
+		PluginVersion: "v1.13.1+builtin",
+	}
+	event, err = logical.NewEvent()
+	if err != nil {
+		t.Fatal(err)
+	}
+	metadata = map[string]string{
+		logical.EventMetadataApiPath: "my/secret/path",
+		"not_touched":                "xyz",
+	}
+	metadataBytes, err = json.Marshal(metadata)
+	if err != nil {
+		t.Fatal(err)
+	}
+	event.Metadata = &structpb.Struct{}
+	if err := event.Metadata.UnmarshalJSON(metadataBytes); err != nil {
+		t.Fatal(err)
+	}
+	err = bus.SendEventInternal(ctx, namespace.RootNamespace, &pluginInfo, fooEventType, event)
+	if err != nil {
+		t.Error(err)
+	}
+
+	timeout = time.After(1 * time.Second)
+	select {
+	case message := <-ch:
+		metadata := message.Payload.(*logical.EventReceived).Event.Metadata.AsMap()
+		assert.Contains(t, metadata, "not_touched")
+		assert.Equal(t, "xyz", metadata["not_touched"])
+		assert.Contains(t, metadata, "api_path")
+		assert.Equal(t, "auth/kubernetes/my/secret/path", metadata["api_path"])
 	case <-timeout:
 		t.Error("Timeout waiting for event")
 	}

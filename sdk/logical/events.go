@@ -6,7 +6,6 @@ package logical
 import (
 	"context"
 	"encoding/json"
-	"errors"
 
 	"github.com/hashicorp/go-uuid"
 	"google.golang.org/protobuf/types/known/structpb"
@@ -14,12 +13,17 @@ import (
 
 // common event metadata keys
 const (
-	EventMetadataSecretPath        = "secret_path"
-	EventMetadataOperation         = "operation"
-	EventMetadataSourcePluginMount = "source_plugin_mount"
-)
+	// EventMetadataApiPath is used in event metadata to show the API path that can be used to fetch any underlying
+	// data. For example, the KV plugin would set this to `data/mysecret`. The event system will automatically prepend
+	// the plugin mount to this path, if present, so it would be come `secret/data/mysecret`, for example.
+	// If this is an auth plugin event, this will additionally be prepended with `auth/`.
+	EventMetadataApiPath = "api_path"
+	// EventMetadataOperation is used in event metadata to express what operation was performed that generated the
+	// event, e.g., `read` or `write`.
+	EventMetadataOperation = "operation"
 
-var ErrOddMetadataStrings = errors.New("odd number of arguments to metadataPairs")
+	extraMetadataArgument = "EXTRA_VALUE_AT_END"
+)
 
 // ID is an alias to GetId() for CloudEvents compatibility.
 func (x *EventReceived) ID() string {
@@ -53,11 +57,13 @@ func SendEvent(ctx context.Context, sender EventSender, eventType string, metada
 		return err
 	}
 	metadata := map[string]string{}
-	if len(metadataPairs)%2 != 0 {
-		return ErrOddMetadataStrings
+	if len(metadataPairs) >= 2 {
+		for i := 0; i < len(metadataPairs)-1; i += 2 {
+			metadata[metadataPairs[i]] = metadataPairs[i+1]
+		}
 	}
-	for i := 0; i < len(metadataPairs); i += 2 {
-		metadata[metadataPairs[i]] = metadataPairs[i+1]
+	if len(metadataPairs)%2 != 0 {
+		metadata[extraMetadataArgument] = metadataPairs[len(metadataPairs)-1]
 	}
 	metadataBytes, err := json.Marshal(metadata)
 	if err != nil {

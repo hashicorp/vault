@@ -86,13 +86,18 @@ func (bus *EventBus) Start() {
 // patchMountPath patches the event data's metadata "secret_path" field, if present, to include the mount path prepended.
 func patchMountPath(data *logical.EventData, pluginInfo *logical.EventPluginInfo) *logical.EventData {
 	if pluginInfo == nil || pluginInfo.MountPath == "" || data.Metadata == nil ||
-		data.Metadata.Fields[logical.EventMetadataSecretPath] == nil {
+		data.Metadata.Fields[logical.EventMetadataApiPath] == nil {
 		return data
 	}
-	data.Metadata.Fields[logical.EventMetadataSecretPath] = structpb.NewStringValue(
-		path.Join(
-			pluginInfo.MountPath,
-			data.Metadata.Fields[logical.EventMetadataSecretPath].GetStringValue()))
+	newPath := path.Join(
+		pluginInfo.MountPath,
+		data.Metadata.Fields[logical.EventMetadataApiPath].GetStringValue())
+
+	if pluginInfo.MountClass == "auth" {
+		newPath = path.Join("auth", newPath)
+	}
+
+	data.Metadata.Fields[logical.EventMetadataApiPath] = structpb.NewStringValue(newPath)
 	return data
 }
 
