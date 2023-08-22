@@ -21,6 +21,10 @@ import { deleteEngineCmd } from 'vault/tests/helpers/commands';
 import authPage from 'vault/tests/pages/auth';
 import mountSecrets from 'vault/tests/pages/settings/mount-secret-backend';
 import consoleClass from 'vault/tests/pages/components/console/ui-panel';
+import ENV from 'vault/config/environment';
+import { formatNumber } from 'core/helpers/format-number';
+import { pollCluster } from 'vault/tests/helpers/poll-cluster';
+import { disableReplication } from 'vault/tests/helpers/replication';
 
 // selectors
 import SECRETS_ENGINE_SELECTORS from 'vault/tests/helpers/components/dashboard/secrets-engines-card';
@@ -28,15 +32,6 @@ import VAULT_CONFIGURATION_SELECTORS from 'vault/tests/helpers/components/dashbo
 import QUICK_ACTION_SELECTORS from 'vault/tests/helpers/components/dashboard/quick-actions-card';
 import REPLICATION_CARD_SELECTORS from 'vault/tests/helpers/components/dashboard/replication-card';
 
-// client count card test
-import sinon from 'sinon';
-import timestamp from 'core/utils/timestamp';
-import ENV from 'vault/config/environment';
-import { formatNumber } from 'core/helpers/format-number';
-const STATIC_NOW = new Date('2023-01-13T14:15:00');
-
-import { pollCluster } from 'vault/tests/helpers/poll-cluster';
-import { disableReplication } from 'vault/tests/helpers/replication';
 const consoleComponent = create(consoleClass);
 
 module('Acceptance | landing page dashboard', function (hooks) {
@@ -311,22 +306,18 @@ module('Acceptance | landing page dashboard', function (hooks) {
     });
   });
   module('client counts card', function (hooks) {
-    hooks.before(function () {
-      sinon.stub(timestamp, 'now').callsFake(() => STATIC_NOW);
+    setupMirage(hooks);
+    hooks.before(async function () {
       ENV['ember-cli-mirage'].handler = 'clients';
     });
 
     hooks.beforeEach(async function () {
       this.store = this.owner.lookup('service:store');
+      await authPage.login();
     });
 
     hooks.after(function () {
-      timestamp.now.restore();
       ENV['ember-cli-mirage'].handler = null;
-    });
-
-    hooks.beforeEach(async function () {
-      await authPage.login();
     });
 
     skip('hides the client count card', async function (assert) {
@@ -357,6 +348,7 @@ module('Acceptance | landing page dashboard', function (hooks) {
     });
   });
   module('replication card', function (hooks) {
+    setupMirage(hooks);
     hooks.beforeEach(async function () {
       await authPage.login();
       await settled();
@@ -364,10 +356,10 @@ module('Acceptance | landing page dashboard', function (hooks) {
       await settled();
       await disableReplication('performance');
       await settled();
-      await visit('/vault/dashboard');
     });
 
     test('shows the replication card empty state', async function (assert) {
+      await visit('/vault/dashboard');
       assert.dom(REPLICATION_CARD_SELECTORS.replicationEmptyState).exists();
       assert.dom(REPLICATION_CARD_SELECTORS.replicationEmptyStateTitle).hasText('Replication not set up');
       assert
@@ -377,6 +369,7 @@ module('Acceptance | landing page dashboard', function (hooks) {
     });
 
     skip('it should show replication status if both dr and performance replication are enabled as features in version', async function (assert) {
+      await visit('/vault/dashboard');
       await click(REPLICATION_CARD_SELECTORS.replicationEmptyStateActionsLink);
       await click('[data-test-replication-type-select="dr"]');
       await fillIn('[data-test-replication-cluster-mode-select]', 'primary');
