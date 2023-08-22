@@ -31,19 +31,38 @@ export default class KvSecretPaths extends Component {
     const data = kvDataPath(backend, path);
     const metadata = kvMetadataPath(backend, path);
 
-    return {
-      'API path': {
-        path: namespace ? `/v1/${namespace}/${data}` : `/v1/${data}`,
+    return [
+      {
+        label: 'API path',
+        snippet: namespace ? `/v1/${namespace}/${data}` : `/v1/${data}`,
         text: 'Use this path when referring to this secret in the API.',
       },
-      'CLI path': {
-        path: namespace ? `-namespace=${namespace} ${cli}` : cli,
+      {
+        label: 'CLI path',
+        snippet: namespace ? `-namespace=${namespace} ${cli}` : cli,
         text: 'Use this path when referring to this secret in the CLI.',
       },
-      'API path for metadata': {
-        path: namespace ? `/v1/${namespace}/${metadata}` : `/v1/${metadata}`,
+      {
+        label: 'API path for metadata',
+        snippet: namespace ? `/v1/${namespace}/${metadata}` : `/v1/${metadata}`,
         text: `Use this path when referring to this secret's metadata in the API and permanent secret deletion.`,
       },
+    ];
+  }
+
+  get commands() {
+    const { snippet: cli } = this.paths.findBy('label', 'CLI path');
+    const { snippet: api } = this.paths.findBy('label', 'API path');
+    const { version } = this.args.secret;
+    const url = `http://127.0.0.1:8200${api}?version=${version}`;
+    return {
+      cli: `vault kv get ${cli}`,
+      /* eslint-disable-next-line no-useless-escape */
+      apiCopy: `curl \ --header "X-Vault-Token: ..." \ --request GET \ ${url}`,
+      apiDisplay: `curl \\
+        --header "X-Vault-Token: ..." \\
+        --request GET \\
+      ${url}`,
     };
   }
 }
