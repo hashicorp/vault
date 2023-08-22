@@ -134,13 +134,11 @@ func (d *autoSeal) upgradeStoredKeys(ctx context.Context) error {
 	if err != nil {
 		return fmt.Errorf("failed to unmarshal stored keys: %w", err)
 	}
-
-	blobInfo := wrappedEntryValue.GetUniqueBlobInfo()
-	keyId, err := d.Access.KeyId(ctx)
+	uptodate, err := d.Access.IsUpToDate(ctx, wrappedEntryValue.getValue(), true)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to check if stored keys are up-to-date: %w", err)
 	}
-	if blobInfo.KeyInfo != nil && blobInfo.KeyInfo.KeyId != keyId {
+	if !uptodate {
 		d.logger.Info("upgrading stored keys")
 
 		keys, err := UnsealWrapStoredBarrierKeys(ctx, d.GetAccess(), pe)
@@ -160,12 +158,6 @@ func (d *autoSeal) upgradeStoredKeys(ctx context.Context) error {
 // the stored keys and the recovery key are encrypted with. The provided
 // Context must be non-nil.
 func (d *autoSeal) UpgradeKeys(ctx context.Context) error {
-	// Many of the seals update their keys to the latest KeyId when Encrypt
-	// is called.
-	if _, err := d.Encrypt(ctx, []byte("a"), nil); err != nil {
-		return err
-	}
-
 	if err := d.upgradeRecoveryKey(ctx); err != nil { // re-encrypts the recovery key
 		return err
 	}
@@ -435,7 +427,7 @@ func (d *autoSeal) getRecoveryKeyInternal(ctx context.Context) ([]byte, error) {
 		return nil, fmt.Errorf("no recovery key found")
 	}
 
-	pt, _, err := UnsealWrapRecoveryKey(ctx, d.Access, pe)
+	pt, err := UnsealWrapRecoveryKey(ctx, d.Access, pe)
 	if err != nil {
 		return nil, fmt.Errorf("failed to decrypt encrypted stored keys: %w", err)
 	}
@@ -452,18 +444,21 @@ func (d *autoSeal) upgradeRecoveryKey(ctx context.Context) error {
 		return fmt.Errorf("no recovery key found")
 	}
 
-	pt, blobInfo, err := UnsealWrapRecoveryKey(ctx, d.Access, pe)
+	wrappedEntryValue, err := UnmarshalSealWrappedValue(pe.Value)
 	if err != nil {
-		return fmt.Errorf("failed to proto decode recovery key: %w", err)
+		return fmt.Errorf("failed to unmarshal recovery key: %w", err)
+	}
+	uptodate, err := d.Access.IsUpToDate(ctx, wrappedEntryValue.getValue(), true)
+	if err != nil {
+		return fmt.Errorf("failed to check if recovery key is up-to-date: %w", err)
 	}
 
-	keyId, err := d.Access.KeyId(ctx)
-	if err != nil {
-		return err
-	}
-
-	if blobInfo.KeyInfo != nil && blobInfo.KeyInfo.KeyId != keyId {
+	if !uptodate {
 		d.logger.Info("upgrading recovery key")
+		pt, err := UnsealWrapRecoveryKey(ctx, d.Access, pe)
+		if err != nil {
+			return fmt.Errorf("failed to decrypt recovery key: %w", err)
+		}
 
 		if err := d.SetRecoveryKey(ctx, pt); err != nil {
 			return fmt.Errorf("failed to save upgraded recovery key: %w", err)
@@ -547,7 +542,7 @@ func (d *autoSeal) StartHealthCheck() {
 					defer cancel()
 
 					testVal := fmt.Sprintf("Heartbeat %d", mathrand.Intn(1000))
-					ciphertext, err := d.Access.Encrypt(ctx, []byte(testVal), nil)
+					ciphertext, err := SealWrapValue(ctx, d.Access, true, []byte(testVal))
 
 					if err != nil {
 						fail("failed to encrypt seal health test value, seal backend may be unreachable", "error", err)
@@ -555,7 +550,7 @@ func (d *autoSeal) StartHealthCheck() {
 						func() {
 							ctx, cancel := context.WithTimeout(ctx, sealHealthTestTimeout)
 							defer cancel()
-							plaintext, err := d.Access.Decrypt(ctx, ciphertext, nil)
+							plaintext, _, err := UnsealWrapValue(ctx, d.Access, "", ciphertext)
 							if err != nil {
 								fail("failed to decrypt seal health test value, seal backend may be unreachable", "error", err)
 							}

@@ -140,7 +140,7 @@ func TestAutoSeal_UpgradeKeys(t *testing.T) {
 				if err != nil {
 					t.Errorf("phyKey = %s: failed to unmarshal stored keys: %s", phyKey, err)
 				}
-				blobInfo := wrappedEntryValue.GetUniqueBlobInfo()
+				blobInfo := wrappedEntryValue.GetSlots()[0]
 				if blobInfo.KeyInfo == nil {
 					t.Errorf("phyKey = %s: KeyInfo missing: %+v", phyKey, blobInfo)
 				}

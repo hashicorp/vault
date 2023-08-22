@@ -1281,7 +1281,11 @@ func (c *Core) joinRaftSendAnswer(ctx context.Context, sealAccess seal.Access, r
 		return errors.New("raft is already initialized")
 	}
 
-	plaintext, err := sealAccess.Decrypt(ctx, raftInfo.challenge, nil)
+	multiWrapValue := &wrapping.MultiWrapValue{
+		Generation: sealAccess.Generation(),
+		Slots:      []*wrapping.BlobInfo{raftInfo.challenge},
+	}
+	plaintext, _, err := sealAccess.Decrypt(ctx, multiWrapValue, nil)
 	if err != nil {
 		return fmt.Errorf("error decrypting challenge: %w", err)
 	}

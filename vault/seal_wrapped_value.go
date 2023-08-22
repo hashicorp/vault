@@ -22,25 +22,32 @@ type SealWrappedValue struct {
 // NewSealWrappedValue creates a new seal wrapped value. Note that this
 // method will change to accept a slice of BlobInfos when multi-seal wrapping
 // is added.
-func NewSealWrappedValue(blobInfo *wrapping.BlobInfo) *SealWrappedValue {
-	if blobInfo == nil {
+func NewSealWrappedValue(multiWrapValue *wrapping.MultiWrapValue) *SealWrappedValue {
+	if len(multiWrapValue.Slots) == 0 {
 		panic("cannot create a SealWrappedValue without a BlobInfo")
 	}
 
+	return &SealWrappedValue{value: *multiWrapValue}
+}
+
+func NewPlaintextSealWrappedValue(generation uint64, plaintext []byte) *SealWrappedValue {
 	// TODO(victorr): see if we can use plaintext instead of blobInfo.Wrapped = false
-	return &SealWrappedValue{
-		value: wrapping.MultiWrapValue{
-			Generation: 1, // TODO(SEALHA): Fill in Generation
-			Slots:      []*wrapping.BlobInfo{blobInfo},
+	return NewSealWrappedValue(&wrapping.MultiWrapValue{
+		Generation: generation,
+		Slots: []*wrapping.BlobInfo{
+			{
+				Wrapped:    false,
+				Ciphertext: plaintext,
+			},
 		},
-	}
+	})
 }
 
 func newTransitorySealWrappedValue(blobInfo *wrapping.BlobInfo) *SealWrappedValue {
-	ret := NewSealWrappedValue(blobInfo)
-	ret.value.Generation = transitoryGeneration
-
-	return ret
+	return NewSealWrappedValue(&wrapping.MultiWrapValue{
+		Generation: transitoryGeneration,
+		Slots:      []*wrapping.BlobInfo{blobInfo},
+	})
 }
 
 func (swv *SealWrappedValue) isTransitory() bool {
@@ -56,19 +63,21 @@ func (swv *SealWrappedValue) isEncrypted() bool {
 	// Note that we set Wrapped == false for StoredBarrierKeysPath and recoveryKeyPath, so check
 	// for the presence of KeyInfo as well as the Wrapped flag.
 
-	blobInfo := swv.GetUniqueBlobInfo()
-	return blobInfo.Wrapped || (blobInfo.KeyInfo != nil)
+	for _, blobInfo := range swv.value.Slots {
+		if blobInfo.Wrapped || (blobInfo.KeyInfo != nil) {
+			return true
+		}
+	}
+	return false
 }
 
-// GetUniqueBlobInfo returns the BlobInfo for the seal wrapped value. This
-// method panics if there is more than one BlobInfo.
-// TODO(SEALHA): Remove GetUniqueBlobInfo() once all callers can work with multiple encryptions.
-func (swv *SealWrappedValue) GetUniqueBlobInfo() *wrapping.BlobInfo {
-	if len(swv.value.Slots) > 1 {
-		panic("expected exactly one BlobInfo but there are more than one of them")
-	}
+func (swv *SealWrappedValue) GetGeneration() uint64 {
+	return swv.value.Generation
+}
 
-	return swv.value.Slots[0]
+// TODO(SEALHA): This is only being used by tests, find a way to remove it
+func (swv *SealWrappedValue) GetSlots() []*wrapping.BlobInfo {
+	return swv.value.Slots
 }
 
 func (swv *SealWrappedValue) getPlaintextValue() ([]byte, error) {
@@ -76,7 +85,7 @@ func (swv *SealWrappedValue) getPlaintextValue() ([]byte, error) {
 		return nil, errors.New("cannot return plaintext value from a SealWrappedValue with encrypted data")
 	}
 
-	return swv.GetUniqueBlobInfo().Ciphertext, nil
+	return swv.value.Slots[0].Ciphertext, nil
 }
 
 var sealWrappedValueHeader = []byte("multiwrapvalue:1")
@@ -103,7 +112,7 @@ func (swv *SealWrappedValue) marshal() ([]byte, error) {
 
 	var buf bytes.Buffer
 	var appendErr error
-	append := func(value []byte) {
+	write := func(value []byte) {
 		if appendErr == nil {
 			_, appendErr = buf.Write(value)
 		}
@@ -112,9 +121,9 @@ func (swv *SealWrappedValue) marshal() ([]byte, error) {
 	lengthBytes := make([]byte, 4)
 	binary.BigEndian.PutUint32(lengthBytes, uint32(len(protoBytes)))
 
-	append(sealWrappedValueHeader)
-	append(lengthBytes)
-	append(protoBytes)
+	write(sealWrappedValueHeader)
+	write(lengthBytes)
+	write(protoBytes)
 	if appendErr != nil {
 		return nil, appendErr
 	}
@@ -145,4 +154,8 @@ func (swv *SealWrappedValue) unmarshal(value []byte) error {
 	}
 
 	return nil
+}
+
+func (swv *SealWrappedValue) getValue() *wrapping.MultiWrapValue {
+	return &swv.value
 }
