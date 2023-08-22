@@ -23,7 +23,7 @@ import mountSecrets from 'vault/tests/pages/settings/mount-secret-backend';
 import consoleClass from 'vault/tests/pages/components/console/ui-panel';
 import ENV from 'vault/config/environment';
 import { formatNumber } from 'core/helpers/format-number';
-import { pollCluster } from 'vault/tests/helpers/poll-cluster';
+// import { pollCluster } from 'vault/tests/helpers/poll-cluster';
 import { disableReplication } from 'vault/tests/helpers/replication';
 
 // selectors
@@ -366,13 +366,10 @@ module('Acceptance | landing page dashboard', function (hooks) {
       assert.dom(REPLICATION_CARD_SELECTORS.replicationEmptyStateActions).hasText('Enable replication');
     });
 
-    skip('it should show replication status if both dr and performance replication are enabled as features in version', async function (assert) {
+    test('it should show replication status if both dr and performance replication are enabled as features in version', async function (assert) {
       await visit('/vault/dashboard');
       await click(REPLICATION_CARD_SELECTORS.replicationEmptyStateActionsLink);
-      await click('[data-test-replication-type-select="dr"]');
-      await fillIn('[data-test-replication-cluster-mode-select]', 'primary');
       await click('[data-test-replication-enable]');
-      await pollCluster(this.owner);
       await visit('/vault/dashboard');
       assert
         .dom(REPLICATION_CARD_SELECTORS.getReplicationTitle('dr-perf', 'DR primary'))
