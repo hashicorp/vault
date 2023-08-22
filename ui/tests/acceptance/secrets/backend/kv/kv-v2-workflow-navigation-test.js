@@ -85,7 +85,7 @@ module('Acceptance | kv-v2 workflow | navigation', function (hooks) {
       assert.dom(PAGE.secretTab('Configuration')).doesNotHaveClass('active');
       // Toolbar correct
       assert.dom(PAGE.toolbar).exists({ count: 1 }, 'toolbar renders');
-      assert.dom(PAGE.list.filter).hasNoValue('List filter input is empty');
+      assert.dom(PAGE.list.filter).doesNotExist('List filter does not show because no secrets exists.');
       // Page content correct
       assert.dom(PAGE.emptyStateTitle).hasText('No secrets yet');
       assert.dom(PAGE.emptyStateActions).hasText('Create secret');
@@ -339,10 +339,9 @@ module('Acceptance | kv-v2 workflow | navigation', function (hooks) {
 
       // click toolbar CTA
       await click(PAGE.list.createSecret);
-      // TODO: initialKey should not show on query params if empty
       assert.strictEqual(
         currentURL(),
-        `/vault/secrets/${backend}/kv/create?initialKey=`,
+        `/vault/secrets/${backend}/kv/create`,
         `url includes /vault/secrets/${backend}/kv/create`
       );
 
@@ -530,7 +529,7 @@ module('Acceptance | kv-v2 workflow | navigation', function (hooks) {
       assert.dom(PAGE.secretTab('Configuration')).doesNotHaveClass('active');
       // Toolbar correct
       assert.dom(PAGE.toolbar).exists({ count: 1 }, 'toolbar renders');
-      assert.dom(PAGE.list.filter).hasNoValue('List filter input is empty');
+      assert.dom(PAGE.list.filter).doesNotExist('List filter does not show because no secrets exists.');
       // Page content correct
       assert.dom(PAGE.emptyStateTitle).hasText('No secrets yet');
       assert.dom(PAGE.emptyStateActions).hasText('Create secret');
@@ -538,7 +537,6 @@ module('Acceptance | kv-v2 workflow | navigation', function (hooks) {
 
       // Click empty state CTA
       await click(`${PAGE.emptyStateActions} a`);
-      // TODO: initialKey should not show on query params if empty
       assert.ok(
         currentURL().startsWith(`/vault/secrets/${backend}/kv/create`),
         `url includes /vault/secrets/${backend}/kv/create`
@@ -554,7 +552,6 @@ module('Acceptance | kv-v2 workflow | navigation', function (hooks) {
 
       // click toolbar CTA
       await click(PAGE.list.createSecret);
-      // TODO: initialKey should not show on query params if empty
       assert.ok(
         currentURL().startsWith(`/vault/secrets/${backend}/kv/create`),
         `url includes /vault/secrets/${backend}/kv/create`
@@ -740,7 +737,7 @@ module('Acceptance | kv-v2 workflow | navigation', function (hooks) {
       assert.dom(PAGE.secretTab('Configuration')).doesNotHaveClass('active');
       // Toolbar correct
       assert.dom(PAGE.toolbar).exists({ count: 1 }, 'toolbar only renders create secret action');
-      assert.dom(PAGE.list.filter).hasNoValue('List filter input is empty');
+      assert.dom(PAGE.list.filter).doesNotExist('List filter does not show because no secrets exists.');
       // Page content correct
       assert.dom(PAGE.emptyStateTitle).hasText('No secrets yet');
       assert.dom(PAGE.emptyStateActions).hasText('Create secret');
@@ -978,10 +975,9 @@ module('Acceptance | kv-v2 workflow | navigation', function (hooks) {
 
       // click toolbar CTA
       await click(PAGE.list.createSecret);
-      // TODO: qp should not be present if empty
       assert.strictEqual(
         currentURL(),
-        `/vault/secrets/${backend}/kv/create?initialKey=`,
+        `/vault/secrets/${backend}/kv/create`,
         `goes to /vault/secrets/${backend}/kv/create`
       );
 

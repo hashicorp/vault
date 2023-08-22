@@ -3,15 +3,17 @@
     <LinkTo @route={{this.router.currentRoute.localName}} data-test-secrets-tab="Secrets">Secrets</LinkTo>
     <LinkTo @route="configuration" data-test-secrets-tab="Configuration">Configuration</LinkTo>
   </:tabLinks>
-  {{! TODO checks for if list >0 show filter }}
+
   <:toolbarFilters>
     {{#unless @noMetadataListPermissions}}
-      <KvListFilter
-        @secrets={{@secrets}}
-        @mountPoint={{this.mountPoint}}
-        @filterValue={{@filterValue}}
-        @pageFilter={{@pageFilter}}
-      />
+      {{#if (or @secrets @filterValue)}}
+        <KvListFilter
+          @secrets={{@secrets}}
+          @mountPoint={{this.mountPoint}}
+          @filterValue={{@filterValue}}
+          @pageFilter={{@pageFilter}}
+        />
+      {{/if}}
     {{/unless}}
   </:toolbarFilters>
 
@@ -106,7 +108,7 @@
                             @onConfirmAction={{fn this.onDelete metadata}}
                             @confirmMessage="This will permanently delete this secret and all its versions."
                             @cancelButtonText="Cancel"
-                            data-test-secret-delete="true"
+                            data-test-delete-metadata={{metadata.path}}
                           >
                             Permanently delete
                           </ConfirmAction>
@@ -121,6 +123,16 @@
         </div>
       </LinkedBlock>
     {{/each}}
+    {{! Pagination }}
+    <Hds::Pagination::Numbered
+      @currentPage={{@secrets.meta.currentPage}}
+      @currentPageSize={{@secrets.meta.pageSize}}
+      @route={{this.router.currentRoute.localName}}
+      @showSizeSelector={{false}}
+      @totalItems={{@secrets.meta.total}}
+      @queryFunction={{this.paginationQueryParams}}
+      data-test-pagination
+    />
   {{else}}
     {{#if @filterValue}}
       <EmptyState @title="There are no secrets matching &quot;{{@filterValue}}&quot;." />

@@ -51,4 +51,10 @@ export default Factory.extend({
       baz: '5c07d823-3810-48f6-a147-4c06b5219e84',
     },
   }),
+
+  withCustomPath: trait({
+    path(i) {
+      return `my-secret-${i}`;
+    },
+  }),
 });

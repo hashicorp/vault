@@ -24,7 +24,6 @@ import { pathIsDirectory } from 'kv/utils/kv-breadcrumbs';
  * @param {boolean} noMetadataListPermissions - true if the return to query metadata LIST is 403, indicating the user does not have permissions to that endpoint.
  * @param {array} breadcrumbs - Breadcrumbs as an array of objects that contain label, route, and modelId. They are updated via the util kv-breadcrumbs to handle dynamic *pathToSecret on the list-directory route.
  * @param {string} routeName - Either list or list-directory.
- * @param {object} meta - Object with values needed for pagination, created by LazyPaginatedQuery on the store service.
  */
 
 export default class KvListPageComponent extends Component {
@@ -41,6 +40,15 @@ export default class KvListPageComponent extends Component {
 
   get buttonText() {
     return pathIsDirectory(this.secretPath) ? 'View directory' : 'View secret';
+  }
+
+  // callback from HDS pagination to set the queryParams currentPage
+  get paginationQueryParams() {
+    return (page) => {
+      return {
+        currentPage: page,
+      };
+    };
   }
 
   @action
