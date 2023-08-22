@@ -64,7 +64,7 @@ You should set up a [Vault policy](/vault/tutorials/policies/policies) for the A
 1. Configure the [OIDC Role](/vault/api-docs/auth/jwt#create-role) with the following:
 
    - `user_claim` should be `"sub"` or `"oid"` following the
-   [recommendation](https://docs.microsoft.com/en-us/azure/active-directory/develop/id-tokens#using-claims-to-reliably-identify-a-user-subject-and-object-id)
+   [recommendation](https://learn.microsoft.com/en-us/azure/active-directory/develop/id-token-claims-reference#use-claims-to-reliably-identify-a-user)
   from Azure.
    - `allowed_redirect_uris` should be the two redirect URIs for Vault CLI and UI access.
    - `groups_claim` should be set to `"groups"`.
