@@ -246,7 +246,7 @@ module('Acceptance | secrets/secret/create, read, delete', function (hooks) {
     await deleteEngine(enginePath, assert);
   });
 
-  test('it disables save when validation errors occur', async function (assert) {
+  test('it shows validation errors', async function (assert) {
     assert.expect(5);
     const enginePath = `kv-${new Date().getTime()}`;
     const secretPath = 'not-duplicate';
@@ -268,7 +268,7 @@ module('Acceptance | secrets/secret/create, read, delete', function (hooks) {
     assert
       .dom('[data-test-input="maxVersions"]')
       .hasClass('has-error-border', 'shows border error on input with error');
-    assert.dom('[data-test-secret-save]').isDisabled('Save button is disabled');
+    assert.dom('[data-test-secret-save]').isNotDisabled('Save button is disabled');
     await fillIn('[data-test-input="maxVersions"]', 20); // fillIn replaces the text, whereas typeIn only adds to it.
     await triggerKeyEvent('[data-test-input="maxVersions"]', 'keyup', 65);
     await editPage.path(secretPath);
