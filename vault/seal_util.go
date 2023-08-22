@@ -18,8 +18,16 @@ import (
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Seal Wrapping
 
+type PartialWrapFailCallback func(context.Context, map[string]error) error
+
+// Helper function to use for partial wrap fail callbacks where we don't want to allow a partial failure.  See
+// for example barrier or recovery key wrapping.  Just don't allow for those risky scenarios
+var DisallowPartialSealWrap = func(ctx context.Context, errs map[string]error) error {
+	return seal.JoinSealWrapErrors("not allowing operation to proceed without full wrapping involving all configured seals", errs)
+}
+
 // SealWrapValue creates a SealWrappedValue wrapper with the entryValue being optionally encrypted with the give seal Access.
-func SealWrapValue(ctx context.Context, access seal.Access, encrypt bool, entryValue []byte) (*SealWrappedValue, error) {
+func SealWrapValue(ctx context.Context, access seal.Access, encrypt bool, entryValue []byte, wrapFailCallback PartialWrapFailCallback) (*SealWrappedValue, error) {
 	if access == nil {
 		return newTransitorySealWrappedValue(&wrapping.BlobInfo{
 			Wrapped:    false,
@@ -37,7 +45,14 @@ func SealWrapValue(ctx context.Context, access seal.Access, encrypt bool, entryV
 		// no seal encryption was successful
 		return nil, seal.JoinSealWrapErrors("error seal wrapping value: encryption generated no results", errs)
 	}
-	// TODO(SEALHA): If len(errs)>0, then there were partial failures, what should we do in that case? We should at least log, is there a glodal logger we can use?
+
+	if len(errs) > 0 {
+		// Partial failure, note this by calling the provided callback, if present
+		if err := wrapFailCallback(ctx, errs); err != nil {
+			// If the callback returns an error, caller is indicating it doesn't want this to proceed
+			return nil, err
+		}
+	}
 
 	// Why are we "cleaning up" the blob infos?
 	var ret []*wrapping.BlobInfo
@@ -114,7 +129,7 @@ func SealWrapStoredBarrierKeys(ctx context.Context, access seal.Access, keys [][
 		return nil, fmt.Errorf("failed to encode keys for storage: %w", err)
 	}
 
-	wrappedEntryValue, err := SealWrapValue(ctx, access, true, buf)
+	wrappedEntryValue, err := SealWrapValue(ctx, access, true, buf, DisallowPartialSealWrap)
 	if err != nil {
 		return nil, &ErrEncrypt{Err: fmt.Errorf("failed to encrypt keys for storage: %w", err)}
 	}
@@ -169,7 +184,7 @@ func decodeBarrierKeys(ctx context.Context, access seal.Access, multiWrapValue *
 
 // SealWrapRecoveryKey encrypts the recovery key using the given seal access and returns a physical.Entry for storage.
 func SealWrapRecoveryKey(ctx context.Context, access seal.Access, key []byte) (*physical.Entry, error) {
-	wrappedEntryValue, err := SealWrapValue(ctx, access, true, key)
+	wrappedEntryValue, err := SealWrapValue(ctx, access, true, key, DisallowPartialSealWrap)
 	if err != nil {
 		return nil, &ErrEncrypt{Err: fmt.Errorf("failed to encrypt recovery key for storage: %w", err)}
 	}

@@ -5,6 +5,7 @@ package seal
 
 import (
 	"context"
+	"fmt"
 	"sync"
 
 	"github.com/hashicorp/go-hclog"
@@ -12,26 +13,34 @@ import (
 )
 
 type TestSealOpts struct {
-	Logger     hclog.Logger
-	StoredKeys StoredKeysSupport
-	Secret     []byte
-	Name       wrapping.WrapperType
+	Logger       hclog.Logger
+	StoredKeys   StoredKeysSupport
+	Secret       []byte
+	Name         wrapping.WrapperType
+	WrapperCount int
 }
 
-func NewTestSeal(opts *TestSealOpts) (Access, *ToggleableWrapper) {
+func NewTestSeal(opts *TestSealOpts) (Access, []*ToggleableWrapper) {
 	if opts == nil {
 		opts = new(TestSealOpts)
 	}
+	if opts.WrapperCount == 0 {
+		opts.WrapperCount = 1
+	}
 
-	w := &ToggleableWrapper{Wrapper: wrapping.NewTestWrapper(opts.Secret)}
+	wrappers := make([]*ToggleableWrapper, opts.WrapperCount)
+	sealInfos := make([]SealInfo, opts.WrapperCount)
+	for i := 0; i < opts.WrapperCount; i++ {
+		wrappers[i] = &ToggleableWrapper{Wrapper: wrapping.NewTestWrapper(opts.Secret)}
+		sealInfos[i] = SealInfo{
+			Wrapper:  wrappers[i],
+			Priority: i + 1,
+			Name:     fmt.Sprintf("%s-%d", opts.Name, i+1),
+		}
+	}
 
-	sealAccess := NewAccess([]SealInfo{{
-		Wrapper:  w,
-		Priority: 1,
-		Name:     opts.Name.String(),
-	}})
-
-	return sealAccess, w
+	sealAccess := NewAccess(sealInfos)
+	return sealAccess, wrappers
 }
 
 func NewToggleableTestSeal(opts *TestSealOpts) (Access, func(error)) {
@@ -52,9 +61,10 @@ func NewToggleableTestSeal(opts *TestSealOpts) (Access, func(error)) {
 
 type ToggleableWrapper struct {
 	wrapping.Wrapper
-	wrapperType *wrapping.WrapperType
-	error       error
-	l           sync.RWMutex
+	wrapperType  *wrapping.WrapperType
+	error        error
+	encryptError error
+	l            sync.RWMutex
 }
 
 func (t *ToggleableWrapper) Encrypt(ctx context.Context, bytes []byte, opts ...wrapping.Option) (*wrapping.BlobInfo, error) {
@@ -62,6 +72,9 @@ func (t *ToggleableWrapper) Encrypt(ctx context.Context, bytes []byte, opts ...w
 	defer t.l.RUnlock()
 	if t.error != nil {
 		return nil, t.error
+	}
+	if t.encryptError != nil {
+		return nil, t.encryptError
 	}
 	return t.Wrapper.Encrypt(ctx, bytes, opts...)
 }
@@ -79,6 +92,13 @@ func (t *ToggleableWrapper) SetError(err error) {
 	t.l.Lock()
 	defer t.l.Unlock()
 	t.error = err
+}
+
+// An error only occuring on encrypt
+func (t *ToggleableWrapper) SetEncryptError(err error) {
+	t.l.Lock()
+	defer t.l.Unlock()
+	t.encryptError = err
 }
 
 func (t *ToggleableWrapper) Type(ctx context.Context) (wrapping.WrapperType, error) {

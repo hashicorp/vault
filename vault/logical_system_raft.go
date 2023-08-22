@@ -12,24 +12,25 @@ import (
 	"strings"
 	"time"
 
-	snapshot "github.com/hashicorp/raft-snapshot"
-
-	"github.com/hashicorp/vault/vault/seal"
-
+	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-uuid"
+	snapshot "github.com/hashicorp/raft-snapshot"
 	"github.com/hashicorp/vault/helper/constants"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/physical/raft"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/sdk/physical"
+	"github.com/hashicorp/vault/vault/seal"
 	"github.com/mitchellh/mapstructure"
 )
 
 // raftStoragePaths returns paths for use when raft is the storage mechanism.
 func (b *SystemBackend) raftStoragePaths() []*framework.Path {
-	makeSealer := func() snapshot.Sealer {
-		return NewSealAccessSealer(b.Core.seal.GetAccess())
+	makeSealer := func(logger hclog.Logger, use string) func() snapshot.Sealer {
+		return func() snapshot.Sealer {
+			return NewSealAccessSealer(b.Core.seal.GetAccess(), logger, use)
+		}
 	}
 
 	return []*framework.Path{
@@ -72,7 +73,7 @@ func (b *SystemBackend) raftStoragePaths() []*framework.Path {
 
 			Operations: map[logical.Operation]framework.OperationHandler{
 				logical.UpdateOperation: &framework.PathOperation{
-					Callback: b.handleRaftBootstrapChallengeWrite(makeSealer),
+					Callback: b.handleRaftBootstrapChallengeWrite(makeSealer(nil, "bootstrap_challenge_write")),
 					Summary:  "Creates a challenge for the new peer to be joined to the raft cluster.",
 				},
 			},
@@ -134,11 +135,11 @@ func (b *SystemBackend) raftStoragePaths() []*framework.Path {
 			Pattern: "storage/raft/snapshot",
 			Operations: map[logical.Operation]framework.OperationHandler{
 				logical.ReadOperation: &framework.PathOperation{
-					Callback: b.handleStorageRaftSnapshotRead(makeSealer),
+					Callback: b.handleStorageRaftSnapshotRead(makeSealer(nil, "snapshot_read")),
 					Summary:  "Returns a snapshot of the current state of vault.",
 				},
 				logical.UpdateOperation: &framework.PathOperation{
-					Callback: b.handleStorageRaftSnapshotWrite(false, makeSealer),
+					Callback: b.handleStorageRaftSnapshotWrite(false, makeSealer(b.logger, "snapshot_write")),
 					Summary:  "Installs the provided snapshot, returning the cluster to the state defined in it.",
 				},
 			},
@@ -150,7 +151,7 @@ func (b *SystemBackend) raftStoragePaths() []*framework.Path {
 			Pattern: "storage/raft/snapshot-force",
 			Operations: map[logical.Operation]framework.OperationHandler{
 				logical.UpdateOperation: &framework.PathOperation{
-					Callback: b.handleStorageRaftSnapshotWrite(true, makeSealer),
+					Callback: b.handleStorageRaftSnapshotWrite(true, makeSealer(b.logger, "snapshot_write")),
 					Summary:  "Installs the provided snapshot, returning the cluster to the state defined in it. This bypasses checks ensuring the current Autounseal or Shamir keys are consistent with the snapshot data.",
 				},
 			},
@@ -714,12 +715,14 @@ var sysRaftHelp = map[string][2]string{
 	},
 }
 
-func NewSealAccessSealer(access seal.Access) snapshot.Sealer {
+func NewSealAccessSealer(access seal.Access, logger hclog.Logger, use string) snapshot.Sealer {
 	// If we have access to the seal create a sealer object
 	var s snapshot.Sealer
 	if access != nil {
 		s = &sealer{
 			access: access,
+			logger: logger,
+			use:    use,
 		}
 	}
 	return s
@@ -729,13 +732,20 @@ func NewSealAccessSealer(access seal.Access) snapshot.Sealer {
 // process for encrypting/decrypting the SHASUM file in snapshot archives.
 type sealer struct {
 	access seal.Access
+	logger hclog.Logger
+	use    string
 }
 
 var _ snapshot.Sealer = (*sealer)(nil)
 
 // Seal encrypts the data with using the seal access object.
-func (s sealer) Seal(ctx context.Context, pt []byte) ([]byte, error) {
-	wrappedValue, err := SealWrapValue(ctx, s.access, true, pt)
+func (s *sealer) Seal(ctx context.Context, pt []byte) ([]byte, error) {
+	wrappedValue, err := SealWrapValue(ctx, s.access, true, pt, func(_ context.Context, errs map[string]error) error {
+		if s.logger != nil {
+			s.logger.Warn("sealed value not wrapped with all seals", "use", s.use)
+		}
+		return nil
+	})
 	if err != nil {
 		return nil, err
 	}
@@ -744,7 +754,7 @@ func (s sealer) Seal(ctx context.Context, pt []byte) ([]byte, error) {
 }
 
 // Open decrypts the data using the seal access object.
-func (s sealer) Open(ctx context.Context, ct []byte) ([]byte, error) {
+func (s *sealer) Open(ctx context.Context, ct []byte) ([]byte, error) {
 	wrappedEntryValue, err := UnmarshalSealWrappedValue(ct)
 	if err != nil {
 		return nil, err

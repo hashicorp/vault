@@ -11,10 +11,11 @@ import (
 	"testing"
 	"time"
 
+	wrapping "github.com/hashicorp/go-kms-wrapping/v2"
+
 	"github.com/armon/go-metrics"
 	"github.com/hashicorp/vault/helper/metricsutil"
 
-	wrapping "github.com/hashicorp/go-kms-wrapping/v2"
 	"github.com/hashicorp/vault/sdk/physical"
 	"github.com/hashicorp/vault/vault/seal"
 )
@@ -67,12 +68,12 @@ func (p *phy) Len() int {
 
 func TestAutoSeal_UpgradeKeys(t *testing.T) {
 	core, _, _ := TestCoreUnsealed(t)
-	testSeal, toggleableWrapper := seal.NewTestSeal(nil)
+	testSeal, toggleableWrappers := seal.NewTestSeal(nil)
 
 	var encKeys []string
 	changeKey := func(key string) {
 		encKeys = append(encKeys, key)
-		toggleableWrapper.Wrapper.(*wrapping.TestWrapper).SetKeyId(key)
+		toggleableWrappers[0].Wrapper.(*wrapping.TestWrapper).SetKeyId(key)
 	}
 
 	// Set initial encryption key.

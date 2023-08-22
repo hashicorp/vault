@@ -86,7 +86,7 @@ type Access interface {
 	// wrappers.
 	IsUpToDate(ctx context.Context, value *wrapping.MultiWrapValue, forceKeyIdRefresh bool) (bool, error)
 
-	GetWrapper() wrapping.Wrapper
+	GetWrappers() []wrapping.Wrapper
 	SetShamirSealKey([]byte) error
 	GetShamirKeyBytes(ctx context.Context) ([]byte, error)
 	SealType(ctx context.Context) (SealType, error)
@@ -135,14 +135,6 @@ func (a *access) Generation() uint64 {
 	return a.generation
 }
 
-func (a *access) KeyId(ctx context.Context) (string, error) {
-	w := a.getDefaultWrapper()
-	if w != nil {
-		return w.KeyId(ctx)
-	}
-	return "", errors.New("no wrapper configured")
-}
-
 func (a *access) SetConfig(ctx context.Context, options ...wrapping.Option) (*wrapping.WrapperConfig, error) {
 	w := a.getDefaultWrapper()
 	if w != nil {
@@ -152,8 +144,12 @@ func (a *access) SetConfig(ctx context.Context, options ...wrapping.Option) (*wr
 	return nil, errors.New("no wrapper configured")
 }
 
-func (a *access) GetWrapper() wrapping.Wrapper {
-	return a.getDefaultWrapper()
+func (a *access) GetWrappers() []wrapping.Wrapper {
+	w := make([]wrapping.Wrapper, len(a.wrappersByPriority))
+	for i, v := range a.wrappersByPriority {
+		w[i] = v.Wrapper
+	}
+	return w
 }
 
 func (a *access) Init(ctx context.Context, options ...wrapping.Option) error {
@@ -237,7 +233,6 @@ func (a *access) Encrypt(ctx context.Context, plaintext []byte, options ...wrapp
 
 		ciphertext, encryptErr := sealInfo.Wrapper.Encrypt(ctx, plaintext, options...)
 		if encryptErr != nil {
-			// TODO (multiseal): logic for failures and setting the sentinel for retrying
 			errs[sealInfo.Name] = encryptErr
 			sealInfo.Healthy = false
 		} else {
