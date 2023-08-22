@@ -48,7 +48,17 @@ func (s StoredKeysSupport) String() string {
 type SealGenerationInfo struct {
 	Generation uint64
 	Seals      []*configutil.KMS
-	Rewrapped  bool
+	rewrapped  atomic.Bool
+}
+
+// SetRewrapped updates the SealGenerationInfo's rewrapped status to the provided value.
+func (sgi *SealGenerationInfo) SetRewrapped(value bool) {
+	sgi.rewrapped.Store(value)
+}
+
+// IsRewrapped returns the SealGenerationInfo's rewrapped status.
+func (sgi *SealGenerationInfo) IsRewrapped() bool {
+	return sgi.rewrapped.Load()
 }
 
 type SealInfo struct {
@@ -143,8 +153,8 @@ func NewAccess(logger hclog.Logger, sealGenerationInfo *SealGenerationInfo, seal
 func NewAccessFromSealInfo(logger hclog.Logger, generation uint64, rewrapped bool, sealInfos []SealInfo) (Access, error) {
 	sealGenerationInfo := &SealGenerationInfo{
 		Generation: generation,
-		Rewrapped:  rewrapped,
 	}
+	sealGenerationInfo.SetRewrapped(rewrapped)
 	ctx := context.Background()
 	for _, sealInfo := range sealInfos {
 		typ, err := sealInfo.Wrapper.Type(ctx)

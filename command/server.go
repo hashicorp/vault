@@ -2712,7 +2712,6 @@ func (c *ServerCommand) computeSealGenerationInfo(existingSealGenInfo *vaultseal
 		return &vaultseal.SealGenerationInfo{
 			Generation: 1,
 			Seals:      sealConfigs,
-			Rewrapped:  false,
 		}
 	}
 	if cmp.Equal(existingSealGenInfo.Seals, sealConfigs) {
@@ -2726,7 +2725,6 @@ func (c *ServerCommand) computeSealGenerationInfo(existingSealGenInfo *vaultseal
 	return &vaultseal.SealGenerationInfo{
 		Generation: generation,
 		Seals:      sealConfigs,
-		Rewrapped:  false,
 	}
 }
 

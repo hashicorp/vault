@@ -2396,10 +2396,13 @@ func (s standardUnsealStrategy) unseal(ctx context.Context, logger log.Logger, c
 			c.logger.Error("failed to store seal generation info", "error", err)
 			return err
 		}
-		if !sealGenerationInfo.Rewrapped {
+
+		if !sealGenerationInfo.IsRewrapped() {
 			// Flag migration performed for seal-rewrap later
 			atomic.StoreUint32(c.sealMigrationDone, 1)
 		}
+
+		c.sealWrapBackend.StartPartialRewrapping(c.activeContext)
 	}
 
 	if c.getClusterListener() != nil && (c.ha != nil || shouldStartClusterListener(c)) {
