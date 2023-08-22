@@ -53,7 +53,6 @@ func GetCloudSQLAuthOptions(credentials string) ([]cloudsqlconn.Option, error) {
 	opts := []cloudsqlconn.Option{cloudsqlconn.WithIAMAuthN()}
 
 	if credentials != "" {
-		fmt.Printf("registering driver with credential json\n")
 		opts = append(opts, cloudsqlconn.WithCredentialsJSON([]byte(credentials)))
 	}
 
