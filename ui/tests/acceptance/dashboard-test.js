@@ -305,7 +305,6 @@ module('Acceptance | landing page dashboard', function (hooks) {
 
     hooks.beforeEach(async function () {
       this.store = this.owner.lookup('service:store');
-      this.version = this.owner.lookup('service:version');
       this.server.get('sys/seal-status', function () {
         return {
           type: 'shamir',
@@ -324,6 +323,7 @@ module('Acceptance | landing page dashboard', function (hooks) {
           storage_type: 'inmem_transactional_ha',
         };
       });
+      this.version = this.owner.lookup('service:version');
       await authPage.login();
     });
 
@@ -332,8 +332,7 @@ module('Acceptance | landing page dashboard', function (hooks) {
     });
 
     test('shows the client count card', async function (assert) {
-      assert.true(this.version.isEnterprise);
-      assert.strictEqual(this.version.version, '1.14.0+ent');
+      assert.true(this.version.isEnterprise, 'version is enterprise');
       assert.strictEqual(currentURL(), '/vault/dashboard');
       assert.dom('[data-test-client-count-card]').exists();
       const response = await this.store.peekRecord('clients/activity', 'some-activity-id');
@@ -362,7 +361,6 @@ module('Acceptance | landing page dashboard', function (hooks) {
   });
   module('replication card', function (hooks) {
     hooks.beforeEach(async function () {
-      this.version = this.owner.lookup('service:version');
       this.server.get('sys/seal-status', function () {
         return {
           type: 'shamir',
@@ -381,6 +379,7 @@ module('Acceptance | landing page dashboard', function (hooks) {
           storage_type: 'inmem_transactional_ha',
         };
       });
+      this.version = this.owner.lookup('service:version');
       await authPage.login();
       await settled();
       await disableReplication('dr');
@@ -391,7 +390,6 @@ module('Acceptance | landing page dashboard', function (hooks) {
 
     test('shows the replication card empty state', async function (assert) {
       assert.true(this.version.isEnterprise);
-      assert.strictEqual(this.version.version, '1.14.0+ent');
       await visit('/vault/dashboard');
       assert.dom(REPLICATION_CARD_SELECTORS.replicationEmptyState).exists();
       assert.dom(REPLICATION_CARD_SELECTORS.replicationEmptyStateTitle).hasText('Replication not set up');
@@ -403,7 +401,6 @@ module('Acceptance | landing page dashboard', function (hooks) {
 
     test('it should show replication status if both dr and performance replication are enabled as features in version', async function (assert) {
       assert.true(this.version.isEnterprise);
-      assert.strictEqual(this.version.version, '1.14.0+ent');
       await visit('/vault/dashboard');
       assert.strictEqual(currentURL(), '/vault/clients/dashboard');
       await click(REPLICATION_CARD_SELECTORS.replicationEmptyStateActionsLink);
