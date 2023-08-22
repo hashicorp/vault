@@ -75,8 +75,8 @@ module('Acceptance | kv-v2 workflow | edge cases', function (hooks) {
       // Title correct
       assert.dom(PAGE.title).hasText(`${backend} Version 2`);
       // Tabs correct
-      assert.dom(PAGE.secretTab('list-directory')).hasText('Secrets');
-      assert.dom(PAGE.secretTab('list-directory')).hasClass('active');
+      assert.dom(PAGE.secretTab('Secrets')).hasText('Secrets');
+      assert.dom(PAGE.secretTab('Secrets')).hasClass('active');
       assert.dom(PAGE.secretTab('Configuration')).hasText('Configuration');
       assert.dom(PAGE.secretTab('Configuration')).doesNotHaveClass('active');
       // Toolbar correct

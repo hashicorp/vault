@@ -79,8 +79,8 @@ module('Acceptance | kv-v2 workflow | navigation', function (hooks) {
       // Title correct
       assert.dom(PAGE.title).hasText(`${backend} Version 2`);
       // Tabs correct
-      assert.dom(PAGE.secretTab('list')).hasText('Secrets');
-      assert.dom(PAGE.secretTab('list')).hasClass('active');
+      assert.dom(PAGE.secretTab('Secrets')).hasText('Secrets');
+      assert.dom(PAGE.secretTab('Secrets')).hasClass('active');
       assert.dom(PAGE.secretTab('Configuration')).hasText('Configuration');
       assert.dom(PAGE.secretTab('Configuration')).doesNotHaveClass('active');
       // Toolbar correct
@@ -172,7 +172,7 @@ module('Acceptance | kv-v2 workflow | navigation', function (hooks) {
       await click(PAGE.breadcrumbAtIdx(1));
       assert.ok(currentURL().startsWith(`/vault/secrets/${backend}/kv/list`), 'links back to list root');
     });
-    test('versioned secret nav, tabs, breadcrumbs (a) (a)', async function (assert) {
+    test('versioned secret nav, tabs, breadcrumbs (a)', async function (assert) {
       assert.expect(43);
       const backend = this.backend;
       await navToBackend(backend);
@@ -322,8 +322,8 @@ module('Acceptance | kv-v2 workflow | navigation', function (hooks) {
       // Title correct
       assert.dom(PAGE.title).hasText(`${backend} Version 2`);
       // Tabs correct
-      assert.dom(PAGE.secretTab('list')).hasText('Secrets');
-      assert.dom(PAGE.secretTab('list')).hasClass('active');
+      assert.dom(PAGE.secretTab('Secrets')).hasText('Secrets');
+      assert.dom(PAGE.secretTab('Secrets')).hasClass('active');
       assert.dom(PAGE.secretTab('Configuration')).hasText('Configuration');
       assert.dom(PAGE.secretTab('Configuration')).doesNotHaveClass('active');
       // Toolbar correct
@@ -524,8 +524,8 @@ module('Acceptance | kv-v2 workflow | navigation', function (hooks) {
       // Title correct
       assert.dom(PAGE.title).hasText(`${backend} Version 2`);
       // Tabs correct
-      assert.dom(PAGE.secretTab('list')).hasText('Secrets');
-      assert.dom(PAGE.secretTab('list')).hasClass('active');
+      assert.dom(PAGE.secretTab('Secrets')).hasText('Secrets');
+      assert.dom(PAGE.secretTab('Secrets')).hasClass('active');
       assert.dom(PAGE.secretTab('Configuration')).hasText('Configuration');
       assert.dom(PAGE.secretTab('Configuration')).doesNotHaveClass('active');
       // Toolbar correct
@@ -734,8 +734,8 @@ module('Acceptance | kv-v2 workflow | navigation', function (hooks) {
       // Title correct
       assert.dom(PAGE.title).hasText(`${backend} Version 2`);
       // Tabs correct
-      assert.dom(PAGE.secretTab('list')).hasText('Secrets');
-      assert.dom(PAGE.secretTab('list')).hasClass('active');
+      assert.dom(PAGE.secretTab('Secrets')).hasText('Secrets');
+      assert.dom(PAGE.secretTab('Secrets')).hasClass('active');
       assert.dom(PAGE.secretTab('Configuration')).hasText('Configuration');
       assert.dom(PAGE.secretTab('Configuration')).doesNotHaveClass('active');
       // Toolbar correct
@@ -965,8 +965,8 @@ module('Acceptance | kv-v2 workflow | navigation', function (hooks) {
       // Title correct
       assert.dom(PAGE.title).hasText(`${backend} Version 2`);
       // Tabs correct
-      assert.dom(PAGE.secretTab('list')).hasText('Secrets');
-      assert.dom(PAGE.secretTab('list')).hasClass('active');
+      assert.dom(PAGE.secretTab('Secrets')).hasText('Secrets');
+      assert.dom(PAGE.secretTab('Secrets')).hasClass('active');
       assert.dom(PAGE.secretTab('Configuration')).hasText('Configuration');
       assert.dom(PAGE.secretTab('Configuration')).doesNotHaveClass('active');
       // Toolbar correct
