@@ -4,20 +4,33 @@
  */
 
 import { module, test } from 'qunit';
-import { visit, currentURL, settled /* currentRouteName */ } from '@ember/test-helpers';
+import { visit, currentURL, settled, fillIn /* currentRouteName */ } from '@ember/test-helpers';
 import { setupApplicationTest } from 'vault/tests/helpers';
 import { setupMirage } from 'ember-cli-mirage/test-support';
+import { create } from 'ember-cli-page-object';
+import { selectChoose } from 'ember-power-select/test-support/helpers';
+import { runCommands } from 'vault/tests/helpers/pki/pki-run-commands';
+import { deleteEngineCmd } from 'vault/tests/helpers/commands';
 import authPage from 'vault/tests/pages/auth';
+import mountSecrets from 'vault/tests/pages/settings/mount-secret-backend';
+import consoleClass from 'vault/tests/pages/components/console/ui-panel';
+// selectors
 import SECRETS_ENGINE_SELECTORS from 'vault/tests/helpers/components/dashboard/secrets-engines-card';
 import VAULT_CONFIGURATION_SELECTORS from 'vault/tests/helpers/components/dashboard/vault-configuration-details-card';
 import QUICK_ACTION_SELECTORS from 'vault/tests/helpers/components/dashboard/quick-actions-card';
-import mountSecrets from 'vault/tests/pages/settings/mount-secret-backend';
-import { deleteEngineCmd } from 'vault/tests/helpers/commands';
-import { create } from 'ember-cli-page-object';
-import consoleClass from 'vault/tests/pages/components/console/ui-panel';
-import { selectChoose } from 'ember-power-select/test-support/helpers';
-import { fillIn } from '@ember/test-helpers';
-import { runCommands } from 'vault/tests/helpers/pki/pki-run-commands';
+// client count card test
+import sinon from 'sinon';
+import timestamp from 'core/utils/timestamp';
+import ENV from 'vault/config/environment';
+import { formatNumber } from 'core/helpers/format-number';
+const STATIC_NOW = new Date('2023-01-13T14:15:00');
+// replication card test
+const REPLICATION_DETAILS = {
+  state: 'running',
+  primaryClusterAddr: 'https://127.0.0.1:8201',
+  merkleRoot: '352f6e58ba2e8ec3935e05da1d142653dc76fe17',
+  clusterId: '68999e13-a09d-b5e4-d66c-b35da566a177',
+};
 
 const consoleComponent = create(consoleClass);
 
@@ -290,6 +303,63 @@ module('Acceptance | landing page dashboard', function (hooks) {
       // select param input, click action, check route
       // cleanup engine mount
       await consoleComponent.runCommands(deleteEngineCmd('database'));
+    });
+  });
+  module('client counts card', function (hooks) {
+    hooks.before(function () {
+      sinon.stub(timestamp, 'now').callsFake(() => STATIC_NOW);
+      ENV['ember-cli-mirage'].handler = 'clients';
+    });
+    hooks.beforeEach(function () {
+      this.store = this.owner.lookup('service:store');
+
+      return authPage.login();
+    });
+    hooks.after(function () {
+      timestamp.now.restore();
+      ENV['ember-cli-mirage'].handler = null;
+    });
+    // version and enterprise - hide cc card
+    test('shows the client count card', async function (assert) {
+      assert.dom('[data-test-client-count-title]').exists();
+      const response = await this.store.peekRecord('clients/activity', 'some-activity-id');
+      assert.dom('[data-test-client-count-title]').hasText('Client count');
+      assert.dom('[data-test-stat-text="total-clients"] .stat-label').hasText('Total');
+      assert
+        .dom('[data-test-stat-text="total-clients"] .stat-value')
+        .hasText(formatNumber([response.total.clients]));
+      assert.dom('[data-test-stat-text="new-clients"] .stat-label').hasText('New');
+      assert
+        .dom('[data-test-stat-text="new-clients"] .stat-text')
+        .hasText('The number of clients new to Vault in the current month.');
+      assert
+        .dom('[data-test-stat-text="new-clients"] .stat-value')
+        .hasText(formatNumber([response.byMonth.lastObject.new_clients.clients]));
+    });
+  });
+  module('replication card', function (hooks) {
+    hooks.beforeEach(function () {
+      this.set('replicationDetails', REPLICATION_DETAILS);
+      this.set('clusterMode', 'secondary');
+      this.set('isSecondary', true);
+      return authPage.login();
+    });
+
+    test('shows the client count card', async function (assert) {
+      assert.dom('[data-test-client-count-title]').exists();
+      const response = await this.store.peekRecord('clients/activity', 'some-activity-id');
+      assert.dom('[data-test-client-count-title]').hasText('Client count');
+      assert.dom('[data-test-stat-text="total-clients"] .stat-label').hasText('Total');
+      assert
+        .dom('[data-test-stat-text="total-clients"] .stat-value')
+        .hasText(formatNumber([response.total.clients]));
+      assert.dom('[data-test-stat-text="new-clients"] .stat-label').hasText('New');
+      assert
+        .dom('[data-test-stat-text="new-clients"] .stat-text')
+        .hasText('The number of clients new to Vault in the current month.');
+      assert
+        .dom('[data-test-stat-text="new-clients"] .stat-value')
+        .hasText(formatNumber([response.byMonth.lastObject.new_clients.clients]));
     });
   });
 });
