@@ -6,7 +6,7 @@
 
   <:toolbarFilters>
     {{#unless @noMetadataListPermissions}}
-      {{#if @secrets}}
+      {{#if (or @secrets @filterValue)}}
         <KvListFilter
           @secrets={{@secrets}}
           @mountPoint={{this.mountPoint}}
@@ -124,17 +124,17 @@
       </LinkedBlock>
     {{/each}}
     {{! Pagination }}
-    {{#if (gt @meta.lastPage 1)}}
-      <Hds::Pagination::Numbered
-        @currentPage={{@meta.currentPage}}
-        @currentPageSize={{@meta.pageSize}}
-        @route={{@routeName}}
-        @showSizeSelector={{false}}
-        @totalItems={{@meta.total}}
-        @queryFunction={{this.paginationQueryParams}}
-        data-test-pagination
-      />
-    {{/if}}
+    {{!-- {{#if (gt @meta.lastPage 1)}} --}}
+    <Hds::Pagination::Numbered
+      @currentPage={{@meta.currentPage}}
+      @currentPageSize={{@meta.pageSize}}
+      @route={{this.router.currentRoute.localName}}
+      @showSizeSelector={{false}}
+      @totalItems={{@meta.total}}
+      @queryFunction={{this.paginationQueryParams}}
+      data-test-pagination
+    />
+    {{!-- {{/if}} --}}
   {{else}}
     {{#if @filterValue}}
       <EmptyState @title="There are no secrets matching &quot;{{@filterValue}}&quot;." />
