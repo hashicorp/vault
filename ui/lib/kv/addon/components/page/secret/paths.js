@@ -17,7 +17,7 @@ import { kvMetadataPath, kvDataPath } from 'vault/utils/kv-path';
  * />
  *
  * @param {model} secret - Ember data model: 'kv/data', the new record for the new secret version saved by the form
- * @param {string} path - kv secret path
+ * @param {string} path - kv secret path for rendering the page title
  * @param {array} breadcrumbs - Array to generate breadcrumbs, passed to the page header component
  */
 
@@ -27,14 +27,23 @@ export default class KvSecretPaths extends Component {
   get paths() {
     const { backend, path } = this.args.secret;
     const namespace = this.namespace.path;
+    const cli = `-mount=${backend} "${path}"`;
     const data = kvDataPath(backend, path);
     const metadata = kvMetadataPath(backend, path);
-    const cli = `-mount=${backend} "${path}"`;
 
     return {
-      data: namespace ? `/v1/${namespace}/${data}` : `/v1/${data}`,
-      metadata: namespace ? `/v1/${namespace}/${metadata}` : `/v1/${metadata}`,
-      cli: namespace ? `-namespace=${namespace} ${cli}` : cli,
+      'CLI path': {
+        path: namespace ? `-namespace=${namespace} ${cli}` : cli,
+        text: 'Use this path when referring to this secret in CLI.',
+      },
+      'API path': {
+        path: namespace ? `/v1/${namespace}/${data}` : `/v1/${data}`,
+        text: 'Use this path when referring to this secret in API.',
+      },
+      'Metadata API path': {
+        path: namespace ? `/v1/${namespace}/${metadata}` : `/v1/${metadata}`,
+        text: 'Use this path for viewing secret metadata and permanent deletion.',
+      },
     };
   }
 }
