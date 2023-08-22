@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: MPL-2.0
  */
 
-import { module, test, skip } from 'qunit';
+import { module, test } from 'qunit';
 import { visit, currentURL, settled, fillIn, click } from '@ember/test-helpers';
 import { setupApplicationTest } from 'vault/tests/helpers';
 import { setupMirage } from 'ember-cli-mirage/test-support';
@@ -24,9 +24,6 @@ import SECRETS_ENGINE_SELECTORS from 'vault/tests/helpers/components/dashboard/s
 import VAULT_CONFIGURATION_SELECTORS from 'vault/tests/helpers/components/dashboard/vault-configuration-details-card';
 import QUICK_ACTION_SELECTORS from 'vault/tests/helpers/components/dashboard/quick-actions-card';
 import REPLICATION_CARD_SELECTORS from 'vault/tests/helpers/components/dashboard/replication-card';
-
-const STATIC_NOW = new Date('2023-01-13T14:15:00');
-import { addMonths, formatRFC3339 } from 'date-fns';
 
 const consoleComponent = create(consoleClass);
 
@@ -309,16 +306,22 @@ module('Acceptance | landing page dashboard', function (hooks) {
     hooks.beforeEach(async function () {
       this.store = this.owner.lookup('service:store');
       this.version = this.owner.lookup('service:version');
-      this.server.get('sys/license/status', function () {
+      this.server.get('sys/seal-status', function () {
         return {
-          request_id: 'my-license-request-id',
-          data: {
-            autoloaded: {
-              license_id: 'my-license-id',
-              start_time: formatRFC3339(STATIC_NOW),
-              expiration_time: formatRFC3339(addMonths(STATIC_NOW, 12)),
-            },
-          },
+          type: 'shamir',
+          initialized: true,
+          sealed: false,
+          t: 1,
+          n: 1,
+          progress: 0,
+          nonce: '',
+          version: '1.14.0+ent',
+          build_date: '2023-06-19T16:20:54Z',
+          migration: false,
+          cluster_name: 'vault-cluster-107c3b64',
+          cluster_id: '7883553f-51ea-bea4-6135-2deb4f147fd1',
+          recovery_seal: false,
+          storage_type: 'inmem_transactional_ha',
         };
       });
       await authPage.login();
@@ -330,6 +333,7 @@ module('Acceptance | landing page dashboard', function (hooks) {
 
     test('shows the client count card', async function (assert) {
       assert.true(this.version.isEnterprise);
+      assert.strictEqual(this.version.version, '1.14.0+ent');
       assert.strictEqual(currentURL(), '/vault/dashboard');
       assert.dom('[data-test-client-count-card]').exists();
       const response = await this.store.peekRecord('clients/activity', 'some-activity-id');
@@ -356,8 +360,27 @@ module('Acceptance | landing page dashboard', function (hooks) {
       assert.dom('[data-test-client-count-card]').doesNotExist();
     });
   });
-  skip('replication card', function (hooks) {
+  module('replication card', function (hooks) {
     hooks.beforeEach(async function () {
+      this.version = this.owner.lookup('service:version');
+      this.server.get('sys/seal-status', function () {
+        return {
+          type: 'shamir',
+          initialized: true,
+          sealed: false,
+          t: 1,
+          n: 1,
+          progress: 0,
+          nonce: '',
+          version: '1.14.0+ent',
+          build_date: '2023-06-19T16:20:54Z',
+          migration: false,
+          cluster_name: 'vault-cluster-107c3b64',
+          cluster_id: '7883553f-51ea-bea4-6135-2deb4f147fd1',
+          recovery_seal: false,
+          storage_type: 'inmem_transactional_ha',
+        };
+      });
       await authPage.login();
       await settled();
       await disableReplication('dr');
@@ -367,6 +390,8 @@ module('Acceptance | landing page dashboard', function (hooks) {
     });
 
     test('shows the replication card empty state', async function (assert) {
+      assert.true(this.version.isEnterprise);
+      assert.strictEqual(this.version.version, '1.14.0+ent');
       await visit('/vault/dashboard');
       assert.dom(REPLICATION_CARD_SELECTORS.replicationEmptyState).exists();
       assert.dom(REPLICATION_CARD_SELECTORS.replicationEmptyStateTitle).hasText('Replication not set up');
@@ -377,6 +402,8 @@ module('Acceptance | landing page dashboard', function (hooks) {
     });
 
     test('it should show replication status if both dr and performance replication are enabled as features in version', async function (assert) {
+      assert.true(this.version.isEnterprise);
+      assert.strictEqual(this.version.version, '1.14.0+ent');
       await visit('/vault/dashboard');
       assert.strictEqual(currentURL(), '/vault/clients/dashboard');
       await click(REPLICATION_CARD_SELECTORS.replicationEmptyStateActionsLink);
