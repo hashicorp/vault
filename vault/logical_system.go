@@ -4824,7 +4824,7 @@ func (c *Core) GetSealBackendStatus(ctx context.Context) (*SealBackendStatusResp
 	if a, ok := c.seal.(*autoSeal); ok {
 		r.Healthy = c.seal.Healthy()
 		var uhMin time.Time
-		for _, s := range a.GetSealInfoByPriority() {
+		for _, s := range a.GetAllSealInfoByPriority() {
 			b := SealBackendStatus{
 				Name:    s.Name,
 				Healthy: s.Healthy,

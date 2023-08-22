@@ -475,7 +475,7 @@ func (d *autoSeal) StartHealthCheck() {
 
 			testVal := fmt.Sprintf("Heartbeat %d", mathrand.Intn(1000))
 			anyUnhealthy := false
-			for _, w := range d.Access.GetSealInfoByPriority() {
+			for _, w := range d.Access.GetAllSealInfoByPriority() {
 				func() {
 					w.HcLock.Lock()
 					defer w.HcLock.Unlock()

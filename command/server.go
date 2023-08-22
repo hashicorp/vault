@@ -1254,7 +1254,7 @@ func (c *ServerCommand) Run(args []string) int {
 	// prepare a secure random reader for core
 	entropyAugLogger := c.logger.Named("entropy-augmentation")
 	var entropySources []*configutil.EntropySourcerInfo
-	for _, sealInfo := range setSealResponse.barrierSeal.GetAccess().GetSealInfoByPriority() {
+	for _, sealInfo := range setSealResponse.barrierSeal.GetAccess().GetEnabledSealInfoByPriority() {
 		if s, ok := sealInfo.Wrapper.(entropy.Sourcer); ok {
 			entropySources = append(entropySources, &configutil.EntropySourcerInfo{
 				Sourcer: s,
@@ -2515,7 +2515,7 @@ type SetSealResponse struct {
 	barrierSeal vault.Seal
 	unwrapSeal  vault.Seal
 
-	// sealConfigError is present if it was impossible to create barrierSeal or unwrapSeal
+	// sealConfigError is present if there was an error configuring wrappers, other than KeyNotFound.
 	sealConfigError error
 }
 
@@ -2560,20 +2560,19 @@ func setSeal(c *ServerCommand, config *server.Config, infoKeys []string, info ma
 		}
 	}
 
+	var sealConfigError error
+	recordSealConfigError := func(err error) {
+		sealConfigError = errors.Join(sealConfigError, err)
+	}
 	enabledSealInfos := make([]vaultseal.SealInfo, 0)
 	disabledSealInfos := make([]vaultseal.SealInfo, 0)
-	disabledKmsConfigs := make([]*configutil.KMS, 0)
 	allSealKmsConfigs := make([]*configutil.KMS, 0)
-	sealWrapperErrors := make(map[string]error)
 
 	type infoKeysAndMap struct {
 		keys   []string
 		theMap map[string]string
 	}
 	sealWrapperInfoKeysMap := make(map[string]infoKeysAndMap)
-
-	var enabledSealType string
-	var disabledSealType string
 
 	for _, configSeal := range config.Seals {
 		sealTypeEnvVarName := "VAULT_SEAL_TYPE"
@@ -2600,7 +2599,7 @@ func setSeal(c *ServerCommand, config *server.Config, infoKeys []string, info ma
 				return nil, fmt.Errorf("error parsing Seal configuration: %s", wrapperConfigError)
 			} else {
 				sealLogger.Error("error configuring seal", "name", configSeal.Name, "err", wrapperConfigError)
-				sealWrapperErrors[configSeal.Name] = wrapperConfigError
+				recordSealConfigError(wrapperConfigError)
 			}
 		}
 		// for some reason configureWrapper in kms.go returns nil wrapper and nil error for wrapping.WrapperTypeShamir
@@ -2609,18 +2608,17 @@ func setSeal(c *ServerCommand, config *server.Config, infoKeys []string, info ma
 		}
 
 		sealInfo := vaultseal.SealInfo{
-			Wrapper:  wrapper,
-			Priority: configSeal.Priority,
-			Name:     configSeal.Name,
+			Wrapper:        wrapper,
+			Priority:       configSeal.Priority,
+			Name:           configSeal.Name,
+			SealConfigType: configSeal.Type,
+			Disabled:       configSeal.Disabled,
 		}
 
 		if configSeal.Disabled {
 			disabledSealInfos = append(disabledSealInfos, sealInfo)
-			disabledSealType = configSeal.Type
-			disabledKmsConfigs = append(disabledKmsConfigs, configSeal)
 		} else {
 			enabledSealInfos = append(enabledSealInfos, sealInfo)
-			enabledSealType = configSeal.Type
 		}
 		allSealKmsConfigs = append(allSealKmsConfigs, configSeal)
 
@@ -2661,43 +2659,58 @@ func setSeal(c *ServerCommand, config *server.Config, infoKeys []string, info ma
 	////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 	// Create the Seals
 
+	containsShamir := func(sealInfos []vaultseal.SealInfo) bool {
+		for _, si := range sealInfos {
+			if vault.SealConfigTypeShamir.IsSameAs(si.SealConfigType) {
+				return true
+			}
+		}
+		return false
+	}
+	sealHaBetaEnabled, err := server.IsSealHABetaEnabled()
+	if err != nil {
+		return nil, err
+	}
+
 	var barrierSeal vault.Seal
 	var unwrapSeal vault.Seal
 
-	if enabledSealType == "shamir" {
-		// We should only have one enabled SealInfo here
-		barrierSeal = vault.NewDefaultSeal(vaultseal.NewAccess(sealLogger, sealGenerationInfo, enabledSealInfos))
-	} else {
-		if len(enabledSealInfos) == 0 {
-			return nil, errors.New("no enabled Seals in configuration")
-		}
-		working := false
-		for _, sealInfo := range enabledSealInfos {
-			if _, wrapperFailed := sealWrapperErrors[sealInfo.Name]; !wrapperFailed {
-				working = true
-				break
-			}
-		}
-		if !working {
-			return nil, errors.New("error creating autoseal: no Seals were configured successfully")
-		}
-		barrierSeal = vault.NewAutoSeal(vaultseal.NewAccess(sealLogger, sealGenerationInfo, enabledSealInfos))
-	}
+	switch {
+	case len(enabledSealInfos) == 0:
+		return nil, errors.New("no enabled Seals in configuration")
 
-	var sealConfigError error
-	if disabledSealType != "" {
-		// Making a SealGenerationInfo for the unwrap seal is a bit funky. None of its fields should
-		// really matter, since the unwrap seal should only be used for decryption. If we switch seal
-		// migration to use multiseals, the unwrap seal should be going away making this unnecessary.
-		unwrapAccess, err := vaultseal.NewAccessFromSealInfo(sealLogger, sealGenerationInfo.Generation-1, true, disabledSealInfos)
-		switch {
-		case err != nil:
-			sealConfigError = err
-		case disabledSealType == "shamir":
-			unwrapSeal = vault.NewDefaultSeal(unwrapAccess)
-		default:
-			unwrapSeal = vault.NewAutoSeal(unwrapAccess)
+	case containsShamir(enabledSealInfos) && containsShamir(disabledSealInfos):
+		return nil, errors.New("cannot migrate from one Shamir seal to another Shamir seal")
+
+	case len(enabledSealInfos) == 1 && containsShamir(enabledSealInfos):
+		// The barrier seal is Shamir. If there are any disabled seals, then we put them all in the same
+		// autoSeal.
+		barrierSeal = vault.NewDefaultSeal(vaultseal.NewAccess(sealLogger, sealGenerationInfo, enabledSealInfos))
+		if len(disabledSealInfos) > 0 {
+			unwrapSeal = vault.NewAutoSeal(vaultseal.NewAccess(sealLogger, sealGenerationInfo, disabledSealInfos))
 		}
+
+	case len(disabledSealInfos) == 1 && containsShamir(disabledSealInfos):
+		// The unwrap seal is Shamir, we are migrating to an autoSeal.
+		barrierSeal = vault.NewAutoSeal(vaultseal.NewAccess(sealLogger, sealGenerationInfo, enabledSealInfos))
+		unwrapSeal = vault.NewDefaultSeal(vaultseal.NewAccess(sealLogger, sealGenerationInfo, disabledSealInfos))
+
+	case sealHaBetaEnabled:
+		// We know we are not using Shamir seal, that we are not migrating away from one, and seal HA is enabled,
+		// so just put enabled and disabled wrappers on the same seal Access
+		allSealInfos := append(enabledSealInfos, disabledSealInfos...)
+		barrierSeal = vault.NewAutoSeal(vaultseal.NewAccess(sealLogger, sealGenerationInfo, allSealInfos))
+
+	case len(enabledSealInfos) == 1:
+		// We may have multiple seals disabled, but we know Shamir is not one of them.
+		barrierSeal = vault.NewAutoSeal(vaultseal.NewAccess(sealLogger, sealGenerationInfo, enabledSealInfos))
+		if len(disabledSealInfos) > 0 {
+			unwrapSeal = vault.NewAutoSeal(vaultseal.NewAccess(sealLogger, sealGenerationInfo, disabledSealInfos))
+		}
+
+	default:
+		// We know there are multiple enabled seals and that the seal HA beta is not enabled
+		return nil, errors.New("error: more than one enabled seal found")
 	}
 
 	return &SetSealResponse{
