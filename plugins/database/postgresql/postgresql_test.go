@@ -7,6 +7,7 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"io/ioutil"
 	"os"
 	"strings"
 	"testing"
@@ -20,7 +21,6 @@ import (
 	dbtesting "github.com/hashicorp/vault/sdk/database/dbplugin/v5/testing"
 	"github.com/hashicorp/vault/sdk/database/helper/dbutil"
 	"github.com/hashicorp/vault/sdk/helper/docker"
-	"github.com/hashicorp/vault/sdk/helper/jsonutil"
 	"github.com/hashicorp/vault/sdk/helper/template"
 )
 
@@ -96,41 +96,34 @@ func TestPostgreSQL_Initialize_ConnURLWithDSNFormat(t *testing.T) {
 	}
 }
 
+// Ensures we can successfully initialize and connect to a CloudSQL database
+// Requires the following:
+// - GOOGLE_APPLICATION_CREDENTIALS either JSON or path to file
+// - CONNECTION_URL to a valid Postgres instance on Google CloudSQL
 func TestPostgreSQL_Initialize_CloudSQL(t *testing.T) {
-	// Move to separate function
 	connURL := os.Getenv("CONNECTION_URL")
-	email := os.Getenv("CLIENT_EMAIL")
-	clientID := os.Getenv("CLIENT_ID")
-	pkID := os.Getenv("PRIVATE_KEY_ID")
-	pk := os.Getenv("PRIVATE_KEY")
-	pid := os.Getenv("PROJECT_ID")
+	credStr := GetTestCredentials(t)
 
 	type testCase struct {
 		req dbplugin.InitializeRequest
 	}
 
-	creds := map[string]interface{}{
-		"client_email":         email,
-		"client_id":            clientID,
-		"private_key_id":       pkID,
-		"private_key":          pk,
-		"project_id":           pid,
-		"type":                 "service_account",
-		"client_x509_cert_url": "https://www.googleapis.com/robot/v1/metadata/x509/cloudsql-test%40hc-8b4a7584067449d88b2510bfdc2.iam.gserviceaccount.com",
-	}
-
-	credJson, err := jsonutil.EncodeJSON(creds)
-	if err != nil {
-		t.Fatal(err)
-	}
-
 	tests := map[string]testCase{
-		"basic": {
+		"default": {
 			req: dbplugin.InitializeRequest{
 				Config: map[string]interface{}{
 					"connection_url": connURL,
-					"auth_type":      "iam",
-					"credentials":    credJson,
+					"auth_type":      "gcp_iam",
+				},
+				VerifyConnection: true,
+			},
+		},
+		"credentials": {
+			req: dbplugin.InitializeRequest{
+				Config: map[string]interface{}{
+					"connection_url": connURL,
+					"auth_type":      "gcp_iam",
+					"credentials":    credStr,
 				},
 				VerifyConnection: true,
 			},
@@ -1156,6 +1149,83 @@ func TestNewUser_CustomUsername(t *testing.T) {
 	}
 }
 
+func TestNewUser_GCPCloudSQL(t *testing.T) {
+	connURL := os.Getenv("CONNECTION_URL")
+	credStr := GetTestCredentials(t)
+
+	// defer cleanup()
+
+	type testCase struct {
+		usernameTemplate string
+		newUserData      dbplugin.UsernameMetadata
+		expectedRegex    string
+	}
+
+	tests := map[string]testCase{
+		"default template": {
+			usernameTemplate: "",
+			newUserData: dbplugin.UsernameMetadata{
+				DisplayName: "displayname",
+				RoleName:    "longrolename",
+			},
+			expectedRegex: "^v-displayn-longrole-[a-zA-Z0-9]{20}-[0-9]{10}$",
+		},
+		//"unique template": {
+		//	usernameTemplate: "foo-bar",
+		//	newUserData: dbplugin.UsernameMetadata{
+		//		DisplayName: "displayname",
+		//		RoleName:    "longrolename",
+		//	},
+		//	expectedRegex: "^foo-bar$",
+		//},
+	}
+
+	for name, test := range tests {
+		t.Run(name, func(t *testing.T) {
+			initReq := dbplugin.InitializeRequest{
+				Config: map[string]interface{}{
+					"connection_url":    connURL,
+					"username_template": test.usernameTemplate,
+					"auth_type":         "gcp_iam",
+					"credentials":       credStr,
+				},
+				VerifyConnection: true,
+			}
+
+			db := new()
+
+			ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+			defer cancel()
+
+			_, err := db.Initialize(ctx, initReq)
+			require.NoError(t, err)
+
+			newUserReq := dbplugin.NewUserRequest{
+				UsernameConfig: test.newUserData,
+				Statements: dbplugin.Statements{
+					Commands: []string{
+						`
+						CREATE ROLE "{{name}}" WITH
+						  LOGIN
+						  PASSWORD '{{password}}'
+						  VALID UNTIL '{{expiration}}';
+						GRANT SELECT ON ALL TABLES IN SCHEMA public TO "{{name}}";`,
+					},
+				},
+				Password:   "myReally-S3curePassword",
+				Expiration: time.Now().Add(1 * time.Hour),
+			}
+			ctx, cancel = context.WithTimeout(context.Background(), 2*time.Second)
+			defer cancel()
+
+			newUserResp, err := db.NewUser(ctx, newUserReq)
+			require.NoError(t, err)
+
+			require.Regexp(t, test.expectedRegex, newUserResp.Username)
+		})
+	}
+}
+
 // This is a long-running integration test which tests the functionality of Postgres's multi-host
 // connection strings. It uses two Postgres containers preconfigured with Replication Manager
 // provided by Bitnami. This test currently does not run in CI and must be run manually. This is
@@ -1293,4 +1363,31 @@ func getHost(url string) string {
 	splitCreds := strings.Split(url, "@")[1]
 
 	return strings.Split(splitCreds, "/")[0]
+}
+
+// GetTestCredentials reads the credentials from the
+// GOOGLE_APPLICATIONS_CREDENTIALS environment variable
+// The credentials are read from a file if a file exists
+// otherwise they are returned as JSON
+func GetTestCredentials(t *testing.T) string {
+	t.Helper()
+
+	var credsStr string
+	credsEnv := os.Getenv("GOOGLE_APPLICATION_CREDENTIALS")
+	if credsEnv == "" {
+		t.Fatal("set GOOGLE_APPLICATION_CREDENTIALS to JSON or path to JSON creds on disk to run integration tests")
+	}
+
+	// Attempt to read as file path; if invalid, assume given JSON value directly
+	if _, err := os.Stat(credsEnv); err == nil {
+		credsBytes, err := ioutil.ReadFile(credsEnv)
+		if err != nil {
+			t.Fatalf("unable to read credentials file %s: %v", credsStr, err)
+		}
+		credsStr = string(credsBytes)
+	} else {
+		credsStr = credsEnv
+	}
+
+	return credsStr
 }

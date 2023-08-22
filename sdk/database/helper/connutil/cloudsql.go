@@ -60,11 +60,11 @@ func GetCloudSQLAuthOptions(credentials string) ([]cloudsqlconn.Option, error) {
 	return opts, nil
 }
 
-func cacheDrivers(typ string, f cloudSQLCleanup) {
+func cacheDrivers(driverName string, f cloudSQLCleanup) {
 	driversMu.Lock()
 	defer driversMu.Unlock()
 
-	drivers[typ] = f
+	drivers[driverName] = f
 }
 
 func cachePop(typ string) cloudSQLCleanup {
@@ -77,11 +77,4 @@ func cachePop(typ string) cloudSQLCleanup {
 		delete(drivers, typ)
 	}
 	return cleanup
-}
-
-func isDriverRegistered(typ string) bool {
-	driversMu.Lock()
-	defer driversMu.Unlock()
-
-	return drivers[typ] != nil
 }
