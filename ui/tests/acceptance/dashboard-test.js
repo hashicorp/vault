@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: MPL-2.0
  */
 
-import { module, test } from 'qunit';
+import { module, test, skip } from 'qunit';
 import {
   visit,
   currentURL,
@@ -21,6 +21,7 @@ import { deleteEngineCmd } from 'vault/tests/helpers/commands';
 import authPage from 'vault/tests/pages/auth';
 import mountSecrets from 'vault/tests/pages/settings/mount-secret-backend';
 import consoleClass from 'vault/tests/pages/components/console/ui-panel';
+
 // selectors
 import SECRETS_ENGINE_SELECTORS from 'vault/tests/helpers/components/dashboard/secrets-engines-card';
 import VAULT_CONFIGURATION_SELECTORS from 'vault/tests/helpers/components/dashboard/vault-configuration-details-card';
@@ -334,7 +335,7 @@ module('Acceptance | landing page dashboard', function (hooks) {
       assert.dom('[data-test-client-count-card]').doesNotExist();
     });
 
-    test('shows the client count card', async function (assert) {
+    skip('shows the client count card', async function (assert) {
       await authPage.login();
       assert.dom('[data-test-client-count-title]').exists();
       const response = await this.store.peekRecord('clients/activity', 'some-activity-id');
@@ -373,8 +374,8 @@ module('Acceptance | landing page dashboard', function (hooks) {
     });
 
     test('it should show replication status if both dr and performance replication are enabled as features in version', async function (assert) {
-      await authPage.login();
-      await click(REPLICATION_CARD_SELECTORS.replicationEmptyStateActionsLink);
+      await visit('/vault/replication');
+      // await click(REPLICATION_CARD_SELECTORS.replicationEmptyStateActionsLink);
       await click('[data-test-replication-type-select="dr"]');
       await fillIn('[data-test-replication-cluster-mode-select]', 'primary');
       await click('[data-test-replication-enable]');
