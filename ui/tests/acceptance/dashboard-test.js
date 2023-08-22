@@ -306,7 +306,6 @@ module('Acceptance | landing page dashboard', function (hooks) {
     });
   });
   module('client counts card', function (hooks) {
-    setupMirage(hooks);
     hooks.before(async function () {
       ENV['ember-cli-mirage'].handler = 'clients';
     });
@@ -348,7 +347,6 @@ module('Acceptance | landing page dashboard', function (hooks) {
     });
   });
   module('replication card', function (hooks) {
-    setupMirage(hooks);
     hooks.beforeEach(async function () {
       await authPage.login();
       await settled();
