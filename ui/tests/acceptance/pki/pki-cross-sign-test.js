@@ -47,13 +47,13 @@ module('Acceptance | pki/pki cross sign', function (hooks) {
     await fillIn(SELECTORS.inputByName('type'), 'internal');
     await fillIn(SELECTORS.inputByName('commonName'), 'Short-Lived Int R1');
     await click('[data-test-save]');
-    const csr = find(SELECTORS.copyButton('CSR')).getAttribute('data-clipboard-target');
+    const csr = find(SELECTORS.copyButton('CSR')).getAttribute('data-clipboard-text');
     await visit(`vault/secrets/${this.parentMountPath}/pki/issuers/${this.oldParentIssuerName}/sign`);
     await fillIn(SELECTORS.inputByName('csr'), csr);
     await fillIn(SELECTORS.inputByName('format'), 'pem_bundle');
     await click('[data-test-pki-sign-intermediate-save]');
     const pemBundle = find(SELECTORS.copyButton('CA Chain'))
-      .getAttribute('data-clipboard-target')
+      .getAttribute('data-clipboard-text')
       .replace(/,/, '\n');
     await visit(`vault/secrets/${this.intMountPath}/pki/configuration/create`);
     await click(SELECTORS.configure.optionByKey('import'));
@@ -64,7 +64,7 @@ module('Acceptance | pki/pki cross sign', function (hooks) {
     await click('[data-test-is-default]');
     // name default issuer of intermediate
     const oldIntIssuerId = find(SELECTORS.rowValue('Issuer ID')).innerText;
-    const oldIntCert = find(SELECTORS.copyButton('Certificate')).getAttribute('data-clipboard-target');
+    const oldIntCert = find(SELECTORS.copyButton('Certificate')).getAttribute('data-clipboard-text');
     await click(SELECTORS.details.configure);
     await fillIn(SELECTORS.inputByName('issuerName'), this.intIssuerName);
     await click('[data-test-save]');
@@ -84,7 +84,7 @@ module('Acceptance | pki/pki cross sign', function (hooks) {
 
     // get certificate data of newly signed issuer
     await click(`${SELECTORS.signedIssuerCol('newCrossSignedIssuer')} a`);
-    const newIntCert = find(SELECTORS.copyButton('Certificate')).getAttribute('data-clipboard-target');
+    const newIntCert = find(SELECTORS.copyButton('Certificate')).getAttribute('data-clipboard-text');
 
     // verify cross-sign was accurate by creating a role to issue a leaf certificate
     const myRole = 'some-role';
@@ -98,7 +98,7 @@ module('Acceptance | pki/pki cross sign', function (hooks) {
     await fillIn(SELECTORS.inputByName('commonName'), 'my-leaf');
     await fillIn('[data-test-ttl-value="TTL"]', '3600');
     await click('[data-test-pki-generate-button]');
-    const myLeafCert = find(SELECTORS.copyButton('Certificate')).getAttribute('data-clipboard-target');
+    const myLeafCert = find(SELECTORS.copyButton('Certificate')).getAttribute('data-clipboard-text');
 
     // see comments in utils/parse-pki-cert.js for step-by-step explanation of of verifyCertificates method
     assert.true(
