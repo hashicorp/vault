@@ -332,7 +332,7 @@ module('Acceptance | landing page dashboard', function (hooks) {
 
     test('shows the client count card', async function (assert) {
       const version = this.owner.lookup('service:version');
-      assert.true(version.isEnterprise);
+      assert.true(version.isEnterprise, 'version is enterprise');
       assert.strictEqual(version.version, '1.14.0+ent');
       assert.strictEqual(currentURL(), '/vault/dashboard');
       assert.dom('[data-test-client-count-card]').exists();
@@ -373,7 +373,7 @@ module('Acceptance | landing page dashboard', function (hooks) {
     test('shows the replication card empty state', async function (assert) {
       await visit('/vault/dashboard');
       const version = this.owner.lookup('service:version');
-      assert.true(version.isEnterprise);
+      assert.true(version.isEnterprise, 'vault is enterprise');
       assert.dom(REPLICATION_CARD_SELECTORS.replicationEmptyState).exists();
       assert.dom(REPLICATION_CARD_SELECTORS.replicationEmptyStateTitle).hasText('Replication not set up');
       assert
@@ -384,11 +384,11 @@ module('Acceptance | landing page dashboard', function (hooks) {
 
     test('it should show replication status if both dr and performance replication are enabled as features in version', async function (assert) {
       const version = this.owner.lookup('service:version');
-      assert.true(version.isEnterprise);
-      await visit('/vault/dashboard');
-      assert.strictEqual(currentURL(), '/vault/dashboard');
-      await click(REPLICATION_CARD_SELECTORS.replicationEmptyStateActionsLink);
-
+      assert.true(version.isEnterprise, 'vault is enterprise');
+      await visit('/vault/replication');
+      assert.strictEqual(currentURL(), '/vault/replication');
+      await click('[data-test-replication-type-select="dr"]');
+      await fillIn('[data-test-replication-cluster-mode-select]', 'primary');
       await click('[data-test-replication-enable]');
       await pollCluster(this.owner);
       await settled();
