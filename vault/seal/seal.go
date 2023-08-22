@@ -44,6 +44,7 @@ type SealInfo struct {
 	wrapping.Wrapper
 	Priority int
 	Name     string
+	Healthy  bool
 }
 
 func (si *SealInfo) keyId(ctx context.Context) string {
@@ -84,6 +85,8 @@ type Access interface {
 	SetShamirSealKey([]byte) error
 	GetShamirKeyBytes(ctx context.Context) ([]byte, error)
 	SealType(ctx context.Context) (SealType, error)
+	// GetSealInfoByPriority the returned slice should be sorted in priority.
+	GetSealInfoByPriority() []SealInfo
 }
 
 type access struct {
@@ -106,6 +109,10 @@ func NewAccess(sealInfos []SealInfo) Access {
 	sort.Slice(a.wrappersByPriority, func(i int, j int) bool { return a.wrappersByPriority[i].Priority < a.wrappersByPriority[j].Priority })
 
 	return a
+}
+
+func (a *access) GetSealInfoByPriority() []SealInfo {
+	return a.wrappersByPriority
 }
 
 func (a *access) Generation() uint64 {

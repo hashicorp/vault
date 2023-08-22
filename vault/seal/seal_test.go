@@ -1,8 +1,9 @@
 package seal
 
 import (
-	wrapping "github.com/hashicorp/go-kms-wrapping/v2"
 	"testing"
+
+	wrapping "github.com/hashicorp/go-kms-wrapping/v2"
 )
 
 func Test_keyIdSet(t *testing.T) {

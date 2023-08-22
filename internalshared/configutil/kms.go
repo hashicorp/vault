@@ -13,6 +13,8 @@ import (
 	"regexp"
 	"strings"
 
+	"github.com/hashicorp/vault/vault/seal"
+
 	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/go-hclog"
 	wrapping "github.com/hashicorp/go-kms-wrapping/v2"
@@ -45,7 +47,8 @@ const (
 )
 
 type Entropy struct {
-	Mode EntropyMode
+	Mode     EntropyMode
+	SealName string
 }
 
 // KMS contains KMS configuration for the server
@@ -387,7 +390,7 @@ var GetTransitKMSFunc = func(kms *KMS, opts ...wrapping.Option) (wrapping.Wrappe
 	return wrapper, info, nil
 }
 
-func createSecureRandomReader(conf *SharedConfig, wrapper wrapping.Wrapper) (io.Reader, error) {
+func createSecureRandomReader(config *SharedConfig, sealList []seal.SealInfo, logger hclog.Logger) (io.Reader, error) {
 	return rand.Reader, nil
 }
 

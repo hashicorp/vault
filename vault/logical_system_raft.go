@@ -9,9 +9,10 @@ import (
 	"encoding/base64"
 	"errors"
 	"fmt"
-	snapshot "github.com/hashicorp/raft-snapshot"
 	"strings"
 	"time"
+
+	snapshot "github.com/hashicorp/raft-snapshot"
 
 	"github.com/hashicorp/vault/vault/seal"
 

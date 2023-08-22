@@ -1250,7 +1250,7 @@ func (c *ServerCommand) Run(args []string) int {
 		infoKeys = append(infoKeys, expKey)
 	}
 
-	barrierSeal, barrierWrapper, unwrapSeal, _, sealConfigError, err := setSeal(c, config, infoKeys, info)
+	barrierSeal, _, unwrapSeal, _, sealConfigError, err := setSeal(c, config, infoKeys, info)
 	// Check error here
 	if err != nil {
 		c.UI.Error(err.Error())
@@ -1281,7 +1281,8 @@ func (c *ServerCommand) Run(args []string) int {
 	}
 
 	// prepare a secure random reader for core
-	secureRandomReader, err := configutil.CreateSecureRandomReaderFunc(config.SharedConfig, barrierWrapper)
+	entropyAugLogger := c.logger.Named("entropy-augmentation")
+	secureRandomReader, err := configutil.CreateSecureRandomReaderFunc(config.SharedConfig, barrierSeal.GetAccess().GetSealInfoByPriority(), entropyAugLogger)
 	if err != nil {
 		c.UI.Error(err.Error())
 		return 1

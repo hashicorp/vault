@@ -530,7 +530,11 @@ SEALFAIL:
 		var secureRandomReader io.Reader
 		// prepare a secure random reader for core
 		randReaderTestName := "Initialize Randomness for Core"
-		secureRandomReader, err = configutil.CreateSecureRandomReaderFunc(config.SharedConfig, barrierWrapper)
+		var sealInfos []seal.SealInfo
+		if barrierSeal != nil {
+			sealInfos = barrierSeal.GetAccess().GetSealInfoByPriority()
+		}
+		secureRandomReader, err = configutil.CreateSecureRandomReaderFunc(config.SharedConfig, sealInfos, server.logger)
 		if err != nil {
 			return diagnose.SpotError(ctx, randReaderTestName, fmt.Errorf("Could not initialize randomness for core: %w.", err))
 		}
