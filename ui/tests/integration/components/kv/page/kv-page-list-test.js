@@ -23,7 +23,6 @@ const CREATE_RECORDS = (number, store, server) => {
       ...record,
     });
   });
-  // kv/metadata model should now have the number of records you specified in the method.
 };
 
 const META = {
@@ -46,9 +45,8 @@ module('Integration | Component | kv | Page::List', function (hooks) {
     this.store = this.owner.lookup('service:store');
   });
 
-  test('it renders Pagination if there are 15 or more secrets', async function (assert) {
+  test('it renders Pagination and allows you to delete a kv/metadata record', async function (assert) {
     assert.expect(19);
-    // 15 is the pageSize. Normally, lazyPaginatedQuery would return the filtered result.
     CREATE_RECORDS(15, this.store, this.server);
     this.model = await this.store.peekAll('kv/metadata');
     this.model.meta = META;
@@ -71,11 +69,11 @@ module('Integration | Component | kv | Page::List', function (hooks) {
     );
     assert.dom(PAGE.list.pagination).exists('shows hds pagination component');
     assert.dom(PAGE.list.paginationInfo).hasText('1–15 of 16', 'shows correct page of pages');
-    // make sure all the rows rendered show 1-15 on the first page.
+
     this.model.forEach((record) => {
       assert.dom(PAGE.list.item(record.path)).exists('lists all records from 0-14 on the first page');
     });
-    // test delete on metadata
+
     this.server.delete(kvMetadataPath('kv-engine', 'my-secret-0'), () => {
       assert.ok(true, 'request made to correct endpoint on delete metadata.');
     });
