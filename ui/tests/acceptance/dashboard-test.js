@@ -313,7 +313,7 @@ module('Acceptance | landing page dashboard', function (hooks) {
     });
 
     test('shows the client count card', async function (assert) {
-      assert.strictEqual(currentURL(), '/vault/clients/dashboard');
+      assert.strictEqual(currentURL(), '/vault/dashboard');
       assert.dom('[data-test-client-count-card]').exists();
       const response = await this.store.peekRecord('clients/activity', 'some-activity-id');
       assert.dom('[data-test-client-count-title]').hasText('Client count');
