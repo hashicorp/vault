@@ -126,6 +126,9 @@ type Access interface {
 	// GetEnabledSealInfoByPriority returns the SealInfo for the enabled seal wrappers.
 	GetEnabledSealInfoByPriority() []*SealInfo
 
+	// AllSealsHealthy returns whether all enabled SealInfos are currently healthy.
+	AllSealsHealthy() bool
+
 	// TODO(SEALHA): Remove this method. Avoid exposing SealGenerationInfo.
 	GetSealGenerationInfo() *SealGenerationInfo
 }
@@ -192,6 +195,21 @@ func (a *access) GetAllSealInfoByPriority() []*SealInfo {
 
 func (a *access) GetEnabledSealInfoByPriority() []*SealInfo {
 	return copySealInfos(a.wrappersByPriority, true)
+}
+
+func (a *access) AllSealsHealthy() bool {
+	for _, si := range a.wrappersByPriority {
+		// Ignore disabled seals
+		if si.Disabled {
+			continue
+		}
+		si.HcLock.RLock()
+		defer si.HcLock.RUnlock()
+		if !si.Healthy {
+			return false
+		}
+	}
+	return true
 }
 
 func copySealInfos(sealInfos []*SealInfo, enabledOnly bool) []*SealInfo {
