@@ -6,5 +6,5 @@
 import Controller from '@ember/controller';
 
 export default class KvListController extends Controller {
-  queryParams = ['pageFilter'];
+  queryParams = ['pageFilter', 'currentPage'];
 }

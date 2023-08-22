@@ -43,6 +43,16 @@ export default class KvListPageComponent extends Component {
     return pathIsDirectory(this.secretPath) ? 'View directory' : 'View secret';
   }
 
+  // callback from HDS pagination to set the queryParams: currentPage & currentPageSize
+  get paginationQueryParams() {
+    return (page, pageSize) => {
+      return {
+        currentPage: page,
+        currentPageSize: pageSize,
+      };
+    };
+  }
+
   @action
   async onDelete(model) {
     try {
