@@ -4,14 +4,7 @@
  */
 
 import { module, test, skip } from 'qunit';
-import {
-  visit,
-  currentURL,
-  settled,
-  fillIn,
-  click,
-  /* currentRouteName */
-} from '@ember/test-helpers';
+import { visit, currentURL, settled, fillIn, click } from '@ember/test-helpers';
 import { setupApplicationTest } from 'vault/tests/helpers';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 import { create } from 'ember-cli-page-object';
@@ -305,7 +298,7 @@ module('Acceptance | landing page dashboard', function (hooks) {
       await consoleComponent.runCommands(deleteEngineCmd('database'));
     });
   });
-  skip('client counts card', function (hooks) {
+  module('client counts card', function (hooks) {
     hooks.before(async function () {
       ENV['ember-cli-mirage'].handler = 'clients';
     });
@@ -319,17 +312,8 @@ module('Acceptance | landing page dashboard', function (hooks) {
       ENV['ember-cli-mirage'].handler = null;
     });
 
-    skip('hides the client count card', async function (assert) {
-      await authPage.logout();
-      this.server.get(
-        'sys/license/status',
-        () => new Response(403, {}, { errors: ['API returns this error'] })
-      );
-      await authPage.login();
-      assert.dom('[data-test-client-count-card]').doesNotExist();
-    });
-
     test('shows the client count card', async function (assert) {
+      assert.strictEqual(currentURL(), '/vault/clients/dashboard');
       assert.dom('[data-test-client-count-card]').exists();
       const response = await this.store.peekRecord('clients/activity', 'some-activity-id');
       assert.dom('[data-test-client-count-title]').hasText('Client count');
@@ -344,6 +328,15 @@ module('Acceptance | landing page dashboard', function (hooks) {
       assert
         .dom('[data-test-stat-text="new-clients"] .stat-value')
         .hasText(formatNumber([response.byMonth.lastObject.new_clients.clients]));
+    });
+    test('hides the client count card', async function (assert) {
+      await authPage.logout();
+      this.server.get(
+        'sys/license/status',
+        () => new Response(403, {}, { errors: ['API returns this error'] })
+      );
+      await authPage.login();
+      assert.dom('[data-test-client-count-card]').doesNotExist();
     });
   });
   skip('replication card', function (hooks) {
@@ -367,8 +360,10 @@ module('Acceptance | landing page dashboard', function (hooks) {
     });
 
     test('it should show replication status if both dr and performance replication are enabled as features in version', async function (assert) {
-      // await visit('/vault/dashboard');
-      // await click(REPLICATION_CARD_SELECTORS.replicationEmptyStateActionsLink);
+      await visit('/vault/dashboard');
+      assert.strictEqual(currentURL(), '/vault/clients/dashboard');
+      await click(REPLICATION_CARD_SELECTORS.replicationEmptyStateActionsLink);
+
       await click('[data-test-replication-enable]');
       await pollCluster(this.owner);
       await settled();
