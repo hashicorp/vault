@@ -29,12 +29,12 @@ export default class KvSecretPaths extends Component {
     const namespace = this.namespace.path;
     const data = kvDataPath(backend, path);
     const metadata = kvMetadataPath(backend, path);
-    const cli = `-mount=${backend} ${path}`;
+    const cli = `-mount=${backend} "${path}"`;
 
     return {
-      data: namespace ? `${namespace}/${data}` : data,
+      data: namespace ? `/v1/${namespace}/${data}` : `/v1/${data}`,
+      metadata: namespace ? `/v1/${namespace}/${metadata}` : `/v1/${metadata}`,
       cli: namespace ? `-namespace=${namespace} ${cli}` : cli,
-      metadata: namespace ? `${namespace}/${metadata}` : metadata,
     };
   }
 }
