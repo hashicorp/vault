@@ -15,7 +15,7 @@ import (
 )
 
 func pathGenerateIntermediate(b *backend) *framework.Path {
-	pattern := "intermediate/generate/" + framework.GenericNameRegex("exported")
+	pattern := "intermediate/generate/" + ExportedNameRegex
 
 	displayAttrs := &framework.DisplayAttributes{
 		OperationPrefix: operationPrefixPKI,
