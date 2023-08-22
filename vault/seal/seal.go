@@ -231,10 +231,11 @@ func (a *access) SealType(ctx context.Context) (SealType, error) {
 }
 
 func (a *access) IsUpToDate(ctx context.Context, value *MultiWrapValue, forceKeyIdRefresh bool) (bool, error) {
-	// TODO(SEALHA): Enable Generation checking
-	//if a.Generation() != value.Generation {
-	//	return false, nil
-	//}
+	// Note that we don't compare generations when the value is transitory, since all single-blobInfo
+	// values are unmarshalled as transitory values.
+	if value.Generation != 0 && value.Generation != a.Generation() {
+		return false, nil
+	}
 	if forceKeyIdRefresh {
 		test, errs := a.Encrypt(ctx, []byte{0})
 		if test == nil {
