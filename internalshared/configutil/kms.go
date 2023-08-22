@@ -206,6 +206,10 @@ func configureWrapper(configKMS *KMS, infoKeys *[]string, info *map[string]strin
 
 	envConfig := GetEnvConfigFunc(configKMS)
 	for name, val := range envConfig {
+		// for the token, config takes precedence over env vars
+		if name == "token" && configKMS.Config[name] != "" {
+			continue
+		}
 		configKMS.Config[name] = val
 	}
 
