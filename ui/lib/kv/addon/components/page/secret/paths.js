@@ -32,17 +32,17 @@ export default class KvSecretPaths extends Component {
     const metadata = kvMetadataPath(backend, path);
 
     return {
-      'CLI path': {
-        path: namespace ? `-namespace=${namespace} ${cli}` : cli,
-        text: 'Use this path when referring to this secret in CLI.',
-      },
       'API path': {
         path: namespace ? `/v1/${namespace}/${data}` : `/v1/${data}`,
-        text: 'Use this path when referring to this secret in API.',
+        text: 'Use this path when referring to this secret in the API.',
       },
-      'Metadata API path': {
+      'CLI path': {
+        path: namespace ? `-namespace=${namespace} ${cli}` : cli,
+        text: 'Use this path when referring to this secret in the CLI.',
+      },
+      'API path for metadata': {
         path: namespace ? `/v1/${namespace}/${metadata}` : `/v1/${metadata}`,
-        text: 'Use this path for viewing secret metadata and permanent deletion.',
+        text: `Use this path when referring to this secret's metadata in the API and permanent secret deletion.`,
       },
     };
   }
