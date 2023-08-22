@@ -52,14 +52,17 @@ scenario "smoke" {
     }
     bundle_path = matrix.artifact_source != "artifactory" ? abspath(var.vault_artifact_path) : null
     distro_version = {
+      "amazon_linux" = var.distro_version_amazon_linux
+      "leap" = var.distro_version_leap
       "rhel"   = var.distro_version_rhel
+      "sles" = var.distro_version_sles
       "ubuntu" = var.distro_version_ubuntu
     }
     enos_provider = {
-      amazon_linux = provider.ec2_user
-      leap         = provider.ec2_user
-      rhel         = provider.ec2_user
-      sles         = provider.ec2_user
+      amazon_linux = provider.enos.ec2_user
+      leap         = provider.enos.ec2_user
+      rhel         = provider.enos.ec2_user
+      sles         = provider.enos.ec2_user
       ubuntu       = provider.enos.ubuntu
     }
     packages = ["jq"]

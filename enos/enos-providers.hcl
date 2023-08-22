@@ -24,3 +24,13 @@ provider "enos" "ubuntu" {
     }
   }
 }
+
+# TO DO: remove later once all scenarios are updated; leaving in to not break other scenarios
+provider "enos" "rhel" {
+  transport = {
+    ssh = {
+      user             = "ec2-user"
+      private_key_path = abspath(var.aws_ssh_private_key_path)
+    }
+  }
+}

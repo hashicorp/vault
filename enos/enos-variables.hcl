@@ -69,6 +69,12 @@ variable "project_name" {
   default     = "vault-enos-integration"
 }
 
+variable "distro_version_amazon_linux" {
+  description = "The version of Amazon Linux to use"
+  type        = string
+  default     = "amzn2" // currently this is the only version we support
+}
+
 variable "distro_version_leap" {
   description = "The version of openSUSE leap to use"
   type        = string
