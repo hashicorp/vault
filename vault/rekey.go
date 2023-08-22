@@ -400,13 +400,17 @@ func (c *Core) BarrierRekeyUpdate(ctx context.Context, key []byte, nonce string)
 		}
 	case c.seal.BarrierType() == seal.SealTypeShamir:
 		if c.seal.StoredKeysSupported() == seal.StoredKeysSupportedShamirRoot {
-			testseal := NewDefaultSeal(seal.NewAccess([]seal.SealInfo{
+			access, err := seal.NewAccessFromSealInfo(c.seal.GetAccess().Generation(), true, []seal.SealInfo{
 				{
 					Wrapper:  aeadwrapper.NewShamirWrapper(),
 					Priority: 1,
 					Name:     existingConfig.Name,
 				},
-			}))
+			})
+			if err != nil {
+				return nil, logical.CodedError(http.StatusInternalServerError, fmt.Errorf("failed to setup test seal: %w", err).Error())
+			}
+			testseal := NewDefaultSeal(access)
 			testseal.SetCore(c)
 			err = testseal.GetAccess().SetShamirSealKey(recoveredKey)
 			if err != nil {

@@ -286,9 +286,6 @@ type Core struct {
 	// seal is our seal, for seal configuration information
 	seal Seal
 
-	// sealGenInfo tracks the generation of seals
-	sealGenInfo SealGenerationInfo
-
 	// raftJoinDoneCh is used by the raft retry join routine to inform unseal process
 	// that the join is complete
 	raftJoinDoneCh chan struct{}
@@ -751,9 +748,6 @@ type CoreConfig struct {
 	// seal in migration scenarios.
 	UnwrapSeal Seal
 
-	// SealGenInfo tracks the generation of seals
-	SealGenInfo SealGenerationInfo
-
 	SecureRandomReader io.Reader
 
 	LogLevel string
@@ -1035,7 +1029,6 @@ func CreateCore(conf *CoreConfig) (*Core, error) {
 		pendingRemovalMountsAllowed:    conf.PendingRemovalMountsAllowed,
 		expirationRevokeRetryBase:      conf.ExpirationRevokeRetryBase,
 		rollbackMountPathMetrics:       conf.MetricSink.TelemetryConsts.RollbackMetricsIncludeMountPoint,
-		sealGenInfo:                    conf.SealGenInfo,
 	}
 
 	c.standbyStopCh.Store(make(chan struct{}))
@@ -1110,13 +1103,17 @@ func CreateCore(conf *CoreConfig) (*Core, error) {
 		wrapper := aeadwrapper.NewShamirWrapper()
 		wrapper.SetConfig(context.Background(), awskms.WithLogger(c.logger.Named("shamir")))
 
-		c.seal = NewDefaultSeal(vaultseal.NewAccess([]vaultseal.SealInfo{
+		access, err := vaultseal.NewAccessFromSealInfo(1, true, []vaultseal.SealInfo{
 			{
 				Wrapper:  wrapper,
 				Priority: 1,
 				Name:     "shamir",
 			},
-		}))
+		})
+		if err != nil {
+			return nil, err
+		}
+		c.seal = NewDefaultSeal(access)
 	}
 	c.seal.SetCore(c)
 	return c, nil
@@ -2391,7 +2388,7 @@ func (s standardUnsealStrategy) unseal(ctx context.Context, logger log.Logger, c
 		}
 
 		// store the sealGenInfo
-		err := c.SetPhysicalSealGenInfo(context.Background(), c.sealGenInfo)
+		err := c.SetPhysicalSealGenInfo(context.Background(), c.seal.GetAccess().GetSealGenerationInfo())
 		if err != nil {
 			c.logger.Error("failed to save seal generation info", "error", err)
 			return err
@@ -2814,18 +2811,25 @@ func (c *Core) adjustForSealMigration(unwrapSeal Seal) error {
 		case existBarrierSealConfig.Type == vaultseal.SealTypeShamir.String():
 			// The configured seal is not Shamir, the stored seal config is Shamir.
 			// This is a migration away from Shamir.
-			sealAccess := vaultseal.NewAccess([]vaultseal.SealInfo{
-				{
-					Wrapper:  aeadwrapper.NewShamirWrapper(),
-					Priority: 1,
-					Name:     "shamir",
-				},
-			})
+
+			// See note about creating a SealGenerationInfo for the unwrap seal in
+			// function setSeal in server.go.
+			sealAccess, err := vaultseal.NewAccessFromSealInfo(1, true,
+				[]vaultseal.SealInfo{
+					{
+						Wrapper:  aeadwrapper.NewShamirWrapper(),
+						Priority: 1,
+						Name:     "shamir",
+					},
+				})
+			if err != nil {
+				return err
+			}
 			unwrapSeal = NewDefaultSeal(sealAccess)
 		default:
 			// We know at this point that there is a configured non-Shamir seal,
 			// that it does not match the stored non-Shamir seal config, and that
-			// there is no explicit disabled seal stanza.
+			// there is no explicitly disabled seal stanza.
 			return fmt.Errorf("cannot seal migrate from %q to %q, no disabled seal in configuration",
 				existBarrierSealConfig.Type, c.seal.BarrierType())
 		}
@@ -2984,13 +2988,18 @@ func (c *Core) unsealKeyToRootKey(ctx context.Context, seal Seal, combinedKey []
 
 	case vaultseal.StoredKeysSupportedShamirRoot:
 		if useTestSeal {
-			sealAccess := vaultseal.NewAccess([]vaultseal.SealInfo{
+			// Note that the seal generation should not matter, since the only thing we are doing with
+			// this seal is calling GetStoredKeys (i.e. we are not encrypting anything).
+			sealAccess, err := vaultseal.NewAccessFromSealInfo(1, true, []vaultseal.SealInfo{
 				{
 					Wrapper:  aeadwrapper.NewShamirWrapper(),
 					Priority: 1,
 					Name:     "shamir",
 				},
 			})
+			if err != nil {
+				return nil, fmt.Errorf("failed to setup seal wrapper for test barrier config: %w", err)
+			}
 			testseal := NewDefaultSeal(sealAccess)
 			testseal.SetCore(c)
 			cfg, err := seal.BarrierConfig(ctx)

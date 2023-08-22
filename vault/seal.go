@@ -12,7 +12,7 @@ import (
 	"fmt"
 	"sync/atomic"
 
-	"github.com/hashicorp/vault/internalshared/configutil"
+	"github.com/hashicorp/vault/command/server"
 
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
 	"github.com/hashicorp/vault/sdk/physical"
@@ -485,13 +485,16 @@ func readStoredKeys(ctx context.Context, storage physical.Backend, encryptor sea
 	return UnsealWrapStoredBarrierKeys(ctx, encryptor, pe)
 }
 
-type SealGenerationInfo struct {
-	Generation int
-	Seals      []*configutil.KMS
-	Rewrapped  bool
-}
+func (c *Core) SetPhysicalSealGenInfo(ctx context.Context, sealGenInfo *seal.SealGenerationInfo) error {
+	if enabled, err := server.IsSealHABetaEnabled(); err != nil {
+		return err
+	} else if !enabled {
+		return nil
+	}
 
-func (c *Core) SetPhysicalSealGenInfo(ctx context.Context, sealGenInfo SealGenerationInfo) error {
+	if sealGenInfo == nil {
+		return errors.New("invalid seal generation information: generation is unknown")
+	}
 	// Encode the seal generation info
 	buf, err := json.Marshal(sealGenInfo)
 	if err != nil {
@@ -512,8 +515,14 @@ func (c *Core) SetPhysicalSealGenInfo(ctx context.Context, sealGenInfo SealGener
 	return nil
 }
 
-func (c *Core) PhysicalSealGenInfo(ctx context.Context) (*SealGenerationInfo, error) {
-	pe, err := c.physical.Get(ctx, SealGenInfoPath)
+func PhysicalSealGenInfo(ctx context.Context, storage physical.Backend) (*seal.SealGenerationInfo, error) {
+	if enabled, err := server.IsSealHABetaEnabled(); err != nil {
+		return nil, err
+	} else if !enabled {
+		return nil, nil
+	}
+
+	pe, err := storage.Get(ctx, SealGenInfoPath)
 	if err != nil {
 		return nil, fmt.Errorf("failed to fetch seal generation info: %w", err)
 	}
@@ -521,7 +530,7 @@ func (c *Core) PhysicalSealGenInfo(ctx context.Context) (*SealGenerationInfo, er
 		return nil, nil
 	}
 
-	sealGenInfo := new(SealGenerationInfo)
+	sealGenInfo := new(seal.SealGenerationInfo)
 
 	if err := jsonutil.DecodeJSON(pe.Value, sealGenInfo); err != nil {
 		return nil, fmt.Errorf("failed to decode seal generation info: %w", err)

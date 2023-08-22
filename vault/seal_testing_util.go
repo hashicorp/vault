@@ -4,32 +4,28 @@
 package vault
 
 import (
-	"github.com/hashicorp/go-hclog"
 	aeadwrapper "github.com/hashicorp/go-kms-wrapping/wrappers/aead/v2"
-	"github.com/hashicorp/vault/sdk/helper/logging"
 	"github.com/hashicorp/vault/vault/seal"
 	testing "github.com/mitchellh/go-testing-interface"
 )
 
 func NewTestSeal(t testing.T, opts *seal.TestSealOpts) Seal {
 	t.Helper()
-	if opts == nil {
-		opts = &seal.TestSealOpts{}
-	}
-	if opts.Logger == nil {
-		opts.Logger = logging.NewVaultLogger(hclog.Debug)
-	}
+	opts = seal.NewTestSealOpts(opts)
 
 	switch opts.StoredKeys {
 	case seal.StoredKeysSupportedShamirRoot:
 		w := aeadwrapper.NewShamirWrapper()
-		sealAccess := seal.NewAccess([]seal.SealInfo{
+		sealAccess, err := seal.NewAccessFromSealInfo(opts.Generation, true, []seal.SealInfo{
 			{
 				Wrapper:  w,
 				Priority: 1,
 				Name:     "shamir",
 			},
 		})
+		if err != nil {
+			t.Fatal("error creating test seal", err)
+		}
 		newSeal := NewDefaultSeal(sealAccess)
 		// Need StoredShares set or this will look like a legacy shamir seal.
 		newSeal.SetCachedBarrierConfig(&SealConfig{
@@ -40,13 +36,16 @@ func NewTestSeal(t testing.T, opts *seal.TestSealOpts) Seal {
 		return newSeal
 	case seal.StoredKeysNotSupported:
 		w := aeadwrapper.NewShamirWrapper()
-		sealAccess := seal.NewAccess([]seal.SealInfo{
+		sealAccess, err := seal.NewAccessFromSealInfo(opts.Generation, true, []seal.SealInfo{
 			{
 				Wrapper:  w,
 				Priority: 1,
 				Name:     "shamir",
 			},
 		})
+		if err != nil {
+			t.Fatal("error creating test seal", err)
+		}
 		newSeal := NewDefaultSeal(sealAccess)
 		newSeal.SetCachedBarrierConfig(&SealConfig{
 			StoredShares:    0,

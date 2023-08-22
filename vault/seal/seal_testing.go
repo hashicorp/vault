@@ -8,6 +8,8 @@ import (
 	"fmt"
 	"sync"
 
+	"github.com/hashicorp/vault/sdk/helper/logging"
+
 	"github.com/hashicorp/go-hclog"
 	wrapping "github.com/hashicorp/go-kms-wrapping/v2"
 )
@@ -18,16 +20,28 @@ type TestSealOpts struct {
 	Secret       []byte
 	Name         wrapping.WrapperType
 	WrapperCount int
+	Generation   uint64
 }
 
-func NewTestSeal(opts *TestSealOpts) (Access, []*ToggleableWrapper) {
+func NewTestSealOpts(opts *TestSealOpts) *TestSealOpts {
 	if opts == nil {
 		opts = new(TestSealOpts)
 	}
 	if opts.WrapperCount == 0 {
 		opts.WrapperCount = 1
 	}
+	if opts.Logger == nil {
+		opts.Logger = logging.NewVaultLogger(hclog.Debug)
+	}
+	if opts.Generation == 0 {
+		// we might at some point need to allow Generation == 0
+		opts.Generation = 1
+	}
+	return opts
+}
 
+func NewTestSeal(opts *TestSealOpts) (Access, []*ToggleableWrapper) {
+	opts = NewTestSealOpts(opts)
 	wrappers := make([]*ToggleableWrapper, opts.WrapperCount)
 	sealInfos := make([]SealInfo, opts.WrapperCount)
 	for i := 0; i < opts.WrapperCount; i++ {
@@ -39,17 +53,15 @@ func NewTestSeal(opts *TestSealOpts) (Access, []*ToggleableWrapper) {
 		}
 	}
 
-	sealAccess := NewAccess(sealInfos)
+	sealAccess, err := NewAccessFromSealInfo(opts.Generation, true, sealInfos)
+	if err != nil {
+		panic(err)
+	}
 	return sealAccess, wrappers
 }
 
 func NewToggleableTestSeal(opts *TestSealOpts) (Access, []func(error)) {
-	if opts == nil {
-		opts = new(TestSealOpts)
-	}
-	if opts.WrapperCount == 0 {
-		opts.WrapperCount = 1
-	}
+	opts = NewTestSealOpts(opts)
 
 	wrappers := make([]*ToggleableWrapper, opts.WrapperCount)
 	sealInfos := make([]SealInfo, opts.WrapperCount)
@@ -65,7 +77,10 @@ func NewToggleableTestSeal(opts *TestSealOpts) (Access, []func(error)) {
 		funcs[i] = w.SetError
 	}
 
-	sealAccess := NewAccess(sealInfos)
+	sealAccess, err := NewAccessFromSealInfo(opts.Generation, true, sealInfos)
+	if err != nil {
+		panic(err)
+	}
 
 	return sealAccess, funcs
 }

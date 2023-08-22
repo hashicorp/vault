@@ -8,12 +8,13 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/hashicorp/go-kms-wrapping/entropy/v2"
 	"io"
 	"os"
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/hashicorp/go-kms-wrapping/entropy/v2"
 
 	"golang.org/x/term"
 
@@ -70,7 +71,7 @@ func (c *OperatorDiagnoseCommand) Synopsis() string {
 
 func (c *OperatorDiagnoseCommand) Help() string {
 	helpText := `
-Usage: vault operator diagnose 
+Usage: vault operator diagnose
 
   This command troubleshoots Vault startup issues, such as TLS configuration or
   auto-unseal. It should be run using the same environment variables and configuration
@@ -78,7 +79,7 @@ Usage: vault operator diagnose
   reproduced.
 
   Start diagnose with a configuration file:
-    
+
      $ vault operator diagnose -config=/etc/vault/config.hcl
 
   Perform a diagnostic check while Vault is still running:
@@ -433,15 +434,17 @@ func (c *OperatorDiagnoseCommand) offlineDiagnostics(ctx context.Context) error 
 
 	sealcontext, sealspan := diagnose.StartSpan(ctx, "Create Vault Server Configuration Seals")
 
-	setSealResponse, err := setSeal(server, config, make([]string, 0), make(map[string]string))
-	// Check error here
+	var setSealResponse *SetSealResponse
+	existingSealGenerationInfo, err := vault.PhysicalSealGenInfo(sealcontext, *backend)
+	if err != nil {
+		diagnose.Fail(sealcontext, fmt.Sprintf("Unable to get Seal genration information from storage: %s.", err.Error()))
+		goto SEALFAIL
+	}
+
+	setSealResponse, err = setSeal(server, config, make([]string, 0), make(map[string]string), existingSealGenerationInfo)
 	if err != nil {
 		diagnose.Advise(ctx, "For assistance with the seal stanza, see the Vault configuration documentation.")
 		diagnose.Fail(sealcontext, fmt.Sprintf("Seal creation resulted in the following error: %s.", err.Error()))
-		goto SEALFAIL
-	}
-	if setSealResponse.sealConfigError != nil {
-		diagnose.Fail(sealcontext, "Seal could not be configured: seals may already be initialized.")
 		goto SEALFAIL
 	}
 
@@ -461,7 +464,9 @@ func (c *OperatorDiagnoseCommand) offlineDiagnostics(ctx context.Context) error 
 		}(seal)
 	}
 
-	if setSealResponse.barrierSeal == nil {
+	if setSealResponse.sealConfigError != nil {
+		diagnose.Fail(sealcontext, "Seal could not be configured: seals may already be initialized.")
+	} else if setSealResponse.barrierSeal == nil {
 		diagnose.Fail(sealcontext, "Could not create barrier seal. No error was generated, but it is likely that the seal stanza is misconfigured. For guidance, see Vault's configuration documentation on the seal stanza.")
 	}
 
@@ -470,18 +475,10 @@ SEALFAIL:
 
 	var barrierSeal vault.Seal
 	var unwrapSeal vault.Seal
-	var sealInfos []*seal.SealInfo
-	sealGenInfo := vault.SealGenerationInfo{
-		Generation: 1,
-		Rewrapped:  false,
-	}
+
 	if setSealResponse != nil {
 		barrierSeal = setSealResponse.barrierSeal
 		unwrapSeal = setSealResponse.unwrapSeal
-		if setSealResponse.barrierSeal != nil {
-			sealInfos = setSealResponse.barrierSeal.GetAccess().GetSealInfoByPriority()
-		}
-		sealGenInfo.Seals = setSealResponse.allSealKmsConfigs
 	}
 
 	diagnose.Test(ctx, "Check Transit Seal TLS", func(ctx context.Context) error {
@@ -541,20 +538,22 @@ SEALFAIL:
 		// prepare a secure random reader for core
 		randReaderTestName := "Initialize Randomness for Core"
 		var sources []*configutil.EntropySourcerInfo
-		for _, sealInfo := range sealInfos {
-			if s, ok := sealInfo.Wrapper.(entropy.Sourcer); ok {
-				sources = append(sources, &configutil.EntropySourcerInfo{
-					Sourcer: s,
-					Name:    sealInfo.Name,
-				})
+		if barrierSeal != nil {
+			for _, sealInfo := range barrierSeal.GetAccess().GetSealInfoByPriority() {
+				if s, ok := sealInfo.Wrapper.(entropy.Sourcer); ok {
+					sources = append(sources, &configutil.EntropySourcerInfo{
+						Sourcer: s,
+						Name:    sealInfo.Name,
+					})
+				}
 			}
 		}
 		secureRandomReader, err = configutil.CreateSecureRandomReaderFunc(config.SharedConfig, sources, server.logger)
 		if err != nil {
-			return diagnose.SpotError(ctx, randReaderTestName, fmt.Errorf("Could not initialize randomness for core: %w.", err))
+			return diagnose.SpotError(ctx, randReaderTestName, fmt.Errorf("could not initialize randomness for core: %w", err))
 		}
 		diagnose.SpotOk(ctx, randReaderTestName, "")
-		coreConfig = createCoreConfig(server, config, *backend, configSR, barrierSeal, unwrapSeal, sealGenInfo, metricsHelper, metricSink, secureRandomReader)
+		coreConfig = createCoreConfig(server, config, *backend, configSR, barrierSeal, unwrapSeal, metricsHelper, metricSink, secureRandomReader)
 		return nil
 	})
 

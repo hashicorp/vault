@@ -13,7 +13,7 @@ import (
 // transitoryGeneration is the Generation value used by SealWrappebValues for
 // entries that need to be upgraded from pre Vault 1.15.
 // Note that the value is 0, since that is the default value for BlobInfo.Generation.
-const transitoryGeneration = 0
+const transitoryGeneration = uint64(0)
 
 type SealWrappedValue struct {
 	value wrapping.MultiWrapValue

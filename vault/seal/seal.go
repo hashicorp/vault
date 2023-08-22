@@ -13,6 +13,8 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/hashicorp/vault/internalshared/configutil"
+
 	metrics "github.com/armon/go-metrics"
 	wrapping "github.com/hashicorp/go-kms-wrapping/v2"
 	"github.com/hashicorp/go-kms-wrapping/v2/aead"
@@ -39,6 +41,12 @@ func (s StoredKeysSupport) String() string {
 	default:
 		return "Invalid StoredKeys type"
 	}
+}
+
+type SealGenerationInfo struct {
+	Generation uint64
+	Seals      []*configutil.KMS
+	Rewrapped  bool
 }
 
 type SealInfo struct {
@@ -92,22 +100,26 @@ type Access interface {
 	SealType(ctx context.Context) (SealType, error)
 	// GetSealInfoByPriority the returned slice should be sorted in priority.
 	GetSealInfoByPriority() []*SealInfo
+	GetSealGenerationInfo() *SealGenerationInfo
 }
 
 type access struct {
-	generation         uint64
+	sealGenerationInfo *SealGenerationInfo
 	wrappersByPriority []*SealInfo
 	keyIdSet           keyIdSet
 }
 
 var _ Access = (*access)(nil)
 
-func NewAccess(sealInfos []SealInfo) Access {
+func NewAccess(sealGenerationInfo *SealGenerationInfo, sealInfos []SealInfo) Access {
+	if sealGenerationInfo == nil {
+		panic("cannot create a seal.Access without a SealGenerationInfo")
+	}
 	if len(sealInfos) == 0 {
 		panic("cannot create a seal.Access without any seal info")
 	}
 	a := &access{
-		generation: 1, // FIXME: Introduce Generation argument
+		sealGenerationInfo: sealGenerationInfo,
 	}
 	a.wrappersByPriority = make([]*SealInfo, len(sealInfos))
 	for i, x := range sealInfos {
@@ -122,6 +134,26 @@ func NewAccess(sealInfos []SealInfo) Access {
 	return a
 }
 
+func NewAccessFromSealInfo(generation uint64, rewrapped bool, sealInfos []SealInfo) (Access, error) {
+	sealGenerationInfo := &SealGenerationInfo{
+		Generation: generation,
+		Rewrapped:  rewrapped,
+	}
+	ctx := context.Background()
+	for _, sealInfo := range sealInfos {
+		typ, err := sealInfo.Wrapper.Type(ctx)
+		if err != nil {
+			return nil, err
+		}
+		sealGenerationInfo.Seals = append(sealGenerationInfo.Seals, &configutil.KMS{
+			Type:     typ.String(),
+			Priority: sealInfo.Priority,
+			Name:     sealInfo.Name,
+		})
+	}
+	return NewAccess(sealGenerationInfo, sealInfos), nil
+}
+
 func (a *access) GetSealInfoByPriority() []*SealInfo {
 	// Return a copy, to prevent modification
 	l := make([]*SealInfo, len(a.wrappersByPriority))
@@ -131,8 +163,12 @@ func (a *access) GetSealInfoByPriority() []*SealInfo {
 	return l
 }
 
+func (a *access) GetSealGenerationInfo() *SealGenerationInfo {
+	return a.sealGenerationInfo
+}
+
 func (a *access) Generation() uint64 {
-	return a.generation
+	return a.sealGenerationInfo.Generation
 }
 
 func (a *access) SetConfig(ctx context.Context, options ...wrapping.Option) (*wrapping.WrapperConfig, error) {
