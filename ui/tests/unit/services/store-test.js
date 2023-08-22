@@ -97,7 +97,7 @@ module('Unit | Service | store', function (hooks) {
           prevPage: 1,
           total: 5,
           filteredTotal: 4,
-          pageSize: 15,
+          pageSize: 3,
         },
       },
       'it returns filtered results'
@@ -133,7 +133,7 @@ module('Unit | Service | store', function (hooks) {
         lastPage: 4,
         total: 7,
         filteredTotal: 7,
-        pageSize: 15,
+        pageSize: 2,
       },
       'returns correct meta values'
     );

@@ -3,15 +3,17 @@
     <LinkTo @route={{@routeName}} data-test-secrets-tab={{@routeName}}>Secrets</LinkTo>
     <LinkTo @route="configuration" data-test-secrets-tab="Configuration">Configuration</LinkTo>
   </:tabLinks>
-  {{! TODO checks for if list >0 show filter }}
+
   <:toolbarFilters>
     {{#unless @noMetadataListPermissions}}
-      <KvListFilter
-        @secrets={{@secrets}}
-        @mountPoint={{this.mountPoint}}
-        @filterValue={{@filterValue}}
-        @pageFilter={{@pageFilter}}
-      />
+      {{#if @secrets}}
+        <KvListFilter
+          @secrets={{@secrets}}
+          @mountPoint={{this.mountPoint}}
+          @filterValue={{@filterValue}}
+          @pageFilter={{@pageFilter}}
+        />
+      {{/if}}
     {{/unless}}
   </:toolbarFilters>
 
