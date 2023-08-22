@@ -15,6 +15,7 @@ export const PAGE = {
   emptyStateTitle: '[data-test-empty-state-title]',
   emptyStateMessage: '[data-test-empty-state-message]',
   emptyStateActions: '[data-test-empty-state-actions]',
+  popup: '[data-test-popup-menu-trigger]',
   error: {
     title: '[data-test-page-error] h1',
     message: '[data-test-page-error] p',
@@ -42,9 +43,12 @@ export const PAGE = {
     overviewCard: '[data-test-overview-card-container="View secret"]',
     overviewInput: '[data-test-view-secret] input',
     overviewButton: '[data-test-get-secret-detail]',
+    pagination: '[data-test-pagination]',
+    paginationInfo: '.hds-pagination-info',
+    paginationNext: '.hds-pagination-nav__arrow--direction-next',
+    paginationSelected: '.hds-pagination-nav__number--is-selected',
   },
   versions: {
-    popup: '[data-test-popup-menu-trigger]',
     icon: (version) => `[data-test-icon-holder="${version}"]`,
     linkedBlock: (version) => `[data-test-version-linked-block="${version}"]`,
     button: (version) => `[data-test-version-button="${version}"]`,
