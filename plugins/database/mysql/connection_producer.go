@@ -30,13 +30,6 @@ const (
 	driverMySQL   = "mysql"
 )
 
-// ensure cloud driver registration only happens once.
-// the complication here is that registration happens at point X, and is not allowed to happen again, ever.
-// This cannot be stored as state within a connection producer, because those producers are config-specific,
-// so if we configure, say, two databases that are both cloud-mysql, we must only register once.
-// we might be able to cleverly do this with init().
-var onceler sync.Once
-
 // mySQLConnectionProducer implements ConnectionProducer and provides a generic producer for most sql databases
 type mySQLConnectionProducer struct {
 	ConnectionURL            string      `json:"connection_url"          mapstructure:"connection_url"          structs:"connection_url"`
@@ -185,7 +178,7 @@ func (c *mySQLConnectionProducer) Connection(ctx context.Context) (interface{}, 
 		// This poses one big obvious problem - each configured cloud database might/will need its own driver registration,
 		// the name of which we have to track, and even worse in the MySQL case, that name is also the name of the
 		// dialer that is registered by MySQL in the dsn: protocol in the DSN acts double duty if a custom dialer
-		// is registered. This means that either we can't hid the name of the dialer from the user OR we have to rewrite
+		// is registered. This means that either we can't hide the name of the dialer from the user OR we have to rewrite
 		// the DSN after the user provides it. We already do this, KIND OF for the TLS config, but this modification
 		// is much more dramatic.
 		_, err := registerDriverMySQL(driverName, credentials.(string))
@@ -302,10 +295,10 @@ func (c *mySQLConnectionProducer) addTLStoDSN() (connURL string, err error) {
 func (c *mySQLConnectionProducer) rewriteProtocolForGCP(inDSN string) (string, error) {
 	config, err := mysql.ParseDSN(inDSN)
 	if err != nil {
-		return "", fmt.Errorf("unable to parseeeee connectionURL: %s", err)
+		return "", fmt.Errorf("unable to parse connectionURL: %s", err)
 	}
 
-	if config.Net != "cloudsql-mysql" {
+	if config.Net != cloudSQLMySQL {
 		return "", fmt.Errorf("didn't update net name because it wasn't what we expected as a placeholder: %s", config.Net)
 	}
 
@@ -316,10 +309,7 @@ func (c *mySQLConnectionProducer) rewriteProtocolForGCP(inDSN string) (string, e
 	return config.FormatDSN(), nil
 }
 
-func registerDriverMySQL(driverName, credentials string) (func() error, error) {
-	// @TODO implement driver cleanup cache
-	// if driver is already registered, return
-
+func registerDriverMySQL(driverName, credentials string) (cleanup func() error, err error) {
 	opts, err := connutil.GetCloudSQLAuthOptions(credentials)
 	if err != nil {
 		return nil, err
