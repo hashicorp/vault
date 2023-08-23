@@ -70,7 +70,10 @@ export default class KvSecretDataModel extends Model {
   casVersion;
 
   get state() {
-    return this.destroyed ? 'destroyed' : this.deletionTime ? 'deleted' : 'created';
+    if (this.destroyed) return 'destroyed';
+    if (this.deletionTime) return 'deleted';
+    if (this.createdTime) return 'created';
+    return '';
   }
 
   // Permissions

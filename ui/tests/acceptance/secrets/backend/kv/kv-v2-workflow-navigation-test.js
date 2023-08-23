@@ -739,7 +739,7 @@ module('Acceptance | kv-v2 workflow | navigation', function (hooks) {
       );
     });
     test('can access nested secret (mm)', async function (assert) {
-      assert.expect(40);
+      assert.expect(41);
       const backend = this.backend;
       await navToBackend(backend);
       assert.dom(PAGE.title).hasText(`${backend} Version 2`, 'title text correct');
@@ -771,9 +771,7 @@ module('Acceptance | kv-v2 workflow | navigation', function (hooks) {
       assertCorrectBreadcrumbs(assert, ['secret', backend, 'app', 'nested', 'secret']);
       assert.dom(PAGE.title).hasText('app/nested/secret', 'title is full secret path');
       assertDetailsToolbar(assert, ['delete', 'destroy', 'versionDropdown']);
-
-      // TODO: FIX: add version to dropdown when no data access
-      // assert.dom(PAGE.detail.versionDropdown).hasText('Version 1');
+      assert.dom(PAGE.detail.versionDropdown).hasText('Version current');
 
       await click(PAGE.breadcrumbAtIdx(3));
       assert.ok(
@@ -791,11 +789,11 @@ module('Acceptance | kv-v2 workflow | navigation', function (hooks) {
       assert.ok(currentURL().startsWith(`/vault/secrets/${backend}/kv/list`), 'links back to list root');
     });
     test('versioned secret nav, tabs, breadcrumbs (mm)', async function (assert) {
-      assert.expect(34);
+      assert.expect(35);
       const backend = this.backend;
       await navToBackend(backend);
       await click(PAGE.list.item(secretPath));
-      // TODO: url should have query param
+
       assert.strictEqual(
         currentURL(),
         `/vault/secrets/${backend}/kv/${secretPathUrlEncoded}/details`,
@@ -812,7 +810,6 @@ module('Acceptance | kv-v2 workflow | navigation', function (hooks) {
         .dom(PAGE.detail.versionDropdown)
         .hasText('Version current', 'Version dropdown shows current version');
       assert.dom(PAGE.detail.createNewVersion).doesNotExist('Create new version button not shown');
-      // TODO: should the created metadata show?
       assert.dom(PAGE.detail.versionTimestamp).doesNotExist('Version created text not shown');
       assert.dom(PAGE.infoRowValue('foo')).doesNotExist('does not render current data');
       assert
@@ -826,10 +823,8 @@ module('Acceptance | kv-v2 workflow | navigation', function (hooks) {
         `/vault/secrets/${backend}/kv/${secretPathUrlEncoded}/details?version=1`,
         'Goes to detail view for version 1'
       );
-      // TODO: version number missing
-      // assert.dom(PAGE.detail.versionDropdown).hasText('Version 1', 'Version dropdown shows selected version');
-      // TODO: versionTooltip missing
-      // assert.dom(PAGE.detail.versionTimestamp).containsText('Version 1 created');
+      assert.dom(PAGE.detail.versionDropdown).hasText('Version 1', 'Version dropdown shows selected version');
+
       assert.dom(PAGE.infoRowValue('key-1')).doesNotExist('does not render previous data');
       assert
         .dom(PAGE.emptyStateTitle)
@@ -989,18 +984,17 @@ module('Acceptance | kv-v2 workflow | navigation', function (hooks) {
       assert.ok(currentURL().startsWith(`/vault/secrets/${backend}/kv/list`), 'links back to list root');
     });
     test('versioned secret nav, tabs, breadcrumbs (sc)', async function (assert) {
-      assert.expect(26);
+      assert.expect(32);
       const backend = this.backend;
       await navToBackend(backend);
 
       await typeIn(PAGE.list.overviewInput, secretPath);
       await click(PAGE.list.overviewButton);
-      // TODO: url should include version param
-      // assert.strictEqual(
-      //   currentURL(),
-      //   `/vault/secrets/${backend}/kv/${secretPathUrlEncoded}/details?version=3`,
-      //   'Url includes version query param'
-      // );
+      assert.strictEqual(
+        currentURL(),
+        `/vault/secrets/${backend}/kv/${secretPathUrlEncoded}/details`,
+        'Goes to detail view'
+      );
       assert.dom(PAGE.title).hasText(secretPath, 'Goes to secret detail view');
       assert.dom(PAGE.secretTab('Secret')).hasText('Secret');
       assert.dom(PAGE.secretTab('Secret')).hasClass('active');
@@ -1016,30 +1010,26 @@ module('Acceptance | kv-v2 workflow | navigation', function (hooks) {
         .hasText('You do not have permission to read this secret', 'empty state shows');
 
       await click(PAGE.detail.createNewVersion);
-      // TODO: url should include version param
-      // assert.strictEqual(
-      //   currentURL(),
-      //   `/vault/secrets/${backend}/kv/${secretPathUrlEncoded}/details/edit?version=3`,
-      //   'Url includes version query param'
-      // );
+      assert.strictEqual(
+        currentURL(),
+        `/vault/secrets/${backend}/kv/${secretPathUrlEncoded}/details/edit`,
+        'Goes to edit page'
+      );
       assert.dom(FORM.versionAlert).doesNotExist('Does not show version alert for current version');
-      // TODO: show this warning
-      // assert
-      //   .dom(FORM.noReadAlert)
-      //   .hasText(
-      //     'You do not have read permissions. If a secret exists at this path creating a new secret will overwrite it.',
-      //     'Shows warning about no read permissions'
-      //   );
-      // TODO: input should be disabled
-      // assert.dom(FORM.inputByAttr('path')).isDisabled();
+      assert
+        .dom(FORM.noReadAlert)
+        .hasText(
+          'You do not have read permissions. If a secret exists at this path creating a new secret will overwrite it.',
+          'Shows warning about no read permissions'
+        );
+      assert.dom(FORM.inputByAttr('path')).isDisabled();
 
       await click(FORM.cancelBtn);
-      // TODO: version qp should exist
-      // assert.strictEqual(
-      //   currentURL(),
-      //   `/vault/secrets/${backend}/kv/${secretPathUrlEncoded}/details?version=3`,
-      //   'Goes back to detail view'
-      // );
+      assert.strictEqual(
+        currentURL(),
+        `/vault/secrets/${backend}/kv/${secretPathUrlEncoded}/details`,
+        'Goes back to detail view'
+      );
 
       await visit(`/vault/secrets/${backend}/kv/${secretPathUrlEncoded}/details?version=1`);
       assert.dom(PAGE.detail.versionDropdown).doesNotExist('Version dropdown does not exist');
@@ -1047,18 +1037,15 @@ module('Acceptance | kv-v2 workflow | navigation', function (hooks) {
       assert.dom(PAGE.infoRowValue('key-1')).doesNotExist('does not render previous data');
 
       await click(PAGE.detail.createNewVersion);
-      // TODO: qp should exist
-      // assert.strictEqual(
-      //   currentURL(),
-      //   `/vault/secrets/${backend}/kv/${secretPathUrlEncoded}/details/edit?version=1`,
-      //   'Url includes version query param'
-      // );
-      // TODO: path should be disabled
-      // assert.dom(FORM.inputByAttr('path')).isDisabled();
+      assert.strictEqual(
+        currentURL(),
+        `/vault/secrets/${backend}/kv/${secretPathUrlEncoded}/details/edit?version=1`,
+        'Url includes version query param'
+      );
+      assert.dom(FORM.inputByAttr('path')).isDisabled();
       assert.dom(FORM.keyInput()).hasValue('', 'form does not pre-populate');
       assert.dom(FORM.maskedValueInput()).hasValue('', 'form does not pre-populate');
-      // TODO: should show
-      // assert.dom(FORM.noReadAlert).exists('Shows no read alert');
+      assert.dom(FORM.noReadAlert).exists('Shows no read alert');
       await click(FORM.cancelBtn);
 
       await click(PAGE.secretTab('Metadata'));

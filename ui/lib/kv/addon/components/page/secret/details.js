@@ -106,12 +106,57 @@ export default class KvSecretDetails extends Component {
     }
   }
 
-  get isDeactivated() {
-    return this.args.secret.state === 'created' ? false : true;
-  }
-
   get hideHeaders() {
     return this.showJsonView || this.emptyState;
+  }
+
+  get versionState() {
+    const { secret, metadata } = this.args;
+    if (secret.failReadErrorCode !== 403) {
+      return secret.state;
+    }
+    // If the user can't read secret data, get the current version
+    // state from metadata versions
+    if (metadata?.sortedVersions) {
+      const version = this.args.version;
+      const meta = version
+        ? metadata.sortedVersions.find((v) => v.version == version)
+        : metadata.sortedVersions[0];
+      if (meta?.destroyed) {
+        return 'destroyed';
+      }
+      if (meta?.deletion_time) {
+        return 'deleted';
+      }
+      if (meta?.created_time) {
+        return 'created';
+      }
+    }
+    return '';
+  }
+
+  get showUndelete() {
+    const { secret } = this.args;
+    if (secret.canUndelete) {
+      return this.versionState === 'deleted';
+    }
+    return false;
+  }
+
+  get showDelete() {
+    const { secret } = this.args;
+    if (secret.canDeleteVersion || secret.canDeleteLatestVersion) {
+      return this.versionState === 'created';
+    }
+    return false;
+  }
+
+  get showDestroy() {
+    const { secret } = this.args;
+    if (secret.canDestroyVersion) {
+      return this.versionState !== 'destroyed';
+    }
+    return false;
   }
 
   get emptyState() {
