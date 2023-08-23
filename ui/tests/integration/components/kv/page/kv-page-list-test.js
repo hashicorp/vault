@@ -60,7 +60,6 @@ module('Integration | Component | kv | Page::List', function (hooks) {
       @backend={{this.model.backend}}
       @noMetadataListPermissions={{false}}
       @breadcrumbs={{this.breadcrumbs}} 
-      @routeName="list"
       @meta={{this.model.meta}}
     />`,
       {
