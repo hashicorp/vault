@@ -62,12 +62,13 @@ default value in the `"/sys/config/ui"` [API endpoint](/vault/api-docs/system/co
   [go-sockaddr template](https://pkg.go.dev/github.com/hashicorp/go-sockaddr/template)
   that is resolved at runtime.
 
-- `chroot_namespace` `(string: "")` – Specifies the namespace that will be used
-as the apparent root namespace by this listener. When not specified, this will default to
-the usual root namespace. If the specified namespace does not exist, requests to this
-listener will not succeed and a 400 error will be returned. If any namespace is simultaneously
-provided through either the CLI flag or the `X-Vault-Namespace` header, it will be appended
-to the `chroot_namespace` value specified here to determine the absolute namespace path.
+- `chroot_namespace` `(string: "")` – Specifies an alternate top-level namespace
+  for the listener. Vault appends the namespace provided in CLI the field or
+  `X-Vault-Namespace` header to the top-level namespace to determine the full
+  namespace path for the request. For example, if `chroot_namespace` is
+  `admin` and a CLI call provides the `ns1` namespace, the full namespace
+  path is `admin/ns1`. Calls to the listener will fail with a 4XX error if
+  the top-level namespace provided for `chroot_namespace` does not exist.
 
 - `http_idle_timeout` `(string: "5m")` - Specifies the maximum amount of time to
   wait for the next request when keep-alives are enabled. If `http_idle_timeout`
