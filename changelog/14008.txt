@@ -1,0 +1,3 @@
+```release-note:improvement
+secrets/ssh: Add support for generating non-RSA SSH CAs
+```

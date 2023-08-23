@@ -1,0 +1,114 @@
+---
+layout: docs
+page_title: Storage
+sidebar_title: Storage
+description: >-
+  Vault relies on external storage to save its durable information.
+---
+
+# Storage
+
+As described on our [Architecture](/vault/docs/internals/architecture) page, Vault's
+storage backend is untrusted storage used purely to keep encrypted information.
+
+## Supported storage backends
+
+@include 'ent-supported-storage.mdx'
+
+Many other options for storage are available with community support for Vault - see our
+[Storage Configuration](/vault/docs/configuration/storage) section for more
+information.
+
+-> **Choosing a storage backend:** Refer to the [integrated storage vs. external
+storage](/vault/docs/configuration/storage#integrated-storage-vs-external-storage)
+section of the storage configuration page to help make a decision about which
+storage backend to use.
+
+## Backups
+
+Due to the highly flexible nature of Vault's potential storage configurations,
+providing exact guidance on backing up Vault is challenging.
+
+When backing up Vault, there are two pieces to consider:
+
+1. Vault's encrypted data in the storage backend
+2. Configuration files and management scripts for running the Vault server
+
+There's also a big question - what is the error case you're trying to guard
+against by saving a backup?
+
+### The big question - why take backups?
+
+It's important to consider the question of "why take a backup" while developing
+your ongoing backup and disaster recovery strategy.
+
+Taking a backup is recommended prior to upgrades, as downgrading Vault storage
+is not always possible. Generally, a backup is recommended any time a major
+change is planned for a cluster.
+
+More specifically, we recommend taking backups **before**, but not during, write
+operations to the `/sys` API (excluding the `/sys/leases`, `/sys/namespaces`,
+`/sys/tools`, `/sys/wrapping`, `/sys/policies`, and `/sys/pprof` endpoints).
+Some examples of workflows that write to the `/sys` API are upgrades and rekeys.
+In the future, this guidance may change for the Integrated Storage backend.
+
+Backups _can_ also help with accidental data deletions or modifications. In
+this case, the story can get a little tricky. If you simply recover a backup
+from 5AM with the correct data, but the current time is 10AM, you will lose data
+written between 5 and 10AM. Lucy Davinhart gave a HashiConf talk that serves as
+an interesting [case
+study](https://www.hashicorp.com/resources/oh-no-i-deleted-my-vault-secret).
+
+We do not recommend backups as protection against the failure of an individual
+machine. Vault servers can run in clusters, so to protect against server
+failure, we recommend running Vault in [HA
+mode](/vault/docs/internals/high-availability). With community features, a
+Vault cluster can extend across multiple availability zones within a region.
+
+Vault Enterprise supports replicated clusters and disaster recovery for data
+center failure. When using Vault Community Edition in [HA
+Mode](/vault/docs/internals/high-availability), a backup can help guard against the
+failure of a data center.
+
+Ultimately, backups are not a replacement for running in HA, or for using
+replication with Vault Enterprise. As you develop a plan for recovering from or
+guarding against failure, you should consider both backups and HA as critical
+components of that plan.
+
+### Backing up vault's persisted data
+
+Backups and restores are ideally performed while Vault is offline. If offline
+backups are not feasible, we recommend using a storage backend that supports
+atomic snapshots (such as
+[Consul](/consul/commands/snapshot) or [Integrated
+Storage](/vault/docs/commands/operator/raft#snapshot)).
+
+~> If your storage backend does not support atomic snapshots, we recommend only
+taking offline backups.
+
+To perform a backup or restore of Vault's encrypted data when using a
+HashiCorp-supported storage backend, see the instructions linked below. For
+other storage backends, follow the documentation of that backend for taking and
+restoring backups.
+
+- Integrated Storage [snapshots](/vault/docs/commands/operator/raft#snapshot)
+- Consul [snapshots](/consul/commands/snapshot)
+
+#### Backing up multiple clusters
+
+If you are using Vault Enterprise [Performance
+Replication](/vault/docs/enterprise/replication#performance-replication-and-disaster-recovery-dr-replication),
+you should plan to take backups of the active node on each of your clusters.
+
+### Configuration
+
+In addition to backing up Vault's encrypted data via the storage backend, you
+may also wish to save the server configuration files, any scripts for managing
+the Vault service, and ensure you can reinstall any user-installed plugins. The
+location of these files will be specific to your installation of Vault.
+
+~> **NOTE**: Although a backup or snapshot of Vault's data from the storage
+backend is encrypted, some of your configuration may be sensitive (a Vault token
+for Transit Autounseal or a TLS private key in your configuration, for example).
+The presence of this information in your backups will mean that they may need
+to be carefully protected.

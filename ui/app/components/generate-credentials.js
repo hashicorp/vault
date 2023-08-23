@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import { inject as service } from '@ember/service';
 import { computed, set } from '@ember/object';
 import Component from '@ember/component';
@@ -15,18 +20,9 @@ const MODEL_TYPES = {
     title: 'Generate AWS Credentials',
     backIsListLink: true,
   },
-  'pki-issue': {
-    model: 'pki-certificate',
-    title: 'Issue Certificate',
-  },
-  'pki-sign': {
-    model: 'pki-certificate-sign',
-    title: 'Sign Certificate',
-  },
 };
 
 export default Component.extend({
-  wizard: service(),
   store: service(),
   router: service(),
   // set on the component
@@ -40,17 +36,17 @@ export default Component.extend({
   emptyData: '{\n}',
 
   modelForType() {
-    const type = this.get('options');
+    const type = this.options;
     if (type) {
       return type.model;
     }
     // if we don't have a mode for that type then redirect them back to the backend list
-    this.get('router').transitionTo('vault.cluster.secrets.backend.list-root', this.get('backendPath'));
+    this.router.transitionTo('vault.cluster.secrets.backend.list-root', this.backendPath);
   },
 
-  options: computed('action', 'backendType', function() {
-    const action = this.get('action') || 'creds';
-    return MODEL_TYPES[`${this.get('backendType')}-${action}`];
+  options: computed('action', 'backendType', function () {
+    const action = this.action || 'creds';
+    return MODEL_TYPES[`${this.backendType}-${action}`];
   }),
 
   init() {
@@ -58,26 +54,20 @@ export default Component.extend({
     this.createOrReplaceModel();
   },
 
-  didReceiveAttrs() {
-    if (this.get('wizard.featureState') === 'displayRole') {
-      this.get('wizard').transitionFeatureMachine(
-        this.get('wizard.featureState'),
-        'CONTINUE',
-        this.get('backendType')
-      );
-    }
-  },
-
   willDestroy() {
-    this.get('model').unloadRecord();
+    // components are torn down after store is unloaded and will cause an error if attempt to unload record
+    const noTeardown = this.store && !this.store.isDestroying;
+    if (noTeardown && !this.model.isDestroyed && !this.model.isDestroying) {
+      this.model.unloadRecord();
+    }
     this._super(...arguments);
   },
 
   createOrReplaceModel() {
     const modelType = this.modelForType();
-    const model = this.get('model');
-    const roleName = this.get('roleName');
-    const backendPath = this.get('backendPath');
+    const model = this.model;
+    const roleName = this.roleName;
+    const backendPath = this.backendPath;
     if (!modelType) {
       return;
     }
@@ -91,29 +81,18 @@ export default Component.extend({
       },
       id: `${backendPath}-${roleName}`,
     };
-    const newModel = this.get('store').createRecord(modelType, attrs);
+    const newModel = this.store.createRecord(modelType, attrs);
     this.set('model', newModel);
   },
 
   actions: {
     create() {
-      let model = this.get('model');
+      const model = this.model;
       this.set('loading', true);
-      this.model
-        .save()
-        .catch(() => {
-          if (this.get('wizard.featureState') === 'credentials') {
-            this.get('wizard').transitionFeatureMachine(
-              this.get('wizard.featureState'),
-              'ERROR',
-              this.get('backendType')
-            );
-          }
-        })
-        .finally(() => {
-          model.set('hasGenerated', true);
-          this.set('loading', false);
-        });
+      this.model.save().finally(() => {
+        model.set('hasGenerated', true);
+        this.set('loading', false);
+      });
     },
 
     codemirrorUpdated(attr, val, codemirror) {
@@ -121,7 +100,7 @@ export default Component.extend({
       const hasErrors = codemirror.state.lint.marked.length > 0;
 
       if (!hasErrors) {
-        set(this.get('model'), attr, JSON.parse(val));
+        set(this.model, attr, JSON.parse(val));
       }
     },
 

@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package metricsutil
 
 import (
@@ -5,7 +8,7 @@ import (
 	"sync/atomic"
 	"time"
 
-	metrics "github.com/armon/go-metrics"
+	"github.com/armon/go-metrics"
 	"github.com/hashicorp/vault/helper/namespace"
 )
 
@@ -34,9 +37,10 @@ type ClusterMetricSink struct {
 }
 
 type TelemetryConstConfig struct {
-	LeaseMetricsEpsilon         time.Duration
-	NumLeaseMetricsTimeBuckets  int
-	LeaseMetricsNameSpaceLabels bool
+	LeaseMetricsEpsilon              time.Duration
+	NumLeaseMetricsTimeBuckets       int
+	LeaseMetricsNameSpaceLabels      bool
+	RollbackMetricsIncludeMountPoint bool
 }
 
 type Metrics interface {
@@ -49,8 +53,31 @@ type Metrics interface {
 
 var _ Metrics = &ClusterMetricSink{}
 
+// SinkWrapper implements `metricsutil.Metrics` using an instance of
+// armon/go-metrics `MetricSink` as the underlying implementation.
+type SinkWrapper struct {
+	metrics.MetricSink
+}
+
+func (s SinkWrapper) AddDurationWithLabels(key []string, d time.Duration, labels []Label) {
+	val := float32(d) / float32(time.Millisecond)
+	s.MetricSink.AddSampleWithLabels(key, val, labels)
+}
+
+func (s SinkWrapper) MeasureSinceWithLabels(key []string, start time.Time, labels []Label) {
+	elapsed := time.Now().Sub(start)
+	val := float32(elapsed) / float32(time.Millisecond)
+	s.MetricSink.AddSampleWithLabels(key, val, labels)
+}
+
+var _ Metrics = SinkWrapper{}
+
 // Convenience alias
 type Label = metrics.Label
+
+func (m *ClusterMetricSink) SetGauge(key []string, val float32) {
+	m.Sink.SetGaugeWithLabels(key, val, []Label{{"cluster", m.ClusterName.Load().(string)}})
+}
 
 func (m *ClusterMetricSink) SetGaugeWithLabels(key []string, val float32, labels []Label) {
 	m.Sink.SetGaugeWithLabels(key, val,
@@ -60,6 +87,10 @@ func (m *ClusterMetricSink) SetGaugeWithLabels(key []string, val float32, labels
 func (m *ClusterMetricSink) IncrCounterWithLabels(key []string, val float32, labels []Label) {
 	m.Sink.IncrCounterWithLabels(key, val,
 		append(labels, Label{"cluster", m.ClusterName.Load().(string)}))
+}
+
+func (m *ClusterMetricSink) AddSample(key []string, val float32) {
+	m.Sink.AddSampleWithLabels(key, val, []Label{{"cluster", m.ClusterName.Load().(string)}})
 }
 
 func (m *ClusterMetricSink) AddSampleWithLabels(key []string, val float32, labels []Label) {
@@ -80,8 +111,9 @@ func (m *ClusterMetricSink) MeasureSinceWithLabels(key []string, start time.Time
 
 // BlackholeSink is a default suitable for use in unit tests.
 func BlackholeSink() *ClusterMetricSink {
-	sink, _ := metrics.New(metrics.DefaultConfig(""),
-		&metrics.BlackholeSink{})
+	conf := metrics.DefaultConfig("")
+	conf.EnableRuntimeMetrics = false
+	sink, _ := metrics.New(conf, &metrics.BlackholeSink{})
 	cms := &ClusterMetricSink{
 		ClusterName: atomic.Value{},
 		Sink:        sink,
@@ -120,7 +152,9 @@ func NamespaceLabel(ns *namespace.Namespace) metrics.Label {
 	case ns.ID == namespace.RootNamespaceID:
 		return metrics.Label{"namespace", "root"}
 	default:
-		return metrics.Label{"namespace",
-			strings.Trim(ns.Path, "/")}
+		return metrics.Label{
+			"namespace",
+			strings.Trim(ns.Path, "/"),
+		}
 	}
 }

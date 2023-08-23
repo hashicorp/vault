@@ -1,12 +1,16 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import { inject as service } from '@ember/service';
 import { alias, gt } from '@ember/object/computed';
 import Component from '@ember/component';
 import { computed } from '@ember/object';
-import keyUtils from 'vault/lib/key-utils';
-import pathToTree from 'vault/lib/path-to-tree';
 import { task, timeout } from 'ember-concurrency';
+import pathToTree from 'vault/lib/path-to-tree';
+import { ancestorKeysForKey } from 'core/utils/key-utils';
 
-const { ancestorKeysForKey } = keyUtils;
 const DOT_REPLACEMENT = '☃';
 const ANIMATION_DURATION = 250;
 
@@ -21,24 +25,24 @@ export default Component.extend({
 
   init() {
     this._super(...arguments);
-    this.get('namespaceService.findNamespacesForUser').perform();
+    this.namespaceService?.findNamespacesForUser.perform();
   },
 
   didReceiveAttrs() {
     this._super(...arguments);
 
-    let ns = this.get('namespace');
-    let oldNS = this.get('oldNamespace');
+    const ns = this.namespace;
+    const oldNS = this.oldNamespace;
     if (!oldNS || ns !== oldNS) {
-      this.get('setForAnimation').perform();
-      this.get('fetchListCapability').perform();
+      this.setForAnimation.perform();
+      this.fetchListCapability.perform();
     }
     this.set('oldNamespace', ns);
   },
 
-  fetchListCapability: task(function*() {
+  fetchListCapability: task(function* () {
     try {
-      let capability = yield this.store.findRecord('capabilities', 'sys/namespaces/');
+      const capability = yield this.store.findRecord('capabilities', 'sys/namespaces/');
       this.set('listCapability', capability);
       this.set('canList', true);
     } catch (e) {
@@ -47,16 +51,16 @@ export default Component.extend({
       this.set('canList', false);
     }
   }),
-  setForAnimation: task(function*() {
-    let leaves = this.get('menuLeaves');
-    let lastLeaves = this.get('lastMenuLeaves');
+  setForAnimation: task(function* () {
+    const leaves = this.menuLeaves;
+    const lastLeaves = this.lastMenuLeaves;
     if (!lastLeaves) {
       this.set('lastMenuLeaves', leaves);
       yield timeout(0);
       return;
     }
-    let isAdding = leaves.length > lastLeaves.length;
-    let changedLeaf = (isAdding ? leaves : lastLeaves).get('lastObject');
+    const isAdding = leaves.length > lastLeaves.length;
+    const changedLeaf = (isAdding ? leaves : lastLeaves).get('lastObject');
     this.set('isAdding', isAdding);
     this.set('changedLeaf', changedLeaf);
 
@@ -81,8 +85,8 @@ export default Component.extend({
   accessibleNamespaces: alias('namespaceService.accessibleNamespaces'),
   inRootNamespace: alias('namespaceService.inRootNamespace'),
 
-  namespaceTree: computed('accessibleNamespaces', function() {
-    let nsList = this.get('accessibleNamespaces');
+  namespaceTree: computed('accessibleNamespaces', function () {
+    const nsList = this.accessibleNamespaces;
 
     if (!nsList) {
       return [];
@@ -91,7 +95,7 @@ export default Component.extend({
   }),
 
   maybeAddRoot(leaves) {
-    let userRoot = this.get('auth.authData.userRootNamespace');
+    const userRoot = this.auth.authData.userRootNamespace;
     if (userRoot === '') {
       leaves.unshift('');
     }
@@ -123,9 +127,9 @@ export default Component.extend({
   // to render the nodes of each leaf
 
   // gets set as  'lastMenuLeaves' in the ember concurrency task above
-  menuLeaves: computed('namespacePath', 'namespaceTree', function() {
-    let ns = this.get('namespacePath');
-    ns = ns.replace(/^\//, '');
+  menuLeaves: computed('namespacePath', 'namespaceTree', 'pathToLeaf', function () {
+    let ns = this.namespacePath;
+    ns = (ns || '').replace(/^\//, '');
     let leaves = ancestorKeysForKey(ns);
     leaves.push(ns);
     leaves = this.maybeAddRoot(leaves);
@@ -136,30 +140,30 @@ export default Component.extend({
 
   // the nodes at the root of the namespace tree
   // these will get rendered as the bottom layer
-  rootLeaves: computed('namespaceTree', function() {
-    let tree = this.get('namespaceTree');
-    let leaves = Object.keys(tree);
+  rootLeaves: computed('namespaceTree', function () {
+    const tree = this.namespaceTree;
+    const leaves = Object.keys(tree);
     return leaves;
   }),
 
   currentLeaf: alias('lastMenuLeaves.lastObject'),
   canAccessMultipleNamespaces: gt('accessibleNamespaces.length', 1),
-  isUserRootNamespace: computed('auth.authData.userRootNamespace', 'namespacePath', function() {
-    return this.get('auth.authData.userRootNamespace') === this.get('namespacePath');
+  isUserRootNamespace: computed('auth.authData.userRootNamespace', 'namespacePath', function () {
+    return this.auth.authData.userRootNamespace === this.namespacePath;
   }),
 
-  namespaceDisplay: computed('namespacePath', 'accessibleNamespaces', 'accessibleNamespaces.[]', function() {
-    let namespace = this.get('namespacePath');
-    if (namespace === '') {
-      return '';
+  namespaceDisplay: computed('namespacePath', 'accessibleNamespaces', 'accessibleNamespaces.[]', function () {
+    const namespace = this.namespacePath;
+    if (!namespace) {
+      return 'root';
     }
-    let parts = namespace.split('/');
+    const parts = namespace?.split('/');
     return parts[parts.length - 1];
   }),
 
   actions: {
     refreshNamespaceList() {
-      this.get('namespaceService.findNamespacesForUser').perform();
+      this.namespaceService.findNamespacesForUser.perform();
     },
   },
 });

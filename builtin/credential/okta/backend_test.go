@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package okta
 
 import (
@@ -9,6 +12,7 @@ import (
 	"time"
 
 	log "github.com/hashicorp/go-hclog"
+	"github.com/hashicorp/vault/helper/testhelpers"
 	logicaltest "github.com/hashicorp/vault/helper/testhelpers/logical"
 	"github.com/hashicorp/vault/sdk/helper/logging"
 	"github.com/hashicorp/vault/sdk/helper/policyutil"
@@ -35,6 +39,15 @@ func TestBackend_Config(t *testing.T) {
 	if os.Getenv("VAULT_ACC") == "" {
 		t.SkipNow()
 	}
+
+	// Ensure each cred is populated.
+	credNames := []string{
+		"OKTA_USERNAME",
+		"OKTA_PASSWORD",
+		"OKTA_API_TOKEN",
+	}
+	testhelpers.SkipUnlessEnvVarsSet(t, credNames)
+
 	defaultLeaseTTLVal := time.Hour * 12
 	maxLeaseTTLVal := time.Hour * 24
 	b, err := Factory(context.Background(), &logical.BackendConfig{
@@ -171,7 +184,6 @@ func testLoginWrite(t *testing.T, username, password, reason string, expectedTTL
 				}
 			} else if reason != "" {
 				return fmt.Errorf("expected error containing %q, got no error", reason)
-
 			}
 
 			if resp.Auth != nil {

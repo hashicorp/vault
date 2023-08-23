@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package vault
 
 import (
@@ -8,11 +11,10 @@ import (
 	"strings"
 
 	"github.com/armon/go-radix"
-	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/go-multierror"
+	"github.com/hashicorp/go-secure-stdlib/strutil"
 	"github.com/hashicorp/vault/helper/identity"
 	"github.com/hashicorp/vault/helper/namespace"
-	"github.com/hashicorp/vault/sdk/helper/strutil"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/mitchellh/copystructure"
 )
@@ -41,11 +43,12 @@ type PolicyCheckOpts struct {
 }
 
 type AuthResults struct {
-	ACLResults  *ACLResults
-	Allowed     bool
-	RootPrivs   bool
-	DeniedError bool
-	Error       *multierror.Error
+	ACLResults      *ACLResults
+	SentinelResults *SentinelResults
+	Allowed         bool
+	RootPrivs       bool
+	DeniedError     bool
+	Error           *multierror.Error
 }
 
 type ACLResults struct {
@@ -55,6 +58,11 @@ type ACLResults struct {
 	MFAMethods         []string
 	ControlGroup       *ControlGroup
 	CapabilitiesBitmap uint32
+	GrantingPolicies   []logical.PolicyInfo
+}
+
+type SentinelResults struct {
+	GrantingPolicies []logical.PolicyInfo
 }
 
 // NewACL is used to construct a policy based ACL from a set of policies.
@@ -125,8 +133,12 @@ func NewACL(ctx context.Context, policies []*Policy) (*ACL, error) {
 			if !ok {
 				clonedPerms, err := pc.Permissions.Clone()
 				if err != nil {
-					return nil, errwrap.Wrapf("error cloning ACL permissions: {{err}}", err)
+					return nil, fmt.Errorf("error cloning ACL permissions: %w", err)
 				}
+
+				// Store this policy name as the policy that permits these
+				// capabilities
+				clonedPerms.GrantingPoliciesMap = addGrantingPoliciesToMap(nil, policy, clonedPerms.CapabilitiesBitmap)
 				switch {
 				case pc.HasSegmentWildcards:
 					a.segmentWildcardPaths[pc.Path] = clonedPerms
@@ -156,6 +168,7 @@ func NewACL(ctx context.Context, policies []*Policy) (*ACL, error) {
 				// Insert the capabilities in this new policy into the existing
 				// value
 				existingPerms.CapabilitiesBitmap = existingPerms.CapabilitiesBitmap | pc.Permissions.CapabilitiesBitmap
+				existingPerms.GrantingPoliciesMap = addGrantingPoliciesToMap(existingPerms.GrantingPoliciesMap, policy, pc.Permissions.CapabilitiesBitmap)
 			}
 
 			// Note: In these stanzas, we're preferring minimum lifetimes. So
@@ -240,22 +253,23 @@ func NewACL(ctx context.Context, policies []*Policy) (*ACL, error) {
 				if existingPerms.MFAMethods == nil {
 					existingPerms.MFAMethods = pc.Permissions.MFAMethods
 				} else {
-					for _, method := range pc.Permissions.MFAMethods {
-						existingPerms.MFAMethods = append(existingPerms.MFAMethods, method)
-					}
+					existingPerms.MFAMethods = append(existingPerms.MFAMethods, pc.Permissions.MFAMethods...)
 				}
 				existingPerms.MFAMethods = strutil.RemoveDuplicates(existingPerms.MFAMethods, false)
 			}
 
-			// No need to dedupe this list since any authorization can satisfy any factor
+			// No need to dedupe this list since any authorization can satisfy any factor, so long as
+			// the factor matches the specified permission requested.
 			if pc.Permissions.ControlGroup != nil {
 				if len(pc.Permissions.ControlGroup.Factors) > 0 {
 					if existingPerms.ControlGroup == nil {
-						existingPerms.ControlGroup = pc.Permissions.ControlGroup
-					} else {
-						for _, authz := range pc.Permissions.ControlGroup.Factors {
-							existingPerms.ControlGroup.Factors = append(existingPerms.ControlGroup.Factors, authz)
+						cg, err := pc.Permissions.ControlGroup.Clone()
+						if err != nil {
+							return nil, err
 						}
+						existingPerms.ControlGroup = cg
+					} else {
+						existingPerms.ControlGroup.Factors = append(existingPerms.ControlGroup.Factors, pc.Permissions.ControlGroup.Factors...)
 					}
 				}
 			}
@@ -305,6 +319,12 @@ func (a *ACL) Capabilities(ctx context.Context, path string) (pathCapabilities [
 	if capabilities&CreateCapabilityInt > 0 {
 		pathCapabilities = append(pathCapabilities, CreateCapability)
 	}
+	if capabilities&PatchCapabilityInt > 0 {
+		pathCapabilities = append(pathCapabilities, PatchCapability)
+	}
+	if capabilities&SubscribeCapabilityInt > 0 {
+		pathCapabilities = append(pathCapabilities, SubscribeCapability)
+	}
 
 	// If "deny" is explicitly set or if the path has no capabilities at all,
 	// set the path capabilities to "deny"
@@ -323,6 +343,12 @@ func (a *ACL) AllowOperation(ctx context.Context, req *logical.Request, capCheck
 		ret.Allowed = true
 		ret.RootPrivs = true
 		ret.IsRoot = true
+		ret.GrantingPolicies = []logical.PolicyInfo{{
+			Name:          "root",
+			NamespaceId:   "root",
+			NamespacePath: "",
+			Type:          "acl",
+		}}
 		return
 	}
 	op := req.Operation
@@ -394,23 +420,33 @@ CHECK:
 	ret.MFAMethods = permissions.MFAMethods
 	ret.ControlGroup = permissions.ControlGroup
 
+	var grantingPolicies []logical.PolicyInfo
 	operationAllowed := false
 	switch op {
 	case logical.ReadOperation:
 		operationAllowed = capabilities&ReadCapabilityInt > 0
+		grantingPolicies = permissions.GrantingPoliciesMap[ReadCapabilityInt]
 	case logical.ListOperation:
 		operationAllowed = capabilities&ListCapabilityInt > 0
+		grantingPolicies = permissions.GrantingPoliciesMap[ListCapabilityInt]
 	case logical.UpdateOperation:
 		operationAllowed = capabilities&UpdateCapabilityInt > 0
+		grantingPolicies = permissions.GrantingPoliciesMap[UpdateCapabilityInt]
 	case logical.DeleteOperation:
 		operationAllowed = capabilities&DeleteCapabilityInt > 0
+		grantingPolicies = permissions.GrantingPoliciesMap[DeleteCapabilityInt]
 	case logical.CreateOperation:
 		operationAllowed = capabilities&CreateCapabilityInt > 0
+		grantingPolicies = permissions.GrantingPoliciesMap[CreateCapabilityInt]
+	case logical.PatchOperation:
+		operationAllowed = capabilities&PatchCapabilityInt > 0
+		grantingPolicies = permissions.GrantingPoliciesMap[PatchCapabilityInt]
 
 	// These three re-use UpdateCapabilityInt since that's the most appropriate
 	// capability/operation mapping
 	case logical.RevokeOperation, logical.RenewOperation, logical.RollbackOperation:
 		operationAllowed = capabilities&UpdateCapabilityInt > 0
+		grantingPolicies = permissions.GrantingPoliciesMap[UpdateCapabilityInt]
 
 	default:
 		return
@@ -419,6 +455,8 @@ CHECK:
 	if !operationAllowed {
 		return
 	}
+
+	ret.GrantingPolicies = grantingPolicies
 
 	if permissions.MaxWrappingTTL > 0 {
 		if req.WrapInfo == nil || req.WrapInfo.TTL > permissions.MaxWrappingTTL {
@@ -440,7 +478,7 @@ CHECK:
 
 	// Only check parameter permissions for operations that can modify
 	// parameters.
-	if op == logical.ReadOperation || op == logical.UpdateOperation || op == logical.CreateOperation {
+	if op == logical.ReadOperation || op == logical.UpdateOperation || op == logical.CreateOperation || op == logical.PatchOperation {
 		for _, parameter := range permissions.RequiredParameters {
 			if _, ok := req.Data[strings.ToLower(parameter)]; !ok {
 				return
@@ -681,14 +719,16 @@ func (c *Core) performPolicyChecks(ctx context.Context, acl *ACL, te *logical.To
 		ret.RootPrivs = ret.ACLResults.RootPrivs
 		// Root is always allowed; skip Sentinel/MFA checks
 		if ret.ACLResults.IsRoot {
-			//logger.Warn("token is root, skipping checks")
+			// logger.Warn("token is root, skipping checks")
 			ret.Allowed = true
 			return ret
 		}
 		if !ret.ACLResults.Allowed {
 			return ret
 		}
-		if !ret.RootPrivs && opts.RootPrivsRequired {
+		// Since HelpOperation was fast-pathed inside AllowOperation, RootPrivs will not have been populated in this
+		// case, so we need to special-case that here as well, or we'll block HelpOperation on all sudo-protected paths.
+		if !ret.RootPrivs && opts.RootPrivsRequired && req.Operation != logical.HelpOperation {
 			return ret
 		}
 	}

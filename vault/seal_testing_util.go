@@ -1,9 +1,11 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package vault
 
 import (
 	"github.com/hashicorp/go-hclog"
-	wrapping "github.com/hashicorp/go-kms-wrapping"
-	aeadwrapper "github.com/hashicorp/go-kms-wrapping/wrappers/aead"
+	aeadwrapper "github.com/hashicorp/go-kms-wrapping/wrappers/aead/v2"
 	"github.com/hashicorp/vault/sdk/helper/logging"
 	"github.com/hashicorp/vault/vault/seal"
 	testing "github.com/mitchellh/go-testing-interface"
@@ -19,12 +21,8 @@ func NewTestSeal(t testing.T, opts *seal.TestSealOpts) Seal {
 	}
 
 	switch opts.StoredKeys {
-	case seal.StoredKeysSupportedShamirMaster:
-		newSeal := NewDefaultSeal(&seal.Access{
-			Wrapper: aeadwrapper.NewShamirWrapper(&wrapping.WrapperOptions{
-				Logger: opts.Logger,
-			}),
-		})
+	case seal.StoredKeysSupportedShamirRoot:
+		newSeal := NewDefaultSeal(seal.NewAccess(aeadwrapper.NewShamirWrapper()))
 		// Need StoredShares set or this will look like a legacy shamir seal.
 		newSeal.SetCachedBarrierConfig(&SealConfig{
 			StoredShares:    1,
@@ -33,11 +31,7 @@ func NewTestSeal(t testing.T, opts *seal.TestSealOpts) Seal {
 		})
 		return newSeal
 	case seal.StoredKeysNotSupported:
-		newSeal := NewDefaultSeal(&seal.Access{
-			Wrapper: aeadwrapper.NewShamirWrapper(&wrapping.WrapperOptions{
-				Logger: opts.Logger,
-			}),
-		})
+		newSeal := NewDefaultSeal(seal.NewAccess(aeadwrapper.NewShamirWrapper()))
 		newSeal.SetCachedBarrierConfig(&SealConfig{
 			StoredShares:    0,
 			SecretThreshold: 1,
@@ -45,6 +39,11 @@ func NewTestSeal(t testing.T, opts *seal.TestSealOpts) Seal {
 		})
 		return newSeal
 	default:
-		return NewAutoSeal(seal.NewTestSeal(opts))
+		access, _ := seal.NewTestSeal(opts)
+		seal, err := NewAutoSeal(access)
+		if err != nil {
+			t.Fatal(err)
+		}
+		return seal
 	}
 }

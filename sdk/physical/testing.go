@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package physical
 
 import (
@@ -458,33 +461,33 @@ func SetupTestingTransactions(t testing.TB, b Backend) []*TxnEntry {
 	}
 
 	txns := []*TxnEntry{
-		&TxnEntry{
+		{
 			Operation: PutOperation,
 			Entry: &Entry{
 				Key:   "foo",
 				Value: []byte("bar2"),
 			},
 		},
-		&TxnEntry{
+		{
 			Operation: DeleteOperation,
 			Entry: &Entry{
 				Key: "deleteme",
 			},
 		},
-		&TxnEntry{
+		{
 			Operation: PutOperation,
 			Entry: &Entry{
 				Key:   "foo",
 				Value: []byte("bar3"),
 			},
 		},
-		&TxnEntry{
+		{
 			Operation: DeleteOperation,
 			Entry: &Entry{
 				Key: "deleteme2",
 			},
 		},
-		&TxnEntry{
+		{
 			Operation: PutOperation,
 			Entry: &Entry{
 				Key:   "zip",

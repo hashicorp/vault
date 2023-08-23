@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import { alias, equal } from '@ember/object/computed';
 import Service, { inject as service } from '@ember/service';
 import { task } from 'ember-concurrency';
@@ -8,7 +13,7 @@ export default Service.extend({
   auth: service(),
   userRootNamespace: alias('auth.authData.userRootNamespace'),
   //populated by the query param on the cluster route
-  path: null,
+  path: '',
   // list of namespaces available to the current user under the
   // current namespace
   accessibleNamespaces: null,
@@ -16,27 +21,31 @@ export default Service.extend({
   inRootNamespace: equal('path', ROOT_NAMESPACE),
 
   setNamespace(path) {
+    if (!path) {
+      this.set('path', '');
+      return;
+    }
     this.set('path', path);
   },
 
-  findNamespacesForUser: task(function*() {
+  findNamespacesForUser: task(function* () {
     // uses the adapter and the raw response here since
     // models get wiped when switching namespaces and we
     // want to keep track of these separately
-    let store = this.get('store');
-    let adapter = store.adapterFor('namespace');
-    let userRoot = this.get('auth.authData.userRootNamespace');
+    const store = this.store;
+    const adapter = store.adapterFor('namespace');
+    const userRoot = this.auth.authData.userRootNamespace;
     try {
-      let ns = yield adapter.findAll(store, 'namespace', null, {
+      const ns = yield adapter.findAll(store, 'namespace', null, {
         adapterOptions: {
           forUser: true,
           namespace: userRoot,
         },
       });
-      let keys = ns.data.keys || [];
+      const keys = ns.data.keys || [];
       this.set(
         'accessibleNamespaces',
-        keys.map(n => {
+        keys.map((n) => {
           let fullNS = n;
           // if the user's root isn't '', then we need to construct
           // the paths so they connect to the user root to the list

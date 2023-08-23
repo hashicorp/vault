@@ -1,20 +1,27 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package command
 
 import (
 	"fmt"
+	"path"
 	"strings"
 
 	"github.com/mitchellh/cli"
 	"github.com/posener/complete"
 )
 
-var _ cli.Command = (*KVDestroyCommand)(nil)
-var _ cli.CommandAutocomplete = (*KVDestroyCommand)(nil)
+var (
+	_ cli.Command             = (*KVDestroyCommand)(nil)
+	_ cli.CommandAutocomplete = (*KVDestroyCommand)(nil)
+)
 
 type KVDestroyCommand struct {
 	*BaseCommand
 
 	flagVersions []string
+	flagMount    string
 }
 
 func (c *KVDestroyCommand) Synopsis() string {
@@ -30,6 +37,12 @@ Usage: vault kv destroy [options] KEY
 
   To destroy version 3 of key foo:
 
+      $ vault kv destroy -mount=secret -versions=3 foo
+
+  The deprecated path-like syntax can also be used, but this should be avoided 
+  for KV v2, as the fact that it is not actually the full API path to 
+  the secret (secret/data/foo) can cause confusion: 
+  
       $ vault kv destroy -versions=3 secret/foo
 
   Additional flags and more advanced use cases are detailed below.
@@ -49,6 +62,17 @@ func (c *KVDestroyCommand) Flags() *FlagSets {
 		Target:  &c.flagVersions,
 		Default: nil,
 		Usage:   `Specifies the version numbers to destroy.`,
+	})
+
+	f.StringVar(&StringVar{
+		Name:    "mount",
+		Target:  &c.flagMount,
+		Default: "", // no default, because the handling of the next arg is determined by whether this flag has a value
+		Usage: `Specifies the path where the KV backend is mounted. If specified, 
+		the next argument will be interpreted as the secret path. If this flag is 
+		not specified, the next argument will be interpreted as the combined mount 
+		path and secret path, with /data/ automatically appended between KV 
+		v2 secrets.`,
 	})
 
 	return set
@@ -84,8 +108,8 @@ func (c *KVDestroyCommand) Run(args []string) int {
 		c.UI.Error("No versions provided, use the \"-versions\" flag to specify the version to destroy.")
 		return 1
 	}
+
 	var err error
-	path := sanitizePath(args[0])
 
 	client, err := c.Client()
 	if err != nil {
@@ -93,16 +117,45 @@ func (c *KVDestroyCommand) Run(args []string) int {
 		return 2
 	}
 
-	mountPath, v2, err := isKVv2(path, client)
-	if err != nil {
-		c.UI.Error(err.Error())
-		return 2
+	// If true, we're working with "-mount=secret foo" syntax.
+	// If false, we're using "secret/foo" syntax.
+	mountFlagSyntax := c.flagMount != ""
+
+	var (
+		mountPath   string
+		partialPath string
+		v2          bool
+	)
+
+	// Parse the paths and grab the KV version
+	if mountFlagSyntax {
+		// In this case, this arg is the secret path (e.g. "foo").
+		partialPath = sanitizePath(args[0])
+		mountPath, v2, err = isKVv2(sanitizePath(c.flagMount), client)
+		if err != nil {
+			c.UI.Error(err.Error())
+			return 2
+		}
+
+		if v2 {
+			partialPath = path.Join(mountPath, partialPath)
+		}
+	} else {
+		// In this case, this arg is a path-like combination of mountPath/secretPath.
+		// (e.g. "secret/foo")
+		partialPath = sanitizePath(args[0])
+		mountPath, v2, err = isKVv2(partialPath, client)
+		if err != nil {
+			c.UI.Error(err.Error())
+			return 2
+		}
 	}
+
 	if !v2 {
 		c.UI.Error("Destroy not supported on KV Version 1")
 		return 1
 	}
-	path = addPrefixToVKVPath(path, mountPath, "destroy")
+	destroyPath := addPrefixToKVPath(partialPath, mountPath, "destroy", false)
 	if err != nil {
 		c.UI.Error(err.Error())
 		return 2
@@ -112,9 +165,9 @@ func (c *KVDestroyCommand) Run(args []string) int {
 		"versions": kvParseVersionsFlags(c.flagVersions),
 	}
 
-	secret, err := client.Logical().Write(path, data)
+	secret, err := client.Logical().Write(destroyPath, data)
 	if err != nil {
-		c.UI.Error(fmt.Sprintf("Error writing data to %s: %s", path, err))
+		c.UI.Error(fmt.Sprintf("Error writing data to %s: %s", destroyPath, err))
 		if secret != nil {
 			OutputSecret(c.UI, secret)
 		}
@@ -123,7 +176,7 @@ func (c *KVDestroyCommand) Run(args []string) int {
 	if secret == nil {
 		// Don't output anything unless using the "table" format
 		if Format(c.UI) == "table" {
-			c.UI.Info(fmt.Sprintf("Success! Data written to: %s", path))
+			c.UI.Info(fmt.Sprintf("Success! Data written to: %s", destroyPath))
 		}
 		return 0
 	}

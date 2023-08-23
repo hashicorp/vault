@@ -1,0 +1,3 @@
+```release-note:bug
+auth/oci: Fixes alias name to use the role name, and not the literal string `name` [[GH-10](https://github.com/hashicorp/vault-plugin-auth-oci/pull/10)]
+```

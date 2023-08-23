@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package vault
 
 import (
@@ -5,16 +8,20 @@ import (
 	"crypto/subtle"
 	"encoding/base64"
 	"errors"
+	"fmt"
 	"strings"
+	"time"
 
-	proto "github.com/golang/protobuf/proto"
-	wrapping "github.com/hashicorp/go-kms-wrapping"
-	uuid "github.com/hashicorp/go-uuid"
+	"github.com/golang/protobuf/proto"
+	wrapping "github.com/hashicorp/go-kms-wrapping/v2"
+	"github.com/hashicorp/go-uuid"
+	"github.com/hashicorp/vault/helper/constants"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/physical/raft"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/sdk/physical"
+	"github.com/mitchellh/mapstructure"
 )
 
 // raftStoragePaths returns paths for use when raft is the storage mechanism.
@@ -82,7 +89,7 @@ func (b *SystemBackend) raftStoragePaths() []*framework.Path {
 
 			Operations: map[logical.Operation]framework.OperationHandler{
 				logical.UpdateOperation: &framework.PathOperation{
-					Callback: wrapHandleRaftRemovePeer(b),
+					Callback: b.verifyDROperationTokenOnSecondary(b.handleRaftRemovePeerUpdate(), false),
 					Summary:  "Remove a peer from the raft cluster.",
 				},
 			},
@@ -93,10 +100,24 @@ func (b *SystemBackend) raftStoragePaths() []*framework.Path {
 		{
 			Pattern: "storage/raft/configuration",
 
+			Fields: map[string]*framework.FieldSchema{
+				"dr_operation_token": {
+					Type:        framework.TypeString,
+					Description: "DR operation token used to authorize this request (if a DR secondary node).",
+				},
+			},
+
 			Operations: map[logical.Operation]framework.OperationHandler{
 				logical.ReadOperation: &framework.PathOperation{
 					Callback: b.handleRaftConfigurationGet(),
 					Summary:  "Returns the configuration of the raft cluster.",
+				},
+				// Reading configuration on a DR secondary cluster is an update
+				// operation to allow consuming the DR operation token for
+				// authenticating the request.
+				logical.UpdateOperation: &framework.PathOperation{
+					Callback: b.verifyDROperationToken(b.handleRaftConfigurationGet(), false),
+					Summary:  "Returns the configuration of the raft cluster in a DR secondary cluster.",
 				},
 			},
 
@@ -130,6 +151,68 @@ func (b *SystemBackend) raftStoragePaths() []*framework.Path {
 
 			HelpSynopsis:    strings.TrimSpace(sysRaftHelp["raft-snapshot-force"][0]),
 			HelpDescription: strings.TrimSpace(sysRaftHelp["raft-snapshot-force"][1]),
+		},
+		{
+			Pattern: "storage/raft/autopilot/state",
+			Operations: map[logical.Operation]framework.OperationHandler{
+				logical.ReadOperation: &framework.PathOperation{
+					Callback:                  b.verifyDROperationTokenOnSecondary(b.handleStorageRaftAutopilotState(), false),
+					Summary:                   "Returns the state of the raft cluster under integrated storage as seen by autopilot.",
+					ForwardPerformanceStandby: true,
+				},
+			},
+
+			HelpSynopsis:    strings.TrimSpace(sysRaftHelp["raft-autopilot-state"][0]),
+			HelpDescription: strings.TrimSpace(sysRaftHelp["raft-autopilot-state"][1]),
+		},
+		{
+			Pattern: "storage/raft/autopilot/configuration",
+			Fields: map[string]*framework.FieldSchema{
+				"cleanup_dead_servers": {
+					Type:        framework.TypeBool,
+					Description: "Controls whether to remove dead servers from the Raft peer list periodically or when a new server joins.",
+				},
+				"last_contact_threshold": {
+					Type:        framework.TypeDurationSecond,
+					Description: "Limit on the amount of time a server can go without leader contact before being considered unhealthy.",
+				},
+				"dead_server_last_contact_threshold": {
+					Type:        framework.TypeDurationSecond,
+					Description: "Limit on the amount of time a server can go without leader contact before being considered failed. This takes effect only when cleanup_dead_servers is set.",
+				},
+				"max_trailing_logs": {
+					Type:        framework.TypeInt,
+					Description: "Amount of entries in the Raft Log that a server can be behind before being considered unhealthy.",
+				},
+				"min_quorum": {
+					Type:        framework.TypeInt,
+					Description: "Minimum number of servers allowed in a cluster before autopilot can prune dead servers. This should at least be 3.",
+				},
+				"server_stabilization_time": {
+					Type:        framework.TypeDurationSecond,
+					Description: "Minimum amount of time a server must be in a stable, healthy state before it can be added to the cluster.",
+				},
+				"disable_upgrade_migration": {
+					Type:        framework.TypeBool,
+					Description: "Whether or not to perform automated version upgrades.",
+				},
+				"dr_operation_token": {
+					Type:        framework.TypeString,
+					Description: "DR operation token used to authorize this request (if a DR secondary node).",
+				},
+			},
+
+			Operations: map[logical.Operation]framework.OperationHandler{
+				logical.ReadOperation: &framework.PathOperation{
+					Callback: b.verifyDROperationTokenOnSecondary(b.handleStorageRaftAutopilotConfigRead(), false),
+				},
+				logical.UpdateOperation: &framework.PathOperation{
+					Callback: b.verifyDROperationTokenOnSecondary(b.handleStorageRaftAutopilotConfigUpdate(), false),
+				},
+			},
+
+			HelpSynopsis:    strings.TrimSpace(sysRaftHelp["raft-autopilot-configuration"][0]),
+			HelpDescription: strings.TrimSpace(sysRaftHelp["raft-autopilot-configuration"][1]),
 		},
 	}
 }
@@ -169,9 +252,8 @@ func (b *SystemBackend) handleRaftRemovePeerUpdate() framework.OperationFunc {
 		if err := raftBackend.RemovePeer(ctx, serverID); err != nil {
 			return nil, err
 		}
-		if b.Core.raftFollowerStates != nil {
-			b.Core.raftFollowerStates.delete(serverID)
-		}
+
+		b.Core.raftFollowerStates.Delete(serverID)
 
 		return nil, nil
 	}
@@ -272,6 +354,19 @@ func (b *SystemBackend) handleRaftBootstrapAnswerWrite() framework.OperationFunc
 			return nil, errors.New("could not decode raft TLS configuration")
 		}
 
+		var desiredSuffrage string
+		switch nonVoter {
+		case true:
+			desiredSuffrage = "non-voter"
+		default:
+			desiredSuffrage = "voter"
+		}
+
+		added := b.Core.raftFollowerStates.Update(&raft.EchoRequestUpdate{
+			NodeID:          serverID,
+			DesiredSuffrage: desiredSuffrage,
+		})
+
 		switch nonVoter {
 		case true:
 			err = raftBackend.AddNonVotingPeer(ctx, serverID, clusterAddr)
@@ -279,11 +374,10 @@ func (b *SystemBackend) handleRaftBootstrapAnswerWrite() framework.OperationFunc
 			err = raftBackend.AddPeer(ctx, serverID, clusterAddr)
 		}
 		if err != nil {
+			if added {
+				b.Core.raftFollowerStates.Delete(serverID)
+			}
 			return nil, err
-		}
-
-		if b.Core.raftFollowerStates != nil {
-			b.Core.raftFollowerStates.update(serverID, 0)
 		}
 
 		peers, err := raftBackend.Peers(ctx)
@@ -295,8 +389,9 @@ func (b *SystemBackend) handleRaftBootstrapAnswerWrite() framework.OperationFunc
 
 		return &logical.Response{
 			Data: map[string]interface{}{
-				"peers":       peers,
-				"tls_keyring": &keyring,
+				"peers":              peers,
+				"tls_keyring":        &keyring,
+				"autoloaded_license": LicenseAutoloaded(b.Core),
 			},
 		}, nil
 	}
@@ -316,6 +411,149 @@ func (b *SystemBackend) handleStorageRaftSnapshotRead() framework.OperationFunc 
 		if err != nil {
 			return nil, err
 		}
+
+		return nil, nil
+	}
+}
+
+func (b *SystemBackend) handleStorageRaftAutopilotState() framework.OperationFunc {
+	return func(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+		raftBackend := b.Core.getRaftBackend()
+		if raftBackend == nil {
+			return logical.ErrorResponse("raft storage is not in use"), logical.ErrInvalidRequest
+		}
+
+		state, err := raftBackend.GetAutopilotServerState(ctx)
+		if err != nil {
+			return nil, err
+		}
+
+		if state == nil {
+			return nil, nil
+		}
+
+		data := make(map[string]interface{})
+		err = mapstructure.Decode(state, &data)
+		if err != nil {
+			return nil, err
+		}
+
+		return &logical.Response{
+			Data: data,
+		}, nil
+	}
+}
+
+func (b *SystemBackend) handleStorageRaftAutopilotConfigRead() framework.OperationFunc {
+	return func(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+		raftBackend := b.Core.getRaftBackend()
+		if raftBackend == nil {
+			return logical.ErrorResponse("raft storage is not in use"), logical.ErrInvalidRequest
+		}
+
+		config := raftBackend.AutopilotConfig()
+		if config == nil {
+			return nil, nil
+		}
+
+		return &logical.Response{
+			Data: map[string]interface{}{
+				"cleanup_dead_servers":               config.CleanupDeadServers,
+				"last_contact_threshold":             config.LastContactThreshold.String(),
+				"dead_server_last_contact_threshold": config.DeadServerLastContactThreshold.String(),
+				"max_trailing_logs":                  config.MaxTrailingLogs,
+				"min_quorum":                         config.MinQuorum,
+				"server_stabilization_time":          config.ServerStabilizationTime.String(),
+				"disable_upgrade_migration":          config.DisableUpgradeMigration,
+			},
+		}, nil
+	}
+}
+
+func (b *SystemBackend) handleStorageRaftAutopilotConfigUpdate() framework.OperationFunc {
+	return func(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+		raftBackend := b.Core.getRaftBackend()
+		if raftBackend == nil {
+			return logical.ErrorResponse("raft storage is not in use"), logical.ErrInvalidRequest
+		}
+
+		// Read autopilot configuration from storage
+		config, err := b.Core.loadAutopilotConfiguration(ctx)
+		if err != nil {
+			b.logger.Error("failed to load autopilot config from storage when setting up cluster; continuing since autopilot falls back to default config", "error", err)
+		}
+		if config == nil {
+			config = &raft.AutopilotConfig{}
+		}
+
+		persist := false
+		cleanupDeadServers, ok := d.GetOk("cleanup_dead_servers")
+		if ok {
+			if cleanupDeadServers.(bool) {
+				config.CleanupDeadServersValue = raft.CleanupDeadServersTrue
+			} else {
+				config.CleanupDeadServersValue = raft.CleanupDeadServersFalse
+			}
+			persist = true
+		}
+		lastContactThreshold, ok := d.GetOk("last_contact_threshold")
+		if ok {
+			config.LastContactThreshold = time.Duration(lastContactThreshold.(int)) * time.Second
+			persist = true
+		}
+		deadServerLastContactThreshold, ok := d.GetOk("dead_server_last_contact_threshold")
+		if ok {
+			config.DeadServerLastContactThreshold = time.Duration(deadServerLastContactThreshold.(int)) * time.Second
+			persist = true
+		}
+		maxTrailingLogs, ok := d.GetOk("max_trailing_logs")
+		if ok {
+			config.MaxTrailingLogs = uint64(maxTrailingLogs.(int))
+			persist = true
+		}
+		minQuorum, ok := d.GetOk("min_quorum")
+		if ok {
+			config.MinQuorum = uint(minQuorum.(int))
+			persist = true
+		}
+		serverStabilizationTime, ok := d.GetOk("server_stabilization_time")
+		if ok {
+			config.ServerStabilizationTime = time.Duration(serverStabilizationTime.(int)) * time.Second
+			persist = true
+		}
+		disableUpgradeMigration, ok := d.GetOk("disable_upgrade_migration")
+		if ok {
+			if !constants.IsEnterprise {
+				return logical.ErrorResponse("disable_upgrade_migration is only available in Vault Enterprise"), logical.ErrInvalidRequest
+			}
+			config.DisableUpgradeMigration = disableUpgradeMigration.(bool)
+			persist = true
+		}
+
+		effectiveConf := raftBackend.AutopilotConfig()
+		effectiveConf.Merge(config)
+
+		if effectiveConf.CleanupDeadServers && effectiveConf.MinQuorum < 3 {
+			return logical.ErrorResponse(fmt.Sprintf("min_quorum must be set when cleanup_dead_servers is set and it should at least be 3; cleanup_dead_servers: %#v, min_quorum: %#v", effectiveConf.CleanupDeadServers, effectiveConf.MinQuorum)), logical.ErrInvalidRequest
+		}
+
+		if effectiveConf.CleanupDeadServers && effectiveConf.DeadServerLastContactThreshold.Seconds() < 60 {
+			return logical.ErrorResponse(fmt.Sprintf("dead_server_last_contact_threshold should not be set to less than 1m; received: %v", deadServerLastContactThreshold)), logical.ErrInvalidRequest
+		}
+
+		// Persist only the user supplied fields
+		if persist {
+			entry, err := logical.StorageEntryJSON(raftAutopilotConfigurationStoragePath, config)
+			if err != nil {
+				return nil, err
+			}
+			if err := b.Core.barrier.Put(ctx, entry); err != nil {
+				return nil, err
+			}
+		}
+
+		// Set the effectiveConfig
+		raftBackend.SetAutopilotConfig(effectiveConf)
 
 		return nil, nil
 	}
@@ -345,7 +583,7 @@ func (b *SystemBackend) handleStorageRaftSnapshotWrite(force bool) framework.Ope
 		case err == nil:
 		case strings.Contains(err.Error(), "failed to open the sealed hashes"):
 			switch b.Core.seal.BarrierType() {
-			case wrapping.Shamir:
+			case wrapping.WrapperTypeShamir:
 				return logical.ErrorResponse("could not verify hash file, possibly the snapshot is using a different set of unseal keys; use the snapshot-force API to bypass this check"), logical.ErrInvalidRequest
 			default:
 				return logical.ErrorResponse("could not verify hash file, possibly the snapshot is using a different autoseal key; use the snapshot-force API to bypass this check"), logical.ErrInvalidRequest
@@ -362,7 +600,9 @@ func (b *SystemBackend) handleStorageRaftSnapshotWrite(force bool) framework.Ope
 			defer cleanup()
 
 			// Grab statelock
-			if stopped := grabLockOrStop(b.Core.stateLock.Lock, b.Core.stateLock.Unlock, b.Core.standbyStopCh.Load().(chan struct{})); stopped {
+			l := newLockGrabber(b.Core.stateLock.Lock, b.Core.stateLock.Unlock, b.Core.standbyStopCh.Load().(chan struct{}))
+			go l.grab()
+			if stopped := l.lockOrStop(); stopped {
 				b.Core.logger.Error("not applying snapshot; shutting down")
 				return
 			}
@@ -428,7 +668,6 @@ func (b *SystemBackend) handleStorageRaftSnapshotWrite(force bool) framework.Ope
 			}
 
 			return nil
-
 		}()
 
 		return nil, nil
@@ -446,7 +685,8 @@ var sysRaftHelp = map[string][2]string{
 	},
 	"raft-configuration": {
 		"Returns the raft cluster configuration.",
-		"",
+		`On a DR secondary cluster, instead of a GET, this must be a POST or
+		PUT, and furthermore a DR operation token must be provided.`,
 	},
 	"raft-remove-peer": {
 		"Removes a peer from the raft cluster.",
@@ -458,6 +698,14 @@ var sysRaftHelp = map[string][2]string{
 	},
 	"raft-snapshot-force": {
 		"Force restore a raft cluster snapshot",
+		"",
+	},
+	"raft-autopilot-state": {
+		"Returns the state of the raft cluster under integrated storage as seen by autopilot.",
+		"",
+	},
+	"raft-autopilot-configuration": {
+		"Returns autopilot configuration.",
 		"",
 	},
 }

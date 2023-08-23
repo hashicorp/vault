@@ -1,7 +1,11 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package framework
 
 import (
 	"context"
+
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/ryanuber/go-glob"
 )

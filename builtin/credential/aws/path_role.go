@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package awsauth
 
 import (
@@ -7,7 +10,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/hashicorp/errwrap"
 	uuid "github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/consts"
@@ -16,13 +18,17 @@ import (
 	"github.com/mitchellh/copystructure"
 )
 
-var (
-	currentRoleStorageVersion = 3
-)
+var currentRoleStorageVersion = 3
 
 func (b *backend) pathRole() *framework.Path {
 	p := &framework.Path{
 		Pattern: "role/" + framework.GenericNameRegex("role"),
+
+		DisplayAttrs: &framework.DisplayAttributes{
+			OperationPrefix: operationPrefixAWS,
+			OperationSuffix: "auth-role",
+		},
+
 		Fields: map[string]*framework.FieldSchema{
 			"role": {
 				Type:        framework.TypeString,
@@ -81,6 +87,9 @@ auth_type is ec2 or inferred_entity_type is ec2_instance.`,
 given instance IDs. Can be a list or comma-separated string of EC2 instance
 IDs. This is only applicable when auth_type is ec2 or inferred_entity_type is
 ec2_instance.`,
+				DisplayAttrs: &framework.DisplayAttributes{
+					Description: "If set, defines a constraint on the EC2 instances to have one of the given instance IDs. A list of EC2 instance IDs. This is only applicable when auth_type is ec2 or inferred_entity_type is ec2_instance.",
+				},
 			},
 			"resolve_aws_unique_ids": {
 				Type:    framework.TypeBool,
@@ -166,9 +175,9 @@ auth_type is ec2.`,
 				Type:    framework.TypeBool,
 				Default: false,
 				Description: `If set, only allows a single token to be granted per
-        instance ID. In order to perform a fresh login, the entry in whitelist
+        instance ID. In order to perform a fresh login, the entry in the access list
         for the instance ID needs to be cleared using
-        'auth/aws-ec2/identity-whitelist/<instance_id>' endpoint. This is only
+        'auth/aws-ec2/identity-accesslist/<instance_id>' endpoint. This is only
         applicable when auth_type is ec2.`,
 			},
 		},
@@ -202,6 +211,11 @@ func (b *backend) pathListRole() *framework.Path {
 	return &framework.Path{
 		Pattern: "role/?",
 
+		DisplayAttrs: &framework.DisplayAttributes{
+			OperationPrefix: operationPrefixAWS,
+			OperationSuffix: "auth-roles",
+		},
+
 		Operations: map[logical.Operation]framework.OperationHandler{
 			logical.ListOperation: &framework.PathOperation{
 				Callback: b.pathRoleList,
@@ -216,6 +230,11 @@ func (b *backend) pathListRole() *framework.Path {
 func (b *backend) pathListRoles() *framework.Path {
 	return &framework.Path{
 		Pattern: "roles/?",
+
+		DisplayAttrs: &framework.DisplayAttributes{
+			OperationPrefix: operationPrefixAWS,
+			OperationSuffix: "auth-roles2",
+		},
 
 		Operations: map[logical.Operation]framework.OperationHandler{
 			logical.ListOperation: &framework.PathOperation{
@@ -262,7 +281,7 @@ func (b *backend) role(ctx context.Context, s logical.Storage, roleName string) 
 	return b.roleInternal(ctx, s, roleName)
 }
 
-// roleInternal does not perform locking, and rechecks the cache, going to disk if necessar
+// roleInternal does not perform locking, and rechecks the cache, going to disk if necessary
 func (b *backend) roleInternal(ctx context.Context, s logical.Storage, roleName string) (*awsRoleEntry, error) {
 	// Check cache again now that we have the lock
 	roleEntryRaw, found := b.roleCache.Get(roleName)
@@ -292,11 +311,11 @@ func (b *backend) roleInternal(ctx context.Context, s logical.Storage, roleName 
 
 	needUpgrade, err := b.upgradeRole(ctx, s, result)
 	if err != nil {
-		return nil, errwrap.Wrapf("error upgrading roleEntry: {{err}}", err)
+		return nil, fmt.Errorf("error upgrading roleEntry: %w", err)
 	}
 	if needUpgrade && (b.System().LocalMount() || !b.System().ReplicationState().HasState(consts.ReplicationPerformanceSecondary|consts.ReplicationPerformanceStandby)) {
 		if err = b.setRole(ctx, s, roleName, result); err != nil {
-			return nil, errwrap.Wrapf("error saving upgraded roleEntry: {{err}}", err)
+			return nil, fmt.Errorf("error saving upgraded roleEntry: %w", err)
 		}
 	}
 
@@ -308,7 +327,8 @@ func (b *backend) roleInternal(ctx context.Context, s logical.Storage, roleName 
 // setRole creates or updates a role in the storage. The caller must hold
 // the write lock.
 func (b *backend) setRole(ctx context.Context, s logical.Storage, roleName string,
-	roleEntry *awsRoleEntry) error {
+	roleEntry *awsRoleEntry,
+) error {
 	if roleName == "" {
 		return fmt.Errorf("missing role name")
 	}
@@ -333,7 +353,6 @@ func (b *backend) setRole(ctx context.Context, s logical.Storage, roleName strin
 
 // initialize is used to initialize the AWS roles
 func (b *backend) initialize(ctx context.Context, req *logical.InitializationRequest) error {
-
 	// on standbys and DR secondaries we do not want to run any kind of upgrade logic
 	if b.System().ReplicationState().HasState(consts.ReplicationPerformanceStandby | consts.ReplicationDRSecondary) {
 		return nil
@@ -413,7 +432,7 @@ func (b *backend) upgrade(ctx context.Context, s logical.Storage) (bool, error) 
 		for _, roleName := range roleNames {
 			// make sure the context hasn't been canceled
 			if ctx.Err() != nil {
-				return false, err
+				return false, ctx.Err()
 			}
 			_, err := b.roleInternal(ctx, s, roleName)
 			if err != nil {
@@ -577,7 +596,7 @@ func (b *backend) pathRoleDelete(ctx context.Context, req *logical.Request, data
 
 	err := req.Storage.Delete(ctx, "role/"+strings.ToLower(roleName))
 	if err != nil {
-		return nil, errwrap.Wrapf("error deleting role: {{err}}", err)
+		return nil, fmt.Errorf("error deleting role: %w", err)
 	}
 
 	b.roleCache.Delete(roleName)
@@ -893,11 +912,7 @@ func (b *backend) pathRoleCreateUpdate(ctx context.Context, req *logical.Request
 		}
 	}
 
-	defaultLeaseTTL := b.System().DefaultLeaseTTL()
 	systemMaxTTL := b.System().MaxLeaseTTL()
-	if roleEntry.TokenTTL > defaultLeaseTTL {
-		resp.AddWarning(fmt.Sprintf("Given ttl of %d seconds greater than current mount/system default of %d seconds; ttl will be capped at login time", roleEntry.TokenTTL/time.Second, defaultLeaseTTL/time.Second))
-	}
 	if roleEntry.TokenMaxTTL > systemMaxTTL {
 		resp.AddWarning(fmt.Sprintf("Given max ttl of %d seconds greater than current mount/system default of %d seconds; max ttl will be capped at login time", roleEntry.TokenMaxTTL/time.Second, systemMaxTTL/time.Second))
 	}
@@ -905,7 +920,7 @@ func (b *backend) pathRoleCreateUpdate(ctx context.Context, req *logical.Request
 		return logical.ErrorResponse("ttl should be shorter than max ttl"), nil
 	}
 	if roleEntry.TokenPeriod > b.System().MaxLeaseTTL() {
-		return logical.ErrorResponse(fmt.Sprintf("period of '%s' is greater than the backend's maximum lease TTL of '%s'", roleEntry.TokenPeriod.String(), b.System().MaxLeaseTTL().String())), nil
+		return logical.ErrorResponse(fmt.Sprintf("period of %q is greater than the backend's maximum lease TTL of %q", roleEntry.TokenPeriod.String(), b.System().MaxLeaseTTL().String())), nil
 	}
 
 	roleTagStr, ok := data.GetOk("role_tag")
@@ -926,7 +941,7 @@ func (b *backend) pathRoleCreateUpdate(ctx context.Context, req *logical.Request
 	if roleEntry.HMACKey == "" {
 		roleEntry.HMACKey, err = uuid.GenerateUUID()
 		if err != nil {
-			return nil, errwrap.Wrapf("failed to generate role HMAC key: {{err}}", err)
+			return nil, fmt.Errorf("failed to generate role HMAC key: %w", err)
 		}
 	}
 

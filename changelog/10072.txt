@@ -1,0 +1,3 @@
+```release-note:bug
+http: change max_request_size to be unlimited when the config value is less than 0
+```

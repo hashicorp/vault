@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package okta
 
 import (
@@ -24,54 +27,60 @@ const (
 func pathConfig(b *backend) *framework.Path {
 	p := &framework.Path{
 		Pattern: `config`,
+
+		DisplayAttrs: &framework.DisplayAttributes{
+			OperationPrefix: operationPrefixOkta,
+			Action:          "Configure",
+		},
+
 		Fields: map[string]*framework.FieldSchema{
-			"organization": &framework.FieldSchema{
+			"organization": {
 				Type:        framework.TypeString,
 				Description: "Use org_name instead.",
 				Deprecated:  true,
 			},
-			"org_name": &framework.FieldSchema{
+			"org_name": {
 				Type:        framework.TypeString,
 				Description: "Name of the organization to be used in the Okta API.",
 				DisplayAttrs: &framework.DisplayAttributes{
 					Name: "Organization Name",
 				},
 			},
-			"token": &framework.FieldSchema{
+			"token": {
 				Type:        framework.TypeString,
 				Description: "Use api_token instead.",
 				Deprecated:  true,
 			},
-			"api_token": &framework.FieldSchema{
+			"api_token": {
 				Type:        framework.TypeString,
 				Description: "Okta API key.",
 				DisplayAttrs: &framework.DisplayAttributes{
 					Name: "API Token",
 				},
 			},
-			"base_url": &framework.FieldSchema{
+			"base_url": {
 				Type:        framework.TypeString,
 				Description: `The base domain to use for the Okta API. When not specified in the configuration, "okta.com" is used.`,
 				DisplayAttrs: &framework.DisplayAttributes{
 					Name: "Base URL",
 				},
 			},
-			"production": &framework.FieldSchema{
+			"production": {
 				Type:        framework.TypeBool,
 				Description: `Use base_url instead.`,
 				Deprecated:  true,
 			},
-			"ttl": &framework.FieldSchema{
+			"ttl": {
 				Type:        framework.TypeDurationSecond,
 				Description: tokenutil.DeprecationText("token_ttl"),
 				Deprecated:  true,
 			},
-			"max_ttl": &framework.FieldSchema{
+			"max_ttl": {
 				Type:        framework.TypeDurationSecond,
 				Description: tokenutil.DeprecationText("token_max_ttl"),
 				Deprecated:  true,
 			},
-			"bypass_okta_mfa": &framework.FieldSchema{
+			"bypass_okta_mfa": {
 				Type:        framework.TypeBool,
 				Description: `When set true, requests by Okta for a MFA check will be bypassed. This also disallows certain status checks on the account, such as whether the password is expired.`,
 				DisplayAttrs: &framework.DisplayAttributes{
@@ -80,18 +89,30 @@ func pathConfig(b *backend) *framework.Path {
 			},
 		},
 
-		Callbacks: map[logical.Operation]framework.OperationFunc{
-			logical.ReadOperation:   b.pathConfigRead,
-			logical.CreateOperation: b.pathConfigWrite,
-			logical.UpdateOperation: b.pathConfigWrite,
+		Operations: map[logical.Operation]framework.OperationHandler{
+			logical.ReadOperation: &framework.PathOperation{
+				Callback: b.pathConfigRead,
+				DisplayAttrs: &framework.DisplayAttributes{
+					OperationSuffix: "configuration",
+				},
+			},
+			logical.CreateOperation: &framework.PathOperation{
+				Callback: b.pathConfigWrite,
+				DisplayAttrs: &framework.DisplayAttributes{
+					OperationVerb: "configure",
+				},
+			},
+			logical.UpdateOperation: &framework.PathOperation{
+				Callback: b.pathConfigWrite,
+				DisplayAttrs: &framework.DisplayAttributes{
+					OperationVerb: "configure",
+				},
+			},
 		},
 
 		ExistenceCheck: b.pathConfigExistenceCheck,
 
 		HelpSynopsis: pathConfigHelp,
-		DisplayAttrs: &framework.DisplayAttributes{
-			Action: "Configure",
-		},
 	}
 
 	tokenutil.AddTokenFields(p.Fields)

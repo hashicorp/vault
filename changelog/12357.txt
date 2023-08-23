@@ -1,0 +1,3 @@
+```release-note:bug
+ui: Fixed text overflow in flash messages
+```

@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package mock
 
 import (
@@ -12,18 +15,18 @@ import (
 // version of the passthrough backend that only accepts string values.
 func kvPaths(b *backend) []*framework.Path {
 	return []*framework.Path{
-		&framework.Path{
+		{
 			Pattern: "kv/?",
 			Callbacks: map[logical.Operation]framework.OperationFunc{
 				logical.ListOperation: b.pathKVList,
 			},
 		},
-		&framework.Path{
+		{
 			Pattern: "kv/" + framework.GenericNameRegex("key"),
 			Fields: map[string]*framework.FieldSchema{
-				"key":     &framework.FieldSchema{Type: framework.TypeString},
-				"value":   &framework.FieldSchema{Type: framework.TypeString},
-				"version": &framework.FieldSchema{Type: framework.TypeInt},
+				"key":     {Type: framework.TypeString},
+				"value":   {Type: framework.TypeString},
+				"version": {Type: framework.TypeInt},
 			},
 			ExistenceCheck: b.pathExistenceCheck,
 			Callbacks: map[logical.Operation]framework.OperationFunc{

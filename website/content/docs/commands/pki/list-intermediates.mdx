@@ -1,0 +1,89 @@
+---
+layout: docs
+page_title: pki list-intermediates - Command
+description: |-
+  The "pki list-intermediates" command searches a mount, or set of mounts for
+  child certificates.
+---
+
+# pki list-intermediates
+
+This command determines which of a list of certificates were issued by a given
+parent certificate.
+
+## Usage
+
+Usage: `vault pki list-intermediates [flags] <parent> [child] [child] [child...`
+
+Lists the set of intermediate CAs issued by this parent issuer.
+
+- `[flags]` listed below determine the type of match required between the `<parent>`
+  and each potential child, and the type of output
+
+- `<parent>` is the certificate that might be the issuer which everything is
+  verified against.
+
+- `[child]` is an optional path to a certificate to be compared to the `<parent>`,
+  or pki mounts to look for certificates on. If `[child]` is omitted entirely, the
+  list will be constructed from all accessible pki mounts.
+
+This returns a list of issuing certificates and whether they are a match.
+By default, the type of match required is whether the `<parent>` has the
+expected subject, [authority/subject key id match](https://datatracker.ietf.org/doc/html/rfc5280#section-4.2.1.1), and could have (directly) signed this issuer.
+The match criteria can be updated by changed the corresponding flag.
+
+### Flags
+
+- `-use_names` `(bool: "false")` - this determines how issuers are referred to
+  in the output, whether by issuer_id (the default), or by their name, or status
+  as default issuer (when use_names is true)
+
+The following flags determine what sorts of relationship between the parent and
+potential child issuers are considered a match.
+
+- `-subject_match` `(bool: "true")` - determines whether the subject of the
+  parent-issuer must match the issuer of the potential child for this to be
+  considered a match
+
+- `-key_id_match` `(bool: "true")` - determines whether the identifier of the
+  parent-issuer must match the IUI of the potential child for this to be
+  considered a match
+
+- `-direct_verify` `(bool: "true")` - determines whether it is required for this
+  to be a match that someone trusting the parent certificate would trust the
+  potential-child certificate (without any more information)
+
+- `-indirect-sign` `(bool: "true")` - determines whether it is required for this
+  to be a match that if someone trusted the first certificate, they would trust
+  the potential-child certificate (using the certificate chains available)
+
+- `-path_contains` `(bool: "false")` - determines whether it is required for
+  this to be a match for the ca_chain of the potential child certificate to
+  contain the parent certificate
+
+### Accessed APIs
+
+Note that the vault user running this command will need to have access to the
+following API endpoints, each representing a step in the process:
+
+- `READ /:parent`
+- `LIST /sys/mounts` - when no `[child]` argument is provided, this is used to
+find a list of pki mounts
+- `LIST /:child_mount/issuers/` - when no `[child]` argument is provided, or the
+`[child]` argument is a mount rather than an issuer, this is used to find a list
+of pki issuers on the mount
+- `READ /:child` - each potential child issuer is read for comparison against
+the parent
+
+## Examples
+
+```shell-session
+$ vault pki list-intermediates /pki_root/issuer/default
+intermediate                                             match?
+------------                                             ------
+pki_int_2/issuer/d4404ccc-3ad4-83a9-f5df-398637654b3b    true
+pki_int_2/issuer/db0b0a6c-6641-ac15-363a-4e5261315581    true
+pki_root/issuer/9464c4fe-e8a6-d96a-0566-021575e7382c     true
+pki_int/issuer/2f958ec5-1838-336e-331b-07032379b958      true
+pki_int/issuer/b8cc0b41-e0e9-1a92-12c4-6849c9d6f837      true
+```

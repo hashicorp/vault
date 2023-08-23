@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package logical
 
 import (
@@ -24,7 +27,6 @@ func TestScanView(t *testing.T) {
 	err := ScanView(context.Background(), s, func(path string) {
 		keys = append(keys, path)
 	})
-
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -56,7 +58,6 @@ func TestCollectKeys(t *testing.T) {
 	s := prepKeyStorage(t)
 
 	keys, err := CollectKeys(context.Background(), s)
-
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -70,7 +71,6 @@ func TestCollectKeysPrefix(t *testing.T) {
 	s := prepKeyStorage(t)
 
 	keys, err := CollectKeysWithPrefix(context.Background(), s, "foo")
-
 	if err != nil {
 		t.Fatal(err)
 	}

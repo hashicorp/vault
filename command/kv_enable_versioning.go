@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package command
 
 import (
@@ -9,8 +12,10 @@ import (
 	"github.com/posener/complete"
 )
 
-var _ cli.Command = (*KVEnableVersioningCommand)(nil)
-var _ cli.CommandAutocomplete = (*KVEnableVersioningCommand)(nil)
+var (
+	_ cli.Command             = (*KVEnableVersioningCommand)(nil)
+	_ cli.CommandAutocomplete = (*KVEnableVersioningCommand)(nil)
+)
 
 type KVEnableVersioningCommand struct {
 	*BaseCommand

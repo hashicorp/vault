@@ -1,0 +1,3 @@
+```release-note:bug
+cli: vault delete and vault kv delete should support the same output options (e.g. -format) as vault write.
+```

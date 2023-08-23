@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import { inject as service } from '@ember/service';
 import Helper from '@ember/component/helper';
 
@@ -6,7 +11,7 @@ export default Helper.extend({
 
   compute([message, type]) {
     return () => {
-      this.get('flashMessages')[type || 'success'](message);
+      this.flashMessages[type || 'success'](message);
     };
   },
 });

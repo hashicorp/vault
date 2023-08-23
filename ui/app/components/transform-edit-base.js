@@ -1,8 +1,13 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import { inject as service } from '@ember/service';
 import { or } from '@ember/object/computed';
 import { isBlank } from '@ember/utils';
 import Component from '@ember/component';
-import { set, get } from '@ember/object';
+import { set } from '@ember/object';
 import FocusOnInsertMixin from 'vault/mixins/focus-on-insert';
 
 const LIST_ROOT_ROUTE = 'vault.cluster.secrets.backend.list-root';
@@ -39,10 +44,10 @@ export default Component.extend(FocusOnInsertMixin, {
   },
 
   willDestroyElement() {
-    this._super(...arguments);
-    if (this.model && this.model.isError) {
+    if (this.model && this.model.isError && !this.model.isDestroyed && !this.model.isDestroying) {
       this.model.rollbackAttributes();
     }
+    this._super(...arguments);
   },
 
   transitionToRoute() {
@@ -66,30 +71,29 @@ export default Component.extend(FocusOnInsertMixin, {
   },
 
   persist(method, successCallback) {
-    const model = get(this, 'model');
+    const model = this.model;
     return model[method]()
       .then(() => {
         successCallback(model);
       })
-      .catch(e => {
+      .catch((e) => {
         model.set('displayErrors', e.errors);
         throw e;
       });
   },
 
   applyDelete(callback = () => {}) {
-    const tab = this.listTabFromType(this.get('model.constructor.modelName'));
+    const tab = this.listTabFromType(this.model.constructor.modelName);
     this.persist('destroyRecord', () => {
       this.hasDataChanges();
       callback();
-      // TODO: Investigate what is causing a console error after this point
       this.transitionToRoute(LIST_ROOT_ROUTE, { queryParams: { tab } });
     });
   },
 
   applyChanges(type, callback = () => {}) {
-    const modelId = this.get('model.id') || this.get('model.name'); // transform comes in as model.name
-    const modelPrefix = this.modelPrefixFromType(this.get('model.constructor.modelName'));
+    const modelId = this.model.id || this.model.name; // transform comes in as model.name
+    const modelPrefix = this.modelPrefixFromType(this.model.constructor.modelName);
     // prevent from submitting if there's no key
     // maybe do something fancier later
     if (type === 'create' && isBlank(modelId)) {
@@ -115,11 +119,11 @@ export default Component.extend(FocusOnInsertMixin, {
     },
 
     setValue(key, event) {
-      set(get(this, 'model'), key, event.target.checked);
+      set(this.model, key, event.target.checked);
     },
 
     refresh() {
-      this.get('onRefresh')();
+      this.onRefresh();
     },
 
     delete() {

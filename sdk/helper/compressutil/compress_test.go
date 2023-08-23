@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package compressutil
 
 import (
@@ -14,31 +17,38 @@ func TestCompressUtil_CompressDecompress(t *testing.T) {
 		compressionConfig CompressionConfig
 		canary            byte
 	}{
-		{"GZIP default implicit",
+		{
+			"GZIP default implicit",
 			CompressionConfig{Type: CompressionTypeGzip},
 			CompressionCanaryGzip,
 		},
-		{"GZIP default explicit",
+		{
+			"GZIP default explicit",
 			CompressionConfig{Type: CompressionTypeGzip, GzipCompressionLevel: gzip.DefaultCompression},
 			CompressionCanaryGzip,
 		},
-		{"GZIP best speed",
+		{
+			"GZIP best speed",
 			CompressionConfig{Type: CompressionTypeGzip, GzipCompressionLevel: gzip.BestSpeed},
 			CompressionCanaryGzip,
 		},
-		{"GZIP best compression",
+		{
+			"GZIP best compression",
 			CompressionConfig{Type: CompressionTypeGzip, GzipCompressionLevel: gzip.BestCompression},
 			CompressionCanaryGzip,
 		},
-		{"Snappy",
+		{
+			"Snappy",
 			CompressionConfig{Type: CompressionTypeSnappy},
 			CompressionCanarySnappy,
 		},
-		{"LZ4",
+		{
+			"LZ4",
 			CompressionConfig{Type: CompressionTypeLZ4},
 			CompressionCanaryLZ4,
 		},
-		{"LZW",
+		{
+			"LZW",
 			CompressionConfig{Type: CompressionTypeLZW},
 			CompressionCanaryLZW,
 		},
@@ -78,6 +88,15 @@ func TestCompressUtil_CompressDecompress(t *testing.T) {
 		// Compare the value after decompression
 		if !bytes.Equal(inputJSONBytes, decompressedJSONBytes) {
 			t.Fatalf("bad (%s): decompressed value;\nexpected: %q\nactual: %q", test.compressionType, string(inputJSONBytes), string(decompressedJSONBytes))
+		}
+
+		decompressedJSONBytes, compressionType, wasNotCompressed, err := DecompressWithCanary(compressedJSONBytes)
+		if err != nil {
+			t.Fatalf("decompress error (%s): %s", test.compressionType, err)
+		}
+
+		if compressionType != test.compressionConfig.Type {
+			t.Fatalf("bad compressionType value;\nexpected: %q\naction: %q", test.compressionConfig.Type, compressionType)
 		}
 	}
 }

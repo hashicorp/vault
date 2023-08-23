@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package vault
 
 import (
@@ -5,7 +8,10 @@ import (
 	"crypto/sha256"
 	"errors"
 	"fmt"
+	"os"
 	"strings"
+
+	"github.com/hashicorp/go-secure-stdlib/parseutil"
 
 	uuid "github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/audit"
@@ -33,12 +39,34 @@ const (
 	// auditTableType is the value we expect to find for the audit table and
 	// corresponding entries
 	auditTableType = "audit"
+
+	// featureFlagDisableEventLogger contains the feature flag name which can be
+	// used to disable internal eventlogger behavior for the audit system.
+	// NOTE: this is an undocumented and temporary feature flag, it should not
+	// be relied on to remain part of Vault for any subsequent releases.
+	featureFlagDisableEventLogger = "VAULT_AUDIT_DISABLE_EVENTLOGGER"
 )
 
-var (
-	// loadAuditFailed if loading audit tables encounters an error
-	errLoadAuditFailed = errors.New("failed to setup audit table")
-)
+// loadAuditFailed if loading audit tables encounters an error
+var errLoadAuditFailed = errors.New("failed to setup audit table")
+
+func (c *Core) generateAuditTestProbe() (*logical.LogInput, error) {
+	requestId, err := uuid.GenerateUUID()
+	if err != nil {
+		return nil, err
+	}
+	return &logical.LogInput{
+		Type: "request",
+		Auth: nil,
+		Request: &logical.Request{
+			ID:        requestId,
+			Operation: "update",
+			Path:      "sys/audit/test",
+		},
+		Response: nil,
+		OuterErr: nil,
+	}, nil
+}
 
 // enableAudit is used to enable a new audit backend
 func (c *Core) enableAudit(ctx context.Context, entry *MountEntry, updateStorage bool) error {
@@ -103,6 +131,20 @@ func (c *Core) enableAudit(ctx context.Context, entry *MountEntry, updateStorage
 		return fmt.Errorf("nil audit backend of type %q returned from factory", entry.Type)
 	}
 
+	if entry.Options["skip_test"] != "true" {
+		// Test the new audit device and report failure if it doesn't work.
+		testProbe, err := c.generateAuditTestProbe()
+		if err != nil {
+			return err
+		}
+		err = backend.LogTestMessage(ctx, testProbe, entry.Options)
+		if err != nil {
+			c.logger.Error("new audit backend failed test", "path", entry.Path, "type", entry.Type, "error", err)
+			return fmt.Errorf("audit backend failed test message: %w", err)
+
+		}
+	}
+
 	newTable := c.audit.shallowClone()
 	newTable.Entries = append(newTable.Entries, entry)
 
@@ -122,7 +164,7 @@ func (c *Core) enableAudit(ctx context.Context, entry *MountEntry, updateStorage
 	c.audit = newTable
 
 	// Register the backend
-	c.auditBroker.Register(entry.Path, backend, view, entry.Local)
+	c.auditBroker.Register(entry.Path, backend, entry.Local)
 	if c.logger.IsInfo() {
 		c.logger.Info("enabled audit backend", "path", entry.Path, "type", entry.Type)
 	}
@@ -174,8 +216,9 @@ func (c *Core) disableAudit(ctx context.Context, path string, updateStorage bool
 
 	c.audit = newTable
 
-	// Unmount the backend
-	c.auditBroker.Deregister(path)
+	// Unmount the backend, any returned error can be ignored since the
+	// Backend will already have been removed from the AuditBroker's map.
+	c.auditBroker.Deregister(ctx, path)
 	if c.logger.IsInfo() {
 		c.logger.Info("disabled audit backend", "path", path)
 	}
@@ -282,13 +325,6 @@ func (c *Core) persistAudit(ctx context.Context, table *MountTable, localOnly bo
 		return fmt.Errorf("invalid table type given, not persisting")
 	}
 
-	for _, entry := range table.Entries {
-		if entry.Table != table.Type {
-			c.logger.Error("given entry to persist in audit table has wrong table value", "path", entry.Path, "entry_table_type", entry.Table, "actual_type", table.Type)
-			return fmt.Errorf("invalid audit entry found, not persisting")
-		}
-	}
-
 	nonLocalAudit := &MountTable{
 		Type: auditTableType,
 	}
@@ -298,6 +334,11 @@ func (c *Core) persistAudit(ctx context.Context, table *MountTable, localOnly bo
 	}
 
 	for _, entry := range table.Entries {
+		if entry.Table != table.Type {
+			c.logger.Error("given entry to persist in audit table has wrong table value", "path", entry.Path, "entry_table_type", entry.Table, "actual_type", table.Type)
+			return fmt.Errorf("invalid audit entry found, not persisting")
+		}
+
 		if entry.Local {
 			localAudit.Entries = append(localAudit.Entries, entry)
 		} else {
@@ -350,8 +391,16 @@ func (c *Core) persistAudit(ctx context.Context, table *MountTable, localOnly bo
 // initialize the audit backends
 func (c *Core) setupAudits(ctx context.Context) error {
 	brokerLogger := c.baseLogger.Named("audit")
-	c.AddLogger(brokerLogger)
-	broker := NewAuditBroker(brokerLogger)
+
+	disableEventLogger, err := parseutil.ParseBool(os.Getenv(featureFlagDisableEventLogger))
+	if err != nil {
+		return fmt.Errorf("unable to parse feature flag: %q: %w", featureFlagDisableEventLogger, err)
+	}
+
+	broker, err := NewAuditBroker(brokerLogger, !disableEventLogger)
+	if err != nil {
+		return err
+	}
 
 	c.auditLock.Lock()
 	defer c.auditLock.Unlock()
@@ -385,7 +434,7 @@ func (c *Core) setupAudits(ctx context.Context) error {
 		}
 
 		// Mount the backend
-		broker.Register(entry.Path, backend, view, entry.Local)
+		broker.Register(entry.Path, backend, entry.Local)
 
 		successCount++
 	}
@@ -446,11 +495,20 @@ func (c *Core) newAuditBackend(ctx context.Context, entry *MountEntry, view logi
 		Location: salt.DefaultLocation,
 	}
 
-	be, err := f(ctx, &audit.BackendConfig{
-		SaltView:   view,
-		SaltConfig: saltConfig,
-		Config:     conf,
-	})
+	disableEventLogger, err := parseutil.ParseBool(os.Getenv(featureFlagDisableEventLogger))
+	if err != nil {
+		return nil, fmt.Errorf("unable to parse feature flag: %q: %w", featureFlagDisableEventLogger, err)
+	}
+
+	be, err := f(
+		ctx, &audit.BackendConfig{
+			SaltView:   view,
+			SaltConfig: saltConfig,
+			Config:     conf,
+			MountPath:  entry.Path,
+		},
+		!disableEventLogger,
+		c.auditedHeaders)
 	if err != nil {
 		return nil, err
 	}
@@ -459,7 +517,6 @@ func (c *Core) newAuditBackend(ctx context.Context, entry *MountEntry, view logi
 	}
 
 	auditLogger := c.baseLogger.Named("audit")
-	c.AddLogger(auditLogger)
 
 	switch entry.Type {
 	case "file":

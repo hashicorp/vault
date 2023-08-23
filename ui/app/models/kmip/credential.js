@@ -1,11 +1,15 @@
-import DS from 'ember-data';
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
+import Model, { attr } from '@ember-data/model';
 import fieldToAttrs from 'vault/utils/field-to-attrs';
 import { computed } from '@ember/object';
-const { attr } = DS;
 import apiPath from 'vault/utils/api-path';
-import attachCapabilities from 'vault/lib/attach-capabilities';
+import lazyCapabilities from 'vault/macros/lazy-capabilities';
 
-const Model = DS.Model.extend({
+export default Model.extend({
   backend: attr({ readOnly: true }),
   scope: attr({ readOnly: true }),
   role: attr({ readOnly: true }),
@@ -20,7 +24,7 @@ const Model = DS.Model.extend({
     defaultValue: 'pem',
     label: 'Certificate format',
   }),
-  fieldGroups: computed(function() {
+  fieldGroups: computed(function () {
     const groups = [
       {
         default: ['format'],
@@ -29,8 +33,10 @@ const Model = DS.Model.extend({
 
     return fieldToAttrs(this, groups);
   }),
-});
-
-export default attachCapabilities(Model, {
-  deletePath: apiPath`${'backend'}/scope/${'scope'}/role/${'role'}/credentials/revoke`,
+  deletePath: lazyCapabilities(
+    apiPath`${'backend'}/scope/${'scope'}/role/${'role'}/credentials/revoke`,
+    'backend',
+    'scope',
+    'role'
+  ),
 });

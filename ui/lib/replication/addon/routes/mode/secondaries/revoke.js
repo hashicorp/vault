@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import Base from '../../replication-base';
 
 export default Base.extend({
@@ -6,7 +11,7 @@ export default Base.extend({
   },
 
   redirect(model) {
-    const replicationMode = this.get('replicationMode');
+    const replicationMode = this.replicationMode;
     if (!model.get(`${replicationMode}.isPrimary`) || !model.get('canRevokeSecondary')) {
       return this.transitionTo('index');
     }

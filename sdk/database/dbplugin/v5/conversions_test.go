@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package dbplugin
 
 import (
@@ -9,7 +12,6 @@ import (
 	"unicode"
 
 	"github.com/hashicorp/vault/sdk/database/dbplugin/v5/proto"
-
 	"google.golang.org/protobuf/types/known/structpb"
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
@@ -60,8 +62,11 @@ func TestConversionsHaveAllFields(t *testing.T) {
 					"rollback_statement",
 				},
 			},
-			Password:   "password",
-			Expiration: time.Now(),
+			CredentialType: CredentialTypeRSAPrivateKey,
+			PublicKey:      []byte("-----BEGIN PUBLIC KEY-----"),
+			Password:       "password",
+			Subject:        "subject",
+			Expiration:     time.Now(),
 		}
 
 		protoReq, err := newUserReqToProto(req)
@@ -85,9 +90,18 @@ func TestConversionsHaveAllFields(t *testing.T) {
 
 	t.Run("updateUserReqToProto", func(t *testing.T) {
 		req := UpdateUserRequest{
-			Username: "username",
+			Username:       "username",
+			CredentialType: CredentialTypeRSAPrivateKey,
 			Password: &ChangePassword{
 				NewPassword: "newpassword",
+				Statements: Statements{
+					Commands: []string{
+						"statement",
+					},
+				},
+			},
+			PublicKey: &ChangePublicKey{
+				NewPublicKey: []byte("-----BEGIN PUBLIC KEY-----"),
 				Statements: Statements{
 					Commands: []string{
 						"statement",
@@ -154,9 +168,18 @@ func TestConversionsHaveAllFields(t *testing.T) {
 
 	t.Run("getUpdateUserRequest", func(t *testing.T) {
 		req := &proto.UpdateUserRequest{
-			Username: "username",
+			Username:       "username",
+			CredentialType: int32(CredentialTypeRSAPrivateKey),
 			Password: &proto.ChangePassword{
 				NewPassword: "newpass",
+				Statements: &proto.Statements{
+					Commands: []string{
+						"statement",
+					},
+				},
+			},
+			PublicKey: &proto.ChangePublicKey{
+				NewPublicKey: []byte("-----BEGIN PUBLIC KEY-----"),
 				Statements: &proto.Statements{
 					Commands: []string{
 						"statement",
@@ -491,6 +514,7 @@ func intPtr(i int) *int {
 func float64Ptr(f float64) *float64 {
 	return &f
 }
+
 func strPtr(str string) *string {
 	return &str
 }

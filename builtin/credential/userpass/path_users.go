@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package userpass
 
 import (
@@ -16,29 +19,40 @@ func pathUsersList(b *backend) *framework.Path {
 	return &framework.Path{
 		Pattern: "users/?",
 
+		DisplayAttrs: &framework.DisplayAttributes{
+			OperationPrefix: operationPrefixUserpass,
+			OperationSuffix: "users",
+			Navigation:      true,
+			ItemType:        "User",
+		},
+
 		Callbacks: map[logical.Operation]framework.OperationFunc{
 			logical.ListOperation: b.pathUserList,
 		},
 
 		HelpSynopsis:    pathUserHelpSyn,
 		HelpDescription: pathUserHelpDesc,
-		DisplayAttrs: &framework.DisplayAttributes{
-			Navigation: true,
-			ItemType:   "User",
-		},
 	}
 }
 
 func pathUsers(b *backend) *framework.Path {
 	p := &framework.Path{
 		Pattern: "users/" + framework.GenericNameRegex("username"),
+
+		DisplayAttrs: &framework.DisplayAttributes{
+			OperationPrefix: operationPrefixUserpass,
+			OperationSuffix: "user",
+			Action:          "Create",
+			ItemType:        "User",
+		},
+
 		Fields: map[string]*framework.FieldSchema{
-			"username": &framework.FieldSchema{
+			"username": {
 				Type:        framework.TypeString,
 				Description: "Username for this user.",
 			},
 
-			"password": &framework.FieldSchema{
+			"password": {
 				Type:        framework.TypeString,
 				Description: "Password for this user.",
 				DisplayAttrs: &framework.DisplayAttributes{
@@ -46,25 +60,25 @@ func pathUsers(b *backend) *framework.Path {
 				},
 			},
 
-			"policies": &framework.FieldSchema{
+			"policies": {
 				Type:        framework.TypeCommaStringSlice,
 				Description: tokenutil.DeprecationText("token_policies"),
 				Deprecated:  true,
 			},
 
-			"ttl": &framework.FieldSchema{
+			"ttl": {
 				Type:        framework.TypeDurationSecond,
 				Description: tokenutil.DeprecationText("token_ttl"),
 				Deprecated:  true,
 			},
 
-			"max_ttl": &framework.FieldSchema{
+			"max_ttl": {
 				Type:        framework.TypeDurationSecond,
 				Description: tokenutil.DeprecationText("token_max_ttl"),
 				Deprecated:  true,
 			},
 
-			"bound_cidrs": &framework.FieldSchema{
+			"bound_cidrs": {
 				Type:        framework.TypeCommaStringSlice,
 				Description: tokenutil.DeprecationText("token_bound_cidrs"),
 				Deprecated:  true,
@@ -82,10 +96,6 @@ func pathUsers(b *backend) *framework.Path {
 
 		HelpSynopsis:    pathUserHelpSyn,
 		HelpDescription: pathUserHelpDesc,
-		DisplayAttrs: &framework.DisplayAttributes{
-			Action:   "Create",
-			ItemType: "User",
-		},
 	}
 
 	tokenutil.AddTokenFields(p.Fields)

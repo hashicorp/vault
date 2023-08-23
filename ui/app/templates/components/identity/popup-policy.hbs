@@ -1,26 +1,32 @@
-{{#popup-menu name="policy-menu"}}
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
+<PopupMenu @name="policy-menu">
   <nav class="menu">
     <ul class="menu-list">
       <li class="action">
-        {{#link-to "vault.cluster.policy.show" "acl" policyName}}
+        <LinkTo @route="vault.cluster.policy.show" @models={{array "acl" this.policyName}}>
           View Policy
-        {{/link-to}}
+        </LinkTo>
       </li>
       <li class="action">
-        {{#link-to "vault.cluster.policy.edit" "acl" policyName}}
+        <LinkTo @route="vault.cluster.policy.edit" @models={{array "acl" this.policyName}}>
           Edit Policy
-        {{/link-to}}
+        </LinkTo>
       </li>
       <li class="action">
         <ConfirmAction
           @buttonClasses="link is-destroy"
           @confirmButtonText="Remove"
           @confirmMessage="This policy may affect permissions to access Vault data."
-          @onConfirmAction={{action "performTransaction" model policyName}}
+          @onConfirmAction={{action "performTransaction" this.model this.policyName}}
         >
-          Remove from {{model.identityType}}
+          Remove from
+          {{this.model.identityType}}
         </ConfirmAction>
       </li>
     </ul>
   </nav>
-{{/popup-menu}}
+</PopupMenu>

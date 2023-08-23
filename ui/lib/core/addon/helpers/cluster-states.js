@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import { helper as buildHelper } from '@ember/component/helper';
 
 // A hash of cluster states to ensure that the status menu and replication dashboards
@@ -6,47 +11,47 @@ import { helper as buildHelper } from '@ember/component/helper';
 
 export const CLUSTER_STATES = {
   running: {
-    glyph: 'check-circle-outline',
+    glyph: 'check-circle',
     isOk: true,
     isSyncing: false,
   },
   ready: {
-    glyph: 'check-circle-outline',
+    glyph: 'check-circle',
     isOk: true,
     isSyncing: false,
   },
   'stream-wals': {
-    glyph: 'check-circle-outline',
+    glyph: 'check-circle',
     isOk: true,
     isSyncing: false,
   },
   'merkle-diff': {
-    glyph: 'android-sync',
+    glyph: 'sync-reverse',
     isOk: true,
     isSyncing: true,
   },
   connecting: {
-    glyph: 'android-sync',
+    glyph: 'sync-reverse',
     isOk: true,
     isSyncing: true,
   },
   'merkle-sync': {
-    glyph: 'android-sync',
+    glyph: 'sync-reverse',
     isOk: true,
     isSyncing: true,
   },
   idle: {
-    glyph: 'cancel-square-outline',
+    glyph: 'x-square',
     isOk: false,
     isSyncing: false,
   },
   transient_failure: {
-    glyph: 'cancel-circle-outline',
+    glyph: 'x-circle',
     isOk: false,
     isSyncing: false,
   },
   shutdown: {
-    glyph: 'cancel-circle-outline',
+    glyph: 'x-circle',
     isOk: false,
     isSyncing: false,
   },

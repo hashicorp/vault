@@ -1,3 +1,6 @@
+# Copyright (c) HashiCorp, Inc.
+# SPDX-License-Identifier: BUSL-1.1
+
 pid_file = "./pidfile"
 
 auto_auth {
@@ -21,6 +24,13 @@ auto_auth {
 
 cache {
 	use_auto_auth_token = true
+	persist = {
+		type = "kubernetes"
+		path = "/vault/agent-cache/"
+		keep_after_import = true
+		exit_on_err = true
+		service_account_token_file = "/tmp/serviceaccount/token"
+	}
 }
 
 listener "unix" {
@@ -36,7 +46,15 @@ listener "tcp" {
     tls_disable = true
 }
 
+listener {
+    type = "tcp"
+    address = "127.0.0.1:3000"
+    tls_disable = true
+    role = "metrics_only"
+}
+
 listener "tcp" {
+    role = "default"
     address = "127.0.0.1:8400"
     tls_key_file = "/path/to/cakey.pem"
     tls_cert_file = "/path/to/cacert.pem"

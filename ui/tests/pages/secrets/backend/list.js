@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import {
   create,
   collection,
@@ -17,7 +22,7 @@ export default create({
   createIsPresent: isPresent('[data-test-secret-create]'),
   configure: clickable('[data-test-secret-backend-configure]'),
   configureIsPresent: isPresent('[data-test-secret-backend-configure]'),
-  tabs: collection('[data-test-tab]'),
+  tabs: collection('[data-test-secret-list-tab]'),
   filterInput: fillable('[data-test-nav-input] input'),
   filterInputValue: value('[data-test-nav-input] input'),
   secrets: collection('[data-test-secret-link]', {
@@ -34,7 +39,7 @@ export default create({
   confirmDelete: clickable('[data-test-confirm-button]', {
     testContainer: '#ember-testing',
   }),
-  backendIsEmpty: getter(function() {
+  backendIsEmpty: getter(function () {
     return this.secrets.length === 0;
   }),
 });

@@ -1,0 +1,3 @@
+```release-note:improvement
+auth/cf: Enables CF roles to be compatible with Vault's role based quotas.
+```

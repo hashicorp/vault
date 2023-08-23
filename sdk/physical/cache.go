@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package physical
 
 import (
@@ -29,6 +32,16 @@ var cacheExceptionsPaths = []string{
 	"sys/expire/",
 	"core/poison-pill",
 	"core/raft/tls",
+
+	// Add barrierSealConfigPath and recoverySealConfigPlaintextPath to the cache
+	// exceptions to avoid unseal errors. See VAULT-17227
+	"core/seal-config",
+	"core/recovery-config",
+
+	// we need to make sure the persisted license is read from the storage
+	// to ensure the changes to the autoloaded license on the active node
+	// is observed on the perfStandby nodes
+	"core/autoloaded-license",
 }
 
 // CacheRefreshContext returns a context with an added value denoting if the
@@ -68,10 +81,12 @@ type TransactionalCache struct {
 }
 
 // Verify Cache satisfies the correct interfaces
-var _ ToggleablePurgemonster = (*Cache)(nil)
-var _ ToggleablePurgemonster = (*TransactionalCache)(nil)
-var _ Backend = (*Cache)(nil)
-var _ Transactional = (*TransactionalCache)(nil)
+var (
+	_ ToggleablePurgemonster = (*Cache)(nil)
+	_ ToggleablePurgemonster = (*TransactionalCache)(nil)
+	_ Backend                = (*Cache)(nil)
+	_ Transactional          = (*TransactionalCache)(nil)
+)
 
 // NewCache returns a physical cache of the given size.
 // If no size is provided, the default size is used.
@@ -181,7 +196,7 @@ func (c *Cache) Get(ctx context.Context, key string) (*Entry, error) {
 		return nil, err
 	}
 
-	// Cache the result
+	// Cache the result, even if nil
 	c.lru.Add(key, ent)
 
 	return ent, nil

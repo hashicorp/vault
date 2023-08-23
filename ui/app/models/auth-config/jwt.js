@@ -1,10 +1,13 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
+import { attr } from '@ember-data/model';
 import { computed } from '@ember/object';
-import DS from 'ember-data';
 import AuthConfig from '../auth-config';
 import fieldToAttrs from 'vault/utils/field-to-attrs';
 import { combineFieldGroups } from 'vault/utils/openapi-to-attrs';
-
-const { attr } = DS;
 
 export default AuthConfig.extend({
   useOpenAPI: true,
@@ -38,8 +41,8 @@ export default AuthConfig.extend({
   boundIssuer: attr('string', {
     helpText: 'The value against which to match the iss claim in a JWT',
   }),
-  fieldGroups: computed(function() {
-    let type = this.constructor.modelName.split('/')[1].toUpperCase();
+  fieldGroups: computed('constructor.modelName', 'newFields', function () {
+    const type = this.constructor.modelName.split('/')[1].toUpperCase();
     let groups = [
       {
         default: ['oidcDiscoveryUrl', 'defaultRole'],

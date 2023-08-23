@@ -1,0 +1,69 @@
+---
+layout: docs
+page_title: status - Command
+description: |-
+  The "status" command prints the current state of Vault including whether it is
+  sealed and if HA mode is enabled. This command prints regardless of whether
+  the Vault is sealed.
+---
+
+# status
+
+The `status` command prints the current state of Vault including whether it is
+sealed and if HA mode is enabled. This command prints regardless of whether the
+Vault is sealed.
+
+The exit code reflects the seal status:
+
+- 0 - unsealed
+- 1 - error
+- 2 - sealed
+
+## Examples
+
+Check the status:
+
+```shell-session
+$ vault status
+
+Sealed: false
+Key Shares: 5
+Key Threshold: 3
+Unseal Progress: 0
+Unseal Nonce:
+Version: x.y.z
+Build Date: 2022-05-03T08:34:11Z
+Cluster Name: vault-cluster-49ffd45f
+Cluster ID: d2dad792-fb99-1c8d-452e-528d073ba205
+
+High-Availability Enabled: false
+```
+
+## Usage
+
+The following flags are available in addition to the [standard set of
+flags](/vault/docs/commands) included on all commands.
+
+### Output options
+
+- `-format` `(string: "table")` - Print the output in the given format. Valid
+  formats are "table", "json", or "yaml". This can also be specified via the
+  `VAULT_FORMAT` environment variable.
+
+By default, the output is displayed in "table" format.
+
+#### Output fields
+
+1. The field for total shares is displayed as `"n"` instead of `n` in yaml outputs. 
+2. The following fields in "table" format are displayed only when relevant:
+- "Unseal Progress" and "Unseal Nonce" are displayed when vault is sealed.
+- "HCP Link Status" and "HCP Link Resource ID" are displayed when HCP link is configured.
+- "Seal Migration in Progress" is displayed when it is in progress.
+- "Cluster Name" and "Cluster ID" are displayed if they have a value.
+- "Raft Committed Index", "Raft Applied Index", "Last WAL" are diplayed if they are non-zero.
+- "Warnings" are displayed if the warnings apply.
+- The following fields are displayed only when HA mode is enabled and is unsealed:
+  - "HA Cluster".
+  - "HA Mode".
+  - "Active Since" is displayed if the node is active and has a valid active time.
+  - "Performance Standby" Node and "Performance Standby Last Remote WAL" are displayed for performance standby nodes.

@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package physical
 
 import (
@@ -7,6 +10,7 @@ import (
 	"time"
 
 	log "github.com/hashicorp/go-hclog"
+	uberAtomic "go.uber.org/atomic"
 )
 
 const (
@@ -18,7 +22,7 @@ const (
 type LatencyInjector struct {
 	logger        log.Logger
 	backend       Backend
-	latency       time.Duration
+	latency       *uberAtomic.Duration
 	jitterPercent int
 	randomLock    *sync.Mutex
 	random        *rand.Rand
@@ -32,8 +36,10 @@ type TransactionalLatencyInjector struct {
 }
 
 // Verify LatencyInjector satisfies the correct interfaces
-var _ Backend = (*LatencyInjector)(nil)
-var _ Transactional = (*TransactionalLatencyInjector)(nil)
+var (
+	_ Backend       = (*LatencyInjector)(nil)
+	_ Transactional = (*TransactionalLatencyInjector)(nil)
+)
 
 // NewLatencyInjector returns a wrapped physical backend to simulate latency
 func NewLatencyInjector(b Backend, latency time.Duration, jitter int, logger log.Logger) *LatencyInjector {
@@ -45,7 +51,7 @@ func NewLatencyInjector(b Backend, latency time.Duration, jitter int, logger log
 	return &LatencyInjector{
 		logger:        logger,
 		backend:       b,
-		latency:       latency,
+		latency:       uberAtomic.NewDuration(latency),
 		jitterPercent: jitter,
 		randomLock:    new(sync.Mutex),
 		random:        rand.New(rand.NewSource(int64(time.Now().Nanosecond()))),
@@ -53,6 +59,9 @@ func NewLatencyInjector(b Backend, latency time.Duration, jitter int, logger log
 }
 
 // NewTransactionalLatencyInjector creates a new transactional LatencyInjector
+// jitter is the random percent that latency will vary between.
+// For example, if you specify latency = 50ms and jitter = 20, then for any
+// given operation, the latency will be 50ms +- 10ms (20% of 50), or between 40 and 60ms.
 func NewTransactionalLatencyInjector(b Backend, latency time.Duration, jitter int, logger log.Logger) *TransactionalLatencyInjector {
 	return &TransactionalLatencyInjector{
 		LatencyInjector: NewLatencyInjector(b, latency, jitter, logger),
@@ -62,7 +71,7 @@ func NewTransactionalLatencyInjector(b Backend, latency time.Duration, jitter in
 
 func (l *LatencyInjector) SetLatency(latency time.Duration) {
 	l.logger.Info("Changing backend latency", "latency", latency)
-	l.latency = latency
+	l.latency.Store(latency)
 }
 
 func (l *LatencyInjector) addLatency() {
@@ -75,7 +84,7 @@ func (l *LatencyInjector) addLatency() {
 		percent = l.random.Intn(max-min) + min
 		l.randomLock.Unlock()
 	}
-	latencyDuration := time.Duration(int(l.latency) * percent / 100)
+	latencyDuration := time.Duration(int(l.latency.Load()) * percent / 100)
 	time.Sleep(latencyDuration)
 }
 

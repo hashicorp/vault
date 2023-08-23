@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import { get } from '@ember/object';
 import ApplicationSerializer from './application';
 
@@ -12,7 +17,7 @@ export default ApplicationSerializer.extend({
     ) {
       // if we have data.keys, it's a list of ids, so we map over that
       // and create objects with id's
-      return payload.data.keys.map(secret => {
+      return payload.data.keys.map((secret) => {
         // secrets don't have an id in the response, so we need to concat the full
         // path of the secret here - the id in the payload is added
         // in the adapter after making the request
@@ -27,7 +32,7 @@ export default ApplicationSerializer.extend({
         return { id: fullSecretPath, backend: payload.backend };
       });
     }
-    let path = this.get('secretDataPath');
+    const path = this.secretDataPath;
     // move response that is the contents of the secret from the dataPath
     // to `secret_data` so it will be `secretData` in the model
     payload.secret_data = get(payload, path);

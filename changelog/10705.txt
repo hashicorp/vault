@@ -1,0 +1,3 @@
+```release-note:improvement
+agent: Better concurrent request handling on identical requests proxied through Agent.
+```

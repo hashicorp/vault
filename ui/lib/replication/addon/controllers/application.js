@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import { isPresent } from '@ember/utils';
 import { alias } from '@ember/object/computed';
 import { inject as service } from '@ember/service';
@@ -36,15 +41,15 @@ export default Controller.extend(copy(DEFAULTS, true), {
   },
 
   saveFilterConfig() {
-    const config = this.get('filterConfig');
-    const id = this.get('id');
+    const config = this.filterConfig;
+    const id = this.id;
     config.id = id;
     // if there is no mode, then they don't want to filter, so we don't save a filter config
     if (!config.mode) {
       return resolve();
     }
-    const configRecord = this.get('store').createRecord('path-filter-config', config);
-    return configRecord.save().catch(e => this.submitError(e));
+    const configRecord = this.store.createRecord('path-filter-config', config);
+    return configRecord.save().catch((e) => this.submitError(e));
   },
 
   reset() {
@@ -52,7 +57,7 @@ export default Controller.extend(copy(DEFAULTS, true), {
   },
 
   submitSuccess(resp, action) {
-    const cluster = this.get('model');
+    const cluster = this.model;
     if (!cluster) {
       return;
     }
@@ -81,7 +86,7 @@ export default Controller.extend(copy(DEFAULTS, true), {
   },
 
   submitHandler(action, clusterMode, data, event) {
-    const replicationMode = this.get('replicationMode');
+    const replicationMode = this.replicationMode;
     if (event && event.preventDefault) {
       event.preventDefault();
     }
@@ -99,11 +104,11 @@ export default Controller.extend(copy(DEFAULTS, true), {
       }, {});
     }
 
-    return this.get('store')
+    return this.store
       .adapterFor('cluster')
       .replicationAction(action, replicationMode, clusterMode, data)
       .then(
-        resp => {
+        (resp) => {
           return this.saveFilterConfig().then(() => {
             return this.submitSuccess(resp, action, clusterMode);
           });
@@ -119,14 +124,14 @@ export default Controller.extend(copy(DEFAULTS, true), {
     copyClose(successMessage) {
       // separate action for copy & close button so it does not try and use execCommand to copy token to clipboard
       if (!!successMessage && typeof successMessage === 'string') {
-        this.get('flashMessages').success(successMessage);
+        this.flashMessages.success(successMessage);
       }
       this.toggleProperty('isModalActive');
       this.transitionToRoute('mode.secondaries');
     },
     toggleModal(successMessage) {
       if (!!successMessage && typeof successMessage === 'string') {
-        this.get('flashMessages').success(successMessage);
+        this.flashMessages.success(successMessage);
       }
       // use copy browser extension to copy token if you close the modal by clicking outside of it.
       const htmlSelectedToken = document.querySelector('#token-textarea');

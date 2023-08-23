@@ -1,7 +1,11 @@
-import DS from 'ember-data';
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
+import Model, { attr } from '@ember-data/model';
 import { expandAttributeMeta } from 'vault/utils/field-to-attrs';
 import { computed } from '@ember/object';
-const { attr } = DS;
 
 //leader_api_addr (string: <required>) – Address of the leader node in the Raft cluster to which this node is trying to join.
 
@@ -13,7 +17,7 @@ const { attr } = DS;
 
 //leader_client_key (string: "") - Client key used to communicate with Raft's leader node.
 
-export default DS.Model.extend({
+export default Model.extend({
   leaderApiAddr: attr('string', {
     label: 'Leader API Address',
   }),
@@ -32,7 +36,7 @@ export default DS.Model.extend({
     label: 'Leader Client Key',
     editType: 'file',
   }),
-  fields: computed(function() {
+  fields: computed(function () {
     return expandAttributeMeta(this, [
       'leaderApiAddr',
       'leaderCaCert',

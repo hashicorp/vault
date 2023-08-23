@@ -1,0 +1,4 @@
+```release-note:bug
+secrets/pki: CRLs on performance secondary clusters are now automatically
+rebuilt upon changes to the list of issuers.
+```

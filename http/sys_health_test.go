@@ -1,8 +1,10 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package http
 
 import (
 	"io/ioutil"
-
 	"net/http"
 	"net/url"
 	"reflect"
@@ -45,6 +47,7 @@ func TestSysHealth_get(t *testing.T) {
 	} else {
 		expected["cluster_id"] = actual["cluster_id"]
 	}
+	delete(actual, "license")
 	if !reflect.DeepEqual(actual, expected) {
 		t.Fatalf("bad: expected:%#v\nactual:%#v", expected, actual)
 	}
@@ -78,6 +81,7 @@ func TestSysHealth_get(t *testing.T) {
 	} else {
 		expected["cluster_id"] = actual["cluster_id"]
 	}
+	delete(actual, "license")
 	if !reflect.DeepEqual(actual, expected) {
 		t.Fatalf("bad: expected:%#v\nactual:%#v", expected, actual)
 	}
@@ -115,10 +119,10 @@ func TestSysHealth_get(t *testing.T) {
 	} else {
 		expected["cluster_id"] = actual["cluster_id"]
 	}
+	delete(actual, "license")
 	if !reflect.DeepEqual(actual, expected) {
 		t.Fatalf("bad: expected:%#v\nactual:%#v", expected, actual)
 	}
-
 }
 
 func TestSysHealth_customcodes(t *testing.T) {
@@ -159,6 +163,7 @@ func TestSysHealth_customcodes(t *testing.T) {
 	} else {
 		expected["cluster_id"] = actual["cluster_id"]
 	}
+	delete(actual, "license")
 	if !reflect.DeepEqual(actual, expected) {
 		t.Fatalf("bad: expected:%#v\nactual:%#v", expected, actual)
 	}
@@ -193,6 +198,7 @@ func TestSysHealth_customcodes(t *testing.T) {
 	} else {
 		expected["cluster_id"] = actual["cluster_id"]
 	}
+	delete(actual, "license")
 	if !reflect.DeepEqual(actual, expected) {
 		t.Fatalf("bad: expected:%#v\nactual:%#v", expected, actual)
 	}
@@ -230,6 +236,7 @@ func TestSysHealth_customcodes(t *testing.T) {
 	} else {
 		expected["cluster_id"] = actual["cluster_id"]
 	}
+	delete(actual, "license")
 	if !reflect.DeepEqual(actual, expected) {
 		t.Fatalf("bad: expected:%#v\nactual:%#v", expected, actual)
 	}

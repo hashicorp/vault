@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import RoleEdit from './role-edit';
 
 export default RoleEdit.extend({
@@ -8,8 +13,8 @@ export default RoleEdit.extend({
 
   actions: {
     updateTtl(path, val) {
-      const model = this.get('model');
-      let valueToSet = val.enabled === true ? `${val.seconds}s` : undefined;
+      const model = this.model;
+      const valueToSet = val.enabled === true ? `${val.seconds}s` : undefined;
       model.set(path, valueToSet);
     },
   },

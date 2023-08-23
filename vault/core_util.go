@@ -1,10 +1,15 @@
-// +build !enterprise
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
+//go:build !enterprise
 
 package vault
 
 import (
 	"context"
+	"fmt"
 
+	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/sdk/helper/license"
 	"github.com/hashicorp/vault/sdk/logical"
@@ -18,8 +23,10 @@ const (
 	activityLogEnabledDefaultValue = "default-disabled"
 )
 
-type entCore struct{}
-type entCoreConfig struct{}
+type (
+	entCore       struct{}
+	entCoreConfig struct{}
+)
 
 func (e entCoreConfig) Clone() entCoreConfig {
 	return entCoreConfig{}
@@ -33,11 +40,9 @@ func coreInit(c *Core, conf *CoreConfig) error {
 	phys := conf.Physical
 	_, txnOK := phys.(physical.Transactional)
 	sealUnwrapperLogger := conf.Logger.Named("storage.sealunwrapper")
-	c.allLoggers = append(c.allLoggers, sealUnwrapperLogger)
 	c.sealUnwrapper = NewSealUnwrapper(phys, sealUnwrapperLogger)
 	// Wrap the physical backend in a cache layer if enabled
 	cacheLogger := c.baseLogger.Named("storage.cache")
-	c.allLoggers = append(c.allLoggers, cacheLogger)
 	if txnOK {
 		c.physical = physical.NewTransactionalCache(c.sealUnwrapper, conf.CacheSize, cacheLogger, c.MetricSink().Sink)
 	} else {
@@ -49,16 +54,32 @@ func coreInit(c *Core, conf *CoreConfig) error {
 	if !conf.DisableKeyEncodingChecks {
 		c.physical = physical.NewStorageEncoding(c.physical)
 	}
+
 	return nil
 }
+
 func (c *Core) setupReplicationResolverHandler() error {
 	return nil
 }
 
+func NewPolicyMFABackend(core *Core, logger hclog.Logger) *PolicyMFABackend { return nil }
+
+func (c *Core) barrierViewForNamespace(namespaceId string) (*BarrierView, error) {
+	if namespaceId != namespace.RootNamespaceID {
+		return nil, fmt.Errorf("failed to find barrier view for non-root namespace")
+	}
+
+	return c.systemBarrierView, nil
+}
+
+func (c *Core) UndoLogsEnabled() bool            { return false }
+func (c *Core) UndoLogsPersisted() (bool, error) { return false, nil }
+func (c *Core) PersistUndoLogs() error           { return nil }
+
 func (c *Core) teardownReplicationResolverHandler() {}
 func createSecondaries(*Core, *CoreConfig)          {}
 
-func addExtraLogicalBackends(*Core, map[string]logical.Factory) {}
+func addExtraLogicalBackends(*Core, map[string]logical.Factory, string) {}
 
 func addExtraCredentialBackends(*Core, map[string]logical.Factory) {}
 
@@ -89,7 +110,7 @@ func postUnsealPhysical(c *Core) error {
 	return nil
 }
 
-func loadMFAConfigs(context.Context, *Core) error { return nil }
+func loadPolicyMFAConfigs(context.Context, *Core) error { return nil }
 
 func shouldStartClusterListener(*Core) bool { return true }
 
@@ -109,8 +130,8 @@ func (c *Core) collectNamespaces() []*namespace.Namespace {
 	}
 }
 
-func (c *Core) namepaceByPath(string) *namespace.Namespace {
-	return namespace.RootNamespace
+func (c *Core) HasWALState(required *logical.WALState, perfStandby bool) bool {
+	return true
 }
 
 func (c *Core) setupReplicatedClusterPrimary(*replication.Cluster) error { return nil }
@@ -139,7 +160,7 @@ func (c *Core) initSealsForMigration() {}
 
 func (c *Core) postSealMigration(ctx context.Context) error { return nil }
 
-func (c *Core) applyLeaseCountQuota(in *quotas.Request) (*quotas.Response, error) {
+func (c *Core) applyLeaseCountQuota(_ context.Context, in *quotas.Request) (*quotas.Response, error) {
 	return &quotas.Response{Allowed: true}, nil
 }
 
@@ -151,10 +172,26 @@ func (c *Core) quotaLeaseWalker(ctx context.Context, callback func(request *quot
 	return nil
 }
 
-func (c *Core) quotasHandleLeases(ctx context.Context, action quotas.LeaseAction, leaseIDs []string) error {
+func (c *Core) quotasHandleLeases(ctx context.Context, action quotas.LeaseAction, leases []*quotas.QuotaLeaseInformation) error {
 	return nil
 }
 
 func (c *Core) namespaceByPath(path string) *namespace.Namespace {
 	return namespace.RootNamespace
+}
+
+func (c *Core) AllowForwardingViaHeader() bool {
+	return false
+}
+
+func (c *Core) ForwardToActive() string {
+	return ""
+}
+
+func (c *Core) MissingRequiredState(raw []string, perfStandby bool) bool {
+	return false
+}
+
+func DiagnoseCheckLicense(ctx context.Context, vaultCore *Core, coreConfig CoreConfig, generate bool) (bool, []string) {
+	return false, nil
 }

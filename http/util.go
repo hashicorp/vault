@@ -1,24 +1,25 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package http
 
 import (
+	"bytes"
+	"errors"
 	"fmt"
+	"io/ioutil"
 	"net"
 	"net/http"
 	"strings"
 
 	"github.com/hashicorp/vault/sdk/logical"
 
-	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/vault"
 	"github.com/hashicorp/vault/vault/quotas"
 )
 
 var (
-	adjustRequest = func(c *vault.Core, r *http.Request) (*http.Request, int) {
-		return r, 0
-	}
-
 	genericWrapping = func(core *vault.Core, in http.Handler, props *vault.HandlerProperties) http.Handler {
 		// Wrap the help wrapped handler with another layer with a generic
 		// handler
@@ -28,6 +29,8 @@ var (
 	additionalRoutes = func(mux *http.ServeMux, core *vault.Core) {}
 
 	nonVotersAllowed = false
+
+	adjustResponse = func(core *vault.Core, w http.ResponseWriter, req *logical.Request) {}
 )
 
 func rateLimitQuotaWrapping(handler http.Handler, core *vault.Core) http.Handler {
@@ -46,11 +49,21 @@ func rateLimitQuotaWrapping(handler http.Handler, core *vault.Core) http.Handler
 			respondError(w, status, err)
 			return
 		}
+		mountPath := strings.TrimPrefix(core.MatchingMount(r.Context(), path), ns.Path)
 
-		quotaResp, err := core.ApplyRateLimitQuota(&quotas.Request{
+		// Clone body, so we do not close the request body reader
+		bodyBytes, err := ioutil.ReadAll(r.Body)
+		if err != nil {
+			respondError(w, http.StatusInternalServerError, errors.New("failed to read request body"))
+			return
+		}
+		r.Body = ioutil.NopCloser(bytes.NewBuffer(bodyBytes))
+
+		quotaResp, err := core.ApplyRateLimitQuota(r.Context(), &quotas.Request{
 			Type:          quotas.TypeRateLimit,
 			Path:          path,
-			MountPath:     strings.TrimPrefix(core.MatchingMount(r.Context(), path), ns.Path),
+			MountPath:     mountPath,
+			Role:          core.DetermineRoleFromLoginRequestFromBytes(mountPath, bodyBytes, r.Context()),
 			NamespacePath: ns.Path,
 			ClientAddress: parseRemoteIPAddress(r),
 		})
@@ -67,7 +80,7 @@ func rateLimitQuotaWrapping(handler http.Handler, core *vault.Core) http.Handler
 		}
 
 		if !quotaResp.Allowed {
-			quotaErr := errwrap.Wrapf(fmt.Sprintf("request path %q: {{err}}", path), quotas.ErrRateLimitQuotaExceeded)
+			quotaErr := fmt.Errorf("request path %q: %w", path, quotas.ErrRateLimitQuotaExceeded)
 			respondError(w, http.StatusTooManyRequests, quotaErr)
 
 			if core.Logger().IsTrace() {

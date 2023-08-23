@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package vault
 
 import (
@@ -6,7 +9,7 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/hashicorp/errwrap"
+	"github.com/hashicorp/vault/audit"
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
@@ -50,11 +53,11 @@ func (a *AuditedHeadersConfig) add(ctx context.Context, header string, hmac bool
 	a.Headers[strings.ToLower(header)] = &auditedHeaderSettings{hmac}
 	entry, err := logical.StorageEntryJSON(auditedHeadersEntry, a.Headers)
 	if err != nil {
-		return errwrap.Wrapf("failed to persist audited headers config: {{err}}", err)
+		return fmt.Errorf("failed to persist audited headers config: %w", err)
 	}
 
 	if err := a.view.Put(ctx, entry); err != nil {
-		return errwrap.Wrapf("failed to persist audited headers config: {{err}}", err)
+		return fmt.Errorf("failed to persist audited headers config: %w", err)
 	}
 
 	return nil
@@ -78,11 +81,11 @@ func (a *AuditedHeadersConfig) remove(ctx context.Context, header string) error 
 	delete(a.Headers, strings.ToLower(header))
 	entry, err := logical.StorageEntryJSON(auditedHeadersEntry, a.Headers)
 	if err != nil {
-		return errwrap.Wrapf("failed to persist audited headers config: {{err}}", err)
+		return fmt.Errorf("failed to persist audited headers config: %w", err)
 	}
 
 	if err := a.view.Put(ctx, entry); err != nil {
-		return errwrap.Wrapf("failed to persist audited headers config: {{err}}", err)
+		return fmt.Errorf("failed to persist audited headers config: %w", err)
 	}
 
 	return nil
@@ -90,7 +93,7 @@ func (a *AuditedHeadersConfig) remove(ctx context.Context, header string) error 
 
 // ApplyConfig returns a map of approved headers and their values, either
 // hmac'ed or plaintext
-func (a *AuditedHeadersConfig) ApplyConfig(ctx context.Context, headers map[string][]string, hashFunc func(context.Context, string) (string, error)) (result map[string][]string, retErr error) {
+func (a *AuditedHeadersConfig) ApplyConfig(ctx context.Context, headers map[string][]string, salter audit.Salter) (result map[string][]string, retErr error) {
 	// Grab a read lock
 	a.RLock()
 	defer a.RUnlock()
@@ -112,7 +115,7 @@ func (a *AuditedHeadersConfig) ApplyConfig(ctx context.Context, headers map[stri
 			// Optionally hmac the values
 			if settings.HMAC {
 				for i, el := range hVals {
-					hVal, err := hashFunc(ctx, el)
+					hVal, err := audit.HashString(ctx, salter, el)
 					if err != nil {
 						return nil, err
 					}
@@ -135,7 +138,7 @@ func (c *Core) setupAuditedHeadersConfig(ctx context.Context) error {
 	// Create the config
 	out, err := view.Get(ctx, auditedHeadersEntry)
 	if err != nil {
-		return errwrap.Wrapf("failed to read config: {{err}}", err)
+		return fmt.Errorf("failed to read config: %w", err)
 	}
 
 	headers := make(map[string]*auditedHeaderSettings)

@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import { inject as service } from '@ember/service';
 import { alias } from '@ember/object/computed';
 import Controller from '@ember/controller';
@@ -8,7 +13,8 @@ export default Controller.extend({
   actions: {
     refreshNamespaceList() {
       // fetch new namespaces for the namespace picker
-      this.get('namespaceService.findNamespacesForUser').perform();
+      this.namespaceService.findNamespacesForUser.perform();
+      this.send('reload');
     },
   },
 });

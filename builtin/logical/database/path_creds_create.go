@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package database
 
 import (
@@ -5,18 +8,26 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/hashicorp/go-secure-stdlib/strutil"
+	"github.com/hashicorp/vault/sdk/database/dbplugin/v5"
 	v5 "github.com/hashicorp/vault/sdk/database/dbplugin/v5"
 	"github.com/hashicorp/vault/sdk/framework"
-	"github.com/hashicorp/vault/sdk/helper/strutil"
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
 func pathCredsCreate(b *databaseBackend) []*framework.Path {
 	return []*framework.Path{
-		&framework.Path{
+		{
 			Pattern: "creds/" + framework.GenericNameRegex("name"),
+
+			DisplayAttrs: &framework.DisplayAttributes{
+				OperationPrefix: operationPrefixDatabase,
+				OperationVerb:   "generate",
+				OperationSuffix: "credentials",
+			},
+
 			Fields: map[string]*framework.FieldSchema{
-				"name": &framework.FieldSchema{
+				"name": {
 					Type:        framework.TypeString,
 					Description: "Name of the role.",
 				},
@@ -29,10 +40,17 @@ func pathCredsCreate(b *databaseBackend) []*framework.Path {
 			HelpSynopsis:    pathCredsCreateReadHelpSyn,
 			HelpDescription: pathCredsCreateReadHelpDesc,
 		},
-		&framework.Path{
+		{
 			Pattern: "static-creds/" + framework.GenericNameRegex("name"),
+
+			DisplayAttrs: &framework.DisplayAttributes{
+				OperationPrefix: operationPrefixDatabase,
+				OperationVerb:   "read",
+				OperationSuffix: "static-role-credentials",
+			},
+
 			Fields: map[string]*framework.FieldSchema{
-				"name": &framework.FieldSchema{
+				"name": {
 					Type:        framework.TypeString,
 					Description: "Name of the static role.",
 				},
@@ -72,6 +90,12 @@ func (b *databaseBackend) pathCredsCreateRead() framework.OperationFunc {
 			return nil, fmt.Errorf("%q is not an allowed role", name)
 		}
 
+		// If the plugin doesn't support the credential type, return an error
+		if !dbConfig.SupportsCredentialType(role.CredentialType) {
+			return logical.ErrorResponse("unsupported credential_type: %q",
+				role.CredentialType.String()), nil
+		}
+
 		// Get the Database object
 		dbi, err := b.GetConnection(ctx, req.Storage, role.DBName)
 		if err != nil {
@@ -90,11 +114,6 @@ func (b *databaseBackend) pathCredsCreateRead() framework.OperationFunc {
 		// to ensure the database credential does not expire before the lease
 		expiration = expiration.Add(5 * time.Second)
 
-		password, err := dbi.database.GeneratePassword(ctx, b.System(), dbConfig.PasswordPolicy)
-		if err != nil {
-			return nil, fmt.Errorf("unable to generate password: %w", err)
-		}
-
 		newUserReq := v5.NewUserRequest{
 			UsernameConfig: v5.UsernameMetadata{
 				DisplayName: req.DisplayName,
@@ -106,21 +125,91 @@ func (b *databaseBackend) pathCredsCreateRead() framework.OperationFunc {
 			RollbackStatements: v5.Statements{
 				Commands: role.Statements.Rollback,
 			},
-			Password:   password,
 			Expiration: expiration,
 		}
 
-		// Overwriting the password in the event this is a legacy database plugin and the provided password is ignored
+		respData := make(map[string]interface{})
+
+		// Generate the credential based on the role's credential type
+		switch role.CredentialType {
+		case v5.CredentialTypePassword:
+			generator, err := newPasswordGenerator(role.CredentialConfig)
+			if err != nil {
+				return nil, fmt.Errorf("failed to construct credential generator: %s", err)
+			}
+
+			// Fall back to database config-level password policy if not set on role
+			if generator.PasswordPolicy == "" {
+				generator.PasswordPolicy = dbConfig.PasswordPolicy
+			}
+
+			// Generate the password
+			password, err := generator.generate(ctx, b, dbi.database)
+			if err != nil {
+				b.CloseIfShutdown(dbi, err)
+				return nil, fmt.Errorf("failed to generate password: %s", err)
+			}
+
+			// Set input credential
+			newUserReq.CredentialType = v5.CredentialTypePassword
+			newUserReq.Password = password
+
+		case v5.CredentialTypeRSAPrivateKey:
+			generator, err := newRSAKeyGenerator(role.CredentialConfig)
+			if err != nil {
+				return nil, fmt.Errorf("failed to construct credential generator: %s", err)
+			}
+
+			// Generate the RSA key pair
+			public, private, err := generator.generate(b.GetRandomReader())
+			if err != nil {
+				return nil, fmt.Errorf("failed to generate RSA key pair: %s", err)
+			}
+
+			// Set input credential
+			newUserReq.CredentialType = v5.CredentialTypeRSAPrivateKey
+			newUserReq.PublicKey = public
+
+			// Set output credential
+			respData["rsa_private_key"] = string(private)
+		case v5.CredentialTypeClientCertificate:
+			generator, err := newClientCertificateGenerator(role.CredentialConfig)
+			if err != nil {
+				return nil, fmt.Errorf("failed to construct credential generator: %s", err)
+			}
+
+			// Generate the client certificate
+			cb, subject, err := generator.generate(b.GetRandomReader(), expiration,
+				newUserReq.UsernameConfig)
+			if err != nil {
+				return nil, fmt.Errorf("failed to generate client certificate: %w", err)
+			}
+
+			// Set input credential
+			newUserReq.CredentialType = dbplugin.CredentialTypeClientCertificate
+			newUserReq.Subject = subject
+
+			// Set output credential
+			respData["client_certificate"] = cb.Certificate
+			respData["private_key"] = cb.PrivateKey
+			respData["private_key_type"] = cb.PrivateKeyType
+		}
+
+		// Overwriting the password in the event this is a legacy database
+		// plugin and the provided password is ignored
 		newUserResp, password, err := dbi.database.NewUser(ctx, newUserReq)
 		if err != nil {
 			b.CloseIfShutdown(dbi, err)
 			return nil, err
 		}
+		respData["username"] = newUserResp.Username
 
-		respData := map[string]interface{}{
-			"username": newUserResp.Username,
-			"password": password,
+		// Database plugins using the v4 interface generate and return the password.
+		// Set the password response to what is returned by the NewUser request.
+		if role.CredentialType == v5.CredentialTypePassword {
+			respData["password"] = password
 		}
+
 		internal := map[string]interface{}{
 			"username":              newUserResp.Username,
 			"role":                  name,
@@ -157,14 +246,22 @@ func (b *databaseBackend) pathStaticCredsRead() framework.OperationFunc {
 			return nil, fmt.Errorf("%q is not an allowed role", name)
 		}
 
+		respData := map[string]interface{}{
+			"username":            role.StaticAccount.Username,
+			"ttl":                 role.StaticAccount.CredentialTTL().Seconds(),
+			"rotation_period":     role.StaticAccount.RotationPeriod.Seconds(),
+			"last_vault_rotation": role.StaticAccount.LastVaultRotation,
+		}
+
+		switch role.CredentialType {
+		case v5.CredentialTypePassword:
+			respData["password"] = role.StaticAccount.Password
+		case v5.CredentialTypeRSAPrivateKey:
+			respData["rsa_private_key"] = string(role.StaticAccount.PrivateKey)
+		}
+
 		return &logical.Response{
-			Data: map[string]interface{}{
-				"username":            role.StaticAccount.Username,
-				"password":            role.StaticAccount.Password,
-				"ttl":                 role.StaticAccount.PasswordTTL().Seconds(),
-				"rotation_period":     role.StaticAccount.RotationPeriod.Seconds(),
-				"last_vault_rotation": role.StaticAccount.LastVaultRotation,
-			},
+			Data: respData,
 		}, nil
 	}
 }

@@ -1,5 +1,9 @@
-import DS from 'ember-data';
-const { attr } = DS;
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
+import Model, { attr } from '@ember-data/model';
 
 /* sample response
 
@@ -33,6 +37,6 @@ const { attr } = DS;
 
 */
 
-export default DS.Model.extend({
+export default Model.extend({
   status: attr('object'),
 });

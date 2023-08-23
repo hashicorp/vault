@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import { inject as service } from '@ember/service';
 import ClusterRouteBase from './cluster-route-base';
 import config from 'vault/config/environment';
@@ -10,10 +15,9 @@ export default ClusterRouteBase.extend({
   },
   flashMessages: service(),
   version: service(),
-  wizard: service(),
   beforeModel() {
     return this._super().then(() => {
-      return this.get('version').fetchFeatures();
+      return this.version.fetchFeatures();
     });
   },
   model() {
@@ -27,18 +31,10 @@ export default ClusterRouteBase.extend({
 
   afterModel() {
     if (config.welcomeMessage) {
-      this.get('flashMessages').stickyInfo(config.welcomeMessage);
+      this.flashMessages.info(config.welcomeMessage, {
+        sticky: true,
+        priority: 300,
+      });
     }
-  },
-  activate() {
-    this.get('wizard').set('initEvent', 'LOGIN');
-    this.get('wizard').transitionTutorialMachine(this.get('wizard.currentState'), 'TOLOGIN');
-  },
-  actions: {
-    willTransition(transition) {
-      if (transition.targetName !== this.routeName) {
-        this.get('wizard').transitionTutorialMachine(this.get('wizard.currentState'), 'INITDONE');
-      }
-    },
   },
 });

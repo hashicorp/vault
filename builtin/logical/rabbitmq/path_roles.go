@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package rabbitmq
 
 import (
@@ -13,6 +16,10 @@ import (
 func pathListRoles(b *backend) *framework.Path {
 	return &framework.Path{
 		Pattern: "roles/?$",
+		DisplayAttrs: &framework.DisplayAttributes{
+			OperationPrefix: operationPrefixRabbitMQ,
+			OperationSuffix: "roles",
+		},
 		Callbacks: map[logical.Operation]framework.OperationFunc{
 			logical.ListOperation: b.pathRoleList,
 		},
@@ -24,20 +31,24 @@ func pathListRoles(b *backend) *framework.Path {
 func pathRoles(b *backend) *framework.Path {
 	return &framework.Path{
 		Pattern: "roles/" + framework.GenericNameRegex("name"),
+		DisplayAttrs: &framework.DisplayAttributes{
+			OperationPrefix: operationPrefixRabbitMQ,
+			OperationSuffix: "role",
+		},
 		Fields: map[string]*framework.FieldSchema{
-			"name": &framework.FieldSchema{
+			"name": {
 				Type:        framework.TypeString,
 				Description: "Name of the role.",
 			},
-			"tags": &framework.FieldSchema{
+			"tags": {
 				Type:        framework.TypeString,
 				Description: "Comma-separated list of tags for this role.",
 			},
-			"vhosts": &framework.FieldSchema{
+			"vhosts": {
 				Type:        framework.TypeString,
 				Description: "A map of virtual hosts to permissions.",
 			},
-			"vhost_topics": &framework.FieldSchema{
+			"vhost_topics": {
 				Type:        framework.TypeString,
 				Description: "A nested map of virtual hosts and exchanges to topic permissions.",
 			},

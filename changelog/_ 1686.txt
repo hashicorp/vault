@@ -1,0 +1,3 @@
+```release-note:feature
+kmip (enterprise): Use entropy augmentation to generate kmip certificates
+```

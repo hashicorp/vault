@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package listenerutil
 
 import (
@@ -11,9 +14,9 @@ import (
 	"strconv"
 
 	"github.com/hashicorp/errwrap"
+	"github.com/hashicorp/go-secure-stdlib/reloadutil"
+	"github.com/hashicorp/go-secure-stdlib/tlsutil"
 	"github.com/hashicorp/vault/internalshared/configutil"
-	"github.com/hashicorp/vault/internalshared/reloadutil"
-	"github.com/hashicorp/vault/sdk/helper/tlsutil"
 	"github.com/jefferai/isbadcipher"
 	"github.com/mitchellh/cli"
 )
@@ -75,7 +78,8 @@ func UnixSocketListener(path string, unixSocketsConfig *UnixSocketsConfig) (net.
 func TLSConfig(
 	l *configutil.Listener,
 	props map[string]string,
-	ui cli.Ui) (*tls.Config, reloadutil.ReloadFunc, error) {
+	ui cli.Ui,
+) (*tls.Config, reloadutil.ReloadFunc, error) {
 	props["tls"] = "disabled"
 
 	if l.TLSDisable {
@@ -96,25 +100,37 @@ func TLSConfig(
 				}
 			}
 		}
-		return nil, nil, errwrap.Wrapf("error loading TLS cert: {{err}}", err)
+		return nil, nil, fmt.Errorf("error loading TLS cert: %w", err)
 	}
 
 PASSPHRASECORRECT:
 	tlsConf := &tls.Config{
-		GetCertificate:           cg.GetCertificate,
-		NextProtos:               []string{"h2", "http/1.1"},
-		ClientAuth:               tls.RequestClientCert,
-		PreferServerCipherSuites: l.TLSPreferServerCipherSuites,
+		GetCertificate: cg.GetCertificate,
+		NextProtos:     []string{"h2", "http/1.1"},
+		ClientAuth:     tls.RequestClientCert,
 	}
 
 	if l.TLSMinVersion == "" {
 		l.TLSMinVersion = "tls12"
 	}
 
+	if l.TLSMaxVersion == "" {
+		l.TLSMaxVersion = "tls13"
+	}
+
 	var ok bool
 	tlsConf.MinVersion, ok = tlsutil.TLSLookup[l.TLSMinVersion]
 	if !ok {
 		return nil, nil, fmt.Errorf("'tls_min_version' value %q not supported, please specify one of [tls10,tls11,tls12,tls13]", l.TLSMinVersion)
+	}
+
+	tlsConf.MaxVersion, ok = tlsutil.TLSLookup[l.TLSMaxVersion]
+	if !ok {
+		return nil, nil, fmt.Errorf("'tls_max_version' value %q not supported, please specify one of [tls10,tls11,tls12,tls13]", l.TLSMaxVersion)
+	}
+
+	if tlsConf.MaxVersion < tlsConf.MinVersion {
+		return nil, nil, fmt.Errorf("'tls_max_version' must be greater than or equal to 'tls_min_version'")
 	}
 
 	if len(l.TLSCipherSuites) > 0 {
@@ -129,7 +145,7 @@ PASSPHRASECORRECT:
 				// Get the name of the current cipher.
 				cipherStr, err := tlsutil.GetCipherName(cipher)
 				if err != nil {
-					return nil, nil, errwrap.Wrapf("invalid value for 'tls_cipher_suites': {{err}}", err)
+					return nil, nil, fmt.Errorf("invalid value for 'tls_cipher_suites': %w", err)
 				}
 				badCiphers = append(badCiphers, cipherStr)
 			}
@@ -154,7 +170,7 @@ Please see https://tools.ietf.org/html/rfc7540#appendix-A for further informatio
 			caPool := x509.NewCertPool()
 			data, err := ioutil.ReadFile(l.TLSClientCAFile)
 			if err != nil {
-				return nil, nil, errwrap.Wrapf("failed to read tls_client_ca_file: {{err}}", err)
+				return nil, nil, fmt.Errorf("failed to read tls_client_ca_file: %w", err)
 			}
 
 			if !caPool.AppendCertsFromPEM(data) {

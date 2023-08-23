@@ -1,0 +1,4 @@
+```release-note:bug
+api: Fixes CORS API methods that were outdated and invalid
+```
+

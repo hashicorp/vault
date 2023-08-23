@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package userpass
 
 import (
@@ -5,10 +8,10 @@ import (
 	"reflect"
 	"testing"
 
+	stepwise "github.com/hashicorp/vault-testing-stepwise"
+	dockerEnvironment "github.com/hashicorp/vault-testing-stepwise/environments/docker"
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/sdk/helper/policyutil"
-	"github.com/hashicorp/vault/sdk/testing/stepwise"
-	dockerEnvironment "github.com/hashicorp/vault/sdk/testing/stepwise/environments/docker"
 	"github.com/mitchellh/mapstructure"
 )
 
@@ -16,7 +19,7 @@ func TestAccBackend_stepwise_UserCrud(t *testing.T) {
 	customPluginName := "my-userpass"
 	envOptions := &stepwise.MountOptions{
 		RegistryName:    customPluginName,
-		PluginType:      stepwise.PluginTypeCredential,
+		PluginType:      api.PluginTypeCredential,
 		PluginName:      "userpass",
 		MountPathPrefix: customPluginName,
 	}
@@ -32,7 +35,8 @@ func TestAccBackend_stepwise_UserCrud(t *testing.T) {
 }
 
 func testAccStepwiseUser(
-	t *testing.T, name string, password string, policies string) stepwise.Step {
+	t *testing.T, name string, password string, policies string,
+) stepwise.Step {
 	return stepwise.Step{
 		Operation: stepwise.UpdateOperation,
 		Path:      "users/" + name,

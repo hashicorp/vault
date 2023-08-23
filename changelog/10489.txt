@@ -1,0 +1,3 @@
+```release-note:improvement
+core: Added active since timestamp to the status output of active nodes.
+```

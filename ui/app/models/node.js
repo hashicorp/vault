@@ -1,10 +1,14 @@
-import { alias, and, equal } from '@ember/object/computed';
-import DS from 'ember-data';
-const { attr } = DS;
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
 
-export default DS.Model.extend({
+import Model, { attr } from '@ember-data/model';
+import { alias, and, equal } from '@ember/object/computed';
+
+export default Model.extend({
   name: attr('string'),
-  //https://www.vaultproject.io/docs/http/sys-health.html
+  // https://developer.hashicorp.com/vault/api-docs/system/health
   initialized: attr('boolean'),
   sealed: attr('boolean'),
   isSealed: alias('sealed'),
@@ -15,8 +19,8 @@ export default DS.Model.extend({
 
   isLeader: and('initialized', 'isActive'),
 
-  //https://www.vaultproject.io/docs/http/sys-seal-status.html
-  //The "t" parameter is the threshold, and "n" is the number of shares.
+  // https://developer.hashicorp.com/vault/api-docs/system/seal-status
+  // The "t" parameter is the threshold, and "n" is the number of shares.
   t: attr('number'),
   n: attr('number'),
   progress: attr('number'),
@@ -25,8 +29,9 @@ export default DS.Model.extend({
   version: attr('string'),
   type: attr('string'),
   storageType: attr('string'),
+  hcpLinkStatus: attr('string'),
 
-  //https://www.vaultproject.io/docs/http/sys-leader.html
+  // https://developer.hashicorp.com/vault/api-docs/system/leader
   haEnabled: attr('boolean'),
   isSelf: attr('boolean'),
   leaderAddress: attr('string'),

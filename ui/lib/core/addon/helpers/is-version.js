@@ -1,3 +1,9 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
+/* eslint-disable ember/no-observers */
 import { inject as service } from '@ember/service';
 import { assert } from '@ember/debug';
 import Helper from '@ember/component/helper';
@@ -5,8 +11,7 @@ import { observer } from '@ember/object';
 
 export default Helper.extend({
   version: service(),
-  /* eslint-disable-next-line ember/no-observers */
-  onFeaturesChange: observer('version.version', function() {
+  onFeaturesChange: observer('version.version', function () {
     this.recompute();
   }),
   compute([sku]) {

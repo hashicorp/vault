@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package dbutil
 
 import (
@@ -58,5 +61,4 @@ func TestStatementCompatibilityHelper(t *testing.T) {
 	if !reflect.DeepEqual(expectedStatements3, StatementCompatibilityHelper(statements3)) {
 		t.Fatalf("mismatch: %#v, %#v", expectedStatements3, statements3)
 	}
-
 }

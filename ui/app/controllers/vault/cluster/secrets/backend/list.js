@@ -1,10 +1,16 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
+import { or } from '@ember/object/computed';
 import { computed } from '@ember/object';
 import { inject as service } from '@ember/service';
 import Controller from '@ember/controller';
-import utils from 'vault/lib/key-utils';
 import BackendCrumbMixin from 'vault/mixins/backend-crumb';
 import WithNavToNearestAncestor from 'vault/mixins/with-nav-to-nearest-ancestor';
 import ListController from 'core/mixins/list-controller';
+import { keyIsFolder } from 'core/utils/key-utils';
 
 export default Controller.extend(ListController, BackendCrumbMixin, WithNavToNearestAncestor, {
   flashMessages: service(),
@@ -12,13 +18,11 @@ export default Controller.extend(ListController, BackendCrumbMixin, WithNavToNea
 
   tab: '',
 
-  filterIsFolder: computed('filter', function() {
-    return !!utils.keyIsFolder(this.get('filter'));
+  filterIsFolder: computed('filter', function () {
+    return !!keyIsFolder(this.filter);
   }),
 
-  isConfigurableTab: computed('isCertTab', 'isConfigure', function() {
-    return this.get('isCertTab') || this.get('isConfigure');
-  }),
+  isConfigurableTab: or('isCertTab', 'isConfigure'),
 
   actions: {
     chooseAction(action) {
@@ -30,9 +34,9 @@ export default Controller.extend(ListController, BackendCrumbMixin, WithNavToNea
       this.set('loading-' + item.id, true);
       backend
         .saveZeroAddressConfig()
-        .catch(e => {
+        .catch((e) => {
           item.set('zeroAddress', false);
-          this.get('flashMessages').danger(e.message);
+          this.flashMessages.danger(e.message);
         })
         .finally(() => {
           this.set('loading-' + item.id, false);
@@ -41,13 +45,19 @@ export default Controller.extend(ListController, BackendCrumbMixin, WithNavToNea
 
     delete(item, type) {
       const name = item.id;
-      item.destroyRecord().then(() => {
-        this.get('flashMessages').success(`${name} was successfully deleted.`);
-        this.send('reload');
-        if (type === 'secret') {
-          this.navToNearestAncestor.perform(name);
-        }
-      });
+      item
+        .destroyRecord()
+        .then(() => {
+          this.flashMessages.success(`${name} was successfully deleted.`);
+          this.send('reload');
+          if (type === 'secret') {
+            this.navToNearestAncestor.perform(name);
+          }
+        })
+        .catch((e) => {
+          const error = e.errors ? e.errors.join('. ') : e.message;
+          this.flashMessages.danger(error);
+        });
     },
   },
 });

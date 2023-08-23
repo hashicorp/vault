@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package awsauth
 
 import (
@@ -17,6 +20,11 @@ func (b *backend) pathListSts() *framework.Path {
 	return &framework.Path{
 		Pattern: "config/sts/?",
 
+		DisplayAttrs: &framework.DisplayAttributes{
+			OperationPrefix: operationPrefixAWS,
+			OperationSuffix: "sts-role-relationships",
+		},
+
 		Operations: map[logical.Operation]framework.OperationHandler{
 			logical.ListOperation: &framework.PathOperation{
 				Callback: b.pathStsList,
@@ -31,6 +39,12 @@ func (b *backend) pathListSts() *framework.Path {
 func (b *backend) pathConfigSts() *framework.Path {
 	return &framework.Path{
 		Pattern: "config/sts/" + framework.GenericNameRegex("account_id"),
+
+		DisplayAttrs: &framework.DisplayAttributes{
+			OperationPrefix: operationPrefixAWS,
+			OperationSuffix: "sts-role",
+		},
+
 		Fields: map[string]*framework.FieldSchema{
 			"account_id": {
 				Type: framework.TypeString,
@@ -250,6 +264,7 @@ by assumption of these STS roles.
 The environment in which the Vault server resides must have access to assume the
 given STS roles.
 `
+
 const pathListStsHelpSyn = `
 List all the AWS account/STS role relationships registered with Vault.
 `

@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package command
 
 import (
@@ -14,8 +17,10 @@ import (
 	consulapi "github.com/hashicorp/consul/api"
 )
 
-var _ cli.Command = (*OperatorInitCommand)(nil)
-var _ cli.CommandAutocomplete = (*OperatorInitCommand)(nil)
+var (
+	_ cli.Command             = (*OperatorInitCommand)(nil)
+	_ cli.CommandAutocomplete = (*OperatorInitCommand)(nil)
+)
 
 type OperatorInitCommand struct {
 	*BaseCommand
@@ -38,8 +43,10 @@ type OperatorInitCommand struct {
 }
 
 const (
-	defKeyShares    = 5
-	defKeyThreshold = 3
+	defKeyShares         = 5
+	defKeyThreshold      = 3
+	defRecoveryShares    = 5
+	defRecoveryThreshold = 3
 )
 
 func (c *OperatorInitCommand) Synopsis() string {
@@ -55,10 +62,10 @@ Usage: vault operator init [options]
   same storage backend in HA mode, you only need to initialize one Vault to
   initialize the storage backend.
 
-  During initialization, Vault generates an in-memory master key and applies
-  Shamir's secret sharing algorithm to disassemble that master key into a
+  During initialization, Vault generates an in-memory root key and applies
+  Shamir's secret sharing algorithm to disassemble that root key into a
   configuration number of key shares such that a configurable subset of those
-  key shares must come together to regenerate the master key. These keys are
+  key shares must come together to regenerate the root key. These keys are
   often called "unseal keys" in Vault's documentation.
 
   This command cannot be run against an already-initialized Vault cluster.
@@ -94,16 +101,15 @@ func (c *OperatorInitCommand) Flags() *FlagSets {
 		Default: false,
 		Usage: "Print the current initialization status. An exit code of 0 means " +
 			"the Vault is already initialized. An exit code of 1 means an error " +
-			"occurred. An exit code of 2 means the mean is not initialized.",
+			"occurred. An exit code of 2 means the Vault is not initialized.",
 	})
 
 	f.IntVar(&IntVar{
 		Name:       "key-shares",
 		Aliases:    []string{"n"},
 		Target:     &c.flagKeyShares,
-		Default:    defKeyShares,
 		Completion: complete.PredictAnything,
-		Usage: "Number of key shares to split the generated master key into. " +
+		Usage: "Number of key shares to split the generated root key into. " +
 			"This is the number of \"unseal keys\" to generate.",
 	})
 
@@ -111,9 +117,8 @@ func (c *OperatorInitCommand) Flags() *FlagSets {
 		Name:       "key-threshold",
 		Aliases:    []string{"t"},
 		Target:     &c.flagKeyThreshold,
-		Default:    defKeyThreshold,
 		Completion: complete.PredictAnything,
-		Usage: "Number of key shares required to reconstruct the master key. " +
+		Usage: "Number of key shares required to reconstruct the root key. " +
 			"This must be less than or equal to -key-shares.",
 	})
 
@@ -122,7 +127,7 @@ func (c *OperatorInitCommand) Flags() *FlagSets {
 		Value:      (*pgpkeys.PubKeyFilesFlag)(&c.flagPGPKeys),
 		Completion: complete.PredictAnything,
 		Usage: "Comma-separated list of paths to files on disk containing " +
-			"public GPG keys OR a comma-separated list of Keybase usernames using " +
+			"public PGP keys OR a comma-separated list of Keybase usernames using " +
 			"the format \"keybase:<username>\". When supplied, the generated " +
 			"unseal keys will be encrypted and base64-encoded in the order " +
 			"specified in this list. The number of entries must match -key-shares, " +
@@ -134,7 +139,7 @@ func (c *OperatorInitCommand) Flags() *FlagSets {
 		Value:      (*pgpkeys.PubKeyFileFlag)(&c.flagRootTokenPGPKey),
 		Completion: complete.PredictAnything,
 		Usage: "Path to a file on disk containing a binary or base64-encoded " +
-			"public GPG key. This can also be specified as a Keybase username " +
+			"public PGP key. This can also be specified as a Keybase username " +
 			"using the format \"keybase:<username>\". When supplied, the generated " +
 			"root token will be encrypted and base64-encoded with the given public " +
 			"key.",
@@ -180,7 +185,6 @@ func (c *OperatorInitCommand) Flags() *FlagSets {
 	f.IntVar(&IntVar{
 		Name:       "recovery-shares",
 		Target:     &c.flagRecoveryShares,
-		Default:    5,
 		Completion: complete.PredictAnything,
 		Usage: "Number of key shares to split the recovery key into. " +
 			"This is only used in auto-unseal mode.",
@@ -189,7 +193,6 @@ func (c *OperatorInitCommand) Flags() *FlagSets {
 	f.IntVar(&IntVar{
 		Name:       "recovery-threshold",
 		Target:     &c.flagRecoveryThreshold,
-		Default:    3,
 		Completion: complete.PredictAnything,
 		Usage: "Number of key shares required to reconstruct the recovery key. " +
 			"This is only used in Auto Unseal mode.",
@@ -231,6 +234,47 @@ func (c *OperatorInitCommand) Run(args []string) int {
 	if c.flagStoredShares != -1 {
 		c.UI.Warn("-stored-shares has no effect and will be removed in Vault 1.3.\n")
 	}
+	client, err := c.Client()
+	if err != nil {
+		c.UI.Error(err.Error())
+		return 2
+	}
+
+	// -output-curl string returns curl command for seal status
+	// setting this to false and then setting actual value after reading seal status
+	currentOutputCurlString := client.OutputCurlString()
+	client.SetOutputCurlString(false)
+	// -output-policy string returns minimum required policy HCL for seal status
+	// setting this to false and then setting actual value after reading seal status
+	outputPolicy := client.OutputPolicy()
+	client.SetOutputPolicy(false)
+
+	// Set defaults based on use of auto unseal seal
+	sealInfo, err := client.Sys().SealStatus()
+	if err != nil {
+		c.UI.Error(err.Error())
+		return 2
+	}
+
+	client.SetOutputCurlString(currentOutputCurlString)
+	client.SetOutputPolicy(outputPolicy)
+
+	switch sealInfo.RecoverySeal {
+	case true:
+		if c.flagRecoveryShares == 0 {
+			c.flagRecoveryShares = defRecoveryShares
+		}
+		if c.flagRecoveryThreshold == 0 {
+			c.flagRecoveryThreshold = defRecoveryThreshold
+		}
+	default:
+		if c.flagKeyShares == 0 {
+			c.flagKeyShares = defKeyShares
+		}
+		if c.flagKeyThreshold == 0 {
+			c.flagKeyThreshold = defKeyThreshold
+		}
+	}
 
 	// Build the initial init request
 	initReq := &api.InitRequest{
@@ -242,12 +286,6 @@ func (c *OperatorInitCommand) Run(args []string) int {
 		RecoveryShares:    c.flagRecoveryShares,
 		RecoveryThreshold: c.flagRecoveryThreshold,
 		RecoveryPGPKeys:   c.flagRecoveryPGPKeys,
-	}
-
-	client, err := c.Client()
-	if err != nil {
-		c.UI.Error(err.Error())
-		return 2
 	}
 
 	// Check auto mode
@@ -445,8 +483,8 @@ func (c *OperatorInitCommand) init(client *api.Client, req *api.InitRequest) int
 
 		c.UI.Output("")
 		c.UI.Output(wrapAtLength(fmt.Sprintf(
-			"Vault does not store the generated master key. Without at least %d "+
-				"key to reconstruct the master key, Vault will remain permanently "+
+			"Vault does not store the generated root key. Without at least %d "+
+				"keys to reconstruct the root key, Vault will remain permanently "+
 				"sealed!",
 			req.SecretThreshold)))
 
@@ -467,14 +505,6 @@ func (c *OperatorInitCommand) init(client *api.Client, req *api.InitRequest) int
 				"Please securely distribute the key shares printed above.",
 			req.RecoveryShares,
 			req.RecoveryThreshold)))
-	}
-
-	if len(resp.RecoveryKeys) > 0 && (req.SecretShares != defKeyShares || req.SecretThreshold != defKeyThreshold) {
-		c.UI.Output("")
-		c.UI.Warn(wrapAtLength(
-			"WARNING! -key-shares and -key-threshold is ignored when " +
-				"Auto Unseal is used. Use -recovery-shares and -recovery-threshold instead.",
-		))
 	}
 
 	return 0

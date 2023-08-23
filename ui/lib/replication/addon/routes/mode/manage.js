@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import { camelize } from '@ember/string';
 import { all } from 'rsvp';
 import { inject as service } from '@ember/service';
@@ -17,15 +22,15 @@ const pathForAction = (action, replicationMode, clusterMode) => {
 export default Route.extend({
   store: service(),
   model() {
-    const store = this.get('store');
+    const store = this.store;
     const model = this.modelFor('mode');
 
     const replicationMode = this.paramsFor('mode').replication_mode;
     const clusterMode = model.get(replicationMode).get('modeForUrl');
     const actions = replicationActionForMode([replicationMode, clusterMode]);
     return all(
-      actions.map(action => {
-        return store.findRecord('capabilities', pathForAction(action)).then(capability => {
+      actions.map((action) => {
+        return store.findRecord('capabilities', pathForAction(action)).then((capability) => {
           model.set(`can${camelize(action)}`, capability.get('canUpdate'));
         });
       })

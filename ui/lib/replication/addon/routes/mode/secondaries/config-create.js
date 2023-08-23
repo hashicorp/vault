@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import { hash } from 'rsvp';
 import { inject as service } from '@ember/service';
 import Base from '../../replication-base';
@@ -8,7 +13,7 @@ export default Base.extend({
   modelPath: 'model.config',
 
   findOrCreate(id) {
-    const flash = this.get('flashMessages');
+    const flash = this.flashMessages;
     return this.store
       .findRecord('path-filter-config', id)
       .then(() => {
@@ -21,7 +26,7 @@ export default Base.extend({
             );
           });
       })
-      .catch(e => {
+      .catch((e) => {
         if (e.httpStatus === 404) {
           return this.store.createRecord('path-filter-config', {
             id,
@@ -36,9 +41,9 @@ export default Base.extend({
 
   redirect(model) {
     const cluster = model.cluster;
-    const replicationMode = this.get('replicationMode');
+    const replicationMode = this.replicationMode;
     if (
-      !this.get('version.hasPerfReplication') ||
+      !this.version.hasPerfReplication ||
       replicationMode !== 'performance' ||
       !cluster.get(`${replicationMode}.isPrimary`) ||
       !cluster.get('canAddSecondary')

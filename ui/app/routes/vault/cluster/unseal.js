@@ -1,11 +1,8 @@
-import { inject as service } from '@ember/service';
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import ClusterRoute from './cluster-route-base';
 
-export default ClusterRoute.extend({
-  wizard: service(),
-
-  activate() {
-    this.get('wizard').set('initEvent', 'UNSEAL');
-    this.get('wizard').transitionTutorialMachine(this.get('wizard.currentState'), 'TOUNSEAL');
-  },
-});
+export default ClusterRoute.extend({});

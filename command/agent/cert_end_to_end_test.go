@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package agent
 
 import (
@@ -9,16 +12,14 @@ import (
 	"testing"
 	"time"
 
-	"github.com/hashicorp/vault/builtin/logical/pki"
-
 	hclog "github.com/hashicorp/go-hclog"
-
 	"github.com/hashicorp/vault/api"
 	vaultcert "github.com/hashicorp/vault/builtin/credential/cert"
-	"github.com/hashicorp/vault/command/agent/auth"
-	agentcert "github.com/hashicorp/vault/command/agent/auth/cert"
-	"github.com/hashicorp/vault/command/agent/sink"
-	"github.com/hashicorp/vault/command/agent/sink/file"
+	"github.com/hashicorp/vault/builtin/logical/pki"
+	"github.com/hashicorp/vault/command/agentproxyshared/auth"
+	agentcert "github.com/hashicorp/vault/command/agentproxyshared/auth/cert"
+	"github.com/hashicorp/vault/command/agentproxyshared/sink"
+	"github.com/hashicorp/vault/command/agentproxyshared/sink/file"
 	"github.com/hashicorp/vault/helper/dhutil"
 	vaulthttp "github.com/hashicorp/vault/http"
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
@@ -28,7 +29,6 @@ import (
 )
 
 func TestCertEndToEnd(t *testing.T) {
-
 	cases := []struct {
 		name             string
 		withCertRoleName bool
@@ -66,7 +66,6 @@ func TestCertEndToEnd(t *testing.T) {
 func testCertEndToEnd(t *testing.T, withCertRoleName, ahWrapping bool) {
 	logger := logging.NewVaultLogger(hclog.Trace)
 	coreConfig := &vault.CoreConfig{
-		Logger: logger,
 		CredentialBackends: map[string]logical.Factory{
 			"cert": vaultcert.Factory,
 		},
@@ -129,7 +128,7 @@ func testCertEndToEnd(t *testing.T, withCertRoleName, ahWrapping bool) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := ioutil.WriteFile(dhpath, mPubKey, 0600); err != nil {
+	if err := ioutil.WriteFile(dhpath, mPubKey, 0o600); err != nil {
 		t.Fatal(err)
 	} else {
 		logger.Trace("wrote dh param file", "path", dhpath)
@@ -306,7 +305,6 @@ func testCertEndToEnd(t *testing.T, withCertRoleName, ahWrapping bool) {
 func TestCertEndToEnd_CertsInConfig(t *testing.T) {
 	logger := logging.NewVaultLogger(hclog.Trace)
 	coreConfig := &vault.CoreConfig{
-		Logger: logger,
 		CredentialBackends: map[string]logical.Factory{
 			"cert": vaultcert.Factory,
 		},
@@ -426,7 +424,7 @@ func TestCertEndToEnd_CertsInConfig(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer os.Remove(leafCertFile.Name())
-	if _, err := leafCertFile.Write([]byte(leafCertPEM)); err != nil {
+	if _, err := leafCertFile.WriteString(leafCertPEM); err != nil {
 		t.Fatal(err)
 	}
 	if err := leafCertFile.Close(); err != nil {
@@ -438,7 +436,7 @@ func TestCertEndToEnd_CertsInConfig(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer os.Remove(leafCertKeyFile.Name())
-	if _, err := leafCertKeyFile.Write([]byte(leafCertKeyPEM)); err != nil {
+	if _, err := leafCertKeyFile.WriteString(leafCertKeyPEM); err != nil {
 		t.Fatal(err)
 	}
 	if err := leafCertKeyFile.Close(); err != nil {

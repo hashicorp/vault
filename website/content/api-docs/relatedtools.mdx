@@ -1,0 +1,40 @@
+---
+layout: api
+page_title: Related Tools
+description: Short list of third-party tools that work with or are related to Vault.
+---
+
+# Related tools
+
+## HashiCorp tools
+
+- [Vault Agent](/vault/docs/agent-and-proxy/agent) can render Vault secrets either to files or directly into a child process as environment variables using `consul-template` templating syntax
+- [Vault Proxy](/vault/docs/agent-and-proxy/proxy) acts as an API Proxy for Vault, and can optionally allow or force interacting clients to use its automatically authenticated token
+- [Terraform Vault Provider](https://registry.terraform.io/providers/hashicorp/vault/latest/docs) can read from, write to, and configure Vault from [HashiCorp Terraform](https://www.terraform.io/)
+- [consul-template](https://github.com/hashicorp/consul-template) is a template renderer, notifier, and supervisor for HashiCorp Consul and Vault data
+- [vault-ssh-helper](https://github.com/hashicorp/vault-ssh-helper) can be used to enable one-time passwords for SSH authentication via Vault
+
+## Third-Party tools
+
+The following list of tools is maintained by the community of Vault users; HashiCorp has not tested or approved them and makes no claims as to their suitability or security.
+
+- [HashiCorp Vault Jenkins plugin](https://plugins.jenkins.io/hashicorp-vault-plugin) - a Jenkins plugin for injecting Vault secrets into the build environment
+- [Spring Vault](http://projects.spring.io/spring-vault/) - a Java Spring project for working with Vault secrets
+- [vault-exec](https://github.com/kmanning/vault_exec) - a shell wrapper to execute arbitrary scripts using temporary AWS credentials managed by Vault
+- [pouch](https://github.com/tuenti/pouch) - A set of tools to manage provisioning of secrets on hosts based on the AppRole authentication method of Vault
+- [vault-aws-creds](https://github.com/jantman/vault-aws-creds) - Python helper to export Vault-provided temporary AWS creds into the environment
+- [goldfish](https://github.com/Caiyeon/goldfish) - A Vault UI panel written with VueJS and Vault native Go API.
+- [vault-migrator](https://github.com/nebtex/vault-migrator) - A tool to migrate data between different Vault storage mechanisms
+- [Cryptr](https://github.com/adobe/cryptr) - a desktop Vault UI for Mac, Windows and Linux
+- [sequelize-vault](https://github.com/linyows/sequelize-vault) - A Sequelize plugin for easily integrating Vault secrets.
+- [ansible-modules-hashivault](https://github.com/TerryHowe/ansible-modules-hashivault) - An Ansible module for configuring most things in Vault including secrets, backends and policies.
+- [Docker credential helper](https://github.com/morningconsult/docker-credential-vault-login) - A program that automatically reads Docker credentials from your Vault server and passes them to the Docker daemon to authenticate to your Docker registry when pulling an image
+- [Cruise Daytona](https://github.com/cruise-automation/daytona) - An alternative implementation of the Vault client CLI for services and containers. Its core features are the ability to automate authentication, fetching of secrets, and automated token renewal. Support for AWS, GCP, & Kubernetes Vault Auth Backends.
+- [Vault-CRD](https://vault.koudingspawn.de/) - Synchronize secrets stored in HashiCorp Vault to Kubernetes Secrets for better GitOps without secrets stored in git manifest files.
+- [vsh](https://github.com/fishi0x01/vsh) - Interactive shell with tab-completion. Allows recursive operations on paths. Allows migration of secrets between both KV versions.
+- [vault-cli](https://github.com/IBM/vault-cli) - A yaml based automation tool that bootstraps Vault cluster(s) with the desired configuration (namespaces, endpoints, policies, roles, endpoint)
+- [vault-go](https://github.com/IBM/vault-go) - Helper Golang Vault types as Kubernetes Custom Resource Definitions (CRD)
+- [HashiBox](https://github.com/nunchistudio/hashibox) - Vagrant environment to simulate highly-available cloud with Consul, Nomad, Vault, and optional support for Waypoint. Community & Enterprise supported.
+- [vkv](https://github.com/FalcoSuessgott/vkv) - Recursively list key-values entries from Vaults KV2 engine in various formats.
+
+Want to add your own project, or one that you use? Additions are welcome via [pull requests](https://github.com/hashicorp/vault/blob/main/website/content/api-docs/relatedtools.mdx).

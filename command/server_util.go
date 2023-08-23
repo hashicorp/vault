@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package command
 
 import (
@@ -7,7 +10,18 @@ import (
 
 var (
 	adjustCoreConfigForEnt = adjustCoreConfigForEntNoop
+	storageSupportedForEnt = checkStorageTypeForEntNoop
 )
 
 func adjustCoreConfigForEntNoop(config *server.Config, coreConfig *vault.CoreConfig) {
+}
+
+var getFIPSInfoKey = getFIPSInfoKeyNoop
+
+func getFIPSInfoKeyNoop() string {
+	return ""
+}
+
+func checkStorageTypeForEntNoop(coreConfig *vault.CoreConfig) bool {
+	return true
 }

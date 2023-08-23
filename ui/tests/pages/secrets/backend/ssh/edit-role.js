@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import { Base } from '../create';
 import { clickable, visitable, create, fillable } from 'ember-cli-page-object';
 
@@ -7,17 +12,13 @@ export default create({
   visitEditRoot: visitable('/vault/secrets/:backend/edit'),
   keyType: fillable('[data-test-input="keyType"]'),
   defaultUser: fillable('[data-test-input="defaultUser"]'),
-  toggleMore: clickable('[data-test-toggle-more]'),
+  toggleMore: clickable('[data-test-toggle-group="Options"]'),
   name: fillable('[data-test-input="name"]'),
   CIDR: fillable('[data-test-input="cidrList"]'),
   save: clickable('[data-test-role-ssh-create]'),
 
   async createOTPRole(name) {
     await this.name(name);
-    await this.toggleMore()
-      .keyType('otp')
-      .defaultUser('admin')
-      .CIDR('0.0.0.0/0')
-      .save();
+    await this.toggleMore().keyType('otp').defaultUser('admin').CIDR('0.0.0.0/0').save();
   },
 });

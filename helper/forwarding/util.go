@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package forwarding
 
 import (
@@ -192,7 +195,7 @@ func NewRPCResponseWriter() *RPCResponseWriter {
 		body:       new(bytes.Buffer),
 		statusCode: 200,
 	}
-	//w.header.Set("Content-Type", "application/octet-stream")
+	// w.header.Set("Content-Type", "application/octet-stream")
 	return w
 }
 

@@ -1,0 +1,243 @@
+---
+layout: api
+page_title: OCI - Auth Methods - HTTP API
+description: This is the API documentation for the Vault OCI auth method plugin.
+---
+
+# OCI auth method (API)
+
+This is the API documentation for the Vault OCI auth method plugin. To
+learn more about the usage and operation, see the
+[Vault OCI auth method](/vault/docs/auth/oci).
+
+This documentation assumes the OCI method is mounted at the
+`/auth/oci` path in Vault. Since it is possible to enable auth methods at
+any location, please update your API calls accordingly.
+
+## Configure home tenancy method
+
+Configure your home tenancy in the Vault, so that only users or instances from your tenancy will be allowed to log into Vault, through the OCI Auth method.
+
+| Method | Path               |
+| :----- | :----------------- |
+| `POST` | `/auth/oci/config` |
+
+### Parameters
+
+- `home_tenancy_id` `(string: <required>)` - The Tenancy OCID of your OCI account.
+
+### Sample payload
+
+```json
+{
+  "home_tenancy_id": "ocid1.tenancy.oc1..aaaaaaaah7zkvaffv26pzyauoe2zbnionqvhvsexamplee557wakiofi4ysgqq"
+}
+```
+
+### Sample request
+
+```shell-session
+$ curl \
+    --header "X-Vault-Token: ..." \
+    --request POST \
+    --data @payload.json \
+    http://127.0.0.1:8200/v1/auth/oci/config
+```
+
+## Read config
+
+Returns the previously configured config.
+
+| Method | Path               |
+| :----- | :----------------- |
+| `GET`  | `/auth/oci/config` |
+
+### Sample request
+
+```shell-session
+$ curl \
+    --header "X-Vault-Token: ..." \
+    http://127.0.0.1:8200/v1/auth/oci/config
+```
+
+### Sample response
+
+```json
+{
+  "data": {
+    "home_tenancy_id": "ocid1.tenancy.oc1..aaaaaaaah7zkvaffv26pzyauoe2zbnionqvhvsexamplee557wakiofi4ysgqq"
+  }
+}
+```
+
+## Create/Update role
+
+Create a Vault administrator role in the OCI Auth method.
+
+| Method | Path                   |
+| :----- | :--------------------- |
+| `POST` | `/auth/oci/role/:name` |
+
+### Parameters
+
+- `name` `(string: <required>)` - Name of the role.
+- `ocid_list` `(string: <required>)` - A comma separated list of Group or Dynamic Group OCIDs that can take this role.
+
+@include 'tokenfields.mdx'
+
+### Sample payload
+
+```json
+{
+  "ocid_list": "ocid1.group.oc1..aaaaaaaaiqnblimpvmegkqh3bxilrdvjobr7qd223g275idcqhexamplefq,ocid1.dynamicgroup.oc1..aaaaaaaa5hmfyrdaxvmt52ekju5n7ffamn2pdvxaq6esb2vzzoduexamplea",
+  "token_policies": ["dev", "prod"],
+  "token_ttl": 1800
+}
+```
+
+### Sample request
+
+```shell-session
+$ curl \
+    --header "X-Vault-Token: ..." \
+    --request POST \
+    --data @payload.json \
+    http://127.0.0.1:8200/v1/auth/oci/role/devrole
+```
+
+## Read role
+
+Returns the previously registered role configuration.
+
+| Method | Path                   |
+| :----- | :--------------------- |
+| `GET`  | `/auth/oci/role/:name` |
+
+### Parameters
+
+- `name` `(string: <required>)` - Name of the role.
+
+### Sample request
+
+```shell-session
+$ curl \
+    --header "X-Vault-Token: ..." \
+    http://127.0.0.1:8200/v1/auth/oci/role/devrole
+```
+
+### Sample response
+
+```json
+{
+  "data": {
+    "ocid_list": [
+      "ocid1.group.oc1..aaaaaaaaiqnblimpvmegkqh3bxilrdvjobr7qd223g275idcqhexamplefq",
+      "ocid1.dynamicgroup.oc1..aaaaaaaa5hmfyrdaxvmt52ekju5n7ffamn2pdvxaq6esb2vzzoduexamplea"
+    ],
+    "token_ttl": 1800,
+    "token_policies": ["dev", "prod"]
+  }
+}
+```
+
+## List roles
+
+Lists all the roles that are registered with the auth method.
+
+| Method | Path                       |
+| :----- | :------------------------- |
+| `LIST` | `/auth/oci/role`           |
+| `GET`  | `/auth/oci/role?list=true` |
+
+### Sample request
+
+```shell-session
+$ curl \
+    --header "X-Vault-Token: ..." \
+    --request LIST \
+    http://127.0.0.1:8200/v1/auth/oci/role
+```
+
+### Sample response
+
+```json
+{
+  "data": {
+    "keys": ["devrole", "prodrole"]
+  }
+}
+```
+
+## Delete role
+
+Deletes the previously registered role.
+
+| Method   | Path                   |
+| :------- | :--------------------- |
+| `DELETE` | `/auth/oci/role/:role` |
+
+### Parameters
+
+- `role` `(string: <required>)` - Name of the role.
+
+### Sample request
+
+```shell-session
+$ curl \
+    --header "X-Vault-Token: ..." \
+    --request DELETE \
+    http://127.0.0.1:8200/v1/auth/oci/role/devrole
+```
+
+## Login
+
+Fetch a token. This endpoint takes signed request headers and
+a role name for some entity. It verifies the signed request headers to authenticate that
+entity and then authorizes the entity for the given role.
+
+| Method | Path                    |
+| :----- | :---------------------- |
+| `POST` | `/auth/oci/login/:role` |
+
+### Parameters
+
+- `role` `(string: <required>)` - Name of the role against which the login is being attempted.
+- `request_headers` `(list: [])` - Signed request headers for authenticating. For details on signing, see [signing the request](https://docs.cloud.oracle.com/iaas/Content/API/Concepts/signingrequests.htm)
+
+### Sample payload
+
+```json
+{
+  "request_headers": {
+    "date": ["Fri, 22 Aug 2019 21:02:19 GMT"],
+    "(request-target)": ["get /v1/auth/oci/login/devrole"],
+    "host": ["127.0.0.1"],
+    "content-type": ["application/json"],
+    "authorization": [
+      "Signature algorithm=\"rsa-sha256\",headers=\"date (request-target) host\",keyId=\"ocid1.tenancy.oc1..aaaaaaaaba3pv6wkcr4jqae5f15p2b2m2yt2j6rx32uzr4h25vqstifsfdsq/ocid1.user.oc1..aaaaaaaat5nvwcna5j6aqzjcaty5eqbb6qt2jvpkanghtgdaqedqw3rynjq/73:61:a2:21:67:e0:df:be:7e:4b:93:1e:15:98:a5:b7\",signature=\"GBas7grhyrhSKHP6AVIj/h5/Vp8bd/peM79H9Wv8kjoaCivujVXlpbKLjMPeDUhxkFIWtTtLBj3sUzaFj34XE6YZAHc9r2DmE4pMwOAy/kiITcZxa1oHPOeRheC0jP2dqbTll8fmTZVwKZOKHYPtrLJIJQHJjNvxFWeHQjMaR7M=\",version=\"1\""
+    ]
+  }
+}
+```
+
+### Sample request
+
+```shell-session
+$ curl \
+    --request POST \
+    --data @payload.json \
+    http://127.0.0.1:8200/v1/auth/oci/login/devrole
+```
+
+### Sample response
+
+```json
+{
+  "auth": {
+    "token": "62b8ssf9-529c-6b26-e0b8-045fcdb4",
+    "token_accessor": "afaff6d0-be3d-c8d2-b0d7-2676sss0d9b4",
+    "token_policies": ["dev"],
+    "token_duration": 1800
+  }
+}
+```

@@ -1,4 +1,7 @@
-// +build foundationdb
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
+//go:build foundationdb
 
 package foundationdb
 
@@ -10,7 +13,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/hashicorp/errwrap"
 	log "github.com/hashicorp/go-hclog"
 	uuid "github.com/hashicorp/go-uuid"
 
@@ -25,12 +27,12 @@ import (
 
 func connectToFoundationDB(clusterFile string) (*fdb.Database, error) {
 	if err := fdb.APIVersion(520); err != nil {
-		return nil, errwrap.Wrapf("failed to set FDB API version: {{err}}", err)
+		return nil, fmt.Errorf("failed to set FDB API version: %w", err)
 	}
 
 	db, err := fdb.Open(clusterFile, []byte("DB"))
 	if err != nil {
-		return nil, errwrap.Wrapf("failed to open database: {{err}}", err)
+		return nil, fmt.Errorf("failed to open database: %w", err)
 	}
 
 	return &db, nil
@@ -39,11 +41,11 @@ func connectToFoundationDB(clusterFile string) (*fdb.Database, error) {
 func cleanupTopDir(clusterFile, topDir string) error {
 	db, err := connectToFoundationDB(clusterFile)
 	if err != nil {
-		return errwrap.Wrapf("could not connect to FDB for cleanup: {{err}}", err)
+		return fmt.Errorf("could not connect to FDB for cleanup: %w", err)
 	}
 
 	if _, err := directory.Root().Remove(db, []string{topDir}); err != nil {
-		return errwrap.Wrapf("could not remove directory: {{err}}", err)
+		return fmt.Errorf("could not remove directory: %w", err)
 	}
 
 	return nil
@@ -170,16 +172,16 @@ func prepareFoundationDBTestDirectory(t *testing.T, topDir string) (func(), stri
 		connectString := fmt.Sprintf("foundationdb:foundationdb@127.0.0.1:%s", resource.GetPort("4500/tcp"))
 
 		if err := tmpFile.Truncate(0); err != nil {
-			return errwrap.Wrapf("could not truncate cluster file: {{err}}", err)
+			return fmt.Errorf("could not truncate cluster file: %w", err)
 		}
 
 		_, err := tmpFile.WriteAt([]byte(connectString), 0)
 		if err != nil {
-			return errwrap.Wrapf("could not write cluster file: {{err}}", err)
+			return fmt.Errorf("could not write cluster file: %w", err)
 		}
 
 		if _, err := connectToFoundationDB(clusterFile); err != nil {
-			return errwrap.Wrapf("could not connect to FoundationDB after starting container: %s", err)
+			return fmt.Errorf("could not connect to FoundationDB after starting container: %s", err)
 		}
 
 		return nil

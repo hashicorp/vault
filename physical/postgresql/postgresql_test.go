@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package postgresql
 
 import (
@@ -10,8 +13,7 @@ import (
 	"github.com/hashicorp/vault/helper/testhelpers/postgresql"
 	"github.com/hashicorp/vault/sdk/helper/logging"
 	"github.com/hashicorp/vault/sdk/physical"
-
-	_ "github.com/lib/pq"
+	_ "github.com/jackc/pgx/v4/stdlib"
 )
 
 func TestPostgreSQLBackend(t *testing.T) {
@@ -43,7 +45,6 @@ func TestPostgreSQLBackend(t *testing.T) {
 		"table":          table,
 		"ha_enabled":     hae,
 	}, logger)
-
 	if err != nil {
 		t.Fatalf("Failed to create new backend: %v", err)
 	}
@@ -53,7 +54,6 @@ func TestPostgreSQLBackend(t *testing.T) {
 		"table":          table,
 		"ha_enabled":     hae,
 	}, logger)
-
 	if err != nil {
 		t.Fatalf("Failed to create new backend: %v", err)
 	}
@@ -109,7 +109,7 @@ func TestPostgreSQLBackendMaxIdleConnectionsParameter(t *testing.T) {
 	}
 	expectedErrStr := "failed parsing max_idle_connections parameter: strconv.Atoi: parsing \"bad param\": invalid syntax"
 	if err.Error() != expectedErrStr {
-		t.Errorf("Expected: \"%s\" but found \"%s\"", expectedErrStr, err.Error())
+		t.Errorf("Expected: %q but found %q", expectedErrStr, err.Error())
 	}
 }
 
@@ -119,7 +119,7 @@ func TestConnectionURL(t *testing.T) {
 		conf  map[string]string
 	}
 
-	var cases = map[string]struct {
+	cases := map[string]struct {
 		want  string
 		input input
 	}{
@@ -168,7 +168,7 @@ func TestConnectionURL(t *testing.T) {
 			got := connectionURL(tt.input.conf)
 
 			if got != tt.want {
-				t.Errorf("connectionURL(%s): want '%s', got '%s'", tt.input, tt.want, got)
+				t.Errorf("connectionURL(%s): want %q, got %q", tt.input, tt.want, got)
 			}
 		})
 	}
@@ -232,7 +232,7 @@ func attemptLockTTLTest(t *testing.T, ha physical.HABackend, tries int) bool {
 		}
 		if !held {
 			if tries < maxTries && time.Since(lockTime) > (time.Second*time.Duration(lockTTL)) {
-				//Our test environment is slow enough that we failed this, retry
+				// Our test environment is slow enough that we failed this, retry
 				return false
 			}
 			t.Fatalf("should be held")
@@ -278,7 +278,7 @@ func attemptLockTTLTest(t *testing.T, ha physical.HABackend, tries int) bool {
 		}
 		if !held {
 			if tries < maxTries && time.Since(lockTime) > (time.Second*time.Duration(lockTTL)) {
-				//Our test environment is slow enough that we failed this, retry
+				// Our test environment is slow enough that we failed this, retry
 				return false
 			}
 			t.Fatalf("should be held")
@@ -411,14 +411,13 @@ func setupDatabaseObjects(t *testing.T, logger log.Logger, pg *PostgreSQLBackend
 		t.Fatalf("Failed to create index: %v", err)
 	}
 
-	createHaTableSQL :=
-		" CREATE TABLE IF NOT EXISTS vault_ha_locks ( " +
-			" ha_key                                      TEXT COLLATE \"C\" NOT NULL, " +
-			" ha_identity                                 TEXT COLLATE \"C\" NOT NULL, " +
-			" ha_value                                    TEXT COLLATE \"C\", " +
-			" valid_until                                 TIMESTAMP WITH TIME ZONE NOT NULL, " +
-			" CONSTRAINT ha_key PRIMARY KEY (ha_key) " +
-			" ); "
+	createHaTableSQL := " CREATE TABLE IF NOT EXISTS vault_ha_locks ( " +
+		" ha_key                                      TEXT COLLATE \"C\" NOT NULL, " +
+		" ha_identity                                 TEXT COLLATE \"C\" NOT NULL, " +
+		" ha_value                                    TEXT COLLATE \"C\", " +
+		" valid_until                                 TIMESTAMP WITH TIME ZONE NOT NULL, " +
+		" CONSTRAINT ha_key PRIMARY KEY (ha_key) " +
+		" ); "
 
 	_, err = pg.client.Exec(createHaTableSQL)
 	if err != nil {

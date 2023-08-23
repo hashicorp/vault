@@ -1,10 +1,15 @@
-import Component from '@ember/component';
-import { computed } from '@ember/object';
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
+import Component from '@glimmer/component';
+import { tracked } from '@glimmer/tracking';
+import { action } from '@ember/object';
 import { capitalize } from 'vault/helpers/capitalize';
 import { humanize } from 'vault/helpers/humanize';
 import { dasherize } from 'vault/helpers/dasherize';
-import layout from '../templates/components/form-field';
-
+import { assert } from '@ember/debug';
 /**
  * @module FormField
  * `FormField` components are field elements associated with a particular model.
@@ -15,120 +20,168 @@ import layout from '../templates/components/form-field';
  *  <FormField data-test-field @attr={{attr}} @model={{this.model}} />
  * {{/each}}
  * ```
- *
- * @param [onChange=null] {Func} - Called whenever a value on the model changes via the component.
- * @param attr=null {Object} - This is usually derived from ember model `attributes` lookup, and all members of `attr.options` are optional.
- * @param model=null {DS.Model} - The Ember Data model that `attr` is defined on
- * @param [disabled=false] {Boolean} - whether the field is disabled
- * @param [showHelpText=true] {Boolean} - whether to show the tooltip with help text from OpenAPI
- * @param [subText] {String} - Text to be displayed below the label
+ * example attr object:
+ * attr = {
+ *   name: "foo", // name of attribute -- used to populate various fields and pull value from model
+ *   options: {
+ *     label: "Foo", // custom label to be shown, otherwise attr.name will be displayed
+ *     defaultValue: "", // default value to display if model value is not present
+ *     fieldValue: "bar", // used for value lookup on model over attr.name
+ *     editType: "ttl", type of field to use. List of editTypes:boolean, file, json, kv, optionalText, mountAccessor, password, radio, regex, searchSelect, stringArray, textarea, ttl, yield.
+ *     helpText: "This will be in a tooltip",
+ *     readOnly: true
+ *   },
+ *   type: "boolean" // type of attribute value -- string, boolean, etc.
+ * }
+ * @param {Object} attr - usually derived from ember model `attributes` lookup, and all members of `attr.options` are optional
+ * @param {Model} model - Ember Data model that `attr` is defined on
+ * @param {boolean} [disabled=false] - whether the field is disabled
+ * @param {boolean} [showHelpText=true] - whether to show the tooltip with help text from OpenAPI
+ * @param {string} [subText] - text to be displayed below the label
+ * @param {string} [mode] - used when editType is 'kv'
+ * @param {ModelValidations} [modelValidations] - Object of errors.  If attr.name is in object and has error message display in AlertInline.
+ * @callback onChangeCallback
+ * @param {onChangeCallback} [onChange] - called whenever a value on the model changes via the component
+ * @callback onKeyUpCallback
+ * @param {onKeyUpCallback} [onKeyUp] - function passed through into MaskedInput to handle validation. It is also handled for certain form-field types here in the action handleKeyUp.
  *
  */
 
-export default Component.extend({
-  layout,
-  'data-test-field': true,
-  classNames: ['field'],
-  disabled: false,
-  showHelpText: true,
-  subText: '',
+export default class FormFieldComponent extends Component {
+  emptyData = '{\n}';
+  shouldHideLabel = [
+    'boolean',
+    'file',
+    'json',
+    'kv',
+    'mountAccessor',
+    'optionalText',
+    'regex',
+    'searchSelect',
+    'stringArray',
+    'ttl',
+  ];
+  @tracked showInput = false;
 
-  onChange() {},
+  constructor() {
+    super(...arguments);
+    const { attr, model } = this.args;
+    const valuePath = attr.options?.fieldValue || attr.name;
+    assert(
+      'Form is attempting to modify an ID. Ember-data does not allow this.',
+      valuePath.toLowerCase() !== 'id'
+    );
+    const modelValue = model[valuePath];
+    this.showInput = !!modelValue;
+  }
 
-  /*
-   * @public
-   * @param Object
-   * in the form of
-   * {
-   *   name: "foo",
-   *   options: {
-   *     label: "Foo",
-   *     defaultValue: "",
-   *     editType: "ttl",
-   *     helpText: "This will be in a tooltip"
-   *   },
-   *   type: "boolean"
-   * }
-   *
-   */
-  attr: null,
+  get hideLabel() {
+    const { type, options } = this.args.attr;
+    if (type === 'boolean' || type === 'object' || options?.isSectionHeader) {
+      return true;
+    }
+    // falsey values render a <FormFieldLabel>
+    return this.shouldHideLabel.includes(options?.editType);
+  }
 
-  /*
-   * @private
-   * @param string
-   * Computed property used in the label element next to the form element
-   *
-   */
-  labelString: computed('attr.{name,options.label}', function() {
-    const label = this.get('attr.options.label');
-    const name = this.get('attr.name');
+  get disabled() {
+    return this.args.disabled || false;
+  }
+  get showHelpText() {
+    return this.args.showHelpText === false ? false : true;
+  }
+  get subText() {
+    return this.args.subText || '';
+  }
+  // used in the label element next to the form element
+  get labelString() {
+    const label = this.args.attr.options?.label || '';
     if (label) {
       return label;
     }
-    if (name) {
-      return capitalize([humanize([dasherize([name])])]);
+    if (this.args.attr.name) {
+      return capitalize([humanize([dasherize([this.args.attr.name])])]);
     }
-  }),
-
+    return '';
+  }
   // both the path to mutate on the model, and the path to read the value from
-  /*
-   * @private
-   * @param string
-   *
-   * Computed property used to set values on the passed model
-   *
-   */
-  valuePath: computed('attr.{name,options.fieldValue}', function() {
-    return this.get('attr.options.fieldValue') || this.get('attr.name');
-  }),
+  get valuePath() {
+    return this.args.attr.options?.fieldValue || this.args.attr.name;
+  }
+  get isReadOnly() {
+    const readonly = this.args.attr.options?.readOnly || false;
+    return readonly && this.args.mode === 'edit';
+  }
+  get validationError() {
+    const validations = this.args.modelValidations || {};
+    const state = validations[this.valuePath];
+    return state && !state.isValid ? state.errors.join(' ') : null;
+  }
+  get validationWarning() {
+    const validations = this.args.modelValidations || {};
+    const state = validations[this.valuePath];
+    return state?.warnings?.length ? state.warnings.join(' ') : null;
+  }
 
-  model: null,
+  onChange() {
+    if (this.args.onChange) {
+      this.args.onChange(...arguments);
+    }
+  }
 
-  /*
-   * @private
-   * @param object
-   *
-   * Used by the pgp-file component when an attr is editType of 'file'
-   */
-  file: computed(function() {
-    return { value: '' };
-  }),
-  emptyData: '{\n}',
+  @action
+  setFile(keyFile) {
+    const path = this.valuePath;
+    const { value } = keyFile;
+    this.args.model.set(path, value);
+    this.onChange(path, value);
+  }
+  @action
+  setAndBroadcast(value) {
+    this.args.model.set(this.valuePath, value);
+    this.onChange(this.valuePath, value);
+  }
+  @action
+  setAndBroadcastBool(trueVal, falseVal, event) {
+    const valueToSet = event.target.checked === true ? trueVal : falseVal;
+    this.setAndBroadcast(valueToSet);
+  }
+  @action
+  setAndBroadcastTtl(value) {
+    const alwaysSendValue = this.valuePath === 'expiry' || this.valuePath === 'safetyBuffer';
+    const valueToSet = value.enabled === true || alwaysSendValue ? `${value.seconds}s` : 0;
+    this.setAndBroadcast(`${valueToSet}`);
+  }
+  @action
+  codemirrorUpdated(isString, value, codemirror) {
+    codemirror.performLint();
+    const hasErrors = codemirror.state.lint.marked.length > 0;
+    const valToSet = isString ? value : JSON.parse(value);
 
-  actions: {
-    setFile(_, keyFile) {
-      const path = this.get('valuePath');
-      const { value } = keyFile;
-      this.get('model').set(path, value);
-      this.get('onChange')(path, value);
-      this.set('file', keyFile);
-    },
-
-    setAndBroadcast(path, value) {
-      this.get('model').set(path, value);
-      this.get('onChange')(path, value);
-    },
-
-    setAndBroadcastBool(path, trueVal, falseVal, value) {
-      let valueToSet = value === true ? trueVal : falseVal;
-      this.send('setAndBroadcast', path, valueToSet);
-    },
-
-    setAndBroadcastTtl(path, value) {
-      const alwaysSendValue = path === 'expiry' || path === 'safetyBuffer';
-      let valueToSet = value.enabled === true || alwaysSendValue ? `${value.seconds}s` : 0;
-      this.send('setAndBroadcast', path, `${valueToSet}`);
-    },
-
-    codemirrorUpdated(path, isString, value, codemirror) {
-      codemirror.performLint();
-      const hasErrors = codemirror.state.lint.marked.length > 0;
-      let valToSet = isString ? value : JSON.parse(value);
-
-      if (!hasErrors) {
-        this.get('model').set(path, valToSet);
-        this.get('onChange')(path, valToSet);
-      }
-    },
-  },
-});
+    if (!hasErrors) {
+      this.args.model.set(this.valuePath, valToSet);
+      this.onChange(this.valuePath, valToSet);
+    }
+  }
+  @action
+  toggleShow() {
+    const value = !this.showInput;
+    this.showInput = value;
+    if (!value) {
+      this.setAndBroadcast(null);
+    }
+  }
+  @action
+  handleKeyUp(maybeEvent) {
+    const value = typeof maybeEvent === 'object' ? maybeEvent.target.value : maybeEvent;
+    if (!this.args.onKeyUp) {
+      return;
+    }
+    this.args.onKeyUp(this.valuePath, value);
+  }
+  @action
+  onChangeWithEvent(event) {
+    const prop = event.target.type === 'checkbox' ? 'checked' : 'value';
+    this.setAndBroadcast(event.target[prop]);
+  }
+}

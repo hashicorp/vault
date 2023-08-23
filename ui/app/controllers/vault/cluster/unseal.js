@@ -1,25 +1,30 @@
-import { inject as service } from '@ember/service';
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import Controller from '@ember/controller';
 
 export default Controller.extend({
-  wizard: service(),
+  showLicenseError: false,
 
   actions: {
-    transitionToCluster(resp) {
-      return this.get('model')
-        .reload()
-        .then(() => {
-          this.get('wizard').transitionTutorialMachine(this.get('wizard.currentState'), 'CONTINUE', resp);
-          return this.transitionToRoute('vault.cluster', this.get('model.name'));
-        });
+    transitionToCluster() {
+      return this.model.reload().then(() => {
+        return this.transitionToRoute('vault.cluster', this.model.name);
+      });
     },
 
-    setUnsealState(resp) {
-      this.get('wizard').set('componentState', resp);
+    reloadCluster() {
+      return this.model.reload();
     },
 
     isUnsealed(data) {
       return data.sealed === false;
+    },
+
+    handleLicenseError() {
+      this.set('showLicenseError', true);
     },
   },
 });

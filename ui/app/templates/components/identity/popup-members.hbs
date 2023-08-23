@@ -1,4 +1,9 @@
-{{#popup-menu name="member-edit-menu"}}
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
+<PopupMenu @name="member-edit-menu">
   <nav class="menu">
     <ul class="menu-list">
       <li class="action">
@@ -6,11 +11,11 @@
           @buttonClasses="link is-destroy"
           @confirmButtonText="Remove this group?"
           @confirmMessage="This may affect permissions for this group."
-          @onConfirmAction={{action "performTransaction" model groupArray memberId}}
+          @onConfirmAction={{action "performTransaction" this.model this.groupArray this.memberId}}
         >
           Remove
         </ConfirmAction>
       </li>
     </ul>
   </nav>
-{{/popup-menu}}
+</PopupMenu>

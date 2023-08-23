@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package consul
 
 import (
@@ -12,7 +15,7 @@ import (
 )
 
 func MakeConsulBackend(t testing.T, logger hclog.Logger) *vault.PhysicalBackendBundle {
-	cleanup, config := consul.PrepareTestContainer(t.(*realtesting.T), "")
+	cleanup, config := consul.PrepareTestContainer(t.(*realtesting.T), "", false, true)
 
 	consulConf := map[string]string{
 		"address":      config.Address(),

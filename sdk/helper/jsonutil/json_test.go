@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package jsonutil
 
 import (
@@ -40,7 +43,7 @@ func TestJSONUtil_CompressDecompressJSON(t *testing.T) {
 	if !reflect.DeepEqual(expected, actual) {
 		t.Fatalf("bad: expected: %#v\nactual: %#v", expected, actual)
 	}
-	for key, _ := range actual {
+	for key := range actual {
 		delete(actual, key)
 	}
 

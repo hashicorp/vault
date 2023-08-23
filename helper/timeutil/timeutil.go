@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package timeutil
 
 import (
@@ -5,6 +8,7 @@ import (
 	"fmt"
 	"strconv"
 	"strings"
+	"testing"
 	"time"
 )
 
@@ -126,4 +130,38 @@ func ParseTimeFromPath(path string) (time.Time, error) {
 func MonthsPreviousTo(months int, now time.Time) time.Time {
 	firstOfMonth := StartOfMonth(now.UTC())
 	return firstOfMonth.AddDate(0, -months, 0)
+}
+
+// Skip this test if too close to the end of a month!
+func SkipAtEndOfMonth(t *testing.T) {
+	t.Helper()
+
+	thisMonth := StartOfMonth(time.Now().UTC())
+	endOfMonth := EndOfMonth(thisMonth)
+	if endOfMonth.Sub(time.Now()) < 10*time.Minute {
+		t.Skip("too close to end of month")
+	}
+}
+
+// This interface allows unit tests to substitute in a simulated Clock.
+type Clock interface {
+	Now() time.Time
+	NewTicker(time.Duration) *time.Ticker
+	NewTimer(time.Duration) *time.Timer
+}
+
+type DefaultClock struct{}
+
+var _ Clock = (*DefaultClock)(nil)
+
+func (_ DefaultClock) Now() time.Time {
+	return time.Now()
+}
+
+func (_ DefaultClock) NewTicker(d time.Duration) *time.Ticker {
+	return time.NewTicker(d)
+}
+
+func (_ DefaultClock) NewTimer(d time.Duration) *time.Timer {
+	return time.NewTimer(d)
 }
