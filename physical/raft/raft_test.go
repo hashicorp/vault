@@ -157,17 +157,26 @@ func compareDBs(t *testing.T, boltDB1, boltDB2 *bolt.DB, dataOnly bool) error {
 
 func TestRaft_Backend(t *testing.T) {
 	t.Parallel()
-	testCases := map[string]string{
-		"use raft wal": "true",
-		"use boltdb":   "false",
+	testCases := []struct {
+		name   string
+		useWAL string
+	}{
+		{
+			name:   "use wal",
+			useWAL: "true",
+		},
+		{
+			name:   "use boltdb",
+			useWAL: "false",
+		},
 	}
 
-	for name, useRaftWal := range testCases {
-		t.Run(name, func(t *testing.T) {
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 			conf := map[string]string{
 				"trailing_logs":  "100",
-				raftWalConfigKey: useRaftWal,
+				raftWalConfigKey: tc.useWAL,
 			}
 
 			b, dir := GetRaftWithConfig(t, true, true, conf)

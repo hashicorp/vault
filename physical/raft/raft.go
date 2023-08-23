@@ -9,7 +9,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"io/fs"
 	"io/ioutil"
 	"math/rand"
 	"os"
@@ -416,8 +415,11 @@ func NewRaftBackend(conf map[string]string, logger log.Logger) (physical.Backend
 		}
 
 		// If the existing raft db exists from a previous use of BoltDB, warn about this and continue to use BoltDB
-		_, err := os.Stat(dbPath)
-		if useRaftWal && errors.Is(err, fs.ErrExist) {
+		raftDbExists, err := fileExists(dbPath)
+		if err != nil {
+			return nil, fmt.Errorf("failed to check if raft.db already exists: %w", err)
+		}
+		if useRaftWal && raftDbExists {
 			logger.Warn("raft is configured to use raft-wal for storage but existing raft.db detected. raft-wal config will be ignored.")
 			useRaftWal = false
 		}
@@ -428,10 +430,7 @@ func NewRaftBackend(conf map[string]string, logger log.Logger) (physical.Backend
 				return nil, err
 			}
 
-			// TODO: is this the right way to do metrics? Do they need to be connected to the core sink somehow?
 			mc := walmetrics.NewGoMetricsCollector([]string{"raft", "wal"}, nil, nil)
-
-			// TODO: do we need to expose any tunables here in the config?
 			wal, err := raftwal.Open(raftWalPath, raftwal.WithMetricsCollector(mc))
 			if err != nil {
 				return nil, fmt.Errorf("fail to open write-ahead-log: %w", err)
@@ -1984,6 +1983,20 @@ func (s sealer) Open(ctx context.Context, ct []byte) ([]byte, error) {
 	}
 
 	return s.access.Decrypt(ctx, &eblob, nil)
+}
+
+func fileExists(name string) (bool, error) {
+	_, err := os.Stat(name)
+	if err == nil {
+		// File exists!
+		return true, nil
+	}
+	if errors.Is(err, os.ErrNotExist) {
+		return false, nil
+	}
+	// We hit some other error trying to stat the file which leaves us in an
+	// unknown state so we can't proceed.
+	return false, err
 }
 
 // boltOptions returns a bolt.Options struct, suitable for passing to
