@@ -72,6 +72,37 @@ func SealWrapValue(ctx context.Context, access seal.Access, encrypt bool, entryV
 	}), nil
 }
 
+// UnsealWrapValue uses the seal Access to decrypt the wrappedEntryValue. It returns the decrypted value
+// and a flag indicating whether the wrappedEntryValue is current (according to Access.IsUpToDate).
+// migration is in progress.
+func UnsealWrapValue(ctx context.Context, access seal.Access, entryKey string, wrappedEntryValue *SealWrappedValue) (entryValue []byte, uptodate bool, err error) {
+	multiWrapValue := &seal.MultiWrapValue{
+		Generation: wrappedEntryValue.GetGeneration(),
+	}
+	for _, blobInfo := range wrappedEntryValue.GetSlots() {
+		// TODO(SEALHA): Why doesn't sealWrapValue() set ValuePath? Could it be a migration issue? Can we stop setting it?
+		blobInfoWithValuePath := &wrapping.BlobInfo{
+			ValuePath:  entryKey,
+			Ciphertext: blobInfo.Ciphertext,
+			Iv:         blobInfo.Iv,
+			Hmac:       blobInfo.Hmac,
+			KeyInfo:    blobInfo.KeyInfo,
+		}
+		multiWrapValue.Slots = append(multiWrapValue.Slots, blobInfoWithValuePath)
+	}
+
+	entryValue, uptodate, err = access.Decrypt(ctx, multiWrapValue, nil)
+	if err != nil {
+		if isSealOldKeyError(err) {
+			uptodate = false
+		} else {
+			return nil, false, err
+		}
+	}
+
+	return entryValue, uptodate, nil
+}
+
 // MarshalSealWrappedValue marshals a SealWrappedValue into a byte slice. If the seal wrapped value contains
 // a single wrapping.BlobInfo, the BlobInfo will be marshalled directly; otherwise the SealWrappedValue
 // will be.
