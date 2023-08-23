@@ -25,7 +25,7 @@ import (
 )
 
 const (
-	authTypeIAM   = "iam"
+	authTypeIAM   = "gcp_iam"
 	cloudSQLMySQL = "cloudsql-mysql"
 	driverMySQL   = "mysql"
 )
