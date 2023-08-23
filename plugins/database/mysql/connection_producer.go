@@ -290,6 +290,11 @@ func (c *mySQLConnectionProducer) addTLStoDSN() (connURL string, err error) {
 // rewriteProtocolForGCP rewrites the protocl in the DSN to contain the protocol name associated
 // with the dialer and therefore driver associated with the provided cloudsqlconn.DialerOpts
 func (c *mySQLConnectionProducer) rewriteProtocolForGCP(inDSN string) (string, error) {
+	if !c.isCloud {
+		// unchanged if not cloud
+		return inDSN, nil
+	}
+
 	config, err := mysql.ParseDSN(inDSN)
 	if err != nil {
 		return "", fmt.Errorf("unable to parse connectionURL: %s", err)
@@ -299,9 +304,7 @@ func (c *mySQLConnectionProducer) rewriteProtocolForGCP(inDSN string) (string, e
 		return "", fmt.Errorf("didn't update net name because it wasn't what we expected as a placeholder: %s", config.Net)
 	}
 
-	if c.isCloud {
-		config.Net = c.cloudDriverName
-	}
+	config.Net = c.cloudDriverName
 
 	return config.FormatDSN(), nil
 }
