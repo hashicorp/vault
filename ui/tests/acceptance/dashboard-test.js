@@ -413,7 +413,7 @@ module('Acceptance | landing page dashboard', function (hooks) {
     test('shows the replication card empty state in enterprise version', async function (assert) {
       await visit('/vault/dashboard');
       const version = this.owner.lookup('service:version');
-      assert.false(version.isEnterprise, 'vault is enterprise');
+      assert.true(version.isEnterprise, 'vault is enterprise');
       assert.dom(REPLICATION_CARD_SELECTORS.replicationEmptyState).exists();
       assert.dom(REPLICATION_CARD_SELECTORS.replicationEmptyStateTitle).hasText('Replication not set up');
       assert
