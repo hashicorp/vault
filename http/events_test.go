@@ -62,7 +62,7 @@ func TestEventsSubscribe(t *testing.T) {
 			pluginInfo := &logical.EventPluginInfo{
 				MountPath: "secret",
 			}
-			err = core.Events().SendInternal(namespace.RootContext(context.Background()), namespace.RootNamespace, pluginInfo, logical.EventType(eventType), &logical.EventData{
+			err = core.Events().SendEventInternal(namespace.RootContext(context.Background()), namespace.RootNamespace, pluginInfo, logical.EventType(eventType), &logical.EventData{
 				Id:        id,
 				Metadata:  nil,
 				EntityIds: nil,
