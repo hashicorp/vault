@@ -8,6 +8,7 @@ import (
 	"crypto/rand"
 	"errors"
 	"fmt"
+	"github.com/hashicorp/go-kms-wrapping/entropy/v2"
 	"io"
 	"os"
 	"regexp"
@@ -47,6 +48,11 @@ const (
 type Entropy struct {
 	Mode     EntropyMode
 	SealName string
+}
+
+type EntropySourcerInfo struct {
+	Sourcer entropy.Sourcer
+	Name    string
 }
 
 // KMS contains KMS configuration for the server
