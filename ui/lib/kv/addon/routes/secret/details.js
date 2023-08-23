@@ -31,18 +31,15 @@ export default class KvSecretDetailsRoute extends Route {
       return hash({
         ...parentModel,
         secret: this.store.queryRecord('kv/data', { backend, path, version: params.version }),
-        requestedVersion: params.version,
       });
     }
-    return {
-      ...parentModel,
-      requestedVersion: params.version,
-    };
+    return parentModel;
   }
 
   setupController(controller, resolvedModel) {
     super.setupController(controller, resolvedModel);
-    controller.set('version', resolvedModel.secret.version);
+    const { version } = this.paramsFor(this.routeName);
+    controller.set('version', resolvedModel.secret.version || version);
   }
 
   resetController(controller, isExiting) {

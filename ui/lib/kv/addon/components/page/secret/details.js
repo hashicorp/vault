@@ -106,6 +106,10 @@ export default class KvSecretDetails extends Component {
     }
   }
 
+  get version() {
+    return this.args.secret.version || this.router.currentRoute.queryParams.version;
+  }
+
   get hideHeaders() {
     return this.showJsonView || this.emptyState;
   }
@@ -118,7 +122,7 @@ export default class KvSecretDetails extends Component {
     // If the user can't read secret data, get the current version
     // state from metadata versions
     if (metadata?.sortedVersions) {
-      const version = this.args.version;
+      const version = this.version;
       const meta = version
         ? metadata.sortedVersions.find((v) => v.version == version)
         : metadata.sortedVersions[0];

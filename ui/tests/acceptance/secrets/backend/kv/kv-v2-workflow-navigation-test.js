@@ -1019,7 +1019,7 @@ module('Acceptance | kv-v2 workflow | navigation', function (hooks) {
       assert
         .dom(FORM.noReadAlert)
         .hasText(
-          'You do not have read permissions. If a secret exists at this path creating a new secret will overwrite it.',
+          'Warning You do not have read permissions for this secret data. Saving will overwrite the existing secret.',
           'Shows warning about no read permissions'
         );
       assert.dom(FORM.inputByAttr('path')).isDisabled();

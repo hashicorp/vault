@@ -971,16 +971,9 @@ module('Acceptance | kv-v2 workflow | secret and version create', function (hook
       await click(PAGE.detail.createNewVersion);
       assert.strictEqual(
         currentURL(),
-        `/vault/secrets/${backend}/kv/app%2Ffirst/details/edit`,
+        `/vault/secrets/${backend}/kv/app%2Ffirst/details/edit?version=1`,
         'Goes to new version page'
       );
-      // TODO: should show version alert?
-      // assert
-      //   .dom(FORM.versionAlert)
-      //   .hasText(
-      //     'Warning You are creating a new version based on data from Version 1. The current version for app/first is Version 2.',
-      //     'Shows version warning'
-      //   );
       assert
         .dom(FORM.noReadAlert)
         .hasText(
