@@ -27,6 +27,7 @@ import ENV from 'vault/config/environment';
 import { formatNumber } from 'core/helpers/format-number';
 import { pollCluster } from 'vault/tests/helpers/poll-cluster';
 import { disableReplication } from 'vault/tests/helpers/replication';
+import connectionPage from 'vault/tests/pages/secrets/backend/database/connection';
 
 // selectors
 import SECRETS_ENGINE_SELECTORS from 'vault/tests/helpers/components/dashboard/secrets-engines-card';
@@ -303,9 +304,28 @@ module('Acceptance | landing page dashboard', function (hooks) {
       await consoleComponent.runCommands(deleteEngineCmd('pki'));
     });
 
+    const newConnection = async (backend, plugin = 'mongodb-database-plugin') => {
+      const name = `connection-${Date.now()}`;
+      await connectionPage.visitCreate({ backend });
+      await connectionPage.dbPlugin(plugin);
+      await connectionPage.name(name);
+      await connectionPage.connectionUrl(`mongodb://127.0.0.1:4321/${name}`);
+      await connectionPage.toggleVerify();
+      await connectionPage.save();
+      await connectionPage.enable();
+      return name;
+    };
+
     test('shows the correct actions and links associated with database', async function (assert) {
       await mountSecrets.enable('database', 'database');
-      // create a role
+      await newConnection('database');
+      await runCommands([
+        `write database/roles/my-role \
+        db_name=mongodb-database-plugin \
+        creation_statements='{ "db": "admin", "roles": [{ "role": "readWrite" }, {"role": "read", "db": "foo"}] }' \
+        default_ttl="1h" \
+        max_ttl="24h`,
+      ]);
       await settled();
       await visit('/vault/dashboard');
       await selectChoose(QUICK_ACTION_SELECTORS.secretsEnginesSelect, 'database');
@@ -313,8 +333,9 @@ module('Acceptance | landing page dashboard', function (hooks) {
       assert.dom(QUICK_ACTION_SELECTORS.emptyState).doesNotExist();
       assert.dom(QUICK_ACTION_SELECTORS.paramsTitle).hasText('Role to use');
       assert.dom(QUICK_ACTION_SELECTORS.getActionButton('Generate credentials')).exists({ count: 1 });
-      // select param input, click action, check route
-      // cleanup engine mount
+      await selectChoose(QUICK_ACTION_SELECTORS.paramSelect, '.ember-power-select-option', 0);
+      await click(QUICK_ACTION_SELECTORS.getActionButton('Generate credentials'));
+      assert.strictEqual(currentRouteName(), 'vault.cluster.secrets.backend.credentials');
       await consoleComponent.runCommands(deleteEngineCmd('database'));
     });
 
@@ -329,17 +350,22 @@ module('Acceptance | landing page dashboard', function (hooks) {
       assert.dom(QUICK_ACTION_SELECTORS.paramsTitle).hasText('Secret path');
       assert.dom(QUICK_ACTION_SELECTORS.getActionButton('Read secrets')).exists({ count: 1 });
       await selectChoose(QUICK_ACTION_SELECTORS.paramSelect, '.ember-power-select-option', 0);
-      // await this.pauseTest();
-      // await click(QUICK_ACTION_SELECTORS.getActionButton('Read secrets'));
-      // console.log('current route name', currentRouteName());
-      // assert.strictEqual(currentRouteName(), 'vault.cluster.secrets.backend.pki.issuers.issuer.details');
-
-      // select param input, click action, check route
-      // cleanup engine mount
       await consoleComponent.runCommands(deleteEngineCmd('database'));
     });
   });
-  module('client counts card', function (hooks) {
+
+  module('replication and client count card community version', function () {
+    test('hides replication card for community version', async function (assert) {
+      await visit('/vault/dashboard');
+      assert.dom('[data-test-replication-card]').doesNotExist();
+    });
+
+    test('hides the client count card in community version', async function (assert) {
+      assert.dom('[data-test-client-count-card]').doesNotExist();
+    });
+  });
+
+  module('client counts card enterprise', function (hooks) {
     hooks.before(async function () {
       ENV['ember-cli-mirage'].handler = 'clients';
     });
@@ -373,18 +399,9 @@ module('Acceptance | landing page dashboard', function (hooks) {
         .dom('[data-test-stat-text="new-clients"] .stat-value')
         .hasText(formatNumber([response.byMonth.lastObject.new_clients.clients]));
     });
-    test('hides the client count card in community version', async function (assert) {
-      await authPage.logout();
-      this.server.get(
-        'sys/license/status',
-        () => new Response(403, {}, { errors: ['API returns this error'] })
-      );
-      await authPage.login();
-      assert.dom('[data-test-client-count-card]').doesNotExist();
-    });
   });
 
-  module('replication card', function (hooks) {
+  module('replication card enterprise', function (hooks) {
     hooks.beforeEach(async function () {
       await authPage.login();
       await settled();
@@ -394,7 +411,7 @@ module('Acceptance | landing page dashboard', function (hooks) {
       await settled();
     });
 
-    test('shows the replication card empty state in community version', async function (assert) {
+    test('shows the replication card empty state in enterprise version', async function (assert) {
       await visit('/vault/dashboard');
       const version = this.owner.lookup('service:version');
       assert.false(version.isEnterprise, 'vault is enterprise');
