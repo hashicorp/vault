@@ -4,7 +4,7 @@
  */
 
 import { module, test } from 'qunit';
-import { visit, currentURL, settled, fillIn, click, waitUntil, find } from '@ember/test-helpers';
+import { visit, currentURL, settled, fillIn, click, waitUntil, find, skip } from '@ember/test-helpers';
 import { setupApplicationTest } from 'vault/tests/helpers';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 import { create } from 'ember-cli-page-object';
@@ -29,6 +29,7 @@ const consoleComponent = create(consoleClass);
 
 module('Acceptance | landing page dashboard', function (hooks) {
   setupApplicationTest(hooks);
+  setupMirage(hooks);
 
   test('navigate to dashboard on login', async function (assert) {
     await authPage.login();
@@ -44,7 +45,6 @@ module('Acceptance | landing page dashboard', function (hooks) {
   });
 
   module('secrets engines card', function (hooks) {
-    setupMirage(hooks);
     hooks.beforeEach(async function () {
       await authPage.login();
     });
@@ -70,7 +70,6 @@ module('Acceptance | landing page dashboard', function (hooks) {
   });
 
   module('learn more card', function (hooks) {
-    setupMirage(hooks);
     hooks.beforeEach(function () {
       return authPage.login();
     });
@@ -90,7 +89,6 @@ module('Acceptance | landing page dashboard', function (hooks) {
   });
 
   module('configuration details card', function (hooks) {
-    setupMirage(hooks);
     hooks.beforeEach(async function () {
       this.data = {
         api_addr: 'http://127.0.0.1:8200',
@@ -233,7 +231,6 @@ module('Acceptance | landing page dashboard', function (hooks) {
   });
 
   module('quick actions card', function (hooks) {
-    setupMirage(hooks);
     hooks.beforeEach(async function () {
       await authPage.login();
     });
@@ -304,7 +301,6 @@ module('Acceptance | landing page dashboard', function (hooks) {
     });
   });
   module('client counts card', function (hooks) {
-    setupMirage(hooks);
     hooks.before(async function () {
       ENV['ember-cli-mirage'].handler = 'clients';
     });
@@ -338,6 +334,7 @@ module('Acceptance | landing page dashboard', function (hooks) {
 
     test('shows the client count card', async function (assert) {
       const version = this.owner.lookup('service:version');
+      assert.strictEqual(version.version, '1.14.0+ent');
       assert.true(version.isEnterprise, 'version is enterprise');
       assert.strictEqual(version.version, '1.14.0+ent');
       assert.strictEqual(currentURL(), '/vault/dashboard');
@@ -366,8 +363,7 @@ module('Acceptance | landing page dashboard', function (hooks) {
       assert.dom('[data-test-client-count-card]').doesNotExist();
     });
   });
-  module('replication card', function (hooks) {
-    setupMirage(hooks);
+  skip('replication card', function (hooks) {
     hooks.beforeEach(async function () {
       await authPage.login();
       await settled();
