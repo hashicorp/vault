@@ -9,7 +9,7 @@ const (
 )
 
 // PluginRuntimeRunner defines the metadata needed to run a plugin runtime
-type PluginRuntimeRunner struct {
+type PluginRuntimeConfig struct {
 	Name         string                   `json:"name" structs:"name"`
 	Type         consts.PluginRuntimeType `json:"type" structs:"type"`
 	OCIRuntime   string                   `json:"oci_runtime" structs:"oci_runtime"`
