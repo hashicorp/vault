@@ -20,7 +20,7 @@ import KVObject from 'vault/lib/kv-object';
  * />
  *
  * @param {model} secret - Ember data model: 'kv/data', the new record saved by the form
- * @param {boolean} showJson - boolean passed from parent to hide/shows json editor
+ * @param {boolean} showJson - boolean passed from parent to hide/show json editor
  * @param {object} [modelValidations] - object of errors.  If attr.name is in object and has error message display in AlertInline.
  * @param {callback} [pathValidations] - callback function fired for the path input on key up
  * @param {boolean} [isEdit=false] - if true, this is a new secret version rather than a new secret. Used to change text for some form labels
