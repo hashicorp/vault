@@ -340,7 +340,7 @@ module('Acceptance | landing page dashboard', function (hooks) {
     });
 
     test('shows the correct actions and links associated with kv', async function (assert) {
-      await runCommands(['write sys/mounts/kv-1 type=kv options=version=2', 'write kv-1/foo bar=baz']);
+      await runCommands(['write sys/mounts/kv type=kv options=version=2']);
       await settled();
       await visit('/vault/dashboard');
       await selectChoose(QUICK_ACTION_SELECTORS.secretsEnginesSelect, 'kv');
