@@ -65,7 +65,6 @@ export default class KvListFilterComponent extends Component {
   get isFilterMatch() {
     return !!this.args.secrets?.findBy('fullSecretPath', this.args.filterValue);
   }
-
   /*
   -handleInput is triggered after the value of the input has changed. It is not triggered when input looses focus.
 **/
