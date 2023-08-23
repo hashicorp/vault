@@ -5,17 +5,32 @@ package api
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/http"
+
+	"github.com/mitchellh/mapstructure"
 )
 
 type PluginRuntimeDetails struct {
 	Type         string  `json:"type"`
 	Name         string  `json:"name"`
 	OCIRuntime   string  `json:"oci_runtime"`
-	ParentCGroup string  `json:"parent_cgroup"`
+	CgroupParent string  `json:"cgroup_parent"`
 	CPU          float32 `json:"cpu"`
 	Memory       uint64  `json:"memory"`
+}
+
+// ListPluginRuntimesInput is used as input to the ListPluginRuntimes function.
+type ListPluginRuntimesInput struct {
+	// Type of the plugin. Required.
+	Type PluginRuntimeType `json:"type"`
+}
+
+// ListPluginRuntimesResponse is the response from the ListPluginRuntimes call.
+type ListPluginRuntimesResponse struct {
+	// RuntimesByType is the list of plugin runtimes by type.
+	RuntimesByType map[PluginRuntimeType][]string `json:"types"`
 }
 
 // GetPluginRuntimeInput is used as input to the GetPluginRuntime function.
@@ -31,7 +46,7 @@ type GetPluginRuntimeResponse struct {
 	Type         string  `json:"type"`
 	Name         string  `json:"name"`
 	OCIRuntime   string  `json:"oci_runtime"`
-	ParentCGroup string  `json:"parent_cgroup"`
+	CgroupParent string  `json:"cgroup_parent"`
 	CPU          float32 `json:"cpu"`
 	Memory       uint64  `json:"memory"`
 }
@@ -74,7 +89,7 @@ type RegisterPluginRuntimeInput struct {
 	Type PluginRuntimeType `json:"type"`
 
 	OCIRuntime   string  `json:"oci_runtime,omitempty"`
-	ParentCGroup string  `json:"parent_cgroup,omitempty"`
+	CgroupParent string  `json:"cgroup_parent,omitempty"`
 	CPU          float32 `json:"cpu,omitempty"`
 	Memory       uint64  `json:"memory,omitempty"`
 }
@@ -130,6 +145,75 @@ func (c *Sys) DeregisterPluginRuntimeWithContext(ctx context.Context, i *Deregis
 		defer resp.Body.Close()
 	}
 	return err
+}
+
+// ListPluginRuntimes wraps ListPluginRuntimesWithContext using context.Background.
+func (c *Sys) ListPluginRuntimes(i *ListPluginRuntimesInput) (*ListPluginRuntimesResponse, error) {
+	return c.ListPluginRuntimesWithContext(context.Background(), i)
+}
+
+// ListPluginRuntimesWithContext lists all plugin runtimes in the catalog and returns their names as a
+// list of strings.
+func (c *Sys) ListPluginRuntimesWithContext(ctx context.Context, i *ListPluginRuntimesInput) (*ListPluginRuntimesResponse, error) {
+	ctx, cancelFunc := c.c.withConfiguredTimeout(ctx)
+	defer cancelFunc()
+
+	if i != nil && i.Type == PluginRuntimeTypeUnsupported {
+		return nil, fmt.Errorf("%q is not a supported runtime type", i.Type.String())
+	}
+
+	resp, err := c.c.rawRequestWithContext(ctx, c.c.NewRequest(http.MethodGet, "/v1/sys/plugins/runtimes/catalog"))
+	if err != nil && resp == nil {
+		return nil, err
+	}
+	if resp == nil {
+		return nil, nil
+	}
+	defer resp.Body.Close()
+
+	secret, err := ParseSecret(resp.Body)
+	if err != nil {
+		return nil, err
+	}
+	if secret == nil || secret.Data == nil {
+		return nil, errors.New("data from server response is empty")
+	}
+
+	result := &ListPluginRuntimesResponse{
+		RuntimesByType: make(map[PluginRuntimeType][]string),
+	}
+
+	// return all runtimes in the catalog
+	if i == nil {
+		for _, runtimeType := range PluginRuntimeTypes {
+			runtimesRaw, ok := secret.Data[runtimeType.String()]
+			if !ok {
+				continue
+			}
+
+			var tmp []string
+			if err = mapstructure.Decode(runtimesRaw, &tmp); err != nil {
+				return nil, err
+			}
+			result.RuntimesByType[runtimeType] = tmp
+		}
+		return result, nil
+	}
+
+	switch i.Type {
+	default:
+		runtimesRaw, ok := secret.Data[i.Type.String()]
+		if !ok {
+			return nil, fmt.Errorf("no %s entry in returned data", i.Type.String())
+		}
+
+		var tmp []string
+		if err := mapstructure.Decode(runtimesRaw, &tmp); err != nil {
+			return nil, err
+		}
+		result.RuntimesByType[i.Type] = tmp
+	}
+	return result, nil
 }
 
 // pluginRuntimeCatalogPathByType is a helper to construct the proper API path by plugin type

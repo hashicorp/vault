@@ -2095,7 +2095,7 @@ func (b *SystemBackend) pluginsReloadPath() *framework.Path {
 
 func (b *SystemBackend) pluginsRuntimesCatalogCRUDPath() *framework.Path {
 	return &framework.Path{
-		Pattern: "plugins/runtimes/catalog(/(?P<type>container))?/(?P<name>.+)",
+		Pattern: "plugins/runtimes/catalog/(?P<type>container)/" + framework.GenericNameRegex("name"),
 
 		DisplayAttrs: &framework.DisplayAttributes{
 			OperationPrefix: "plugins-runtimes-catalog",
@@ -2114,9 +2114,9 @@ func (b *SystemBackend) pluginsRuntimesCatalogCRUDPath() *framework.Path {
 				Type:        framework.TypeString,
 				Description: strings.TrimSpace(sysHelp["plugin-runtime-catalog_oci-runtime"][0]),
 			},
-			"parent_cgroup": {
+			"cgroup_parent": {
 				Type:        framework.TypeString,
-				Description: strings.TrimSpace(sysHelp["plugin-runtime-catalog_parent-cgroup"][0]),
+				Description: strings.TrimSpace(sysHelp["plugin-runtime-catalog_cgroup-parent"][0]),
 			},
 			"cpu": {
 				Type:        framework.TypeFloat,
@@ -2151,7 +2151,6 @@ func (b *SystemBackend) pluginsRuntimesCatalogCRUDPath() *framework.Path {
 				Responses: map[int][]framework.Response{
 					http.StatusOK: {{
 						Description: "OK",
-						Fields:      map[string]*framework.FieldSchema{},
 					}},
 				},
 				Summary: "Remove the plugin runtime with the given name.",
@@ -2181,9 +2180,9 @@ func (b *SystemBackend) pluginsRuntimesCatalogCRUDPath() *framework.Path {
 								Description: strings.TrimSpace(sysHelp["plugin-runtime-catalog_oci-runtime"][0]),
 								Required:    true,
 							},
-							"parent_cgroup": {
+							"cgroup_parent": {
 								Type:        framework.TypeString,
-								Description: strings.TrimSpace(sysHelp["plugin-runtime-catalog_parent-cgroup"][0]),
+								Description: strings.TrimSpace(sysHelp["plugin-runtime-catalog_cgroup-parent"][0]),
 								Required:    true,
 							},
 							"cpu": {
@@ -2208,10 +2207,78 @@ func (b *SystemBackend) pluginsRuntimesCatalogCRUDPath() *framework.Path {
 	}
 }
 
-// TODO thy
-//func (b *SystemBackend) pluginsRuntimesCatalogListPaths() []*framework.Path {
-//	return []*framework.Path{}
-//}
+func (b *SystemBackend) pluginsRuntimesCatalogListPaths() []*framework.Path {
+	return []*framework.Path{
+		{
+			Pattern: "plugins/runtimes/catalog/(?P<type>container)/?$",
+
+			DisplayAttrs: &framework.DisplayAttributes{
+				OperationPrefix: "plugins-runtimes-catalog",
+				OperationVerb:   "list",
+				OperationSuffix: "plugins-runtimes-with-type",
+			},
+
+			Fields: map[string]*framework.FieldSchema{
+				"type": {
+					Type:        framework.TypeString,
+					Description: strings.TrimSpace(sysHelp["plugin-runtime-catalog_type"][0]),
+				},
+			},
+
+			Operations: map[logical.Operation]framework.OperationHandler{
+				logical.ListOperation: &framework.PathOperation{
+					Callback: b.handlePluginRuntimeCatalogTypedList,
+					Responses: map[int][]framework.Response{
+						http.StatusOK: {{
+							Description: "OK",
+							Fields: map[string]*framework.FieldSchema{
+								"keys": {
+									Type:        framework.TypeStringSlice,
+									Description: "List of plugin runtime names in the catalog",
+									Required:    true,
+								},
+							},
+						}},
+					},
+					Summary: "List the plugin runtimes of a given type in the catalog.",
+				},
+			},
+
+			HelpSynopsis:    strings.TrimSpace(sysHelp["plugin-runtime-catalog"][0]),
+			HelpDescription: strings.TrimSpace(sysHelp["plugin-runtime-catalog"][1]),
+		},
+		{
+			Pattern: "plugins/runtimes/catalog/?$",
+
+			DisplayAttrs: &framework.DisplayAttributes{
+				OperationPrefix: "plugins-runtimes-catalog",
+				OperationVerb:   "list",
+				OperationSuffix: "plugins-runtimes",
+			},
+
+			Operations: map[logical.Operation]framework.OperationHandler{
+				logical.ReadOperation: &framework.PathOperation{
+					Callback: b.handlePluginRuntimeCatalogUntypedList,
+					Responses: map[int][]framework.Response{
+						http.StatusOK: {{
+							Description: "OK",
+							Fields: map[string]*framework.FieldSchema{
+								"types": {
+									Type:        framework.TypeMap,
+									Description: "Map of plugin runtime types to their plugin runtime names in the catalog",
+									Required:    true,
+								},
+							},
+						}},
+					},
+				},
+			},
+
+			HelpSynopsis:    strings.TrimSpace(sysHelp["plugin-runtime-catalog-list-all"][0]),
+			HelpDescription: strings.TrimSpace(sysHelp["plugin-runtime-catalog-list-all"][1]),
+		},
+	}
+}
 
 func (b *SystemBackend) toolsPaths() []*framework.Path {
 	return []*framework.Path{

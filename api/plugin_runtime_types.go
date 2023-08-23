@@ -10,7 +10,7 @@ package api
 import "fmt"
 
 var PluginRuntimeTypes = []PluginRuntimeType{
-	PluginRuntimeTypeUnknown,
+	PluginRuntimeTypeUnsupported,
 	PluginRuntimeTypeContainer,
 }
 
@@ -18,7 +18,7 @@ type PluginRuntimeType uint32
 
 // This is a list of PluginRuntimeTypes used by Vault.
 const (
-	PluginRuntimeTypeUnknown PluginRuntimeType = iota
+	PluginRuntimeTypeUnsupported PluginRuntimeType = iota
 	PluginRuntimeTypeContainer
 )
 
@@ -26,8 +26,6 @@ func (r PluginRuntimeType) String() string {
 	switch r {
 	case PluginRuntimeTypeContainer:
 		return "container"
-	case PluginRuntimeTypeUnknown:
-		fallthrough
 	default:
 		return "unsupported"
 	}
@@ -38,6 +36,6 @@ func ParsePluginRuntimeType(PluginRuntimeType string) (PluginRuntimeType, error)
 	case "container":
 		return PluginRuntimeTypeContainer, nil
 	default:
-		return PluginRuntimeTypeUnknown, fmt.Errorf("%q is not a supported plugin runtime type", PluginRuntimeType)
+		return PluginRuntimeTypeUnsupported, fmt.Errorf("%q is not a supported plugin runtime type", PluginRuntimeType)
 	}
 }

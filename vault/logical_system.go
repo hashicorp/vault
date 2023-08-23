@@ -189,8 +189,7 @@ func NewSystemBackend(core *Core, logger log.Logger) *SystemBackend {
 	b.Backend.Paths = append(b.Backend.Paths, b.pluginsCatalogCRUDPath())
 	b.Backend.Paths = append(b.Backend.Paths, b.pluginsReloadPath())
 	b.Backend.Paths = append(b.Backend.Paths, b.pluginsRuntimesCatalogCRUDPath())
-	// TODO thy
-	// b.Backend.Paths = append(b.Backend.Paths, b.pluginsRuntimesCatalogListPaths()...)
+	b.Backend.Paths = append(b.Backend.Paths, b.pluginsRuntimesCatalogListPaths()...)
 	b.Backend.Paths = append(b.Backend.Paths, b.auditPaths()...)
 	b.Backend.Paths = append(b.Backend.Paths, b.mountPaths()...)
 	b.Backend.Paths = append(b.Backend.Paths, b.authPaths()...)
@@ -735,8 +734,6 @@ func (b *SystemBackend) handlePluginRuntimeCatalogUpdate(ctx context.Context, _ 
 		return logical.ErrorResponse("missing plugin runtime name"), nil
 	}
 
-	// TODO validate name
-
 	runtimeTypeStr := d.Get("type").(string)
 	if runtimeTypeStr == "" {
 		return logical.ErrorResponse("missing plugin runtime type"), nil
@@ -753,19 +750,21 @@ func (b *SystemBackend) handlePluginRuntimeCatalogUpdate(ctx context.Context, _ 
 		if ociRuntime == "" {
 			ociRuntime = pluginruntimeutil.DefaultOCIRuntime
 		}
-		parentCGroup := d.Get("parent_cgroup").(string)
-		cpu := d.Get("cpu").(float32)
+		cgroupParent := d.Get("cgroup_parent").(string)
+		cpu := float32(d.Get("cpu").(float64))
 		if cpu == 0 {
 			cpu = pluginruntimeutil.DefaultCPU
 		}
-		memory := d.Get("memory").(uint64)
+		memory := uint64(d.Get("memory").(int64))
 		if memory == 0 {
 			memory = pluginruntimeutil.DefaultMemory
 		}
-		err := b.Core.pluginRuntimeCatalog.Set(ctx, runtimeName, runtimeType, ociRuntime, parentCGroup, cpu, memory)
+		err := b.Core.pluginRuntimeCatalog.Set(ctx, runtimeName, runtimeType, ociRuntime, cgroupParent, cpu, memory)
 		if err != nil {
 			return logical.ErrorResponse(err.Error()), nil
 		}
+	default:
+		logical.ErrorResponse(fmt.Sprintf("%s is not a supported plugin runtime type", runtimeTypeStr))
 	}
 	return nil, nil
 }
@@ -775,8 +774,6 @@ func (b *SystemBackend) handlePluginRuntimeCatalogDelete(ctx context.Context, _ 
 	if runtimeName == "" {
 		return logical.ErrorResponse("missing plugin runtime name"), nil
 	}
-
-	// TODO validate name
 
 	runtimeTypeStr := d.Get("type").(string)
 	if runtimeTypeStr == "" {
@@ -801,8 +798,6 @@ func (b *SystemBackend) handlePluginRuntimeCatalogRead(ctx context.Context, _ *l
 		return logical.ErrorResponse("missing plugin runtime name"), nil
 	}
 
-	// TODO validate name
-
 	runtimeTypeStr := d.Get("type").(string)
 	if runtimeTypeStr == "" {
 		return logical.ErrorResponse("missing plugin runtime type"), nil
@@ -813,18 +808,58 @@ func (b *SystemBackend) handlePluginRuntimeCatalogRead(ctx context.Context, _ *l
 		return logical.ErrorResponse(err.Error()), nil
 	}
 
-	runner, err := b.Core.pluginRuntimeCatalog.Get(ctx, runtimeName, runtimeType)
+	conf, err := b.Core.pluginRuntimeCatalog.Get(ctx, runtimeName, runtimeType)
 	if err != nil {
 		return logical.ErrorResponse(err.Error()), nil
 	}
 	return &logical.Response{Data: map[string]interface{}{
-		"name":          runner.Name,
-		"type":          runner.Type,
-		"oci_runtime":   runner.OCIRuntime,
-		"parent_cgroup": runner.ParentCGroup,
-		"cpu":           runner.CPU,
-		"memory":        runner.Memory,
+		"name":          conf.Name,
+		"type":          conf.Type.String(),
+		"oci_runtime":   conf.OCIRuntime,
+		"cgroup_parent": conf.CgroupParent,
+		"cpu":           conf.CPU,
+		"memory":        conf.Memory,
 	}}, nil
+}
+
+func (b *SystemBackend) handlePluginRuntimeCatalogTypedList(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	runtimeType, err := consts.ParsePluginRuntimeType(d.Get("type").(string))
+	if err != nil {
+		return nil, err
+	}
+
+	runtimes, err := b.Core.pluginRuntimeCatalog.List(ctx, runtimeType)
+	if err != nil {
+		return nil, err
+	}
+	sort.Strings(runtimes)
+	return logical.ListResponse(runtimes), nil
+}
+
+func (b *SystemBackend) handlePluginRuntimeCatalogUntypedList(ctx context.Context, _ *logical.Request, _ *framework.FieldData) (*logical.Response, error) {
+	data := make(map[string]interface{})
+	for _, runtimeType := range consts.PluginRuntimeTypes {
+		if runtimeType == consts.PluginRuntimeTypeUnsupported {
+			continue
+		}
+		runtimes, err := b.Core.pluginRuntimeCatalog.List(ctx, runtimeType)
+		if err != nil {
+			return nil, err
+		}
+		if len(runtimes) > 0 {
+			sort.Strings(runtimes)
+			data[runtimeType.String()] = runtimes
+		}
+	}
+
+	resp := &logical.Response{
+		Data: map[string]interface{}{},
+	}
+	if len(data) > 0 {
+		resp.Data["types"] = data
+	}
+
+	return resp, nil
 }
 
 // handleAuditedHeaderUpdate creates or overwrites a header entry
@@ -6000,31 +6035,48 @@ Each entry is of the form "key=value".`,
 		"",
 	},
 	"plugin-runtime-catalog": {
-		"", // TODO thy def.
-		"", // TODO thy def.
+		"Configures plugin runtimes",
+		`
+This path responds to the following HTTP methods.
+		LIST /
+			Returns a list of names of configured plugin runtimes.
+
+		GET /<type>/<name>
+			Retrieve the metadata for the named plugin runtime.
+
+		PUT /<type>/<name>
+			Add or update plugin runtime.
+
+		DELETE /<type>/<name>
+			Delete the plugin runtime with the given name.
+		`,
+	},
+	"plugin-runtime-catalog-list-all": {
+		"List all plugin runtimes in the catalog as a map of type to names.",
+		"",
 	},
 	"plugin-runtime-catalog_name": {
-		"", // TODO thy def.
+		"The name of the plugin runtime",
 		"",
 	},
 	"plugin-runtime-catalog_type": {
-		"", // TODO thy def.
+		"The type of the plugin runtime",
 		"",
 	},
 	"plugin-runtime-catalog_oci-runtime": {
-		"", // TODO thy def.
+		"The OCI-compatible runtime (default \"runsc\")",
 		"",
 	},
-	"plugin-runtime-catalog_parent-cgroup": {
-		"", // TODO thy def.
+	"plugin-runtime-catalog_cgroup-parent": {
+		"Optional parent cgroup for the container",
 		"",
 	},
 	"plugin-runtime-catalog_cpu": {
-		"", // TODO thy def.
+		"The limit of runtime CPU (default 0.1)",
 		"",
 	},
 	"plugin-runtime-catalog_memory": {
-		"", // TODO thy def.
+		"The limit of runtime memory in bytes (default 100000000)",
 		"",
 	},
 	"leases": {

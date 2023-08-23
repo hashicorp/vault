@@ -46,8 +46,8 @@ func (c *Core) setupPluginRuntimeCatalog(ctx context.Context) error {
 }
 
 // Get retrieves a plugin runtime with the specified name from the catalog
-// It returns a PluginRuntimeRunner or an error if no plugin runtime was found.
-func (c *PluginRuntimeCatalog) Get(ctx context.Context, name string, prt consts.PluginRuntimeType) (*pluginruntimeutil.PluginRuntimeRunner, error) {
+// It returns a PluginRuntimeConfig or an error if no plugin runtime was found.
+func (c *PluginRuntimeCatalog) Get(ctx context.Context, name string, prt consts.PluginRuntimeType) (*pluginruntimeutil.PluginRuntimeConfig, error) {
 	storageKey := path.Join(prt.String(), name)
 	c.lock.RLock()
 	defer c.lock.RUnlock()
@@ -58,7 +58,7 @@ func (c *PluginRuntimeCatalog) Get(ctx context.Context, name string, prt consts.
 	if entry == nil {
 		return nil, fmt.Errorf("failed to retrieve plugin %q %q: %w", prt.String(), name, err)
 	}
-	runner := new(pluginruntimeutil.PluginRuntimeRunner)
+	runner := new(pluginruntimeutil.PluginRuntimeConfig)
 	if err := jsonutil.DecodeJSON(entry.Value, runner); err != nil {
 		return nil, fmt.Errorf("failed to decode plugin runtime entry: %w", err)
 	}
@@ -73,11 +73,11 @@ func (c *PluginRuntimeCatalog) Set(ctx context.Context, name string, prt consts.
 	c.lock.Lock()
 	defer c.lock.Unlock()
 
-	entry := &pluginruntimeutil.PluginRuntimeRunner{
+	entry := &pluginruntimeutil.PluginRuntimeConfig{
 		Name:         name,
 		Type:         prt,
 		OCIRuntime:   ociRuntime,
-		ParentCGroup: parentCGroup,
+		CgroupParent: parentCGroup,
 		CPU:          cpu,
 		Memory:       memory,
 	}
@@ -132,7 +132,7 @@ func (c *PluginRuntimeCatalog) List(ctx context.Context, prt consts.PluginRuntim
 			continue
 		}
 
-		runner := new(pluginruntimeutil.PluginRuntimeRunner)
+		runner := new(pluginruntimeutil.PluginRuntimeConfig)
 		if err := jsonutil.DecodeJSON(entry.Value, runner); err != nil {
 			return nil, fmt.Errorf("failed to decode plugin runtime entry: %w", err)
 		}

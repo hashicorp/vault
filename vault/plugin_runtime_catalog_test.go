@@ -8,7 +8,6 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/pluginruntimeutil"
 )
 
@@ -16,17 +15,16 @@ func TestPluginRuntimeCatalog_CRUD(t *testing.T) {
 	core, _, _ := TestCoreUnsealed(t)
 	ctx := context.Background()
 
-	expected := &pluginruntimeutil.PluginRuntimeRunner{
+	expected := &pluginruntimeutil.PluginRuntimeConfig{
 		Name:         "gvisor",
-		Type:         consts.PluginRuntimeTypeContainer,
 		OCIRuntime:   "runsc",
-		ParentCGroup: "/cpulimit-cgroup/",
+		CgroupParent: "/cpulimit/",
 		CPU:          1,
 		Memory:       10000,
 	}
 
 	// Set new plugin runtime
-	err := core.pluginRuntimeCatalog.Set(ctx, expected.Name, expected.Type, expected.OCIRuntime, expected.ParentCGroup, expected.CPU, expected.Memory)
+	err := core.pluginRuntimeCatalog.Set(ctx, expected.Name, expected.Type, expected.OCIRuntime, expected.CgroupParent, expected.CPU, expected.Memory)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -41,10 +39,10 @@ func TestPluginRuntimeCatalog_CRUD(t *testing.T) {
 	}
 
 	// Set existing plugin runtime
-	expected.ParentCGroup = "memorylimit-cgroup"
+	expected.CgroupParent = "memorylimit-cgroup"
 	expected.CPU = 0.5
 	expected.Memory = 5000
-	err = core.pluginRuntimeCatalog.Set(ctx, expected.Name, expected.Type, expected.OCIRuntime, expected.ParentCGroup, expected.CPU, expected.Memory)
+	err = core.pluginRuntimeCatalog.Set(ctx, expected.Name, expected.Type, expected.OCIRuntime, expected.CgroupParent, expected.CPU, expected.Memory)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}

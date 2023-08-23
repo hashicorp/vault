@@ -23,7 +23,7 @@ func TestRegisterPluginRuntime(t *testing.T) {
 		Name:         "gvisor",
 		Type:         PluginRuntimeTypeContainer,
 		OCIRuntime:   "runsc",
-		ParentCGroup: "/cpulimit-cgroup/",
+		CgroupParent: "/cpulimit/",
 		CPU:          1,
 		Memory:       10000,
 	})
@@ -43,7 +43,7 @@ func TestGetPluginRuntime(t *testing.T) {
 				Name:         "gvisor",
 				Type:         PluginRuntimeTypeContainer.String(),
 				OCIRuntime:   "runsc",
-				ParentCGroup: "/cpulimit-cgroup/",
+				CgroupParent: "/cpulimit/",
 				CPU:          1,
 				Memory:       10000,
 			},
@@ -77,15 +77,124 @@ func TestGetPluginRuntime(t *testing.T) {
 	}
 }
 
+func TestListPluginRuntimeTyped(t *testing.T) {
+	for _, tc := range []struct {
+		runtimeType      PluginRuntimeType
+		body             string
+		expectedResponse *ListPluginRuntimesResponse
+		expectedErrNil   bool
+	}{
+		{
+			runtimeType: PluginRuntimeTypeContainer,
+			body:        listPluginRuntimeTypedResponse,
+			expectedResponse: &ListPluginRuntimesResponse{
+				RuntimesByType: map[PluginRuntimeType][]string{
+					PluginRuntimeTypeContainer: {"gvisor"},
+				},
+			},
+			expectedErrNil: true,
+		},
+		{
+			runtimeType:      PluginRuntimeTypeUnsupported,
+			body:             listPluginRuntimeTypedResponse,
+			expectedResponse: nil,
+			expectedErrNil:   false,
+		},
+	} {
+		t.Run(tc.runtimeType.String(), func(t *testing.T) {
+			mockVaultServer := httptest.NewServer(http.HandlerFunc(mockVaultHandlerInfo(tc.body)))
+			defer mockVaultServer.Close()
+
+			cfg := DefaultConfig()
+			cfg.Address = mockVaultServer.URL
+			client, err := NewClient(cfg)
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			input := ListPluginRuntimesInput{
+				Type: tc.runtimeType,
+			}
+
+			list, err := client.Sys().ListPluginRuntimesWithContext(context.Background(), &input)
+			if tc.expectedErrNil && err != nil {
+				t.Fatal(err)
+			}
+
+			if (tc.expectedErrNil && !reflect.DeepEqual(tc.expectedResponse, list)) || (!tc.expectedErrNil && list != nil) {
+				t.Errorf("expected: %#v\ngot: %#v", tc.expectedResponse, list)
+			}
+		})
+	}
+}
+
+func TestListPluginRuntimeUntyped(t *testing.T) {
+	for _, tc := range []struct {
+		body             string
+		expectedResponse *ListPluginRuntimesResponse
+		expectedErrNil   bool
+	}{
+		{
+			body: listPluginRuntimeUntypedResponse,
+			expectedResponse: &ListPluginRuntimesResponse{
+				RuntimesByType: map[PluginRuntimeType][]string{
+					PluginRuntimeTypeContainer: {"gvisor", "foo", "bar"},
+				},
+			},
+			expectedErrNil: true,
+		},
+	} {
+		t.Run("", func(t *testing.T) {
+			mockVaultServer := httptest.NewServer(http.HandlerFunc(mockVaultHandlerInfo(tc.body)))
+			defer mockVaultServer.Close()
+
+			cfg := DefaultConfig()
+			cfg.Address = mockVaultServer.URL
+			client, err := NewClient(cfg)
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			info, err := client.Sys().ListPluginRuntimesWithContext(context.Background(), nil)
+			if tc.expectedErrNil && err != nil {
+				t.Fatal(err)
+			}
+
+			if !reflect.DeepEqual(tc.expectedResponse, info) {
+				t.Errorf("expected: %#v\ngot: %#v", tc.expectedResponse, info)
+			}
+		})
+	}
+}
+
 const getPluginRuntimeResponse = `{
     "request_id": "e93d3f93-8e4f-8443-a803-f1c97c123456",
     "data": {
         "name": "gvisor",
         "type": "container",
         "oci_runtime": "runsc",
-        "parent_cgroup": "/cpulimit-cgroup/",
+        "cgroup_parent": "/cpulimit/",
         "cpu": 1,
         "memory": 10000
+    },
+    "warnings": null,
+    "auth": null
+}`
+
+const listPluginRuntimeTypedResponse = `{
+    "request_id": "e93d3f93-8e4f-8443-a803-f1c97c123456",
+    "data": {
+        "container": ["gvisor"]
+    },
+    "warnings": null,
+    "auth": null
+}
+`
+
+const listPluginRuntimeUntypedResponse = `{
+    "request_id": "e93d3f93-8e4f-8443-a803-f1c97c123456",
+    "data": {
+        "container": ["gvisor", "foo", "bar"]
     },
     "warnings": null,
     "auth": null
