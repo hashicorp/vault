@@ -4,7 +4,7 @@
  */
 
 import { module, test } from 'qunit';
-import { visit, currentURL, settled, fillIn, click } from '@ember/test-helpers';
+import { visit, currentURL, settled, fillIn, click, waitUntil, find } from '@ember/test-helpers';
 import { setupApplicationTest } from 'vault/tests/helpers';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 import { create } from 'ember-cli-page-object';
@@ -29,7 +29,6 @@ const consoleComponent = create(consoleClass);
 
 module('Acceptance | landing page dashboard', function (hooks) {
   setupApplicationTest(hooks);
-  setupMirage(hooks);
 
   test('navigate to dashboard on login', async function (assert) {
     await authPage.login();
@@ -39,10 +38,13 @@ module('Acceptance | landing page dashboard', function (hooks) {
   test('display the version number for the title', async function (assert) {
     await authPage.login();
     await visit('/vault/dashboard');
-    assert.dom('[data-test-dashboard-version-header]').hasText('Vault v1.9.0 root');
+    const version = this.owner.lookup('service:version');
+    const versionName = version.version.slice(0, version.version.indexOf('+'));
+    assert.dom('[data-test-dashboard-version-header]').hasText(`Vault v${versionName} root`);
   });
 
   module('secrets engines card', function (hooks) {
+    setupMirage(hooks);
     hooks.beforeEach(async function () {
       await authPage.login();
     });
@@ -68,6 +70,7 @@ module('Acceptance | landing page dashboard', function (hooks) {
   });
 
   module('learn more card', function (hooks) {
+    setupMirage(hooks);
     hooks.beforeEach(function () {
       return authPage.login();
     });
@@ -87,6 +90,7 @@ module('Acceptance | landing page dashboard', function (hooks) {
   });
 
   module('configuration details card', function (hooks) {
+    setupMirage(hooks);
     hooks.beforeEach(async function () {
       this.data = {
         api_addr: 'http://127.0.0.1:8200',
@@ -229,6 +233,7 @@ module('Acceptance | landing page dashboard', function (hooks) {
   });
 
   module('quick actions card', function (hooks) {
+    setupMirage(hooks);
     hooks.beforeEach(async function () {
       await authPage.login();
     });
@@ -299,6 +304,7 @@ module('Acceptance | landing page dashboard', function (hooks) {
     });
   });
   module('client counts card', function (hooks) {
+    setupMirage(hooks);
     hooks.before(async function () {
       ENV['ember-cli-mirage'].handler = 'clients';
     });
@@ -361,6 +367,7 @@ module('Acceptance | landing page dashboard', function (hooks) {
     });
   });
   module('replication card', function (hooks) {
+    setupMirage(hooks);
     hooks.beforeEach(async function () {
       await authPage.login();
       await settled();
@@ -387,27 +394,32 @@ module('Acceptance | landing page dashboard', function (hooks) {
       assert.true(version.isEnterprise, 'vault is enterprise');
       await visit('/vault/replication');
       assert.strictEqual(currentURL(), '/vault/replication');
-      await click('[data-test-replication-type-select="dr"]');
+      await click('[data-test-replication-type-select="performance"]');
       await fillIn('[data-test-replication-cluster-mode-select]', 'primary');
       await click('[data-test-replication-enable]');
       await pollCluster(this.owner);
-      await settled();
+      assert.ok(
+        await waitUntil(() => find('[data-test-replication-dashboard]')),
+        'details dashboard is shown'
+      );
       await visit('/vault/dashboard');
       assert
         .dom(REPLICATION_CARD_SELECTORS.getReplicationTitle('dr-perf', 'DR primary'))
         .hasText('DR primary');
-      assert.dom(REPLICATION_CARD_SELECTORS.getStateTooltipTitle('dr-perf', 'DR primary')).hasText('running');
       assert
-        .dom(REPLICATION_CARD_SELECTORS.getStateTooltipIcon('dr-perf', 'DR primary', 'check-circle'))
+        .dom(REPLICATION_CARD_SELECTORS.getStateTooltipTitle('dr-perf', 'DR primary'))
+        .hasText('not set up');
+      assert
+        .dom(REPLICATION_CARD_SELECTORS.getStateTooltipIcon('dr-perf', 'DR primary', 'x-circle'))
         .exists();
       assert
         .dom(REPLICATION_CARD_SELECTORS.getReplicationTitle('dr-perf', 'Perf primary'))
         .hasText('Perf primary');
       assert
         .dom(REPLICATION_CARD_SELECTORS.getStateTooltipTitle('dr-perf', 'Perf primary'))
-        .hasText('not set up');
+        .hasText('running');
       assert
-        .dom(REPLICATION_CARD_SELECTORS.getStateTooltipIcon('dr-perf', 'Perf primary', 'x-circle'))
+        .dom(REPLICATION_CARD_SELECTORS.getStateTooltipIcon('dr-perf', 'Perf primary', 'check-circle'))
         .exists();
     });
   });
