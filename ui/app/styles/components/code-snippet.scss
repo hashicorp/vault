@@ -1,0 +1,20 @@
+.code-snippet-container {
+  background-color: $ui-gray-900;
+  display: flex;
+  justify-content: space-between;
+  border-radius: $radius-large;
+
+  code {
+    white-space: pre;
+  }
+}
+
+.code-snippet-copy-button {
+  cursor: pointer;
+  color: $ui-gray-300;
+  background: none;
+  border: none;
+  box-shadow: none;
+  min-width: auto;
+  padding: $size-11 $size-8;
+}
