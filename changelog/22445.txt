@@ -1,0 +1,3 @@
+```release-note:feature
+**GCP IAM Support**: Adds support for IAM-based authentication to database backends using Google Cloud SQL.
+```
