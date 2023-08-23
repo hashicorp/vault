@@ -1,0 +1,3 @@
+```release-note:bug
+ui: Fix bug in InfoTableRow by changing to Ember Octane syntax
+```
