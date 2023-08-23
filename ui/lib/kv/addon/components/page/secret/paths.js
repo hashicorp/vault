@@ -27,7 +27,7 @@ export default class KvSecretPaths extends Component {
   get paths() {
     const { backend, path } = this.args.secret;
     const namespace = this.namespace.path;
-    const cli = `-mount=${backend} "${path}"`;
+    const cli = `-mount="${backend}" "${path}"`;
     const data = kvDataPath(backend, path);
     const metadata = kvMetadataPath(backend, path);
 

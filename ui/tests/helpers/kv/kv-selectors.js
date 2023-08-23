@@ -52,6 +52,11 @@ export const PAGE = {
   create: {
     metadataSection: '[data-test-metadata-section]',
   },
+  paths: {
+    copyButton: (label) => `${PAGE.infoRowValue(label)} button`,
+    codeSnippet: (section) => `[data-test-code-snippet][data-test-commands="${section}"] code`,
+    snippetCopy: (section) => `[data-test-code-snippet][data-test-commands="${section}"] button`,
+  },
 };
 
 // Form/Interactive selectors that are common between pages and forms
