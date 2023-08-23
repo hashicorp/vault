@@ -340,7 +340,7 @@ module('Acceptance | landing page dashboard', function (hooks) {
     });
 
     test('shows the correct actions and links associated with kv', async function (assert) {
-      await runCommands(['write sys/mounts/kv type=kv options=version=2']);
+      await runCommands(['write sys/mounts/kv type=kv', 'write kv/foo bar=baz']);
       await settled();
       await visit('/vault/dashboard');
       await selectChoose(QUICK_ACTION_SELECTORS.secretsEnginesSelect, 'kv');
@@ -349,6 +349,9 @@ module('Acceptance | landing page dashboard', function (hooks) {
       assert.dom(QUICK_ACTION_SELECTORS.paramsTitle).hasText('Secret path');
       assert.dom(QUICK_ACTION_SELECTORS.getActionButton('Read secrets')).exists({ count: 1 });
       await selectChoose(QUICK_ACTION_SELECTORS.paramSelect, '.ember-power-select-option', 0);
+      await click(QUICK_ACTION_SELECTORS.getActionButton('Read secrets'));
+      assert.strictEqual(currentRouteName(), 'vault.cluster.secrets.backend.show');
+      // can't write v2 acceptance tests since there isn't runCommands for v2 create secrets
       await consoleComponent.runCommands(deleteEngineCmd('kv'));
     });
   });
