@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 package configutil
 
@@ -41,18 +41,20 @@ type SharedConfig struct {
 	// LogFormat specifies the log format. Valid values are "standard" and
 	// "json". The values are case-insenstive. If no log format is specified,
 	// then standard format will be used.
+	LogFile              string      `hcl:"log_file"`
 	LogFormat            string      `hcl:"log_format"`
 	LogLevel             string      `hcl:"log_level"`
-	LogFile              string      `hcl:"log_file"`
-	LogRotateDuration    string      `hcl:"log_rotate_duration"`
 	LogRotateBytes       int         `hcl:"log_rotate_bytes"`
 	LogRotateBytesRaw    interface{} `hcl:"log_rotate_bytes"`
+	LogRotateDuration    string      `hcl:"log_rotate_duration"`
 	LogRotateMaxFiles    int         `hcl:"log_rotate_max_files"`
 	LogRotateMaxFilesRaw interface{} `hcl:"log_rotate_max_files"`
 
 	PidFile string `hcl:"pid_file"`
 
 	ClusterName string `hcl:"cluster_name"`
+
+	AdministrativeNamespacePath string `hcl:"administrative_namespace_path"`
 }
 
 func ParseConfig(d string) (*SharedConfig, error) {
@@ -167,16 +169,27 @@ func (c *SharedConfig) Sanitized() map[string]interface{} {
 	}
 
 	result := map[string]interface{}{
-		"disable_mlock": c.DisableMlock,
+		"default_max_request_duration":  c.DefaultMaxRequestDuration,
+		"disable_mlock":                 c.DisableMlock,
+		"log_level":                     c.LogLevel,
+		"log_format":                    c.LogFormat,
+		"pid_file":                      c.PidFile,
+		"cluster_name":                  c.ClusterName,
+		"administrative_namespace_path": c.AdministrativeNamespacePath,
+	}
 
-		"default_max_request_duration": c.DefaultMaxRequestDuration,
-
-		"log_level":  c.LogLevel,
-		"log_format": c.LogFormat,
-
-		"pid_file": c.PidFile,
-
-		"cluster_name": c.ClusterName,
+	// Optional log related settings
+	if c.LogFile != "" {
+		result["log_file"] = c.LogFile
+	}
+	if c.LogRotateBytes != 0 {
+		result["log_rotate_bytes"] = c.LogRotateBytes
+	}
+	if c.LogRotateDuration != "" {
+		result["log_rotate_duration"] = c.LogRotateDuration
+	}
+	if c.LogRotateMaxFiles != 0 {
+		result["log_rotate_max_files"] = c.LogRotateMaxFiles
 	}
 
 	// Sanitize listeners
@@ -258,6 +271,7 @@ func (c *SharedConfig) Sanitized() map[string]interface{} {
 			"lease_metrics_epsilon":                  c.Telemetry.LeaseMetricsEpsilon,
 			"num_lease_metrics_buckets":              c.Telemetry.NumLeaseMetricsTimeBuckets,
 			"add_lease_metrics_namespace_labels":     c.Telemetry.LeaseMetricsNameSpaceLabels,
+			"add_mount_point_rollback_metrics":       c.Telemetry.RollbackMetricsIncludeMountPoint,
 		}
 		result["telemetry"] = sanitizedTelemetry
 	}

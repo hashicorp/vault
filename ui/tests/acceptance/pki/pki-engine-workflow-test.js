@@ -1,6 +1,6 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 import { module, test } from 'qunit';
@@ -38,7 +38,6 @@ module('Acceptance | pki workflow', function (hooks) {
     await authPage.login();
     // Cleanup engine
     await runCommands([`delete sys/mounts/${this.mountPath}`]);
-    await logout.visit();
   });
 
   test('empty state messages are correct when PKI not configured', async function (assert) {
@@ -204,7 +203,7 @@ module('Acceptance | pki workflow', function (hooks) {
       assert.strictEqual(currentURL(), `/vault/secrets/${this.mountPath}/pki/roles/create`);
       assert.dom(SELECTORS.breadcrumbContainer).exists({ count: 1 }, 'breadcrumbs are rendered');
       assert.dom(SELECTORS.breadcrumbs).exists({ count: 4 }, 'Shows 4 breadcrumbs');
-      assert.dom(SELECTORS.pageTitle).hasText('Create a PKI role');
+      assert.dom(SELECTORS.pageTitle).hasText('Create a PKI Role');
 
       await fillIn(SELECTORS.roleForm.roleName, roleName);
       await click(SELECTORS.roleForm.roleCreateButton);
@@ -331,7 +330,7 @@ module('Acceptance | pki workflow', function (hooks) {
       assert.dom(SELECTORS.keyPages.keyDeleteButton).doesNotExist('Delete key button is not shown');
       await click(SELECTORS.keyPages.keyEditLink);
       assert.strictEqual(currentURL(), `/vault/secrets/${this.mountPath}/pki/keys/${keyId}/edit`);
-      assert.dom(SELECTORS.keyPages.title).hasText('Edit key');
+      assert.dom(SELECTORS.keyPages.title).hasText('Edit Key');
       await click(SELECTORS.keyForm.keyCancelButton);
       assert.strictEqual(currentURL(), `/vault/secrets/${this.mountPath}/pki/keys/${keyId}/details`);
     });
@@ -396,7 +395,7 @@ module('Acceptance | pki workflow', function (hooks) {
         currentURL().match(`/vault/secrets/${this.mountPath}/pki/issuers/.+/details`),
         `/vault/secrets/${this.mountPath}/pki/issuers/my-issuer/details`
       );
-      assert.dom(SELECTORS.issuerDetails.title).hasText('View issuer certificate');
+      assert.dom(SELECTORS.issuerDetails.title).hasText('View Issuer Certificate');
       ['Certificate', 'CA Chain', 'Common name', 'Issuer name', 'Issuer ID', 'Default key ID'].forEach(
         (label) => {
           assert

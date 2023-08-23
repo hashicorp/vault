@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 package vault
 
@@ -25,6 +25,8 @@ import (
 	"sync"
 	"sync/atomic"
 	"time"
+
+	"github.com/hashicorp/go-secure-stdlib/parseutil"
 
 	"github.com/armon/go-metrics"
 	"github.com/hashicorp/errwrap"
@@ -593,10 +595,6 @@ type Core struct {
 	// active, or give up active as soon as it gets it
 	neverBecomeActive *uint32
 
-	// loadCaseSensitiveIdentityStore enforces the loading of identity store
-	// artifacts in a case sensitive manner. To be used only in testing.
-	loadCaseSensitiveIdentityStore bool
-
 	// clusterListener starts up and manages connections on the cluster ports
 	clusterListener *atomic.Value
 
@@ -651,6 +649,8 @@ type Core struct {
 
 	autoRotateCancel context.CancelFunc
 
+	updateLockedUserEntriesCancel context.CancelFunc
+
 	// number of workers to use for lease revocation in the expiration manager
 	numExpirationWorkers int
 
@@ -677,7 +677,8 @@ type Core struct {
 	// heartbeating with the active node. Default to the current SDK version.
 	effectiveSDKVersion string
 
-	rollbackPeriod time.Duration
+	rollbackPeriod           time.Duration
+	rollbackMountPathMetrics bool
 
 	experiments []string
 
@@ -852,6 +853,17 @@ type CoreConfig struct {
 	PendingRemovalMountsAllowed bool
 
 	ExpirationRevokeRetryBase time.Duration
+
+	// AdministrativeNamespacePath is used to configure the administrative namespace, which has access to some sys endpoints that are
+	// only accessible in the root namespace, currently sys/audit-hash and sys/monitor.
+	AdministrativeNamespacePath string
+}
+
+// SubloggerHook implements the SubloggerAdder interface. This implementation
+// manages CoreConfig.AllLoggers state prior to (and during) NewCore.
+func (c *CoreConfig) SubloggerHook(logger log.Logger) log.Logger {
+	c.AllLoggers = append(c.AllLoggers, logger)
+	return logger
 }
 
 // GetServiceRegistration returns the config's ServiceRegistration, or nil if it does
@@ -1016,6 +1028,7 @@ func CreateCore(conf *CoreConfig) (*Core, error) {
 		experiments:                    conf.Experiments,
 		pendingRemovalMountsAllowed:    conf.PendingRemovalMountsAllowed,
 		expirationRevokeRetryBase:      conf.ExpirationRevokeRetryBase,
+		rollbackMountPathMetrics:       conf.MetricSink.TelemetryConsts.RollbackMetricsIncludeMountPoint,
 	}
 
 	c.standbyStopCh.Store(make(chan struct{}))
@@ -1024,10 +1037,8 @@ func CreateCore(conf *CoreConfig) (*Core, error) {
 
 	c.shutdownDoneCh.Store(make(chan struct{}))
 
-	c.allLoggers = append(c.allLoggers, c.logger)
-
 	c.router.logger = c.logger.Named("router")
-	c.allLoggers = append(c.allLoggers, c.router.logger)
+	c.router.rollbackMetricsMountName = c.rollbackMountPathMetrics
 
 	c.inFlightReqData = &InFlightRequests{
 		InFlightReqMap:   &sync.Map{},
@@ -1105,7 +1116,6 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 	if err != nil {
 		return nil, err
 	}
-
 	if err = coreInit(c, conf); err != nil {
 		return nil, err
 	}
@@ -1176,10 +1186,6 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 
 	c.loginMFABackend = NewLoginMFABackend(c, conf.Logger)
 
-	if c.loginMFABackend.mfaLogger != nil {
-		c.AddLogger(c.loginMFABackend.mfaLogger)
-	}
-
 	logicalBackends := make(map[string]logical.Factory)
 	for k, f := range conf.LogicalBackends {
 		logicalBackends[k] = f
@@ -1192,7 +1198,6 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 	logicalBackends["cubbyhole"] = CubbyholeBackendFactory
 	logicalBackends[systemMountType] = func(ctx context.Context, config *logical.BackendConfig) (logical.Backend, error) {
 		sysBackendLogger := conf.Logger.Named("system")
-		c.AddLogger(sysBackendLogger)
 		b := NewSystemBackend(c, sysBackendLogger)
 		if err := b.Setup(ctx, config); err != nil {
 			return nil, err
@@ -1201,10 +1206,9 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 	}
 	logicalBackends["identity"] = func(ctx context.Context, config *logical.BackendConfig) (logical.Backend, error) {
 		identityLogger := conf.Logger.Named("identity")
-		c.AddLogger(identityLogger)
 		return NewIdentityStore(ctx, c, config, identityLogger)
 	}
-	addExtraLogicalBackends(c, logicalBackends)
+	addExtraLogicalBackends(c, logicalBackends, conf.AdministrativeNamespacePath)
 	c.logicalBackends = logicalBackends
 
 	credentialBackends := make(map[string]logical.Factory)
@@ -1213,7 +1217,6 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 	}
 	credentialBackends["token"] = func(ctx context.Context, config *logical.BackendConfig) (logical.Backend, error) {
 		tsLogger := conf.Logger.Named("token")
-		c.AddLogger(tsLogger)
 		return NewTokenStore(ctx, tsLogger, c, config)
 	}
 	addExtraCredentialBackends(c, credentialBackends)
@@ -1251,7 +1254,6 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 	}
 
 	quotasLogger := conf.Logger.Named("quotas")
-	c.allLoggers = append(c.allLoggers, quotasLogger)
 	c.quotaManager, err = quotas.NewManager(quotasLogger, c.quotaLeaseWalker, c.metricSink)
 	if err != nil {
 		return nil, err
@@ -1269,7 +1271,6 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 
 	// start the event system
 	eventsLogger := conf.Logger.Named("events")
-	c.allLoggers = append(c.allLoggers, eventsLogger)
 	events, err := eventbus.NewEventBus(eventsLogger)
 	if err != nil {
 		return nil, err
@@ -1279,6 +1280,10 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 		c.events.Start()
 	}
 
+	// Make sure we're keeping track of the subloggers added above. We haven't
+	// yet registered core to the server command's SubloggerAdder, so any new
+	// subloggers will be in conf.AllLoggers.
+	c.allLoggers = conf.AllLoggers
 	return c, nil
 }
 
@@ -2322,12 +2327,9 @@ func (s standardUnsealStrategy) unseal(ctx context.Context, logger log.Logger, c
 	if err := c.setupHeaderHMACKey(ctx, false); err != nil {
 		return err
 	}
-	if err := c.runLockedUserEntryUpdates(ctx); err != nil {
-		return err
-	}
-	c.updateLockedUserEntries()
-
 	if !c.IsDRSecondary() {
+		c.updateLockedUserEntries()
+
 		if err := c.startRollback(); err != nil {
 			return err
 		}
@@ -2337,6 +2339,10 @@ func (s standardUnsealStrategy) unseal(ctx context.Context, logger log.Logger, c
 		if err := c.loadAudits(ctx); err != nil {
 			return err
 		}
+		if err := c.setupAuditedHeadersConfig(ctx); err != nil {
+			return err
+		}
+
 		if err := c.setupAudits(ctx); err != nil {
 			return err
 		}
@@ -2351,10 +2357,6 @@ func (s standardUnsealStrategy) unseal(ctx context.Context, logger log.Logger, c
 			return err
 		}
 
-		if err := c.setupAuditedHeadersConfig(ctx); err != nil {
-			return err
-		}
-
 		if err := c.setupCensusAgent(); err != nil {
 			c.logger.Error("skipping reporting for nil agent", "error", err)
 		}
@@ -2365,7 +2367,15 @@ func (s standardUnsealStrategy) unseal(ctx context.Context, logger log.Logger, c
 			return err
 		}
 	} else {
-		c.auditBroker = NewAuditBroker(c.logger)
+		var err error
+		disableEventLogger, err := parseutil.ParseBool(os.Getenv(featureFlagDisableEventLogger))
+		if err != nil {
+			return fmt.Errorf("unable to parse feature flag: %q: %w", featureFlagDisableEventLogger, err)
+		}
+		c.auditBroker, err = NewAuditBroker(c.logger, !disableEventLogger)
+		if err != nil {
+			return err
+		}
 	}
 
 	if !c.ReplicationState().HasState(consts.ReplicationPerformanceSecondary | consts.ReplicationDRSecondary) {
@@ -2584,6 +2594,11 @@ func (c *Core) preSeal() error {
 	if c.autoRotateCancel != nil {
 		c.autoRotateCancel()
 		c.autoRotateCancel = nil
+	}
+
+	if c.updateLockedUserEntriesCancel != nil {
+		c.updateLockedUserEntriesCancel()
+		c.updateLockedUserEntriesCancel = nil
 	}
 
 	if seal, ok := c.seal.(*autoSeal); ok {
@@ -3037,6 +3052,14 @@ func (c *Core) AddLogger(logger log.Logger) {
 	c.allLoggers = append(c.allLoggers, logger)
 }
 
+// SubloggerHook implements the SubloggerAdder interface. We add this method to
+// the server command after NewCore returns with a Core object. The hook keeps
+// track of newly added subloggers without manual calls to c.AddLogger.
+func (c *Core) SubloggerHook(logger log.Logger) log.Logger {
+	c.AddLogger(logger)
+	return logger
+}
+
 // SetLogLevel sets logging level for all tracked loggers to the level provided
 func (c *Core) SetLogLevel(level log.Level) {
 	c.allLoggersLock.RLock()
@@ -3177,6 +3200,7 @@ type BuiltinRegistry interface {
 	Get(name string, pluginType consts.PluginType) (func() (interface{}, error), bool)
 	Keys(pluginType consts.PluginType) []string
 	DeprecationStatus(name string, pluginType consts.PluginType) (consts.DeprecationStatus, bool)
+	IsBuiltinEntPlugin(name string, pluginType consts.PluginType) bool
 }
 
 func (c *Core) AuditLogger() AuditLogger {
@@ -3433,16 +3457,26 @@ func (c *Core) setupCachedMFAResponseAuth() {
 // updateLockedUserEntries runs every 15 mins to remove stale user entries from storage
 // it also updates the userFailedLoginInfo map with correct information for locked users if incorrect
 func (c *Core) updateLockedUserEntries() {
-	ctx := c.activeContext
+	if c.updateLockedUserEntriesCancel != nil {
+		return
+	}
+
+	var updateLockedUserEntriesCtx context.Context
+	updateLockedUserEntriesCtx, c.updateLockedUserEntriesCancel = context.WithCancel(c.activeContext)
+
+	if err := c.runLockedUserEntryUpdates(updateLockedUserEntriesCtx); err != nil {
+		c.Logger().Error("failed to run locked user entry updates", "error", err)
+	}
+
 	go func() {
 		ticker := time.NewTicker(15 * time.Minute)
 		for {
 			select {
-			case <-ctx.Done():
+			case <-updateLockedUserEntriesCtx.Done():
 				ticker.Stop()
 				return
 			case <-ticker.C:
-				if err := c.runLockedUserEntryUpdates(ctx); err != nil {
+				if err := c.runLockedUserEntryUpdates(updateLockedUserEntriesCtx); err != nil {
 					c.Logger().Error("failed to run locked user entry updates", "error", err)
 				}
 			}

@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 //go:build !enterprise
 
@@ -71,4 +71,8 @@ func (c *Core) mountEntrySysView(entry *MountEntry) extendedSystemView {
 		return esi
 	}
 	return c.NewAcmeBillingSystemView(esi)
+}
+
+func (c *Core) entBuiltinPluginMetrics(ctx context.Context, entry *MountEntry, val float32) error {
+	return nil
 }

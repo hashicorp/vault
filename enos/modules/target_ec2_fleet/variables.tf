@@ -1,3 +1,6 @@
+# Copyright (c) HashiCorp, Inc.
+# SPDX-License-Identifier: BUSL-1.1
+
 variable "ami_id" {
   description = "The machine image identifier"
   type        = string
@@ -25,7 +28,7 @@ variable "common_tags" {
   description = "Common tags for cloud resources"
   type        = map(string)
   default = {
-    Project = "Vault"
+    Project = "vault-ci"
   }
 }
 

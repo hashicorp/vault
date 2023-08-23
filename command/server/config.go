@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 package server
 
@@ -445,6 +445,11 @@ func (c *Config) Merge(c2 *Config) *Config {
 		if result.DisableClusteringRaw != nil {
 			haStorage.DisableClustering = result.DisableClustering
 		}
+	}
+
+	result.AdministrativeNamespacePath = c.AdministrativeNamespacePath
+	if c2.AdministrativeNamespacePath != "" {
+		result.AdministrativeNamespacePath = c2.AdministrativeNamespacePath
 	}
 
 	result.entConfig = c.entConfig.Merge(c2.entConfig)

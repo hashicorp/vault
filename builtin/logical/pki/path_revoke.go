@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 package pki
 
@@ -37,18 +37,6 @@ func pathListCertsRevoked(b *backend) *framework.Path {
 		Operations: map[logical.Operation]framework.OperationHandler{
 			logical.ListOperation: &framework.PathOperation{
 				Callback: b.pathListRevokedCertsHandler,
-				Responses: map[int][]framework.Response{
-					http.StatusOK: {{
-						Description: "OK",
-						Fields: map[string]*framework.FieldSchema{
-							"keys": {
-								Type:        framework.TypeStringSlice,
-								Description: `List of Keys`,
-								Required:    false,
-							},
-						},
-					}},
-				},
 			},
 		},
 
@@ -111,7 +99,7 @@ signed by an issuer in this mount.`,
 						Description: "OK",
 						Fields: map[string]*framework.FieldSchema{
 							"revocation_time": {
-								Type:        framework.TypeDurationSecond,
+								Type:        framework.TypeInt64,
 								Description: `Revocation Time`,
 								Required:    false,
 							},
@@ -176,7 +164,7 @@ be in PEM format.`,
 						Description: "OK",
 						Fields: map[string]*framework.FieldSchema{
 							"revocation_time": {
-								Type:        framework.TypeDurationSecond,
+								Type:        framework.TypeInt64,
 								Description: `Revocation Time`,
 								Required:    false,
 							},

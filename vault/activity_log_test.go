@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 package vault
 
@@ -136,7 +136,10 @@ func TestActivityLog_Creation_WrappingTokens(t *testing.T) {
 	}
 
 	id, isTWE := te.CreateClientID()
-	a.HandleTokenUsage(context.Background(), te, id, isTWE)
+	err := a.HandleTokenUsage(context.Background(), te, id, isTWE)
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	a.fragmentLock.Lock()
 	if a.fragment != nil {
@@ -153,7 +156,10 @@ func TestActivityLog_Creation_WrappingTokens(t *testing.T) {
 	}
 
 	id, isTWE = teNew.CreateClientID()
-	a.HandleTokenUsage(context.Background(), teNew, id, isTWE)
+	err = a.HandleTokenUsage(context.Background(), teNew, id, isTWE)
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	a.fragmentLock.Lock()
 	if a.fragment != nil {
@@ -380,18 +386,24 @@ func TestActivityLog_SaveTokensToStorageDoesNotUpdateTokenCount(t *testing.T) {
 	tokenPath := fmt.Sprintf("%sdirecttokens/%d/0", ActivityLogPrefix, a.GetStartTimestamp())
 	clientPath := fmt.Sprintf("sys/counters/activity/log/entity/%d/0", a.GetStartTimestamp())
 	// Create some entries without entityIDs
-	tokenEntryOne := logical.TokenEntry{NamespaceID: "ns1_id", Policies: []string{"hi"}}
-	entityEntry := logical.TokenEntry{EntityID: "foo", NamespaceID: "ns1_id", Policies: []string{"hi"}}
+	tokenEntryOne := logical.TokenEntry{NamespaceID: namespace.RootNamespaceID, Policies: []string{"hi"}}
+	entityEntry := logical.TokenEntry{EntityID: "foo", NamespaceID: namespace.RootNamespaceID, Policies: []string{"hi"}}
 
 	idNonEntity, isTWE := tokenEntryOne.CreateClientID()
 
 	for i := 0; i < 3; i++ {
-		a.HandleTokenUsage(ctx, &tokenEntryOne, idNonEntity, isTWE)
+		err := a.HandleTokenUsage(ctx, &tokenEntryOne, idNonEntity, isTWE)
+		if err != nil {
+			t.Fatal(err)
+		}
 	}
 
 	idEntity, isTWE := entityEntry.CreateClientID()
 	for i := 0; i < 2; i++ {
-		a.HandleTokenUsage(ctx, &entityEntry, idEntity, isTWE)
+		err := a.HandleTokenUsage(ctx, &entityEntry, idEntity, isTWE)
+		if err != nil {
+			t.Fatal(err)
+		}
 	}
 	err := a.saveCurrentSegmentToStorage(ctx, false)
 	if err != nil {

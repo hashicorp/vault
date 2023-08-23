@@ -72,7 +72,7 @@ jobs:
       MATRIX_FILE: ./.github/enos-run-matrices/${{ inputs.matrix-file-name }}.json
       MATRIX_TEST_GROUP: ${{ inputs.matrix-test-group }}
     steps:
-      - uses: actions/checkout@8e5e7e5ab8b370d6c329ec480221332ada57f0ab # v3.5.2
+      - uses: actions/checkout@c85c95e3d7251135ab7dc9ce3241c5835cc595a9 # v3.5.3
         with:
           ref: ${{ inputs.vault-revision }}
       - id: metadata
@@ -99,20 +99,20 @@ jobs:
       ENOS_VAR_artifactory_username: ${{ secrets.ARTIFACTORY_USER }}
       ENOS_VAR_artifactory_token: ${{ secrets.ARTIFACTORY_TOKEN }}
       ENOS_VAR_terraform_plugin_cache_dir: ./support/terraform-plugin-cache
+      ENOS_VAR_vault_artifact_path: ./support/downloads/${{ inputs.build-artifact-name }}
       ENOS_VAR_vault_build_date: ${{ needs.metadata.outputs.build-date }}
       ENOS_VAR_vault_product_version: ${{ needs.metadata.outputs.version }}
       ENOS_VAR_vault_revision: ${{ inputs.vault-revision }}
-      ENOS_VAR_vault_bundle_path: ./support/downloads/${{ inputs.build-artifact-name }}
       ENOS_VAR_vault_license_path: ./support/vault.hclic
       ENOS_DEBUG_DATA_ROOT_DIR: /tmp/enos-debug-data
     steps:
-      - uses: actions/checkout@8e5e7e5ab8b370d6c329ec480221332ada57f0ab # v3.5.2
+      - uses: actions/checkout@c85c95e3d7251135ab7dc9ce3241c5835cc595a9 # v3.5.3
       - uses: hashicorp/setup-terraform@v2
         with:
           # the Terraform wrapper will break Terraform execution in Enos because
           # it changes the output to text when we expect it to be JSON.
           terraform_wrapper: false
-      - uses: aws-actions/configure-aws-credentials@e1e17a757e536f70e52b5a12b2e8d1d1c60e04ef # v2.0.0
+      - uses: aws-actions/configure-aws-credentials@5fd3084fc36e372ff1fff382a39b10d03659f355 # v2.2.0
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID_CI }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY_CI }}
@@ -147,6 +147,7 @@ jobs:
       - name: Retry Enos scenario if necessary
         id: run_retry
         if: steps.run.outcome == 'failure'
+        continue-on-error: true
         run: enos scenario run --timeout 60m0s --chdir ./enos ${{ matrix.scenario }}
       - name: Upload Debug Data
         if: failure()
@@ -156,15 +157,44 @@ jobs:
           name: ${{ steps.prepare_scenario.outputs.debug_data_artifact_name }}
           path: ${{ env.ENOS_DEBUG_DATA_ROOT_DIR }}
           retention-days: 30
+        continue-on-error: true
       - name: Ensure scenario has been destroyed
+        id: destroy
         if: ${{ always() }}
         # With Enos version 0.0.11 the destroy step returns an error if the infrastructure
         # is already destroyed by enos run. So temporarily setting it to continue on error in GHA
         continue-on-error: true
         run: enos scenario destroy --timeout 60m0s --chdir ./enos ${{ matrix.scenario }}
       - name: Clean up Enos runtime directories
+        id: cleanup
         if: ${{ always() }}
+        continue-on-error: true
         run: |
           rm -rf /tmp/enos*
           rm -rf ./enos/support
           rm -rf ./enos/.enos
+      # Send a Slack notification to #feed-vault-enos-failures if the 'run' step fails.
+      # There is an incoming webhook set up on the "Enos Vault Failure Bot" Slackbot https://api.slack.com/apps/A05E31CH1LG/incoming-webhooks
+      - name: Send Slack notification on Enos run failure
+        uses: hashicorp/actions-slack-status@v1
+        if: ${{ always() }}
+        with:
+          failure-message: "An Enos scenario `run` failed. \nTriggering event: `${{ github.event_name }}` \nActor: `${{ github.actor }}`"
+          status: ${{ steps.run.outcome }}
+          slack-webhook-url: ${{ secrets.SLACK_WEBHOOK_URL }}
+      # Send a Slack notification to #feed-vault-enos-failures if the 'run_retry' step fails.
+      - name: Send Slack notification on Enos run_retry failure
+        uses: hashicorp/actions-slack-status@v1
+        if: ${{ always() }}
+        with:
+          failure-message: "An Enos scenario `run_retry` failed. \nTriggering event: `${{ github.event_name }}` \nActor: `${{ github.actor }}`"
+          status: ${{ steps.run_retry.outcome }}
+          slack-webhook-url: ${{ secrets.SLACK_WEBHOOK_URL }}
+      # Send a Slack notification to #feed-vault-enos-failures if the 'destroy' step fails.
+      - name: Send Slack notification on Enos destroy failure
+        uses: hashicorp/actions-slack-status@v1
+        if: ${{ always() }}
+        with:
+          failure-message: "An Enos scenario `destroy` failed. \nTriggering event: `${{ github.event_name }}` \nActor: `${{ github.actor }}`"
+          status: ${{ steps.destroy.outcome }}
+          slack-webhook-url: ${{ secrets.SLACK_WEBHOOK_URL }}

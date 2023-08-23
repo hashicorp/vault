@@ -1,6 +1,6 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 import { currentRouteName } from '@ember/test-helpers';
@@ -31,7 +31,7 @@ module('Acceptance | auth-methods list view', function (hooks) {
     await page.visit();
     assert.strictEqual(currentRouteName(), 'vault.cluster.access.methods', 'navigates to the correct route');
     assert.ok(page.methodsLink.isActive, 'the first link is active');
-    assert.strictEqual(page.methodsLink.text, 'Authentication methods');
+    assert.strictEqual(page.methodsLink.text, 'Authentication Methods');
   });
 
   test('it filters by name and auth type', async function (assert) {

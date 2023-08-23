@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 package http
 
@@ -8,23 +8,34 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"net/http/httptest"
 	"strings"
+	"sync"
 	"sync/atomic"
 	"testing"
 	"time"
 
+	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/api"
+	"github.com/hashicorp/vault/audit"
+	"github.com/hashicorp/vault/helper/experiments"
 	"github.com/hashicorp/vault/helper/namespace"
+	"github.com/hashicorp/vault/helper/testhelpers/corehelpers"
+	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/vault"
+	"github.com/hashicorp/vault/vault/cluster"
 	"nhooyr.io/websocket"
 )
 
 // TestEventsSubscribe tests the websocket endpoint for subscribing to events
 // by generating some events.
 func TestEventsSubscribe(t *testing.T) {
-	core := vault.TestCore(t)
+	core := vault.TestCoreWithConfig(t, &vault.CoreConfig{
+		Experiments: []string{experiments.VaultExperimentEventsAlpha1},
+	})
+
 	ln, addr := TestServer(t, core)
 	defer ln.Close()
 
@@ -195,5 +206,99 @@ func TestEventsSubscribeAuth(t *testing.T) {
 	}
 	if resp == nil || resp.StatusCode != http.StatusForbidden {
 		t.Errorf("Expected 403 but got %+v", resp)
+	}
+}
+
+func TestCanForwardEventConnections(t *testing.T) {
+	// Run again with in-memory network
+	inmemCluster, err := cluster.NewInmemLayerCluster("inmem-cluster", 3, hclog.New(&hclog.LoggerOptions{
+		Mutex: &sync.Mutex{},
+		Level: hclog.Trace,
+		Name:  "inmem-cluster",
+	}))
+	if err != nil {
+		t.Fatal(err)
+	}
+	testCluster := vault.NewTestCluster(t, &vault.CoreConfig{
+		Experiments: []string{experiments.VaultExperimentEventsAlpha1},
+		AuditBackends: map[string]audit.Factory{
+			"nop": corehelpers.NoopAuditFactory(nil),
+		},
+	}, &vault.TestClusterOptions{
+		ClusterLayers: inmemCluster,
+	})
+	cores := testCluster.Cores
+	testCluster.Start()
+	defer testCluster.Cleanup()
+
+	rootToken := testCluster.RootToken
+
+	// Wait for core to become active
+	vault.TestWaitActiveForwardingReady(t, cores[0].Core)
+
+	// Test forwarding a request. Since we're going directly from core to core
+	// with no fallback we know that if it worked, request handling is working
+	c := cores[1]
+	standby, err := c.Standby()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !standby {
+		t.Fatal("expected core to be standby")
+	}
+
+	// We need to call Leader as that refreshes the connection info
+	isLeader, _, _, err := c.Leader()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if isLeader {
+		t.Fatal("core should not be leader")
+	}
+	corehelpers.RetryUntil(t, 5*time.Second, func() error {
+		state := c.ActiveNodeReplicationState()
+		if state == 0 {
+			return fmt.Errorf("heartbeats have not yet returned a valid active node replication state: %d", state)
+		}
+		return nil
+	})
+
+	req, err := http.NewRequest("GET", "https://pushit.real.good:9281/v1/sys/events/subscribe/xyz?json=true", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	req = req.WithContext(namespace.RootContext(req.Context()))
+	req.Header.Add(consts.AuthHeaderName, rootToken)
+
+	resp := httptest.NewRecorder()
+	forwardRequest(cores[1].Core, resp, req)
+
+	header := resp.Header()
+	if header == nil {
+		t.Fatal("err: expected at least a Location header")
+	}
+	if !strings.HasPrefix(header.Get("Location"), "wss://") {
+		t.Fatalf("bad location: %s", header.Get("Location"))
+	}
+
+	// test forwarding requests to each core
+	handled := 0
+	forwarded := 0
+	for _, c := range cores {
+		resp := httptest.NewRecorder()
+		fakeHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			handled++
+		})
+		handleRequestForwarding(c.Core, fakeHandler).ServeHTTP(resp, req)
+		header := resp.Header()
+		if header == nil {
+			continue
+		}
+		if strings.HasPrefix(header.Get("Location"), "wss://") {
+			forwarded++
+		}
+	}
+	if handled != 1 && forwarded != 2 {
+		t.Fatalf("Expected 1 core to handle the request and 2 to forward")
 	}
 }

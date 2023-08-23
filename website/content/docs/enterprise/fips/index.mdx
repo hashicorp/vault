@@ -6,24 +6,26 @@ description: An overview of FIPS compliance in Vault.
 
 # FIPS
 
+@include 'alerts/enterprise-only.mdx'
+
 The [Federal Information Processing Standard](https://www.nist.gov/federal-information-standards-fips)
 is a cryptography-focused certification standard for U.S. Government usage.
 
 Hashicorp's Vault Enterprise supports the modes of FIPS compliance documented below.
 
-## FIPS 140-2 Inside
+## FIPS 140-2 inside
 
 Vault Enterprise now includes release flavors with FIPS 140-2 compliant
 cryptography built into the Vault binary. More information on these releases
 can be found on the [FIPS 140-2 Inside](/vault/docs/enterprise/fips/fips1402) page.
 
-## Seal Wrap
+## Seal wrap
 
 Before our FIPS Inside effort, Vault [depended on](https://www.hashicorp.com/vault-compliance)
 an external HSM for FIPS 140-2 compliance. This uses the [Seal Wrap](/vault/docs/enterprise/fips/sealwrap)
 functionality to wrap security relevant keys in an extra layer of encryption.
 
-## Comparison of Versions
+## Comparison of versions
 
 The below table attempts to documents the FIPS compliance of various Vault
 operations between FIPS Inside and FIPS Seal Wrap. This table is by no means

@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import { module, test } from 'qunit';
 import { setupRenderingTest } from 'vault/tests/helpers';
 import { render } from '@ember/test-helpers';
@@ -40,7 +45,7 @@ module('Integration | Component | page/pki-tidy-auto-settings', function (hooks)
     );
 
     assert.dom('[data-test-breadcrumbs] li').exists({ count: 4 }, 'an item exists for each breadcrumb');
-    assert.dom('[data-test-header-title]').hasText('Automatic tidy configuration', 'title is correct');
+    assert.dom('[data-test-header-title]').hasText('Automatic Tidy Configuration', 'title is correct');
     assert
       .dom('[data-test-pki-edit-tidy-auto-link]')
       .hasText('Edit auto-tidy', 'toolbar edit link has correct text');

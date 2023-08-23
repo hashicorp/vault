@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 package command
 
@@ -102,15 +102,32 @@ func (c *EventsSubscribeCommands) subscribeRequest(client *api.Client, path stri
 	client.AddHeader("X-Vault-Token", client.Token())
 	client.AddHeader("X-Vault-Namesapce", client.Namespace())
 	ctx := context.Background()
-	conn, resp, err := websocket.Dial(ctx, u.String(), &websocket.DialOptions{
-		HTTPClient: client.CloneConfig().HttpClient,
-		HTTPHeader: client.Headers(),
-	})
-	if err != nil {
-		if resp != nil && resp.StatusCode == http.StatusNotFound {
-			return fmt.Errorf("events endpoint not found; check `vault read sys/experiments` to see if an events experiment is available but disabled")
+
+	// Follow redirects in case our request if our request is forwarded to the leader.
+	url := u.String()
+	var conn *websocket.Conn
+	var err error
+	for attempt := 0; attempt < 10; attempt++ {
+		var resp *http.Response
+		conn, resp, err = websocket.Dial(ctx, url, &websocket.DialOptions{
+			HTTPClient: client.CloneConfig().HttpClient,
+			HTTPHeader: client.Headers(),
+		})
+		if err != nil {
+			if resp != nil {
+				if resp.StatusCode == http.StatusNotFound {
+					return fmt.Errorf("events endpoint not found; check `vault read sys/experiments` to see if an events experiment is available but disabled")
+				} else if resp.StatusCode == http.StatusTemporaryRedirect {
+					url = resp.Header.Get("Location")
+					continue
+				}
+			}
+			return err
 		}
-		return err
+		break
+	}
+	if conn == nil {
+		return fmt.Errorf("too many redirects")
 	}
 	defer conn.Close(websocket.StatusNormalClosure, "")
 

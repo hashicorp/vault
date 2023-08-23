@@ -1,3 +1,8 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
 {{! template-lint-configure simple-unless "warn" }}
 <div class="field" data-test-field={{or @attr.name true}}>
   {{#unless this.hideLabel}}
@@ -301,9 +306,9 @@
           disabled={{and @attr.options.editDisabled (not @model.isNew)}}
           autocomplete="off"
           spellcheck="false"
-          value={{or (get @model this.valuePath) @attr.options.defaultValue}}
-          {{on "input" this.onChangeWithEvent}}
+          value={{get @model this.valuePath}}
           {{on "change" this.onChangeWithEvent}}
+          {{on "input" this.onChangeWithEvent}}
           {{on "keyup" this.handleKeyUp}}
           class="input {{if this.validationError 'has-error-border'}}"
           maxLength={{@attr.options.characterLimit}}

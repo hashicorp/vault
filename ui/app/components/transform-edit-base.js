@@ -1,6 +1,6 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 import { inject as service } from '@ember/service';
@@ -44,10 +44,10 @@ export default Component.extend(FocusOnInsertMixin, {
   },
 
   willDestroyElement() {
-    this._super(...arguments);
-    if (this.model && this.model.isError) {
+    if (this.model && this.model.isError && !this.model.isDestroyed && !this.model.isDestroying) {
       this.model.rollbackAttributes();
     }
+    this._super(...arguments);
   },
 
   transitionToRoute() {

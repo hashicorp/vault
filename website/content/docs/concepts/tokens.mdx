@@ -6,7 +6,10 @@ description: Tokens are a core auth method in Vault. Concepts and important feat
 
 # Tokens
 
-!> **Warning**: Since tokens are considered opaque values, their structure is undocumented and subject to change. For these reasons, we do not recommend using tokens within your scripts or for automation since it can cause breakage.
+<Warning heading="Internal token structure is volatile">
+  Tokens are opaque values so their structure is undocumented and subject to change.
+  Scripts and automations that rely on the internal structure of a token in scripts will break.
+</Warning>
 
 Tokens are the core method for _authentication_ within Vault. Tokens
 can be used directly or [auth methods](/vault/docs/concepts/auth)
@@ -33,7 +36,7 @@ Read on for a deeper dive into token concepts.  See the
 [tokens tutorial](/vault/tutorials/tokens/tokens)
 for details on how these concepts play out in practice.
 
-## Token Types
+## Token types
 
 As of Vault 1.0, there are two types of tokens: `service` tokens and `batch`
 tokens. A section near the bottom of this page contains detailed information
@@ -41,7 +44,7 @@ about their differences, but it is useful to understand other token concepts
 first. The features in the following sections all apply to service tokens, and
 their applicability to batch tokens is discussed later.
 
-## The Token Store
+## The token store
 
 Often in documentation or in help channels, the "token store" is referenced.
 This is the same as the [`token` authentication
@@ -50,7 +53,7 @@ backend in that it is responsible for creating and storing tokens, and cannot
 be disabled. It is also the only auth method that has no login
 capability -- all actions require existing authenticated tokens.
 
-## Root Tokens
+## Root tokens
 
 Root tokens are tokens that have the `root` policy attached to them. Root
 tokens can do anything in Vault. _Anything_. In addition, they are the only
@@ -78,7 +81,7 @@ whenever a root token is live. This way multiple people can verify as to the
 tasks performed with the root token, and that the token was revoked immediately
 after these tasks were completed.
 
-## Token Hierarchies and Orphan Tokens
+## Token hierarchies and orphan tokens
 
 Normally, when a token holder creates new tokens, these tokens will be created
 as children of the original token; tokens they create will be children of them;
@@ -101,7 +104,7 @@ endpoint, which revokes the given token but rather than revoke the rest of the
 tree, it instead sets the tokens' immediate children to be orphans. Use with
 caution!
 
-## Token Accessors
+## Token accessors
 
 When tokens are created, a token accessor is also created and returned. This
 accessor is a value that acts as a reference to a token and can only be used to
@@ -133,7 +136,7 @@ dangerous endpoint (since listing all of the accessors means that they can then
 be used to revoke all tokens), it also provides a way to audit and revoke the
 currently-active set of tokens.
 
-## Token Time-To-Live, Periodic Tokens, and Explicit Max TTLs
+## Token Time-To-Live, periodic tokens, and explicit max TTLs
 
 Every non-root token has a time-to-live (TTL) associated with it, which is a
 current period of validity since either the token's creation time or last
@@ -149,7 +152,7 @@ token is a periodic token (available for creation by `root`/`sudo` users, token
 store roles, or some auth methods), has an explicit maximum TTL
 attached, or neither.
 
-### The General Case
+### The general case
 
 In the general case, where there is neither a period nor explicit maximum TTL
 value set on the token, the token's lifetime since it was created will be
@@ -177,7 +180,7 @@ current value and the client may want to reauthenticate and acquire a new
 token. However, outside of direct operator interaction, Vault will never revoke
 a token before the returned TTL has expired.
 
-### Explicit Max TTLs
+### Explicit max TTLs
 
 Tokens can have an explicit max TTL set on them. This value becomes a hard
 limit on the token's lifetime -- no matter what the values in (1), (2), and (3)
@@ -185,7 +188,7 @@ from the general case are, the token cannot live past this explicitly-set
 value. This has an effect even when using periodic tokens to escape the normal
 TTL mechanism.
 
-### Periodic Tokens
+### Periodic tokens
 
 In some cases, having a token be revoked would be problematic -- for instance,
 if a long-running service needs to maintain its SQL connection pool over a long
@@ -221,31 +224,31 @@ There are a few important things to know when using periodic tokens:
 - A token with both a period and an explicit max TTL will act like a periodic
   token but will be revoked when the explicit max TTL is reached
 
-## CIDR-Bound Tokens
+## CIDR-Bound tokens
 
 Some tokens are able to be bound to CIDR(s) that restrict the range of client
 IPs allowed to use them. These affect all tokens except for non-expiring root
 tokens (those with a TTL of zero). If a root token has an expiration, it also
 is affected by CIDR-binding.
 
-## Token Types in Detail
+## Token types in detail
 
 There are currently two types of tokens.
 
-### Service Tokens
+### Service tokens
 
 Service tokens are what users will generally think of as "normal" Vault tokens.
 They support all features, such as renewal, revocation, creating child tokens,
 and more. They are correspondingly heavyweight to create and track.
 
-### Batch Tokens
+### Batch tokens
 
 Batch tokens are encrypted blobs that carry enough information for them to
 be used for Vault actions, but they require no storage on disk to track them.
 As a result they are extremely lightweight and scalable, but lack most of the
 flexibility and features of service tokens.
 
-### Token Type Comparison
+### Token type comparison
 
 This reference chart describes the difference in behavior between service and
 batch tokens.
@@ -266,14 +269,14 @@ batch tokens.
 | Creation Scales with Performance Standby Node Count |                                                      No |                                             Yes |
 | Cost                                                | Heavyweight; multiple storage writes per token creation | Lightweight; no storage cost for token creation |
 
-### Service vs. Batch Token Lease Handling
+### Service vs. batch token lease handling
 
-#### Service Tokens
+#### Service tokens
 
 Leases created by service tokens (including child tokens' leases) are tracked
 along with the service token and revoked when the token expires.
 
-#### Batch Tokens
+#### Batch tokens
 
 Leases created by batch tokens are constrained to the remaining TTL of the
 batch tokens and, if the batch token is not an orphan, are tracked by the

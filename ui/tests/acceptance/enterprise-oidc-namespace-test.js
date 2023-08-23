@@ -1,4 +1,9 @@
-import { visit, currentURL } from '@ember/test-helpers';
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
+import { currentURL, click } from '@ember/test-helpers';
 import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
 import { create } from 'ember-cli-page-object';
@@ -40,17 +45,8 @@ module('Acceptance | Enterprise | oidc auth namespace test', function (hooks) {
   });
 
   test('oidc: request is made to auth_url when a namespace is inputted', async function (assert) {
-    assert.expect(5);
+    assert.expect(4);
 
-    this.server.post(`/auth/${this.rootOidc}/oidc/auth_url`, (schema, req) => {
-      const { redirect_uri } = JSON.parse(req.requestBody);
-      const { pathname, search } = parseURL(redirect_uri);
-      assert.strictEqual(
-        pathname + search,
-        `/ui/vault/auth/${this.rootOidc}/oidc/callback`,
-        'request made to auth_url when the login page is visited'
-      );
-    });
     this.server.post(`/auth/${this.nsOidc}/oidc/auth_url`, (schema, req) => {
       const { redirect_uri } = JSON.parse(req.requestBody);
       const { pathname, search } = parseURL(redirect_uri);
@@ -69,23 +65,24 @@ module('Acceptance | Enterprise | oidc auth namespace test', function (hooks) {
     // enable oidc in child namespace with default role
     await authPage.loginNs(this.namespace);
     await this.enableOidc(this.nsOidc, `${this.nsOidc}-role`);
+    // check root namespace for method tab
     await authPage.logout();
-
-    await visit('/vault/auth');
+    await authPage.namespaceInput('');
     assert.dom(SELECTORS.authTab(this.rootOidc)).exists('renders oidc method tab for root');
+    // check child namespace for method tab
     await authPage.namespaceInput(this.namespace);
+    assert.dom(SELECTORS.authTab(this.nsOidc)).exists('renders oidc method tab for child namespace');
+    // clicking on the tab should update with= queryParam
+    await click(`[data-test-auth-method="${this.nsOidc}"] a`);
     assert.strictEqual(
       currentURL(),
       `/vault/auth?namespace=${this.namespace}&with=${this.nsOidc}%2F`,
       'url updates with namespace value'
     );
-    assert.dom(SELECTORS.authTab(this.nsOidc)).exists('renders oidc method tab for child namespace');
-
     // disable methods to cleanup test state for re-running
     await authPage.login();
     await this.disableOidc(this.rootOidc);
     await this.disableOidc(this.nsOidc);
     await shell.runCommands([`delete /sys/auth/${this.namespace}`]);
-    await authPage.logout();
   });
 });
