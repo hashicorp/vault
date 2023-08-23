@@ -54,9 +54,10 @@ export default class KvSecretPaths extends Component {
   }
 
   get commands() {
-    const { snippet: cliPath } = this.paths.findBy('label', 'CLI path');
-    const { snippet: apiPath } = this.paths.findBy('label', 'API path');
+    const cliPath = this.paths.findBy('label', 'CLI path').snippet;
+    const apiPath = this.paths.findBy('label', 'API path').snippet;
     const url = `http://127.0.0.1:8200${apiPath}`;
+
     return {
       cli: `vault kv get ${cliPath}`,
       /* eslint-disable-next-line no-useless-escape */
