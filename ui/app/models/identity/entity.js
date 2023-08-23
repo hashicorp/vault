@@ -8,10 +8,9 @@ import { computed } from '@ember/object';
 import { alias } from '@ember/object/computed';
 import IdentityModel from './_base';
 import apiPath from 'vault/utils/api-path';
-import attachCapabilities from 'vault/lib/attach-capabilities';
 import lazyCapabilities from 'vault/macros/lazy-capabilities';
 
-const Model = IdentityModel.extend({
+export default IdentityModel.extend({
   formFields: computed(function () {
     return ['name', 'disabled', 'policies', 'metadata'];
   }),
@@ -45,15 +44,12 @@ const Model = IdentityModel.extend({
   inheritedGroupIds: attr({
     readOnly: true,
   }),
+  updatePath: lazyCapabilities(apiPath`identity/entity/id/${'id'}`, 'id'),
   canDelete: alias('updatePath.canDelete'),
   canEdit: alias('updatePath.canUpdate'),
   canRead: alias('updatePath.canRead'),
+  aliasPath: lazyCapabilities(apiPath`identity/entity-alias`),
   canAddAlias: alias('aliasPath.canCreate'),
   policyPath: lazyCapabilities(apiPath`sys/policies`),
   canCreatePolicies: alias('policyPath.canCreate'),
-});
-
-export default attachCapabilities(Model, {
-  updatePath: apiPath`identity/entity/id/${'id'}`,
-  aliasPath: apiPath`identity/entity-alias`,
 });
