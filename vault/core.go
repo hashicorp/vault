@@ -2402,7 +2402,7 @@ func (s standardUnsealStrategy) unseal(ctx context.Context, logger log.Logger, c
 			atomic.StoreUint32(c.sealMigrationDone, 1)
 		}
 
-		c.sealWrapBackend.StartPartialRewrapping(c.activeContext)
+		startPartialSealRewrapping(c)
 	}
 
 	if c.getClusterListener() != nil && (c.ha != nil || shouldStartClusterListener(c)) {

@@ -9,3 +9,7 @@ package vault
 func isSealOldKeyError(err error) bool {
 	return false
 }
+
+func startPartialSealRewrapping(c *Core) {
+	// nothing to do
+}
