@@ -17,8 +17,8 @@ import { action } from '@ember/object';
  *
  * @param {array} metadata - The kv/metadata model. It is version agnostic.
  * @param {array} breadcrumbs - Breadcrumbs as an array of objects that contain label, route, and modelId. They are updated via the util kv-breadcrumbs to handle dynamic *pathToSecret on the list-directory route.
- * @param {onCancel} onCancel - Callback triggered when cancel button is clicked that transitions to the metadata details route.
- * @param {onSave} onSave - Callback triggered on save success that transitions to the metadata details route.
+ * @callback onCancel - Callback triggered when cancel button is clicked that transitions to the metadata details route.
+ * @callback onSave - Callback triggered on save success that transitions to the metadata details route.
  */
 
 export default class KvSecretMetadataEditComponent extends Component {

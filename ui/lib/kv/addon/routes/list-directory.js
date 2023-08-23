@@ -18,15 +18,20 @@ export default class KvSecretsListRoute extends Route {
     pageFilter: {
       refreshModel: true,
     },
+    currentPage: {
+      refreshModel: true,
+    },
   };
 
-  async fetchMetadata(backend, pathToSecret, filter) {
+  async fetchMetadata(backend, pathToSecret, params) {
     return await this.store
-      .query('kv/metadata', { backend, pathToSecret })
-      .then((models) => {
-        return filter
-          ? models.filter((model) => model.fullSecretPath.toLowerCase().includes(filter.toLowerCase()))
-          : models;
+      .lazyPaginatedQuery('kv/metadata', {
+        backend,
+        responsePath: 'data.keys',
+        page: Number(params.currentPage) || 1,
+        size: Number(params.currentPageSize),
+        pageFilter: params.pageFilter,
+        pathToSecret,
       })
       .catch((err) => {
         if (err.httpStatus === 403) {
@@ -41,15 +46,15 @@ export default class KvSecretsListRoute extends Route {
   }
 
   model(params) {
-    const pageFilter = params.pageFilter || '';
-    const pathToSecret = params.path_to_secret ? normalizePath(params.path_to_secret) : '';
+    const { pageFilter, path_to_secret } = params;
+    const pathToSecret = path_to_secret ? normalizePath(path_to_secret) : '';
     const backend = this.secretMountPath.currentPath;
-    const filter = pathToSecret ? pathToSecret + pageFilter : pageFilter;
+    const filterValue = pathToSecret ? (pageFilter ? pathToSecret + pageFilter : pathToSecret) : pageFilter;
     return hash({
-      secrets: this.fetchMetadata(backend, pathToSecret, filter),
+      secrets: this.fetchMetadata(backend, pathToSecret, params),
       backend,
       pathToSecret,
-      filterValue: filter,
+      filterValue,
       pageFilter,
     });
   }
@@ -78,6 +83,7 @@ export default class KvSecretsListRoute extends Route {
   resetController(controller, isExiting) {
     if (isExiting) {
       controller.set('pageFilter', null);
+      controller.set('currentPage', null);
     }
   }
 }

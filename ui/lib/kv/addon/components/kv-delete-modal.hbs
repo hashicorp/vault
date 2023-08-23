@@ -27,10 +27,10 @@
                     @groupValue={{this.deleteType}}
                     @onChange={{fn (mut this.deleteType) option.key}}
                   />
-                  <div class="has-left-margin-s {{if option.disabled 'opacity-060'}}">
-                    <label class="has-text-weight-semibold">{{option.label}}</label>
+                  <label for={{option.key}} class="has-left-margin-s {{if option.disabled 'opacity-060'}}">
+                    <p class="has-text-weight-semibold">{{option.label}}</p>
                     <p>{{option.description}}</p>
-                  </div>
+                  </label>
                 </div>
               </T.Trigger>
               {{#if option.disabled}}

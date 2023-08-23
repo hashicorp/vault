@@ -32,8 +32,7 @@ export default class InputSearch extends Component {
    * Function called when any of the inputs change
    *
    */
-
-  @tracked searchInput;
+  @tracked searchInput = '';
 
   constructor() {
     super(...arguments);

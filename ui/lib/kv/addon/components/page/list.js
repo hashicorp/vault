@@ -23,8 +23,6 @@ import { pathIsDirectory } from 'kv/utils/kv-breadcrumbs';
  * @param {string} filterValue - The concatenation of the pathToSecret and pageFilter ex: beep/boop/my-
  * @param {boolean} noMetadataListPermissions - true if the return to query metadata LIST is 403, indicating the user does not have permissions to that endpoint.
  * @param {array} breadcrumbs - Breadcrumbs as an array of objects that contain label, route, and modelId. They are updated via the util kv-breadcrumbs to handle dynamic *pathToSecret on the list-directory route.
- * @param {string} routeName - Either list or list-directory.
- * @param {object} meta - Object with values needed for pagination, created by LazyPaginatedQuery on the store service.
  */
 
 export default class KvListPageComponent extends Component {
@@ -40,7 +38,16 @@ export default class KvListPageComponent extends Component {
   }
 
   get buttonText() {
-    return pathIsDirectory(this.secretPath) ? 'View directory' : 'View secret';
+    return pathIsDirectory(this.secretPath) ? 'View list' : 'View secret';
+  }
+
+  // callback from HDS pagination to set the queryParams currentPage
+  get paginationQueryParams() {
+    return (page) => {
+      return {
+        currentPage: page,
+      };
+    };
   }
 
   @action
@@ -52,7 +59,7 @@ export default class KvListPageComponent extends Component {
       const message = `Successfully deleted the metadata and all version data of the secret ${model.fullSecretPath}.`;
       this.flashMessages.success(message);
       // if you've deleted a secret from within a directory, transition to its parent directory.
-      if (this.args.routeName === 'list-directory') {
+      if (this.router.currentRoute.localName === 'list-directory') {
         const ancestors = ancestorKeysForKey(model.fullSecretPath);
         const nearest = ancestors.pop();
         this.router.transitionTo(`${this.mountPoint}.list-directory`, nearest);
@@ -72,7 +79,8 @@ export default class KvListPageComponent extends Component {
   }
 
   @action
-  transitionToSecretDetail() {
+  transitionToSecretDetail(evt) {
+    evt.preventDefault();
     pathIsDirectory(this.secretPath)
       ? this.router.transitionTo('vault.cluster.secrets.backend.kv.list-directory', this.secretPath)
       : this.router.transitionTo('vault.cluster.secrets.backend.kv.secret.details', this.secretPath);

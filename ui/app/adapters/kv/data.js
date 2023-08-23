@@ -96,7 +96,7 @@ export default class KvDataAdapter extends ApplicationAdapter {
       });
   }
 
-  /* Five types of delete operations */
+  /* Five types of delete operations (the 5th operation is on the kv/metadata adapter) */
   deleteRecord(store, type, snapshot) {
     const { backend, path } = snapshot.record;
     const { deleteType, deleteVersions } = snapshot.adapterOptions;
@@ -121,7 +121,7 @@ export default class KvDataAdapter extends ApplicationAdapter {
           data: { versions: deleteVersions },
         });
       default:
-        assert('deleteType must be one of delete-latest-version, delete-version, destroy, undelete.');
+        assert('deleteType must be one of delete-latest-version, delete-version, destroy, or undelete.');
     }
   }
 

@@ -5,7 +5,7 @@ import { withConfirmLeave } from 'core/decorators/confirm-leave';
 import { breadcrumbsForSecret } from 'kv/utils/kv-breadcrumbs';
 
 @withConfirmLeave('model.newVersion')
-export default class KvSecretEditRoute extends Route {
+export default class KvSecretDetailsEditRoute extends Route {
   @service store;
 
   model() {
