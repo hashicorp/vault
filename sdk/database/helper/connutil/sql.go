@@ -23,7 +23,10 @@ import (
 )
 
 const (
-	authTypeIAM      = "gcp_iam"
+	AuthTypeIAM = "gcp_iam"
+)
+
+const (
 	dbTypePostgres   = "pgx"
 	dbTypeMSSQL      = "mssql"
 	cloudSQLPostgres = "cloudsql-postgres"
@@ -132,7 +135,7 @@ func (c *SQLConnectionProducer) Init(ctx context.Context, conf map[string]interf
 		return nil, errwrap.Wrapf("invalid max_connection_lifetime: {{err}}", err)
 	}
 
-	if c.AuthType == authTypeIAM {
+	if c.AuthType == AuthTypeIAM {
 		c.cloudDriverName, err = uuid.GenerateUUID()
 		if err != nil {
 			return nil, fmt.Errorf("unable to generate UUID for IAM configuration: %w", err)
@@ -169,15 +172,13 @@ func (c *SQLConnectionProducer) Connection(ctx context.Context) (interface{}, er
 		}
 		// If the ping was unsuccessful, close it and ignore errors as we'll be
 		// reestablishing anyways
-
-		// @TODO confirm if we need driver cleanup here as well
 		c.db.Close()
 	}
 
 	// default non-IAM behavior
 	driverName := c.Type
 
-	if c.AuthType == authTypeIAM {
+	if c.AuthType == AuthTypeIAM {
 		_, err := c.getCloudSQLDriverName()
 		if err != nil {
 			return nil, err
@@ -186,13 +187,11 @@ func (c *SQLConnectionProducer) Connection(ctx context.Context) (interface{}, er
 		driverName = c.cloudDriverName
 		credentials := c.Credentials
 
-		cleanup, err := c.registerDrivers(driverName, credentials)
+		_, err = c.registerDrivers(driverName, credentials)
 		if err != nil {
 			return nil, err
 		}
 
-		// store driver cleanup
-		cacheDrivers(driverName, cleanup)
 	} else {
 		// For mssql backend, switch to sqlserver instead
 		if c.Type == "mssql" {
@@ -248,16 +247,9 @@ func (c *SQLConnectionProducer) Close() error {
 	if c.db != nil {
 		// if auth_type is IAM, ensure cleanup
 		// of cloudSQL resources
-		if c.AuthType == authTypeIAM {
+		if c.AuthType == AuthTypeIAM {
 			driversMu.Lock()
 			defer driversMu.Unlock()
-
-			// @TODO cleanup
-			//for driver := range drivers {
-			//	fmt.Printf("cleaning up for %s\n", c.Type)
-			//	cleanup := cachePop(driver)
-			//	cleanup()
-			//}
 		} else {
 			c.db.Close()
 		}

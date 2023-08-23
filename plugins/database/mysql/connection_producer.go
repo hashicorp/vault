@@ -25,7 +25,7 @@ import (
 )
 
 const (
-	authTypeIAM   = "gcp_iam"
+	authTypeIAM   = connutil.AuthTypeIAM
 	cloudSQLMySQL = "cloudsql-mysql"
 	driverMySQL   = "mysql"
 )
@@ -185,9 +185,6 @@ func (c *mySQLConnectionProducer) Connection(ctx context.Context) (interface{}, 
 		if err != nil {
 			return nil, err
 		}
-
-		//@TODO store driver cleanup
-		//c.cleanupDrivers = append(c.cleanupDrivers, cleanupFunc)
 	}
 
 	connURL, err := c.addTLStoDSN()
@@ -303,7 +300,7 @@ func (c *mySQLConnectionProducer) rewriteProtocolForGCP(inDSN string) (string, e
 	}
 
 	if c.isCloud {
-		config.Net = c.cloudDriverName // todo format to something reasonable
+		config.Net = c.cloudDriverName
 	}
 
 	return config.FormatDSN(), nil
