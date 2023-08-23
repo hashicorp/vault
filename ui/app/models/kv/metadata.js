@@ -100,7 +100,7 @@ export default class KvSecretMetadataModel extends Model {
   get canUpdateMetadata() {
     return this.metadataPath.get('canUpdate') !== false;
   }
-  get canEditData() {
+  get canCreateVersionData() {
     return this.dataPath.get('canUpdate') !== false;
   }
 }

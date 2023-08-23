@@ -9,13 +9,14 @@ import CapabilitiesModel from '../capabilities';
 export default class KvSecretDataModel extends Model {
   backend: string;
   path: string;
-  data: object;
+  secretData: object;
   createdTime: string;
   customMetadata: object;
   deletionTime: string;
-  destroyed: string;
-  version: string | number;
-
+  destroyed: boolean;
+  versions: object;
+  failReadErrorCode: number;
+  casVersion: number;
   // apiPaths for capabilities
   dataPath: Promise<CapabilitiesModel>;
   metadataPath: Promise<CapabilitiesModel>;

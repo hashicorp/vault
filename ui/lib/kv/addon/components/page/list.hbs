@@ -94,7 +94,7 @@
                           </LinkTo>
                         </li>
                       {{/if}}
-                      {{#if metadata.canEditData}}
+                      {{#if metadata.canCreateVersionData}}
                         <li>
                           <LinkTo @route="secret.details.edit" @model={{metadata.fullSecretPath}}>
                             Create new version

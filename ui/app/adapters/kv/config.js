@@ -4,7 +4,7 @@
  */
 
 import ApplicationAdapter from '../application';
-export default class KvDataAdapter extends ApplicationAdapter {
+export default class KvConfigAdapter extends ApplicationAdapter {
   namespace = 'v1';
 
   urlForFindRecord(id) {
