@@ -342,6 +342,7 @@ export default Route.extend(UnloadModelRoute, {
           )
         ) {
           version && version.rollbackAttributes();
+          model && model.rollbackAttributes();
           this.unloadModel();
           return true;
         } else {
