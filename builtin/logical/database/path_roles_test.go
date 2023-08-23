@@ -1084,6 +1084,9 @@ func TestWALsDeletedOnRoleDeletion(t *testing.T) {
 }
 
 func TestIsInsideRotationWindow(t *testing.T) {
+	// We allow seconds to be set for testing purposes, but it's not to be used in production
+	scheduleOptions = cron.Second | cron.Minute | cron.Hour | cron.Dom | cron.Month | cron.Dow
+
 	for _, tc := range []struct {
 		name         string
 		expected     bool

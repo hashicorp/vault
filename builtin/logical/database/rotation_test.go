@@ -14,6 +14,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/robfig/cron/v3"
+
 	"github.com/Sectorbob/mlab-ns2/gae/ns/digest"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/helper/testhelpers/mongodb"
@@ -37,6 +39,9 @@ const (
 )
 
 func TestBackend_StaticRole_Rotation_basic(t *testing.T) {
+	// We allow seconds to be set for testing purposes, but it's not to be used in production
+	scheduleOptions = cron.Second | cron.Minute | cron.Hour | cron.Dom | cron.Month | cron.Dow
+
 	cluster, sys := getCluster(t)
 	defer cluster.Cleanup()
 
@@ -1218,6 +1223,7 @@ func TestRollsPasswordForwardsUsingWAL(t *testing.T) {
 }
 
 func TestStoredWALsCorrectlyProcessed(t *testing.T) {
+	scheduleOptions = cron.Second | cron.Minute | cron.Hour | cron.Dom | cron.Month | cron.Dow
 	const walNewPassword = "new-password-from-wal"
 
 	rotationPeriodData := map[string]interface{}{
