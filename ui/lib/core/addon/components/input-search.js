@@ -11,6 +11,12 @@ export default class inputSelect extends Component {
    *
    */
   @tracked searchInput = '';
+
+  constructor() {
+    super(...arguments);
+    this.searchInput = this.args?.initialValue;
+  }
+
   @action
   inputChanged() {
     this.args.onChange(this.searchInput);
