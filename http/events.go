@@ -22,13 +22,13 @@ import (
 )
 
 type eventSubscribeArgs struct {
-	ctx     context.Context
-	logger  hclog.Logger
-	events  *eventbus.EventBus
-	ns      *namespace.Namespace
-	pattern string
-	conn    *websocket.Conn
-	json    bool
+	ctx               context.Context
+	logger            hclog.Logger
+	events            *eventbus.EventBus
+	namespacePatterns []string
+	pattern           string
+	conn              *websocket.Conn
+	json              bool
 }
 
 // handleEventsSubscribeWebsocket runs forever, returning a websocket error code and reason
@@ -36,7 +36,7 @@ type eventSubscribeArgs struct {
 func handleEventsSubscribeWebsocket(args eventSubscribeArgs) (websocket.StatusCode, string, error) {
 	ctx := args.ctx
 	logger := args.logger
-	ch, cancel, err := args.events.Subscribe(ctx, args.ns, args.pattern)
+	ch, cancel, err := args.events.SubscribeMultipleNamespaces(ctx, args.namespacePatterns, args.pattern)
 	if err != nil {
 		logger.Info("Error subscribing", "error", err)
 		return websocket.StatusUnsupportedData, "Error subscribing", nil
@@ -123,6 +123,7 @@ func handleEventsSubscribe(core *vault.Core, req *logical.Request) http.Handler 
 			}
 		}
 
+		namespacePatterns := r.URL.Query()["namespaces"]
 		conn, err := websocket.Accept(w, r, nil)
 		if err != nil {
 			logger.Info("Could not accept as websocket", "error", err)
@@ -143,7 +144,7 @@ func handleEventsSubscribe(core *vault.Core, req *logical.Request) http.Handler 
 			}
 		}()
 
-		closeStatus, closeReason, err := handleEventsSubscribeWebsocket(eventSubscribeArgs{ctx, logger, core.Events(), ns, pattern, conn, json})
+		closeStatus, closeReason, err := handleEventsSubscribeWebsocket(eventSubscribeArgs{ctx, logger, core.Events(), namespacePatterns, pattern, conn, json})
 		if err != nil {
 			closeStatus = websocket.CloseStatus(err)
 			if closeStatus == -1 {

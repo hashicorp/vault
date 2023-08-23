@@ -23,6 +23,8 @@ var (
 
 type EventsSubscribeCommands struct {
 	*BaseCommand
+
+	namespaces []string
 }
 
 func (c *EventsSubscribeCommands) Synopsis() string {
@@ -31,7 +33,7 @@ func (c *EventsSubscribeCommands) Synopsis() string {
 
 func (c *EventsSubscribeCommands) Help() string {
 	helpText := `
-Usage: vault events subscribe [-format=json] [-timeout=XYZs] eventType
+Usage: vault events subscribe [-namespaces=ns1] [-timeout=XYZs] eventType
 
   Subscribe to events of the given event type (topic). The events will be
   output to standard out.
@@ -44,7 +46,15 @@ Usage: vault events subscribe [-format=json] [-timeout=XYZs] eventType
 
 func (c *EventsSubscribeCommands) Flags() *FlagSets {
 	set := c.flagSet(FlagSetHTTP)
-
+	f := set.NewFlagSet("Subscribe Options")
+	f.StringSliceVar(&StringSliceVar{
+		Name: "namespaces",
+		Usage: `Specifies one or more patterns of namespaces to subscribe
+                to. Patterns can include "*" characters to indicate wildcards.
+				The defaults is to subscribe only to the root namespace.`,
+		Default: []string{},
+		Target:  &c.namespaces,
+	})
 	return set
 }
 
@@ -88,6 +98,21 @@ func (c *EventsSubscribeCommands) Run(args []string) int {
 	return 0
 }
 
+// cleanNamespace removes leading and trailing space and /'s from the namespace path.
+func cleanNamespace(ns string) string {
+	ns = strings.TrimSpace(ns)
+	ns = strings.Trim(ns, "/")
+	return ns
+}
+
+func cleanNamespaces(namespaces []string) []string {
+	cleaned := make([]string, len(namespaces))
+	for i, ns := range namespaces {
+		cleaned[i] = cleanNamespace(ns)
+	}
+	return cleaned
+}
+
 func (c *EventsSubscribeCommands) subscribeRequest(client *api.Client, path string) error {
 	r := client.NewRequest("GET", "/v1/"+path)
 	u := r.URL
@@ -98,9 +123,12 @@ func (c *EventsSubscribeCommands) subscribeRequest(client *api.Client, path stri
 	}
 	q := u.Query()
 	q.Set("json", "true")
+	if len(c.namespaces) > 0 {
+		q["namespaces"] = cleanNamespaces(c.namespaces)
+	}
 	u.RawQuery = q.Encode()
 	client.AddHeader("X-Vault-Token", client.Token())
-	client.AddHeader("X-Vault-Namesapce", client.Namespace())
+	client.AddHeader("X-Vault-Namespace", client.Namespace())
 	ctx := context.Background()
 
 	// Follow redirects in case our request if our request is forwarded to the leader.

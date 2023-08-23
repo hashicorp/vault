@@ -202,6 +202,10 @@ func NewEventBus(logger hclog.Logger) (*EventBus, error) {
 }
 
 func (bus *EventBus) Subscribe(ctx context.Context, ns *namespace.Namespace, pattern string) (<-chan *eventlogger.Event, context.CancelFunc, error) {
+	return bus.SubscribeMultipleNamespaces(ctx, []string{ns.Path}, pattern)
+}
+
+func (bus *EventBus) SubscribeMultipleNamespaces(ctx context.Context, namespacePathPatterns []string, pattern string) (<-chan *eventlogger.Event, context.CancelFunc, error) {
 	// subscriptions are still stored even if the bus has not been started
 	pipelineID, err := uuid.GenerateUUID()
 	if err != nil {
@@ -213,7 +217,7 @@ func (bus *EventBus) Subscribe(ctx context.Context, ns *namespace.Namespace, pat
 		return nil, nil, err
 	}
 
-	filterNode := newFilterNode(ns, pattern)
+	filterNode := newFilterNode(namespacePathPatterns, pattern)
 	err = bus.broker.RegisterNode(eventlogger.NodeID(filterNodeID), filterNode)
 	if err != nil {
 		return nil, nil, err
@@ -259,15 +263,23 @@ func (bus *EventBus) SetSendTimeout(timeout time.Duration) {
 	bus.timeout = timeout
 }
 
-func newFilterNode(ns *namespace.Namespace, pattern string) *eventlogger.Filter {
+func newFilterNode(namespacePatterns []string, pattern string) *eventlogger.Filter {
 	return &eventlogger.Filter{
 		Predicate: func(e *eventlogger.Event) (bool, error) {
 			eventRecv := e.Payload.(*logical.EventReceived)
-
-			// Drop if event is not in our namespace.
-			// TODO: add wildcard/child namespace processing here in some cases?
-			if eventRecv.Namespace != ns.Path {
-				return false, nil
+			eventNs := strings.Trim(eventRecv.Namespace, "/")
+			// Drop if event is not in namespace patterns namespace.
+			if len(namespacePatterns) > 0 {
+				allow := false
+				for _, nsPattern := range namespacePatterns {
+					if glob.Glob(nsPattern, eventNs) {
+						allow = true
+						break
+					}
+				}
+				if !allow {
+					return false, nil
+				}
 			}
 
 			// Filter for correct event type, including wildcards.
