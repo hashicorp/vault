@@ -40,8 +40,11 @@ module('Acceptance | landing page dashboard', function (hooks) {
     await authPage.login();
     await visit('/vault/dashboard');
     const version = this.owner.lookup('service:version');
-    const versionName = version.version.slice(0, version.version.indexOf('+'));
-    assert.dom('[data-test-dashboard-version-header]').hasText(`Vault v${versionName} root`);
+    const versionName = version.version;
+    const versionNameEnd = version.isEnterprise ? versionName.indexOf('+') : versionName.length;
+    assert
+      .dom('[data-test-dashboard-version-header]')
+      .hasText(`Vault v${versionName.slice(0, versionNameEnd)} root`);
   });
 
   module('secrets engines card', function (hooks) {
@@ -357,7 +360,7 @@ module('Acceptance | landing page dashboard', function (hooks) {
     test('shows the replication card empty state in community version', async function (assert) {
       await visit('/vault/dashboard');
       const version = this.owner.lookup('service:version');
-      assert.true(version.isEnterprise, 'vault is enterprise');
+      assert.false(version.isEnterprise, 'vault is enterprise');
       assert.dom(REPLICATION_CARD_SELECTORS.replicationEmptyState).exists();
       assert.dom(REPLICATION_CARD_SELECTORS.replicationEmptyStateTitle).hasText('Replication not set up');
       assert
