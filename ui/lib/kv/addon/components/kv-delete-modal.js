@@ -6,7 +6,6 @@
 import Component from '@glimmer/component';
 import { action } from '@ember/object';
 import { tracked } from '@glimmer/tracking';
-import { inject as service } from '@ember/service';
 import { assert } from '@ember/debug';
 
 /**
@@ -26,9 +25,6 @@ import { assert } from '@ember/debug';
  */
 
 export default class KvDeleteModal extends Component {
-  @service flashMessages;
-  @service router;
-  @service store;
   @tracked deleteType = null; // Either delete-version or delete-current-version.
   @tracked modalOpen = false;
 
