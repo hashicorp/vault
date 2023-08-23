@@ -31,10 +31,7 @@ import { withFormFields } from 'vault/decorators/model-form-fields';
 const validations = {
   path: [
     { type: 'presence', message: `Path can't be blank.` },
-    {
-      validator: (model) => (model.path?.match(/\/$/) ? false : true),
-      message: `Path can't end in forward slash '/'.`,
-    },
+    { type: 'endsInSlash', message: `Path can't end in forward slash '/'.` },
     {
       type: 'containsWhiteSpace',
       message:
