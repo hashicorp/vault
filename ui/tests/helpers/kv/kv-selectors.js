@@ -35,6 +35,9 @@ export const PAGE = {
     versionDropdown: '[data-test-version-dropdown]',
     version: (number) => `[data-test-version="${number}"]`,
     createNewVersion: '[data-test-create-new-version]',
+    delete: '[data-test-kv-delete="delete"]',
+    destroy: '[data-test-kv-delete="destroy"]',
+    copy: '[data-test-copy-menu-trigger]',
   },
   list: {
     createSecret: '[data-test-toolbar-create-secret]',

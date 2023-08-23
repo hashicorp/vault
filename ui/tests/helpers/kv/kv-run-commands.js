@@ -38,3 +38,11 @@ export const addSecretMetadataCmd = (backend, secret, options = { max_versions: 
   }, '');
   return `write ${backend}/metadata/${secret} ${stringOptions}`;
 };
+
+// Clears kv-related data and capabilities so that admin
+// capabilities from setup don't rollover
+export function clearRecords(store) {
+  store.unloadAll('kv/data');
+  store.unloadAll('kv/metatata');
+  store.unloadAll('capabilities');
+}

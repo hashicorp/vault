@@ -6,18 +6,21 @@ import { setupApplicationTest } from 'vault/tests/helpers';
 import authPage from 'vault/tests/pages/auth';
 import { deleteEngineCmd, mountEngineCmd, runCmd, tokenWithPolicyCmd } from 'vault/tests/helpers/commands';
 import { personas } from 'vault/tests/helpers/policy-generator/kv';
-import { writeVersionedSecret } from 'vault/tests/helpers/kv/kv-run-commands';
+import { clearRecords, writeVersionedSecret } from 'vault/tests/helpers/kv/kv-run-commands';
 import { FORM, PAGE } from 'vault/tests/helpers/kv/kv-selectors';
 import { setupControlGroup } from 'vault/tests/helpers/control-groups';
 
 /**
- * This test set is for testing the flow for creating new secrets and versions
+ * This test set is for testing the flow for creating new secrets and versions.
+ * Letter(s) in parenthesis at the end are shorthand for the persona,
+ * for ease of tracking down specific tests failures from CI
  */
 module('Acceptance | kv-v2 workflow | secret and version create', function (hooks) {
   setupApplicationTest(hooks);
 
   hooks.beforeEach(async function () {
     this.backend = `kv-create-${uuidv4()}`;
+    this.store = this.owner.lookup('service:store');
     await authPage.login();
     await runCmd(mountEngineCmd('kv-v2', this.backend), false);
     await writeVersionedSecret(this.backend, 'app/first', 'foo', 'bar', 2);
@@ -32,6 +35,8 @@ module('Acceptance | kv-v2 workflow | secret and version create', function (hook
     hooks.beforeEach(async function () {
       const token = await runCmd(tokenWithPolicyCmd('admin', personas.admin(this.backend)));
       await authPage.login(token);
+      clearRecords(this.store);
+      return;
     });
     test('cancel on create clears model (a)', async function (assert) {
       const backend = this.backend;
@@ -273,7 +278,9 @@ module('Acceptance | kv-v2 workflow | secret and version create', function (hook
   module('data-reader persona', function (hooks) {
     hooks.beforeEach(async function () {
       const token = await runCmd(tokenWithPolicyCmd('data-reader', personas.dataReader(this.backend)));
-      return authPage.login(token);
+      await authPage.login(token);
+      clearRecords(this.store);
+      return;
     });
     test('cancel on create clears model (dr)', async function (assert) {
       const backend = this.backend;
@@ -292,14 +299,7 @@ module('Acceptance | kv-v2 workflow | secret and version create', function (hook
       const backend = this.backend;
       await visit(`/vault/secrets/${backend}/kv/${encodeURIComponent('app/first')}/details`);
       assert.dom(PAGE.infoRowValue('foo')).exists('key has expected value');
-      await click(PAGE.detail.createNewVersion);
-      await fillIn(FORM.keyInput(), 'bar');
-      await click(FORM.cancelBtn);
-      assert.dom(PAGE.infoRowValue('foo')).exists('secret is previous value');
-      await click(PAGE.detail.createNewVersion);
-      await fillIn(FORM.keyInput(), 'bar');
-      await click(PAGE.breadcrumbAtIdx(3));
-      assert.dom(PAGE.infoRowValue('foo')).exists('secret is previous value');
+      assert.dom(PAGE.detail.createNewVersion).doesNotExist();
     });
     test('create & update root secret with default metadata (dr)', async function (assert) {
       const backend = this.backend;
@@ -344,18 +344,7 @@ module('Acceptance | kv-v2 workflow | secret and version create', function (hook
 
       // Add new version
       await click(PAGE.secretTab('Secret'));
-      await click(PAGE.detail.createNewVersion);
-      assert.dom(FORM.inputByAttr('path')).isDisabled('path input is disabled');
-      assert.dom(FORM.inputByAttr('path')).hasValue('app/first');
-      assert.dom(FORM.toggleMetadata).doesNotExist('Does not show metadata toggle when creating new version');
-      assert.dom(FORM.keyInput()).hasValue('foo');
-      assert.dom(FORM.maskedValueInput()).hasValue('bar');
-      await fillIn(FORM.keyInput(1), 'api_url');
-      await fillIn(FORM.maskedValueInput(1), 'hashicorp.com');
-      await click(FORM.saveBtn);
-      assert
-        .dom(FORM.messageError)
-        .hasText('Error 1 error occurred: * permission denied', 'API error shows on form');
+      assert.dom(PAGE.detail.createNewVersion).doesNotExist('cannot create new version');
     });
     test('create nested secret with metadata (dr)', async function (assert) {
       const backend = this.backend;
@@ -420,31 +409,9 @@ module('Acceptance | kv-v2 workflow | secret and version create', function (hook
     test('create new version of secret from older version (dr)', async function (assert) {
       const backend = this.backend;
       await visit(`/vault/secrets/${backend}/kv/app%2Ffirst/details?version=1`);
-      // TODO: Should hide dropdown for no metadata access
-      // assert.dom(PAGE.detail.versionDropdown).doesNotExist('version dropdown does not show');
+      assert.dom(PAGE.detail.versionDropdown).doesNotExist('version dropdown does not show');
       assert.dom(PAGE.detail.versionTimestamp).includesText('Version 1 created');
-      await click(PAGE.detail.createNewVersion);
-      assert.strictEqual(
-        currentURL(),
-        `/vault/secrets/${backend}/kv/app%2Ffirst/details/edit?version=1`,
-        'Goes to new version page'
-      );
-      // TODO: alert should show if no metadata access
-      // assert
-      //   .dom(FORM.versionAlert)
-      //   .hasText(
-      //     'Warning You are creating a new version based on data from Version 1. The current version for app/first is Version 2.',
-      //     'Shows version warning'
-      //   );
-      assert.dom(FORM.keyInput()).hasValue('key-1', 'Key input has old value');
-      assert.dom(FORM.maskedValueInput()).hasValue('val-1', 'Val input has old value');
-
-      await fillIn(FORM.keyInput(), 'my-key');
-      await fillIn(FORM.maskedValueInput(), 'my-value');
-      await click(FORM.saveBtn);
-      assert
-        .dom(FORM.messageError)
-        .hasText('Error 1 error occurred: * permission denied', 'API error shows on form');
+      assert.dom(PAGE.detail.createNewVersion).doesNotExist('cannot create new version');
     });
   });
 
@@ -453,7 +420,9 @@ module('Acceptance | kv-v2 workflow | secret and version create', function (hook
       const token = await runCmd(
         tokenWithPolicyCmd('data-list-reader', personas.dataListReader(this.backend))
       );
-      return authPage.login(token);
+      await authPage.login(token);
+      clearRecords(this.store);
+      return;
     });
     test('cancel on create clears model (dlr)', async function (assert) {
       const backend = this.backend;
@@ -475,14 +444,7 @@ module('Acceptance | kv-v2 workflow | secret and version create', function (hook
       const backend = this.backend;
       await visit(`/vault/secrets/${backend}/kv/${encodeURIComponent('app/first')}/details`);
       assert.dom(PAGE.infoRowValue('foo')).exists('key has expected value');
-      await click(PAGE.detail.createNewVersion);
-      await fillIn(FORM.keyInput(), 'bar');
-      await click(FORM.cancelBtn);
-      assert.dom(PAGE.infoRowValue('foo')).exists('secret is previous value');
-      await click(PAGE.detail.createNewVersion);
-      await fillIn(FORM.keyInput(), 'bar');
-      await click(PAGE.breadcrumbAtIdx(3));
-      assert.dom(PAGE.infoRowValue('foo')).exists('secret is previous value');
+      assert.dom(PAGE.detail.createNewVersion).doesNotExist('cannot create new version');
     });
     test('create & update root secret with default metadata (dlr)', async function (assert) {
       const backend = this.backend;
@@ -527,18 +489,7 @@ module('Acceptance | kv-v2 workflow | secret and version create', function (hook
 
       // Add new version
       await click(PAGE.secretTab('Secret'));
-      await click(PAGE.detail.createNewVersion);
-      assert.dom(FORM.inputByAttr('path')).isDisabled('path input is disabled');
-      assert.dom(FORM.inputByAttr('path')).hasValue('app/first');
-      assert.dom(FORM.toggleMetadata).doesNotExist('Does not show metadata toggle when creating new version');
-      assert.dom(FORM.keyInput()).hasValue('foo');
-      assert.dom(FORM.maskedValueInput()).hasValue('bar');
-      await fillIn(FORM.keyInput(1), 'api_url');
-      await fillIn(FORM.maskedValueInput(1), 'hashicorp.com');
-      await click(FORM.saveBtn);
-      assert
-        .dom(FORM.messageError)
-        .hasText('Error 1 error occurred: * permission denied', 'API error shows on form');
+      assert.dom(PAGE.detail.createNewVersion).doesNotExist('cannot create new version');
     });
     test('create nested secret with metadata (dlr)', async function (assert) {
       const backend = this.backend;
@@ -603,31 +554,9 @@ module('Acceptance | kv-v2 workflow | secret and version create', function (hook
     test('create new version of secret from older version (dlr)', async function (assert) {
       const backend = this.backend;
       await visit(`/vault/secrets/${backend}/kv/app%2Ffirst/details?version=1`);
-      // TODO: Should hide dropdown for no metadata access
-      // assert.dom(PAGE.detail.versionDropdown).doesNotExist('version dropdown does not show');
+      assert.dom(PAGE.detail.versionDropdown).doesNotExist('version dropdown does not show');
       assert.dom(PAGE.detail.versionTimestamp).includesText('Version 1 created');
-      await click(PAGE.detail.createNewVersion);
-      assert.strictEqual(
-        currentURL(),
-        `/vault/secrets/${backend}/kv/app%2Ffirst/details/edit?version=1`,
-        'Goes to new version page'
-      );
-      // TODO: alert should show if no metadata access
-      // assert
-      //   .dom(FORM.versionAlert)
-      //   .hasText(
-      //     'Warning You are creating a new version based on data from Version 1. The current version for app/first is Version 2.',
-      //     'Shows version warning'
-      //   );
-      assert.dom(FORM.keyInput()).hasValue('key-1', 'Key input has old value');
-      assert.dom(FORM.maskedValueInput()).hasValue('val-1', 'Val input has old value');
-
-      await fillIn(FORM.keyInput(), 'my-key');
-      await fillIn(FORM.maskedValueInput(), 'my-value');
-      await click(FORM.saveBtn);
-      assert
-        .dom(FORM.messageError)
-        .hasText('Error 1 error occurred: * permission denied', 'API error shows on form');
+      assert.dom(PAGE.detail.createNewVersion).doesNotExist('cannot create new version');
     });
   });
 
@@ -636,7 +565,9 @@ module('Acceptance | kv-v2 workflow | secret and version create', function (hook
       const token = await runCmd(
         tokenWithPolicyCmd('data-list-reader', personas.metadataMaintainer(this.backend))
       );
-      return authPage.login(token);
+      await authPage.login(token);
+      clearRecords(this.store);
+      return;
     });
     test('cancel on create clears model (mm)', async function (assert) {
       const backend = this.backend;
@@ -828,7 +759,9 @@ module('Acceptance | kv-v2 workflow | secret and version create', function (hook
   module('secret-creator persona', function (hooks) {
     hooks.beforeEach(async function () {
       const token = await runCmd(tokenWithPolicyCmd('secret-creator', personas.secretCreator(this.backend)));
-      return authPage.login(token);
+      await authPage.login(token);
+      clearRecords(this.store);
+      return;
     });
     test('cancel on create clears model (sc)', async function (assert) {
       const backend = this.backend;
@@ -1031,8 +964,7 @@ module('Acceptance | kv-v2 workflow | secret and version create', function (hook
     test('create new version of secret from older version (sc)', async function (assert) {
       const backend = this.backend;
       await visit(`/vault/secrets/${backend}/kv/app%2Ffirst/details?version=1`);
-      // TODO: Should hide dropdown for no metadata access
-      // assert.dom(PAGE.detail.versionDropdown).doesNotExist('version dropdown does not show');
+      assert.dom(PAGE.detail.versionDropdown).doesNotExist('version dropdown does not show');
       assert.dom(PAGE.detail.versionTimestamp).doesNotExist('Version created not shown');
       await click(PAGE.detail.createNewVersion);
       assert.strictEqual(
@@ -1076,11 +1008,10 @@ module('Acceptance | kv-v2 workflow | secret and version create', function (hook
     hooks.beforeEach(async function () {
       const userPolicy = `
 path "${this.backend}/data/*" {
-  capabilities = ["create", "read", "update", "delete", "list"]
+  capabilities = ["create", "read", "update"]
   control_group = {
     max_ttl = "24h"
     factor "authorizer" {
-      controlled_capabilities = ["update"]
       identity {
           group_names = ["managers"]
           approvals = 1
