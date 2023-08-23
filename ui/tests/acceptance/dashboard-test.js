@@ -349,7 +349,7 @@ module('Acceptance | landing page dashboard', function (hooks) {
       assert.dom(QUICK_ACTION_SELECTORS.paramsTitle).hasText('Secret path');
       assert.dom(QUICK_ACTION_SELECTORS.getActionButton('Read secrets')).exists({ count: 1 });
       await selectChoose(QUICK_ACTION_SELECTORS.paramSelect, '.ember-power-select-option', 0);
-      await consoleComponent.runCommands(deleteEngineCmd('database'));
+      await consoleComponent.runCommands(deleteEngineCmd('kv'));
     });
   });
 
