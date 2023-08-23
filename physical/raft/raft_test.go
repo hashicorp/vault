@@ -30,6 +30,54 @@ import (
 	bolt "go.etcd.io/bbolt"
 )
 
+func testBothRaftBackends(t *testing.T, f func(raftWALValue string)) {
+	t.Helper()
+
+	testCases := []struct {
+		name   string
+		useWAL string
+	}{
+		{
+			name:   "use wal",
+			useWAL: "true",
+		},
+		{
+			name:   "use boltdb",
+			useWAL: "false",
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			f(tc.useWAL)
+		})
+	}
+}
+
+func testBothRaftBackendsBenchmark(b *testing.B, f func(raftWALValue string)) {
+	testCases := []struct {
+		name   string
+		useWAL string
+	}{
+		{
+			name:   "use wal",
+			useWAL: "true",
+		},
+		{
+			name:   "use boltdb",
+			useWAL: "false",
+		},
+	}
+
+	for _, tc := range testCases {
+		b.Run(tc.name, func(b *testing.B) {
+			f(tc.useWAL)
+		})
+	}
+}
+
 func connectPeers(nodes ...*RaftBackend) {
 	for _, node := range nodes {
 		for _, peer := range nodes {
@@ -157,34 +205,23 @@ func compareDBs(t *testing.T, boltDB1, boltDB2 *bolt.DB, dataOnly bool) error {
 
 func TestRaft_Backend(t *testing.T) {
 	t.Parallel()
-	testCases := []struct {
-		name   string
-		useWAL string
-	}{
-		{
-			name:   "use wal",
-			useWAL: "true",
-		},
-		{
-			name:   "use boltdb",
-			useWAL: "false",
-		},
-	}
 
-	for _, tc := range testCases {
-		t.Run(tc.name, func(t *testing.T) {
-			t.Parallel()
-			conf := map[string]string{
-				"trailing_logs":  "100",
-				raftWalConfigKey: tc.useWAL,
-			}
+	testBothRaftBackends(t, func(useRaftWal string) {
+		conf := map[string]string{
+			"trailing_logs":  "100",
+			raftWalConfigKey: useRaftWal,
+		}
 
-			b, dir := GetRaftWithConfig(t, true, true, conf)
-			defer func() { _ = os.RemoveAll(dir) }()
+		b, dir := GetRaftWithConfig(t, true, true, conf)
+		defer func() { _ = os.RemoveAll(dir) }()
 
-			physical.ExerciseBackend(t, b)
-		})
-	}
+		physical.ExerciseBackend(t, b)
+	})
+}
+
+// TestRaft_SwitchFromBoltDBToRaftWal is testing that we don't use raft-wal, even if configured to do so,
+// if there is an existing raft.db file on disk (meaning BoltDB was previously in use).
+func TestRaft_SwitchFromBoltDBToRaftWal(t *testing.T) {
 }
 
 func TestRaft_ParseRaftWalBackend(t *testing.T) {
@@ -302,315 +339,260 @@ func TestRaft_ParseNonVoter(t *testing.T) {
 func TestRaft_Backend_LargeKey(t *testing.T) {
 	t.Parallel()
 
-	testCases := map[string]string{
-		"use raft wal": "true",
-		"use boltdb":   "false",
-	}
+	testBothRaftBackends(t, func(useRaftWal string) {
+		conf := map[string]string{
+			"trailing_logs":  "100",
+			raftWalConfigKey: useRaftWal,
+		}
 
-	for name, useRaftWal := range testCases {
-		t.Run(name, func(t *testing.T) {
-			t.Parallel()
-			conf := map[string]string{
-				"trailing_logs":  "100",
-				raftWalConfigKey: useRaftWal,
-			}
+		b, dir := GetRaftWithConfig(t, true, true, conf)
+		defer func() { _ = os.RemoveAll(dir) }()
 
-			b, dir := GetRaftWithConfig(t, true, true, conf)
-			defer func() { _ = os.RemoveAll(dir) }()
+		key, err := base62.Random(bolt.MaxKeySize + 1)
+		if err != nil {
+			t.Fatal(err)
+		}
+		entry := &physical.Entry{Key: key, Value: []byte(key)}
 
-			key, err := base62.Random(bolt.MaxKeySize + 1)
-			if err != nil {
-				t.Fatal(err)
-			}
-			entry := &physical.Entry{Key: key, Value: []byte(key)}
+		err = b.Put(context.Background(), entry)
+		if err == nil {
+			t.Fatal("expected error for put entry")
+		}
 
-			err = b.Put(context.Background(), entry)
-			if err == nil {
-				t.Fatal("expected error for put entry")
-			}
+		if !strings.Contains(err.Error(), physical.ErrKeyTooLarge) {
+			t.Fatalf("expected %q, got %v", physical.ErrKeyTooLarge, err)
+		}
 
-			if !strings.Contains(err.Error(), physical.ErrKeyTooLarge) {
-				t.Fatalf("expected %q, got %v", physical.ErrKeyTooLarge, err)
-			}
-
-			out, err := b.Get(context.Background(), entry.Key)
-			if err != nil {
-				t.Fatalf("unexpected error after failed put: %v", err)
-			}
-			if out != nil {
-				t.Fatal("expected response entry to be nil after a failed put")
-			}
-		})
-	}
+		out, err := b.Get(context.Background(), entry.Key)
+		if err != nil {
+			t.Fatalf("unexpected error after failed put: %v", err)
+		}
+		if out != nil {
+			t.Fatal("expected response entry to be nil after a failed put")
+		}
+	})
 }
 
 func TestRaft_Backend_LargeValue(t *testing.T) {
 	t.Parallel()
-	testCases := map[string]string{
-		"use raft wal": "true",
-		"use boltdb":   "false",
-	}
 
-	for name, useRaftWal := range testCases {
-		t.Run(name, func(t *testing.T) {
-			t.Parallel()
-			conf := map[string]string{
-				"trailing_logs":  "100",
-				raftWalConfigKey: useRaftWal,
-			}
+	testBothRaftBackends(t, func(useRaftWal string) {
+		conf := map[string]string{
+			"trailing_logs":  "100",
+			raftWalConfigKey: useRaftWal,
+		}
 
-			b, dir := GetRaftWithConfig(t, true, true, conf)
-			defer func() { _ = os.RemoveAll(dir) }()
+		b, dir := GetRaftWithConfig(t, true, true, conf)
+		defer func() { _ = os.RemoveAll(dir) }()
 
-			value := make([]byte, defaultMaxEntrySize+1)
-			rand.Read(value)
-			entry := &physical.Entry{Key: "foo", Value: value}
+		value := make([]byte, defaultMaxEntrySize+1)
+		rand.Read(value)
+		entry := &physical.Entry{Key: "foo", Value: value}
 
-			err := b.Put(context.Background(), entry)
-			if err == nil {
-				t.Fatal("expected error for put entry")
-			}
+		err := b.Put(context.Background(), entry)
+		if err == nil {
+			t.Fatal("expected error for put entry")
+		}
 
-			if !strings.Contains(err.Error(), physical.ErrValueTooLarge) {
-				t.Fatalf("expected %q, got %v", physical.ErrValueTooLarge, err)
-			}
+		if !strings.Contains(err.Error(), physical.ErrValueTooLarge) {
+			t.Fatalf("expected %q, got %v", physical.ErrValueTooLarge, err)
+		}
 
-			out, err := b.Get(context.Background(), entry.Key)
-			if err != nil {
-				t.Fatalf("unexpected error after failed put: %v", err)
-			}
-			if out != nil {
-				t.Fatal("expected response entry to be nil after a failed put")
-			}
-		})
-	}
+		out, err := b.Get(context.Background(), entry.Key)
+		if err != nil {
+			t.Fatalf("unexpected error after failed put: %v", err)
+		}
+		if out != nil {
+			t.Fatal("expected response entry to be nil after a failed put")
+		}
+	})
 }
 
 // TestRaft_TransactionalBackend_GetTransactions tests that passing a slice of transactions to the
 // raft backend will populate values for any transactions that are Get operations.
 func TestRaft_TransactionalBackend_GetTransactions(t *testing.T) {
 	t.Parallel()
-	testCases := map[string]string{
-		"use raft wal": "true",
-		"use boltdb":   "false",
-	}
+	testBothRaftBackends(t, func(useRaftWal string) {
+		conf := map[string]string{
+			"trailing_logs":  "100",
+			raftWalConfigKey: useRaftWal,
+		}
 
-	for name, useRaftWal := range testCases {
-		t.Run(name, func(t *testing.T) {
-			t.Parallel()
-			conf := map[string]string{
-				"trailing_logs":  "100",
-				raftWalConfigKey: useRaftWal,
-			}
+		b, dir := GetRaftWithConfig(t, true, true, conf)
+		defer func() { _ = os.RemoveAll(dir) }()
 
-			b, dir := GetRaftWithConfig(t, true, true, conf)
-			defer func() { _ = os.RemoveAll(dir) }()
+		ctx := context.Background()
+		txns := make([]*physical.TxnEntry, 0)
 
-			ctx := context.Background()
-			txns := make([]*physical.TxnEntry, 0)
-
-			// Add some seed values to our FSM, and prepare our slice of transactions at the same time
-			for i := 0; i < 5; i++ {
-				key := fmt.Sprintf("foo/%d", i)
-				err := b.fsm.Put(ctx, &physical.Entry{Key: key, Value: []byte(fmt.Sprintf("value-%d", i))})
-				if err != nil {
-					t.Fatal(err)
-				}
-
-				txns = append(txns, &physical.TxnEntry{
-					Operation: physical.GetOperation,
-					Entry: &physical.Entry{
-						Key: key,
-					},
-				})
-			}
-
-			// Add some additional transactions, so we have a mix of operations
-			for i := 0; i < 10; i++ {
-				txnEntry := &physical.TxnEntry{
-					Entry: &physical.Entry{
-						Key: fmt.Sprintf("lol-%d", i),
-					},
-				}
-
-				if i%2 == 0 {
-					txnEntry.Operation = physical.PutOperation
-					txnEntry.Entry.Value = []byte("lol")
-				} else {
-					txnEntry.Operation = physical.DeleteOperation
-				}
-
-				txns = append(txns, txnEntry)
-			}
-
-			err := b.Transaction(ctx, txns)
+		// Add some seed values to our FSM, and prepare our slice of transactions at the same time
+		for i := 0; i < 5; i++ {
+			key := fmt.Sprintf("foo/%d", i)
+			err := b.fsm.Put(ctx, &physical.Entry{Key: key, Value: []byte(fmt.Sprintf("value-%d", i))})
 			if err != nil {
 				t.Fatal(err)
 			}
 
-			// Check that our Get operations were populated with their values
-			for i, txn := range txns {
-				if txn.Operation == physical.GetOperation {
-					val := []byte(fmt.Sprintf("value-%d", i))
-					if !bytes.Equal(val, txn.Entry.Value) {
-						t.Fatalf("expected %s to equal %s but it didn't", hex.EncodeToString(val), hex.EncodeToString(txn.Entry.Value))
-					}
+			txns = append(txns, &physical.TxnEntry{
+				Operation: physical.GetOperation,
+				Entry: &physical.Entry{
+					Key: key,
+				},
+			})
+		}
+
+		// Add some additional transactions, so we have a mix of operations
+		for i := 0; i < 10; i++ {
+			txnEntry := &physical.TxnEntry{
+				Entry: &physical.Entry{
+					Key: fmt.Sprintf("lol-%d", i),
+				},
+			}
+
+			if i%2 == 0 {
+				txnEntry.Operation = physical.PutOperation
+				txnEntry.Entry.Value = []byte("lol")
+			} else {
+				txnEntry.Operation = physical.DeleteOperation
+			}
+
+			txns = append(txns, txnEntry)
+		}
+
+		err := b.Transaction(ctx, txns)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		// Check that our Get operations were populated with their values
+		for i, txn := range txns {
+			if txn.Operation == physical.GetOperation {
+				val := []byte(fmt.Sprintf("value-%d", i))
+				if !bytes.Equal(val, txn.Entry.Value) {
+					t.Fatalf("expected %s to equal %s but it didn't", hex.EncodeToString(val), hex.EncodeToString(txn.Entry.Value))
 				}
 			}
-		})
-	}
+		}
+	})
 }
 
 func TestRaft_TransactionalBackend_LargeKey(t *testing.T) {
 	t.Parallel()
-	testCases := map[string]string{
-		"use raft wal": "true",
-		"use boltdb":   "false",
-	}
+	testBothRaftBackends(t, func(useRaftWal string) {
+		conf := map[string]string{
+			"trailing_logs":  "100",
+			raftWalConfigKey: useRaftWal,
+		}
 
-	for name, useRaftWal := range testCases {
-		t.Run(name, func(t *testing.T) {
-			t.Parallel()
-			conf := map[string]string{
-				"trailing_logs":  "100",
-				raftWalConfigKey: useRaftWal,
-			}
+		b, dir := GetRaftWithConfig(t, true, true, conf)
+		defer func() { _ = os.RemoveAll(dir) }()
 
-			b, dir := GetRaftWithConfig(t, true, true, conf)
-			defer func() { _ = os.RemoveAll(dir) }()
+		value := make([]byte, defaultMaxEntrySize+1)
+		rand.Read(value)
 
-			value := make([]byte, defaultMaxEntrySize+1)
-			rand.Read(value)
-
-			key, err := base62.Random(bolt.MaxKeySize + 1)
-			if err != nil {
-				t.Fatal(err)
-			}
-			txns := []*physical.TxnEntry{
-				{
-					Operation: physical.PutOperation,
-					Entry: &physical.Entry{
-						Key:   key,
-						Value: []byte(key),
-					},
+		key, err := base62.Random(bolt.MaxKeySize + 1)
+		if err != nil {
+			t.Fatal(err)
+		}
+		txns := []*physical.TxnEntry{
+			{
+				Operation: physical.PutOperation,
+				Entry: &physical.Entry{
+					Key:   key,
+					Value: []byte(key),
 				},
-			}
+			},
+		}
 
-			err = b.Transaction(context.Background(), txns)
-			if err == nil {
-				t.Fatal("expected error for transactions")
-			}
+		err = b.Transaction(context.Background(), txns)
+		if err == nil {
+			t.Fatal("expected error for transactions")
+		}
 
-			if !strings.Contains(err.Error(), physical.ErrKeyTooLarge) {
-				t.Fatalf("expected %q, got %v", physical.ErrValueTooLarge, err)
-			}
+		if !strings.Contains(err.Error(), physical.ErrKeyTooLarge) {
+			t.Fatalf("expected %q, got %v", physical.ErrValueTooLarge, err)
+		}
 
-			out, err := b.Get(context.Background(), txns[0].Entry.Key)
-			if err != nil {
-				t.Fatalf("unexpected error after failed put: %v", err)
-			}
-			if out != nil {
-				t.Fatal("expected response entry to be nil after a failed put")
-			}
-		})
-	}
+		out, err := b.Get(context.Background(), txns[0].Entry.Key)
+		if err != nil {
+			t.Fatalf("unexpected error after failed put: %v", err)
+		}
+		if out != nil {
+			t.Fatal("expected response entry to be nil after a failed put")
+		}
+	})
 }
 
 func TestRaft_TransactionalBackend_LargeValue(t *testing.T) {
 	t.Parallel()
-	testCases := map[string]string{
-		"use raft wal": "true",
-		"use boltdb":   "false",
-	}
+	testBothRaftBackends(t, func(useRaftWal string) {
+		conf := map[string]string{
+			"trailing_logs":  "100",
+			raftWalConfigKey: useRaftWal,
+		}
 
-	for name, useRaftWal := range testCases {
-		t.Run(name, func(t *testing.T) {
-			t.Parallel()
-			conf := map[string]string{
-				"trailing_logs":  "100",
-				raftWalConfigKey: useRaftWal,
-			}
+		b, dir := GetRaftWithConfig(t, true, true, conf)
+		defer func() { _ = os.RemoveAll(dir) }()
 
-			b, dir := GetRaftWithConfig(t, true, true, conf)
-			defer func() { _ = os.RemoveAll(dir) }()
+		value := make([]byte, defaultMaxEntrySize+1)
+		rand.Read(value)
 
-			value := make([]byte, defaultMaxEntrySize+1)
-			rand.Read(value)
-
-			txns := []*physical.TxnEntry{
-				{
-					Operation: physical.PutOperation,
-					Entry: &physical.Entry{
-						Key:   "foo",
-						Value: value,
-					},
+		txns := []*physical.TxnEntry{
+			{
+				Operation: physical.PutOperation,
+				Entry: &physical.Entry{
+					Key:   "foo",
+					Value: value,
 				},
-			}
+			},
+		}
 
-			err := b.Transaction(context.Background(), txns)
-			if err == nil {
-				t.Fatal("expected error for transactions")
-			}
+		err := b.Transaction(context.Background(), txns)
+		if err == nil {
+			t.Fatal("expected error for transactions")
+		}
 
-			if !strings.Contains(err.Error(), physical.ErrValueTooLarge) {
-				t.Fatalf("expected %q, got %v", physical.ErrValueTooLarge, err)
-			}
+		if !strings.Contains(err.Error(), physical.ErrValueTooLarge) {
+			t.Fatalf("expected %q, got %v", physical.ErrValueTooLarge, err)
+		}
 
-			out, err := b.Get(context.Background(), txns[0].Entry.Key)
-			if err != nil {
-				t.Fatalf("unexpected error after failed put: %v", err)
-			}
-			if out != nil {
-				t.Fatal("expected response entry to be nil after a failed put")
-			}
-		})
-	}
+		out, err := b.Get(context.Background(), txns[0].Entry.Key)
+		if err != nil {
+			t.Fatalf("unexpected error after failed put: %v", err)
+		}
+		if out != nil {
+			t.Fatal("expected response entry to be nil after a failed put")
+		}
+	})
 }
 
 func TestRaft_Backend_ListPrefix(t *testing.T) {
 	t.Parallel()
-	testCases := map[string]string{
-		"use raft wal": "true",
-		"use boltdb":   "false",
-	}
+	testBothRaftBackends(t, func(useRaftWal string) {
+		conf := map[string]string{
+			"trailing_logs":  "100",
+			raftWalConfigKey: useRaftWal,
+		}
 
-	for name, useRaftWal := range testCases {
-		t.Run(name, func(t *testing.T) {
-			t.Parallel()
-			conf := map[string]string{
-				"trailing_logs":  "100",
-				raftWalConfigKey: useRaftWal,
-			}
+		b, dir := GetRaftWithConfig(t, true, true, conf)
+		defer func() { _ = os.RemoveAll(dir) }()
 
-			b, dir := GetRaftWithConfig(t, true, true, conf)
-			defer func() { _ = os.RemoveAll(dir) }()
-
-			physical.ExerciseBackend_ListPrefix(t, b)
-		})
-	}
+		physical.ExerciseBackend_ListPrefix(t, b)
+	})
 }
 
 func TestRaft_TransactionalBackend(t *testing.T) {
 	t.Parallel()
-	testCases := map[string]string{
-		"use raft wal": "true",
-		"use boltdb":   "false",
-	}
+	testBothRaftBackends(t, func(useRaftWal string) {
+		conf := map[string]string{
+			"trailing_logs":  "100",
+			raftWalConfigKey: useRaftWal,
+		}
 
-	for name, useRaftWal := range testCases {
-		t.Run(name, func(t *testing.T) {
-			t.Parallel()
-			conf := map[string]string{
-				"trailing_logs":  "100",
-				raftWalConfigKey: useRaftWal,
-			}
+		b, dir := GetRaftWithConfig(t, true, true, conf)
+		defer func() { _ = os.RemoveAll(dir) }()
 
-			b, dir := GetRaftWithConfig(t, true, true, conf)
-			defer func() { _ = os.RemoveAll(dir) }()
-
-			physical.ExerciseTransactionalBackend(t, b)
-		})
-	}
+		physical.ExerciseTransactionalBackend(t, b)
+	})
 }
 
 func TestRaft_HABackend(t *testing.T) {
@@ -628,413 +610,324 @@ func TestRaft_HABackend(t *testing.T) {
 
 func TestRaft_Backend_ThreeNode(t *testing.T) {
 	t.Parallel()
-	testCases := map[string]string{
-		"use raft wal": "true",
-		"use boltdb":   "false",
-	}
+	testBothRaftBackends(t, func(useRaftWal string) {
+		conf := map[string]string{
+			"trailing_logs":  "100",
+			raftWalConfigKey: useRaftWal,
+		}
 
-	for name, useRaftWal := range testCases {
-		t.Run(name, func(t *testing.T) {
-			t.Parallel()
-			conf := map[string]string{
-				"trailing_logs":  "100",
-				raftWalConfigKey: useRaftWal,
-			}
+		raft1, dir := GetRaftWithConfig(t, true, true, conf)
+		raft2, dir2 := GetRaftWithConfig(t, false, true, conf)
+		raft3, dir3 := GetRaftWithConfig(t, false, true, conf)
+		defer func() { _ = os.RemoveAll(dir) }()
+		defer func() { _ = os.RemoveAll(dir2) }()
+		defer func() { _ = os.RemoveAll(dir3) }()
 
-			raft1, dir := GetRaftWithConfig(t, true, true, conf)
-			raft2, dir2 := GetRaftWithConfig(t, false, true, conf)
-			raft3, dir3 := GetRaftWithConfig(t, false, true, conf)
-			defer func() { _ = os.RemoveAll(dir) }()
-			defer func() { _ = os.RemoveAll(dir2) }()
-			defer func() { _ = os.RemoveAll(dir3) }()
+		// Add raft2 to the cluster
+		addPeer(t, raft1, raft2)
 
-			// Add raft2 to the cluster
-			addPeer(t, raft1, raft2)
+		// Add raft3 to the cluster
+		addPeer(t, raft1, raft3)
 
-			// Add raft3 to the cluster
-			addPeer(t, raft1, raft3)
+		physical.ExerciseBackend(t, raft1)
 
-			physical.ExerciseBackend(t, raft1)
-
-			time.Sleep(10 * time.Second)
-			// Make sure all stores are the same
-			compareFSMs(t, raft1.fsm, raft2.fsm)
-			compareFSMs(t, raft1.fsm, raft3.fsm)
-		})
-	}
+		time.Sleep(10 * time.Second)
+		// Make sure all stores are the same
+		compareFSMs(t, raft1.fsm, raft2.fsm)
+		compareFSMs(t, raft1.fsm, raft3.fsm)
+	})
 }
 
 func TestRaft_GetOfflineConfig(t *testing.T) {
 	t.Parallel()
-	testCases := map[string]string{
-		"use raft wal": "true",
-		"use boltdb":   "false",
-	}
+	testBothRaftBackends(t, func(useRaftWal string) {
+		config := map[string]string{
+			"trailing_logs":  "100",
+			raftWalConfigKey: useRaftWal,
+		}
 
-	for name, useRaftWal := range testCases {
-		t.Run(name, func(t *testing.T) {
-			t.Parallel()
-			config := map[string]string{
-				"trailing_logs":  "100",
-				raftWalConfigKey: useRaftWal,
-			}
+		// Create 3 raft nodes
+		raft1, dir1 := GetRaftWithConfig(t, true, true, config)
+		raft2, dir2 := GetRaftWithConfig(t, false, true, config)
+		raft3, dir3 := GetRaftWithConfig(t, false, true, config)
+		defer func() { _ = os.RemoveAll(dir1) }()
+		defer func() { _ = os.RemoveAll(dir2) }()
+		defer func() { _ = os.RemoveAll(dir3) }()
 
-			// Create 3 raft nodes
-			raft1, dir1 := GetRaftWithConfig(t, true, true, config)
-			raft2, dir2 := GetRaftWithConfig(t, false, true, config)
-			raft3, dir3 := GetRaftWithConfig(t, false, true, config)
-			defer func() { _ = os.RemoveAll(dir1) }()
-			defer func() { _ = os.RemoveAll(dir2) }()
-			defer func() { _ = os.RemoveAll(dir3) }()
+		// Add them all to the cluster
+		addPeer(t, raft1, raft2)
+		addPeer(t, raft1, raft3)
 
-			// Add them all to the cluster
-			addPeer(t, raft1, raft2)
-			addPeer(t, raft1, raft3)
+		// Add some data into the FSM
+		physical.ExerciseBackend(t, raft1)
 
-			// Add some data into the FSM
-			physical.ExerciseBackend(t, raft1)
+		time.Sleep(10 * time.Second)
 
-			time.Sleep(10 * time.Second)
+		// Spin down the raft cluster and check that GetConfigurationOffline
+		// returns 3 voters
+		err := raft3.TeardownCluster(nil)
+		if err != nil {
+			t.Fatal(err)
+		}
+		err = raft2.TeardownCluster(nil)
+		if err != nil {
+			t.Fatal(err)
+		}
+		err = raft1.TeardownCluster(nil)
+		if err != nil {
+			t.Fatal(err)
+		}
 
-			// Spin down the raft cluster and check that GetConfigurationOffline
-			// returns 3 voters
-			err := raft3.TeardownCluster(nil)
-			if err != nil {
-				t.Fatal(err)
+		conf, err := raft1.GetConfigurationOffline()
+		if err != nil {
+			t.Fatal(err)
+		}
+		if len(conf.Servers) != 3 {
+			t.Fatalf("three raft nodes existed but we only see %d", len(conf.Servers))
+		}
+		for _, s := range conf.Servers {
+			if s.Voter != true {
+				t.Fatalf("one of the nodes is not a voter")
 			}
-			err = raft2.TeardownCluster(nil)
-			if err != nil {
-				t.Fatal(err)
-			}
-			err = raft1.TeardownCluster(nil)
-			if err != nil {
-				t.Fatal(err)
-			}
-
-			conf, err := raft1.GetConfigurationOffline()
-			if err != nil {
-				t.Fatal(err)
-			}
-			if len(conf.Servers) != 3 {
-				t.Fatalf("three raft nodes existed but we only see %d", len(conf.Servers))
-			}
-			for _, s := range conf.Servers {
-				if s.Voter != true {
-					t.Fatalf("one of the nodes is not a voter")
-				}
-			}
-		})
-	}
+		}
+	})
 }
 
 func TestRaft_Recovery(t *testing.T) {
 	t.Parallel()
-	testCases := map[string]string{
-		"use raft wal": "true",
-		"use boltdb":   "false",
-	}
+	testBothRaftBackends(t, func(useRaftWal string) {
+		conf := map[string]string{
+			"trailing_logs":  "100",
+			raftWalConfigKey: useRaftWal,
+		}
 
-	for name, useRaftWal := range testCases {
-		t.Run(name, func(t *testing.T) {
-			t.Parallel()
-			conf := map[string]string{
-				"trailing_logs":  "100",
-				raftWalConfigKey: useRaftWal,
-			}
+		// Create 4 raft nodes
+		raft1, dir1 := GetRaftWithConfig(t, true, true, conf)
+		raft2, dir2 := GetRaftWithConfig(t, false, true, conf)
+		raft3, dir3 := GetRaftWithConfig(t, false, true, conf)
+		raft4, dir4 := GetRaftWithConfig(t, false, true, conf)
+		defer func() { _ = os.RemoveAll(dir1) }()
+		defer func() { _ = os.RemoveAll(dir2) }()
+		defer func() { _ = os.RemoveAll(dir3) }()
+		defer func() { _ = os.RemoveAll(dir4) }()
 
-			// Create 4 raft nodes
-			raft1, dir1 := GetRaftWithConfig(t, true, true, conf)
-			raft2, dir2 := GetRaftWithConfig(t, false, true, conf)
-			raft3, dir3 := GetRaftWithConfig(t, false, true, conf)
-			raft4, dir4 := GetRaftWithConfig(t, false, true, conf)
-			defer func() { _ = os.RemoveAll(dir1) }()
-			defer func() { _ = os.RemoveAll(dir2) }()
-			defer func() { _ = os.RemoveAll(dir3) }()
-			defer func() { _ = os.RemoveAll(dir4) }()
+		// Add them all to the cluster
+		addPeer(t, raft1, raft2)
+		addPeer(t, raft1, raft3)
+		addPeer(t, raft1, raft4)
 
-			// Add them all to the cluster
-			addPeer(t, raft1, raft2)
-			addPeer(t, raft1, raft3)
-			addPeer(t, raft1, raft4)
+		// Add some data into the FSM
+		physical.ExerciseBackend(t, raft1)
 
-			// Add some data into the FSM
-			physical.ExerciseBackend(t, raft1)
+		time.Sleep(10 * time.Second)
 
-			time.Sleep(10 * time.Second)
+		// Bring down all nodes
+		err := raft1.TeardownCluster(nil)
+		if err != nil {
+			t.Fatal(err)
+		}
+		err = raft2.TeardownCluster(nil)
+		if err != nil {
+			t.Fatal(err)
+		}
+		err = raft3.TeardownCluster(nil)
+		if err != nil {
+			t.Fatal(err)
+		}
+		err = raft4.TeardownCluster(nil)
+		if err != nil {
+			t.Fatal(err)
+		}
 
-			// Bring down all nodes
-			err := raft1.TeardownCluster(nil)
-			if err != nil {
-				t.Fatal(err)
-			}
-			err = raft2.TeardownCluster(nil)
-			if err != nil {
-				t.Fatal(err)
-			}
-			err = raft3.TeardownCluster(nil)
-			if err != nil {
-				t.Fatal(err)
-			}
-			err = raft4.TeardownCluster(nil)
-			if err != nil {
-				t.Fatal(err)
-			}
+		// Prepare peers.json
+		type RecoveryPeer struct {
+			ID       string `json:"id"`
+			Address  string `json:"address"`
+			NonVoter bool   `json:"non_voter"`
+		}
 
-			// Prepare peers.json
-			type RecoveryPeer struct {
-				ID       string `json:"id"`
-				Address  string `json:"address"`
-				NonVoter bool   `json:"non_voter"`
-			}
-
-			// Leave out node 1 during recovery
-			peersList := make([]*RecoveryPeer, 0, 3)
-			peersList = append(peersList, &RecoveryPeer{
-				ID:       raft1.NodeID(),
-				Address:  raft1.NodeID(),
-				NonVoter: false,
-			})
-			peersList = append(peersList, &RecoveryPeer{
-				ID:       raft2.NodeID(),
-				Address:  raft2.NodeID(),
-				NonVoter: false,
-			})
-			peersList = append(peersList, &RecoveryPeer{
-				ID:       raft4.NodeID(),
-				Address:  raft4.NodeID(),
-				NonVoter: false,
-			})
-
-			peersJSONBytes, err := jsonutil.EncodeJSON(peersList)
-			if err != nil {
-				t.Fatal(err)
-			}
-			err = ioutil.WriteFile(filepath.Join(filepath.Join(dir1, raftState), "peers.json"), peersJSONBytes, 0o644)
-			if err != nil {
-				t.Fatal(err)
-			}
-			err = ioutil.WriteFile(filepath.Join(filepath.Join(dir2, raftState), "peers.json"), peersJSONBytes, 0o644)
-			if err != nil {
-				t.Fatal(err)
-			}
-			err = ioutil.WriteFile(filepath.Join(filepath.Join(dir4, raftState), "peers.json"), peersJSONBytes, 0o644)
-			if err != nil {
-				t.Fatal(err)
-			}
-
-			// Bring up the nodes again
-			err = raft1.SetupCluster(context.Background(), SetupOpts{})
-			if err != nil {
-				t.Fatal(err)
-			}
-			err = raft2.SetupCluster(context.Background(), SetupOpts{})
-			if err != nil {
-				t.Fatal(err)
-			}
-			err = raft4.SetupCluster(context.Background(), SetupOpts{})
-			if err != nil {
-				t.Fatal(err)
-			}
-
-			peers, err := raft1.Peers(context.Background())
-			if err != nil {
-				t.Fatal(err)
-			}
-			if len(peers) != 3 {
-				t.Fatalf("failed to recover the cluster")
-			}
-
-			time.Sleep(10 * time.Second)
-
-			compareFSMs(t, raft1.fsm, raft2.fsm)
-			compareFSMs(t, raft1.fsm, raft4.fsm)
+		// Leave out node 1 during recovery
+		peersList := make([]*RecoveryPeer, 0, 3)
+		peersList = append(peersList, &RecoveryPeer{
+			ID:       raft1.NodeID(),
+			Address:  raft1.NodeID(),
+			NonVoter: false,
 		})
-	}
+		peersList = append(peersList, &RecoveryPeer{
+			ID:       raft2.NodeID(),
+			Address:  raft2.NodeID(),
+			NonVoter: false,
+		})
+		peersList = append(peersList, &RecoveryPeer{
+			ID:       raft4.NodeID(),
+			Address:  raft4.NodeID(),
+			NonVoter: false,
+		})
+
+		peersJSONBytes, err := jsonutil.EncodeJSON(peersList)
+		if err != nil {
+			t.Fatal(err)
+		}
+		err = ioutil.WriteFile(filepath.Join(filepath.Join(dir1, raftState), "peers.json"), peersJSONBytes, 0o644)
+		if err != nil {
+			t.Fatal(err)
+		}
+		err = ioutil.WriteFile(filepath.Join(filepath.Join(dir2, raftState), "peers.json"), peersJSONBytes, 0o644)
+		if err != nil {
+			t.Fatal(err)
+		}
+		err = ioutil.WriteFile(filepath.Join(filepath.Join(dir4, raftState), "peers.json"), peersJSONBytes, 0o644)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		// Bring up the nodes again
+		err = raft1.SetupCluster(context.Background(), SetupOpts{})
+		if err != nil {
+			t.Fatal(err)
+		}
+		err = raft2.SetupCluster(context.Background(), SetupOpts{})
+		if err != nil {
+			t.Fatal(err)
+		}
+		err = raft4.SetupCluster(context.Background(), SetupOpts{})
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		peers, err := raft1.Peers(context.Background())
+		if err != nil {
+			t.Fatal(err)
+		}
+		if len(peers) != 3 {
+			t.Fatalf("failed to recover the cluster")
+		}
+
+		time.Sleep(10 * time.Second)
+
+		compareFSMs(t, raft1.fsm, raft2.fsm)
+		compareFSMs(t, raft1.fsm, raft4.fsm)
+	})
 }
 
 func TestRaft_TransactionalBackend_ThreeNode(t *testing.T) {
 	t.Parallel()
-	testCases := map[string]string{
-		"use raft wal": "true",
-		"use boltdb":   "false",
-	}
+	testBothRaftBackends(t, func(useRaftWal string) {
+		conf := map[string]string{
+			"trailing_logs":  "100",
+			raftWalConfigKey: useRaftWal,
+		}
 
-	for name, useRaftWal := range testCases {
-		t.Run(name, func(t *testing.T) {
-			t.Parallel()
-			conf := map[string]string{
-				"trailing_logs":  "100",
-				raftWalConfigKey: useRaftWal,
-			}
+		raft1, dir := GetRaftWithConfig(t, true, true, conf)
+		raft2, dir2 := GetRaftWithConfig(t, false, true, conf)
+		raft3, dir3 := GetRaftWithConfig(t, false, true, conf)
+		defer func() { _ = os.RemoveAll(dir) }()
+		defer func() { _ = os.RemoveAll(dir2) }()
+		defer func() { _ = os.RemoveAll(dir3) }()
 
-			raft1, dir := GetRaftWithConfig(t, true, true, conf)
-			raft2, dir2 := GetRaftWithConfig(t, false, true, conf)
-			raft3, dir3 := GetRaftWithConfig(t, false, true, conf)
-			defer func() { _ = os.RemoveAll(dir) }()
-			defer func() { _ = os.RemoveAll(dir2) }()
-			defer func() { _ = os.RemoveAll(dir3) }()
+		// Add raft2 to the cluster
+		addPeer(t, raft1, raft2)
 
-			// Add raft2 to the cluster
-			addPeer(t, raft1, raft2)
+		// Add raft3 to the cluster
+		addPeer(t, raft1, raft3)
 
-			// Add raft3 to the cluster
-			addPeer(t, raft1, raft3)
+		physical.ExerciseTransactionalBackend(t, raft1)
 
-			physical.ExerciseTransactionalBackend(t, raft1)
-
-			time.Sleep(10 * time.Second)
-			// Make sure all stores are the same
-			compareFSMs(t, raft1.fsm, raft2.fsm)
-			compareFSMs(t, raft1.fsm, raft3.fsm)
-		})
-	}
+		time.Sleep(10 * time.Second)
+		// Make sure all stores are the same
+		compareFSMs(t, raft1.fsm, raft2.fsm)
+		compareFSMs(t, raft1.fsm, raft3.fsm)
+	})
 }
 
 func TestRaft_Backend_Performance(t *testing.T) {
 	t.Parallel()
-	testCases := map[string]string{
-		"use raft wal": "true",
-		"use boltdb":   "false",
-	}
+	testBothRaftBackends(t, func(useRaftWal string) {
+		conf := map[string]string{
+			"trailing_logs":  "100",
+			raftWalConfigKey: useRaftWal,
+		}
 
-	for name, useRaftWal := range testCases {
-		t.Run(name, func(t *testing.T) {
-			t.Parallel()
-			conf := map[string]string{
-				"trailing_logs":  "100",
-				raftWalConfigKey: useRaftWal,
-			}
+		b, dir := GetRaftWithConfig(t, true, true, conf)
+		defer func() { _ = os.RemoveAll(dir) }()
 
-			b, dir := GetRaftWithConfig(t, true, true, conf)
-			defer func() { _ = os.RemoveAll(dir) }()
+		defaultConfig := raft.DefaultConfig()
 
-			defaultConfig := raft.DefaultConfig()
+		localConfig := raft.DefaultConfig()
+		err := b.applyConfigSettings(localConfig)
+		if err != nil {
+			t.Fatal(err)
+		}
 
-			localConfig := raft.DefaultConfig()
-			err := b.applyConfigSettings(localConfig)
-			if err != nil {
-				t.Fatal(err)
-			}
+		if localConfig.ElectionTimeout != defaultConfig.ElectionTimeout*5 {
+			t.Fatalf("bad config: %v", localConfig)
+		}
+		if localConfig.HeartbeatTimeout != defaultConfig.HeartbeatTimeout*5 {
+			t.Fatalf("bad config: %v", localConfig)
+		}
+		if localConfig.LeaderLeaseTimeout != defaultConfig.LeaderLeaseTimeout*5 {
+			t.Fatalf("bad config: %v", localConfig)
+		}
 
-			if localConfig.ElectionTimeout != defaultConfig.ElectionTimeout*5 {
-				t.Fatalf("bad config: %v", localConfig)
-			}
-			if localConfig.HeartbeatTimeout != defaultConfig.HeartbeatTimeout*5 {
-				t.Fatalf("bad config: %v", localConfig)
-			}
-			if localConfig.LeaderLeaseTimeout != defaultConfig.LeaderLeaseTimeout*5 {
-				t.Fatalf("bad config: %v", localConfig)
-			}
+		b.conf = map[string]string{
+			"path":                   dir,
+			"performance_multiplier": "5",
+		}
 
-			b.conf = map[string]string{
-				"path":                   dir,
-				"performance_multiplier": "5",
-			}
+		localConfig = raft.DefaultConfig()
+		err = b.applyConfigSettings(localConfig)
+		if err != nil {
+			t.Fatal(err)
+		}
 
-			localConfig = raft.DefaultConfig()
-			err = b.applyConfigSettings(localConfig)
-			if err != nil {
-				t.Fatal(err)
-			}
+		if localConfig.ElectionTimeout != defaultConfig.ElectionTimeout*5 {
+			t.Fatalf("bad config: %v", localConfig)
+		}
+		if localConfig.HeartbeatTimeout != defaultConfig.HeartbeatTimeout*5 {
+			t.Fatalf("bad config: %v", localConfig)
+		}
+		if localConfig.LeaderLeaseTimeout != defaultConfig.LeaderLeaseTimeout*5 {
+			t.Fatalf("bad config: %v", localConfig)
+		}
 
-			if localConfig.ElectionTimeout != defaultConfig.ElectionTimeout*5 {
-				t.Fatalf("bad config: %v", localConfig)
-			}
-			if localConfig.HeartbeatTimeout != defaultConfig.HeartbeatTimeout*5 {
-				t.Fatalf("bad config: %v", localConfig)
-			}
-			if localConfig.LeaderLeaseTimeout != defaultConfig.LeaderLeaseTimeout*5 {
-				t.Fatalf("bad config: %v", localConfig)
-			}
+		b.conf = map[string]string{
+			"path":                   dir,
+			"performance_multiplier": "1",
+		}
 
-			b.conf = map[string]string{
-				"path":                   dir,
-				"performance_multiplier": "1",
-			}
+		localConfig = raft.DefaultConfig()
+		err = b.applyConfigSettings(localConfig)
+		if err != nil {
+			t.Fatal(err)
+		}
 
-			localConfig = raft.DefaultConfig()
-			err = b.applyConfigSettings(localConfig)
-			if err != nil {
-				t.Fatal(err)
-			}
-
-			if localConfig.ElectionTimeout != defaultConfig.ElectionTimeout {
-				t.Fatalf("bad config: %v", localConfig)
-			}
-			if localConfig.HeartbeatTimeout != defaultConfig.HeartbeatTimeout {
-				t.Fatalf("bad config: %v", localConfig)
-			}
-			if localConfig.LeaderLeaseTimeout != defaultConfig.LeaderLeaseTimeout {
-				t.Fatalf("bad config: %v", localConfig)
-			}
-		})
-	}
+		if localConfig.ElectionTimeout != defaultConfig.ElectionTimeout {
+			t.Fatalf("bad config: %v", localConfig)
+		}
+		if localConfig.HeartbeatTimeout != defaultConfig.HeartbeatTimeout {
+			t.Fatalf("bad config: %v", localConfig)
+		}
+		if localConfig.LeaderLeaseTimeout != defaultConfig.LeaderLeaseTimeout {
+			t.Fatalf("bad config: %v", localConfig)
+		}
+	})
 }
 
 func BenchmarkDB_Puts(b *testing.B) {
-	testCases := map[string]string{
-		"use raft wal": "true",
-		"use boltdb":   "false",
-	}
+	testBothRaftBackendsBenchmark(b, func(useRaftWal string) {
+		conf := map[string]string{
+			"trailing_logs":  "100",
+			raftWalConfigKey: useRaftWal,
+		}
 
-	for name, useRaftWal := range testCases {
-		b.Run(name, func(b *testing.B) {
-			conf := map[string]string{
-				"trailing_logs":  "100",
-				raftWalConfigKey: useRaftWal,
-			}
+		raft1, dir := GetRaftWithConfig(b, true, false, conf)
+		defer func() { _ = os.RemoveAll(dir) }()
 
-			raft1, dir := GetRaftWithConfig(b, true, false, conf)
-			defer func() { _ = os.RemoveAll(dir) }()
+		raft2, dir2 := GetRaftWithConfig(b, true, false, conf)
+		defer func() { _ = os.RemoveAll(dir2) }()
 
-			raft2, dir2 := GetRaftWithConfig(b, true, false, conf)
-			defer func() { _ = os.RemoveAll(dir2) }()
-
-			bench := func(b *testing.B, s physical.Backend, dataSize int) {
-				data, err := uuid.GenerateRandomBytes(dataSize)
-				if err != nil {
-					b.Fatal(err)
-				}
-
-				ctx := context.Background()
-				pe := &physical.Entry{
-					Value: data,
-				}
-				testName := b.Name()
-
-				b.ResetTimer()
-				for i := 0; i < b.N; i++ {
-					pe.Key = fmt.Sprintf("%x", md5.Sum([]byte(fmt.Sprintf("%s-%d", testName, i))))
-					err := s.Put(ctx, pe)
-					if err != nil {
-						b.Fatal(err)
-					}
-				}
-			}
-
-			b.Run("256b", func(b *testing.B) { bench(b, raft1, 256) })
-			b.Run("256kb", func(b *testing.B) { bench(b, raft2, 256*1024) })
-		})
-	}
-}
-
-func BenchmarkDB_Snapshot(b *testing.B) {
-	testCases := map[string]string{
-		"use raft wal": "true",
-		"use boltdb":   "false",
-	}
-
-	for name, useRaftWal := range testCases {
-		b.Run(name, func(b *testing.B) {
-			conf := map[string]string{
-				"trailing_logs":  "100",
-				raftWalConfigKey: useRaftWal,
-			}
-
-			raft1, dir := GetRaftWithConfig(b, true, false, conf)
-			defer func() { _ = os.RemoveAll(dir) }()
-
-			data, err := uuid.GenerateRandomBytes(256 * 1024)
+		bench := func(b *testing.B, s physical.Backend, dataSize int) {
+			data, err := uuid.GenerateRandomBytes(dataSize)
 			if err != nil {
 				b.Fatal(err)
 			}
@@ -1045,25 +938,60 @@ func BenchmarkDB_Snapshot(b *testing.B) {
 			}
 			testName := b.Name()
 
-			for i := 0; i < 100; i++ {
+			b.ResetTimer()
+			for i := 0; i < b.N; i++ {
 				pe.Key = fmt.Sprintf("%x", md5.Sum([]byte(fmt.Sprintf("%s-%d", testName, i))))
-				err = raft1.Put(ctx, pe)
+				err := s.Put(ctx, pe)
 				if err != nil {
 					b.Fatal(err)
 				}
 			}
+		}
 
-			bench := func(b *testing.B, s *FSM) {
-				b.ResetTimer()
-				for i := 0; i < b.N; i++ {
-					pe.Key = fmt.Sprintf("%x", md5.Sum([]byte(fmt.Sprintf("%s-%d", testName, i))))
-					s.writeTo(ctx, discardCloser{Writer: ioutil.Discard}, discardCloser{Writer: ioutil.Discard})
-				}
+		b.Run("256b", func(b *testing.B) { bench(b, raft1, 256) })
+		b.Run("256kb", func(b *testing.B) { bench(b, raft2, 256*1024) })
+	})
+}
+
+func BenchmarkDB_Snapshot(b *testing.B) {
+	testBothRaftBackendsBenchmark(b, func(useRaftWal string) {
+		conf := map[string]string{
+			"trailing_logs":  "100",
+			raftWalConfigKey: useRaftWal,
+		}
+
+		raft1, dir := GetRaftWithConfig(b, true, false, conf)
+		defer func() { _ = os.RemoveAll(dir) }()
+
+		data, err := uuid.GenerateRandomBytes(256 * 1024)
+		if err != nil {
+			b.Fatal(err)
+		}
+
+		ctx := context.Background()
+		pe := &physical.Entry{
+			Value: data,
+		}
+		testName := b.Name()
+
+		for i := 0; i < 100; i++ {
+			pe.Key = fmt.Sprintf("%x", md5.Sum([]byte(fmt.Sprintf("%s-%d", testName, i))))
+			err = raft1.Put(ctx, pe)
+			if err != nil {
+				b.Fatal(err)
 			}
+		}
 
-			b.Run("256kb", func(b *testing.B) { bench(b, raft1.fsm) })
-		})
-	}
+		bench := func(b *testing.B, s *FSM) {
+			b.ResetTimer()
+			for i := 0; i < b.N; i++ {
+				pe.Key = fmt.Sprintf("%x", md5.Sum([]byte(fmt.Sprintf("%s-%d", testName, i))))
+				s.writeTo(ctx, discardCloser{Writer: ioutil.Discard}, discardCloser{Writer: ioutil.Discard})
+			}
+		}
+
+		b.Run("256kb", func(b *testing.B) { bench(b, raft1.fsm) })
+	})
 }
 
 type discardCloser struct {
