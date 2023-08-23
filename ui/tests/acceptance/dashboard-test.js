@@ -18,7 +18,6 @@ import ENV from 'vault/config/environment';
 import { formatNumber } from 'core/helpers/format-number';
 import { pollCluster } from 'vault/tests/helpers/poll-cluster';
 import { disableReplication } from 'vault/tests/helpers/replication';
-import modifyPassthroughResponse from 'vault/mirage/helpers/modify-passthrough-response';
 
 // selectors
 import SECRETS_ENGINE_SELECTORS from 'vault/tests/helpers/components/dashboard/secrets-engines-card';
@@ -309,10 +308,6 @@ module('Acceptance | landing page dashboard', function (hooks) {
     hooks.beforeEach(async function () {
       this.store = this.owner.lookup('service:store');
 
-      this.server.get('/sys/seal-status', (schema, req) => {
-        return modifyPassthroughResponse(req, { version: '1.14.0+ent' });
-      });
-
       await authPage.login();
     });
 
@@ -320,11 +315,9 @@ module('Acceptance | landing page dashboard', function (hooks) {
       ENV['ember-cli-mirage'].handler = null;
     });
 
-    test('shows the client count card', async function (assert) {
+    test('shows the client count card for enterprise', async function (assert) {
       const version = this.owner.lookup('service:version');
-      assert.strictEqual(version.version, '1.14.0+ent');
       assert.true(version.isEnterprise, 'version is enterprise');
-      assert.strictEqual(version.version, '1.14.0+ent');
       assert.strictEqual(currentURL(), '/vault/dashboard');
       assert.dom('[data-test-client-count-card]').exists();
       const response = await this.store.peekRecord('clients/activity', 'some-activity-id');
@@ -341,7 +334,7 @@ module('Acceptance | landing page dashboard', function (hooks) {
         .dom('[data-test-stat-text="new-clients"] .stat-value')
         .hasText(formatNumber([response.byMonth.lastObject.new_clients.clients]));
     });
-    test('hides the client count card', async function (assert) {
+    test('hides the client count card in community version', async function (assert) {
       await authPage.logout();
       this.server.get(
         'sys/license/status',
@@ -359,12 +352,9 @@ module('Acceptance | landing page dashboard', function (hooks) {
       await settled();
       await disableReplication('performance');
       await settled();
-      this.server.get('/sys/seal-status', (schema, req) => {
-        return modifyPassthroughResponse(req, { version: '1.14.0+ent' });
-      });
     });
 
-    test('shows the replication card empty state', async function (assert) {
+    test('shows the replication card empty state in community version', async function (assert) {
       await visit('/vault/dashboard');
       const version = this.owner.lookup('service:version');
       assert.true(version.isEnterprise, 'vault is enterprise');
@@ -376,7 +366,7 @@ module('Acceptance | landing page dashboard', function (hooks) {
       assert.dom(REPLICATION_CARD_SELECTORS.replicationEmptyStateActions).hasText('Enable replication');
     });
 
-    test('it should show replication status if both dr and performance replication are enabled as features in version', async function (assert) {
+    test('it should show replication status if both dr and performance replication are enabled as features in enterprise', async function (assert) {
       const version = this.owner.lookup('service:version');
       assert.true(version.isEnterprise, 'vault is enterprise');
       await visit('/vault/replication');
