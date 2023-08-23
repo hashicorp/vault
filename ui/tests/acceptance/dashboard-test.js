@@ -67,7 +67,7 @@ module('Acceptance | landing page dashboard', function (hooks) {
       await settled();
       await visit('/vault/dashboard');
       assert.dom(SECRETS_ENGINE_SELECTORS.cardTitle).hasText('Secrets engines');
-      assert.dom(SECRETS_ENGINE_SELECTORS.getSecretEngineAccessor('pki')).exists();
+      assert.dom('[data-test-secrets-engines-card-show-all]').doesNotExist();
       // cleanup engine mount
       await consoleComponent.runCommands(deleteEngineCmd('pki'));
     });
@@ -77,6 +77,7 @@ module('Acceptance | landing page dashboard', function (hooks) {
       await settled();
       await visit('/vault/dashboard');
       assert.dom('[data-test-secrets-engines-row="nomad"] [data-test-view]').doesNotExist();
+      assert.dom('[data-test-secrets-engines-card-show-all]').doesNotExist();
       // cleanup engine mount
       await consoleComponent.runCommands(deleteEngineCmd('nomad'));
     });
@@ -254,7 +255,6 @@ module('Acceptance | landing page dashboard', function (hooks) {
 
     test('shows the correct actions and links associated with pki', async function (assert) {
       await mountSecrets.enable('pki', 'pki');
-      // generate role, issuer
       await runCommands([
         `write pki/roles/some-role \
       issuer_ref="default" \

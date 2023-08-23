@@ -30,7 +30,7 @@ export default class DashboardQuickActionsCard extends Component {
 
   get actionOptions() {
     switch (this.selectedEngine.type) {
-      case 'kv version 1' || 'kv version 2':
+      case `kv version ${this.selectedEngine?.version}`:
         return ['Find KV secrets'];
       case 'database':
         return ['Generate credentials for database'];
