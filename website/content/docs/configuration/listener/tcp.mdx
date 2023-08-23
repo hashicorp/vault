@@ -65,9 +65,9 @@ default value in the `"/sys/config/ui"` [API endpoint](/vault/api-docs/system/co
 - `chroot_namespace` `(string: "")` – Specifies an alternate top-level namespace
   for the listener. Vault appends the namespace provided in CLI the field or
   `X-Vault-Namespace` header to the top-level namespace to determine the full
-  namespace path for the request. For example, if `chroot_namespace` is
-  `admin` and a CLI call provides the `ns1` namespace, the full namespace
-  path is `admin/ns1`. Calls to the listener will fail with a 4XX error if
+  namespace path for the request. For example, if `chroot_namespace` is set to
+  `admin` and the `X-Vault-Namespace` header has the value `ns1` namespace, the full
+  namespace path is `admin/ns1`. Calls to the listener will fail with a 4XX error if
   the top-level namespace provided for `chroot_namespace` does not exist.
 
 - `http_idle_timeout` `(string: "5m")` - Specifies the maximum amount of time to
