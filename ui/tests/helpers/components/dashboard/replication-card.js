@@ -12,11 +12,15 @@ const SELECTORS = {
   knownSecondariesLabel: '[data-test-stat-text="known secondaries"] .stat-label',
   knownSecondariesSubtext: '[data-test-stat-text="known secondaries"] .stat-text',
   knownSecondariesValue: '[data-test-stat-text="known secondaries"] .stat-value',
-  replicationEmptyState: '[data-test-component="empty-state"]',
-  replicationEmptyStateTitle: '[data-test-component="empty-state"] .empty-state-title',
-  replicationEmptyStateMessage: '[data-test-component="empty-state"] .empty-state-message',
-  replicationEmptyStateActions: '[data-test-component="empty-state"] .empty-state-actions',
-  replicationEmptyStateActionsLink: '[data-test-component="empty-state"] .empty-state-actions a',
+  replicationEmptyState: '[data-test-replication-card] [data-test-component="empty-state"]',
+  replicationEmptyStateTitle:
+    '[data-test-replication-card] [data-test-component="empty-state"] .empty-state-title',
+  replicationEmptyStateMessage:
+    '[data-test-replication-card] [data-test-component="empty-state"] .empty-state-message',
+  replicationEmptyStateActions:
+    '[data-test-replication-card] [data-test-component="empty-state"] .empty-state-actions',
+  replicationEmptyStateActionsLink:
+    '[data-test-replication-card] [data-test-component="empty-state"] .empty-state-actions a',
 };
 
 export default SELECTORS;

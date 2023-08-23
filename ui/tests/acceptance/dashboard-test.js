@@ -4,7 +4,16 @@
  */
 
 import { module, test } from 'qunit';
-import { visit, currentURL, settled, fillIn, click, waitUntil, find } from '@ember/test-helpers';
+import {
+  visit,
+  currentURL,
+  settled,
+  fillIn,
+  click,
+  waitUntil,
+  find,
+  currentRouteName,
+} from '@ember/test-helpers';
 import { setupApplicationTest } from 'vault/tests/helpers';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 import { create } from 'ember-cli-page-object';
@@ -245,29 +254,50 @@ module('Acceptance | landing page dashboard', function (hooks) {
     test('shows the correct actions and links associated with pki', async function (assert) {
       await mountSecrets.enable('pki', 'pki');
       // generate role, issuer
-      await runCommands([`write pki/root/generate/internal common_name="Hashicorp Test"`]);
+      await runCommands([
+        `write pki/roles/some-role \
+      issuer_ref="default" \
+      allowed_domains="example.com" \
+      allow_subdomains=true \
+      max_ttl="720h"`,
+      ]);
+      await runCommands([`write pki/root/generate/internal issuer_name="Hashicorp" common_name="Hello"`]);
       await settled();
       await visit('/vault/dashboard');
       await selectChoose(QUICK_ACTION_SELECTORS.secretsEnginesSelect, 'pki');
       await fillIn(QUICK_ACTION_SELECTORS.actionSelect, 'Issue certificate');
       assert.dom(QUICK_ACTION_SELECTORS.emptyState).doesNotExist();
       assert.dom(QUICK_ACTION_SELECTORS.paramsTitle).hasText('Role to use');
-      assert.dom(QUICK_ACTION_SELECTORS.getActionButton('Issue leaf certificate')).exists({ count: 1 });
-      // select param input, click action, check route (issue cert)
-      // await selectChoose(assert.dom(QUICK_ACTION_SELECTORS.paramSelect), 'pki');
-      // await click(QUICK_ACTION_SELECTORS.getActionButton('Issue leaf certificate'));
 
+      await selectChoose(QUICK_ACTION_SELECTORS.paramSelect, 'some-role');
+      assert.dom(QUICK_ACTION_SELECTORS.getActionButton('Issue leaf certificate')).exists({ count: 1 });
+      await click(QUICK_ACTION_SELECTORS.getActionButton('Issue leaf certificate'));
+      assert.strictEqual(currentRouteName(), 'vault.cluster.secrets.backend.pki.roles.role.generate');
+
+      await visit('/vault/dashboard');
+
+      await selectChoose(QUICK_ACTION_SELECTORS.secretsEnginesSelect, 'pki');
       await fillIn(QUICK_ACTION_SELECTORS.actionSelect, 'View certificate');
       assert.dom(QUICK_ACTION_SELECTORS.emptyState).doesNotExist();
       assert.dom(QUICK_ACTION_SELECTORS.paramsTitle).hasText('Certificate serial number');
       assert.dom(QUICK_ACTION_SELECTORS.getActionButton('View certificate')).exists({ count: 1 });
-      // select param input, click action, check route (view cert)
+      await selectChoose(QUICK_ACTION_SELECTORS.paramSelect, '.ember-power-select-option', 0);
+      await click(QUICK_ACTION_SELECTORS.getActionButton('View certificate'));
+      assert.strictEqual(
+        currentRouteName(),
+        'vault.cluster.secrets.backend.pki.certificates.certificate.details'
+      );
 
+      await visit('/vault/dashboard');
+
+      await selectChoose(QUICK_ACTION_SELECTORS.secretsEnginesSelect, 'pki');
       await fillIn(QUICK_ACTION_SELECTORS.actionSelect, 'View issuer');
       assert.dom(QUICK_ACTION_SELECTORS.emptyState).doesNotExist();
       assert.dom(QUICK_ACTION_SELECTORS.paramsTitle).hasText('Issuer');
       assert.dom(QUICK_ACTION_SELECTORS.getActionButton('View issuer')).exists({ count: 1 });
-      // select param input, click action, check route (view issuer)
+      await selectChoose(QUICK_ACTION_SELECTORS.paramSelect, '.ember-power-select-option', 0);
+      await click(QUICK_ACTION_SELECTORS.getActionButton('View issuer'));
+      assert.strictEqual(currentRouteName(), 'vault.cluster.secrets.backend.pki.issuers.issuer.details');
 
       // cleanup engine mount
       await consoleComponent.runCommands(deleteEngineCmd('pki'));
@@ -289,8 +319,8 @@ module('Acceptance | landing page dashboard', function (hooks) {
     });
 
     test('shows the correct actions and links associated with kv', async function (assert) {
-      await mountSecrets.enable('kv', 'kv');
       // create a secret
+      await runCommands(['write sys/mounts/kv-1 type=kv options=version=2', 'write kv-1/foo bar=baz']);
       await settled();
       await visit('/vault/dashboard');
       await selectChoose(QUICK_ACTION_SELECTORS.secretsEnginesSelect, 'kv');
@@ -298,6 +328,12 @@ module('Acceptance | landing page dashboard', function (hooks) {
       assert.dom(QUICK_ACTION_SELECTORS.emptyState).doesNotExist();
       assert.dom(QUICK_ACTION_SELECTORS.paramsTitle).hasText('Secret path');
       assert.dom(QUICK_ACTION_SELECTORS.getActionButton('Read secrets')).exists({ count: 1 });
+      await selectChoose(QUICK_ACTION_SELECTORS.paramSelect, '.ember-power-select-option', 0);
+      // await this.pauseTest();
+      // await click(QUICK_ACTION_SELECTORS.getActionButton('Read secrets'));
+      // console.log('current route name', currentRouteName());
+      // assert.strictEqual(currentRouteName(), 'vault.cluster.secrets.backend.pki.issuers.issuer.details');
+
       // select param input, click action, check route
       // cleanup engine mount
       await consoleComponent.runCommands(deleteEngineCmd('database'));
@@ -347,6 +383,7 @@ module('Acceptance | landing page dashboard', function (hooks) {
       assert.dom('[data-test-client-count-card]').doesNotExist();
     });
   });
+
   module('replication card', function (hooks) {
     hooks.beforeEach(async function () {
       await authPage.login();
