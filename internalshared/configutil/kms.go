@@ -8,11 +8,12 @@ import (
 	"crypto/rand"
 	"errors"
 	"fmt"
-	"github.com/hashicorp/go-kms-wrapping/entropy/v2"
 	"io"
 	"os"
 	"regexp"
 	"strings"
+
+	"github.com/hashicorp/go-kms-wrapping/entropy/v2"
 
 	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/go-hclog"

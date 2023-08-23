@@ -8,6 +8,7 @@ package vault
 import (
 	"context"
 	"fmt"
+
 	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/sdk/helper/license"
