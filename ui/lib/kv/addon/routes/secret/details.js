@@ -38,7 +38,8 @@ export default class KvSecretDetailsRoute extends Route {
 
   setupController(controller, resolvedModel) {
     super.setupController(controller, resolvedModel);
-    controller.set('version', resolvedModel.secret.version);
+    const { version } = this.paramsFor(this.routeName);
+    controller.set('version', resolvedModel.secret.version || version);
   }
 
   resetController(controller, isExiting) {

@@ -8,7 +8,6 @@ import { inject as service } from '@ember/service';
 import { hash } from 'rsvp';
 
 export default class KvSecretRoute extends Route {
-  @service router;
   @service secretMountPath;
   @service store;
 
