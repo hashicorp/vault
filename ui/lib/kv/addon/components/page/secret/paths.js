@@ -9,23 +9,26 @@ import { kvMetadataPath, kvDataPath } from 'vault/utils/kv-path';
 
 /**
  * @module KvSecretPaths is used to display copyable secret paths to use on the CLI and API.
+ * This view is permission agnostic because args come from the views mount path and url params.
  *
  * <Page::Secret::Paths
  *  @path={{this.model.path}}
- *  @secret={{this.model.secret}}
+ *  @backend={{this.model.backend}}
  *  @breadcrumbs={{this.breadcrumbs}}
+ *  @canReadMetadata={{this.model.secret.canReadMetadata}}
  * />
  *
- * @param {model} secret - Ember data model: 'kv/data', the new record for the new secret version saved by the form
- * @param {string} path - kv secret path for rendering the page title
+ * @param {string} path - kv secret path for building the CLI and API paths
+ * @param {string} backend - the secret engine mount path, comes from the secretMountPath service defined in the route
  * @param {array} breadcrumbs - Array to generate breadcrumbs, passed to the page header component
+ * @param {boolean} [canReadMetadata=true] - if true, displays tab for Version History
  */
 
 export default class KvSecretPaths extends Component {
   @service namespace;
 
   get paths() {
-    const { backend, path } = this.args.secret;
+    const { backend, path } = this.args;
     const namespace = this.namespace.path;
     const cli = `-mount="${backend}" "${path}"`;
     const data = kvDataPath(backend, path);
@@ -51,12 +54,11 @@ export default class KvSecretPaths extends Component {
   }
 
   get commands() {
-    const { snippet: cli } = this.paths.findBy('label', 'CLI path');
-    const { snippet: api } = this.paths.findBy('label', 'API path');
-    const { version } = this.args.secret;
-    const url = `http://127.0.0.1:8200${api}?version=${version}`;
+    const { snippet: cliPath } = this.paths.findBy('label', 'CLI path');
+    const { snippet: apiPath } = this.paths.findBy('label', 'API path');
+    const url = `http://127.0.0.1:8200${apiPath}`;
     return {
-      cli: `vault kv get ${cli}`,
+      cli: `vault kv get ${cliPath}`,
       /* eslint-disable-next-line no-useless-escape */
       apiCopy: `curl \ --header "X-Vault-Token: ..." \ --request GET \ ${url}`,
       apiDisplay: `curl \\
