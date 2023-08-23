@@ -4,7 +4,7 @@
  */
 
 import { module, test } from 'qunit';
-import { visit, currentURL, settled, fillIn, click, waitUntil, find, skip } from '@ember/test-helpers';
+import { visit, currentURL, settled, fillIn, click, waitUntil, find } from '@ember/test-helpers';
 import { setupApplicationTest } from 'vault/tests/helpers';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 import { create } from 'ember-cli-page-object';
@@ -18,6 +18,7 @@ import ENV from 'vault/config/environment';
 import { formatNumber } from 'core/helpers/format-number';
 import { pollCluster } from 'vault/tests/helpers/poll-cluster';
 import { disableReplication } from 'vault/tests/helpers/replication';
+import modifyPassthroughResponse from 'vault/mirage/helpers/modify-passthrough-response';
 
 // selectors
 import SECRETS_ENGINE_SELECTORS from 'vault/tests/helpers/components/dashboard/secrets-engines-card';
@@ -307,24 +308,11 @@ module('Acceptance | landing page dashboard', function (hooks) {
 
     hooks.beforeEach(async function () {
       this.store = this.owner.lookup('service:store');
-      this.server.get('sys/seal-status', function () {
-        return {
-          type: 'shamir',
-          initialized: true,
-          sealed: false,
-          t: 1,
-          n: 1,
-          progress: 0,
-          nonce: '',
-          version: '1.14.0+ent',
-          build_date: '2023-06-19T16:20:54Z',
-          migration: false,
-          cluster_name: 'vault-cluster-107c3b64',
-          cluster_id: '7883553f-51ea-bea4-6135-2deb4f147fd1',
-          recovery_seal: false,
-          storage_type: 'inmem_transactional_ha',
-        };
+
+      this.server.get('/sys/seal-status', (schema, req) => {
+        return modifyPassthroughResponse(req, { version: '1.14.0+ent' });
       });
+
       await authPage.login();
     });
 
@@ -363,7 +351,7 @@ module('Acceptance | landing page dashboard', function (hooks) {
       assert.dom('[data-test-client-count-card]').doesNotExist();
     });
   });
-  skip('replication card', function (hooks) {
+  module('replication card', function (hooks) {
     hooks.beforeEach(async function () {
       await authPage.login();
       await settled();
@@ -371,6 +359,9 @@ module('Acceptance | landing page dashboard', function (hooks) {
       await settled();
       await disableReplication('performance');
       await settled();
+      this.server.get('/sys/seal-status', (schema, req) => {
+        return modifyPassthroughResponse(req, { version: '1.14.0+ent' });
+      });
     });
 
     test('shows the replication card empty state', async function (assert) {
