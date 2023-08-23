@@ -5,7 +5,6 @@ package logical
 
 import (
 	"context"
-	"encoding/json"
 
 	"github.com/hashicorp/go-uuid"
 	"google.golang.org/protobuf/types/known/structpb"
@@ -13,14 +12,17 @@ import (
 
 // common event metadata keys
 const (
-	// EventMetadataApiPath is used in event metadata to show the API path that can be used to fetch any underlying
+	// EventMetadataDataPath is used in event metadata to show the API path that can be used to fetch any underlying
 	// data. For example, the KV plugin would set this to `data/mysecret`. The event system will automatically prepend
-	// the plugin mount to this path, if present, so it would be come `secret/data/mysecret`, for example.
+	// the plugin mount to this path, if present, so it would become `secret/data/mysecret`, for example.
 	// If this is an auth plugin event, this will additionally be prepended with `auth/`.
-	EventMetadataApiPath = "api_path"
+	EventMetadataDataPath = "data_path"
 	// EventMetadataOperation is used in event metadata to express what operation was performed that generated the
 	// event, e.g., `read` or `write`.
 	EventMetadataOperation = "operation"
+	// EventMetadataModified is used in event metadata when the event attests that the underlying data has been modified
+	// and might need to be re-fetched (at the EventMetadataDataPath).
+	EventMetadataModified = "modified"
 
 	extraMetadataArgument = "EXTRA_VALUE_AT_END"
 )
@@ -56,22 +58,12 @@ func SendEvent(ctx context.Context, sender EventSender, eventType string, metada
 	if err != nil {
 		return err
 	}
-	metadata := map[string]string{}
-	if len(metadataPairs) >= 2 {
-		for i := 0; i < len(metadataPairs)-1; i += 2 {
-			metadata[metadataPairs[i]] = metadataPairs[i+1]
-		}
+	ev.Metadata = &structpb.Struct{Fields: make(map[string]*structpb.Value, (len(metadataPairs)+1)/2)}
+	for i := 0; i < len(metadataPairs)-1; i += 2 {
+		ev.Metadata.Fields[metadataPairs[i]] = structpb.NewStringValue(metadataPairs[i+1])
 	}
 	if len(metadataPairs)%2 != 0 {
-		metadata[extraMetadataArgument] = metadataPairs[len(metadataPairs)-1]
-	}
-	metadataBytes, err := json.Marshal(metadata)
-	if err != nil {
-		return err
-	}
-	ev.Metadata = &structpb.Struct{}
-	if err := ev.Metadata.UnmarshalJSON(metadataBytes); err != nil {
-		return err
+		ev.Metadata.Fields[extraMetadataArgument] = structpb.NewStringValue(metadataPairs[len(metadataPairs)-1])
 	}
 	return sender.SendEvent(ctx, EventType(eventType), ev)
 }

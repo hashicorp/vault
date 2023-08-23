@@ -381,9 +381,9 @@ func TestBusWildcardSubscriptions(t *testing.T) {
 	}
 }
 
-// TestApiPathIsPrependedWithMount tests that "api_path", if present in the
+// TestDataPathIsPrependedWithMount tests that "data_path", if present in the
 // metadata, is prepended with the plugin's mount.
-func TestApiPathIsPrependedWithMount(t *testing.T) {
+func TestDataPathIsPrependedWithMount(t *testing.T) {
 	bus, err := NewEventBus(nil)
 	if err != nil {
 		t.Fatal(err)
@@ -404,8 +404,8 @@ func TestApiPathIsPrependedWithMount(t *testing.T) {
 		t.Fatal(err)
 	}
 	metadata := map[string]string{
-		logical.EventMetadataApiPath: "my/secret/path",
-		"not_touched":                "xyz",
+		logical.EventMetadataDataPath: "my/secret/path",
+		"not_touched":                 "xyz",
 	}
 	metadataBytes, err := json.Marshal(metadata)
 	if err != nil {
@@ -428,8 +428,8 @@ func TestApiPathIsPrependedWithMount(t *testing.T) {
 		metadata := message.Payload.(*logical.EventReceived).Event.Metadata.AsMap()
 		assert.Contains(t, metadata, "not_touched")
 		assert.Equal(t, "xyz", metadata["not_touched"])
-		assert.Contains(t, metadata, "api_path")
-		assert.Equal(t, "my/secret/path", metadata["api_path"])
+		assert.Contains(t, metadata, "data_path")
+		assert.Equal(t, "my/secret/path", metadata["data_path"])
 	case <-timeout:
 		t.Error("Timeout waiting for event")
 	}
@@ -454,8 +454,8 @@ func TestApiPathIsPrependedWithMount(t *testing.T) {
 		metadata := message.Payload.(*logical.EventReceived).Event.Metadata.AsMap()
 		assert.Contains(t, metadata, "not_touched")
 		assert.Equal(t, "xyz", metadata["not_touched"])
-		assert.Contains(t, metadata, "api_path")
-		assert.Equal(t, "secret/my/secret/path", metadata["api_path"])
+		assert.Contains(t, metadata, "data_path")
+		assert.Equal(t, "secret/my/secret/path", metadata["data_path"])
 	case <-timeout:
 		t.Error("Timeout waiting for event")
 	}
@@ -473,8 +473,8 @@ func TestApiPathIsPrependedWithMount(t *testing.T) {
 		t.Fatal(err)
 	}
 	metadata = map[string]string{
-		logical.EventMetadataApiPath: "my/secret/path",
-		"not_touched":                "xyz",
+		logical.EventMetadataDataPath: "my/secret/path",
+		"not_touched":                 "xyz",
 	}
 	metadataBytes, err = json.Marshal(metadata)
 	if err != nil {
@@ -495,8 +495,8 @@ func TestApiPathIsPrependedWithMount(t *testing.T) {
 		metadata := message.Payload.(*logical.EventReceived).Event.Metadata.AsMap()
 		assert.Contains(t, metadata, "not_touched")
 		assert.Equal(t, "xyz", metadata["not_touched"])
-		assert.Contains(t, metadata, "api_path")
-		assert.Equal(t, "auth/kubernetes/my/secret/path", metadata["api_path"])
+		assert.Contains(t, metadata, "data_path")
+		assert.Equal(t, "auth/kubernetes/my/secret/path", metadata["data_path"])
 	case <-timeout:
 		t.Error("Timeout waiting for event")
 	}

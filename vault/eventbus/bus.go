@@ -37,6 +37,12 @@ var (
 	ErrNotStarted              = errors.New("event broker has not been started")
 	cloudEventsFormatterFilter *cloudevents.FormatterFilter
 	subscriptions              atomic.Int64 // keeps track of event subscription count in all event buses
+
+	// these metadata fields will have the plugin mount path prepended to them
+	metadataPrependPathFields = []string{
+		"path",
+		logical.EventMetadataDataPath,
+	}
 )
 
 // EventBus contains the main logic of running an event broker for Vault.
@@ -85,19 +91,20 @@ func (bus *EventBus) Start() {
 
 // patchMountPath patches the event data's metadata "secret_path" field, if present, to include the mount path prepended.
 func patchMountPath(data *logical.EventData, pluginInfo *logical.EventPluginInfo) *logical.EventData {
-	if pluginInfo == nil || pluginInfo.MountPath == "" || data.Metadata == nil ||
-		data.Metadata.Fields[logical.EventMetadataApiPath] == nil {
+	if pluginInfo == nil || pluginInfo.MountPath == "" || data.Metadata == nil {
 		return data
 	}
-	newPath := path.Join(
-		pluginInfo.MountPath,
-		data.Metadata.Fields[logical.EventMetadataApiPath].GetStringValue())
 
-	if pluginInfo.MountClass == "auth" {
-		newPath = path.Join("auth", newPath)
+	for _, field := range metadataPrependPathFields {
+		if data.Metadata.Fields[field] != nil {
+			newPath := path.Join(pluginInfo.MountPath, data.Metadata.Fields[field].GetStringValue())
+			if pluginInfo.MountClass == "auth" {
+				newPath = path.Join("auth", newPath)
+			}
+			data.Metadata.Fields[field] = structpb.NewStringValue(newPath)
+		}
 	}
 
-	data.Metadata.Fields[logical.EventMetadataApiPath] = structpb.NewStringValue(newPath)
 	return data
 }
 
