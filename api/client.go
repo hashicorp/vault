@@ -545,7 +545,7 @@ func (c *Config) ParseAddress(address string) (*url.URL, error) {
 			// be pointing to the protocol used in the application layer and not to
 			// the transport layer. Hence, setting the fields accordingly.
 			u.Scheme = "http"
-			u.Host = socket
+			u.Host = "localhost"
 			u.Path = ""
 		} else {
 			return nil, fmt.Errorf("attempting to specify unix:// address with non-transport transport")
