@@ -26,12 +26,11 @@ export default class DashboardQuickActionsCard extends Component {
 
   @tracked selectedEngine;
   @tracked selectedAction;
-  @tracked mountPath;
   @tracked paramValue;
 
   get actionOptions() {
-    switch (this.selectedEngine) {
-      case 'kv':
+    switch (this.selectedEngine.type) {
+      case `kv version ${this.selectedEngine?.version}`:
         return ['Find KV secrets'];
       case 'database':
         return ['Generate credentials for database'];
@@ -49,8 +48,9 @@ export default class DashboardQuickActionsCard extends Component {
           title: 'Secret path',
           subText: 'Path of the secret you want to read, including the mount. E.g., secret/data/foo.',
           buttonText: 'Read secrets',
-          model: 'secret-v2',
-          route: 'vault.cluster.secrets.backends.show',
+          // check kv version to figure out which model to use
+          model: this.selectedEngine.version === 2 ? 'secret-v2' : 'secret',
+          route: 'vault.cluster.secrets.backend.show',
         };
       case 'Generate credentials for database':
         return {
@@ -99,15 +99,16 @@ export default class DashboardQuickActionsCard extends Component {
 
   get mountOptions() {
     return this.filteredSecretEngines.map((engine) => {
-      const { id, type } = engine;
-      return { name: id, type, id };
+      let { id, type, version } = engine;
+      if (type === 'kv') type = `kv version ${version}`;
+
+      return { name: id, type, id, version };
     });
   }
 
   @action
   handleSearchEngineSelect([selection]) {
-    this.selectedEngine = selection?.type;
-    this.mountPath = selection?.id;
+    this.selectedEngine = selection;
     // reset tracked properties
     this.selectedAction = null;
     this.paramValue = null;
@@ -134,13 +135,13 @@ export default class DashboardQuickActionsCard extends Component {
 
     // kv has a special use case where if the paramValue ends in a '/' you should
     // link to different route
-    if (this.selectedEngine === 'kv') {
+    if (this.selectedEngine.type === 'kv') {
       searchSelectParamRoute =
         this.paramValue && this.paramValue[this.paramValue?.length - 1] === '/'
           ? 'vault.cluster.secrets.backend.list'
           : 'vault.cluster.secrets.backend.show';
     }
 
-    this.router.transitionTo(searchSelectParamRoute, this.mountPath, this.paramValue);
+    this.router.transitionTo(searchSelectParamRoute, this.selectedEngine.id, this.paramValue);
   }
 }

@@ -2,7 +2,7 @@
 
 <div class="has-bottom-margin-xl">
   <div class="is-flex-row has-gap-l">
-    {{#if @model.version.isEnterprise}}
+    {{#if (and @model.version.isEnterprise (or @model.license @model.isRootNamespace))}}
 
       <div class="is-flex-column is-flex-1 has-gap-l">
         {{#if @model.license}}

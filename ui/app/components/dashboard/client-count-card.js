@@ -45,7 +45,8 @@ export default class DashboardClientCountCard extends Component {
 
   @task
   @waitFor
-  *fetchClientActivity() {
+  *fetchClientActivity(e) {
+    if (e) e.preventDefault();
     this.updatedAt = timestamp.now().toISOString();
     // only make the network request if we have a start_time
     if (!this.licenseStartTime) return {};

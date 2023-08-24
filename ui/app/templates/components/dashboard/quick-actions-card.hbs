@@ -14,7 +14,7 @@
       @displayInherit={{true}}
       @shouldRenderName={{true}}
       @passObject={{true}}
-      @objectKeys={{array "type"}}
+      @objectKeys={{array "type" "version"}}
       class="is-marginless"
       data-test-secrets-engines-select
     />
@@ -38,13 +38,14 @@
         class="is-flex-grow-1"
         @selectLimit="1"
         @models={{array this.searchSelectParams.model}}
-        @backend={{this.mountPath}}
+        @backend={{this.selectedEngine.id}}
         @placeholder={{this.searchSelectParams.placeholder}}
         @disallowNewItems={{true}}
         @onChange={{this.handleActionSelect}}
         @fallbackComponent="input-search"
         @nameKey={{this.searchSelectParams.nameKey}}
         @disabled={{not this.searchSelectParams.model}}
+        data-test-param-select
       />
 
       <div>
@@ -60,6 +61,10 @@
       </div>
     {{/if}}
   {{else}}
-    <EmptyState @title="No mount selected" @message="Select a mount above to get started." />
+    <EmptyState
+      @title="No mount selected"
+      @message="Select a mount above to get started."
+      data-test-no-mount-selected-empty
+    />
   {{/if}}
 </Hds::Card::Container>
