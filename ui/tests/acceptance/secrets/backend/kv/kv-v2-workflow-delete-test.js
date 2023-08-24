@@ -203,7 +203,55 @@ module('Acceptance | kv-v2 workflow | delete, undelete, destroy', function (hook
       clearRecords(this.store);
       return;
     });
-    // Copy test outline from admin persona
+    test('can delete and undelete the latest secret version (dlr)', async function (assert) {
+      assert.expect(12);
+      // go to secret details
+      await visit(`/vault/secrets/${this.backend}/kv/${this.secretPath}/details`);
+      // correct toolbar options & details show
+      assertDeleteActions(assert, ['delete']);
+      assert.dom(PAGE.secretRow).exists('shows secret data');
+      // delete flow
+      await click(PAGE.detail.delete);
+      assert.dom(PAGE.detail.deleteModalTitle).includesText('Delete version?', 'shows correct modal title');
+      assert.dom(PAGE.detail.deleteOption).isDisabled('delete option is disabled');
+      assert.dom(PAGE.detail.deleteOptionLatest).isNotDisabled('delete latest option is selectable');
+      await click(PAGE.detail.deleteOptionLatest);
+      await click(PAGE.detail.deleteConfirm);
+      // details update accordingly
+      assert
+        .dom(PAGE.emptyStateTitle)
+        .hasText('Version 4 of this secret has been deleted', 'Shows deleted message');
+      assert.dom(PAGE.detail.versionTimestamp).includesText('Version 4 deleted');
+      // updated toolbar options
+      assertDeleteActions(assert, []);
+      // user can't undelete
+    });
+    test('can soft delete and undelete an older secret version (dlr)', async function (assert) {
+      assert.expect(6);
+      // go to secret details
+      await visit(`/vault/secrets/${this.backend}/kv/${this.secretPath}/details?version=2`);
+      // correct toolbar options & details show
+      assertDeleteActions(assert, ['delete']);
+      assert.dom(PAGE.secretRow).exists('shows secret data');
+      // delete flow
+      await click(PAGE.detail.delete);
+      assert.dom(PAGE.detail.deleteModalTitle).includesText('Delete version?', 'shows correct modal title');
+      assert.dom(PAGE.detail.deleteOption).isDisabled('delete this version is not available');
+    });
+    test('cannot destroy a secret version (dlr)', async function (assert) {
+      assert.expect(3);
+      // go to secret details
+      await visit(`/vault/secrets/${this.backend}/kv/${this.secretPath}/details?version=3`);
+      // correct toolbar options show
+      assertDeleteActions(assert, ['delete']);
+    });
+    test('cannot permanently delete all secret versions (dr)', async function (assert) {
+      // go to secret details
+      await visit(`/vault/secrets/${this.backend}/kv/nuke/details`);
+      // Check metadata toolbar
+      await click(PAGE.secretTab('Metadata'));
+      assert.dom(PAGE.metadata.deleteMetadata).doesNotExist('does not show delete metadata button');
+    });
   });
 
   module('metadata-maintainer persona', function (hooks) {
