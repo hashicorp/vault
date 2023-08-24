@@ -1,0 +1,8 @@
+<KvPageHeader @breadcrumbs={{this.breadcrumbs}} @mountName={{this.mountName}}>
+  <:tabLinks>
+    <LinkTo @route="list" data-test-secrets-tab="Secrets">Secrets</LinkTo>
+    <LinkTo @route="configuration" data-test-secrets-tab="Configuration">Configuration</LinkTo>
+  </:tabLinks>
+</KvPageHeader>
+
+<Page::Error @error={{this.model}} />

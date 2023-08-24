@@ -126,7 +126,7 @@ func testCore_Rekey_Init_Common(t *testing.T, c *Core, recovery bool) {
 	// If recovery key is supported, set newConf
 	// to be a recovery seal config
 	if c.seal.RecoveryKeySupported() {
-		newConf.Type = c.seal.RecoveryType()
+		newConf.Type = c.seal.RecoverySealConfigType().String()
 	}
 
 	err = c.RekeyInit(newConf, recovery)
@@ -155,9 +155,9 @@ func testCore_Rekey_Update_Common(t *testing.T, c *Core, keys [][]byte, root str
 	// Start a rekey
 	var expType string
 	if recovery {
-		expType = c.seal.RecoveryType()
+		expType = c.seal.RecoverySealConfigType().String()
 	} else {
-		expType = c.seal.BarrierType().String()
+		expType = c.seal.BarrierSealConfigType().String()
 	}
 
 	newConf := &SealConfig{

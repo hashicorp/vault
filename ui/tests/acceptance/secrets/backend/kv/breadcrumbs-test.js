@@ -12,6 +12,7 @@ import consoleClass from 'vault/tests/pages/components/console/ui-panel';
 
 const consolePanel = create(consoleClass);
 
+// TODO: replace with workflow-navigation
 module('Acceptance | kv | breadcrumbs', function (hooks) {
   setupApplicationTest(hooks);
 
