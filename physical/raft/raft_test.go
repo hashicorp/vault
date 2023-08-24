@@ -222,6 +222,47 @@ func TestRaft_Backend(t *testing.T) {
 // TestRaft_SwitchFromBoltDBToRaftWal is testing that we don't use raft-wal, even if configured to do so,
 // if there is an existing raft.db file on disk (meaning BoltDB was previously in use).
 func TestRaft_SwitchFromBoltDBToRaftWal(t *testing.T) {
+	tmpDir := t.TempDir()
+
+	// configured to use raft-wal
+	conf := map[string]string{
+		"path":           tmpDir,
+		"trailing_logs":  "100",
+		raftWalConfigKey: "true",
+	}
+
+	// raftBaseDir will end up looking like $tmpDir/raft
+	raftBaseDir := filepath.Join(tmpDir, raftState)
+	err := os.MkdirAll(raftBaseDir, 0o777)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// create a bogus $tmpDir/raft/raft.db file
+	db, err := bolt.Open(filepath.Join(raftBaseDir, "raft.db"), 0o777, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	err = db.Close()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	_, err = NewRaftBackend(conf, hclog.NewNullLogger())
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Check to see if $tmpDir/raft/raft-wal exists. It should not, because we only create that if raft-wal is in use.
+	// And since raft.db already existed, we should've skipped all the raft-wal setup code.
+	raftWalExists, err := fileExists(filepath.Join(raftBaseDir, raftWalDir))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if raftWalExists {
+		t.Fatal("expected raft-wal dir to not exist, but it does")
+	}
 }
 
 func TestRaft_ParseRaftWalBackend(t *testing.T) {
