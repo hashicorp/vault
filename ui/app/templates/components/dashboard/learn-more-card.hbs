@@ -11,16 +11,14 @@
           (not learnMoreLink.requiredFeature)
         )
       }}
-        <div class="has-bottom-margin-xxs">
-          <DocLink
-            data-test-learn-more-link={{learnMoreLink.title}}
-            @path={{learnMoreLink.link}}
-            class="is-size-8 has-font-weight-normal"
-          >
-            <Icon @name={{learnMoreLink.icon}} />
-            {{learnMoreLink.title}}
-          </DocLink>
-        </div>
+        <DocLink
+          data-test-learn-more-link={{learnMoreLink.title}}
+          @path={{learnMoreLink.link}}
+          class="is-size-8 has-font-weight-normal is-block has-bottom-margin-xxs"
+        >
+          <Icon @name={{learnMoreLink.icon}} />
+          {{learnMoreLink.title}}
+        </DocLink>
       {{/if}}
 
     {{/each}}
