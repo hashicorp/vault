@@ -12,7 +12,11 @@
         )
       }}
         <div class="has-bottom-margin-xxs">
-          <DocLink data-test-learn-more-link={{learnMoreLink.title}} @path={{learnMoreLink.link}}>
+          <DocLink
+            data-test-learn-more-link={{learnMoreLink.title}}
+            @path={{learnMoreLink.link}}
+            class="is-size-8 has-font-weight-normal"
+          >
             <Icon @name={{learnMoreLink.icon}} />
             {{learnMoreLink.title}}
           </DocLink>
