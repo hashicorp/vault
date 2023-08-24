@@ -12,20 +12,27 @@ import (
 	"strings"
 	"time"
 
-	"github.com/golang/protobuf/proto"
-	wrapping "github.com/hashicorp/go-kms-wrapping/v2"
+	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-uuid"
+	snapshot "github.com/hashicorp/raft-snapshot"
 	"github.com/hashicorp/vault/helper/constants"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/physical/raft"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/sdk/physical"
+	"github.com/hashicorp/vault/vault/seal"
 	"github.com/mitchellh/mapstructure"
 )
 
 // raftStoragePaths returns paths for use when raft is the storage mechanism.
 func (b *SystemBackend) raftStoragePaths() []*framework.Path {
+	makeSealer := func(logger hclog.Logger, use string) func() snapshot.Sealer {
+		return func() snapshot.Sealer {
+			return NewSealAccessSealer(b.Core.seal.GetAccess(), logger, use)
+		}
+	}
+
 	return []*framework.Path{
 		{
 			Pattern: "storage/raft/bootstrap/answer",
@@ -66,7 +73,7 @@ func (b *SystemBackend) raftStoragePaths() []*framework.Path {
 
 			Operations: map[logical.Operation]framework.OperationHandler{
 				logical.UpdateOperation: &framework.PathOperation{
-					Callback: b.handleRaftBootstrapChallengeWrite(),
+					Callback: b.handleRaftBootstrapChallengeWrite(makeSealer(nil, "bootstrap_challenge_write")),
 					Summary:  "Creates a challenge for the new peer to be joined to the raft cluster.",
 				},
 			},
@@ -128,11 +135,11 @@ func (b *SystemBackend) raftStoragePaths() []*framework.Path {
 			Pattern: "storage/raft/snapshot",
 			Operations: map[logical.Operation]framework.OperationHandler{
 				logical.ReadOperation: &framework.PathOperation{
-					Callback: b.handleStorageRaftSnapshotRead(),
+					Callback: b.handleStorageRaftSnapshotRead(makeSealer(nil, "snapshot_read")),
 					Summary:  "Returns a snapshot of the current state of vault.",
 				},
 				logical.UpdateOperation: &framework.PathOperation{
-					Callback: b.handleStorageRaftSnapshotWrite(false),
+					Callback: b.handleStorageRaftSnapshotWrite(false, makeSealer(b.logger, "snapshot_write")),
 					Summary:  "Installs the provided snapshot, returning the cluster to the state defined in it.",
 				},
 			},
@@ -144,7 +151,7 @@ func (b *SystemBackend) raftStoragePaths() []*framework.Path {
 			Pattern: "storage/raft/snapshot-force",
 			Operations: map[logical.Operation]framework.OperationHandler{
 				logical.UpdateOperation: &framework.PathOperation{
-					Callback: b.handleStorageRaftSnapshotWrite(true),
+					Callback: b.handleStorageRaftSnapshotWrite(true, makeSealer(b.logger, "snapshot_write")),
 					Summary:  "Installs the provided snapshot, returning the cluster to the state defined in it. This bypasses checks ensuring the current Autounseal or Shamir keys are consistent with the snapshot data.",
 				},
 			},
@@ -259,7 +266,7 @@ func (b *SystemBackend) handleRaftRemovePeerUpdate() framework.OperationFunc {
 	}
 }
 
-func (b *SystemBackend) handleRaftBootstrapChallengeWrite() framework.OperationFunc {
+func (b *SystemBackend) handleRaftBootstrapChallengeWrite(makeSealer func() snapshot.Sealer) framework.OperationFunc {
 	return func(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 		serverID := d.Get("server_id").(string)
 		if len(serverID) == 0 {
@@ -279,13 +286,11 @@ func (b *SystemBackend) handleRaftBootstrapChallengeWrite() framework.OperationF
 			answer = answerRaw.([]byte)
 		}
 
-		sealAccess := b.Core.seal.GetAccess()
-
-		eBlob, err := sealAccess.Encrypt(ctx, answer, nil)
-		if err != nil {
-			return nil, err
+		sealer := makeSealer()
+		if sealer == nil {
+			return nil, errors.New("core has no seal Access to write raft bootstrap challenge")
 		}
-		protoBlob, err := proto.Marshal(eBlob)
+		protoBlob, err := sealer.Seal(ctx, answer)
 		if err != nil {
 			return nil, err
 		}
@@ -397,7 +402,7 @@ func (b *SystemBackend) handleRaftBootstrapAnswerWrite() framework.OperationFunc
 	}
 }
 
-func (b *SystemBackend) handleStorageRaftSnapshotRead() framework.OperationFunc {
+func (b *SystemBackend) handleStorageRaftSnapshotRead(makeSealer func() snapshot.Sealer) framework.OperationFunc {
 	return func(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 		raftStorage, ok := b.Core.underlyingPhysical.(*raft.RaftBackend)
 		if !ok {
@@ -407,7 +412,7 @@ func (b *SystemBackend) handleStorageRaftSnapshotRead() framework.OperationFunc 
 			return nil, errors.New("no writer for request")
 		}
 
-		err := raftStorage.SnapshotHTTP(req.ResponseWriter, b.Core.seal.GetAccess())
+		err := raftStorage.SnapshotHTTP(req.ResponseWriter, makeSealer())
 		if err != nil {
 			return nil, err
 		}
@@ -559,7 +564,7 @@ func (b *SystemBackend) handleStorageRaftAutopilotConfigUpdate() framework.Opera
 	}
 }
 
-func (b *SystemBackend) handleStorageRaftSnapshotWrite(force bool) framework.OperationFunc {
+func (b *SystemBackend) handleStorageRaftSnapshotWrite(force bool, makeSealer func() snapshot.Sealer) framework.OperationFunc {
 	return func(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 		raftStorage, ok := b.Core.underlyingPhysical.(*raft.RaftBackend)
 		if !ok {
@@ -569,21 +574,21 @@ func (b *SystemBackend) handleStorageRaftSnapshotWrite(force bool) framework.Ope
 			return nil, errors.New("no reader for request")
 		}
 
-		access := b.Core.seal.GetAccess()
-		if force {
-			access = nil
+		var sealer snapshot.Sealer
+		if !force {
+			sealer = makeSealer()
 		}
 
 		// We want to buffer the http request reader into a temp file here so we
 		// don't have to hold the full snapshot in memory. We also want to do
 		// the restore in two parts so we can restore the snapshot while the
 		// stateLock is write locked.
-		snapFile, cleanup, metadata, err := raftStorage.WriteSnapshotToTemp(req.HTTPRequest.Body, access)
+		snapFile, cleanup, metadata, err := raftStorage.WriteSnapshotToTemp(req.HTTPRequest.Body, sealer)
 		switch {
 		case err == nil:
 		case strings.Contains(err.Error(), "failed to open the sealed hashes"):
-			switch b.Core.seal.BarrierType() {
-			case wrapping.WrapperTypeShamir:
+			switch b.Core.seal.BarrierSealConfigType() {
+			case SealConfigTypeShamir:
 				return logical.ErrorResponse("could not verify hash file, possibly the snapshot is using a different set of unseal keys; use the snapshot-force API to bypass this check"), logical.ErrInvalidRequest
 			default:
 				return logical.ErrorResponse("could not verify hash file, possibly the snapshot is using a different autoseal key; use the snapshot-force API to bypass this check"), logical.ErrInvalidRequest
@@ -708,4 +713,53 @@ var sysRaftHelp = map[string][2]string{
 		"Returns autopilot configuration.",
 		"",
 	},
+}
+
+func NewSealAccessSealer(access seal.Access, logger hclog.Logger, use string) snapshot.Sealer {
+	// If we have access to the seal create a sealer object
+	var s snapshot.Sealer
+	if access != nil {
+		s = &sealer{
+			access: access,
+			logger: logger,
+			use:    use,
+		}
+	}
+	return s
+}
+
+// sealer implements the snapshot.Sealer interface and is used in the snapshot
+// process for encrypting/decrypting the SHASUM file in snapshot archives.
+type sealer struct {
+	access seal.Access
+	logger hclog.Logger
+	use    string
+}
+
+var _ snapshot.Sealer = (*sealer)(nil)
+
+// Seal encrypts the data with using the seal access object.
+func (s *sealer) Seal(ctx context.Context, pt []byte) ([]byte, error) {
+	wrappedValue, err := SealWrapValue(ctx, s.access, true, pt, func(_ context.Context, errs map[string]error) error {
+		if s.logger != nil {
+			s.logger.Warn("sealed value not wrapped with all seals", "use", s.use)
+		}
+		return nil
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	return MarshalSealWrappedValue(wrappedValue)
+}
+
+// Open decrypts the data using the seal access object.
+func (s *sealer) Open(ctx context.Context, ct []byte) ([]byte, error) {
+	wrappedEntryValue, err := UnmarshalSealWrappedValue(ct)
+	if err != nil {
+		return nil, err
+	}
+
+	pt, _, err := UnsealWrapValue(ctx, s.access, "", wrappedEntryValue)
+	return pt, err
 }

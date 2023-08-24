@@ -505,6 +505,10 @@ func CheckConfig(c *Config, e error) (*Config, error) {
 
 	sealMap := make(map[string]*configutil.KMS)
 	for _, seal := range c.Seals {
+		if seal.Name == "" {
+			return nil, errors.New("seals: seal name is empty")
+		}
+
 		if _, ok := sealMap[seal.Name]; ok {
 			return nil, errors.New("seals: seal names must be unique")
 		}
