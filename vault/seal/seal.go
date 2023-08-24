@@ -13,6 +13,8 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/google/go-cmp/cmp"
+
 	"github.com/hashicorp/go-hclog"
 
 	"github.com/hashicorp/vault/internalshared/configutil"
