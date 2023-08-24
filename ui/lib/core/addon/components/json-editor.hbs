@@ -16,7 +16,13 @@
         <ToolbarActions>
           {{yield}}
           <div class="toolbar-separator"></div>
-          <Hds::Copy::Button @text="Copy" @isIconOnly={{true}} @textToCopy={{@value}} data-test-copy-button />
+          <Hds::Copy::Button
+            @text="Copy"
+            @isIconOnly={{true}}
+            @textToCopy={{@value}}
+            class="hds-copy-button icon-only"
+            data-test-copy-button
+          />
         </ToolbarActions>
       </Toolbar>
     </div>

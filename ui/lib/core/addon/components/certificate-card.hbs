@@ -20,7 +20,13 @@
       {{@data}}
     </code>
   </div>
-  <div class="is-flex has-left-padding-s has-top-bottom-margin-negative-m">
-    <Hds::Copy::Button @text="Copy" @isIconOnly={{true}} @textToCopy={{@data}} data-test-copy-button />
+  <div class="is-flex-center has-background-white-bis has-side-padding-s has-top-bottom-margin-negative-m">
+    <Hds::Copy::Button
+      @text="Copy"
+      @isIconOnly={{true}}
+      @textToCopy={{@data}}
+      class="hds-copy-button icon-only"
+      data-test-copy-button
+    />
   </div>
 </Hds::Card::Container>

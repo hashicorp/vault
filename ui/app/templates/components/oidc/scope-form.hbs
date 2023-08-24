@@ -89,7 +89,13 @@
       <p data-test-modal-text>
         Example of a JSON template for scopes:
       </p>
-      <Hds::Copy::Button @text="Copy" @isIconOnly={{true}} @textToCopy={{this.exampleTemplate}} data-test-copy-button />
+      <Hds::Copy::Button
+        @text="Copy"
+        @isIconOnly={{true}}
+        @textToCopy={{this.exampleTemplate}}
+        class="hds-copy-button icon-only"
+        data-test-copy-button
+      />
     </div>
     {{! code-mirror modifier does not render value initially in wormhole until focus event fires }}
     {{! wait until the Modal is rendered and then show the JsonEditor }}
