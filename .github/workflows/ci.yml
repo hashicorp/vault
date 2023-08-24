@@ -117,6 +117,7 @@ jobs:
       go-tags: '${{ needs.setup.outputs.go-tags }},deadlock'
       runs-on: ${{ needs.setup.outputs.compute-large }}
       enterprise: ${{ needs.setup.outputs.enterprise }}
+      test-timing-cache-key: go-test-timing-standard
     secrets: inherit
 
   test-go-testonly:
@@ -136,6 +137,7 @@ jobs:
       go-tags: '${{ needs.setup.outputs.go-tags }},deadlock,testonly'
       runs-on: ${{ needs.setup.outputs.compute-large }}
       enterprise: ${{ needs.setup.outputs.enterprise }}
+      test-timing-cache-enabled: false
     secrets: inherit
 
   test-go-race:
@@ -161,6 +163,7 @@ jobs:
       runs-on: ${{ needs.setup.outputs.compute-large }}
       enterprise: ${{ needs.setup.outputs.enterprise }}
       name: "race"
+      test-timing-cache-key: go-test-timing-race
     secrets: inherit
 
   test-go-fips:
@@ -186,6 +189,7 @@ jobs:
       runs-on: ${{ needs.setup.outputs.compute-large }}
       enterprise: ${{ needs.setup.outputs.enterprise }}
       name: "fips"
+      test-timing-cache-key: go-test-timing-fips
     secrets: inherit
 
   test-ui:
