@@ -123,9 +123,14 @@ jobs:
           restore-keys: |
             ${{ inputs.test-timing-cache-key }}-
             go-test-reports-
-      - name: List cached results
-        id: list-cached-results
-        run: ls -lhR test-results/go-test
+      - name: Sanitize timing files
+        id: sanitize-timing-files
+        run: |
+          # Prune invalid timing files
+          find test-results/go-test -mindepth 1 -type f -name "*.json" -exec sh -c '
+            file="$1";
+            jq . "$file" || rm "$file"
+          ' shell {} \; > /dev/null 2>&1
       - name: Build matrix excluding binary, integration, and testonly tests
         id: build-non-binary
         if: ${{ !inputs.testonly }}
@@ -427,4 +432,11 @@ jobs:
       - run: |
           ls -lhR test-results/go-test
           find test-results/go-test -mindepth 1 -mtime +3 -delete
+
+          # Prune invalid timing files
+          find test-results/go-test -mindepth 1 -type f -name "*.json" -exec sh -c '
+            file="$1";
+            jq . "$file" || rm "$file"
+          ' shell {} \; > /dev/null 2>&1
+
           ls -lhR test-results/go-test
