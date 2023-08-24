@@ -92,7 +92,7 @@ module('Integration | Component | kv-v2 | Page::Secret::Paths', function (hooks)
 
   test('it renders copyable commands', async function (assert) {
     assert.expect(4);
-    const url = `http://127.0.0.1:8200/v1/${this.backend}/data/${this.path}`;
+    const url = `https://127.0.0.1:8200/v1/${this.backend}/data/${this.path}`;
     const expected = {
       cli: `vault kv get -mount="${this.backend}" "${this.path}"`,
       apiDisplay: `curl \\ --header \"X-Vault-Token: ...\" \\ --request GET \\ ${url}`,
@@ -122,7 +122,7 @@ module('Integration | Component | kv-v2 | Page::Secret::Paths', function (hooks)
 
     const backend = encodeURIComponent(this.backend);
     const path = encodeURIComponent(this.path);
-    const url = `http://127.0.0.1:8200/v1/${backend}/data/${path}`;
+    const url = `https://127.0.0.1:8200/v1/${backend}/data/${path}`;
 
     const expected = {
       cli: `vault kv get -mount="${this.backend}" "${this.path}"`,

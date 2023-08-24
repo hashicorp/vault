@@ -8,7 +8,7 @@ import { inject as service } from '@ember/service';
 import { kvMetadataPath, kvDataPath } from 'vault/utils/kv-path';
 
 /**
- * @module KvSecretPaths is used to display copyable secret paths to use on the CLI and API.
+ * @module KvSecretPaths is used to display copyable secret paths for KV v2 for CLI and API use.
  * This view is permission agnostic because args come from the views mount path and url params.
  *
  * <Page::Secret::Paths
@@ -56,7 +56,8 @@ export default class KvSecretPaths extends Component {
   get commands() {
     const cliPath = this.paths.findBy('label', 'CLI path').snippet;
     const apiPath = this.paths.findBy('label', 'API path').snippet;
-    const url = `http://127.0.0.1:8200${apiPath}`;
+    // as a future improvement, it might be nice to use window.location.protocol here:
+    const url = `https://127.0.0.1:8200${apiPath}`;
 
     return {
       cli: `vault kv get ${cliPath}`,
