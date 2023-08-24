@@ -35,8 +35,9 @@ func (c *EventsSubscribeCommands) Help() string {
 	helpText := `
 Usage: vault events subscribe [-namespaces=ns1] [-timeout=XYZs] eventType
 
-  Subscribe to events of the given event type (topic). The events will be
-  output to standard out.
+  Subscribe to events of the given event type (topic), which may be a glob
+  pattern (with "*"" treated as a wildcard). The events will be sent to
+  standard out.
 
   The output will be a JSON object serialized using the default protobuf
   JSON serialization format, with one line per event received.
@@ -49,9 +50,10 @@ func (c *EventsSubscribeCommands) Flags() *FlagSets {
 	f := set.NewFlagSet("Subscribe Options")
 	f.StringSliceVar(&StringSliceVar{
 		Name: "namespaces",
-		Usage: `Specifies one or more patterns of child namespaces to subscribe
-                to. Patterns can include "*" characters to indicate wildcards.
-				The default is to subscribe only to the request's namespace.`,
+		Usage: `Specifies one or more patterns of additional child namespaces
+				to subscribe to. Patterns can include "*" characters to indicate
+                wildcards. The default is to subscribe only to the request's
+                namespace.`,
 		Default: []string{},
 		Target:  &c.namespaces,
 	})

@@ -161,7 +161,8 @@ func TestEventsSubscribeNamespaces(t *testing.T) {
 		"",
 		"ns1",
 		"ns2",
-		"other",
+		"ns1/ns13",
+		"ns1/ns13/ns134",
 	}
 
 	// send some events with the specified namespaces
@@ -208,13 +209,13 @@ func TestEventsSubscribeNamespaces(t *testing.T) {
 		namespaces     []string
 		expectedEvents int
 	}{
-		{"invalid", []string{"something"}, 0},
-		{"simple wildcard", []string{"ns*"}, 2},
-		{"two namespaces", []string{"ns1", "other"}, 2},
+		{"invalid", []string{"something"}, 1},
+		{"simple wildcard", []string{"ns*"}, 5},
+		{"two namespaces", []string{"ns1/ns13", "ns1/other"}, 2},
 		{"no namespace", []string{""}, 1},
-		{"all wildcard", []string{"*"}, 4},
-		{"mixed wildcard", []string{"ns*", "other"}, 3},
-		{"overlapping wildcard", []string{"ns*", "ns1"}, 2},
+		{"all wildcard", []string{"*"}, 5},
+		{"mixed wildcard", []string{"ns1/ns13*", "ns2"}, 4},
+		{"overlapping wildcard", []string{"ns*", "ns1"}, 5},
 	}
 
 	for _, testCase := range testCases {
@@ -251,6 +252,46 @@ func TestEventsSubscribeNamespaces(t *testing.T) {
 				gotEvents += 1
 			}
 			assert.Equal(t, testCase.expectedEvents, gotEvents)
+		})
+	}
+}
+
+func TestNamespaceValidation(t *testing.T) {
+	testCases := []struct {
+		requestNs string
+		patterns  []string
+		result    []string
+		err       bool
+	}{
+		{"", []string{"ns*"}, []string{"ns*", ""}, false},
+		{"ns1", []string{"ns*"}, nil, true},
+		{"ns1", []string{"ns1*"}, nil, true},
+		{"ns1", []string{"ns1/*"}, []string{"ns1/*", "ns1"}, false},
+		{"", []string{"ns1/ns13", "ns1/other"}, []string{"ns1/ns13", "ns1/other", ""}, false},
+		{"ns1", []string{"ns1/ns13", "ns1/other"}, []string{"ns1/ns13", "ns1/other", "ns1"}, false},
+		{"", []string{""}, []string{""}, false},
+		{"ns1", []string{""}, nil, true},
+		{"ns1", []string{"ns1"}, []string{"ns1"}, false},
+		{"", []string{"*"}, []string{"*"}, false},
+		{"ns1", []string{"*"}, nil, true},
+		{"", []string{"ns1/ns13*", "ns2"}, []string{"ns1/ns13*", "ns2", ""}, false},
+		{"ns1", []string{"ns1/ns13*", "ns2"}, nil, true},
+		{"", []string{"ns*", "ns1"}, []string{"ns*", "ns1", ""}, false},
+		{"ns1", []string{"ns*", "ns1"}, nil, true},
+		{"ns1", []string{"ns1*", "ns1"}, nil, true},
+		{"ns1", []string{"ns1/*", "ns1"}, []string{"ns1/*", "ns1"}, false},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.requestNs+" "+strings.Join(testCase.patterns, " "), func(t *testing.T) {
+			result, err := validateNamespacePatterns(testCase.patterns, &namespace.Namespace{ID: testCase.requestNs, Path: testCase.requestNs})
+			if err != nil {
+				if testCase.err {
+					return
+				} else {
+					t.Fatalf("Expected no error but got %v", err)
+				}
+			}
+			assert.Equal(t, testCase.result, result)
 		})
 	}
 }
