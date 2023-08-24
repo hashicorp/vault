@@ -196,10 +196,10 @@ module('Acceptance | settings/mount-secret-backend', function (hooks) {
     await mountSecrets.visit();
     await mountSecrets.selectType('kubernetes');
     await mountSecrets.next().path('kubernetes').submit();
-    const { engineRoute } = allEngines().findBy('type', 'kubernetes');
+    const { indexRoute } = allEngines().findBy('type', 'kubernetes');
     assert.strictEqual(
       currentRouteName(),
-      `vault.cluster.secrets.backend.${engineRoute}`,
+      `vault.cluster.secrets.backend.${indexRoute}`,
       'Transitions to engine route on mount success'
     );
   });
