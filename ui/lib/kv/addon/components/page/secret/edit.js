@@ -26,6 +26,7 @@ import { inject as service } from '@ember/service';
  */
 
 export default class KvSecretEdit extends Component {
+  @service controlGroup;
   @service flashMessages;
   @service router;
 
@@ -62,7 +63,12 @@ export default class KvSecretEdit extends Component {
         this.router.transitionTo('vault.cluster.secrets.backend.kv.secret');
       }
     } catch (error) {
-      const message = error.errors ? error.errors.join('. ') : error.message;
+      let message = error.errors ? error.errors.join('. ') : error.message;
+      if (error.message === 'Control Group encountered') {
+        this.controlGroup.saveTokenFromError(error);
+        const err = this.controlGroup.logFromError(error);
+        message = err.content;
+      }
       this.errorMessage = message;
       this.invalidFormAlert = 'There was an error submitting this form.';
     }
