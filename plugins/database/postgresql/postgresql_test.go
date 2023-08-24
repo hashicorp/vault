@@ -7,7 +7,6 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"strings"
 	"testing"
@@ -100,9 +99,14 @@ func TestPostgreSQL_Initialize_ConnURLWithDSNFormat(t *testing.T) {
 // Requires the following:
 // - GOOGLE_APPLICATION_CREDENTIALS either JSON or path to file
 // - CONNECTION_URL to a valid Postgres instance on Google CloudSQL
-func TestPostgreSQL_Initialize_CloudSQL(t *testing.T) {
-	connURL := os.Getenv("CONNECTION_URL")
-	credStr := GetTestCredentials(t)
+func TestPostgreSQL_Initialize_CloudGCP(t *testing.T) {
+	envConnURL := "CONNECTION_URL"
+	connURL := os.Getenv(envConnURL)
+	if connURL == "" {
+		t.Skipf("env var %s not set, skipping test", envConnURL)
+	}
+
+	credStr := dbtesting.GetGCPTestCredentials(t)
 
 	type testCase struct {
 		req dbplugin.InitializeRequest
@@ -1149,11 +1153,14 @@ func TestNewUser_CustomUsername(t *testing.T) {
 	}
 }
 
-func TestNewUser_GCPCloudSQL(t *testing.T) {
-	connURL := os.Getenv("CONNECTION_URL")
-	credStr := GetTestCredentials(t)
+func TestNewUser_CloudGCP(t *testing.T) {
+	envConnURL := "CONNECTION_URL"
+	connURL := os.Getenv(envConnURL)
+	if connURL == "" {
+		t.Skipf("env var %s not set, skipping test", envConnURL)
+	}
 
-	// defer cleanup()
+	credStr := dbtesting.GetGCPTestCredentials(t)
 
 	type testCase struct {
 		usernameTemplate string
@@ -1363,31 +1370,4 @@ func getHost(url string) string {
 	splitCreds := strings.Split(url, "@")[1]
 
 	return strings.Split(splitCreds, "/")[0]
-}
-
-// GetTestCredentials reads the credentials from the
-// GOOGLE_APPLICATIONS_CREDENTIALS environment variable
-// The credentials are read from a file if a file exists
-// otherwise they are returned as JSON
-func GetTestCredentials(t *testing.T) string {
-	t.Helper()
-
-	var credsStr string
-	credsEnv := os.Getenv("GOOGLE_APPLICATION_CREDENTIALS")
-	if credsEnv == "" {
-		t.Fatal("set GOOGLE_APPLICATION_CREDENTIALS to JSON or path to JSON creds on disk to run integration tests")
-	}
-
-	// Attempt to read as file path; if invalid, assume given JSON value directly
-	if _, err := os.Stat(credsEnv); err == nil {
-		credsBytes, err := ioutil.ReadFile(credsEnv)
-		if err != nil {
-			t.Fatalf("unable to read credentials file %s: %v", credsStr, err)
-		}
-		credsStr = string(credsBytes)
-	} else {
-		credsStr = credsEnv
-	}
-
-	return credsStr
 }

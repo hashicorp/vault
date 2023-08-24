@@ -14,12 +14,13 @@ import (
 
 	stdmysql "github.com/go-sql-driver/mysql"
 	"github.com/hashicorp/go-secure-stdlib/strutil"
+	"github.com/stretchr/testify/require"
+
 	mysqlhelper "github.com/hashicorp/vault/helper/testhelpers/mysql"
-	dbplugin "github.com/hashicorp/vault/sdk/database/dbplugin/v5"
+	"github.com/hashicorp/vault/sdk/database/dbplugin/v5"
 	dbtesting "github.com/hashicorp/vault/sdk/database/dbplugin/v5/testing"
 	"github.com/hashicorp/vault/sdk/database/helper/credsutil"
 	"github.com/hashicorp/vault/sdk/database/helper/dbutil"
-	"github.com/stretchr/testify/require"
 )
 
 var _ dbplugin.Database = (*MySQL)(nil)
@@ -48,9 +49,13 @@ func TestMySQL_Initialize(t *testing.T) {
 // TestMySQL_Initialize_CloudGCP validates the proper initialization of a MySQL backend pointing
 // to a GCP CloudSQL MySQL instance. This expects some external setup (exact TBD)
 func TestMySQL_Initialize_CloudGCP(t *testing.T) {
-	// hardcode data for now
-	url := os.Getenv("CONN_URL")
-	creds := os.Getenv("CREDS")
+	envConnURL := "CONNECTION_URL"
+	connURL := os.Getenv(envConnURL)
+	if connURL == "" {
+		t.Skipf("env var %s not set, skipping test", envConnURL)
+	}
+
+	credStr := dbtesting.GetGCPTestCredentials(t)
 
 	tests := map[string]struct {
 		req dbplugin.InitializeRequest
@@ -58,9 +63,9 @@ func TestMySQL_Initialize_CloudGCP(t *testing.T) {
 		"normal": {
 			req: dbplugin.InitializeRequest{
 				Config: map[string]interface{}{
-					"connection_url": url,
-					"auth_type":      "iam", // authTypeGCPIAM,
-					"credentials":    creds,
+					"connection_url": connURL,
+					"auth_type":      authTypeGCPIAM,
+					"credentials":    credStr,
 				},
 				VerifyConnection: true,
 			},

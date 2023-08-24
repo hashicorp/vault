@@ -5,11 +5,13 @@ package dbtesting
 
 import (
 	"context"
+	"io/ioutil"
 	"os"
 	"testing"
 	"time"
 
 	"github.com/hashicorp/go-secure-stdlib/parseutil"
+
 	"github.com/hashicorp/vault/sdk/database/dbplugin/v5"
 )
 
@@ -118,4 +120,32 @@ func AssertClose(t *testing.T, db dbplugin.Database) {
 	if err != nil {
 		t.Fatalf("Failed to close database: %s", err)
 	}
+}
+
+// GetGCPTestCredentials reads the credentials from the
+// GOOGLE_APPLICATIONS_CREDENTIALS environment variable
+// The credentials are read from a file if a file exists
+// otherwise they are returned as JSON
+func GetGCPTestCredentials(t *testing.T) string {
+	t.Helper()
+	envCredentials := "GOOGLE_APPLICATIONS_CREDENTIALS"
+
+	var credsStr string
+	credsEnv := os.Getenv(envCredentials)
+	if credsEnv == "" {
+		t.Skipf("env var %s not set, skipping test", envCredentials)
+	}
+
+	// Attempt to read as file path; if invalid, assume given JSON value directly
+	if _, err := os.Stat(credsEnv); err == nil {
+		credsBytes, err := ioutil.ReadFile(credsEnv)
+		if err != nil {
+			t.Fatalf("unable to read credentials file %s: %v", credsStr, err)
+		}
+		credsStr = string(credsBytes)
+	} else {
+		credsStr = credsEnv
+	}
+
+	return credsStr
 }

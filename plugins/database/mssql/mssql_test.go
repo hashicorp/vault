@@ -7,7 +7,6 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
-	"os"
 	"reflect"
 	"regexp"
 	"strings"
@@ -62,38 +61,6 @@ func TestInitialize(t *testing.T) {
 				Config: map[string]interface{}{
 					"connection_url": connURL,
 					"contained_db":   "true",
-				},
-				VerifyConnection: true,
-			},
-		},
-	}
-
-	for name, test := range tests {
-		t.Run(name, func(t *testing.T) {
-			db := new()
-			dbtesting.AssertInitializeCircleCiTest(t, db, test.req)
-			defer dbtesting.AssertClose(t, db)
-
-			if !db.Initialized {
-				t.Fatal("Database should be initialized")
-			}
-		})
-	}
-}
-
-func TestInitializeCloudSQL(t *testing.T) {
-	connURL := os.Getenv("CONNECTION_URL")
-
-	type testCase struct {
-		req dbplugin.InitializeRequest
-	}
-
-	tests := map[string]testCase{
-		"happy path": {
-			req: dbplugin.InitializeRequest{
-				Config: map[string]interface{}{
-					"connection_url": connURL,
-					"auth_type":      "iam",
 				},
 				VerifyConnection: true,
 			},
