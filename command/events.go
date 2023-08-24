@@ -49,7 +49,7 @@ func (c *EventsSubscribeCommands) Flags() *FlagSets {
 	f := set.NewFlagSet("Subscribe Options")
 	f.StringSliceVar(&StringSliceVar{
 		Name: "namespaces",
-		Usage: `Specifies one or more patterns of namespaces to subscribe
+		Usage: `Specifies one or more patterns of child namespaces to subscribe
                 to. Patterns can include "*" characters to indicate wildcards.
 				The default is to subscribe only to the request's namespace.`,
 		Default: []string{},
