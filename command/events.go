@@ -51,7 +51,7 @@ func (c *EventsSubscribeCommands) Flags() *FlagSets {
 		Name: "namespaces",
 		Usage: `Specifies one or more patterns of namespaces to subscribe
                 to. Patterns can include "*" characters to indicate wildcards.
-				The defaults is to subscribe only to the root namespace.`,
+				The default is to subscribe only to the request's namespace.`,
 		Default: []string{},
 		Target:  &c.namespaces,
 	})
