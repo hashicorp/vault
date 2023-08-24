@@ -70,7 +70,8 @@ require (
 	github.com/google/go-github v17.0.0+incompatible
 	github.com/google/go-metrics-stackdriver v0.2.0
 	github.com/google/tink/go v1.7.0
-	github.com/hashicorp/cap v0.3.4
+	github.com/hashicorp/cap v0.3.5-0.20230824011758-99585a2d0319
+	github.com/hashicorp/cap/ldap v0.0.0-20230824195246-512b26a36f79
 	github.com/hashicorp/consul-template v0.32.0
 	github.com/hashicorp/consul/api v1.20.0
 	github.com/hashicorp/errwrap v1.1.0
@@ -372,7 +373,6 @@ require (
 	github.com/gorilla/websocket v1.5.0 // indirect
 	github.com/gsterjov/go-libsecret v0.0.0-20161001094733-a6f4afe4910c // indirect
 	github.com/hailocab/go-hostpool v0.0.0-20160125115350-e80d13ce29ed // indirect
-	github.com/hashicorp/cap/ldap v0.0.0-20230727124555-bdf7984c095d // indirect
 	github.com/hashicorp/cronexpr v1.1.1 // indirect
 	github.com/hashicorp/go-immutable-radix v1.3.1 // indirect
 	github.com/hashicorp/go-msgpack/v2 v2.0.0 // indirect
