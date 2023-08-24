@@ -305,9 +305,8 @@ jobs:
     if:  |
       always() &&
       github.repository == 'hashicorp/vault' &&
-      (needs.test-go.result == 'failure' ||
-      needs.test-go-fips.result == 'failure' ||
-      needs.test-go-race.result == 'failure') &&
+      (needs.test-go.result == 'failure' || needs.test-go-race.result == 'failure' 
+      || needs.test-go-testonly.result == 'failure' || needs.test-ui.result == 'failure') &&
       (github.ref_name == 'main' || startsWith(github.ref_name, 'release/'))
     runs-on: ubuntu-latest
     permissions:
@@ -317,8 +316,9 @@ jobs:
       fail-fast: false
     needs:
       - test-go
-      - test-go-fips
+      - test-go-testonly
       - test-go-race
+      - test-ui
     steps:
       - name: send-notification
         uses: slackapi/slack-github-action@e28cf165c92ffef168d23c5c9000cffc8a25e117 # v1.24.0
@@ -329,7 +329,38 @@ jobs:
         with:
           channel-id: "C05AABYEA9Y" # sent to #feed-vault-ci-official
           payload: |
-            {"text":"OSS test failures on ${{ github.ref_name }}","blocks":[{"type":"header","text":{"type":"plain_text","text":":rotating_light: OSS test failures :rotating_light:","emoji":true}},{"type":"divider"},{"type":"section","text":{"type":"mrkdwn","text":"test(s) failed on ${{ github.ref_name }}"},"accessory":{"type":"button","text":{"type":"plain_text","text":"View Failing Workflow","emoji":true},"url":"${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"}}]}
+            {
+              "text": "OSS test failures on ${{ github.ref_name }}",
+              "blocks": [
+                {
+                  "type": "header",
+                  "text": {
+                    "type": "plain_text",
+                    "text": ":rotating_light: OSS test failures :rotating_light:",
+                    "emoji": true
+                  }
+                },
+                {
+                  "type": "divider"
+                },
+                {
+                  "type": "section",
+                  "text": {
+                    "type": "mrkdwn",
+                    "text": "CI failed on ${{ github.ref_name }}, go: ${{ needs.test-go.result }}, go-race: ${{ needs.test-go-race.result }}, go-testonly ${{ needs.test-go-testonly.result }: ui: ${{ needs.test-ui.result }}"
+                  },
+                  "accessory": {
+                    "type": "button",
+                    "text": {
+                      "type": "plain_text",
+                      "text": "View Failing Workflow",
+                      "emoji": true
+                    },
+                    "url": "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+                  }
+                }
+              ]
+            }
 
   notify-tests-completed-failures-ent:
     if: |
