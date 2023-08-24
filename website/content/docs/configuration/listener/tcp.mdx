@@ -62,6 +62,14 @@ default value in the `"/sys/config/ui"` [API endpoint](/vault/api-docs/system/co
   [go-sockaddr template](https://pkg.go.dev/github.com/hashicorp/go-sockaddr/template)
   that is resolved at runtime.
 
+- `chroot_namespace` `(string: "")` – Specifies an alternate top-level namespace
+  for the listener. Vault appends namespaces provided in the `X-Vault-Namespace`
+  header or the `-namespace` field in a CLI command to the top-level namespace
+  to determine the full namespace path for the request. For example, if
+  `chroot_namespace` is set to `admin` and the `X-Vault-Namespace` header is
+  `ns1`, the full namespace path is `admin/ns1`. Calls to the listener will fail
+   with a 4XX error if the top-level namespace provided for `chroot_namespace`
+   does not exist.
 - `http_idle_timeout` `(string: "5m")` - Specifies the maximum amount of time to
   wait for the next request when keep-alives are enabled. If `http_idle_timeout`
   is zero, the value of `http_read_timeout` is used. If both are zero, the value
@@ -174,10 +182,10 @@ default value in the `"/sys/config/ui"` [API endpoint](/vault/api-docs/system/co
 - `x_forwarded_for_authorized_addrs` `(string: <required-to-enable>)` –
   Specifies the list of source IP CIDRs for which an X-Forwarded-For header
   will be trusted. Comma-separated list or JSON array. This turns on
-  X-Forwarded-For support.  If for example Vault receives connections from the 
-  load balancer's IP of `1.2.3.4`, adding `1.2.3.4` to `x_forwarded_for_authorized_addrs` 
-  will result in the `remote_address` field in the audit log being populated with the 
-  connecting client's IP, for example `3.4.5.6`. Note this requires the load balancer 
+  X-Forwarded-For support.  If for example Vault receives connections from the
+  load balancer's IP of `1.2.3.4`, adding `1.2.3.4` to `x_forwarded_for_authorized_addrs`
+  will result in the `remote_address` field in the audit log being populated with the
+  connecting client's IP, for example `3.4.5.6`. Note this requires the load balancer
   to send the connecting client's IP in the `X-Forwarded-For` header.
 
 - `x_forwarded_for_hop_skips` `(string: "0")` – The number of addresses that will be
