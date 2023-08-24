@@ -23,7 +23,7 @@ import (
 )
 
 const (
-	AuthTypeIAM = "gcp_iam"
+	AuthTypeGCPIAM = "gcp_iam"
 )
 
 const (
@@ -135,7 +135,7 @@ func (c *SQLConnectionProducer) Init(ctx context.Context, conf map[string]interf
 		return nil, errwrap.Wrapf("invalid max_connection_lifetime: {{err}}", err)
 	}
 
-	if c.AuthType == AuthTypeIAM {
+	if c.AuthType == AuthTypeGCPIAM {
 		c.cloudDriverName, err = uuid.GenerateUUID()
 		if err != nil {
 			return nil, fmt.Errorf("unable to generate UUID for IAM configuration: %w", err)
@@ -178,7 +178,7 @@ func (c *SQLConnectionProducer) Connection(ctx context.Context) (interface{}, er
 	// default non-IAM behavior
 	driverName := c.Type
 
-	if c.AuthType == AuthTypeIAM {
+	if c.AuthType == AuthTypeGCPIAM {
 		_, err := c.getCloudSQLDriverName()
 		if err != nil {
 			return nil, err
@@ -247,7 +247,7 @@ func (c *SQLConnectionProducer) Close() error {
 	if c.db != nil {
 		// if auth_type is IAM, ensure cleanup
 		// of cloudSQL resources
-		if c.AuthType == AuthTypeIAM {
+		if c.AuthType == AuthTypeGCPIAM {
 			driversMu.Lock()
 			defer driversMu.Unlock()
 		} else {

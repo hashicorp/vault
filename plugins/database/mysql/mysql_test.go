@@ -59,7 +59,7 @@ func TestMySQL_Initialize_CloudGCP(t *testing.T) {
 			req: dbplugin.InitializeRequest{
 				Config: map[string]interface{}{
 					"connection_url": url,
-					"auth_type":      "iam", // authTypeIAM,
+					"auth_type":      "iam", // authTypeGCPIAM,
 					"credentials":    creds,
 				},
 				VerifyConnection: true,

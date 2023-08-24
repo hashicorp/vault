@@ -25,9 +25,9 @@ import (
 )
 
 const (
-	authTypeIAM   = connutil.AuthTypeIAM
-	cloudSQLMySQL = "cloudsql-mysql"
-	driverMySQL   = "mysql"
+	authTypeGCPIAM = connutil.AuthTypeGCPIAM
+	cloudSQLMySQL  = "cloudsql-mysql"
+	driverMySQL    = "mysql"
 )
 
 // mySQLConnectionProducer implements ConnectionProducer and provides a generic producer for most sql databases
@@ -124,7 +124,7 @@ func (c *mySQLConnectionProducer) Init(ctx context.Context, conf map[string]inte
 		mysql.RegisterTLSConfig(c.tlsConfigName, tlsConfig)
 	}
 
-	if c.RawConfig["auth_type"] == authTypeIAM {
+	if c.RawConfig["auth_type"] == authTypeGCPIAM {
 		c.cloudDriverName, err = uuid.GenerateUUID()
 		if err != nil {
 			return nil, fmt.Errorf("unable to generate UUID for IAM configuration: %w", err)
@@ -226,7 +226,7 @@ func (c *mySQLConnectionProducer) Close() error {
 	if c.db != nil {
 		// if auth_type is IAM, ensure cleanup
 		// of cloudSQL resources
-		if c.RawConfig["auth_type"] == authTypeIAM {
+		if c.RawConfig["auth_type"] == authTypeGCPIAM {
 			// @TODO implement cloudSQL Driver cleanup from cache
 		} else {
 			c.db.Close()
@@ -287,8 +287,12 @@ func (c *mySQLConnectionProducer) addTLStoDSN() (connURL string, err error) {
 	return connURL, nil
 }
 
-// rewriteProtocolForGCP rewrites the protocl in the DSN to contain the protocol name associated
-// with the dialer and therefore driver associated with the provided cloudsqlconn.DialerOpts
+// rewriteProtocolForGCP rewrites the protocol in the DSN to contain the protocol name associated
+// with the dialer and therefore driver associated with the provided cloudsqlconn.DialerOpts.
+// As a safety/sanity check, it will only do this for protocol "cloudsql-mysql", the name GCP uses in its documentation.
+//
+// For example, it will rewrite the dsn "user@cloudsql-mysql(zone:region:instance)/ to
+// "user@the-uuid-generated(zone:region:instance)/
 func (c *mySQLConnectionProducer) rewriteProtocolForGCP(inDSN string) (string, error) {
 	if !c.isCloud {
 		// unchanged if not cloud
