@@ -38,6 +38,8 @@ type mySQLConnectionProducer struct {
 	MaxConnectionLifetimeRaw interface{} `json:"max_connection_lifetime" mapstructure:"max_connection_lifetime" structs:"max_connection_lifetime"`
 	Username                 string      `json:"username" mapstructure:"username" structs:"username"`
 	Password                 string      `json:"password" mapstructure:"password" structs:"password"`
+	AuthType                 string      `json:"auth_type" mapstructure:"auth_type" structs:"auth_type"`
+	Credentials              string      `json:"credentials" mapstructure:"credentials" structs:"credentials"`
 
 	TLSCertificateKeyData []byte `json:"tls_certificate_key" mapstructure:"tls_certificate_key" structs:"-"`
 	TLSCAData             []byte `json:"tls_ca"              mapstructure:"tls_ca"              structs:"-"`
@@ -124,14 +126,14 @@ func (c *mySQLConnectionProducer) Init(ctx context.Context, conf map[string]inte
 		mysql.RegisterTLSConfig(c.tlsConfigName, tlsConfig)
 	}
 
-	if c.RawConfig["auth_type"] == authTypeGCPIAM {
+	if c.AuthType == authTypeGCPIAM {
 		c.cloudDriverName, err = uuid.GenerateUUID()
 		if err != nil {
 			return nil, fmt.Errorf("unable to generate UUID for IAM configuration: %w", err)
 		}
 		c.isCloud = true
 
-		credentials := c.RawConfig["credentials"]
+		credentials := c.Credentials
 
 		// for _most_ sql databases, the driver itself contains no state. In the case of google's cloudsql drivers,
 		// however, the driver might store a credentials file, in which case the state stored by the driver is in
@@ -143,7 +145,7 @@ func (c *mySQLConnectionProducer) Init(ctx context.Context, conf map[string]inte
 		// is registered. This means that either we can't hide the name of the dialer from the user OR we have to rewrite
 		// the DSN after the user provides it. We already do this, KIND OF for the TLS config, but this modification
 		// is much more dramatic.
-		_, err := registerDriverMySQL(c.cloudDriverName, credentials.(string))
+		_, err := registerDriverMySQL(c.cloudDriverName, credentials)
 		if err != nil {
 			return nil, err
 		}
@@ -225,7 +227,7 @@ func (c *mySQLConnectionProducer) Close() error {
 	if c.db != nil {
 		// if auth_type is IAM, ensure cleanup
 		// of cloudSQL resources
-		if c.RawConfig["auth_type"] == authTypeGCPIAM {
+		if c.AuthType == authTypeGCPIAM {
 			// @TODO implement cloudSQL Driver cleanup from cache
 		} else {
 			c.db.Close()
