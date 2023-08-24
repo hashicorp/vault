@@ -60,6 +60,7 @@ export default class GetCredentialsCard extends Component {
     if (role) {
       this.router.transitionTo('vault.cluster.secrets.backend.credentials', role);
     }
+    // TODO kv engine cleanup. Should be able to remove this component and replace with overview card for the role usage. KV engine has switched to overview card.
     if (secret) {
       if (secret.endsWith('/')) {
         this.router.transitionTo('vault.cluster.secrets.backend.list', secret);

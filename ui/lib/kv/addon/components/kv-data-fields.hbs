@@ -1,0 +1,33 @@
+{{#let (find-by "name" "path" @secret.allFields) as |attr|}}
+  {{#if @isEdit}}
+    <ReadonlyFormField @attr={{attr}} @value={{get @secret attr.name}} />
+  {{else}}
+    <FormField @attr={{attr}} @model={{@secret}} @modelValidations={{@modelValidations}} @onKeyUp={{@pathValidations}} />
+  {{/if}}
+{{/let}}
+
+<hr class="is-marginless has-background-gray-200" />
+{{#if @showJson}}
+  <JsonEditor
+    @title="{{if @isEdit 'Version' 'Secret'}} data"
+    @value={{or (stringify @secret.secretData) this.emptyJson}}
+    @valueUpdated={{this.handleJson}}
+  />
+  {{#if (or @modelValidations.secretData.errors this.lintingErrors)}}
+    <AlertInline @type={{if this.lintingErrors "warning" "danger"}} @paddingTop={{true}}>
+      {{#if @modelValidations.secretData.errors}}
+        {{@modelValidations.secretData.errors}}
+      {{else}}
+        JSON is unparsable. Fix linting errors to avoid data discrepancies.
+      {{/if}}
+    </AlertInline>
+  {{/if}}
+{{else}}
+  <KvObjectEditor
+    class="has-top-margin-m"
+    @label="{{if @isEdit 'Version' 'Secret'}} data"
+    @value={{@secret.secretData}}
+    @onChange={{fn (mut @secret.secretData)}}
+    @isMasked={{true}}
+  />
+{{/if}}

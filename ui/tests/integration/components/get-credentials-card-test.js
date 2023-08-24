@@ -48,12 +48,14 @@ module('Integration | Component | get-credentials-card', function (hooks) {
   });
 
   test('it shows a disabled button when no item is selected', async function (assert) {
+    assert.expect(2);
     await render(hbs`<GetCredentialsCard @title={{this.title}} @searchLabel={{this.searchLabel}}/>`);
     assert.dom('[data-test-get-credentials]').isDisabled();
     assert.dom('[data-test-get-credentials]').hasText('Get credentials', 'Button has default text');
   });
 
   test('it shows button that can be clicked to credentials route when an item is selected', async function (assert) {
+    assert.expect(4);
     const models = ['database/role'];
     this.set('models', models);
     await render(
@@ -77,6 +79,7 @@ module('Integration | Component | get-credentials-card', function (hooks) {
   });
 
   test('it renders input search field when renderInputSearch=true and shows placeholder text', async function (assert) {
+    assert.expect(5);
     await render(
       hbs`<GetCredentialsCard @title={{this.title}} @renderInputSearch={{true}} @placeholder="secret/" @backend="kv" @type="secret"/>`
     );
