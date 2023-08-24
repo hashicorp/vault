@@ -4,7 +4,11 @@ import { setupApplicationTest } from 'vault/tests/helpers';
 import authPage from 'vault/tests/pages/auth';
 import { deleteEngineCmd, mountEngineCmd, runCmd, tokenWithPolicyCmd } from 'vault/tests/helpers/commands';
 import { personas } from 'vault/tests/helpers/policy-generator/kv';
-import { setupControlGroup, writeSecret, writeVersionedSecret } from 'vault/tests/helpers/kv/kv-run-commands';
+import {
+  clearRecords,
+  setupControlGroup,
+  writeVersionedSecret,
+} from 'vault/tests/helpers/kv/kv-run-commands';
 import { click, currentURL, visit } from '@ember/test-helpers';
 import { PAGE } from 'vault/tests/helpers/kv/kv-selectors';
 
@@ -27,12 +31,15 @@ module('Acceptance | kv-v2 workflow | delete, undelete, destroy', function (hook
   setupApplicationTest(hooks);
 
   hooks.beforeEach(async function () {
+    this.store = this.owner.lookup('service:store');
     this.backend = `kv-delete-${uuidv4()}`;
     this.secretPath = 'bad-secret';
     await authPage.login();
     await runCmd(mountEngineCmd('kv-v2', this.backend), false);
     await writeVersionedSecret(this.backend, this.secretPath, 'foo', 'bar', 4);
-    await writeSecret(this.backend, 'nuke', 'foo', 'bar');
+    await writeVersionedSecret(this.backend, 'nuke', 'foo', 'bar', 2);
+    // Delete latest version for testing undelete for users that can't delete
+    await runCmd(`delete ${this.backend}/data/nuke`);
     return;
   });
 
@@ -45,6 +52,8 @@ module('Acceptance | kv-v2 workflow | delete, undelete, destroy', function (hook
     hooks.beforeEach(async function () {
       const token = await runCmd(tokenWithPolicyCmd('admin', personas.admin(this.backend)));
       await authPage.login(token);
+      clearRecords(this.store);
+      return;
     });
     test('can delete and undelete the latest secret version (a)', async function (assert) {
       assert.expect(17);
@@ -123,7 +132,6 @@ module('Acceptance | kv-v2 workflow | delete, undelete, destroy', function (hook
       assertDeleteActions(assert, []);
     });
     test('can permanently delete all secret versions (a)', async function (assert) {
-      assert.expect(3);
       // go to secret details
       await visit(`/vault/secrets/${this.backend}/kv/nuke/details`);
       // Check metadata toolbar
@@ -141,38 +149,81 @@ module('Acceptance | kv-v2 workflow | delete, undelete, destroy', function (hook
 
   module('data-reader persona', function (hooks) {
     hooks.beforeEach(async function () {
-      const token = await runCmd([tokenWithPolicyCmd('data-reader', personas.dataReader(this.backend))]);
+      const token = await runCmd(tokenWithPolicyCmd('data-reader', personas.dataReader(this.backend)));
       await authPage.login(token);
+      clearRecords(this.store);
+      return;
     });
-    // Copy test outline from admin persona
+    test('cannot delete and undelete the latest secret version (dr)', async function (assert) {
+      assert.expect(9);
+      // go to secret details
+      await visit(`/vault/secrets/${this.backend}/kv/${this.secretPath}/details`);
+      // correct toolbar options & details show
+      assertDeleteActions(assert, []);
+      assert.dom(PAGE.secretRow).exists('shows secret data');
+
+      // data-reader can't delete, so check undelete with already-deleted version
+      await visit(`/vault/secrets/${this.backend}/kv/nuke/details`);
+      assertDeleteActions(assert, []);
+      assert
+        .dom(PAGE.emptyStateTitle)
+        .hasText('Version 2 of this secret has been deleted', 'Shows deleted message');
+      assert.dom(PAGE.detail.versionTimestamp).includesText('Version 2 deleted');
+    });
+    test('cannot soft delete and undelete an older secret version (dr)', async function (assert) {
+      assert.expect(4);
+      // go to secret details
+      await visit(`/vault/secrets/${this.backend}/kv/${this.secretPath}/details?version=2`);
+      // correct toolbar options & details show
+      assertDeleteActions(assert, []);
+      assert.dom(PAGE.secretRow).exists('shows secret data');
+    });
+    test('cannot destroy a secret version (dr)', async function (assert) {
+      assert.expect(3);
+      // go to secret details
+      await visit(`/vault/secrets/${this.backend}/kv/${this.secretPath}/details?version=3`);
+      // correct toolbar options show
+      assertDeleteActions(assert, []);
+    });
+    test('cannot permanently delete all secret versions (dr)', async function (assert) {
+      // go to secret details
+      await visit(`/vault/secrets/${this.backend}/kv/nuke/details`);
+      // Check metadata toolbar
+      await click(PAGE.secretTab('Metadata'));
+      assert.dom(PAGE.metadata.deleteMetadata).doesNotExist('does not show delete metadata button');
+    });
   });
 
   module('data-list-reader persona', function (hooks) {
     hooks.beforeEach(async function () {
-      const token = await runCmd([
-        tokenWithPolicyCmd('data-list-reader', personas.dataListReader(this.backend)),
-      ]);
+      const token = await runCmd(
+        tokenWithPolicyCmd('data-list-reader', personas.dataListReader(this.backend))
+      );
       await authPage.login(token);
+      clearRecords(this.store);
+      return;
     });
     // Copy test outline from admin persona
   });
 
   module('metadata-maintainer persona', function (hooks) {
     hooks.beforeEach(async function () {
-      const token = await runCmd([
-        tokenWithPolicyCmd('metadata-maintainer', personas.metadataMaintainer(this.backend)),
-      ]);
+      const token = await runCmd(
+        tokenWithPolicyCmd('metadata-maintainer', personas.metadataMaintainer(this.backend))
+      );
       await authPage.login(token);
+      clearRecords(this.store);
+      return;
     });
     // Copy test outline from admin persona
   });
 
   module('secret-creator persona', function (hooks) {
     hooks.beforeEach(async function () {
-      const token = await runCmd([
-        tokenWithPolicyCmd('secret-creator', personas.secretCreator(this.backend)),
-      ]);
+      const token = await runCmd(tokenWithPolicyCmd('secret-creator', personas.secretCreator(this.backend)));
       await authPage.login(token);
+      clearRecords(this.store);
+      return;
     });
     // Copy test outline from admin persona
   });
@@ -210,7 +261,9 @@ path "sys/control-group/request" {
 
       const { userToken } = await setupControlGroup({ userPolicy });
       this.userToken = userToken;
-      return authPage.login(userToken);
+      await authPage.login(userToken);
+      clearRecords(this.store);
+      return;
     });
     // Copy test outline from admin persona
   });
