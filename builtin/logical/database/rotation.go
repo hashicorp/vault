@@ -22,6 +22,9 @@ const (
 	// Default interval to check the queue for items needing rotation
 	defaultQueueTickSeconds = 5
 
+	// Minimum allowed value for rotation_window
+	minRotationWindowSeconds = 3600
+
 	// Config key to set an alternate interval
 	queueTickIntervalKey = "rotation_queue_tick_interval"
 
@@ -91,6 +94,8 @@ func (b *databaseBackend) populateQueue(ctx context.Context, s logical.Storage) 
 					log.Warn("unable to delete WAL", "error", err, "WAL ID", walEntry.walID)
 				}
 			} else {
+				// previous rotation attempt was interrupted, so we set the
+				// Priority as highest to be processed immediately
 				log.Info("found WAL for role", "role", item.Key, "WAL ID", walEntry.walID)
 				item.Value = walEntry.walID
 				item.Priority = time.Now().Unix()
@@ -215,9 +220,8 @@ func (b *databaseBackend) rotateCredential(ctx context.Context, s logical.Storag
 
 	logger = logger.With("database", role.DBName)
 
-	// If "now" is less than the Item priority, then this item does not need to
-	// be rotated
-	if time.Now().Unix() < item.Priority {
+	if !role.StaticAccount.ShouldRotate(item.Priority) {
+		// do not rotate now, push item back onto queue to be rotated later
 		if err := b.pushItem(item); err != nil {
 			logger.Error("unable to push item on to queue", "error", err)
 		}
@@ -264,8 +268,8 @@ func (b *databaseBackend) rotateCredential(ctx context.Context, s logical.Storag
 	}
 
 	// Update priority and push updated Item to the queue
-	nextRotation := lvr.Add(role.StaticAccount.RotationPeriod)
-	item.Priority = nextRotation.Unix()
+	item.Priority = role.StaticAccount.NextRotationTimeFromInput(lvr).Unix()
+
 	if err := b.pushItem(item); err != nil {
 		logger.Warn("unable to push item on to queue", "error", err)
 	}
@@ -490,6 +494,7 @@ func (b *databaseBackend) setStaticAccount(ctx context.Context, s logical.Storag
 	// lvr is the known LastVaultRotation
 	lvr := time.Now()
 	input.Role.StaticAccount.LastVaultRotation = lvr
+	input.Role.StaticAccount.SetNextVaultRotation(lvr)
 	output.RotationTime = lvr
 
 	entry, err := logical.StorageEntryJSON(databaseStaticRolePath+input.RoleName, input.Role)
