@@ -39,7 +39,7 @@ jobs:
             # shellcheck disable=SC2129
             echo 'compute-small=["self-hosted","ondemand","linux","type=c6a.large"]' >> "$GITHUB_OUTPUT"     #  2x vCPUs,  4 GiB RAM,
             echo 'compute-medium=["self-hosted","ondemand","linux","type=c6a.xlarge"]' >> "$GITHUB_OUTPUT"   #  4x vCPUs,  8 GiB RAM,
-            echo 'compute-large=["self-hosted","ondemand","linux","type=c6a.2xlarge"]' >> "$GITHUB_OUTPUT"   #  8x vCPUs, 16 GiB RAM,
+            echo 'compute-large=["self-hosted","ondemand","linux","type=c6a.2xlarge","disk_gb=64"]' >> "$GITHUB_OUTPUT"   #  8x vCPUs, 16 GiB RAM,
             echo 'compute-largem=["self-hosted","ondemand","linux","type=m6a.2xlarge"]' >> "$GITHUB_OUTPUT"  #  8x vCPUs, 32 GiB RAM,
             echo 'compute-xlarge=["self-hosted","ondemand","linux","type=c6a.4xlarge"]' >> "$GITHUB_OUTPUT"  # 16x vCPUs, 32 GiB RAM,
             echo 'enterprise=1' >> "$GITHUB_OUTPUT"
@@ -117,6 +117,7 @@ jobs:
       go-tags: '${{ needs.setup.outputs.go-tags }},deadlock'
       runs-on: ${{ needs.setup.outputs.compute-large }}
       enterprise: ${{ needs.setup.outputs.enterprise }}
+      test-timing-cache-key: go-test-timing-standard
     secrets: inherit
 
   test-go-testonly:
@@ -136,6 +137,7 @@ jobs:
       go-tags: '${{ needs.setup.outputs.go-tags }},deadlock,testonly'
       runs-on: ${{ needs.setup.outputs.compute-large }}
       enterprise: ${{ needs.setup.outputs.enterprise }}
+      test-timing-cache-enabled: false
     secrets: inherit
 
   test-go-race:
@@ -161,6 +163,7 @@ jobs:
       runs-on: ${{ needs.setup.outputs.compute-large }}
       enterprise: ${{ needs.setup.outputs.enterprise }}
       name: "race"
+      test-timing-cache-key: go-test-timing-race
     secrets: inherit
 
   test-go-fips:
@@ -186,6 +189,7 @@ jobs:
       runs-on: ${{ needs.setup.outputs.compute-large }}
       enterprise: ${{ needs.setup.outputs.enterprise }}
       name: "fips"
+      test-timing-cache-key: go-test-timing-fips
     secrets: inherit
 
   test-ui:

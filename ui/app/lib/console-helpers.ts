@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: BUSL-1.1
  */
 
-import keys from 'vault/lib/keycodes';
+import keys from 'core/utils/key-codes';
 import AdapterError from '@ember-data/adapter/error';
 import { parse } from 'shell-quote';
 

@@ -48,11 +48,14 @@ module('Integration | Component | get-credentials-card', function (hooks) {
   });
 
   test('it shows a disabled button when no item is selected', async function (assert) {
+    assert.expect(2);
     await render(hbs`<GetCredentialsCard @title={{this.title}} @searchLabel={{this.searchLabel}}/>`);
     assert.dom('[data-test-get-credentials]').isDisabled();
+    assert.dom('[data-test-get-credentials]').hasText('Get credentials', 'Button has default text');
   });
 
   test('it shows button that can be clicked to credentials route when an item is selected', async function (assert) {
+    assert.expect(4);
     const models = ['database/role'];
     this.set('models', models);
     await render(
@@ -76,6 +79,7 @@ module('Integration | Component | get-credentials-card', function (hooks) {
   });
 
   test('it renders input search field when renderInputSearch=true and shows placeholder text', async function (assert) {
+    assert.expect(5);
     await render(
       hbs`<GetCredentialsCard @title={{this.title}} @renderInputSearch={{true}} @placeholder="secret/" @backend="kv" @type="secret"/>`
     );
@@ -89,10 +93,51 @@ module('Integration | Component | get-credentials-card', function (hooks) {
     );
     await typeIn('[data-test-search-roles] input', 'test');
     assert.dom('[data-test-get-credentials]').isEnabled('submit button enables after typing input text');
+    assert.dom('[data-test-get-credentials]').hasText('View secret', 'Button has view secret CTA');
     await click('[data-test-get-credentials]');
     assert.propEqual(
       this.router.transitionTo.lastCall.args,
       ['vault.cluster.secrets.backend.show', 'test'],
+      'transitionTo is called with correct route and secret name'
+    );
+  });
+
+  test('it prefills input if initialValue has value', async function (assert) {
+    await render(
+      hbs`<GetCredentialsCard @title={{this.title}} @renderInputSearch={{true}} @placeholder="secret/" @backend="kv" @type="secret" @initialValue="hello/"/>`
+    );
+    assert
+      .dom('[data-test-component="search-select"]')
+      .doesNotExist('does not render search select component');
+    assert.dom('[data-test-search-roles] input').hasValue('hello/', 'pre-fills search input');
+    assert.dom('[data-test-get-credentials]').isEnabled('submit button is enabled at render');
+    assert.dom('[data-test-get-credentials]').hasText('View list', 'Button has list CTA');
+    await typeIn('[data-test-search-roles] input', 'test');
+    assert
+      .dom('[data-test-get-credentials]')
+      .hasText('View secret', 'Button has view secret CTA after input');
+    await click('[data-test-get-credentials]');
+    assert.propEqual(
+      this.router.transitionTo.lastCall.args,
+      ['vault.cluster.secrets.backend.show', 'hello/test'],
+      'transitionTo is called with correct route and secret name'
+    );
+  });
+
+  test('it goes to list route if input ends in / and type=secret', async function (assert) {
+    await render(
+      hbs`<GetCredentialsCard @title={{this.title}} @renderInputSearch={{true}} @placeholder="secret/" @backend="kv" @type="secret" />`
+    );
+    assert
+      .dom('[data-test-component="search-select"]')
+      .doesNotExist('does not render search select component');
+    await typeIn('[data-test-search-roles] input', 'test/');
+    assert.dom('[data-test-get-credentials]').hasText('View list', 'submit button has list CTA');
+    assert.dom('[data-test-get-credentials]').isEnabled('submit button is enabled at render');
+    await click('[data-test-get-credentials]');
+    assert.propEqual(
+      this.router.transitionTo.lastCall.args,
+      ['vault.cluster.secrets.backend.list', 'test/'],
       'transitionTo is called with correct route and secret name'
     );
   });
