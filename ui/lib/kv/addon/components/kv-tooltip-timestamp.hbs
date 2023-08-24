@@ -1,0 +1,14 @@
+{{! renders a human readable date with a tooltip containing the API timestamp}}
+<ToolTip @verticalPosition="above" @horizontalPosition="center" as |T|>
+  <T.Trigger data-test-kv-version-tooltip-trigger tabindex="-1">
+    {{#if @text}}
+      {{@text}}
+    {{/if}}
+    {{date-format @timestamp "MMM dd, yyyy hh:mm a"}}
+  </T.Trigger>
+  <T.Content @defaultClass="tool-tip smaller-font">
+    <div class="box" data-test-hover-copy-tooltip-text>
+      {{@timestamp}}
+    </div>
+  </T.Content>
+</ToolTip>

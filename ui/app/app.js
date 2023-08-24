@@ -55,6 +55,11 @@ export default class App extends Application {
     ldap: {
       dependencies: {
         services: ['router', 'store', 'secret-mount-path', 'flash-messages', 'auth'],
+      },
+    },
+    kv: {
+      dependencies: {
+        services: ['download', 'namespace', 'router', 'store', 'secret-mount-path', 'flash-messages'],
         externalRoutes: {
           secrets: 'vault.cluster.secrets.backends',
         },

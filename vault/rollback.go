@@ -39,9 +39,10 @@ type RollbackManager struct {
 	router *Router
 	period time.Duration
 
-	inflightAll  sync.WaitGroup
-	inflight     map[string]*rollbackState
-	inflightLock sync.RWMutex
+	rollbackMetricsMountName bool
+	inflightAll              sync.WaitGroup
+	inflight                 map[string]*rollbackState
+	inflightLock             sync.RWMutex
 
 	doneCh          chan struct{}
 	shutdown        bool
@@ -52,6 +53,8 @@ type RollbackManager struct {
 	quitContext     context.Context
 
 	core *Core
+	// This channel is used for testing
+	rollbacksDoneCh chan struct{}
 }
 
 // rollbackState is used to track the state of a single rollback attempt
@@ -65,16 +68,18 @@ type rollbackState struct {
 // NewRollbackManager is used to create a new rollback manager
 func NewRollbackManager(ctx context.Context, logger log.Logger, backendsFunc func() []*MountEntry, router *Router, core *Core) *RollbackManager {
 	r := &RollbackManager{
-		logger:      logger,
-		backends:    backendsFunc,
-		router:      router,
-		period:      core.rollbackPeriod,
-		inflight:    make(map[string]*rollbackState),
-		doneCh:      make(chan struct{}),
-		shutdownCh:  make(chan struct{}),
-		stopTicker:  make(chan struct{}),
-		quitContext: ctx,
-		core:        core,
+		logger:                   logger,
+		backends:                 backendsFunc,
+		router:                   router,
+		period:                   core.rollbackPeriod,
+		inflight:                 make(map[string]*rollbackState),
+		doneCh:                   make(chan struct{}),
+		shutdownCh:               make(chan struct{}),
+		stopTicker:               make(chan struct{}),
+		quitContext:              ctx,
+		core:                     core,
+		rollbackMetricsMountName: core.rollbackMountPathMetrics,
+		rollbacksDoneCh:          make(chan struct{}),
 	}
 	return r
 }
@@ -121,7 +126,6 @@ func (m *RollbackManager) run() {
 		select {
 		case <-tick.C:
 			m.triggerRollbacks()
-
 		case <-m.shutdownCh:
 			m.logger.Info("stopping rollback manager")
 			return
@@ -179,14 +183,23 @@ func (m *RollbackManager) startOrLookupRollback(ctx context.Context, fullPath st
 	m.inflight[fullPath] = rs
 	rs.Add(1)
 	m.inflightAll.Add(1)
-	go m.attemptRollback(ctx, fullPath, rs, grabStatelock)
+	go func() {
+		m.attemptRollback(ctx, fullPath, rs, grabStatelock)
+		select {
+		case m.rollbacksDoneCh <- struct{}{}:
+		default:
+		}
+	}()
 	return rs
 }
 
 // attemptRollback invokes a RollbackOperation for the given path
 func (m *RollbackManager) attemptRollback(ctx context.Context, fullPath string, rs *rollbackState, grabStatelock bool) (err error) {
-	defer metrics.MeasureSince([]string{"rollback", "attempt", strings.ReplaceAll(fullPath, "/", "-")}, time.Now())
-
+	metricName := []string{"rollback", "attempt"}
+	if m.rollbackMetricsMountName {
+		metricName = append(metricName, strings.ReplaceAll(fullPath, "/", "-"))
+	}
+	defer metrics.MeasureSince(metricName, time.Now())
 	defer func() {
 		rs.lastError = err
 		rs.Done()

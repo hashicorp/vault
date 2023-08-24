@@ -159,6 +159,7 @@ Router.map(function () {
         this.route('backend', { path: '/:backend' }, function () {
           this.mount('kmip');
           this.mount('kubernetes');
+          this.mount('kv');
           this.mount('ldap');
           this.mount('pki');
           this.route('index', { path: '/' });

@@ -123,6 +123,10 @@
   grid-template-columns: repeat(3, 1fr);
 }
 
+.align-self-center {
+  align-self: center;
+}
+
 .is-medium-height {
   height: 125px;
 }

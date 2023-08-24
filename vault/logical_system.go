@@ -4164,7 +4164,8 @@ func hasMountAccess(ctx context.Context, acl *ACL, path string) bool {
 			perms.CapabilitiesBitmap&ReadCapabilityInt > 0,
 			perms.CapabilitiesBitmap&SudoCapabilityInt > 0,
 			perms.CapabilitiesBitmap&UpdateCapabilityInt > 0,
-			perms.CapabilitiesBitmap&PatchCapabilityInt > 0:
+			perms.CapabilitiesBitmap&PatchCapabilityInt > 0,
+			perms.CapabilitiesBitmap&SubscribeCapabilityInt > 0:
 
 			aclCapabilitiesGiven = true
 
@@ -4484,6 +4485,9 @@ func (b *SystemBackend) pathInternalUIResultantACL(ctx context.Context, req *log
 		if perms.CapabilitiesBitmap&PatchCapabilityInt > 0 {
 			capabilities = append(capabilities, PatchCapability)
 		}
+		if perms.CapabilitiesBitmap&SubscribeCapabilityInt > 0 {
+			capabilities = append(capabilities, SubscribeCapability)
+		}
 
 		// If "deny" is explicitly set or if the path has no capabilities at all,
 		// set the path capabilities to "deny"
@@ -4723,6 +4727,18 @@ type SealStatusResponse struct {
 	Warnings          []string `json:"warnings,omitempty"`
 }
 
+type SealBackendStatus struct {
+	Name           string `json:"name"`
+	Healthy        bool   `json:"healthy"`
+	UnhealthySince string `json:"unhealthy_since,omitempty"`
+}
+
+type SealBackendStatusResponse struct {
+	Healthy        bool                `json:"healthy"`
+	UnhealthySince string              `json:"unhealthy_since,omitempty"`
+	Backends       []SealBackendStatus `json:"backends"`
+}
+
 func (core *Core) GetSealStatus(ctx context.Context) (*SealStatusResponse, error) {
 	sealed := core.Sealed()
 
@@ -4745,7 +4761,7 @@ func (core *Core) GetSealStatus(ctx context.Context) (*SealStatusResponse, error
 
 	if sealConfig == nil {
 		s := &SealStatusResponse{
-			Type:         core.SealAccess().BarrierType().String(),
+			Type:         core.SealAccess().BarrierSealConfigType().String(),
 			Initialized:  initialized,
 			Sealed:       true,
 			RecoverySeal: core.SealAccess().RecoveryKeySupported(),
@@ -4801,6 +4817,40 @@ func (core *Core) GetSealStatus(ctx context.Context) (*SealStatusResponse, error
 	}
 
 	return s, nil
+}
+
+func (c *Core) GetSealBackendStatus(ctx context.Context) (*SealBackendStatusResponse, error) {
+	var r SealBackendStatusResponse
+	if a, ok := c.seal.(*autoSeal); ok {
+		r.Healthy = c.seal.Healthy()
+		var uhMin time.Time
+		for _, s := range a.GetAllSealInfoByPriority() {
+			b := SealBackendStatus{
+				Name:    s.Name,
+				Healthy: s.Healthy,
+			}
+			if !s.Healthy {
+				if !s.LastSeenHealthy.IsZero() {
+					b.UnhealthySince = s.LastSeenHealthy.String()
+				}
+				if uhMin.IsZero() || uhMin.After(s.LastSeenHealthy) {
+					uhMin = s.LastSeenHealthy
+				}
+			}
+			r.Backends = append(r.Backends, b)
+		}
+		if !uhMin.IsZero() {
+			r.UnhealthySince = uhMin.String()
+		}
+	} else {
+		r.Backends = []SealBackendStatus{
+			{
+				Name:    "shamir", // "default?"
+				Healthy: true,
+			},
+		}
+	}
+	return &r, nil
 }
 
 type LeaderResponse struct {
