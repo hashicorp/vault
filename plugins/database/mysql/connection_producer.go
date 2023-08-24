@@ -130,6 +130,23 @@ func (c *mySQLConnectionProducer) Init(ctx context.Context, conf map[string]inte
 			return nil, fmt.Errorf("unable to generate UUID for IAM configuration: %w", err)
 		}
 		c.isCloud = true
+
+		credentials := c.RawConfig["credentials"]
+
+		// for _most_ sql databases, the driver itself contains no state. In the case of google's cloudsql drivers,
+		// however, the driver might store a credentials file, in which case the state stored by the driver is in
+		// fact critical to the proper function of the connection.
+		//
+		// This poses one big obvious problem - each configured cloud database might/will need its own driver registration,
+		// the name of which we have to track, and even worse in the MySQL case, that name is also the name of the
+		// dialer that is registered by MySQL in the dsn: protocol in the DSN acts double duty if a custom dialer
+		// is registered. This means that either we can't hide the name of the dialer from the user OR we have to rewrite
+		// the DSN after the user provides it. We already do this, KIND OF for the TLS config, but this modification
+		// is much more dramatic.
+		_, err := registerDriverMySQL(c.cloudDriverName, credentials.(string))
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	// Set initialized to true at this point since all fields are set,
@@ -167,24 +184,6 @@ func (c *mySQLConnectionProducer) Connection(ctx context.Context) (interface{}, 
 	driverName := driverMySQL
 	if c.isCloud {
 		driverName = c.cloudDriverName
-
-		//@TODO - move these to init?
-		credentials := c.RawConfig["credentials"]
-
-		// for _most_ sql databases, the driver itself contains no state. In the case of google's cloudsql drivers,
-		// however, the driver might store a credentials file, in which case the state stored by the driver is in
-		// fact critical to the proper function of the connection.
-		//
-		// This poses one big obvious problem - each configured cloud database might/will need its own driver registration,
-		// the name of which we have to track, and even worse in the MySQL case, that name is also the name of the
-		// dialer that is registered by MySQL in the dsn: protocol in the DSN acts double duty if a custom dialer
-		// is registered. This means that either we can't hide the name of the dialer from the user OR we have to rewrite
-		// the DSN after the user provides it. We already do this, KIND OF for the TLS config, but this modification
-		// is much more dramatic.
-		_, err := registerDriverMySQL(driverName, credentials.(string))
-		if err != nil {
-			return nil, err
-		}
 	}
 
 	connURL, err := c.addTLStoDSN()

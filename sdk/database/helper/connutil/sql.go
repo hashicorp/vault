@@ -141,6 +141,10 @@ func (c *SQLConnectionProducer) Init(ctx context.Context, conf map[string]interf
 			return nil, fmt.Errorf("unable to generate UUID for IAM configuration: %w", err)
 		}
 		c.isCloud = true
+		_, err := c.registerDrivers(c.cloudDriverName, c.Credentials)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	// Set initialized to true at this point since all fields are set,
@@ -179,24 +183,10 @@ func (c *SQLConnectionProducer) Connection(ctx context.Context) (interface{}, er
 	driverName := c.Type
 
 	if c.AuthType == AuthTypeGCPIAM {
-		_, err := c.getCloudSQLDriverName()
-		if err != nil {
-			return nil, err
-		}
-		// ignore the string, yeah i know
 		driverName = c.cloudDriverName
-		credentials := c.Credentials
-
-		_, err = c.registerDrivers(driverName, credentials)
-		if err != nil {
-			return nil, err
-		}
-
-	} else {
+	} else if c.Type == "mssql" {
 		// For mssql backend, switch to sqlserver instead
-		if c.Type == "mssql" {
-			driverName = "sqlserver"
-		}
+		driverName = "sqlserver"
 	}
 
 	// Otherwise, attempt to make connection
