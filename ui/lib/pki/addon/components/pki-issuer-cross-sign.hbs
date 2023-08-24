@@ -20,7 +20,7 @@
     </p>
     <div class="is-flex-start">
       {{#each this.inputFields as |column|}}
-        <div class="is-flex-1 basis-0 has-text-grey has-bottom-margin-xs">
+        <div class="is-flex-grow-1 basis-0 has-text-grey has-bottom-margin-xs">
           <h2 data-test-info-table-label={{column.key}}>
             {{column.label}}
             {{#if column.helpText}}
@@ -40,7 +40,7 @@
             />
             {{#each (map-by "key" this.inputFields) as |columnAttr|}}
               {{#let (get crossSignRow columnAttr) as |data|}}
-                <div data-test-info-table-column={{columnAttr}} class="is-flex-1 basis-0 has-bottom-margin-xs">
+                <div data-test-info-table-column={{columnAttr}} class="is-flex-grow-1 basis-0 has-bottom-margin-xs">
                   {{#if (eq columnAttr "intermediateMount")}}
                     <LinkTo class="has-text-black has-text-weight-semibold" @route="overview" @model={{data}}>
                       {{data}}
