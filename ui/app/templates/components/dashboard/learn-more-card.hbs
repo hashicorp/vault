@@ -5,13 +5,21 @@
   </div>
   <div class="has-top-margin-xs" data-test-learn-more-links>
     {{#each this.learnMoreLinks as |learnMoreLink|}}
-      <Hds::Link::Standalone
-        @icon={{learnMoreLink.icon}}
-        @text={{learnMoreLink.title}}
-        @href={{learnMoreLink.link}}
-        class="has-bottom-margin-xs"
-        data-test-learn-more-link={{learnMoreLink.title}}
-      />
+      {{#if
+        (or
+          (and learnMoreLink.requiredFeature @isEnterprise (has-feature learnMoreLink.requiredFeature))
+          (not learnMoreLink.requiredFeature)
+        )
+      }}
+        <Hds::Link::Standalone
+          @icon={{learnMoreLink.icon}}
+          @text={{learnMoreLink.title}}
+          @href={{learnMoreLink.link}}
+          class="has-bottom-margin-xs"
+          data-test-learn-more-link={{learnMoreLink.title}}
+        />
+      {{/if}}
+
     {{/each}}
   </div>
 </Hds::Card::Container>

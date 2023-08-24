@@ -137,7 +137,7 @@ export default class DashboardQuickActionsCard extends Component {
     // link to different route
     if (this.selectedEngine.type === 'kv') {
       searchSelectParamRoute =
-        this.paramValue && this.paramValue[this.paramValue?.length - 1] === '/'
+        this.paramValue && this.paramValue?.endsWith('/')
           ? 'vault.cluster.secrets.backend.list'
           : 'vault.cluster.secrets.backend.show';
     }

@@ -25,16 +25,7 @@ export default class VaultClusterDashboardRoute extends Route.extend(ClusterRout
     }
   }
 
-  async getLicense() {
-    try {
-      return await this.store.queryRecord('license', {});
-    } catch (e) {
-      return null;
-    }
-  }
-
   model() {
-    const vaultConfiguration = this.getVaultConfiguration();
     const clusterModel = this.modelFor('vault.cluster');
     const replication = {
       dr: clusterModel.dr,
@@ -42,12 +33,12 @@ export default class VaultClusterDashboardRoute extends Route.extend(ClusterRout
     };
 
     return hash({
-      vaultConfiguration,
       replication,
       secretsEngines: this.store.query('secret-engine', {}),
+      license: this.store.queryRecord('license', {}).catch(() => null),
       isRootNamespace: this.namespace.inRootNamespace,
       version: this.version,
-      license: this.getLicense(),
+      vaultConfiguration: this.getVaultConfiguration(),
     });
   }
 

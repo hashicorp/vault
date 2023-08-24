@@ -1,4 +1,4 @@
-<Dashboard::VaultVersionTitle />
+<Dashboard::VaultVersionTitle @version={{@model.version}} />
 
 <div class="has-bottom-margin-xl">
   <div class="is-flex-row has-gap-l">
@@ -25,7 +25,7 @@
           <Dashboard::VaultConfigurationDetailsCard @vaultConfiguration={{@model.vaultConfiguration}} />
         {{/if}}
         <div>
-          <Dashboard::LearnMoreCard />
+          <Dashboard::LearnMoreCard @isEnterprise={{@model.version.isEnterprise}} />
           <Dashboard::SurveyLinkText />
         </div>
       </div>
@@ -34,7 +34,7 @@
       <div class="is-flex-column is-flex-1 has-gap-l">
         <Dashboard::SecretsEnginesCard @secretsEngines={{@model.secretsEngines}} />
         <div>
-          <Dashboard::LearnMoreCard />
+          <Dashboard::LearnMoreCard @isEnterprise={{@model.version.isEnterprise}} />
           <Dashboard::SurveyLinkText />
         </div>
       </div>

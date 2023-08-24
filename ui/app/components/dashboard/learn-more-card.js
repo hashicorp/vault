@@ -32,6 +32,7 @@ export default class DashboardLearnMoreCard extends Component {
         link: 'https://developer.hashicorp.com/vault/tutorials/adp/transform',
         icon: 'learn-link',
         title: 'Advanced Data Protection: Transform engine',
+        requiredFeature: 'Transform Secrets Engine',
       },
       {
         link: 'https://developer.hashicorp.com/vault/tutorials/secrets-management/pki-engine',
