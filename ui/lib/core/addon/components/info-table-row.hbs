@@ -84,7 +84,7 @@
           {{#if @tooltipText}}
             <ToolTip @verticalPosition="above" @horizontalPosition="left" as |T|>
               <T.Trigger @tabindex={{false}}>
-                <span class="is-word-break has-text-black" data-test-row-value={{@label}}>{{@value}}</span>
+                <span class="is-word-break has-text-black" data-test-row-value={{this.label}}>{{this.value}}</span>
               </T.Trigger>
               <T.Content @defaultClass="tool-tip">
                 <div class="box is-flex-center">
