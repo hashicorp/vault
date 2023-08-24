@@ -39,7 +39,7 @@ jobs:
             # shellcheck disable=SC2129
             echo 'compute-small=["self-hosted","ondemand","linux","type=c6a.large"]' >> "$GITHUB_OUTPUT"     #  2x vCPUs,  4 GiB RAM,
             echo 'compute-medium=["self-hosted","ondemand","linux","type=c6a.xlarge"]' >> "$GITHUB_OUTPUT"   #  4x vCPUs,  8 GiB RAM,
-            echo 'compute-large=["self-hosted","ondemand","linux","type=c6a.2xlarge"]' >> "$GITHUB_OUTPUT"   #  8x vCPUs, 16 GiB RAM,
+            echo 'compute-large=["self-hosted","ondemand","linux","type=c6a.2xlarge","disk_gb=64"]' >> "$GITHUB_OUTPUT"   #  8x vCPUs, 16 GiB RAM,
             echo 'compute-largem=["self-hosted","ondemand","linux","type=m6a.2xlarge"]' >> "$GITHUB_OUTPUT"  #  8x vCPUs, 32 GiB RAM,
             echo 'compute-xlarge=["self-hosted","ondemand","linux","type=c6a.4xlarge"]' >> "$GITHUB_OUTPUT"  # 16x vCPUs, 32 GiB RAM,
             echo 'enterprise=1' >> "$GITHUB_OUTPUT"
@@ -117,6 +117,27 @@ jobs:
       go-tags: '${{ needs.setup.outputs.go-tags }},deadlock'
       runs-on: ${{ needs.setup.outputs.compute-large }}
       enterprise: ${{ needs.setup.outputs.enterprise }}
+      test-timing-cache-key: go-test-timing-standard
+    secrets: inherit
+
+  test-go-testonly:
+    name: Run Go tests tagged with testonly
+    needs:
+      - setup
+      - verify-changes
+    # Don't run this job for docs/ui only PRs
+    if: |
+      needs.verify-changes.outputs.is_docs_change == 'false' &&
+      needs.verify-changes.outputs.is_ui_change == 'false'
+    uses: ./.github/workflows/test-go.yml
+    with:
+      testonly: true
+      total-runners: 2 # test runners cannot be less than 2
+      go-arch: amd64
+      go-tags: '${{ needs.setup.outputs.go-tags }},deadlock,testonly'
+      runs-on: ${{ needs.setup.outputs.compute-large }}
+      enterprise: ${{ needs.setup.outputs.enterprise }}
+      test-timing-cache-enabled: false
     secrets: inherit
 
   test-go-race:
@@ -142,6 +163,7 @@ jobs:
       runs-on: ${{ needs.setup.outputs.compute-large }}
       enterprise: ${{ needs.setup.outputs.enterprise }}
       name: "race"
+      test-timing-cache-key: go-test-timing-race
     secrets: inherit
 
   test-go-fips:
@@ -167,6 +189,7 @@ jobs:
       runs-on: ${{ needs.setup.outputs.compute-large }}
       enterprise: ${{ needs.setup.outputs.enterprise }}
       name: "fips"
+      test-timing-cache-key: go-test-timing-fips
     secrets: inherit
 
   test-ui:
@@ -357,7 +380,11 @@ jobs:
       needs.test-go-fips.result == 'success' ||
       needs.test-go-fips.result == 'failure' ||
       needs.test-go-race.result == 'success' ||
-      needs.test-go-race.result == 'failure')
+      needs.test-go-race.result == 'failure') &&
+      (github.repository == 'hashicorp/vault' &&
+      (github.event.pull_request.head.repo.full_name == github.event.pull_request.base.repo.full_name))
+    # The last check ensures this doesn't run on community-contributed PRs, who
+    # won't have the permissions to run this job.
     needs:
       - test-go
       - test-go-fips

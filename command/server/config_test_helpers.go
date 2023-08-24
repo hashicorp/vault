@@ -846,6 +846,7 @@ func testConfig_Sanitized(t *testing.T) {
 			"lease_metrics_epsilon":                  time.Hour,
 			"num_lease_metrics_buckets":              168,
 			"add_lease_metrics_namespace_labels":     false,
+			"add_mount_point_rollback_metrics":       false,
 		},
 		"administrative_namespace_path": "admin/",
 	}
@@ -1134,7 +1135,7 @@ func testParseSeals(t *testing.T) {
 						"default_hmac_key_label": "vault-hsm-hmac-key",
 						"generate_key":           "true",
 					},
-					Name: "pkcs11",
+					Name: "pkcs11-disabled",
 				},
 			},
 		},

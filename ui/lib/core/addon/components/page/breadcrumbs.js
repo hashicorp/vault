@@ -21,7 +21,7 @@ export default class Breadcrumbs extends Component {
   constructor() {
     super(...arguments);
     this.args.breadcrumbs.forEach((breadcrumb) => {
-      assert('breadcrumb has a label key', Object.keys(breadcrumb).includes('label'));
+      assert('breadcrumb must have a label key', Object.keys(breadcrumb).includes('label'));
     });
   }
 }

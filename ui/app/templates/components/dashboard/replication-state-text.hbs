@@ -1,0 +1,48 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
+<div>
+  {{#if @name}}
+    <LinkTo
+      class="title is-5 has-text-weight-semibold has-bottom-margin-xs"
+      @route="vault.cluster.replication.mode.index"
+      @model={{@name}}
+      data-test-title={{@title}}
+    >
+      {{@title}}
+    </LinkTo>
+  {{else}}
+    <h2 class="title is-5 has-text-weight-semibold has-bottom-margin-xs" data-test-title={{@title}}>
+      {{@title}}
+    </h2>
+  {{/if}}
+
+  {{#if @subText}}
+    <div class="title is-8 has-font-weight-normal has-text-grey-dark" data-test-subtext={{@title}}>
+      {{@subText}}
+    </div>
+  {{/if}}
+
+  <ToolTip @verticalPosition="above" @horizontalPosition="center" as |T|>
+    <T.Trigger
+      data-test-tooltip-trigger
+      tabindex="-1"
+      class="title is-3 has-font-weight-normal has-top-margin-xxs has-bottom-margin-xxs"
+      data-test-tooltip-title={{@title}}
+    >
+      {{or @state "not set up"}}
+
+      <FlightIcon
+        @name={{or @clusterStates.glyph "x-circle"}}
+        class={{if @clusterStates.isOk "has-text-success" "has-text-danger"}}
+      />
+    </T.Trigger>
+    <T.Content @defaultClass="tool-tip smaller-font">
+      <div class="box" data-test-hover-copy-tooltip-text>
+        The cluster's current operating state
+      </div>
+    </T.Content>
+  </ToolTip>
+</div>

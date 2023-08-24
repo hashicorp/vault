@@ -7,7 +7,7 @@ import { text, triggerable, clickable, collection, fillable, value, isPresent } 
 import { getter } from 'ember-cli-page-object/macros';
 import { settled } from '@ember/test-helpers';
 
-import keys from 'vault/lib/keycodes';
+import keys from 'core/utils/key-codes';
 
 export default {
   toggle: clickable('[data-test-console-toggle]'),

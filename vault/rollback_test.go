@@ -5,14 +5,18 @@ package vault
 
 import (
 	"context"
+	"strings"
 	"sync"
 	"testing"
 	"time"
 
+	"github.com/armon/go-metrics"
 	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-uuid"
+	"github.com/hashicorp/vault/helper/metricsutil"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/sdk/helper/logging"
+	"github.com/stretchr/testify/require"
 )
 
 // mockRollback returns a mock rollback manager
@@ -118,5 +122,82 @@ func TestRollbackManager_Join(t *testing.T) {
 	err := <-errCh
 	if err != nil {
 		t.Fatalf("Error on rollback:%v", err)
+	}
+}
+
+// TestRollbackMetrics verifies that the rollback metrics only include the mount
+// point in their names when RollbackMetricsIncludeMountPoint is true.
+// This test cannot be run in parallel, because we are using the global metrics
+// instance
+func TestRollbackMetrics(t *testing.T) {
+	testCases := []struct {
+		name          string
+		addMountPoint bool
+	}{
+		{
+			name:          "include mount point",
+			addMountPoint: true,
+		},
+		{
+			name:          "exclude mount point",
+			addMountPoint: false,
+		},
+	}
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			inMemSink := metrics.NewInmemSink(10000*time.Hour, 10000*time.Hour)
+			sink := metricsutil.NewClusterMetricSink("test", inMemSink)
+			sink.TelemetryConsts.RollbackMetricsIncludeMountPoint = tc.addMountPoint
+			_, err := metrics.NewGlobal(metrics.DefaultConfig("vault"), inMemSink)
+			require.NoError(t, err)
+			conf := &CoreConfig{
+				MetricSink:     sink,
+				RollbackPeriod: 50 * time.Millisecond,
+				MetricsHelper:  metricsutil.NewMetricsHelper(inMemSink, true),
+			}
+
+			core, _, _ := TestCoreUnsealedWithConfig(t, conf)
+
+			samplesWith := func(intervals []*metrics.IntervalMetrics, with func(string) bool) []metrics.SampledValue {
+				t.Helper()
+				samples := make([]metrics.SampledValue, 0)
+				for _, interval := range intervals {
+					for name, summary := range interval.Samples {
+						if with(name) {
+							samples = append(samples, summary)
+						}
+					}
+				}
+				return samples
+			}
+
+			<-core.rollback.rollbacksDoneCh
+			intervals := inMemSink.Data()
+
+			mountPointAttempts := samplesWith(intervals, func(s string) bool {
+				return strings.HasPrefix(s, "vault.rollback.attempt.")
+			})
+			mountPointRoutes := samplesWith(intervals, func(s string) bool {
+				return strings.HasPrefix(s, "vault.route.rollback.")
+			})
+
+			noMountPointAttempts := samplesWith(intervals, func(s string) bool {
+				return s == "vault.rollback.attempt"
+			})
+			noMountPointRoutes := samplesWith(intervals, func(s string) bool {
+				return s == "vault.route.rollback"
+			})
+			if tc.addMountPoint {
+				require.NotEmpty(t, mountPointAttempts)
+				require.NotEmpty(t, mountPointRoutes)
+				require.Empty(t, noMountPointAttempts)
+				require.Empty(t, noMountPointRoutes)
+			} else {
+				require.Empty(t, mountPointAttempts)
+				require.Empty(t, mountPointRoutes)
+				require.NotEmpty(t, noMountPointAttempts)
+				require.NotEmpty(t, noMountPointRoutes)
+			}
+		})
 	}
 }

@@ -29,6 +29,7 @@
 @import './core/file';
 @import './core/footer';
 @import './core/inputs';
+@import './core/json-diff-patch';
 @import './core/label';
 @import './core/level';
 @import './core/link';
@@ -59,6 +60,7 @@
 @import './components/box-radio';
 @import './components/calendar-widget';
 @import './components/codemirror';
+@import './components/code-snippet';
 @import './components/confirm';
 @import './components/console-ui-panel';
 @import './components/control-group';
@@ -103,6 +105,7 @@
 @import './components/search-select';
 @import './components/selectable-card';
 @import './components/selectable-card-container';
+@import './components/secrets-engines-card';
 // action-block extends selectable-card
 @import './components/action-block';
 @import './components/shamir-modal-flow';
