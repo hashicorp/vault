@@ -4,20 +4,36 @@ import { setupApplicationTest } from 'vault/tests/helpers';
 import authPage from 'vault/tests/pages/auth';
 import { deleteEngineCmd, mountEngineCmd, runCmd, tokenWithPolicyCmd } from 'vault/tests/helpers/commands';
 import { personas } from 'vault/tests/helpers/policy-generator/kv';
-import { setupControlGroup, writeSecret } from 'vault/tests/helpers/kv/kv-run-commands';
+import { setupControlGroup, writeSecret, writeVersionedSecret } from 'vault/tests/helpers/kv/kv-run-commands';
+import { click, currentURL, visit } from '@ember/test-helpers';
+import { PAGE } from 'vault/tests/helpers/kv/kv-selectors';
 
+const ALL_DELETE_ACTIONS = ['delete', 'destroy', 'undelete'];
+const assertDeleteActions = (assert, expected = ['delete', 'destroy']) => {
+  ALL_DELETE_ACTIONS.forEach((toolbar) => {
+    if (expected.includes(toolbar)) {
+      assert.dom(PAGE.detail[toolbar]).exists(`${toolbar} toolbar action exists`);
+    } else {
+      assert.dom(PAGE.detail[toolbar]).doesNotExist(`${toolbar} toolbar action not rendered`);
+    }
+  });
+};
 /**
  * This test set is for testing delete, undelete, destroy flows
- * VAULT-18818
+ * Letter(s) in parenthesis at the end are shorthand for the persona,
+ * for ease of tracking down specific tests failures from CI
  */
 module('Acceptance | kv-v2 workflow | delete, undelete, destroy', function (hooks) {
   setupApplicationTest(hooks);
 
   hooks.beforeEach(async function () {
     this.backend = `kv-delete-${uuidv4()}`;
+    this.secretPath = 'bad-secret';
     await authPage.login();
     await runCmd(mountEngineCmd('kv-v2', this.backend), false);
-    await writeSecret(this.backend, 'app/first-secret', 'foo', 'bar');
+    await writeVersionedSecret(this.backend, this.secretPath, 'foo', 'bar', 4);
+    await writeSecret(this.backend, 'nuke', 'foo', 'bar');
+    return;
   });
 
   hooks.afterEach(async function () {
@@ -30,17 +46,96 @@ module('Acceptance | kv-v2 workflow | delete, undelete, destroy', function (hook
       const token = await runCmd(tokenWithPolicyCmd('admin', personas.admin(this.backend)));
       await authPage.login(token);
     });
-    test.skip('can delete the latest secret version', async function (assert) {
-      assert.expect(0);
+    test('can delete and undelete the latest secret version (a)', async function (assert) {
+      assert.expect(17);
+      // go to secret details
+      await visit(`/vault/secrets/${this.backend}/kv/${this.secretPath}/details`);
+      // correct toolbar options & details show
+      assertDeleteActions(assert);
+      assert.dom(PAGE.secretRow).exists('shows secret data');
+      // delete flow
+      await click(PAGE.detail.delete);
+      assert.dom(PAGE.detail.deleteModalTitle).includesText('Delete version?', 'shows correct modal title');
+      assert.dom(PAGE.detail.deleteOption).isNotDisabled('delete option is selectable');
+      assert.dom(PAGE.detail.deleteOptionLatest).isNotDisabled('delete latest option is selectable');
+      await click(PAGE.detail.deleteOptionLatest);
+      await click(PAGE.detail.deleteConfirm);
+      // details update accordingly
+      assert
+        .dom(PAGE.emptyStateTitle)
+        .hasText('Version 4 of this secret has been deleted', 'Shows deleted message');
+      assert.dom(PAGE.detail.versionTimestamp).includesText('Version 4 deleted');
+      // updated toolbar options
+      assertDeleteActions(assert, ['undelete', 'destroy']);
+      // undelete flow
+      await click(PAGE.detail.undelete);
+      // details update accordingly
+      assert.dom(PAGE.secretRow).exists('shows secret data');
+      assert.dom(PAGE.detail.versionTimestamp).includesText('Version 4 created');
+      // correct toolbar options
+      assertDeleteActions(assert, ['delete', 'destroy']);
     });
-    test.skip('can soft delete and undelete a secret version', async function (assert) {
-      assert.expect(0);
+    test('can soft delete and undelete an older secret version (a)', async function (assert) {
+      assert.expect(17);
+      // go to secret details
+      await visit(`/vault/secrets/${this.backend}/kv/${this.secretPath}/details?version=2`);
+      // correct toolbar options & details show
+      assertDeleteActions(assert);
+      assert.dom(PAGE.secretRow).exists('shows secret data');
+      // delete flow
+      await click(PAGE.detail.delete);
+      assert.dom(PAGE.detail.deleteModalTitle).includesText('Delete version?', 'shows correct modal title');
+      assert.dom(PAGE.detail.deleteOption).isNotDisabled('delete option is selectable');
+      assert.dom(PAGE.detail.deleteOptionLatest).isNotDisabled('delete latest option is selectable');
+      await click(PAGE.detail.deleteOption);
+      await click(PAGE.detail.deleteConfirm);
+      // details update accordingly
+      assert
+        .dom(PAGE.emptyStateTitle)
+        .hasText('Version 2 of this secret has been deleted', 'Shows deleted message');
+      assert.dom(PAGE.detail.versionTimestamp).includesText('Version 2 deleted');
+      // updated toolbar options
+      assertDeleteActions(assert, ['undelete', 'destroy']);
+      // undelete flow
+      await click(PAGE.detail.undelete);
+      // details update accordingly
+      assert.dom(PAGE.secretRow).exists('shows secret data');
+      assert.dom(PAGE.detail.versionTimestamp).includesText('Version 2 created');
+      // correct toolbar options
+      assertDeleteActions(assert, ['delete', 'destroy']);
     });
-    test.skip('can destroy a secret version', async function (assert) {
-      assert.expect(0);
+    test('can destroy a secret version (a)', async function (assert) {
+      assert.expect(9);
+      // go to secret details
+      await visit(`/vault/secrets/${this.backend}/kv/${this.secretPath}/details?version=3`);
+      // correct toolbar options show
+      assertDeleteActions(assert);
+      // delete flow
+      await click(PAGE.detail.destroy);
+      assert.dom(PAGE.detail.deleteModalTitle).includesText('Destroy version?', 'modal has correct title');
+      await click(PAGE.detail.deleteConfirm);
+      // details update accordingly
+      assert
+        .dom(PAGE.emptyStateTitle)
+        .hasText('Version 3 of this secret has been permanently destroyed', 'Shows destroyed message');
+      assert.dom(PAGE.detail.versionTimestamp).doesNotExist('does not show version timestamp');
+      // updated toolbar options
+      assertDeleteActions(assert, []);
     });
-    test.skip('can destroy a secret', async function (assert) {
-      assert.expect(0);
+    test('can permanently delete all secret versions (a)', async function (assert) {
+      assert.expect(3);
+      // go to secret details
+      await visit(`/vault/secrets/${this.backend}/kv/nuke/details`);
+      // Check metadata toolbar
+      await click(PAGE.secretTab('Metadata'));
+      assert.dom(PAGE.metadata.deleteMetadata).hasText('Delete metadata', 'shows delete metadata button');
+      // delete flow
+      await click(PAGE.metadata.deleteMetadata);
+      assert.dom(PAGE.detail.deleteModalTitle).includesText('Delete metadata?', 'modal has correct title');
+      await click(PAGE.detail.deleteConfirm);
+
+      // redirects to list
+      assert.strictEqual(currentURL(), `/vault/secrets/${this.backend}/kv/list`, 'redirects to list');
     });
   });
 
