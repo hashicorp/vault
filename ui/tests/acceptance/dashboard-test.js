@@ -87,7 +87,20 @@ module('Acceptance | landing page dashboard', function (hooks) {
     hooks.beforeEach(function () {
       return authPage.login();
     });
-    test('shows the learn more card', async function (assert) {
+    test('shows the learn more card on community', async function (assert) {
+      await visit('/vault/dashboard');
+      assert.dom('[data-test-learn-more-title]').hasText('Learn more');
+      assert
+        .dom('[data-test-learn-more-subtext]')
+        .hasText(
+          'Explore the features of Vault and learn advance practices with the following tutorials and documentation.'
+        );
+      assert.dom('[data-test-learn-more-links] a').exists({ count: 3 });
+      assert
+        .dom('[data-test-feedback-form]')
+        .hasText("Don't see what you're looking for on this page? Let us know via our feedback form .");
+    });
+    test('shows the learn more card on enterprise', async function (assert) {
       await visit('/vault/dashboard');
       assert.dom('[data-test-learn-more-title]').hasText('Learn more');
       assert
