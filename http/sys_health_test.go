@@ -30,6 +30,7 @@ func TestSysHealth_get(t *testing.T) {
 		"replication_dr_mode":          consts.ReplicationUnknown.GetDRString(),
 		"initialized":                  false,
 		"sealed":                       true,
+		"post_unseal_failed":           false,
 		"standby":                      true,
 		"performance_standby":          false,
 	}
@@ -64,6 +65,7 @@ func TestSysHealth_get(t *testing.T) {
 		"replication_dr_mode":          consts.ReplicationUnknown.GetDRString(),
 		"initialized":                  true,
 		"sealed":                       true,
+		"post_unseal_failed":           false,
 		"standby":                      true,
 		"performance_standby":          false,
 	}
@@ -102,6 +104,7 @@ func TestSysHealth_get(t *testing.T) {
 		"replication_dr_mode":          consts.ReplicationDRDisabled.GetDRString(),
 		"initialized":                  true,
 		"sealed":                       false,
+		"post_unseal_failed":           false,
 		"standby":                      false,
 		"performance_standby":          false,
 	}
@@ -145,6 +148,7 @@ func TestSysHealth_customcodes(t *testing.T) {
 		"replication_dr_mode":          consts.ReplicationUnknown.GetDRString(),
 		"initialized":                  false,
 		"sealed":                       true,
+		"post_unseal_failed":           false,
 		"standby":                      true,
 		"performance_standby":          false,
 	}
@@ -180,6 +184,7 @@ func TestSysHealth_customcodes(t *testing.T) {
 		"replication_dr_mode":          consts.ReplicationUnknown.GetDRString(),
 		"initialized":                  true,
 		"sealed":                       true,
+		"post_unseal_failed":           false,
 		"standby":                      true,
 		"performance_standby":          false,
 	}
@@ -219,6 +224,7 @@ func TestSysHealth_customcodes(t *testing.T) {
 		"replication_dr_mode":          consts.ReplicationDRDisabled.GetDRString(),
 		"initialized":                  true,
 		"sealed":                       false,
+		"post_unseal_failed":           false,
 		"standby":                      false,
 		"performance_standby":          false,
 	}

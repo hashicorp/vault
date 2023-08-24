@@ -106,6 +106,13 @@ func getSysHealth(core *vault.Core, r *http.Request) (int, *HealthResponse, erro
 		sealedCode = code
 	}
 
+	postunsealfailedCode := 523
+	if code, found, ok := fetchStatusCode(r, "postunsealfailedcode"); !ok {
+		return http.StatusBadRequest, nil, nil
+	} else if found {
+		postunsealfailedCode = code
+	}
+
 	standbyCode := http.StatusTooManyRequests // Consul warning code
 	if code, found, ok := fetchStatusCode(r, "standbycode"); !ok {
 		return http.StatusBadRequest, nil, nil
@@ -138,6 +145,7 @@ func getSysHealth(core *vault.Core, r *http.Request) (int, *HealthResponse, erro
 
 	// Check system status
 	sealed := core.Sealed()
+	postUnsealFailed := core.PostUnsealFailed()
 	standby, perfStandby := core.StandbyStates()
 	var replicationState consts.ReplicationState
 	if standby {
@@ -158,6 +166,8 @@ func getSysHealth(core *vault.Core, r *http.Request) (int, *HealthResponse, erro
 		code = uninitCode
 	case sealed:
 		code = sealedCode
+	case postUnsealFailed:
+		code = postunsealfailedCode
 	case replicationState.HasState(consts.ReplicationDRSecondary):
 		code = drSecondaryCode
 	case perfStandby:
@@ -188,6 +198,7 @@ func getSysHealth(core *vault.Core, r *http.Request) (int, *HealthResponse, erro
 	body := &HealthResponse{
 		Initialized:                init,
 		Sealed:                     sealed,
+		PostUnsealFailed:           postUnsealFailed,
 		Standby:                    standby,
 		PerformanceStandby:         perfStandby,
 		ReplicationPerformanceMode: replicationState.GetPerformanceString(),
@@ -229,6 +240,7 @@ type HealthResponseLicense struct {
 type HealthResponse struct {
 	Initialized                bool                   `json:"initialized"`
 	Sealed                     bool                   `json:"sealed"`
+	PostUnsealFailed           bool                   `json:"post_unseal_failed"`
 	Standby                    bool                   `json:"standby"`
 	PerformanceStandby         bool                   `json:"performance_standby"`
 	ReplicationPerformanceMode string                 `json:"replication_performance_mode"`

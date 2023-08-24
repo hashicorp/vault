@@ -523,6 +523,10 @@ func (b *SystemBackend) configPaths() []*framework.Path {
 					Type:        framework.TypeInt,
 					Description: "Specifies the status code for a sealed node.",
 				},
+				"postunsealfailedcode": {
+					Type:        framework.TypeInt,
+					Description: "Specifies the status code for a node that failed to perform the post-unseal operations.",
+				},
 				"uninitcode": {
 					Type:        framework.TypeInt,
 					Description: "Specifies the status code for an uninitialized node.",
@@ -541,6 +545,7 @@ func (b *SystemBackend) configPaths() []*framework.Path {
 						472: {{Description: "data recovery mode replication secondary and active"}},
 						501: {{Description: "not initialized"}},
 						503: {{Description: "sealed"}},
+						523: {{Description: "post-unseal failed"}},
 					},
 				},
 			},

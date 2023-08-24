@@ -91,6 +91,50 @@ type AESGCMBarrier struct {
 	totalLocalEncryptions *atomic.Int64
 }
 
+type backendError struct {
+	err error
+}
+
+func newBackendError(err error) error {
+	if err == nil {
+		return nil
+	}
+	return backendError{err}
+}
+
+func (e backendError) Error() string {
+	return e.err.Error()
+}
+
+func (e backendError) Unwrap() error {
+	return e.err
+}
+
+func (m backendError) Is(target error) bool {
+	_, ok := target.(backendError)
+	return ok
+}
+
+func (b *AESGCMBarrier) list(ctx context.Context, prefix string) ([]string, error) {
+	keys, err := b.backend.List(ctx, prefix)
+	return keys, newBackendError(err)
+}
+
+func (b *AESGCMBarrier) get(ctx context.Context, key string) (*physical.Entry, error) {
+	entry, err := b.backend.Get(ctx, key)
+	return entry, newBackendError(err)
+}
+
+func (b *AESGCMBarrier) put(ctx context.Context, entry *physical.Entry) error {
+	err := b.backend.Put(ctx, entry)
+	return newBackendError(err)
+}
+
+func (b *AESGCMBarrier) delete(ctx context.Context, key string) error {
+	err := b.backend.Delete(ctx, key)
+	return newBackendError(err)
+}
+
 func (b *AESGCMBarrier) RotationConfig() (kc KeyRotationConfig, err error) {
 	if b.keyring == nil {
 		return kc, errors.New("keyring not yet present")
@@ -133,7 +177,7 @@ func (b *AESGCMBarrier) Initialized(ctx context.Context) (bool, error) {
 	}
 
 	// Read the keyring file
-	keys, err := b.backend.List(ctx, keyringPrefix)
+	keys, err := b.list(ctx, keyringPrefix)
 	if err != nil {
 		return false, fmt.Errorf("failed to check for initialization: %w", err)
 	}
@@ -143,7 +187,7 @@ func (b *AESGCMBarrier) Initialized(ctx context.Context) (bool, error) {
 	}
 
 	// Fallback, check for the old sentinel file
-	out, err := b.backend.Get(ctx, barrierInitPath)
+	out, err := b.get(ctx, barrierInitPath)
 	if err != nil {
 		return false, fmt.Errorf("failed to check for initialization: %w", err)
 	}
@@ -235,7 +279,7 @@ func (b *AESGCMBarrier) persistKeyring(ctx context.Context, keyring *Keyring) er
 		Key:   keyringPath,
 		Value: value,
 	}
-	if err := b.backend.Put(ctx, pe); err != nil {
+	if err := b.put(ctx, pe); err != nil {
 		return fmt.Errorf("failed to persist keyring: %w", err)
 	}
 
@@ -267,7 +311,7 @@ func (b *AESGCMBarrier) persistKeyring(ctx context.Context, keyring *Keyring) er
 		Key:   rootKeyPath,
 		Value: value,
 	}
-	if err := b.backend.Put(ctx, pe); err != nil {
+	if err := b.put(ctx, pe); err != nil {
 		return fmt.Errorf("failed to persist root key: %w", err)
 	}
 	return nil
@@ -323,7 +367,7 @@ func (b *AESGCMBarrier) ReloadKeyring(ctx context.Context) error {
 	}
 
 	// Read in the keyring
-	out, err := b.backend.Get(ctx, keyringPath)
+	out, err := b.get(ctx, keyringPath)
 	if err != nil {
 		return fmt.Errorf("failed to check for keyring: %w", err)
 	}
@@ -438,7 +482,7 @@ func (b *AESGCMBarrier) Unseal(ctx context.Context, key []byte) error {
 	}
 
 	// Read in the keyring
-	out, err := b.backend.Get(ctx, keyringPath)
+	out, err := b.get(ctx, keyringPath)
 	if err != nil {
 		return fmt.Errorf("failed to check for keyring: %w", err)
 	}
@@ -471,7 +515,7 @@ func (b *AESGCMBarrier) Unseal(ctx context.Context, key []byte) error {
 	}
 
 	// Read the barrier initialization key
-	out, err = b.backend.Get(ctx, barrierInitPath)
+	out, err = b.get(ctx, barrierInitPath)
 	if err != nil {
 		return fmt.Errorf("failed to check for initialization: %w", err)
 	}
@@ -521,7 +565,7 @@ func (b *AESGCMBarrier) Unseal(ctx context.Context, key []byte) error {
 	}
 
 	// Delete the old barrier entry
-	if err := b.backend.Delete(ctx, barrierInitPath); err != nil {
+	if err := b.delete(ctx, barrierInitPath); err != nil {
 		return fmt.Errorf("failed to delete barrier init file: %w", err)
 	}
 
@@ -627,7 +671,7 @@ func (b *AESGCMBarrier) CreateUpgrade(ctx context.Context, term uint32) error {
 		Key:   key,
 		Value: value,
 	}
-	return b.backend.Put(ctx, pe)
+	return b.put(ctx, pe)
 }
 
 // DestroyUpgrade destroys the upgrade path key to the given term
@@ -808,7 +852,7 @@ func (b *AESGCMBarrier) putInternal(ctx context.Context, term uint32, primary ci
 		Value:    value,
 		SealWrap: entry.SealWrap,
 	}
-	return b.backend.Put(ctx, pe)
+	return b.put(ctx, pe)
 }
 
 // Get is used to fetch an entry
@@ -829,7 +873,7 @@ func (b *AESGCMBarrier) lockSwitchedGet(ctx context.Context, key string, getLock
 	}
 
 	// Read the key from the backend
-	pe, err := b.backend.Get(ctx, key)
+	pe, err := b.get(ctx, key)
 	if err != nil {
 		if getLock {
 			b.l.RUnlock()
@@ -891,7 +935,7 @@ func (b *AESGCMBarrier) Delete(ctx context.Context, key string) error {
 		return ErrBarrierSealed
 	}
 
-	return b.backend.Delete(ctx, key)
+	return b.delete(ctx, key)
 }
 
 // List is used ot list all the keys under a given
@@ -905,7 +949,7 @@ func (b *AESGCMBarrier) List(ctx context.Context, prefix string) ([]string, erro
 		return nil, ErrBarrierSealed
 	}
 
-	return b.backend.List(ctx, prefix)
+	return b.list(ctx, prefix)
 }
 
 // aeadForTerm returns the AES-GCM AEAD for the given term
