@@ -21,7 +21,6 @@ import (
 	"github.com/armon/go-metrics"
 	"github.com/golang/protobuf/proto"
 	log "github.com/hashicorp/go-hclog"
-	wrapping "github.com/hashicorp/go-kms-wrapping/v2"
 	"github.com/hashicorp/go-raftchunking"
 	"github.com/hashicorp/go-secure-stdlib/parseutil"
 	"github.com/hashicorp/go-secure-stdlib/tlsutil"
@@ -37,7 +36,6 @@ import (
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/sdk/physical"
 	"github.com/hashicorp/vault/vault/cluster"
-	"github.com/hashicorp/vault/vault/seal"
 	"github.com/hashicorp/vault/version"
 	bolt "go.etcd.io/bbolt"
 )
@@ -1373,17 +1371,17 @@ func (b *RaftBackend) Peers(ctx context.Context) ([]Peer, error) {
 
 // SnapshotHTTP is a wrapper for Snapshot that sends the snapshot as an HTTP
 // response.
-func (b *RaftBackend) SnapshotHTTP(out *logical.HTTPResponseWriter, access seal.Access) error {
+func (b *RaftBackend) SnapshotHTTP(out *logical.HTTPResponseWriter, sealer snapshot.Sealer) error {
 	out.Header().Add("Content-Disposition", "attachment")
 	out.Header().Add("Content-Type", "application/gzip")
 
-	return b.Snapshot(out, access)
+	return b.Snapshot(out, sealer)
 }
 
 // Snapshot takes a raft snapshot, packages it into a archive file and writes it
 // to the provided writer. Seal access is used to encrypt the SHASUM file so we
 // can validate the snapshot was taken using the same root keys or not.
-func (b *RaftBackend) Snapshot(out io.Writer, access seal.Access) error {
+func (b *RaftBackend) Snapshot(out io.Writer, sealer snapshot.Sealer) error {
 	b.l.RLock()
 	defer b.l.RUnlock()
 
@@ -1391,15 +1389,7 @@ func (b *RaftBackend) Snapshot(out io.Writer, access seal.Access) error {
 		return errors.New("raft storage is sealed")
 	}
 
-	// If we have access to the seal create a sealer object
-	var s snapshot.Sealer
-	if access != nil {
-		s = &sealer{
-			access: access,
-		}
-	}
-
-	return snapshot.Write(b.logger.Named("snapshot"), b.raft, s, out)
+	return snapshot.Write(b.logger.Named("snapshot"), b.raft, sealer, out)
 }
 
 // WriteSnapshotToTemp reads a snapshot archive off the provided reader,
@@ -1407,7 +1397,7 @@ func (b *RaftBackend) Snapshot(out io.Writer, access seal.Access) error {
 // access is used to decrypt the SHASUM file in the archive to ensure this
 // snapshot has the same root key as the running instance. If the provided
 // access is nil then it will skip that validation.
-func (b *RaftBackend) WriteSnapshotToTemp(in io.ReadCloser, access seal.Access) (*os.File, func(), raft.SnapshotMeta, error) {
+func (b *RaftBackend) WriteSnapshotToTemp(in io.ReadCloser, sealer snapshot.Sealer) (*os.File, func(), raft.SnapshotMeta, error) {
 	b.l.RLock()
 	defer b.l.RUnlock()
 
@@ -1416,15 +1406,7 @@ func (b *RaftBackend) WriteSnapshotToTemp(in io.ReadCloser, access seal.Access) 
 		return nil, nil, metadata, errors.New("raft storage is sealed")
 	}
 
-	// If we have access to the seal create a sealer object
-	var s snapshot.Sealer
-	if access != nil {
-		s = &sealer{
-			access: access,
-		}
-	}
-
-	snap, cleanup, err := snapshot.WriteToTempFileWithSealer(b.logger.Named("snapshot"), in, &metadata, s)
+	snap, cleanup, err := snapshot.WriteToTempFileWithSealer(b.logger.Named("snapshot"), in, &metadata, sealer)
 	return snap, cleanup, metadata, err
 }
 
@@ -1895,40 +1877,6 @@ func (l *RaftLock) Value() (bool, string, error) {
 	value := string(e.Value)
 	// TODO: how to tell if held?
 	return true, value, nil
-}
-
-// sealer implements the snapshot.Sealer interface and is used in the snapshot
-// process for encrypting/decrypting the SHASUM file in snapshot archives.
-type sealer struct {
-	access seal.Access
-}
-
-// Seal encrypts the data with using the seal access object.
-func (s sealer) Seal(ctx context.Context, pt []byte) ([]byte, error) {
-	if s.access == nil {
-		return nil, errors.New("no seal access available")
-	}
-	eblob, err := s.access.Encrypt(ctx, pt, nil)
-	if err != nil {
-		return nil, err
-	}
-
-	return proto.Marshal(eblob)
-}
-
-// Open decrypts the data using the seal access object.
-func (s sealer) Open(ctx context.Context, ct []byte) ([]byte, error) {
-	if s.access == nil {
-		return nil, errors.New("no seal access available")
-	}
-
-	var eblob wrapping.BlobInfo
-	err := proto.Unmarshal(ct, &eblob)
-	if err != nil {
-		return nil, err
-	}
-
-	return s.access.Decrypt(ctx, &eblob, nil)
 }
 
 // boltOptions returns a bolt.Options struct, suitable for passing to
