@@ -11,13 +11,12 @@
           (not learnMoreLink.requiredFeature)
         )
       }}
-        <Hds::Link::Standalone
-          @icon={{learnMoreLink.icon}}
-          @text={{learnMoreLink.title}}
-          @href={{learnMoreLink.link}}
-          class="has-bottom-margin-xs"
-          data-test-learn-more-link={{learnMoreLink.title}}
-        />
+        <div class="has-bottom-margin-xxs">
+          <DocLink data-test-learn-more-link={{learnMoreLink.title}} @path={{learnMoreLink.link}}>
+            <Icon @name={{learnMoreLink.icon}} />
+            {{learnMoreLink.title}}
+          </DocLink>
+        </div>
       {{/if}}
 
     {{/each}}
