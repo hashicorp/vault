@@ -57,13 +57,13 @@ export default class KvDeleteModal extends Component {
   }
 
   get deleteOptions() {
-    const { secret, metadata } = this.args;
+    const { secret, metadata, currentVersion } = this.args;
     const isDeactivated = secret.canReadMetadata ? metadata?.currentSecret.isDeactivated : false;
     return [
       {
         key: 'delete-version',
         label: 'Delete this version',
-        description: `This deletes Version ${secret.version} of the secret.`,
+        description: `This deletes Version ${secret.version || currentVersion} of the secret.`,
         disabled: !secret.canDeleteVersion,
         tooltipMessage: 'You do not have permission to delete a specific version.',
       },

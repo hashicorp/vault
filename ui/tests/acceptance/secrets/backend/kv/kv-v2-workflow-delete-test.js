@@ -263,7 +263,86 @@ module('Acceptance | kv-v2 workflow | delete, undelete, destroy', function (hook
       clearRecords(this.store);
       return;
     });
-    // Copy test outline from admin persona
+    test('can delete and undelete the latest secret version (mm)', async function (assert) {
+      assert.expect(12);
+      // go to secret details
+      await visit(`/vault/secrets/${this.backend}/kv/${this.secretPath}/details`);
+      // correct toolbar options & details show
+      assertDeleteActions(assert);
+      assert.dom(PAGE.emptyStateTitle).hasText('You do not have permission to read this secret');
+      // delete flow
+      await click(PAGE.detail.delete);
+      assert.dom(PAGE.detail.deleteModalTitle).includesText('Delete version?', 'shows correct modal title');
+      assert.dom(PAGE.detail.deleteOption).isNotDisabled('delete option is selectable');
+      assert.dom(PAGE.detail.deleteOptionLatest).isDisabled('delete latest option is disabled');
+
+      // Can't delete latest, try with pre-deleted secret
+      await visit(`/vault/secrets/${this.backend}/kv/nuke/details`);
+      assert.dom(PAGE.emptyStateTitle).hasText('You do not have permission to read this secret');
+      assert.dom(PAGE.detail.versionTimestamp).doesNotExist('Version 2 timestamp not rendered');
+      // updated toolbar options
+      assertDeleteActions(assert, ['undelete', 'destroy']);
+      // undelete flow
+      await click(PAGE.detail.undelete);
+      // details update accordingly
+      assert.dom(PAGE.emptyStateTitle).hasText('You do not have permission to read this secret');
+      assert.dom(PAGE.detail.versionTimestamp).doesNotExist('Version 2 timestamp not rendered');
+      // correct toolbar options
+      assertDeleteActions(assert, ['delete', 'destroy']);
+    });
+    test('can soft delete and undelete an older secret version (mm)', async function (assert) {
+      assert.expect(17);
+      // go to secret details
+      await visit(`/vault/secrets/${this.backend}/kv/${this.secretPath}/details?version=2`);
+      // correct toolbar options & details show
+      assertDeleteActions(assert);
+      assert.dom(PAGE.emptyStateTitle).hasText('You do not have permission to read this secret');
+      assert.dom(PAGE.detail.versionTimestamp).doesNotExist('Version 2 timestamp not rendered');
+      // delete flow
+      await click(PAGE.detail.delete);
+      assert.dom(PAGE.detail.deleteModalTitle).includesText('Delete version?', 'shows correct modal title');
+      assert.dom(PAGE.detail.deleteOption).isNotDisabled('delete option is selectable');
+      assert.dom(PAGE.detail.deleteOptionLatest).isDisabled('delete latest option is disabled');
+      await click(PAGE.detail.deleteOption);
+      await click(PAGE.detail.deleteConfirm);
+      // details update accordingly
+      assert.dom(PAGE.emptyStateTitle).hasText('You do not have permission to read this secret');
+      assert.dom(PAGE.detail.versionTimestamp).doesNotExist('Version 2 timestamp not rendered');
+      // updated toolbar options
+      assertDeleteActions(assert, ['undelete', 'destroy']);
+      // undelete flow
+      await click(PAGE.detail.undelete);
+      // details update accordingly
+      assert.dom(PAGE.emptyStateTitle).hasText('You do not have permission to read this secret');
+      assert.dom(PAGE.detail.versionTimestamp).doesNotExist('Version 2 timestamp not rendered');
+      // correct toolbar options
+      assertDeleteActions(assert);
+    });
+    test('can destroy a secret version (mm)', async function (assert) {
+      assert.expect(9);
+      // go to secret details
+      await visit(`/vault/secrets/${this.backend}/kv/${this.secretPath}/details?version=3`);
+      // correct toolbar options show
+      assertDeleteActions(assert);
+      // delete flow
+      await click(PAGE.detail.destroy);
+      assert.dom(PAGE.detail.deleteModalTitle).includesText('Destroy version?', 'modal has correct title');
+      await click(PAGE.detail.deleteConfirm);
+      // details update accordingly
+      assert
+        .dom(PAGE.emptyStateTitle)
+        .hasText('You do not have permission to read this secret', 'Shows permissions message');
+      assert.dom(PAGE.detail.versionTimestamp).doesNotExist('does not show version timestamp');
+      // updated toolbar options
+      assertDeleteActions(assert, []);
+    });
+    test('can permanently delete all secret versions (mm)', async function (assert) {
+      // go to secret details
+      await visit(`/vault/secrets/${this.backend}/kv/nuke/details`);
+      // Check metadata toolbar
+      await click(PAGE.secretTab('Metadata'));
+      assert.dom(PAGE.metadata.deleteMetadata).doesNotExist('does not show delete metadata button');
+    });
   });
 
   module('secret-creator persona', function (hooks) {
