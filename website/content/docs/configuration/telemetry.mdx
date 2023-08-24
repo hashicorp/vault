@@ -36,6 +36,7 @@ The following options are available on all telemetry configurations.
 - `enable_hostname_label` `(bool: false)` - Specifies if all metric values should
   contain the `host` label with the local hostname. It is recommended to enable
   `disable_hostname` if this option is used.
+- `metrics_prefix` `(string: "vault")` - Specifies the prefix used for metric vaules. By default, metrics are prefixed with "vault".
 - `lease_metrics_epsilon` `(string: "1h")` - Specifies the size of the bucket used to measure future
   lease expiration. For example, for the default value of 1 hour, the `vault.expire.leases.by_expiration`
   metric will aggregate the total number of expiring leases for 1 hour buckets, starting from the current time.
@@ -51,6 +52,11 @@ The following options are available on all telemetry configurations.
 - `add_lease_metrics_namespace_labels` `(bool: false)` - If this value is set to true, then `vault.expire.leases.by_expiration`
   will break down expiring leases by both time and namespace. This parameter is disabled by default because enabling it can lead
   to a large-cardinality metric.
+- `add_mount_point_rollback_metrics` `(bool: false)` - If this value is set to true, then `vault.rollback.attempt.{MOUNT_POINT}`
+  and `vault.route.rollback.{MOUNT_POINT}` metrics will be reported for every mount point. If this parameter is false, then
+  `vault.rollback.attempt` and `vault.route.rollback` metrics (which do not have the mount point in the metric name)
+  will be reported instead. This parameter is disabled by default starting in Vault 1.15 due to the high cardinality of
+  these metrics.
 - `filter_default` `(bool: true)` - This controls whether to allow metrics that have not been specified by the filter.
   Defaults to `true`, which will allow all metrics when no filters are provided.
   When set to `false` with no filters, no metrics will be sent.
@@ -182,14 +188,20 @@ The `/v1/sys/metrics` endpoint is only accessible on active nodes
 and automatically disabled on standby nodes. You can enable the `/v1/sys/metrics`
 endpoint on standby nodes by [enabling unauthenticated metrics access][telemetry-tcp].
 
-Vault does not use the default Prometheus path, so Prometheus must be configured
-with the path below.
-Note that using `?format=prometheus` in the path won't work as "?" will be
-escaped, so it must be specified as a parameter.
+Querying `/v1/sys/metrics` with one of the following headers:
+
+ - `Accept: prometheus/telemetry`
+ - `Accept: application/openmetrics-text`
+
+will return Prometheus formatted results. Most Prometheus servers automatically
+query scrape targets with these headers by default.
 
 A Vault token is required with `capabilities = ["read", "list"]` to
 /v1/sys/metrics. The Prometheus `bearer_token` or `bearer_token_file` options
 must be added to the scrape job.
+
+Vault does not use the default Prometheus path, so Prometheus must be configured
+to scrape `v1/sys/metrics` instead of the default scrape path.
 
 An example job_name stanza required in the [Prometheus config](https://prometheus.io/docs/prometheus/latest/configuration/configuration/#scrape_config) is provided below.
 
@@ -198,8 +210,6 @@ An example job_name stanza required in the [Prometheus config](https://prometheu
 scrape_configs:
   - job_name: 'vault'
     metrics_path: "/v1/sys/metrics"
-    params:
-      format: ['prometheus']
     scheme: https
     tls_config:
       ca_file: your_ca_here.pem

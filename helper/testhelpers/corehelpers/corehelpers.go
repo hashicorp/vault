@@ -16,6 +16,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/hashicorp/vault/internal/observability/event"
+
 	"github.com/hashicorp/eventlogger"
 	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/audit"
@@ -265,6 +267,26 @@ func NewNoopAudit(config map[string]string) (*NoopAudit, error) {
 
 	n.formatter = fw
 
+	n.nodeIDList = make([]eventlogger.NodeID, 2)
+	n.nodeMap = make(map[eventlogger.NodeID]eventlogger.Node)
+
+	formatterNodeID, err := event.GenerateNodeID()
+	if err != nil {
+		return nil, fmt.Errorf("error generating random NodeID for formatter node: %w", err)
+	}
+
+	n.nodeIDList[0] = formatterNodeID
+	n.nodeMap[formatterNodeID] = f
+
+	sinkNode := event.NewNoopSink()
+	sinkNodeID, err := event.GenerateNodeID()
+	if err != nil {
+		return nil, fmt.Errorf("error generating random NodeID for sink node: %w", err)
+	}
+
+	n.nodeIDList[1] = sinkNodeID
+	n.nodeMap[sinkNodeID] = sinkNode
+
 	return n, nil
 }
 
@@ -277,6 +299,7 @@ func NoopAuditFactory(records **[][]byte) audit.Factory {
 		if records != nil {
 			*records = &n.records
 		}
+
 		return n, nil
 	}
 }
@@ -303,6 +326,9 @@ type NoopAudit struct {
 	l         sync.RWMutex
 	salt      *salt.Salt
 	saltMutex sync.RWMutex
+
+	nodeIDList []eventlogger.NodeID
+	nodeMap    map[eventlogger.NodeID]eventlogger.Node
 }
 
 func (n *NoopAudit) LogRequest(ctx context.Context, in *logical.LogInput) error {
@@ -410,8 +436,22 @@ func (n *NoopAudit) Invalidate(_ context.Context) {
 	n.salt = nil
 }
 
-func (n *NoopAudit) RegisterNodesAndPipeline(broker *eventlogger.Broker, _ string) error {
-	return nil
+// RegisterNodesAndPipeline registers the nodes and a pipeline as required by
+// the audit.Backend interface.
+func (b *NoopAudit) RegisterNodesAndPipeline(broker *eventlogger.Broker, name string) error {
+	for id, node := range b.nodeMap {
+		if err := broker.RegisterNode(id, node); err != nil {
+			return err
+		}
+	}
+
+	pipeline := eventlogger.Pipeline{
+		PipelineID: eventlogger.PipelineID(name),
+		EventType:  eventlogger.EventType("audit"),
+		NodeIDs:    b.nodeIDList,
+	}
+
+	return broker.RegisterPipeline(pipeline)
 }
 
 type TestLogger struct {

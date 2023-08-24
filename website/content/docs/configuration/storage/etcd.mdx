@@ -92,7 +92,15 @@ storage "etcd" {
 - `lock_timeout` `(string: "15s")` – Specifies lock timeout for master
   Vault instance. Set bigger value if you don't need faster recovery.
 
-## `etcd` examples
+- `max_receive_size` `(int)` – Specifies the client-side response receive limit.
+Make sure that "max_receive_size" >= server-side default send/recv limit.
+("--max-request-bytes" flag to etcd or "embed.Config.MaxRequestBytes").
+
+- `max_send_size` `(int)` – Specifies the client-side request send limit in bytes.
+Make sure that "max_send_size" < server-side default send/recv limit.
+("--max-request-bytes" flag to etcd or "embed.Config.MaxRequestBytes").
+
+## `etcd` Examples
 
 ### DNS discovery of cluster members
 

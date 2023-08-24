@@ -51,6 +51,8 @@ func doTwoPhaseLogin(t *testing.T, client *api.Client, totpCodePath, methodID, u
 }
 
 func TestLoginMfaGenerateTOTPTestAuditIncluded(t *testing.T) {
+	t.Setenv("VAULT_AUDIT_DISABLE_EVENTLOGGER", "true")
+
 	noop := corehelpers.TestNoopAudit(t, nil)
 
 	cluster := vault.NewTestCluster(t, &vault.CoreConfig{

@@ -15,6 +15,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	log "github.com/hashicorp/go-hclog"
@@ -89,7 +90,7 @@ type DynamoDBBackend struct {
 	client     *dynamodb.DynamoDB
 	logger     log.Logger
 	haEnabled  bool
-	permitPool *physical.PermitPool
+	permitPool *PermitPoolWithMetrics
 }
 
 // DynamoDBRecord is the representation of a vault entry in
@@ -120,6 +121,12 @@ type DynamoDBLockRecord struct {
 	Value    []byte
 	Identity []byte
 	Expires  int64
+}
+
+type PermitPoolWithMetrics struct {
+	physical.PermitPool
+	pendingPermits int32
+	poolSize       int
 }
 
 // NewDynamoDBBackend constructs a DynamoDB backend. If the
@@ -248,7 +255,7 @@ func NewDynamoDBBackend(conf map[string]string, logger log.Logger) (physical.Bac
 	return &DynamoDBBackend{
 		table:      table,
 		client:     client,
-		permitPool: physical.NewPermitPool(maxParInt),
+		permitPool: NewPermitPoolWithMetrics(maxParInt),
 		haEnabled:  haEnabledBool,
 		logger:     logger,
 	}, nil
@@ -908,4 +915,40 @@ func isConditionCheckFailed(err error) bool {
 	}
 
 	return false
+}
+
+// NewPermitPoolWithMetrics returns a new permit pool with the provided
+// number of permits which emits metrics
+func NewPermitPoolWithMetrics(permits int) *PermitPoolWithMetrics {
+	return &PermitPoolWithMetrics{
+		PermitPool:     *physical.NewPermitPool(permits),
+		pendingPermits: 0,
+		poolSize:       permits,
+	}
+}
+
+// Acquire returns when a permit has been acquired
+func (c *PermitPoolWithMetrics) Acquire() {
+	atomic.AddInt32(&c.pendingPermits, 1)
+	c.emitPermitMetrics()
+	c.PermitPool.Acquire()
+	atomic.AddInt32(&c.pendingPermits, -1)
+	c.emitPermitMetrics()
+}
+
+// Release returns a permit to the pool
+func (c *PermitPoolWithMetrics) Release() {
+	c.PermitPool.Release()
+	c.emitPermitMetrics()
+}
+
+// Get the number of requests in the permit pool
+func (c *PermitPoolWithMetrics) CurrentPermits() int {
+	return c.PermitPool.CurrentPermits()
+}
+
+func (c *PermitPoolWithMetrics) emitPermitMetrics() {
+	metrics.SetGauge([]string{"dynamodb", "permit_pool", "pending_permits"}, float32(c.pendingPermits))
+	metrics.SetGauge([]string{"dynamodb", "permit_pool", "active_permits"}, float32(c.PermitPool.CurrentPermits()))
+	metrics.SetGauge([]string{"dynamodb", "permit_pool", "pool_size"}, float32(c.poolSize))
 }

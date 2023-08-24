@@ -1,0 +1,23 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: MPL-2.0
+ */
+
+// used in KV version diff view. https://github.com/benjamine/jsondiffpatch/tree/master
+
+.jsondiffpatch-deleted .jsondiffpatch-property-name,
+.jsondiffpatch-deleted pre,
+.jsondiffpatch-modified .jsondiffpatch-left-value pre,
+.jsondiffpatch-textdiff-deleted {
+  background: $red-500;
+}
+.jsondiffpatch-added .jsondiffpatch-property-name,
+.jsondiffpatch-added .jsondiffpatch-value pre,
+.jsondiffpatch-modified .jsondiffpatch-right-value pre,
+.jsondiffpatch-textdiff-added {
+  background: $green-500;
+}
+
+.jsondiffpatch-property-name {
+  color: $ui-gray-300;
+}
