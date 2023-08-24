@@ -360,7 +360,7 @@ jobs:
                   "type": "section",
                   "text": {
                     "type": "mrkdwn",
-                    "text": "CI failed on ${{ github.ref_name }}, go: ${{ needs.test-go.result }}, go-race: ${{ needs.test-go-race.result }}, go-testonly ${{ needs.test-go-testonly.result }}: ui: ${{ needs.test-ui.result }}"
+                    "text": "CI failed on ${{ github.ref_name }}, go: ${{ needs.test-go.result }}, go-race: ${{ needs.test-go-race.result }}, go-testonly: ${{ needs.test-go-testonly.result }}: ui: ${{ needs.test-ui.result }}"
                   },
                   "accessory": {
                     "type": "button",
