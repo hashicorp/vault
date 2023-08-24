@@ -294,6 +294,7 @@ jobs:
     needs:
       - setup
       - test-go
+      - test-go-testonly
       - test-ui
     if: always()
     runs-on: ${{ fromJSON(needs.setup.outputs.compute-small) }}
@@ -306,8 +307,8 @@ jobs:
       always() &&
       github.repository == 'hashicorp/vault' &&
       (needs.test-go.result == 'failure' || needs.test-go-race.result == 'failure' 
-      || needs.test-go-testonly.result == 'failure' || needs.test-ui.result == 'failure') &&
-      (github.ref_name == 'main' || startsWith(github.ref_name, 'release/'))
+      || needs.test-go-testonly.result == 'failure' || needs.test-ui.result == 'failure')
+#      && (github.ref_name == 'main' || startsWith(github.ref_name, 'release/'))
     runs-on: ubuntu-latest
     permissions:
       id-token: write
@@ -327,7 +328,7 @@ jobs:
         env:
           SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
         with:
-          channel-id: "C05AABYEA9Y" # sent to #feed-vault-ci-official
+          channel-id: "DE0MRNZSQ" # "C05AABYEA9Y" # sent to #feed-vault-ci-official
           payload: |
             {
               "text": "OSS test failures on ${{ github.ref_name }}",
