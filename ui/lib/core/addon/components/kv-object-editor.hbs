@@ -21,7 +21,7 @@
       <div class="columns is-variable" data-test-kv-row>
         <div class="column is-one-quarter">
           <Input
-            data-test-kv-key={{true}}
+            data-test-kv-key={{index}}
             @value={{row.name}}
             placeholder={{this.placeholders.key}}
             {{on "change" (fn this.updateRow row index)}}
@@ -31,6 +31,13 @@
         <div class="column">
           {{#if (has-block)}}
             {{yield row this.kvData}}
+          {{else if @isMasked}}
+            <MaskedInput
+              data-test-kv-value={{index}}
+              @name={{row.name}}
+              @onChange={{fn this.updateRow row index}}
+              @value={{row.value}}
+            />
           {{else}}
             <Textarea
               data-test-kv-value={{index}}
@@ -47,7 +54,7 @@
         </div>
         <div class="column is-narrow">
           {{#if (eq this.kvData.length (inc index))}}
-            <button type="button" {{action "addRow"}} class="button is-outlined is-primary" data-test-kv-add-row={{true}}>
+            <button type="button" {{action "addRow"}} class="button is-outlined is-primary" data-test-kv-add-row={{index}}>
               Add
             </button>
           {{else}}

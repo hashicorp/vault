@@ -2,6 +2,11 @@
 # SPDX-License-Identifier: BUSL-1.1
 
 version: v1
+breaking:
+  use:
+    - FILE
+deps:
+  - buf.build/hashicorp/go-kms-wrapping
 lint:
   ignore_only:
     ENUM_VALUE_PREFIX:

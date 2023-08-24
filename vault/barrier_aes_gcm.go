@@ -153,7 +153,7 @@ func (b *AESGCMBarrier) Initialized(ctx context.Context) (bool, error) {
 
 // Initialize works only if the barrier has not been initialized
 // and makes use of the given root key.
-func (b *AESGCMBarrier) Initialize(ctx context.Context, key, sealKey []byte, reader io.Reader) error {
+func (b *AESGCMBarrier) Initialize(ctx context.Context, key []byte, sealKey []byte, reader io.Reader) error {
 	// Verify the key size
 	min, max := b.KeyLength()
 	if len(key) < min || len(key) > max {
@@ -168,7 +168,7 @@ func (b *AESGCMBarrier) Initialize(ctx context.Context, key, sealKey []byte, rea
 	}
 
 	// Generate encryption key
-	encrypt, err := b.GenerateKey(reader)
+	encryptionKey, err := b.GenerateKey(reader)
 	if err != nil {
 		return fmt.Errorf("failed to generate encryption key: %w", err)
 	}
@@ -179,7 +179,7 @@ func (b *AESGCMBarrier) Initialize(ctx context.Context, key, sealKey []byte, rea
 	keyring, err = keyring.AddKey(&Key{
 		Term:    1,
 		Version: 1,
-		Value:   encrypt,
+		Value:   encryptionKey,
 	})
 	if err != nil {
 		return fmt.Errorf("failed to create keyring: %w", err)
@@ -191,7 +191,7 @@ func (b *AESGCMBarrier) Initialize(ctx context.Context, key, sealKey []byte, rea
 	}
 
 	if len(sealKey) > 0 {
-		primary, err := b.aeadFromKey(encrypt)
+		primary, err := b.aeadFromKey(encryptionKey)
 		if err != nil {
 			return err
 		}
