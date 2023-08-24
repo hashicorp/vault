@@ -71,7 +71,7 @@ export default Route.extend({
     const secretEngine = this.store.peekRecord('secret-engine', backend);
     const type = secretEngine?.engineType;
     assert('secretEngine.engineType is not defined', !!type);
-    const engineRoute = allEngines().findBy('type', type)?.engineRoute;
+    const indexRoute = allEngines().findBy('type', type)?.indexRoute;
 
     if (!type || !SUPPORTED_BACKENDS.includes(type)) {
       return this.router.transitionTo('vault.cluster.secrets');
@@ -79,8 +79,8 @@ export default Route.extend({
     if (this.routeName === 'vault.cluster.secrets.backend.list' && !secret.endsWith('/')) {
       return this.router.replaceWith('vault.cluster.secrets.backend.list', secret + '/');
     }
-    if (engineRoute) {
-      return this.router.transitionTo(`vault.cluster.secrets.backend.${engineRoute}`, backend);
+    if (indexRoute) {
+      return this.router.transitionTo(`vault.cluster.secrets.backend.${indexRoute}`, backend);
     }
     const modelType = this.getModelType(backend, tab);
     return this.pathHelp.getNewModel(modelType, backend).then(() => {

@@ -152,7 +152,7 @@ export default class SecretEngineModel extends Model {
   }
 
   get backendLink() {
-    const route = allEngines().findBy('type', this.engineType)?.engineRoute || 'list-root';
+    const route = allEngines().findBy('type', this.engineType)?.indexRoute || 'list-root';
     return `vault.cluster.secrets.backend.${route}`;
   }
 

@@ -9,7 +9,7 @@ const ENTERPRISE_SECRET_ENGINES = [
   {
     displayName: 'KMIP',
     type: 'kmip',
-    engineRoute: 'kmip.scopes',
+    indexRoute: 'kmip',
     category: 'generic',
     requiredFeature: 'KMIP',
   },
@@ -60,7 +60,7 @@ const MOUNTABLE_SECRET_ENGINES = [
   {
     displayName: 'Databases',
     type: 'database',
-    engineRoute: 'overview',
+    indexRoute: 'overview',
     category: 'infra',
   },
   {
@@ -88,7 +88,7 @@ const MOUNTABLE_SECRET_ENGINES = [
   {
     displayName: 'PKI Certificates',
     type: 'pki',
-    engineRoute: 'pki.overview',
+    indexRoute: 'pki',
     category: 'generic',
   },
   {
@@ -115,7 +115,7 @@ const MOUNTABLE_SECRET_ENGINES = [
     displayName: 'Kubernetes',
     value: 'kubernetes',
     type: 'kubernetes',
-    engineRoute: 'kubernetes.overview',
+    indexRoute: 'kubernetes',
     category: 'generic',
     glyph: 'kubernetes-color',
   },
