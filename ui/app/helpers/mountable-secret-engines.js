@@ -60,6 +60,7 @@ const MOUNTABLE_SECRET_ENGINES = [
   {
     displayName: 'Databases',
     type: 'database',
+    engineRoute: 'overview',
     category: 'infra',
   },
   {

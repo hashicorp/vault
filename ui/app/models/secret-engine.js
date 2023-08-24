@@ -9,6 +9,7 @@ import { equal } from '@ember/object/computed'; // eslint-disable-line
 import { withModelValidations } from 'vault/decorators/model-validations';
 import { withExpandedAttributes } from 'vault/decorators/model-expanded-attributes';
 import { supportedSecretBackends } from 'vault/helpers/supported-secret-backends';
+import { allEngines } from 'vault/helpers/mountable-secret-engines';
 
 const LINKED_BACKENDS = supportedSecretBackends();
 
@@ -151,13 +152,8 @@ export default class SecretEngineModel extends Model {
   }
 
   get backendLink() {
-    if (this.engineType === 'kmip') {
-      return 'vault.cluster.secrets.backend.kmip.scopes';
-    }
-    if (this.engineType === 'database') {
-      return 'vault.cluster.secrets.backend.overview';
-    }
-    return 'vault.cluster.secrets.backend.list-root';
+    const route = allEngines().findBy('type', this.engineType)?.engineRoute || 'list-root';
+    return `vault.cluster.secrets.backend.${route}`;
   }
 
   get localDisplay() {
