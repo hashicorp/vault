@@ -141,6 +141,9 @@ func (c *SQLConnectionProducer) Init(ctx context.Context, conf map[string]interf
 			return nil, fmt.Errorf("unable to generate UUID for IAM configuration: %w", err)
 		}
 		c.isCloud = true
+
+		// There are a few important points to keep in mind with this line of code, for more information
+		// see the connection_producer.go
 		_, err := c.registerDrivers(c.cloudDriverName, c.Credentials)
 		if err != nil {
 			return nil, err

@@ -145,6 +145,10 @@ func (c *mySQLConnectionProducer) Init(ctx context.Context, conf map[string]inte
 		// is registered. This means that either we can't hide the name of the dialer from the user OR we have to rewrite
 		// the DSN after the user provides it. We already do this, KIND OF for the TLS config, but this modification
 		// is much more dramatic.
+		//
+		// Another potentially latent issue is that it is difficult to clear out the driver (or its underlying dialer)
+		// if the config changes or if the backend is deleted. This has the potential to become a bit of an issue if
+		// somehow millions upon millions of configs are written.
 		_, err := registerDriverMySQL(c.cloudDriverName, credentials)
 		if err != nil {
 			return nil, err
