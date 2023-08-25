@@ -3,18 +3,9 @@
  * SPDX-License-Identifier: BUSL-1.1
  */
 
-import {
-  click,
-  visit,
-  settled,
-  currentURL,
-  currentRouteName,
-  fillIn,
-  triggerKeyEvent,
-  typeIn,
-} from '@ember/test-helpers';
+import { click, visit, settled, currentURL, currentRouteName } from '@ember/test-helpers';
 import { create } from 'ember-cli-page-object';
-import { module, skip, test } from 'qunit';
+import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
 import { v4 as uuidv4 } from 'uuid';
 import { setupMirage } from 'ember-cli-mirage/test-support';
@@ -22,13 +13,11 @@ import { setupMirage } from 'ember-cli-mirage/test-support';
 import editPage from 'vault/tests/pages/secrets/backend/kv/edit-secret';
 import showPage from 'vault/tests/pages/secrets/backend/kv/show';
 import listPage from 'vault/tests/pages/secrets/backend/list';
-import assertSecretWrap from 'vault/tests/helpers/secret-edit-toolbar';
 
 import mountSecrets from 'vault/tests/pages/settings/mount-secret-backend';
 import authPage from 'vault/tests/pages/auth';
 import logout from 'vault/tests/pages/logout';
 import consoleClass from 'vault/tests/pages/components/console/ui-panel';
-import enablePage from 'vault/tests/pages/settings/mount-secret-backend';
 
 const consoleComponent = create(consoleClass);
 
@@ -75,258 +64,6 @@ module('Acceptance | secrets/secret/create, read, delete', function (hooks) {
 
   hooks.afterEach(async function () {
     this.server.shutdown();
-  });
-
-  test('it creates a secret and redirects', async function (assert) {
-    assert.expect(6);
-    const secretPath = `kv-path-${this.uid}`;
-    const path = `kv-engine-${this.uid}`;
-    await enablePage.enable('kv', path);
-    await listPage.visitRoot({ backend: path });
-    await settled();
-    assert.strictEqual(
-      currentRouteName(),
-      'vault.cluster.secrets.backend.list-root',
-      'navigates to the list page'
-    );
-    await listPage.create();
-    await settled();
-    await editPage.toggleMetadata();
-    await settled();
-    assert.ok(editPage.hasMetadataFields, 'shows the metadata form');
-    await editPage.createSecret(secretPath, 'foo', 'bar');
-    await settled();
-
-    assert.strictEqual(
-      currentRouteName(),
-      'vault.cluster.secrets.backend.show',
-      'redirects to the show page'
-    );
-    await assertSecretWrap(assert, this.server, `${path}/data/${secretPath}`);
-    assert.ok(showPage.editIsPresent, 'shows the edit button');
-    await deleteEngine(path, assert);
-  });
-
-  test('it can create a secret when check-and-set is required', async function (assert) {
-    assert.expect(3);
-    const enginePath = `kv-secret-${this.uid}`;
-    const secretPath = 'foo/bar';
-    await mountSecrets.visit();
-    await mountSecrets.enable('kv', enginePath);
-    await consoleComponent.runCommands(`write ${enginePath}/config cas_required=true`);
-    await writeSecret(enginePath, secretPath, 'foo', 'bar');
-    assert.strictEqual(
-      currentRouteName(),
-      'vault.cluster.secrets.backend.show',
-      'redirects to the show page'
-    );
-    assert.ok(showPage.editIsPresent, 'shows the edit button');
-    await deleteEngine(enginePath, assert);
-  });
-
-  test('it can create a secret with a non default max version and add metadata', async function (assert) {
-    assert.expect(4);
-    const enginePath = `kv-secret-${this.uid}`;
-    const secretPath = 'maxVersions';
-    const maxVersions = 101;
-    await mountSecrets.visit();
-    await mountSecrets.enable('kv', enginePath);
-    await settled();
-    await editPage.startCreateSecret();
-    await editPage.path(secretPath);
-    await editPage.toggleMetadata();
-    await settled();
-    await editPage.maxVersion(maxVersions);
-    await settled();
-    await editPage.save();
-    await settled();
-    await editPage.metadataTab();
-    await settled();
-    const savedMaxVersions = Number(
-      document.querySelector('[data-test-value-div="Maximum versions"]').innerText
-    );
-    assert.strictEqual(
-      maxVersions,
-      savedMaxVersions,
-      'max_version displays the saved number set when creating the secret'
-    );
-    // add metadata
-    await click('[data-test-add-custom-metadata]');
-    await fillIn('[data-test-kv-key]', 'key');
-    await fillIn('[data-test-kv-value]', 'value');
-    await click('[data-test-save-metadata]');
-    const key = document.querySelector('[data-test-row-label="key"]').innerText;
-    const value = document.querySelector('[data-test-row-value="key"]').innerText;
-    assert.strictEqual(key, 'key', 'metadata key displays after adding it.');
-    assert.strictEqual(value, 'value', 'metadata value displays after adding it.');
-    await deleteEngine(enginePath, assert);
-  });
-
-  skip('it can handle validation on custom metadata', async function (assert) {
-    assert.expect(3);
-    const enginePath = `kv-secret-${this.uid}`;
-    const secretPath = 'customMetadataValidations';
-
-    await mountSecrets.visit();
-    await mountSecrets.enable('kv', enginePath);
-    await settled();
-    await editPage.startCreateSecret();
-    await editPage.path(secretPath);
-    await editPage.toggleMetadata();
-    await settled();
-    await typeIn('[data-test-kv-value]', 'invalid\\/');
-    assert
-      .dom('[data-test-inline-error-message]')
-      .hasText('Custom values cannot contain a backward slash.', 'will not allow backward slash in value.');
-    await fillIn('[data-test-kv-value]', ''); // clear previous contents
-    await typeIn('[data-test-kv-value]', 'removed!');
-    assert.dom('[data-test-inline-error-message]').doesNotExist('inline error goes away');
-    await click('[data-test-secret-save]');
-    assert
-      .dom('[data-test-message-error]')
-      .includesText(
-        'custom_metadata validation failed: length of key',
-        'shows API error that is not captured by validation'
-      );
-    await deleteEngine(enginePath, assert);
-  });
-
-  test('it can mount a KV 2 secret engine with config metadata', async function (assert) {
-    assert.expect(4);
-    const enginePath = `kv-secret-${this.uid}`;
-    const maxVersion = '101';
-    await mountSecrets.visit();
-    await click('[data-test-mount-type="kv"]');
-
-    await click('[data-test-mount-next]');
-
-    await fillIn('[data-test-input="path"]', enginePath);
-    await fillIn('[data-test-input="maxVersions"]', maxVersion);
-    await click('[data-test-input="casRequired"]');
-    await click('[data-test-toggle-label="Automate secret deletion"]');
-    await fillIn('[data-test-select="ttl-unit"]', 's');
-    await fillIn('[data-test-ttl-value="Automate secret deletion"]', '1');
-    await click('[data-test-mount-submit="true"]');
-
-    await click('[data-test-configuration-tab]');
-
-    const cas = document.querySelector('[data-test-value-div="Require Check and Set"]').innerText;
-    const deleteVersionAfter = document.querySelector(
-      '[data-test-value-div="Automate secret deletion"]'
-    ).innerText;
-    const savedMaxVersion = document.querySelector(
-      '[data-test-value-div="Maximum number of versions"]'
-    ).innerText;
-
-    assert.strictEqual(
-      maxVersion,
-      savedMaxVersion,
-      'displays the max version set when configuring the secret-engine'
-    );
-    assert.strictEqual(cas.trim(), 'Yes', 'displays the cas set when configuring the secret-engine');
-    assert.strictEqual(
-      deleteVersionAfter.trim(),
-      '1 second',
-      'displays the delete version after set when configuring the secret-engine'
-    );
-    await deleteEngine(enginePath, assert);
-  });
-
-  test('it can create a secret and metadata can be created and edited', async function (assert) {
-    assert.expect(2);
-    const enginePath = `kv-secret-${this.uid}`;
-    const secretPath = 'metadata';
-    const maxVersions = 101;
-    await mountSecrets.visit();
-    await mountSecrets.enable('kv', enginePath);
-    await settled();
-    await editPage.startCreateSecret();
-    await editPage.path(secretPath);
-    await editPage.toggleMetadata();
-    await settled();
-    await fillIn('[data-test-input="maxVersions"]', maxVersions);
-
-    await editPage.save();
-    await settled();
-    await editPage.metadataTab();
-    await settled();
-    const savedMaxVersions = Number(document.querySelectorAll('[data-test-value-div]')[0].innerText);
-    assert.strictEqual(
-      maxVersions,
-      savedMaxVersions,
-      'max_version displays the saved number set when creating the secret'
-    );
-    await deleteEngine(enginePath, assert);
-  });
-
-  test('it shows validation errors', async function (assert) {
-    assert.expect(5);
-    const enginePath = `kv-secret-${this.uid}`;
-    const secretPath = 'not-duplicate';
-    await mountSecrets.visit();
-    await mountSecrets.enable('kv', enginePath);
-    await settled();
-    await editPage.startCreateSecret();
-    await typeIn('[data-test-secret-path="true"]', 'beep');
-    assert
-      .dom('[data-test-inline-error-message]')
-      .hasText(
-        'A secret with this path already exists.',
-        'when duplicate path it shows correct error message'
-      );
-
-    await editPage.toggleMetadata();
-    await settled();
-    await typeIn('[data-test-input="maxVersions"]', 'abc');
-    assert
-      .dom('[data-test-input="maxVersions"]')
-      .hasClass('has-error-border', 'shows border error on input with error');
-    assert.dom('[data-test-secret-save]').isNotDisabled('Save button is disabled');
-    await fillIn('[data-test-input="maxVersions"]', 20); // fillIn replaces the text, whereas typeIn only adds to it.
-    await triggerKeyEvent('[data-test-input="maxVersions"]', 'keyup', 65);
-    await editPage.path(secretPath);
-    await triggerKeyEvent('[data-test-secret-path="true"]', 'keyup', 65);
-    await click('[data-test-secret-save]');
-    assert.strictEqual(
-      currentURL(),
-      `/vault/secrets/${enginePath}/show/${secretPath}`,
-      'navigates to show secret'
-    );
-    await deleteEngine(enginePath, assert);
-  });
-
-  test('it navigates to version history and to a specific version', async function (assert) {
-    assert.expect(6);
-    const enginePath = `kv-secret-${this.uid}`;
-    const secretPath = `specific-version`;
-    await mountSecrets.visit();
-    await mountSecrets.enable('kv', enginePath);
-    await settled();
-    await listPage.visitRoot({ backend: enginePath });
-    await settled();
-    await listPage.create();
-    await settled();
-    await editPage.createSecret(secretPath, 'foo', 'bar');
-    await click('[data-test-popup-menu-trigger="version"]');
-
-    assert.dom('[data-test-created-time]').includesText('Version created ', 'shows version created time');
-
-    await click('[data-test-version-history]');
-
-    assert
-      .dom('[data-test-list-item-content]')
-      .includesText('Version 1 Current', 'shows version one data on the version history as current');
-    assert.dom('[data-test-list-item-content]').exists({ count: 1 }, 'renders a single version');
-
-    await click('.linked-block');
-    await click('button.button.masked-input-toggle');
-    assert.dom('[data-test-masked-input]').hasText('bar', 'renders secret on the secret version show page');
-    assert.strictEqual(
-      currentURL(),
-      `/vault/secrets/${enginePath}/show/${secretPath}?version=1`,
-      'redirects to the show page with queryParam version=1'
-    );
-    await deleteEngine(enginePath, assert);
   });
 
   test('version 1 performs the correct capabilities lookup and does not show metadata tab', async function (assert) {
@@ -517,39 +254,6 @@ module('Acceptance | secrets/secret/create, read, delete', function (hooks) {
       );
     }
     await deleteEngine(backend, assert);
-  });
-
-  test('create secret with space shows version data and shows space warning', async function (assert) {
-    assert.expect(4);
-    const enginePath = `kv-engine-${this.uid}`;
-    const secretPath = 'space space';
-    // mount version 2
-    await mountSecrets.visit();
-    await mountSecrets.selectType('kv');
-    await mountSecrets.next().path(enginePath).submit();
-    await settled();
-    await listPage.create();
-    await editPage.createSecretDontSave(secretPath, 'foo', 'bar');
-    // to trigger warning need to hit keyup on the secret path
-    await triggerKeyEvent('[data-test-secret-path="true"]', 'keyup', 65);
-
-    assert.dom('[data-test-whitespace-warning]').exists('renders warning about their being a space');
-    await settled();
-    await click('[data-test-secret-save]');
-
-    await click('[data-test-popup-menu-trigger="version"]');
-
-    await click('[data-test-version-history]');
-
-    assert.dom('[data-test-list-item-content]').exists('renders the version and not an error state');
-    // click on version
-    await click('[data-test-popup-menu-trigger="true"]');
-    await click('[data-test-version]');
-
-    // perform encode function that should be done by the encodePath
-    const encodedSecretPath = secretPath.replace(/ /g, '%20');
-    assert.strictEqual(currentURL(), `/vault/secrets/${enginePath}/show/${encodedSecretPath}?version=1`);
-    await deleteEngine(enginePath, assert);
   });
 
   test('UI handles secret with % in path correctly', async function (assert) {

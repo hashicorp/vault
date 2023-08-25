@@ -16,6 +16,7 @@ import consoleClass from 'vault/tests/pages/components/console/ui-panel';
 import logout from 'vault/tests/pages/logout';
 import mountSecrets from 'vault/tests/pages/settings/mount-secret-backend';
 import { allEngines } from 'vault/helpers/mountable-secret-engines';
+import { supportedSecretBackends } from 'vault/helpers/supported-secret-backends';
 
 const consoleComponent = create(consoleClass);
 
@@ -180,7 +181,7 @@ module('Acceptance | settings/mount-secret-backend', function (hooks) {
       );
     assert.strictEqual(
       currentURL(),
-      `/vault/secrets/${enginePath}/list`,
+      `/vault/secrets/${enginePath}/kv/list`,
       'After mounting, redirects to secrets list page'
     );
     await configPage.visit({ backend: enginePath });
@@ -188,19 +189,103 @@ module('Acceptance | settings/mount-secret-backend', function (hooks) {
     assert.dom('[data-test-row-value="Maximum number of versions"]').hasText('Not set');
   });
 
-  test('it should transition to engine route on success if defined in mount config', async function (assert) {
+  // TEST TRANSITIONS AFTER MOUNTING
+  test('it should transition to mountable addon engine after mount success', async function (assert) {
+    assert.expect(3);
+    const addons = allEngines().filter((e) => supportedSecretBackends().includes(e.type) && e.engineRoute);
+
+    for (const engine of addons) {
+      await consoleComponent.runCommands([
+        // delete any previous mount with same name
+        `delete sys/mounts/${engine.type}`,
+      ]);
+      await mountSecrets.visit();
+      await mountSecrets.selectType(engine.type);
+      await mountSecrets.next().path(engine.type).submit();
+
+      assert.strictEqual(
+        currentRouteName(),
+        `vault.cluster.secrets.backend.${engine.engineRoute}`,
+        `Transitions to ${engine} route on mount success`
+      );
+    }
+  });
+
+  test('it should transition to mountable non-addon engine after mount success', async function (assert) {
+    assert.expect(engines.length);
+    const engines = allEngines().filter((e) => supportedSecretBackends().includes(e.type) && !e.engineRoute);
+
+    for (const engine of engines) {
+      if (engine.type === 'kv') continue; // exist loop because kv is special so we test separately
+      await consoleComponent.runCommands([
+        // delete any previous mount with same name
+        `delete sys/mounts/${engine.type}`,
+      ]);
+      await mountSecrets.visit();
+      await mountSecrets.selectType(engine.type);
+      await mountSecrets.next().path(engine.type).submit();
+
+      assert.strictEqual(
+        currentRouteName(),
+        `vault.cluster.secrets.backend.list-root`,
+        `${engine.type} navigates to list view`
+      );
+    }
+  });
+
+  test('it should transition back to backend list for unsupported backends', async function (assert) {
+    assert.expect(unsupported.length);
+    const unsupported = allEngines().filter((e) => !supportedSecretBackends().includes(e.type));
+
+    for (const engine of unsupported) {
+      await consoleComponent.runCommands([
+        // delete any previous mount with same name
+        `delete sys/mounts/${engine.type}`,
+      ]);
+      await mountSecrets.visit();
+      await mountSecrets.selectType(engine.type);
+      await mountSecrets.next().path(engine.type).submit();
+
+      assert.strictEqual(
+        currentRouteName(),
+        `vault.cluster.secrets.backends`,
+        `${engine.type} returns to backends list`
+      );
+    }
+  });
+
+  test('it should transition to different locations for kv v1 and v2', async function (assert) {
+    assert.expect(4);
+    const v2 = 'kv-v2';
     await consoleComponent.runCommands([
       // delete any previous mount with same name
-      `delete sys/mounts/kubernetes`,
+      `delete sys/mounts/${v2}`,
     ]);
     await mountSecrets.visit();
-    await mountSecrets.selectType('kubernetes');
-    await mountSecrets.next().path('kubernetes').submit();
-    const { engineRoute } = allEngines().findBy('type', 'kubernetes');
+    await mountSecrets.selectType('kv');
+    await mountSecrets.next().path(v2).submit();
+
+    assert.strictEqual(currentURL(), `/vault/secrets/${v2}/kv/list`, `${v2} navigates to list url`);
     assert.strictEqual(
       currentRouteName(),
-      `vault.cluster.secrets.backend.${engineRoute}`,
-      'Transitions to engine route on mount success'
+      `vault.cluster.secrets.backend.kv.list`,
+      `${v2} navigates to list url`
+    );
+
+    const v1 = 'kv-v1';
+    await consoleComponent.runCommands([
+      // delete any previous mount with same name
+      `delete sys/mounts/${v1}`,
+    ]);
+    await mountSecrets.visit();
+    await mountSecrets.selectType('kv');
+    await mountSecrets.next().path(v1).toggleOptions().version(1).submit();
+
+    assert.strictEqual(currentURL(), `/vault/secrets/${v1}/list`, `${v1} navigates to list url`);
+    assert.strictEqual(
+      currentRouteName(),
+      `vault.cluster.secrets.backend.list-root`,
+      `${v1} navigates to list route`
     );
   });
 });

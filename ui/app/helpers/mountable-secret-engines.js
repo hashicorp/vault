@@ -77,6 +77,7 @@ const MOUNTABLE_SECRET_ENGINES = [
   {
     displayName: 'KV',
     type: 'kv',
+    engineRoute: 'kv',
     category: 'generic',
   },
   {
@@ -126,6 +127,12 @@ export function mountableEngines() {
 
 export function allEngines() {
   return [...MOUNTABLE_SECRET_ENGINES, ...ENTERPRISE_SECRET_ENGINES];
+}
+
+export function isAddonEngine(type, version) {
+  const engineRoute = allEngines().findBy('type', type)?.engineRoute;
+  if (type === 'kv' && version === 1) return false;
+  return !!engineRoute;
 }
 
 export default buildHelper(mountableEngines);

@@ -156,7 +156,7 @@ export default class MountBackendForm extends Component {
         this.args.mountType === 'secret' ? 'secrets engine' : 'auth method'
       } at ${path}.`
     );
-    yield this.args.onMountSuccess(type, path);
+    yield this.args.onMountSuccess(type, path, mountModel);
     return;
   }
 

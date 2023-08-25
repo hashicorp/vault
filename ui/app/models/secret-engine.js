@@ -9,7 +9,7 @@ import { equal } from '@ember/object/computed'; // eslint-disable-line
 import { withModelValidations } from 'vault/decorators/model-validations';
 import { withExpandedAttributes } from 'vault/decorators/model-expanded-attributes';
 import { supportedSecretBackends } from 'vault/helpers/supported-secret-backends';
-import { allEngines } from 'vault/helpers/mountable-secret-engines';
+import { isAddonEngine, allEngines } from 'vault/helpers/mountable-secret-engines';
 
 const LINKED_BACKENDS = supportedSecretBackends();
 
@@ -155,10 +155,9 @@ export default class SecretEngineModel extends Model {
     if (this.engineType === 'database') {
       return 'vault.cluster.secrets.backend.overview';
     }
-    const isAddonEngine = allEngines().findBy('type', this.engineType)?.engineRoute;
-    // only kv v2 is an addon engine
-    if (isAddonEngine || (this.engineType === 'kv' && this.isV2KV)) {
-      return `vault.cluster.secrets.backend.${this.engineType}`;
+    if (isAddonEngine(this.engineType, this.version)) {
+      const { engineRoute } = allEngines().findBy('type', this.engineType);
+      return `vault.cluster.secrets.backend.${engineRoute}`;
     }
     return `vault.cluster.secrets.backend.list-root`;
   }
