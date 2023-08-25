@@ -14,11 +14,11 @@
           </LinkToExternal>
         {{else if breadcrumb.route}}
           {{#if breadcrumb.model}}
-            <LinkTo @route={{breadcrumb.route}} @model={{breadcrumb.model}}>
+            <LinkTo @route={{breadcrumb.route}} @model={{breadcrumb.model}} data-test-breadcrumb={{breadcrumb.label}}>
               {{breadcrumb.label}}
             </LinkTo>
           {{else}}
-            <LinkTo @route={{breadcrumb.route}}>
+            <LinkTo @route={{breadcrumb.route}} data-test-breadcrumb={{breadcrumb.label}}>
               {{breadcrumb.label}}
             </LinkTo>
           {{/if}}
