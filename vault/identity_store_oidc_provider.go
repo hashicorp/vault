@@ -178,6 +178,7 @@ type authCodeCacheEntry struct {
 	authTime            time.Time
 	codeChallenge       string
 	codeChallengeMethod string
+	state               string
 }
 
 func oidcProviderPaths(i *IdentityStore) []*framework.Path {
@@ -1797,6 +1798,7 @@ func (i *IdentityStore) pathOIDCAuthorize(ctx context.Context, req *logical.Requ
 		redirectURI: redirectURI,
 		nonce:       nonce,
 		scopes:      scopes,
+		state:       state,
 	}
 
 	// Validate the Proof Key for Code Exchange (PKCE) code challenge and code challenge
@@ -2133,6 +2135,16 @@ func (i *IdentityStore) pathOIDCToken(ctx context.Context, req *logical.Request,
 	// Add the auth_time claim if it's not the zero time instant
 	if !authCodeEntry.authTime.IsZero() {
 		idToken.AuthTime = authCodeEntry.authTime.Unix()
+	}
+
+	// Compute the state hash claim (s_hash)
+	// https://openid.net/specs/openid-financial-api-part-2-1_0.html#rfc.section.5.1.1
+	if authCodeEntry.state != "" {
+		sHash, err := computeHashClaim(key.Algorithm, authCodeEntry.state)
+		if err != nil {
+			return tokenResponse(nil, ErrTokenServerError, err.Error())
+		}
+		idToken.StateHash = sHash
 	}
 
 	// Populate each of the requested scope templates

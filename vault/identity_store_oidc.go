@@ -84,6 +84,7 @@ type idToken struct {
 	AuthTime        int64  `json:"auth_time"` // AuthTime given in OIDC authentication requests
 	AccessTokenHash string `json:"at_hash"`   // Access token hash value
 	CodeHash        string `json:"c_hash"`    // Authorization code hash value
+	StateHash       string `json:"s_hash"`    // State hash value - https://openid.net/specs/openid-financial-api-part-2-1_0.html#rfc.section.5.1.1
 }
 
 // discovery contains a subset of the required elements of OIDC discovery needed
@@ -118,7 +119,7 @@ var (
 	reservedClaims = []string{
 		"iat", "aud", "exp", "iss",
 		"sub", "namespace", "nonce",
-		"auth_time", "at_hash", "c_hash",
+		"auth_time", "at_hash", "c_hash", "s_hash",
 	}
 	supportedAlgs = []string{
 		string(jose.RS256),
@@ -1034,6 +1035,9 @@ func (tok *idToken) generatePayload(logger hclog.Logger, templates ...string) ([
 	}
 	if len(tok.CodeHash) > 0 {
 		output["c_hash"] = tok.CodeHash
+	}
+	if len(tok.StateHash) > 0 {
+		output["s_hash"] = tok.StateHash
 	}
 
 	// Merge each of the populated JSON templates into output
