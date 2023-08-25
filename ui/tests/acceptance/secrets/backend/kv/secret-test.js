@@ -294,7 +294,7 @@ module('Acceptance | secrets/secret/create, read, delete', function (hooks) {
 
     // the web cli does not handle a quote as part of a path, so we test it here via the UI
     test('creating a secret with a single or double quote works properly', async function (assert) {
-      assert.expect(8);
+      assert.expect(6);
       const backend = this.backend;
       // await consoleComponent.runCommands(`write sys/mounts/${backend} type=kv`);
       const paths = ["'some", '"some'];
@@ -310,6 +310,7 @@ module('Acceptance | secrets/secret/create, read, delete', function (hooks) {
           'vault.cluster.secrets.backend.show',
           `${path}: show page renders correctly`
         );
+        assert.dom('h1.title').hasText(`${path}/2`, 'shows correct page title');
       }
     });
 
