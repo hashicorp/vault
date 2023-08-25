@@ -177,7 +177,7 @@ func prependNamespacePatterns(patterns []string, requestNamespace *namespace.Nam
 		if strings.Trim(strings.TrimSpace(pattern), "/") == "" {
 			continue
 		}
-		newPatterns = append(newPatterns, path.Join(prepend, strings.TrimPrefix(pattern, "/")))
+		newPatterns = append(newPatterns, path.Join(prepend, pattern, "/"))
 	}
 	return newPatterns
 }
