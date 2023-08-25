@@ -69,14 +69,13 @@ module('Acceptance | auth backend list', function (hooks) {
 
     await click('[data-test-save-config="true"]');
 
-    //confirming that the user was created. There was a bug where the apiPath was not being updated when toggling between auth routes
+    // Confirm that the user was created. There was a bug where the apiPath was not being updated when toggling between auth routes.
     assert
       .dom('[data-test-list-item-content]')
       .hasText(user2, 'user just created shows in current auth list');
 
-    //confirm that the auth method 1 shows the user1. There was a bug where the user was not listed when toggling between auth routes
+    // Confirm that the auth method 1 shows user1. There was a bug where the user was not listed when toggling between auth routes.
     await click('[data-test-access-methods]');
-    // clicking the linkedBlock from the list view can't be trusted because of pagination. The records are not cleared and the item could be pushed to the second page.
     await visit(`/vault/access/${path1}/item/user`);
     assert
       .dom('[data-test-list-item-content]')
