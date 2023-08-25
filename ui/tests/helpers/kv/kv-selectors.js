@@ -24,6 +24,9 @@ export const PAGE = {
   toolbarAction: 'nav.toolbar-actions .toolbar-link',
   secretRow: '[data-test-component="info-table-row"]',
   // specific page selectors
+  backends: {
+    link: (backend) => `[data-test-secrets-backend-link="${backend}"]`,
+  },
   metadata: {
     editBtn: '[data-test-edit-metadata]',
     addCustomMetadataBtn: '[data-test-add-custom-metadata]',
@@ -53,8 +56,11 @@ export const PAGE = {
   },
   versions: {
     icon: (version) => `[data-test-icon-holder="${version}"]`,
-    linkedBlock: (version) => `[data-test-version-linked-block="${version}"]`,
+    linkedBlock: (version) =>
+      version ? `[data-test-version-linked-block="${version}"]` : '[data-test-version-linked-block]',
     button: (version) => `[data-test-version-button="${version}"]`,
+    versionMenu: (version) => `[data-test-version-linked-block="${version}"] [data-test-popup-menu-trigger]`,
+    createFromVersion: (version) => `[data-test-create-new-version-from="${version}"]`,
   },
   create: {
     metadataSection: '[data-test-metadata-section]',
