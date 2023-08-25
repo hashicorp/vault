@@ -437,7 +437,7 @@ func (c *Core) CheckToken(ctx context.Context, req *logical.Request, unauth bool
 	c.activityLogLock.RUnlock()
 	// If it is an authenticated ( i.e. with vault token ) request, increment client count
 	if !unauth && activityLog != nil {
-		err := c.activityLog.HandleTokenUsage(ctx, te, clientID, isTWE)
+		err := activityLog.HandleTokenUsage(ctx, te, clientID, isTWE)
 		if err != nil {
 			return auth, te, err
 		}
