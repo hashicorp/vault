@@ -34,6 +34,7 @@ const (
 	databaseRolePath        = "role/"
 	databaseStaticRolePath  = "static-role/"
 	minRootCredRollbackAge  = 1 * time.Minute
+	scheduleOptionsDefault  = cron.Minute | cron.Hour | cron.Dom | cron.Month | cron.Dow
 )
 
 type dbPluginInstance struct {
@@ -129,12 +130,6 @@ func Backend(conf *logical.BackendConfig) *databaseBackend {
 	b.queueCtx, b.cancelQueueCtx = context.WithCancel(context.Background())
 	b.roleLocks = locksutil.CreateLocks()
 
-	// TODO(JM): don't allow seconds in production, this is helpful for
-	// development/testing though
-	parser := cron.NewParser(
-		cron.Second | cron.Minute | cron.Hour | cron.Dom | cron.Month | cron.DowOptional,
-	)
-	b.scheduleParser = parser
 	return &b
 }
 
@@ -185,7 +180,25 @@ type databaseBackend struct {
 	gaugeCollectionProcess     *metricsutil.GaugeCollectionProcess
 	gaugeCollectionProcessStop sync.Once
 
-	scheduleParser cron.Parser
+	// scheduleOptionsOverride is used by tests to set a custom ParseOption with seconds enabled
+	scheduleOptionsOverride cron.ParseOption
+}
+
+func (b *databaseBackend) ParseSchedule(rotationSchedule string) (*cron.SpecSchedule, error) {
+	scheduleOptions := scheduleOptionsDefault
+	if b.scheduleOptionsOverride != 0 {
+		scheduleOptions = b.scheduleOptionsOverride
+	}
+	parser := cron.NewParser(scheduleOptions)
+	schedule, err := parser.Parse(rotationSchedule)
+	if err != nil {
+		return nil, err
+	}
+	sched, ok := schedule.(*cron.SpecSchedule)
+	if !ok {
+		return nil, fmt.Errorf("invalid rotation schedule")
+	}
+	return sched, nil
 }
 
 func (b *databaseBackend) DatabaseConfig(ctx context.Context, s logical.Storage, name string) (*DatabaseConfig, error) {

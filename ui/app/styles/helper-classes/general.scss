@@ -116,6 +116,10 @@
   border-radius: $radius;
 }
 
+.border-radius-4 {
+  border-radius: $radius-large;
+}
+
 // border-spacing
 .is-border-spacing-revert {
   border-spacing: revert;

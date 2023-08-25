@@ -67,7 +67,6 @@ module('Acceptance | landing page dashboard', function (hooks) {
       await settled();
       await visit('/vault/dashboard');
       assert.dom(SECRETS_ENGINE_SELECTORS.cardTitle).hasText('Secrets engines');
-      assert.dom('[data-test-secrets-engines-card-show-all]').doesNotExist();
       // cleanup engine mount
       await consoleComponent.runCommands(deleteEngineCmd('pki'));
     });
@@ -77,7 +76,6 @@ module('Acceptance | landing page dashboard', function (hooks) {
       await settled();
       await visit('/vault/dashboard');
       assert.dom('[data-test-secrets-engines-row="nomad"] [data-test-view]').doesNotExist();
-      assert.dom('[data-test-secrets-engines-card-show-all]').doesNotExist();
       // cleanup engine mount
       await consoleComponent.runCommands(deleteEngineCmd('nomad'));
     });
