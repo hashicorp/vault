@@ -8,7 +8,7 @@ import { deleteEngineCmd, mountEngineCmd, runCmd, tokenWithPolicyCmd } from 'vau
 import { personas } from 'vault/tests/helpers/policy-generator/kv';
 import { clearRecords, writeVersionedSecret } from 'vault/tests/helpers/kv/kv-run-commands';
 import { FORM, PAGE } from 'vault/tests/helpers/kv/kv-selectors';
-import { setupControlGroup } from 'vault/tests/helpers/control-groups';
+import { grantAccessForWrite, setupControlGroup } from 'vault/tests/helpers/control-groups';
 
 /**
  * This test set is for testing the flow for creating new secrets and versions.
@@ -1001,12 +1001,14 @@ module('Acceptance | kv-v2 workflow | secret and version create', function (hook
 
   module('enterprise controlled access persona', function (hooks) {
     hooks.beforeEach(async function () {
+      this.controlGroup = this.owner.lookup('service:control-group');
       const userPolicy = `
 path "${this.backend}/data/*" {
   capabilities = ["create", "read", "update"]
   control_group = {
     max_ttl = "24h"
     factor "authorizer" {
+      controlled_capabilities = ["create", "update"]
       identity {
           group_names = ["managers"]
           approvals = 1
@@ -1024,8 +1026,142 @@ path "${this.backend}/metadata/*" {
 `;
       const { userToken } = await setupControlGroup({ userPolicy });
       this.userToken = userToken;
-      return authPage.login(userToken);
+      await authPage.login(userToken);
+      clearRecords(this.store);
+      return;
     });
-    // Copy test outline from admin persona
+    test('create & update root secret with default metadata (cg)', async function (assert) {
+      const backend = this.backend;
+      // Known issue: control groups do not work correctly in UI when encodable characters in path
+      const secretPath = 'some-secret';
+      await visit(`/vault/secrets/${backend}/kv/list`);
+      await click(PAGE.list.createSecret);
+
+      // Create secret form -- validations
+      await click(FORM.saveBtn);
+      assert.dom(FORM.invalidFormAlert).hasText('There is an error with this form.');
+      assert.dom(FORM.validation('path')).hasText("Path can't be blank.");
+      await typeIn(FORM.inputByAttr('path'), secretPath);
+      assert.dom(PAGE.create.metadataSection).doesNotExist('Hides metadata section by default');
+
+      await fillIn(FORM.keyInput(), 'api_key');
+      await fillIn(FORM.maskedValueInput(), 'partyparty');
+      await click(FORM.saveBtn);
+      let tokenToUnwrap = this.controlGroup.tokenToUnwrap;
+      assert.deepEqual(
+        Object.keys(tokenToUnwrap),
+        ['accessor', 'token', 'creation_path', 'creation_time', 'ttl'],
+        'stored tokenToUnwrap includes correct keys'
+      );
+      assert.strictEqual(
+        tokenToUnwrap.creation_path,
+        `${backend}/data/${secretPath}`,
+        'stored tokenToUnwrap includes correct creation path'
+      );
+      assert
+        .dom(FORM.messageError)
+        .includesText(
+          `Error A Control Group was encountered at ${backend}/data/${secretPath}.`,
+          'shows control group error'
+        );
+      await grantAccessForWrite({
+        accessor: tokenToUnwrap.accessor,
+        token: tokenToUnwrap.token,
+        creation_path: `${backend}/data/${secretPath}`,
+        originUrl: `/vault/secrets/${backend}/kv/create`,
+        userToken: this.userToken,
+      });
+      // In a real scenario the user would stay on page, but in the test
+      // we fill in the same info and try again
+      await typeIn(FORM.inputByAttr('path'), secretPath);
+      await fillIn(FORM.keyInput(), 'this can be anything');
+      await fillIn(FORM.maskedValueInput(), 'this too, gonna use the wrapped data');
+      await click(FORM.saveBtn);
+      assert.strictEqual(this.controlGroup.tokenToUnwrap, null, 'clears tokenToUnwrap after successful save');
+      // Details page
+      assert.strictEqual(
+        currentURL(),
+        `/vault/secrets/${backend}/kv/${secretPath}/details?version=1`,
+        'Goes to details page after save'
+      );
+      assert.dom(PAGE.detail.versionTimestamp).includesText('Version 1 created');
+      assert.dom(PAGE.secretRow).exists({ count: 1 }, '1 row of data shows');
+      assert.dom(PAGE.infoRowValue('api_key')).hasText('***********');
+      await click(PAGE.infoRowToggleMasked('api_key'));
+      assert.dom(PAGE.infoRowValue('api_key')).hasText('partyparty', 'secret value shows after toggle');
+
+      // Metadata page
+      await click(PAGE.secretTab('Metadata'));
+      assert
+        .dom(`${PAGE.metadata.customMetadataSection} ${PAGE.emptyStateTitle}`)
+        .hasText('No custom metadata', 'No custom metadata empty state');
+      assert
+        .dom(`${PAGE.metadata.secretMetadataSection} ${PAGE.secretRow}`)
+        .exists({ count: 4 }, '4 metadata rows show');
+      assert.dom(PAGE.infoRowValue('Maximum versions')).hasText('0', 'max versions shows 0');
+      assert.dom(PAGE.infoRowValue('Check-and-Set required')).hasText('No', 'cas not enforced');
+      assert
+        .dom(PAGE.infoRowValue('Delete version after'))
+        .hasText('Never delete', 'Delete version after has default 0s');
+
+      // Add new version
+      await click(PAGE.secretTab('Secret'));
+      await click(PAGE.detail.createNewVersion);
+      assert.dom(FORM.inputByAttr('path')).isDisabled('path input is disabled');
+      assert.dom(FORM.inputByAttr('path')).hasValue(secretPath);
+      assert.dom(FORM.toggleMetadata).doesNotExist('Does not show metadata toggle when creating new version');
+      assert.dom(FORM.keyInput()).hasValue('api_key');
+      assert.dom(FORM.maskedValueInput()).hasValue('partyparty');
+      await fillIn(FORM.keyInput(1), 'api_url');
+      await fillIn(FORM.maskedValueInput(1), 'hashicorp.com');
+      await click(FORM.saveBtn);
+      tokenToUnwrap = this.controlGroup.tokenToUnwrap;
+      assert.strictEqual(
+        tokenToUnwrap.creation_path,
+        `${backend}/data/${secretPath}`,
+        'stored tokenToUnwrap includes correct update path'
+      );
+      assert
+        .dom(FORM.messageError)
+        .includesText(
+          `Error A Control Group was encountered at ${backend}/data/${secretPath}.`,
+          'shows control group error'
+        );
+      // Normally the user stays on the page and tries again once approval is granted
+      // unmark on test so it doesn't use the control group on read at the same path
+      // when we return to the page after granting access below
+      this.controlGroup.unmarkTokenForUnwrap();
+      await grantAccessForWrite({
+        accessor: tokenToUnwrap.accessor,
+        token: tokenToUnwrap.token,
+        creation_path: `${backend}/data/${secretPath}`,
+        originUrl: `/vault/secrets/${backend}/kv/${secretPath}/details/edit`,
+        userToken: this.userToken,
+      });
+      // Remark for unwrap as if we never left the page.
+      this.controlGroup.markTokenForUnwrap(tokenToUnwrap.accessor);
+      // No need to fill in data because we're using the stored wrapped request
+      // and the path already exists
+      await click(FORM.saveBtn);
+      assert.strictEqual(
+        this.controlGroup.tokenToUnwrap,
+        null,
+        'clears tokenToUnwrap after successful update'
+      );
+
+      // Back to details page
+      assert.strictEqual(
+        currentURL(),
+        `/vault/secrets/${backend}/kv/${encodeURIComponent(secretPath)}/details?version=2`
+      );
+      assert.dom(PAGE.detail.versionTimestamp).includesText('Version 2 created');
+      assert.dom(PAGE.secretRow).exists({ count: 2 }, '2 rows of data shows');
+      assert.dom(PAGE.infoRowValue('api_key')).hasText('***********');
+      assert.dom(PAGE.infoRowValue('api_url')).hasText('***********');
+      await click(PAGE.infoRowToggleMasked('api_key'));
+      await click(PAGE.infoRowToggleMasked('api_url'));
+      assert.dom(PAGE.infoRowValue('api_key')).hasText('partyparty', 'secret value shows after toggle');
+      assert.dom(PAGE.infoRowValue('api_url')).hasText('hashicorp.com', 'secret value shows after toggle');
+    });
   });
 });
