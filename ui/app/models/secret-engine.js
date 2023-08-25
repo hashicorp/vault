@@ -155,7 +155,6 @@ export default class SecretEngineModel extends Model {
     if (this.engineType === 'database') {
       return 'vault.cluster.secrets.backend.overview';
     }
-
     const route = allEngines().findBy('type', this.engineType)?.engineRoute || 'list-root';
     return `vault.cluster.secrets.backend.${route}`;
   }
