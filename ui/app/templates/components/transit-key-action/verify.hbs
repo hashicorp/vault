@@ -143,14 +143,14 @@
         </div>
         <div class="column is-two-thirds is-flex-column">
           {{#if (or (and @verification (eq @verification "HMAC")) @hmac)}}
-            <div class="field is-flex-column is-flex-1">
-              <div class="control is-flex-column is-flex-1">
+            <div class="field is-flex-column is-flex-grow-1">
+              <div class="control is-flex-column is-flex-grow-1">
                 <JsonEditor @title="HMAC" @value={{@hmac}} @valueUpdated={{action (mut @hmac)}} @mode="ruby" />
               </div>
             </div>
           {{else}}
-            <div class="field is-flex-column is-flex-1">
-              <div class="control is-flex-column is-flex-1">
+            <div class="field is-flex-column is-flex-grow-1">
+              <div class="control is-flex-column is-flex-grow-1">
                 <JsonEditor
                   @title="Signature"
                   @value={{@signature}}
