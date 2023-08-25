@@ -12,6 +12,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/hashicorp/vault/sdk/database/helper/connutil"
+
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
@@ -117,7 +119,7 @@ func TestPostgreSQL_Initialize_CloudGCP(t *testing.T) {
 			req: dbplugin.InitializeRequest{
 				Config: map[string]interface{}{
 					"connection_url": connURL,
-					"auth_type":      "gcp_iam",
+					"auth_type":      connutil.AuthTypeGCPIAM,
 				},
 				VerifyConnection: true,
 			},
