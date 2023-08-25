@@ -217,7 +217,7 @@ jobs:
           caCertificate: ${{ steps.vault-auth.outputs.ca_certificate }}
           token: ${{ steps.vault-auth.outputs.token }}
           secrets: |
-            kv/data/github/hashicorp/vault-enterprise/github-token token | PRIVATE_REPO_GITHUB_TOKEN;
+            kv/data/github/hashicorp/vault-enterprise/github-token username-and-token | PRIVATE_REPO_GITHUB_TOKEN;
             kv/data/github/hashicorp/vault-enterprise/license license_1 | VAULT_LICENSE;
       - id: setup-git
         name: Setup Git
