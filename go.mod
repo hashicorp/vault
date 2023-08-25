@@ -191,6 +191,7 @@ require (
 	github.com/prometheus/client_golang v1.14.0
 	github.com/prometheus/common v0.37.0
 	github.com/rboyer/safeio v0.2.1
+	github.com/robfig/cron/v3 v3.0.1
 	github.com/ryanuber/columnize v2.1.0+incompatible
 	github.com/ryanuber/go-glob v1.0.0
 	github.com/sasha-s/go-deadlock v0.2.0

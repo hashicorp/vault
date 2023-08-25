@@ -59,24 +59,6 @@
         </div>
       </div>
     {{/if}}
-  {{else if (and (eq @attr.type "string") (eq @attr.options.editType "boolean"))}}
-    <div class="b-checkbox">
-      <input
-        type="checkbox"
-        id={{@attr.name}}
-        class="styled"
-        checked={{eq (get @model this.valuePath) @attr.options.trueValue}}
-        onchange={{fn this.setAndBroadcastBool @attr.options.trueValue @attr.options.falseValue}}
-        data-test-input={{@attr.name}}
-      />
-
-      <label for={{@attr.name}} class="is-label">
-        {{this.labelString}}
-        {{#if (and this.showHelpText @attr.options.helpText)}}
-          <InfoTooltip>{{@attr.options.helpText}}</InfoTooltip>
-        {{/if}}
-      </label>
-    </div>
   {{else if (eq @attr.options.editType "searchSelect")}}
     <div class="form-section">
       <SearchSelect
@@ -307,7 +289,7 @@
         {{/if}}
       {{/if}}
     </div>
-  {{else if (eq @attr.type "boolean")}}
+  {{else if (or (eq @attr.type "boolean") (eq @attr.options.editType "boolean"))}}
     <div class="b-checkbox">
       <input
         disabled={{this.disabled}}
