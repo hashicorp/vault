@@ -13,8 +13,8 @@ import consoleClass from 'vault/tests/pages/components/console/ui-panel';
 import authForm from 'vault/tests/pages/components/auth-form';
 import controlGroup from 'vault/tests/pages/components/control-group';
 import controlGroupSuccess from 'vault/tests/pages/components/control-group-success';
+import { writeSecret } from 'vault/tests/helpers/kv/kv-run-commands';
 import authPage from 'vault/tests/pages/auth';
-import { writeSecret } from '../helpers/kv/kv-run-commands';
 
 const consoleComponent = create(consoleClass);
 const authFormComponent = create(authForm);

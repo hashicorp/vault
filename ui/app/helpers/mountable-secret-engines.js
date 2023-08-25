@@ -131,8 +131,8 @@ export function allEngines() {
 }
 
 export function isAddonEngine(type, version) {
-  const engineRoute = allEngines().findBy('type', type)?.engineRoute;
   if (type === 'kv' && version === 1) return false;
+  const engineRoute = allEngines().findBy('type', type)?.engineRoute;
   return !!engineRoute;
 }
 
