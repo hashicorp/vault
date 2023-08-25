@@ -57,15 +57,15 @@ export default class KvDeleteModal extends Component {
   }
 
   get deleteOptions() {
-    const { secret, metadata, currentVersion } = this.args;
+    const { secret, metadata, version } = this.args;
     const isDeactivated = secret.canReadMetadata ? metadata?.currentSecret.isDeactivated : false;
     return [
       {
         key: 'delete-version',
         label: 'Delete this version',
-        description: `This deletes Version ${secret.version || currentVersion} of the secret.`,
+        description: `This deletes Version ${version} of the secret.`,
         disabled: !secret.canDeleteVersion,
-        tooltipMessage: 'You do not have permission to delete a specific version.',
+        tooltipMessage: `Deleting a specific version requires "update" capabilities to ${secret.backend}/delete/${secret.path}.`,
       },
       {
         key: 'delete-latest-version',
@@ -74,7 +74,7 @@ export default class KvDeleteModal extends Component {
         disabled: !secret.canDeleteLatestVersion || isDeactivated,
         tooltipMessage: isDeactivated
           ? `The latest version of the secret is already ${metadata.currentSecret.state}.`
-          : 'You do not have permission to delete the latest version of this secret.',
+          : `Deleting the latest version of this secret requires "delete" capabilities to ${secret.backend}/data/${secret.path}.`,
       },
     ];
   }
