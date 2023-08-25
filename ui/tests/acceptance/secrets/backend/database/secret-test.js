@@ -33,7 +33,7 @@ const newConnection = async (backend, plugin = 'mongodb-database-plugin') => {
 
 const navToConnection = async (backend, connection) => {
   await visit('/vault/secrets');
-  await click(`[data-test-auth-backend-link="${backend}"]`);
+  await click(`[data-test-secrets-backend-link="${backend}"]`);
   await click('[data-test-secret-list-tab="Connections"]');
   await click(`[data-test-secret-link="${connection}"]`);
   return;
@@ -454,7 +454,7 @@ module('Acceptance | secrets/database/*', function (hooks) {
     // Check with restricted permissions
     await authPage.login(token);
     await click('[data-test-sidebar-nav-link="Secrets engines"]');
-    assert.dom(`[data-test-auth-backend-link="${backend}"]`).exists('Shows backend on secret list page');
+    assert.dom(`[data-test-secrets-backend-link="${backend}"]`).exists('Shows backend on secret list page');
     await navToConnection(backend, connection);
     assert.strictEqual(
       currentURL(),
