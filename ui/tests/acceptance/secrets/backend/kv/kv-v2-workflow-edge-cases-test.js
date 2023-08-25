@@ -163,7 +163,6 @@ module('Acceptance | kv-v2 workflow | edge cases', function (hooks) {
   });
 
   module('destruction without read', function (hooks) {
-    // see github issue for more details https://github.com/hashicorp/vault/issues/5362
     hooks.beforeEach(async function () {
       const backend = this.backend;
       const testSecrets = [
@@ -232,7 +231,7 @@ module('Acceptance | kv-v2 workflow | edge cases', function (hooks) {
       assert.expect(2);
 
       const testSecret = 'destroy-metadata-only';
-      await visit(`/vault/secrets/${this.backend}/kv/${testSecret}/metadata/details`);
+      await visit(`/vault/secrets/${this.backend}/kv/${testSecret}/metadata`);
       assert.dom(PAGE.metadata.deleteMetadata).exists('renders delete metadata button');
       await click(PAGE.metadata.deleteMetadata);
       assert
