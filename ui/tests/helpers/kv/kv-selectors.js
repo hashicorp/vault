@@ -56,7 +56,8 @@ export const PAGE = {
   },
   versions: {
     icon: (version) => `[data-test-icon-holder="${version}"]`,
-    linkedBlock: (version) => `[data-test-version-linked-block="${version}"]`,
+    linkedBlock: (version) =>
+      version ? `[data-test-version-linked-block="${version}"]` : '[data-test-version-linked-block]',
     button: (version) => `[data-test-version-button="${version}"]`,
   },
   create: {

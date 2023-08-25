@@ -216,7 +216,7 @@ module('Acceptance | settings/mount-secret-backend', function (hooks) {
     assert.expect(engines.length);
 
     for (const engine of engines) {
-      if (engine.type === 'kv') continue; // exist loop because kv is special so we test separately
+      if (engine.type === 'kv') continue; // exit loop because kv is special so we test separately
       await consoleComponent.runCommands([
         // delete any previous mount with same name
         `delete sys/mounts/${engine.type}`,
