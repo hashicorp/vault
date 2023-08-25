@@ -153,10 +153,7 @@ func TestSysInit_Put_ValidateParams(t *testing.T) {
 
 func TestSysInit_Put_ValidateParams_AutoUnseal(t *testing.T) {
 	testSeal, _ := seal.NewTestSeal(&seal.TestSealOpts{Name: "transit"})
-	autoSeal, err := vault.NewAutoSeal(testSeal)
-	if err != nil {
-		t.Fatal(err)
-	}
+	autoSeal := vault.NewAutoSeal(testSeal)
 
 	// Create the transit server.
 	conf := &vault.CoreConfig{
@@ -189,7 +186,8 @@ func TestSysInit_Put_ValidateParams_AutoUnseal(t *testing.T) {
 	testResponseStatus(t, resp, http.StatusBadRequest)
 	body := map[string][]string{}
 	testResponseBody(t, resp, &body)
-	if body["errors"][0] != "parameters secret_shares,secret_threshold not applicable to seal type transit" {
+	if body["errors"][0] != "parameters secret_shares,secret_threshold not applicable to seal type transit" &&
+		body["errors"][0] != "parameters secret_shares,secret_threshold not applicable to seal type test-auto" {
 		t.Fatal(body)
 	}
 }

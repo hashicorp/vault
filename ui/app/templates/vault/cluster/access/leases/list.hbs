@@ -36,19 +36,16 @@
       @placeholder="Filter leases"
     />
     {{#if this.filterFocused}}
-      {{! template-lint-disable no-whitespace-for-layout }}
-      &nbsp; &nbsp;
-      {{! template-lint-enable no-whitespace-for-layout }}
       {{#if this.filterMatchesKey}}
         {{#unless this.filterIsFolder}}
-          <p class="help has-text-grey is-size-8">
+          <p class="help has-text-grey is-size-8 has-left-padding-xs">
             <kbd>ENTER</kbd>
             to go to see details
           </p>
         {{/unless}}
       {{/if}}
       {{#if this.firstPartialMatch}}
-        <p class="help has-text-grey is-size-8">
+        <p class="help has-text-grey is-size-8 has-left-padding-xs">
           <kbd>TAB</kbd>
           to complete
         </p>
