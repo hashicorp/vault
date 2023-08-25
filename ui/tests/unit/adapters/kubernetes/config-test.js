@@ -58,4 +58,14 @@ module('Unit | Adapter | kubernetes/config', function (hooks) {
     const record = this.store.peekRecord('kubernetes/config', 'kubernetes-test');
     await record.destroyRecord();
   });
+
+  test('it should check the config vars endpoint', async function (assert) {
+    assert.expect(1);
+
+    this.server.get('/kubernetes-test/check', () => {
+      assert.ok('GET request made to config vars check endpoint');
+    });
+
+    await this.store.adapterFor('kubernetes/config').checkConfigVars('kubernetes-test');
+  });
 });
