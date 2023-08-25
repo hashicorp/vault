@@ -1,0 +1,21 @@
+{{#each @model.displayFields as |field|}}
+  {{#let (get @model field.name) as |value|}}
+    {{#if (eq field.name "disable_check_in_enforcement")}}
+      <InfoTableRow @label={{field.options.label}}>
+        <Icon
+          class="is-flex-v-centered {{if (eq value 'Enabled') 'icon-true' 'icon-false'}}"
+          @name={{if (eq value "Enabled") "check-circle" "x-square"}}
+          data-test-check-in-icon
+        />
+        <span>{{value}}</span>
+      </InfoTableRow>
+    {{else}}
+      <InfoTableRow
+        data-test-filtered-field
+        @label={{or field.options.detailsLabel field.options.label}}
+        @value={{value}}
+        @formatTtl={{eq field.options.editType "ttl"}}
+      />
+    {{/if}}
+  {{/let}}
+{{/each}}

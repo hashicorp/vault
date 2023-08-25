@@ -60,11 +60,19 @@ export const PAGE = {
   },
   versions: {
     icon: (version) => `[data-test-icon-holder="${version}"]`,
-    linkedBlock: (version) => `[data-test-version-linked-block="${version}"]`,
+    linkedBlock: (version) =>
+      !version ? '[data-test-version-linked-block]' : `[data-test-version-linked-block="${version}"]`,
     button: (version) => `[data-test-version-button="${version}"]`,
+    versionMenu: (version) => `[data-test-version-linked-block="${version}"] [data-test-popup-menu-trigger]`,
+    createFromVersion: (version) => `[data-test-create-new-version-from="${version}"]`,
   },
   create: {
     metadataSection: '[data-test-metadata-section]',
+  },
+  paths: {
+    copyButton: (label) => `${PAGE.infoRowValue(label)} button`,
+    codeSnippet: (section) => `[data-test-code-snippet][data-test-commands="${section}"] code`,
+    snippetCopy: (section) => `[data-test-code-snippet][data-test-commands="${section}"] button`,
   },
 };
 
