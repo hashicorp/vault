@@ -51,6 +51,73 @@ type SealGenerationInfo struct {
 	rewrapped  atomic.Bool
 }
 
+// Validate is used to sanity check the seal generation info being created
+func (sgi *SealGenerationInfo) Validate(existingSgi *SealGenerationInfo) error {
+	existingSealsLen := 0
+	previousShamirConfigured := false
+	if existingSgi != nil {
+		if sgi.Generation == existingSgi.Generation {
+			if !cmp.Equal(sgi.Seals, existingSgi.Seals) {
+				return errors.New("existing seal generation is the same, but the configured seals are different")
+			}
+			return nil
+		}
+
+		existingSealsLen = len(existingSgi.Seals)
+		for _, sealKmsConfig := range existingSgi.Seals {
+			if sealKmsConfig.Type == wrapping.WrapperTypeShamir.String() {
+				previousShamirConfigured = true
+				break
+			}
+		}
+	}
+
+	numSealsToAdd := 0
+	// With a previously configured shamir seal, we are either going from [shamir]->[auto]
+	// or [shamir]->[another shamir] (since we do not allow multiple shamir
+	// seals, and, mixed shamir and auto seals). Also, we do not allow shamir seals to
+	// be set disabled, so, the number of seals to add is always going to be the length
+	// of new seal configs.
+	if previousShamirConfigured {
+		numSealsToAdd = len(sgi.Seals)
+	} else {
+		numSealsToAdd = len(sgi.Seals) - existingSealsLen
+	}
+
+	numSealsToDelete := existingSealsLen - len(sgi.Seals)
+	switch {
+	case numSealsToAdd > 1:
+		return errors.New("cannot add more than one seal")
+
+	case numSealsToDelete > 1:
+		return errors.New("cannot delete more than one seal")
+
+	case !previousShamirConfigured && existingSgi != nil && !haveCommonSeal(existingSgi.Seals, sgi.Seals):
+		// With a previously configured shamir seal, we are either going from [shamir]->[auto] or [shamir]->[another shamir],
+		// in which case we cannot have a common seal because shamir seals cannot be set to disabled, they can only be deleted.
+		return errors.New("must have at least one seal in common with the old generation")
+	}
+	return nil
+}
+
+func haveCommonSeal(existingSealKmsConfigs, newSealKmsConfigs []*configutil.KMS) (result bool) {
+	for _, existingSealKmsConfig := range existingSealKmsConfigs {
+		for _, newSealKmsConfig := range newSealKmsConfigs {
+			// Clone the existing seal config and set 'Disabled' and 'Priority' fields same as the
+			// new seal config, because there might be a case where a seal might be disabled in
+			// current config, but might be stored as enabled previously, and this still needs to
+			// be considered as a common seal.
+			clonedSgi := existingSealKmsConfig.Clone()
+			clonedSgi.Disabled = newSealKmsConfig.Disabled
+			clonedSgi.Priority = newSealKmsConfig.Priority
+			if cmp.Equal(clonedSgi, newSealKmsConfig.Clone()) {
+				return true
+			}
+		}
+	}
+	return false
+}
+
 // SetRewrapped updates the SealGenerationInfo's rewrapped status to the provided value.
 func (sgi *SealGenerationInfo) SetRewrapped(value bool) {
 	sgi.rewrapped.Store(value)
