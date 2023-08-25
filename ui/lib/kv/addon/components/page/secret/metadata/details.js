@@ -30,7 +30,7 @@ export default class KvSecretMetadataDetails extends Component {
 
   get customMetadata() {
     // metadata tab is available even if user only has access to kv/data path
-    return this.args.metadata.customMetadata || this.args.secret.customMetadata;
+    return this.args.metadata?.customMetadata || this.args.secret?.customMetadata;
   }
   @action
   async onDelete() {
