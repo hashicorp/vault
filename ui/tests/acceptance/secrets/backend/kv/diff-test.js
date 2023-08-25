@@ -15,7 +15,7 @@ import consoleClass from 'vault/tests/pages/components/console/ui-panel';
 
 const consoleComponent = create(consoleClass);
 
-// TODO: replace with workflow-diff-test
+// TODO: kv engine cleanup replace with workflow-diff-test
 module('Acceptance | kv2 diff view', function (hooks) {
   setupApplicationTest(hooks);
 
