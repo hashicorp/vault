@@ -25,7 +25,7 @@ export const PAGE = {
   secretRow: '[data-test-component="info-table-row"]',
   // specific page selectors
   backends: {
-    link: (backend) => `[data-test-auth-backend-link="${backend}"]`,
+    link: (backend) => `[data-test-secrets-backend-link="${backend}"]`,
   },
   metadata: {
     editBtn: '[data-test-edit-metadata]',
