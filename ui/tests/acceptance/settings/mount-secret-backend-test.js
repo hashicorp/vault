@@ -20,6 +20,7 @@ import { supportedSecretBackends } from 'vault/helpers/supported-secret-backends
 
 const consoleComponent = create(consoleClass);
 
+const BACKENDS_WITH_ENGINES = ['kv', 'pki', 'ldap', 'kubernetes', 'kmip'];
 module('Acceptance | settings/mount-secret-backend', function (hooks) {
   setupApplicationTest(hooks);
 
@@ -191,7 +192,7 @@ module('Acceptance | settings/mount-secret-backend', function (hooks) {
 
   // TEST TRANSITIONS AFTER MOUNTING
   test('it should transition to mountable addon engine after mount success', async function (assert) {
-    const addons = allEngines().filter((e) => supportedSecretBackends().includes(e.type) && e.engineRoute);
+    const addons = allEngines().filter((e) => BACKENDS_WITH_ENGINES.includes(e.type));
     assert.expect(addons.length);
 
     for (const engine of addons) {
@@ -202,34 +203,46 @@ module('Acceptance | settings/mount-secret-backend', function (hooks) {
       await mountSecrets.visit();
       await mountSecrets.selectType(engine.type);
       await mountSecrets.next().path(engine.type).submit();
-
       assert.strictEqual(
         currentRouteName(),
         `vault.cluster.secrets.backend.${engine.engineRoute}`,
         `Transitions to ${engine.displayName} route on mount success`
       );
+      await consoleComponent.runCommands([
+        // cleanup after
+        `delete sys/mounts/${engine.type}`,
+      ]);
     }
   });
 
   test('it should transition to mountable non-addon engine after mount success', async function (assert) {
-    const engines = allEngines().filter((e) => supportedSecretBackends().includes(e.type) && !e.engineRoute);
+    // test supported backends that are not ember engines
+    const nonEngineBackends = supportedSecretBackends().filter((b) => !BACKENDS_WITH_ENGINES.includes(b));
+    const engines = allEngines().filter((e) => nonEngineBackends.includes(e.type));
     assert.expect(engines.length);
 
     for (const engine of engines) {
-      if (engine.type === 'kv') continue; // exit loop because kv is special so we test separately
       await consoleComponent.runCommands([
         // delete any previous mount with same name
         `delete sys/mounts/${engine.type}`,
       ]);
       await mountSecrets.visit();
       await mountSecrets.selectType(engine.type);
-      await mountSecrets.next().path(engine.type).submit();
+      await mountSecrets.next().path(engine.type);
+      // if (engine.type === 'kv') {
+      //   await mountSecrets.toggleOptions().version(1)
+      // };
+      await mountSecrets.submit();
 
       assert.strictEqual(
         currentRouteName(),
         `vault.cluster.secrets.backend.list-root`,
         `${engine.type} navigates to list view`
       );
+      await consoleComponent.runCommands([
+        // delete any previous mount with same name
+        `delete sys/mounts/${engine.type}`,
+      ]);
     }
   });
 
