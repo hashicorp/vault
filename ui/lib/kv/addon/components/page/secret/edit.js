@@ -8,6 +8,7 @@ import { action } from '@ember/object';
 import { tracked } from '@glimmer/tracking';
 import { task } from 'ember-concurrency';
 import { inject as service } from '@ember/service';
+import errorMessage from 'vault/utils/error-message';
 
 /**
  * @module KvSecretEdit is used for creating a new version of a secret
@@ -63,7 +64,7 @@ export default class KvSecretEdit extends Component {
         this.router.transitionTo('vault.cluster.secrets.backend.kv.secret');
       }
     } catch (error) {
-      let message = error.errors ? error.errors.join('. ') : error.message;
+      let message = errorMessage(error);
       if (error.message === 'Control Group encountered') {
         this.controlGroup.saveTokenFromError(error);
         const err = this.controlGroup.logFromError(error);
