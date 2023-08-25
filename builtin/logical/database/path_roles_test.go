@@ -252,10 +252,11 @@ func TestBackend_StaticRole_Config(t *testing.T) {
 	// Test static role creation scenarios. Uses a map, so there is no guaranteed
 	// ordering, so each case cleans up by deleting the role
 	testCases := map[string]struct {
-		account  map[string]interface{}
-		path     string
-		expected map[string]interface{}
-		err      error
+		account         map[string]interface{}
+		path            string
+		expected        map[string]interface{}
+		scheduleOptions cron.ParseOption
+		err             error
 		// use this field to check partial error strings, otherwise use err
 		errContains string
 	}{
@@ -343,6 +344,19 @@ func TestBackend_StaticRole_Config(t *testing.T) {
 			},
 			path: "disallowed-role",
 			err:  errors.New("\"disallowed-role\" is not an allowed role"),
+		},
+		"fails to parse cronSpec with seconds": {
+			account: map[string]interface{}{
+				"username":          dbUser,
+				"rotation_schedule": "*/10 * * * * *",
+			},
+			path: "plugin-role-test-1",
+			expected: map[string]interface{}{
+				"username":          dbUser,
+				"rotation_schedule": "*/10 * * * * *",
+			},
+			scheduleOptions: scheduleOptionsDefault,
+			errContains:     "could not parse rotation_schedule",
 		},
 	}
 
@@ -1084,9 +1098,6 @@ func TestWALsDeletedOnRoleDeletion(t *testing.T) {
 }
 
 func TestIsInsideRotationWindow(t *testing.T) {
-	// We allow seconds to be set for testing purposes, but it's not to be used in production
-	scheduleOptions = cron.Second | cron.Minute | cron.Hour | cron.Dom | cron.Month | cron.Dow
-
 	for _, tc := range []struct {
 		name         string
 		expected     bool
@@ -1148,16 +1159,12 @@ func TestIsInsideRotationWindow(t *testing.T) {
 			testTime := tc.now
 			if tc.data["rotation_schedule"] != nil && tc.timeModifier != nil {
 				rotationSchedule := tc.data["rotation_schedule"].(string)
-				schedule, err := b.scheduleParser.Parse(rotationSchedule)
+				schedule, err := b.ParseSchedule(rotationSchedule)
 				if err != nil {
 					t.Fatalf("could not parse rotation_schedule: %s", err)
 				}
-				sched, ok := schedule.(*cron.SpecSchedule)
-				if !ok {
-					t.Fatalf("could not parse rotation_schedule")
-				}
-				next1 := sched.Next(tc.now) // the next rotation time we expect
-				next2 := sched.Next(next1)  // the next rotation time after that
+				next1 := schedule.Next(tc.now) // the next rotation time we expect
+				next2 := schedule.Next(next1)  // the next rotation time after that
 				testTime = tc.timeModifier(next2)
 			}
 

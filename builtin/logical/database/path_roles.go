@@ -591,16 +591,12 @@ func (b *databaseBackend) pathStaticRoleCreateUpdate(ctx context.Context, req *l
 	}
 
 	if rotationScheduleOk {
-		schedule, err := b.scheduleParser.Parse(rotationSchedule)
+		parsedSchedule, err := b.ParseSchedule(rotationSchedule)
 		if err != nil {
 			return logical.ErrorResponse("could not parse rotation_schedule", "error", err), nil
 		}
 		role.StaticAccount.RotationSchedule = rotationSchedule
-		sched, ok := schedule.(*cron.SpecSchedule)
-		if !ok {
-			return logical.ErrorResponse("could not parse rotation_schedule"), nil
-		}
-		role.StaticAccount.Schedule = *sched
+		role.StaticAccount.Schedule = *parsedSchedule
 
 		if rotationWindowOk {
 			rotationWindowSeconds := rotationWindowSecondsRaw.(int)

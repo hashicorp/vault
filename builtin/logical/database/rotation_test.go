@@ -14,8 +14,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/robfig/cron/v3"
-
 	"github.com/Sectorbob/mlab-ns2/gae/ns/digest"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/helper/testhelpers/mongodb"
@@ -27,6 +25,7 @@ import (
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/sdk/queue"
 	_ "github.com/jackc/pgx/v4/stdlib"
+	"github.com/robfig/cron/v3"
 	"github.com/stretchr/testify/mock"
 	mongodbatlasapi "go.mongodb.org/atlas/mongodbatlas"
 	"go.mongodb.org/mongo-driver/mongo"
@@ -34,14 +33,12 @@ import (
 )
 
 const (
-	dbUser                = "vaultstatictest"
-	dbUserDefaultPassword = "password"
+	dbUser                     = "vaultstatictest"
+	dbUserDefaultPassword      = "password"
+	testScheduleOptionsSeconds = cron.Second | cron.Minute | cron.Hour | cron.Dom | cron.Month | cron.Dow
 )
 
 func TestBackend_StaticRole_Rotation_basic(t *testing.T) {
-	// We allow seconds to be set for testing purposes, but it's not to be used in production
-	scheduleOptions = cron.Second | cron.Minute | cron.Hour | cron.Dom | cron.Month | cron.Dow
-
 	cluster, sys := getCluster(t)
 	defer cluster.Cleanup()
 
@@ -58,6 +55,8 @@ func TestBackend_StaticRole_Rotation_basic(t *testing.T) {
 		t.Fatal("could not convert to db backend")
 	}
 	defer b.Cleanup(context.Background())
+
+	b.scheduleOptionsOverride = testScheduleOptionsSeconds
 
 	cleanup, connURL := postgreshelper.PrepareTestContainer(t, "")
 	defer cleanup()
@@ -1223,7 +1222,6 @@ func TestRollsPasswordForwardsUsingWAL(t *testing.T) {
 }
 
 func TestStoredWALsCorrectlyProcessed(t *testing.T) {
-	scheduleOptions = cron.Second | cron.Minute | cron.Hour | cron.Dom | cron.Month | cron.Dow
 	const walNewPassword = "new-password-from-wal"
 
 	rotationPeriodData := map[string]interface{}{
@@ -1299,6 +1297,7 @@ func TestStoredWALsCorrectlyProcessed(t *testing.T) {
 				t.Fatal(err)
 			}
 			b.credRotationQueue = queue.New()
+			b.scheduleOptionsOverride = testScheduleOptionsSeconds
 			configureDBMount(t, config.StorageView)
 			createRoleWithData(t, b, config.StorageView, mockDB, tc.wal.RoleName, tc.data)
 			role, err := b.StaticRole(ctx, config.StorageView, "hashicorp")
@@ -1459,6 +1458,7 @@ func getBackend(t *testing.T) (*databaseBackend, logical.Storage, *mockNewDataba
 	if err := b.Setup(context.Background(), config); err != nil {
 		t.Fatal(err)
 	}
+	b.scheduleOptionsOverride = testScheduleOptionsSeconds
 	b.credRotationQueue = queue.New()
 	b.populateQueue(context.Background(), config.StorageView)
 
