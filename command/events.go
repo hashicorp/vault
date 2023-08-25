@@ -53,7 +53,7 @@ func (c *EventsSubscribeCommands) Flags() *FlagSets {
 		Usage: `Specifies one or more patterns of additional child namespaces
 				to subscribe to. The namespace of the request is automatically
                 prepended, so specifying 'ns2' when the request is in the 'ns1'
-                namespace will result in subscribing to 'ns1/ns2', in addition
+                namespace will result in subscribing to 'ns1/ns2', in addition to
                 'ns1'. Patterns can include "*" characters to indicate
                 wildcards. The default is to subscribe only to the request's
                 namespace.`,
