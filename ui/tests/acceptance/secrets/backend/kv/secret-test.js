@@ -17,13 +17,14 @@ import { create } from 'ember-cli-page-object';
 import { module, skip, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
 import { v4 as uuidv4 } from 'uuid';
+import { setupMirage } from 'ember-cli-mirage/test-support';
 
 import editPage from 'vault/tests/pages/secrets/backend/kv/edit-secret';
 import showPage from 'vault/tests/pages/secrets/backend/kv/show';
 import listPage from 'vault/tests/pages/secrets/backend/list';
+import assertSecretWrap from 'vault/tests/helpers/secret-edit-toolbar';
 
 import mountSecrets from 'vault/tests/pages/settings/mount-secret-backend';
-import apiStub from 'vault/tests/helpers/noop-all-api-requests';
 import authPage from 'vault/tests/pages/auth';
 import logout from 'vault/tests/pages/logout';
 import consoleClass from 'vault/tests/pages/components/console/ui-panel';
@@ -65,10 +66,10 @@ const mountEngineGeneratePolicyToken = async (enginePath, secretPath, policy, ve
 
 module('Acceptance | secrets/secret/create, read, delete', function (hooks) {
   setupApplicationTest(hooks);
+  setupMirage(hooks);
 
   hooks.beforeEach(async function () {
     this.uid = uuidv4();
-    this.server = apiStub({ usePassthrough: true });
     await authPage.login();
   });
 
@@ -77,7 +78,7 @@ module('Acceptance | secrets/secret/create, read, delete', function (hooks) {
   });
 
   test('it creates a secret and redirects', async function (assert) {
-    assert.expect(5);
+    assert.expect(6);
     const secretPath = `kv-path-${this.uid}`;
     const path = `kv-engine-${this.uid}`;
     await enablePage.enable('kv', path);
@@ -101,6 +102,7 @@ module('Acceptance | secrets/secret/create, read, delete', function (hooks) {
       'vault.cluster.secrets.backend.show',
       'redirects to the show page'
     );
+    await assertSecretWrap(assert, this.server, `${path}/data/${secretPath}`);
     assert.ok(showPage.editIsPresent, 'shows the edit button');
     await deleteEngine(path, assert);
   });
@@ -707,6 +709,8 @@ module('Acceptance | secrets/secret/create, read, delete', function (hooks) {
     await settled();
     await authPage.login(userToken);
     await settled();
+    // on login users are directed to dashboard, so we would need to visit the vault secrets page to click on an engine
+    await visit('vault/secrets');
     // test if metadata tab there with no read access message and no ability to edit.
     await click(`[data-test-auth-backend-link=${enginePath}]`);
     assert
@@ -1050,7 +1054,7 @@ module('Acceptance | secrets/secret/create, read, delete', function (hooks) {
     assert
       .dom('[data-test-warning-no-read-permissions]')
       .hasText(
-        'You do not have read permissions. If a secret exists here creating a new secret will overwrite it.'
+        'You do not have read permissions. If a secret exists at this path creating a new secret will overwrite it.'
       );
 
     await editPage.editSecret('bar', 'baz');

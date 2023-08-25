@@ -14,11 +14,11 @@
     data-test-list-item-link
   >
     <div class="level is-mobile">
-      <div class="level-left is-flex-1" data-test-list-item-content>
+      <div class="level-left is-flex-grow-1" data-test-list-item-content>
         <LinkTo
           @route={{this.link.route}}
           @models={{this.link.models}}
-          class="has-text-weight-semibold has-text-black is-display-flex is-flex-1 is-no-underline"
+          class="has-text-weight-semibold has-text-black is-display-flex is-flex-grow-1 is-no-underline"
         >
           {{yield (hash content=(component "list-item/content"))}}
         </LinkTo>
@@ -35,7 +35,7 @@
 {{else}}
   <div class="list-item-row">
     <div class="level is-mobile">
-      <div class="level-left is-flex-1 has-text-weight-semibold" data-test-list-item>
+      <div class="level-left is-flex-grow-1 has-text-weight-semibold" data-test-list-item>
         {{yield (hash content=(component "list-item/content"))}}
       </div>
       <div class="level-right">
