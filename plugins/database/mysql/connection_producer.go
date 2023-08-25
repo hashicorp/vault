@@ -52,7 +52,6 @@ type mySQLConnectionProducer struct {
 	// cloudDriverName is a globally unique name that references the cloud dialer config for this instance of the driver
 	// I would like to reuse the tlsConfigName value, but there are parts of the code that expect its emptyness to equal "no-tls"
 	cloudDriverName string
-	isCloud         bool
 
 	RawConfig             map[string]interface{}
 	maxConnectionLifetime time.Duration
@@ -131,7 +130,6 @@ func (c *mySQLConnectionProducer) Init(ctx context.Context, conf map[string]inte
 		if err != nil {
 			return nil, fmt.Errorf("unable to generate UUID for IAM configuration: %w", err)
 		}
-		c.isCloud = true
 
 		credentials := c.Credentials
 
@@ -188,7 +186,7 @@ func (c *mySQLConnectionProducer) Connection(ctx context.Context) (interface{}, 
 	}
 
 	driverName := driverMySQL
-	if c.isCloud {
+	if c.cloudDriverName != "" {
 		driverName = c.cloudDriverName
 	}
 
@@ -299,7 +297,7 @@ func (c *mySQLConnectionProducer) addTLStoDSN() (connURL string, err error) {
 // For example, it will rewrite the dsn "user@cloudsql-mysql(zone:region:instance)/ to
 // "user@the-uuid-generated(zone:region:instance)/
 func (c *mySQLConnectionProducer) rewriteProtocolForGCP(inDSN string) (string, error) {
-	if !c.isCloud {
+	if c.cloudDriverName == "" {
 		// unchanged if not cloud
 		return inDSN, nil
 	}

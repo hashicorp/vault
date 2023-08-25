@@ -57,7 +57,6 @@ type SQLConnectionProducer struct {
 	// cloud options here - cloudDriverName is globally unique, but only needs to be retained for the lifetime
 	// of driver registration, not from run to run.
 	cloudDriverName string
-	isCloud         bool
 
 	Type                  string
 	RawConfig             map[string]interface{}
@@ -140,7 +139,6 @@ func (c *SQLConnectionProducer) Init(ctx context.Context, conf map[string]interf
 		if err != nil {
 			return nil, fmt.Errorf("unable to generate UUID for IAM configuration: %w", err)
 		}
-		c.isCloud = true
 
 		// There are a few important points to keep in mind with this line of code, for more information
 		// see the connection_producer.go
