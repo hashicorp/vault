@@ -326,4 +326,9 @@ a.button.disabled {
   font-size: inherit;
   font-weight: inherit;
   cursor: pointer;
+
+  &:disabled {
+    color: $grey-light;
+    cursor: not-allowed;
+  }
 }

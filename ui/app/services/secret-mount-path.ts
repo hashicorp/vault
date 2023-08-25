@@ -10,10 +10,8 @@ import Service from '@ember/service';
 // are not accessible
 export default class SecretMountPath extends Service {
   currentPath = '';
-  update(path) {
+
+  update(path: string) {
     this.currentPath = path;
-  }
-  get() {
-    return this.currentPath;
   }
 }

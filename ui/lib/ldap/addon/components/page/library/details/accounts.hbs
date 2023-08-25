@@ -1,0 +1,90 @@
+<div class="has-top-margin-l is-flex-align-start">
+  <Hds::Card::Container @level="mid" @hasBorder={{true}} class="has-padding-l is-flex-half">
+    <div class="is-flex-between">
+      <h3 class="is-size-5 has-text-weight-semibold">All accounts</h3>
+      {{#if @library.canCheckOut}}
+        <button
+          type="button"
+          class="button is-link"
+          data-test-check-out
+          {{on "click" (fn (mut this.showCheckOutPrompt) true)}}
+        >
+          Check-out
+        </button>
+      {{/if}}
+    </div>
+
+    <p class="has-text-grey is-size-8">The accounts within this library</p>
+    <hr class="has-background-gray-200" />
+
+    <Hds::Table @model={{@statuses}} @columns={{array (hash label="Accounts") (hash label="Status")}}>
+      <:body as |Body|>
+        <Body.Tr>
+          <Body.Td data-test-account-name={{Body.data.account}}>{{Body.data.account}}</Body.Td>
+          <Body.Td>
+            <Hds::Badge
+              @text={{if Body.data.available "Available" "Unavailable"}}
+              @color={{if Body.data.available "success" "neutral"}}
+              data-test-account-status={{Body.data.account}}
+            />
+          </Body.Td>
+        </Body.Tr>
+      </:body>
+    </Hds::Table>
+  </Hds::Card::Container>
+
+  <div class="has-left-margin-l is-flex-half">
+    <AccountsCheckedOut @libraries={{array @library}} @statuses={{@statuses}} data-test-checked-out-card />
+
+    <OverviewCard
+      @cardTitle="To renew a checked-out account"
+      @subText="Use the CLI command below:"
+      class="has-padding-l has-top-margin-l"
+    >
+      <div class="has-padding-s has-background-gray-900 border-radius-4 is-flex-between has-top-margin-s">
+        <code class="has-text-white is-size-7" data-test-cli-command>{{this.cliCommand}}</code>
+        <CopyButton
+          class="button is-compact is-transparent has-text-grey-light"
+          data-test-cli-command-copy
+          @clipboardText={{this.cliCommand}}
+          @buttonType="button"
+          @success={{action (set-flash-message "Renew command copied!")}}
+        >
+          Copy
+          <Icon @name="clipboard-copy" aria-label="Copy" />
+        </CopyButton>
+      </div>
+    </OverviewCard>
+  </div>
+</div>
+
+{{#if this.showCheckOutPrompt}}
+  <Modal
+    @title="Account Check-out"
+    @isActive={{this.showCheckOutPrompt}}
+    @showCloseButton={{true}}
+    @onClose={{fn (mut this.showCheckOutPrompt) false}}
+  >
+    <section class="modal-card-body">
+      <p>
+        Current generated credential’s time-to-live is set at
+        {{format-duration @library.ttl}}. You can set a different limit if you’d like:
+      </p>
+      <br />
+      <TtlPicker @label="TTL" @hideToggle={{true}} @initialValue={{@library.ttl}} @onChange={{this.setTtl}} />
+    </section>
+    <footer class="modal-card-foot modal-card-foot-outlined">
+      <button data-test-check-out="save" type="button" class="button is-primary" {{on "click" this.checkOut}}>
+        Check-out
+      </button>
+      <button
+        data-test-check-out="cancel"
+        type="button"
+        class="button"
+        {{on "click" (fn (mut this.showCheckOutPrompt) false)}}
+      >
+        Cancel
+      </button>
+    </footer>
+  </Modal>
+{{/if}}

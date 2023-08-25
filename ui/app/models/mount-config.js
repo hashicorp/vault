@@ -32,11 +32,10 @@ export default class MountConfigModel extends Model {
   })
   auditNonHmacResponseKeys;
 
-  @attr('string', {
+  @attr('mountVisibility', {
     editType: 'boolean',
     label: 'List method when unauthenticated',
-    trueValue: 'unauth',
-    falseValue: 'hidden',
+    defaultValue: false,
   })
   listingVisibility;
 
