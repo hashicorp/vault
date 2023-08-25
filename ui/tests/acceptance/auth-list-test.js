@@ -77,6 +77,7 @@ module('Acceptance | auth backend list', function (hooks) {
     // Confirm that the auth method 1 shows user1. There was a bug where the user was not listed when toggling between auth routes.
     await click('[data-test-access-methods]');
     await visit(`/vault/access/${path1}/item/user`);
+
     assert
       .dom('[data-test-list-item-content]')
       .hasText(user1, 'first user created shows in current auth list');
