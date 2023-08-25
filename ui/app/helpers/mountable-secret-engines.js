@@ -77,7 +77,6 @@ const MOUNTABLE_SECRET_ENGINES = [
   {
     displayName: 'KV',
     type: 'kv',
-    engineRoute: 'kv',
     category: 'generic',
   },
   {

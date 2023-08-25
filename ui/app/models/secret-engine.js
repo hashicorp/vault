@@ -155,8 +155,12 @@ export default class SecretEngineModel extends Model {
     if (this.engineType === 'database') {
       return 'vault.cluster.secrets.backend.overview';
     }
-    const route = allEngines().findBy('type', this.engineType)?.engineRoute || 'list-root';
-    return `vault.cluster.secrets.backend.${route}`;
+    const isAddonEngine = allEngines().findBy('type', this.engineType)?.engineRoute;
+    // only kv v2 is an addon engine
+    if (isAddonEngine || (this.engineType === 'kv' && this.isV2KV)) {
+      return `vault.cluster.secrets.backend.${this.engineType}`;
+    }
+    return `vault.cluster.secrets.backend.list-root`;
   }
 
   get localDisplay() {
