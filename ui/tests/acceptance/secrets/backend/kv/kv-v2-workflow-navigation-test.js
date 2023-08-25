@@ -24,8 +24,9 @@ import { setupControlGroup, grantAccess } from 'vault/tests/helpers/control-grou
 const secretPath = `my-#:$=?-secret`;
 // This doesn't encode in a normal way, so hardcoding it here until we sort that out
 const secretPathUrlEncoded = `my-%23:$=%3F-secret`;
-const navToBackend = (backend) => {
-  return visit(`/vault/secrets/${backend}/kv/list`);
+const navToBackend = async (backend) => {
+  await visit(`/vault/secrets`);
+  return click(PAGE.backends.link(backend));
 };
 const assertCorrectBreadcrumbs = (assert, expected) => {
   assert.dom(PAGE.breadcrumb).exists({ count: expected.length }, 'correct number of breadcrumbs');
