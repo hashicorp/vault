@@ -9,7 +9,7 @@ const ENTERPRISE_SECRET_ENGINES = [
   {
     displayName: 'KMIP',
     type: 'kmip',
-    engineRoute: 'kmip.scopes.index',
+    engineRoute: 'kmip.scopes',
     category: 'generic',
     requiredFeature: 'KMIP',
   },
