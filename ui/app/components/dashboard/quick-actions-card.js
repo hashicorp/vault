@@ -135,7 +135,7 @@ export default class DashboardQuickActionsCard extends Component {
 
     // kv has a special use case where if the paramValue ends in a '/' you should
     // link to different route
-    if (this.selectedEngine.type === 'kv') {
+    if (this.selectedEngine.type.includes('kv')) {
       searchSelectParamRoute =
         this.paramValue && this.paramValue?.endsWith('/')
           ? 'vault.cluster.secrets.backend.list'
