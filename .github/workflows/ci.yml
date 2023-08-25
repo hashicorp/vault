@@ -348,7 +348,7 @@ jobs:
       needs.test-go-fips.result == 'failure' ||
       needs.test-go-race.result == 'success' ||
       needs.test-go-race.result == 'failure') &&
-      (github.repository == 'hashicorp/vault' &&
+      (github.repository != 'hashicorp/vault' ||
       (github.event.pull_request.head.repo.full_name == github.event.pull_request.base.repo.full_name))
     # The last check ensures this doesn't run on community-contributed PRs, who
     # won't have the permissions to run this job.
