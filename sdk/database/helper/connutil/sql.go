@@ -55,7 +55,7 @@ type SQLConnectionProducer struct {
 	DisableEscaping          bool        `json:"disable_escaping" mapstructure:"disable_escaping" structs:"disable_escaping"`
 
 	// cloud options here - cloudDriverName is globally unique, but only needs to be retained for the lifetime
-	// of driver registration, not from run to run.
+	// of driver registration, not across plugin restarts.
 	cloudDriverName string
 
 	Type                  string
