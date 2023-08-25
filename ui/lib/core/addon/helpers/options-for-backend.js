@@ -46,6 +46,7 @@ const SECRET_BACKENDS = {
         searchPlaceholder: 'Filter connections',
         item: 'connection',
         create: 'Create connection',
+        tab: 'connection',
         editComponent: 'database-connection',
         checkCapabilitiesPath: 'config',
       },
