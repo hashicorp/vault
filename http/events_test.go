@@ -26,6 +26,7 @@ import (
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/vault"
 	"github.com/hashicorp/vault/vault/cluster"
+	"github.com/stretchr/testify/assert"
 	"nhooyr.io/websocket"
 )
 
@@ -131,6 +132,161 @@ func TestEventsSubscribe(t *testing.T) {
 
 			checkRequiredCloudEventsFields(t, event)
 		}
+	}
+}
+
+// TestEventsSubscribeNamespaces tests the websocket endpoint for subscribing to events in multiple namespaces.
+func TestEventsSubscribeNamespaces(t *testing.T) {
+	core := vault.TestCoreWithConfig(t, &vault.CoreConfig{
+		Experiments: []string{experiments.VaultExperimentEventsAlpha1},
+	})
+
+	ln, addr := TestServer(t, core)
+	defer ln.Close()
+
+	// unseal the core
+	keys, token := vault.TestCoreInit(t, core)
+	for _, key := range keys {
+		_, err := core.Unseal(key)
+		if err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	stop := atomic.Bool{}
+
+	const eventType = "abc"
+
+	namespaces := []string{
+		"",
+		"ns1",
+		"ns2",
+		"ns1/ns13",
+		"ns1/ns13/ns134",
+	}
+
+	// send some events with the specified namespaces
+	sendEvents := func() {
+		pluginInfo := &logical.EventPluginInfo{
+			MountPath: "secret",
+		}
+		for i := range namespaces {
+			var ns *namespace.Namespace
+			if namespaces[i] == "" {
+				ns = namespace.RootNamespace
+			} else {
+				ns = &namespace.Namespace{
+					ID:             namespaces[i],
+					Path:           namespaces[i],
+					CustomMetadata: nil,
+				}
+			}
+			id, err := uuid.GenerateUUID()
+			if err != nil {
+				core.Logger().Info("Error generating UUID, exiting sender", "error", err)
+			}
+			err = core.Events().SendEventInternal(namespace.RootContext(context.Background()), ns, pluginInfo, eventType, &logical.EventData{
+				Id:        id,
+				Metadata:  nil,
+				EntityIds: nil,
+				Note:      "testing",
+			})
+			if err != nil {
+				core.Logger().Info("Error sending event, exiting sender", "error", err)
+			}
+		}
+	}
+
+	t.Cleanup(func() {
+		stop.Store(true)
+	})
+
+	ctx := context.Background()
+	wsAddr := strings.Replace(addr, "http", "ws", 1)
+
+	testCases := []struct {
+		name           string
+		namespaces     []string
+		expectedEvents int
+	}{
+		{"invalid", []string{"something"}, 1},
+		{"simple wildcard", []string{"ns*"}, 5},
+		{"two namespaces", []string{"ns1/ns13", "ns1/other"}, 2},
+		{"no namespace", []string{""}, 1},
+		{"all wildcard", []string{"*"}, 5},
+		{"mixed wildcard", []string{"ns1/ns13*", "ns2"}, 4},
+		{"overlapping wildcard", []string{"ns*", "ns1"}, 5},
+	}
+
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			extra := ""
+			for _, ns := range testCase.namespaces {
+				extra += "&namespaces=" + ns
+			}
+			url := fmt.Sprintf("%s/v1/sys/events/subscribe/%s?json=true%v", wsAddr, eventType, extra)
+			conn, _, err := websocket.Dial(ctx, url, &websocket.DialOptions{
+				HTTPHeader: http.Header{"x-vault-token": []string{token}},
+			})
+			if err != nil {
+				t.Fatal(err)
+			}
+			t.Cleanup(func() {
+				conn.Close(websocket.StatusNormalClosure, "")
+			})
+			sendEvents()
+			ctx, cancel := context.WithTimeout(ctx, 100*time.Millisecond)
+			defer cancel()
+			gotEvents := 0
+			for {
+				_, msg, err := conn.Read(ctx)
+				if err != nil {
+					break
+				}
+				event := map[string]interface{}{}
+				err = json.Unmarshal(msg, &event)
+				if err != nil {
+					t.Fatal(err)
+				}
+				t.Log(string(msg))
+				gotEvents += 1
+			}
+			assert.Equal(t, testCase.expectedEvents, gotEvents)
+		})
+	}
+}
+
+func TestNamespacePrepend(t *testing.T) {
+	testCases := []struct {
+		requestNs string
+		patterns  []string
+		result    []string
+	}{
+		{"", []string{"ns*"}, []string{"", "ns*"}},
+		{"ns1", []string{"ns*"}, []string{"ns1", "ns1/ns*"}},
+		{"ns1", []string{"ns1*"}, []string{"ns1", "ns1/ns1*"}},
+		{"ns1", []string{"ns1/*"}, []string{"ns1", "ns1/ns1/*"}},
+		{"", []string{"ns1/ns13", "ns1/other"}, []string{"", "ns1/ns13", "ns1/other"}},
+		{"ns1", []string{"ns1/ns13", "ns1/other"}, []string{"ns1", "ns1/ns1/ns13", "ns1/ns1/other"}},
+		{"", []string{""}, []string{""}},
+		{"", nil, []string{""}},
+		{"ns1", []string{""}, []string{"ns1"}},
+		{"ns1", []string{"", ""}, []string{"ns1"}},
+		{"ns1", []string{"ns1"}, []string{"ns1", "ns1/ns1"}},
+		{"", []string{"*"}, []string{"", "*"}},
+		{"ns1", []string{"*"}, []string{"ns1", "ns1/*"}},
+		{"", []string{"ns1/ns13*", "ns2"}, []string{"", "ns1/ns13*", "ns2"}},
+		{"ns1", []string{"ns1/ns13*", "ns2"}, []string{"ns1", "ns1/ns1/ns13*", "ns1/ns2"}},
+		{"", []string{"ns*", "ns1"}, []string{"", "ns*", "ns1"}},
+		{"ns1", []string{"ns*", "ns1"}, []string{"ns1", "ns1/ns*", "ns1/ns1"}},
+		{"ns1", []string{"ns1*", "ns1"}, []string{"ns1", "ns1/ns1*", "ns1/ns1"}},
+		{"ns1", []string{"ns1/*", "ns1"}, []string{"ns1", "ns1/ns1/*", "ns1/ns1"}},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.requestNs+" "+strings.Join(testCase.patterns, " "), func(t *testing.T) {
+			result := prependNamespacePatterns(testCase.patterns, &namespace.Namespace{ID: testCase.requestNs, Path: testCase.requestNs})
+			assert.Equal(t, testCase.result, result)
+		})
 	}
 }
 
