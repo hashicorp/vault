@@ -154,7 +154,7 @@ export default class KvSecretDetails extends Component {
   get showDelete() {
     const { secret } = this.args;
     if (secret.canDeleteVersion || secret.canDeleteLatestVersion) {
-      return this.versionState === 'created';
+      return this.versionState === 'created' || this.versionState === '';
     }
     return false;
   }
@@ -162,7 +162,7 @@ export default class KvSecretDetails extends Component {
   get showDestroy() {
     const { secret } = this.args;
     if (secret.canDestroyVersion) {
-      return this.versionState !== 'destroyed';
+      return this.versionState !== 'destroyed' && this.version;
     }
     return false;
   }

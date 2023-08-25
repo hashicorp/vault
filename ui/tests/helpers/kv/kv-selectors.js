@@ -40,6 +40,7 @@ export const PAGE = {
     destroy: '[data-test-kv-delete="destroy"]',
     undelete: '[data-test-kv-delete="undelete"]',
     copy: '[data-test-copy-menu-trigger]',
+    deleteModal: '[data-test-delete-modal]',
     deleteModalTitle: '[data-test-delete-modal] [data-test-modal-title]',
     deleteOption: 'input#delete-version',
     deleteOptionLatest: 'input#delete-latest-version',

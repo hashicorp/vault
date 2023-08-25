@@ -42,7 +42,7 @@ export default class KvDeleteModal extends Component {
         return {
           title: 'Destroy version?',
           type: 'danger',
-          intro: `This action will permanently destroy Version ${this.args.secret.version} of the secret, and the secret data cannot be read or recovered later.`,
+          intro: `This action will permanently destroy Version ${this.args.version} of the secret, and the secret data cannot be read or recovered later.`,
         };
       case 'delete-metadata':
         return {
@@ -63,7 +63,7 @@ export default class KvDeleteModal extends Component {
       {
         key: 'delete-version',
         label: 'Delete this version',
-        description: `This deletes Version ${version} of the secret.`,
+        description: `This deletes ${version ? `Version ${version}` : `a specific version`} of the secret.`,
         disabled: !secret.canDeleteVersion,
         tooltipMessage: `Deleting a specific version requires "update" capabilities to ${secret.backend}/delete/${secret.path}.`,
       },
