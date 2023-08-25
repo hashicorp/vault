@@ -4,7 +4,7 @@
  */
 
 import ApplicationAdapter from '../application';
-import { kvDataPath, kvDeletePath, kvDestroyPath, kvUndeletePath } from 'vault/utils/kv-path';
+import { kvDataPath, kvDeletePath, kvDestroyPath, kvMetadataPath, kvUndeletePath } from 'vault/utils/kv-path';
 import { assert } from '@ember/debug';
 import ControlGroupError from 'vault/lib/control-group-error';
 
@@ -96,7 +96,7 @@ export default class KvDataAdapter extends ApplicationAdapter {
       });
   }
 
-  /* Five types of delete operations (the 5th operation is on the kv/metadata adapter) */
+  /* Five types of delete operations */
   deleteRecord(store, type, snapshot) {
     const { backend, path } = snapshot.record;
     const { deleteType, deleteVersions } = snapshot.adapterOptions;
@@ -120,8 +120,12 @@ export default class KvDataAdapter extends ApplicationAdapter {
         return this.ajax(this._url(kvUndeletePath(backend, path)), 'POST', {
           data: { versions: deleteVersions },
         });
+      case 'destroy-all-versions':
+        return this.ajax(this._url(kvMetadataPath(backend, path)), 'DELETE');
       default:
-        assert('deleteType must be one of delete-latest-version, delete-version, destroy, or undelete.');
+        assert(
+          'deleteType must be one of delete-latest-version, delete-version, destroy, undelete, or destroy-all-versions.'
+        );
     }
   }
 
