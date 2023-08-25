@@ -191,8 +191,8 @@ module('Acceptance | settings/mount-secret-backend', function (hooks) {
 
   // TEST TRANSITIONS AFTER MOUNTING
   test('it should transition to mountable addon engine after mount success', async function (assert) {
-    assert.expect(3);
     const addons = allEngines().filter((e) => supportedSecretBackends().includes(e.type) && e.engineRoute);
+    assert.expect(addons.length);
 
     for (const engine of addons) {
       await consoleComponent.runCommands([
@@ -206,14 +206,14 @@ module('Acceptance | settings/mount-secret-backend', function (hooks) {
       assert.strictEqual(
         currentRouteName(),
         `vault.cluster.secrets.backend.${engine.engineRoute}`,
-        `Transitions to ${engine} route on mount success`
+        `Transitions to ${engine.displayName} route on mount success`
       );
     }
   });
 
   test('it should transition to mountable non-addon engine after mount success', async function (assert) {
-    assert.expect(engines.length);
     const engines = allEngines().filter((e) => supportedSecretBackends().includes(e.type) && !e.engineRoute);
+    assert.expect(engines.length);
 
     for (const engine of engines) {
       if (engine.type === 'kv') continue; // exist loop because kv is special so we test separately
@@ -234,8 +234,8 @@ module('Acceptance | settings/mount-secret-backend', function (hooks) {
   });
 
   test('it should transition back to backend list for unsupported backends', async function (assert) {
-    assert.expect(unsupported.length);
     const unsupported = allEngines().filter((e) => !supportedSecretBackends().includes(e.type));
+    assert.expect(unsupported.length);
 
     for (const engine of unsupported) {
       await consoleComponent.runCommands([
