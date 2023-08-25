@@ -128,7 +128,7 @@ func TestPostgreSQL_Initialize_CloudGCP(t *testing.T) {
 			req: dbplugin.InitializeRequest{
 				Config: map[string]interface{}{
 					"connection_url": connURL,
-					"auth_type":      "gcp_iam",
+					"auth_type":      connutil.AuthTypeGCPIAM,
 					"credentials":    credStr,
 				},
 				VerifyConnection: true,
@@ -1195,7 +1195,7 @@ func TestNewUser_CloudGCP(t *testing.T) {
 				Config: map[string]interface{}{
 					"connection_url":    connURL,
 					"username_template": test.usernameTemplate,
-					"auth_type":         "gcp_iam",
+					"auth_type":         connutil.AuthTypeGCPIAM,
 					"credentials":       credStr,
 				},
 				VerifyConnection: true,
