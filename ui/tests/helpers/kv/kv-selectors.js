@@ -59,6 +59,8 @@ export const PAGE = {
     linkedBlock: (version) =>
       version ? `[data-test-version-linked-block="${version}"]` : '[data-test-version-linked-block]',
     button: (version) => `[data-test-version-button="${version}"]`,
+    versionMenu: (version) => `[data-test-version-linked-block="${version}"] [data-test-popup-menu-trigger]`,
+    createFromVersion: (version) => `[data-test-create-new-version-from="${version}"]`,
   },
   create: {
     metadataSection: '[data-test-metadata-section]',
