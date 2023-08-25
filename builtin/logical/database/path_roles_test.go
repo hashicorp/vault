@@ -17,7 +17,6 @@ import (
 	postgreshelper "github.com/hashicorp/vault/helper/testhelpers/postgresql"
 	v5 "github.com/hashicorp/vault/sdk/database/dbplugin/v5"
 	"github.com/hashicorp/vault/sdk/logical"
-	"github.com/robfig/cron/v3"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 )
@@ -252,11 +251,10 @@ func TestBackend_StaticRole_Config(t *testing.T) {
 	// Test static role creation scenarios. Uses a map, so there is no guaranteed
 	// ordering, so each case cleans up by deleting the role
 	testCases := map[string]struct {
-		account         map[string]interface{}
-		path            string
-		expected        map[string]interface{}
-		scheduleOptions cron.ParseOption
-		err             error
+		account  map[string]interface{}
+		path     string
+		expected map[string]interface{}
+		err      error
 		// use this field to check partial error strings, otherwise use err
 		errContains string
 	}{
@@ -350,13 +348,8 @@ func TestBackend_StaticRole_Config(t *testing.T) {
 				"username":          dbUser,
 				"rotation_schedule": "*/10 * * * * *",
 			},
-			path: "plugin-role-test-1",
-			expected: map[string]interface{}{
-				"username":          dbUser,
-				"rotation_schedule": "*/10 * * * * *",
-			},
-			scheduleOptions: scheduleOptionsDefault,
-			errContains:     "could not parse rotation_schedule",
+			path:        "plugin-role-test-1",
+			errContains: "could not parse rotation_schedule",
 		},
 	}
 

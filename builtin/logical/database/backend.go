@@ -180,6 +180,7 @@ type databaseBackend struct {
 	gaugeCollectionProcess     *metricsutil.GaugeCollectionProcess
 	gaugeCollectionProcessStop sync.Once
 
+	// scheduleOptionsOverride is used by tests to set a custom ParseOption with seconds enabled
 	scheduleOptionsOverride cron.ParseOption
 }
 
