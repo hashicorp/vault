@@ -62,7 +62,15 @@ export default class App extends Application {
     },
     kv: {
       dependencies: {
-        services: ['download', 'namespace', 'router', 'store', 'secret-mount-path', 'flash-messages'],
+        services: [
+          'download',
+          'namespace',
+          'router',
+          'store',
+          'secret-mount-path',
+          'flash-messages',
+          'control-group',
+        ],
         externalRoutes: {
           secrets: 'vault.cluster.secrets.backends',
         },
