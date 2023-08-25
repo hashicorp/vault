@@ -38,8 +38,8 @@ const EXAMPLE_KV_DATA_GET_RESPONSE = {
 const EXAMPLE_CONTROL_GROUP_RESPONSE = {
   data: null,
   wrap_info: {
-    token: 'hvs.kQC7bJuXHBhXHmkOrD2s2uyD',
-    accessor: 'S6RoG8QpScWlBrF8AodC1nFi',
+    token: 'some-token',
+    accessor: 'some-accessor',
     ttl: 86400,
     creation_time: '2023-08-09T16:08:06-05:00',
     creation_path: 'some/path/here',
