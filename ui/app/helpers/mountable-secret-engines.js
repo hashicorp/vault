@@ -9,7 +9,7 @@ const ENTERPRISE_SECRET_ENGINES = [
   {
     displayName: 'KMIP',
     type: 'kmip',
-    engineRoute: 'kmip.scopes',
+    engineRoute: 'kmip.scopes.index',
     category: 'generic',
     requiredFeature: 'KMIP',
   },
@@ -77,7 +77,7 @@ const MOUNTABLE_SECRET_ENGINES = [
   {
     displayName: 'KV',
     type: 'kv',
-    engineRoute: 'kv',
+    engineRoute: 'kv.list',
     category: 'generic',
   },
   {

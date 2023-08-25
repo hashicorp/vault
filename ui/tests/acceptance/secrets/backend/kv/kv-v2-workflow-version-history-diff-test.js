@@ -40,7 +40,7 @@ module('Acceptance | kv-v2 workflow | version history & diff', function (hooks) 
       await authPage.login(token);
     });
     test('can navigate to the version history page', async function (assert) {
-      assert.expect(8);
+      assert.expect(10);
       await this.navToSecret();
       await click(PAGE.secretTab('Version History'));
       assert.strictEqual(
