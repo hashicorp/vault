@@ -31,11 +31,6 @@ const ENTERPRISE_SECRET_ENGINES = [
 
 const MOUNTABLE_SECRET_ENGINES = [
   {
-    displayName: 'Active Directory',
-    type: 'ad',
-    category: 'cloud',
-  },
-  {
     displayName: 'AliCloud',
     type: 'alicloud',
     category: 'cloud',
@@ -112,8 +107,14 @@ const MOUNTABLE_SECRET_ENGINES = [
     category: 'generic',
   },
   {
+    displayName: 'LDAP',
+    type: 'ldap',
+    engineRoute: 'ldap.overview',
+    category: 'generic',
+    glyph: 'folder-users',
+  },
+  {
     displayName: 'Kubernetes',
-    value: 'kubernetes',
     type: 'kubernetes',
     engineRoute: 'kubernetes.overview',
     category: 'generic',

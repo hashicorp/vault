@@ -11,7 +11,7 @@ export default class KubernetesRoleCredentialsRoute extends Route {
   model() {
     return {
       roleName: this.paramsFor('roles.role').name,
-      backend: this.secretMountPath.get(),
+      backend: this.secretMountPath.currentPath,
     };
   }
 

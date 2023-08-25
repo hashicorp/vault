@@ -5,35 +5,48 @@
 
 import Route from '@ember/routing/route';
 
+import type Store from '@ember-data/store';
+import type SecretMountPath from 'vault/services/secret-mount-path';
+import type Transition from '@ember/routing/transition';
+import type Model from '@ember-data/model';
+import type AdapterError from 'ember-data/adapter'; // eslint-disable-line ember/use-ember-data-rfc-395-imports
+
 /**
- * the overview, configure, configuration and roles routes all need to be aware of the config for the engine
+ * for use in routes that need to be aware of the config for a secrets engine
  * if the user has not configured they are prompted to do so in each of the routes
  * decorate the necessary routes to perform the check in the beforeModel hook since that may change what is returned for the model
  */
 
-export function withConfig() {
-  return function decorator(SuperClass) {
+interface BaseRoute extends Route {
+  store: Store;
+  secretMountPath: SecretMountPath;
+}
+
+export function withConfig(modelName: string) {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  return function <RouteClass extends new (...args: any[]) => BaseRoute>(SuperClass: RouteClass) {
     if (!Object.prototype.isPrototypeOf.call(Route, SuperClass)) {
       // eslint-disable-next-line
       console.error(
-        'withConfig decorator must be used on an instance of ember Route class. Decorator not applied to returned class'
+        'withConfig decorator must be used on an instance of Ember Route class. Decorator not applied to returned class'
       );
       return SuperClass;
     }
-    return class FetchConfig extends SuperClass {
-      configModel = null;
-      configError = null;
+
+    return class FetchSecretsEngineConfig extends SuperClass {
+      configModel: Model | null = null;
+      configError: AdapterError | null = null;
       promptConfig = false;
 
-      async beforeModel() {
-        super.beforeModel(...arguments);
+      async beforeModel(transition: Transition) {
+        super.beforeModel(transition);
 
-        const backend = this.secretMountPath.get();
+        const backend = this.secretMountPath.currentPath;
         // check the store for record first
-        this.configModel = this.store.peekRecord('kubernetes/config', backend);
+        this.configModel = this.store.peekRecord(modelName, backend);
         if (!this.configModel) {
           return this.store
-            .queryRecord('kubernetes/config', { backend })
+            .queryRecord(modelName, { backend })
             .then((record) => {
               this.configModel = record;
               this.promptConfig = false;

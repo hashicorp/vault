@@ -9,14 +9,16 @@
       <li data-test-crumb="{{idx}}">
         <span class="sep">/</span>
         {{#if breadcrumb.linkExternal}}
-          <LinkToExternal @route={{breadcrumb.route}}>{{breadcrumb.label}}</LinkToExternal>
+          <LinkToExternal @route={{breadcrumb.route}} data-test-breadcrumb={{breadcrumb.label}}>
+            {{breadcrumb.label}}
+          </LinkToExternal>
         {{else if breadcrumb.route}}
           {{#if breadcrumb.model}}
-            <LinkTo @route={{breadcrumb.route}} @model={{breadcrumb.model}}>
+            <LinkTo @route={{breadcrumb.route}} @model={{breadcrumb.model}} data-test-breadcrumb={{breadcrumb.label}}>
               {{breadcrumb.label}}
             </LinkTo>
           {{else}}
-            <LinkTo @route={{breadcrumb.route}}>
+            <LinkTo @route={{breadcrumb.route}} data-test-breadcrumb={{breadcrumb.label}}>
               {{breadcrumb.label}}
             </LinkTo>
           {{/if}}
