@@ -60,39 +60,6 @@ jobs:
           github-token: ${{ secrets.ELEVATED_GITHUB_TOKEN }}
           no-restore: true # don't download them on a cache hit
 
-  diff-oss-ci:
-    name: Diff OSS
-    needs:
-      - setup
-    if: ${{ needs.setup.outputs.enterprise != '' && github.base_ref != '' }}
-    runs-on: ${{ fromJSON(needs.setup.outputs.compute-small) }}
-    steps:
-      - uses: actions/checkout@c85c95e3d7251135ab7dc9ce3241c5835cc595a9 # v3.5.3
-        with:
-          fetch-depth: 0
-      - id: determine-branch
-        run: |
-          branch="${{ github.base_ref }}"
-
-          if [[ $branch = release/* ]] ; then
-            branch=${branch%%+ent}
-
-            # Add OSS remote
-            git config --global user.email "github-team-secret-vault-core@hashicorp.com"
-            git config --global user.name "hc-github-team-secret-vault-core"
-            git remote add oss https://github.com/hashicorp/vault.git
-            git fetch oss "$branch"
-
-            branch="oss/$branch"
-          else
-            branch="origin/$branch"
-          fi
-
-          echo "BRANCH=$branch" >> "$GITHUB_OUTPUT"
-      - id: diff
-        run: |
-          ./.github/scripts/oss-diff.sh ${{ steps.determine-branch.outputs.BRANCH }} HEAD
-
   verify-changes:
     name: Verify doc-ui only PRs
     uses: ./.github/workflows/verify_changes.yml
