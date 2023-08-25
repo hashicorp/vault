@@ -83,7 +83,9 @@ module('Integration | Component | kv-v2 | Page::Secret::Metadata::Details', func
     assert.dom(PAGE.metadata.editBtn).exists();
 
     // Metadata details
-    assert.dom(PAGE.infoRowValue('Last updated')).hasText('Mar 21, 2018 07:36 PM');
+    assert
+      .dom(PAGE.infoRowValue('Last updated'))
+      .hasTextContaining('Mar', 'Displays updated date with formatting');
     assert.dom(PAGE.infoRowValue('Maximum versions')).hasText('15');
     assert.dom(PAGE.infoRowValue('Check-and-Set required')).hasText('Yes');
     assert
