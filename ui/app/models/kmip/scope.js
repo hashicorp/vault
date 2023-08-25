@@ -16,5 +16,5 @@ export default Model.extend({
   attrs: computed(function () {
     return expandAttributeMeta(this, ['name']);
   }),
-  updatePath: lazyCapabilities(apiPath`${'backend'}/scope/${'id'}`, 'id'),
+  updatePath: lazyCapabilities(apiPath`${'backend'}/scope/${'id'}`, 'backend', 'id'),
 });

@@ -96,5 +96,5 @@ export default Model.extend({
   backend: attr('string', {
     readOnly: true,
   }),
-  updatePath: lazyCapabilities(apiPath`${'backend'}/transformation/${'id'}`, 'id'),
+  updatePath: lazyCapabilities(apiPath`${'backend'}/transformation/${'id'}`, 'backend', 'id'),
 });
