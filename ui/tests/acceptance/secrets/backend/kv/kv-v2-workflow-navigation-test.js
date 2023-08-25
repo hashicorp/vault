@@ -772,7 +772,7 @@ module('Acceptance | kv-v2 workflow | navigation', function (hooks) {
       assertCorrectBreadcrumbs(assert, ['secret', backend, 'app', 'nested', 'secret']);
       assert.dom(PAGE.title).hasText('app/nested/secret', 'title is full secret path');
       assertDetailsToolbar(assert, ['delete', 'destroy', 'versionDropdown']);
-      assert.dom(PAGE.detail.versionDropdown).hasText('Version current');
+      assert.dom(PAGE.detail.versionDropdown).hasText('Version 1', 'Shows version timestamp');
 
       await click(PAGE.breadcrumbAtIdx(3));
       assert.ok(
@@ -807,9 +807,7 @@ module('Acceptance | kv-v2 workflow | navigation', function (hooks) {
       assert.dom(PAGE.secretTab('Metadata')).doesNotHaveClass('active');
       assert.dom(PAGE.secretTab('Version History')).hasText('Version History');
       assert.dom(PAGE.secretTab('Version History')).doesNotHaveClass('active');
-      assert
-        .dom(PAGE.detail.versionDropdown)
-        .hasText('Version current', 'Version dropdown shows current version');
+      assert.dom(PAGE.detail.versionDropdown).hasText('Version 3', 'Version dropdown shows current version');
       assert.dom(PAGE.detail.createNewVersion).doesNotExist('Create new version button not shown');
       assert.dom(PAGE.detail.versionTimestamp).doesNotExist('Version created text not shown');
       assert.dom(PAGE.infoRowValue('foo')).doesNotExist('does not render current data');
