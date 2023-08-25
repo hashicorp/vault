@@ -51,7 +51,10 @@ func (c *EventsSubscribeCommands) Flags() *FlagSets {
 	f.StringSliceVar(&StringSliceVar{
 		Name: "namespaces",
 		Usage: `Specifies one or more patterns of additional child namespaces
-				to subscribe to. Patterns can include "*" characters to indicate
+				to subscribe to. The namespace of the request is automatically
+                prepended, so specifying 'ns2' when the request is in the 'ns1'
+                namespace will result in subscribing to 'ns1/ns2', in addition
+                'ns1'. Patterns can include "*" characters to indicate
                 wildcards. The default is to subscribe only to the request's
                 namespace.`,
 		Default: []string{},
@@ -107,6 +110,7 @@ func cleanNamespace(ns string) string {
 	return ns
 }
 
+// cleanNamespaces removes leading and trailing space and /'s from the namespace paths.
 func cleanNamespaces(namespaces []string) []string {
 	cleaned := make([]string, len(namespaces))
 	for i, ns := range namespaces {

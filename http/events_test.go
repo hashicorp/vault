@@ -185,7 +185,7 @@ func TestEventsSubscribeNamespaces(t *testing.T) {
 			if err != nil {
 				core.Logger().Info("Error generating UUID, exiting sender", "error", err)
 			}
-			err = core.Events().SendInternal(namespace.RootContext(context.Background()), ns, pluginInfo, eventType, &logical.EventData{
+			err = core.Events().SendEventInternal(namespace.RootContext(context.Background()), ns, pluginInfo, eventType, &logical.EventData{
 				Id:        id,
 				Metadata:  nil,
 				EntityIds: nil,
@@ -256,41 +256,35 @@ func TestEventsSubscribeNamespaces(t *testing.T) {
 	}
 }
 
-func TestNamespaceValidation(t *testing.T) {
+func TestNamespacePrepend(t *testing.T) {
 	testCases := []struct {
 		requestNs string
 		patterns  []string
 		result    []string
-		err       bool
 	}{
-		{"", []string{"ns*"}, []string{"ns*", ""}, false},
-		{"ns1", []string{"ns*"}, nil, true},
-		{"ns1", []string{"ns1*"}, nil, true},
-		{"ns1", []string{"ns1/*"}, []string{"ns1/*", "ns1"}, false},
-		{"", []string{"ns1/ns13", "ns1/other"}, []string{"ns1/ns13", "ns1/other", ""}, false},
-		{"ns1", []string{"ns1/ns13", "ns1/other"}, []string{"ns1/ns13", "ns1/other", "ns1"}, false},
-		{"", []string{""}, []string{""}, false},
-		{"ns1", []string{""}, nil, true},
-		{"ns1", []string{"ns1"}, []string{"ns1"}, false},
-		{"", []string{"*"}, []string{"*"}, false},
-		{"ns1", []string{"*"}, nil, true},
-		{"", []string{"ns1/ns13*", "ns2"}, []string{"ns1/ns13*", "ns2", ""}, false},
-		{"ns1", []string{"ns1/ns13*", "ns2"}, nil, true},
-		{"", []string{"ns*", "ns1"}, []string{"ns*", "ns1", ""}, false},
-		{"ns1", []string{"ns*", "ns1"}, nil, true},
-		{"ns1", []string{"ns1*", "ns1"}, nil, true},
-		{"ns1", []string{"ns1/*", "ns1"}, []string{"ns1/*", "ns1"}, false},
+		{"", []string{"ns*"}, []string{"", "ns*"}},
+		{"ns1", []string{"ns*"}, []string{"ns1", "ns1/ns*"}},
+		{"ns1", []string{"ns1*"}, []string{"ns1", "ns1/ns1*"}},
+		{"ns1", []string{"ns1/*"}, []string{"ns1", "ns1/ns1/*"}},
+		{"", []string{"ns1/ns13", "ns1/other"}, []string{"", "ns1/ns13", "ns1/other"}},
+		{"ns1", []string{"ns1/ns13", "ns1/other"}, []string{"ns1", "ns1/ns1/ns13", "ns1/ns1/other"}},
+		{"", []string{""}, []string{""}},
+		{"", nil, []string{""}},
+		{"ns1", []string{""}, []string{"ns1"}},
+		{"ns1", []string{"", ""}, []string{"ns1"}},
+		{"ns1", []string{"ns1"}, []string{"ns1", "ns1/ns1"}},
+		{"", []string{"*"}, []string{"", "*"}},
+		{"ns1", []string{"*"}, []string{"ns1", "ns1/*"}},
+		{"", []string{"ns1/ns13*", "ns2"}, []string{"", "ns1/ns13*", "ns2"}},
+		{"ns1", []string{"ns1/ns13*", "ns2"}, []string{"ns1", "ns1/ns1/ns13*", "ns1/ns2"}},
+		{"", []string{"ns*", "ns1"}, []string{"", "ns*", "ns1"}},
+		{"ns1", []string{"ns*", "ns1"}, []string{"ns1", "ns1/ns*", "ns1/ns1"}},
+		{"ns1", []string{"ns1*", "ns1"}, []string{"ns1", "ns1/ns1*", "ns1/ns1"}},
+		{"ns1", []string{"ns1/*", "ns1"}, []string{"ns1", "ns1/ns1/*", "ns1/ns1"}},
 	}
 	for _, testCase := range testCases {
 		t.Run(testCase.requestNs+" "+strings.Join(testCase.patterns, " "), func(t *testing.T) {
-			result, err := validateNamespacePatterns(testCase.patterns, &namespace.Namespace{ID: testCase.requestNs, Path: testCase.requestNs})
-			if err != nil {
-				if testCase.err {
-					return
-				} else {
-					t.Fatalf("Expected no error but got %v", err)
-				}
-			}
+			result := prependNamespacePatterns(testCase.patterns, &namespace.Namespace{ID: testCase.requestNs, Path: testCase.requestNs})
 			assert.Equal(t, testCase.result, result)
 		})
 	}

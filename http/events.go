@@ -8,6 +8,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"path"
 	"strconv"
 	"strings"
 	"time"
@@ -18,7 +19,6 @@ import (
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/vault"
 	"github.com/hashicorp/vault/vault/eventbus"
-	"github.com/ryanuber/go-glob"
 	"nhooyr.io/websocket"
 )
 
@@ -125,12 +125,7 @@ func handleEventsSubscribe(core *vault.Core, req *logical.Request) http.Handler 
 		}
 
 		namespacePatterns := r.URL.Query()["namespaces"]
-		namespacePatterns, err = validateNamespacePatterns(namespacePatterns, ns)
-		if err != nil {
-			logger.Info("Error validating namespace subscription request", "error", err)
-			respondError(w, http.StatusBadRequest, err)
-			return
-		}
+		namespacePatterns = prependNamespacePatterns(namespacePatterns, ns)
 		conn, err := websocket.Accept(w, r, nil)
 		if err != nil {
 			logger.Info("Could not accept as websocket", "error", err)
@@ -172,44 +167,17 @@ func handleEventsSubscribe(core *vault.Core, req *logical.Request) http.Handler 
 	})
 }
 
-// validateNamespacePatterns validates that the namespace subscribe patterns only match
-// child namespaces of the request namespace. It also checks if the request namespace
-// is present, and if it is not, it adds it. It returns a (possibly modified) copy of
-// the patterns.
-func validateNamespacePatterns(patterns []string, requestNamespace *namespace.Namespace) ([]string, error) {
-	rns := strings.TrimSuffix(requestNamespace.Path, "/")
+// prependNamespacePatterns prepends the request namespace to the namespace patterns,
+// and also adds the request namespace to the list.
+func prependNamespacePatterns(patterns []string, requestNamespace *namespace.Namespace) []string {
+	prepend := strings.Trim(requestNamespace.Path, "/")
+	newPatterns := make([]string, 0, len(patterns)+1)
+	newPatterns = append(newPatterns, prepend)
 	for _, pattern := range patterns {
-		if !isChildPattern(pattern, rns) {
-			return nil, fmt.Errorf("namespace pattern %v must match only child namespaces of %s", pattern, rns)
+		if strings.Trim(strings.TrimSpace(pattern), "/") == "" {
+			continue
 		}
+		newPatterns = append(newPatterns, path.Join(prepend, strings.TrimPrefix(pattern, "/")))
 	}
-
-	// check that the request namespace is included in at least one of the patterns
-	present := false
-	for _, pattern := range patterns {
-		if glob.Glob(pattern, rns) {
-			present = true
-			break
-		}
-	}
-	if present {
-		return patterns, nil
-	}
-	newPatterns := append(patterns, rns)
-	return newPatterns, nil
-}
-
-func isChildPattern(pattern string, ns string) bool {
-	// everything is a child of the root namespace
-	if ns == "" {
-		return true
-	}
-	// if they are exact matches and the pattern doesn't have a glob, then it only matches the namespace
-	if ns == pattern && !strings.Contains(pattern, "*") {
-		return true
-	}
-	if strings.HasPrefix(pattern, ns+"/") {
-		return true
-	}
-	return false
+	return newPatterns
 }
