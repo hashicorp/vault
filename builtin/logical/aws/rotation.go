@@ -11,6 +11,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/iam"
 	"github.com/hashicorp/go-multierror"
+
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/sdk/queue"
 )
@@ -131,10 +132,16 @@ func (b *backend) createCredential(ctx context.Context, storage logical.Storage,
 		return fmt.Errorf("unable to create new access keys for user %q: %w", cfg.Username, err)
 	}
 
+	sesSmtpPassword := ""
+	if cfg.SESRegion != "" {
+		sesSmtpPassword = awsSesSmtpPasswordFromSecretKey(*out.AccessKey.SecretAccessKey, cfg.SESRegion)
+	}
+
 	// Persist new keys
 	entry, err := logical.StorageEntryJSON(formatCredsStoragePath(cfg.Name), &awsCredentials{
 		AccessKeyID:     *out.AccessKey.AccessKeyId,
 		SecretAccessKey: *out.AccessKey.SecretAccessKey,
+		SESSMTPPassword: sesSmtpPassword,
 	})
 	if err != nil {
 		return fmt.Errorf("failed to marshal object to JSON: %w", err)

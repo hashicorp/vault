@@ -13,6 +13,8 @@ import (
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/iam"
 	"github.com/fatih/structs"
+	"github.com/hashicorp/go-secure-stdlib/strutil"
+
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/sdk/queue"
@@ -24,6 +26,7 @@ const (
 	paramRoleName       = "name"
 	paramUsername       = "username"
 	paramRotationPeriod = "rotation_period"
+	paramSESRegion      = "ses_region"
 )
 
 type staticRoleEntry struct {
@@ -31,6 +34,7 @@ type staticRoleEntry struct {
 	ID             string        `json:"id" structs:"id" mapstructure:"id"`
 	Username       string        `json:"username" structs:"username" mapstructure:"username"`
 	RotationPeriod time.Duration `json:"rotation_period" structs:"rotation_period" mapstructure:"rotation_period"`
+	SESRegion      string        `json:"ses_region" structs:"ses_region" mapstructure:"ses_region"`
 }
 
 func pathStaticRoles(b *backend) *framework.Path {
@@ -50,6 +54,10 @@ func pathStaticRoles(b *backend) *framework.Path {
 					Type:        framework.TypeDurationSecond,
 					Description: descRotationPeriod,
 				},
+				paramSESRegion: {
+					Type:        framework.TypeString,
+					Description: descSESRegion,
+				},
 			},
 		}},
 	}
@@ -68,6 +76,10 @@ func pathStaticRoles(b *backend) *framework.Path {
 			paramRotationPeriod: {
 				Type:        framework.TypeDurationSecond,
 				Description: descRotationPeriod,
+			},
+			paramSESRegion: {
+				Type:        framework.TypeString,
+				Description: descSESRegion,
 			},
 		},
 
@@ -177,6 +189,15 @@ func (b *backend) pathStaticRolesWrite(ctx context.Context, req *logical.Request
 		}
 	} else if isCreate {
 		return logical.ErrorResponse("missing %q parameter", paramRotationPeriod), nil
+	}
+
+	if rawSESRegion, ok := data.GetOk(paramSESRegion); ok {
+		config.SESRegion = rawSESRegion.(string)
+		if config.SESRegion != "" {
+			if !strutil.StrListContains(sesRegions, config.SESRegion) {
+				return logical.ErrorResponse(`"%s" doesn't have an SMTP endpoint`, paramSESRegion), nil
+			}
+		}
 	}
 
 	b.roleMutex.Lock()
@@ -331,4 +352,5 @@ const (
 	descUsername       = "The IAM user to adopt as a static role."
 	descRotationPeriod = `Period by which to rotate the backing credential of the adopted user. 
 This can be a Go duration (e.g, '1m', 24h'), or an integer number of seconds.`
+	descSESRegion = "The region to use when generating SES credentials."
 )
