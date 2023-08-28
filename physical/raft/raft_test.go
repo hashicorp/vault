@@ -23,6 +23,7 @@ import (
 	"github.com/golang/protobuf/proto"
 	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-secure-stdlib/base62"
+	"github.com/hashicorp/go-secure-stdlib/parseutil"
 	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/raft"
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
@@ -285,6 +286,110 @@ func TestRaft_ParseRaftWalBackend(t *testing.T) {
 
 	if !strings.Contains(err.Error(), "failed to parse") {
 		t.Fatal("expected an error about parsing config keys but got none")
+	}
+}
+
+// TestRaft_ParseRaftWalVerifierEnabled checks to make sure we error correctly if raft_log_verifier_enabled is not a boolean
+func TestRaft_ParseRaftWalVerifierEnabled(t *testing.T) {
+	raftDir := t.TempDir()
+	conf := map[string]string{
+		"path":                      raftDir,
+		"node_id":                   "abc123",
+		raftWalConfigKey:            "true",
+		"raft_log_verifier_enabled": "notabooleanlol",
+	}
+
+	_, err := NewRaftBackend(conf, hclog.NewNullLogger())
+	if err == nil {
+		t.Fatal("expected an error but got none")
+	}
+
+	if !strings.Contains(err.Error(), "does not parse as a boolean") {
+		t.Fatal("expected an error about parsing config keys but got none")
+	}
+}
+
+// TestRaft_ParseRaftWalVerifierInterval checks to make sure we handle various intervals correctly and have a default
+func TestRaft_ParseRaftWalVerifierInterval(t *testing.T) {
+	testCases := []struct {
+		name             string
+		givenInterval    string
+		expectedInterval string
+		shouldError      bool
+	}{
+		{
+			"zero",
+			"0s",
+			"30s",
+			false,
+		},
+		{
+			"one",
+			"1s",
+			"30s",
+			false,
+		},
+		{
+			"nothing",
+			"",
+			"30s",
+			false,
+		},
+		{
+			"30",
+			"30s",
+			"30s",
+			false,
+		},
+		{
+			"more than 30",
+			"45s",
+			"45s",
+			false,
+		},
+		{
+			"obviously wrong",
+			"notadurationlol",
+			"",
+			true,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			raftDir := t.TempDir()
+			conf := map[string]string{
+				"path":                           raftDir,
+				"node_id":                        "abc123",
+				raftWalConfigKey:                 "true",
+				"raft_log_verifier_enabled":      "true",
+				"raft_log_verification_interval": tc.givenInterval,
+			}
+
+			rbRaw, err := NewRaftBackend(conf, hclog.NewNullLogger())
+			if tc.shouldError {
+				if err == nil {
+					t.Fatal("expected an error but got none")
+				}
+
+				// return early, since we got the error we wanted
+				return
+			}
+			if !tc.shouldError && err != nil {
+				t.Fatal(err)
+			}
+
+			rb := rbRaw.(*RaftBackend)
+
+			parsedExpectedInterval, err := parseutil.ParseDurationSecond(tc.expectedInterval)
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			if parsedExpectedInterval != rb.RaftLogVerificationInterval() {
+				t.Fatal("expected intervals to match but they didn't")
+			}
+		})
 	}
 }
 

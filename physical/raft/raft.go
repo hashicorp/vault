@@ -686,6 +686,13 @@ func (b *RaftBackend) EffectiveVersion() string {
 	return version.GetVersion().Version
 }
 
+func (b *RaftBackend) RaftLogVerificationInterval() time.Duration {
+	b.l.RLock()
+	defer b.l.RUnlock()
+
+	return b.raftLogVerificationInterval
+}
+
 // DisableUpgradeMigration returns the state of the DisableUpgradeMigration config flag and whether it was set or not
 func (b *RaftBackend) DisableUpgradeMigration() (bool, bool) {
 	b.l.RLock()
