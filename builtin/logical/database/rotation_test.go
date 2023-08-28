@@ -15,6 +15,7 @@ import (
 	"time"
 
 	"github.com/Sectorbob/mlab-ns2/gae/ns/digest"
+	"github.com/hashicorp/vault/builtin/logical/database/schedule"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/helper/testhelpers/mongodb"
 	postgreshelper "github.com/hashicorp/vault/helper/testhelpers/postgresql"
@@ -33,9 +34,10 @@ import (
 )
 
 const (
-	dbUser                     = "vaultstatictest"
-	dbUserDefaultPassword      = "password"
-	testScheduleOptionsSeconds = cron.Second | cron.Minute | cron.Hour | cron.Dom | cron.Month | cron.Dow
+	dbUser                       = "vaultstatictest"
+	dbUserDefaultPassword        = "password"
+	testMinRotationWindowSeconds = 10
+	testScheduleParseOptions     = cron.Second | cron.Minute | cron.Hour | cron.Dom | cron.Month | cron.Dow
 )
 
 func TestBackend_StaticRole_Rotation_basic(t *testing.T) {
@@ -56,7 +58,7 @@ func TestBackend_StaticRole_Rotation_basic(t *testing.T) {
 	}
 	defer b.Cleanup(context.Background())
 
-	b.scheduleOptionsOverride = testScheduleOptionsSeconds
+	b.schedule = &TestSchedule{}
 
 	cleanup, connURL := postgreshelper.PrepareTestContainer(t, "")
 	defer cleanup()
@@ -1297,7 +1299,7 @@ func TestStoredWALsCorrectlyProcessed(t *testing.T) {
 				t.Fatal(err)
 			}
 			b.credRotationQueue = queue.New()
-			b.scheduleOptionsOverride = testScheduleOptionsSeconds
+			b.schedule = &TestSchedule{}
 			configureDBMount(t, config.StorageView)
 			createRoleWithData(t, b, config.StorageView, mockDB, tc.wal.RoleName, tc.data)
 			role, err := b.StaticRole(ctx, config.StorageView, "hashicorp")
@@ -1458,7 +1460,7 @@ func getBackend(t *testing.T) (*databaseBackend, logical.Storage, *mockNewDataba
 	if err := b.Setup(context.Background(), config); err != nil {
 		t.Fatal(err)
 	}
-	b.scheduleOptionsOverride = testScheduleOptionsSeconds
+	b.schedule = &TestSchedule{}
 	b.credRotationQueue = queue.New()
 	b.populateQueue(context.Background(), config.StorageView)
 
@@ -1547,4 +1549,28 @@ func assertPriorityUnchanged(t *testing.T, priority int64, nextRotationTime time
 	if priority != nextRotationTime.Unix() {
 		t.Fatalf("expected next rotation at %s, but got %s", nextRotationTime, time.Unix(priority, 0).String())
 	}
+}
+
+var _ schedule.Scheduler = &TestSchedule{}
+
+type TestSchedule struct{}
+
+func (d *TestSchedule) Parse(rotationSchedule string) (*cron.SpecSchedule, error) {
+	parser := cron.NewParser(testScheduleParseOptions)
+	schedule, err := parser.Parse(rotationSchedule)
+	if err != nil {
+		return nil, err
+	}
+	sched, ok := schedule.(*cron.SpecSchedule)
+	if !ok {
+		return nil, fmt.Errorf("invalid rotation schedule")
+	}
+	return sched, nil
+}
+
+func (d *TestSchedule) ValidateRotationWindow(s int) error {
+	if s < testMinRotationWindowSeconds {
+		return fmt.Errorf("rotation_window must be %d seconds or more", testMinRotationWindowSeconds)
+	}
+	return nil
 }
