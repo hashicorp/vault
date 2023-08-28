@@ -7,115 +7,131 @@ import { module, test } from 'qunit';
 import { setupRenderingTest } from 'ember-qunit';
 import { setupEngine } from 'ember-engines/test-support';
 import { setupMirage } from 'ember-cli-mirage/test-support';
-import { findAll, render } from '@ember/test-helpers';
+import { render } from '@ember/test-helpers';
 import { hbs } from 'ember-cli-htmlbars';
-import { kvMetadataPath } from 'vault/utils/kv-path';
+import { kvDataPath, kvMetadataPath } from 'vault/utils/kv-path';
 import { allowAllCapabilitiesStub } from 'vault/tests/helpers/stubs';
 import { PAGE } from 'vault/tests/helpers/kv/kv-selectors';
 
-module('Integration | Component | kv | Page::Secret::Metadata::Details', function (hooks) {
+module('Integration | Component | kv-v2 | Page::Secret::Metadata::Details', function (hooks) {
   setupRenderingTest(hooks);
   setupEngine(hooks, 'kv');
   setupMirage(hooks);
 
   hooks.beforeEach(async function () {
     this.store = this.owner.lookup('service:store');
-  });
-
-  test('it renders metadata details component and shows empty state when custom_metadata is empty', async function (assert) {
-    assert.expect(2);
     this.server.post('/sys/capabilities-self', allowAllCapabilitiesStub());
-    const data = this.server.create('kv-metadatum');
-    data.id = kvMetadataPath('kv-engine', 'my-secret');
-    this.store.pushPayload('kv/metadata', {
-      modelName: 'kv/metadata',
-      ...data,
+    this.backend = 'kv-engine';
+    this.path = 'my-secret';
+    this.dataId = kvDataPath(this.backend, this.path);
+    this.metadataId = kvMetadataPath(this.backend, this.path);
+
+    this.metadataModel = (withCustom = false) => {
+      const metadata = withCustom
+        ? this.server.create('kv-metadatum', 'withCustomMetadata')
+        : this.server.create('kv-metadatum');
+      metadata.id = this.metadataId;
+      this.store.pushPayload('kv/metadata', {
+        modelName: 'kv/metadata',
+        ...metadata,
+      });
+      return this.store.peekRecord('kv/metadata', this.metadataId);
+    };
+
+    this.metadata = this.metadataModel();
+
+    // empty secret model always exists for permissions
+    this.store.pushPayload('kv/data', {
+      modelName: 'kv/data',
+      id: this.dataId,
+      custom_metadata: null,
     });
-    this.model = this.store.peekRecord('kv/metadata', data.id);
+    this.secret = this.store.peekRecord('kv/data', this.dataId);
+
+    // this is the route model, not an ember data model
+    this.model = {
+      backend: this.backend,
+      path: this.path,
+      secret: this.secret,
+      metadata: this.metadata,
+    };
     this.breadcrumbs = [
       { label: 'secrets', route: 'secrets', linkExternal: true },
       { label: this.model.backend, route: 'list' },
-      { label: this.model.path, route: 'secret', model: this.model.path },
-      { label: 'metadata' },
+      { label: this.model.path },
     ];
+  });
+
+  test('it renders metadata details', async function (assert) {
+    assert.expect(8);
+    this.metadata = this.metadataModel();
     await render(
-      hbs`<Page::Secret::Metadata::Details @metadata={{this.model}} @breadcrumbs={{this.breadcrumbs}} />`,
-      {
-        owner: this.engine,
-      }
+      hbs`
+       <Page::Secret::Metadata::Details
+        @path={{this.model.path}}
+        @secret={{this.model.secret}}
+        @metadata={{this.model.metadata}}
+        @breadcrumbs={{this.breadcrumbs}}
+      />
+      `,
+      { owner: this.engine }
     );
+
+    assert.dom(PAGE.title).includesText(this.model.path, 'renders secret path as page title');
     assert.dom(PAGE.emptyStateTitle).hasText('No custom metadata', 'renders the correct empty state');
+    assert.dom(PAGE.metadata.deleteMetadata).exists();
+    assert.dom(PAGE.metadata.editBtn).exists();
+
+    // Metadata details
+    assert
+      .dom(PAGE.infoRowValue('Last updated'))
+      .hasTextContaining('Mar', 'Displays updated date with formatting');
+    assert.dom(PAGE.infoRowValue('Maximum versions')).hasText('15');
+    assert.dom(PAGE.infoRowValue('Check-and-Set required')).hasText('Yes');
     assert
       .dom(PAGE.infoRowValue('Delete version after'))
       .hasText('3 hours 25 minutes 19 seconds', 'correctly shows and formats the timestamp.');
   });
 
-  test('it renders custom metadata when it exists and user has permissions', async function (assert) {
-    assert.expect(3);
-    this.server.post('/sys/capabilities-self', allowAllCapabilitiesStub());
-    const data = this.server.create('kv-metadatum', 'withCustomMetadata');
-    data.id = kvMetadataPath('kv-engine', 'my-secret');
-    this.store.pushPayload('kv/metadata', {
-      modelName: 'kv/metadata',
-      ...data,
-    });
-    this.model = this.store.peekRecord('kv/metadata', data.id);
-    this.breadcrumbs = [
-      { label: 'secrets', route: 'secrets', linkExternal: true },
-      { label: this.model.backend, route: 'list' },
-      { label: this.model.path, route: 'secret', model: this.model.path },
-      { label: 'metadata' },
-    ];
-
+  test('it renders custom metadata from secret model', async function (assert) {
+    assert.expect(2);
+    this.metadata = this.metadataModel();
+    this.secret.customMetadata = { hi: 'there' };
     await render(
-      hbs`<Page::Secret::Metadata::Details @metadata={{this.model}} @breadcrumbs={{this.breadcrumbs}} />`,
-      {
-        owner: this.engine,
-      }
+      hbs`
+       <Page::Secret::Metadata::Details
+        @path={{this.model.path}}
+        @secret={{this.model.secret}}
+        @metadata={{this.model.metadata}}
+        @breadcrumbs={{this.breadcrumbs}}
+      />
+      `,
+      { owner: this.engine }
     );
-    for (const key in this.model.customMetadata) {
-      const value = this.model.customMetadata[key];
-      assert.dom(PAGE.infoRowValue(key)).hasText(value);
-    }
+
+    assert.dom(PAGE.emptyStateTitle).doesNotExist();
+    assert.dom(PAGE.infoRowValue('hi')).hasText('there', 'renders custom metadata from secret');
   });
 
-  test('it renders correct empty state messages with no READ metadata permissions and no secret.customMetadata is returned', async function (assert) {
-    assert.expect(3);
-    this.server.post('/sys/capabilities-self', allowAllCapabilitiesStub('list', 'update'));
-    // would not return custom_metadata if they did not have permissions
-    const data = this.server.create('kv-metadatum');
-    data.id = kvMetadataPath('kv-engine', 'my-secret');
-    this.store.pushPayload('kv/metadata', {
-      modelName: 'kv/metadata',
-      ...data,
-    });
-    this.model = this.store.peekRecord('kv/metadata', data.id);
-    this.breadcrumbs = [
-      { label: 'secrets', route: 'secrets', linkExternal: true },
-      { label: this.model.backend, route: 'list' },
-      { label: this.model.path, route: 'secret', model: this.model.path },
-      { label: 'metadata' },
-    ];
+  test('it renders custom metadata from metadata model', async function (assert) {
+    assert.expect(4);
+    this.metadata = this.metadataModel({ withCustom: true });
     await render(
-      hbs`<Page::Secret::Metadata::Details @metadata={{this.model}} @breadcrumbs={{this.breadcrumbs}} />`,
-      {
-        owner: this.engine,
-      }
+      hbs`
+       <Page::Secret::Metadata::Details
+        @path={{this.model.path}}
+        @secret={{this.model.secret}}
+        @metadata={{this.model.metadata}}
+        @breadcrumbs={{this.breadcrumbs}}
+      />
+      `,
+      { owner: this.engine }
     );
 
-    const [noCustomMetadata, noMetadata] = findAll(PAGE.emptyStateTitle);
-    assert
-      .dom(noCustomMetadata)
-      .exists(
-        'You do not have access to read custom metadata',
-        'renders the empty state about custom_metadata'
-      );
-    assert
-      .dom(noMetadata)
-      .exists(
-        'You do not have access to secret metadata',
-        'renders the empty state about no secret metadata'
-      );
-    assert.dom(PAGE.metadata.editBtn).doesNotExist('does not render edit metadata button.');
+    assert.dom(PAGE.emptyStateTitle).doesNotExist();
+    // Metadata details
+    assert.dom(PAGE.infoRowValue('foo')).hasText('abc');
+    assert.dom(PAGE.infoRowValue('bar')).hasText('123');
+    assert.dom(PAGE.infoRowValue('baz')).hasText('5c07d823-3810-48f6-a147-4c06b5219e84');
   });
 });

@@ -10,8 +10,14 @@ import {
   runCmd,
   createTokenCmd,
 } from 'vault/tests/helpers/commands';
-import { dataPolicy, metadataPolicy } from 'vault/tests/helpers/policy-generator/kv';
-import { writeSecret } from 'vault/tests/helpers/kv/kv-run-commands';
+import {
+  dataPolicy,
+  deleteVersionsPolicy,
+  destroyVersionsPolicy,
+  metadataListPolicy,
+  metadataPolicy,
+} from 'vault/tests/helpers/policy-generator/kv';
+import { writeSecret, writeVersionedSecret } from 'vault/tests/helpers/kv/kv-run-commands';
 import { PAGE } from 'vault/tests/helpers/kv/kv-selectors';
 
 /**
@@ -153,6 +159,86 @@ module('Acceptance | kv-v2 workflow | edge cases', function (hooks) {
       assert.dom(PAGE.breadcrumbAtIdx(1)).hasText(backend);
       assert.dom(PAGE.secretTab('Secrets')).doesNotHaveClass('is-active');
       assert.dom(PAGE.secretTab('Configuration')).doesNotHaveClass('is-active');
+    });
+  });
+
+  module('destruction without read', function (hooks) {
+    hooks.beforeEach(async function () {
+      const backend = this.backend;
+      const testSecrets = [
+        'data-delete-only',
+        'delete-version-only',
+        'destroy-version-only',
+        'destroy-metadata-only',
+      ];
+
+      // user has different permissions for each secret path
+      const token = await runCmd([
+        createPolicyCmd(
+          'destruction-no-read',
+          dataPolicy({ backend, secretPath: 'data-delete-only', capabilities: ['delete'] }) +
+            deleteVersionsPolicy({ backend, secretPath: 'delete-version-only' }) +
+            destroyVersionsPolicy({ backend, secretPath: 'destroy-version-only' }) +
+            metadataPolicy({ backend, secretPath: 'destroy-metadata-only', capabilities: ['delete'] }) +
+            metadataListPolicy(backend)
+        ),
+        createTokenCmd('destruction-no-read'),
+      ]);
+      for (const secret of testSecrets) {
+        await writeVersionedSecret(backend, secret, 'foo', 'bar', 2);
+      }
+      await authPage.login(token);
+    });
+
+    test('it renders the delete action and disables delete this version option', async function (assert) {
+      assert.expect(4);
+      const testSecret = 'data-delete-only';
+      await visit(`/vault/secrets/${this.backend}/kv/${testSecret}/details`);
+
+      assert.dom(PAGE.detail.delete).exists('renders delete button');
+      await click(PAGE.detail.delete);
+      assert
+        .dom(PAGE.detail.deleteModal)
+        .hasTextContaining('Delete this version This deletes a specific version of the secret');
+      assert.dom(PAGE.detail.deleteOption).isDisabled('disables version specific option');
+      assert.dom(PAGE.detail.deleteOptionLatest).isEnabled('enables version specific option');
+    });
+
+    test('it renders the delete action and disables delete latest version option', async function (assert) {
+      assert.expect(4);
+      const testSecret = 'delete-version-only';
+      await visit(`/vault/secrets/${this.backend}/kv/${testSecret}/details`);
+
+      assert.dom(PAGE.detail.delete).exists('renders delete button');
+      await click(PAGE.detail.delete);
+      assert
+        .dom(PAGE.detail.deleteModal)
+        .hasTextContaining('Delete this version This deletes a specific version of the secret');
+
+      assert.dom(PAGE.detail.deleteOption).isEnabled('enables version specific option');
+      assert.dom(PAGE.detail.deleteOptionLatest).isDisabled('disables version specific option');
+    });
+
+    test('it hides destroy option without version number', async function (assert) {
+      assert.expect(1);
+      const testSecret = 'destroy-version-only';
+      await visit(`/vault/secrets/${this.backend}/kv/${testSecret}/details`);
+
+      assert.dom(PAGE.detail.destroy).doesNotExist();
+    });
+
+    test('it renders the destroy metadata action and expected modal copy', async function (assert) {
+      assert.expect(2);
+
+      const testSecret = 'destroy-metadata-only';
+      await visit(`/vault/secrets/${this.backend}/kv/${testSecret}/metadata`);
+      assert.dom(PAGE.metadata.deleteMetadata).exists('renders delete metadata button');
+      await click(PAGE.metadata.deleteMetadata);
+      assert
+        .dom(PAGE.detail.deleteModal)
+        .hasText(
+          'Delete metadata? This will permanently delete the metadata and versions of the secret. All version history will be removed. This cannot be undone. Confirm Cancel'
+        );
     });
   });
 });

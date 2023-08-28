@@ -8,6 +8,7 @@
     @isActive={{this.modalOpen}}
     @type={{this.modalDisplay.type}}
     @showCloseButton={{true}}
+    data-test-delete-modal
   >
     <section class="modal-card-body">
       <p class="has-bottom-margin-s">
@@ -50,6 +51,7 @@
         type="button"
         class="button {{if (eq this.modalDisplay.type 'danger') 'is-danger-outlined' 'is-warning-outlined'}}"
         {{on "click" this.onDelete}}
+        data-test-delete-modal-confirm
       >
         Confirm
       </button>

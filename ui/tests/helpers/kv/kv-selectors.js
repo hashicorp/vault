@@ -32,6 +32,7 @@ export const PAGE = {
     addCustomMetadataBtn: '[data-test-add-custom-metadata]',
     customMetadataSection: '[data-test-kv-custom-metadata-section]',
     secretMetadataSection: '[data-test-kv-metadata-section]',
+    deleteMetadata: '[data-test-kv-delete="delete-metadata"]',
   },
   detail: {
     versionTimestamp: '[data-test-kv-version-tooltip-trigger]',
@@ -40,7 +41,13 @@ export const PAGE = {
     createNewVersion: '[data-test-create-new-version]',
     delete: '[data-test-kv-delete="delete"]',
     destroy: '[data-test-kv-delete="destroy"]',
+    undelete: '[data-test-kv-delete="undelete"]',
     copy: '[data-test-copy-menu-trigger]',
+    deleteModal: '[data-test-delete-modal]',
+    deleteModalTitle: '[data-test-delete-modal] [data-test-modal-title]',
+    deleteOption: 'input#delete-version',
+    deleteOptionLatest: 'input#delete-latest-version',
+    deleteConfirm: '[data-test-delete-modal-confirm]',
   },
   list: {
     createSecret: '[data-test-toolbar-create-secret]',
