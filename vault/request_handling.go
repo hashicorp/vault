@@ -879,12 +879,6 @@ func (c *Core) isLoginRequest(ctx context.Context, req *logical.Request) bool {
 func (c *Core) handleRequest(ctx context.Context, req *logical.Request) (retResp *logical.Response, retAuth *logical.Auth, retErr error) {
 	defer metrics.MeasureSince([]string{"core", "handle_request"}, time.Now())
 
-	// Check for request role
-	var role string
-	if reqRole := ctx.Value(logical.CtxKeyRequestRole{}); reqRole != nil {
-		role = reqRole.(string)
-	}
-
 	var nonHMACReqDataKeys []string
 	entry := c.router.MatchingMountEntry(ctx, req.Path)
 	if entry != nil {
@@ -1258,6 +1252,13 @@ func (c *Core) handleRequest(ctx context.Context, req *logical.Request) (retResp
 						Path:        resp.Auth.CreationPath,
 						NamespaceID: ns.ID,
 					}
+
+					// Check for request role
+					var role string
+					if reqRole := ctx.Value(logical.CtxKeyRequestRole{}); reqRole != nil {
+						role = reqRole.(string)
+					}
+
 					if err := c.expiration.RegisterAuth(ctx, registeredTokenEntry, resp.Auth, role); err != nil {
 						// Best-effort clean up on error, so we log the cleanup error as
 						// a warning but still return as internal error.
@@ -1305,12 +1306,6 @@ func (c *Core) handleRequest(ctx context.Context, req *logical.Request) (retResp
 // unauthenticated request to the backend.
 func (c *Core) handleLoginRequest(ctx context.Context, req *logical.Request) (retResp *logical.Response, retAuth *logical.Auth, retErr error) {
 	defer metrics.MeasureSince([]string{"core", "handle_login_request"}, time.Now())
-
-	// Check for request role
-	var role string
-	if reqRole := ctx.Value(logical.CtxKeyRequestRole{}); reqRole != nil {
-		role = reqRole.(string)
-	}
 
 	req.Unauthenticated = true
 
@@ -1491,6 +1486,12 @@ func (c *Core) handleLoginRequest(ctx context.Context, req *logical.Request) (re
 		if err := enterpriseBlockRequestIfError(c, ns.Path, req.Path); err != nil {
 			retErr = multierror.Append(retErr, err)
 			return
+		}
+
+		// Check for request role
+		var role string
+		if reqRole := ctx.Value(logical.CtxKeyRequestRole{}); reqRole != nil {
+			role = reqRole.(string)
 		}
 
 		// The request successfully authenticated itself. Run the quota checks
