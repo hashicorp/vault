@@ -10,6 +10,8 @@ The `/sys/mounts` endpoint is used to manage secrets engines in Vault.
 
 ## List mounted secrets engines
 
+@include 'alerts/restricted-admin.mdx'
+
 This endpoints lists all the mounted secrets engines.
 
 | Method | Path          |
@@ -119,6 +121,8 @@ are used by this backend.
 
 ## Enable secrets engine
 
+@include 'alerts/restricted-admin.mdx'
+
 This endpoint enables a new secrets engine at the given path.
 
 | Method | Path                |
@@ -215,6 +219,8 @@ $ curl \
 
 ## Disable secrets engine
 
+@include 'alerts/restricted-admin.mdx'
+
 This endpoint disables the mount point specified in the URL.
 
 | Method   | Path                |                    |
@@ -243,11 +249,13 @@ simple as increasing the timeout (in the event of timeout errors).
 For recovery situations where the secret was manually removed from the
 secrets backing service, one can force a secrets engine disable in Vault by
 performing a [force revoke](/vault/api-docs/system/leases)
-on the mount prefix, followed by a secrets disable when that completes. 
+on the mount prefix, followed by a secrets disable when that completes.
 If the underlying secrets were not manually cleaned up, this method might result
 in dangling credentials. This is meant for extreme circumstances.
 
 ## Get the configuration of a secret engine
+
+@include 'alerts/restricted-admin.mdx'
 
 This endpoint returns the configuration of a specific secret engine.
 
@@ -310,6 +318,8 @@ $ curl \
 
 ## Read mount configuration
 
+@include 'alerts/restricted-admin.mdx'
+
 This endpoint reads the given mount's configuration. Unlike the `mounts`
 endpoint, this will return the current time in seconds for each TTL, which may
 be the system default or a mount-specific value.
@@ -337,6 +347,8 @@ $ curl \
 ```
 
 ## Tune mount configuration
+
+@include 'alerts/restricted-admin.mdx'
 
 This endpoint tunes configuration parameters for a given mount point.
 
