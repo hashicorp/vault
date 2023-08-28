@@ -486,6 +486,10 @@ func (c *Core) switchedLockHandleRequest(httpCtx context.Context, req *logical.R
 	if ok {
 		ctx = context.WithValue(ctx, logical.CtxKeyInFlightRequestID{}, inFlightReqID)
 	}
+	requestRole, ok := httpCtx.Value(logical.CtxKeyRequestRole{}).(string)
+	if ok {
+		ctx = context.WithValue(ctx, logical.CtxKeyRequestRole{}, requestRole)
+	}
 	resp, err = c.handleCancelableRequest(ctx, req)
 	req.SetTokenEntry(nil)
 	cancel()
@@ -1236,7 +1240,14 @@ func (c *Core) handleRequest(ctx context.Context, req *logical.Request) (retResp
 						Path:        resp.Auth.CreationPath,
 						NamespaceID: ns.ID,
 					}
-					if err := c.expiration.RegisterAuth(ctx, registeredTokenEntry, resp.Auth, c.DetermineRoleFromLoginRequest(req.MountPoint, req.Data, ctx)); err != nil {
+
+					// Check for request role
+					var role string
+					if reqRole := ctx.Value(logical.CtxKeyRequestRole{}); reqRole != nil {
+						role = reqRole.(string)
+					}
+
+					if err := c.expiration.RegisterAuth(ctx, registeredTokenEntry, resp.Auth, role); err != nil {
 						// Best-effort clean up on error, so we log the cleanup error as
 						// a warning but still return as internal error.
 						if err := c.tokenStore.revokeOrphan(ctx, resp.Auth.ClientToken); err != nil {
@@ -1460,12 +1471,18 @@ func (c *Core) handleLoginRequest(ctx context.Context, req *logical.Request) (re
 			return
 		}
 
+		// Check for request role
+		var role string
+		if reqRole := ctx.Value(logical.CtxKeyRequestRole{}); reqRole != nil {
+			role = reqRole.(string)
+		}
+
 		// The request successfully authenticated itself. Run the quota checks
 		// before creating lease.
 		quotaResp, quotaErr := c.applyLeaseCountQuota(ctx, &quotas.Request{
 			Path:          req.Path,
 			MountPath:     strings.TrimPrefix(req.MountPoint, ns.Path),
-			Role:          c.DetermineRoleFromLoginRequest(req.MountPoint, req.Data, ctx),
+			Role:          role,
 			NamespacePath: ns.Path,
 		})
 
@@ -1657,7 +1674,7 @@ func (c *Core) handleLoginRequest(ctx context.Context, req *logical.Request) (re
 		// Attach the display name, might be used by audit backends
 		req.DisplayName = auth.DisplayName
 
-		leaseGen, respTokenCreate, errCreateToken := c.LoginCreateToken(ctx, ns, req.Path, source, resp, req.Data)
+		leaseGen, respTokenCreate, errCreateToken := c.LoginCreateToken(ctx, ns, req.Path, source, role, resp)
 		leaseGenerated = leaseGen
 		if errCreateToken != nil {
 			return respTokenCreate, nil, errCreateToken
@@ -1709,9 +1726,8 @@ func (c *Core) handleLoginRequest(ctx context.Context, req *logical.Request) (re
 // LoginCreateToken creates a token as a result of a login request.
 // If MFA is enforced, mfa/validate endpoint calls this functions
 // after successful MFA validation to generate the token.
-func (c *Core) LoginCreateToken(ctx context.Context, ns *namespace.Namespace, reqPath, mountPoint string, resp *logical.Response, loginRequestData map[string]interface{}) (bool, *logical.Response, error) {
+func (c *Core) LoginCreateToken(ctx context.Context, ns *namespace.Namespace, reqPath, mountPoint, role string, resp *logical.Response) (bool, *logical.Response, error) {
 	auth := resp.Auth
-
 	source := strings.TrimPrefix(mountPoint, credentialRoutePrefix)
 	source = strings.ReplaceAll(source, "/", "-")
 
@@ -1771,7 +1787,7 @@ func (c *Core) LoginCreateToken(ctx context.Context, ns *namespace.Namespace, re
 	}
 
 	leaseGenerated := false
-	err = registerFunc(ctx, tokenTTL, reqPath, auth, c.DetermineRoleFromLoginRequest(mountPoint, loginRequestData, ctx))
+	err = registerFunc(ctx, tokenTTL, reqPath, auth, role)
 	switch {
 	case err == nil:
 		if auth.TokenType != logical.TokenTypeBatch {
