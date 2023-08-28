@@ -7,7 +7,6 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"fmt"
 	"strings"
 	"testing"
 	"time"
@@ -332,8 +331,8 @@ func TestBackend_StaticRole_Config(t *testing.T) {
 				"rotation_schedule": "* * * * *",
 				"rotation_window":   "59s",
 			},
-			path: "plugin-role-test",
-			err:  errors.New(fmt.Sprintf("rotation_window must be %d seconds or more", minRotationWindowSeconds)),
+			path:        "plugin-role-test",
+			errContains: "rotation_window is invalid",
 		},
 		"disallowed role config": {
 			account: map[string]interface{}{
@@ -1152,7 +1151,7 @@ func TestIsInsideRotationWindow(t *testing.T) {
 			testTime := tc.now
 			if tc.data["rotation_schedule"] != nil && tc.timeModifier != nil {
 				rotationSchedule := tc.data["rotation_schedule"].(string)
-				schedule, err := b.ParseSchedule(rotationSchedule)
+				schedule, err := b.schedule.Parse(rotationSchedule)
 				if err != nil {
 					t.Fatalf("could not parse rotation_schedule: %s", err)
 				}
