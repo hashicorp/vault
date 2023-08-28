@@ -9,6 +9,7 @@ export const PAGE = {
   breadcrumbs: '[data-test-breadcrumbs]',
   breadcrumb: '[data-test-breadcrumbs] li',
   breadcrumbAtIdx: (idx) => `[data-test-crumb="${idx}"] a`,
+  infoRow: '[data-test-component="info-table-row"]',
   infoRowValue: (label) => `[data-test-value-div="${label}"]`,
   infoRowToggleMasked: (label) => `[data-test-value-div="${label}"] [data-test-button="toggle-masked"]`,
   secretTab: (tab) => (tab ? `[data-test-secrets-tab="${tab}"]` : '[data-test-secrets-tab]'),
@@ -22,7 +23,7 @@ export const PAGE = {
   },
   toolbar: 'nav.toolbar',
   toolbarAction: 'nav.toolbar-actions .toolbar-link',
-  secretRow: '[data-test-component="info-table-row"]',
+  secretRow: '[data-test-component="info-table-row"]', // replace with infoRow
   // specific page selectors
   backends: {
     link: (backend) => `[data-test-secrets-backend-link="${backend}"]`,

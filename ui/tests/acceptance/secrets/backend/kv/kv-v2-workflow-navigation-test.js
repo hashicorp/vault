@@ -289,7 +289,7 @@ module('Acceptance | kv-v2 workflow | navigation', function (hooks) {
       );
     });
     test('breadcrumbs & page titles are correct (a)', async function (assert) {
-      assert.expect(39);
+      assert.expect(45);
       const backend = this.backend;
       await navToBackend(backend);
       await click(PAGE.secretTab('Configuration'));
@@ -318,6 +318,10 @@ module('Acceptance | kv-v2 workflow | navigation', function (hooks) {
       assert.dom(PAGE.title).hasText('Edit Secret Metadata', 'correct page title for metadata edit');
 
       await click(PAGE.breadcrumbAtIdx(3));
+      await click(PAGE.secretTab('Paths'));
+      assertCorrectBreadcrumbs(assert, ['secrets', backend, secretPath, 'paths']);
+      assert.dom(PAGE.title).hasText(secretPath, 'correct page title for paths');
+
       await click(PAGE.secretTab('Version History'));
       assertCorrectBreadcrumbs(assert, ['secrets', backend, secretPath, 'version history']);
       assert.dom(PAGE.title).hasText(secretPath, 'correct page title for version history');
@@ -465,7 +469,7 @@ module('Acceptance | kv-v2 workflow | navigation', function (hooks) {
       assert.dom(PAGE.metadata.editBtn).doesNotExist('edit button hidden');
     });
     test('breadcrumbs & page titles are correct (dr)', async function (assert) {
-      assert.expect(27);
+      assert.expect(35);
       const backend = this.backend;
       await navToBackend(backend);
       await click(PAGE.secretTab('Configuration'));
@@ -489,7 +493,10 @@ module('Acceptance | kv-v2 workflow | navigation', function (hooks) {
 
       assert.dom(PAGE.metadata.editBtn).doesNotExist('cannot edit metadata');
 
-      await click(PAGE.breadcrumbAtIdx(2));
+      await click(PAGE.secretTab('Paths'));
+      assertCorrectBreadcrumbs(assert, ['secrets', backend, 'app', 'nested', 'secret', 'paths']);
+      assert.dom(PAGE.title).hasText('app/nested/secret', 'correct page title for paths');
+
       assert.dom(PAGE.secretTab('Version History')).doesNotExist('Version History tab not shown');
     });
   });
@@ -649,7 +656,7 @@ module('Acceptance | kv-v2 workflow | navigation', function (hooks) {
       assert.dom(PAGE.metadata.editBtn).doesNotExist('edit button hidden');
     });
     test('breadcrumbs & page titles are correct (dlr)', async function (assert) {
-      assert.expect(23);
+      assert.expect(29);
       const backend = this.backend;
       await navToBackend(backend);
 
@@ -673,7 +680,10 @@ module('Acceptance | kv-v2 workflow | navigation', function (hooks) {
 
       assert.dom(PAGE.metadata.editBtn).doesNotExist('cannot edit metadata');
 
-      await click(PAGE.breadcrumbAtIdx(2));
+      await click(PAGE.secretTab('Paths'));
+      assertCorrectBreadcrumbs(assert, ['secrets', backend, secretPath, 'paths']);
+      assert.dom(PAGE.title).hasText(secretPath, 'correct page title for paths');
+
       assert.dom(PAGE.secretTab('Version History')).doesNotExist('Version History tab not shown');
     });
   });
@@ -862,7 +872,7 @@ module('Acceptance | kv-v2 workflow | navigation', function (hooks) {
       );
     });
     test('breadcrumbs & page titles are correct (mm)', async function (assert) {
-      assert.expect(33);
+      assert.expect(39);
       const backend = this.backend;
       await navToBackend(backend);
       await click(PAGE.secretTab('Configuration'));
@@ -886,6 +896,10 @@ module('Acceptance | kv-v2 workflow | navigation', function (hooks) {
       assert.dom(PAGE.title).hasText('Edit Secret Metadata', 'correct page title for metadata edit');
 
       await click(PAGE.breadcrumbAtIdx(3));
+      await click(PAGE.secretTab('Paths'));
+      assertCorrectBreadcrumbs(assert, ['secrets', backend, secretPath, 'paths']);
+      assert.dom(PAGE.title).hasText(secretPath, 'correct page title for paths');
+
       await click(PAGE.secretTab('Version History'));
       assertCorrectBreadcrumbs(assert, ['secrets', backend, secretPath, 'version history']);
       assert.dom(PAGE.title).hasText(secretPath, 'correct page title for version history');
@@ -1056,7 +1070,7 @@ module('Acceptance | kv-v2 workflow | navigation', function (hooks) {
       assert.dom(PAGE.metadata.editBtn).doesNotExist('edit metadata button does not render');
     });
     test('breadcrumbs & page titles are correct (sc)', async function (assert) {
-      assert.expect(28);
+      assert.expect(34);
       const backend = this.backend;
       await navToBackend(backend);
       await click(PAGE.secretTab('Configuration'));
@@ -1084,6 +1098,10 @@ module('Acceptance | kv-v2 workflow | navigation', function (hooks) {
       assert.dom(PAGE.metadata.editBtn).doesNotExist('cannot edit metadata');
 
       await click(PAGE.breadcrumbAtIdx(2));
+      await click(PAGE.secretTab('Paths'));
+      assertCorrectBreadcrumbs(assert, ['secrets', backend, secretPath, 'paths']);
+      assert.dom(PAGE.title).hasText(secretPath, 'correct page title for paths');
+
       assert.dom(PAGE.secretTab('Version History')).doesNotExist('Version History tab not shown');
     });
   });
@@ -1184,7 +1202,7 @@ path "${this.backend}/*" {
       assert.ok(currentURL().startsWith(`/vault/secrets/${backend}/kv/list`), 'links back to list root');
     });
     test('breadcrumbs & page titles are correct (cg)', async function (assert) {
-      assert.expect(30);
+      assert.expect(36);
       const backend = this.backend;
       await navToBackend(backend);
       await click(PAGE.secretTab('Configuration'));
@@ -1225,6 +1243,10 @@ path "${this.backend}/*" {
       assert.dom(PAGE.metadata.editBtn).doesNotExist('cannot edit metadata');
 
       await click(PAGE.breadcrumbAtIdx(2));
+      await click(PAGE.secretTab('Paths'));
+      assertCorrectBreadcrumbs(assert, ['secrets', backend, secretPath, 'paths']);
+      assert.dom(PAGE.title).hasText(secretPath, 'correct page title for paths');
+
       assert.dom(PAGE.secretTab('Version History')).doesNotExist('Version History tab not shown');
 
       await click(PAGE.secretTab('Secret'));

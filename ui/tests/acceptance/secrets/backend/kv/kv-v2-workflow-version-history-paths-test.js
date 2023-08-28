@@ -4,29 +4,40 @@ import { setupApplicationTest } from 'vault/tests/helpers';
 import authPage from 'vault/tests/pages/auth';
 import { deleteEngineCmd, mountEngineCmd, runCmd, tokenWithPolicyCmd } from 'vault/tests/helpers/commands';
 import { personas } from 'vault/tests/helpers/policy-generator/kv';
-import { setupControlGroup, writeSecret, writeVersionedSecret } from 'vault/tests/helpers/kv/kv-run-commands';
+import {
+  clearRecords,
+  deleteVersionCmd,
+  destroyVersionCmd,
+  setupControlGroup,
+  writeVersionedSecret,
+} from 'vault/tests/helpers/kv/kv-run-commands';
 
 import { PAGE } from 'vault/tests/helpers/kv/kv-selectors';
 import { click, currentURL, visit } from '@ember/test-helpers';
 
 /**
- * This test set is for testing version history & diff pages
- * VAULT-18817
+ * This test set is for testing version history & path pages for secret.
+ * Letter(s) in parenthesis at the end are shorthand for the persona,
+ * for ease of tracking down specific tests failures from CI
  */
-module('Acceptance | kv-v2 workflow | version history & diff', function (hooks) {
+module('Acceptance | kv-v2 workflow | version history, paths', function (hooks) {
   setupApplicationTest(hooks);
 
   hooks.beforeEach(async function () {
+    this.store = this.owner.lookup('service:store');
     this.backend = `kv-workflow-${uuidv4()}`;
     this.secretPath = 'app/first-secret';
-    const urlPath = `${this.backend}/kv/${encodeURIComponent(this.secretPath)}`;
+    this.urlPath = `${this.backend}/kv/${encodeURIComponent(this.secretPath)}`;
     this.navToSecret = async () => {
-      return visit(`/vault/secrets/${urlPath}/details?version=2`);
+      return visit(`/vault/secrets/${this.urlPath}/details?version=4`);
     };
     await authPage.login();
     await runCmd(mountEngineCmd('kv-v2', this.backend), false);
-    await writeSecret(this.backend, this.secretPath, 'foo', 'bar');
-    await writeVersionedSecret(this.backend, this.secretPath, 'hello', 'there');
+    await writeVersionedSecret(this.backend, this.secretPath, 'hello', 'there', 6);
+    await runCmd([
+      destroyVersionCmd(this.backend, this.secretPath),
+      deleteVersionCmd(this.backend, this.secretPath, 2),
+    ]);
   });
 
   hooks.afterEach(async function () {
@@ -38,59 +49,48 @@ module('Acceptance | kv-v2 workflow | version history & diff', function (hooks) 
     hooks.beforeEach(async function () {
       const token = await runCmd(tokenWithPolicyCmd('admin', personas.admin(this.backend)));
       await authPage.login(token);
+      clearRecords(this.store);
     });
     test('can navigate to the version history page', async function (assert) {
-      assert.expect(10);
       await this.navToSecret();
       await click(PAGE.secretTab('Version History'));
       assert.strictEqual(
         currentURL(),
-        `/vault/secrets/${this.backend}/kv/${encodeURIComponent(this.secretPath)}/metadata/versions`,
+        `/vault/secrets/${this.urlPath}/metadata/versions`,
         'navigates to version history'
       );
-      assert.dom(PAGE.secretTab('Secret')).hasText('Secret');
-      assert.dom(PAGE.secretTab('Secret')).doesNotHaveClass('active');
-      assert.dom(PAGE.secretTab('Metadata')).hasText('Metadata');
-      assert.dom(PAGE.secretTab('Metadata')).doesNotHaveClass('active');
-      assert.dom(PAGE.secretTab('Version History')).hasText('Version History');
-      assert.dom(PAGE.secretTab('Version History')).hasClass('active');
+      assert.dom(PAGE.versions.linkedBlock()).exists({ count: 6 });
+
+      assert.dom(PAGE.versions.linkedBlock(6)).hasTextContaining('Version 6');
+      assert.dom(PAGE.versions.icon(6)).hasTextContaining('Current');
+
       assert.dom(PAGE.versions.linkedBlock(2)).hasTextContaining('Version 2');
-      assert.dom(PAGE.versions.icon(2)).hasTextContaining('Current');
+      assert.dom(PAGE.versions.icon(2)).hasTextContaining('Deleted');
+
       assert.dom(PAGE.versions.linkedBlock(1)).hasTextContaining('Version 1');
-    });
-    test.skip('history works correctly when no secrets', async function (assert) {
-      assert.expect(0);
-    });
-    test.skip('history works correctly when only one secret version', async function (assert) {
-      assert.expect(0);
-    });
-    test.skip('history works correctly when many secret versions in various states', async function (assert) {
-      assert.expect(0);
-    });
-    test('can navigate to the version diff view', async function (assert) {
-      assert.expect(4);
-      await this.navToSecret();
-      await click(PAGE.detail.versionDropdown);
-      await click(`${PAGE.detail.version('diff')} a`);
+      assert.dom(PAGE.versions.icon(1)).hasText('Destroyed');
+
+      await click(PAGE.versions.linkedBlock(5));
       assert.strictEqual(
         currentURL(),
-        `/vault/secrets/${this.backend}/kv/${encodeURIComponent(this.secretPath)}/metadata/diff`,
-        'navigates to version diff'
+        `/vault/secrets/${this.urlPath}/details?version=5`,
+        'navigates to detail at specific version'
       );
-
-      // No tabs render
-      assert.dom(PAGE.secretTab('Secret')).doesNotExist();
-      assert.dom(PAGE.secretTab('Metadata')).doesNotExist();
-      assert.dom(PAGE.secretTab('Version History')).doesNotExist();
     });
-    test.skip('diff works correctly when no secrets', async function (assert) {
-      assert.expect(0);
-    });
-    test.skip('diff works correctly when only one secret version', async function (assert) {
-      assert.expect(0);
-    });
-    test.skip('diff works correctly between various secret versions', async function (assert) {
-      assert.expect(0);
+    test('can navigate to the paths page', async function (assert) {
+      await this.navToSecret();
+      await click(PAGE.secretTab('Paths'));
+      assert.strictEqual(
+        currentURL(),
+        `/vault/secrets/${this.urlPath}/paths`,
+        'navigates to secret paths route'
+      );
+      assert.dom(PAGE.infoRow).exists({ count: 3 }, 'shows 3 rows of information');
+      assert.dom(PAGE.infoRowValue('API path')).hasText(`/v1/${this.backend}/data/${this.secretPath}`);
+      assert.dom(PAGE.infoRowValue('CLI path')).hasText(`-mount="${this.backend}" "${this.secretPath}"`);
+      assert
+        .dom(PAGE.infoRowValue('API path for metadata'))
+        .hasText(`/v1/${this.backend}/metadata/${this.secretPath}`);
     });
   });
 
