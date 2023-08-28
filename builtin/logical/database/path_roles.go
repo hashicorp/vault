@@ -591,7 +591,7 @@ func (b *databaseBackend) pathStaticRoleCreateUpdate(ctx context.Context, req *l
 	}
 
 	if rotationScheduleOk {
-		parsedSchedule, err := b.ParseSchedule(rotationSchedule)
+		parsedSchedule, err := b.schedule.Parse(rotationSchedule)
 		if err != nil {
 			return logical.ErrorResponse("could not parse rotation_schedule", "error", err), nil
 		}
@@ -600,8 +600,9 @@ func (b *databaseBackend) pathStaticRoleCreateUpdate(ctx context.Context, req *l
 
 		if rotationWindowOk {
 			rotationWindowSeconds := rotationWindowSecondsRaw.(int)
-			if rotationWindowSeconds < minRotationWindowSeconds {
-				return logical.ErrorResponse(fmt.Sprintf("rotation_window must be %d seconds or more", minRotationWindowSeconds)), nil
+			err := b.schedule.ValidateRotationWindow(rotationWindowSeconds)
+			if err != nil {
+				return logical.ErrorResponse("rotation_window is invalid", "error", err), nil
 			}
 			role.StaticAccount.RotationWindow = time.Duration(rotationWindowSeconds) * time.Second
 		}
