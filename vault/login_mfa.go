@@ -792,11 +792,8 @@ func (c *Core) LoginMFACreateToken(ctx context.Context, reqPath string, cachedAu
 	}
 
 	var role string
-	reqRole := ctx.Value(logical.CtxKeyRequestRole{})
-	if reqRole != nil {
+	if reqRole := ctx.Value(logical.CtxKeyRequestRole{}); reqRole != nil {
 		role = reqRole.(string)
-	} else {
-		role = c.DetermineRoleFromLoginRequest(mountPoint, loginRequestData, ctx)
 	}
 
 	// The request successfully authenticated itself. Run the quota checks on
