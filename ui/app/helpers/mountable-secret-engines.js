@@ -9,7 +9,7 @@ const ENTERPRISE_SECRET_ENGINES = [
   {
     displayName: 'KMIP',
     type: 'kmip',
-    engineRoute: 'kmip.scopes',
+    engineRoute: 'kmip.scopes.index',
     category: 'generic',
     requiredFeature: 'KMIP',
   },
@@ -72,6 +72,7 @@ const MOUNTABLE_SECRET_ENGINES = [
   {
     displayName: 'KV',
     type: 'kv',
+    engineRoute: 'kv.list',
     category: 'generic',
   },
   {
@@ -127,6 +128,12 @@ export function mountableEngines() {
 
 export function allEngines() {
   return [...MOUNTABLE_SECRET_ENGINES, ...ENTERPRISE_SECRET_ENGINES];
+}
+
+export function isAddonEngine(type, version) {
+  if (type === 'kv' && version === 1) return false;
+  const engineRoute = allEngines().findBy('type', type)?.engineRoute;
+  return !!engineRoute;
 }
 
 export default buildHelper(mountableEngines);

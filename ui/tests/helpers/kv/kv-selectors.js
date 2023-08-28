@@ -24,11 +24,15 @@ export const PAGE = {
   toolbarAction: 'nav.toolbar-actions .toolbar-link',
   secretRow: '[data-test-component="info-table-row"]',
   // specific page selectors
+  backends: {
+    link: (backend) => `[data-test-secrets-backend-link="${backend}"]`,
+  },
   metadata: {
     editBtn: '[data-test-edit-metadata]',
     addCustomMetadataBtn: '[data-test-add-custom-metadata]',
     customMetadataSection: '[data-test-kv-custom-metadata-section]',
     secretMetadataSection: '[data-test-kv-metadata-section]',
+    deleteMetadata: '[data-test-kv-delete="delete-metadata"]',
   },
   detail: {
     versionTimestamp: '[data-test-kv-version-tooltip-trigger]',
@@ -37,7 +41,13 @@ export const PAGE = {
     createNewVersion: '[data-test-create-new-version]',
     delete: '[data-test-kv-delete="delete"]',
     destroy: '[data-test-kv-delete="destroy"]',
+    undelete: '[data-test-kv-delete="undelete"]',
     copy: '[data-test-copy-menu-trigger]',
+    deleteModal: '[data-test-delete-modal]',
+    deleteModalTitle: '[data-test-delete-modal] [data-test-modal-title]',
+    deleteOption: 'input#delete-version',
+    deleteOptionLatest: 'input#delete-latest-version',
+    deleteConfirm: '[data-test-delete-modal-confirm]',
   },
   list: {
     createSecret: '[data-test-toolbar-create-secret]',
@@ -53,8 +63,11 @@ export const PAGE = {
   },
   versions: {
     icon: (version) => `[data-test-icon-holder="${version}"]`,
-    linkedBlock: (version) => `[data-test-version-linked-block="${version}"]`,
+    linkedBlock: (version) =>
+      version ? `[data-test-version-linked-block="${version}"]` : '[data-test-version-linked-block]',
     button: (version) => `[data-test-version-button="${version}"]`,
+    versionMenu: (version) => `[data-test-version-linked-block="${version}"] [data-test-popup-menu-trigger]`,
+    createFromVersion: (version) => `[data-test-create-new-version-from="${version}"]`,
   },
   create: {
     metadataSection: '[data-test-metadata-section]',

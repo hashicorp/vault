@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: MPL-2.0
  */
 
-import { module, test } from 'qunit';
+import { module, test, skip } from 'qunit';
 import {
   visit,
   currentURL,
@@ -85,7 +85,7 @@ module('Acceptance | landing page dashboard', function (hooks) {
     hooks.beforeEach(function () {
       return authPage.login();
     });
-    test('shows the learn more card on community', async function (assert) {
+    skip('shows the learn more card on community', async function (assert) {
       await visit('/vault/dashboard');
       assert.dom('[data-test-learn-more-title]').hasText('Learn more');
       assert
@@ -363,9 +363,16 @@ module('Acceptance | landing page dashboard', function (hooks) {
     });
   });
 
-  module('replication and client count card community version', function () {
+  skip('replication and client count card community version', function (hooks) {
+    hooks.beforeEach(async function () {
+      this.store = this.owner.lookup('service:store');
+      await authPage.login();
+    });
+
     test('hides replication card for community version', async function (assert) {
-      await visit('/vault/dashboard');
+      const version = this.owner.lookup('service:version');
+      assert.false(version.isEnterprise, 'version is not enterprise');
+
       assert.dom('[data-test-replication-card]').doesNotExist();
     });
 

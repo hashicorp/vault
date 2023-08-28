@@ -4,7 +4,10 @@ import { setupApplicationTest } from 'vault/tests/helpers';
 import authPage from 'vault/tests/pages/auth';
 import { deleteEngineCmd, mountEngineCmd, runCmd, tokenWithPolicyCmd } from 'vault/tests/helpers/commands';
 import { personas } from 'vault/tests/helpers/policy-generator/kv';
-import { setupControlGroup, writeSecret } from 'vault/tests/helpers/kv/kv-run-commands';
+import { setupControlGroup, writeSecret, writeVersionedSecret } from 'vault/tests/helpers/kv/kv-run-commands';
+
+import { PAGE } from 'vault/tests/helpers/kv/kv-selectors';
+import { click, currentURL, visit } from '@ember/test-helpers';
 
 /**
  * This test set is for testing version history & diff pages
@@ -15,9 +18,15 @@ module('Acceptance | kv-v2 workflow | version history & diff', function (hooks) 
 
   hooks.beforeEach(async function () {
     this.backend = `kv-workflow-${uuidv4()}`;
+    this.secretPath = 'app/first-secret';
+    const urlPath = `${this.backend}/kv/${encodeURIComponent(this.secretPath)}`;
+    this.navToSecret = async () => {
+      return visit(`/vault/secrets/${urlPath}/details?version=2`);
+    };
     await authPage.login();
     await runCmd(mountEngineCmd('kv-v2', this.backend), false);
-    await writeSecret(this.backend, 'app/first-secret', 'foo', 'bar');
+    await writeSecret(this.backend, this.secretPath, 'foo', 'bar');
+    await writeVersionedSecret(this.backend, this.secretPath, 'hello', 'there');
   });
 
   hooks.afterEach(async function () {
@@ -30,8 +39,24 @@ module('Acceptance | kv-v2 workflow | version history & diff', function (hooks) 
       const token = await runCmd(tokenWithPolicyCmd('admin', personas.admin(this.backend)));
       await authPage.login(token);
     });
-    test.skip('can navigate to the version history page', async function (assert) {
-      assert.expect(0);
+    test('can navigate to the version history page', async function (assert) {
+      assert.expect(10);
+      await this.navToSecret();
+      await click(PAGE.secretTab('Version History'));
+      assert.strictEqual(
+        currentURL(),
+        `/vault/secrets/${this.backend}/kv/${encodeURIComponent(this.secretPath)}/metadata/versions`,
+        'navigates to version history'
+      );
+      assert.dom(PAGE.secretTab('Secret')).hasText('Secret');
+      assert.dom(PAGE.secretTab('Secret')).doesNotHaveClass('active');
+      assert.dom(PAGE.secretTab('Metadata')).hasText('Metadata');
+      assert.dom(PAGE.secretTab('Metadata')).doesNotHaveClass('active');
+      assert.dom(PAGE.secretTab('Version History')).hasText('Version History');
+      assert.dom(PAGE.secretTab('Version History')).hasClass('active');
+      assert.dom(PAGE.versions.linkedBlock(2)).hasTextContaining('Version 2');
+      assert.dom(PAGE.versions.icon(2)).hasTextContaining('Current');
+      assert.dom(PAGE.versions.linkedBlock(1)).hasTextContaining('Version 1');
     });
     test.skip('history works correctly when no secrets', async function (assert) {
       assert.expect(0);
@@ -42,8 +67,21 @@ module('Acceptance | kv-v2 workflow | version history & diff', function (hooks) 
     test.skip('history works correctly when many secret versions in various states', async function (assert) {
       assert.expect(0);
     });
-    test.skip('can navigate to the version diff view', async function (assert) {
-      assert.expect(0);
+    test('can navigate to the version diff view', async function (assert) {
+      assert.expect(4);
+      await this.navToSecret();
+      await click(PAGE.detail.versionDropdown);
+      await click(`${PAGE.detail.version('diff')} a`);
+      assert.strictEqual(
+        currentURL(),
+        `/vault/secrets/${this.backend}/kv/${encodeURIComponent(this.secretPath)}/metadata/diff`,
+        'navigates to version diff'
+      );
+
+      // No tabs render
+      assert.dom(PAGE.secretTab('Secret')).doesNotExist();
+      assert.dom(PAGE.secretTab('Metadata')).doesNotExist();
+      assert.dom(PAGE.secretTab('Version History')).doesNotExist();
     });
     test.skip('diff works correctly when no secrets', async function (assert) {
       assert.expect(0);
