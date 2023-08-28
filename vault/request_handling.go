@@ -1690,7 +1690,7 @@ func (c *Core) handleLoginRequest(ctx context.Context, req *logical.Request) (re
 		// Attach the display name, might be used by audit backends
 		req.DisplayName = auth.DisplayName
 
-		leaseGen, respTokenCreate, errCreateToken := c.LoginCreateToken(ctx, ns, req.Path, source, resp, role)
+		leaseGen, respTokenCreate, errCreateToken := c.LoginCreateToken(ctx, ns, req.Path, source, role, resp)
 		leaseGenerated = leaseGen
 		if errCreateToken != nil {
 			return respTokenCreate, nil, errCreateToken
@@ -1742,7 +1742,7 @@ func (c *Core) handleLoginRequest(ctx context.Context, req *logical.Request) (re
 // LoginCreateToken creates a token as a result of a login request.
 // If MFA is enforced, mfa/validate endpoint calls this functions
 // after successful MFA validation to generate the token.
-func (c *Core) LoginCreateToken(ctx context.Context, ns *namespace.Namespace, reqPath, mountPoint string, resp *logical.Response, role string) (bool, *logical.Response, error) {
+func (c *Core) LoginCreateToken(ctx context.Context, ns *namespace.Namespace, reqPath, mountPoint, role string, resp *logical.Response) (bool, *logical.Response, error) {
 	auth := resp.Auth
 	source := strings.TrimPrefix(mountPoint, credentialRoutePrefix)
 	source = strings.ReplaceAll(source, "/", "-")
