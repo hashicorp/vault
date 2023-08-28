@@ -20,7 +20,8 @@ import { inject as service } from '@ember/service';
  */
 
 const QUICK_ACTION_ENGINES = ['pki', 'kv', 'database'];
-
+const KV_VERSION_1 = 'kv version 1';
+const KV_VERSION_2 = 'kv version 2';
 export default class DashboardQuickActionsCard extends Component {
   @service router;
 
@@ -50,7 +51,10 @@ export default class DashboardQuickActionsCard extends Component {
           buttonText: 'Read secrets',
           // check kv version to figure out which model to use
           model: this.selectedEngine.version === 2 ? 'secret-v2' : 'secret',
-          route: 'vault.cluster.secrets.backend.show',
+          route:
+            this.selectedEngine.version === 1
+              ? 'vault.cluster.secrets.backend.show'
+              : 'vault.cluster.secrets.backend.kv.secret.details',
         };
       case 'Generate credentials for database':
         return {
@@ -135,11 +139,18 @@ export default class DashboardQuickActionsCard extends Component {
 
     // kv has a special use case where if the paramValue ends in a '/' you should
     // link to different route
-    if (this.selectedEngine.type.includes('kv')) {
+    if (this.selectedEngine.type === KV_VERSION_1) {
       searchSelectParamRoute =
         this.paramValue && this.paramValue?.endsWith('/')
           ? 'vault.cluster.secrets.backend.list'
           : 'vault.cluster.secrets.backend.show';
+    }
+
+    if (this.selectedEngine.type === KV_VERSION_2) {
+      searchSelectParamRoute =
+        this.paramValue && this.paramValue?.endsWith('/')
+          ? 'vault.cluster.secrets.backend.kv.list-directory'
+          : 'vault.cluster.secrets.backend.kv.secret.details';
     }
 
     this.router.transitionTo(searchSelectParamRoute, this.selectedEngine.id, this.paramValue);
