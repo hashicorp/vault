@@ -50,7 +50,7 @@ export default class DashboardQuickActionsCard extends Component {
           subText: 'Path of the secret you want to read, including the mount. E.g., secret/data/foo.',
           buttonText: 'Read secrets',
           // check kv version to figure out which model to use
-          model: this.selectedEngine.version === 2 ? 'secret-v2' : 'secret',
+          model: this.selectedEngine.version === 2 ? 'kv/data' : 'secret',
           route:
             this.selectedEngine.version === 2
               ? 'vault.cluster.secrets.backend.kv.secret.details'
