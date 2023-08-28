@@ -11,7 +11,7 @@ export const PAGE = {
   breadcrumbAtIdx: (idx) => `[data-test-crumb="${idx}"] a`,
   infoRowValue: (label) => `[data-test-value-div="${label}"]`,
   infoRowToggleMasked: (label) => `[data-test-value-div="${label}"] [data-test-button="toggle-masked"]`,
-  secretTab: (tab) => `[data-test-secrets-tab="${tab}"]`,
+  secretTab: (tab) => (tab ? `[data-test-secrets-tab="${tab}"]` : '[data-test-secrets-tab]'),
   emptyStateTitle: '[data-test-empty-state-title]',
   emptyStateMessage: '[data-test-empty-state-message]',
   emptyStateActions: '[data-test-empty-state-actions]',
@@ -48,6 +48,13 @@ export const PAGE = {
     deleteOption: 'input#delete-version',
     deleteOptionLatest: 'input#delete-latest-version',
     deleteConfirm: '[data-test-delete-modal-confirm]',
+  },
+  edit: {
+    toggleDiff: '[data-test-toggle-input="Show diff"',
+    toggleDiffDescription: '[data-test-diff-description]',
+    visualDiff: '[data-test-visual-diff]',
+    added: `.jsondiffpatch-added`,
+    deleted: `.jsondiffpatch-deleted`,
   },
   list: {
     createSecret: '[data-test-toolbar-create-secret]',
