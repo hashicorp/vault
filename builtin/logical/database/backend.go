@@ -15,6 +15,7 @@ import (
 	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-secure-stdlib/strutil"
 	"github.com/hashicorp/go-uuid"
+	"github.com/hashicorp/vault/builtin/logical/database/schedule"
 	"github.com/hashicorp/vault/helper/metricsutil"
 	"github.com/hashicorp/vault/helper/syncmap"
 	"github.com/hashicorp/vault/internalshared/configutil"
@@ -25,7 +26,6 @@ import (
 	"github.com/hashicorp/vault/sdk/helper/locksutil"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/sdk/queue"
-	"github.com/robfig/cron/v3"
 )
 
 const (
@@ -34,7 +34,6 @@ const (
 	databaseRolePath        = "role/"
 	databaseStaticRolePath  = "static-role/"
 	minRootCredRollbackAge  = 1 * time.Minute
-	scheduleOptionsDefault  = cron.Minute | cron.Hour | cron.Dom | cron.Month | cron.Dow
 )
 
 type dbPluginInstance struct {
@@ -129,6 +128,7 @@ func Backend(conf *logical.BackendConfig) *databaseBackend {
 	b.connections = syncmap.NewSyncMap[string, *dbPluginInstance]()
 	b.queueCtx, b.cancelQueueCtx = context.WithCancel(context.Background())
 	b.roleLocks = locksutil.CreateLocks()
+	b.schedule = &schedule.DefaultSchedule{}
 
 	return &b
 }
@@ -180,25 +180,7 @@ type databaseBackend struct {
 	gaugeCollectionProcess     *metricsutil.GaugeCollectionProcess
 	gaugeCollectionProcessStop sync.Once
 
-	// scheduleOptionsOverride is used by tests to set a custom ParseOption with seconds enabled
-	scheduleOptionsOverride cron.ParseOption
-}
-
-func (b *databaseBackend) ParseSchedule(rotationSchedule string) (*cron.SpecSchedule, error) {
-	scheduleOptions := scheduleOptionsDefault
-	if b.scheduleOptionsOverride != 0 {
-		scheduleOptions = b.scheduleOptionsOverride
-	}
-	parser := cron.NewParser(scheduleOptions)
-	schedule, err := parser.Parse(rotationSchedule)
-	if err != nil {
-		return nil, err
-	}
-	sched, ok := schedule.(*cron.SpecSchedule)
-	if !ok {
-		return nil, fmt.Errorf("invalid rotation schedule")
-	}
-	return sched, nil
+	schedule schedule.Scheduler
 }
 
 func (b *databaseBackend) DatabaseConfig(ctx context.Context, s logical.Storage, name string) (*DatabaseConfig, error) {

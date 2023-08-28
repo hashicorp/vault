@@ -437,3 +437,16 @@ func getEnvConfig(kms *KMS) map[string]string {
 
 	return envValues
 }
+
+func (k *KMS) Clone() *KMS {
+	ret := &KMS{
+		UnusedKeys: k.UnusedKeys,
+		Type:       k.Type,
+		Purpose:    k.Purpose,
+		Config:     k.Config,
+		Name:       k.Name,
+		Disabled:   k.Disabled,
+		Priority:   k.Priority,
+	}
+	return ret
+}
