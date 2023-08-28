@@ -1,6 +1,6 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 /* eslint qunit/no-conditional-assertions: "warn" */
@@ -69,12 +69,13 @@ module('Acceptance | auth backend list', function (hooks) {
 
     await click('[data-test-save-config="true"]');
 
-    //confirming that the user was created.  There was a bug where the apiPath was not being updated when toggling between auth routes
+    // Confirm that the user was created. There was a bug where the apiPath was not being updated when toggling between auth routes.
     assert
       .dom('[data-test-list-item-content]')
       .hasText(user2, 'user just created shows in current auth list');
 
-    //confirm that the auth method 1 shows the user1.  There was a bug where it was not updated the list when toggling between auth routes
+    // Confirm that the auth method 1 shows user1. There was a bug where the user was not listed when toggling between auth routes.
+    await click('[data-test-access-methods]');
     await visit(`/vault/access/${path1}/item/user`);
 
     assert

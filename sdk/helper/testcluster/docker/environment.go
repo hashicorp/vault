@@ -39,6 +39,7 @@ import (
 	"github.com/hashicorp/vault/api"
 	dockhelper "github.com/hashicorp/vault/sdk/helper/docker"
 	"github.com/hashicorp/vault/sdk/helper/logging"
+	"github.com/hashicorp/vault/sdk/helper/strutil"
 	"github.com/hashicorp/vault/sdk/helper/testcluster"
 	uberAtomic "go.uber.org/atomic"
 	"golang.org/x/net/http2"
@@ -479,6 +480,7 @@ type DockerClusterNode struct {
 	ImageTag             string
 	DataVolumeName       string
 	cleanupVolume        func()
+	AllClients           []*api.Client
 }
 
 func (n *DockerClusterNode) TLSConfig() *tls.Config {
@@ -504,6 +506,30 @@ func (n *DockerClusterNode) APIClient() *api.Client {
 	}
 	client.SetToken(n.Cluster.rootToken)
 	return client
+}
+
+func (n *DockerClusterNode) APIClientN(listenerNumber int) (*api.Client, error) {
+	// We clone to ensure that whenever this method is called, the caller gets
+	// back a pristine client, without e.g. any namespace or token changes that
+	// might pollute a shared client.  We clone the config instead of the
+	// client because (1) Client.clone propagates the replicationStateStore and
+	// the httpClient pointers, (2) it doesn't copy the tlsConfig at all, and
+	// (3) if clone returns an error, it doesn't feel as appropriate to panic
+	// below.  Who knows why clone might return an error?
+	if listenerNumber >= len(n.AllClients) {
+		return nil, fmt.Errorf("invalid listener number %d", listenerNumber)
+	}
+	cfg := n.AllClients[listenerNumber].CloneConfig()
+	client, err := api.NewClient(cfg)
+	if err != nil {
+		// It seems fine to panic here, since this should be the same input
+		// we provided to NewClient when we were setup, and we didn't panic then.
+		// Better not to completely ignore the error though, suppose there's a
+		// bug in CloneConfig?
+		panic(fmt.Sprintf("NewClient error on cloned config: %v", err))
+	}
+	client.SetToken(n.Cluster.rootToken)
+	return client, nil
 }
 
 // NewAPIClient creates and configures a Vault API client to communicate with
@@ -544,6 +570,20 @@ func (n *DockerClusterNode) newAPIClient() (*api.Client, error) {
 	return client, nil
 }
 
+func (n *DockerClusterNode) newAPIClientForAddress(address string) (*api.Client, error) {
+	config, err := n.apiConfig()
+	if err != nil {
+		return nil, err
+	}
+	config.Address = fmt.Sprintf("https://%s", address)
+	client, err := api.NewClient(config)
+	if err != nil {
+		return nil, err
+	}
+	client.SetToken(n.Cluster.GetRootToken())
+	return client, nil
+}
+
 // Cleanup kills the container of the node and deletes its data volume
 func (n *DockerClusterNode) Cleanup() {
 	n.cleanup()
@@ -563,6 +603,17 @@ func (n *DockerClusterNode) cleanup() error {
 	return nil
 }
 
+func (n *DockerClusterNode) createDefaultListenerConfig() map[string]interface{} {
+	return map[string]interface{}{"tcp": map[string]interface{}{
+		"address":       fmt.Sprintf("%s:%d", "0.0.0.0", 8200),
+		"tls_cert_file": "/vault/config/cert.pem",
+		"tls_key_file":  "/vault/config/key.pem",
+		"telemetry": map[string]interface{}{
+			"unauthenticated_metrics_access": true,
+		},
+	}}
+}
+
 func (n *DockerClusterNode) Start(ctx context.Context, opts *DockerClusterOptions) error {
 	if n.DataVolumeName == "" {
 		vol, err := n.DockerAPI.VolumeCreate(ctx, volume.CreateOptions{})
@@ -575,16 +626,25 @@ func (n *DockerClusterNode) Start(ctx context.Context, opts *DockerClusterOption
 		}
 	}
 	vaultCfg := map[string]interface{}{}
-	vaultCfg["listener"] = map[string]interface{}{
-		"tcp": map[string]interface{}{
-			"address":       fmt.Sprintf("%s:%d", "0.0.0.0", 8200),
-			"tls_cert_file": "/vault/config/cert.pem",
-			"tls_key_file":  "/vault/config/key.pem",
-			"telemetry": map[string]interface{}{
-				"unauthenticated_metrics_access": true,
-			},
-		},
+	var listenerConfig []map[string]interface{}
+	listenerConfig = append(listenerConfig, n.createDefaultListenerConfig())
+	ports := []string{"8200/tcp", "8201/tcp"}
+
+	if opts.VaultNodeConfig != nil && opts.VaultNodeConfig.AdditionalListeners != nil {
+		for _, config := range opts.VaultNodeConfig.AdditionalListeners {
+			cfg := n.createDefaultListenerConfig()
+			listener := cfg["tcp"].(map[string]interface{})
+			listener["address"] = fmt.Sprintf("%s:%d", "0.0.0.0", config.Port)
+			listener["chroot_namespace"] = config.ChrootNamespace
+			listenerConfig = append(listenerConfig, cfg)
+			portStr := fmt.Sprintf("%d/tcp", config.Port)
+			if strutil.StrListContains(ports, portStr) {
+				return fmt.Errorf("duplicate port %d specified", config.Port)
+			}
+			ports = append(ports, portStr)
+		}
 	}
+	vaultCfg["listener"] = listenerConfig
 	vaultCfg["telemetry"] = map[string]interface{}{
 		"disable_hostname": true,
 	}
@@ -675,6 +735,7 @@ func (n *DockerClusterNode) Start(ctx context.Context, opts *DockerClusterOption
 		}
 		testcluster.JSONLogNoTimestamp(n.Logger, s)
 	}}
+
 	r, err := dockhelper.NewServiceRunner(dockhelper.RunOptions{
 		ImageRepo: n.ImageRepo,
 		ImageTag:  n.ImageTag,
@@ -689,7 +750,7 @@ func (n *DockerClusterNode) Start(ctx context.Context, opts *DockerClusterOption
 			"VAULT_LOG_FORMAT=json",
 			"VAULT_LICENSE=" + opts.VaultLicense,
 		},
-		Ports:           []string{"8200/tcp", "8201/tcp"},
+		Ports:           ports,
 		ContainerName:   n.Name(),
 		NetworkName:     opts.NetworkName,
 		CopyFromTo:      copyFromTo,
@@ -772,6 +833,19 @@ func (n *DockerClusterNode) Start(ctx context.Context, opts *DockerClusterOption
 	}
 	client.SetToken(n.Cluster.rootToken)
 	n.client = client
+
+	n.AllClients = append(n.AllClients, client)
+
+	for _, addr := range svc.StartResult.Addrs[2:] {
+		// The second element of this list of addresses is the cluster address
+		// We do not want to create a client for the cluster address mapping
+		client, err := n.newAPIClientForAddress(addr)
+		if err != nil {
+			return err
+		}
+		client.SetToken(n.Cluster.rootToken)
+		n.AllClients = append(n.AllClients, client)
+	}
 	return nil
 }
 

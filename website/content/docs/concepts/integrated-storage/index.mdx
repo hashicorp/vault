@@ -221,7 +221,7 @@ and egg problem. Nodes don't have a shared view of storage until the raft
 cluster has been formed, but we're trying to form the raft cluster! To solve
 this problem, a Vault node must speak to another Vault node using the API port
 instead of the cluster port. This is currently the only situation in which
-OSS Vault does this (Vault Enterprise also does something similar when setting
+Vault Community Edition does this (Vault Enterprise also does something similar when setting
 up replication.)
 
 - `node2` wants to join the cluster, so issues challenge API request to existing member `node1`

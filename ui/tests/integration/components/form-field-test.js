@@ -1,6 +1,6 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 import EmberObject from '@ember/object';
@@ -26,7 +26,8 @@ module('Integration | Component | form field', function (hooks) {
   };
 
   const setup = async function (attr) {
-    const model = EmberObject.create({});
+    // ember sets model attrs from the defaultValue key, mimicking that behavior here
+    const model = EmberObject.create({ [attr.name]: attr.options?.defaultValue });
     const spy = sinon.spy();
     this.set('onChange', spy);
     this.set('model', model);

@@ -1,6 +1,6 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 import Store from '@ember-data/store';
@@ -132,6 +132,7 @@ export default class StoreService extends Store {
       prevPage: clamp(currentPage - 1, 1, lastPage),
       total: dataset.length || 0,
       filteredTotal: data.length || 0,
+      pageSize: size,
     };
 
     return resp;

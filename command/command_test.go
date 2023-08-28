@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 package command
 
@@ -137,10 +137,7 @@ func testVaultServerAllBackends(tb testing.TB) (*api.Client, func()) {
 // the function returns a client, the recovery keys, and a closer function
 func testVaultServerAutoUnseal(tb testing.TB) (*api.Client, []string, func()) {
 	testSeal, _ := seal.NewTestSeal(nil)
-	autoSeal, err := vault.NewAutoSeal(testSeal)
-	if err != nil {
-		tb.Fatal("unable to create autoseal", err)
-	}
+	autoSeal := vault.NewAutoSeal(testSeal)
 	return testVaultServerUnsealWithKVVersionWithSeal(tb, "1", autoSeal)
 }
 

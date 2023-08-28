@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 package database
 
@@ -25,6 +25,7 @@ import (
 	"github.com/hashicorp/vault/sdk/helper/locksutil"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/sdk/queue"
+	"github.com/robfig/cron/v3"
 )
 
 const (
@@ -33,6 +34,7 @@ const (
 	databaseRolePath        = "role/"
 	databaseStaticRolePath  = "static-role/"
 	minRootCredRollbackAge  = 1 * time.Minute
+	scheduleOptionsDefault  = cron.Minute | cron.Hour | cron.Dom | cron.Month | cron.Dow
 )
 
 type dbPluginInstance struct {
@@ -127,6 +129,7 @@ func Backend(conf *logical.BackendConfig) *databaseBackend {
 	b.connections = syncmap.NewSyncMap[string, *dbPluginInstance]()
 	b.queueCtx, b.cancelQueueCtx = context.WithCancel(context.Background())
 	b.roleLocks = locksutil.CreateLocks()
+
 	return &b
 }
 
@@ -176,6 +179,26 @@ type databaseBackend struct {
 	// the running gauge collection process
 	gaugeCollectionProcess     *metricsutil.GaugeCollectionProcess
 	gaugeCollectionProcessStop sync.Once
+
+	// scheduleOptionsOverride is used by tests to set a custom ParseOption with seconds enabled
+	scheduleOptionsOverride cron.ParseOption
+}
+
+func (b *databaseBackend) ParseSchedule(rotationSchedule string) (*cron.SpecSchedule, error) {
+	scheduleOptions := scheduleOptionsDefault
+	if b.scheduleOptionsOverride != 0 {
+		scheduleOptions = b.scheduleOptionsOverride
+	}
+	parser := cron.NewParser(scheduleOptions)
+	schedule, err := parser.Parse(rotationSchedule)
+	if err != nil {
+		return nil, err
+	}
+	sched, ok := schedule.(*cron.SpecSchedule)
+	if !ok {
+		return nil, fmt.Errorf("invalid rotation schedule")
+	}
+	return sched, nil
 }
 
 func (b *databaseBackend) DatabaseConfig(ctx context.Context, s logical.Storage, name string) (*DatabaseConfig, error) {

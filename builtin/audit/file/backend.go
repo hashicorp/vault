@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 package file
 
@@ -165,18 +165,19 @@ func Factory(ctx context.Context, conf *audit.BackendConfig, useEventLogger bool
 
 		switch path {
 		case "stdout":
-			sinkNode = event.NewStdoutSinkNode(format)
+			sinkNode = &audit.SinkWrapper{Name: path, Sink: event.NewStdoutSinkNode(format)}
 		case "discard":
-			sinkNode = event.NewNoopSink()
+			sinkNode = &audit.SinkWrapper{Name: path, Sink: event.NewNoopSink()}
 		default:
 			var err error
 
 			// The NewFileSink function attempts to open the file and will
 			// return an error if it can't.
-			sinkNode, err = event.NewFileSink(b.path, format, event.WithFileMode(strconv.FormatUint(uint64(mode), 8)))
+			n, err := event.NewFileSink(b.path, format, event.WithFileMode(strconv.FormatUint(uint64(mode), 8)))
 			if err != nil {
 				return nil, fmt.Errorf("file sink creation failed for path %q: %w", path, err)
 			}
+			sinkNode = &audit.SinkWrapper{Name: conf.MountPath, Sink: n}
 		}
 
 		sinkNodeID, err := event.GenerateNodeID()
@@ -328,6 +329,12 @@ func (b *Backend) LogResponse(ctx context.Context, in *logical.LogInput) error {
 }
 
 func (b *Backend) LogTestMessage(ctx context.Context, in *logical.LogInput, config map[string]string) error {
+	// Event logger behavior - manually Process each node
+	if len(b.nodeIDList) > 0 {
+		return audit.ProcessManual(ctx, in, b.nodeIDList, b.nodeMap)
+	}
+
+	// Old behavior
 	var writer io.Writer
 	switch b.path {
 	case "stdout":

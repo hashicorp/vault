@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 package vault
 
@@ -271,12 +271,12 @@ func (c *Core) CheckToken(ctx context.Context, req *logical.Request, unauth bool
 	var te *logical.TokenEntry
 	var entity *identity.Entity
 	var identityPolicies map[string][]string
-	var err error
 
 	// Even if unauth, if a token is provided, there's little reason not to
 	// gather as much info as possible for the audit log and to e.g. control
 	// trace mode for EGPs.
 	if !unauth || (unauth && req.ClientToken != "") {
+		var err error
 		acl, te, entity, identityPolicies, err = c.fetchACLTokenEntryAndEntity(ctx, req)
 		// In the unauth case we don't want to fail the command, since it's
 		// unauth, we just have no information to attach to the request, so
@@ -438,9 +438,12 @@ func (c *Core) CheckToken(ctx context.Context, req *logical.Request, unauth bool
 	c.activityLogLock.RLock()
 	activityLog := c.activityLog
 	c.activityLogLock.RUnlock()
-	// If it is an authenticated ( i.e with vault token ) request, increment client count
+	// If it is an authenticated ( i.e. with vault token ) request, increment client count
 	if !unauth && activityLog != nil {
-		activityLog.HandleTokenUsage(ctx, te, clientID, isTWE)
+		err := activityLog.HandleTokenUsage(ctx, te, clientID, isTWE)
+		if err != nil {
+			return auth, te, err
+		}
 	}
 	return auth, te, nil
 }

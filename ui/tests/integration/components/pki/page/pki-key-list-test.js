@@ -1,6 +1,6 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 import { module, test } from 'qunit';
@@ -45,7 +45,7 @@ module('Integration | Component | pki key list page', function (hooks) {
           @mountPoint="vault.cluster.secrets.backend.pki"
           @canImportKey={{true}}
           @canGenerateKey={{true}}
-        />, 
+        />,
       `,
       { owner: this.engine }
     );
@@ -67,7 +67,7 @@ module('Integration | Component | pki key list page', function (hooks) {
           @canGenerateKey={{true}}
           @canRead={{true}}
           @canEdit={{true}}
-        />, 
+        />,
       `,
       { owner: this.engine }
     );
@@ -93,7 +93,7 @@ module('Integration | Component | pki key list page', function (hooks) {
           @canGenerateKey={{false}}
           @canRead={{false}}
           @canEdit={{false}}
-        />, 
+        />,
       `,
       { owner: this.engine }
     );

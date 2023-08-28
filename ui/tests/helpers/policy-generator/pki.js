@@ -1,6 +1,6 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 import { singularize } from 'ember-inflector';
@@ -40,7 +40,7 @@ export const updatePolicy = (mountPath, resource) => {
     },
     path "${mountPath}/${singularize(resource)}/*" {
       capabilities = ["read", "update"]
-    },    
+    },
     path "${mountPath}/issue/*" {
       capabilities = ["update"]
     },

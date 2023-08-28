@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 package database
 
@@ -224,7 +224,7 @@ func (b *databaseBackend) pathRotateRoleCredentialsUpdate() framework.OperationF
 				item.Value = resp.WALID
 			}
 		} else {
-			item.Priority = resp.RotationTime.Add(role.StaticAccount.RotationPeriod).Unix()
+			item.Priority = role.StaticAccount.NextRotationTimeFromInput(resp.RotationTime).Unix()
 			// Clear any stored WAL ID as we must have successfully deleted our WAL to get here.
 			item.Value = ""
 		}
