@@ -8,12 +8,12 @@ import {
   clearRecords,
   deleteVersionCmd,
   destroyVersionCmd,
-  setupControlGroup,
   writeVersionedSecret,
 } from 'vault/tests/helpers/kv/kv-run-commands';
 
 import { PAGE } from 'vault/tests/helpers/kv/kv-selectors';
-import { click, currentURL, visit } from '@ember/test-helpers';
+import { click, currentRouteName, currentURL, visit, waitUntil } from '@ember/test-helpers';
+import { grantAccess, setupControlGroup } from 'vault/tests/helpers/control-groups';
 
 /**
  * This test set is for testing version history & path pages for secret.
@@ -51,7 +51,7 @@ module('Acceptance | kv-v2 workflow | version history, paths', function (hooks) 
       await authPage.login(token);
       clearRecords(this.store);
     });
-    test('can navigate to the version history page', async function (assert) {
+    test('can navigate to the version history page (a)', async function (assert) {
       await this.navToSecret();
       await click(PAGE.secretTab('Version History'));
       assert.strictEqual(
@@ -77,7 +77,7 @@ module('Acceptance | kv-v2 workflow | version history, paths', function (hooks) 
         'navigates to detail at specific version'
       );
     });
-    test('can navigate to the paths page', async function (assert) {
+    test('can navigate to the paths page (a)', async function (assert) {
       await this.navToSecret();
       await click(PAGE.secretTab('Paths'));
       assert.strictEqual(
@@ -96,51 +96,147 @@ module('Acceptance | kv-v2 workflow | version history, paths', function (hooks) 
 
   module('data-reader persona', function (hooks) {
     hooks.beforeEach(async function () {
-      const token = await runCmd([tokenWithPolicyCmd('data-reader', personas.dataReader(this.backend))]);
+      const token = await runCmd(tokenWithPolicyCmd('data-reader', personas.dataReader(this.backend)));
       await authPage.login(token);
+      clearRecords(this.store);
     });
-    // Copy test outline from admin persona
+    test('cannot navigate to the version history page (dr)', async function (assert) {
+      await this.navToSecret();
+      assert.dom(PAGE.secretTab('Version History')).doesNotExist('Does not render Version History tab');
+    });
+    test('can navigate to the paths page (dr)', async function (assert) {
+      await this.navToSecret();
+      await click(PAGE.secretTab('Paths'));
+      assert.strictEqual(
+        currentURL(),
+        `/vault/secrets/${this.urlPath}/paths`,
+        'navigates to secret paths route'
+      );
+      assert.dom(PAGE.infoRow).exists({ count: 3 }, 'shows 3 rows of information');
+      assert.dom(PAGE.infoRowValue('API path')).hasText(`/v1/${this.backend}/data/${this.secretPath}`);
+      assert.dom(PAGE.infoRowValue('CLI path')).hasText(`-mount="${this.backend}" "${this.secretPath}"`);
+      assert
+        .dom(PAGE.infoRowValue('API path for metadata'))
+        .hasText(`/v1/${this.backend}/metadata/${this.secretPath}`);
+    });
   });
 
   module('data-list-reader persona', function (hooks) {
     hooks.beforeEach(async function () {
-      const token = await runCmd([
-        tokenWithPolicyCmd('data-list-reader', personas.dataListReader(this.backend)),
-      ]);
+      const token = await runCmd(
+        tokenWithPolicyCmd('data-list-reader', personas.dataListReader(this.backend))
+      );
       await authPage.login(token);
+      clearRecords(this.store);
     });
-    // Copy test outline from admin persona
+    test('cannot navigate to the version history page (dlr)', async function (assert) {
+      await this.navToSecret();
+      assert.dom(PAGE.secretTab('Version History')).doesNotExist('Does not render Version History tab');
+    });
+    test('can navigate to the paths page (dlr)', async function (assert) {
+      await this.navToSecret();
+      await click(PAGE.secretTab('Paths'));
+      assert.strictEqual(
+        currentURL(),
+        `/vault/secrets/${this.urlPath}/paths`,
+        'navigates to secret paths route'
+      );
+      assert.dom(PAGE.infoRow).exists({ count: 3 }, 'shows 3 rows of information');
+      assert.dom(PAGE.infoRowValue('API path')).hasText(`/v1/${this.backend}/data/${this.secretPath}`);
+      assert.dom(PAGE.infoRowValue('CLI path')).hasText(`-mount="${this.backend}" "${this.secretPath}"`);
+      assert
+        .dom(PAGE.infoRowValue('API path for metadata'))
+        .hasText(`/v1/${this.backend}/metadata/${this.secretPath}`);
+    });
   });
 
   module('metadata-maintainer persona', function (hooks) {
     hooks.beforeEach(async function () {
-      const token = await runCmd([
-        tokenWithPolicyCmd('metadata-maintainer', personas.metadataMaintainer(this.backend)),
-      ]);
+      const token = await runCmd(
+        tokenWithPolicyCmd('metadata-maintainer', personas.metadataMaintainer(this.backend))
+      );
       await authPage.login(token);
+      clearRecords(this.store);
     });
-    // Copy test outline from admin persona
+    test('can navigate to the version history page (mm)', async function (assert) {
+      await this.navToSecret();
+      await click(PAGE.secretTab('Version History'));
+      assert.strictEqual(
+        currentURL(),
+        `/vault/secrets/${this.urlPath}/metadata/versions`,
+        'navigates to version history'
+      );
+      assert.dom(PAGE.versions.linkedBlock()).exists({ count: 6 });
+
+      assert.dom(PAGE.versions.linkedBlock(6)).hasTextContaining('Version 6');
+      assert.dom(PAGE.versions.icon(6)).hasTextContaining('Current');
+
+      assert.dom(PAGE.versions.linkedBlock(2)).hasTextContaining('Version 2');
+      assert.dom(PAGE.versions.icon(2)).hasTextContaining('Deleted');
+
+      assert.dom(PAGE.versions.linkedBlock(1)).hasTextContaining('Version 1');
+      assert.dom(PAGE.versions.icon(1)).hasText('Destroyed');
+
+      await click(PAGE.versions.linkedBlock(5));
+      assert.strictEqual(
+        currentURL(),
+        `/vault/secrets/${this.urlPath}/details?version=5`,
+        'navigates to detail at specific version'
+      );
+    });
+    test('can navigate to the paths page (mm)', async function (assert) {
+      await this.navToSecret();
+      await click(PAGE.secretTab('Paths'));
+      assert.strictEqual(
+        currentURL(),
+        `/vault/secrets/${this.urlPath}/paths`,
+        'navigates to secret paths route'
+      );
+      assert.dom(PAGE.infoRow).exists({ count: 3 }, 'shows 3 rows of information');
+      assert.dom(PAGE.infoRowValue('API path')).hasText(`/v1/${this.backend}/data/${this.secretPath}`);
+      assert.dom(PAGE.infoRowValue('CLI path')).hasText(`-mount="${this.backend}" "${this.secretPath}"`);
+      assert
+        .dom(PAGE.infoRowValue('API path for metadata'))
+        .hasText(`/v1/${this.backend}/metadata/${this.secretPath}`);
+    });
   });
 
   module('secret-creator persona', function (hooks) {
     hooks.beforeEach(async function () {
-      const token = await runCmd([
-        tokenWithPolicyCmd('secret-creator', personas.secretCreator(this.backend)),
-      ]);
+      const token = await runCmd(tokenWithPolicyCmd('secret-creator', personas.secretCreator(this.backend)));
       await authPage.login(token);
+      clearRecords(this.store);
     });
-    // Copy test outline from admin persona
+    test('cannot navigate to the version history page (sc)', async function (assert) {
+      await this.navToSecret();
+      assert.dom(PAGE.secretTab('Version History')).doesNotExist('Does not render Version History tab');
+    });
+    test('can navigate to the paths page (sc)', async function (assert) {
+      await this.navToSecret();
+      await click(PAGE.secretTab('Paths'));
+      assert.strictEqual(
+        currentURL(),
+        `/vault/secrets/${this.urlPath}/paths`,
+        'navigates to secret paths route'
+      );
+      assert.dom(PAGE.infoRow).exists({ count: 3 }, 'shows 3 rows of information');
+      assert.dom(PAGE.infoRowValue('API path')).hasText(`/v1/${this.backend}/data/${this.secretPath}`);
+      assert.dom(PAGE.infoRowValue('CLI path')).hasText(`-mount="${this.backend}" "${this.secretPath}"`);
+      assert
+        .dom(PAGE.infoRowValue('API path for metadata'))
+        .hasText(`/v1/${this.backend}/metadata/${this.secretPath}`);
+    });
   });
 
   module('enterprise controlled access persona', function (hooks) {
     hooks.beforeEach(async function () {
       const userPolicy = `
-path "${this.backend}/data/*" {
+path "${this.backend}/metadata/*" {
   capabilities = ["create", "read", "update", "delete", "list"]
   control_group = {
     max_ttl = "24h"
     factor "approver" {
-      controlled_capabilities = ["write"]
+      controlled_capabilities = ["read"]
       identity {
           group_names = ["managers"]
           approvals = 1
@@ -152,20 +248,67 @@ path "${this.backend}/data/*" {
 path "${this.backend}/*" {
   capabilities = ["list"]
 }
-
-// Can we allow this so user can self-authorize?
-path "sys/control-group/authorize" {
-  capabilities = ["update"]
-}
-
-path "sys/control-group/request" {
-  capabilities = ["update"]
-}
 `;
       const { userToken } = await setupControlGroup({ userPolicy });
       this.userToken = userToken;
-      return authPage.login(userToken);
+      await authPage.login(userToken);
+      clearRecords(this.store);
     });
-    // Copy test outline from admin persona
+    test('can navigate to the version history page (cg)', async function (assert) {
+      await this.navToSecret();
+      await click(PAGE.secretTab('Version History'));
+      assert.ok(
+        await waitUntil(() => currentRouteName() === 'vault.cluster.access.control-group-accessor'),
+        'redirects to access control group route'
+      );
+      await grantAccess({
+        apiPath: `${this.backend}/metadata/${this.secretPath}`,
+        originUrl: `/vault/secrets/${this.urlPath}/details`,
+        userToken: this.userToken,
+      });
+      assert.strictEqual(
+        currentURL(),
+        `/vault/secrets/${this.urlPath}/details`,
+        'navigates back to secret overview after authorized'
+      );
+      await click(PAGE.secretTab('Version History'));
+      assert.strictEqual(
+        currentURL(),
+        `/vault/secrets/${this.urlPath}/metadata/versions`,
+        'goes to version history page'
+      );
+      assert.dom(PAGE.versions.linkedBlock()).exists({ count: 6 });
+
+      assert.dom(PAGE.versions.linkedBlock(6)).hasTextContaining('Version 6');
+      assert.dom(PAGE.versions.icon(6)).hasTextContaining('Current');
+
+      assert.dom(PAGE.versions.linkedBlock(2)).hasTextContaining('Version 2');
+      assert.dom(PAGE.versions.icon(2)).hasTextContaining('Deleted');
+
+      assert.dom(PAGE.versions.linkedBlock(1)).hasTextContaining('Version 1');
+      assert.dom(PAGE.versions.icon(1)).hasText('Destroyed');
+
+      await click(PAGE.versions.linkedBlock(5));
+      assert.strictEqual(
+        currentURL(),
+        `/vault/secrets/${this.urlPath}/details?version=5`,
+        'navigates to detail at specific version'
+      );
+    });
+    test('can navigate to the paths page (cg)', async function (assert) {
+      await this.navToSecret();
+      await click(PAGE.secretTab('Paths'));
+      assert.strictEqual(
+        currentURL(),
+        `/vault/secrets/${this.urlPath}/paths`,
+        'navigates to secret paths route'
+      );
+      assert.dom(PAGE.infoRow).exists({ count: 3 }, 'shows 3 rows of information');
+      assert.dom(PAGE.infoRowValue('API path')).hasText(`/v1/${this.backend}/data/${this.secretPath}`);
+      assert.dom(PAGE.infoRowValue('CLI path')).hasText(`-mount="${this.backend}" "${this.secretPath}"`);
+      assert
+        .dom(PAGE.infoRowValue('API path for metadata'))
+        .hasText(`/v1/${this.backend}/metadata/${this.secretPath}`);
+    });
   });
 });
