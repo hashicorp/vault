@@ -6,7 +6,6 @@ package dbplugin
 import (
 	"context"
 	"errors"
-	"fmt"
 	"net/url"
 	"strings"
 	"time"
@@ -302,7 +301,7 @@ func (mw DatabaseErrorSanitizerMiddleware) sanitize(err error) error {
 		return nil
 	}
 	if errwrap.ContainsType(err, new(url.Error)) {
-		return fmt.Errorf("unable to parse connection url, err=%w", err)
+		return errors.New("unable to parse connection url")
 	}
 	if mw.secretsFn == nil {
 		return err
