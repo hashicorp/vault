@@ -786,12 +786,19 @@ func (c *Core) LoginMFACreateToken(ctx context.Context, reqPath string, cachedAu
 	// Determine the source of the login
 	mountPoint := c.router.MatchingMount(ctx, reqPath)
 
+	var role string
+	reqRole := ctx.Value(logical.CtxKeyRequestRole{})
+	if reqRole != nil {
+		role = reqRole.(string)
+	} else {
+		role = c.DetermineRoleFromLoginRequest(mountPoint, loginRequestData, ctx)
+	}
+
 	ns, err := namespace.FromContext(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("namespace not found: %w", err)
 	}
 
-	role := c.DetermineRoleFromLoginRequest(mountPoint, loginRequestData, ctx)
 	// The request successfully authenticated itself. Run the quota checks on
 	// the original login request path before creating the token.
 	quotaResp, quotaErr := c.applyLeaseCountQuota(ctx, &quotas.Request{
