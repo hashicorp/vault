@@ -791,12 +791,13 @@ func (c *Core) LoginMFACreateToken(ctx context.Context, reqPath string, cachedAu
 		return nil, fmt.Errorf("namespace not found: %w", err)
 	}
 
+	role := c.DetermineRoleFromLoginRequest(mountPoint, loginRequestData, ctx)
 	// The request successfully authenticated itself. Run the quota checks on
 	// the original login request path before creating the token.
 	quotaResp, quotaErr := c.applyLeaseCountQuota(ctx, &quotas.Request{
 		Path:          reqPath,
 		MountPath:     strings.TrimPrefix(mountPoint, ns.Path),
-		Role:          c.DetermineRoleFromLoginRequest(mountPoint, loginRequestData, ctx),
+		Role:          role,
 		NamespacePath: ns.Path,
 	})
 
@@ -816,7 +817,7 @@ func (c *Core) LoginMFACreateToken(ctx context.Context, reqPath string, cachedAu
 	// note that we don't need to handle the error for the following function right away.
 	// The function takes the response as in input variable and modify it. So, the returned
 	// arguments are resp and err.
-	leaseGenerated, resp, err := c.LoginCreateToken(ctx, ns, reqPath, mountPoint, resp, loginRequestData)
+	leaseGenerated, resp, err := c.LoginCreateToken(ctx, ns, reqPath, mountPoint, resp, role)
 
 	if quotaResp.Access != nil {
 		quotaAckErr := c.ackLeaseQuota(quotaResp.Access, leaseGenerated)
