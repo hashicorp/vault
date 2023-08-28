@@ -817,7 +817,7 @@ func (c *Core) LoginMFACreateToken(ctx context.Context, reqPath string, cachedAu
 	// note that we don't need to handle the error for the following function right away.
 	// The function takes the response as in input variable and modify it. So, the returned
 	// arguments are resp and err.
-	leaseGenerated, resp, err := c.LoginCreateToken(ctx, ns, reqPath, mountPoint, resp, role)
+	leaseGenerated, resp, err := c.LoginCreateToken(ctx, ns, resp, reqPath, mountPoint, role)
 
 	if quotaResp.Access != nil {
 		quotaAckErr := c.ackLeaseQuota(quotaResp.Access, leaseGenerated)
