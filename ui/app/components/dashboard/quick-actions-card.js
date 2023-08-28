@@ -52,9 +52,9 @@ export default class DashboardQuickActionsCard extends Component {
           // check kv version to figure out which model to use
           model: this.selectedEngine.version === 2 ? 'secret-v2' : 'secret',
           route:
-            this.selectedEngine.version === 1
-              ? 'vault.cluster.secrets.backend.show'
-              : 'vault.cluster.secrets.backend.kv.secret.details',
+            this.selectedEngine.version === 2
+              ? 'vault.cluster.secrets.backend.kv.secret.details'
+              : 'vault.cluster.secrets.backend.show',
         };
       case 'Generate credentials for database':
         return {

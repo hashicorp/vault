@@ -1,5 +1,10 @@
 <Dashboard::Overview
-  @model={{@model}}
+  @replication={{@model.replication}}
+  @secretsEngines={{@model.secretsEngines}}
+  @license={{@model.license}}
+  @isRootNamespace={{@model.isRootNamespace}}
+  @version={{@model.version}}
+  @vaultConfiguration={{@model.vaultConfiguration}}
   @refreshModel={{this.refreshModel}}
   @replicationUpdatedAt={{this.replicationUpdatedAt}}
 />

@@ -1,46 +1,46 @@
-<Dashboard::VaultVersionTitle @version={{@model.version}} />
+<Dashboard::VaultVersionTitle @version={{@version}} />
 
 <div class="has-bottom-margin-xl">
   <div class="is-flex-row has-gap-l">
-    {{#if (and @model.version.isEnterprise (or @model.license @model.isRootNamespace))}}
+    {{#if (and @version.isEnterprise (or @license @isRootNamespace))}}
       <div class="is-flex-column is-flex-1 has-gap-l">
-        {{#if @model.license}}
-          <Dashboard::ClientCountCard @license={{@model.license}} />
+        {{#if @license}}
+          <Dashboard::ClientCountCard @license={{@license}} />
         {{/if}}
-        {{#if @model.isRootNamespace}}
+        {{#if @isRootNamespace}}
           <Dashboard::ReplicationCard
-            @replication={{@model.replication}}
-            @version={{@model.version}}
+            @replication={{@replication}}
+            @version={{@version}}
             @refresh={{@refreshModel}}
             @updatedAt={{@replicationUpdatedAt}}
           />
         {{/if}}
-        <Dashboard::SecretsEnginesCard @secretsEngines={{@model.secretsEngines}} />
+        <Dashboard::SecretsEnginesCard @secretsEngines={{@secretsEngines}} />
       </div>
 
       <div class="is-flex-column is-flex-1 has-gap-l">
-        <Dashboard::QuickActionsCard @secretsEngines={{@model.secretsEngines}} />
-        {{#if @model.vaultConfiguration}}
-          <Dashboard::VaultConfigurationDetailsCard @vaultConfiguration={{@model.vaultConfiguration}} />
+        <Dashboard::QuickActionsCard @secretsEngines={{@secretsEngines}} />
+        {{#if @vaultConfiguration}}
+          <Dashboard::VaultConfigurationDetailsCard @vaultConfiguration={{@vaultConfiguration}} />
         {{/if}}
         <div>
-          <Dashboard::LearnMoreCard @isEnterprise={{@model.version.isEnterprise}} />
+          <Dashboard::LearnMoreCard @isEnterprise={{@version.isEnterprise}} />
           <Dashboard::SurveyLinkText />
         </div>
       </div>
 
     {{else}}
       <div class="is-flex-column is-flex-1 has-gap-l">
-        <Dashboard::SecretsEnginesCard @secretsEngines={{@model.secretsEngines}} />
+        <Dashboard::SecretsEnginesCard @secretsEngines={{@secretsEngines}} />
         <div>
-          <Dashboard::LearnMoreCard @isEnterprise={{@model.version.isEnterprise}} />
+          <Dashboard::LearnMoreCard @isEnterprise={{@version.isEnterprise}} />
           <Dashboard::SurveyLinkText />
         </div>
       </div>
       <div class="is-flex-column is-flex-1 has-gap-l">
-        <Dashboard::QuickActionsCard @secretsEngines={{@model.secretsEngines}} />
-        {{#if @model.vaultConfiguration}}
-          <Dashboard::VaultConfigurationDetailsCard @vaultConfiguration={{@model.vaultConfiguration}} />
+        <Dashboard::QuickActionsCard @secretsEngines={{@secretsEngines}} />
+        {{#if @vaultConfiguration}}
+          <Dashboard::VaultConfigurationDetailsCard @vaultConfiguration={{@vaultConfiguration}} />
         {{/if}}
       </div>
     {{/if}}
