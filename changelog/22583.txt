@@ -1,0 +1,3 @@
+```release-note:improvement
+core/quotas: Reduce the number of times role is calculated for rate limit and lease count quotas.
+```
