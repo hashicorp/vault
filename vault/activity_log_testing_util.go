@@ -59,16 +59,26 @@ func (c *Core) InjectActivityLogDataThisMonth(t *testing.T) map[string]*activity
 
 // GetActiveClients returns the in-memory partialMonthClientTracker from an
 // activity log.
-func (c *Core) GetActiveClients() []*activity.EntityRecord {
-	out := []*activity.EntityRecord{}
+func (c *Core) GetActiveClients() map[string]*activity.EntityRecord {
+	out := make(map[string]*activity.EntityRecord)
 
 	c.stateLock.RLock()
 	c.activityLog.fragmentLock.RLock()
-	for _, v := range c.activityLog.partialMonthClientTracker {
-		out = append(out, v)
+	for k, v := range c.activityLog.partialMonthClientTracker {
+		out[k] = v
 	}
 	c.activityLog.fragmentLock.RUnlock()
 	c.stateLock.RUnlock()
+
+	return out
+}
+
+func (c *Core) GetActiveClientsList() []*activity.EntityRecord {
+	out := []*activity.EntityRecord{}
+
+	for _, v := range c.GetActiveClients() {
+		out = append(out, v)
+	}
 
 	return out
 }
