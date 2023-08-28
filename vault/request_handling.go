@@ -879,6 +879,12 @@ func (c *Core) isLoginRequest(ctx context.Context, req *logical.Request) bool {
 func (c *Core) handleRequest(ctx context.Context, req *logical.Request) (retResp *logical.Response, retAuth *logical.Auth, retErr error) {
 	defer metrics.MeasureSince([]string{"core", "handle_request"}, time.Now())
 
+	// Check for request role
+	var role string
+	if reqRole := ctx.Value(logical.CtxKeyRequestRole{}); reqRole != nil {
+		role = reqRole.(string)
+	}
+
 	var nonHMACReqDataKeys []string
 	entry := c.router.MatchingMountEntry(ctx, req.Path)
 	if entry != nil {
@@ -1252,7 +1258,7 @@ func (c *Core) handleRequest(ctx context.Context, req *logical.Request) (retResp
 						Path:        resp.Auth.CreationPath,
 						NamespaceID: ns.ID,
 					}
-					if err := c.expiration.RegisterAuth(ctx, registeredTokenEntry, resp.Auth, c.DetermineRoleFromLoginRequest(req.MountPoint, req.Data, ctx)); err != nil {
+					if err := c.expiration.RegisterAuth(ctx, registeredTokenEntry, resp.Auth, role); err != nil {
 						// Best-effort clean up on error, so we log the cleanup error as
 						// a warning but still return as internal error.
 						if err := c.tokenStore.revokeOrphan(ctx, resp.Auth.ClientToken); err != nil {
