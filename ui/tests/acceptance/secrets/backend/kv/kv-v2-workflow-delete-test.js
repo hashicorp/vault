@@ -6,6 +6,7 @@ import { deleteEngineCmd, mountEngineCmd, runCmd, tokenWithPolicyCmd } from 'vau
 import { personas } from 'vault/tests/helpers/policy-generator/kv';
 import {
   clearRecords,
+  deleteLatestCmd,
   setupControlGroup,
   writeVersionedSecret,
 } from 'vault/tests/helpers/kv/kv-run-commands';
@@ -39,7 +40,7 @@ module('Acceptance | kv-v2 workflow | delete, undelete, destroy', function (hook
     await writeVersionedSecret(this.backend, this.secretPath, 'foo', 'bar', 4);
     await writeVersionedSecret(this.backend, 'nuke', 'foo', 'bar', 2);
     // Delete latest version for testing undelete for users that can't delete
-    await runCmd(`delete ${this.backend}/data/nuke`);
+    await runCmd(deleteLatestCmd(this.backend, 'nuke'));
     return;
   });
 
