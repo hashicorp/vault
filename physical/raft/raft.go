@@ -189,6 +189,11 @@ type RaftBackend struct {
 
 	effectiveSDKVersion string
 	failGetInTxn        *uint32
+
+	// raftLogVerifierEnabled and raftLogVerificationInterval control enabling the raft log verifier and how often
+	// it writes checkpoints.
+	raftLogVerifierEnabled      bool
+	raftLogVerificationInterval time.Duration
 }
 
 // LeaderJoinInfo contains information required by a node to join itself as a
@@ -468,6 +473,33 @@ func NewRaftBackend(conf map[string]string, logger log.Logger) (physical.Backend
 		snap = snapshots
 	}
 
+	var raftLogVerifierEnabled bool
+	raftLogVerificationInterval := 30 * time.Second
+
+	if rlveRaw, ok := conf["raft_log_verifier_enabled"]; ok {
+		rlve, err := strconv.ParseBool(rlveRaw)
+		if err != nil {
+			return nil, fmt.Errorf("raft_log_verifier_enabled does not parse as a boolean: %w", err)
+		}
+		raftLogVerifierEnabled = rlve
+
+		if rlviRaw, ok := conf["raft_log_verification_interval"]; ok {
+			rlvi, err := parseutil.ParseDurationSecond(rlviRaw)
+			if err != nil {
+				return nil, fmt.Errorf("raft_log_verification_interval does not parse as a duration: %w", err)
+			}
+
+			// Make sure our interval is capped to a reasonable value, so e.g. people don't use 0s or 1s
+			// TODO: I'm not 100% clear how much work verification does, so I'm making a guess here that we should
+			//  cap at 30s. Is that reasonable? If not, what's a better minimum value to use here?
+			if rlvi >= raftLogVerificationInterval {
+				raftLogVerificationInterval = rlvi
+			} else {
+				logger.Warn("raft_log_verification_interval is less than 30s. Using default of 30s instead")
+			}
+		}
+	}
+
 	if delayRaw, ok := conf["snapshot_delay"]; ok {
 		delay, err := parseutil.ParseDurationSecond(delayRaw)
 		if err != nil {
@@ -544,24 +576,26 @@ func NewRaftBackend(conf map[string]string, logger log.Logger) (physical.Backend
 	}
 
 	return &RaftBackend{
-		logger:                     logger,
-		fsm:                        fsm,
-		raftInitCh:                 make(chan struct{}),
-		conf:                       conf,
-		logStore:                   log,
-		stableStore:                stable,
-		snapStore:                  snap,
-		dataDir:                    path,
-		localID:                    localID,
-		permitPool:                 physical.NewPermitPool(physical.DefaultParallelOperations),
-		maxEntrySize:               maxEntrySize,
-		followerHeartbeatTicker:    time.NewTicker(time.Second),
-		autopilotReconcileInterval: reconcileInterval,
-		autopilotUpdateInterval:    updateInterval,
-		redundancyZone:             conf["autopilot_redundancy_zone"],
-		nonVoter:                   nonVoter,
-		upgradeVersion:             upgradeVersion,
-		failGetInTxn:               new(uint32),
+		logger:                      logger,
+		fsm:                         fsm,
+		raftInitCh:                  make(chan struct{}),
+		conf:                        conf,
+		logStore:                    log,
+		stableStore:                 stable,
+		snapStore:                   snap,
+		dataDir:                     path,
+		localID:                     localID,
+		permitPool:                  physical.NewPermitPool(physical.DefaultParallelOperations),
+		maxEntrySize:                maxEntrySize,
+		followerHeartbeatTicker:     time.NewTicker(time.Second),
+		autopilotReconcileInterval:  reconcileInterval,
+		autopilotUpdateInterval:     updateInterval,
+		redundancyZone:              conf["autopilot_redundancy_zone"],
+		nonVoter:                    nonVoter,
+		upgradeVersion:              upgradeVersion,
+		failGetInTxn:                new(uint32),
+		raftLogVerifierEnabled:      raftLogVerifierEnabled,
+		raftLogVerificationInterval: raftLogVerificationInterval,
 	}, nil
 }
 
