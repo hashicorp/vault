@@ -122,7 +122,7 @@ module('Integration | Component | Page::PkiConfigurationDetails', function (hook
       .hasText('15m', 'it renders delta build duration');
     assert
       .dom(SELECTORS.rowValue('Responder APIs'))
-      .hasText('Enabled', 'responder apis value renders Enabled if oscp_disable=false');
+      .hasText('Enabled', 'responder apis value renders Enabled if ocsp_disable=false');
     assert.dom(SELECTORS.rowValue('Interval')).hasText('77h', 'interval value renders');
     // check falsy aut_rebuild and _enable_delta hides duration values
     this.crl.autoRebuild = false;
