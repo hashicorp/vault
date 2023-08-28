@@ -21,6 +21,12 @@ import (
 func (b *backend) pathCreateCsr() *framework.Path {
 	return &framework.Path{
 		Pattern: "keys/" + framework.GenericNameRegex("name") + "/csr",
+
+		DisplayAttrs: &framework.DisplayAttributes{
+			OperationPrefix: operationPrefixTransit,
+			OperationVerb:   "generate-csr-for-key",
+		},
+
 		Fields: map[string]*framework.FieldSchema{
 			"name": {
 				Type:        framework.TypeString,
@@ -42,9 +48,6 @@ will be used as a basis for the CSR with the key in transit. If not set, an empt
 		Operations: map[logical.Operation]framework.OperationHandler{
 			logical.UpdateOperation: &framework.PathOperation{
 				Callback: b.pathCreateCsrWrite,
-				DisplayAttrs: &framework.DisplayAttributes{
-					OperationVerb: "update",
-				},
 			},
 		},
 		HelpSynopsis:    pathCreateCsrHelpSyn,
@@ -57,6 +60,12 @@ func (b *backend) pathImportCertChain() *framework.Path {
 		// NOTE: `set-certificate` or `set_certificate`? Paths seem to use different
 		// case, such as `transit/wrapping_key` and `transit/cache-config`.
 		Pattern: "keys/" + framework.GenericNameRegex("name") + "/set-certificate",
+
+		DisplayAttrs: &framework.DisplayAttributes{
+			OperationPrefix: operationPrefixTransit,
+			OperationVerb:   "set-certificate-for-key",
+		},
+
 		Fields: map[string]*framework.FieldSchema{
 			"name": {
 				Type:        framework.TypeString,
@@ -78,9 +87,6 @@ by one or more concatenated PEM blocks and ordered starting from the end-entity 
 		Operations: map[logical.Operation]framework.OperationHandler{
 			logical.UpdateOperation: &framework.PathOperation{
 				Callback: b.pathImportCertChainWrite,
-				DisplayAttrs: &framework.DisplayAttributes{
-					OperationVerb: "update",
-				},
 			},
 		},
 		HelpSynopsis:    pathImportCertChainHelpSyn,
