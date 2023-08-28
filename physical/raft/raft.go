@@ -693,6 +693,13 @@ func (b *RaftBackend) RaftLogVerificationInterval() time.Duration {
 	return b.raftLogVerificationInterval
 }
 
+func (b *RaftBackend) RaftLogVerifierEnabled() bool {
+	b.l.RLock()
+	defer b.l.RUnlock()
+
+	return b.raftLogVerifierEnabled
+}
+
 // DisableUpgradeMigration returns the state of the DisableUpgradeMigration config flag and whether it was set or not
 func (b *RaftBackend) DisableUpgradeMigration() (bool, bool) {
 	b.l.RLock()
@@ -703,6 +710,44 @@ func (b *RaftBackend) DisableUpgradeMigration() (bool, bool) {
 	}
 
 	return b.autopilotConfig.DisableUpgradeMigration, true
+}
+
+// RunRaftWalVerifier runs a raft log store verifier in the background, if configured to do so.
+// This periodically writes out special raft logs to verify that the log store is not corrupting data.
+func (b *RaftBackend) RunRaftWalVerifier(ctx context.Context) {
+	if !b.RaftLogVerifierEnabled() {
+		return
+	}
+
+	go func() {
+		ticker := time.NewTicker(b.RaftLogVerificationInterval())
+		defer ticker.Stop()
+
+		logger := b.logger.Named("raft-wal-verifier")
+
+		for {
+			select {
+			case <-ticker.C:
+				command := &LogData{
+					Operations: []*LogOperation{
+						{
+							OpType: verifierCheckpointOp,
+						},
+					},
+				}
+
+				b.permitPool.Acquire()
+				b.l.RLock()
+				// TODO: we're not able to recover the raft index from this call, the way Consul does. Is that ok?
+				err := b.applyLog(ctx, command)
+				b.l.RUnlock()
+				b.permitPool.Release()
+				logger.Debug("sent verification checkpoint", "error", err)
+			case <-ctx.Done():
+				return
+			}
+		}
+	}()
 }
 
 func (b *RaftBackend) CollectMetrics(sink *metricsutil.ClusterMetricSink) {

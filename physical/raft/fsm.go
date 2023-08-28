@@ -36,6 +36,7 @@ const (
 	putOp
 	restoreCallbackOp
 	getOp
+	verifierCheckpointOp
 
 	chunkingPrefix   = "raftchunking/"
 	databaseFilename = "vault.db"
