@@ -153,4 +153,52 @@ module('Integration | Component | dashboard/overview', function (hooks) {
     assert.dom(SELECTORS.cardName('replication')).doesNotExist();
     assert.dom(SELECTORS.cardName('client-count')).exists();
   });
+
+  module('learn more card', function () {
+    test('shows the learn more card on community', async function (assert) {
+      await render(hbs`<Dashboard::Overview @model={{this.model}} @refreshModel={{this.refreshModel}} />`);
+
+      assert.dom('[data-test-learn-more-title]').hasText('Learn more');
+      assert
+        .dom('[data-test-learn-more-subtext]')
+        .hasText(
+          'Explore the features of Vault and learn advance practices with the following tutorials and documentation.'
+        );
+      assert.dom('[data-test-learn-more-links] a').exists({ count: 3 });
+      assert
+        .dom('[data-test-feedback-form]')
+        .hasText("Don't see what you're looking for on this page? Let us know via our feedback form .");
+    });
+    test('shows the learn more card on enterprise', async function (assert) {
+      this.version = this.owner.lookup('service:version');
+      this.version.version = '1.13.1+ent';
+      this.version.features = [
+        'Performance Replication',
+        'DR Replication',
+        'Namespaces',
+        'Transform Secrets Engine',
+      ];
+      this.model.version = this.version;
+      this.namespace = this.owner.lookup('service:namespace');
+      this.namespace.isRootNamespace = true;
+      this.model.isRootNamespace = this.namespace;
+      this.license = {
+        autoloaded: {
+          license_id: '7adbf1f4-56ef-35cd-3a6c-50ef2627865d',
+        },
+      };
+      this.model.license = this.license;
+      await render(hbs`<Dashboard::Overview @model={{this.model}} @refreshModel={{this.refreshModel}} />`);
+      assert.dom('[data-test-learn-more-title]').hasText('Learn more');
+      assert
+        .dom('[data-test-learn-more-subtext]')
+        .hasText(
+          'Explore the features of Vault and learn advance practices with the following tutorials and documentation.'
+        );
+      assert.dom('[data-test-learn-more-links] a').exists({ count: 4 });
+      assert
+        .dom('[data-test-feedback-form]')
+        .hasText("Don't see what you're looking for on this page? Let us know via our feedback form .");
+    });
+  });
 });
