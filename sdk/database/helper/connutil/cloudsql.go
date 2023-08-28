@@ -48,7 +48,6 @@ func (c *SQLConnectionProducer) registerDrivers(driverName string, credentials s
 
 // GetCloudSQLAuthOptions takes a credentials (file) or a credentialsJSON (the actual data) and returns
 // a set of GCP CloudSQL options - always WithIAMAUthN, and then the appropriate file/JSON option.
-
 func GetCloudSQLAuthOptions(credentials string) ([]cloudsqlconn.Option, error) {
 	opts := []cloudsqlconn.Option{cloudsqlconn.WithIAMAuthN()}
 

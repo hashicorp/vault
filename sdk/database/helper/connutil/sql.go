@@ -35,11 +35,6 @@ const (
 
 var _ ConnectionProducer = &SQLConnectionProducer{}
 
-var (
-	driversMu sync.RWMutex
-	drivers   = make(map[string]cloudSQLCleanup)
-)
-
 type cloudSQLCleanup func() error
 
 // SQLConnectionProducer implements ConnectionProducer and provides a generic producer for most sql databases
@@ -234,17 +229,6 @@ func (c *SQLConnectionProducer) Close() error {
 	// Grab the write lock
 	c.Lock()
 	defer c.Unlock()
-
-	if c.db != nil {
-		// if auth_type is IAM, ensure cleanup
-		// of cloudSQL resources
-		if c.AuthType == AuthTypeGCPIAM {
-			driversMu.Lock()
-			defer driversMu.Unlock()
-		} else {
-			c.db.Close()
-		}
-	}
 
 	c.db = nil
 
