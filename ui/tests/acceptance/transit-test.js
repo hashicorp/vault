@@ -6,13 +6,11 @@
 import { click, fillIn, find, currentURL, settled, visit, waitUntil, findAll } from '@ember/test-helpers';
 import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
-import { create } from 'ember-cli-page-object';
 import { v4 as uuidv4 } from 'uuid';
 
 import { encodeString } from 'vault/utils/b64';
 import authPage from 'vault/tests/pages/auth';
-import consoleClass from 'vault/tests/pages/components/console/ui-panel';
-import { deleteEngineCmd, mountEngineCmd } from '../helpers/commands';
+import { deleteEngineCmd, mountEngineCmd, runCmd } from 'vault/tests/helpers/commands';
 
 const SELECTORS = {
   secretLink: '[data-test-secret-link]',
@@ -26,7 +24,6 @@ const SELECTORS = {
   },
 };
 
-const consoleComponent = create(consoleClass);
 const groupOne = [
   {
     name: (ts) => `aes-convergent-${ts}`,
@@ -316,13 +313,14 @@ module('Acceptance | transit', function (hooks) {
     this.uid = uid;
     this.path = `transit-${uid}`;
 
-    await consoleComponent.runCommands(mountEngineCmd('transit', this.path));
+    await runCmd(mountEngineCmd('transit', this.path));
     // Start test on backend main page
     return visit(`/vault/secrets/${this.path}/list`);
   });
 
-  hooks.afterEach(function () {
-    return consoleComponent.runCommands(deleteEngineCmd(this.path));
+  hooks.afterEach(async function () {
+    await authPage.login();
+    await runCmd(deleteEngineCmd(this.mountPath));
   });
 
   test(`transit backend: list menu`, async function (assert) {
