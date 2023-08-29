@@ -15,14 +15,18 @@ import (
 )
 
 func PrepareTestContainer(t *testing.T, version string) (func(), string) {
+	_, cleanup, url, _ := PrepareTestContainerRunner(t, version)
+
+	return cleanup, url
+}
+
+func PrepareTestContainerRunner(t *testing.T, version string) (*docker.Runner, func(), string, string) {
 	env := []string{
 		"POSTGRES_PASSWORD=secret",
 		"POSTGRES_DB=database",
 	}
 
-	_, cleanup, url, _ := prepareTestContainer(t, "postgres", "docker.mirror.hashicorp.services/postgres", version, "secret", true, false, false, env)
-
-	return cleanup, url
+	return prepareTestContainer(t, "postgres", "docker.mirror.hashicorp.services/postgres", version, "secret", true, false, false, env)
 }
 
 // PrepareTestContainerWithVaultUser will setup a test container with a Vault
