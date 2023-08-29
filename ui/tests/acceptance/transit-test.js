@@ -24,87 +24,94 @@ const SELECTORS = {
   },
 };
 
+// convergent
 const groupOne = [
   {
-    name: (ts) => `aes-convergent-${ts}`,
+    name: (uid = 'name') => `aes-1A-convergent-${uid}`,
     type: 'aes128-gcm96',
     convergent: true,
     supportsEncryption: true,
   },
   {
-    name: (ts) => `aes-convergent-${ts}`,
+    name: (uid = 'name') => `aes-1B-convergent-${uid}`,
     type: 'aes256-gcm96',
     convergent: true,
     supportsEncryption: true,
   },
   {
-    name: (ts) => `chacha-convergent-${ts}`,
+    name: (uid = 'name') => `chacha-1C-convergent-${uid}`,
     type: 'chacha20-poly1305',
     convergent: true,
     supportsEncryption: true,
     autoRotate: true,
   },
 ];
+
+// exportable, supports encryption
 const groupTwo = [
   {
-    name: (ts) => `aes-${ts}`,
+    name: (uid = 'name') => `aes-2A-${uid}`,
     type: 'aes128-gcm96',
     exportable: true,
     supportsEncryption: true,
   },
   {
-    name: (ts) => `aes-${ts}`,
+    name: (uid = 'name') => `aes-2B-${uid}`,
     type: 'aes256-gcm96',
     exportable: true,
     supportsEncryption: true,
   },
   {
-    name: (ts) => `chacha-${ts}`,
+    name: (uid = 'name') => `chacha-3B-${uid}`,
     type: 'chacha20-poly1305',
     exportable: true,
     supportsEncryption: true,
   },
+];
+
+// exportable, supports signing
+const groupThree = [
   {
-    name: (ts) => `ecdsa-${ts}`,
+    name: (uid = 'name') => `ecdsa-3A-${uid}`,
     type: 'ecdsa-p256',
     exportable: true,
     supportsSigning: true,
   },
   {
-    name: (ts) => `ecdsa-${ts}`,
+    name: (uid = 'name') => `ecdsa-3B-${uid}`,
     type: 'ecdsa-p384',
     exportable: true,
     supportsSigning: true,
   },
   {
-    name: (ts) => `ecdsa-${ts}`,
+    name: (uid = 'name') => `ecdsa-3C-${uid}`,
     type: 'ecdsa-p521',
     exportable: true,
     supportsSigning: true,
   },
 ];
-
-const groupThree = [
+// the rest
+const groupFour = [
   {
-    name: (ts) => `ed25519-${ts}`,
+    name: (uid = 'name') => `ed25519-4A-${uid}`,
     type: 'ed25519',
     derived: true,
     supportsSigning: true,
   },
   {
-    name: (ts) => `rsa-2048-${ts}`,
+    name: (uid = 'name') => `rsa-2048-4B-${uid}`,
     type: `rsa-2048`,
     supportsSigning: true,
     supportsEncryption: true,
   },
   {
-    name: (ts) => `rsa-3072-${ts}`,
+    name: (uid = 'name') => `rsa-3072-4C-${uid}`,
     type: `rsa-3072`,
     supportsSigning: true,
     supportsEncryption: true,
   },
   {
-    name: (ts) => `rsa-4096-${ts}`,
+    name: (uid = 'name') => `rsa-4096-4D-${uid}`,
     type: `rsa-4096`,
     supportsSigning: true,
     supportsEncryption: true,
@@ -341,8 +348,9 @@ module('Acceptance | transit', function (hooks) {
       'navigates back to transit actions';
   });
 
+  // convergent keys
   for (const key of groupOne) {
-    test(`transit backend: group 1 ${key.type}`, async function (assert) {
+    test(`transit backend: group 1 ${key.name()}`, async function (assert) {
       assert.expect(42);
       const name = await generateTransitKey(key, this.uid);
       await visit(`vault/secrets/${this.path}/show/${name}`);
@@ -368,7 +376,7 @@ module('Acceptance | transit', function (hooks) {
 
       const keyAction = 'encrypt';
       await waitUntil(() => find(SELECTORS.card(keyAction)));
-      assert.dom(SELECTORS.card(keyAction)).exists(`renders ${keyAction} card for ${key.type}`);
+      assert.dom(SELECTORS.card(keyAction)).exists(`renders ${keyAction} card for ${key.name()}`);
       await click(SELECTORS.card(keyAction));
       assert
         .dom('[data-test-transit-key-version-select]')
@@ -379,9 +387,9 @@ module('Acceptance | transit', function (hooks) {
       await testConvergentEncryption(assert, name);
     });
   }
-
+  // exportable, supports encryption
   for (const key of groupTwo) {
-    test(`transit backend: group 2 ${key.type}`, async function (assert) {
+    test(`transit backend: group 2 ${key.name()}`, async function (assert) {
       assert.expect(6);
       const name = await generateTransitKey(key, this.uid);
       await visit(`vault/secrets/${this.path}/show/${name}`);
@@ -404,9 +412,47 @@ module('Acceptance | transit', function (hooks) {
 
       // navigate back to actions tab
       await visit(`/vault/secrets/${this.path}/show/${name}?tab=actions`);
-      const keyAction = key.supportsEncryption ? 'encrypt' : 'sign';
+      const keyAction = 'encrypt';
       await waitUntil(() => find(SELECTORS.card(keyAction)));
-      assert.dom(SELECTORS.card(keyAction)).exists(`renders ${keyAction} card for ${key.type}`);
+      assert.dom(SELECTORS.card(keyAction)).exists(`renders ${keyAction} card for ${key.name()}`);
+      await click(SELECTORS.card(keyAction));
+
+      assert
+        .dom('[data-test-transit-key-version-select]')
+        .exists(`${name}: the rotated key allows you to select versions`);
+      assert
+        .dom('[data-test-transit-action-link="export"]')
+        .exists(`${name}: exportable key has a link to export action`);
+    });
+  }
+  // exportable, supports signing
+  for (const key of groupThree) {
+    test(`transit backend: group 2 ${key.name()}`, async function (assert) {
+      assert.expect(6);
+      const name = await generateTransitKey(key, this.uid);
+      await visit(`vault/secrets/${this.path}/show/${name}`);
+
+      assert
+        .dom('[data-test-row-value="Auto-rotation period"]')
+        .hasText('Key will not be automatically rotated', 'key will not auto rotate');
+
+      await click(SELECTORS.versionsTab);
+      assert.dom('[data-test-transit-key-version-row]').exists({ count: 1 }, `${name}: only one key version`);
+      await waitUntil(() => find(SELECTORS.rotate.trigger));
+      await click(SELECTORS.rotate.trigger);
+      await click(SELECTORS.rotate.confirm);
+
+      // wait for rotate call
+      await waitUntil(() => findAll('[data-test-transit-key-version-row]').length >= 2);
+      assert
+        .dom('[data-test-transit-key-version-row]')
+        .exists({ count: 2 }, `${name}: two key versions after rotate`);
+
+      // navigate back to actions tab
+      await visit(`/vault/secrets/${this.path}/show/${name}?tab=actions`);
+      const keyAction = 'sign';
+      await waitUntil(() => find(SELECTORS.card(keyAction)));
+      assert.dom(SELECTORS.card(keyAction)).exists(`renders ${keyAction} card for ${key.name()}`);
       await click(SELECTORS.card(keyAction));
 
       assert
@@ -418,8 +464,8 @@ module('Acceptance | transit', function (hooks) {
     });
   }
 
-  for (const key of groupThree) {
-    test(`transit backend: group 3 ${key.type}`, async function (assert) {
+  for (const key of groupFour) {
+    test(`transit backend: group 3 ${key.name()}`, async function (assert) {
       assert.expect(6);
       const name = await generateTransitKey(key, this.uid);
       await visit(`vault/secrets/${this.path}/show/${name}`);
@@ -447,7 +493,7 @@ module('Acceptance | transit', function (hooks) {
 
       const keyAction = key.supportsEncryption ? 'encrypt' : 'sign';
       await waitUntil(() => find(SELECTORS.card(keyAction)));
-      assert.dom(SELECTORS.card(keyAction)).exists(`renders ${keyAction} card for ${key.type}`);
+      assert.dom(SELECTORS.card(keyAction)).exists(`renders ${keyAction} card for ${key.name()}`);
       await click(SELECTORS.card(keyAction));
 
       assert
