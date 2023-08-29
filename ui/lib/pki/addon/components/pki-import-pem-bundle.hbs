@@ -5,12 +5,12 @@
 
 {{#if this.importedResponse}}
   <div class="is-flex-start has-top-margin-xs">
-    <div class="is-flex-1 basis-0 has-text-grey has-bottom-margin-xs">
+    <div class="is-flex-grow-1 basis-0 has-text-grey has-bottom-margin-xs">
       <h2>
         Imported Issuer
       </h2>
     </div>
-    <div class="is-flex-1 basis-0 has-text-grey has-bottom-margin-xs">
+    <div class="is-flex-grow-1 basis-0 has-text-grey has-bottom-margin-xs">
       <h2>
         Imported Key
       </h2>
@@ -23,7 +23,7 @@
         data-test-import-pair={{concat imported.issuer "_" imported.key}}
       >
         <div class="is-flex-start">
-          <div class="is-flex-1 basis-0 has-bottom-margin-xs" data-test-imported-issuer>
+          <div class="is-flex-grow-1 basis-0 has-bottom-margin-xs" data-test-imported-issuer>
             {{#if imported.issuer}}
               <LinkTo @route="issuers.issuer.details" @model={{imported.issuer}}>
                 {{imported.issuer}}
@@ -32,7 +32,7 @@
               None
             {{/if}}
           </div>
-          <div class="is-flex-1 basis-0 has-bottom-margin-xs" data-test-imported-key>
+          <div class="is-flex-grow-1 basis-0 has-bottom-margin-xs" data-test-imported-key>
             {{#if imported.key}}
               <LinkTo @route="keys.key.details" @model={{imported.key}}>
                 {{imported.key}}

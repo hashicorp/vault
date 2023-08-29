@@ -1135,7 +1135,7 @@ func testParseSeals(t *testing.T) {
 						"default_hmac_key_label": "vault-hsm-hmac-key",
 						"generate_key":           "true",
 					},
-					Name: "pkcs11",
+					Name: "pkcs11-disabled",
 				},
 			},
 		},

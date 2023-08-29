@@ -15,6 +15,7 @@ import consoleClass from 'vault/tests/pages/components/console/ui-panel';
 
 const consoleComponent = create(consoleClass);
 
+// TODO: kv engine cleanup replace with workflow-diff-test
 module('Acceptance | kv2 diff view', function (hooks) {
   setupApplicationTest(hooks);
 
@@ -27,7 +28,7 @@ module('Acceptance | kv2 diff view', function (hooks) {
     this.server.shutdown();
   });
 
-  test('it shows correct diff status based on versions', async function (assert) {
+  test.skip('it shows correct diff status based on versions', async function (assert) {
     const secretPath = `my-secret`;
 
     await consoleComponent.runCommands([

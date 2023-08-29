@@ -6,7 +6,7 @@ description: The `/sys/quotas/lease-count` endpoint is used to create, edit and 
 
 # `/sys/quotas/lease-count`
 
-@include 'alerts/enterprise-and-hcp.mdx'
+@include 'alerts/enterprise-and-hcp-plus.mdx'
 
 The `/sys/quotas/lease-count` endpoint is used to create, edit and delete lease count quotas.
 
@@ -49,6 +49,11 @@ millions of leases in an automated way, it is recommended to space out the creat
   concept of roles (such as `/auth/approle/`), this will make the quota restrict login
   requests to that mount that are made with the specified role. The request will fail if
   the auth mount does not have a concept of roles, or `path` is not an auth mount.
+- `inheritable` `(bool: false)` - If set to `true` on a quota where `path` is set to a namespace,
+  all child namespaces of the specified path namespace will inherit the quota. The `inheritable` parameter cannot be set to
+  `true` if the `path` does not specify a namespace. Only the quotas associated
+  with the root namespace are inheritable by default.
+
 
 ### Sample payload
 

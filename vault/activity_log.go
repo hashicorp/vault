@@ -209,6 +209,8 @@ type ActivityLogCoreConfig struct {
 	// Clock holds a custom clock to modify time.Now, time.Ticker, time.Timer.
 	// If nil, the default functions from the time package are used
 	Clock timeutil.Clock
+
+	DisableInvalidation bool
 }
 
 // NewActivityLog creates an activity log.

@@ -17,6 +17,7 @@
  *  @isV2=true
  *  @secretData={{@secretData}}
  *  @canCreateSecretMetadata=false
+ *  @buttonDisabled={{this.saving}}
  * />
  * ```
  * @param {string} mode - create, edit, show determines what view to display
@@ -26,12 +27,13 @@
  * @param {boolean} isV2 - whether or not KV1 or KV2
  * @param {object} secretData - class that is created in secret-edit
  * @param {boolean} canUpdateSecretMetadata - based on permissions to the /metadata/ endpoint. If user has secret update. create is not enough for metadata.
+ * @param {boolean} buttonDisabled - if true, disables the submit button on the create/update form
  */
 
 import Component from '@glimmer/component';
 import ControlGroupError from 'vault/lib/control-group-error';
 import Ember from 'ember';
-import keys from 'vault/lib/keycodes';
+import keys from 'core/utils/key-codes';
 import { action, set } from '@ember/object';
 import { inject as service } from '@ember/service';
 import { tracked } from '@glimmer/tracking';
@@ -51,6 +53,7 @@ export default class SecretCreateOrUpdate extends Component {
   @tracked validationMessages = null;
 
   @service controlGroup;
+  @service flashMessages;
   @service router;
   @service store;
 
@@ -163,6 +166,7 @@ export default class SecretCreateOrUpdate extends Component {
         if (error instanceof ControlGroupError) {
           const errorMessage = this.controlGroup.logFromError(error);
           this.error = errorMessage.content;
+          this.controlGroup.saveTokenFromError(error);
         }
         throw error;
       });
@@ -233,8 +237,13 @@ export default class SecretCreateOrUpdate extends Component {
       return;
     }
 
+    const secretPath = type === 'create' ? this.args.modelForData.path : this.args.model.id;
     this.persistKey(() => {
-      this.transitionToRoute(SHOW_ROUTE, this.args.model.path || this.args.model.id);
+      // Show flash message in case there's a control group on read
+      this.flashMessages.success(
+        `Secret ${secretPath} ${type === 'create' ? 'created' : 'updated'} successfully.`
+      );
+      this.transitionToRoute(SHOW_ROUTE, secretPath);
     });
   }
   @action
