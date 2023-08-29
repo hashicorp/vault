@@ -265,6 +265,10 @@ export default Service.extend({
     if (typeof userRootNamespace === 'undefined') {
       userRootNamespace = currentNamespace;
     }
+    if (userRootNamespace.startsWith('/')) {
+      // remove the forward slash if the namespace starts with it.
+      userRootNamespace = userRootNamespace.slice(1);
+    }
     const data = {
       userRootNamespace,
       displayName,
