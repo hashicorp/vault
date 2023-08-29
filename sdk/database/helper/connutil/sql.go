@@ -132,8 +132,10 @@ func (c *SQLConnectionProducer) Init(ctx context.Context, conf map[string]interf
 			return nil, fmt.Errorf("unable to generate UUID for IAM configuration: %w", err)
 		}
 
-		// There are a few important points to keep in mind with this line of code, for more information
-		// see the connection_producer.go
+		// for _most_ sql databases, the driver itself contains no state. In the case of google's cloudsql drivers,
+		// however, the driver might store a credentials file, in which case the state stored by the driver is in
+		// fact critical to the proper function of the connection. So it needs to be registered here inside the
+		// ConnectionProducer init.
 		cleanup, err := c.registerDrivers(c.cloudDriverName, c.Credentials)
 		if err != nil {
 			return nil, err
@@ -236,6 +238,17 @@ func (c *SQLConnectionProducer) Close() error {
 	// Grab the write lock
 	c.Lock()
 	defer c.Unlock()
+
+	if c.db != nil {
+		c.db.Close()
+
+		// cleanup IAM dialer if it exists
+		if c.AuthType == AuthTypeGCPIAM {
+			if c.cloudDialerCleanup != nil {
+				c.cloudDialerCleanup()
+			}
+		}
+	}
 
 	c.db = nil
 

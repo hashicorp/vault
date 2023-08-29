@@ -49,7 +49,6 @@ type mySQLConnectionProducer struct {
 	tlsConfigName string
 
 	// cloudDriverName is a globally unique name that references the cloud dialer config for this instance of the driver
-	// I would like to reuse the tlsConfigName value, but there are parts of the code that expect its emptyness to equal "no-tls"
 	cloudDriverName    string
 	cloudDialerCleanup func() error
 
@@ -135,18 +134,8 @@ func (c *mySQLConnectionProducer) Init(ctx context.Context, conf map[string]inte
 
 		// for _most_ sql databases, the driver itself contains no state. In the case of google's cloudsql drivers,
 		// however, the driver might store a credentials file, in which case the state stored by the driver is in
-		// fact critical to the proper function of the connection.
-		//
-		// This poses one big obvious problem - each configured cloud database might/will need its own driver registration,
-		// the name of which we have to track, and even worse in the MySQL case, that name is also the name of the
-		// dialer that is registered by MySQL in the dsn: protocol in the DSN acts double duty if a custom dialer
-		// is registered. This means that either we can't hide the name of the dialer from the user OR we have to rewrite
-		// the DSN after the user provides it. We already do this, KIND OF for the TLS config, but this modification
-		// is much more dramatic.
-		//
-		// Another potentially latent issue is that it is difficult to clear out the driver (or its underlying dialer)
-		// if the config changes or if the backend is deleted. This has the potential to become a bit of an issue if
-		// somehow millions upon millions of configs are written.
+		// fact critical to the proper function of the connection. So it needs to be registered here inside the
+		// ConnectionProducer init.
 		_, err := registerDriverMySQL(c.cloudDriverName, credentials)
 		if err != nil {
 			return nil, err
@@ -242,9 +231,8 @@ func (c *mySQLConnectionProducer) Close() error {
 			if c.cloudDialerCleanup != nil {
 				c.cloudDialerCleanup()
 			}
-		} else {
-			c.db.Close()
 		}
+		c.db.Close()
 	}
 
 	c.db = nil

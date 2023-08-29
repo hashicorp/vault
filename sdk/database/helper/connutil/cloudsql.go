@@ -17,7 +17,7 @@ func (c *SQLConnectionProducer) getCloudSQLDriverName() (string, error) {
 	case dbTypePostgres:
 		driverName = cloudSQLPostgres
 	default:
-		return "", fmt.Errorf("unrecognized DB type: %s", c.Type)
+		return "", fmt.Errorf("unsupported DB type for cloud IAM: %s", c.Type)
 	}
 
 	return driverName, nil
