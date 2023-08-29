@@ -2399,6 +2399,7 @@ func (s standardUnsealStrategy) unseal(ctx context.Context, logger log.Logger, c
 
 		if !sealGenerationInfo.IsRewrapped() {
 			// Flag migration performed for seal-rewrap later
+			c.logger.Trace("seal generation information indicates that a seal-rewrap is needed", "generation", sealGenerationInfo.Generation, "rewrapped", sealGenerationInfo.IsRewrapped())
 			atomic.StoreUint32(c.sealMigrationDone, 1)
 		}
 
