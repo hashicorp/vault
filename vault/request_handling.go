@@ -1203,6 +1203,7 @@ func (c *Core) handleRequest(ctx context.Context, req *logical.Request) (retResp
 					NamespaceID: ns.ID,
 				}
 
+				// Check for request role in context to role based quotas
 				var role string
 				if reqRole := ctx.Value(logical.CtxKeyRequestRole{}); reqRole != nil {
 					role = reqRole.(string)
@@ -1402,7 +1403,7 @@ func (c *Core) handleLoginRequest(ctx context.Context, req *logical.Request) (re
 			return
 		}
 
-		// Check for request role
+		// Check for request role in context to role based quotas
 		var role string
 		if reqRole := ctx.Value(logical.CtxKeyRequestRole{}); reqRole != nil {
 			role = reqRole.(string)
