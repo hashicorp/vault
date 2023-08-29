@@ -19,6 +19,7 @@ import (
 	mysqlhelper "github.com/hashicorp/vault/helper/testhelpers/mysql"
 	"github.com/hashicorp/vault/sdk/database/dbplugin/v5"
 	dbtesting "github.com/hashicorp/vault/sdk/database/dbplugin/v5/testing"
+	"github.com/hashicorp/vault/sdk/database/helper/connutil"
 	"github.com/hashicorp/vault/sdk/database/helper/credsutil"
 	"github.com/hashicorp/vault/sdk/database/helper/dbutil"
 )
@@ -64,7 +65,7 @@ func TestMySQL_Initialize_CloudGCP(t *testing.T) {
 			req: dbplugin.InitializeRequest{
 				Config: map[string]interface{}{
 					"connection_url": connURL,
-					"auth_type":      authTypeGCPIAM,
+					"auth_type":      connutil.AuthTypeGCPIAM,
 					"credentials":    credStr,
 				},
 				VerifyConnection: true,

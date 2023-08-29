@@ -8,14 +8,12 @@ import (
 
 	"cloud.google.com/go/cloudsqlconn"
 	"cloud.google.com/go/cloudsqlconn/postgres/pgxv4"
-	"cloud.google.com/go/cloudsqlconn/sqlserver/mssql"
 )
 
 func (c *SQLConnectionProducer) getCloudSQLDriverName() (string, error) {
 	var driverName string
+	// using switch case for future extensibility
 	switch c.Type {
-	case dbTypeMSSQL:
-		driverName = cloudSQLMSSQL
 	case dbTypePostgres:
 		driverName = cloudSQLPostgres
 	default:
@@ -36,9 +34,8 @@ func (c *SQLConnectionProducer) registerDrivers(driverName string, credentials s
 		return nil, err
 	}
 
+	// using switch case for future extensibility
 	switch typ {
-	case cloudSQLMSSQL:
-		return mssql.RegisterDriver(driverName, opts...)
 	case cloudSQLPostgres:
 		return pgxv4.RegisterDriver(driverName, opts...)
 	}

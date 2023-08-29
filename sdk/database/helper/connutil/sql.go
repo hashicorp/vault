@@ -28,14 +28,10 @@ const (
 
 const (
 	dbTypePostgres   = "pgx"
-	dbTypeMSSQL      = "mssql"
 	cloudSQLPostgres = "cloudsql-postgres"
-	cloudSQLMSSQL    = "cloudsql-sqlserver"
 )
 
 var _ ConnectionProducer = &SQLConnectionProducer{}
-
-type cloudSQLCleanup func() error
 
 // SQLConnectionProducer implements ConnectionProducer and provides a generic producer for most sql databases
 type SQLConnectionProducer struct {
@@ -51,7 +47,8 @@ type SQLConnectionProducer struct {
 
 	// cloud options here - cloudDriverName is globally unique, but only needs to be retained for the lifetime
 	// of driver registration, not across plugin restarts.
-	cloudDriverName string
+	cloudDriverName    string
+	cloudDialerCleanup func() error
 
 	Type                  string
 	RawConfig             map[string]interface{}
@@ -137,10 +134,12 @@ func (c *SQLConnectionProducer) Init(ctx context.Context, conf map[string]interf
 
 		// There are a few important points to keep in mind with this line of code, for more information
 		// see the connection_producer.go
-		_, err := c.registerDrivers(c.cloudDriverName, c.Credentials)
+		cleanup, err := c.registerDrivers(c.cloudDriverName, c.Credentials)
 		if err != nil {
 			return nil, err
 		}
+
+		c.cloudDialerCleanup = cleanup
 	}
 
 	// Set initialized to true at this point since all fields are set,
@@ -173,6 +172,14 @@ func (c *SQLConnectionProducer) Connection(ctx context.Context) (interface{}, er
 		// If the ping was unsuccessful, close it and ignore errors as we'll be
 		// reestablishing anyways
 		c.db.Close()
+
+		// if IAM authentication is enabled
+		// ensure open dialer is also closed
+		if c.AuthType == AuthTypeGCPIAM {
+			if c.cloudDialerCleanup != nil {
+				c.cloudDialerCleanup()
+			}
+		}
 	}
 
 	// default non-IAM behavior

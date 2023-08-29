@@ -49,7 +49,9 @@ type mySQLConnectionProducer struct {
 	tlsConfigName string
 
 	// cloudDriverName is a globally unique name that references the cloud dialer config for this instance of the driver
-	cloudDriverName string
+	// I would like to reuse the tlsConfigName value, but there are parts of the code that expect its emptyness to equal "no-tls"
+	cloudDriverName    string
+	cloudDialerCleanup func() error
 
 	RawConfig             map[string]interface{}
 	maxConnectionLifetime time.Duration
@@ -181,6 +183,15 @@ func (c *mySQLConnectionProducer) Connection(ctx context.Context) (interface{}, 
 		// If the ping was unsuccessful, close it and ignore errors as we'll be
 		// reestablishing anyways
 		c.db.Close()
+
+		// if IAM authentication was enabled
+		// ensure open dialer is also closed
+		if c.AuthType == connutil.AuthTypeGCPIAM {
+			if c.cloudDialerCleanup != nil {
+				c.cloudDialerCleanup()
+			}
+		}
+
 	}
 
 	driverName := driverMySQL
@@ -228,7 +239,9 @@ func (c *mySQLConnectionProducer) Close() error {
 		// if auth_type is IAM, ensure cleanup
 		// of cloudSQL resources
 		if c.AuthType == connutil.AuthTypeGCPIAM {
-			// @TODO implement cloudSQL Driver cleanup from cache
+			if c.cloudDialerCleanup != nil {
+				c.cloudDialerCleanup()
+			}
 		} else {
 			c.db.Close()
 		}
