@@ -46,7 +46,7 @@ func (c *SQLConnectionProducer) registerDrivers(driverName string, credentials s
 	return nil, fmt.Errorf("unrecognized cloudsql type encountered: %s", typ)
 }
 
-// GetCloudSQLAuthOptions takes a credentials (file) or a credentialsJSON (the actual data) and returns
+// GetCloudSQLAuthOptions takes a credentials JSON and returns
 // a set of GCP CloudSQL options - always WithIAMAUthN, and then the appropriate file/JSON option.
 func GetCloudSQLAuthOptions(credentials string) ([]cloudsqlconn.Option, error) {
 	opts := []cloudsqlconn.Option{cloudsqlconn.WithIAMAuthN()}
