@@ -6,7 +6,7 @@
 <div>
   {{#if @name}}
     <LinkTo
-      class="is-size-5 has-text-weight-semibold has-bottom-margin-xs is-no-underline"
+      class="is-size-5 has-text-weight-semibold has-bottom-margin-xs is-no-underline title-link"
       @route="vault.cluster.replication.mode.index"
       @model={{@name}}
       data-test-title={{@title}}
@@ -29,7 +29,7 @@
     <T.Trigger
       data-test-tooltip-trigger
       tabindex="-1"
-      class="title is-5 has-top-margin-xxs has-bottom-margin-xxs"
+      class="title is-4 has-text-weight-semibold has-top-margin-xxs has-bottom-margin-xxs"
       data-test-tooltip-title={{@title}}
     >
       {{or @state "not set up"}}
