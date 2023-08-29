@@ -337,7 +337,7 @@ a.button.disabled {
     min-width: $spacing-l;
     padding: 0;
   }
-  &.white-icon > * {
+  &.white-icon svg {
     color: $white;
   }
 }
