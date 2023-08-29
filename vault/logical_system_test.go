@@ -5884,3 +5884,139 @@ func TestSystemBackend_ReadExperiments(t *testing.T) {
 		})
 	}
 }
+
+func TestSystemBackend_pluginRuntimeCRUD(t *testing.T) {
+	b := testSystemBackend(t)
+
+	// Register the plugin runtime
+	req := logical.TestRequest(t, logical.UpdateOperation, "plugins/runtimes/catalog/container/foo")
+	req.Data = map[string]interface{}{
+		"oci_runtime":   "some-oci-runtime",
+		"cgroup_parent": "/cpulimit/",
+		"cpu":           1,
+		"memory":        10000,
+	}
+
+	resp, err := b.HandleRequest(namespace.RootContext(nil), req)
+	if err != nil {
+		t.Fatalf("err: %v %#v", err, resp)
+	}
+	if resp != nil && (resp.IsError() || len(resp.Data) > 0) {
+		t.Fatalf("bad: %#v", resp)
+	}
+
+	// validate the response structure for plugin container runtime named foo
+	schema.ValidateResponse(
+		t,
+		schema.GetResponseSchema(t, b.(*SystemBackend).Route(req.Path), req.Operation),
+		resp,
+		true,
+	)
+
+	// Read the plugin runtime
+	req = logical.TestRequest(t, logical.ReadOperation, "plugins/runtimes/catalog/container/foo")
+	resp, err = b.HandleRequest(namespace.RootContext(nil), req)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	// validate the response structure for plugin container runtime named foo
+	schema.ValidateResponse(
+		t,
+		schema.GetResponseSchema(t, b.(*SystemBackend).Route(req.Path), req.Operation),
+		resp,
+		true,
+	)
+
+	exp := map[string]interface{}{
+		"name":          "foo",
+		"type":          "container",
+		"oci_runtime":   "some-oci-runtime",
+		"cgroup_parent": "/cpulimit/",
+		"cpu":           1,
+		"memory":        10000,
+	}
+	if !reflect.DeepEqual(resp.Data, exp) {
+		t.Fatalf("got: %#v expect: %#v", resp.Data, exp)
+	}
+
+	// List the plugin runtimes of container type
+	req = logical.TestRequest(t, logical.ReadOperation, "plugins/runtimes/catalog/container")
+	resp, err = b.HandleRequest(namespace.RootContext(nil), req)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	exp = map[string]interface{}{
+		"keys": []string{"foo"},
+	}
+	if !reflect.DeepEqual(resp.Data, exp) {
+		t.Fatalf("got: %#v expect: %#v", resp.Data, exp)
+	}
+
+	// List the plugin runtimes (untyped or all)
+	req = logical.TestRequest(t, logical.ReadOperation, "plugins/runtimes/catalog")
+	resp, err = b.HandleRequest(namespace.RootContext(nil), req)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	exp = map[string]interface{}{
+		"type": map[string][]string{"container": {"foo"}},
+	}
+	if !reflect.DeepEqual(resp.Data, exp) {
+		t.Fatalf("got: %#v expect: %#v", resp.Data, exp)
+	}
+
+	// Delete the plugin runtime
+	req = logical.TestRequest(t, logical.DeleteOperation, "plugins/runtimes/catalog/container/foo")
+	resp, err = b.HandleRequest(namespace.RootContext(nil), req)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	if resp != nil {
+		t.Fatalf("bad: %#v", resp)
+	}
+
+	// validate the response structure for plugin container runtime named foo
+	schema.ValidateResponse(
+		t,
+		schema.GetResponseSchema(t, b.(*SystemBackend).Route(req.Path), req.Operation),
+		resp,
+		true,
+	)
+
+	// Read the plugin runtime (deleted)
+	req = logical.TestRequest(t, logical.ReadOperation, "plugins/runtimes/catalog/container/foo")
+	resp, err = b.HandleRequest(namespace.RootContext(nil), req)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	if resp != nil {
+		t.Fatalf("bad: %#v", resp)
+	}
+
+	// List the plugin runtimes (deleted)
+	req = logical.TestRequest(t, logical.ReadOperation, "plugins/runtimes/catalog/container")
+	resp, err = b.HandleRequest(namespace.RootContext(nil), req)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	exp = map[string]interface{}{}
+	if !reflect.DeepEqual(resp.Data, exp) {
+		t.Fatalf("got: %#v expect: %#v", resp.Data, exp)
+	}
+
+	// List the plugin runtimes (untyped or all)
+	req = logical.TestRequest(t, logical.ReadOperation, "plugins/runtimes/catalog")
+	resp, err = b.HandleRequest(namespace.RootContext(nil), req)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	exp = map[string]interface{}{}
+	if !reflect.DeepEqual(resp.Data, exp) {
+		t.Fatalf("got: %#v expect: %#v", resp.Data, exp)
+	}
+}
