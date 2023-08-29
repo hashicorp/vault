@@ -324,8 +324,14 @@ DONELISTHANDLING:
 		},
 	}
 
+	// Check for request role in context to role based quotas
+	var role string
+	if reqRole := ctx.Value(logical.CtxKeyRequestRole{}); reqRole != nil {
+		role = reqRole.(string)
+	}
+
 	// Register the wrapped token with the expiration manager
-	if err := c.expiration.RegisterAuth(ctx, &te, wAuth, c.DetermineRoleFromLoginRequest(req.MountPoint, req.Data, ctx)); err != nil {
+	if err := c.expiration.RegisterAuth(ctx, &te, wAuth, role); err != nil {
 		// Revoke since it's not yet being tracked for expiration
 		c.tokenStore.revokeOrphan(ctx, te.ID)
 		c.logger.Error("failed to register cubbyhole wrapping token lease", "request_path", req.Path, "error", err)
