@@ -215,10 +215,11 @@ func configureWrapper(configKMS *KMS, infoKeys *[]string, info *map[string]strin
 	var kmsInfo map[string]string
 	var err error
 
+	wrapperType := wrapping.WrapperType(configKMS.Type)
 	envConfig := GetEnvConfigFunc(configKMS)
 	for name, val := range envConfig {
-		// for the token, config takes precedence over env vars
-		if name == "token" && configKMS.Config[name] != "" {
+		// for transit seals, config takes precedence over env vars
+		if wrapperType == wrapping.WrapperTypeTransit && configKMS.Config[name] != "" {
 			continue
 		}
 		configKMS.Config[name] = val
