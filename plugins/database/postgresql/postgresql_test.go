@@ -139,7 +139,7 @@ func TestPostgreSQL_Initialize_CloudGCP(t *testing.T) {
 	for name, test := range tests {
 		t.Run(name, func(t *testing.T) {
 			db := new()
-			dbtesting.AssertInitializeCircleCiTest(t, db, test.req)
+			dbtesting.AssertInitialize(t, db, test.req)
 			defer dbtesting.AssertClose(t, db)
 
 			if !db.Initialized {

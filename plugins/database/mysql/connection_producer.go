@@ -25,9 +25,8 @@ import (
 )
 
 const (
-	authTypeGCPIAM = connutil.AuthTypeGCPIAM
-	cloudSQLMySQL  = "cloudsql-mysql"
-	driverMySQL    = "mysql"
+	cloudSQLMySQL = "cloudsql-mysql"
+	driverMySQL   = "mysql"
 )
 
 // mySQLConnectionProducer implements ConnectionProducer and provides a generic producer for most sql databases
@@ -50,7 +49,6 @@ type mySQLConnectionProducer struct {
 	tlsConfigName string
 
 	// cloudDriverName is a globally unique name that references the cloud dialer config for this instance of the driver
-	// I would like to reuse the tlsConfigName value, but there are parts of the code that expect its emptyness to equal "no-tls"
 	cloudDriverName string
 
 	RawConfig             map[string]interface{}
@@ -125,7 +123,7 @@ func (c *mySQLConnectionProducer) Init(ctx context.Context, conf map[string]inte
 		mysql.RegisterTLSConfig(c.tlsConfigName, tlsConfig)
 	}
 
-	if c.AuthType == authTypeGCPIAM {
+	if c.AuthType == connutil.AuthTypeGCPIAM {
 		c.cloudDriverName, err = uuid.GenerateUUID()
 		if err != nil {
 			return nil, fmt.Errorf("unable to generate UUID for IAM configuration: %w", err)
@@ -229,7 +227,7 @@ func (c *mySQLConnectionProducer) Close() error {
 	if c.db != nil {
 		// if auth_type is IAM, ensure cleanup
 		// of cloudSQL resources
-		if c.AuthType == authTypeGCPIAM {
+		if c.AuthType == connutil.AuthTypeGCPIAM {
 			// @TODO implement cloudSQL Driver cleanup from cache
 		} else {
 			c.db.Close()
