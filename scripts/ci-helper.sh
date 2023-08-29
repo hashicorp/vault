@@ -85,7 +85,7 @@ function build() {
   : "${GO_TAGS:=""}"
   : "${REMOVE_SYMBOLS:=""}"
 
-  GOOS= GOARCH= go generate ./...
+  (unset GOOS; unset GOARCH; go generate ./...)
 
   # Build our ldflags
   msg="--> Building Vault revision $revision, built $build_date"
@@ -129,53 +129,10 @@ function prepare_legal() {
   popd
 }
 
-# Determine the matrix group number that we'll select for execution. If the
-# MATRIX_TEST_GROUP environment variable has set then it will always return
-# that value. If has not been set, we will randomly select a number between 1
-# and the value of MATRIX_MAX_TEST_GROUPS.
-function matrix_group_id() {
-  : "${MATRIX_TEST_GROUP:=""}"
-  if [ -n "$MATRIX_TEST_GROUP" ]; then
-    echo "$MATRIX_TEST_GROUP"
-    return
-  fi
-
-  : "${MATRIX_MAX_TEST_GROUPS:=1}"
-  awk -v min=1 -v max=$MATRIX_MAX_TEST_GROUPS 'BEGIN{srand(); print int(min+rand()*(max-min+1))}'
-}
-
-# Filter matrix file reads in the contents of MATRIX_FILE and filters out
-# scenarios that are not in the current test group and/or those that have not
-# met minimux or maximum version requirements.
-function matrix_filter_file() {
-  : "${MATRIX_FILE:=""}"
-  if [ -z "$MATRIX_FILE" ]; then
-    echo "You must specify the MATRIX_FILE variable for this command" >&2
-    exit 1
-  fi
-
-  : "${VAULT_MINOR_VERSION:=""}"
-  if [ -z "$VAULT_MINOR_VERSION" ]; then
-    echo "You must specify the VAULT_MINOR_VERSION variable for this command" >&2
-    exit 1
-  fi
-
-  : "${MATRIX_TEST_GROUP:=$(matrix_group_id)}"
-
-  local path
-  local matrix
-  path=$(readlink -f $MATRIX_FILE)
-  matrix=$(cat "$path" | jq ".include |
-    map(. |
-      select(
-        ((.min_minor_version == null) or (.min_minor_version <= $VAULT_MINOR_VERSION)) and
-        ((.max_minor_version == null) or (.max_minor_version >= $VAULT_MINOR_VERSION)) and
-        ((.test_group == null) or (.test_group == $MATRIX_TEST_GROUP))
-      )
-    )"
-  )
-
-  echo "{\"include\":$matrix}" | jq -c .
+# Package version converts a vault version string into a compatible representation for system
+# packages.
+function version_package() {
+  awk '{ gsub("-","~",$1); print $1 }' <<< "$VAULT_VERSION"
 }
 
 # Run the CI Helper
@@ -198,12 +155,6 @@ function main() {
   ;;
   prepare-legal)
     prepare_legal
-  ;;
-  matrix-filter-file)
-    matrix_filter_file
-  ;;
-  matrix-group-id)
-    matrix_group_id
   ;;
   revision)
     build_revision
