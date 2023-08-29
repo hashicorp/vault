@@ -32,6 +32,7 @@ import (
 	snapshot "github.com/hashicorp/raft-snapshot"
 	raftwal "github.com/hashicorp/raft-wal"
 	walmetrics "github.com/hashicorp/raft-wal/metrics"
+	"github.com/hashicorp/raft-wal/verifier"
 	"github.com/hashicorp/vault/helper/metricsutil"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
@@ -458,13 +459,6 @@ func NewRaftBackend(conf map[string]string, logger log.Logger) (physical.Backend
 			log = store
 		}
 
-		// Wrap the store in a LogCache to improve performance.
-		cacheStore, err := raft.NewLogCache(raftLogCacheSize, log)
-		if err != nil {
-			return nil, err
-		}
-		log = cacheStore
-
 		// Create the snapshot store.
 		snapshots, err := NewBoltSnapshotStore(raftBasePath, logger.Named("snapshot"), fsm)
 		if err != nil {
@@ -499,6 +493,21 @@ func NewRaftBackend(conf map[string]string, logger log.Logger) (physical.Backend
 			}
 		}
 	}
+
+	// Hook up the verifier if it's enabled
+	if raftLogVerifierEnabled {
+		mc := walmetrics.NewGoMetricsCollector([]string{"raft", "logstore", "verifier"}, nil, nil)
+		reportFn := makeLogVerifyReportFn(logger.Named("raft.logstore.verifier"))
+		v := verifier.NewLogStore(log, isLogVerifyCheckpoint, reportFn, mc)
+		log = v
+	}
+
+	// Wrap the store in a LogCache to improve performance.
+	cacheStore, err := raft.NewLogCache(raftLogCacheSize, log)
+	if err != nil {
+		return nil, err
+	}
+	log = cacheStore
 
 	if delayRaw, ok := conf["snapshot_delay"]; ok {
 		delay, err := parseutil.ParseDurationSecond(delayRaw)
@@ -748,6 +757,83 @@ func (b *RaftBackend) RunRaftWalVerifier(ctx context.Context) {
 			}
 		}
 	}()
+}
+
+// isLogVerifyCheckpoint is the verifier.IsCheckpointFn that can decode our raft logs for
+// their type.
+func isLogVerifyCheckpoint(l *raft.Log) (bool, error) {
+	if len(l.Data) < 1 {
+		// Shouldn't be possible! But no need to make it an error if it wasn't one
+		// before.
+		return false, nil
+	}
+
+	// Unmarshal the data back into LogData
+	var command LogData
+	err := proto.Unmarshal(l.Data, &command)
+	if err != nil {
+		return false, err
+	}
+
+	// Check the operations
+	for _, op := range command.Operations {
+		if op.OpType == verifierCheckpointOp {
+			return true, nil
+		}
+	}
+
+	return false, nil
+}
+
+func makeLogVerifyReportFn(logger log.Logger) verifier.ReportFn {
+	return func(r verifier.VerificationReport) {
+		if r.SkippedRange != nil {
+			logger.Warn("verification skipped range, consider decreasing validation interval if this is frequent",
+				"rangeStart", int64(r.SkippedRange.Start),
+				"rangeEnd", int64(r.SkippedRange.End),
+			)
+		}
+
+		l2 := logger.With(
+			"rangeStart", int64(r.Range.Start),
+			"rangeEnd", int64(r.Range.End),
+			"leaderChecksum", fmt.Sprintf("%08x", r.ExpectedSum),
+			"elapsed", r.Elapsed,
+		)
+
+		if r.Err == nil {
+			l2.Info("verification checksum OK",
+				"readChecksum", fmt.Sprintf("%08x", r.ReadSum),
+			)
+			return
+		}
+
+		if errors.Is(r.Err, verifier.ErrRangeMismatch) {
+			l2.Warn("verification checksum skipped as we don't have all logs in range")
+			return
+		}
+
+		var csErr verifier.ErrChecksumMismatch
+		if errors.As(r.Err, &csErr) {
+			if r.WrittenSum > 0 && r.WrittenSum != r.ExpectedSum {
+				// The failure occurred before the follower wrote to the log so it
+				// must be corrupted in flight from the leader!
+				l2.Error("verification checksum FAILED: in-flight corruption",
+					"followerWriteChecksum", fmt.Sprintf("%08x", r.WrittenSum),
+					"readChecksum", fmt.Sprintf("%08x", r.ReadSum),
+				)
+			} else {
+				l2.Error("verification checksum FAILED: storage corruption",
+					"followerWriteChecksum", fmt.Sprintf("%08x", r.WrittenSum),
+					"readChecksum", fmt.Sprintf("%08x", r.ReadSum),
+				)
+			}
+			return
+		}
+
+		// Some other unknown error occurred
+		l2.Error(r.Err.Error())
+	}
 }
 
 func (b *RaftBackend) CollectMetrics(sink *metricsutil.ClusterMetricSink) {
