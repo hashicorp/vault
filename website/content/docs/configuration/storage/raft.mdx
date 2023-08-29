@@ -116,6 +116,11 @@ delay) mode. The maximum allowed value is 10.
   breaking a large value into chunks. By default, the chunk size is the same as
   Raft's max size log entry. The default value for this configuration is 1048576
   -- two times the chunking size.
+  - **Note:** This option corresponds to [Consul's `kv_max_value_size` parameter](https://developer.hashicorp.com/consul/docs/agent/config/config-files#kv_max_value_size) for
+    Vault clusters using a Consul storage backend.  If you are migrating from Consul
+    storage to Raft Integrated Storage,  and have changed this value in Consul from its
+    default to a value larger than the Integrated Storage default of 1MB, then you will 
+    need to make the same change in Vault's Integrated Storage config.
 
 - `autopilot_reconcile_interval` `(string: "10s")` - This is the interval after
   which autopilot will pick up any state changes. State change could mean multiple
