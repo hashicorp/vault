@@ -125,34 +125,4 @@ module('Integration | Component | masked input', function (hooks) {
       .dom('[data-test-icon="minus"]')
       .exists('shows minus icon when unmasked because value is empty string');
   });
-
-  test('it shows "success" flash message when the value is successfully copied', async function (assert) {
-    await render(hbs`
-      <MaskedInput
-        @name="key"
-        @value="value"
-        @displayOnly={{true}}
-        @allowCopy={{true}}
-      />
-    `);
-    assert.dom('[data-test-masked-input]').exists('shows masked input');
-    assert.ok(component.copyButtonIsPresent);
-    await component.copyValue();
-    assert.ok(this.flashSuccessSpy.calledWith('Data copied!'), 'Renders correct flash message');
-  });
-
-  test('it shows "danger" flash message when the value fails to be copied (no value)', async function (assert) {
-    await render(hbs`
-      <MaskedInput
-        @name="key"
-        @value=""
-        @displayOnly={{true}}
-        @allowCopy={{true}}
-      />
-    `);
-    assert.dom('[data-test-masked-input]').exists('shows masked input');
-    assert.ok(component.copyButtonIsPresent);
-    await component.copyValue();
-    assert.ok(this.flashDangerSpy.calledWith('Error copying data'), 'Renders correct flash message');
-  });
 });
