@@ -2733,7 +2733,7 @@ func (c *ServerCommand) computeSealGenerationInfo(existingSealGenInfo *vaultseal
 		}
 		generation = existingSealGenInfo.Generation + 1
 	}
-	c.logger.Info("incrementing seal config gen, new generation: ", "generation", generation)
+	c.logger.Info("incrementing seal geneneration", "generation", generation)
 
 	// If the stored copy doesn't match the current configuration, we introduce a new generation
 	// which keeps track if a rewrap of all CSPs and seal wrapped values has completed (initially false).
