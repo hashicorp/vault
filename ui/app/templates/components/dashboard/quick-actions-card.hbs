@@ -35,19 +35,37 @@
     {{#if this.searchSelectParams.model}}
       <h4 class="title is-6" data-test-search-select-params-title>{{this.searchSelectParams.title}}</h4>
 
-      <SearchSelect
-        class="is-flex-grow-1"
-        @selectLimit="1"
-        @models={{array this.searchSelectParams.model}}
-        @backend={{this.selectedEngine.id}}
-        @placeholder={{this.searchSelectParams.placeholder}}
-        @disallowNewItems={{true}}
-        @onChange={{this.handleActionSelect}}
-        @fallbackComponent="input-search"
-        @nameKey={{this.searchSelectParams.nameKey}}
-        @disabled={{not this.searchSelectParams.model}}
-        data-test-param-select
-      />
+      {{#if (eq this.selectedEngine.version 2)}}
+        <SearchSelect
+          class="is-flex-grow-1"
+          @selectLimit="1"
+          @models={{array this.searchSelectParams.model}}
+          @placeholder={{this.searchSelectParams.placeholder}}
+          @disallowNewItems={{true}}
+          @onChange={{this.handleActionSelect}}
+          @fallbackComponent="input-search"
+          @nameKey="path"
+          @disabled={{not this.searchSelectParams.model}}
+          @queryObject={{hash pathToSecret="" backend=this.selectedEngine.id}}
+          @objectKeys={{array "path" "id"}}
+          @passObject={{true}}
+          data-test-param-select
+        />
+      {{else}}
+        <SearchSelect
+          class="is-flex-grow-1"
+          @selectLimit="1"
+          @models={{array this.searchSelectParams.model}}
+          @backend={{this.selectedEngine.id}}
+          @placeholder={{this.searchSelectParams.placeholder}}
+          @disallowNewItems={{true}}
+          @onChange={{this.handleActionSelect}}
+          @fallbackComponent="input-search"
+          @nameKey={{this.searchSelectParams.nameKey}}
+          @disabled={{not this.searchSelectParams.model}}
+          data-test-param-select
+        />
+      {{/if}}
 
       <div>
         <button

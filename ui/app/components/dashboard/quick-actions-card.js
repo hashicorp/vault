@@ -49,7 +49,7 @@ export default class DashboardQuickActionsCard extends Component {
           subText: 'Path of the secret you want to read, including the mount. E.g., secret/data/foo.',
           buttonText: 'Read secrets',
           // check kv version to figure out which model to use
-          model: this.selectedEngine.version === 2 ? 'kv/data' : 'secret',
+          model: this.selectedEngine.version === 2 ? 'kv/metadata' : 'secret',
           route:
             this.selectedEngine.version === 2
               ? 'vault.cluster.secrets.backend.kv.secret.details'
@@ -134,26 +134,28 @@ export default class DashboardQuickActionsCard extends Component {
 
   @action
   navigateToPage() {
-    let searchSelectParamRoute = this.searchSelectParams.route;
+    let route = this.searchSelectParams.route;
+    let param = this.paramValue;
 
     // kv has a special use case where if the paramValue ends in a '/' you should
     // link to different route
     if (this.selectedEngine.type.includes('kv')) {
       if (this.selectedEngine.version === 1) {
-        searchSelectParamRoute =
+        route =
           this.paramValue && this.paramValue?.endsWith('/')
             ? 'vault.cluster.secrets.backend.list'
             : 'vault.cluster.secrets.backend.show';
       }
 
       if (this.selectedEngine.version === 2) {
-        searchSelectParamRoute =
-          this.paramValue && this.paramValue?.endsWith('/')
+        route =
+          this.paramValue?.path && this.paramValue?.path?.endsWith('/')
             ? 'vault.cluster.secrets.backend.kv.list-directory'
             : 'vault.cluster.secrets.backend.kv.secret.details';
+        param = this.paramValue?.path;
       }
     }
 
-    this.router.transitionTo(searchSelectParamRoute, this.selectedEngine.id, this.paramValue);
+    this.router.transitionTo(route, this.selectedEngine.id, param);
   }
 }
