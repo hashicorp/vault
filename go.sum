@@ -565,6 +565,10 @@ github.com/Azure/azure-sdk-for-go/sdk/internal v1.1.1/go.mod h1:eWRD7oawr1Mu1sLC
 github.com/Azure/azure-sdk-for-go/sdk/internal v1.1.2/go.mod h1:eWRD7oawr1Mu1sLCawqVc0CUiF43ia3qQMxLscsKQ9w=
 github.com/Azure/azure-sdk-for-go/sdk/internal v1.3.0 h1:sXr+ck84g/ZlZUOZiNELInmMgOsuGwdjjVkEIde0OtY=
 github.com/Azure/azure-sdk-for-go/sdk/internal v1.3.0/go.mod h1:okt5dMMTOFjX/aovMlrjvvXoPMBVSPzk9185BT0+eZM=
+github.com/Azure/azure-sdk-for-go/sdk/keyvault/azkeys v0.9.0 h1:TOFrNxfjslms5nLLIMjW7N0+zSALX4KiGsptmpb16AA=
+github.com/Azure/azure-sdk-for-go/sdk/keyvault/azkeys v0.9.0/go.mod h1:EAyXOW1F6BTJPiK2pDvmnvxOHPxoTYWoqBeIlql+QhI=
+github.com/Azure/azure-sdk-for-go/sdk/keyvault/internal v0.7.0 h1:Lg6BW0VPmCwcMlvOviL3ruHFO+H9tZNqscK0AeuFjGM=
+github.com/Azure/azure-sdk-for-go/sdk/keyvault/internal v0.7.0/go.mod h1:9V2j0jn9jDEkCkv8w/bKTNppX/d0FVA1ud77xCIP4KA=
 github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/compute/armcompute/v4 v4.2.1 h1:UPeCRD+XY7QlaGQte2EVI2iOcWvUYA2XY8w5T/8v0NQ=
 github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/compute/armcompute/v4 v4.2.1/go.mod h1:oGV6NlB0cvi1ZbYRR2UN44QHxWFyGk+iylgD0qaMXjA=
 github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/internal v1.1.2 h1:mLY+pNLjCUeKhgnAJWAKhEUQM+RJQo2H1fuGSw1Ky1E=
@@ -708,6 +712,8 @@ github.com/SAP/go-hdb v0.14.1/go.mod h1:7fdQLVC2lER3urZLjZCm0AuMQfApof92n3aylBPE
 github.com/Sectorbob/mlab-ns2 v0.0.0-20171030222938-d3aa0c295a8a h1:KFHLI4QGttB0i7M3qOkAo8Zn/GSsxwwCnInFqBaYtkM=
 github.com/Sectorbob/mlab-ns2 v0.0.0-20171030222938-d3aa0c295a8a/go.mod h1:D73UAuEPckrDorYZdtlCu2ySOLuPB5W4rhIkmmc/XbI=
 github.com/Shopify/logrus-bugsnag v0.0.0-20171204204709-577dee27f20d/go.mod h1:HI8ITrYtUY+O+ZhtlqUnD8+KwNPOyugEhfP9fdUIaEQ=
+github.com/Xovis/go-kms-wrapping/wrappers/azurekeyvault/v2 v2.0.0-20230324102024-60a01cac746b h1:049YJqh/6fFfH1h+cSv0Iy/P50VOEkOw8hbuaXYk4ys=
+github.com/Xovis/go-kms-wrapping/wrappers/azurekeyvault/v2 v2.0.0-20230324102024-60a01cac746b/go.mod h1:vR0vXzity1LWk9N7bMsZoyIpJzMnmPlf3tSICeAc+hY=
 github.com/abdullin/seq v0.0.0-20160510034733-d5467c17e7af h1:DBNMBMuMiWYu0b+8KMJuWmfCkcxl09JwdlqwDZZ6U14=
 github.com/abdullin/seq v0.0.0-20160510034733-d5467c17e7af/go.mod h1:5Jv4cbFiHJMsVxt52+i0Ha45fjshj6wxYr1r19tB9bw=
 github.com/acomagu/bufpipe v1.0.4 h1:e3H4WUzM3npvo5uv95QuJM3cQspFNtFBzvJ2oNjKIDQ=
@@ -1750,8 +1756,6 @@ github.com/hashicorp/go-kms-wrapping/wrappers/alicloudkms/v2 v2.0.1 h1:ydUCtmr8f
 github.com/hashicorp/go-kms-wrapping/wrappers/alicloudkms/v2 v2.0.1/go.mod h1:Sl/ffzV57UAyjtSg1h5Km0rN5+dtzZJm1CUztkoCW2c=
 github.com/hashicorp/go-kms-wrapping/wrappers/awskms/v2 v2.0.7 h1:E3eEWpkofgPNrYyYznfS1+drq4/jFcqHQVNcL7WhUCo=
 github.com/hashicorp/go-kms-wrapping/wrappers/awskms/v2 v2.0.7/go.mod h1:j5vefRoguQUG7iM4reS/hKIZssU1lZRqNPM5Wow6UnM=
-github.com/hashicorp/go-kms-wrapping/wrappers/azurekeyvault/v2 v2.0.7 h1:X27JWuPW6Gmi2l7NMm0pvnp7z7hhtns2TeIOQU93mqI=
-github.com/hashicorp/go-kms-wrapping/wrappers/azurekeyvault/v2 v2.0.7/go.mod h1:i7Dt9mDsVUQG/I639jtdQerliaO2SvvPnpYPhZ8CGZ4=
 github.com/hashicorp/go-kms-wrapping/wrappers/gcpckms/v2 v2.0.8 h1:16I8OqBEuxZIowwn3jiLvhlx+z+ia4dJc9stvz0yUBU=
 github.com/hashicorp/go-kms-wrapping/wrappers/gcpckms/v2 v2.0.8/go.mod h1:6QUMo5BrXAtbzSuZilqmx0A4px2u6PeFK7vfp2WIzeM=
 github.com/hashicorp/go-kms-wrapping/wrappers/ocikms/v2 v2.0.7 h1:KeG3QGrbxbr2qAqCJdf3NR4ijAYwdcWLTmwSbR0yusM=
