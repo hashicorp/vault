@@ -327,7 +327,7 @@ DONELISTHANDLING:
 		},
 	}
 
-	// Check for request role
+	// Check for request role in context to role based quotas
 	var role string
 	if reqRole := ctx.Value(logical.CtxKeyRequestRole{}); reqRole != nil {
 		role = reqRole.(string)
