@@ -17,7 +17,7 @@ import {
   metadataListPolicy,
   metadataPolicy,
 } from 'vault/tests/helpers/policy-generator/kv';
-import { writeSecret, writeVersionedSecret } from 'vault/tests/helpers/kv/kv-run-commands';
+import { clearRecords, writeSecret, writeVersionedSecret } from 'vault/tests/helpers/kv/kv-run-commands';
 import { FORM, PAGE } from 'vault/tests/helpers/kv/kv-selectors';
 
 /**
@@ -251,11 +251,12 @@ module('Acceptance | Enterprise | kv-v2 workflow | edge cases', function (hooks)
     return await click(PAGE.backends.link(backend));
   };
   hooks.beforeEach(async function () {
-    await authPage.login();
     const uid = uuidv4();
+    this.store = this.owner.lookup('service:store');
     this.backend = `kv-enterprise-edge-${uid}`;
     this.namespace = `ns-${uid}`;
     this.secretPath = 'my-secret';
+    await authPage.login();
     await runCmd([`write sys/namespaces/${this.namespace} -force`]);
     return;
   });
@@ -272,11 +273,12 @@ module('Acceptance | Enterprise | kv-v2 workflow | edge cases', function (hooks)
       await authPage.loginNs(this.namespace);
       // mount engine within namespace
       await runCmd(mountEngineCmd('kv-v2', this.backend), false);
+      clearRecords(this.store);
       return;
     });
     hooks.afterEach(async function () {
       // visit logout with namespace query param because we're transitioning from within an engine
-      // and navigating directly to /vault/auth was causing test context routing problems
+      // and navigating directly to /vault/auth caused test context routing problems :(
       await visit(`/vault/logout?namespace=${this.namespace}`);
     });
 
