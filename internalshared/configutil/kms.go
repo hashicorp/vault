@@ -457,7 +457,7 @@ func mergeTransitConfig(config map[string]string, envConfig map[string]string) {
 	}
 
 	for varName, val := range envConfig {
-		// for some value, file config takes precedence
+		// for some values, file config takes precedence
 		if slices.Contains(TransitPrioritizeConfigValues, varName) && config[varName] != "" {
 			continue
 		}
