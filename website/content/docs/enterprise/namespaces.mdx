@@ -100,6 +100,95 @@ identities. This behavior can be configured using the [group-policy-application]
 can be set to allow policies to be applied irrespective of namespace hierarchy, allowing sharing
 across any namespace.
 
+## Usage
+
+API operations performed under a namespace can be done by providing the relative
+request path along with the namespace path using the `X-Vault-Namespace` header.
+Similarly, the namespace header value can be provided in full or partially when
+reaching into nested namespaces. When provided partially, the remaining
+namespace path must be provided in the request path in order to reach into the
+desired nested namespace.
+
+Alternatively, the fully qualified path can be provided without using the
+`X-Vault-Namespace` header. In either scenario, Vault will construct the fully
+qualified path from these two sources to correctly route the request to the
+appropriate namespace.
+
+For example, these three requests are equivalent:
+
+1. Path: `ns1/ns2/secret/foo`
+2. Path: `secret/foo`, Header: `X-Vault-Namespace: ns1/ns2/`
+3. Path: `ns2/secret/foo`, Header: `X-Vault-Namespace: ns1/`
+
+<Tip>
+
+See the [Commands (CLI) - namespace](/vault/docs/commands/namespace) page to
+learn more about the `namespace` command and subcommands to create and manage
+namespaces.
+
+</Tip>
+
+## Namespace naming restrictions
+
+Consider the following namespace name restrictions:
+
+- Cannot end with `/`
+- Cannot contain spaces
+- The `root` is the top-level namespace. You cannot create another namespace
+  named "root" under the `root` namespace
+
+In addition, the following paths are reserved by Vault so that they cannot be
+the namespace name.
+
+- `sys/`
+- `audit/`
+- `auth/`
+- `cubbyhole/`
+- `identity/`
+
+<Tip>
+
+Refer to the [Namespace limits section of the Limits and
+Maximums](/vault/docs/internals/limits#namespace-limits) documentation for the
+limits associated with the Vault's storage backend.
+
+To learn more about the recommended approach to structure your namespaces, read
+the [Vault Namespace and Mount Structuring
+Guide](/vault/tutorials/enterprise/namespace-structure) tutorial.
+
+</Tip>
+
+
+## Root-only API paths
+
+There are certain API paths that can only be called from the **root** namespace:
+
+- `sys/init`
+- `sys/leader`
+- `sys/health`
+- `sys/metrics`
+- `sys/config/group-policy-application`
+- `sys/config/state`
+- `sys/host-info`
+- `sys/key-status`
+- `sys/storage`
+- `sys/storage/raft`
+- `sys/quotas`
+- `sys/plugins`
+
+### Administrative namespaces
+
+The Vault API includes system backend endpoints, which are mounted under the sys/ path.
+System endpoints let you interact with the internal features of your Vault instance.
+For security reasons, some of the system backend endpoints are restricted, and can only be called
+from the root namespace or using a token in the root namespace with elevated permissions.
+
+By default, Vault allows non-root calls to the less sensitive system backend endpoints.
+However, there may be instances where a Vault operator needs to provide access to a subset
+of the restricted endpoints, like sys/audit-hash and sys/monitor, without granting access
+to the full set of privileged sys/ paths. An administrative namespace lets Vault operators grant
+access to a subset of privileged endpoints by setting a parameter in their Vault configuration file.
+
 ## Tutorial
 
 Refer to the [Secure Multi-Tenancy with Namespaces](/vault/tutorials/enterprise/namespaces)
