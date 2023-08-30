@@ -33,16 +33,29 @@ function retry {
 }
 
 echo "Installing Dependencies: $packages"
-if [ -f /etc/debian_version ]; then
-  # Do our best to make sure that we don't race with cloud-init. Wait a reasonable time until we
-  # see ec2 in the sources list. Very rarely cloud-init will take longer than we wait. In that case
-  # we'll just install our packages.
-  retry 7 grep ec2 /etc/apt/sources.list || true
+  # If this distro comes with yum or apt, use that to install packages
+  if [ -n "$(command -v yum || command -v apt)" ]; then
+    if [ -f /etc/debian_version ]; then
+      # Do our best to make sure that we don't race with cloud-init. Wait a reasonable time until we
+      # see ec2 in the sources list. Very rarely cloud-init will take longer than we wait. In that case
+      # we'll just install our packages.
+      retry 7 grep ec2 /etc/apt/sources.list || true
 
-  cd /tmp
-  retry 5 sudo apt update
-  retry 5 sudo apt install -y "$${packages[@]}"
-else
-  cd /tmp
-  retry 7 sudo yum -y install "$${packages[@]}"
-fi
+      cd /tmp
+      retry 5 sudo apt update
+      retry 5 sudo apt install -y "$${packages[@]}"
+    else
+      cd /tmp
+      retry 7 sudo yum -y install "$${packages[@]}"
+    fi
+  # Otherwise use zypper
+  else
+    if [ -f /etc/debian_version ]; then
+      # Do our best to make sure that we don't race with cloud-init. Wait a reasonable time until we
+      # see ec2 in the sources list. Very rarely cloud-init will take longer than we wait. In that case
+      # we'll just install our packages.
+      retry 7 grep ec2 /etc/apt/sources.list || true
+
+      retry 5 sudo zypper install --no-confirm "$${packages[@]}"
+    fi
+  fi

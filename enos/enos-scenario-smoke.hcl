@@ -53,10 +53,10 @@ scenario "smoke" {
     bundle_path = matrix.artifact_source != "artifactory" ? abspath(var.vault_artifact_path) : null
     distro_version = {
       "amazon_linux" = var.distro_version_amazon_linux
-      "leap" = var.distro_version_leap
-      "rhel"   = var.distro_version_rhel
-      "sles" = var.distro_version_sles
-      "ubuntu" = var.distro_version_ubuntu
+      "leap"         = var.distro_version_leap
+      "rhel"         = var.distro_version_rhel
+      "sles"         = var.distro_version_sles
+      "ubuntu"       = var.distro_version_ubuntu
     }
     enos_provider = {
       amazon_linux = provider.enos.ec2_user
@@ -73,10 +73,10 @@ scenario "smoke" {
     }, var.tags)
     vault_license_path = abspath(var.vault_license_path != null ? var.vault_license_path : joinpath(path.root, "./support/vault.hclic"))
     vault_install_dir_packages = {
-      amazon_linux = "/bin" // TO DO: verify
-      leap         = "/bin" // TO DO: verify
+      amazon_linux = "/bin"
+      leap         = "/usr/bin"
       rhel         = "/bin"
-      sles         = "/bin" // TO DO: verify
+      sles         = "/bin"
       ubuntu       = "/usr/bin"
     }
     vault_install_dir = matrix.artifact_type == "bundle" ? var.vault_install_dir : local.vault_install_dir_packages[matrix.distro]
