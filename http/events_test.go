@@ -235,7 +235,8 @@ func TestEventsSubscribeNamespaces(t *testing.T) {
 				conn.Close(websocket.StatusNormalClosure, "")
 			})
 			sendEvents()
-			ctx, cancel := context.WithTimeout(ctx, 100*time.Millisecond)
+			// CI is sometimes slow, so this timeout is high initially
+			ctx, cancel := context.WithTimeout(ctx, 1*time.Second)
 			defer cancel()
 			gotEvents := 0
 			for {
@@ -250,6 +251,14 @@ func TestEventsSubscribeNamespaces(t *testing.T) {
 				}
 				t.Log(string(msg))
 				gotEvents += 1
+
+				// if we got as many as we expect, shorten the test so we don't waste time,
+				// but still allow time for "extra" events to come in and make us fail
+				if gotEvents == testCase.expectedEvents {
+					ctx2, cancel2 := context.WithTimeout(ctx, 100*time.Millisecond)
+					t.Cleanup(cancel2)
+					ctx = ctx2
+				}
 			}
 			assert.Equal(t, testCase.expectedEvents, gotEvents)
 		})

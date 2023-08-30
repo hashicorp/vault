@@ -26,15 +26,23 @@ import errorMessage from 'vault/utils/error-message';
  * @param {array} breadcrumbs - breadcrumb objects to render in page header
  */
 
+/* eslint-disable no-undef */
 export default class KvSecretEdit extends Component {
   @service controlGroup;
   @service flashMessages;
   @service router;
 
   @tracked showJsonView = false;
+  @tracked showDiff = false;
   @tracked errorMessage;
   @tracked modelValidations;
   @tracked invalidFormAlert;
+  originalSecret;
+
+  constructor() {
+    super(...arguments);
+    this.originalSecret = JSON.stringify(this.args.secret.secretData || {});
+  }
 
   get showOldVersionAlert() {
     const { currentVersion, previousVersion } = this.args;
@@ -42,6 +50,22 @@ export default class KvSecretEdit extends Component {
     if (!currentVersion || !previousVersion || !this.args.secret.isNew) return false;
     if (currentVersion !== previousVersion) return true;
     return false;
+  }
+
+  get diffDelta() {
+    const oldData = JSON.parse(this.originalSecret);
+    const newData = this.args.secret.secretData;
+
+    const diffpatcher = jsondiffpatch.create({});
+    return diffpatcher.diff(oldData, newData);
+  }
+
+  get visualDiff() {
+    if (!this.showDiff) return null;
+    const newData = this.args.secret.secretData;
+    return this.diffDelta
+      ? jsondiffpatch.formatters.html.format(this.diffDelta, newData)
+      : JSON.stringify(newData, undefined, 2);
   }
 
   @action
@@ -58,10 +82,11 @@ export default class KvSecretEdit extends Component {
       this.invalidFormAlert = invalidFormMessage;
       if (isValid) {
         const { secret } = this.args;
-        yield this.args.secret.save();
+        yield secret.save();
         this.flashMessages.success(`Successfully created new version of ${secret.path}.`);
-        // transition to parent secret route to re-query latest version
-        this.router.transitionTo('vault.cluster.secrets.backend.kv.secret');
+        this.router.transitionTo('vault.cluster.secrets.backend.kv.secret.details', {
+          queryParams: { version: secret?.version },
+        });
       }
     } catch (error) {
       let message = errorMessage(error);

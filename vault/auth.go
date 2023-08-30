@@ -240,7 +240,8 @@ func (c *Core) enableCredentialInternal(ctx context.Context, entry *MountEntry, 
 		// Initialize() if necessary
 		view.setReadOnlyErr(origViewReadOnlyErr)
 		// initialize, using the core's active context.
-		err := backend.Initialize(c.activeContext, &logical.InitializationRequest{Storage: view})
+		nsActiveContext := namespace.ContextWithNamespace(c.activeContext, ns)
+		err := backend.Initialize(nsActiveContext, &logical.InitializationRequest{Storage: view})
 		if err != nil {
 			return err
 		}

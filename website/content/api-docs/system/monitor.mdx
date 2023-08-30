@@ -13,6 +13,8 @@ some log lines will be dropped.
 
 ## Monitor system logs
 
+@include 'alerts/restricted-admin.mdx'
+
 This endpoint streams logs back to the client from Vault. Note that unlike most API endpoints in Vault, this one
 does not return JSON by default. This will send back data in whatever log format Vault has been configured with. By
 default, this is text.
