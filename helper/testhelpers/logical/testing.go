@@ -431,6 +431,18 @@ func TestCheckMulti(fs ...TestCheckFunc) TestCheckFunc {
 	}
 }
 
+func TestCheckMulti2(fs ...TestCheckFunc) TestCheckFunc {
+	return func(resp *logical.Response) error {
+		for _, f := range fs {
+			if err := f(resp); err != nil {
+				return err
+			}
+		}
+
+		return nil
+	}
+}
+
 // TestCheckAuth is a helper to check that a request generated an
 // auth token with the proper policies.
 func TestCheckAuth(policies []string) TestCheckFunc {
