@@ -60,7 +60,7 @@ export default class KvSecretEdit extends Component {
         const { secret } = this.args;
         yield secret.save();
         this.flashMessages.success(`Successfully created new version of ${secret.path}.`);
-        this.router.transitionTo('vault.cluster.secrets.backend.kv.secret.details', secret.path, {
+        this.router.transitionTo('vault.cluster.secrets.backend.kv.secret.details', {
           queryParams: { version: secret?.version },
         });
       }
