@@ -52,12 +52,14 @@
     {{/if}}
     <div class="box is-marginless is-shadowless">
       <MessageError @errorMessage={{if (and this.cluster.standby this.hasCSPError) this.cspErrorText this.error}} />
-      <div class="has-bottom-margin-s">
-        <p class="is-label">{{this.selectedAuthBackend.path}}</p>
-        <span class="description has-text-grey" data-test-description={{true}}>
-          {{this.selectedAuthBackend.mountDescription}}
-        </span>
-      </div>
+      {{#if this.selectedAuthBackend.path}}
+        <div class="has-bottom-margin-s">
+          <p class="is-label">{{this.selectedAuthBackend.path}}</p>
+          <span class="description has-text-grey" data-test-description={{true}}>
+            {{this.selectedAuthBackend.mountDescription}}
+          </span>
+        </div>
+      {{/if}}
       {{#if (or (not this.hasMethodsWithPath) (not this.selectedAuthIsPath))}}
         <Select
           @label="Method"

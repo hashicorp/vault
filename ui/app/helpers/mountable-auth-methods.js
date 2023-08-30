@@ -92,7 +92,6 @@ const MOUNTABLE_AUTH_METHODS = [
     displayName: 'SAML',
     value: 'saml',
     type: 'saml',
-    glyph: 'auth',
     category: 'generic',
   },
   {

@@ -70,7 +70,7 @@ export default ApplicationAdapter.extend({
 
   pollSAMLToken(path, token_poll_id, client_verifier) {
     return this.ajax(`/v1/auth/${encodePath(path)}/token`, 'GET', {
-      data: { token_poll_id: token_poll_id, client_verifier: client_verifier },
+      data: { token_poll_id, client_verifier },
     });
   },
 

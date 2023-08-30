@@ -8,6 +8,7 @@ import { inject as service } from '@ember/service';
 import Component from './outer-html';
 import { task, timeout, waitForEvent } from 'ember-concurrency';
 import { waitFor } from '@ember/test-waiters';
+import { computed } from '@ember/object';
 
 const WAIT_TIME = 500;
 const ERROR_WINDOW_CLOSED =
@@ -38,6 +39,10 @@ export default Component.extend({
   getWindow() {
     return this.window || window;
   },
+
+  canLoginSaml: computed('getWindow', function () {
+    return this.getWindow().isSecureContext;
+  }),
 
   fetchRole: task(
     waitFor(function* (roleName, options = { debounce: true }) {
