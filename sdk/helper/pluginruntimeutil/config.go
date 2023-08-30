@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package pluginruntimeutil
 
 import "github.com/hashicorp/vault/sdk/helper/consts"
