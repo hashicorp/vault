@@ -91,7 +91,7 @@ module('Integration | Component | kv-v2 | Page::Secret::Edit', function (hooks) 
     await click(FORM.saveBtn);
     assert.ok(
       this.transitionStub.calledWith('vault.cluster.secrets.backend.kv.secret.details'),
-      'router transitions to parent secret route on save'
+      'router transitions to secret details route on save'
     );
   });
 
