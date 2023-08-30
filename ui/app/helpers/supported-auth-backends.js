@@ -63,6 +63,14 @@ const SUPPORTED_AUTH_BACKENDS = [
     formAttributes: ['username', 'password'],
   },
   {
+    type: 'saml',
+    typeDisplay: 'SAML',
+    description: 'Authenticate using SAML provider.',
+    tokenPath: 'client_token',
+    displayNamePath: 'display_name',
+    formAttributes: ['role'],
+  },
+  {
     type: 'github',
     typeDisplay: 'GitHub',
     description: 'GitHub authentication.',

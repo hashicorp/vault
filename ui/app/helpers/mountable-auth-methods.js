@@ -89,6 +89,13 @@ const MOUNTABLE_AUTH_METHODS = [
     category: 'infra',
   },
   {
+    displayName: 'SAML',
+    value: 'saml',
+    type: 'saml',
+    glyph: 'auth',
+    category: 'generic',
+  },
+  {
     displayName: 'TLS Certificates',
     value: 'cert',
     type: 'cert',

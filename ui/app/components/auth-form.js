@@ -299,7 +299,7 @@ export default Component.extend(DEFAULTS, {
         this.set('token', token);
       }
       this.set('error', null);
-      // if callback from oidc or jwt we have a token at this point
+      // if callback from oidc, jwt, or saml we have a token at this point
       const backend = token ? this.getAuthBackend('token') : this.selectedAuthBackend || {};
       const backendMeta = BACKENDS.find(
         (b) => (b.type || '').toLowerCase() === (backend.type || '').toLowerCase()

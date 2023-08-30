@@ -89,6 +89,25 @@
             @selectedAuthIsPath={{this.selectedAuthIsPath}}
           />
         </AuthJwt>
+      {{else if (eq this.selectedAuthBackend.type "saml")}}
+        <AuthSaml
+          @onError={{action "handleError"}}
+          @onLoading={{action (mut this.isLoading)}}
+          @namespace={{this.namespace}}
+          @onNamespace={{action (mut this.namespace)}}
+          @onSubmit={{action "doSubmit"}}
+          @onRoleName={{action (mut this.roleName)}}
+          @roleName={{this.roleName}}
+          @selectedAuthType={{this.selectedAuthBackend.type}}
+          @selectedAuthPath={{or this.customPath this.selectedAuthBackend.id}}
+          @disabled={{or this.authenticate.isRunning this.isLoading}}
+        >
+          <AuthFormOptions
+            @customPath={{this.customPath}}
+            @onPathChange={{action (mut this.customPath)}}
+            @selectedAuthIsPath={{this.selectedAuthIsPath}}
+          />
+        </AuthSaml>
       {{else}}
         <form id="auth-form" onsubmit={{action "doSubmit" null}}>
           {{#if (eq this.providerName "github")}}
