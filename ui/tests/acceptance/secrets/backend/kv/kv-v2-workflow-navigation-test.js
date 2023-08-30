@@ -24,14 +24,30 @@ import { setupControlGroup, grantAccess } from 'vault/tests/helpers/control-grou
 const secretPath = `my-#:$=?-secret`;
 // This doesn't encode in a normal way, so hardcoding it here until we sort that out
 const secretPathUrlEncoded = `my-%23:$=%3F-secret`;
-const navToBackend = (backend) => {
-  return visit(`/vault/secrets/${backend}/kv/list`);
+const navToBackend = async (backend) => {
+  await visit(`/vault/secrets`);
+  return click(PAGE.backends.link(backend));
 };
 const assertCorrectBreadcrumbs = (assert, expected) => {
   assert.dom(PAGE.breadcrumb).exists({ count: expected.length }, 'correct number of breadcrumbs');
   const breadcrumbs = document.querySelectorAll(PAGE.breadcrumb);
   expected.forEach((text, idx) => {
     assert.dom(breadcrumbs[idx]).includesText(text, `position ${idx} breadcrumb includes text ${text}`);
+  });
+};
+const assertDetailTabs = (assert, current, hidden = []) => {
+  const allTabs = ['Secret', 'Metadata', 'Paths', 'Version History'];
+  allTabs.forEach((tab) => {
+    if (hidden.includes(tab)) {
+      assert.dom(PAGE.secretTab(tab)).doesNotExist(`${tab} tab does not render`);
+      return;
+    }
+    assert.dom(PAGE.secretTab(tab)).hasText(tab);
+    if (current === tab) {
+      assert.dom(PAGE.secretTab(tab)).hasClass('active');
+    } else {
+      assert.dom(PAGE.secretTab(tab)).doesNotHaveClass('active');
+    }
   });
 };
 const DETAIL_TOOLBARS = ['delete', 'destroy', 'copy', 'versionDropdown', 'createNewVersion'];
@@ -187,7 +203,7 @@ module('Acceptance | kv-v2 workflow | navigation', function (hooks) {
       assert.ok(currentURL().startsWith(`/vault/secrets/${backend}/kv/list`), 'links back to list root');
     });
     test('versioned secret nav, tabs, breadcrumbs (a)', async function (assert) {
-      assert.expect(43);
+      assert.expect(45);
       const backend = this.backend;
       await navToBackend(backend);
       await click(PAGE.list.item(secretPath));
@@ -196,13 +212,8 @@ module('Acceptance | kv-v2 workflow | navigation', function (hooks) {
         `/vault/secrets/${backend}/kv/${secretPathUrlEncoded}/details?version=3`,
         'Url includes version query param'
       );
-      assert.dom(PAGE.title).hasText(secretPath, 'Goes to secret detail view');
-      assert.dom(PAGE.secretTab('Secret')).hasText('Secret');
-      assert.dom(PAGE.secretTab('Secret')).hasClass('active');
-      assert.dom(PAGE.secretTab('Metadata')).hasText('Metadata');
-      assert.dom(PAGE.secretTab('Metadata')).doesNotHaveClass('active');
-      assert.dom(PAGE.secretTab('Version History')).hasText('Version History');
-      assert.dom(PAGE.secretTab('Version History')).doesNotHaveClass('active');
+      assert.dom(PAGE.title).hasText(secretPath, 'title is correct on detail view');
+      assertDetailTabs(assert, 'Secret');
       assert.dom(PAGE.detail.versionDropdown).hasText('Version 3', 'Version dropdown shows current version');
       assert.dom(PAGE.detail.createNewVersion).hasText('Create new version', 'Create version button shows');
       assert.dom(PAGE.detail.versionTimestamp).containsText('Version 3 created');
@@ -278,7 +289,7 @@ module('Acceptance | kv-v2 workflow | navigation', function (hooks) {
       );
     });
     test('breadcrumbs & page titles are correct (a)', async function (assert) {
-      assert.expect(39);
+      assert.expect(45);
       const backend = this.backend;
       await navToBackend(backend);
       await click(PAGE.secretTab('Configuration'));
@@ -307,6 +318,10 @@ module('Acceptance | kv-v2 workflow | navigation', function (hooks) {
       assert.dom(PAGE.title).hasText('Edit Secret Metadata', 'correct page title for metadata edit');
 
       await click(PAGE.breadcrumbAtIdx(3));
+      await click(PAGE.secretTab('Paths'));
+      assertCorrectBreadcrumbs(assert, ['secrets', backend, secretPath, 'paths']);
+      assert.dom(PAGE.title).hasText(secretPath, 'correct page title for paths');
+
       await click(PAGE.secretTab('Version History'));
       assertCorrectBreadcrumbs(assert, ['secrets', backend, secretPath, 'version history']);
       assert.dom(PAGE.title).hasText(secretPath, 'correct page title for version history');
@@ -408,7 +423,7 @@ module('Acceptance | kv-v2 workflow | navigation', function (hooks) {
       assert.ok(currentURL().startsWith(`/vault/secrets/${backend}/kv/list`), 'links back to list root');
     });
     test('versioned secret nav, tabs, breadcrumbs (dr)', async function (assert) {
-      assert.expect(25);
+      assert.expect(28);
       const backend = this.backend;
       await navToBackend(backend);
 
@@ -422,10 +437,7 @@ module('Acceptance | kv-v2 workflow | navigation', function (hooks) {
         'Url includes version query param'
       );
       assert.dom(PAGE.title).hasText(secretPath, 'Goes to secret detail view');
-      assert.dom(PAGE.secretTab('Secret')).hasText('Secret');
-      assert.dom(PAGE.secretTab('Secret')).hasClass('active');
-      assert.dom(PAGE.secretTab('Metadata')).hasText('Metadata');
-      assert.dom(PAGE.secretTab('Metadata')).doesNotHaveClass('active');
+      assertDetailTabs(assert, 'Secret', ['Version History']);
       assert.dom(PAGE.detail.versionDropdown).doesNotExist('Version dropdown hidden');
       assert.dom(PAGE.detail.createNewVersion).doesNotExist('unable to create a new version');
       assert.dom(PAGE.detail.versionTimestamp).containsText('Version 3 created');
@@ -457,7 +469,7 @@ module('Acceptance | kv-v2 workflow | navigation', function (hooks) {
       assert.dom(PAGE.metadata.editBtn).doesNotExist('edit button hidden');
     });
     test('breadcrumbs & page titles are correct (dr)', async function (assert) {
-      assert.expect(27);
+      assert.expect(35);
       const backend = this.backend;
       await navToBackend(backend);
       await click(PAGE.secretTab('Configuration'));
@@ -481,7 +493,10 @@ module('Acceptance | kv-v2 workflow | navigation', function (hooks) {
 
       assert.dom(PAGE.metadata.editBtn).doesNotExist('cannot edit metadata');
 
-      await click(PAGE.breadcrumbAtIdx(2));
+      await click(PAGE.secretTab('Paths'));
+      assertCorrectBreadcrumbs(assert, ['secrets', backend, 'app', 'nested', 'secret', 'paths']);
+      assert.dom(PAGE.title).hasText('app/nested/secret', 'correct page title for paths');
+
       assert.dom(PAGE.secretTab('Version History')).doesNotExist('Version History tab not shown');
     });
   });
@@ -598,7 +613,7 @@ module('Acceptance | kv-v2 workflow | navigation', function (hooks) {
       assert.ok(currentURL().startsWith(`/vault/secrets/${backend}/kv/list`), 'links back to list root');
     });
     test('versioned secret nav, tabs, breadcrumbs (dlr)', async function (assert) {
-      assert.expect(25);
+      assert.expect(28);
       const backend = this.backend;
       await navToBackend(backend);
       await click(PAGE.list.item(secretPath));
@@ -608,10 +623,7 @@ module('Acceptance | kv-v2 workflow | navigation', function (hooks) {
         'Url includes version query param'
       );
       assert.dom(PAGE.title).hasText(secretPath, 'Goes to secret detail view');
-      assert.dom(PAGE.secretTab('Secret')).hasText('Secret');
-      assert.dom(PAGE.secretTab('Secret')).hasClass('active');
-      assert.dom(PAGE.secretTab('Metadata')).hasText('Metadata');
-      assert.dom(PAGE.secretTab('Metadata')).doesNotHaveClass('active');
+      assertDetailTabs(assert, 'Secret', ['Version History']);
       assert.dom(PAGE.detail.versionDropdown).doesNotExist('does not show version dropdown');
       assert.dom(PAGE.detail.createNewVersion).doesNotExist('unable to create a new version');
       assert.dom(PAGE.detail.versionTimestamp).containsText('Version 3 created');
@@ -644,7 +656,7 @@ module('Acceptance | kv-v2 workflow | navigation', function (hooks) {
       assert.dom(PAGE.metadata.editBtn).doesNotExist('edit button hidden');
     });
     test('breadcrumbs & page titles are correct (dlr)', async function (assert) {
-      assert.expect(23);
+      assert.expect(29);
       const backend = this.backend;
       await navToBackend(backend);
 
@@ -668,7 +680,10 @@ module('Acceptance | kv-v2 workflow | navigation', function (hooks) {
 
       assert.dom(PAGE.metadata.editBtn).doesNotExist('cannot edit metadata');
 
-      await click(PAGE.breadcrumbAtIdx(2));
+      await click(PAGE.secretTab('Paths'));
+      assertCorrectBreadcrumbs(assert, ['secrets', backend, secretPath, 'paths']);
+      assert.dom(PAGE.title).hasText(secretPath, 'correct page title for paths');
+
       assert.dom(PAGE.secretTab('Version History')).doesNotExist('Version History tab not shown');
     });
   });
@@ -771,7 +786,7 @@ module('Acceptance | kv-v2 workflow | navigation', function (hooks) {
       assertCorrectBreadcrumbs(assert, ['secret', backend, 'app', 'nested', 'secret']);
       assert.dom(PAGE.title).hasText('app/nested/secret', 'title is full secret path');
       assertDetailsToolbar(assert, ['delete', 'destroy', 'versionDropdown']);
-      assert.dom(PAGE.detail.versionDropdown).hasText('Version current');
+      assert.dom(PAGE.detail.versionDropdown).hasText('Version 1', 'Shows version timestamp');
 
       await click(PAGE.breadcrumbAtIdx(3));
       assert.ok(
@@ -789,7 +804,7 @@ module('Acceptance | kv-v2 workflow | navigation', function (hooks) {
       assert.ok(currentURL().startsWith(`/vault/secrets/${backend}/kv/list`), 'links back to list root');
     });
     test('versioned secret nav, tabs, breadcrumbs (mm)', async function (assert) {
-      assert.expect(35);
+      assert.expect(37);
       const backend = this.backend;
       await navToBackend(backend);
       await click(PAGE.list.item(secretPath));
@@ -800,15 +815,8 @@ module('Acceptance | kv-v2 workflow | navigation', function (hooks) {
         'Url includes version query param'
       );
       assert.dom(PAGE.title).hasText(secretPath, 'Goes to secret detail view');
-      assert.dom(PAGE.secretTab('Secret')).hasText('Secret');
-      assert.dom(PAGE.secretTab('Secret')).hasClass('active');
-      assert.dom(PAGE.secretTab('Metadata')).hasText('Metadata');
-      assert.dom(PAGE.secretTab('Metadata')).doesNotHaveClass('active');
-      assert.dom(PAGE.secretTab('Version History')).hasText('Version History');
-      assert.dom(PAGE.secretTab('Version History')).doesNotHaveClass('active');
-      assert
-        .dom(PAGE.detail.versionDropdown)
-        .hasText('Version current', 'Version dropdown shows current version');
+      assertDetailTabs(assert, 'Secret');
+      assert.dom(PAGE.detail.versionDropdown).hasText('Version 3', 'Version dropdown shows current version');
       assert.dom(PAGE.detail.createNewVersion).doesNotExist('Create new version button not shown');
       assert.dom(PAGE.detail.versionTimestamp).doesNotExist('Version created text not shown');
       assert.dom(PAGE.infoRowValue('foo')).doesNotExist('does not render current data');
@@ -864,7 +872,7 @@ module('Acceptance | kv-v2 workflow | navigation', function (hooks) {
       );
     });
     test('breadcrumbs & page titles are correct (mm)', async function (assert) {
-      assert.expect(33);
+      assert.expect(39);
       const backend = this.backend;
       await navToBackend(backend);
       await click(PAGE.secretTab('Configuration'));
@@ -888,6 +896,10 @@ module('Acceptance | kv-v2 workflow | navigation', function (hooks) {
       assert.dom(PAGE.title).hasText('Edit Secret Metadata', 'correct page title for metadata edit');
 
       await click(PAGE.breadcrumbAtIdx(3));
+      await click(PAGE.secretTab('Paths'));
+      assertCorrectBreadcrumbs(assert, ['secrets', backend, secretPath, 'paths']);
+      assert.dom(PAGE.title).hasText(secretPath, 'correct page title for paths');
+
       await click(PAGE.secretTab('Version History'));
       assertCorrectBreadcrumbs(assert, ['secrets', backend, secretPath, 'version history']);
       assert.dom(PAGE.title).hasText(secretPath, 'correct page title for version history');
@@ -984,7 +996,7 @@ module('Acceptance | kv-v2 workflow | navigation', function (hooks) {
       assert.ok(currentURL().startsWith(`/vault/secrets/${backend}/kv/list`), 'links back to list root');
     });
     test('versioned secret nav, tabs, breadcrumbs (sc)', async function (assert) {
-      assert.expect(34);
+      assert.expect(36);
       const backend = this.backend;
       await navToBackend(backend);
 
@@ -996,11 +1008,7 @@ module('Acceptance | kv-v2 workflow | navigation', function (hooks) {
         'Goes to detail view'
       );
       assert.dom(PAGE.title).hasText(secretPath, 'Goes to secret detail view');
-      assert.dom(PAGE.secretTab('Secret')).hasText('Secret');
-      assert.dom(PAGE.secretTab('Secret')).hasClass('active');
-      assert.dom(PAGE.secretTab('Metadata')).hasText('Metadata');
-      assert.dom(PAGE.secretTab('Metadata')).doesNotHaveClass('active');
-      assert.dom(PAGE.secretTab('Version History')).doesNotExist('Version History tab does not render');
+      assertDetailTabs(assert, 'Secret', ['Version History']);
       assert.dom(PAGE.detail.versionDropdown).doesNotExist('Version dropdown does not render');
       assert.dom(PAGE.detail.createNewVersion).hasText('Create new version', 'Create version button shows');
       assert.dom(PAGE.detail.versionTimestamp).doesNotExist('Version created info is not rendered');
@@ -1062,7 +1070,7 @@ module('Acceptance | kv-v2 workflow | navigation', function (hooks) {
       assert.dom(PAGE.metadata.editBtn).doesNotExist('edit metadata button does not render');
     });
     test('breadcrumbs & page titles are correct (sc)', async function (assert) {
-      assert.expect(28);
+      assert.expect(34);
       const backend = this.backend;
       await navToBackend(backend);
       await click(PAGE.secretTab('Configuration'));
@@ -1090,6 +1098,10 @@ module('Acceptance | kv-v2 workflow | navigation', function (hooks) {
       assert.dom(PAGE.metadata.editBtn).doesNotExist('cannot edit metadata');
 
       await click(PAGE.breadcrumbAtIdx(2));
+      await click(PAGE.secretTab('Paths'));
+      assertCorrectBreadcrumbs(assert, ['secrets', backend, secretPath, 'paths']);
+      assert.dom(PAGE.title).hasText(secretPath, 'correct page title for paths');
+
       assert.dom(PAGE.secretTab('Version History')).doesNotExist('Version History tab not shown');
     });
   });
@@ -1190,7 +1202,7 @@ path "${this.backend}/*" {
       assert.ok(currentURL().startsWith(`/vault/secrets/${backend}/kv/list`), 'links back to list root');
     });
     test('breadcrumbs & page titles are correct (cg)', async function (assert) {
-      assert.expect(30);
+      assert.expect(36);
       const backend = this.backend;
       await navToBackend(backend);
       await click(PAGE.secretTab('Configuration'));
@@ -1231,6 +1243,10 @@ path "${this.backend}/*" {
       assert.dom(PAGE.metadata.editBtn).doesNotExist('cannot edit metadata');
 
       await click(PAGE.breadcrumbAtIdx(2));
+      await click(PAGE.secretTab('Paths'));
+      assertCorrectBreadcrumbs(assert, ['secrets', backend, secretPath, 'paths']);
+      assert.dom(PAGE.title).hasText(secretPath, 'correct page title for paths');
+
       assert.dom(PAGE.secretTab('Version History')).doesNotExist('Version History tab not shown');
 
       await click(PAGE.secretTab('Secret'));

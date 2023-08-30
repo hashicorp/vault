@@ -6,12 +6,14 @@ description: The '/sys/config/control-group' endpoint configures control groups.
 
 # `/sys/config/control-group`
 
-@include 'alerts/enterprise-and-hcp.mdx'
+@include 'alerts/enterprise-and-hcp-plus.mdx'
 
 The `/sys/config/control-group` endpoint is used to configure Control Group
 settings.
 
 ## Read control group settings
+
+@include 'alerts/restricted-admin.mdx'
 
 This endpoint returns the current Control Group configuration.
 
@@ -36,6 +38,8 @@ $ curl \
 ```
 
 ## Configure control group settings
+
+@include 'alerts/restricted-admin.mdx'
 
 This endpoint allows configuring control groups.
 
@@ -66,6 +70,8 @@ $ curl \
 ```
 
 ## Delete control group settings
+
+@include 'alerts/restricted-admin.mdx'
 
 This endpoint removes any control group configuration.
 

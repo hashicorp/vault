@@ -76,5 +76,7 @@ export const personas = {
     deleteVersionsPolicy({ backend }) +
     undeleteVersionsPolicy({ backend }) +
     destroyVersionsPolicy({ backend }),
-  secretCreator: (backend) => dataPolicy({ backend, capabilities: ['create', 'update'] }),
+  secretCreator: (backend) =>
+    dataPolicy({ backend, capabilities: ['create', 'update'] }) +
+    metadataPolicy({ backend, capabilities: ['delete'] }),
 };

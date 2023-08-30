@@ -5,6 +5,7 @@
 
 import { click, fillIn, visit } from '@ember/test-helpers';
 import { FORM } from './kv-selectors';
+import { encodePath } from 'vault/utils/path-encoding-helpers';
 
 // CUSTOM ACTIONS RELEVANT TO KV-V2
 
@@ -30,6 +31,16 @@ export const writeVersionedSecret = async function (backend, path, key, val, ver
     await click(FORM.saveBtn);
   }
   return;
+};
+
+export const deleteVersionCmd = function (backend, secretPath, version = 1) {
+  return `write ${backend}/delete/${encodePath(secretPath)} versions=${version}`;
+};
+export const destroyVersionCmd = function (backend, secretPath, version = 1) {
+  return `write ${backend}/destroy/${encodePath(secretPath)} versions=${version}`;
+};
+export const deleteLatestCmd = function (backend, secretPath) {
+  return `delete ${backend}/data/${encodePath(secretPath)}`;
 };
 
 export const addSecretMetadataCmd = (backend, secret, options = { max_versions: 10 }) => {

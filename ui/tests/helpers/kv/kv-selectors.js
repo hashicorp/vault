@@ -9,9 +9,10 @@ export const PAGE = {
   breadcrumbs: '[data-test-breadcrumbs]',
   breadcrumb: '[data-test-breadcrumbs] li',
   breadcrumbAtIdx: (idx) => `[data-test-crumb="${idx}"] a`,
+  infoRow: '[data-test-component="info-table-row"]',
   infoRowValue: (label) => `[data-test-value-div="${label}"]`,
   infoRowToggleMasked: (label) => `[data-test-value-div="${label}"] [data-test-button="toggle-masked"]`,
-  secretTab: (tab) => `[data-test-secrets-tab="${tab}"]`,
+  secretTab: (tab) => (tab ? `[data-test-secrets-tab="${tab}"]` : '[data-test-secrets-tab]'),
   emptyStateTitle: '[data-test-empty-state-title]',
   emptyStateMessage: '[data-test-empty-state-message]',
   emptyStateActions: '[data-test-empty-state-actions]',
@@ -22,13 +23,17 @@ export const PAGE = {
   },
   toolbar: 'nav.toolbar',
   toolbarAction: 'nav.toolbar-actions .toolbar-link',
-  secretRow: '[data-test-component="info-table-row"]',
+  secretRow: '[data-test-component="info-table-row"]', // replace with infoRow
   // specific page selectors
+  backends: {
+    link: (backend) => `[data-test-secrets-backend-link="${backend}"]`,
+  },
   metadata: {
     editBtn: '[data-test-edit-metadata]',
     addCustomMetadataBtn: '[data-test-add-custom-metadata]',
     customMetadataSection: '[data-test-kv-custom-metadata-section]',
     secretMetadataSection: '[data-test-kv-metadata-section]',
+    deleteMetadata: '[data-test-kv-delete="delete-metadata"]',
   },
   detail: {
     versionTimestamp: '[data-test-kv-version-tooltip-trigger]',
@@ -37,7 +42,20 @@ export const PAGE = {
     createNewVersion: '[data-test-create-new-version]',
     delete: '[data-test-kv-delete="delete"]',
     destroy: '[data-test-kv-delete="destroy"]',
+    undelete: '[data-test-kv-delete="undelete"]',
     copy: '[data-test-copy-menu-trigger]',
+    deleteModal: '[data-test-delete-modal]',
+    deleteModalTitle: '[data-test-delete-modal] [data-test-modal-title]',
+    deleteOption: 'input#delete-version',
+    deleteOptionLatest: 'input#delete-latest-version',
+    deleteConfirm: '[data-test-delete-modal-confirm]',
+  },
+  edit: {
+    toggleDiff: '[data-test-toggle-input="Show diff"',
+    toggleDiffDescription: '[data-test-diff-description]',
+    visualDiff: '[data-test-visual-diff]',
+    added: `.jsondiffpatch-added`,
+    deleted: `.jsondiffpatch-deleted`,
   },
   list: {
     createSecret: '[data-test-toolbar-create-secret]',
@@ -53,11 +71,19 @@ export const PAGE = {
   },
   versions: {
     icon: (version) => `[data-test-icon-holder="${version}"]`,
-    linkedBlock: (version) => `[data-test-version-linked-block="${version}"]`,
+    linkedBlock: (version) =>
+      version ? `[data-test-version-linked-block="${version}"]` : '[data-test-version-linked-block]',
     button: (version) => `[data-test-version-button="${version}"]`,
+    versionMenu: (version) => `[data-test-version-linked-block="${version}"] [data-test-popup-menu-trigger]`,
+    createFromVersion: (version) => `[data-test-create-new-version-from="${version}"]`,
   },
   create: {
     metadataSection: '[data-test-metadata-section]',
+  },
+  paths: {
+    copyButton: (label) => `${PAGE.infoRowValue(label)} button`,
+    codeSnippet: (section) => `[data-test-code-snippet][data-test-commands="${section}"] code`,
+    snippetCopy: (section) => `[data-test-code-snippet][data-test-commands="${section}"] button`,
   },
 };
 

@@ -42,7 +42,7 @@ module('Acceptance | mfa-login', function (hooks) {
     await click('[data-test-auth-submit]');
   };
   const didLogin = (assert) => {
-    assert.strictEqual(currentRouteName(), 'vault.cluster.secrets.backends', 'Route transitions after login');
+    assert.strictEqual(currentRouteName(), 'vault.cluster.dashboard', 'Route transitions after login');
   };
   const validate = async (multi) => {
     await fillIn('[data-test-mfa-passcode="0"]', 'test');

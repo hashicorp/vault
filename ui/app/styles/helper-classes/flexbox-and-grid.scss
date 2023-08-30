@@ -20,6 +20,14 @@
   flex-direction: row;
 }
 
+.has-gap-m {
+  gap: $spacing-m;
+}
+
+.has-gap-l {
+  gap: $spacing-l;
+}
+
 // Alignment of the items
 .is-flex-v-centered {
   display: flex;
@@ -31,6 +39,11 @@
 .is-flex-center {
   display: flex;
   align-items: center;
+}
+
+.is-flex-align-start {
+  display: flex;
+  align-items: flex-start;
 }
 
 .is-flex-align-baseline {
@@ -68,11 +81,15 @@
   flex-basis: 100%;
 }
 
-.is-flex-1 {
+.is-flex-grow-1 {
   flex-grow: 1;
   &.basis-0 {
     flex-basis: 0;
   }
+}
+
+.is-flex-1 {
+  flex: 1;
 }
 
 .is-no-flex-grow {
@@ -94,6 +111,12 @@
     align-items: center;
     align-self: center;
     justify-content: center;
+  }
+}
+
+@include until($mobile) {
+  .is-flex-row {
+    flex-flow: column wrap;
   }
 }
 
@@ -128,4 +151,8 @@
 
 .is-grid-column-span-3 {
   grid-column-end: span 3;
+}
+
+.grid-align-items-start {
+  align-items: start;
 }

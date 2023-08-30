@@ -8,6 +8,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"path"
 	"strconv"
 	"strings"
 	"time"
@@ -22,13 +23,13 @@ import (
 )
 
 type eventSubscribeArgs struct {
-	ctx     context.Context
-	logger  hclog.Logger
-	events  *eventbus.EventBus
-	ns      *namespace.Namespace
-	pattern string
-	conn    *websocket.Conn
-	json    bool
+	ctx               context.Context
+	logger            hclog.Logger
+	events            *eventbus.EventBus
+	namespacePatterns []string
+	pattern           string
+	conn              *websocket.Conn
+	json              bool
 }
 
 // handleEventsSubscribeWebsocket runs forever, returning a websocket error code and reason
@@ -36,7 +37,7 @@ type eventSubscribeArgs struct {
 func handleEventsSubscribeWebsocket(args eventSubscribeArgs) (websocket.StatusCode, string, error) {
 	ctx := args.ctx
 	logger := args.logger
-	ch, cancel, err := args.events.Subscribe(ctx, args.ns, args.pattern)
+	ch, cancel, err := args.events.SubscribeMultipleNamespaces(ctx, args.namespacePatterns, args.pattern)
 	if err != nil {
 		logger.Info("Error subscribing", "error", err)
 		return websocket.StatusUnsupportedData, "Error subscribing", nil
@@ -123,6 +124,8 @@ func handleEventsSubscribe(core *vault.Core, req *logical.Request) http.Handler 
 			}
 		}
 
+		namespacePatterns := r.URL.Query()["namespaces"]
+		namespacePatterns = prependNamespacePatterns(namespacePatterns, ns)
 		conn, err := websocket.Accept(w, r, nil)
 		if err != nil {
 			logger.Info("Could not accept as websocket", "error", err)
@@ -143,7 +146,7 @@ func handleEventsSubscribe(core *vault.Core, req *logical.Request) http.Handler 
 			}
 		}()
 
-		closeStatus, closeReason, err := handleEventsSubscribeWebsocket(eventSubscribeArgs{ctx, logger, core.Events(), ns, pattern, conn, json})
+		closeStatus, closeReason, err := handleEventsSubscribeWebsocket(eventSubscribeArgs{ctx, logger, core.Events(), namespacePatterns, pattern, conn, json})
 		if err != nil {
 			closeStatus = websocket.CloseStatus(err)
 			if closeStatus == -1 {
@@ -162,4 +165,19 @@ func handleEventsSubscribe(core *vault.Core, req *logical.Request) http.Handler 
 			logger.Debug("Error closing websocket", "error", err)
 		}
 	})
+}
+
+// prependNamespacePatterns prepends the request namespace to the namespace patterns,
+// and also adds the request namespace to the list.
+func prependNamespacePatterns(patterns []string, requestNamespace *namespace.Namespace) []string {
+	prepend := strings.Trim(requestNamespace.Path, "/")
+	newPatterns := make([]string, 0, len(patterns)+1)
+	newPatterns = append(newPatterns, prepend)
+	for _, pattern := range patterns {
+		if strings.Trim(strings.TrimSpace(pattern), "/") == "" {
+			continue
+		}
+		newPatterns = append(newPatterns, path.Join(prepend, pattern, "/"))
+	}
+	return newPatterns
 }
