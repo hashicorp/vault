@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 package vault
 
@@ -243,6 +243,9 @@ func TestCoreWithSealAndUINoCleanup(t testing.T, opts *CoreConfig) *Core {
 
 	for k, v := range opts.AuditBackends {
 		conf.AuditBackends[k] = v
+	}
+	if opts.RollbackPeriod != time.Duration(0) {
+		conf.RollbackPeriod = opts.RollbackPeriod
 	}
 
 	conf.ActivityLogConfig = opts.ActivityLogConfig
@@ -1272,21 +1275,8 @@ func NewTestCluster(t testing.T, base *CoreConfig, opts *TestClusterOptions) *Te
 		net.IPv6loopback,
 		net.ParseIP("127.0.0.1"),
 	}
-	var baseAddr *net.TCPAddr
-	if opts != nil && opts.BaseListenAddress != "" {
-		baseAddr, err = net.ResolveTCPAddr("tcp", opts.BaseListenAddress)
 
-		if err != nil {
-			t.Fatal("could not parse given base IP")
-		}
-		certIPs = append(certIPs, baseAddr.IP)
-	} else {
-		baseAddr = &net.TCPAddr{
-			IP:   net.ParseIP("127.0.0.1"),
-			Port: 0,
-		}
-	}
-
+	baseAddr, certIPs := GenerateListenerAddr(t, opts, certIPs)
 	var testCluster TestCluster
 	testCluster.base = base
 
@@ -1807,7 +1797,28 @@ func (cluster *TestCluster) StopCore(t testing.T, idx int) {
 	cluster.cleanupFuncs[idx]()
 }
 
-// Restart a TestClusterCore that was stopped, by replacing the
+func GenerateListenerAddr(t testing.T, opts *TestClusterOptions, certIPs []net.IP) (*net.TCPAddr, []net.IP) {
+	var baseAddr *net.TCPAddr
+	var err error
+
+	if opts != nil && opts.BaseListenAddress != "" {
+		baseAddr, err = net.ResolveTCPAddr("tcp", opts.BaseListenAddress)
+
+		if err != nil {
+			t.Fatal("could not parse given base IP")
+		}
+		certIPs = append(certIPs, baseAddr.IP)
+	} else {
+		baseAddr = &net.TCPAddr{
+			IP:   net.ParseIP("127.0.0.1"),
+			Port: 0,
+		}
+	}
+
+	return baseAddr, certIPs
+}
+
+// StartCore restarts a TestClusterCore that was stopped, by replacing the
 // underlying Core.
 func (cluster *TestCluster) StartCore(t testing.T, idx int, opts *TestClusterOptions) {
 	t.Helper()
@@ -2031,6 +2042,10 @@ func (testCluster *TestCluster) setupClusterListener(
 	core.Logger().Info("assigning cluster listener for test core", "core", idx, "port", port)
 	core.SetClusterListenerAddrs(clusterAddrGen(listeners, port))
 	core.SetClusterHandler(handler)
+}
+
+func (tc *TestCluster) InitCores(t testing.T, opts *TestClusterOptions, addAuditBackend bool) {
+	tc.initCores(t, opts, addAuditBackend)
 }
 
 func (tc *TestCluster) initCores(t testing.T, opts *TestClusterOptions, addAuditBackend bool) {

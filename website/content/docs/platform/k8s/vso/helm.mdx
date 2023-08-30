@@ -14,7 +14,7 @@ The chart is customizable using
                   the vault-secrets-operator repo's values.yaml: file commit=e9c2b499105d977fa23a9f746186253991ebcee1 -->
 <!-- codegen: start -->
 
-## Top-Level stanzas
+## Top-Level Stanzas
 
 Use these links to navigate to a particular top-level stanza.
 
@@ -25,7 +25,7 @@ Use these links to navigate to a particular top-level stanza.
 - [`telemetry`](#h-telemetry)
 - [`tests`](#h-tests)
 
-## All values
+## All Values
 
 ### controller ((#h-controller))
 
@@ -34,6 +34,22 @@ Use these links to navigate to a particular top-level stanza.
 
   - `replicas` ((#v-controller-replicas)) (`integer: 1`) - Set the number of replicas for the operator.
 
+  - `nodeSelector` ((#v-controller-nodeselector)) (`map`) - nodeSelector labels for vault-secrets-operator pod assignment.
+    ref: https://kubernetes.io/docs/concepts/configuration/assign-pod-node/#nodeselector
+    Example:
+    nodeSelector:
+      beta.kubernetes.io/arch: amd64
+
+  - `tolerations` ((#v-controller-tolerations)) (`array<map>`) - Toleration Settings for vault-secrets-operator pod.
+    The value is an array of PodSpec Toleration maps.
+    ref: https://kubernetes.io/docs/concepts/scheduling-eviction/taint-and-toleration/
+    Example:
+    tolerations:
+     - key: "key1"
+       operator: "Equal"
+       value: "value1"
+       effect: "NoSchedule"
+
   - `kubeRbacProxy` ((#v-controller-kuberbacproxy)) - Settings related to the kubeRbacProxy container. This container is an HTTP proxy for the
     controller manager which performs RBAC authorization against the Kubernetes API using SubjectAccessReviews.
 
@@ -41,7 +57,7 @@ Use these links to navigate to a particular top-level stanza.
 
       - `repository` ((#v-controller-kuberbacproxy-image-repository)) (`string: gcr.io/kubebuilder/kube-rbac-proxy`)
 
-      - `tag` ((#v-controller-kuberbacproxy-image-tag)) (`string: v0.11.0`)
+      - `tag` ((#v-controller-kuberbacproxy-image-tag)) (`string: v0.14.1`)
 
     - `resources` ((#v-controller-kuberbacproxy-resources)) (`map`) - Configures the default resources for the kube rbac proxy container.
       For more information on configuring resources, see the K8s documentation:
@@ -59,6 +75,18 @@ Use these links to navigate to a particular top-level stanza.
 
         - `memory` ((#v-controller-kuberbacproxy-resources-requests-memory)) (`string: 64Mi`)
 
+  - `imagePullSecrets` ((#v-controller-imagepullsecrets)) (`array<map>`) - Image pull secret to use for private container registry authentication which will be applied to the controllers
+    service account. Alternatively, the value may be specified as an array of strings.
+    Example:
+    ```yaml
+    imagePullSecrets:
+      - name: pull-secret-name-1
+      - name: pull-secret-name-2
+    ```
+    Refer to https://kubernetes.io/docs/concepts/containers/images/#using-a-private-registry.
+
+  - `extraLabels` ((#v-controller-extralabels)) - Extra labels to attach to the deployment. This should be formatted as a YAML object (map)
+
   - `annotations` ((#v-controller-annotations)) - This value defines additional annotations for the deployment. This should be formatted as a YAML object (map)
 
   - `manager` ((#v-controller-manager)) - Settings related to the vault-secrets-operator container.
@@ -67,7 +95,7 @@ Use these links to navigate to a particular top-level stanza.
 
       - `repository` ((#v-controller-manager-image-repository)) (`string: hashicorp/vault-secrets-operator`)
 
-      - `tag` ((#v-controller-manager-image-tag)) (`string: 0.1.0`)
+      - `tag` ((#v-controller-manager-image-tag)) (`string: 0.2.0`)
 
     - `clientCache` ((#v-controller-manager-clientcache)) - Configures the client cache which is used by the controller to cache (and potentially persist) vault tokens that
       are the result of using the VaultAuthMethod. This enables re-use of Vault Tokens
@@ -195,6 +223,12 @@ Use these links to navigate to a particular top-level stanza.
       NOTE: Currently this is only used by the reconciliation logic of dynamic secrets.
 
       default: 100
+
+    - `extraEnv` ((#v-controller-manager-extraenv)) (`array<map>`) - Defines additional environment variables to be added to the
+      vault-secrets-opearator manager container.
+      extraEnv:
+        - name: HTTP_PROXY
+          value: http://proxy.example.com
 
     - `resources` ((#v-controller-manager-resources)) (`map`) - Configures the default resources for the vault-secrets-operator container.
       For more information on configuring resources, see the K8s documentation:

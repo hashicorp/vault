@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 package syslog
 
@@ -133,10 +133,11 @@ func Factory(ctx context.Context, conf *audit.BackendConfig, useEventLogger bool
 		b.nodeIDList[0] = formatterNodeID
 		b.nodeMap[formatterNodeID] = f
 
-		sinkNode, err := event.NewSyslogSink(format, event.WithFacility(facility), event.WithTag(tag))
+		n, err := event.NewSyslogSink(format, event.WithFacility(facility), event.WithTag(tag))
 		if err != nil {
 			return nil, fmt.Errorf("error creating syslog sink node: %w", err)
 		}
+		sinkNode := &audit.SinkWrapper{Name: conf.MountPath, Sink: n}
 
 		sinkNodeID, err := event.GenerateNodeID()
 		if err != nil {

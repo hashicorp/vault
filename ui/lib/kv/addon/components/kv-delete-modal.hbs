@@ -1,0 +1,63 @@
+<button type="button" class="toolbar-link" {{on "click" (fn (mut this.modalOpen) true)}} data-test-kv-delete={{@mode}}>
+  {{yield}}
+</button>
+{{#if this.modalOpen}}
+  <Modal
+    @title={{this.modalDisplay.title}}
+    @onClose={{fn (mut this.modalOpen) false}}
+    @isActive={{this.modalOpen}}
+    @type={{this.modalDisplay.type}}
+    @showCloseButton={{true}}
+    data-test-delete-modal
+  >
+    <section class="modal-card-body">
+      <p class="has-bottom-margin-s">
+        {{this.modalDisplay.intro}}
+      </p>
+      {{#if (eq @mode "delete")}}
+        <div class="is-flex-column">
+          {{#each this.deleteOptions as |option|}}
+            <ToolTip @verticalPosition="above" @horizontalPosition="left" as |T|>
+              <T.Trigger @tabindex="-1">
+                <div class="is-flex-align-baseline has-bottom-margin-m">
+                  <RadioButton
+                    id={{option.key}}
+                    class="radio top-xxs"
+                    @disabled={{option.disabled}}
+                    @value={{option.key}}
+                    @groupValue={{this.deleteType}}
+                    @onChange={{fn (mut this.deleteType) option.key}}
+                  />
+                  <label for={{option.key}} class="has-left-margin-s {{if option.disabled 'opacity-060'}}">
+                    <p class="has-text-weight-semibold">{{option.label}}</p>
+                    <p>{{option.description}}</p>
+                  </label>
+                </div>
+              </T.Trigger>
+              {{#if option.disabled}}
+                <T.Content @defaultClass="tool-tip">
+                  <div class="box">
+                    {{option.tooltipMessage}}
+                  </div>
+                </T.Content>
+              {{/if}}
+            </ToolTip>
+          {{/each}}
+        </div>
+      {{/if}}
+    </section>
+    <footer class="modal-card-foot modal-card-foot-outlined">
+      <button
+        type="button"
+        class="button {{if (eq this.modalDisplay.type 'danger') 'is-danger-outlined' 'is-warning-outlined'}}"
+        {{on "click" this.onDelete}}
+        data-test-delete-modal-confirm
+      >
+        Confirm
+      </button>
+      <button type="button" class="button is-secondary" {{on "click" (fn (mut this.modalOpen) false)}}>
+        Cancel
+      </button>
+    </footer>
+  </Modal>
+{{/if}}

@@ -1,5 +1,5 @@
 # Copyright (c) HashiCorp, Inc.
-# SPDX-License-Identifier: MPL-2.0
+# SPDX-License-Identifier: BUSL-1.1
 
 variable "artifactory_username" {
   type        = string
@@ -53,8 +53,8 @@ variable "backend_edition" {
 
 variable "backend_instance_type" {
   description = "The instance type to use for the Vault backend. Must be arm64/nitro compatible"
-  type                  = string
-  default               = "t4g.small"
+  type        = string
+  default     = "t4g.small"
 }
 
 variable "backend_license_path" {

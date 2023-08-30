@@ -1,3 +1,8 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
 <Hds::AppFrame @hasSidebar={{@showSidebar}} @hasHeader={{false}} @hasFooter={{false}} as |Frame|>
   <Frame.Sidebar data-test-sidebar-nav>
     <Hds::SideNav @isResponsive={{true}} @hasA11yRefocus={{true}} @a11yRefocusSkipTo="app-main-content">
@@ -6,7 +11,7 @@
           <:logo>
             <Hds::SideNav::Header::HomeLink
               @icon="vault"
-              @route="vault.cluster"
+              @route="vault.cluster.dashboard"
               @model={{this.currentCluster.cluster.name}}
               @ariaLabel="home link"
               data-test-sidebar-logo

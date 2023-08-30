@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 package audit
 
@@ -578,5 +578,15 @@ func doElideListResponseData(data map[string]interface{}) {
 				data[k] = len(vMap)
 			}
 		}
+	}
+}
+
+// newTemporaryEntryFormatter creates a cloned EntryFormatter instance with a non-persistent Salter.
+func newTemporaryEntryFormatter(n *EntryFormatter) *EntryFormatter {
+	return &EntryFormatter{
+		salter:          &nonPersistentSalt{},
+		headerFormatter: n.headerFormatter,
+		config:          n.config,
+		prefix:          n.prefix,
 	}
 }

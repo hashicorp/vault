@@ -1,6 +1,6 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 import { module, test } from 'qunit';
@@ -200,7 +200,7 @@ module('Acceptance | pki action forms test', function (hooks) {
       assert.dom(S.configuration.title).hasText('View Root Certificate');
       assert.dom(S.configuration.nextStepsBanner).doesNotExist('no private key warning');
       assert.dom(S.configuration.title).hasText('View Root Certificate', 'Updates title on page');
-      assert.dom(S.configuration.saved.certificate).hasClass('allow-copy', 'copyable certificate is masked');
+      assert.dom(S.configuration.saved.certificate).exists('Copyable certificate exists');
       assert.dom(S.configuration.saved.issuerName).hasText(issuerName);
       assert.dom(S.configuration.saved.issuerLink).exists('Issuer link exists');
       assert.dom(S.configuration.saved.keyLink).exists('Key link exists');
@@ -230,17 +230,13 @@ module('Acceptance | pki action forms test', function (hooks) {
         .dom(S.configuration.nextStepsBanner)
         .hasText('Next steps The private_key is only available once. Make sure you copy and save it now.');
       assert.dom(S.configuration.title).hasText('View Root Certificate', 'Updates title on page');
-      assert
-        .dom(S.configuration.saved.certificate)
-        .hasClass('allow-copy', 'copyable masked certificate exists');
+      assert.dom(S.configuration.saved.certificate).exists('Copyable certificate exists');
       assert
         .dom(S.configuration.saved.issuerName)
         .doesNotExist('Issuer name not shown because it was not named');
       assert.dom(S.configuration.saved.issuerLink).exists('Issuer link exists');
       assert.dom(S.configuration.saved.keyLink).exists('Key link exists');
-      assert
-        .dom(S.configuration.saved.privateKey)
-        .hasClass('allow-copy', 'copyable masked private key exists');
+      assert.dom(S.configuration.saved.privateKey).exists('Copyable private key exists');
       assert.dom(S.configuration.saved.keyName).doesNotExist('Key name not shown because it was not named');
       assert.dom('[data-test-done]').exists('Done button exists');
       // Check that linked issuer has correct common name
@@ -283,9 +279,7 @@ module('Acceptance | pki action forms test', function (hooks) {
         .hasText(
           'Next steps Copy the CSR below for a parent issuer to sign and then import the signed certificate back into this mount. The private_key is only available once. Make sure you copy and save it now.'
         );
-      assert
-        .dom(S.configuration.saved.privateKey)
-        .hasClass('allow-copy', 'copyable masked private key exists');
+      assert.dom(S.configuration.saved.privateKey).exists('Copyable private key exists');
       await click('[data-test-done]');
       assert.strictEqual(
         currentURL(),
