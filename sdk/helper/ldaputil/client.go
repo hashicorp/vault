@@ -480,6 +480,7 @@ func sidBytesToString(b []byte) (string, error) {
 
 func (c *Client) performLdapTokenGroupsSearch(cfg *ConfigEntry, conn Connection, userDN string) ([]*ldap.Entry, error) {
 	var wg sync.WaitGroup
+	var lock sync.Mutex
 	taskChan := make(chan string)
 	maxWorkers := 10
 
@@ -523,12 +524,15 @@ func (c *Client) performLdapTokenGroupsSearch(cfg *ConfigEntry, conn Connection,
 					c.Logger.Warn("unable to read the group sid", "sid", sid)
 					continue
 				}
+
 				if len(groupResult.Entries) == 0 {
 					c.Logger.Warn("unable to find the group", "sid", sid)
 					continue
 				}
 
+				lock.Lock()
 				groupEntries = append(groupEntries, groupResult.Entries[0])
+				lock.Unlock()
 			}
 		}()
 	}
