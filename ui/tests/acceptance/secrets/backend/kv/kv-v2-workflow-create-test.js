@@ -100,7 +100,7 @@ module('Acceptance | kv-v2 workflow | secret and version create', function (hook
         'Goes to details page after save'
       );
       assert.dom(PAGE.detail.versionTimestamp).includesText('Version 1 created');
-      assert.dom(PAGE.secretRow).exists({ count: 1 }, '1 row of data shows');
+      assert.dom(PAGE.infoRow).exists({ count: 1 }, '1 row of data shows');
       assert.dom(PAGE.infoRowValue('api_key')).hasText('***********');
       await click(PAGE.infoRowToggleMasked('api_key'));
       assert.dom(PAGE.infoRowValue('api_key')).hasText('partyparty', 'secret value shows after toggle');
@@ -111,7 +111,7 @@ module('Acceptance | kv-v2 workflow | secret and version create', function (hook
         .dom(`${PAGE.metadata.customMetadataSection} ${PAGE.emptyStateTitle}`)
         .hasText('No custom metadata', 'No custom metadata empty state');
       assert
-        .dom(`${PAGE.metadata.secretMetadataSection} ${PAGE.secretRow}`)
+        .dom(`${PAGE.metadata.secretMetadataSection} ${PAGE.infoRow}`)
         .exists({ count: 4 }, '4 metadata rows show');
       assert.dom(PAGE.infoRowValue('Maximum versions')).hasText('0', 'max versions shows 0');
       assert.dom(PAGE.infoRowValue('Check-and-Set required')).hasText('No', 'cas not enforced');
@@ -137,7 +137,7 @@ module('Acceptance | kv-v2 workflow | secret and version create', function (hook
         `/vault/secrets/${backend}/kv/${encodeURIComponent(secretPath)}/details?version=2`
       );
       assert.dom(PAGE.detail.versionTimestamp).includesText('Version 2 created');
-      assert.dom(PAGE.secretRow).exists({ count: 2 }, '2 rows of data shows');
+      assert.dom(PAGE.infoRow).exists({ count: 2 }, '2 rows of data shows');
       assert.dom(PAGE.infoRowValue('api_key')).hasText('***********');
       assert.dom(PAGE.infoRowValue('api_url')).hasText('***********');
       await click(PAGE.infoRowToggleMasked('api_key'));
@@ -190,7 +190,7 @@ module('Acceptance | kv-v2 workflow | secret and version create', function (hook
         `/vault/secrets/${backend}/kv/${encodeURIComponent('my/secret')}/details?version=1`
       );
       assert.dom(PAGE.detail.versionTimestamp).includesText('Version 1 created');
-      assert.dom(PAGE.secretRow).exists({ count: 1 }, '1 row of data shows');
+      assert.dom(PAGE.infoRow).exists({ count: 1 }, '1 row of data shows');
       assert.dom(PAGE.infoRowValue('password')).hasText('***********');
       await click(PAGE.infoRowToggleMasked('password'));
       assert.dom(PAGE.infoRowValue('password')).hasText('kittens1234', 'secret value shows after toggle');
@@ -198,12 +198,12 @@ module('Acceptance | kv-v2 workflow | secret and version create', function (hook
       // Metadata
       await click(PAGE.secretTab('Metadata'));
       assert
-        .dom(`${PAGE.metadata.customMetadataSection} ${PAGE.secretRow}`)
+        .dom(`${PAGE.metadata.customMetadataSection} ${PAGE.infoRow}`)
         .exists({ count: 1 }, 'One custom metadata row shows');
       assert.dom(`${PAGE.metadata.customMetadataSection} ${PAGE.infoRowValue('team')}`).hasText('UI');
 
       assert
-        .dom(`${PAGE.metadata.secretMetadataSection} ${PAGE.secretRow}`)
+        .dom(`${PAGE.metadata.secretMetadataSection} ${PAGE.infoRow}`)
         .exists({ count: 4 }, '4 metadata rows show');
       assert.dom(PAGE.infoRowValue('Maximum versions')).hasText('7', 'max versions shows 0');
       assert.dom(PAGE.infoRowValue('Check-and-Set required')).hasText('Yes', 'cas enforced');
@@ -328,7 +328,7 @@ module('Acceptance | kv-v2 workflow | secret and version create', function (hook
       // Since this persona can't create a new secret, test update with existing:
       await visit(`/vault/secrets/${backend}/kv/app%2Ffirst/details`);
       assert.dom(PAGE.detail.versionTimestamp).includesText('Version 2 created');
-      assert.dom(PAGE.secretRow).exists({ count: 1 }, '1 row of data shows');
+      assert.dom(PAGE.infoRow).exists({ count: 1 }, '1 row of data shows');
       assert.dom(PAGE.infoRowValue('foo')).hasText('***********');
       await click(PAGE.infoRowToggleMasked('foo'));
       assert.dom(PAGE.infoRowValue('foo')).hasText('bar', 'secret value shows after toggle');
@@ -473,7 +473,7 @@ module('Acceptance | kv-v2 workflow | secret and version create', function (hook
       // Since this persona can't create a new secret, test update with existing:
       await visit(`/vault/secrets/${backend}/kv/app%2Ffirst/details`);
       assert.dom(PAGE.detail.versionTimestamp).includesText('Version 2 created');
-      assert.dom(PAGE.secretRow).exists({ count: 1 }, '1 row of data shows');
+      assert.dom(PAGE.infoRow).exists({ count: 1 }, '1 row of data shows');
       assert.dom(PAGE.infoRowValue('foo')).hasText('***********');
       await click(PAGE.infoRowToggleMasked('foo'));
       assert.dom(PAGE.infoRowValue('foo')).hasText('bar', 'secret value shows after toggle');
@@ -620,7 +620,7 @@ module('Acceptance | kv-v2 workflow | secret and version create', function (hook
       // Since this persona can't create a new secret, test update with existing:
       await visit(`/vault/secrets/${backend}/kv/app%2Ffirst/details`);
       assert.dom(PAGE.detail.versionTimestamp).doesNotExist('Version created tooltip does not show');
-      assert.dom(PAGE.secretRow).doesNotExist('secret data not shown');
+      assert.dom(PAGE.infoRow).doesNotExist('secret data not shown');
       assert.dom(PAGE.emptyStateTitle).hasText('You do not have permission to read this secret');
 
       // Metadata page
@@ -629,7 +629,7 @@ module('Acceptance | kv-v2 workflow | secret and version create', function (hook
         .dom(`${PAGE.metadata.customMetadataSection} ${PAGE.emptyStateTitle}`)
         .hasText('No custom metadata', 'No custom metadata empty state');
       assert
-        .dom(`${PAGE.metadata.secretMetadataSection} ${PAGE.secretRow}`)
+        .dom(`${PAGE.metadata.secretMetadataSection} ${PAGE.infoRow}`)
         .exists({ count: 4 }, '4 metadata rows show');
       assert.dom(PAGE.infoRowValue('Maximum versions')).hasText('0', 'max versions shows 0');
       assert.dom(PAGE.infoRowValue('Check-and-Set required')).hasText('No', 'cas not enforced');
@@ -835,7 +835,7 @@ module('Acceptance | kv-v2 workflow | secret and version create', function (hook
         'Goes to details page after save'
       );
       assert.dom(PAGE.detail.versionTimestamp).doesNotExist('Version created not shown');
-      assert.dom(PAGE.secretRow).doesNotExist('does not show data contents');
+      assert.dom(PAGE.infoRow).doesNotExist('does not show data contents');
       assert
         .dom(PAGE.emptyStateTitle)
         .hasText('You do not have permission to read this secret', 'shows permissions empty state');
@@ -871,7 +871,7 @@ module('Acceptance | kv-v2 workflow | secret and version create', function (hook
         'goes back to details page'
       );
       assert.dom(PAGE.detail.versionTimestamp).doesNotExist('Version created does not show');
-      assert.dom(PAGE.secretRow).doesNotExist('does not show data contents');
+      assert.dom(PAGE.infoRow).doesNotExist('does not show data contents');
       assert
         .dom(PAGE.emptyStateTitle)
         .hasText('You do not have permission to read this secret', 'shows permissions empty state');
@@ -922,7 +922,7 @@ module('Acceptance | kv-v2 workflow | secret and version create', function (hook
         'goes back to details page'
       );
       assert.dom(PAGE.detail.versionTimestamp).doesNotExist('version created not shown');
-      assert.dom(PAGE.secretRow).doesNotExist('does not show data contents');
+      assert.dom(PAGE.infoRow).doesNotExist('does not show data contents');
       assert
         .dom(PAGE.emptyStateTitle)
         .hasText('You do not have permission to read this secret', 'shows permissions empty state');
@@ -991,7 +991,7 @@ module('Acceptance | kv-v2 workflow | secret and version create', function (hook
         `/vault/secrets/${backend}/kv/app%2Ffirst/details`,
         'redirects to details page'
       );
-      assert.dom(PAGE.secretRow).doesNotExist('does not show data contents');
+      assert.dom(PAGE.infoRow).doesNotExist('does not show data contents');
       assert
         .dom(PAGE.emptyStateTitle)
         .hasText('You do not have permission to read this secret', 'shows permissions empty state');
@@ -1084,7 +1084,7 @@ path "${this.backend}/metadata/*" {
         'Goes to details page after save'
       );
       assert.dom(PAGE.detail.versionTimestamp).includesText('Version 1 created');
-      assert.dom(PAGE.secretRow).exists({ count: 1 }, '1 row of data shows');
+      assert.dom(PAGE.infoRow).exists({ count: 1 }, '1 row of data shows');
       assert.dom(PAGE.infoRowValue('api_key')).hasText('***********');
       await click(PAGE.infoRowToggleMasked('api_key'));
       assert.dom(PAGE.infoRowValue('api_key')).hasText('partyparty', 'secret value shows after toggle');
@@ -1095,7 +1095,7 @@ path "${this.backend}/metadata/*" {
         .dom(`${PAGE.metadata.customMetadataSection} ${PAGE.emptyStateTitle}`)
         .hasText('No custom metadata', 'No custom metadata empty state');
       assert
-        .dom(`${PAGE.metadata.secretMetadataSection} ${PAGE.secretRow}`)
+        .dom(`${PAGE.metadata.secretMetadataSection} ${PAGE.infoRow}`)
         .exists({ count: 4 }, '4 metadata rows show');
       assert.dom(PAGE.infoRowValue('Maximum versions')).hasText('0', 'max versions shows 0');
       assert.dom(PAGE.infoRowValue('Check-and-Set required')).hasText('No', 'cas not enforced');
@@ -1154,7 +1154,7 @@ path "${this.backend}/metadata/*" {
         `/vault/secrets/${backend}/kv/${encodeURIComponent(secretPath)}/details?version=2`
       );
       assert.dom(PAGE.detail.versionTimestamp).includesText('Version 2 created');
-      assert.dom(PAGE.secretRow).exists({ count: 2 }, '2 rows of data shows');
+      assert.dom(PAGE.infoRow).exists({ count: 2 }, '2 rows of data shows');
       assert.dom(PAGE.infoRowValue('api_key')).hasText('***********');
       assert.dom(PAGE.infoRowValue('api_url')).hasText('***********');
       await click(PAGE.infoRowToggleMasked('api_key'));
