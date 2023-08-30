@@ -1691,7 +1691,7 @@ func (c *Core) handleLoginRequest(ctx context.Context, req *logical.Request) (re
 		// we still need to associate the login role with this lease for later
 		// lease-count quotas to be accurate. Unless disable lease role tracking is enabled,
 		// then skip calculating role.
-		if !c.disableLeaseRoleTracking && reqRole == nil && resp.Auth.TokenType != logical.TokenTypeBatch {
+		if !c.impreciseLeaseRoleTracking && reqRole == nil && resp.Auth.TokenType != logical.TokenTypeBatch {
 			role = c.DetermineRoleFromLoginRequest(ctx, req.MountPoint, req.Data)
 		}
 

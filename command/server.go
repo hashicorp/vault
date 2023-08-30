@@ -2954,7 +2954,7 @@ func createCoreConfig(c *ServerCommand, config *server.Config, backend physical.
 		LogicalBackends:                c.LogicalBackends,
 		Logger:                         c.logger,
 		DetectDeadlocks:                config.DetectDeadlocks,
-		DisableLeaseRoleTracking:       config.DisableLeaseRoleTracking,
+		ImpreciseLeaseRoleTracking:     config.ImpreciseLeaseRoleTracking,
 		DisableSentinelTrace:           config.DisableSentinelTrace,
 		DisableCache:                   config.DisableCache,
 		DisableMlock:                   config.DisableMlock,

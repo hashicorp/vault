@@ -697,8 +697,8 @@ type Core struct {
 	// for testing purposes
 	requestResponseCallback func(logical.Backend, *logical.Request, *logical.Response)
 
-	// Prevent calculation of role for each lease
-	disableLeaseRoleTracking bool
+	// If role quotas are not enabled, don't track lease counts by role
+	impreciseLeaseRoleTracking bool
 }
 
 // c.stateLock needs to be held in read mode before calling this function.
@@ -761,7 +761,7 @@ type CoreConfig struct {
 	DetectDeadlocks string
 
 	// Disables tracking a leases role
-	DisableLeaseRoleTracking bool
+	ImpreciseLeaseRoleTracking bool
 
 	// Disables the trace display for Sentinel checks
 	DisableSentinelTrace bool
@@ -1035,7 +1035,7 @@ func CreateCore(conf *CoreConfig) (*Core, error) {
 		pendingRemovalMountsAllowed:    conf.PendingRemovalMountsAllowed,
 		expirationRevokeRetryBase:      conf.ExpirationRevokeRetryBase,
 		rollbackMountPathMetrics:       conf.MetricSink.TelemetryConsts.RollbackMetricsIncludeMountPoint,
-		disableLeaseRoleTracking:       conf.DisableLeaseRoleTracking,
+		impreciseLeaseRoleTracking:     conf.ImpreciseLeaseRoleTracking,
 	}
 
 	c.standbyStopCh.Store(make(chan struct{}))
