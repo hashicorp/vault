@@ -276,7 +276,8 @@ jobs:
       needs.test-go-testonly.result == 'failure' ||
       needs.test-go-race.result == 'failure' ||
       needs.test-ui.result == 'failure'
-      ) && (github.ref_name == 'main' || startsWith(github.ref_name, 'release/'))
+      )
+    # && (github.ref_name == 'main' || startsWith(github.ref_name, 'release/'))
     runs-on: ubuntu-latest
     permissions:
       id-token: write
@@ -296,7 +297,7 @@ jobs:
         env:
           SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
         with:
-          channel-id: "C05AABYEA9Y" # sent to #feed-vault-ci-official
+          channel-id: "C05Q4D5V89W" # sent to #feed-vault-ci-official, use "C05Q4D5V89W"/test-vault-ci-slack-integration for testing
           payload: |
             {
               "text": "OSS test failures on ${{ github.ref_name }}",
@@ -316,7 +317,7 @@ jobs:
                   "type": "section",
                   "text": {
                     "type": "mrkdwn",
-                    "text": "CI failed on ${{ github.ref_name }}, go: ${{ needs.test-go.result }}, race: ${{ needs.test-go-race.result }}, testonly: ${{ needs.test-go-testonly.result }}: ui: ${{ needs.test-ui.result }}"
+                    "text": "CI failed on ${{ github.ref_name }}\ngo: ${{ needs.test-go.result && ':white_check_mark:' || 'x' }}\nrace: ${{ needs.test-go-race.result && ':white_check_mark:' || 'x' }}\ntestonly: ${{ needs.test-go-testonly.result && ':white_check_mark:' || 'x' }}\nui: ${{ needs.test-ui.result && ':white_check_mark:' || 'x' }}"
                   },
                   "accessory": {
                     "type": "button",
