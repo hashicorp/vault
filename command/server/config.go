@@ -112,6 +112,8 @@ type Config struct {
 
 	DetectDeadlocks string `hcl:"detect_deadlocks"`
 
+	DisableLeaseRoleTracking bool `hcl:"disable_lease_role_tracking"`
+
 	EnableResponseHeaderRaftNodeID    bool        `hcl:"-"`
 	EnableResponseHeaderRaftNodeIDRaw interface{} `hcl:"enable_response_header_raft_node_id"`
 
@@ -410,6 +412,11 @@ func (c *Config) Merge(c2 *Config) *Config {
 	result.DetectDeadlocks = c.DetectDeadlocks
 	if c2.DetectDeadlocks != "" {
 		result.DetectDeadlocks = c2.DetectDeadlocks
+	}
+
+	result.DisableLeaseRoleTracking = c.DisableLeaseRoleTracking
+	if c2.DisableLeaseRoleTracking {
+		result.DisableLeaseRoleTracking = c2.DisableLeaseRoleTracking
 	}
 
 	result.EnableResponseHeaderRaftNodeID = c.EnableResponseHeaderRaftNodeID
@@ -1144,6 +1151,8 @@ func (c *Config) Sanitized() map[string]interface{} {
 		"experiments":        c.Experiments,
 
 		"detect_deadlocks": c.DetectDeadlocks,
+
+		"disable_lease_role_tracking": c.DisableLeaseRoleTracking,
 	}
 	for k, v := range sharedResult {
 		result[k] = v
