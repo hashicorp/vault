@@ -299,13 +299,13 @@ jobs:
           channel-id: "C05Q4D5V89W" # sent to #feed-vault-ci-official, use "C05Q4D5V89W"/test-vault-ci-slack-integration for testing
           payload: |
             {
-              "text": "OSS test failures on ${{ github.ref_name }}",
+              "text": "CE test failures on ${{ github.ref_name }}",
               "blocks": [
                 {
                   "type": "header",
                   "text": {
                     "type": "plain_text",
-                    "text": ":rotating_light: OSS test failures :rotating_light:",
+                    "text": ":rotating_light: CE test failures :rotating_light:",
                     "emoji": true
                   }
                 },
