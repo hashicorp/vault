@@ -58,11 +58,12 @@ export default create({
     await this.tokenInput(rootToken).submit();
     return;
   },
-  logoutNs: async function () {
-    // just navigating to the logout URL wasn't working, so clicking manually
+  clickLogout: async function (clearNamespace = false) {
     await click('[data-test-user-menu-trigger]');
     await click('[data-test-user-menu-content] a#logout');
-    await this.namespaceInput('');
+    if (clearNamespace) {
+      await this.namespaceInput('');
+    }
     return;
   },
 });

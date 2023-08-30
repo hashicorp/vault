@@ -275,8 +275,9 @@ module('Acceptance | Enterprise | kv-v2 workflow | edge cases', function (hooks)
       return;
     });
     hooks.afterEach(async function () {
-      // special logout method clears the namespace field so test suite doesn't bork
-      return await authPage.logoutNs();
+      // visit logout with namespace query param because we're transitioning from within an engine
+      // and navigating directly to /vault/auth was causing test context routing problems
+      await visit(`/vault/logout?namespace=${this.namespace}`);
     });
 
     test('it can create a new secret version in a namespace', async function (assert) {
