@@ -423,7 +423,7 @@ underlying storage.
 
 ```json
 {
-  "dr_operation_token": "...",
+  "dr_operation_token": "..."
 }
 ```
 
@@ -438,12 +438,27 @@ $ curl \
 
 ## Update DR secondary's primary
 
-This endpoint changes a DR secondary cluster's assigned primary cluster using a
-secondary activation token. This does not wipe all data in the cluster.
+This endpoint changes a DR secondary cluster's assigned primary cluster. This does not
+wipe all data in the cluster.
 
 This endpoint requires a DR Operation Token to be provided as means of
 authorization. See the [DR Operation Token API
 docs](#generate-disaster-recovery-operation-token) for more information.
+
+There are two different ways to use this API call, each with its own parameter. The first way
+is using a secondary activation token (`token` in the parameter list below). This is the original
+way to call `update-primary`. This method is required for newly demoted DR secondary clusters that,
+after a DR failover, need to be pointed to their newly promoted DR primary cluster.
+
+The other way is with the `update_primary_addrs` parameter, which was added in Vault 1.13. This is an array
+of Vault cluster addresses that represent the cluster listeners of the primary cluster. These addresses will
+be pinged one at a time via gRPC and the ones that respond successfully will be used as the secondary's new
+primary addresses. This is a quicker process vs using a secondary activation token. Vault does
+less work behind the scenes, which means potentially less disruption for replication. This method
+will not work on a DR secondary cluster that is currently demoted as part of a DR failover.
+
+It's important to note that `update_primary_addrs` and `token` are mutually exclusive. You may use
+one or the other, but not both.
 
 | Method | Path                                           |
 | :----- | :--------------------------------------------- |
@@ -475,8 +490,7 @@ docs](#generate-disaster-recovery-operation-token) for more information.
   primary clusters. These addresses will be pinged in sequence, and if any of them
   respond successfully, these will be recorded as the new primary addresses. This is
   a lighter weight version of specifying a token and should result in less disruption
-  of replication. Note that it's invalid to specify this and `token` in the same API call.
-  They are mutually exclusive.
+  of replication.
 
 ### Sample payload
 
@@ -484,6 +498,25 @@ docs](#generate-disaster-recovery-operation-token) for more information.
 {
   "dr_operation_token": "...",
   "token": "..."
+}
+```
+
+### Sample request
+
+```shell-session
+$ curl \
+    --header "X-Vault-Token: ..." \
+    --request POST \
+    --data @payload.json \
+    http://127.0.0.1:8200/v1/sys/replication/dr/secondary/update-primary
+```
+
+### Sample payload
+
+```json
+{
+  "dr_operation_token": "...",
+  "update_primary_addrs": ["10.0.0.2:8201"]
 }
 ```
 
