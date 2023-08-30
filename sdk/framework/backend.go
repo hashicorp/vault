@@ -1,8 +1,13 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package framework
 
 import (
 	"context"
 	"crypto/rand"
+	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -13,9 +18,11 @@ import (
 	"sync"
 	"time"
 
+	"github.com/hashicorp/go-kms-wrapping/entropy/v2"
+
+	jsonpatch "github.com/evanphx/json-patch/v5"
 	"github.com/hashicorp/errwrap"
 	log "github.com/hashicorp/go-hclog"
-	"github.com/hashicorp/go-kms-wrapping/entropy"
 	"github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/go-secure-stdlib/parseutil"
 	"github.com/hashicorp/vault/sdk/helper/consts"
@@ -41,10 +48,8 @@ type Backend struct {
 	// paths, including adding or removing, is not allowed once the
 	// backend is in use).
 	//
-	// PathsSpecial is the list of path patterns that denote the
-	// paths above that require special privileges. These can't be
-	// regular expressions, it is either exact match or prefix match.
-	// For prefix match, append '*' as a suffix.
+	// PathsSpecial is the list of path patterns that denote the paths above
+	// that require special privileges.
 	Paths        []*Path
 	PathsSpecial *logical.Paths
 
@@ -55,6 +60,11 @@ type Backend struct {
 
 	// InitializeFunc is the callback, which if set, will be invoked via
 	// Initialize() just after a plugin has been mounted.
+	//
+	// Note that storage writes should only occur on the active instance within a
+	// primary cluster or local mount on a performance secondary. If your InitializeFunc
+	// writes to storage, you can use the backend's WriteSafeReplicationState() method
+	// to prevent it from attempting to write on a Vault instance with read-only storage.
 	InitializeFunc InitializeFunc
 
 	// PeriodicFunc is the callback, which if set, will be invoked when the
@@ -65,6 +75,11 @@ type Backend struct {
 	// entries in backend's storage, while the backend is still being used.
 	// (Note the difference between this action and `Clean`, which is
 	// invoked just before the backend is unmounted).
+	//
+	// Note that storage writes should only occur on the active instance within a
+	// primary cluster or local mount on a performance secondary. If your PeriodicFunc
+	// writes to storage, you can use the backend's WriteSafeReplicationState() method
+	// to prevent it from attempting to write on a Vault instance with read-only storage.
 	PeriodicFunc periodicFunc
 
 	// WALRollback is called when a WAL entry (see wal.go) has to be rolled
@@ -91,8 +106,12 @@ type Backend struct {
 	// BackendType is the logical.BackendType for the backend implementation
 	BackendType logical.BackendType
 
+	// RunningVersion is the optional version that will be self-reported
+	RunningVersion string
+
 	logger  log.Logger
 	system  logical.SystemView
+	events  logical.EventSender
 	once    sync.Once
 	pathsRe []*regexp.Regexp
 }
@@ -119,6 +138,14 @@ type InvalidateFunc func(context.Context, string)
 // InitializeFunc is the callback, which if set, will be invoked via
 // Initialize() just after a plugin has been mounted.
 type InitializeFunc func(context.Context, *logical.InitializationRequest) error
+
+// PatchPreprocessorFunc is used by HandlePatchOperation in order to shape
+// the input as defined by request handler prior to JSON marshaling
+type PatchPreprocessorFunc func(map[string]interface{}) (map[string]interface{}, error)
+
+// ErrNoEvents is returned when attempting to send an event, but when the event
+// sender was not passed in during `backend.Setup()`.
+var ErrNoEvents = errors.New("no event sender configured")
 
 // Initialize is the logical.Backend implementation.
 func (b *Backend) Initialize(ctx context.Context, req *logical.InitializationRequest) error {
@@ -194,7 +221,7 @@ func (b *Backend) HandleRequest(ctx context.Context, req *logical.Request) (*log
 
 	// If the path is empty and it is a help operation, handle that.
 	if req.Path == "" && req.Operation == logical.HelpOperation {
-		return b.handleRootHelp()
+		return b.handleRootHelp(req)
 	}
 
 	// Find the matching route
@@ -214,10 +241,19 @@ func (b *Backend) HandleRequest(ctx context.Context, req *logical.Request) (*log
 	// Build up the data for the route, with the URL taking priority
 	// for the fields over the PUT data.
 	raw := make(map[string]interface{}, len(path.Fields))
+	var ignored []string
 	for k, v := range req.Data {
 		raw[k] = v
+		if !path.TakesArbitraryInput && path.Fields[k] == nil {
+			ignored = append(ignored, k)
+		}
 	}
+
+	var replaced []string
 	for k, v := range captures {
+		if raw[k] != nil {
+			replaced = append(replaced, k)
+		}
 		raw[k] = v
 	}
 
@@ -271,7 +307,91 @@ func (b *Backend) HandleRequest(ctx context.Context, req *logical.Request) (*log
 		}
 	}
 
-	return callback(ctx, req, &fd)
+	resp, err := callback(ctx, req, &fd)
+	if err != nil {
+		return resp, err
+	}
+
+	switch resp {
+	case nil:
+	default:
+		// If fields supplied in the request are not present in the field schema
+		// of the path, add a warning to the response indicating that those
+		// parameters will be ignored.
+		sort.Strings(ignored)
+
+		if len(ignored) != 0 {
+			resp.AddWarning(fmt.Sprintf("Endpoint ignored these unrecognized parameters: %v", ignored))
+		}
+		// If fields supplied in the request is being overwritten by the values
+		// supplied in the API request path, add a warning to the response
+		// indicating that those parameters will be replaced.
+		if len(replaced) != 0 {
+			resp.AddWarning(fmt.Sprintf("Endpoint replaced the value of these parameters with the values captured from the endpoint's path: %v", replaced))
+		}
+	}
+
+	return resp, nil
+}
+
+// HandlePatchOperation acts as an abstraction for performing JSON merge patch
+// operations (see https://datatracker.ietf.org/doc/html/rfc7396) for HTTP
+// PATCH requests. It is responsible for properly processing and marshalling
+// the input and existing resource prior to performing the JSON merge operation
+// using the MergePatch function from the json-patch library. The preprocessor
+// is an arbitrary func that can be provided to further process the input. The
+// MergePatch function accepts and returns byte arrays. Null values will unset
+// fields defined within the input's FieldData (as if they were never specified)
+// and remove user-specified keys that exist within a map field.
+func HandlePatchOperation(input *FieldData, resource map[string]interface{}, preprocessor PatchPreprocessorFunc) ([]byte, error) {
+	var err error
+
+	if resource == nil {
+		return nil, fmt.Errorf("resource does not exist")
+	}
+
+	inputMap := map[string]interface{}{}
+
+	for key := range input.Raw {
+		if _, ok := input.Schema[key]; !ok {
+			// Only accept fields in the schema
+			continue
+		}
+
+		// Ensure data types are handled properly according to the FieldSchema
+		val, ok, err := input.GetOkErr(key)
+		if err != nil {
+			return nil, err
+		}
+
+		if ok {
+			inputMap[key] = val
+		}
+	}
+
+	if preprocessor != nil {
+		inputMap, err = preprocessor(inputMap)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	marshaledResource, err := json.Marshal(resource)
+	if err != nil {
+		return nil, err
+	}
+
+	marshaledInput, err := json.Marshal(inputMap)
+	if err != nil {
+		return nil, err
+	}
+
+	modified, err := jsonpatch.MergePatch(marshaledResource, marshaledInput)
+	if err != nil {
+		return nil, err
+	}
+
+	return modified, nil
 }
 
 // SpecialPaths is the logical.Backend implementation.
@@ -297,6 +417,7 @@ func (b *Backend) InvalidateKey(ctx context.Context, key string) {
 func (b *Backend) Setup(ctx context.Context, config *logical.BackendConfig) error {
 	b.logger = config.Logger
 	b.system = config.System
+	b.events = config.EventsSender
 	return nil
 }
 
@@ -331,6 +452,13 @@ func (b *Backend) Type() logical.BackendType {
 	return b.BackendType
 }
 
+// Version returns the plugin version information
+func (b *Backend) PluginVersion() logical.PluginVersion {
+	return logical.PluginVersion{
+		Version: b.RunningVersion,
+	}
+}
+
 // Route looks up the path that would be used for a given path string.
 func (b *Backend) Route(path string) *Path {
 	result, _ := b.route(path)
@@ -348,12 +476,38 @@ func (b *Backend) Secret(k string) *Secret {
 	return nil
 }
 
+// WriteSafeReplicationState returns true if this backend instance is capable of writing
+// to storage without receiving an ErrReadOnly error. The active instance in a primary
+// cluster or a local mount on a performance secondary is capable of writing to storage.
+func (b *Backend) WriteSafeReplicationState() bool {
+	replicationState := b.System().ReplicationState()
+	return (b.System().LocalMount() || !replicationState.HasState(consts.ReplicationPerformanceSecondary)) &&
+		!replicationState.HasState(consts.ReplicationDRSecondary) &&
+		!replicationState.HasState(consts.ReplicationPerformanceStandby)
+}
+
+// init runs as a sync.Once function from any plugin entry point which needs to route requests by paths.
+// It may panic if a coding error in the plugin is detected.
+// For builtin plugins, this is unit tested in helper/builtinplugins/builtinplugins_test.go.
+// For other plugins, any unit test that attempts to perform any request to the plugin will exercise these checks.
 func (b *Backend) init() {
 	b.pathsRe = make([]*regexp.Regexp, len(b.Paths))
 	for i, p := range b.Paths {
+		// Detect the coding error of failing to initialise Pattern
 		if len(p.Pattern) == 0 {
 			panic(fmt.Sprintf("Routing pattern cannot be blank"))
 		}
+
+		// Detect the coding error of attempting to define a CreateOperation without defining an ExistenceCheck
+		if p.ExistenceCheck == nil {
+			if _, ok := p.Operations[logical.CreateOperation]; ok {
+				panic(fmt.Sprintf("Pattern %v defines a CreateOperation but no ExistenceCheck", p.Pattern))
+			}
+			if _, ok := p.Callbacks[logical.CreateOperation]; ok {
+				panic(fmt.Sprintf("Pattern %v defines a CreateOperation but no ExistenceCheck", p.Pattern))
+			}
+		}
+
 		// Automatically anchor the pattern
 		if p.Pattern[0] != '^' {
 			p.Pattern = "^" + p.Pattern
@@ -361,6 +515,8 @@ func (b *Backend) init() {
 		if p.Pattern[len(p.Pattern)-1] != '$' {
 			p.Pattern = p.Pattern + "$"
 		}
+
+		// Detect the coding error of an invalid Pattern
 		b.pathsRe[i] = regexp.MustCompile(p.Pattern)
 	}
 }
@@ -393,7 +549,7 @@ func (b *Backend) route(path string) (*Path, map[string]string) {
 	return nil, nil
 }
 
-func (b *Backend) handleRootHelp() (*logical.Response, error) {
+func (b *Backend) handleRootHelp(req *logical.Request) (*logical.Response, error) {
 	// Build a mapping of the paths and get the paths alphabetized to
 	// make the output prettier.
 	pathsMap := make(map[string]*Path)
@@ -422,9 +578,27 @@ func (b *Backend) handleRootHelp() (*logical.Response, error) {
 		return nil, err
 	}
 
+	// Plugins currently don't have a direct knowledge of their own "type"
+	// (e.g. "kv", "cubbyhole"). It defaults to the name of the executable but
+	// can be overridden when the plugin is mounted. Since we need this type to
+	// form the request & response full names, we are passing it as an optional
+	// request parameter to the plugin's root help endpoint. If specified in
+	// the request, the type will be used as part of the request/response body
+	// names in the OAS document.
+	requestResponsePrefix := req.GetString("requestResponsePrefix")
+
 	// Build OpenAPI response for the entire backend
-	doc := NewOASDocument()
-	if err := documentPaths(b, doc); err != nil {
+	vaultVersion := "unknown"
+	if b.System() != nil {
+		env, err := b.System().PluginEnv(context.Background())
+		if err != nil {
+			return nil, err
+		}
+		vaultVersion = env.VaultVersion
+	}
+
+	doc := NewOASDocument(vaultVersion)
+	if err := documentPaths(b, requestResponsePrefix, doc); err != nil {
 		b.Logger().Warn("error generating OpenAPI", "error", err)
 	}
 
@@ -556,24 +730,55 @@ func (b *Backend) handleWALRollback(ctx context.Context, req *logical.Request) (
 	return logical.ErrorResponse(merr.Error()), nil
 }
 
+// SendEvent is used to send events through the underlying EventSender.
+// It returns ErrNoEvents if the events system has not been configured or enabled.
+func (b *Backend) SendEvent(ctx context.Context, eventType logical.EventType, event *logical.EventData) error {
+	if b.events == nil {
+		return ErrNoEvents
+	}
+	return b.events.SendEvent(ctx, eventType, event)
+}
+
 // FieldSchema is a basic schema to describe the format of a path field.
 type FieldSchema struct {
 	Type        FieldType
 	Default     interface{}
 	Description string
-	Required    bool
-	Deprecated  bool
 
-	// Query indicates this field will be sent as a query parameter:
+	// The Required and Deprecated members are only used by openapi, and are not actually
+	// used by the framework.
+	Required   bool
+	Deprecated bool
+
+	// Query indicates this field will be expected as a query parameter as part
+	// of ReadOperation, ListOperation or DeleteOperation requests:
 	//
 	//   /v1/foo/bar?some_param=some_value
 	//
-	// It doesn't affect handling of the value, but may be used for documentation.
+	// The field will still be expected as a request body parameter for
+	// CreateOperation or UpdateOperation requests!
+	//
+	// To put that another way, you should set Query for any non-path parameter
+	// you want to use in a read/list/delete operation.  While setting the Query
+	// field to `true` is not required in such cases (Vault will expose the
+	// query parameters to you via req.Data regardless), it is highly
+	// recommended to do so in order to improve the quality of the generated
+	// OpenAPI documentation (as well as any code generation based on it), which
+	// will otherwise incorrectly omit the parameter.
+	//
+	// The reason for this design is historical: back at the start of 2018,
+	// query parameters were not mapped to fields at all, and it was implicit
+	// that all non-path fields were exclusively for the use of create/update
+	// operations.  Since then, support for query parameters has gradually been
+	// extended to read, delete and list operations - and now this declarative
+	// metadata is needed, so that the OpenAPI generator can know which
+	// parameters are actually referred to, from within the code of
+	// read/delete/list operation handler functions.
 	Query bool
 
 	// AllowedValues is an optional list of permitted values for this field.
 	// This constraint is not (yet) enforced by the framework, but the list is
-	// output as part of OpenAPI generation and may effect documentation and
+	// output as part of OpenAPI generation and may affect documentation and
 	// dynamic UI generation.
 	AllowedValues []interface{}
 
@@ -609,6 +814,8 @@ func (t FieldType) Zero() interface{} {
 		return ""
 	case TypeInt:
 		return 0
+	case TypeInt64:
+		return int64(0)
 	case TypeBool:
 		return false
 	case TypeMap:

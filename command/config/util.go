@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package config
 
 import (
@@ -5,6 +8,7 @@ import (
 )
 
 // DefaultTokenHelper returns the token helper that is configured for Vault.
+// This helper should only be used for non-server CLI commands.
 func DefaultTokenHelper() (token.TokenHelper, error) {
 	config, err := LoadConfig("")
 	if err != nil {

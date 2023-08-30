@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package cassandra
 
 import (
@@ -287,7 +290,7 @@ func assertNoCreds(t testing.TB, address string, port int, username, password st
 		if err != nil {
 			return nil
 		}
-		return err
+		return nil
 	}
 	bo := backoff.NewExponentialBackOff()
 	bo.MaxElapsedTime = timeout

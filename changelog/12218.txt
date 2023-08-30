@@ -1,3 +1,0 @@
-```release-note:feature
-secrets/kv: Add ability to specify version-agnostic custom key metadata
-```

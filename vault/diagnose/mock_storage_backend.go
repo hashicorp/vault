@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package diagnose
 
 import (
@@ -25,8 +28,10 @@ const (
 	deleteOp               string = "delete"
 )
 
-var goodEntry physical.Entry = physical.Entry{Key: "diagnose", Value: []byte(secretVal)}
-var badEntry physical.Entry = physical.Entry{}
+var (
+	goodEntry physical.Entry = physical.Entry{Key: "diagnose", Value: []byte(secretVal)}
+	badEntry  physical.Entry = physical.Entry{}
+)
 
 type mockStorageBackend struct {
 	callType             string
@@ -65,12 +70,10 @@ func (m mockStorageBackend) Get(ctx context.Context, key string) (*physical.Entr
 		return &badEntry, nil
 	}
 	return &goodEntry, nil
-
 }
 
 // Delete is used to permanently delete an entry
 func (m mockStorageBackend) Delete(ctx context.Context, key string) error {
-
 	return m.storageLogicGeneralInternal(deleteOp)
 }
 

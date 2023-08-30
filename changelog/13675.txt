@@ -1,0 +1,4 @@
+```release-note:feature
+agent: The Vault agent now returns telemetry information at the `/agent/v1/metrics`
+path.
+```

@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package command
 
 import (
@@ -32,7 +35,7 @@ func TestAuditEnableCommand_Run(t *testing.T) {
 		{
 			"empty",
 			nil,
-			"Missing TYPE!",
+			"Error enabling audit device: audit type missing. Valid types include 'file', 'socket' and 'syslog'.",
 			1,
 		},
 		{

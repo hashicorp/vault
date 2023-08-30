@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import { hash } from 'rsvp';
 import { inject as service } from '@ember/service';
 import Base from '../../replication-base';
@@ -21,7 +26,7 @@ export default Base.extend({
             );
           });
       })
-      .catch(e => {
+      .catch((e) => {
         if (e.httpStatus === 404) {
           return this.store.createRecord('path-filter-config', {
             id,

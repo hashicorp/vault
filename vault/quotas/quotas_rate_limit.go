@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package quotas
 
 import (
@@ -54,6 +57,16 @@ type RateLimitQuota struct {
 	// MountPath is the path of the mount to which this quota is applicable
 	MountPath string `json:"mount_path"`
 
+	// Role is the role on an auth mount to apply the quota to upon /login requests
+	// Not applicable for use with path suffixes
+	Role string `json:"role"`
+
+	// PathSuffix is the path suffix to which this quota is applicable
+	PathSuffix string `json:"path_suffix"`
+
+	// Inheritable indicates whether the quota will be inherited by child namespaces
+	Inheritable bool `json:"inheritable"`
+
 	// Rate defines the number of requests allowed per Interval.
 	Rate float64 `json:"rate"`
 
@@ -81,7 +94,7 @@ type RateLimitQuota struct {
 // provided, which will default to 1s when initialized. An optional block
 // duration may be provided, where if set, when a client reaches the rate limit,
 // subsequent requests will fail until the block duration has passed.
-func NewRateLimitQuota(name, nsPath, mountPath string, rate float64, interval, block time.Duration) *RateLimitQuota {
+func NewRateLimitQuota(name, nsPath, mountPath, pathSuffix, role string, inheritable bool, interval, block time.Duration, rate float64) *RateLimitQuota {
 	id, err := uuid.GenerateUUID()
 	if err != nil {
 		// Fall back to generating with a hash of the name, later in initialize
@@ -93,6 +106,9 @@ func NewRateLimitQuota(name, nsPath, mountPath string, rate float64, interval, b
 		Type:          TypeRateLimit,
 		NamespacePath: nsPath,
 		MountPath:     mountPath,
+		Role:          role,
+		PathSuffix:    pathSuffix,
+		Inheritable:   inheritable,
 		Rate:          rate,
 		Interval:      interval,
 		BlockInterval: block,
@@ -101,18 +117,25 @@ func NewRateLimitQuota(name, nsPath, mountPath string, rate float64, interval, b
 	}
 }
 
-func (q *RateLimitQuota) Clone() *RateLimitQuota {
+func (q *RateLimitQuota) Clone() Quota {
 	rlq := &RateLimitQuota{
 		ID:            q.ID,
 		Name:          q.Name,
 		MountPath:     q.MountPath,
+		Role:          q.Role,
+		Inheritable:   q.Inheritable,
 		Type:          q.Type,
 		NamespacePath: q.NamespacePath,
+		PathSuffix:    q.PathSuffix,
 		BlockInterval: q.BlockInterval,
 		Rate:          q.Rate,
 		Interval:      q.Interval,
 	}
 	return rlq
+}
+
+func (q *RateLimitQuota) IsInheritable() bool {
+	return q.Inheritable
 }
 
 // initialize ensures the namespace and max requests are initialized, sets the ID
@@ -205,6 +228,9 @@ func (rlq *RateLimitQuota) initialize(logger log.Logger, ms *metricsutil.Cluster
 // in which we stop the ticker and return.
 func (rlq *RateLimitQuota) purgeBlockedClients() {
 	rlq.lock.RLock()
+	if rlq.purgeInterval <= 0 {
+		rlq.purgeInterval = DefaultRateLimitPurgeInterval
+	}
 	ticker := time.NewTicker(rlq.purgeInterval)
 	rlq.lock.RUnlock()
 
@@ -337,6 +363,7 @@ func (rlq *RateLimitQuota) close(ctx context.Context) error {
 	return nil
 }
 
-func (rlq *RateLimitQuota) handleRemount(toPath string) {
-	rlq.MountPath = toPath
+func (rlq *RateLimitQuota) handleRemount(mountpath, nspath string) {
+	rlq.MountPath = mountpath
+	rlq.NamespacePath = nspath
 }

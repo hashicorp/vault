@@ -1,18 +1,21 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import Model, { attr } from '@ember-data/model';
 import { computed } from '@ember/object';
-import { apiPath } from 'vault/macros/lazy-capabilities';
-import attachCapabilities from 'vault/lib/attach-capabilities';
+import lazyCapabilities, { apiPath } from 'vault/macros/lazy-capabilities';
 import { expandAttributeMeta } from 'vault/utils/field-to-attrs';
 
-const M = Model.extend({
+export default Model.extend({
   idPrefix: 'template/',
-  idForNav: computed('id', 'idPrefix', function() {
-    let modelId = this.id || '';
+  idForNav: computed('id', 'idPrefix', function () {
+    const modelId = this.id || '';
     return `${this.idPrefix}${modelId}`;
   }),
 
   name: attr('string', {
-    fieldValue: 'id',
     readOnly: true,
     subText:
       'Templates allow Vault to determine what and how to capture the value to be transformed. This cannot be edited later.',
@@ -26,20 +29,22 @@ const M = Model.extend({
     subText:
       'Alphabet defines a set of characters (UTF-8) that is used for FPE to determine the validity of plaintext and ciphertext values. You can choose a built-in one, or create your own.',
     editType: 'searchSelect',
+    isSectionHeader: true,
     fallbackComponent: 'string-list',
     label: 'Alphabet',
     models: ['transform/alphabet'],
     selectLimit: 1,
   }),
+  encodeFormat: attr('string'),
+  decodeFormats: attr(),
+  backend: attr('string', { readOnly: true }),
 
-  attrs: computed(function() {
-    let keys = ['name', 'pattern', 'alphabet'];
+  readAttrs: computed(function () {
+    const keys = ['name', 'pattern', 'encodeFormat', 'decodeFormats', 'alphabet'];
     return expandAttributeMeta(this, keys);
   }),
-
-  backend: attr('string', { readOnly: true }),
-});
-
-export default attachCapabilities(M, {
-  updatePath: apiPath`${'backend'}/template/${'id'}`,
+  writeAttrs: computed(function () {
+    return expandAttributeMeta(this, ['name', 'pattern', 'alphabet']);
+  }),
+  updatePath: lazyCapabilities(apiPath`${'backend'}/template/${'id'}`, 'backend', 'id'),
 });

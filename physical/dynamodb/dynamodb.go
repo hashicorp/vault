@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package dynamodb
 
 import (
@@ -12,6 +15,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	log "github.com/hashicorp/go-hclog"
@@ -86,7 +90,7 @@ type DynamoDBBackend struct {
 	client     *dynamodb.DynamoDB
 	logger     log.Logger
 	haEnabled  bool
-	permitPool *physical.PermitPool
+	permitPool *PermitPoolWithMetrics
 }
 
 // DynamoDBRecord is the representation of a vault entry in
@@ -117,6 +121,12 @@ type DynamoDBLockRecord struct {
 	Value    []byte
 	Identity []byte
 	Expires  int64
+}
+
+type PermitPoolWithMetrics struct {
+	physical.PermitPool
+	pendingPermits int32
+	poolSize       int
 }
 
 // NewDynamoDBBackend constructs a DynamoDB backend. If the
@@ -163,13 +173,16 @@ func NewDynamoDBBackend(conf map[string]string, logger log.Logger) (physical.Bac
 	if endpoint == "" {
 		endpoint = conf["endpoint"]
 	}
-	region := os.Getenv("AWS_REGION")
+	region := os.Getenv("AWS_DYNAMODB_REGION")
 	if region == "" {
-		region = os.Getenv("AWS_DEFAULT_REGION")
+		region = os.Getenv("AWS_REGION")
 		if region == "" {
-			region = conf["region"]
+			region = os.Getenv("AWS_DEFAULT_REGION")
 			if region == "" {
-				region = DefaultDynamoDBRegion
+				region = conf["region"]
+				if region == "" {
+					region = DefaultDynamoDBRegion
+				}
 			}
 		}
 	}
@@ -242,7 +255,7 @@ func NewDynamoDBBackend(conf map[string]string, logger log.Logger) (physical.Bac
 	return &DynamoDBBackend{
 		table:      table,
 		client:     client,
-		permitPool: physical.NewPermitPool(maxParInt),
+		permitPool: NewPermitPoolWithMetrics(maxParInt),
 		haEnabled:  haEnabledBool,
 		logger:     logger,
 	}, nil
@@ -800,44 +813,47 @@ func ensureTableExists(client *dynamodb.DynamoDB, table string, readCapacity, wr
 	_, err := client.DescribeTable(&dynamodb.DescribeTableInput{
 		TableName: aws.String(table),
 	})
-	if awsError, ok := err.(awserr.Error); ok {
-		if awsError.Code() == "ResourceNotFoundException" {
-			_, err = client.CreateTable(&dynamodb.CreateTableInput{
-				TableName: aws.String(table),
-				ProvisionedThroughput: &dynamodb.ProvisionedThroughput{
-					ReadCapacityUnits:  aws.Int64(int64(readCapacity)),
-					WriteCapacityUnits: aws.Int64(int64(writeCapacity)),
-				},
-				KeySchema: []*dynamodb.KeySchemaElement{{
-					AttributeName: aws.String("Path"),
-					KeyType:       aws.String("HASH"),
-				}, {
-					AttributeName: aws.String("Key"),
-					KeyType:       aws.String("RANGE"),
-				}},
-				AttributeDefinitions: []*dynamodb.AttributeDefinition{{
-					AttributeName: aws.String("Path"),
-					AttributeType: aws.String("S"),
-				}, {
-					AttributeName: aws.String("Key"),
-					AttributeType: aws.String("S"),
-				}},
-			})
-			if err != nil {
-				return err
-			}
+	if err != nil {
+		if awsError, ok := err.(awserr.Error); ok {
+			if awsError.Code() == "ResourceNotFoundException" {
+				_, err := client.CreateTable(&dynamodb.CreateTableInput{
+					TableName: aws.String(table),
+					ProvisionedThroughput: &dynamodb.ProvisionedThroughput{
+						ReadCapacityUnits:  aws.Int64(int64(readCapacity)),
+						WriteCapacityUnits: aws.Int64(int64(writeCapacity)),
+					},
+					KeySchema: []*dynamodb.KeySchemaElement{{
+						AttributeName: aws.String("Path"),
+						KeyType:       aws.String("HASH"),
+					}, {
+						AttributeName: aws.String("Key"),
+						KeyType:       aws.String("RANGE"),
+					}},
+					AttributeDefinitions: []*dynamodb.AttributeDefinition{{
+						AttributeName: aws.String("Path"),
+						AttributeType: aws.String("S"),
+					}, {
+						AttributeName: aws.String("Key"),
+						AttributeType: aws.String("S"),
+					}},
+				})
+				if err != nil {
+					return err
+				}
 
-			err = client.WaitUntilTableExists(&dynamodb.DescribeTableInput{
-				TableName: aws.String(table),
-			})
-			if err != nil {
-				return err
+				err = client.WaitUntilTableExists(&dynamodb.DescribeTableInput{
+					TableName: aws.String(table),
+				})
+				if err != nil {
+					return err
+				}
+				// table created successfully
+				return nil
 			}
 		}
-	}
-	if err != nil {
 		return err
 	}
+
 	return nil
 }
 
@@ -899,4 +915,40 @@ func isConditionCheckFailed(err error) bool {
 	}
 
 	return false
+}
+
+// NewPermitPoolWithMetrics returns a new permit pool with the provided
+// number of permits which emits metrics
+func NewPermitPoolWithMetrics(permits int) *PermitPoolWithMetrics {
+	return &PermitPoolWithMetrics{
+		PermitPool:     *physical.NewPermitPool(permits),
+		pendingPermits: 0,
+		poolSize:       permits,
+	}
+}
+
+// Acquire returns when a permit has been acquired
+func (c *PermitPoolWithMetrics) Acquire() {
+	atomic.AddInt32(&c.pendingPermits, 1)
+	c.emitPermitMetrics()
+	c.PermitPool.Acquire()
+	atomic.AddInt32(&c.pendingPermits, -1)
+	c.emitPermitMetrics()
+}
+
+// Release returns a permit to the pool
+func (c *PermitPoolWithMetrics) Release() {
+	c.PermitPool.Release()
+	c.emitPermitMetrics()
+}
+
+// Get the number of requests in the permit pool
+func (c *PermitPoolWithMetrics) CurrentPermits() int {
+	return c.PermitPool.CurrentPermits()
+}
+
+func (c *PermitPoolWithMetrics) emitPermitMetrics() {
+	metrics.SetGauge([]string{"dynamodb", "permit_pool", "pending_permits"}, float32(c.pendingPermits))
+	metrics.SetGauge([]string{"dynamodb", "permit_pool", "active_permits"}, float32(c.PermitPool.CurrentPermits()))
+	metrics.SetGauge([]string{"dynamodb", "permit_pool", "pool_size"}, float32(c.poolSize))
 }

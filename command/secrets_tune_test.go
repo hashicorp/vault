@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package command
 
 import (
@@ -6,6 +9,7 @@ import (
 
 	"github.com/go-test/deep"
 	"github.com/hashicorp/vault/api"
+	"github.com/hashicorp/vault/helper/testhelpers/corehelpers"
 	"github.com/mitchellh/cli"
 )
 
@@ -148,7 +152,10 @@ func TestSecretsTuneCommand_Run(t *testing.T) {
 	t.Run("integration", func(t *testing.T) {
 		t.Run("flags_all", func(t *testing.T) {
 			t.Parallel()
-			client, closer := testVaultServer(t)
+			pluginDir, cleanup := corehelpers.MakeTestPluginDir(t)
+			defer cleanup(t)
+
+			client, _, closer := testVaultServerPluginDir(t, pluginDir)
 			defer closer()
 
 			ui, cmd := testSecretsTuneCommand(t)
@@ -161,6 +168,21 @@ func TestSecretsTuneCommand_Run(t *testing.T) {
 				t.Fatal(err)
 			}
 
+			mounts, err := client.Sys().ListMounts()
+			if err != nil {
+				t.Fatal(err)
+			}
+			mountInfo, ok := mounts["mount_tune_integration/"]
+			if !ok {
+				t.Fatalf("expected mount to exist")
+			}
+
+			if exp := ""; mountInfo.PluginVersion != exp {
+				t.Errorf("expected %q to be %q", mountInfo.PluginVersion, exp)
+			}
+
+			_, _, version := testPluginCreateAndRegisterVersioned(t, client, pluginDir, "pki", api.PluginTypeSecrets)
+
 			code := cmd.Run([]string{
 				"-description", "new description",
 				"-default-lease-ttl", "30m",
@@ -170,7 +192,9 @@ func TestSecretsTuneCommand_Run(t *testing.T) {
 				"-passthrough-request-headers", "authorization",
 				"-passthrough-request-headers", "www-authentication",
 				"-allowed-response-headers", "authorization,www-authentication",
+				"-allowed-managed-keys", "key1,key2",
 				"-listing-visibility", "unauth",
+				"-plugin-version", version,
 				"mount_tune_integration/",
 			})
 			if exp := 0; code != exp {
@@ -183,12 +207,12 @@ func TestSecretsTuneCommand_Run(t *testing.T) {
 				t.Errorf("expected %q to contain %q", combined, expected)
 			}
 
-			mounts, err := client.Sys().ListMounts()
+			mounts, err = client.Sys().ListMounts()
 			if err != nil {
 				t.Fatal(err)
 			}
 
-			mountInfo, ok := mounts["mount_tune_integration/"]
+			mountInfo, ok = mounts["mount_tune_integration/"]
 			if !ok {
 				t.Fatalf("expected mount to exist")
 			}
@@ -197,6 +221,9 @@ func TestSecretsTuneCommand_Run(t *testing.T) {
 			}
 			if exp := "pki"; mountInfo.Type != exp {
 				t.Errorf("expected %q to be %q", mountInfo.Type, exp)
+			}
+			if exp := version; mountInfo.PluginVersion != exp {
+				t.Errorf("expected %q to be %q", mountInfo.PluginVersion, exp)
 			}
 			if exp := 1800; mountInfo.Config.DefaultLeaseTTL != exp {
 				t.Errorf("expected %d to be %d", mountInfo.Config.DefaultLeaseTTL, exp)
@@ -215,6 +242,9 @@ func TestSecretsTuneCommand_Run(t *testing.T) {
 			}
 			if diff := deep.Equal([]string{"foo,bar"}, mountInfo.Config.AuditNonHMACResponseKeys); len(diff) > 0 {
 				t.Errorf("Failed to find expected values in AuditNonHMACResponseKeys. Difference is: %v", diff)
+			}
+			if diff := deep.Equal([]string{"key1,key2"}, mountInfo.Config.AllowedManagedKeys); len(diff) > 0 {
+				t.Errorf("Failed to find expected values in AllowedManagedKeys. Difference is: %v", diff)
 			}
 		})
 

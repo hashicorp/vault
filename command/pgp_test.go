@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package command
 
 import (
@@ -13,8 +16,8 @@ import (
 	"github.com/hashicorp/vault/helper/pgpkeys"
 	"github.com/hashicorp/vault/vault"
 
-	"github.com/keybase/go-crypto/openpgp"
-	"github.com/keybase/go-crypto/openpgp/packet"
+	"github.com/ProtonMail/go-crypto/openpgp"
+	"github.com/ProtonMail/go-crypto/openpgp/packet"
 )
 
 func getPubKeyFiles(t *testing.T) (string, []string, error) {
@@ -96,8 +99,8 @@ func parseDecryptAndTestUnsealKeys(t *testing.T,
 	fingerprints bool,
 	backupKeys map[string][]string,
 	backupKeysB64 map[string][]string,
-	core *vault.Core) {
-
+	core *vault.Core,
+) {
 	decoder := base64.StdEncoding
 	priv1Bytes, err := decoder.DecodeString(pgpkeys.TestPrivKey1)
 	if err != nil {

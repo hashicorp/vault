@@ -1,0 +1,20 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
+<div data-test-code-snippet class="code-snippet-container" ...attributes>
+  <code class="text-grey-lightest">
+    {{@codeBlock}}
+  </code>
+  {{! replace with Hds::Copy::Button }}
+  <CopyButton
+    class="code-snippet-copy-button"
+    @clipboardText={{or @clipboardCode @codeBlock}}
+    @buttonType="button"
+    @success={{action (set-flash-message "Code copied!")}}
+  >
+    Copy
+    <Icon @name="clipboard-copy" aria-label="Copy" />
+  </CopyButton>
+</div>

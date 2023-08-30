@@ -1,13 +1,21 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package vault
 
 import (
 	"bytes"
 	"context"
+	"errors"
 	"reflect"
 	"testing"
+	"time"
 
-	proto "github.com/golang/protobuf/proto"
-	wrapping "github.com/hashicorp/go-kms-wrapping"
+	wrapping "github.com/hashicorp/go-kms-wrapping/v2"
+
+	"github.com/armon/go-metrics"
+	"github.com/hashicorp/vault/helper/metricsutil"
+
 	"github.com/hashicorp/vault/sdk/physical"
 	"github.com/hashicorp/vault/vault/seal"
 )
@@ -60,12 +68,12 @@ func (p *phy) Len() int {
 
 func TestAutoSeal_UpgradeKeys(t *testing.T) {
 	core, _, _ := TestCoreUnsealed(t)
-	testSeal := seal.NewTestSeal(nil)
+	testSeal, toggleableWrappers := seal.NewTestSeal(nil)
 
 	var encKeys []string
 	changeKey := func(key string) {
 		encKeys = append(encKeys, key)
-		testSeal.Wrapper.(*wrapping.TestWrapper).SetKeyID(key)
+		toggleableWrappers[0].Wrapper.(*wrapping.TestWrapper).SetKeyId(key)
 	}
 
 	// Set initial encryption key.
@@ -124,14 +132,15 @@ func TestAutoSeal_UpgradeKeys(t *testing.T) {
 			// in encKeys. Iterate over each phyEntry and verify it was
 			// encrypted with its corresponding key in encKeys.
 			for i, phyEntry := range phyEntries {
-				blobInfo := &wrapping.EncryptedBlobInfo{}
-				if err := proto.Unmarshal(phyEntry.Value, blobInfo); err != nil {
-					t.Errorf("phyKey = %s: failed to proto decode stored keys: %s", phyKey, err)
+				wrappedEntryValue, err := UnmarshalSealWrappedValue(phyEntry.Value)
+				if err != nil {
+					t.Errorf("phyKey = %s: failed to unmarshal stored keys: %s", phyKey, err)
 				}
+				blobInfo := wrappedEntryValue.GetSlots()[0]
 				if blobInfo.KeyInfo == nil {
 					t.Errorf("phyKey = %s: KeyInfo missing: %+v", phyKey, blobInfo)
 				}
-				if want, got := encKeys[i], blobInfo.KeyInfo.KeyID; want != got {
+				if want, got := encKeys[i], blobInfo.KeyInfo.KeyId; want != got {
 					t.Errorf("phyKey = %s: Incorrect encryption key: want %s, got %s", phyKey, want, got)
 				}
 			}
@@ -156,4 +165,50 @@ func TestAutoSeal_UpgradeKeys(t *testing.T) {
 		t.Fatalf("UpgradeKeys: want no error, got %v", err)
 	}
 	check()
+}
+
+func TestAutoSeal_HealthCheck(t *testing.T) {
+	inmemSink := metrics.NewInmemSink(
+		1000000*time.Hour,
+		2000000*time.Hour)
+
+	metricsConf := metrics.DefaultConfig("")
+	metricsConf.EnableHostname = false
+	metricsConf.EnableHostnameLabel = false
+	metricsConf.EnableServiceLabel = false
+	metricsConf.EnableTypePrefix = false
+
+	metrics.NewGlobal(metricsConf, inmemSink)
+
+	pBackend := newTestBackend(t)
+	testSealAccess, setErrs := seal.NewToggleableTestSeal(nil)
+	core, _, _ := TestCoreUnsealedWithConfig(t, &CoreConfig{
+		MetricSink: metricsutil.NewClusterMetricSink("", inmemSink),
+		Physical:   pBackend,
+	})
+	sealHealthTestIntervalNominal = 10 * time.Millisecond
+	sealHealthTestIntervalUnhealthy = 10 * time.Millisecond
+	autoSeal := NewAutoSeal(testSealAccess)
+	autoSeal.SetCore(core)
+	core.seal = autoSeal
+	autoSeal.StartHealthCheck()
+	defer autoSeal.StopHealthCheck()
+	setErrs[0](errors.New("disconnected"))
+
+	tries := 10
+	for tries = 10; tries > 0; tries-- {
+		if !autoSeal.Healthy() {
+			break
+		}
+		time.Sleep(100 * time.Millisecond)
+	}
+	if tries == 0 {
+		t.Fatalf("Expected to detect unhealthy seals")
+	}
+
+	setErrs[0](nil)
+	time.Sleep(50 * time.Millisecond)
+	if !autoSeal.Healthy() {
+		t.Fatal("Expected seals to be healthy")
+	}
 }

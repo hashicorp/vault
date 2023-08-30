@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import ApplicationSerializer from './application';
 
 export default ApplicationSerializer.extend({
@@ -7,11 +12,6 @@ export default ApplicationSerializer.extend({
       transformedPayload = {
         ...transformedPayload,
         ...payload.data.autoloaded,
-      };
-    } else if (payload.data.stored) {
-      transformedPayload = {
-        ...transformedPayload,
-        ...payload.data.stored,
       };
     }
     transformedPayload.id = transformedPayload.license_id;

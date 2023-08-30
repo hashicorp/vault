@@ -1,0 +1,3 @@
+```release-note:bug
+ui: Fixes node-forge error when parsing EC (elliptical curve) certs
+```

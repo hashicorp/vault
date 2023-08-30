@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package vault
 
 import (
@@ -82,6 +85,9 @@ path "test/types" {
 path "test/req" {
 	capabilities = ["create", "sudo"]
 	required_parameters = ["foo"]
+}
+path "test/patch" {
+	capabilities = ["patch"]
 }
 path "test/mfa" {
 	capabilities = ["create", "sudo"]
@@ -242,6 +248,13 @@ func TestPolicy_Parse(t *testing.T) {
 			Permissions: &ACLPermissions{
 				CapabilitiesBitmap: (CreateCapabilityInt | SudoCapabilityInt),
 				RequiredParameters: []string{"foo"},
+			},
+		},
+		{
+			Path:         "test/patch",
+			Capabilities: []string{"patch"},
+			Permissions: &ACLPermissions{
+				CapabilitiesBitmap: (PatchCapabilityInt),
 			},
 		},
 		{
@@ -482,5 +495,34 @@ path "foo/+*" {
 
 	if !strings.Contains(err.Error(), `path "foo/+*": invalid use of wildcards ('+*' is forbidden)`) {
 		t.Errorf("bad error: %s", err)
+	}
+}
+
+func TestPolicy_Subscribe(t *testing.T) {
+	policy, err := ParseACLPolicy(namespace.RootNamespace, strings.TrimSpace(`
+	path "secret/*" {
+		capabilities = ["subscribe", "create", "read"]
+	}
+	`))
+	if err != nil {
+		t.Fatalf("Policies should be able to use 'subscribe' capability")
+	}
+	if policy.Paths[0].Permissions.CapabilitiesBitmap&SubscribeCapabilityInt == 0 {
+		t.Fatalf("Subscribe capability should be present in capabilities bitmap")
+	}
+}
+
+func TestPolicy_Subscribe_EventTypes(t *testing.T) {
+	policy, err := ParseACLPolicy(namespace.RootNamespace, strings.TrimSpace(`
+	path "secret/*" {
+		capabilities = ["subscribe"]
+		subscribe_event_types = ["kv-v2/data-write", "kv-v1/*"]
+	}
+	`))
+	if err != nil {
+		t.Fatalf("Should be able to subscribe to a list of event types: %v", err)
+	}
+	if strings.Join(policy.Paths[0].Permissions.SubscribeEventTypes, ",") != "kv-v2/data-write,kv-v1/*" {
+		t.Fatalf("ACLPermission should reflect subscribe event types, but got %v", policy.Paths[0].Permissions.SubscribeEventTypes)
 	}
 }

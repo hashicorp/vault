@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import RESTSerializer from '@ember-data/serializer/rest';
 
 export default RESTSerializer.extend({
@@ -5,7 +10,7 @@ export default RESTSerializer.extend({
 
   normalizeSecrets(payload) {
     if (payload.data.keys && Array.isArray(payload.data.keys)) {
-      const roles = payload.data.keys.map(secret => {
+      const roles = payload.data.keys.map((secret) => {
         let type = 'dynamic';
         let path = 'roles';
         if (payload.data.staticRoles.includes(secret)) {
@@ -70,7 +75,7 @@ export default RESTSerializer.extend({
   },
 
   serialize(snapshot, requestType) {
-    let data = this._super(snapshot, requestType);
+    const data = this._super(snapshot, requestType);
     if (data.database) {
       const db = data.database[0];
       data.db_name = db;

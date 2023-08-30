@@ -1,0 +1,3 @@
+```release-note:bug
+storage/raft: Nodes no longer get demoted to nonvoter if we don't know their version due to missing heartbeats.
+```

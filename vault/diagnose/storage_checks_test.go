@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package diagnose
 
 import (
@@ -10,7 +13,6 @@ import (
 )
 
 func TestStorageTimeout(t *testing.T) {
-
 	testCases := []struct {
 		errSubString string
 		mb           physical.Backend

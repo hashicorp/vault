@@ -1,0 +1,295 @@
+---
+layout: docs
+page_title: Automated license utilization reporting
+description: >-
+  Learn what data HashiCorp collects to meter Enterprise license utilization. Enable or disable reporting. Review sample payloads and logs.
+---
+
+# Automated license utilization reporting
+
+@include 'alerts/enterprise-and-hcp-plus.mdx'
+
+Automated license utilization reporting sends license utilization data to
+HashiCorp without requiring you to manually collect and report them. It also
+lets you review your license usage with the monitoring solution you already use
+(for example Splunk, Datadog, or others) so you can optimize and manage your
+deployments. Use these reports to understand how much more you can deploy under
+your current contract, protect against overutilization, and budget for predicted
+consumption.  
+
+Automated reporting shares the minimum data required to validate license
+utilization as defined in our contracts. They consist of mostly computed metrics
+and will never contain Personal Identifiable Information (PII) or other
+sensitive information. Automated reporting shares the data with HashiCorp using
+a secure, unidirectional HTTPS API and makes an auditable record in the product
+logs each time it submits a report. The reporting process is GDPR compliant and submits
+reports roughly once every 24 hours.
+
+## Enable automated reporting
+
+To enable automated reporting, you need to make sure that outbound network
+traffic is configured correctly and upgrade your enterprise product to a version
+that supports it. If your installation is air-gapped or network settings are not
+in place, automated reporting will not work. 
+
+### 1. allow outbound HTTPS traffic on port 443
+
+Make sure that your network allows HTTPS egress on port 443 to
+https://reporting.hashicorp.services by allow-listing the following IP
+addresses: 
+
+- 100.20.70.12
+- 35.166.5.222
+- 23.95.85.111
+- 44.215.244.1
+
+### 2. upgrade
+
+Upgrade to a release that supports license utilization reporting. These
+releases include:
+
+- [Vault Enterprise 1.14.0](https://releases.hashicorp.com/vault/) and later
+- [Vault Enterprise 1.13.4](https://releases.hashicorp.com/vault/) and later 1.13.x versions
+- [Vault Enterprise 1.12.8](https://releases.hashicorp.com/vault/) and later 1.12.x versions
+- [Vault Enterprise 1.11.12](https://releases.hashicorp.com/vault/)
+
+### 3. check logs
+
+Automatic license utilization reporting will start sending data within roughly 24 hours.
+Check the server logs for records that the data sent successfully.
+
+You will find log entries similar to the following:
+
+<CodeBlockConfig hideClipboard>
+
+```
+[DEBUG] core.reporting: beginning snapshot export
+[DEBUG] core.reporting: creating payload
+[DEBUG] core.reporting: marshalling payload to json
+[DEBUG] core.reporting: generating authentication headers
+[DEBUG] core.reporting: creating request
+[DEBUG] core.reporting: sending request
+[DEBUG] core.reporting: performing request: method=POST url=https://reporting.hashicorp.services
+[DEBUG] core.reporting: recording audit record
+[INFO]  core.reporting: Report sent: auditRecord="{\"payload\":{\"payload_version\":\"1\",\"license_id\":\"97afe7b4-b9c8-bf19-bf35-b89b5cc0efea\",\"product\":\"vault\",\"product_version\":\"1.14.0-rc1+ent\",\"export_timestamp\":\"2023-06-01T09:34:44.215133-04:00\",\"snapshots\":[{\"snapshot_version\":1,\"snapshot_id\":\"0001J7H7KMEDRXKM5C1QJGBXV3\",\"process_id\":\"01H1T45CZK2GN9WR22863W2K32\",\"timestamp\":\"2023-06-01T09:34:44.215001-04:00\",\"schema_version\":\"1.0.0\",\"service\":\"vault\",\"metrics\":{\"clientcount.current_month_estimate\":{\"key\":\"clientcount.current_month_estimate\",\"kind\":\"sum\",\"mode\":\"write\",\"labels\":{\"type\":{\"entity\":20,\"nonentity\":11}}},\"clientcount.previous_month_complete\":{\"key\":\"clientcount.previous_month_complete\",\"kind\":\"sum\",\"mode\":\"write\",\"labels\":{\"type\":{\"entity\":10,\"nonentity\":11}}}}}],\"metadata\":{\"vault\":{\"billing_start\":\"2023-03-01T00:00:00Z\",\"cluster_id\":\"a8d95acc-ec0a-6087-d7f6-4f054ab2e7fd\"}}}}"
+[DEBUG] core.reporting: completed recording audit record
+[DEBUG] core.reporting: export finished successfully
+```
+
+</CodeBlockConfig>
+
+If your installation is air-gapped or your network doesn’t allow the correct
+egress, logs will show an error. 
+
+<CodeBlockConfig hideClipboard>
+
+```
+[DEBUG] core.reporting: beginning snapshot export
+[DEBUG] core.reporting: creating payload
+[DEBUG] core.reporting: marshalling payload to json
+[DEBUG] core.reporting: generating authentication headers
+[DEBUG] core.reporting: creating request
+[DEBUG] core.reporting: sending request
+[DEBUG] core.reporting: performing request: method=POST url=https://reporting.hashicorp.services
+[DEBUG] core.reporting: error status code received: statusCode=403
+```
+
+</CodeBlockConfig>
+
+In this case, reconfigure your network to allow egress and check back in 24
+hours. 
+
+## Opt out
+
+If your installation is air-gapped or you want to manually collect and report on
+the same license utilization metrics, you can opt-out of automated reporting. 
+
+Manually reporting these metrics can be time consuming. Opting out of automated
+reporting does not mean that you also opt out from sending license utilization
+metrics. Customers who opt out of automated reporting will still be required to
+manually collect and send license utilization metrics to HashiCorp. 
+
+If you are considering opting out because you’re worried about the data, we
+strongly recommend that you review the [example payloads](#example-payloads)
+before opting out. If you have concerns with any of the automatically-reported
+data please bring them to your account manager. 
+
+You have two options to opt out of automated reporting: 
+
+- HCL configuration (recommended) 
+- Environment variable (requires restart)
+
+
+#### HCL configuration
+
+Opting out in your product’s configuration file doesn’t require a system
+restart, and is the method we recommend. Add the following block to your server
+configuration file (e.g. `vault-config.hcl`).
+
+```hcl
+reporting {
+	license {
+		enabled = false
+   }
+}
+```
+
+<Warning>
+
+When you have a cluster, each node must have the reporting stanza in its
+configuration to be consistent. In the event of leadership change, nodes will
+use its server configuration to determine whether or not to opt-out the
+automated reporting. Inconsistent configuration between nodes will change the
+reporting status upon active unseal.
+
+</Warning>
+
+
+You will find the following entries in the server log.
+
+<CodeBlockConfig hideClipboard>
+
+```
+[DEBUG] core: reloading automated reporting
+[INFO]  core: opting out of automated reporting
+[DEBUG] activity: there is no reporting agent configured, skipping counts reporting
+```
+
+</CodeBlockConfig>
+
+#### Environment variable
+
+If you need to, you can also opt out using an environment variable, which will
+provide a startup message confirming that you have disabled automated reporting.
+This option requires a system restart. 
+
+<Note>
+
+If the reporting stanza exists in the configuration file, the
+`OPTOUT_LICENSE_REPORTING` value overrides the configuration.
+
+</Note>
+
+Set the following environment variable.
+
+```shell-session
+$ export OPTOUT_LICENSE_REPORTING=true
+```
+
+Now, restart your [Vault servers](/vault/docs/commands/server) from the shell
+where you set the environment variable.
+
+You will find the following entries in the server log.
+
+<CodeBlockConfig hideClipboard>
+
+```
+[INFO]  core: automated reporting disabled via environment variable: env=OPTOUT_LICENSE_REPORTING
+[INFO]  core: opting out of automated reporting
+[DEBUG] activity: there is no reporting agent configured, skipping counts reporting
+```
+
+</CodeBlockConfig>
+
+
+Check your product logs roughly 24 hours after opting out to make sure that the system
+isn’t trying to send reports. 
+
+If your configuration file and environment variable differ, the environment
+variable setting will take precedence.
+
+## Example payloads
+
+HashiCorp collects the following utilization data as JSON payloads:
+
+- `payload_version` - The version of this payload schema
+- `license_id` - The license ID for this product
+- `product` - The product that this contribution is for
+- `product_version` - The product version this contribution is for
+- `export_timestamp`- The date and time for this contribution
+- `snapshots` - An array of snapshot details. A snapshot is a structure that
+  represents a single data collection
+   - `snapshot_version` - The version of the snapshot package that produced this
+     snapshot
+   - `snapshot_id` - A unique identifier for this particular snapshot
+   - `process_id` - An identifier for the system that produced this snapshot
+   - `timestamp` - The date and time for this snapshot
+   - `schema_version` - The version of the schema associated with this snapshot
+   - `service` - The service that produced this snapshot (likely to be product
+     name)
+   - `metrics` - A map of representations of snapshot metrics contained within
+     this snapshot
+      - `key` - The key name associated with this metric
+      - `kind` - The kind of metric (feature, counter, sum, or mean)
+      - `mode` - The mode of operation associated with this metric (write or
+        collect)
+      - `labels` - The labels associated with each collected metric
+         - `entity` - The sum of tokens generated for a unique client identifier
+         - `nonentity` - The sum of tokens without an entity attached
+- `metadata` - Optional product-specific metadata
+   - `billing_start` - The billing start date associated with the reporting cluster (license start date if not configured)
+   - `cluster_id` - The cluster UUID as shown by `vault status` on the reporting
+     cluster
+   
+<CodeBlockConfig hideClipboard>
+
+```json
+{
+  "payload_version": "1",
+  "license_id": "97afe7b4-b9c8-bf19-bf35-b89b5cc0efea",
+  "product": "vault",
+  "product_version": "1.14.0-rc1+ent",
+  "export_timestamp": "2023-06-01T11:39:00.76643-04:00",
+  "snapshots": [
+    {
+      "snapshot_version": 1,
+      "snapshot_id": "0001J7HEWM1PEHPMF5YZT8EV65",
+      "process_id": "01H1VSQMNYAP77R566F1Y03GE6",
+      "timestamp": "2023-06-01T11:39:00.766099-04:00",
+      "schema_version": "1.0.0",
+      "service": "vault",
+      "metrics": {
+        "clientcount.current_month_estimate": {
+          "key": "clientcount.current_month_estimate",
+          "kind": "sum",
+          "mode": "write",
+          "labels": {
+            "type": {
+              "entity": 20,
+              "nonentity": 11
+            }
+          }
+        },
+        "clientcount.previous_month_complete": {
+          "key": "clientcount.previous_month_complete",
+          "kind": "sum",
+          "mode": "write",
+          "labels": {
+            "type": {
+              "entity": 10,
+              "nonentity": 11
+            }
+          }
+        }
+      }
+    }
+  ],
+  "metadata": {
+    "vault": {
+      "billing_start": "2023-03-01T00:00:00Z",
+      "cluster_id": "a8d95acc-ec0a-6087-d7f6-4f054ab2e7fd"
+    }
+  }
+}
+```
+
+</CodeBlockConfig>
+
+## Pre-1.9 counts
+
+When upgrading Vault from 1.8 (or earlier) to 1.9 (or later), utilization reporting will only include the [non-entity tokens](/vault/docs/concepts/client-count#non-entity-tokens) that are used after the upgrade.
+
+Starting in Vault 1.9, the activity log records and de-duplicates non-entity tokens by using the namespace and token's policies to generate a unique identifier. Because Vault did not create identifiers for these tokens before 1.9, the activity log cannot know whether this token has been seen pre-1.9. To prevent inaccurate and inflated counts, the activity log will ignore any counts of non-entity tokens that were created before the upgrade and only the non-entity tokens from versions 1.9 and later will be counted.
+
+See the client count [overview](/vault/docs/concepts/client-count) and [FAQ](/vault/docs/concepts/client-count/faq) for more information.
+

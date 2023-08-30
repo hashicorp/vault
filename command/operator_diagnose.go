@@ -1,8 +1,12 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package command
 
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -10,33 +14,31 @@ import (
 	"sync"
 	"time"
 
+	"github.com/hashicorp/go-kms-wrapping/entropy/v2"
+
 	"golang.org/x/term"
 
-	wrapping "github.com/hashicorp/go-kms-wrapping"
-	"github.com/hashicorp/vault/helper/constants"
-
-	"github.com/docker/docker/pkg/ioutils"
 	"github.com/hashicorp/consul/api"
 	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-secure-stdlib/reloadutil"
 	uuid "github.com/hashicorp/go-uuid"
 	cserver "github.com/hashicorp/vault/command/server"
+	"github.com/hashicorp/vault/helper/constants"
 	"github.com/hashicorp/vault/helper/metricsutil"
 	"github.com/hashicorp/vault/internalshared/configutil"
 	"github.com/hashicorp/vault/internalshared/listenerutil"
 	physconsul "github.com/hashicorp/vault/physical/consul"
 	"github.com/hashicorp/vault/physical/raft"
 	"github.com/hashicorp/vault/sdk/physical"
-	"github.com/hashicorp/vault/sdk/version"
 	sr "github.com/hashicorp/vault/serviceregistration"
 	srconsul "github.com/hashicorp/vault/serviceregistration/consul"
 	"github.com/hashicorp/vault/vault"
 	"github.com/hashicorp/vault/vault/diagnose"
+	"github.com/hashicorp/vault/vault/hcp_link"
+	"github.com/hashicorp/vault/version"
 	"github.com/mitchellh/cli"
 	"github.com/posener/complete"
 )
-
-const OperatorDiagnoseEnableEnv = "VAULT_DIAGNOSE"
 
 const CoreConfigUninitializedErr = "Diagnose cannot attempt this step because core config could not be set."
 
@@ -68,7 +70,7 @@ func (c *OperatorDiagnoseCommand) Synopsis() string {
 
 func (c *OperatorDiagnoseCommand) Help() string {
 	helpText := `
-Usage: vault operator diagnose 
+Usage: vault operator diagnose
 
   This command troubleshoots Vault startup issues, such as TLS configuration or
   auto-unseal. It should be run using the same environment variables and configuration
@@ -76,7 +78,7 @@ Usage: vault operator diagnose
   reproduced.
 
   Start diagnose with a configuration file:
-    
+
      $ vault operator diagnose -config=/etc/vault/config.hcl
 
   Perform a diagnostic check while Vault is still running:
@@ -159,7 +161,7 @@ func (c *OperatorDiagnoseCommand) RunWithParsedFlags() int {
 
 	if c.diagnose == nil {
 		if c.flagFormat == "json" {
-			c.diagnose = diagnose.New(&ioutils.NopWriter{})
+			c.diagnose = diagnose.New(io.Discard)
 		} else {
 			c.UI.Output(version.GetVersion().FullVersionNumber(true))
 			c.diagnose = diagnose.New(os.Stdout)
@@ -248,6 +250,42 @@ func (c *OperatorDiagnoseCommand) offlineDiagnostics(ctx context.Context) error 
 	if config == nil {
 		return fmt.Errorf("No vault server configuration found.")
 	}
+
+	diagnose.Test(ctx, "Check Telemetry", func(ctx context.Context) (err error) {
+		if config.Telemetry == nil {
+			diagnose.Warn(ctx, "Telemetry is using default configuration")
+			diagnose.Advise(ctx, "By default only Prometheus and JSON metrics are available.  Ignore this warning if you are using telemetry or are using these metrics and are satisfied with the default retention time and gauge period.")
+		} else {
+			t := config.Telemetry
+			// If any Circonus setting is present but we're missing the basic fields...
+			if coalesce(t.CirconusAPIURL, t.CirconusAPIToken, t.CirconusCheckID, t.CirconusCheckTags, t.CirconusCheckSearchTag,
+				t.CirconusBrokerID, t.CirconusBrokerSelectTag, t.CirconusCheckForceMetricActivation, t.CirconusCheckInstanceID,
+				t.CirconusCheckSubmissionURL, t.CirconusCheckDisplayName) != nil {
+				if t.CirconusAPIURL == "" {
+					return errors.New("incomplete Circonus telemetry configuration, missing circonus_api_url")
+				} else if t.CirconusAPIToken != "" {
+					return errors.New("incomplete Circonus telemetry configuration, missing circonus_api_token")
+				}
+			}
+			if len(t.DogStatsDTags) > 0 && t.DogStatsDAddr == "" {
+				return errors.New("incomplete DogStatsD telemetry configuration, missing dogstatsd_addr, while dogstatsd_tags specified")
+			}
+
+			// If any Stackdriver setting is present but we're missing the basic fields...
+			if coalesce(t.StackdriverNamespace, t.StackdriverLocation, t.StackdriverDebugLogs, t.StackdriverNamespace) != nil {
+				if t.StackdriverProjectID == "" {
+					return errors.New("incomplete Stackdriver telemetry configuration, missing stackdriver_project_id")
+				}
+				if t.StackdriverLocation == "" {
+					return errors.New("incomplete Stackdriver telemetry configuration, missing stackdriver_location")
+				}
+				if t.StackdriverNamespace == "" {
+					return errors.New("incomplete Stackdriver telemetry configuration, missing stackdriver_namespace")
+				}
+			}
+		}
+		return nil
+	})
 
 	var metricSink *metricsutil.ClusterMetricSink
 	var metricsHelper *metricsutil.MetricsHelper
@@ -394,49 +432,53 @@ func (c *OperatorDiagnoseCommand) offlineDiagnostics(ctx context.Context) error 
 	})
 
 	sealcontext, sealspan := diagnose.StartSpan(ctx, "Create Vault Server Configuration Seals")
-	var seals []vault.Seal
-	var sealConfigError error
 
-	barrierSeal, barrierWrapper, unwrapSeal, seals, sealConfigError, err := setSeal(server, config, make([]string, 0), make(map[string]string))
-	// Check error here
+	var setSealResponse *SetSealResponse
+	existingSealGenerationInfo, err := vault.PhysicalSealGenInfo(sealcontext, *backend)
+	if err != nil {
+		diagnose.Fail(sealcontext, fmt.Sprintf("Unable to get Seal genration information from storage: %s.", err.Error()))
+		goto SEALFAIL
+	}
+
+	setSealResponse, err = setSeal(server, config, make([]string, 0), make(map[string]string), existingSealGenerationInfo, server.logger)
 	if err != nil {
 		diagnose.Advise(ctx, "For assistance with the seal stanza, see the Vault configuration documentation.")
 		diagnose.Fail(sealcontext, fmt.Sprintf("Seal creation resulted in the following error: %s.", err.Error()))
 		goto SEALFAIL
 	}
-	if sealConfigError != nil {
-		diagnose.Fail(sealcontext, "Seal could not be configured: seals may already be initialized.")
-		goto SEALFAIL
-	}
 
-	if seals != nil {
-		for _, seal := range seals {
-			// There is always one nil seal. We need to skip it so we don't start an empty Finalize-Seal-Shamir
-			// section.
-			if seal == nil {
-				continue
-			}
-			// Ensure that the seal finalizer is called, even if using verify-only
-			defer func(seal *vault.Seal) {
-				sealType := diagnose.CapitalizeFirstLetter((*seal).BarrierType())
-				finalizeSealContext, finalizeSealSpan := diagnose.StartSpan(ctx, "Finalize "+sealType+" Seal")
-				err = (*seal).Finalize(finalizeSealContext)
-				if err != nil {
-					diagnose.Fail(finalizeSealContext, "Error finalizing seal.")
-					diagnose.Advise(finalizeSealContext, "This likely means that the barrier is still in use; therefore, finalizing the seal timed out.")
-					finalizeSealSpan.End()
-				}
+	for _, seal := range setSealResponse.getCreatedSeals() {
+		seal := seal // capture range variable
+		// Ensure that the seal finalizer is called, even if using verify-only
+		defer func(seal *vault.Seal) {
+			sealType := diagnose.CapitalizeFirstLetter((*seal).BarrierSealConfigType().String())
+			finalizeSealContext, finalizeSealSpan := diagnose.StartSpan(ctx, "Finalize "+sealType+" Seal")
+			err = (*seal).Finalize(finalizeSealContext)
+			if err != nil {
+				diagnose.Fail(finalizeSealContext, "Error finalizing seal.")
+				diagnose.Advise(finalizeSealContext, "This likely means that the barrier is still in use; therefore, finalizing the seal timed out.")
 				finalizeSealSpan.End()
-			}(&seal)
-		}
+			}
+			finalizeSealSpan.End()
+		}(seal)
 	}
 
-	if barrierSeal == nil {
+	if setSealResponse.sealConfigError != nil {
+		diagnose.Fail(sealcontext, "Seal could not be configured: seals may already be initialized.")
+	} else if setSealResponse.barrierSeal == nil {
 		diagnose.Fail(sealcontext, "Could not create barrier seal. No error was generated, but it is likely that the seal stanza is misconfigured. For guidance, see Vault's configuration documentation on the seal stanza.")
 	}
 
 SEALFAIL:
 	sealspan.End()
+
+	var barrierSeal vault.Seal
+	var unwrapSeal vault.Seal
+
+	if setSealResponse != nil {
+		barrierSeal = setSealResponse.barrierSeal
+		unwrapSeal = setSealResponse.unwrapSeal
+	}
 
 	diagnose.Test(ctx, "Check Transit Seal TLS", func(ctx context.Context) error {
 		var checkSealTransit bool
@@ -494,9 +536,20 @@ SEALFAIL:
 		var secureRandomReader io.Reader
 		// prepare a secure random reader for core
 		randReaderTestName := "Initialize Randomness for Core"
-		secureRandomReader, err = configutil.CreateSecureRandomReaderFunc(config.SharedConfig, barrierWrapper)
+		var sources []*configutil.EntropySourcerInfo
+		if barrierSeal != nil {
+			for _, sealInfo := range barrierSeal.GetAccess().GetEnabledSealInfoByPriority() {
+				if s, ok := sealInfo.Wrapper.(entropy.Sourcer); ok {
+					sources = append(sources, &configutil.EntropySourcerInfo{
+						Sourcer: s,
+						Name:    sealInfo.Name,
+					})
+				}
+			}
+		}
+		secureRandomReader, err = configutil.CreateSecureRandomReaderFunc(config.SharedConfig, sources, server.logger)
 		if err != nil {
-			return diagnose.SpotError(ctx, randReaderTestName, fmt.Errorf("Could not initialize randomness for core: %w.", err))
+			return diagnose.SpotError(ctx, randReaderTestName, fmt.Errorf("could not initialize randomness for core: %w", err))
 		}
 		diagnose.SpotOk(ctx, randReaderTestName, "")
 		coreConfig = createCoreConfig(server, config, *backend, configSR, barrierSeal, unwrapSeal, metricsHelper, metricSink, secureRandomReader)
@@ -638,7 +691,7 @@ SEALFAIL:
 		if barrierSeal == nil {
 			return fmt.Errorf("Diagnose could not create a barrier seal object.")
 		}
-		if barrierSeal.BarrierType() == wrapping.Shamir {
+		if barrierSeal.BarrierSealConfigType() == vault.SealConfigTypeShamir {
 			diagnose.Skipped(ctx, "Skipping barrier encryption test. Only supported for auto-unseal.")
 			return nil
 		}
@@ -647,11 +700,25 @@ SEALFAIL:
 			return fmt.Errorf("Diagnose could not create unique UUID for unsealing.")
 		}
 		barrierEncValue := "diagnose-" + barrierUUID
-		ciphertext, err := barrierWrapper.Encrypt(ctx, []byte(barrierEncValue), nil)
-		if err != nil {
-			return fmt.Errorf("Error encrypting with seal barrier: %w.", err)
+		ciphertext, errMap := barrierSeal.GetAccess().Encrypt(ctx, []byte(barrierEncValue), nil)
+		if len(errMap) > 0 {
+			var sealErrors []error
+			for name, err := range errMap {
+				sealErrors = append(sealErrors, fmt.Errorf("error encrypting with seal %q: %w", name, err))
+			}
+			if ciphertext == nil {
+				// Full failure
+				if len(sealErrors) == 1 {
+					return sealErrors[0]
+				} else {
+					return fmt.Errorf("complete seal encryption failure: %w", errors.Join())
+				}
+			} else {
+				// Partial failure
+				return fmt.Errorf("partial seal encryption failure: %w", errors.Join())
+			}
 		}
-		plaintext, err := barrierWrapper.Decrypt(ctx, ciphertext, nil)
+		plaintext, _, err := barrierSeal.GetAccess().Decrypt(ctx, ciphertext, nil)
 		if err != nil {
 			return fmt.Errorf("Error decrypting with seal barrier: %w", err)
 		}
@@ -674,5 +741,57 @@ SEALFAIL:
 		}
 		return nil
 	})
+
+	// Checking HCP link to make sure Vault could connect to SCADA.
+	// If it could not connect to SCADA in 5 seconds, diagnose reports an issue
+	if !constants.IsEnterprise {
+		diagnose.Skipped(ctx, "HCP link check will not run on OSS Vault.")
+	} else {
+		if config.HCPLinkConf != nil {
+			// we need to override API and Passthrough capabilities
+			// as they could not be initialized when Vault http handler
+			// is not fully initialized
+			config.HCPLinkConf.EnablePassThroughCapability = false
+			config.HCPLinkConf.EnableAPICapability = false
+
+			diagnose.Test(ctx, "Check HCP Connection", func(ctx context.Context) error {
+				hcpLink, err := hcp_link.NewHCPLink(config.HCPLinkConf, vaultCore, server.logger)
+				if err != nil || hcpLink == nil {
+					return fmt.Errorf("failed to start HCP link, %w", err)
+				}
+
+				// check if a SCADA session is established successfully
+				deadline := time.Now().Add(5 * time.Second)
+				linkSessionStatus := "disconnected"
+				for time.Now().Before(deadline) {
+					linkSessionStatus = hcpLink.GetConnectionStatusMessage(hcpLink.GetScadaSessionStatus())
+					if linkSessionStatus == "connected" {
+						break
+					}
+					time.Sleep(500 * time.Millisecond)
+				}
+				if linkSessionStatus != "connected" {
+					return fmt.Errorf("failed to connect to HCP in 5 seconds. HCP session status is: %s", linkSessionStatus)
+				}
+
+				err = hcpLink.Shutdown()
+				if err != nil {
+					return fmt.Errorf("failed to shutdown HCP link: %w", err)
+				}
+
+				return nil
+			})
+		}
+	}
+
+	return nil
+}
+
+func coalesce(values ...interface{}) interface{} {
+	for _, val := range values {
+		if val != nil && val != "" {
+			return val
+		}
+	}
 	return nil
 }

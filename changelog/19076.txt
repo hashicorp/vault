@@ -1,0 +1,6 @@
+```release-note:improvement
+auth/oidc: Adds ability to set Google Workspace domain for groups search
+```
+```release-note:improvement
+auth/oidc: Adds `abort_on_error` parameter to CLI login command to help in non-interactive contexts
+```

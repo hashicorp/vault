@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package metricsutil
 
 import (
@@ -5,7 +8,7 @@ import (
 	"sync/atomic"
 	"time"
 
-	metrics "github.com/armon/go-metrics"
+	"github.com/armon/go-metrics"
 	"github.com/hashicorp/vault/helper/namespace"
 )
 
@@ -34,9 +37,10 @@ type ClusterMetricSink struct {
 }
 
 type TelemetryConstConfig struct {
-	LeaseMetricsEpsilon         time.Duration
-	NumLeaseMetricsTimeBuckets  int
-	LeaseMetricsNameSpaceLabels bool
+	LeaseMetricsEpsilon              time.Duration
+	NumLeaseMetricsTimeBuckets       int
+	LeaseMetricsNameSpaceLabels      bool
+	RollbackMetricsIncludeMountPoint bool
 }
 
 type Metrics interface {
@@ -48,6 +52,25 @@ type Metrics interface {
 }
 
 var _ Metrics = &ClusterMetricSink{}
+
+// SinkWrapper implements `metricsutil.Metrics` using an instance of
+// armon/go-metrics `MetricSink` as the underlying implementation.
+type SinkWrapper struct {
+	metrics.MetricSink
+}
+
+func (s SinkWrapper) AddDurationWithLabels(key []string, d time.Duration, labels []Label) {
+	val := float32(d) / float32(time.Millisecond)
+	s.MetricSink.AddSampleWithLabels(key, val, labels)
+}
+
+func (s SinkWrapper) MeasureSinceWithLabels(key []string, start time.Time, labels []Label) {
+	elapsed := time.Now().Sub(start)
+	val := float32(elapsed) / float32(time.Millisecond)
+	s.MetricSink.AddSampleWithLabels(key, val, labels)
+}
+
+var _ Metrics = SinkWrapper{}
 
 // Convenience alias
 type Label = metrics.Label

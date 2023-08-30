@@ -1,18 +1,20 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import { inject as service } from '@ember/service';
 import Route from '@ember/routing/route';
 
 export default Route.extend({
-  wizard: service(),
   store: service(),
   async model() {
-    let backend = this.modelFor('vault.cluster.secrets.backend');
-    if (this.wizard.featureState === 'list') {
-      this.wizard.transitionFeatureMachine(this.wizard.featureState, 'CONTINUE', backend.get('type'));
-    }
+    const backend = this.modelFor('vault.cluster.secrets.backend');
+    // TODO kv engine cleanup - this can be removed when KV has fully moved to separate ember engine and list view config details menu is refactored
     if (backend.isV2KV) {
-      let canRead = await this.store
+      const canRead = await this.store
         .findRecord('capabilities', `${backend.id}/config`)
-        .then(response => response.canRead);
+        .then((response) => response.canRead);
       // only set these config params if they can read the config endpoint.
       if (canRead) {
         // design wants specific default to show that can't be set in the model

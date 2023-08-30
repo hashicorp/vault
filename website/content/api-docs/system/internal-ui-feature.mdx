@@ -14,7 +14,9 @@ This is currently only being used internally for the UI and is
 an unauthenticated endpoint. Due to the nature of its intended usage, there is no
 guarantee on backwards compatibility for this endpoint.
 
-## Get Enabled Feature Flags
+## Get enabled feature flags
+
+@include 'alerts/restricted-admin.mdx'
 
 This endpoint lists the enabled feature flags relevant to the UI.
 
@@ -22,14 +24,14 @@ This endpoint lists the enabled feature flags relevant to the UI.
 | :----- | :------------------------------- |
 | `GET`  | `/sys/internal/ui/feature-flags` |
 
-### Sample Request
+### Sample request
 
 ```shell-session
 $ curl \
     http://127.0.0.1:8200/v1/sys/internal/ui/feature-flags
 ```
 
-### Sample Response
+### Sample response
 
 ```json
 {

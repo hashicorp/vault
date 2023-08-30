@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package vault
 
 import (
@@ -6,7 +9,7 @@ import (
 	"strings"
 	"time"
 
-	multierror "github.com/hashicorp/go-multierror"
+	"github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/go-secure-stdlib/parseutil"
 	"github.com/hashicorp/hcl"
 	"github.com/hashicorp/hcl/hcl/ast"
@@ -14,18 +17,21 @@ import (
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/sdk/helper/hclutil"
 	"github.com/hashicorp/vault/sdk/helper/identitytpl"
+	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/mitchellh/copystructure"
 )
 
 const (
-	DenyCapability   = "deny"
-	CreateCapability = "create"
-	ReadCapability   = "read"
-	UpdateCapability = "update"
-	DeleteCapability = "delete"
-	ListCapability   = "list"
-	SudoCapability   = "sudo"
-	RootCapability   = "root"
+	DenyCapability      = "deny"
+	CreateCapability    = "create"
+	ReadCapability      = "read"
+	UpdateCapability    = "update"
+	DeleteCapability    = "delete"
+	ListCapability      = "list"
+	SudoCapability      = "sudo"
+	RootCapability      = "root"
+	PatchCapability     = "patch"
+	SubscribeCapability = "subscribe"
 
 	// Backwards compatibility
 	OldDenyPathPolicy  = "deny"
@@ -42,6 +48,8 @@ const (
 	DeleteCapabilityInt
 	ListCapabilityInt
 	SudoCapabilityInt
+	PatchCapabilityInt
+	SubscribeCapabilityInt
 )
 
 // Error constants for testing
@@ -76,13 +84,15 @@ func (p PolicyType) String() string {
 }
 
 var cap2Int = map[string]uint32{
-	DenyCapability:   DenyCapabilityInt,
-	CreateCapability: CreateCapabilityInt,
-	ReadCapability:   ReadCapabilityInt,
-	UpdateCapability: UpdateCapabilityInt,
-	DeleteCapability: DeleteCapabilityInt,
-	ListCapability:   ListCapabilityInt,
-	SudoCapability:   SudoCapabilityInt,
+	DenyCapability:      DenyCapabilityInt,
+	CreateCapability:    CreateCapabilityInt,
+	ReadCapability:      ReadCapabilityInt,
+	UpdateCapability:    UpdateCapabilityInt,
+	DeleteCapability:    DeleteCapabilityInt,
+	ListCapability:      ListCapabilityInt,
+	SudoCapability:      SudoCapabilityInt,
+	PatchCapability:     PatchCapabilityInt,
+	SubscribeCapability: SubscribeCapabilityInt,
 }
 
 type egpPath struct {
@@ -126,13 +136,14 @@ type PathRules struct {
 
 	// These keys are used at the top level to make the HCL nicer; we store in
 	// the ACLPermissions object though
-	MinWrappingTTLHCL     interface{}              `hcl:"min_wrapping_ttl"`
-	MaxWrappingTTLHCL     interface{}              `hcl:"max_wrapping_ttl"`
-	AllowedParametersHCL  map[string][]interface{} `hcl:"allowed_parameters"`
-	DeniedParametersHCL   map[string][]interface{} `hcl:"denied_parameters"`
-	RequiredParametersHCL []string                 `hcl:"required_parameters"`
-	MFAMethodsHCL         []string                 `hcl:"mfa_methods"`
-	ControlGroupHCL       *ControlGroupHCL         `hcl:"control_group"`
+	MinWrappingTTLHCL      interface{}              `hcl:"min_wrapping_ttl"`
+	MaxWrappingTTLHCL      interface{}              `hcl:"max_wrapping_ttl"`
+	AllowedParametersHCL   map[string][]interface{} `hcl:"allowed_parameters"`
+	DeniedParametersHCL    map[string][]interface{} `hcl:"denied_parameters"`
+	RequiredParametersHCL  []string                 `hcl:"required_parameters"`
+	MFAMethodsHCL          []string                 `hcl:"mfa_methods"`
+	ControlGroupHCL        *ControlGroupHCL         `hcl:"control_group"`
+	SubscribeEventTypesHCL []string                 `hcl:"subscribe_event_types"`
 }
 
 type ControlGroupHCL struct {
@@ -143,6 +154,17 @@ type ControlGroupHCL struct {
 type ControlGroup struct {
 	TTL     time.Duration
 	Factors []*ControlGroupFactor
+}
+
+func (c *ControlGroup) Clone() (*ControlGroup, error) {
+	clonedControlGroup, err := copystructure.Copy(c)
+	if err != nil {
+		return nil, err
+	}
+
+	cg := clonedControlGroup.(*ControlGroup)
+
+	return cg, nil
 }
 
 type ControlGroupFactor struct {
@@ -158,22 +180,25 @@ type IdentityFactor struct {
 }
 
 type ACLPermissions struct {
-	CapabilitiesBitmap uint32
-	MinWrappingTTL     time.Duration
-	MaxWrappingTTL     time.Duration
-	AllowedParameters  map[string][]interface{}
-	DeniedParameters   map[string][]interface{}
-	RequiredParameters []string
-	MFAMethods         []string
-	ControlGroup       *ControlGroup
+	CapabilitiesBitmap  uint32
+	MinWrappingTTL      time.Duration
+	MaxWrappingTTL      time.Duration
+	AllowedParameters   map[string][]interface{}
+	DeniedParameters    map[string][]interface{}
+	RequiredParameters  []string
+	MFAMethods          []string
+	ControlGroup        *ControlGroup
+	GrantingPoliciesMap map[uint32][]logical.PolicyInfo
+	SubscribeEventTypes []string
 }
 
 func (p *ACLPermissions) Clone() (*ACLPermissions, error) {
 	ret := &ACLPermissions{
-		CapabilitiesBitmap: p.CapabilitiesBitmap,
-		MinWrappingTTL:     p.MinWrappingTTL,
-		MaxWrappingTTL:     p.MaxWrappingTTL,
-		RequiredParameters: p.RequiredParameters[:],
+		CapabilitiesBitmap:  p.CapabilitiesBitmap,
+		MinWrappingTTL:      p.MinWrappingTTL,
+		MaxWrappingTTL:      p.MaxWrappingTTL,
+		RequiredParameters:  p.RequiredParameters[:],
+		SubscribeEventTypes: p.SubscribeEventTypes[:],
 	}
 
 	switch {
@@ -222,7 +247,42 @@ func (p *ACLPermissions) Clone() (*ACLPermissions, error) {
 		ret.ControlGroup = clonedControlGroup.(*ControlGroup)
 	}
 
+	switch {
+	case p.GrantingPoliciesMap == nil:
+	case len(p.GrantingPoliciesMap) == 0:
+		ret.GrantingPoliciesMap = make(map[uint32][]logical.PolicyInfo)
+	default:
+		clonedGrantingPoliciesMap, err := copystructure.Copy(p.GrantingPoliciesMap)
+		if err != nil {
+			return nil, err
+		}
+		ret.GrantingPoliciesMap = clonedGrantingPoliciesMap.(map[uint32][]logical.PolicyInfo)
+	}
+
 	return ret, nil
+}
+
+func addGrantingPoliciesToMap(m map[uint32][]logical.PolicyInfo, policy *Policy, capabilitiesBitmap uint32) map[uint32][]logical.PolicyInfo {
+	if m == nil {
+		m = make(map[uint32][]logical.PolicyInfo)
+	}
+
+	// For all possible policies, check if the provided capabilities include
+	// them
+	for _, capability := range cap2Int {
+		if capabilitiesBitmap&capability == 0 {
+			continue
+		}
+
+		m[capability] = append(m[capability], logical.PolicyInfo{
+			Name:          policy.Name,
+			NamespaceId:   policy.namespace.ID,
+			NamespacePath: policy.namespace.Path,
+			Type:          "acl",
+		})
+	}
+
+	return m
 }
 
 // ParseACLPolicy is used to parse the specified ACL rules into an
@@ -323,6 +383,7 @@ func parsePaths(result *Policy, list *ast.ObjectList, performTemplating bool, en
 			"max_wrapping_ttl",
 			"mfa_methods",
 			"control_group",
+			"subscribe_event_types",
 		}
 		if err := hclutil.CheckHCLKeys(item.Val, valid); err != nil {
 			return multierror.Prefix(err, fmt.Sprintf("path %q:", key))
@@ -390,7 +451,7 @@ func parsePaths(result *Policy, list *ast.ObjectList, performTemplating bool, en
 				pc.Capabilities = []string{DenyCapability}
 				pc.Permissions.CapabilitiesBitmap = DenyCapabilityInt
 				goto PathFinished
-			case CreateCapability, ReadCapability, UpdateCapability, DeleteCapability, ListCapability, SudoCapability:
+			case CreateCapability, ReadCapability, UpdateCapability, DeleteCapability, ListCapability, SudoCapability, PatchCapability, SubscribeCapability:
 				pc.Permissions.CapabilitiesBitmap |= cap2Int[cap]
 			default:
 				return fmt.Errorf("path %q: invalid capability %q", key, cap)
@@ -399,15 +460,15 @@ func parsePaths(result *Policy, list *ast.ObjectList, performTemplating bool, en
 
 		if pc.AllowedParametersHCL != nil {
 			pc.Permissions.AllowedParameters = make(map[string][]interface{}, len(pc.AllowedParametersHCL))
-			for key, val := range pc.AllowedParametersHCL {
-				pc.Permissions.AllowedParameters[strings.ToLower(key)] = val
+			for k, v := range pc.AllowedParametersHCL {
+				pc.Permissions.AllowedParameters[strings.ToLower(k)] = v
 			}
 		}
 		if pc.DeniedParametersHCL != nil {
 			pc.Permissions.DeniedParameters = make(map[string][]interface{}, len(pc.DeniedParametersHCL))
 
-			for key, val := range pc.DeniedParametersHCL {
-				pc.Permissions.DeniedParameters[strings.ToLower(key)] = val
+			for k, v := range pc.DeniedParametersHCL {
+				pc.Permissions.DeniedParameters[strings.ToLower(k)] = v
 			}
 		}
 		if pc.MinWrappingTTLHCL != nil {
@@ -426,9 +487,7 @@ func parsePaths(result *Policy, list *ast.ObjectList, performTemplating bool, en
 		}
 		if pc.MFAMethodsHCL != nil {
 			pc.Permissions.MFAMethods = make([]string, len(pc.MFAMethodsHCL))
-			for idx, item := range pc.MFAMethodsHCL {
-				pc.Permissions.MFAMethods[idx] = item
-			}
+			copy(pc.Permissions.MFAMethods, pc.MFAMethodsHCL)
 		}
 		if pc.ControlGroupHCL != nil {
 			pc.Permissions.ControlGroup = new(ControlGroup)
@@ -489,6 +548,9 @@ func parsePaths(result *Policy, list *ast.ObjectList, performTemplating bool, en
 		}
 		if len(pc.RequiredParametersHCL) > 0 {
 			pc.Permissions.RequiredParameters = pc.RequiredParametersHCL[:]
+		}
+		if len(pc.SubscribeEventTypesHCL) > 0 {
+			pc.Permissions.SubscribeEventTypes = pc.SubscribeEventTypesHCL[:]
 		}
 
 	PathFinished:

@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package rabbitmq
 
 import (
@@ -8,7 +11,7 @@ import (
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/template"
 	"github.com/hashicorp/vault/sdk/logical"
-	rabbithole "github.com/michaelklishin/rabbit-hole"
+	rabbithole "github.com/michaelklishin/rabbit-hole/v2"
 )
 
 const (
@@ -18,6 +21,13 @@ const (
 func pathCreds(b *backend) *framework.Path {
 	return &framework.Path{
 		Pattern: "creds/" + framework.GenericNameRegex("name"),
+
+		DisplayAttrs: &framework.DisplayAttributes{
+			OperationPrefix: operationPrefixRabbitMQ,
+			OperationVerb:   "request",
+			OperationSuffix: "credentials",
+		},
+
 		Fields: map[string]*framework.FieldSchema{
 			"name": {
 				Type:        framework.TypeString,
@@ -74,7 +84,6 @@ func (b *backend) pathCredsRead(ctx context.Context, req *logical.Request, d *fr
 	if err != nil {
 		return nil, fmt.Errorf("failed to generate username: %w", err)
 	}
-	fmt.Printf("username: %s\n", username)
 
 	password, err := b.generatePassword(ctx, config.PasswordPolicy)
 	if err != nil {
@@ -93,7 +102,7 @@ func (b *backend) pathCredsRead(ctx context.Context, req *logical.Request, d *fr
 	// Register the generated credentials in the backend, with the RabbitMQ server
 	resp, err := client.PutUser(username, rabbithole.UserSettings{
 		Password: password,
-		Tags:     role.Tags,
+		Tags:     []string{role.Tags},
 	})
 	if err != nil {
 		return nil, fmt.Errorf("failed to create a new user with the generated credentials")
@@ -127,7 +136,7 @@ func (b *backend) pathCredsRead(ctx context.Context, req *logical.Request, d *fr
 	// If the role had vhost permissions specified, assign those permissions
 	// to the created username for respective vhosts.
 	for vhost, permission := range role.VHosts {
-		if err := func() error {
+		err := func() error {
 			resp, err := client.UpdatePermissionsIn(vhost, username, rabbithole.Permissions{
 				Configure: permission.Configure,
 				Write:     permission.Write,
@@ -146,7 +155,8 @@ func (b *backend) pathCredsRead(ctx context.Context, req *logical.Request, d *fr
 				return fmt.Errorf("error updating vhost permissions for %s - %d: %s", vhost, resp.StatusCode, body)
 			}
 			return nil
-		}(); err != nil {
+		}()
+		if err != nil {
 			return nil, err
 		}
 	}
@@ -155,7 +165,7 @@ func (b *backend) pathCredsRead(ctx context.Context, req *logical.Request, d *fr
 	// to the created username for respective vhosts and exchange.
 	for vhost, permissions := range role.VHostTopics {
 		for exchange, permission := range permissions {
-			if err := func() error {
+			err := func() error {
 				resp, err := client.UpdateTopicPermissionsIn(vhost, username, rabbithole.TopicPermissions{
 					Exchange: exchange,
 					Write:    permission.Write,
@@ -174,7 +184,8 @@ func (b *backend) pathCredsRead(ctx context.Context, req *logical.Request, d *fr
 					return fmt.Errorf("error updating vhost permissions for %s - %d: %s", vhost, resp.StatusCode, body)
 				}
 				return nil
-			}(); err != nil {
+			}()
+			if err != nil {
 				return nil, err
 			}
 		}

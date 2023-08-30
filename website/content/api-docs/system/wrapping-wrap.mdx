@@ -11,7 +11,9 @@ description: |-
 The `/sys/wrapping/wrap` endpoint wraps the given values in a response-wrapped
 token.
 
-## Wrapping Wrap
+## Wrapping wrap
+
+@include 'alerts/restricted-admin.mdx'
 
 This endpoint wraps the given user-supplied data inside a response-wrapped
 token.
@@ -26,7 +28,7 @@ token.
   keys/values in a JSON object. The exact set of given parameters will be
   contained in the wrapped response.
 
-### Sample Payload
+### Sample payload
 
 ```json
 {
@@ -35,7 +37,7 @@ token.
 }
 ```
 
-### Sample Request
+### Sample request
 
 ```shell-session
 $ curl \
@@ -46,7 +48,7 @@ $ curl \
     http://127.0.0.1:8200/v1/sys/wrapping/wrap
 ```
 
-### Sample Response
+### Sample response
 
 ```json
 {

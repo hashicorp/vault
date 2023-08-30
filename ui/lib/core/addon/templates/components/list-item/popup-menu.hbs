@@ -1,4 +1,9 @@
-{{#if hasMenu}}
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
+{{#if this.hasMenu}}
   <PopupMenu>
     <Confirm as |c|>
       <nav class="menu">
@@ -9,5 +14,5 @@
     </Confirm>
   </PopupMenu>
 {{else}}
-  {{yield item}}
+  {{yield this.item}}
 {{/if}}

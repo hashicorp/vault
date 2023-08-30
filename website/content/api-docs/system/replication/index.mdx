@@ -8,9 +8,9 @@ description: >-
 
 # `/sys/replication`
 
-~> **Enterprise Only** – These endpoints require Vault Enterprise.
+@include 'alerts/enterprise-and-hcp-plus.mdx'
 
-## Attempt Recovery
+## Attempt recovery
 
 This endpoint attempts recovery if replication is in an adverse state. For
 example: an error has caused replication to stop syncing.
@@ -19,7 +19,7 @@ example: an error has caused replication to stop syncing.
 | :----- | :------------------------- |
 | `POST` | `/sys/replication/recover` |
 
-### Sample Request
+### Sample request
 
 ```shell-session
 $ curl \
@@ -28,7 +28,7 @@ $ curl \
     http://127.0.0.1:8200/v1/sys/replication/recover
 ```
 
-### Sample Response
+### Sample response
 
 ```json
 {
@@ -36,7 +36,7 @@ $ curl \
 }
 ```
 
-## Reindex Replication
+## Reindex replication
 
 This endpoint reindexes the local data storage. This can cause a very long delay
 depending on the number and size of objects in the data store.
@@ -59,16 +59,15 @@ depending on the number and size of objects in the data store.
   process. This setting can be used to reduce the amount of time the tree is locked
   during a reindex process. If this node is killed before the full tree has been
   asynchronously flushed the reindex may not have applied fully and a new reindex
-  may need to be done. Shutting down this node cleanly will cause the tree to be
-  flushed prior to shutdown. Defaults false.
+  may need to be done. Defaults false.
 
-### Sample Payload
+### Sample payload
 
 ```json
 {}
 ```
 
-### Sample Request
+### Sample request
 
 ```shell-session
 $ curl \
@@ -77,7 +76,7 @@ $ curl \
     http://127.0.0.1:8200/v1/sys/replication/reindex
 ```
 
-### Sample Response
+### Sample response
 
 ```json
 {
@@ -85,7 +84,7 @@ $ curl \
 }
 ```
 
-## Check Status
+## Check status
 
 This endpoint print information about the status of replication (mode,
 sync progress, etc).
@@ -96,14 +95,14 @@ This is an unauthenticated endpoint.
 | :----- | :------------------------ |
 | `GET`  | `/sys/replication/status` |
 
-### Sample Request
+### Sample request
 
 ```shell-session
 $ curl \
     http://127.0.0.1:8200/v1/sys/replication/status
 ```
 
-### Sample Response
+### Sample response
 
 The printed status of the replication environment. As an example, for a
 performance primary and DR primary node, it will look something like:
@@ -152,7 +151,7 @@ performance primary and DR primary node, it will look something like:
 Possible values for `connection_status` are `connected` or `disconnected`. `last_heartbeat` is the timestamp of the
 last time this node exchanged heartbeats with another node.
 
-### Sample Response from Performance Secondary & DR Primary
+### Sample response from performance secondary & DR primary
 
 The printed status of the replication environment. As an example, for a
 performance secondary and DR primary node, it will look something like:

@@ -1,0 +1,200 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
+<div class="box is-sideless is-fullwidth is-marginless is-bottomless">
+  <p class="has-bottom-margin-xl">
+    This dashboard will surface Vault client usage over time. Clients represent a user or service that has authenticated to
+    Vault. Documentation is available
+    <DocLink @path="/vault/docs/concepts/client-count">here.</DocLink>
+    Date queries are sent in UTC.
+  </p>
+  <h2 class="title is-6 has-bottom-margin-xs">
+    {{this.versionText.label}}
+  </h2>
+  <div data-test-start-date-editor class="is-flex-align-baseline">
+    {{#if this.formattedStartDate}}
+      <p class="is-size-6" data-test-date-display>{{this.formattedStartDate}}</p>
+      <button type="button" class="button is-link" {{on "click" (fn (mut this.showBillingStartModal) true)}}>
+        Edit
+      </button>
+    {{else}}
+      <DateDropdown @handleSubmit={{this.handleClientActivityQuery}} @dateType="startDate" @submitText="Save" />
+    {{/if}}
+  </div>
+  <p class="is-8 has-text-grey has-bottom-margin-l">
+    {{this.versionText.description}}
+  </p>
+  {{#if this.noActivityData}}
+    <Clients::NoData @config={{@model.config}} @dateRangeMessage={{this.dateRangeMessage}} />
+  {{else if this.errorObject}}
+    <Clients::Error @error={{this.errorObject}} />
+  {{else}}
+    {{#if (eq @model.config.enabled "Off")}}
+      <Hds::Alert @type="inline" @color="warning" class="has-bottom-margin-s" as |A|>
+        <A.Title>Tracking is disabled</A.Title>
+        <A.Description>
+          Tracking is currently disabled and data is not being collected. Historical data can be searched, but you will need
+          to
+          <Hds::Link::Inline @route="vault.cluster.clients.edit">edit the configuration</Hds::Link::Inline>
+          to enable tracking again.
+        </A.Description>
+      </Hds::Alert>
+    {{/if}}
+    {{#if (or this.totalUsageCounts this.hasAttributionData)}}
+      <div class="is-subtitle-gray has-bottom-margin-m">
+        FILTERS
+        <Toolbar data-test-clients-filter-bar>
+          <ToolbarFilters>
+            <CalendarWidget
+              @startTimestamp={{this.startMonthTimestamp}}
+              @endTimestamp={{this.endMonthTimestamp}}
+              @selectMonth={{this.handleClientActivityQuery}}
+            />
+            {{#if this.namespaceArray}}
+              <SearchSelect
+                @id="namespace-search-select"
+                @options={{this.namespaceArray}}
+                @selectLimit="1"
+                @disallowNewItems={{true}}
+                @fallbackComponent="input-search"
+                @onChange={{this.selectNamespace}}
+                @placeholder={{"Filter by namespace"}}
+                @displayInherit={{true}}
+                class="is-marginless"
+              />
+            {{/if}}
+            {{#if (not (is-empty this.authMethodOptions))}}
+              <SearchSelect
+                @id="auth-method-search-select"
+                @options={{this.authMethodOptions}}
+                @selectLimit="1"
+                @disallowNewItems={{true}}
+                @fallbackComponent="input-search"
+                @onChange={{this.setAuthMethod}}
+                @placeholder={{"Filter by auth method"}}
+                @displayInherit={{true}}
+              />
+            {{/if}}
+          </ToolbarFilters>
+        </Toolbar>
+      </div>
+
+      {{#if (or this.upgradeDuringActivity this.startTimeDiscrepancy)}}
+        <Hds::Alert data-test-clients-upgrade-warning @type="inline" @color="warning" class="has-bottom-margin-s" as |A|>
+          <A.Title>Warning</A.Title>
+          <A.Description>
+            <ul class={{if (and this.upgradeDuringActivity this.startTimeDiscrepancy) "bullet"}}>
+              {{#if this.startTimeDiscrepancy}}
+                <li>{{this.startTimeDiscrepancy}}</li>
+              {{/if}}
+              {{#if this.upgradeDuringActivity}}
+                <li>
+                  {{this.upgradeVersionAndDate}}
+                  {{this.upgradeExplanation}}
+                  <DocLink
+                    @path="/vault/docs/concepts/client-count/faq#q-which-vault-version-reflects-the-most-accurate-client-counts"
+                  >
+                    Learn more here.
+                  </DocLink>
+                </li>
+              {{/if}}
+            </ul>
+          </A.Description>
+        </Hds::Alert>
+      {{/if}}
+      {{#if this.isLoadingQuery}}
+        <LayoutLoading />
+      {{else}}
+        {{#if this.totalUsageCounts}}
+          {{#unless this.byMonthActivityData}}
+            {{! UsageStats render when viewing a single, historical month AND activity data predates new client breakdown (< v1.10.0)
+             or viewing the current month filtered down to auth method }}
+            <Clients::UsageStats
+              @title="Total usage"
+              @description="These totals are within 
+              {{if this.selectedAuthMethod this.selectedAuthMethod 'this namespace and all its children'}}.
+              {{if
+                this.isCurrentMonth
+                "Only totals are available when viewing the current month. To see a breakdown of new and total clients for this month, select the 'Current Billing Period' filter."
+              }}"
+              @totalUsageCounts={{this.totalUsageCounts}}
+            />
+          {{/unless}}
+          {{#if this.byMonthActivityData}}
+            <Clients::RunningTotal
+              @chartLegend={{this.chartLegend}}
+              @selectedAuthMethod={{this.selectedAuthMethod}}
+              @byMonthActivityData={{this.byMonthActivityData}}
+              @isHistoricalMonth={{and (not this.isCurrentMonth) (not this.isDateRange)}}
+              @isCurrentMonth={{this.isCurrentMonth}}
+              @runningTotals={{this.totalUsageCounts}}
+              @upgradeData={{this.upgradeDuringActivity}}
+              @responseTimestamp={{this.responseTimestamp}}
+            />
+          {{/if}}
+          {{#if this.hasAttributionData}}
+            <Clients::Attribution
+              @chartLegend={{this.chartLegend}}
+              @totalUsageCounts={{this.totalUsageCounts}}
+              @newUsageCounts={{this.newClientCounts}}
+              @totalClientAttribution={{this.totalClientAttribution}}
+              @newClientAttribution={{this.newClientAttribution}}
+              @selectedNamespace={{this.selectedNamespace}}
+              @startTimestamp={{this.startMonthTimestamp}}
+              @endTimestamp={{this.endMonthTimestamp}}
+              @responseTimestamp={{this.responseTimestamp}}
+              @isHistoricalMonth={{and (not this.isCurrentMonth) (not this.isDateRange)}}
+              @upgradeExplanation={{this.upgradeExplanation}}
+            />
+          {{/if}}
+          {{#if this.hasMultipleMonthsData}}
+            <Clients::MonthlyUsage
+              @chartLegend={{this.chartLegend}}
+              @verticalBarChartData={{this.byMonthActivityData}}
+              @responseTimestamp={{this.responseTimestamp}}
+            />
+          {{/if}}
+        {{/if}}
+      {{/if}}
+    {{else if (and (not @model.licenseStartTimestamp) (not this.startMonthTimestamp))}}
+      {{! Empty state for no billing/license start date }}
+      <EmptyState @title={{this.versionText.title}} @message={{this.versionText.message}} />
+    {{else}}
+      <EmptyState
+        @title="No data received  {{if this.dateRangeMessage this.dateRangeMessage}}"
+        @message="Select a different start date above, or choose a different end date here:"
+      >
+        <DateDropdown
+          @handleSubmit={{this.handleClientActivityQuery}}
+          @validateDate={{this.isEndBeforeStart}}
+          @dateType="endDate"
+          @submitText="View"
+        />
+      </EmptyState>
+    {{/if}}
+  {{/if}}
+
+  {{! BILLING START DATE MODAL }}
+
+  <Modal
+    @title="Edit start month"
+    @onClose={{action (mut this.showBillingStartModal) false}}
+    @isActive={{this.showBillingStartModal}}
+    @showCloseButton={{true}}
+  >
+    <section class="modal-card-custom has-padding-m">
+      <p class="has-bottom-margin-s">
+        {{this.versionText.description}}
+      </p>
+      <p><strong>{{this.versionText.label}}</strong></p>
+    </section>
+    <DateDropdown
+      @handleSubmit={{this.handleClientActivityQuery}}
+      @dateType="startDate"
+      @submitText="Save"
+      @handleCancel={{fn this.handleClientActivityQuery (hash dateType="cancel")}}
+    />
+  </Modal>
+</div>

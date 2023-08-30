@@ -1,4 +1,7 @@
-// +build openbsd,arm
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
+//go:build openbsd && arm
 
 package diagnose
 

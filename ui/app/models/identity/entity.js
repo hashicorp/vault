@@ -1,12 +1,17 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import { hasMany, attr } from '@ember-data/model';
 import { computed } from '@ember/object';
 import { alias } from '@ember/object/computed';
 import IdentityModel from './_base';
 import apiPath from 'vault/utils/api-path';
-import attachCapabilities from 'vault/lib/attach-capabilities';
+import lazyCapabilities from 'vault/macros/lazy-capabilities';
 
-let Model = IdentityModel.extend({
-  formFields: computed(function() {
+export default IdentityModel.extend({
+  formFields: computed(function () {
     return ['name', 'disabled', 'policies', 'metadata'];
   }),
   name: attr('string'),
@@ -20,10 +25,8 @@ let Model = IdentityModel.extend({
     editType: 'kv',
   }),
   policies: attr({
-    label: 'Policies',
-    editType: 'searchSelect',
-    fallbackComponent: 'string-list',
-    models: ['policy/acl', 'policy/rgp'],
+    editType: 'yield',
+    isSectionHeader: true,
   }),
   creationTime: attr('string', {
     readOnly: true,
@@ -41,13 +44,12 @@ let Model = IdentityModel.extend({
   inheritedGroupIds: attr({
     readOnly: true,
   }),
+  updatePath: lazyCapabilities(apiPath`identity/entity/id/${'id'}`, 'id'),
   canDelete: alias('updatePath.canDelete'),
   canEdit: alias('updatePath.canUpdate'),
   canRead: alias('updatePath.canRead'),
+  aliasPath: lazyCapabilities(apiPath`identity/entity-alias`),
   canAddAlias: alias('aliasPath.canCreate'),
-});
-
-export default attachCapabilities(Model, {
-  updatePath: apiPath`identity/entity/id/${'id'}`,
-  aliasPath: apiPath`identity/entity-alias`,
+  policyPath: lazyCapabilities(apiPath`sys/policies`),
+  canCreatePolicies: alias('policyPath.canCreate'),
 });
