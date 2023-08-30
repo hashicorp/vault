@@ -90,8 +90,8 @@ module('Integration | Component | kv-v2 | Page::Secret::Edit', function (hooks) 
     await fillIn(FORM.maskedValueInput(1), 'bar2');
     await click(FORM.saveBtn);
     assert.ok(
-      this.transitionStub.calledWith('vault.cluster.secrets.backend.kv.secret'),
-      'router transitions to parent secret route on save'
+      this.transitionStub.calledWith('vault.cluster.secrets.backend.kv.secret.details'),
+      'router transitions to secret details route on save'
     );
   });
 

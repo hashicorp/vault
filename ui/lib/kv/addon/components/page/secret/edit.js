@@ -82,10 +82,11 @@ export default class KvSecretEdit extends Component {
       this.invalidFormAlert = invalidFormMessage;
       if (isValid) {
         const { secret } = this.args;
-        yield this.args.secret.save();
+        yield secret.save();
         this.flashMessages.success(`Successfully created new version of ${secret.path}.`);
-        // transition to parent secret route to re-query latest version
-        this.router.transitionTo('vault.cluster.secrets.backend.kv.secret');
+        this.router.transitionTo('vault.cluster.secrets.backend.kv.secret.details', {
+          queryParams: { version: secret?.version },
+        });
       }
     } catch (error) {
       let message = errorMessage(error);
