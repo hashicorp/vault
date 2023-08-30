@@ -20,7 +20,6 @@ import { pathIsDirectory } from 'kv/utils/kv-breadcrumbs';
  */
 
 const QUICK_ACTION_ENGINES = ['pki', 'database'];
-const KV = 'kv';
 
 export default class DashboardQuickActionsCard extends Component {
   @service router;
@@ -31,7 +30,7 @@ export default class DashboardQuickActionsCard extends Component {
 
   get actionOptions() {
     switch (this.selectedEngine.type) {
-      case KV:
+      case 'kv':
         return ['Find KV secrets'];
       case 'database':
         return ['Generate credentials for database'];
@@ -47,7 +46,7 @@ export default class DashboardQuickActionsCard extends Component {
       case 'Find KV secrets':
         return {
           title: 'Secret path',
-          subText: 'Path of the secret you want to read, including the mount. E.g., secret/data/foo.',
+          subText: 'Path of the secret you want to read.',
           buttonText: 'Read secrets',
           model: 'kv/metadata',
           route: 'vault.cluster.secrets.backend.kv.secret.details',
@@ -61,9 +60,7 @@ export default class DashboardQuickActionsCard extends Component {
           buttonText: 'Generate credentials',
           model: 'database/role',
           route: 'vault.cluster.secrets.backend.credentials',
-          nameKey: 'id',
           queryObject: { backend: this.selectedEngine.id },
-          objectKeys: ['id'],
         };
       case 'Issue certificate':
         return {
@@ -72,9 +69,7 @@ export default class DashboardQuickActionsCard extends Component {
           buttonText: 'Issue leaf certificate',
           model: 'pki/role',
           route: 'vault.cluster.secrets.backend.pki.roles.role.generate',
-          nameKey: 'id',
           queryObject: { backend: this.selectedEngine.id },
-          objectKeys: ['id'],
         };
       case 'View certificate':
         return {
@@ -83,9 +78,7 @@ export default class DashboardQuickActionsCard extends Component {
           buttonText: 'View certificate',
           model: 'pki/certificate/base',
           route: 'vault.cluster.secrets.backend.pki.certificates.certificate.details',
-          nameKey: 'id',
           queryObject: { backend: this.selectedEngine.id },
-          objectKeys: ['id'],
         };
       case 'View issuer':
         return {
@@ -109,7 +102,7 @@ export default class DashboardQuickActionsCard extends Component {
 
   get filteredSecretEngines() {
     return this.args.secretsEngines.filter(
-      (engine) => (engine.type === KV && engine.version == 2) || QUICK_ACTION_ENGINES.includes(engine.type)
+      (engine) => (engine.type === 'kv' && engine.version == 2) || QUICK_ACTION_ENGINES.includes(engine.type)
     );
   }
 
@@ -151,7 +144,7 @@ export default class DashboardQuickActionsCard extends Component {
 
     // kv has a special use case where if the paramValue ends in a '/' you should
     // link to different route
-    if (this.selectedEngine.type === KV) {
+    if (this.selectedEngine.type === 'kv') {
       route = pathIsDirectory(this.paramValue?.path)
         ? 'vault.cluster.secrets.backend.kv.list-directory'
         : 'vault.cluster.secrets.backend.kv.secret.details';
