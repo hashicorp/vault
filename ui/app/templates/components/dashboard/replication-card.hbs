@@ -32,7 +32,7 @@
           @clusterStates={{cluster-states @replication.dr.state}}
         />
         <Dashboard::ReplicationStateText
-          @title="Performance primary"
+          @title="Performance {{if @replication.performance.isPrimary 'primary' 'secondary'}}"
           @name="performance"
           @state={{if @replication.performance.clusterId @replication.performance.state "not set up"}}
           @clusterStates={{if @replication.performance.clusterId (cluster-states @replication.performance.state)}}

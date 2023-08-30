@@ -7,7 +7,7 @@ import Component from '@glimmer/component';
 import { action } from '@ember/object';
 import { tracked } from '@glimmer/tracking';
 import { inject as service } from '@ember/service';
-
+import { pathIsDirectory } from 'kv/utils/kv-breadcrumbs';
 /**
  * @module DashboardQuickActionsCard
  * DashboardQuickActionsCard component allows users to see a list of secrets engines filtered by
@@ -152,10 +152,9 @@ export default class DashboardQuickActionsCard extends Component {
     // kv has a special use case where if the paramValue ends in a '/' you should
     // link to different route
     if (this.selectedEngine.type === KV) {
-      route =
-        this.paramValue?.path && this.paramValue?.path?.endsWith('/')
-          ? 'vault.cluster.secrets.backend.kv.list-directory'
-          : 'vault.cluster.secrets.backend.kv.secret.details';
+      route = pathIsDirectory(this.paramValue?.path)
+        ? 'vault.cluster.secrets.backend.kv.list-directory'
+        : 'vault.cluster.secrets.backend.kv.secret.details';
       param = this.paramValue?.path;
     }
 
