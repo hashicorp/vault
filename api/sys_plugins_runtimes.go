@@ -147,14 +147,9 @@ func (c *Sys) DeregisterPluginRuntimeWithContext(ctx context.Context, i *Deregis
 	return err
 }
 
-// ListPluginRuntimes wraps ListPluginRuntimesWithContext using context.Background.
-func (c *Sys) ListPluginRuntimes(i *ListPluginRuntimesInput) (*ListPluginRuntimesResponse, error) {
-	return c.ListPluginRuntimesWithContext(context.Background(), i)
-}
-
-// ListPluginRuntimesWithContext lists all plugin runtimes in the catalog and returns their names as a
+// ListPluginRuntimes lists all plugin runtimes in the catalog and returns their names as a
 // list of strings.
-func (c *Sys) ListPluginRuntimesWithContext(ctx context.Context, i *ListPluginRuntimesInput) (*ListPluginRuntimesResponse, error) {
+func (c *Sys) ListPluginRuntimes(ctx context.Context, i *ListPluginRuntimesInput) (*ListPluginRuntimesResponse, error) {
 	ctx, cancelFunc := c.c.withConfiguredTimeout(ctx)
 	defer cancelFunc()
 

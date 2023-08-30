@@ -119,7 +119,7 @@ func TestListPluginRuntimeTyped(t *testing.T) {
 				Type: tc.runtimeType,
 			}
 
-			list, err := client.Sys().ListPluginRuntimesWithContext(context.Background(), &input)
+			list, err := client.Sys().ListPluginRuntimes(context.Background(), &input)
 			if tc.expectedErrNil && err != nil {
 				t.Fatal(err)
 			}
@@ -158,7 +158,7 @@ func TestListPluginRuntimeUntyped(t *testing.T) {
 				t.Fatal(err)
 			}
 
-			info, err := client.Sys().ListPluginRuntimesWithContext(context.Background(), nil)
+			info, err := client.Sys().ListPluginRuntimes(context.Background(), nil)
 			if tc.expectedErrNil && err != nil {
 				t.Fatal(err)
 			}
