@@ -2724,8 +2724,7 @@ func setSeal(c *ServerCommand, config *server.Config, infoKeys []string, info ma
 }
 
 func (c *ServerCommand) computeSealGenerationInfo(existingSealGenInfo *vaultseal.SealGenerationInfo, sealConfigs []*configutil.KMS) (*vaultseal.SealGenerationInfo, error) {
-	var generation uint64
-	generation = 1
+	generation := uint64(1)
 
 	if existingSealGenInfo != nil {
 		if cmp.Equal(existingSealGenInfo.Seals, sealConfigs) {
