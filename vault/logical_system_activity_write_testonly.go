@@ -325,7 +325,7 @@ func (m *multipleMonthsActivityClients) addRepeatedClients(monthsAgo int32, c *g
 }
 
 func (m *multipleMonthsActivityClients) write(ctx context.Context, opts map[generation.WriteOptions]struct{}, activityLog *ActivityLog) ([]string, error) {
-	now := timeutil.StartOfMonth(time.Now().UTC())
+	now := time.Now().UTC()
 	paths := []string{}
 
 	_, writePQ := opts[generation.WriteOptions_WRITE_PRECOMPUTED_QUERIES]
@@ -337,8 +337,8 @@ func (m *multipleMonthsActivityClients) write(ctx context.Context, opts map[gene
 	if writePQ || writeDistinctClients {
 		pqOpts.byNamespace = make(map[string]*processByNamespace)
 		pqOpts.byMonth = make(map[int64]*processMonth)
-		pqOpts.activePeriodEnd = m.latestTimestamp(now)
-		pqOpts.endTime = timeutil.EndOfMonth(pqOpts.activePeriodEnd)
+		pqOpts.activePeriodEnd = m.latestTimestamp(now, true)
+		pqOpts.endTime = timeutil.EndOfMonth(m.latestTimestamp(pqOpts.activePeriodEnd, false))
 		pqOpts.activePeriodStart = m.earliestTimestamp(now)
 	}
 
@@ -382,7 +382,7 @@ func (m *multipleMonthsActivityClients) write(ctx context.Context, opts map[gene
 			}
 		}
 
-		if writePQ || writeDistinctClients {
+		if (writePQ || writeDistinctClients) && i > 0 {
 			reader := newProtoSegmentReader(segments)
 			err = activityLog.segmentToPrecomputedQuery(ctx, timestamp, reader, pqOpts)
 			if err != nil {
@@ -402,12 +402,13 @@ func (m *multipleMonthsActivityClients) write(ctx context.Context, opts map[gene
 	if err != nil {
 		return nil, err
 	}
+	wg.Wait()
 	return paths, nil
 }
 
-func (m *multipleMonthsActivityClients) latestTimestamp(now time.Time) time.Time {
+func (m *multipleMonthsActivityClients) latestTimestamp(now time.Time, includeCurrentMonth bool) time.Time {
 	for i, month := range m.months {
-		if month.generationParameters != nil {
+		if month.generationParameters != nil && (i != 0 || includeCurrentMonth) {
 			return timeutil.StartOfMonth(timeutil.MonthsPreviousTo(i, now))
 		}
 	}
