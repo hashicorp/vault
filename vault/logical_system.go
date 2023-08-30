@@ -560,7 +560,7 @@ func (b *SystemBackend) handlePluginCatalogUpdate(ctx context.Context, _ *logica
 		Name:    pluginName,
 		Type:    pluginType,
 		Version: pluginVersion,
-		Command: command,
+		Command: parts[0],
 		Args:    args,
 		Env:     env,
 		Sha256:  sha256Bytes,
