@@ -2214,44 +2214,6 @@ func (b *SystemBackend) pluginsRuntimesCatalogCRUDPath() *framework.Path {
 func (b *SystemBackend) pluginsRuntimesCatalogListPaths() []*framework.Path {
 	return []*framework.Path{
 		{
-			Pattern: "plugins/runtimes/catalog/(?P<type>container)/?$",
-
-			DisplayAttrs: &framework.DisplayAttributes{
-				OperationPrefix: "plugins-runtimes-catalog",
-				OperationVerb:   "list",
-				OperationSuffix: "plugins-runtimes-with-type",
-			},
-
-			Fields: map[string]*framework.FieldSchema{
-				"type": {
-					Type:        framework.TypeString,
-					Description: strings.TrimSpace(sysHelp["plugin-runtime-catalog_type"][0]),
-				},
-			},
-
-			Operations: map[logical.Operation]framework.OperationHandler{
-				logical.ListOperation: &framework.PathOperation{
-					Callback: b.handlePluginRuntimeCatalogTypedList,
-					Responses: map[int][]framework.Response{
-						http.StatusOK: {{
-							Description: "OK",
-							Fields: map[string]*framework.FieldSchema{
-								"keys": {
-									Type:        framework.TypeStringSlice,
-									Description: "List of plugin runtime names in the catalog",
-									Required:    true,
-								},
-							},
-						}},
-					},
-					Summary: "List the plugin runtimes of a given type in the catalog.",
-				},
-			},
-
-			HelpSynopsis:    strings.TrimSpace(sysHelp["plugin-runtime-catalog"][0]),
-			HelpDescription: strings.TrimSpace(sysHelp["plugin-runtime-catalog"][1]),
-		},
-		{
 			Pattern: "plugins/runtimes/catalog/?$",
 
 			DisplayAttrs: &framework.DisplayAttributes{

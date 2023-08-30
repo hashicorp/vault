@@ -748,23 +748,14 @@ func (b *SystemBackend) handlePluginRuntimeCatalogUpdate(ctx context.Context, _ 
 	switch runtimeType {
 	case consts.PluginRuntimeTypeContainer:
 		ociRuntime := d.Get("oci_runtime").(string)
-		if ociRuntime == "" {
-			ociRuntime = pluginruntimeutil.DefaultOCIRuntime
-		}
 		cgroupParent := d.Get("cgroup_parent").(string)
 		cpu := d.Get("cpu").(int64)
 		if cpu < 0 {
 			return logical.ErrorResponse("runtime cpu must be greater than 0"), nil
 		}
-		if cpu == 0 {
-			cpu = pluginruntimeutil.DefaultCPU
-		}
 		memory := d.Get("memory").(int64)
 		if memory < 0 {
 			return logical.ErrorResponse("runtime memory in bytes must be greater than 0"), nil
-		}
-		if memory == 0 {
-			memory = pluginruntimeutil.DefaultMemory
 		}
 		if err = b.Core.pluginRuntimeCatalog.Set(ctx,
 			&pluginruntimeutil.PluginRuntimeConfig{
@@ -838,20 +829,6 @@ func (b *SystemBackend) handlePluginRuntimeCatalogRead(ctx context.Context, _ *l
 		"cpu":           conf.CPU,
 		"memory":        conf.Memory,
 	}}, nil
-}
-
-func (b *SystemBackend) handlePluginRuntimeCatalogTypedList(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-	runtimeType, err := consts.ParsePluginRuntimeType(d.Get("type").(string))
-	if err != nil {
-		return nil, err
-	}
-
-	runtimes, err := b.Core.pluginRuntimeCatalog.List(ctx, runtimeType)
-	if err != nil {
-		return nil, err
-	}
-	sort.Strings(runtimes)
-	return logical.ListResponse(runtimes), nil
 }
 
 func (b *SystemBackend) handlePluginRuntimeCatalogUntypedList(ctx context.Context, _ *logical.Request, _ *framework.FieldData) (*logical.Response, error) {
