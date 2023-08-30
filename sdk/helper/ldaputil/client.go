@@ -485,9 +485,10 @@ func (c *Client) performLdapTokenGroupsSearch(cfg *ConfigEntry, conn Connection,
 	maxWorkers := 10
 
 	result, err := conn.Search(&ldap.SearchRequest{
-		BaseDN: userDN,
-		Scope:  ldap.ScopeBaseObject,
-		Filter: "(objectClass=*)",
+		BaseDN:       userDN,
+		Scope:        ldap.ScopeBaseObject,
+		DerefAliases: ldapDerefAliasMap[cfg.DerefAliases],
+		Filter:       "(objectClass=*)",
 		Attributes: []string{
 			"tokenGroups",
 		},
@@ -512,9 +513,10 @@ func (c *Client) performLdapTokenGroupsSearch(cfg *ConfigEntry, conn Connection,
 
 			for sid := range taskChan {
 				groupResult, err := conn.Search(&ldap.SearchRequest{
-					BaseDN: fmt.Sprintf("<SID=%s>", sid),
-					Scope:  ldap.ScopeBaseObject,
-					Filter: "(objectClass=*)",
+					BaseDN:       fmt.Sprintf("<SID=%s>", sid),
+					Scope:        ldap.ScopeBaseObject,
+					DerefAliases: ldapDerefAliasMap[cfg.DerefAliases],
+					Filter:       "(objectClass=*)",
 					Attributes: []string{
 						"1.1", // RFC no attributes
 					},
