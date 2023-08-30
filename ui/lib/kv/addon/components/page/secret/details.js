@@ -36,11 +36,6 @@ export default class KvSecretDetails extends Component {
   @tracked wrappedData = null;
 
   @action
-  toggleJsonView() {
-    this.showJsonView = !this.showJsonView;
-  }
-
-  @action
   closeVersionMenu(dropdown) {
     // strange issue where closing dropdown triggers full transition (which redirects to auth screen in production)
     // closing dropdown in next tick of run loop fixes it
