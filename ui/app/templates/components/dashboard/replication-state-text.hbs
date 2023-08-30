@@ -4,20 +4,9 @@
 ~}}
 
 <div>
-  {{#if @name}}
-    <LinkTo
-      class="is-size-5 has-text-weight-semibold has-bottom-margin-xs is-no-underline title-link"
-      @route="vault.cluster.replication.mode.index"
-      @model={{@name}}
-      data-test-title={{@title}}
-    >
-      {{@title}}
-    </LinkTo>
-  {{else}}
-    <h2 class="title is-5 has-text-weight-semibold has-bottom-margin-xs" data-test-title={{@title}}>
-      {{@title}}
-    </h2>
-  {{/if}}
+  <h2 class="is-size-5 has-text-weight-semibold has-bottom-margin-xs" data-test-title={{@title}}>
+    {{@title}}
+  </h2>
 
   {{#if @subText}}
     <div class="title is-8 has-font-weight-normal has-text-grey-dark" data-test-subtext={{@title}}>
