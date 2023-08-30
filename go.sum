@@ -1903,8 +1903,8 @@ github.com/hashicorp/vault-plugin-database-elasticsearch v0.13.2 h1:N81xJfdVjAo4
 github.com/hashicorp/vault-plugin-database-elasticsearch v0.13.2/go.mod h1:P4cUbvtXgvfWZassvJzyXC4nIGRUO72ds9rE5WpQnuw=
 github.com/hashicorp/vault-plugin-database-mongodbatlas v0.10.1 h1:st8aNVyXyiHpAq8CTWfxj1uGQHnggA5Hsg5ug0Qv2UA=
 github.com/hashicorp/vault-plugin-database-mongodbatlas v0.10.1/go.mod h1:rFvNp9rYOFPwAPFUHcGnRIwOlAYBPZHgKul/Sj2poPs=
-github.com/hashicorp/vault-plugin-database-redis v0.2.1 h1:E+UeZcpNtQO8nMfVebwE5ZS2sJpNjzbKwYJX1y8FFNk=
-github.com/hashicorp/vault-plugin-database-redis v0.2.1/go.mod h1:T0i639Xnh2DY5ij8ofS83ZauBh8N0drKzqXYDrH87tM=
+github.com/hashicorp/vault-plugin-database-redis v0.2.2 h1:nMpNIDP1Cvw5aMLXp3ObvXmv5c2X3GqBmoPNMtvWe5E=
+github.com/hashicorp/vault-plugin-database-redis v0.2.2/go.mod h1:POHYpUTsdJwGE1DSHaDlLjB/CpzBHLfIIVVXElBtbcs=
 github.com/hashicorp/vault-plugin-database-redis-elasticache v0.2.3 h1:Y2/teLlrYR80LATq4T2EZJgeQFkYUvExH1WUfssi2IU=
 github.com/hashicorp/vault-plugin-database-redis-elasticache v0.2.3/go.mod h1:eGj+U2NroyrtKqdNAoOG7is2mbmSIoTvDA0EETqWTDI=
 github.com/hashicorp/vault-plugin-database-snowflake v0.9.0 h1:kYr7DXkxuznPstyvt0HQ6HfMBv7M3agGjDcgiOJuxm4=
@@ -2213,8 +2213,8 @@ github.com/matttproud/golang_protobuf_extensions v1.0.2/go.mod h1:BSXmuO+STAnVfr
 github.com/matttproud/golang_protobuf_extensions v1.0.4 h1:mmDVorXM7PCGKw94cs5zkfA9PSy5pEvNWRP0ET0TIVo=
 github.com/matttproud/golang_protobuf_extensions v1.0.4/go.mod h1:BSXmuO+STAnVfrANrmjBb36TMTDstsz7MSK+HVaYKv4=
 github.com/maxbrunsfeld/counterfeiter/v6 v6.2.2/go.mod h1:eD9eIE7cdwcMi9rYluz88Jz2VyhSmden33/aXg4oVIY=
-github.com/mediocregopher/radix/v4 v4.1.2 h1:Pj7XnNK5WuzzFy63g98pnccainAePK+aZNQRvxSvj2I=
-github.com/mediocregopher/radix/v4 v4.1.2/go.mod h1:ajchozX/6ELmydxWeWM6xCFHVpZ4+67LXHOTOVR0nCE=
+github.com/mediocregopher/radix/v4 v4.1.4 h1:Uze6DEbEAvL+VHXUEu/EDBTkUk5CLct5h3nVSGpc6Ts=
+github.com/mediocregopher/radix/v4 v4.1.4/go.mod h1:ajchozX/6ELmydxWeWM6xCFHVpZ4+67LXHOTOVR0nCE=
 github.com/mholt/archiver/v3 v3.5.1 h1:rDjOBX9JSF5BvoJGvjqK479aL70qh9DIpZCl+k7Clwo=
 github.com/mholt/archiver/v3 v3.5.1/go.mod h1:e3dqJ7H78uzsRSEACH1joayhuSyhnonssnDhppzS1L4=
 github.com/michaelklishin/rabbit-hole/v2 v2.12.0 h1:946p6jOYFcVJdtBBX8MwXvuBkpPjwm1Nm2Qg8oX+uFk=
