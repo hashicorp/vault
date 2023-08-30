@@ -70,7 +70,7 @@ func rateLimitQuotaWrapping(handler http.Handler, core *vault.Core) http.Handler
 		requiresResolveRole, err := core.ResolveRoleForQuotas(r.Context(), quotaReq)
 		if err != nil {
 			core.Logger().Error("failed to lookup quotas", "path", path, "error", err)
-			respondError(w, http.StatusUnprocessableEntity, err)
+			respondError(w, http.StatusInternalServerError, err)
 			return
 		}
 
@@ -86,7 +86,7 @@ func rateLimitQuotaWrapping(handler http.Handler, core *vault.Core) http.Handler
 		quotaResp, err := core.ApplyRateLimitQuota(r.Context(), quotaReq)
 		if err != nil {
 			core.Logger().Error("failed to apply quota", "path", path, "error", err)
-			respondError(w, http.StatusUnprocessableEntity, err)
+			respondError(w, http.StatusInternalServerError, err)
 			return
 		}
 
