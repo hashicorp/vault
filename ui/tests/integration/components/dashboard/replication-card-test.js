@@ -24,6 +24,7 @@ module('Integration | Component | dashboard/replication-card', function (hooks) 
       performance: {
         clusterId: 'abc-1',
         state: 'running',
+        isPrimary: true,
       },
     };
     this.version = {
@@ -37,10 +38,10 @@ module('Integration | Component | dashboard/replication-card', function (hooks) 
   test('it should display replication information if both dr and performance replication are enabled as features', async function (assert) {
     await render(
       hbs`
-        <Dashboard::ReplicationCard 
-          @replication={{this.replication}} 
-          @version={{this.version}} 
-          @updatedAt={{this.updatedAt}} 
+        <Dashboard::ReplicationCard
+          @replication={{this.replication}}
+          @version={{this.version}}
+          @updatedAt={{this.updatedAt}}
           @refresh={{this.refresh}} />
           `
     );
@@ -61,14 +62,15 @@ module('Integration | Component | dashboard/replication-card', function (hooks) 
       },
       performance: {
         clusterId: '',
+        isPrimary: true,
       },
     };
     await render(
       hbs`
-        <Dashboard::ReplicationCard 
-          @replication={{this.replication}} 
-          @version={{this.version}} 
-          @updatedAt={{this.updatedAt}} 
+        <Dashboard::ReplicationCard
+          @replication={{this.replication}}
+          @version={{this.version}}
+          @updatedAt={{this.updatedAt}}
           @refresh={{this.refresh}} />
           `
     );
@@ -104,10 +106,10 @@ module('Integration | Component | dashboard/replication-card', function (hooks) 
     };
     await render(
       hbs`
-        <Dashboard::ReplicationCard 
-          @replication={{this.replication}} 
-          @version={{this.version}} 
-          @updatedAt={{this.updatedAt}} 
+        <Dashboard::ReplicationCard
+          @replication={{this.replication}}
+          @version={{this.version}}
+          @updatedAt={{this.updatedAt}}
           @refresh={{this.refresh}} />
           `
     );
@@ -130,14 +132,15 @@ module('Integration | Component | dashboard/replication-card', function (hooks) 
       performance: {
         clusterId: 'def',
         state: 'shutdown',
+        isPrimary: true,
       },
     };
     await render(
       hbs`
-        <Dashboard::ReplicationCard 
-          @replication={{this.replication}} 
-          @version={{this.version}} 
-          @updatedAt={{this.updatedAt}} 
+        <Dashboard::ReplicationCard
+          @replication={{this.replication}}
+          @version={{this.version}}
+          @updatedAt={{this.updatedAt}}
           @refresh={{this.refresh}} />
           `
     );
@@ -158,6 +161,55 @@ module('Integration | Component | dashboard/replication-card', function (hooks) 
       .hasClass('has-text-danger');
   });
 
+  test('it should show correct performance titles if primary vs secondary', async function (assert) {
+    this.replication = {
+      dr: {
+        clusterId: 'abc',
+        state: 'running',
+      },
+      performance: {
+        clusterId: 'def',
+        isPrimary: true,
+      },
+    };
+    await render(
+      hbs`
+        <Dashboard::ReplicationCard
+          @replication={{this.replication}}
+          @version={{this.version}}
+          @updatedAt={{this.updatedAt}}
+          @refresh={{this.refresh}} />
+          `
+    );
+    assert.dom(SELECTORS.getReplicationTitle('dr-perf', 'DR primary')).hasText('DR primary');
+    assert
+      .dom(SELECTORS.getReplicationTitle('dr-perf', 'Performance primary'))
+      .hasText('Performance primary');
+
+    this.replication = {
+      dr: {
+        clusterId: 'abc',
+        state: 'running',
+      },
+      performance: {
+        clusterId: 'def',
+        isPrimary: false,
+      },
+    };
+    await render(
+      hbs`
+          <Dashboard::ReplicationCard
+            @replication={{this.replication}}
+            @version={{this.version}}
+            @updatedAt={{this.updatedAt}}
+            @refresh={{this.refresh}} />
+            `
+    );
+    assert
+      .dom(SELECTORS.getReplicationTitle('dr-perf', 'Performance secondary'))
+      .hasText('Performance secondary');
+  });
+
   test('it should show empty state', async function (assert) {
     this.replication = {
       dr: {
@@ -169,10 +221,10 @@ module('Integration | Component | dashboard/replication-card', function (hooks) 
     };
     await render(
       hbs`
-        <Dashboard::ReplicationCard 
-          @replication={{this.replication}} 
-          @version={{this.version}} 
-          @updatedAt={{this.updatedAt}} 
+        <Dashboard::ReplicationCard
+          @replication={{this.replication}}
+          @version={{this.version}}
+          @updatedAt={{this.updatedAt}}
           @refresh={{this.refresh}} />
           `
     );
