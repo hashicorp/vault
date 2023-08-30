@@ -5933,15 +5933,15 @@ func TestSystemBackend_pluginRuntimeCRUD(t *testing.T) {
 		"type":          "container",
 		"oci_runtime":   "some-oci-runtime",
 		"cgroup_parent": "/cpulimit/",
-		"cpu":           1,
-		"memory":        10000,
+		"cpu":           float32(1),
+		"memory":        int64(10000),
 	}
 	if !reflect.DeepEqual(resp.Data, exp) {
 		t.Fatalf("got: %#v expect: %#v", resp.Data, exp)
 	}
 
 	// List the plugin runtimes of container type
-	req = logical.TestRequest(t, logical.ReadOperation, "plugins/runtimes/catalog/container")
+	req = logical.TestRequest(t, logical.ListOperation, "plugins/runtimes/catalog/container")
 	resp, err = b.HandleRequest(namespace.RootContext(nil), req)
 	if err != nil {
 		t.Fatalf("err: %v", err)
@@ -5955,14 +5955,14 @@ func TestSystemBackend_pluginRuntimeCRUD(t *testing.T) {
 	}
 
 	// List the plugin runtimes (untyped or all)
-	req = logical.TestRequest(t, logical.ReadOperation, "plugins/runtimes/catalog")
+	req = logical.TestRequest(t, logical.ListOperation, "plugins/runtimes/catalog")
 	resp, err = b.HandleRequest(namespace.RootContext(nil), req)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
 
 	exp = map[string]interface{}{
-		"type": map[string][]string{"container": {"foo"}},
+		"types": map[string]interface{}{"container": []string{"foo"}},
 	}
 	if !reflect.DeepEqual(resp.Data, exp) {
 		t.Fatalf("got: %#v expect: %#v", resp.Data, exp)
@@ -5989,15 +5989,15 @@ func TestSystemBackend_pluginRuntimeCRUD(t *testing.T) {
 	// Read the plugin runtime (deleted)
 	req = logical.TestRequest(t, logical.ReadOperation, "plugins/runtimes/catalog/container/foo")
 	resp, err = b.HandleRequest(namespace.RootContext(nil), req)
-	if err != nil {
-		t.Fatalf("err: %v", err)
+	if err == nil {
+		t.Fatal("expected a read error after the runtime was deleted")
 	}
 	if resp != nil {
 		t.Fatalf("bad: %#v", resp)
 	}
 
 	// List the plugin runtimes (deleted)
-	req = logical.TestRequest(t, logical.ReadOperation, "plugins/runtimes/catalog/container")
+	req = logical.TestRequest(t, logical.ListOperation, "plugins/runtimes/catalog/container")
 	resp, err = b.HandleRequest(namespace.RootContext(nil), req)
 	if err != nil {
 		t.Fatalf("err: %v", err)
@@ -6009,7 +6009,7 @@ func TestSystemBackend_pluginRuntimeCRUD(t *testing.T) {
 	}
 
 	// List the plugin runtimes (untyped or all)
-	req = logical.TestRequest(t, logical.ReadOperation, "plugins/runtimes/catalog")
+	req = logical.TestRequest(t, logical.ListOperation, "plugins/runtimes/catalog")
 	resp, err = b.HandleRequest(namespace.RootContext(nil), req)
 	if err != nil {
 		t.Fatalf("err: %v", err)

@@ -69,7 +69,7 @@ func (c *PluginRuntimeCatalog) Get(ctx context.Context, name string, prt consts.
 }
 
 // Set registers a new plugin with the catalog, or updates an existing plugin runtime
-func (c *PluginRuntimeCatalog) Set(ctx context.Context, name string, prt consts.PluginRuntimeType, ociRuntime string, parentCGroup string, cpu float32, memory uint64) error {
+func (c *PluginRuntimeCatalog) Set(ctx context.Context, name string, prt consts.PluginRuntimeType, ociRuntime string, parentCGroup string, cpu float32, memory int64) error {
 	c.lock.Lock()
 	defer c.lock.Unlock()
 

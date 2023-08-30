@@ -15,5 +15,5 @@ type PluginRuntimeConfig struct {
 	OCIRuntime   string                   `json:"oci_runtime" structs:"oci_runtime"`
 	CgroupParent string                   `json:"cgroup_parent" structs:"cgroup_parent"`
 	CPU          float32                  `json:"cpu" structs:"cpu"`
-	Memory       uint64                   `json:"memory" structs:"memory"`
+	Memory       int64                    `json:"memory" structs:"memory"`
 }

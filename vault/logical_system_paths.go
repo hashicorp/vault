@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"github.com/hashicorp/vault/sdk/framework"
+	"github.com/hashicorp/vault/sdk/helper/pluginruntimeutil"
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
@@ -2113,6 +2114,7 @@ func (b *SystemBackend) pluginsRuntimesCatalogCRUDPath() *framework.Path {
 			"oci_runtime": {
 				Type:        framework.TypeString,
 				Description: strings.TrimSpace(sysHelp["plugin-runtime-catalog_oci-runtime"][0]),
+				Default:     pluginruntimeutil.DefaultOCIRuntime,
 			},
 			"cgroup_parent": {
 				Type:        framework.TypeString,
@@ -2121,10 +2123,12 @@ func (b *SystemBackend) pluginsRuntimesCatalogCRUDPath() *framework.Path {
 			"cpu": {
 				Type:        framework.TypeFloat,
 				Description: strings.TrimSpace(sysHelp["plugin-runtime-catalog_cpu"][0]),
+				Default:     pluginruntimeutil.DefaultCPU,
 			},
 			"memory": {
 				Type:        framework.TypeInt64,
 				Description: strings.TrimSpace(sysHelp["plugin-runtime-catalog_memory"][0]),
+				Default:     pluginruntimeutil.DefaultMemory,
 			},
 		},
 
@@ -2257,7 +2261,7 @@ func (b *SystemBackend) pluginsRuntimesCatalogListPaths() []*framework.Path {
 			},
 
 			Operations: map[logical.Operation]framework.OperationHandler{
-				logical.ReadOperation: &framework.PathOperation{
+				logical.ListOperation: &framework.PathOperation{
 					Callback: b.handlePluginRuntimeCatalogUntypedList,
 					Responses: map[int][]framework.Response{
 						http.StatusOK: {{

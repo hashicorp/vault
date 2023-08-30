@@ -752,10 +752,16 @@ func (b *SystemBackend) handlePluginRuntimeCatalogUpdate(ctx context.Context, _ 
 		}
 		cgroupParent := d.Get("cgroup_parent").(string)
 		cpu := float32(d.Get("cpu").(float64))
+		if cpu < 0 {
+			return logical.ErrorResponse("runtime cpu in bytes must be greater than 0"), nil
+		}
 		if cpu == 0 {
 			cpu = pluginruntimeutil.DefaultCPU
 		}
-		memory := uint64(d.Get("memory").(int64))
+		memory := d.Get("memory").(int64)
+		if memory < 0 {
+			return logical.ErrorResponse("runtime memory in bytes must be greater than 0"), nil
+		}
 		if memory == 0 {
 			memory = pluginruntimeutil.DefaultMemory
 		}
@@ -787,7 +793,7 @@ func (b *SystemBackend) handlePluginRuntimeCatalogDelete(ctx context.Context, _ 
 
 	err = b.Core.pluginRuntimeCatalog.Delete(ctx, runtimeName, runtimeType)
 	if err != nil {
-		return logical.ErrorResponse(err.Error()), nil
+		return nil, err
 	}
 	return nil, nil
 }
@@ -810,8 +816,12 @@ func (b *SystemBackend) handlePluginRuntimeCatalogRead(ctx context.Context, _ *l
 
 	conf, err := b.Core.pluginRuntimeCatalog.Get(ctx, runtimeName, runtimeType)
 	if err != nil {
-		return logical.ErrorResponse(err.Error()), nil
+		return nil, err
 	}
+	if conf == nil {
+		return nil, nil
+	}
+
 	return &logical.Response{Data: map[string]interface{}{
 		"name":          conf.Name,
 		"type":          conf.Type.String(),
