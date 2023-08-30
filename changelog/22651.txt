@@ -1,0 +1,3 @@
+```release-note:bug
+core/quotas: Add configuration to allow skipping of expensive role calculations
+```
