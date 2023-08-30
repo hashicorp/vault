@@ -1468,7 +1468,8 @@ func (c *Core) handleLoginRequest(ctx context.Context, req *logical.Request) (re
 
 		// Check for request role in context to role based quotas
 		var role string
-		if reqRole := ctx.Value(logical.CtxKeyRequestRole{}); reqRole != nil {
+		reqRole := ctx.Value(logical.CtxKeyRequestRole{})
+		if reqRole != nil {
 			role = reqRole.(string)
 		}
 
@@ -1668,6 +1669,13 @@ func (c *Core) handleLoginRequest(ctx context.Context, req *logical.Request) (re
 
 		// Attach the display name, might be used by audit backends
 		req.DisplayName = auth.DisplayName
+
+		// If this is not a role-based quota, we still need to associate the
+		// login role with this lease for later lease-count quotas to be
+		// accurate.
+		if reqRole == nil && resp.Auth.TokenType != logical.TokenTypeBatch {
+			role = c.DetermineRoleFromLoginRequest(ctx, req.MountPoint, req.Data)
+		}
 
 		leaseGen, respTokenCreate, errCreateToken := c.LoginCreateToken(ctx, ns, req.Path, source, role, resp)
 		leaseGenerated = leaseGen

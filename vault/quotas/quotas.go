@@ -597,6 +597,37 @@ func (m *Manager) queryQuota(txn *memdb.Txn, req *Request) (Quota, error) {
 	return nil, nil
 }
 
+// QueryResolveRoleQuotas checks if there's a quota for the request mount path
+// which requires ResolveRoleOperation.
+func (m *Manager) QueryResolveRoleQuotas(req *Request) (bool, error) {
+	m.dbAndCacheLock.RLock()
+	defer m.dbAndCacheLock.RUnlock()
+
+	txn := m.db.Txn(false)
+
+	// ns would have been made non-empty during insertion. Use non-empty
+	// value during query as well.
+	if req.NamespacePath == "" {
+		req.NamespacePath = "root"
+	}
+
+	// Check for any role-based quotas on the request namespaces/mount path.
+	for _, qType := range quotaTypes() {
+		// Use the namespace and mount as indexes and find all matches with a
+		// set Role field (see: 'true' as the last argument). We can't use
+		// indexNamespaceMountRole for this, because Role is a StringFieldIndex,
+		// which won't match on an empty string.
+		quota, err := txn.First(qType, indexNamespaceMount, req.NamespacePath, req.MountPath, false, true)
+		if err != nil {
+			return false, err
+		}
+		if quota != nil {
+			return true, nil
+		}
+	}
+	return false, nil
+}
+
 // DeleteQuota removes a quota rule from the db for a given name
 func (m *Manager) DeleteQuota(ctx context.Context, qType string, name string) error {
 	m.quotaLock.Lock()
