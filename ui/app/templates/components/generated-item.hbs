@@ -79,7 +79,7 @@
           type="submit"
           data-test-save-config="true"
           class="button is-primary {{if this.saveModel.isRunning 'loading'}}"
-          disabled={{or this.saveModel.isRunning this.isFormInvalid}}
+          disabled={{this.saveModel.isRunning}}
         >
           Save
         </button>
