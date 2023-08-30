@@ -265,7 +265,6 @@ export default Service.extend({
     if (typeof userRootNamespace === 'undefined') {
       userRootNamespace = currentNamespace;
     }
-
     const data = {
       userRootNamespace,
       displayName,

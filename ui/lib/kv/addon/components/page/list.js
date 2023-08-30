@@ -43,7 +43,7 @@ export default class KvListPageComponent extends Component {
       return pathIsDirectory(this.secretPath) ? 'View list' : 'View secret';
     } else {
       // if secretPath is an empty string it could be because the user hit a permissions error.
-      // in that case check pathToSecret, which is taking from the URL.
+      // in that case check pathToSecret, which is taken from the URL.
       return pathIsDirectory(this.args.pathToSecret) ? 'View list' : 'View secret';
     }
   }

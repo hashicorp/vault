@@ -43,7 +43,7 @@
           </button>
         </form>
         {{#if @listPermissions.noDirectory}}
-          <AlertInline @type="danger" @message="You do not have permissions to list {{@pathToSecret}} metadata." />
+          <AlertInline @type="danger" @message="You do not have the required permissions or the directory does not exist." />
         {{/if}}
       </OverviewCard>
     </div>
