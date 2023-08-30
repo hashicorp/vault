@@ -1,49 +1,10 @@
-<Dashboard::VaultVersionTitle @version={{@model.version}} />
-
-<div class="has-bottom-margin-xl">
-  <div class="is-flex-row has-gap-l">
-    {{#if (and @model.version.isEnterprise (or @model.license @model.isRootNamespace))}}
-
-      <div class="is-flex-column is-flex-1 has-gap-l">
-        {{#if @model.license}}
-          <Dashboard::ClientCountCard @license={{@model.license}} />
-        {{/if}}
-        {{#if @model.isRootNamespace}}
-          <Dashboard::ReplicationCard
-            @replication={{@model.replication}}
-            @version={{@model.version}}
-            @refresh={{this.refreshModel}}
-            @updatedAt={{this.replicationUpdatedAt}}
-          />
-        {{/if}}
-        <Dashboard::SecretsEnginesCard @secretsEngines={{@model.secretsEngines}} />
-      </div>
-
-      <div class="is-flex-column is-flex-1 has-gap-l">
-        <Dashboard::QuickActionsCard @secretsEngines={{@model.secretsEngines}} />
-        {{#if @model.vaultConfiguration}}
-          <Dashboard::VaultConfigurationDetailsCard @vaultConfiguration={{@model.vaultConfiguration}} />
-        {{/if}}
-        <div>
-          <Dashboard::LearnMoreCard @isEnterprise={{@model.version.isEnterprise}} />
-          <Dashboard::SurveyLinkText />
-        </div>
-      </div>
-
-    {{else}}
-      <div class="is-flex-column is-flex-1 has-gap-l">
-        <Dashboard::SecretsEnginesCard @secretsEngines={{@model.secretsEngines}} />
-        <div>
-          <Dashboard::LearnMoreCard @isEnterprise={{@model.version.isEnterprise}} />
-          <Dashboard::SurveyLinkText />
-        </div>
-      </div>
-      <div class="is-flex-column is-flex-1 has-gap-l">
-        <Dashboard::QuickActionsCard @secretsEngines={{@model.secretsEngines}} />
-        {{#if @model.vaultConfiguration}}
-          <Dashboard::VaultConfigurationDetailsCard @vaultConfiguration={{@model.vaultConfiguration}} />
-        {{/if}}
-      </div>
-    {{/if}}
-  </div>
-</div>
+<Dashboard::Overview
+  @replication={{@model.replication}}
+  @secretsEngines={{@model.secretsEngines}}
+  @license={{@model.license}}
+  @isRootNamespace={{@model.isRootNamespace}}
+  @version={{@model.version}}
+  @vaultConfiguration={{@model.vaultConfiguration}}
+  @refreshModel={{this.refreshModel}}
+  @replicationUpdatedAt={{this.replicationUpdatedAt}}
+/>
