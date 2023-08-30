@@ -284,7 +284,7 @@ module('Acceptance | Enterprise | kv-v2 workflow | edge cases', function (hooks)
     });
 
     test('it can create a new secret version in a namespace', async function (assert) {
-      assert.expect(11);
+      assert.expect(15);
       const backend = this.backend;
       const ns = this.namespace;
       const secret = this.secretPath;
@@ -324,6 +324,13 @@ module('Acceptance | Enterprise | kv-v2 workflow | edge cases', function (hooks)
         `/vault/secrets/${backend}/kv/${secret}/details?namespace=${ns}&version=2`,
         'navigates to details'
       );
+      assert.dom(PAGE.detail.versionDropdown).hasText('Version 2');
+      await click(PAGE.detail.versionDropdown);
+      assert.dom(PAGE.detail.version(1)).exists('renders version 1 link in dropdown');
+      assert.dom(PAGE.detail.version(2)).exists('renders version 2 link in dropdown');
+      assert
+        .dom(`${PAGE.detail.version(2)} [data-test-icon="check-circle"]`)
+        .exists('renders current version icon');
       assert.dom(PAGE.infoRowValue('foo-two')).hasText('***********');
       await click(PAGE.infoRowToggleMasked('foo-two'));
       assert.dom(PAGE.infoRowValue('foo-two')).hasText('supersecret', 'secret value shows after toggle');
