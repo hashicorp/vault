@@ -2397,8 +2397,14 @@ func (s standardUnsealStrategy) unseal(ctx context.Context, logger log.Logger, c
 			return err
 		}
 
-		if !sealGenerationInfo.IsRewrapped() {
+		sealHaEnabled, err := server.IsSealHABetaEnabled()
+		if err != nil {
+			return err
+		}
+		if sealHaEnabled && !sealGenerationInfo.IsRewrapped() {
 			// Flag migration performed for seal-rewrap later
+			// Note that in the case where seal HA is not enabled, Core.migrateSeal() takes care of
+			// triggering the rewrap when necessary.
 			c.logger.Trace("seal generation information indicates that a seal-rewrap is needed", "generation", sealGenerationInfo.Generation, "rewrapped", sealGenerationInfo.IsRewrapped())
 			atomic.StoreUint32(c.sealMigrationDone, 1)
 		}
