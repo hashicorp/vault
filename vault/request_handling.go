@@ -1690,7 +1690,7 @@ func (c *Core) handleLoginRequest(ctx context.Context, req *logical.Request) (re
 		// If this is not a role-based quota, we still need to associate the
 		// login role with this lease for later lease-count quotas to be
 		// accurate.
-		if reqRole == nil {
+		if reqRole == nil && resp.Auth.TokenType != logical.TokenTypeBatch {
 			role = c.DetermineRoleFromLoginRequest(ctx, req.MountPoint, req.Data)
 		}
 
