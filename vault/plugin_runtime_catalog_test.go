@@ -24,7 +24,7 @@ func TestPluginRuntimeCatalog_CRUD(t *testing.T) {
 	}
 
 	// Set new plugin runtime
-	err := core.pluginRuntimeCatalog.Set(ctx, expected.Name, expected.Type, expected.OCIRuntime, expected.CgroupParent, expected.CPU, expected.Memory)
+	err := core.pluginRuntimeCatalog.Set(ctx, expected)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -40,9 +40,9 @@ func TestPluginRuntimeCatalog_CRUD(t *testing.T) {
 
 	// Set existing plugin runtime
 	expected.CgroupParent = "memorylimit-cgroup"
-	expected.CPU = 0.5
+	expected.CPU = 2
 	expected.Memory = 5000
-	err = core.pluginRuntimeCatalog.Set(ctx, expected.Name, expected.Type, expected.OCIRuntime, expected.CgroupParent, expected.CPU, expected.Memory)
+	err = core.pluginRuntimeCatalog.Set(ctx, expected)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}

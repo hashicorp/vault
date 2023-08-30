@@ -5933,7 +5933,7 @@ func TestSystemBackend_pluginRuntimeCRUD(t *testing.T) {
 		"type":          "container",
 		"oci_runtime":   "some-oci-runtime",
 		"cgroup_parent": "/cpulimit/",
-		"cpu":           float32(1),
+		"cpu":           int64(1),
 		"memory":        int64(10000),
 	}
 	if !reflect.DeepEqual(resp.Data, exp) {

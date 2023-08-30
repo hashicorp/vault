@@ -13,12 +13,12 @@ import (
 )
 
 type PluginRuntimeDetails struct {
-	Type         string  `json:"type"`
-	Name         string  `json:"name"`
-	OCIRuntime   string  `json:"oci_runtime"`
-	CgroupParent string  `json:"cgroup_parent"`
-	CPU          float32 `json:"cpu"`
-	Memory       uint64  `json:"memory"`
+	Type         string `json:"type"`
+	Name         string `json:"name"`
+	OCIRuntime   string `json:"oci_runtime"`
+	CgroupParent string `json:"cgroup_parent"`
+	CPU          int64  `json:"cpu"`
+	Memory       int64  `json:"memory"`
 }
 
 // ListPluginRuntimesInput is used as input to the ListPluginRuntimes function.
@@ -43,12 +43,12 @@ type GetPluginRuntimeInput struct {
 
 // GetPluginRuntimeResponse is the response from the GetPluginRuntime call.
 type GetPluginRuntimeResponse struct {
-	Type         string  `json:"type"`
-	Name         string  `json:"name"`
-	OCIRuntime   string  `json:"oci_runtime"`
-	CgroupParent string  `json:"cgroup_parent"`
-	CPU          float32 `json:"cpu"`
-	Memory       uint64  `json:"memory"`
+	Type         string `json:"type"`
+	Name         string `json:"name"`
+	OCIRuntime   string `json:"oci_runtime"`
+	CgroupParent string `json:"cgroup_parent"`
+	CPU          int64  `json:"cpu"`
+	Memory       int64  `json:"memory"`
 }
 
 // GetPluginRuntime wraps GetPluginRuntimeWithContext using context.Background.
@@ -88,10 +88,10 @@ type RegisterPluginRuntimeInput struct {
 	// Type of the plugin. Required.
 	Type PluginRuntimeType `json:"type"`
 
-	OCIRuntime   string  `json:"oci_runtime,omitempty"`
-	CgroupParent string  `json:"cgroup_parent,omitempty"`
-	CPU          float32 `json:"cpu,omitempty"`
-	Memory       uint64  `json:"memory,omitempty"`
+	OCIRuntime   string `json:"oci_runtime,omitempty"`
+	CgroupParent string `json:"cgroup_parent,omitempty"`
+	CPU          int64  `json:"cpu,omitempty"`
+	Memory       int64  `json:"memory,omitempty"`
 }
 
 // RegisterPluginRuntime wraps RegisterPluginWithContext using context.Background.

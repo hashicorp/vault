@@ -752,9 +752,9 @@ func (b *SystemBackend) handlePluginRuntimeCatalogUpdate(ctx context.Context, _ 
 			ociRuntime = pluginruntimeutil.DefaultOCIRuntime
 		}
 		cgroupParent := d.Get("cgroup_parent").(string)
-		cpu := float32(d.Get("cpu").(float64))
+		cpu := d.Get("cpu").(int64)
 		if cpu < 0 {
-			return logical.ErrorResponse("runtime cpu in bytes must be greater than 0"), nil
+			return logical.ErrorResponse("runtime cpu must be greater than 0"), nil
 		}
 		if cpu == 0 {
 			cpu = pluginruntimeutil.DefaultCPU
@@ -766,8 +766,15 @@ func (b *SystemBackend) handlePluginRuntimeCatalogUpdate(ctx context.Context, _ 
 		if memory == 0 {
 			memory = pluginruntimeutil.DefaultMemory
 		}
-		err := b.Core.pluginRuntimeCatalog.Set(ctx, runtimeName, runtimeType, ociRuntime, cgroupParent, cpu, memory)
-		if err != nil {
+		if err = b.Core.pluginRuntimeCatalog.Set(ctx,
+			&pluginruntimeutil.PluginRuntimeConfig{
+				Name:         runtimeName,
+				Type:         runtimeType,
+				OCIRuntime:   ociRuntime,
+				CgroupParent: cgroupParent,
+				CPU:          cpu,
+				Memory:       memory,
+			}); err != nil {
 			return logical.ErrorResponse(err.Error()), nil
 		}
 	default:

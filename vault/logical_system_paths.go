@@ -2121,7 +2121,7 @@ func (b *SystemBackend) pluginsRuntimesCatalogCRUDPath() *framework.Path {
 				Description: strings.TrimSpace(sysHelp["plugin-runtime-catalog_cgroup-parent"][0]),
 			},
 			"cpu": {
-				Type:        framework.TypeFloat,
+				Type:        framework.TypeInt64,
 				Description: strings.TrimSpace(sysHelp["plugin-runtime-catalog_cpu"][0]),
 				Default:     pluginruntimeutil.DefaultCPU,
 			},
@@ -2190,7 +2190,7 @@ func (b *SystemBackend) pluginsRuntimesCatalogCRUDPath() *framework.Path {
 								Required:    true,
 							},
 							"cpu": {
-								Type:        framework.TypeFloat,
+								Type:        framework.TypeInt64,
 								Description: strings.TrimSpace(sysHelp["plugin-runtime-catalog_cpu"][0]),
 								Required:    true,
 							},

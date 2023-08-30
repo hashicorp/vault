@@ -7,7 +7,7 @@ import "github.com/hashicorp/vault/sdk/helper/consts"
 
 const (
 	DefaultOCIRuntime = "runsc"
-	DefaultCPU        = 0.1
+	DefaultCPU        = 1
 	DefaultMemory     = 100000000
 )
 
@@ -17,6 +17,6 @@ type PluginRuntimeConfig struct {
 	Type         consts.PluginRuntimeType `json:"type" structs:"type"`
 	OCIRuntime   string                   `json:"oci_runtime" structs:"oci_runtime"`
 	CgroupParent string                   `json:"cgroup_parent" structs:"cgroup_parent"`
-	CPU          float32                  `json:"cpu" structs:"cpu"`
+	CPU          int64                    `json:"cpu" structs:"cpu"`
 	Memory       int64                    `json:"memory" structs:"memory"`
 }

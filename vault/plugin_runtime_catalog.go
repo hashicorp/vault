@@ -69,26 +69,20 @@ func (c *PluginRuntimeCatalog) Get(ctx context.Context, name string, prt consts.
 }
 
 // Set registers a new plugin with the catalog, or updates an existing plugin runtime
-func (c *PluginRuntimeCatalog) Set(ctx context.Context, name string, prt consts.PluginRuntimeType, ociRuntime string, parentCGroup string, cpu float32, memory int64) error {
+func (c *PluginRuntimeCatalog) Set(ctx context.Context, conf *pluginruntimeutil.PluginRuntimeConfig) error {
 	c.lock.Lock()
 	defer c.lock.Unlock()
 
-	entry := &pluginruntimeutil.PluginRuntimeConfig{
-		Name:         name,
-		Type:         prt,
-		OCIRuntime:   ociRuntime,
-		CgroupParent: parentCGroup,
-		CPU:          cpu,
-		Memory:       memory,
+	if conf == nil {
+		return fmt.Errorf("plugin runtime config reference is nil")
 	}
 
-	// TODO what happens to the running existing container with(out) running plugins. Need to shut it down before setting it?
-	buf, err := json.Marshal(entry)
+	buf, err := json.Marshal(conf)
 	if err != nil {
 		return fmt.Errorf("failed to encode plugin entry: %w", err)
 	}
 
-	storageKey := path.Join(prt.String(), name)
+	storageKey := path.Join(conf.Type.String(), conf.Name)
 	logicalEntry := logical.StorageEntry{
 		Key:   storageKey,
 		Value: buf,
@@ -112,7 +106,6 @@ func (c *PluginRuntimeCatalog) Delete(ctx context.Context, name string, prt cons
 		return ErrPluginRuntimeNotFound
 	}
 
-	// TODO what happens to the running existing container with(out) running plugins. Need to shut it down before setting it?
 	return c.catalogView.Delete(ctx, storageKey)
 }
 
