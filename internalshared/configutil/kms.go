@@ -13,12 +13,9 @@ import (
 	"regexp"
 	"strings"
 
-	"k8s.io/utils/strings/slices"
-
-	"github.com/hashicorp/go-kms-wrapping/entropy/v2"
-
 	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/go-hclog"
+	"github.com/hashicorp/go-kms-wrapping/entropy/v2"
 	wrapping "github.com/hashicorp/go-kms-wrapping/v2"
 	aeadwrapper "github.com/hashicorp/go-kms-wrapping/wrappers/aead/v2"
 	"github.com/hashicorp/go-kms-wrapping/wrappers/alicloudkms/v2"
@@ -31,6 +28,7 @@ import (
 	"github.com/hashicorp/go-secure-stdlib/parseutil"
 	"github.com/hashicorp/hcl"
 	"github.com/hashicorp/hcl/hcl/ast"
+	"github.com/hashicorp/vault/sdk/helper/strutil"
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
@@ -458,7 +456,7 @@ func mergeTransitConfig(config map[string]string, envConfig map[string]string) {
 
 	for varName, val := range envConfig {
 		// for some values, file config takes precedence
-		if slices.Contains(TransitPrioritizeConfigValues, varName) && config[varName] != "" {
+		if strutil.StrListContains(TransitPrioritizeConfigValues, varName) && config[varName] != "" {
 			continue
 		}
 
