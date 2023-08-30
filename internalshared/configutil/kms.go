@@ -9,10 +9,11 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"k8s.io/utils/strings/slices"
 	"os"
 	"regexp"
 	"strings"
+
+	"k8s.io/utils/strings/slices"
 
 	"github.com/hashicorp/go-kms-wrapping/entropy/v2"
 
