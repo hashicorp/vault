@@ -198,7 +198,7 @@ $ curl \
 @include 'alerts/restricted-admin.mdx'
 
 The unlock user endpoint frees a locked user with the provided `mount_accessor` and `alias_identifier` in the given namespace.
-This command is idempotent, meaning it succeeds even if user with the given mount_accessor and alias_identifier is not locked.
+The unlock command is idempotent. Calls to the endpoint succeed even if the user matching the provided `mount_accessor` and `alias_identifier` is not currently locked.
 
 
 This endpoint was added in Vault 1.13.
