@@ -134,7 +134,7 @@
         <Hds::Copy::Button
           @text="Copy & Close"
           @textToCopy={{@ciphertext}}
-          class="hds-copy-button has-top-margin-m"
+          class="hds-copy-button copy-close has-top-margin-m"
           data-test-button="modal-copy-close"
           {{on "click" (fn @toggleModal "Ciphertext copied!")}}
         />
