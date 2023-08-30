@@ -9,6 +9,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"k8s.io/utils/strings/slices"
 	"os"
 	"regexp"
 	"strings"
@@ -215,14 +216,14 @@ func configureWrapper(configKMS *KMS, infoKeys *[]string, info *map[string]strin
 	var kmsInfo map[string]string
 	var err error
 
-	wrapperType := wrapping.WrapperType(configKMS.Type)
 	envConfig := GetEnvConfigFunc(configKMS)
-	for name, val := range envConfig {
-		// for transit seals, config takes precedence over env vars
-		if wrapperType == wrapping.WrapperTypeTransit && configKMS.Config[name] != "" {
-			continue
+	// transit is a special case, because some config values take precedence over env vars
+	if configKMS.Type == wrapping.WrapperTypeTransit.String() {
+		mergeTransitConfig(configKMS.Config, envConfig)
+	} else {
+		for name, val := range envConfig {
+			configKMS.Config[name] = val
 		}
-		configKMS.Config[name] = val
 	}
 
 	switch wrapping.WrapperType(configKMS.Type) {
@@ -437,6 +438,31 @@ func getEnvConfig(kms *KMS) map[string]string {
 	}
 
 	return envValues
+}
+
+func mergeTransitConfig(config map[string]string, envConfig map[string]string) {
+	useFileTlsConfig := false
+	for _, varName := range TransitTlsConfigVars {
+		if _, ok := config[varName]; ok {
+			useFileTlsConfig = true
+			break
+		}
+	}
+
+	if useFileTlsConfig {
+		for _, varName := range TransitTlsConfigVars {
+			delete(envConfig, varName)
+		}
+	}
+
+	for varName, val := range envConfig {
+		// for some value, file config takes precedence
+		if slices.Contains(TransitPrioritizeConfigValues, varName) && config[varName] != "" {
+			continue
+		}
+
+		config[varName] = val
+	}
 }
 
 func (k *KMS) Clone() *KMS {

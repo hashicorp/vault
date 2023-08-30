@@ -81,4 +81,17 @@ var (
 		transit.EnvTransitWrapperDisableRenewal:   "disable_renewal",
 		transit.EnvVaultTransitSealDisableRenewal: "disable_renewal",
 	}
+
+	TransitPrioritizeConfigValues = []string{
+		"token",
+		"address",
+	}
+
+	TransitTlsConfigVars = []string{
+		"tls_ca_cert",
+		"tls_client_cert",
+		"tls_client_key",
+		"tls_server_name",
+		"tls_skip_verify",
+	}
 )
