@@ -2654,7 +2654,10 @@ func setSeal(c *ServerCommand, config *server.Config, infoKeys []string, info ma
 	////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 	// Compute seal generation
 
-	sealGenerationInfo := c.computeSealGenerationInfo(existingSealGenerationInfo, allSealKmsConfigs)
+	sealGenerationInfo, err := c.computeSealGenerationInfo(existingSealGenerationInfo, allSealKmsConfigs)
+	if err != nil {
+		return nil, err
+	}
 
 	////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 	// Create the Seals
@@ -2680,7 +2683,7 @@ func setSeal(c *ServerCommand, config *server.Config, infoKeys []string, info ma
 		return nil, errors.New("no enabled Seals in configuration")
 
 	case containsShamir(enabledSealInfos) && containsShamir(disabledSealInfos):
-		return nil, errors.New("cannot migrate from one Shamir seal to another Shamir seal")
+		return nil, errors.New("shamir seals cannot be set disabled (they should simply not be set)")
 
 	case len(enabledSealInfos) == 1 && containsShamir(enabledSealInfos):
 		// The barrier seal is Shamir. If there are any disabled seals, then we put them all in the same
@@ -2720,25 +2723,31 @@ func setSeal(c *ServerCommand, config *server.Config, infoKeys []string, info ma
 	}, nil
 }
 
-func (c *ServerCommand) computeSealGenerationInfo(existingSealGenInfo *vaultseal.SealGenerationInfo, sealConfigs []*configutil.KMS) *vaultseal.SealGenerationInfo {
-	if existingSealGenInfo == nil {
-		return &vaultseal.SealGenerationInfo{
-			Generation: 1,
-			Seals:      sealConfigs,
+func (c *ServerCommand) computeSealGenerationInfo(existingSealGenInfo *vaultseal.SealGenerationInfo, sealConfigs []*configutil.KMS) (*vaultseal.SealGenerationInfo, error) {
+	var generation uint64
+	generation = 1
+
+	if existingSealGenInfo != nil {
+		if cmp.Equal(existingSealGenInfo.Seals, sealConfigs) {
+			return existingSealGenInfo, nil
 		}
+		generation = existingSealGenInfo.Generation + 1
 	}
-	if cmp.Equal(existingSealGenInfo.Seals, sealConfigs) {
-		return existingSealGenInfo
-	}
+	c.logger.Info("incrementing seal geneneration", "generation", generation)
 
-	generation := existingSealGenInfo.Generation + 1
-	c.logger.Info("incrementing seal config gen, new generation: ", "generation", generation)
-
-	// If the stored copy doesn't match the current configuration, we introduce a new generation which keeps track if a rewrap of all CSPs and seal wrapped values has completed (initially false).
-	return &vaultseal.SealGenerationInfo{
+	// If the stored copy doesn't match the current configuration, we introduce a new generation
+	// which keeps track if a rewrap of all CSPs and seal wrapped values has completed (initially false).
+	newSealGenInfo := &vaultseal.SealGenerationInfo{
 		Generation: generation,
 		Seals:      sealConfigs,
 	}
+
+	err := newSealGenInfo.Validate(existingSealGenInfo)
+	if err != nil {
+		return nil, err
+	}
+
+	return newSealGenInfo, nil
 }
 
 func initHaBackend(c *ServerCommand, config *server.Config, coreConfig *vault.CoreConfig, backend physical.Backend) (bool, error) {

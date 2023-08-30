@@ -202,7 +202,7 @@ func NewEventBus(logger hclog.Logger) (*EventBus, error) {
 }
 
 func (bus *EventBus) Subscribe(ctx context.Context, ns *namespace.Namespace, pattern string) (<-chan *eventlogger.Event, context.CancelFunc, error) {
-	return bus.SubscribeMultipleNamespaces(ctx, []string{ns.Path}, pattern)
+	return bus.SubscribeMultipleNamespaces(ctx, []string{strings.Trim(ns.Path, "/")}, pattern)
 }
 
 func (bus *EventBus) SubscribeMultipleNamespaces(ctx context.Context, namespacePathPatterns []string, pattern string) (<-chan *eventlogger.Event, context.CancelFunc, error) {
