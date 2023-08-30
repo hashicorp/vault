@@ -37,10 +37,6 @@ export default class KvListFilterComponent extends Component {
     this.query = this.args.filterValue;
   }
 
-  get searchMatchesFilter() {
-    return this.query === this.args.filterValue;
-  }
-
   navigate(pathToSecret, pageFilter) {
     const route = pathToSecret ? `${this.args.mountPoint}.list-directory` : `${this.args.mountPoint}.list`;
     const args = [route];
