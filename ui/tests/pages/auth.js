@@ -4,7 +4,7 @@
  */
 
 import { create, visitable, fillable, clickable } from 'ember-cli-page-object';
-import { settled } from '@ember/test-helpers';
+import { click, settled } from '@ember/test-helpers';
 import VAULT_KEYS from 'vault/tests/helpers/vault-keys';
 
 const { rootToken } = VAULT_KEYS;
@@ -56,6 +56,13 @@ export default create({
     await this.namespaceInput(ns);
     await settled();
     await this.tokenInput(rootToken).submit();
+    return;
+  },
+  logoutNs: async function () {
+    // just navigating to the logout URL wasn't working, so clicking manually
+    await click('[data-test-user-menu-trigger]');
+    await click('[data-test-user-menu-content] a#logout');
+    await this.namespaceInput('');
     return;
   },
 });

@@ -1,6 +1,6 @@
 import { module, test } from 'qunit';
 import { v4 as uuidv4 } from 'uuid';
-import { click, currentURL, findAll, setupOnerror, typeIn, visit } from '@ember/test-helpers';
+import { click, currentURL, fillIn, findAll, setupOnerror, typeIn, visit } from '@ember/test-helpers';
 import { setupApplicationTest } from 'vault/tests/helpers';
 import authPage from 'vault/tests/pages/auth';
 import {
@@ -18,7 +18,7 @@ import {
   metadataPolicy,
 } from 'vault/tests/helpers/policy-generator/kv';
 import { writeSecret, writeVersionedSecret } from 'vault/tests/helpers/kv/kv-run-commands';
-import { PAGE } from 'vault/tests/helpers/kv/kv-selectors';
+import { FORM, PAGE } from 'vault/tests/helpers/kv/kv-selectors';
 
 /**
  * This test set is for testing edge cases, such as specific bug fixes or reported user workflows
@@ -239,6 +239,90 @@ module('Acceptance | kv-v2 workflow | edge cases', function (hooks) {
         .hasText(
           'Delete metadata? This will permanently delete the metadata and versions of the secret. All version history will be removed. This cannot be undone. Confirm Cancel'
         );
+    });
+  });
+});
+
+module('Acceptance | Enterprise | kv-v2 workflow | edge cases', function (hooks) {
+  setupApplicationTest(hooks);
+
+  const navToEngine = async (backend) => {
+    await click('[data-test-sidebar-nav-link="Secrets engines"]');
+    return await click(PAGE.backends.link(backend));
+  };
+  hooks.beforeEach(async function () {
+    await authPage.login();
+    const uid = uuidv4();
+    this.backend = `kv-enterprise-edge-${uid}`;
+    this.namespace = `ns-${uid}`;
+    this.secretPath = 'my-secret';
+    await runCmd([`write sys/namespaces/${this.namespace} -force`]);
+    return;
+  });
+
+  hooks.afterEach(async function () {
+    await authPage.login();
+    await runCmd([`delete /sys/auth/${this.namespace}`]);
+    await runCmd(deleteEngineCmd(this.backend));
+    return;
+  });
+
+  module('admin persona', function (hooks) {
+    hooks.beforeEach(async function () {
+      await authPage.loginNs(this.namespace);
+      // mount engine within namespace
+      await runCmd(mountEngineCmd('kv-v2', this.backend), false);
+      return;
+    });
+    hooks.afterEach(async function () {
+      // special logout method clears the namespace field so test suite doesn't bork
+      return await authPage.logoutNs();
+    });
+
+    test('it can create a new secret version in a namespace', async function (assert) {
+      assert.expect(11);
+      const backend = this.backend;
+      const ns = this.namespace;
+      const secret = this.secretPath;
+      await navToEngine(backend);
+      assert.strictEqual(
+        currentURL(),
+        `/vault/secrets/${backend}/kv/list?namespace=${ns}`,
+        'navigates to list'
+      );
+      // Create first version of secret
+      await click(PAGE.list.createSecret);
+      await fillIn(FORM.inputByAttr('path'), secret);
+      assert.dom(FORM.toggleMetadata).exists('Shows metadata toggle when creating new secret');
+      await fillIn(FORM.keyInput(), 'foo');
+      await fillIn(FORM.maskedValueInput(), 'woahsecret');
+      await click(FORM.saveBtn);
+      assert.strictEqual(
+        currentURL(),
+        `/vault/secrets/${backend}/kv/${secret}/details?namespace=${ns}&version=1`,
+        'navigates to details'
+      );
+
+      // Create a new version
+      await click(PAGE.detail.createNewVersion);
+      assert.dom(FORM.inputByAttr('path')).isDisabled('path input is disabled');
+      assert.dom(FORM.inputByAttr('path')).hasValue(secret);
+      assert.dom(FORM.toggleMetadata).doesNotExist('Does not show metadata toggle when creating new version');
+      assert.dom(FORM.keyInput()).hasValue('foo');
+      assert.dom(FORM.maskedValueInput()).hasValue('woahsecret');
+      await fillIn(FORM.keyInput(1), 'foo-two');
+      await fillIn(FORM.maskedValueInput(1), 'supersecret');
+      await click(FORM.saveBtn);
+
+      // Check details
+      assert.strictEqual(
+        currentURL(),
+        `/vault/secrets/${backend}/kv/${secret}/details?namespace=${ns}&version=2`,
+        'navigates to details'
+      );
+      assert.dom(PAGE.infoRowValue('foo-two')).hasText('***********');
+      await click(PAGE.infoRowToggleMasked('foo-two'));
+      assert.dom(PAGE.infoRowValue('foo-two')).hasText('supersecret', 'secret value shows after toggle');
     });
   });
 });
