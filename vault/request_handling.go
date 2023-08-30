@@ -1253,13 +1253,8 @@ func (c *Core) handleRequest(ctx context.Context, req *logical.Request) (retResp
 						NamespaceID: ns.ID,
 					}
 
-					// Check for request role in context to role based quotas
-					var role string
-					if reqRole := ctx.Value(logical.CtxKeyRequestRole{}); reqRole != nil {
-						role = reqRole.(string)
-					}
-
-					if err := c.expiration.RegisterAuth(ctx, registeredTokenEntry, resp.Auth, role); err != nil {
+					// Only logins apply to role based quotas, so we can omit the role here, as we are not logging in.
+					if err := c.expiration.RegisterAuth(ctx, registeredTokenEntry, resp.Auth, ""); err != nil {
 						// Best-effort clean up on error, so we log the cleanup error as
 						// a warning but still return as internal error.
 						if err := c.tokenStore.revokeOrphan(ctx, resp.Auth.ClientToken); err != nil {

@@ -5,6 +5,7 @@ package seal
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"reflect"
@@ -128,6 +129,33 @@ func (sgi *SealGenerationInfo) SetRewrapped(value bool) {
 // IsRewrapped returns the SealGenerationInfo's rewrapped status.
 func (sgi *SealGenerationInfo) IsRewrapped() bool {
 	return sgi.rewrapped.Load()
+}
+
+type sealGenerationInfoJson struct {
+	Generation uint64
+	Seals      []*configutil.KMS
+	Rewrapped  bool
+}
+
+func (sgi *SealGenerationInfo) MarshalJSON() ([]byte, error) {
+	return json.Marshal(sealGenerationInfoJson{
+		Generation: sgi.Generation,
+		Seals:      sgi.Seals,
+		Rewrapped:  sgi.IsRewrapped(),
+	})
+}
+
+func (sgi *SealGenerationInfo) UnmarshalJSON(b []byte) error {
+	var value sealGenerationInfoJson
+	if err := json.Unmarshal(b, &value); err != nil {
+		return err
+	}
+
+	sgi.Generation = value.Generation
+	sgi.Seals = value.Seals
+	sgi.SetRewrapped(value.Rewrapped)
+
+	return nil
 }
 
 type SealInfo struct {
