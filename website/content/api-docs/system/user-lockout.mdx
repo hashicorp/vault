@@ -197,7 +197,7 @@ $ curl \
 
 @include 'alerts/restricted-admin.mdx'
 
-This endpoint unlocks a locked user with provided mount_accessor and alias_identifier in namespace in which the request was made if locked.
+The unlock user endpoint frees a locked user with the provided `mount_accessor` and `alias_identifier` in the given namespace.
 This command is idempotent, meaning it succeeds even if user with the given mount_accessor and alias_identifier is not locked.
 
 
