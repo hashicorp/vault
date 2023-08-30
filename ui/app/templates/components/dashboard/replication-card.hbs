@@ -9,9 +9,11 @@
       Replication
     </h3>
 
-    <LinkTo class="is-no-underline" @route="vault.cluster.replication.index">
-      Details
-    </LinkTo>
+    {{#if (or @replication.dr.clusterId @replication.performance.clusterId)}}
+      <LinkTo class="is-no-underline" @route="vault.cluster.replication.index">
+        Details
+      </LinkTo>
+    {{/if}}
   </div>
 
   {{! check if dr replication and performance replication exists }}
