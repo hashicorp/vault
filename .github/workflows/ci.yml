@@ -316,7 +316,7 @@ jobs:
                   "type": "section",
                   "text": {
                     "type": "mrkdwn",
-                    "text": "CI failed on ${{ github.ref_name }}\ngo: ${{ needs.test-go.result && ':white_check_mark:' || ':x:' }}\nrace: ${{ needs.test-go-race.result && ':white_check_mark:' || ':x:' }}\ntestonly: ${{ needs.test-go-testonly.result && ':white_check_mark:' || ':x:' }}\nui: ${{ needs.test-ui.result && ':white_check_mark:' || ':x:' }}"
+                    "text": "CI failed on ${{ github.ref_name }}\n${{ needs.test-go.result && ':white_check_mark:' || ':x:' }} Go tests\n${{ needs.test-go-race.result && ':white_check_mark:' || ':x:' }} Go race tests\n${{ needs.test-go-testonly.result && ':white_check_mark:' || ':x:' }}Go testonly tests\n${{ needs.test-ui.result && ':white_check_mark:' || ':x:' }} UI tests"
                   },
                   "accessory": {
                     "type": "button",
