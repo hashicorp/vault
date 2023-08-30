@@ -633,6 +633,10 @@ func (m *Manager) QueryResolveRoleQuotas(req *Request) (bool, error) {
 
 	// Check for any role-based quotas on the request namespaces/mount path.
 	for _, qType := range quotaTypes() {
+		// Use the namespace and mount as indexes and find all matches with a
+		// set Role field (see: 'true' as the last argument). We can't use
+		// indexNamespaceMountRole for this, because Role is a StringFieldIndex,
+		// which won't match on an empty string.
 		quota, err := txn.First(qType, indexNamespaceMount, req.NamespacePath, req.MountPath, false, true)
 		if err != nil {
 			return false, err
