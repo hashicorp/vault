@@ -28,7 +28,7 @@ type CaCert struct {
 }
 
 // generateCert creates a new leaf cert from provided CA template and signer
-func generateCert(caCertTemplate *x509.Certificate, caSigner crypto.Signer, extraSans []string) (string, string, error) {
+func generateCert(caCertTemplate *x509.Certificate, caSigner crypto.Signer, extraSANs []string) (string, string, error) {
 	// Create the private key
 	signer, keyPEM, err := privateKey()
 	if err != nil {
@@ -80,7 +80,7 @@ func generateCert(caCertTemplate *x509.Certificate, caSigner crypto.Signer, extr
 	if !foundHostname {
 		template.DNSNames = append(template.DNSNames, hostname)
 	}
-	for _, san := range extraSans {
+	for _, san := range extraSANs {
 		if ip := net.ParseIP(san); ip != nil {
 			template.IPAddresses = append(template.IPAddresses, ip)
 		} else {

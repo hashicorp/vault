@@ -266,7 +266,7 @@ func (c *ServerCommand) Flags() *FlagSets {
 			"certificate will always use localhost, localhost4, localhost6, " +
 			"localhost.localdomain, and the host name as alternate DNS names, " +
 			"and 127.0.0.1 as an alternate IP address. This flag can be specified " +
-			"multiple times to specify multiple SANs",
+			"multiple times to specify multiple SANs.",
 	})
 
 	f.StringVar(&StringVar{

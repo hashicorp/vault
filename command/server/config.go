@@ -176,13 +176,13 @@ ui = true
 }
 
 // DevTLSConfig is a Config that is used for dev tls mode of Vault.
-func DevTLSConfig(storageType, certDir string, extraSans []string) (*Config, error) {
+func DevTLSConfig(storageType, certDir string, extraSANs []string) (*Config, error) {
 	ca, err := GenerateCA()
 	if err != nil {
 		return nil, err
 	}
 
-	cert, key, err := generateCert(ca.Template, ca.Signer, extraSans)
+	cert, key, err := generateCert(ca.Template, ca.Signer, extraSANs)
 	if err != nil {
 		return nil, err
 	}
