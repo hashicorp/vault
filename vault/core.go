@@ -3784,7 +3784,7 @@ func (c *Core) LoadNodeID() (string, error) {
 
 // DetermineRoleFromLoginRequestFromBytes will determine the role that should be applied to a quota for a given
 // login request, accepting a byte payload
-func (c *Core) DetermineRoleFromLoginRequestFromBytes(mountPoint string, payload []byte, ctx context.Context) string {
+func (c *Core) DetermineRoleFromLoginRequestFromBytes(ctx context.Context, mountPoint string, payload []byte) string {
 	data := make(map[string]interface{})
 	err := jsonutil.DecodeJSON(payload, &data)
 	if err != nil {
@@ -3792,12 +3792,12 @@ func (c *Core) DetermineRoleFromLoginRequestFromBytes(mountPoint string, payload
 		return ""
 	}
 
-	return c.DetermineRoleFromLoginRequest(mountPoint, data, ctx)
+	return c.DetermineRoleFromLoginRequest(ctx, mountPoint, data)
 }
 
 // DetermineRoleFromLoginRequest will determine the role that should be applied to a quota for a given
 // login request
-func (c *Core) DetermineRoleFromLoginRequest(mountPoint string, data map[string]interface{}, ctx context.Context) string {
+func (c *Core) DetermineRoleFromLoginRequest(ctx context.Context, mountPoint string, data map[string]interface{}) string {
 	c.authLock.RLock()
 	defer c.authLock.RUnlock()
 	matchingBackend := c.router.MatchingBackend(ctx, mountPoint)
@@ -3816,7 +3816,17 @@ func (c *Core) DetermineRoleFromLoginRequest(mountPoint string, data map[string]
 	if err != nil || resp.Data["role"] == nil {
 		return ""
 	}
+
 	return resp.Data["role"].(string)
+}
+
+// ResolveRoleForQuotas looks for any quotas requiring a role for early
+// computation in the RateLimitQuotaWrapping handler.
+func (c *Core) ResolveRoleForQuotas(ctx context.Context, req *quotas.Request) (bool, error) {
+	if c.quotaManager == nil {
+		return false, nil
+	}
+	return c.quotaManager.QueryResolveRoleQuotas(req)
 }
 
 // aliasNameFromLoginRequest will determine the aliasName from the login Request
