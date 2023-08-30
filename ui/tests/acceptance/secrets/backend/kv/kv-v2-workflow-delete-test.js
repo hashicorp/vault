@@ -6,6 +6,7 @@ import { deleteEngineCmd, mountEngineCmd, runCmd, tokenWithPolicyCmd } from 'vau
 import { personas } from 'vault/tests/helpers/policy-generator/kv';
 import {
   clearRecords,
+  deleteLatestCmd,
   setupControlGroup,
   writeVersionedSecret,
 } from 'vault/tests/helpers/kv/kv-run-commands';
@@ -39,7 +40,7 @@ module('Acceptance | kv-v2 workflow | delete, undelete, destroy', function (hook
     await writeVersionedSecret(this.backend, this.secretPath, 'foo', 'bar', 4);
     await writeVersionedSecret(this.backend, 'nuke', 'foo', 'bar', 2);
     // Delete latest version for testing undelete for users that can't delete
-    await runCmd(`delete ${this.backend}/data/nuke`);
+    await runCmd(deleteLatestCmd(this.backend, 'nuke'));
     return;
   });
 
@@ -61,7 +62,7 @@ module('Acceptance | kv-v2 workflow | delete, undelete, destroy', function (hook
       await visit(`/vault/secrets/${this.backend}/kv/${this.secretPath}/details`);
       // correct toolbar options & details show
       assertDeleteActions(assert);
-      assert.dom(PAGE.secretRow).exists('shows secret data');
+      assert.dom(PAGE.infoRow).exists('shows secret data');
       // delete flow
       await click(PAGE.detail.delete);
       assert.dom(PAGE.detail.deleteModalTitle).includesText('Delete version?', 'shows correct modal title');
@@ -79,7 +80,7 @@ module('Acceptance | kv-v2 workflow | delete, undelete, destroy', function (hook
       // undelete flow
       await click(PAGE.detail.undelete);
       // details update accordingly
-      assert.dom(PAGE.secretRow).exists('shows secret data');
+      assert.dom(PAGE.infoRow).exists('shows secret data');
       assert.dom(PAGE.detail.versionTimestamp).includesText('Version 4 created');
       // correct toolbar options
       assertDeleteActions(assert, ['delete', 'destroy']);
@@ -90,7 +91,7 @@ module('Acceptance | kv-v2 workflow | delete, undelete, destroy', function (hook
       await visit(`/vault/secrets/${this.backend}/kv/${this.secretPath}/details?version=2`);
       // correct toolbar options & details show
       assertDeleteActions(assert);
-      assert.dom(PAGE.secretRow).exists('shows secret data');
+      assert.dom(PAGE.infoRow).exists('shows secret data');
       // delete flow
       await click(PAGE.detail.delete);
       assert.dom(PAGE.detail.deleteModalTitle).includesText('Delete version?', 'shows correct modal title');
@@ -108,7 +109,7 @@ module('Acceptance | kv-v2 workflow | delete, undelete, destroy', function (hook
       // undelete flow
       await click(PAGE.detail.undelete);
       // details update accordingly
-      assert.dom(PAGE.secretRow).exists('shows secret data');
+      assert.dom(PAGE.infoRow).exists('shows secret data');
       assert.dom(PAGE.detail.versionTimestamp).includesText('Version 2 created');
       // correct toolbar options
       assertDeleteActions(assert, ['delete', 'destroy']);
@@ -160,7 +161,7 @@ module('Acceptance | kv-v2 workflow | delete, undelete, destroy', function (hook
       await visit(`/vault/secrets/${this.backend}/kv/${this.secretPath}/details`);
       // correct toolbar options & details show
       assertDeleteActions(assert, []);
-      assert.dom(PAGE.secretRow).exists('shows secret data');
+      assert.dom(PAGE.infoRow).exists('shows secret data');
 
       // data-reader can't delete, so check undelete with already-deleted version
       await visit(`/vault/secrets/${this.backend}/kv/nuke/details`);
@@ -176,7 +177,7 @@ module('Acceptance | kv-v2 workflow | delete, undelete, destroy', function (hook
       await visit(`/vault/secrets/${this.backend}/kv/${this.secretPath}/details?version=2`);
       // correct toolbar options & details show
       assertDeleteActions(assert, []);
-      assert.dom(PAGE.secretRow).exists('shows secret data');
+      assert.dom(PAGE.infoRow).exists('shows secret data');
     });
     test('cannot destroy a secret version (dr)', async function (assert) {
       assert.expect(3);
@@ -209,7 +210,7 @@ module('Acceptance | kv-v2 workflow | delete, undelete, destroy', function (hook
       await visit(`/vault/secrets/${this.backend}/kv/${this.secretPath}/details`);
       // correct toolbar options & details show
       assertDeleteActions(assert, ['delete']);
-      assert.dom(PAGE.secretRow).exists('shows secret data');
+      assert.dom(PAGE.infoRow).exists('shows secret data');
       // delete flow
       await click(PAGE.detail.delete);
       assert.dom(PAGE.detail.deleteModalTitle).includesText('Delete version?', 'shows correct modal title');
@@ -232,7 +233,7 @@ module('Acceptance | kv-v2 workflow | delete, undelete, destroy', function (hook
       await visit(`/vault/secrets/${this.backend}/kv/${this.secretPath}/details?version=2`);
       // correct toolbar options & details show
       assertDeleteActions(assert, ['delete']);
-      assert.dom(PAGE.secretRow).exists('shows secret data');
+      assert.dom(PAGE.infoRow).exists('shows secret data');
       // delete flow
       await click(PAGE.detail.delete);
       assert.dom(PAGE.detail.deleteModalTitle).includesText('Delete version?', 'shows correct modal title');
