@@ -145,41 +145,38 @@ func TestQuotas_QueryResolveRole_RateLimitQuotas(t *testing.T) {
 	qm, err := NewManager(logging.NewVaultLogger(log.Trace), leaseWalkFunc, metricsutil.BlackholeSink())
 	require.NoError(t, err)
 
-	// RLQ
-	{
-		rlqReq := &Request{
-			Type:          TypeRateLimit,
-			Path:          "",
-			MountPath:     "mount1/",
-			NamespacePath: "",
-			ClientAddress: "127.0.0.1",
-		}
-		// Check that we have no quotas requiring role resolution on mount1/
-		required, err := qm.QueryResolveRoleQuotas(rlqReq)
-		require.NoError(t, err)
-		require.False(t, required)
-
-		// Create a non-role-based RLQ on mount1/ and make sure it doesn't require role resolution
-		rlq := NewRateLimitQuota("tq", rlqReq.NamespacePath, rlqReq.MountPath, rlqReq.Path, rlqReq.Role, false, 1*time.Minute, 10*time.Second, 10)
-		require.NoError(t, qm.SetQuota(context.Background(), TypeRateLimit.String(), rlq, false))
-
-		required, err = qm.QueryResolveRoleQuotas(rlqReq)
-		require.NoError(t, err)
-		require.False(t, required)
-
-		// Create a role-based RLQ on mount1/ and make sure it requires role resolution
-		rlqReq.Role = "test"
-		rlq = NewRateLimitQuota("tq", rlqReq.NamespacePath, rlqReq.MountPath, rlqReq.Path, rlqReq.Role, false, 1*time.Minute, 10*time.Second, 10)
-		require.NoError(t, qm.SetQuota(context.Background(), TypeRateLimit.String(), rlq, false))
-
-		required, err = qm.QueryResolveRoleQuotas(rlqReq)
-		require.NoError(t, err)
-		require.True(t, required)
-
-		// Check that we have no quotas requiring role resolution on mount2/
-		rlqReq.MountPath = "mount2/"
-		required, err = qm.QueryResolveRoleQuotas(rlqReq)
-		require.NoError(t, err)
-		require.False(t, required)
+	rlqReq := &Request{
+		Type:          TypeRateLimit,
+		Path:          "",
+		MountPath:     "mount1/",
+		NamespacePath: "",
+		ClientAddress: "127.0.0.1",
 	}
+	// Check that we have no quotas requiring role resolution on mount1/
+	required, err := qm.QueryResolveRoleQuotas(rlqReq)
+	require.NoError(t, err)
+	require.False(t, required)
+
+	// Create a non-role-based RLQ on mount1/ and make sure it doesn't require role resolution
+	rlq := NewRateLimitQuota("tq", rlqReq.NamespacePath, rlqReq.MountPath, rlqReq.Path, rlqReq.Role, false, 1*time.Minute, 10*time.Second, 10)
+	require.NoError(t, qm.SetQuota(context.Background(), TypeRateLimit.String(), rlq, false))
+
+	required, err = qm.QueryResolveRoleQuotas(rlqReq)
+	require.NoError(t, err)
+	require.False(t, required)
+
+	// Create a role-based RLQ on mount1/ and make sure it requires role resolution
+	rlqReq.Role = "test"
+	rlq = NewRateLimitQuota("tq", rlqReq.NamespacePath, rlqReq.MountPath, rlqReq.Path, rlqReq.Role, false, 1*time.Minute, 10*time.Second, 10)
+	require.NoError(t, qm.SetQuota(context.Background(), TypeRateLimit.String(), rlq, false))
+
+	required, err = qm.QueryResolveRoleQuotas(rlqReq)
+	require.NoError(t, err)
+	require.True(t, required)
+
+	// Check that we have no quotas requiring role resolution on mount2/
+	rlqReq.MountPath = "mount2/"
+	required, err = qm.QueryResolveRoleQuotas(rlqReq)
+	require.NoError(t, err)
+	require.False(t, required)
 }
