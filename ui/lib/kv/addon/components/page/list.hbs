@@ -5,7 +5,7 @@
   </:tabLinks>
 
   <:toolbarFilters>
-    {{#unless @noMetadataListPermissions}}
+    {{#unless @listPermissions.noList}}
       {{#if (or @secrets @filterValue)}}
         <KvListFilter
           @secrets={{@secrets}}
@@ -23,8 +23,7 @@
     </ToolbarLink>
   </:toolbarActions>
 </KvPageHeader>
-
-{{#if @noMetadataListPermissions}}
+{{#if @listPermissions.noList}}
   <div class="box is-fullwidth is-shadowless has-tall-padding">
     <div class="selectable-card-container one-card">
       <OverviewCard
@@ -43,6 +42,9 @@
             {{this.buttonText}}
           </button>
         </form>
+        {{#if @listPermissions.noDirectory}}
+          <AlertInline @type="danger" @message="You do not have permissions to list {{@pathToSecret}} metadata." />
+        {{/if}}
       </OverviewCard>
     </div>
   </div>

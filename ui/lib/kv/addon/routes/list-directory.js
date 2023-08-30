@@ -8,6 +8,7 @@ import { inject as service } from '@ember/service';
 import { hash } from 'rsvp';
 import { normalizePath } from 'vault/utils/path-encoding-helpers';
 import { breadcrumbsForSecret } from 'kv/utils/kv-breadcrumbs';
+import { pathIsDirectory } from 'kv/utils/kv-breadcrumbs';
 
 export default class KvSecretsListRoute extends Route {
   @service store;
@@ -61,8 +62,18 @@ export default class KvSecretsListRoute extends Route {
 
   setupController(controller, resolvedModel) {
     super.setupController(controller, resolvedModel);
+    // listPermissions is used to show the overview card and/or an error message about LIST permissions.
+    resolvedModel.listPermissions = {
+      noDirectory: false,
+      noList: false,
+    };
+
     if (resolvedModel.secrets === 403) {
-      resolvedModel.noMetadataListPermissions = true;
+      resolvedModel.listPermissions.noList = true;
+      if (pathIsDirectory(resolvedModel.pathToSecret)) {
+        // the user attempted to return the list for a directory but does not have access
+        resolvedModel.listPermissions.noDirectory = true;
+      }
     }
 
     let breadcrumbsArray = [{ label: 'secrets', route: 'secrets', linkExternal: true }];
