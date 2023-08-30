@@ -8,6 +8,7 @@ import (
 	"errors"
 	"fmt"
 	"net/url"
+	"path"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -21,6 +22,7 @@ import (
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/ryanuber/go-glob"
+	"google.golang.org/protobuf/types/known/structpb"
 )
 
 const (
@@ -35,6 +37,12 @@ var (
 	ErrNotStarted              = errors.New("event broker has not been started")
 	cloudEventsFormatterFilter *cloudevents.FormatterFilter
 	subscriptions              atomic.Int64 // keeps track of event subscription count in all event buses
+
+	// these metadata fields will have the plugin mount path prepended to them
+	metadataPrependPathFields = []string{
+		"path",
+		logical.EventMetadataDataPath,
+	}
 )
 
 // EventBus contains the main logic of running an event broker for Vault.
@@ -81,12 +89,31 @@ func (bus *EventBus) Start() {
 	}
 }
 
-// SendInternal sends an event to the event bus and routes it to all relevant subscribers.
+// patchMountPath patches the event data's metadata "secret_path" field, if present, to include the mount path prepended.
+func patchMountPath(data *logical.EventData, pluginInfo *logical.EventPluginInfo) *logical.EventData {
+	if pluginInfo == nil || pluginInfo.MountPath == "" || data.Metadata == nil {
+		return data
+	}
+
+	for _, field := range metadataPrependPathFields {
+		if data.Metadata.Fields[field] != nil {
+			newPath := path.Join(pluginInfo.MountPath, data.Metadata.Fields[field].GetStringValue())
+			if pluginInfo.MountClass == "auth" {
+				newPath = path.Join("auth", newPath)
+			}
+			data.Metadata.Fields[field] = structpb.NewStringValue(newPath)
+		}
+	}
+
+	return data
+}
+
+// SendEventInternal sends an event to the event bus and routes it to all relevant subscribers.
 // This function does *not* wait for all subscribers to acknowledge before returning.
 // This function is meant to be used by trusted internal code, so it can specify details like the namespace
 // and plugin info. Events from plugins should be routed through WithPlugin(), which will populate
 // the namespace and plugin info automatically.
-func (bus *EventBus) SendInternal(ctx context.Context, ns *namespace.Namespace, pluginInfo *logical.EventPluginInfo, eventType logical.EventType, data *logical.EventData) error {
+func (bus *EventBus) SendEventInternal(ctx context.Context, ns *namespace.Namespace, pluginInfo *logical.EventPluginInfo, eventType logical.EventType, data *logical.EventData) error {
 	if ns == nil {
 		return namespace.ErrNoNamespace
 	}
@@ -94,14 +121,14 @@ func (bus *EventBus) SendInternal(ctx context.Context, ns *namespace.Namespace, 
 		return ErrNotStarted
 	}
 	eventReceived := &logical.EventReceived{
-		Event:      data,
+		Event:      patchMountPath(data, pluginInfo),
 		Namespace:  ns.Path,
 		EventType:  string(eventType),
 		PluginInfo: pluginInfo,
 	}
 	bus.logger.Info("Sending event", "event", eventReceived)
 
-	// We can't easily know when the Send is complete, so we can't call the cancel function.
+	// We can't easily know when the SendEvent is complete, so we can't call the cancel function.
 	// But, it is called automatically after bus.timeout, so there won't be any leak as long as bus.timeout is not too long.
 	ctx, _ = context.WithTimeout(ctx, bus.timeout)
 	_, err := bus.broker.Send(ctx, eventTypeAll, eventReceived)
@@ -126,10 +153,10 @@ func (bus *EventBus) WithPlugin(ns *namespace.Namespace, eventPluginInfo *logica
 	}, nil
 }
 
-// Send sends an event to the event bus and routes it to all relevant subscribers.
+// SendEvent sends an event to the event bus and routes it to all relevant subscribers.
 // This function does *not* wait for all subscribers to acknowledge before returning.
-func (bus *pluginEventBus) Send(ctx context.Context, eventType logical.EventType, data *logical.EventData) error {
-	return bus.bus.SendInternal(ctx, bus.namespace, bus.pluginInfo, eventType, data)
+func (bus *pluginEventBus) SendEvent(ctx context.Context, eventType logical.EventType, data *logical.EventData) error {
+	return bus.bus.SendEventInternal(ctx, bus.namespace, bus.pluginInfo, eventType, data)
 }
 
 func init() {
@@ -175,6 +202,10 @@ func NewEventBus(logger hclog.Logger) (*EventBus, error) {
 }
 
 func (bus *EventBus) Subscribe(ctx context.Context, ns *namespace.Namespace, pattern string) (<-chan *eventlogger.Event, context.CancelFunc, error) {
+	return bus.SubscribeMultipleNamespaces(ctx, []string{strings.Trim(ns.Path, "/")}, pattern)
+}
+
+func (bus *EventBus) SubscribeMultipleNamespaces(ctx context.Context, namespacePathPatterns []string, pattern string) (<-chan *eventlogger.Event, context.CancelFunc, error) {
 	// subscriptions are still stored even if the bus has not been started
 	pipelineID, err := uuid.GenerateUUID()
 	if err != nil {
@@ -186,7 +217,7 @@ func (bus *EventBus) Subscribe(ctx context.Context, ns *namespace.Namespace, pat
 		return nil, nil, err
 	}
 
-	filterNode := newFilterNode(ns, pattern)
+	filterNode := newFilterNode(namespacePathPatterns, pattern)
 	err = bus.broker.RegisterNode(eventlogger.NodeID(filterNodeID), filterNode)
 	if err != nil {
 		return nil, nil, err
@@ -232,15 +263,23 @@ func (bus *EventBus) SetSendTimeout(timeout time.Duration) {
 	bus.timeout = timeout
 }
 
-func newFilterNode(ns *namespace.Namespace, pattern string) *eventlogger.Filter {
+func newFilterNode(namespacePatterns []string, pattern string) *eventlogger.Filter {
 	return &eventlogger.Filter{
 		Predicate: func(e *eventlogger.Event) (bool, error) {
 			eventRecv := e.Payload.(*logical.EventReceived)
-
-			// Drop if event is not in our namespace.
-			// TODO: add wildcard/child namespace processing here in some cases?
-			if eventRecv.Namespace != ns.Path {
-				return false, nil
+			eventNs := strings.Trim(eventRecv.Namespace, "/")
+			// Drop if event is not in namespace patterns namespace.
+			if len(namespacePatterns) > 0 {
+				allow := false
+				for _, nsPattern := range namespacePatterns {
+					if glob.Glob(nsPattern, eventNs) {
+						allow = true
+						break
+					}
+				}
+				if !allow {
+					return false, nil
+				}
 			}
 
 			// Filter for correct event type, including wildcards.

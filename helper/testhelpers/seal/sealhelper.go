@@ -68,10 +68,20 @@ func (tss *TransitSealServer) MakeSeal(t testing.T, key string) (vault.Seal, err
 		"key_name":    key,
 		"tls_ca_cert": tss.CACertPEMFile,
 	}
-	transitSeal, _, err := configutil.GetTransitKMSFunc(&configutil.KMS{Config: wrapperConfig})
+	transitSealWrapper, _, err := configutil.GetTransitKMSFunc(&configutil.KMS{Config: wrapperConfig})
 	if err != nil {
 		t.Fatalf("error setting wrapper config: %v", err)
 	}
 
-	return vault.NewAutoSeal(seal.NewAccess(transitSeal))
+	access, err := seal.NewAccessFromSealInfo(tss.Logger, 1, true, []seal.SealInfo{
+		{
+			Wrapper:  transitSealWrapper,
+			Priority: 1,
+			Name:     "transit",
+		},
+	})
+	if err != nil {
+		return nil, err
+	}
+	return vault.NewAutoSeal(access), nil
 }

@@ -15,6 +15,18 @@
         </label>
         <ToolbarActions>
           {{yield}}
+          {{#if @example}}
+            <button
+              type="button"
+              class="toolbar-link"
+              disabled={{not @value}}
+              {{on "click" this.restoreExample}}
+              data-test-restore-example
+            >
+              Restore example
+              <Icon @name="reload" />
+            </button>
+          {{/if}}
           <div class="toolbar-separator"></div>
           <CopyButton
             class="button is-transparent"
@@ -30,7 +42,7 @@
   {{/if}}
   <div
     {{code-mirror
-      content=@value
+      content=(or @value @example)
       extraKeys=@extraKeys
       gutters=@gutters
       lineNumbers=(if @readOnly false true)
@@ -38,12 +50,12 @@
       readOnly=@readOnly
       theme=@theme
       viewportMarg=@viewportMargin
+      onSetup=this.onSetup
       onUpdate=this.onUpdate
       onFocus=this.onFocus
     }}
     class={{if @readOnly "readonly-codemirror"}}
     data-test-component="code-mirror-modifier"
-    data-test-example-modal-json-text
   ></div>
 
   {{#if @helpText}}

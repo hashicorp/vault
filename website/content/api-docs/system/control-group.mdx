@@ -6,7 +6,8 @@ description: The '/sys/control-group' endpoint handles the Control Group workflo
 
 ## Authorize control group request
 
-@include 'alerts/enterprise-and-hcp.mdx'
+@include 'alerts/enterprise-and-hcp-plus.mdx'
+@include 'alerts/restricted-admin.mdx'
 
 This endpoint authorizes a control group request.
 
@@ -47,6 +48,8 @@ $ curl \
 ```
 
 ## Check control group request status
+
+@include 'alerts/restricted-admin.mdx'
 
 This endpoint checks the status of a control group request.
 

@@ -6,7 +6,7 @@
 {{#if (or (has-block) this.isVisible)}}
   <div class="info-table-row" data-test-component="info-table-row" ...attributes>
     <div
-      class="column is-one-quarter {{if this.hasLabelOverflow 'label-overflow'}}"
+      class="column {{or @labelWidth 'is-one-quarter'}} {{if this.hasLabelOverflow 'label-overflow'}}"
       data-test-label-div
       {{did-insert this.calculateLabelOverflow}}
     >
@@ -87,7 +87,7 @@
           {{#if @tooltipText}}
             <ToolTip @verticalPosition="above" @horizontalPosition="left" as |T|>
               <T.Trigger @tabindex={{false}}>
-                <span class="is-word-break has-text-black" data-test-row-value={{this.label}}>{{this.value}}</span>
+                <span class="is-word-break has-text-black" data-test-row-value={{@label}}>{{@value}}</span>
               </T.Trigger>
               <T.Content @defaultClass="tool-tip">
                 <CopyButton

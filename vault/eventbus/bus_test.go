@@ -5,6 +5,7 @@ package eventbus
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"sync/atomic"
 	"testing"
@@ -14,6 +15,8 @@ import (
 	"github.com/hashicorp/go-secure-stdlib/strutil"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/sdk/logical"
+	"github.com/stretchr/testify/assert"
+	"google.golang.org/protobuf/types/known/structpb"
 )
 
 // TestBusBasics tests that basic event sending and subscribing function.
@@ -31,14 +34,14 @@ func TestBusBasics(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	err = bus.SendInternal(ctx, namespace.RootNamespace, nil, eventType, event)
+	err = bus.SendEventInternal(ctx, namespace.RootNamespace, nil, eventType, event)
 	if err != ErrNotStarted {
 		t.Errorf("Expected not started error but got: %v", err)
 	}
 
 	bus.Start()
 
-	err = bus.SendInternal(ctx, namespace.RootNamespace, nil, eventType, event)
+	err = bus.SendEventInternal(ctx, namespace.RootNamespace, nil, eventType, event)
 	if err != nil {
 		t.Errorf("Expected no error sending: %v", err)
 	}
@@ -54,7 +57,51 @@ func TestBusBasics(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	err = bus.SendInternal(ctx, namespace.RootNamespace, nil, eventType, event)
+	err = bus.SendEventInternal(ctx, namespace.RootNamespace, nil, eventType, event)
+	if err != nil {
+		t.Error(err)
+	}
+
+	timeout := time.After(1 * time.Second)
+	select {
+	case message := <-ch:
+		if message.Payload.(*logical.EventReceived).Event.Id != event.Id {
+			t.Errorf("Got unexpected message: %+v", message)
+		}
+	case <-timeout:
+		t.Error("Timeout waiting for message")
+	}
+}
+
+// TestSubscribeNonRootNamespace verifies that events for non-root namespaces
+// aren't filtered out by the bus.
+func TestSubscribeNonRootNamespace(t *testing.T) {
+	bus, err := NewEventBus(nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	bus.Start()
+	ctx := context.Background()
+
+	eventType := logical.EventType("someType")
+
+	ns := &namespace.Namespace{
+		ID:   "abc",
+		Path: "abc/",
+	}
+
+	ch, cancel, err := bus.Subscribe(ctx, ns, string(eventType))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer cancel()
+
+	event, err := logical.NewEvent()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	err = bus.SendEventInternal(ctx, ns, nil, eventType, event)
 	if err != nil {
 		t.Error(err)
 	}
@@ -97,7 +144,7 @@ func TestNamespaceFiltering(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	err = bus.SendInternal(ctx, &namespace.Namespace{
+	err = bus.SendEventInternal(ctx, &namespace.Namespace{
 		ID:   "abc",
 		Path: "/abc",
 	}, nil, eventType, event)
@@ -113,7 +160,7 @@ func TestNamespaceFiltering(t *testing.T) {
 		// okay
 	}
 
-	err = bus.SendInternal(ctx, namespace.RootNamespace, nil, eventType, event)
+	err = bus.SendEventInternal(ctx, namespace.RootNamespace, nil, eventType, event)
 	if err != nil {
 		t.Error(err)
 	}
@@ -163,11 +210,11 @@ func TestBus2Subscriptions(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	err = bus.SendInternal(ctx, namespace.RootNamespace, nil, eventType2, event2)
+	err = bus.SendEventInternal(ctx, namespace.RootNamespace, nil, eventType2, event2)
 	if err != nil {
 		t.Error(err)
 	}
-	err = bus.SendInternal(ctx, namespace.RootNamespace, nil, eventType1, event1)
+	err = bus.SendEventInternal(ctx, namespace.RootNamespace, nil, eventType1, event1)
 	if err != nil {
 		t.Error(err)
 	}
@@ -255,7 +302,7 @@ func TestBusSubscriptionsCancel(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			err = bus.SendInternal(ctx, namespace.RootNamespace, nil, eventType, event)
+			err = bus.SendEventInternal(ctx, namespace.RootNamespace, nil, eventType, event)
 			if err != nil {
 				t.Error(err)
 			}
@@ -267,7 +314,7 @@ func TestBusSubscriptionsCancel(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			err = bus.SendInternal(ctx, namespace.RootNamespace, nil, eventType, event)
+			err = bus.SendEventInternal(ctx, namespace.RootNamespace, nil, eventType, event)
 			if err != nil {
 				t.Error(err)
 			}
@@ -337,11 +384,11 @@ func TestBusWildcardSubscriptions(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	err = bus.SendInternal(ctx, namespace.RootNamespace, nil, barEventType, event2)
+	err = bus.SendEventInternal(ctx, namespace.RootNamespace, nil, barEventType, event2)
 	if err != nil {
 		t.Error(err)
 	}
-	err = bus.SendInternal(ctx, namespace.RootNamespace, nil, fooEventType, event1)
+	err = bus.SendEventInternal(ctx, namespace.RootNamespace, nil, fooEventType, event1)
 	if err != nil {
 		t.Error(err)
 	}
@@ -375,5 +422,126 @@ func TestBusWildcardSubscriptions(t *testing.T) {
 		}
 	case <-timeout:
 		t.Error("Timeout waiting for event2")
+	}
+}
+
+// TestDataPathIsPrependedWithMount tests that "data_path", if present in the
+// metadata, is prepended with the plugin's mount.
+func TestDataPathIsPrependedWithMount(t *testing.T) {
+	bus, err := NewEventBus(nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	ctx := context.Background()
+
+	fooEventType := logical.EventType("kv/foo")
+	bus.Start()
+
+	ch, cancel, err := bus.Subscribe(ctx, namespace.RootNamespace, "kv/*")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer cancel()
+
+	event, err := logical.NewEvent()
+	if err != nil {
+		t.Fatal(err)
+	}
+	metadata := map[string]string{
+		logical.EventMetadataDataPath: "my/secret/path",
+		"not_touched":                 "xyz",
+	}
+	metadataBytes, err := json.Marshal(metadata)
+	if err != nil {
+		t.Fatal(err)
+	}
+	event.Metadata = &structpb.Struct{}
+	if err := event.Metadata.UnmarshalJSON(metadataBytes); err != nil {
+		t.Fatal(err)
+	}
+
+	// no plugin info means nothing should change
+	err = bus.SendEventInternal(ctx, namespace.RootNamespace, nil, fooEventType, event)
+	if err != nil {
+		t.Error(err)
+	}
+
+	timeout := time.After(1 * time.Second)
+	select {
+	case message := <-ch:
+		metadata := message.Payload.(*logical.EventReceived).Event.Metadata.AsMap()
+		assert.Contains(t, metadata, "not_touched")
+		assert.Equal(t, "xyz", metadata["not_touched"])
+		assert.Contains(t, metadata, "data_path")
+		assert.Equal(t, "my/secret/path", metadata["data_path"])
+	case <-timeout:
+		t.Error("Timeout waiting for event")
+	}
+
+	// send with a secrets plugin mounted
+	pluginInfo := logical.EventPluginInfo{
+		MountClass:    "secrets",
+		MountAccessor: "kv_abc",
+		MountPath:     "secret/",
+		Plugin:        "kv",
+		PluginVersion: "v1.13.1+builtin",
+		Version:       "2",
+	}
+	err = bus.SendEventInternal(ctx, namespace.RootNamespace, &pluginInfo, fooEventType, event)
+	if err != nil {
+		t.Error(err)
+	}
+
+	timeout = time.After(1 * time.Second)
+	select {
+	case message := <-ch:
+		metadata := message.Payload.(*logical.EventReceived).Event.Metadata.AsMap()
+		assert.Contains(t, metadata, "not_touched")
+		assert.Equal(t, "xyz", metadata["not_touched"])
+		assert.Contains(t, metadata, "data_path")
+		assert.Equal(t, "secret/my/secret/path", metadata["data_path"])
+	case <-timeout:
+		t.Error("Timeout waiting for event")
+	}
+
+	// send with an auth plugin mounted
+	pluginInfo = logical.EventPluginInfo{
+		MountClass:    "auth",
+		MountAccessor: "kubernetes_abc",
+		MountPath:     "kubernetes/",
+		Plugin:        "vault-plugin-auth-kubernetes",
+		PluginVersion: "v1.13.1+builtin",
+	}
+	event, err = logical.NewEvent()
+	if err != nil {
+		t.Fatal(err)
+	}
+	metadata = map[string]string{
+		logical.EventMetadataDataPath: "my/secret/path",
+		"not_touched":                 "xyz",
+	}
+	metadataBytes, err = json.Marshal(metadata)
+	if err != nil {
+		t.Fatal(err)
+	}
+	event.Metadata = &structpb.Struct{}
+	if err := event.Metadata.UnmarshalJSON(metadataBytes); err != nil {
+		t.Fatal(err)
+	}
+	err = bus.SendEventInternal(ctx, namespace.RootNamespace, &pluginInfo, fooEventType, event)
+	if err != nil {
+		t.Error(err)
+	}
+
+	timeout = time.After(1 * time.Second)
+	select {
+	case message := <-ch:
+		metadata := message.Payload.(*logical.EventReceived).Event.Metadata.AsMap()
+		assert.Contains(t, metadata, "not_touched")
+		assert.Equal(t, "xyz", metadata["not_touched"])
+		assert.Contains(t, metadata, "data_path")
+		assert.Equal(t, "auth/kubernetes/my/secret/path", metadata["data_path"])
+	case <-timeout:
+		t.Error("Timeout waiting for event")
 	}
 }

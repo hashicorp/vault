@@ -84,6 +84,7 @@ var (
 	// the always forward list
 	perfStandbyAlwaysForwardPaths = pathmanager.New()
 	alwaysRedirectPaths           = pathmanager.New()
+	websocketPaths                = pathmanager.New()
 
 	injectDataIntoTopRoutes = []string{
 		"/v1/sys/audit",
@@ -109,7 +110,9 @@ var (
 		"/v1/sys/rotate",
 		"/v1/sys/wrapping/wrap",
 	}
-
+	websocketRawPaths = []string{
+		"/v1/sys/events/subscribe",
+	}
 	oidcProtectedPathRegex = regexp.MustCompile(`^identity/oidc/provider/\w(([\w-.]+)?\w)?/userinfo$`)
 )
 
@@ -119,6 +122,10 @@ func init() {
 		"sys/storage/raft/snapshot-force",
 		"!sys/storage/raft/snapshot-auto/config",
 	})
+	websocketPaths.AddPaths(websocketRawPaths)
+	for _, path := range websocketRawPaths {
+		alwaysRedirectPaths.AddPaths([]string{strings.TrimPrefix(path, "/v1/")})
+	}
 }
 
 type HandlerAnchor struct{}
@@ -159,6 +166,7 @@ func handler(props *vault.HandlerProperties) http.Handler {
 
 		mux.Handle("/v1/sys/init", handleSysInit(core))
 		mux.Handle("/v1/sys/seal-status", handleSysSealStatus(core))
+		mux.Handle("/v1/sys/seal-backend-status", handleSysSealBackendStatus(core))
 		mux.Handle("/v1/sys/seal", handleSysSeal(core))
 		mux.Handle("/v1/sys/step-down", handleRequestForwarding(core, handleSysStepDown(core)))
 		mux.Handle("/v1/sys/unseal", handleSysUnseal(core))
@@ -1015,6 +1023,15 @@ func respondStandby(core *vault.Core, w http.ResponseWriter, reqURL *url.URL) {
 		Host:     redirectURL.Host,
 		Path:     reqURL.Path,
 		RawQuery: reqURL.RawQuery,
+	}
+
+	// WebSockets schemas are ws or wss
+	if websocketPaths.HasPath(reqURL.Path) {
+		if finalURL.Scheme == "http" {
+			finalURL.Scheme = "ws"
+		} else {
+			finalURL.Scheme = "wss"
+		}
 	}
 
 	// Ensure there is a scheme, default to https

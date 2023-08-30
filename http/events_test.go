@@ -8,17 +8,25 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"net/http/httptest"
 	"strings"
+	"sync"
 	"sync/atomic"
 	"testing"
 	"time"
 
+	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/api"
+	"github.com/hashicorp/vault/audit"
 	"github.com/hashicorp/vault/helper/experiments"
 	"github.com/hashicorp/vault/helper/namespace"
+	"github.com/hashicorp/vault/helper/testhelpers/corehelpers"
+	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/vault"
+	"github.com/hashicorp/vault/vault/cluster"
+	"github.com/stretchr/testify/assert"
 	"nhooyr.io/websocket"
 )
 
@@ -55,7 +63,7 @@ func TestEventsSubscribe(t *testing.T) {
 			pluginInfo := &logical.EventPluginInfo{
 				MountPath: "secret",
 			}
-			err = core.Events().SendInternal(namespace.RootContext(context.Background()), namespace.RootNamespace, pluginInfo, logical.EventType(eventType), &logical.EventData{
+			err = core.Events().SendEventInternal(namespace.RootContext(context.Background()), namespace.RootNamespace, pluginInfo, logical.EventType(eventType), &logical.EventData{
 				Id:        id,
 				Metadata:  nil,
 				EntityIds: nil,
@@ -124,6 +132,170 @@ func TestEventsSubscribe(t *testing.T) {
 
 			checkRequiredCloudEventsFields(t, event)
 		}
+	}
+}
+
+// TestEventsSubscribeNamespaces tests the websocket endpoint for subscribing to events in multiple namespaces.
+func TestEventsSubscribeNamespaces(t *testing.T) {
+	core := vault.TestCoreWithConfig(t, &vault.CoreConfig{
+		Experiments: []string{experiments.VaultExperimentEventsAlpha1},
+	})
+
+	ln, addr := TestServer(t, core)
+	defer ln.Close()
+
+	// unseal the core
+	keys, token := vault.TestCoreInit(t, core)
+	for _, key := range keys {
+		_, err := core.Unseal(key)
+		if err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	stop := atomic.Bool{}
+
+	const eventType = "abc"
+
+	namespaces := []string{
+		"",
+		"ns1",
+		"ns2",
+		"ns1/ns13",
+		"ns1/ns13/ns134",
+	}
+
+	// send some events with the specified namespaces
+	sendEvents := func() {
+		pluginInfo := &logical.EventPluginInfo{
+			MountPath: "secret",
+		}
+		for i := range namespaces {
+			var ns *namespace.Namespace
+			if namespaces[i] == "" {
+				ns = namespace.RootNamespace
+			} else {
+				ns = &namespace.Namespace{
+					ID:             namespaces[i],
+					Path:           namespaces[i],
+					CustomMetadata: nil,
+				}
+			}
+			id, err := uuid.GenerateUUID()
+			if err != nil {
+				core.Logger().Info("Error generating UUID, exiting sender", "error", err)
+			}
+			err = core.Events().SendEventInternal(namespace.RootContext(context.Background()), ns, pluginInfo, eventType, &logical.EventData{
+				Id:        id,
+				Metadata:  nil,
+				EntityIds: nil,
+				Note:      "testing",
+			})
+			if err != nil {
+				core.Logger().Info("Error sending event, exiting sender", "error", err)
+			}
+		}
+	}
+
+	t.Cleanup(func() {
+		stop.Store(true)
+	})
+
+	ctx := context.Background()
+	wsAddr := strings.Replace(addr, "http", "ws", 1)
+
+	testCases := []struct {
+		name           string
+		namespaces     []string
+		expectedEvents int
+	}{
+		{"invalid", []string{"something"}, 1},
+		{"simple wildcard", []string{"ns*"}, 5},
+		{"two namespaces", []string{"ns1/ns13", "ns1/other"}, 2},
+		{"no namespace", []string{""}, 1},
+		{"all wildcard", []string{"*"}, 5},
+		{"mixed wildcard", []string{"ns1/ns13*", "ns2"}, 4},
+		{"overlapping wildcard", []string{"ns*", "ns1"}, 5},
+	}
+
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			extra := ""
+			for _, ns := range testCase.namespaces {
+				extra += "&namespaces=" + ns
+			}
+			url := fmt.Sprintf("%s/v1/sys/events/subscribe/%s?json=true%v", wsAddr, eventType, extra)
+			conn, _, err := websocket.Dial(ctx, url, &websocket.DialOptions{
+				HTTPHeader: http.Header{"x-vault-token": []string{token}},
+			})
+			if err != nil {
+				t.Fatal(err)
+			}
+			t.Cleanup(func() {
+				conn.Close(websocket.StatusNormalClosure, "")
+			})
+			sendEvents()
+			// CI is sometimes slow, so this timeout is high initially
+			ctx, cancel := context.WithTimeout(ctx, 1*time.Second)
+			defer cancel()
+			gotEvents := 0
+			for {
+				_, msg, err := conn.Read(ctx)
+				if err != nil {
+					break
+				}
+				event := map[string]interface{}{}
+				err = json.Unmarshal(msg, &event)
+				if err != nil {
+					t.Fatal(err)
+				}
+				t.Log(string(msg))
+				gotEvents += 1
+
+				// if we got as many as we expect, shorten the test so we don't waste time,
+				// but still allow time for "extra" events to come in and make us fail
+				if gotEvents == testCase.expectedEvents {
+					ctx2, cancel2 := context.WithTimeout(ctx, 100*time.Millisecond)
+					t.Cleanup(cancel2)
+					ctx = ctx2
+				}
+			}
+			assert.Equal(t, testCase.expectedEvents, gotEvents)
+		})
+	}
+}
+
+func TestNamespacePrepend(t *testing.T) {
+	testCases := []struct {
+		requestNs string
+		patterns  []string
+		result    []string
+	}{
+		{"", []string{"ns*"}, []string{"", "ns*"}},
+		{"ns1", []string{"ns*"}, []string{"ns1", "ns1/ns*"}},
+		{"ns1", []string{"ns1*"}, []string{"ns1", "ns1/ns1*"}},
+		{"ns1", []string{"ns1/*"}, []string{"ns1", "ns1/ns1/*"}},
+		{"", []string{"ns1/ns13", "ns1/other"}, []string{"", "ns1/ns13", "ns1/other"}},
+		{"ns1", []string{"ns1/ns13", "ns1/other"}, []string{"ns1", "ns1/ns1/ns13", "ns1/ns1/other"}},
+		{"", []string{""}, []string{""}},
+		{"", nil, []string{""}},
+		{"ns1", []string{""}, []string{"ns1"}},
+		{"ns1", []string{"", ""}, []string{"ns1"}},
+		{"ns1", []string{"ns1"}, []string{"ns1", "ns1/ns1"}},
+		{"", []string{"*"}, []string{"", "*"}},
+		{"ns1", []string{"*"}, []string{"ns1", "ns1/*"}},
+		{"", []string{"ns1/ns13*", "ns2"}, []string{"", "ns1/ns13*", "ns2"}},
+		{"ns1", []string{"ns1/ns13*", "ns2"}, []string{"ns1", "ns1/ns1/ns13*", "ns1/ns2"}},
+		{"", []string{"ns*", "ns1"}, []string{"", "ns*", "ns1"}},
+		{"ns1", []string{"ns*", "ns1"}, []string{"ns1", "ns1/ns*", "ns1/ns1"}},
+		{"ns1", []string{"ns1*", "ns1"}, []string{"ns1", "ns1/ns1*", "ns1/ns1"}},
+		{"ns1", []string{"ns1/*", "ns1"}, []string{"ns1", "ns1/ns1/*", "ns1/ns1"}},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.requestNs+" "+strings.Join(testCase.patterns, " "), func(t *testing.T) {
+			result := prependNamespacePatterns(testCase.patterns, &namespace.Namespace{ID: testCase.requestNs, Path: testCase.requestNs})
+			assert.Equal(t, testCase.result, result)
+		})
 	}
 }
 
@@ -199,5 +371,99 @@ func TestEventsSubscribeAuth(t *testing.T) {
 	}
 	if resp == nil || resp.StatusCode != http.StatusForbidden {
 		t.Errorf("Expected 403 but got %+v", resp)
+	}
+}
+
+func TestCanForwardEventConnections(t *testing.T) {
+	// Run again with in-memory network
+	inmemCluster, err := cluster.NewInmemLayerCluster("inmem-cluster", 3, hclog.New(&hclog.LoggerOptions{
+		Mutex: &sync.Mutex{},
+		Level: hclog.Trace,
+		Name:  "inmem-cluster",
+	}))
+	if err != nil {
+		t.Fatal(err)
+	}
+	testCluster := vault.NewTestCluster(t, &vault.CoreConfig{
+		Experiments: []string{experiments.VaultExperimentEventsAlpha1},
+		AuditBackends: map[string]audit.Factory{
+			"nop": corehelpers.NoopAuditFactory(nil),
+		},
+	}, &vault.TestClusterOptions{
+		ClusterLayers: inmemCluster,
+	})
+	cores := testCluster.Cores
+	testCluster.Start()
+	defer testCluster.Cleanup()
+
+	rootToken := testCluster.RootToken
+
+	// Wait for core to become active
+	vault.TestWaitActiveForwardingReady(t, cores[0].Core)
+
+	// Test forwarding a request. Since we're going directly from core to core
+	// with no fallback we know that if it worked, request handling is working
+	c := cores[1]
+	standby, err := c.Standby()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !standby {
+		t.Fatal("expected core to be standby")
+	}
+
+	// We need to call Leader as that refreshes the connection info
+	isLeader, _, _, err := c.Leader()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if isLeader {
+		t.Fatal("core should not be leader")
+	}
+	corehelpers.RetryUntil(t, 5*time.Second, func() error {
+		state := c.ActiveNodeReplicationState()
+		if state == 0 {
+			return fmt.Errorf("heartbeats have not yet returned a valid active node replication state: %d", state)
+		}
+		return nil
+	})
+
+	req, err := http.NewRequest("GET", "https://pushit.real.good:9281/v1/sys/events/subscribe/xyz?json=true", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	req = req.WithContext(namespace.RootContext(req.Context()))
+	req.Header.Add(consts.AuthHeaderName, rootToken)
+
+	resp := httptest.NewRecorder()
+	forwardRequest(cores[1].Core, resp, req)
+
+	header := resp.Header()
+	if header == nil {
+		t.Fatal("err: expected at least a Location header")
+	}
+	if !strings.HasPrefix(header.Get("Location"), "wss://") {
+		t.Fatalf("bad location: %s", header.Get("Location"))
+	}
+
+	// test forwarding requests to each core
+	handled := 0
+	forwarded := 0
+	for _, c := range cores {
+		resp := httptest.NewRecorder()
+		fakeHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			handled++
+		})
+		handleRequestForwarding(c.Core, fakeHandler).ServeHTTP(resp, req)
+		header := resp.Header()
+		if header == nil {
+			continue
+		}
+		if strings.HasPrefix(header.Get("Location"), "wss://") {
+			forwarded++
+		}
+	}
+	if handled != 1 && forwarded != 2 {
+		t.Fatalf("Expected 1 core to handle the request and 2 to forward")
 	}
 }

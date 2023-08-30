@@ -36,6 +36,10 @@
   border: none !important;
 }
 
+.has-border-collapse {
+  border-collapse: collapse;
+}
+
 // pointer helpers
 .has-no-pointer {
   pointer-events: none;
@@ -85,6 +89,14 @@
   overflow: hidden;
 }
 
+.truncate-first-line {
+  display: -webkit-box;
+  -webkit-line-clamp: 1;
+  -webkit-box-orient: vertical;
+  text-overflow: ellipsis;
+  overflow: hidden;
+}
+
 // screen reader only
 .sr-only {
   border: 0;
@@ -102,4 +114,13 @@
 // border-radius
 .border-radius-2 {
   border-radius: $radius;
+}
+
+.border-radius-4 {
+  border-radius: $radius-large;
+}
+
+// border-spacing
+.is-border-spacing-revert {
+  border-spacing: revert;
 }

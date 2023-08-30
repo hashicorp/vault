@@ -3,4 +3,4 @@
  * SPDX-License-Identifier: BUSL-1.1
  */
 
-export { default } from 'core/helpers/format-duration';
+export { default, duration } from 'core/helpers/format-duration';

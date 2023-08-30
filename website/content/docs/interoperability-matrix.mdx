@@ -48,7 +48,7 @@ Partners who integrate with Vault to have Vault store and/or manage encryption k
 ~> Note: HCP Vault Verified means that the integration has been verified to work with HCP Vault. All integrations have been verified with Vault self-managed.
 
 <span style={{fontSize:'12px'}}>
-Vault Secrets Engine Key: K/V = <a href="/docs/secrets/kv">K/V secrets engine</a>; KMSE = <a href="/docs/secrets/key-management">Key Management Secrets Engine</a>; KMIP = <a href="/docs/secrets/kmip">KMIP Secrets Engine</a>; Transit = <a href="/docs/secrets/transit">Transit Secrets Engine</a>
+Vault Secrets Engine Key: EKM Provider = <a href="/docs/platform/mssql">Vault EKM provider for SQL server</a>; K/V = <a href="/docs/secrets/kv">K/V secrets engine</a>; KMSE = <a href="/docs/secrets/key-management">Key Management Secrets Engine</a>; KMIP = <a href="/docs/secrets/kmip">KMIP Secrets Engine</a>; PKCS#11 = <a href="/docs/enterprise/pkcs11-provider">PKCS#11 Provider</a>; Transit = <a href="/docs/secrets/transit">Transit Secrets Engine</a>
 </span>
 
 | Partner           | Product                  | Vault Secrets Engine | Min. Vault Version Verified | HCP Vault Verified |
@@ -71,6 +71,7 @@ Vault Secrets Engine Key: K/V = <a href="/docs/secrets/kv">K/V secrets engine</a
 | JumpWire          | JumpWire                 | K/V                  | 1.12                        | Yes                 |
 | Micro Focus       | Connected Mx             | Transit              | 1.7                         | No                  |
 | Microsoft         | Azure Key Vault          | KMSE                 | 1.6                         | N/A                 |
+| Microsoft         | MSSSQL                   | EKM Provider         | 1.9                         | No                  |
 | MinIO             | Key Encryption Service   | K/V                  | 1.11                        | No                  |
 | MongoDB           | Atlas                    | KMSE                 | 1.6                         | N/A                 |
 | MongoDB           | MongoDB Enterprise       | KMIP                 | 1.2                         | N/A                 |
@@ -80,13 +81,14 @@ Vault Secrets Engine Key: K/V = <a href="/docs/secrets/kv">K/V secrets engine</a
 | Nutanix           | AHV/AOS 6.5.1.6          | KMIP                 | 1.12                        | N/A                 |
 | Ondat             | Trousseau                | Transit              | 1.9                         | Yes                 |
 | Oracle            | MySQL                    | KMIP                 | 1.2                         | N/A                 |
+| Oracle            | Oracle 19c               | PKCS#11              | 1.11                        | N/A                 |
 | Percona           | Server 8.0               | KMIP                 | 1.9                         | N/A                 |
 | Percona           | XtraBackup 8.0           | KMIP                 | 1.9                         | N/A                 |
 | Snowflake         | Snowflake                | KMSE                 | 1.6                         | N/A                 |
 | VMware            | vSphere 7.0, 8.0         | KMIP                 | 1.2                         | N/A                 |
 | VMware            | vSan 7.0, 8.0            | KMIP                 | 1.2                         | N/A                 |
 | Yugabyte          | Yugabyte Platform        | Transit              | 1.9                         | No                  |
-<span style={{display:'block', textAlign:'right', fontSize:'12px'}}><em>Last Updated May 03, 2023</em></span>
+<span style={{display:'block', textAlign:'right', fontSize:'12px'}}><em>Last Updated August 25, 2023</em></span>
 
 Please reach out to [technologypartners@hashicorp.com](mailto:technologypartners@hashicorp.com) if there are any questions on the above tables. 
 

@@ -1,3 +1,0 @@
-```release-note:bug
-core/metrics: vault.raft_storage.bolt.write.time should be a gauge not a summary
-```
