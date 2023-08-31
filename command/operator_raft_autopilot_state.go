@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/hashicorp/vault/api"
 	"github.com/mitchellh/cli"
 	"github.com/posener/complete"
 )
@@ -16,6 +17,7 @@ var (
 
 type OperatorRaftAutopilotStateCommand struct {
 	*BaseCommand
+	flagDRToken string
 }
 
 func (c *OperatorRaftAutopilotStateCommand) Synopsis() string {
@@ -34,6 +36,17 @@ Usage: vault operator raft autopilot state
 
 func (c *OperatorRaftAutopilotStateCommand) Flags() *FlagSets {
 	set := c.flagSet(FlagSetHTTP | FlagSetOutputFormat)
+
+	f := set.NewFlagSet("Command Options")
+
+	f.StringVar(&StringVar{
+		Name:       "dr-token",
+		Target:     &c.flagDRToken,
+		Default:    "",
+		EnvVar:     "",
+		Completion: complete.PredictAnything,
+		Usage:      "DR operation token used to authorize this request (if a DR secondary node).",
+	})
 
 	// The output of the state endpoint contains nested values and is not fit for
 	// the default "table" display format. Override the default display format to
@@ -80,7 +93,14 @@ func (c *OperatorRaftAutopilotStateCommand) Run(args []string) int {
 		return 2
 	}
 
-	state, err := client.Sys().RaftAutopilotState()
+	var state *api.AutopilotState
+	switch {
+	case c.flagDRToken != "":
+		state, err = client.Sys().RaftAutopilotStateWithDRToken(c.flagDRToken)
+	default:
+		state, err = client.Sys().RaftAutopilotState()
+	}
+
 	if err != nil {
 		c.UI.Error(fmt.Sprintf("Error checking autopilot state: %s", err))
 		return 2
