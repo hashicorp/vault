@@ -211,6 +211,10 @@ func TestRollbackManager_WorkerPool(t *testing.T) {
 		}()
 	}
 
+	core.mountsLock.RLock()
+	numMounts := len(core.mounts.Entries)
+	core.mountsLock.RUnlock()
+
 	timeout, cancel := context.WithTimeout(context.Background(), 20*time.Second)
 	defer cancel()
 	got := make(map[string]bool)
@@ -249,6 +253,14 @@ func TestRollbackManager_WorkerPool(t *testing.T) {
 			}
 		}
 	}()
+
+	// wait for every mount to be rolled back at least once
+	numMountsDone := 0
+	for numMountsDone < numMounts {
+		<-core.rollback.rollbacksDoneCh
+		numMountsDone++
+	}
+
 	// stop the rollback worker, which will wait for all inflight rollbacks to
 	// complete
 	core.rollback.Stop()
