@@ -10,7 +10,6 @@ import (
 	"fmt"
 	"reflect"
 	"sort"
-	"sync"
 	"sync/atomic"
 	"time"
 
@@ -160,32 +159,6 @@ func (sgi *SealGenerationInfo) UnmarshalJSON(b []byte) error {
 	sgi.SetRewrapped(value.Rewrapped)
 
 	return nil
-}
-
-// SealWrapper contains a Wrapper and related information needed by the seal that uses it.
-type SealWrapper struct {
-	wrapping.Wrapper
-	Priority int
-	Name     string
-
-	// sealConfigType is the KMS.Type of this wrapper. It is a string rather than a SealConfigType
-	// to avoid a circular go package depency
-	SealConfigType string
-
-	// Disabled indicates, when true indicates that this wrapper should only be used for decryption.
-	Disabled bool
-
-	HcLock          sync.RWMutex
-	LastHealthCheck time.Time
-	LastSeenHealthy time.Time
-	Healthy         bool
-}
-
-func (sw *SealWrapper) keyId(ctx context.Context) string {
-	if id, err := sw.Wrapper.KeyId(ctx); err == nil {
-		return id
-	}
-	return ""
 }
 
 // Access is the embedded implementation of autoSeal that contains logic
