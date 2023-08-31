@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"net/http"
 	"path"
+	"slices"
 	"strconv"
 	"strings"
 	"time"
@@ -19,25 +20,34 @@ import (
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/vault"
 	"github.com/hashicorp/vault/vault/eventbus"
+	"github.com/patrickmn/go-cache"
+	"github.com/ryanuber/go-glob"
 	"nhooyr.io/websocket"
 )
 
-type eventSubscribeArgs struct {
+// DefaultWebSocketRevalidationTime is how often we re-check access to the
+// events that the websocket requested access to.
+const DefaultWebSocketRevalidationTime = 5 * time.Minute
+
+type eventSubscriber struct {
 	ctx               context.Context
+	clientToken       string
+	core              *vault.Core
 	logger            hclog.Logger
 	events            *eventbus.EventBus
 	namespacePatterns []string
 	pattern           string
 	conn              *websocket.Conn
 	json              bool
+	checkCache        *cache.Cache
 }
 
-// handleEventsSubscribeWebsocket runs forever, returning a websocket error code and reason
-// only if the connection closes or there was an error.
-func handleEventsSubscribeWebsocket(args eventSubscribeArgs) (websocket.StatusCode, string, error) {
-	ctx := args.ctx
-	logger := args.logger
-	ch, cancel, err := args.events.SubscribeMultipleNamespaces(ctx, args.namespacePatterns, args.pattern)
+// handleEventsSubscribeWebsocket runs forever serving events to the websocket connection, returning a websocket
+// error code and reason only if the connection closes or there was an error.
+func (sub *eventSubscriber) handleEventsSubscribeWebsocket() (websocket.StatusCode, string, error) {
+	ctx := sub.ctx
+	logger := sub.logger
+	ch, cancel, err := sub.events.SubscribeMultipleNamespaces(ctx, sub.namespacePatterns, sub.pattern)
 	if err != nil {
 		logger.Info("Error subscribing", "error", err)
 		return websocket.StatusUnsupportedData, "Error subscribing", nil
@@ -50,10 +60,18 @@ func handleEventsSubscribeWebsocket(args eventSubscribeArgs) (websocket.StatusCo
 			logger.Info("Websocket context is done, closing the connection")
 			return websocket.StatusNormalClosure, "", nil
 		case message := <-ch:
+			// Perform one last check that the message is allowed to be received.
+			// For example, if a new namespace was created that matches the namespace patterns,
+			// but the token doesn't have access to it, we don't want to accidentally send it to
+			// the websocket.
+			if !sub.allowMessageCached(message.Payload.(*logical.EventReceived)) {
+				continue
+			}
+
 			logger.Debug("Sending message to websocket", "message", message.Payload)
 			var messageBytes []byte
 			var messageType websocket.MessageType
-			if args.json {
+			if sub.json {
 				var ok bool
 				messageBytes, ok = message.Format("cloudevents-json")
 				if !ok {
@@ -69,12 +87,78 @@ func handleEventsSubscribeWebsocket(args eventSubscribeArgs) (websocket.StatusCo
 				logger.Warn("Could not serialize websocket event", "error", err)
 				return 0, "", err
 			}
-			err = args.conn.Write(ctx, messageType, messageBytes)
+			err = sub.conn.Write(ctx, messageType, messageBytes)
 			if err != nil {
 				return 0, "", err
 			}
 		}
 	}
+}
+
+// allowMessageCached checks that the message is allowed to received by the websocket.
+// It caches results for specific namespaces, data paths, and event types.
+func (sub *eventSubscriber) allowMessageCached(message *logical.EventReceived) bool {
+	// default to the subscribe endpoint if there is no specific data path
+	messageNs := strings.Trim(message.Namespace, "/")
+	dataPath := "sys/events/subscribe"
+	if message.Event.Metadata != nil {
+		dataPathField := message.Event.Metadata.GetFields()[logical.EventMetadataDataPath]
+		if dataPathField != nil {
+			dataPath = dataPathField.GetStringValue()
+		}
+	}
+	cacheKey := fmt.Sprintf("%v!%v!%v", messageNs, dataPath, message.EventType)
+	_, ok := sub.checkCache.Get(cacheKey)
+	if ok {
+		return true
+	}
+
+	// perform the actual check and cache it if true
+	ok = sub.allowMessage(messageNs, dataPath, message.EventType)
+	if ok {
+		err := sub.checkCache.Add(cacheKey, ok, DefaultWebSocketRevalidationTime)
+		if err != nil {
+			sub.logger.Debug("Error adding to policy check cache for websocket", "error", err)
+			// still return the right value, but we can't guarantee it was cached
+		}
+	}
+	return ok
+}
+
+// allowMessage checks that the message is allowed to received by the websocket
+func (sub *eventSubscriber) allowMessage(eventNs, dataPath, eventType string) bool {
+	// does this even match the requested namespaces
+	matchedNs := false
+	for _, nsPattern := range sub.namespacePatterns {
+		if glob.Glob(nsPattern, eventNs) {
+			matchedNs = true
+			break
+		}
+	}
+	if !matchedNs {
+		return false
+	}
+
+	// next check for specific access to the namespace and event types
+	nsDataPath := dataPath
+	if eventNs != "" {
+		nsDataPath = path.Join(eventNs, dataPath)
+	}
+	capabilities, eventTypes, err := sub.core.CapabilitiesAndSubscribeEventTypes(sub.ctx, sub.clientToken, nsDataPath)
+	if err != nil {
+		sub.logger.Debug("Error checking capabilities and event types for token", "error", err, "namespace", eventNs)
+		return false
+	}
+	if !(slices.Contains(capabilities, "root") || slices.Contains(capabilities, "subscribe")) {
+		return false
+	}
+	for _, pattern := range eventTypes {
+		if glob.Glob(pattern, eventType) {
+			return true
+		}
+	}
+	// no event types matched, so return false
+	return false
 }
 
 func handleEventsSubscribe(core *vault.Core, req *logical.Request) http.Handler {
@@ -85,7 +169,7 @@ func handleEventsSubscribe(core *vault.Core, req *logical.Request) http.Handler 
 		ctx := r.Context()
 
 		// ACL check
-		_, _, err := core.CheckToken(ctx, req, false)
+		auth, _, err := core.CheckToken(ctx, req, false)
 		if err != nil {
 			if errors.Is(err, logical.ErrPermissionDenied) {
 				respondError(w, http.StatusForbidden, logical.ErrPermissionDenied)
@@ -146,7 +230,24 @@ func handleEventsSubscribe(core *vault.Core, req *logical.Request) http.Handler 
 			}
 		}()
 
-		closeStatus, closeReason, err := handleEventsSubscribeWebsocket(eventSubscribeArgs{ctx, logger, core.Events(), namespacePatterns, pattern, conn, json})
+		// continually validate subscribe access while the websocket is running
+		ctx, cancelCtx := context.WithCancel(ctx)
+		defer cancelCtx()
+		go validateSubscribeAccessLoop(core, ctx, cancelCtx, req)
+
+		sub := &eventSubscriber{
+			ctx:               ctx,
+			core:              core,
+			logger:            logger,
+			events:            core.Events(),
+			namespacePatterns: namespacePatterns,
+			pattern:           pattern,
+			conn:              conn,
+			json:              json,
+			checkCache:        cache.New(DefaultWebSocketRevalidationTime, DefaultWebSocketRevalidationTime),
+			clientToken:       auth.ClientToken,
+		}
+		closeStatus, closeReason, err := sub.handleEventsSubscribeWebsocket()
 		if err != nil {
 			closeStatus = websocket.CloseStatus(err)
 			if closeStatus == -1 {
@@ -174,10 +275,47 @@ func prependNamespacePatterns(patterns []string, requestNamespace *namespace.Nam
 	newPatterns := make([]string, 0, len(patterns)+1)
 	newPatterns = append(newPatterns, prepend)
 	for _, pattern := range patterns {
-		if strings.Trim(strings.TrimSpace(pattern), "/") == "" {
-			continue
+		if strings.Trim(pattern, "/") != "" {
+			newPatterns = append(newPatterns, path.Join(prepend, pattern))
 		}
-		newPatterns = append(newPatterns, path.Join(prepend, pattern, "/"))
 	}
 	return newPatterns
+}
+
+// validateSubscribeAccessLoop continually checks if the request has access to the subscribe endpoint in
+// its namespace. If the access check ever fails, then the cancel function is called and  the function returns.
+func validateSubscribeAccessLoop(core *vault.Core, ctx context.Context, cancel context.CancelFunc, req *logical.Request) {
+	// if something breaks, default to canceling the websocket
+	defer cancel()
+	for {
+		err := validateSubscribeAccess(core, ctx, req)
+		if err != nil {
+			return
+		}
+		// wait a while and try again, but quit the loop if the context finishes early
+		finished := func() bool {
+			ticker := time.NewTicker(DefaultWebSocketRevalidationTime)
+			defer ticker.Stop()
+			select {
+			case <-ctx.Done():
+				return true
+			case <-ticker.C:
+				return false
+			}
+		}()
+		if finished {
+			return
+		}
+	}
+}
+
+// validateSubscribeAccess does a single check that the request has access to subscribe endpoint.
+func validateSubscribeAccess(core *vault.Core, ctx context.Context, req *logical.Request) error {
+	_, _, err := core.CheckToken(ctx, req, false)
+	if err != nil {
+		core.Logger().Debug("Token does not have access to subscription path in its own namespace, terminating WebSocket subscription", "path", req.Path, "http_method", req.HTTPRequest.Method, "error", err)
+		// trigger the cancel
+		return err
+	}
+	return nil
 }
