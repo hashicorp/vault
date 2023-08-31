@@ -1687,12 +1687,12 @@ func (c *Core) handleLoginRequest(ctx context.Context, req *logical.Request) (re
 		// Attach the display name, might be used by audit backends
 		req.DisplayName = auth.DisplayName
 
-		loginRequest := resp.Auth.TokenType != logical.TokenTypeBatch
+		requiresLease := resp.Auth.TokenType != logical.TokenTypeBatch
 
 		// If role was not already determined by http.rateLimitQuotaWrapping
 		// and this is a login request
 		// and imprecise_lease_role_tracking is not set to true, calculate the role
-		if reqRole == nil && loginRequest && !c.impreciseLeaseRoleTracking {
+		if reqRole == nil && requiresLease && !c.impreciseLeaseRoleTracking {
 			role = c.DetermineRoleFromLoginRequest(ctx, req.MountPoint, req.Data)
 		}
 
