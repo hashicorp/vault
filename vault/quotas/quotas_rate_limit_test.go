@@ -131,6 +131,7 @@ func TestRateLimitQuota_Allow(t *testing.T) {
 }
 
 func TestRateLimitQuota_Allow_WithBlock(t *testing.T) {
+	t.Fatal("TODO: Remove me. This is added to test CI")
 	rlq := &RateLimitQuota{
 		Name:          "test-rate-limiter",
 		Type:          TypeRateLimit,
