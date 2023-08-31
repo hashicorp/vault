@@ -71,9 +71,7 @@ export default class KvSecretDetails extends Component {
       });
       this.store.clearDataset('kv/metadata'); // Clear out the store cache so that the metadata/list view is updated.
       this.flashMessages.success(`Successfully undeleted ${secret.path}.`);
-      this.router.transitionTo('vault.cluster.secrets.backend.kv.secret', {
-        queryParams: { version: this.version },
-      });
+      this.transition();
     } catch (err) {
       this.flashMessages.danger(
         `There was a problem undeleting ${secret.path}. Error: ${err.errors.join(' ')}.`
@@ -88,9 +86,7 @@ export default class KvSecretDetails extends Component {
       await secret.destroyRecord({ adapterOptions: { deleteType: type, deleteVersions: this.version } });
       this.store.clearDataset('kv/metadata'); // Clear out the store cache so that the metadata/list view is updated.
       this.flashMessages.success(`Successfully ${secret.state} Version ${this.version} of ${secret.path}.`);
-      this.router.transitionTo('vault.cluster.secrets.backend.kv.secret', {
-        queryParams: { version: this.version },
-      });
+      this.transition();
     } catch (err) {
       const verb = type.includes('delete') ? 'deleting' : 'destroying';
       this.flashMessages.danger(
@@ -99,6 +95,12 @@ export default class KvSecretDetails extends Component {
         )}.`
       );
     }
+  }
+
+  transition() {
+    this.router.transitionTo('vault.cluster.secrets.backend.kv.secret', {
+      queryParams: { version: this.version },
+    });
   }
 
   get version() {
