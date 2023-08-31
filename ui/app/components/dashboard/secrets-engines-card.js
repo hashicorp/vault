@@ -22,6 +22,10 @@ export default class DashboardSecretsEnginesCard extends Component {
       (secretEngine) => secretEngine.shouldIncludeInList
     );
 
-    return filteredEngines.slice(0, 5);
+    return filteredEngines;
+  }
+
+  get firstFiveSecretsEngines() {
+    return this.filteredSecretsEngines.slice(0, 5);
   }
 }
