@@ -441,7 +441,7 @@ func getEnvConfig(kms *KMS) map[string]string {
 
 func mergeTransitConfig(config map[string]string, envConfig map[string]string) {
 	useFileTlsConfig := false
-	for _, varName := range TransitTlsConfigVars {
+	for _, varName := range TransitTLSConfigVars {
 		if _, ok := config[varName]; ok {
 			useFileTlsConfig = true
 			break
@@ -449,7 +449,7 @@ func mergeTransitConfig(config map[string]string, envConfig map[string]string) {
 	}
 
 	if useFileTlsConfig {
-		for _, varName := range TransitTlsConfigVars {
+		for _, varName := range TransitTLSConfigVars {
 			delete(envConfig, varName)
 		}
 	}
