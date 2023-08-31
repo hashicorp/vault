@@ -221,11 +221,9 @@ a negative effect on performance due to the tracking of each lock attempt.
   the `VAULT_EXPERIMENTS` environment variable as a comma-separated list, or via the
   [`-experiment`](/vault/docs/commands/server#experiment) flag.
 
-- `imprecise_lease_role_tracking` `(bool: "false")` - Skip lease counting by role if there are no role based quotas enabled. Role
-  based quotas include rate limit quotas or lease count quotas that are enabled by setting the role parameter when using the 
-  `sys/quotas/lease-count` or `sys/quotas/rate-limit` endpoints. When `imprecise_lease_role_tracking` is set to true and a new 
-  role-based quota is enabled, subsequent lease counts start from 0. Restarting the lease count affects role-based lease count 
-  quotas, but reduces latencies when not using role based quotas.
+- `imprecise_lease_role_tracking` `(bool: "false")` - Skip lease counting by role if there are no role based quotas enabled.
+  When `imprecise_lease_role_tracking` is set to true and a new role-based quota is enabled, subsequent lease counts start from 0.
+  `imprecise_lease_role_tracking` affects role-based lease count quotas, but reduces latencies when not using role based quotas.
 
 ### High availability parameters
 
