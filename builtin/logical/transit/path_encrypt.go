@@ -472,7 +472,8 @@ func (b *backend) pathEncryptWrite(ctx context.Context, req *logical.Request, d 
 		}
 
 		if !nonceAllowed(p) {
-			item.DecodedNonce = nil
+			batchResponseItems[i].Error = ErrNonceNotAllowed
+			continue
 		}
 
 		if !warnAboutNonceUsage && shouldWarnAboutNonceUsage(p, item.DecodedNonce) {

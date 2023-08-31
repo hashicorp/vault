@@ -16,6 +16,8 @@ import (
 	"github.com/mitchellh/mapstructure"
 )
 
+var ErrNonceNotAllowed = errors.New("provided nonce not allowed for this key")
+
 func (b *backend) pathRewrap() *framework.Path {
 	return &framework.Path{
 		Pattern: "rewrap/" + framework.GenericNameRegex("name"),
@@ -165,7 +167,8 @@ func (b *backend) pathRewrapWrite(ctx context.Context, req *logical.Request, d *
 		}
 
 		if !nonceAllowed(p) {
-			item.DecodedNonce = nil
+			batchResponseItems[i].Error = ErrNonceNotAllowed
+			continue
 		}
 
 		if !warnAboutNonceUsage && shouldWarnAboutNonceUsage(p, item.DecodedNonce) {

@@ -2014,8 +2014,7 @@ func (p *Policy) EncryptWithFactory(ver int, context []byte, nonce []byte, value
 			deriveHMAC = true
 			hmacBytes = 32
 		} else if !p.ConvergentEncryption || convergentVersion != 1 {
-			// Make sure to ignore a provided nonce
-			nonce = nil
+			return "", errutil.UserError{Err: "nonce provided when not allowed"}
 		}
 		if p.Type == KeyType_AES128_GCM96 {
 			encBytes = 16

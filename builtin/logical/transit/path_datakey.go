@@ -171,7 +171,7 @@ func (b *backend) pathDatakeyWrite(ctx context.Context, req *logical.Request, d 
 	}
 
 	if !nonceAllowed(p) {
-		nonce = nil
+		return nil, ErrNonceNotAllowed
 	}
 
 	if constants.IsFIPS() && shouldWarnAboutNonceUsage(p, nonce) {
