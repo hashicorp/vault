@@ -4,7 +4,7 @@
  */
 
 import { create, visitable, fillable, clickable } from 'ember-cli-page-object';
-import { settled } from '@ember/test-helpers';
+import { click, settled } from '@ember/test-helpers';
 import VAULT_KEYS from 'vault/tests/helpers/vault-keys';
 
 const { rootToken } = VAULT_KEYS;
@@ -56,6 +56,14 @@ export default create({
     await this.namespaceInput(ns);
     await settled();
     await this.tokenInput(rootToken).submit();
+    return;
+  },
+  clickLogout: async function (clearNamespace = false) {
+    await click('[data-test-user-menu-trigger]');
+    await click('[data-test-user-menu-content] a#logout');
+    if (clearNamespace) {
+      await this.namespaceInput('');
+    }
     return;
   },
 });

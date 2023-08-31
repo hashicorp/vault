@@ -33,6 +33,7 @@ import (
 	"github.com/hashicorp/vault/sdk/helper/compressutil"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
+	"github.com/hashicorp/vault/sdk/helper/pluginruntimeutil"
 	"github.com/hashicorp/vault/sdk/helper/pluginutil"
 	"github.com/hashicorp/vault/sdk/helper/testhelpers/schema"
 	"github.com/hashicorp/vault/sdk/logical"
@@ -2189,7 +2190,15 @@ func TestSystemBackend_tuneAuth(t *testing.T) {
 		if err := file.Close(); err != nil {
 			t.Fatal(err)
 		}
-		err = c.pluginCatalog.Set(context.Background(), "token", consts.PluginTypeCredential, "v1.0.0", "foo", []string{}, []string{}, []byte{})
+		err = c.pluginCatalog.Set(context.Background(), pluginutil.SetPluginInput{
+			Name:    "token",
+			Type:    consts.PluginTypeCredential,
+			Version: "v1.0.0",
+			Command: "foo",
+			Args:    []string{},
+			Env:     []string{},
+			Sha256:  []byte{},
+		})
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -5742,7 +5751,15 @@ func TestValidateVersion_HelpfulErrorWhenBuiltinOverridden(t *testing.T) {
 	defer file.Close()
 
 	command := filepath.Base(file.Name())
-	err = core.pluginCatalog.Set(context.Background(), "kubernetes", consts.PluginTypeCredential, "", command, nil, nil, nil)
+	err = core.pluginCatalog.Set(context.Background(), pluginutil.SetPluginInput{
+		Name:    "kubernetes",
+		Type:    consts.PluginTypeCredential,
+		Version: "",
+		Command: command,
+		Args:    nil,
+		Env:     nil,
+		Sha256:  nil,
+	})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -5882,5 +5899,124 @@ func TestSystemBackend_ReadExperiments(t *testing.T) {
 				t.Fatal("No experiments should be enabled by default")
 			}
 		})
+	}
+}
+
+func TestSystemBackend_pluginRuntimeCRUD(t *testing.T) {
+	b := testSystemBackend(t)
+
+	conf := pluginruntimeutil.PluginRuntimeConfig{
+		Name:         "foo",
+		Type:         consts.PluginRuntimeTypeContainer,
+		OCIRuntime:   "some-oci-runtime",
+		CgroupParent: "/cpulimit/",
+		CPU:          1,
+		Memory:       10000,
+	}
+
+	// Register the plugin runtime
+	req := logical.TestRequest(t, logical.UpdateOperation, fmt.Sprintf("plugins/runtimes/catalog/%s/%s", conf.Type.String(), conf.Name))
+	req.Data = map[string]interface{}{
+		"oci_runtime":   conf.OCIRuntime,
+		"cgroup_parent": conf.OCIRuntime,
+		"cpu_nanos":     conf.CPU,
+		"memory_bytes":  conf.Memory,
+	}
+
+	resp, err := b.HandleRequest(namespace.RootContext(nil), req)
+	if err != nil {
+		t.Fatalf("err: %v %#v", err, resp)
+	}
+	if resp != nil && (resp.IsError() || len(resp.Data) > 0) {
+		t.Fatalf("bad: %#v", resp)
+	}
+
+	// validate the response structure for plugin container runtime named foo
+	schema.ValidateResponse(
+		t,
+		schema.GetResponseSchema(t, b.(*SystemBackend).Route(req.Path), req.Operation),
+		resp,
+		true,
+	)
+
+	// Read the plugin runtime
+	req = logical.TestRequest(t, logical.ReadOperation, "plugins/runtimes/catalog/container/foo")
+	resp, err = b.HandleRequest(namespace.RootContext(nil), req)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	// validate the response structure for plugin container runtime named foo
+	schema.ValidateResponse(
+		t,
+		schema.GetResponseSchema(t, b.(*SystemBackend).Route(req.Path), req.Operation),
+		resp,
+		true,
+	)
+
+	readExp := map[string]any{
+		"type":          conf.Type.String(),
+		"name":          conf.Name,
+		"oci_runtime":   conf.OCIRuntime,
+		"cgroup_parent": conf.OCIRuntime,
+		"cpu_nanos":     conf.CPU,
+		"memory_bytes":  conf.Memory,
+	}
+	if !reflect.DeepEqual(resp.Data, readExp) {
+		t.Fatalf("got: %#v expect: %#v", resp.Data, readExp)
+	}
+
+	// List the plugin runtimes (untyped or all)
+	req = logical.TestRequest(t, logical.ListOperation, "plugins/runtimes/catalog")
+	resp, err = b.HandleRequest(namespace.RootContext(nil), req)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	listExp := map[string]interface{}{
+		"runtimes": []map[string]any{readExp},
+	}
+	if !reflect.DeepEqual(resp.Data, listExp) {
+		t.Fatalf("got: %#v expect: %#v", resp.Data, listExp)
+	}
+
+	// Delete the plugin runtime
+	req = logical.TestRequest(t, logical.DeleteOperation, "plugins/runtimes/catalog/container/foo")
+	resp, err = b.HandleRequest(namespace.RootContext(nil), req)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	if resp != nil {
+		t.Fatalf("bad: %#v", resp)
+	}
+
+	// validate the response structure for plugin container runtime named foo
+	schema.ValidateResponse(
+		t,
+		schema.GetResponseSchema(t, b.(*SystemBackend).Route(req.Path), req.Operation),
+		resp,
+		true,
+	)
+
+	// Read the plugin runtime (deleted)
+	req = logical.TestRequest(t, logical.ReadOperation, "plugins/runtimes/catalog/container/foo")
+	resp, err = b.HandleRequest(namespace.RootContext(nil), req)
+	if err == nil {
+		t.Fatal("expected a read error after the runtime was deleted")
+	}
+	if resp != nil {
+		t.Fatalf("bad: %#v", resp)
+	}
+
+	// List the plugin runtimes (untyped or all)
+	req = logical.TestRequest(t, logical.ListOperation, "plugins/runtimes/catalog")
+	resp, err = b.HandleRequest(namespace.RootContext(nil), req)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	listExp = map[string]interface{}{}
+	if !reflect.DeepEqual(resp.Data, listExp) {
+		t.Fatalf("got: %#v expect: %#v", resp.Data, listExp)
 	}
 }

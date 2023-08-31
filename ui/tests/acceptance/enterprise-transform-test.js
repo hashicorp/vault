@@ -5,7 +5,7 @@
 
 import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
-import { currentURL, click, settled } from '@ember/test-helpers';
+import { currentURL, click, settled, currentRouteName } from '@ember/test-helpers';
 import { create } from 'ember-cli-page-object';
 import { typeInSearch, selectChoose, clickTrigger } from 'ember-power-select/test-support/helpers';
 
@@ -16,6 +16,8 @@ import rolesPage from 'vault/tests/pages/secrets/backend/transform/roles';
 import templatesPage from 'vault/tests/pages/secrets/backend/transform/templates';
 import alphabetsPage from 'vault/tests/pages/secrets/backend/transform/alphabets';
 import searchSelect from 'vault/tests/pages/components/search-select';
+import { runCmd } from '../helpers/commands';
+import { allEngines } from 'vault/helpers/mountable-secret-engines';
 
 const searchSelectComponent = create(searchSelect);
 
@@ -63,6 +65,27 @@ module('Acceptance | Enterprise | Transform secrets', function (hooks) {
 
   hooks.beforeEach(function () {
     return authPage.login();
+  });
+
+  test('it transitions to list route after mount success', async function (assert) {
+    assert.expect(1);
+    const engine = allEngines().find((e) => e.type === 'transform');
+
+    // delete any previous mount with same name
+    await runCmd([`delete sys/mounts/${engine.type}`]);
+    await mountSecrets.visit();
+    await mountSecrets.selectType(engine.type);
+    await mountSecrets.next().path(engine.type);
+    await mountSecrets.submit();
+
+    assert.strictEqual(
+      currentRouteName(),
+      `vault.cluster.secrets.backend.list-root`,
+      `${engine.type} navigates to list view`
+    );
+
+    // cleanup
+    await runCmd([`delete sys/mounts/${engine.type}`]);
   });
 
   test('it enables Transform secrets engine and shows tabs', async function (assert) {
