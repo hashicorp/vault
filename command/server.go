@@ -986,14 +986,13 @@ func configureDevTLS(c *ServerCommand) (func(), *server.Config, string, error) {
 		}
 		extraSANs := c.flagDevTLSSANs
 		host, _, err := net.SplitHostPort(c.flagDevListenAddr)
-		if err != nil {
-			return nil, nil, "", fmt.Errorf("invalid dev listen address: %w", err)
-		}
-		// 127.0.0.1 is the default, and already included in the SANs.
-		// Empty host means listen on all interfaces, but users should use the
-		// -dev-tls-san flag to get the right SANs in that case.
-		if host != "" && host != "127.0.0.1" {
-			extraSANs = append(extraSANs, host)
+		if err == nil {
+			// 127.0.0.1 is the default, and already included in the SANs.
+			// Empty host means listen on all interfaces, but users should use the
+			// -dev-tls-san flag to get the right SANs in that case.
+			if host != "" && host != "127.0.0.1" {
+				extraSANs = append(extraSANs, host)
+			}
 		}
 		config, err = server.DevTLSConfig(devStorageType, certDir, extraSANs)
 
