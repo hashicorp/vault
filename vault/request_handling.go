@@ -1687,11 +1687,13 @@ func (c *Core) handleLoginRequest(ctx context.Context, req *logical.Request) (re
 		// Attach the display name, might be used by audit backends
 		req.DisplayName = auth.DisplayName
 
-		// If this is not a role-based quota (ie when reqRole == nil),
-		// we still need to associate the login role with this lease for later
-		// lease-count quotas to be accurate. Unless disable lease role tracking is enabled,
-		// then skip calculating role.
-		if reqRole == nil && c.impreciseLeaseRoleTracking && resp.Auth.TokenType != logical.TokenTypeBatch {
+		// If role was not already determined for a role based RLQ
+		// and imprecise_lease_role_tracking = false
+		// and this is a login request, calculate the role
+		// Otherwise, if role was already calculated
+		// or imprecise_role_tracking=true
+		// or this isn't a login request, skip the role calculation
+		if reqRole == nil && !c.impreciseLeaseRoleTracking && resp.Auth.TokenType != logical.TokenTypeBatch {
 			role = c.DetermineRoleFromLoginRequest(ctx, req.MountPoint, req.Data)
 		}
 
