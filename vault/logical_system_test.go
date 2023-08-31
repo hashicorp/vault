@@ -5938,7 +5938,7 @@ func TestSystemBackend_pluginRuntimeCRUD(t *testing.T) {
 		true,
 	)
 
-	readExp := map[string]interface{}{
+	readExp := map[string]any{
 		"type":          conf.Type.String(),
 		"name":          conf.Name,
 		"oci_runtime":   conf.OCIRuntime,
@@ -5958,7 +5958,7 @@ func TestSystemBackend_pluginRuntimeCRUD(t *testing.T) {
 	}
 
 	listExp := map[string]interface{}{
-		"runtimes": []map[string]interface{}{readExp},
+		"runtimes": []map[string]any{readExp},
 	}
 	if !reflect.DeepEqual(resp.Data, listExp) {
 		t.Fatalf("got: %#v expect: %#v", resp.Data, listExp)
