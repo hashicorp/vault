@@ -221,6 +221,10 @@ a negative effect on performance due to the tracking of each lock attempt.
   the `VAULT_EXPERIMENTS` environment variable as a comma-separated list, or via the
   [`-experiment`](/vault/docs/commands/server#experiment) flag.
 
+- `imprecise_lease_role_tracking` `(bool: "false")` - If role based quota does not exist for mount, then do not keep track of a lease's role.
+  The purpose of this configuration is to reduce expensive role calculations if role base quotas are not being used. 
+
+
 ### High availability parameters
 
 The following parameters are used on backends that support [high availability][high-availability].
