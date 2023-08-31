@@ -697,7 +697,7 @@ type Core struct {
 	// for testing purposes
 	requestResponseCallback func(logical.Backend, *logical.Request, *logical.Response)
 
-	// If no role-based quota (lease count or rate limting) is enabled, don't track lease counts by role
+	// If no role-based lease count quota or role based rate limiting quota is enabled, don't track lease counts by role
 	impreciseLeaseRoleTracking bool
 }
 
@@ -760,7 +760,7 @@ type CoreConfig struct {
 	// Use the deadlocks library to detect deadlocks
 	DetectDeadlocks string
 
-	// If no role-based lease-count or rate limiting quota is enabled, don't track lease counts by role
+	// If no role-based lease count quota or role based rate limiting quota is enabled, don't track lease counts by role
 	ImpreciseLeaseRoleTracking bool
 
 	// Disables the trace display for Sentinel checks
