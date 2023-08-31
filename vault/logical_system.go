@@ -556,7 +556,15 @@ func (b *SystemBackend) handlePluginCatalogUpdate(ctx context.Context, _ *logica
 		return logical.ErrorResponse("Could not decode SHA-256 value from Hex"), err
 	}
 
-	err = b.Core.pluginCatalog.Set(ctx, pluginName, pluginType, pluginVersion, parts[0], args, env, sha256Bytes)
+	err = b.Core.pluginCatalog.Set(ctx, pluginutil.SetPluginInput{
+		Name:    pluginName,
+		Type:    pluginType,
+		Version: pluginVersion,
+		Command: parts[0],
+		Args:    args,
+		Env:     env,
+		Sha256:  sha256Bytes,
+	})
 	if err != nil {
 		if errors.Is(err, ErrPluginNotFound) || strings.HasPrefix(err.Error(), "plugin version mismatch") {
 			return logical.ErrorResponse(err.Error()), nil
@@ -4825,17 +4833,17 @@ func (c *Core) GetSealBackendStatus(ctx context.Context) (*SealBackendStatusResp
 	if a, ok := c.seal.(*autoSeal); ok {
 		r.Healthy = c.seal.Healthy()
 		var uhMin time.Time
-		for _, s := range a.GetAllSealInfoByPriority() {
+		for _, sealWrapper := range a.GetAllSealWrappersByPriority() {
 			b := SealBackendStatus{
-				Name:    s.Name,
-				Healthy: s.Healthy,
+				Name:    sealWrapper.Name,
+				Healthy: sealWrapper.Healthy,
 			}
-			if !s.Healthy {
-				if !s.LastSeenHealthy.IsZero() {
-					b.UnhealthySince = s.LastSeenHealthy.String()
+			if !sealWrapper.Healthy {
+				if !sealWrapper.LastSeenHealthy.IsZero() {
+					b.UnhealthySince = sealWrapper.LastSeenHealthy.String()
 				}
-				if uhMin.IsZero() || uhMin.After(s.LastSeenHealthy) {
-					uhMin = s.LastSeenHealthy
+				if uhMin.IsZero() || uhMin.After(sealWrapper.LastSeenHealthy) {
+					uhMin = sealWrapper.LastSeenHealthy
 				}
 			}
 			r.Backends = append(r.Backends, b)

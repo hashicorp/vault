@@ -538,11 +538,11 @@ SEALFAIL:
 		randReaderTestName := "Initialize Randomness for Core"
 		var sources []*configutil.EntropySourcerInfo
 		if barrierSeal != nil {
-			for _, sealInfo := range barrierSeal.GetAccess().GetEnabledSealInfoByPriority() {
-				if s, ok := sealInfo.Wrapper.(entropy.Sourcer); ok {
+			for _, sealWrapper := range barrierSeal.GetAccess().GetEnabledSealWrappersByPriority() {
+				if s, ok := sealWrapper.Wrapper.(entropy.Sourcer); ok {
 					sources = append(sources, &configutil.EntropySourcerInfo{
 						Sourcer: s,
-						Name:    sealInfo.Name,
+						Name:    sealWrapper.Name,
 					})
 				}
 			}
