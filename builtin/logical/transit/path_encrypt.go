@@ -12,6 +12,8 @@ import (
 	"net/http"
 	"reflect"
 
+	"github.com/hashicorp/vault/helper/constants"
+
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/errutil"
 	"github.com/hashicorp/vault/sdk/helper/keysutil"
@@ -471,7 +473,6 @@ func (b *backend) pathEncryptWrite(ctx context.Context, req *logical.Request, d 
 
 		if !warnAboutNonceUsage && shouldWarnAboutNonceUsage(p, item.DecodedNonce) {
 			warnAboutNonceUsage = true
-			item.DecodedNonce = nil
 		}
 
 		var factory interface{}
@@ -554,8 +555,8 @@ func (b *backend) pathEncryptWrite(ctx context.Context, req *logical.Request, d 
 		}
 	}
 
-	if warnAboutNonceUsage {
-		resp.AddWarning("A provided nonce value was ignored where a user supplied nonce cannot be specified.")
+	if constants.IsFIPS() && warnAboutNonceUsage {
+		resp.AddWarning("A provided nonce value was used within FIPS mode, this violates FIPS 140 compliance.")
 	}
 
 	if req.Operation == logical.CreateOperation && !upserted {

@@ -9,6 +9,7 @@ import (
 	"encoding/base64"
 	"fmt"
 
+	"github.com/hashicorp/vault/helper/constants"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/errutil"
 	"github.com/hashicorp/vault/sdk/helper/keysutil"
@@ -169,8 +170,8 @@ func (b *backend) pathDatakeyWrite(ctx context.Context, req *logical.Request, d 
 		},
 	}
 
-	if shouldWarnAboutNonceUsage(p, nonce) {
-		resp.AddWarning("A provided nonce value was ignored where a user supplied nonce cannot be specified.")
+	if constants.IsFIPS() && shouldWarnAboutNonceUsage(p, nonce) {
+		resp.AddWarning("A provided nonce value was used within FIPS mode, this violates FIPS 140 compliance.")
 	}
 
 	if plaintextAllowed {
