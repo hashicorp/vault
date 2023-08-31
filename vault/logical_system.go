@@ -751,11 +751,11 @@ func (b *SystemBackend) handlePluginRuntimeCatalogUpdate(ctx context.Context, _ 
 		cgroupParent := d.Get("cgroup_parent").(string)
 		cpu := d.Get("cpu").(int64)
 		if cpu < 0 {
-			return logical.ErrorResponse("runtime cpu must be greater than 0"), nil
+			return logical.ErrorResponse("runtime cpu cannot be negative"), nil
 		}
 		memory := d.Get("memory").(int64)
 		if memory < 0 {
-			return logical.ErrorResponse("runtime memory in bytes must be greater than 0"), nil
+			return logical.ErrorResponse("runtime memory in bytes cannot be negative"), nil
 		}
 		if err = b.Core.pluginRuntimeCatalog.Set(ctx,
 			&pluginruntimeutil.PluginRuntimeConfig{
