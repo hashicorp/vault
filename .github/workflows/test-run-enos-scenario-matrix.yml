@@ -147,7 +147,6 @@ jobs:
       - name: Retry Enos scenario if necessary
         id: run_retry
         if: steps.run.outcome == 'failure'
-        continue-on-error: true
         run: enos scenario run --timeout 60m0s --chdir ./enos ${{ matrix.scenario }}
       - name: Upload Debug Data
         if: failure()
