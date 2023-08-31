@@ -8,6 +8,7 @@
       size="32"
       {{on "input" this.handleInput}}
       {{on "keydown" this.handleKeyDown}}
+      data-test-kv-list-filter
     />
     <S.Button @color="secondary" @text="Search" @icon={{if this.handleSearch.isRunning "loading" "search"}} type="submit" />
   </Hds::SegmentedGroup>
