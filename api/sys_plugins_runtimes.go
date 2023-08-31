@@ -5,10 +5,11 @@ package api
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"net/http"
+
+	"github.com/mitchellh/mapstructure"
 )
 
 // GetPluginRuntimeInput is used as input to the GetPluginRuntime function.
@@ -111,12 +112,12 @@ func (c *Sys) DeregisterPluginRuntime(ctx context.Context, i *DeregisterPluginRu
 }
 
 type PluginRuntimeDetails struct {
-	Type         string `json:"type"`
-	Name         string `json:"name"`
-	OCIRuntime   string `json:"oci_runtime"`
-	CgroupParent string `json:"cgroup_parent"`
-	CPU          int64  `json:"cpu"`
-	Memory       int64  `json:"memory"`
+	Type         string `json:"type" mapstructure:"type"`
+	Name         string `json:"name" mapstructure:"name"`
+	OCIRuntime   string `json:"oci_runtime" mapstructure:"oci_runtime"`
+	CgroupParent string `json:"cgroup_parent" mapstructure:"cgroup_parent"`
+	CPU          int64  `json:"cpu" mapstructure:"cpu"`
+	Memory       int64  `json:"memory" mapstructure:"memory"`
 }
 
 // ListPluginRuntimesInput is used as input to the ListPluginRuntimes function.
@@ -133,12 +134,12 @@ type ListPluginRuntimesResponse struct {
 
 // ListPluginRuntimes lists all plugin runtimes in the catalog and returns their names as a
 // list of strings.
-func (c *Sys) ListPluginRuntimes(ctx context.Context, i *ListPluginRuntimesInput) (*ListPluginRuntimesResponse, error) {
+func (c *Sys) ListPluginRuntimes(ctx context.Context, input *ListPluginRuntimesInput) (*ListPluginRuntimesResponse, error) {
 	ctx, cancelFunc := c.c.withConfiguredTimeout(ctx)
 	defer cancelFunc()
 
-	if i != nil && i.Type == PluginRuntimeTypeUnsupported {
-		return nil, fmt.Errorf("%q is not a supported runtime type", i.Type.String())
+	if input != nil && input.Type == PluginRuntimeTypeUnsupported {
+		return nil, fmt.Errorf("%q is not a supported runtime type", input.Type.String())
 	}
 
 	resp, err := c.c.rawRequestWithContext(ctx, c.c.NewRequest(http.MethodGet, "/v1/sys/plugins/runtimes/catalog"))
@@ -161,24 +162,21 @@ func (c *Sys) ListPluginRuntimes(ctx context.Context, i *ListPluginRuntimesInput
 		return nil, fmt.Errorf("data from server response does not contain runtimes")
 	}
 
-	runtimesJSON, err := json.Marshal(secret.Data["runtimes"])
-	if err != nil {
-		return nil, fmt.Errorf("unable to marshal runtimes")
-	}
-
 	var runtimes []PluginRuntimeDetails
-	if err = json.Unmarshal(runtimesJSON, &runtimes); err != nil {
-		return nil, fmt.Errorf("unable to parse runtimes")
+	if err = mapstructure.Decode(secret.Data["runtimes"], &runtimes); err != nil {
+		return nil, err
 	}
 
 	// return all runtimes in the catalog
-	if i == nil {
+	if input == nil {
 		return &ListPluginRuntimesResponse{Runtimes: runtimes}, nil
 	}
 
-	result := &ListPluginRuntimesResponse{Runtimes: []PluginRuntimeDetails{}}
+	result := &ListPluginRuntimesResponse{
+		Runtimes: []PluginRuntimeDetails{},
+	}
 	for _, runtime := range runtimes {
-		if runtime.Type == i.Type.String() {
+		if runtime.Type == input.Type.String() {
 			result.Runtimes = append(result.Runtimes, runtime)
 		}
 	}
