@@ -1690,11 +1690,8 @@ func (c *Core) handleLoginRequest(ctx context.Context, req *logical.Request) (re
 		loginRequest := resp.Auth.TokenType != logical.TokenTypeBatch
 
 		// If role was not already determined by http.rateLimitQuotaWrapping
-		// and imprecise_lease_role_tracking = false
-		// and this is a login request, calculate the role
-		// Otherwise, if role was already calculated
-		// or imprecise_role_tracking=true
-		// or this isn't a login request, skip the role calculation
+		// and this is a login request
+		// and imprecise_lease_role_tracking is not set to true, calculate the role
 		if reqRole == nil && loginRequest && !c.impreciseLeaseRoleTracking {
 			role = c.DetermineRoleFromLoginRequest(ctx, req.MountPoint, req.Data)
 		}
