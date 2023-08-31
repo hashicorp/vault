@@ -1687,7 +1687,7 @@ func (c *Core) handleLoginRequest(ctx context.Context, req *logical.Request) (re
 		// Attach the display name, might be used by audit backends
 		req.DisplayName = auth.DisplayName
 
-		// If role was not already determined for a role based RLQ
+		// If role was not already determined by http.rateLimitQuotaWrapping
 		// and imprecise_lease_role_tracking = false
 		// and this is a login request, calculate the role
 		// Otherwise, if role was already calculated
