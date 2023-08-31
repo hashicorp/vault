@@ -39,7 +39,7 @@ var sudoPaths = map[string]*regexp.Regexp{
 	"/sys/plugins/catalog/{type}":                 regexp.MustCompile(`^/sys/plugins/catalog/[\w-]+$`),
 	"/sys/plugins/catalog/{type}/{name}":          regexp.MustCompile(`^/sys/plugins/catalog/[\w-]+/[^/]+$`),
 	"/sys/plugins/runtimes/catalog":               regexp.MustCompile(`^/sys/plugins/runtimes/catalog/?$`),
-	"/sys/plugins/runtimes/catalog/{type}/{name}": regexp.MustCompile(`^/sys/plugins/runtimes/catalog/[\w-]+/[\w-]+$`),
+	"/sys/plugins/runtimes/catalog/{type}/{name}": regexp.MustCompile(`^/sys/plugins/runtimes/catalog/[\w-]+/[^/]+$`),
 	"/sys/raw/{path}":                             regexp.MustCompile(`^/sys/raw(?:/.+)?$`),
 	"/sys/remount":                                regexp.MustCompile(`^/sys/remount$`),
 	"/sys/revoke-force/{prefix}":                  regexp.MustCompile(`^/sys/revoke-force/.+$`),
