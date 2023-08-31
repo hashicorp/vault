@@ -2589,6 +2589,7 @@ func setSeal(c *ServerCommand, config *server.Config, infoKeys []string, info ma
 
 		var wrapperInfoKeys []string
 		wrapperInfoMap := map[string]string{}
+		configSeal.Config = make(map[string]string)
 		wrapper, wrapperConfigError := configutil.ConfigureWrapper(configSeal, &wrapperInfoKeys, &wrapperInfoMap, sealLogger)
 		if wrapperConfigError != nil {
 			// It seems that we are checking for this particular error here is to distinguish between a

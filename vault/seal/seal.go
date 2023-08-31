@@ -165,7 +165,7 @@ type SealWrapper struct {
 	Name     string
 
 	// sealConfigType is the KMS.Type of this wrapper. It is a string rather than a SealConfigType
-	// to avoid a circular go package depency
+	// to avoid a circular go package dependency
 	SealConfigType string
 
 	// Disabled indicates, when true indicates that this wrapper should only be used for decryption.
