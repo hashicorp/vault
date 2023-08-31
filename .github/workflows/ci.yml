@@ -276,7 +276,8 @@ jobs:
       needs.test-go-testonly.result == 'failure' ||
       needs.test-go-race.result == 'failure' ||
       needs.test-ui.result == 'failure'
-      ) && (github.ref_name == 'main' || startsWith(github.ref_name, 'release/'))
+      )
+    # && (github.ref_name == 'main' || startsWith(github.ref_name, 'release/'))
     runs-on: ubuntu-latest
     permissions:
       id-token: write
