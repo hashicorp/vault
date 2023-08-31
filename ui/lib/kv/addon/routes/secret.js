@@ -6,6 +6,7 @@
 import Route from '@ember/routing/route';
 import { inject as service } from '@ember/service';
 import { hash } from 'rsvp';
+import { action } from '@ember/object';
 
 export default class KvSecretRoute extends Route {
   @service secretMountPath;
@@ -31,5 +32,13 @@ export default class KvSecretRoute extends Route {
       secret: this.fetchSecretData(backend, path),
       metadata: this.fetchSecretMetadata(backend, path),
     });
+  }
+
+  @action
+  willTransition(transition) {
+    const { to, from } = transition;
+    if (to.name === 'vault.cluster.secrets.backend.kv.secret.index' || from.localName === 'edit') {
+      this.refresh();
+    }
   }
 }
