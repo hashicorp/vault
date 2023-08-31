@@ -164,7 +164,7 @@ func (sgi *SealGenerationInfo) UnmarshalJSON(b []byte) error {
 
 // SealWrapper contains a Wrapper and related information needed by the seal that uses it.
 type SealWrapper struct {
-	wrapping.Wrapper
+	Wrapper  wrapping.Wrapper
 	Priority int
 	Name     string
 

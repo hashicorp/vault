@@ -488,7 +488,7 @@ func (d *autoSeal) StartHealthCheck() {
 						sealWrapper.Healthy = false
 						d.core.MetricSink().SetGaugeWithLabels(autoSealUnavailableDuration, float32(time.Since(sealWrapper.LastSeenHealthy).Milliseconds()), mLabels)
 					}
-					ciphertext, err := sealWrapper.Encrypt(ctx, []byte(testVal), nil)
+					ciphertext, err := sealWrapper.Wrapper.Encrypt(ctx, []byte(testVal), nil)
 					checkTime := time.Now()
 					sealWrapper.LastHealthCheck = checkTime
 
@@ -499,7 +499,7 @@ func (d *autoSeal) StartHealthCheck() {
 						func() {
 							ctx, cancel := context.WithTimeout(ctx, sealHealthTestTimeout)
 							defer cancel()
-							plaintext, err := sealWrapper.Decrypt(ctx, ciphertext, nil)
+							plaintext, err := sealWrapper.Wrapper.Decrypt(ctx, ciphertext, nil)
 							if err != nil {
 								fail("failed to decrypt seal health test value, seal backend may be unreachable", "error", err, "seal_name", sealWrapper.Name)
 							}
