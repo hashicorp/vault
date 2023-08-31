@@ -225,6 +225,7 @@ func TestCoreWithSealAndUINoCleanup(t testing.T, opts *CoreConfig) *Core {
 	conf.CensusAgent = opts.CensusAgent
 	conf.AdministrativeNamespacePath = opts.AdministrativeNamespacePath
 	conf.AllLoggers = logger.AllLoggers
+	conf.ImpreciseLeaseRoleTracking = opts.ImpreciseLeaseRoleTracking
 
 	if opts.Logger != nil {
 		conf.Logger = opts.Logger
