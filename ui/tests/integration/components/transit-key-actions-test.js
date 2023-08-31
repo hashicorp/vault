@@ -280,8 +280,8 @@ module('Integration | Component | transit key actions', function (hooks) {
     await click('button[type="submit"]');
     assert.dom('.modal.is-active').exists('Modal opens after export');
     assert.deepEqual(
-      find('.modal [data-test-encrypted-value="export"]').innerText,
-      JSON.stringify(response, null, 2),
+      JSON.parse(find('.modal [data-test-encrypted-value="export"]').innerText),
+      response,
       'prints json response'
     );
   });
@@ -296,8 +296,8 @@ module('Integration | Component | transit key actions', function (hooks) {
     await click('button[type="submit"]');
     assert.dom('.modal.is-active').exists('Modal opens after export');
     assert.deepEqual(
-      find('.modal [data-test-encrypted-value="export"]').innerText,
-      JSON.stringify(response, null, 2),
+      JSON.parse(find('.modal [data-test-encrypted-value="export"]').innerText),
+      response,
       'prints json response'
     );
     assert.deepEqual(

@@ -71,11 +71,9 @@
       <h2 class="title is-6">Wrapped Key</h2>
       {{! HDS Adoption: Replace with Hds::Copy::Snippet }}
       <div class="copy-text level">
-        <code data-test-encrypted-value="export" class="level-left">{{if
-            this.wrapTTL
-            @wrappedToken
-            (stringify @keys)
-          }}</code>
+        <code data-test-encrypted-value="export" class="level-left">
+          {{if this.wrapTTL @wrappedToken (stringify @keys)}}
+        </code>
         <Hds::Copy::Button
           @text="Copy"
           @isIconOnly={{true}}
