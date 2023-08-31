@@ -1103,7 +1103,7 @@ func CreateCore(conf *CoreConfig) (*Core, error) {
 		wrapper := aeadwrapper.NewShamirWrapper()
 		wrapper.SetConfig(context.Background(), awskms.WithLogger(c.logger.Named("shamir")))
 
-		access, err := vaultseal.NewAccessFromSealInfo(c.logger, 1, true, []vaultseal.SealInfo{
+		access, err := vaultseal.NewAccessFromSealWrappers(c.logger, 1, true, []vaultseal.SealWrapper{
 			{
 				Wrapper:  wrapper,
 				Priority: 1,
@@ -2397,8 +2397,14 @@ func (s standardUnsealStrategy) unseal(ctx context.Context, logger log.Logger, c
 			return err
 		}
 
-		if !sealGenerationInfo.IsRewrapped() {
+		sealHaEnabled, err := server.IsSealHABetaEnabled()
+		if err != nil {
+			return err
+		}
+		if sealHaEnabled && !sealGenerationInfo.IsRewrapped() {
 			// Flag migration performed for seal-rewrap later
+			// Note that in the case where seal HA is not enabled, Core.migrateSeal() takes care of
+			// triggering the rewrap when necessary.
 			c.logger.Trace("seal generation information indicates that a seal-rewrap is needed", "generation", sealGenerationInfo.Generation, "rewrapped", sealGenerationInfo.IsRewrapped())
 			atomic.StoreUint32(c.sealMigrationDone, 1)
 		}
@@ -2866,7 +2872,7 @@ func (c *Core) adjustForSealMigration(unwrapSeal Seal) error {
 
 			// See note about creating a SealGenerationInfo for the unwrap seal in
 			// function setSeal in server.go.
-			sealAccess, err := vaultseal.NewAccessFromSealInfo(c.logger, 1, true, []vaultseal.SealInfo{
+			sealAccess, err := vaultseal.NewAccessFromSealWrappers(c.logger, 1, true, []vaultseal.SealWrapper{
 				{
 					Wrapper:  aeadwrapper.NewShamirWrapper(),
 					Priority: 1,
@@ -3094,7 +3100,7 @@ func (c *Core) unsealKeyToRootKey(ctx context.Context, seal Seal, combinedKey []
 		if useTestSeal {
 			// Note that the seal generation should not matter, since the only thing we are doing with
 			// this seal is calling GetStoredKeys (i.e. we are not encrypting anything).
-			sealAccess, err := vaultseal.NewAccessFromSealInfo(c.logger, 1, true, []vaultseal.SealInfo{
+			sealAccess, err := vaultseal.NewAccessFromSealWrappers(c.logger, 1, true, []vaultseal.SealWrapper{
 				{
 					Wrapper:  aeadwrapper.NewShamirWrapper(),
 					Priority: 1,

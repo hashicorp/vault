@@ -1254,11 +1254,11 @@ func (c *ServerCommand) Run(args []string) int {
 	// prepare a secure random reader for core
 	entropyAugLogger := c.logger.Named("entropy-augmentation")
 	var entropySources []*configutil.EntropySourcerInfo
-	for _, sealInfo := range setSealResponse.barrierSeal.GetAccess().GetEnabledSealInfoByPriority() {
-		if s, ok := sealInfo.Wrapper.(entropy.Sourcer); ok {
+	for _, sealWrapper := range setSealResponse.barrierSeal.GetAccess().GetEnabledSealWrappersByPriority() {
+		if s, ok := sealWrapper.Wrapper.(entropy.Sourcer); ok {
 			entropySources = append(entropySources, &configutil.EntropySourcerInfo{
 				Sourcer: s,
-				Name:    sealInfo.Name,
+				Name:    sealWrapper.Name,
 			})
 		}
 	}
@@ -2564,8 +2564,8 @@ func setSeal(c *ServerCommand, config *server.Config, infoKeys []string, info ma
 	recordSealConfigError := func(err error) {
 		sealConfigError = errors.Join(sealConfigError, err)
 	}
-	enabledSealInfos := make([]vaultseal.SealInfo, 0)
-	disabledSealInfos := make([]vaultseal.SealInfo, 0)
+	enabledSealWrappers := make([]vaultseal.SealWrapper, 0)
+	disabledSealWrappers := make([]vaultseal.SealWrapper, 0)
 	allSealKmsConfigs := make([]*configutil.KMS, 0)
 
 	type infoKeysAndMap struct {
@@ -2607,7 +2607,7 @@ func setSeal(c *ServerCommand, config *server.Config, infoKeys []string, info ma
 			wrapper = aeadwrapper.NewShamirWrapper()
 		}
 
-		sealInfo := vaultseal.SealInfo{
+		sealWrapper := vaultseal.SealWrapper{
 			Wrapper:        wrapper,
 			Priority:       configSeal.Priority,
 			Name:           configSeal.Name,
@@ -2616,13 +2616,13 @@ func setSeal(c *ServerCommand, config *server.Config, infoKeys []string, info ma
 		}
 
 		if configSeal.Disabled {
-			disabledSealInfos = append(disabledSealInfos, sealInfo)
+			disabledSealWrappers = append(disabledSealWrappers, sealWrapper)
 		} else {
-			enabledSealInfos = append(enabledSealInfos, sealInfo)
+			enabledSealWrappers = append(enabledSealWrappers, sealWrapper)
 		}
 		allSealKmsConfigs = append(allSealKmsConfigs, configSeal)
 
-		sealWrapperInfoKeysMap[sealInfo.Name] = infoKeysAndMap{
+		sealWrapperInfoKeysMap[sealWrapper.Name] = infoKeysAndMap{
 			keys:   wrapperInfoKeys,
 			theMap: wrapperInfoMap,
 		}
@@ -2631,25 +2631,25 @@ func setSeal(c *ServerCommand, config *server.Config, infoKeys []string, info ma
 	////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 	// Set the info keys, this modifies the function arguments `info` and `infoKeys`
 	// TODO(SEALHA): Why are we doing this? What is its use?
-	appendWrapperInfoKeys := func(prefix string, sealInfos []vaultseal.SealInfo) {
-		if len(sealInfos) > 0 {
+	appendWrapperInfoKeys := func(prefix string, sealWrappers []vaultseal.SealWrapper) {
+		if len(sealWrappers) > 0 {
 			useName := false
-			if len(sealInfos) > 1 {
+			if len(sealWrappers) > 1 {
 				useName = true
 			}
-			for _, sealInfo := range sealInfos {
+			for _, sealWrapper := range sealWrappers {
 				if useName {
-					prefix = fmt.Sprintf("%s %s ", prefix, sealInfo.Name)
+					prefix = fmt.Sprintf("%s %s ", prefix, sealWrapper.Name)
 				}
-				for _, k := range sealWrapperInfoKeysMap[sealInfo.Name].keys {
+				for _, k := range sealWrapperInfoKeysMap[sealWrapper.Name].keys {
 					infoKeys = append(infoKeys, prefix+k)
-					info[prefix+k] = sealWrapperInfoKeysMap[sealInfo.Name].theMap[k]
+					info[prefix+k] = sealWrapperInfoKeysMap[sealWrapper.Name].theMap[k]
 				}
 			}
 		}
 	}
-	appendWrapperInfoKeys("", enabledSealInfos)
-	appendWrapperInfoKeys("Old", disabledSealInfos)
+	appendWrapperInfoKeys("", enabledSealWrappers)
+	appendWrapperInfoKeys("Old", disabledSealWrappers)
 
 	////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 	// Compute seal generation
@@ -2662,8 +2662,8 @@ func setSeal(c *ServerCommand, config *server.Config, infoKeys []string, info ma
 	////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 	// Create the Seals
 
-	containsShamir := func(sealInfos []vaultseal.SealInfo) bool {
-		for _, si := range sealInfos {
+	containsShamir := func(sealWrappers []vaultseal.SealWrapper) bool {
+		for _, si := range sealWrappers {
 			if vault.SealConfigTypeShamir.IsSameAs(si.SealConfigType) {
 				return true
 			}
@@ -2679,36 +2679,36 @@ func setSeal(c *ServerCommand, config *server.Config, infoKeys []string, info ma
 	var unwrapSeal vault.Seal
 
 	switch {
-	case len(enabledSealInfos) == 0:
+	case len(enabledSealWrappers) == 0:
 		return nil, errors.New("no enabled Seals in configuration")
 
-	case containsShamir(enabledSealInfos) && containsShamir(disabledSealInfos):
+	case containsShamir(enabledSealWrappers) && containsShamir(disabledSealWrappers):
 		return nil, errors.New("shamir seals cannot be set disabled (they should simply not be set)")
 
-	case len(enabledSealInfos) == 1 && containsShamir(enabledSealInfos):
+	case len(enabledSealWrappers) == 1 && containsShamir(enabledSealWrappers):
 		// The barrier seal is Shamir. If there are any disabled seals, then we put them all in the same
 		// autoSeal.
-		barrierSeal = vault.NewDefaultSeal(vaultseal.NewAccess(sealLogger, sealGenerationInfo, enabledSealInfos))
-		if len(disabledSealInfos) > 0 {
-			unwrapSeal = vault.NewAutoSeal(vaultseal.NewAccess(sealLogger, sealGenerationInfo, disabledSealInfos))
+		barrierSeal = vault.NewDefaultSeal(vaultseal.NewAccess(sealLogger, sealGenerationInfo, enabledSealWrappers))
+		if len(disabledSealWrappers) > 0 {
+			unwrapSeal = vault.NewAutoSeal(vaultseal.NewAccess(sealLogger, sealGenerationInfo, disabledSealWrappers))
 		}
 
-	case len(disabledSealInfos) == 1 && containsShamir(disabledSealInfos):
+	case len(disabledSealWrappers) == 1 && containsShamir(disabledSealWrappers):
 		// The unwrap seal is Shamir, we are migrating to an autoSeal.
-		barrierSeal = vault.NewAutoSeal(vaultseal.NewAccess(sealLogger, sealGenerationInfo, enabledSealInfos))
-		unwrapSeal = vault.NewDefaultSeal(vaultseal.NewAccess(sealLogger, sealGenerationInfo, disabledSealInfos))
+		barrierSeal = vault.NewAutoSeal(vaultseal.NewAccess(sealLogger, sealGenerationInfo, enabledSealWrappers))
+		unwrapSeal = vault.NewDefaultSeal(vaultseal.NewAccess(sealLogger, sealGenerationInfo, disabledSealWrappers))
 
 	case sealHaBetaEnabled:
 		// We know we are not using Shamir seal, that we are not migrating away from one, and seal HA is enabled,
 		// so just put enabled and disabled wrappers on the same seal Access
-		allSealInfos := append(enabledSealInfos, disabledSealInfos...)
-		barrierSeal = vault.NewAutoSeal(vaultseal.NewAccess(sealLogger, sealGenerationInfo, allSealInfos))
+		allSealWrappers := append(enabledSealWrappers, disabledSealWrappers...)
+		barrierSeal = vault.NewAutoSeal(vaultseal.NewAccess(sealLogger, sealGenerationInfo, allSealWrappers))
 
-	case len(enabledSealInfos) == 1:
+	case len(enabledSealWrappers) == 1:
 		// We may have multiple seals disabled, but we know Shamir is not one of them.
-		barrierSeal = vault.NewAutoSeal(vaultseal.NewAccess(sealLogger, sealGenerationInfo, enabledSealInfos))
-		if len(disabledSealInfos) > 0 {
-			unwrapSeal = vault.NewAutoSeal(vaultseal.NewAccess(sealLogger, sealGenerationInfo, disabledSealInfos))
+		barrierSeal = vault.NewAutoSeal(vaultseal.NewAccess(sealLogger, sealGenerationInfo, enabledSealWrappers))
+		if len(disabledSealWrappers) > 0 {
+			unwrapSeal = vault.NewAutoSeal(vaultseal.NewAccess(sealLogger, sealGenerationInfo, disabledSealWrappers))
 		}
 
 	default:
@@ -2724,8 +2724,7 @@ func setSeal(c *ServerCommand, config *server.Config, infoKeys []string, info ma
 }
 
 func (c *ServerCommand) computeSealGenerationInfo(existingSealGenInfo *vaultseal.SealGenerationInfo, sealConfigs []*configutil.KMS) (*vaultseal.SealGenerationInfo, error) {
-	var generation uint64
-	generation = 1
+	generation := uint64(1)
 
 	if existingSealGenInfo != nil {
 		if cmp.Equal(existingSealGenInfo.Seals, sealConfigs) {
