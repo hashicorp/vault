@@ -8,10 +8,16 @@ import (
 	"crypto/sha256"
 	"crypto/tls"
 	"fmt"
+	"os"
 	"os/exec"
+	"strings"
 
+	"github.com/hashicorp/go-hclog"
 	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-plugin"
+	"github.com/hashicorp/go-plugin/runner"
+	"github.com/hashicorp/go-secure-stdlib/plugincontainer"
+	"github.com/hashicorp/go-secure-stdlib/plugincontainer/config"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 )
 
@@ -31,6 +37,7 @@ type PluginClientConfig struct {
 type runConfig struct {
 	// Provided by PluginRunner
 	command string
+	image   string
 	args    []string
 	sha256  []byte
 
@@ -38,6 +45,18 @@ type runConfig struct {
 	env []string
 
 	PluginClientConfig
+}
+
+func overlayCmdSpec(base, cmd *exec.Cmd) {
+	// if cmd.Path != "" {
+	// 	base.Path = cmd.Path
+	// }
+	// if len(cmd.Args) > 0 {
+	// 	base.Args = cmd.Args
+	// }
+	if len(cmd.Env) > 0 {
+		base.Env = append(base.Env, cmd.Env...)
+	}
 }
 
 func (rc runConfig) makeConfig(ctx context.Context) (*plugin.ClientConfig, error) {
@@ -88,16 +107,9 @@ func (rc runConfig) makeConfig(ctx context.Context) (*plugin.ClientConfig, error
 		cmd.Env = append(cmd.Env, fmt.Sprintf("%s=%s", PluginUnwrapTokenEnv, wrapToken))
 	}
 
-	secureConfig := &plugin.SecureConfig{
-		Checksum: rc.sha256,
-		Hash:     sha256.New(),
-	}
-
 	clientConfig := &plugin.ClientConfig{
 		HandshakeConfig:  rc.HandshakeConfig,
 		VersionedPlugins: rc.PluginSets,
-		Cmd:              cmd,
-		SecureConfig:     secureConfig,
 		TLSConfig:        clientTLSConfig,
 		Logger:           rc.Logger,
 		AllowedProtocols: []plugin.Protocol{
@@ -105,6 +117,34 @@ func (rc runConfig) makeConfig(ctx context.Context) (*plugin.ClientConfig, error
 			plugin.ProtocolGRPC,
 		},
 		AutoMTLS: rc.AutoMTLS,
+	}
+	if rc.image == "" {
+		clientConfig.Cmd = cmd
+		clientConfig.SecureConfig = &plugin.SecureConfig{
+			Checksum: rc.sha256,
+			Hash:     sha256.New(),
+		}
+	} else {
+		clientConfig.SkipHostEnv = true
+		clientConfig.RunnerFunc = func(logger hclog.Logger, goPluginCmd *exec.Cmd, tmpDir string) (runner.Runner, error) {
+			overlayCmdSpec(goPluginCmd, cmd)
+			cfg := &config.ContainerConfig{
+				UnixSocketGroup: fmt.Sprintf("%d", os.Getgid()),
+				Image:           rc.image,
+				SHA256:          fmt.Sprintf("%x", rc.sha256),
+				Labels: map[string]string{
+					"managed-by": "hashicorp.com/vault",
+				},
+				// TODO: More configurables
+				// Runtime:         "runsc",
+				// CgroupParent: "",
+				// NanoCpus: 100000000,
+				// Memory: 64 * 1024 * 1024,
+				// TODO: network
+
+			}
+			return plugincontainer.NewContainerRunner(logger, goPluginCmd, cfg, tmpDir)
+		}
 	}
 	return clientConfig, nil
 }
@@ -170,8 +210,17 @@ func MLock(mlock bool) RunOpt {
 }
 
 func (r *PluginRunner) RunConfig(ctx context.Context, opts ...RunOpt) (*plugin.Client, error) {
+	var image string
+	if r.Image != "" {
+		if r.Version != "" {
+			image = fmt.Sprintf("%s:%s", r.Image, strings.TrimPrefix(r.Version, "v"))
+		} else {
+			image = r.Image
+		}
+	}
 	rc := runConfig{
 		command: r.Command,
+		image:   image,
 		args:    r.Args,
 		sha256:  r.Sha256,
 		env:     r.Env,

@@ -54,6 +54,7 @@ type PluginRunner struct {
 	Type           consts.PluginType           `json:"type" structs:"type"`
 	Version        string                      `json:"version" structs:"version"`
 	Command        string                      `json:"command" structs:"command"`
+	Image          string                      `json:"oc_image" structs:"oci_image"`
 	Args           []string                    `json:"args" structs:"args"`
 	Env            []string                    `json:"env" structs:"env"`
 	Sha256         []byte                      `json:"sha256" structs:"sha256"`
@@ -65,14 +66,14 @@ type PluginRunner struct {
 // We don't use the very similar PluginRunner struct to avoid confusion about
 // what's settable, which does not include the builtin fields.
 type SetPluginInput struct {
-	Name     string
-	Type     consts.PluginType
-	Version  string
-	Command  string
-	OCIImage string
-	Args     []string
-	Env      []string
-	Sha256   []byte
+	Name    string
+	Type    consts.PluginType
+	Version string
+	Command string
+	Image   string
+	Args    []string
+	Env     []string
+	Sha256  []byte
 }
 
 // Run takes a wrapper RunnerUtil instance along with the go-plugin parameters and

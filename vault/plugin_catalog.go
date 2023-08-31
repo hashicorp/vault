@@ -75,6 +75,7 @@ type externalPluginsKey struct {
 	typ     consts.PluginType
 	version string
 	command string
+	image   string
 	args    string
 	env     string
 	sha256  string
@@ -97,6 +98,7 @@ func makeExternalPluginsKey(p *pluginutil.PluginRunner) (externalPluginsKey, err
 		typ:     p.Type,
 		version: p.Version,
 		command: p.Command,
+		image:   p.Image,
 		args:    string(args),
 		env:     string(env),
 		sha256:  hex.EncodeToString(p.Sha256),
@@ -118,8 +120,8 @@ type pluginClient struct {
 	logger log.Logger
 
 	// id is the connection ID
-	id  string
-	pid int
+	id       string
+	pluginID string
 
 	// client handles the lifecycle of a plugin process
 	// multiplexed plugins share the same client
@@ -152,6 +154,9 @@ func wrapFactoryCheckPerms(core *Core, f logical.Factory) logical.Factory {
 		}
 		if plugin == nil {
 			return nil, fmt.Errorf("failed to find %s in plugin catalog", pluginDescription)
+		}
+		if plugin.Command == "" {
+			return f(ctx, conf)
 		}
 
 		command, err := filepath.Rel(core.pluginCatalog.directory, plugin.Command)
@@ -244,7 +249,7 @@ func (c *PluginCatalog) reloadExternalPlugin(key externalPluginsKey, id, path st
 
 	delete(c.externalPlugins, key)
 	pc.client.Kill()
-	c.logger.Debug("killed external plugin process for reload", "path", path, "pid", pc.pid)
+	c.logger.Debug("killed external plugin process for reload", "path", path, "pluginID", pc.pluginID)
 
 	return nil
 }
@@ -283,11 +288,11 @@ func (c *PluginCatalog) cleanupExternalPlugin(key externalPluginsKey, id, path s
 		if len(extPlugin.connections) == 0 {
 			delete(c.externalPlugins, key)
 		}
-		c.logger.Debug("killed external plugin process", "path", path, "pid", pc.pid)
+		c.logger.Debug("killed external plugin process", "path", path, "pluginID", pc.pluginID)
 	} else if len(extPlugin.connections) == 0 || pc.client.Exited() {
 		pc.client.Kill()
 		delete(c.externalPlugins, key)
-		c.logger.Debug("killed external multiplexed plugin process", "path", path, "pid", pc.pid)
+		c.logger.Debug("killed external multiplexed plugin process", "path", path, "pluginID", pc.pluginID)
 	}
 
 	return nil
@@ -410,11 +415,8 @@ func (c *PluginCatalog) newPluginClient(ctx context.Context, pluginRunner *plugi
 		return nil, err
 	}
 
-	// get the external plugin pid
-	conf := pc.client.ReattachConfig()
-	if conf != nil {
-		pc.pid = conf.Pid
-	}
+	// get the external plugin id
+	pc.pluginID = pc.client.ID()
 
 	clientConn := rpcClient.(*plugin.GRPCClient).Conn
 
@@ -896,27 +898,32 @@ func (c *PluginCatalog) Set(ctx context.Context, plugin pluginutil.SetPluginInpu
 }
 
 func (c *PluginCatalog) setInternal(ctx context.Context, plugin pluginutil.SetPluginInput) (*pluginutil.PluginRunner, error) {
-	// Best effort check to make sure the command isn't breaking out of the
-	// configured plugin directory.
-	commandFull := filepath.Join(c.directory, plugin.Command)
-	sym, err := filepath.EvalSymlinks(commandFull)
-	if err != nil {
-		return nil, fmt.Errorf("error while validating the command path: %w", err)
-	}
-	symAbs, err := filepath.Abs(filepath.Dir(sym))
-	if err != nil {
-		return nil, fmt.Errorf("error while validating the command path: %w", err)
+	var commandFull string
+	if plugin.Command != "" {
+		// Best effort check to make sure the command isn't breaking out of the
+		// configured plugin directory.
+		commandFull := filepath.Join(c.directory, plugin.Command)
+		sym, err := filepath.EvalSymlinks(commandFull)
+		if err != nil {
+			return nil, fmt.Errorf("error while validating the command path: %w", err)
+		}
+		symAbs, err := filepath.Abs(filepath.Dir(sym))
+		if err != nil {
+			return nil, fmt.Errorf("error while validating the command path: %w", err)
+		}
+
+		if symAbs != c.directory {
+			return nil, errors.New("cannot execute files outside of configured plugin directory")
+		}
 	}
 
-	if symAbs != c.directory {
-		return nil, errors.New("cannot execute files outside of configured plugin directory")
-	}
-
-	// entryTmp should only be used for the below type and version checks, it uses the
-	// full command instead of the relative command.
+	// entryTmp should only be used for the below type and version checks. It uses the
+	// full command instead of the relative command because get() normally prepends
+	// the plugin directory to the command, but we can't use get() here.
 	entryTmp := &pluginutil.PluginRunner{
 		Name:    plugin.Name,
 		Command: commandFull,
+		Image:   plugin.Image,
 		Args:    plugin.Args,
 		Env:     plugin.Env,
 		Sha256:  plugin.Sha256,
@@ -964,6 +971,7 @@ func (c *PluginCatalog) setInternal(ctx context.Context, plugin pluginutil.SetPl
 		Type:    plugin.Type,
 		Version: plugin.Version,
 		Command: plugin.Command,
+		Image:   plugin.Image,
 		Args:    plugin.Args,
 		Env:     plugin.Env,
 		Sha256:  plugin.Sha256,

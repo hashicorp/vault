@@ -24,6 +24,7 @@ type PluginRegisterCommand struct {
 	flagCommand string
 	flagSHA256  string
 	flagVersion string
+	flagImage   string
 }
 
 func (c *PluginRegisterCommand) Synopsis() string {
@@ -90,6 +91,13 @@ func (c *PluginRegisterCommand) Flags() *FlagSets {
 		Usage:      "Semantic version of the plugin. Optional.",
 	})
 
+	f.StringVar(&StringVar{
+		Name:       "oci_image",
+		Target:     &c.flagImage,
+		Completion: complete.PredictAnything,
+		Usage:      "OCI image to run.",
+	})
+
 	return set
 }
 
@@ -145,17 +153,18 @@ func (c *PluginRegisterCommand) Run(args []string) int {
 	pluginName := strings.TrimSpace(pluginNameRaw)
 
 	command := c.flagCommand
-	if command == "" {
+	if command == "" && c.flagImage == "" {
 		command = pluginName
 	}
 
 	if err := client.Sys().RegisterPlugin(&api.RegisterPluginInput{
-		Name:    pluginName,
-		Type:    pluginType,
-		Args:    c.flagArgs,
-		Command: command,
-		SHA256:  c.flagSHA256,
-		Version: c.flagVersion,
+		Name:     pluginName,
+		Type:     pluginType,
+		Args:     c.flagArgs,
+		Command:  command,
+		SHA256:   c.flagSHA256,
+		Version:  c.flagVersion,
+		OCIImage: c.flagImage,
 	}); err != nil {
 		c.UI.Error(fmt.Sprintf("Error registering plugin %s: %s", pluginName, err))
 		return 2

@@ -201,6 +201,8 @@ type RegisterPluginInput struct {
 
 	// Version is the optional version of the plugin being registered
 	Version string `json:"version,omitempty"`
+
+	OCIImage string `json:"oci_image,omitempty"`
 }
 
 // RegisterPlugin wraps RegisterPluginWithContext using context.Background.
