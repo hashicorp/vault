@@ -71,15 +71,15 @@ type PluginCatalog struct {
 // In particular, the PluginRunner struct has slices and a function which are not
 // comparable, so we need to transform it into a struct which is.
 type externalPluginsKey struct {
-	name    string
-	typ     consts.PluginType
-	version string
-	command string
-	image   string
-	args    string
-	env     string
-	sha256  string
-	builtin bool
+	name     string
+	typ      consts.PluginType
+	version  string
+	command  string
+	ociImage string
+	args     string
+	env      string
+	sha256   string
+	builtin  bool
 }
 
 func makeExternalPluginsKey(p *pluginutil.PluginRunner) (externalPluginsKey, error) {
@@ -94,15 +94,15 @@ func makeExternalPluginsKey(p *pluginutil.PluginRunner) (externalPluginsKey, err
 	}
 
 	return externalPluginsKey{
-		name:    p.Name,
-		typ:     p.Type,
-		version: p.Version,
-		command: p.Command,
-		image:   p.Image,
-		args:    string(args),
-		env:     string(env),
-		sha256:  hex.EncodeToString(p.Sha256),
-		builtin: p.Builtin,
+		name:     p.Name,
+		typ:      p.Type,
+		version:  p.Version,
+		command:  p.Command,
+		ociImage: p.OCIImage,
+		args:     string(args),
+		env:      string(env),
+		sha256:   hex.EncodeToString(p.Sha256),
+		builtin:  p.Builtin,
 	}, nil
 }
 
@@ -155,7 +155,7 @@ func wrapFactoryCheckPerms(core *Core, f logical.Factory) logical.Factory {
 		if plugin == nil {
 			return nil, fmt.Errorf("failed to find %s in plugin catalog", pluginDescription)
 		}
-		if plugin.Command == "" {
+		if plugin.OCIImage != "" {
 			return f(ctx, conf)
 		}
 
@@ -229,13 +229,13 @@ func (p *pluginClient) Reload() error {
 
 // reloadExternalPlugin
 // This should be called with the write lock held.
-func (c *PluginCatalog) reloadExternalPlugin(key externalPluginsKey, id, path string) error {
+func (c *PluginCatalog) reloadExternalPlugin(key externalPluginsKey, id, pluginBinaryRef string) error {
 	extPlugin, ok := c.externalPlugins[key]
 	if !ok {
 		return fmt.Errorf("plugin client not found")
 	}
 	if !extPlugin.multiplexingSupport {
-		err := c.cleanupExternalPlugin(key, id, path)
+		err := c.cleanupExternalPlugin(key, id, pluginBinaryRef)
 		if err != nil {
 			return err
 		}
@@ -249,7 +249,7 @@ func (c *PluginCatalog) reloadExternalPlugin(key externalPluginsKey, id, path st
 
 	delete(c.externalPlugins, key)
 	pc.client.Kill()
-	c.logger.Debug("killed external plugin process for reload", "path", path, "pluginID", pc.pluginID)
+	c.logger.Debug("killed external plugin process for reload", "plugin", pluginBinaryRef, "pluginID", pc.pluginID)
 
 	return nil
 }
@@ -265,7 +265,7 @@ func (p *pluginClient) Close() error {
 // cleanupExternalPlugin will kill plugin processes and perform any necessary
 // cleanup on the externalPlugins map for multiplexed and non-multiplexed
 // plugins. This should be called with the write lock held.
-func (c *PluginCatalog) cleanupExternalPlugin(key externalPluginsKey, id, path string) error {
+func (c *PluginCatalog) cleanupExternalPlugin(key externalPluginsKey, id, pluginBinaryRef string) error {
 	extPlugin, ok := c.externalPlugins[key]
 	if !ok {
 		return fmt.Errorf("plugin client not found")
@@ -288,11 +288,11 @@ func (c *PluginCatalog) cleanupExternalPlugin(key externalPluginsKey, id, path s
 		if len(extPlugin.connections) == 0 {
 			delete(c.externalPlugins, key)
 		}
-		c.logger.Debug("killed external plugin process", "path", path, "pluginID", pc.pluginID)
+		c.logger.Debug("killed external plugin process", "plugin", pluginBinaryRef, "pluginID", pc.pluginID)
 	} else if len(extPlugin.connections) == 0 || pc.client.Exited() {
 		pc.client.Kill()
 		delete(c.externalPlugins, key)
-		c.logger.Debug("killed external multiplexed plugin process", "path", path, "pluginID", pc.pluginID)
+		c.logger.Debug("killed external multiplexed plugin process", "plugin", pluginBinaryRef, "pluginID", pc.pluginID)
 	}
 
 	return nil
@@ -367,12 +367,12 @@ func (c *PluginCatalog) newPluginClient(ctx context.Context, pluginRunner *plugi
 		cleanupFunc: func() error {
 			c.lock.Lock()
 			defer c.lock.Unlock()
-			return c.cleanupExternalPlugin(key, id, pluginRunner.Command)
+			return c.cleanupExternalPlugin(key, id, pluginRunner.BinaryReference())
 		},
 		reloadFunc: func() error {
 			c.lock.Lock()
 			defer c.lock.Unlock()
-			return c.reloadExternalPlugin(key, id, pluginRunner.Command)
+			return c.reloadExternalPlugin(key, id, pluginRunner.BinaryReference())
 		},
 	}
 
@@ -485,7 +485,7 @@ func (c *PluginCatalog) getBackendPluginType(ctx context.Context, pluginRunner *
 		}
 		defer func() {
 			// Close the client and cleanup the plugin process
-			err = c.cleanupExternalPlugin(key, pc.id, pluginRunner.Command)
+			err = c.cleanupExternalPlugin(key, pc.id, pluginRunner.BinaryReference())
 			if err != nil {
 				c.logger.Error("error closing plugin client", "error", err)
 			}
@@ -574,7 +574,7 @@ func (c *PluginCatalog) getBackendRunningVersion(ctx context.Context, pluginRunn
 		}
 		defer func() {
 			// Close the client and cleanup the plugin process
-			err = c.cleanupExternalPlugin(key, pc.id, pluginRunner.Command)
+			err = c.cleanupExternalPlugin(key, pc.id, pluginRunner.BinaryReference())
 			if err != nil {
 				c.logger.Error("error closing plugin client", "error", err)
 			}
@@ -644,7 +644,7 @@ func (c *PluginCatalog) getDatabaseRunningVersion(ctx context.Context, pluginRun
 		}
 		defer func() {
 			// Close the client and cleanup the plugin process
-			err = c.cleanupExternalPlugin(key, v5Client.id, pluginRunner.Command)
+			err = c.cleanupExternalPlugin(key, v5Client.id, pluginRunner.BinaryReference())
 			if err != nil {
 				c.logger.Error("error closing plugin client", "error", err)
 			}
@@ -706,7 +706,7 @@ func (c *PluginCatalog) isDatabasePlugin(ctx context.Context, pluginRunner *plug
 		if err != nil {
 			return err
 		}
-		err = c.cleanupExternalPlugin(key, v5Client.id, pluginRunner.Command)
+		err = c.cleanupExternalPlugin(key, v5Client.id, pluginRunner.BinaryReference())
 		if err != nil {
 			c.logger.Error("error closing plugin client", "error", err)
 		}
@@ -770,16 +770,12 @@ func (c *PluginCatalog) UpgradePlugins(ctx context.Context, logger log.Logger) e
 			continue
 		}
 
-		// prepend the plugin directory to the command
-		cmdOld := plugin.Command
-		plugin.Command = filepath.Join(c.directory, plugin.Command)
-
 		// Upgrade the storage. At this point we don't know what type of plugin this is so pass in the unknown type.
 		runner, err := c.setInternal(ctx, pluginutil.SetPluginInput{
 			Name:    pluginName,
 			Type:    consts.PluginTypeUnknown,
 			Version: plugin.Version,
-			Command: cmdOld,
+			Command: plugin.Command,
 			Args:    plugin.Args,
 			Env:     plugin.Env,
 			Sha256:  plugin.Sha256,
@@ -844,8 +840,10 @@ func (c *PluginCatalog) get(ctx context.Context, name string, pluginType consts.
 				return nil, nil
 			}
 
-			// prepend the plugin directory to the command
-			entry.Command = filepath.Join(c.directory, entry.Command)
+			// Make the command path fully rooted if it's not a container plugin.
+			if entry.OCIImage == "" {
+				entry.Command = filepath.Join(c.directory, entry.Command)
+			}
 
 			return entry, nil
 		}
@@ -898,12 +896,12 @@ func (c *PluginCatalog) Set(ctx context.Context, plugin pluginutil.SetPluginInpu
 }
 
 func (c *PluginCatalog) setInternal(ctx context.Context, plugin pluginutil.SetPluginInput) (*pluginutil.PluginRunner, error) {
-	var commandFull string
-	if plugin.Command != "" {
+	command := plugin.Command
+	if plugin.OCIImage == "" {
 		// Best effort check to make sure the command isn't breaking out of the
 		// configured plugin directory.
-		commandFull := filepath.Join(c.directory, plugin.Command)
-		sym, err := filepath.EvalSymlinks(commandFull)
+		command = filepath.Join(c.directory, plugin.Command)
+		sym, err := filepath.EvalSymlinks(command)
 		if err != nil {
 			return nil, fmt.Errorf("error while validating the command path: %w", err)
 		}
@@ -921,13 +919,13 @@ func (c *PluginCatalog) setInternal(ctx context.Context, plugin pluginutil.SetPl
 	// full command instead of the relative command because get() normally prepends
 	// the plugin directory to the command, but we can't use get() here.
 	entryTmp := &pluginutil.PluginRunner{
-		Name:    plugin.Name,
-		Command: commandFull,
-		Image:   plugin.Image,
-		Args:    plugin.Args,
-		Env:     plugin.Env,
-		Sha256:  plugin.Sha256,
-		Builtin: false,
+		Name:     plugin.Name,
+		Command:  command,
+		OCIImage: plugin.OCIImage,
+		Args:     plugin.Args,
+		Env:      plugin.Env,
+		Sha256:   plugin.Sha256,
+		Builtin:  false,
 	}
 	// If the plugin type is unknown, we want to attempt to determine the type
 	if plugin.Type == consts.PluginTypeUnknown {
@@ -967,15 +965,15 @@ func (c *PluginCatalog) setInternal(ctx context.Context, plugin pluginutil.SetPl
 	}
 
 	entry := &pluginutil.PluginRunner{
-		Name:    plugin.Name,
-		Type:    plugin.Type,
-		Version: plugin.Version,
-		Command: plugin.Command,
-		Image:   plugin.Image,
-		Args:    plugin.Args,
-		Env:     plugin.Env,
-		Sha256:  plugin.Sha256,
-		Builtin: false,
+		Name:     plugin.Name,
+		Type:     plugin.Type,
+		Version:  plugin.Version,
+		Command:  plugin.Command,
+		OCIImage: plugin.OCIImage,
+		Args:     plugin.Args,
+		Env:      plugin.Env,
+		Sha256:   plugin.Sha256,
+		Builtin:  false,
 	}
 
 	buf, err := json.Marshal(entry)

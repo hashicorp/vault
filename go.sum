@@ -1811,6 +1811,8 @@ github.com/hashicorp/go-secure-stdlib/password v0.1.1 h1:6JzmBqXprakgFEHwBgdchsj
 github.com/hashicorp/go-secure-stdlib/password v0.1.1/go.mod h1:9hH302QllNwu1o2TGYtSk8I8kTAN0ca1EHpwhm5Mmzo=
 github.com/hashicorp/go-secure-stdlib/plugincontainer v0.1.0 h1:Qn5JAcazHfVeNscqAzmdkDRka7FdJK3Cth5JTHDvgUU=
 github.com/hashicorp/go-secure-stdlib/plugincontainer v0.1.0/go.mod h1:kRpzC4wHYXc2+sjXA9vuKawXYs0x0d0HuqqbaW1fj1w=
+github.com/hashicorp/go-secure-stdlib/plugincontainer v0.1.1 h1:1F0n5stk5uz4yIw2elN3k6bGbIv95OQaJVR2sVQ1kk0=
+github.com/hashicorp/go-secure-stdlib/plugincontainer v0.1.1/go.mod h1:kRpzC4wHYXc2+sjXA9vuKawXYs0x0d0HuqqbaW1fj1w=
 github.com/hashicorp/go-secure-stdlib/reloadutil v0.1.1 h1:SMGUnbpAcat8rIKHkBPjfv81yC46a8eCNZ2hsR2l1EI=
 github.com/hashicorp/go-secure-stdlib/reloadutil v0.1.1/go.mod h1:Ch/bf00Qnx77MZd49JRgHYqHQjtEmTgGU2faufpVZb0=
 github.com/hashicorp/go-secure-stdlib/strutil v0.1.1/go.mod h1:gKOamz3EwoIoJq7mlMIRBpVTAUn8qPCrEclOKKWhD3U=

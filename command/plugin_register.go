@@ -20,11 +20,11 @@ var (
 type PluginRegisterCommand struct {
 	*BaseCommand
 
-	flagArgs    []string
-	flagCommand string
-	flagSHA256  string
-	flagVersion string
-	flagImage   string
+	flagArgs     []string
+	flagCommand  string
+	flagSHA256   string
+	flagVersion  string
+	flagOCIImage string
 }
 
 func (c *PluginRegisterCommand) Synopsis() string {
@@ -93,7 +93,7 @@ func (c *PluginRegisterCommand) Flags() *FlagSets {
 
 	f.StringVar(&StringVar{
 		Name:       "oci_image",
-		Target:     &c.flagImage,
+		Target:     &c.flagOCIImage,
 		Completion: complete.PredictAnything,
 		Usage:      "OCI image to run.",
 	})
@@ -153,7 +153,7 @@ func (c *PluginRegisterCommand) Run(args []string) int {
 	pluginName := strings.TrimSpace(pluginNameRaw)
 
 	command := c.flagCommand
-	if command == "" && c.flagImage == "" {
+	if command == "" && c.flagOCIImage == "" {
 		command = pluginName
 	}
 
@@ -164,7 +164,7 @@ func (c *PluginRegisterCommand) Run(args []string) int {
 		Command:  command,
 		SHA256:   c.flagSHA256,
 		Version:  c.flagVersion,
-		OCIImage: c.flagImage,
+		OCIImage: c.flagOCIImage,
 	}); err != nil {
 		c.UI.Error(fmt.Sprintf("Error registering plugin %s: %s", pluginName, err))
 		return 2

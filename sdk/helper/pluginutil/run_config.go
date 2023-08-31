@@ -36,10 +36,11 @@ type PluginClientConfig struct {
 
 type runConfig struct {
 	// Provided by PluginRunner
-	command string
-	image   string
-	args    []string
-	sha256  []byte
+	command  string
+	image    string
+	imageTag string
+	args     []string
+	sha256   []byte
 
 	// Initialized with what's in PluginRunner.Env, but can be added to
 	env []string
@@ -48,12 +49,12 @@ type runConfig struct {
 }
 
 func overlayCmdSpec(base, cmd *exec.Cmd) {
-	// if cmd.Path != "" {
-	// 	base.Path = cmd.Path
-	// }
-	// if len(cmd.Args) > 0 {
-	// 	base.Args = cmd.Args
-	// }
+	if cmd.Path != "" {
+		base.Path = cmd.Path
+	}
+	if len(cmd.Args) > 0 {
+		base.Args = cmd.Args
+	}
 	if len(cmd.Env) > 0 {
 		base.Env = append(base.Env, cmd.Env...)
 	}
@@ -131,11 +132,13 @@ func (rc runConfig) makeConfig(ctx context.Context) (*plugin.ClientConfig, error
 			cfg := &config.ContainerConfig{
 				UnixSocketGroup: fmt.Sprintf("%d", os.Getgid()),
 				Image:           rc.image,
+				Tag:             rc.imageTag,
 				SHA256:          fmt.Sprintf("%x", rc.sha256),
 				Labels: map[string]string{
 					"managed-by": "hashicorp.com/vault",
 				},
-				// TODO: More configurables
+				// TODO: More configurables.
+				// Defaulting to runsc will require installing gVisor in the GitHub runner.
 				// Runtime:         "runsc",
 				// CgroupParent: "",
 				// NanoCpus: 100000000,
@@ -210,20 +213,18 @@ func MLock(mlock bool) RunOpt {
 }
 
 func (r *PluginRunner) RunConfig(ctx context.Context, opts ...RunOpt) (*plugin.Client, error) {
-	var image string
-	if r.Image != "" {
-		if r.Version != "" {
-			image = fmt.Sprintf("%s:%s", r.Image, strings.TrimPrefix(r.Version, "v"))
-		} else {
-			image = r.Image
-		}
+	var image, imageTag string
+	if r.OCIImage != "" {
+		image = r.OCIImage
+		imageTag = strings.TrimPrefix(r.Version, "v")
 	}
 	rc := runConfig{
-		command: r.Command,
-		image:   image,
-		args:    r.Args,
-		sha256:  r.Sha256,
-		env:     r.Env,
+		command:  r.Command,
+		image:    image,
+		imageTag: imageTag,
+		args:     r.Args,
+		sha256:   r.Sha256,
+		env:      r.Env,
 	}
 
 	for _, opt := range opts {

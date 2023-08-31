@@ -544,35 +544,33 @@ func (b *SystemBackend) handlePluginCatalogUpdate(ctx context.Context, _ *logica
 	// accepts args in both command and args.
 	args := d.Get("args").([]string)
 	parts := strings.Split(command, " ")
-	if len(parts) <= 0 {
-		if ociImage != "" {
-			command = ""
-		} else {
-			return logical.ErrorResponse("missing command value"), nil
-		}
+	if len(parts) <= 0 && ociImage == "" {
+		return logical.ErrorResponse("missing command value"), nil
 	} else if len(parts) > 1 && len(args) > 0 {
 		return logical.ErrorResponse("must not specify args in command and args field"), nil
-	} else if len(parts) > 1 {
+	} else if len(parts) >= 1 {
 		command = parts[0]
-		args = parts[1:]
+		if len(parts) > 1 {
+			args = parts[1:]
+		}
 	}
 
 	env := d.Get("env").([]string)
 
 	sha256Bytes, err := hex.DecodeString(sha256)
 	if err != nil {
-		return logical.ErrorResponse("Could not decode SHA-256 value from Hex"), err
+		return logical.ErrorResponse("Could not decode SHA256 value from Hex %s: %s", sha256, err), err
 	}
 
 	err = b.Core.pluginCatalog.Set(ctx, pluginutil.SetPluginInput{
-		Name:    pluginName,
-		Type:    pluginType,
-		Version: pluginVersion,
-		Command: command,
-		Image:   ociImage,
-		Args:    args,
-		Env:     env,
-		Sha256:  sha256Bytes,
+		Name:     pluginName,
+		Type:     pluginType,
+		Version:  pluginVersion,
+		Command:  command,
+		OCIImage: ociImage,
+		Args:     args,
+		Env:      env,
+		Sha256:   sha256Bytes,
 	})
 	if err != nil {
 		if errors.Is(err, ErrPluginNotFound) || strings.HasPrefix(err.Error(), "plugin version mismatch") {
