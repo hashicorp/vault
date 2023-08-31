@@ -2224,14 +2224,14 @@ func (b *SystemBackend) pluginsRuntimesCatalogListPaths() []*framework.Path {
 
 			Operations: map[logical.Operation]framework.OperationHandler{
 				logical.ListOperation: &framework.PathOperation{
-					Callback: b.handlePluginRuntimeCatalogUntypedList,
+					Callback: b.handlePluginRuntimeCatalogList,
 					Responses: map[int][]framework.Response{
 						http.StatusOK: {{
 							Description: "OK",
 							Fields: map[string]*framework.FieldSchema{
-								"types": {
-									Type:        framework.TypeMap,
-									Description: "Map of plugin runtime types to their plugin runtime names in the catalog",
+								"runtimes": {
+									Type:        framework.TypeSlice,
+									Description: "List of all plugin runtimes in the catalog",
 									Required:    true,
 								},
 							},

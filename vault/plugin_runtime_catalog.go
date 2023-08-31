@@ -109,11 +109,11 @@ func (c *PluginRuntimeCatalog) Delete(ctx context.Context, name string, prt cons
 	return c.catalogView.Delete(ctx, storageKey)
 }
 
-func (c *PluginRuntimeCatalog) List(ctx context.Context, prt consts.PluginRuntimeType) ([]string, error) {
+func (c *PluginRuntimeCatalog) List(ctx context.Context, prt consts.PluginRuntimeType) ([]*pluginruntimeutil.PluginRuntimeConfig, error) {
 	c.lock.RLock()
 	defer c.lock.RUnlock()
 
-	var retList []string
+	var retList []*pluginruntimeutil.PluginRuntimeConfig
 	keys, err := logical.CollectKeys(ctx, c.catalogView)
 	if err != nil {
 		return nil, err
@@ -125,16 +125,16 @@ func (c *PluginRuntimeCatalog) List(ctx context.Context, prt consts.PluginRuntim
 			continue
 		}
 
-		runner := new(pluginruntimeutil.PluginRuntimeConfig)
-		if err := jsonutil.DecodeJSON(entry.Value, runner); err != nil {
+		conf := new(pluginruntimeutil.PluginRuntimeConfig)
+		if err := jsonutil.DecodeJSON(entry.Value, conf); err != nil {
 			return nil, fmt.Errorf("failed to decode plugin runtime entry: %w", err)
 		}
 
-		if runner.Type != prt {
+		if conf.Type != prt {
 			continue
 		}
 
-		retList = append(retList, runner.Name)
+		retList = append(retList, conf)
 	}
 	return retList, nil
 }

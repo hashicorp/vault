@@ -22,7 +22,7 @@ func TestRegisterPluginRuntime(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	err = client.Sys().RegisterPluginRuntimeWithContext(context.Background(), &RegisterPluginRuntimeInput{
+	err = client.Sys().RegisterPluginRuntime(context.Background(), &RegisterPluginRuntimeInput{
 		Name:         "gvisor",
 		Type:         PluginRuntimeTypeContainer,
 		OCIRuntime:   "runsc",
@@ -68,7 +68,7 @@ func TestGetPluginRuntime(t *testing.T) {
 				Type: PluginRuntimeTypeContainer,
 			}
 
-			info, err := client.Sys().GetPluginRuntimeWithContext(context.Background(), &input)
+			info, err := client.Sys().GetPluginRuntime(context.Background(), &input)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -91,8 +91,15 @@ func TestListPluginRuntimeTyped(t *testing.T) {
 			runtimeType: PluginRuntimeTypeContainer,
 			body:        listPluginRuntimeTypedResponse,
 			expectedResponse: &ListPluginRuntimesResponse{
-				RuntimesByType: map[PluginRuntimeType][]string{
-					PluginRuntimeTypeContainer: {"gvisor"},
+				Runtimes: []PluginRuntimeDetails{
+					{
+						Type:         "container",
+						Name:         "gvisor",
+						OCIRuntime:   "runsc",
+						CgroupParent: "/cpulimit/",
+						CPU:          1,
+						Memory:       10000,
+					},
 				},
 			},
 			expectedErrNil: true,
@@ -140,8 +147,31 @@ func TestListPluginRuntimeUntyped(t *testing.T) {
 		{
 			body: listPluginRuntimeUntypedResponse,
 			expectedResponse: &ListPluginRuntimesResponse{
-				RuntimesByType: map[PluginRuntimeType][]string{
-					PluginRuntimeTypeContainer: {"gvisor", "foo", "bar"},
+				Runtimes: []PluginRuntimeDetails{
+					{
+						Type:         "container",
+						Name:         "gvisor",
+						OCIRuntime:   "runsc",
+						CgroupParent: "/cpulimit/",
+						CPU:          1,
+						Memory:       10000,
+					},
+					{
+						Type:         "container",
+						Name:         "foo",
+						OCIRuntime:   "otherociruntime",
+						CgroupParent: "/memorylimit/",
+						CPU:          2,
+						Memory:       20000,
+					},
+					{
+						Type:         "container",
+						Name:         "bar",
+						OCIRuntime:   "otherociruntime",
+						CgroupParent: "/cpulimit/",
+						CPU:          3,
+						Memory:       30000,
+					},
 				},
 			},
 			expectedErrNil: true,
@@ -187,7 +217,16 @@ const getPluginRuntimeResponse = `{
 const listPluginRuntimeTypedResponse = `{
     "request_id": "e93d3f93-8e4f-8443-a803-f1c97c123456",
     "data": {
-        "container": ["gvisor"]
+       "runtimes": [
+			{
+				"name": "gvisor",
+				"type": "container",
+				"oci_runtime": "runsc",
+				"cgroup_parent": "/cpulimit/",
+				"cpu": 1,
+				"memory": 10000
+			}
+		]
     },
     "warnings": null,
     "auth": null
@@ -197,7 +236,32 @@ const listPluginRuntimeTypedResponse = `{
 const listPluginRuntimeUntypedResponse = `{
     "request_id": "e93d3f93-8e4f-8443-a803-f1c97c123456",
     "data": {
-        "container": ["gvisor", "foo", "bar"]
+        "runtimes": [
+			{
+				"name": "gvisor",
+				"type": "container",
+				"oci_runtime": "runsc",
+				"cgroup_parent": "/cpulimit/",
+				"cpu": 1,
+				"memory": 10000
+			},
+			{
+				"name": "foo",
+				"type": "container",
+				"oci_runtime": "otherociruntime",
+				"cgroup_parent": "/memorylimit/",
+				"cpu": 2,
+				"memory": 20000
+			},
+			{
+				"name": "bar",
+				"type": "container",
+				"oci_runtime": "otherociruntime",
+				"cgroup_parent": "/cpulimit/",
+				"cpu": 3,
+				"memory": 30000
+			}
+		]
     },
     "warnings": null,
     "auth": null

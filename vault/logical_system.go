@@ -831,27 +831,40 @@ func (b *SystemBackend) handlePluginRuntimeCatalogRead(ctx context.Context, _ *l
 	}}, nil
 }
 
-func (b *SystemBackend) handlePluginRuntimeCatalogUntypedList(ctx context.Context, _ *logical.Request, _ *framework.FieldData) (*logical.Response, error) {
-	data := make(map[string]interface{})
+func (b *SystemBackend) handlePluginRuntimeCatalogList(ctx context.Context, _ *logical.Request, _ *framework.FieldData) (*logical.Response, error) {
+	var data []map[string]interface{}
 	for _, runtimeType := range consts.PluginRuntimeTypes {
 		if runtimeType == consts.PluginRuntimeTypeUnsupported {
 			continue
 		}
-		runtimes, err := b.Core.pluginRuntimeCatalog.List(ctx, runtimeType)
+		configs, err := b.Core.pluginRuntimeCatalog.List(ctx, runtimeType)
 		if err != nil {
 			return nil, err
 		}
-		if len(runtimes) > 0 {
-			sort.Strings(runtimes)
-			data[runtimeType.String()] = runtimes
+
+		if len(configs) > 0 {
+			sort.Slice(configs, func(i, j int) bool {
+				return strings.Compare(configs[i].Name, configs[j].Name) == -1
+			})
+			for _, conf := range configs {
+				data = append(data, map[string]interface{}{
+					"name":          conf.Name,
+					"type":          conf.Type.String(),
+					"oci_runtime":   conf.OCIRuntime,
+					"cgroup_parent": conf.CgroupParent,
+					"cpu":           conf.CPU,
+					"memory":        conf.Memory,
+				})
+			}
 		}
 	}
 
 	resp := &logical.Response{
 		Data: map[string]interface{}{},
 	}
+
 	if len(data) > 0 {
-		resp.Data["types"] = data
+		resp.Data["runtimes"] = data
 	}
 
 	return resp, nil

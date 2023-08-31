@@ -57,12 +57,12 @@ func TestPluginRuntimeCatalog_CRUD(t *testing.T) {
 		t.Fatalf("expected did not match actual, got %#v\n expected %#v\n", runner, expected)
 	}
 
-	names, err := core.pluginRuntimeCatalog.List(ctx, expected.Type)
+	configs, err := core.pluginRuntimeCatalog.List(ctx, expected.Type)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
-	if len(names) != 1 {
-		t.Fatalf("expected plugin runtime catalog to have 1 container runtime but got %d", len(names))
+	if len(configs) != 1 {
+		t.Fatalf("expected plugin runtime catalog to have 1 container runtime but got %d", len(configs))
 	}
 
 	// Delete plugin runtime
@@ -72,11 +72,11 @@ func TestPluginRuntimeCatalog_CRUD(t *testing.T) {
 	}
 
 	// Assert the plugin runtime catalog is empty
-	names, err = core.pluginRuntimeCatalog.List(ctx, expected.Type)
+	configs, err = core.pluginRuntimeCatalog.List(ctx, expected.Type)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
-	if len(names) != 0 {
-		t.Fatalf("expected plugin runtime catalog to have 0 container runtimes but got %d", len(names))
+	if len(configs) != 0 {
+		t.Fatalf("expected plugin runtime catalog to have 0 container runtimes but got %d", len(configs))
 	}
 }

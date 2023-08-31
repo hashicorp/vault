@@ -33,6 +33,7 @@ import (
 	"github.com/hashicorp/vault/sdk/helper/compressutil"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
+	"github.com/hashicorp/vault/sdk/helper/pluginruntimeutil"
 	"github.com/hashicorp/vault/sdk/helper/pluginutil"
 	"github.com/hashicorp/vault/sdk/helper/testhelpers/schema"
 	"github.com/hashicorp/vault/sdk/logical"
@@ -5888,13 +5889,22 @@ func TestSystemBackend_ReadExperiments(t *testing.T) {
 func TestSystemBackend_pluginRuntimeCRUD(t *testing.T) {
 	b := testSystemBackend(t)
 
+	conf := pluginruntimeutil.PluginRuntimeConfig{
+		Name:         "foo",
+		Type:         consts.PluginRuntimeTypeContainer,
+		OCIRuntime:   "some-oci-runtime",
+		CgroupParent: "/cpulimit/",
+		CPU:          1,
+		Memory:       10000,
+	}
+
 	// Register the plugin runtime
-	req := logical.TestRequest(t, logical.UpdateOperation, "plugins/runtimes/catalog/container/foo")
+	req := logical.TestRequest(t, logical.UpdateOperation, fmt.Sprintf("plugins/runtimes/catalog/%s/%s", conf.Type.String(), conf.Name))
 	req.Data = map[string]interface{}{
-		"oci_runtime":   "some-oci-runtime",
-		"cgroup_parent": "/cpulimit/",
-		"cpu":           1,
-		"memory":        10000,
+		"oci_runtime":   conf.OCIRuntime,
+		"cgroup_parent": conf.OCIRuntime,
+		"cpu":           conf.CPU,
+		"memory":        conf.Memory,
 	}
 
 	resp, err := b.HandleRequest(namespace.RootContext(nil), req)
@@ -5928,16 +5938,16 @@ func TestSystemBackend_pluginRuntimeCRUD(t *testing.T) {
 		true,
 	)
 
-	exp := map[string]interface{}{
-		"name":          "foo",
-		"type":          "container",
-		"oci_runtime":   "some-oci-runtime",
-		"cgroup_parent": "/cpulimit/",
-		"cpu":           int64(1),
-		"memory":        int64(10000),
+	readExp := map[string]interface{}{
+		"type":          conf.Type.String(),
+		"name":          conf.Name,
+		"oci_runtime":   conf.OCIRuntime,
+		"cgroup_parent": conf.OCIRuntime,
+		"cpu":           conf.CPU,
+		"memory":        conf.Memory,
 	}
-	if !reflect.DeepEqual(resp.Data, exp) {
-		t.Fatalf("got: %#v expect: %#v", resp.Data, exp)
+	if !reflect.DeepEqual(resp.Data, readExp) {
+		t.Fatalf("got: %#v expect: %#v", resp.Data, readExp)
 	}
 
 	// List the plugin runtimes (untyped or all)
@@ -5947,11 +5957,11 @@ func TestSystemBackend_pluginRuntimeCRUD(t *testing.T) {
 		t.Fatalf("err: %v", err)
 	}
 
-	exp = map[string]interface{}{
-		"types": map[string]interface{}{"container": []string{"foo"}},
+	listExp := map[string]interface{}{
+		"runtimes": []map[string]interface{}{readExp},
 	}
-	if !reflect.DeepEqual(resp.Data, exp) {
-		t.Fatalf("got: %#v expect: %#v", resp.Data, exp)
+	if !reflect.DeepEqual(resp.Data, listExp) {
+		t.Fatalf("got: %#v expect: %#v", resp.Data, listExp)
 	}
 
 	// Delete the plugin runtime
@@ -5989,8 +5999,8 @@ func TestSystemBackend_pluginRuntimeCRUD(t *testing.T) {
 		t.Fatalf("err: %v", err)
 	}
 
-	exp = map[string]interface{}{}
-	if !reflect.DeepEqual(resp.Data, exp) {
-		t.Fatalf("got: %#v expect: %#v", resp.Data, exp)
+	listExp = map[string]interface{}{}
+	if !reflect.DeepEqual(resp.Data, listExp) {
+		t.Fatalf("got: %#v expect: %#v", resp.Data, listExp)
 	}
 }
