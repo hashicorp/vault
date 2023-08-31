@@ -242,7 +242,7 @@ module('Acceptance | settings/mount-secret-backend', function (hooks) {
         `${engine.type} navigates to list view`
       );
       await consoleComponent.runCommands([
-        // delete any previous mount with same name
+        // cleanup after
         `delete sys/mounts/${engine.type}`,
       ]);
     }
