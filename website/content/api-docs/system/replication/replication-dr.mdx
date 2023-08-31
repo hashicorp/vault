@@ -452,15 +452,18 @@ There are two ways to update the primary assignment:
     activation token is required after a DR failover when updating a newly
     demoted DR secondary cluster.
 
-The other way is with the `update_primary_addrs` parameter, which was added in Vault 1.13. This is an array
-of Vault cluster addresses that represent the cluster listeners of the primary cluster. These addresses will
-be pinged one at a time via gRPC and the ones that respond successfully will be used as the secondary's new
-primary addresses. This is a quicker process vs using a secondary activation token. Vault does
-less work behind the scenes, which means potentially less disruption for replication. This method
-will not work on a DR secondary cluster that is currently demoted as part of a DR failover.
+1. **Use primary cluster addresses with the `update_primary_addrs` parameter**. 
+    During the update, cluster addresses are pinged one at a time via gRPC.
+    The first cluster to respond successfully is assigned as the new primary
+    address. Updating with cluster addresses is not allowed after a DR
+    failover when updating a newly demoted DR secondary cluster.
 
-It's important to note that `update_primary_addrs` and `token` are mutually exclusive. You may use
-one or the other, but not both.
+The two update methods are mutually exclusive. You may use one or the
+other, but not both. We recommend updating primary cluster
+assignments with cluster addresses whenever possible. Address updates
+are much faster than activation token updates because Vault does less
+work behind the scenes, which means potentially less disruption in
+replication.
 
 | Method | Path                                           |
 | :----- | :--------------------------------------------- |
