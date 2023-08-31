@@ -499,7 +499,6 @@ func (c *Client) performLdapTokenGroupsSearch(cfg *ConfigEntry, conn Connection,
 				groupResult, err := conn.Search(&ldap.SearchRequest{
 					BaseDN:       fmt.Sprintf("<SID=%s>", sid),
 					Scope:        ldap.ScopeBaseObject,
-					DerefAliases: ldapDerefAliasMap[cfg.DerefAliases],
 					Filter:       "(objectClass=*)",
 					Attributes: []string{
 						"1.1", // RFC no attributes
