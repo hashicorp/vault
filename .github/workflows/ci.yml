@@ -268,7 +268,7 @@ jobs:
       - run: |
           tr -d '\n' <<< '${{ toJSON(needs.*.result) }}' | grep -q -v -E '(failure|cancelled)'
 
-  notify-tests-completed-failures-oss:
+  notify-tests-completed-failures-ce:
     if:  |
       always() &&
       github.repository == 'hashicorp/vault' &&
@@ -296,16 +296,16 @@ jobs:
         env:
           SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
         with:
-          channel-id: "C05AABYEA9Y" # sent to #feed-vault-ci-official
+          channel-id: "C05AABYEA9Y" # sent to #feed-vault-ci-official, use "C05Q4D5V89W"/test-vault-ci-slack-integration for testing
           payload: |
             {
-              "text": "OSS test failures on ${{ github.ref_name }}",
+              "text": "CE test failures on ${{ github.ref_name }}",
               "blocks": [
                 {
                   "type": "header",
                   "text": {
                     "type": "plain_text",
-                    "text": ":rotating_light: OSS test failures :rotating_light:",
+                    "text": ":rotating_light: CE test failures on ${{ github.ref_name }} :rotating_light:",
                     "emoji": true
                   }
                 },
@@ -316,7 +316,7 @@ jobs:
                   "type": "section",
                   "text": {
                     "type": "mrkdwn",
-                    "text": "CI failed on ${{ github.ref_name }}, go: ${{ needs.test-go.result }}, race: ${{ needs.test-go-race.result }}, testonly: ${{ needs.test-go-testonly.result }}: ui: ${{ needs.test-ui.result }}"
+                    "text": "${{ needs.test-go.result != 'failure' && ':white_check_mark:' || ':x:' }} Go tests\n${{ needs.test-go-race.result != 'failure' && ':white_check_mark:' || ':x:' }} Go race tests\n${{ needs.test-go-testonly.result != 'failure' && ':white_check_mark:' || ':x:' }} Go testonly tests\n${{ needs.test-ui.result != 'failure' && ':white_check_mark:' || ':x:' }} UI tests"
                   },
                   "accessory": {
                     "type": "button",
@@ -379,7 +379,7 @@ jobs:
                   "type": "header",
                   "text": {
                     "type": "plain_text",
-                    "text": ":rotating_light: Enterprise test failures :rotating_light:",
+                    "text": ":rotating_light: Enterprise test failures on ${{ github.ref_name }} :rotating_light:",
                     "emoji": true
                   }
                 },
@@ -390,7 +390,7 @@ jobs:
                   "type": "section",
                   "text": {
                     "type": "mrkdwn",
-                    "text": "CI failed on ${{ github.ref_name }}, go: ${{ needs.test-go.result }}, fips: ${{ needs.test-go-fips.result }}, race: ${{ needs.test-go-race.result }}, testonly: ${{ needs.test-go-testonly.result }}, ui: ${{ needs.test-ui.result }}"
+                    "text": "${{ needs.test-go.result != 'failure' && ':white_check_mark:' || ':x:' }} Go tests\n${{ needs.test-go-fips.result != 'failure' && ':white_check_mark:' || ':x:' }} Go FIPS tests\n${{ needs.test-go-race.result != 'failure' && ':white_check_mark:' || ':x:' }} Go race tests\n${{ needs.test-go-testonly.result != 'failure' && ':white_check_mark:' || ':x:' }} Go testonly tests\n${{ needs.test-ui.result != 'failure' && ':white_check_mark:' || ':x:' }} UI tests"
                   },
                   "accessory": {
                     "type": "button",
