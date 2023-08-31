@@ -5,16 +5,14 @@
   </:tabLinks>
 
   <:toolbarFilters>
-    {{#unless @listPermissions.noList}}
-      {{#if (or @secrets @filterValue)}}
-        <KvListFilter
-          @secrets={{@secrets}}
-          @mountPoint={{this.mountPoint}}
-          @filterValue={{@filterValue}}
-          @pageFilter={{@pageFilter}}
-        />
-      {{/if}}
-    {{/unless}}
+    {{#if (and (not-eq @secrets 403) (or @secrets @filterValue))}}
+      <KvListFilter
+        @secrets={{@secrets}}
+        @mountPoint={{this.mountPoint}}
+        @filterValue={{@filterValue}}
+        @pageFilter={{@pageFilter}}
+      />
+    {{/if}}
   </:toolbarFilters>
 
   <:toolbarActions>
@@ -23,7 +21,7 @@
     </ToolbarLink>
   </:toolbarActions>
 </KvPageHeader>
-{{#if @listPermissions.noList}}
+{{#if (eq @secrets 403)}}
   <div class="box is-fullwidth is-shadowless has-tall-padding">
     <div class="selectable-card-container one-card">
       <OverviewCard
@@ -42,7 +40,7 @@
             {{this.buttonText}}
           </button>
         </form>
-        {{#if @listPermissions.noDirectory}}
+        {{#if @failedDirectoryQuery}}
           <AlertInline @type="danger" @message="You do not have the required permissions or the directory does not exist." />
         {{/if}}
       </OverviewCard>

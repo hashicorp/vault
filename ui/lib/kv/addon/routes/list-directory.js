@@ -62,19 +62,9 @@ export default class KvSecretsListRoute extends Route {
 
   setupController(controller, resolvedModel) {
     super.setupController(controller, resolvedModel);
-    // listPermissions is used to show the overview card and/or an error message about LIST permissions.
-    resolvedModel.listPermissions = {
-      noDirectory: false,
-      noList: false,
-    };
-
-    if (resolvedModel.secrets === 403) {
-      resolvedModel.listPermissions.noList = true;
-      if (pathIsDirectory(resolvedModel.pathToSecret)) {
-        // the user attempted to return the list for a directory but does not have access
-        resolvedModel.listPermissions.noDirectory = true;
-      }
-    }
+    // renders alert inline error for overview card
+    resolvedModel.failedDirectoryQuery =
+      resolvedModel.secrets === 403 && pathIsDirectory(resolvedModel.pathToSecret);
 
     let breadcrumbsArray = [{ label: 'secrets', route: 'secrets', linkExternal: true }];
     // if on top level don't link the engine breadcrumb label, but if within a directory, do link back to top level.
