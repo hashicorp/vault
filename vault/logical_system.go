@@ -749,11 +749,11 @@ func (b *SystemBackend) handlePluginRuntimeCatalogUpdate(ctx context.Context, _ 
 	case consts.PluginRuntimeTypeContainer:
 		ociRuntime := d.Get("oci_runtime").(string)
 		cgroupParent := d.Get("cgroup_parent").(string)
-		cpu := d.Get("cpu").(int64)
+		cpu := d.Get("cpu_nanos").(int64)
 		if cpu < 0 {
-			return logical.ErrorResponse("runtime cpu cannot be negative"), nil
+			return logical.ErrorResponse("runtime cpu in nanos cannot be negative"), nil
 		}
-		memory := d.Get("memory").(int64)
+		memory := d.Get("memory_bytes").(int64)
 		if memory < 0 {
 			return logical.ErrorResponse("runtime memory in bytes cannot be negative"), nil
 		}
@@ -826,8 +826,8 @@ func (b *SystemBackend) handlePluginRuntimeCatalogRead(ctx context.Context, _ *l
 		"type":          conf.Type.String(),
 		"oci_runtime":   conf.OCIRuntime,
 		"cgroup_parent": conf.CgroupParent,
-		"cpu":           conf.CPU,
-		"memory":        conf.Memory,
+		"cpu_nanos":     conf.CPU,
+		"memory_bytes":  conf.Memory,
 	}}, nil
 }
 
@@ -852,8 +852,8 @@ func (b *SystemBackend) handlePluginRuntimeCatalogList(ctx context.Context, _ *l
 					"type":          conf.Type.String(),
 					"oci_runtime":   conf.OCIRuntime,
 					"cgroup_parent": conf.CgroupParent,
-					"cpu":           conf.CPU,
-					"memory":        conf.Memory,
+					"cpu_nanos":     conf.CPU,
+					"memory_bytes":  conf.Memory,
 				})
 			}
 		}
@@ -6129,12 +6129,12 @@ This path responds to the following HTTP methods.
 		"Optional parent cgroup for the container",
 		"",
 	},
-	"plugin-runtime-catalog_cpu": {
-		"The limit of runtime CPU (default 0.1)",
+	"plugin-runtime-catalog_cpu-nanos": {
+		"The limit of runtime CPU in nanos",
 		"",
 	},
-	"plugin-runtime-catalog_memory": {
-		"The limit of runtime memory in bytes (default 100000000)",
+	"plugin-runtime-catalog_memory-bytes": {
+		"The limit of runtime memory in bytes",
 		"",
 	},
 	"leases": {

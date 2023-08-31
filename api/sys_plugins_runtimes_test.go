@@ -207,8 +207,8 @@ const getPluginRuntimeResponse = `{
         "type": "container",
         "oci_runtime": "runsc",
         "cgroup_parent": "/cpulimit/",
-        "cpu": 1,
-        "memory": 10000
+        "cpu_nanos": 1,
+        "memory_bytes": 10000
     },
     "warnings": null,
     "auth": null
@@ -223,8 +223,8 @@ const listPluginRuntimeTypedResponse = `{
 				"type": "container",
 				"oci_runtime": "runsc",
 				"cgroup_parent": "/cpulimit/",
-				"cpu": 1,
-				"memory": 10000
+				"cpu_nanos": 1,
+				"memory_bytes": 10000
 			}
 		]
     },
@@ -242,24 +242,24 @@ const listPluginRuntimeUntypedResponse = `{
 				"type": "container",
 				"oci_runtime": "runsc",
 				"cgroup_parent": "/cpulimit/",
-				"cpu": 1,
-				"memory": 10000
+				"cpu_nanos": 1,
+				"memory_bytes": 10000
 			},
 			{
 				"name": "foo",
 				"type": "container",
 				"oci_runtime": "otherociruntime",
 				"cgroup_parent": "/memorylimit/",
-				"cpu": 2,
-				"memory": 20000
+				"cpu_nanos": 2,
+				"memory_bytes": 20000
 			},
 			{
 				"name": "bar",
 				"type": "container",
 				"oci_runtime": "otherociruntime",
 				"cgroup_parent": "/cpulimit/",
-				"cpu": 3,
-				"memory": 30000
+				"cpu_nanos": 3,
+				"memory_bytes": 30000
 			}
 		]
     },

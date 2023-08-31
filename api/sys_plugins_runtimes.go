@@ -26,8 +26,8 @@ type GetPluginRuntimeResponse struct {
 	Name         string `json:"name"`
 	OCIRuntime   string `json:"oci_runtime"`
 	CgroupParent string `json:"cgroup_parent"`
-	CPU          int64  `json:"cpu"`
-	Memory       int64  `json:"memory"`
+	CPU          int64  `json:"cpu_nanos"`
+	Memory       int64  `json:"memory_bytes"`
 }
 
 // GetPluginRuntime retrieves information about the plugin.
@@ -116,8 +116,8 @@ type PluginRuntimeDetails struct {
 	Name         string `json:"name" mapstructure:"name"`
 	OCIRuntime   string `json:"oci_runtime" mapstructure:"oci_runtime"`
 	CgroupParent string `json:"cgroup_parent" mapstructure:"cgroup_parent"`
-	CPU          int64  `json:"cpu" mapstructure:"cpu"`
-	Memory       int64  `json:"memory" mapstructure:"memory"`
+	CPU          int64  `json:"cpu_nanos" mapstructure:"cpu_nanos"`
+	Memory       int64  `json:"memory_bytes" mapstructure:"memory_bytes"`
 }
 
 // ListPluginRuntimesInput is used as input to the ListPluginRuntimes function.

@@ -5,12 +5,6 @@ package pluginruntimeutil
 
 import "github.com/hashicorp/vault/sdk/helper/consts"
 
-const (
-	DefaultOCIRuntime = "runsc"
-	DefaultCPU        = 1
-	DefaultMemory     = 100000000
-)
-
 // PluginRuntimeConfig defines the metadata needed to run a plugin runtime
 type PluginRuntimeConfig struct {
 	Name         string                   `json:"name" structs:"name"`

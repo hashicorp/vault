@@ -8,7 +8,6 @@ import (
 	"strings"
 
 	"github.com/hashicorp/vault/sdk/framework"
-	"github.com/hashicorp/vault/sdk/helper/pluginruntimeutil"
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
@@ -2114,21 +2113,18 @@ func (b *SystemBackend) pluginsRuntimesCatalogCRUDPath() *framework.Path {
 			"oci_runtime": {
 				Type:        framework.TypeString,
 				Description: strings.TrimSpace(sysHelp["plugin-runtime-catalog_oci-runtime"][0]),
-				Default:     pluginruntimeutil.DefaultOCIRuntime,
 			},
 			"cgroup_parent": {
 				Type:        framework.TypeString,
 				Description: strings.TrimSpace(sysHelp["plugin-runtime-catalog_cgroup-parent"][0]),
 			},
-			"cpu": {
+			"cpu_nanos": {
 				Type:        framework.TypeInt64,
-				Description: strings.TrimSpace(sysHelp["plugin-runtime-catalog_cpu"][0]),
-				Default:     pluginruntimeutil.DefaultCPU,
+				Description: strings.TrimSpace(sysHelp["plugin-runtime-catalog_cpu-nanos"][0]),
 			},
-			"memory": {
+			"memory_bytes": {
 				Type:        framework.TypeInt64,
-				Description: strings.TrimSpace(sysHelp["plugin-runtime-catalog_memory"][0]),
-				Default:     pluginruntimeutil.DefaultMemory,
+				Description: strings.TrimSpace(sysHelp["plugin-runtime-catalog_memory-bytes"][0]),
 			},
 		},
 
@@ -2189,14 +2185,14 @@ func (b *SystemBackend) pluginsRuntimesCatalogCRUDPath() *framework.Path {
 								Description: strings.TrimSpace(sysHelp["plugin-runtime-catalog_cgroup-parent"][0]),
 								Required:    true,
 							},
-							"cpu": {
+							"cpu_nanos": {
 								Type:        framework.TypeInt64,
-								Description: strings.TrimSpace(sysHelp["plugin-runtime-catalog_cpu"][0]),
+								Description: strings.TrimSpace(sysHelp["plugin-runtime-catalog_cpu-nanos"][0]),
 								Required:    true,
 							},
-							"memory": {
+							"memory_bytes": {
 								Type:        framework.TypeInt64,
-								Description: strings.TrimSpace(sysHelp["plugin-runtime-catalog_memory"][0]),
+								Description: strings.TrimSpace(sysHelp["plugin-runtime-catalog_memory-bytes"][0]),
 								Required:    true,
 							},
 						},
