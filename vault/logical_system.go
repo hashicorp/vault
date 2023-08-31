@@ -17,6 +17,7 @@ import (
 	"net/http"
 	"path"
 	"path/filepath"
+	"runtime"
 	"sort"
 	"strconv"
 	"strings"
@@ -538,6 +539,9 @@ func (b *SystemBackend) handlePluginCatalogUpdate(ctx context.Context, _ *logica
 		if err = b.Core.CheckPluginPerms(command); err != nil {
 			return nil, err
 		}
+	}
+	if ociImage != "" && runtime.GOOS != "linux" {
+		return logical.ErrorResponse("specifying oci_image is currently only supported on Linux"), nil
 	}
 
 	// For backwards compatibility, also accept args as part of command. Don't
