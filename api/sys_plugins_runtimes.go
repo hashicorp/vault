@@ -5,11 +5,10 @@ package api
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"net/http"
-
-	"github.com/mitchellh/mapstructure"
 )
 
 // GetPluginRuntimeInput is used as input to the GetPluginRuntime function.
@@ -162,35 +161,25 @@ func (c *Sys) ListPluginRuntimes(ctx context.Context, i *ListPluginRuntimesInput
 		return nil, fmt.Errorf("data from server response does not contain runtimes")
 	}
 
-	runtimesRaw, ok := secret.Data["runtimes"].([]interface{})
-	if !ok {
-		return nil, fmt.Errorf("unable to parse runtimes")
+	runtimesJSON, err := json.Marshal(secret.Data["runtimes"])
+	if err != nil {
+		return nil, fmt.Errorf("unable to marshal runtimes")
 	}
 
-	result := &ListPluginRuntimesResponse{
-		Runtimes: []PluginRuntimeDetails{},
-	}
 	var runtimes []PluginRuntimeDetails
-	for _, runtimeRaw := range runtimesRaw {
-		var runtime PluginRuntimeDetails
-		if err = mapstructure.Decode(runtimeRaw, &runtime); err != nil {
-			return nil, err
-		}
-		runtimes = append(runtimes, runtime)
+	if err = json.Unmarshal(runtimesJSON, &runtimes); err != nil {
+		return nil, fmt.Errorf("unable to parse runtimes")
 	}
 
 	// return all runtimes in the catalog
 	if i == nil {
-		result.Runtimes = runtimes
-		return result, nil
+		return &ListPluginRuntimesResponse{Runtimes: runtimes}, nil
 	}
 
-	switch i.Type {
-	default:
-		for _, runtime := range runtimes {
-			if runtime.Type == i.Type.String() {
-				result.Runtimes = append(result.Runtimes, runtime)
-			}
+	result := &ListPluginRuntimesResponse{Runtimes: []PluginRuntimeDetails{}}
+	for _, runtime := range runtimes {
+		if runtime.Type == i.Type.String() {
+			result.Runtimes = append(result.Runtimes, runtime)
 		}
 	}
 	return result, nil
