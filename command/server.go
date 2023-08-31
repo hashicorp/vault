@@ -132,6 +132,7 @@ type ServerCommand struct {
 	flagDev                bool
 	flagDevTLS             bool
 	flagDevTLSCertDir      string
+	flagDevTLSSANs         []string
 	flagDevRootTokenID     string
 	flagDevListenAddr      string
 	flagDevNoStoreToken    bool
@@ -254,6 +255,18 @@ func (c *ServerCommand) Flags() *FlagSets {
 		Default: "",
 		Usage: "Directory where generated TLS files are created if `-dev-tls` is " +
 			"specified. If left unset, files are generated in a temporary directory.",
+	})
+
+	f.StringSliceVar(&StringSliceVar{
+		Name:    "dev-tls-san",
+		Target:  &c.flagDevTLSSANs,
+		Default: nil,
+		Usage: "Additional Subject Alternative Name (as a DNS name or IP address) " +
+			"to generate the certificate with if `-dev-tls` is specified. The " +
+			"certificate will always use localhost, localhost4, localhost6, " +
+			"localhost.localdomain, and the host name as alternate DNS names, " +
+			"and 127.0.0.1 as an alternate IP address. This flag can be specified " +
+			"multiple times to specify multiple SANs.",
 	})
 
 	f.StringVar(&StringVar{
@@ -977,7 +990,17 @@ func configureDevTLS(c *ServerCommand) (func(), *server.Config, string, error) {
 				return nil, nil, certDir, err
 			}
 		}
-		config, err = server.DevTLSConfig(devStorageType, certDir)
+		extraSANs := c.flagDevTLSSANs
+		host, _, err := net.SplitHostPort(c.flagDevListenAddr)
+		if err == nil {
+			// 127.0.0.1 is the default, and already included in the SANs.
+			// Empty host means listen on all interfaces, but users should use the
+			// -dev-tls-san flag to get the right SANs in that case.
+			if host != "" && host != "127.0.0.1" {
+				extraSANs = append(extraSANs, host)
+			}
+		}
+		config, err = server.DevTLSConfig(devStorageType, certDir, extraSANs)
 
 		f = func() {
 			if err := os.Remove(fmt.Sprintf("%s/%s", certDir, server.VaultDevCAFilename)); err != nil {
