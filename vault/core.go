@@ -697,7 +697,7 @@ type Core struct {
 	// for testing purposes
 	requestResponseCallback func(logical.Backend, *logical.Request, *logical.Response)
 
-	// If no role-based lease count quota or role based rate limiting quota is enabled, don't track lease counts by role
+	// If any role based quota (LCQ or RLQ) is enabled, don't track lease counts by role
 	impreciseLeaseRoleTracking bool
 }
 
