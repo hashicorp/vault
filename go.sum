@@ -1701,8 +1701,8 @@ github.com/gsterjov/go-libsecret v0.0.0-20161001094733-a6f4afe4910c h1:6rhixN/i8
 github.com/gsterjov/go-libsecret v0.0.0-20161001094733-a6f4afe4910c/go.mod h1:NMPJylDgVpX0MLRlPy15sqSwOFv/U1GZ2m21JhFfek0=
 github.com/hailocab/go-hostpool v0.0.0-20160125115350-e80d13ce29ed h1:5upAirOpQc1Q53c0bnx2ufif5kANL7bfZWcc6VJWJd8=
 github.com/hailocab/go-hostpool v0.0.0-20160125115350-e80d13ce29ed/go.mod h1:tMWxXQ9wFIaZeTI9F+hmhFiGpFmhOHzyShyFUhRm0H4=
-github.com/hashicorp/cap v0.3.1 h1:JwX2vg3KIl2+ka4VIPB0yWB9PoPvHL3ACmVrLJLCHDQ=
-github.com/hashicorp/cap v0.3.1/go.mod h1:dHTmyMIVbzT981XxRoci5G//dfWmd/HhuNiCH6J5+IA=
+github.com/hashicorp/cap v0.3.4 h1:RoqWYqr6LaDLuvnBCpod1sZtvuEhehIhu0GncmoHW40=
+github.com/hashicorp/cap v0.3.4/go.mod h1:dHTmyMIVbzT981XxRoci5G//dfWmd/HhuNiCH6J5+IA=
 github.com/hashicorp/consul-template v0.33.0 h1:UNyf7V/nFeh8edh5X6pP8f+9LZVn+DG9uNLLcTpLsFc=
 github.com/hashicorp/consul-template v0.33.0/go.mod h1:3RayddSLvOGQwdifbbe4doVwamgJU4QvxTtf5DNeclw=
 github.com/hashicorp/consul/api v1.1.0/go.mod h1:VmuI/Lkw1nC05EYQWNKwWGbkg+FbDBtguAZLlVdkD9Q=
@@ -1889,8 +1889,8 @@ github.com/hashicorp/vault-plugin-auth-cf v0.15.0 h1:zIVGlYXCRBY/ElucWdFC9xF27d2
 github.com/hashicorp/vault-plugin-auth-cf v0.15.0/go.mod h1:FEIjQkYmzno4MfU36MAjFUG9/JUWeMPxvBG5DRTMYVM=
 github.com/hashicorp/vault-plugin-auth-gcp v0.16.1 h1:KasqciAWHP3Htruowdu8fhO5X1YFfY0Qi3nrsBlpDkU=
 github.com/hashicorp/vault-plugin-auth-gcp v0.16.1/go.mod h1:pLF4l4SjTMR24/FTsE1idVpKEeO8ah0x1Kpulw+I09I=
-github.com/hashicorp/vault-plugin-auth-jwt v0.16.0 h1:BUk03WDSGZuB+kEq3HTOQ7ecEH2Z1Idit42jfB5EnpE=
-github.com/hashicorp/vault-plugin-auth-jwt v0.16.0/go.mod h1:Ve3r228afZOShwNvp+MGEKtm+ROskv10GG7bMXZb5OA=
+github.com/hashicorp/vault-plugin-auth-jwt v0.17.0 h1:ZfgyFjZfquIn9qk1bytkaqUfG8mKx71RYaSb620dEh0=
+github.com/hashicorp/vault-plugin-auth-jwt v0.17.0/go.mod h1:R5ZtloCRWHnElOm+MXJadj2jkGMwF9Ybk3sn2kV3L48=
 github.com/hashicorp/vault-plugin-auth-kerberos v0.10.0 h1:YH2x9kIV0jKXk22tVkpydhmPeEgprC7IOfN8l0pjF6c=
 github.com/hashicorp/vault-plugin-auth-kerberos v0.10.0/go.mod h1:I6ulXug4oxx77DFYjqI1kVl+72TgXEo3Oju4tTOVfU4=
 github.com/hashicorp/vault-plugin-auth-kubernetes v0.16.0 h1:vuXNJvtMyoqQ01Sfwf2TNcJNkGcxP1vD3C7gpvuVkCU=

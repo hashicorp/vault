@@ -72,7 +72,7 @@ require (
 	github.com/google/go-github v17.0.0+incompatible
 	github.com/google/go-metrics-stackdriver v0.2.0
 	github.com/google/tink/go v1.7.0
-	github.com/hashicorp/cap v0.3.1
+	github.com/hashicorp/cap v0.3.4
 	github.com/hashicorp/consul-template v0.33.0
 	github.com/hashicorp/consul/api v1.23.0
 	github.com/hashicorp/errwrap v1.1.0
@@ -128,7 +128,7 @@ require (
 	github.com/hashicorp/vault-plugin-auth-centrify v0.15.1
 	github.com/hashicorp/vault-plugin-auth-cf v0.15.0
 	github.com/hashicorp/vault-plugin-auth-gcp v0.16.1
-	github.com/hashicorp/vault-plugin-auth-jwt v0.16.0
+	github.com/hashicorp/vault-plugin-auth-jwt v0.17.0
 	github.com/hashicorp/vault-plugin-auth-kerberos v0.10.0
 	github.com/hashicorp/vault-plugin-auth-kubernetes v0.16.0
 	github.com/hashicorp/vault-plugin-auth-oci v0.14.0
