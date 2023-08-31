@@ -187,5 +187,5 @@ func (c *Sys) ListPluginRuntimes(ctx context.Context, i *ListPluginRuntimesInput
 
 // pluginRuntimeCatalogPathByType is a helper to construct the proper API path by plugin type
 func pluginRuntimeCatalogPathByType(runtimeType PluginRuntimeType, name string) string {
-	return fmt.Sprintf("/v1/sys/plugins/catalog/%s/%s", runtimeType, name)
+	return fmt.Sprintf("/v1/sys/plugins/runtimes/catalog/%s/%s", runtimeType, name)
 }
