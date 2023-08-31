@@ -3,7 +3,7 @@
 
 //go:build testonly
 
-package activity
+package activity_testonly
 
 import (
 	"context"
