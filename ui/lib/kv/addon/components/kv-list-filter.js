@@ -3,6 +3,7 @@
  * SPDX-License-Identifier: MPL-2.0
  */
 
+import Ember from 'ember';
 import Component from '@glimmer/component';
 import { inject as service } from '@ember/service';
 import { action } from '@ember/object';
@@ -13,24 +14,25 @@ import { task, timeout } from 'ember-concurrency';
 
 /**
  * @module KvListFilter
- * `KvListFilter` filters through the KV metadata LIST response. It allows users to search through the current list, navigate into directories, and use keyboard functions to: autocomplete, view a secret, create a new secret, or clear the input field.
+ * `KvListFilter` is used for filtering on the KV metadata LIST response.
+ * It allows users to search for any text, and will transition to the list
+ * page with the appropriate parameters depending on the query. This component
+ * expects that the component will be re-constructed after search, since the
+ * route will reload the model and completely refresh the page.
  *  *
  * <KvListFilter
  *  @secrets={{this.model.secrets}}
  *  @mountPoint={{this.model.mountPoint}}
  *  @filterValue="beep/my-"
- *  @pageFilter="my-"
  * />
  * @param {array} secrets - An array of secret models.
  * @param {string} mountPoint - Where in the router files we're located. For this component it will always be vault.cluster.secrets.backend.kv
- * @param {string} filterValue - A concatenation between the list-directory's dynamic path "path-to-secret" and the queryParam "pageFilter". For example, if we're inside the beep/ directory searching for any secret that starts with "my-" this value will equal "beep/my-".
- * @param {string} pageFilter - The queryParam value, does not include pathToSecret ex: my-.
+ * @param {string} filterValue - Full initial search value. A concatenation between the list-directory's dynamic path "path-to-secret" and the queryParam "pageFilter". For example, if we're inside the beep/ directory searching for any secret that starts with "my-" this value will equal "beep/my-".
  */
 
 export default class KvListFilterComponent extends Component {
   @service router;
   @tracked query;
-  @tracked filterIsFocused = false;
 
   constructor() {
     super(...arguments);
@@ -61,7 +63,6 @@ export default class KvListFilterComponent extends Component {
       !parentDirectory ? this.navigate() : this.navigate(parentDirectory);
     }
     // ignore all other key events
-    return;
   }
 
   @action handleInput(evt) {
@@ -72,17 +73,17 @@ export default class KvListFilterComponent extends Component {
   *handleSearch(evt) {
     evt.preventDefault();
     // shows loader to indicate that the search was executed
-    yield timeout(250);
-    const input = this.query;
-    const isDirectory = keyIsFolder(input);
-    const parentDirectory = parentKeyForKey(input);
-    const secretWithinDirectory = keyWithoutParentKey(input);
+    yield timeout(Ember.testing ? 0 : 250);
+    const searchTerm = this.query;
+    const isDirectory = keyIsFolder(searchTerm);
+    const parentDirectory = parentKeyForKey(searchTerm);
+    const secretWithinDirectory = keyWithoutParentKey(searchTerm);
     if (isDirectory) {
-      this.navigate(input);
+      this.navigate(searchTerm);
     } else if (parentDirectory) {
       this.navigate(parentDirectory, secretWithinDirectory);
     } else {
-      this.navigate(null, input);
+      this.navigate(null, searchTerm);
     }
   }
 }
