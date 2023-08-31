@@ -18,11 +18,7 @@ import Component from '@glimmer/component';
 
 export default class DashboardSecretsEnginesCard extends Component {
   get filteredSecretsEngines() {
-    const filteredEngines = this.args.secretsEngines?.filter(
-      (secretEngine) => secretEngine.shouldIncludeInList
-    );
-
-    return filteredEngines;
+    return this.args.secretsEngines?.filter((secretEngine) => secretEngine.shouldIncludeInList);
   }
 
   get firstFiveSecretsEngines() {
