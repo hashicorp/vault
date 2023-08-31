@@ -23,12 +23,14 @@ func init() {
 
 func TestMultiSealCases(t *testing.T) {
 	cases := []struct {
-		name                string
-		existingSealGenInfo *seal.SealGenerationInfo
-		allSealKmsConfigs   []*configutil.KMS
-		expectedSealGenInfo *seal.SealGenerationInfo
-		isErrorExpected     bool
-		expectedErrorMsg    string
+		name                     string
+		existingSealGenInfo      *seal.SealGenerationInfo
+		allSealKmsConfigs        []*configutil.KMS
+		expectedSealGenInfo      *seal.SealGenerationInfo
+		isRewrapped              bool
+		hasPartiallyWrappedPaths bool
+		isErrorExpected          bool
+		expectedErrorMsg         string
 	}{
 		// none_to_shamir
 		{
@@ -123,6 +125,7 @@ func TestMultiSealCases(t *testing.T) {
 					},
 				},
 			},
+			isRewrapped: false,
 		},
 		// shamir_to_multi
 		{
@@ -149,6 +152,7 @@ func TestMultiSealCases(t *testing.T) {
 					Priority: 3,
 				},
 			},
+			isRewrapped:      false,
 			isErrorExpected:  true,
 			expectedErrorMsg: "cannot add more than one seal",
 		},
@@ -172,8 +176,10 @@ func TestMultiSealCases(t *testing.T) {
 					Priority: 1,
 				},
 			},
-			isErrorExpected:  true,
-			expectedErrorMsg: "must have at least one seal in common with the old generation",
+			isRewrapped:              true,
+			hasPartiallyWrappedPaths: false,
+			isErrorExpected:          true,
+			expectedErrorMsg:         "must have at least one seal in common with the old generation",
 		},
 		// auto_to_shamir_with_common_seal
 		{
@@ -217,6 +223,8 @@ func TestMultiSealCases(t *testing.T) {
 					},
 				},
 			},
+			isRewrapped:              true,
+			hasPartiallyWrappedPaths: false,
 		},
 		// auto_to_auto_no_common_seal
 		{
@@ -238,8 +246,10 @@ func TestMultiSealCases(t *testing.T) {
 					Priority: 1,
 				},
 			},
-			isErrorExpected:  true,
-			expectedErrorMsg: "must have at least one seal in common with the old generation",
+			isRewrapped:              true,
+			hasPartiallyWrappedPaths: false,
+			isErrorExpected:          true,
+			expectedErrorMsg:         "must have at least one seal in common with the old generation",
 		},
 		// auto_to_auto_with_common_seal
 		{
@@ -283,6 +293,8 @@ func TestMultiSealCases(t *testing.T) {
 					},
 				},
 			},
+			isRewrapped:              true,
+			hasPartiallyWrappedPaths: false,
 		},
 		// auto_to_multi_add_one
 		{
@@ -324,6 +336,8 @@ func TestMultiSealCases(t *testing.T) {
 					},
 				},
 			},
+			isRewrapped:              true,
+			hasPartiallyWrappedPaths: false,
 		},
 		// auto_to_multi_add_two
 		{
@@ -355,8 +369,10 @@ func TestMultiSealCases(t *testing.T) {
 					Priority: 3,
 				},
 			},
-			isErrorExpected:  true,
-			expectedErrorMsg: "cannot add more than one seal",
+			isRewrapped:              true,
+			hasPartiallyWrappedPaths: false,
+			isErrorExpected:          true,
+			expectedErrorMsg:         "cannot add more than one seal",
 		},
 		// multi_to_auto_delete_one
 		{
@@ -393,6 +409,8 @@ func TestMultiSealCases(t *testing.T) {
 					},
 				},
 			},
+			isRewrapped:              true,
+			hasPartiallyWrappedPaths: false,
 		},
 		// multi_to_auto_delete_two
 		{
@@ -424,8 +442,10 @@ func TestMultiSealCases(t *testing.T) {
 					Priority: 1,
 				},
 			},
-			isErrorExpected:  true,
-			expectedErrorMsg: "cannot delete more than one seal",
+			isRewrapped:              true,
+			hasPartiallyWrappedPaths: false,
+			isErrorExpected:          true,
+			expectedErrorMsg:         "cannot delete more than one seal",
 		},
 		// disable_two_auto
 		{
@@ -491,6 +511,8 @@ func TestMultiSealCases(t *testing.T) {
 					},
 				},
 			},
+			isRewrapped:              true,
+			hasPartiallyWrappedPaths: false,
 		},
 	}
 
@@ -498,7 +520,10 @@ func TestMultiSealCases(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			cmd := &ServerCommand{}
 			cmd.logger = corehelpers.NewTestLogger(t)
-			sealGenInfo, err := cmd.computeSealGenerationInfo(tc.existingSealGenInfo, tc.allSealKmsConfigs)
+			if tc.existingSealGenInfo != nil {
+				tc.existingSealGenInfo.SetRewrapped(tc.isRewrapped)
+			}
+			sealGenInfo, err := cmd.computeSealGenerationInfo(tc.existingSealGenInfo, tc.allSealKmsConfigs, tc.hasPartiallyWrappedPaths)
 			switch {
 			case tc.isErrorExpected:
 				require.Error(t, err)
@@ -512,11 +537,13 @@ func TestMultiSealCases(t *testing.T) {
 	}
 
 	cases2 := []struct {
-		name                string
-		existingSealGenInfo *seal.SealGenerationInfo
-		newSealGenInfo      *seal.SealGenerationInfo
-		isErrorExpected     bool
-		expectedErrorMsg    string
+		name                     string
+		existingSealGenInfo      *seal.SealGenerationInfo
+		newSealGenInfo           *seal.SealGenerationInfo
+		isRewrapped              bool
+		hasPartiallyWrappedPaths bool
+		isErrorExpected          bool
+		expectedErrorMsg         string
 	}{
 		// same_generation_different_seals
 		{
@@ -551,8 +578,10 @@ func TestMultiSealCases(t *testing.T) {
 					},
 				},
 			},
-			isErrorExpected:  true,
-			expectedErrorMsg: "existing seal generation is the same, but the configured seals are different",
+			isRewrapped:              true,
+			hasPartiallyWrappedPaths: false,
+			isErrorExpected:          true,
+			expectedErrorMsg:         "existing seal generation is the same, but the configured seals are different",
 		},
 
 		// same_generation_same_seals
@@ -588,12 +617,115 @@ func TestMultiSealCases(t *testing.T) {
 					},
 				},
 			},
-			isErrorExpected: false,
+			isRewrapped:              true,
+			hasPartiallyWrappedPaths: false,
+			isErrorExpected:          false,
+		},
+		// existing seal gen info rewrapped is set to false
+		{
+			name: "existing_sgi_rewrapped_false",
+			existingSealGenInfo: &seal.SealGenerationInfo{
+				Generation: 2,
+				Seals: []*configutil.KMS{
+					{
+						Type:     "pkcs11",
+						Name:     "autoSeal1",
+						Priority: 1,
+					},
+					{
+						Type:     "pkcs11",
+						Name:     "autoSeal2",
+						Priority: 2,
+					},
+				},
+			},
+			newSealGenInfo: &seal.SealGenerationInfo{
+				Generation: 1,
+				Seals: []*configutil.KMS{
+					{
+						Type:     "pkcs11",
+						Name:     "autoSeal1",
+						Priority: 1,
+					},
+				},
+			},
+			isRewrapped:              false,
+			hasPartiallyWrappedPaths: false,
+			isErrorExpected:          true,
+			expectedErrorMsg:         "cannot make seal config changes while seal re-wrap is in progress, please revert any seal configuration changes",
+		},
+		// have partially wrapped paths
+		{
+			name: "have_partially_wrapped_paths",
+			existingSealGenInfo: &seal.SealGenerationInfo{
+				Generation: 2,
+				Seals: []*configutil.KMS{
+					{
+						Type:     "pkcs11",
+						Name:     "autoSeal1",
+						Priority: 1,
+					},
+					{
+						Type:     "pkcs11",
+						Name:     "autoSeal2",
+						Priority: 2,
+					},
+				},
+			},
+			newSealGenInfo: &seal.SealGenerationInfo{
+				Generation: 1,
+				Seals: []*configutil.KMS{
+					{
+						Type:     "pkcs11",
+						Name:     "autoSeal1",
+						Priority: 1,
+					},
+				},
+			},
+			isRewrapped:              true,
+			hasPartiallyWrappedPaths: true,
+			isErrorExpected:          true,
+			expectedErrorMsg:         "cannot make seal config changes while seal re-wrap is in progress, please revert any seal configuration changes",
+		},
+		// no partially wrapped paths
+		{
+			name: "no_partially_wrapped_paths",
+			existingSealGenInfo: &seal.SealGenerationInfo{
+				Generation: 2,
+				Seals: []*configutil.KMS{
+					{
+						Type:     "pkcs11",
+						Name:     "autoSeal1",
+						Priority: 1,
+					},
+					{
+						Type:     "pkcs11",
+						Name:     "autoSeal2",
+						Priority: 2,
+					},
+				},
+			},
+			newSealGenInfo: &seal.SealGenerationInfo{
+				Generation: 1,
+				Seals: []*configutil.KMS{
+					{
+						Type:     "pkcs11",
+						Name:     "autoSeal1",
+						Priority: 1,
+					},
+				},
+			},
+			isRewrapped:              true,
+			hasPartiallyWrappedPaths: false,
+			isErrorExpected:          false,
 		},
 	}
 	for _, tc := range cases2 {
 		t.Run(tc.name, func(t *testing.T) {
-			err := tc.newSealGenInfo.Validate(tc.existingSealGenInfo)
+			if tc.existingSealGenInfo != nil {
+				tc.existingSealGenInfo.SetRewrapped(tc.isRewrapped)
+			}
+			err := tc.newSealGenInfo.Validate(tc.existingSealGenInfo, tc.hasPartiallyWrappedPaths)
 			switch {
 			case tc.isErrorExpected:
 				require.Error(t, err)
