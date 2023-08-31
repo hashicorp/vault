@@ -164,6 +164,10 @@ func (b *backend) pathRewrapWrite(ctx context.Context, req *logical.Request, d *
 			}
 		}
 
+		if !nonceAllowed(p) {
+			item.DecodedNonce = nil
+		}
+
 		if !warnAboutNonceUsage && shouldWarnAboutNonceUsage(p, item.DecodedNonce) {
 			warnAboutNonceUsage = true
 		}
