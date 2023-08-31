@@ -18,7 +18,7 @@ func NewTestSeal(t testing.T, opts *seal.TestSealOpts) Seal {
 	switch opts.StoredKeys {
 	case seal.StoredKeysSupportedShamirRoot:
 		w := aeadwrapper.NewShamirWrapper()
-		sealAccess, err := seal.NewAccessFromSealInfo(logger, opts.Generation, true, []seal.SealInfo{
+		sealAccess, err := seal.NewAccessFromSealWrappers(logger, opts.Generation, true, []seal.SealWrapper{
 			{
 				Wrapper:  w,
 				Priority: 1,
@@ -38,7 +38,7 @@ func NewTestSeal(t testing.T, opts *seal.TestSealOpts) Seal {
 		return newSeal
 	case seal.StoredKeysNotSupported:
 		w := aeadwrapper.NewShamirWrapper()
-		sealAccess, err := seal.NewAccessFromSealInfo(logger, opts.Generation, true, []seal.SealInfo{
+		sealAccess, err := seal.NewAccessFromSealWrappers(logger, opts.Generation, true, []seal.SealWrapper{
 			{
 				Wrapper:  w,
 				Priority: 1,
