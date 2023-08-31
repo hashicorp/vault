@@ -55,7 +55,7 @@ type SealGenerationInfo struct {
 }
 
 // Validate is used to sanity check the seal generation info being created
-func (sgi *SealGenerationInfo) Validate(existingSgi *SealGenerationInfo) error {
+func (sgi *SealGenerationInfo) Validate(existingSgi *SealGenerationInfo, hasPartiallyWrappedPaths bool) error {
 	existingSealsLen := 0
 	previousShamirConfigured := false
 	if existingSgi != nil {
@@ -72,6 +72,10 @@ func (sgi *SealGenerationInfo) Validate(existingSgi *SealGenerationInfo) error {
 				previousShamirConfigured = true
 				break
 			}
+		}
+
+		if !previousShamirConfigured && (!existingSgi.IsRewrapped() || hasPartiallyWrappedPaths) {
+			return errors.New("cannot make seal config changes while seal re-wrap is in progress, please revert any seal configuration changes")
 		}
 	}
 

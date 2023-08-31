@@ -2743,9 +2743,6 @@ func (c *ServerCommand) computeSealGenerationInfo(existingSealGenInfo *vaultseal
 		if cmp.Equal(existingSealGenInfo.Seals, sealConfigs) {
 			return existingSealGenInfo, nil
 		}
-		if !existingSealGenInfo.IsRewrapped() || hasPartiallyWrappedPaths {
-			return nil, errors.New("cannot make seal config changes while seal re-wrap is in progress, please revert any seal configuration changes")
-		}
 		generation = existingSealGenInfo.Generation + 1
 	}
 	c.logger.Info("incrementing seal generation", "generation", generation)
@@ -2757,7 +2754,7 @@ func (c *ServerCommand) computeSealGenerationInfo(existingSealGenInfo *vaultseal
 		Seals:      sealConfigs,
 	}
 
-	err := newSealGenInfo.Validate(existingSealGenInfo)
+	err := newSealGenInfo.Validate(existingSealGenInfo, hasPartiallyWrappedPaths)
 	if err != nil {
 		return nil, err
 	}
