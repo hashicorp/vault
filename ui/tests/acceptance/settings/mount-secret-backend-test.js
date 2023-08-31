@@ -15,12 +15,13 @@ import authPage from 'vault/tests/pages/auth';
 import consoleClass from 'vault/tests/pages/components/console/ui-panel';
 import logout from 'vault/tests/pages/logout';
 import mountSecrets from 'vault/tests/pages/settings/mount-secret-backend';
-import { allEngines } from 'vault/helpers/mountable-secret-engines';
+import { mountableEngines } from 'vault/helpers/mountable-secret-engines'; // allEngines() includes enterprise engines, those are tested elsewhere
 import { supportedSecretBackends } from 'vault/helpers/supported-secret-backends';
 
 const consoleComponent = create(consoleClass);
 
-const BACKENDS_WITH_ENGINES = ['kv', 'pki', 'ldap', 'kubernetes', 'kmip'];
+// enterprise backends are tested separately
+const BACKENDS_WITH_ENGINES = ['kv', 'pki', 'ldap', 'kubernetes'];
 module('Acceptance | settings/mount-secret-backend', function (hooks) {
   setupApplicationTest(hooks);
 
@@ -190,9 +191,9 @@ module('Acceptance | settings/mount-secret-backend', function (hooks) {
     assert.dom('[data-test-row-value="Maximum number of versions"]').hasText('Not set');
   });
 
-  // TODO: kv engine cleanup revisit test why failing on CI
-  test.skip('it should transition to mountable addon engine after mount success', async function (assert) {
-    const addons = allEngines().filter((e) => BACKENDS_WITH_ENGINES.includes(e.type));
+  test('it should transition to mountable addon engine after mount success', async function (assert) {
+    // test supported backends that ARE ember engines (enterprise only engines are tested individually)
+    const addons = mountableEngines().filter((e) => BACKENDS_WITH_ENGINES.includes(e.type));
     assert.expect(addons.length);
 
     for (const engine of addons) {
@@ -215,11 +216,11 @@ module('Acceptance | settings/mount-secret-backend', function (hooks) {
     }
   });
 
-  // TODO: kv engine cleanup revisit test why failing on CI
-  test.skip('it should transition to mountable non-addon engine after mount success', async function (assert) {
-    // test supported backends that are not ember engines
+  test('it should transition to mountable non-addon engine after mount success', async function (assert) {
+    // test supported backends that are not ember engines (enterprise only engines are tested individually)
     const nonEngineBackends = supportedSecretBackends().filter((b) => !BACKENDS_WITH_ENGINES.includes(b));
-    const engines = allEngines().filter((e) => nonEngineBackends.includes(e.type));
+    // add back kv because we want to test v1
+    const engines = mountableEngines().filter((e) => nonEngineBackends.includes(e.type) || e.type === 'kv');
     assert.expect(engines.length);
 
     for (const engine of engines) {
@@ -230,9 +231,9 @@ module('Acceptance | settings/mount-secret-backend', function (hooks) {
       await mountSecrets.visit();
       await mountSecrets.selectType(engine.type);
       await mountSecrets.next().path(engine.type);
-      // if (engine.type === 'kv') {
-      //   await mountSecrets.toggleOptions().version(1)
-      // };
+      if (engine.type === 'kv') {
+        await mountSecrets.toggleOptions().version(1);
+      }
       await mountSecrets.submit();
 
       assert.strictEqual(
@@ -241,14 +242,14 @@ module('Acceptance | settings/mount-secret-backend', function (hooks) {
         `${engine.type} navigates to list view`
       );
       await consoleComponent.runCommands([
-        // delete any previous mount with same name
+        // cleanup after
         `delete sys/mounts/${engine.type}`,
       ]);
     }
   });
 
   test('it should transition back to backend list for unsupported backends', async function (assert) {
-    const unsupported = allEngines().filter((e) => !supportedSecretBackends().includes(e.type));
+    const unsupported = mountableEngines().filter((e) => !supportedSecretBackends().includes(e.type));
     assert.expect(unsupported.length);
 
     for (const engine of unsupported) {

@@ -434,13 +434,19 @@ func (c *OperatorDiagnoseCommand) offlineDiagnostics(ctx context.Context) error 
 	sealcontext, sealspan := diagnose.StartSpan(ctx, "Create Vault Server Configuration Seals")
 
 	var setSealResponse *SetSealResponse
+	var hasPartialPaths bool
 	existingSealGenerationInfo, err := vault.PhysicalSealGenInfo(sealcontext, *backend)
 	if err != nil {
 		diagnose.Fail(sealcontext, fmt.Sprintf("Unable to get Seal genration information from storage: %s.", err.Error()))
 		goto SEALFAIL
 	}
 
-	setSealResponse, err = setSeal(server, config, make([]string, 0), make(map[string]string), existingSealGenerationInfo, server.logger)
+	hasPartialPaths, err = hasPartiallyWrappedPaths(context.Background(), *backend)
+	if err != nil {
+		diagnose.Fail(sealcontext, fmt.Sprintf("Cannot determine if there are parrtially seal wrapped entries in storage: %s.", err.Error()))
+		goto SEALFAIL
+	}
+	setSealResponse, err = setSeal(server, config, make([]string, 0), make(map[string]string), existingSealGenerationInfo, hasPartialPaths)
 	if err != nil {
 		diagnose.Advise(ctx, "For assistance with the seal stanza, see the Vault configuration documentation.")
 		diagnose.Fail(sealcontext, fmt.Sprintf("Seal creation resulted in the following error: %s.", err.Error()))
@@ -538,11 +544,11 @@ SEALFAIL:
 		randReaderTestName := "Initialize Randomness for Core"
 		var sources []*configutil.EntropySourcerInfo
 		if barrierSeal != nil {
-			for _, sealInfo := range barrierSeal.GetAccess().GetEnabledSealInfoByPriority() {
-				if s, ok := sealInfo.Wrapper.(entropy.Sourcer); ok {
+			for _, sealWrapper := range barrierSeal.GetAccess().GetEnabledSealWrappersByPriority() {
+				if s, ok := sealWrapper.Wrapper.(entropy.Sourcer); ok {
 					sources = append(sources, &configutil.EntropySourcerInfo{
 						Sourcer: s,
-						Name:    sealInfo.Name,
+						Name:    sealWrapper.Name,
 					})
 				}
 			}
