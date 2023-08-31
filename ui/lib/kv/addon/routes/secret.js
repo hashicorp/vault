@@ -36,8 +36,11 @@ export default class KvSecretRoute extends Route {
 
   @action
   willTransition(transition) {
-    const { to, from } = transition;
-    if (to.name === 'vault.cluster.secrets.backend.kv.secret.index' || from.localName === 'edit') {
+    // refresh the route if transitioning to secret.index (which happens after delete, undelete or destroy)
+    // or transitioning from editing either metadata or secret data (creating a new version)
+    const performedToolbarAction = transition.to.name === 'vault.cluster.secrets.backend.kv.secret.index';
+    const afterEditing = transition.from.localName === 'edit';
+    if (performedToolbarAction || afterEditing) {
       this.refresh();
     }
   }

@@ -268,6 +268,7 @@ module('Acceptance | Enterprise | kv-v2 workflow | edge cases', function (hooks)
     versions.forEach((num) => {
       assert.dom(PAGE.detail.version(num)).exists(`renders version ${num} link in dropdown`);
     });
+    // also asserts destroyed icon
     deleted.forEach((num) => {
       assert.dom(`${PAGE.detail.version(num)} [data-test-icon="x-square"]`);
     });
@@ -356,8 +357,8 @@ module('Acceptance | Enterprise | kv-v2 workflow | edge cases', function (hooks)
       assert.dom(PAGE.infoRowValue('foo-two')).hasText('supersecret', 'secret value shows after toggle');
     });
 
-    test('namespace: it manages state throughout delete and undelete operations', async function (assert) {
-      assert.expect(23);
+    test('namespace: it manages state throughout delete, destroy and undelete operations', async function (assert) {
+      assert.expect(32);
       const backend = this.backend;
       const ns = this.namespace;
       const secret = 'my-delete-secret';
@@ -399,9 +400,27 @@ module('Acceptance | Enterprise | kv-v2 workflow | edge cases', function (hooks)
       // undelete flow
       await click(PAGE.detail.undelete);
       // details update accordingly
+      assertDeleteActions(assert, ['delete', 'destroy']);
       assert.dom(PAGE.infoRow).exists('shows secret data');
       assert.dom(PAGE.detail.versionTimestamp).includesText('Version 2 created');
-      assertDeleteActions(assert, ['delete', 'destroy']);
+
+      // destroy flow
+      await click(PAGE.detail.destroy);
+      await click(PAGE.detail.deleteConfirm);
+      assertDeleteActions(assert, []);
+      assert
+        .dom(PAGE.emptyStateTitle)
+        .hasText('Version 2 of this secret has been permanently destroyed', 'Shows destroyed message');
+
+      // navigate to sibling route to make sure empty state remains for details tab
+      await click(PAGE.secretTab('Version History'));
+      assert.dom(PAGE.versions.linkedBlock()).exists({ count: 2 });
+
+      // back to secret tab to confirm destroyed state
+      await click(PAGE.secretTab('Secret'));
+      // if this assertion fails, the view is rendering a stale model
+      assert.dom(PAGE.emptyStateTitle).exists('still renders empty state!!');
+      await assertVersionDropdown(assert, [2]);
     });
   });
 });
