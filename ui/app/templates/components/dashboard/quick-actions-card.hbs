@@ -1,8 +1,9 @@
-<Hds::Card::Container @hasBorder={{true}} class="has-padding-l">
+<Hds::Card::Container @hasBorder={{true}} class="has-padding-l" data-test-card="quick-actions">
   <h3 class="title is-4">Quick actions</h3>
-
-  <div class="has-bottom-margin-m">
-    <h4 class="title is-6">Secrets engines</h4>
+  <div class="has-top-margin-m has-bottom-margin-m">
+    <h4 class="title is-marginless is-6">Secrets engines</h4>
+    <p class="is-size-8 has-top-margin-xxs has-bottom-margin-s has-text-grey">Supported engines include databases, KV version
+      2, and PKI.</p>
     <SearchSelect
       @id="secrets-engines-select"
       @options={{this.mountOptions}}
@@ -38,13 +39,16 @@
         class="is-flex-grow-1"
         @selectLimit="1"
         @models={{array this.searchSelectParams.model}}
-        @backend={{this.selectedEngine.id}}
         @placeholder={{this.searchSelectParams.placeholder}}
         @disallowNewItems={{true}}
         @onChange={{this.handleActionSelect}}
         @fallbackComponent="input-search"
-        @nameKey={{this.searchSelectParams.nameKey}}
         @disabled={{not this.searchSelectParams.model}}
+        @nameKey={{this.searchSelectParams.nameKey}}
+        @queryObject={{this.searchSelectParams.queryObject}}
+        @objectKeys={{this.searchSelectParams.objectKeys}}
+        @passObject={{true}}
+        @shouldRenderName={{this.searchSelectParams.nameKey}}
         data-test-param-select
       />
 

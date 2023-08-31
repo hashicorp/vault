@@ -2189,7 +2189,15 @@ func TestSystemBackend_tuneAuth(t *testing.T) {
 		if err := file.Close(); err != nil {
 			t.Fatal(err)
 		}
-		err = c.pluginCatalog.Set(context.Background(), "token", consts.PluginTypeCredential, "v1.0.0", "foo", []string{}, []string{}, []byte{})
+		err = c.pluginCatalog.Set(context.Background(), pluginutil.SetPluginInput{
+			Name:    "token",
+			Type:    consts.PluginTypeCredential,
+			Version: "v1.0.0",
+			Command: "foo",
+			Args:    []string{},
+			Env:     []string{},
+			Sha256:  []byte{},
+		})
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -5742,7 +5750,15 @@ func TestValidateVersion_HelpfulErrorWhenBuiltinOverridden(t *testing.T) {
 	defer file.Close()
 
 	command := filepath.Base(file.Name())
-	err = core.pluginCatalog.Set(context.Background(), "kubernetes", consts.PluginTypeCredential, "", command, nil, nil, nil)
+	err = core.pluginCatalog.Set(context.Background(), pluginutil.SetPluginInput{
+		Name:    "kubernetes",
+		Type:    consts.PluginTypeCredential,
+		Version: "",
+		Command: command,
+		Args:    nil,
+		Env:     nil,
+		Sha256:  nil,
+	})
 	if err != nil {
 		t.Fatal(err)
 	}
