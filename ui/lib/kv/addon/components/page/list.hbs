@@ -7,12 +7,7 @@
   <:toolbarFilters>
     {{#unless @noMetadataListPermissions}}
       {{#if (or @secrets @filterValue)}}
-        <KvListFilter
-          @secrets={{@secrets}}
-          @mountPoint={{this.mountPoint}}
-          @filterValue={{@filterValue}}
-          @pageFilter={{@pageFilter}}
-        />
+        <KvListFilter @secrets={{@secrets}} @mountPoint={{this.mountPoint}} @filterValue={{@filterValue}} />
       {{/if}}
     {{/unless}}
   </:toolbarFilters>
