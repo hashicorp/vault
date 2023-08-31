@@ -760,7 +760,7 @@ type CoreConfig struct {
 	// Use the deadlocks library to detect deadlocks
 	DetectDeadlocks string
 
-	// If no role-based lease count quota or role based rate limiting quota is enabled, don't track lease counts by role
+	// If any role based quota (LCQ or RLQ) is enabled, don't track lease counts by role
 	ImpreciseLeaseRoleTracking bool
 
 	// Disables the trace display for Sentinel checks
