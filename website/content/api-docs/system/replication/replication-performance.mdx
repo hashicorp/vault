@@ -545,17 +545,17 @@ performance secondary cluster. Changing the primary cluster assignment
 does not wipe data in the secondary cluster.
 
 There are two ways to update the primary assignment:
-	
+
 1. **Use a secondary activation token with the `token` parameter**.
 1. **Use primary cluster addresses with the `update_primary_addrs` parameter**.
    During the update, cluster addresses are pinged one at a time via gRPC. The
    first cluster to respond successfully is assigned as the new primary address.
+   This was added in Vault 1.13.3.
 
 The two update methods are mutually exclusive. You may use one or the other,
-but not both. We recommend updating primary cluster assignments with cluster
-addresses whenever possible. Address updates are much faster than activation
-token updates because Vault does less work behind the scenes, which means
-potentially less disruption in replication.
+but not both. If you're confused as to which method to use, a good rule of
+thumb is to use `token` on DR secondary clusters and `update_primary_addrs`
+on performance secondary clusters.
 
 | Method | Path                                                    |
 | :----- | :------------------------------------------------------ |
