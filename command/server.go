@@ -132,6 +132,7 @@ type ServerCommand struct {
 	flagDev                bool
 	flagDevTLS             bool
 	flagDevTLSCertDir      string
+	flagDevTLSSANs         []string
 	flagDevRootTokenID     string
 	flagDevListenAddr      string
 	flagDevNoStoreToken    bool
@@ -254,6 +255,18 @@ func (c *ServerCommand) Flags() *FlagSets {
 		Default: "",
 		Usage: "Directory where generated TLS files are created if `-dev-tls` is " +
 			"specified. If left unset, files are generated in a temporary directory.",
+	})
+
+	f.StringSliceVar(&StringSliceVar{
+		Name:    "dev-tls-san",
+		Target:  &c.flagDevTLSSANs,
+		Default: nil,
+		Usage: "Additional Subject Alternative Name (as a DNS name or IP address) " +
+			"to generate the certificate with if `-dev-tls` is specified. The " +
+			"certificate will always use localhost, localhost4, localhost6, " +
+			"localhost.localdomain, and the host name as alternate DNS names, " +
+			"and 127.0.0.1 as an alternate IP address. This flag can be specified " +
+			"multiple times to specify multiple SANs.",
 	})
 
 	f.StringVar(&StringVar{
@@ -560,13 +573,19 @@ func (c *ServerCommand) runRecoveryMode() int {
 		return 1
 	}
 
-	existingSealGenenrationInfo, err := vault.PhysicalSealGenInfo(context.Background(), backend)
+	ctx := context.Background()
+	existingSealGenerationInfo, err := vault.PhysicalSealGenInfo(ctx, backend)
 	if err != nil {
 		c.UI.Error(fmt.Sprintf("Error getting seal generation info: %v", err))
 		return 1
 	}
 
-	setSealResponse, err := setSeal(c, config, infoKeys, info, existingSealGenenrationInfo, c.logger)
+	hasPartialPaths, err := hasPartiallyWrappedPaths(ctx, backend)
+	if err != nil {
+		c.UI.Error(fmt.Sprintf("Cannot determine if there are partially seal wrapped entries in storage: %v", err))
+		return 1
+	}
+	setSealResponse, err := setSeal(c, config, infoKeys, info, existingSealGenerationInfo, hasPartialPaths)
 	if err != nil {
 		c.UI.Error(err.Error())
 		return 1
@@ -579,7 +598,7 @@ func (c *ServerCommand) runRecoveryMode() int {
 
 	// Ensure that the seal finalizer is called, even if using verify-only
 	defer func() {
-		err = barrierSeal.Finalize(context.Background())
+		err = barrierSeal.Finalize(ctx)
 		if err != nil {
 			c.UI.Error(fmt.Sprintf("Error finalizing seals: %v", err))
 		}
@@ -605,7 +624,7 @@ func (c *ServerCommand) runRecoveryMode() int {
 		}
 	}
 
-	if err := core.InitializeRecovery(context.Background()); err != nil {
+	if err := core.InitializeRecovery(ctx); err != nil {
 		c.UI.Error(fmt.Sprintf("Error initializing core in recovery mode: %s", err))
 		return 1
 	}
@@ -706,7 +725,7 @@ func (c *ServerCommand) runRecoveryMode() int {
 	}
 
 	if sealConfigError != nil {
-		init, err := core.InitializedLocally(context.Background())
+		init, err := core.InitializedLocally(ctx)
 		if err != nil {
 			c.UI.Error(fmt.Sprintf("Error checking if core is initialized: %v", err))
 			return 1
@@ -971,7 +990,17 @@ func configureDevTLS(c *ServerCommand) (func(), *server.Config, string, error) {
 				return nil, nil, certDir, err
 			}
 		}
-		config, err = server.DevTLSConfig(devStorageType, certDir)
+		extraSANs := c.flagDevTLSSANs
+		host, _, err := net.SplitHostPort(c.flagDevListenAddr)
+		if err == nil {
+			// 127.0.0.1 is the default, and already included in the SANs.
+			// Empty host means listen on all interfaces, but users should use the
+			// -dev-tls-san flag to get the right SANs in that case.
+			if host != "" && host != "127.0.0.1" {
+				extraSANs = append(extraSANs, host)
+			}
+		}
+		config, err = server.DevTLSConfig(devStorageType, certDir, extraSANs)
 
 		f = func() {
 			if err := os.Remove(fmt.Sprintf("%s/%s", certDir, server.VaultDevCAFilename)); err != nil {
@@ -1223,13 +1252,19 @@ func (c *ServerCommand) Run(args []string) int {
 		infoKeys = append(infoKeys, expKey)
 	}
 
-	existingSealGenenrationInfo, err := vault.PhysicalSealGenInfo(context.Background(), backend)
+	ctx := context.Background()
+	existingSealGenerationInfo, err := vault.PhysicalSealGenInfo(ctx, backend)
 	if err != nil {
 		c.UI.Error(fmt.Sprintf("Error getting seal generation info: %v", err))
 		return 1
 	}
 
-	setSealResponse, err := setSeal(c, config, infoKeys, info, existingSealGenenrationInfo, c.logger)
+	hasPartialPaths, err := hasPartiallyWrappedPaths(ctx, backend)
+	if err != nil {
+		c.UI.Error(fmt.Sprintf("Cannot determine if there are partially seal wrapped entries in storage: %v", err))
+		return 1
+	}
+	setSealResponse, err := setSeal(c, config, infoKeys, info, existingSealGenerationInfo, hasPartialPaths)
 	if err != nil {
 		c.UI.Error(err.Error())
 		return 1
@@ -1239,7 +1274,7 @@ func (c *ServerCommand) Run(args []string) int {
 		seal := seal // capture range variable
 		// Ensure that the seal finalizer is called, even if using verify-only
 		defer func(seal *vault.Seal) {
-			err = (*seal).Finalize(context.Background())
+			err = (*seal).Finalize(ctx)
 			if err != nil {
 				c.UI.Error(fmt.Sprintf("Error finalizing seals: %v", err))
 			}
@@ -1489,14 +1524,14 @@ func (c *ServerCommand) Run(args []string) int {
 	// uninitialized. Once one server initializes the storage backend, this
 	// goroutine will pick up the unseal keys and unseal this instance.
 	if !core.IsInSealMigrationMode() {
-		go runUnseal(c, core, context.Background())
+		go runUnseal(c, core, ctx)
 	}
 
 	// When the underlying storage is raft, kick off retry join if it was specified
 	// in the configuration
 	// TODO: Should we also support retry_join for ha_storage?
 	if config.Storage.Type == storageTypeRaft {
-		if err := core.InitiateRetryJoin(context.Background()); err != nil {
+		if err := core.InitiateRetryJoin(ctx); err != nil {
 			c.UI.Error(fmt.Sprintf("Failed to initiate raft retry join, %q", err.Error()))
 			return 1
 		}
@@ -1542,7 +1577,7 @@ func (c *ServerCommand) Run(args []string) int {
 	}
 
 	if setSealResponse.sealConfigError != nil {
-		init, err := core.InitializedLocally(context.Background())
+		init, err := core.InitializedLocally(ctx)
 		if err != nil {
 			c.UI.Error(fmt.Sprintf("Error checking if core is initialized: %v", err))
 			return 1
@@ -2532,7 +2567,7 @@ func (r *SetSealResponse) getCreatedSeals() []*vault.Seal {
 
 // setSeal return barrierSeal, barrierWrapper, unwrapSeal, all the created seals, and all the provided seals from the configs so we can close them in Run
 // The two errors are the sealConfigError and the regular error
-func setSeal(c *ServerCommand, config *server.Config, infoKeys []string, info map[string]string, existingSealGenerationInfo *vaultseal.SealGenerationInfo, sealLogger hclog.Logger) (*SetSealResponse, error) {
+func setSeal(c *ServerCommand, config *server.Config, infoKeys []string, info map[string]string, existingSealGenerationInfo *vaultseal.SealGenerationInfo, hasPartiallyWrappedPaths bool) (*SetSealResponse, error) {
 	if c.flagDevAutoSeal {
 		access, _ := vaultseal.NewTestSeal(nil)
 		barrierSeal := vault.NewAutoSeal(access)
@@ -2654,7 +2689,7 @@ func setSeal(c *ServerCommand, config *server.Config, infoKeys []string, info ma
 	////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 	// Compute seal generation
 
-	sealGenerationInfo, err := c.computeSealGenerationInfo(existingSealGenerationInfo, allSealKmsConfigs)
+	sealGenerationInfo, err := c.computeSealGenerationInfo(existingSealGenerationInfo, allSealKmsConfigs, hasPartiallyWrappedPaths)
 	if err != nil {
 		return nil, err
 	}
@@ -2678,6 +2713,7 @@ func setSeal(c *ServerCommand, config *server.Config, infoKeys []string, info ma
 	var barrierSeal vault.Seal
 	var unwrapSeal vault.Seal
 
+	sealLogger := c.logger
 	switch {
 	case len(enabledSealWrappers) == 0:
 		return nil, errors.New("no enabled Seals in configuration")
@@ -2723,7 +2759,7 @@ func setSeal(c *ServerCommand, config *server.Config, infoKeys []string, info ma
 	}, nil
 }
 
-func (c *ServerCommand) computeSealGenerationInfo(existingSealGenInfo *vaultseal.SealGenerationInfo, sealConfigs []*configutil.KMS) (*vaultseal.SealGenerationInfo, error) {
+func (c *ServerCommand) computeSealGenerationInfo(existingSealGenInfo *vaultseal.SealGenerationInfo, sealConfigs []*configutil.KMS, hasPartiallyWrappedPaths bool) (*vaultseal.SealGenerationInfo, error) {
 	generation := uint64(1)
 
 	if existingSealGenInfo != nil {
@@ -2732,7 +2768,7 @@ func (c *ServerCommand) computeSealGenerationInfo(existingSealGenInfo *vaultseal
 		}
 		generation = existingSealGenInfo.Generation + 1
 	}
-	c.logger.Info("incrementing seal geneneration", "generation", generation)
+	c.logger.Info("incrementing seal generation", "generation", generation)
 
 	// If the stored copy doesn't match the current configuration, we introduce a new generation
 	// which keeps track if a rewrap of all CSPs and seal wrapped values has completed (initially false).
@@ -2741,12 +2777,21 @@ func (c *ServerCommand) computeSealGenerationInfo(existingSealGenInfo *vaultseal
 		Seals:      sealConfigs,
 	}
 
-	err := newSealGenInfo.Validate(existingSealGenInfo)
+	err := newSealGenInfo.Validate(existingSealGenInfo, hasPartiallyWrappedPaths)
 	if err != nil {
 		return nil, err
 	}
 
 	return newSealGenInfo, nil
+}
+
+func hasPartiallyWrappedPaths(ctx context.Context, backend physical.Backend) (bool, error) {
+	paths, err := vault.GetPartiallySealWrappedPaths(ctx, backend)
+	if err != nil {
+		return false, err
+	}
+
+	return len(paths) > 0, nil
 }
 
 func initHaBackend(c *ServerCommand, config *server.Config, coreConfig *vault.CoreConfig, backend physical.Backend) (bool, error) {
@@ -2953,6 +2998,7 @@ func createCoreConfig(c *ServerCommand, config *server.Config, backend physical.
 		LogicalBackends:                c.LogicalBackends,
 		Logger:                         c.logger,
 		DetectDeadlocks:                config.DetectDeadlocks,
+		ImpreciseLeaseRoleTracking:     config.ImpreciseLeaseRoleTracking,
 		DisableSentinelTrace:           config.DisableSentinelTrace,
 		DisableCache:                   config.DisableCache,
 		DisableMlock:                   config.DisableMlock,

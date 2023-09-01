@@ -19,7 +19,6 @@ import { pathIsDirectory } from 'kv/utils/kv-breadcrumbs';
  * @param {array} secrets - An array of models generated form kv/metadata query.
  * @param {string} backend - The name of the kv secret engine.
  * @param {string} pathToSecret - The directory name that the secret belongs to ex: beep/boop/
- * @param {string} pageFilter - The input on the kv-list-filter. Does not include a directory name.
  * @param {string} filterValue - The concatenation of the pathToSecret and pageFilter ex: beep/boop/my-
  * @param {boolean} failedDirectoryQuery - true if the query was a 403 and the search was for a directory. Used to display inline alert message on the overview card.
  * @param {array} breadcrumbs - Breadcrumbs as an array of objects that contain label, route, and modelId. They are updated via the util kv-breadcrumbs to handle dynamic *pathToSecret on the list-directory route.

@@ -5,13 +5,9 @@
   </:tabLinks>
 
   <:toolbarFilters>
+
     {{#if (and (not-eq @secrets 403) (or @secrets @filterValue))}}
-      <KvListFilter
-        @secrets={{@secrets}}
-        @mountPoint={{this.mountPoint}}
-        @filterValue={{@filterValue}}
-        @pageFilter={{@pageFilter}}
-      />
+      <KvListFilter @secrets={{@secrets}} @mountPoint={{this.mountPoint}} @filterValue={{@filterValue}} />
     {{/if}}
   </:toolbarFilters>
 

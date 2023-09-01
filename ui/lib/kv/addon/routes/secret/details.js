@@ -36,6 +36,7 @@ export default class KvSecretDetailsRoute extends Route {
     return parentModel;
   }
 
+  // breadcrumbs are set in details/index.js
   setupController(controller, resolvedModel) {
     super.setupController(controller, resolvedModel);
     const { version } = this.paramsFor(this.routeName);

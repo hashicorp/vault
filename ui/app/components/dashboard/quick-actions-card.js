@@ -101,13 +101,13 @@ export default class DashboardQuickActionsCard extends Component {
   }
 
   get filteredSecretEngines() {
-    return this.args.secretsEngines.filter(
+    return this.args.secretsEngines?.filter(
       (engine) => (engine.type === 'kv' && engine.version == 2) || QUICK_ACTION_ENGINES.includes(engine.type)
     );
   }
 
   get mountOptions() {
-    return this.filteredSecretEngines.map((engine) => {
+    return this.filteredSecretEngines?.map((engine) => {
       const { id, type } = engine;
 
       return { name: id, type, id };
