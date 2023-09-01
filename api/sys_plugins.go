@@ -203,6 +203,8 @@ type RegisterPluginInput struct {
 	Version string `json:"version,omitempty"`
 
 	OCIImage string `json:"oci_image,omitempty"`
+
+	Env []string `json:"env,omitempty"`
 }
 
 // RegisterPlugin wraps RegisterPluginWithContext using context.Background.

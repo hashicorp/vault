@@ -25,6 +25,7 @@ type PluginRegisterCommand struct {
 	flagSHA256   string
 	flagVersion  string
 	flagOCIImage string
+	flagEnv      []string
 }
 
 func (c *PluginRegisterCommand) Synopsis() string {
@@ -65,8 +66,8 @@ func (c *PluginRegisterCommand) Flags() *FlagSets {
 		Name:       "args",
 		Target:     &c.flagArgs,
 		Completion: complete.PredictAnything,
-		Usage: "Arguments to pass to the plugin when starting. Separate " +
-			"multiple arguments with a comma.",
+		Usage: "Argument to pass to the plugin when starting. This " +
+			"flag can be specified multiple times to specify multiple args.",
 	})
 
 	f.StringVar(&StringVar{
@@ -74,28 +75,37 @@ func (c *PluginRegisterCommand) Flags() *FlagSets {
 		Target:     &c.flagCommand,
 		Completion: complete.PredictAnything,
 		Usage: "Command to spawn the plugin. This defaults to the name of the " +
-			"plugin if unspecified.",
+			"plugin if both oci_image and command are unspecified.",
 	})
 
 	f.StringVar(&StringVar{
 		Name:       "sha256",
 		Target:     &c.flagSHA256,
 		Completion: complete.PredictAnything,
-		Usage:      "SHA256 of the plugin binary. This is required for all plugins.",
+		Usage:      "SHA256 of the plugin binary or the oci_image provided. This is required for all plugins.",
 	})
 
 	f.StringVar(&StringVar{
 		Name:       "version",
 		Target:     &c.flagVersion,
 		Completion: complete.PredictAnything,
-		Usage:      "Semantic version of the plugin. Optional.",
+		Usage:      "Semantic version of the plugin. Used as the tag when specifying oci_image, but with any leading 'v' trimmed. Optional.",
 	})
 
 	f.StringVar(&StringVar{
 		Name:       "oci_image",
 		Target:     &c.flagOCIImage,
 		Completion: complete.PredictAnything,
-		Usage:      "OCI image to run.",
+		Usage: "OCI image to run. If specified, setting command, args, and env will update the " +
+			"container's entrypoint, args, and environment variables (append-only) respectively.",
+	})
+
+	f.StringSliceVar(&StringSliceVar{
+		Name:       "env",
+		Target:     &c.flagEnv,
+		Completion: complete.PredictAnything,
+		Usage: "Environment variables to set for the plugin when starting. This " +
+			"flag can be specified multiple times to specify multiple environment variables.",
 	})
 
 	return set
@@ -165,6 +175,7 @@ func (c *PluginRegisterCommand) Run(args []string) int {
 		SHA256:   c.flagSHA256,
 		Version:  c.flagVersion,
 		OCIImage: c.flagOCIImage,
+		Env:      c.flagEnv,
 	}); err != nil {
 		c.UI.Error(fmt.Sprintf("Error registering plugin %s: %s", pluginName, err))
 		return 2

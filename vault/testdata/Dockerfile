@@ -1,4 +1,4 @@
-FROM gcr.io/distroless/static-debian11
+FROM docker.mirror.hashicorp.services/ubuntu:22.04
 
 ARG plugin
 
