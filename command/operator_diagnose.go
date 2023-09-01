@@ -440,7 +440,7 @@ func (c *OperatorDiagnoseCommand) offlineDiagnostics(ctx context.Context) error 
 		goto SEALFAIL
 	}
 
-	setSealResponse, err = setSeal(server, config, make([]string, 0), make(map[string]string), existingSealGenerationInfo, server.logger)
+	setSealResponse, err = setSeal(server, config, make([]string, 0), make(map[string]string), existingSealGenerationInfo, false /* unsealed vault has no partially wrapped paths */)
 	if err != nil {
 		diagnose.Advise(ctx, "For assistance with the seal stanza, see the Vault configuration documentation.")
 		diagnose.Fail(sealcontext, fmt.Sprintf("Seal creation resulted in the following error: %s.", err.Error()))
@@ -538,11 +538,11 @@ SEALFAIL:
 		randReaderTestName := "Initialize Randomness for Core"
 		var sources []*configutil.EntropySourcerInfo
 		if barrierSeal != nil {
-			for _, sealInfo := range barrierSeal.GetAccess().GetEnabledSealInfoByPriority() {
-				if s, ok := sealInfo.Wrapper.(entropy.Sourcer); ok {
+			for _, sealWrapper := range barrierSeal.GetAccess().GetEnabledSealWrappersByPriority() {
+				if s, ok := sealWrapper.Wrapper.(entropy.Sourcer); ok {
 					sources = append(sources, &configutil.EntropySourcerInfo{
 						Sourcer: s,
-						Name:    sealInfo.Name,
+						Name:    sealWrapper.Name,
 					})
 				}
 			}

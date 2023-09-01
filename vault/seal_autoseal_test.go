@@ -186,8 +186,8 @@ func TestAutoSeal_HealthCheck(t *testing.T) {
 		MetricSink: metricsutil.NewClusterMetricSink("", inmemSink),
 		Physical:   pBackend,
 	})
-	sealHealthTestIntervalNominal = 10 * time.Millisecond
-	sealHealthTestIntervalUnhealthy = 10 * time.Millisecond
+	seal.HealthTestIntervalNominal = 10 * time.Millisecond
+	seal.HealthTestIntervalUnhealthy = 10 * time.Millisecond
 	autoSeal := NewAutoSeal(testSealAccess)
 	autoSeal.SetCore(core)
 	core.seal = autoSeal
