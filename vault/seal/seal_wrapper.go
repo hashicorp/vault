@@ -5,10 +5,11 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	wrapping "github.com/hashicorp/go-kms-wrapping/v2"
 	mathrand "math/rand"
 	"sync"
 	"time"
+
+	wrapping "github.com/hashicorp/go-kms-wrapping/v2"
 )
 
 // SealWrapper contains a Wrapper and related information needed by the seal that uses it.
