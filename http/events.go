@@ -25,9 +25,9 @@ import (
 	"nhooyr.io/websocket"
 )
 
-// DefaultWebSocketRevalidationTime is how often we re-check access to the
+// webSocketRevalidationTime is how often we re-check access to the
 // events that the websocket requested access to.
-const DefaultWebSocketRevalidationTime = 5 * time.Minute
+const webSocketRevalidationTime = 5 * time.Minute
 
 type eventSubscriber struct {
 	ctx               context.Context
@@ -116,7 +116,7 @@ func (sub *eventSubscriber) allowMessageCached(message *logical.EventReceived) b
 	// perform the actual check and cache it if true
 	ok = sub.allowMessage(messageNs, dataPath, message.EventType)
 	if ok {
-		err := sub.checkCache.Add(cacheKey, ok, DefaultWebSocketRevalidationTime)
+		err := sub.checkCache.Add(cacheKey, ok, webSocketRevalidationTime)
 		if err != nil {
 			sub.logger.Debug("Error adding to policy check cache for websocket", "error", err)
 			// still return the right value, but we can't guarantee it was cached
@@ -244,7 +244,7 @@ func handleEventsSubscribe(core *vault.Core, req *logical.Request) http.Handler 
 			pattern:           pattern,
 			conn:              conn,
 			json:              json,
-			checkCache:        cache.New(DefaultWebSocketRevalidationTime, DefaultWebSocketRevalidationTime),
+			checkCache:        cache.New(webSocketRevalidationTime, webSocketRevalidationTime),
 			clientToken:       auth.ClientToken,
 		}
 		closeStatus, closeReason, err := sub.handleEventsSubscribeWebsocket()
@@ -294,7 +294,7 @@ func validateSubscribeAccessLoop(core *vault.Core, ctx context.Context, cancel c
 		}
 		// wait a while and try again, but quit the loop if the context finishes early
 		finished := func() bool {
-			ticker := time.NewTicker(DefaultWebSocketRevalidationTime)
+			ticker := time.NewTicker(webSocketRevalidationTime)
 			defer ticker.Stop()
 			select {
 			case <-ctx.Done():
