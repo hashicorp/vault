@@ -30,11 +30,11 @@ func Test_ActivityLog_LoseLeadership(t *testing.T) {
 	t.Parallel()
 	cluster := vault.NewTestCluster(t, nil, &vault.TestClusterOptions{
 		HandlerFunc: vaulthttp.Handler,
+		NumCores:    2,
 	})
 	cluster.Start()
 	defer cluster.Cleanup()
 
-	testhelpers.WaitForActiveNodeAndStandbys(t, cluster)
 	active := testhelpers.DeriveStableActiveCore(t, cluster)
 	client := active.Client
 	_, err := client.Logical().Write("sys/internal/counters/config", map[string]interface{}{
