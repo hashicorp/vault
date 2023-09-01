@@ -137,6 +137,7 @@ func (rc runConfig) makeConfig(ctx context.Context) (*plugin.ClientConfig, error
 				Labels: map[string]string{
 					"managed-by": "hashicorp.com/vault",
 				},
+				Debug: true,
 				// TODO: More configurables.
 				// Defaulting to runsc will require installing gVisor in the GitHub runner.
 				// Runtime:         "runsc",
