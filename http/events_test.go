@@ -247,7 +247,7 @@ func TestEventsSubscribeNamespaces(t *testing.T) {
 			gotEvents := 0
 			for {
 				ctx, cancel := context.WithTimeout(ctx, timeout)
-				defer cancel()
+				t.Cleanup(func() { defer cancel() })
 
 				_, msg, err := conn.Read(ctx)
 				if err != nil {
