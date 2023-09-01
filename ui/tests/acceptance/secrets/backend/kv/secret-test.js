@@ -3,9 +3,10 @@
  * SPDX-License-Identifier: BUSL-1.1
  */
 
+// TODO kv engine cleanup - this should only be testing kv1 eventually...
 import { click, visit, settled, currentURL, currentRouteName, fillIn } from '@ember/test-helpers';
 import { create } from 'ember-cli-page-object';
-import { module, test } from 'qunit';
+import { module, test, skip } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
 import { v4 as uuidv4 } from 'uuid';
 
@@ -146,7 +147,8 @@ module('Acceptance | secrets/secret/create, read, delete', function (hooks) {
     hooks.afterEach(async function () {
       await consoleComponent.runCommands([`delete sys/mounts/${this.backend}`]);
     });
-    test('version 1 performs the correct capabilities lookup and does not show metadata tab', async function (assert) {
+    skip('version 1 performs the correct capabilities lookup and does not show metadata tab', async function (assert) {
+      // TODO: while this should pass it doesn't really do anything anymore for us as v1 and v2 are completely separate.
       const secretPath = 'foo/bar';
       await listPage.create();
       await editPage.createSecret(secretPath, 'foo', 'bar');

@@ -97,7 +97,7 @@
       @subText={{@attr.options.subText}}
       @onKeyUp={{this.handleKeyUp}}
       @validationError={{this.validationError}}
-      class={{if (not-eq @mode "customMetadata") "form-section"}}
+      class="form-section"
     />
   {{else if (eq @attr.options.editType "file")}}
     {{! File Input }}
