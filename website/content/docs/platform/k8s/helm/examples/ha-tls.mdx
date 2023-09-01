@@ -1,17 +1,23 @@
 ---
 layout: 'docs'
-page_title: 'HA Cluster with TLS'
+page_title: 'HA Cluster with Raft and TLS'
 sidebar_current: 'docs-platform-k8s-examples-ha-tls'
 description: |-
   Describes how to set up a Raft HA Vault cluster with TLS certificate
 ---
 
-# Raft HA server with TLS
+# HA Cluster with Raft and TLS
 
 The overview for [Integrated Storage and
-TLS](/docs/concepts/integrated-storage#integrated-storage-and-tls) covers the
-various options for mitigating TLS verification warnings and bootstrapping your
-Raft cluster.
+TLS](/vault/docs/concepts/integrated-storage#integrated-storage-and-tls) covers
+the various options for mitigating TLS verification warnings and bootstrapping
+your Raft cluster.
+
+Without proper configuration, you will see the following warning before cluster
+initialization:
+```shell
+core: join attempt failed: error="error during raft bootstrap init call: Put "https://vault-${N}.${SERVICE}:8200/v1/sys/storage/raft/bootstrap/challenge": x509: certificate is valid for ${SERVICE}, ${SERVICE}.${NAMESPACE}, ${SERVICE}.${NAMESPACE}.svc, ${SERVICE}.${NAMESPACE}.svc.cluster.local, not vault-${N}.${SERVICE}"
+```
 
 The examples below demonstrate two specific solutions. Both solutions ensure
 that the common name (CN) used for the `leader_api_addr` in the Raft stanza
@@ -20,25 +26,17 @@ matches the name(s) listed in the TLS certificate.
 ## Before you start
 
 1. Follow the steps from the example [HA Vault Cluster with Integrated
-Storage](/docs/platform/k8s/helm/examples/ha-with-raft) to build the cluster.
+Storage](/vault/docs/platform/k8s/helm/examples/ha-with-raft) to build the cluster.
 
 2. Follow the examples and instructions in [Standalone Server with
-TLS](/docs/platform/k8s/helm/examples/standalone-tls) to create a TLS
+TLS](/vault/docs/platform/k8s/helm/examples/standalone-tls) to create a TLS
 certificate.
-
-## Bootstrap your Raft cluster
-
-Without proper configuration, you will see the following warning before cluster
-initialization:
-```shell
-core: join attempt failed: error="error during raft bootstrap init call: Put "https://vault-${N}.${SERVICE}:8200/v1/sys/storage/raft/bootstrap/challenge": x509: certificate is valid for ${SERVICE}, ${SERVICE}.${NAMESPACE}, ${SERVICE}.${NAMESPACE}.svc, ${SERVICE}.${NAMESPACE}.svc.cluster.local, not vault-${N}.${SERVICE}"
-```
 
 ## Solution 1: Use auto-join and set the TLS server in your Raft configuration
 
 The join warning disappears if you use auto-join and set the expected TLS
 server name (`${CN}`) with
-[`leader_tls_servername`](/docs/configuration/storage/raft#leader_tls_servername)
+[`leader_tls_servername`](/vault/docs/configuration/storage/raft#leader_tls_servername)
 in the Raft stanza for your Vault configuration.
 
 For example:
@@ -78,7 +76,7 @@ storage "raft" {
 
 ## Solution 2:  Add a load balancer to your Raft configuration
 
-If you have a load balancer for your Vault cluster, you can add  a single
+If you have a load balancer for your Vault cluster, you can add a single
 `retry_join` stanza to your Raft configuration and use the load balancer
 address for `leader_api_addr`.
 
