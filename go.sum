@@ -1760,6 +1760,8 @@ github.com/hashicorp/go-kms-wrapping/wrappers/transit/v2 v2.0.7 h1:G25tZFw/LrAzJ
 github.com/hashicorp/go-kms-wrapping/wrappers/transit/v2 v2.0.7/go.mod h1:hxNA5oTfAvwPacWVg1axtF/lvTafwlAa6a6K4uzWHhw=
 github.com/hashicorp/go-memdb v1.3.4 h1:XSL3NR682X/cVk2IeV0d70N4DZ9ljI885xAEU8IoK3c=
 github.com/hashicorp/go-memdb v1.3.4/go.mod h1:uBTr1oQbtuMgd1SSGoR8YV27eT3sBHbYiNm53bMpgSg=
+github.com/hashicorp/go-metrics v0.5.1 h1:rfPwUqFU6uZXNvGl4hzjY8LEBsqFVU4si1H9/Hqck/U=
+github.com/hashicorp/go-metrics v0.5.1/go.mod h1:KEjodfebIOuBYSAe/bHTm+HChmKSxAOXPBieMLYozDE=
 github.com/hashicorp/go-msgpack v0.5.3/go.mod h1:ahLV/dePpqEmjfWmKiqvPkv/twdG7iPBM1vqhUKIvfM=
 github.com/hashicorp/go-msgpack v0.5.5/go.mod h1:ahLV/dePpqEmjfWmKiqvPkv/twdG7iPBM1vqhUKIvfM=
 github.com/hashicorp/go-msgpack v1.1.5 h1:9byZdVjKTe5mce63pRVNP1L7UAmdHOTEMGehn6KvJWs=
@@ -1927,8 +1929,8 @@ github.com/hashicorp/vault-plugin-secrets-kv v0.16.1 h1:Giy/sj9O9BYdZbNsAkYvNmns
 github.com/hashicorp/vault-plugin-secrets-kv v0.16.1/go.mod h1:oJwVConr6pkDIIO8q8OO3FP5WtWj/iSWuhiPVdKt67E=
 github.com/hashicorp/vault-plugin-secrets-mongodbatlas v0.10.0 h1:FB860wKclwLBvBHkQb5nq8bGMUAsuw0khrYT1RM0NR0=
 github.com/hashicorp/vault-plugin-secrets-mongodbatlas v0.10.0/go.mod h1:6YPhFm57C3DvPueHEGdTLK94g3gZI/gdiRrSwO5Fym8=
-github.com/hashicorp/vault-plugin-secrets-openldap v0.11.1 h1:8TI1l3Dt1pdkPPDG/1SyoKbWB/PBc1kHJ/nSD+2jTR4=
-github.com/hashicorp/vault-plugin-secrets-openldap v0.11.1/go.mod h1:aeTnHAsh580Kml5O+kyn9g0ywE5f7EQXkXFeraMF08A=
+github.com/hashicorp/vault-plugin-secrets-openldap v0.11.2 h1:LNzIP4zfWivAy/hgCIwETJFr7BBS91bsJ6AlsGhqAc8=
+github.com/hashicorp/vault-plugin-secrets-openldap v0.11.2/go.mod h1:osvWc6/BOZPR8Mdqp5dF40dAaHddEiylO1pDRI7DOqo=
 github.com/hashicorp/vault-plugin-secrets-terraform v0.7.1 h1:Icb3EDpNvb4ltnGff2Zrm3JVNDDdbbL2wdA2LouD2KQ=
 github.com/hashicorp/vault-plugin-secrets-terraform v0.7.1/go.mod h1:JHHo1nWOgYPsbTqE/PVwkTKRkLSlPSqo9RBqZ7NLKB8=
 github.com/hashicorp/vault-testing-stepwise v0.1.3 h1:GYvm98EB4nUKUntkBcLicnKsebeV89KPHmAGJUCPU/c=
