@@ -10,7 +10,6 @@ import (
 	"fmt"
 	"reflect"
 	"sort"
-	"sync"
 	"sync/atomic"
 	"time"
 
@@ -55,7 +54,7 @@ type SealGenerationInfo struct {
 }
 
 // Validate is used to sanity check the seal generation info being created
-func (sgi *SealGenerationInfo) Validate(existingSgi *SealGenerationInfo) error {
+func (sgi *SealGenerationInfo) Validate(existingSgi *SealGenerationInfo, hasPartiallyWrappedPaths bool) error {
 	existingSealsLen := 0
 	previousShamirConfigured := false
 	if existingSgi != nil {
@@ -72,6 +71,10 @@ func (sgi *SealGenerationInfo) Validate(existingSgi *SealGenerationInfo) error {
 				previousShamirConfigured = true
 				break
 			}
+		}
+
+		if !previousShamirConfigured && (!existingSgi.IsRewrapped() || hasPartiallyWrappedPaths) {
+			return errors.New("cannot make seal config changes while seal re-wrap is in progress, please revert any seal configuration changes")
 		}
 	}
 
@@ -156,32 +159,6 @@ func (sgi *SealGenerationInfo) UnmarshalJSON(b []byte) error {
 	sgi.SetRewrapped(value.Rewrapped)
 
 	return nil
-}
-
-// SealWrapper contains a Wrapper and related information needed by the seal that uses it.
-type SealWrapper struct {
-	wrapping.Wrapper
-	Priority int
-	Name     string
-
-	// sealConfigType is the KMS.Type of this wrapper. It is a string rather than a SealConfigType
-	// to avoid a circular go package depency
-	SealConfigType string
-
-	// Disabled indicates, when true indicates that this wrapper should only be used for decryption.
-	Disabled bool
-
-	HcLock          sync.RWMutex
-	LastHealthCheck time.Time
-	LastSeenHealthy time.Time
-	Healthy         bool
-}
-
-func (sw *SealWrapper) keyId(ctx context.Context) string {
-	if id, err := sw.Wrapper.KeyId(ctx); err == nil {
-		return id
-	}
-	return ""
 }
 
 // Access is the embedded implementation of autoSeal that contains logic

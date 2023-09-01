@@ -58,7 +58,7 @@ export default class KvDeleteModal extends Component {
 
   get deleteOptions() {
     const { secret, metadata, version } = this.args;
-    const isDeactivated = secret.canReadMetadata ? metadata?.currentSecret.isDeactivated : false;
+    const isDeactivated = secret.canReadMetadata ? metadata?.currentSecret?.isDeactivated : false;
     return [
       {
         key: 'delete-version',

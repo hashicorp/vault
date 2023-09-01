@@ -67,6 +67,8 @@ func rateLimitQuotaWrapping(handler http.Handler, core *vault.Core) http.Handler
 			NamespacePath: ns.Path,
 			ClientAddress: parseRemoteIPAddress(r),
 		}
+
+		// This checks if any role based quota is required (LCQ or RLQ).
 		requiresResolveRole, err := core.ResolveRoleForQuotas(r.Context(), quotaReq)
 		if err != nil {
 			core.Logger().Error("failed to lookup quotas", "path", path, "error", err)

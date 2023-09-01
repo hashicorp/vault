@@ -548,6 +548,9 @@ type Core struct {
 	// pluginCatalog is used to manage plugin configurations
 	pluginCatalog *PluginCatalog
 
+	// pluginRuntimeCatalog is used to manage plugin runtime configurations
+	pluginRuntimeCatalog *PluginRuntimeCatalog
+
 	// The userFailedLoginInfo map has user failed login information.
 	// It has user information (alias-name and mount accessor) as a key
 	// and login counter, last failed login time as value
@@ -696,6 +699,9 @@ type Core struct {
 	// if populated, the callback is called for every request
 	// for testing purposes
 	requestResponseCallback func(logical.Backend, *logical.Request, *logical.Response)
+
+	// If any role based quota (LCQ or RLQ) is enabled, don't track lease counts by role
+	impreciseLeaseRoleTracking bool
 }
 
 // c.stateLock needs to be held in read mode before calling this function.
@@ -756,6 +762,9 @@ type CoreConfig struct {
 
 	// Use the deadlocks library to detect deadlocks
 	DetectDeadlocks string
+
+	// If any role based quota (LCQ or RLQ) is enabled, don't track lease counts by role
+	ImpreciseLeaseRoleTracking bool
 
 	// Disables the trace display for Sentinel checks
 	DisableSentinelTrace bool
@@ -1029,6 +1038,7 @@ func CreateCore(conf *CoreConfig) (*Core, error) {
 		pendingRemovalMountsAllowed:    conf.PendingRemovalMountsAllowed,
 		expirationRevokeRetryBase:      conf.ExpirationRevokeRetryBase,
 		rollbackMountPathMetrics:       conf.MetricSink.TelemetryConsts.RollbackMetricsIncludeMountPoint,
+		impreciseLeaseRoleTracking:     conf.ImpreciseLeaseRoleTracking,
 	}
 
 	c.standbyStopCh.Store(make(chan struct{}))
@@ -2292,6 +2302,9 @@ func (s standardUnsealStrategy) unseal(ctx context.Context, logger log.Logger, c
 		if err := c.ensureWrappingKey(ctx); err != nil {
 			return err
 		}
+	}
+	if err := c.setupPluginRuntimeCatalog(ctx); err != nil {
+		return err
 	}
 	if err := c.setupPluginCatalog(ctx); err != nil {
 		return err

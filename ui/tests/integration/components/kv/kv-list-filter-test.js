@@ -4,10 +4,11 @@
  */
 
 import { module, test } from 'qunit';
+import sinon from 'sinon';
 import { setupRenderingTest } from 'vault/tests/helpers';
 import { setupEngine } from 'ember-engines/test-support';
 import { setupMirage } from 'ember-cli-mirage/test-support';
-import { render, focus, triggerKeyEvent, fillIn } from '@ember/test-helpers';
+import { render, triggerKeyEvent, typeIn, click } from '@ember/test-helpers';
 import { hbs } from 'ember-cli-htmlbars';
 import { kvMetadataPath } from 'vault/utils/kv-path';
 
@@ -47,14 +48,16 @@ module('Integration | Component | kv | kv-list-filter', function (hooks) {
     this.mountPoint = MOUNT_POINT;
   });
 
-  test('it renders and TAB defaults to first secret in list', async function (assert) {
-    assert.expect(4);
-    // mirage hook for TAB
-    this.owner.lookup('service:router').reopen({
-      transitionTo(route, { queryParams: { pageFilter } }) {
-        assert.strictEqual(route, `${MOUNT_POINT}.list`, 'List route sent when TAB on empty input.');
-        assert.deepEqual(pageFilter, 'my-secret', 'Filters to the first secret in the list.');
-      },
+  test('it transitions correctly for query without slash', async function (assert) {
+    assert.expect(3);
+    const routerSvc = this.owner.lookup('service:router');
+    sinon.stub(routerSvc, 'transitionTo').callsFake((route, params) => {
+      assert.strictEqual(route, `${MOUNT_POINT}.list`, 'List route sent when no pathToSecret.');
+      assert.deepEqual(
+        params,
+        { queryParams: { pageFilter: 'my-secret' } },
+        'Sends correct transition params.'
+      );
     });
 
     await render(hbs`<KvListFilter @secrets={{this.model.secrets}} @mountPoint={{this.mountPoint}} />`, {
@@ -62,136 +65,99 @@ module('Integration | Component | kv | kv-list-filter', function (hooks) {
     });
 
     assert
-      .dom('[data-test-component="kv-list-filter"]')
-      .hasAttribute('placeholder', 'Filter secrets', 'Placeholder applied to input.');
+      .dom('[data-test-kv-list-filter]')
+      .hasAttribute('placeholder', 'Search secret path', 'Placeholder applied to input.');
 
-    await focus('[data-test-component="kv-list-filter"]');
-    assert.dom('[data-test-help-tab]').exists('on focus, with no filterValue, displays help text');
-    // trigger tab
-    await triggerKeyEvent('[data-test-component="kv-list-filter"]', 'keydown', 9);
+    await typeIn('[data-test-kv-list-filter]', 'my-secret');
+    await click('[data-test-kv-list-filter-submit]');
   });
 
-  test('it filters partial matches', async function (assert) {
-    assert.expect(2);
-    // mirage hook for TAB
-    this.owner.lookup('service:router').reopen({
-      transitionTo(route, { queryParams: { pageFilter } }) {
-        assert.strictEqual(route, `${MOUNT_POINT}.list`, 'List route sent when no pathToSecret.');
-        assert.deepEqual(pageFilter, 'my-secret', 'Sets page filter to my-secret.');
-      },
+  test('it transitions correctly for query ending in /', async function (assert) {
+    assert.expect(3);
+    const routerSvc = this.owner.lookup('service:router');
+    sinon.stub(routerSvc, 'transitionTo').callsFake((route, params) => {
+      assert.strictEqual(route, `${MOUNT_POINT}.list-directory`, 'List route sent when params');
+      assert.deepEqual(params, 'beep/', 'Sends directory as param');
     });
 
+    await render(hbs`<KvListFilter @secrets={{this.model.secrets}} @mountPoint={{this.mountPoint}} />`, {
+      owner: this.engine,
+    });
+
+    assert
+      .dom('[data-test-kv-list-filter]')
+      .hasAttribute('placeholder', 'Search secret path', 'Placeholder applied to input.');
+
+    await typeIn('[data-test-kv-list-filter]', 'beep/');
+    await click('[data-test-kv-list-filter-submit]');
+  });
+
+  test('it transitions correctly for nested query', async function (assert) {
+    assert.expect(4);
+    const routerSvc = this.owner.lookup('service:router');
+    sinon.stub(routerSvc, 'transitionTo').callsFake((route, params, { queryParams }) => {
+      assert.strictEqual(route, `${MOUNT_POINT}.list-directory`, 'List route sent when params');
+      assert.deepEqual(params, 'beep/', 'Sends directory as url param');
+      assert.deepEqual(queryParams, { pageFilter: 'boo' }, 'Sends directory as query param');
+    });
+
+    await render(hbs`<KvListFilter @secrets={{this.model.secrets}} @mountPoint={{this.mountPoint}} />`, {
+      owner: this.engine,
+    });
+
+    assert
+      .dom('[data-test-kv-list-filter]')
+      .hasAttribute('placeholder', 'Search secret path', 'Placeholder applied to input.');
+
+    await typeIn('[data-test-kv-list-filter]', 'beep/boo');
+    await click('[data-test-kv-list-filter-submit]');
+  });
+
+  test('it prefills filterbar from pageFilter', async function (assert) {
     await render(
-      hbs`<KvListFilter @secrets={{this.model.secrets}} @mountPoint={{this.mountPoint}} @pageFilter="my-" />`,
+      hbs`<KvListFilter @secrets={{this.model.secrets}} @mountPoint={{this.mountPoint}} @filterValue="beep/boop/bop" />`,
       {
         owner: this.engine,
       }
     );
-    // focus on input and trigger TAB
-    await focus('[data-test-component="kv-list-filter"]');
-    await triggerKeyEvent('[data-test-component="kv-list-filter"]', 'keydown', 9);
+    assert.dom('[data-test-kv-list-filter]').hasValue('beep/boop/bop');
   });
 
-  test('it clears last item on backspace and clears to directory on esc', async function (assert) {
-    assert.expect(8);
-    // mirage hook for filling in the input
-    this.owner.lookup('service:router').reopen({
-      transitionTo(route, pathToSecret, { queryParams: { pageFilter } }) {
-        assert.deepEqual(pageFilter, 'boop-', 'Sends the correct pageFilter on fillIn.');
-      },
+  test('it clears to directory on esc', async function (assert) {
+    assert.expect(3);
+    const routerSvc = this.owner.lookup('service:router');
+    sinon.stub(routerSvc, 'transitionTo').callsFake((route, params, { queryParams }) => {
+      assert.strictEqual(route, `${MOUNT_POINT}.list-directory`, 'List route sent when params');
+      assert.deepEqual(params, 'beep/boop/', 'Sends base directory as url param');
+      assert.deepEqual(queryParams, { pageFilter: null }, 'clears pageFilter param');
     });
 
     await render(
-      hbs`<KvListFilter @secrets={{this.model.secrets}} @mountPoint={{this.mountPoint}} @filterValue="beep/" @pageFilter=""/>`,
+      hbs`<KvListFilter @secrets={{this.model.secrets}} @mountPoint={{this.mountPoint}} @filterValue="beep/boop/bop" />`,
       {
         owner: this.engine,
       }
     );
-    // focus on input and trigger backspace
-    await focus('[data-test-component="kv-list-filter"]');
-    await fillIn('[data-test-component="kv-list-filter"]', 'beep/boop-');
-
-    this.owner.lookup('service:router').reopen({
-      transitionTo(route, pathToSecret, { queryParams: { pageFilter } }) {
-        assert.strictEqual(route, `${MOUNT_POINT}.list-directory`, 'Correct route sent.');
-        assert.strictEqual(pathToSecret, 'beep/', 'PathToSecret is the parent directory.');
-        assert.deepEqual(pageFilter, 'boop', 'Clears last item in pageFilter on backspace.');
-      },
-    });
-    await triggerKeyEvent('[data-test-component="kv-list-filter"]', 'keydown', 8);
-    assert.strictEqual(
-      document.activeElement.id,
-      'secret-filter',
-      'the input still remains focused after delete.'
-    );
-
-    this.owner.lookup('service:router').reopen({
-      transitionTo(route, pathToSecret, { queryParams: { pageFilter } }) {
-        assert.strictEqual(route, `${MOUNT_POINT}.list-directory`, 'Still on a directory route.');
-        assert.strictEqual(pathToSecret, 'beep/', 'Parent directory still shown.');
-        assert.deepEqual(pageFilter, null, 'Clears pageFilter on escape.');
-      },
-    });
-    // trigger escape
-    await triggerKeyEvent('[data-test-component="kv-list-filter"]', 'keydown', 27);
+    // trigger esc
+    await triggerKeyEvent('[data-test-kv-list-filter]', 'keydown', 27);
   });
 
-  test('it transitions create page on enter when secret path is new', async function (assert) {
-    assert.expect(5);
-    // mirage hook for fillIn
-    this.owner.lookup('service:router').reopen({
-      transitionTo(route, pathToSecret, { queryParams: { pageFilter } }) {
-        assert.strictEqual(route, `${MOUNT_POINT}.list-directory`, 'Still on a directory route.');
-        assert.strictEqual(pathToSecret, 'beep/boop/', 'Parent directory still shown.');
-        assert.deepEqual(pageFilter, 'new-secret', 'Sends correct pageFilter.');
-      },
+  test('it clears to previous directory on esc', async function (assert) {
+    assert.expect(3);
+    const routerSvc = this.owner.lookup('service:router');
+    sinon.stub(routerSvc, 'transitionTo').callsFake((route, params, { queryParams }) => {
+      assert.strictEqual(route, `${MOUNT_POINT}.list-directory`, 'List route sent when params');
+      assert.deepEqual(params, 'beep/', 'Sends base directory as url param');
+      assert.deepEqual(queryParams, { pageFilter: null }, 'clears pageFilter param');
     });
 
     await render(
-      hbs`<KvListFilter @secrets={{this.model.secrets}} @mountPoint={{this.mountPoint}} @filterValue="beep/boop/"/>`,
+      hbs`<KvListFilter @secrets={{this.model.secrets}} @mountPoint={{this.mountPoint}} @filterValue="beep/boop/" />`,
       {
         owner: this.engine,
       }
     );
-    // focus on input, fillIn and then trigger enter
-    await focus('[data-test-component="kv-list-filter"]');
-    await fillIn('[data-test-component="kv-list-filter"]', 'beep/boop/new-secret');
-
-    // mirage hook for entering to create
-    this.owner.lookup('service:router').reopen({
-      transitionTo(route, { queryParams: { initialKey } }) {
-        assert.strictEqual(
-          route,
-          `${MOUNT_POINT}.create`,
-          'Sends to create route when secret does not exists.'
-        );
-        assert.deepEqual(initialKey, 'beep/boop/new-secret', 'It sends full secret path.');
-      },
-    });
-    await triggerKeyEvent('[data-test-component="kv-list-filter"]', 'keydown', 13);
-  });
-
-  test('it transitions details page on enter when secret path exists', async function (assert) {
-    assert.expect(1);
-    // mirage hook for entering to details
-    this.owner.lookup('service:router').reopen({
-      transitionTo(route) {
-        assert.strictEqual(
-          route,
-          `${MOUNT_POINT}.secret.details`,
-          'Sends to details route when secret does exists.'
-        );
-      },
-    });
-
-    await render(
-      hbs`<KvListFilter @secrets={{this.model.secrets}} @mountPoint={{this.mountPoint}} @filterValue="beep/boop/bop"/>`,
-      {
-        owner: this.engine,
-      }
-    );
-    // focus on input, fillIn and then trigger enter
-    await focus('[data-test-component="kv-list-filter"]');
-    await triggerKeyEvent('[data-test-component="kv-list-filter"]', 'keydown', 13);
+    // trigger esc
+    await triggerKeyEvent('[data-test-kv-list-filter]', 'keydown', 27);
   });
 });
