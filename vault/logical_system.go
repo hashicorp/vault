@@ -621,7 +621,7 @@ func (b *SystemBackend) handlePluginCatalogRead(ctx context.Context, _ *logical.
 	}
 
 	command := ""
-	if !plugin.Builtin {
+	if !plugin.Builtin && plugin.OCIImage == "" {
 		command, err = filepath.Rel(b.Core.pluginCatalog.directory, plugin.Command)
 		if err != nil {
 			return nil, err
@@ -631,6 +631,7 @@ func (b *SystemBackend) handlePluginCatalogRead(ctx context.Context, _ *logical.
 	data := map[string]interface{}{
 		"name":    plugin.Name,
 		"args":    plugin.Args,
+		"env":     plugin.Env,
 		"command": command,
 		"sha256":  hex.EncodeToString(plugin.Sha256),
 		"builtin": plugin.Builtin,
@@ -640,6 +641,10 @@ func (b *SystemBackend) handlePluginCatalogRead(ctx context.Context, _ *logical.
 	if plugin.Builtin {
 		status, _ := b.Core.builtinRegistry.DeprecationStatus(plugin.Name, plugin.Type)
 		data["deprecation_status"] = status.String()
+	}
+
+	if plugin.OCIImage != "" {
+		data["oci_image"] = plugin.OCIImage
 	}
 
 	return &logical.Response{
