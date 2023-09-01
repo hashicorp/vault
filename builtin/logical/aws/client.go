@@ -52,9 +52,8 @@ func getRootConfig(ctx context.Context, s logical.Storage, clientType string, lo
 					credsConfig.Region = "us-east-1"
 				}
 			}
-		}		
+		}
 	}
-
 
 	credsConfig.HTTPClient = cleanhttp.DefaultClient()
 
