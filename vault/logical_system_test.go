@@ -13,6 +13,7 @@ import (
 	"os"
 	"path/filepath"
 	"reflect"
+	"runtime"
 	"strings"
 	"testing"
 	"time"
@@ -3449,6 +3450,94 @@ func TestSystemBackend_PluginCatalog_CRUD(t *testing.T) {
 	resp, err = b.HandleRequest(namespace.RootContext(nil), req)
 	if resp != nil || err != nil {
 		t.Fatalf("expected nil response, plugin not deleted correctly got resp: %v, err: %v", resp, err)
+	}
+}
+
+// TestSystemBackend_PluginCatalog_ContainerCRUD tests that plugins registered
+// with oci_image set get recorded properly in the catalog.
+func TestSystemBackend_PluginCatalog_ContainerCRUD(t *testing.T) {
+	c, b, _ := testCoreSystemBackend(t)
+	// Bootstrap the pluginCatalog
+	sym, err := filepath.EvalSymlinks(os.TempDir())
+	if err != nil {
+		t.Fatalf("error: %v", err)
+	}
+	c.pluginCatalog.directory = sym
+
+	for name, tc := range map[string]struct {
+		in, expected map[string]any
+	}{
+		"minimal": {
+			in: map[string]any{
+				"oci_image": "foo-image",
+				"sha256":    hex.EncodeToString([]byte{'1'}),
+			},
+			expected: map[string]interface{}{
+				"name":      "test-plugin",
+				"oci_image": "foo-image",
+				"sha256":    "31",
+				"command":   "",
+				"args":      []string{},
+				"builtin":   false,
+				"version":   "",
+			},
+		},
+		"fully specified": {
+			in: map[string]any{
+				"oci_image": "foo-image",
+				"sha256":    hex.EncodeToString([]byte{'1'}),
+				"command":   "foo-command",
+				"args":      []string{"--a=1"},
+				"version":   "v1.0.0",
+				"env":       []string{"X=2"},
+			},
+			expected: map[string]interface{}{
+				"name":      "test-plugin",
+				"oci_image": "foo-image",
+				"sha256":    "31",
+				"command":   "foo-command",
+				"args":      []string{"--a=1"},
+				"builtin":   false,
+				"version":   "v1.0.0",
+			},
+		},
+	} {
+		t.Run(name, func(t *testing.T) {
+			// Add a container plugin.
+			req := logical.TestRequest(t, logical.UpdateOperation, "plugins/catalog/database/test-plugin")
+			for k, v := range tc.in {
+				req.Data[k] = v
+			}
+
+			resp, err := b.HandleRequest(namespace.RootContext(nil), req)
+
+			// We should get a nice error back from the API if we're not on linux, but
+			// that's all we can test on non-linux.
+			if runtime.GOOS != "linux" {
+				if err != nil || resp.Error() == nil {
+					t.Fatalf("err: %v %v", err, resp.Error())
+				}
+				return
+			}
+
+			if err != nil || resp.Error() != nil {
+				t.Fatalf("err: %v %v", err, resp.Error())
+			}
+
+			req = logical.TestRequest(t, logical.ReadOperation, "plugins/catalog/database/test-plugin")
+			if tc.in["version"] != nil {
+				req.Data["version"] = tc.in["version"]
+			}
+			resp, err = b.HandleRequest(namespace.RootContext(nil), req)
+			if err != nil || resp == nil || resp.Error() != nil {
+				t.Fatalf("err: %v %v", err, resp)
+			}
+
+			actual := resp.Data
+			if !reflect.DeepEqual(actual, tc.expected) {
+				t.Fatalf("expected did not match actual\ngot      %#v\nexpected %#v\n", actual, tc.expected)
+			}
+		})
 	}
 }
 
