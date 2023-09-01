@@ -215,7 +215,7 @@ type access struct {
 
 var _ Access = (*access)(nil)
 
-func NewAccess(logger hclog.Logger, sealGenerationInfo *SealGenerationInfo, sealWrappers []SealWrapper) Access {
+func NewAccess(logger hclog.Logger, sealGenerationInfo *SealGenerationInfo, sealWrappers []*SealWrapper) Access {
 	if logger == nil {
 		logger = hclog.NewNullLogger()
 	}
@@ -231,8 +231,7 @@ func NewAccess(logger hclog.Logger, sealGenerationInfo *SealGenerationInfo, seal
 	}
 	a.wrappersByPriority = make([]*SealWrapper, len(sealWrappers))
 	for i, sw := range sealWrappers {
-		v := sw
-		a.wrappersByPriority[i] = &v
+		a.wrappersByPriority[i] = sw
 	}
 
 	sort.Slice(a.wrappersByPriority, func(i int, j int) bool { return a.wrappersByPriority[i].Priority < a.wrappersByPriority[j].Priority })
@@ -240,7 +239,7 @@ func NewAccess(logger hclog.Logger, sealGenerationInfo *SealGenerationInfo, seal
 	return a
 }
 
-func NewAccessFromSealWrappers(logger hclog.Logger, generation uint64, rewrapped bool, sealWrappers []SealWrapper) (Access, error) {
+func NewAccessFromSealWrappers(logger hclog.Logger, generation uint64, rewrapped bool, sealWrappers []*SealWrapper) (Access, error) {
 	sealGenerationInfo := &SealGenerationInfo{
 		Generation: generation,
 	}
@@ -258,6 +257,16 @@ func NewAccessFromSealWrappers(logger hclog.Logger, generation uint64, rewrapped
 		})
 	}
 	return NewAccess(logger, sealGenerationInfo, sealWrappers), nil
+}
+
+// NewAccessFromWrapper creates an enabled Access for a single wrapping.Wrapper.
+// The Access has generation set to 1 and the rewrapped flag set to true.
+// The SealWrapper created uses the seal config type as the name, has priority set to 1 and the
+// disabled flag set to false.
+func NewAccessFromWrapper(logger hclog.Logger, wrapper wrapping.Wrapper, sealConfigType string) (Access, error) {
+	sealWrapper := NewSealWrapper(wrapper, 1, sealConfigType, sealConfigType, false)
+
+	return NewAccessFromSealWrappers(logger, 1, true, []*SealWrapper{sealWrapper})
 }
 
 func (a *access) GetAllSealWrappersByPriority() []*SealWrapper {

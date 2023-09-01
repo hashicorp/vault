@@ -2599,8 +2599,8 @@ func setSeal(c *ServerCommand, config *server.Config, infoKeys []string, info ma
 	recordSealConfigError := func(err error) {
 		sealConfigError = errors.Join(sealConfigError, err)
 	}
-	enabledSealWrappers := make([]vaultseal.SealWrapper, 0)
-	disabledSealWrappers := make([]vaultseal.SealWrapper, 0)
+	enabledSealWrappers := make([]*vaultseal.SealWrapper, 0)
+	disabledSealWrappers := make([]*vaultseal.SealWrapper, 0)
 	allSealKmsConfigs := make([]*configutil.KMS, 0)
 
 	type infoKeysAndMap struct {
@@ -2642,7 +2642,7 @@ func setSeal(c *ServerCommand, config *server.Config, infoKeys []string, info ma
 			wrapper = aeadwrapper.NewShamirWrapper()
 		}
 
-		sealWrapper := *vaultseal.NewSealWrapper(
+		sealWrapper := vaultseal.NewSealWrapper(
 			wrapper,
 			configSeal.Priority,
 			configSeal.Name,
@@ -2666,20 +2666,21 @@ func setSeal(c *ServerCommand, config *server.Config, infoKeys []string, info ma
 	////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 	// Set the info keys, this modifies the function arguments `info` and `infoKeys`
 	// TODO(SEALHA): Why are we doing this? What is its use?
-	appendWrapperInfoKeys := func(prefix string, sealWrappers []vaultseal.SealWrapper) {
-		if len(sealWrappers) > 0 {
-			useName := false
-			if len(sealWrappers) > 1 {
-				useName = true
+	appendWrapperInfoKeys := func(prefix string, sealWrappers []*vaultseal.SealWrapper) {
+		if len(sealWrappers) == 0 {
+			return
+		}
+		useName := false
+		if len(sealWrappers) > 1 {
+			useName = true
+		}
+		for _, sealWrapper := range sealWrappers {
+			if useName {
+				prefix = fmt.Sprintf("%s %s ", prefix, sealWrapper.Name)
 			}
-			for _, sealWrapper := range sealWrappers {
-				if useName {
-					prefix = fmt.Sprintf("%s %s ", prefix, sealWrapper.Name)
-				}
-				for _, k := range sealWrapperInfoKeysMap[sealWrapper.Name].keys {
-					infoKeys = append(infoKeys, prefix+k)
-					info[prefix+k] = sealWrapperInfoKeysMap[sealWrapper.Name].theMap[k]
-				}
+			for _, k := range sealWrapperInfoKeysMap[sealWrapper.Name].keys {
+				infoKeys = append(infoKeys, prefix+k)
+				info[prefix+k] = sealWrapperInfoKeysMap[sealWrapper.Name].theMap[k]
 			}
 		}
 	}
@@ -2697,7 +2698,7 @@ func setSeal(c *ServerCommand, config *server.Config, infoKeys []string, info ma
 	////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 	// Create the Seals
 
-	containsShamir := func(sealWrappers []vaultseal.SealWrapper) bool {
+	containsShamir := func(sealWrappers []*vaultseal.SealWrapper) bool {
 		for _, si := range sealWrappers {
 			if vault.SealConfigTypeShamir.IsSameAs(si.SealConfigType) {
 				return true
