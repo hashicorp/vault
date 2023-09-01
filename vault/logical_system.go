@@ -628,10 +628,11 @@ func (b *SystemBackend) handlePluginCatalogRead(ctx context.Context, _ *logical.
 		}
 	}
 
+	// plugin.Env has historically been omitted, and could conceivably have
+	// sensitive information in it.
 	data := map[string]interface{}{
 		"name":    plugin.Name,
 		"args":    plugin.Args,
-		"env":     plugin.Env,
 		"command": command,
 		"sha256":  hex.EncodeToString(plugin.Sha256),
 		"builtin": plugin.Builtin,
@@ -5973,7 +5974,7 @@ Each entry is of the form "key=value".`,
 	},
 	"plugin-catalog_oci_image": {
 		`The name of the OCI image to be run, without the tag or SHA256.
-Must already be present on the machine, and version must be provided.`,
+Must already be present on the machine.`,
 		"",
 	},
 	"leases": {

@@ -124,7 +124,6 @@ func (c *PluginInfoCommand) Run(args []string) int {
 
 	data := map[string]interface{}{
 		"args":               resp.Args,
-		"env":                resp.Env,
 		"builtin":            resp.Builtin,
 		"command":            resp.Command,
 		"oci_image":          resp.OCIImage,

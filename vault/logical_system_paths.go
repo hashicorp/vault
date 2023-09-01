@@ -1937,6 +1937,11 @@ func (b *SystemBackend) pluginsCatalogCRUDPath() *framework.Path {
 								Description: strings.TrimSpace(sysHelp["plugin-catalog_command"][0]),
 								Required:    true,
 							},
+							"oci_image": {
+								Type:        framework.TypeString,
+								Description: strings.TrimSpace(sysHelp["plugin-catalog_oci_image"][0]),
+								Required:    false,
+							},
 							"args": {
 								Type:        framework.TypeStringSlice,
 								Description: strings.TrimSpace(sysHelp["plugin-catalog_args"][0]),

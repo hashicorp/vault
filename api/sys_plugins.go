@@ -142,7 +142,6 @@ type GetPluginInput struct {
 // GetPluginResponse is the response from the GetPlugin call.
 type GetPluginResponse struct {
 	Args              []string `json:"args"`
-	Env               []string `json:"env,omitempty"`
 	Builtin           bool     `json:"builtin"`
 	Command           string   `json:"command"`
 	OCIImage          string   `json:"oci_image"`
