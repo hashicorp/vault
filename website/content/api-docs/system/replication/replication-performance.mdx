@@ -550,12 +550,10 @@ There are two ways to update the primary assignment:
 1. **Use primary cluster addresses with the `update_primary_addrs` parameter**.
    During the update, cluster addresses are pinged one at a time via gRPC. The
    first cluster to respond successfully is assigned as the new primary address.
-   This was added in Vault 1.13.3.
 
 The two update methods are mutually exclusive. You may use one or the other,
-but not both. If you're confused as to which method to use, a good rule of
-thumb is to use `token` on DR secondary clusters and `update_primary_addrs`
-on performance secondary clusters.
+but not both. A good rule of thumb is to use `token` on DR secondary
+clusters and `update_primary_addrs` on performance secondary clusters.
 
 | Method | Path                                                    |
 | :----- | :------------------------------------------------------ |

@@ -456,15 +456,11 @@ There are two ways to update the primary assignment:
     During the update, cluster addresses are pinged one at a time via gRPC.
     The first cluster to respond successfully is assigned as the new primary
     address. Updating with cluster addresses is not allowed after a DR
-    failover when updating a newly demoted DR secondary cluster. This was added
-    in Vault 1.13.3.
+    failover when updating a newly demoted DR secondary cluster.
 
 The two update methods are mutually exclusive. You may use one or the
-other, but not both. In most cases, update-primary is called on a DR
-cluster after a failover, which will require the use of an activation
-token. If you're confused as to which method to use, a good rule of
-thumb is to use `token` on DR secondary clusters and `update_primary_addrs`
-on performance secondary clusters.
+other, but not both. A good rule of thumb is to use `token` on DR secondary
+clusters and `update_primary_addrs` on performance secondary clusters.
 
 | Method | Path                                           |
 | :----- | :--------------------------------------------- |
