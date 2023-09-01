@@ -687,10 +687,6 @@ type Core struct {
 	// we're on a secondary cluster.
 	writeForwardedPaths *pathmanager.PathManager
 
-	// if populated, the callback is called for every request
-	// for testing purposes
-	requestResponseCallback func(logical.Backend, *logical.Request, *logical.Response)
-
 	// If any role based quota (LCQ or RLQ) is enabled, don't track lease counts by role
 	impreciseLeaseRoleTracking bool
 }
