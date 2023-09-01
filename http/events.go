@@ -27,7 +27,7 @@ import (
 
 // webSocketRevalidationTime is how often we re-check access to the
 // events that the websocket requested access to.
-const webSocketRevalidationTime = 5 * time.Minute
+var webSocketRevalidationTime = 5 * time.Minute
 
 type eventSubscriber struct {
 	ctx               context.Context
@@ -40,6 +40,7 @@ type eventSubscriber struct {
 	conn              *websocket.Conn
 	json              bool
 	checkCache        *cache.Cache
+	isRootToken       bool
 }
 
 // handleEventsSubscribeWebsocket runs forever serving events to the websocket connection, returning a websocket
@@ -98,14 +99,22 @@ func (sub *eventSubscriber) handleEventsSubscribeWebsocket() (websocket.StatusCo
 // allowMessageCached checks that the message is allowed to received by the websocket.
 // It caches results for specific namespaces, data paths, and event types.
 func (sub *eventSubscriber) allowMessageCached(message *logical.EventReceived) bool {
-	// default to the subscribe endpoint if there is no specific data path
+	if sub.isRootToken {
+		// fast-path root tokens
+		return true
+	}
+
 	messageNs := strings.Trim(message.Namespace, "/")
-	dataPath := "sys/events/subscribe"
+	dataPath := ""
 	if message.Event.Metadata != nil {
 		dataPathField := message.Event.Metadata.GetFields()[logical.EventMetadataDataPath]
 		if dataPathField != nil {
 			dataPath = dataPathField.GetStringValue()
 		}
+	}
+	if dataPath == "" {
+		// Only allow root tokens to subscribe to events with no data path, for now.
+		return false
 	}
 	cacheKey := fmt.Sprintf("%v!%v!%v", messageNs, dataPath, message.EventType)
 	_, ok := sub.checkCache.Get(cacheKey)
@@ -169,7 +178,7 @@ func handleEventsSubscribe(core *vault.Core, req *logical.Request) http.Handler 
 		ctx := r.Context()
 
 		// ACL check
-		auth, _, err := core.CheckToken(ctx, req, false)
+		auth, entry, err := core.CheckToken(ctx, req, false)
 		if err != nil {
 			if errors.Is(err, logical.ErrPermissionDenied) {
 				respondError(w, http.StatusForbidden, logical.ErrPermissionDenied)
@@ -246,6 +255,7 @@ func handleEventsSubscribe(core *vault.Core, req *logical.Request) http.Handler 
 			json:              json,
 			checkCache:        cache.New(webSocketRevalidationTime, webSocketRevalidationTime),
 			clientToken:       auth.ClientToken,
+			isRootToken:       entry.IsRoot(),
 		}
 		closeStatus, closeReason, err := sub.handleEventsSubscribeWebsocket()
 		if err != nil {
@@ -288,8 +298,9 @@ func validateSubscribeAccessLoop(core *vault.Core, ctx context.Context, cancel c
 	// if something breaks, default to canceling the websocket
 	defer cancel()
 	for {
-		err := validateSubscribeAccess(core, ctx, req)
+		_, _, err := core.CheckToken(ctx, req, false)
 		if err != nil {
+			core.Logger().Debug("Token does not have access to subscription path in its own namespace, terminating WebSocket subscription", "path", req.Path, "error", err)
 			return
 		}
 		// wait a while and try again, but quit the loop if the context finishes early
@@ -307,15 +318,4 @@ func validateSubscribeAccessLoop(core *vault.Core, ctx context.Context, cancel c
 			return
 		}
 	}
-}
-
-// validateSubscribeAccess does a single check that the request has access to subscribe endpoint.
-func validateSubscribeAccess(core *vault.Core, ctx context.Context, req *logical.Request) error {
-	_, _, err := core.CheckToken(ctx, req, false)
-	if err != nil {
-		core.Logger().Debug("Token does not have access to subscription path in its own namespace, terminating WebSocket subscription", "path", req.Path, "http_method", req.HTTPRequest.Method, "error", err)
-		// trigger the cancel
-		return err
-	}
-	return nil
 }
