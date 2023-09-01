@@ -146,10 +146,9 @@ type GetPluginResponse struct {
 	Args              []string `json:"args"`
 	Builtin           bool     `json:"builtin"`
 	Command           string   `json:"command"`
-	OCIImage          string   `json:"oci_image"`
 	Name              string   `json:"name"`
 	SHA256            string   `json:"sha256"`
-	OCIImage          string   `json:"oci_image"`
+	OCIImage          string   `json:"oci_image,omitempty"`
 	Runtime           string   `json:"runtime,omitempty"`
 	DeprecationStatus string   `json:"deprecation_status,omitempty"`
 	Version           string   `json:"version,omitempty"`
@@ -195,12 +194,6 @@ type RegisterPluginInput struct {
 	// Type of the plugin. Required.
 	Type PluginType `json:"type"`
 
-	// OCIImage is the plugin OCI image
-	OCIImage string `json:"oci_image"`
-
-	// Runtime is the OCI-compatible plugin runtime
-	Runtime string `json:"runtime,omitempty"`
-
 	// Args is the list of args to spawn the process with.
 	Args []string `json:"args,omitempty"`
 
@@ -215,6 +208,9 @@ type RegisterPluginInput struct {
 
 	// OCIImage specifies the container image to run as a plugin.
 	OCIImage string `json:"oci_image,omitempty"`
+
+	// Runtime is the OCI-compatible plugin runtime
+	Runtime string `json:"runtime,omitempty"`
 
 	// Env specifies a list of key=value pairs to add to the plugin's environment
 	// variables.
