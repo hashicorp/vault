@@ -1,0 +1,3 @@
+```release-note:bug
+secrets/aws: Set region parameter to be used for STS only on AWS secrets engine
+```
