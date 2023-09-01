@@ -729,7 +729,7 @@ func (c *PluginCatalog) isDatabasePlugin(ctx context.Context, pluginRunner *plug
 	return merr.ErrorOrNil()
 }
 
-// UpdatePlugins will loop over all the plugins of unknown type and attempt to
+// UpgradePlugins will loop over all the plugins of unknown type and attempt to
 // upgrade them to typed plugins
 func (c *PluginCatalog) UpgradePlugins(ctx context.Context, logger log.Logger) error {
 	c.lock.Lock()

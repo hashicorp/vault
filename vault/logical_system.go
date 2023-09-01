@@ -532,6 +532,9 @@ func (b *SystemBackend) handlePluginCatalogUpdate(ctx context.Context, _ *logica
 		}
 	}
 
+	ociImage := d.Get("oci_image").(string)
+	runtime := d.Get("runtime").(string)
+
 	command := d.Get("command").(string)
 	if command == "" {
 		return logical.ErrorResponse("missing command value"), nil
@@ -561,13 +564,15 @@ func (b *SystemBackend) handlePluginCatalogUpdate(ctx context.Context, _ *logica
 	}
 
 	err = b.Core.pluginCatalog.Set(ctx, pluginutil.SetPluginInput{
-		Name:    pluginName,
-		Type:    pluginType,
-		Version: pluginVersion,
-		Command: parts[0],
-		Args:    args,
-		Env:     env,
-		Sha256:  sha256Bytes,
+		Name:     pluginName,
+		Type:     pluginType,
+		Version:  pluginVersion,
+		OCIImage: ociImage,
+		Runtime:  runtime,
+		Command:  parts[0],
+		Args:     args,
+		Env:      env,
+		Sha256:   sha256Bytes,
 	})
 	if err != nil {
 		if errors.Is(err, ErrPluginNotFound) || strings.HasPrefix(err.Error(), "plugin version mismatch") {
@@ -622,12 +627,17 @@ func (b *SystemBackend) handlePluginCatalogRead(ctx context.Context, _ *logical.
 	}
 
 	data := map[string]interface{}{
-		"name":    plugin.Name,
-		"args":    plugin.Args,
-		"command": command,
-		"sha256":  hex.EncodeToString(plugin.Sha256),
-		"builtin": plugin.Builtin,
-		"version": plugin.Version,
+		"name":      plugin.Name,
+		"oci_image": plugin.OCIImage,
+		"args":      plugin.Args,
+		"command":   command,
+		"sha256":    hex.EncodeToString(plugin.Sha256),
+		"builtin":   plugin.Builtin,
+		"version":   plugin.Version,
+	}
+
+	if plugin.Runtime != "" {
+		data["runtime"] = plugin.Runtime
 	}
 
 	if plugin.Builtin {
@@ -6079,6 +6089,14 @@ This path responds to the following HTTP methods.
 	"plugin-catalog_sha-256": {
 		`The SHA256 sum of the executable used in the
 command field. This should be HEX encoded.`,
+		"",
+	},
+	"plugin-catalog_oci-image": {
+		`The plugin OCI image.`,
+		"",
+	},
+	"plugin-catalog_runtime": {
+		`The registered OCI-compatible runtime for the plugin.`,
 		"",
 	},
 	"plugin-catalog_command": {

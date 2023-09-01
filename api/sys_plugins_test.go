@@ -144,6 +144,8 @@ func TestGetPlugin(t *testing.T) {
 				Builtin:           false,
 				Command:           "azure-plugin",
 				Name:              "azure",
+				OCIImage:          "hashicorp/vault-plugin-auth-azure",
+				Runtime:           "gvisor",
 				SHA256:            "8ba442dba253803685b05e35ad29dcdebc48dec16774614aa7a4ebe53c1e90e1",
 				DeprecationStatus: "",
 				Version:           "v1.0.0",
@@ -246,6 +248,7 @@ const getResponseOldServerVersion = `{
         "builtin": true,
         "command": "",
         "name": "azure",
+		""
         "sha256": ""
     },
     "wrap_info": null,
