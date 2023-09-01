@@ -17,12 +17,12 @@ import { resolve, reject } from 'rsvp';
 
 import getStorage from 'vault/lib/token-storage';
 import ENV from 'vault/config/environment';
-import { supportedAuthBackends } from 'vault/helpers/supported-auth-backends';
+import { allSupportedAuthBackends } from 'vault/helpers/supported-auth-backends';
 
 const TOKEN_SEPARATOR = '☃';
 const TOKEN_PREFIX = 'vault-';
 const ROOT_PREFIX = '_root_';
-const BACKENDS = supportedAuthBackends();
+const BACKENDS = allSupportedAuthBackends();
 
 export { TOKEN_SEPARATOR, TOKEN_PREFIX, ROOT_PREFIX };
 
