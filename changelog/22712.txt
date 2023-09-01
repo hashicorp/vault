@@ -1,0 +1,3 @@
+```release-note:feature
+**Plugin Containers**: Vault supports registering, managing, and running plugins inside a container on Linux.
+```
