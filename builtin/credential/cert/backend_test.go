@@ -1440,6 +1440,37 @@ func TestBackend_organizationalUnit_singleCert(t *testing.T) {
 	})
 }
 
+// Test a self-signed client with O (root CA) that is trusted
+func TestBackend_organization_singleCert(t *testing.T) {
+	connState, err := testConnState(
+		"test-fixtures/root/rootcawocert.pem",
+		"test-fixtures/root/rootcawokey.pem",
+		"test-fixtures/root/rootcawocert.pem",
+	)
+	if err != nil {
+		t.Fatalf("error testing connection state: %v", err)
+	}
+	ca, err := ioutil.ReadFile("test-fixtures/root/rootcawocert.pem")
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	logicaltest.Test(t, logicaltest.TestCase{
+		CredentialBackend: testFactory(t),
+		Steps: []logicaltest.TestStep{
+			testAccStepCert(t, "web", ca, "foo", allowed{organizations: "team.engineering"}, false),
+			testAccStepLogin(t, connState),
+			testAccStepCert(t, "web", ca, "foo", allowed{organizations: "team.eng*"}, false),
+			testAccStepLogin(t, connState),
+			testAccStepCert(t, "web", ca, "foo", allowed{organizations: "team.engineering,team.finance"}, false),
+			testAccStepLogin(t, connState),
+			testAccStepCert(t, "web", ca, "foo", allowed{organizations: "team.engineering1,team.finance"}, false),
+			testAccStepLoginInvalid(t, connState),
+			testAccStepCert(t, "web", ca, "foo", allowed{organizations: "foo"}, false),
+			testAccStepLoginInvalid(t, connState),
+		},
+	})
+}
+
 // Test a self-signed client with URI alt names (root CA) that is trusted
 func TestBackend_uri_singleCert(t *testing.T) {
 	u, err := url.Parse("spiffe://example.com/host")
@@ -1924,6 +1955,7 @@ type allowed struct {
 	emails               string // allowed email names in SAN extension of the certificate
 	uris                 string // allowed uris in SAN extension of the certificate
 	organizational_units string // allowed OUs in the certificate
+	organizations        string // allowed Os in the certificate
 	ext                  string // required extensions in the certificate
 	metadata_ext         string // allowed metadata extensions to add to identity alias
 }
@@ -1943,6 +1975,7 @@ func testAccStepCertWithExtraParams(t *testing.T, name string, cert []byte, poli
 		"allowed_email_sans":           testData.emails,
 		"allowed_uri_sans":             testData.uris,
 		"allowed_organizational_units": testData.organizational_units,
+		"allowed_organizations":        testData.organizations,
 		"required_extensions":          testData.ext,
 		"allowed_metadata_extensions":  testData.metadata_ext,
 		"lease":                        1000,
