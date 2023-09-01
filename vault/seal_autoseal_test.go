@@ -181,13 +181,13 @@ func TestAutoSeal_HealthCheck(t *testing.T) {
 	metrics.NewGlobal(metricsConf, inmemSink)
 
 	pBackend := newTestBackend(t)
-	testSealAccess, setErrs := seal.NewToggleableTestSeal(nil)
+	testSealAccess, setErrs := seal.NewToggleableTestSeal(&seal.TestSealOpts{Name: "health-test"})
 	core, _, _ := TestCoreUnsealedWithConfig(t, &CoreConfig{
 		MetricSink: metricsutil.NewClusterMetricSink("", inmemSink),
 		Physical:   pBackend,
 	})
-	sealHealthTestIntervalNominal = 10 * time.Millisecond
-	sealHealthTestIntervalUnhealthy = 10 * time.Millisecond
+	seal.HealthTestIntervalNominal = 10 * time.Millisecond
+	seal.HealthTestIntervalUnhealthy = 10 * time.Millisecond
 	autoSeal := NewAutoSeal(testSealAccess)
 	autoSeal.SetCore(core)
 	core.seal = autoSeal

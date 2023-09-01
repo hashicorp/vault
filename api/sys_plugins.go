@@ -146,6 +146,7 @@ type GetPluginResponse struct {
 	Args              []string `json:"args"`
 	Builtin           bool     `json:"builtin"`
 	Command           string   `json:"command"`
+	OCIImage          string   `json:"oci_image"`
 	Name              string   `json:"name"`
 	SHA256            string   `json:"sha256"`
 	OCIImage          string   `json:"oci_image"`
@@ -211,6 +212,13 @@ type RegisterPluginInput struct {
 
 	// Version is the optional version of the plugin being registered
 	Version string `json:"version,omitempty"`
+
+	// OCIImage specifies the container image to run as a plugin.
+	OCIImage string `json:"oci_image,omitempty"`
+
+	// Env specifies a list of key=value pairs to add to the plugin's environment
+	// variables.
+	Env []string `json:"env,omitempty"`
 }
 
 // RegisterPlugin wraps RegisterPluginWithContext using context.Background.

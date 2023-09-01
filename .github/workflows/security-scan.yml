@@ -57,7 +57,7 @@ jobs:
         mv scan-plugin-codeql "$HOME/.bin"
 
         # Semgrep
-        python3 -m pip install semgrep
+        python3 -m pip install semgrep==1.37.0
 
         # CodeQL
         LATEST=$(gh release list --repo https://github.com/github/codeql-action | cut -f 3 | sort --version-sort | tail -n1)
