@@ -40,6 +40,10 @@ export default ApplicationAdapter.extend({
         client_type: 'browser',
       },
     });
+    if (!response) {
+      // throw error, it will be caught in auth-saml component and not shown
+      throw new Error('SAML role is invalid');
+    }
     return {
       ...response.data,
       client_verifier: verifier,

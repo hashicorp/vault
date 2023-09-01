@@ -9,6 +9,7 @@ import Component from './outer-html';
 import { task, timeout, waitForEvent } from 'ember-concurrency';
 import { waitFor } from '@ember/test-waiters';
 import { computed } from '@ember/object';
+import errorMessage from 'vault/utils/error-message';
 
 const WAIT_TIME = 500;
 const ERROR_WINDOW_CLOSED =
@@ -60,13 +61,8 @@ export default Component.extend({
           adapterOptions: { namespace: this.namespace },
         });
       } catch (e) {
-        // throwing here causes failures in tests
-        if ((!e.httpStatus || e.httpStatus !== 400) && !Ember.testing) {
-          throw e;
-        }
-        if (e.errors && e.errors.length > 0) {
-          this.set('errorMessage', e.errors[0]);
-        }
+        this.set('errorMessage', errorMessage(e));
+        return;
       }
       this.set('role', role);
     })
