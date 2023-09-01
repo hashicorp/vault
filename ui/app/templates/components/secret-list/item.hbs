@@ -57,13 +57,6 @@
                         Details
                       </SecretLink>
                     </li>
-                    {{#if @backendModel.isV2KV}}
-                      <li class="action">
-                        <SecretLink @mode="versions" @secret={{@item.id}} class="has-text-black has-text-weight-semibold">
-                          View version history
-                        </SecretLink>
-                      </li>
-                    {{/if}}
                   {{/if}}
                   {{#if (or @item.canEditSecretData @item.canEdit)}}
                     <li class="action">
