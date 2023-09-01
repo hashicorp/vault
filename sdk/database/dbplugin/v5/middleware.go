@@ -13,9 +13,8 @@ import (
 	"github.com/armon/go-metrics"
 	"github.com/hashicorp/errwrap"
 	log "github.com/hashicorp/go-hclog"
-	"google.golang.org/grpc/status"
-
 	"github.com/hashicorp/vault/sdk/logical"
+	"google.golang.org/grpc/status"
 )
 
 // ///////////////////////////////////////////////////
