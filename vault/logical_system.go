@@ -620,9 +620,9 @@ func (b *SystemBackend) handlePluginCatalogRead(ctx context.Context, _ *logical.
 		return nil, nil
 	}
 
-	command := ""
+	command := plugin.Command
 	if !plugin.Builtin && plugin.OCIImage == "" {
-		command, err = filepath.Rel(b.Core.pluginCatalog.directory, plugin.Command)
+		command, err = filepath.Rel(b.Core.pluginCatalog.directory, command)
 		if err != nil {
 			return nil, err
 		}
