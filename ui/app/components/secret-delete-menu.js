@@ -11,9 +11,7 @@ import { alias } from '@ember/object/computed';
 import { maybeQueryRecord } from 'vault/macros/maybe-query-record';
 
 export default class SecretDeleteMenu extends Component {
-  @service store;
   @service router;
-  @service flashMessages;
 
   @maybeQueryRecord(
     'capabilities',
