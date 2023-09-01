@@ -289,7 +289,7 @@ func (d *ActivityLogDataGenerator) Write(ctx context.Context, writeOptions ...ge
 	if err != nil {
 		return nil, err
 	}
-	resp, err := d.client.Logical().WriteBytesWithContext(ctx, "sys/internal/counters/activity/write", data)
+	resp, err := d.client.Logical().WriteWithContext(ctx, "sys/internal/counters/activity/write", map[string]interface{}{"input": string(data)})
 	if err != nil {
 		return nil, err
 	}
