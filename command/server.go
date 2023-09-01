@@ -2642,13 +2642,13 @@ func setSeal(c *ServerCommand, config *server.Config, infoKeys []string, info ma
 			wrapper = aeadwrapper.NewShamirWrapper()
 		}
 
-		sealWrapper := vaultseal.SealWrapper{
-			Wrapper:        wrapper,
-			Priority:       configSeal.Priority,
-			Name:           configSeal.Name,
-			SealConfigType: configSeal.Type,
-			Disabled:       configSeal.Disabled,
-		}
+		sealWrapper := *vaultseal.NewSealWrapper(
+			wrapper,
+			configSeal.Priority,
+			configSeal.Name,
+			configSeal.Type,
+			configSeal.Disabled,
+		)
 
 		if configSeal.Disabled {
 			disabledSealWrappers = append(disabledSealWrappers, sealWrapper)

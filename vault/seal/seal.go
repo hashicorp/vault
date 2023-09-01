@@ -233,8 +233,6 @@ func NewAccess(logger hclog.Logger, sealGenerationInfo *SealGenerationInfo, seal
 	for i, sw := range sealWrappers {
 		v := sw
 		a.wrappersByPriority[i] = &v
-		v.Healthy = true
-		v.LastSeenHealthy = time.Now()
 	}
 
 	sort.Slice(a.wrappersByPriority, func(i int, j int) bool { return a.wrappersByPriority[i].Priority < a.wrappersByPriority[j].Priority })
@@ -276,9 +274,7 @@ func (a *access) AllSealWrappersHealthy() bool {
 		if sw.Disabled {
 			continue
 		}
-		sw.HcLock.RLock()
-		defer sw.HcLock.RUnlock()
-		if !sw.Healthy {
+		if !sw.IsHealthy() {
 			return false
 		}
 	}
@@ -361,6 +357,7 @@ func (a *access) Encrypt(ctx context.Context, plaintext []byte, options ...wrapp
 	errs := make(map[string]error)
 
 	for _, sealWrapper := range a.GetEnabledSealWrappersByPriority() {
+		now := time.Now()
 		var encryptErr error
 		defer func(now time.Time) {
 			metrics.MeasureSince([]string{"seal", "encrypt", "time"}, now)
@@ -370,7 +367,7 @@ func (a *access) Encrypt(ctx context.Context, plaintext []byte, options ...wrapp
 				metrics.IncrCounter([]string{"seal", "encrypt", "error"}, 1)
 				metrics.IncrCounter([]string{"seal", sealWrapper.Name, "encrypt", "error"}, 1)
 			}
-		}(time.Now())
+		}(now)
 
 		metrics.IncrCounter([]string{"seal", "encrypt"}, 1)
 		metrics.IncrCounter([]string{"seal", sealWrapper.Name, "encrypt"}, 1)
@@ -381,7 +378,7 @@ func (a *access) Encrypt(ctx context.Context, plaintext []byte, options ...wrapp
 			a.logger.Trace("error encrypting with seal", "seal", sealWrapper.Name, "err", encryptErr)
 
 			errs[sealWrapper.Name] = encryptErr
-			sealWrapper.Healthy = false
+			sealWrapper.SetHealthy(false, now)
 		} else {
 			a.logger.Trace("encrypted value using seal", "seal", sealWrapper.Name, "keyId", ciphertext.KeyInfo.KeyId)
 
