@@ -127,9 +127,9 @@ func TestPostgreSQL_Initialize_CloudGCP(t *testing.T) {
 		"credentials": {
 			req: dbplugin.InitializeRequest{
 				Config: map[string]interface{}{
-					"connection_url": connURL,
-					"auth_type":      connutil.AuthTypeGCPIAM,
-					"credentials":    credStr,
+					"connection_url":       connURL,
+					"auth_type":            connutil.AuthTypeGCPIAM,
+					"service_account_json": credStr,
 				},
 				VerifyConnection: true,
 			},
@@ -1179,24 +1179,24 @@ func TestNewUser_CloudGCP(t *testing.T) {
 			},
 			expectedRegex: "^v-displayn-longrole-[a-zA-Z0-9]{20}-[0-9]{10}$",
 		},
-		//"unique template": {
-		//	usernameTemplate: "foo-bar",
-		//	newUserData: dbplugin.UsernameMetadata{
-		//		DisplayName: "displayname",
-		//		RoleName:    "longrolename",
-		//	},
-		//	expectedRegex: "^foo-bar$",
-		//},
+		"unique template": {
+			usernameTemplate: "foo-bar",
+			newUserData: dbplugin.UsernameMetadata{
+				DisplayName: "displayname",
+				RoleName:    "longrolename",
+			},
+			expectedRegex: "^foo-bar$",
+		},
 	}
 
 	for name, test := range tests {
 		t.Run(name, func(t *testing.T) {
 			initReq := dbplugin.InitializeRequest{
 				Config: map[string]interface{}{
-					"connection_url":    connURL,
-					"username_template": test.usernameTemplate,
-					"auth_type":         connutil.AuthTypeGCPIAM,
-					"credentials":       credStr,
+					"connection_url":       connURL,
+					"username_template":    test.usernameTemplate,
+					"auth_type":            connutil.AuthTypeGCPIAM,
+					"service_account_json": credStr,
 				},
 				VerifyConnection: true,
 			}

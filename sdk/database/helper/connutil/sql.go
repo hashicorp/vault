@@ -42,7 +42,7 @@ type SQLConnectionProducer struct {
 	Username                 string      `json:"username" mapstructure:"username" structs:"username"`
 	Password                 string      `json:"password" mapstructure:"password" structs:"password"`
 	AuthType                 string      `json:"auth_type" mapstructure:"auth_type" structs:"auth_type"`
-	Credentials              string      `json:"credentials" mapstructure:"credentials" structs:"credentials"`
+	ServiceAccountJSON       string      `json:"service_account_json" mapstructure:"service_account_json" structs:"service_account_json"`
 	DisableEscaping          bool        `json:"disable_escaping" mapstructure:"disable_escaping" structs:"disable_escaping"`
 
 	// cloud options here - cloudDriverName is globally unique, but only needs to be retained for the lifetime
@@ -136,12 +136,12 @@ func (c *SQLConnectionProducer) Init(ctx context.Context, conf map[string]interf
 		// however, the driver might store a credentials file, in which case the state stored by the driver is in
 		// fact critical to the proper function of the connection. So it needs to be registered here inside the
 		// ConnectionProducer init.
-		cleanup, err := c.registerDrivers(c.cloudDriverName, c.Credentials)
+		dialerCleanup, err := c.registerDrivers(c.cloudDriverName, c.ServiceAccountJSON)
 		if err != nil {
 			return nil, err
 		}
 
-		c.cloudDialerCleanup = cleanup
+		c.cloudDialerCleanup = dialerCleanup
 	}
 
 	// Set initialized to true at this point since all fields are set,

@@ -38,7 +38,7 @@ type mySQLConnectionProducer struct {
 	Username                 string      `json:"username" mapstructure:"username" structs:"username"`
 	Password                 string      `json:"password" mapstructure:"password" structs:"password"`
 	AuthType                 string      `json:"auth_type" mapstructure:"auth_type" structs:"auth_type"`
-	Credentials              string      `json:"credentials" mapstructure:"credentials" structs:"credentials"`
+	ServiceAccountJSON       string      `json:"service_account_json" mapstructure:"service_account_json" structs:"service_account_json"`
 
 	TLSCertificateKeyData []byte `json:"tls_certificate_key" mapstructure:"tls_certificate_key" structs:"-"`
 	TLSCAData             []byte `json:"tls_ca"              mapstructure:"tls_ca"              structs:"-"`
@@ -130,16 +130,16 @@ func (c *mySQLConnectionProducer) Init(ctx context.Context, conf map[string]inte
 			return nil, fmt.Errorf("unable to generate UUID for IAM configuration: %w", err)
 		}
 
-		credentials := c.Credentials
-
 		// for _most_ sql databases, the driver itself contains no state. In the case of google's cloudsql drivers,
 		// however, the driver might store a credentials file, in which case the state stored by the driver is in
 		// fact critical to the proper function of the connection. So it needs to be registered here inside the
 		// ConnectionProducer init.
-		_, err := registerDriverMySQL(c.cloudDriverName, credentials)
+		dialerCleanup, err := registerDriverMySQL(c.cloudDriverName, c.ServiceAccountJSON)
 		if err != nil {
 			return nil, err
 		}
+
+		c.cloudDialerCleanup = dialerCleanup
 	}
 
 	// Set initialized to true at this point since all fields are set,

@@ -64,9 +64,9 @@ func TestMySQL_Initialize_CloudGCP(t *testing.T) {
 		"normal": {
 			req: dbplugin.InitializeRequest{
 				Config: map[string]interface{}{
-					"connection_url": connURL,
-					"auth_type":      connutil.AuthTypeGCPIAM,
-					"credentials":    credStr,
+					"connection_url":       connURL,
+					"auth_type":            connutil.AuthTypeGCPIAM,
+					"service_account_json": credStr,
 				},
 				VerifyConnection: true,
 			},
