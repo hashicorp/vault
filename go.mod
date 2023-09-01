@@ -60,7 +60,7 @@ require (
 	github.com/go-errors/errors v1.4.2
 	github.com/go-git/go-git/v5 v5.7.0
 	github.com/go-jose/go-jose/v3 v3.0.0
-	github.com/go-ldap/ldap/v3 v3.4.4
+	github.com/go-ldap/ldap/v3 v3.4.5
 	github.com/go-sql-driver/mysql v1.6.0
 	github.com/go-test/deep v1.1.0
 	github.com/go-zookeeper/zk v1.0.3
@@ -129,7 +129,7 @@ require (
 	github.com/hashicorp/vault-plugin-auth-cf v0.15.0
 	github.com/hashicorp/vault-plugin-auth-gcp v0.16.1
 	github.com/hashicorp/vault-plugin-auth-jwt v0.17.0
-	github.com/hashicorp/vault-plugin-auth-kerberos v0.10.0
+	github.com/hashicorp/vault-plugin-auth-kerberos v0.10.1-0.20230901001851-5c364232c9c7
 	github.com/hashicorp/vault-plugin-auth-kubernetes v0.16.0
 	github.com/hashicorp/vault-plugin-auth-oci v0.14.0
 	github.com/hashicorp/vault-plugin-database-couchbase v0.9.2
