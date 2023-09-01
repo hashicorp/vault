@@ -395,6 +395,18 @@ func (b *backend) matchesNames(clientCert *x509.Certificate, config *ParsedCert)
 			}
 		}
 
+		for _, name := range clientCert.Subject.OrganizationalUnit {
+			if glob.Glob(allowedName, name) {
+				return true
+			}
+		}
+
+		for _, name := range clientCert.Subject.Organization {
+			if glob.Glob(allowedName, name) {
+				return true
+			}
+		}
+
 	}
 	return false
 }
