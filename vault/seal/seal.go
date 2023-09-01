@@ -215,7 +215,7 @@ type access struct {
 
 var _ Access = (*access)(nil)
 
-func NewAccess(logger hclog.Logger, sealGenerationInfo *SealGenerationInfo, sealWrappers []SealWrapper) Access {
+func NewAccess(logger hclog.Logger, sealGenerationInfo *SealGenerationInfo, sealWrappers []*SealWrapper) Access {
 	if logger == nil {
 		logger = hclog.NewNullLogger()
 	}
@@ -231,10 +231,7 @@ func NewAccess(logger hclog.Logger, sealGenerationInfo *SealGenerationInfo, seal
 	}
 	a.wrappersByPriority = make([]*SealWrapper, len(sealWrappers))
 	for i, sw := range sealWrappers {
-		v := sw
-		a.wrappersByPriority[i] = &v
-		v.Healthy = true
-		v.LastSeenHealthy = time.Now()
+		a.wrappersByPriority[i] = sw
 	}
 
 	sort.Slice(a.wrappersByPriority, func(i int, j int) bool { return a.wrappersByPriority[i].Priority < a.wrappersByPriority[j].Priority })
@@ -242,7 +239,7 @@ func NewAccess(logger hclog.Logger, sealGenerationInfo *SealGenerationInfo, seal
 	return a
 }
 
-func NewAccessFromSealWrappers(logger hclog.Logger, generation uint64, rewrapped bool, sealWrappers []SealWrapper) (Access, error) {
+func NewAccessFromSealWrappers(logger hclog.Logger, generation uint64, rewrapped bool, sealWrappers []*SealWrapper) (Access, error) {
 	sealGenerationInfo := &SealGenerationInfo{
 		Generation: generation,
 	}
@@ -262,6 +259,16 @@ func NewAccessFromSealWrappers(logger hclog.Logger, generation uint64, rewrapped
 	return NewAccess(logger, sealGenerationInfo, sealWrappers), nil
 }
 
+// NewAccessFromWrapper creates an enabled Access for a single wrapping.Wrapper.
+// The Access has generation set to 1 and the rewrapped flag set to true.
+// The SealWrapper created uses the seal config type as the name, has priority set to 1 and the
+// disabled flag set to false.
+func NewAccessFromWrapper(logger hclog.Logger, wrapper wrapping.Wrapper, sealConfigType string) (Access, error) {
+	sealWrapper := NewSealWrapper(wrapper, 1, sealConfigType, sealConfigType, false)
+
+	return NewAccessFromSealWrappers(logger, 1, true, []*SealWrapper{sealWrapper})
+}
+
 func (a *access) GetAllSealWrappersByPriority() []*SealWrapper {
 	return copySealWrappers(a.wrappersByPriority, false)
 }
@@ -276,9 +283,7 @@ func (a *access) AllSealWrappersHealthy() bool {
 		if sw.Disabled {
 			continue
 		}
-		sw.HcLock.RLock()
-		defer sw.HcLock.RUnlock()
-		if !sw.Healthy {
+		if !sw.IsHealthy() {
 			return false
 		}
 	}
@@ -361,6 +366,7 @@ func (a *access) Encrypt(ctx context.Context, plaintext []byte, options ...wrapp
 	errs := make(map[string]error)
 
 	for _, sealWrapper := range a.GetEnabledSealWrappersByPriority() {
+		now := time.Now()
 		var encryptErr error
 		defer func(now time.Time) {
 			metrics.MeasureSince([]string{"seal", "encrypt", "time"}, now)
@@ -370,7 +376,7 @@ func (a *access) Encrypt(ctx context.Context, plaintext []byte, options ...wrapp
 				metrics.IncrCounter([]string{"seal", "encrypt", "error"}, 1)
 				metrics.IncrCounter([]string{"seal", sealWrapper.Name, "encrypt", "error"}, 1)
 			}
-		}(time.Now())
+		}(now)
 
 		metrics.IncrCounter([]string{"seal", "encrypt"}, 1)
 		metrics.IncrCounter([]string{"seal", sealWrapper.Name, "encrypt"}, 1)
@@ -381,7 +387,7 @@ func (a *access) Encrypt(ctx context.Context, plaintext []byte, options ...wrapp
 			a.logger.Trace("error encrypting with seal", "seal", sealWrapper.Name, "err", encryptErr)
 
 			errs[sealWrapper.Name] = encryptErr
-			sealWrapper.Healthy = false
+			sealWrapper.SetHealthy(false, now)
 		} else {
 			a.logger.Trace("encrypted value using seal", "seal", sealWrapper.Name, "keyId", ciphertext.KeyInfo.KeyId)
 

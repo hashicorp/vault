@@ -4,7 +4,7 @@
 package vault
 
 import (
-	aeadwrapper "github.com/hashicorp/go-kms-wrapping/wrappers/aead/v2"
+	"github.com/hashicorp/go-kms-wrapping/wrappers/aead/v2"
 	"github.com/hashicorp/vault/helper/testhelpers/corehelpers"
 	"github.com/hashicorp/vault/vault/seal"
 	testing "github.com/mitchellh/go-testing-interface"
@@ -17,13 +17,8 @@ func NewTestSeal(t testing.T, opts *seal.TestSealOpts) Seal {
 
 	switch opts.StoredKeys {
 	case seal.StoredKeysSupportedShamirRoot:
-		w := aeadwrapper.NewShamirWrapper()
-		sealAccess, err := seal.NewAccessFromSealWrappers(logger, opts.Generation, true, []seal.SealWrapper{
-			{
-				Wrapper:  w,
-				Priority: 1,
-				Name:     "shamir",
-			},
+		sealAccess, err := seal.NewAccessFromSealWrappers(logger, opts.Generation, true, []*seal.SealWrapper{
+			seal.NewSealWrapper(aead.NewShamirWrapper(), 1, "shamir", "shamir", false),
 		})
 		if err != nil {
 			t.Fatal("error creating test seal", err)
@@ -37,13 +32,8 @@ func NewTestSeal(t testing.T, opts *seal.TestSealOpts) Seal {
 		})
 		return newSeal
 	case seal.StoredKeysNotSupported:
-		w := aeadwrapper.NewShamirWrapper()
-		sealAccess, err := seal.NewAccessFromSealWrappers(logger, opts.Generation, true, []seal.SealWrapper{
-			{
-				Wrapper:  w,
-				Priority: 1,
-				Name:     "shamir",
-			},
+		sealAccess, err := seal.NewAccessFromSealWrappers(logger, opts.Generation, true, []*seal.SealWrapper{
+			seal.NewSealWrapper(aead.NewShamirWrapper(), 1, "shamir", "shamir", false),
 		})
 		if err != nil {
 			t.Fatal("error creating test seal", err)

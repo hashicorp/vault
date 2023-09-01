@@ -480,7 +480,7 @@ func (d *autoSeal) StartHealthCheck() {
 					// Seal wrapper is unhealthy
 					d.logger.Warn("seal wrapper health check failed", "seal_name", sealWrapper.Name, "err", err)
 					d.core.MetricSink().SetGaugeWithLabels(autoSealUnavailableDuration,
-						float32(time.Since(sealWrapper.LastSeenHealthy).Milliseconds()), mLabels)
+						float32(time.Since(sealWrapper.LastSeenHealthy()).Milliseconds()), mLabels)
 					allHealthy = false
 				} else {
 					// Seal wrapper is healthy
@@ -488,7 +488,7 @@ func (d *autoSeal) StartHealthCheck() {
 						d.logger.Debug("seal wrapper health test passed", "seal_name", sealWrapper.Name)
 					} else {
 						d.logger.Info("seal wrapper is now healthy again", "downtime", "seal_name", sealWrapper.Name,
-							now.Sub(sealWrapper.LastSeenHealthy).String())
+							now.Sub(sealWrapper.LastSeenHealthy()).String())
 					}
 					allUnhealthy = false
 				}

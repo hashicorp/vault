@@ -4998,14 +4998,15 @@ func (c *Core) GetSealBackendStatus(ctx context.Context) (*SealBackendStatusResp
 		for _, sealWrapper := range a.GetAllSealWrappersByPriority() {
 			b := SealBackendStatus{
 				Name:    sealWrapper.Name,
-				Healthy: sealWrapper.Healthy,
+				Healthy: sealWrapper.IsHealthy(),
 			}
-			if !sealWrapper.Healthy {
-				if !sealWrapper.LastSeenHealthy.IsZero() {
-					b.UnhealthySince = sealWrapper.LastSeenHealthy.String()
+			if !sealWrapper.IsHealthy() {
+				lastSeenHealthy := sealWrapper.LastSeenHealthy()
+				if !lastSeenHealthy.IsZero() {
+					b.UnhealthySince = lastSeenHealthy.String()
 				}
-				if uhMin.IsZero() || uhMin.After(sealWrapper.LastSeenHealthy) {
-					uhMin = sealWrapper.LastSeenHealthy
+				if uhMin.IsZero() || uhMin.After(lastSeenHealthy) {
+					uhMin = lastSeenHealthy
 				}
 			}
 			r.Backends = append(r.Backends, b)
