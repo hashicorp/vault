@@ -128,20 +128,6 @@ pre {
   background: $ui-gray-050;
   border-top: $base-border;
 }
-// kv engine clean up - can remove this style after you remove secret-delete-menu
-.modal-radio-button {
-  display: flex;
-  align-items: baseline;
-  margin-bottom: $spacing-xs;
-
-  input {
-    top: 2px;
-  }
-
-  .helper-text {
-    margin-left: 10px;
-  }
-}
 
 // customize spacing (.modal-card-body is restricted to padding: 20px)
 .modal-card-custom {

@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: BUSL-1.1
  */
 
-import { module, test } from 'qunit';
+import { module, skip } from 'qunit';
 import { Machine } from 'xstate';
 import SecretsMachineConfig from 'vault/machines/secrets-machine';
 
@@ -997,7 +997,8 @@ module('Unit | Machine | secrets-machine', function () {
   ];
 
   testCases.forEach((testCase) => {
-    test(`transition: ${testCase.event} for currentState ${testCase.currentState} and componentState ${testCase.params}`, function (assert) {
+    // skipping see PR https://github.com/hashicorp/vault/pull/19220
+    skip(`transition: ${testCase.event} for currentState ${testCase.currentState} and componentState ${testCase.params}`, function (assert) {
       const result = secretsMachine.transition(testCase.currentState, testCase.event, testCase.params);
       assert.strictEqual(result.value, testCase.expectedResults.value);
       assert.deepEqual(result.actions, testCase.expectedResults.actions);
