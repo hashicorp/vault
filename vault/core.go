@@ -686,6 +686,13 @@ type Core struct {
 	// contains absolute paths that we intend to forward (and template) when
 	// we're on a secondary cluster.
 	writeForwardedPaths *pathmanager.PathManager
+
+	// if populated, the callback is called for every request
+	// for testing purposes
+	requestResponseCallback func(logical.Backend, *logical.Request, *logical.Response)
+
+	// If any role based quota (LCQ or RLQ) is enabled, don't track lease counts by role
+	impreciseLeaseRoleTracking bool
 }
 
 // c.stateLock needs to be held in read mode before calling this function.
@@ -746,6 +753,9 @@ type CoreConfig struct {
 
 	// Use the deadlocks library to detect deadlocks
 	DetectDeadlocks string
+
+	// If any role based quota (LCQ or RLQ) is enabled, don't track lease counts by role
+	ImpreciseLeaseRoleTracking bool
 
 	// Disables the trace display for Sentinel checks
 	DisableSentinelTrace bool
@@ -1011,6 +1021,7 @@ func CreateCore(conf *CoreConfig) (*Core, error) {
 		experiments:                    conf.Experiments,
 		pendingRemovalMountsAllowed:    conf.PendingRemovalMountsAllowed,
 		expirationRevokeRetryBase:      conf.ExpirationRevokeRetryBase,
+		impreciseLeaseRoleTracking:     conf.ImpreciseLeaseRoleTracking,
 	}
 
 	c.standbyStopCh.Store(make(chan struct{}))

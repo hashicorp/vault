@@ -839,6 +839,7 @@ func testConfig_Sanitized(t *testing.T) {
 			"add_lease_metrics_namespace_labels":     false,
 		},
 		"administrative_namespace_path": "admin/",
+		"imprecise_lease_role_tracking": false,
 	}
 
 	addExpectedEntSanitizedConfig(expected, []string{"http"})
