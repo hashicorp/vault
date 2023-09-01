@@ -114,6 +114,7 @@ func CompilePlugin(t testing.T, typ consts.PluginType, pluginVersion string, plu
 		}
 		line = append(line, "-o", pluginPath, pluginMain)
 		cmd := exec.Command("go", line...)
+		cmd.Env = append(os.Environ(), "CGO_ENABLED=0")
 		cmd.Dir = dir
 		output, err := cmd.CombinedOutput()
 		if err != nil {
