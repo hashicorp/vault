@@ -217,6 +217,7 @@ func TestCoreWithSealAndUINoCleanup(t testing.T, opts *CoreConfig) *Core {
 	conf.Experiments = []string{experiments.VaultExperimentEventsAlpha1}
 	conf.CensusAgent = opts.CensusAgent
 	conf.AdministrativeNamespacePath = opts.AdministrativeNamespacePath
+	conf.ImpreciseLeaseRoleTracking = opts.ImpreciseLeaseRoleTracking
 
 	if opts.Logger != nil {
 		conf.Logger = opts.Logger
@@ -1523,6 +1524,7 @@ func NewTestCluster(t testing.T, base *CoreConfig, opts *TestClusterOptions) *Te
 		coreConfig.DisableAutopilot = base.DisableAutopilot
 		coreConfig.AdministrativeNamespacePath = base.AdministrativeNamespacePath
 		coreConfig.ServiceRegistration = base.ServiceRegistration
+		coreConfig.ImpreciseLeaseRoleTracking = base.ImpreciseLeaseRoleTracking
 
 		if base.BuiltinRegistry != nil {
 			coreConfig.BuiltinRegistry = base.BuiltinRegistry
