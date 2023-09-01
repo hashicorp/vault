@@ -12,6 +12,7 @@ import { maybeQueryRecord } from 'vault/macros/maybe-query-record';
 
 export default class SecretDeleteMenu extends Component {
   @service router;
+  @service store;
 
   @maybeQueryRecord(
     'capabilities',
