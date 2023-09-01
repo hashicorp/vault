@@ -340,4 +340,8 @@ a.button.disabled {
   &.white-icon svg {
     color: $white;
   }
+
+  &.user-menu div {
+    font-size: $size-7;
+  }
 }
