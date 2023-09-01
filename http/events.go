@@ -144,7 +144,7 @@ func (sub *eventSubscriber) allowMessage(eventNs, dataPath, eventType string) bo
 	if eventNs != "" {
 		nsDataPath = path.Join(eventNs, dataPath)
 	}
-	capabilities, eventTypes, err := sub.core.CapabilitiesAndSubscribeEventTypes(sub.ctx, sub.clientToken, nsDataPath)
+	capabilities, allowedEventTypes, err := sub.core.CapabilitiesAndSubscribeEventTypes(sub.ctx, sub.clientToken, nsDataPath)
 	if err != nil {
 		sub.logger.Debug("Error checking capabilities and event types for token", "error", err, "namespace", eventNs)
 		return false
@@ -152,7 +152,7 @@ func (sub *eventSubscriber) allowMessage(eventNs, dataPath, eventType string) bo
 	if !(slices.Contains(capabilities, "root") || slices.Contains(capabilities, "subscribe")) {
 		return false
 	}
-	for _, pattern := range eventTypes {
+	for _, pattern := range allowedEventTypes {
 		if glob.Glob(pattern, eventType) {
 			return true
 		}
