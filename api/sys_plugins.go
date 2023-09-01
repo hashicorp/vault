@@ -203,8 +203,11 @@ type RegisterPluginInput struct {
 	// Version is the optional version of the plugin being registered
 	Version string `json:"version,omitempty"`
 
+	// OCIImage specifies the container image to run as a plugin.
 	OCIImage string `json:"oci_image,omitempty"`
 
+	// Env specifies a list of key=value pairs to add to the plugin's environment
+	// variables.
 	Env []string `json:"env,omitempty"`
 }
 
