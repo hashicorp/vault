@@ -512,9 +512,9 @@ func (b *backend) matchesOrganizations(clientCert *x509.Certificate, config *Par
 	}
 
 	// At least one pattern must match at least one name if any patterns are specified
-	for _, allowedOrganizations := range config.Entry.AllowedOrganizations {
+	for _, allowedOrganization := range config.Entry.AllowedOrganizations {
 		for _, o := range clientCert.Subject.Organization {
-			if glob.Glob(allowedOrganizations, o) {
+			if glob.Glob(allowedOrganization, o) {
 				return true
 			}
 		}

@@ -161,6 +161,7 @@ At least one must exist in the OU field.`,
 				Description: `A comma-separated list of Organization names.
 At least one must exist in the O field.`,
 				DisplayAttrs: &framework.DisplayAttributes{
+					Name:        "Allowed Organizations",
 					Group:       "Constraints",
 					Description: "A list of Organization names. At least one must exist in the O field.",
 				},
