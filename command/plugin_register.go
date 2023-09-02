@@ -25,6 +25,7 @@ type PluginRegisterCommand struct {
 	flagSHA256   string
 	flagVersion  string
 	flagOCIImage string
+	flagRuntime  string
 	flagEnv      []string
 }
 
@@ -98,6 +99,13 @@ func (c *PluginRegisterCommand) Flags() *FlagSets {
 		Completion: complete.PredictAnything,
 		Usage: "OCI image to run. If specified, setting command, args, and env will update the " +
 			"container's entrypoint, args, and environment variables (append-only) respectively.",
+	})
+
+	f.StringVar(&StringVar{
+		Name:       "runtime",
+		Target:     &c.flagRuntime,
+		Completion: complete.PredictAnything,
+		Usage:      "OCI runtime for the plugin OCI image if specified. Default is gVisor/runsc",
 	})
 
 	f.StringSliceVar(&StringSliceVar{
@@ -175,6 +183,7 @@ func (c *PluginRegisterCommand) Run(args []string) int {
 		SHA256:   c.flagSHA256,
 		Version:  c.flagVersion,
 		OCIImage: c.flagOCIImage,
+		Runtime:  c.flagRuntime,
 		Env:      c.flagEnv,
 	}); err != nil {
 		c.UI.Error(fmt.Sprintf("Error registering plugin %s: %s", pluginName, err))

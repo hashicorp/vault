@@ -243,6 +243,7 @@ func TestFlagParsing(t *testing.T) {
 		name            string
 		command         string
 		ociImage        string
+		runtime         string
 		version         string
 		sha256          string
 		args            []string
@@ -260,11 +261,12 @@ func TestFlagParsing(t *testing.T) {
 			name:            "name",
 			command:         "cmd",
 			ociImage:        "image",
+			runtime:         "runtime",
 			version:         "v1.0.0",
 			sha256:          "abc123",
 			args:            []string{"--a=b", "--b=c", "positional"},
 			env:             []string{"x=1", "y=2"},
-			expectedPayload: `{"type":1,"args":["--a=b","--b=c","positional"],"command":"cmd","sha256":"abc123","version":"v1.0.0","oci_image":"image","env":["x=1","y=2"]}`,
+			expectedPayload: `{"type":1,"args":["--a=b","--b=c","positional"],"command":"cmd","sha256":"abc123","version":"v1.0.0","oci_image":"image","runtime":"runtime","env":["x=1","y=2"]}`,
 		},
 		"command remains empty if oci_image specified": {
 			pluginType:      api.PluginTypeCredential,
@@ -286,6 +288,9 @@ func TestFlagParsing(t *testing.T) {
 			}
 			if tc.ociImage != "" {
 				args = append(args, "-oci_image="+tc.ociImage)
+			}
+			if tc.runtime != "" {
+				args = append(args, "-runtime="+tc.runtime)
 			}
 			if tc.sha256 != "" {
 				args = append(args, "-sha256="+tc.sha256)
