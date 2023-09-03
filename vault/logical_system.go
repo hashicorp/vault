@@ -822,6 +822,15 @@ func (b *SystemBackend) handlePluginRuntimeCatalogDelete(ctx context.Context, _ 
 		return logical.ErrorResponse(err.Error()), nil
 	}
 
+	plugins, err := b.Core.pluginCatalog.ListPluginsWithRuntime(ctx, runtimeName)
+	if err != nil {
+		return nil, err
+	}
+
+	if len(plugins) != 0 {
+		return logical.ErrorResponse(fmt.Sprintf("unable to delete %q runtime. Registered plugins=%+v are referencing it.", runtimeName, plugins)), nil
+	}
+
 	err = b.Core.pluginRuntimeCatalog.Delete(ctx, runtimeName, runtimeType)
 	if err != nil {
 		return nil, err
