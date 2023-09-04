@@ -26,6 +26,7 @@ import (
 	"os"
 	"path/filepath"
 	"reflect"
+	"runtime"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -225,6 +226,7 @@ func TestCoreWithSealAndUINoCleanup(t testing.T, opts *CoreConfig) *Core {
 	conf.CensusAgent = opts.CensusAgent
 	conf.AdministrativeNamespacePath = opts.AdministrativeNamespacePath
 	conf.AllLoggers = logger.AllLoggers
+	conf.ImpreciseLeaseRoleTracking = opts.ImpreciseLeaseRoleTracking
 
 	if opts.Logger != nil {
 		conf.Logger = opts.Logger
@@ -1246,8 +1248,9 @@ type TestClusterOptions struct {
 }
 
 type TestPluginConfig struct {
-	Typ      consts.PluginType
-	Versions []string
+	Typ       consts.PluginType
+	Versions  []string
+	Container bool
 }
 
 var DefaultNumCores = 3
@@ -1557,6 +1560,7 @@ func NewTestCluster(t testing.T, base *CoreConfig, opts *TestClusterOptions) *Te
 		coreConfig.DisableAutopilot = base.DisableAutopilot
 		coreConfig.AdministrativeNamespacePath = base.AdministrativeNamespacePath
 		coreConfig.ServiceRegistration = base.ServiceRegistration
+		coreConfig.ImpreciseLeaseRoleTracking = base.ImpreciseLeaseRoleTracking
 
 		if base.BuiltinRegistry != nil {
 			coreConfig.BuiltinRegistry = base.BuiltinRegistry
@@ -1673,6 +1677,10 @@ func NewTestCluster(t testing.T, base *CoreConfig, opts *TestClusterOptions) *Te
 	}
 
 	if opts != nil && opts.Plugins != nil {
+		if opts.Plugins.Container && runtime.GOOS != "linux" {
+			t.Skip("Running plugins in containers is only supported on linux")
+		}
+
 		var pluginDir string
 		var cleanup func(t testing.T)
 
@@ -1684,7 +1692,11 @@ func NewTestCluster(t testing.T, base *CoreConfig, opts *TestClusterOptions) *Te
 
 		var plugins []pluginhelpers.TestPlugin
 		for _, version := range opts.Plugins.Versions {
-			plugins = append(plugins, pluginhelpers.CompilePlugin(t, opts.Plugins.Typ, version, coreConfig.PluginDirectory))
+			plugin := pluginhelpers.CompilePlugin(t, opts.Plugins.Typ, version, coreConfig.PluginDirectory)
+			if opts.Plugins.Container {
+				plugin.Image, plugin.ImageSha256 = pluginhelpers.BuildPluginContainerImage(t, plugin, coreConfig.PluginDirectory)
+			}
+			plugins = append(plugins, plugin)
 		}
 		testCluster.Plugins = plugins
 	}

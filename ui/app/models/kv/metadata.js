@@ -79,6 +79,7 @@ export default class KvSecretMetadataModel extends Model {
 
   // helps in long logic statements for state of a currentVersion
   get currentSecret() {
+    if (!this.versions || !this.currentVersion) return false;
     const data = this.versions[this.currentVersion];
     const state = data.destroyed ? 'destroyed' : data.deletion_time ? 'deleted' : 'created';
     return {

@@ -548,6 +548,9 @@ type Core struct {
 	// pluginCatalog is used to manage plugin configurations
 	pluginCatalog *PluginCatalog
 
+	// pluginRuntimeCatalog is used to manage plugin runtime configurations
+	pluginRuntimeCatalog *PluginRuntimeCatalog
+
 	// The userFailedLoginInfo map has user failed login information.
 	// It has user information (alias-name and mount accessor) as a key
 	// and login counter, last failed login time as value
@@ -697,6 +700,9 @@ type Core struct {
 	// if populated, the callback is called for every request
 	// for testing purposes
 	requestResponseCallback func(logical.Backend, *logical.Request, *logical.Response)
+
+	// If any role based quota (LCQ or RLQ) is enabled, don't track lease counts by role
+	impreciseLeaseRoleTracking bool
 }
 
 // c.stateLock needs to be held in read mode before calling this function.
@@ -757,6 +763,9 @@ type CoreConfig struct {
 
 	// Use the deadlocks library to detect deadlocks
 	DetectDeadlocks string
+
+	// If any role based quota (LCQ or RLQ) is enabled, don't track lease counts by role
+	ImpreciseLeaseRoleTracking bool
 
 	// Disables the trace display for Sentinel checks
 	DisableSentinelTrace bool
@@ -1036,6 +1045,7 @@ func CreateCore(conf *CoreConfig) (*Core, error) {
 		expirationRevokeRetryBase:      conf.ExpirationRevokeRetryBase,
 		rollbackMountPathMetrics:       conf.MetricSink.TelemetryConsts.RollbackMetricsIncludeMountPoint,
 		numRollbackWorkers:             conf.NumRollbackWorkers,
+		impreciseLeaseRoleTracking:     conf.ImpreciseLeaseRoleTracking,
 	}
 
 	c.standbyStopCh.Store(make(chan struct{}))
@@ -1110,13 +1120,7 @@ func CreateCore(conf *CoreConfig) (*Core, error) {
 		wrapper := aeadwrapper.NewShamirWrapper()
 		wrapper.SetConfig(context.Background(), awskms.WithLogger(c.logger.Named("shamir")))
 
-		access, err := vaultseal.NewAccessFromSealInfo(c.logger, 1, true, []vaultseal.SealInfo{
-			{
-				Wrapper:  wrapper,
-				Priority: 1,
-				Name:     "shamir",
-			},
-		})
+		access, err := vaultseal.NewAccessFromWrapper(c.logger, wrapper, SealConfigTypeShamir.String())
 		if err != nil {
 			return nil, err
 		}
@@ -2300,6 +2304,9 @@ func (s standardUnsealStrategy) unseal(ctx context.Context, logger log.Logger, c
 			return err
 		}
 	}
+	if err := c.setupPluginRuntimeCatalog(ctx); err != nil {
+		return err
+	}
 	if err := c.setupPluginCatalog(ctx); err != nil {
 		return err
 	}
@@ -2879,13 +2886,7 @@ func (c *Core) adjustForSealMigration(unwrapSeal Seal) error {
 
 			// See note about creating a SealGenerationInfo for the unwrap seal in
 			// function setSeal in server.go.
-			sealAccess, err := vaultseal.NewAccessFromSealInfo(c.logger, 1, true, []vaultseal.SealInfo{
-				{
-					Wrapper:  aeadwrapper.NewShamirWrapper(),
-					Priority: 1,
-					Name:     "shamir",
-				},
-			})
+			sealAccess, err := vaultseal.NewAccessFromWrapper(c.logger, aeadwrapper.NewShamirWrapper(), SealConfigTypeShamir.String())
 			if err != nil {
 				return err
 			}
@@ -3107,13 +3108,7 @@ func (c *Core) unsealKeyToRootKey(ctx context.Context, seal Seal, combinedKey []
 		if useTestSeal {
 			// Note that the seal generation should not matter, since the only thing we are doing with
 			// this seal is calling GetStoredKeys (i.e. we are not encrypting anything).
-			sealAccess, err := vaultseal.NewAccessFromSealInfo(c.logger, 1, true, []vaultseal.SealInfo{
-				{
-					Wrapper:  aeadwrapper.NewShamirWrapper(),
-					Priority: 1,
-					Name:     "shamir",
-				},
-			})
+			sealAccess, err := vaultseal.NewAccessFromWrapper(c.logger, aeadwrapper.NewShamirWrapper(), SealConfigTypeShamir.String())
 			if err != nil {
 				return nil, fmt.Errorf("failed to setup seal wrapper for test barrier config: %w", err)
 			}

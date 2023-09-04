@@ -25,6 +25,7 @@ module('Integration | Component | dashboard/overview', function (hooks) {
       performance: {
         clusterId: 'abc-1',
         state: 'running',
+        isPrimary: true,
       },
     };
     this.store.pushPayload('secret-engine', {
@@ -59,6 +60,29 @@ module('Integration | Component | dashboard/overview', function (hooks) {
       ],
     };
     this.refreshModel = () => {};
+  });
+
+  test('it should show dashboard empty states', async function (assert) {
+    this.version = this.owner.lookup('service:version');
+    this.version.version = '1.13.1';
+    this.isRootNamespace = true;
+    await render(
+      hbs`
+        <Dashboard::Overview
+          @version={{this.version}}
+          @isRootNamespace={{this.isRootNamespace}}
+          @refreshModel={{this.refreshModel}} />
+      `
+    );
+    assert.dom('[data-test-dashboard-version-header]').exists();
+    assert.dom(SELECTORS.cardName('secrets-engines')).exists();
+    assert.dom(SELECTORS.emptyState('secrets-engines')).exists();
+    assert.dom(SELECTORS.cardName('learn-more')).exists();
+    assert.dom(SELECTORS.cardName('quick-actions')).exists();
+    assert.dom(SELECTORS.emptyState('quick-actions')).exists();
+    assert.dom(SELECTORS.cardName('configuration-details')).doesNotExist();
+    assert.dom(SELECTORS.cardName('replication')).doesNotExist();
+    assert.dom(SELECTORS.cardName('client-count')).doesNotExist();
   });
 
   test('it should hide client count and replication card on community', async function (assert) {
@@ -135,6 +159,7 @@ module('Integration | Component | dashboard/overview', function (hooks) {
     );
 
     assert.dom('[data-test-dashboard-version-header]').exists();
+    assert.dom('[data-test-badge-namespace]').exists();
     assert.dom(SELECTORS.cardName('secrets-engines')).exists();
     assert.dom(SELECTORS.cardName('learn-more')).exists();
     assert.dom(SELECTORS.cardName('quick-actions')).exists();
@@ -166,6 +191,7 @@ module('Integration | Component | dashboard/overview', function (hooks) {
     );
 
     assert.dom('[data-test-dashboard-version-header]').exists();
+    assert.dom('[data-test-badge-namespace]').exists();
     assert.dom(SELECTORS.cardName('secrets-engines')).exists();
     assert.dom(SELECTORS.cardName('learn-more')).exists();
     assert.dom(SELECTORS.cardName('quick-actions')).exists();

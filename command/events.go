@@ -5,6 +5,7 @@ package command
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/http"
 	"os"
@@ -147,19 +148,24 @@ func (c *EventsSubscribeCommands) subscribeRequest(client *api.Client, path stri
 			HTTPClient: client.CloneConfig().HttpClient,
 			HTTPHeader: client.Headers(),
 		})
-		if err != nil {
-			if resp != nil {
-				if resp.StatusCode == http.StatusNotFound {
-					return fmt.Errorf("events endpoint not found; check `vault read sys/experiments` to see if an events experiment is available but disabled")
-				} else if resp.StatusCode == http.StatusTemporaryRedirect {
-					url = resp.Header.Get("Location")
-					continue
-				}
-			}
+
+		if err == nil {
+			break
+		}
+
+		switch {
+		case resp == nil:
+			return err
+		case resp.StatusCode == http.StatusTemporaryRedirect:
+			url = resp.Header.Get("Location")
+			continue
+		case resp.StatusCode == http.StatusNotFound:
+			return errors.New("events endpoint not found; check `vault read sys/experiments` to see if an events experiment is available but disabled")
+		default:
 			return err
 		}
-		break
 	}
+
 	if conn == nil {
 		return fmt.Errorf("too many redirects")
 	}

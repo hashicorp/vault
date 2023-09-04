@@ -68,11 +68,6 @@ export default class KvSecretEdit extends Component {
       : JSON.stringify(newData, undefined, 2);
   }
 
-  @action
-  toggleJsonView() {
-    this.showJsonView = !this.showJsonView;
-  }
-
   @task
   *save(event) {
     event.preventDefault();
