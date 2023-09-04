@@ -243,6 +243,12 @@ func TestCoreWithSealAndUINoCleanup(t testing.T, opts *CoreConfig) *Core {
 	for k, v := range opts.AuditBackends {
 		conf.AuditBackends[k] = v
 	}
+	if opts.RollbackPeriod != time.Duration(0) {
+		conf.RollbackPeriod = opts.RollbackPeriod
+	}
+	if opts.NumRollbackWorkers != 0 {
+		conf.NumRollbackWorkers = opts.NumRollbackWorkers
+	}
 
 	conf.ActivityLogConfig = opts.ActivityLogConfig
 	testApplyEntBaseConfig(conf, opts)
@@ -299,6 +305,7 @@ func testCoreConfig(t testing.T, physicalBackend physical.Backend, logger log.Lo
 		CredentialBackends: credentialBackends,
 		DisableMlock:       true,
 		Logger:             logger,
+		NumRollbackWorkers: 10,
 		BuiltinRegistry:    corehelpers.NewMockBuiltinRegistry(),
 	}
 
