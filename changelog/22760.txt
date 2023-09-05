@@ -1,0 +1,3 @@
+```release-note:bug
+core/seal: add a workaround for potential connection [[hangs](https://github.com/Azure/azure-sdk-for-go/issues/21346)] in Azure autoseals.
+```
