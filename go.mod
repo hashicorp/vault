@@ -144,7 +144,7 @@ require (
 	github.com/hashicorp/vault-plugin-secrets-alicloud v0.15.1
 	github.com/hashicorp/vault-plugin-secrets-azure v0.16.1
 	github.com/hashicorp/vault-plugin-secrets-gcp v0.17.0
-	github.com/hashicorp/vault-plugin-secrets-gcpkms v0.15.0
+	github.com/hashicorp/vault-plugin-secrets-gcpkms v0.15.1
 	github.com/hashicorp/vault-plugin-secrets-kubernetes v0.5.0
 	github.com/hashicorp/vault-plugin-secrets-kv v0.16.1
 	github.com/hashicorp/vault-plugin-secrets-mongodbatlas v0.10.1
@@ -232,11 +232,11 @@ require (
 )
 
 require (
-	cloud.google.com/go v0.110.6 // indirect
+	cloud.google.com/go v0.110.7 // indirect
 	cloud.google.com/go/compute v1.23.0 // indirect
 	cloud.google.com/go/compute/metadata v0.2.3 // indirect
 	cloud.google.com/go/iam v1.1.1 // indirect
-	cloud.google.com/go/kms v1.15.0 // indirect
+	cloud.google.com/go/kms v1.15.1 // indirect
 	code.cloudfoundry.org/gofileutils v0.0.0-20170111115228-4d0c80011a0f // indirect
 	github.com/99designs/go-keychain v0.0.0-20191008050251-8e49817e8af4 // indirect
 	github.com/99designs/keyring v1.2.2 // indirect
@@ -513,7 +513,7 @@ require (
 	golang.org/x/time v0.3.0 // indirect
 	golang.org/x/xerrors v0.0.0-20220907171357-04be3eba64a2 // indirect
 	google.golang.org/appengine v1.6.7 // indirect
-	google.golang.org/genproto v0.0.0-20230803162519-f966b187b2e5 // indirect
+	google.golang.org/genproto v0.0.0-20230822172742-b8732ec3820d // indirect
 	google.golang.org/genproto/googleapis/api v0.0.0-20230803162519-f966b187b2e5 // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20230807174057-1744710a1577 // indirect
 	gopkg.in/inf.v0 v0.9.1 // indirect
