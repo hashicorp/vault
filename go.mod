@@ -71,11 +71,11 @@ require (
 	github.com/hashicorp/go-discover v0.0.0-20210818145131-c573d69da192
 	github.com/hashicorp/go-gcp-common v0.8.0
 	github.com/hashicorp/go-hclog v1.5.0
-	github.com/hashicorp/go-kms-wrapping/v2 v2.0.8
+	github.com/hashicorp/go-kms-wrapping/v2 v2.0.9-0.20230228100945-740d2999c798
 	github.com/hashicorp/go-kms-wrapping/wrappers/aead/v2 v2.0.7-1
 	github.com/hashicorp/go-kms-wrapping/wrappers/alicloudkms/v2 v2.0.1
 	github.com/hashicorp/go-kms-wrapping/wrappers/awskms/v2 v2.0.7
-	github.com/hashicorp/go-kms-wrapping/wrappers/azurekeyvault/v2 v2.0.7
+	github.com/hashicorp/go-kms-wrapping/wrappers/azurekeyvault/v2 v2.0.8-0.20230905162003-bfa3347a7c85
 	github.com/hashicorp/go-kms-wrapping/wrappers/gcpckms/v2 v2.0.8
 	github.com/hashicorp/go-kms-wrapping/wrappers/ocikms/v2 v2.0.7
 	github.com/hashicorp/go-kms-wrapping/wrappers/transit/v2 v2.0.7
