@@ -80,12 +80,9 @@ export default class InfoTableRowComponent extends Component {
 
   @action
   calculateValueOverflow(el) {
-    const valueDiv = el;
     const valueText = el.querySelector('[truncate-value]');
-    if (valueDiv && valueText) {
-      if (valueText.offsetWidth > valueDiv.offsetWidth) {
-        this.hasValueOverflow = true;
-      }
+    if (valueText) {
+      this.hasValueOverflow = true;
     }
   }
 }

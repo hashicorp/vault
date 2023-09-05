@@ -35,7 +35,7 @@
       {{/if}}
     </div>
     <div
-      class="column is-flex {{if this.hasValueOverflow 'is-two-thirds'}}"
+      class="column {{if this.hasValueOverflow 'is-two-thirds is-flex-center' 'is-flex'}}"
       data-test-value-div={{@label}}
       {{did-insert this.calculateValueOverflow}}
     >
