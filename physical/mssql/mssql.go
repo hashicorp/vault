@@ -13,10 +13,10 @@ import (
 	"strings"
 	"time"
 
-	"github.com/armon/go-metrics"
+	metrics "github.com/armon/go-metrics"
+	_ "github.com/denisenkom/go-mssqldb"
 	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-secure-stdlib/strutil"
-	_ "github.com/microsoft/go-mssqldb"
 
 	"github.com/hashicorp/vault/sdk/physical"
 )
