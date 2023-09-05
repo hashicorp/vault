@@ -242,6 +242,11 @@ func TestRollbackManager_WorkerPool(t *testing.T) {
 			select {
 			case i := <-ran:
 				got[i] = true
+
+				// keep this goroutine running even after there are 10 paths.
+				// More rollback operations might get queued before Stop() is
+				// called, and we don't want them to block on writing the to the
+				// ran channel
 				if len(got) == 10 && !channelClosed {
 					close(gotAllPaths)
 					channelClosed = true
