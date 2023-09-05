@@ -45,6 +45,7 @@ type SSHCommand struct {
 	flagHostKeyMountPoint string
 	flagHostKeyHostnames  string
 	flagValidPrincipals   string
+	flagExtensions        string
 }
 
 func (c *SSHCommand) Synopsis() string {
@@ -206,6 +207,17 @@ func (c *SSHCommand) Flags() *FlagSets {
 		Completion: complete.PredictAnything,
 		Usage: "List of valid principal names to include in the generated " +
 			"user certificate. This is specified as a comma-separated list of values.",
+	})
+
+	f.StringVar(&StringVar{
+		Name:       "extensions",
+		Target:     &c.flagExtensions,
+		Default:    "",
+		EnvVar:     "",
+		Completion: complete.PredictAnything,
+		Usage: "List of extensions to include in the generated user certificate. " +
+			"This is specified as a comma-separated list of values. Role's " +
+			"default extensions are used by default.",
 	})
 
 	f.StringVar(&StringVar{
@@ -380,6 +392,13 @@ func (c *SSHCommand) handleTypeCA(username, ip, port string, sshArgs []string) i
 		principals = c.flagValidPrincipals
 	}
 
+	extensions := map[string]string{}
+	if c.flagExtensions != "" {
+		for _, extension := range strings.Split(c.flagExtensions, ",") {
+			extensions[extension] = ""
+		}
+	}
+
 	// Attempt to sign the public key
 	secret, err := sshClient.SignKey(c.flagRole, map[string]interface{}{
 		// WARNING: publicKey is []byte, which is b64 encoded on JSON upload. We
@@ -387,16 +406,7 @@ func (c *SSHCommand) handleTypeCA(username, ip, port string, sshArgs []string) i
 		"public_key":       string(publicKey),
 		"valid_principals": principals,
 		"cert_type":        "user",
-
-		// TODO: let the user configure these. In the interim, if users want to
-		// customize these values, they can produce the key themselves.
-		"extensions": map[string]string{
-			"permit-X11-forwarding":   "",
-			"permit-agent-forwarding": "",
-			"permit-port-forwarding":  "",
-			"permit-pty":              "",
-			"permit-user-rc":          "",
-		},
+		"extensions":       extensions,
 	})
 	if err != nil {
 		c.UI.Error(fmt.Sprintf("failed to sign public key %s: %s",
