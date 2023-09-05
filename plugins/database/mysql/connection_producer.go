@@ -14,14 +14,12 @@ import (
 	"time"
 
 	cloudmysql "cloud.google.com/go/cloudsqlconn/mysql/mysql"
-
 	"github.com/go-sql-driver/mysql"
 	"github.com/hashicorp/go-secure-stdlib/parseutil"
 	"github.com/hashicorp/go-uuid"
-	"github.com/mitchellh/mapstructure"
-
 	"github.com/hashicorp/vault/sdk/database/helper/connutil"
 	"github.com/hashicorp/vault/sdk/database/helper/dbutil"
+	"github.com/mitchellh/mapstructure"
 )
 
 const (
