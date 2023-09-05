@@ -34,7 +34,11 @@
         <Icon @name="minus" />
       {{/if}}
     </div>
-    <div class="column is-flex" data-test-value-div={{@label}}>
+    <div
+      class="column is-flex {{if this.hasValueOverflow 'is-two-thirds'}}"
+      data-test-value-div={{@label}}
+      {{did-insert this.calculateValueOverflow}}
+    >
       {{#if @addCopyButton}}
         <div class="display-only">
           <CopyButton

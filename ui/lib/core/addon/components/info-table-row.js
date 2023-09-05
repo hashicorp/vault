@@ -39,6 +39,8 @@ import { action } from '@ember/object';
 export default class InfoTableRowComponent extends Component {
   @tracked
   hasLabelOverflow = false; // is calculated and set in didInsertElement
+  @tracked
+  hasValueOverflow = false; // is calculated and set in didInsertElement
 
   get isVisible() {
     return this.args.alwaysRender || !this.valueIsEmpty;
@@ -72,6 +74,17 @@ export default class InfoTableRowComponent extends Component {
     if (labelDiv && labelText) {
       if (labelText.offsetWidth > labelDiv.offsetWidth) {
         this.hasLabelOverflow = true;
+      }
+    }
+  }
+
+  @action
+  calculateValueOverflow(el) {
+    const valueDiv = el;
+    const valueText = el.querySelector('[truncate-value]');
+    if (valueDiv && valueText) {
+      if (valueText.offsetWidth > valueDiv.offsetWidth) {
+        this.hasValueOverflow = true;
       }
     }
   }
