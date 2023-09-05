@@ -1253,13 +1253,8 @@ func (c *Core) handleRequest(ctx context.Context, req *logical.Request) (retResp
 						NamespaceID: ns.ID,
 					}
 
-					// Check for request role in context to role based quotas
-					var role string
-					if reqRole := ctx.Value(logical.CtxKeyRequestRole{}); reqRole != nil {
-						role = reqRole.(string)
-					}
-
-					if err := c.expiration.RegisterAuth(ctx, registeredTokenEntry, resp.Auth, role); err != nil {
+					// Only logins apply to role based quotas, so we can omit the role here, as we are not logging in.
+					if err := c.expiration.RegisterAuth(ctx, registeredTokenEntry, resp.Auth, ""); err != nil {
 						// Best-effort clean up on error, so we log the cleanup error as
 						// a warning but still return as internal error.
 						if err := c.tokenStore.revokeOrphan(ctx, resp.Auth.ClientToken); err != nil {
@@ -1490,7 +1485,8 @@ func (c *Core) handleLoginRequest(ctx context.Context, req *logical.Request) (re
 
 		// Check for request role in context to role based quotas
 		var role string
-		if reqRole := ctx.Value(logical.CtxKeyRequestRole{}); reqRole != nil {
+		reqRole := ctx.Value(logical.CtxKeyRequestRole{})
+		if reqRole != nil {
 			role = reqRole.(string)
 		}
 
@@ -1690,6 +1686,19 @@ func (c *Core) handleLoginRequest(ctx context.Context, req *logical.Request) (re
 
 		// Attach the display name, might be used by audit backends
 		req.DisplayName = auth.DisplayName
+
+		requiresLease := resp.Auth.TokenType != logical.TokenTypeBatch
+
+		// If role was not already determined by http.rateLimitQuotaWrapping
+		// and a lease will be generated, calculate a role for the leaseEntry.
+		// We can skip this step if there are no pre-existing role-based quotas
+		// for this mount and Vault is configured to skip lease role-based lease counting
+		// until after they're created. This effectively zeroes out the lease count
+		// for new role-based quotas upon creation, rather than counting old leases toward
+		// the total.
+		if reqRole == nil && requiresLease && !c.impreciseLeaseRoleTracking {
+			role = c.DetermineRoleFromLoginRequest(ctx, req.MountPoint, req.Data)
+		}
 
 		leaseGen, respTokenCreate, errCreateToken := c.LoginCreateToken(ctx, ns, req.Path, source, role, resp)
 		leaseGenerated = leaseGen

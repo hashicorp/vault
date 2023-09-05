@@ -9,9 +9,10 @@ export const PAGE = {
   breadcrumbs: '[data-test-breadcrumbs]',
   breadcrumb: '[data-test-breadcrumbs] li',
   breadcrumbAtIdx: (idx) => `[data-test-crumb="${idx}"] a`,
+  infoRow: '[data-test-component="info-table-row"]',
   infoRowValue: (label) => `[data-test-value-div="${label}"]`,
   infoRowToggleMasked: (label) => `[data-test-value-div="${label}"] [data-test-button="toggle-masked"]`,
-  secretTab: (tab) => `[data-test-secrets-tab="${tab}"]`,
+  secretTab: (tab) => (tab ? `[data-test-secrets-tab="${tab}"]` : '[data-test-secrets-tab]'),
   emptyStateTitle: '[data-test-empty-state-title]',
   emptyStateMessage: '[data-test-empty-state-message]',
   emptyStateActions: '[data-test-empty-state-actions]',
@@ -22,7 +23,7 @@ export const PAGE = {
   },
   toolbar: 'nav.toolbar',
   toolbarAction: 'nav.toolbar-actions .toolbar-link',
-  secretRow: '[data-test-component="info-table-row"]',
+  secretRow: '[data-test-component="info-table-row"]', // replace with infoRow
   // specific page selectors
   backends: {
     link: (backend) => `[data-test-secrets-backend-link="${backend}"]`,
@@ -49,10 +50,17 @@ export const PAGE = {
     deleteOptionLatest: 'input#delete-latest-version',
     deleteConfirm: '[data-test-delete-modal-confirm]',
   },
+  edit: {
+    toggleDiff: '[data-test-toggle-input="Show diff"',
+    toggleDiffDescription: '[data-test-diff-description]',
+    visualDiff: '[data-test-visual-diff]',
+    added: `.jsondiffpatch-added`,
+    deleted: `.jsondiffpatch-deleted`,
+  },
   list: {
     createSecret: '[data-test-toolbar-create-secret]',
     item: (secret) => (!secret ? '[data-test-list-item]' : `[data-test-list-item="${secret}"]`),
-    filter: `[data-test-component="kv-list-filter"]`,
+    filter: `[data-test-kv-list-filter]`,
     overviewCard: '[data-test-overview-card-container="View secret"]',
     overviewInput: '[data-test-view-secret] input',
     overviewButton: '[data-test-get-secret-detail]',

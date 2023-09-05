@@ -8,7 +8,17 @@ description: |-
 
 # `pkcs11` seal
 
--> **Note:** The Seal Wrap functionality is enabled by default. For this reason, HSM must be available throughout Vault's runtime and not just during the unseal process. Refer to the [Seal Wrap](/vault/docs/enterprise/sealwrap) documentation for more information.
+
+<Note title="Auto-unseal and seal wrapping requires Vault Enterprise">
+
+  Auto-unseal **and** seal wrapping for PKCS11 require Vault Enterprise.
+  
+  Vault Enterprise enables seal wrapping by default, which means the KMS service
+  must be available at runtime and not just during the unseal process. Refer to
+  the [Seal wrap](/vault/docs/enterprise/sealwrap) overview for more
+  information.
+
+</Note>
 
 The PKCS11 seal configures Vault to use an HSM with PKCS11 as the seal wrapping
 mechanism. Vault Enterprise's HSM PKCS11 support is activated by one of the

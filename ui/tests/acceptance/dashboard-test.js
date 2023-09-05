@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: MPL-2.0
  */
 
-import { module, test, skip } from 'qunit';
+import { module, test } from 'qunit';
 import {
   visit,
   currentURL,
@@ -34,6 +34,7 @@ import SECRETS_ENGINE_SELECTORS from 'vault/tests/helpers/components/dashboard/s
 import VAULT_CONFIGURATION_SELECTORS from 'vault/tests/helpers/components/dashboard/vault-configuration-details-card';
 import QUICK_ACTION_SELECTORS from 'vault/tests/helpers/components/dashboard/quick-actions-card';
 import REPLICATION_CARD_SELECTORS from 'vault/tests/helpers/components/dashboard/replication-card';
+import { SELECTORS } from 'vault/tests/helpers/components/dashboard/dashboard-selectors';
 
 const consoleComponent = create(consoleClass);
 
@@ -78,38 +79,6 @@ module('Acceptance | landing page dashboard', function (hooks) {
       assert.dom('[data-test-secrets-engines-row="nomad"] [data-test-view]').doesNotExist();
       // cleanup engine mount
       await consoleComponent.runCommands(deleteEngineCmd('nomad'));
-    });
-  });
-
-  module('learn more card', function (hooks) {
-    hooks.beforeEach(function () {
-      return authPage.login();
-    });
-    skip('shows the learn more card on community', async function (assert) {
-      await visit('/vault/dashboard');
-      assert.dom('[data-test-learn-more-title]').hasText('Learn more');
-      assert
-        .dom('[data-test-learn-more-subtext]')
-        .hasText(
-          'Explore the features of Vault and learn advance practices with the following tutorials and documentation.'
-        );
-      assert.dom('[data-test-learn-more-links] a').exists({ count: 3 });
-      assert
-        .dom('[data-test-feedback-form]')
-        .hasText("Don't see what you're looking for on this page? Let us know via our feedback form .");
-    });
-    test('shows the learn more card on enterprise', async function (assert) {
-      await visit('/vault/dashboard');
-      assert.dom('[data-test-learn-more-title]').hasText('Learn more');
-      assert
-        .dom('[data-test-learn-more-subtext]')
-        .hasText(
-          'Explore the features of Vault and learn advance practices with the following tutorials and documentation.'
-        );
-      assert.dom('[data-test-learn-more-links] a').exists({ count: 4 });
-      assert
-        .dom('[data-test-feedback-form]')
-        .hasText("Don't see what you're looking for on this page? Let us know via our feedback form .");
     });
   });
 
@@ -363,24 +332,6 @@ module('Acceptance | landing page dashboard', function (hooks) {
     });
   });
 
-  skip('replication and client count card community version', function (hooks) {
-    hooks.beforeEach(async function () {
-      this.store = this.owner.lookup('service:store');
-      await authPage.login();
-    });
-
-    test('hides replication card for community version', async function (assert) {
-      const version = this.owner.lookup('service:version');
-      assert.false(version.isEnterprise, 'version is not enterprise');
-
-      assert.dom('[data-test-replication-card]').doesNotExist();
-    });
-
-    test('hides the client count card in community version', async function (assert) {
-      assert.dom('[data-test-client-count-card]').doesNotExist();
-    });
-  });
-
   module('client counts card enterprise', function (hooks) {
     hooks.before(async function () {
       ENV['ember-cli-mirage'].handler = 'clients';
@@ -400,7 +351,7 @@ module('Acceptance | landing page dashboard', function (hooks) {
       const version = this.owner.lookup('service:version');
       assert.true(version.isEnterprise, 'version is enterprise');
       assert.strictEqual(currentURL(), '/vault/dashboard');
-      assert.dom('[data-test-client-count-card]').exists();
+      assert.dom(SELECTORS.cardName('client-count')).exists();
       const response = await this.store.peekRecord('clients/activity', 'some-activity-id');
       assert.dom('[data-test-client-count-title]').hasText('Client count');
       assert.dom('[data-test-stat-text="total-clients"] .stat-label').hasText('Total');
@@ -463,13 +414,13 @@ module('Acceptance | landing page dashboard', function (hooks) {
         .dom(REPLICATION_CARD_SELECTORS.getStateTooltipIcon('dr-perf', 'DR primary', 'x-circle'))
         .exists();
       assert
-        .dom(REPLICATION_CARD_SELECTORS.getReplicationTitle('dr-perf', 'Perf primary'))
-        .hasText('Perf primary');
+        .dom(REPLICATION_CARD_SELECTORS.getReplicationTitle('dr-perf', 'Performance primary'))
+        .hasText('Performance primary');
       assert
-        .dom(REPLICATION_CARD_SELECTORS.getStateTooltipTitle('dr-perf', 'Perf primary'))
+        .dom(REPLICATION_CARD_SELECTORS.getStateTooltipTitle('dr-perf', 'Performance primary'))
         .hasText('running');
       assert
-        .dom(REPLICATION_CARD_SELECTORS.getStateTooltipIcon('dr-perf', 'Perf primary', 'check-circle'))
+        .dom(REPLICATION_CARD_SELECTORS.getStateTooltipIcon('dr-perf', 'Performance primary', 'check-circle'))
         .exists();
     });
   });

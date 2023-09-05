@@ -166,24 +166,25 @@ func TestEventsSubscribeNamespaces(t *testing.T) {
 	}
 
 	// send some events with the specified namespaces
-	sendEvents := func() {
+	sendEvents := func() error {
 		pluginInfo := &logical.EventPluginInfo{
 			MountPath: "secret",
 		}
-		for i := range namespaces {
+		for _, namespacePath := range namespaces {
 			var ns *namespace.Namespace
-			if namespaces[i] == "" {
+			if namespacePath == "" {
 				ns = namespace.RootNamespace
 			} else {
 				ns = &namespace.Namespace{
-					ID:             namespaces[i],
-					Path:           namespaces[i],
+					ID:             namespacePath,
+					Path:           namespacePath,
 					CustomMetadata: nil,
 				}
 			}
 			id, err := uuid.GenerateUUID()
 			if err != nil {
 				core.Logger().Info("Error generating UUID, exiting sender", "error", err)
+				return err
 			}
 			err = core.Events().SendEventInternal(namespace.RootContext(context.Background()), ns, pluginInfo, eventType, &logical.EventData{
 				Id:        id,
@@ -193,8 +194,11 @@ func TestEventsSubscribeNamespaces(t *testing.T) {
 			})
 			if err != nil {
 				core.Logger().Info("Error sending event, exiting sender", "error", err)
+				return err
 			}
 		}
+
+		return nil
 	}
 
 	t.Cleanup(func() {
@@ -234,32 +238,39 @@ func TestEventsSubscribeNamespaces(t *testing.T) {
 			t.Cleanup(func() {
 				conn.Close(websocket.StatusNormalClosure, "")
 			})
-			sendEvents()
+			err = sendEvents()
+			if err != nil {
+				t.Fatal(err)
+			}
 			// CI is sometimes slow, so this timeout is high initially
-			ctx, cancel := context.WithTimeout(ctx, 1*time.Second)
-			defer cancel()
+			timeout := 10 * time.Second
 			gotEvents := 0
 			for {
+				ctx, cancel := context.WithTimeout(ctx, timeout)
+				t.Cleanup(func() { defer cancel() })
+
 				_, msg, err := conn.Read(ctx)
 				if err != nil {
+					t.Log("error reading from connection", err)
 					break
 				}
+
 				event := map[string]interface{}{}
 				err = json.Unmarshal(msg, &event)
 				if err != nil {
 					t.Fatal(err)
 				}
-				t.Log(string(msg))
+
+				t.Log("event received", string(msg))
 				gotEvents += 1
 
-				// if we got as many as we expect, shorten the test so we don't waste time,
+				// if we got as many as we expect, shorten the test, so we don't waste time,
 				// but still allow time for "extra" events to come in and make us fail
 				if gotEvents == testCase.expectedEvents {
-					ctx2, cancel2 := context.WithTimeout(ctx, 100*time.Millisecond)
-					t.Cleanup(cancel2)
-					ctx = ctx2
+					timeout = 100 * time.Millisecond
 				}
 			}
+
 			assert.Equal(t, testCase.expectedEvents, gotEvents)
 		})
 	}

@@ -54,11 +54,12 @@ module('Integration | Component | kv | Page::List', function (hooks) {
       { label: 'secrets', route: 'secrets', linkExternal: true },
       { label: this.model.backend, route: 'list' },
     ];
+    this.failedDirectoryQuery = false;
     await render(
       hbs`<Page::List
       @secrets={{this.model}} 
       @backend={{this.model.backend}}
-      @noMetadataListPermissions={{false}}
+      @failedDirectoryQuery={{this.failedDirectoryQuery}}
       @breadcrumbs={{this.breadcrumbs}} 
       @meta={{this.model.meta}}
     />`,

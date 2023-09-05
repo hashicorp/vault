@@ -13,10 +13,9 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/hashicorp/go-kms-wrapping/entropy/v2"
-
 	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/go-hclog"
+	"github.com/hashicorp/go-kms-wrapping/entropy/v2"
 	wrapping "github.com/hashicorp/go-kms-wrapping/v2"
 	aeadwrapper "github.com/hashicorp/go-kms-wrapping/wrappers/aead/v2"
 	"github.com/hashicorp/go-kms-wrapping/wrappers/alicloudkms/v2"
@@ -29,6 +28,7 @@ import (
 	"github.com/hashicorp/go-secure-stdlib/parseutil"
 	"github.com/hashicorp/hcl"
 	"github.com/hashicorp/hcl/hcl/ast"
+	"github.com/hashicorp/vault/sdk/helper/strutil"
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
@@ -216,12 +216,13 @@ func configureWrapper(configKMS *KMS, infoKeys *[]string, info *map[string]strin
 	var err error
 
 	envConfig := GetEnvConfigFunc(configKMS)
-	for name, val := range envConfig {
-		// for the token, config takes precedence over env vars
-		if name == "token" && configKMS.Config[name] != "" {
-			continue
+	// transit is a special case, because some config values take precedence over env vars
+	if configKMS.Type == wrapping.WrapperTypeTransit.String() {
+		mergeTransitConfig(configKMS.Config, envConfig)
+	} else {
+		for name, val := range envConfig {
+			configKMS.Config[name] = val
 		}
-		configKMS.Config[name] = val
 	}
 
 	switch wrapping.WrapperType(configKMS.Type) {
@@ -436,6 +437,31 @@ func getEnvConfig(kms *KMS) map[string]string {
 	}
 
 	return envValues
+}
+
+func mergeTransitConfig(config map[string]string, envConfig map[string]string) {
+	useFileTlsConfig := false
+	for _, varName := range TransitTLSConfigVars {
+		if _, ok := config[varName]; ok {
+			useFileTlsConfig = true
+			break
+		}
+	}
+
+	if useFileTlsConfig {
+		for _, varName := range TransitTLSConfigVars {
+			delete(envConfig, varName)
+		}
+	}
+
+	for varName, val := range envConfig {
+		// for some values, file config takes precedence
+		if strutil.StrListContains(TransitPrioritizeConfigValues, varName) && config[varName] != "" {
+			continue
+		}
+
+		config[varName] = val
+	}
 }
 
 func (k *KMS) Clone() *KMS {
