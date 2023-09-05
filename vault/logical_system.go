@@ -5021,6 +5021,7 @@ func (c *Core) GetSealBackendStatus(ctx context.Context) (*SealBackendStatusResp
 				Healthy: true,
 			},
 		}
+		r.Healthy = true
 	}
 	return &r, nil
 }
