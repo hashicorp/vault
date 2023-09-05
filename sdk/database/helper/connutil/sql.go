@@ -12,21 +12,17 @@ import (
 	"sync"
 	"time"
 
-	"github.com/hashicorp/go-uuid"
-
 	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/go-secure-stdlib/parseutil"
-	"github.com/mitchellh/mapstructure"
-
+	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/sdk/database/dbplugin"
 	"github.com/hashicorp/vault/sdk/database/helper/dbutil"
+	"github.com/mitchellh/mapstructure"
 )
 
 const (
 	AuthTypeGCPIAM = "gcp_iam"
-)
 
-const (
 	dbTypePostgres   = "pgx"
 	cloudSQLPostgres = "cloudsql-postgres"
 )
