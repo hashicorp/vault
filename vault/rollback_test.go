@@ -241,15 +241,21 @@ func TestRollbackManager_WorkerPool(t *testing.T) {
 	done := make(chan struct{})
 
 	// start a goroutine to consume the remaining items from the queued work
+	// we need to wait to see all 10 paths do a rollback
 	go func() {
+		gotLock.Lock()
+		defer gotLock.Unlock()
+		defer close(done)
 		for {
 			select {
 			case i := <-ran:
-				gotLock.Lock()
 				got[i] = true
-				gotLock.Unlock()
-			case <-done:
-				return
+				if len(got) >= 10 {
+					return
+				}
+			case <-timeout.Done():
+				require.Fail(t, "test timed out")
+
 			}
 		}
 	}()
@@ -264,12 +270,7 @@ func TestRollbackManager_WorkerPool(t *testing.T) {
 	// stop the rollback worker, which will wait for all inflight rollbacks to
 	// complete
 	core.rollback.Stop()
-	close(done)
-
-	// we should have received at least 1 rollback for every backend
-	gotLock.RLock()
-	defer gotLock.RUnlock()
-	require.GreaterOrEqual(t, len(got), 10)
+	<-done
 }
 
 // TestRollbackManager_numRollbackWorkers verifies that the number of rollback
