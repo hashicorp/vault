@@ -32,7 +32,7 @@ var webSocketRevalidationTime = 5 * time.Minute
 type eventSubscriber struct {
 	ctx               context.Context
 	clientToken       string
-	core              *vault.Core
+	capabilitiesFunc  func(ctx context.Context, token, path string) ([]string, []string, error)
 	logger            hclog.Logger
 	events            *eventbus.EventBus
 	namespacePatterns []string
@@ -153,7 +153,7 @@ func (sub *eventSubscriber) allowMessage(eventNs, dataPath, eventType string) bo
 	if eventNs != "" {
 		nsDataPath = path.Join(eventNs, dataPath)
 	}
-	capabilities, allowedEventTypes, err := sub.core.CapabilitiesAndSubscribeEventTypes(sub.ctx, sub.clientToken, nsDataPath)
+	capabilities, allowedEventTypes, err := sub.capabilitiesFunc(sub.ctx, sub.clientToken, nsDataPath)
 	if err != nil {
 		sub.logger.Debug("Error checking capabilities and event types for token", "error", err, "namespace", eventNs)
 		return false
@@ -246,7 +246,7 @@ func handleEventsSubscribe(core *vault.Core, req *logical.Request) http.Handler 
 
 		sub := &eventSubscriber{
 			ctx:               ctx,
-			core:              core,
+			capabilitiesFunc:  core.CapabilitiesAndSubscribeEventTypes,
 			logger:            logger,
 			events:            core.Events(),
 			namespacePatterns: namespacePatterns,
