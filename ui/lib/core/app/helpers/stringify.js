@@ -3,4 +3,4 @@
  * SPDX-License-Identifier: MPL-2.0
  */
 
-export { default } from 'core/helpers/stringify';
+export { default, stringify } from 'core/helpers/stringify';

@@ -9,6 +9,7 @@ import { equal } from '@ember/object/computed'; // eslint-disable-line
 import { withModelValidations } from 'vault/decorators/model-validations';
 import { withExpandedAttributes } from 'vault/decorators/model-expanded-attributes';
 import { supportedSecretBackends } from 'vault/helpers/supported-secret-backends';
+import { isAddonEngine, allEngines } from 'vault/helpers/mountable-secret-engines';
 
 const LINKED_BACKENDS = supportedSecretBackends();
 
@@ -129,13 +130,14 @@ export default class SecretEngineModel extends Model {
   }
 
   get icon() {
-    if (!this.engineType || this.engineType === 'kmip') {
-      return 'secrets';
-    }
-    if (this.engineType === 'keymgmt') {
-      return 'key';
-    }
-    return this.engineType;
+    const defaultIcon = this.engineType || 'secrets';
+    return (
+      {
+        keymgmt: 'key',
+        kmip: 'secrets',
+        ldap: 'folder-users',
+      }[this.engineType] || defaultIcon
+    );
   }
 
   get engineType() {
@@ -151,13 +153,14 @@ export default class SecretEngineModel extends Model {
   }
 
   get backendLink() {
-    if (this.engineType === 'kmip') {
-      return 'vault.cluster.secrets.backend.kmip.scopes';
-    }
     if (this.engineType === 'database') {
       return 'vault.cluster.secrets.backend.overview';
     }
-    return 'vault.cluster.secrets.backend.list-root';
+    if (isAddonEngine(this.engineType, this.version)) {
+      const { engineRoute } = allEngines().findBy('type', this.engineType);
+      return `vault.cluster.secrets.backend.${engineRoute}`;
+    }
+    return `vault.cluster.secrets.backend.list-root`;
   }
 
   get localDisplay() {

@@ -13,6 +13,8 @@ The `/sys/version-history` endpoint is used to retrieve the version history of a
 
 ## Read version history
 
+@include 'alerts/restricted-admin.mdx'
+
 This endpoint returns the version history of the Vault. The response will contain the following keys:
 
 - `keys`: a list of installed versions in chronological order based on the time installed
@@ -23,7 +25,7 @@ This endpoint returns the version history of the Vault. The response will contai
 
 | Method | Path                   |
 | :----- | :--------------------- |
-| `GET`  | `/sys/version-history` |
+| `LIST`  | `/sys/version-history` |
 
 ### Sample request
 

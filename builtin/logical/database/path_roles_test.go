@@ -7,7 +7,6 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"fmt"
 	"strings"
 	"testing"
 	"time"
@@ -17,7 +16,6 @@ import (
 	postgreshelper "github.com/hashicorp/vault/helper/testhelpers/postgresql"
 	v5 "github.com/hashicorp/vault/sdk/database/dbplugin/v5"
 	"github.com/hashicorp/vault/sdk/logical"
-	"github.com/robfig/cron/v3"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 )
@@ -333,8 +331,8 @@ func TestBackend_StaticRole_Config(t *testing.T) {
 				"rotation_schedule": "* * * * *",
 				"rotation_window":   "59s",
 			},
-			path: "plugin-role-test",
-			err:  errors.New(fmt.Sprintf("rotation_window must be %d seconds or more", minRotationWindowSeconds)),
+			path:        "plugin-role-test",
+			errContains: "rotation_window is invalid",
 		},
 		"disallowed role config": {
 			account: map[string]interface{}{
@@ -343,6 +341,14 @@ func TestBackend_StaticRole_Config(t *testing.T) {
 			},
 			path: "disallowed-role",
 			err:  errors.New("\"disallowed-role\" is not an allowed role"),
+		},
+		"fails to parse cronSpec with seconds": {
+			account: map[string]interface{}{
+				"username":          dbUser,
+				"rotation_schedule": "*/10 * * * * *",
+			},
+			path:        "plugin-role-test-1",
+			errContains: "could not parse rotation_schedule",
 		},
 	}
 
@@ -1145,16 +1151,12 @@ func TestIsInsideRotationWindow(t *testing.T) {
 			testTime := tc.now
 			if tc.data["rotation_schedule"] != nil && tc.timeModifier != nil {
 				rotationSchedule := tc.data["rotation_schedule"].(string)
-				schedule, err := b.scheduleParser.Parse(rotationSchedule)
+				schedule, err := b.schedule.Parse(rotationSchedule)
 				if err != nil {
 					t.Fatalf("could not parse rotation_schedule: %s", err)
 				}
-				sched, ok := schedule.(*cron.SpecSchedule)
-				if !ok {
-					t.Fatalf("could not parse rotation_schedule")
-				}
-				next1 := sched.Next(tc.now) // the next rotation time we expect
-				next2 := sched.Next(next1)  // the next rotation time after that
+				next1 := schedule.Next(tc.now) // the next rotation time we expect
+				next2 := schedule.Next(next1)  // the next rotation time after that
 				testTime = tc.timeModifier(next2)
 			}
 

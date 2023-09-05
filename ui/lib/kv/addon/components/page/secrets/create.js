@@ -26,19 +26,15 @@ import errorMessage from 'vault/utils/error-message';
  */
 
 export default class KvSecretCreate extends Component {
+  @service controlGroup;
   @service flashMessages;
   @service router;
   @service store;
 
   @tracked showJsonView = false;
-  @tracked errorMessage; // only renders for kv/data API errors
+  @tracked errorMessage;
   @tracked modelValidations;
   @tracked invalidFormAlert;
-
-  @action
-  toggleJsonView() {
-    this.showJsonView = !this.showJsonView;
-  }
 
   @action
   pathValidations() {
@@ -67,7 +63,13 @@ export default class KvSecretCreate extends Component {
         this.store.clearDataset('kv/metadata'); // Clear out the store cache so that the metadata/list view is updated.
         this.flashMessages.success(`Successfully saved secret data for: ${secret.path}.`);
       } catch (error) {
-        this.errorMessage = errorMessage(error);
+        let message = errorMessage(error);
+        if (error.message === 'Control Group encountered') {
+          this.controlGroup.saveTokenFromError(error);
+          const err = this.controlGroup.logFromError(error);
+          message = err.content;
+        }
+        this.errorMessage = message;
       }
 
       // users must have permission to create secret data to create metadata in the UI

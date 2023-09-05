@@ -59,6 +59,33 @@ export const setupControlGroup = async ({
   };
 };
 
+export async function grantAccessForWrite({
+  token,
+  accessor,
+  creation_path,
+  originUrl,
+  userToken,
+  authorizerUser = 'authorizer',
+  authorizerPassword = 'password',
+}) {
+  await authPage.loginUsername(authorizerUser, authorizerPassword);
+  await visit(`/vault/access/control-groups/${accessor}`);
+  await controlGroupComponent.authorize();
+  await authPage.login(userToken);
+  localStorage.setItem(
+    storageKey(accessor, creation_path),
+    JSON.stringify({
+      accessor,
+      token,
+      creation_path,
+      uiParams: {
+        url: originUrl,
+      },
+    })
+  );
+  await visit(originUrl);
+}
+
 export async function grantAccess({
   apiPath,
   originUrl,

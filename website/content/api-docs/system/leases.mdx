@@ -10,6 +10,8 @@ The `/sys/leases` endpoints are used to view and manage leases in Vault.
 
 ## Read lease
 
+@include 'alerts/restricted-admin.mdx'
+
 This endpoint retrieve lease metadata.
 
 | Method | Path                 |
@@ -53,6 +55,8 @@ $ curl \
 
 ## List leases
 
+@include 'alerts/restricted-admin.mdx'
+
 This endpoint returns a list of lease ids.
 
 **This endpoint requires 'sudo' capability.**
@@ -82,6 +86,8 @@ $ curl \
 
 ## Renew lease
 
+@include 'alerts/restricted-admin.mdx'
+
 This endpoint renews a lease, requesting to extend the lease. Token leases
 cannot be renewed using this endpoint, use instead the auth/token/renew endpoint.
 
@@ -91,9 +97,9 @@ cannot be renewed using this endpoint, use instead the auth/token/renew endpoint
 
 ### Parameters
 
-- `lease_id` `(string: <required>)` – Specifies the ID of the lease to extend. This 
+- `lease_id` `(string: <required>)` – Specifies the ID of the lease to extend. This
   parameter can either be specified in a json request, as shown below, or provided as
-  a path parameter to the endpoint, like /sys/leases/revoke/:lease_id. If both are 
+  a path parameter to the endpoint, like /sys/leases/revoke/:lease_id. If both are
   provided, the leaseID in the request json takes precedence.
 
 - `increment` `(int: 0)` – Specifies the requested amount of time (in seconds)
@@ -130,6 +136,8 @@ $ curl \
 
 ## Revoke lease
 
+@include 'alerts/restricted-admin.mdx'
+
 This endpoint revokes a lease immediately.
 
 | Method | Path                 |
@@ -138,9 +146,9 @@ This endpoint revokes a lease immediately.
 
 ### Parameters
 
-- `lease_id` `(string: <required>)` – Specifies the ID of the lease to revoke. This 
+- `lease_id` `(string: <required>)` – Specifies the ID of the lease to revoke. This
   parameter can either be specified in a json request, as shown below, or provided as
-  a path parameter to the endpoint, like /sys/leases/revoke/:lease_id. If both are 
+  a path parameter to the endpoint, like /sys/leases/revoke/:lease_id. If both are
   provided, the leaseID in the request json takes precedence.
 - `sync` `(bool: false)` - Instead of the default behaviour of queueing the lease
   revocation, sync=true will revoke the lease immediately and only return once
@@ -165,6 +173,8 @@ $ curl \
 ```
 
 ## Revoke force
+
+@include 'alerts/restricted-admin.mdx'
 
 This endpoint revokes all secrets or tokens generated under a given prefix
 immediately. Unlike `/sys/leases/revoke-prefix`, this path ignores backend errors
@@ -198,6 +208,8 @@ $ curl \
 
 ## Revoke prefix
 
+@include 'alerts/restricted-admin.mdx'
+
 This endpoint revokes all secrets (via a lease ID prefix) or tokens (via the
 tokens' path property) generated under a given prefix immediately. This requires
 `sudo` capability and access to it should be tightly controlled as it can be
@@ -228,6 +240,8 @@ $ curl \
 
 ## Tidy leases
 
+@include 'alerts/restricted-admin.mdx'
+
 This endpoint cleans up the dangling storage entries for leases: for each lease
 entry in storage, Vault will verify that it has an associated valid non-expired
 token in storage, and if not, the lease will be revoked.
@@ -250,6 +264,8 @@ $ curl \
 ```
 
 ## Lease counts
+
+@include 'alerts/restricted-admin.mdx'
 
 This endpoint returns the total count of a `type` of lease, as well as a count
 per mount point. Note that it currently only supports type "irrevocable".
@@ -280,6 +296,8 @@ $ curl \
 ```
 
 ## Leases list
+
+@include 'alerts/restricted-admin.mdx'
 
 This endpoint returns the total count of a `type` of lease, as well as a list
 of leases per mount point. Note that it currently only supports type

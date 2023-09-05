@@ -84,8 +84,8 @@ jobs:
           PLUGIN_TYPE=$(echo "$PLUGIN" | awk -F- '{print $3}')
           echo "plugin type: $PLUGIN_TYPE"
 
-          # plugin service is the last element in the repo name
-          PLUGIN_SERVICE=$(echo "$PLUGIN" | awk -F- '{print $4}')
+          # plugin service is the rest of the repo name
+          PLUGIN_SERVICE=$(echo "$PLUGIN" | cut -d- -f 4-)
           echo "plugin service: $PLUGIN_SERVICE"
 
           echo "\`\`\`release-note:change

@@ -36,11 +36,6 @@ export default class KvSecretDetails extends Component {
   @tracked wrappedData = null;
 
   @action
-  toggleJsonView() {
-    this.showJsonView = !this.showJsonView;
-  }
-
-  @action
   closeVersionMenu(dropdown) {
     // strange issue where closing dropdown triggers full transition (which redirects to auth screen in production)
     // closing dropdown in next tick of run loop fixes it
@@ -72,13 +67,10 @@ export default class KvSecretDetails extends Component {
     const { secret } = this.args;
     try {
       await secret.destroyRecord({
-        adapterOptions: { deleteType: 'undelete', deleteVersions: secret.version },
+        adapterOptions: { deleteType: 'undelete', deleteVersions: this.version },
       });
-      this.store.clearDataset('kv/metadata'); // Clear out the store cache so that the metadata/list view is updated.
       this.flashMessages.success(`Successfully undeleted ${secret.path}.`);
-      this.router.transitionTo('vault.cluster.secrets.backend.kv.secret', {
-        queryParams: { version: secret.version },
-      });
+      this.refreshRoute();
     } catch (err) {
       this.flashMessages.danger(
         `There was a problem undeleting ${secret.path}. Error: ${err.errors.join(' ')}.`
@@ -90,24 +82,32 @@ export default class KvSecretDetails extends Component {
   async handleDestruction(type) {
     const { secret } = this.args;
     try {
-      await secret.destroyRecord({ adapterOptions: { deleteType: type, deleteVersions: secret.version } });
-      this.store.clearDataset('kv/metadata'); // Clear out the store cache so that the metadata/list view is updated.
-      this.flashMessages.success(`Successfully ${secret.state} Version ${secret.version} of ${secret.path}.`);
-      this.router.transitionTo('vault.cluster.secrets.backend.kv.secret', {
-        queryParams: { version: secret.version },
-      });
+      await secret.destroyRecord({ adapterOptions: { deleteType: type, deleteVersions: this.version } });
+      this.flashMessages.success(`Successfully ${secret.state} Version ${this.version} of ${secret.path}.`);
+      this.refreshRoute();
     } catch (err) {
       const verb = type.includes('delete') ? 'deleting' : 'destroying';
       this.flashMessages.danger(
-        `There was a problem ${verb} Version ${secret.version} of ${secret.path}. Error: ${err.errors.join(
+        `There was a problem ${verb} Version ${this.version} of ${secret.path}. Error: ${err.errors.join(
           ' '
         )}.`
       );
     }
   }
 
+  refreshRoute() {
+    // transition to the parent secret route to refresh both metadata and data models
+    this.router.transitionTo('vault.cluster.secrets.backend.kv.secret', {
+      queryParams: { version: this.version },
+    });
+  }
+
   get version() {
-    return this.args.secret.version || this.router.currentRoute.queryParams.version;
+    return (
+      this.args.secret?.version ||
+      this.router.currentRoute.queryParams?.version ||
+      this.args.metadata?.sortedVersions[0].version
+    );
   }
 
   get hideHeaders() {
@@ -150,7 +150,7 @@ export default class KvSecretDetails extends Component {
   get showDelete() {
     const { secret } = this.args;
     if (secret.canDeleteVersion || secret.canDeleteLatestVersion) {
-      return this.versionState === 'created';
+      return this.versionState === 'created' || this.versionState === '';
     }
     return false;
   }
@@ -158,7 +158,7 @@ export default class KvSecretDetails extends Component {
   get showDestroy() {
     const { secret } = this.args;
     if (secret.canDestroyVersion) {
-      return this.versionState !== 'destroyed';
+      return this.versionState !== 'destroyed' && this.version;
     }
     return false;
   }
