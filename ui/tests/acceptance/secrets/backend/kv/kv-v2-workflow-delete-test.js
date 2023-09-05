@@ -137,10 +137,12 @@ module('Acceptance | kv-v2 workflow | delete, undelete, destroy', function (hook
       await visit(`/vault/secrets/${this.backend}/kv/nuke/details`);
       // Check metadata toolbar
       await click(PAGE.secretTab('Metadata'));
-      assert.dom(PAGE.metadata.deleteMetadata).hasText('Delete metadata', 'shows delete metadata button');
+      assert.dom(PAGE.metadata.deleteMetadata).hasText('Permanently delete', 'shows delete metadata button');
       // delete flow
       await click(PAGE.metadata.deleteMetadata);
-      assert.dom(PAGE.detail.deleteModalTitle).includesText('Delete metadata?', 'modal has correct title');
+      assert
+        .dom(PAGE.detail.deleteModalTitle)
+        .includesText('Delete metadata and secret data?', 'modal has correct title');
       await click(PAGE.detail.deleteConfirm);
 
       // redirects to list
@@ -388,10 +390,12 @@ module('Acceptance | kv-v2 workflow | delete, undelete, destroy', function (hook
       await visit(`/vault/secrets/${this.backend}/kv/nuke/details`);
       // Check metadata toolbar
       await click(PAGE.secretTab('Metadata'));
-      assert.dom(PAGE.metadata.deleteMetadata).hasText('Delete metadata', 'shows delete metadata button');
+      assert.dom(PAGE.metadata.deleteMetadata).hasText('Permanently delete', 'shows delete metadata button');
       // delete flow
       await click(PAGE.metadata.deleteMetadata);
-      assert.dom(PAGE.detail.deleteModalTitle).includesText('Delete metadata?', 'modal has correct title');
+      assert
+        .dom(PAGE.detail.deleteModalTitle)
+        .includesText('Delete metadata and secret data?', 'modal has correct title');
       await click(PAGE.detail.deleteConfirm);
 
       // redirects to list
