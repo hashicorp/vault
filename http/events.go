@@ -158,7 +158,7 @@ func (sub *eventSubscriber) allowMessage(eventNs, dataPath, eventType string) bo
 		sub.logger.Debug("Error checking capabilities and event types for token", "error", err, "namespace", eventNs)
 		return false
 	}
-	if !(slices.Contains(capabilities, "root") || slices.Contains(capabilities, "subscribe")) {
+	if !(slices.Contains(capabilities, vault.RootCapability) || slices.Contains(capabilities, vault.SubscribeCapability)) {
 		return false
 	}
 	for _, pattern := range allowedEventTypes {
