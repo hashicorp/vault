@@ -107,13 +107,13 @@
           <Hds::Copy::Button
             @text="Copy Plaintext"
             @textToCopy={{@plaintext}}
-            class="hds-copy-button copy-close white-icon"
+            class="hds-copy-button is-primary white-icon"
             data-test-button="modal-copy-close"
           />
           <Hds::Copy::Button
             @text="Copy Ciphertext"
             @textToCopy={{@ciphertext}}
-            class="hds-copy-button copy-close white-icon"
+            class="hds-copy-button is-primary white-icon"
             data-test-button="modal-copy-close"
           />
           <button type="submit" class="button is-secondary" onclick={{action (mut @isModalActive) false}}>Close</button>
@@ -134,7 +134,7 @@
         <Hds::Copy::Button
           @text="Copy & Close"
           @textToCopy={{@ciphertext}}
-          class="hds-copy-button copy-close has-top-margin-m"
+          class="hds-copy-button is-primary has-top-margin-m"
           data-test-button="modal-copy-close"
           {{on "click" (fn @toggleModal "Ciphertext copied!")}}
         />

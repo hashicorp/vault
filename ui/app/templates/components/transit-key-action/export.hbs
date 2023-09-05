@@ -88,7 +88,7 @@
     <Hds::Copy::Button
       @text="Copy & Close"
       @textToCopy={{if this.wrapTTL @wrappedToken (stringify @keys)}}
-      class="hds-copy-button copy-close"
+      class="hds-copy-button is-primary"
       data-test-button="modal-copy-close"
       {{on "click" (fn @toggleModal "Token copied!")}}
     />
