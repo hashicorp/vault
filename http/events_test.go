@@ -226,7 +226,12 @@ func TestNamespaceRootSubscriptions(t *testing.T) {
 			timeout := 10 * time.Second
 			gotEvents := 0
 			for {
-				ctx, cancel := context.WithTimeout(ctx, timeout)
+				// if we got as many as we expect, shorten the test, so we don't waste time,
+				// but still allow time for "extra" events to come in and make us fail
+				if gotEvents == testCase.expectedEvents {
+					timeout = 100 * time.Millisecond
+				}
+				ctx, cancel := context.WithTimeout(context.Background(), timeout)
 				t.Cleanup(cancel)
 
 				_, msg, err := conn.Read(ctx)
@@ -243,12 +248,6 @@ func TestNamespaceRootSubscriptions(t *testing.T) {
 
 				t.Log("event received", string(msg))
 				gotEvents += 1
-
-				// if we got as many as we expect, shorten the test, so we don't waste time,
-				// but still allow time for "extra" events to come in and make us fail
-				if gotEvents == testCase.expectedEvents {
-					timeout = 100 * time.Millisecond
-				}
 			}
 
 			assert.Equal(t, testCase.expectedEvents, gotEvents)
