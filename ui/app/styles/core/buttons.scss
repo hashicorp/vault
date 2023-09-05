@@ -351,6 +351,7 @@ a.button.disabled {
     font-weight: $font-weight-bold;
     text-shadow: 0 1px 1px rgba($black, 0.25);
     height: 2.5rem;
+    min-width: 6rem;
 
     svg {
       color: $white;
