@@ -6,7 +6,7 @@
 {{#if (or (has-block) this.isVisible)}}
   <div class="info-table-row" data-test-component="info-table-row" ...attributes>
     <div
-      class="column is-one-quarter {{if this.hasLabelOverflow 'label-overflow'}}"
+      class="column {{or @labelWidth 'is-one-quarter'}} {{if this.hasLabelOverflow 'label-overflow'}}"
       data-test-label-div
       {{did-insert this.calculateLabelOverflow}}
     >
@@ -34,7 +34,7 @@
         <Icon @name="minus" />
       {{/if}}
     </div>
-    <div class="column is-flex-center" data-test-value-div={{@label}}>
+    <div class="column is-flex-center {{if @truncateValue 'is-two-thirds'}}" data-test-value-div={{@label}}>
       {{#if @addCopyButton}}
         <Hds::Copy::Button
           @text="Copy"

@@ -43,17 +43,24 @@ func NewTestSealOpts(opts *TestSealOpts) *TestSealOpts {
 func NewTestSeal(opts *TestSealOpts) (Access, []*ToggleableWrapper) {
 	opts = NewTestSealOpts(opts)
 	wrappers := make([]*ToggleableWrapper, opts.WrapperCount)
-	sealInfos := make([]SealInfo, opts.WrapperCount)
+	sealWrappers := make([]*SealWrapper, opts.WrapperCount)
+	ctx := context.Background()
 	for i := 0; i < opts.WrapperCount; i++ {
 		wrappers[i] = &ToggleableWrapper{Wrapper: wrapping.NewTestWrapper(opts.Secret)}
-		sealInfos[i] = SealInfo{
-			Wrapper:  wrappers[i],
-			Priority: i + 1,
-			Name:     fmt.Sprintf("%s-%d", opts.Name, i+1),
+		wrapperType, err := wrappers[i].Type(ctx)
+		if err != nil {
+			panic(err)
 		}
+		sealWrappers[i] = NewSealWrapper(
+			wrappers[i],
+			i+1,
+			fmt.Sprintf("%s-%d", opts.Name, i+1),
+			wrapperType.String(),
+			false,
+		)
 	}
 
-	sealAccess, err := NewAccessFromSealInfo(nil, opts.Generation, true, sealInfos)
+	sealAccess, err := NewAccessFromSealWrappers(nil, opts.Generation, true, sealWrappers)
 	if err != nil {
 		panic(err)
 	}
@@ -64,20 +71,28 @@ func NewToggleableTestSeal(opts *TestSealOpts) (Access, []func(error)) {
 	opts = NewTestSealOpts(opts)
 
 	wrappers := make([]*ToggleableWrapper, opts.WrapperCount)
-	sealInfos := make([]SealInfo, opts.WrapperCount)
+	sealWrappers := make([]*SealWrapper, opts.WrapperCount)
 	funcs := make([]func(error), opts.WrapperCount)
+	ctx := context.Background()
 	for i := 0; i < opts.WrapperCount; i++ {
 		w := &ToggleableWrapper{Wrapper: wrapping.NewTestWrapper(opts.Secret)}
-		wrappers[i] = w
-		sealInfos[i] = SealInfo{
-			Wrapper:  wrappers[i],
-			Priority: i + 1,
-			Name:     fmt.Sprintf("%s-%d", opts.Name, i+1),
+		wrapperType, err := w.Type(ctx)
+		if err != nil {
+			panic(err)
 		}
+
+		wrappers[i] = w
+		sealWrappers[i] = NewSealWrapper(
+			wrappers[i],
+			i+1,
+			fmt.Sprintf("%s-%d", opts.Name, i+1),
+			wrapperType.String(),
+			false,
+		)
 		funcs[i] = w.SetError
 	}
 
-	sealAccess, err := NewAccessFromSealInfo(nil, opts.Generation, true, sealInfos)
+	sealAccess, err := NewAccessFromSealWrappers(nil, opts.Generation, true, sealWrappers)
 	if err != nil {
 		panic(err)
 	}

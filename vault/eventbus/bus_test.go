@@ -73,6 +73,50 @@ func TestBusBasics(t *testing.T) {
 	}
 }
 
+// TestSubscribeNonRootNamespace verifies that events for non-root namespaces
+// aren't filtered out by the bus.
+func TestSubscribeNonRootNamespace(t *testing.T) {
+	bus, err := NewEventBus(nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	bus.Start()
+	ctx := context.Background()
+
+	eventType := logical.EventType("someType")
+
+	ns := &namespace.Namespace{
+		ID:   "abc",
+		Path: "abc/",
+	}
+
+	ch, cancel, err := bus.Subscribe(ctx, ns, string(eventType))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer cancel()
+
+	event, err := logical.NewEvent()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	err = bus.SendEventInternal(ctx, ns, nil, eventType, event)
+	if err != nil {
+		t.Error(err)
+	}
+
+	timeout := time.After(1 * time.Second)
+	select {
+	case message := <-ch:
+		if message.Payload.(*logical.EventReceived).Event.Id != event.Id {
+			t.Errorf("Got unexpected message: %+v", message)
+		}
+	case <-timeout:
+		t.Error("Timeout waiting for message")
+	}
+}
+
 // TestNamespaceFiltering verifies that events for other namespaces are filtered out by the bus.
 func TestNamespaceFiltering(t *testing.T) {
 	bus, err := NewEventBus(nil)

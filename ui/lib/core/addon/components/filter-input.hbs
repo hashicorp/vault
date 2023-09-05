@@ -1,0 +1,12 @@
+<div class="field">
+  <p class="control has-icons-left">
+    <Input
+      class="filter input"
+      placeholder={{this.placeholder}}
+      data-test-filter-input
+      @value={{@value}}
+      {{on "input" this.onInput}}
+    />
+    <Icon @name="search" class="search-icon has-text-grey-light" />
+  </p>
+</div>

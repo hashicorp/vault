@@ -1535,9 +1535,13 @@ func (p *Policy) ImportPublicOrPrivate(ctx context.Context, storage logical.Stor
 			}
 		} else {
 			pemBlock, _ := pem.Decode(key)
+			if pemBlock == nil {
+				return fmt.Errorf("error parsing public key: not in PEM format")
+			}
+
 			parsedKey, err = x509.ParsePKIXPublicKey(pemBlock.Bytes)
 			if err != nil {
-				return fmt.Errorf("error parsing public key: %s", err)
+				return fmt.Errorf("error parsing public key: %w", err)
 			}
 		}
 
@@ -2177,6 +2181,9 @@ func (p *Policy) ImportPrivateKeyForVersion(ctx context.Context, storage logical
 	case *ecdsa.PrivateKey:
 		ecdsaKey := parsedPrivateKey.(*ecdsa.PrivateKey)
 		pemBlock, _ := pem.Decode([]byte(keyEntry.FormattedPublicKey))
+		if pemBlock == nil {
+			return fmt.Errorf("failed to parse key entry public key: invalid PEM blob")
+		}
 		publicKey, err := x509.ParsePKIXPublicKey(pemBlock.Bytes)
 		if err != nil || publicKey == nil {
 			return fmt.Errorf("failed to parse key entry public key: %v", err)

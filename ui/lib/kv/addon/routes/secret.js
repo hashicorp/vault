@@ -6,6 +6,7 @@
 import Route from '@ember/routing/route';
 import { inject as service } from '@ember/service';
 import { hash } from 'rsvp';
+import { action } from '@ember/object';
 
 export default class KvSecretRoute extends Route {
   @service secretMountPath;
@@ -31,5 +32,16 @@ export default class KvSecretRoute extends Route {
       secret: this.fetchSecretData(backend, path),
       metadata: this.fetchSecretMetadata(backend, path),
     });
+  }
+
+  @action
+  willTransition(transition) {
+    // refresh the route if transitioning to secret.index (which happens after delete, undelete or destroy)
+    // or transitioning from editing either metadata or secret data (creating a new version)
+    const isToIndex = transition.to.name === 'vault.cluster.secrets.backend.kv.secret.index';
+    const isFromEdit = transition.from.localName === 'edit';
+    if (isToIndex || isFromEdit) {
+      this.refresh();
+    }
   }
 }

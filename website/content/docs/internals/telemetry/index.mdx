@@ -13,12 +13,20 @@ of different libraries and subsystems. These metrics are aggregated on a
 metrics, like `vault.kv.secret.count`, report every 10 minutes or at an interval
 configured with in the `telemetry` stanza.
 
+Telemetry from Vault must be streamed and stored in metrics aggregation
+software to monitor Vault and collect durable metrics.
+
 @include 'telemetry/supported-aggregation-agents.mdx'
 
-<Important>
-  Telemetry from Vault must be streamed and stored in metrics aggregation
-  software to monitor Vault and collect durable metrics.
-</Important>
+<Tip title="Start with key health metrics">
+
+  The [Well-Architected Framework](/well-architected-framework) documentation
+  includes a best practices guide on
+  [key Vault metrics for common health checks](/well-architected-framework/reliability/reliability-vault-monitoring-key-metrics).
+  We recommend reviewing the key metric recommendations to identify metrics you
+  may want to start monitoring immediately.
+
+</Tip>
 
 ## Working with raw telemetry data
 

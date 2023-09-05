@@ -42,11 +42,11 @@ export default class KvDeleteModal extends Component {
         return {
           title: 'Destroy version?',
           type: 'danger',
-          intro: `This action will permanently destroy Version ${this.args.secret.version} of the secret, and the secret data cannot be read or recovered later.`,
+          intro: `This action will permanently destroy Version ${this.args.version} of the secret, and the secret data cannot be read or recovered later.`,
         };
       case 'delete-metadata':
         return {
-          title: 'Delete metadata?',
+          title: 'Delete metadata and secret data?',
           type: 'danger',
           intro:
             'This will permanently delete the metadata and versions of the secret. All version history will be removed. This cannot be undone.',
@@ -57,15 +57,15 @@ export default class KvDeleteModal extends Component {
   }
 
   get deleteOptions() {
-    const { secret, metadata } = this.args;
-    const isDeactivated = secret.canReadMetadata ? metadata?.currentSecret.isDeactivated : false;
+    const { secret, metadata, version } = this.args;
+    const isDeactivated = secret.canReadMetadata ? metadata?.currentSecret?.isDeactivated : false;
     return [
       {
         key: 'delete-version',
         label: 'Delete this version',
-        description: `This deletes Version ${secret.version} of the secret.`,
+        description: `This deletes ${version ? `Version ${version}` : `a specific version`} of the secret.`,
         disabled: !secret.canDeleteVersion,
-        tooltipMessage: 'You do not have permission to delete a specific version.',
+        tooltipMessage: `Deleting a specific version requires "update" capabilities to ${secret.backend}/delete/${secret.path}.`,
       },
       {
         key: 'delete-latest-version',
@@ -74,7 +74,7 @@ export default class KvDeleteModal extends Component {
         disabled: !secret.canDeleteLatestVersion || isDeactivated,
         tooltipMessage: isDeactivated
           ? `The latest version of the secret is already ${metadata.currentSecret.state}.`
-          : 'You do not have permission to delete the latest version of this secret.',
+          : `Deleting the latest version of this secret requires "delete" capabilities to ${secret.backend}/data/${secret.path}.`,
       },
     ];
   }

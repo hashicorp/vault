@@ -97,6 +97,12 @@
   overflow: hidden;
 }
 
+.text-overflow-ellipsis {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
 // screen reader only
 .sr-only {
   border: 0;
@@ -114,6 +120,10 @@
 // border-radius
 .border-radius-2 {
   border-radius: $radius;
+}
+
+.border-radius-4 {
+  border-radius: $radius-large;
 }
 
 // border-spacing

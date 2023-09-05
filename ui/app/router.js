@@ -161,6 +161,7 @@ Router.map(function () {
           this.mount('kmip');
           this.mount('kubernetes');
           this.mount('kv');
+          this.mount('ldap');
           this.mount('pki');
           this.route('index', { path: '/' });
           this.route('configuration');

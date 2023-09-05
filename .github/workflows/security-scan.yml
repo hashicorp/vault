@@ -1,5 +1,10 @@
 name: Security Scan
 
+# cancel existing runs of the same workflow on the same ref
+concurrency:
+  group: ${{ github.workflow }}-${{ github.head_ref || github.ref }}
+  cancel-in-progress: true
+
 on:
   push:
     branches: [main]
@@ -13,7 +18,7 @@ jobs:
     runs-on: ['linux', 'large']
     # The first check ensures this doesn't run on community-contributed PRs, who
     # won't have the permissions to run this job.
-    if: ${{ (github.repository == 'hashicorp/vault' && (github.event.pull_request.head.repo.full_name == github.event.pull_request.base.repo.full_name))
+    if: ${{ (github.repository != 'hashicorp/vault' || (github.event.pull_request.head.repo.full_name == github.event.pull_request.base.repo.full_name))
           && (github.actor != 'dependabot[bot]' || github.actor != 'hc-github-team-secure-vault-core') }}
     steps:
     - uses: actions/checkout@c85c95e3d7251135ab7dc9ce3241c5835cc595a9 # v3.5.3
