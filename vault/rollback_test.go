@@ -211,10 +211,6 @@ func TestRollbackManager_WorkerPool(t *testing.T) {
 		}()
 	}
 
-	core.mountsLock.RLock()
-	numMounts := len(core.mounts.Entries)
-	core.mountsLock.RUnlock()
-
 	timeout, cancel := context.WithTimeout(context.Background(), 20*time.Second)
 	defer cancel()
 	got := make(map[string]bool)
@@ -241,36 +237,33 @@ func TestRollbackManager_WorkerPool(t *testing.T) {
 	done := make(chan struct{})
 
 	// start a goroutine to consume the remaining items from the queued work
-	// we need to wait to see all 10 paths do a rollback
+	gotAllPaths := make(chan struct{})
 	go func() {
+		channelClosed := false
 		gotLock.Lock()
 		defer gotLock.Unlock()
-		defer close(done)
 		for {
 			select {
 			case i := <-ran:
 				got[i] = true
-				if len(got) >= 10 {
-					return
+				if len(got) == 10 && !channelClosed {
+					close(gotAllPaths)
+					channelClosed = true
 				}
 			case <-timeout.Done():
 				require.Fail(t, "test timed out")
-
+			case <-done:
+				return
 			}
 		}
 	}()
 
-	// wait for every mount to be rolled back at least once
-	numMountsDone := 0
-	for numMountsDone < numMounts {
-		<-core.rollback.rollbacksDoneCh
-		numMountsDone++
-	}
-
-	// stop the rollback worker, which will wait for all inflight rollbacks to
+	// wait until all 10 backends have each ran at least once
+	<-gotAllPaths
+	// stop the rollback worker, which will wait for any inflight rollbacks to
 	// complete
 	core.rollback.Stop()
-	<-done
+	close(done)
 }
 
 // TestRollbackManager_numRollbackWorkers verifies that the number of rollback
