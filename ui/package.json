@@ -240,6 +240,8 @@
       "lib/keep-gitkeep",
       "lib/kmip",
       "lib/kubernetes",
+      "lib/ldap",
+      "lib/kv",
       "lib/open-api-explorer",
       "lib/pki",
       "lib/replication",

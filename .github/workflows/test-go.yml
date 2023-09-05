@@ -52,6 +52,21 @@ on:
         required: false
         default: 60
         type: number
+      testonly:
+        description: Whether to run the tests tagged with testonly.
+        required: false
+        default: false
+        type: boolean
+      test-timing-cache-enabled:
+        description: Cache the gotestsum test timing data.
+        required: false
+        default: true
+        type: boolean
+      test-timing-cache-key:
+        description: The cache key to use for gotestsum test timing data.
+        required: false
+        default: go-test-reports
+        type: string
 
 env: ${{ fromJSON(inputs.env-vars) }}
 
@@ -101,23 +116,50 @@ jobs:
       - uses: ./.github/actions/set-up-gotestsum
       - run: mkdir -p test-results/go-test
       - uses: actions/cache/restore@88522ab9f39a2ea568f7027eddc7d8d8bc9d59c8 # v3.3.1
+        if: inputs.test-timing-cache-enabled
         with:
           path: test-results/go-test
-          key: go-test-reports-${{ github.run_number }}
-          restore-keys: go-test-reports-
-      - name: List cached results
-        id: list-cached-results
-        run: ls -lhR test-results/go-test
-      - name: Build matrix excluding binary and integration tests
+          key: ${{ inputs.test-timing-cache-key }}-${{ github.run_number }}
+          restore-keys: |
+            ${{ inputs.test-timing-cache-key }}-
+            go-test-reports-
+      - name: Sanitize timing files
+        id: sanitize-timing-files
+        run: |
+          # Prune invalid timing files
+          find test-results/go-test -mindepth 1 -type f -name "*.json" -exec sh -c '
+            file="$1";
+            jq . "$file" || rm "$file"
+          ' shell {} \; > /dev/null 2>&1
+      - name: Build matrix excluding binary, integration, and testonly tests
         id: build-non-binary
+        if: ${{ !inputs.testonly }}
         env:
           GOPRIVATE: github.com/hashicorp/*
         run: |
+          # testonly tests need additional build tag though let's exclude them anyway for clarity
           (
-            go list ./... | grep -v "_binary" | grep -v "vault/integ" | gotestsum tool ci-matrix --debug \
+            go list ./... | grep -v "_binary" | grep -v "vault/integ" | grep -v "testonly" | gotestsum tool ci-matrix --debug \
               --partitions "${{ inputs.total-runners }}" \
               --timing-files 'test-results/go-test/*.json' > matrix.json
           )
+      - name: Build matrix for tests tagged with testonly
+        if: ${{ inputs.testonly }}
+        env:
+          GOPRIVATE: github.com/hashicorp/*
+        run: |
+          set -exo pipefail
+          # enable glob expansion
+          shopt -s nullglob
+          # testonly tagged tests need an additional tag to be included
+          # also running some extra tests for sanity checking with the testonly build tag
+          (
+            go list -tags=testonly ./vault/external_tests/{kv,token,*replication-perf*,*testonly*} ./vault/ | gotestsum tool ci-matrix --debug \
+              --partitions "${{ inputs.total-runners }}" \
+              --timing-files 'test-results/go-test/*.json' > matrix.json
+          )
+          # disable glob expansion
+          shopt -u nullglob
       - name: Capture list of binary tests
         if: inputs.binary-tests
         id: list-binary-tests
@@ -372,15 +414,17 @@ jobs:
           path: failure-summary-${{ matrix.id }}${{ inputs.name != '' && '-' || '' }}${{inputs.name}}.md
 
   test-collect-reports:
-    if: ${{ ! cancelled() }}
+    if: ${{ ! cancelled() && needs.test-go.result == 'success' && inputs.test-timing-cache-enabled }}
     needs: test-go
     runs-on: ${{ fromJSON(inputs.runs-on) }}
     steps:
       - uses: actions/cache@88522ab9f39a2ea568f7027eddc7d8d8bc9d59c8 # v3.3.1
         with:
           path: test-results/go-test
-          key: go-test-reports-${{ github.run_number }}
-          restore-keys: go-test-reports-
+          key: ${{ inputs.test-timing-cache-key }}-${{ github.run_number }}
+          restore-keys: |
+            ${{ inputs.test-timing-cache-key }}-
+            go-test-reports-
       - uses: actions/download-artifact@9bc31d5ccc31df68ecc42ccf4149144866c47d8a # v3.0.2
         with:
           name: test-results
@@ -388,4 +432,11 @@ jobs:
       - run: |
           ls -lhR test-results/go-test
           find test-results/go-test -mindepth 1 -mtime +3 -delete
+
+          # Prune invalid timing files
+          find test-results/go-test -mindepth 1 -type f -name "*.json" -exec sh -c '
+            file="$1";
+            jq . "$file" || rm "$file"
+          ' shell {} \; > /dev/null 2>&1
+
           ls -lhR test-results/go-test

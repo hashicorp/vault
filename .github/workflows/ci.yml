@@ -39,7 +39,7 @@ jobs:
             # shellcheck disable=SC2129
             echo 'compute-small=["self-hosted","ondemand","linux","type=c6a.large"]' >> "$GITHUB_OUTPUT"     #  2x vCPUs,  4 GiB RAM,
             echo 'compute-medium=["self-hosted","ondemand","linux","type=c6a.xlarge"]' >> "$GITHUB_OUTPUT"   #  4x vCPUs,  8 GiB RAM,
-            echo 'compute-large=["self-hosted","ondemand","linux","type=c6a.2xlarge"]' >> "$GITHUB_OUTPUT"   #  8x vCPUs, 16 GiB RAM,
+            echo 'compute-large=["self-hosted","ondemand","linux","type=c6a.2xlarge","disk_gb=64"]' >> "$GITHUB_OUTPUT"   #  8x vCPUs, 16 GiB RAM,
             echo 'compute-largem=["self-hosted","ondemand","linux","type=m6a.2xlarge"]' >> "$GITHUB_OUTPUT"  #  8x vCPUs, 32 GiB RAM,
             echo 'compute-xlarge=["self-hosted","ondemand","linux","type=c6a.4xlarge"]' >> "$GITHUB_OUTPUT"  # 16x vCPUs, 32 GiB RAM,
             echo 'enterprise=1' >> "$GITHUB_OUTPUT"
@@ -59,39 +59,6 @@ jobs:
         with:
           github-token: ${{ secrets.ELEVATED_GITHUB_TOKEN }}
           no-restore: true # don't download them on a cache hit
-
-  diff-oss-ci:
-    name: Diff OSS
-    needs:
-      - setup
-    if: ${{ needs.setup.outputs.enterprise != '' && github.base_ref != '' }}
-    runs-on: ${{ fromJSON(needs.setup.outputs.compute-small) }}
-    steps:
-      - uses: actions/checkout@c85c95e3d7251135ab7dc9ce3241c5835cc595a9 # v3.5.3
-        with:
-          fetch-depth: 0
-      - id: determine-branch
-        run: |
-          branch="${{ github.base_ref }}"
-
-          if [[ $branch = release/* ]] ; then
-            branch=${branch%%+ent}
-
-            # Add OSS remote
-            git config --global user.email "github-team-secret-vault-core@hashicorp.com"
-            git config --global user.name "hc-github-team-secret-vault-core"
-            git remote add oss https://github.com/hashicorp/vault.git
-            git fetch oss "$branch"
-
-            branch="oss/$branch"
-          else
-            branch="origin/$branch"
-          fi
-
-          echo "BRANCH=$branch" >> "$GITHUB_OUTPUT"
-      - id: diff
-        run: |
-          ./.github/scripts/oss-diff.sh ${{ steps.determine-branch.outputs.BRANCH }} HEAD
 
   verify-changes:
     name: Verify doc-ui only PRs
@@ -117,6 +84,27 @@ jobs:
       go-tags: '${{ needs.setup.outputs.go-tags }},deadlock'
       runs-on: ${{ needs.setup.outputs.compute-large }}
       enterprise: ${{ needs.setup.outputs.enterprise }}
+      test-timing-cache-key: go-test-timing-standard
+    secrets: inherit
+
+  test-go-testonly:
+    name: Run Go tests tagged with testonly
+    needs:
+      - setup
+      - verify-changes
+    # Don't run this job for docs/ui only PRs
+    if: |
+      needs.verify-changes.outputs.is_docs_change == 'false' &&
+      needs.verify-changes.outputs.is_ui_change == 'false'
+    uses: ./.github/workflows/test-go.yml
+    with:
+      testonly: true
+      total-runners: 2 # test runners cannot be less than 2
+      go-arch: amd64
+      go-tags: '${{ needs.setup.outputs.go-tags }},deadlock,testonly'
+      runs-on: ${{ needs.setup.outputs.compute-large }}
+      enterprise: ${{ needs.setup.outputs.enterprise }}
+      test-timing-cache-enabled: false
     secrets: inherit
 
   test-go-race:
@@ -142,6 +130,7 @@ jobs:
       runs-on: ${{ needs.setup.outputs.compute-large }}
       enterprise: ${{ needs.setup.outputs.enterprise }}
       name: "race"
+      test-timing-cache-key: go-test-timing-race
     secrets: inherit
 
   test-go-fips:
@@ -167,6 +156,7 @@ jobs:
       runs-on: ${{ needs.setup.outputs.compute-large }}
       enterprise: ${{ needs.setup.outputs.enterprise }}
       name: "fips"
+      test-timing-cache-key: go-test-timing-fips
     secrets: inherit
 
   test-ui:
@@ -227,7 +217,7 @@ jobs:
           caCertificate: ${{ steps.vault-auth.outputs.ca_certificate }}
           token: ${{ steps.vault-auth.outputs.token }}
           secrets: |
-            kv/data/github/hashicorp/vault-enterprise/github-token token | PRIVATE_REPO_GITHUB_TOKEN;
+            kv/data/github/hashicorp/vault-enterprise/github-token username-and-token | PRIVATE_REPO_GITHUB_TOKEN;
             kv/data/github/hashicorp/vault-enterprise/license license_1 | VAULT_LICENSE;
       - id: setup-git
         name: Setup Git
@@ -278,14 +268,15 @@ jobs:
       - run: |
           tr -d '\n' <<< '${{ toJSON(needs.*.result) }}' | grep -q -v -E '(failure|cancelled)'
 
-  notify-tests-completed-failures-oss:
+  notify-tests-completed-failures-ce:
     if:  |
       always() &&
       github.repository == 'hashicorp/vault' &&
       (needs.test-go.result == 'failure' ||
-      needs.test-go-fips.result == 'failure' ||
-      needs.test-go-race.result == 'failure') &&
-      (github.ref_name == 'main' || startsWith(github.ref_name, 'release/'))
+      needs.test-go-testonly.result == 'failure' ||
+      needs.test-go-race.result == 'failure' ||
+      needs.test-ui.result == 'failure'
+      ) && (github.ref_name == 'main' || startsWith(github.ref_name, 'release/'))
     runs-on: ubuntu-latest
     permissions:
       id-token: write
@@ -294,8 +285,9 @@ jobs:
       fail-fast: false
     needs:
       - test-go
-      - test-go-fips
+      - test-go-testonly
       - test-go-race
+      - test-ui
     steps:
       - name: send-notification
         uses: slackapi/slack-github-action@e28cf165c92ffef168d23c5c9000cffc8a25e117 # v1.24.0
@@ -304,18 +296,51 @@ jobs:
         env:
           SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
         with:
-          channel-id: "C05AABYEA9Y" # sent to #feed-vault-ci-official
+          channel-id: "C05AABYEA9Y" # sent to #feed-vault-ci-official, use "C05Q4D5V89W"/test-vault-ci-slack-integration for testing
           payload: |
-            {"text":"OSS test failures on ${{ github.ref_name }}","blocks":[{"type":"header","text":{"type":"plain_text","text":":rotating_light: OSS test failures :rotating_light:","emoji":true}},{"type":"divider"},{"type":"section","text":{"type":"mrkdwn","text":"test(s) failed on ${{ github.ref_name }}"},"accessory":{"type":"button","text":{"type":"plain_text","text":"View Failing Workflow","emoji":true},"url":"${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"}}]}
+            {
+              "text": "CE test failures on ${{ github.ref_name }}",
+              "blocks": [
+                {
+                  "type": "header",
+                  "text": {
+                    "type": "plain_text",
+                    "text": ":rotating_light: CE test failures on ${{ github.ref_name }} :rotating_light:",
+                    "emoji": true
+                  }
+                },
+                {
+                  "type": "divider"
+                },
+                {
+                  "type": "section",
+                  "text": {
+                    "type": "mrkdwn",
+                    "text": "${{ needs.test-go.result != 'failure' && ':white_check_mark:' || ':x:' }} Go tests\n${{ needs.test-go-race.result != 'failure' && ':white_check_mark:' || ':x:' }} Go race tests\n${{ needs.test-go-testonly.result != 'failure' && ':white_check_mark:' || ':x:' }} Go testonly tests\n${{ needs.test-ui.result != 'failure' && ':white_check_mark:' || ':x:' }} UI tests"
+                  },
+                  "accessory": {
+                    "type": "button",
+                    "text": {
+                      "type": "plain_text",
+                      "text": "View Failing Workflow",
+                      "emoji": true
+                    },
+                    "url": "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+                  }
+                }
+              ]
+            }
 
   notify-tests-completed-failures-ent:
     if: |
       always() &&
       github.repository == 'hashicorp/vault-enterprise' &&
       (needs.test-go.result == 'failure' ||
+      needs.test-go-testonly.result == 'failure' ||
       needs.test-go-fips.result == 'failure' ||
-      needs.test-go-race.result == 'failure') &&
-      (github.ref_name == 'main' || startsWith(github.ref_name, 'release/'))
+      needs.test-go-race.result == 'failure' ||
+      needs.test-ui.result == 'failure'
+      ) && (github.ref_name == 'main' || startsWith(github.ref_name, 'release/'))
     runs-on: ['self-hosted', 'linux', 'small']
     permissions:
       id-token: write
@@ -324,8 +349,10 @@ jobs:
       fail-fast: false
     needs:
       - test-go
-      - test-go-fips
+      - test-go-testonly
       - test-go-race
+      - test-go-fips
+      - test-ui
     steps:
       - id: vault-auth
         name: Vault Authenticate
@@ -342,10 +369,41 @@ jobs:
       - name: send-notification
         uses: hashicorp/cloud-gha-slack-notifier@730a033037b8e603adf99ebd3085f0fdfe75e2f4 #v1
         with:
-          channel-id: "C05AABYEA9Y" # sent to #feed-vault-ci-official
+          channel-id: "C05AABYEA9Y" # sent to #feed-vault-ci-official, use "C05Q4D5V89W"/test-vault-ci-slack-integration for testing
           slack-bot-token: ${{ steps.secrets.outputs.SLACK_BOT_TOKEN }}
           payload: |
-            {"text":"Enterprise test failures on ${{ github.ref_name }}","blocks":[{"type":"header","text":{"type":"plain_text","text":":rotating_light: Enterprise test failures :rotating_light:","emoji":true}},{"type":"divider"},{"type":"section","text":{"type":"mrkdwn","text":"test(s) failed on ${{ github.ref_name }}"},"accessory":{"type":"button","text":{"type":"plain_text","text":"View Failing Workflow","emoji":true},"url":"${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"}}]}
+            {
+              "text": "Enterprise test failures on ${{ github.ref_name }}",
+              "blocks": [
+                {
+                  "type": "header",
+                  "text": {
+                    "type": "plain_text",
+                    "text": ":rotating_light: Enterprise test failures on ${{ github.ref_name }} :rotating_light:",
+                    "emoji": true
+                  }
+                },
+                {
+                  "type": "divider"
+                },
+                {
+                  "type": "section",
+                  "text": {
+                    "type": "mrkdwn",
+                    "text": "${{ needs.test-go.result != 'failure' && ':white_check_mark:' || ':x:' }} Go tests\n${{ needs.test-go-fips.result != 'failure' && ':white_check_mark:' || ':x:' }} Go FIPS tests\n${{ needs.test-go-race.result != 'failure' && ':white_check_mark:' || ':x:' }} Go race tests\n${{ needs.test-go-testonly.result != 'failure' && ':white_check_mark:' || ':x:' }} Go testonly tests\n${{ needs.test-ui.result != 'failure' && ':white_check_mark:' || ':x:' }} UI tests"
+                  },
+                  "accessory": {
+                    "type": "button",
+                    "text": {
+                      "type": "plain_text",
+                      "text": "View Failing Workflow",
+                      "emoji": true
+                    },
+                    "url": "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+                  }
+                }
+              ]
+            }
 
   test-summary:
     name: Go test failures
@@ -358,7 +416,7 @@ jobs:
       needs.test-go-fips.result == 'failure' ||
       needs.test-go-race.result == 'success' ||
       needs.test-go-race.result == 'failure') &&
-      (github.repository == 'hashicorp/vault' &&
+      (github.repository != 'hashicorp/vault' ||
       (github.event.pull_request.head.repo.full_name == github.event.pull_request.base.repo.full_name))
     # The last check ensures this doesn't run on community-contributed PRs, who
     # won't have the permissions to run this job.

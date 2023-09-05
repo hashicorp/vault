@@ -34,7 +34,7 @@ module('Acceptance | Enterprise | namespaces', function (hooks) {
     assert.dom('[data-test-namespace-link]').doesNotExist('Additional namespace have been cleared');
   });
 
-  test('it shows nested namespaces if you log in with a namspace starting with a /', async function (assert) {
+  test('it shows nested namespaces if you log in with a namespace starting with a /', async function (assert) {
     assert.expect(5);
 
     await click('[data-test-namespace-toggle]');

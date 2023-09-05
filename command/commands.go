@@ -218,11 +218,7 @@ var (
 		"kubernetes": ksr.NewServiceRegistration,
 	}
 
-	initCommandsEnt = func(ui, serverCmdUi cli.Ui, runOpts *RunOptions, commands map[string]cli.CommandFactory) {}
-)
-
-func initCommands(ui, serverCmdUi cli.Ui, runOpts *RunOptions) map[string]cli.CommandFactory {
-	loginHandlers := map[string]LoginHandler{
+	loginHandlers = map[string]LoginHandler{
 		"alicloud": &credAliCloud.CLIHandler{},
 		"aws":      &credAws.CLIHandler{},
 		"centrify": &credCentrify.CLIHandler{},
@@ -245,6 +241,10 @@ func initCommands(ui, serverCmdUi cli.Ui, runOpts *RunOptions) map[string]cli.Co
 		},
 	}
 
+	initCommandsEnt = func(ui, serverCmdUi cli.Ui, runOpts *RunOptions, commands map[string]cli.CommandFactory) {}
+)
+
+func initCommands(ui, serverCmdUi cli.Ui, runOpts *RunOptions) map[string]cli.CommandFactory {
 	getBaseCommand := func() *BaseCommand {
 		return &BaseCommand{
 			UI:          ui,

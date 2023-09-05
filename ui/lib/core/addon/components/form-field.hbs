@@ -57,34 +57,8 @@
             {{/each}}
           </select>
         </div>
-        {{#if this.validationError}}
-          <AlertInline
-            @type="danger"
-            @message={{this.validationError}}
-            @paddingTop={{true}}
-            data-test-field-validation={{@attr.name}}
-          />
-        {{/if}}
       </div>
     {{/if}}
-  {{else if (and (eq @attr.type "string") (eq @attr.options.editType "boolean"))}}
-    <div class="b-checkbox">
-      <input
-        type="checkbox"
-        id={{@attr.name}}
-        class="styled"
-        checked={{eq (get @model this.valuePath) @attr.options.trueValue}}
-        onchange={{fn this.setAndBroadcastBool @attr.options.trueValue @attr.options.falseValue}}
-        data-test-input={{@attr.name}}
-      />
-
-      <label for={{@attr.name}} class="is-label">
-        {{this.labelString}}
-        {{#if (and this.showHelpText @attr.options.helpText)}}
-          <InfoTooltip>{{@attr.options.helpText}}</InfoTooltip>
-        {{/if}}
-      </label>
-    </div>
   {{else if (eq @attr.options.editType "searchSelect")}}
     <div class="form-section">
       <SearchSelect
@@ -104,9 +78,6 @@
         class={{if this.validationError "dropdown-has-error-border"}}
       />
     </div>
-    {{#if this.validationError}}
-      <AlertInline @type="danger" @message={{this.validationError}} @paddingTop={{true}} />
-    {{/if}}
   {{else if (eq @attr.options.editType "mountAccessor")}}
     <MountAccessorSelect
       @name={{@attr.name}}
@@ -144,6 +115,7 @@
       {{#let (or (get @model this.valuePath) @attr.options.setDefault) as |initialValue|}}
         <TtlPicker
           data-test-input={{@attr.name}}
+          class={{if this.validationError "ttl-picker-form-field-error"}}
           @onChange={{this.setAndBroadcastTtl}}
           @label={{this.labelString}}
           @helperTextDisabled={{or @attr.options.helperTextDisabled "Vault will use the default lease duration."}}
@@ -212,6 +184,7 @@
     </Toggle>
   {{else if (eq @attr.options.editType "stringArray")}}
     <StringList
+      class={{if this.validationError "string-list-form-field-error"}}
       data-test-input={{@attr.name}}
       @label={{this.labelString}}
       @helpText={{if this.showHelpText @attr.options.helpText}}
@@ -228,9 +201,6 @@
       @onChange={{this.setAndBroadcast}}
       @onKeyUp={{@onKeyUp}}
     />
-    {{#if this.validationError}}
-      <AlertInline @type="danger" @message={{this.validationError}} @paddingTop={{true}} />
-    {{/if}}
   {{else if (or (eq @attr.type "number") (eq @attr.type "string"))}}
     <div class="control">
       {{#if (eq @attr.options.editType "textarea")}}
@@ -242,9 +212,6 @@
           oninput={{this.onChangeWithEvent}}
           class="textarea {{if this.validationError 'has-error-border'}}"
         ></textarea>
-        {{#if this.validationError}}
-          <AlertInline @type="danger" @message={{this.validationError}} @paddingTop={{true}} />
-        {{/if}}
       {{else if (eq @attr.options.editType "password")}}
         <Input
           data-test-input={{@attr.name}}
@@ -271,6 +238,7 @@
             @theme={{or @attr.options.theme "hashi"}}
             @helpText={{@attr.options.helpText}}
             @mode={{@attr.options.mode}}
+            @example={{@attr.options.example}}
           >
             {{#if @attr.options.allowReset}}
               <button
@@ -306,31 +274,22 @@
           disabled={{and @attr.options.editDisabled (not @model.isNew)}}
           autocomplete="off"
           spellcheck="false"
-          value={{or (get @model this.valuePath) @attr.options.defaultValue}}
+          value={{get @model this.valuePath}}
           {{on "change" this.onChangeWithEvent}}
+          {{on "input" this.onChangeWithEvent}}
           {{on "keyup" this.handleKeyUp}}
           class="input {{if this.validationError 'has-error-border'}}"
           maxLength={{@attr.options.characterLimit}}
         />
+        {{! TODO: explore removing in favor of new model validations pattern since it is only used on the namespace model }}
         {{#if @attr.options.validationAttr}}
           {{#if (and (get @model this.valuePath) (not (get @model @attr.options.validationAttr)))}}
             <AlertInline @type="danger" @message={{@attr.options.invalidMessage}} />
           {{/if}}
         {{/if}}
-        {{#if this.validationError}}
-          <AlertInline @type="danger" @message={{this.validationError}} @paddingTop={{true}} />
-        {{/if}}
-        {{#if this.validationWarning}}
-          <AlertInline
-            @type="warning"
-            @message={{this.validationWarning}}
-            @paddingTop={{true}}
-            data-test-validation-warning
-          />
-        {{/if}}
       {{/if}}
     </div>
-  {{else if (eq @attr.type "boolean")}}
+  {{else if (or (eq @attr.type "boolean") (eq @attr.options.editType "boolean"))}}
     <div class="b-checkbox">
       <input
         disabled={{this.disabled}}
@@ -364,8 +323,27 @@
       @value={{if (get @model this.valuePath) (stringify (get @model this.valuePath)) this.emptyData}}
       @valueUpdated={{fn this.codemirrorUpdated false}}
       @helpText={{@attr.options.helpText}}
+      @example={{@attr.options.example}}
     />
   {{else if (eq @attr.options.editType "yield")}}
     {{yield}}
+  {{/if}}
+  {{#if this.validationError}}
+    <AlertInline
+      @type="danger"
+      @message={{this.validationError}}
+      @paddingTop={{not-eq @attr.options.editType "ttl"}}
+      data-test-field-validation={{@attr.name}}
+      class={{if (eq @attr.options.editType "stringArray") "has-top-margin-negative-xxl"}}
+    />
+  {{/if}}
+  {{#if this.validationWarning}}
+    <AlertInline
+      @type="warning"
+      @message={{this.validationWarning}}
+      @paddingTop={{if (and (not this.validationError) (eq @attr.options.editType "ttl")) false true}}
+      data-test-validation-warning={{@attr.name}}
+      class={{if (and (not this.validationError) (eq @attr.options.editType "stringArray")) "has-top-margin-negative-xxl"}}
+    />
   {{/if}}
 </div>

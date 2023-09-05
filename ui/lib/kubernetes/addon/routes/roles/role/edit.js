@@ -11,7 +11,7 @@ export default class KubernetesRoleEditRoute extends Route {
   @service secretMountPath;
 
   model() {
-    const backend = this.secretMountPath.get();
+    const backend = this.secretMountPath.currentPath;
     const { name } = this.paramsFor('roles.role');
     return this.store.queryRecord('kubernetes/role', { backend, name });
   }

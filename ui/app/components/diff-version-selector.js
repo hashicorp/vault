@@ -12,6 +12,7 @@ import { tracked } from '@glimmer/tracking';
 /**
  * @module DiffVersionSelector
  * DiffVersionSelector component includes a toolbar and diff view between KV 2 versions. It uses the library jsondiffpatch.
+ * TODO kv engine cleanup
  *
  * @example
  * ```js

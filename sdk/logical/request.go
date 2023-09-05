@@ -447,3 +447,9 @@ type CtxKeyInFlightRequestID struct{}
 func (c CtxKeyInFlightRequestID) String() string {
 	return "in-flight-request-ID"
 }
+
+type CtxKeyRequestRole struct{}
+
+func (c CtxKeyRequestRole) String() string {
+	return "request-role"
+}

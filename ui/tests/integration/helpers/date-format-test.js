@@ -70,10 +70,12 @@ module('Integration | Helper | date-format', function (hooks) {
       hbs`<span data-test-formatted>{{date-format this.timestampDate 'MMM d yyyy, h:mm:ss aaa' withTimeZone=this.withTimezone}}</span>`
     );
     const result = find('[data-test-formatted]');
-    assert.strictEqual(result.innerText.length, 22);
+    const resultLength = result.innerText.length;
     // Compare to with timezone, which should add 4 characters
+    // Testing the difference because depending on the day the length may change.
     this.set('withTimezone', true);
     await settled();
-    assert.strictEqual(result.innerText.length, 26);
+    const resultLengthWithTimezone = result.innerText.length;
+    assert.strictEqual(resultLengthWithTimezone - resultLength, 4);
   });
 });

@@ -14,18 +14,10 @@ import connectionPage from 'vault/tests/pages/secrets/backend/database/connectio
 import rolePage from 'vault/tests/pages/secrets/backend/database/role';
 import authPage from 'vault/tests/pages/auth';
 import logout from 'vault/tests/pages/logout';
-import consoleClass from 'vault/tests/pages/components/console/ui-panel';
 import searchSelect from 'vault/tests/pages/components/search-select';
-import {
-  createPolicyCmd,
-  deleteEngineCmd,
-  mountEngineCmd,
-  runCmd,
-  tokenWithPolicyCmd,
-} from 'vault/tests/helpers/commands';
+import { deleteEngineCmd, mountEngineCmd, runCmd, tokenWithPolicyCmd } from 'vault/tests/helpers/commands';
 
 const searchSelectComponent = create(searchSelect);
-const consoleComponent = create(consoleClass);
 
 const newConnection = async (backend, plugin = 'mongodb-database-plugin') => {
   const name = `connection-${Date.now()}`;
@@ -41,7 +33,7 @@ const newConnection = async (backend, plugin = 'mongodb-database-plugin') => {
 
 const navToConnection = async (backend, connection) => {
   await visit('/vault/secrets');
-  await click(`[data-test-auth-backend-link="${backend}"]`);
+  await click(`[data-test-secrets-backend-link="${backend}"]`);
   await click('[data-test-secret-list-tab="Connections"]');
   await click(`[data-test-secret-link="${connection}"]`);
   return;
@@ -231,10 +223,11 @@ module('Acceptance | secrets/database/*', function (hooks) {
   hooks.beforeEach(async function () {
     this.backend = `database-testing`;
     await authPage.login();
-    return consoleComponent.runCommands(mountEngineCmd('database', this.backend));
+    return runCmd(mountEngineCmd('database', this.backend), false);
   });
-  hooks.afterEach(function () {
-    return consoleComponent.runCommands(deleteEngineCmd(this.backend));
+  hooks.afterEach(async function () {
+    await authPage.login();
+    return runCmd(deleteEngineCmd(this.backend), false);
   });
 
   test('can enable the database secrets engine', async function (assert) {
@@ -256,7 +249,7 @@ module('Acceptance | secrets/database/*', function (hooks) {
     assert.dom('[data-test-secret-list-tab="Roles"]').exists('Has Roles tab');
     await visit('/vault/secrets');
     // Cleanup backend
-    await consoleComponent.runCommands(deleteEngineCmd(backend));
+    await runCmd(deleteEngineCmd(backend), false);
   });
 
   for (const testCase of connectionTests) {
@@ -446,15 +439,8 @@ module('Acceptance | secrets/database/*', function (hooks) {
       path "${backend}/config/*" {
         capabilities = ["read"]
       }
-      # allow backend cleanup on afterEach
-      path "sys/mounts/${backend}" {
-        capabilities = ["delete"]
-      }
     `;
-    const token = await runCmd(consoleComponent, [
-      ...createPolicyCmd('test-policy', CONNECTION_VIEW_ONLY),
-      ...tokenWithPolicyCmd('test-policy'),
-    ]);
+    const token = await runCmd(tokenWithPolicyCmd('test-policy', CONNECTION_VIEW_ONLY));
     await navToConnection(backend, connection);
     assert
       .dom('[data-test-database-connection-delete]')
@@ -467,7 +453,8 @@ module('Acceptance | secrets/database/*', function (hooks) {
     await authPage.logout();
     // Check with restricted permissions
     await authPage.login(token);
-    assert.dom(`[data-test-auth-backend-link="${backend}"]`).exists('Shows backend on secret list page');
+    await click('[data-test-sidebar-nav-link="Secrets engines"]');
+    assert.dom(`[data-test-secrets-backend-link="${backend}"]`).exists('Shows backend on secret list page');
     await navToConnection(backend, connection);
     assert.strictEqual(
       currentURL(),
@@ -540,10 +527,7 @@ module('Acceptance | secrets/database/*', function (hooks) {
         capabilities = ["list", "create", "read", "update"]
       }
     `;
-    const token = await runCmd(consoleComponent, [
-      ...createPolicyCmd('test-policy', NO_ROLES_POLICY),
-      ...tokenWithPolicyCmd('test-policy'),
-    ]);
+    const token = await runCmd(tokenWithPolicyCmd('test-policy', NO_ROLES_POLICY));
 
     // test root user flow first
     await visit(`/vault/secrets/${backend}/overview`);

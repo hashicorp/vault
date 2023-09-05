@@ -22,6 +22,7 @@
  * @param {string} backend - Passed to SearchSelect query method to fetch dropdown options
  */
 
+// TODO: kv engine cleanup remove secrets related logic
 import Component from '@glimmer/component';
 import { inject as service } from '@ember/service';
 import { action } from '@ember/object';
@@ -32,18 +33,39 @@ export default class GetCredentialsCard extends Component {
   @tracked role = '';
   @tracked secret = '';
 
+  constructor() {
+    super(...arguments);
+    this.secret = this.args?.initialValue || '';
+  }
+
+  get buttonText() {
+    if (this.args.type === 'secret') {
+      if (this.secret.endsWith('/')) {
+        return 'View list';
+      }
+      return 'View secret';
+    }
+    return 'Get credentials';
+  }
+
   get buttonDisabled() {
     return !this.role && !this.secret;
   }
 
   @action
-  transitionToCredential() {
+  transitionToCredential(evt) {
+    evt.preventDefault();
     const role = this.role;
     const secret = this.secret;
     if (role) {
       this.router.transitionTo('vault.cluster.secrets.backend.credentials', role);
     }
+    // TODO kv engine cleanup. Should be able to remove this component and replace with overview card for the role usage. KV engine has switched to overview card.
     if (secret) {
+      if (secret.endsWith('/')) {
+        this.router.transitionTo('vault.cluster.secrets.backend.list', secret);
+        return;
+      }
       this.router.transitionTo('vault.cluster.secrets.backend.show', secret);
     }
   }

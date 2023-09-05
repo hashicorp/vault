@@ -6,13 +6,16 @@ package configutil
 import (
 	"context"
 	"crypto/rand"
+	"errors"
 	"fmt"
 	"io"
 	"os"
+	"regexp"
 	"strings"
 
 	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/go-hclog"
+	"github.com/hashicorp/go-kms-wrapping/entropy/v2"
 	wrapping "github.com/hashicorp/go-kms-wrapping/v2"
 	aeadwrapper "github.com/hashicorp/go-kms-wrapping/wrappers/aead/v2"
 	"github.com/hashicorp/go-kms-wrapping/wrappers/alicloudkms/v2"
@@ -25,6 +28,7 @@ import (
 	"github.com/hashicorp/go-secure-stdlib/parseutil"
 	"github.com/hashicorp/hcl"
 	"github.com/hashicorp/hcl/hcl/ast"
+	"github.com/hashicorp/vault/sdk/helper/strutil"
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
@@ -43,7 +47,13 @@ const (
 )
 
 type Entropy struct {
-	Mode EntropyMode
+	Mode     EntropyMode
+	SealName string
+}
+
+type EntropySourcerInfo struct {
+	Sourcer entropy.Sourcer
+	Name    string
 }
 
 // KMS contains KMS configuration for the server
@@ -121,12 +131,20 @@ func parseKMS(result *[]*KMS, list *ast.ObjectList, blockName string, maxKMS int
 		}
 
 		name := strings.ToLower(key)
+		// ensure that seals of the same type will have unique names for seal migration
+		if disabled {
+			name += "-disabled"
+		}
 		if v, ok := m["name"]; ok {
 			name, ok = v.(string)
 			if !ok {
 				return multierror.Prefix(fmt.Errorf("unable to parse 'name' in kms type %q: unexpected type %T", key, v), fmt.Sprintf("%s.%s", blockName, key))
 			}
 			delete(m, "name")
+
+			if !regexp.MustCompile("^[a-zA-Z0-9-_]+$").MatchString(name) {
+				return multierror.Prefix(errors.New("'name' field can only include alphanumeric characters, hyphens, and underscores"), fmt.Sprintf("%s.%s", blockName, key))
+			}
 		}
 
 		strMap := make(map[string]string, len(m))
@@ -198,8 +216,13 @@ func configureWrapper(configKMS *KMS, infoKeys *[]string, info *map[string]strin
 	var err error
 
 	envConfig := GetEnvConfigFunc(configKMS)
-	for name, val := range envConfig {
-		configKMS.Config[name] = val
+	// transit is a special case, because some config values take precedence over env vars
+	if configKMS.Type == wrapping.WrapperTypeTransit.String() {
+		mergeTransitConfig(configKMS.Config, envConfig)
+	} else {
+		for name, val := range envConfig {
+			configKMS.Config[name] = val
+		}
 	}
 
 	switch wrapping.WrapperType(configKMS.Type) {
@@ -381,7 +404,7 @@ var GetTransitKMSFunc = func(kms *KMS, opts ...wrapping.Option) (wrapping.Wrappe
 	return wrapper, info, nil
 }
 
-func createSecureRandomReader(conf *SharedConfig, wrapper wrapping.Wrapper) (io.Reader, error) {
+func createSecureRandomReader(_ *SharedConfig, _ []*EntropySourcerInfo, _ hclog.Logger) (io.Reader, error) {
 	return rand.Reader, nil
 }
 
@@ -414,4 +437,42 @@ func getEnvConfig(kms *KMS) map[string]string {
 	}
 
 	return envValues
+}
+
+func mergeTransitConfig(config map[string]string, envConfig map[string]string) {
+	useFileTlsConfig := false
+	for _, varName := range TransitTLSConfigVars {
+		if _, ok := config[varName]; ok {
+			useFileTlsConfig = true
+			break
+		}
+	}
+
+	if useFileTlsConfig {
+		for _, varName := range TransitTLSConfigVars {
+			delete(envConfig, varName)
+		}
+	}
+
+	for varName, val := range envConfig {
+		// for some values, file config takes precedence
+		if strutil.StrListContains(TransitPrioritizeConfigValues, varName) && config[varName] != "" {
+			continue
+		}
+
+		config[varName] = val
+	}
+}
+
+func (k *KMS) Clone() *KMS {
+	ret := &KMS{
+		UnusedKeys: k.UnusedKeys,
+		Type:       k.Type,
+		Purpose:    k.Purpose,
+		Config:     k.Config,
+		Name:       k.Name,
+		Disabled:   k.Disabled,
+		Priority:   k.Priority,
+	}
+	return ret
 }

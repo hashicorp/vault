@@ -15,6 +15,7 @@ import (
 	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-secure-stdlib/strutil"
 	"github.com/hashicorp/go-uuid"
+	"github.com/hashicorp/vault/builtin/logical/database/schedule"
 	"github.com/hashicorp/vault/helper/metricsutil"
 	"github.com/hashicorp/vault/helper/syncmap"
 	"github.com/hashicorp/vault/internalshared/configutil"
@@ -127,6 +128,8 @@ func Backend(conf *logical.BackendConfig) *databaseBackend {
 	b.connections = syncmap.NewSyncMap[string, *dbPluginInstance]()
 	b.queueCtx, b.cancelQueueCtx = context.WithCancel(context.Background())
 	b.roleLocks = locksutil.CreateLocks()
+	b.schedule = &schedule.DefaultSchedule{}
+
 	return &b
 }
 
@@ -176,6 +179,8 @@ type databaseBackend struct {
 	// the running gauge collection process
 	gaugeCollectionProcess     *metricsutil.GaugeCollectionProcess
 	gaugeCollectionProcessStop sync.Once
+
+	schedule schedule.Scheduler
 }
 
 func (b *databaseBackend) DatabaseConfig(ctx context.Context, s logical.Storage, name string) (*DatabaseConfig, error) {

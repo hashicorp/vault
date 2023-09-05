@@ -1,0 +1,58 @@
+<Hds::Card::Container @hasBorder={{true}} class="has-padding-l has-bottom-padding-m" data-test-card="client-count">
+  <div class="is-flex-between">
+    <h3 class="title is-4 has-bottom-margin-xxs" data-test-client-count-title>
+      Client count
+    </h3>
+
+    <LinkTo @route="vault.cluster.clients.dashboard" class="is-no-underline">Details</LinkTo>
+  </div>
+
+  <hr class="has-background-gray-100" />
+
+  {{#if this.noActivityData}}
+    {{! This will likely not be show since the client activity api was changed to always return data. In the past it
+  would return no activity data. Adding this empty state here to match the current client count behavior }}
+    <Clients::NoData @config={{this.clientConfig}} />
+  {{else}}
+    {{#if this.fetchClientActivity.isRunning}}
+      <VaultLogoSpinner />
+    {{else}}
+      <div class="is-grid grid-2-columns grid-gap-2 has-top-margin-m grid-align-items-start is-flex-v-centered">
+        <StatText
+          @label="Total"
+          @value={{this.activityData.total.clients}}
+          @size="l"
+          @subText="The number of clients in this billing period ({{date-format
+            this.licenseStartTime
+            'MMM yyyy'
+          }} - {{date-format this.updatedAt 'MMM yyyy'}})."
+          data-test-stat-text="total-clients"
+        />
+        <StatText
+          @label="New"
+          @value={{this.currentMonthActivityTotalCount}}
+          @size="l"
+          @subText="The number of clients new to Vault in the current month."
+          data-test-stat-text="new-clients"
+        />
+      </div>
+
+      <div class="has-top-margin-l is-flex-center">
+        <Hds::Button
+          @text="Refresh"
+          @isIconOnly={{true}}
+          @color="tertiary"
+          @icon="sync"
+          disabled={{this.fetchClientActivity.isRunning}}
+          class="has-padding-xxs"
+          {{on "click" (perform this.fetchClientActivity)}}
+          data-test-refresh
+        />
+        <small class="has-left-margin-xs has-text-grey">
+          Updated
+          {{date-format this.updatedAt "MMM dd, yyyy hh:mm:SS"}}
+        </small>
+      </div>
+    {{/if}}
+  {{/if}}
+</Hds::Card::Container>

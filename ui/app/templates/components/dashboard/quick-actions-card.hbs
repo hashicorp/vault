@@ -1,0 +1,87 @@
+<Hds::Card::Container @hasBorder={{true}} class="has-padding-l" data-test-card="quick-actions">
+  <h3 class="title is-4">Quick actions</h3>
+  {{#if this.filteredSecretEngines}}
+    <div class="has-top-margin-m has-bottom-margin-m">
+      <h4 class="title is-marginless is-6">Secrets engines</h4>
+      <p class="is-size-8 has-top-margin-xxs has-bottom-margin-s has-text-grey">Supported engines include databases, KV
+        version 2, and PKI.</p>
+      <SearchSelect
+        @id="secrets-engines-select"
+        @options={{this.mountOptions}}
+        @selectLimit="1"
+        @disallowNewItems={{true}}
+        @fallbackComponent="input-search"
+        @onChange={{this.handleSearchEngineSelect}}
+        @placeholder="Type to select a mount"
+        @displayInherit={{true}}
+        @shouldRenderName={{true}}
+        @passObject={{true}}
+        @objectKeys={{array "type" "version"}}
+        class="is-marginless"
+        data-test-secrets-engines-select
+      />
+    </div>
+
+    {{#if this.selectedEngine}}
+      <h4 class="title is-6">Action</h4>
+      <Select
+        @name="action-select"
+        @options={{this.actionOptions}}
+        @isFullwidth={{true}}
+        @selectedValue={{this.selectedAction}}
+        @onChange={{this.setSelectedAction}}
+        @noDefault={{true}}
+      />
+
+      {{#if this.searchSelectParams.model}}
+        <h4 class="title is-6" data-test-search-select-params-title>{{this.searchSelectParams.title}}</h4>
+
+        <SearchSelect
+          class="is-flex-grow-1"
+          @selectLimit="1"
+          @models={{array this.searchSelectParams.model}}
+          @placeholder={{this.searchSelectParams.placeholder}}
+          @disallowNewItems={{true}}
+          @onChange={{this.handleActionSelect}}
+          @fallbackComponent="input-search"
+          @disabled={{not this.searchSelectParams.model}}
+          @nameKey={{this.searchSelectParams.nameKey}}
+          @queryObject={{this.searchSelectParams.queryObject}}
+          @objectKeys={{this.searchSelectParams.objectKeys}}
+          @passObject={{true}}
+          @shouldRenderName={{this.searchSelectParams.nameKey}}
+          data-test-param-select
+        />
+
+        <div>
+          <button
+            type="button"
+            class="button is-primary has-top-margin-m"
+            disabled={{(not (and this.selectedAction this.selectedEngine this.paramValue))}}
+            {{on "click" this.navigateToPage}}
+            data-test-button={{this.searchSelectParams.buttonText}}
+          >
+            {{this.searchSelectParams.buttonText}}
+          </button>
+        </div>
+      {{/if}}
+    {{else}}
+      <EmptyState
+        @title="No mount selected"
+        @message="Select a mount above to get started."
+        data-test-no-mount-selected-empty
+      />
+    {{/if}}
+  {{else}}
+
+    <EmptyState
+      @title="Welcome to quick actions"
+      @message="Access secret engine actions easily. Enable a compatible secret engine (such as database, KV version 2, or PKI) to get started."
+      data-test-empty-state="quick-actions"
+    >
+      <div>
+        <LinkTo @route="vault.cluster.settings.mount-secret-backend">Enable a secret engine</LinkTo>
+      </div>
+    </EmptyState>
+  {{/if}}
+</Hds::Card::Container>
