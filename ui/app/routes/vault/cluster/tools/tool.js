@@ -2,17 +2,12 @@ import Route from '@ember/routing/route';
 import { toolsActions } from 'vault/helpers/tools-actions';
 
 export default Route.extend({
-  beforeModel(transition) {
-    const supportedActions = toolsActions();
-    const { selected_action: selectedAction } = this.paramsFor(this.routeName);
-    if (!selectedAction || !supportedActions.includes(selectedAction)) {
-      transition.abort();
-      return this.transitionTo(this.routeName, supportedActions[0]);
-    }
-  },
-
   model(params) {
-    return params.selected_action;
+    const supportedActions = toolsActions();
+    if (supportedActions.includes(params.selected_action)) {
+      return params.selected_action;
+    }
+    throw new Error('Given param is not a supported tool action');
   },
 
   setupController(controller, model) {
