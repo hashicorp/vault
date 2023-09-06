@@ -153,8 +153,17 @@ event "post-publish-website" {
   }
 }
 
-event "update-ironbank" {
+event "bump-version" {
   depends = ["post-publish-website"]
+  action "bump-version" {
+    organization = "hashicorp"
+    repository = "crt-workflows-common"
+    workflow = "bump-version"
+  }
+}
+
+event "update-ironbank" {
+  depends = ["bump-version"]
   action "update-ironbank" {
     organization = "hashicorp"
     repository = "crt-workflows-common"
