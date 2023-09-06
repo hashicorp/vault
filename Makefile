@@ -293,22 +293,13 @@ ci-build:
 ci-build-ui:
 	@$(CURDIR)/scripts/ci-helper.sh build-ui
 
-.PHONY: ci-bundle
-ci-bundle:
-	@$(CURDIR)/scripts/ci-helper.sh bundle
-
 .PHONY: ci-filter-matrix
 ci-filter-matrix:
 	@$(CURDIR)/scripts/ci-helper.sh matrix-filter-file
 
-.PHONY: ci-get-artifact-basename
-ci-get-artifact-basename:
-	@$(CURDIR)/scripts/ci-helper.sh artifact-basename
-
 .PHONY: ci-get-date
 ci-get-date:
 	@$(CURDIR)/scripts/ci-helper.sh date
-
 .PHONY: ci-get-matrix-group-id
 ci-get-matrix-group-id:
 	@$(CURDIR)/scripts/ci-helper.sh matrix-group-id
@@ -317,38 +308,19 @@ ci-get-matrix-group-id:
 ci-get-revision:
 	@$(CURDIR)/scripts/ci-helper.sh revision
 
-.PHONY: ci-get-version
-ci-get-version:
-	@$(CURDIR)/scripts/ci-helper.sh version
-
-.PHONY: ci-get-version-base
-ci-get-version-base:
-	@$(CURDIR)/scripts/ci-helper.sh version-base
-
-.PHONY: ci-get-version-major
-ci-get-version-major:
-	@$(CURDIR)/scripts/ci-helper.sh version-major
-
-.PHONY: ci-get-version-meta
-ci-get-version-meta:
-	@$(CURDIR)/scripts/ci-helper.sh version-meta
-
-.PHONY: ci-get-version-minor
-ci-get-version-minor:
-	@$(CURDIR)/scripts/ci-helper.sh version-minor
+.PHONY: ci-prepare-legal
+ci-prepare-legal:
+	@$(CURDIR)/scripts/ci-helper.sh prepare-legal
 
 .PHONY: ci-get-version-package
 ci-get-version-package:
 	@$(CURDIR)/scripts/ci-helper.sh version-package
 
-.PHONY: ci-get-version-patch
-ci-get-version-patch:
-	@$(CURDIR)/scripts/ci-helper.sh version-patch
+.PHONY: ci-get-artifact-basename
+ci-get-artifact-basename:
+	@$(CURDIR)/scripts/ci-helper.sh artifact-basename
 
-.PHONY: ci-get-version-pre
-ci-get-version-pre:
-	@$(CURDIR)/scripts/ci-helper.sh version-pre
+.PHONY: ci-bundle
+ci-bundle:
+	@$(CURDIR)/scripts/ci-helper.sh bundle
 
-.PHONY: ci-prepare-legal
-ci-prepare-legal:
-	@$(CURDIR)/scripts/ci-helper.sh prepare-legal
