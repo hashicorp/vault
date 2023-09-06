@@ -78,29 +78,26 @@
   <section class="modal-card-body">
     <div class="box is-shadowless is-fullwidth is-sideless">
       <h2 class="title is-6">Ciphertext</h2>
+      {{! HDS Adoption: Replace with Hds::Copy::Snippet }}
       <div class="copy-text level">
         <code class="level-left" data-test-encrypted-value="ciphertext">{{@ciphertext}}</code>
-        <CopyButton
-          class="button is-compact is-transparent level-right"
+        <Hds::Copy::Button
+          @text="Copy"
+          @isIconOnly={{true}}
+          @textToCopy={{@ciphertext}}
+          class="hds-copy-button icon-only"
           data-test-button="modal-copy"
-          @clipboardText={{@ciphertext}}
-          @buttonType="button"
-          @success={{action (set-flash-message "Ciphertext copied!")}}
-        >
-          <Icon @name="clipboard-copy" aria-label="Copy" />
-        </CopyButton>
+        />
       </div>
     </div>
   </section>
   <footer class="modal-card-foot">
-    <CopyButton
-      class="button is-primary copy-close"
+    <Hds::Copy::Button
+      @text="Copy & Close"
+      @textToCopy={{@ciphertext}}
+      class="hds-copy-button is-primary"
       data-test-button="modal-copy-close"
-      @clipboardText={{@ciphertext}}
-      @buttonType="button"
-      @success={{action @toggleModal "Ciphertext copied!"}}
-    >
-      Copy &amp; Close
-    </CopyButton>
+      {{on "click" (fn @toggleModal "Ciphertext copied!")}}
+    />
   </footer>
 </Modal>

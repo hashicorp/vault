@@ -69,29 +69,28 @@
   <section class="modal-card-body">
     <div class="box is-shadowless is-fullwidth is-sideless">
       <h2 class="title is-6">Wrapped Key</h2>
+      {{! HDS Adoption: Replace with Hds::Copy::Snippet }}
       <div class="copy-text level">
-        <pre data-test-encrypted-value="export" class="level-left">{{if this.wrapTTL @wrappedToken (stringify @keys)}}</pre>
-        <CopyButton
-          class="button is-compact is-transparent level-right"
+        <code data-test-encrypted-value="export" class="level-left">
+          {{if this.wrapTTL @wrappedToken (stringify @keys)}}
+        </code>
+        <Hds::Copy::Button
+          @text="Copy"
+          @isIconOnly={{true}}
+          @textToCopy={{if this.wrapTTL @wrappedToken (stringify @keys)}}
+          class="hds-copy-button icon-only"
           data-test-button="modal-copy"
-          @clipboardText={{if this.wrapTTL @wrappedToken (stringify @keys)}}
-          @buttonType="button"
-          @success={{action (set-flash-message "Token copied!")}}
-        >
-          <Icon @name="clipboard-copy" aria-label="Copy" />
-        </CopyButton>
+        />
       </div>
     </div>
   </section>
   <footer class="modal-card-foot">
-    <CopyButton
-      class="button is-primary copy-close"
+    <Hds::Copy::Button
+      @text="Copy & Close"
+      @textToCopy={{if this.wrapTTL @wrappedToken (stringify @keys)}}
+      class="hds-copy-button is-primary"
       data-test-button="modal-copy-close"
-      @clipboardText={{if this.wrapTTL @wrappedToken (stringify @keys)}}
-      @buttonType="button"
-      @success={{action @toggleModal "Token copied!"}}
-    >
-      Copy &amp; Close
-    </CopyButton>
+      {{on "click" (fn @toggleModal "Token copied!")}}
+    />
   </footer>
 </Modal>

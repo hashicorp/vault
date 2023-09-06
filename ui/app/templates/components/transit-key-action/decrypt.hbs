@@ -60,31 +60,28 @@
     <section class="modal-card-body">
       <div class="box is-shadowless is-fullwidth is-sideless">
         <h2 class="title is-6">Plaintext</h2>
+        {{! HDS Adoption: Replace with Hds::Copy::Snippet }}
         <div class="copy-text level">
           <code class="level-left" data-test-encrypted-value="plaintext">{{@plaintext}}</code>
-          <CopyButton
-            class="button is-compact is-transparent level-right"
+          <Hds::Copy::Button
+            @text="Copy"
+            @isIconOnly={{true}}
+            @textToCopy={{@plaintext}}
+            class="hds-copy-button icon-only"
             data-test-button="modal-copy"
-            @clipboardText={{@plaintext}}
-            @buttonType="button"
-            @success={{action (set-flash-message "Plaintext copied!")}}
-          >
-            <Icon @name="clipboard-copy" aria-label="Copy" />
-          </CopyButton>
+          />
         </div>
         <p class="help">Plaintext is base64 encoded</p>
       </div>
     </section>
     <footer class="modal-card-foot">
-      <CopyButton
-        class="button is-primary copy-close"
+      <Hds::Copy::Button
+        @text="Copy & Close"
+        @textToCopy={{@plaintext}}
+        class="hds-copy-button is-primary"
         data-test-button="modal-copy-close"
-        @clipboardText={{@plaintext}}
-        @buttonType="button"
-        @success={{action @toggleModal "Plaintext copied!"}}
-      >
-        Copy &amp; Close
-      </CopyButton>
+        {{on "click" (fn @toggleModal "Plaintext copied!")}}
+      />
     </footer>
   </Modal>
 {{/if}}
