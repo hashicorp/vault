@@ -349,4 +349,13 @@ a.button.disabled {
   &.size-7 div {
     font-size: $size-7;
   }
+
+  &.code-snippet {
+    background: none;
+    border: none;
+    box-shadow: none;
+    min-width: auto;
+    padding: $size-11 $size-8;
+    color: $ui-gray-300;
+  }
 }
