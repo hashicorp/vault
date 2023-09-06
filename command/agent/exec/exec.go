@@ -65,9 +65,13 @@ type Server struct {
 
 	logger hclog.Logger
 
-	childProcess      *child.Child
-	childProcessState childProcessState
-	childProcessLock  sync.Mutex
+	childProcess            *child.Child
+	childProcessState       childProcessState
+	childProcessLock        sync.Mutex
+	childProcessStdout      *os.File
+	childProcessStderr      *os.File
+	childProcessCloseStdOut bool
+	childProcessCloseStderr bool
 
 	// exit channel of the child process
 	childProcessExitCh chan int
@@ -85,15 +89,41 @@ func (e *ProcessExitError) Error() string {
 	return fmt.Sprintf("process exited with %d", e.ExitCode)
 }
 
-func NewServer(cfg *ServerConfig) *Server {
-	server := Server{
-		logger:             cfg.Logger,
-		config:             cfg,
-		childProcessState:  childProcessStateNotStarted,
-		childProcessExitCh: make(chan int),
+func NewServer(cfg *ServerConfig) (*Server, error) {
+	var err error
+
+	childProcessCloseStdout := false
+	childProcessStdout := os.Stdout
+	if cfg.AgentConfig.Exec.ChildProcessStdout != "" {
+		childProcessStdout, err = os.OpenFile(cfg.AgentConfig.Exec.ChildProcessStdout, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+		if err != nil {
+			return nil, fmt.Errorf("could not open %q, %w", cfg.AgentConfig.Exec.ChildProcessStdout, err)
+		}
+		childProcessCloseStdout = true
 	}
 
-	return &server
+	childProcessCloseStderr := false
+	childProcessStderr := os.Stderr
+	if cfg.AgentConfig.Exec.ChildProcessStderr != "" {
+		childProcessStderr, err = os.OpenFile(cfg.AgentConfig.Exec.ChildProcessStderr, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+		if err != nil {
+			return nil, fmt.Errorf("could not open %q, %w", cfg.AgentConfig.Exec.ChildProcessStdout, err)
+		}
+		childProcessCloseStderr = true
+	}
+
+	server := Server{
+		logger:                  cfg.Logger,
+		config:                  cfg,
+		childProcessState:       childProcessStateNotStarted,
+		childProcessExitCh:      make(chan int),
+		childProcessStdout:      childProcessStdout,
+		childProcessStderr:      childProcessStderr,
+		childProcessCloseStdOut: childProcessCloseStdout,
+		childProcessCloseStderr: childProcessCloseStderr,
+	}
+
+	return &server, nil
 }
 
 func (s *Server) Run(ctx context.Context, incomingVaultToken chan string) error {
@@ -291,8 +321,8 @@ func (s *Server) restartChildProcess(newEnvVars []string) error {
 
 	childInput := &child.NewInput{
 		Stdin:        os.Stdin,
-		Stdout:       os.Stdout,
-		Stderr:       os.Stderr,
+		Stdout:       s.childProcessStdout,
+		Stderr:       s.childProcessStderr,
 		Command:      args[0],
 		Args:         args[1:],
 		Timeout:      0, // let it run forever
@@ -332,4 +362,17 @@ func (s *Server) restartChildProcess(newEnvVars []string) error {
 	}()
 
 	return nil
+}
+
+func (s *Server) Close() {
+	s.childProcessLock.Lock()
+	defer s.childProcessLock.Unlock()
+
+	if s.childProcessCloseStdOut {
+		_ = s.childProcessStdout.Close()
+	}
+
+	if s.childProcessCloseStderr {
+		_ = s.childProcessStderr.Close()
+	}
 }
