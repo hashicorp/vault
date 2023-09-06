@@ -111,11 +111,31 @@ func TestPostgreSQL_Initialize_CloudGCP(t *testing.T) {
 	credStr := dbtesting.GetGCPTestCredentials(t)
 
 	type testCase struct {
-		req dbplugin.InitializeRequest
+		req           dbplugin.InitializeRequest
+		wantErr       bool
+		expectedError string
 	}
 
 	tests := map[string]testCase{
-		"default": {
+		"empty auth type": {
+			req: dbplugin.InitializeRequest{
+				Config: map[string]interface{}{
+					"connection_url": connURL,
+					"auth_type":      "",
+				},
+			},
+		},
+		"invalid auth type": {
+			req: dbplugin.InitializeRequest{
+				Config: map[string]interface{}{
+					"connection_url": connURL,
+					"auth_type":      "invalid",
+				},
+			},
+			wantErr:       true,
+			expectedError: "invalid auth_type",
+		},
+		"default credentials": {
 			req: dbplugin.InitializeRequest{
 				Config: map[string]interface{}{
 					"connection_url": connURL,
@@ -124,7 +144,7 @@ func TestPostgreSQL_Initialize_CloudGCP(t *testing.T) {
 				VerifyConnection: true,
 			},
 		},
-		"credentials": {
+		"JSON credentials": {
 			req: dbplugin.InitializeRequest{
 				Config: map[string]interface{}{
 					"connection_url":       connURL,
@@ -139,11 +159,26 @@ func TestPostgreSQL_Initialize_CloudGCP(t *testing.T) {
 	for name, test := range tests {
 		t.Run(name, func(t *testing.T) {
 			db := new()
-			dbtesting.AssertInitialize(t, db, test.req)
 			defer dbtesting.AssertClose(t, db)
 
-			if !db.Initialized {
-				t.Fatal("Database should be initialized")
+			_, err := dbtesting.VerifyInitialize(t, db, test.req)
+
+			if test.wantErr {
+				if err == nil {
+					t.Fatalf("expected error but received nil")
+				}
+
+				if !strings.Contains(err.Error(), test.expectedError) {
+					t.Fatalf("expected error %s, got %s", test.expectedError, err.Error())
+				}
+			} else {
+				if err != nil {
+					t.Fatalf("expected no error, received %s", err)
+				}
+
+				if !db.Initialized {
+					t.Fatal("Database should be initialized")
+				}
 			}
 		})
 	}

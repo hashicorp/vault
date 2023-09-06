@@ -40,7 +40,7 @@ func AssertInitializeCircleCiTest(t *testing.T, db dbplugin.Database, req dbplug
 	var err error
 
 	for i := 1; i <= maxAttempts; i++ {
-		resp, err = verifyInitialize(t, db, req)
+		resp, err = VerifyInitialize(t, db, req)
 		if err != nil {
 			t.Errorf("Failed AssertInitialize attempt: %d with error:\n%+v\n", i, err)
 			time.Sleep(1 * time.Second)
@@ -58,14 +58,14 @@ func AssertInitializeCircleCiTest(t *testing.T, db dbplugin.Database, req dbplug
 
 func AssertInitialize(t *testing.T, db dbplugin.Database, req dbplugin.InitializeRequest) dbplugin.InitializeResponse {
 	t.Helper()
-	resp, err := verifyInitialize(t, db, req)
+	resp, err := VerifyInitialize(t, db, req)
 	if err != nil {
 		t.Fatalf("Failed to initialize: %s", err)
 	}
 	return resp
 }
 
-func verifyInitialize(t *testing.T, db dbplugin.Database, req dbplugin.InitializeRequest) (dbplugin.InitializeResponse, error) {
+func VerifyInitialize(t *testing.T, db dbplugin.Database, req dbplugin.InitializeRequest) (dbplugin.InitializeResponse, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), getRequestTimeout(t))
 	defer cancel()
 

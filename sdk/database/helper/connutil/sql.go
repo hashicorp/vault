@@ -122,7 +122,15 @@ func (c *SQLConnectionProducer) Init(ctx context.Context, conf map[string]interf
 		return nil, errwrap.Wrapf("invalid max_connection_lifetime: {{err}}", err)
 	}
 
-	if c.AuthType == AuthTypeGCPIAM {
+	// validate auth_type if provided
+	authType := c.AuthType
+	if authType != "" {
+		if ok := ValidateAuthType(authType); !ok {
+			return nil, fmt.Errorf("invalid auth_type %s provided", authType)
+		}
+	}
+
+	if authType == AuthTypeGCPIAM {
 		c.cloudDriverName, err = uuid.GenerateUUID()
 		if err != nil {
 			return nil, fmt.Errorf("unable to generate UUID for IAM configuration: %w", err)

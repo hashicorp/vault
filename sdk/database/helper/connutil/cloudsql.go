@@ -10,21 +10,25 @@ import (
 	"cloud.google.com/go/cloudsqlconn/postgres/pgxv4"
 )
 
-func (c *SQLConnectionProducer) getCloudSQLDriverName() (string, error) {
-	var driverName string
+var configurableAuthTypes = []string{
+	AuthTypeGCPIAM,
+}
+
+func (c *SQLConnectionProducer) getCloudSQLDriverType() (string, error) {
+	var driverType string
 	// using switch case for future extensibility
 	switch c.Type {
 	case dbTypePostgres:
-		driverName = cloudSQLPostgres
+		driverType = cloudSQLPostgres
 	default:
 		return "", fmt.Errorf("unsupported DB type for cloud IAM: %s", c.Type)
 	}
 
-	return driverName, nil
+	return driverType, nil
 }
 
 func (c *SQLConnectionProducer) registerDrivers(driverName string, credentials string) (func() error, error) {
-	typ, err := c.getCloudSQLDriverName()
+	typ, err := c.getCloudSQLDriverType()
 	if err != nil {
 		return nil, err
 	}
@@ -53,4 +57,16 @@ func GetCloudSQLAuthOptions(credentials string) ([]cloudsqlconn.Option, error) {
 	}
 
 	return opts, nil
+}
+
+func ValidateAuthType(authType string) bool {
+	var valid bool
+	for _, typ := range configurableAuthTypes {
+		if authType == typ {
+			valid = true
+			break
+		}
+	}
+
+	return valid
 }

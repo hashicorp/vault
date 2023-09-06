@@ -59,9 +59,29 @@ func TestMySQL_Initialize_CloudGCP(t *testing.T) {
 	credStr := dbtesting.GetGCPTestCredentials(t)
 
 	tests := map[string]struct {
-		req dbplugin.InitializeRequest
+		req           dbplugin.InitializeRequest
+		wantErr       bool
+		expectedError string
 	}{
-		"normal": {
+		"empty auth type": {
+			req: dbplugin.InitializeRequest{
+				Config: map[string]interface{}{
+					"connection_url": connURL,
+					"auth_type":      "",
+				},
+			},
+		},
+		"invalid auth type": {
+			req: dbplugin.InitializeRequest{
+				Config: map[string]interface{}{
+					"connection_url": connURL,
+					"auth_type":      "invalid",
+				},
+			},
+			wantErr:       true,
+			expectedError: "invalid auth_type",
+		},
+		"JSON credentials": {
 			req: dbplugin.InitializeRequest{
 				Config: map[string]interface{}{
 					"connection_url":       connURL,
@@ -78,8 +98,23 @@ func TestMySQL_Initialize_CloudGCP(t *testing.T) {
 			db := newMySQL(DefaultUserNameTemplate)
 			defer dbtesting.AssertClose(t, db)
 			_, err := db.Initialize(context.Background(), tc.req)
-			if err != nil {
-				t.Fatalf("err: %s", err)
+
+			if tc.wantErr {
+				if err == nil {
+					t.Fatalf("expected error but received nil")
+				}
+
+				if !strings.Contains(err.Error(), tc.expectedError) {
+					t.Fatalf("expected error %s, got %s", tc.expectedError, err.Error())
+				}
+			} else {
+				if err != nil {
+					t.Fatalf("expected no error, received %s", err)
+				}
+
+				if !db.Initialized {
+					t.Fatal("Database should be initialized")
+				}
 			}
 		})
 	}

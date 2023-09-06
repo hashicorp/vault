@@ -122,6 +122,14 @@ func (c *mySQLConnectionProducer) Init(ctx context.Context, conf map[string]inte
 		mysql.RegisterTLSConfig(c.tlsConfigName, tlsConfig)
 	}
 
+	// validate auth_type if provided
+	authType := c.AuthType
+	if authType != "" {
+		if ok := connutil.ValidateAuthType(authType); !ok {
+			return nil, fmt.Errorf("invalid auth_type %s provided", authType)
+		}
+	}
+
 	if c.AuthType == connutil.AuthTypeGCPIAM {
 		c.cloudDriverName, err = uuid.GenerateUUID()
 		if err != nil {
