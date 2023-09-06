@@ -19,7 +19,6 @@ import (
 	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/audit"
-	"github.com/hashicorp/vault/helper/experiments"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/helper/testhelpers/corehelpers"
 	"github.com/hashicorp/vault/sdk/helper/consts"
@@ -33,10 +32,7 @@ import (
 // TestEventsSubscribe tests the websocket endpoint for subscribing to events
 // by generating some events.
 func TestEventsSubscribe(t *testing.T) {
-	core := vault.TestCoreWithConfig(t, &vault.CoreConfig{
-		Experiments: []string{experiments.VaultExperimentEventsAlpha1},
-	})
-
+	core := vault.TestCoreWithConfig(t, &vault.CoreConfig{})
 	ln, addr := TestServer(t, core)
 	defer ln.Close()
 
@@ -255,7 +251,6 @@ func TestCanForwardEventConnections(t *testing.T) {
 		t.Fatal(err)
 	}
 	testCluster := vault.NewTestCluster(t, &vault.CoreConfig{
-		Experiments: []string{experiments.VaultExperimentEventsAlpha1},
 		AuditBackends: map[string]audit.Factory{
 			"nop": corehelpers.NoopAuditFactory(nil),
 		},
