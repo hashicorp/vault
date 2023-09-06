@@ -24,7 +24,7 @@
     {{/if}}
     {{#if @onCancel}}
       <div class="control">
-        <button type="button" class="button" onclick={{action this.onCancel}} data-test-cancel-button>
+        <button type="button" class="button" onclick={{action @onCancel}} data-test-cancel-button>
           {{or @cancelButtonText "Cancel"}}
         </button>
       </div>
