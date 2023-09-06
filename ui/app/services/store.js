@@ -4,7 +4,7 @@
  */
 
 import Store from '@ember-data/store';
-import { schedule } from '@ember/runloop';
+import { run } from '@ember/runloop';
 import { resolve, Promise } from 'rsvp';
 import { dasherize } from '@ember/string';
 import { assert } from '@ember/debug';
@@ -141,23 +141,22 @@ export default class StoreService extends Store {
   // pushes records into the store and returns the result
   fetchPage(modelName, query) {
     const response = this.constructResponse(modelName, query);
-    this.unloadAll(modelName);
+    // force destroy queue to flush https://github.com/emberjs/data/issues/5447
+    run(() => this.unloadAll(modelName));
     return new Promise((resolve) => {
-      // after the above unloadRecords are finished, push into store
-      schedule('destroy', () => {
-        this.push(
-          this.serializerFor(modelName).normalizeResponse(
-            this,
-            this.modelFor(modelName),
-            response,
-            null,
-            'query'
-          )
-        );
-        const model = this.peekAll(modelName).toArray();
-        model.set('meta', response.meta);
-        resolve(model);
-      });
+      // push subset of records into the store
+      this.push(
+        this.serializerFor(modelName).normalizeResponse(
+          this,
+          this.modelFor(modelName),
+          response,
+          null,
+          'query'
+        )
+      );
+      const model = this.peekAll(modelName).toArray();
+      model.set('meta', response.meta);
+      resolve(model);
     });
   }
 
