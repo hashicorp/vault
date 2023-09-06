@@ -14,6 +14,7 @@ import scopesPage from 'vault/tests/pages/secrets/backend/kmip/scopes';
 import rolesPage from 'vault/tests/pages/secrets/backend/kmip/roles';
 import credentialsPage from 'vault/tests/pages/secrets/backend/kmip/credentials';
 import mountSecrets from 'vault/tests/pages/settings/mount-secret-backend';
+import { allEngines } from 'vault/helpers/mountable-secret-engines';
 
 const uiConsole = create(consoleClass);
 
@@ -85,6 +86,29 @@ module('Acceptance | Enterprise | KMIP secrets', function (hooks) {
   hooks.beforeEach(async function () {
     await authPage.login();
     return;
+  });
+
+  test('it should transition to addon engine route after mount success', async function (assert) {
+    // test supported backends that ARE ember engines (enterprise only engines are tested individually)
+    const engine = allEngines().find((e) => e.type === 'kmip');
+    assert.expect(1);
+
+    await uiConsole.runCommands([
+      // delete any previous mount with same name
+      `delete sys/mounts/${engine.type}`,
+    ]);
+    await mountSecrets.visit();
+    await mountSecrets.selectType(engine.type);
+    await mountSecrets.next().path(engine.type).submit();
+    assert.strictEqual(
+      currentRouteName(),
+      `vault.cluster.secrets.backend.${engine.engineRoute}`,
+      `Transitions to ${engine.displayName} route on mount success`
+    );
+    await uiConsole.runCommands([
+      // cleanup after
+      `delete sys/mounts/${engine.type}`,
+    ]);
   });
 
   test('it enables KMIP secrets engine', async function (assert) {

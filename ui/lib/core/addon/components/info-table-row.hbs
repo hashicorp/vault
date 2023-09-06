@@ -34,7 +34,7 @@
         <Icon @name="minus" />
       {{/if}}
     </div>
-    <div class="column is-flex" data-test-value-div={{@label}}>
+    <div class="column {{if @truncateValue 'is-two-thirds is-flex-center' 'is-flex'}}" data-test-value-div={{@label}}>
       {{#if @addCopyButton}}
         <div class="display-only">
           <CopyButton

@@ -1687,10 +1687,16 @@ func (c *Core) handleLoginRequest(ctx context.Context, req *logical.Request) (re
 		// Attach the display name, might be used by audit backends
 		req.DisplayName = auth.DisplayName
 
-		// If this is not a role-based quota, we still need to associate the
-		// login role with this lease for later lease-count quotas to be
-		// accurate.
-		if reqRole == nil && resp.Auth.TokenType != logical.TokenTypeBatch {
+		requiresLease := resp.Auth.TokenType != logical.TokenTypeBatch
+
+		// If role was not already determined by http.rateLimitQuotaWrapping
+		// and a lease will be generated, calculate a role for the leaseEntry.
+		// We can skip this step if there are no pre-existing role-based quotas
+		// for this mount and Vault is configured to skip lease role-based lease counting
+		// until after they're created. This effectively zeroes out the lease count
+		// for new role-based quotas upon creation, rather than counting old leases toward
+		// the total.
+		if reqRole == nil && requiresLease && !c.impreciseLeaseRoleTracking {
 			role = c.DetermineRoleFromLoginRequest(ctx, req.MountPoint, req.Data)
 		}
 

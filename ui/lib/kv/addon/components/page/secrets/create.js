@@ -37,11 +37,6 @@ export default class KvSecretCreate extends Component {
   @tracked invalidFormAlert;
 
   @action
-  toggleJsonView() {
-    this.showJsonView = !this.showJsonView;
-  }
-
-  @action
   pathValidations() {
     // check path attribute warnings on key up
     const { state } = this.args.secret.validate();

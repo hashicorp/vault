@@ -13,6 +13,7 @@ import (
 	"net/http"
 
 	aeadwrapper "github.com/hashicorp/go-kms-wrapping/wrappers/aead/v2"
+
 	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/helper/pgpkeys"
 	"github.com/hashicorp/vault/sdk/helper/consts"
@@ -400,16 +401,12 @@ func (c *Core) BarrierRekeyUpdate(ctx context.Context, key []byte, nonce string)
 		}
 	case c.seal.BarrierSealConfigType() == SealConfigTypeShamir:
 		if c.seal.StoredKeysSupported() == seal.StoredKeysSupportedShamirRoot {
-			access, err := seal.NewAccessFromSealInfo(c.logger, c.seal.GetAccess().Generation(), true, []seal.SealInfo{
-				{
-					Wrapper:  aeadwrapper.NewShamirWrapper(),
-					Priority: 1,
-					Name:     existingConfig.Name,
-				},
-			})
+			access, err := seal.NewAccessFromWrapper(c.logger, aeadwrapper.NewShamirWrapper(), SealConfigTypeShamir.String())
 			if err != nil {
 				return nil, logical.CodedError(http.StatusInternalServerError, fmt.Errorf("failed to setup test seal: %w", err).Error())
 			}
+			access.GetAllSealWrappersByPriority()[0].Name = existingConfig.Name
+
 			testseal := NewDefaultSeal(access)
 			testseal.SetCore(c)
 			err = testseal.GetAccess().SetShamirSealKey(recoveredKey)

@@ -867,7 +867,7 @@ module('Acceptance | kv-v2 workflow | secret and version create', function (hook
       // Back to details page
       assert.strictEqual(
         currentURL(),
-        `/vault/secrets/${backend}/kv/${encodeURIComponent(secretPath)}/details`,
+        `/vault/secrets/${backend}/kv/${encodeURIComponent(secretPath)}/details?version=2`,
         'goes back to details page'
       );
       assert.dom(PAGE.detail.versionTimestamp).doesNotExist('Version created does not show');
@@ -988,7 +988,7 @@ module('Acceptance | kv-v2 workflow | secret and version create', function (hook
 
       assert.strictEqual(
         currentURL(),
-        `/vault/secrets/${backend}/kv/app%2Ffirst/details`,
+        `/vault/secrets/${backend}/kv/app%2Ffirst/details?version=3`,
         'redirects to details page'
       );
       assert.dom(PAGE.infoRow).doesNotExist('does not show data contents');

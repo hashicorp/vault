@@ -1,6 +1,6 @@
 import { module, test } from 'qunit';
 import { v4 as uuidv4 } from 'uuid';
-import { click, currentURL, findAll, setupOnerror, typeIn, visit } from '@ember/test-helpers';
+import { click, currentURL, fillIn, findAll, setupOnerror, typeIn, visit } from '@ember/test-helpers';
 import { setupApplicationTest } from 'vault/tests/helpers';
 import authPage from 'vault/tests/pages/auth';
 import {
@@ -17,8 +17,8 @@ import {
   metadataListPolicy,
   metadataPolicy,
 } from 'vault/tests/helpers/policy-generator/kv';
-import { writeSecret, writeVersionedSecret } from 'vault/tests/helpers/kv/kv-run-commands';
-import { PAGE } from 'vault/tests/helpers/kv/kv-selectors';
+import { clearRecords, writeSecret, writeVersionedSecret } from 'vault/tests/helpers/kv/kv-run-commands';
+import { FORM, PAGE } from 'vault/tests/helpers/kv/kv-selectors';
 
 /**
  * This test set is for testing edge cases, such as specific bug fixes or reported user workflows
@@ -61,13 +61,21 @@ module('Acceptance | kv-v2 workflow | edge cases', function (hooks) {
     });
 
     test('it can navigate to secrets within a secret directory', async function (assert) {
-      assert.expect(19);
+      assert.expect(21);
       const backend = this.backend;
       const [root, subdirectory, secret] = this.fullSecretPath.split('/');
 
       await visit(`/vault/secrets/${backend}/kv/list`);
       assert.strictEqual(currentURL(), `/vault/secrets/${backend}/kv/list`, 'lands on secrets list page');
 
+      await typeIn(PAGE.list.overviewInput, `${root}/no-access/`);
+      assert
+        .dom(PAGE.list.overviewButton)
+        .hasText('View list', 'shows list and not secret because search is a directory');
+      await click(PAGE.list.overviewButton);
+      assert.dom(PAGE.emptyStateTitle).hasText(`There are no secrets matching "${root}/no-access/".`);
+
+      await visit(`/vault/secrets/${backend}/kv/list`);
       await typeIn(PAGE.list.overviewInput, `${root}/`); // add slash because this is a directory
       await click(PAGE.list.overviewButton);
 
@@ -237,8 +245,190 @@ module('Acceptance | kv-v2 workflow | edge cases', function (hooks) {
       assert
         .dom(PAGE.detail.deleteModal)
         .hasText(
-          'Delete metadata? This will permanently delete the metadata and versions of the secret. All version history will be removed. This cannot be undone. Confirm Cancel'
+          'Delete metadata and secret data? This will permanently delete the metadata and versions of the secret. All version history will be removed. This cannot be undone. Confirm Cancel'
         );
+    });
+  });
+});
+
+// NAMESPACE TESTS
+module('Acceptance | Enterprise | kv-v2 workflow | edge cases', function (hooks) {
+  setupApplicationTest(hooks);
+
+  const navToEngine = async (backend) => {
+    await click('[data-test-sidebar-nav-link="Secrets engines"]');
+    return await click(PAGE.backends.link(backend));
+  };
+
+  const assertDeleteActions = (assert, expected = ['delete', 'destroy']) => {
+    ['delete', 'destroy', 'undelete'].forEach((toolbar) => {
+      if (expected.includes(toolbar)) {
+        assert.dom(PAGE.detail[toolbar]).exists(`${toolbar} toolbar action exists`);
+      } else {
+        assert.dom(PAGE.detail[toolbar]).doesNotExist(`${toolbar} toolbar action not rendered`);
+      }
+    });
+  };
+
+  const assertVersionDropdown = async (assert, deleted = [], versions = [2, 1]) => {
+    assert.dom(PAGE.detail.versionDropdown).hasText(`Version ${versions[0]}`);
+    await click(PAGE.detail.versionDropdown);
+    versions.forEach((num) => {
+      assert.dom(PAGE.detail.version(num)).exists(`renders version ${num} link in dropdown`);
+    });
+    // also asserts destroyed icon
+    deleted.forEach((num) => {
+      assert.dom(`${PAGE.detail.version(num)} [data-test-icon="x-square"]`);
+    });
+  };
+
+  // each test uses a different secret path
+  hooks.beforeEach(async function () {
+    const uid = uuidv4();
+    this.store = this.owner.lookup('service:store');
+    this.backend = `kv-enterprise-edge-${uid}`;
+    this.namespace = `ns-${uid}`;
+    await authPage.login();
+    await runCmd([`write sys/namespaces/${this.namespace} -force`]);
+    return;
+  });
+
+  hooks.afterEach(async function () {
+    await authPage.login();
+    await runCmd([`delete /sys/auth/${this.namespace}`]);
+    await runCmd(deleteEngineCmd(this.backend));
+    return;
+  });
+
+  module('admin persona', function (hooks) {
+    hooks.beforeEach(async function () {
+      await authPage.loginNs(this.namespace);
+      // mount engine within namespace
+      await runCmd(mountEngineCmd('kv-v2', this.backend), false);
+      clearRecords(this.store);
+      return;
+    });
+    hooks.afterEach(async function () {
+      // visit logout with namespace query param because we're transitioning from within an engine
+      // and navigating directly to /vault/auth caused test context routing problems :(
+      await visit(`/vault/logout?namespace=${this.namespace}`);
+      await authPage.namespaceInput(''); // clear login form namespace input
+    });
+
+    test('namespace: it can create a secret and new secret version', async function (assert) {
+      assert.expect(15);
+      const backend = this.backend;
+      const ns = this.namespace;
+      const secret = 'my-create-secret';
+      await navToEngine(backend);
+      assert.strictEqual(
+        currentURL(),
+        `/vault/secrets/${backend}/kv/list?namespace=${ns}`,
+        'navigates to list'
+      );
+      // Create first version of secret
+      await click(PAGE.list.createSecret);
+      await fillIn(FORM.inputByAttr('path'), secret);
+      assert.dom(FORM.toggleMetadata).exists('Shows metadata toggle when creating new secret');
+      await fillIn(FORM.keyInput(), 'foo');
+      await fillIn(FORM.maskedValueInput(), 'woahsecret');
+      await click(FORM.saveBtn);
+      assert.strictEqual(
+        currentURL(),
+        `/vault/secrets/${backend}/kv/${secret}/details?namespace=${ns}&version=1`,
+        'navigates to details'
+      );
+
+      // Create a new version
+      await click(PAGE.detail.createNewVersion);
+      assert.dom(FORM.inputByAttr('path')).isDisabled('path input is disabled');
+      assert.dom(FORM.inputByAttr('path')).hasValue(secret);
+      assert.dom(FORM.toggleMetadata).doesNotExist('Does not show metadata toggle when creating new version');
+      assert.dom(FORM.keyInput()).hasValue('foo');
+      assert.dom(FORM.maskedValueInput()).hasValue('woahsecret');
+      await fillIn(FORM.keyInput(1), 'foo-two');
+      await fillIn(FORM.maskedValueInput(1), 'supersecret');
+      await click(FORM.saveBtn);
+
+      // Check details
+      assert.strictEqual(
+        currentURL(),
+        `/vault/secrets/${backend}/kv/${secret}/details?namespace=${ns}&version=2`,
+        'navigates to details'
+      );
+      await assertVersionDropdown(assert);
+      assert
+        .dom(`${PAGE.detail.version(2)} [data-test-icon="check-circle"]`)
+        .exists('renders current version icon');
+      assert.dom(PAGE.infoRowValue('foo-two')).hasText('***********');
+      await click(PAGE.infoRowToggleMasked('foo-two'));
+      assert.dom(PAGE.infoRowValue('foo-two')).hasText('supersecret', 'secret value shows after toggle');
+    });
+
+    test('namespace: it manages state throughout delete, destroy and undelete operations', async function (assert) {
+      assert.expect(32);
+      const backend = this.backend;
+      const ns = this.namespace;
+      const secret = 'my-delete-secret';
+      await writeVersionedSecret(backend, secret, 'foo', 'bar', 2, ns);
+      await navToEngine(backend);
+
+      await click(PAGE.list.item(secret));
+      assert.strictEqual(
+        currentURL(),
+        `/vault/secrets/${backend}/kv/${secret}/details?namespace=${ns}&version=2`,
+        'navigates to details'
+      );
+
+      // correct toolbar options & details show
+      assertDeleteActions(assert);
+      await assertVersionDropdown(assert);
+      // delete flow
+      await click(PAGE.detail.delete);
+      await click(PAGE.detail.deleteOption);
+      await click(PAGE.detail.deleteConfirm);
+      // check empty state and toolbar
+      assertDeleteActions(assert, ['undelete', 'destroy']);
+      assert
+        .dom(PAGE.emptyStateTitle)
+        .hasText('Version 2 of this secret has been deleted', 'Shows deleted message');
+      assert.dom(PAGE.detail.versionTimestamp).includesText('Version 2 deleted');
+      await assertVersionDropdown(assert, [2]); // important to test dropdown versions are accurate
+
+      // navigate to sibling route to make sure empty state remains for details tab
+      await click(PAGE.secretTab('Version History'));
+      assert.dom(PAGE.versions.linkedBlock()).exists({ count: 2 });
+
+      // back to secret tab to confirm deleted state
+      await click(PAGE.secretTab('Secret'));
+      // if this assertion fails, the view is rendering a stale model
+      assert.dom(PAGE.emptyStateTitle).exists('still renders empty state!!');
+      await assertVersionDropdown(assert, [2]);
+
+      // undelete flow
+      await click(PAGE.detail.undelete);
+      // details update accordingly
+      assertDeleteActions(assert, ['delete', 'destroy']);
+      assert.dom(PAGE.infoRow).exists('shows secret data');
+      assert.dom(PAGE.detail.versionTimestamp).includesText('Version 2 created');
+
+      // destroy flow
+      await click(PAGE.detail.destroy);
+      await click(PAGE.detail.deleteConfirm);
+      assertDeleteActions(assert, []);
+      assert
+        .dom(PAGE.emptyStateTitle)
+        .hasText('Version 2 of this secret has been permanently destroyed', 'Shows destroyed message');
+
+      // navigate to sibling route to make sure empty state remains for details tab
+      await click(PAGE.secretTab('Version History'));
+      assert.dom(PAGE.versions.linkedBlock()).exists({ count: 2 });
+
+      // back to secret tab to confirm destroyed state
+      await click(PAGE.secretTab('Secret'));
+      // if this assertion fails, the view is rendering a stale model
+      assert.dom(PAGE.emptyStateTitle).exists('still renders empty state!!');
+      await assertVersionDropdown(assert, [2]);
     });
   });
 });

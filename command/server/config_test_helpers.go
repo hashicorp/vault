@@ -849,6 +849,7 @@ func testConfig_Sanitized(t *testing.T) {
 			"add_mount_point_rollback_metrics":       false,
 		},
 		"administrative_namespace_path": "admin/",
+		"imprecise_lease_role_tracking": false,
 	}
 
 	addExpectedEntSanitizedConfig(expected, []string{"http"})

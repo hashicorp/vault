@@ -5,7 +5,7 @@
 
 import { module, test } from 'qunit';
 import { setupRenderingTest } from 'vault/tests/helpers';
-import { render } from '@ember/test-helpers';
+import { render, findAll, click } from '@ember/test-helpers';
 import { hbs } from 'ember-cli-htmlbars';
 import { fillIn } from '@ember/test-helpers';
 import { selectChoose } from 'ember-power-select/test-support/helpers';
@@ -78,7 +78,10 @@ module('Integration | Component | dashboard/quick-actions-card', function (hooks
       modelName: 'secret-engine',
       data: {
         accessor: 'secrets_j2350ii',
-        path: 'secrets-1-test/',
+        path: 'kv-v2-test/',
+        options: {
+          version: 2,
+        },
         type: 'kv',
       },
     });
@@ -122,7 +125,13 @@ module('Integration | Component | dashboard/quick-actions-card', function (hooks
   });
   test('it should show correct actions for kv', async function (assert) {
     await this.renderComponent();
-    await selectChoose(SELECTORS.secretsEnginesSelect, 'secrets-1-test');
+    await click('[data-test-component="search-select"]#secrets-engines-select .ember-basic-dropdown-trigger');
+    assert.strictEqual(
+      findAll('li.ember-power-select-option').length,
+      5,
+      'renders only kv v2, pki and db engines'
+    );
+    await selectChoose(SELECTORS.secretsEnginesSelect, 'kv-v2-test');
     assert.dom(SELECTORS.emptyState).doesNotExist();
     await fillIn(SELECTORS.actionSelect, 'Find KV secrets');
     assert.dom(SELECTORS.paramsTitle).hasText('Secret path');

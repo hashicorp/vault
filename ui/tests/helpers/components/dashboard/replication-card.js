@@ -12,15 +12,15 @@ const SELECTORS = {
   knownSecondariesLabel: '[data-test-stat-text="known secondaries"] .stat-label',
   knownSecondariesSubtext: '[data-test-stat-text="known secondaries"] .stat-text',
   knownSecondariesValue: '[data-test-stat-text="known secondaries"] .stat-value',
-  replicationEmptyState: '[data-test-replication-card] [data-test-component="empty-state"]',
+  replicationEmptyState: '[data-test-card="replication"] [data-test-component="empty-state"]',
   replicationEmptyStateTitle:
-    '[data-test-replication-card] [data-test-component="empty-state"] .empty-state-title',
+    '[data-test-card="replication"] [data-test-component="empty-state"] .empty-state-title',
   replicationEmptyStateMessage:
-    '[data-test-replication-card] [data-test-component="empty-state"] .empty-state-message',
+    '[data-test-card="replication"] [data-test-component="empty-state"] .empty-state-message',
   replicationEmptyStateActions:
-    '[data-test-replication-card] [data-test-component="empty-state"] .empty-state-actions',
+    '[data-test-card="replication"] [data-test-component="empty-state"] .empty-state-actions',
   replicationEmptyStateActionsLink:
-    '[data-test-replication-card] [data-test-component="empty-state"] .empty-state-actions a',
+    '[data-test-card="replication"] [data-test-component="empty-state"] .empty-state-actions a',
 };
 
 export default SELECTORS;

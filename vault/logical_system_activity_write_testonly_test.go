@@ -502,7 +502,7 @@ func Test_handleActivityWriteData(t *testing.T) {
 		},
 	}
 
-	t.Run("write entitites", func(t *testing.T) {
+	t.Run("write entities", func(t *testing.T) {
 		core, _, _ := TestCoreUnsealed(t)
 		marshaled, err := protojson.Marshal(&generation.ActivityLogMockInput{
 			Data:  data,
@@ -601,15 +601,15 @@ func Test_handleActivityWriteData(t *testing.T) {
 
 		now := time.Now().UTC()
 		start := timeutil.StartOfMonth(timeutil.MonthsPreviousTo(3, now))
-		end := timeutil.EndOfMonth(now)
+		end := timeutil.EndOfMonth(timeutil.MonthsPreviousTo(1, now))
 		pq, err := core.activityLog.queryStore.Get(context.Background(), start, end)
 		require.NoError(t, err)
 		require.NotNil(t, pq)
 		require.Equal(t, end, pq.EndTime)
 		require.Equal(t, start, pq.StartTime)
 		require.Len(t, pq.Namespaces, 1)
-		require.Equal(t, uint64(12), pq.Namespaces[0].Entities)
-		require.Len(t, pq.Months, 4)
+		require.Equal(t, uint64(10), pq.Namespaces[0].Entities)
+		require.Len(t, pq.Months, 3)
 	})
 	t.Run("write intent logs", func(t *testing.T) {
 		core, _, _ := TestCoreUnsealed(t)

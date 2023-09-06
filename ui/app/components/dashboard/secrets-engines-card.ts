@@ -4,6 +4,7 @@
  */
 
 import Component from '@glimmer/component';
+import type SecretEngineModel from 'vault/models/secret-engine';
 
 /**
  * @module DashboardSecretsEnginesCard
@@ -16,12 +17,16 @@ import Component from '@glimmer/component';
  * @param {array} secretsEngines - list of secrets engines
  */
 
-export default class DashboardSecretsEnginesCard extends Component {
-  get filteredSecretsEngines() {
-    const filteredEngines = this.args.secretsEngines.filter(
-      (secretEngine) => secretEngine.shouldIncludeInList
-    );
+interface Args {
+  secretsEngines: SecretEngineModel[];
+}
 
-    return filteredEngines.slice(0, 5);
+export default class DashboardSecretsEnginesCard extends Component<Args> {
+  get filteredSecretsEngines() {
+    return this.args.secretsEngines?.filter((secretEngine) => secretEngine.shouldIncludeInList);
+  }
+
+  get firstFiveSecretsEngines() {
+    return this.filteredSecretsEngines?.slice(0, 5);
   }
 }

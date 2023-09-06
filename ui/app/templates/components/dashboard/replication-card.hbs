@@ -2,16 +2,18 @@
   Copyright (c) HashiCorp, Inc.
   SPDX-License-Identifier: BUSL-1.1
 ~}}
-<Hds::Card::Container @hasBorder={{true}} class="has-padding-l has-bottom-padding-m" data-test-replication-card>
+<Hds::Card::Container @hasBorder={{true}} class="has-padding-l has-bottom-padding-m" data-test-card="replication">
 
   <div class="is-flex-between">
     <h3 class="title is-4 has-bottom-margin-xxs" data-test-client-count-title>
       Replication
     </h3>
 
-    <LinkTo class="is-no-underline" @route="vault.cluster.replication.index">
-      Details
-    </LinkTo>
+    {{#if (or @replication.dr.clusterId @replication.performance.clusterId)}}
+      <LinkTo class="is-no-underline" @route="vault.cluster.replication.index">
+        Details
+      </LinkTo>
+    {{/if}}
   </div>
 
   {{! check if dr replication and performance replication exists }}
@@ -30,7 +32,7 @@
           @clusterStates={{cluster-states @replication.dr.state}}
         />
         <Dashboard::ReplicationStateText
-          @title="Perf primary"
+          @title="Performance {{if @replication.performance.isPrimary 'primary' 'secondary'}}"
           @name="performance"
           @state={{if @replication.performance.clusterId @replication.performance.state "not set up"}}
           @clusterStates={{if @replication.performance.clusterId (cluster-states @replication.performance.state)}}
@@ -77,7 +79,7 @@
       />
       <small class="has-left-margin-xs has-text-grey">
         Updated
-        {{date-format @updatedAt "MMM dd, yyyy hh:mm:SS"}}
+        {{date-format @updatedAt "MMM dd, yyyy hh:mm:ss"}}
       </small>
     </div>
   {{else}}

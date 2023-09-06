@@ -8,6 +8,7 @@ import { inject as service } from '@ember/service';
 import { hash } from 'rsvp';
 import { normalizePath } from 'vault/utils/path-encoding-helpers';
 import { breadcrumbsForSecret } from 'kv/utils/kv-breadcrumbs';
+import { pathIsDirectory } from 'kv/utils/kv-breadcrumbs';
 
 export default class KvSecretsListRoute extends Route {
   @service store;
@@ -61,9 +62,9 @@ export default class KvSecretsListRoute extends Route {
 
   setupController(controller, resolvedModel) {
     super.setupController(controller, resolvedModel);
-    if (resolvedModel.secrets === 403) {
-      resolvedModel.noMetadataListPermissions = true;
-    }
+    // renders alert inline error for overview card
+    resolvedModel.failedDirectoryQuery =
+      resolvedModel.secrets === 403 && pathIsDirectory(resolvedModel.pathToSecret);
 
     let breadcrumbsArray = [{ label: 'secrets', route: 'secrets', linkExternal: true }];
     // if on top level don't link the engine breadcrumb label, but if within a directory, do link back to top level.
