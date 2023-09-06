@@ -12,6 +12,8 @@
   display: flex;
   align-items: center;
   gap: $spacing-xxs;
+  width: min-content;
+  min-width: 100%;
 
   &:not(:last-child) {
     margin-bottom: 0.25rem;
