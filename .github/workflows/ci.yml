@@ -64,11 +64,25 @@ jobs:
     name: Verify doc-ui only PRs
     uses: ./.github/workflows/verify_changes.yml
 
+  checkout-ref:
+    name: Checkout head or merge commit
+    runs-on: ubuntu-latest
+    outputs:
+      checkout-ref: ${{ steps.checkout-ref-output.outputs.checkout-ref }}
+    steps:
+      - if: ${{ !contains(github.event.pull_request.labels.*.name, 'checkout-head') }}
+        run: echo "CHECKOUT_REF=${{ github.base_ref }}" >> "$GITHUB_ENV"
+      - if: ${{ contains(github.event.pull_request.labels.*.name, 'checkout-head') }}
+        run: echo "CHECKOUT_REF=${{ github.event.pull_request.head.sha }}" >> "$GITHUB_ENV"
+      - id: checkout-ref-output
+        run: echo "checkout-ref=${{ env.CHECKOUT_REF }}" >> "$GITHUB_OUTPUT"
+
   test-go:
     name: Run Go tests
     needs:
       - setup
       - verify-changes
+      - checkout-ref
     # Don't run this job for docs/ui only PRs
     if: |
       needs.verify-changes.outputs.is_docs_change == 'false' &&
@@ -85,6 +99,7 @@ jobs:
       runs-on: ${{ needs.setup.outputs.compute-large }}
       enterprise: ${{ needs.setup.outputs.enterprise }}
       test-timing-cache-key: go-test-timing-standard
+      checkout-ref: ${{ needs.checkout-ref.outputs.checkout-ref }}
     secrets: inherit
 
   test-go-testonly:
@@ -92,6 +107,7 @@ jobs:
     needs:
       - setup
       - verify-changes
+      - checkout-ref
     # Don't run this job for docs/ui only PRs
     if: |
       needs.verify-changes.outputs.is_docs_change == 'false' &&
@@ -105,6 +121,7 @@ jobs:
       runs-on: ${{ needs.setup.outputs.compute-large }}
       enterprise: ${{ needs.setup.outputs.enterprise }}
       test-timing-cache-enabled: false
+      checkout-ref: ${{ needs.checkout-ref.outputs.checkout-ref }}
     secrets: inherit
 
   test-go-race:
@@ -112,6 +129,7 @@ jobs:
     needs:
       - setup
       - verify-changes
+      - checkout-ref
     # Don't run this job for docs/ui only PRs
     if: |
       github.event.pull_request.draft == false &&
@@ -131,6 +149,7 @@ jobs:
       enterprise: ${{ needs.setup.outputs.enterprise }}
       name: "race"
       test-timing-cache-key: go-test-timing-race
+      checkout-ref: ${{ needs.checkout-ref.outputs.checkout-ref }}
     secrets: inherit
 
   test-go-fips:
@@ -144,6 +163,7 @@ jobs:
     needs:
       - setup
       - verify-changes
+      - checkout-ref
     uses: ./.github/workflows/test-go.yml
     with:
       total-runners: 16
@@ -157,6 +177,7 @@ jobs:
       enterprise: ${{ needs.setup.outputs.enterprise }}
       name: "fips"
       test-timing-cache-key: go-test-timing-fips
+      checkout-ref: ${{ needs.checkout-ref.outputs.checkout-ref }}
     secrets: inherit
 
   test-ui:
