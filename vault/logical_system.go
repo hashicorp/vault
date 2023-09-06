@@ -15,6 +15,7 @@ import (
 	"hash"
 	"math/rand"
 	"net/http"
+	"os/exec"
 	"path"
 	"path/filepath"
 	"runtime"
@@ -544,11 +545,23 @@ func (b *SystemBackend) handlePluginCatalogUpdate(ctx context.Context, _ *logica
 			return nil, err
 		}
 	}
-	if ociImage != "" && runtime.GOOS != "linux" {
-		return logical.ErrorResponse("specifying oci_image is currently only supported on Linux"), nil
-	}
 
 	pluginRuntime := d.Get("runtime").(string)
+	if ociImage != "" {
+		if runtime.GOOS != "linux" {
+			return logical.ErrorResponse("specifying oci_image is currently only supported on Linux"), nil
+		}
+		if pluginRuntime != "" {
+			_, err := b.Core.pluginRuntimeCatalog.Get(ctx, pluginRuntime, consts.PluginRuntimeTypeContainer)
+			if err != nil {
+				return logical.ErrorResponse("specified plugin runtime %q, but failed to retrieve config: %w", pluginRuntime, err), nil
+			}
+		} else if _, err := exec.LookPath(consts.DefaultContainerPluginOCIRuntime); err != nil {
+			return logical.ErrorResponse("no plugin 'runtime' specified, but default OCI runtime %q "+
+				"is not available in PATH; you may want to install it or configure a different plugin runtime: %w",
+				consts.DefaultContainerPluginOCIRuntime, err), nil
+		}
+	}
 
 	// For backwards compatibility, also accept args as part of command. Don't
 	// accepts args in both command and args.
@@ -782,6 +795,9 @@ func (b *SystemBackend) handlePluginRuntimeCatalogUpdate(ctx context.Context, _ 
 		ociRuntime := d.Get("oci_runtime").(string)
 		cgroupParent := d.Get("cgroup_parent").(string)
 		cpu := d.Get("cpu_nanos").(int64)
+		if _, err := exec.LookPath(ociRuntime); err != nil {
+			return logical.ErrorResponse("specified oci_runtime %q, but failed to find it in PATH: %w", err), nil
+		}
 		if cpu < 0 {
 			return logical.ErrorResponse("runtime cpu in nanos cannot be negative"), nil
 		}

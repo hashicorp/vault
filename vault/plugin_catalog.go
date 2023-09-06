@@ -61,6 +61,8 @@ type PluginCatalog struct {
 
 	lock    sync.RWMutex
 	wrapper pluginutil.RunnerUtil
+
+	runtimeCatalog *PluginRuntimeCatalog
 }
 
 // Only plugins running with identical PluginRunner config can be multiplexed,
@@ -181,6 +183,7 @@ func (c *Core) setupPluginCatalog(ctx context.Context) error {
 		logger:          c.logger,
 		mlockPlugins:    c.enableMlock,
 		wrapper:         logical.StaticSystemView{VersionString: version.GetVersion().Version},
+		runtimeCatalog:  c.pluginRuntimeCatalog,
 	}
 
 	// Run upgrade if untyped plugins exist
@@ -814,39 +817,46 @@ func (c *PluginCatalog) Get(ctx context.Context, name string, pluginType consts.
 }
 
 func (c *PluginCatalog) get(ctx context.Context, name string, pluginType consts.PluginType, version string) (*pluginutil.PluginRunner, error) {
-	// If the directory isn't set only look for builtin plugins.
-	if c.directory != "" {
-		// Look for external plugins in the barrier
-		storageKey := path.Join(pluginType.String(), name)
-		if version != "" {
-			storageKey = path.Join(storageKey, version)
-		}
-		out, err := c.catalogView.Get(ctx, storageKey)
+	// Look for external plugins in the barrier
+	storageKey := path.Join(pluginType.String(), name)
+	if version != "" {
+		storageKey = path.Join(storageKey, version)
+	}
+	out, err := c.catalogView.Get(ctx, storageKey)
+	if err != nil {
+		return nil, fmt.Errorf("failed to retrieve plugin %q: %w", name, err)
+	}
+	if out == nil && version == "" {
+		// Also look for external plugins under what their name would have been if they
+		// were registered before plugin types existed.
+		out, err = c.catalogView.Get(ctx, name)
 		if err != nil {
 			return nil, fmt.Errorf("failed to retrieve plugin %q: %w", name, err)
 		}
-		if out == nil && version == "" {
-			// Also look for external plugins under what their name would have been if they
-			// were registered before plugin types existed.
-			out, err = c.catalogView.Get(ctx, name)
-			if err != nil {
-				return nil, fmt.Errorf("failed to retrieve plugin %q: %w", name, err)
-			}
+	}
+	entry := new(pluginutil.PluginRunner)
+	if out != nil {
+		if err := jsonutil.DecodeJSON(out.Value, entry); err != nil {
+			return nil, fmt.Errorf("failed to decode plugin entry: %w", err)
 		}
-		if out != nil {
-			entry := new(pluginutil.PluginRunner)
-			if err := jsonutil.DecodeJSON(out.Value, entry); err != nil {
-				return nil, fmt.Errorf("failed to decode plugin entry: %w", err)
-			}
-			if entry.Type != pluginType && entry.Type != consts.PluginTypeUnknown {
-				return nil, nil
-			}
+		if entry.Type != pluginType && entry.Type != consts.PluginTypeUnknown {
+			return nil, nil
+		}
 
-			// Make the command path fully rooted if it's not a container plugin.
-			if entry.OCIImage == "" {
-				entry.Command = filepath.Join(c.directory, entry.Command)
+		// If none of the cases are satisfied, we'll search for a builtin plugin below.
+		switch {
+		case entry.OCIImage != "":
+			if entry.Runtime != "" {
+				entry.RuntimeConfig, err = c.runtimeCatalog.Get(ctx, entry.Runtime, consts.PluginRuntimeTypeContainer)
+				if err != nil {
+					return nil, fmt.Errorf("failed to get configured runtime for plugin %q: %w", name, err)
+				}
 			}
-
+			return entry, nil
+		case c.directory != "":
+			// Only allow returning non-container external plugins if we have a plugin directory.
+			// Make the command path fully rooted.
+			entry.Command = filepath.Join(c.directory, entry.Command)
 			return entry, nil
 		}
 	}
@@ -879,7 +889,7 @@ func (c *PluginCatalog) get(ctx context.Context, name string, pluginType consts.
 // Set registers a new external plugin with the catalog, or updates an existing
 // external plugin. It takes the name, command and SHA256 of the plugin.
 func (c *PluginCatalog) Set(ctx context.Context, plugin pluginutil.SetPluginInput) error {
-	if c.directory == "" {
+	if c.directory == "" && plugin.OCIImage == "" {
 		return ErrDirectoryNotConfigured
 	}
 
@@ -929,6 +939,13 @@ func (c *PluginCatalog) setInternal(ctx context.Context, plugin pluginutil.SetPl
 		Env:      plugin.Env,
 		Sha256:   plugin.Sha256,
 		Builtin:  false,
+	}
+	if entryTmp.OCIImage != "" && entryTmp.Runtime != "" {
+		var err error
+		entryTmp.RuntimeConfig, err = c.runtimeCatalog.Get(ctx, entryTmp.Runtime, consts.PluginRuntimeTypeContainer)
+		if err != nil {
+			return nil, fmt.Errorf("failed to get configured runtime for plugin %q: %w", plugin.Name, err)
+		}
 	}
 	// If the plugin type is unknown, we want to attempt to determine the type
 	if plugin.Type == consts.PluginTypeUnknown {
