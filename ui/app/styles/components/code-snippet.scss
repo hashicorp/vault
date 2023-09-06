@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 .code-snippet-container {
   background-color: $ui-gray-900;
   display: flex;
@@ -7,14 +12,4 @@
   code {
     white-space: pre;
   }
-}
-
-.code-snippet-copy-button {
-  cursor: pointer;
-  color: $ui-gray-300;
-  background: none;
-  border: none;
-  box-shadow: none;
-  min-width: auto;
-  padding: $size-11 $size-8;
 }
