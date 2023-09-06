@@ -26,7 +26,9 @@ type SealWrapper struct {
 	// Disabled indicates, when true indicates that this wrapper should only be used for decryption.
 	Disabled bool
 
-	// hcLock protects lastHealthy, lastSeenHealthy, and healthy. Do not modify those fields directly, use setHealth instead.
+	// hcLock protects lastHealthy, lastSeenHealthy, and healthy.
+	// Do not modify those fields directly, use setHealth instead.
+	// Do not access these fields directly, use getHealth instead.
 	hcLock          sync.RWMutex
 	lastHealthCheck time.Time
 	lastSeenHealthy time.Time
@@ -42,53 +44,36 @@ func NewSealWrapper(wrapper wrapping.Wrapper, priority int, name string, sealCon
 		Disabled:       disabled,
 	}
 
-	ret.setHealth(true, time.Now(), ret.lastHealthCheck)
+	setHealth(ret, true, time.Now(), ret.lastHealthCheck)
 
 	return ret
 }
 
-func (sw *SealWrapper) rlock() func() {
-	sw.hcLock.RLock()
-	return sw.hcLock.RUnlock
-}
-
-func (sw *SealWrapper) lock() func() {
-	sw.hcLock.Lock()
-	return sw.hcLock.Unlock
-}
-
 func (sw *SealWrapper) SetHealthy(healthy bool, checkTime time.Time) {
-	unlock := sw.lock()
-	defer unlock()
-
-	wasHealthy := sw.healthy
-	lastHealthy := sw.lastSeenHealthy
-	if !wasHealthy && healthy {
-		lastHealthy = checkTime
+	if healthy {
+		setHealth(sw, true, checkTime, checkTime)
+	} else {
+		// do not update lastSeenHealthy
+		setHealth(sw, false, sw.lastHealthCheck, checkTime)
 	}
-
-	sw.setHealth(healthy, lastHealthy, checkTime)
 }
 
 func (sw *SealWrapper) IsHealthy() bool {
-	unlock := sw.rlock()
-	defer unlock()
+	healthy, _, _ := getHealth(sw)
 
-	return sw.healthy
+	return healthy
 }
 
 func (sw *SealWrapper) LastSeenHealthy() time.Time {
-	unlock := sw.rlock()
-	defer unlock()
+	_, lastSeenHealthy, _ := getHealth(sw)
 
-	return sw.lastSeenHealthy
+	return lastSeenHealthy
 }
 
 func (sw *SealWrapper) LastHealthCheck() time.Time {
-	unlock := sw.rlock()
-	defer unlock()
+	_, _, lastHealthCheck := getHealth(sw)
 
-	return sw.lastHealthCheck
+	return lastHealthCheck
 }
 
 var (
@@ -99,35 +84,43 @@ var (
 )
 
 func (sw *SealWrapper) CheckHealth(ctx context.Context, checkTime time.Time) error {
-	unlock := sw.lock()
-	defer unlock()
-
-	// Assume the wrapper is unhealthy, if we make it to the end we'll set it to true
-	sw.setHealth(false, sw.lastSeenHealthy, checkTime)
-
 	testVal := fmt.Sprintf("Heartbeat %d", mathrand.Intn(1000))
 	ciphertext, err := sw.Wrapper.Encrypt(ctx, []byte(testVal), nil)
 	if err != nil {
+		sw.SetHealthy(false, checkTime)
 		return fmt.Errorf("failed to encrypt test value, seal wrapper may be unreachable: %w", err)
 	}
 
 	ctx, cancel := context.WithTimeout(ctx, HealthTestTimeout)
 	defer cancel()
 	plaintext, err := sw.Wrapper.Decrypt(ctx, ciphertext, nil)
-	if err != nil {
+	if err != nil && !IsOldKeyError(err) {
+		sw.SetHealthy(false, checkTime)
 		return fmt.Errorf("failed to decrypt test value, seal wrapper may be unreachable: %w", err)
 	}
 	if !bytes.Equal([]byte(testVal), plaintext) {
+		sw.SetHealthy(false, checkTime)
 		return errors.New("failed to decrypt health test value to expected result")
 	}
 
-	sw.setHealth(true, checkTime, checkTime)
+	sw.SetHealthy(true, checkTime)
 
 	return nil
 }
 
-// setHealth sets the fields protected by sw.hcLock, callers *must* hold the write lock.
-func (sw *SealWrapper) setHealth(healthy bool, lastSeenHealthy, lastHealthCheck time.Time) {
+// getHealth is the only function allowed to inspect the health fields directly
+func getHealth(sw *SealWrapper) (healthy bool, lastSeenHealthy time.Time, lastHealthCheck time.Time) {
+	sw.hcLock.RLock()
+	defer sw.hcLock.RUnlock()
+
+	return sw.healthy, sw.lastSeenHealthy, sw.lastHealthCheck
+}
+
+// setHealth is the only function allowed to mutate the health fields
+func setHealth(sw *SealWrapper, healthy bool, lastSeenHealthy, lastHealthCheck time.Time) {
+	sw.hcLock.Lock()
+	defer sw.hcLock.Unlock()
+
 	sw.healthy = healthy
 	sw.lastSeenHealthy = lastSeenHealthy
 	sw.lastHealthCheck = lastHealthCheck
