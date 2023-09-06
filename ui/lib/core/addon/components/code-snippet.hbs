@@ -7,9 +7,5 @@
   <code class="text-grey-lightest">
     {{@codeBlock}}
   </code>
-  <Hds::Copy::Button
-    @text="Copy"
-    @textToCopy={{or @clipboardCode @codeBlock}}
-    class="hds-copy-button code-snippet gray-icon"
-  />
+  <Hds::Copy::Button @text="Copy" @textToCopy={{or @clipboardCode @codeBlock}} class="hds-copy-button code-snippet" />
 </div>

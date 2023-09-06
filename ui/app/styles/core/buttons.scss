@@ -347,10 +347,6 @@ a.button.disabled {
     color: $white;
   }
 
-  &.gray-icon svg {
-    color: $ui-gray-300;
-  }
-
   &.size-7 div {
     font-size: $size-7;
   }
@@ -362,6 +358,10 @@ a.button.disabled {
     min-width: auto;
     padding: $size-11 $size-8;
     color: $ui-gray-300;
+
+    svg {
+      color: $ui-gray-300;
+    }
   }
 
   &.is-primary {
