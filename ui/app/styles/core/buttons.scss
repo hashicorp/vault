@@ -379,4 +379,10 @@ a.button.disabled {
       color: $white;
     }
   }
+
+  &.hover-button {
+    min-width: $spacing-xl;
+    border-radius: 0;
+    box-shadow: 0 3px 1px 0px rgba(10, 10, 10, 0.12);
+  }
 }
