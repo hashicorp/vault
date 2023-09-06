@@ -55,29 +55,26 @@
   <section class="modal-card-body">
     <div class="box is-shadowless is-fullwidth is-sideless">
       <h2 class="title is-6">HMAC</h2>
+      {{! HDS Adoption: Replace with Hds::Copy::Snippet }}
       <div class="copy-text level">
         <code class="level-left" data-test-encrypted-value="hmac">{{@hmac}}</code>
-        <CopyButton
-          class="button is-compact is-transparent level-right"
+        <Hds::Copy::Button
+          @text="Copy"
+          @isIconOnly={{true}}
+          @textToCopy={{@hmac}}
+          class="hds-copy-button icon-only"
           data-test-button="modal-copy"
-          @clipboardText={{@hmac}}
-          @buttonType="button"
-          @success={{action (set-flash-message "HMAC copied!")}}
-        >
-          <Icon @name="clipboard-copy" aria-label="Copy" />
-        </CopyButton>
+        />
       </div>
     </div>
   </section>
   <footer class="modal-card-foot">
-    <CopyButton
-      class="button is-primary copy-close"
+    <Hds::Copy::Button
+      @text="Copy & Close"
+      @textToCopy={{@hmac}}
+      class="hds-copy-button is-primary"
       data-test-button="modal-copy-close"
-      @clipboardText={{@hmac}}
-      @buttonType="button"
-      @success={{action @toggleModal "HMAC copied!"}}
-    >
-      Copy &amp; Close
-    </CopyButton>
+      {{on "click" (fn @toggleModal "HMAC copied!")}}
+    />
   </footer>
 </Modal>

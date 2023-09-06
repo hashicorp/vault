@@ -342,7 +342,24 @@ a.button.disabled {
     min-width: $spacing-l;
     padding: 0;
   }
+
   &.white-icon svg {
     color: $white;
+  }
+
+  &.is-primary {
+    background-color: $blue;
+    box-shadow: $box-shadow-low;
+    border-radius: $radius;
+    border-color: darken($blue, 2%);
+    color: $white;
+    font-weight: $font-weight-bold;
+    text-shadow: 0 1px 1px rgba($black, 0.25);
+    height: 2.5rem;
+    min-width: 6rem;
+
+    svg {
+      color: $white;
+    }
   }
 }

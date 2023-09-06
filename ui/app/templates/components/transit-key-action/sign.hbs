@@ -129,29 +129,26 @@
   <section class="modal-card-body">
     <div class="box is-shadowless is-fullwidth is-sideless">
       <h2 class="title is-6">Signature</h2>
+      {{! HDS Adoption: Replace with Hds::Copy::Snippet }}
       <div class="copy-text level">
         <code class="level-left" data-test-encrypted-value="signature">{{@signature}}</code>
-        <CopyButton
-          class="button is-compact is-transparent level-right"
+        <Hds::Copy::Button
+          @text="Copy"
+          @isIconOnly={{true}}
+          @textToCopy={{@signature}}
+          class="hds-copy-button icon-only"
           data-test-button="modal-copy"
-          @clipboardText={{@signature}}
-          @buttonType="button"
-          @success={{action (set-flash-message "Signature copied!")}}
-        >
-          <Icon @name="clipboard-copy" aria-label="Copy" />
-        </CopyButton>
+        />
       </div>
     </div>
   </section>
   <footer class="modal-card-foot">
-    <CopyButton
-      class="button is-primary copy-close"
+    <Hds::Copy::Button
+      @text="Copy & Close"
+      @textToCopy={{@signature}}
+      class="hds-copy-button is-primary"
       data-test-button="modal-copy-close"
-      @clipboardText={{@signature}}
-      @buttonType="button"
-      @success={{action @toggleModal "Signature copied!"}}
-    >
-      Copy &amp; Close
-    </CopyButton>
+      {{on "click" (fn @toggleModal "Signature copied!")}}
+    />
   </footer>
 </Modal>
