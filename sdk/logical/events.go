@@ -67,3 +67,39 @@ func SendEvent(ctx context.Context, sender EventSender, eventType string, metada
 	}
 	return sender.SendEvent(ctx, EventType(eventType), ev)
 }
+
+// EventReceivedBexpr is used for evaluating boolean expressions with go-bexpr.
+type EventReceivedBexpr struct {
+	EventType         string `bexpr:"event_type"`
+	Operation         string `bexpr:"operation"`
+	SourcePluginMount string `bexpr:"source_plugin_mount"`
+	FullSecretPath    string `bexpr:"full_secret_path"`
+	Namespace         string `bexpr:"namespace"`
+}
+
+// BexprDatum returns a copy of EventReceived formatted for use in evaluating go-bexpr boolean expressions.
+func (x *EventReceived) BexprDatum() any {
+	operation := ""
+	fullSecretPath := ""
+
+	if x.Event != nil {
+		if x.Event.Metadata != nil {
+			operationValue := x.Event.Metadata.Fields[EventMetadataOperation]
+			if operationValue != nil {
+				operation = operationValue.GetStringValue()
+			}
+			fullSecretPathValue := x.Event.Metadata.Fields[EventMetadataDataPath]
+			if fullSecretPathValue != nil {
+				fullSecretPath = fullSecretPathValue.GetStringValue()
+			}
+		}
+	}
+
+	return &EventReceivedBexpr{
+		EventType:         x.EventType,
+		Operation:         operation,
+		SourcePluginMount: x.PluginInfo.MountPath,
+		FullSecretPath:    fullSecretPath,
+		Namespace:         x.Namespace,
+	}
+}

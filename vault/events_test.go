@@ -25,7 +25,7 @@ func TestCanSendEventsFromBuiltinPlugin(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	ch, cancel, err := c.events.Subscribe(ctx, namespace.RootNamespace, eventType)
+	ch, cancel, err := c.events.Subscribe(ctx, namespace.RootNamespace, eventType, "")
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -37,6 +37,7 @@ type eventSubscriber struct {
 	events            *eventbus.EventBus
 	namespacePatterns []string
 	pattern           string
+	bexprFilter       string
 	conn              *websocket.Conn
 	json              bool
 	checkCache        *cache.Cache
@@ -48,7 +49,7 @@ type eventSubscriber struct {
 func (sub *eventSubscriber) handleEventsSubscribeWebsocket() (websocket.StatusCode, string, error) {
 	ctx := sub.ctx
 	logger := sub.logger
-	ch, cancel, err := sub.events.SubscribeMultipleNamespaces(ctx, sub.namespacePatterns, sub.pattern)
+	ch, cancel, err := sub.events.SubscribeMultipleNamespaces(ctx, sub.namespacePatterns, sub.pattern, sub.bexprFilter)
 	if err != nil {
 		logger.Info("Error subscribing", "error", err)
 		return websocket.StatusUnsupportedData, "Error subscribing", nil
@@ -217,6 +218,7 @@ func handleEventsSubscribe(core *vault.Core, req *logical.Request) http.Handler 
 			}
 		}
 
+		bexprFilter := strings.TrimSpace(r.URL.Query().Get("filter"))
 		namespacePatterns := r.URL.Query()["namespaces"]
 		namespacePatterns = prependNamespacePatterns(namespacePatterns, ns)
 		conn, err := websocket.Accept(w, r, nil)
@@ -251,6 +253,7 @@ func handleEventsSubscribe(core *vault.Core, req *logical.Request) http.Handler 
 			events:            core.Events(),
 			namespacePatterns: namespacePatterns,
 			pattern:           pattern,
+			bexprFilter:       bexprFilter,
 			conn:              conn,
 			json:              json,
 			checkCache:        cache.New(webSocketRevalidationTime, webSocketRevalidationTime),
