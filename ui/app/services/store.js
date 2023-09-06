@@ -109,7 +109,6 @@ export default Store.extend({
 
   filterData(filter, dataset) {
     let newData = dataset || [];
-
     if (filter) {
       newData = dataset.filter(function (item) {
         const id = item.id || item.name || item;
