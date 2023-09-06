@@ -3,7 +3,7 @@
   SPDX-License-Identifier: BUSL-1.1
 ~}}
 
-<div class="field is-grouped is-grouped-split is-fullwidth box is-bottomless {{if (eq @includeBox false) 'is-shadowless'}}">
+<div class="field is-fullwidth box is-bottomless {{if (eq @includeBox false) 'is-shadowless'}}">
   <div class="field is-grouped">
     <div class="control">
       <button
@@ -30,4 +30,5 @@
       </div>
     {{/if}}
   </div>
+  {{yield to="error"}}
 </div>
