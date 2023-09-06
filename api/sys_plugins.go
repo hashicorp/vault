@@ -209,7 +209,7 @@ type RegisterPluginInput struct {
 	// OCIImage specifies the container image to run as a plugin.
 	OCIImage string `json:"oci_image,omitempty"`
 
-	// Runtime is the OCI-compatible plugin runtime
+	// Runtime is the Vault plugin runtime to use when running the plugin.
 	Runtime string `json:"runtime,omitempty"`
 
 	// Env specifies a list of key=value pairs to add to the plugin's environment
