@@ -12,7 +12,7 @@ import { Response } from 'miragejs';
 import authPage from 'vault/tests/pages/auth';
 import { fakeWindow } from 'vault/tests/helpers/oidc-window-stub';
 
-module('Acceptance | saml auth method', function (hooks) {
+module('Acceptance | enterprise saml auth method', function (hooks) {
   setupApplicationTest(hooks);
   setupMirage(hooks);
 
