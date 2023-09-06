@@ -11,6 +11,7 @@
   font-weight: $font-weight-bold;
   display: flex;
   align-items: center;
+  gap: $spacing-xxs;
 
   &:not(:last-child) {
     margin-bottom: 0.25rem;
