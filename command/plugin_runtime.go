@@ -36,7 +36,7 @@ Usage: vault plugin runtime <subcommand> [options] [args]
 
       $ vault plugin runtime register -type=container -oci_runtime=my-oci-runtime my-custom-plugin-runtime
 
-  Get information about a plugin in the catalog listed under a particular type:
+  Get information about a plugin runtime in the catalog listed under a particular type:
 
       $ vault plugin runtime info -type=container my-custom-plugin
 
