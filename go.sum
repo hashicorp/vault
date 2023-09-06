@@ -629,8 +629,8 @@ github.com/Azure/azure-pipeline-go v0.2.3/go.mod h1:x841ezTBIMG6O3lAcl8ATHnsOPVl
 github.com/Azure/azure-sdk-for-go v16.2.1+incompatible/go.mod h1:9XXNKU+eRnpl9moKnB4QOLf1HestfXbmab5FXxiDBjc=
 github.com/Azure/azure-sdk-for-go v44.0.0+incompatible/go.mod h1:9XXNKU+eRnpl9moKnB4QOLf1HestfXbmab5FXxiDBjc=
 github.com/Azure/azure-sdk-for-go v56.3.0+incompatible/go.mod h1:9XXNKU+eRnpl9moKnB4QOLf1HestfXbmab5FXxiDBjc=
-github.com/Azure/azure-sdk-for-go v67.2.0+incompatible h1:Uu/Ww6ernvPTrpq31kITVTIm/I5jlJ1wjtEH/bmSB2k=
-github.com/Azure/azure-sdk-for-go v67.2.0+incompatible/go.mod h1:9XXNKU+eRnpl9moKnB4QOLf1HestfXbmab5FXxiDBjc=
+github.com/Azure/azure-sdk-for-go v68.0.0+incompatible h1:fcYLmCpyNYRnvJbPerq7U0hS+6+I79yEDJBqVNcqUzU=
+github.com/Azure/azure-sdk-for-go v68.0.0+incompatible/go.mod h1:9XXNKU+eRnpl9moKnB4QOLf1HestfXbmab5FXxiDBjc=
 github.com/Azure/azure-sdk-for-go/sdk/azcore v0.19.0/go.mod h1:h6H6c8enJmmocHUbLiiGY6sx7f9i+X3m1CHdd5c6Rdw=
 github.com/Azure/azure-sdk-for-go/sdk/azcore v1.0.0/go.mod h1:uGG2W01BaETf0Ozp+QxxKJdMBNRWPdstHG0Fmdwn1/U=
 github.com/Azure/azure-sdk-for-go/sdk/azcore v1.3.0/go.mod h1:tZoQYdDZNOiIjdSn0dVWVfl0NEPGOJqVLzSrcFk4Is0=
@@ -2009,8 +2009,8 @@ github.com/hashicorp/vault-plugin-secrets-ad v0.16.0 h1:6RCpd2PbBvmi5xmxXhggE0Xv
 github.com/hashicorp/vault-plugin-secrets-ad v0.16.0/go.mod h1:6IeXly3xi+dVodzFSx6aVZjdhd3syboPyhxr1/WMcyo=
 github.com/hashicorp/vault-plugin-secrets-alicloud v0.15.1 h1:LrcvOhx1hy8NvENdORrJUcpuY4JHDD5NvDILdlOgefw=
 github.com/hashicorp/vault-plugin-secrets-alicloud v0.15.1/go.mod h1:YKoctp9/8VkjIx827IrNCqSow/Z88wCz3Qb/sAFLe6o=
-github.com/hashicorp/vault-plugin-secrets-azure v0.16.2 h1:oyUYXNq4DFjSfsVAR3Ny1ZTWraIWtk5fMVrtbR0m7WE=
-github.com/hashicorp/vault-plugin-secrets-azure v0.16.2/go.mod h1:jXY62bJukKXF1ssMqS/n1AwiOwy52eRojfWIpqqS6B8=
+github.com/hashicorp/vault-plugin-secrets-azure v0.16.3 h1:XqVsmkGK5szTZe3YpMlHB5v+QceujZDR7ghY/YOg7jk=
+github.com/hashicorp/vault-plugin-secrets-azure v0.16.3/go.mod h1:VuFiqDd4xvBxpb/F/QEeHE7wXgqqbPYIV61COLvY0tY=
 github.com/hashicorp/vault-plugin-secrets-gcp v0.17.0 h1:Z7IqtShXD8uDzLfKskk8rt84hZbXMHCtJT4YQrUigPs=
 github.com/hashicorp/vault-plugin-secrets-gcp v0.17.0/go.mod h1:VRSCqW/rYThWK/bmBiBKI1dKOg383xnedA/G9ghJrug=
 github.com/hashicorp/vault-plugin-secrets-gcpkms v0.15.1 h1:qUFOjiz5+wgZsRpOF0hCFeot9vZEyhqfJ4w/UFJAjfc=
