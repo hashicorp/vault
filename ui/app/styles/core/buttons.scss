@@ -345,6 +345,9 @@ a.button.disabled {
   &.white-icon svg {
     color: $white;
   }
+  &.gray-icon svg {
+    color: $ui-gray-300;
+  }
 
   &.size-7 div {
     font-size: $size-7;
