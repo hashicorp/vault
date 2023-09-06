@@ -3,17 +3,16 @@
  * SPDX-License-Identifier: BUSL-1.1
  */
 
-import Ember from 'ember';
 import { inject as service } from '@ember/service';
 import Component from './outer-html';
 import { task, timeout, waitForEvent } from 'ember-concurrency';
-import { waitFor } from '@ember/test-waiters';
 import { computed } from '@ember/object';
 import errorMessage from 'vault/utils/error-message';
 
 const WAIT_TIME = 500;
 const ERROR_WINDOW_CLOSED =
   'The provider window was closed before authentication was complete. Your web browser may have blocked or closed a pop-up window. Please check your settings and click Sign In to try again.';
+const ERROR_TIMEOUT = 'The authentication request has timed out. Please click Sign In to try again.';
 const ERROR_MISSING_PARAMS =
   'The callback from the provider did not supply all of the required parameters. Please click Sign In to try again. If the problem persists, you may want to contact your administrator.';
 export { ERROR_WINDOW_CLOSED, ERROR_MISSING_PARAMS };
@@ -25,7 +24,6 @@ export default Component.extend({
   selectedAuthPath: null,
   selectedAuthType: null,
   roleName: null,
-  role: null,
   errorMessage: null,
   onRoleName() {},
   onLoading() {},
@@ -45,32 +43,18 @@ export default Component.extend({
     return this.getWindow().isSecureContext;
   }),
 
-  fetchRole: task(
-    waitFor(function* (roleName, options = { debounce: true }) {
-      if (options.debounce) {
-        this.onRoleName(roleName);
-        // debounce
-        yield timeout(Ember.testing ? 0 : WAIT_TIME);
-      }
-
-      const path = this.selectedAuthPath || this.selectedAuthType;
-      const id = JSON.stringify([path, roleName]);
-      let role = null;
-      try {
-        role = yield this.store.findRecord('role-saml', id, {
-          adapterOptions: { namespace: this.namespace },
-        });
-      } catch (e) {
-        this.set('errorMessage', errorMessage(e));
-        return;
-      }
-      this.set('role', role);
-    })
-  ).restartable(),
+  async fetchRole(roleName) {
+    const path = this.selectedAuthPath || this.selectedAuthType;
+    const id = JSON.stringify([path, roleName]);
+    return this.store.findRecord('role-saml', id, {
+      adapterOptions: { namespace: this.namespace },
+    });
+  },
 
   cancelLogin(samlWindow, errorMessage) {
     this.closeWindow(samlWindow);
     this.handleSAMLError(errorMessage);
+    this.exchangeSAMLTokenPollID.cancelAll();
   },
 
   closeWindow(samlWindow) {
@@ -88,6 +72,7 @@ export default Component.extend({
     while (true) {
       yield timeout(WAIT_TIME);
       if (!samlWindow || samlWindow.closed) {
+        this.exchangeSAMLTokenPollID.cancelAll();
         return this.handleSAMLError(ERROR_WINDOW_CLOSED);
       }
     }
@@ -96,10 +81,10 @@ export default Component.extend({
   watchCurrent: task(function* (samlWindow) {
     // when user is about to change pages, close the popup window
     yield waitForEvent(this.getWindow(), 'beforeunload');
-    samlWindow.close();
+    samlWindow?.close();
   }),
 
-  exchangeSAMLTokenPollID: task(function* (samlWindow) {
+  exchangeSAMLTokenPollID: task(function* (samlWindow, role) {
     this.onLoading(true);
 
     // start watching the popup window and the current one
@@ -113,54 +98,50 @@ export default Component.extend({
     // Wait up to 3 minutes for the token to become available
     let resp;
     for (let i = 0; i < 180; i++) {
-      sleep(500);
-
+      yield timeout(WAIT_TIME);
       try {
-        resp = yield adapter.pollSAMLToken(path, this.role.tokenPollID, this.role.clientVerifier);
+        resp = yield adapter.pollSAMLToken(path, role.tokenPollID, role.clientVerifier);
         if (!resp?.auth) {
           continue;
         }
-
         // We've obtained the Vault token for the authentication flow, now log in.
-        this.closeWindow(samlWindow);
         yield this.onSubmit(null, null, resp.auth.client_token);
+        this.closeWindow(samlWindow);
         return;
       } catch (e) {
         if (e.httpStatus === 401) {
           // Continue to retry on 401 Unauthorized
           continue;
         }
-        if (e.httpStatus === 403 || e.httpStatus === 400) {
-          return this.cancelLogin(samlWindow, e.errors[0]);
-        }
+        return this.cancelLogin(samlWindow, errorMessage(e));
       }
     }
+    this.cancelLogin(samlWindow, ERROR_TIMEOUT);
   }),
 
   actions: {
-    async startSAMLAuth(data, e) {
+    setRole(roleName) {
+      this.onRoleName(roleName);
+    },
+    /* Saml auth flow on login button click:
+     * 1. find role-saml record which returns role info
+     * 2. open popup at url defined returned from role
+     * 3. watch popup window for close (and cancel polling if it closes)
+     * 4. poll vault for 200 token response
+     * 5. close popup, stop polling, and trigger onSubmit with token data
+     */
+    async startSAMLAuth(callback, data, e) {
       this.onError(null);
+      this.onLoading(true);
       if (e && e.preventDefault) {
         e.preventDefault();
       }
-
+      const roleName = data.role;
+      let role;
       try {
-        await this.fetchRole.perform(this.roleName, { debounce: false });
+        role = await this.fetchRole(roleName);
       } catch (error) {
-        // this task could be cancelled if the instances in didReceiveAttrs resolve after this was started
-        if (error?.name !== 'TaskCancelation') {
-          throw error;
-        }
-      }
-
-      if (!this.role) {
-        this.onError('Invalid role. Please try again.');
-        return;
-      }
-      if (!this.role.ssoServiceURL) {
-        this.onError(
-          'Missing sso_service_url. Please check the acs_urls field of the auth method configuration.'
-        );
+        this.handleSAMLError(error);
         return;
       }
 
@@ -170,17 +151,12 @@ export default Component.extend({
       const left = win.screen.width / 2 - POPUP_WIDTH / 2;
       const top = win.screen.height / 2 - POPUP_HEIGHT / 2;
       const samlWindow = win.open(
-        this.role.ssoServiceURL,
+        role.ssoServiceURL,
         'vaultSAMLWindow',
         `width=${POPUP_WIDTH},height=${POPUP_HEIGHT},resizable,scrollbars=yes,top=${top},left=${left}`
       );
 
-      this.exchangeSAMLTokenPollID.perform(samlWindow);
+      this.exchangeSAMLTokenPollID.perform(samlWindow, role);
     },
   },
 });
-
-function sleep(milliseconds) {
-  const start = new Date().getTime();
-  while (new Date().getTime() - start < milliseconds);
-}
