@@ -14,6 +14,8 @@ The `/sys/policies` endpoints are used to manage ACL, RGP, and EGP policies in V
 
 ## List ACL policies
 
+@include 'alerts/restricted-admin.mdx'
+
 This endpoint lists all configured ACL policies.
 
 | Method | Path                |
@@ -37,6 +39,8 @@ $ curl \
 ```
 
 ## Read ACL policy
+
+@include 'alerts/restricted-admin.mdx'
 
 This endpoint retrieves information about the named ACL policy.
 
@@ -67,6 +71,8 @@ $ curl \
 ```
 
 ## Create/Update ACL policy
+
+@include 'alerts/restricted-admin.mdx'
 
 This endpoint adds a new or updates an existing ACL policy. Once a policy is
 updated, it takes effect immediately to all associated users.
@@ -103,6 +109,8 @@ $ curl \
 
 ## Delete ACL policy
 
+@include 'alerts/restricted-admin.mdx'
+
 This endpoint deletes the ACL policy with the given name. This will immediately
 affect all users associated with this policy. (A deleted policy set on a token
 acts as an empty policy.)
@@ -127,6 +135,8 @@ $ curl \
 
 ## List RGP policies
 
+@include 'alerts/restricted-admin.mdx'
+
 This endpoint lists all configured RGP policies.
 
 | Method | Path                |
@@ -150,6 +160,8 @@ $ curl \
 ```
 
 ## Read RGP policy
+
+@include 'alerts/restricted-admin.mdx'
 
 This endpoint retrieves information about the named RGP policy.
 
@@ -181,6 +193,8 @@ $ curl \
 ```
 
 ## Create/Update RGP policy
+
+@include 'alerts/restricted-admin.mdx'
 
 This endpoint adds a new or updates an existing RGP policy. Once a policy is
 updated, it takes effect immediately to all associated users.
@@ -222,6 +236,8 @@ $ curl \
 
 ## Delete RGP policy
 
+@include 'alerts/restricted-admin.mdx'
+
 This endpoint deletes the RGP policy with the given name. This will immediately
 affect all users associated with this policy. (A deleted policy set on a token
 acts as an empty policy.)
@@ -245,6 +261,8 @@ $ curl \
 ```
 
 ## List EGP policies
+
+@include 'alerts/restricted-admin.mdx'
 
 This endpoint lists all configured EGP policies. Since EGP policies act on a
 path, this endpoint returns two identifiers:
@@ -275,6 +293,8 @@ $ curl \
 ```
 
 ## Read EGP policy
+
+@include 'alerts/restricted-admin.mdx'
 
 This endpoint retrieves information about the named EGP policy.
 
@@ -307,6 +327,8 @@ $ curl \
 ```
 
 ## Create/Update EGP policy
+
+@include 'alerts/restricted-admin.mdx'
 
 This endpoint adds a new or updates an existing EGP policy. Once a policy is
 updated, it takes effect immediately to all associated users.
@@ -353,6 +375,8 @@ $ curl \
 ```
 
 ## Delete EGP policy
+
+@include 'alerts/restricted-admin.mdx'
 
 This endpoint deletes the EGP policy with the given name from all paths on which it was configured.
 

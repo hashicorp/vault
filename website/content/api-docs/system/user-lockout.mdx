@@ -6,20 +6,22 @@ description: The `/sys/locked-users` endpoint is used to manage locked users in 
 
 # `/sys/locked-users`
 
-The `/sys/locked-users` endpoint is used to list and unlock locked users in Vault. 
+The `/sys/locked-users` endpoint is used to list and unlock locked users in Vault.
 
-Please visit [user lockout](/vault/docs/concepts/user-lockout) concepts page for more details about the feature. 
+Refer to the [user lockout](/vault/docs/concepts/user-lockout) overview for more details about how Vault handles lockouts.
 
 ## List locked users
 
-This endpoint lists the locked users information in Vault. 
+@include 'alerts/restricted-admin.mdx'
+
+The list endpoint returns information on the users currently locked by Vault.
 
 The response will include all child namespaces of the namespace in which the
 request was made. If some namespace has subsequently been deleted, its path will
 be listed as "deleted namespace :ID:." Deleted namespaces are reported only for
 queries in the root namespace because the information about the namespace path
 is unknown. The response will be returned in the decreasing order of locked user
-counts. 
+counts.
 
 This endpoint was added in Vault 1.13.
 
@@ -31,7 +33,7 @@ This endpoint was added in Vault 1.13.
 
 - `mount_accessor` `(string, optional)` -  Specifies the identifier of the auth mount entry to which the user
 belongs in the namespace in which the request was made. If no mount accessor is specified,
-the response will include locked users in all child namespaces of the namespace in which the request was made. 
+the response includes locked users in all child namespaces of the namespace in which the request was made.
 
 ### Sample request
 
@@ -193,9 +195,11 @@ $ curl \
 
 ## Unlock user
 
-This endpoint unlocks a locked user with provided mount_accessor and alias_identifier in namespace in which the request was made if locked. 
-This command is idempotent, meaning it succeeds even if user with the given mount_accessor and alias_identifier is not locked. 
- 
+@include 'alerts/restricted-admin.mdx'
+
+The unlock user endpoint frees a locked user with the provided `mount_accessor` and `alias_identifier` in the given namespace.
+The unlock command is idempotent. Calls to the endpoint succeed even if the user matching the provided `mount_accessor` and `alias_identifier` is not currently locked.
+
 
 This endpoint was added in Vault 1.13.
 
@@ -207,7 +211,7 @@ This endpoint was added in Vault 1.13.
 
 - `mount_accessor` `(string, required)` - Specifies the identifier of the auth mount entry to which the user
 belongs
-- `alias_identifier` `(string, required)` - It is the name of the alias (user). For example, if the alias 
+- `alias_identifier` `(string, required)` - The name of the alias (user). For example, if the alias
 belongs to userpass backend, the name should be a valid username within userpass auth method. If the alias belongs
 to an approle auth method, the name should be a valid RoleID. If the alias belongs to an ldap auth method, the name
 should be a valid username.

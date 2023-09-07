@@ -13,6 +13,8 @@ refresh its TTL.
 
 ## Wrapping rewrap
 
+@include 'alerts/restricted-admin.mdx'
+
 This endpoint rewraps a response-wrapped token. The new token will use the same
 creation TTL as the original token and contain the same response. The old token
 will be invalidated. This can be used for long-term storage of a secret in a
