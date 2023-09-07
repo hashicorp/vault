@@ -105,7 +105,7 @@ func (c *PluginRegisterCommand) Flags() *FlagSets {
 		Name:       "runtime",
 		Target:     &c.flagRuntime,
 		Completion: complete.PredictAnything,
-		Usage:      "OCI runtime for the plugin OCI image if specified. Default is gVisor/runsc",
+		Usage:      "Vault plugin runtime to use if oci_image is specified.",
 	})
 
 	f.StringSliceVar(&StringSliceVar{
