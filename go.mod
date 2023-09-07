@@ -84,11 +84,11 @@ require (
 	github.com/hashicorp/go-gcp-common v0.8.0
 	github.com/hashicorp/go-hclog v1.5.0
 	github.com/hashicorp/go-kms-wrapping/entropy/v2 v2.0.0
-	github.com/hashicorp/go-kms-wrapping/v2 v2.0.10
+	github.com/hashicorp/go-kms-wrapping/v2 v2.0.13
 	github.com/hashicorp/go-kms-wrapping/wrappers/aead/v2 v2.0.7-1
 	github.com/hashicorp/go-kms-wrapping/wrappers/alicloudkms/v2 v2.0.1
 	github.com/hashicorp/go-kms-wrapping/wrappers/awskms/v2 v2.0.7
-	github.com/hashicorp/go-kms-wrapping/wrappers/azurekeyvault/v2 v2.0.7
+	github.com/hashicorp/go-kms-wrapping/wrappers/azurekeyvault/v2 v2.0.8
 	github.com/hashicorp/go-kms-wrapping/wrappers/gcpckms/v2 v2.0.8
 	github.com/hashicorp/go-kms-wrapping/wrappers/ocikms/v2 v2.0.7
 	github.com/hashicorp/go-kms-wrapping/wrappers/transit/v2 v2.0.7
@@ -250,7 +250,7 @@ require (
 	github.com/Azure/go-ansiterm v0.0.0-20230124172434-306776ec8161 // indirect
 	github.com/Azure/go-autorest v14.2.0+incompatible // indirect
 	github.com/Azure/go-autorest/autorest/azure/auth v0.5.12 // indirect
-	github.com/Azure/go-autorest/autorest/azure/cli v0.4.5 // indirect
+	github.com/Azure/go-autorest/autorest/azure/cli v0.4.6 // indirect
 	github.com/Azure/go-autorest/autorest/date v0.3.0 // indirect
 	github.com/Azure/go-autorest/autorest/to v0.4.0 // indirect
 	github.com/Azure/go-autorest/autorest/validation v0.3.1 // indirect
