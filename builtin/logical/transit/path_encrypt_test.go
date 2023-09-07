@@ -707,8 +707,8 @@ func TestTransit_EncryptionCase14(t *testing.T) {
 		Path:      "keys/my-key",
 		Storage:   s,
 		Data: map[string]interface{}{
-			"convergent": "true",
-			"derived":    "true",
+			"convergent_encryption": "true",
+			"derived":               "true",
 		},
 	}
 	resp, err := b.HandleRequest(context.Background(), cReq)
@@ -717,7 +717,7 @@ func TestTransit_EncryptionCase14(t *testing.T) {
 	}
 
 	// Non-batch first
-	data := map[string]interface{}{"plaintext": "bXkgc2VjcmV0IGRhdGE=", "nonce": "R80hr9eNUIuFV52e"}
+	data := map[string]interface{}{"plaintext": "bXkgc2VjcmV0IGRhdGE=", "context": "SGVsbG8sIFdvcmxkCg==", "nonce": "R80hr9eNUIuFV52e"}
 	req := &logical.Request{
 		Operation: logical.CreateOperation,
 		Path:      "encrypt/my-key",
@@ -731,7 +731,7 @@ func TestTransit_EncryptionCase14(t *testing.T) {
 	}
 
 	batchInput := []interface{}{
-		map[string]interface{}{"plaintext": "bXkgc2VjcmV0IGRhdGE=", "nonce": "R80hr9eNUIuFV52e"},
+		data,
 	}
 
 	batchData := map[string]interface{}{
