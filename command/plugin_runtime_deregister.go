@@ -119,6 +119,6 @@ func (c *PluginRuntimeDeregisterCommand) Run(args []string) int {
 		return 2
 	}
 
-	c.UI.Output(fmt.Sprintf("Success! Deregistered plugin runtime (if it was registered): %s", runtimeName))
+	c.UI.Output(fmt.Sprintf("Success! Deregistered plugin runtime: %s", runtimeName))
 	return 0
 }

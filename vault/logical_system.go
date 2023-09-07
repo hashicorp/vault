@@ -6187,11 +6187,11 @@ This path responds to the following HTTP methods.
 		"",
 	},
 	"plugin-runtime-catalog_cpu-nanos": {
-		"The limit of runtime CPU in nanos",
+		"CPU limit to set per runtime in nanos. Defaults to no limit.",
 		"",
 	},
 	"plugin-runtime-catalog_memory-bytes": {
-		"The limit of runtime memory in bytes",
+		"Memory limit to set per runtime in bytes. Defaults to no limit.",
 		"",
 	},
 	"leases": {

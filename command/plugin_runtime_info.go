@@ -30,11 +30,11 @@ func (c *PluginRuntimeInfoCommand) Synopsis() string {
 
 func (c *PluginRuntimeInfoCommand) Help() string {
 	helpText := `
-Usage: vault plugin runtime info [options] TYPE NAME
+Usage: vault plugin runtime info [options] NAME
 
   Displays information about a plugin runtime in the catalog with the given name. If
-  the plugin runtime does not exist, an error is returned. The argument of type
-  takes "container".
+  the plugin runtime does not exist, an error is returned. The type argument
+  currently only accepts "container".
 
   Get info about a plugin runtime:
 
