@@ -134,10 +134,7 @@ func TestEventsSubscribe(t *testing.T) {
 
 // TestBexprFilters tests that go-bexpr filters are used to filter events.
 func TestBexprFilters(t *testing.T) {
-	core := vault.TestCoreWithConfig(t, &vault.CoreConfig{
-		Experiments: []string{experiments.VaultExperimentEventsAlpha1},
-	})
-
+	core := vault.TestCoreWithConfig(t, &vault.CoreConfig{})
 	ln, addr := TestServer(t, core)
 	defer ln.Close()
 
