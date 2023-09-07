@@ -76,6 +76,7 @@ type externalPluginsKey struct {
 	version  string
 	command  string
 	ociImage string
+	runtime  string
 	args     string
 	env      string
 	sha256   string
@@ -99,6 +100,7 @@ func makeExternalPluginsKey(p *pluginutil.PluginRunner) (externalPluginsKey, err
 		version:  p.Version,
 		command:  p.Command,
 		ociImage: p.OCIImage,
+		runtime:  p.Runtime,
 		args:     string(args),
 		env:      string(env),
 		sha256:   hex.EncodeToString(p.Sha256),
@@ -731,7 +733,7 @@ func (c *PluginCatalog) isDatabasePlugin(ctx context.Context, pluginRunner *plug
 	return merr.ErrorOrNil()
 }
 
-// UpdatePlugins will loop over all the plugins of unknown type and attempt to
+// UpgradePlugins will loop over all the plugins of unknown type and attempt to
 // upgrade them to typed plugins
 func (c *PluginCatalog) UpgradePlugins(ctx context.Context, logger log.Logger) error {
 	c.lock.Lock()
@@ -922,6 +924,7 @@ func (c *PluginCatalog) setInternal(ctx context.Context, plugin pluginutil.SetPl
 		Name:     plugin.Name,
 		Command:  command,
 		OCIImage: plugin.OCIImage,
+		Runtime:  plugin.Runtime,
 		Args:     plugin.Args,
 		Env:      plugin.Env,
 		Sha256:   plugin.Sha256,
@@ -970,6 +973,7 @@ func (c *PluginCatalog) setInternal(ctx context.Context, plugin pluginutil.SetPl
 		Version:  plugin.Version,
 		Command:  plugin.Command,
 		OCIImage: plugin.OCIImage,
+		Runtime:  plugin.Runtime,
 		Args:     plugin.Args,
 		Env:      plugin.Env,
 		Sha256:   plugin.Sha256,
@@ -1035,6 +1039,33 @@ func (c *PluginCatalog) List(ctx context.Context, pluginType consts.PluginType) 
 	}
 
 	return retList, nil
+}
+
+// ListPluginsWithRuntime lists the plugins that are registered with a given runtime
+func (c *PluginCatalog) ListPluginsWithRuntime(ctx context.Context, runtime string) ([]string, error) {
+	// Collect keys for external plugins in the barrier.
+	keys, err := logical.CollectKeys(ctx, c.catalogView)
+	if err != nil {
+		return nil, err
+	}
+
+	var ret []string
+	for _, key := range keys {
+		entry, err := c.catalogView.Get(ctx, key)
+		if err != nil || entry == nil {
+			continue
+		}
+
+		plugin := new(pluginutil.PluginRunner)
+		if err := jsonutil.DecodeJSON(entry.Value, plugin); err != nil {
+			return nil, fmt.Errorf("failed to decode plugin entry: %w", err)
+		}
+
+		if plugin.Runtime == runtime {
+			ret = append(ret, plugin.Name)
+		}
+	}
+	return ret, nil
 }
 
 func (c *PluginCatalog) ListVersionedPlugins(ctx context.Context, pluginType consts.PluginType) ([]pluginutil.VersionedPlugin, error) {

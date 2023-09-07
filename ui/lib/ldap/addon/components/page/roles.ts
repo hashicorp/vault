@@ -55,7 +55,6 @@ export default class LdapRolesPageComponent extends Component<Args> {
     try {
       const message = `Successfully deleted role ${model.name}.`;
       await model.destroyRecord();
-      this.args.roles.removeObject(model);
       this.flashMessages.success(message);
     } catch (error) {
       this.flashMessages.danger(`Error deleting role \n ${errorMessage(error)}`);
