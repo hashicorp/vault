@@ -1572,16 +1572,16 @@ func (a *ActivityLog) receivedFragment(fragment *activity.LogFragment) {
 }
 
 type ResponseCounts struct {
-	DistinctEntities int `json:"distinct_entities"`
-	EntityClients    int `json:"entity_clients"`
-	NonEntityTokens  int `json:"non_entity_tokens"`
-	NonEntityClients int `json:"non_entity_clients"`
+	DistinctEntities int `json:"distinct_entities" mapstructure:"distinct_entities"`
+	EntityClients    int `json:"entity_clients" mapstructure:"entity_clients"`
+	NonEntityTokens  int `json:"non_entity_tokens" mapstructure:"non_entity_tokens"`
+	NonEntityClients int `json:"non_entity_clients" mapstructure:"non_entity_clients"`
 	Clients          int `json:"clients"`
 }
 
 type ResponseNamespace struct {
-	NamespaceID   string           `json:"namespace_id"`
-	NamespacePath string           `json:"namespace_path"`
+	NamespaceID   string           `json:"namespace_id" mapstructure:"namespace_id"`
+	NamespacePath string           `json:"namespace_path" mapstructure:"namespace_path"`
 	Counts        ResponseCounts   `json:"counts"`
 	Mounts        []*ResponseMount `json:"mounts"`
 }
@@ -1599,7 +1599,7 @@ type ResponseNewClients struct {
 }
 
 type ResponseMount struct {
-	MountPath string          `json:"mount_path"`
+	MountPath string          `json:"mount_path" mapstructure:"mount_path"`
 	Counts    *ResponseCounts `json:"counts"`
 }
 
