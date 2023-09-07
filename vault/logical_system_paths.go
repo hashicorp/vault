@@ -1862,6 +1862,14 @@ func (b *SystemBackend) pluginsCatalogCRUDPath() *framework.Path {
 				Type:        framework.TypeString,
 				Description: strings.TrimSpace(sysHelp["plugin-catalog_sha-256"][0]),
 			},
+			"oci_image": {
+				Type:        framework.TypeString,
+				Description: strings.TrimSpace(sysHelp["plugin-catalog_oci-image"][0]),
+			},
+			"runtime": {
+				Type:        framework.TypeString,
+				Description: strings.TrimSpace(sysHelp["plugin-catalog_runtime"][0]),
+			},
 			"command": {
 				Type:        framework.TypeString,
 				Description: strings.TrimSpace(sysHelp["plugin-catalog_command"][0]),
@@ -1877,10 +1885,6 @@ func (b *SystemBackend) pluginsCatalogCRUDPath() *framework.Path {
 			"version": {
 				Type:        framework.TypeString,
 				Description: strings.TrimSpace(sysHelp["plugin-catalog_version"][0]),
-			},
-			"oci_image": {
-				Type:        framework.TypeString,
-				Description: strings.TrimSpace(sysHelp["plugin-catalog_oci_image"][0]),
 			},
 		},
 
@@ -1932,15 +1936,18 @@ func (b *SystemBackend) pluginsCatalogCRUDPath() *framework.Path {
 								Description: strings.TrimSpace(sysHelp["plugin-catalog_sha-256"][0]),
 								Required:    true,
 							},
+							"oci_image": {
+								Type:        framework.TypeString,
+								Description: strings.TrimSpace(sysHelp["plugin-catalog_oci-image"][0]),
+							},
+							"runtime": {
+								Type:        framework.TypeString,
+								Description: strings.TrimSpace(sysHelp["plugin-catalog_runtime"][0]),
+							},
 							"command": {
 								Type:        framework.TypeString,
 								Description: strings.TrimSpace(sysHelp["plugin-catalog_command"][0]),
 								Required:    true,
-							},
-							"oci_image": {
-								Type:        framework.TypeString,
-								Description: strings.TrimSpace(sysHelp["plugin-catalog_oci_image"][0]),
-								Required:    false,
 							},
 							"args": {
 								Type:        framework.TypeStringSlice,
