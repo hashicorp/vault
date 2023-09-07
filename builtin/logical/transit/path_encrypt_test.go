@@ -951,7 +951,6 @@ func TestShouldWarnAboutNonceUsage(t *testing.T) {
 		convergentEncryption bool
 		convergentVersion    int
 		expected             bool
-		errExpected          bool
 	}{
 		{
 			name:                 "-NoConvergent-WithNonce",
