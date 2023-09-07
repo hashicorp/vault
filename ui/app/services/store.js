@@ -4,7 +4,7 @@
  */
 
 import Store from '@ember-data/store';
-import { run } from '@ember/runloop';
+import { next, run } from '@ember/runloop';
 import { resolve, Promise } from 'rsvp';
 import { dasherize } from '@ember/string';
 import { assert } from '@ember/debug';
@@ -138,25 +138,36 @@ export default class StoreService extends Store {
     return resp;
   }
 
+  forceUnload(modelName) {
+    // For some reason peeking the records before unloading ensures we
+    // don't have ghost models leftover
+    // eslint-disable-next-line no-console
+    console.info(`unloading ${this.peekAll(modelName).length} records`);
+    run(() => this.unloadAll(modelName));
+    return;
+  }
+
   // pushes records into the store and returns the result
   fetchPage(modelName, query) {
     const response = this.constructResponse(modelName, query);
     // force destroy queue to flush https://github.com/emberjs/data/issues/5447
-    run(() => this.unloadAll(modelName));
+    this.forceUnload(modelName);
     return new Promise((resolve) => {
       // push subset of records into the store
-      this.push(
-        this.serializerFor(modelName).normalizeResponse(
-          this,
-          this.modelFor(modelName),
-          response,
-          null,
-          'query'
-        )
-      );
-      const model = this.peekAll(modelName).toArray();
-      model.set('meta', response.meta);
-      resolve(model);
+      next(() => {
+        this.push(
+          this.serializerFor(modelName).normalizeResponse(
+            this,
+            this.modelFor(modelName),
+            response,
+            null,
+            'query'
+          )
+        );
+        const model = this.peekAll(modelName).toArray();
+        model.set('meta', response.meta);
+        resolve(model);
+      });
     });
   }
 
