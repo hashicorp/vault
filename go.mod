@@ -96,7 +96,7 @@ require (
 	github.com/hashicorp/go-memdb v1.3.4
 	github.com/hashicorp/go-msgpack v1.1.5
 	github.com/hashicorp/go-multierror v1.1.1
-	github.com/hashicorp/go-plugin v1.5.0
+	github.com/hashicorp/go-plugin v1.5.1
 	github.com/hashicorp/go-raftchunking v0.6.3-0.20191002164813-7e9e8525653a
 	github.com/hashicorp/go-retryablehttp v0.7.4
 	github.com/hashicorp/go-rootcerts v1.0.2
@@ -385,7 +385,7 @@ require (
 	github.com/hashicorp/go-metrics v0.5.1 // indirect
 	github.com/hashicorp/go-msgpack/v2 v2.0.0 // indirect
 	github.com/hashicorp/go-secure-stdlib/fileutil v0.1.0 // indirect
-	github.com/hashicorp/go-secure-stdlib/plugincontainer v0.1.1 // indirect
+	github.com/hashicorp/go-secure-stdlib/plugincontainer v0.2.0 // indirect
 	github.com/hashicorp/go-slug v0.11.1 // indirect
 	github.com/hashicorp/go-tfe v1.25.1 // indirect
 	github.com/hashicorp/jsonapi v0.0.0-20210826224640-ee7dae0fb22d // indirect
