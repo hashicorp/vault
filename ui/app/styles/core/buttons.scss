@@ -347,6 +347,10 @@ a.button.disabled {
     color: $white;
   }
 
+  &.hidden-icon svg {
+    color: transparent;
+  }
+
   &.size-7 div {
     font-size: $size-7;
   }

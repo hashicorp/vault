@@ -159,7 +159,8 @@
                       @text="Copy Public Key"
                       @textToCopy={{meta.public_key}}
                       @isFullWidth={{true}}
-                      class="hds-copy-button size-7 link is-flex-start"
+                      class="hds-copy-button size-7 hidden-icon link is-flex-start"
+                      {{on "click" (action (set-flash-message "Public key copied!"))}}
                     />
                   </li>
                 </ul>
