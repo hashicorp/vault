@@ -33,7 +33,7 @@ func (c *PluginRuntimeInfoCommand) Help() string {
 Usage: vault plugin runtime info [options] NAME
 
   Displays information about a plugin runtime in the catalog with the given name. If
-  the plugin runtime does not exist, an error is returned. The type argument
+  the plugin runtime does not exist, an error is returned. The -type flag
   currently only accepts "container".
 
   Get info about a plugin runtime:

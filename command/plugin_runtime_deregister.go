@@ -30,11 +30,11 @@ func (c *PluginRuntimeDeregisterCommand) Synopsis() string {
 
 func (c *PluginRuntimeDeregisterCommand) Help() string {
 	helpText := `
-Usage: vault plugin runtime deregister [options] TYPE NAME
+Usage: vault plugin runtime deregister [options] NAME
 
   Deregister an existing plugin runtime in the catalog with the given name. If
   any registered plugin references the plugin runtime, an error is returned. If
-  the plugin runtime does not exist, an error is returned. The type argument
+  the plugin runtime does not exist, an error is returned. The -type flag
   currently only accepts "container".
 
   Deregister a plugin runtime:
