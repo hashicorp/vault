@@ -1139,6 +1139,8 @@ func (c *PluginCatalog) listInternal(ctx context.Context, pluginType consts.Plug
 		result = append(result, pluginutil.VersionedPlugin{
 			Name:            plugin.Name,
 			Type:            plugin.Type.String(),
+			OCIImage:        plugin.OCIImage,
+			Runtime:         plugin.Runtime,
 			Version:         plugin.Version,
 			SHA256:          hex.EncodeToString(plugin.Sha256),
 			SemanticVersion: semanticVersion,

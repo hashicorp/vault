@@ -366,7 +366,7 @@ module('Acceptance | Enterprise | kv-v2 workflow | edge cases', function (hooks)
     });
 
     test('namespace: it manages state throughout delete, destroy and undelete operations', async function (assert) {
-      assert.expect(32);
+      assert.expect(34);
       const backend = this.backend;
       const ns = this.namespace;
       const secret = 'my-delete-secret';

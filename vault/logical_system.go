@@ -467,6 +467,12 @@ func (b *SystemBackend) handlePluginCatalogUntypedList(ctx context.Context, _ *l
 				"version": p.Version,
 				"builtin": p.Builtin,
 			}
+			if p.OCIImage != "" {
+				entry["oci_image"] = p.OCIImage
+			}
+			if p.Runtime != "" {
+				entry["runtime"] = p.Runtime
+			}
 			if p.SHA256 != "" {
 				entry["sha256"] = p.SHA256
 			}
