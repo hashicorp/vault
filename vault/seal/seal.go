@@ -291,8 +291,10 @@ func (a *access) AllSealWrappersHealthy() bool {
 	return len(a.wrappersByPriority) == len(a.filterSealWrappers(enabledAndDisabled, healthyOnly))
 }
 
-type enabledFilter bool
-type healthyFilter bool
+type (
+	enabledFilter bool
+	healthyFilter bool
+)
 
 const (
 	enabledOnly         = enabledFilter(true)
