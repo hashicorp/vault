@@ -380,6 +380,17 @@ a.button.disabled {
     }
   }
 
+  &.is-secondary {
+    background-color: $grey-lightest;
+    box-shadow: $box-shadow-low;
+    border-radius: $radius;
+    border: 1px solid $grey-light;
+    color: $ui-gray-800;
+    font-weight: $font-weight-semibold;
+    height: 2.5rem;
+    min-width: 6rem;
+  }
+
   &.hover-button {
     min-width: $spacing-xl;
     border-radius: 0;
