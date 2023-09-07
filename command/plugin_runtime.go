@@ -16,7 +16,7 @@ type PluginRuntimeCommand struct {
 }
 
 func (c *PluginRuntimeCommand) Synopsis() string {
-	return "Interact with Vault plugins and catalog"
+	return "Interact with Vault plugin runtimes catalog."
 }
 
 func (c *PluginRuntimeCommand) Help() string {
