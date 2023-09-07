@@ -1,3 +1,3 @@
 ```release-note:bug
-cli: Fix the CLI failing to return wrapping information for KV PUTs and PATCHes when format is set to `table`.
+cli: Fix the CLI failing to return wrapping information for KV PUT and PATCH operations when format is set to `table`.
 ```
