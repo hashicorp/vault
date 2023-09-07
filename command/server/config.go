@@ -791,7 +791,7 @@ func ExperimentsFromEnvAndCLI(config *Config, envKey string, flagExperiments []s
 	return nil
 }
 
-// Validate checks each experiment is a known experiment.
+// validateExperiments checks each experiment is a known experiment.
 func validateExperiments(experiments []string) error {
 	var invalid []string
 

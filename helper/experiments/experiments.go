@@ -3,6 +3,8 @@
 
 package experiments
 
+import "slices"
+
 const (
 	VaultExperimentCoreAuditEventsAlpha1 = "core.audit.events.alpha1"
 	VaultExperimentSecretsSyncAlpha1     = "secrets.sync.alpha1"
@@ -18,11 +20,18 @@ var validExperiments = []string{
 	VaultExperimentSecretsSyncAlpha1,
 }
 
-// ValidExperiments exposes the list without exposing a mutable global variable.
-// Experiments can only be enabled when starting a server, and will typically
-// enable pre-GA API functionality.
+var unusedExperiments = []string{
+	VaultExperimentEventsAlpha1,
+}
+
+// ValidExperiments exposes the list of valid experiments without exposing a mutable
+// global variable. Experiments can only be enabled when starting a server, and will
+// typically enable pre-GA API functionality.
 func ValidExperiments() []string {
-	result := make([]string, len(validExperiments))
-	copy(result, validExperiments)
-	return result
+	return slices.Clone(validExperiments)
+}
+
+// IsUnused returns true if the given experiment is in the unused list.
+func IsUnused(experiment string) bool {
+	return slices.Contains(unusedExperiments, experiment)
 }
