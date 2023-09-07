@@ -36,8 +36,6 @@ type ListPluginsResponse struct {
 type PluginDetails struct {
 	Type              string `json:"type"`
 	Name              string `json:"name"`
-	OCIImage          string `json:"oci_image" mapstructure:"oci_image"`
-	Runtime           string `json:"runtime,omitempty"`
 	Version           string `json:"version,omitempty"`
 	Builtin           bool   `json:"builtin"`
 	DeprecationStatus string `json:"deprecation_status,omitempty" mapstructure:"deprecation_status"`
