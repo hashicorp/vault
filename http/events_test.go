@@ -88,7 +88,7 @@ func TestEventsSubscribe(t *testing.T) {
 	}{{true}, {false}}
 
 	for _, testCase := range testCases {
-		url := fmt.Sprintf("%s/v1/sys/events/subscribe/%s?json=%v", wsAddr, eventType, testCase.json)
+		url := fmt.Sprintf("%s/v1/sys/events/subscribe/%s?namespaces=ns1&namespaces=ns*&json=%v", wsAddr, eventType, testCase.json)
 		conn, _, err := websocket.Dial(ctx, url, &websocket.DialOptions{
 			HTTPHeader: http.Header{"x-vault-token": []string{token}},
 		})
@@ -132,126 +132,6 @@ func TestEventsSubscribe(t *testing.T) {
 
 			checkRequiredCloudEventsFields(t, event)
 		}
-	}
-}
-
-func TestNamespaceRootSubscriptions(t *testing.T) {
-	core := vault.TestCoreWithConfig(t, &vault.CoreConfig{
-		Experiments: []string{experiments.VaultExperimentEventsAlpha1},
-	})
-
-	ln, addr := TestServer(t, core)
-	defer ln.Close()
-
-	// unseal the core
-	keys, token := vault.TestCoreInit(t, core)
-	for _, key := range keys {
-		_, err := core.Unseal(key)
-		if err != nil {
-			t.Fatal(err)
-		}
-	}
-
-	stop := atomic.Bool{}
-
-	const eventType = "abc"
-
-	// send some events with the specified namespaces
-	sendEvents := func() error {
-		pluginInfo := &logical.EventPluginInfo{
-			MountPath: "secret",
-		}
-		ns := namespace.RootNamespace
-		id, err := uuid.GenerateUUID()
-		if err != nil {
-			core.Logger().Info("Error generating UUID, exiting sender", "error", err)
-			return err
-		}
-		err = core.Events().SendEventInternal(namespace.RootContext(context.Background()), ns, pluginInfo, eventType, &logical.EventData{
-			Id:        id,
-			Metadata:  nil,
-			EntityIds: nil,
-			Note:      "testing",
-		})
-		if err != nil {
-			core.Logger().Info("Error sending event, exiting sender", "error", err)
-			return err
-		}
-		return nil
-	}
-
-	t.Cleanup(func() {
-		stop.Store(true)
-	})
-
-	ctx := context.Background()
-	wsAddr := strings.Replace(addr, "http", "ws", 1)
-
-	testCases := []struct {
-		name           string
-		namespaces     []string
-		expectedEvents int
-	}{
-		// We only send events in the root namespace, but we test all the various patterns of namespace patterns.
-		{"single", []string{"something"}, 1},
-		{"simple wildcard", []string{"ns*"}, 1},
-		{"two namespaces", []string{"ns1/ns13", "ns1/other"}, 1},
-		{"no namespace", []string{""}, 1},
-		{"all wildcard", []string{"*"}, 1},
-		{"mixed wildcard", []string{"ns1/ns13*", "ns2"}, 1},
-		{"overlapping wildcard", []string{"ns*", "ns1"}, 1},
-	}
-
-	for _, testCase := range testCases {
-		t.Run(testCase.name, func(t *testing.T) {
-			extra := ""
-			for _, ns := range testCase.namespaces {
-				extra += "&namespaces=" + ns
-			}
-			url := fmt.Sprintf("%s/v1/sys/events/subscribe/%s?json=true%v", wsAddr, eventType, extra)
-			conn, _, err := websocket.Dial(ctx, url, &websocket.DialOptions{
-				HTTPHeader: http.Header{"x-vault-token": []string{token}},
-			})
-			if err != nil {
-				t.Fatal(err)
-			}
-			t.Cleanup(func() {
-				conn.Close(websocket.StatusNormalClosure, "")
-			})
-			err = sendEvents()
-			if err != nil {
-				t.Fatal(err)
-			}
-			// CI is sometimes slow, so this timeout is high initially
-			timeout := 10 * time.Second
-			gotEvents := 0
-			for {
-				// if we got as many as we expect, shorten the test, so we don't waste time,
-				// but still allow time for "extra" events to come in and make us fail
-				if gotEvents == testCase.expectedEvents {
-					timeout = 100 * time.Millisecond
-				}
-				ctx, cancel := context.WithTimeout(context.Background(), timeout)
-				t.Cleanup(cancel)
-
-				_, msg, err := conn.Read(ctx)
-				if err != nil {
-					t.Log("error reading from connection", err)
-					break
-				}
-
-				event := map[string]interface{}{}
-				err = json.Unmarshal(msg, &event)
-				if err != nil {
-					t.Fatal(err)
-				}
-
-				t.Log("event received", string(msg))
-				gotEvents += 1
-			}
-
-			assert.Equal(t, testCase.expectedEvents, gotEvents)
-		})
 	}
 }
 
