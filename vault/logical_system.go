@@ -556,10 +556,6 @@ func (b *SystemBackend) handlePluginCatalogUpdate(ctx context.Context, _ *logica
 			if err != nil {
 				return logical.ErrorResponse("specified plugin runtime %q, but failed to retrieve config: %w", pluginRuntime, err), nil
 			}
-		} else if _, err := exec.LookPath(consts.DefaultContainerPluginOCIRuntime); err != nil {
-			return logical.ErrorResponse("no plugin 'runtime' specified, but default OCI runtime %q "+
-				"is not available in PATH; you may want to install it or configure a different plugin runtime: %w",
-				consts.DefaultContainerPluginOCIRuntime, err), nil
 		}
 	}
 
