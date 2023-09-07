@@ -10,7 +10,7 @@ import { next } from '@ember/runloop';
 import { inject as service } from '@ember/service';
 import { task } from 'ember-concurrency';
 import { waitFor } from '@ember/test-waiters';
-import { deleted } from 'kv/utils/kv-deleted';
+import { isDeleted } from 'kv/utils/kv-deleted';
 
 /**
  * @module KvSecretDetails renders the key/value data of a KV secret.
@@ -130,7 +130,7 @@ export default class KvSecretDetails extends Component {
       if (meta?.destroyed) {
         return 'destroyed';
       }
-      if (deleted(meta?.deletion_time)) {
+      if (isDeleted(meta?.deletion_time)) {
         return 'deleted';
       }
       if (meta?.created_time) {
@@ -173,7 +173,7 @@ export default class KvSecretDetails extends Component {
       };
     }
     // only destructure if we can read secret data
-    const { version, destroyed, secretIsDeleted } = this.args.secret;
+    const { version, destroyed, isSecretDeleted } = this.args.secret;
     if (destroyed) {
       return {
         title: `Version ${version} of this secret has been permanently destroyed`,
@@ -185,7 +185,7 @@ export default class KvSecretDetails extends Component {
         link: '/vault/docs/secrets/kv/kv-v2',
       };
     }
-    if (secretIsDeleted) {
+    if (isSecretDeleted) {
       return {
         title: `Version ${version} of this secret has been deleted`,
         message: `This version has been deleted but can be undeleted. ${

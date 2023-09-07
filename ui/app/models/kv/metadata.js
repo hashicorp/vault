@@ -8,7 +8,7 @@ import lazyCapabilities, { apiPath } from 'vault/macros/lazy-capabilities';
 import { withModelValidations } from 'vault/decorators/model-validations';
 import { withFormFields } from 'vault/decorators/model-form-fields';
 import { keyIsFolder } from 'core/utils/key-utils';
-import { deleted } from 'kv/utils/kv-deleted';
+import { isDeleted } from 'kv/utils/kv-deleted';
 
 const validations = {
   maxVersions: [
@@ -69,15 +69,15 @@ export default class KvSecretMetadataModel extends Model {
   }
 
   // cannot use isDeleted due to ember property conflict
-  get secretIsDeleted() {
-    return deleted(this.deletionTime);
+  get isSecretDeleted() {
+    return isDeleted(this.deletionTime);
   }
 
   // turns version object into an array for version dropdown menu
   get sortedVersions() {
     const array = [];
     for (const key in this.versions) {
-      this.versions[key].secretIsDeleted = deleted(this.versions[key].deletion_time);
+      this.versions[key].isSecretDeleted = isDeleted(this.versions[key].deletion_time);
       array.push({ version: key, ...this.versions[key] });
     }
     // version keys are in order created with 1 being the oldest, we want newest first
@@ -88,7 +88,7 @@ export default class KvSecretMetadataModel extends Model {
   get currentSecret() {
     if (!this.versions || !this.currentVersion) return false;
     const data = this.versions[this.currentVersion];
-    const state = data.destroyed ? 'destroyed' : deleted(data.deletion_time) ? 'deleted' : 'created';
+    const state = data.destroyed ? 'destroyed' : isDeleted(data.deletion_time) ? 'deleted' : 'created';
     return {
       state,
       isDeactivated: state !== 'created',

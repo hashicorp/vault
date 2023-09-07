@@ -7,7 +7,7 @@ import Model, { attr } from '@ember-data/model';
 import lazyCapabilities, { apiPath } from 'vault/macros/lazy-capabilities';
 import { withModelValidations } from 'vault/decorators/model-validations';
 import { withFormFields } from 'vault/decorators/model-form-fields';
-import { deleted } from 'kv/utils/kv-deleted';
+import { isDeleted } from 'kv/utils/kv-deleted';
 
 /* sample response
 {
@@ -72,14 +72,14 @@ export default class KvSecretDataModel extends Model {
 
   get state() {
     if (this.destroyed) return 'destroyed';
-    if (this.secretIsDeleted) return 'deleted';
+    if (this.isSecretDeleted) return 'deleted';
     if (this.createdTime) return 'created';
     return '';
   }
 
-  // cannot use isDeleted due to ember property conflict
-  get secretIsDeleted() {
-    return deleted(this.deletionTime);
+  // cannot use isDeleted as model property name because of an ember property conflict
+  get isSecretDeleted() {
+    return isDeleted(this.deletionTime);
   }
 
   // Permissions
