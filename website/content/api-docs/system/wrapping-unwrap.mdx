@@ -10,6 +10,8 @@ The `/sys/wrapping/unwrap` endpoint unwraps a wrapped response.
 
 ## Wrapping unwrap
 
+@include 'alerts/restricted-admin.mdx'
+
 This endpoint returns the original response inside the given wrapping token.
 Unlike simply reading `cubbyhole/response` (which is deprecated), this endpoint
 provides additional validation checks on the token, returns the original value
