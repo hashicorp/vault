@@ -38,7 +38,7 @@ func (c *EventsSubscribeCommands) Help() string {
 Usage: vault events subscribe [-namespaces=ns1] [-timeout=XYZs] [-filter=filterExpression] eventType
 
   Subscribe to events of the given event type (topic), which may be a glob
-  pattern (with "*"" treated as a wildcard). The events will be sent to
+  pattern (with "*" treated as a wildcard). The events will be sent to
   standard out.
 
   The output will be a JSON object serialized using the default protobuf
