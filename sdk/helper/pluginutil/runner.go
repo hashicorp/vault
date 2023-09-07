@@ -131,6 +131,8 @@ type VersionedPlugin struct {
 	Type              string `json:"type"` // string instead of consts.PluginType so that we get the string form in API responses.
 	Name              string `json:"name"`
 	Version           string `json:"version"`
+	OCIImage          string `json:"oci_image,omitempty"`
+	Runtime           string `json:"runtime,omitempty"`
 	SHA256            string `json:"sha256,omitempty"`
 	Builtin           bool   `json:"builtin"`
 	DeprecationStatus string `json:"deprecation_status,omitempty"`
