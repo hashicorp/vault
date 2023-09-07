@@ -473,6 +473,7 @@ func (b *backend) pathEncryptWrite(ctx context.Context, req *logical.Request, d 
 		}
 
 		if !nonceAllowed(p) {
+			userErrorInBatch = true
 			batchResponseItems[i].Error = ErrNonceNotAllowed.Error()
 			continue
 		}
