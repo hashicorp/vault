@@ -155,6 +155,11 @@ func (b *backend) pathRewrapWrite(ctx context.Context, req *logical.Request, d *
 			continue
 		}
 
+		if item.Nonce != "" && !nonceAllowed(p) {
+			batchResponseItems[i].Error = ErrNonceNotAllowed.Error()
+			continue
+		}
+
 		plaintext, err := p.Decrypt(item.DecodedContext, item.DecodedNonce, item.Ciphertext)
 		if err != nil {
 			switch err.(type) {
@@ -165,11 +170,6 @@ func (b *backend) pathRewrapWrite(ctx context.Context, req *logical.Request, d *
 				p.Unlock()
 				return nil, err
 			}
-		}
-
-		if !nonceAllowed(p) {
-			batchResponseItems[i].Error = ErrNonceNotAllowed.Error()
-			continue
 		}
 
 		if !warnAboutNonceUsage && shouldWarnAboutNonceUsage(p, item.DecodedNonce) {

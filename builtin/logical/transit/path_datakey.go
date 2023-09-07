@@ -170,7 +170,7 @@ func (b *backend) pathDatakeyWrite(ctx context.Context, req *logical.Request, d 
 		},
 	}
 
-	if !nonceAllowed(p) {
+	if len(nonce) > 0 && !nonceAllowed(p) {
 		return nil, ErrNonceNotAllowed
 	}
 
