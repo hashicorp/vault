@@ -51,6 +51,12 @@ on:
       vault-edition:
         required: true
         type: string
+      vault-version:
+        required: true
+        type: string
+      vault-minor-version:
+        required: true
+        type: string
       # The Git commit SHA used as the revision when building vault
       vault-revision:
         required: true
@@ -62,12 +68,12 @@ jobs:
     outputs:
       build-date: ${{ steps.metadata.outputs.build-date }}
       matrix: ${{ steps.metadata.outputs.matrix }}
-      version: ${{ steps.metadata.outputs.version }}
-      version-minor: ${{ steps.metadata.outputs.matrix }}
     env:
       # Pass the vault edition as VAULT_METADATA so the CI make targets can create
       # values that consider the edition.
       VAULT_METADATA: ${{ inputs.vault-edition }}
+      VAULT_VERSION: ${{ inputs.vault-version }}
+      VAULT_MINOR_VERSION: ${{ inputs.vault-minor-version }}
       # Pass in the matrix and matrix group for filtering
       MATRIX_FILE: ./.github/enos-run-matrices/${{ inputs.matrix-file-name }}.json
       MATRIX_TEST_GROUP: ${{ inputs.matrix-test-group }}
@@ -77,10 +83,9 @@ jobs:
           ref: ${{ inputs.vault-revision }}
       - id: metadata
         run: |
-          # shellcheck disable=SC2129
           echo "build-date=$(make ci-get-date)" >> "$GITHUB_OUTPUT"
-          echo "version=$(make ci-get-version)" >> "$GITHUB_OUTPUT"
-          echo "matrix=$(make ci-filter-matrix)" >> "$GITHUB_OUTPUT"
+          filtered="$(make ci-filter-matrix)"
+          echo "matrix=$filtered" >> "$GITHUB_OUTPUT"
 
   # Run the Enos test scenarios
   run:
@@ -101,7 +106,7 @@ jobs:
       ENOS_VAR_terraform_plugin_cache_dir: ./support/terraform-plugin-cache
       ENOS_VAR_vault_artifact_path: ./support/downloads/${{ inputs.build-artifact-name }}
       ENOS_VAR_vault_build_date: ${{ needs.metadata.outputs.build-date }}
-      ENOS_VAR_vault_product_version: ${{ needs.metadata.outputs.version }}
+      ENOS_VAR_vault_product_version: ${{ inputs.vault-version }}
       ENOS_VAR_vault_revision: ${{ inputs.vault-revision }}
       ENOS_VAR_vault_license_path: ./support/vault.hclic
       ENOS_DEBUG_DATA_ROOT_DIR: /tmp/enos-debug-data

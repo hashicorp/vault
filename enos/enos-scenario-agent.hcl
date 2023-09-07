@@ -42,11 +42,6 @@ scenario "agent" {
     vault_tag_key      = "Type" // enos_vault_start expects Type as the tag key
   }
 
-  step "get_local_metadata" {
-    skip_step = matrix.artifact_source != "local"
-    module    = module.get_local_metadata
-  }
-
   step "build_vault" {
     module = "build_${matrix.artifact_source}"
 
