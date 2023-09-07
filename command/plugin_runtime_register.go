@@ -77,7 +77,7 @@ func (c *PluginRuntimeRegisterCommand) Flags() *FlagSets {
 		Name:       "cgroup_parent",
 		Target:     &c.flagCgroupParent,
 		Completion: complete.PredictAnything,
-		Usage:      "Parent cgroup for the container runtime",
+		Usage:      "Parent cgroup to set for each container. This can be used to control the total resource usage for a group of plugins.",
 	})
 
 	f.Int64Var(&Int64Var{
