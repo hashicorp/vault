@@ -6140,7 +6140,7 @@ Must already be present on the machine.`,
 		"",
 	},
 	"plugin-catalog_runtime": {
-		`The registered OCI-compatible runtime for the plugin OCI image (default "gVisor/runsc")`,
+		`The Vault plugin runtime to use when running the plugin.`,
 		"",
 	},
 	"plugin-runtime-catalog": {
