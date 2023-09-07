@@ -91,7 +91,7 @@ func (c *PluginRuntimeRegisterCommand) Flags() *FlagSets {
 		Name:       "memory_bytes",
 		Target:     &c.flagMemoryBytes,
 		Completion: complete.PredictAnything,
-		Usage:      "The limit of runtime memory in bytes",
+		Usage:      "Memory limit to set per container in bytes. Defaults to no limit.",
 	})
 
 	return set
