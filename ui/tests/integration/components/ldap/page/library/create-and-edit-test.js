@@ -55,7 +55,8 @@ module('Integration | Component | ldap | Page::Library::CreateAndEdit', function
     await this.renderComponent();
 
     assert.dom('[data-test-input="name"]').hasValue(this.libraryData.name, 'Name renders');
-    [0, 1].forEach((index) => {
+    assert.dom('[data-test-input="name"]').isDisabled('Name field is disabled when editing');
+    [(0, 1)].forEach((index) => {
       assert
         .dom(`[data-test-string-list-input="${index}"]`)
         .hasValue(this.libraryData.service_account_names[index], 'Service account renders');
