@@ -7,18 +7,21 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"os"
 	"strings"
 	"testing"
 	"time"
 
 	stdmysql "github.com/go-sql-driver/mysql"
 	"github.com/hashicorp/go-secure-stdlib/strutil"
+	"github.com/stretchr/testify/require"
+
 	mysqlhelper "github.com/hashicorp/vault/helper/testhelpers/mysql"
-	dbplugin "github.com/hashicorp/vault/sdk/database/dbplugin/v5"
+	"github.com/hashicorp/vault/sdk/database/dbplugin/v5"
 	dbtesting "github.com/hashicorp/vault/sdk/database/dbplugin/v5/testing"
+	"github.com/hashicorp/vault/sdk/database/helper/connutil"
 	"github.com/hashicorp/vault/sdk/database/helper/credsutil"
 	"github.com/hashicorp/vault/sdk/database/helper/dbutil"
-	"github.com/stretchr/testify/require"
 )
 
 var _ dbplugin.Database = (*MySQL)(nil)
@@ -40,6 +43,79 @@ func TestMySQL_Initialize(t *testing.T) {
 	for name, test := range tests {
 		t.Run(name, func(t *testing.T) {
 			testInitialize(t, test.rootPassword)
+		})
+	}
+}
+
+// TestMySQL_Initialize_CloudGCP validates the proper initialization of a MySQL backend pointing
+// to a GCP CloudSQL MySQL instance. This expects some external setup (exact TBD)
+func TestMySQL_Initialize_CloudGCP(t *testing.T) {
+	envConnURL := "CONNECTION_URL"
+	connURL := os.Getenv(envConnURL)
+	if connURL == "" {
+		t.Skipf("env var %s not set, skipping test", envConnURL)
+	}
+
+	credStr := dbtesting.GetGCPTestCredentials(t)
+
+	tests := map[string]struct {
+		req           dbplugin.InitializeRequest
+		wantErr       bool
+		expectedError string
+	}{
+		"empty auth type": {
+			req: dbplugin.InitializeRequest{
+				Config: map[string]interface{}{
+					"connection_url": connURL,
+					"auth_type":      "",
+				},
+			},
+		},
+		"invalid auth type": {
+			req: dbplugin.InitializeRequest{
+				Config: map[string]interface{}{
+					"connection_url": connURL,
+					"auth_type":      "invalid",
+				},
+			},
+			wantErr:       true,
+			expectedError: "invalid auth_type",
+		},
+		"JSON credentials": {
+			req: dbplugin.InitializeRequest{
+				Config: map[string]interface{}{
+					"connection_url":       connURL,
+					"auth_type":            connutil.AuthTypeGCPIAM,
+					"service_account_json": credStr,
+				},
+				VerifyConnection: true,
+			},
+		},
+	}
+
+	for n, tc := range tests {
+		t.Run(n, func(t *testing.T) {
+			db := newMySQL(DefaultUserNameTemplate)
+			defer dbtesting.AssertClose(t, db)
+			_, err := db.Initialize(context.Background(), tc.req)
+
+			if tc.wantErr {
+				if err == nil {
+					t.Fatalf("expected error but received nil")
+				}
+
+				if !strings.Contains(err.Error(), tc.expectedError) {
+					t.Fatalf("expected error %s, got %s", tc.expectedError, err.Error())
+				}
+			} else {
+				if err != nil {
+					t.Fatalf("expected no error, received %s", err)
+				}
+
+				if !db.Initialized {
+					t.Fatal("Database should be initialized")
+				}
+			}
 		})
 	}
 }

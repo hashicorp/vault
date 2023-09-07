@@ -680,6 +680,7 @@ type Core struct {
 	// heartbeating with the active node. Default to the current SDK version.
 	effectiveSDKVersion string
 
+	numRollbackWorkers       int
 	rollbackPeriod           time.Duration
 	rollbackMountPathMetrics bool
 
@@ -866,6 +867,8 @@ type CoreConfig struct {
 	// AdministrativeNamespacePath is used to configure the administrative namespace, which has access to some sys endpoints that are
 	// only accessible in the root namespace, currently sys/audit-hash and sys/monitor.
 	AdministrativeNamespacePath string
+
+	NumRollbackWorkers int
 }
 
 // SubloggerHook implements the SubloggerAdder interface. This implementation
@@ -954,6 +957,9 @@ func CreateCore(conf *CoreConfig) (*Core, error) {
 		conf.NumExpirationWorkers = numExpirationWorkersDefault
 	}
 
+	if conf.NumRollbackWorkers == 0 {
+		conf.NumRollbackWorkers = RollbackDefaultNumWorkers
+	}
 	// Use imported logging deadlock if requested
 	var stateLock locking.RWMutex
 	if strings.Contains(conf.DetectDeadlocks, "statelock") {
@@ -1038,6 +1044,7 @@ func CreateCore(conf *CoreConfig) (*Core, error) {
 		pendingRemovalMountsAllowed:    conf.PendingRemovalMountsAllowed,
 		expirationRevokeRetryBase:      conf.ExpirationRevokeRetryBase,
 		rollbackMountPathMetrics:       conf.MetricSink.TelemetryConsts.RollbackMetricsIncludeMountPoint,
+		numRollbackWorkers:             conf.NumRollbackWorkers,
 		impreciseLeaseRoleTracking:     conf.ImpreciseLeaseRoleTracking,
 	}
 

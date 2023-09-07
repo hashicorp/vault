@@ -245,7 +245,7 @@ module('Acceptance | kv-v2 workflow | edge cases', function (hooks) {
       assert
         .dom(PAGE.detail.deleteModal)
         .hasText(
-          'Delete metadata? This will permanently delete the metadata and versions of the secret. All version history will be removed. This cannot be undone. Confirm Cancel'
+          'Delete metadata and secret data? This will permanently delete the metadata and versions of the secret. All version history will be removed. This cannot be undone. Confirm Cancel'
         );
     });
   });
