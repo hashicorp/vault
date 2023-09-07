@@ -38,7 +38,7 @@ Usage: vault plugin runtime <subcommand> [options] [args]
 
   Get information about a plugin runtime in the catalog listed under a particular type:
 
-      $ vault plugin runtime info -type=container my-custom-plugin
+      $ vault plugin runtime info -type=container my-custom-plugin-runtime
 
   Please see the individual subcommand help for detailed usage information.
 `
