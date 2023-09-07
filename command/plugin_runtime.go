@@ -25,7 +25,7 @@ Usage: vault plugin runtime <subcommand> [options] [args]
 
   This command groups subcommands for interacting with Vault's plugin runtimes and the
   plugin runtime catalog. The plugin runtime catalog is divided into types. Currently,
-  Vault only supports "container" plugin runtimes. A type must be specified on each call. Here 
+  Vault only supports "container" plugin runtimes. A plugin runtime allows users to fine-tune the parameters with which a plugin is executed. For example, you can select a different OCI-compatible runtime, or set resource limits. A plugin runtime can optionally be referenced during plugin registration. A type must be specified on each call. Here 
   are a few examples of the plugin runtime commands.
 
   List all available plugin runtimes in the catalog of a particular type:
