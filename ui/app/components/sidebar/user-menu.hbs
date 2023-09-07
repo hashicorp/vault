@@ -43,7 +43,8 @@
                 <Hds::Copy::Button
                   @text="Copy token"
                   @textToCopy={{this.auth.currentToken}}
-                  class="hds-copy-button size-7 link is-flex"
+                  @isFullWidth={{true}}
+                  class="hds-copy-button size-7 link is-flex-start"
                 />
               </li>
               {{#if (is-before (now interval=1000) this.auth.tokenExpirationDate)}}
