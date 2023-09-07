@@ -37,7 +37,7 @@ func (c *PluginRuntimeRegisterCommand) Help() string {
 Usage: vault plugin runtime register [options] NAME
 
   Registers a new plugin runtime in the catalog. Currently, Vault only supports registering runtimes of type "container".
-The OCI runtime must be available on Vault's host. If no OCI runtime is specified, Vault will use \"runsc\", gVisor's OCI runtime.
+The OCI runtime must be available on Vault's host. If no OCI runtime is specified, Vault will use "runsc", gVisor's OCI runtime.
 
   Register the plugin runtime named my-custom-plugin-runtime:
 
