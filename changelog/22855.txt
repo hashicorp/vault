@@ -1,0 +1,3 @@
+git a```release-note:bug
+ui: list all enterprise features in the license page on the ui
+```
