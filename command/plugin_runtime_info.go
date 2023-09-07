@@ -78,7 +78,7 @@ func (c *PluginRuntimeInfoCommand) Run(args []string) int {
 
 	runtimeTyeRaw := strings.TrimSpace(c.flagType)
 	if len(runtimeTyeRaw) == 0 {
-		c.UI.Error("-type is required for plugin runtime registration")
+		c.UI.Error("-type is required for plugin runtime info retrieval")
 		return 1
 	}
 

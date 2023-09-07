@@ -79,7 +79,7 @@ func (c *PluginRuntimeDeregisterCommand) Run(args []string) int {
 
 	runtimeTyeRaw := strings.TrimSpace(c.flagType)
 	if len(runtimeTyeRaw) == 0 {
-		c.UI.Error("-type is required for plugin runtime registration")
+		c.UI.Error("-type is required for plugin runtime deregistration")
 		return 1
 	}
 
