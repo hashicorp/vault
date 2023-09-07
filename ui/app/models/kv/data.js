@@ -7,7 +7,7 @@ import Model, { attr } from '@ember-data/model';
 import lazyCapabilities, { apiPath } from 'vault/macros/lazy-capabilities';
 import { withModelValidations } from 'vault/decorators/model-validations';
 import { withFormFields } from 'vault/decorators/model-form-fields';
-import timestamp from 'core/utils/timestamp';
+import { deleted } from 'kv/utils/kv-deleted';
 
 /* sample response
 {
@@ -72,18 +72,14 @@ export default class KvSecretDataModel extends Model {
 
   get state() {
     if (this.destroyed) return 'destroyed';
-    if (this.deleted) return 'deleted';
+    if (this.secretIsDeleted) return 'deleted';
     if (this.createdTime) return 'created';
     return '';
   }
 
-  get deleted() {
-    // deletion_time does not always mean the secret has been deleted.
-    // if the delete_version_after is set then the deletion_time will be UTC of that time, even if it's a future time from now.
-    // to determine if the secret is deleted we check if deletion_time <= time right now.
-    const deletionTime = new Date(this.deletionTime);
-    const now = timestamp.now();
-    return deletionTime <= now;
+  // cannot use isDeleted due to ember property conflict
+  get secretIsDeleted() {
+    return deleted(this.deletionTime);
   }
 
   // Permissions

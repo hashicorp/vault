@@ -14,7 +14,7 @@
               {{versionData.version}}
               {{#if versionData.destroyed}}
                 <Icon @name="x-square-fill" class="has-text-danger is-pulled-right" />
-              {{else if versionData.deleted}}
+              {{else if versionData.secretIsDeleted}}
                 <Icon @name="x-square-fill" class="has-text-grey is-pulled-right" />
               {{else if (loose-equal versionData.version @metadata.currentVersion)}}
                 <Icon @name="check-circle" class="has-text-success is-pulled-right" />
