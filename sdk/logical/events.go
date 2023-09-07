@@ -73,14 +73,14 @@ type EventReceivedBexpr struct {
 	EventType         string `bexpr:"event_type"`
 	Operation         string `bexpr:"operation"`
 	SourcePluginMount string `bexpr:"source_plugin_mount"`
-	FullSecretPath    string `bexpr:"full_secret_path"`
+	DataPath          string `bexpr:"data_path"`
 	Namespace         string `bexpr:"namespace"`
 }
 
 // BexprDatum returns a copy of EventReceived formatted for use in evaluating go-bexpr boolean expressions.
 func (x *EventReceived) BexprDatum() any {
 	operation := ""
-	fullSecretPath := ""
+	dataPath := ""
 
 	if x.Event != nil {
 		if x.Event.Metadata != nil {
@@ -88,9 +88,9 @@ func (x *EventReceived) BexprDatum() any {
 			if operationValue != nil {
 				operation = operationValue.GetStringValue()
 			}
-			fullSecretPathValue := x.Event.Metadata.Fields[EventMetadataDataPath]
-			if fullSecretPathValue != nil {
-				fullSecretPath = fullSecretPathValue.GetStringValue()
+			dataPathValue := x.Event.Metadata.Fields[EventMetadataDataPath]
+			if dataPathValue != nil {
+				dataPath = dataPathValue.GetStringValue()
 			}
 		}
 	}
@@ -99,7 +99,7 @@ func (x *EventReceived) BexprDatum() any {
 		EventType:         x.EventType,
 		Operation:         operation,
 		SourcePluginMount: x.PluginInfo.MountPath,
-		FullSecretPath:    fullSecretPath,
+		DataPath:          dataPath,
 		Namespace:         x.Namespace,
 	}
 }

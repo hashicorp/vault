@@ -593,9 +593,9 @@ func TestBexpr(t *testing.T) {
 		shouldPassFilter bool
 	}{
 		{"empty expression", "", true},
-		{"non-matching expression", "full_secret_path == nothing", false},
-		{"matching expression", "full_secret_path == secret/my/secret/path", true},
-		{"full matching expression", "full_secret_path == secret/my/secret/path and operation != read and source_plugin_mount == secret/ and source_plugin_mount != somethingelse", true},
+		{"non-matching expression", "data_path == nothing", false},
+		{"matching expression", "data_path == secret/my/secret/path", true},
+		{"full matching expression", "data_path == secret/my/secret/path and operation != read and source_plugin_mount == secret/ and source_plugin_mount != somethingelse", true},
 	}
 
 	for _, testCase := range testCases {
