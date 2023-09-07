@@ -84,7 +84,7 @@ func (c *PluginRuntimeRegisterCommand) Flags() *FlagSets {
 		Name:       "cpu_nanos",
 		Target:     &c.flagCPUNanos,
 		Completion: complete.PredictAnything,
-		Usage:      "The limit of runtime cpu in nanos",
+		Usage:      "CPU limit to set per container in nanos. Defaults to no limit.",
 	})
 
 	f.Int64Var(&Int64Var{
