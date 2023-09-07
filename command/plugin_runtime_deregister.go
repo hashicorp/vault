@@ -34,8 +34,8 @@ Usage: vault plugin runtime deregister [options] TYPE NAME
 
   Deregister an existing plugin runtime in the catalog with the given name. If
   any registered plugin references the plugin runtime, an error is returned. If
-  the plugin runtime does not exist, an error is returned. The argument of type
-  takes "container".
+  the plugin runtime does not exist, an error is returned. The type argument
+  currently only accepts "container".
 
   Deregister a plugin runtime:
 
