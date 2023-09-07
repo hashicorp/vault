@@ -660,7 +660,7 @@ func TestTransit_BatchEncryptionCase13(t *testing.T) {
 	b, s := createBackendWithStorage(t)
 
 	batchInput := []interface{}{
-		map[string]interface{}{"plaintext": "bXkgc2VjcmV0IGRhdGE=", "nonce": "YmFkbm9uY2U="},
+		map[string]interface{}{"plaintext": "bXkgc2VjcmV0IGRhdGE=", "nonce": "R80hr9eNUIuFV52e"},
 	}
 
 	batchData := map[string]interface{}{
@@ -672,9 +672,13 @@ func TestTransit_BatchEncryptionCase13(t *testing.T) {
 		Storage:   s,
 		Data:      batchData,
 	}
-	_, err = b.HandleRequest(context.Background(), batchReq)
+	resp, err := b.HandleRequest(context.Background(), batchReq)
 	if err != nil {
 		t.Fatal(err)
+	}
+	res := resp.Data["batch_results"].([]EncryptBatchResponseItem)[0]
+	if res.Error == "" {
+		t.Fatal("no error in batch result")
 	}
 }
 
@@ -876,6 +880,7 @@ func TestShouldWarnAboutNonceUsage(t *testing.T) {
 		convergentEncryption bool
 		convergentVersion    int
 		expected             bool
+		errExpected          bool
 	}{
 		{
 			name:                 "-NoConvergent-WithNonce",

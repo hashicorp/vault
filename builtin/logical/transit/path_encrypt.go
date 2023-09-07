@@ -468,11 +468,12 @@ func (b *backend) pathEncryptWrite(ctx context.Context, req *logical.Request, d 
 	successesInBatch := false
 	for i, item := range batchInputItems {
 		if batchResponseItems[i].Error != "" {
+			userErrorInBatch = true
 			continue
 		}
 
 		if !nonceAllowed(p) {
-			batchResponseItems[i].Error = ErrNonceNotAllowed
+			batchResponseItems[i].Error = ErrNonceNotAllowed.Error()
 			continue
 		}
 

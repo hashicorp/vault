@@ -6,6 +6,7 @@ package transit
 import (
 	"context"
 	"encoding/base64"
+	"errors"
 	"fmt"
 
 	"github.com/hashicorp/vault/helper/constants"
@@ -167,7 +168,7 @@ func (b *backend) pathRewrapWrite(ctx context.Context, req *logical.Request, d *
 		}
 
 		if !nonceAllowed(p) {
-			batchResponseItems[i].Error = ErrNonceNotAllowed
+			batchResponseItems[i].Error = ErrNonceNotAllowed.Error()
 			continue
 		}
 
