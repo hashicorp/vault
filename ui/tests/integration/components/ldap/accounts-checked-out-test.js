@@ -40,11 +40,16 @@ module('Integration | Component | ldap | AccountsCheckedOut', function (hooks) {
       { account: 'bar.baz', available: false, library: 'test-library' },
       { account: 'checked.in', available: true, library: 'test-library' },
     ];
+    this.onCheckInSuccess = () => true;
     this.renderComponent = () => {
       return render(
         hbs`
           <div id="modal-wormhole"></div>
-          <AccountsCheckedOut @libraries={{array this.library}} @statuses={{this.statuses}} @showLibraryColumn={{this.showLibraryColumn}} />
+          <AccountsCheckedOut
+            @libraries={{array this.library}}
+            @statuses={{this.statuses}}
+            @showLibraryColumn={{this.showLibraryColumn}}
+            @onCheckInSuccess={{this.onCheckInSuccess}} />
         `,
         {
           owner: this.engine,
@@ -122,8 +127,8 @@ module('Integration | Component | ldap | AccountsCheckedOut', function (hooks) {
   test('it should check in account', async function (assert) {
     assert.expect(2);
 
-    const transitionStub = sinon.stub(this.owner.lookup('service:router'), 'transitionTo');
     this.library.disable_check_in_enforcement = 'Disabled';
+    this.onCheckInSuccess = () => assert.ok(true, 'Callback is fired on check-in success');
 
     this.server.post('/ldap-test/library/test-library/check-in', (schema, req) => {
       const json = JSON.parse(req.requestBody);
@@ -138,10 +143,5 @@ module('Integration | Component | ldap | AccountsCheckedOut', function (hooks) {
 
     await click('[data-test-checked-out-account-action="foo.bar"]');
     await click('[data-test-check-in-confirm]');
-
-    const didTransition = transitionStub.calledWith(
-      'vault.cluster.secrets.backend.ldap.libraries.library.details.accounts'
-    );
-    assert.true(didTransition, 'Transitions to accounts route on check-in success');
   });
 });

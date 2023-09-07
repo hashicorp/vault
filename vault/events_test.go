@@ -8,16 +8,12 @@ import (
 	"time"
 
 	"github.com/hashicorp/go-uuid"
-	"github.com/hashicorp/vault/helper/experiments"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
 func TestCanSendEventsFromBuiltinPlugin(t *testing.T) {
-	c, _, _ := TestCoreUnsealedWithConfig(t, &CoreConfig{
-		Experiments: []string{experiments.VaultExperimentEventsAlpha1},
-	})
-
+	c, _, _ := TestCoreUnsealedWithConfig(t, &CoreConfig{})
 	ctx := namespace.RootContext(nil)
 
 	// subscribe to an event type

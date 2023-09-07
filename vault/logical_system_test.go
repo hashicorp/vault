@@ -6013,7 +6013,7 @@ func TestSystemBackend_pluginRuntimeCRUD(t *testing.T) {
 	req := logical.TestRequest(t, logical.UpdateOperation, fmt.Sprintf("plugins/runtimes/catalog/%s/%s", conf.Type.String(), conf.Name))
 	req.Data = map[string]interface{}{
 		"oci_runtime":   conf.OCIRuntime,
-		"cgroup_parent": conf.OCIRuntime,
+		"cgroup_parent": conf.CgroupParent,
 		"cpu_nanos":     conf.CPU,
 		"memory_bytes":  conf.Memory,
 	}
@@ -6053,7 +6053,7 @@ func TestSystemBackend_pluginRuntimeCRUD(t *testing.T) {
 		"type":          conf.Type.String(),
 		"name":          conf.Name,
 		"oci_runtime":   conf.OCIRuntime,
-		"cgroup_parent": conf.OCIRuntime,
+		"cgroup_parent": conf.CgroupParent,
 		"cpu_nanos":     conf.CPU,
 		"memory_bytes":  conf.Memory,
 	}
@@ -6238,5 +6238,82 @@ func TestGetSealBackendStatus(t *testing.T) {
 
 	if !resp.Backends[0].Healthy {
 		t.Fatal("expected healthy seal, got unhealthy")
+  }
+}
+
+func TestSystemBackend_pluginRuntime_CannotDeleteRuntimeWithReferencingPlugins(t *testing.T) {
+	if runtime.GOOS != "linux" {
+		t.Skip("Currently plugincontainer only supports linux")
+	}
+	c, b, _ := testCoreSystemBackend(t)
+
+	conf := pluginruntimeutil.PluginRuntimeConfig{
+		Name:         "foo",
+		Type:         consts.PluginRuntimeTypeContainer,
+		OCIRuntime:   "some-oci-runtime",
+		CgroupParent: "/cpulimit/",
+		CPU:          1,
+		Memory:       10000,
+	}
+
+	// Register the plugin runtime
+	req := logical.TestRequest(t, logical.UpdateOperation, fmt.Sprintf("plugins/runtimes/catalog/%s/%s", conf.Type.String(), conf.Name))
+	req.Data = map[string]interface{}{
+		"oci_runtime":   conf.OCIRuntime,
+		"cgroup_parent": conf.CgroupParent,
+		"cpu_nanos":     conf.CPU,
+		"memory_bytes":  conf.Memory,
+	}
+
+	resp, err := b.HandleRequest(namespace.RootContext(nil), req)
+	if err != nil {
+		t.Fatalf("err: %v %#v", err, resp)
+	}
+	if resp != nil && (resp.IsError() || len(resp.Data) > 0) {
+		t.Fatalf("bad: %#v", resp)
+	}
+
+	// Bootstrap the pluginCatalog
+	sym, err := filepath.EvalSymlinks(os.TempDir())
+	if err != nil {
+		t.Fatalf("error: %v", err)
+	}
+	c.pluginCatalog.directory = sym
+
+	// Register the plugin referencing the runtime.
+	req = logical.TestRequest(t, logical.UpdateOperation, "plugins/catalog/database/test-plugin")
+	req.Data["version"] = "v0.16.0"
+	req.Data["sha_256"] = hex.EncodeToString([]byte{'1'})
+	req.Data["command"] = ""
+	req.Data["oci_image"] = "hashicorp/vault-plugin-auth-jwt"
+	req.Data["runtime"] = "foo"
+	resp, err = b.HandleRequest(namespace.RootContext(nil), req)
+	if err != nil || resp.Error() != nil {
+		t.Fatalf("err: %v %v", err, resp.Error())
+	}
+
+	// Expect to fail to delete the plugin runtime
+	req = logical.TestRequest(t, logical.DeleteOperation, "plugins/runtimes/catalog/container/foo")
+	resp, err = b.HandleRequest(namespace.RootContext(nil), req)
+	if resp == nil || !resp.IsError() || resp.Error() == nil {
+		t.Errorf("expected logical error but got none, resp: %#v", resp)
+	}
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	// Delete the plugin.
+	req = logical.TestRequest(t, logical.DeleteOperation, "plugins/catalog/database/test-plugin")
+	req.Data["version"] = "v0.16.0"
+	resp, err = b.HandleRequest(namespace.RootContext(nil), req)
+	if err != nil || resp.Error() != nil {
+		t.Fatalf("err: %v %v", err, resp.Error())
+	}
+
+	// This time deleting the runtime should work.
+	req = logical.TestRequest(t, logical.DeleteOperation, "plugins/runtimes/catalog/container/foo")
+	resp, err = b.HandleRequest(namespace.RootContext(nil), req)
+	if err != nil || resp.Error() != nil {
+		t.Fatalf("err: %v %v", err, resp.Error())
 	}
 }

@@ -470,6 +470,8 @@ func (d *autoSeal) StartHealthCheck() {
 			ctx, cancel := context.WithTimeout(ctx, seal.HealthTestTimeout)
 			defer cancel()
 
+			d.logger.Trace("performing a seal health check")
+
 			allHealthy := true
 			allUnhealthy := true
 			for _, sealWrapper := range d.Access.GetAllSealWrappersByPriority() {
