@@ -215,7 +215,7 @@ func (c *ServerCommand) Flags() *FlagSets {
 	f.BoolVar(&BoolVar{
 		Name:   "recovery",
 		Target: &c.flagRecovery,
-		Usage: "Enable recovery mode. In this mode, Vault is used to perform recovery actions." +
+		Usage: "Enable recovery mode. In this mode, Vault is used to perform recovery actions. " +
 			"Using a recovery token, \"sys/raw\" API can be used to manipulate the storage.",
 	})
 
