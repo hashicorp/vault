@@ -265,7 +265,7 @@ func (c *KVPatchCommand) Run(args []string) int {
 	}
 
 	// If the secret is wrapped, return the wrapped response.
-	if secret != nil && secret.WrapInfo != nil && secret.WrapInfo.TTL != 0 {
+	if secret.WrapInfo != nil && secret.WrapInfo.TTL != 0 {
 		return OutputSecret(c.UI, secret)
 	}
 
