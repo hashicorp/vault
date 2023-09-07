@@ -276,10 +276,10 @@ const getResponseOCIImageVersion = `{
     "data": {
         "args": [],
         "builtin": false,
-		"name": "jwt",
-		"oci_image" : "hashicorp/vault-plugin-auth-jwt",
-		"runtime" : "gvisor",
-		"sha256": "8ba442dba253803685b05e35ad29dcdebc48dec16774614aa7a4ebe53c1e90e1",
+        "name": "jwt",
+        "oci_image" : "hashicorp/vault-plugin-auth-jwt",
+        "runtime" : "gvisor",
+        "sha256": "8ba442dba253803685b05e35ad29dcdebc48dec16774614aa7a4ebe53c1e90e1",
         "version": "v0.16.0"
     },
     "wrap_info": null,
