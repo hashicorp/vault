@@ -1,3 +1,0 @@
-```release-note:feature
-**Plugin**: Vault supports referencing an OCI runtime on plugin registration on Linux.
-```
