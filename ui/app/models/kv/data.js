@@ -72,12 +72,12 @@ export default class KvSecretDataModel extends Model {
 
   get state() {
     if (this.destroyed) return 'destroyed';
-    if (this.deletionTime) return 'deleted';
+    if (this.deleted) return 'deleted';
     if (this.createdTime) return 'created';
     return '';
   }
 
-  get isDeleted() {
+  get deleted() {
     // deletion_time does not always mean the secret has been deleted.
     // if the delete_version_after is set then the deletion_time will be UTC of that time, even if it's a future time from now.
     // to determine if the secret is deleted we check if deletion_time <= time right now.
