@@ -43,7 +43,6 @@ import (
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/audit"
 	"github.com/hashicorp/vault/command/server"
-	"github.com/hashicorp/vault/helper/experiments"
 	"github.com/hashicorp/vault/helper/identity/mfa"
 	"github.com/hashicorp/vault/helper/locking"
 	"github.com/hashicorp/vault/helper/metricsutil"
@@ -1297,9 +1296,7 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 		return nil, err
 	}
 	c.events = events
-	if c.IsExperimentEnabled(experiments.VaultExperimentEventsAlpha1) {
-		c.events.Start()
-	}
+	c.events.Start()
 
 	// Make sure we're keeping track of the subloggers added above. We haven't
 	// yet registered core to the server command's SubloggerAdder, so any new

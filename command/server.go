@@ -1176,6 +1176,12 @@ func (c *ServerCommand) Run(args []string) int {
 		return 1
 	}
 
+	for _, experiment := range config.Experiments {
+		if experiments.IsUnused(experiment) {
+			c.UI.Warn(fmt.Sprintf("WARNING! Experiment %s is no longer used", experiment))
+		}
+	}
+
 	// If mlockall(2) isn't supported, show a warning. We disable this in dev
 	// because it is quite scary to see when first using Vault. We also disable
 	// this if the user has explicitly disabled mlock in configuration.
