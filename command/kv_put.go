@@ -216,6 +216,11 @@ func (c *KVPutCommand) Run(args []string) int {
 		return PrintRawField(c.UI, secret, c.flagField)
 	}
 
+	// If the secret is wrapped, return the wrapped response.
+	if secret.WrapInfo != nil && secret.WrapInfo.TTL != 0 {
+		return OutputSecret(c.UI, secret)
+	}
+
 	if Format(c.UI) == "table" {
 		outputPath(c.UI, fullPath, "Secret Path")
 		metadata := secret.Data
