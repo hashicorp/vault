@@ -1,5 +1,5 @@
 <div class="has-top-margin-l is-flex-align-start">
-  <Hds::Card::Container @level="mid" @hasBorder={{true}} class="has-padding-l is-flex-half">
+  <Hds::Card::Container @level="mid" @hasBorder={{true}} class="has-padding-l is-flex-half border-radius-2">
     <div class="is-flex-between">
       <h3 class="is-size-5 has-text-weight-semibold">All accounts</h3>
       {{#if @library.canCheckOut}}
@@ -34,7 +34,12 @@
   </Hds::Card::Container>
 
   <div class="has-left-margin-l is-flex-half">
-    <AccountsCheckedOut @libraries={{array @library}} @statuses={{@statuses}} data-test-checked-out-card />
+    <AccountsCheckedOut
+      @libraries={{array @library}}
+      @statuses={{@statuses}}
+      @onCheckInSuccess={{transition-to "vault.cluster.secrets.backend.ldap.libraries.library.details.accounts"}}
+      data-test-checked-out-card
+    />
 
     <OverviewCard
       @cardTitle="To renew a checked-out account"
