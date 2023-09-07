@@ -5,6 +5,7 @@ package pluginutil
 
 import (
 	"context"
+	"strings"
 	"time"
 
 	log "github.com/hashicorp/go-hclog"
@@ -53,12 +54,32 @@ type PluginRunner struct {
 	Name           string                      `json:"name" structs:"name"`
 	Type           consts.PluginType           `json:"type" structs:"type"`
 	Version        string                      `json:"version" structs:"version"`
+	OCIImage       string                      `json:"oci_image" structs:"oci_image"`
+	Runtime        string                      `json:"runtime" structs:"runtime"`
 	Command        string                      `json:"command" structs:"command"`
 	Args           []string                    `json:"args" structs:"args"`
 	Env            []string                    `json:"env" structs:"env"`
 	Sha256         []byte                      `json:"sha256" structs:"sha256"`
 	Builtin        bool                        `json:"builtin" structs:"builtin"`
 	BuiltinFactory func() (interface{}, error) `json:"-" structs:"-"`
+}
+
+// BinaryReference returns either the OCI image reference if it's a container
+// plugin or the path to the binary if it's a plain process plugin.
+func (p *PluginRunner) BinaryReference() string {
+	if p.Builtin {
+		return ""
+	}
+	if p.OCIImage == "" {
+		return p.Command
+	}
+
+	imageRef := p.OCIImage
+	if p.Version != "" {
+		imageRef += ":" + strings.TrimPrefix(p.Version, "v")
+	}
+
+	return imageRef
 }
 
 // SetPluginInput is only used as input for the plugin catalog's set methods.
@@ -70,6 +91,7 @@ type SetPluginInput struct {
 	Version  string
 	Command  string
 	OCIImage string
+	Runtime  string
 	Args     []string
 	Env      []string
 	Sha256   []byte

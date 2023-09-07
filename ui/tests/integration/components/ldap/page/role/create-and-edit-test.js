@@ -82,7 +82,7 @@ module('Integration | Component | ldap | Page::Role::CreateAndEdit', function (h
   });
 
   test('it should populate form and disable type cards when editing', async function (assert) {
-    assert.expect(12);
+    assert.expect(13);
 
     const checkFields = (fields, element = 'input:last-child') => {
       fields.forEach((field) => {
@@ -103,6 +103,7 @@ module('Integration | Component | ldap | Page::Role::CreateAndEdit', function (h
     this.model = this.store.peekRecord('ldap/role', 'static-role');
     await this.renderComponent();
     assert.dom('[data-test-radio-card="static"]').isDisabled('Type selection is disabled when editing');
+    assert.dom('[data-test-input="name"]').isDisabled('Name field is disabled when editing');
     checkFields(['name', 'dn', 'username']);
     checkTtl(['rotation_period']);
 
@@ -183,7 +184,6 @@ module('Integration | Component | ldap | Page::Role::CreateAndEdit', function (h
     this.model = this.store.peekRecord('ldap/role', 'static-role');
     await this.renderComponent();
 
-    await fillIn('[data-test-input="name"]', 'test-role');
     await fillIn('[data-test-input="dn"]', 'foo');
     await fillIn('[data-test-input="username"]', 'bar');
     await fillIn('[data-test-ttl-value="Rotation period"]', 30);

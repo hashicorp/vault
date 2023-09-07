@@ -13,6 +13,7 @@ import (
 	"os"
 	"path/filepath"
 	"reflect"
+	"runtime"
 	"strings"
 	"testing"
 	"time"
@@ -3453,6 +3454,94 @@ func TestSystemBackend_PluginCatalog_CRUD(t *testing.T) {
 	}
 }
 
+// TestSystemBackend_PluginCatalog_ContainerCRUD tests that plugins registered
+// with oci_image set get recorded properly in the catalog.
+func TestSystemBackend_PluginCatalog_ContainerCRUD(t *testing.T) {
+	c, b, _ := testCoreSystemBackend(t)
+	// Bootstrap the pluginCatalog
+	sym, err := filepath.EvalSymlinks(os.TempDir())
+	if err != nil {
+		t.Fatalf("error: %v", err)
+	}
+	c.pluginCatalog.directory = sym
+
+	for name, tc := range map[string]struct {
+		in, expected map[string]any
+	}{
+		"minimal": {
+			in: map[string]any{
+				"oci_image": "foo-image",
+				"sha256":    hex.EncodeToString([]byte{'1'}),
+			},
+			expected: map[string]interface{}{
+				"name":      "test-plugin",
+				"oci_image": "foo-image",
+				"sha256":    "31",
+				"command":   "",
+				"args":      []string{},
+				"builtin":   false,
+				"version":   "",
+			},
+		},
+		"fully specified": {
+			in: map[string]any{
+				"oci_image": "foo-image",
+				"sha256":    hex.EncodeToString([]byte{'1'}),
+				"command":   "foo-command",
+				"args":      []string{"--a=1"},
+				"version":   "v1.0.0",
+				"env":       []string{"X=2"},
+			},
+			expected: map[string]interface{}{
+				"name":      "test-plugin",
+				"oci_image": "foo-image",
+				"sha256":    "31",
+				"command":   "foo-command",
+				"args":      []string{"--a=1"},
+				"builtin":   false,
+				"version":   "v1.0.0",
+			},
+		},
+	} {
+		t.Run(name, func(t *testing.T) {
+			// Add a container plugin.
+			req := logical.TestRequest(t, logical.UpdateOperation, "plugins/catalog/database/test-plugin")
+			for k, v := range tc.in {
+				req.Data[k] = v
+			}
+
+			resp, err := b.HandleRequest(namespace.RootContext(nil), req)
+
+			// We should get a nice error back from the API if we're not on linux, but
+			// that's all we can test on non-linux.
+			if runtime.GOOS != "linux" {
+				if err != nil || resp.Error() == nil {
+					t.Fatalf("err: %v %v", err, resp.Error())
+				}
+				return
+			}
+
+			if err != nil || resp.Error() != nil {
+				t.Fatalf("err: %v %v", err, resp.Error())
+			}
+
+			req = logical.TestRequest(t, logical.ReadOperation, "plugins/catalog/database/test-plugin")
+			if tc.in["version"] != nil {
+				req.Data["version"] = tc.in["version"]
+			}
+			resp, err = b.HandleRequest(namespace.RootContext(nil), req)
+			if err != nil || resp == nil || resp.Error() != nil {
+				t.Fatalf("err: %v %v", err, resp)
+			}
+
+			actual := resp.Data
+			if !reflect.DeepEqual(actual, tc.expected) {
+				t.Fatalf("expected did not match actual\ngot      %#v\nexpected %#v\n", actual, tc.expected)
+			}
+		})
+	}
+}
+
 func TestSystemBackend_PluginCatalog_ListPlugins_SucceedsWithAuditLogEnabled(t *testing.T) {
 	core, b, root := testCoreSystemBackend(t)
 
@@ -5918,7 +6007,7 @@ func TestSystemBackend_pluginRuntimeCRUD(t *testing.T) {
 	req := logical.TestRequest(t, logical.UpdateOperation, fmt.Sprintf("plugins/runtimes/catalog/%s/%s", conf.Type.String(), conf.Name))
 	req.Data = map[string]interface{}{
 		"oci_runtime":   conf.OCIRuntime,
-		"cgroup_parent": conf.OCIRuntime,
+		"cgroup_parent": conf.CgroupParent,
 		"cpu_nanos":     conf.CPU,
 		"memory_bytes":  conf.Memory,
 	}
@@ -5958,7 +6047,7 @@ func TestSystemBackend_pluginRuntimeCRUD(t *testing.T) {
 		"type":          conf.Type.String(),
 		"name":          conf.Name,
 		"oci_runtime":   conf.OCIRuntime,
-		"cgroup_parent": conf.OCIRuntime,
+		"cgroup_parent": conf.CgroupParent,
 		"cpu_nanos":     conf.CPU,
 		"memory_bytes":  conf.Memory,
 	}
@@ -6018,5 +6107,82 @@ func TestSystemBackend_pluginRuntimeCRUD(t *testing.T) {
 	listExp = map[string]interface{}{}
 	if !reflect.DeepEqual(resp.Data, listExp) {
 		t.Fatalf("got: %#v expect: %#v", resp.Data, listExp)
+	}
+}
+
+func TestSystemBackend_pluginRuntime_CannotDeleteRuntimeWithReferencingPlugins(t *testing.T) {
+	if runtime.GOOS != "linux" {
+		t.Skip("Currently plugincontainer only supports linux")
+	}
+	c, b, _ := testCoreSystemBackend(t)
+
+	conf := pluginruntimeutil.PluginRuntimeConfig{
+		Name:         "foo",
+		Type:         consts.PluginRuntimeTypeContainer,
+		OCIRuntime:   "some-oci-runtime",
+		CgroupParent: "/cpulimit/",
+		CPU:          1,
+		Memory:       10000,
+	}
+
+	// Register the plugin runtime
+	req := logical.TestRequest(t, logical.UpdateOperation, fmt.Sprintf("plugins/runtimes/catalog/%s/%s", conf.Type.String(), conf.Name))
+	req.Data = map[string]interface{}{
+		"oci_runtime":   conf.OCIRuntime,
+		"cgroup_parent": conf.CgroupParent,
+		"cpu_nanos":     conf.CPU,
+		"memory_bytes":  conf.Memory,
+	}
+
+	resp, err := b.HandleRequest(namespace.RootContext(nil), req)
+	if err != nil {
+		t.Fatalf("err: %v %#v", err, resp)
+	}
+	if resp != nil && (resp.IsError() || len(resp.Data) > 0) {
+		t.Fatalf("bad: %#v", resp)
+	}
+
+	// Bootstrap the pluginCatalog
+	sym, err := filepath.EvalSymlinks(os.TempDir())
+	if err != nil {
+		t.Fatalf("error: %v", err)
+	}
+	c.pluginCatalog.directory = sym
+
+	// Register the plugin referencing the runtime.
+	req = logical.TestRequest(t, logical.UpdateOperation, "plugins/catalog/database/test-plugin")
+	req.Data["version"] = "v0.16.0"
+	req.Data["sha_256"] = hex.EncodeToString([]byte{'1'})
+	req.Data["command"] = ""
+	req.Data["oci_image"] = "hashicorp/vault-plugin-auth-jwt"
+	req.Data["runtime"] = "foo"
+	resp, err = b.HandleRequest(namespace.RootContext(nil), req)
+	if err != nil || resp.Error() != nil {
+		t.Fatalf("err: %v %v", err, resp.Error())
+	}
+
+	// Expect to fail to delete the plugin runtime
+	req = logical.TestRequest(t, logical.DeleteOperation, "plugins/runtimes/catalog/container/foo")
+	resp, err = b.HandleRequest(namespace.RootContext(nil), req)
+	if resp == nil || !resp.IsError() || resp.Error() == nil {
+		t.Errorf("expected logical error but got none, resp: %#v", resp)
+	}
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	// Delete the plugin.
+	req = logical.TestRequest(t, logical.DeleteOperation, "plugins/catalog/database/test-plugin")
+	req.Data["version"] = "v0.16.0"
+	resp, err = b.HandleRequest(namespace.RootContext(nil), req)
+	if err != nil || resp.Error() != nil {
+		t.Fatalf("err: %v %v", err, resp.Error())
+	}
+
+	// This time deleting the runtime should work.
+	req = logical.TestRequest(t, logical.DeleteOperation, "plugins/runtimes/catalog/container/foo")
+	resp, err = b.HandleRequest(namespace.RootContext(nil), req)
+	if err != nil || resp.Error() != nil {
+		t.Fatalf("err: %v %v", err, resp.Error())
 	}
 }

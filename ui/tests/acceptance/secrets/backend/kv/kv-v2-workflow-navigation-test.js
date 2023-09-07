@@ -342,7 +342,7 @@ module('Acceptance | kv-v2 workflow | navigation', function (hooks) {
       return;
     });
     test('empty backend - breadcrumbs, title, tabs, emptyState (dr)', async function (assert) {
-      assert.expect(15);
+      assert.expect(16);
       const backend = this.emptyBackend;
       await navToBackend(backend);
 
@@ -368,7 +368,14 @@ module('Acceptance | kv-v2 workflow | navigation', function (hooks) {
         .doesNotExist('empty state does not render because no metadata access to list');
       assert.dom(PAGE.list.overviewCard).exists('renders overview card');
 
+      await typeIn(PAGE.list.overviewInput, 'directory/');
+      await click(PAGE.list.overviewButton);
+      assert
+        .dom('[data-test-inline-error-message]')
+        .hasText('You do not have the required permissions or the directory does not exist.');
+
       // click toolbar CTA
+      await visit(`/vault/secrets/${backend}/kv/list`);
       await click(PAGE.list.createSecret);
       assert.strictEqual(
         currentURL(),
