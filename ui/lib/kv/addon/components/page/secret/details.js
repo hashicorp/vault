@@ -172,7 +172,7 @@ export default class KvSecretDetails extends Component {
       };
     }
     // only destructure if we can read secret data
-    const { version, destroyed, deletionTime } = this.args.secret;
+    const { version, destroyed, isDeleted } = this.args.secret;
     if (destroyed) {
       return {
         title: `Version ${version} of this secret has been permanently destroyed`,
@@ -184,7 +184,7 @@ export default class KvSecretDetails extends Component {
         link: '/vault/docs/secrets/kv/kv-v2',
       };
     }
-    if (deletionTime) {
+    if (isDeleted) {
       return {
         title: `Version ${version} of this secret has been deleted`,
         message: `This version has been deleted but can be undeleted. ${
