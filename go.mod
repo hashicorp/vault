@@ -59,7 +59,7 @@ require (
 	github.com/favadi/protoc-go-inject-tag v1.4.0
 	github.com/gammazero/workerpool v1.1.3
 	github.com/ghodss/yaml v1.0.1-0.20190212211648-25d852aebe32
-	github.com/go-errors/errors v1.4.2
+	github.com/go-errors/errors v1.5.0
 	github.com/go-git/go-git/v5 v5.7.0
 	github.com/go-jose/go-jose/v3 v3.0.0
 	github.com/go-ldap/ldap/v3 v3.4.4
@@ -134,14 +134,14 @@ require (
 	github.com/hashicorp/vault-plugin-auth-kerberos v0.10.1
 	github.com/hashicorp/vault-plugin-auth-kubernetes v0.17.0
 	github.com/hashicorp/vault-plugin-auth-oci v0.14.2
-	github.com/hashicorp/vault-plugin-database-couchbase v0.9.2
+	github.com/hashicorp/vault-plugin-database-couchbase v0.9.3
 	github.com/hashicorp/vault-plugin-database-elasticsearch v0.13.3
 	github.com/hashicorp/vault-plugin-database-mongodbatlas v0.10.1
 	github.com/hashicorp/vault-plugin-database-redis v0.2.2
 	github.com/hashicorp/vault-plugin-database-redis-elasticache v0.2.3
 	github.com/hashicorp/vault-plugin-database-snowflake v0.9.0
 	github.com/hashicorp/vault-plugin-mock v0.16.1
-	github.com/hashicorp/vault-plugin-secrets-ad v0.16.0
+	github.com/hashicorp/vault-plugin-secrets-ad v0.16.1
 	github.com/hashicorp/vault-plugin-secrets-alicloud v0.15.1
 	github.com/hashicorp/vault-plugin-secrets-azure v0.16.3
 	github.com/hashicorp/vault-plugin-secrets-gcp v0.17.0
@@ -510,7 +510,7 @@ require (
 	go.uber.org/multierr v1.7.0 // indirect
 	go.uber.org/zap v1.19.1 // indirect
 	golang.org/x/exp/typeparams v0.0.0-20221208152030-732eee02a75a // indirect
-	golang.org/x/mod v0.10.0 // indirect
+	golang.org/x/mod v0.12.0 // indirect
 	golang.org/x/time v0.3.0 // indirect
 	golang.org/x/xerrors v0.0.0-20220907171357-04be3eba64a2 // indirect
 	google.golang.org/appengine v1.6.7 // indirect
