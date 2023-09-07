@@ -43,12 +43,6 @@ The OCI runtime must be available on Vault's host. If no OCI runtime is specifie
 
       $ vault plugin runtime register -type=container -oci_runtime=my-oci-runtime my-custom-plugin-runtime
 
-  Register a plugin runtime with custom arguments:
-
-      $ vault plugin runtime register \
-          -oci_runtime=my-oci-runtime \
-          -type=container my-custom-plugin
-
 ` + c.Flags().Help()
 
 	return strings.TrimSpace(helpText)
