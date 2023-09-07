@@ -21,7 +21,6 @@ import (
 
 	"github.com/fatih/structs"
 	"github.com/go-test/deep"
-	"github.com/hashicorp/go-hclog"
 	wrapping "github.com/hashicorp/go-kms-wrapping/v2"
 	aeadwrapper "github.com/hashicorp/go-kms-wrapping/wrappers/aead/v2"
 	semver "github.com/hashicorp/go-version"
@@ -6238,7 +6237,7 @@ func TestGetSealBackendStatus(t *testing.T) {
 
 	if !resp.Backends[0].Healthy {
 		t.Fatal("expected healthy seal, got unhealthy")
-  }
+	}
 }
 
 func TestSystemBackend_pluginRuntime_CannotDeleteRuntimeWithReferencingPlugins(t *testing.T) {
