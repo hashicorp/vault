@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -84,8 +85,8 @@ func TestEventsSubscribe(t *testing.T) {
 	}{{true}, {false}}
 
 	for _, testCase := range testCases {
-		url := fmt.Sprintf("%s/v1/sys/events/subscribe/%s?namespaces=ns1&namespaces=ns*&json=%v", wsAddr, eventType, testCase.json)
-		conn, _, err := websocket.Dial(ctx, url, &websocket.DialOptions{
+		location := fmt.Sprintf("%s/v1/sys/events/subscribe/%s?namespaces=ns1&namespaces=ns*&json=%v", wsAddr, eventType, testCase.json)
+		conn, _, err := websocket.Dial(ctx, location, &websocket.DialOptions{
 			HTTPHeader: http.Header{"x-vault-token": []string{token}},
 		})
 		if err != nil {
@@ -129,6 +130,90 @@ func TestEventsSubscribe(t *testing.T) {
 			checkRequiredCloudEventsFields(t, event)
 		}
 	}
+}
+
+// TestBexprFilters tests that go-bexpr filters are used to filter events.
+func TestBexprFilters(t *testing.T) {
+	core := vault.TestCoreWithConfig(t, &vault.CoreConfig{
+		Experiments: []string{experiments.VaultExperimentEventsAlpha1},
+	})
+
+	ln, addr := TestServer(t, core)
+	defer ln.Close()
+
+	// unseal the core
+	keys, token := vault.TestCoreInit(t, core)
+	for _, key := range keys {
+		_, err := core.Unseal(key)
+		if err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	sendEvent := func(eventType string) error {
+		pluginInfo := &logical.EventPluginInfo{
+			MountPath: "secret",
+		}
+		ns := namespace.RootNamespace
+		id, err := uuid.GenerateUUID()
+		if err != nil {
+			core.Logger().Info("Error generating UUID, exiting sender", "error", err)
+			return err
+		}
+		err = core.Events().SendEventInternal(namespace.RootContext(context.Background()), ns, pluginInfo, logical.EventType(eventType), &logical.EventData{
+			Id:        id,
+			Metadata:  nil,
+			EntityIds: nil,
+			Note:      "testing",
+		})
+		if err != nil {
+			core.Logger().Info("Error sending event, exiting sender", "error", err)
+			return err
+		}
+		return nil
+	}
+	ctx := context.Background()
+	wsAddr := strings.Replace(addr, "http", "ws", 1)
+	bexprFilter := url.QueryEscape("event_type == abc")
+
+	location := fmt.Sprintf("%s/v1/sys/events/subscribe/*?json=true&filter=%s", wsAddr, bexprFilter)
+	conn, _, err := websocket.Dial(ctx, location, &websocket.DialOptions{
+		HTTPHeader: http.Header{"x-vault-token": []string{token}},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer conn.Close(websocket.StatusNormalClosure, "")
+	err = sendEvent("def")
+	if err != nil {
+		t.Fatal(err)
+	}
+	err = sendEvent("xyz")
+	if err != nil {
+		t.Fatal(err)
+	}
+	err = sendEvent("abc")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// we should get the abc message
+	_, msg, err := conn.Read(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+	event := map[string]interface{}{}
+	err = json.Unmarshal(msg, &event)
+	if err != nil {
+		t.Fatal(err)
+	}
+	assert.Equal(t, "abc", event["data"].(map[string]interface{})["event_type"].(string))
+
+	// and no other messages
+	ctx, cancel := context.WithTimeout(context.Background(), 100*time.Millisecond)
+	defer cancel()
+	_, _, err = conn.Read(ctx)
+	assert.ErrorContains(t, err, "context deadline exceeded")
 }
 
 func TestNamespacePrepend(t *testing.T) {
