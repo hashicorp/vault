@@ -347,27 +347,6 @@ a.button.disabled {
     color: $white;
   }
 
-  &.hidden-icon svg {
-    color: transparent;
-  }
-
-  &.size-7 div {
-    font-size: $size-7;
-  }
-
-  &.code-snippet {
-    background: none;
-    border: none;
-    box-shadow: none;
-    min-width: auto;
-    padding: $size-11 $size-8;
-    color: $ui-gray-300;
-
-    svg {
-      color: $ui-gray-300;
-    }
-  }
-
   &.is-primary {
     background-color: $blue;
     box-shadow: $box-shadow-low;
@@ -399,5 +378,27 @@ a.button.disabled {
     min-width: $spacing-xl;
     border-radius: 0;
     box-shadow: 0 3px 1px 0px rgba(10, 10, 10, 0.12);
+  }
+
+  &.code-snippet {
+    background: none;
+    border: none;
+    box-shadow: none;
+    min-width: auto;
+    padding: $size-11 $size-8;
+    color: $ui-gray-300;
+
+    svg {
+      color: $ui-gray-300;
+    }
+  }
+
+  &.in-dropdown {
+    div {
+      font-size: $size-7;
+    }
+    svg {
+      color: transparent;
+    }
   }
 }
