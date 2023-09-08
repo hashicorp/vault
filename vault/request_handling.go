@@ -272,7 +272,7 @@ func (c *Core) CheckTokenWithLock(ctx context.Context, req *logical.Request, una
 	// first check that we aren't shutting down
 	if c.Sealed() {
 		return nil, nil, errors.New("core is sealed")
-	} else if c.activeContext.Err() != nil {
+	} else if c.activeContext != nil && c.activeContext.Err() != nil {
 		return nil, nil, c.activeContext.Err()
 	}
 	return c.CheckToken(ctx, req, unauth)
