@@ -189,7 +189,9 @@ func TestBexprFilters(t *testing.T) {
 		defer close(eventChan)
 
 		// we should get the abc message
-		_, msg, err := conn.Read(ctx)
+		readCtx, readCancel := context.WithTimeout(context.Background(), 2*time.Minute)
+		defer readCancel()
+		_, msg, err := conn.Read(readCtx)
 		if err != nil {
 			t.Error(err)
 			return
