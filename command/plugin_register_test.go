@@ -6,14 +6,11 @@ package command
 import (
 	"encoding/json"
 	"fmt"
-	"io"
-	"net/http"
 	"reflect"
 	"sort"
 	"strings"
 	"testing"
 
-	"github.com/hashicorp/go-cleanhttp"
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/helper/testhelpers/corehelpers"
 	"github.com/hashicorp/vault/sdk/helper/consts"
@@ -243,6 +240,7 @@ func TestFlagParsing(t *testing.T) {
 		name            string
 		command         string
 		ociImage        string
+		runtime         string
 		version         string
 		sha256          string
 		args            []string
@@ -260,11 +258,12 @@ func TestFlagParsing(t *testing.T) {
 			name:            "name",
 			command:         "cmd",
 			ociImage:        "image",
+			runtime:         "runtime",
 			version:         "v1.0.0",
 			sha256:          "abc123",
 			args:            []string{"--a=b", "--b=c", "positional"},
 			env:             []string{"x=1", "y=2"},
-			expectedPayload: `{"type":1,"args":["--a=b","--b=c","positional"],"command":"cmd","sha256":"abc123","version":"v1.0.0","oci_image":"image","env":["x=1","y=2"]}`,
+			expectedPayload: `{"type":1,"args":["--a=b","--b=c","positional"],"command":"cmd","sha256":"abc123","version":"v1.0.0","oci_image":"image","runtime":"runtime","env":["x=1","y=2"]}`,
 		},
 		"command remains empty if oci_image specified": {
 			pluginType:      api.PluginTypeCredential,
@@ -286,6 +285,9 @@ func TestFlagParsing(t *testing.T) {
 			}
 			if tc.ociImage != "" {
 				args = append(args, "-oci_image="+tc.ociImage)
+			}
+			if tc.runtime != "" {
+				args = append(args, "-runtime="+tc.runtime)
 			}
 			if tc.sha256 != "" {
 				args = append(args, "-sha256="+tc.sha256)
@@ -332,41 +334,4 @@ func TestFlagParsing(t *testing.T) {
 			}
 		})
 	}
-}
-
-func mockClient(t *testing.T) (*api.Client, *recordingRoundTripper) {
-	t.Helper()
-
-	config := api.DefaultConfig()
-	httpClient := cleanhttp.DefaultClient()
-	roundTripper := &recordingRoundTripper{}
-	httpClient.Transport = roundTripper
-	config.HttpClient = httpClient
-	client, err := api.NewClient(config)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	return client, roundTripper
-}
-
-var _ http.RoundTripper = (*recordingRoundTripper)(nil)
-
-type recordingRoundTripper struct {
-	path string
-	body []byte
-}
-
-func (r *recordingRoundTripper) RoundTrip(req *http.Request) (*http.Response, error) {
-	r.path = req.URL.Path
-	defer req.Body.Close()
-	body, err := io.ReadAll(req.Body)
-	if err != nil {
-		return nil, err
-	}
-
-	r.body = body
-	return &http.Response{
-		StatusCode: 200,
-	}, nil
 }

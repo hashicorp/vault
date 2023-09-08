@@ -160,9 +160,9 @@ func (c *PluginListCommand) simpleResponse(plugins *api.ListPluginsResponse, plu
 }
 
 func (c *PluginListCommand) detailedResponse(plugins *api.ListPluginsResponse) []string {
-	out := []string{"Name | Type | Version | Deprecation Status"}
+	out := []string{"Name | Type | Version | Container | Deprecation Status"}
 	for _, plugin := range plugins.Details {
-		out = append(out, fmt.Sprintf("%s | %s | %s | %s", plugin.Name, plugin.Type, plugin.Version, plugin.DeprecationStatus))
+		out = append(out, fmt.Sprintf("%s | %s | %s | %v | %s", plugin.Name, plugin.Type, plugin.Version, plugin.OCIImage != "", plugin.DeprecationStatus))
 	}
 
 	return out

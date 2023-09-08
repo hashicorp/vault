@@ -37,6 +37,7 @@ type eventSubscriber struct {
 	events            *eventbus.EventBus
 	namespacePatterns []string
 	pattern           string
+	bexprFilter       string
 	conn              *websocket.Conn
 	json              bool
 	checkCache        *cache.Cache
@@ -48,7 +49,7 @@ type eventSubscriber struct {
 func (sub *eventSubscriber) handleEventsSubscribeWebsocket() (websocket.StatusCode, string, error) {
 	ctx := sub.ctx
 	logger := sub.logger
-	ch, cancel, err := sub.events.SubscribeMultipleNamespaces(ctx, sub.namespacePatterns, sub.pattern)
+	ch, cancel, err := sub.events.SubscribeMultipleNamespaces(ctx, sub.namespacePatterns, sub.pattern, sub.bexprFilter)
 	if err != nil {
 		logger.Info("Error subscribing", "error", err)
 		return websocket.StatusUnsupportedData, "Error subscribing", nil
@@ -217,6 +218,7 @@ func handleEventsSubscribe(core *vault.Core, req *logical.Request) http.Handler 
 			}
 		}
 
+		bexprFilter := strings.TrimSpace(r.URL.Query().Get("filter"))
 		namespacePatterns := r.URL.Query()["namespaces"]
 		namespacePatterns = prependNamespacePatterns(namespacePatterns, ns)
 		conn, err := websocket.Accept(w, r, nil)
@@ -242,8 +244,9 @@ func handleEventsSubscribe(core *vault.Core, req *logical.Request) http.Handler 
 		// continually validate subscribe access while the websocket is running
 		ctx, cancelCtx := context.WithCancel(ctx)
 		defer cancelCtx()
-		go validateSubscribeAccessLoop(core, ctx, cancelCtx, req)
 
+		isRoot := entry.IsRoot()
+		go validateSubscribeAccessLoop(core, ctx, cancelCtx, req)
 		sub := &eventSubscriber{
 			ctx:               ctx,
 			capabilitiesFunc:  core.CapabilitiesAndSubscribeEventTypes,
@@ -251,11 +254,12 @@ func handleEventsSubscribe(core *vault.Core, req *logical.Request) http.Handler 
 			events:            core.Events(),
 			namespacePatterns: namespacePatterns,
 			pattern:           pattern,
+			bexprFilter:       bexprFilter,
 			conn:              conn,
 			json:              json,
 			checkCache:        cache.New(webSocketRevalidationTime, webSocketRevalidationTime),
 			clientToken:       auth.ClientToken,
-			isRootToken:       entry.IsRoot(),
+			isRootToken:       isRoot,
 		}
 		closeStatus, closeReason, err := sub.handleEventsSubscribeWebsocket()
 		if err != nil {
@@ -298,7 +302,7 @@ func validateSubscribeAccessLoop(core *vault.Core, ctx context.Context, cancel c
 	// if something breaks, default to canceling the websocket
 	defer cancel()
 	for {
-		_, _, err := core.CheckToken(ctx, req, false)
+		_, _, err := core.CheckTokenWithLock(ctx, req, false)
 		if err != nil {
 			core.Logger().Debug("Token does not have access to subscription path in its own namespace, terminating WebSocket subscription", "path", req.Path, "error", err)
 			return
