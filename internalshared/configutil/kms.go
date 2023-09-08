@@ -220,6 +220,9 @@ func configureWrapper(configKMS *KMS, infoKeys *[]string, info *map[string]strin
 	if configKMS.Type == wrapping.WrapperTypeTransit.String() {
 		mergeTransitConfig(configKMS.Config, envConfig)
 	} else {
+		if configKMS.Config == nil {
+			configKMS.Config = make(map[string]string)
+		}
 		for name, val := range envConfig {
 			configKMS.Config[name] = val
 		}
