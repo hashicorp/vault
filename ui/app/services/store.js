@@ -141,13 +141,9 @@ export default class StoreService extends Store {
   forceUnload(modelName) {
     // For some reason peeking the records before unloading ensures
     // all the records are properly unloaded and we don't get ghost records
-    // eslint-disable-next-line no-console
-    console.debug(`DEBUG: before unload: ${this.peekAll(modelName).length}`);
+    this.peekAll(modelName);
     // force destroy queue to flush https://github.com/emberjs/data/issues/5447
     run(() => this.unloadAll(modelName));
-    // peekRecord again after clear so that peekAll after push doesn't use internal cache
-    // eslint-disable-next-line no-console
-    console.debug(`DEBUG: after unload: ${this.peekAll(modelName).length}`);
   }
 
   // pushes records into the store and returns the result
