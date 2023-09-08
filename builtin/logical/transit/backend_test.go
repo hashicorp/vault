@@ -1111,9 +1111,11 @@ func testConvergentEncryptionCommon(t *testing.T, ver int, keyType keysutil.KeyT
 
 	// Now test encrypting the same value twice
 	req.Data = map[string]interface{}{
-		"plaintext": "emlwIHphcA==",     // "zip zap"
-		"nonce":     "b25ldHdvdGhyZWVl", // "onetwothreee"
+		"plaintext": "emlwIHphcA==", // "zip zap"
 		"context":   "pWZ6t/im3AORd0lVYE0zBdKpX6Bl3/SvFtoVTPWbdkzjG788XmMAnOlxandSdd7S",
+	}
+	if ver == 0 {
+		req.Data["nonce"] = "b25ldHdvdGhyZWVl" // "onetwothreee"
 	}
 	resp, err = b.HandleRequest(context.Background(), req)
 	if err != nil {
@@ -1145,11 +1147,10 @@ func testConvergentEncryptionCommon(t *testing.T, ver int, keyType keysutil.KeyT
 
 	// For sanity, also check a different nonce value...
 	req.Data = map[string]interface{}{
-		"plaintext": "emlwIHphcA==",     // "zip zap"
-		"nonce":     "dHdvdGhyZWVmb3Vy", // "twothreefour"
+		"plaintext": "emlwIHphcA==", // "zip zap"
 		"context":   "pWZ6t/im3AORd0lVYE0zBdKpX6Bl3/SvFtoVTPWbdkzjG788XmMAnOlxandSdd7S",
 	}
-	if ver < 2 {
+	if ver == 0 {
 		req.Data["nonce"] = "dHdvdGhyZWVmb3Vy" // "twothreefour"
 	} else {
 		req.Data["context"] = "pWZ6t/im3AORd0lVYE0zBdKpX6Bl3/SvFtoVTPWbdkzjG788XmMAnOldandSdd7S"
@@ -1188,9 +1189,11 @@ func testConvergentEncryptionCommon(t *testing.T, ver int, keyType keysutil.KeyT
 
 	// ...and a different context value
 	req.Data = map[string]interface{}{
-		"plaintext": "emlwIHphcA==",     // "zip zap"
-		"nonce":     "dHdvdGhyZWVmb3Vy", // "twothreefour"
+		"plaintext": "emlwIHphcA==", // "zip zap"
 		"context":   "qV4h9iQyvn+raODOer4JNAsOhkXBwdT4HZ677Ql4KLqXSU+Jk4C/fXBWbv6xkSYT",
+	}
+	if ver == 0 {
+		req.Data["nonce"] = "dHdvdGhyZWVmb3Vy" // "twothreefour"
 	}
 	resp, err = b.HandleRequest(context.Background(), req)
 	if err != nil {
@@ -1303,8 +1306,10 @@ func testConvergentEncryptionCommon(t *testing.T, ver int, keyType keysutil.KeyT
 	// Finally, check operations on empty values
 	// First, check without setting a plaintext at all
 	req.Data = map[string]interface{}{
-		"nonce":   "b25ldHdvdGhyZWVl", // "onetwothreee"
 		"context": "pWZ6t/im3AORd0lVYE0zBdKpX6Bl3/SvFtoVTPWbdkzjG788XmMAnOlxandSdd7S",
+	}
+	if ver == 0 {
+		req.Data["nonce"] = "dHdvdGhyZWVmb3Vy" // "twothreefour"
 	}
 	resp, err = b.HandleRequest(context.Background(), req)
 	if err == nil {
@@ -1320,8 +1325,10 @@ func testConvergentEncryptionCommon(t *testing.T, ver int, keyType keysutil.KeyT
 	// Now set plaintext to empty
 	req.Data = map[string]interface{}{
 		"plaintext": "",
-		"nonce":     "b25ldHdvdGhyZWVl", // "onetwothreee"
 		"context":   "pWZ6t/im3AORd0lVYE0zBdKpX6Bl3/SvFtoVTPWbdkzjG788XmMAnOlxandSdd7S",
+	}
+	if ver == 0 {
+		req.Data["nonce"] = "dHdvdGhyZWVmb3Vy" // "twothreefour"
 	}
 	resp, err = b.HandleRequest(context.Background(), req)
 	if err != nil {
