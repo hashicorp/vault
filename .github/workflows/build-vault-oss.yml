@@ -9,9 +9,6 @@ name: build_vault
 on:
   workflow_call:
     inputs:
-      bundle-path:
-        required: false
-        type: string
       cgo-enabled:
         type: string
         default: 0

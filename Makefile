@@ -300,10 +300,6 @@ ci-build-ui:
 ci-bundle:
 	@$(CURDIR)/scripts/ci-helper.sh bundle
 
-.PHONY: ci-filter-matrix
-ci-filter-matrix:
-	@$(CURDIR)/scripts/ci-helper.sh matrix-filter-file
-
 .PHONY: ci-get-artifact-basename
 ci-get-artifact-basename:
 	@$(CURDIR)/scripts/ci-helper.sh artifact-basename
@@ -311,10 +307,6 @@ ci-get-artifact-basename:
 .PHONY: ci-get-date
 ci-get-date:
 	@$(CURDIR)/scripts/ci-helper.sh date
-
-.PHONY: ci-get-matrix-group-id
-ci-get-matrix-group-id:
-	@$(CURDIR)/scripts/ci-helper.sh matrix-group-id
 
 .PHONY: ci-get-revision
 ci-get-revision:

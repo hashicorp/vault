@@ -30,11 +30,10 @@ jobs:
     outputs:
       build-date: ${{ steps.get-metadata.outputs.build-date }}
       filepath: ${{ steps.generate-metadata-file.outputs.filepath }}
-      matrix-test-group: ${{ steps.get-metadata.outputs.matrix-test-group }}
       package-name: ${{ steps.get-metadata.outputs.package-name }}
       vault-revision: ${{ steps.get-metadata.outputs.vault-revision }}
       vault-version: ${{ steps.get-metadata.outputs.vault-version }}
-      vault-base-version: ${{ steps.get-metadata.outputs.vault-base-version }}
+      vault-version-package: ${{ steps.get-metadata.outputs.vault-version-package }}
     steps:
       - uses: actions/checkout@c85c95e3d7251135ab7dc9ce3241c5835cc595a9 # v3.5.3
       - name: Ensure Go modules are cached
@@ -45,19 +44,13 @@ jobs:
           no-restore: true # don't download them on a cache hit
       - name: Get metadata
         id: get-metadata
-        env:
-          # MATRIX_MAX_TEST_GROUPS is required to determine the randomly selected
-          # test group. It should be set to the highest test_group used in the
-          # enos-run-matrices.
-          MATRIX_MAX_TEST_GROUPS: 5
         run: |
           # shellcheck disable=SC2129
           echo "build-date=$(make ci-get-date)" >> "$GITHUB_OUTPUT"
-          echo "matrix-test-group=$(make ci-get-matrix-group-id)" >> "$GITHUB_OUTPUT"
           echo "package-name=vault" >> "$GITHUB_OUTPUT"
-          echo "vault-base-version=$(make ci-get-version-base)" >> "$GITHUB_OUTPUT"
           echo "vault-revision=$(make ci-get-revision)" >> "$GITHUB_OUTPUT"
           echo "vault-version=$(make ci-get-version)" >> "$GITHUB_OUTPUT"
+          echo "vault-version-package=$(make ci-get-version-package)" >> "$GITHUB_OUTPUT"
       - uses: hashicorp/actions-generate-metadata@v1
         id: generate-metadata-file
         with:
@@ -219,17 +212,25 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - matrix-file-name: build-github-oss-linux-amd64-zip
+          - sample-name: build_oss_linux_amd64_deb
+            build-artifact-name: vault_${{ needs.product-metadata.outputs.vault-version-package }}-1_amd64.deb
+          - sample-name: build_oss_linux_arm64_deb
+            build-artifact-name: vault_${{ needs.product-metadata.outputs.vault-version-package }}-1_arm64.deb
+          - sample-name: build_oss_linux_amd64_rpm
+            build-artifact-name: vault-${{ needs.product-metadata.outputs.vault-version-package }}-1.x86_64.rpm
+          - sample-name: build_oss_linux_arm64_rpm
+            build-artifact-name: vault-${{ needs.product-metadata.outputs.vault-version-package }}-1.aarch64.rpm
+          - sample-name: build_oss_linux_amd64_zip
             build-artifact-name: vault_${{ needs.product-metadata.outputs.vault-version }}_linux_amd64.zip
-          - matrix-file-name: build-github-oss-linux-arm64-zip
+          - sample-name: build_oss_linux_arm64_zip
             build-artifact-name: vault_${{ needs.product-metadata.outputs.vault-version }}_linux_arm64.zip
     with:
       build-artifact-name: ${{ matrix.build-artifact-name }}
-      matrix-file-name: ${{ matrix.matrix-file-name }}
-      matrix-test-group: ${{ needs.product-metadata.outputs.matrix-test-group }}
+      sample-max: 1
+      sample-name: ${{ matrix.sample-name }}
+      ssh-key-name: ${{ github.event.repository.name }}-ci-ssh-key
       vault-edition: oss
       vault-revision: ${{ needs.product-metadata.outputs.vault-revision }}
-      ssh-key-name: ${{ github.event.repository.name }}-ci-ssh-key
     secrets: inherit
 
   test-docker-k8s:
@@ -290,7 +291,7 @@ jobs:
     steps:
       - run: |
           tr -d '\n' <<< '${{ toJSON(needs.*.result) }}' | grep -q -v -E '(failure|cancelled)'
-          
+
   notify-completed-successfully-failures-oss:
     if: ${{ always() && github.repository == 'hashicorp/vault' && needs.completed-successfully.result == 'failure' && (github.ref_name == 'main' || startsWith(github.ref_name, 'release/')) }}
     runs-on: ubuntu-latest
