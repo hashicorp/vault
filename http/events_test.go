@@ -49,6 +49,8 @@ func TestEventsSubscribe(t *testing.T) {
 	stop := atomic.Bool{}
 
 	const eventType = "abc"
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
 
 	// send some events
 	go func() {
@@ -60,7 +62,7 @@ func TestEventsSubscribe(t *testing.T) {
 			pluginInfo := &logical.EventPluginInfo{
 				MountPath: "secret",
 			}
-			err = core.Events().SendEventInternal(namespace.RootContext(context.Background()), namespace.RootNamespace, pluginInfo, logical.EventType(eventType), &logical.EventData{
+			err = core.Events().SendEventInternal(namespace.RootContext(ctx), namespace.RootNamespace, pluginInfo, logical.EventType(eventType), &logical.EventData{
 				Id:        id,
 				Metadata:  nil,
 				EntityIds: nil,
@@ -77,7 +79,6 @@ func TestEventsSubscribe(t *testing.T) {
 		stop.Store(true)
 	})
 
-	ctx := context.Background()
 	wsAddr := strings.Replace(addr, "http", "ws", 1)
 
 	testCases := []struct {
@@ -147,7 +148,7 @@ func TestBexprFilters(t *testing.T) {
 		}
 	}
 
-	sendEvent := func(eventType string) error {
+	sendEvent := func(ctx context.Context, eventType string) error {
 		pluginInfo := &logical.EventPluginInfo{
 			MountPath: "secret",
 		}
@@ -157,7 +158,7 @@ func TestBexprFilters(t *testing.T) {
 			core.Logger().Info("Error generating UUID, exiting sender", "error", err)
 			return err
 		}
-		err = core.Events().SendEventInternal(namespace.RootContext(context.Background()), ns, pluginInfo, logical.EventType(eventType), &logical.EventData{
+		err = core.Events().SendEventInternal(namespace.RootContext(ctx), ns, pluginInfo, logical.EventType(eventType), &logical.EventData{
 			Id:        id,
 			Metadata:  nil,
 			EntityIds: nil,
@@ -169,7 +170,9 @@ func TestBexprFilters(t *testing.T) {
 		}
 		return nil
 	}
-	ctx := context.Background()
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+
 	wsAddr := strings.Replace(addr, "http", "ws", 1)
 	bexprFilter := url.QueryEscape("event_type == abc")
 
@@ -181,33 +184,47 @@ func TestBexprFilters(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer conn.Close(websocket.StatusNormalClosure, "")
-	err = sendEvent("def")
+	eventChan := make(chan map[string]interface{})
+	go func() {
+		defer close(eventChan)
+
+		// we should get the abc message
+		readCtx, readCancel := context.WithTimeout(context.Background(), 2*time.Minute)
+		defer readCancel()
+		_, msg, err := conn.Read(readCtx)
+		if err != nil {
+			t.Error(err)
+			return
+		}
+		event := map[string]interface{}{}
+		err = json.Unmarshal(msg, &event)
+		if err != nil {
+			t.Error(err)
+			return
+		}
+		eventChan <- event
+	}()
+	err = sendEvent(ctx, "def")
 	if err != nil {
 		t.Fatal(err)
 	}
-	err = sendEvent("xyz")
+	err = sendEvent(ctx, "xyz")
 	if err != nil {
 		t.Fatal(err)
 	}
-	err = sendEvent("abc")
+	err = sendEvent(ctx, "abc")
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	// we should get the abc message
-	_, msg, err := conn.Read(context.Background())
-	if err != nil {
-		t.Fatal(err)
-	}
-	event := map[string]interface{}{}
-	err = json.Unmarshal(msg, &event)
-	if err != nil {
-		t.Fatal(err)
+	event := <-eventChan
+	if event == nil {
+		t.Fatal()
 	}
 	assert.Equal(t, "abc", event["data"].(map[string]interface{})["event_type"].(string))
 
 	// and no other messages
-	ctx, cancel := context.WithTimeout(context.Background(), 100*time.Millisecond)
+	ctx, cancel = context.WithTimeout(context.Background(), 100*time.Millisecond)
 	defer cancel()
 	_, _, err = conn.Read(ctx)
 	assert.ErrorContains(t, err, "context deadline exceeded")
@@ -298,7 +315,8 @@ func TestEventsSubscribeAuth(t *testing.T) {
 		nonPrivilegedToken = secret.Auth.ClientToken
 	}
 
-	ctx := context.Background()
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
 	wsAddr := strings.Replace(addr, "http", "ws", 1)
 
 	// Get a 403 with no token.
