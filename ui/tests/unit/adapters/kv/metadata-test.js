@@ -9,6 +9,8 @@ import { setupMirage } from 'ember-cli-mirage/test-support';
 import { kvMetadataPath } from 'vault/utils/kv-path';
 import { Response } from 'miragejs';
 
+const UTC_DATE = '1994-11-05T00:00:00.000Z';
+
 const EXAMPLE_KV_METADATA_GET_RESPONSE = {
   request_id: 'foobar',
   data: {
@@ -23,7 +25,7 @@ const EXAMPLE_KV_METADATA_GET_RESPONSE = {
     versions: {
       1: {
         created_time: 'created-time',
-        deletion_time: 'deletion-time',
+        deletion_time: UTC_DATE,
         destroyed: false,
       },
       2: { created_time: 'created-time', deletion_time: '', destroyed: false },
@@ -75,7 +77,7 @@ module('Unit | Adapter | kv/metadata', function (hooks) {
       versions: {
         1: {
           created_time: 'created-time',
-          deletion_time: 'deletion-time',
+          deletion_time: UTC_DATE,
           destroyed: false,
         },
         2: {
@@ -113,6 +115,22 @@ module('Unit | Adapter | kv/metadata', function (hooks) {
     );
   });
 
+  test('it should make request to correct endpoint on update record', async function (assert) {
+    assert.expect(1);
+    const data = this.server.create('kv-metadatum');
+    data.id = kvMetadataPath('kv-engine', 'my-secret');
+    this.store.pushPayload('kv/metadata', {
+      modelName: 'kv/metadata',
+      ...data,
+    });
+    this.server.post(kvMetadataPath('kv-engine', 'my-secret'), () => {
+      assert.ok(true, 'request made to correct endpoint on delete metadata.');
+    });
+
+    const record = await this.store.peekRecord('kv/metadata', data.id);
+    await record.save();
+  });
+
   test('it should make request to correct endpoint on queryRecord', async function (assert) {
     assert.expect(13);
     this.server.get(this.endpoint, () => {
@@ -137,6 +155,16 @@ module('Unit | Adapter | kv/metadata', function (hooks) {
       EXAMPLE_KV_METADATA_GET_RESPONSE.data.versions,
       'record has correct versions data'
     );
+  });
+
+  test('it should make request to correct endpoint on query', async function (assert) {
+    assert.expect(1);
+    this.server.get(kvMetadataPath(this.backend, 'directory/'), (schema, req) => {
+      assert.ok(req.queryParams.list, 'list query param sent when listing secrets');
+      return { data: { keys: [] } };
+    });
+
+    this.store.query('kv/metadata', { backend: this.backend, pathToSecret: 'directory/' });
   });
 
   test('it should make request to correct endpoint on delete metadata', async function (assert) {

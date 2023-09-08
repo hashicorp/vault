@@ -73,6 +73,7 @@ export default class LdapRoleModel extends Model {
   @attr('string', {
     label: 'Role name',
     subText: 'The name of the role that will be used in Vault.',
+    editDisabled: true,
   })
   name;
 

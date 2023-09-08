@@ -44,7 +44,6 @@ export default class LdapLibrariesPageComponent extends Component<Args> {
     try {
       const message = `Successfully deleted library ${model.name}.`;
       await model.destroyRecord();
-      this.args.libraries.removeObject(model);
       this.flashMessages.success(message);
     } catch (error) {
       this.flashMessages.danger(`Error deleting library \n ${errorMessage(error)}`);

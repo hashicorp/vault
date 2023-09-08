@@ -100,11 +100,16 @@ module('Integration | Component | dashboard/secrets-engines-card', function (hoo
       };
     });
 
-    test('it should display only five secrets engines', async function (assert) {
+    test('it should display only five secrets engines and show help text for more than 5 engines', async function (assert) {
       await this.renderComponent();
       assert.dom(SELECTORS.cardTitle).hasText('Secrets engines');
       assert.dom(SELECTORS.secretEnginesTableRows).exists({ count: 5 });
-      assert.dom('[data-test-secrets-engines-card-show-all]').exists();
+      assert.dom('[data-test-secrets-engine-total-help-text]').exists();
+      assert
+        .dom('[data-test-secrets-engine-total-help-text]')
+        .hasText(
+          `Showing 5 out of ${this.secretsEngines.length} secret engines. Navigate to details to view more.`
+        );
     });
 
     test('it should display the secrets engines accessor and path', async function (assert) {

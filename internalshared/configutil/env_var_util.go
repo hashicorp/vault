@@ -81,4 +81,21 @@ var (
 		transit.EnvTransitWrapperDisableRenewal:   "disable_renewal",
 		transit.EnvVaultTransitSealDisableRenewal: "disable_renewal",
 	}
+
+	// TransitPrioritizeConfigValues are the variables where file config takes precedence over env vars in transit seals
+	TransitPrioritizeConfigValues = []string{
+		"token",
+		"address",
+	}
+
+	// TransitTLSConfigVars are the TLS config variables for transit seals
+	// if one of them is set in file config, transit seals use the file config for all TLS values and ignore env vars
+	// otherwise they use the env vars for TLS config
+	TransitTLSConfigVars = []string{
+		"tls_ca_cert",
+		"tls_client_cert",
+		"tls_client_key",
+		"tls_server_name",
+		"tls_skip_verify",
+	}
 )

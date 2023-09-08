@@ -14,6 +14,7 @@ import (
 	"net"
 	"net/url"
 	"strings"
+	"sync"
 	"text/template"
 	"time"
 
@@ -478,6 +479,11 @@ func sidBytesToString(b []byte) (string, error) {
 }
 
 func (c *Client) performLdapTokenGroupsSearch(cfg *ConfigEntry, conn Connection, userDN string) ([]*ldap.Entry, error) {
+	var wg sync.WaitGroup
+	var lock sync.Mutex
+	taskChan := make(chan string)
+	maxWorkers := 10
+
 	result, err := conn.Search(&ldap.SearchRequest{
 		BaseDN:       userDN,
 		Scope:        ldap.ScopeBaseObject,
@@ -498,36 +504,52 @@ func (c *Client) performLdapTokenGroupsSearch(cfg *ConfigEntry, conn Connection,
 
 	userEntry := result.Entries[0]
 	groupAttrValues := userEntry.GetRawAttributeValues("tokenGroups")
-
 	groupEntries := make([]*ldap.Entry, 0, len(groupAttrValues))
+
+	for i := 0; i < maxWorkers; i++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+
+			for sid := range taskChan {
+				groupResult, err := conn.Search(&ldap.SearchRequest{
+					BaseDN:       fmt.Sprintf("<SID=%s>", sid),
+					Scope:        ldap.ScopeBaseObject,
+					DerefAliases: ldapDerefAliasMap[cfg.DerefAliases],
+					Filter:       "(objectClass=*)",
+					Attributes: []string{
+						"1.1", // RFC no attributes
+					},
+					SizeLimit: 1,
+				})
+				if err != nil {
+					c.Logger.Warn("unable to read the group sid", "sid", sid)
+					continue
+				}
+
+				if len(groupResult.Entries) == 0 {
+					c.Logger.Warn("unable to find the group", "sid", sid)
+					continue
+				}
+
+				lock.Lock()
+				groupEntries = append(groupEntries, groupResult.Entries[0])
+				lock.Unlock()
+			}
+		}()
+	}
+
 	for _, sidBytes := range groupAttrValues {
 		sidString, err := sidBytesToString(sidBytes)
 		if err != nil {
 			c.Logger.Warn("unable to read sid", "err", err)
 			continue
 		}
-
-		groupResult, err := conn.Search(&ldap.SearchRequest{
-			BaseDN:       fmt.Sprintf("<SID=%s>", sidString),
-			Scope:        ldap.ScopeBaseObject,
-			DerefAliases: ldapDerefAliasMap[cfg.DerefAliases],
-			Filter:       "(objectClass=*)",
-			Attributes: []string{
-				"1.1", // RFC no attributes
-			},
-			SizeLimit: 1,
-		})
-		if err != nil {
-			c.Logger.Warn("unable to read the group sid", "sid", sidString)
-			continue
-		}
-		if len(groupResult.Entries) == 0 {
-			c.Logger.Warn("unable to find the group", "sid", sidString)
-			continue
-		}
-
-		groupEntries = append(groupEntries, groupResult.Entries[0])
+		taskChan <- sidString
 	}
+
+	close(taskChan)
+	wg.Wait()
 
 	return groupEntries, nil
 }

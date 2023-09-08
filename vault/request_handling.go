@@ -264,6 +264,20 @@ func (c *Core) fetchACLTokenEntryAndEntity(ctx context.Context, req *logical.Req
 	return acl, te, entity, identityPolicies, nil
 }
 
+// CheckTokenWithLock calls CheckToken after grabbing the internal stateLock, and also checking that we aren't in the
+// process of shutting down.
+func (c *Core) CheckTokenWithLock(ctx context.Context, req *logical.Request, unauth bool) (*logical.Auth, *logical.TokenEntry, error) {
+	c.stateLock.RLock()
+	defer c.stateLock.RUnlock()
+	// first check that we aren't shutting down
+	if c.Sealed() {
+		return nil, nil, errors.New("core is sealed")
+	} else if c.activeContext != nil && c.activeContext.Err() != nil {
+		return nil, nil, c.activeContext.Err()
+	}
+	return c.CheckToken(ctx, req, unauth)
+}
+
 func (c *Core) CheckToken(ctx context.Context, req *logical.Request, unauth bool) (*logical.Auth, *logical.TokenEntry, error) {
 	defer metrics.MeasureSince([]string{"core", "check_token"}, time.Now())
 
@@ -1687,10 +1701,16 @@ func (c *Core) handleLoginRequest(ctx context.Context, req *logical.Request) (re
 		// Attach the display name, might be used by audit backends
 		req.DisplayName = auth.DisplayName
 
-		// If this is not a role-based quota, we still need to associate the
-		// login role with this lease for later lease-count quotas to be
-		// accurate.
-		if reqRole == nil && resp.Auth.TokenType != logical.TokenTypeBatch {
+		requiresLease := resp.Auth.TokenType != logical.TokenTypeBatch
+
+		// If role was not already determined by http.rateLimitQuotaWrapping
+		// and a lease will be generated, calculate a role for the leaseEntry.
+		// We can skip this step if there are no pre-existing role-based quotas
+		// for this mount and Vault is configured to skip lease role-based lease counting
+		// until after they're created. This effectively zeroes out the lease count
+		// for new role-based quotas upon creation, rather than counting old leases toward
+		// the total.
+		if reqRole == nil && requiresLease && !c.impreciseLeaseRoleTracking {
 			role = c.DetermineRoleFromLoginRequest(ctx, req.MountPoint, req.Data)
 		}
 

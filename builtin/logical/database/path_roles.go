@@ -837,7 +837,7 @@ func (s *staticAccount) NextRotationTime() time.Time {
 	if s.UsesRotationPeriod() {
 		return s.LastVaultRotation.Add(s.RotationPeriod)
 	}
-	return s.Schedule.Next(s.LastVaultRotation)
+	return s.Schedule.Next(time.Now())
 }
 
 // NextRotationTimeFromInput calculates the next rotation time for period and
@@ -879,10 +879,9 @@ func (s *staticAccount) IsInsideRotationWindow(t time.Time) bool {
 //
 // This will return true when the priority <= the current Unix time. If this
 // static account is schedule-based with a rotation window, this method will
-// return false if now is outside the rotation window.
-func (s *staticAccount) ShouldRotate(priority int64) bool {
-	now := time.Now()
-	return priority <= now.Unix() && s.IsInsideRotationWindow(now)
+// return false if t is outside the rotation window.
+func (s *staticAccount) ShouldRotate(priority int64, t time.Time) bool {
+	return priority <= t.Unix() && s.IsInsideRotationWindow(t)
 }
 
 // SetNextVaultRotation

@@ -24,6 +24,7 @@ import (
 	"github.com/hashicorp/vault/sdk/physical"
 	physInmem "github.com/hashicorp/vault/sdk/physical/inmem"
 	"github.com/mitchellh/cli"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
@@ -383,13 +384,19 @@ func TestConfigureDevTLS(t *testing.T) {
 			fun()
 		}
 
-		require.Equal(t, testcase.DeferFuncNotNil, (fun != nil), "test description %s", testcase.TestDescription)
-		require.Equal(t, testcase.ConfigNotNil, cfg != nil, "test description %s", testcase.TestDescription)
-		if testcase.ConfigNotNil {
-			require.True(t, len(cfg.Listeners) > 0, "test description %s", testcase.TestDescription)
-			require.Equal(t, testcase.TLSDisable, cfg.Listeners[0].TLSDisable, "test description %s", testcase.TestDescription)
-		}
-		require.Equal(t, testcase.CertPathEmpty, len(certPath) == 0, "test description %s", testcase.TestDescription)
-		require.Equal(t, testcase.ErrNotNil, (err != nil), "test description %s", testcase.TestDescription)
+		t.Run(testcase.TestDescription, func(t *testing.T) {
+			assert.Equal(t, testcase.DeferFuncNotNil, (fun != nil))
+			assert.Equal(t, testcase.ConfigNotNil, cfg != nil)
+			if testcase.ConfigNotNil && cfg != nil {
+				assert.True(t, len(cfg.Listeners) > 0)
+				assert.Equal(t, testcase.TLSDisable, cfg.Listeners[0].TLSDisable)
+			}
+			assert.Equal(t, testcase.CertPathEmpty, len(certPath) == 0)
+			if testcase.ErrNotNil {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
+			}
+		})
 	}
 }

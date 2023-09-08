@@ -5,6 +5,7 @@ package audit
 
 import (
 	"errors"
+	"reflect"
 	"strings"
 	"time"
 )
@@ -150,9 +151,13 @@ func WithHMACAccessor(h bool) Option {
 }
 
 // WithHeaderFormatter provides an Option to supply a HeaderFormatter.
+// If the HeaderFormatter interface supplied is nil (type or value), the option will not be applied.
 func WithHeaderFormatter(f HeaderFormatter) Option {
 	return func(o *options) error {
-		o.withHeaderFormatter = f
+		if f != nil && !reflect.ValueOf(f).IsNil() {
+			o.withHeaderFormatter = f
+		}
+
 		return nil
 	}
 }

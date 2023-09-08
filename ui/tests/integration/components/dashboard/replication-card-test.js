@@ -24,6 +24,7 @@ module('Integration | Component | dashboard/replication-card', function (hooks) 
       performance: {
         clusterId: 'abc-1',
         state: 'running',
+        isPrimary: true,
       },
     };
     this.version = {
@@ -37,19 +38,21 @@ module('Integration | Component | dashboard/replication-card', function (hooks) 
   test('it should display replication information if both dr and performance replication are enabled as features', async function (assert) {
     await render(
       hbs`
-        <Dashboard::ReplicationCard 
-          @replication={{this.replication}} 
-          @version={{this.version}} 
-          @updatedAt={{this.updatedAt}} 
+        <Dashboard::ReplicationCard
+          @replication={{this.replication}}
+          @version={{this.version}}
+          @updatedAt={{this.updatedAt}}
           @refresh={{this.refresh}} />
           `
     );
     assert.dom(SELECTORS.getReplicationTitle('dr-perf', 'DR primary')).hasText('DR primary');
     assert.dom(SELECTORS.getStateTooltipTitle('dr-perf', 'DR primary')).hasText('running');
     assert.dom(SELECTORS.getStateTooltipIcon('dr-perf', 'DR primary', 'check-circle')).exists();
-    assert.dom(SELECTORS.getReplicationTitle('dr-perf', 'Perf primary')).hasText('Perf primary');
-    assert.dom(SELECTORS.getStateTooltipTitle('dr-perf', 'Perf primary')).hasText('running');
-    assert.dom(SELECTORS.getStateTooltipIcon('dr-perf', 'Perf primary', 'check-circle')).exists();
+    assert
+      .dom(SELECTORS.getReplicationTitle('dr-perf', 'Performance primary'))
+      .hasText('Performance primary');
+    assert.dom(SELECTORS.getStateTooltipTitle('dr-perf', 'Performance primary')).hasText('running');
+    assert.dom(SELECTORS.getStateTooltipIcon('dr-perf', 'Performance primary', 'check-circle')).exists();
   });
   test('it should display replication information if both dr and performance replication are enabled as features and only dr is setup', async function (assert) {
     this.replication = {
@@ -59,14 +62,15 @@ module('Integration | Component | dashboard/replication-card', function (hooks) 
       },
       performance: {
         clusterId: '',
+        isPrimary: true,
       },
     };
     await render(
       hbs`
-        <Dashboard::ReplicationCard 
-          @replication={{this.replication}} 
-          @version={{this.version}} 
-          @updatedAt={{this.updatedAt}} 
+        <Dashboard::ReplicationCard
+          @replication={{this.replication}}
+          @version={{this.version}}
+          @updatedAt={{this.updatedAt}}
           @refresh={{this.refresh}} />
           `
     );
@@ -77,12 +81,14 @@ module('Integration | Component | dashboard/replication-card', function (hooks) 
       .dom(SELECTORS.getStateTooltipIcon('dr-perf', 'DR primary', 'check-circle'))
       .hasClass('has-text-success');
 
-    assert.dom(SELECTORS.getReplicationTitle('dr-perf', 'Perf primary')).hasText('Perf primary');
-
-    assert.dom(SELECTORS.getStateTooltipTitle('dr-perf', 'Perf primary')).hasText('not set up');
-    assert.dom(SELECTORS.getStateTooltipIcon('dr-perf', 'Perf primary', 'x-circle')).exists();
     assert
-      .dom(SELECTORS.getStateTooltipIcon('dr-perf', 'Perf primary', 'x-circle'))
+      .dom(SELECTORS.getReplicationTitle('dr-perf', 'Performance primary'))
+      .hasText('Performance primary');
+
+    assert.dom(SELECTORS.getStateTooltipTitle('dr-perf', 'Performance primary')).hasText('not set up');
+    assert.dom(SELECTORS.getStateTooltipIcon('dr-perf', 'Performance primary', 'x-circle')).exists();
+    assert
+      .dom(SELECTORS.getStateTooltipIcon('dr-perf', 'Performance primary', 'x-circle'))
       .hasClass('has-text-danger');
   });
 
@@ -100,10 +106,10 @@ module('Integration | Component | dashboard/replication-card', function (hooks) 
     };
     await render(
       hbs`
-        <Dashboard::ReplicationCard 
-          @replication={{this.replication}} 
-          @version={{this.version}} 
-          @updatedAt={{this.updatedAt}} 
+        <Dashboard::ReplicationCard
+          @replication={{this.replication}}
+          @version={{this.version}}
+          @updatedAt={{this.updatedAt}}
           @refresh={{this.refresh}} />
           `
     );
@@ -126,14 +132,15 @@ module('Integration | Component | dashboard/replication-card', function (hooks) 
       performance: {
         clusterId: 'def',
         state: 'shutdown',
+        isPrimary: true,
       },
     };
     await render(
       hbs`
-        <Dashboard::ReplicationCard 
-          @replication={{this.replication}} 
-          @version={{this.version}} 
-          @updatedAt={{this.updatedAt}} 
+        <Dashboard::ReplicationCard
+          @replication={{this.replication}}
+          @version={{this.version}}
+          @updatedAt={{this.updatedAt}}
           @refresh={{this.refresh}} />
           `
     );
@@ -144,12 +151,63 @@ module('Integration | Component | dashboard/replication-card', function (hooks) 
       .dom(SELECTORS.getStateTooltipIcon('dr-perf', 'DR primary', 'x-square'))
       .hasClass('has-text-danger');
 
-    assert.dom(SELECTORS.getReplicationTitle('dr-perf', 'Perf primary')).hasText('Perf primary');
-    assert.dom(SELECTORS.getStateTooltipTitle('dr-perf', 'Perf primary')).hasText('shutdown');
-    assert.dom(SELECTORS.getStateTooltipIcon('dr-perf', 'Perf primary', 'x-circle')).exists();
     assert
-      .dom(SELECTORS.getStateTooltipIcon('dr-perf', 'Perf primary', 'x-circle'))
+      .dom(SELECTORS.getReplicationTitle('dr-perf', 'Performance primary'))
+      .hasText('Performance primary');
+    assert.dom(SELECTORS.getStateTooltipTitle('dr-perf', 'Performance primary')).hasText('shutdown');
+    assert.dom(SELECTORS.getStateTooltipIcon('dr-perf', 'Performance primary', 'x-circle')).exists();
+    assert
+      .dom(SELECTORS.getStateTooltipIcon('dr-perf', 'Performance primary', 'x-circle'))
       .hasClass('has-text-danger');
+  });
+
+  test('it should show correct performance titles if primary vs secondary', async function (assert) {
+    this.replication = {
+      dr: {
+        clusterId: 'abc',
+        state: 'running',
+      },
+      performance: {
+        clusterId: 'def',
+        isPrimary: true,
+      },
+    };
+    await render(
+      hbs`
+        <Dashboard::ReplicationCard
+          @replication={{this.replication}}
+          @version={{this.version}}
+          @updatedAt={{this.updatedAt}}
+          @refresh={{this.refresh}} />
+          `
+    );
+    assert.dom(SELECTORS.getReplicationTitle('dr-perf', 'DR primary')).hasText('DR primary');
+    assert
+      .dom(SELECTORS.getReplicationTitle('dr-perf', 'Performance primary'))
+      .hasText('Performance primary');
+
+    this.replication = {
+      dr: {
+        clusterId: 'abc',
+        state: 'running',
+      },
+      performance: {
+        clusterId: 'def',
+        isPrimary: false,
+      },
+    };
+    await render(
+      hbs`
+          <Dashboard::ReplicationCard
+            @replication={{this.replication}}
+            @version={{this.version}}
+            @updatedAt={{this.updatedAt}}
+            @refresh={{this.refresh}} />
+            `
+    );
+    assert
+      .dom(SELECTORS.getReplicationTitle('dr-perf', 'Performance secondary'))
+      .hasText('Performance secondary');
   });
 
   test('it should show empty state', async function (assert) {
@@ -163,10 +221,10 @@ module('Integration | Component | dashboard/replication-card', function (hooks) 
     };
     await render(
       hbs`
-        <Dashboard::ReplicationCard 
-          @replication={{this.replication}} 
-          @version={{this.version}} 
-          @updatedAt={{this.updatedAt}} 
+        <Dashboard::ReplicationCard
+          @replication={{this.replication}}
+          @version={{this.version}}
+          @updatedAt={{this.updatedAt}}
           @refresh={{this.refresh}} />
           `
     );

@@ -9,18 +9,21 @@ import { encodePath } from 'vault/utils/path-encoding-helpers';
 
 // CUSTOM ACTIONS RELEVANT TO KV-V2
 
-export const writeSecret = async function (backend, path, key, val) {
-  await visit(`vault/secrets/${backend}/kv/create`);
+export const writeSecret = async function (backend, path, key, val, ns = null) {
+  const url = `vault/secrets/${backend}/kv/create`;
+  ns ? await visit(url + `?namespace=${ns}`) : await visit(url);
   await fillIn(FORM.inputByAttr('path'), path);
   await fillIn(FORM.keyInput(), key);
   await fillIn(FORM.maskedValueInput(), val);
   return click(FORM.saveBtn);
 };
 
-export const writeVersionedSecret = async function (backend, path, key, val, version = 2) {
-  await writeSecret(backend, path, 'key-1', 'val-1');
+export const writeVersionedSecret = async function (backend, path, key, val, version = 2, ns = null) {
+  await writeSecret(backend, path, 'key-1', 'val-1', ns);
   for (let currentVersion = 2; currentVersion <= version; currentVersion++) {
-    await visit(`/vault/secrets/${backend}/kv/${encodeURIComponent(path)}/details/edit`);
+    const url = `/vault/secrets/${backend}/kv/${encodeURIComponent(path)}/details/edit`;
+    ns ? await visit(url + `?namespace=${ns}`) : await visit(url);
+
     if (currentVersion === version) {
       await fillIn(FORM.keyInput(), key);
       await fillIn(FORM.maskedValueInput(), val);

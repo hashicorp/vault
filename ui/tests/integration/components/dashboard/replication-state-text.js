@@ -50,11 +50,13 @@ module('Integration | Component | dashboard/replication-state-text', function (h
           @clusterStates={{this.clusterStates}} />
           `
     );
-    assert.dom(SELECTORS.getReplicationTitle('dr-perf', 'Perf primary')).hasText('Perf primary');
-    assert.dom(SELECTORS.getStateTooltipTitle('dr-perf', 'Perf primary')).hasText('running');
-    assert.dom(SELECTORS.getStateTooltipIcon('dr-perf', 'Perf primary', 'x-circle')).exists();
     assert
-      .dom(SELECTORS.getStateTooltipIcon('dr-perf', 'Perf primary', 'x-circle'))
+      .dom(SELECTORS.getReplicationTitle('dr-perf', 'Performance primary'))
+      .hasText('Performance primary');
+    assert.dom(SELECTORS.getStateTooltipTitle('dr-perf', 'Performance primary')).hasText('running');
+    assert.dom(SELECTORS.getStateTooltipIcon('dr-perf', 'Performance primary', 'x-circle')).exists();
+    assert
+      .dom(SELECTORS.getStateTooltipIcon('dr-perf', 'Performance primary', 'x-circle'))
       .hasClass('has-text-danger');
   });
 });

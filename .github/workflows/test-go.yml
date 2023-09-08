@@ -304,7 +304,11 @@ jobs:
           # shellcheck disable=SC2193 # can get false positive for this comparision
           if [[  "${{ github.base_ref }}" == release/* ]] || [[  -z "${{ github.base_ref }}" && "${{ github.ref_name }}" == release/* ]]
           then
-           RERUN_FAILS="--rerun-fails"
+            # TODO remove this extra condition once 1.15 is about to released GA
+            if [[  "${{ github.base_ref }}" != release/1.15* ]] || [[  -z "${{ github.base_ref }}" && "${{ github.ref_name }}" != release/1.15* ]]
+            then
+              RERUN_FAILS="--rerun-fails"
+            fi
           fi
 
           # shellcheck disable=SC2086 # can't quote RERUN_FAILS
