@@ -35,7 +35,12 @@ on:
       web-ui-cache-key:
         type: string
         required: true
-
+      vault-base-version:
+        type: string
+        required: true
+      vault-prerelease-version:
+        type: string
+        required: true
 jobs:
   build:
     runs-on: custom-linux-xl-vault-latest
@@ -55,15 +60,18 @@ jobs:
           key: ${{ inputs.web-ui-cache-key }}
       - name: Build Vault
         env:
+          GO_TAGS: ${{ inputs.go-tags }}
           CGO_ENABLED: ${{ inputs.cgo-enabled }}
           GOARCH: ${{ inputs.goarch }}
           GOOS: ${{ inputs.goos }}
-          GO_TAGS: ${{ inputs.go-tags }}
-        run: make ci-build
+          VERSION: ${{ inputs.vault-version }}
+        run:
+            make ci-build
       - name: Determine artifact basename
         env:
           GOARCH: ${{ inputs.goarch }}
           GOOS: ${{ inputs.goos }}
+          VERSION: ${{ inputs.vault-version }}
         run: echo "ARTIFACT_BASENAME=$(make ci-get-artifact-basename)" >> "$GITHUB_ENV"
       - name: Bundle Vault
         env:

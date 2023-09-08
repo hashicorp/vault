@@ -21,6 +21,7 @@ import (
 	"github.com/hashicorp/vault/plugins/database/postgresql"
 	v5 "github.com/hashicorp/vault/sdk/database/dbplugin/v5"
 	"github.com/hashicorp/vault/sdk/helper/consts"
+	"github.com/hashicorp/vault/sdk/helper/pluginruntimeutil"
 	"github.com/hashicorp/vault/sdk/helper/pluginutil"
 	backendplugin "github.com/hashicorp/vault/sdk/plugin"
 
@@ -72,7 +73,7 @@ func TestPluginCatalog_CRUD(t *testing.T) {
 	}
 
 	// Set a plugin, test overwriting a builtin plugin
-	file, err := ioutil.TempFile(tempDir, "temp")
+	file, err := os.CreateTemp(tempDir, "temp")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -645,6 +646,151 @@ func TestPluginCatalog_MakeExternalPluginsKey_Comparable(t *testing.T) {
 
 	if keys[0] != keys[1] {
 		t.Fatal("expected equality")
+	}
+}
+
+// TestPluginCatalog_ErrDirectoryNotConfigured ensures we correctly report an
+// error when registering a binary plugin without a directory configured, and
+// always allow registration of container plugins (rejecting on non-Linux happens
+// in the logical system API handler).
+func TestPluginCatalog_ErrDirectoryNotConfigured(t *testing.T) {
+	core, _, _ := TestCoreUnsealed(t)
+	tempDir, err := filepath.EvalSymlinks(t.TempDir())
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	catalog := core.pluginCatalog
+	tests := map[string]func(t *testing.T){
+		"set binary plugin": func(t *testing.T) {
+			file, err := os.CreateTemp(tempDir, "temp")
+			if err != nil {
+				t.Fatal(err)
+			}
+			defer file.Close()
+
+			command := filepath.Base(file.Name())
+			// Should error if directory not set.
+			err = catalog.Set(context.Background(), pluginutil.SetPluginInput{
+				Name:    "binary",
+				Type:    consts.PluginTypeDatabase,
+				Command: command,
+			})
+			dirSet := catalog.directory != ""
+			if dirSet {
+				if err != nil {
+					t.Fatal(err)
+				}
+				p, err := catalog.Get(context.Background(), "binary", consts.PluginTypeDatabase, "")
+				if err != nil {
+					t.Fatal(err)
+				}
+				expectedCommand := filepath.Join(tempDir, command)
+				if p.Command != expectedCommand {
+					t.Fatalf("Expected %s, got %s", expectedCommand, p.Command)
+				}
+			}
+			if !dirSet && err == nil {
+				t.Fatal("expected error without directory set")
+			}
+			// Make sure we can still get builtins too
+			_, err = core.pluginCatalog.Get(context.Background(), "mysql-database-plugin", consts.PluginTypeDatabase, "")
+			if err != nil {
+				t.Fatalf("unexpected error %v", err)
+			}
+		},
+		"set container plugin": func(t *testing.T) {
+			// Should never error.
+			const image = "does-not-exist"
+			err = catalog.Set(context.Background(), pluginutil.SetPluginInput{
+				Name:     "container",
+				Type:     consts.PluginTypeDatabase,
+				OCIImage: image,
+			})
+			if err != nil {
+				t.Fatal(err)
+			}
+			// Check we can get it back ok.
+			p, err := catalog.Get(context.Background(), "container", consts.PluginTypeDatabase, "")
+			if err != nil {
+				t.Fatal(err)
+			}
+			if p.OCIImage != image {
+				t.Fatalf("Expected %s, got %s", image, p.OCIImage)
+			}
+			// Make sure we can still get builtins too
+			_, err = core.pluginCatalog.Get(context.Background(), "mysql-database-plugin", consts.PluginTypeDatabase, "")
+			if err != nil {
+				t.Fatalf("unexpected error %v", err)
+			}
+		},
+	}
+
+	t.Run("directory not set", func(t *testing.T) {
+		for name, test := range tests {
+			t.Run(name, test)
+		}
+	})
+
+	core.pluginCatalog.directory = tempDir
+
+	t.Run("directory set", func(t *testing.T) {
+		for name, test := range tests {
+			t.Run(name, test)
+		}
+	})
+}
+
+// TestRuntimeConfigPopulatedIfSpecified ensures plugins read from the catalog
+// are returned with their container runtime config populated if it was
+// specified.
+func TestRuntimeConfigPopulatedIfSpecified(t *testing.T) {
+	core, _, _ := TestCoreUnsealed(t)
+	const image = "does-not-exist"
+	const runtime = "custom-runtime"
+	err := core.pluginCatalog.Set(context.Background(), pluginutil.SetPluginInput{
+		Name:     "container",
+		Type:     consts.PluginTypeDatabase,
+		OCIImage: image,
+		Runtime:  runtime,
+	})
+	if err == nil {
+		t.Fatal("specified runtime doesn't exist yet, should have failed")
+	}
+
+	const ociRuntime = "some-other-oci-runtime"
+	err = core.pluginRuntimeCatalog.Set(context.Background(), &pluginruntimeutil.PluginRuntimeConfig{
+		Name:       runtime,
+		Type:       consts.PluginRuntimeTypeContainer,
+		OCIRuntime: ociRuntime,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Now setting the plugin with a runtime should succeed.
+	err = core.pluginCatalog.Set(context.Background(), pluginutil.SetPluginInput{
+		Name:     "container",
+		Type:     consts.PluginTypeDatabase,
+		OCIImage: image,
+		Runtime:  runtime,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	p, err := core.pluginCatalog.Get(context.Background(), "container", consts.PluginTypeDatabase, "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if p.Runtime != runtime {
+		t.Errorf("expected %s, got %s", runtime, p.Runtime)
+	}
+	if p.RuntimeConfig == nil {
+		t.Fatal()
+	}
+	if p.RuntimeConfig.OCIRuntime != ociRuntime {
+		t.Errorf("expected %s, got %s", ociRuntime, p.RuntimeConfig.OCIRuntime)
 	}
 }
 
