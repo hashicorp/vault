@@ -23,10 +23,10 @@ import (
 const (
 	// Labels for plugin container ownership
 	labelVaultPID           = "com.hashicorp.vault.pid"
-	labelVaultClusterID     = "com.hashicorp.vault.clusterID"
-	labelVaultPluginName    = "com.hashicorp.vault.pluginName"
-	labelVaultPluginVersion = "com.hashicorp.vault.pluginVersion"
-	labelVaultPluginType    = "com.hashicorp.vault.pluginType"
+	labelVaultClusterID     = "com.hashicorp.vault.cluster.id"
+	labelVaultPluginName    = "com.hashicorp.vault.plugin.name"
+	labelVaultPluginVersion = "com.hashicorp.vault.plugin.version"
+	labelVaultPluginType    = "com.hashicorp.vault.plugin.type"
 )
 
 type PluginClientConfig struct {
