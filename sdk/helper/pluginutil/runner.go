@@ -12,6 +12,7 @@ import (
 	"github.com/hashicorp/go-plugin"
 	"github.com/hashicorp/go-version"
 	"github.com/hashicorp/vault/sdk/helper/consts"
+	prutil "github.com/hashicorp/vault/sdk/helper/pluginruntimeutil"
 	"github.com/hashicorp/vault/sdk/helper/wrapping"
 	"google.golang.org/grpc"
 )
@@ -54,13 +55,15 @@ type PluginRunner struct {
 	Name           string                      `json:"name" structs:"name"`
 	Type           consts.PluginType           `json:"type" structs:"type"`
 	Version        string                      `json:"version" structs:"version"`
-	Command        string                      `json:"command" structs:"command"`
 	OCIImage       string                      `json:"oci_image" structs:"oci_image"`
+	Runtime        string                      `json:"runtime" structs:"runtime"`
+	Command        string                      `json:"command" structs:"command"`
 	Args           []string                    `json:"args" structs:"args"`
 	Env            []string                    `json:"env" structs:"env"`
 	Sha256         []byte                      `json:"sha256" structs:"sha256"`
 	Builtin        bool                        `json:"builtin" structs:"builtin"`
 	BuiltinFactory func() (interface{}, error) `json:"-" structs:"-"`
+	RuntimeConfig  *prutil.PluginRuntimeConfig `json:"-" structs:"-"`
 }
 
 // BinaryReference returns either the OCI image reference if it's a container
@@ -90,6 +93,7 @@ type SetPluginInput struct {
 	Version  string
 	Command  string
 	OCIImage string
+	Runtime  string
 	Args     []string
 	Env      []string
 	Sha256   []byte
@@ -129,6 +133,8 @@ type VersionedPlugin struct {
 	Type              string `json:"type"` // string instead of consts.PluginType so that we get the string form in API responses.
 	Name              string `json:"name"`
 	Version           string `json:"version"`
+	OCIImage          string `json:"oci_image,omitempty"`
+	Runtime           string `json:"runtime,omitempty"`
 	SHA256            string `json:"sha256,omitempty"`
 	Builtin           bool   `json:"builtin"`
 	DeprecationStatus string `json:"deprecation_status,omitempty"`

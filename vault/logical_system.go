@@ -467,6 +467,12 @@ func (b *SystemBackend) handlePluginCatalogUntypedList(ctx context.Context, _ *l
 				"version": p.Version,
 				"builtin": p.Builtin,
 			}
+			if p.OCIImage != "" {
+				entry["oci_image"] = p.OCIImage
+			}
+			if p.Runtime != "" {
+				entry["runtime"] = p.Runtime
+			}
 			if p.SHA256 != "" {
 				entry["sha256"] = p.SHA256
 			}
@@ -544,8 +550,18 @@ func (b *SystemBackend) handlePluginCatalogUpdate(ctx context.Context, _ *logica
 			return nil, err
 		}
 	}
-	if ociImage != "" && runtime.GOOS != "linux" {
-		return logical.ErrorResponse("specifying oci_image is currently only supported on Linux"), nil
+
+	pluginRuntime := d.Get("runtime").(string)
+	if ociImage != "" {
+		if runtime.GOOS != "linux" {
+			return logical.ErrorResponse("specifying oci_image is currently only supported on Linux"), nil
+		}
+		if pluginRuntime != "" {
+			_, err := b.Core.pluginRuntimeCatalog.Get(ctx, pluginRuntime, consts.PluginRuntimeTypeContainer)
+			if err != nil {
+				return logical.ErrorResponse("specified plugin runtime %q, but failed to retrieve config: %w", pluginRuntime, err), nil
+			}
+		}
 	}
 
 	// For backwards compatibility, also accept args as part of command. Don't
@@ -574,8 +590,9 @@ func (b *SystemBackend) handlePluginCatalogUpdate(ctx context.Context, _ *logica
 		Name:     pluginName,
 		Type:     pluginType,
 		Version:  pluginVersion,
-		Command:  command,
 		OCIImage: ociImage,
+		Runtime:  pluginRuntime,
+		Command:  command,
 		Args:     args,
 		Env:      env,
 		Sha256:   sha256Bytes,
@@ -650,6 +667,10 @@ func (b *SystemBackend) handlePluginCatalogRead(ctx context.Context, _ *logical.
 
 	if plugin.OCIImage != "" {
 		data["oci_image"] = plugin.OCIImage
+	}
+
+	if plugin.Runtime != "" {
+		data["runtime"] = plugin.Runtime
 	}
 
 	return &logical.Response{
@@ -813,6 +834,15 @@ func (b *SystemBackend) handlePluginRuntimeCatalogDelete(ctx context.Context, _ 
 	runtimeType, err := consts.ParsePluginRuntimeType(runtimeTypeStr)
 	if err != nil {
 		return logical.ErrorResponse(err.Error()), nil
+	}
+
+	plugins, err := b.Core.pluginCatalog.ListPluginsWithRuntime(ctx, runtimeName)
+	if err != nil {
+		return nil, err
+	}
+
+	if len(plugins) != 0 {
+		return logical.ErrorResponse("unable to delete %q runtime. Registered plugins=%v are referencing it.", runtimeName, plugins), nil
 	}
 
 	err = b.Core.pluginRuntimeCatalog.Delete(ctx, runtimeName, runtimeType)
@@ -6121,6 +6151,10 @@ Each entry is of the form "key=value".`,
 	"plugin-catalog_oci_image": {
 		`The name of the OCI image to be run, without the tag or SHA256.
 Must already be present on the machine.`,
+		"",
+	},
+	"plugin-catalog_runtime": {
+		`The Vault plugin runtime to use when running the plugin.`,
 		"",
 	},
 	"plugin-runtime-catalog": {
