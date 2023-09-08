@@ -7,6 +7,7 @@ import (
 	"context"
 	"encoding/hex"
 	"fmt"
+	"os/exec"
 	"strings"
 	"testing"
 
@@ -56,6 +57,9 @@ func TestExternalPluginInContainer_MountAndUnmount(t *testing.T) {
 			c, plugin := testClusterWithContainerPlugin(t, tc.pluginType, "v1.0.0")
 
 			t.Run("default", func(t *testing.T) {
+				if _, err := exec.LookPath("runsc"); err != nil {
+					t.Skip("Skipping test as runsc not found on path")
+				}
 				mountAndUnmountContainerPlugin_WithRuntime(t, c, plugin, "")
 			})
 
@@ -64,6 +68,9 @@ func TestExternalPluginInContainer_MountAndUnmount(t *testing.T) {
 			})
 
 			t.Run("runsc", func(t *testing.T) {
+				if _, err := exec.LookPath("runsc"); err != nil {
+					t.Skip("Skipping test as runsc not found on path")
+				}
 				mountAndUnmountContainerPlugin_WithRuntime(t, c, plugin, "runsc")
 			})
 		})
@@ -119,6 +126,9 @@ func TestExternalPluginInContainer_GetBackendTypeVersion(t *testing.T) {
 			c, plugin := testClusterWithContainerPlugin(t, tc.pluginType, tc.setRunningVersion)
 			for _, ociRuntime := range []string{"runc", "runsc"} {
 				t.Run(ociRuntime, func(t *testing.T) {
+					if _, err := exec.LookPath(ociRuntime); err != nil {
+						t.Skipf("Skipping test as %s not found on path", ociRuntime)
+					}
 					shaBytes, _ := hex.DecodeString(plugin.ImageSha256)
 					entry := &pluginutil.PluginRunner{
 						Name:     plugin.Name,
