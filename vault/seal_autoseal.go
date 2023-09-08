@@ -66,7 +66,7 @@ func NewAutoSeal(lowLevel seal.Access) *autoSeal {
 func (d *autoSeal) Healthy() bool {
 	d.hcLock.RLock()
 	defer d.hcLock.RUnlock()
-	return d.allSealsHealthy
+	return d.Access.AllSealWrappersHealthy()
 }
 
 func (d *autoSeal) SealWrapable() bool {
@@ -469,6 +469,8 @@ func (d *autoSeal) StartHealthCheck() {
 		check := func(now time.Time) {
 			ctx, cancel := context.WithTimeout(ctx, seal.HealthTestTimeout)
 			defer cancel()
+
+			d.logger.Trace("performing a seal health check")
 
 			allHealthy := true
 			allUnhealthy := true

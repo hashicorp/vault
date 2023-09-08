@@ -6,7 +6,6 @@ import { waitFor } from '@ember/test-waiters';
 import errorMessage from 'vault/utils/error-message';
 
 import type FlashMessageService from 'vault/services/flash-messages';
-import type RouterService from '@ember/routing/router-service';
 import type AuthService from 'vault/services/auth';
 import type LdapLibraryModel from 'vault/models/ldap/library';
 import type { LdapLibraryAccountStatus } from 'vault/adapters/ldap/library';
@@ -15,11 +14,11 @@ interface Args {
   libraries: Array<LdapLibraryModel>;
   statuses: Array<LdapLibraryAccountStatus>;
   showLibraryColumn: boolean;
+  onCheckInSuccess: CallableFunction;
 }
 
 export default class LdapAccountsCheckedOutComponent extends Component<Args> {
   @service declare readonly flashMessages: FlashMessageService;
-  @service declare readonly router: RouterService;
   @service declare readonly auth: AuthService;
 
   @tracked selectedStatus: LdapLibraryAccountStatus | undefined;
@@ -62,8 +61,7 @@ export default class LdapAccountsCheckedOutComponent extends Component<Args> {
       const libraryModel = this.findLibrary(library);
       yield libraryModel.checkInAccount(account);
       this.flashMessages.success(`Successfully checked in the account ${account}.`);
-      // transitioning to the current route to trigger the model hook so we can fetch the updated status
-      this.router.transitionTo('vault.cluster.secrets.backend.ldap.libraries.library.details.accounts');
+      this.args.onCheckInSuccess();
     } catch (error) {
       this.selectedStatus = undefined;
       this.flashMessages.danger(`Error checking in the account ${account}. \n ${errorMessage(error)}`);

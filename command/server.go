@@ -1176,6 +1176,12 @@ func (c *ServerCommand) Run(args []string) int {
 		return 1
 	}
 
+	for _, experiment := range config.Experiments {
+		if experiments.IsUnused(experiment) {
+			c.UI.Warn(fmt.Sprintf("WARNING! Experiment %s is no longer used", experiment))
+		}
+	}
+
 	// If mlockall(2) isn't supported, show a warning. We disable this in dev
 	// because it is quite scary to see when first using Vault. We also disable
 	// this if the user has explicitly disabled mlock in configuration.
@@ -2690,7 +2696,12 @@ func setSeal(c *ServerCommand, config *server.Config, infoKeys []string, info ma
 	////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 	// Compute seal generation
 
-	sealGenerationInfo, err := c.computeSealGenerationInfo(existingSealGenerationInfo, allSealKmsConfigs, hasPartiallyWrappedPaths)
+	sealHaBetaEnabled, err := server.IsSealHABetaEnabled()
+	if err != nil {
+		return nil, err
+	}
+
+	sealGenerationInfo, err := c.computeSealGenerationInfo(existingSealGenerationInfo, allSealKmsConfigs, hasPartiallyWrappedPaths, sealHaBetaEnabled)
 	if err != nil {
 		return nil, err
 	}
@@ -2705,10 +2716,6 @@ func setSeal(c *ServerCommand, config *server.Config, infoKeys []string, info ma
 			}
 		}
 		return false
-	}
-	sealHaBetaEnabled, err := server.IsSealHABetaEnabled()
-	if err != nil {
-		return nil, err
 	}
 
 	var barrierSeal vault.Seal
@@ -2760,7 +2767,7 @@ func setSeal(c *ServerCommand, config *server.Config, infoKeys []string, info ma
 	}, nil
 }
 
-func (c *ServerCommand) computeSealGenerationInfo(existingSealGenInfo *vaultseal.SealGenerationInfo, sealConfigs []*configutil.KMS, hasPartiallyWrappedPaths bool) (*vaultseal.SealGenerationInfo, error) {
+func (c *ServerCommand) computeSealGenerationInfo(existingSealGenInfo *vaultseal.SealGenerationInfo, sealConfigs []*configutil.KMS, hasPartiallyWrappedPaths bool, sealHaBetaEnabled bool) (*vaultseal.SealGenerationInfo, error) {
 	generation := uint64(1)
 
 	if existingSealGenInfo != nil {
@@ -2778,9 +2785,11 @@ func (c *ServerCommand) computeSealGenerationInfo(existingSealGenInfo *vaultseal
 		Seals:      sealConfigs,
 	}
 
-	err := newSealGenInfo.Validate(existingSealGenInfo, hasPartiallyWrappedPaths)
-	if err != nil {
-		return nil, err
+	if sealHaBetaEnabled {
+		err := newSealGenInfo.Validate(existingSealGenInfo, hasPartiallyWrappedPaths)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	return newSealGenInfo, nil

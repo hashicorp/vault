@@ -127,6 +127,7 @@ func (c *PluginInfoCommand) Run(args []string) int {
 		"builtin":            resp.Builtin,
 		"command":            resp.Command,
 		"oci_image":          resp.OCIImage,
+		"runtime":            resp.Runtime,
 		"name":               resp.Name,
 		"sha256":             resp.SHA256,
 		"deprecation_status": resp.DeprecationStatus,
