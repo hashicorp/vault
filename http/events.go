@@ -302,7 +302,7 @@ func validateSubscribeAccessLoop(core *vault.Core, ctx context.Context, cancel c
 	// if something breaks, default to canceling the websocket
 	defer cancel()
 	for {
-		_, _, err := core.CheckToken(ctx, req, false)
+		_, _, err := core.CheckTokenWithLock(ctx, req, false)
 		if err != nil {
 			core.Logger().Debug("Token does not have access to subscription path in its own namespace, terminating WebSocket subscription", "path", req.Path, "error", err)
 			return
