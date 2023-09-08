@@ -20,6 +20,15 @@ import (
 	"github.com/hashicorp/vault/sdk/helper/pluginruntimeutil"
 )
 
+const (
+	// Labels for plugin container ownership
+	LabelVaultPID           = "com.hashicorp.vault.pid"
+	LabelVaultClusterID     = "com.hashicorp.vault.clusterID"
+	LabelVaultPluginName    = "com.hashicorp.vault.pluginName"
+	LabelVaultPluginVersion = "com.hashicorp.vault.pluginVersion"
+	LabelVaultPluginType    = "com.hashicorp.vault.pluginType"
+)
+
 type PluginClientConfig struct {
 	Name            string
 	PluginType      consts.PluginType
@@ -123,7 +132,10 @@ func (rc runConfig) makeConfig(ctx context.Context) (*plugin.ClientConfig, error
 			Hash:     sha256.New(),
 		}
 	} else {
-		containerCfg := rc.containerConfig(cmd.Env)
+		containerCfg, err := rc.containerConfig(ctx, cmd.Env)
+		if err != nil {
+			return nil, err
+		}
 		clientConfig.SkipHostEnv = true
 		clientConfig.RunnerFunc = containerCfg.NewContainerRunner
 		clientConfig.UnixSocketConfig = &plugin.UnixSocketConfig{
@@ -133,7 +145,11 @@ func (rc runConfig) makeConfig(ctx context.Context) (*plugin.ClientConfig, error
 	return clientConfig, nil
 }
 
-func (rc runConfig) containerConfig(env []string) *plugincontainer.Config {
+func (rc runConfig) containerConfig(ctx context.Context, env []string) (*plugincontainer.Config, error) {
+	clusterID, err := rc.Wrapper.ClusterID(ctx)
+	if err != nil {
+		return nil, err
+	}
 	cfg := &plugincontainer.Config{
 		Image:  rc.image,
 		Tag:    rc.imageTag,
@@ -143,9 +159,15 @@ func (rc runConfig) containerConfig(env []string) *plugincontainer.Config {
 		GroupAdd: os.Getgid(),
 		Runtime:  consts.DefaultContainerPluginOCIRuntime,
 		Labels: map[string]string{
-			"managed-by": "hashicorp.com/vault",
+			"managed-by":            "hashicorp.com/vault",
+			LabelVaultPID:           fmt.Sprintf("%d", os.Getpid()),
+			LabelVaultClusterID:     clusterID,
+			LabelVaultPluginName:    rc.PluginClientConfig.Name,
+			LabelVaultPluginType:    rc.PluginClientConfig.PluginType.String(),
+			LabelVaultPluginVersion: rc.PluginClientConfig.Version,
 		},
 	}
+
 	// Use rc.command and rc.args directly instead of cmd.Path and cmd.Args, as
 	// exec.Command may mutate the provided command.
 	if rc.command != "" {
@@ -163,7 +185,7 @@ func (rc runConfig) containerConfig(env []string) *plugincontainer.Config {
 		}
 	}
 
-	return cfg
+	return cfg, nil
 }
 
 func (rc runConfig) run(ctx context.Context) (*plugin.Client, error) {
@@ -240,6 +262,11 @@ func (r *PluginRunner) RunConfig(ctx context.Context, opts ...RunOpt) (*plugin.C
 		sha256:        r.Sha256,
 		env:           r.Env,
 		runtimeConfig: r.RuntimeConfig,
+		PluginClientConfig: PluginClientConfig{
+			Name:       r.Name,
+			PluginType: r.Type,
+			Version:    r.Version,
+		},
 	}
 
 	for _, opt := range opts {
