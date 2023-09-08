@@ -49,6 +49,8 @@ func TestEventsSubscribe(t *testing.T) {
 	stop := atomic.Bool{}
 
 	const eventType = "abc"
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
 
 	// send some events
 	go func() {
@@ -60,8 +62,6 @@ func TestEventsSubscribe(t *testing.T) {
 			pluginInfo := &logical.EventPluginInfo{
 				MountPath: "secret",
 			}
-			ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-			defer cancel()
 			err = core.Events().SendEventInternal(namespace.RootContext(ctx), namespace.RootNamespace, pluginInfo, logical.EventType(eventType), &logical.EventData{
 				Id:        id,
 				Metadata:  nil,
@@ -79,8 +79,6 @@ func TestEventsSubscribe(t *testing.T) {
 		stop.Store(true)
 	})
 
-	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
-	defer cancel()
 	wsAddr := strings.Replace(addr, "http", "ws", 1)
 
 	testCases := []struct {
