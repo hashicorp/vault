@@ -22,9 +22,21 @@ export default ApplicationAdapter.extend({
     return btoa(String.fromCharCode.apply(null, hashArray));
   },
 
-  async findRecord(store, type, id) {
+  async findRecord(store, type, id, snapshot) {
     let [path, role] = JSON.parse(id);
+
+    // Prepare the path by trimming slashes and encoding
+    path = path.replace(/^\//, '');
+    path = path.replace(/\/$/, '');
     path = encodePath(path);
+
+    // Create the ACS URL based on the cluster the UI is targeting
+    let acs_url = `${window.location.origin}/v1/`;
+    const namespace = snapshot?.adapterOptions.namespace;
+    if (namespace) {
+      acs_url = acs_url.concat(namespace, '/');
+    }
+    acs_url = acs_url.concat('auth/', path, '/callback');
 
     // Create the client verifier and challenge
     const verifier = uuidv4();
@@ -35,6 +47,7 @@ export default ApplicationAdapter.extend({
     // when we poll for the Vault token by its returned token poll ID.
     const response = await this.ajax(`/v1/auth/${path}/sso_service_url`, 'PUT', {
       data: {
+        acs_url,
         role,
         client_challenge: challenge,
         client_type: 'browser',
