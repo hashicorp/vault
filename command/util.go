@@ -6,10 +6,13 @@ package command
 import (
 	"fmt"
 	"io"
+	"net/http"
 	"os"
+	"testing"
 	"time"
 
 	"github.com/fatih/color"
+	"github.com/hashicorp/go-cleanhttp"
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/command/config"
 	"github.com/hashicorp/vault/command/token"
@@ -160,4 +163,41 @@ func getWriterFromUI(ui cli.Ui) io.Writer {
 	default:
 		return os.Stdout
 	}
+}
+
+func mockClient(t *testing.T) (*api.Client, *recordingRoundTripper) {
+	t.Helper()
+
+	config := api.DefaultConfig()
+	httpClient := cleanhttp.DefaultClient()
+	roundTripper := &recordingRoundTripper{}
+	httpClient.Transport = roundTripper
+	config.HttpClient = httpClient
+	client, err := api.NewClient(config)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	return client, roundTripper
+}
+
+var _ http.RoundTripper = (*recordingRoundTripper)(nil)
+
+type recordingRoundTripper struct {
+	path string
+	body []byte
+}
+
+func (r *recordingRoundTripper) RoundTrip(req *http.Request) (*http.Response, error) {
+	r.path = req.URL.Path
+	defer req.Body.Close()
+	body, err := io.ReadAll(req.Body)
+	if err != nil {
+		return nil, err
+	}
+
+	r.body = body
+	return &http.Response{
+		StatusCode: 200,
+	}, nil
 }

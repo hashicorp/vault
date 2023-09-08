@@ -6191,15 +6191,15 @@ This path responds to the following HTTP methods.
 		"",
 	},
 	"plugin-runtime-catalog_cgroup-parent": {
-		"Optional parent cgroup for the container",
+		"Parent cgroup to set for each container. This can be used to control the total resource usage for a group of plugins.",
 		"",
 	},
 	"plugin-runtime-catalog_cpu-nanos": {
-		"The limit of runtime CPU in nanos",
+		"CPU limit to set per container in nanos. Defaults to no limit.",
 		"",
 	},
 	"plugin-runtime-catalog_memory-bytes": {
-		"The limit of runtime memory in bytes",
+		"Memory limit to set per container in bytes. Defaults to no limit.",
 		"",
 	},
 	"leases": {
