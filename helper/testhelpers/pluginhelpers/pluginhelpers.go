@@ -154,6 +154,8 @@ func BuildPluginContainerImage(t testing.T, plugin TestPlugin, pluginDir string)
 	ref := plugin.Name
 	if plugin.Version != "" {
 		ref += ":" + strings.TrimPrefix(plugin.Version, "v")
+	} else {
+		ref += ":latest"
 	}
 	args := []string{"build", "--tag=" + ref, "--build-arg=plugin=" + plugin.FileName, "--file=vault/testdata/Dockerfile", pluginDir}
 	cmd := exec.Command("docker", args...)

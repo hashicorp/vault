@@ -467,6 +467,12 @@ func (b *SystemBackend) handlePluginCatalogUntypedList(ctx context.Context, _ *l
 				"version": p.Version,
 				"builtin": p.Builtin,
 			}
+			if p.OCIImage != "" {
+				entry["oci_image"] = p.OCIImage
+			}
+			if p.Runtime != "" {
+				entry["runtime"] = p.Runtime
+			}
 			if p.SHA256 != "" {
 				entry["sha256"] = p.SHA256
 			}
@@ -544,11 +550,19 @@ func (b *SystemBackend) handlePluginCatalogUpdate(ctx context.Context, _ *logica
 			return nil, err
 		}
 	}
-	if ociImage != "" && runtime.GOOS != "linux" {
-		return logical.ErrorResponse("specifying oci_image is currently only supported on Linux"), nil
-	}
 
 	pluginRuntime := d.Get("runtime").(string)
+	if ociImage != "" {
+		if runtime.GOOS != "linux" {
+			return logical.ErrorResponse("specifying oci_image is currently only supported on Linux"), nil
+		}
+		if pluginRuntime != "" {
+			_, err := b.Core.pluginRuntimeCatalog.Get(ctx, pluginRuntime, consts.PluginRuntimeTypeContainer)
+			if err != nil {
+				return logical.ErrorResponse("specified plugin runtime %q, but failed to retrieve config: %w", pluginRuntime, err), nil
+			}
+		}
+	}
 
 	// For backwards compatibility, also accept args as part of command. Don't
 	// accepts args in both command and args.
@@ -5037,6 +5051,7 @@ func (c *Core) GetSealBackendStatus(ctx context.Context) (*SealBackendStatusResp
 				Healthy: true,
 			},
 		}
+		r.Healthy = true
 	}
 	return &r, nil
 }
@@ -6177,15 +6192,15 @@ This path responds to the following HTTP methods.
 		"",
 	},
 	"plugin-runtime-catalog_cgroup-parent": {
-		"Optional parent cgroup for the container",
+		"Parent cgroup to set for each container. This can be used to control the total resource usage for a group of plugins.",
 		"",
 	},
 	"plugin-runtime-catalog_cpu-nanos": {
-		"The limit of runtime CPU in nanos",
+		"CPU limit to set per container in nanos. Defaults to no limit.",
 		"",
 	},
 	"plugin-runtime-catalog_memory-bytes": {
-		"The limit of runtime memory in bytes",
+		"Memory limit to set per container in bytes. Defaults to no limit.",
 		"",
 	},
 	"leases": {

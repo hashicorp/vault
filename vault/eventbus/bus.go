@@ -17,6 +17,7 @@ import (
 	"github.com/armon/go-metrics"
 	"github.com/hashicorp/eventlogger"
 	"github.com/hashicorp/eventlogger/formatter_filters/cloudevents"
+	"github.com/hashicorp/go-bexpr"
 	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/helper/namespace"
@@ -201,11 +202,15 @@ func NewEventBus(logger hclog.Logger) (*EventBus, error) {
 	}, nil
 }
 
-func (bus *EventBus) Subscribe(ctx context.Context, ns *namespace.Namespace, pattern string) (<-chan *eventlogger.Event, context.CancelFunc, error) {
-	return bus.SubscribeMultipleNamespaces(ctx, []string{strings.Trim(ns.Path, "/")}, pattern)
+// Subscribe subscribes to events in the given namespace matching the event type pattern and after
+// applying the optional go-bexpr filter.
+func (bus *EventBus) Subscribe(ctx context.Context, ns *namespace.Namespace, pattern string, bexprFilter string) (<-chan *eventlogger.Event, context.CancelFunc, error) {
+	return bus.SubscribeMultipleNamespaces(ctx, []string{strings.Trim(ns.Path, "/")}, pattern, bexprFilter)
 }
 
-func (bus *EventBus) SubscribeMultipleNamespaces(ctx context.Context, namespacePathPatterns []string, pattern string) (<-chan *eventlogger.Event, context.CancelFunc, error) {
+// SubscribeMultipleNamespaces subscribes to events in the given namespace matching the event type
+// pattern and after applying the optional go-bexpr filter.
+func (bus *EventBus) SubscribeMultipleNamespaces(ctx context.Context, namespacePathPatterns []string, pattern string, bexprFilter string) (<-chan *eventlogger.Event, context.CancelFunc, error) {
 	// subscriptions are still stored even if the bus has not been started
 	pipelineID, err := uuid.GenerateUUID()
 	if err != nil {
@@ -217,7 +222,10 @@ func (bus *EventBus) SubscribeMultipleNamespaces(ctx context.Context, namespaceP
 		return nil, nil, err
 	}
 
-	filterNode := newFilterNode(namespacePathPatterns, pattern)
+	filterNode, err := newFilterNode(namespacePathPatterns, pattern, bexprFilter)
+	if err != nil {
+		return nil, nil, err
+	}
 	err = bus.broker.RegisterNode(eventlogger.NodeID(filterNodeID), filterNode)
 	if err != nil {
 		return nil, nil, err
@@ -263,7 +271,15 @@ func (bus *EventBus) SetSendTimeout(timeout time.Duration) {
 	bus.timeout = timeout
 }
 
-func newFilterNode(namespacePatterns []string, pattern string) *eventlogger.Filter {
+func newFilterNode(namespacePatterns []string, pattern string, bexprFilter string) (*eventlogger.Filter, error) {
+	var evaluator *bexpr.Evaluator
+	if bexprFilter != "" {
+		var err error
+		evaluator, err = bexpr.CreateEvaluator(bexprFilter)
+		if err != nil {
+			return nil, err
+		}
+	}
 	return &eventlogger.Filter{
 		Predicate: func(e *eventlogger.Event) (bool, error) {
 			eventRecv := e.Payload.(*logical.EventReceived)
@@ -287,9 +303,13 @@ func newFilterNode(namespacePatterns []string, pattern string) *eventlogger.Filt
 				return false, nil
 			}
 
+			// apply go-bexpr filter
+			if evaluator != nil {
+				return evaluator.Evaluate(eventRecv.BexprDatum())
+			}
 			return true, nil
 		},
-	}
+	}, nil
 }
 
 func newAsyncNode(ctx context.Context, logger hclog.Logger) *asyncChanNode {
