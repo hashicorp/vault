@@ -9,11 +9,12 @@ import { click, render } from '@ember/test-helpers';
 import { hbs } from 'ember-cli-htmlbars';
 import sinon from 'sinon';
 import { allEngines, mountableEngines } from 'vault/helpers/mountable-secret-engines';
-import { methods } from 'vault/helpers/mountable-auth-methods';
+import { allMethods, methods } from 'vault/helpers/mountable-auth-methods';
 
 const secretTypes = mountableEngines().map((engine) => engine.type);
 const allSecretTypes = allEngines().map((engine) => engine.type);
 const authTypes = methods().map((auth) => auth.type);
+const allAuthTypes = allMethods().map((auth) => auth.type);
 
 module('Integration | Component | mount-backend/type-form', function (hooks) {
   setupRenderingTest(hooks);
@@ -69,6 +70,13 @@ module('Integration | Component | mount-backend/type-form', function (hooks) {
       assert
         .dom('[data-test-mount-type]')
         .exists({ count: allSecretTypes.length }, 'Renders all secret engines');
+    });
+
+    test('it renders correct items for enterprise auth methods', async function (assert) {
+      await render(hbs`<MountBackend::TypeForm @mountType="secret" @setMountType={{this.setType}} />`);
+      assert
+        .dom('[data-test-mount-type]')
+        .exists({ count: allAuthTypes.length }, 'Renders all secret engines');
     });
   });
 });
