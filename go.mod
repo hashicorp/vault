@@ -59,7 +59,7 @@ require (
 	github.com/favadi/protoc-go-inject-tag v1.4.0
 	github.com/gammazero/workerpool v1.1.3
 	github.com/ghodss/yaml v1.0.1-0.20190212211648-25d852aebe32
-	github.com/go-errors/errors v1.4.2
+	github.com/go-errors/errors v1.5.0
 	github.com/go-git/go-git/v5 v5.7.0
 	github.com/go-jose/go-jose/v3 v3.0.0
 	github.com/go-ldap/ldap/v3 v3.4.4
@@ -142,7 +142,7 @@ require (
 	github.com/hashicorp/vault-plugin-database-redis-elasticache v0.2.3
 	github.com/hashicorp/vault-plugin-database-snowflake v0.9.0
 	github.com/hashicorp/vault-plugin-mock v0.16.1
-	github.com/hashicorp/vault-plugin-secrets-ad v0.16.0
+	github.com/hashicorp/vault-plugin-secrets-ad v0.16.1
 	github.com/hashicorp/vault-plugin-secrets-alicloud v0.15.1
 	github.com/hashicorp/vault-plugin-secrets-azure v0.16.3
 	github.com/hashicorp/vault-plugin-secrets-gcp v0.17.0
