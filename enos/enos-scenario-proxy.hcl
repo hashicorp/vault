@@ -18,32 +18,11 @@ scenario "proxy" {
   ]
 
   locals {
-    backend_tag_key = "VaultStorage"
-    build_tags = {
-      "oss"              = ["ui"]
-      "ent"              = ["ui", "enterprise", "ent"]
-      "ent.fips1402"     = ["ui", "enterprise", "cgo", "hsm", "fips", "fips_140_2", "ent.fips1402"]
-      "ent.hsm"          = ["ui", "enterprise", "cgo", "hsm", "venthsm"]
-      "ent.hsm.fips1402" = ["ui", "enterprise", "cgo", "hsm", "fips", "fips_140_2", "ent.hsm.fips1402"]
-    }
     bundle_path = matrix.artifact_source != "artifactory" ? abspath(var.vault_artifact_path) : null
-    distro_version = {
-      "rhel"   = var.rhel_distro_version
-      "ubuntu" = var.ubuntu_distro_version
-    }
     enos_provider = {
       rhel   = provider.enos.rhel
       ubuntu = provider.enos.ubuntu
     }
-    install_artifactory_artifact = local.bundle_path == null
-    packages                     = ["jq"]
-    tags = merge({
-      "Project Name" : var.project_name
-      "Project" : "Enos",
-      "Environment" : "ci"
-    }, var.tags)
-    vault_license_path = abspath(var.vault_license_path != null ? var.vault_license_path : joinpath(path.root, "./support/vault.hclic"))
-    vault_tag_key      = "Type" // enos_vault_start expects Type as the tag key
   }
 
   step "get_local_metadata" {
@@ -55,7 +34,7 @@ scenario "proxy" {
     module = "build_${matrix.artifact_source}"
 
     variables {
-      build_tags           = var.vault_local_build_tags != null ? var.vault_local_build_tags : local.build_tags[matrix.edition]
+      build_tags           = var.vault_local_build_tags != null ? var.vault_local_build_tags : global.build_tags[matrix.edition]
       bundle_path          = local.bundle_path
       goarch               = matrix.arch
       goos                 = "linux"
@@ -80,7 +59,7 @@ scenario "proxy" {
     module = module.create_vpc
 
     variables {
-      common_tags = local.tags
+      common_tags = global.tags
     }
   }
 
@@ -89,7 +68,7 @@ scenario "proxy" {
     module    = module.read_license
 
     variables {
-      file_name = local.vault_license_path
+      file_name = global.vault_license_path
     }
   }
 
@@ -102,10 +81,10 @@ scenario "proxy" {
     }
 
     variables {
-      ami_id                = step.ec2_info.ami_ids[matrix.arch][matrix.distro][local.distro_version[matrix.distro]]
+      ami_id                = step.ec2_info.ami_ids[matrix.arch][matrix.distro][global.distro_version[matrix.distro]]
       awskms_unseal_key_arn = step.create_vpc.kms_key_arn
-      cluster_tag_key       = local.vault_tag_key
-      common_tags           = local.tags
+      cluster_tag_key       = global.vault_tag_key
+      common_tags           = global.tags
       vpc_id                = step.create_vpc.vpc_id
     }
   }
@@ -129,7 +108,7 @@ scenario "proxy" {
       install_dir              = var.vault_install_dir
       license                  = matrix.edition != "oss" ? step.read_license.license : null
       local_artifact_path      = local.bundle_path
-      packages                 = local.packages
+      packages                 = global.packages
       storage_backend          = "raft"
       target_hosts             = step.create_vault_cluster_targets.hosts
       unseal_method            = "shamir"
