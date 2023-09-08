@@ -11,32 +11,14 @@ on:
       build-artifact-name:
         required: true
         type: string
-      # The base name of the file in ./github/enos-run-matrices that we use to
-      # determine which scenarios to run for the build artifact.
-      #
-      # They are named in the format of:
-      #   $caller_workflow_name-$artifact_source-$vault_edition-$platform-$arch-$packing_type
-      #
-      # Where each are:
-      #   caller_workflow_name: the Github Actions workflow that is calling
-      #     this one
-      #   artifact_source: where we're getting the artifact from. Either
-      #     "github" or "artifactory"
-      #   vault_edition: which edition of vault that we're testing. e.g. "oss"
-      #     or "ent"
-      #   platform: the vault binary target platform, e.g. "linux" or "macos"
-      #   arch: the vault binary target architecture, e.g. "arm64" or "amd64"
-      #   packing_type: how vault binary is packaged, e.g. "zip", "deb", "rpm"
-      #
-      # Examples:
-      #   build-github-oss-linux-amd64-zip
-      matrix-file-name:
+      # The maximum number of scenarios to include in the test sample.
+      sample-max:
+        default: 1
+        type: number
+      # The name of the enos scenario sample that defines compatible scenarios we can
+      # can test with.
+      sample-name:
         required: true
-        type: string
-      # The test group we want to run. This corresponds to the test_group attribute
-      # defined in the enos-run-matrices files.
-      matrix-test-group:
-        default: 0
         type: string
       runs-on:
         # NOTE: The value should be JSON encoded as that's the only way we can
@@ -47,14 +29,7 @@ on:
       ssh-key-name:
         type: string
         default: ${{ github.event.repository.name }}-ci-ssh-key
-      # Which edition of Vault we're using. e.g. "oss", "ent", "ent.hsm.fips1402"
-      vault-edition:
-        required: true
-        type: string
       vault-version:
-        required: true
-        type: string
-      vault-minor-version:
         required: true
         type: string
       # The Git commit SHA used as the revision when building vault
@@ -67,37 +42,34 @@ jobs:
     runs-on: ${{ fromJSON(inputs.runs-on) }}
     outputs:
       build-date: ${{ steps.metadata.outputs.build-date }}
-      matrix: ${{ steps.metadata.outputs.matrix }}
-    env:
-      # Pass the vault edition as VAULT_METADATA so the CI make targets can create
-      # values that consider the edition.
-      VAULT_METADATA: ${{ inputs.vault-edition }}
-      VAULT_VERSION: ${{ inputs.vault-version }}
-      VAULT_MINOR_VERSION: ${{ inputs.vault-minor-version }}
-      # Pass in the matrix and matrix group for filtering
-      MATRIX_FILE: ./.github/enos-run-matrices/${{ inputs.matrix-file-name }}.json
-      MATRIX_TEST_GROUP: ${{ inputs.matrix-test-group }}
+      sample: ${{ steps.metadata.outputs.sample }}
     steps:
       - uses: actions/checkout@c85c95e3d7251135ab7dc9ce3241c5835cc595a9 # v3.5.3
         with:
           ref: ${{ inputs.vault-revision }}
+      - uses: hashicorp/action-setup-enos@v1
+        with:
+          github-token: ${{ secrets.ELEVATED_GITHUB_TOKEN }}
       - id: metadata
         run: |
           echo "build-date=$(make ci-get-date)" >> "$GITHUB_OUTPUT"
-          filtered="$(make ci-filter-matrix)"
-          echo "matrix=$filtered" >> "$GITHUB_OUTPUT"
+          sample="$(enos scenario sample observe ${{ inputs.sample-name }} --chdir ./enos --min 1 --max ${{ inputs.sample-max }} --seed "$(date +%s%N)" --format json | jq -c ".observation.elements")"
+          echo "sample=$sample"
+          echo "sample=$sample" >> "$GITHUB_OUTPUT"
 
-  # Run the Enos test scenarios
+  # Run the Enos test scenario(s)
   run:
     needs: metadata
+    name: run ${{ matrix.scenario.id.filter }}
     strategy:
       fail-fast: false # don't fail as that can skip required cleanup steps for jobs
-      matrix: ${{ fromJson(needs.metadata.outputs.matrix) }}
-    runs-on: ubuntu-latest
+      matrix:
+        include: ${{ fromJSON(needs.metadata.outputs.sample) }}
+    runs-on: ${{ fromJSON(inputs.runs-on) }}
     env:
       GITHUB_TOKEN: ${{ secrets.ELEVATED_GITHUB_TOKEN }}
       # Pass in enos variables
-      ENOS_VAR_aws_region: ${{ matrix.aws_region }}
+      ENOS_VAR_aws_region: ${{ matrix.attributes.aws_region }}
       ENOS_VAR_aws_ssh_keypair_name: ${{ inputs.ssh-key-name }}
       ENOS_VAR_aws_ssh_private_key_path: ./support/private_key.pem
       ENOS_VAR_tfc_api_token: ${{ secrets.TF_API_TOKEN }}
@@ -121,7 +93,7 @@ jobs:
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID_CI }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY_CI }}
-          aws-region: ${{ matrix.aws_region }}
+          aws-region: ${{ matrix.attributes.aws_region }}
           role-to-assume: ${{ secrets.AWS_ROLE_ARN_CI }}
           role-skip-session-tagging: true
           role-duration-seconds: 3600
@@ -135,12 +107,12 @@ jobs:
           echo "${{ secrets.SSH_KEY_PRIVATE_CI }}" > "./enos/support/private_key.pem"
           chmod 600 "./enos/support/private_key.pem"
           echo "debug_data_artifact_name=enos-debug-data_$(echo "${{ matrix.scenario }}" | sed -e 's/ /_/g' | sed -e 's/:/=/g')" >> "$GITHUB_OUTPUT"
-      - if: contains(inputs.matrix-file-name, 'github')
+      - if: contains(inputs.sample-name, 'build')
         uses: actions/download-artifact@9bc31d5ccc31df68ecc42ccf4149144866c47d8a # v3.0.2
         with:
           name: ${{ inputs.build-artifact-name }}
           path: ./enos/support/downloads
-      - if: contains(inputs.matrix-file-name, 'ent')
+      - if: contains(inputs.sample-name, 'ent')
         name: Configure Vault license
         run: echo "${{ secrets.VAULT_LICENSE }}" > ./enos/support/vault.hclic || true
       - name: Run Enos scenario
@@ -148,12 +120,11 @@ jobs:
         # Continue once and retry to handle occasional blips when creating
         # infrastructure.
         continue-on-error: true
-        run: enos scenario run --timeout 60m0s --chdir ./enos ${{ matrix.scenario }}
+        run: enos scenario run --timeout 60m0s --chdir ./enos ${{ matrix.scenario.id.filter }}
       - name: Retry Enos scenario if necessary
         id: run_retry
         if: steps.run.outcome == 'failure'
-        continue-on-error: true
-        run: enos scenario run --timeout 60m0s --chdir ./enos ${{ matrix.scenario }}
+        run: enos scenario run --timeout 60m0s --chdir ./enos ${{ matrix.scenario.id.filter }}
       - name: Upload Debug Data
         if: failure()
         uses: actions/upload-artifact@0b7f8abb1508181956e8e162db84b466c27e18ce # v3.1.2
@@ -169,7 +140,7 @@ jobs:
         # With Enos version 0.0.11 the destroy step returns an error if the infrastructure
         # is already destroyed by enos run. So temporarily setting it to continue on error in GHA
         continue-on-error: true
-        run: enos scenario destroy --timeout 60m0s --chdir ./enos ${{ matrix.scenario }}
+        run: enos scenario destroy --timeout 60m0s --chdir ./enos ${{ matrix.scenario.id.filter }}
       - name: Clean up Enos runtime directories
         id: cleanup
         if: ${{ always() }}
@@ -182,7 +153,7 @@ jobs:
       # There is an incoming webhook set up on the "Enos Vault Failure Bot" Slackbot https://api.slack.com/apps/A05E31CH1LG/incoming-webhooks
       - name: Send Slack notification on Enos run failure
         uses: hashicorp/actions-slack-status@v1
-        if: ${{ always() }}
+        if: ${{ always() && ! cancelled() }}
         with:
           failure-message: "An Enos scenario `run` failed. \nTriggering event: `${{ github.event_name }}` \nActor: `${{ github.actor }}`"
           status: ${{ steps.run.outcome }}
@@ -190,7 +161,7 @@ jobs:
       # Send a Slack notification to #feed-vault-enos-failures if the 'run_retry' step fails.
       - name: Send Slack notification on Enos run_retry failure
         uses: hashicorp/actions-slack-status@v1
-        if: ${{ always() }}
+        if: ${{ always() && ! cancelled() }}
         with:
           failure-message: "An Enos scenario `run_retry` failed. \nTriggering event: `${{ github.event_name }}` \nActor: `${{ github.actor }}`"
           status: ${{ steps.run_retry.outcome }}
@@ -198,7 +169,7 @@ jobs:
       # Send a Slack notification to #feed-vault-enos-failures if the 'destroy' step fails.
       - name: Send Slack notification on Enos destroy failure
         uses: hashicorp/actions-slack-status@v1
-        if: ${{ always() }}
+        if: ${{ always() && ! cancelled() }}
         with:
           failure-message: "An Enos scenario `destroy` failed. \nTriggering event: `${{ github.event_name }}` \nActor: `${{ github.actor }}`"
           status: ${{ steps.destroy.outcome }}

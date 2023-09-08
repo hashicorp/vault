@@ -383,6 +383,7 @@ func (c *PluginCatalog) newPluginClient(ctx context.Context, pluginRunner *plugi
 
 	// Multiplexing support will always be false initially, but will be
 	// adjusted once we query from the plugin whether it can multiplex or not
+	var spawnedPlugin bool
 	if !extPlugin.multiplexingSupport || len(extPlugin.connections) == 0 {
 		c.logger.Debug("spawning a new plugin process", "plugin_name", pluginRunner.Name, "id", id)
 		client, err := pluginRunner.RunConfig(ctx,
@@ -398,6 +399,7 @@ func (c *PluginCatalog) newPluginClient(ctx context.Context, pluginRunner *plugi
 			return nil, err
 		}
 
+		spawnedPlugin = true
 		pc.client = client
 	} else {
 		c.logger.Debug("returning existing plugin client for multiplexed plugin", "id", id)
@@ -417,6 +419,11 @@ func (c *PluginCatalog) newPluginClient(ctx context.Context, pluginRunner *plugi
 	// Subsequent calls to this will return the same client.
 	rpcClient, err := pc.client.Client()
 	if err != nil {
+		// Make sure we kill any spawned plugins that didn't make it into our
+		// map of connections.
+		if spawnedPlugin {
+			pc.client.Kill()
+		}
 		return nil, err
 	}
 
@@ -427,6 +434,11 @@ func (c *PluginCatalog) newPluginClient(ctx context.Context, pluginRunner *plugi
 
 	muxed, err := pluginutil.MultiplexingSupported(ctx, clientConn, config.Name)
 	if err != nil {
+		// Make sure we kill any spawned plugins that didn't make it into our
+		// map of connections.
+		if spawnedPlugin {
+			pc.client.Kill()
+		}
 		return nil, err
 	}
 
