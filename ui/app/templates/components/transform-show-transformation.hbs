@@ -42,15 +42,14 @@
     </div>
     <div class="copy-text level">
       {{#let (concat "vault write " this.model.backend "/encode/" this.cliCommand) as |copyEncodeCommand|}}
+        {{! HDS Adoption: Replace with Hds::Copy::Snippet }}
         <code>vault write {{this.model.backend}}/encode/{{this.cliCommand}}</code>
-        <CopyButton
-          class="button is-transparent level-right"
-          @clipboardText={{copyEncodeCommand}}
-          @buttonType="button"
-          @success={{action (set-flash-message "Command copied!")}}
-        >
-          <Icon @name="clipboard-copy" aria-label="Copy" />
-        </CopyButton>
+        <Hds::Copy::Button
+          @text="Copy"
+          @isIconOnly={{true}}
+          @textToCopy={{copyEncodeCommand}}
+          class="hds-copy-button icon-only"
+        />
       {{/let}}
     </div>
   </div>
@@ -64,15 +63,14 @@
     </div>
     <div class="copy-text level">
       {{#let (concat "vault write " this.model.backend "/decode/" this.cliCommand) as |copyDecodeCommand|}}
+        {{! HDS Adoption: Replace with Hds::Copy::Snippet }}
         <code>vault write {{this.model.backend}}/decode/{{this.cliCommand}}</code>
-        <CopyButton
-          class="button is-transparent level-right"
-          @clipboardText={{copyDecodeCommand}}
-          @buttonType="button"
-          @success={{action (set-flash-message "Command copied!")}}
-        >
-          <Icon @name="clipboard-copy" aria-label="Copy" />
-        </CopyButton>
+        <Hds::Copy::Button
+          @text="Copy"
+          @isIconOnly={{true}}
+          @textToCopy={{copyDecodeCommand}}
+          class="hds-copy-button icon-only"
+        />
       {{/let}}
     </div>
   </div>

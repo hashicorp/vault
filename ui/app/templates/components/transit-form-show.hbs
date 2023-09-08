@@ -155,14 +155,13 @@
               <nav class="menu" aria-label="copy public key">
                 <ul class="menu-list">
                   <li class="action">
-                    <CopyButton
-                      @clipboardText={{meta.public_key}}
-                      @class="link button is-transparent"
-                      @buttonType="button"
-                      @success={{action (set-flash-message "Public key copied!")}}
-                    >
-                      Copy Public Key
-                    </CopyButton>
+                    <Hds::Copy::Button
+                      @text="Copy Public Key"
+                      @textToCopy={{meta.public_key}}
+                      @isFullWidth={{true}}
+                      class="hds-copy-button size-7 hidden-icon link is-flex-start"
+                      {{on "click" (action (set-flash-message "Public key copied!"))}}
+                    />
                   </li>
                 </ul>
               </nav>

@@ -22,14 +22,7 @@
   </div>
   <div class="field is-grouped box is-fullwidth is-bottomless">
     <div class="control">
-      <CopyButton
-        @clipboardText={{@sum}}
-        @class="button is-primary"
-        @buttonType="button"
-        @success={{action (set-flash-message "Hashed data copied!")}}
-      >
-        Copy
-      </CopyButton>
+      <Hds::Copy::Button @text="Copy" @textToCopy={{@sum}} class="hds-copy-button is-primary" />
     </div>
     <div class="control">
       <button {{on "click" this.onClear}} type="button" class="button" data-test-tools-back={{true}}>
