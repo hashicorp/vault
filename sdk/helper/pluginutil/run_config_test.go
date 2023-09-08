@@ -441,7 +441,7 @@ func TestContainerConfig(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	myPID := fmt.Sprintf("%d", os.Getpid())
+	myPID := strconv.Itoa(os.Getpid())
 	for name, tc := range map[string]struct {
 		rc       runConfig
 		expected plugincontainer.Config
@@ -485,12 +485,11 @@ func TestContainerConfig(t *testing.T) {
 					fmt.Sprintf("%s=%t", PluginAutoMTLSEnv, true),
 				},
 				Labels: map[string]string{
-					"managed-by":            "hashicorp.com/vault",
-					LabelVaultPID:           myPID,
-					LabelVaultClusterID:     "1234",
-					LabelVaultPluginName:    "some-plugin",
-					LabelVaultPluginType:    "auth",
-					LabelVaultPluginVersion: "v0.1.0",
+					labelVaultPID:           myPID,
+					labelVaultClusterID:     "1234",
+					labelVaultPluginName:    "some-plugin",
+					labelVaultPluginType:    "auth",
+					labelVaultPluginVersion: "v0.1.0",
 				},
 				Runtime:  consts.DefaultContainerPluginOCIRuntime,
 				GroupAdd: os.Getgid(),
@@ -535,12 +534,11 @@ func TestContainerConfig(t *testing.T) {
 					fmt.Sprintf("%s=%t", PluginAutoMTLSEnv, true),
 				},
 				Labels: map[string]string{
-					"managed-by":            "hashicorp.com/vault",
-					LabelVaultPID:           myPID,
-					LabelVaultClusterID:     "1234",
-					LabelVaultPluginName:    "some-plugin",
-					LabelVaultPluginType:    "auth",
-					LabelVaultPluginVersion: "v0.1.0",
+					labelVaultPID:           myPID,
+					labelVaultClusterID:     "1234",
+					labelVaultPluginName:    "some-plugin",
+					labelVaultPluginType:    "auth",
+					labelVaultPluginVersion: "v0.1.0",
 				},
 				Runtime:      "some-oci-runtime",
 				GroupAdd:     os.Getgid(),

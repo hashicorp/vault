@@ -22,11 +22,11 @@ import (
 
 const (
 	// Labels for plugin container ownership
-	LabelVaultPID           = "com.hashicorp.vault.pid"
-	LabelVaultClusterID     = "com.hashicorp.vault.clusterID"
-	LabelVaultPluginName    = "com.hashicorp.vault.pluginName"
-	LabelVaultPluginVersion = "com.hashicorp.vault.pluginVersion"
-	LabelVaultPluginType    = "com.hashicorp.vault.pluginType"
+	labelVaultPID           = "com.hashicorp.vaultPid"
+	labelVaultClusterID     = "com.hashicorp.vault.clusterID"
+	labelVaultPluginName    = "com.hashicorp.vault.pluginName"
+	labelVaultPluginVersion = "com.hashicorp.vault.pluginVersion"
+	labelVaultPluginType    = "com.hashicorp.vault.pluginType"
 )
 
 type PluginClientConfig struct {
@@ -159,12 +159,11 @@ func (rc runConfig) containerConfig(ctx context.Context, env []string) (*pluginc
 		GroupAdd: os.Getgid(),
 		Runtime:  consts.DefaultContainerPluginOCIRuntime,
 		Labels: map[string]string{
-			"managed-by":            "hashicorp.com/vault",
-			LabelVaultPID:           fmt.Sprintf("%d", os.Getpid()),
-			LabelVaultClusterID:     clusterID,
-			LabelVaultPluginName:    rc.PluginClientConfig.Name,
-			LabelVaultPluginType:    rc.PluginClientConfig.PluginType.String(),
-			LabelVaultPluginVersion: rc.PluginClientConfig.Version,
+			labelVaultPID:           strconv.Itoa(os.Getpid()),
+			labelVaultClusterID:     clusterID,
+			labelVaultPluginName:    rc.PluginClientConfig.Name,
+			labelVaultPluginType:    rc.PluginClientConfig.PluginType.String(),
+			labelVaultPluginVersion: rc.PluginClientConfig.Version,
 		},
 	}
 
