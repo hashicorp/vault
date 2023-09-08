@@ -11,11 +11,8 @@ import type LdapRoleModel from 'vault/models/ldap/role';
 import type Controller from '@ember/controller';
 import type Transition from '@ember/routing/transition';
 import type { Breadcrumb } from 'vault/vault/app-types';
+import type AdapterError from 'ember-data/adapter'; // eslint-disable-line ember/use-ember-data-rfc-395-imports
 
-interface LdapRoleCredentialsController extends Controller {
-  breadcrumbs: Array<Breadcrumb>;
-  model: LdapRoleModel;
-}
 export interface LdapStaticRoleCredentials {
   dn: string;
   last_vault_rotation: string;
@@ -35,17 +32,30 @@ export interface LdapDynamicRoleCredentials {
   renewable: boolean;
   type: string;
 }
+interface LdapRoleCredentialsRouteModel {
+  credentials: undefined | LdapStaticRoleCredentials | LdapDynamicRoleCredentials;
+  error: undefined | AdapterError;
+}
+interface LdapRoleCredentialsController extends Controller {
+  breadcrumbs: Array<Breadcrumb>;
+  model: LdapRoleCredentialsRouteModel;
+}
 
 export default class LdapRoleCredentialsRoute extends Route {
   @service declare readonly store: Store;
 
-  model() {
-    const role = this.modelFor('roles.role') as LdapRoleModel;
-    return role.fetchCredentials();
+  async model() {
+    try {
+      const role = this.modelFor('roles.role') as LdapRoleModel;
+      const credentials = await role.fetchCredentials();
+      return { credentials };
+    } catch (error) {
+      return { error };
+    }
   }
   setupController(
     controller: LdapRoleCredentialsController,
-    resolvedModel: LdapStaticRoleCredentials | LdapDynamicRoleCredentials,
+    resolvedModel: LdapRoleCredentialsRouteModel,
     transition: Transition
   ) {
     super.setupController(controller, resolvedModel, transition);

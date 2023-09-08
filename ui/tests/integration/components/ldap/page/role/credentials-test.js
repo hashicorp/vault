@@ -29,7 +29,7 @@ module('Integration | Component | ldap | Page::Role::Credentials', function (hoo
   });
 
   test('it should render page title and breadcrumbs', async function (assert) {
-    this.creds = [];
+    this.creds = {};
     await render(
       hbs`<Page::Role::Credentials @credentials={{this.creds}} @breadcrumbs={{this.breadcrumbs}} />`,
       { owner: this.engine }
@@ -46,6 +46,16 @@ module('Integration | Component | ldap | Page::Role::Credentials', function (hoo
     assert
       .dom('[data-test-breadcrumbs] li:nth-child(4)')
       .containsText('credentials', 'Credentials breadcrumb renders');
+  });
+
+  test('it should render error', async function (assert) {
+    this.error = { errors: ['Failed to fetch credentials for role'] };
+
+    await render(hbs`<Page::Role::Credentials @error={{this.error}} @breadcrumbs={{this.breadcrumbs}} />`, {
+      owner: this.engine,
+    });
+
+    assert.dom('[data-test-page-error-details]').hasText(this.error.errors[0], 'Error renders');
   });
 
   test('it should render fields for static role', async function (assert) {
