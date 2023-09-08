@@ -12,6 +12,8 @@ token which can be used for all future requests.
 
 ## List auth methods
 
+@include 'alerts/restricted-admin.mdx'
+
 This endpoint lists all enabled auth methods.
 
 | Method | Path        |
@@ -81,6 +83,8 @@ $ curl \
 
 ## Enable auth method
 
+@include 'alerts/restricted-admin.mdx'
+
 This endpoint enables a new auth method. After enabling, the auth method can
 be accessed and configured via the auth path specified as part of the URL. This
 auth path will be nested under the `auth` prefix.
@@ -143,13 +147,13 @@ relevant functionality is only supported in Vault Enterprise:
 
 - `local` `(bool: false)` – Specifies if the auth method is local only. Local
   auth methods are not replicated nor (if a secondary) removed by replication.
-  Local auth mounts also generate entities for tokens issued. The entity will 
-  be replicated across clusters and the aliases generated on the local auth 
-  mount will be local to the cluster. If the goal of marking an auth method 
-  as `local` was to comply with GDPR guidelines, then care must be taken to not 
-  set the data pertaining to local auth mount or local auth mount aliases in the 
-  metadata of the associated entity. Metadata related to local auth mount aliases 
-  can be stored as `custom_metadata` on the alias itself which will also be 
+  Local auth mounts also generate entities for tokens issued. The entity will
+  be replicated across clusters and the aliases generated on the local auth
+  mount will be local to the cluster. If the goal of marking an auth method
+  as `local` was to comply with GDPR guidelines, then care must be taken to not
+  set the data pertaining to local auth mount or local auth mount aliases in the
+  metadata of the associated entity. Metadata related to local auth mount aliases
+  can be stored as `custom_metadata` on the alias itself which will also be
   retained locally to the cluster.
 
   ~> ** Warning:** Remember, policies when using replication secondaries are
@@ -181,6 +185,8 @@ $ curl \
 ```
 
 ## Read auth method configuration
+
+@include 'alerts/restricted-admin.mdx'
 
 This endpoints returns the configuration of the auth method at the given path.
 
@@ -231,6 +237,8 @@ $ curl \
 
 ## Disable auth method
 
+@include 'alerts/restricted-admin.mdx'
+
 This endpoint disables the auth method at the given auth path.
 
 - **`sudo` required** – This endpoint requires `sudo` capability in addition to
@@ -256,7 +264,9 @@ $ curl \
 
 ## Read auth method tuning
 
-This endpoint reads the given auth path's configuration. _This endpoint requires
+@include 'alerts/restricted-admin.mdx'
+
+- This endpoint reads the given auth path's configuration. This endpoint requires
 `sudo` capability on the final path, but the same functionality can be achieved
 without `sudo` via `sys/mounts/auth/[auth-path]/tune`._
 
@@ -292,6 +302,8 @@ $ curl \
 ```
 
 ## Tune auth method
+
+@include 'alerts/restricted-admin.mdx'
 
 Tune configuration parameters for a given auth path. _This endpoint
 requires `sudo` capability on the final path, but the same functionality
@@ -349,13 +361,13 @@ can be achieved without `sudo` via `sys/mounts/auth/[auth-path]/tune`._
 - `user_lockout_config` `(map<string|string>: nil)` – Specifies the user lockout configuration
   for the mount. User lockout feature was added in Vault 1.13. These are the possible values:
 
-  - `lockout_threshold` `(string: "")` - Specifies the number of failed login attempts after 
+  - `lockout_threshold` `(string: "")` - Specifies the number of failed login attempts after
     which the user is locked out, specified as a string like "15".
 
-  - `lockout_duration` `(string: "")` - Specifies the duration for which an user will be locked out, 
+  - `lockout_duration` `(string: "")` - Specifies the duration for which an user will be locked out,
     specified as a string duration like "5s" or "30m".
 
-  - `lockout_counter_reset` `(string: "")` - Specifies the duration after which the lockout counter is 
+  - `lockout_counter_reset` `(string: "")` - Specifies the duration after which the lockout counter is
     reset with no failed login attempts, specified as a string duration like "5s" or "30m".
 
   - `lockout_disable` `(bool: false)` - Disables the user lockout feature for this mount

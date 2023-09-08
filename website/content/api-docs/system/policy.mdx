@@ -10,6 +10,8 @@ The `/sys/policy` endpoint is used to manage ACL policies in Vault.
 
 ## List policies
 
+@include 'alerts/restricted-admin.mdx'
+
 This endpoint lists all configured policies.
 
 | Method | Path          |
@@ -33,6 +35,8 @@ $ curl \
 ```
 
 ## Read policy
+
+@include 'alerts/restricted-admin.mdx'
 
 This endpoint retrieve the policy body for the named policy.
 
@@ -63,6 +67,8 @@ $ curl \
 ```
 
 ## Create/Update policy
+
+@include 'alerts/restricted-admin.mdx'
 
 This endpoint adds a new or updates an existing policy. Once a policy is
 updated, it takes effect immediately to all associated users.
@@ -97,6 +103,8 @@ $ curl \
 ```
 
 ## Delete policy
+
+@include 'alerts/restricted-admin.mdx'
 
 This endpoint deletes the policy with the given name. This will immediately
 affect all users associated with this policy.
