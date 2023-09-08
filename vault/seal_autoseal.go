@@ -66,7 +66,7 @@ func NewAutoSeal(lowLevel seal.Access) *autoSeal {
 func (d *autoSeal) Healthy() bool {
 	d.hcLock.RLock()
 	defer d.hcLock.RUnlock()
-	return d.allSealsHealthy
+	return d.Access.AllSealWrappersHealthy()
 }
 
 func (d *autoSeal) SealWrapable() bool {

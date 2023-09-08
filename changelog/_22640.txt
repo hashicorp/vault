@@ -1,0 +1,3 @@
+```release-note:feature
+ui: Add support for SAML login flow
+```

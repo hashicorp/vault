@@ -18,6 +18,8 @@ type PluginRuntimeType uint32
 
 // This is a list of PluginRuntimeTypes used by Vault.
 const (
+	DefaultContainerPluginOCIRuntime = "runsc"
+
 	PluginRuntimeTypeUnsupported PluginRuntimeType = iota
 	PluginRuntimeTypeContainer
 )

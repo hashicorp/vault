@@ -171,8 +171,8 @@ github.com/hashicorp/go-kms-wrapping/v2 v2.0.8/go.mod h1:qTCjxGig/kjuj3hk1z8pOUr
 github.com/hashicorp/go-multierror v1.0.0/go.mod h1:dHtQlpGsu+cZNNAkkCN/P3hoUDHhCYQXV3UM06sGGrk=
 github.com/hashicorp/go-multierror v1.1.1 h1:H5DkEtf6CXdFp0N0Em5UCwQpXMWke8IA0+lD48awMYo=
 github.com/hashicorp/go-multierror v1.1.1/go.mod h1:iw975J/qwKPdAO1clOe2L8331t/9/fmwbPZ6JB6eMoM=
-github.com/hashicorp/go-plugin v1.5.0 h1:g6Lj3USwF5LaB8HlvCxPjN2X4nFE08ko2BJNVpl7TIE=
-github.com/hashicorp/go-plugin v1.5.0/go.mod h1:w1sAEES3g3PuV/RzUrgow20W2uErMly84hhD3um1WL4=
+github.com/hashicorp/go-plugin v1.5.1 h1:oGm7cWBaYIp3lJpx1RUEfLWophprE2EV/KUeqBYo+6k=
+github.com/hashicorp/go-plugin v1.5.1/go.mod h1:w1sAEES3g3PuV/RzUrgow20W2uErMly84hhD3um1WL4=
 github.com/hashicorp/go-retryablehttp v0.5.3/go.mod h1:9B5zBasrRhHXnJnui7y6sL7es7NDiJgTc6Er0maI1Xs=
 github.com/hashicorp/go-retryablehttp v0.7.1 h1:sUiuQAnLlbvmExtFQs72iFW/HXeUn8Z1aJLQ4LJJbTQ=
 github.com/hashicorp/go-retryablehttp v0.7.1/go.mod h1:vAew36LZh98gCBJNLH42IQ1ER/9wtLZZ8meHqQvEYWY=
@@ -187,8 +187,8 @@ github.com/hashicorp/go-secure-stdlib/parseutil v0.1.7 h1:UpiO20jno/eV1eVZcxqWnU
 github.com/hashicorp/go-secure-stdlib/parseutil v0.1.7/go.mod h1:QmrqtbKuxxSWTN3ETMPuB+VtEiBJ/A9XhoYGv8E1uD8=
 github.com/hashicorp/go-secure-stdlib/password v0.1.1 h1:6JzmBqXprakgFEHwBgdchsjaA9x3GyjdI568bXKxa60=
 github.com/hashicorp/go-secure-stdlib/password v0.1.1/go.mod h1:9hH302QllNwu1o2TGYtSk8I8kTAN0ca1EHpwhm5Mmzo=
-github.com/hashicorp/go-secure-stdlib/plugincontainer v0.1.1 h1:1F0n5stk5uz4yIw2elN3k6bGbIv95OQaJVR2sVQ1kk0=
-github.com/hashicorp/go-secure-stdlib/plugincontainer v0.1.1/go.mod h1:kRpzC4wHYXc2+sjXA9vuKawXYs0x0d0HuqqbaW1fj1w=
+github.com/hashicorp/go-secure-stdlib/plugincontainer v0.2.0 h1:1jd8y6HKfDED6vdsXFRM9SpFQNfhBEIHOC41GyILGyY=
+github.com/hashicorp/go-secure-stdlib/plugincontainer v0.2.0/go.mod h1:Cv387jRKKbetAp5AWK4zL7UxdeBeDTgUJOnmS4T/4I8=
 github.com/hashicorp/go-secure-stdlib/strutil v0.1.1/go.mod h1:gKOamz3EwoIoJq7mlMIRBpVTAUn8qPCrEclOKKWhD3U=
 github.com/hashicorp/go-secure-stdlib/strutil v0.1.2 h1:kes8mmyCpxJsI7FTwtzRqEy9CdjCtrXrXGuOpxEA7Ts=
 github.com/hashicorp/go-secure-stdlib/strutil v0.1.2/go.mod h1:Gou2R9+il93BqX25LAKCLuM+y9U2T4hlwvT1yprcna4=
