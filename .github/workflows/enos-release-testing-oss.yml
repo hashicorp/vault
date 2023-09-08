@@ -17,28 +17,23 @@ jobs:
     if: ${{ startsWith(github.event.client_payload.payload.branch, 'release/') }}
     runs-on: ubuntu-latest
     outputs:
-      matrix-test-group: ${{ steps.get-metadata.outputs.matrix-test-group }}
       vault-revision: ${{ steps.get-metadata.outputs.vault-revision }}
       vault-version: ${{ steps.set-product-version.outputs.product-version }}
-      vault-base-version: ${{ steps.set-product-version.outputs.base-product-version }}
-      vault-prerelease-version: ${{ steps.set-product-version.outputs.prerelease-product-version }}
-      vault-minor-version: ${{ steps.set-product-version.outputs.minor-product-version }}
+      vault-version-package: ${{ steps.get-metadata.outputs.vault-version-package }}
     steps:
       - uses: actions/checkout@c85c95e3d7251135ab7dc9ce3241c5835cc595a9 # v3.5.3
         with:
           # Check out the repository at the same Git SHA that was used to create
           # the artifacts to get the correct metadata.
           ref: ${{ github.event.client_payload.payload.sha }}
+      - name: Set Product version
+        id: set-product-version
+        uses: hashicorp/actions-set-product-version@v1
       - id: get-metadata
-        env:
-          # MATRIX_MAX_TEST_GROUPS is required to determine the randomly selected
-          # test group. It should be set to the highest test_group used in the
-          # enos-run-matrices.
-          MATRIX_MAX_TEST_GROUPS: 2
         run: |
           # shellcheck disable=SC2129
-          echo "matrix-test-group=$(make ci-get-matrix-group-id)" >> "$GITHUB_OUTPUT"
           echo "vault-revision=$(make ci-get-revision)" >> "$GITHUB_OUTPUT"
+          echo "vault-version-package=$(echo ${{ steps.set-product-version.outputs.product-version }} | awk '{ gsub("-","~",$1); print $1 }')" >> "$GITHUB_OUTPUT"
         # Get the workflow summary similar to CRT workflows
       - name: Release Artifact Info
         run: |
@@ -48,10 +43,6 @@ jobs:
           echo "__Commit:__ ${{ github.event.client_payload.payload.sha }}" >> "$GITHUB_STEP_SUMMARY"
           echo "" >> "$GITHUB_STEP_SUMMARY"
           echo "[Build Workflow](https://github.com/${{github.event.client_payload.payload.org}}/${{github.event.client_payload.payload.repo}}/actions/runs/${{github.event.client_payload.payload.buildworkflowid}})" >> "$GITHUB_STEP_SUMMARY"
-      - name: Set Product version
-        id: set-product-version
-        uses: hashicorp/actions-set-product-version@v1
-
 
   test:
     name: Test ${{ matrix.build-artifact-name }}
@@ -62,18 +53,24 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - matrix-file-name: enos_release_testing_oss-artifactory-oss-linux-amd64-zip
+          - sample-name: release_oss_linux_amd64_deb
+            build-artifact-name: vault_${{ needs.product-metadata.outputs.vault-version-package }}-1_amd64.deb
+          - sample-name: release_oss_linux_arm64_deb
+            build-artifact-name: vault_${{ needs.product-metadata.outputs.vault-version-package }}-1_arm64.deb
+          - sample-name: release_oss_linux_amd64_rpm
+            build-artifact-name: vault_${{ needs.product-metadata.outputs.vault-version-package }}-1.x86_64.rpm
+          - sample-name: release_oss_linux_arm64_rpm
+            build-artifact-name: vault_${{ needs.product-metadata.outputs.vault-version-package }}-1.aarch64.rpm
+          - sample-name: release_oss_linux_amd64_zip
             build-artifact-name: vault_${{ needs.product-metadata.outputs.vault-version }}_linux_amd64.zip
-          - matrix-file-name: enos_release_testing_oss-artifactory-oss-linux-arm64-zip
+          - sample-name: release_oss_linux_arm64_zip
             build-artifact-name: vault_${{ needs.product-metadata.outputs.vault-version }}_linux_arm64.zip
     with:
       build-artifact-name: ${{ matrix.build-artifact-name }}
-      matrix-file-name: ${{ matrix.matrix-file-name }}
-      matrix-test-group: ${{ needs.product-metadata.outputs.matrix-test-group }}
-      vault-edition: oss
+      sample-max: 2
+      sample-name: ${{ matrix.sample-name }}
       vault-revision: ${{ needs.product-metadata.outputs.vault-revision }}
       vault-version: ${{ needs.product-metadata.outputs.vault-version }}
-      vault-minor-version: ${{ needs.product-metadata.outputs.vault-minor-version }}
     secrets: inherit
 
   save-metadata:
