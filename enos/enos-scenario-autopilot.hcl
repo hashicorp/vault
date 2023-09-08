@@ -10,16 +10,16 @@ scenario "autopilot" {
     edition         = ["ent", "ent.fips1402", "ent.hsm", "ent.hsm.fips1402"]
     seal            = ["awskms", "shamir"]
 
-    # Packages are not offered for the oss, ent.fips1402, and ent.hsm.fips1402 editions
-    exclude {
-      edition       = ["oss", "ent.fips1402", "ent.hsm.fips1402"]
-      artifact_type = ["package"]
-    }
-
     # Our local builder always creates bundles
     exclude {
       artifact_source = ["local"]
       artifact_type   = ["package"]
+    }
+
+    # HSM and FIPS 140-2 are only supported on amd64
+    exclude {
+      arch    = ["arm64"]
+      edition = ["ent.fips1402", "ent.hsm", "ent.hsm.fips1402"]
     }
   }
 
@@ -32,42 +32,21 @@ scenario "autopilot" {
   ]
 
   locals {
-    build_tags = {
-      "ent"              = ["ui", "enterprise", "ent"]
-      "ent.fips1402"     = ["ui", "enterprise", "cgo", "hsm", "fips", "fips_140_2", "ent.fips1402"]
-      "ent.hsm"          = ["ui", "enterprise", "cgo", "hsm", "venthsm"]
-      "ent.hsm.fips1402" = ["ui", "enterprise", "cgo", "hsm", "fips", "fips_140_2", "ent.hsm.fips1402"]
-    }
-    bundle_path = matrix.artifact_source != "artifactory" ? abspath(var.vault_artifact_path) : null
-    distro_version = {
-      "rhel"   = var.rhel_distro_version
-      "ubuntu" = var.ubuntu_distro_version
-    }
+    artifact_path = matrix.artifact_source != "artifactory" ? abspath(var.vault_artifact_path) : null
     enos_provider = {
       rhel   = provider.enos.rhel
       ubuntu = provider.enos.ubuntu
     }
-    packages = ["jq"]
-    tags = merge({
-      "Project Name" : var.project_name
-      "Project" : "Enos",
-      "Environment" : "ci"
-    }, var.tags)
-    vault_license_path = abspath(var.vault_license_path != null ? var.vault_license_path : joinpath(path.root, "./support/vault.hclic"))
-    vault_install_dir_packages = {
-      rhel   = "/bin"
-      ubuntu = "/usr/bin"
-    }
-    vault_install_dir = matrix.artifact_type == "bundle" ? var.vault_install_dir : local.vault_install_dir_packages[matrix.distro]
-    vault_tag_key     = "Type" // enos_vault_start expects Type as the tag key
+    manage_service    = matrix.artifact_type == "bundle"
+    vault_install_dir = matrix.artifact_type == "bundle" ? var.vault_install_dir : global.vault_install_dir_packages[matrix.distro]
   }
 
   step "build_vault" {
     module = "build_${matrix.artifact_source}"
 
     variables {
-      build_tags           = var.vault_local_build_tags != null ? var.vault_local_build_tags : local.build_tags[matrix.edition]
-      bundle_path          = local.bundle_path
+      build_tags           = var.vault_local_build_tags != null ? var.vault_local_build_tags : global.build_tags[matrix.edition]
+      artifact_path        = local.artifact_path
       goarch               = matrix.arch
       goos                 = "linux"
       artifactory_host     = matrix.artifact_source == "artifactory" ? var.artifactory_host : null
@@ -91,7 +70,7 @@ scenario "autopilot" {
     module = module.create_vpc
 
     variables {
-      common_tags = local.tags
+      common_tags = global.tags
     }
   }
 
@@ -99,7 +78,7 @@ scenario "autopilot" {
     module = module.read_license
 
     variables {
-      file_name = local.vault_license_path
+      file_name = global.vault_license_path
     }
   }
 
@@ -112,10 +91,10 @@ scenario "autopilot" {
     }
 
     variables {
-      ami_id                = step.ec2_info.ami_ids[matrix.arch][matrix.distro][local.distro_version[matrix.distro]]
+      ami_id                = step.ec2_info.ami_ids[matrix.arch][matrix.distro][global.distro_version[matrix.distro]]
       awskms_unseal_key_arn = step.create_vpc.kms_key_arn
-      cluster_tag_key       = local.vault_tag_key
-      common_tags           = local.tags
+      cluster_tag_key       = global.vault_tag_key
+      common_tags           = global.tags
       vpc_id                = step.create_vpc.vpc_id
     }
   }
@@ -136,7 +115,7 @@ scenario "autopilot" {
       cluster_name          = step.create_vault_cluster_targets.cluster_name
       install_dir           = local.vault_install_dir
       license               = matrix.edition != "oss" ? step.read_license.license : null
-      packages              = local.packages
+      packages              = global.packages
       release               = var.vault_autopilot_initial_release
       storage_backend       = "raft"
       storage_backend_addl_config = {
@@ -205,9 +184,9 @@ scenario "autopilot" {
     }
 
     variables {
-      ami_id                = step.ec2_info.ami_ids[matrix.arch][matrix.distro][local.distro_version[matrix.distro]]
+      ami_id                = step.ec2_info.ami_ids[matrix.arch][matrix.distro][global.distro_version[matrix.distro]]
       awskms_unseal_key_arn = step.create_vpc.kms_key_arn
-      common_tags           = local.tags
+      common_tags           = global.tags
       cluster_name          = step.create_vault_cluster_targets.cluster_name
       vpc_id                = step.create_vpc.vpc_id
     }
@@ -235,8 +214,9 @@ scenario "autopilot" {
       initialize_cluster          = false
       install_dir                 = local.vault_install_dir
       license                     = matrix.edition != "oss" ? step.read_license.license : null
-      local_artifact_path         = local.bundle_path
-      packages                    = local.packages
+      local_artifact_path         = local.artifact_path
+      manage_service              = local.manage_service
+      packages                    = global.packages
       root_token                  = step.create_vault_cluster.root_token
       shamir_unseal_keys          = matrix.seal == "shamir" ? step.create_vault_cluster.unseal_keys_hex : null
       storage_backend             = "raft"

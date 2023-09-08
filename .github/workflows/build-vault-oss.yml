@@ -9,9 +9,6 @@ name: build_vault
 on:
   workflow_call:
     inputs:
-      bundle-path:
-        required: false
-        type: string
       cgo-enabled:
         type: string
         default: 0
@@ -35,12 +32,7 @@ on:
       web-ui-cache-key:
         type: string
         required: true
-      vault-base-version:
-        type: string
-        required: true
-      vault-prerelease-version:
-        type: string
-        required: true
+
 jobs:
   build:
     runs-on: custom-linux-xl-vault-latest
