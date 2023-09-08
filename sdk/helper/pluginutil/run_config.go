@@ -22,7 +22,7 @@ import (
 
 const (
 	// Labels for plugin container ownership
-	labelVaultPID           = "com.hashicorp.vaultPid"
+	labelVaultPID           = "com.hashicorp.vault.pid"
 	labelVaultClusterID     = "com.hashicorp.vault.clusterID"
 	labelVaultPluginName    = "com.hashicorp.vault.pluginName"
 	labelVaultPluginVersion = "com.hashicorp.vault.pluginVersion"
