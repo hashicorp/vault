@@ -244,8 +244,9 @@ func handleEventsSubscribe(core *vault.Core, req *logical.Request) http.Handler 
 		// continually validate subscribe access while the websocket is running
 		ctx, cancelCtx := context.WithCancel(ctx)
 		defer cancelCtx()
-		go validateSubscribeAccessLoop(core, ctx, cancelCtx, req)
 
+		isRoot := entry.IsRoot()
+		go validateSubscribeAccessLoop(core, ctx, cancelCtx, req)
 		sub := &eventSubscriber{
 			ctx:               ctx,
 			capabilitiesFunc:  core.CapabilitiesAndSubscribeEventTypes,
@@ -258,7 +259,7 @@ func handleEventsSubscribe(core *vault.Core, req *logical.Request) http.Handler 
 			json:              json,
 			checkCache:        cache.New(webSocketRevalidationTime, webSocketRevalidationTime),
 			clientToken:       auth.ClientToken,
-			isRootToken:       entry.IsRoot(),
+			isRootToken:       isRoot,
 		}
 		closeStatus, closeReason, err := sub.handleEventsSubscribeWebsocket()
 		if err != nil {
