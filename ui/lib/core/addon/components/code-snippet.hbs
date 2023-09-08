@@ -3,13 +3,14 @@
   SPDX-License-Identifier: BUSL-1.1
 ~}}
 
-<div data-test-code-snippet class="code-snippet-container" ...attributes>
-  <code class="text-grey-lightest">
-    {{@codeBlock}}
-  </code>
-  {{! replace with Hds::Copy::Button }}
+<div
+  class="has-padding-s has-background-gray-900 border-radius-4 is-flex-between is-flex-center"
+  data-test-code-snippet
+  ...attributes
+>
+  <code class="has-text-white is-size-7">{{@codeBlock}}</code>
   <CopyButton
-    class="code-snippet-copy-button"
+    class="button is-compact is-transparent has-text-grey-light"
     @clipboardText={{or @clipboardCode @codeBlock}}
     @buttonType="button"
     @success={{action (set-flash-message "Code copied!")}}
