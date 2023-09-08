@@ -390,7 +390,7 @@ listener "tcp" {
 	select {
 	case <-cmd.startedCh:
 	case <-time.After(5 * time.Second):
-		t.Errorf("timeout")
+		t.Fatalf("timeout")
 	}
 
 	// defer agent shutdown
