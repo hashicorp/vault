@@ -24,16 +24,13 @@ export default ApplicationAdapter.extend({
 
   async findRecord(store, type, id, snapshot) {
     let [path, role] = JSON.parse(id);
-
-    // Prepare the path by trimming slashes and encoding
-    path = path.replace(/^\//, '');
-    path = path.replace(/\/$/, '');
-    path = encodePath(path);
+    path = preparePathSegment(path);
 
     // Create the ACS URL based on the cluster the UI is targeting
     let acs_url = `${window.location.origin}/v1/`;
-    const namespace = snapshot?.adapterOptions.namespace;
+    let namespace = snapshot?.adapterOptions.namespace;
     if (namespace) {
+      namespace = preparePathSegment(namespace);
       acs_url = acs_url.concat(namespace, '/');
     }
     acs_url = acs_url.concat('auth/', path, '/callback');
@@ -59,3 +56,11 @@ export default ApplicationAdapter.extend({
     };
   },
 });
+
+// preparePathSegment prepares the given segment for being included in a URL
+// path by trimming leading and trailing forward slashes and URL encoding.
+function preparePathSegment(segment) {
+  segment = segment.replace(/^\//, '');
+  segment = segment.replace(/\/$/, '');
+  return encodePath(segment);
+}
