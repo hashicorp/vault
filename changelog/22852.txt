@@ -1,3 +1,0 @@
-```release-note:security
-secrets/transit: fix a regression that was honoring nonces provided in non-convergent modes during encryption.
-```

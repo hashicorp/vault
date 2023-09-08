@@ -3,7 +3,6 @@ package transit
 import (
 	"context"
 	"encoding/json"
-	"net/http"
 	"reflect"
 	"strings"
 	"testing"
@@ -646,26 +645,13 @@ func TestTransit_BatchEncryptionCase12(t *testing.T) {
 }
 
 // Case13: Incorrect input for nonce when we aren't in convergent encryption should fail the operation
-func TestTransit_EncryptionCase13(t *testing.T) {
+func TestTransit_BatchEncryptionCase13(t *testing.T) {
 	var err error
 
 	b, s := createBackendWithStorage(t)
 
-	// Non-batch first
-	data := map[string]interface{}{"plaintext": "bXkgc2VjcmV0IGRhdGE=", "nonce": "R80hr9eNUIuFV52e"}
-	req := &logical.Request{
-		Operation: logical.CreateOperation,
-		Path:      "encrypt/my-key",
-		Storage:   s,
-		Data:      data,
-	}
-	resp, err := b.HandleRequest(context.Background(), req)
-	if err == nil {
-		t.Fatal("expected invalid request")
-	}
-
 	batchInput := []interface{}{
-		map[string]interface{}{"plaintext": "bXkgc2VjcmV0IGRhdGE=", "nonce": "R80hr9eNUIuFV52e"},
+		map[string]interface{}{"plaintext": "bXkgc2VjcmV0IGRhdGE=", "nonce": "YmFkbm9uY2U="},
 	}
 
 	batchData := map[string]interface{}{
@@ -677,70 +663,9 @@ func TestTransit_EncryptionCase13(t *testing.T) {
 		Storage:   s,
 		Data:      batchData,
 	}
-	resp, err = b.HandleRequest(context.Background(), batchReq)
+	_, err = b.HandleRequest(context.Background(), batchReq)
 	if err != nil {
 		t.Fatal(err)
-	}
-
-	if v, ok := resp.Data["http_status_code"]; !ok || v.(int) != http.StatusBadRequest {
-		t.Fatal("expected request error")
-	}
-}
-
-// Case14: Incorrect input for nonce when we are in convergent version 3 should fail
-func TestTransit_EncryptionCase14(t *testing.T) {
-	var err error
-
-	b, s := createBackendWithStorage(t)
-
-	cReq := &logical.Request{
-		Operation: logical.UpdateOperation,
-		Path:      "keys/my-key",
-		Storage:   s,
-		Data: map[string]interface{}{
-			"convergent_encryption": "true",
-			"derived":               "true",
-		},
-	}
-	resp, err := b.HandleRequest(context.Background(), cReq)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	// Non-batch first
-	data := map[string]interface{}{"plaintext": "bXkgc2VjcmV0IGRhdGE=", "context": "SGVsbG8sIFdvcmxkCg==", "nonce": "R80hr9eNUIuFV52e"}
-	req := &logical.Request{
-		Operation: logical.CreateOperation,
-		Path:      "encrypt/my-key",
-		Storage:   s,
-		Data:      data,
-	}
-
-	resp, err = b.HandleRequest(context.Background(), req)
-	if err == nil {
-		t.Fatal("expected invalid request")
-	}
-
-	batchInput := []interface{}{
-		data,
-	}
-
-	batchData := map[string]interface{}{
-		"batch_input": batchInput,
-	}
-	batchReq := &logical.Request{
-		Operation: logical.CreateOperation,
-		Path:      "encrypt/my-key",
-		Storage:   s,
-		Data:      batchData,
-	}
-	resp, err = b.HandleRequest(context.Background(), batchReq)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	if v, ok := resp.Data["http_status_code"]; !ok || v.(int) != http.StatusBadRequest {
-		t.Fatal("expected request error")
 	}
 }
 
