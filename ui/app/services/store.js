@@ -143,14 +143,13 @@ export default class StoreService extends Store {
     // don't have ghost models leftover
     // eslint-disable-next-line no-console
     console.info(`unloading ${this.peekAll(modelName).length} records`);
+    // force destroy queue to flush https://github.com/emberjs/data/issues/5447
     run(() => this.unloadAll(modelName));
-    return;
   }
 
   // pushes records into the store and returns the result
   fetchPage(modelName, query) {
     const response = this.constructResponse(modelName, query);
-    // force destroy queue to flush https://github.com/emberjs/data/issues/5447
     this.forceUnload(modelName);
     return new Promise((resolve) => {
       // push subset of records into the store
