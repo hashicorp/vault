@@ -347,6 +347,27 @@ a.button.disabled {
     color: $white;
   }
 
+  &.hidden-icon svg {
+    color: transparent;
+  }
+
+  &.size-7 div {
+    font-size: $size-7;
+  }
+
+  &.code-snippet {
+    background: none;
+    border: none;
+    box-shadow: none;
+    min-width: auto;
+    padding: $size-11 $size-8;
+    color: $ui-gray-300;
+
+    svg {
+      color: $ui-gray-300;
+    }
+  }
+
   &.is-primary {
     background-color: $blue;
     box-shadow: $box-shadow-low;
@@ -361,5 +382,22 @@ a.button.disabled {
     svg {
       color: $white;
     }
+  }
+
+  &.is-secondary {
+    background-color: $grey-lightest;
+    box-shadow: $box-shadow-low;
+    border-radius: $radius;
+    border: 1px solid $grey-light;
+    color: $ui-gray-800;
+    font-weight: $font-weight-semibold;
+    height: 2.5rem;
+    min-width: 6rem;
+  }
+
+  &.hover-button {
+    min-width: $spacing-xl;
+    border-radius: 0;
+    box-shadow: 0 3px 1px 0px rgba(10, 10, 10, 0.12);
   }
 }

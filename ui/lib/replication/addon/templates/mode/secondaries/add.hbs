@@ -81,16 +81,13 @@
       </div>
     </section>
     <footer class="modal-card-foot">
-      <CopyButton
-        class="button is-primary copy-close"
+      <Hds::Copy::Button
+        @text="Copy & Close"
+        @textToCopy={{this.token}}
+        class="hds-copy-button is-primary"
         data-test-button="modal-copy-close"
-        @clipboardText={{this.token}}
-        @buttonType="button"
-        @type="copy"
-        @success={{action "copyClose" "Token copied!"}}
-      >
-        Copy &amp; Close
-      </CopyButton>
+        {{on "click" (action "copyClose" "Token copied!")}}
+      />
     </footer>
   </Modal>
 {{/if}}
