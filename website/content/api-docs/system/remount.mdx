@@ -12,8 +12,6 @@ The Remount documentation details the endpoints required to trigger and monitor 
 
 ## Move backend
 
-@include 'alerts/restricted-admin.mdx'
-
 The `/sys/remount` endpoint moves an already-mounted backend to a new mount point. Remounting works for both secret
 engines and auth methods.
 
@@ -84,8 +82,6 @@ $ curl \
 ```
 
 ## Monitor migration status
-
-@include 'alerts/restricted-admin.mdx'
 
 This endpoint is used to monitor the status of a mount migration operation, using the ID returned in the response
 of the `sys/remount` call. The response contains the passed-in ID, the source and target mounts, and a status field
