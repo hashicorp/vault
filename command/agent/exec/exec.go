@@ -94,22 +94,25 @@ func NewServer(cfg *ServerConfig) (*Server, error) {
 
 	childProcessCloseStdout := false
 	childProcessStdout := os.Stdout
-	if cfg.AgentConfig.Exec.ChildProcessStdout != "" {
-		childProcessStdout, err = os.OpenFile(cfg.AgentConfig.Exec.ChildProcessStdout, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
-		if err != nil {
-			return nil, fmt.Errorf("could not open %q, %w", cfg.AgentConfig.Exec.ChildProcessStdout, err)
-		}
-		childProcessCloseStdout = true
-	}
-
 	childProcessCloseStderr := false
 	childProcessStderr := os.Stderr
-	if cfg.AgentConfig.Exec.ChildProcessStderr != "" {
-		childProcessStderr, err = os.OpenFile(cfg.AgentConfig.Exec.ChildProcessStderr, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
-		if err != nil {
-			return nil, fmt.Errorf("could not open %q, %w", cfg.AgentConfig.Exec.ChildProcessStdout, err)
+
+	if cfg.AgentConfig.Exec != nil {
+		if cfg.AgentConfig.Exec.ChildProcessStdout != "" {
+			childProcessStdout, err = os.OpenFile(cfg.AgentConfig.Exec.ChildProcessStdout, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0o644)
+			if err != nil {
+				return nil, fmt.Errorf("could not open %q, %w", cfg.AgentConfig.Exec.ChildProcessStdout, err)
+			}
+			childProcessCloseStdout = true
 		}
-		childProcessCloseStderr = true
+
+		if cfg.AgentConfig.Exec.ChildProcessStderr != "" {
+			childProcessStderr, err = os.OpenFile(cfg.AgentConfig.Exec.ChildProcessStderr, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0o644)
+			if err != nil {
+				return nil, fmt.Errorf("could not open %q, %w", cfg.AgentConfig.Exec.ChildProcessStdout, err)
+			}
+			childProcessCloseStderr = true
+		}
 	}
 
 	server := Server{
