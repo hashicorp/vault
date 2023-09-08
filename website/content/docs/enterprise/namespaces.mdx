@@ -62,15 +62,16 @@ across any namespace.
 
 ### Administrative namespaces
 
-The Vault API includes system backend endpoints, which are mounted under the sys/ path.
+The Vault API includes system backend endpoints, which are mounted under the `sys/` path.
 System endpoints let you interact with the internal features of your Vault instance.
 For security reasons, some of the system backend endpoints are restricted, and can only be called
-from the root namespace or using a token in the root namespace with elevated permissions.
+from the root namespace or using a token in the root namespace with elevated permissions. These endpoints
+are [documented below](/vault/docs/enterprise/namespaces#root-only-api-paths).
 
 By default, Vault allows non-root calls to the less sensitive system backend endpoints.
 However, there may be instances where a Vault operator needs to provide access to a subset
-of the restricted endpoints, like sys/audit-hash and sys/monitor, without granting access
-to the full set of privileged sys/ paths. An administrative namespace lets Vault operators grant
+of the restricted endpoints, like `sys/audit-hash` and `sys/monitor`, without granting access
+to the full set of privileged `sys/` paths. An administrative namespace lets Vault operators grant
 access to a subset of privileged endpoints by setting a parameter in their Vault configuration file.
 
 ## Usage
@@ -148,6 +149,8 @@ There are certain API paths that can only be called from the **root** namespace:
 - `sys/storage/raft`
 - `sys/quotas`
 - `sys/plugins`
+- `sys/monitor`
+- `sys/audit-hash`
 
 ## Tutorial
 
