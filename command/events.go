@@ -25,7 +25,8 @@ var (
 type EventsSubscribeCommands struct {
 	*BaseCommand
 
-	namespaces []string
+	namespaces  []string
+	bexprFilter string
 }
 
 func (c *EventsSubscribeCommands) Synopsis() string {
@@ -34,7 +35,7 @@ func (c *EventsSubscribeCommands) Synopsis() string {
 
 func (c *EventsSubscribeCommands) Help() string {
 	helpText := `
-Usage: vault events subscribe [-namespaces=ns1] [-timeout=XYZs] eventType
+Usage: vault events subscribe [-namespaces=ns1] [-timeout=XYZs] [-filter=filterExpression] eventType
 
   Subscribe to events of the given event type (topic), which may be a glob
   pattern (with "*"" treated as a wildcard). The events will be sent to
@@ -49,6 +50,14 @@ Usage: vault events subscribe [-namespaces=ns1] [-timeout=XYZs] eventType
 func (c *EventsSubscribeCommands) Flags() *FlagSets {
 	set := c.flagSet(FlagSetHTTP)
 	f := set.NewFlagSet("Subscribe Options")
+	f.StringVar(&StringVar{
+		Name: "filter",
+		Usage: `A boolean expression to use to filter events. Only events matching
+                the filter will be subscribed to. This is applied after any filtering
+                by event type or namespace.`,
+		Default: "",
+		Target:  &c.bexprFilter,
+	})
 	f.StringSliceVar(&StringSliceVar{
 		Name: "namespaces",
 		Usage: `Specifies one or more patterns of additional child namespaces
@@ -132,6 +141,10 @@ func (c *EventsSubscribeCommands) subscribeRequest(client *api.Client, path stri
 	q.Set("json", "true")
 	if len(c.namespaces) > 0 {
 		q["namespaces"] = cleanNamespaces(c.namespaces)
+	}
+	bexprFilter := strings.TrimSpace(c.bexprFilter)
+	if bexprFilter != "" {
+		q.Set("filter", bexprFilter)
 	}
 	u.RawQuery = q.Encode()
 	client.AddHeader("X-Vault-Token", client.Token())
