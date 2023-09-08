@@ -25,7 +25,7 @@ var (
 )
 
 // Validate backendGRPCPluginClient satisfies the logical.Backend interface
-var _ logical.Backend = &backendGRPCPluginClient{}
+var _ logical.Backend = (*backendGRPCPluginClient)(nil)
 
 // backendPluginClient implements logical.Backend and is the
 // go-plugin client.
@@ -183,17 +183,21 @@ func (b *backendGRPCPluginClient) Cleanup(ctx context.Context) {
 	defer close(quitCh)
 	defer cancel()
 
-	b.client.Cleanup(ctx, &pb.Empty{})
-
-	// This will block until Setup has run the function to create a new server
-	// in b.server. If we stop here before it has a chance to actually start
-	// listening, when it starts listening it will immediately error out and
-	// exit, which is fine. Overall this ensures that we do not miss stopping
-	// the server if it ends up being created after Cleanup is called.
-	<-b.cleanupCh
+	// Only wait on graceful cleanup if we can establish communication with the
+	// plugin, otherwise b.cleanupCh may never get called.
+	if _, err := b.client.Cleanup(ctx, &pb.Empty{}); status.Code(err) != codes.Unavailable {
+		// This will block until Setup has run the function to create a new server
+		// in b.server. If we stop here before it has a chance to actually start
+		// listening, when it starts listening it will immediately error out and
+		// exit, which is fine. Overall this ensures that we do not miss stopping
+		// the server if it ends up being created after Cleanup is called.
+		select {
+		case <-b.cleanupCh:
+		}
+	}
 	server := b.server.Load()
-	if server != nil {
-		server.(*grpc.Server).GracefulStop()
+	if grpcServer, ok := server.(*grpc.Server); ok && grpcServer != nil {
+		grpcServer.GracefulStop()
 	}
 }
 
