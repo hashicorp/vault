@@ -298,16 +298,10 @@ func prependNamespacePatterns(patterns []string, requestNamespace *namespace.Nam
 // validateSubscribeAccessLoop continually checks if the request has access to the subscribe endpoint in
 // its namespace. If the access check ever fails, then the cancel function is called and  the function returns.
 func validateSubscribeAccessLoop(core *vault.Core, ctx context.Context, cancel context.CancelFunc, req *logical.Request) {
-	defer func() {
-		if err := recover(); err != nil {
-			core.Logger().Error("Panic while validating subscribe access loop", "err", err)
-			return
-		}
-	}()
 	// if something breaks, default to canceling the websocket
 	defer cancel()
 	for {
-		_, _, err := core.CheckToken(ctx, req, false)
+		_, _, err := core.CheckTokenWithLock(ctx, req, false)
 		if err != nil {
 			core.Logger().Debug("Token does not have access to subscription path in its own namespace, terminating WebSocket subscription", "path", req.Path, "error", err)
 			return

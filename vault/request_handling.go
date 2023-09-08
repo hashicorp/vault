@@ -264,6 +264,20 @@ func (c *Core) fetchACLTokenEntryAndEntity(ctx context.Context, req *logical.Req
 	return acl, te, entity, identityPolicies, nil
 }
 
+// CheckTokenWithLock calls CheckToken after grabbing the internal stateLock, and also checking that we aren't in the
+// process of shutting down.
+func (c *Core) CheckTokenWithLock(ctx context.Context, req *logical.Request, unauth bool) (*logical.Auth, *logical.TokenEntry, error) {
+	c.stateLock.RLock()
+	defer c.stateLock.RUnlock()
+	// first check that we aren't shutting down
+	if c.Sealed() {
+		return nil, nil, errors.New("core is sealed")
+	} else if c.activeContext.Err() != nil {
+		return nil, nil, c.activeContext.Err()
+	}
+	return c.CheckToken(ctx, req, unauth)
+}
+
 func (c *Core) CheckToken(ctx context.Context, req *logical.Request, unauth bool) (*logical.Auth, *logical.TokenEntry, error) {
 	defer metrics.MeasureSince([]string{"core", "check_token"}, time.Now())
 
