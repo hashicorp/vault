@@ -257,7 +257,7 @@ func TestExecServer_Run(t *testing.T) {
 				strconv.Itoa(testCase.testAppPort),
 			}
 
-			execServer := NewServer(&ServerConfig{
+			execServer, err := NewServer(&ServerConfig{
 				Logger: logging.NewVaultLogger(hclog.Trace),
 				AgentConfig: &config.Config{
 					Vault: &config.Vault{
@@ -280,6 +280,9 @@ func TestExecServer_Run(t *testing.T) {
 				LogLevel:  hclog.Trace,
 				LogWriter: hclog.DefaultOutput,
 			})
+			if err != nil {
+				t.Fatalf("could not create exec server: %q", err)
+			}
 
 			// start the exec server
 			var (
