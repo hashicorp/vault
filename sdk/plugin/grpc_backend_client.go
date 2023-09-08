@@ -184,7 +184,7 @@ func (b *backendGRPCPluginClient) Cleanup(ctx context.Context) {
 	defer cancel()
 
 	// Only wait on graceful cleanup if we can establish communication with the
-	// plugin, otherwise b.cleanupCh may never get called.
+	// plugin, otherwise b.cleanupCh may never get closed.
 	if _, err := b.client.Cleanup(ctx, &pb.Empty{}); status.Code(err) != codes.Unavailable {
 		// This will block until Setup has run the function to create a new server
 		// in b.server. If we stop here before it has a chance to actually start
