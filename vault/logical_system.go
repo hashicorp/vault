@@ -550,11 +550,19 @@ func (b *SystemBackend) handlePluginCatalogUpdate(ctx context.Context, _ *logica
 			return nil, err
 		}
 	}
-	if ociImage != "" && runtime.GOOS != "linux" {
-		return logical.ErrorResponse("specifying oci_image is currently only supported on Linux"), nil
-	}
 
 	pluginRuntime := d.Get("runtime").(string)
+	if ociImage != "" {
+		if runtime.GOOS != "linux" {
+			return logical.ErrorResponse("specifying oci_image is currently only supported on Linux"), nil
+		}
+		if pluginRuntime != "" {
+			_, err := b.Core.pluginRuntimeCatalog.Get(ctx, pluginRuntime, consts.PluginRuntimeTypeContainer)
+			if err != nil {
+				return logical.ErrorResponse("specified plugin runtime %q, but failed to retrieve config: %w", pluginRuntime, err), nil
+			}
+		}
+	}
 
 	// For backwards compatibility, also accept args as part of command. Don't
 	// accepts args in both command and args.
