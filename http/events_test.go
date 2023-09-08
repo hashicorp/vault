@@ -148,27 +148,27 @@ func TestBexprFilters(t *testing.T) {
 		}
 	}
 
-	sendEvent := func(ctx context.Context, eventType string) error {
-		pluginInfo := &logical.EventPluginInfo{
-			MountPath: "secret",
+	// send duplicates to help avoid flaky tests in CI
+	sendEvents := func(ctx context.Context, eventTypes ...string) {
+		for i := 0; i < 10; i++ {
+			time.Sleep(10 * time.Millisecond)
+			for _, eventType := range eventTypes {
+				pluginInfo := &logical.EventPluginInfo{
+					MountPath: "secret",
+				}
+				ns := namespace.RootNamespace
+				id := eventType
+				err := core.Events().SendEventInternal(namespace.RootContext(ctx), ns, pluginInfo, logical.EventType(eventType), &logical.EventData{
+					Id:        id,
+					Metadata:  nil,
+					EntityIds: nil,
+					Note:      "testing",
+				})
+				if err != nil {
+					return
+				}
+			}
 		}
-		ns := namespace.RootNamespace
-		id, err := uuid.GenerateUUID()
-		if err != nil {
-			core.Logger().Info("Error generating UUID, exiting sender", "error", err)
-			return err
-		}
-		err = core.Events().SendEventInternal(namespace.RootContext(ctx), ns, pluginInfo, logical.EventType(eventType), &logical.EventData{
-			Id:        id,
-			Metadata:  nil,
-			EntityIds: nil,
-			Note:      "testing",
-		})
-		if err != nil {
-			core.Logger().Info("Error sending event, exiting sender", "error", err)
-			return err
-		}
-		return nil
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
@@ -184,50 +184,32 @@ func TestBexprFilters(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer conn.Close(websocket.StatusNormalClosure, "")
-	eventChan := make(chan map[string]interface{})
-	go func() {
-		defer close(eventChan)
 
-		// we should get the abc message
-		readCtx, readCancel := context.WithTimeout(context.Background(), 2*time.Minute)
-		defer readCancel()
-		_, msg, err := conn.Read(readCtx)
-		if err != nil {
-			t.Error(err)
-			return
-		}
-		event := map[string]interface{}{}
-		err = json.Unmarshal(msg, &event)
-		if err != nil {
-			t.Error(err)
-			return
-		}
-		eventChan <- event
-	}()
-	err = sendEvent(ctx, "def")
-	if err != nil {
-		t.Fatal(err)
+	go sendEvents(ctx, "abc", "def", "xyz")
+	// read until we time out
+	seen := map[string]bool{}
+	done := false
+	for !done {
+		done = func() bool {
+			readCtx, readCancel := context.WithTimeout(context.Background(), 1*time.Second)
+			defer readCancel()
+			_, msg, err := conn.Read(readCtx)
+			if err != nil {
+				return true
+			}
+			event := map[string]interface{}{}
+			err = json.Unmarshal(msg, &event)
+			if err != nil {
+				t.Error(err)
+				return true
+			}
+			seen[event["id"].(string)] = true
+			return false
+		}()
 	}
-	err = sendEvent(ctx, "xyz")
-	if err != nil {
-		t.Fatal(err)
-	}
-	err = sendEvent(ctx, "abc")
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	event := <-eventChan
-	if event == nil {
-		t.Fatal()
-	}
-	assert.Equal(t, "abc", event["data"].(map[string]interface{})["event_type"].(string))
-
-	// and no other messages
-	ctx, cancel = context.WithTimeout(context.Background(), 100*time.Millisecond)
-	defer cancel()
-	_, _, err = conn.Read(ctx)
-	assert.ErrorContains(t, err, "context deadline exceeded")
+	// we should only get the "abc" messages
+	assert.Len(t, seen, 1)
+	assert.Contains(t, seen, "abc")
 }
 
 func TestNamespacePrepend(t *testing.T) {
