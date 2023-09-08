@@ -184,6 +184,24 @@ func TestBexprFilters(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer conn.Close(websocket.StatusNormalClosure, "")
+	eventChan := make(chan map[string]interface{})
+	go func() {
+		defer close(eventChan)
+
+		// we should get the abc message
+		_, msg, err := conn.Read(ctx)
+		if err != nil {
+			t.Error(err)
+			return
+		}
+		event := map[string]interface{}{}
+		err = json.Unmarshal(msg, &event)
+		if err != nil {
+			t.Error(err)
+			return
+		}
+		eventChan <- event
+	}()
 	err = sendEvent(ctx, "def")
 	if err != nil {
 		t.Fatal(err)
@@ -197,15 +215,9 @@ func TestBexprFilters(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	// we should get the abc message
-	_, msg, err := conn.Read(ctx)
-	if err != nil {
-		t.Fatal(err)
-	}
-	event := map[string]interface{}{}
-	err = json.Unmarshal(msg, &event)
-	if err != nil {
-		t.Fatal(err)
+	event := <-eventChan
+	if event == nil {
+		t.Fatal()
 	}
 	assert.Equal(t, "abc", event["data"].(map[string]interface{})["event_type"].(string))
 
