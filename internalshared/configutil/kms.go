@@ -216,6 +216,9 @@ func configureWrapper(configKMS *KMS, infoKeys *[]string, info *map[string]strin
 	var err error
 
 	envConfig := GetEnvConfigFunc(configKMS)
+	if len(envConfig) > 0 && configKMS.Config == nil {
+		configKMS.Config = make(map[string]string)
+	}
 	// transit is a special case, because some config values take precedence over env vars
 	if configKMS.Type == wrapping.WrapperTypeTransit.String() {
 		mergeTransitConfig(configKMS.Config, envConfig)
