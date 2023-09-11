@@ -172,6 +172,24 @@ a warning that it did not exist.`,
 	}
 }
 
+func pathBintest(b *backend) *framework.Path {
+	return &framework.Path{
+		Pattern: "bintest",
+
+		Operations: map[logical.Operation]framework.OperationHandler{
+			logical.UpdateOperation: &framework.PathOperation{
+				Callback: b.pathBintest,
+			},
+		},
+
+		HelpSynopsis: "Delete an external account binding id prior to its use within an ACME account",
+		HelpDescription: `Allows an operator to delete an external account binding,
+before its bound to a new ACME account. If the identifier provided does not exist or 
+was already consumed by an ACME account a successful response is returned along with 
+a warning that it did not exist.`,
+	}
+}
+
 type eabType struct {
 	KeyID         string    `json:"-"`
 	KeyType       string    `json:"key-type"`

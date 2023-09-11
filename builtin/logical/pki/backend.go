@@ -144,6 +144,10 @@ func Backend(conf *logical.BackendConfig) *backend {
 				unifiedRevocationWritePathPrefix,
 				unifiedDeltaWALPath,
 			},
+
+			Binary: []string{
+				"bintest",
+			},
 		},
 
 		Paths: []*framework.Path{
@@ -219,6 +223,8 @@ func Backend(conf *logical.BackendConfig) *backend {
 			pathAcmeConfig(&b),
 			pathAcmeEabList(&b),
 			pathAcmeEabDelete(&b),
+
+			pathBintest(&b),
 		},
 
 		Secrets: []*framework.Secret{
@@ -942,4 +948,9 @@ func (b *backend) emitTotalRevokedCountMetric(revokedCertCount uint32) {
 func (b *backend) decrementTotalRevokedCertificatesCountNoReport() uint32 {
 	newRevokedCertCount := b.revokedCertCount.Add(^uint32(0))
 	return newRevokedCertCount
+}
+
+func (b *backend) pathBintest(ctx context.Context, request *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	b.Logger().Info("Called!", "len", len(request.Data[logical.HTTPRawBody].([]byte)))
+	return nil, nil
 }
