@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -379,6 +380,156 @@ func TestExecServer_Run(t *testing.T) {
 				if expectedValue != actualValue {
 					t.Fatalf("expected environment variable %s to have a value of %q but it has a value of %q", key, expectedValue, actualValue)
 				}
+			}
+		})
+	}
+}
+
+func TestExecServer_LogFiles(t *testing.T) {
+	goBinary, err := exec.LookPath("go")
+	if err != nil {
+		t.Fatalf("could not find go binary on path: %s", err)
+	}
+
+	testAppBinary := filepath.Join(os.TempDir(), "test-app")
+
+	if err := exec.Command(goBinary, "build", "-o", testAppBinary, "./test-app").Run(); err != nil {
+		t.Fatalf("could not build the test application: %s", err)
+	}
+	t.Cleanup(func() {
+		if err := os.Remove(testAppBinary); err != nil {
+			t.Fatalf("could not remove %q test application: %s", testAppBinary, err)
+		}
+	})
+
+	tempStdout := os.TempDir() + "/vault-exec-test.stdout.log"
+	t.Cleanup(func() {
+		_ = os.Remove(tempStdout)
+	})
+
+	testCases := map[string]struct {
+		testAppPort   int
+		stdoutFile    string
+		expectedError error
+	}{
+		"can_log_to_file": {
+			testAppPort: 34001,
+			stdoutFile:  tempStdout,
+		},
+	}
+
+	for tcName, testCase := range testCases {
+		t.Run(tcName, func(t *testing.T) {
+			fakeVault := fakeVaultServer(t)
+			defer fakeVault.Close()
+
+			testAppCommand := []string{
+				testAppBinary,
+				"--port",
+				strconv.Itoa(testCase.testAppPort),
+				"--stop-after",
+				"5s",
+			}
+
+			execServer, err := NewServer(&ServerConfig{
+				Logger: logging.NewVaultLogger(hclog.Trace),
+				AgentConfig: &config.Config{
+					Vault: &config.Vault{
+						Address: fakeVault.URL,
+						Retry: &config.Retry{
+							NumRetries: 3,
+						},
+					},
+					Exec: &config.ExecConfig{
+						RestartOnSecretChanges: "always",
+						Command:                testAppCommand,
+						ChildProcessStdout:     testCase.stdoutFile,
+					},
+					EnvTemplates: []*ctconfig.TemplateConfig{{
+						Contents:                 pointerutil.StringPtr(`{{ with secret "kv/my-app/creds" }}{{ .Data.data.user }}{{ end }}`),
+						MapToEnvironmentVariable: pointerutil.StringPtr("MY_USER"),
+					}},
+					TemplateConfig: &config.TemplateConfig{
+						ExitOnRetryFailure:    true,
+						StaticSecretRenderInt: 5 * time.Second,
+					},
+				},
+			})
+			if err != nil {
+				if testCase.expectedError != nil {
+					if errors.Is(err, testCase.expectedError) {
+						t.Log("test passes! caught expected err")
+						return
+					} else {
+						t.Fatalf("caught error %q did not match expected error %q", err, testCase.expectedError)
+					}
+				}
+				t.Fatalf("could not create exec server: %q", err)
+			}
+
+			ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+			defer cancel()
+
+			// start the exec server
+			var (
+				execServerErrCh   = make(chan error)
+				execServerTokenCh = make(chan string, 1)
+			)
+			go func() {
+				execServerErrCh <- execServer.Run(ctx, execServerTokenCh)
+			}()
+
+			// send a dummy token to kick off the server
+			execServerTokenCh <- "my-token"
+
+			// ensure the test app is running after 3 seconds
+			var (
+				testAppAddr      = fmt.Sprintf("http://localhost:%d", testCase.testAppPort)
+				testAppStartedCh = make(chan error)
+			)
+			time.AfterFunc(500*time.Millisecond, func() {
+				_, err := retryablehttp.Head(testAppAddr)
+				testAppStartedCh <- err
+			})
+
+			select {
+			case <-ctx.Done():
+				t.Fatal("timeout reached before templates were rendered")
+
+			case err := <-execServerErrCh:
+				if testCase.expectedError == nil && err != nil {
+					t.Fatalf("exec server did not expect an error, got: %v", err)
+				}
+
+				if errors.Is(err, testCase.expectedError) {
+					t.Fatalf("exec server expected error %v; got %v", testCase.expectedError, err)
+				}
+
+				t.Log("exec server exited without an error")
+
+				return
+
+			case <-testAppStartedCh:
+				t.Log("test app started successfully")
+			}
+
+			// stop the app
+			cancel()
+
+			// does the stdlog file have content?
+			stdoutFile, err := os.Open(testCase.stdoutFile)
+			if err != nil {
+				t.Fatalf("could not open stdout file %q", err)
+			}
+			defer stdoutFile.Close()
+
+			data, err := io.ReadAll(stdoutFile)
+			if err != nil {
+				t.Fatalf("could not read data from stdout file: %q", err)
+			}
+
+			if len(data) == 0 {
+				t.Fatalf("stdout log file does not have any data!")
 			}
 		})
 	}
