@@ -211,9 +211,9 @@ func TestOptions_WithPrefix(t *testing.T) {
 			ExpectedValue:   "",
 		},
 		"whitespace": {
-			Value:                "     ",
-			IsErrorExpected:      false,
-			ExpectedErrorMessage: "     ",
+			Value:           "     ",
+			IsErrorExpected: false,
+			ExpectedValue:   "     ",
 		},
 		"valid": {
 			Value:           "test",
