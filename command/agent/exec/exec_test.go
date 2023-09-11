@@ -417,6 +417,11 @@ func TestExecServer_LogFiles(t *testing.T) {
 			testAppPort: 34001,
 			stderrFile:  tempStderr,
 		},
+		"cant_open_file": {
+			testAppPort:   34002,
+			stderrFile:    "/file/does/not/exist",
+			expectedError: os.ErrNotExist,
+		},
 	}
 
 	for tcName, testCase := range testCases {
