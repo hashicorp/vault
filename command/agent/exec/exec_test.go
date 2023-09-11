@@ -4,6 +4,7 @@
 package exec
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
@@ -402,19 +403,19 @@ func TestExecServer_LogFiles(t *testing.T) {
 		}
 	})
 
-	tempStdout := os.TempDir() + "vault-exec-test.stdout.log"
+	tempStderr := filepath.Join(os.TempDir(), "vault-exec-test.stderr.log")
 	t.Cleanup(func() {
-		_ = os.Remove(tempStdout)
+		_ = os.Remove(tempStderr)
 	})
 
 	testCases := map[string]struct {
 		testAppPort   int
-		stdoutFile    string
+		stderrFile    string
 		expectedError error
 	}{
 		"can_log_to_file": {
 			testAppPort: 34001,
-			stdoutFile:  tempStdout,
+			stderrFile:  tempStderr,
 		},
 	}
 
@@ -443,7 +444,7 @@ func TestExecServer_LogFiles(t *testing.T) {
 					Exec: &config.ExecConfig{
 						RestartOnSecretChanges: "always",
 						Command:                testAppCommand,
-						ChildProcessStdout:     testCase.stdoutFile,
+						ChildProcessStderr:     testCase.stderrFile,
 					},
 					EnvTemplates: []*ctconfig.TemplateConfig{{
 						Contents:                 pointerutil.StringPtr(`{{ with secret "kv/my-app/creds" }}{{ .Data.data.user }}{{ end }}`),
@@ -468,6 +469,10 @@ func TestExecServer_LogFiles(t *testing.T) {
 				}
 				t.Fatalf("could not create exec server: %q", err)
 			}
+
+			// replace the tempfile created with one owned by this test
+			var stdoutBuffer bytes.Buffer
+			execServer.childProcessStderr = noopCloser{&stdoutBuffer}
 
 			ctx, cancel := context.WithCancel(context.Background())
 			defer cancel()
@@ -522,21 +527,17 @@ func TestExecServer_LogFiles(t *testing.T) {
 			// wait for app to stop
 			time.Sleep(5 * time.Second)
 
-			// does the stdlog file have content?
-			stdoutFile, err := os.Open(testCase.stdoutFile)
-			if err != nil {
-				t.Fatalf("could not open stdout file %q", err)
-			}
-			defer stdoutFile.Close()
-
-			data, err := io.ReadAll(stdoutFile)
-			if err != nil {
-				t.Fatalf("could not read data from stdout file: %q", err)
-			}
-
-			if len(data) == 0 {
+			if stdoutBuffer.Len() == 0 {
 				t.Fatalf("stdout log file does not have any data!")
 			}
 		})
 	}
+}
+
+type noopCloser struct {
+	io.Writer
+}
+
+func (_ noopCloser) Close() error {
+	return nil
 }

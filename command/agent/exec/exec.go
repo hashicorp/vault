@@ -68,8 +68,8 @@ type Server struct {
 	childProcess            *child.Child
 	childProcessState       childProcessState
 	childProcessLock        sync.Mutex
-	childProcessStdout      *os.File
-	childProcessStderr      *os.File
+	childProcessStdout      io.WriteCloser
+	childProcessStderr      io.WriteCloser
 	childProcessCloseStdOut bool
 	childProcessCloseStderr bool
 
