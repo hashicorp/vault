@@ -1,0 +1,39 @@
+<TabPageHeader @model={{@backendModel}} @breadcrumbs={{@breadcrumbs}}>
+  <:toolbarActions>
+    {{#if @configModel}}
+      <ConfirmAction
+        @buttonClasses="toolbar-link"
+        @onConfirmAction={{perform this.rotateRoot}}
+        @confirmTitle="Rotate root?"
+        @confirmMessage="After rotation, Vault will generate a new root password in your directory server."
+        @confirmButtonText="Rotate"
+        @disabled={{this.rotateRoot.isRunning}}
+        data-test-toolbar-rotate-action
+      >
+        Rotate root
+      </ConfirmAction>
+    {{/if}}
+    <ToolbarLink @route="configure" data-test-toolbar-config-action>
+      {{if @configModel "Edit configuration" "Configure LDAP"}}
+    </ToolbarLink>
+  </:toolbarActions>
+</TabPageHeader>
+
+{{#if @configModel}}
+  {{#each this.defaultFields as |field|}}
+    <InfoTableRow @label={{field.label}} @value={{field.value}} @formatTtl={{field.formatTtl}} @alwaysRender={{true}} />
+  {{/each}}
+
+  <h2 class="title is-4 has-top-margin-xl">TLS Connection</h2>
+  <hr class="is-marginless" />
+
+  {{#each this.connectionFields as |field|}}
+    <InfoTableRow @label={{field.label}} @value={{field.value}} @alwaysRender={{true}} />
+  {{/each}}
+{{else if @configError}}
+  <Page::Error @error={{@configError}} />
+{{else}}
+  <ConfigCta />
+{{/if}}
+
+<SecretsEngineMountConfig @model={{@backendModel}} class="has-top-margin-xl has-bottom-margin-xl" data-test-mount-config />

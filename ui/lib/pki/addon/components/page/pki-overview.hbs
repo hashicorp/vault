@@ -25,7 +25,7 @@
   <OverviewCard @cardTitle="Issue certificate" @subText="Begin issuing a certificate by choosing a role.">
     <div class="has-top-margin-m is-flex">
       <SearchSelect
-        class="is-flex-1"
+        class="is-flex-grow-1"
         @selectLimit="1"
         @models={{array "pki/role"}}
         @backend={{@engine.id}}
@@ -50,7 +50,7 @@
   <OverviewCard @cardTitle="View certificate" @subText="Quickly view a certificate by typing its serial number.">
     <div class="has-top-margin-m {{unless this.certificateValue 'is-flex'}}">
       <SearchSelect
-        class="is-flex-1"
+        class="is-flex-grow-1"
         @selectLimit="1"
         @models={{array "pki/certificate/base"}}
         @backend={{@engine.id}}
@@ -75,7 +75,7 @@
   <OverviewCard @cardTitle="View issuer" @subText="Choose or type an issuer name or ID to view its details">
     <div class="has-top-margin-m is-flex">
       <SearchSelect
-        class="is-flex-1"
+        class="is-flex-grow-1"
         @selectLimit="1"
         @models={{array "pki/issuer"}}
         @backend={{@engine.id}}

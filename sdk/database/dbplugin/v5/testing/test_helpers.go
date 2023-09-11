@@ -5,6 +5,7 @@ package dbtesting
 
 import (
 	"context"
+	"io/ioutil"
 	"os"
 	"testing"
 	"time"
@@ -39,7 +40,7 @@ func AssertInitializeCircleCiTest(t *testing.T, db dbplugin.Database, req dbplug
 	var err error
 
 	for i := 1; i <= maxAttempts; i++ {
-		resp, err = verifyInitialize(t, db, req)
+		resp, err = VerifyInitialize(t, db, req)
 		if err != nil {
 			t.Errorf("Failed AssertInitialize attempt: %d with error:\n%+v\n", i, err)
 			time.Sleep(1 * time.Second)
@@ -57,14 +58,14 @@ func AssertInitializeCircleCiTest(t *testing.T, db dbplugin.Database, req dbplug
 
 func AssertInitialize(t *testing.T, db dbplugin.Database, req dbplugin.InitializeRequest) dbplugin.InitializeResponse {
 	t.Helper()
-	resp, err := verifyInitialize(t, db, req)
+	resp, err := VerifyInitialize(t, db, req)
 	if err != nil {
 		t.Fatalf("Failed to initialize: %s", err)
 	}
 	return resp
 }
 
-func verifyInitialize(t *testing.T, db dbplugin.Database, req dbplugin.InitializeRequest) (dbplugin.InitializeResponse, error) {
+func VerifyInitialize(t *testing.T, db dbplugin.Database, req dbplugin.InitializeRequest) (dbplugin.InitializeResponse, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), getRequestTimeout(t))
 	defer cancel()
 
@@ -118,4 +119,32 @@ func AssertClose(t *testing.T, db dbplugin.Database) {
 	if err != nil {
 		t.Fatalf("Failed to close database: %s", err)
 	}
+}
+
+// GetGCPTestCredentials reads the credentials from the
+// GOOGLE_APPLICATIONS_CREDENTIALS environment variable
+// The credentials are read from a file if a file exists
+// otherwise they are returned as JSON
+func GetGCPTestCredentials(t *testing.T) string {
+	t.Helper()
+	envCredentials := "GOOGLE_APPLICATIONS_CREDENTIALS"
+
+	var credsStr string
+	credsEnv := os.Getenv(envCredentials)
+	if credsEnv == "" {
+		t.Skipf("env var %s not set, skipping test", envCredentials)
+	}
+
+	// Attempt to read as file path; if invalid, assume given JSON value directly
+	if _, err := os.Stat(credsEnv); err == nil {
+		credsBytes, err := ioutil.ReadFile(credsEnv)
+		if err != nil {
+			t.Fatalf("unable to read credentials file %s: %v", credsStr, err)
+		}
+		credsStr = string(credsBytes)
+	} else {
+		credsStr = credsEnv
+	}
+
+	return credsStr
 }

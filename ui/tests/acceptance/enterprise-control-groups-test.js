@@ -13,9 +13,8 @@ import consoleClass from 'vault/tests/pages/components/console/ui-panel';
 import authForm from 'vault/tests/pages/components/auth-form';
 import controlGroup from 'vault/tests/pages/components/control-group';
 import controlGroupSuccess from 'vault/tests/pages/components/control-group-success';
+import { writeSecret } from 'vault/tests/helpers/kv/kv-run-commands';
 import authPage from 'vault/tests/pages/auth';
-import editPage from 'vault/tests/pages/secrets/backend/kv/edit-secret';
-import listPage from 'vault/tests/pages/secrets/backend/list';
 
 const consoleComponent = create(consoleClass);
 const authFormComponent = create(authForm);
@@ -114,12 +113,6 @@ module('Acceptance | Enterprise | control groups', function (hooks) {
     await authPage.login(context.userToken);
     await settled();
     return this;
-  };
-
-  const writeSecret = async function (backend, path, key, val) {
-    await listPage.visitRoot({ backend });
-    await listPage.create();
-    await editPage.createSecret(path, key, val);
   };
 
   test('for v2 secrets it redirects you if you try to navigate to a Control Group restricted path', async function (assert) {

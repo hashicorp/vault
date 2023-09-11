@@ -163,9 +163,31 @@ func handleSysSealStatus(core *vault.Core) http.Handler {
 	})
 }
 
+func handleSysSealBackendStatus(core *vault.Core) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != "GET" {
+			respondError(w, http.StatusMethodNotAllowed, nil)
+			return
+		}
+
+		handleSysSealBackendStatusRaw(core, w, r)
+	})
+}
+
 func handleSysSealStatusRaw(core *vault.Core, w http.ResponseWriter, r *http.Request) {
 	ctx := context.Background()
 	status, err := core.GetSealStatus(ctx)
+	if err != nil {
+		respondError(w, http.StatusInternalServerError, err)
+		return
+	}
+
+	respondOk(w, status)
+}
+
+func handleSysSealBackendStatusRaw(core *vault.Core, w http.ResponseWriter, r *http.Request) {
+	ctx := context.Background()
+	status, err := core.GetSealBackendStatus(ctx)
 	if err != nil {
 		respondError(w, http.StatusInternalServerError, err)
 		return

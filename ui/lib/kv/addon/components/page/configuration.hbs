@@ -1,0 +1,32 @@
+<KvPageHeader @breadcrumbs={{@breadcrumbs}} @mountName={{@mountConfig.id}}>
+  <:tabLinks>
+    <LinkTo @route="list" data-test-secrets-tab="Secrets">Secrets</LinkTo>
+    <LinkTo @route="configuration" data-test-secrets-tab="Configuration">Configuration</LinkTo>
+  </:tabLinks>
+</KvPageHeader>
+
+{{! engine configuration }}
+{{#if @engineConfig.canRead}}
+  <div class="box is-fullwidth is-sideless is-paddingless is-marginless">
+    {{#each @engineConfig.formFields as |attr|}}
+      <InfoTableRow
+        @alwaysRender={{true}}
+        @label={{or attr.options.label (to-label attr.name)}}
+        @value={{if (eq attr.name "deleteVersionAfter") @engineConfig.displayDeleteTtl (get @engineConfig attr.name)}}
+      />
+    {{/each}}
+  </div>
+{{/if}}
+
+{{! mount configuration }}
+<div class="box is-fullwidth is-sideless is-paddingless is-marginless">
+  {{#each @mountConfig.attrs as |attr|}}
+    {{#if (not (includes attr.name @engineConfig.displayFields))}}
+      <InfoTableRow
+        @formatTtl={{eq attr.options.editType "ttl"}}
+        @label={{or attr.options.label (to-label attr.name)}}
+        @value={{get @mountConfig (or attr.options.fieldValue attr.name)}}
+      />
+    {{/if}}
+  {{/each}}
+</div>

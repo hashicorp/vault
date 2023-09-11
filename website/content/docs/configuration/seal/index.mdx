@@ -14,12 +14,13 @@ root key. This stanza is optional, and in the case of the root key, Vault
 will use the Shamir algorithm to cryptographically split the root key if this
 is not configured.
 
-As of Vault 0.9.0, the seal can also be used for [seal wrapping][sealwrap] to
-add an extra layer of protection and satisfy compliance and regulatory requirements.
-This feature is only available in Vault Enterprise.
+## Seal wrapping <EnterpriseAlert inline="true" product="vault" />
 
-For more examples, please choose a specific auto unsealing technology from the
-sidebar.
+The seal can also be used for seal wrapping to add an extra layer of protection
+and satisfy compliance and regulatory requirements.
+
+Seal wrap is enabled by default for Vault Enterprise. Refer to the
+[Seal wrap](/vault/docs/enterprise/sealwrap) overview for more information.
 
 ## Configuration
 

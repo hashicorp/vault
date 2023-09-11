@@ -22,6 +22,7 @@ import (
 
 const (
 	amzHeaderPrefix    = "X-Amz-"
+	amzSignedHeaders   = "X-Amz-SignedHeaders"
 	operationPrefixAWS = "aws"
 )
 
@@ -32,7 +33,8 @@ var defaultAllowedSTSRequestHeaders = []string{
 	"X-Amz-Date",
 	"X-Amz-Security-Token",
 	"X-Amz-Signature",
-	"X-Amz-SignedHeaders",
+	amzSignedHeaders,
+	"X-Amz-User-Agent",
 }
 
 func Factory(ctx context.Context, conf *logical.BackendConfig) (logical.Backend, error) {

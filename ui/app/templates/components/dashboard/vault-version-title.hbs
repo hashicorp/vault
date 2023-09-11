@@ -1,0 +1,11 @@
+<PageHeader as |p|>
+  <p.levelLeft>
+    <h1 class="title is-3" data-test-dashboard-version-header>
+      {{this.versionHeader}}
+      {{#if @version.isEnterprise}}
+        <Hds::Badge @text={{this.namespaceDisplay}} @icon="org" data-test-badge-namespace />
+      {{/if}}
+    </h1>
+  </p.levelLeft>
+</PageHeader>
+<hr class="has-top-margin-xxs has-bottom-margin-l has-background-gray-200" />

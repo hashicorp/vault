@@ -94,19 +94,19 @@ period, which is represented by the `start_time` and `end_time` parameters.
 
 There are a few things to keep in mind while using this API.
 
-- For Vault versions before 1.11, the activity information only accounts for 
-the activity of the latest contiguous months in the billing period. 
+- For Vault versions before 1.11, the activity information only accounts for
+the activity of the latest contiguous months in the billing period.
 For example, if the billing period is from Jan 2022 to June 2022, and the
 activity subsystem in Vault was not capturing data for the months Jan to March,
-the response will only include information for May and June. Note that if no 
-`start_time` and `end_time` parameters are specified, the billing period defaults 
-to 12 months, so the endpoint will return activity information from the end of the 
-previous month to the start of 12 months prior to that date. 
+the response will only include information for May and June. Note that if no
+`start_time` and `end_time` parameters are specified, the billing period defaults
+to 12 months, so the endpoint will return activity information from the end of the
+previous month to the start of 12 months prior to that date.
 
-- As of 1.11, this behavior has been modified to return all available data within 
+- As of 1.11, this behavior has been modified to return all available data within
 the specified billing period.
 
-- As of 1.12, the `end_time` can be the current month. 
+- As of 1.12, the `end_time` can be the current month.
 
 - The response contains the total activity for the billing period and the
 attributions of the total activity against specific components in Vault. This
@@ -259,10 +259,10 @@ information, it will not be added to the API response.
 match the query parameters due to the month granularity of data or missing
 months in the requested time range.
 
-- Note that if the `end_date` specified is the current month, 
+- Note that if the `end_date` specified is the current month,
 the last element in the `months` response stanza, signifying the current month, will
-not have namespace attribution for the `new_clients` stanza. Furthermore, the 
-`new_clients` counts returned for the current month will be an approximation. 
+not have namespace attribution for the `new_clients` stanza. Furthermore, the
+`new_clients` counts returned for the current month will be an approximation.
 That is to say, the response will appear as follows.
 
 ```json
@@ -270,7 +270,7 @@ That is to say, the response will appear as follows.
    "months":[
       {
          "timestamp":"current_month_timestamp",
-         "counts":{ 
+         "counts":{
             "distinct_entities":"exact int value",
             "entity_clients":"exact int value",
             "non_entity_tokens":"exact int value",
@@ -281,7 +281,7 @@ That is to say, the response will appear as follows.
                {
                   "namespace_id":"root",
                   "namespace_path":"path",
-                  "counts":{ 
+                  "counts":{
                      "distinct_entities":"exact int value",
                      "entity_clients":"exact int value",
                      "non_entity_tokens":"exact int value",
@@ -291,7 +291,7 @@ That is to say, the response will appear as follows.
                   "mounts":[
                      {
                         "path":"auth/up2/",
-                        "counts":{ 
+                        "counts":{
                            "distinct_entities":"exact int value",
                            "entity_clients":"exact int value",
                            "non_entity_tokens":"exact int value",
@@ -320,7 +320,7 @@ That is to say, the response will appear as follows.
 
 Please visit the [client count](/vault/docs/concepts/client-count) concepts page for
 more information on how clients map to these client IDs and how they are
-counted, or for more information about how the new clients for the current month 
+counted, or for more information about how the new clients for the current month
 are estimated in a billing period.
 
 The response will include all child namespaces of the namespace in which the
@@ -344,7 +344,7 @@ This endpoint was added in Vault 1.6.
   for which client counts will be reported. If no end time is specified, the end of the previous calendar
   month will be used.
 - `limit_namespaces` `(int, optional)` - Controls the total number of by_namespace data returned. This can
-   be used to return the client counts for the specified number of namespaces having highest activity. 
+   be used to return the client counts for the specified number of namespaces having highest activity.
    If no `limit_namespaces` parameter is specified, client counts for all namespaces in specified usage period is returned.
 - `current_billing_period` `(bool, optional)` - Uses the builtin billing start
   timestamp as `start_time` and the current time as the `end_time`, returning a
@@ -873,7 +873,7 @@ The `/sys/internal/counters/config` endpoint is used to configure logging of act
 
 - `default_report_months` `(integer: 12)` - The number of months to report if no `start_time` is specified in a query.
 - `enabled` `(string: enable, disable, default)` - Enable or disable counting of client activity. When set to `default`, the client
-  counts are enabled on Enterprise builds and disabled on OSS builds. Disabling the feature during the middle of a month will
+  counts are enabled on Enterprise builds and disabled on community builds. Disabling the feature during the middle of a month will
   discard any data recorded for that month, but does not delete previous months.
 - `retention_months` `(integer: 24)` - The number of months of history to retain.
 

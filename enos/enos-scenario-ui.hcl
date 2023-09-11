@@ -15,10 +15,10 @@ scenario "ui" {
   ]
 
   locals {
-    arch            = "amd64"
-    artifact_type   = "bundle"
+    arch                 = "amd64"
+    artifact_type        = "bundle"
     backend_license_path = abspath(var.backend_license_path != null ? var.backend_license_path : joinpath(path.root, "./support/consul.hclic"))
-    backend_tag_key = "VaultStorage"
+    backend_tag_key      = "VaultStorage"
     build_tags = {
       "oss" = ["ui"]
       "ent" = ["ui", "enterprise", "ent"]
@@ -40,10 +40,6 @@ scenario "ui" {
     vault_license_path = abspath(var.vault_license_path != null ? var.vault_license_path : joinpath(path.root, "./support/vault.hclic"))
     vault_tag_key      = "Type" // enos_vault_start expects Type as the tag key
     ui_test_filter     = var.ui_test_filter != null && try(trimspace(var.ui_test_filter), "") != "" ? var.ui_test_filter : (matrix.edition == "oss") ? "!enterprise" : null
-  }
-
-  step "get_local_metadata" {
-    module = module.get_local_metadata
   }
 
   step "build_vault" {
@@ -139,7 +135,7 @@ scenario "ui" {
     variables {
       cluster_name    = step.create_vault_cluster_backend_targets.cluster_name
       cluster_tag_key = local.backend_tag_key
-      license  = (matrix.backend == "consul" && var.backend_edition == "ent") ? step.read_backend_license.license : null
+      license         = (matrix.backend == "consul" && var.backend_edition == "ent") ? step.read_backend_license.license : null
       release = {
         edition = var.backend_edition
         version = local.consul_version
@@ -165,7 +161,7 @@ scenario "ui" {
       backend_cluster_name    = step.create_vault_cluster_backend_targets.cluster_name
       backend_cluster_tag_key = local.backend_tag_key
       cluster_name            = step.create_vault_cluster_targets.cluster_name
-      consul_license  = (matrix.backend == "consul" && var.backend_edition == "ent") ? step.read_backend_license.license : null
+      consul_license          = (matrix.backend == "consul" && var.backend_edition == "ent") ? step.read_backend_license.license : null
       consul_release = matrix.backend == "consul" ? {
         edition = var.backend_edition
         version = local.consul_version

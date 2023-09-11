@@ -6,7 +6,7 @@
 import { module, test } from 'qunit';
 import { setupRenderingTest } from 'ember-qunit';
 import { create } from 'ember-cli-page-object';
-import { render, fillIn, find, waitUntil } from '@ember/test-helpers';
+import { render, fillIn, find, waitUntil, click } from '@ember/test-helpers';
 import hbs from 'htmlbars-inline-precompile';
 import jsonEditor from '../../pages/components/json-editor';
 import sinon from 'sinon';
@@ -77,5 +77,27 @@ module('Integration | Component | json-editor', function (hooks) {
       background: 'rgb(247, 248, 250) none repeat scroll 0% 0% / auto padding-box border-box',
     });
     assert.dom('.CodeMirror-linenumber').doesNotExist('on readOnly does not show line numbers');
+  });
+
+  test('it should render example and restore it', async function (assert) {
+    this.value = null;
+    this.example = 'this is a test example';
+
+    await render(hbs`
+      <JsonEditor
+        @value={{this.value}}
+        @example={{this.example}}
+        @mode="ruby"
+        @valueUpdated={{fn (mut this.value)}}
+      />
+    `);
+
+    assert.dom('.CodeMirror-code').hasText(`1${this.example}`, 'Example renders when there is no value');
+    assert.dom('[data-test-restore-example]').isDisabled('Restore button disabled when showing example');
+    await fillIn('textarea', '');
+    await fillIn('textarea', 'adding a value should allow the example to be restored');
+    await click('[data-test-restore-example]');
+    assert.dom('.CodeMirror-code').hasText(`1${this.example}`, 'Example is restored');
+    assert.strictEqual(this.value, null, 'Value is cleared on restore example');
   });
 });

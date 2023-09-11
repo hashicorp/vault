@@ -5,11 +5,10 @@
 
 import Model, { attr } from '@ember-data/model';
 import { computed } from '@ember/object';
-import { apiPath } from 'vault/macros/lazy-capabilities';
-import attachCapabilities from 'vault/lib/attach-capabilities';
+import lazyCapabilities, { apiPath } from 'vault/macros/lazy-capabilities';
 import { expandAttributeMeta } from 'vault/utils/field-to-attrs';
 
-const M = Model.extend({
+export default Model.extend({
   idPrefix: 'template/',
   idForNav: computed('id', 'idPrefix', function () {
     const modelId = this.id || '';
@@ -47,8 +46,5 @@ const M = Model.extend({
   writeAttrs: computed(function () {
     return expandAttributeMeta(this, ['name', 'pattern', 'alphabet']);
   }),
-});
-
-export default attachCapabilities(M, {
-  updatePath: apiPath`${'backend'}/template/${'id'}`,
+  updatePath: lazyCapabilities(apiPath`${'backend'}/template/${'id'}`, 'backend', 'id'),
 });

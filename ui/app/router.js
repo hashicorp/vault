@@ -14,6 +14,7 @@ export default class Router extends EmberRouter {
 Router.map(function () {
   this.route('vault', { path: '/' }, function () {
     this.route('cluster', { path: '/:cluster_name' }, function () {
+      this.route('dashboard');
       this.route('oidc-provider-ns', { path: '/*namespace/identity/oidc/provider/:provider_name/authorize' });
       this.route('oidc-provider', { path: '/identity/oidc/provider/:provider_name/authorize' });
       this.route('oidc-callback', { path: '/auth/*auth_path/oidc/callback' });
@@ -159,6 +160,8 @@ Router.map(function () {
         this.route('backend', { path: '/:backend' }, function () {
           this.mount('kmip');
           this.mount('kubernetes');
+          this.mount('kv');
+          this.mount('ldap');
           this.mount('pki');
           this.route('index', { path: '/' });
           this.route('configuration');

@@ -730,11 +730,13 @@ func (b *Backend) handleWALRollback(ctx context.Context, req *logical.Request) (
 	return logical.ErrorResponse(merr.Error()), nil
 }
 
+// SendEvent is used to send events through the underlying EventSender.
+// It returns ErrNoEvents if the events system has not been configured or enabled.
 func (b *Backend) SendEvent(ctx context.Context, eventType logical.EventType, event *logical.EventData) error {
 	if b.events == nil {
 		return ErrNoEvents
 	}
-	return b.events.Send(ctx, eventType, event)
+	return b.events.SendEvent(ctx, eventType, event)
 }
 
 // FieldSchema is a basic schema to describe the format of a path field.

@@ -7,7 +7,7 @@ import { set } from '@ember/object';
 import { hash } from 'rsvp';
 import Route from '@ember/routing/route';
 import { supportedSecretBackends } from 'vault/helpers/supported-secret-backends';
-import { allEngines } from 'vault/helpers/mountable-secret-engines';
+import { allEngines, isAddonEngine } from 'vault/helpers/mountable-secret-engines';
 import { inject as service } from '@ember/service';
 import { normalizePath } from 'vault/utils/path-encoding-helpers';
 import { assert } from '@ember/debug';
@@ -79,7 +79,7 @@ export default Route.extend({
     if (this.routeName === 'vault.cluster.secrets.backend.list' && !secret.endsWith('/')) {
       return this.router.replaceWith('vault.cluster.secrets.backend.list', secret + '/');
     }
-    if (engineRoute) {
+    if (isAddonEngine(type, secretEngine.version)) {
       return this.router.transitionTo(`vault.cluster.secrets.backend.${engineRoute}`, backend);
     }
     const modelType = this.getModelType(backend, tab);

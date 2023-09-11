@@ -7,19 +7,20 @@ import { currentRouteName, settled } from '@ember/test-helpers';
 import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
 import { v4 as uuidv4 } from 'uuid';
+import { setupMirage } from 'ember-cli-mirage/test-support';
 
 import editPage from 'vault/tests/pages/secrets/backend/kv/edit-secret';
 import showPage from 'vault/tests/pages/secrets/backend/kv/show';
 import listPage from 'vault/tests/pages/secrets/backend/list';
-import apiStub from 'vault/tests/helpers/noop-all-api-requests';
 import authPage from 'vault/tests/pages/auth';
+import assertSecretWrap from 'vault/tests/helpers/secret-edit-toolbar';
 
 module('Acceptance | secrets/cubbyhole/create', function (hooks) {
   setupApplicationTest(hooks);
+  setupMirage(hooks);
 
   hooks.beforeEach(function () {
     this.uid = uuidv4();
-    this.server = apiStub({ usePassthrough: true });
     return authPage.login();
   });
 
@@ -28,7 +29,9 @@ module('Acceptance | secrets/cubbyhole/create', function (hooks) {
   });
 
   test('it creates and can view a secret with the cubbyhole backend', async function (assert) {
+    assert.expect(5);
     const kvPath = `cubbyhole-kv-${this.uid}`;
+    const requestPath = `cubbyhole/${kvPath}`;
     await listPage.visitRoot({ backend: 'cubbyhole' });
     await settled();
     assert.strictEqual(
@@ -48,5 +51,7 @@ module('Acceptance | secrets/cubbyhole/create', function (hooks) {
     );
     assert.dom('[data-test-created-time]').hasText('', 'it does not render created time if blank');
     assert.ok(showPage.editIsPresent, 'shows the edit button');
+
+    await assertSecretWrap(assert, this.server, requestPath);
   });
 });

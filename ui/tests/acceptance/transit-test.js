@@ -6,92 +6,112 @@
 import { click, fillIn, find, currentURL, settled, visit, waitUntil, findAll } from '@ember/test-helpers';
 import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
-import { create } from 'ember-cli-page-object';
 import { v4 as uuidv4 } from 'uuid';
 
 import { encodeString } from 'vault/utils/b64';
 import authPage from 'vault/tests/pages/auth';
-import secretListPage from 'vault/tests/pages/secrets/backend/list';
-import consoleClass from 'vault/tests/pages/components/console/ui-panel';
-import { deleteEngineCmd, mountEngineCmd } from '../helpers/commands';
+import { deleteEngineCmd, mountEngineCmd, runCmd } from 'vault/tests/helpers/commands';
 
-const consoleComponent = create(consoleClass);
-const keyTypes = [
-  {
-    name: (ts) => `aes-${ts}`,
-    type: 'aes128-gcm96',
-    exportable: true,
-    supportsEncryption: true,
+const SELECTORS = {
+  secretLink: '[data-test-secret-link]',
+  popupMenu: '[data-test-popup-menu-trigger]',
+  versionsTab: '[data-test-transit-link="versions"]',
+  actionsTab: '[data-test-transit-key-actions-link]',
+  card: (action) => `[data-test-transit-card="${action}"]`,
+  rotate: {
+    trigger: '[data-test-confirm-action-trigger]',
+    confirm: '[data-test-confirm-button]',
   },
+};
+
+// convergent
+const groupOne = [
   {
-    name: (ts) => `aes-convergent-${ts}`,
+    name: (uid = 'name') => `aes-1A-convergent-${uid}`,
     type: 'aes128-gcm96',
     convergent: true,
     supportsEncryption: true,
   },
   {
-    name: (ts) => `aes-${ts}`,
-    type: 'aes256-gcm96',
-    exportable: true,
-    supportsEncryption: true,
-  },
-  {
-    name: (ts) => `aes-convergent-${ts}`,
+    name: (uid = 'name') => `aes-1B-convergent-${uid}`,
     type: 'aes256-gcm96',
     convergent: true,
     supportsEncryption: true,
   },
   {
-    name: (ts) => `chacha-${ts}`,
-    type: 'chacha20-poly1305',
-    exportable: true,
-    supportsEncryption: true,
-  },
-  {
-    name: (ts) => `chacha-convergent-${ts}`,
+    name: (uid = 'name') => `chacha-1C-convergent-${uid}`,
     type: 'chacha20-poly1305',
     convergent: true,
     supportsEncryption: true,
     autoRotate: true,
   },
+];
+
+// exportable, supports encryption
+const groupTwo = [
   {
-    name: (ts) => `ecdsa-${ts}`,
+    name: (uid = 'name') => `aes-2A-${uid}`,
+    type: 'aes128-gcm96',
+    exportable: true,
+    supportsEncryption: true,
+  },
+  {
+    name: (uid = 'name') => `aes-2B-${uid}`,
+    type: 'aes256-gcm96',
+    exportable: true,
+    supportsEncryption: true,
+  },
+  {
+    name: (uid = 'name') => `chacha-3B-${uid}`,
+    type: 'chacha20-poly1305',
+    exportable: true,
+    supportsEncryption: true,
+  },
+];
+
+// exportable, supports signing
+const groupThree = [
+  {
+    name: (uid = 'name') => `ecdsa-3A-${uid}`,
     type: 'ecdsa-p256',
     exportable: true,
     supportsSigning: true,
   },
   {
-    name: (ts) => `ecdsa-${ts}`,
+    name: (uid = 'name') => `ecdsa-3B-${uid}`,
     type: 'ecdsa-p384',
     exportable: true,
     supportsSigning: true,
   },
   {
-    name: (ts) => `ecdsa-${ts}`,
+    name: (uid = 'name') => `ecdsa-3C-${uid}`,
     type: 'ecdsa-p521',
     exportable: true,
     supportsSigning: true,
   },
+];
+// the rest
+const groupFour = [
   {
-    name: (ts) => `ed25519-${ts}`,
+    name: (uid = 'name') => `ed25519-4A-${uid}`,
     type: 'ed25519',
     derived: true,
     supportsSigning: true,
   },
   {
-    name: (ts) => `rsa-2048-${ts}`,
+    name: (uid = 'name') => `rsa-2048-4B-${uid}`,
     type: `rsa-2048`,
     supportsSigning: true,
     supportsEncryption: true,
   },
   {
-    name: (ts) => `rsa-3072-${ts}`,
+    name: (uid = 'name') => `rsa-3072-4C-${uid}`,
     type: `rsa-3072`,
     supportsSigning: true,
     supportsEncryption: true,
   },
   {
-    name: (ts) => `rsa-4096-${ts}`,
+    name: (uid = 'name') => `rsa-4096-4D-${uid}`,
     type: `rsa-4096`,
     supportsSigning: true,
     supportsEncryption: true,
@@ -99,8 +119,8 @@ const keyTypes = [
   },
 ];
 
-const generateTransitKey = async function (key, now) {
-  const name = key.name(now);
+const generateTransitKey = async function (key, uid) {
+  const name = key.name(uid);
   await click('[data-test-secret-create]');
 
   await fillIn('[data-test-transit-key-name]', name);
@@ -300,24 +320,38 @@ module('Acceptance | transit', function (hooks) {
     this.uid = uid;
     this.path = `transit-${uid}`;
 
-    await consoleComponent.runCommands(mountEngineCmd('transit', this.path));
+    await runCmd(mountEngineCmd('transit', this.path));
     // Start test on backend main page
     return visit(`/vault/secrets/${this.path}/list`);
   });
 
-  hooks.afterEach(function () {
-    return consoleComponent.runCommands(deleteEngineCmd(this.path));
+  hooks.afterEach(async function () {
+    await authPage.login();
+    await runCmd(deleteEngineCmd(this.mountPath));
   });
 
   test(`transit backend: list menu`, async function (assert) {
-    await generateTransitKey(keyTypes[0], this.uid);
-    await secretListPage.secrets.objectAt(0).menuToggle();
-    await settled();
-    assert.strictEqual(secretListPage.menuItems.length, 2, 'shows 2 items in the menu');
+    assert.expect(3);
+    const name = await generateTransitKey(groupTwo[0], this.uid);
+    await click(SELECTORS.popupMenu);
+    const actions = findAll('.ember-basic-dropdown-content li');
+    assert.strictEqual(actions.length, 2, 'shows 2 items in popup menu');
+
+    await click(SELECTORS.secretLink);
+    assert.strictEqual(
+      currentURL(),
+      `/vault/secrets/${this.path}/show/${name}?tab=actions`,
+      'navigates to key actions tab'
+    );
+    await click(SELECTORS.actionsTab);
+    assert.strictEqual(currentURL(), `/vault/secrets/${this.path}/show/${name}?tab=actions`),
+      'navigates back to transit actions';
   });
-  for (const key of keyTypes) {
-    test(`transit backend: ${key.type}`, async function (assert) {
-      assert.expect(key.convergent ? 43 : 7);
+
+  // convergent keys
+  for (const key of groupOne) {
+    test(`transit backend: group 1 ${key.name()}`, async function (assert) {
+      assert.expect(42);
       const name = await generateTransitKey(key, this.uid);
       await visit(`vault/secrets/${this.path}/show/${name}`);
 
@@ -326,52 +360,149 @@ module('Acceptance | transit', function (hooks) {
         .dom('[data-test-row-value="Auto-rotation period"]')
         .hasText(expectedRotateValue, 'Has expected auto rotate value');
 
-      await click('[data-test-transit-link="versions"]');
-      // wait for capabilities
-
+      await click(SELECTORS.versionsTab);
       assert.dom('[data-test-transit-key-version-row]').exists({ count: 1 }, `${name}: only one key version`);
-      await waitUntil(() => find('[data-test-confirm-action-trigger]'));
-      await click('[data-test-confirm-action-trigger]');
-
-      await click('[data-test-confirm-button]');
+      await waitUntil(() => find(SELECTORS.rotate.trigger));
+      await click(SELECTORS.rotate.trigger);
+      await click(SELECTORS.rotate.confirm);
       // wait for rotate call
       await waitUntil(() => findAll('[data-test-transit-key-version-row]').length >= 2);
       assert
         .dom('[data-test-transit-key-version-row]')
         .exists({ count: 2 }, `${name}: two key versions after rotate`);
-      await click('[data-test-transit-key-actions-link]');
-      assert.ok(
-        currentURL().startsWith(`/vault/secrets/${this.path}/show/${name}?tab=actions`),
-        `${name}: navigates to transit actions`
-      );
 
-      const keyAction = key.supportsEncryption ? 'encrypt' : 'sign';
-      const actionTitle = find(`[data-test-transit-action-title=${keyAction}]`).innerText.toLowerCase();
+      // navigate back to actions tab
+      await visit(`/vault/secrets/${this.path}/show/${name}?tab=actions`);
 
-      assert.true(
-        actionTitle.includes(keyAction),
-        `shows a card with title that links to the ${name} transit action`
-      );
+      const keyAction = 'encrypt';
+      await waitUntil(() => find(SELECTORS.card(keyAction)));
+      assert.dom(SELECTORS.card(keyAction)).exists(`renders ${keyAction} card for ${key.name()}`);
+      await click(SELECTORS.card(keyAction));
+      assert
+        .dom('[data-test-transit-key-version-select]')
+        .exists(`${name}: the rotated key allows you to select versions`);
+      assert
+        .dom('[data-test-transit-action-link="export"]')
+        .doesNotExist(`${name}: non-exportable key does not link to export action`);
+      await testConvergentEncryption(assert, name);
+    });
+  }
+  // exportable, supports encryption
+  for (const key of groupTwo) {
+    test(`transit backend: group 2 ${key.name()}`, async function (assert) {
+      assert.expect(6);
+      const name = await generateTransitKey(key, this.uid);
+      await visit(`vault/secrets/${this.path}/show/${name}`);
 
-      await click(`[data-test-transit-card=${keyAction}]`);
+      assert
+        .dom('[data-test-row-value="Auto-rotation period"]')
+        .hasText('Key will not be automatically rotated', 'key will not auto rotate');
+
+      await click(SELECTORS.versionsTab);
+      assert.dom('[data-test-transit-key-version-row]').exists({ count: 1 }, `${name}: only one key version`);
+      await waitUntil(() => find(SELECTORS.rotate.trigger));
+      await click(SELECTORS.rotate.trigger);
+      await click(SELECTORS.rotate.confirm);
+
+      // wait for rotate call
+      await waitUntil(() => findAll('[data-test-transit-key-version-row]').length >= 2);
+      assert
+        .dom('[data-test-transit-key-version-row]')
+        .exists({ count: 2 }, `${name}: two key versions after rotate`);
+
+      // navigate back to actions tab
+      await visit(`/vault/secrets/${this.path}/show/${name}?tab=actions`);
+      const keyAction = 'encrypt';
+      await waitUntil(() => find(SELECTORS.card(keyAction)));
+      assert.dom(SELECTORS.card(keyAction)).exists(`renders ${keyAction} card for ${key.name()}`);
+      await click(SELECTORS.card(keyAction));
 
       assert
         .dom('[data-test-transit-key-version-select]')
         .exists(`${name}: the rotated key allows you to select versions`);
-      if (key.exportable) {
-        assert
-          .dom('[data-test-transit-action-link="export"]')
-          .exists(`${name}: exportable key has a link to export action`);
-      } else {
-        assert
-          .dom('[data-test-transit-action-link="export"]')
-          .doesNotExist(`${name}: non-exportable key does not link to export action`);
-      }
-      if (key.convergent && key.supportsEncryption) {
-        await testConvergentEncryption(assert, name);
-        await settled();
-      }
-      await settled();
+      assert
+        .dom('[data-test-transit-action-link="export"]')
+        .exists(`${name}: exportable key has a link to export action`);
+    });
+  }
+  // exportable, supports signing
+  for (const key of groupThree) {
+    test(`transit backend: group 2 ${key.name()}`, async function (assert) {
+      assert.expect(6);
+      const name = await generateTransitKey(key, this.uid);
+      await visit(`vault/secrets/${this.path}/show/${name}`);
+
+      assert
+        .dom('[data-test-row-value="Auto-rotation period"]')
+        .hasText('Key will not be automatically rotated', 'key will not auto rotate');
+
+      await click(SELECTORS.versionsTab);
+      assert.dom('[data-test-transit-key-version-row]').exists({ count: 1 }, `${name}: only one key version`);
+      await waitUntil(() => find(SELECTORS.rotate.trigger));
+      await click(SELECTORS.rotate.trigger);
+      await click(SELECTORS.rotate.confirm);
+
+      // wait for rotate call
+      await waitUntil(() => findAll('[data-test-transit-key-version-row]').length >= 2);
+      assert
+        .dom('[data-test-transit-key-version-row]')
+        .exists({ count: 2 }, `${name}: two key versions after rotate`);
+
+      // navigate back to actions tab
+      await visit(`/vault/secrets/${this.path}/show/${name}?tab=actions`);
+      const keyAction = 'sign';
+      await waitUntil(() => find(SELECTORS.card(keyAction)));
+      assert.dom(SELECTORS.card(keyAction)).exists(`renders ${keyAction} card for ${key.name()}`);
+      await click(SELECTORS.card(keyAction));
+
+      assert
+        .dom('[data-test-transit-key-version-select]')
+        .exists(`${name}: the rotated key allows you to select versions`);
+      assert
+        .dom('[data-test-transit-action-link="export"]')
+        .exists(`${name}: exportable key has a link to export action`);
+    });
+  }
+
+  for (const key of groupFour) {
+    test(`transit backend: group 3 ${key.name()}`, async function (assert) {
+      assert.expect(6);
+      const name = await generateTransitKey(key, this.uid);
+      await visit(`vault/secrets/${this.path}/show/${name}`);
+
+      const expectedRotateValue = key.autoRotate ? '30 days' : 'Key will not be automatically rotated';
+      assert
+        .dom('[data-test-row-value="Auto-rotation period"]')
+        .hasText(expectedRotateValue, 'Has expected auto rotate value');
+
+      await click(SELECTORS.versionsTab);
+
+      assert.dom('[data-test-transit-key-version-row]').exists({ count: 1 }, `${name}: only one key version`);
+      await waitUntil(() => find(SELECTORS.rotate.trigger));
+      await click(SELECTORS.rotate.trigger);
+      await click(SELECTORS.rotate.confirm);
+
+      // wait for rotate call
+      await waitUntil(() => findAll('[data-test-transit-key-version-row]').length >= 2);
+      assert
+        .dom('[data-test-transit-key-version-row]')
+        .exists({ count: 2 }, `${name}: two key versions after rotate`);
+
+      // navigate back to actions tab
+      await visit(`/vault/secrets/${this.path}/show/${name}?tab=actions`);
+
+      const keyAction = key.supportsEncryption ? 'encrypt' : 'sign';
+      await waitUntil(() => find(SELECTORS.card(keyAction)));
+      assert.dom(SELECTORS.card(keyAction)).exists(`renders ${keyAction} card for ${key.name()}`);
+      await click(SELECTORS.card(keyAction));
+
+      assert
+        .dom('[data-test-transit-key-version-select]')
+        .exists(`${name}: the rotated key allows you to select versions`);
+
+      assert
+        .dom('[data-test-transit-action-link="export"]')
+        .doesNotExist(`${name}: non-exportable key does not link to export action`);
     });
   }
 });

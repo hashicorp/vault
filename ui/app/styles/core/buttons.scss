@@ -92,6 +92,12 @@
     color: $red-500;
   }
 
+  &.is-warning-outlined {
+    background-color: $yellow-010;
+    border: 1px solid $yellow-700;
+    color: $yellow-700;
+  }
+
   &.is-flat {
     min-width: auto;
     border: none;
@@ -320,4 +326,9 @@ a.button.disabled {
   font-size: inherit;
   font-weight: inherit;
   cursor: pointer;
+
+  &:disabled {
+    color: $grey-light;
+    cursor: not-allowed;
+  }
 }

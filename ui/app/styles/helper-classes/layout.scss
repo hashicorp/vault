@@ -34,6 +34,10 @@
   position: relative;
 }
 
+.top-xxs {
+  top: $spacing-xxs;
+}
+
 // visibility
 .is-invisible {
   visibility: hidden;
@@ -42,6 +46,10 @@
 // width and height
 .is-fullwidth {
   width: 100%;
+}
+
+.is-three-fourths-width {
+  width: 75%;
 }
 
 .is-auto-width {

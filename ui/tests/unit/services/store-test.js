@@ -90,7 +90,15 @@ module('Unit | Service | store', function (hooks) {
       store.constructResponse('data', { id: 1, pageFilter: 't', page: 1, size: 3, responsePath: 'data' }),
       {
         data: ['two', 'three', 'fifteen'],
-        meta: { currentPage: 1, lastPage: 2, nextPage: 2, prevPage: 1, total: 5, filteredTotal: 4 },
+        meta: {
+          currentPage: 1,
+          lastPage: 2,
+          nextPage: 2,
+          prevPage: 1,
+          total: 5,
+          filteredTotal: 4,
+          pageSize: 3,
+        },
       },
       'it returns filtered results'
     );
@@ -125,6 +133,7 @@ module('Unit | Service | store', function (hooks) {
         lastPage: 4,
         total: 7,
         filteredTotal: 7,
+        pageSize: 2,
       },
       'returns correct meta values'
     );

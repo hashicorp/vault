@@ -35,7 +35,7 @@ export default SecretV2Model.extend(KeyMixin, {
     subText: 'An optional set of informational key-value pairs that will be stored with all secret versions.',
   }),
   maxVersions: attr('number', {
-    defaultValue: 10,
+    defaultValue: 0,
     label: 'Maximum number of versions',
     subText:
       'The number of versions to keep per key. Once the number of keys exceeds the maximum number set here, the oldest version will be permanently deleted.',

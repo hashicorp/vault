@@ -9,9 +9,12 @@ import (
 	"math/rand"
 	"testing"
 
+	"github.com/google/go-cmp/cmp"
+	"github.com/google/go-cmp/cmp/cmpopts"
 	"github.com/hashicorp/vault/helper/constants"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/vault/activity"
+	"google.golang.org/protobuf/testing/protocmp"
 )
 
 // InjectActivityLogDataThisMonth populates the in-memory client store
@@ -66,6 +69,16 @@ func (c *Core) GetActiveClients() map[string]*activity.EntityRecord {
 	}
 	c.activityLog.fragmentLock.RUnlock()
 	c.stateLock.RUnlock()
+
+	return out
+}
+
+func (c *Core) GetActiveClientsList() []*activity.EntityRecord {
+	out := []*activity.EntityRecord{}
+
+	for _, v := range c.GetActiveClients() {
+		out = append(out, v)
+	}
 
 	return out
 }
@@ -175,18 +188,14 @@ func (a *ActivityLog) ExpectCurrentSegmentRefreshed(t *testing.T, expectedStart 
 }
 
 // ActiveEntitiesEqual checks that only the set of `test` exists in `active`
-func ActiveEntitiesEqual(active map[string]*activity.EntityRecord, test []*activity.EntityRecord) bool {
-	if len(active) != len(test) {
-		return false
+func ActiveEntitiesEqual(active []*activity.EntityRecord, test []*activity.EntityRecord) error {
+	opts := []cmp.Option{protocmp.Transform(), cmpopts.SortSlices(func(x, y *activity.EntityRecord) bool {
+		return x.ClientID < y.ClientID
+	})}
+	if diff := cmp.Diff(active, test, opts...); len(diff) > 0 {
+		return fmt.Errorf("entity record mismatch: %v", diff)
 	}
-
-	for _, ent := range test {
-		if _, ok := active[ent.ClientID]; !ok {
-			return false
-		}
-	}
-
-	return true
+	return nil
 }
 
 // GetStartTimestamp returns the start timestamp on an activity log

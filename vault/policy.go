@@ -9,7 +9,7 @@ import (
 	"strings"
 	"time"
 
-	multierror "github.com/hashicorp/go-multierror"
+	"github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/go-secure-stdlib/parseutil"
 	"github.com/hashicorp/hcl"
 	"github.com/hashicorp/hcl/hcl/ast"
@@ -22,15 +22,16 @@ import (
 )
 
 const (
-	DenyCapability   = "deny"
-	CreateCapability = "create"
-	ReadCapability   = "read"
-	UpdateCapability = "update"
-	DeleteCapability = "delete"
-	ListCapability   = "list"
-	SudoCapability   = "sudo"
-	RootCapability   = "root"
-	PatchCapability  = "patch"
+	DenyCapability      = "deny"
+	CreateCapability    = "create"
+	ReadCapability      = "read"
+	UpdateCapability    = "update"
+	DeleteCapability    = "delete"
+	ListCapability      = "list"
+	SudoCapability      = "sudo"
+	RootCapability      = "root"
+	PatchCapability     = "patch"
+	SubscribeCapability = "subscribe"
 
 	// Backwards compatibility
 	OldDenyPathPolicy  = "deny"
@@ -48,6 +49,7 @@ const (
 	ListCapabilityInt
 	SudoCapabilityInt
 	PatchCapabilityInt
+	SubscribeCapabilityInt
 )
 
 // Error constants for testing
@@ -82,14 +84,15 @@ func (p PolicyType) String() string {
 }
 
 var cap2Int = map[string]uint32{
-	DenyCapability:   DenyCapabilityInt,
-	CreateCapability: CreateCapabilityInt,
-	ReadCapability:   ReadCapabilityInt,
-	UpdateCapability: UpdateCapabilityInt,
-	DeleteCapability: DeleteCapabilityInt,
-	ListCapability:   ListCapabilityInt,
-	SudoCapability:   SudoCapabilityInt,
-	PatchCapability:  PatchCapabilityInt,
+	DenyCapability:      DenyCapabilityInt,
+	CreateCapability:    CreateCapabilityInt,
+	ReadCapability:      ReadCapabilityInt,
+	UpdateCapability:    UpdateCapabilityInt,
+	DeleteCapability:    DeleteCapabilityInt,
+	ListCapability:      ListCapabilityInt,
+	SudoCapability:      SudoCapabilityInt,
+	PatchCapability:     PatchCapabilityInt,
+	SubscribeCapability: SubscribeCapabilityInt,
 }
 
 type egpPath struct {
@@ -133,13 +136,14 @@ type PathRules struct {
 
 	// These keys are used at the top level to make the HCL nicer; we store in
 	// the ACLPermissions object though
-	MinWrappingTTLHCL     interface{}              `hcl:"min_wrapping_ttl"`
-	MaxWrappingTTLHCL     interface{}              `hcl:"max_wrapping_ttl"`
-	AllowedParametersHCL  map[string][]interface{} `hcl:"allowed_parameters"`
-	DeniedParametersHCL   map[string][]interface{} `hcl:"denied_parameters"`
-	RequiredParametersHCL []string                 `hcl:"required_parameters"`
-	MFAMethodsHCL         []string                 `hcl:"mfa_methods"`
-	ControlGroupHCL       *ControlGroupHCL         `hcl:"control_group"`
+	MinWrappingTTLHCL      interface{}              `hcl:"min_wrapping_ttl"`
+	MaxWrappingTTLHCL      interface{}              `hcl:"max_wrapping_ttl"`
+	AllowedParametersHCL   map[string][]interface{} `hcl:"allowed_parameters"`
+	DeniedParametersHCL    map[string][]interface{} `hcl:"denied_parameters"`
+	RequiredParametersHCL  []string                 `hcl:"required_parameters"`
+	MFAMethodsHCL          []string                 `hcl:"mfa_methods"`
+	ControlGroupHCL        *ControlGroupHCL         `hcl:"control_group"`
+	SubscribeEventTypesHCL []string                 `hcl:"subscribe_event_types"`
 }
 
 type ControlGroupHCL struct {
@@ -185,14 +189,16 @@ type ACLPermissions struct {
 	MFAMethods          []string
 	ControlGroup        *ControlGroup
 	GrantingPoliciesMap map[uint32][]logical.PolicyInfo
+	SubscribeEventTypes []string
 }
 
 func (p *ACLPermissions) Clone() (*ACLPermissions, error) {
 	ret := &ACLPermissions{
-		CapabilitiesBitmap: p.CapabilitiesBitmap,
-		MinWrappingTTL:     p.MinWrappingTTL,
-		MaxWrappingTTL:     p.MaxWrappingTTL,
-		RequiredParameters: p.RequiredParameters[:],
+		CapabilitiesBitmap:  p.CapabilitiesBitmap,
+		MinWrappingTTL:      p.MinWrappingTTL,
+		MaxWrappingTTL:      p.MaxWrappingTTL,
+		RequiredParameters:  p.RequiredParameters[:],
+		SubscribeEventTypes: p.SubscribeEventTypes[:],
 	}
 
 	switch {
@@ -377,6 +383,7 @@ func parsePaths(result *Policy, list *ast.ObjectList, performTemplating bool, en
 			"max_wrapping_ttl",
 			"mfa_methods",
 			"control_group",
+			"subscribe_event_types",
 		}
 		if err := hclutil.CheckHCLKeys(item.Val, valid); err != nil {
 			return multierror.Prefix(err, fmt.Sprintf("path %q:", key))
@@ -444,7 +451,7 @@ func parsePaths(result *Policy, list *ast.ObjectList, performTemplating bool, en
 				pc.Capabilities = []string{DenyCapability}
 				pc.Permissions.CapabilitiesBitmap = DenyCapabilityInt
 				goto PathFinished
-			case CreateCapability, ReadCapability, UpdateCapability, DeleteCapability, ListCapability, SudoCapability, PatchCapability:
+			case CreateCapability, ReadCapability, UpdateCapability, DeleteCapability, ListCapability, SudoCapability, PatchCapability, SubscribeCapability:
 				pc.Permissions.CapabilitiesBitmap |= cap2Int[cap]
 			default:
 				return fmt.Errorf("path %q: invalid capability %q", key, cap)
@@ -541,6 +548,9 @@ func parsePaths(result *Policy, list *ast.ObjectList, performTemplating bool, en
 		}
 		if len(pc.RequiredParametersHCL) > 0 {
 			pc.Permissions.RequiredParameters = pc.RequiredParametersHCL[:]
+		}
+		if len(pc.SubscribeEventTypesHCL) > 0 {
+			pc.Permissions.SubscribeEventTypes = pc.SubscribeEventTypesHCL[:]
 		}
 
 	PathFinished:

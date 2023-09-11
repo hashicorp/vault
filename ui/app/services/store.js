@@ -132,6 +132,7 @@ export default class StoreService extends Store {
       prevPage: clamp(currentPage - 1, 1, lastPage),
       total: dataset.length || 0,
       filteredTotal: data.length || 0,
+      pageSize: size,
     };
 
     return resp;

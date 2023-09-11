@@ -7,6 +7,7 @@ import (
 	"context"
 	"fmt"
 	"reflect"
+	"slices"
 	"sort"
 	"strings"
 
@@ -52,13 +53,14 @@ type AuthResults struct {
 }
 
 type ACLResults struct {
-	Allowed            bool
-	RootPrivs          bool
-	IsRoot             bool
-	MFAMethods         []string
-	ControlGroup       *ControlGroup
-	CapabilitiesBitmap uint32
-	GrantingPolicies   []logical.PolicyInfo
+	Allowed             bool
+	RootPrivs           bool
+	IsRoot              bool
+	MFAMethods          []string
+	ControlGroup        *ControlGroup
+	CapabilitiesBitmap  uint32
+	GrantingPolicies    []logical.PolicyInfo
+	SubscribeEventTypes []string
 }
 
 type SentinelResults struct {
@@ -274,6 +276,12 @@ func NewACL(ctx context.Context, policies []*Policy) (*ACL, error) {
 				}
 			}
 
+			if len(pc.Permissions.SubscribeEventTypes) > 0 {
+				if len(existingPerms.SubscribeEventTypes) > 0 {
+					existingPerms.SubscribeEventTypes = strutil.RemoveDuplicates(append(existingPerms.SubscribeEventTypes, pc.Permissions.SubscribeEventTypes...), false)
+				}
+			}
+
 		INSERT:
 			switch {
 			case pc.HasSegmentWildcards:
@@ -286,7 +294,7 @@ func NewACL(ctx context.Context, policies []*Policy) (*ACL, error) {
 	return a, nil
 }
 
-func (a *ACL) Capabilities(ctx context.Context, path string) (pathCapabilities []string) {
+func (a *ACL) CapabilitiesAndSubscribeEventTypes(ctx context.Context, path string) (pathCapabilities []string, subscribeEventTypes []string) {
 	req := &logical.Request{
 		Path: path,
 		// doesn't matter, but use List to trigger fallback behavior so we can
@@ -296,9 +304,9 @@ func (a *ACL) Capabilities(ctx context.Context, path string) (pathCapabilities [
 
 	res := a.AllowOperation(ctx, req, true)
 	if res.IsRoot {
-		return []string{RootCapability}
+		return []string{RootCapability}, []string{"*"}
 	}
-
+	subscribeEventTypes = res.SubscribeEventTypes
 	capabilities := res.CapabilitiesBitmap
 
 	if capabilities&SudoCapabilityInt > 0 {
@@ -322,13 +330,22 @@ func (a *ACL) Capabilities(ctx context.Context, path string) (pathCapabilities [
 	if capabilities&PatchCapabilityInt > 0 {
 		pathCapabilities = append(pathCapabilities, PatchCapability)
 	}
+	if capabilities&SubscribeCapabilityInt > 0 {
+		pathCapabilities = append(pathCapabilities, SubscribeCapability)
+	}
 
 	// If "deny" is explicitly set or if the path has no capabilities at all,
 	// set the path capabilities to "deny"
 	if capabilities&DenyCapabilityInt > 0 || len(pathCapabilities) == 0 {
 		pathCapabilities = []string{DenyCapability}
 	}
+
 	return
+}
+
+func (a *ACL) Capabilities(ctx context.Context, path string) []string {
+	pathCapabilities, _ := a.CapabilitiesAndSubscribeEventTypes(ctx, path)
+	return pathCapabilities
 }
 
 // AllowOperation is used to check if the given operation is permitted.
@@ -346,6 +363,7 @@ func (a *ACL) AllowOperation(ctx context.Context, req *logical.Request, capCheck
 			NamespacePath: "",
 			Type:          "acl",
 		}}
+		ret.SubscribeEventTypes = []string{"*"}
 		return
 	}
 	op := req.Operation
@@ -411,6 +429,7 @@ CHECK:
 	// rather than policy root
 	if capCheckOnly {
 		ret.CapabilitiesBitmap = capabilities
+		ret.SubscribeEventTypes = slices.Clone(permissions.SubscribeEventTypes)
 		return ret
 	}
 

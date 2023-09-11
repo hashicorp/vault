@@ -7,7 +7,7 @@ import Model, { attr } from '@ember-data/model';
 import { computed } from '@ember/object';
 import fieldToAttrs, { expandAttributeMeta } from 'vault/utils/field-to-attrs';
 import apiPath from 'vault/utils/api-path';
-import attachCapabilities from 'vault/lib/attach-capabilities';
+import lazyCapabilities from 'vault/macros/lazy-capabilities';
 
 export const COMPUTEDS = {
   operationFields: computed('newFields', function () {
@@ -34,7 +34,7 @@ export const COMPUTEDS = {
   }),
 };
 
-const ModelExport = Model.extend(COMPUTEDS, {
+export default Model.extend(COMPUTEDS, {
   useOpenAPI: true,
   backend: attr({ readOnly: true }),
   scope: attr({ readOnly: true }),
@@ -85,8 +85,6 @@ const ModelExport = Model.extend(COMPUTEDS, {
   fields: computed('defaultFields', function () {
     return expandAttributeMeta(this, this.defaultFields);
   }),
-});
 
-export default attachCapabilities(ModelExport, {
-  updatePath: apiPath`${'backend'}/scope/${'scope'}/role/${'id'}`,
+  updatePath: lazyCapabilities(apiPath`${'backend'}/scope/${'scope'}/role/${'id'}`, 'backend', 'scope', 'id'),
 });

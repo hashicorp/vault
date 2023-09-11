@@ -30,6 +30,10 @@ var (
 		return nil
 	}
 
+	sysInitialize = func(b *SystemBackend) func(context.Context, *logical.InitializationRequest) error {
+		return nil
+	}
+
 	getSystemSchemas = func() []func() *memdb.TableSchema { return nil }
 
 	getEGPListResponseKeyInfo = func(*SystemBackend, *namespace.Namespace) map[string]interface{} { return nil }

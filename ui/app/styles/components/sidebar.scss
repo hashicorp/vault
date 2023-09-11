@@ -17,6 +17,12 @@
       padding: $spacing-xs;
     }
   }
+
+  .confirm-action-message p {
+    padding-top: $size-10;
+    font-weight: $font-weight-semibold;
+    color: $black;
+  }
 }
 
 .link-status {

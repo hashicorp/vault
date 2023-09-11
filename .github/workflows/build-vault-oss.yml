@@ -9,9 +9,6 @@ name: build_vault
 on:
   workflow_call:
     inputs:
-      bundle-path:
-        required: false
-        type: string
       cgo-enabled:
         type: string
         default: 0
@@ -55,15 +52,18 @@ jobs:
           key: ${{ inputs.web-ui-cache-key }}
       - name: Build Vault
         env:
+          GO_TAGS: ${{ inputs.go-tags }}
           CGO_ENABLED: ${{ inputs.cgo-enabled }}
           GOARCH: ${{ inputs.goarch }}
           GOOS: ${{ inputs.goos }}
-          GO_TAGS: ${{ inputs.go-tags }}
-        run: make ci-build
+          VERSION: ${{ inputs.vault-version }}
+        run:
+            make ci-build
       - name: Determine artifact basename
         env:
           GOARCH: ${{ inputs.goarch }}
           GOOS: ${{ inputs.goos }}
+          VERSION: ${{ inputs.vault-version }}
         run: echo "ARTIFACT_BASENAME=$(make ci-get-artifact-basename)" >> "$GITHUB_ENV"
       - name: Bundle Vault
         env:
@@ -83,7 +83,7 @@ jobs:
           version: ${{ inputs.vault-version }}
           maintainer: HashiCorp
           homepage: https://github.com/hashicorp/vault
-          license: MPL-2.0
+          license: BUSL-1.1
           binary: dist/${{ inputs.package-name }}
           deb_depends: openssl
           rpm_depends: openssl

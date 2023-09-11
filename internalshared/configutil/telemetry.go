@@ -162,6 +162,10 @@ type Telemetry struct {
 	// PrefixFilter is a list of filter rules to apply for allowing
 	// or blocking metrics by prefix.
 	PrefixFilter []string `hcl:"prefix_filter"`
+
+	// Whether or not telemetry should include the mount point in the rollback
+	// metrics
+	RollbackMetricsIncludeMountPoint bool `hcl:"add_mount_point_rollback_metrics"`
 }
 
 func (t *Telemetry) Validate(source string) []ConfigError {
@@ -402,6 +406,7 @@ func SetupTelemetry(opts *SetupTelemetryOpts) (*metrics.InmemSink, *metricsutil.
 	wrapper.TelemetryConsts.LeaseMetricsEpsilon = opts.Config.LeaseMetricsEpsilon
 	wrapper.TelemetryConsts.LeaseMetricsNameSpaceLabels = opts.Config.LeaseMetricsNameSpaceLabels
 	wrapper.TelemetryConsts.NumLeaseMetricsTimeBuckets = opts.Config.NumLeaseMetricsTimeBuckets
+	wrapper.TelemetryConsts.RollbackMetricsIncludeMountPoint = opts.Config.RollbackMetricsIncludeMountPoint
 
 	// Parse the metric filters
 	telemetryAllowedPrefixes, telemetryBlockedPrefixes, err := parsePrefixFilter(opts.Config.PrefixFilter)

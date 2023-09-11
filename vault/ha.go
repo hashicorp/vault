@@ -571,9 +571,9 @@ func (c *Core) waitForLeadership(newLeaderCh chan func(), manualStepDownCh, stop
 		// everything is sane. If we have no sanity in the barrier, we actually
 		// seal, as there's little we can do.
 		{
-			c.seal.SetBarrierConfig(activeCtx, nil)
+			c.seal.ClearBarrierConfig(activeCtx)
 			if c.seal.RecoveryKeySupported() {
-				c.seal.SetRecoveryConfig(activeCtx, nil)
+				c.seal.ClearRecoveryConfig(activeCtx)
 			}
 
 			if err := c.performKeyUpgrades(activeCtx); err != nil {
@@ -951,10 +951,13 @@ func (c *Core) reloadRootKey(ctx context.Context) error {
 }
 
 func (c *Core) reloadShamirKey(ctx context.Context) error {
-	_ = c.seal.SetBarrierConfig(ctx, nil)
-	if cfg, _ := c.seal.BarrierConfig(ctx); cfg == nil {
+	_ = c.seal.ClearBarrierConfig(ctx)
+
+	cfg, _ := c.seal.BarrierConfig(ctx)
+	if cfg == nil {
 		return nil
 	}
+
 	var shamirKey []byte
 	switch c.seal.StoredKeysSupported() {
 	case seal.StoredKeysSupportedGeneric:
@@ -975,11 +978,7 @@ func (c *Core) reloadShamirKey(ctx context.Context) error {
 		}
 		shamirKey = keyring.rootKey
 	}
-	shamirWrapper, err := c.seal.GetShamirWrapper()
-	if err != nil {
-		return err
-	}
-	return shamirWrapper.SetAesGcmKeyBytes(shamirKey)
+	return c.seal.GetAccess().SetShamirSealKey(shamirKey)
 }
 
 func (c *Core) performKeyUpgrades(ctx context.Context) error {

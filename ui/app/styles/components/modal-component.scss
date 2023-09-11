@@ -110,6 +110,16 @@ pre {
   }
 }
 
+.is-danger {
+  .modal-card-head {
+    background: $red-010;
+    border: 1px solid $red-100;
+  }
+  .modal-card-title {
+    color: $red-dark;
+  }
+}
+
 .modal-confirm-section {
   margin: $spacing-xl 0 $spacing-m;
 }
@@ -118,7 +128,7 @@ pre {
   background: $ui-gray-050;
   border-top: $base-border;
 }
-
+// kv engine clean up - can remove this style after you remove secret-delete-menu
 .modal-radio-button {
   display: flex;
   align-items: baseline;

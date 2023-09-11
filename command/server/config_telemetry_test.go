@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestMetricFilterConfigs(t *testing.T) {
@@ -40,4 +41,36 @@ func TestMetricFilterConfigs(t *testing.T) {
 			assert.Equal(t, tc.expectedPrefixFilter, config.SharedConfig.Telemetry.PrefixFilter)
 		}
 	})
+}
+
+// TestRollbackMountPointMetricsConfig verifies that the add_mount_point_rollback_metrics
+// config option is parsed correctly, when it is set to true. Also verifies that
+// the default for this setting is false
+func TestRollbackMountPointMetricsConfig(t *testing.T) {
+	t.Parallel()
+	testCases := []struct {
+		name           string
+		configFile     string
+		wantMountPoint bool
+	}{
+		{
+			name:           "include mount point",
+			configFile:     "./test-fixtures/telemetry/rollback_mount_point.hcl",
+			wantMountPoint: true,
+		},
+		{
+			name:           "exclude mount point",
+			configFile:     "./test-fixtures/telemetry/valid_prefix_filter.hcl",
+			wantMountPoint: false,
+		},
+	}
+	for _, tc := range testCases {
+		tc := tc
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			config, err := LoadConfigFile(tc.configFile)
+			require.NoError(t, err)
+			require.Equal(t, tc.wantMountPoint, config.Telemetry.RollbackMetricsIncludeMountPoint)
+		})
+	}
 }

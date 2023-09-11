@@ -9,6 +9,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/hashicorp/vault/internalshared/configutil"
 	"github.com/stretchr/testify/require"
 )
 
@@ -217,6 +218,79 @@ func Test_parseDevTLSConfig(t *testing.T) {
 			require.NoError(t, err)
 			require.Equal(t, fmt.Sprintf("%s/%s", tt.certDirectory, VaultDevCertFilename), cfg.Listeners[0].TLSCertFile)
 			require.Equal(t, fmt.Sprintf("%s/%s", tt.certDirectory, VaultDevKeyFilename), cfg.Listeners[0].TLSKeyFile)
+		})
+	}
+}
+
+func TestCheckConfig(t *testing.T) {
+	testCases := []struct {
+		name        string
+		config      *Config
+		expectError bool
+	}{
+		{
+			name:        "no-seals-configured",
+			config:      &Config{SharedConfig: &configutil.SharedConfig{Seals: []*configutil.KMS{}}},
+			expectError: false,
+		},
+		{
+			name: "seal-with-empty-name",
+			config: &Config{SharedConfig: &configutil.SharedConfig{
+				Seals: []*configutil.KMS{
+					{
+						Type:     "awskms",
+						Disabled: false,
+					},
+				},
+			}},
+			expectError: true,
+		},
+		{
+			name: "seals-with-unique-names",
+			config: &Config{SharedConfig: &configutil.SharedConfig{
+				Seals: []*configutil.KMS{
+					{
+						Type:     "awskms",
+						Disabled: false,
+						Name:     "enabled-awskms",
+					},
+					{
+						Type:     "awskms",
+						Disabled: true,
+						Name:     "disabled-awskms",
+					},
+				},
+			}},
+			expectError: false,
+		},
+		{
+			name: "seals-with-same-names",
+			config: &Config{SharedConfig: &configutil.SharedConfig{
+				Seals: []*configutil.KMS{
+					{
+						Type:     "awskms",
+						Disabled: false,
+						Name:     "awskms",
+					},
+					{
+						Type:     "awskms",
+						Disabled: true,
+						Name:     "awskms",
+					},
+				},
+			}},
+			expectError: true,
+		},
+	}
+
+	for _, tt := range testCases {
+		t.Run(tt.name, func(t *testing.T) {
+			_, err := CheckConfig(tt.config, nil)
+			if tt.expectError {
+				require.Error(t, err)
+			} else {
+				require.NoError(t, err)
+			}
 		})
 	}
 }

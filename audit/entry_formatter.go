@@ -580,3 +580,13 @@ func doElideListResponseData(data map[string]interface{}) {
 		}
 	}
 }
+
+// newTemporaryEntryFormatter creates a cloned EntryFormatter instance with a non-persistent Salter.
+func newTemporaryEntryFormatter(n *EntryFormatter) *EntryFormatter {
+	return &EntryFormatter{
+		salter:          &nonPersistentSalt{},
+		headerFormatter: n.headerFormatter,
+		config:          n.config,
+		prefix:          n.prefix,
+	}
+}

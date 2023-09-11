@@ -10,6 +10,7 @@ export default Route.extend({
   store: service(),
   async model() {
     const backend = this.modelFor('vault.cluster.secrets.backend');
+    // TODO kv engine cleanup - this can be removed when KV has fully moved to separate ember engine and list view config details menu is refactored
     if (backend.isV2KV) {
       const canRead = await this.store
         .findRecord('capabilities', `${backend.id}/config`)

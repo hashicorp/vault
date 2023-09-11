@@ -85,11 +85,6 @@ access to the root key shares.
 
 ## Auto unseal
 
--> **Note:** The Seal Wrap functionality is enabled by default. For this
-reason, the seal provider (HSM or cloud KMS) must be available throughout
-Vault's runtime and not just during the unseal process. Refer to the [Seal
-Wrap](/vault/docs/enterprise/sealwrap) documentation for more information.
-
 Auto Unseal was developed to aid in reducing the operational complexity of
 keeping the unseal key secure. This feature delegates the responsibility of
 securing the unseal key from users to a trusted device or service. At startup
@@ -174,6 +169,10 @@ operation from the CLI or the matching API calls. The rekey operation is
 authorized by meeting the threshold of recovery keys. After rekeying, the new
 barrier key is wrapped by the HSM or KMS and stored like the previous key; it is not
 returned to the users that submitted their recovery keys.
+
+<EnterpriseAlert product="vault">
+  Seal wrapping requires Vault Enterprise
+</EnterpriseAlert>
 
 #### Recovery key
 

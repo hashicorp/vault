@@ -13,7 +13,6 @@ import (
 	"github.com/hashicorp/go-secure-stdlib/strutil"
 	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/builtin/plugin"
-	"github.com/hashicorp/vault/helper/experiments"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/helper/versions"
 	"github.com/hashicorp/vault/sdk/helper/consts"
@@ -240,7 +239,8 @@ func (c *Core) enableCredentialInternal(ctx context.Context, entry *MountEntry, 
 		// Initialize() if necessary
 		view.setReadOnlyErr(origViewReadOnlyErr)
 		// initialize, using the core's active context.
-		err := backend.Initialize(c.activeContext, &logical.InitializationRequest{Storage: view})
+		nsActiveContext := namespace.ContextWithNamespace(c.activeContext, ns)
+		err := backend.Initialize(nsActiveContext, &logical.InitializationRequest{Storage: view})
 		if err != nil {
 			return err
 		}
@@ -798,10 +798,6 @@ func (c *Core) setupCredentials(ctx context.Context) error {
 		view.setReadOnlyErr(logical.ErrSetupReadOnly)
 		if strutil.StrListContains(singletonMounts, entry.Type) {
 			defer view.setReadOnlyErr(origViewReadOnlyErr)
-		} else {
-			c.postUnsealFuncs = append(c.postUnsealFuncs, func() {
-				view.setReadOnlyErr(origViewReadOnlyErr)
-			})
 		}
 
 		// Initialize the backend
@@ -914,6 +910,9 @@ func (c *Core) setupCredentials(ctx context.Context) error {
 					postUnsealLogger.Error("skipping initialization for nil auth backend")
 					return
 				}
+				if !strutil.StrListContains(singletonMounts, localEntry.Type) {
+					view.setReadOnlyErr(origViewReadOnlyErr)
+				}
 
 				err := backend.Initialize(ctx, &logical.InitializationRequest{Storage: view})
 				if err != nil {
@@ -1011,14 +1010,12 @@ func (c *Core) newCredentialBackend(ctx context.Context, entry *MountEntry, sysV
 	}
 
 	config := &logical.BackendConfig{
-		StorageView: view,
-		Logger:      authLogger,
-		Config:      conf,
-		System:      sysView,
-		BackendUUID: entry.BackendAwareUUID,
-	}
-	if c.IsExperimentEnabled(experiments.VaultExperimentEventsAlpha1) {
-		config.EventsSender = pluginEventSender
+		StorageView:  view,
+		Logger:       authLogger,
+		Config:       conf,
+		System:       sysView,
+		BackendUUID:  entry.BackendAwareUUID,
+		EventsSender: pluginEventSender,
 	}
 
 	b, err := f(ctx, config)

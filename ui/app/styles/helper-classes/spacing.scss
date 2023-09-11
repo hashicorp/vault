@@ -26,8 +26,23 @@
   padding-right: $spacing-s;
 }
 
+.has-padding-s {
+  padding: $spacing-s;
+}
+
+.has-padding-xxs {
+  padding: $spacing-xxs;
+}
+
 .has-padding-m {
   padding: $spacing-m;
+}
+.has-padding-l {
+  padding: $spacing-l;
+}
+
+.has-padding-l {
+  padding: $spacing-l;
 }
 
 .has-bottom-padding-s {
@@ -86,6 +101,26 @@
 .has-top-bottom-margin-negative-m {
   margin-top: -$spacing-m;
   margin-bottom: -$spacing-m;
+}
+
+.has-top-margin-negative-xxl {
+  margin-top: -$spacing-xxl;
+}
+
+.has-top-margin-xxs {
+  margin: $spacing-xxs 0;
+}
+
+.has-right-margin-xxs {
+  margin-right: $spacing-xxs;
+}
+
+.has-left-margin-xxs {
+  margin-left: $spacing-xxs;
+}
+
+.has-bottom-margin-xxs {
+  margin-bottom: $spacing-xxs !important;
 }
 
 .has-bottom-margin-xs {

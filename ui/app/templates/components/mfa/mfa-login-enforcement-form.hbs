@@ -58,7 +58,7 @@
     />
     {{#each this.targets as |target|}}
       <div class="is-flex-center has-border-top-light" data-test-mlef-target={{target.label}}>
-        <InfoTableRow @label={{target.label}} class="is-flex-1 has-no-shadow">
+        <InfoTableRow @label={{target.label}} class="is-flex-grow-1 has-no-shadow">
           {{#if target.value.id}}
             {{target.value.name}}
             <span class="tag has-left-margin-s">{{target.value.id}}</span>
@@ -85,7 +85,7 @@
         @onChange={{this.onTargetSelect}}
         data-test-mlef-select="target-type"
       />
-      <div class="has-left-margin-s is-flex-1">
+      <div class="has-left-margin-s is-flex-grow-1">
         {{#if (eq this.selectedTargetType "accessor")}}
           <MountAccessorSelect
             @value={{this.selectedTargetValue}}

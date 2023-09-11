@@ -26,6 +26,8 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/hashicorp/go-secure-stdlib/parseutil"
+
 	"github.com/armon/go-metrics"
 	"github.com/hashicorp/errwrap"
 	log "github.com/hashicorp/go-hclog"
@@ -41,7 +43,6 @@ import (
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/audit"
 	"github.com/hashicorp/vault/command/server"
-	"github.com/hashicorp/vault/helper/experiments"
 	"github.com/hashicorp/vault/helper/identity/mfa"
 	"github.com/hashicorp/vault/helper/locking"
 	"github.com/hashicorp/vault/helper/metricsutil"
@@ -546,6 +547,9 @@ type Core struct {
 	// pluginCatalog is used to manage plugin configurations
 	pluginCatalog *PluginCatalog
 
+	// pluginRuntimeCatalog is used to manage plugin runtime configurations
+	pluginRuntimeCatalog *PluginRuntimeCatalog
+
 	// The userFailedLoginInfo map has user failed login information.
 	// It has user information (alias-name and mount accessor) as a key
 	// and login counter, last failed login time as value
@@ -647,6 +651,8 @@ type Core struct {
 
 	autoRotateCancel context.CancelFunc
 
+	updateLockedUserEntriesCancel context.CancelFunc
+
 	// number of workers to use for lease revocation in the expiration manager
 	numExpirationWorkers int
 
@@ -673,7 +679,9 @@ type Core struct {
 	// heartbeating with the active node. Default to the current SDK version.
 	effectiveSDKVersion string
 
-	rollbackPeriod time.Duration
+	numRollbackWorkers       int
+	rollbackPeriod           time.Duration
+	rollbackMountPathMetrics bool
 
 	experiments []string
 
@@ -691,6 +699,9 @@ type Core struct {
 	// if populated, the callback is called for every request
 	// for testing purposes
 	requestResponseCallback func(logical.Backend, *logical.Request, *logical.Response)
+
+	// If any role based quota (LCQ or RLQ) is enabled, don't track lease counts by role
+	impreciseLeaseRoleTracking bool
 }
 
 // c.stateLock needs to be held in read mode before calling this function.
@@ -751,6 +762,9 @@ type CoreConfig struct {
 
 	// Use the deadlocks library to detect deadlocks
 	DetectDeadlocks string
+
+	// If any role based quota (LCQ or RLQ) is enabled, don't track lease counts by role
+	ImpreciseLeaseRoleTracking bool
 
 	// Disables the trace display for Sentinel checks
 	DisableSentinelTrace bool
@@ -852,6 +866,8 @@ type CoreConfig struct {
 	// AdministrativeNamespacePath is used to configure the administrative namespace, which has access to some sys endpoints that are
 	// only accessible in the root namespace, currently sys/audit-hash and sys/monitor.
 	AdministrativeNamespacePath string
+
+	NumRollbackWorkers int
 }
 
 // SubloggerHook implements the SubloggerAdder interface. This implementation
@@ -940,6 +956,9 @@ func CreateCore(conf *CoreConfig) (*Core, error) {
 		conf.NumExpirationWorkers = numExpirationWorkersDefault
 	}
 
+	if conf.NumRollbackWorkers == 0 {
+		conf.NumRollbackWorkers = RollbackDefaultNumWorkers
+	}
 	// Use imported logging deadlock if requested
 	var stateLock locking.RWMutex
 	if strings.Contains(conf.DetectDeadlocks, "statelock") {
@@ -1023,6 +1042,9 @@ func CreateCore(conf *CoreConfig) (*Core, error) {
 		experiments:                    conf.Experiments,
 		pendingRemovalMountsAllowed:    conf.PendingRemovalMountsAllowed,
 		expirationRevokeRetryBase:      conf.ExpirationRevokeRetryBase,
+		rollbackMountPathMetrics:       conf.MetricSink.TelemetryConsts.RollbackMetricsIncludeMountPoint,
+		numRollbackWorkers:             conf.NumRollbackWorkers,
+		impreciseLeaseRoleTracking:     conf.ImpreciseLeaseRoleTracking,
 	}
 
 	c.standbyStopCh.Store(make(chan struct{}))
@@ -1032,6 +1054,7 @@ func CreateCore(conf *CoreConfig) (*Core, error) {
 	c.shutdownDoneCh.Store(make(chan struct{}))
 
 	c.router.logger = c.logger.Named("router")
+	c.router.rollbackMetricsMountName = c.rollbackMountPathMetrics
 
 	c.inFlightReqData = &InFlightRequests{
 		InFlightReqMap:   &sync.Map{},
@@ -1096,7 +1119,11 @@ func CreateCore(conf *CoreConfig) (*Core, error) {
 		wrapper := aeadwrapper.NewShamirWrapper()
 		wrapper.SetConfig(context.Background(), awskms.WithLogger(c.logger.Named("shamir")))
 
-		c.seal = NewDefaultSeal(vaultseal.NewAccess(wrapper))
+		access, err := vaultseal.NewAccessFromWrapper(c.logger, wrapper, SealConfigTypeShamir.String())
+		if err != nil {
+			return nil, err
+		}
+		c.seal = NewDefaultSeal(access)
 	}
 	c.seal.SetCore(c)
 	return c, nil
@@ -1269,9 +1296,7 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 		return nil, err
 	}
 	c.events = events
-	if c.IsExperimentEnabled(experiments.VaultExperimentEventsAlpha1) {
-		c.events.Start()
-	}
+	c.events.Start()
 
 	// Make sure we're keeping track of the subloggers added above. We haven't
 	// yet registered core to the server command's SubloggerAdder, so any new
@@ -1521,13 +1546,10 @@ func (c *Core) unsealFragment(key []byte, migrate bool) error {
 func (c *Core) unsealWithRaft(combinedKey []byte) error {
 	ctx := context.Background()
 
-	if c.seal.BarrierType() == wrapping.WrapperTypeShamir {
+	if c.seal.BarrierSealConfigType() == SealConfigTypeShamir {
 		// If this is a legacy shamir seal this serves no purpose but it
 		// doesn't hurt.
-		shamirWrapper, err := c.seal.GetShamirWrapper()
-		if err == nil {
-			err = shamirWrapper.SetAesGcmKeyBytes(combinedKey)
-		}
+		err := c.seal.GetAccess().SetShamirSealKey(combinedKey)
 		if err != nil {
 			return err
 		}
@@ -1696,14 +1718,14 @@ func (c *Core) sealMigrated(ctx context.Context) (bool, error) {
 		return false, err
 	}
 
-	if existBarrierSealConfig.Type != c.seal.BarrierType().String() {
+	if !c.seal.BarrierSealConfigType().IsSameAs(existBarrierSealConfig.Type) {
 		return false, nil
 	}
-	if c.seal.RecoveryKeySupported() && existRecoverySealConfig.Type != c.seal.RecoveryType() {
+	if c.seal.RecoveryKeySupported() && !SealConfigTypeRecovery.IsSameAs(existRecoverySealConfig.Type) {
 		return false, nil
 	}
 
-	if c.seal.BarrierType() != c.migrationInfo.seal.BarrierType() {
+	if c.seal.BarrierSealConfigType() != c.migrationInfo.seal.BarrierSealConfigType() {
 		return true, nil
 	}
 
@@ -1729,7 +1751,9 @@ func (c *Core) sealMigrated(ctx context.Context) (bool, error) {
 // migrateSeal must be called with the stateLock held.
 func (c *Core) migrateSeal(ctx context.Context) error {
 	if c.migrationInfo == nil {
-		return nil
+		// There is no defaultSeal <-> autoSeal migration, but we may need to
+		// migrate seal configuration from single <-> multi autoSeal
+		return c.migrateMultiSealConfig(ctx)
 	}
 
 	ok, err := c.sealMigrated(ctx)
@@ -1747,7 +1771,7 @@ func (c *Core) migrateSeal(ctx context.Context) error {
 	switch {
 	case c.migrationInfo.seal.RecoveryKeySupported() && c.seal.RecoveryKeySupported():
 		c.logger.Info("migrating from one auto-unseal to another", "from",
-			c.migrationInfo.seal.BarrierType(), "to", c.seal.BarrierType())
+			c.migrationInfo.seal.BarrierSealConfigType(), "to", c.seal.BarrierSealConfigType())
 
 		// Set the recovery and barrier keys to be the same.
 		recoveryKey, err := c.migrationInfo.seal.RecoveryKey(ctx)
@@ -1769,7 +1793,7 @@ func (c *Core) migrateSeal(ctx context.Context) error {
 		}
 
 	case c.migrationInfo.seal.RecoveryKeySupported():
-		c.logger.Info("migrating from one auto-unseal to shamir", "from", c.migrationInfo.seal.BarrierType())
+		c.logger.Info("migrating from one auto-unseal to shamir", "from", c.migrationInfo.seal.BarrierSealConfigType())
 		// Auto to Shamir, since recovery key isn't supported on new seal
 
 		recoveryKey, err := c.migrationInfo.seal.RecoveryKey(ctx)
@@ -1778,11 +1802,7 @@ func (c *Core) migrateSeal(ctx context.Context) error {
 		}
 
 		// We have recovery keys; we're going to use them as the new shamir KeK.
-		shamirWrapper, err := c.seal.GetShamirWrapper()
-		if err != nil {
-			return err
-		}
-		err = shamirWrapper.SetAesGcmKeyBytes(recoveryKey)
+		err = c.seal.GetAccess().SetShamirSealKey(recoveryKey)
 		if err != nil {
 			return fmt.Errorf("failed to set master key in seal: %w", err)
 		}
@@ -1797,7 +1817,7 @@ func (c *Core) migrateSeal(ctx context.Context) error {
 		}
 
 	case c.seal.RecoveryKeySupported():
-		c.logger.Info("migrating from shamir to auto-unseal", "to", c.seal.BarrierType())
+		c.logger.Info("migrating from shamir to auto-unseal", "to", c.seal.BarrierSealConfigType())
 		// Migration is happening from shamir -> auto. In this case use the shamir
 		// combined key that was used to store the master key as the new recovery key.
 		if err := c.seal.SetRecoveryKey(ctx, c.migrationInfo.unsealKey); err != nil {
@@ -1889,7 +1909,7 @@ func (c *Core) unsealInternal(ctx context.Context, masterKey []byte) error {
 
 		// Force a cache bust here, which will also run migration code
 		if c.seal.RecoveryKeySupported() {
-			c.seal.SetRecoveryConfig(ctx, nil)
+			c.seal.ClearRecoveryConfig(ctx)
 		}
 
 		c.standby = false
@@ -2281,6 +2301,9 @@ func (s standardUnsealStrategy) unseal(ctx context.Context, logger log.Logger, c
 			return err
 		}
 	}
+	if err := c.setupPluginRuntimeCatalog(ctx); err != nil {
+		return err
+	}
 	if err := c.setupPluginCatalog(ctx); err != nil {
 		return err
 	}
@@ -2320,12 +2343,9 @@ func (s standardUnsealStrategy) unseal(ctx context.Context, logger log.Logger, c
 	if err := c.setupHeaderHMACKey(ctx, false); err != nil {
 		return err
 	}
-	if err := c.runLockedUserEntryUpdates(ctx); err != nil {
-		return err
-	}
-	c.updateLockedUserEntries()
-
 	if !c.IsDRSecondary() {
+		c.updateLockedUserEntries()
+
 		if err := c.startRollback(); err != nil {
 			return err
 		}
@@ -2364,7 +2384,11 @@ func (s standardUnsealStrategy) unseal(ctx context.Context, logger log.Logger, c
 		}
 	} else {
 		var err error
-		c.auditBroker, err = NewAuditBroker(c.logger, c.IsExperimentEnabled(experiments.VaultExperimentCoreAuditEventsAlpha1))
+		disableEventLogger, err := parseutil.ParseBool(os.Getenv(featureFlagDisableEventLogger))
+		if err != nil {
+			return fmt.Errorf("unable to parse feature flag: %q: %w", featureFlagDisableEventLogger, err)
+		}
+		c.auditBroker, err = NewAuditBroker(c.logger, !disableEventLogger)
 		if err != nil {
 			return err
 		}
@@ -2375,6 +2399,28 @@ func (s standardUnsealStrategy) unseal(ctx context.Context, logger log.Logger, c
 		if err := c.setupPluginReload(); err != nil {
 			return err
 		}
+
+		// store the sealGenInfo
+		sealGenerationInfo := c.seal.GetAccess().GetSealGenerationInfo()
+		err := c.SetPhysicalSealGenInfo(context.Background(), sealGenerationInfo)
+		if err != nil {
+			c.logger.Error("failed to store seal generation info", "error", err)
+			return err
+		}
+
+		sealHaEnabled, err := server.IsSealHABetaEnabled()
+		if err != nil {
+			return err
+		}
+		if sealHaEnabled && !sealGenerationInfo.IsRewrapped() {
+			// Flag migration performed for seal-rewrap later
+			// Note that in the case where seal HA is not enabled, Core.migrateSeal() takes care of
+			// triggering the rewrap when necessary.
+			c.logger.Trace("seal generation information indicates that a seal-rewrap is needed", "generation", sealGenerationInfo.Generation, "rewrapped", sealGenerationInfo.IsRewrapped())
+			atomic.StoreUint32(c.sealMigrationDone, 1)
+		}
+
+		startPartialSealRewrapping(c)
 	}
 
 	if c.getClusterListener() != nil && (c.ha != nil || shouldStartClusterListener(c)) {
@@ -2435,9 +2481,9 @@ func (c *Core) postUnseal(ctx context.Context, ctxCancelFunc context.CancelFunc,
 	}
 
 	// Purge these for safety in case of a rekey
-	_ = c.seal.SetBarrierConfig(ctx, nil)
+	_ = c.seal.ClearBarrierConfig(ctx)
 	if c.seal.RecoveryKeySupported() {
-		_ = c.seal.SetRecoveryConfig(ctx, nil)
+		_ = c.seal.ClearRecoveryConfig(ctx)
 	}
 
 	// Load prior un-updated store into version history cache to compare
@@ -2588,6 +2634,11 @@ func (c *Core) preSeal() error {
 		c.autoRotateCancel = nil
 	}
 
+	if c.updateLockedUserEntriesCancel != nil {
+		c.updateLockedUserEntriesCancel()
+		c.updateLockedUserEntriesCancel = nil
+	}
+
 	if seal, ok := c.seal.(*autoSeal); ok {
 		seal.StopHealthCheck()
 	}
@@ -2690,52 +2741,90 @@ func lastRemoteUpstreamWALImpl(c *Core) uint64 {
 	return 0
 }
 
-func (c *Core) PhysicalSealConfigs(ctx context.Context) (*SealConfig, *SealConfig, error) {
-	pe, err := c.physical.Get(ctx, barrierSealConfigPath)
+// physicalBarrierSealConfig reads the storage entry at configPath and parses and validates it as SealConfig.
+func physicalSealConfig(ctx context.Context, c *Core, label, configPath string) (*SealConfig, error) {
+	pe, err := c.physical.Get(ctx, configPath)
 	if err != nil {
-		return nil, nil, fmt.Errorf("failed to fetch barrier seal configuration at migration check time: %w", err)
+		return nil, fmt.Errorf("failed to fetch %s seal configuration: %w", label, err)
 	}
 	if pe == nil {
-		return nil, nil, nil
+		return nil, nil
 	}
 
-	barrierConf := new(SealConfig)
+	config := new(SealConfig)
 
-	if err := jsonutil.DecodeJSON(pe.Value, barrierConf); err != nil {
-		return nil, nil, fmt.Errorf("failed to decode barrier seal configuration at migration check time: %w", err)
+	if err := jsonutil.DecodeJSON(pe.Value, config); err != nil {
+		return nil, fmt.Errorf("failed to decode %s seal configuration: %w", label, err)
 	}
-	err = barrierConf.Validate()
+	err = config.Validate()
 	if err != nil {
-		return nil, nil, fmt.Errorf("failed to validate barrier seal configuration at migration check time: %w", err)
+		return nil, fmt.Errorf("failed to validate %s seal configuration: %w", label, err)
 	}
 	// In older versions of vault the default seal would not store a type. This
 	// is here to offer backwards compatibility for older seal configs.
-	if barrierConf.Type == "" {
-		barrierConf.Type = wrapping.WrapperTypeShamir.String()
+	if config.Type == "" {
+		config.Type = SealConfigTypeShamir.String()
 	}
 
-	var recoveryConf *SealConfig
-	pe, err = c.physical.Get(ctx, recoverySealConfigPlaintextPath)
+	return config, nil
+}
+
+func (c *Core) PhysicalBarrierSealConfig(ctx context.Context) (*SealConfig, error) {
+	return physicalSealConfig(ctx, c, "barrier", barrierSealConfigPath)
+}
+
+func (c *Core) PhysicalRecoverySealConfig(ctx context.Context) (*SealConfig, error) {
+	return physicalSealConfig(ctx, c, "recovery", recoverySealConfigPlaintextPath)
+}
+
+func (c *Core) PhysicalRecoverySealConfigOldPath(ctx context.Context) (*SealConfig, error) {
+	return physicalSealConfig(ctx, c, "recovery", recoverySealConfigPath)
+}
+
+func (c *Core) PhysicalSealConfigs(ctx context.Context) (*SealConfig, *SealConfig, error) {
+	barrierConf, err := c.PhysicalBarrierSealConfig(ctx)
 	if err != nil {
-		return nil, nil, fmt.Errorf("failed to fetch seal configuration at migration check time: %w", err)
+		return nil, nil, fmt.Errorf("failed to get barrier seal configuration at migration check time: %w", err)
 	}
-	if pe != nil {
-		recoveryConf = &SealConfig{}
-		if err := jsonutil.DecodeJSON(pe.Value, recoveryConf); err != nil {
-			return nil, nil, fmt.Errorf("failed to decode seal configuration at migration check time: %w", err)
-		}
-		err = recoveryConf.Validate()
-		if err != nil {
-			return nil, nil, fmt.Errorf("failed to validate seal configuration at migration check time: %w", err)
-		}
-		// In older versions of vault the default seal would not store a type. This
-		// is here to offer backwards compatibility for older seal configs.
-		if recoveryConf.Type == "" {
-			recoveryConf.Type = wrapping.WrapperTypeShamir.String()
-		}
+	if barrierConf == nil {
+		return nil, nil, nil
+	}
+
+	recoveryConf, err := c.PhysicalRecoverySealConfig(ctx)
+	if err != nil {
+		return nil, nil, fmt.Errorf("failed to get recovery seal configuration at migration check time: %w", err)
 	}
 
 	return barrierConf, recoveryConf, nil
+}
+
+func (c *Core) SetPhysicalBarrierSealConfig(ctx context.Context, barrierSealConfig *SealConfig) error {
+	return setPhysicalSealConfig(ctx, c, "barrier", barrierSealConfigPath, barrierSealConfig)
+}
+
+func (c *Core) SetPhysicalRecoverySealConfig(ctx context.Context, recoverySealConfig *SealConfig) error {
+	return setPhysicalSealConfig(ctx, c, "recovery", recoverySealConfigPlaintextPath, recoverySealConfig)
+}
+
+func setPhysicalSealConfig(ctx context.Context, c *Core, label, configPath string, sealConfig *SealConfig) error {
+	// Encode the seal configuration
+	buf, err := json.Marshal(sealConfig)
+	if err != nil {
+		return fmt.Errorf("failed to encode %s seal configuration: %w", label, err)
+	}
+
+	// Store the seal configuration
+	pe := &physical.Entry{
+		Key:   configPath,
+		Value: buf,
+	}
+
+	if err := c.physical.Put(ctx, pe); err != nil {
+		c.logger.Error(fmt.Sprintf("failed to write %s seal configuration", label), "error", err)
+		return fmt.Errorf("failed to write %s seal configuration: %w", label, err)
+	}
+
+	return nil
 }
 
 // adjustForSealMigration takes the unwrapSeal, which is nil if (a) we're not
@@ -2774,33 +2863,68 @@ func (c *Core) adjustForSealMigration(unwrapSeal Seal) error {
 		// With unwrapSeal==nil, either we're not migrating, or we're migrating
 		// from shamir.
 
+		storedType := SealConfigType(existBarrierSealConfig.Type)
+		configuredType := c.seal.BarrierSealConfigType()
+
 		switch {
-		case existBarrierSealConfig.Type == c.seal.BarrierType().String():
+		case storedType == configuredType:
 			// We have the same barrier type and the unwrap seal is nil so we're not
 			// migrating from same to same, IOW we assume it's not a migration.
 			return nil
-		case c.seal.BarrierType() == wrapping.WrapperTypeShamir:
+		case configuredType == SealConfigTypeShamir:
 			// The stored barrier config is not shamir, there is no disabled seal
 			// in config, and either no configured seal (which equates to Shamir)
 			// or an explicitly configured Shamir seal.
 			return fmt.Errorf("cannot seal migrate from %q to Shamir, no disabled seal in configuration",
 				existBarrierSealConfig.Type)
-		case existBarrierSealConfig.Type == wrapping.WrapperTypeShamir.String():
+		case storedType == SealConfigTypeShamir:
 			// The configured seal is not Shamir, the stored seal config is Shamir.
 			// This is a migration away from Shamir.
-			unwrapSeal = NewDefaultSeal(vaultseal.NewAccess(aeadwrapper.NewShamirWrapper()))
+
+			// See note about creating a SealGenerationInfo for the unwrap seal in
+			// function setSeal in server.go.
+			sealAccess, err := vaultseal.NewAccessFromWrapper(c.logger, aeadwrapper.NewShamirWrapper(), SealConfigTypeShamir.String())
+			if err != nil {
+				return err
+			}
+			unwrapSeal = NewDefaultSeal(sealAccess)
+		case configuredType == SealConfigTypeMultiseal:
+			// The configured seal is multiseal and we know the stored type is not shamir, thus
+			// we are going from auto seal to multiseal.
+			betaEnabled, err := server.IsSealHABetaEnabled()
+			switch {
+			case err != nil:
+				return err
+			case !betaEnabled:
+				return fmt.Errorf("cannot seal migrate from %q to %q, Seal High Availability beta is not enabled",
+					existBarrierSealConfig.Type, c.seal.BarrierSealConfigType())
+			default:
+				// We are going from a single non-shamir seal to multiseal, and the seal HA beta is enabled.
+				// This scenario is not considered a migration in the sense of requiring an unwrapSeal,
+				// but we will update the stored SealConfig later (see Core.migrateMultiSealConfig).
+
+				return nil
+			}
+		case storedType == SealConfigTypeMultiseal:
+			// The stored type is multiseal and we know the type the configured type is not shamir,
+			// thus we are going from multiseal to autoseal.
+			//
+			// This scenario is not considered a migration in the sense of requiring an unwrapSeal,
+			// but we will update the stored SealConfig later (see Core.migrateMultiSealConfig).
+
+			return nil
 		default:
 			// We know at this point that there is a configured non-Shamir seal,
 			// that it does not match the stored non-Shamir seal config, and that
-			// there is no explicit disabled seal stanza.
+			// there is no explicitly disabled seal stanza.
 			return fmt.Errorf("cannot seal migrate from %q to %q, no disabled seal in configuration",
-				existBarrierSealConfig.Type, c.seal.BarrierType())
+				existBarrierSealConfig.Type, c.seal.BarrierSealConfigType())
 		}
 	} else {
 		// If we're not coming from Shamir we expect the previous seal to be
 		// in the config and disabled.
 
-		if unwrapSeal.BarrierType() == wrapping.WrapperTypeShamir {
+		if unwrapSeal.BarrierSealConfigType() == SealConfigTypeShamir {
 			return errors.New("Shamir seals cannot be set disabled (they should simply not be set)")
 		}
 	}
@@ -2810,7 +2934,7 @@ func (c *Core) adjustForSealMigration(unwrapSeal Seal) error {
 	unwrapSeal.SetCore(c)
 
 	// No stored recovery seal config found, what about the legacy recovery config?
-	if existBarrierSealConfig.Type != wrapping.WrapperTypeShamir.String() && existRecoverySealConfig == nil {
+	if existBarrierSealConfig.Type != SealConfigTypeShamir.String() && existRecoverySealConfig == nil {
 		entry, err := c.physical.Get(ctx, recoverySealConfigPath)
 		if err != nil {
 			return fmt.Errorf("failed to read %q recovery seal configuration: %w", existBarrierSealConfig.Type, err)
@@ -2824,14 +2948,42 @@ func (c *Core) adjustForSealMigration(unwrapSeal Seal) error {
 	c.migrationInfo = &migrationInformation{
 		seal: unwrapSeal,
 	}
-	if existBarrierSealConfig.Type != c.seal.BarrierType().String() {
+	if existBarrierSealConfig.Type != c.seal.BarrierSealConfigType().String() {
 		// It's unnecessary to call this when doing an auto->auto
 		// same-seal-type migration, since they'll have the same configs before
 		// and after migration.
 		c.adjustSealConfigDuringMigration(existBarrierSealConfig, existRecoverySealConfig)
 	}
 	c.initSealsForMigration()
-	c.logger.Warn("entering seal migration mode; Vault will not automatically unseal even if using an autoseal", "from_barrier_type", c.migrationInfo.seal.BarrierType(), "to_barrier_type", c.seal.BarrierType())
+	c.logger.Warn("entering seal migration mode; Vault will not automatically unseal even if using an autoseal", "from_barrier_type", c.migrationInfo.seal.BarrierSealConfigType(), "to_barrier_type", c.seal.BarrierSealConfigType())
+
+	return nil
+}
+
+func (c *Core) migrateMultiSealConfig(ctx context.Context) error {
+	barrierSealConfig, err := c.PhysicalBarrierSealConfig(ctx)
+	if err != nil {
+		return fmt.Errorf("failed to read existing seal configuration during multi seal migration: %v", err)
+	}
+
+	switch {
+	case c.seal.BarrierSealConfigType().IsSameAs(barrierSealConfig.Type):
+		return nil
+	case c.seal.BarrierSealConfigType() == SealConfigTypeMultiseal:
+		// needs update
+	case SealConfigTypeMultiseal.IsSameAs(barrierSealConfig.Type):
+		// needs update
+	default:
+		return nil
+	}
+
+	// Note that SetBarrierConfig updates SealConfig.Type to the correct value.
+	if err := c.seal.SetBarrierConfig(ctx, barrierSealConfig); err != nil {
+		return fmt.Errorf("error storing barrier config during multi seal migration: %w", err)
+	}
+
+	// Note that we don't need to trigger a seal rewrap here, since we'll do that when
+	// we update the SealGenerationInfo. See standardUnsealStrategy.unseal().
 
 	return nil
 }
@@ -2858,7 +3010,7 @@ func (c *Core) migrateSealConfig(ctx context.Context) error {
 		// recovery config to a clone of shamir's barrier config with stored
 		// keys set to 0.
 		bc = &SealConfig{
-			Type:            c.seal.BarrierType().String(),
+			Type:            c.seal.BarrierSealConfigType().String(),
 			SecretShares:    1,
 			SecretThreshold: 1,
 			StoredShares:    1,
@@ -2897,7 +3049,7 @@ func (c *Core) adjustSealConfigDuringMigration(existBarrierSealConfig, existReco
 		// recovery config to a clone of shamir's barrier config with stored
 		// keys set to 0.
 		newBarrierSealConfig := &SealConfig{
-			Type:            c.seal.BarrierType().String(),
+			Type:            c.seal.BarrierSealConfigType().String(),
 			SecretShares:    1,
 			SecretThreshold: 1,
 			StoredShares:    1,
@@ -2911,14 +3063,14 @@ func (c *Core) adjustSealConfigDuringMigration(existBarrierSealConfig, existReco
 }
 
 func (c *Core) unsealKeyToRootKeyPostUnseal(ctx context.Context, combinedKey []byte) ([]byte, error) {
-	return c.unsealKeyToMasterKey(ctx, c.seal, combinedKey, true, false)
+	return c.unsealKeyToRootKey(ctx, c.seal, combinedKey, true, false)
 }
 
 func (c *Core) unsealKeyToMasterKeyPreUnseal(ctx context.Context, seal Seal, combinedKey []byte) ([]byte, error) {
-	return c.unsealKeyToMasterKey(ctx, seal, combinedKey, false, true)
+	return c.unsealKeyToRootKey(ctx, seal, combinedKey, false, true)
 }
 
-// unsealKeyToMasterKey takes a key provided by the user, either a recovery key
+// unsealKeyToRootKey takes a key provided by the user, either a recovery key
 // if using an autoseal or an unseal key with Shamir.  It returns a nil error
 // if the key is valid and an error otherwise. It also returns the master key
 // that can be used to unseal the barrier.
@@ -2929,7 +3081,7 @@ func (c *Core) unsealKeyToMasterKeyPreUnseal(ctx context.Context, seal Seal, com
 // valid.
 // If allowMissing is true, a failure to find the master key in storage results
 // in a nil error and a nil master key being returned.
-func (c *Core) unsealKeyToMasterKey(ctx context.Context, seal Seal, combinedKey []byte, useTestSeal bool, allowMissing bool) ([]byte, error) {
+func (c *Core) unsealKeyToRootKey(ctx context.Context, seal Seal, combinedKey []byte, useTestSeal bool, allowMissing bool) ([]byte, error) {
 	switch seal.StoredKeysSupported() {
 	case vaultseal.StoredKeysSupportedGeneric:
 		if err := seal.VerifyRecoveryKey(ctx, combinedKey); err != nil {
@@ -2951,7 +3103,13 @@ func (c *Core) unsealKeyToMasterKey(ctx context.Context, seal Seal, combinedKey 
 
 	case vaultseal.StoredKeysSupportedShamirRoot:
 		if useTestSeal {
-			testseal := NewDefaultSeal(vaultseal.NewAccess(aeadwrapper.NewShamirWrapper()))
+			// Note that the seal generation should not matter, since the only thing we are doing with
+			// this seal is calling GetStoredKeys (i.e. we are not encrypting anything).
+			sealAccess, err := vaultseal.NewAccessFromWrapper(c.logger, aeadwrapper.NewShamirWrapper(), SealConfigTypeShamir.String())
+			if err != nil {
+				return nil, fmt.Errorf("failed to setup seal wrapper for test barrier config: %w", err)
+			}
+			testseal := NewDefaultSeal(sealAccess)
 			testseal.SetCore(c)
 			cfg, err := seal.BarrierConfig(ctx)
 			if err != nil {
@@ -2961,11 +3119,7 @@ func (c *Core) unsealKeyToMasterKey(ctx context.Context, seal Seal, combinedKey 
 			seal = testseal
 		}
 
-		shamirWrapper, err := seal.GetShamirWrapper()
-		if err != nil {
-			return nil, err
-		}
-		err = shamirWrapper.SetAesGcmKeyBytes(combinedKey)
+		err := seal.GetAccess().SetShamirSealKey(combinedKey)
 		if err != nil {
 			return nil, &ErrInvalidKey{fmt.Sprintf("failed to setup unseal key: %v", err)}
 		}
@@ -3444,16 +3598,26 @@ func (c *Core) setupCachedMFAResponseAuth() {
 // updateLockedUserEntries runs every 15 mins to remove stale user entries from storage
 // it also updates the userFailedLoginInfo map with correct information for locked users if incorrect
 func (c *Core) updateLockedUserEntries() {
-	ctx := c.activeContext
+	if c.updateLockedUserEntriesCancel != nil {
+		return
+	}
+
+	var updateLockedUserEntriesCtx context.Context
+	updateLockedUserEntriesCtx, c.updateLockedUserEntriesCancel = context.WithCancel(c.activeContext)
+
+	if err := c.runLockedUserEntryUpdates(updateLockedUserEntriesCtx); err != nil {
+		c.Logger().Error("failed to run locked user entry updates", "error", err)
+	}
+
 	go func() {
 		ticker := time.NewTicker(15 * time.Minute)
 		for {
 			select {
-			case <-ctx.Done():
+			case <-updateLockedUserEntriesCtx.Done():
 				ticker.Stop()
 				return
 			case <-ticker.C:
-				if err := c.runLockedUserEntryUpdates(ctx); err != nil {
+				if err := c.runLockedUserEntryUpdates(updateLockedUserEntriesCtx); err != nil {
 					c.Logger().Error("failed to run locked user entry updates", "error", err)
 				}
 			}
@@ -3780,7 +3944,7 @@ func (c *Core) LoadNodeID() (string, error) {
 
 // DetermineRoleFromLoginRequestFromBytes will determine the role that should be applied to a quota for a given
 // login request, accepting a byte payload
-func (c *Core) DetermineRoleFromLoginRequestFromBytes(mountPoint string, payload []byte, ctx context.Context) string {
+func (c *Core) DetermineRoleFromLoginRequestFromBytes(ctx context.Context, mountPoint string, payload []byte) string {
 	data := make(map[string]interface{})
 	err := jsonutil.DecodeJSON(payload, &data)
 	if err != nil {
@@ -3788,12 +3952,12 @@ func (c *Core) DetermineRoleFromLoginRequestFromBytes(mountPoint string, payload
 		return ""
 	}
 
-	return c.DetermineRoleFromLoginRequest(mountPoint, data, ctx)
+	return c.DetermineRoleFromLoginRequest(ctx, mountPoint, data)
 }
 
 // DetermineRoleFromLoginRequest will determine the role that should be applied to a quota for a given
 // login request
-func (c *Core) DetermineRoleFromLoginRequest(mountPoint string, data map[string]interface{}, ctx context.Context) string {
+func (c *Core) DetermineRoleFromLoginRequest(ctx context.Context, mountPoint string, data map[string]interface{}) string {
 	c.authLock.RLock()
 	defer c.authLock.RUnlock()
 	matchingBackend := c.router.MatchingBackend(ctx, mountPoint)
@@ -3812,7 +3976,17 @@ func (c *Core) DetermineRoleFromLoginRequest(mountPoint string, data map[string]
 	if err != nil || resp.Data["role"] == nil {
 		return ""
 	}
+
 	return resp.Data["role"].(string)
+}
+
+// ResolveRoleForQuotas looks for any quotas requiring a role for early
+// computation in the RateLimitQuotaWrapping handler.
+func (c *Core) ResolveRoleForQuotas(ctx context.Context, req *quotas.Request) (bool, error) {
+	if c.quotaManager == nil {
+		return false, nil
+	}
+	return c.quotaManager.QueryResolveRoleQuotas(req)
 }
 
 // aliasNameFromLoginRequest will determine the aliasName from the login Request

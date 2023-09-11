@@ -5,6 +5,8 @@ package eventbus
 
 import (
 	"context"
+	"encoding/json"
+	"errors"
 	"fmt"
 	"sync/atomic"
 	"testing"
@@ -12,8 +14,11 @@ import (
 
 	"github.com/hashicorp/eventlogger"
 	"github.com/hashicorp/go-secure-stdlib/strutil"
+	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/sdk/logical"
+	"github.com/stretchr/testify/assert"
+	"google.golang.org/protobuf/types/known/structpb"
 )
 
 // TestBusBasics tests that basic event sending and subscribing function.
@@ -31,19 +36,19 @@ func TestBusBasics(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	err = bus.SendInternal(ctx, namespace.RootNamespace, nil, eventType, event)
-	if err != ErrNotStarted {
+	err = bus.SendEventInternal(ctx, namespace.RootNamespace, nil, eventType, event)
+	if !errors.Is(err, ErrNotStarted) {
 		t.Errorf("Expected not started error but got: %v", err)
 	}
 
 	bus.Start()
 
-	err = bus.SendInternal(ctx, namespace.RootNamespace, nil, eventType, event)
+	err = bus.SendEventInternal(ctx, namespace.RootNamespace, nil, eventType, event)
 	if err != nil {
 		t.Errorf("Expected no error sending: %v", err)
 	}
 
-	ch, cancel, err := bus.Subscribe(ctx, namespace.RootNamespace, string(eventType))
+	ch, cancel, err := bus.Subscribe(ctx, namespace.RootNamespace, string(eventType), "")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -54,7 +59,51 @@ func TestBusBasics(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	err = bus.SendInternal(ctx, namespace.RootNamespace, nil, eventType, event)
+	err = bus.SendEventInternal(ctx, namespace.RootNamespace, nil, eventType, event)
+	if err != nil {
+		t.Error(err)
+	}
+
+	timeout := time.After(1 * time.Second)
+	select {
+	case message := <-ch:
+		if message.Payload.(*logical.EventReceived).Event.Id != event.Id {
+			t.Errorf("Got unexpected message: %+v", message)
+		}
+	case <-timeout:
+		t.Error("Timeout waiting for message")
+	}
+}
+
+// TestSubscribeNonRootNamespace verifies that events for non-root namespaces
+// aren't filtered out by the bus.
+func TestSubscribeNonRootNamespace(t *testing.T) {
+	bus, err := NewEventBus(nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	bus.Start()
+	ctx := context.Background()
+
+	eventType := logical.EventType("someType")
+
+	ns := &namespace.Namespace{
+		ID:   "abc",
+		Path: "abc/",
+	}
+
+	ch, cancel, err := bus.Subscribe(ctx, ns, string(eventType), "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer cancel()
+
+	event, err := logical.NewEvent()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	err = bus.SendEventInternal(ctx, ns, nil, eventType, event)
 	if err != nil {
 		t.Error(err)
 	}
@@ -86,7 +135,7 @@ func TestNamespaceFiltering(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	ch, cancel, err := bus.Subscribe(ctx, namespace.RootNamespace, string(eventType))
+	ch, cancel, err := bus.Subscribe(ctx, namespace.RootNamespace, string(eventType), "")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -97,7 +146,7 @@ func TestNamespaceFiltering(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	err = bus.SendInternal(ctx, &namespace.Namespace{
+	err = bus.SendEventInternal(ctx, &namespace.Namespace{
 		ID:   "abc",
 		Path: "/abc",
 	}, nil, eventType, event)
@@ -113,7 +162,7 @@ func TestNamespaceFiltering(t *testing.T) {
 		// okay
 	}
 
-	err = bus.SendInternal(ctx, namespace.RootNamespace, nil, eventType, event)
+	err = bus.SendEventInternal(ctx, namespace.RootNamespace, nil, eventType, event)
 	if err != nil {
 		t.Error(err)
 	}
@@ -142,13 +191,13 @@ func TestBus2Subscriptions(t *testing.T) {
 	eventType2 := logical.EventType("someType2")
 	bus.Start()
 
-	ch1, cancel1, err := bus.Subscribe(ctx, namespace.RootNamespace, string(eventType1))
+	ch1, cancel1, err := bus.Subscribe(ctx, namespace.RootNamespace, string(eventType1), "")
 	if err != nil {
 		t.Fatal(err)
 	}
 	defer cancel1()
 
-	ch2, cancel2, err := bus.Subscribe(ctx, namespace.RootNamespace, string(eventType2))
+	ch2, cancel2, err := bus.Subscribe(ctx, namespace.RootNamespace, string(eventType2), "")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -163,11 +212,11 @@ func TestBus2Subscriptions(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	err = bus.SendInternal(ctx, namespace.RootNamespace, nil, eventType2, event2)
+	err = bus.SendEventInternal(ctx, namespace.RootNamespace, nil, eventType2, event2)
 	if err != nil {
 		t.Error(err)
 	}
-	err = bus.SendInternal(ctx, namespace.RootNamespace, nil, eventType1, event1)
+	err = bus.SendEventInternal(ctx, namespace.RootNamespace, nil, eventType1, event1)
 	if err != nil {
 		t.Error(err)
 	}
@@ -227,7 +276,7 @@ func TestBusSubscriptionsCancel(t *testing.T) {
 			received := atomic.Int32{}
 
 			for i := 0; i < create; i++ {
-				ch, cancelFunc, err := bus.Subscribe(ctx, namespace.RootNamespace, string(eventType))
+				ch, cancelFunc, err := bus.Subscribe(ctx, namespace.RootNamespace, string(eventType), "")
 				if err != nil {
 					t.Fatal(err)
 				}
@@ -255,7 +304,7 @@ func TestBusSubscriptionsCancel(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			err = bus.SendInternal(ctx, namespace.RootNamespace, nil, eventType, event)
+			err = bus.SendEventInternal(ctx, namespace.RootNamespace, nil, eventType, event)
 			if err != nil {
 				t.Error(err)
 			}
@@ -267,7 +316,7 @@ func TestBusSubscriptionsCancel(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			err = bus.SendInternal(ctx, namespace.RootNamespace, nil, eventType, event)
+			err = bus.SendEventInternal(ctx, namespace.RootNamespace, nil, eventType, event)
 			if err != nil {
 				t.Error(err)
 			}
@@ -316,13 +365,13 @@ func TestBusWildcardSubscriptions(t *testing.T) {
 	barEventType := logical.EventType("kv/bar")
 	bus.Start()
 
-	ch1, cancel1, err := bus.Subscribe(ctx, namespace.RootNamespace, "kv/*")
+	ch1, cancel1, err := bus.Subscribe(ctx, namespace.RootNamespace, "kv/*", "")
 	if err != nil {
 		t.Fatal(err)
 	}
 	defer cancel1()
 
-	ch2, cancel2, err := bus.Subscribe(ctx, namespace.RootNamespace, "*/bar")
+	ch2, cancel2, err := bus.Subscribe(ctx, namespace.RootNamespace, "*/bar", "")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -337,11 +386,11 @@ func TestBusWildcardSubscriptions(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	err = bus.SendInternal(ctx, namespace.RootNamespace, nil, barEventType, event2)
+	err = bus.SendEventInternal(ctx, namespace.RootNamespace, nil, barEventType, event2)
 	if err != nil {
 		t.Error(err)
 	}
-	err = bus.SendInternal(ctx, namespace.RootNamespace, nil, fooEventType, event1)
+	err = bus.SendEventInternal(ctx, namespace.RootNamespace, nil, fooEventType, event1)
 	if err != nil {
 		t.Error(err)
 	}
@@ -375,5 +424,205 @@ func TestBusWildcardSubscriptions(t *testing.T) {
 		}
 	case <-timeout:
 		t.Error("Timeout waiting for event2")
+	}
+}
+
+// TestDataPathIsPrependedWithMount tests that "data_path", if present in the
+// metadata, is prepended with the plugin's mount.
+func TestDataPathIsPrependedWithMount(t *testing.T) {
+	bus, err := NewEventBus(nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	ctx := context.Background()
+
+	fooEventType := logical.EventType("kv/foo")
+	bus.Start()
+
+	ch, cancel, err := bus.Subscribe(ctx, namespace.RootNamespace, "kv/*", "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer cancel()
+
+	event, err := logical.NewEvent()
+	if err != nil {
+		t.Fatal(err)
+	}
+	metadata := map[string]string{
+		logical.EventMetadataDataPath: "my/secret/path",
+		"not_touched":                 "xyz",
+	}
+	metadataBytes, err := json.Marshal(metadata)
+	if err != nil {
+		t.Fatal(err)
+	}
+	event.Metadata = &structpb.Struct{}
+	if err := event.Metadata.UnmarshalJSON(metadataBytes); err != nil {
+		t.Fatal(err)
+	}
+
+	// no plugin info means nothing should change
+	err = bus.SendEventInternal(ctx, namespace.RootNamespace, nil, fooEventType, event)
+	if err != nil {
+		t.Error(err)
+	}
+
+	timeout := time.After(1 * time.Second)
+	select {
+	case message := <-ch:
+		metadata := message.Payload.(*logical.EventReceived).Event.Metadata.AsMap()
+		assert.Contains(t, metadata, "not_touched")
+		assert.Equal(t, "xyz", metadata["not_touched"])
+		assert.Contains(t, metadata, "data_path")
+		assert.Equal(t, "my/secret/path", metadata["data_path"])
+	case <-timeout:
+		t.Error("Timeout waiting for event")
+	}
+
+	// send with a secrets plugin mounted
+	pluginInfo := logical.EventPluginInfo{
+		MountClass:    "secrets",
+		MountAccessor: "kv_abc",
+		MountPath:     "secret/",
+		Plugin:        "kv",
+		PluginVersion: "v1.13.1+builtin",
+		Version:       "2",
+	}
+	err = bus.SendEventInternal(ctx, namespace.RootNamespace, &pluginInfo, fooEventType, event)
+	if err != nil {
+		t.Error(err)
+	}
+
+	timeout = time.After(1 * time.Second)
+	select {
+	case message := <-ch:
+		metadata := message.Payload.(*logical.EventReceived).Event.Metadata.AsMap()
+		assert.Contains(t, metadata, "not_touched")
+		assert.Equal(t, "xyz", metadata["not_touched"])
+		assert.Contains(t, metadata, "data_path")
+		assert.Equal(t, "secret/my/secret/path", metadata["data_path"])
+	case <-timeout:
+		t.Error("Timeout waiting for event")
+	}
+
+	// send with an auth plugin mounted
+	pluginInfo = logical.EventPluginInfo{
+		MountClass:    "auth",
+		MountAccessor: "kubernetes_abc",
+		MountPath:     "kubernetes/",
+		Plugin:        "vault-plugin-auth-kubernetes",
+		PluginVersion: "v1.13.1+builtin",
+	}
+	event, err = logical.NewEvent()
+	if err != nil {
+		t.Fatal(err)
+	}
+	metadata = map[string]string{
+		logical.EventMetadataDataPath: "my/secret/path",
+		"not_touched":                 "xyz",
+	}
+	metadataBytes, err = json.Marshal(metadata)
+	if err != nil {
+		t.Fatal(err)
+	}
+	event.Metadata = &structpb.Struct{}
+	if err := event.Metadata.UnmarshalJSON(metadataBytes); err != nil {
+		t.Fatal(err)
+	}
+	err = bus.SendEventInternal(ctx, namespace.RootNamespace, &pluginInfo, fooEventType, event)
+	if err != nil {
+		t.Error(err)
+	}
+
+	timeout = time.After(1 * time.Second)
+	select {
+	case message := <-ch:
+		metadata := message.Payload.(*logical.EventReceived).Event.Metadata.AsMap()
+		assert.Contains(t, metadata, "not_touched")
+		assert.Equal(t, "xyz", metadata["not_touched"])
+		assert.Contains(t, metadata, "data_path")
+		assert.Equal(t, "auth/kubernetes/my/secret/path", metadata["data_path"])
+	case <-timeout:
+		t.Error("Timeout waiting for event")
+	}
+}
+
+// TestBexpr tests go-bexpr filters are evaluated on an event.
+func TestBexpr(t *testing.T) {
+	bus, err := NewEventBus(nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	ctx := context.Background()
+
+	bus.Start()
+
+	sendEvent := func(eventType string) error {
+		event, err := logical.NewEvent()
+		if err != nil {
+			return err
+		}
+		metadata := map[string]string{
+			logical.EventMetadataDataPath:  "my/secret/path",
+			logical.EventMetadataOperation: "write",
+		}
+		metadataBytes, err := json.Marshal(metadata)
+		if err != nil {
+			return err
+		}
+		event.Metadata = &structpb.Struct{}
+		if err := event.Metadata.UnmarshalJSON(metadataBytes); err != nil {
+			return err
+		}
+		// send with a secrets plugin mounted
+		pluginInfo := logical.EventPluginInfo{
+			MountClass:    "secrets",
+			MountAccessor: "kv_abc",
+			MountPath:     "secret/",
+			Plugin:        "kv",
+			PluginVersion: "v1.13.1+builtin",
+			Version:       "2",
+		}
+		return bus.SendEventInternal(ctx, namespace.RootNamespace, &pluginInfo, logical.EventType(eventType), event)
+	}
+
+	testCases := []struct {
+		name             string
+		filter           string
+		shouldPassFilter bool
+	}{
+		{"empty expression", "", true},
+		{"non-matching expression", "data_path == nothing", false},
+		{"matching expression", "data_path == secret/my/secret/path", true},
+		{"full matching expression", "data_path == secret/my/secret/path and operation != read and source_plugin_mount == secret/ and source_plugin_mount != somethingelse", true},
+	}
+
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			eventType, err := uuid.GenerateUUID()
+			if err != nil {
+				t.Fatal(err)
+			}
+			ch, cancel, err := bus.Subscribe(ctx, namespace.RootNamespace, eventType, testCase.filter)
+			if err != nil {
+				t.Fatal(err)
+			}
+			defer cancel()
+			err = sendEvent(eventType)
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			timer := time.NewTimer(5 * time.Second)
+			defer timer.Stop()
+			got := false
+			select {
+			case <-ch:
+				got = true
+			case <-timer.C:
+			}
+			assert.Equal(t, testCase.shouldPassFilter, got)
+		})
 	}
 }

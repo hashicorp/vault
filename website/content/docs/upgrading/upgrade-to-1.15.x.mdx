@@ -30,5 +30,13 @@ Please audit your Consul storage stanza to ensure that you either:
 * Manually convert your `service_tags` to lowercase if required
 * Ensure that any system that relies on the tags is aware of the new case-preserving behavior
 
+## Rollback metrics
 
+Vault no longer measures and reports the metrics `vault.rollback.attempts.{MOUNTPOINT}` and `vault.route.rollback.{MOUNTPOINT}` by default. The new default metrics are `vault.rollback.attempts`
+and `vault.route.rollback`, which **do not** contain the mount point in the metric name.
 
+To continue measuring `vault.rollback.attempts.{MOUNTPOINT}` and
+`vault.route.rollback.{MOUNTPOINT}`, you must explicitly enable mount-specific
+metrics in the `telemetry` stanza of your Vault configuration with the
+[`add_mount_point_rollback_metrics`](/vault/docs/configuration/telemetry#add_mount_point_rollback_metrics)
+option.

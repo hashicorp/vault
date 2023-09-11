@@ -39,8 +39,9 @@ type Router struct {
 	// storagePrefix maps the prefix used for storage (ala the BarrierView)
 	// to the backend. This is used to map a key back into the backend that owns it.
 	// For example, logical/uuid1/foobar -> secrets/ (kv backend) + foobar
-	storagePrefix *radix.Tree
-	logger        hclog.Logger
+	storagePrefix            *radix.Tree
+	logger                   hclog.Logger
+	rollbackMetricsMountName bool
 }
 
 // NewRouter returns a new router
@@ -581,10 +582,11 @@ func (r *Router) routeCommon(ctx context.Context, req *logical.Request, existenc
 	}
 	req.Path = adjustedPath
 	if !existenceCheck {
-		defer metrics.MeasureSince([]string{
-			"route", string(req.Operation),
-			strings.ReplaceAll(mount, "/", "-"),
-		}, time.Now())
+		metricName := []string{"route", string(req.Operation)}
+		if req.Operation != logical.RollbackOperation || r.rollbackMetricsMountName {
+			metricName = append(metricName, strings.ReplaceAll(mount, "/", "-"))
+		}
+		defer metrics.MeasureSince(metricName, time.Now())
 	}
 	re := raw.(*routeEntry)
 

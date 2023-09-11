@@ -27,8 +27,13 @@ module('Acceptance | sidebar navigation', function (hooks) {
     return authPage.login();
   });
 
+  test('it should navigate back to the dashboard when logo is clicked', async function (assert) {
+    await click('[data-test-sidebar-logo]');
+    assert.strictEqual(currentURL(), '/vault/dashboard', 'dashboard route renders');
+  });
+
   test('it should link to correct routes at the cluster level', async function (assert) {
-    assert.expect(10);
+    assert.expect(11);
 
     assert.dom(panel('Cluster')).exists('Cluster nav panel renders');
 
@@ -50,6 +55,7 @@ module('Acceptance | sidebar navigation', function (hooks) {
       { label: 'Raft Storage', route: '/vault/storage/raft' },
       { label: 'Seal Vault', route: '/vault/settings/seal' },
       { label: 'Secrets engines', route: '/vault/secrets' },
+      { label: 'Dashboard', route: '/vault/dashboard' },
     ];
 
     for (const l of links) {

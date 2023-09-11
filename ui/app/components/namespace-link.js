@@ -44,8 +44,8 @@ export default Component.extend({
       window.location.hostname +
       (window.location.port ? ':' + window.location.port : '');
 
-    if (!this.normalizedNamespace) return `${origin}/ui/vault/secrets`;
+    if (!this.normalizedNamespace) return `${origin}/ui/vault/dashboard`;
     // The full URL/origin is required so that the page is reloaded.
-    return `${origin}/ui/vault/secrets?namespace=${encodeURIComponent(this.normalizedNamespace)}`;
+    return `${origin}/ui/vault/dashboard?namespace=${encodeURIComponent(this.normalizedNamespace)}`;
   },
 });

@@ -5,11 +5,10 @@
 
 import Model, { attr } from '@ember-data/model';
 import { computed } from '@ember/object';
-import { apiPath } from 'vault/macros/lazy-capabilities';
+import lazyCapabilities, { apiPath } from 'vault/macros/lazy-capabilities';
 import { expandAttributeMeta } from 'vault/utils/field-to-attrs';
-import attachCapabilities from 'vault/lib/attach-capabilities';
 
-const ModelExport = Model.extend({
+export default Model.extend({
   // used for getting appropriate options for backend
   idPrefix: 'role/',
   // the id prefixed with `role/` so we can use it as the *secret param for the secret show route
@@ -40,8 +39,5 @@ const ModelExport = Model.extend({
   }),
 
   backend: attr('string', { readOnly: true }),
-});
-
-export default attachCapabilities(ModelExport, {
-  updatePath: apiPath`${'backend'}/role/${'id'}`,
+  updatePath: lazyCapabilities(apiPath`${'backend'}/role/${'id'}`, 'backend', 'id'),
 });

@@ -1078,18 +1078,18 @@ for more information on the signature types.
   enabled on either the role or the role tag, the `nonce` holds no significance.
   This is ignored unless using the ec2 auth method.
 - `iam_http_request_method` `(string: <required-iam>)` - HTTP method used in the
-  signed request. Currently only POST is supported, but other methods may be
-  supported in the future. This is required when using the iam auth method.
+  signed request. This is required when using the iam auth method.
 - `iam_request_url` `(string: <required-iam>)` - Base64-encoded HTTP URL used in
   the signed request. Most likely just `aHR0cHM6Ly9zdHMuYW1hem9uYXdzLmNvbS8=`
   (base64-encoding of `https://sts.amazonaws.com/`) as most requests will
-  probably use POST with an empty URI. This is required when using the iam auth
-  method.
+  probably use POST with an empty URI. If using GET method this will contain
+  the authentication headers that have been hoisted out of the message body.
+  This is required when using the iam auth method.
 - `iam_request_body` `(string: <required-iam>)` - Base64-encoded body of the
   signed request. Most likely
   `QWN0aW9uPUdldENhbGxlcklkZW50aXR5JlZlcnNpb249MjAxMS0wNi0xNQ==`, which is the
   base64 encoding of `Action=GetCallerIdentity&Version=2011-06-15`. This is
-  required when using the iam auth method.
+  required when using the iam auth method with POST signed requests.
 - `iam_request_headers` `(string: <required-iam>)` - Key/value pairs of headers
   for use in the `sts:GetCallerIdentity` HTTP requests headers. Can be either a
   Base64-encoded, JSON-serialized string, or a JSON object of key/value pairs. The

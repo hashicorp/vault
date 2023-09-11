@@ -1,0 +1,3 @@
+```release-note:feature
+auto-auth: support ldap auth
+```

@@ -5,6 +5,7 @@ package http
 
 import (
 	"bytes"
+	"context"
 	"errors"
 	"fmt"
 	"io/ioutil"
@@ -20,10 +21,6 @@ import (
 )
 
 var (
-	adjustRequest = func(c *vault.Core, r *http.Request) (*http.Request, int) {
-		return r, 0
-	}
-
 	genericWrapping = func(core *vault.Core, in http.Handler, props *vault.HandlerProperties) http.Handler {
 		// Wrap the help wrapped handler with another layer with a generic
 		// handler
@@ -63,17 +60,35 @@ func rateLimitQuotaWrapping(handler http.Handler, core *vault.Core) http.Handler
 		}
 		r.Body = ioutil.NopCloser(bytes.NewBuffer(bodyBytes))
 
-		quotaResp, err := core.ApplyRateLimitQuota(r.Context(), &quotas.Request{
+		quotaReq := &quotas.Request{
 			Type:          quotas.TypeRateLimit,
 			Path:          path,
 			MountPath:     mountPath,
-			Role:          core.DetermineRoleFromLoginRequestFromBytes(mountPath, bodyBytes, r.Context()),
 			NamespacePath: ns.Path,
 			ClientAddress: parseRemoteIPAddress(r),
-		})
+		}
+
+		// This checks if any role based quota is required (LCQ or RLQ).
+		requiresResolveRole, err := core.ResolveRoleForQuotas(r.Context(), quotaReq)
+		if err != nil {
+			core.Logger().Error("failed to lookup quotas", "path", path, "error", err)
+			respondError(w, http.StatusInternalServerError, err)
+			return
+		}
+
+		// If any role-based quotas are enabled for this namespace/mount, just
+		// do the role resolution once here.
+		if requiresResolveRole {
+			role := core.DetermineRoleFromLoginRequestFromBytes(r.Context(), mountPath, bodyBytes)
+			// add an entry to the context to prevent recalculating request role unnecessarily
+			r = r.WithContext(context.WithValue(r.Context(), logical.CtxKeyRequestRole{}, role))
+			quotaReq.Role = role
+		}
+
+		quotaResp, err := core.ApplyRateLimitQuota(r.Context(), quotaReq)
 		if err != nil {
 			core.Logger().Error("failed to apply quota", "path", path, "error", err)
-			respondError(w, http.StatusUnprocessableEntity, err)
+			respondError(w, http.StatusInternalServerError, err)
 			return
 		}
 
