@@ -427,7 +427,7 @@ module('Acceptance | transit', function (hooks) {
   }
   // exportable, supports signing
   for (const key of groupThree) {
-    test(`transit backend: group 2 ${key.name()}`, async function (assert) {
+    test(`transit backend: group 3 ${key.name()}`, async function (assert) {
       assert.expect(6);
       const name = await generateTransitKey(key, this.uid);
       await visit(`vault/secrets/${this.path}/show/${name}`);
@@ -465,7 +465,7 @@ module('Acceptance | transit', function (hooks) {
   }
 
   for (const key of groupFour) {
-    test(`transit backend: group 3 ${key.name()}`, async function (assert) {
+    test(`transit backend: group 4 ${key.name()}`, async function (assert) {
       assert.expect(6);
       const name = await generateTransitKey(key, this.uid);
       await visit(`vault/secrets/${this.path}/show/${name}`);
