@@ -402,7 +402,7 @@ func TestExecServer_LogFiles(t *testing.T) {
 		}
 	})
 
-	tempStdout := os.TempDir() + "/vault-exec-test.stdout.log"
+	tempStdout := os.TempDir() + "vault-exec-test.stdout.log"
 	t.Cleanup(func() {
 		_ = os.Remove(tempStdout)
 	})
@@ -428,7 +428,7 @@ func TestExecServer_LogFiles(t *testing.T) {
 				"--port",
 				strconv.Itoa(testCase.testAppPort),
 				"--stop-after",
-				"5s",
+				"60s",
 			}
 
 			execServer, err := NewServer(&ServerConfig{
@@ -454,6 +454,8 @@ func TestExecServer_LogFiles(t *testing.T) {
 						StaticSecretRenderInt: 5 * time.Second,
 					},
 				},
+				LogLevel:  hclog.Trace,
+				LogWriter: hclog.DefaultOutput,
 			})
 			if err != nil {
 				if testCase.expectedError != nil {
@@ -467,7 +469,7 @@ func TestExecServer_LogFiles(t *testing.T) {
 				t.Fatalf("could not create exec server: %q", err)
 			}
 
-			ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+			ctx, cancel := context.WithCancel(context.Background())
 			defer cancel()
 
 			// start the exec server
@@ -513,8 +515,12 @@ func TestExecServer_LogFiles(t *testing.T) {
 				t.Log("test app started successfully")
 			}
 
+			// let the app run a bit
+			time.Sleep(5 * time.Second)
 			// stop the app
 			cancel()
+			// wait for app to stop
+			time.Sleep(5 * time.Second)
 
 			// does the stdlog file have content?
 			stdoutFile, err := os.Open(testCase.stdoutFile)

@@ -185,6 +185,7 @@ func (s *Server) Run(ctx context.Context, incomingVaultToken chan string) error 
 				s.childProcess.Stop()
 			}
 			s.childProcessState = childProcessStateStopped
+			s.close()
 			s.childProcessLock.Unlock()
 			return nil
 
@@ -370,7 +371,10 @@ func (s *Server) restartChildProcess(newEnvVars []string) error {
 func (s *Server) Close() {
 	s.childProcessLock.Lock()
 	defer s.childProcessLock.Unlock()
+	s.close()
+}
 
+func (s *Server) close() {
 	if s.childProcessCloseStdOut {
 		_ = s.childProcessStdout.Close()
 	}
