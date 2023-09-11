@@ -1,18 +1,15 @@
-<SecretListHeader
-  @model={{this.model.parentModel}}
-  @backendCrumb={{hash
-    label=this.model.parentModel.id
-    text=this.model.parentModel.id
-    path="vault.cluster.secrets.backend.list-root"
-    model=this.model.parentModel.id
-  }}
-  @isEngine={{true}}
-/>
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
+<PkiPageHeader @backend={{this.model.parentModel}} />
+
 {{outlet}}
 <Toolbar>
   {{#if this.model.certificates.length}}
     <ToolbarFilters>
-      {{! ARG TODO glimmerize the NavigateInput and refactor so you can use it in an engine }}
+      {{! TODO add NavigateInput component }}
     </ToolbarFilters>
   {{/if}}
 </Toolbar>
@@ -46,7 +43,6 @@
                         Details
                       </LinkTo>
                     </li>
-                    {{! ARG TODO ask Ivana if we wnat revoke or maybe download action here? }}
                   </ul>
                 </nav>
               </PopupMenu>
@@ -68,7 +64,7 @@
     </EmptyState>
   {{/if}}
 {{else}}
-  <EmptyState @title="PKI not configured" @message="This PKI mount hasn't yet been configured with a certificate issuer.">
+  <EmptyState @title="PKI not configured" @message={{this.notConfiguredMessage}}>
     <LinkTo @route="configuration.create">
       Configure PKI
     </LinkTo>

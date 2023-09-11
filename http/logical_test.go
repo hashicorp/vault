@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package http
 
 import (
@@ -8,6 +11,7 @@ import (
 	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"reflect"
 	"strconv"
 	"strings"
@@ -474,11 +478,13 @@ func TestLogical_RespondWithStatusCode(t *testing.T) {
 }
 
 func TestLogical_Audit_invalidWrappingToken(t *testing.T) {
+	t.Setenv("VAULT_AUDIT_DISABLE_EVENTLOGGER", "true")
+
 	// Create a noop audit backend
 	noop := corehelpers.TestNoopAudit(t, nil)
 	c, _, root := vault.TestCoreUnsealedWithConfig(t, &vault.CoreConfig{
 		AuditBackends: map[string]audit.Factory{
-			"noop": func(ctx context.Context, config *audit.BackendConfig) (audit.Backend, error) {
+			"noop": func(ctx context.Context, config *audit.BackendConfig, _ bool, _ audit.HeaderFormatter) (audit.Backend, error) {
 				return noop, nil
 			},
 		},
@@ -755,5 +761,182 @@ func TestLogical_ErrRelativePath(t *testing.T) {
 
 	if !strings.Contains(respErr.Error(), logical.ErrRelativePath.Error()) {
 		t.Errorf("expected response for write to include %q", logical.ErrRelativePath.Error())
+	}
+}
+
+func testBuiltinPluginMetadataAuditLog(t *testing.T, log map[string]interface{}, expectedMountClass string) {
+	if mountClass, ok := log["mount_class"].(string); !ok {
+		t.Fatalf("mount_class should be a string, not %T", log["mount_class"])
+	} else if mountClass != expectedMountClass {
+		t.Fatalf("bad: mount_class should be %s, not %s", expectedMountClass, mountClass)
+	}
+
+	if _, ok := log["mount_running_version"].(string); !ok {
+		t.Fatalf("mount_running_version should be a string, not %T", log["mount_running_version"])
+	}
+
+	if _, ok := log["mount_running_sha256"].(string); ok {
+		t.Fatalf("mount_running_sha256 should be nil, not %T", log["mount_running_sha256"])
+	}
+
+	if mountIsExternalPlugin, ok := log["mount_is_external_plugin"].(bool); ok && mountIsExternalPlugin {
+		t.Fatalf("mount_is_external_plugin should be nil or false, not %T", log["mount_is_external_plugin"])
+	}
+}
+
+// TestLogical_AuditEnabled_ShouldLogPluginMetadata_Auth tests that we have plugin metadata of a builtin auth plugin
+// in audit log when it is enabled
+func TestLogical_AuditEnabled_ShouldLogPluginMetadata_Auth(t *testing.T) {
+	coreConfig := &vault.CoreConfig{
+		AuditBackends: map[string]audit.Factory{
+			"file": auditFile.Factory,
+		},
+	}
+
+	cluster := vault.NewTestCluster(t, coreConfig, &vault.TestClusterOptions{
+		HandlerFunc: Handler,
+	})
+
+	cluster.Start()
+	defer cluster.Cleanup()
+
+	cores := cluster.Cores
+
+	core := cores[0].Core
+	c := cluster.Cores[0].Client
+	vault.TestWaitActive(t, core)
+
+	// Enable the audit backend
+	tempDir := t.TempDir()
+	auditLogFile, err := os.CreateTemp(tempDir, "")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	err = c.Sys().EnableAuditWithOptions("file", &api.EnableAuditOptions{
+		Type: "file",
+		Options: map[string]string{
+			"file_path": auditLogFile.Name(),
+		},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	_, err = c.Logical().Write("auth/token/create", map[string]interface{}{
+		"ttl": "10s",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Check the audit trail on request and response
+	decoder := json.NewDecoder(auditLogFile)
+	var auditRecord map[string]interface{}
+	for decoder.Decode(&auditRecord) == nil {
+		auditRequest := map[string]interface{}{}
+		if req, ok := auditRecord["request"]; ok {
+			auditRequest = req.(map[string]interface{})
+			if auditRequest["path"] != "auth/token/create" {
+				continue
+			}
+		}
+		testBuiltinPluginMetadataAuditLog(t, auditRequest, consts.PluginTypeCredential.String())
+
+		auditResponse := map[string]interface{}{}
+		if req, ok := auditRecord["response"]; ok {
+			auditRequest = req.(map[string]interface{})
+			if auditResponse["path"] != "auth/token/create" {
+				continue
+			}
+		}
+		testBuiltinPluginMetadataAuditLog(t, auditResponse, consts.PluginTypeCredential.String())
+	}
+}
+
+// TestLogical_AuditEnabled_ShouldLogPluginMetadata_Secret tests that we have plugin metadata of a builtin secret plugin
+// in audit log when it is enabled
+func TestLogical_AuditEnabled_ShouldLogPluginMetadata_Secret(t *testing.T) {
+	coreConfig := &vault.CoreConfig{
+		LogicalBackends: map[string]logical.Factory{
+			"kv": kv.VersionedKVFactory,
+		},
+		AuditBackends: map[string]audit.Factory{
+			"file": auditFile.Factory,
+		},
+	}
+
+	cluster := vault.NewTestCluster(t, coreConfig, &vault.TestClusterOptions{
+		HandlerFunc: Handler,
+	})
+
+	cluster.Start()
+	defer cluster.Cleanup()
+
+	cores := cluster.Cores
+
+	core := cores[0].Core
+	c := cluster.Cores[0].Client
+	vault.TestWaitActive(t, core)
+
+	if err := c.Sys().Mount("kv/", &api.MountInput{
+		Type: "kv-v2",
+	}); err != nil {
+		t.Fatalf("kv-v2 mount attempt failed - err: %#v\n", err)
+	}
+
+	// Enable the audit backend
+	tempDir := t.TempDir()
+	auditLogFile, err := os.CreateTemp(tempDir, "")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	err = c.Sys().EnableAuditWithOptions("file", &api.EnableAuditOptions{
+		Type: "file",
+		Options: map[string]string{
+			"file_path": auditLogFile.Name(),
+		},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	{
+		writeData := map[string]interface{}{
+			"data": map[string]interface{}{
+				"bar": "a",
+			},
+		}
+		corehelpers.RetryUntil(t, 10*time.Second, func() error {
+			resp, err := c.Logical().Write("kv/data/foo", writeData)
+			if err != nil {
+				t.Fatalf("write request failed, err: %#v, resp: %#v\n", err, resp)
+			}
+			return nil
+		})
+	}
+
+	// Check the audit trail on request and response
+	decoder := json.NewDecoder(auditLogFile)
+	var auditRecord map[string]interface{}
+	for decoder.Decode(&auditRecord) == nil {
+		auditRequest := map[string]interface{}{}
+		if req, ok := auditRecord["request"]; ok {
+			auditRequest = req.(map[string]interface{})
+			if auditRequest["path"] != "kv/data/foo" {
+				continue
+			}
+		}
+		testBuiltinPluginMetadataAuditLog(t, auditRequest, consts.PluginTypeSecrets.String())
+
+		auditResponse := map[string]interface{}{}
+		if req, ok := auditRecord["response"]; ok {
+			auditRequest = req.(map[string]interface{})
+			if auditResponse["path"] != "kv/data/foo" {
+				continue
+			}
+		}
+		testBuiltinPluginMetadataAuditLog(t, auditResponse, consts.PluginTypeSecrets.String())
 	}
 }

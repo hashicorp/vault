@@ -1,0 +1,101 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
+// This file defines the style for .tabs-container, .tabs and .tab
+
+.page-header + .tabs-container {
+  box-shadow: none;
+}
+
+.tabs {
+  align-items: stretch;
+  box-shadow: inset 0 -1px 0 $grey-light;
+  display: flex;
+  justify-content: space-between;
+  overflow: hidden;
+  overflow-x: auto;
+  user-select: none;
+  white-space: nowrap;
+
+  ul {
+    align-items: center;
+    display: flex;
+    justify-content: flex-start;
+    min-height: 3rem;
+
+    > a {
+      &:focus {
+        box-shadow: none;
+      }
+      &.active,
+      &.active .tab {
+        border-color: $blue;
+        color: $blue;
+      }
+    }
+    li {
+      // solves for tools -> sub-tabs like "Unwrap data" -> "Data"
+      &.is-active {
+        border-bottom: 2px solid $blue;
+        color: $blue;
+
+        > button {
+          color: $blue;
+        }
+      }
+      // solves for tabs on auth mounts & secrets engines
+      > a {
+        &.active {
+          color: $blue;
+          background-color: transparent;
+          border-bottom: 2px solid $blue;
+        }
+      }
+    }
+  }
+
+  li {
+    &:focus {
+      box-shadow: none;
+    }
+    &.active a,
+    &.is-active a,
+    &.active .tab {
+      border-color: $blue;
+      color: $blue;
+    }
+  }
+  // important for auth tabs in active state, otherwise the border-bottom will not show.
+  a {
+    align-items: center;
+    display: flex;
+    justify-content: center;
+    vertical-align: top;
+  }
+
+  a,
+  .tab {
+    border-bottom: 2px solid transparent;
+    color: $grey;
+    font-weight: $font-weight-semibold;
+    padding: $size-6 $size-8 $size-8;
+    text-decoration: none;
+    transition: background-color $speed, border-color $speed;
+
+    &:hover,
+    &:active {
+      border-color: $grey-light;
+    }
+
+    &:hover {
+      background-color: $ui-gray-050;
+      color: $grey-darkest;
+    }
+  }
+
+  .ember-basic-dropdown-trigger {
+    outline: none;
+  }
+}

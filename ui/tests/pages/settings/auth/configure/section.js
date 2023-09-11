@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import { create, clickable, visitable, collection } from 'ember-cli-page-object';
 import fields from '../../../components/form-field';
 import flashMessage from '../../../components/flash-message';

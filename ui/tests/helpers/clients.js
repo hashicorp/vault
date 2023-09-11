@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import { Response } from 'miragejs';
 
 /** Scenarios
@@ -9,7 +14,7 @@ import { Response } from 'miragejs';
   Filtering (data without mounts)
   * -- HISTORY ONLY --
   Filtering different date ranges (hist only)
-  Upgrade warning 
+  Upgrade warning
   No permissions for license
   Version
   queries available
@@ -23,7 +28,7 @@ export const SELECTORS = {
   dateDisplay: '[data-test-date-display]',
   attributionBlock: '[data-test-clients-attribution]',
   filterBar: '[data-test-clients-filter-bar]',
-  rangeDropdown: '[data-test-popup-menu-trigger]',
+  rangeDropdown: '[data-test-calendar-widget-trigger]',
   monthDropdown: '[data-test-popup-menu-trigger="month"]',
   yearDropdown: '[data-test-popup-menu-trigger="year"]',
   dateDropdownSubmit: '[data-test-date-dropdown-submit]',
@@ -32,6 +37,7 @@ export const SELECTORS = {
   monthlyUsageBlock: '[data-test-monthly-usage]',
   selectedAuthMount: 'div#auth-method-search-select [data-test-selected-option] div',
   selectedNs: 'div#namespace-search-select [data-test-selected-option] div',
+  upgradeWarning: '[data-test-clients-upgrade-warning]',
 };
 
 export const CHART_ELEMENTS = {

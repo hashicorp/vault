@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package api
 
 import (
@@ -145,17 +148,17 @@ func TestKVHelpers(t *testing.T) {
 		teardownTest, _ := setupKVv2Test(t)
 		defer teardownTest(t)
 
-		_, err = client.KVv2(v1MountPath).Get(context.Background(), "does/not/exist")
+		_, err = client.KVv2(v2MountPath).Get(context.Background(), "does/not/exist")
 		if !errors.Is(err, api.ErrSecretNotFound) {
 			t.Fatalf("KVv2.Get is expected to return an api.ErrSecretNotFound wrapped error for a missing secret; got %v", err)
 		}
 
-		_, err = client.KVv2(v1MountPath).GetMetadata(context.Background(), "does/not/exist")
+		_, err = client.KVv2(v2MountPath).GetMetadata(context.Background(), "does/not/exist")
 		if !errors.Is(err, api.ErrSecretNotFound) {
 			t.Fatalf("KVv2.GetMetadata is expected to return an api.ErrSecretNotFound wrapped error for a missing secret; got %v", err)
 		}
 
-		_, err = client.KVv2(v1MountPath).GetVersion(context.Background(), secretPath, 99)
+		_, err = client.KVv2(v2MountPath).GetVersion(context.Background(), secretPath, 99)
 		if !errors.Is(err, api.ErrSecretNotFound) {
 			t.Fatalf("KVv2.GetVersion is expected to return an api.ErrSecretNotFound wrapped error for a missing secret version; got %v", err)
 		}

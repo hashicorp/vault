@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package config
 
 import (
@@ -9,16 +12,22 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"syscall"
 	"time"
 
 	ctconfig "github.com/hashicorp/consul-template/config"
+	ctsignals "github.com/hashicorp/consul-template/signals"
 	"github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/go-secure-stdlib/parseutil"
 	"github.com/hashicorp/hcl"
 	"github.com/hashicorp/hcl/hcl/ast"
+	"github.com/mitchellh/mapstructure"
+	"k8s.io/utils/strings/slices"
+
+	"github.com/hashicorp/vault/command/agentproxyshared"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/internalshared/configutil"
-	"github.com/mitchellh/mapstructure"
+	"github.com/hashicorp/vault/sdk/helper/pointerutil"
 )
 
 // Config is the configuration for Vault Agent.
@@ -28,7 +37,7 @@ type Config struct {
 	AutoAuth                    *AutoAuth                  `hcl:"auto_auth"`
 	ExitAfterAuth               bool                       `hcl:"exit_after_auth"`
 	Cache                       *Cache                     `hcl:"cache"`
-	APIProxy                    *APIProxy                  `hcl:"api_proxy""`
+	APIProxy                    *APIProxy                  `hcl:"api_proxy"`
 	Vault                       *Vault                     `hcl:"vault"`
 	TemplateConfig              *TemplateConfig            `hcl:"template_config"`
 	Templates                   []*ctconfig.TemplateConfig `hcl:"templates"`
@@ -40,6 +49,8 @@ type Config struct {
 	DisableKeepAlivesAPIProxy   bool                       `hcl:"-"`
 	DisableKeepAlivesTemplating bool                       `hcl:"-"`
 	DisableKeepAlivesAutoAuth   bool                       `hcl:"-"`
+	Exec                        *ExecConfig                `hcl:"exec,optional"`
+	EnvTemplates                []*ctconfig.TemplateConfig `hcl:"env_template,optional"`
 }
 
 const (
@@ -102,22 +113,13 @@ type APIProxy struct {
 
 // Cache contains any configuration needed for Cache mode
 type Cache struct {
-	UseAutoAuthTokenRaw interface{}     `hcl:"use_auto_auth_token"`
-	UseAutoAuthToken    bool            `hcl:"-"`
-	ForceAutoAuthToken  bool            `hcl:"-"`
-	EnforceConsistency  string          `hcl:"enforce_consistency"`
-	WhenInconsistent    string          `hcl:"when_inconsistent"`
-	Persist             *Persist        `hcl:"persist"`
-	InProcDialer        transportDialer `hcl:"-"`
-}
-
-// Persist contains configuration needed for persistent caching
-type Persist struct {
-	Type                    string
-	Path                    string `hcl:"path"`
-	KeepAfterImport         bool   `hcl:"keep_after_import"`
-	ExitOnErr               bool   `hcl:"exit_on_err"`
-	ServiceAccountTokenFile string `hcl:"service_account_token_file"`
+	UseAutoAuthTokenRaw interface{}                     `hcl:"use_auto_auth_token"`
+	UseAutoAuthToken    bool                            `hcl:"-"`
+	ForceAutoAuthToken  bool                            `hcl:"-"`
+	EnforceConsistency  string                          `hcl:"enforce_consistency"`
+	WhenInconsistent    string                          `hcl:"when_inconsistent"`
+	Persist             *agentproxyshared.PersistConfig `hcl:"persist"`
+	InProcDialer        transportDialer                 `hcl:"-"`
 }
 
 // AutoAuth is the configured authentication method and sinks
@@ -163,6 +165,12 @@ type TemplateConfig struct {
 	ExitOnRetryFailure       bool          `hcl:"exit_on_retry_failure"`
 	StaticSecretRenderIntRaw interface{}   `hcl:"static_secret_render_interval"`
 	StaticSecretRenderInt    time.Duration `hcl:"-"`
+}
+
+type ExecConfig struct {
+	Command                []string  `hcl:"command,attr" mapstructure:"command"`
+	RestartOnSecretChanges string    `hcl:"restart_on_secret_changes,optional" mapstructure:"restart_on_secret_changes"`
+	RestartStopSignal      os.Signal `hcl:"-" mapstructure:"restart_stop_signal"`
 }
 
 func NewConfig() *Config {
@@ -262,7 +270,31 @@ func (c *Config) Merge(c2 *Config) *Config {
 		result.PidFile = c2.PidFile
 	}
 
+	result.Exec = c.Exec
+	if c2.Exec != nil {
+		result.Exec = c2.Exec
+	}
+
+	for _, envTmpl := range c.EnvTemplates {
+		result.EnvTemplates = append(result.EnvTemplates, envTmpl)
+	}
+
+	for _, envTmpl := range c2.EnvTemplates {
+		result.EnvTemplates = append(result.EnvTemplates, envTmpl)
+	}
+
 	return result
+}
+
+// IsDefaultListerDefined returns true if a default listener has been defined
+// in this config
+func (c *Config) IsDefaultListerDefined() bool {
+	for _, l := range c.Listeners {
+		if l.Role != "metrics_only" {
+			return true
+		}
+	}
+	return false
 }
 
 // ValidateConfig validates an Agent configuration after it has been fully merged together, to
@@ -279,7 +311,7 @@ func (c *Config) ValidateConfig() error {
 	}
 
 	if c.Cache != nil {
-		if len(c.Listeners) < 1 && len(c.Templates) < 1 {
+		if len(c.Listeners) < 1 && len(c.Templates) < 1 && len(c.EnvTemplates) < 1 {
 			return fmt.Errorf("enabling the cache requires at least 1 template or 1 listener to be defined")
 		}
 
@@ -311,13 +343,134 @@ func (c *Config) ValidateConfig() error {
 	if c.AutoAuth != nil {
 		if len(c.AutoAuth.Sinks) == 0 &&
 			(c.APIProxy == nil || !c.APIProxy.UseAutoAuthToken) &&
-			len(c.Templates) == 0 {
+			len(c.Templates) == 0 &&
+			len(c.EnvTemplates) == 0 {
 			return fmt.Errorf("auto_auth requires at least one sink or at least one template or api_proxy.use_auto_auth_token=true")
 		}
 	}
 
 	if c.AutoAuth == nil && c.Cache == nil && len(c.Listeners) == 0 {
 		return fmt.Errorf("no auto_auth, cache, or listener block found in config")
+	}
+
+	return c.validateEnvTemplateConfig()
+}
+
+func (c *Config) validateEnvTemplateConfig() error {
+	// if we are not in env-template mode, exit early
+	if c.Exec == nil && len(c.EnvTemplates) == 0 {
+		return nil
+	}
+
+	if c.Exec == nil {
+		return fmt.Errorf("a top-level 'exec' element must be specified with 'env_template' entries")
+	}
+
+	if len(c.EnvTemplates) == 0 {
+		return fmt.Errorf("must specify at least one 'env_template' element with a top-level 'exec' element")
+	}
+
+	if c.APIProxy != nil {
+		return fmt.Errorf("'api_proxy' cannot be specified with 'env_template' entries")
+	}
+
+	if len(c.Templates) > 0 {
+		return fmt.Errorf("'template' cannot be specified with 'env_template' entries")
+	}
+
+	if len(c.Exec.Command) == 0 {
+		return fmt.Errorf("'exec' requires a non-empty 'command' field")
+	}
+
+	if !slices.Contains([]string{"always", "never"}, c.Exec.RestartOnSecretChanges) {
+		return fmt.Errorf("'exec.restart_on_secret_changes' unexpected value: %q", c.Exec.RestartOnSecretChanges)
+	}
+
+	uniqueKeys := make(map[string]struct{})
+
+	for _, template := range c.EnvTemplates {
+		// Required:
+		//   - the key (environment variable name)
+		//   - either "contents" or "source"
+		// Optional / permitted:
+		//   - error_on_missing_key
+		//   - error_fatal
+		//   - left_delimiter
+		//   - right_delimiter
+		//   - ExtFuncMap
+		//   - function_denylist / function_blacklist
+
+		if template.MapToEnvironmentVariable == nil {
+			return fmt.Errorf("env_template: an environment variable name is required")
+		}
+
+		key := *template.MapToEnvironmentVariable
+
+		if _, exists := uniqueKeys[key]; exists {
+			return fmt.Errorf("env_template: duplicate environment variable name: %q", key)
+		}
+
+		uniqueKeys[key] = struct{}{}
+
+		if template.Contents == nil && template.Source == nil {
+			return fmt.Errorf("env_template[%s]: either 'contents' or 'source' must be specified", key)
+		}
+
+		if template.Contents != nil && template.Source != nil {
+			return fmt.Errorf("env_template[%s]: 'contents' and 'source' cannot be specified together", key)
+		}
+
+		if template.Backup != nil {
+			return fmt.Errorf("env_template[%s]: 'backup' is not allowed", key)
+		}
+
+		if template.Command != nil {
+			return fmt.Errorf("env_template[%s]: 'command' is not allowed", key)
+		}
+
+		if template.CommandTimeout != nil {
+			return fmt.Errorf("env_template[%s]: 'command_timeout' is not allowed", key)
+		}
+
+		if template.CreateDestDirs != nil {
+			return fmt.Errorf("env_template[%s]: 'create_dest_dirs' is not allowed", key)
+		}
+
+		if template.Destination != nil {
+			return fmt.Errorf("env_template[%s]: 'destination' is not allowed", key)
+		}
+
+		if template.Exec != nil {
+			return fmt.Errorf("env_template[%s]: 'exec' is not allowed", key)
+		}
+
+		if template.Perms != nil {
+			return fmt.Errorf("env_template[%s]: 'perms' is not allowed", key)
+		}
+
+		if template.User != nil {
+			return fmt.Errorf("env_template[%s]: 'user' is not allowed", key)
+		}
+
+		if template.Uid != nil {
+			return fmt.Errorf("env_template[%s]: 'uid' is not allowed", key)
+		}
+
+		if template.Group != nil {
+			return fmt.Errorf("env_template[%s]: 'group' is not allowed", key)
+		}
+
+		if template.Gid != nil {
+			return fmt.Errorf("env_template[%s]: 'gid' is not allowed", key)
+		}
+
+		if template.Wait != nil {
+			return fmt.Errorf("env_template[%s]: 'wait' is not allowed", key)
+		}
+
+		if template.SandboxPath != nil {
+			return fmt.Errorf("env_template[%s]: 'sandbox_path' is not allowed", key)
+		}
 	}
 
 	return nil
@@ -485,7 +638,15 @@ func LoadConfigFile(path string) (*Config, error) {
 		return nil, fmt.Errorf("error parsing 'template': %w", err)
 	}
 
-	if result.Cache != nil && result.APIProxy == nil {
+	if err := parseExec(result, list); err != nil {
+		return nil, fmt.Errorf("error parsing 'exec': %w", err)
+	}
+
+	if err := parseEnvTemplates(result, list); err != nil {
+		return nil, fmt.Errorf("error parsing 'env_template': %w", err)
+	}
+
+	if result.Cache != nil && result.APIProxy == nil && (result.Cache.UseAutoAuthToken || result.Cache.ForceAutoAuthToken) {
 		result.APIProxy = &APIProxy{
 			UseAutoAuthToken:   result.Cache.UseAutoAuthToken,
 			ForceAutoAuthToken: result.Cache.ForceAutoAuthToken,
@@ -734,7 +895,7 @@ func parsePersist(result *Config, list *ast.ObjectList) error {
 
 	item := persistList.Items[0]
 
-	var p Persist
+	var p agentproxyshared.PersistConfig
 	err := hcl.DecodeObject(&p, item.Val)
 	if err != nil {
 		return err
@@ -1030,5 +1191,123 @@ func parseTemplates(result *Config, list *ast.ObjectList) error {
 		tcs = append(tcs, &tc)
 	}
 	result.Templates = tcs
+	return nil
+}
+
+func parseExec(result *Config, list *ast.ObjectList) error {
+	name := "exec"
+
+	execList := list.Filter(name)
+	if len(execList.Items) == 0 {
+		return nil
+	}
+
+	if len(execList.Items) > 1 {
+		return fmt.Errorf("at most one %q block is allowed", name)
+	}
+
+	item := execList.Items[0]
+	var shadow interface{}
+	if err := hcl.DecodeObject(&shadow, item.Val); err != nil {
+		return fmt.Errorf("error decoding config: %s", err)
+	}
+
+	parsed, ok := shadow.(map[string]interface{})
+	if !ok {
+		return errors.New("error converting config")
+	}
+
+	var execConfig ExecConfig
+	var md mapstructure.Metadata
+	decoder, err := mapstructure.NewDecoder(&mapstructure.DecoderConfig{
+		DecodeHook: mapstructure.ComposeDecodeHookFunc(
+			ctconfig.StringToFileModeFunc(),
+			ctconfig.StringToWaitDurationHookFunc(),
+			mapstructure.StringToSliceHookFunc(","),
+			mapstructure.StringToTimeDurationHookFunc(),
+			ctsignals.StringToSignalFunc(),
+		),
+		ErrorUnused: true,
+		Metadata:    &md,
+		Result:      &execConfig,
+	})
+	if err != nil {
+		return errors.New("mapstructure decoder creation failed")
+	}
+	if err := decoder.Decode(parsed); err != nil {
+		return err
+	}
+
+	// if the user does not specify a restart signal, default to SIGTERM
+	if execConfig.RestartStopSignal == nil {
+		execConfig.RestartStopSignal = syscall.SIGTERM
+	}
+
+	if execConfig.RestartOnSecretChanges == "" {
+		execConfig.RestartOnSecretChanges = "always"
+	}
+
+	result.Exec = &execConfig
+	return nil
+}
+
+func parseEnvTemplates(result *Config, list *ast.ObjectList) error {
+	name := "env_template"
+
+	envTemplateList := list.Filter(name)
+
+	if len(envTemplateList.Items) < 1 {
+		return nil
+	}
+
+	envTemplates := make([]*ctconfig.TemplateConfig, 0, len(envTemplateList.Items))
+
+	for _, item := range envTemplateList.Items {
+		var shadow interface{}
+		if err := hcl.DecodeObject(&shadow, item.Val); err != nil {
+			return fmt.Errorf("error decoding config: %s", err)
+		}
+
+		// Convert to a map and flatten the keys we want to flatten
+		parsed, ok := shadow.(map[string]any)
+		if !ok {
+			return errors.New("error converting config")
+		}
+
+		var templateConfig ctconfig.TemplateConfig
+		var md mapstructure.Metadata
+		decoder, err := mapstructure.NewDecoder(&mapstructure.DecoderConfig{
+			DecodeHook: mapstructure.ComposeDecodeHookFunc(
+				ctconfig.StringToFileModeFunc(),
+				ctconfig.StringToWaitDurationHookFunc(),
+				mapstructure.StringToSliceHookFunc(","),
+				mapstructure.StringToTimeDurationHookFunc(),
+				ctsignals.StringToSignalFunc(),
+			),
+			ErrorUnused: true,
+			Metadata:    &md,
+			Result:      &templateConfig,
+		})
+		if err != nil {
+			return errors.New("mapstructure decoder creation failed")
+		}
+		if err := decoder.Decode(parsed); err != nil {
+			return err
+		}
+
+		// parse the keys in the item for the environment variable name
+		if numberOfKeys := len(item.Keys); numberOfKeys != 1 {
+			return fmt.Errorf("expected one and only one environment variable name, got %d", numberOfKeys)
+		}
+
+		// hcl parses this with extra quotes if quoted in config file
+		environmentVariableName := strings.Trim(item.Keys[0].Token.Text, `"`)
+
+		templateConfig.MapToEnvironmentVariable = pointerutil.StringPtr(environmentVariableName)
+
+		envTemplates = append(envTemplates, &templateConfig)
+	}
+
+	result.EnvTemplates = envTemplates
 	return nil
 }

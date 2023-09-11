@@ -1,10 +1,15 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
 <PageHeader as |p|>
   <p.top>
     <Page::Breadcrumbs @breadcrumbs={{@breadcrumbs}} />
   </p.top>
   <p.levelLeft>
     <h1 class="title is-3">
-      {{if @model.isNew "Create role" "Edit role"}}
+      {{if @model.isNew "Create Role" "Edit Role"}}
     </h1>
   </p.levelLeft>
 </PageHeader>
@@ -39,6 +44,10 @@
 
 {{#if @model.generationPreference}}
   <form id="role" {{on "submit" this.onSave}} data-test-policy-form>
+    {{#if this.errorBanner}}
+      <MessageError @errorMessage={{this.errorBanner}} class="has-top-margin-s" />
+    {{/if}}
+
     {{#each @model.filteredFormFields as |field|}}
       <FormField @attr={{field}} @model={{@model}} @modelValidations={{this.modelValidations}} />
     {{/each}}
@@ -105,7 +114,7 @@
             @value={{template.rules}}
             @mode="ruby"
             @valueUpdated={{fn (mut template.rules)}}
-            @helpText={{this.roleRulesHelpText}}
+            @helpText={{sanitized-html this.roleRulesHelpText}}
           >
             <button type="button" class="toolbar-link" {{on "click" this.resetRoleRules}} data-test-restore-example>
               Restore example
@@ -113,6 +122,11 @@
             </button>
           </JsonEditor>
         {{/let}}
+      </div>
+    {{/if}}
+    {{#if this.invalidFormAlert}}
+      <div class="control" data-test-invalid-form-alert>
+        <AlertInline @type="danger" @paddingTop={{true}} @message={{this.invalidFormAlert}} @mimicRefresh={{true}} />
       </div>
     {{/if}}
   </form>

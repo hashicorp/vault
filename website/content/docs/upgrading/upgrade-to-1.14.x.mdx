@@ -1,0 +1,45 @@
+---
+layout: docs
+page_title: Upgrade to Vault 1.14.x
+description: |-
+  Deprecations, important or breaking changes, and remediation recommendations
+  for anyone upgrading to 1.14.x from Vault 1.13.x.
+---
+
+# Upgrade to Vault 1.14.x
+
+The Vault 1.14.x upgrade guide contains information on deprecations, important
+or breaking changes, and remediation recommendations for anyone upgrading from
+Vault 1.13. **Please read carefully**.
+
+## Feature deprecations and EOL
+
+### Duplicative Docker images
+
+As of Vault 1.14 we will no longer update the the `vault` Docker image.
+Only the [Verified Publisher](https://hub.docker.com/r/hashicorp/vault)
+`hashicorp/vault` image will be updated on DockerHub.
+
+Users of [Official Images](https://hub.docker.com/_/vault) need to use
+`docker pull hashicorp/vault:<version>` instead of `docker pull vault:<version>`
+to get newer versions of Vault in Docker images. Currently, HashiCorp publishes
+and updates identical Docker images of Vault as Verified Publisher and
+Official images separately.
+
+## Important changes
+
+`vault.raft_storage.bolt.write.time` has been corrected from a summary to a counter to more accurately reflect that it
+is measuring cumulative time writing, and not the distribution of individual write times.
+
+## Known issues and workarounds
+
+@include 'known-issues/ui-pki-control-groups.mdx'
+
+@include 'known-issues/update-primary-data-loss.mdx'
+
+@include 'known-issues/update-primary-addrs-panic.mdx'
+
+@include 'known-issues/ui-safari-login-screen.mdx'
+
+@include 'known-issues/aws-static-roles.mdx'
+

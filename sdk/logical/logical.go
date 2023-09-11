@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package logical
 
 import (
@@ -161,11 +164,6 @@ type Paths struct {
 type Auditor interface {
 	AuditRequest(ctx context.Context, input *LogInput) error
 	AuditResponse(ctx context.Context, input *LogInput) error
-}
-
-// Externaler allows us to check if a backend is running externally (i.e., over GRPC)
-type Externaler interface {
-	IsExternal() bool
 }
 
 type PluginVersion struct {

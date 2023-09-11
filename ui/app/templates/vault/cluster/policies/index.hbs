@@ -1,3 +1,8 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
 {{#if (or (eq this.policyType "acl") (has-feature "Sentinel"))}}
   <PageHeader as |p|>
     <p.levelLeft>
@@ -16,7 +21,7 @@
     {{#if this.model.meta.total}}
       <ToolbarFilters>
         <NavigateInput
-          filterFocusDidChange={{action "setFilterFocus"}}
+          @filterFocusDidChange={{action "setFilterFocus"}}
           @filterDidChange={{action "setFilter"}}
           @filter={{this.filter}}
           @filterMatchesKey={{this.filterMatchesKey}}

@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package pki
 
 import (
@@ -5,6 +8,7 @@ import (
 	"context"
 	"crypto"
 	"crypto/x509"
+	"errors"
 	"fmt"
 	"sort"
 	"strings"
@@ -16,6 +20,8 @@ import (
 	"github.com/hashicorp/vault/sdk/helper/errutil"
 	"github.com/hashicorp/vault/sdk/logical"
 )
+
+var ErrStorageItemNotFound = errors.New("storage item not found")
 
 const (
 	storageKeyConfig        = "config/keys"
@@ -279,6 +285,15 @@ func (b *backend) makeStorageContext(ctx context.Context, s logical.Storage) *st
 		Storage: s,
 		Backend: b,
 	}
+}
+
+func (sc *storageContext) WithFreshTimeout(timeout time.Duration) (*storageContext, context.CancelFunc) {
+	ctx, cancel := context.WithTimeout(context.Background(), timeout)
+	return &storageContext{
+		Context: ctx,
+		Storage: sc.Storage,
+		Backend: sc.Backend,
+	}, cancel
 }
 
 func (sc *storageContext) listKeys() ([]keyID, error) {
@@ -706,7 +721,7 @@ func (sc *storageContext) upgradeIssuerIfRequired(issuer *issuerEntry) *issuerEn
 		// Remove CRL signing usage if it exists on the issuer but doesn't
 		// exist in the KU of the x509 certificate.
 		if hadCRL && (cert.KeyUsage&x509.KeyUsageCRLSign) == 0 {
-			issuer.Usage.ToggleUsage(OCSPSigningUsage)
+			issuer.Usage.ToggleUsage(CRLSigningUsage)
 		}
 
 		// Handle our new OCSPSigning usage flag for earlier versions. If we
@@ -1310,9 +1325,10 @@ func (sc *storageContext) getRevocationConfig() (*crlConfig, error) {
 		result.Expiry = defaultCrlConfig.Expiry
 	}
 
-	if !constants.IsEnterprise && (result.UnifiedCRLOnExistingPaths || result.UnifiedCRL || result.UseGlobalQueue) {
+	isLocalMount := sc.Backend.System().LocalMount()
+	if (!constants.IsEnterprise || isLocalMount) && (result.UnifiedCRLOnExistingPaths || result.UnifiedCRL || result.UseGlobalQueue) {
 		// An end user must have had Enterprise, enabled the unified config args and then downgraded to OSS.
-		sc.Backend.Logger().Warn("Not running Vault Enterprise, " +
+		sc.Backend.Logger().Warn("Not running Vault Enterprise or using a local mount, " +
 			"disabling unified_crl, unified_crl_on_existing_paths and cross_cluster_revocation config flags.")
 		result.UnifiedCRLOnExistingPaths = false
 		result.UnifiedCRL = false
@@ -1320,6 +1336,20 @@ func (sc *storageContext) getRevocationConfig() (*crlConfig, error) {
 	}
 
 	return &result, nil
+}
+
+func (sc *storageContext) setRevocationConfig(config *crlConfig) error {
+	entry, err := logical.StorageEntryJSON("config/crl", config)
+	if err != nil {
+		return fmt.Errorf("failed building storage entry JSON: %w", err)
+	}
+
+	err = sc.Storage.Put(sc.Context, entry)
+	if err != nil {
+		return fmt.Errorf("failed writing storage entry: %w", err)
+	}
+
+	return nil
 }
 
 func (sc *storageContext) getAutoTidyConfig() (*tidyConfig, error) {
@@ -1351,7 +1381,33 @@ func (sc *storageContext) writeAutoTidyConfig(config *tidyConfig) error {
 		return err
 	}
 
-	return sc.Storage.Put(sc.Context, entry)
+	err = sc.Storage.Put(sc.Context, entry)
+	if err != nil {
+		return err
+	}
+
+	sc.Backend.publishCertCountMetrics.Store(config.PublishMetrics)
+
+	// To Potentially Disable Certificate Counting
+	if config.MaintainCount == false {
+		certCountWasEnabled := sc.Backend.certCountEnabled.Swap(config.MaintainCount)
+		if certCountWasEnabled {
+			sc.Backend.certsCounted.Store(true)
+			sc.Backend.certCountError = "Cert Count is Disabled: enable via Tidy Config maintain_stored_certificate_counts"
+			sc.Backend.possibleDoubleCountedSerials = nil        // This won't stop a list operation, but will stop an expensive clean-up during initialize
+			sc.Backend.possibleDoubleCountedRevokedSerials = nil // This won't stop a list operation, but will stop an expensive clean-up during initialize
+			sc.Backend.certCount.Store(0)
+			sc.Backend.revokedCertCount.Store(0)
+		}
+	} else { // To Potentially Enable Certificate Counting
+		if sc.Backend.certCountEnabled.Load() == false {
+			// We haven't written "re-enable certificate counts" outside the initialize function
+			// Any call derived call to do so is likely to time out on ~2 million certs
+			sc.Backend.certCountError = "Certificate Counting Has Not Been Initialized, re-initialize this mount"
+		}
+	}
+
+	return nil
 }
 
 func (sc *storageContext) listRevokedCerts() ([]string, error) {
@@ -1399,7 +1455,7 @@ func (sc *storageContext) fetchRevocationInfo(serial string) (*revocationInfo, e
 	if revEntry != nil {
 		err = revEntry.DecodeJSON(&revInfo)
 		if err != nil {
-			return nil, fmt.Errorf("error decoding existing revocation info")
+			return nil, fmt.Errorf("error decoding existing revocation info: %w", err)
 		}
 	}
 

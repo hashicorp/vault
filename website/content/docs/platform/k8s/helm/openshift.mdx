@@ -37,7 +37,7 @@ on OpenShift:
 ~> **Note:** Support for Consul on OpenShift is available since [Consul 1.9](https://www.hashicorp.com/blog/introducing-openshift-support-for-consul-on-kubernetes). However, for highly available
 deployments, Raft integrated storage is recommended.
 
-## Additional Resources
+## Additional resources
 
 The documentation, configuration and examples for Vault Helm and Vault K8s Agent Injector
 are applicable to OpenShift installations. For more examples see the existing documentation:
@@ -45,7 +45,7 @@ are applicable to OpenShift installations. For more examples see the existing do
 - [Vault Helm documentation](/vault/docs/platform/k8s/helm)
 - [Vault K8s documentation](/vault/docs/platform/k8s/injector)
 
-## Helm Chart
+## Helm chart
 
 The [Vault Helm chart](https://github.com/hashicorp/vault-helm)
 is the recommended way to install and configure Vault on OpenShift.
@@ -134,7 +134,7 @@ $ helm install vault hashicorp/vault \
     --set "server.dev.enabled=true"
 ```
 
-#### Highly Available Raft Mode
+#### Highly available raft mode
 
 The following creates a Vault cluster using the Raft integrated storage backend.
 
@@ -204,5 +204,5 @@ $ helm install vault hashicorp/vault \
 ## Tutorial
 
 Refer to the [Integrate a Kubernetes Cluster with an
-External Vault](https://learn.hashicorp.com/vault/getting-started-k8s/external-vault)
+External Vault](/vault/tutorials/kubernetes/kubernetes-external-vault)
 tutorial to learn how to use an external Vault within a Kubernetes cluster.

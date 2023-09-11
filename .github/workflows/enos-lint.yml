@@ -1,0 +1,35 @@
+---
+name: lint-enos
+
+on:
+  pull_request:
+    paths:
+      - enos/**
+
+jobs:
+  lint:
+    # Only run this workflow on pull requests from hashicorp/vault branches
+    # as we need secrets to install enos.
+    if: "! github.event.pull_request.head.repo.fork"
+    runs-on: ubuntu-latest
+    env:
+      GITHUB_TOKEN: ${{ secrets.ELEVATED_GITHUB_TOKEN }}
+      ENOS_VAR_tfc_api_token: ${{ secrets.TF_API_TOKEN }}
+    steps:
+      - uses: actions/checkout@c85c95e3d7251135ab7dc9ce3241c5835cc595a9 # v3.5.3
+      - name: Set Product version
+        id: set-product-version
+        uses: hashicorp/actions-set-product-version@v1
+      - id: get-version
+        run: echo "version=${{ steps.set-product-version.outputs.product-version }}" >> "$GITHUB_OUTPUT"
+      - uses: hashicorp/setup-terraform@v2
+        with:
+          terraform_wrapper: false
+      - uses: hashicorp/action-setup-enos@v1
+        with:
+          github-token: ${{ secrets.ELEVATED_GITHUB_TOKEN }}
+      - name: lint
+        working-directory: ./enos
+        env:
+          ENOS_VAR_vault_product_version: ${{ steps.get-version.outputs.version }}
+        run: make lint

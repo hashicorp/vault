@@ -1,10 +1,15 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
 <PageHeader as |p|>
   <p.top>
     <Page::Breadcrumbs @breadcrumbs={{@breadcrumbs}} />
   </p.top>
   <p.levelLeft>
     <h1 class="title is-3">
-      Configure kubernetes
+      Configure Kubernetes
     </h1>
   </p.levelLeft>
 </PageHeader>
@@ -46,11 +51,11 @@
       <FormField @attr={{attr}} @model={{@model}} @modelValidations={{this.modelValidations}} />
     {{/each}}
   {{else if (eq this.inferredState "success")}}
-    <Icon @name="check-circle-fill" class="has-text-green" />
+    <Icon @name="check-circle-fill" class="has-text-success" />
     <span>Configuration values were inferred successfully.</span>
   {{else if (eq this.inferredState "error")}}
-    <Icon @name="x-square-fill" class="has-text-red" />
-    <span class="has-text-red">
+    <Icon @name="x-square-fill" class="has-text-danger" />
+    <span class="has-text-danger">
       Vault could not infer a configuration from your environment variables. Check your configuration file to edit or delete
       them, or configure manually.
     </span>
@@ -73,7 +78,7 @@
 
 <hr class="has-background-gray-200 has-top-margin-l" />
 
-<div class="has-top-margin-s has-bottom-margin-s">
+<div class="has-top-margin-s has-bottom-margin-s is-flex">
   <button
     data-test-config-save
     class="button is-primary"
@@ -92,6 +97,9 @@
   >
     Back
   </button>
+  {{#if this.alert}}
+    <AlertInline @type="danger" @paddingTop={{true}} @message={{this.alert}} @mimicRefresh={{true}} data-test-alert />
+  {{/if}}
 </div>
 
 {{#if this.showConfirm}}

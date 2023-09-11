@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package pki
 
 import (
@@ -12,6 +15,7 @@ import (
 	"errors"
 	"fmt"
 	"math/big"
+	"net/http"
 	"strconv"
 	"strings"
 	"time"
@@ -39,6 +43,13 @@ var (
 func pathResignCrls(b *backend) *framework.Path {
 	return &framework.Path{
 		Pattern: "issuer/" + framework.GenericNameRegex(issuerRefParam) + "/resign-crls",
+
+		DisplayAttrs: &framework.DisplayAttributes{
+			OperationPrefix: operationPrefixPKIIssuer,
+			OperationVerb:   "resign",
+			OperationSuffix: "crls",
+		},
+
 		Fields: map[string]*framework.FieldSchema{
 			issuerRefParam: {
 				Type: framework.TypeString,
@@ -77,6 +88,18 @@ base64 encoded. Defaults to "pem".`,
 		Operations: map[logical.Operation]framework.OperationHandler{
 			logical.UpdateOperation: &framework.PathOperation{
 				Callback: b.pathUpdateResignCrlsHandler,
+				Responses: map[int][]framework.Response{
+					http.StatusOK: {{
+						Description: "OK",
+						Fields: map[string]*framework.FieldSchema{
+							"crl": {
+								Type:        framework.TypeString,
+								Description: `CRL`,
+								Required:    true,
+							},
+						},
+					}},
+				},
 			},
 		},
 
@@ -89,6 +112,13 @@ base64 encoded. Defaults to "pem".`,
 func pathSignRevocationList(b *backend) *framework.Path {
 	return &framework.Path{
 		Pattern: "issuer/" + framework.GenericNameRegex(issuerRefParam) + "/sign-revocation-list",
+
+		DisplayAttrs: &framework.DisplayAttributes{
+			OperationPrefix: operationPrefixPKIIssuer,
+			OperationVerb:   "sign",
+			OperationSuffix: "revocation-list",
+		},
+
 		Fields: map[string]*framework.FieldSchema{
 			issuerRefParam: {
 				Type: framework.TypeString,
@@ -133,6 +163,18 @@ value (string)`,
 		Operations: map[logical.Operation]framework.OperationHandler{
 			logical.UpdateOperation: &framework.PathOperation{
 				Callback: b.pathUpdateSignRevocationListHandler,
+				Responses: map[int][]framework.Response{
+					http.StatusOK: {{
+						Description: "OK",
+						Fields: map[string]*framework.FieldSchema{
+							"crl": {
+								Type:        framework.TypeString,
+								Description: `CRL`,
+								Required:    true,
+							},
+						},
+					}},
+				},
 			},
 		},
 

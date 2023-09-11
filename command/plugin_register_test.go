@@ -1,6 +1,11 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package command
 
 import (
+	"encoding/json"
+	"fmt"
 	"reflect"
 	"sort"
 	"strings"
@@ -107,7 +112,7 @@ func TestPluginRegisterCommand_Run(t *testing.T) {
 		}
 
 		resp, err := client.Sys().ListPlugins(&api.ListPluginsInput{
-			Type: consts.PluginTypeCredential,
+			Type: api.PluginTypeCredential,
 		})
 		if err != nil {
 			t.Fatal(err)
@@ -138,7 +143,7 @@ func TestPluginRegisterCommand_Run(t *testing.T) {
 		const pluginName = "my-plugin"
 		versions := []string{"v1.0.0", "v2.0.1"}
 		_, sha256Sum := testPluginCreate(t, pluginDir, pluginName)
-		types := []consts.PluginType{consts.PluginTypeCredential, consts.PluginTypeDatabase, consts.PluginTypeSecrets}
+		types := []api.PluginType{api.PluginTypeCredential, api.PluginTypeDatabase, api.PluginTypeSecrets}
 
 		for _, typ := range types {
 			for _, version := range versions {
@@ -164,17 +169,17 @@ func TestPluginRegisterCommand_Run(t *testing.T) {
 		}
 
 		resp, err := client.Sys().ListPlugins(&api.ListPluginsInput{
-			Type: consts.PluginTypeUnknown,
+			Type: api.PluginTypeUnknown,
 		})
 		if err != nil {
 			t.Fatal(err)
 		}
 
-		found := make(map[consts.PluginType]int)
-		versionsFound := make(map[consts.PluginType][]string)
+		found := make(map[api.PluginType]int)
+		versionsFound := make(map[api.PluginType][]string)
 		for _, p := range resp.Details {
 			if p.Name == pluginName {
-				typ, err := consts.ParsePluginType(p.Type)
+				typ, err := api.ParsePluginType(p.Type)
 				if err != nil {
 					t.Fatal(err)
 				}
@@ -225,4 +230,108 @@ func TestPluginRegisterCommand_Run(t *testing.T) {
 		_, cmd := testPluginRegisterCommand(t)
 		assertNoTabs(t, cmd)
 	})
+}
+
+// TestFlagParsing ensures that flags passed to vault plugin register correctly
+// translate into the expected JSON body and request path.
+func TestFlagParsing(t *testing.T) {
+	for name, tc := range map[string]struct {
+		pluginType      api.PluginType
+		name            string
+		command         string
+		ociImage        string
+		runtime         string
+		version         string
+		sha256          string
+		args            []string
+		env             []string
+		expectedPayload string
+	}{
+		"minimal": {
+			pluginType:      api.PluginTypeUnknown,
+			name:            "foo",
+			sha256:          "abc123",
+			expectedPayload: `{"type":0,"command":"foo","sha256":"abc123"}`,
+		},
+		"full": {
+			pluginType:      api.PluginTypeCredential,
+			name:            "name",
+			command:         "cmd",
+			ociImage:        "image",
+			runtime:         "runtime",
+			version:         "v1.0.0",
+			sha256:          "abc123",
+			args:            []string{"--a=b", "--b=c", "positional"},
+			env:             []string{"x=1", "y=2"},
+			expectedPayload: `{"type":1,"args":["--a=b","--b=c","positional"],"command":"cmd","sha256":"abc123","version":"v1.0.0","oci_image":"image","runtime":"runtime","env":["x=1","y=2"]}`,
+		},
+		"command remains empty if oci_image specified": {
+			pluginType:      api.PluginTypeCredential,
+			name:            "name",
+			ociImage:        "image",
+			sha256:          "abc123",
+			expectedPayload: `{"type":1,"sha256":"abc123","oci_image":"image"}`,
+		},
+	} {
+		tc := tc
+		t.Run(name, func(t *testing.T) {
+			ui, cmd := testPluginRegisterCommand(t)
+			var requestLogger *recordingRoundTripper
+			cmd.client, requestLogger = mockClient(t)
+
+			var args []string
+			if tc.command != "" {
+				args = append(args, "-command="+tc.command)
+			}
+			if tc.ociImage != "" {
+				args = append(args, "-oci_image="+tc.ociImage)
+			}
+			if tc.runtime != "" {
+				args = append(args, "-runtime="+tc.runtime)
+			}
+			if tc.sha256 != "" {
+				args = append(args, "-sha256="+tc.sha256)
+			}
+			if tc.version != "" {
+				args = append(args, "-version="+tc.version)
+			}
+			for _, arg := range tc.args {
+				args = append(args, "-args="+arg)
+			}
+			for _, env := range tc.env {
+				args = append(args, "-env="+env)
+			}
+			if tc.pluginType != api.PluginTypeUnknown {
+				args = append(args, tc.pluginType.String())
+			}
+			args = append(args, tc.name)
+			t.Log(args)
+
+			code := cmd.Run(args)
+			if exp := 0; code != exp {
+				t.Fatalf("expected %d to be %d\nstdout: %s\nstderr: %s", code, exp, ui.OutputWriter.String(), ui.ErrorWriter.String())
+			}
+
+			actual := &api.RegisterPluginInput{}
+			expected := &api.RegisterPluginInput{}
+			err := json.Unmarshal(requestLogger.body, actual)
+			if err != nil {
+				t.Fatal(err)
+			}
+			err = json.Unmarshal([]byte(tc.expectedPayload), expected)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if !reflect.DeepEqual(expected, actual) {
+				t.Errorf("expected: %s\ngot: %s", tc.expectedPayload, requestLogger.body)
+			}
+			expectedPath := fmt.Sprintf("/v1/sys/plugins/catalog/%s/%s", tc.pluginType.String(), tc.name)
+			if tc.pluginType == api.PluginTypeUnknown {
+				expectedPath = fmt.Sprintf("/v1/sys/plugins/catalog/%s", tc.name)
+			}
+			if requestLogger.path != expectedPath {
+				t.Errorf("Expected path %s, got %s", expectedPath, requestLogger.path)
+			}
+		})
+	}
 }

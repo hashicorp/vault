@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package vault
 
 import (
@@ -15,7 +18,6 @@ import (
 
 	"github.com/armon/go-metrics"
 	"github.com/hashicorp/errwrap"
-	aeadwrapper "github.com/hashicorp/go-kms-wrapping/wrappers/aead/v2"
 	"github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/helper/namespace"
@@ -133,7 +135,10 @@ func (c *Core) getHAMembers() ([]HAStatusNode, error) {
 	return nodes, nil
 }
 
-// Leader is used to get the current active leader
+// Leader is used to get information about the current active leader in relation to the current node (core).
+// It utilizes a state lock on the Core by attempting to acquire a read lock. Care should be taken not to
+// call this method if a read lock on this Core's state lock is currently held, as this can cause deadlock.
+// e.g. if called from within request handling.
 func (c *Core) Leader() (isLeader bool, leaderAddr, clusterAddr string, err error) {
 	// Check if HA enabled. We don't need the lock for this check as it's set
 	// on startup and never modified
@@ -235,7 +240,7 @@ func (c *Core) Leader() (isLeader bool, leaderAddr, clusterAddr string, err erro
 	// to ourself, there's no point in paying any attention to it.  And by
 	// disregarding it, we can avoid a panic in raft tests using the Inmem network
 	// layer when we try to connect back to ourself.
-	if adv.ClusterAddr == c.ClusterAddr() && adv.RedirectAddr == c.redirectAddr {
+	if adv.ClusterAddr == c.ClusterAddr() && adv.RedirectAddr == c.redirectAddr && c.getRaftBackend() != nil {
 		return false, "", "", nil
 	}
 
@@ -566,9 +571,9 @@ func (c *Core) waitForLeadership(newLeaderCh chan func(), manualStepDownCh, stop
 		// everything is sane. If we have no sanity in the barrier, we actually
 		// seal, as there's little we can do.
 		{
-			c.seal.SetBarrierConfig(activeCtx, nil)
+			c.seal.ClearBarrierConfig(activeCtx)
 			if c.seal.RecoveryKeySupported() {
-				c.seal.SetRecoveryConfig(activeCtx, nil)
+				c.seal.ClearRecoveryConfig(activeCtx)
 			}
 
 			if err := c.performKeyUpgrades(activeCtx); err != nil {
@@ -663,10 +668,12 @@ func (c *Core) waitForLeadership(newLeaderCh chan func(), manualStepDownCh, stop
 			// Spawn this in a go routine so we can cancel the context and
 			// unblock any inflight requests that are holding the statelock.
 			go func() {
+				timer := time.NewTimer(DefaultMaxRequestDuration)
 				select {
 				case <-activeCtx.Done():
-				// Attempt to drain any inflight requests
-				case <-time.After(DefaultMaxRequestDuration):
+					timer.Stop()
+					// Attempt to drain any inflight requests
+				case <-timer.C:
 					activeCtxCancel()
 				}
 			}()
@@ -701,6 +708,13 @@ func (c *Core) waitForLeadership(newLeaderCh chan func(), manualStepDownCh, stop
 					c.logger.Error("unlocking HA lock failed", "error", err)
 				}
 				c.heldHALock = nil
+			}
+
+			// Advertise ourselves as a standby.
+			if c.serviceRegistration != nil {
+				if err := c.serviceRegistration.NotifyActiveStateChange(false); err != nil {
+					c.logger.Warn("failed to notify standby status", "error", err)
+				}
 			}
 
 			// If we are stopped return, otherwise unlock the statelock
@@ -796,8 +810,9 @@ func (c *Core) periodicLeaderRefresh(newLeaderCh chan func(), stopCh chan struct
 
 	clusterAddr := ""
 	for {
+		timer := time.NewTimer(leaderCheckInterval)
 		select {
-		case <-time.After(leaderCheckInterval):
+		case <-timer.C:
 			count := atomic.AddInt32(opCount, 1)
 			if count > 1 {
 				atomic.AddInt32(opCount, -1)
@@ -830,6 +845,7 @@ func (c *Core) periodicLeaderRefresh(newLeaderCh chan func(), stopCh chan struct
 				atomic.AddInt32(lopCount, -1)
 			}()
 		case <-stopCh:
+			timer.Stop()
 			return
 		}
 	}
@@ -842,8 +858,9 @@ func (c *Core) periodicCheckKeyUpgrades(ctx context.Context, stopCh chan struct{
 
 	opCount := new(int32)
 	for {
+		timer := time.NewTimer(keyRotateCheckInterval)
 		select {
-		case <-time.After(keyRotateCheckInterval):
+		case <-timer.C:
 			count := atomic.AddInt32(opCount, 1)
 			if count > 1 {
 				atomic.AddInt32(opCount, -1)
@@ -899,6 +916,7 @@ func (c *Core) periodicCheckKeyUpgrades(ctx context.Context, stopCh chan struct{
 				return
 			}()
 		case <-stopCh:
+			timer.Stop()
 			return
 		}
 	}
@@ -933,10 +951,13 @@ func (c *Core) reloadRootKey(ctx context.Context) error {
 }
 
 func (c *Core) reloadShamirKey(ctx context.Context) error {
-	_ = c.seal.SetBarrierConfig(ctx, nil)
-	if cfg, _ := c.seal.BarrierConfig(ctx); cfg == nil {
+	_ = c.seal.ClearBarrierConfig(ctx)
+
+	cfg, _ := c.seal.BarrierConfig(ctx)
+	if cfg == nil {
 		return nil
 	}
+
 	var shamirKey []byte
 	switch c.seal.StoredKeysSupported() {
 	case seal.StoredKeysSupportedGeneric:
@@ -957,7 +978,7 @@ func (c *Core) reloadShamirKey(ctx context.Context) error {
 		}
 		shamirKey = keyring.rootKey
 	}
-	return c.seal.GetAccess().Wrapper.(*aeadwrapper.ShamirWrapper).SetAesGcmKeyBytes(shamirKey)
+	return c.seal.GetAccess().SetShamirSealKey(shamirKey)
 }
 
 func (c *Core) performKeyUpgrades(ctx context.Context) error {
@@ -1030,9 +1051,11 @@ func (c *Core) acquireLock(lock physical.Lock, stopCh <-chan struct{}) <-chan st
 
 		// Retry the acquisition
 		c.logger.Error("failed to acquire lock", "error", err)
+		timer := time.NewTimer(lockRetryInterval)
 		select {
-		case <-time.After(lockRetryInterval):
+		case <-timer.C:
 		case <-stopCh:
+			timer.Stop()
 			return nil
 		}
 	}
@@ -1099,13 +1122,15 @@ func (c *Core) cleanLeaderPrefix(ctx context.Context, uuid string, leaderLostCh 
 		return
 	}
 	for len(keys) > 0 {
+		timer := time.NewTimer(leaderPrefixCleanDelay)
 		select {
-		case <-time.After(leaderPrefixCleanDelay):
+		case <-timer.C:
 			if keys[0] != uuid {
 				c.barrier.Delete(ctx, coreLeaderPrefix+keys[0])
 			}
 			keys = keys[1:]
 		case <-leaderLostCh:
+			timer.Stop()
 			return
 		}
 	}
@@ -1114,18 +1139,7 @@ func (c *Core) cleanLeaderPrefix(ctx context.Context, uuid string, leaderLostCh 
 // clearLeader is used to clear our leadership entry
 func (c *Core) clearLeader(uuid string) error {
 	key := coreLeaderPrefix + uuid
-	err := c.barrier.Delete(context.Background(), key)
-
-	// Advertise ourselves as a standby
-	if c.serviceRegistration != nil {
-		if err := c.serviceRegistration.NotifyActiveStateChange(false); err != nil {
-			if c.logger.IsWarn() {
-				c.logger.Warn("failed to notify standby status", "error", err)
-			}
-		}
-	}
-
-	return err
+	return c.barrier.Delete(context.Background(), key)
 }
 
 func (c *Core) SetNeverBecomeActive(on bool) {

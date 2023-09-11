@@ -6,9 +6,9 @@ description: >-
   automatic unsealing.
 ---
 
-# Vault Enterprise HSM Support
+# Vault enterprise HSM support
 
--> **Note**: This feature requires [Vault Enterprise Plus](https://www.hashicorp.com/products/vault/).
+@include 'alerts/enterprise-and-hcp-plus.mdx'
 
 - Root key Wrapping: Vault protects its root key by transiting it through
   the HSM for encryption rather than splitting into key shares
@@ -37,5 +37,9 @@ important information on these differences.
 The [Configuration](/vault/docs/configuration/seal/pkcs11) page contains
 configuration information.
 
-Finally, the [Security](/vault/docs/enterprise/hsm/security) page contains
+The [Security](/vault/docs/enterprise/hsm/security) page contains
 information about deploying Vault's HSM support in a secure fashion.
+
+Finally, the [Vault Interoperability Matrix](/vault/docs/interoperability-matrix) page contains
+information about HashiCorp partner products that have been verified to work with Vault 
+for Auto Unsealing / HSM Support and External Key Management.

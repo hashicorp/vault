@@ -1,0 +1,3 @@
+```release-note:improvement
+core: Add possibility to decode a generated encoded root token via the rest API
+```

@@ -1,9 +1,13 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package command
 
 import (
 	"strings"
 	"testing"
 
+	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/helper/testhelpers/corehelpers"
 	"github.com/hashicorp/vault/helper/versions"
 	"github.com/hashicorp/vault/sdk/helper/consts"
@@ -38,7 +42,7 @@ func TestPluginInfoCommand_Run(t *testing.T) {
 		},
 		{
 			"no_plugin_exist",
-			[]string{consts.PluginTypeCredential.String(), "not-a-real-plugin-like-ever"},
+			[]string{api.PluginTypeCredential.String(), "not-a-real-plugin-like-ever"},
 			"Error reading plugin",
 			2,
 		},
@@ -82,13 +86,13 @@ func TestPluginInfoCommand_Run(t *testing.T) {
 		defer closer()
 
 		pluginName := "my-plugin"
-		_, sha256Sum := testPluginCreateAndRegister(t, client, pluginDir, pluginName, consts.PluginTypeCredential, "")
+		_, sha256Sum := testPluginCreateAndRegister(t, client, pluginDir, pluginName, api.PluginTypeCredential, "")
 
 		ui, cmd := testPluginInfoCommand(t)
 		cmd.client = client
 
 		code := cmd.Run([]string{
-			consts.PluginTypeCredential.String(), pluginName,
+			api.PluginTypeCredential.String(), pluginName,
 		})
 		if exp := 0; code != exp {
 			t.Errorf("expected %d to be %d", code, exp)
@@ -113,7 +117,7 @@ func TestPluginInfoCommand_Run(t *testing.T) {
 		defer closer()
 
 		const pluginName = "azure"
-		_, sha256Sum := testPluginCreateAndRegister(t, client, pluginDir, pluginName, consts.PluginTypeCredential, "v1.0.0")
+		_, sha256Sum := testPluginCreateAndRegister(t, client, pluginDir, pluginName, api.PluginTypeCredential, "v1.0.0")
 
 		for name, tc := range map[string]struct {
 			version     string
@@ -128,7 +132,7 @@ func TestPluginInfoCommand_Run(t *testing.T) {
 
 				code := cmd.Run([]string{
 					"-version=" + tc.version,
-					consts.PluginTypeCredential.String(), pluginName,
+					api.PluginTypeCredential.String(), pluginName,
 				})
 
 				combined := ui.OutputWriter.String() + ui.ErrorWriter.String()
@@ -159,14 +163,14 @@ func TestPluginInfoCommand_Run(t *testing.T) {
 		defer closer()
 
 		pluginName := "my-plugin"
-		testPluginCreateAndRegister(t, client, pluginDir, pluginName, consts.PluginTypeCredential, "")
+		testPluginCreateAndRegister(t, client, pluginDir, pluginName, api.PluginTypeCredential, "")
 
 		ui, cmd := testPluginInfoCommand(t)
 		cmd.client = client
 
 		code := cmd.Run([]string{
 			"-field", "builtin",
-			consts.PluginTypeCredential.String(), pluginName,
+			api.PluginTypeCredential.String(), pluginName,
 		})
 		if exp := 0; code != exp {
 			t.Errorf("expected %d to be %d", code, exp)
@@ -188,7 +192,7 @@ func TestPluginInfoCommand_Run(t *testing.T) {
 		cmd.client = client
 
 		code := cmd.Run([]string{
-			consts.PluginTypeCredential.String(), "my-plugin",
+			api.PluginTypeCredential.String(), "my-plugin",
 		})
 		if exp := 2; code != exp {
 			t.Errorf("expected %d to be %d", code, exp)

@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package pki
 
 import (
@@ -8,6 +11,8 @@ import (
 	"encoding/pem"
 	"fmt"
 	"testing"
+
+	"github.com/hashicorp/vault/sdk/helper/testhelpers/schema"
 
 	"github.com/hashicorp/vault/sdk/helper/certutil"
 
@@ -95,6 +100,8 @@ func TestPKI_PathManageKeys_GenerateExportedKeys(t *testing.T) {
 		},
 		MountPoint: "pki/",
 	})
+	schema.ValidateResponse(t, schema.GetResponseSchema(t, b.Route("keys/generate/exported"), logical.UpdateOperation), resp, true)
+
 	require.NoError(t, err, "Failed generating exported key")
 	require.NotNil(t, resp, "Got nil response generating exported key")
 	require.Equal(t, "ec", resp.Data["key_type"], "key_type field contained an invalid type")
@@ -136,6 +143,9 @@ func TestPKI_PathManageKeys_ImportKeyBundle(t *testing.T) {
 		},
 		MountPoint: "pki/",
 	})
+
+	schema.ValidateResponse(t, schema.GetResponseSchema(t, b.Route("keys/import"), logical.UpdateOperation), resp, true)
+
 	require.NoError(t, err, "Failed importing ec key")
 	require.NotNil(t, resp, "Got nil response importing ec key")
 	require.False(t, resp.IsError(), "received an error response: %v", resp.Error())
@@ -324,6 +334,8 @@ func TestPKI_PathManageKeys_UpdateKeyDetails(t *testing.T) {
 		Data:       map[string]interface{}{"key_name": "new-name"},
 		MountPoint: "pki/",
 	})
+	schema.ValidateResponse(t, schema.GetResponseSchema(t, b.Route("key/"+keyId.String()), logical.UpdateOperation), resp, true)
+
 	require.NoError(t, err, "failed updating key with new name")
 	require.NotNil(t, resp, "Got nil response updating key with new name")
 	require.False(t, resp.IsError(), "unexpected error updating key with new name: %#v", resp.Error())
@@ -334,6 +346,8 @@ func TestPKI_PathManageKeys_UpdateKeyDetails(t *testing.T) {
 		Storage:    s,
 		MountPoint: "pki/",
 	})
+	schema.ValidateResponse(t, schema.GetResponseSchema(t, b.Route("key/"+keyId.String()), logical.ReadOperation), resp, true)
+
 	require.NoError(t, err, "failed reading key after name update")
 	require.NotNil(t, resp, "Got nil response reading key after name update")
 	require.False(t, resp.IsError(), "unexpected error reading key: %#v", resp.Error())

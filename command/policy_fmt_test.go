@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package command
 
 import (
@@ -86,7 +89,7 @@ path "secret" {
 			t.Fatal(err)
 		}
 		defer os.Remove(f.Name())
-		if _, err := f.Write([]byte(policy)); err != nil {
+		if _, err := f.WriteString(policy); err != nil {
 			t.Fatal(err)
 		}
 		f.Close()
@@ -129,7 +132,7 @@ path "secret" {
 			t.Fatal(err)
 		}
 		defer os.Remove(f.Name())
-		if _, err := f.Write([]byte(policy)); err != nil {
+		if _, err := f.WriteString(policy); err != nil {
 			t.Fatal(err)
 		}
 		f.Close()
@@ -164,7 +167,7 @@ path "secret" {
 			t.Fatal(err)
 		}
 		defer os.Remove(f.Name())
-		if _, err := f.Write([]byte(policy)); err != nil {
+		if _, err := f.WriteString(policy); err != nil {
 			t.Fatal(err)
 		}
 		f.Close()
@@ -199,7 +202,7 @@ path "secret" {
 			t.Fatal(err)
 		}
 		defer os.Remove(f.Name())
-		if _, err := f.Write([]byte(policy)); err != nil {
+		if _, err := f.WriteString(policy); err != nil {
 			t.Fatal(err)
 		}
 		f.Close()

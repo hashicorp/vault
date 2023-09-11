@@ -1,0 +1,208 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
+/* Helpers that define anything with the margin or padding. */
+
+/* Notes
+- these helpers are generally defined in px but some (if they use $size-xx) are using rems.
+*/
+
+.is-paddingless {
+  padding: 0 !important;
+}
+
+.has-short-padding {
+  padding: $size-11 $size-5;
+}
+
+.has-tall-padding {
+  padding: $size-2;
+}
+
+.has-side-padding-s {
+  padding-left: $spacing-s;
+  padding-right: $spacing-s;
+}
+
+.has-padding-s {
+  padding: $spacing-s;
+}
+
+.has-padding-xxs {
+  padding: $spacing-xxs;
+}
+
+.has-padding-m {
+  padding: $spacing-m;
+}
+.has-padding-l {
+  padding: $spacing-l;
+}
+
+.has-padding-l {
+  padding: $spacing-l;
+}
+
+.has-bottom-padding-s {
+  padding-bottom: $spacing-s;
+}
+
+.has-bottom-padding-m {
+  padding-bottom: $spacing-m;
+}
+
+.has-bottom-padding-l {
+  padding-bottom: $spacing-l;
+}
+
+.has-top-padding-s {
+  padding-top: $spacing-s;
+}
+
+.has-top-padding-m {
+  padding-top: $spacing-m;
+}
+
+.has-top-padding-l {
+  padding-top: $spacing-l;
+}
+
+.has-left-padding-xs {
+  padding-left: $spacing-xs;
+}
+
+.has-left-padding-s {
+  padding-left: $spacing-s;
+}
+
+.has-left-padding-l {
+  padding-left: $spacing-l;
+}
+
+.has-top-padding-xxl {
+  padding-top: $spacing-xxl;
+}
+
+// All Margin helpers
+.is-marginless {
+  margin: 0 !important;
+}
+
+.has-top-bottom-margin {
+  margin: $size-5 0rem;
+}
+
+.has-top-bottom-margin-xxs {
+  margin: $spacing-xxs 0;
+}
+
+.has-top-bottom-margin-negative-m {
+  margin-top: -$spacing-m;
+  margin-bottom: -$spacing-m;
+}
+
+.has-top-margin-negative-xxl {
+  margin-top: -$spacing-xxl;
+}
+
+.has-top-margin-xxs {
+  margin: $spacing-xxs 0;
+}
+
+.has-right-margin-xxs {
+  margin-right: $spacing-xxs;
+}
+
+.has-left-margin-xxs {
+  margin-left: $spacing-xxs;
+}
+
+.has-bottom-margin-xxs {
+  margin-bottom: $spacing-xxs !important;
+}
+
+.has-bottom-margin-xs {
+  margin-bottom: $spacing-xs !important;
+}
+
+.has-bottom-margin-s {
+  margin-bottom: $spacing-s;
+}
+
+.has-bottom-margin-m {
+  margin-bottom: $spacing-m;
+}
+
+.has-bottom-margin-l {
+  margin-bottom: $spacing-l;
+}
+
+.has-bottom-margin-xl {
+  margin-bottom: $spacing-xl;
+}
+
+.has-bottom-margin-xxl {
+  margin-bottom: $spacing-xxl;
+}
+
+.has-top-margin-s {
+  margin-top: $spacing-s;
+}
+
+.has-top-margin-xs {
+  margin-top: $spacing-xs;
+}
+
+.has-top-margin-m {
+  margin-top: $spacing-m;
+}
+
+.has-top-margin-l {
+  margin-top: $spacing-l;
+}
+
+.has-top-margin-xl {
+  margin-top: $spacing-xl;
+}
+
+.has-top-margin-xxl {
+  margin-top: $spacing-xxl;
+}
+
+.has-top-margin-negative-s {
+  margin-top: (-1 * $spacing-s);
+}
+
+.has-left-margin-xxs {
+  margin-left: $spacing-xxs;
+}
+
+.has-left-margin-xs {
+  margin-left: $spacing-xs;
+}
+
+.has-left-margin-s {
+  margin-left: $spacing-s;
+}
+
+.has-left-margin-m {
+  margin-left: $spacing-m;
+}
+
+.has-left-margin-l {
+  margin-left: $spacing-l;
+}
+
+.has-left-margin-xl {
+  margin-left: $spacing-xl;
+}
+
+.has-right-margin-m {
+  margin-right: $spacing-m;
+}
+
+.has-right-margin-l {
+  margin-right: $spacing-l;
+}

@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package mongodb
 
 import "go.mongodb.org/mongo-driver/mongo/writeconcern"

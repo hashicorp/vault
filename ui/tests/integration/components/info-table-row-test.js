@@ -1,8 +1,13 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import { module, test } from 'qunit';
 import { resolve } from 'rsvp';
 import Service from '@ember/service';
 import { setupRenderingTest } from 'ember-qunit';
-import { render, settled, triggerEvent } from '@ember/test-helpers';
+import { render, triggerEvent } from '@ember/test-helpers';
 import hbs from 'htmlbars-inline-precompile';
 
 const VALUE = 'test value';
@@ -254,15 +259,14 @@ module('Integration | Component | InfoTableRow', function (hooks) {
   });
 
   test('Formats the value as date when formatDate present', async function (assert) {
-    const yearString = new Date().getFullYear().toString();
-    this.set('value', new Date());
+    this.set('value', new Date('2018-04-03T14:15:30'));
     await render(hbs`<InfoTableRow
       @label={{this.label}}
       @value={{this.value}}
       @formatDate={{'yyyy'}}
     />`);
 
-    assert.dom('[data-test-value-div]').hasText(yearString, 'Renders date with passed format');
+    assert.dom('[data-test-value-div]').hasText('2018', 'Renders date with passed format');
   });
 
   test('Formats the value as TTL when formatTtl present', async function (assert) {
@@ -273,9 +277,19 @@ module('Integration | Component | InfoTableRow', function (hooks) {
       @formatTtl={{true}}
     />`);
 
-    assert.dom('[data-test-value-div]').hasText('100m', 'Translates number value to largest unit');
+    assert
+      .dom('[data-test-value-div]')
+      .hasText('1 hour 40 minutes', 'Translates number value to largest unit with carryover of minutes');
+  });
+
+  test('Formats string value when formatTtl present', async function (assert) {
     this.set('value', '45m');
-    await settled();
-    assert.dom('[data-test-value-div]').hasText('45m', 'Renders non-number values as-is');
+    await render(hbs`<InfoTableRow
+      @label={{this.label}}
+      @value={{this.value}}
+      @formatTtl={{true}}
+    />`);
+
+    assert.dom('[data-test-value-div]').hasText('45 minutes', 'it formats string duration');
   });
 });

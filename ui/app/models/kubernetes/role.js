@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import Model, { attr } from '@ember-data/model';
 import { withModelValidations } from 'vault/decorators/model-validations';
 import { withFormFields } from 'vault/decorators/model-form-fields';
@@ -46,12 +51,6 @@ export default class KubernetesRoleModel extends Model {
     subText: 'Vault will use the default template when generating service accounts, roles and role bindings.',
   })
   kubernetesRoleName;
-
-  @attr('string', {
-    label: 'Service account name',
-    subText: 'Vault will use the default template when generating service accounts, roles and role bindings.',
-  })
-  serviceAccountName;
 
   @attr('string', {
     label: 'Allowed Kubernetes namespaces',

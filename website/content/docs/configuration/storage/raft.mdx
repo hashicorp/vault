@@ -10,7 +10,7 @@ description: |-
   Consensus Algorithm.
 ---
 
-# Integrated Storage (Raft) Backend
+# Integrated storage (Raft) backend
 
 The Integrated Storage backend is used to persist Vault's data. Unlike other storage
 backends, Integrated Storage does not operate from a single source of data. Instead
@@ -42,7 +42,7 @@ backend cannot be declared.
 ~> **Note:** When using the Integrated Storage backend, it is strongly recommended to
 set [`disable_mlock`](/vault/docs/configuration#disable_mlock) to `true`, and to disable memory swapping on the system.
 
-## `raft` Parameters
+## `raft` parameters
 
 - `path` `(string: "")` – The file system path where all the Vault data gets
   stored.
@@ -51,20 +51,22 @@ set [`disable_mlock`](/vault/docs/configuration#disable_mlock) to `true`, and to
 - `node_id` `(string: "")` - The identifier for the node in the Raft cluster.
   This value can be overridden by setting the `VAULT_RAFT_NODE_ID` environment variable.
 
-- `performance_multiplier` `(integer: 0)` - An integer multiplier used by
-  servers to scale key Raft timing parameters. Tuning this affects the time it
+- `performance_multiplier` `(integer: 0)` - An integer multiplier used by 
+  servers to scale key Raft timing parameters, where each increment translates to approximately 1 – 2 seconds of delay. For example, setting the multiplier to "3" translates to 3 – 6 seconds of total delay.  Tuning  the multiplier affects the time it
   takes Vault to detect leader failures and to perform leader elections, at the
   expense of requiring more network and CPU resources for better performance.
-  Omitting this value or setting it to 0 uses default timing described below.
-  Lower values are used to tighten timing and increase sensitivity while higher
+  Omitting this value or setting it to 0 uses default timing described below. 
+  Lower values are used to tighten timing and increase sensitivity while higher 
   values relax timings and reduce sensitivity.
 
-  By default, Vault will use a lower-performance timing that's suitable for
-  minimal Vault servers, currently equivalent to setting this to a value of 5
-  (this default may be changed in future versions of Vault, depending if the
-  target minimum server profile changes). Setting this to a value of 1 will
-  configure Raft to its highest-performance mode and is recommended for
-  production Vault servers. The maximum allowed value is 10.
+
+By default, Vault uses a balanced timing value of 5, which is suitable for most
+platforms and scenarios. You should only adjust the timing value when platform
+telemetry indicators that a change is needed or different timing is required due
+to the overall reliability your platform (network, etc.).
+
+Setting the timing value to 1 configures Raft to its highest performance (lowest
+delay) mode. The maximum allowed value is 10. 
 
 - `trailing_logs` `(integer: 10000)` - This controls how many log entries are
   left in the log store on disk after a snapshot is made. This should only be
@@ -114,6 +116,11 @@ set [`disable_mlock`](/vault/docs/configuration#disable_mlock) to `true`, and to
   breaking a large value into chunks. By default, the chunk size is the same as
   Raft's max size log entry. The default value for this configuration is 1048576
   -- two times the chunking size.
+  - **Note:** This option corresponds to [Consul's `kv_max_value_size` parameter](https://developer.hashicorp.com/consul/docs/agent/config/config-files#kv_max_value_size) for
+    Vault clusters using a Consul storage backend.  If you are migrating from Consul
+    storage to Raft Integrated Storage,  and have changed this value in Consul from its
+    default to a value larger than the Integrated Storage default of 1MB, then you will 
+    need to make the same change in Vault's Integrated Storage config.
 
 - `autopilot_reconcile_interval` `(string: "10s")` - This is the interval after
   which autopilot will pick up any state changes. State change could mean multiple

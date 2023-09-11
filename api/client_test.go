@@ -1,8 +1,12 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package api
 
 import (
 	"bytes"
 	"context"
+	"crypto/tls"
 	"crypto/x509"
 	"encoding/base64"
 	"fmt"
@@ -19,7 +23,6 @@ import (
 
 	"github.com/go-test/deep"
 	"github.com/hashicorp/go-hclog"
-	"github.com/hashicorp/vault/sdk/helper/consts"
 )
 
 func init() {
@@ -223,6 +226,7 @@ func TestClientDisableRedirects(t *testing.T) {
 
 	for name, tc := range tests {
 		test := tc
+		name := name
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 			numReqs := 0
@@ -442,7 +446,7 @@ func TestClientDeprecatedEnvSettings(t *testing.T) {
 func TestClientEnvNamespace(t *testing.T) {
 	var seenNamespace string
 	handler := func(w http.ResponseWriter, req *http.Request) {
-		seenNamespace = req.Header.Get(consts.NamespaceHeaderName)
+		seenNamespace = req.Header.Get(NamespaceHeaderName)
 	}
 	config, ln := testHTTPServer(t, http.HandlerFunc(handler))
 	defer ln.Close()
@@ -588,6 +592,24 @@ func TestClone(t *testing.T) {
 			},
 			token: "cloneToken",
 		},
+		{
+			name: "cloneTLSConfig-enabled",
+			config: &Config{
+				CloneTLSConfig: true,
+				clientTLSConfig: &tls.Config{
+					ServerName: "foo.bar.baz",
+				},
+			},
+		},
+		{
+			name: "cloneTLSConfig-disabled",
+			config: &Config{
+				CloneTLSConfig: false,
+				clientTLSConfig: &tls.Config{
+					ServerName: "foo.bar.baz",
+				},
+			},
+		},
 	}
 
 	for _, tt := range tests {
@@ -696,8 +718,79 @@ func TestClone(t *testing.T) {
 				t.Fatalf("expected replicationStateStore %v, actual %v", parent.replicationStateStore,
 					clone.replicationStateStore)
 			}
+			if tt.config.CloneTLSConfig {
+				if !reflect.DeepEqual(parent.config.TLSConfig(), clone.config.TLSConfig()) {
+					t.Fatalf("config.clientTLSConfig doesn't match: %v vs %v",
+						parent.config.TLSConfig(), clone.config.TLSConfig())
+				}
+			} else if tt.config.clientTLSConfig != nil {
+				if reflect.DeepEqual(parent.config.TLSConfig(), clone.config.TLSConfig()) {
+					t.Fatalf("config.clientTLSConfig should not match: %v vs %v",
+						parent.config.TLSConfig(), clone.config.TLSConfig())
+				}
+			} else {
+				if !reflect.DeepEqual(parent.config.TLSConfig(), clone.config.TLSConfig()) {
+					t.Fatalf("config.clientTLSConfig doesn't match: %v vs %v",
+						parent.config.TLSConfig(), clone.config.TLSConfig())
+				}
+			}
 		})
 	}
+}
+
+// TestCloneWithHeadersNoDeadlock confirms that the cloning of the client doesn't cause
+// a deadlock.
+// Raised in https://github.com/hashicorp/vault/issues/22393 -- there was a
+// potential deadlock caused by running the problematicFunc() function in
+// multiple goroutines.
+func TestCloneWithHeadersNoDeadlock(t *testing.T) {
+	client, err := NewClient(nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	wg := &sync.WaitGroup{}
+
+	problematicFunc := func() {
+		wg.Add(1)
+		client.SetCloneToken(true)
+		_, err := client.CloneWithHeaders()
+		if err != nil {
+			t.Fatal(err)
+		}
+		wg.Done()
+	}
+
+	for i := 0; i < 1000; i++ {
+		go problematicFunc()
+	}
+	wg.Wait()
+}
+
+// TestCloneNoDeadlock is like TestCloneWithHeadersNoDeadlock but with
+// Clone instead of CloneWithHeaders
+func TestCloneNoDeadlock(t *testing.T) {
+	client, err := NewClient(nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	wg := &sync.WaitGroup{}
+
+	problematicFunc := func() {
+		wg.Add(1)
+		client.SetCloneToken(true)
+		_, err := client.Clone()
+		if err != nil {
+			t.Fatal(err)
+		}
+		wg.Done()
+	}
+
+	for i := 0; i < 1000; i++ {
+		go problematicFunc()
+	}
+	wg.Wait()
 }
 
 func TestSetHeadersRaceSafe(t *testing.T) {
@@ -1267,7 +1360,7 @@ func TestClient_SetCloneToken(t *testing.T) {
 func TestClientWithNamespace(t *testing.T) {
 	var ns string
 	handler := func(w http.ResponseWriter, req *http.Request) {
-		ns = req.Header.Get(consts.NamespaceHeaderName)
+		ns = req.Header.Get(NamespaceHeaderName)
 	}
 	config, ln := testHTTPServer(t, http.HandlerFunc(handler))
 	defer ln.Close()

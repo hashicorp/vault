@@ -1,0 +1,3 @@
+```release-note:improvement
+docs: Clarify when a entity is created
+```

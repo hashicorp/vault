@@ -1,3 +1,6 @@
+# Copyright (c) HashiCorp, Inc.
+# SPDX-License-Identifier: BUSL-1.1
+
 locals {
 
   // file name extensions for the install packages of vault for the various architectures, distributions and editions

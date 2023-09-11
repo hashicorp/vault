@@ -366,15 +366,6 @@
       {
         "title": "Username & Password",
         "path": "auth/userpass"
-      },
-      {
-        "title": "App ID",
-        "badge": {
-          "text": "DEPRECATED",
-          "type": "outlined",
-          "color": "neutral"
-        },
-        "path": "auth/app-id"
       }
     ]
   },
@@ -445,6 +436,10 @@
       {
         "title": "<code>/sys/control-group</code>",
         "path": "system/control-group"
+      },
+      {
+        "title": "<code>/sys/decode-token</code>",
+        "path": "system/decode-token"
       },
       {
         "title": "<code>/sys/experiments</code>",

@@ -1,32 +1,17 @@
-<SecretListHeader
-  @model={{this.model}}
-  @backendCrumb={{hash
-    label=this.model.id
-    text=this.model.id
-    path="vault.cluster.secrets.backend.list-root"
-    model=this.model.id
-  }}
-  @isEngine={{true}}
-/>
-{{! <Toolbar>
-  <ToolbarActions>
-    <ToolbarLink @route="configuration.tidy">
-      Tidy
-    </ToolbarLink>
-    <ToolbarLink @route="configuration.edit">
-      Edit configuration
-    </ToolbarLink>
-  </ToolbarActions>
-</Toolbar> }}
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
 
-<AlertBanner
-  @type="info"
-  @title="PKI beta in use"
-  @message="To configure the engine, you'll have to return to the regular version."
-  class="has-top-margin-m"
-  data-test-pki-configuration-banner
->
-  <LinkToExternal @route="secretsListRootConfiguration" class="info">
-    Return to old PKI to configure
-  </LinkToExternal>
-</AlertBanner>
+<PkiPageHeader @backend={{this.model.engine}} />
+
+<Page::PkiConfigurationDetails
+  @acme={{this.model.acme}}
+  @cluster={{this.model.cluster}}
+  @urls={{this.model.urls}}
+  @crl={{this.model.crl}}
+  @mountConfig={{this.model.mountConfig}}
+  @backend={{this.model.engine.id}}
+  @canDeleteAllIssuers={{this.model.issuerModel.canDeleteAllIssuers}}
+  @hasConfig={{this.model.hasConfig}}
+/>

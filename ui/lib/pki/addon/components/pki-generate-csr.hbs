@@ -1,28 +1,83 @@
-<form {{on "submit" (perform this.save)}}>
-  <MessageError @errorMessage={{this.error}} class="has-top-margin-s" />
-  <h2 class="title is-size-5 has-border-bottom-light page-header">
-    CSR parameters
-  </h2>
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
 
-  {{#each this.formFields as |field|}}
-    <FormField @attr={{field}} @model={{@model}} @modelValidations={{this.modelValidations}} />
-  {{/each}}
-
-  <PkiGenerateToggleGroups @model={{@model}} />
-
-  <div class="field is-grouped box is-fullwidth is-bottomless has-top-margin-l">
-    <div class="control">
-      <button type="submit" class="button is-primary" data-test-save>
-        Done
-      </button>
-      <button {{on "click" this.cancel}} type="button" class="button has-left-margin-s" data-test-cancel>
-        Cancel
-      </button>
+{{#if @model.id}}
+  {{! Model only has ID once form has been submitted and saved }}
+  <main data-test-generate-csr-result>
+    <div class="box is-sideless is-fullwidth is-shadowless">
+      <Hds::Alert data-test-next-steps-csr @type="inline" @color="highlight" class="has-bottom-margin-s" as |A|>
+        <A.Title>Next steps</A.Title>
+        <A.Description>
+          Copy the CSR below for a parent issuer to sign and then import the signed certificate back into this mount.
+          {{#if @model.privateKey}}
+            The
+            <code>private_key</code>
+            is only available once. Make sure you copy and save it now.
+          {{/if}}
+        </A.Description>
+      </Hds::Alert>
+      {{#each this.showFields as |fieldName|}}
+        {{#let (find-by "name" fieldName @model.allFields) as |attr|}}
+          {{#let (get @model attr.name) as |value|}}
+            <InfoTableRow
+              @label={{or attr.options.label (humanize (dasherize attr.name))}}
+              @value={{value}}
+              @addCopyButton={{eq attr.name "keyId"}}
+            >
+              {{#if (and attr.options.isCertificate value)}}
+                <CertificateCard @data={{value}} />
+              {{else if (eq attr.name "keyId")}}
+                <LinkTo @route="keys.key.details" @model={{@model.keyId}}>
+                  {{@model.keyId}}
+                </LinkTo>
+              {{else}}
+                {{! this block only ever renders privateKey and privateKeyType }}
+                <span class="{{unless value 'tag'}}">{{or value "internal"}}</span>
+              {{/if}}
+            </InfoTableRow>
+          {{/let}}
+        {{/let}}
+      {{/each}}
     </div>
-    {{#if this.alert}}
+  </main>
+  <footer>
+    <div class="field is-grouped is-fullwidth has-top-margin-l">
       <div class="control">
-        <AlertInline @type="danger" @paddingTop={{true}} @message={{this.alert}} @mimicRefresh={{true}} data-test-alert />
+        <button type="button" class="button is-primary" {{on "click" @onComplete}} data-test-done>
+          Done
+        </button>
       </div>
-    {{/if}}
-  </div>
-</form>
+    </div>
+  </footer>
+{{else}}
+  <form {{on "submit" (perform this.save)}}>
+    <MessageError @errorMessage={{this.error}} class="has-top-margin-s" />
+    <h2 class="title is-size-5 has-border-bottom-light page-header">
+      CSR parameters
+    </h2>
+
+    {{#each this.formFields as |field|}}
+      <FormField @attr={{field}} @model={{@model}} @modelValidations={{this.modelValidations}} />
+    {{/each}}
+
+    <PkiGenerateToggleGroups @model={{@model}} @modelValidations={{this.modelValidations}} />
+
+    <div class="field is-grouped box is-fullwidth is-bottomless has-top-margin-l">
+      <div class="control">
+        <button type="submit" class="button is-primary" data-test-save>
+          Generate
+        </button>
+        <button {{on "click" this.cancel}} type="button" class="button has-left-margin-s" data-test-cancel>
+          Cancel
+        </button>
+      </div>
+      {{#if this.alert}}
+        <div class="control">
+          <AlertInline @type="danger" @paddingTop={{true}} @message={{this.alert}} @mimicRefresh={{true}} data-test-alert />
+        </div>
+      {{/if}}
+    </div>
+  </form>
+{{/if}}

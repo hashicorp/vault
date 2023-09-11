@@ -1,11 +1,18 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package vault
 
 import (
+	"context"
+	"encoding/base64"
 	"errors"
 	"sort"
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/stretchr/testify/assert"
 
 	"github.com/armon/go-metrics"
 	logicalKv "github.com/hashicorp/vault-plugin-secrets-kv"
@@ -346,4 +353,91 @@ func TestCoreMetrics_EntityGauges(t *testing.T) {
 			"auth_method": "userpass",
 			"mount_point": "auth/userpass/",
 		})
+}
+
+// TestCoreMetrics_AvailablePolicies tests the that available metrics are getting correctly collected when the availablePoliciesGaugeCollector function is invoked
+func TestCoreMetrics_AvailablePolicies(t *testing.T) {
+	aclPolicy := map[string]interface{}{
+		"policy": base64.StdEncoding.EncodeToString([]byte(`path "ns1/secret/foo/*" {
+    capabilities = ["create", "read", "update", "delete", "list"]
+}`)),
+		"name": "secret",
+	}
+
+	type pathPolicy struct {
+		Path   string
+		Policy map[string]interface{}
+	}
+
+	tests := map[string]struct {
+		Policies       []pathPolicy
+		ExpectedValues map[string]float32
+	}{
+		"single acl": {
+			Policies: []pathPolicy{
+				{
+					"sys/policy/secret", aclPolicy,
+				},
+			},
+			ExpectedValues: map[string]float32{
+				// The "default" policy will always be included
+				"acl": 2,
+				"egp": 0,
+				"rgp": 0,
+			},
+		},
+		"multiple acl": {
+			Policies: []pathPolicy{
+				{
+					"sys/policy/secret", aclPolicy,
+				},
+				{
+					"sys/policy/secret2", aclPolicy,
+				},
+			},
+			ExpectedValues: map[string]float32{
+				// The "default" policy will always be included
+				"acl": 3,
+				"egp": 0,
+				"rgp": 0,
+			},
+		},
+	}
+
+	for name, tst := range tests {
+		t.Run(name, func(t *testing.T) {
+			core, _, root := TestCoreUnsealed(t)
+
+			ctxRoot := namespace.RootContext(context.Background())
+
+			// Create policies
+			for _, p := range tst.Policies {
+				req := logical.TestRequest(t, logical.UpdateOperation, p.Path)
+				req.Data = p.Policy
+				req.ClientToken = root
+
+				resp, err := core.HandleRequest(ctxRoot, req)
+				if err != nil {
+					t.Fatalf("err: %v", err)
+				}
+				if resp != nil {
+					logger.Info("expected nil response", resp)
+					t.Fatalf("expected nil response")
+				}
+			}
+
+			gValues, err := core.configuredPoliciesGaugeCollector(ctxRoot)
+			if err != nil {
+				t.Fatalf("err: %v", err)
+			}
+
+			// Check the metrics values match the expected values
+			mgValues := make(map[string]float32, len(gValues))
+			for _, v := range gValues {
+				mgValues[v.Labels[0].Value] = v.Value
+			}
+
+			assert.EqualValues(t, tst.ExpectedValues, mgValues)
+		})
+	}
 }

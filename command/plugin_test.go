@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package command
 
 import (
@@ -9,7 +12,6 @@ import (
 	"testing"
 
 	"github.com/hashicorp/vault/api"
-	"github.com/hashicorp/vault/sdk/helper/consts"
 )
 
 // testPluginCreate creates a sample plugin in a tempdir and returns the shasum
@@ -38,7 +40,7 @@ func testPluginCreate(tb testing.TB, dir, name string) (string, string) {
 }
 
 // testPluginCreateAndRegister creates a plugin and registers it in the catalog.
-func testPluginCreateAndRegister(tb testing.TB, client *api.Client, dir, name string, pluginType consts.PluginType, version string) (string, string) {
+func testPluginCreateAndRegister(tb testing.TB, client *api.Client, dir, name string, pluginType api.PluginType, version string) (string, string) {
 	tb.Helper()
 
 	pth, sha256Sum := testPluginCreate(tb, dir, name)
@@ -57,7 +59,7 @@ func testPluginCreateAndRegister(tb testing.TB, client *api.Client, dir, name st
 }
 
 // testPluginCreateAndRegisterVersioned creates a versioned plugin and registers it in the catalog.
-func testPluginCreateAndRegisterVersioned(tb testing.TB, client *api.Client, dir, name string, pluginType consts.PluginType) (string, string, string) {
+func testPluginCreateAndRegisterVersioned(tb testing.TB, client *api.Client, dir, name string, pluginType api.PluginType) (string, string, string) {
 	tb.Helper()
 
 	pth, sha256Sum := testPluginCreate(tb, dir, name)

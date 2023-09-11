@@ -1,3 +1,8 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
 <PageHeader as |p|>
   <p.top>
     <nav class="breadcrumb">
@@ -74,7 +79,7 @@
           type="submit"
           data-test-save-config="true"
           class="button is-primary {{if this.saveModel.isRunning 'loading'}}"
-          disabled={{or this.saveModel.isRunning this.isFormInvalid}}
+          disabled={{this.saveModel.isRunning}}
         >
           Save
         </button>

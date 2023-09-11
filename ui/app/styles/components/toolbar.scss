@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 .tabs-container + .toolbar {
   border-top: 0;
 }
@@ -128,6 +133,7 @@ a.disabled.toolbar-link {
   width: 0;
 }
 
+// TODO kv engine cleanup
 .version-diff-toolbar {
   display: flex;
   align-items: baseline;

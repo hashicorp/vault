@@ -1,0 +1,21 @@
+<form {{on "submit" (perform this.handleSearch)}}>
+  <Hds::SegmentedGroup as |S|>
+    <S.TextInput
+      id="secret-id"
+      @value={{this.query}}
+      placeholder="Search secret path"
+      aria-describedby="Search by secret path"
+      size="32"
+      {{on "input" this.handleInput}}
+      {{on "keydown" this.handleKeyDown}}
+      data-test-kv-list-filter
+    />
+    <S.Button
+      @color="secondary"
+      @text="Search"
+      @icon={{if this.handleSearch.isRunning "loading" "search"}}
+      type="submit"
+      data-test-kv-list-filter-submit
+    />
+  </Hds::SegmentedGroup>
+</form>

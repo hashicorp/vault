@@ -1,0 +1,38 @@
+<Hds::Card::Container @hasBorder={{true}} class="has-padding-l" data-test-card="configuration-details">
+  <h3 class="title is-4" data-test-configuration-details-title>Configuration details</h3>
+
+  <Hds::Table @caption="Vault configuration details" class="is-border-spacing-revert">
+    <:body as |B|>
+      <B.Tr>
+        <B.Td>API_ADDR</B.Td>
+        <B.Td data-test-vault-config-details="api_addr">{{or @vaultConfiguration.api_addr "None"}}</B.Td>
+      </B.Tr>
+      <B.Tr>
+        <B.Td>Default lease TTL</B.Td>
+        <B.Td data-test-vault-config-details="default_lease_ttl">{{format-duration
+            @vaultConfiguration.default_lease_ttl
+          }}</B.Td>
+      </B.Tr>
+      <B.Tr>
+        <B.Td>Max lease TTL</B.Td>
+        <B.Td data-test-vault-config-details="max_lease_ttl">{{format-duration @vaultConfiguration.max_lease_ttl}}</B.Td>
+      </B.Tr>
+      <B.Tr>
+        <B.Td>TLS</B.Td>
+        <B.Td data-test-vault-config-details="tls_disable">{{this.tlsDisabled}}</B.Td>
+      </B.Tr>
+      <B.Tr>
+        <B.Td>Log format</B.Td>
+        <B.Td data-test-vault-config-details="log_format">{{or @vaultConfiguration.log_format "None"}}</B.Td>
+      </B.Tr>
+      <B.Tr>
+        <B.Td>Log level</B.Td>
+        <B.Td data-test-vault-config-details="log_level">{{@vaultConfiguration.log_level}}</B.Td>
+      </B.Tr>
+      <B.Tr>
+        <B.Td>Storage type</B.Td>
+        <B.Td data-test-vault-config-details="type">{{@vaultConfiguration.storage.type}}</B.Td>
+      </B.Tr>
+    </:body>
+  </Hds::Table>
+</Hds::Card::Container>

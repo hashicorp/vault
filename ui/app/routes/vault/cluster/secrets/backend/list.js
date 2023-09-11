@@ -1,10 +1,16 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import { set } from '@ember/object';
-import { hash, all } from 'rsvp';
+import { hash } from 'rsvp';
 import Route from '@ember/routing/route';
 import { supportedSecretBackends } from 'vault/helpers/supported-secret-backends';
-import { allEngines } from 'vault/helpers/mountable-secret-engines';
+import { allEngines, isAddonEngine } from 'vault/helpers/mountable-secret-engines';
 import { inject as service } from '@ember/service';
 import { normalizePath } from 'vault/utils/path-encoding-helpers';
+import { assert } from '@ember/debug';
 
 const SUPPORTED_BACKENDS = supportedSecretBackends();
 
@@ -63,7 +69,8 @@ export default Route.extend({
     const backend = this.enginePathParam();
     const { tab } = this.paramsFor('vault.cluster.secrets.backend.list-root');
     const secretEngine = this.store.peekRecord('secret-engine', backend);
-    const type = secretEngine && secretEngine.get('engineType');
+    const type = secretEngine?.engineType;
+    assert('secretEngine.engineType is not defined', !!type);
     const engineRoute = allEngines().findBy('type', type)?.engineRoute;
 
     if (!type || !SUPPORTED_BACKENDS.includes(type)) {
@@ -72,7 +79,7 @@ export default Route.extend({
     if (this.routeName === 'vault.cluster.secrets.backend.list' && !secret.endsWith('/')) {
       return this.router.replaceWith('vault.cluster.secrets.backend.list', secret + '/');
     }
-    if (engineRoute) {
+    if (isAddonEngine(type, secretEngine.version)) {
       return this.router.transitionTo(`vault.cluster.secrets.backend.${engineRoute}`, backend);
     }
     const modelType = this.getModelType(backend, tab);
@@ -83,19 +90,18 @@ export default Route.extend({
 
   getModelType(backend, tab) {
     const secretEngine = this.store.peekRecord('secret-engine', backend);
-    const type = secretEngine.get('engineType');
+    const type = secretEngine.engineType;
     const types = {
       database: tab === 'role' ? 'database/role' : 'database/connection',
       transit: 'transit-key',
       ssh: 'role-ssh',
       transform: this.modelTypeForTransform(tab),
       aws: 'role-aws',
-      pki: `pki/${tab || 'pki-role'}`,
       // secret or secret-v2
       cubbyhole: 'secret',
-      kv: secretEngine.get('modelTypeForKV'),
+      kv: secretEngine.modelTypeForKV,
       keymgmt: `keymgmt/${tab || 'key'}`,
-      generic: secretEngine.get('modelTypeForKV'),
+      generic: secretEngine.modelTypeForKV,
     };
     return types[type];
   },
@@ -135,29 +141,6 @@ export default Route.extend({
           }
         }),
     });
-  },
-
-  afterModel(model) {
-    const { tab } = this.paramsFor(this.routeName);
-    const backend = this.enginePathParam();
-    if (!tab || tab !== 'cert') {
-      return;
-    }
-    return all(
-      // these ids are treated specially by vault's api, but it's also
-      // possible that there is no certificate for them in order to know,
-      // we fetch them specifically on the list page, and then unload the
-      // records if there is no `certificate` attribute on the resultant model
-      ['ca', 'crl', 'ca_chain'].map((id) => this.store.queryRecord('pki/cert', { id, backend }))
-    ).then(
-      (results) => {
-        results.rejectBy('certificate').forEach((record) => record.unloadRecord());
-        return model;
-      },
-      () => {
-        return model;
-      }
-    );
   },
 
   setupController(controller, resolvedModel) {

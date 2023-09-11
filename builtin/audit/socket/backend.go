@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package socket
 
 import (
@@ -9,14 +12,17 @@ import (
 	"sync"
 	"time"
 
-	"github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/go-secure-stdlib/parseutil"
+
+	"github.com/hashicorp/eventlogger"
+	"github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/vault/audit"
+	"github.com/hashicorp/vault/internal/observability/event"
 	"github.com/hashicorp/vault/sdk/helper/salt"
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
-func Factory(ctx context.Context, conf *audit.BackendConfig) (audit.Backend, error) {
+func Factory(ctx context.Context, conf *audit.BackendConfig, useEventLogger bool, headersConfig audit.HeaderFormatter) (audit.Backend, error) {
 	if conf.SaltConfig == nil {
 		return nil, fmt.Errorf("nil salt config")
 	}
@@ -33,7 +39,6 @@ func Factory(ctx context.Context, conf *audit.BackendConfig) (audit.Backend, err
 	if !ok {
 		socketType = "tcp"
 	}
-
 	writeDeadline, ok := conf.Config["write_timeout"]
 	if !ok {
 		writeDeadline = "2s"
@@ -43,70 +48,105 @@ func Factory(ctx context.Context, conf *audit.BackendConfig) (audit.Backend, err
 		return nil, err
 	}
 
-	format, ok := conf.Config["format"]
-	if !ok {
-		format = "json"
-	}
-	switch format {
-	case "json", "jsonx":
-	default:
-		return nil, fmt.Errorf("unknown format type %q", format)
+	var cfgOpts []audit.Option
+
+	if format, ok := conf.Config["format"]; ok {
+		cfgOpts = append(cfgOpts, audit.WithFormat(format))
 	}
 
 	// Check if hashing of accessor is disabled
-	hmacAccessor := true
 	if hmacAccessorRaw, ok := conf.Config["hmac_accessor"]; ok {
-		value, err := strconv.ParseBool(hmacAccessorRaw)
+		v, err := strconv.ParseBool(hmacAccessorRaw)
 		if err != nil {
 			return nil, err
 		}
-		hmacAccessor = value
+		cfgOpts = append(cfgOpts, audit.WithHMACAccessor(v))
 	}
 
 	// Check if raw logging is enabled
-	logRaw := false
 	if raw, ok := conf.Config["log_raw"]; ok {
-		b, err := strconv.ParseBool(raw)
+		v, err := strconv.ParseBool(raw)
 		if err != nil {
 			return nil, err
 		}
-		logRaw = b
+		cfgOpts = append(cfgOpts, audit.WithRaw(v))
 	}
 
-	elideListResponses := false
 	if elideListResponsesRaw, ok := conf.Config["elide_list_responses"]; ok {
-		value, err := strconv.ParseBool(elideListResponsesRaw)
+		v, err := strconv.ParseBool(elideListResponsesRaw)
 		if err != nil {
 			return nil, err
 		}
-		elideListResponses = value
+		cfgOpts = append(cfgOpts, audit.WithElision(v))
+	}
+
+	cfg, err := audit.NewFormatterConfig(cfgOpts...)
+	if err != nil {
+		return nil, err
 	}
 
 	b := &Backend{
-		saltConfig: conf.SaltConfig,
-		saltView:   conf.SaltView,
-		formatConfig: audit.FormatterConfig{
-			Raw:                logRaw,
-			HMACAccessor:       hmacAccessor,
-			ElideListResponses: elideListResponses,
-		},
+		saltConfig:   conf.SaltConfig,
+		saltView:     conf.SaltView,
+		formatConfig: cfg,
 
 		writeDuration: writeDuration,
 		address:       address,
 		socketType:    socketType,
 	}
 
-	switch format {
-	case "json":
-		b.formatter.AuditFormatWriter = &audit.JSONFormatWriter{
-			Prefix:   conf.Config["prefix"],
-			SaltFunc: b.Salt,
+	// Configure the formatter for either case.
+	f, err := audit.NewEntryFormatter(b.formatConfig, b, audit.WithHeaderFormatter(headersConfig))
+	if err != nil {
+		return nil, fmt.Errorf("error creating formatter: %w", err)
+	}
+	var w audit.Writer
+	switch b.formatConfig.RequiredFormat {
+	case audit.JSONFormat:
+		w = &audit.JSONWriter{Prefix: conf.Config["prefix"]}
+	case audit.JSONxFormat:
+		w = &audit.JSONxWriter{Prefix: conf.Config["prefix"]}
+	}
+
+	fw, err := audit.NewEntryFormatterWriter(b.formatConfig, f, w)
+	if err != nil {
+		return nil, fmt.Errorf("error creating formatter writer: %w", err)
+	}
+
+	b.formatter = fw
+
+	if useEventLogger {
+		var opts []event.Option
+
+		if socketType, ok := conf.Config["socket_type"]; ok {
+			opts = append(opts, event.WithSocketType(socketType))
 		}
-	case "jsonx":
-		b.formatter.AuditFormatWriter = &audit.JSONxFormatWriter{
-			Prefix:   conf.Config["prefix"],
-			SaltFunc: b.Salt,
+
+		if writeDeadline, ok := conf.Config["write_timeout"]; ok {
+			opts = append(opts, event.WithMaxDuration(writeDeadline))
 		}
+
+		b.nodeIDList = make([]eventlogger.NodeID, 2)
+		b.nodeMap = make(map[eventlogger.NodeID]eventlogger.Node)
+
+		formatterNodeID, err := event.GenerateNodeID()
+		if err != nil {
+			return nil, fmt.Errorf("error generating random NodeID for formatter node: %w", err)
+		}
+		b.nodeIDList[0] = formatterNodeID
+		b.nodeMap[formatterNodeID] = f
+
+		n, err := event.NewSocketSink(b.formatConfig.RequiredFormat.String(), address, opts...)
+		if err != nil {
+			return nil, fmt.Errorf("error creating socket sink node: %w", err)
+		}
+		sinkNode := &audit.SinkWrapper{Name: conf.MountPath, Sink: n}
+		sinkNodeID, err := event.GenerateNodeID()
+		if err != nil {
+			return nil, fmt.Errorf("error generating random NodeID for sink node: %w", err)
+		}
+		b.nodeIDList[1] = sinkNodeID
+		b.nodeMap[sinkNodeID] = sinkNode
 	}
 
 	return b, nil
@@ -116,7 +156,7 @@ func Factory(ctx context.Context, conf *audit.BackendConfig) (audit.Backend, err
 type Backend struct {
 	connection net.Conn
 
-	formatter    audit.AuditFormatter
+	formatter    *audit.EntryFormatterWriter
 	formatConfig audit.FormatterConfig
 
 	writeDuration time.Duration
@@ -129,21 +169,16 @@ type Backend struct {
 	salt       *salt.Salt
 	saltConfig *salt.Config
 	saltView   logical.Storage
+
+	nodeIDList []eventlogger.NodeID
+	nodeMap    map[eventlogger.NodeID]eventlogger.Node
 }
 
 var _ audit.Backend = (*Backend)(nil)
 
-func (b *Backend) GetHash(ctx context.Context, data string) (string, error) {
-	salt, err := b.Salt(ctx)
-	if err != nil {
-		return "", err
-	}
-	return audit.HashString(salt, data), nil
-}
-
 func (b *Backend) LogRequest(ctx context.Context, in *logical.LogInput) error {
 	var buf bytes.Buffer
-	if err := b.formatter.FormatRequest(ctx, &buf, b.formatConfig, in); err != nil {
+	if err := b.formatter.FormatAndWriteRequest(ctx, &buf, in); err != nil {
 		return err
 	}
 
@@ -166,7 +201,7 @@ func (b *Backend) LogRequest(ctx context.Context, in *logical.LogInput) error {
 
 func (b *Backend) LogResponse(ctx context.Context, in *logical.LogInput) error {
 	var buf bytes.Buffer
-	if err := b.formatter.FormatResponse(ctx, &buf, b.formatConfig, in); err != nil {
+	if err := b.formatter.FormatAndWriteResponse(ctx, &buf, in); err != nil {
 		return err
 	}
 
@@ -188,16 +223,27 @@ func (b *Backend) LogResponse(ctx context.Context, in *logical.LogInput) error {
 }
 
 func (b *Backend) LogTestMessage(ctx context.Context, in *logical.LogInput, config map[string]string) error {
+	// Event logger behavior - manually Process each node
+	if len(b.nodeIDList) > 0 {
+		return audit.ProcessManual(ctx, in, b.nodeIDList, b.nodeMap)
+	}
+
+	// Old behavior
 	var buf bytes.Buffer
-	temporaryFormatter := audit.NewTemporaryFormatter(config["format"], config["prefix"])
-	if err := temporaryFormatter.FormatRequest(ctx, &buf, b.formatConfig, in); err != nil {
+
+	temporaryFormatter, err := audit.NewTemporaryFormatter(config["format"], config["prefix"])
+	if err != nil {
+		return err
+	}
+
+	if err = temporaryFormatter.FormatAndWriteRequest(ctx, &buf, in); err != nil {
 		return err
 	}
 
 	b.Lock()
 	defer b.Unlock()
 
-	err := b.write(ctx, buf.Bytes())
+	err = b.write(ctx, buf.Bytes())
 	if err != nil {
 		rErr := b.reconnect(ctx)
 		if rErr != nil {
@@ -284,4 +330,22 @@ func (b *Backend) Invalidate(_ context.Context) {
 	b.saltMutex.Lock()
 	defer b.saltMutex.Unlock()
 	b.salt = nil
+}
+
+// RegisterNodesAndPipeline registers the nodes and a pipeline as required by
+// the audit.Backend interface.
+func (b *Backend) RegisterNodesAndPipeline(broker *eventlogger.Broker, name string) error {
+	for id, node := range b.nodeMap {
+		if err := broker.RegisterNode(id, node); err != nil {
+			return err
+		}
+	}
+
+	pipeline := eventlogger.Pipeline{
+		PipelineID: eventlogger.PipelineID(name),
+		EventType:  eventlogger.EventType("audit"),
+		NodeIDs:    b.nodeIDList,
+	}
+
+	return broker.RegisterPipeline(pipeline)
 }

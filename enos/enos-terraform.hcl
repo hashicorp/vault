@@ -1,3 +1,6 @@
+# Copyright (c) HashiCorp, Inc.
+# SPDX-License-Identifier: BUSL-1.1
+
 terraform_cli "default" {
   plugin_cache_dir = var.terraform_plugin_cache_dir != null ? abspath(var.terraform_plugin_cache_dir) : null
 
@@ -24,7 +27,8 @@ terraform "default" {
     }
 
     enos = {
-      source = "app.terraform.io/hashicorp-qti/enos"
+      source  = "app.terraform.io/hashicorp-qti/enos"
+      version = ">= 0.4.0"
     }
   }
 }

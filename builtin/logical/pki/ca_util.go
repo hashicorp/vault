@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package pki
 
 import (
@@ -260,4 +263,62 @@ func existingKeyGeneratorFromBytes(key *keyEntry) certutil.KeyGenerator {
 		container.SetParsedPrivateKey(signer, key.PrivateKeyType, pemBytes.Bytes)
 		return nil
 	}
+}
+
+func buildSignVerbatimRoleWithNoData(role *roleEntry) *roleEntry {
+	data := &framework.FieldData{
+		Raw:    map[string]interface{}{},
+		Schema: addSignVerbatimRoleFields(map[string]*framework.FieldSchema{}),
+	}
+	return buildSignVerbatimRole(data, role)
+}
+
+func buildSignVerbatimRole(data *framework.FieldData, role *roleEntry) *roleEntry {
+	entry := &roleEntry{
+		AllowLocalhost:            true,
+		AllowAnyName:              true,
+		AllowIPSANs:               true,
+		AllowWildcardCertificates: new(bool),
+		EnforceHostnames:          false,
+		KeyType:                   "any",
+		UseCSRCommonName:          true,
+		UseCSRSANs:                true,
+		AllowedOtherSANs:          []string{"*"},
+		AllowedSerialNumbers:      []string{"*"},
+		AllowedURISANs:            []string{"*"},
+		AllowedUserIDs:            []string{"*"},
+		CNValidations:             []string{"disabled"},
+		GenerateLease:             new(bool),
+		// If adding new fields to be read, update the field list within addSignVerbatimRoleFields
+		KeyUsage:        data.Get("key_usage").([]string),
+		ExtKeyUsage:     data.Get("ext_key_usage").([]string),
+		ExtKeyUsageOIDs: data.Get("ext_key_usage_oids").([]string),
+		SignatureBits:   data.Get("signature_bits").(int),
+		UsePSS:          data.Get("use_pss").(bool),
+	}
+	*entry.AllowWildcardCertificates = true
+	*entry.GenerateLease = false
+
+	if role != nil {
+		if role.TTL > 0 {
+			entry.TTL = role.TTL
+		}
+		if role.MaxTTL > 0 {
+			entry.MaxTTL = role.MaxTTL
+		}
+		if role.GenerateLease != nil {
+			*entry.GenerateLease = *role.GenerateLease
+		}
+		if role.NotBeforeDuration > 0 {
+			entry.NotBeforeDuration = role.NotBeforeDuration
+		}
+		entry.NoStore = role.NoStore
+		entry.Issuer = role.Issuer
+	}
+
+	if len(entry.Issuer) == 0 {
+		entry.Issuer = defaultRef
+	}
+
+	return entry
 }

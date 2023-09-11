@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 //go:build !enterprise
 
 package vault
@@ -7,9 +10,7 @@ import (
 	"fmt"
 	"sync/atomic"
 
-	proto "github.com/golang/protobuf/proto"
 	log "github.com/hashicorp/go-hclog"
-	wrapping "github.com/hashicorp/go-kms-wrapping/v2"
 	"github.com/hashicorp/vault/sdk/helper/locksutil"
 	"github.com/hashicorp/vault/sdk/physical"
 )
@@ -62,81 +63,63 @@ func (d *sealUnwrapper) Put(ctx context.Context, entry *physical.Entry) error {
 	return d.underlying.Put(ctx, entry)
 }
 
-func (d *sealUnwrapper) Get(ctx context.Context, key string) (*physical.Entry, error) {
-	entry, err := d.underlying.Get(ctx, key)
+// unwrap gets an entry from underlying storage and tries to unwrap it. If the entry was not wrapped, return
+// value unwrappedEntry will be nil. If the entry is wrapped and encrypted, an error is returned.
+func (d *sealUnwrapper) unwrap(ctx context.Context, key string) (entry, unwrappedEntry *physical.Entry, err error) {
+	entry, err = d.underlying.Get(ctx, key)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	if entry == nil {
-		return nil, nil
+		return nil, nil, err
 	}
 
-	var performUnwrap bool
-	se := &wrapping.BlobInfo{}
-	// If the value ends in our canary value, try to decode the bytes.
-	eLen := len(entry.Value)
-	if eLen > 0 && entry.Value[eLen-1] == 's' {
-		if err := proto.Unmarshal(entry.Value[:eLen-1], se); err == nil {
-			// We unmarshaled successfully which means we need to store it as a
-			// non-proto message
-			performUnwrap = true
+	wrappedEntryValue, unmarshaled := UnmarshalSealWrappedValueWithCanary(entry.Value)
+	switch {
+	case !unmarshaled:
+		unwrappedEntry = entry
+	case wrappedEntryValue.isEncrypted():
+		return nil, nil, fmt.Errorf("cannot decode sealwrapped storage entry %q", entry.Key)
+	default:
+		pt, err := wrappedEntryValue.getPlaintextValue()
+		if err != nil {
+			return nil, nil, err
+		}
+		unwrappedEntry = &physical.Entry{
+			Key:   entry.Key,
+			Value: pt,
 		}
 	}
-	if !performUnwrap {
-		return entry, nil
-	}
-	// It's actually encrypted and we can't read it
-	if se.Wrapped {
-		return nil, fmt.Errorf("cannot decode sealwrapped storage entry %q", entry.Key)
-	}
-	if atomic.LoadUint32(d.allowUnwraps) != 1 {
-		return &physical.Entry{
-			Key:   entry.Key,
-			Value: se.Ciphertext,
-		}, nil
+
+	return entry, unwrappedEntry, nil
+}
+
+func (d *sealUnwrapper) Get(ctx context.Context, key string) (*physical.Entry, error) {
+	entry, unwrappedEntry, err := d.unwrap(ctx, key)
+	switch {
+	case err != nil:
+		return nil, err
+	case entry == nil:
+		return nil, nil
+	case atomic.LoadUint32(d.allowUnwraps) != 1:
+		return unwrappedEntry, nil
 	}
 
 	locksutil.LockForKey(d.locks, key).Lock()
 	defer locksutil.LockForKey(d.locks, key).Unlock()
 
 	// At this point we need to re-read and re-check
-	entry, err = d.underlying.Get(ctx, key)
-	if err != nil {
+	entry, unwrappedEntry, err = d.unwrap(ctx, key)
+	switch {
+	case err != nil:
 		return nil, err
-	}
-	if entry == nil {
+	case entry == nil:
 		return nil, nil
+	case atomic.LoadUint32(d.allowUnwraps) != 1:
+		return unwrappedEntry, nil
 	}
 
-	performUnwrap = false
-	se = &wrapping.BlobInfo{}
-	// If the value ends in our canary value, try to decode the bytes.
-	eLen = len(entry.Value)
-	if eLen > 0 && entry.Value[eLen-1] == 's' {
-		// We ignore an error because the canary is not a guarantee; if it
-		// doesn't decode, proceed normally
-		if err := proto.Unmarshal(entry.Value[:eLen-1], se); err == nil {
-			// We unmarshaled successfully which means we need to store it as a
-			// non-proto message
-			performUnwrap = true
-		}
-	}
-	if !performUnwrap {
-		return entry, nil
-	}
-	if se.Wrapped {
-		return nil, fmt.Errorf("cannot decode sealwrapped storage entry %q", entry.Key)
-	}
-
-	entry = &physical.Entry{
-		Key:   entry.Key,
-		Value: se.Ciphertext,
-	}
-
-	if atomic.LoadUint32(d.allowUnwraps) != 1 {
-		return entry, nil
-	}
-	return entry, d.underlying.Put(ctx, entry)
+	return unwrappedEntry, d.underlying.Put(ctx, unwrappedEntry)
 }
 
 func (d *sealUnwrapper) Delete(ctx context.Context, key string) error {

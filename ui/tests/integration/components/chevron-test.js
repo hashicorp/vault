@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import { module, test } from 'qunit';
 import { setupRenderingTest } from 'ember-qunit';
 import { render } from '@ember/test-helpers';
@@ -23,8 +28,9 @@ module('Integration | Component | chevron', function (hooks) {
     const promise = waitForError();
     render(hbs`<Chevron @direction='lol' />`);
     const err = await promise;
+
     assert.ok(
-      err.message.includes('The direction property of <vault@component:chevron:'),
+      err.message.includes('The direction property of Chevron'),
       'asserts about unsupported direction'
     );
   });

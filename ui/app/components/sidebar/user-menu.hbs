@@ -1,0 +1,88 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
+<BasicDropdown
+  @horizontalPosition="right"
+  @verticalPosition="below"
+  @renderInPlace={{true}}
+  class="sidebar-user-menu"
+  data-test-user-menu
+  as |Dropdown|
+>
+  <Dropdown.Trigger data-test-user-menu-trigger>
+    <Hds::SideNav::Header::IconButton @icon="user" @ariaLabel="User menu" />
+  </Dropdown.Trigger>
+  <Dropdown.Content>
+    <Confirm as |c|>
+      <div class="popup-menu-content" data-test-user-menu-content>
+        <div class="box">
+          <div class="menu-label">
+            {{capitalize this.auth.authData.displayName}}
+          </div>
+          <nav class="menu">
+            <ul class="menu-list">
+              {{#if this.auth.allowExpiration}}
+                <li class="token-alert is-flex" data-test-user-menu-item="token alert">
+                  <span><Icon @name="alert-triangle-fill" class="has-text-highlight" /></span>
+                  <span class="is-size-8 has-text-semibold">
+                    We've stopped auto-renewing your token due to inactivity. It will expire on
+                    {{date-format this.auth.tokenExpirationDate "MMMM do yyyy, h:mm:ss a"}}.
+                  </span>
+                </li>
+              {{/if}}
+              {{#if this.hasEntityId}}
+                <li class="action">
+                  <LinkTo @route="vault.cluster.mfa-setup" data-test-user-menu-item="mfa">
+                    Multi-factor authentication
+                  </LinkTo>
+                </li>
+              {{/if}}
+              <li class="action">
+                <CopyButton
+                  @clipboardText={{this.auth.currentToken}}
+                  class="link"
+                  @buttonType="button"
+                  @success={{action (set-flash-message "Token copied!")}}
+                >
+                  Copy token
+                </CopyButton>
+              </li>
+              {{#if (is-before (now interval=1000) this.auth.tokenExpirationDate)}}
+                {{#if this.auth.authData.renewable}}
+                  <li class="action">
+                    <button
+                      type="button"
+                      {{on "click" this.renewToken}}
+                      class="link button {{if this.isRenewing 'is-loading'}}"
+                      data-test-user-menu-item="renew token"
+                    >
+                      Renew token
+                    </button>
+                  </li>
+                {{/if}}
+                <li class="action">
+                  <c.Message
+                    @id={{get this.auth "authData.displayName"}}
+                    @title={{concat "Revoke " (get this.auth "authData.displayName") "?"}}
+                    @onConfirm={{action "revokeToken"}}
+                    @message="You will not be able to log in again with this token."
+                    @triggerText="Revoke token"
+                    @confirmButtonText="Revoke"
+                    data-test-user-menu-item="revoke token"
+                  />
+                </li>
+              {{/if}}
+              <li class="action">
+                <LinkTo @route="vault.cluster.logout" @model={{this.currentCluster.cluster.name}} id="logout">
+                  Log out
+                </LinkTo>
+              </li>
+            </ul>
+          </nav>
+        </div>
+      </div>
+    </Confirm>
+  </Dropdown.Content>
+</BasicDropdown>

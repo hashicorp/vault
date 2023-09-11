@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package rafttests
 
 import (
@@ -435,47 +438,7 @@ func TestRaft_Configuration(t *testing.T) {
 	t.Parallel()
 	cluster, _ := raftCluster(t, nil)
 	defer cluster.Cleanup()
-
-	for i, c := range cluster.Cores {
-		if c.Core.Sealed() {
-			t.Fatalf("failed to unseal core %d", i)
-		}
-	}
-
-	client := cluster.Cores[0].Client
-	secret, err := client.Logical().Read("sys/storage/raft/configuration")
-	if err != nil {
-		t.Fatal(err)
-	}
-	servers := secret.Data["config"].(map[string]interface{})["servers"].([]interface{})
-	expected := map[string]bool{
-		"core-0": true,
-		"core-1": true,
-		"core-2": true,
-	}
-	if len(servers) != 3 {
-		t.Fatalf("incorrect number of servers in the configuration")
-	}
-	for _, s := range servers {
-		server := s.(map[string]interface{})
-		nodeID := server["node_id"].(string)
-		leader := server["leader"].(bool)
-		switch nodeID {
-		case "core-0":
-			if !leader {
-				t.Fatalf("expected server to be leader: %#v", server)
-			}
-		default:
-			if leader {
-				t.Fatalf("expected server to not be leader: %#v", server)
-			}
-		}
-
-		delete(expected, nodeID)
-	}
-	if len(expected) != 0 {
-		t.Fatalf("failed to read configuration successfully")
-	}
+	Raft_Configuration_Test(t, cluster)
 }
 
 func TestRaft_ShamirUnseal(t *testing.T) {
@@ -552,10 +515,7 @@ func TestRaft_SnapshotAPI_MidstreamFailure(t *testing.T) {
 	t.Parallel()
 
 	seal, setErr := vaultseal.NewToggleableTestSeal(nil)
-	autoSeal, err := vault.NewAutoSeal(seal)
-	if err != nil {
-		t.Fatal(err)
-	}
+	autoSeal := vault.NewAutoSeal(seal)
 	cluster, _ := raftCluster(t, &RaftClusterOpts{
 		NumCores: 1,
 		Seal:     autoSeal,
@@ -587,9 +547,9 @@ func TestRaft_SnapshotAPI_MidstreamFailure(t *testing.T) {
 		wg.Done()
 	}()
 
-	setErr(errors.New("seal failure"))
+	setErr[0](errors.New("seal failure"))
 	// Take a snapshot
-	err = leaderClient.Sys().RaftSnapshot(w)
+	err := leaderClient.Sys().RaftSnapshot(w)
 	w.Close()
 	if err == nil || err != api.ErrIncompleteSnapshot {
 		t.Fatalf("expected err=%v, got: %v", api.ErrIncompleteSnapshot, err)
@@ -604,6 +564,7 @@ func TestRaft_SnapshotAPI_MidstreamFailure(t *testing.T) {
 }
 
 func TestRaft_SnapshotAPI_RekeyRotate_Backward(t *testing.T) {
+	t.Parallel()
 	type testCase struct {
 		Name               string
 		Rekey              bool
@@ -790,6 +751,7 @@ func TestRaft_SnapshotAPI_RekeyRotate_Backward(t *testing.T) {
 }
 
 func TestRaft_SnapshotAPI_RekeyRotate_Forward(t *testing.T) {
+	t.Parallel()
 	type testCase struct {
 		Name               string
 		Rekey              bool

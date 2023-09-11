@@ -8,9 +8,19 @@ description: >-
   mechanism.
 ---
 
-# `alicloudkms` Seal
+# `alicloudkms` seal
 
--> **Note:** The Seal Wrap functionality is enabled by default. For this reason, the KMS service must be available throughout Vault's runtime and not just during the unseal process. Refer to the [Seal Wrap](/vault/docs/enterprise/sealwrap) documenation for more information.
+<Note title="Seal wrapping requires Vault Enterprise">
+
+  All Vault versions support **auto-unseal** for AliCloud, but **seal wrapping**
+  requires Vault Enterprise.
+  
+  Vault Enterprise enables seal wrapping by default, which means the KMS service
+  must be available at runtime and not just during the unseal process. Refer to
+  the [Seal wrap](/vault/docs/enterprise/sealwrap) overview for more
+  information.
+
+</Note>
 
 
 The AliCloud KMS seal configures Vault to use AliCloud KMS as the seal wrapping mechanism.
@@ -23,7 +33,7 @@ The AliCloud KMS seal is activated by one of the following:
   other AliCloud-related environment variables that lends to successful
   authentication.
 
-## `alicloudkms` Example
+## `alicloudkms` example
 
 This example shows configuring AliCloud KMS seal through the Vault configuration file
 by providing all the required values:
@@ -37,7 +47,7 @@ seal "alicloudkms" {
 }
 ```
 
-## `alicloudkms` Parameters
+## `alicloudkms` parameters
 
 These parameters apply to the `seal` stanza in the Vault configuration file:
 
@@ -85,7 +95,7 @@ AliCloud authentication values:
 Note: The client uses the official AliCloud SDK and will use environment credentials,
 the specified credentials, or RAM role credentials in that order.
 
-## `alicloudkms` Environment Variables
+## `alicloudkms` environment variables
 
 Alternatively, the AliCloud KMS seal can be activated by providing the following
 environment variables:

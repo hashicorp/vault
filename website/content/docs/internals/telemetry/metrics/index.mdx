@@ -1,0 +1,51 @@
+---
+layout: docs
+page_title: Metrics reference overview
+description: |-
+  Learn about how telemetry metrics are structured in Vault
+---
+
+# Telemetry metrics overview 
+
+## Metric types
+
+Vault provides three types of telemetry metrics:
+
+- **Counter metrics** increment when an event occurs. Counters are cumulative
+  and reset at the end of reporting intervals. 
+- **Gauge metrics** provide measurements of current values.
+- **Summary metrics** provide observational values. Vault commonly uses
+  summaries to measure the time required to for a discrete event to complete.
+
+High-cardinality gauges, like `vault.kv.secret.count`, update at the interval
+configured with `usage_gauge_period` in the `telemetry` stanza. The default
+reporting interval for gauge metrics is 10 minutes.
+
+## Metric labels
+
+Some telemetry metrics come with additional metadata that provides context for
+the measurement. For example, a token metric might include the namespace it
+belongs to or the authentication method used to create it.
+
+Metric metadata is labeled and incorporated into the metric name for the
+in-memory telemetry and any other telemetry engine that does not support custom
+labels.
+
+The metric name in the table below is followed by a list of labels supported,
+in the order in which they appear, if flattened.
+
+
+| Label                  | Example                 | Description
+| ---------------------- | ----------------------- | ---------------------------
+| `auth_method`          | `userpass`              | Authorization engine type
+| `cluster`              | `vault-cluster-d54ad07` | Name of the cluster where the metric originated
+| `creation_ttl`         | `7d`                    | Time-to-live assigned at creation, rounded up to the next-highest bucket: `1m`, `10m`, `20m`, `1h`, `2h`, `1d`, `2d`, `7d`, `30d`, or `+Inf`
+| `mount_point`          | `auth/userpass/`        | Path at which an authentication method or secret engine is mounted
+| `name`                 | `memoryLimit`           | Name of the object being aggregated (for example, a quota or quota rule)
+| `namespace`            | `ns1`                   | A namespace path or `root` for the root namespace
+| `policy`               | `default`               | Name of the associated policy
+| `secret_engine`        | `aws`                   | Secrets engine type
+| `token_type`           | `service`               | Type of the associated token: `batch` or `service`
+| `peer_id`              | `node-1`                | Unique identifier of a raft peer node
+| `node_id`              | `node-42`               | Unique identifier of a raft peer node (duplicates `peer_id`)
+| `snapshot_config_name` | `config1`               | Name of the configuration used for automated snapshots

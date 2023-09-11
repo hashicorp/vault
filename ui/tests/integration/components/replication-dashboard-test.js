@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import { module, test } from 'qunit';
 import { setupRenderingTest } from 'ember-qunit';
 import { render } from '@ember/test-helpers';
@@ -86,7 +91,6 @@ module('Integration | Component | replication-dashboard', function (hooks) {
       @isSecondary={{this.isSecondary}}
       @componentToRender='replication-secondary-card'
     />`);
-
     assert.dom('[data-test-isSyncing]').exists();
     assert
       .dom('[data-test-isReindexing]')
@@ -102,21 +106,20 @@ module('Integration | Component | replication-dashboard', function (hooks) {
       @isSecondary={{this.isSecondary}}
       @componentToRender='replication-secondary-card'
     />`);
-
     assert.dom('[data-test-isReindexing]').exists();
-    assert.dom('.message-title').includesText('Building', 'shows reindexing stage if there is one');
     assert
-      .dom('.message-title>.progress')
+      .dom('[data-test-reindexing-title]')
+      .includesText('Building', 'shows reindexing stage if there is one');
+    assert
+      .dom('[data-test-reindexing-progress]')
       .hasValue(
         IS_REINDEXING.reindex_building_progress,
         'shows the reindexing progress inside the alert banner'
       );
-
-    const reindexingInProgress = assign({}, IS_REINDEXING, { reindex_building_progress: 27000 });
+    const reindexingInProgress = assign({}, IS_REINDEXING, { reindex_building_progress: 152721 });
     this.set('replicationDetails', reindexingInProgress);
-
     assert
-      .dom('.message-title>.progress')
+      .dom('[data-test-reindexing-progress]')
       .hasValue(reindexingInProgress.reindex_building_progress, 'updates the reindexing progress');
   });
 

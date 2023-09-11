@@ -1,3 +1,6 @@
+# Copyright (c) HashiCorp, Inc.
+# SPDX-License-Identifier: BUSL-1.1
+
 FROM debian:buster
 
 RUN apt-get update -y && apt-get install --no-install-recommends -y -q \
@@ -12,7 +15,7 @@ RUN apt-get update -y && apt-get install --no-install-recommends -y -q \
                          libltdl-dev \
                          libltdl7
 
-RUN curl -sL https://deb.nodesource.com/setup_14.x | bash -
+RUN curl -sL https://deb.nodesource.com/setup_16.x | bash -
 RUN curl -sL https://dl.yarnpkg.com/debian/pubkey.gpg | apt-key add -
 RUN echo "deb https://dl.yarnpkg.com/debian/ stable main" | tee /etc/apt/sources.list.d/yarn.list
 

@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
 import { click, currentRouteName, fillIn, visit, waitUntil, find } from '@ember/test-helpers';
@@ -13,11 +18,17 @@ module('Acceptance | mfa-login', function (hooks) {
     ENV['ember-cli-mirage'].handler = 'mfaLogin';
   });
   hooks.beforeEach(function () {
+    this.auth = this.owner.lookup('service:auth');
     this.select = async (select = 0, option = 1) => {
       const selector = `[data-test-mfa-select="${select}"]`;
       const value = this.element.querySelector(`${selector} option:nth-child(${option + 1})`).value;
       await fillIn(`${selector} select`, value);
     };
+    return visit('/vault/logout');
+  });
+  hooks.afterEach(function () {
+    // Manually clear token after each so that future tests don't get into a weird state
+    this.auth.deleteCurrentToken();
   });
   hooks.after(function () {
     ENV['ember-cli-mirage'].handler = null;
@@ -31,7 +42,7 @@ module('Acceptance | mfa-login', function (hooks) {
     await click('[data-test-auth-submit]');
   };
   const didLogin = (assert) => {
-    assert.strictEqual(currentRouteName(), 'vault.cluster.secrets.backends', 'Route transitions after login');
+    assert.strictEqual(currentRouteName(), 'vault.cluster.dashboard', 'Route transitions after login');
   };
   const validate = async (multi) => {
     await fillIn('[data-test-mfa-passcode="0"]', 'test');

@@ -1,0 +1,15 @@
+### vault.audit.log_request_failure ((#vault-audit-log_request_failure))
+
+Metric type | Value   | Description
+----------- | ------- | -----------
+counter     | number  | Number of audit log request failures across all devices
+
+The number of request failures is a **crucial metric**.
+
+A non-zero value for `vault.audit.log_request_failure` indicates that all your
+configured audit devices failed to log a request (or response). If Vault cannot
+properly audit a request, or the response to a request, the original request
+will fail.
+
+Refer to the Vault logs and any device-specific metrics to troubleshoot the
+failing audit log device.

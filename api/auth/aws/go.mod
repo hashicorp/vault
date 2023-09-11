@@ -7,5 +7,5 @@ require (
 	github.com/hashicorp/go-hclog v0.16.2
 	github.com/hashicorp/go-secure-stdlib/awsutil v0.1.6
 	github.com/hashicorp/go-uuid v1.0.2
-	github.com/hashicorp/vault/api v1.8.3
+	github.com/hashicorp/vault/api v1.10.0
 )

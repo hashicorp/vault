@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import AdapterError from '@ember-data/adapter/error';
 import AuthConfigComponent from './config';
 import { inject as service } from '@ember/service';
@@ -20,14 +25,13 @@ import { waitFor } from '@ember/test-waiters';
 export default AuthConfigComponent.extend({
   flashMessages: service(),
   router: service(),
-  wizard: service(),
 
   saveModel: task(
     waitFor(function* () {
       const data = this.model.config.serialize();
       data.description = this.model.description;
 
-      // token_type should not be tuneable for the token auth method, default is 'default-service'
+      // token_type should not be tuneable for the token auth method.
       if (this.model.type === 'token') {
         delete data.token_type;
       }
@@ -48,9 +52,6 @@ export default AuthConfigComponent.extend({
           // do nothing
         }
         return;
-      }
-      if (this.wizard.currentMachine === 'authentication' && this.wizard.featureState === 'config') {
-        this.wizard.transitionFeatureMachine(this.wizard.featureState, 'CONTINUE');
       }
       this.router.transitionTo('vault.cluster.access.methods').followRedirects();
       this.flashMessages.success('The configuration was saved successfully.');

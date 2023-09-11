@@ -1,0 +1,3 @@
+```release-note:improvement
+ui: adds warning for commas in stringArray inputs and updates tooltip help text to remove references to comma separation 
+```

@@ -1,3 +1,8 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
 {{#if @attr}}
   <div class="field" data-test-regex-validator-pattern>
     <div class="regex-label-wrapper">
@@ -79,12 +84,11 @@
         {{else if this.regexError}}
           <AlertInline @type="danger" @message="This test string does not match the pattern regex." />
         {{else}}
-          <div class="message-inline">
-            <Icon @name="check-circle-fill" class="has-text-success" />
-            <p data-test-inline-success-message>
-              This test string matches the pattern regex.
-            </p>
-          </div>
+          <AlertInline
+            data-test-inline-success-message
+            @type="success"
+            @message="This test string matches the pattern regex."
+          />
         {{/if}}
       </div>
     {{/if}}

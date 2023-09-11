@@ -1,6 +1,11 @@
 ---
 name: Vault UI Tests
 
+# cancel existing runs of the same workflow on the same ref
+concurrency:
+  group: ${{ github.workflow }}-${{ github.head_ref || github.ref }}
+  cancel-in-progress: true
+
 on:
   workflow_call:
     inputs:
@@ -32,27 +37,22 @@ jobs:
     name: Get metadata
     runs-on: ubuntu-latest
     outputs:
-      go-version: ${{ steps.get-metadata.outputs.go-version }}
-      node-version: ${{ steps.get-metadata.outputs.node-version }}
       runs-on: ${{ steps.get-metadata.outputs.runs-on }}
       vault_edition: ${{ steps.get-metadata.outputs.vault_edition }}
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@c85c95e3d7251135ab7dc9ce3241c5835cc595a9 # v3.5.3
       - id: get-metadata
         env:
           IS_ENT: ${{ startsWith(github.event.repository.name, 'vault-enterprise' ) }}
         run: |
-          echo "go-version=$(cat ./.go-version)" >> $GITHUB_OUTPUT
-          echo "node-version=$(cat ./ui/.nvmrc)" >> $GITHUB_OUTPUT
-          echo "chrome-installed=$(chrome --version && echo true || echo false)" >> $GITHUB_OUTPUT
-          if ${IS_ENT} == true; then
+          if [ "$IS_ENT" == true ]; then
             echo "detected vault_edition=ent"
-            echo "runs-on=['self-hosted', 'ondemand', 'os=linux', 'type=m5d.4xlarge']" >> $GITHUB_OUTPUT
-            echo "vault_edition=ent" >> $GITHUB_OUTPUT
+            echo "runs-on=['self-hosted', 'ondemand', 'os=linux', 'type=m5d.4xlarge']" >> "$GITHUB_OUTPUT"
+            echo "vault_edition=ent" >> "$GITHUB_OUTPUT"
           else
             echo "detected vault_edition=oss"
-            echo "runs-on=custom-linux-xl-vault-latest" >> $GITHUB_OUTPUT
-            echo "vault_edition=oss" >> $GITHUB_OUTPUT
+            echo "runs-on=\"custom-linux-xl-vault-latest\"" >> "$GITHUB_OUTPUT"
+            echo "vault_edition=oss" >> "$GITHUB_OUTPUT"
           fi
 
   run-ui-tests:
@@ -72,20 +72,19 @@ jobs:
       GOPRIVATE: github.com/hashicorp
     steps:
       - name: Checkout
-        uses: actions/checkout@v3
-      - name: Set Up Go
-        uses: actions/setup-go@v3
+        uses: actions/checkout@c85c95e3d7251135ab7dc9ce3241c5835cc595a9 # v3.5.3
+      - uses: ./.github/actions/set-up-go
         with:
-          go-version: ${{ needs.get-metadata.outputs.go-version }}
+          github-token: ${{ secrets.ELEVATED_GITHUB_TOKEN }}
       - uses: hashicorp/action-setup-enos@v1
         with:
           github-token: ${{ secrets.ELEVATED_GITHUB_TOKEN }}
       - name: Set Up Git
         run: git config --global url."https://${{ secrets.elevated_github_token }}:@github.com".insteadOf "https://github.com"
       - name: Set Up Node
-        uses: actions/setup-node@v3
+        uses: actions/setup-node@e33196f7422957bea03ed53f6fbb155025ffc7b8 # v3.7.0
         with:
-          node-version: ${{ needs.get-metadata.outputs.node-version }}
+          node-version-file: './ui/package.json'
       - name: Set Up Terraform
         uses: hashicorp/setup-terraform@v2
         with:
@@ -99,18 +98,22 @@ jobs:
       - name: Set Up Vault Enterprise License
         if: contains(${{ github.event.repository.name }}, 'ent')
         run: echo "${{ secrets.VAULT_LICENSE }}" > ./enos/support/vault.hclic || true
+      - name: Check Chrome Installed
+        id: chrome-check
+        run: echo "chrome-version=$(chrome --version 2> /dev/null || google-chrome --version 2> /dev/null || google-chrome-stable --version 2> /dev/null || echo 'not-installed')" >> "$GITHUB_OUTPUT"
       - name: Install Chrome Dependencies
-        if: ${{ !needs.get-metadata.outputs.chrome-installed }}
+        if: steps.chrome-check.outputs.chrome-version == 'not-installed'
         run: |
           sudo apt update
           sudo apt install -y libnss3-dev libgdk-pixbuf2.0-dev libgtk-3-dev libxss-dev libasound2
       - name: Install Chrome
-        if: ${{ !needs.get-metadata.outputs.chrome-installed }}
-        uses: browser-actions/setup-chrome@v1
-      - run: |
-         chrome --version
+        if: steps.chrome-check.outputs.chrome-version == 'not-installed'
+        uses: browser-actions/setup-chrome@c485fa3bab6be59dce18dbc18ef6ab7cbc8ff5f1 # v1.2.0
+      - name: Installed Chrome Version
+        run: |
+          echo "Installed Chrome Version = [$(chrome --version 2> /dev/null || google-chrome --version 2> /dev/null || google-chrome-stable --version 2> /dev/null)]"
       - name: Configure AWS credentials from Test account
-        uses: aws-actions/configure-aws-credentials@v1-node16
+        uses: aws-actions/configure-aws-credentials@5fd3084fc36e372ff1fff382a39b10d03659f355 # v2.2.0
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID_CI }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY_CI }}

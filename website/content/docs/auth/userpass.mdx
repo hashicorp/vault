@@ -6,7 +6,7 @@ description: >-
   username and password.
 ---
 
-# Userpass Auth Method
+# Userpass auth method
 
 The `userpass` auth method allows users to authenticate with Vault using
 a username and password combination.
@@ -65,14 +65,20 @@ management tool.
 
 1. Enable the userpass auth method:
 
-   ```text
+   ```shell-session
    $ vault auth enable userpass
+   ```
+   
+   This enables the userpass auth method at `auth/userpass`. To enable it at a different path, use the `-path` flag:
+   
+   ```shell-session
+   $ vault auth enable -path=<path> userpass
    ```
 
 1. Configure it with users that are allowed to authenticate:
 
-   ```text
-   $ vault write auth/userpass/users/mitchellh \
+   ```shell-session
+   $ vault write auth/<userpass:path>/users/mitchellh \
        password=foo \
        policies=admins
    ```
@@ -80,6 +86,7 @@ management tool.
    This creates a new user "mitchellh" with the password "foo" that will be
    associated with the "admins" policy. This is the only configuration
    necessary.
+
 
 ## API
 

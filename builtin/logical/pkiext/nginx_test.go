@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package pkiext
 
 import (
@@ -14,11 +17,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/hashicorp/vault/builtin/logical/pki"
-	"github.com/hashicorp/vault/helper/testhelpers/docker"
-
 	"github.com/hashicorp/go-uuid"
-
+	"github.com/hashicorp/vault/builtin/logical/pki"
+	"github.com/hashicorp/vault/sdk/helper/docker"
 	"github.com/stretchr/testify/require"
 )
 
@@ -229,7 +230,7 @@ func CheckWithClients(t *testing.T, network string, address string, url string, 
 	// Start our service with a random name to not conflict with other
 	// threads.
 	ctx := context.Background()
-	ctr, _, _, err := cwRunner.Start(ctx, true, false)
+	result, err := cwRunner.Start(ctx, true, false)
 	if err != nil {
 		t.Fatalf("Could not start golang container for wget/curl checks: %s", err)
 	}
@@ -255,14 +256,14 @@ func CheckWithClients(t *testing.T, network string, address string, url string, 
 		wgetCmd = []string{"wget", "--verbose", "--ca-certificate=/root.pem", "--certificate=/client-cert.pem", "--private-key=/client-privkey.pem", url}
 		curlCmd = []string{"curl", "--verbose", "--cacert", "/root.pem", "--cert", "/client-cert.pem", "--key", "/client-privkey.pem", url}
 	}
-	if err := cwRunner.CopyTo(ctr.ID, "/", certCtx); err != nil {
+	if err := cwRunner.CopyTo(result.Container.ID, "/", certCtx); err != nil {
 		t.Fatalf("Could not copy certificate and key into container: %v", err)
 	}
 
 	for _, cmd := range [][]string{hostPrimeCmd, wgetCmd, curlCmd} {
 		t.Logf("Running client connection command: %v", cmd)
 
-		stdout, stderr, retcode, err := cwRunner.RunCmdWithOutput(ctx, ctr.ID, cmd)
+		stdout, stderr, retcode, err := cwRunner.RunCmdWithOutput(ctx, result.Container.ID, cmd)
 		if err != nil {
 			t.Fatalf("Could not run command (%v) in container: %v", cmd, err)
 		}
@@ -292,7 +293,7 @@ func CheckDeltaCRL(t *testing.T, network string, address string, url string, roo
 	// Start our service with a random name to not conflict with other
 	// threads.
 	ctx := context.Background()
-	ctr, _, _, err := cwRunner.Start(ctx, true, false)
+	result, err := cwRunner.Start(ctx, true, false)
 	if err != nil {
 		t.Fatalf("Could not start golang container for wget2 delta CRL checks: %s", err)
 	}
@@ -310,14 +311,14 @@ func CheckDeltaCRL(t *testing.T, network string, address string, url string, roo
 	certCtx := docker.NewBuildContext()
 	certCtx["root.pem"] = docker.PathContentsFromString(rootCert)
 	certCtx["crls.pem"] = docker.PathContentsFromString(crls)
-	if err := cwRunner.CopyTo(ctr.ID, "/", certCtx); err != nil {
+	if err := cwRunner.CopyTo(result.Container.ID, "/", certCtx); err != nil {
 		t.Fatalf("Could not copy certificate and key into container: %v", err)
 	}
 
 	for index, cmd := range [][]string{hostPrimeCmd, wgetCmd} {
 		t.Logf("Running client connection command: %v", cmd)
 
-		stdout, stderr, retcode, err := cwRunner.RunCmdWithOutput(ctx, ctr.ID, cmd)
+		stdout, stderr, retcode, err := cwRunner.RunCmdWithOutput(ctx, result.Container.ID, cmd)
 		if err != nil {
 			t.Fatalf("Could not run command (%v) in container: %v", cmd, err)
 		}

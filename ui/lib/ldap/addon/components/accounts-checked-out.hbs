@@ -1,0 +1,75 @@
+<OverviewCard
+  @cardTitle="Accounts checked-out"
+  @subText="The accounts that are currently on lease with this token or exist in a library set with check-in enforcement disabled."
+  class="has-padding-l"
+  ...attributes
+>
+  <hr class="has-background-gray-200" />
+
+  {{#if this.filteredAccounts}}
+    <Hds::Table @model={{this.filteredAccounts}} @columns={{this.columns}}>
+      <:body as |Body|>
+        <Body.Tr>
+          <Body.Td data-test-checked-out-account={{Body.data.account}}>{{Body.data.account}}</Body.Td>
+          {{#if @showLibraryColumn}}
+            <Body.Td data-test-checked-out-library={{Body.data.account}}>{{Body.data.library}}</Body.Td>
+          {{/if}}
+          <Body.Td>
+            <button
+              type="button"
+              class="text-button has-text-primary has-text-weight-semibold"
+              disabled={{this.disableCheckIn Body.data.library}}
+              data-test-checked-out-account-action={{Body.data.account}}
+              {{on "click" (fn (mut this.selectedStatus) Body.data)}}
+            >
+              <Icon @name="queue" />
+              Check-in
+            </button>
+          </Body.Td>
+        </Body.Tr>
+      </:body>
+    </Hds::Table>
+  {{else}}
+    <EmptyState
+      @title="No accounts checked out yet"
+      @message="There is no account that is currently in use."
+      class="is-shadowless"
+    />
+  {{/if}}
+</OverviewCard>
+
+{{#if this.selectedStatus}}
+  <Modal
+    @title="Account Check-in"
+    @isActive={{this.selectedStatus}}
+    @showCloseButton={{true}}
+    @onClose={{fn (mut this.selectedStatus) undefined}}
+  >
+    <section class="modal-card-body">
+      <p>
+        This action will check-in account
+        {{this.selectedStatus.account}}
+        back to the library. Do you want to proceed?
+      </p>
+    </section>
+    <footer class="modal-card-foot modal-card-foot-outlined">
+      <button
+        type="button"
+        class="button is-primary {{if this.save.isRunning 'is-loading'}}"
+        disabled={{this.checkIn.isRunning}}
+        data-test-check-in-confirm
+        {{on "click" (perform this.checkIn)}}
+      >
+        Confirm
+      </button>
+      <button
+        type="button"
+        class="button"
+        disabled={{this.checkIn.isRunning}}
+        {{on "click" (fn (mut this.selectedStatus) "")}}
+      >
+        Cancel
+      </button>
+    </footer>
+  </Modal>
+{{/if}}

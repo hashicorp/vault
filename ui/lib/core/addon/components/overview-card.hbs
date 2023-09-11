@@ -1,9 +1,20 @@
-<div class="selectable-card is-rounded no-flex" data-test-selectable-card-container={{@cardTitle}}>
-  <div class="is-flex-between is-fullwidth card-details" data-test-selectable-card={{@cardTitle}}>
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
+<Hds::Card::Container
+  @level="mid"
+  @hasBorder={{true}}
+  class="overview-card border-radius-2"
+  data-test-overview-card-container={{@cardTitle}}
+  ...attributes
+>
+  <div class="is-flex-between" data-test-overview-card={{@cardTitle}}>
     <h3 class="title is-5">{{@cardTitle}}</h3>
     {{#if @actionText}}
       <LinkTo
-        class="has-icon-right is-ghost is-no-underline has-text-semibold"
+        class="has-icon-right is-ghost is-no-underline has-text-weight-semibold"
         @route={{@actionTo}}
         @query={{hash @actionQuery}}
         data-test-action-text={{@actionText}}
@@ -15,4 +26,4 @@
   </div>
   <p class="has-text-grey is-size-8 {{unless @actionText 'has-top-margin-s'}}">{{@subText}}</p>
   {{yield}}
-</div>
+</Hds::Card::Container>

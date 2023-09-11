@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package vault
 
 import (
@@ -6,6 +9,7 @@ import (
 	"testing"
 
 	"github.com/hashicorp/vault/helper/namespace"
+	"github.com/hashicorp/vault/sdk/logical"
 )
 
 func mockPolicyWithCore(t *testing.T, disableCache bool) (*Core, *PolicyStore) {
@@ -273,4 +277,79 @@ func testPolicyStoreACL(t *testing.T, ps *PolicyStore, ns *namespace.Namespace) 
 		t.Fatalf("err: %v", err)
 	}
 	testLayeredACL(t, acl, ns)
+}
+
+func TestDefaultPolicy(t *testing.T) {
+	ctx := namespace.ContextWithNamespace(context.Background(), namespace.RootNamespace)
+
+	policy, err := ParseACLPolicy(namespace.RootNamespace, defaultPolicy)
+	if err != nil {
+		t.Fatal(err)
+	}
+	acl, err := NewACL(ctx, []*Policy{policy})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	for name, tc := range map[string]struct {
+		op            logical.Operation
+		path          string
+		expectAllowed bool
+	}{
+		"lookup self":            {logical.ReadOperation, "auth/token/lookup-self", true},
+		"renew self":             {logical.UpdateOperation, "auth/token/renew-self", true},
+		"revoke self":            {logical.UpdateOperation, "auth/token/revoke-self", true},
+		"check own capabilities": {logical.UpdateOperation, "sys/capabilities-self", true},
+
+		"read arbitrary path":     {logical.ReadOperation, "foo/bar", false},
+		"login at arbitrary path": {logical.UpdateOperation, "auth/foo", false},
+	} {
+		t.Run(name, func(t *testing.T) {
+			request := new(logical.Request)
+			request.Operation = tc.op
+			request.Path = tc.path
+
+			result := acl.AllowOperation(ctx, request, false)
+			if result.RootPrivs {
+				t.Fatal("unexpected root")
+			}
+			if tc.expectAllowed != result.Allowed {
+				t.Fatalf("Expected %v, got %v", tc.expectAllowed, result.Allowed)
+			}
+		})
+	}
+}
+
+// TestPolicyStore_PoliciesByNamespaces tests the policiesByNamespaces function, which should return a slice of policy names for a given slice of namespaces.
+func TestPolicyStore_PoliciesByNamespaces(t *testing.T) {
+	_, ps := mockPolicyWithCore(t, false)
+
+	ctxRoot := namespace.RootContext(context.Background())
+	rootNs := namespace.RootNamespace
+
+	parsedPolicy, _ := ParseACLPolicy(rootNs, aclPolicy)
+
+	err := ps.SetPolicy(ctxRoot, parsedPolicy)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	// Get should work
+	pResult, err := ps.GetPolicy(ctxRoot, "dev", PolicyTypeACL)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+	if !reflect.DeepEqual(pResult, parsedPolicy) {
+		t.Fatalf("bad: %v", pResult)
+	}
+
+	out, err := ps.policiesByNamespaces(ctxRoot, PolicyTypeACL, []*namespace.Namespace{rootNs})
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	expectedResult := []string{"default", "dev"}
+	if !reflect.DeepEqual(expectedResult, out) {
+		t.Fatalf("expected: %v\ngot: %v", expectedResult, out)
+	}
 }

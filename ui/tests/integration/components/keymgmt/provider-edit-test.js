@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import { module, test } from 'qunit';
 import { setupRenderingTest } from 'ember-qunit';
 import { render } from '@ember/test-helpers';
@@ -148,7 +153,7 @@ module('Integration | Component | keymgmt/provider-edit', function (hooks) {
         @mode="create"
       />`);
 
-    assert.dom(`[${ts}-header]`).hasText('Create provider', 'Page header renders');
+    assert.dom(`[${ts}-header]`).hasText('Create Provider', 'Page header renders');
     assert.dom(`[${ts}-config-title]`).exists('Config header shown in create mode');
     assert.dom(`[${ts}-creds-title]`).doesNotExist('New credentials header hidden in create mode');
 
@@ -210,7 +215,7 @@ module('Integration | Component | keymgmt/provider-edit', function (hooks) {
         @mode="edit"
       />`);
 
-    assert.dom(`[${ts}-header]`).hasText('Update credentials', 'Page header renders');
+    assert.dom(`[${ts}-header]`).hasText('Update Credentials', 'Page header renders');
     assert.dom(`[${ts}-config-title]`).doesNotExist('Config header hidden in edit mode');
     assert.dom(`[${ts}-creds-title]`).exists('New credentials header shown in edit mode');
 

@@ -7,9 +7,9 @@ description: |-
   in the cloud.
 ---
 
-# Automated Integrated Storage Snapshots
+# Automated integrated storage snapshots
 
--> **Note**: This feature requires [Vault Enterprise](https://www.hashicorp.com/products/vault/)
+@include 'alerts/enterprise-and-hcp-plus.mdx'
 
 Any production system should include a provision for taking regular backups.
 Vault Enterprise can be configured to take and store snapshots at a specific
@@ -35,7 +35,15 @@ and GCP can be used without specifying credentials, by ensuring that the VMs on
 which Vault is running have been granted permission to access the specified
 object store.
 
-# vs Snapshot Agents
+<Note>
+
+Currently, Vault does not allow the use of AWS IAM Roles for EKS Service
+Accounts to authenticate to Amazon S3 buckets for the Automated Integrated
+Storage Snapshots.
+
+</Note>
+
+# vs snapshot agents
 
 Nomad and Consul Enterprise offer the same functionality in a slightly different way.
 They provide a `snapshot agent`, which is a standalone program that runs

@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import Component from '@glimmer/component';
 import { action } from '@ember/object';
 import { task } from 'ember-concurrency';
@@ -40,6 +45,8 @@ export default class PkiIssuerCrossSign extends Component {
   @service store;
   @tracked formData = [];
   @tracked signedIssuers = [];
+  @tracked intermediateIssuers = {};
+  @tracked validationErrors = [];
 
   inputFields = [
     {
@@ -73,6 +80,23 @@ export default class PkiIssuerCrossSign extends Component {
   *submit(e) {
     e.preventDefault();
     this.signedIssuers = [];
+    this.validationErrors = [];
+
+    // Validate name input for new issuer does not already exist in mount
+    for (let row = 0; row < this.formData.length; row++) {
+      const { intermediateMount, newCrossSignedIssuer } = this.formData[row];
+      const issuers = yield this.store
+        .query('pki/issuer', { backend: intermediateMount })
+        .then((resp) => resp.map(({ issuerName, issuerId }) => ({ issuerName, issuerId })))
+        .catch(() => []);
+
+      // for cross-signing error handling we want to record the list of issuers before the process starts
+      this.intermediateIssuers[intermediateMount] = issuers;
+      this.validationErrors.addObject({
+        newCrossSignedIssuer: this.nameValidation(newCrossSignedIssuer, issuers),
+      });
+    }
+    if (this.validationErrors.any((row) => !row.newCrossSignedIssuer.isValid)) return;
 
     // iterate through submitted data and cross-sign each certificate
     for (let row = 0; row < this.formData.length; row++) {
@@ -99,12 +123,16 @@ export default class PkiIssuerCrossSign extends Component {
   @action
   async crossSignIntermediate(intMount, intName, newCrossSignedIssuer) {
     // 1. Fetch issuer we want to sign
-    //
     // What/Recovery: any failure is early enough that you can bail safely/normally.
     const existingIssuer = await this.store.queryRecord('pki/issuer', {
       backend: intMount,
       id: intName,
     });
+
+    // Return if user is attempting to self-sign issuer
+    if (existingIssuer.issuerId === this.args.parentIssuer.issuerId) {
+      throw new Error('Cross-signing a root issuer with itself must be performed manually using the CLI.');
+    }
 
     // Translate certificate values to API parameters to pass along: CSR -> Signed CSR -> Cross-Signed issuer
     // some of these values do not apply to a CSR, but pass anyway. If there is any issue parsing the certificate,
@@ -117,7 +145,6 @@ export default class PkiIssuerCrossSign extends Component {
     }
 
     // 2. Create the new CSR
-    //
     // What/Recovery: any failure is early enough that you can bail safely/normally.
     const newCsr = await this.store
       .createRecord('pki/action', {
@@ -133,7 +160,6 @@ export default class PkiIssuerCrossSign extends Component {
 
     // 3. Sign newCSR with correct parent to create cross-signed cert, "issuing"
     // an intermediate certificate.
-    //
     // What/Recovery: any failure is early enough that you can bail safely/normally.
     const signedCaChain = await this.store
       .createRecord('pki/action', {
@@ -151,9 +177,7 @@ export default class PkiIssuerCrossSign extends Component {
       .then(({ caChain }) => caChain.join('\n'));
 
     // 4. Import the newly cross-signed cert to become an issuer
-    //
     // What/Recovery:
-    //
     //   1. Permission issue -> give the cert (`signedCaChain`) to the user,
     //      let them import & name. (Issue you have is that you already issued
     //      it (step 3) and so "undo" would mean revoking the cert, which
@@ -181,13 +205,17 @@ export default class PkiIssuerCrossSign extends Component {
     //       the newly issued intermediate CA, so that they can do recovery
     //       as they'd like.
     const issuerId = await this.store
-      .createRecord('pki/issuer', { pemBundle: signedCaChain })
-      .save({ adapterOptions: { import: true, mount: intMount } })
+      .createRecord('pki/action', { pemBundle: signedCaChain })
+      .save({ adapterOptions: { actionType: 'import', mount: intMount, useIssuer: true } })
       .then((importedIssuer) => {
         return Object.keys(importedIssuer.mapping).find(
           // matching key is the issuer_id
           (key) => importedIssuer.mapping[key] === existingIssuer.keyId
         );
+      })
+      .catch((e) => {
+        console.debug('CA_CHAIN \n', signedCaChain); // eslint-disable-line
+        throw new Error(`${errorMessage(e)} See console for signed ca_chain data.`);
       });
 
     // 5. Fetch issuer imported above by issuer_id, name and save
@@ -210,6 +238,16 @@ export default class PkiIssuerCrossSign extends Component {
   @action
   reset() {
     this.signedIssuers = [];
+    this.validationErrors = [];
     this.formData = [];
+  }
+
+  nameValidation(nameInput, existing) {
+    if (existing.any((i) => i.issuerName === nameInput || i.issuerId === nameInput))
+      return {
+        errors: [`Issuer reference '${nameInput}' already exists in this mount.`],
+        isValid: false,
+      };
+    return { errors: [], isValid: true };
   }
 }

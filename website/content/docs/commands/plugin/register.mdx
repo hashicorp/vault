@@ -36,13 +36,13 @@ $ vault plugin register \
 The following flags are available in addition to the [standard set of
 flags](/vault/docs/commands) included on all commands.
 
-### Output Options
+### Output options
 
 - `-format` `(string: "table")` - Print the output in the given format. Valid
   formats are "table", "json", or "yaml". This can also be specified via the
   `VAULT_FORMAT` environment variable.
 
-### Command Options
+### Command options
 
 - `-sha256` `(string: <required>)` - Checksum (SHA256) of the plugin binary.
 
@@ -52,6 +52,6 @@ flags](/vault/docs/commands) included on all commands.
 - `-command` `(string: "")` - Name of the command to run to invoke the binary.
   By default, this is the name of the plugin.
 
-- `-plugin-version` `(string: "")` - Semantic version of the plugin to run from
+- `-version` `(string: "")` - Semantic version of the plugin to run from
   the catalog. If unspecified, refers to the unversioned plugin registered with
   the same name and type, or the built-in plugin, in that order of precedence.

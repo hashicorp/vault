@@ -1,39 +1,59 @@
-{{#if this.licenseExpired}}
-  <div class="license-banner-wrapper" data-test-license-banner data-test-license-banner-expired>
-    <AlertBanner
-      @bannerType="license"
-      @type="danger"
-      @title="License expired"
-      @message="Your Vault license expired on {{date-format
-        @expiry
-        'MMM d, yyyy'
-      }}. Add a new license to your configuration and restart Vault."
-      @marginless={{true}}
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
+{{#if (and this.licenseExpired (not this.expiredDismissed))}}
+  <div class="license-banner-wrapper">
+    <Hds::Alert
+      @type="inline"
+      @color="critical"
+      @onDismiss={{fn this.dismissBanner "expired"}}
+      data-test-license-banner-expired
+      as |A|
     >
-      <DocLink @path="/vault/tutorials/enterprise/hashicorp-enterprise-license">
-        Read documentation
-      </DocLink>
-    </AlertBanner>
+      <A.Title>License expired</A.Title>
+      <A.Description>
+        Your Vault license expired on
+        {{date-format @expiry "MMM d, yyyy"}}. Add a new license to your configuration and restart Vault.
+      </A.Description>
+      <A.Description class="has-top-margin-xs">
+        <DocLink @path="/vault/tutorials/enterprise/hashicorp-enterprise-license">
+          Read documentation
+          <Icon @name="learn-link" />
+        </DocLink>
+      </A.Description>
+    </Hds::Alert>
   </div>
-{{else if (lte this.licenseExpiringInDays 30)}}
-  <div class="license-banner-wrapper" data-test-license-banner data-test-license-banner-warning>
-    <AlertBanner
-      @bannerType="license"
-      @type="warning"
-      @title="Vault license expiring"
-      @message="Your Vault license will expire in {{this.licenseExpiringInDays}} days at {{date-format
-        @expiry
-        'hh:mm:ss a'
-      }} on {{date-format @expiry 'MMM d, yyyy'}}. {{if
-        @autoloaded
-        'Add a new license to your configuration.'
-        'Keep in mind that your next license will need to be autoloaded'
-      }}"
-      @marginless={{true}}
+{{else if (and (lte this.licenseExpiringInDays 30) (not this.warningDismissed))}}
+  <div class="license-banner-wrapper">
+    <Hds::Alert
+      @type="inline"
+      @color="warning"
+      @onDismiss={{fn this.dismissBanner "warning"}}
+      data-test-license-banner-warning
+      as |A|
     >
-      <DocLink @path="/vault/tutorials/enterprise/hashicorp-enterprise-license">
-        Read documentation
-      </DocLink>
-    </AlertBanner>
+      <A.Title>Vault license expiring</A.Title>
+      <A.Description>
+        Your Vault license will expire in
+        {{this.licenseExpiringInDays}}
+        days at
+        {{date-format @expiry "hh:mm:ss a"}}
+        on
+        {{date-format @expiry "MMM d, yyyy"}}.
+        {{if
+          @autoloaded
+          "Add a new license to your configuration."
+          "Keep in mind that your next license will need to be autoloaded."
+        }}
+      </A.Description>
+      <A.Description class="has-top-margin-xs">
+        <DocLink @path="/vault/tutorials/enterprise/hashicorp-enterprise-license">
+          Read documentation
+          <Icon @name="learn-link" />
+        </DocLink>
+      </A.Description>
+    </Hds::Alert>
   </div>
 {{/if}}

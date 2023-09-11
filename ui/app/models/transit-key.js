@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import Model, { attr } from '@ember-data/model';
 import { alias } from '@ember/object/computed';
 import { set, get, computed } from '@ember/object';
@@ -53,7 +58,6 @@ export default Model.extend({
   }),
   name: attr('string', {
     label: 'Name',
-    fieldValue: 'id',
     readOnly: true,
   }),
   autoRotatePeriod: attr({

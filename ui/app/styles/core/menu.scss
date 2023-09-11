@@ -1,3 +1,27 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
+.menu {
+  font-size: $size-6;
+}
+
+.menu a {
+  display: block;
+  padding: $size-10 $size-9;
+  text-decoration: none;
+}
+
+.menu-label {
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.menu-list {
+  line-height: 1.25;
+}
+
 .column .menu-list a {
   border-radius: 0;
   border-right: 0 solid transparent;
@@ -5,7 +29,6 @@
 
   &:hover,
   &.is-active {
-    color: $menu-item-active-color;
-    background-color: $menu-item-active-background-color;
+    color: $blue;
   }
 }

@@ -1,21 +1,15 @@
+# Copyright (c) HashiCorp, Inc.
+# SPDX-License-Identifier: BUSL-1.1
+
 module "autopilot_upgrade_storageconfig" {
   source = "./modules/autopilot_upgrade_storageconfig"
 }
 
-module "az_finder" {
-  source = "./modules/az_finder"
-}
-
 module "backend_consul" {
-  source = "app.terraform.io/hashicorp-qti/aws-consul/enos"
+  source = "./modules/backend_consul"
 
-  project_name    = var.project_name
-  environment     = "ci"
-  common_tags     = var.tags
-  ssh_aws_keypair = var.aws_ssh_keypair_name
-
-  # Set this to a real license vault if using an Enterprise edition of Consul
-  consul_license = var.backend_license_path == null ? "none" : file(abspath(var.backend_license_path))
+  license   = var.backend_license_path == null ? null : file(abspath(var.backend_license_path))
+  log_level = var.backend_log_level
 }
 
 module "backend_raft" {
@@ -35,12 +29,14 @@ module "build_artifactory" {
 }
 
 module "create_vpc" {
-  source = "app.terraform.io/hashicorp-qti/aws-infra/enos"
+  source = "./modules/create_vpc"
 
-  project_name      = var.project_name
-  environment       = "ci"
-  common_tags       = var.tags
-  ami_architectures = ["amd64", "arm64"]
+  environment = "ci"
+  common_tags = var.tags
+}
+
+module "ec2_info" {
+  source = "./modules/ec2_info"
 }
 
 module "get_local_metadata" {
@@ -65,6 +61,42 @@ module "shutdown_multiple_nodes" {
   source = "./modules/shutdown_multiple_nodes"
 }
 
+# create target instances using ec2:CreateFleet
+module "target_ec2_fleet" {
+  source = "./modules/target_ec2_fleet"
+
+  common_tags  = var.tags
+  project_name = var.project_name
+  ssh_keypair  = var.aws_ssh_keypair_name
+}
+
+# create target instances using ec2:RunInstances
+module "target_ec2_instances" {
+  source = "./modules/target_ec2_instances"
+
+  common_tags  = var.tags
+  project_name = var.project_name
+  ssh_keypair  = var.aws_ssh_keypair_name
+}
+
+# don't create instances but satisfy the module interface
+module "target_ec2_shim" {
+  source = "./modules/target_ec2_shim"
+
+  common_tags  = var.tags
+  project_name = var.project_name
+  ssh_keypair  = var.aws_ssh_keypair_name
+}
+
+# create target instances using ec2:RequestSpotFleet
+module "target_ec2_spot_fleet" {
+  source = "./modules/target_ec2_spot_fleet"
+
+  common_tags  = var.tags
+  project_name = var.project_name
+  ssh_keypair  = var.aws_ssh_keypair_name
+}
+
 module "vault_agent" {
   source = "./modules/vault_agent"
 
@@ -72,6 +104,12 @@ module "vault_agent" {
   vault_instance_count = var.vault_instance_count
 }
 
+module "vault_proxy" {
+  source = "./modules/vault_proxy"
+
+  vault_install_dir    = var.vault_install_dir
+  vault_instance_count = var.vault_instance_count
+}
 
 module "vault_verify_agent_output" {
   source = "./modules/vault_verify_agent_output"
@@ -80,15 +118,11 @@ module "vault_verify_agent_output" {
 }
 
 module "vault_cluster" {
-  source = "app.terraform.io/hashicorp-qti/aws-vault/enos"
-  # source = "../../terraform-enos-aws-vault"
+  source = "./modules/vault_cluster"
 
-  common_tags       = var.tags
-  environment       = "ci"
-  instance_count    = var.vault_instance_count
-  project_name      = var.project_name
-  ssh_aws_keypair   = var.aws_ssh_keypair_name
-  vault_install_dir = var.vault_install_dir
+  install_dir    = var.vault_install_dir
+  consul_license = var.backend_license_path == null ? null : file(abspath(var.backend_license_path))
+  log_level      = var.vault_log_level
 }
 
 module "vault_get_cluster_ips" {

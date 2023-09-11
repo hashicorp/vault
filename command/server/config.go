@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package server
 
 import (
@@ -5,7 +8,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"math"
 	"os"
 	"path/filepath"
@@ -23,6 +25,8 @@ import (
 	"github.com/hashicorp/vault/internalshared/configutil"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/strutil"
+	"github.com/hashicorp/vault/sdk/helper/testcluster"
+	"github.com/mitchellh/mapstructure"
 )
 
 const (
@@ -109,6 +113,8 @@ type Config struct {
 	LogRequestsLevelRaw interface{} `hcl:"log_requests_level"`
 
 	DetectDeadlocks string `hcl:"detect_deadlocks"`
+
+	ImpreciseLeaseRoleTracking bool `hcl:"imprecise_lease_role_tracking"`
 
 	EnableResponseHeaderRaftNodeID    bool        `hcl:"-"`
 	EnableResponseHeaderRaftNodeIDRaw interface{} `hcl:"enable_response_header_raft_node_id"`
@@ -197,13 +203,13 @@ ui_config {
 }
 
 // DevTLSConfig is a Config that is used for dev tls mode of Vault.
-func DevTLSConfig(storageType, certDir string) (*Config, error) {
+func DevTLSConfig(storageType, certDir string, extraSANs []string) (*Config, error) {
 	ca, err := GenerateCA()
 	if err != nil {
 		return nil, err
 	}
 
-	cert, key, err := GenerateCert(ca.Template, ca.Signer)
+	cert, key, err := generateCert(ca.Template, ca.Signer, extraSANs)
 	if err != nil {
 		return nil, err
 	}
@@ -219,7 +225,10 @@ func DevTLSConfig(storageType, certDir string) (*Config, error) {
 	if err := os.WriteFile(fmt.Sprintf("%s/%s", certDir, VaultDevKeyFilename), []byte(key), 0o400); err != nil {
 		return nil, err
 	}
+	return parseDevTLSConfig(storageType, certDir)
+}
 
+func parseDevTLSConfig(storageType, certDir string) (*Config, error) {
 	hclStr := `
 disable_mlock = true
 
@@ -245,8 +254,8 @@ ui_config {
   enabled = true
 }
 `
-
-	hclStr = fmt.Sprintf(hclStr, certDir, certDir, storageType)
+	certDirEscaped := strings.Replace(certDir, "\\", "\\\\", -1)
+	hclStr = fmt.Sprintf(hclStr, certDirEscaped, certDirEscaped, storageType)
 	parsed, err := ParseConfig(hclStr, "")
 	if err != nil {
 		return nil, err
@@ -437,6 +446,11 @@ func (c *Config) Merge(c2 *Config) *Config {
 		result.DetectDeadlocks = c2.DetectDeadlocks
 	}
 
+	result.ImpreciseLeaseRoleTracking = c.ImpreciseLeaseRoleTracking
+	if c2.ImpreciseLeaseRoleTracking {
+		result.ImpreciseLeaseRoleTracking = c2.ImpreciseLeaseRoleTracking
+	}
+
 	result.EnableResponseHeaderRaftNodeID = c.EnableResponseHeaderRaftNodeID
 	if c2.EnableResponseHeaderRaftNodeID {
 		result.EnableResponseHeaderRaftNodeID = c2.EnableResponseHeaderRaftNodeID
@@ -472,6 +486,11 @@ func (c *Config) Merge(c2 *Config) *Config {
 		}
 	}
 
+	result.AdministrativeNamespacePath = c.AdministrativeNamespacePath
+	if c2.AdministrativeNamespacePath != "" {
+		result.AdministrativeNamespacePath = c2.AdministrativeNamespacePath
+	}
+
 	result.entConfig = c.entConfig.Merge(c2.entConfig)
 
 	result.Experiments = mergeExperiments(c.Experiments, c2.Experiments)
@@ -497,9 +516,14 @@ func LoadConfig(path string) (*Config, error) {
 				return nil, errors.New("Error parsing the environment variable VAULT_ENABLE_FILE_PERMISSIONS_CHECK")
 			}
 		}
+		f, err := os.Open(path)
+		if err != nil {
+			return nil, err
+		}
+		defer f.Close()
 
 		if enableFilePermissionsCheck {
-			err = osutil.OwnerPermissionsMatch(path, 0, 0)
+			err = osutil.OwnerPermissionsMatchFile(f, 0, 0)
 			if err != nil {
 				return nil, err
 			}
@@ -514,13 +538,21 @@ func CheckConfig(c *Config, e error) (*Config, error) {
 		return c, e
 	}
 
-	if len(c.Seals) == 2 {
-		switch {
-		case c.Seals[0].Disabled && c.Seals[1].Disabled:
-			return nil, errors.New("seals: two seals provided but both are disabled")
-		case !c.Seals[0].Disabled && !c.Seals[1].Disabled:
-			return nil, errors.New("seals: two seals provided but neither is disabled")
+	if err := c.checkSealConfig(); err != nil {
+		return nil, err
+	}
+
+	sealMap := make(map[string]*configutil.KMS)
+	for _, seal := range c.Seals {
+		if seal.Name == "" {
+			return nil, errors.New("seals: seal name is empty")
 		}
+
+		if _, ok := sealMap[seal.Name]; ok {
+			return nil, errors.New("seals: seal names must be unique")
+		}
+
+		sealMap[seal.Name] = seal
 	}
 
 	return c, nil
@@ -528,8 +560,14 @@ func CheckConfig(c *Config, e error) (*Config, error) {
 
 // LoadConfigFile loads the configuration from the given file.
 func LoadConfigFile(path string) (*Config, error) {
+	// Open the file
+	f, err := os.Open(path)
+	if err != nil {
+		return nil, err
+	}
+	defer f.Close()
 	// Read the file
-	d, err := ioutil.ReadFile(path)
+	d, err := io.ReadAll(f)
 	if err != nil {
 		return nil, err
 	}
@@ -550,7 +588,7 @@ func LoadConfigFile(path string) (*Config, error) {
 
 	if enableFilePermissionsCheck {
 		// check permissions of the config file
-		err = osutil.OwnerPermissionsMatch(path, 0, 0)
+		err = osutil.OwnerPermissionsMatchFile(f, 0, 0)
 		if err != nil {
 			return nil, err
 		}
@@ -787,7 +825,7 @@ func ExperimentsFromEnvAndCLI(config *Config, envKey string, flagExperiments []s
 	return nil
 }
 
-// Validate checks each experiment is a known experiment.
+// validateExperiments checks each experiment is a known experiment.
 func validateExperiments(experiments []string) error {
 	var invalid []string
 
@@ -1151,6 +1189,8 @@ func (c *Config) Sanitized() map[string]interface{} {
 		"experiments":        c.Experiments,
 
 		"detect_deadlocks": c.DetectDeadlocks,
+
+		"imprecise_lease_role_tracking": c.ImpreciseLeaseRoleTracking,
 	}
 	for k, v := range sharedResult {
 		result[k] = v
@@ -1158,23 +1198,39 @@ func (c *Config) Sanitized() map[string]interface{} {
 
 	// Sanitize storage stanza
 	if c.Storage != nil {
+		storageType := c.Storage.Type
 		sanitizedStorage := map[string]interface{}{
-			"type":               c.Storage.Type,
+			"type":               storageType,
 			"redirect_addr":      c.Storage.RedirectAddr,
 			"cluster_addr":       c.Storage.ClusterAddr,
 			"disable_clustering": c.Storage.DisableClustering,
 		}
+
+		if storageType == "raft" {
+			sanitizedStorage["raft"] = map[string]interface{}{
+				"max_entry_size": c.Storage.Config["max_entry_size"],
+			}
+		}
+
 		result["storage"] = sanitizedStorage
 	}
 
 	// Sanitize HA storage stanza
 	if c.HAStorage != nil {
+		haStorageType := c.HAStorage.Type
 		sanitizedHAStorage := map[string]interface{}{
-			"type":               c.HAStorage.Type,
+			"type":               haStorageType,
 			"redirect_addr":      c.HAStorage.RedirectAddr,
 			"cluster_addr":       c.HAStorage.ClusterAddr,
 			"disable_clustering": c.HAStorage.DisableClustering,
 		}
+
+		if haStorageType == "raft" {
+			sanitizedHAStorage["raft"] = map[string]interface{}{
+				"max_entry_size": c.HAStorage.Config["max_entry_size"],
+			}
+		}
+
 		result["ha_storage"] = sanitizedHAStorage
 	}
 
@@ -1212,4 +1268,13 @@ func (c *Config) Prune() {
 func (c *Config) found(s, k string) {
 	delete(c.UnusedKeys, s)
 	c.FoundKeys = append(c.FoundKeys, k)
+}
+
+func (c *Config) ToVaultNodeConfig() (*testcluster.VaultNodeConfig, error) {
+	var vnc testcluster.VaultNodeConfig
+	err := mapstructure.Decode(c, &vnc)
+	if err != nil {
+		return nil, err
+	}
+	return &vnc, nil
 }

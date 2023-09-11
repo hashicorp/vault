@@ -99,7 +99,7 @@ Usage: vault operator raft list-peers
 	  $ vault operator raft list-peers
 ```
 
-### Example Output
+### Example output
 
 ```json
 {
@@ -143,6 +143,10 @@ Usage: vault operator raft remove-peer <server_id>
 
 	  $ vault operator raft remove-peer node1
 ```
+
+<Note>
+  Once a node is removed, its Raft data needs to be deleted before it may be joined back into an existing cluster. This requires shutting down the Vault process, deleting the data, then restarting the Vault process on the removed node.
+</Note>
 
 ## snapshot
 
@@ -228,7 +232,7 @@ Usage: vault operator raft autopilot state
     $ vault operator raft autopilot state
 ```
 
-#### Example Output
+#### Example output
 
 ```text
 Healthy:                      true
@@ -260,7 +264,7 @@ Servers:
 ```
 Vault Enterprise will include additional output related to automated upgrades and redundancy zones.
 
-#### Example Vault Enterprise Output
+#### Example Vault enterprise output
 
 ```text
 Redundancy Zones:

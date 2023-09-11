@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 export const SELECTORS = {
   // key index
   importKey: '[data-test-pki-key-import]',
@@ -17,4 +22,5 @@ export const SELECTORS = {
   downloadButton: '[data-test-download-button]',
   keyEditLink: '[data-test-pki-key-edit]',
   confirmDelete: '[data-test-confirm-button]',
+  nextStepsAlert: '[data-test-pki-key-next-steps]',
 };

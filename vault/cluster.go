@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package vault
 
 import (
@@ -320,7 +323,6 @@ func (c *Core) startClusterListener(ctx context.Context) error {
 	if networkLayer == nil {
 		tcpLogger := c.logger.Named("cluster-listener.tcp")
 		networkLayer = cluster.NewTCPLayer(c.clusterListenerAddrs, tcpLogger)
-		c.AddLogger(tcpLogger)
 	}
 
 	listenerLogger := c.logger.Named("cluster-listener")
@@ -328,8 +330,6 @@ func (c *Core) startClusterListener(ctx context.Context) error {
 		c.clusterCipherSuites,
 		listenerLogger,
 		5*c.clusterHeartbeatInterval))
-
-	c.AddLogger(listenerLogger)
 
 	err := c.getClusterListener().Run(ctx)
 	if err != nil {

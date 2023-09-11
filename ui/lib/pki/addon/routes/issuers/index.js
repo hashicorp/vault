@@ -1,19 +1,19 @@
-import PkiOverviewRoute from '../overview';
-import { inject as service } from '@ember/service';
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
 
-export default class PkiIssuersListRoute extends PkiOverviewRoute {
+import Route from '@ember/routing/route';
+import { inject as service } from '@ember/service';
+import { PKI_DEFAULT_EMPTY_STATE_MSG } from 'pki/routes/overview';
+
+export default class PkiIssuersListRoute extends Route {
   @service store;
   @service secretMountPath;
-  @service pathHelp;
-
-  beforeModel() {
-    // Must call this promise before the model hook otherwise it doesn't add OpenApi to record.
-    return this.pathHelp.getNewModel('pki/issuer', this.secretMountPath.currentPath);
-  }
 
   model() {
     return this.store
-      .query('pki/issuer', { backend: this.secretMountPath.currentPath })
+      .query('pki/issuer', { backend: this.secretMountPath.currentPath, isListView: true })
       .then((issuersModel) => {
         return { issuersModel, parentModel: this.modelFor('issuers') };
       })
@@ -33,5 +33,6 @@ export default class PkiIssuersListRoute extends PkiOverviewRoute {
       { label: this.secretMountPath.currentPath, route: 'overview' },
       { label: 'issuers', route: 'issuers.index' },
     ];
+    controller.notConfiguredMessage = PKI_DEFAULT_EMPTY_STATE_MSG;
   }
 }

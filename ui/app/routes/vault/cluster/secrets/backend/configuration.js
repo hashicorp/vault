@@ -1,14 +1,16 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import { inject as service } from '@ember/service';
 import Route from '@ember/routing/route';
 
 export default Route.extend({
-  wizard: service(),
   store: service(),
   async model() {
     const backend = this.modelFor('vault.cluster.secrets.backend');
-    if (this.wizard.featureState === 'list') {
-      this.wizard.transitionFeatureMachine(this.wizard.featureState, 'CONTINUE', backend.get('type'));
-    }
+    // TODO kv engine cleanup - this can be removed when KV has fully moved to separate ember engine and list view config details menu is refactored
     if (backend.isV2KV) {
       const canRead = await this.store
         .findRecord('capabilities', `${backend.id}/config`)

@@ -1,11 +1,17 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import AdapterError from '@ember-data/adapter/error';
 import { set } from '@ember/object';
+import Ember from 'ember';
 import { resolve } from 'rsvp';
 import { inject as service } from '@ember/service';
 import Route from '@ember/routing/route';
-import utils from 'vault/lib/key-utils';
 import UnloadModelRoute from 'vault/mixins/unload-model-route';
 import { encodePath, normalizePath } from 'vault/utils/path-encoding-helpers';
+import { keyIsFolder, parentKeyForKey } from 'core/utils/key-utils';
 
 export default Route.extend(UnloadModelRoute, {
   store: service(),
@@ -74,9 +80,9 @@ export default Route.extend(UnloadModelRoute, {
   beforeModel({ to: { queryParams } }) {
     const secret = this.secretParam();
     return this.buildModel(secret, queryParams).then(() => {
-      const parentKey = utils.parentKeyForKey(secret);
+      const parentKey = parentKeyForKey(secret);
       const mode = this.routeName.split('.').pop();
-      if (mode === 'edit' && utils.keyIsFolder(secret)) {
+      if (mode === 'edit' && keyIsFolder(secret)) {
         if (parentKey) {
           return this.transitionTo('vault.cluster.secrets.backend.list', encodePath(parentKey));
         } else {
@@ -104,11 +110,10 @@ export default Route.extend(UnloadModelRoute, {
       ssh: 'role-ssh',
       transform: this.modelTypeForTransform(secret),
       aws: 'role-aws',
-      pki: secret && secret.startsWith('cert/') ? 'pki/cert' : 'pki/pki-role',
       cubbyhole: 'secret',
-      kv: backendModel.get('modelTypeForKV'),
+      kv: backendModel.modelTypeForKV,
       keymgmt: `keymgmt/${options.queryParams?.itemType || 'key'}`,
-      generic: backendModel.get('modelTypeForKV'),
+      generic: backendModel.modelTypeForKV,
     };
     return types[type];
   },
@@ -234,9 +239,6 @@ export default Route.extend(UnloadModelRoute, {
     if (!secret) {
       secret = '\u0020';
     }
-    if (modelType === 'pki/cert') {
-      secret = secret.replace('cert/', '');
-    }
     if (modelType.startsWith('transform/')) {
       secret = this.transformSecretName(secret, modelType);
     }
@@ -313,6 +315,12 @@ export default Route.extend(UnloadModelRoute, {
     willTransition(transition) {
       /* eslint-disable-next-line ember/no-controller-access-in-routes */
       const { mode, model } = this.controller;
+
+      // If model is clean or deleted, continue
+      if (!model.hasDirtyAttributes || model.isDeleted) {
+        return true;
+      }
+      // TODO kv engine cleanup: below is KV v2 logic, remove with engine work
       const version = model.get('selectedVersion');
       const changed = model.changedAttributes();
       const changedKeys = Object.keys(changed);
@@ -329,14 +337,16 @@ export default Route.extend(UnloadModelRoute, {
       // and explicity ignore it here
       if (
         (mode !== 'show' && changedKeys.length && changedKeys[0] !== 'backend') ||
-        (mode !== 'show' && version && Object.keys(version.changedAttributes()).length)
+        (mode !== 'show' && version && version.hasDirtyAttributes)
       ) {
         if (
+          Ember.testing ||
           window.confirm(
             'You have unsaved changes. Navigating away will discard these changes. Are you sure you want to discard your changes?'
           )
         ) {
           version && version.rollbackAttributes();
+          model && model.rollbackAttributes();
           this.unloadModel();
           return true;
         } else {

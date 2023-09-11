@@ -1,3 +1,8 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
 {{#if (and (eq this.mode "edit") this.model.canDelete)}}
   <Toolbar>
     <ToolbarActions>
@@ -18,10 +23,10 @@
     <NamespaceReminder @mode={{this.mode}} @noun={{lowercase (humanize this.model.identityType)}} />
     <MessageError @model={{this.model}} />
     {{#if (eq this.mode "merge")}}
-      <AlertBanner
-        @type="warning"
-        @message="Metadata on merged entities is not preserved, you will need to recreate it on the entity you merge to."
-      />
+      <Hds::Alert @type="inline" @color="warning" class="has-bottom-margin-s" as |A|>
+        <A.Title>Warning</A.Title>
+        <A.Description>Metadata on merged entities is not preserved, you will need to recreate it on the entity you merge to.</A.Description>
+      </Hds::Alert>
     {{/if}}
     {{#each this.model.fields as |attr|}}
       <FormField data-test-field={{true}} @attr={{attr}} @model={{@model}}>

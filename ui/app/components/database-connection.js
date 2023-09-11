@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import Component from '@glimmer/component';
 import { inject as service } from '@ember/service';
 import { tracked } from '@glimmer/tracking';
@@ -19,20 +24,12 @@ export default class DatabaseConnectionEdit extends Component {
   @service store;
   @service router;
   @service flashMessages;
-  @service wizard;
 
   @tracked
   showPasswordField = false; // used for edit mode
 
   @tracked
   showSaveModal = false; // used for create mode
-
-  constructor() {
-    super(...arguments);
-    if (this.wizard.featureState === 'details' || this.wizard.featureState === 'connection') {
-      this.wizard.transitionFeatureMachine(this.wizard.featureState, 'CONTINUE', 'database');
-    }
-  }
 
   rotateCredentials(backend, name) {
     const adapter = this.store.adapterFor('database/connection');

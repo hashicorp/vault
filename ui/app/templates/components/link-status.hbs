@@ -1,5 +1,10 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
 {{#if (and this.state this.version.isEnterprise)}}
-  <div class="navbar-status {{if (eq this.state 'connected') 'connected' 'warning'}}">
+  <div class="link-status {{if (eq this.state 'connected') 'connected' 'warning'}}">
     <Icon @name="info" />
     <p data-test-link-status>
       {{#if (eq this.state "connected")}}

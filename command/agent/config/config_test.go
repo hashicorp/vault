@@ -1,12 +1,19 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package config
 
 import (
 	"os"
+	"syscall"
 	"testing"
 	"time"
 
 	"github.com/go-test/deep"
 	ctconfig "github.com/hashicorp/consul-template/config"
+	"golang.org/x/exp/slices"
+
+	"github.com/hashicorp/vault/command/agentproxyshared"
 	"github.com/hashicorp/vault/internalshared/configutil"
 	"github.com/hashicorp/vault/sdk/helper/pointerutil"
 )
@@ -77,7 +84,7 @@ func TestLoadConfigFile_AgentCache(t *testing.T) {
 			UseAutoAuthToken:    true,
 			UseAutoAuthTokenRaw: true,
 			ForceAutoAuthToken:  false,
-			Persist: &Persist{
+			Persist: &agentproxyshared.PersistConfig{
 				Type:                    "kubernetes",
 				Path:                    "/vault/agent-cache/",
 				KeepAfterImport:         true,
@@ -182,7 +189,7 @@ func TestLoadConfigDir_AgentCache(t *testing.T) {
 			UseAutoAuthToken:    true,
 			UseAutoAuthTokenRaw: true,
 			ForceAutoAuthToken:  false,
-			Persist: &Persist{
+			Persist: &agentproxyshared.PersistConfig{
 				Type:                    "kubernetes",
 				Path:                    "/vault/agent-cache/",
 				KeepAfterImport:         true,
@@ -382,7 +389,7 @@ func TestLoadConfigFile_AgentCache_NoListeners(t *testing.T) {
 			UseAutoAuthToken:    true,
 			UseAutoAuthTokenRaw: true,
 			ForceAutoAuthToken:  false,
-			Persist: &Persist{
+			Persist: &agentproxyshared.PersistConfig{
 				Type:                    "kubernetes",
 				Path:                    "/vault/agent-cache/",
 				KeepAfterImport:         true,
@@ -610,8 +617,7 @@ func TestLoadConfigFile_AgentCache_NoAutoAuth(t *testing.T) {
 	}
 
 	expected := &Config{
-		APIProxy: &APIProxy{},
-		Cache:    &Cache{},
+		Cache: &Cache{},
 		SharedConfig: &configutil.SharedConfig{
 			PidFile: "./pidfile",
 			Listeners: []*configutil.Listener{
@@ -928,10 +934,6 @@ func TestLoadConfigFile_AgentCache_AutoAuth_False(t *testing.T) {
 				},
 			},
 		},
-		APIProxy: &APIProxy{
-			UseAutoAuthToken:   false,
-			ForceAutoAuthToken: false,
-		},
 		Cache: &Cache{
 			UseAutoAuthToken:    false,
 			UseAutoAuthTokenRaw: "false",
@@ -952,9 +954,8 @@ func TestLoadConfigFile_AgentCache_Persist(t *testing.T) {
 	}
 
 	expected := &Config{
-		APIProxy: &APIProxy{},
 		Cache: &Cache{
-			Persist: &Persist{
+			Persist: &agentproxyshared.PersistConfig{
 				Type:                    "kubernetes",
 				Path:                    "/vault/agent-cache/",
 				KeepAfterImport:         false,
@@ -1245,6 +1246,43 @@ func TestLoadConfigFile_Template_NoSinks(t *testing.T) {
 	}
 }
 
+// TestLoadConfigFile_Template_WithCache tests ensures that cache {} stanza is
+// permitted in vault agent configuration with template(s)
+func TestLoadConfigFile_Template_WithCache(t *testing.T) {
+	config, err := LoadConfigFile("./test-fixtures/config-template-with-cache.hcl")
+	if err != nil {
+		t.Fatalf("err: %s", err)
+	}
+
+	expected := &Config{
+		SharedConfig: &configutil.SharedConfig{
+			PidFile: "./pidfile",
+		},
+		AutoAuth: &AutoAuth{
+			Method: &Method{
+				Type:      "aws",
+				MountPath: "auth/aws",
+				Namespace: "my-namespace/",
+				Config: map[string]interface{}{
+					"role": "foobar",
+				},
+			},
+		},
+		Cache: &Cache{},
+		Templates: []*ctconfig.TemplateConfig{
+			{
+				Source:      pointerutil.StringPtr("/path/on/disk/to/template.ctmpl"),
+				Destination: pointerutil.StringPtr("/path/on/disk/where/template/will/render.txt"),
+			},
+		},
+	}
+
+	config.Prune()
+	if diff := deep.Equal(config, expected); diff != nil {
+		t.Fatal(diff)
+	}
+}
+
 func TestLoadConfigFile_Vault_Retry(t *testing.T) {
 	config, err := LoadConfigFile("./test-fixtures/config-vault-retry.hcl")
 	if err != nil {
@@ -1352,7 +1390,6 @@ func TestLoadConfigFile_EnforceConsistency(t *testing.T) {
 			},
 			PidFile: "",
 		},
-		APIProxy: &APIProxy{},
 		Cache: &Cache{
 			EnforceConsistency: "always",
 			WhenInconsistent:   "retry",
@@ -2103,5 +2140,191 @@ func TestLoadConfigFile_Bad_Value_Disable_Keep_Alives(t *testing.T) {
 	_, err := LoadConfigFile("./test-fixtures/bad-config-disable-keep-alives.hcl")
 	if err == nil {
 		t.Fatal("should have error, it didn't")
+	}
+}
+
+// TestLoadConfigFile_EnvTemplates_Simple loads and validates an env_template config
+func TestLoadConfigFile_EnvTemplates_Simple(t *testing.T) {
+	cfg, err := LoadConfigFile("./test-fixtures/config-env-templates-simple.hcl")
+	if err != nil {
+		t.Fatalf("error loading config file: %s", err)
+	}
+
+	if err := cfg.ValidateConfig(); err != nil {
+		t.Fatalf("validation error: %s", err)
+	}
+
+	expectedKey := "MY_DATABASE_USER"
+	found := false
+	for _, envTemplate := range cfg.EnvTemplates {
+		if *envTemplate.MapToEnvironmentVariable == expectedKey {
+			found = true
+		}
+	}
+	if !found {
+		t.Fatalf("expected environment variable name to be populated")
+	}
+}
+
+// TestLoadConfigFile_EnvTemplates_Complex loads and validates an env_template config
+func TestLoadConfigFile_EnvTemplates_Complex(t *testing.T) {
+	cfg, err := LoadConfigFile("./test-fixtures/config-env-templates-complex.hcl")
+	if err != nil {
+		t.Fatalf("error loading config file: %s", err)
+	}
+
+	if err := cfg.ValidateConfig(); err != nil {
+		t.Fatalf("validation error: %s", err)
+	}
+
+	expectedKeys := []string{
+		"FOO_PASSWORD",
+		"FOO_USER",
+	}
+
+	envExists := func(key string) bool {
+		for _, envTmpl := range cfg.EnvTemplates {
+			if *envTmpl.MapToEnvironmentVariable == key {
+				return true
+			}
+		}
+		return false
+	}
+
+	for _, expected := range expectedKeys {
+		if !envExists(expected) {
+			t.Fatalf("expected environment variable %s", expected)
+		}
+	}
+}
+
+// TestLoadConfigFile_EnvTemplates_WithSource loads and validates an
+// env_template config with "source" instead of "contents"
+func TestLoadConfigFile_EnvTemplates_WithSource(t *testing.T) {
+	cfg, err := LoadConfigFile("./test-fixtures/config-env-templates-with-source.hcl")
+	if err != nil {
+		t.Fatalf("error loading config file: %s", err)
+	}
+
+	if err := cfg.ValidateConfig(); err != nil {
+		t.Fatalf("validation error: %s", err)
+	}
+}
+
+// TestLoadConfigFile_EnvTemplates_NoName ensures that env_template with no name triggers an error
+func TestLoadConfigFile_EnvTemplates_NoName(t *testing.T) {
+	_, err := LoadConfigFile("./test-fixtures/bad-config-env-templates-no-name.hcl")
+	if err == nil {
+		t.Fatalf("expected error")
+	}
+}
+
+// TestLoadConfigFile_EnvTemplates_ExecInvalidSignal ensures that an invalid signal triggers an error
+func TestLoadConfigFile_EnvTemplates_ExecInvalidSignal(t *testing.T) {
+	_, err := LoadConfigFile("./test-fixtures/bad-config-env-templates-invalid-signal.hcl")
+	if err == nil {
+		t.Fatalf("expected error")
+	}
+}
+
+// TestLoadConfigFile_EnvTemplates_ExecSimple validates the exec section with default parameters
+func TestLoadConfigFile_EnvTemplates_ExecSimple(t *testing.T) {
+	cfg, err := LoadConfigFile("./test-fixtures/config-env-templates-simple.hcl")
+	if err != nil {
+		t.Fatalf("error loading config file: %s", err)
+	}
+
+	if err := cfg.ValidateConfig(); err != nil {
+		t.Fatalf("validation error: %s", err)
+	}
+
+	expectedCmd := []string{"/path/to/my/app", "arg1", "arg2"}
+	if !slices.Equal(cfg.Exec.Command, expectedCmd) {
+		t.Fatal("exec.command does not have expected value")
+	}
+
+	// check defaults
+	if cfg.Exec.RestartOnSecretChanges != "always" {
+		t.Fatalf("expected cfg.Exec.RestartOnSecretChanges to be 'always', got '%s'", cfg.Exec.RestartOnSecretChanges)
+	}
+
+	if cfg.Exec.RestartStopSignal != syscall.SIGTERM {
+		t.Fatalf("expected cfg.Exec.RestartStopSignal to be 'syscall.SIGTERM', got '%s'", cfg.Exec.RestartStopSignal)
+	}
+}
+
+// TestLoadConfigFile_EnvTemplates_ExecComplex validates the exec section with non-default parameters
+func TestLoadConfigFile_EnvTemplates_ExecComplex(t *testing.T) {
+	cfg, err := LoadConfigFile("./test-fixtures/config-env-templates-complex.hcl")
+	if err != nil {
+		t.Fatalf("error loading config file: %s", err)
+	}
+
+	if err := cfg.ValidateConfig(); err != nil {
+		t.Fatalf("validation error: %s", err)
+	}
+
+	if !slices.Equal(cfg.Exec.Command, []string{"env"}) {
+		t.Fatal("exec.command does not have expected value")
+	}
+
+	if cfg.Exec.RestartOnSecretChanges != "never" {
+		t.Fatalf("expected cfg.Exec.RestartOnSecretChanges to be 'never', got %q", cfg.Exec.RestartOnSecretChanges)
+	}
+
+	if cfg.Exec.RestartStopSignal != syscall.SIGINT {
+		t.Fatalf("expected cfg.Exec.RestartStopSignal to be 'syscall.SIGINT', got %q", cfg.Exec.RestartStopSignal)
+	}
+}
+
+// TestLoadConfigFile_Bad_EnvTemplates_MissingExec ensures that ValidateConfig
+// errors when "env_template" stanza(s) are specified but "exec" is missing
+func TestLoadConfigFile_Bad_EnvTemplates_MissingExec(t *testing.T) {
+	config, err := LoadConfigFile("./test-fixtures/bad-config-env-templates-missing-exec.hcl")
+	if err != nil {
+		t.Fatalf("error loading config file: %s", err)
+	}
+
+	if err := config.ValidateConfig(); err == nil {
+		t.Fatal("expected an error from ValidateConfig: exec section is missing")
+	}
+}
+
+// TestLoadConfigFile_Bad_EnvTemplates_WithProxy ensures that ValidateConfig
+// errors when both env_template and api_proxy stanzas are present
+func TestLoadConfigFile_Bad_EnvTemplates_WithProxy(t *testing.T) {
+	config, err := LoadConfigFile("./test-fixtures/bad-config-env-templates-with-proxy.hcl")
+	if err != nil {
+		t.Fatalf("error loading config file: %s", err)
+	}
+
+	if err := config.ValidateConfig(); err == nil {
+		t.Fatal("expected an error from ValidateConfig: listener / api_proxy are not compatible with env_template")
+	}
+}
+
+// TestLoadConfigFile_Bad_EnvTemplates_WithFileTemplates ensures that
+// ValidateConfig errors when both env_template and template stanzas are present
+func TestLoadConfigFile_Bad_EnvTemplates_WithFileTemplates(t *testing.T) {
+	config, err := LoadConfigFile("./test-fixtures/bad-config-env-templates-with-file-templates.hcl")
+	if err != nil {
+		t.Fatalf("error loading config file: %s", err)
+	}
+
+	if err := config.ValidateConfig(); err == nil {
+		t.Fatal("expected an error from ValidateConfig: file template stanza is not compatible with env_template")
+	}
+}
+
+// TestLoadConfigFile_Bad_EnvTemplates_DisalowedFields ensure that
+// ValidateConfig errors for disalowed env_template fields
+func TestLoadConfigFile_Bad_EnvTemplates_DisalowedFields(t *testing.T) {
+	config, err := LoadConfigFile("./test-fixtures/bad-config-env-templates-disalowed-fields.hcl")
+	if err != nil {
+		t.Fatalf("error loading config file: %s", err)
+	}
+
+	if err := config.ValidateConfig(); err == nil {
+		t.Fatal("expected an error from ValidateConfig: disallowed fields specified in env_template")
 	}
 }

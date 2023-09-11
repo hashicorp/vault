@@ -1,0 +1,476 @@
+on:
+  workflow_call:
+    inputs:
+      go-arch:
+        description: The execution architecture (arm, amd64, etc.)
+        required: true
+        type: string
+      enterprise:
+        description: A flag indicating if this workflow is executing for the enterprise repository.
+        required: true
+        type: string
+      total-runners:
+        description: Number of runners to use for executing non-binary tests.
+        required: true
+        type: string
+      binary-tests:
+        description: Whether to run the binary tests.
+        required: false
+        default: false
+        type: boolean
+      env-vars:
+        description: A map of environment variables as JSON.
+        required: false
+        type: string
+        default: '{}'
+      extra-flags:
+        description: A space-separated list of additional build flags.
+        required: false
+        type: string
+        default: ''
+      runs-on:
+        description: An expression indicating which kind of runners to use.
+        required: false
+        type: string
+        default: ubuntu-latest
+      go-tags:
+        description: A comma-separated list of additional build tags to consider satisfied during the build.
+        required: false
+        type: string
+      name:
+        description: A suffix to append to archived test results
+        required: false
+        default: ''
+        type: string
+      go-test-parallelism:
+        description: The parallelism parameter for Go tests
+        required: false
+        default: 20
+        type: number
+      timeout-minutes:
+        description: The maximum number of minutes that this workflow should run
+        required: false
+        default: 60
+        type: number
+      testonly:
+        description: Whether to run the tests tagged with testonly.
+        required: false
+        default: false
+        type: boolean
+      test-timing-cache-enabled:
+        description: Cache the gotestsum test timing data.
+        required: false
+        default: true
+        type: boolean
+      test-timing-cache-key:
+        description: The cache key to use for gotestsum test timing data.
+        required: false
+        default: go-test-reports
+        type: string
+
+env: ${{ fromJSON(inputs.env-vars) }}
+
+jobs:
+  test-matrix:
+    permissions:
+      id-token: write  # Note: this permission is explicitly required for Vault auth
+      contents: read
+    runs-on: ${{ fromJSON(inputs.runs-on) }}
+    steps:
+      - uses: actions/checkout@c85c95e3d7251135ab7dc9ce3241c5835cc595a9 # v3.5.3
+      - uses: ./.github/actions/set-up-go
+        with:
+          github-token: ${{ secrets.ELEVATED_GITHUB_TOKEN }}
+      - name: Authenticate to Vault
+        id: vault-auth
+        if: github.repository == 'hashicorp/vault-enterprise'
+        run: vault-auth
+      - name: Fetch Secrets
+        id: secrets
+        if: github.repository == 'hashicorp/vault-enterprise'
+        uses: hashicorp/vault-action@130d1f5f4fe645bb6c83e4225c04d64cfb62de6e
+        with:
+          url: ${{ steps.vault-auth.outputs.addr }}
+          caCertificate: ${{ steps.vault-auth.outputs.ca_certificate }}
+          token: ${{ steps.vault-auth.outputs.token }}
+          secrets: |
+            kv/data/github/${{ github.repository }}/datadog-ci DATADOG_API_KEY;
+            kv/data/github/${{ github.repository }}/github-token username-and-token | github-token;
+            kv/data/github/${{ github.repository }}/license license_1 | VAULT_LICENSE_CI;
+            kv/data/github/${{ github.repository }}/license license_2 | VAULT_LICENSE_2;
+            kv/data/github/${{ github.repository }}/hcp-link HCP_API_ADDRESS;
+            kv/data/github/${{ github.repository }}/hcp-link HCP_AUTH_URL;
+            kv/data/github/${{ github.repository }}/hcp-link HCP_CLIENT_ID;
+            kv/data/github/${{ github.repository }}/hcp-link HCP_CLIENT_SECRET;
+            kv/data/github/${{ github.repository }}/hcp-link HCP_RESOURCE_ID;
+      - id: setup-git-private
+        name: Setup Git configuration (private)
+        if: github.repository == 'hashicorp/vault-enterprise'
+        run: |
+          git config --global url."https://${{ steps.secrets.outputs.github-token }}@github.com".insteadOf https://github.com
+      - id: setup-git-public
+        name: Setup Git configuration (public)
+        if: github.repository != 'hashicorp/vault-enterprise'
+        run: |
+          git config --global url."https://${{ secrets.ELEVATED_GITHUB_TOKEN}}@github.com".insteadOf https://github.com
+      - uses: ./.github/actions/set-up-gotestsum
+      - run: mkdir -p test-results/go-test
+      - uses: actions/cache/restore@88522ab9f39a2ea568f7027eddc7d8d8bc9d59c8 # v3.3.1
+        if: inputs.test-timing-cache-enabled
+        with:
+          path: test-results/go-test
+          key: ${{ inputs.test-timing-cache-key }}-${{ github.run_number }}
+          restore-keys: |
+            ${{ inputs.test-timing-cache-key }}-
+            go-test-reports-
+      - name: Sanitize timing files
+        id: sanitize-timing-files
+        run: |
+          # Prune invalid timing files
+          find test-results/go-test -mindepth 1 -type f -name "*.json" -exec sh -c '
+            file="$1";
+            jq . "$file" || rm "$file"
+          ' shell {} \; > /dev/null 2>&1
+      - name: Build matrix excluding binary, integration, and testonly tests
+        id: build-non-binary
+        if: ${{ !inputs.testonly }}
+        env:
+          GOPRIVATE: github.com/hashicorp/*
+        run: |
+          # testonly tests need additional build tag though let's exclude them anyway for clarity
+          (
+            go list ./... | grep -v "_binary" | grep -v "vault/integ" | grep -v "testonly" | gotestsum tool ci-matrix --debug \
+              --partitions "${{ inputs.total-runners }}" \
+              --timing-files 'test-results/go-test/*.json' > matrix.json
+          )
+      - name: Build matrix for tests tagged with testonly
+        if: ${{ inputs.testonly }}
+        env:
+          GOPRIVATE: github.com/hashicorp/*
+        run: |
+          set -exo pipefail
+          # enable glob expansion
+          shopt -s nullglob
+          # testonly tagged tests need an additional tag to be included
+          # also running some extra tests for sanity checking with the testonly build tag
+          (
+            go list -tags=testonly ./vault/external_tests/{kv,token,*replication-perf*,*testonly*} ./vault/ | gotestsum tool ci-matrix --debug \
+              --partitions "${{ inputs.total-runners }}" \
+              --timing-files 'test-results/go-test/*.json' > matrix.json
+          )
+          # disable glob expansion
+          shopt -u nullglob
+      - name: Capture list of binary tests
+        if: inputs.binary-tests
+        id: list-binary-tests
+        run: |
+          LIST="$(go list ./... | grep "_binary" | xargs)"
+          echo "list=$LIST" >> "$GITHUB_OUTPUT"
+      - name: Build complete matrix
+        id: build
+        run: |
+            set -exo pipefail
+            matrix_file="matrix.json"
+            if [ "${{ inputs.binary-tests}}" == "true" ] && [ -n "${{ steps.list-binary-tests.outputs.list }}" ]; then
+              export BINARY_TESTS="${{ steps.list-binary-tests.outputs.list }}"
+              jq --arg BINARY "${BINARY_TESTS}" --arg BINARY_INDEX "${{ inputs.total-runners }}" \
+                '.include += [{
+                  "id": $BINARY_INDEX,
+                  "estimatedRuntime": "N/A",
+                  "packages": $BINARY,
+                  "description": "partition $BINARY_INDEX - binary test packages"
+              }]' matrix.json > new-matrix.json
+              matrix_file="new-matrix.json"
+            fi
+            # convert the json to a map keyed by id
+            (
+              echo -n "matrix="
+                jq -c \
+                '.include | map( { (.id|tostring): . } ) | add' "$matrix_file"
+            ) >> "$GITHUB_OUTPUT"
+            # extract an array of ids from the json
+            (
+              echo -n "matrix_ids="
+              jq -c \
+                '[ .include[].id | tostring ]' "$matrix_file"
+            ) >> "$GITHUB_OUTPUT"
+    outputs:
+      matrix: ${{ steps.build.outputs.matrix }}
+      matrix_ids: ${{ steps.build.outputs.matrix_ids }}
+
+  test-go:
+    needs: test-matrix
+    permissions:
+      actions: read
+      contents: read
+      id-token: write  # Note: this permission is explicitly required for Vault auth
+    runs-on: ${{ fromJSON(inputs.runs-on) }}
+    strategy:
+      fail-fast: false
+      matrix:
+        id: ${{ fromJSON(needs.test-matrix.outputs.matrix_ids) }}
+    env:
+      GOPRIVATE: github.com/hashicorp/*
+      TIMEOUT_IN_MINUTES: ${{ inputs.timeout-minutes }}
+    steps:
+      - uses: actions/checkout@c85c95e3d7251135ab7dc9ce3241c5835cc595a9 # v3.5.3
+      - uses: ./.github/actions/set-up-go
+        with:
+          github-token: ${{ secrets.ELEVATED_GITHUB_TOKEN }}
+      - name: Authenticate to Vault
+        id: vault-auth
+        if: github.repository == 'hashicorp/vault-enterprise'
+        run: vault-auth
+      - name: Fetch Secrets
+        id: secrets
+        if: github.repository == 'hashicorp/vault-enterprise'
+        uses: hashicorp/vault-action@130d1f5f4fe645bb6c83e4225c04d64cfb62de6e
+        with:
+          url: ${{ steps.vault-auth.outputs.addr }}
+          caCertificate: ${{ steps.vault-auth.outputs.ca_certificate }}
+          token: ${{ steps.vault-auth.outputs.token }}
+          secrets: |
+            kv/data/github/${{ github.repository }}/datadog-ci DATADOG_API_KEY;
+            kv/data/github/${{ github.repository }}/github-token username-and-token | github-token;
+            kv/data/github/${{ github.repository }}/license license_1 | VAULT_LICENSE_CI;
+            kv/data/github/${{ github.repository }}/license license_2 | VAULT_LICENSE_2;
+            kv/data/github/${{ github.repository }}/hcp-link HCP_API_ADDRESS;
+            kv/data/github/${{ github.repository }}/hcp-link HCP_AUTH_URL;
+            kv/data/github/${{ github.repository }}/hcp-link HCP_CLIENT_ID;
+            kv/data/github/${{ github.repository }}/hcp-link HCP_CLIENT_SECRET;
+            kv/data/github/${{ github.repository }}/hcp-link HCP_RESOURCE_ID;
+      - id: setup-git-private
+        name: Setup Git configuration (private)
+        if: github.repository == 'hashicorp/vault-enterprise'
+        run: |
+          git config --global url."https://${{ steps.secrets.outputs.github-token }}@github.com".insteadOf https://github.com
+      - id: setup-git-public
+        name: Setup Git configuration (public)
+        if: github.repository != 'hashicorp/vault-enterprise'
+        run: |
+          git config --global url."https://${{ secrets.ELEVATED_GITHUB_TOKEN}}@github.com".insteadOf https://github.com
+      - id: build
+        if: inputs.binary-tests && matrix.id == inputs.total-runners
+        env:
+          GOPRIVATE: github.com/hashicorp/*
+        run: time make ci-bootstrap dev
+      - uses: ./.github/actions/set-up-gotestsum
+      - name: Install gVisor
+        # Enterprise repo runners do not allow sudo, so can't install gVisor there yet.
+        if: ${{ !inputs.enterprise }}
+        run: |
+          (
+            set -e
+            ARCH="$(uname -m)"
+            URL="https://storage.googleapis.com/gvisor/releases/release/latest/${ARCH}"
+            wget --quiet "${URL}/runsc" "${URL}/runsc.sha512" \
+              "${URL}/containerd-shim-runsc-v1" "${URL}/containerd-shim-runsc-v1.sha512"
+            sha512sum -c runsc.sha512 \
+              -c containerd-shim-runsc-v1.sha512
+            rm -f -- *.sha512
+            chmod a+rx runsc containerd-shim-runsc-v1
+            sudo mv runsc containerd-shim-runsc-v1 /usr/local/bin
+          )
+          sudo tee /etc/docker/daemon.json <<EOF
+          {
+            "runtimes": {
+              "runsc": {
+                "path": "/usr/local/bin/runsc",
+                "runtimeArgs": [
+                  "--host-uds=all",
+                  "--host-fifo=open"
+                ]
+              }
+            }
+          }
+          EOF
+          sudo systemctl reload docker
+      - id: run-go-tests
+        name: Run Go tests
+        timeout-minutes: ${{ fromJSON(env.TIMEOUT_IN_MINUTES) }}
+        env:
+          COMMIT_SHA: ${{ github.sha }}
+        run: |
+          set -exo pipefail
+
+          # Build the dynamically generated source files.
+          make prep
+
+          packages=$(echo "${{ toJSON(needs.test-matrix.outputs.matrix) }}" | jq -c -r --arg id "${{ matrix.id }}" '.[$id] | .packages')
+
+          if [ -z "$packages" ]; then
+            echo "no test packages to run"
+            exit 1
+          fi
+          # We don't want VAULT_LICENSE set when running Go tests, because that's
+          # not what developers have in their environments and it could break some
+          # tests; it would be like setting VAULT_TOKEN.  However some non-Go
+          # CI commands, like the UI tests, shouldn't have to worry about licensing.
+          # So we provide the tests which want an externally supplied license with licenses
+          # via the VAULT_LICENSE_CI and VAULT_LICENSE_2 environment variables, and here we unset it.
+          # shellcheck disable=SC2034
+          VAULT_LICENSE=
+
+          # Assign test licenses to relevant variables if they aren't already
+          if [[ ${{ github.repository }} == 'hashicorp/vault' ]]; then
+            export VAULT_LICENSE_CI=${{ secrets.ci_license }}
+            export VAULT_LICENSE_2=${{ secrets.ci_license_2 }}
+            export HCP_API_ADDRESS=${{ secrets.HCP_API_ADDRESS }}
+            export HCP_AUTH_URL=${{ secrets.HCP_AUTH_URL }}
+            export HCP_CLIENT_ID=${{ secrets.HCP_CLIENT_ID }}
+            export HCP_CLIENT_SECRET=${{ secrets.HCP_CLIENT_SECRET }}
+            export HCP_RESOURCE_ID=${{ secrets.HCP_RESOURCE_ID }}
+            # Temporarily removing this variable to cause HCP Link tests
+            # to be skipped.
+            #export HCP_SCADA_ADDRESS=${{ secrets.HCP_SCADA_ADDRESS }}
+          fi
+
+          if [ -f bin/vault ]; then
+            VAULT_BINARY="$(pwd)/bin/vault"
+            export VAULT_BINARY
+          fi
+
+          # On a release branch, add a flag to rerun failed tests
+          # shellcheck disable=SC2193 # can get false positive for this comparision
+          if [[  "${{ github.base_ref }}" == release/* ]] || [[  -z "${{ github.base_ref }}" && "${{ github.ref_name }}" == release/* ]]
+          then
+            # TODO remove this extra condition once 1.15 is about to released GA
+            if [[  "${{ github.base_ref }}" != release/1.15* ]] || [[  -z "${{ github.base_ref }}" && "${{ github.ref_name }}" != release/1.15* ]]
+            then
+              RERUN_FAILS="--rerun-fails"
+            fi
+          fi
+
+          # shellcheck disable=SC2086 # can't quote RERUN_FAILS
+          GOARCH=${{ inputs.go-arch }} \
+            gotestsum --format=short-verbose \
+              --junitfile test-results/go-test/results-${{ matrix.id }}.xml \
+              --jsonfile test-results/go-test/results-${{ matrix.id }}.json \
+              --jsonfile-timing-events failure-summary-${{ matrix.id }}${{ inputs.name != '' && '-' || '' }}${{ inputs.name }}.json \
+              $RERUN_FAILS \
+              --packages "$packages" \
+              -- \
+              -tags "${{ inputs.go-tags }}" \
+              -timeout=${{ env.TIMEOUT_IN_MINUTES }}m \
+              -parallel=${{ inputs.go-test-parallelism }} \
+              ${{ inputs.extra-flags }} \
+      - name: Prepare datadog-ci
+        if: github.repository == 'hashicorp/vault' && (success() || failure())
+        continue-on-error: true
+        run: |
+          curl -L --fail "https://github.com/DataDog/datadog-ci/releases/latest/download/datadog-ci_linux-x64" --output "/usr/local/bin/datadog-ci"
+          chmod +x /usr/local/bin/datadog-ci
+      - name: Upload test results to DataDog
+        continue-on-error: true
+        env:
+          DD_ENV: ci
+        run: |
+          if [[ ${{ github.repository }} == 'hashicorp/vault' ]]; then
+            export DATADOG_API_KEY=${{ secrets.DATADOG_API_KEY }}
+          fi
+          datadog-ci junit upload --service "$GITHUB_REPOSITORY" test-results/go-test/results-${{ matrix.id }}.xml
+        if: success() || failure()
+      - name: Archive test results
+        uses: actions/upload-artifact@0b7f8abb1508181956e8e162db84b466c27e18ce # v3.1.2
+        with:
+          name: test-results${{ inputs.name != '' && '-' || '' }}${{ inputs.name }}
+          path: test-results/go-test
+        if: success() || failure()
+      # GitHub Actions doesn't expose the job ID or the URL to the job execution,
+      # so we have to fetch it from the API
+      - name: Fetch job logs URL
+        uses: actions/github-script@d7906e4ad0b1822421a7e6a35d5ca353c962f410 # v6.4.1
+        if: success() || failure()
+        continue-on-error: true
+        with:
+          retries: 3
+          script: |
+            // We surround the whole script with a try-catch block, to avoid each of the matrix jobs
+            // displaying an error in the GHA workflow run annotations, which gets very noisy.
+            // If an error occurs, it will be logged so that we don't lose any information about the reason for failure.
+            try {
+              const fs = require("fs");
+              const result = await github.rest.actions.listJobsForWorkflowRun({
+                owner: context.repo.owner,
+                per_page: 100,
+                repo: context.repo.repo,
+                run_id: context.runId,
+              });
+
+              // Determine what job name to use for the query. These values are hardcoded, because GHA doesn't
+              // expose them in any of the contexts available within a workflow run.
+              let prefixToSearchFor;
+              switch ("${{ inputs.name }}") {
+                case "race":
+                  prefixToSearchFor = 'Run Go tests with data race detection / test-go (${{ matrix.id }})'
+                  break
+                case "fips":
+                  prefixToSearchFor = 'Run Go tests with FIPS configuration / test-go (${{ matrix.id }})'
+                  break
+                default:
+                  prefixToSearchFor = 'Run Go tests / test-go (${{ matrix.id }})'
+              }
+
+              const jobData = result.data.jobs.filter(
+                (job) => job.name.startsWith(prefixToSearchFor)
+              );
+              const url = jobData[0].html_url;
+              const envVarName = "GH_JOB_URL";
+              const envVar = envVarName + "=" + url;
+              const envFile = process.env.GITHUB_ENV;
+
+              fs.appendFile(envFile, envVar, (err) => {
+                if (err) throw err;
+                console.log("Successfully set " + envVarName + " to: " + url);
+              });
+            } catch (error) {
+              console.log("Error: " + error);
+              return
+            }
+      - name: Prepare failure summary
+        if: success() || failure()
+        continue-on-error: true
+        run: |
+          # This jq query filters out successful tests, leaving only the failures.
+          # Then, it formats the results into rows of a Markdown table.
+          # An example row will resemble this:
+          # | github.com/hashicorp/vault/package | TestName | fips | 0 | 2 | [view results](github.com/link-to-logs) |
+          jq -r -n 'inputs
+          | select(.Action == "fail")
+          | "| ${{inputs.name}} | \(.Package) | \(.Test // "-") | \(.Elapsed) | ${{ matrix.id }} | [view test results :scroll:](${{ env.GH_JOB_URL }}) |"' \
+          failure-summary-${{ matrix.id }}${{ inputs.name != '' && '-' || '' }}${{inputs.name}}.json \
+          >> failure-summary-${{ matrix.id }}${{ inputs.name != '' && '-' || '' }}${{inputs.name}}.md
+      - name: Upload failure summary
+        uses: actions/upload-artifact@0b7f8abb1508181956e8e162db84b466c27e18ce # v3.1.2
+        if: success() || failure()
+        with:
+          name: failure-summary
+          path: failure-summary-${{ matrix.id }}${{ inputs.name != '' && '-' || '' }}${{inputs.name}}.md
+
+  test-collect-reports:
+    if: ${{ ! cancelled() && needs.test-go.result == 'success' && inputs.test-timing-cache-enabled }}
+    needs: test-go
+    runs-on: ${{ fromJSON(inputs.runs-on) }}
+    steps:
+      - uses: actions/cache@88522ab9f39a2ea568f7027eddc7d8d8bc9d59c8 # v3.3.1
+        with:
+          path: test-results/go-test
+          key: ${{ inputs.test-timing-cache-key }}-${{ github.run_number }}
+          restore-keys: |
+            ${{ inputs.test-timing-cache-key }}-
+            go-test-reports-
+      - uses: actions/download-artifact@9bc31d5ccc31df68ecc42ccf4149144866c47d8a # v3.0.2
+        with:
+          name: test-results
+          path: test-results/go-test
+      - run: |
+          ls -lhR test-results/go-test
+          find test-results/go-test -mindepth 1 -mtime +3 -delete
+
+          # Prune invalid timing files
+          find test-results/go-test -mindepth 1 -type f -name "*.json" -exec sh -c '
+            file="$1";
+            jq . "$file" || rm "$file"
+          ' shell {} \; > /dev/null 2>&1
+
+          ls -lhR test-results/go-test

@@ -1,0 +1,49 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
+/* General sizing in rem values used largely for text sizing.*/
+$size-1: 3rem; // 48px, same as $spacing-xxl
+$size-2: 2.5rem; // 40px
+$size-3: calc(24 / 14) + 0rem; // ~1.714rem ~27px
+$size-4: 1.5rem; // 24px same as $spacing-l
+$size-5: 1.25rem; // 20px
+$size-6: 1rem; // 16px same as $spacing-m
+$size-7: calc(13 / 14) + 0rem; // ~.929rem ~15px
+$size-8: calc(12 / 14) + 0rem; // ~.857rem  ~13.7px
+$size-9: 0.75rem; // 12px same as $spacing-s
+$size-10: 0.5rem; // 8px same as $spacing-xs
+$size-11: 0.25rem; // 4px same as spacing-xxs
+
+/* Spacing vars in px */
+$spacing-xxs: 4px;
+$spacing-xs: 8px;
+$spacing-s: 12px;
+$spacing-m: 16px;
+$spacing-l: 24px;
+$spacing-xl: 36px;
+$spacing-xxl: 48px;
+
+/* Border radius */
+$radius: 2px;
+$radius-large: 4px;
+
+/* Responsiveness */
+// 960, 1152, and 1344 have been chosen because they are divisible by both 12 and 16
+$mobile: 769px;
+// 960px container + 4rem
+$desktop: 960px + (2 * 32px);
+
+/* Animations and transitions */
+$speed: 150ms;
+$speed-slow: $speed * 2;
+$easing: ease-out;
+
+/* Nav */
+$drawer-width: 300px;
+
+// Wizard
+// Not being used: https://github.com/hashicorp/vault/pull/19220
+// $wizard-progress-bar-height: 6px;
+// $wizard-progress-check-size: 16px;

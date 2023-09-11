@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import { find, fillIn, visit, waitUntil } from '@ember/test-helpers';
 import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
@@ -12,7 +17,7 @@ module('Acceptance | API Explorer', function (hooks) {
   });
 
   test('it filters paths after swagger-ui is loaded', async function (assert) {
-    await visit('/vault/api-explorer');
+    await visit('/vault/tools/api-explorer');
     await waitUntil(() => {
       return find('[data-test-filter-input]').disabled === false;
     });

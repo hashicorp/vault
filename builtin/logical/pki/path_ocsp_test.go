@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package pki
 
 import (
@@ -9,16 +12,15 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	"net/url"
 	"strconv"
 	"strings"
 	"testing"
-	"time"
 
+	"github.com/hashicorp/go-secure-stdlib/parseutil"
 	vaulthttp "github.com/hashicorp/vault/http"
-	"github.com/hashicorp/vault/vault"
-
+	"github.com/hashicorp/vault/sdk/helper/testhelpers/schema"
 	"github.com/hashicorp/vault/sdk/logical"
+	"github.com/hashicorp/vault/vault"
 	"github.com/stretchr/testify/require"
 	"golang.org/x/crypto/ocsp"
 )
@@ -198,6 +200,7 @@ func TestOcsp_UnknownIssuerIdWithDefaultHavingOcspUsageRemoved(t *testing.T) {
 	resp, err := CBWrite(b, s, "revoke", map[string]interface{}{
 		"serial_number": serial,
 	})
+	schema.ValidateResponse(t, schema.GetResponseSchema(t, b.Route("revoke"), logical.UpdateOperation), resp, true)
 	requireSuccessNonNilResponse(t, resp, err, "revoke")
 
 	// Twiddle the entry so that the issuer id is no longer valid.
@@ -360,7 +363,6 @@ func TestOcsp_MultipleMatchingIssuersOneWithoutSigningUsage(t *testing.T) {
 	require.Equal(t, crypto.SHA1, ocspResp.IssuerHash)
 	require.Equal(t, 0, ocspResp.RevocationReason)
 	require.Equal(t, testEnv.leafCertIssuer1.SerialNumber, ocspResp.SerialNumber)
-	require.Equal(t, rotatedCert, ocspResp.Certificate)
 
 	requireOcspSignatureAlgoForKey(t, rotatedCert.SignatureAlgorithm, ocspResp.SignatureAlgorithm)
 	requireOcspResponseSignedBy(t, ocspResp, rotatedCert)
@@ -437,11 +439,15 @@ func TestOcsp_HigherLevel(t *testing.T) {
 	require.NoError(t, err, "parsing ocsp get response")
 
 	require.Equal(t, ocsp.Revoked, ocspResp.Status)
-	require.Equal(t, issuerCert, ocspResp.Certificate)
 	require.Equal(t, certToRevoke.SerialNumber, ocspResp.SerialNumber)
 
 	// Test OCSP Get request for ocsp
-	urlEncoded := url.QueryEscape(base64.StdEncoding.EncodeToString(ocspReq))
+	urlEncoded := base64.StdEncoding.EncodeToString(ocspReq)
+	if strings.Contains(urlEncoded, "//") {
+		// workaround known redirect bug that is difficult to fix
+		t.Skipf("VAULT-13630 - Skipping GET OCSP test with encoded issuer cert containing // triggering redirection bug")
+	}
+
 	ocspGetReq := client.NewRequest(http.MethodGet, "/v1/pki/ocsp/"+urlEncoded)
 	ocspGetReq.Headers.Set("Content-Type", "application/ocsp-request")
 	rawResp, err = client.RawRequest(ocspGetReq)
@@ -458,7 +464,6 @@ func TestOcsp_HigherLevel(t *testing.T) {
 	require.NoError(t, err, "parsing ocsp get response")
 
 	require.Equal(t, ocsp.Revoked, ocspResp.Status)
-	require.Equal(t, issuerCert, ocspResp.Certificate)
 	require.Equal(t, certToRevoke.SerialNumber, ocspResp.SerialNumber)
 }
 
@@ -522,7 +527,6 @@ func runOcspRequestTest(t *testing.T, requestType string, caKeyType string, caKe
 
 	require.Equal(t, ocsp.Good, ocspResp.Status)
 	require.Equal(t, requestHash, ocspResp.IssuerHash)
-	require.Equal(t, testEnv.issuer1, ocspResp.Certificate)
 	require.Equal(t, 0, ocspResp.RevocationReason)
 	require.Equal(t, testEnv.leafCertIssuer1.SerialNumber, ocspResp.SerialNumber)
 
@@ -547,7 +551,6 @@ func runOcspRequestTest(t *testing.T, requestType string, caKeyType string, caKe
 
 	require.Equal(t, ocsp.Revoked, ocspResp.Status)
 	require.Equal(t, requestHash, ocspResp.IssuerHash)
-	require.Equal(t, testEnv.issuer1, ocspResp.Certificate)
 	require.Equal(t, 0, ocspResp.RevocationReason)
 	require.Equal(t, testEnv.leafCertIssuer1.SerialNumber, ocspResp.SerialNumber)
 
@@ -567,7 +570,6 @@ func runOcspRequestTest(t *testing.T, requestType string, caKeyType string, caKe
 
 	require.Equal(t, ocsp.Good, ocspResp.Status)
 	require.Equal(t, requestHash, ocspResp.IssuerHash)
-	require.Equal(t, testEnv.issuer2, ocspResp.Certificate)
 	require.Equal(t, 0, ocspResp.RevocationReason)
 	require.Equal(t, testEnv.leafCertIssuer2.SerialNumber, ocspResp.SerialNumber)
 
@@ -577,7 +579,7 @@ func runOcspRequestTest(t *testing.T, requestType string, caKeyType string, caKe
 	require.True(t, thisUpdate.Before(nextUpdate),
 		fmt.Sprintf("thisUpdate %s, should have been before nextUpdate: %s", thisUpdate, nextUpdate))
 	nextUpdateDiff := nextUpdate.Sub(thisUpdate)
-	expectedDiff, err := time.ParseDuration(defaultCrlConfig.OcspExpiry)
+	expectedDiff, err := parseutil.ParseDurationSecond(defaultCrlConfig.OcspExpiry)
 	require.NoError(t, err, "failed to parse default ocsp expiry value")
 	require.Equal(t, expectedDiff, nextUpdateDiff,
 		fmt.Sprintf("the delta between thisUpdate %s and nextUpdate: %s should have been around: %s but was %s",
@@ -688,7 +690,7 @@ func SendOcspRequest(t *testing.T, b *backend, s logical.Storage, getOrPost stri
 }
 
 func sendOcspGetRequest(b *backend, s logical.Storage, ocspRequest []byte) (*logical.Response, error) {
-	urlEncoded := url.QueryEscape(base64.StdEncoding.EncodeToString(ocspRequest))
+	urlEncoded := base64.StdEncoding.EncodeToString(ocspRequest)
 	return CBRead(b, s, "ocsp/"+urlEncoded)
 }
 
@@ -705,20 +707,4 @@ func sendOcspPostRequest(b *backend, s logical.Storage, ocspRequest []byte) (*lo
 	})
 
 	return resp, err
-}
-
-func generateRequest(t *testing.T, requestHash crypto.Hash, cert *x509.Certificate, issuer *x509.Certificate) []byte {
-	t.Helper()
-
-	opts := &ocsp.RequestOptions{Hash: requestHash}
-	ocspRequestDer, err := ocsp.CreateRequest(cert, issuer, opts)
-	require.NoError(t, err, "Failed generating OCSP request")
-	return ocspRequestDer
-}
-
-func requireOcspResponseSignedBy(t *testing.T, ocspResp *ocsp.Response, issuer *x509.Certificate) {
-	t.Helper()
-
-	err := ocspResp.CheckSignatureFrom(issuer)
-	require.NoError(t, err, "Failed signature verification of ocsp response: %w", err)
 }

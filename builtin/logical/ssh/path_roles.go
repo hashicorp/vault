@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package ssh
 
 import (
@@ -69,6 +72,11 @@ func pathListRoles(b *backend) *framework.Path {
 	return &framework.Path{
 		Pattern: "roles/?$",
 
+		DisplayAttrs: &framework.DisplayAttributes{
+			OperationPrefix: operationPrefixSSH,
+			OperationSuffix: "roles",
+		},
+
 		Callbacks: map[logical.Operation]framework.OperationFunc{
 			logical.ListOperation: b.pathRoleList,
 		},
@@ -81,6 +89,12 @@ func pathListRoles(b *backend) *framework.Path {
 func pathRoles(b *backend) *framework.Path {
 	return &framework.Path{
 		Pattern: "roles/" + framework.GenericNameWithAtRegex("role"),
+
+		DisplayAttrs: &framework.DisplayAttributes{
+			OperationPrefix: operationPrefixSSH,
+			OperationSuffix: "role",
+		},
+
 		Fields: map[string]*framework.FieldSchema{
 			"role": {
 				Type: framework.TypeString,
@@ -333,7 +347,7 @@ func pathRoles(b *backend) *framework.Path {
 				When supplied, this value specifies a signing algorithm for the key. Possible values:
 				ssh-rsa, rsa-sha2-256, rsa-sha2-512, default, or the empty string.
 				`,
-				AllowedValues: []interface{}{"", ssh.SigAlgoRSA, ssh.SigAlgoRSASHA2256, ssh.SigAlgoRSASHA2512},
+				AllowedValues: []interface{}{"", DefaultAlgorithmSigner, ssh.SigAlgoRSA, ssh.SigAlgoRSASHA2256, ssh.SigAlgoRSASHA2512},
 				DisplayAttrs: &framework.DisplayAttributes{
 					Name: "Signing Algorithm",
 				},

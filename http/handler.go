@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package http
 
 import (
@@ -81,6 +84,7 @@ var (
 	// the always forward list
 	perfStandbyAlwaysForwardPaths = pathmanager.New()
 	alwaysRedirectPaths           = pathmanager.New()
+	websocketPaths                = pathmanager.New()
 
 	injectDataIntoTopRoutes = []string{
 		"/v1/sys/audit",
@@ -106,7 +110,9 @@ var (
 		"/v1/sys/rotate",
 		"/v1/sys/wrapping/wrap",
 	}
-
+	websocketRawPaths = []string{
+		"/v1/sys/events/subscribe",
+	}
 	oidcProtectedPathRegex = regexp.MustCompile(`^identity/oidc/provider/\w(([\w-.]+)?\w)?/userinfo$`)
 )
 
@@ -116,6 +122,10 @@ func init() {
 		"sys/storage/raft/snapshot-force",
 		"!sys/storage/raft/snapshot-auto/config",
 	})
+	websocketPaths.AddPaths(websocketRawPaths)
+	for _, path := range websocketRawPaths {
+		alwaysRedirectPaths.AddPaths([]string{strings.TrimPrefix(path, "/v1/")})
+	}
 }
 
 type HandlerAnchor struct{}
@@ -156,6 +166,7 @@ func handler(props *vault.HandlerProperties) http.Handler {
 
 		mux.Handle("/v1/sys/init", handleSysInit(core))
 		mux.Handle("/v1/sys/seal-status", handleSysSealStatus(core))
+		mux.Handle("/v1/sys/seal-backend-status", handleSysSealBackendStatus(core))
 		mux.Handle("/v1/sys/seal", handleSysSeal(core))
 		mux.Handle("/v1/sys/step-down", handleRequestForwarding(core, handleSysStepDown(core)))
 		mux.Handle("/v1/sys/unseal", handleSysUnseal(core))
@@ -175,6 +186,7 @@ func handler(props *vault.HandlerProperties) http.Handler {
 		mux.Handle("/v1/sys/storage/raft/bootstrap", handleSysRaftBootstrap(core))
 		mux.Handle("/v1/sys/storage/raft/join", handleSysRaftJoin(core))
 		mux.Handle("/v1/sys/internal/ui/feature-flags", handleSysInternalFeatureFlags(core))
+
 		for _, path := range injectDataIntoTopRoutes {
 			mux.Handle(path, handleRequestForwarding(core, handleLogicalWithInjector(core)))
 		}
@@ -348,12 +360,13 @@ func wrapGenericHandler(core *vault.Core, h http.Handler, props *vault.HandlerPr
 		// Start with the request context
 		ctx := r.Context()
 		var cancelFunc context.CancelFunc
-		// Add our timeout, but not for the monitor endpoint, as it's streaming
-		if strings.HasSuffix(r.URL.Path, "sys/monitor") {
+		// Add our timeout, but not for the monitor or events endpoints, as they are streaming
+		if strings.HasSuffix(r.URL.Path, "sys/monitor") || strings.Contains(r.URL.Path, "sys/events") {
 			ctx, cancelFunc = context.WithCancel(ctx)
 		} else {
 			ctx, cancelFunc = context.WithTimeout(ctx, maxRequestDuration)
 		}
+
 		// if maxRequestSize < 0, no need to set context value
 		// Add a size limiter if desired
 		if maxRequestSize > 0 {
@@ -375,11 +388,14 @@ func wrapGenericHandler(core *vault.Core, h http.Handler, props *vault.HandlerPr
 			nw.Header().Set("X-Vault-Hostname", hostname)
 		}
 
+		// Extract the namespace from the header before we modify it
+		ns := r.Header.Get(consts.NamespaceHeaderName)
 		switch {
 		case strings.HasPrefix(r.URL.Path, "/v1/"):
-			newR, status := adjustRequest(core, r)
+			// Setting the namespace in the header to be included in the error message
+			newR, status, err := adjustRequest(core, props.ListenerConfig, r)
 			if status != 0 {
-				respondError(nw, status, nil)
+				respondError(nw, status, err)
 				cancelFunc()
 				return
 			}
@@ -430,7 +446,6 @@ func wrapGenericHandler(core *vault.Core, h http.Handler, props *vault.HandlerPr
 		}()
 
 		// Setting the namespace in the header to be included in the error message
-		ns := r.Header.Get(consts.NamespaceHeaderName)
 		if ns != "" {
 			nw.Header().Set(consts.NamespaceHeaderName, ns)
 		}
@@ -1008,6 +1023,15 @@ func respondStandby(core *vault.Core, w http.ResponseWriter, reqURL *url.URL) {
 		Host:     redirectURL.Host,
 		Path:     reqURL.Path,
 		RawQuery: reqURL.RawQuery,
+	}
+
+	// WebSockets schemas are ws or wss
+	if websocketPaths.HasPath(reqURL.Path) {
+		if finalURL.Scheme == "http" {
+			finalURL.Scheme = "ws"
+		} else {
+			finalURL.Scheme = "wss"
+		}
 	}
 
 	// Ensure there is a scheme, default to https

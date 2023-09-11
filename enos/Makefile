@@ -22,3 +22,10 @@ check-fmt-modules:
 .PHONY: fmt-modules
 fmt-modules:
 	terraform fmt -diff -recursive ./modules
+
+.PHONY: validate-enos
+validate-enos:
+	enos scenario validate
+
+.PHONY: lint
+lint: check-fmt validate-enos

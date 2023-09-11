@@ -1,3 +1,8 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
 <PageHeader as |p|>
   <p.top>
     <nav class="breadcrumb" aria-label="breadcrumbs">
@@ -21,7 +26,7 @@
   <p.levelLeft>
     <h1 class="title is-3" data-test-oidc-scope-title>
       {{if @model.isNew "Create" "Edit"}}
-      scope
+      Scope
     </h1>
   </p.levelLeft>
 </PageHeader>
@@ -31,7 +36,7 @@
     <p class="has-bottom-margin-l">
       Providers may reference a set of scopes to make specific identity information available as claims
     </p>
-    <MessageError @errorMessage={{this.errorBanner}} class="has-top-margin-s" />
+    <MessageError @errorMessage={{this.errorBanner}} />
     {{#each @model.formFields as |field|}}
       <FormField @attr={{field}} @model={{@model}} @modelValidations={{this.modelValidations}} />
     {{/each}}
@@ -100,7 +105,7 @@
     {{/if}}
     <p class="has-top-margin-m">
       The full list of template parameters can be found
-      <DocLink @path="/docs/concepts/oidc-provider#scopes">
+      <DocLink @path="/vault/docs/concepts/oidc-provider#scopes">
         here.
       </DocLink>
     </p>

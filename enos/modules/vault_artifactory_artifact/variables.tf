@@ -1,4 +1,5 @@
-
+# Copyright (c) HashiCorp, Inc.
+# SPDX-License-Identifier: BUSL-1.1
 variable "artifactory_username" {
   type        = string
   description = "The username to use when connecting to artifactory"
@@ -25,9 +26,9 @@ variable "artifactory_repo" {
 }
 variable "arch" {}
 variable "artifact_type" {}
+variable "artifact_path" {}
 variable "distro" {}
 variable "edition" {}
-variable "instance_type" {}
 variable "revision" {}
 variable "product_version" {}
 variable "build_tags" { default = null }

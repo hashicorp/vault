@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package vault
 
 import (
@@ -24,7 +27,7 @@ import (
 
 func TestAudit_ReadOnlyViewDuringMount(t *testing.T) {
 	c, _, _ := TestCoreUnsealed(t)
-	c.auditBackends["noop"] = func(ctx context.Context, config *audit.BackendConfig) (audit.Backend, error) {
+	c.auditBackends["noop"] = func(ctx context.Context, config *audit.BackendConfig, _ bool, _ audit.HeaderFormatter) (audit.Backend, error) {
 		err := config.SaltView.Put(ctx, &logical.StorageEntry{
 			Key:   "bar",
 			Value: []byte("baz"),
@@ -33,7 +36,7 @@ func TestAudit_ReadOnlyViewDuringMount(t *testing.T) {
 			t.Fatalf("expected a read-only error")
 		}
 		factory := corehelpers.NoopAuditFactory(nil)
-		return factory(ctx, config)
+		return factory(ctx, config, false, nil)
 	}
 
 	me := &MountEntry{
@@ -41,7 +44,7 @@ func TestAudit_ReadOnlyViewDuringMount(t *testing.T) {
 		Path:  "foo",
 		Type:  "noop",
 	}
-	err := c.enableAudit(namespace.RootContext(nil), me, true)
+	err := c.enableAudit(namespace.RootContext(context.Background()), me, true)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -56,7 +59,7 @@ func TestCore_EnableAudit(t *testing.T) {
 		Path:  "foo",
 		Type:  "noop",
 	}
-	err := c.enableAudit(namespace.RootContext(nil), me, true)
+	err := c.enableAudit(namespace.RootContext(context.Background()), me, true)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -100,7 +103,7 @@ func TestCore_EnableAudit(t *testing.T) {
 func TestCore_EnableAudit_MixedFailures(t *testing.T) {
 	c, _, _ := TestCoreUnsealed(t)
 	c.auditBackends["noop"] = corehelpers.NoopAuditFactory(nil)
-	c.auditBackends["fail"] = func(ctx context.Context, config *audit.BackendConfig) (audit.Backend, error) {
+	c.auditBackends["fail"] = func(ctx context.Context, config *audit.BackendConfig, _ bool, _ audit.HeaderFormatter) (audit.Backend, error) {
 		return nil, fmt.Errorf("failing enabling")
 	}
 
@@ -149,7 +152,7 @@ func TestCore_EnableAudit_MixedFailures(t *testing.T) {
 func TestCore_EnableAudit_Local(t *testing.T) {
 	c, _, _ := TestCoreUnsealed(t)
 	c.auditBackends["noop"] = corehelpers.NoopAuditFactory(nil)
-	c.auditBackends["fail"] = func(ctx context.Context, config *audit.BackendConfig) (audit.Backend, error) {
+	c.auditBackends["fail"] = func(ctx context.Context, config *audit.BackendConfig, _ bool, _ audit.HeaderFormatter) (audit.Backend, error) {
 		return nil, fmt.Errorf("failing enabling")
 	}
 
@@ -236,7 +239,7 @@ func TestCore_DisableAudit(t *testing.T) {
 	c, keys, _ := TestCoreUnsealed(t)
 	c.auditBackends["noop"] = corehelpers.NoopAuditFactory(nil)
 
-	existed, err := c.disableAudit(namespace.RootContext(nil), "foo", true)
+	existed, err := c.disableAudit(namespace.RootContext(context.Background()), "foo", true)
 	if existed && err != nil {
 		t.Fatalf("existed: %v; err: %v", existed, err)
 	}
@@ -246,12 +249,12 @@ func TestCore_DisableAudit(t *testing.T) {
 		Path:  "foo",
 		Type:  "noop",
 	}
-	err = c.enableAudit(namespace.RootContext(nil), me, true)
+	err = c.enableAudit(namespace.RootContext(context.Background()), me, true)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
 
-	existed, err = c.disableAudit(namespace.RootContext(nil), "foo", true)
+	existed, err = c.disableAudit(namespace.RootContext(context.Background()), "foo", true)
 	if !existed || err != nil {
 		t.Fatalf("existed: %v; err: %v", existed, err)
 	}
@@ -337,11 +340,14 @@ func verifyDefaultAuditTable(t *testing.T, table *MountTable) {
 
 func TestAuditBroker_LogRequest(t *testing.T) {
 	l := logging.NewVaultLogger(log.Trace)
-	b := NewAuditBroker(l)
+	b, err := NewAuditBroker(l, false)
+	if err != nil {
+		t.Fatal(err)
+	}
 	a1 := corehelpers.TestNoopAudit(t, nil)
 	a2 := corehelpers.TestNoopAudit(t, nil)
-	b.Register("foo", a1, nil, false)
-	b.Register("bar", a2, nil, false)
+	b.Register("foo", a1, false)
+	b.Register("bar", a2, false)
 
 	auth := &logical.Auth{
 		ClientToken: "foo",
@@ -400,8 +406,8 @@ func TestAuditBroker_LogRequest(t *testing.T) {
 		if !reflect.DeepEqual(a.Req[0], req) {
 			t.Fatalf("Bad: %#v\n wanted %#v", a.Req[0], req)
 		}
-		if !reflect.DeepEqual(a.ReqErrs[0], reqErrs) {
-			t.Fatalf("Bad: %#v", a.ReqErrs[0])
+		if a.ReqErrs[0].Error() != reqErrs.Error() {
+			t.Fatalf("expected %v, got %v", a.ReqErrs[0].Error(), reqErrs.Error())
 		}
 	}
 
@@ -424,11 +430,14 @@ func TestAuditBroker_LogRequest(t *testing.T) {
 
 func TestAuditBroker_LogResponse(t *testing.T) {
 	l := logging.NewVaultLogger(log.Trace)
-	b := NewAuditBroker(l)
+	b, err := NewAuditBroker(l, false)
+	if err != nil {
+		t.Fatal(err)
+	}
 	a1 := corehelpers.TestNoopAudit(t, nil)
 	a2 := corehelpers.TestNoopAudit(t, nil)
-	b.Register("foo", a1, nil, false)
-	b.Register("bar", a2, nil, false)
+	b.Register("foo", a1, false)
+	b.Register("bar", a2, false)
 
 	auth := &logical.Auth{
 		NumUses:     10,
@@ -501,8 +510,8 @@ func TestAuditBroker_LogResponse(t *testing.T) {
 		if !reflect.DeepEqual(a.Resp[0], resp) {
 			t.Fatalf("Bad: %#v", a.Resp[0])
 		}
-		if !reflect.DeepEqual(a.RespErrs[0], respErr) {
-			t.Fatalf("Expected\n%v\nGot\n%#v", respErr, a.RespErrs[0])
+		if a.RespErrs[0].Error() != respErr.Error() {
+			t.Fatalf("expected %v, got %v", respErr, a.RespErrs[0])
 		}
 	}
 
@@ -529,13 +538,16 @@ func TestAuditBroker_LogResponse(t *testing.T) {
 
 func TestAuditBroker_AuditHeaders(t *testing.T) {
 	logger := logging.NewVaultLogger(log.Trace)
-	b := NewAuditBroker(logger)
+	b, err := NewAuditBroker(logger, false)
+	if err != nil {
+		t.Fatal(err)
+	}
 	_, barrier, _ := mockBarrier(t)
 	view := NewBarrierView(barrier, "headers/")
 	a1 := corehelpers.TestNoopAudit(t, nil)
 	a2 := corehelpers.TestNoopAudit(t, nil)
-	b.Register("foo", a1, nil, false)
-	b.Register("bar", a2, nil, false)
+	b.Register("foo", a1, false)
+	b.Register("bar", a2, false)
 
 	auth := &logical.Auth{
 		ClientToken: "foo",

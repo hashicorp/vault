@@ -6,7 +6,7 @@ description: |-
   Directory.
 ---
 
-# Azure Auth Method
+# Azure auth method
 
 The `azure` auth method allows authentication against Vault using
 Azure Active Directory credentials. It treats Azure as a Trusted Third Party
@@ -39,6 +39,8 @@ The following Azure [role assignments](https://learn.microsoft.com/en-us/azure/r
 must be granted to the Azure AD application in order for the auth method to access Azure
 APIs during authentication.
 
+### Role assignments
+
 ~> **Note:** The role assignments are only required when the
 [`vm_name`](/vault/api-docs/auth/azure#vm_name), [`vmss_name`](/vault/api-docs/auth/azure#vmss_name),
 or [`resource_id`](/vault/api-docs/auth/azure#resource_id) parameters are used on login.
@@ -53,6 +55,15 @@ or [`resource_id`](/vault/api-docs/auth/azure#resource_id) parameters are used o
 [vmss-uniform]: https://learn.microsoft.com/en-us/azure/virtual-machine-scale-sets/virtual-machine-scale-sets-orchestration-modes#scale-sets-with-uniform-orchestration
 [vmss-flex]: https://learn.microsoft.com/en-us/azure/virtual-machine-scale-sets/virtual-machine-scale-sets-orchestration-modes#scale-sets-with-flexible-orchestration
 [managed-identities]: https://learn.microsoft.com/en-us/azure/active-directory/managed-identities-azure-resources/managed-identities-status
+
+### API permissions
+
+The following [API permissions](https://learn.microsoft.com/en-us/azure/active-directory/develop/permissions-consent-overview#types-of-permissions)
+must be assigned to the service principal provided to Vault for managing the root rotation in Azure:
+
+| Permission Name               | Type        |
+| ----------------------------- | ----------- |
+| Application.ReadWrite.All     | Application |
 
 ## Authentication
 
@@ -188,7 +199,7 @@ tool.
        https://127.0.0.1:8200/v1/auth/azure/role/dev-role
    ```
 
-## Azure Managed Identities
+## Azure managed identities
 
 There are two types of [managed identities](https://learn.microsoft.com/en-us/azure/active-directory/managed-identities-azure-resources/overview#managed-identity-types)
 in Azure: System-assigned and User-assigned. System-assigned identities are unique to
@@ -206,7 +217,7 @@ for more info.
 
 [id-limitations]: https://learn.microsoft.com/en-us/azure/active-directory/managed-identities-azure-resources/managed-identity-best-practice-recommendations#limitation-of-using-managed-identities-for-authorization
 
-## Azure Debug Logs
+## Azure debug logs
 
 The Azure auth plugin supports debug logging which includes additional information
 about requests and responses from the Azure API.
@@ -222,7 +233,7 @@ AZURE_GO_SDK_LOG_LEVEL=DEBUG
 
 The Azure Auth Plugin has a full HTTP API. Please see the [API documentation](/vault/api-docs/auth/azure) for more details.
 
-## Code Example
+## Code example
 
 The following example demonstrates the Azure auth method to authenticate
 with Vault.

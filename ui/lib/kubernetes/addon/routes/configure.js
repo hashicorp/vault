@@ -1,8 +1,19 @@
-import FetchConfigRoute from './fetch-config';
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
 
-export default class KubernetesConfigureRoute extends FetchConfigRoute {
+import Route from '@ember/routing/route';
+import { inject as service } from '@ember/service';
+import { withConfig } from 'core/decorators/fetch-secrets-engine-config';
+
+@withConfig('kubernetes/config')
+export default class KubernetesConfigureRoute extends Route {
+  @service store;
+  @service secretMountPath;
+
   async model() {
-    const backend = this.secretMountPath.get();
+    const backend = this.secretMountPath.currentPath;
     return this.configModel || this.store.createRecord('kubernetes/config', { backend });
   }
 

@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import { attribute, clickable, isVisible, focusable, text } from 'ember-cli-page-object';
 import { triggerEvent, focus } from '@ember/test-helpers';
 

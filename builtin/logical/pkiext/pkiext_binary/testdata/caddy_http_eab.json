@@ -1,0 +1,70 @@
+{
+  "apps": {
+    "http": {
+      "servers": {
+        "srv0": {
+          "listen": [
+            ":80",
+            ":443"
+          ],
+          "routes": [
+            {
+              "match": [
+                {
+                  "host": [
+                    "{{.Hostname}}"
+                  ]
+                }
+              ],
+              "handle": [
+                {
+                  "handler": "subroute",
+                  "routes": [
+                    {
+                      "handle": [
+                        {
+                          "body": "Hello!",
+                          "handler": "static_response"
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ],
+              "terminal": true
+            }
+          ]
+        }
+      }
+    },
+    "tls": {
+      "automation": {
+        "policies": [
+          {
+            "subjects": [
+              "{{.Hostname}}"
+            ],
+            "issuers": [
+              {
+                "ca": "{{.Directory}}",
+                "module": "acme",
+                "external_account": {
+                  "key_id": "{{.EABID}}",
+                  "mac_key": "{{.EABKey}}"
+                },
+                "challenges": {
+                  "tls-alpn": {
+                    "disabled": true
+                  }
+                },
+                "trusted_roots_pem_files": [
+                  "{{.CACert}}"
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    }
+  }
+}

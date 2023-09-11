@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import { resolve } from 'rsvp';
 import { run } from '@ember/runloop';
 import { module, test } from 'qunit';
@@ -51,7 +56,7 @@ module('Unit | Service | store', function (hooks) {
 
     store.clearDataset('transit-key');
     assert.strictEqual(store.get('lazyCaches').size, 1, 'deletes one key');
-    assert.notOk(store.get('lazyCaches').has(), 'cache is no longer stored');
+    assert.notOk(store.get('lazyCaches').has('transit-key'), 'cache is no longer stored');
   });
 
   test('store.clearAllDatasets', function (assert) {
@@ -85,14 +90,21 @@ module('Unit | Service | store', function (hooks) {
       store.constructResponse('data', { id: 1, pageFilter: 't', page: 1, size: 3, responsePath: 'data' }),
       {
         data: ['two', 'three', 'fifteen'],
-        meta: { currentPage: 1, lastPage: 2, nextPage: 2, prevPage: 1, total: 5, filteredTotal: 4 },
+        meta: {
+          currentPage: 1,
+          lastPage: 2,
+          nextPage: 2,
+          prevPage: 1,
+          total: 5,
+          filteredTotal: 4,
+          pageSize: 3,
+        },
       },
       'it returns filtered results'
     );
   });
 
-  test('store.fetchPage', function (assert) {
-    const done = assert.async(4);
+  test('store.fetchPage', async function (assert) {
     const keys = ['zero', 'one', 'two', 'three', 'four', 'five', 'six'];
     const data = {
       data: {
@@ -109,13 +121,7 @@ module('Unit | Service | store', function (hooks) {
     store.storeDataset('transit-key', query, data, keys);
 
     let result;
-    run(() => {
-      store.fetchPage('transit-key', query).then((r) => {
-        result = r;
-        done();
-      });
-    });
-
+    result = await store.fetchPage('transit-key', query);
     assert.strictEqual(result.get('length'), pageSize, 'returns the correct number of items');
     assert.deepEqual(result.mapBy('id'), keys.slice(0, pageSize), 'returns the first page of items');
     assert.deepEqual(
@@ -127,23 +133,16 @@ module('Unit | Service | store', function (hooks) {
         lastPage: 4,
         total: 7,
         filteredTotal: 7,
+        pageSize: 2,
       },
       'returns correct meta values'
     );
 
-    run(() => {
-      store
-        .fetchPage('transit-key', {
-          size: pageSize,
-          page: 3,
-          responsePath: 'data.keys',
-        })
-        .then((r) => {
-          result = r;
-          done();
-        });
+    result = await store.fetchPage('transit-key', {
+      size: pageSize,
+      page: 3,
+      responsePath: 'data.keys',
     });
-
     const pageThreeEnd = 3 * pageSize;
     const pageThreeStart = pageThreeEnd - pageSize;
     assert.deepEqual(
@@ -152,17 +151,10 @@ module('Unit | Service | store', function (hooks) {
       'returns the third page of items'
     );
 
-    run(() => {
-      store
-        .fetchPage('transit-key', {
-          size: pageSize,
-          page: 99,
-          responsePath: 'data.keys',
-        })
-        .then((r) => {
-          result = r;
-          done();
-        });
+    result = await store.fetchPage('transit-key', {
+      size: pageSize,
+      page: 99,
+      responsePath: 'data.keys',
     });
 
     assert.deepEqual(
@@ -171,17 +163,10 @@ module('Unit | Service | store', function (hooks) {
       'returns the last page when the page value is beyond the of bounds'
     );
 
-    run(() => {
-      store
-        .fetchPage('transit-key', {
-          size: pageSize,
-          page: 0,
-          responsePath: 'data.keys',
-        })
-        .then((r) => {
-          result = r;
-          done();
-        });
+    result = await store.fetchPage('transit-key', {
+      size: pageSize,
+      page: 0,
+      responsePath: 'data.keys',
     });
     assert.deepEqual(
       result.mapBy('id'),

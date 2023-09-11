@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package fakegcsserver
 
 import (
@@ -9,7 +12,7 @@ import (
 	"testing"
 
 	"cloud.google.com/go/storage"
-	"github.com/hashicorp/vault/helper/testhelpers/docker"
+	"github.com/hashicorp/vault/sdk/helper/docker"
 	"google.golang.org/api/iterator"
 	"google.golang.org/api/option"
 )

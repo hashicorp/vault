@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package command
 
 import (
@@ -152,7 +155,7 @@ func (c *KVDestroyCommand) Run(args []string) int {
 		c.UI.Error("Destroy not supported on KV Version 1")
 		return 1
 	}
-	destroyPath := addPrefixToKVPath(partialPath, mountPath, "destroy")
+	destroyPath := addPrefixToKVPath(partialPath, mountPath, "destroy", false)
 	if err != nil {
 		c.UI.Error(err.Error())
 		return 2
