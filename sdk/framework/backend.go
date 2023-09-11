@@ -32,6 +32,10 @@ import (
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
+// Custom body parsers which may parse a binary body and populate request.Data fields
+// req.Data will contain a special field, HTTPRawBody with the body contents pre-populated
+type BodyParsingFunc func(context.Context, *logical.Request) error
+
 // Backend is an implementation of logical.Backend that allows
 // the implementer to code a backend using a much more programmer-friendly
 // framework that handles a lot of the routing and validation for you.

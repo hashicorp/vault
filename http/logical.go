@@ -5,6 +5,7 @@ package http
 
 import (
 	"bufio"
+	"bytes"
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
@@ -44,26 +45,36 @@ func (b *bufferedReader) Close() error {
 
 const MergePatchContentTypeHeader = "application/merge-patch+json"
 
-func buildLogicalRequestNoAuth(perfStandby bool, w http.ResponseWriter, r *http.Request) (*logical.Request, io.ReadCloser, int, error) {
+func buildLogicalRequestNoAuth(perfStandby bool, a *vault.RouterAccess, w http.ResponseWriter, r *http.Request) (*logical.Request, io.ReadCloser, int, error) {
 	ns, err := namespace.FromContext(r.Context())
 	if err != nil {
 		return nil, nil, http.StatusBadRequest, nil
 	}
 	path := ns.TrimmedPath(r.URL.Path[len("/v1/"):])
 
+	ctx := r.Context()
 	var data map[string]interface{}
 	var origBody io.ReadCloser
 	var passHTTPReq bool
 	var responseWriter http.ResponseWriter
+	req := &logical.Request{
+		Path:       path,
+		Data:       data,
+		Connection: getConnection(r),
+		Headers:    r.Header,
+	}
+	// Buffer the request body in order to allow us to peek at the beginning
+	// without consuming it. This approach involves no copying.
+	bufferedBody := newBufferedReader(r.Body)
+	r.Body = bufferedBody
 
 	// Determine the operation
-	var op logical.Operation
 	switch r.Method {
 	case "DELETE":
-		op = logical.DeleteOperation
+		req.Operation = logical.DeleteOperation
 		data = parseQuery(r.URL.Query())
 	case "GET":
-		op = logical.ReadOperation
+		req.Operation = logical.ReadOperation
 		queryVals := r.URL.Query()
 		var list bool
 		var err error
@@ -75,7 +86,7 @@ func buildLogicalRequestNoAuth(perfStandby bool, w http.ResponseWriter, r *http.
 			}
 			if list {
 				queryVals.Del("list")
-				op = logical.ListOperation
+				req.Operation = logical.ListOperation
 				if !strings.HasSuffix(path, "/") {
 					path += "/"
 				}
@@ -98,10 +109,11 @@ func buildLogicalRequestNoAuth(perfStandby bool, w http.ResponseWriter, r *http.
 		}
 
 	case "POST", "PUT":
-		op = logical.UpdateOperation
+		req.Operation = logical.UpdateOperation
 
 		// Buffer the request body in order to allow us to peek at the beginning
 		// without consuming it. This approach involves no copying.
+		origBody = r.Body
 		bufferedBody := newBufferedReader(r.Body)
 		r.Body = bufferedBody
 
@@ -109,7 +121,21 @@ func buildLogicalRequestNoAuth(perfStandby bool, w http.ResponseWriter, r *http.
 		// is der encoded) we don't want to parse it. Instead, we will simply
 		// add the HTTP request to the logical request object for later consumption.
 		contentType := r.Header.Get("Content-Type")
-		if path == "sys/storage/raft/snapshot" || path == "sys/storage/raft/snapshot-force" || isOcspRequest(contentType) {
+
+		if a != nil && a.IsBinaryPath(ctx, req) {
+			var bodyBytes bytes.Buffer
+			// TODO: Size limit
+			_, err := io.Copy(&bodyBytes, r.Body)
+			if err != nil {
+				status := http.StatusBadRequest
+				logical.AdjustErrorStatusCode(&status, err)
+				return nil, nil, status, fmt.Errorf("error reading data")
+			}
+			passHTTPReq = true
+			req.HTTPRequest = r
+			data = make(map[string]interface{})
+			data[logical.HTTPRawBody] = bodyBytes.Bytes()
+		} else if path == "sys/storage/raft/snapshot" || path == "sys/storage/raft/snapshot-force" || isOcspRequest(contentType) {
 			passHTTPReq = true
 			origBody = r.Body
 		} else {
@@ -148,7 +174,7 @@ func buildLogicalRequestNoAuth(perfStandby bool, w http.ResponseWriter, r *http.
 		}
 
 	case "PATCH":
-		op = logical.PatchOperation
+		req.Operation = logical.PatchOperation
 
 		contentTypeHeader := r.Header.Get("Content-Type")
 		contentType, _, err := mime.ParseMediaType(contentTypeHeader)
@@ -176,14 +202,14 @@ func buildLogicalRequestNoAuth(perfStandby bool, w http.ResponseWriter, r *http.
 		}
 
 	case "LIST":
-		op = logical.ListOperation
+		req.Operation = logical.ListOperation
 		if !strings.HasSuffix(path, "/") {
 			path += "/"
 		}
 
 		data = parseQuery(r.URL.Query())
 	case "HEAD":
-		op = logical.HeaderOperation
+		req.Operation = logical.HeaderOperation
 		data = parseQuery(r.URL.Query())
 	case "OPTIONS":
 	default:
@@ -195,14 +221,8 @@ func buildLogicalRequestNoAuth(perfStandby bool, w http.ResponseWriter, r *http.
 		return nil, nil, http.StatusInternalServerError, fmt.Errorf("failed to generate identifier for the request: %w", err)
 	}
 
-	req := &logical.Request{
-		ID:         requestId,
-		Operation:  op,
-		Path:       path,
-		Data:       data,
-		Connection: getConnection(r),
-		Headers:    r.Header,
-	}
+	req.ID = requestId
+	req.Data = data
 
 	if passHTTPReq {
 		req.HTTPRequest = r
@@ -263,7 +283,7 @@ func buildLogicalPath(r *http.Request) (string, int, error) {
 }
 
 func buildLogicalRequest(core *vault.Core, w http.ResponseWriter, r *http.Request) (*logical.Request, io.ReadCloser, int, error) {
-	req, origBody, status, err := buildLogicalRequestNoAuth(core.PerfStandby(), w, r)
+	req, origBody, status, err := buildLogicalRequestNoAuth(core.PerfStandby(), core.RouterAccess(), w, r)
 	if err != nil || status != 0 {
 		return nil, nil, status, err
 	}
@@ -315,7 +335,7 @@ func handleLogicalNoForward(core *vault.Core) http.Handler {
 
 func handleLogicalRecovery(raw *vault.RawBackend, token *atomic.String) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		req, _, statusCode, err := buildLogicalRequestNoAuth(false, w, r)
+		req, _, statusCode, err := buildLogicalRequestNoAuth(false, nil, w, r)
 		if err != nil || statusCode != 0 {
 			respondError(w, statusCode, err)
 			return
