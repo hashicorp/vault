@@ -13,7 +13,7 @@
  * <SecretEdit @model={{model}} @mode="create" @baseKey={{this.baseKey}} @key={{this.model}} @initialKey={{this.initialKey}} @onRefresh={{action "refresh"}} @onToggleAdvancedEdit={{action "toggleAdvancedEdit"}} @preferAdvancedEdit={{this.preferAdvancedEdit}}/>
  * ```
 /This component is initialized from the secret-edit-layout.hbs file
- * @param {object} model - Model returned from secret-v2 which is generated in the secret-edit route
+ * @param {object} model - Secret model which is generated in the secret-edit route
  * @param {string} mode - Edit, create, etc.
  * @param {string} baseKey - Provided for navigation.
  * @param {object} key - Passed through, copy of the model.
