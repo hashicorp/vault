@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 package vault
 
@@ -240,7 +240,8 @@ func (c *Core) enableCredentialInternal(ctx context.Context, entry *MountEntry, 
 		// Initialize() if necessary
 		view.setReadOnlyErr(origViewReadOnlyErr)
 		// initialize, using the core's active context.
-		err := backend.Initialize(c.activeContext, &logical.InitializationRequest{Storage: view})
+		nsActiveContext := namespace.ContextWithNamespace(c.activeContext, ns)
+		err := backend.Initialize(nsActiveContext, &logical.InitializationRequest{Storage: view})
 		if err != nil {
 			return err
 		}
@@ -798,10 +799,6 @@ func (c *Core) setupCredentials(ctx context.Context) error {
 		view.setReadOnlyErr(logical.ErrSetupReadOnly)
 		if strutil.StrListContains(singletonMounts, entry.Type) {
 			defer view.setReadOnlyErr(origViewReadOnlyErr)
-		} else {
-			c.postUnsealFuncs = append(c.postUnsealFuncs, func() {
-				view.setReadOnlyErr(origViewReadOnlyErr)
-			})
 		}
 
 		// Initialize the backend
@@ -914,6 +911,9 @@ func (c *Core) setupCredentials(ctx context.Context) error {
 					postUnsealLogger.Error("skipping initialization for nil auth backend")
 					return
 				}
+				if !strutil.StrListContains(singletonMounts, localEntry.Type) {
+					view.setReadOnlyErr(origViewReadOnlyErr)
+				}
 
 				err := backend.Initialize(ctx, &logical.InitializationRequest{Storage: view})
 				if err != nil {
@@ -998,7 +998,6 @@ func (c *Core) newCredentialBackend(ctx context.Context, entry *MountEntry, sysV
 	conf["plugin_version"] = entry.Version
 
 	authLogger := c.baseLogger.Named(fmt.Sprintf("auth.%s.%s", t, entry.Accessor))
-	c.AddLogger(authLogger)
 	pluginEventSender, err := c.events.WithPlugin(entry.namespace, &logical.EventPluginInfo{
 		MountClass:    consts.PluginTypeCredential.String(),
 		MountAccessor: entry.Accessor,

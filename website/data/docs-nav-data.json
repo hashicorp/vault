@@ -644,7 +644,7 @@
             "path": "commands/pki/verify-sign"
           },
           {
-            "title": "<code>list-intermeidates</code>",
+            "title": "<code>list-intermediates</code>",
             "path": "commands/pki/list-intermediates"
           },
           {
@@ -1007,6 +1007,10 @@
               {
                 "title": "JWT",
                 "path": "agent-and-proxy/autoauth/methods/jwt"
+              },
+              {
+                "title": "LDAP",
+                "path": "agent-and-proxy/autoauth/methods/ldap"
               },
               {
                 "title": "Kerberos",
@@ -1379,8 +1383,22 @@
             "path": "secrets/pki/considerations"
           },
           {
+            "title": "Troubleshooting ACME integration",
+            "path": "secrets/pki/troubleshooting-acme"
+          },
+
+          {
             "title": "Rotation Primitives",
             "path": "secrets/pki/rotation-primitives"
+          },
+          {
+            "title": "Certificate Issuance External Policy Service (CIEPS)",
+            "badge": {
+              "text": "ENTERPRISE",
+              "type": "outlined",
+              "color": "neutral"
+            },
+            "path": "secrets/pki/cieps"
           }
         ]
       },
@@ -1870,6 +1888,10 @@
               {
                 "title": "API Reference",
                 "path": "platform/k8s/vso/api-reference"
+              },
+              {
+                "title": "OpenShift",
+                "path": "platform/k8s/vso/openshift"
               }
             ]
           }
@@ -2268,19 +2290,19 @@
       },
       {
         "title": "Feature Deprecation Notice and Plans",
-        "href": "https://www.vaultproject.io/docs/deprecation/faq"
+        "href": "https://developer.hashicorp.com/vault/docs/deprecation/faq"
       },
       {
         "title": "License",
-        "href": "https://www.vaultproject.io/docs/enterprise/license/faq"
+        "href": "https://developer.hashicorp.com/vault/docs/enterprise/license/faq"
       },
       {
         "title": "Client Count",
-        "href": "https://www.vaultproject.io/docs/concepts/client-count/faq"
+        "href": "https://developer.hashicorp.com/vault/docs/concepts/client-count/faq"
       },
       {
         "title": "Login MFA",
-        "href": "https://www.vaultproject.io/docs/auth/login-mfa/faq"
+        "href": "https://developer.hashicorp.com/vault/docs/auth/login-mfa/faq"
       },
       {
         "title": "Server Side Consistent Token",

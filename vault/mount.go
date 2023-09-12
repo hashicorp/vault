@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 package vault
 
@@ -758,8 +758,10 @@ func (c *Core) mountInternal(ctx context.Context, entry *MountEntry, updateStora
 		// restore the original readOnlyErr, so we can write to the view in
 		// Initialize() if necessary
 		view.setReadOnlyErr(origReadOnlyErr)
+
 		// initialize, using the core's active context.
-		err := backend.Initialize(c.activeContext, &logical.InitializationRequest{Storage: view})
+		nsActiveContext := namespace.ContextWithNamespace(c.activeContext, ns)
+		err := backend.Initialize(nsActiveContext, &logical.InitializationRequest{Storage: view})
 		if err != nil {
 			return err
 		}
@@ -874,9 +876,13 @@ func (c *Core) unmountInternal(ctx context.Context, path string, updateStorage b
 
 	rCtx := namespace.ContextWithNamespace(c.activeContext, ns)
 	if backend != nil && c.rollback != nil {
-		// Invoke the rollback manager a final time
+		// Invoke the rollback manager a final time. This is not fatal as
+		// various periodic funcs (e.g., PKI) can legitimately error; the
+		// periodic rollback manager logs these errors rather than failing
+		// replication like returning this error would do.
 		if err := c.rollback.Rollback(rCtx, path); err != nil {
-			return err
+			c.logger.Error("ignoring rollback error during unmount", "error", err, "path", path)
+			err = nil
 		}
 	}
 	if backend != nil && c.expiration != nil && updateStorage {
@@ -1142,11 +1148,15 @@ func (c *Core) remountSecretsEngine(ctx context.Context, src, dst namespace.Moun
 	}
 
 	if !c.IsDRSecondary() {
-		// Invoke the rollback manager a final time
+		// Invoke the rollback manager a final time. This is not fatal as
+		// various periodic funcs (e.g., PKI) can legitimately error; the
+		// periodic rollback manager logs these errors rather than failing
+		// replication like returning this error would do.
 		rCtx := namespace.ContextWithNamespace(c.activeContext, ns)
 		if c.rollback != nil && c.router.MatchingBackend(ctx, srcRelativePath) != nil {
 			if err := c.rollback.Rollback(rCtx, srcRelativePath); err != nil {
-				return err
+				c.logger.Error("ignoring rollback error during remount", "error", err, "path", src.Namespace.Path+src.MountPath)
+				err = nil
 			}
 		}
 
@@ -1506,10 +1516,6 @@ func (c *Core) setupMounts(ctx context.Context) error {
 		view.setReadOnlyErr(logical.ErrSetupReadOnly)
 		if strutil.StrListContains(singletonMounts, entry.Type) {
 			defer view.setReadOnlyErr(origReadOnlyErr)
-		} else {
-			c.postUnsealFuncs = append(c.postUnsealFuncs, func() {
-				view.setReadOnlyErr(origReadOnlyErr)
-			})
 		}
 
 		var backend logical.Backend
@@ -1595,8 +1601,12 @@ func (c *Core) setupMounts(ctx context.Context) error {
 					postUnsealLogger.Error("skipping initialization for nil backend", "path", localEntry.Path)
 					return
 				}
+				if !strutil.StrListContains(singletonMounts, localEntry.Type) {
+					view.setReadOnlyErr(origReadOnlyErr)
+				}
 
-				err := backend.Initialize(ctx, &logical.InitializationRequest{Storage: view})
+				nsActiveContext := namespace.ContextWithNamespace(c.activeContext, localEntry.Namespace())
+				err := backend.Initialize(nsActiveContext, &logical.InitializationRequest{Storage: view})
 				if err != nil {
 					postUnsealLogger.Error("failed to initialize mount backend", "error", err)
 				}
@@ -1695,7 +1705,6 @@ func (c *Core) newLogicalBackend(ctx context.Context, entry *MountEntry, sysView
 	conf["plugin_version"] = entry.Version
 
 	backendLogger := c.baseLogger.Named(fmt.Sprintf("secrets.%s.%s", t, entry.Accessor))
-	c.AddLogger(backendLogger)
 	pluginEventSender, err := c.events.WithPlugin(entry.namespace, &logical.EventPluginInfo{
 		MountClass:    consts.PluginTypeSecrets.String(),
 		MountAccessor: entry.Accessor,

@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 package server
 
@@ -507,7 +507,7 @@ func testUnknownFieldValidation(t *testing.T) {
 			Problem: "unknown or unsupported field bad_value found in configuration",
 			Position: token.Pos{
 				Filename: "./test-fixtures/config.hcl",
-				Offset:   651,
+				Offset:   652,
 				Line:     37,
 				Column:   5,
 			},
@@ -789,7 +789,8 @@ func testConfig_Sanitized(t *testing.T) {
 		"listeners": []interface{}{
 			map[string]interface{}{
 				"config": map[string]interface{}{
-					"address": "127.0.0.1:443",
+					"address":          "127.0.0.1:443",
+					"chroot_namespace": "admin/",
 				},
 				"type": "tcp",
 			},
@@ -845,6 +846,7 @@ func testConfig_Sanitized(t *testing.T) {
 			"lease_metrics_epsilon":                  time.Hour,
 			"num_lease_metrics_buckets":              168,
 			"add_lease_metrics_namespace_labels":     false,
+			"add_mount_point_rollback_metrics":       false,
 		},
 		"administrative_namespace_path": "admin/",
 	}
@@ -882,6 +884,7 @@ listener "tcp" {
   proxy_api {
     enable_quit = true
   }
+  chroot_namespace = "admin"
 }`))
 
 	config := Config{
@@ -926,6 +929,7 @@ listener "tcp" {
 						EnableQuit: true,
 					},
 					CustomResponseHeaders: DefaultCustomHeaders,
+					ChrootNamespace:       "admin/",
 				},
 			},
 		},
@@ -1131,7 +1135,7 @@ func testParseSeals(t *testing.T) {
 						"default_hmac_key_label": "vault-hsm-hmac-key",
 						"generate_key":           "true",
 					},
-					Name: "pkcs11",
+					Name: "pkcs11-disabled",
 				},
 			},
 		},

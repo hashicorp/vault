@@ -1,0 +1,28 @@
+<BasicDropdown @class="popup-menu" @horizontalPosition="auto-right" @verticalPosition="below" as |D|>
+  <D.Trigger data-test-version-dropdown class="toolbar-link {{if D.isOpen ' is-active'}}">
+    Version
+    {{or @displayVersion "current"}}
+    <Chevron @direction="down" @isButton={{true}} />
+  </D.Trigger>
+  <D.Content @defaultClass="popup-menu-content">
+    <nav class="box menu">
+      <ul class="menu-list">
+        {{#each @metadata.sortedVersions as |versionData|}}
+          <li data-test-version={{versionData.version}} class="action">
+            <LinkTo @query={{hash version=versionData.version}} {{on "click" (fn @onClose D)}}>
+              Version
+              {{versionData.version}}
+              {{#if versionData.destroyed}}
+                <Icon @name="x-square-fill" class="has-text-danger is-pulled-right" />
+              {{else if versionData.deletion_time}}
+                <Icon @name="x-square-fill" class="has-text-grey is-pulled-right" />
+              {{else if (loose-equal versionData.version @metadata.currentVersion)}}
+                <Icon @name="check-circle" class="has-text-success is-pulled-right" />
+              {{/if}}
+            </LinkTo>
+          </li>
+        {{/each}}
+      </ul>
+    </nav>
+  </D.Content>
+</BasicDropdown>

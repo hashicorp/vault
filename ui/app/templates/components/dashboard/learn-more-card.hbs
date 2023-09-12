@@ -1,0 +1,26 @@
+<Hds::Card::Container @hasBorder={{true}} class="has-padding-l" data-test-card="learn-more">
+  <h3 class="title is-4 has-bottom-margin-xxs" data-test-learn-more-title>Learn more</h3>
+  <div class="sub-text" data-test-learn-more-subtext>
+    Explore the features of Vault and learn advance practices with the following tutorials and documentation.
+  </div>
+  <div class="has-top-margin-xs" data-test-learn-more-links>
+    {{#each this.learnMoreLinks as |learnMoreLink|}}
+      {{#if
+        (or
+          (and learnMoreLink.requiredFeature @isEnterprise (has-feature learnMoreLink.requiredFeature))
+          (not learnMoreLink.requiredFeature)
+        )
+      }}
+        <DocLink
+          data-test-learn-more-link={{learnMoreLink.title}}
+          @path={{learnMoreLink.link}}
+          class="is-size-8 has-font-weight-normal is-block has-bottom-margin-xxs"
+        >
+          <Icon @name={{learnMoreLink.icon}} />
+          {{learnMoreLink.title}}
+        </DocLink>
+      {{/if}}
+
+    {{/each}}
+  </div>
+</Hds::Card::Container>

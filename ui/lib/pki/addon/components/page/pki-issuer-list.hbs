@@ -1,3 +1,8 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
 {{#each @issuers as |pkiIssuer idx|}}
   <LinkedBlock class="list-item-row" @params={{array "issuers.issuer.details" pkiIssuer.id}} @linkPrefix={{@mountPoint}}>
     <div class="level is-mobile">

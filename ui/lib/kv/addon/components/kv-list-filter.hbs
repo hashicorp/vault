@@ -1,0 +1,35 @@
+<div class="navigate-filter">
+  <div class="field" data-test-nav-input>
+    <p class="control has-icons-left">
+      <Input
+        id="secret-filter"
+        class="filter input"
+        placeholder="Filter secrets"
+        @value={{@filterValue}}
+        @type="text"
+        data-test-component="kv-list-filter"
+        {{on "input" this.handleInput}}
+        {{on "keydown" this.handleKeyDown}}
+        {{on "focus" this.setFilterIsFocused}}
+        {{did-insert this.focusInput}}
+        autocomplete="off"
+      />
+      <Icon @name="search" class="search-icon has-text-grey-light" />
+    </p>
+  </div>
+</div>
+{{#if (and this.filterIsFocused this.isFilterMatch)}}
+  <p class="help has-text-grey is-size-8 has-left-padding-xs" data-test-help-enter>
+    <kbd>ENTER</kbd>
+    to go to see details.
+    <kbd>ESC</kbd>
+    to clear input.
+  </p>
+{{else}}
+  <p class="help has-text-grey is-size-8 has-left-padding-xs" data-test-help-tab>
+    <kbd>TAB</kbd>
+    to autocomplete.
+    <kbd>ESC</kbd>
+    to clear input.
+  </p>
+{{/if}}

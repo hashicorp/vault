@@ -60,6 +60,19 @@ identities. This behavior can be configured using the [group-policy-application]
 can be set to allow policies to be applied irrespective of namespace hierarchy, allowing sharing
 across any namespace.
 
+### Administrative namespaces
+
+The Vault API includes system backend endpoints, which are mounted under the sys/ path.
+System endpoints let you interact with the internal features of your Vault instance.
+For security reasons, some of the system backend endpoints are restricted, and can only be called
+from the root namespace or using a token in the root namespace with elevated permissions.
+
+By default, Vault allows non-root calls to the less sensitive system backend endpoints.
+However, there may be instances where a Vault operator needs to provide access to a subset
+of the restricted endpoints, like sys/audit-hash and sys/monitor, without granting access
+to the full set of privileged sys/ paths. An administrative namespace lets Vault operators grant
+access to a subset of privileged endpoints by setting a parameter in their Vault configuration file.
+
 ## Usage
 
 API operations performed under a namespace can be done by providing the relative
@@ -95,7 +108,7 @@ Consider the following namespace name restrictions:
 - Cannot end with `/`
 - Cannot contain spaces
 - The `root` is the top-level namespace. You cannot create another namespace
-  named "root" under the `root` namespace 
+  named "root" under the `root` namespace
 
 In addition, the following paths are reserved by Vault so that they cannot be
 the namespace name.

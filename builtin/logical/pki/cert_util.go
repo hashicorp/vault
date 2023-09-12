@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 package pki
 
@@ -659,7 +659,7 @@ func validateNames(b *backend, data *inputBundle, names []string) string {
 
 				if data.role.AllowGlobDomains &&
 					strings.Contains(currDomain, "*") &&
-					glob.Glob(currDomain, name) {
+					glob.Glob(strings.ToLower(currDomain), strings.ToLower(name)) {
 					valid = true
 					break
 				}
@@ -1618,6 +1618,16 @@ func getCertificateNotAfter(b *backend, data *inputBundle, caSign *certutil.CAIn
 	} else {
 		notAfter = time.Now().Add(ttl)
 	}
+	notAfter, err = applyIssuerLeafNotAfterBehavior(caSign, notAfter)
+	if err != nil {
+		return time.Time{}, warnings, err
+	}
+	return notAfter, warnings, nil
+}
+
+// applyIssuerLeafNotAfterBehavior resets a certificate's notAfter time or errors out based on the
+// issuer's notAfter date along with the LeafNotAfterBehavior configuration
+func applyIssuerLeafNotAfterBehavior(caSign *certutil.CAInfoBundle, notAfter time.Time) (time.Time, error) {
 	if caSign != nil && notAfter.After(caSign.Certificate.NotAfter) {
 		// If it's not self-signed, verify that the issued certificate
 		// won't be valid past the lifetime of the CA certificate, and
@@ -1631,11 +1641,11 @@ func getCertificateNotAfter(b *backend, data *inputBundle, caSign *certutil.CAIn
 		case certutil.ErrNotAfterBehavior:
 			fallthrough
 		default:
-			return time.Time{}, warnings, errutil.UserError{Err: fmt.Sprintf(
+			return time.Time{}, errutil.UserError{Err: fmt.Sprintf(
 				"cannot satisfy request, as TTL would result in notAfter of %s that is beyond the expiration of the CA certificate at %s", notAfter.UTC().Format(time.RFC3339Nano), caSign.Certificate.NotAfter.UTC().Format(time.RFC3339Nano))}
 		}
 	}
-	return notAfter, warnings, nil
+	return notAfter, nil
 }
 
 func convertRespToPKCS8(resp *logical.Response) error {

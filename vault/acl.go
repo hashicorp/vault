@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 package vault
 
@@ -321,6 +321,9 @@ func (a *ACL) Capabilities(ctx context.Context, path string) (pathCapabilities [
 	}
 	if capabilities&PatchCapabilityInt > 0 {
 		pathCapabilities = append(pathCapabilities, PatchCapability)
+	}
+	if capabilities&SubscribeCapabilityInt > 0 {
+		pathCapabilities = append(pathCapabilities, SubscribeCapability)
 	}
 
 	// If "deny" is explicitly set or if the path has no capabilities at all,

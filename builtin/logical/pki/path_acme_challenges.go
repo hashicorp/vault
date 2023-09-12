@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 package pki
 
@@ -10,9 +10,9 @@ import (
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
-func pathAcmeChallenge(b *backend) []*framework.Path {
-	return buildAcmeFrameworkPaths(b, patternAcmeChallenge,
-		"/challenge/"+framework.MatchAllRegex("auth_id")+"/"+framework.MatchAllRegex("challenge_type"))
+func pathAcmeChallenge(b *backend, baseUrl string, opts acmeWrapperOpts) *framework.Path {
+	return patternAcmeChallenge(b, baseUrl+
+		"/challenge/"+framework.MatchAllRegex("auth_id")+"/"+framework.MatchAllRegex("challenge_type"), opts)
 }
 
 func addFieldsForACMEChallenge(fields map[string]*framework.FieldSchema) map[string]*framework.FieldSchema {
@@ -31,7 +31,7 @@ func addFieldsForACMEChallenge(fields map[string]*framework.FieldSchema) map[str
 	return fields
 }
 
-func patternAcmeChallenge(b *backend, pattern string) *framework.Path {
+func patternAcmeChallenge(b *backend, pattern string, opts acmeWrapperOpts) *framework.Path {
 	fields := map[string]*framework.FieldSchema{}
 	addFieldsForACMEPath(fields, pattern)
 	addFieldsForACMERequest(fields)
@@ -42,7 +42,7 @@ func patternAcmeChallenge(b *backend, pattern string) *framework.Path {
 		Fields:  fields,
 		Operations: map[logical.Operation]framework.OperationHandler{
 			logical.UpdateOperation: &framework.PathOperation{
-				Callback:                    b.acmeAccountRequiredWrapper(b.acmeChallengeHandler),
+				Callback:                    b.acmeAccountRequiredWrapper(opts, b.acmeChallengeHandler),
 				ForwardPerformanceSecondary: false,
 				ForwardPerformanceStandby:   true,
 			},

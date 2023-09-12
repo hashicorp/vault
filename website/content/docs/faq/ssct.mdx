@@ -9,7 +9,7 @@ description: An list of frequently asked questions about server side consistent 
 This FAQ section contains frequently asked questions about the Server Side Consistent Token feature.
 
 - [Q: What is the Server Side Consistent Token feature?](#q-what-is-the-server-side-consistent-token-feature)
-- [Q: I have Vault OSS. How does this feature impact me?](#q-i-have-vault-oss-how-does-this-feature-impact-me)
+- [Q: I have Vault Community Edition. How does this feature impact me?](#q-i-have-vault-community-edition-how-does-this-feature-impact-me)
 - [Q: What token changes does the Server Side Consistent Tokens feature introduce?](#q-what-token-changes-does-the-server-side-consistent-tokens-feature-introduce)
 - [Q: Why are we changing the token?](#q-why-are-we-changing-the-token)
 - [Q: What type of tokens are impacted by this feature?](#q-what-type-of-tokens-are-impacted-by-this-feature)
@@ -31,9 +31,9 @@ To help with such cases, we’ve now added support for the Server Side Consisten
 This feature provides a way for Service tokens, returned from logins (or token create requests), to have the relevant minimum WAL state information embedded within the token itself. Clients can then use this token to authenticate subsequent requests. Thus, clients can obtain read-after-write consistency for the token without typically having to make changes to their code or architecture.
 If a performance standby does not have the state required to authenticate the token, it returns a 412 error to allow the client to retry. If client retry is not possible, there is a server config to allow for the consistency.
 
-### Q: i have Vault OSS. how does this feature impact me?
+### Q: i have Vault Community Edition. how does this feature impact me?
 
-For the sake of standardization between OSS and Enterprise, and due to the value of adding token prefixes in OSS for token scanning use cases, the token formats are changed across OSS and Enterprise starting Vault 1.10. However, since there are no performance standbys or replication in Vault OSS, the new Vault OSS token will always show the local index of the WAL as 0 to indicate there is nothing to wait for.
+For the sake of standardization between Community and Enterprise, and due to the value of adding token prefixes in Vault for token scanning use cases, the token formats are changed across all Vault versions starting Vault 1.10. However, since there are no performance standbys or replication in Vault Community Edition, the new Vault token will always show the local index of the WAL as 0 to indicate there is nothing to wait for.
 
 ### Q: what token changes does the server side consistent tokens feature introduce?
 

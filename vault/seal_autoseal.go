@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 package vault
 
@@ -7,17 +7,15 @@ import (
 	"bytes"
 	"context"
 	"crypto/subtle"
-	"encoding/json"
 	"fmt"
 	mathrand "math/rand"
 	"sync"
 	"sync/atomic"
 	"time"
 
-	aeadwrapper "github.com/hashicorp/go-kms-wrapping/wrappers/aead/v2"
+	"github.com/armon/go-metrics"
 
 	log "github.com/hashicorp/go-hclog"
-	wrapping "github.com/hashicorp/go-kms-wrapping/v2"
 	"github.com/hashicorp/vault/sdk/physical"
 	"github.com/hashicorp/vault/vault/seal"
 )
@@ -25,7 +23,7 @@ import (
 // barrierTypeUpgradeCheck checks for backwards compat on barrier type, not
 // applicable in the OSS side
 var (
-	barrierTypeUpgradeCheck     = func(_ wrapping.WrapperType, _ *SealConfig) {}
+	barrierTypeUpgradeCheck     = func(_ SealConfigType, _ *SealConfig) {}
 	autoSealUnavailableDuration = []string{"seal", "unreachable", "time"}
 	// vars for unit testings
 	sealHealthTestIntervalNominal   = 10 * time.Minute
@@ -39,35 +37,42 @@ var (
 type autoSeal struct {
 	seal.Access
 
-	barrierType    wrapping.WrapperType
-	barrierConfig  atomic.Value
-	recoveryConfig atomic.Value
-	core           *Core
-	logger         log.Logger
+	barrierSealConfigType SealConfigType
+	barrierConfig         atomic.Value
+	recoveryConfig        atomic.Value
+	core                  *Core
+	logger                log.Logger
 
-	hcLock          sync.Mutex
+	allSealsHealthy bool
+	hcLock          sync.RWMutex
 	healthCheckStop chan struct{}
 }
 
 // Ensure we are implementing the Seal interface
 var _ Seal = (*autoSeal)(nil)
 
-func NewAutoSeal(lowLevel seal.Access) (*autoSeal, error) {
+func NewAutoSeal(lowLevel seal.Access) *autoSeal {
 	ret := &autoSeal{
 		Access: lowLevel,
 	}
 	ret.barrierConfig.Store((*SealConfig)(nil))
 	ret.recoveryConfig.Store((*SealConfig)(nil))
 
-	// Having the wrapper type in a field is just a convenience since Seal.BarrierType()
-	// does not return an error.
-	var err error
-	ret.barrierType, err = ret.Type(context.Background())
-	if err != nil {
-		return nil, err
+	// See SealConfigType for the rules about computing the type.
+	if len(lowLevel.GetSealGenerationInfo().Seals) > 1 {
+		ret.barrierSealConfigType = SealConfigTypeMultiseal
+	} else {
+		// Note that the Access constructors guarantee that there is at least one KMS config
+		ret.barrierSealConfigType = SealConfigType(lowLevel.GetSealGenerationInfo().Seals[0].Type)
 	}
 
-	return ret, nil
+	return ret
+}
+
+func (d *autoSeal) Healthy() bool {
+	d.hcLock.RLock()
+	defer d.hcLock.RUnlock()
+	return d.allSealsHealthy
 }
 
 func (d *autoSeal) SealWrapable() bool {
@@ -89,7 +94,6 @@ func (d *autoSeal) SetCore(core *Core) {
 	d.core = core
 	if d.logger == nil {
 		d.logger = d.core.Logger().Named("autoseal")
-		d.core.AddLogger(d.logger)
 	}
 }
 
@@ -101,12 +105,8 @@ func (d *autoSeal) Finalize(ctx context.Context) error {
 	return d.Access.Finalize(ctx)
 }
 
-func (d *autoSeal) BarrierType() wrapping.WrapperType {
-	return d.barrierType
-}
-
-func (d *autoSeal) GetShamirWrapper() (*aeadwrapper.ShamirWrapper, error) {
-	return nil, fmt.Errorf("autoSeal does not use a ShamirWrapper")
+func (d *autoSeal) BarrierSealConfigType() SealConfigType {
+	return d.barrierSealConfigType
 }
 
 func (d *autoSeal) StoredKeysSupported() seal.StoredKeysSupport {
@@ -138,16 +138,15 @@ func (d *autoSeal) upgradeStoredKeys(ctx context.Context) error {
 		return fmt.Errorf("no stored keys found")
 	}
 
-	blobInfo, err := UnmarshalSealWrappedValue(pe.Value)
+	wrappedEntryValue, err := UnmarshalSealWrappedValue(pe.Value)
 	if err != nil {
 		return fmt.Errorf("failed to unmarshal stored keys: %w", err)
 	}
-
-	keyId, err := d.Access.KeyId(ctx)
+	uptodate, err := d.Access.IsUpToDate(ctx, wrappedEntryValue.getValue(), true)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to check if stored keys are up-to-date: %w", err)
 	}
-	if blobInfo.KeyInfo != nil && blobInfo.KeyInfo.KeyId != keyId {
+	if !uptodate {
 		d.logger.Info("upgrading stored keys")
 
 		keys, err := UnsealWrapStoredBarrierKeys(ctx, d.GetAccess(), pe)
@@ -167,68 +166,50 @@ func (d *autoSeal) upgradeStoredKeys(ctx context.Context) error {
 // the stored keys and the recovery key are encrypted with. The provided
 // Context must be non-nil.
 func (d *autoSeal) UpgradeKeys(ctx context.Context) error {
-	// Many of the seals update their keys to the latest KeyId when Encrypt
-	// is called.
-	if _, err := d.Encrypt(ctx, []byte("a"), nil); err != nil {
+	if err := d.upgradeRecoveryKey(ctx); err != nil { // re-encrypts the recovery key
 		return err
 	}
-
-	if err := d.upgradeRecoveryKey(ctx); err != nil {
-		return err
-	}
-	if err := d.upgradeStoredKeys(ctx); err != nil {
+	if err := d.upgradeStoredKeys(ctx); err != nil { // re-encrypts the root key
 		return err
 	}
 	return nil
 }
 
 func (d *autoSeal) BarrierConfig(ctx context.Context) (*SealConfig, error) {
-	if d.barrierConfig.Load().(*SealConfig) != nil {
-		return d.barrierConfig.Load().(*SealConfig).Clone(), nil
+	if cfg := d.barrierConfig.Load().(*SealConfig); cfg != nil {
+		return cfg.Clone(), nil
 	}
 
 	if err := d.checkCore(); err != nil {
 		return nil, err
 	}
 
-	sealType := "barrier"
-
-	entry, err := d.core.physical.Get(ctx, barrierSealConfigPath)
+	// Fetch the core configuration
+	conf, err := d.core.PhysicalBarrierSealConfig(ctx)
 	if err != nil {
-		d.logger.Error("failed to read seal configuration", "seal_type", sealType, "error", err)
-		return nil, fmt.Errorf("failed to read %q seal configuration: %w", sealType, err)
+		d.logger.Error("failed to read seal configuration", "error", err)
+		return nil, fmt.Errorf("failed to read seal configuration: %w", err)
 	}
 
 	// If the seal configuration is missing, we are not initialized
-	if entry == nil {
-		if d.logger.IsInfo() {
-			d.logger.Info("seal configuration missing, not initialized", "seal_type", sealType)
-		}
+	if conf == nil {
+		d.logger.Info("seal configuration missing, not initialized")
 		return nil, nil
 	}
 
-	conf := &SealConfig{}
-	err = json.Unmarshal(entry.Value, conf)
-	if err != nil {
-		d.logger.Error("failed to decode seal configuration", "seal_type", sealType, "error", err)
-		return nil, fmt.Errorf("failed to decode %q seal configuration: %w", sealType, err)
-	}
+	barrierTypeUpgradeCheck(d.BarrierSealConfigType(), conf)
 
-	// Check for a valid seal configuration
-	if err := conf.Validate(); err != nil {
-		d.logger.Error("invalid seal configuration", "seal_type", sealType, "error", err)
-		return nil, fmt.Errorf("%q seal validation failed: %w", sealType, err)
-	}
-
-	barrierTypeUpgradeCheck(d.BarrierType(), conf)
-
-	if conf.Type != d.BarrierType().String() {
-		d.logger.Error("barrier seal type does not match loaded type", "seal_type", conf.Type, "loaded_type", d.BarrierType())
-		return nil, fmt.Errorf("barrier seal type of %q does not match loaded type of %q", conf.Type, d.BarrierType())
+	if conf.Type != d.BarrierSealConfigType().String() {
+		d.logger.Error("barrier seal type does not match loaded type", "seal_type", conf.Type, "loaded_type", d.BarrierSealConfigType())
+		return nil, fmt.Errorf("barrier seal type of %q does not match loaded type of %q", conf.Type, d.BarrierSealConfigType())
 	}
 
 	d.SetCachedBarrierConfig(conf)
 	return conf.Clone(), nil
+}
+
+func (d *autoSeal) ClearBarrierConfig(ctx context.Context) error {
+	return d.SetBarrierConfig(ctx, nil)
 }
 
 func (d *autoSeal) SetBarrierConfig(ctx context.Context, conf *SealConfig) error {
@@ -241,23 +222,11 @@ func (d *autoSeal) SetBarrierConfig(ctx context.Context, conf *SealConfig) error
 		return nil
 	}
 
-	conf.Type = d.BarrierType().String()
+	conf.Type = d.BarrierSealConfigType().String()
 
-	// Encode the seal configuration
-	buf, err := json.Marshal(conf)
+	err := d.core.SetPhysicalBarrierSealConfig(ctx, conf)
 	if err != nil {
-		return fmt.Errorf("failed to encode barrier seal configuration: %w", err)
-	}
-
-	// Store the seal configuration
-	pe := &physical.Entry{
-		Key:   barrierSealConfigPath,
-		Value: buf,
-	}
-
-	if err := d.core.physical.Put(ctx, pe); err != nil {
-		d.logger.Error("failed to write barrier seal configuration", "error", err)
-		return fmt.Errorf("failed to write barrier seal configuration: %w", err)
+		return err
 	}
 
 	d.SetCachedBarrierConfig(conf.Clone())
@@ -269,77 +238,57 @@ func (d *autoSeal) SetCachedBarrierConfig(config *SealConfig) {
 	d.barrierConfig.Store(config)
 }
 
-func (d *autoSeal) RecoveryType() string {
-	return RecoveryTypeShamir
+func (d *autoSeal) RecoverySealConfigType() SealConfigType {
+	return SealConfigTypeRecovery
 }
 
 // RecoveryConfig returns the recovery config on recoverySealConfigPlaintextPath.
 func (d *autoSeal) RecoveryConfig(ctx context.Context) (*SealConfig, error) {
-	if d.recoveryConfig.Load().(*SealConfig) != nil {
-		return d.recoveryConfig.Load().(*SealConfig).Clone(), nil
+	if cfg := d.recoveryConfig.Load().(*SealConfig); cfg != nil {
+		return cfg.Clone(), nil
 	}
 
 	if err := d.checkCore(); err != nil {
 		return nil, err
 	}
 
-	sealType := "recovery"
-
-	var entry *physical.Entry
-	var err error
-	entry, err = d.core.physical.Get(ctx, recoverySealConfigPlaintextPath)
+	conf, err := d.core.PhysicalRecoverySealConfig(ctx)
 	if err != nil {
-		d.logger.Error("failed to read seal configuration", "seal_type", sealType, "error", err)
-		return nil, fmt.Errorf("failed to read %q seal configuration: %w", sealType, err)
+		d.logger.Error("failed to read recovery seal configuration", "error", err)
+		return nil, fmt.Errorf("failed to read recovery seal configuration: %w", err)
 	}
 
-	if entry == nil {
+	if conf == nil {
 		if d.core.Sealed() {
-			d.logger.Info("seal configuration missing, but cannot check old path as core is sealed", "seal_type", sealType)
+			d.logger.Info("recovery seal configuration missing, but cannot check old path as core is sealed")
 			return nil, nil
 		}
 
 		// Check the old recovery seal config path so an upgraded standby will
 		// return the correct seal config
-		be, err := d.core.barrier.Get(ctx, recoverySealConfigPath)
+		conf, err := d.core.PhysicalRecoverySealConfigOldPath(ctx)
 		if err != nil {
 			return nil, fmt.Errorf("failed to read old recovery seal configuration: %w", err)
 		}
 
 		// If the seal configuration is missing, then we are not initialized.
-		if be == nil {
-			if d.logger.IsInfo() {
-				d.logger.Info("seal configuration missing, not initialized", "seal_type", sealType)
-			}
+		if conf == nil {
+			d.logger.Info("recovery seal configuration missing, not initialized")
 			return nil, nil
 		}
-
-		// Reconstruct the physical entry
-		entry = &physical.Entry{
-			Key:   be.Key,
-			Value: be.Value,
-		}
 	}
 
-	conf := &SealConfig{}
-	if err := json.Unmarshal(entry.Value, conf); err != nil {
-		d.logger.Error("failed to decode seal configuration", "seal_type", sealType, "error", err)
-		return nil, fmt.Errorf("failed to decode %q seal configuration: %w", sealType, err)
-	}
-
-	// Check for a valid seal configuration
-	if err := conf.Validate(); err != nil {
-		d.logger.Error("invalid seal configuration", "seal_type", sealType, "error", err)
-		return nil, fmt.Errorf("%q seal validation failed: %w", sealType, err)
-	}
-
-	if conf.Type != d.RecoveryType() {
-		d.logger.Error("recovery seal type does not match loaded type", "seal_type", conf.Type, "loaded_type", d.RecoveryType())
-		return nil, fmt.Errorf("recovery seal type of %q does not match loaded type of %q", conf.Type, d.RecoveryType())
+	if !d.RecoverySealConfigType().IsSameAs(conf.Type) {
+		d.logger.Error("recovery seal type does not match loaded type", "seal_type", conf.Type, "loaded_type", d.RecoverySealConfigType())
+		return nil, fmt.Errorf("recovery seal type of %q does not match loaded type of %q", conf.Type, d.RecoverySealConfigType())
 	}
 
 	d.recoveryConfig.Store(conf)
 	return conf.Clone(), nil
+}
+
+func (d *autoSeal) ClearRecoveryConfig(ctx context.Context) error {
+	return d.SetRecoveryConfig(ctx, nil)
 }
 
 // SetRecoveryConfig writes the recovery configuration to the physical storage
@@ -359,21 +308,9 @@ func (d *autoSeal) SetRecoveryConfig(ctx context.Context, conf *SealConfig) erro
 		return nil
 	}
 
-	conf.Type = d.RecoveryType()
+	conf.Type = d.RecoverySealConfigType().String()
 
-	// Encode the seal configuration
-	buf, err := json.Marshal(conf)
-	if err != nil {
-		return fmt.Errorf("failed to encode recovery seal configuration: %w", err)
-	}
-
-	// Store the seal configuration directly in the physical storage
-	pe := &physical.Entry{
-		Key:   recoverySealConfigPlaintextPath,
-		Value: buf,
-	}
-
-	if err := d.core.physical.Put(ctx, pe); err != nil {
+	if err := d.core.SetPhysicalRecoverySealConfig(ctx, conf); err != nil {
 		d.logger.Error("failed to write recovery seal configuration", "error", err)
 		return fmt.Errorf("failed to write recovery seal configuration: %w", err)
 	}
@@ -442,7 +379,7 @@ func (d *autoSeal) getRecoveryKeyInternal(ctx context.Context) ([]byte, error) {
 		return nil, fmt.Errorf("no recovery key found")
 	}
 
-	pt, _, err := UnsealWrapRecoveryKey(ctx, d.Access, pe)
+	pt, err := UnsealWrapRecoveryKey(ctx, d.Access, pe)
 	if err != nil {
 		return nil, fmt.Errorf("failed to decrypt encrypted stored keys: %w", err)
 	}
@@ -459,18 +396,21 @@ func (d *autoSeal) upgradeRecoveryKey(ctx context.Context) error {
 		return fmt.Errorf("no recovery key found")
 	}
 
-	pt, blobInfo, err := UnsealWrapRecoveryKey(ctx, d.Access, pe)
+	wrappedEntryValue, err := UnmarshalSealWrappedValue(pe.Value)
 	if err != nil {
-		return fmt.Errorf("failed to proto decode recovery key: %w", err)
+		return fmt.Errorf("failed to unmarshal recovery key: %w", err)
+	}
+	uptodate, err := d.Access.IsUpToDate(ctx, wrappedEntryValue.getValue(), true)
+	if err != nil {
+		return fmt.Errorf("failed to check if recovery key is up-to-date: %w", err)
 	}
 
-	keyId, err := d.Access.KeyId(ctx)
-	if err != nil {
-		return err
-	}
-
-	if blobInfo.KeyInfo != nil && blobInfo.KeyInfo.KeyId != keyId {
+	if !uptodate {
 		d.logger.Info("upgrading recovery key")
+		pt, err := UnsealWrapRecoveryKey(ctx, d.Access, pe)
+		if err != nil {
+			return fmt.Errorf("failed to decrypt recovery key: %w", err)
+		}
 
 		if err := d.SetRecoveryKey(ctx, pt); err != nil {
 			return fmt.Errorf("failed to save upgraded recovery key: %w", err)
@@ -529,17 +469,62 @@ func (d *autoSeal) StartHealthCheck() {
 	ctx := d.core.activeContext
 
 	go func() {
-		lastTestOk := true
-		lastSeenOk := time.Now()
+		check := func(t time.Time) {
+			ctx, cancel := context.WithTimeout(ctx, sealHealthTestTimeout)
+			defer cancel()
 
-		fail := func(msg string, args ...interface{}) {
-			d.logger.Warn(msg, args...)
-			if lastTestOk {
-				healthCheck.Reset(sealHealthTestIntervalUnhealthy)
+			testVal := fmt.Sprintf("Heartbeat %d", mathrand.Intn(1000))
+			anyUnhealthy := false
+			for _, sealWrapper := range d.Access.GetAllSealWrappersByPriority() {
+				func() {
+					sealWrapper.HcLock.Lock()
+					defer sealWrapper.HcLock.Unlock()
+					mLabels := []metrics.Label{{Name: "seal_name", Value: sealWrapper.Name}}
+					fail := func(msg string, args ...interface{}) {
+						d.logger.Warn(msg, args...)
+						if sealWrapper.Healthy {
+							healthCheck.Reset(sealHealthTestIntervalUnhealthy)
+						}
+						sealWrapper.Healthy = false
+						d.core.MetricSink().SetGaugeWithLabels(autoSealUnavailableDuration, float32(time.Since(sealWrapper.LastSeenHealthy).Milliseconds()), mLabels)
+					}
+					ciphertext, err := sealWrapper.Encrypt(ctx, []byte(testVal), nil)
+					checkTime := time.Now()
+					sealWrapper.LastHealthCheck = checkTime
+
+					if err != nil {
+						fail("failed to encrypt seal health test value, seal backend may be unreachable", "error", err, "seal_name", sealWrapper.Name)
+						anyUnhealthy = true
+					} else {
+						func() {
+							ctx, cancel := context.WithTimeout(ctx, sealHealthTestTimeout)
+							defer cancel()
+							plaintext, err := sealWrapper.Decrypt(ctx, ciphertext, nil)
+							if err != nil {
+								fail("failed to decrypt seal health test value, seal backend may be unreachable", "error", err, "seal_name", sealWrapper.Name)
+							}
+							if !bytes.Equal([]byte(testVal), plaintext) {
+								fail("seal health test value failed to decrypt to expected value", "seal_name", sealWrapper.Name)
+							} else {
+								d.logger.Debug("seal health test passed", "seal_name", sealWrapper.Name)
+								if !sealWrapper.Healthy {
+									d.logger.Info("seal backend is now healthy again", "downtime", t.Sub(sealWrapper.LastSeenHealthy).String(), "seal_name", sealWrapper.Name)
+									healthCheck.Reset(sealHealthTestIntervalNominal)
+								}
+
+								sealWrapper.Healthy = true
+								sealWrapper.LastSeenHealthy = checkTime
+								d.core.MetricSink().SetGaugeWithLabels(autoSealUnavailableDuration, 0, mLabels)
+							}
+						}()
+					}
+				}()
 			}
-			lastTestOk = false
-			d.core.MetricSink().SetGauge(autoSealUnavailableDuration, float32(time.Since(lastSeenOk).Milliseconds()))
+			d.hcLock.Lock()
+			defer d.hcLock.Unlock()
+			d.allSealsHealthy = !anyUnhealthy
 		}
+
 		for {
 			select {
 			case <-healthCheckStop:
@@ -549,38 +534,7 @@ func (d *autoSeal) StartHealthCheck() {
 				healthCheckStop = nil
 				return
 			case t := <-healthCheck.C:
-				func() {
-					ctx, cancel := context.WithTimeout(ctx, sealHealthTestTimeout)
-					defer cancel()
-
-					testVal := fmt.Sprintf("Heartbeat %d", mathrand.Intn(1000))
-					ciphertext, err := d.Access.Encrypt(ctx, []byte(testVal), nil)
-
-					if err != nil {
-						fail("failed to encrypt seal health test value, seal backend may be unreachable", "error", err)
-					} else {
-						func() {
-							ctx, cancel := context.WithTimeout(ctx, sealHealthTestTimeout)
-							defer cancel()
-							plaintext, err := d.Access.Decrypt(ctx, ciphertext, nil)
-							if err != nil {
-								fail("failed to decrypt seal health test value, seal backend may be unreachable", "error", err)
-							}
-							if !bytes.Equal([]byte(testVal), plaintext) {
-								fail("seal health test value failed to decrypt to expected value")
-							} else {
-								d.logger.Debug("seal health test passed")
-								if !lastTestOk {
-									d.logger.Info("seal backend is now healthy again", "downtime", t.Sub(lastSeenOk).String())
-									healthCheck.Reset(sealHealthTestIntervalNominal)
-								}
-								lastTestOk = true
-								lastSeenOk = t
-								d.core.MetricSink().SetGauge(autoSealUnavailableDuration, 0)
-							}
-						}()
-					}
-				}()
+				check(t)
 			}
 		}
 	}()

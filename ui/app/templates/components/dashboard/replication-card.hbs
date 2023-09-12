@@ -1,0 +1,96 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+<Hds::Card::Container @hasBorder={{true}} class="has-padding-l has-bottom-padding-m" data-test-card="replication">
+
+  <div class="is-flex-between">
+    <h3 class="title is-4 has-bottom-margin-xxs" data-test-client-count-title>
+      Replication
+    </h3>
+
+    {{#if (or @replication.dr.clusterId @replication.performance.clusterId)}}
+      <LinkTo class="is-no-underline" @route="vault.cluster.replication.index">
+        Details
+      </LinkTo>
+    {{/if}}
+  </div>
+
+  {{! check if dr replication and performance replication exists }}
+  {{#if (or @replication.dr.clusterId @replication.performance.clusterId)}}
+    <hr class="has-background-gray-100" />
+    {{! check if user has access to both perf replication and dr replication }}
+    {{#if (and @version.hasPerfReplication @version.hasDRReplication)}}
+      <div
+        class="is-grid grid-2-columns grid-gap-2 has-top-margin-m has-bottom-margin-xs grid-align-items-start"
+        data-test-dr-perf-replication
+      >
+        <Dashboard::ReplicationStateText
+          @title="DR primary"
+          @name="dr"
+          @state={{@replication.dr.state}}
+          @clusterStates={{cluster-states @replication.dr.state}}
+        />
+        <Dashboard::ReplicationStateText
+          @title="Performance {{if @replication.performance.isPrimary 'primary' 'secondary'}}"
+          @name="performance"
+          @state={{if @replication.performance.clusterId @replication.performance.state "not set up"}}
+          @clusterStates={{if @replication.performance.clusterId (cluster-states @replication.performance.state)}}
+        />
+      </div>
+      {{! if user only has access to dr replication }}
+    {{else if @version.hasDRReplication}}
+      <LinkTo
+        class="title is-5 has-text-weight-semibold is-marginless"
+        @route="vault.cluster.replication.mode.index"
+        @model="dr"
+      >
+        DR Primary
+      </LinkTo>
+
+      <div
+        class="is-grid grid-2-columns grid-gap-2 has-top-margin-m has-bottom-margin-m grid-align-items-start"
+        data-test-dr-replication
+      >
+        <Dashboard::ReplicationStateText
+          @title="state"
+          @state={{@replication.dr.state}}
+          @clusterStates={{cluster-states @replication.dr.state}}
+          @subText="The current operating state of the cluster."
+        />
+        <StatText
+          @label="known secondaries"
+          @value={{@replication.dr.knownSecondaries.length}}
+          @size="l"
+          @subText="Number of secondaries connected to this primary."
+          data-test-stat-text="known secondaries"
+        />
+      </div>
+    {{/if}}
+    <div class="has-top-margin-s is-flex-center">
+      <Hds::Button
+        @text="Refresh"
+        @isIconOnly={{true}}
+        @color="tertiary"
+        @icon="sync"
+        class="has-padding-xxs"
+        {{on "click" @refresh}}
+        data-test-refresh
+      />
+      <small class="has-left-margin-xs has-text-grey">
+        Updated
+        {{date-format @updatedAt "MMM dd, yyyy hh:mm:SS"}}
+      </small>
+    </div>
+  {{else}}
+    <EmptyState
+      @title="Replication not set up"
+      @message="Data will be listed here. Enable a primary replication cluster to get started."
+      class="has-top-margin-m"
+    >
+      <div>
+        <LinkTo @route="vault.cluster.replication">Enable replication</LinkTo>
+      </div>
+    </EmptyState>
+  {{/if}}
+</Hds::Card::Container>

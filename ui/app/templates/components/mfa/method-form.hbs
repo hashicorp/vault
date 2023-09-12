@@ -1,3 +1,8 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
 <div class="box is-sideless is-fullwidth is-marginless" ...attributes>
   {{#each @model.attrs as |attr|}}
     <FormField @attr={{attr}} @model={{@model}} @modelValidations={{or @validations this.editValidations}} />

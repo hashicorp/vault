@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 package pki
 
@@ -56,7 +56,8 @@ func TestAcmeBasicWorkflow(t *testing.T) {
 		{"issuer", "issuer/int-ca/acme/"},
 		{"issuer_role", "issuer/int-ca/roles/test-role/acme/"},
 	}
-	testCtx := context.Background()
+	testCtx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
+	defer cancel()
 
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
@@ -359,7 +360,8 @@ func TestAcmeBasicWorkflowWithEab(t *testing.T) {
 	t.Parallel()
 	cluster, client, _ := setupAcmeBackend(t)
 	defer cluster.Cleanup()
-	testCtx := context.Background()
+	testCtx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
+	defer cancel()
 
 	// Enable EAB
 	_, err := client.Logical().WriteWithContext(context.Background(), "pki/config/acme", map[string]interface{}{
@@ -559,7 +561,8 @@ func TestAcmeClusterPathNotConfigured(t *testing.T) {
 		{"issuer", "pki/issuer/default/acme/directory"},
 		{"issuer_role", "pki/issuer/default/roles/test-role/acme/directory"},
 	}
-	testCtx := context.Background()
+	testCtx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
+	defer cancel()
 
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
@@ -594,7 +597,8 @@ func TestAcmeAccountsCrossingDirectoryPath(t *testing.T) {
 	accountKey, err := rsa.GenerateKey(rand.Reader, 2048)
 	require.NoError(t, err, "failed creating rsa key")
 
-	testCtx := context.Background()
+	testCtx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
+	defer cancel()
 	acmeClient := getAcmeClientForCluster(t, cluster, baseAcmeURL, accountKey)
 
 	// Create new account
@@ -629,7 +633,8 @@ func TestAcmeEabCrossingDirectoryPath(t *testing.T) {
 	accountKey, err := rsa.GenerateKey(rand.Reader, 2048)
 	require.NoError(t, err, "failed creating rsa key")
 
-	testCtx := context.Background()
+	testCtx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
+	defer cancel()
 	acmeClient := getAcmeClientForCluster(t, cluster, baseAcmeURL, accountKey)
 
 	// fetch a new EAB
@@ -716,7 +721,9 @@ func TestAcmeTruncatesToIssuerExpiry(t *testing.T) {
 	cluster, client, _ := setupAcmeBackend(t)
 	defer cluster.Cleanup()
 
-	testCtx := context.Background()
+	testCtx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
+	defer cancel()
+
 	mount := "pki"
 	resp, err := client.Logical().WriteWithContext(context.Background(), mount+"/issuers/generate/intermediate/internal",
 		map[string]interface{}{
@@ -804,7 +811,8 @@ func TestAcmeRoleExtKeyUsage(t *testing.T) {
 	cluster, client, _ := setupAcmeBackend(t)
 	defer cluster.Cleanup()
 
-	testCtx := context.Background()
+	testCtx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
+	defer cancel()
 
 	roleName := "test-role"
 
@@ -907,7 +915,9 @@ func TestIssuerRoleDirectoryAssociations(t *testing.T) {
 	defer cluster.Cleanup()
 
 	// Setup DNS for validations.
-	testCtx := context.Background()
+	testCtx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
+	defer cancel()
+
 	dns := dnstest.SetupResolver(t, "dadgarcorp.com")
 	defer dns.Cleanup()
 	_, err := client.Logical().WriteWithContext(testCtx, "pki/config/acme", map[string]interface{}{
@@ -1040,7 +1050,9 @@ func TestACMESubjectFieldsAndExtensionsIgnored(t *testing.T) {
 	defer cluster.Cleanup()
 
 	// Setup DNS for validations.
-	testCtx := context.Background()
+	testCtx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
+	defer cancel()
+
 	dns := dnstest.SetupResolver(t, "dadgarcorp.com")
 	defer dns.Cleanup()
 	_, err := client.Logical().WriteWithContext(testCtx, "pki/config/acme", map[string]interface{}{
@@ -1086,7 +1098,8 @@ func TestAcmeWithCsrIncludingBasicConstraintExtension(t *testing.T) {
 	cluster, client, _ := setupAcmeBackend(t)
 	defer cluster.Cleanup()
 
-	testCtx := context.Background()
+	testCtx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
+	defer cancel()
 
 	baseAcmeURL := "/v1/pki/acme/"
 	accountKey, err := rsa.GenerateKey(rand.Reader, 2048)
@@ -1415,7 +1428,9 @@ func TestAcmeValidationError(t *testing.T) {
 	cluster, _, _ := setupAcmeBackend(t)
 	defer cluster.Cleanup()
 
-	testCtx := context.Background()
+	testCtx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
+	defer cancel()
+
 	baseAcmeURL := "/v1/pki/acme/"
 	accountKey, err := rsa.GenerateKey(rand.Reader, 2048)
 	require.NoError(t, err, "failed creating rsa key")
@@ -1521,7 +1536,8 @@ func TestAcmeRevocationAcrossAccounts(t *testing.T) {
 
 	cluster, vaultClient, _ := setupAcmeBackend(t)
 	defer cluster.Cleanup()
-	testCtx := context.Background()
+	testCtx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
+	defer cancel()
 
 	baseAcmeURL := "/v1/pki/acme/"
 	accountKey1, err := rsa.GenerateKey(rand.Reader, 2048)
@@ -1600,7 +1616,8 @@ func TestAcmeRevocationAcrossAccounts(t *testing.T) {
 }
 
 func doACMEWorkflow(t *testing.T, vaultClient *api.Client, acmeClient *acme.Client) (*ecdsa.PrivateKey, [][]byte) {
-	testCtx := context.Background()
+	testCtx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
 
 	// Create new account
 	acct, err := acmeClient.Register(testCtx, &acme.Account{}, func(tosURL string) bool { return true })
@@ -1682,6 +1699,8 @@ func getAcmeClientForCluster(t *testing.T, cluster *vault.TestCluster, baseUrl s
 }
 
 func getEABKey(t *testing.T, client *api.Client, baseUrl string) (string, []byte) {
+	t.Helper()
+
 	resp, err := client.Logical().WriteWithContext(ctx, path.Join("pki/", baseUrl, "/new-eab"), map[string]interface{}{})
 	require.NoError(t, err, "failed getting eab key")
 	require.NotNil(t, resp, "eab key returned nil response")
@@ -1745,7 +1764,9 @@ func TestACMEClientRequestLimits(t *testing.T) {
 		},
 	}
 
-	testCtx := context.Background()
+	testCtx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
+	defer cancel()
+
 	acmeConfig := map[string]interface{}{
 		"enabled":                  true,
 		"allowed_issuers":          "*",

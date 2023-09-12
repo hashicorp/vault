@@ -1,6 +1,6 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 import Ember from 'ember';
@@ -12,8 +12,7 @@ import Component from '@glimmer/component';
 
 import { encodePath } from 'vault/utils/path-encoding-helpers';
 import { keyIsFolder, parentKeyForKey } from 'core/utils/key-utils';
-// TODO MOVE THESE TO THE ADDON
-import keys from 'vault/lib/keycodes';
+import keys from 'core/utils/key-codes';
 
 /**
  * @module NavigateInput

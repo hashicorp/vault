@@ -53,7 +53,8 @@ type VaultNodeConfig struct {
 	//   ServiceRegistrationType        string
 	//   ServiceRegistrationOptions    map[string]string
 
-	StorageOptions map[string]string
+	StorageOptions      map[string]string
+	AdditionalListeners []VaultNodeListenerConfig
 
 	DefaultMaxRequestDuration      time.Duration `json:"default_max_request_duration"`
 	LogFormat                      string        `json:"log_format"`
@@ -100,6 +101,11 @@ type ClusterOptions struct {
 	VaultNodeConfig             *VaultNodeConfig
 	VaultLicense                string
 	AdministrativeNamespacePath string
+}
+
+type VaultNodeListenerConfig struct {
+	Port            int
+	ChrootNamespace string
 }
 
 type CA struct {

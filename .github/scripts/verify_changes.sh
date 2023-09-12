@@ -1,4 +1,7 @@
 #!/bin/bash
+# Copyright (c) HashiCorp, Inc.
+# SPDX-License-Identifier: BUSL-1.1
+
 #  This script validates if the git diff contains only docs/ui changes
 
 event_type=$1 # GH event type (pull_request)

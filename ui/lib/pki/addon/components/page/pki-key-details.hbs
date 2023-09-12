@@ -1,3 +1,8 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
 <Toolbar>
   <ToolbarActions>
     {{#if @canDelete}}
@@ -49,7 +54,7 @@
   {{/each}}
   {{#if @key.privateKey}}
     <InfoTableRow @label="Private key">
-      <MaskedInput @value={{@key.privateKey}} @name="Private key" @displayOnly={{true}} @allowCopy={{true}} />
+      <CertificateCard @data={{@key.privateKey}} />
     </InfoTableRow>
   {{/if}}
 </div>

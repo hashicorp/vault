@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 package event
 
@@ -28,7 +28,7 @@ func NewStdoutSinkNode(format string) *StdoutSink {
 }
 
 // Process persists the provided eventlogger.Event to the standard output stream.
-func (n *StdoutSink) Process(ctx context.Context, event *eventlogger.Event) (*eventlogger.Event, error) {
+func (s *StdoutSink) Process(ctx context.Context, event *eventlogger.Event) (*eventlogger.Event, error) {
 	const op = "event.(StdoutSink).Process"
 
 	select {
@@ -41,9 +41,9 @@ func (n *StdoutSink) Process(ctx context.Context, event *eventlogger.Event) (*ev
 		return nil, fmt.Errorf("%s: event is nil: %w", op, ErrInvalidParameter)
 	}
 
-	formattedBytes, found := event.Format(n.requiredFormat)
+	formattedBytes, found := event.Format(s.requiredFormat)
 	if !found {
-		return nil, fmt.Errorf("%s: unable to retrieve event formatted as %q", op, n.requiredFormat)
+		return nil, fmt.Errorf("%s: unable to retrieve event formatted as %q", op, s.requiredFormat)
 	}
 
 	_, err := os.Stdout.Write(formattedBytes)
@@ -56,11 +56,11 @@ func (n *StdoutSink) Process(ctx context.Context, event *eventlogger.Event) (*ev
 }
 
 // Reopen is a no-op for the StdoutSink type.
-func (n *StdoutSink) Reopen() error {
+func (s *StdoutSink) Reopen() error {
 	return nil
 }
 
 // Type returns the eventlogger.NodeTypeSink constant.
-func (n *StdoutSink) Type() eventlogger.NodeType {
+func (s *StdoutSink) Type() eventlogger.NodeType {
 	return eventlogger.NodeTypeSink
 }

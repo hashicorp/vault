@@ -1,3 +1,8 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
 {{#each @displayFields as |field|}}
   {{#let (find-by "name" field @model.allFields) as |attr|}}
     {{#let (get @model attr.name) as |value|}}
@@ -8,8 +13,8 @@
           @value={{value}}
           @addCopyButton={{or (eq attr.name "issuerId") (eq attr.name "keyId")}}
         >
-          {{#if (and attr.options.masked value)}}
-            <MaskedInput @value={{value}} @displayOnly={{true}} @allowCopy={{true}} />
+          {{#if (and attr.options.isCertificate value)}}
+            <CertificateCard @data={{value}} />
           {{else if attr.options.detailLinkTo}}
             <LinkTo @route={{attr.options.detailLinkTo}} @model={{value}}>{{value}}</LinkTo>
           {{else if (or (eq attr.name "privateKey") (eq attr.name "privateKeyType"))}}

@@ -738,6 +738,61 @@ func TestClone(t *testing.T) {
 	}
 }
 
+// TestCloneWithHeadersNoDeadlock confirms that the cloning of the client doesn't cause
+// a deadlock.
+// Raised in https://github.com/hashicorp/vault/issues/22393 -- there was a
+// potential deadlock caused by running the problematicFunc() function in
+// multiple goroutines.
+func TestCloneWithHeadersNoDeadlock(t *testing.T) {
+	client, err := NewClient(nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	wg := &sync.WaitGroup{}
+
+	problematicFunc := func() {
+		wg.Add(1)
+		client.SetCloneToken(true)
+		_, err := client.CloneWithHeaders()
+		if err != nil {
+			t.Fatal(err)
+		}
+		wg.Done()
+	}
+
+	for i := 0; i < 1000; i++ {
+		go problematicFunc()
+	}
+	wg.Wait()
+}
+
+// TestCloneNoDeadlock is like TestCloneWithHeadersNoDeadlock but with
+// Clone instead of CloneWithHeaders
+func TestCloneNoDeadlock(t *testing.T) {
+	client, err := NewClient(nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	wg := &sync.WaitGroup{}
+
+	problematicFunc := func() {
+		wg.Add(1)
+		client.SetCloneToken(true)
+		_, err := client.Clone()
+		if err != nil {
+			t.Fatal(err)
+		}
+		wg.Done()
+	}
+
+	for i := 0; i < 1000; i++ {
+		go problematicFunc()
+	}
+	wg.Wait()
+}
+
 func TestSetHeadersRaceSafe(t *testing.T) {
 	client, err1 := NewClient(nil)
 	if err1 != nil {

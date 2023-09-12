@@ -1,3 +1,8 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
 {{#each (if @model.alias.id (array @model.alias) @model.aliases) as |item|}}
   <LinkedBlock @params={{array "vault.cluster.access.identity.aliases.show" item.id "details"}} class="list-item-row">
     <div class="columns is-mobile">

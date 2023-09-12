@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 package event
 
@@ -8,6 +8,8 @@ import (
 
 	"github.com/hashicorp/eventlogger"
 )
+
+var _ eventlogger.Node = (*NoopSink)(nil)
 
 // NoopSink is a sink node which handles ignores everything.
 type NoopSink struct{}

@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 package pki
 
@@ -388,24 +388,14 @@ func (b *backend) pathIssueSignCert(ctx context.Context, req *logical.Request, d
 		return nil, fmt.Errorf("error converting raw cert bundle to cert bundle: %w", err)
 	}
 
-	resp, err := signIssueApiResponse(data, parsedBundle, signingBundle, warnings)
-	if err != nil {
-		return nil, err
+	generateLease := false
+	if role.GenerateLease != nil && *role.GenerateLease {
+		generateLease = true
 	}
 
-	switch {
-	case role.GenerateLease == nil:
-		return nil, fmt.Errorf("generate lease in role is nil")
-	case !*role.GenerateLease:
-		// Use resp from above
-	default:
-		respData := resp.Data
-		resp = b.Secret(SecretCertsType).Response(
-			respData,
-			map[string]interface{}{
-				"serial_number": cb.SerialNumber,
-			})
-		resp.Secret.TTL = parsedBundle.Certificate.NotAfter.Sub(time.Now())
+	resp, err := signIssueApiResponse(b, data, parsedBundle, signingBundle, generateLease, warnings)
+	if err != nil {
+		return nil, err
 	}
 
 	if !role.NoStore {
@@ -479,7 +469,7 @@ func (cac *caChainOutput) derEncodedChain() []string {
 	return derCaChain
 }
 
-func signIssueApiResponse(data *framework.FieldData, parsedBundle *certutil.ParsedCertBundle, signingBundle *certutil.CAInfoBundle, warnings []string) (*logical.Response, error) {
+func signIssueApiResponse(b *backend, data *framework.FieldData, parsedBundle *certutil.ParsedCertBundle, signingBundle *certutil.CAInfoBundle, generateLease bool, warnings []string) (*logical.Response, error) {
 	cb, err := parsedBundle.ToCertBundle()
 	if err != nil {
 		return nil, fmt.Errorf("error converting raw cert bundle to cert bundle: %w", err)
@@ -538,8 +528,18 @@ func signIssueApiResponse(data *framework.FieldData, parsedBundle *certutil.Pars
 		return nil, fmt.Errorf("unsupported format: %s", format)
 	}
 
-	resp := &logical.Response{
-		Data: respData,
+	var resp *logical.Response
+	if generateLease {
+		resp = b.Secret(SecretCertsType).Response(
+			respData,
+			map[string]interface{}{
+				"serial_number": cb.SerialNumber,
+			})
+		resp.Secret.TTL = parsedBundle.Certificate.NotAfter.Sub(time.Now())
+	} else {
+		resp = &logical.Response{
+			Data: respData,
+		}
 	}
 
 	if includeKey {

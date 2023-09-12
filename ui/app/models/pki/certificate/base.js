@@ -1,6 +1,6 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 import Model, { attr } from '@ember-data/model';
@@ -83,11 +83,11 @@ export default class PkiCertificateBaseModel extends Model {
   otherSans;
 
   // Attrs that come back from API POST request
-  @attr({ label: 'CA Chain', masked: true }) caChain;
-  @attr('string', { masked: true }) certificate;
+  @attr({ label: 'CA Chain', isCertificate: true }) caChain;
+  @attr('string', { isCertificate: true }) certificate;
   @attr('number') expiration;
-  @attr('string', { label: 'Issuing CA', masked: true }) issuingCa;
-  @attr('string', { masked: true }) privateKey; // only returned for type=exported and /issue
+  @attr('string', { label: 'Issuing CA', isCertificate: true }) issuingCa;
+  @attr('string', { isCertificate: true }) privateKey; // only returned for type=exported and /issue
   @attr('string') privateKeyType; // only returned for type=exported and /issue
   @attr('number', { formatDate: true }) revocationTime;
   @attr('string') serialNumber;

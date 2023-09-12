@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 package pki
 
@@ -20,11 +20,11 @@ const (
  should be used to interact with these endpoints.`
 )
 
-func pathAcmeDirectory(b *backend) []*framework.Path {
-	return buildAcmeFrameworkPaths(b, patternAcmeDirectory, "/directory")
+func pathAcmeDirectory(b *backend, baseUrl string, opts acmeWrapperOpts) *framework.Path {
+	return patternAcmeDirectory(b, baseUrl+"/directory", opts)
 }
 
-func patternAcmeDirectory(b *backend, pattern string) *framework.Path {
+func patternAcmeDirectory(b *backend, pattern string, opts acmeWrapperOpts) *framework.Path {
 	fields := map[string]*framework.FieldSchema{}
 	addFieldsForACMEPath(fields, pattern)
 
@@ -33,7 +33,7 @@ func patternAcmeDirectory(b *backend, pattern string) *framework.Path {
 		Fields:  fields,
 		Operations: map[logical.Operation]framework.OperationHandler{
 			logical.ReadOperation: &framework.PathOperation{
-				Callback:                    b.acmeWrapper(b.acmeDirectoryHandler),
+				Callback:                    b.acmeWrapper(opts, b.acmeDirectoryHandler),
 				ForwardPerformanceSecondary: false,
 				ForwardPerformanceStandby:   true,
 			},

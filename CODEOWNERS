@@ -5,22 +5,22 @@
 # More on CODEOWNERS files: https://help.github.com/en/github/creating-cloning-and-archiving-repositories/about-code-owners
 
 # Select Auth engines are owned by Ecosystem
-/builtin/credential/aws/      @hashicorp/vault-ecosystem
-/builtin/credential/github/   @hashicorp/vault-ecosystem
-/builtin/credential/ldap/     @hashicorp/vault-ecosystem
-/builtin/credential/okta/     @hashicorp/vault-ecosystem
+/builtin/credential/aws/      @hashicorp/vault-ecosystem-applications
+/builtin/credential/github/   @hashicorp/vault-ecosystem-applications
+/builtin/credential/ldap/     @hashicorp/vault-ecosystem-applications
+/builtin/credential/okta/     @hashicorp/vault-ecosystem-applications
 
 # Secrets engines (pki, ssh, totp and transit omitted)
-/builtin/logical/aws/         @hashicorp/vault-ecosystem
-/builtin/logical/cassandra/   @hashicorp/vault-ecosystem
-/builtin/logical/consul/      @hashicorp/vault-ecosystem
-/builtin/logical/database/    @hashicorp/vault-ecosystem
-/builtin/logical/mongodb/     @hashicorp/vault-ecosystem
-/builtin/logical/mssql/       @hashicorp/vault-ecosystem
-/builtin/logical/mysql/       @hashicorp/vault-ecosystem
-/builtin/logical/nomad/       @hashicorp/vault-ecosystem
-/builtin/logical/postgresql/  @hashicorp/vault-ecosystem
-/builtin/logical/rabbitmq/    @hashicorp/vault-ecosystem
+/builtin/logical/aws/         @hashicorp/vault-ecosystem-applications
+/builtin/logical/cassandra/   @hashicorp/vault-ecosystem-applications
+/builtin/logical/consul/      @hashicorp/vault-ecosystem-applications
+/builtin/logical/database/    @hashicorp/vault-ecosystem-applications
+/builtin/logical/mongodb/     @hashicorp/vault-ecosystem-applications
+/builtin/logical/mssql/       @hashicorp/vault-ecosystem-applications
+/builtin/logical/mysql/       @hashicorp/vault-ecosystem-applications
+/builtin/logical/nomad/       @hashicorp/vault-ecosystem-applications
+/builtin/logical/postgresql/  @hashicorp/vault-ecosystem-applications
+/builtin/logical/rabbitmq/    @hashicorp/vault-ecosystem-applications
 
 /plugins/                     @hashicorp/vault-ecosystem
 /vault/plugin_catalog.go      @hashicorp/vault-ecosystem
@@ -29,14 +29,14 @@
 /website/content/docs/plugin-portal.mdx   @acahn @hashicorp/vault-education-approvers
 
 # Plugin docs
-/website/content/docs/plugins/              @fairclothjm @hashicorp/vault-education-approvers
-/website/content/docs/upgrading/plugins.mdx @fairclothjm @hashicorp/vault-education-approvers
+/website/content/docs/plugins/              @hashicorp/vault-ecosystem @hashicorp/vault-education-approvers
+/website/content/docs/upgrading/plugins.mdx @hashicorp/vault-ecosystem @hashicorp/vault-education-approvers
 
 # UI code related to Vault's JWT/OIDC auth method and OIDC provider.
 # Changes to these files often require coordination with backend code,
 # so stewards of the backend code are added below for notification.
-/ui/app/components/auth-jwt.js         @austingebauer
-/ui/app/routes/vault/cluster/oidc-*.js @austingebauer
+/ui/app/components/auth-jwt.js         @hashicorp/vault-ecosystem-applications
+/ui/app/routes/vault/cluster/oidc-*.js @hashicorp/vault-ecosystem-applications
 
 # Release config; service account is required for automation tooling.
 /.release/                    @hashicorp/release-engineering @hashicorp/github-secure-vault-core @hashicorp/quality-team

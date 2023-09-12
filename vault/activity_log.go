@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 package vault
 
@@ -94,11 +94,6 @@ type segmentInfo struct {
 	// This field is needed for backward compatibility with fragments
 	// and segments created with vault versions before 1.9.
 	tokenCount *activity.TokenCount
-}
-
-type clients struct {
-	distinctEntities    uint64
-	distinctNonEntities uint64
 }
 
 // ActivityLog tracks unique entity counts and non-entity token counts.
@@ -214,6 +209,8 @@ type ActivityLogCoreConfig struct {
 	// Clock holds a custom clock to modify time.Now, time.Ticker, time.Timer.
 	// If nil, the default functions from the time package are used
 	Clock timeutil.Clock
+
+	DisableInvalidation bool
 }
 
 // NewActivityLog creates an activity log.
@@ -1104,7 +1101,6 @@ func (c *Core) setupActivityLog(ctx context.Context, wg *sync.WaitGroup) error {
 // this function should be called with activityLogLock.
 func (c *Core) setupActivityLogLocked(ctx context.Context, wg *sync.WaitGroup) error {
 	logger := c.baseLogger.Named("activity")
-	c.AddLogger(logger)
 
 	if os.Getenv("VAULT_DISABLE_ACTIVITY_LOG") != "" {
 		if c.CensusLicensingEnabled() {
@@ -1381,23 +1377,10 @@ func (a *ActivityLog) HandleEndOfMonth(ctx context.Context, currentTime time.Tim
 
 	a.logger.Trace("starting end of month processing", "rolloverTime", currentTime)
 
-	prevSegmentTimestamp := a.currentSegment.startTimestamp
-	nextSegmentTimestamp := timeutil.StartOfMonth(currentTime.UTC()).Unix()
-
-	// Write out an intent log for the rotation with the current and new segment times.
-	intentLog := &ActivityIntentLog{
-		PreviousMonth: prevSegmentTimestamp,
-		NextMonth:     nextSegmentTimestamp,
-	}
-	entry, err := logical.StorageEntryJSON(activityIntentLogKey, intentLog)
+	err := a.writeIntentLog(ctx, a.currentSegment.startTimestamp, currentTime)
 	if err != nil {
 		return err
 	}
-	err = a.view.Put(ctx, entry)
-	if err != nil {
-		return err
-	}
-
 	// Save the current segment; this does not guarantee that fragment will be
 	// empty when it returns, but dropping some measurements is acceptable.
 	// We use force=true here in case an entry didn't appear this month
@@ -1421,6 +1404,31 @@ func (a *ActivityLog) HandleEndOfMonth(ctx context.Context, currentTime time.Tim
 	// Work on precomputed queries in background
 	go a.precomputedQueryWorker(ctx)
 
+	return nil
+}
+
+// writeIntentLog writes out an intent log for the month
+// prevSegmentTimestamp is the timestamp of the segment that we would like to
+// transform into a precomputed query.
+// nextSegment is the timestamp for the next segment. When invoked by end of
+// month processing, this will be the current time and should be in a different
+// month than the prevSegmentTimestamp
+func (a *ActivityLog) writeIntentLog(ctx context.Context, prevSegmentTimestamp int64, nextSegment time.Time) error {
+	nextSegmentTimestamp := timeutil.StartOfMonth(nextSegment.UTC()).Unix()
+
+	// Write out an intent log for the rotation with the current and new segment times.
+	intentLog := &ActivityIntentLog{
+		PreviousMonth: prevSegmentTimestamp,
+		NextMonth:     nextSegmentTimestamp,
+	}
+	entry, err := logical.StorageEntryJSON(activityIntentLogKey, intentLog)
+	if err != nil {
+		return err
+	}
+	err = a.view.Put(ctx, entry)
+	if err != nil {
+		return err
+	}
 	return nil
 }
 
@@ -1904,39 +1912,50 @@ func (a *ActivityLog) loadConfigOrDefault(ctx context.Context) (activityConfig, 
 
 // HandleTokenUsage adds the TokenEntry to the current fragment of the activity log
 // This currently occurs on token usage only.
-func (a *ActivityLog) HandleTokenUsage(ctx context.Context, entry *logical.TokenEntry, clientID string, isTWE bool) {
+func (a *ActivityLog) HandleTokenUsage(ctx context.Context, entry *logical.TokenEntry, clientID string, isTWE bool) error {
 	// First, check if a is enabled, so as to avoid the cost of creating an ID for
 	// tokens without entities in the case where it not.
 	a.fragmentLock.RLock()
 	if !a.enabled {
 		a.fragmentLock.RUnlock()
-		return
+		return nil
 	}
 	a.fragmentLock.RUnlock()
 
 	// Do not count wrapping tokens in client count
 	if IsWrappingToken(entry) {
-		return
+		return nil
 	}
 
 	// Do not count root tokens in client count.
 	if entry.IsRoot() {
-		return
+		return nil
 	}
 
 	// Tokens created for the purpose of Link should bypass counting for billing purposes
 	if entry.InternalMeta != nil && entry.InternalMeta[IgnoreForBilling] == "true" {
-		return
+		return nil
 	}
 
+	// Look up the mount accessor of the auth method that issued the token, taking care to resolve the token path
+	// against the token namespace, which may not be the same as the request namespace!
+	tokenNS, err := NamespaceByID(ctx, entry.NamespaceID, a.core)
+	if err != nil {
+		return err
+	}
+	if tokenNS == nil {
+		return namespace.ErrNoNamespace
+	}
+	tokenCtx := namespace.ContextWithNamespace(ctx, tokenNS)
 	mountAccessor := ""
-	mountEntry := a.core.router.MatchingMountEntry(ctx, entry.Path)
+	mountEntry := a.core.router.MatchingMountEntry(tokenCtx, entry.Path)
 	if mountEntry != nil {
 		mountAccessor = mountEntry.Accessor
 	}
 
 	// Parse an entry's client ID and add it to the activity log
 	a.AddClientToFragment(clientID, entry.NamespaceID, entry.CreationTime, isTWE, mountAccessor)
+	return nil
 }
 
 func (a *ActivityLog) namespaceToLabel(ctx context.Context, nsID string) string {

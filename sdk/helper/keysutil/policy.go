@@ -244,6 +244,10 @@ type KeyEntry struct {
 	DeprecatedCreationTime int64 `json:"creation_time"`
 
 	ManagedKeyUUID string `json:"managed_key_id,omitempty"`
+
+	// Key entry certificate chain. If set, leaf certificate key matches the
+	// KeyEntry key
+	CertificateChain [][]byte `json:"certificate_chain"`
 }
 
 func (ke *KeyEntry) IsPrivateKeyMissing() bool {
@@ -2392,4 +2396,191 @@ func wrapTargetPKCS8ForImport(wrappingKey *rsa.PublicKey, preppedTargetKey []byt
 	// Combined wrapped keys into a single blob and base64 encode
 	wrappedKeys := append(ephKeyWrapped, targetKeyWrapped...)
 	return base64.StdEncoding.EncodeToString(wrappedKeys), nil
+}
+
+func (p *Policy) CreateCsr(keyVersion int, csrTemplate *x509.CertificateRequest) ([]byte, error) {
+	if !p.Type.SigningSupported() {
+		return nil, errutil.UserError{Err: fmt.Sprintf("key type '%s' does not support signing", p.Type)}
+	}
+
+	keyEntry, err := p.safeGetKeyEntry(keyVersion)
+	if err != nil {
+		return nil, err
+	}
+
+	if keyEntry.IsPrivateKeyMissing() {
+		return nil, errutil.UserError{Err: "private key not imported for key version selected"}
+	}
+
+	csrTemplate.Signature = nil
+	csrTemplate.SignatureAlgorithm = x509.UnknownSignatureAlgorithm
+
+	var key crypto.Signer
+	switch p.Type {
+	case KeyType_ECDSA_P256, KeyType_ECDSA_P384, KeyType_ECDSA_P521:
+		var curve elliptic.Curve
+		switch p.Type {
+		case KeyType_ECDSA_P384:
+			curve = elliptic.P384()
+		case KeyType_ECDSA_P521:
+			curve = elliptic.P521()
+		default:
+			curve = elliptic.P256()
+		}
+
+		key = &ecdsa.PrivateKey{
+			PublicKey: ecdsa.PublicKey{
+				Curve: curve,
+				X:     keyEntry.EC_X,
+				Y:     keyEntry.EC_Y,
+			},
+			D: keyEntry.EC_D,
+		}
+
+	case KeyType_ED25519:
+		if p.Derived {
+			return nil, errutil.UserError{Err: "operation not supported on keys with derivation enabled"}
+		}
+		key = ed25519.PrivateKey(keyEntry.Key)
+
+	case KeyType_RSA2048, KeyType_RSA3072, KeyType_RSA4096:
+		key = keyEntry.RSAKey
+
+	default:
+		return nil, errutil.InternalError{Err: fmt.Sprintf("selected key type '%s' does not support signing", p.Type.String())}
+	}
+	csrBytes, err := x509.CreateCertificateRequest(rand.Reader, csrTemplate, key)
+	if err != nil {
+		return nil, fmt.Errorf("could not create the cerfificate request: %w", err)
+	}
+
+	pemCsr := pem.EncodeToMemory(&pem.Block{
+		Type:  "CERTIFICATE REQUEST",
+		Bytes: csrBytes,
+	})
+
+	return pemCsr, nil
+}
+
+func (p *Policy) ValidateLeafCertKeyMatch(keyVersion int, certPublicKeyAlgorithm x509.PublicKeyAlgorithm, certPublicKey any) (bool, error) {
+	if !p.Type.SigningSupported() {
+		return false, errutil.UserError{Err: fmt.Sprintf("key type '%s' does not support signing", p.Type)}
+	}
+
+	var keyTypeMatches bool
+	switch p.Type {
+	case KeyType_ECDSA_P256, KeyType_ECDSA_P384, KeyType_ECDSA_P521:
+		if certPublicKeyAlgorithm == x509.ECDSA {
+			keyTypeMatches = true
+		}
+	case KeyType_ED25519:
+		if certPublicKeyAlgorithm == x509.Ed25519 {
+			keyTypeMatches = true
+		}
+	case KeyType_RSA2048, KeyType_RSA3072, KeyType_RSA4096:
+		if certPublicKeyAlgorithm == x509.RSA {
+			keyTypeMatches = true
+		}
+	}
+	if !keyTypeMatches {
+		return false, errutil.UserError{Err: fmt.Sprintf("provided leaf certificate public key algorithm '%s' does not match the transit key type '%s'",
+			certPublicKeyAlgorithm, p.Type)}
+	}
+
+	keyEntry, err := p.safeGetKeyEntry(keyVersion)
+	if err != nil {
+		return false, err
+	}
+
+	switch certPublicKeyAlgorithm {
+	case x509.ECDSA:
+		certPublicKey := certPublicKey.(*ecdsa.PublicKey)
+		var curve elliptic.Curve
+		switch p.Type {
+		case KeyType_ECDSA_P384:
+			curve = elliptic.P384()
+		case KeyType_ECDSA_P521:
+			curve = elliptic.P521()
+		default:
+			curve = elliptic.P256()
+		}
+
+		publicKey := &ecdsa.PublicKey{
+			Curve: curve,
+			X:     keyEntry.EC_X,
+			Y:     keyEntry.EC_Y,
+		}
+
+		return publicKey.Equal(certPublicKey), nil
+
+	case x509.Ed25519:
+		if p.Derived {
+			return false, errutil.UserError{Err: "operation not supported on keys with derivation enabled"}
+		}
+		certPublicKey := certPublicKey.(ed25519.PublicKey)
+
+		raw, err := base64.StdEncoding.DecodeString(keyEntry.FormattedPublicKey)
+		if err != nil {
+			return false, err
+		}
+		publicKey := ed25519.PublicKey(raw)
+
+		return publicKey.Equal(certPublicKey), nil
+
+	case x509.RSA:
+		certPublicKey := certPublicKey.(*rsa.PublicKey)
+		publicKey := keyEntry.RSAKey.PublicKey
+		return publicKey.Equal(certPublicKey), nil
+
+	case x509.UnknownPublicKeyAlgorithm:
+		return false, errutil.InternalError{Err: fmt.Sprint("certificate signed with an unknown algorithm")}
+	}
+
+	return false, nil
+}
+
+func (p *Policy) ValidateAndPersistCertificateChain(ctx context.Context, keyVersion int, certChain []*x509.Certificate, storage logical.Storage) error {
+	if len(certChain) == 0 {
+		return errutil.UserError{Err: "expected at least one certificate in the parsed certificate chain"}
+	}
+
+	if certChain[0].BasicConstraintsValid && certChain[0].IsCA {
+		return errutil.UserError{Err: "certificate in the first position is not a leaf certificate"}
+	}
+
+	for _, cert := range certChain[1:] {
+		if cert.BasicConstraintsValid && !cert.IsCA {
+			return errutil.UserError{Err: "provided certificate chain contains more than one leaf certificate"}
+		}
+	}
+
+	valid, err := p.ValidateLeafCertKeyMatch(keyVersion, certChain[0].PublicKeyAlgorithm, certChain[0].PublicKey)
+	if err != nil {
+		prefixedErr := fmt.Errorf("could not validate key match between leaf certificate key and key version in transit: %w", err)
+		switch err.(type) {
+		case errutil.UserError:
+			return errutil.UserError{Err: prefixedErr.Error()}
+		default:
+			return prefixedErr
+		}
+	}
+	if !valid {
+		return fmt.Errorf("leaf certificate public key does match the key version selected")
+	}
+
+	keyEntry, err := p.safeGetKeyEntry(keyVersion)
+	if err != nil {
+		return err
+	}
+
+	// Convert the certificate chain to DER format
+	derCertificates := make([][]byte, len(certChain))
+	for i, cert := range certChain {
+		derCertificates[i] = cert.Raw
+	}
+
+	keyEntry.CertificateChain = derCertificates
+
+	p.Keys[strconv.Itoa(keyVersion)] = keyEntry
+	return p.Persist(ctx, storage)
 }

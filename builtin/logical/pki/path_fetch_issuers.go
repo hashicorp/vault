@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 package pki
 
@@ -283,7 +283,7 @@ to be set on all PR secondary clusters.`,
 				},
 				"ocsp_servers": {
 					Type:        framework.TypeStringSlice,
-					Description: `OSCP Servers`,
+					Description: `OCSP Servers`,
 					Required:    false,
 				},
 				"enable_aia_url_templating": {

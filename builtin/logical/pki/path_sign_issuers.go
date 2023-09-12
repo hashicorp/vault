@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 package pki
 
@@ -55,7 +55,7 @@ func buildPathIssuerSignIntermediateRaw(b *backend, pattern string, displayAttrs
 							"serial_number": {
 								Type:        framework.TypeString,
 								Description: `Serial Number`,
-								Required:    false,
+								Required:    true,
 							},
 							"certificate": {
 								Type:        framework.TypeString,

@@ -6,7 +6,7 @@ description: An overview of how Sentinel interacts with Vault Enterprise.
 
 # Vault Enterprise and Sentinel integration
 
-@include 'alerts/enterprise-and-hcp.mdx'
+@include 'alerts/enterprise-and-hcp-plus.mdx'
 
 Vault Enterprise integrates HashiCorp Sentinel to provide a rich set of access
 control functionality. Because Vault is a security-focused product trusted with
@@ -46,12 +46,11 @@ appropriately when introducing Sentinel policies.
 
 Sentinel policies have three enforcement levels to choose from.
 
-| Level          | Description                                                                |
-| -------------- | -------------------------------------------------------------------------- |
-| advisory       | The policy is allowed to fail. Can be used as a tool to educate new users. |
-| soft-mandatory | The policy must pass unless an override is specified.                      |
-| hard-mandatory | The policy must pass.                                       |
-
+| Level          | Description                                                                 |
+| -------------- | --------------------------------------------------------------------------- |
+| advisory       | The policy is allowed to fail. Can be used as a tool to educate new users.  |
+| soft-mandatory | The policy must pass unless an [override](#policy-overriding) is specified. |
+| hard-mandatory | The policy must pass.                                                       |
 
 ## Policy evaluation
 

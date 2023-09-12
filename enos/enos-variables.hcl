@@ -1,5 +1,5 @@
 # Copyright (c) HashiCorp, Inc.
-# SPDX-License-Identifier: MPL-2.0
+# SPDX-License-Identifier: BUSL-1.1
 
 variable "artifactory_username" {
   type        = string
@@ -48,7 +48,7 @@ variable "aws_ssh_private_key_path" {
 variable "backend_edition" {
   description = "The backend release edition if applicable"
   type        = string
-  default     = "oss"
+  default     = "oss" // or "ent"
 }
 
 variable "backend_instance_type" {

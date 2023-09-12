@@ -1,0 +1,3 @@
+```release-note:change
+core: Bump Go version to 1.21.0.
+```

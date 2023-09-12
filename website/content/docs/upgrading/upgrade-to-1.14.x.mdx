@@ -28,7 +28,8 @@ Official images separately.
 
 ## Important changes
 
-There are no major changes to announce at this time.
+`vault.raft_storage.bolt.write.time` has been corrected from a summary to a counter to more accurately reflect that it
+is measuring cumulative time writing, and not the distribution of individual write times.
 
 ## Known issues and workarounds
 
@@ -39,4 +40,6 @@ There are no major changes to announce at this time.
 @include 'known-issues/update-primary-addrs-panic.mdx'
 
 @include 'known-issues/ui-safari-login-screen.mdx'
+
+@include 'known-issues/aws-static-roles.mdx'
 

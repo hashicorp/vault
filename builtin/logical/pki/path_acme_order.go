@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 package pki
 
@@ -25,27 +25,27 @@ import (
 
 var maxAcmeCertTTL = 90 * (24 * time.Hour)
 
-func pathAcmeListOrders(b *backend) []*framework.Path {
-	return buildAcmeFrameworkPaths(b, patternAcmeListOrders, "/orders")
+func pathAcmeListOrders(b *backend, baseUrl string, opts acmeWrapperOpts) *framework.Path {
+	return patternAcmeListOrders(b, baseUrl+"/orders", opts)
 }
 
-func pathAcmeGetOrder(b *backend) []*framework.Path {
-	return buildAcmeFrameworkPaths(b, patternAcmeGetOrder, "/order/"+uuidNameRegex("order_id"))
+func pathAcmeGetOrder(b *backend, baseUrl string, opts acmeWrapperOpts) *framework.Path {
+	return patternAcmeGetOrder(b, baseUrl+"/order/"+uuidNameRegex("order_id"), opts)
 }
 
-func pathAcmeNewOrder(b *backend) []*framework.Path {
-	return buildAcmeFrameworkPaths(b, patternAcmeNewOrder, "/new-order")
+func pathAcmeNewOrder(b *backend, baseUrl string, opts acmeWrapperOpts) *framework.Path {
+	return patternAcmeNewOrder(b, baseUrl+"/new-order", opts)
 }
 
-func pathAcmeFinalizeOrder(b *backend) []*framework.Path {
-	return buildAcmeFrameworkPaths(b, patternAcmeFinalizeOrder, "/order/"+uuidNameRegex("order_id")+"/finalize")
+func pathAcmeFinalizeOrder(b *backend, baseUrl string, opts acmeWrapperOpts) *framework.Path {
+	return patternAcmeFinalizeOrder(b, baseUrl+"/order/"+uuidNameRegex("order_id")+"/finalize", opts)
 }
 
-func pathAcmeFetchOrderCert(b *backend) []*framework.Path {
-	return buildAcmeFrameworkPaths(b, patternAcmeFetchOrderCert, "/order/"+uuidNameRegex("order_id")+"/cert")
+func pathAcmeFetchOrderCert(b *backend, baseUrl string, opts acmeWrapperOpts) *framework.Path {
+	return patternAcmeFetchOrderCert(b, baseUrl+"/order/"+uuidNameRegex("order_id")+"/cert", opts)
 }
 
-func patternAcmeNewOrder(b *backend, pattern string) *framework.Path {
+func patternAcmeNewOrder(b *backend, pattern string, opts acmeWrapperOpts) *framework.Path {
 	fields := map[string]*framework.FieldSchema{}
 	addFieldsForACMEPath(fields, pattern)
 	addFieldsForACMERequest(fields)
@@ -55,7 +55,7 @@ func patternAcmeNewOrder(b *backend, pattern string) *framework.Path {
 		Fields:  fields,
 		Operations: map[logical.Operation]framework.OperationHandler{
 			logical.UpdateOperation: &framework.PathOperation{
-				Callback:                    b.acmeAccountRequiredWrapper(b.acmeNewOrderHandler),
+				Callback:                    b.acmeAccountRequiredWrapper(opts, b.acmeNewOrderHandler),
 				ForwardPerformanceSecondary: false,
 				ForwardPerformanceStandby:   true,
 			},
@@ -66,7 +66,7 @@ func patternAcmeNewOrder(b *backend, pattern string) *framework.Path {
 	}
 }
 
-func patternAcmeListOrders(b *backend, pattern string) *framework.Path {
+func patternAcmeListOrders(b *backend, pattern string, opts acmeWrapperOpts) *framework.Path {
 	fields := map[string]*framework.FieldSchema{}
 	addFieldsForACMEPath(fields, pattern)
 	addFieldsForACMERequest(fields)
@@ -76,7 +76,7 @@ func patternAcmeListOrders(b *backend, pattern string) *framework.Path {
 		Fields:  fields,
 		Operations: map[logical.Operation]framework.OperationHandler{
 			logical.UpdateOperation: &framework.PathOperation{
-				Callback:                    b.acmeAccountRequiredWrapper(b.acmeListOrdersHandler),
+				Callback:                    b.acmeAccountRequiredWrapper(opts, b.acmeListOrdersHandler),
 				ForwardPerformanceSecondary: false,
 				ForwardPerformanceStandby:   true,
 			},
@@ -87,7 +87,7 @@ func patternAcmeListOrders(b *backend, pattern string) *framework.Path {
 	}
 }
 
-func patternAcmeGetOrder(b *backend, pattern string) *framework.Path {
+func patternAcmeGetOrder(b *backend, pattern string, opts acmeWrapperOpts) *framework.Path {
 	fields := map[string]*framework.FieldSchema{}
 	addFieldsForACMEPath(fields, pattern)
 	addFieldsForACMERequest(fields)
@@ -98,7 +98,7 @@ func patternAcmeGetOrder(b *backend, pattern string) *framework.Path {
 		Fields:  fields,
 		Operations: map[logical.Operation]framework.OperationHandler{
 			logical.UpdateOperation: &framework.PathOperation{
-				Callback:                    b.acmeAccountRequiredWrapper(b.acmeGetOrderHandler),
+				Callback:                    b.acmeAccountRequiredWrapper(opts, b.acmeGetOrderHandler),
 				ForwardPerformanceSecondary: false,
 				ForwardPerformanceStandby:   true,
 			},
@@ -109,7 +109,7 @@ func patternAcmeGetOrder(b *backend, pattern string) *framework.Path {
 	}
 }
 
-func patternAcmeFinalizeOrder(b *backend, pattern string) *framework.Path {
+func patternAcmeFinalizeOrder(b *backend, pattern string, opts acmeWrapperOpts) *framework.Path {
 	fields := map[string]*framework.FieldSchema{}
 	addFieldsForACMEPath(fields, pattern)
 	addFieldsForACMERequest(fields)
@@ -120,7 +120,7 @@ func patternAcmeFinalizeOrder(b *backend, pattern string) *framework.Path {
 		Fields:  fields,
 		Operations: map[logical.Operation]framework.OperationHandler{
 			logical.UpdateOperation: &framework.PathOperation{
-				Callback:                    b.acmeAccountRequiredWrapper(b.acmeFinalizeOrderHandler),
+				Callback:                    b.acmeAccountRequiredWrapper(opts, b.acmeFinalizeOrderHandler),
 				ForwardPerformanceSecondary: false,
 				ForwardPerformanceStandby:   true,
 			},
@@ -131,7 +131,7 @@ func patternAcmeFinalizeOrder(b *backend, pattern string) *framework.Path {
 	}
 }
 
-func patternAcmeFetchOrderCert(b *backend, pattern string) *framework.Path {
+func patternAcmeFetchOrderCert(b *backend, pattern string, opts acmeWrapperOpts) *framework.Path {
 	fields := map[string]*framework.FieldSchema{}
 	addFieldsForACMEPath(fields, pattern)
 	addFieldsForACMERequest(fields)
@@ -142,7 +142,7 @@ func patternAcmeFetchOrderCert(b *backend, pattern string) *framework.Path {
 		Fields:  fields,
 		Operations: map[logical.Operation]framework.OperationHandler{
 			logical.UpdateOperation: &framework.PathOperation{
-				Callback:                    b.acmeAccountRequiredWrapper(b.acmeFetchCertOrderHandler),
+				Callback:                    b.acmeAccountRequiredWrapper(opts, b.acmeFetchCertOrderHandler),
 				ForwardPerformanceSecondary: false,
 				ForwardPerformanceStandby:   true,
 			},
@@ -224,7 +224,7 @@ func (b *backend) acmeFetchCertOrderHandler(ac *acmeContext, _ *logical.Request,
 	}, nil
 }
 
-func (b *backend) acmeFinalizeOrderHandler(ac *acmeContext, _ *logical.Request, fields *framework.FieldData, uc *jwsCtx, data map[string]interface{}, account *acmeAccount) (*logical.Response, error) {
+func (b *backend) acmeFinalizeOrderHandler(ac *acmeContext, r *logical.Request, fields *framework.FieldData, uc *jwsCtx, data map[string]interface{}, account *acmeAccount) (*logical.Response, error) {
 	orderId := fields.Get("order_id").(string)
 
 	csr, err := parseCsrFromFinalize(data)
@@ -259,16 +259,27 @@ func (b *backend) acmeFinalizeOrderHandler(ac *acmeContext, _ *logical.Request, 
 		return nil, err
 	}
 
-	signedCertBundle, issuerId, err := issueCertFromCsr(ac, csr)
-	if err != nil {
-		return nil, err
-	}
+	var signedCertBundle *certutil.ParsedCertBundle
+	var issuerId issuerID
+	if ac.runtimeOpts.isCiepsEnabled {
+		// Note that issueAcmeCertUsingCieps enforces storage requirements and
+		// does the certificate storage for us
+		signedCertBundle, issuerId, err = issueAcmeCertUsingCieps(b, ac, r, fields, uc, account, order, csr)
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		signedCertBundle, issuerId, err = issueCertFromCsr(ac, csr)
+		if err != nil {
+			return nil, err
+		}
 
-	hyphenSerialNumber := normalizeSerialFromBigInt(signedCertBundle.Certificate.SerialNumber)
-	err = storeCertificate(ac.sc, signedCertBundle)
-	if err != nil {
-		return nil, err
+		err = storeCertificate(ac.sc, signedCertBundle)
+		if err != nil {
+			return nil, err
+		}
 	}
+	hyphenSerialNumber := normalizeSerialFromBigInt(signedCertBundle.Certificate.SerialNumber)
 
 	if err := b.acmeState.TrackIssuedCert(ac, order.AccountId, hyphenSerialNumber, order.OrderId); err != nil {
 		b.Logger().Warn("orphaned generated ACME certificate due to error saving account->cert->order reference", "serial_number", hyphenSerialNumber, "error", err)

@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 package pki
 
@@ -20,12 +20,12 @@ func uuidNameRegex(name string) string {
 	return fmt.Sprintf("(?P<%s>[[:alnum:]]{8}-[[:alnum:]]{4}-[[:alnum:]]{4}-[[:alnum:]]{4}-[[:alnum:]]{12}?)", name)
 }
 
-func pathAcmeNewAccount(b *backend) []*framework.Path {
-	return buildAcmeFrameworkPaths(b, patternAcmeNewAccount, "/new-account")
+func pathAcmeNewAccount(b *backend, baseUrl string, opts acmeWrapperOpts) *framework.Path {
+	return patternAcmeNewAccount(b, baseUrl+"/new-account", opts)
 }
 
-func pathAcmeUpdateAccount(b *backend) []*framework.Path {
-	return buildAcmeFrameworkPaths(b, patternAcmeNewAccount, "/account/"+uuidNameRegex("kid"))
+func pathAcmeUpdateAccount(b *backend, baseUrl string, opts acmeWrapperOpts) *framework.Path {
+	return patternAcmeNewAccount(b, baseUrl+"/account/"+uuidNameRegex("kid"), opts)
 }
 
 func addFieldsForACMEPath(fields map[string]*framework.FieldSchema, pattern string) map[string]*framework.FieldSchema {
@@ -40,6 +40,13 @@ func addFieldsForACMEPath(fields map[string]*framework.FieldSchema, pattern stri
 		fields[issuerRefParam] = &framework.FieldSchema{
 			Type:        framework.TypeString,
 			Description: `Reference to an existing issuer name or issuer id`,
+			Required:    true,
+		}
+	}
+	if strings.Contains(pattern, framework.GenericNameRegex("policy")) {
+		fields["policy"] = &framework.FieldSchema{
+			Type:        framework.TypeString,
+			Description: `The policy name to pass through to the CIEPS service`,
 			Required:    true,
 		}
 	}
@@ -81,7 +88,7 @@ func addFieldsForACMEKidRequest(fields map[string]*framework.FieldSchema, patter
 	return fields
 }
 
-func patternAcmeNewAccount(b *backend, pattern string) *framework.Path {
+func patternAcmeNewAccount(b *backend, pattern string, opts acmeWrapperOpts) *framework.Path {
 	fields := map[string]*framework.FieldSchema{}
 	addFieldsForACMEPath(fields, pattern)
 	addFieldsForACMERequest(fields)
@@ -92,7 +99,7 @@ func patternAcmeNewAccount(b *backend, pattern string) *framework.Path {
 		Fields:  fields,
 		Operations: map[logical.Operation]framework.OperationHandler{
 			logical.UpdateOperation: &framework.PathOperation{
-				Callback:                    b.acmeParsedWrapper(b.acmeNewAccountHandler),
+				Callback:                    b.acmeParsedWrapper(opts, b.acmeNewAccountHandler),
 				ForwardPerformanceSecondary: false,
 				ForwardPerformanceStandby:   true,
 			},

@@ -1,3 +1,8 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+~}}
+
 {{#unless this.selectedAuthIsPath}}
   <div class="box has-slim-padding is-shadowless">
     <ToggleButton @isOpen={{this.isOpen}} @onClick={{fn (mut this.isOpen)}} data-test-auth-form-options-toggle />

@@ -1,10 +1,11 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 export const SELECTORS = {
   configure: '[data-test-pki-issuer-configure]',
+  copyButtonByName: (name) => `[data-test-value-div="${name}"] [data-test-copy-button]`,
   crossSign: '[data-test-pki-issuer-cross-sign]',
   defaultGroup: '[data-test-details-group="default"]',
   download: '[data-test-issuer-download]',

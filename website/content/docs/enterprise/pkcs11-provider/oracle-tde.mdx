@@ -7,9 +7,9 @@ description: |-
 
 # Oracle TDE
 
-@include 'alerts/enterprise-and-hcp.mdx'
+@include 'alerts/enterprise-and-hcp-plus.mdx'
 
-[Oracle Transparent Data Encryption](https://docs.oracle.com/database/121/ASOAG/introduction-to-transparent-data-encryption.htm#ASOAG10270) (TDE)
+[Oracle Transparent Data Encryption](https://docs.oracle.com/en/database/oracle/oracle-database/19/asoag/introduction-to-transparent-data-encryption.html) (TDE)
 is supported with the [Vault PKCS#11 provider](/vault/docs/enterprise/pkcs11-provider).
 In this setup, Vault's KMIP engine generates and store the "TDE Master Encryption Key" that the Oracle Database uses to encrypt and decrypt the "TDE Table Keys".
 Oracle will not have access to the TDE Master Encryption Key itself.
@@ -18,10 +18,10 @@ Oracle will not have access to the TDE Master Encryption Key itself.
 
 To setup Oracle TDE backed by Vault, the following are required:
 
-- A database running Oracle 19 Enterprise Edition
+- A database running Oracle 19c Enterprise Edition
 - A Vault Enterprise 1.11+ server with Advanced Data Protection for KMIP support.
 - Vault has TCP port 5696 accessible to the Oracle database.
-- `libvault-pkcs11.so` downloaded from [releases.hashicorp.com](https://releases.hashicorp.com/vault-pkcs11-provider) for the operating system running the Oracle database (the RHEL 7 x86-64 version for Oracle Enterprise Linux 7).
+- `libvault-pkcs11.so` downloaded from [releases.hashicorp.com](https://releases.hashicorp.com/vault-pkcs11-provider) for the operating system running the Oracle database.
 
 ## Vault setup
 
@@ -77,7 +77,7 @@ The rest of the steps take place on the Oracle server.
 
 We need to configure the Vault PKCS#11 provider.
 
-1. Copy the `libvault-pkcs11.so` binary into `$ORACLE_BASE/extapi/64/hsm/vault/0.0.1/`, and ensure there are no other PKCS#11 libraries in `$ORACLE_BASE/extapi/64/hsm`.
+1. Copy the `libvault-pkcs11.so` binary into `$ORACLE_BASE/extapi/64/hsm`, and ensure there are no other PKCS#11 libraries in `$ORACLE_BASE/extapi/64/hsm`.
 
 1. Copy the TLS certificate and key bundle (e.g., `/etc/cert.pem`) and CA bundle (e.g., `/etc/ca.pem`) for the KMIP role (configured as above) to the Oracle server.
    The exact location does not matter as long as the Oracle process has access to it.
@@ -106,28 +106,39 @@ We need to configure the Vault PKCS#11 provider.
 
 1. If you want to view the Vault logs (helpful when trying to find error messages), you can specify the `VAULT_LOG_FILE` (default is stdout) and `VAULT_LOG_LEVEL` (default is `INFO`). We'd recommend setting `VAULT_LOG_FILE` to something like `/tmp/vault.log` or `/var/log/vault.log`. Other useful log levels are `WARN` (quieter) and `TRACE` (very verbose, could possibly contain sensitive information, like raw network packets).
 
-## Enable TDE
+## Enable TDE 
 
 The only remaining step is to setup Oracle TDE for an external HSM using shared library, `libvault-pkcs11.so`.
 These steps are not specific to Vault, other than requiring the shared library, HCL configuration, and certificates be present.
 TDE is complex, but an example way to enable it is:
 
-1. Create or update the `sqlnet.ora` (usually in `$ORACLE_BASE/oradata/dbconfig/$SID/sqlnet.ora`) configuration file to use an HSM encryption wallet by adding the following line:
+1. Open a `sqlplus` session into the root container (or switch into it with `ALTER SESSION SET CONTAINER = CDB$ROOT;`).
 
+1. Set WALLET_ROOT and TDE_CONFIGURATION parameters on the Oracle database. The wallet root directory is only used to set the TDE configuration parameter. To learn more about the wallet parameters refer to the [Oracle TDE documentation](https://docs.oracle.com/en/database/oracle/oracle-database/19/refrn/TDE_CONFIGURATION.html).
+
+    ```sql
+    SQL> alter system set wallet_root='/opt/oracle/admin/ORCLCDB/wallet' scope=spfile;
+    SQL> shutdown immediate;
+    SQL> startup;
+    SQL> alter system set TDE_CONFIGURATION="KEYSTORE_CONFIGURATION=HSM" SCOPE=both;
     ```
-    encryption_wallet_location=(source=(method=hsm))
+1. Validate the parameters are set by querying `V$PARAMETER`
+
+    ```sql
+    SQL> SELECT name, value from V$PARAMETER WHERE NAME IN ('wallet_root','tde_configuration');
+
+    NAME                           VALUE
+    ------------------------------ --------------------------------------------------
+    wallet_root                    /opt/oracle/admin/ORCLCDB/wallet
+    tde_configuration              KEYSTORE_CONFIGURATION=HSM
     ```
-
-1. Restart the Oracle database so that it picks up the `sqlnet.ora` changes.
-
-1. Open a `sqlplus` session into the root container (or switch into it with `ALTER SESSION SET CONTAINER = CDB$ROOT;`)
 
 1. Open the HSM wallet: `ADMINISTER KEY MANAGEMENT SET KEYSTORE OPEN IDENTIFIED BY "1234" CONTAINER = ALL;`.
-   The password `1234` here is used as the password for decyrpting the TLS key, if it is stored encrypted on disk.
+   The password `1234` here is used as the password for decrypting the TLS key, if it is stored encrypted on disk.
    If the TLS key is not encrypted, this password is ignored.
 
 1. Create the TDE master key: `ADMINISTER KEY MANAGEMENT SET ENCRYPTION KEY USING TAG 'default' IDENTIFIED BY "1234" CONTAINER = ALL;`, again specifying the TLS key password if necessary.
 
 1. Finally, use TDE in a PDB, e.g., `CREATE TABLE test_tde (something CHAR(32) ENCRYPT);`.
 
-More extensive information on the details and procedures for Oracle TDE can be found in [Oracle's documentation](https://docs.oracle.com/database/121/ASOAG/asopart1.htm#ASOAG600).
+More extensive information on the details and procedures for Oracle TDE can be found in [Oracle's documentation](https://docs.oracle.com/en/database/oracle/oracle-database/19/asoag/configuring-transparent-data-encryption.html#GUID-753C4808-CC51-4DA1-A5C3-980417FDAB14).

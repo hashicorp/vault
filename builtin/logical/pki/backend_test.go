@@ -1,5 +1,5 @@
 // Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
+// SPDX-License-Identifier: BUSL-1.1
 
 package pki
 
@@ -6872,22 +6872,24 @@ func TestProperAuthing(t *testing.T) {
 	maps.Copy(paths, entPaths)
 
 	// Add ACME based paths to the test suite
-	for _, acmePrefix := range []string{"", "issuer/default/", "roles/test/", "issuer/default/roles/test/"} {
-		paths[acmePrefix+"acme/directory"] = shouldBeUnauthedReadList
-		paths[acmePrefix+"acme/new-nonce"] = shouldBeUnauthedReadList
-		paths[acmePrefix+"acme/new-account"] = shouldBeUnauthedWriteOnly
-		paths[acmePrefix+"acme/revoke-cert"] = shouldBeUnauthedWriteOnly
-		paths[acmePrefix+"acme/new-order"] = shouldBeUnauthedWriteOnly
-		paths[acmePrefix+"acme/orders"] = shouldBeUnauthedWriteOnly
-		paths[acmePrefix+"acme/account/hrKmDYTvicHoHGVN2-3uzZV_BPGdE0W_dNaqYTtYqeo="] = shouldBeUnauthedWriteOnly
-		paths[acmePrefix+"acme/authorization/29da8c38-7a09-465e-b9a6-3d76802b1afd"] = shouldBeUnauthedWriteOnly
-		paths[acmePrefix+"acme/challenge/29da8c38-7a09-465e-b9a6-3d76802b1afd/http-01"] = shouldBeUnauthedWriteOnly
-		paths[acmePrefix+"acme/order/13b80844-e60d-42d2-b7e9-152a8e834b90"] = shouldBeUnauthedWriteOnly
-		paths[acmePrefix+"acme/order/13b80844-e60d-42d2-b7e9-152a8e834b90/finalize"] = shouldBeUnauthedWriteOnly
-		paths[acmePrefix+"acme/order/13b80844-e60d-42d2-b7e9-152a8e834b90/cert"] = shouldBeUnauthedWriteOnly
+	ossAcmePrefixes := []string{"acme/", "issuer/default/acme/", "roles/test/acme/", "issuer/default/roles/test/acme/"}
+	entAcmePrefixes := getEntAcmePrefixes()
+	for _, acmePrefix := range append(ossAcmePrefixes, entAcmePrefixes...) {
+		paths[acmePrefix+"directory"] = shouldBeUnauthedReadList
+		paths[acmePrefix+"new-nonce"] = shouldBeUnauthedReadList
+		paths[acmePrefix+"new-account"] = shouldBeUnauthedWriteOnly
+		paths[acmePrefix+"revoke-cert"] = shouldBeUnauthedWriteOnly
+		paths[acmePrefix+"new-order"] = shouldBeUnauthedWriteOnly
+		paths[acmePrefix+"orders"] = shouldBeUnauthedWriteOnly
+		paths[acmePrefix+"account/hrKmDYTvicHoHGVN2-3uzZV_BPGdE0W_dNaqYTtYqeo="] = shouldBeUnauthedWriteOnly
+		paths[acmePrefix+"authorization/29da8c38-7a09-465e-b9a6-3d76802b1afd"] = shouldBeUnauthedWriteOnly
+		paths[acmePrefix+"challenge/29da8c38-7a09-465e-b9a6-3d76802b1afd/http-01"] = shouldBeUnauthedWriteOnly
+		paths[acmePrefix+"order/13b80844-e60d-42d2-b7e9-152a8e834b90"] = shouldBeUnauthedWriteOnly
+		paths[acmePrefix+"order/13b80844-e60d-42d2-b7e9-152a8e834b90/finalize"] = shouldBeUnauthedWriteOnly
+		paths[acmePrefix+"order/13b80844-e60d-42d2-b7e9-152a8e834b90/cert"] = shouldBeUnauthedWriteOnly
 
 		// Make sure this new-eab path is auth'd
-		paths[acmePrefix+"acme/new-eab"] = shouldBeAuthed
+		paths[acmePrefix+"new-eab"] = shouldBeAuthed
 	}
 
 	for path, checkerType := range paths {
@@ -6947,6 +6949,9 @@ func TestProperAuthing(t *testing.T) {
 		}
 		if strings.Contains(raw_path, "eab") && strings.Contains(raw_path, "{key_id}") {
 			raw_path = strings.ReplaceAll(raw_path, "{key_id}", eabKid)
+		}
+		if strings.Contains(raw_path, "external-policy/") && strings.Contains(raw_path, "{policy}") {
+			raw_path = strings.ReplaceAll(raw_path, "{policy}", "a-policy")
 		}
 
 		raw_path = entProperAuthingPathReplacer(raw_path)

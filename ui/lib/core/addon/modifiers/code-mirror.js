@@ -1,6 +1,6 @@
 /**
  * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: MPL-2.0
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
 import { action } from '@ember/object';
@@ -68,5 +68,9 @@ export default class CodeMirrorModifier extends Modifier {
     editor.on('focus', bind(this, this._onFocus, namedArgs));
 
     this._editor = editor;
+
+    if (namedArgs.onSetup) {
+      namedArgs.onSetup(editor);
+    }
   }
 }
