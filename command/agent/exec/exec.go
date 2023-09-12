@@ -122,7 +122,7 @@ func NewServer(cfg *ServerConfig) (*Server, error) {
 		childProcessExitCh:      make(chan int),
 		childProcessStdout:      childProcessStdout,
 		childProcessStderr:      childProcessStderr,
-		childProcessCloseStdOut: childProcessCloseStdout,
+		childProcessCloseStdout: childProcessCloseStdout,
 		childProcessCloseStderr: childProcessCloseStderr,
 	}
 
@@ -375,7 +375,7 @@ func (s *Server) Close() {
 }
 
 func (s *Server) close() {
-	if s.childProcessCloseStdOut {
+	if s.childProcessCloseStdout {
 		_ = s.childProcessStdout.Close()
 	}
 
