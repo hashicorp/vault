@@ -4995,7 +4995,9 @@ func (core *Core) GetSealStatus(ctx context.Context) (*SealStatusResponse, error
 		}
 		clusterName = cluster.Name
 		clusterID = cluster.ID
-		recoverySealType = sealType
+		if core.SealAccess().RecoveryKeySupported() {
+			recoverySealType = sealType
+		}
 		sealType = core.seal.BarrierSealConfigType().String()
 	}
 
