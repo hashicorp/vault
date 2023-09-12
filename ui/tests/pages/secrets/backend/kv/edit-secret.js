@@ -3,8 +3,10 @@
  * SPDX-License-Identifier: BUSL-1.1
  */
 
+// TODO kv engine cleanup. There are some selectors that may not be used anymore.
+
 import { Base } from '../create';
-import { isPresent, clickable, visitable, create, fillable } from 'ember-cli-page-object';
+import { clickable, visitable, create, fillable } from 'ember-cli-page-object';
 
 export default create({
   ...Base,
@@ -17,10 +19,6 @@ export default create({
   visitEdit: visitable('/vault/secrets/:backend/edit/:id'),
   visitEditRoot: visitable('/vault/secrets/:backend/edit'),
   toggleJSON: clickable('[data-test-toggle-input="json"]'),
-  toggleMetadata: clickable('[data-test-show-metadata-toggle]'),
-  metadataTab: clickable('[data-test-secret-metadata-tab]'),
-  hasMetadataFields: isPresent('[data-test-metadata-fields]'),
-  maxVersion: fillable('[data-test-input="maxVersions"]'),
   startCreateSecret: clickable('[data-test-secret-create]'),
   deleteSecret() {
     return this.deleteBtn().confirmBtn();
@@ -30,9 +28,6 @@ export default create({
   },
   createSecretDontSave: async function (path, key, value) {
     return this.path(path).secretKey(key).secretValue(value);
-  },
-  createSecretWithMetadata: async function (path, key, value, maxVersion) {
-    return this.path(path).secretKey(key).secretValue(value).toggleMetadata().maxVersion(maxVersion).save();
   },
   editSecret: async function (key, value) {
     return this.secretKey(key).secretValue(value).save();

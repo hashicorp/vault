@@ -3,6 +3,7 @@
  * SPDX-License-Identifier: BUSL-1.1
  */
 
+// TODO kv engine cleanup - this file can be completely removed.
 import Model, { belongsTo, hasMany, attr } from '@ember-data/model';
 import { computed } from '@ember/object'; // eslint-disable-line
 import { alias } from '@ember/object/computed'; // eslint-disable-line

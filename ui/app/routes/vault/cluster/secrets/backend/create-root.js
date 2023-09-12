@@ -10,6 +10,7 @@ import EditBase from './secret-edit';
 const secretModel = (store, backend, key) => {
   const backendModel = store.peekRecord('secret-engine', backend);
   const modelType = backendModel.modelTypeForKV;
+  // TODO kv engine cleanup - oish, this will need some thought.
   if (modelType !== 'secret-v2') {
     const model = store.createRecord(modelType, {
       path: key,
