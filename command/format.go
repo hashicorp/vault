@@ -723,5 +723,4 @@ type SealStatusOutput struct {
 	LastWAL                  uint64    `json:"last_wal,omitempty"`
 	RaftCommittedIndex       uint64    `json:"raft_committed_index,omitempty"`
 	RaftAppliedIndex         uint64    `json:"raft_applied_index,omitempty"`
-	SealType                 string    `json:"type,omittempty"`
 }
