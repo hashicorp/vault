@@ -103,7 +103,17 @@ func NewAzureAuthMethod(conf *auth.AuthConfig) (auth.AuthMethod, error) {
 	if ok {
 		a.authenticateFromEnvironment, ok = authenticateFromEnvironmentRaw.(bool)
 		if !ok {
-			return nil, errors.New("could not convert 'authenticate_from_environment' config value to bool")
+			authFromEnvString, ok := authenticateFromEnvironmentRaw.(string)
+			if !ok {
+				return nil, errors.New("could not convert 'authenticate_from_environment' config value to bool")
+			}
+			if authFromEnvString == "true" {
+				a.authenticateFromEnvironment = true
+			} else if authFromEnvString == "false" {
+				a.authenticateFromEnvironment = false
+			} else {
+				return nil, errors.New("could not convert 'authenticate_from_environment' config value to bool")
+			}
 		}
 	}
 
