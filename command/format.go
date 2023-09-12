@@ -326,13 +326,14 @@ func (t TableFormatter) Output(ui cli.Ui, secret *api.Secret, data interface{}) 
 func (t TableFormatter) OutputSealStatusStruct(ui cli.Ui, secret *api.Secret, data interface{}) error {
 	var status SealStatusOutput = data.(SealStatusOutput)
 	var sealPrefix string
-	if status.RecoverySeal {
-		sealPrefix = "Recovery "
-	}
 
 	out := []string{}
 	out = append(out, "Key | Value")
-	out = append(out, fmt.Sprintf("%sSeal Type | %s", sealPrefix, status.Type))
+	out = append(out, fmt.Sprintf("Seal Type | %s", status.Type))
+	if status.RecoverySeal {
+		sealPrefix = "Recovery "
+		out = append(out, fmt.Sprintf("Recovery Seal Type | %s", status.RecoverySealType))
+	}
 	out = append(out, fmt.Sprintf("Initialized | %t", status.Initialized))
 	out = append(out, fmt.Sprintf("Sealed | %t", status.Sealed))
 	out = append(out, fmt.Sprintf("Total %sShares | %d", sealPrefix, status.N))
@@ -668,7 +669,7 @@ func (t TableFormatter) OutputMap(ui cli.Ui, data map[string]interface{}) error 
 
 // OutputSealStatus will print *api.SealStatusResponse in the CLI according to the format provided
 func OutputSealStatus(ui cli.Ui, client *api.Client, status *api.SealStatusResponse) int {
-	sealStatusOutput := SealStatusOutput{SealStatusResponse: *status}
+	sealStatusOutput := SealStatusOutput{SealStatusResponse: *status, SealType: status.Type}
 
 	// Mask the 'Vault is sealed' error, since this means HA is enabled, but that
 	// we cannot query for the leader since we are sealed.
@@ -722,4 +723,5 @@ type SealStatusOutput struct {
 	LastWAL                  uint64    `json:"last_wal,omitempty"`
 	RaftCommittedIndex       uint64    `json:"raft_committed_index,omitempty"`
 	RaftAppliedIndex         uint64    `json:"raft_applied_index,omitempty"`
+	SealType                 string    `json:"type,omittempty"`
 }
