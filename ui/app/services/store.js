@@ -150,7 +150,7 @@ export default class StoreService extends Store {
   fetchPage(modelName, query) {
     const response = this.constructResponse(modelName, query);
     this.forceUnload(modelName);
-    // Hack to ensure the pushed records below all get in the store
+    // Hack to ensure the pushed records below all get in the store. remove with update to ember-data@4.12
     this.peekAll(modelName).length;
     return new Promise((resolve) => {
       // push subset of records into the store
@@ -164,7 +164,7 @@ export default class StoreService extends Store {
             'query'
           )
         );
-        // Hack to make sure all records get in model correctly
+        // Hack to make sure all records get in model correctly. remove with update to ember-data@4.12
         this.peekAll(modelName).length;
         const model = this.peekAll(modelName).toArray();
         model.set('meta', response.meta);

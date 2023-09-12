@@ -34,7 +34,7 @@ module('Unit | Model | unloadAll works as expected', function (hooks) {
     this.store = this.owner.lookup('service:store');
   });
 
-  test('edit then unload does not remove all records', async function (assert) {
+  test('edit then unload correctly removes all records', async function (assert) {
     this.store.push({
       data: [
         {
@@ -70,7 +70,7 @@ module('Unit | Model | unloadAll works as expected', function (hooks) {
       'peekAll array 0 - companies unloaded'
     );
   });
-  test('create then unload does not remove all records', async function (assert) {
+  test('create then unload correctly removes all records', async function (assert) {
     this.store.push({
       data: [
         {
