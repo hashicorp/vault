@@ -86,7 +86,12 @@ delay) mode. The maximum allowed value is 10.
   snapshot. Servers may take longer to recover from crashes or failover if this
   is increased significantly as more logs will need to be replayed.
 
-- `snapshot_interval` `(integer: 120 seconds)` - This controls how often Raft checks if a snapshot operation should be performed. Raft randomly staggers between this value and 2x this value to avoid the entire cluster from performing a snapshot at once. The default value is 120 seconds.
+- `snapshot_interval` `(integer: 120 seconds)` - The snapshot interval
+   controls how often Raft checks whether a snapshot operation is
+   required. Raft randomly staggers snapshots between the configured
+   interval and twice the configured interval to keep the entire cluster
+   from performing a snapshot at once. The default snapshot interval is
+   120 seconds.
 
 - `retry_join` `(list: [])` - There can be one or more
   [`retry_join`](#retry_join-stanza) stanzas. When the Raft cluster is getting
