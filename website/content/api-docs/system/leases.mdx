@@ -10,8 +10,6 @@ The `/sys/leases` endpoints are used to view and manage leases in Vault.
 
 ## Read lease
 
-@include 'alerts/restricted-admin.mdx'
-
 This endpoint retrieve lease metadata.
 
 | Method | Path                 |
@@ -55,8 +53,6 @@ $ curl \
 
 ## List leases
 
-@include 'alerts/restricted-admin.mdx'
-
 This endpoint returns a list of lease ids.
 
 **This endpoint requires 'sudo' capability.**
@@ -85,8 +81,6 @@ $ curl \
 ```
 
 ## Renew lease
-
-@include 'alerts/restricted-admin.mdx'
 
 This endpoint renews a lease, requesting to extend the lease. Token leases
 cannot be renewed using this endpoint, use instead the auth/token/renew endpoint.
@@ -136,8 +130,6 @@ $ curl \
 
 ## Revoke lease
 
-@include 'alerts/restricted-admin.mdx'
-
 This endpoint revokes a lease immediately.
 
 | Method | Path                 |
@@ -174,8 +166,6 @@ $ curl \
 
 ## Revoke force
 
-@include 'alerts/restricted-admin.mdx'
-
 This endpoint revokes all secrets or tokens generated under a given prefix
 immediately. Unlike `/sys/leases/revoke-prefix`, this path ignores backend errors
 encountered during revocation. This is _potentially very dangerous_ and should
@@ -208,8 +198,6 @@ $ curl \
 
 ## Revoke prefix
 
-@include 'alerts/restricted-admin.mdx'
-
 This endpoint revokes all secrets (via a lease ID prefix) or tokens (via the
 tokens' path property) generated under a given prefix immediately. This requires
 `sudo` capability and access to it should be tightly controlled as it can be
@@ -240,8 +228,6 @@ $ curl \
 
 ## Tidy leases
 
-@include 'alerts/restricted-admin.mdx'
-
 This endpoint cleans up the dangling storage entries for leases: for each lease
 entry in storage, Vault will verify that it has an associated valid non-expired
 token in storage, and if not, the lease will be revoked.
@@ -264,8 +250,6 @@ $ curl \
 ```
 
 ## Lease counts
-
-@include 'alerts/restricted-admin.mdx'
 
 This endpoint returns the total count of a `type` of lease, as well as a count
 per mount point. Note that it currently only supports type "irrevocable".
@@ -296,8 +280,6 @@ $ curl \
 ```
 
 ## Leases list
-
-@include 'alerts/restricted-admin.mdx'
 
 This endpoint returns the total count of a `type` of lease, as well as a list
 of leases per mount point. Note that it currently only supports type

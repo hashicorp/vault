@@ -46,7 +46,7 @@ export default class KvDeleteModal extends Component {
         };
       case 'delete-metadata':
         return {
-          title: 'Delete metadata?',
+          title: 'Delete metadata and secret data?',
           type: 'danger',
           intro:
             'This will permanently delete the metadata and versions of the secret. All version history will be removed. This cannot be undone.',

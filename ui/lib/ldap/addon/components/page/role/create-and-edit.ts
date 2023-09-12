@@ -10,6 +10,7 @@ import type LdapRoleModel from 'vault/models/ldap/role';
 import { Breadcrumb, ValidationMap } from 'vault/vault/app-types';
 import type FlashMessageService from 'vault/services/flash-messages';
 import type RouterService from '@ember/routing/router-service';
+import type StoreService from 'vault/services/store';
 
 interface Args {
   model: LdapRoleModel;
@@ -25,6 +26,7 @@ interface RoleTypeOption {
 export default class LdapCreateAndEditRolePageComponent extends Component<Args> {
   @service declare readonly flashMessages: FlashMessageService;
   @service declare readonly router: RouterService;
+  @service declare readonly store: StoreService;
 
   @tracked modelValidations: ValidationMap | null = null;
   @tracked invalidFormMessage = '';
@@ -63,6 +65,9 @@ export default class LdapCreateAndEditRolePageComponent extends Component<Args> 
         const action = model.isNew ? 'created' : 'updated';
         yield model.save();
         this.flashMessages.success(`Successfully ${action} the role ${model.name}`);
+        if (action === 'created') {
+          this.store.clearDataset('ldap/role');
+        }
         this.router.transitionTo(
           'vault.cluster.secrets.backend.ldap.roles.role.details',
           model.type,
